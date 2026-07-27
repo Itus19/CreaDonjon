@@ -4,37 +4,28 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+async function requireUser(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  return user;
+}
+
 export async function addBlock(
   worldId: string,
   entityId: string,
   formData: FormData,
 ) {
   const supabase = await createClient();
+  await requireUser(supabase);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const blockType = formData.get("block_type") as string;
-  const content = formData.get("content") as string;
-  const visibility = formData.get("visibility") as string;
-
-  const { error } = await supabase.from("blocks").insert({
+  await supabase.from("blocks").insert({
     entity_id: entityId,
-    block_type: blockType,
-    data: { content },
-    visibility,
+    block_type: formData.get("block_type") as string,
+    data: { content: formData.get("content") as string },
+    visibility: formData.get("visibility") as string,
   });
-
-  if (error) {
-    redirect(
-      `/worlds/${worldId}/entities/${entityId}?error=${encodeURIComponent(error.message)}`,
-    );
-  }
 
   revalidatePath(`/worlds/${worldId}/entities/${entityId}`);
 }
@@ -87,22 +78,12 @@ export async function addRelation(
 ) {
   const supabase = await createClient();
 
-  const targetEntityId = formData.get("target_entity_id") as string;
-  const relationType = formData.get("relation_type") as string;
-  const visibility = formData.get("visibility") as string;
-
-  const { error } = await supabase.from("relations").insert({
+  await supabase.from("relations").insert({
     source_entity_id: entityId,
-    target_entity_id: targetEntityId,
-    relation_type: relationType,
-    visibility,
+    target_entity_id: formData.get("target_entity_id") as string,
+    relation_type: formData.get("relation_type") as string,
+    visibility: formData.get("visibility") as string,
   });
-
-  if (error) {
-    redirect(
-      `/worlds/${worldId}/entities/${entityId}?error=${encodeURIComponent(error.message)}`,
-    );
-  }
 
   revalidatePath(`/worlds/${worldId}/entities/${entityId}`);
 }

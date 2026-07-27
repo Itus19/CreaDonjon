@@ -21,7 +21,7 @@ export default function ThemeSwitcher({ currentTheme }: { currentTheme: string }
   }
 
   return (
-    <div className="fixed top-4 right-4 z-50">
+    <div className="fixed bottom-4 right-4 z-50">
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="Changer de thème"
@@ -31,7 +31,7 @@ export default function ThemeSwitcher({ currentTheme }: { currentTheme: string }
       </button>
 
       {open && (
-        <div className="mt-2 flex flex-col gap-1 rounded-lg border border-border bg-surface p-2 shadow-xl">
+        <div className="absolute bottom-full right-0 mb-2 flex flex-col gap-1 rounded-lg border border-border bg-surface p-2 shadow-xl">
           {THEMES.map((t) => (
             <button
               key={t.id}
