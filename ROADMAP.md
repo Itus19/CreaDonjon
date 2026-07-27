@@ -81,6 +81,15 @@ Statuts : `[x]` fait · `[~]` en cours / partiel · `[ ]` pas commencé
 - [ ] Aide à la structuration de règles (langage naturel → JSON)
 - [ ] Génération de contenu (PNJ, lieux, objets, rencontres...)
 
+## Design / Présentation
+
+Volontairement laissé de côté jusqu'ici : les pages construites sont fonctionnelles mais visuellement nues (Tailwind par défaut, pas de direction artistique), pour valider en premier que les données circulent correctement (schéma → RLS → UI). Section 20 du PDD place d'ailleurs l'Interface après Données/Logique/API, donc l'ordre suivi jusqu'ici est cohérent avec ça — mais rien ne trackait ce chantier explicitement.
+
+- [ ] Direction artistique définie (inspirations du PDD section 1 : vvd.world, dd2024.fr, alchemyrpg.com — captures/références à fournir)
+- [ ] Palette de couleurs, typographie
+- [ ] Vraie présentation de fiche d'entité (mise en page des blocs, pas juste une liste de cartes empilées)
+- [ ] Système de composants/design system réutilisable
+
 ## Plus tard (V2+, hors scope court terme)
 
 Pas commencé, volontairement reporté — voir le PDD section 22 pour le détail :
