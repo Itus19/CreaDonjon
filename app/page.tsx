@@ -63,14 +63,16 @@ export default async function Home() {
         {!error && (
           <ul className="flex flex-col gap-2">
             {worlds?.map((world) => (
-              <li
-                key={world.id}
-                className="rounded-lg border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-900"
-              >
-                <p className="font-medium text-black dark:text-zinc-50">
-                  {world.name}
-                </p>
-                <p className="text-sm text-zinc-500">{world.id}</p>
+              <li key={world.id}>
+                <Link
+                  href={`/worlds/${world.id}`}
+                  className="block rounded-lg border border-black/10 bg-white p-4 hover:border-black/20 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-white/20"
+                >
+                  <p className="font-medium text-black dark:text-zinc-50">
+                    {world.name}
+                  </p>
+                  <p className="text-sm text-zinc-500">{world.id}</p>
+                </Link>
               </li>
             ))}
             {worlds?.length === 0 && (
