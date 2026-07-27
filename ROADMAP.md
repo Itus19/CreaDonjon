@@ -89,6 +89,7 @@ Statuts : `[x]` fait · `[~]` en cours / partiel · `[ ]` pas commencé
 - [x] Palette de couleurs (fond/surface/accent/danger) centralisée en CSS, typographie par défaut (Geist)
 - [x] Classes utilitaires réutilisables (`.card`, `.form-card`, `.chip`, `.btn-accent`, `.btn-outline`, `.input-field`) — début de design system
 - [~] Présentation de fiche d'entité alignée sur les références (alias/relations en étiquettes, portrait réservé) ; pas encore : texte enrichi, liens automatiques, mise en page façon vvd.world (barre latérale par catégories)
+- [x] 4 thèmes sélectionnables (sombre/demi-sombre/demi-clair/clair), mémorisés par cookie — global à l'app pour l'instant, pas encore par monde comme chez vvd.world
 - [ ] Barre latérale de navigation par catégories (comme vvd.world)
 - [ ] Tableau de bord d'accueil (récents, création rapide, aperçu du graphe)
 
