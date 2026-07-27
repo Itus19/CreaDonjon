@@ -1,26 +1,62 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0d1210;
+  --surface: #161f1b;
+  --surface-hover: #1c2823;
+  --foreground: #ece8dc;
+  --muted: #9aa39c;
+  --border: rgba(236, 232, 220, 0.1);
+  --accent: #c9a24a;
+  --accent-hover: #dab35a;
+  --accent-foreground: #1a1408;
+  --danger: #e0796a;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-danger: var(--danger);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: radial-gradient(ellipse at top, #1a2420 0%, var(--background) 60%);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .field-label {
+    @apply flex flex-col gap-1 text-sm text-muted;
+  }
+  .input-field {
+    @apply rounded-md border border-border bg-black/20 px-3 py-2 text-foreground outline-none focus:border-accent;
+  }
+  .card {
+    @apply rounded-lg border border-border bg-surface p-4;
+  }
+  .form-card {
+    @apply rounded-xl border border-border bg-surface p-8 shadow-xl shadow-black/20;
+  }
+  .btn-accent {
+    @apply rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover;
+  }
+  .btn-outline {
+    @apply rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-border bg-black/20 px-3 py-1 text-xs text-foreground;
+  }
+  .chip-remove {
+    @apply text-muted transition-colors hover:text-danger;
+  }
 }

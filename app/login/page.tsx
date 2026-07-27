@@ -8,54 +8,48 @@ export default async function LoginPage({
   const { error, message } = await searchParams;
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <form className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-black/10 bg-white p-8 dark:border-white/10 dark:bg-zinc-900">
-        <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
+    <div className="flex flex-1 items-center justify-center font-sans">
+      <form className="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-border bg-surface p-8 shadow-xl shadow-black/20">
+        <h1 className="text-xl font-semibold tracking-wide text-accent">
           CreaDonjon
         </h1>
 
-        {error && (
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-        )}
-        {message && (
-          <p className="text-sm text-emerald-600 dark:text-emerald-400">
-            {message}
-          </p>
-        )}
+        {error && <p className="text-sm text-danger">{error}</p>}
+        {message && <p className="text-sm text-accent">{message}</p>}
 
-        <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+        <label className="flex flex-col gap-1 text-sm text-muted">
           Email
           <input
             name="email"
             type="email"
             required
-            className="rounded-md border border-black/10 bg-transparent px-3 py-2 text-black dark:border-white/10 dark:text-zinc-50"
+            className="rounded-md border border-border bg-black/20 px-3 py-2 text-foreground outline-none focus:border-accent"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+        <label className="flex flex-col gap-1 text-sm text-muted">
           Mot de passe
           <input
             name="password"
             type="password"
             required
             minLength={6}
-            className="rounded-md border border-black/10 bg-transparent px-3 py-2 text-black dark:border-white/10 dark:text-zinc-50"
+            className="rounded-md border border-border bg-black/20 px-3 py-2 text-foreground outline-none focus:border-accent"
           />
         </label>
 
         <div className="flex gap-3 pt-2">
           <button
             formAction={login}
-            className="flex-1 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+            className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
           >
             Se connecter
           </button>
           <button
             formAction={signup}
-            className="flex-1 rounded-full border border-black/10 px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-black/5 dark:border-white/10 dark:text-zinc-50 dark:hover:bg-white/5"
+            className="flex-1 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover"
           >
-            Creer un compte
+            Créer un compte
           </button>
         </div>
       </form>

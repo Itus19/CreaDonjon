@@ -10,14 +10,14 @@ export default async function Home() {
 
   if (!user) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+      <div className="flex flex-1 items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-4">
-          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
+          <h1 className="text-2xl font-semibold tracking-wide text-accent">
             CreaDonjon
           </h1>
           <Link
             href="/login"
-            className="rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background"
+            className="rounded-full bg-accent px-5 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
           >
             Se connecter
           </Link>
@@ -31,31 +31,27 @@ export default async function Home() {
     .select("id, name, created_at");
 
   return (
-    <div className="flex flex-col flex-1 items-center bg-zinc-50 font-sans dark:bg-black">
+    <div className="flex flex-col flex-1 items-center font-sans">
       <main className="flex w-full max-w-2xl flex-col gap-6 py-16 px-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
+          <h1 className="text-2xl font-semibold tracking-wide text-accent">
             CreaDonjon
           </h1>
           <div className="flex items-center gap-3 text-sm">
-            <span className="text-zinc-500">{user.email}</span>
+            <span className="text-muted">{user.email}</span>
             <form action={logout}>
-              <button className="rounded-full border border-black/10 px-3 py-1 dark:border-white/10">
-                Se deconnecter
+              <button className="rounded-full border border-border px-3 py-1 text-foreground transition-colors hover:bg-surface-hover">
+                Se déconnecter
               </button>
             </form>
           </div>
         </div>
 
-        {error && (
-          <p className="text-red-600 dark:text-red-400">
-            Erreur: {error.message}
-          </p>
-        )}
+        {error && <p className="text-danger">Erreur: {error.message}</p>}
 
         <Link
           href="/worlds/new"
-          className="self-start rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background"
+          className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
         >
           Créer un monde
         </Link>
@@ -66,19 +62,15 @@ export default async function Home() {
               <li key={world.id}>
                 <Link
                   href={`/worlds/${world.id}`}
-                  className="block rounded-lg border border-black/10 bg-white p-4 hover:border-black/20 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-white/20"
+                  className="block rounded-lg border border-border bg-surface p-4 transition-colors hover:bg-surface-hover"
                 >
-                  <p className="font-medium text-black dark:text-zinc-50">
-                    {world.name}
-                  </p>
-                  <p className="text-sm text-zinc-500">{world.id}</p>
+                  <p className="font-medium text-foreground">{world.name}</p>
+                  <p className="text-sm text-muted">{world.id}</p>
                 </Link>
               </li>
             ))}
             {worlds?.length === 0 && (
-              <p className="text-zinc-500">
-                Aucun monde visible pour ce compte.
-              </p>
+              <p className="text-muted">Aucun monde visible pour ce compte.</p>
             )}
           </ul>
         )}
