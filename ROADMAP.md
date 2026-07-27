@@ -29,12 +29,14 @@ Statuts : `[x]` fait · `[~]` en cours / partiel · `[ ]` pas commencé
 - [x] Liste des mondes d'un utilisateur (sur la page d'accueil)
 - [x] Créer une entité dans un monde, page de fiche d'entité (affichage)
 - [x] Ajouter un bloc à une entité (type libre, contenu, visibilité)
+- [x] Alias en étiquettes (ajout/suppression)
+- [x] Relations entre entités : étiquettes cliquables (dans les deux sens), formulaire de création — première UI pour la table `relations`
 - [ ] Éditer/supprimer une entité ou un bloc existant (seule la création marche pour l'instant)
 - [~] Blocs modulaires : système générique en place (`data.content` texte libre) ; pas encore d'éditeurs dédiés par type (personnage, inventaire, biologie...)
 - [ ] Éditeur de `narrative_content` avec segments de visibilité (distinct des blocs, pas commencé)
-- [ ] Liens automatiques / bidirectionnels entre fiches
+- [ ] Liens automatiques dans le texte (détection de mentions/alias) — question ouverte non résolue dans le PDD (faux positifs)
+- [ ] Graphe de connaissances (visualisation des `relations`, au-delà des étiquettes)
 - [ ] Historique des modifications d'une fiche
-- [ ] Graphe de connaissances (visualisation des `relations`)
 - [ ] Import/export de contenu
 
 ## Maître du Jeu (MJ)
@@ -83,12 +85,12 @@ Statuts : `[x]` fait · `[~]` en cours / partiel · `[ ]` pas commencé
 
 ## Design / Présentation
 
-Volontairement laissé de côté jusqu'ici : les pages construites sont fonctionnelles mais visuellement nues (Tailwind par défaut, pas de direction artistique), pour valider en premier que les données circulent correctement (schéma → RLS → UI). Section 20 du PDD place d'ailleurs l'Interface après Données/Logique/API, donc l'ordre suivi jusqu'ici est cohérent avec ça — mais rien ne trackait ce chantier explicitement.
-
-- [ ] Direction artistique définie (inspirations du PDD section 1 : vvd.world, dd2024.fr, alchemyrpg.com — captures/références à fournir)
-- [ ] Palette de couleurs, typographie
-- [ ] Vraie présentation de fiche d'entité (mise en page des blocs, pas juste une liste de cartes empilées)
-- [ ] Système de composants/design system réutilisable
+- [x] Direction artistique définie (références fournies : vvd.world, Alchemy RPG, Daggerheart — dark/chaleureux, accent doré)
+- [x] Palette de couleurs (fond/surface/accent/danger) centralisée en CSS, typographie par défaut (Geist)
+- [x] Classes utilitaires réutilisables (`.card`, `.form-card`, `.chip`, `.btn-accent`, `.btn-outline`, `.input-field`) — début de design system
+- [~] Présentation de fiche d'entité alignée sur les références (alias/relations en étiquettes, portrait réservé) ; pas encore : texte enrichi, liens automatiques, mise en page façon vvd.world (barre latérale par catégories)
+- [ ] Barre latérale de navigation par catégories (comme vvd.world)
+- [ ] Tableau de bord d'accueil (récents, création rapide, aperçu du graphe)
 
 ## Plus tard (V2+, hors scope court terme)
 
