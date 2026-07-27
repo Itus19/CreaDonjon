@@ -53,6 +53,13 @@ export default async function Home() {
           </p>
         )}
 
+        <Link
+          href="/worlds/new"
+          className="self-start rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background"
+        >
+          Créer un monde
+        </Link>
+
         {!error && (
           <ul className="flex flex-col gap-2">
             {worlds?.map((world) => (
