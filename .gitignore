@@ -1,0 +1,21 @@
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+.claude/session-env/
+.claude/settings.local.json
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+
+# Supabase
+.supabase/
+
+# OS / editor
+.DS_Store
+Thumbs.db
