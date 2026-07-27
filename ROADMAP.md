@@ -27,10 +27,11 @@ Statuts : `[x]` fait · `[~]` en cours / partiel · `[ ]` pas commencé
 
 - [x] Page de création d'un monde
 - [x] Liste des mondes d'un utilisateur (sur la page d'accueil)
-- [ ] Page de fiche d'entité (affichage)
-- [ ] Édition d'une fiche d'entité
-- [ ] Blocs modulaires configurables dans l'UI (personnage, inventaire, biologie, etc.)
-- [ ] Éditeur de `narrative_content` avec segments de visibilité
+- [x] Créer une entité dans un monde, page de fiche d'entité (affichage)
+- [x] Ajouter un bloc à une entité (type libre, contenu, visibilité)
+- [ ] Éditer/supprimer une entité ou un bloc existant (seule la création marche pour l'instant)
+- [~] Blocs modulaires : système générique en place (`data.content` texte libre) ; pas encore d'éditeurs dédiés par type (personnage, inventaire, biologie...)
+- [ ] Éditeur de `narrative_content` avec segments de visibilité (distinct des blocs, pas commencé)
 - [ ] Liens automatiques / bidirectionnels entre fiches
 - [ ] Historique des modifications d'une fiche
 - [ ] Graphe de connaissances (visualisation des `relations`)
