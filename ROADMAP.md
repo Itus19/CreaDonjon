@@ -25,8 +25,8 @@ Statuts : `[x]` fait · `[~]` en cours / partiel · `[ ]` pas commencé
 
 ## Wiki (fiches et base de connaissances)
 
-- [ ] Page de création d'un monde (prochaine étape prévue)
-- [ ] Liste des mondes d'un utilisateur
+- [x] Page de création d'un monde
+- [x] Liste des mondes d'un utilisateur (sur la page d'accueil)
 - [ ] Page de fiche d'entité (affichage)
 - [ ] Édition d'une fiche d'entité
 - [ ] Blocs modulaires configurables dans l'UI (personnage, inventaire, biologie, etc.)
@@ -39,8 +39,8 @@ Statuts : `[x]` fait · `[~]` en cours / partiel · `[ ]` pas commencé
 ## Maître du Jeu (MJ)
 
 - [x] Compte de test créé manuellement dans Supabase (temporaire, à remplacer par le flux normal)
-- [ ] Créer un monde (UI)
-- [ ] Choisir un système de règles pour son monde (2014 / 2024 / homebrew)
+- [x] Créer un monde (UI), avec choix du système de règles par défaut (2014 / 2024)
+- [ ] Modifier le système de règles d'un monde après sa création
 - [ ] Modifier/dériver un système de règles (variante liée par `parent_ruleset_id`)
 - [ ] Créer une campagne, inviter des joueurs
 - [ ] Créer des personnages et PNJ
