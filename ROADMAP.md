@@ -92,6 +92,7 @@ Statuts : `[x]` fait · `[~]` en cours / partiel · `[ ]` pas commencé
 - [~] Présentation de fiche d'entité alignée sur les références (alias/relations en étiquettes, portrait réservé) ; pas encore : texte enrichi, liens automatiques, mise en page façon vvd.world (barre latérale par catégories)
 - [x] 4 thèmes sélectionnables (sombre/demi-sombre/demi-clair/clair), mémorisés par cookie — global à l'app pour l'instant, pas encore par monde comme chez vvd.world
 - [x] Bureau à fenêtres pour les fiches d'entité (glisser/redimensionner/agrandir/fermer, plusieurs fenêtres simultanées, aimantation gauche/droite façon Aero Snap) — inspiré du prototype antigravity, réimplémenté contre notre schéma
+- [x] Esthétique verre (glassmorphism) sur les fenêtres/cartes, fond immersif flouté en CSS pur, police d'affichage "Outfit", étiquettes de relation colorées différemment entrant/sortant — d'après l'examen détaillé du CSS du prototype antigravity
 - [ ] Barre latérale de navigation par catégories (comme vvd.world)
 - [ ] Tableau de bord d'accueil (récents, création rapide, aperçu du graphe)
 
