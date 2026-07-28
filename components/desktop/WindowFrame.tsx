@@ -115,8 +115,8 @@ export default function WindowFrame({
 
   return (
     <div
-      className={`absolute flex flex-col overflow-hidden rounded-lg border bg-surface shadow-2xl shadow-black/40 ${
-        isFocused ? "border-accent" : "border-border"
+      className={`absolute flex flex-col overflow-hidden rounded-2xl border bg-surface-glass backdrop-blur-2xl backdrop-saturate-150 shadow-2xl shadow-black/50 transition-[border-color] ${
+        isFocused ? "border-accent/40" : "border-border"
       }`}
       style={
         win.isMaximized
@@ -132,26 +132,26 @@ export default function WindowFrame({
       onMouseDown={onFocus}
     >
       <div
-        className="flex shrink-0 cursor-move items-center justify-between gap-2 border-b border-border bg-black/20 px-3 py-2"
+        className="flex h-[38px] shrink-0 cursor-move items-center justify-between gap-2 border-b border-border bg-black/10 px-3"
         onMouseDown={handleDragStart}
         onDoubleClick={toggleMaximize}
       >
         <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-sm font-medium text-foreground">{title}</span>
+          <span className="truncate font-display text-sm font-medium text-foreground">{title}</span>
           {subtitle && <span className="chip shrink-0">{subtitle}</span>}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2.5">
           <button
             onMouseDown={(e) => e.stopPropagation()}
             onClick={toggleMaximize}
             title="Agrandir / Restaurer"
-            className="h-3 w-3 rounded-full bg-accent/70 transition-colors hover:bg-accent"
+            className="h-[11px] w-[11px] rounded-full bg-accent/75 transition-all hover:scale-110 hover:bg-accent"
           />
           <button
             onMouseDown={(e) => e.stopPropagation()}
             onClick={onClose}
             title="Fermer"
-            className="h-3 w-3 rounded-full bg-danger/70 transition-colors hover:bg-danger"
+            className="h-[11px] w-[11px] rounded-full bg-danger/75 transition-all hover:scale-110 hover:bg-danger"
           />
         </div>
       </div>

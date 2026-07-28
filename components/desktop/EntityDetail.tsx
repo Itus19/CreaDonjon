@@ -34,6 +34,7 @@ type RelationRow = {
   visibility: string;
   otherId: string;
   otherName: string;
+  direction: "out" | "in";
 };
 
 export default function EntityDetail({
@@ -105,6 +106,7 @@ export default function EntityDetail({
           visibility: r.visibility,
           otherId: target.id,
           otherName: target.name,
+          direction: "out" as const,
         };
       }),
       ...(incoming ?? []).map((r) => {
@@ -115,6 +117,7 @@ export default function EntityDetail({
           visibility: r.visibility,
           otherId: source.id,
           otherName: source.name,
+          direction: "in" as const,
         };
       }),
     ]);
@@ -199,29 +202,35 @@ export default function EntityDetail({
         <h2 className="text-lg font-medium text-foreground">Relations</h2>
 
         <div className="flex flex-wrap gap-2">
-          {relations.map((relation) =>
-            onOpenEntity ? (
+          {relations.map((relation) => {
+            const chipClass =
+              relation.direction === "out" ? "chip-relation-out" : "chip-relation-in";
+            const label = (
+              <>
+                <span className="opacity-70">{relation.relationType}</span>
+                {relation.otherName}
+              </>
+            );
+            return onOpenEntity ? (
               <button
                 key={relation.id}
                 onClick={() => onOpenEntity(relation.otherId, relation.otherName, null)}
-                className="chip transition-colors hover:bg-surface-hover"
+                className={chipClass}
                 title={VISIBILITY_LABELS[relation.visibility] ?? relation.visibility}
               >
-                <span className="text-muted">{relation.relationType}</span>
-                {relation.otherName}
+                {label}
               </button>
             ) : (
               <Link
                 key={relation.id}
                 href={`/worlds/${worldId}/entities/${relation.otherId}`}
-                className="chip transition-colors hover:bg-surface-hover"
+                className={chipClass}
                 title={VISIBILITY_LABELS[relation.visibility] ?? relation.visibility}
               >
-                <span className="text-muted">{relation.relationType}</span>
-                {relation.otherName}
+                {label}
               </Link>
-            ),
-          )}
+            );
+          })}
           {relations.length === 0 && (
             <p className="text-sm text-muted">Aucune relation pour l&apos;instant.</p>
           )}
