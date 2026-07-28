@@ -34,7 +34,7 @@ export async function updateBlock(
   worldId: string,
   entityId: string,
   blockId: string,
-  updates: { title?: string; content?: string; visibility?: string },
+  updates: { title?: string; content?: string; caption?: string; visibility?: string },
 ) {
   const supabase = await createClient();
   await requireUser(supabase);
@@ -48,6 +48,7 @@ export async function updateBlock(
   const nextData = { ...(block?.data as Record<string, unknown> ?? {}) };
   if (updates.title !== undefined) nextData.title = updates.title;
   if (updates.content !== undefined) nextData.content = updates.content;
+  if (updates.caption !== undefined) nextData.caption = updates.caption;
 
   const payload: Record<string, unknown> = { data: nextData };
   if (updates.visibility !== undefined) payload.visibility = updates.visibility;
@@ -70,6 +71,35 @@ export async function deleteEntity(worldId: string, entityId: string) {
 
   await supabase.from("entities").delete().eq("id", entityId);
   revalidatePath(`/worlds/${worldId}`);
+}
+
+export async function createEntity(worldId: string, entityKind: string | null = null) {
+  const supabase = await createClient();
+  const user = await requireUser(supabase);
+
+  const { data } = await supabase
+    .from("entities")
+    .insert({
+      world_id: worldId,
+      name: "Nouvelle fiche",
+      entity_kind: entityKind,
+      created_by: user.id,
+    })
+    .select("id, name, entity_kind, summary")
+    .single();
+
+  revalidatePath(`/worlds/${worldId}`);
+  return data;
+}
+
+export async function updateEntityName(worldId: string, entityId: string, name: string) {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const trimmed = name.trim() || "Nouvelle fiche";
+  await supabase.from("entities").update({ name: trimmed }).eq("id", entityId);
+  revalidatePath(`/worlds/${worldId}`);
+  revalidatePath(`/worlds/${worldId}/entities/${entityId}`);
 }
 
 export async function addAlias(

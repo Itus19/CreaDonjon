@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -13,6 +13,7 @@ import {
   removeAlias,
   removeRelation,
   updateBlock,
+  updateEntityName,
 } from "@/lib/actions/entities";
 import { entityKindColor } from "@/lib/entityKindColors";
 import RichTextEditor from "./RichTextEditor";
@@ -48,7 +49,7 @@ type Entity = {
 type Block = {
   id: string;
   block_type: string;
-  data: { title?: string; content?: string };
+  data: { title?: string; content?: string; caption?: string };
   visibility: string;
   display_order: number;
 };
@@ -83,6 +84,12 @@ export default function EntityDetail({
   const [otherEntities, setOtherEntities] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const onLoadedRef = useRef(onLoaded);
+  useEffect(() => {
+    onLoadedRef.current = onLoaded;
+  }, [onLoaded]);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -122,7 +129,7 @@ export default function EntityDetail({
     }
 
     setEntity(entityData);
-    onLoaded?.({ name: entityData.name, entity_kind: entityData.entity_kind });
+    onLoadedRef.current?.({ name: entityData.name, entity_kind: entityData.entity_kind });
     setBlocks(blocksData ?? []);
     setOtherEntities(others ?? []);
 
@@ -155,7 +162,7 @@ export default function EntityDetail({
       }),
     ]);
     setLoading(false);
-  }, [worldId, entityId, onLoaded]);
+  }, [worldId, entityId]);
 
   useEffect(() => {
     setLoading(true);
@@ -168,6 +175,12 @@ export default function EntityDetail({
     await load();
   }
 
+  async function handleUpdateName(name: string) {
+    if (!entity || name === entity.name) return;
+    await updateEntityName(worldId, entityId, name);
+    await load();
+  }
+
   async function handleAddBlock(blockType: string) {
     await addBlock(worldId, entityId, blockType);
     await load();
@@ -175,7 +188,7 @@ export default function EntityDetail({
 
   async function handleUpdateBlock(
     blockId: string,
-    updates: { title?: string; content?: string; visibility?: string },
+    updates: { title?: string; content?: string; caption?: string; visibility?: string },
   ) {
     await updateBlock(worldId, entityId, blockId, updates);
     await load();
@@ -197,6 +210,18 @@ export default function EntityDetail({
     }
   }
 
+  function toggleCollapsed(blockId: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(blockId)) {
+        next.delete(blockId);
+      } else {
+        next.add(blockId);
+      }
+      return next;
+    });
+  }
+
   if (loading) {
     return <p className="p-6 text-muted">Chargement...</p>;
   }
@@ -215,15 +240,12 @@ export default function EntityDetail({
       {/* En-tete : titre, proprietes, portrait */}
       <div className="grid grid-cols-4 gap-4 border-b border-border pb-5">
         <div className="col-span-3 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2">
-            <h1 className="entity-title">{entity.name}</h1>
-            <button
-              onClick={handleDeleteEntity}
-              className="text-xs text-muted transition-colors hover:text-danger"
-            >
-              Supprimer la fiche
-            </button>
-          </div>
+          <input
+            key={entity.id}
+            defaultValue={entity.name}
+            onBlur={(e) => handleUpdateName(e.target.value)}
+            className="entity-title bg-transparent outline-none focus:border-b focus:border-accent"
+          />
 
           {entity.entity_kind && (
             <span className="inline-flex w-fit items-center gap-1.5 rounded-md border border-border bg-black/20 px-2.5 py-1 text-xs font-medium text-foreground">
@@ -234,8 +256,6 @@ export default function EntityDetail({
               {entity.entity_kind}
             </span>
           )}
-
-          {entity.summary && <p className="text-foreground/90">{entity.summary}</p>}
 
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
@@ -357,75 +377,101 @@ export default function EntityDetail({
           </div>
         </div>
 
-        {/* Portrait / blason */}
-        <div className="flex items-center justify-center">
-          <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-black/20 text-center text-xs text-muted">
+        {/* Suppression + portrait / blason */}
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={handleDeleteEntity}
+            className="self-end text-xs text-muted transition-colors hover:text-danger"
+          >
+            Supprimer la fiche
+          </button>
+          <div className="flex aspect-[3/4] w-full items-center justify-center rounded-2xl border border-border bg-black/20 text-center text-xs text-muted">
             Portrait
           </div>
         </div>
       </div>
 
-      {/* Corps : blocs, toujours editables en place */}
-      <div className="flex flex-col gap-3">
-        {blocks.map((block) => (
-          <div key={block.id} className="card">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <input
-                defaultValue={block.data?.title ?? ""}
-                placeholder={block.block_type}
-                onBlur={(e) => handleUpdateBlock(block.id, { title: e.target.value })}
-                className="block-title flex-1 bg-transparent outline-none placeholder:font-sans placeholder:text-base placeholder:font-normal placeholder:italic placeholder:text-muted focus:border-b focus:border-accent"
-              />
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="chip">{block.block_type}</span>
-                <select
-                  defaultValue={block.visibility}
-                  onChange={(e) => handleUpdateBlock(block.id, { visibility: e.target.value })}
-                  className="rounded-md border border-border bg-black/20 px-1.5 py-0.5 text-[10px] text-foreground outline-none"
-                >
-                  {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => handleDeleteBlock(block.id)}
-                  className="text-xs text-muted transition-colors hover:text-danger"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-
-            {block.block_type === "image" ? (
-              <div className="flex flex-col gap-2">
-                <input
-                  defaultValue={block.data?.content ?? ""}
-                  placeholder="URL de l'image..."
-                  onBlur={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                  className="input-field text-sm"
-                />
-                {block.data?.content ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={block.data.content}
-                    alt={block.data.title ?? "Image"}
-                    className="max-h-72 w-full rounded-md object-contain"
+      {/* Corps : blocs, discrets (pas d'encadre), toujours editables en place */}
+      <div className="flex flex-col">
+        {blocks.map((block) => {
+          const isCollapsed = collapsed.has(block.id);
+          return (
+            <div key={block.id} className="border-b border-border/60 py-4 first:pt-0 last:border-b-0">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="flex flex-1 items-center gap-1.5">
+                  <button
+                    onClick={() => toggleCollapsed(block.id)}
+                    className="shrink-0 text-muted transition-transform hover:text-foreground"
+                    style={{ transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
+                    title={isCollapsed ? "Déplier" : "Replier"}
+                  >
+                    ▾
+                  </button>
+                  <input
+                    defaultValue={block.data?.title ?? ""}
+                    placeholder={block.block_type}
+                    onBlur={(e) => handleUpdateBlock(block.id, { title: e.target.value })}
+                    className="block-title flex-1 bg-transparent outline-none placeholder:font-sans placeholder:text-base placeholder:font-normal placeholder:italic placeholder:text-muted focus:border-b focus:border-accent"
                   />
-                ) : (
-                  <p className="text-xs italic text-muted">Aucune image renseignée.</p>
-                )}
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="chip">{block.block_type}</span>
+                  <select
+                    defaultValue={block.visibility}
+                    onChange={(e) => handleUpdateBlock(block.id, { visibility: e.target.value })}
+                    className="rounded-md border border-border bg-black/20 px-1.5 py-0.5 text-[10px] text-foreground outline-none"
+                  >
+                    {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => handleDeleteBlock(block.id)}
+                    className="text-xs text-muted transition-colors hover:text-danger"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
-            ) : (
-              <RichTextEditor
-                content={block.data?.content ?? ""}
-                placeholder="Ecrire ici..."
-                onBlurSave={(html) => handleUpdateBlock(block.id, { content: html })}
-              />
-            )}
-          </div>
-        ))}
+
+              {!isCollapsed &&
+                (block.block_type === "image" ? (
+                  <div className="flex flex-col gap-2">
+                    <input
+                      defaultValue={block.data?.content ?? ""}
+                      placeholder="URL de l'image..."
+                      onBlur={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                      className="input-field text-sm"
+                    />
+                    {block.data?.content ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={block.data.content}
+                        alt={block.data.title ?? "Image"}
+                        className="max-h-72 w-full rounded-md object-contain"
+                      />
+                    ) : (
+                      <p className="text-xs italic text-muted">Aucune image renseignée.</p>
+                    )}
+                    <input
+                      defaultValue={block.data?.caption ?? ""}
+                      placeholder="Légende..."
+                      onBlur={(e) => handleUpdateBlock(block.id, { caption: e.target.value })}
+                      className="bg-transparent text-center text-xs italic text-muted outline-none focus:border-b focus:border-accent"
+                    />
+                  </div>
+                ) : (
+                  <RichTextEditor
+                    content={block.data?.content ?? ""}
+                    placeholder="Ecrire ici..."
+                    onBlurSave={(html) => handleUpdateBlock(block.id, { content: html })}
+                  />
+                ))}
+            </div>
+          );
+        })}
         {blocks.length === 0 && (
           <p className="py-4 text-center text-xs italic text-muted">
             Aucun bloc. Utilisez la barre ci-dessous pour en ajouter.
