@@ -87,3 +87,16 @@ export async function addRelation(
 
   revalidatePath(`/worlds/${worldId}/entities/${entityId}`);
 }
+
+export async function removeRelation(
+  worldId: string,
+  entityId: string,
+  formData: FormData,
+) {
+  const supabase = await createClient();
+  const relationId = formData.get("relation_id") as string;
+
+  await supabase.from("relations").delete().eq("id", relationId);
+
+  revalidatePath(`/worlds/${worldId}/entities/${entityId}`);
+}
