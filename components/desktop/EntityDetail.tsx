@@ -88,6 +88,7 @@ export default function EntityDetail({
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [previewAsPlayer, setPreviewAsPlayer] = useState(false);
 
   const onLoadedRef = useRef(onLoaded);
   useEffect(() => {
@@ -246,6 +247,12 @@ export default function EntityDetail({
     ]),
   ].sort();
 
+  const isPlayerVisible = (visibility: string) => visibility === "public" || visibility === "joueurs";
+  const visibleBlocks = previewAsPlayer ? blocks.filter((b) => isPlayerVisible(b.visibility)) : blocks;
+  const visibleRelations = previewAsPlayer
+    ? relations.filter((r) => isPlayerVisible(r.visibility))
+    : relations;
+
   const addAliasToEntity = addAlias.bind(null, worldId, entityId);
   const removeAliasFromEntity = removeAlias.bind(null, worldId, entityId);
   const addRelationToEntity = addRelation.bind(null, worldId, entityId);
@@ -253,6 +260,24 @@ export default function EntityDetail({
 
   return (
     <div className="flex flex-col gap-5 p-6">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setPreviewAsPlayer((v) => !v)}
+          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+            previewAsPlayer
+              ? "border-accent bg-accent text-accent-foreground"
+              : "border-border text-muted hover:bg-surface-hover hover:text-foreground"
+          }`}
+        >
+          {previewAsPlayer ? "👁 Aperçu joueur (actif)" : "👁 Aperçu joueur"}
+        </button>
+        {previewAsPlayer && (
+          <span className="text-[10px] italic text-muted">
+            Ce que voit un joueur : lecture seule, blocs/relations « MJ » et « privé » masqués
+          </span>
+        )}
+      </div>
+
       {/* En-tete : titre, proprietes, portrait */}
       <div className="grid grid-cols-4 gap-4 border-b border-border pb-5">
         <div className="col-span-3 flex flex-col gap-3">
@@ -260,6 +285,7 @@ export default function EntityDetail({
             key={entity.id}
             defaultValue={entity.name}
             onBlur={(e) => handleUpdateName(e.target.value)}
+            readOnly={previewAsPlayer}
             className="entity-title bg-transparent outline-none focus:border-b focus:border-accent"
           />
 
@@ -274,6 +300,7 @@ export default function EntityDetail({
               onBlur={(e) => handleUpdateKind(e.target.value)}
               placeholder="type de fiche..."
               list={`entity-kind-suggestions-${entityId}`}
+              readOnly={previewAsPlayer}
               className="w-32 bg-transparent text-xs font-medium text-foreground outline-none placeholder:italic placeholder:text-muted"
             />
             <datalist id={`entity-kind-suggestions-${entityId}`}>
@@ -287,32 +314,40 @@ export default function EntityDetail({
             <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
               Alias :
             </span>
-            {entity.aliases?.map((alias) => (
-              <form key={alias} action={(fd) => withRefresh(removeAliasFromEntity, fd)}>
-                <input type="hidden" name="alias" value={alias} />
-                <button type="submit" className="chip group">
+            {entity.aliases?.map((alias) =>
+              previewAsPlayer ? (
+                <span key={alias} className="chip">
                   {alias}
-                  <span className="chip-remove">×</span>
+                </span>
+              ) : (
+                <form key={alias} action={(fd) => withRefresh(removeAliasFromEntity, fd)}>
+                  <input type="hidden" name="alias" value={alias} />
+                  <button type="submit" className="chip group">
+                    {alias}
+                    <span className="chip-remove">×</span>
+                  </button>
+                </form>
+              ),
+            )}
+            {!previewAsPlayer && (
+              <form
+                action={(fd) => withRefresh(addAliasToEntity, fd)}
+                className="flex items-center gap-1"
+              >
+                <input
+                  name="alias"
+                  type="text"
+                  placeholder="+ ajouter"
+                  className="w-24 rounded-full border border-border bg-transparent px-3 py-1 text-xs text-foreground outline-none focus:border-accent"
+                />
+                <button
+                  type="submit"
+                  className="rounded-full border border-border px-2 py-1 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                >
+                  Ajouter
                 </button>
               </form>
-            ))}
-            <form
-              action={(fd) => withRefresh(addAliasToEntity, fd)}
-              className="flex items-center gap-1"
-            >
-              <input
-                name="alias"
-                type="text"
-                placeholder="+ ajouter"
-                className="w-24 rounded-full border border-border bg-transparent px-3 py-1 text-xs text-foreground outline-none focus:border-accent"
-              />
-              <button
-                type="submit"
-                className="rounded-full border border-border px-2 py-1 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
-              >
-                Ajouter
-              </button>
-            </form>
+            )}
           </div>
 
           {/* Relations : rangees verticales, comme dans le prototype de reference */}
@@ -321,7 +356,7 @@ export default function EntityDetail({
               Relations :
             </span>
             <div className="flex flex-col gap-1.5">
-              {relations.map((relation) => (
+              {visibleRelations.map((relation) => (
                 <div
                   key={relation.id}
                   className="inline-flex w-fit items-center gap-1.5 rounded border border-border bg-black/20 px-2 py-1 text-xs text-muted transition-colors hover:border-accent/30"
@@ -348,20 +383,22 @@ export default function EntityDetail({
                       {relation.otherName}
                     </Link>
                   )}
-                  <form action={(fd) => withRefresh(removeRelationFromEntity, fd)}>
-                    <input type="hidden" name="relation_id" value={relation.id} />
-                    <button type="submit" className="chip-remove ml-1">
-                      ×
-                    </button>
-                  </form>
+                  {!previewAsPlayer && (
+                    <form action={(fd) => withRefresh(removeRelationFromEntity, fd)}>
+                      <input type="hidden" name="relation_id" value={relation.id} />
+                      <button type="submit" className="chip-remove ml-1">
+                        ×
+                      </button>
+                    </form>
+                  )}
                 </div>
               ))}
-              {relations.length === 0 && (
+              {visibleRelations.length === 0 && (
                 <p className="text-xs italic text-muted">Aucune relation pour l&apos;instant.</p>
               )}
             </div>
 
-            {otherEntities.length > 0 && (
+            {!previewAsPlayer && otherEntities.length > 0 && (
               <form
                 action={(fd) => withRefresh(addRelationToEntity, fd)}
                 className="mt-1 flex flex-wrap items-center gap-2"
@@ -405,12 +442,14 @@ export default function EntityDetail({
 
         {/* Suppression + portrait / blason */}
         <div className="flex flex-col gap-2">
-          <button
-            onClick={handleDeleteEntity}
-            className="self-end text-xs text-muted transition-colors hover:text-danger"
-          >
-            Supprimer la fiche
-          </button>
+          {!previewAsPlayer && (
+            <button
+              onClick={handleDeleteEntity}
+              className="self-end text-xs text-muted transition-colors hover:text-danger"
+            >
+              Supprimer la fiche
+            </button>
+          )}
           <div className="flex aspect-[3/4] w-full items-center justify-center rounded-2xl border border-border bg-black/20 text-center text-xs text-muted">
             Portrait
           </div>
@@ -419,7 +458,7 @@ export default function EntityDetail({
 
       {/* Corps : blocs, discrets (pas d'encadre), toujours editables en place */}
       <div className="flex flex-col">
-        {blocks.map((block) => {
+        {visibleBlocks.map((block) => {
           const isCollapsed = collapsed.has(block.id);
           return (
             <div key={block.id} className="border-b border-border/60 py-4 first:pt-0 last:border-b-0">
@@ -437,40 +476,47 @@ export default function EntityDetail({
                     defaultValue={block.data?.title ?? ""}
                     placeholder={block.block_type}
                     onBlur={(e) => handleUpdateBlock(block.id, { title: e.target.value })}
+                    readOnly={previewAsPlayer}
                     className="block-title flex-1 bg-transparent outline-none placeholder:font-sans placeholder:text-base placeholder:font-normal placeholder:italic placeholder:text-muted focus:border-b focus:border-accent"
                   />
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="chip">{block.block_type}</span>
-                  <select
-                    defaultValue={block.visibility}
-                    onChange={(e) => handleUpdateBlock(block.id, { visibility: e.target.value })}
-                    className="rounded-md border border-border bg-black/20 px-1.5 py-0.5 text-[10px] text-foreground outline-none"
-                  >
-                    {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => handleDeleteBlock(block.id)}
-                    className="text-xs text-muted transition-colors hover:text-danger"
-                  >
-                    ×
-                  </button>
+                  {!previewAsPlayer && (
+                    <>
+                      <select
+                        defaultValue={block.visibility}
+                        onChange={(e) => handleUpdateBlock(block.id, { visibility: e.target.value })}
+                        className="rounded-md border border-border bg-black/20 px-1.5 py-0.5 text-[10px] text-foreground outline-none"
+                      >
+                        {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => handleDeleteBlock(block.id)}
+                        className="text-xs text-muted transition-colors hover:text-danger"
+                      >
+                        ×
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
               {!isCollapsed &&
                 (block.block_type === "image" ? (
                   <div className="flex flex-col gap-2">
-                    <input
-                      defaultValue={block.data?.content ?? ""}
-                      placeholder="URL de l'image..."
-                      onBlur={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                      className="input-field text-sm"
-                    />
+                    {!previewAsPlayer && (
+                      <input
+                        defaultValue={block.data?.content ?? ""}
+                        placeholder="URL de l'image..."
+                        onBlur={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                        className="input-field text-sm"
+                      />
+                    )}
                     {block.data?.content ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -485,9 +531,15 @@ export default function EntityDetail({
                       defaultValue={block.data?.caption ?? ""}
                       placeholder="Légende..."
                       onBlur={(e) => handleUpdateBlock(block.id, { caption: e.target.value })}
+                      readOnly={previewAsPlayer}
                       className="bg-transparent text-center text-xs italic text-muted outline-none focus:border-b focus:border-accent"
                     />
                   </div>
+                ) : previewAsPlayer ? (
+                  <div
+                    className="prose-editor"
+                    dangerouslySetInnerHTML={{ __html: block.data?.content ?? "" }}
+                  />
                 ) : (
                   <RichTextEditor
                     content={block.data?.content ?? ""}
@@ -498,14 +550,17 @@ export default function EntityDetail({
             </div>
           );
         })}
-        {blocks.length === 0 && (
+        {visibleBlocks.length === 0 && (
           <p className="py-4 text-center text-xs italic text-muted">
-            Aucun bloc. Utilisez la barre ci-dessous pour en ajouter.
+            {previewAsPlayer
+              ? "Aucun bloc visible par un joueur."
+              : "Aucun bloc. Utilisez la barre ci-dessous pour en ajouter."}
           </p>
         )}
       </div>
 
       {/* Barre d'ajout de bloc : clic = creation immediate, edition en place ensuite */}
+      {!previewAsPlayer && (
       <div className="flex flex-col gap-2 border-t border-border pt-4">
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted">
           Ajouter un bloc :
@@ -522,16 +577,19 @@ export default function EntityDetail({
           ))}
         </div>
       </div>
+      )}
 
-      {/* Tiroir JSON brut, replie par defaut */}
-      <details className="rounded-lg border border-border">
-        <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-muted hover:text-foreground">
-          Code JSON brut de la fiche
-        </summary>
-        <pre className="max-h-64 overflow-auto border-t border-border bg-black/30 p-3 font-mono text-[11px] text-foreground/70">
-          {JSON.stringify({ entity, blocks, relations }, null, 2)}
-        </pre>
-      </details>
+      {/* Tiroir JSON brut, replie par defaut (masque en apercu joueur : il expose tout, non filtre) */}
+      {!previewAsPlayer && (
+        <details className="rounded-lg border border-border">
+          <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-muted hover:text-foreground">
+            Code JSON brut de la fiche
+          </summary>
+          <pre className="max-h-64 overflow-auto border-t border-border bg-black/30 p-3 font-mono text-[11px] text-foreground/70">
+            {JSON.stringify({ entity, blocks, relations }, null, 2)}
+          </pre>
+        </details>
+      )}
     </div>
   );
 }

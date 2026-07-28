@@ -68,6 +68,7 @@ Audit du code de `C:\Users\Gabriel\.gemini\antigravity\scratch\dnd-companion` (2
 - [ ] "Créer comme carte" / "Lien vers une carte" depuis la sélection de texte (créer une nouvelle entité ou lier une entité existante) — mis de côté volontairement lors de l'ajout de la bulle de mise en forme, nécessite une recherche d'entités + création, brique à part
 - [ ] Portrait d'entité : vrai téléversement d'image (actuellement un simple cadre "Portrait" sans upload) — bloqué par le stockage de fichiers (Supabase Storage, voir Général/Infrastructure) ; la zone doit garder un ratio fixe (3/4) quelle que soit la taille de la fenêtre, déjà en place côté CSS
 - [ ] Bloc généalogie / arbre familial — à terme, pas urgent : entité liée par des relations typées avec un vocabulaire dédié (soeur, frère, adelphe, parent, cousin, oncle...) et une visualisation en arbre plutôt qu'en étiquettes plates. Implique : une liste de types de relation "famille" distincte de la liste libre actuelle, et un rendu graphique (au-delà du graphe de connaissances déjà listé plus bas)
+- [ ] Réorganiser les blocs par glisser-déposer (actuellement l'ordre suit `display_order`, fixé à la création, aucune UI pour le changer)
 - [ ] Éditeur de `narrative_content` avec segments de visibilité (distinct des blocs, pas commencé)
 - [ ] Liens automatiques dans le texte (détection de mentions/alias) — question ouverte non résolue dans le PDD (faux positifs)
 - [ ] Graphe de connaissances (visualisation des `relations`, au-delà des étiquettes)
