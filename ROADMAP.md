@@ -44,10 +44,15 @@ Audit du code de `C:\Users\Gabriel\.gemini\antigravity\scratch\dnd-companion` (2
 - [x] App Next.js initialisée (TypeScript, App Router, Tailwind)
 - [x] Authentification par email/mot de passe (inscription, confirmation email, connexion, déconnexion)
 - [x] Résolution de visibilité côté serveur pour les blocs et les relations (public/joueurs/MJ/privé), au niveau RLS (`can_view_visibility`, `is_campaign_mj`) — vérifié par simulation d'un joueur et d'un co-MJ ; un bouton "Aperçu joueur" sur la fiche permet de voir l'effet sans compte de test. Reste à faire : la même résolution pour `narrative_content` une fois cet éditeur construit (voir Wiki)
-- [ ] Stockage de fichiers/images (Supabase Storage)
-- [ ] Recherche globale (noms, alias, tags, contenu)
+- [ ] Stockage de fichiers/images (Supabase Storage) — vérifié le 2026-07-29 : aucun bucket créé, rien construit
+- [ ] Recherche globale (noms, alias, tags, contenu) — la barre latérale ne filtre que par nom, sur la liste déjà chargée
 - [ ] Détection automatique de liens entre fiches (alias)
 - [ ] Lien de partage du wiki sans compte, en lecture seule (PDD 4.2) — nécessite un mécanisme à jeton, distinct de l'auth actuelle
+
+### Dette technique identifiée (audit du 2026-07-29)
+
+- [ ] `app/worlds/[id]/entities/[entityId]/page.tsx` — page de fiche autonome (hors bureau à fenêtres), devenue orpheline : plus aucun lien de l'appli n'y mène (`EntityDetail` reçoit toujours `onOpenEntity` depuis `WorldDesktop`, donc les relations s'ouvrent en fenêtre, pas via cette route). Reste accessible seulement en tapant l'URL à la main, avec une présentation non alignée sur le reste (pas de barre latérale, pas d'apercu joueur). À supprimer ou rediriger vers `/worlds/[id]`.
+- [ ] `app/worlds/new/page.tsx` — le choix du ruleset par défaut utilise encore un `<select>` natif ; incohérent avec `Dropdown.tsx`/`Combobox.tsx` désormais utilisés partout ailleurs. Impact mineur (page pleine, pas de fenêtre qui la découpe), mais à harmoniser à l'occasion.
 
 ## Wiki (fiches et base de connaissances)
 
@@ -112,9 +117,9 @@ Constat général : ce bloc a besoin d'un `data` jsonb structuré et documenté 
 - [x] Créer un monde (UI), avec choix du système de règles par défaut (2014 / 2024)
 - [ ] Modifier le système de règles d'un monde après sa création
 - [ ] Modifier/dériver un système de règles (variante liée par `parent_ruleset_id`)
-- [ ] Créer une campagne, inviter des joueurs
+- [ ] Créer une campagne, inviter des joueurs — table `campaigns`/`campaign_members` prête et testée par simulation SQL directe (voir Général/Infrastructure), mais **aucune UI** ; 0 campagne réelle en base au 2026-07-29. Tant que ça n'existe pas, "joueur" reste un rôle jamais réellement testé par un second compte humain
 - [ ] Créer des personnages et PNJ
-- [ ] Gérer les secrets et la visibilité par bloc
+- [x] Gérer les secrets et la visibilité par bloc — fait le 2026-07-28 (résolution serveur + bouton "Aperçu joueur", voir Général/Infrastructure) ; ce qui manque est l'UI d'invitation ci-dessus, pas le mécanisme de visibilité lui-même
 - [ ] Générateurs (noms, rencontres, PNJ) — IA
 - [ ] Préparer des rencontres, gérer l'initiative
 - [ ] Partager un lien de wiki en lecture seule
@@ -137,7 +142,7 @@ Constat général : ce bloc a besoin d'un `data` jsonb structuré et documenté 
 ## Moteur de règles
 
 - [x] Import brut des SRD 2014/2024 (`rulesets` + `ruleset_entries`, vue structurée = enregistrement source complet)
-- [ ] Mini-langage de formules : parser fermé (grammaire section 12 du schéma technique), jamais d'`eval()`
+- [ ] Mini-langage de formules : parser fermé (grammaire section 12 du schéma technique), jamais d'`eval()` — **dépendance partagée** : le bloc personnage (modificateurs, CA, jets de sauvegarde) et toute variante de règles en ont besoin ; à construire une fois, avant eux, plutôt que redécouvert au milieu du bloc personnage
 - [ ] Éditeur de règles : langage naturel → structure via IA
 - [ ] Versionnage/héritage utilisé en pratique dans l'UI (`parent_ruleset_id` existe en base, pas encore exploité)
 - [ ] Révisions mécaniques d'entité utilisées en pratique (`entity_mechanical_revisions` existe en base, pas encore exploité)
@@ -150,6 +155,8 @@ Constat général : ce bloc a besoin d'un `data` jsonb structuré et documenté 
   - [ ] Phase 3 : favoris par monde, recherche plein texte sur la description
 
 ## Assistant IA
+
+**Bloqué en amont par une décision non prise** (question ouverte PDD section 24) : quel(s) modèle(s)/fournisseur(s) ? Aucune dépendance IA (SDK Anthropic/OpenAI...) n'est présente dans `package.json` au 2026-07-29 — rien n'a encore été entamé techniquement, pas même une clé d'API branchée. À trancher avant de commencer n'importe quel point ci-dessous.
 
 - [ ] Génération contextuelle de texte (continuer un champ en cours d'écriture)
 - [ ] Recherche de contexte minimal (n'envoyer que les données pertinentes au modèle)
