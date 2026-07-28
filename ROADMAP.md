@@ -13,9 +13,9 @@ Statuts : `[x]` fait · `[~]` en cours / partiel · `[ ]` pas commencé
 Audit du code de `C:\Users\Gabriel\.gemini\antigravity\scratch\dnd-companion` (2026-07-28) : ce qui existe là-bas et pas encore chez nous, avec une priorité d'implémentation. Rappel : on ne recopie pas ce code (voir [[antigravity_prototype]] / mémoire — architecture 100% client/localStorage incompatible avec notre modèle serveur+RLS), seulement l'idée, adaptée à notre schéma.
 
 **Priorité haute :**
-- **Blocs structurés par type** (`BlockRenderer.tsx`) — chez eux, un bloc `personnage` a de vrais champs (STR/DEX/CON/INT/SAG/CHA, PV, CA, bonus de maîtrise, jets de dés). Chez nous, un bloc reste `data.content` en texte libre quel que soit le type. C'est le plus gros écart sur "comment est construite une fiche" et le plus utile pour jouer réellement. Proposition détaillée plus bas.
+- **Blocs structurés par type** (`BlockRenderer.tsx`) — chez eux, un bloc `personnage` a de vrais champs (STR/DEX/CON/INT/SAG/CHA, PV, CA, bonus de maîtrise, jets de dés). Chez nous, un bloc a un titre + du texte enrichi (fait le 2026-07-28, voir Wiki ci-dessous), mais pas encore de champs structurés par type. C'est le plus gros écart restant sur "comment est construite une fiche" et le plus utile pour jouer réellement.
 - **Résolution de visibilité côté serveur** (déjà listée en Général/Infrastructure) — chez eux le filtrage MJ/joueur est réimplémenté à la main dans chaque composant client (`isSecret`), jamais appliqué côté serveur. On a dit dès le schéma technique qu'on ferait mieux (jamais confier ça au client) — reste à construire.
-- **Éditer/supprimer une entité ou un bloc** (déjà listée) — seule la création fonctionne actuellement.
+- ~~**Éditer/supprimer une entité ou un bloc**~~ — fait le 2026-07-28 (voir Wiki ci-dessous).
 - **Compendium de consultation du SRD** (déjà listée, section Moteur de règles) — `CompendiumPortal.tsx` : grille de cartes filtrables par catégorie (Sorts/Classes/Espèces/Origines/Combat) + recherche. On a 3653 entrées SRD importées et aucune page pour les parcourir.
 
 **Priorité moyenne :**
@@ -57,8 +57,8 @@ Audit du code de `C:\Users\Gabriel\.gemini\antigravity\scratch\dnd-companion` (2
 - [x] Ajouter un bloc à une entité (type libre, contenu, visibilité)
 - [x] Alias en étiquettes (ajout/suppression)
 - [x] Relations entre entités : étiquettes cliquables (dans les deux sens), formulaire de création — première UI pour la table `relations`
-- [ ] Éditer/supprimer une entité ou un bloc existant (seule la création marche pour l'instant)
-- [~] Blocs modulaires : système générique en place (`data.content` texte libre) ; pas encore d'éditeurs dédiés par type (personnage, inventaire, biologie...)
+- [x] Éditer/supprimer une entité ou un bloc existant — blocs toujours éditables en place (titre libre + Tiptap : gras/italique/titre/liste, sauvegarde au blur), suppression de bloc et de fiche
+- [~] Blocs modulaires : titre + texte enrichi en place pour tous les types ; pas encore de champs structurés dédiés par type (personnage, inventaire, biologie...) — voir audit antigravity en tête de document
 - [ ] Éditeur de `narrative_content` avec segments de visibilité (distinct des blocs, pas commencé)
 - [ ] Liens automatiques dans le texte (détection de mentions/alias) — question ouverte non résolue dans le PDD (faux positifs)
 - [ ] Graphe de connaissances (visualisation des `relations`, au-delà des étiquettes)
