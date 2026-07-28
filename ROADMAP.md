@@ -58,7 +58,11 @@ Audit du code de `C:\Users\Gabriel\.gemini\antigravity\scratch\dnd-companion` (2
 - [x] Alias en étiquettes (ajout/suppression)
 - [x] Relations entre entités : étiquettes cliquables (dans les deux sens), formulaire de création — première UI pour la table `relations`
 - [x] Éditer/supprimer une entité ou un bloc existant — blocs toujours éditables en place (titre libre + Tiptap : gras/italique/titre/liste, sauvegarde au blur), suppression de bloc et de fiche
+- [x] Bulle de mise en forme flottante (apparaît à la sélection) : type de texte (paragraphe/titre 1/2/3), gras, italique, souligné, barré, lien externe, couleur du texte, spoiler, masquer aux joueurs (ces deux derniers : marques visuelles pour l'auteur seulement, pas encore de filtrage réel côté joueur — dépend de la résolution de visibilité serveur)
+- [x] Blocs "texte" (générique) et "image" (URL + aperçu, pas d'upload réel) ajoutés aux types disponibles
+- [x] Hiérarchie de tailles cohérente : titre de fiche 30px > titre de bloc 24px > H1/H2/H3 (20.8/18/16px) > paragraphe 14px (≥ 12px demandé)
 - [~] Blocs modulaires : titre + texte enrichi en place pour tous les types ; pas encore de champs structurés dédiés par type (personnage, inventaire, biologie...) — voir audit antigravity en tête de document
+- [ ] "Créer comme carte" / "Lien vers une carte" depuis la sélection de texte (créer une nouvelle entité ou lier une entité existante) — mis de côté volontairement lors de l'ajout de la bulle de mise en forme, nécessite une recherche d'entités + création, brique à part
 - [ ] Éditeur de `narrative_content` avec segments de visibilité (distinct des blocs, pas commencé)
 - [ ] Liens automatiques dans le texte (détection de mentions/alias) — question ouverte non résolue dans le PDD (faux positifs)
 - [ ] Graphe de connaissances (visualisation des `relations`, au-delà des étiquettes)
