@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import WindowFrame, { type WindowGeometry } from "./WindowFrame";
 import EntityDetail from "./EntityDetail";
 import { entityKindColor } from "@/lib/entityKindColors";
@@ -32,6 +33,7 @@ export default function WorldDesktop({
   worldName: string;
   entities: EntitySummary[];
 }) {
+  const router = useRouter();
   const [windows, setWindows] = useState<EntityWindow[]>([]);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const desktopRef = useRef<HTMLDivElement>(null);
@@ -135,7 +137,15 @@ export default function WorldDesktop({
             onClose={() => closeWindow(win.entityId)}
             onUpdate={(updates) => updateWindow(win.entityId, updates)}
           >
-            <EntityDetail worldId={worldId} entityId={win.entityId} onOpenEntity={openWindow} />
+            <EntityDetail
+              worldId={worldId}
+              entityId={win.entityId}
+              onOpenEntity={openWindow}
+              onDeleted={() => {
+                closeWindow(win.entityId);
+                router.refresh();
+              }}
+            />
           </WindowFrame>
         ))}
       </div>

@@ -2,15 +2,20 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   addAlias,
   addBlock,
   addRelation,
+  deleteBlock,
+  deleteEntity,
   removeAlias,
   removeRelation,
+  updateBlock,
 } from "@/lib/actions/entities";
 import { entityKindColor } from "@/lib/entityKindColors";
+import RichTextEditor from "./RichTextEditor";
 
 const VISIBILITY_LABELS: Record<string, string> = {
   public: "Public",
@@ -41,7 +46,7 @@ type Entity = {
 type Block = {
   id: string;
   block_type: string;
-  data: { content?: string } | Record<string, unknown>;
+  data: { title?: string; content?: string };
   visibility: string;
   display_order: number;
 };
@@ -61,19 +66,21 @@ export default function EntityDetail({
   entityId,
   onOpenEntity,
   onLoaded,
+  onDeleted,
 }: {
   worldId: string;
   entityId: string;
   onOpenEntity?: (entityId: string, name: string, entityKind: string | null) => void;
   onLoaded?: (entity: { name: string; entity_kind: string | null }) => void;
+  onDeleted?: () => void;
 }) {
+  const router = useRouter();
   const [entity, setEntity] = useState<Entity | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [relations, setRelations] = useState<RelationRow[]>([]);
   const [otherEntities, setOtherEntities] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [pendingBlockType, setPendingBlockType] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -151,13 +158,40 @@ export default function EntityDetail({
   useEffect(() => {
     setLoading(true);
     setNotFound(false);
-    setPendingBlockType(null);
     load();
   }, [load]);
 
   async function withRefresh(action: (formData: FormData) => Promise<void>, formData: FormData) {
     await action(formData);
     await load();
+  }
+
+  async function handleAddBlock(blockType: string) {
+    await addBlock(worldId, entityId, blockType);
+    await load();
+  }
+
+  async function handleUpdateBlock(
+    blockId: string,
+    updates: { title?: string; content?: string; visibility?: string },
+  ) {
+    await updateBlock(worldId, entityId, blockId, updates);
+  }
+
+  async function handleDeleteBlock(blockId: string) {
+    await deleteBlock(worldId, entityId, blockId);
+    await load();
+  }
+
+  async function handleDeleteEntity() {
+    if (!entity) return;
+    if (!confirm(`Supprimer définitivement "${entity.name}" ?`)) return;
+    await deleteEntity(worldId, entityId);
+    if (onDeleted) {
+      onDeleted();
+    } else {
+      router.push(`/worlds/${worldId}`);
+    }
   }
 
   if (loading) {
@@ -172,15 +206,20 @@ export default function EntityDetail({
   const removeAliasFromEntity = removeAlias.bind(null, worldId, entityId);
   const addRelationToEntity = addRelation.bind(null, worldId, entityId);
   const removeRelationFromEntity = removeRelation.bind(null, worldId, entityId);
-  const addBlockToEntity = addBlock.bind(null, worldId, entityId);
 
   return (
     <div className="flex flex-col gap-5 p-6">
       {/* En-tete : titre, proprietes, portrait */}
       <div className="grid grid-cols-4 gap-4 border-b border-border pb-5">
         <div className="col-span-3 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">{entity.name}</h1>
+            <button
+              onClick={handleDeleteEntity}
+              className="text-xs text-muted transition-colors hover:text-danger"
+            >
+              Supprimer la fiche
+            </button>
           </div>
 
           {entity.entity_kind && (
@@ -323,19 +362,43 @@ export default function EntityDetail({
         </div>
       </div>
 
-      {/* Corps : blocs */}
+      {/* Corps : blocs, toujours editables en place */}
       <div className="flex flex-col gap-3">
         {blocks.map((block) => (
           <div key={block.id} className="card">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-foreground">{block.block_type}</span>
-              <span className="chip">
-                {VISIBILITY_LABELS[block.visibility] ?? block.visibility}
-              </span>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <input
+                defaultValue={block.data?.title ?? ""}
+                placeholder={block.block_type}
+                onBlur={(e) => handleUpdateBlock(block.id, { title: e.target.value })}
+                className="flex-1 bg-transparent font-display text-sm font-bold text-foreground outline-none placeholder:font-sans placeholder:font-normal placeholder:italic placeholder:text-muted focus:border-b focus:border-accent"
+              />
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="chip">{block.block_type}</span>
+                <select
+                  defaultValue={block.visibility}
+                  onChange={(e) => handleUpdateBlock(block.id, { visibility: e.target.value })}
+                  className="rounded-md border border-border bg-black/20 px-1.5 py-0.5 text-[10px] text-foreground outline-none"
+                >
+                  {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => handleDeleteBlock(block.id)}
+                  className="text-xs text-muted transition-colors hover:text-danger"
+                >
+                  ×
+                </button>
+              </div>
             </div>
-            <p className="mt-1 whitespace-pre-wrap text-sm text-foreground/80">
-              {(block.data as { content?: string })?.content ?? JSON.stringify(block.data)}
-            </p>
+            <RichTextEditor
+              content={block.data?.content ?? ""}
+              placeholder="Ecrire ici..."
+              onBlurSave={(html) => handleUpdateBlock(block.id, { content: html })}
+            />
           </div>
         ))}
         {blocks.length === 0 && (
@@ -345,7 +408,7 @@ export default function EntityDetail({
         )}
       </div>
 
-      {/* Barre d'ajout de bloc, façon barre d'outils compacte */}
+      {/* Barre d'ajout de bloc : clic = creation immediate, edition en place ensuite */}
       <div className="flex flex-col gap-2 border-t border-border pt-4">
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted">
           Ajouter un bloc :
@@ -354,54 +417,13 @@ export default function EntityDetail({
           {BLOCK_TYPE_PRESETS.map((type) => (
             <button
               key={type}
-              onClick={() => setPendingBlockType(type)}
+              onClick={() => handleAddBlock(type)}
               className="chip transition-colors hover:border-accent/40 hover:bg-surface-hover"
             >
               + {type}
             </button>
           ))}
         </div>
-
-        {pendingBlockType && (
-          <form
-            action={async (fd) => {
-              await withRefresh(addBlockToEntity, fd);
-              setPendingBlockType(null);
-            }}
-            className="mt-1 flex flex-col gap-2 rounded-lg border border-border bg-black/10 p-3"
-          >
-            <input type="hidden" name="block_type" value={pendingBlockType} />
-            <div className="flex items-center gap-2 text-xs text-muted">
-              Type : <span className="chip">{pendingBlockType}</span>
-            </div>
-            <textarea
-              name="content"
-              rows={3}
-              required
-              autoFocus
-              placeholder="Contenu du bloc..."
-              className="input-field text-sm"
-            />
-            <div className="flex items-center gap-2">
-              <select name="visibility" defaultValue="public" className="input-field text-xs">
-                <option value="public">Public</option>
-                <option value="joueurs">Joueurs</option>
-                <option value="mj">MJ uniquement</option>
-                <option value="prive">Privé</option>
-              </select>
-              <button type="submit" className="btn-accent text-xs">
-                Ajouter
-              </button>
-              <button
-                type="button"
-                onClick={() => setPendingBlockType(null)}
-                className="text-xs text-muted hover:text-foreground"
-              >
-                Annuler
-              </button>
-            </div>
-          </form>
-        )}
       </div>
 
       {/* Tiroir JSON brut, replie par defaut */}
