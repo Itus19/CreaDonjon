@@ -16,7 +16,7 @@ Audit du code de `C:\Users\Gabriel\.gemini\antigravity\scratch\dnd-companion` (2
 - **Blocs structurés par type** (`BlockRenderer.tsx`) — chez eux, un bloc `personnage` a de vrais champs (STR/DEX/CON/INT/SAG/CHA, PV, CA, bonus de maîtrise, jets de dés). Chez nous, un bloc a un titre + du texte enrichi (fait le 2026-07-28, voir Wiki ci-dessous), mais pas encore de champs structurés par type. C'est le plus gros écart restant sur "comment est construite une fiche" et le plus utile pour jouer réellement.
 - ~~**Résolution de visibilité côté serveur**~~ — fait le 2026-07-28 pour les blocs et relations (voir Général/Infrastructure ci-dessous) ; chez eux ce filtrage restait réimplémenté à la main côté client (`isSecret`), jamais appliqué côté serveur — nous l'avons désormais en RLS, jamais confié au client.
 - ~~**Éditer/supprimer une entité ou un bloc**~~ — fait le 2026-07-28 (voir Wiki ci-dessous).
-- **Compendium de consultation du SRD** (déjà listée, section Moteur de règles) — `CompendiumPortal.tsx` : grille de cartes filtrables par catégorie (Sorts/Classes/Espèces/Origines/Combat) + recherche. On a 3653 entrées SRD importées et aucune page pour les parcourir.
+- ~~**Compendium de consultation du SRD**~~ — Phase 1 faite le 2026-07-28 (voir Moteur de règles ci-dessous) : onglet dans la barre latérale, pas de page à part.
 
 **Priorité moyenne :**
 - **Dossiers de la barre latérale + glisser-déposer** (`Sidebar.tsx`) — chez eux : 15 dossiers par défaut (rattachement par préfixe d'id), dossiers personnalisés, réordonnancement en drag-and-drop, onglets Monde/Règles séparés, recherche. Notre barre latérale actuelle (groupement plat par `entity_kind`) couvre le besoin de base ; ceci n'est utile que si un monde grossit beaucoup.
@@ -141,7 +141,9 @@ Constat général : ce bloc a besoin d'un `data` jsonb structuré et documenté 
 - [ ] Éditeur de règles : langage naturel → structure via IA
 - [ ] Versionnage/héritage utilisé en pratique dans l'UI (`parent_ruleset_id` existe en base, pas encore exploité)
 - [ ] Révisions mécaniques d'entité utilisées en pratique (`entity_mechanical_revisions` existe en base, pas encore exploité)
-- [ ] Compendium : page de consultation des `ruleset_entries` (sorts/classes/monstres...) — inspiré du `CompendiumPortal` du prototype antigravity, rien construit encore pour parcourir les 3653 entrées SRD déjà importées
+- [x] Compendium (Phase 1) : onglet "Règles" dans la barre latérale (bascule avec "Fiches"), catégories regroupant les `entry_type` bruts (Sorts/Classes/Espèces/Origines/Monstres/Objets/Dons/Traits/Compétences/Référence — "features" et "levels" volontairement exclus, ce sont des tables de progression, pas des entrées consultables), sélecteur de ruleset 2014/2024, recherche par nom, fenêtre de détail en lecture seule avec rendu générique clé/valeur. Découverte au passage : `human_readable.desc` est de forme incohérente selon les entrées (array, string ou null) — normalisé côté client, mais bon signal que `structured_data` mériterait des rendus dédiés par type plutôt que le fallback générique (Phase 2, voir plus haut)
+  - [ ] Phase 2 : rendu détaillé sur-mesure (sorts, monstres, objets), liens croisés entre entrées, lien depuis un bloc personnage
+  - [ ] Phase 3 : favoris par monde, recherche plein texte sur la description
 
 ## Assistant IA
 

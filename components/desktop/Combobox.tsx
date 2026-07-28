@@ -22,7 +22,9 @@ export default function Combobox({
 }) {
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
-  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [rect, setRect] = useState<{ left: number; width: number; top?: number; bottom?: number } | null>(
+    null,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
 
   const filtered = suggestions.filter((s) => s.toLowerCase().includes(value.toLowerCase()));
@@ -30,7 +32,14 @@ export default function Combobox({
   function openList() {
     if (inputRef.current) {
       const r = inputRef.current.getBoundingClientRect();
-      setRect({ top: r.bottom + 4, left: r.left, width: r.width });
+      const estimatedHeight = Math.min(192, filtered.length * 32 + 8);
+      const spaceBelow = window.innerHeight - r.bottom;
+      const openUpward = spaceBelow < estimatedHeight && r.top > spaceBelow;
+      setRect({
+        left: r.left,
+        width: r.width,
+        ...(openUpward ? { bottom: window.innerHeight - r.top + 4 } : { top: r.bottom + 4 }),
+      });
     }
     setOpen(true);
   }
@@ -65,7 +74,7 @@ export default function Combobox({
         createPortal(
           <div
             className="fixed z-[1000] max-h-48 overflow-auto rounded-md border border-border bg-surface shadow-2xl"
-            style={{ top: rect.top, left: rect.left, minWidth: rect.width }}
+            style={{ top: rect.top, bottom: rect.bottom, left: rect.left, minWidth: rect.width }}
           >
             {filtered.map((s) => (
               <button

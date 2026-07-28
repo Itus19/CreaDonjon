@@ -18,7 +18,9 @@ export default function Dropdown({
 }) {
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
-  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [rect, setRect] = useState<{ left: number; width: number; top?: number; bottom?: number } | null>(
+    null,
+  );
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +38,14 @@ export default function Dropdown({
   function toggle() {
     if (!open && triggerRef.current) {
       const r = triggerRef.current.getBoundingClientRect();
-      setRect({ top: r.bottom + 4, left: r.left, width: r.width });
+      const estimatedHeight = Math.min(240, options.length * 32 + 8);
+      const spaceBelow = window.innerHeight - r.bottom;
+      const openUpward = spaceBelow < estimatedHeight && r.top > spaceBelow;
+      setRect({
+        left: r.left,
+        width: r.width,
+        ...(openUpward ? { bottom: window.innerHeight - r.top + 4 } : { top: r.bottom + 4 }),
+      });
     }
     setOpen((v) => !v);
   }
@@ -69,7 +78,7 @@ export default function Dropdown({
           <div
             ref={panelRef}
             className="fixed z-[1000] max-h-60 overflow-auto rounded-md border border-border bg-surface shadow-2xl"
-            style={{ top: rect.top, left: rect.left, minWidth: rect.width }}
+            style={{ top: rect.top, bottom: rect.bottom, left: rect.left, minWidth: rect.width }}
           >
             {options.map((opt) => (
               <button
