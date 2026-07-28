@@ -398,10 +398,7 @@ export default function EntityDetail({
             </span>
             <div className="flex flex-col gap-1.5">
               {visibleRelations.map((relation) => (
-                <div
-                  key={relation.id}
-                  className="inline-flex w-fit items-center gap-1.5 rounded border border-border bg-black/20 px-2 py-1 text-xs text-muted transition-colors hover:border-accent/30"
-                >
+                <div key={relation.id} className="chip w-fit gap-1.5 transition-colors hover:border-accent/30">
                   <span
                     className="h-1.5 w-1.5 shrink-0 rounded-full"
                     style={{ background: entityKindColor(relation.otherKind) }}
@@ -541,7 +538,7 @@ export default function EntityDetail({
                         defaultValue={block.visibility}
                         onChange={(v) => handleUpdateBlock(block.id, { visibility: v })}
                         options={Object.entries(VISIBILITY_LABELS).map(([value, label]) => ({ value, label }))}
-                        className="rounded-md border border-border bg-black/20 px-1.5 py-0.5 text-[10px] text-foreground outline-none"
+                        className="chip transition-colors hover:border-accent/40 hover:bg-surface-hover"
                       />
                       <button
                         onClick={() => handleDeleteBlock(block.id)}
