@@ -25,6 +25,8 @@ const VISIBILITY_LABELS: Record<string, string> = {
 };
 
 const BLOCK_TYPE_PRESETS = [
+  "texte",
+  "image",
   "personnage",
   "biologie",
   "inventaire",
@@ -176,6 +178,7 @@ export default function EntityDetail({
     updates: { title?: string; content?: string; visibility?: string },
   ) {
     await updateBlock(worldId, entityId, blockId, updates);
+    await load();
   }
 
   async function handleDeleteBlock(blockId: string) {
@@ -213,7 +216,7 @@ export default function EntityDetail({
       <div className="grid grid-cols-4 gap-4 border-b border-border pb-5">
         <div className="col-span-3 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">{entity.name}</h1>
+            <h1 className="entity-title">{entity.name}</h1>
             <button
               onClick={handleDeleteEntity}
               className="text-xs text-muted transition-colors hover:text-danger"
@@ -371,7 +374,7 @@ export default function EntityDetail({
                 defaultValue={block.data?.title ?? ""}
                 placeholder={block.block_type}
                 onBlur={(e) => handleUpdateBlock(block.id, { title: e.target.value })}
-                className="flex-1 bg-transparent font-display text-sm font-bold text-foreground outline-none placeholder:font-sans placeholder:font-normal placeholder:italic placeholder:text-muted focus:border-b focus:border-accent"
+                className="block-title flex-1 bg-transparent outline-none placeholder:font-sans placeholder:text-base placeholder:font-normal placeholder:italic placeholder:text-muted focus:border-b focus:border-accent"
               />
               <div className="flex shrink-0 items-center gap-2">
                 <span className="chip">{block.block_type}</span>
@@ -394,11 +397,33 @@ export default function EntityDetail({
                 </button>
               </div>
             </div>
-            <RichTextEditor
-              content={block.data?.content ?? ""}
-              placeholder="Ecrire ici..."
-              onBlurSave={(html) => handleUpdateBlock(block.id, { content: html })}
-            />
+
+            {block.block_type === "image" ? (
+              <div className="flex flex-col gap-2">
+                <input
+                  defaultValue={block.data?.content ?? ""}
+                  placeholder="URL de l'image..."
+                  onBlur={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                  className="input-field text-sm"
+                />
+                {block.data?.content ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={block.data.content}
+                    alt={block.data.title ?? "Image"}
+                    className="max-h-72 w-full rounded-md object-contain"
+                  />
+                ) : (
+                  <p className="text-xs italic text-muted">Aucune image renseignée.</p>
+                )}
+              </div>
+            ) : (
+              <RichTextEditor
+                content={block.data?.content ?? ""}
+                placeholder="Ecrire ici..."
+                onBlurSave={(html) => handleUpdateBlock(block.id, { content: html })}
+              />
+            )}
           </div>
         ))}
         {blocks.length === 0 && (

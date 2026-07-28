@@ -189,10 +189,29 @@ h1, h2, h3 {
   }
 }
 
+/*
+  Hierarchie de tailles (du plus grand au plus petit):
+  titre de fiche (.entity-title) > titre de bloc (.block-title)
+  > H1 > H2 > H3 (dans le texte enrichi) > paragraphe (.prose-editor, 14px, >= 12px demandes)
+*/
+.entity-title {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.875rem; /* 30px */
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+.block-title {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.5rem; /* 24px */
+  font-weight: 700;
+  color: var(--foreground);
+}
+
 .prose-editor {
   outline: none;
   min-height: 1.75rem;
-  font-size: 0.9rem;
+  font-size: 0.875rem; /* 14px, au-dessus du minimum de 12px demande */
   line-height: 1.6;
   color: var(--foreground);
   opacity: 0.9;
@@ -203,21 +222,58 @@ h1, h2, h3 {
 .prose-editor p:last-child {
   margin-bottom: 0;
 }
+.prose-editor h1 {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.3rem; /* 20.8px */
+  font-weight: 700;
+  margin: 0.6rem 0 0.3rem 0;
+  color: var(--foreground);
+}
+.prose-editor h2 {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.125rem; /* 18px */
+  font-weight: 700;
+  margin: 0.55rem 0 0.3rem 0;
+  color: var(--foreground);
+}
 .prose-editor h3 {
   font-family: var(--font-display), sans-serif;
-  font-size: 1.05rem;
+  font-size: 1rem; /* 16px */
   font-weight: 700;
   margin: 0.5rem 0 0.25rem 0;
   color: var(--foreground);
 }
-.prose-editor ul {
-  list-style-type: disc;
+.prose-editor ul,
+.prose-editor ol {
   padding-left: 1.25rem;
   margin-bottom: 0.5rem;
+}
+.prose-editor ul {
+  list-style-type: disc;
+}
+.prose-editor ol {
+  list-style-type: decimal;
 }
 .prose-editor strong {
   font-weight: 700;
   color: var(--foreground);
+}
+.prose-editor a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-editor :is(.mark-spoiler) {
+  background: rgba(var(--accent-rgb), 0.12);
+  border-bottom: 1px dashed rgba(var(--accent-rgb), 0.5);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+.prose-editor :is(.mark-mj-hidden) {
+  background: rgba(124, 58, 237, 0.1);
+  border-bottom: 1px dashed rgba(167, 139, 250, 0.5);
+  border-radius: 2px;
+  padding: 0 2px;
 }
 .prose-editor:empty::before,
 .prose-editor p.is-editor-empty:first-child::before {
