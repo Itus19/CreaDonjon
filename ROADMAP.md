@@ -89,12 +89,13 @@ Statuts : `[x]` fait · `[~]` en cours / partiel · `[ ]` pas commencé
 - [x] Direction artistique définie (références fournies : vvd.world, Alchemy RPG, Daggerheart — dark/chaleureux, accent doré)
 - [x] Palette de couleurs (fond/surface/accent/danger) centralisée en CSS, typographie par défaut (Geist)
 - [x] Classes utilitaires réutilisables (`.card`, `.form-card`, `.chip`, `.btn-accent`, `.btn-outline`, `.input-field`) — début de design system
-- [~] Présentation de fiche d'entité alignée sur les références (alias/relations en étiquettes, portrait réservé) ; pas encore : texte enrichi, liens automatiques, mise en page façon vvd.world (barre latérale par catégories)
+- [x] Présentation de fiche d'entité alignée sur le modèle antigravity (relations en rangées verticales avec pastille de catégorie, badge de catégorie, en-tête en grille avec portrait agrandi, barre "Ajouter un bloc" compacte par pastilles, tiroir JSON brut repliable) ; reste non fait : texte enrichi, liens automatiques
 - [x] 4 thèmes sélectionnables (sombre/demi-sombre/demi-clair/clair), mémorisés par cookie — global à l'app pour l'instant, pas encore par monde comme chez vvd.world
 - [x] Bureau à fenêtres pour les fiches d'entité (glisser/redimensionner/agrandir/fermer, plusieurs fenêtres simultanées, aimantation gauche/droite façon Aero Snap) — inspiré du prototype antigravity, réimplémenté contre notre schéma
 - [x] Esthétique verre (glassmorphism) sur les fenêtres/cartes, fond immersif flouté, police d'affichage "Outfit", étiquettes de relation colorées différemment entrant/sortant — d'après l'examen détaillé du CSS du prototype antigravity
 - [x] Fond immersif = vrais visuels Midjourney de l'utilisateur (un par thème), optimisés en WebP
-- [ ] Barre latérale de navigation par catégories (comme vvd.world)
+- [x] Barre latérale de navigation avec liste des entités groupée par catégorie (pastille de couleur) — la liste ne se cache plus derrière les fenêtres ouvertes
+- [ ] Fond personnalisable par téléversement + palette de couleurs extraite automatiquement de l'image (pour que l'UI s'adapte). Nécessite : (1) le stockage de fichiers (Supabase Storage, pas encore construit), (2) un algorithme d'extraction de couleurs dominantes, (3) une garantie de contraste texte/fond suffisant — pas trivial, à faire proprement plutôt qu'en vitesse
 - [ ] Tableau de bord d'accueil (récents, création rapide, aperçu du graphe)
 
 ## Plus tard (V2+, hors scope court terme)
