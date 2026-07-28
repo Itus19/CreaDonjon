@@ -68,7 +68,7 @@ Audit du code de `C:\Users\Gabriel\.gemini\antigravity\scratch\dnd-companion` (2
 - [ ] "Créer comme carte" / "Lien vers une carte" depuis la sélection de texte (créer une nouvelle entité ou lier une entité existante) — mis de côté volontairement lors de l'ajout de la bulle de mise en forme, nécessite une recherche d'entités + création, brique à part
 - [ ] Portrait d'entité : vrai téléversement d'image (actuellement un simple cadre "Portrait" sans upload) — bloqué par le stockage de fichiers (Supabase Storage, voir Général/Infrastructure) ; la zone doit garder un ratio fixe (3/4) quelle que soit la taille de la fenêtre, déjà en place côté CSS
 - [ ] Bloc généalogie / arbre familial — à terme, pas urgent : entité liée par des relations typées avec un vocabulaire dédié (soeur, frère, adelphe, parent, cousin, oncle...) et une visualisation en arbre plutôt qu'en étiquettes plates. Implique : une liste de types de relation "famille" distincte de la liste libre actuelle, et un rendu graphique (au-delà du graphe de connaissances déjà listé plus bas)
-- [ ] Réorganiser les blocs par glisser-déposer (actuellement l'ordre suit `display_order`, fixé à la création, aucune UI pour le changer)
+- [x] Réorganiser les blocs par glisser-déposer (drag-and-drop HTML5 natif, poignée `⋮⋮`, persiste `display_order` via `reorderBlocks`)
 - [ ] Éditeur de `narrative_content` avec segments de visibilité (distinct des blocs, pas commencé)
 - [ ] Liens automatiques dans le texte (détection de mentions/alias) — question ouverte non résolue dans le PDD (faux positifs)
 - [ ] Graphe de connaissances (visualisation des `relations`, au-delà des étiquettes)
@@ -162,7 +162,7 @@ Constat général : ce bloc a besoin d'un `data` jsonb structuré et documenté 
 - [x] Esthétique verre (glassmorphism) sur les fenêtres/cartes, fond immersif flouté, police d'affichage "Outfit", étiquettes de relation colorées différemment entrant/sortant — d'après l'examen détaillé du CSS du prototype antigravity
 - [x] Fond immersif = vrais visuels Midjourney de l'utilisateur (un par thème), optimisés en WebP
 - [x] Barre latérale de navigation avec liste des entités groupée par catégorie (pastille de couleur) — la liste ne se cache plus derrière les fenêtres ouvertes
-- [ ] Remplacer les `<select>`/`<datalist>` natifs (type de fiche, type de relation, visibilité...) par des menus déroulants personnalisés — comportement normal du navigateur mais les menus natifs débordent des fenêtres du bureau (rendus par l'OS, pas par notre conteneur `overflow:hidden`). Changement systémique (un seul composant réutilisable à créer), pas urgent tant que ça reste utilisable
+- [x] Remplacer les `<select>`/`<datalist>` natifs par des menus déroulants personnalisés (`Dropdown.tsx`, `Combobox.tsx`, rendus via portail React dans `document.body` pour échapper au `overflow:hidden`/`transform` de la fenêtre) — couvre type de fiche, type de relation, entité cible et visibilité (bloc + relation)
 - [ ] Fond personnalisable par téléversement + palette de couleurs extraite automatiquement de l'image (pour que l'UI s'adapte). Nécessite : (1) le stockage de fichiers (Supabase Storage, pas encore construit), (2) un algorithme d'extraction de couleurs dominantes, (3) une garantie de contraste texte/fond suffisant — pas trivial, à faire proprement plutôt qu'en vitesse
 - [ ] Tableau de bord d'accueil (récents, création rapide, aperçu du graphe)
 

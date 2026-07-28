@@ -57,6 +57,18 @@ export async function updateBlock(
   revalidatePath(`/worlds/${worldId}/entities/${entityId}`);
 }
 
+export async function reorderBlocks(worldId: string, entityId: string, orderedBlockIds: string[]) {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  await Promise.all(
+    orderedBlockIds.map((blockId, index) =>
+      supabase.from("blocks").update({ display_order: index }).eq("id", blockId),
+    ),
+  );
+  revalidatePath(`/worlds/${worldId}/entities/${entityId}`);
+}
+
 export async function deleteBlock(worldId: string, entityId: string, blockId: string) {
   const supabase = await createClient();
   await requireUser(supabase);

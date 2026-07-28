@@ -12,12 +12,15 @@ import {
   deleteEntity,
   removeAlias,
   removeRelation,
+  reorderBlocks,
   updateBlock,
   updateEntityKind,
   updateEntityName,
 } from "@/lib/actions/entities";
 import { ENTITY_KIND_COLORS, entityKindColor } from "@/lib/entityKindColors";
 import RichTextEditor from "./RichTextEditor";
+import Dropdown from "./Dropdown";
+import Combobox from "./Combobox";
 
 const VISIBILITY_LABELS: Record<string, string> = {
   public: "Public",
@@ -25,6 +28,15 @@ const VISIBILITY_LABELS: Record<string, string> = {
   mj: "MJ uniquement",
   prive: "Privé",
 };
+
+const RELATION_TYPE_SUGGESTIONS = [
+  "habite",
+  "appartient",
+  "connait",
+  "possede",
+  "deteste",
+  "a_participe",
+];
 
 const BLOCK_TYPE_PRESETS = [
   "texte",
@@ -89,6 +101,7 @@ export default function EntityDetail({
   const [notFound, setNotFound] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [previewAsPlayer, setPreviewAsPlayer] = useState(false);
+  const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
 
   const onLoadedRef = useRef(onLoaded);
   useEffect(() => {
@@ -232,6 +245,34 @@ export default function EntityDetail({
     });
   }
 
+  function handleBlockDragStart(e: React.DragEvent, blockId: string) {
+    setDraggedBlockId(blockId);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleBlockDragOver(e: React.DragEvent, overBlockId: string) {
+    e.preventDefault();
+    if (!draggedBlockId || draggedBlockId === overBlockId) return;
+    const fromIndex = blocks.findIndex((b) => b.id === draggedBlockId);
+    const toIndex = blocks.findIndex((b) => b.id === overBlockId);
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+    const reordered = [...blocks];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    setBlocks(reordered);
+  }
+
+  async function handleBlockDragEnd() {
+    const draggedId = draggedBlockId;
+    setDraggedBlockId(null);
+    if (!draggedId) return;
+    await reorderBlocks(
+      worldId,
+      entityId,
+      blocks.map((b) => b.id),
+    );
+  }
+
   if (loading) {
     return <p className="p-6 text-muted">Chargement...</p>;
   }
@@ -294,20 +335,20 @@ export default function EntityDetail({
               className="h-1.5 w-1.5 shrink-0 rounded-full"
               style={{ background: entityKindColor(entity.entity_kind) }}
             />
-            <input
-              key={entity.id}
-              defaultValue={entity.entity_kind ?? ""}
-              onBlur={(e) => handleUpdateKind(e.target.value)}
-              placeholder="type de fiche..."
-              list={`entity-kind-suggestions-${entityId}`}
-              readOnly={previewAsPlayer}
-              className="w-32 bg-transparent text-xs font-medium text-foreground outline-none placeholder:italic placeholder:text-muted"
-            />
-            <datalist id={`entity-kind-suggestions-${entityId}`}>
-              {kindSuggestions.map((kind) => (
-                <option key={kind} value={kind} />
-              ))}
-            </datalist>
+            {previewAsPlayer ? (
+              <span className="text-xs font-medium text-foreground">
+                {entity.entity_kind || "type de fiche..."}
+              </span>
+            ) : (
+              <Combobox
+                key={entity.id}
+                defaultValue={entity.entity_kind ?? ""}
+                suggestions={kindSuggestions}
+                onCommit={handleUpdateKind}
+                placeholder="type de fiche..."
+                className="w-32 bg-transparent text-xs font-medium text-foreground outline-none placeholder:italic placeholder:text-muted"
+              />
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
@@ -403,35 +444,29 @@ export default function EntityDetail({
                 action={(fd) => withRefresh(addRelationToEntity, fd)}
                 className="mt-1 flex flex-wrap items-center gap-2"
               >
-                <input
+                <Combobox
+                  key={`relation-type-${relations.length}`}
+                  defaultValue=""
+                  suggestions={RELATION_TYPE_SUGGESTIONS}
                   name="relation_type"
-                  type="text"
-                  placeholder="type (habite, connait...)"
                   required
-                  list={`relation-type-suggestions-${entityId}`}
+                  placeholder="type (habite, connait...)"
                   className="input-field w-40 text-xs"
                 />
-                <datalist id={`relation-type-suggestions-${entityId}`}>
-                  <option value="habite" />
-                  <option value="appartient" />
-                  <option value="connait" />
-                  <option value="possede" />
-                  <option value="deteste" />
-                  <option value="a_participe" />
-                </datalist>
-                <select name="target_entity_id" required className="input-field text-xs">
-                  {otherEntities.map((other) => (
-                    <option key={other.id} value={other.id}>
-                      {other.name}
-                    </option>
-                  ))}
-                </select>
-                <select name="visibility" defaultValue="public" className="input-field text-xs">
-                  <option value="public">Public</option>
-                  <option value="joueurs">Joueurs</option>
-                  <option value="mj">MJ uniquement</option>
-                  <option value="prive">Privé</option>
-                </select>
+                <Dropdown
+                  key={`target-entity-${relations.length}`}
+                  defaultValue={otherEntities[0]?.id ?? ""}
+                  name="target_entity_id"
+                  options={otherEntities.map((other) => ({ value: other.id, label: other.name }))}
+                  className="input-field text-xs"
+                />
+                <Dropdown
+                  key={`relation-visibility-${relations.length}`}
+                  defaultValue="public"
+                  name="visibility"
+                  options={Object.entries(VISIBILITY_LABELS).map(([value, label]) => ({ value, label }))}
+                  className="input-field text-xs"
+                />
                 <button type="submit" className="btn-outline text-xs">
                   + Ajouter une relation
                 </button>
@@ -461,9 +496,26 @@ export default function EntityDetail({
         {visibleBlocks.map((block) => {
           const isCollapsed = collapsed.has(block.id);
           return (
-            <div key={block.id} className="border-b border-border/60 py-4 first:pt-0 last:border-b-0">
+            <div
+              key={block.id}
+              draggable={!previewAsPlayer}
+              onDragStart={(e) => handleBlockDragStart(e, block.id)}
+              onDragOver={(e) => handleBlockDragOver(e, block.id)}
+              onDragEnd={handleBlockDragEnd}
+              className={`border-b border-border/60 py-4 first:pt-0 last:border-b-0 ${
+                draggedBlockId === block.id ? "opacity-40" : ""
+              }`}
+            >
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="flex flex-1 items-center gap-1.5">
+                  {!previewAsPlayer && (
+                    <span
+                      className="shrink-0 cursor-grab text-muted/60 transition-colors hover:text-foreground active:cursor-grabbing"
+                      title="Glisser pour réordonner"
+                    >
+                      ⋮⋮
+                    </span>
+                  )}
                   <button
                     onClick={() => toggleCollapsed(block.id)}
                     className="shrink-0 text-muted transition-transform hover:text-foreground"
@@ -484,17 +536,13 @@ export default function EntityDetail({
                   <span className="chip">{block.block_type}</span>
                   {!previewAsPlayer && (
                     <>
-                      <select
+                      <Dropdown
+                        key={`${block.id}-${block.visibility}`}
                         defaultValue={block.visibility}
-                        onChange={(e) => handleUpdateBlock(block.id, { visibility: e.target.value })}
+                        onChange={(v) => handleUpdateBlock(block.id, { visibility: v })}
+                        options={Object.entries(VISIBILITY_LABELS).map(([value, label]) => ({ value, label }))}
                         className="rounded-md border border-border bg-black/20 px-1.5 py-0.5 text-[10px] text-foreground outline-none"
-                      >
-                        {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
+                      />
                       <button
                         onClick={() => handleDeleteBlock(block.id)}
                         className="text-xs text-muted transition-colors hover:text-danger"
