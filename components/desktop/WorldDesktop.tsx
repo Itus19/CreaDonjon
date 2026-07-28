@@ -196,7 +196,7 @@ export default function WorldDesktop({
   const activeCategoryData = COMPENDIUM_CATEGORIES.find((c) => c.id === activeCategory);
 
   return (
-    <div className="flex flex-1 overflow-hidden font-sans">
+    <div className="flex h-dvh overflow-hidden font-sans">
       <aside className="flex w-72 shrink-0 flex-col border-r border-border bg-black/10">
         <div className="flex items-center justify-between px-4 pt-6">
           <h1 className="truncate font-display text-lg font-semibold text-foreground">
@@ -258,7 +258,7 @@ export default function WorldDesktop({
           </div>
         )}
 
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-3">
           {sidebarTab === "wiki" ? (
             <>
               {groups.map(([kind, group]) => (
