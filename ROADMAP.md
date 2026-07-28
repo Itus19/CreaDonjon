@@ -14,7 +14,7 @@ Audit du code de `C:\Users\Gabriel\.gemini\antigravity\scratch\dnd-companion` (2
 
 **Priorité haute :**
 - **Blocs structurés par type** (`BlockRenderer.tsx`) — chez eux, un bloc `personnage` a de vrais champs (STR/DEX/CON/INT/SAG/CHA, PV, CA, bonus de maîtrise, jets de dés). Chez nous, un bloc a un titre + du texte enrichi (fait le 2026-07-28, voir Wiki ci-dessous), mais pas encore de champs structurés par type. C'est le plus gros écart restant sur "comment est construite une fiche" et le plus utile pour jouer réellement.
-- **Résolution de visibilité côté serveur** (déjà listée en Général/Infrastructure) — chez eux le filtrage MJ/joueur est réimplémenté à la main dans chaque composant client (`isSecret`), jamais appliqué côté serveur. On a dit dès le schéma technique qu'on ferait mieux (jamais confier ça au client) — reste à construire.
+- ~~**Résolution de visibilité côté serveur**~~ — fait le 2026-07-28 pour les blocs et relations (voir Général/Infrastructure ci-dessous) ; chez eux ce filtrage restait réimplémenté à la main côté client (`isSecret`), jamais appliqué côté serveur — nous l'avons désormais en RLS, jamais confié au client.
 - ~~**Éditer/supprimer une entité ou un bloc**~~ — fait le 2026-07-28 (voir Wiki ci-dessous).
 - **Compendium de consultation du SRD** (déjà listée, section Moteur de règles) — `CompendiumPortal.tsx` : grille de cartes filtrables par catégorie (Sorts/Classes/Espèces/Origines/Combat) + recherche. On a 3653 entrées SRD importées et aucune page pour les parcourir.
 
@@ -43,7 +43,7 @@ Audit du code de `C:\Users\Gabriel\.gemini\antigravity\scratch\dnd-companion` (2
 - [x] Import du contenu des SRD D&D 2014 et 2024 dans `rulesets`/`ruleset_entries`
 - [x] App Next.js initialisée (TypeScript, App Router, Tailwind)
 - [x] Authentification par email/mot de passe (inscription, confirmation email, connexion, déconnexion)
-- [ ] Résolution de visibilité côté serveur pour `narrative_content`/blocs (public/joueurs/MJ/privé) — la donnée existe dans le schéma mais rien ne la lit/filtre encore à l'affichage
+- [x] Résolution de visibilité côté serveur pour les blocs et les relations (public/joueurs/MJ/privé), au niveau RLS (`can_view_visibility`, `is_campaign_mj`) — vérifié par simulation d'un joueur et d'un co-MJ ; un bouton "Aperçu joueur" sur la fiche permet de voir l'effet sans compte de test. Reste à faire : la même résolution pour `narrative_content` une fois cet éditeur construit (voir Wiki)
 - [ ] Stockage de fichiers/images (Supabase Storage)
 - [ ] Recherche globale (noms, alias, tags, contenu)
 - [ ] Détection automatique de liens entre fiches (alias)
