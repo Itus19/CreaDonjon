@@ -59,15 +59,51 @@ Audit du code de `C:\Users\Gabriel\.gemini\antigravity\scratch\dnd-companion` (2
 - [x] Relations entre entités : étiquettes cliquables (dans les deux sens), formulaire de création — première UI pour la table `relations`
 - [x] Éditer/supprimer une entité ou un bloc existant — blocs toujours éditables en place (titre libre + Tiptap : gras/italique/titre/liste, sauvegarde au blur), suppression de bloc et de fiche
 - [x] Bulle de mise en forme flottante (apparaît à la sélection) : type de texte (paragraphe/titre 1/2/3), gras, italique, souligné, barré, lien externe, couleur du texte, spoiler, masquer aux joueurs (ces deux derniers : marques visuelles pour l'auteur seulement, pas encore de filtrage réel côté joueur — dépend de la résolution de visibilité serveur)
-- [x] Blocs "texte" (générique) et "image" (URL + aperçu, pas d'upload réel) ajoutés aux types disponibles
+- [x] Blocs "texte" (générique) et "image" (URL + aperçu, pas d'upload réel) ajoutés aux types disponibles, avec légende sous l'image
 - [x] Hiérarchie de tailles cohérente : titre de fiche 30px > titre de bloc 24px > H1/H2/H3 (20.8/18/16px) > paragraphe 14px (≥ 12px demandé)
-- [~] Blocs modulaires : titre + texte enrichi en place pour tous les types ; pas encore de champs structurés dédiés par type (personnage, inventaire, biologie...) — voir audit antigravity en tête de document
+- [x] Création instantanée d'une fiche vierge (plus de page séparée) : titre toujours éditable en place, ouverte immédiatement dans la barre latérale et le bureau
+- [x] Type de fiche (`entity_kind`) éditable directement dans la fiche, avec types personnalisés (le champ était déjà du texte libre en base ; aucune liste fermée à maintenir)
+- [x] Blocs repliables (chevron) et discrets (pas d'encadré visible, séparateur fin uniquement)
+- [~] Blocs modulaires : titre + texte enrichi en place pour tous les types ; pas encore de champs structurés dédiés par type (personnage, inventaire, biologie...) — voir audit antigravity en tête de document, et la spécification détaillée du bloc personnage ci-dessous
 - [ ] "Créer comme carte" / "Lien vers une carte" depuis la sélection de texte (créer une nouvelle entité ou lier une entité existante) — mis de côté volontairement lors de l'ajout de la bulle de mise en forme, nécessite une recherche d'entités + création, brique à part
+- [ ] Portrait d'entité : vrai téléversement d'image (actuellement un simple cadre "Portrait" sans upload) — bloqué par le stockage de fichiers (Supabase Storage, voir Général/Infrastructure) ; la zone doit garder un ratio fixe (3/4) quelle que soit la taille de la fenêtre, déjà en place côté CSS
+- [ ] Bloc généalogie / arbre familial — à terme, pas urgent : entité liée par des relations typées avec un vocabulaire dédié (soeur, frère, adelphe, parent, cousin, oncle...) et une visualisation en arbre plutôt qu'en étiquettes plates. Implique : une liste de types de relation "famille" distincte de la liste libre actuelle, et un rendu graphique (au-delà du graphe de connaissances déjà listé plus bas)
 - [ ] Éditeur de `narrative_content` avec segments de visibilité (distinct des blocs, pas commencé)
 - [ ] Liens automatiques dans le texte (détection de mentions/alias) — question ouverte non résolue dans le PDD (faux positifs)
 - [ ] Graphe de connaissances (visualisation des `relations`, au-delà des étiquettes)
 - [ ] Historique des modifications d'une fiche
 - [ ] Import/export de contenu
+
+### Bloc "personnage" — spécification détaillée (V2, gros chantier)
+
+Basé sur des captures d'écran d'une fiche de référence (feuille de perso "Fine Lââm") montrant le résultat visé à long terme, à adapter à notre esthétique (verre/glassmorphism, doré, thèmes). Rien de ceci n'est commencé : c'est une expansion du point "[~] Blocs modulaires" ci-dessus, listée à part parce qu'elle est bien plus grosse que les autres types de bloc. Chaque élément est noté avec ce qu'il implique techniquement.
+
+- [ ] **En-tête de fiche** : portrait rond, nom, sous-titre (espèce · classe, ex. "Tieffelin · Roublard"), badge de niveau, favori (étoile), CA (bouclier), PV avec boutons +/-, pastilles initiative/vitesse/perception/maîtrise/épuisement, barre d'XP avec boutons "+XP"/"Ajouter", barre d'outils (repos court, repos long, Éditer, Partager, Export)
+  - Implique : des champs structurés (pas juste titre+texte) — donc un `data` jsonb avec un schéma dédié par bloc "personnage" plutôt que `{title, content}` ; une logique de repos (court/long) qui réinitialise PV/emplacements de sorts/ressources à usage limité ; export = sérialisation JSON ou PDF, à définir
+- [ ] **Six caractéristiques** (FOR/DEX/CON/INT/SAG/CHA) : modificateur affiché, score brut, pastille de bonus de sauvegarde
+  - Implique : calcul modificateur = `floor((score - 10) / 2)`, et bonus de sauvegarde = modificateur + bonus de maîtrise si la caractéristique est "maîtrisée" — relève du mini-langage de formules déjà prévu (section Moteur de règles), pas un calcul à coder en dur par caractéristique
+- [ ] **Liste de compétences** (Compétences) : pastilles de maîtrise (aucune/demi/maîtrisée/expertise) et caractéristique associée affichée
+  - Implique : les 18 compétences et leur caractéristique de rattachement existent déjà comme données SRD dans `ruleset_entries` — à relier plutôt qu'à recopier en dur ; le niveau de maîtrise est propre au personnage (à stocker dans le bloc, pas dans le ruleset)
+- [ ] **Onglets Actions / Inventaire / Traits** — navigation à onglets à l'intérieur du bloc
+  - Implique : un sous-composant de bloc avec état d'onglet actif (probablement pas persisté serveur, juste UI)
+- [ ] **Tableau d'attaques** (onglet Actions) : nom, type de dégâts/propriétés, liste déroulante de bonus d'attaque, pastille de dé de dégâts
+  - Implique : jets de dés réels (tirage + affichage du résultat) — dépend du "mécanisme de jets de dés relié à un journal" déjà listé en priorité basse plus haut ; les propriétés d'armes (portée, deux mains, légère...) existent déjà comme données SRD à référencer
+- [ ] **Ressources** (onglet Actions) : capacités à usage limité (ex. Sorts, Ki, Rage) avec compteur d'utilisations restantes
+  - Implique : reset au repos court ou long selon la ressource — champ de configuration par ressource, pas juste un compteur
+- [ ] **Compteurs personnalisés** (onglet Actions) : compteurs libres définis par le joueur/MJ
+  - Implique : structure clé/valeur/max flexible dans le `data` jsonb, sans schéma fermé (contrairement aux ressources standard)
+- [ ] **Maîtrise d'armes** (onglet Actions, règles 2024) : cartes avec bascule active/inactive + description de l'effet
+  - Implique : donnée SRD 2024 uniquement (le mastery n'existe pas en 2014) — doit être conditionnel au ruleset du monde
+- [ ] **Armure & Défense** (onglet Inventaire) : détail du calcul de CA, sélecteur d'armure équipée
+  - Implique : formule de CA dépendante du type d'armure équipée (légère/intermédiaire/lourde + bouclier), encore le mini-langage de formules
+- [ ] **Inventaire catégorisé** (onglet Inventaire) : objets personnalisés / armes / équipement, avec quantités, et barre de poids avec seuil "Encombré"
+  - Implique : table ou structure jsonb pour les objets possédés (référence à un `ruleset_entry` pour les objets SRD + objets libres), calcul de poids total vs. seuil de force
+- [ ] **Dés de vie** et **Bourse** (PP/PO/PE/PA/PC) (onglet Inventaire)
+  - Implique : arithmétique de monnaie (conversion entre pièces), dés de vie liés au niveau et à la classe
+- [ ] **Traits d'espèce** (vision, résistances), **Traits passifs**, **Capacités de classe** (cartes dépliables), **Dons** (onglet Traits)
+  - Implique : toutes ces données existent déjà comme `ruleset_entries` SRD à référencer/lier plutôt qu'à ressaisir ; les cartes dépliables réutilisent le principe des blocs repliables déjà en place
+
+Constat général : ce bloc a besoin d'un `data` jsonb structuré et documenté par sous-section (pas un simple titre+texte comme les blocs actuels), d'une UI à onglets dédiée, et s'appuie fortement sur le mini-langage de formules et sur les `ruleset_entries` déjà importées — trois chantiers qui doivent avancer ensemble plutôt que ce bloc en isolation. Recommandation : traiter comme un type de bloc à part entière (`block_type = "personnage_complet"` ou similaire) plutôt que d'étendre le bloc "personnage" actuel, pour ne pas casser les fiches personnage déjà créées en texte libre.
 
 ## Maître du Jeu (MJ)
 
@@ -125,6 +161,7 @@ Audit du code de `C:\Users\Gabriel\.gemini\antigravity\scratch\dnd-companion` (2
 - [x] Esthétique verre (glassmorphism) sur les fenêtres/cartes, fond immersif flouté, police d'affichage "Outfit", étiquettes de relation colorées différemment entrant/sortant — d'après l'examen détaillé du CSS du prototype antigravity
 - [x] Fond immersif = vrais visuels Midjourney de l'utilisateur (un par thème), optimisés en WebP
 - [x] Barre latérale de navigation avec liste des entités groupée par catégorie (pastille de couleur) — la liste ne se cache plus derrière les fenêtres ouvertes
+- [ ] Remplacer les `<select>`/`<datalist>` natifs (type de fiche, type de relation, visibilité...) par des menus déroulants personnalisés — comportement normal du navigateur mais les menus natifs débordent des fenêtres du bureau (rendus par l'OS, pas par notre conteneur `overflow:hidden`). Changement systémique (un seul composant réutilisable à créer), pas urgent tant que ça reste utilisable
 - [ ] Fond personnalisable par téléversement + palette de couleurs extraite automatiquement de l'image (pour que l'UI s'adapte). Nécessite : (1) le stockage de fichiers (Supabase Storage, pas encore construit), (2) un algorithme d'extraction de couleurs dominantes, (3) une garantie de contraste texte/fond suffisant — pas trivial, à faire proprement plutôt qu'en vitesse
 - [ ] Tableau de bord d'accueil (récents, création rapide, aperçu du graphe)
 
