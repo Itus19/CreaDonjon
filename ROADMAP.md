@@ -8,6 +8,32 @@ Statuts : `[x]` fait · `[~]` en cours / partiel · `[ ]` pas commencé
 
 ---
 
+## Écarts avec le prototype antigravity, par priorité
+
+Audit du code de `C:\Users\Gabriel\.gemini\antigravity\scratch\dnd-companion` (2026-07-28) : ce qui existe là-bas et pas encore chez nous, avec une priorité d'implémentation. Rappel : on ne recopie pas ce code (voir [[antigravity_prototype]] / mémoire — architecture 100% client/localStorage incompatible avec notre modèle serveur+RLS), seulement l'idée, adaptée à notre schéma.
+
+**Priorité haute :**
+- **Blocs structurés par type** (`BlockRenderer.tsx`) — chez eux, un bloc `personnage` a de vrais champs (STR/DEX/CON/INT/SAG/CHA, PV, CA, bonus de maîtrise, jets de dés). Chez nous, un bloc reste `data.content` en texte libre quel que soit le type. C'est le plus gros écart sur "comment est construite une fiche" et le plus utile pour jouer réellement. Proposition détaillée plus bas.
+- **Résolution de visibilité côté serveur** (déjà listée en Général/Infrastructure) — chez eux le filtrage MJ/joueur est réimplémenté à la main dans chaque composant client (`isSecret`), jamais appliqué côté serveur. On a dit dès le schéma technique qu'on ferait mieux (jamais confier ça au client) — reste à construire.
+- **Éditer/supprimer une entité ou un bloc** (déjà listée) — seule la création fonctionne actuellement.
+- **Compendium de consultation du SRD** (déjà listée, section Moteur de règles) — `CompendiumPortal.tsx` : grille de cartes filtrables par catégorie (Sorts/Classes/Espèces/Origines/Combat) + recherche. On a 3653 entrées SRD importées et aucune page pour les parcourir.
+
+**Priorité moyenne :**
+- **Dossiers de la barre latérale + glisser-déposer** (`Sidebar.tsx`) — chez eux : 15 dossiers par défaut (rattachement par préfixe d'id), dossiers personnalisés, réordonnancement en drag-and-drop, onglets Monde/Règles séparés, recherche. Notre barre latérale actuelle (groupement plat par `entity_kind`) couvre le besoin de base ; ceci n'est utile que si un monde grossit beaucoup.
+- **Historique des révisions / annulation** (déjà listée) — chez eux : jusqu'à 15 versions par page en localStorage, restauration. Chez nous, la table `entity_mechanical_revisions` existe déjà en base mais rien ne l'utilise.
+- **Blocs structurés additionnels** (arme, sort, monstre/statblock, classe, espèce...) — logique à faire après le bloc personnage, une fois le principe validé.
+- **Export/import d'un monde en JSON** — simple et utile, faisable rapidement quand on voudra.
+- **Génération de contenu par IA avec repli procédural** (`loreGenerator.ts`) — déjà listée (Assistant IA). Dépend d'abord de choisir un modèle/fournisseur (question ouverte du PDD).
+
+**Priorité basse / plus tard :**
+- **Texte enrichi avec liens automatiques** (déjà listée) — complexe, risque de faux positifs, non résolu même dans leur PDD à eux.
+- **Portail joueur en lecture seule sans compte** (déjà listée) — la leur n'a aucune sécurité serveur (juste un filtre client) ; la nôtre devra être conçue différemment (jeton + résolution serveur). Attend un vrai wiki à partager.
+- **Gestionnaire de catégories personnalisées, personnalisation de thème plus poussée** — petits conforts, faisables plus tard.
+- **Mécanique de jets de dés reliée à un journal/toast** — amusant mais pas central.
+- **Substrat "moteur de règles programmatique"** (`general_rule`/`rule_logic` avec `programmaticVariables`) — à regarder comme inspiration quand on construira le mini-langage de formules (déjà listé, Moteur de règles), pas avant.
+
+---
+
 ## Général / Infrastructure
 
 - [x] Dépôt GitHub connecté et utilisé (push direct sur `master`)
