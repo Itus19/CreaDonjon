@@ -102,6 +102,16 @@ export async function updateEntityName(worldId: string, entityId: string, name: 
   revalidatePath(`/worlds/${worldId}/entities/${entityId}`);
 }
 
+export async function updateEntityKind(worldId: string, entityId: string, kind: string) {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const trimmed = kind.trim();
+  await supabase.from("entities").update({ entity_kind: trimmed || null }).eq("id", entityId);
+  revalidatePath(`/worlds/${worldId}`);
+  revalidatePath(`/worlds/${worldId}/entities/${entityId}`);
+}
+
 export async function addAlias(
   worldId: string,
   entityId: string,

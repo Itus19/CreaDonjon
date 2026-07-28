@@ -13,9 +13,10 @@ import {
   removeAlias,
   removeRelation,
   updateBlock,
+  updateEntityKind,
   updateEntityName,
 } from "@/lib/actions/entities";
-import { entityKindColor } from "@/lib/entityKindColors";
+import { ENTITY_KIND_COLORS, entityKindColor } from "@/lib/entityKindColors";
 import RichTextEditor from "./RichTextEditor";
 
 const VISIBILITY_LABELS: Record<string, string> = {
@@ -81,7 +82,9 @@ export default function EntityDetail({
   const [entity, setEntity] = useState<Entity | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [relations, setRelations] = useState<RelationRow[]>([]);
-  const [otherEntities, setOtherEntities] = useState<{ id: string; name: string }[]>([]);
+  const [otherEntities, setOtherEntities] = useState<
+    { id: string; name: string; entity_kind: string | null }[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -116,7 +119,7 @@ export default function EntityDetail({
           .eq("target_entity_id", entityId),
         supabase
           .from("entities")
-          .select("id, name")
+          .select("id, name, entity_kind")
           .eq("world_id", worldId)
           .neq("id", entityId)
           .order("name"),
@@ -181,6 +184,12 @@ export default function EntityDetail({
     await load();
   }
 
+  async function handleUpdateKind(kind: string) {
+    if (!entity || kind === (entity.entity_kind ?? "")) return;
+    await updateEntityKind(worldId, entityId, kind);
+    await load();
+  }
+
   async function handleAddBlock(blockType: string) {
     await addBlock(worldId, entityId, blockType);
     await load();
@@ -230,6 +239,13 @@ export default function EntityDetail({
     return <p className="p-6 text-muted">Entité introuvable.</p>;
   }
 
+  const kindSuggestions = [
+    ...new Set([
+      ...Object.keys(ENTITY_KIND_COLORS),
+      ...otherEntities.map((e) => e.entity_kind).filter((k): k is string => !!k),
+    ]),
+  ].sort();
+
   const addAliasToEntity = addAlias.bind(null, worldId, entityId);
   const removeAliasFromEntity = removeAlias.bind(null, worldId, entityId);
   const addRelationToEntity = addRelation.bind(null, worldId, entityId);
@@ -247,15 +263,25 @@ export default function EntityDetail({
             className="entity-title bg-transparent outline-none focus:border-b focus:border-accent"
           />
 
-          {entity.entity_kind && (
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-md border border-border bg-black/20 px-2.5 py-1 text-xs font-medium text-foreground">
-              <span
-                className="h-1.5 w-1.5 rounded-full"
-                style={{ background: entityKindColor(entity.entity_kind) }}
-              />
-              {entity.entity_kind}
-            </span>
-          )}
+          <div className="inline-flex w-fit items-center gap-1.5 rounded-md border border-border bg-black/20 px-2.5 py-1">
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full"
+              style={{ background: entityKindColor(entity.entity_kind) }}
+            />
+            <input
+              key={entity.id}
+              defaultValue={entity.entity_kind ?? ""}
+              onBlur={(e) => handleUpdateKind(e.target.value)}
+              placeholder="type de fiche..."
+              list={`entity-kind-suggestions-${entityId}`}
+              className="w-32 bg-transparent text-xs font-medium text-foreground outline-none placeholder:italic placeholder:text-muted"
+            />
+            <datalist id={`entity-kind-suggestions-${entityId}`}>
+              {kindSuggestions.map((kind) => (
+                <option key={kind} value={kind} />
+              ))}
+            </datalist>
+          </div>
 
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
