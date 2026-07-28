@@ -83,7 +83,7 @@ export default function WorldDesktop({
     const supabase = createClient();
     let query = supabase
       .from("ruleset_entries")
-      .select("id, entry_type, human_readable")
+      .select("id, entry_type, human_readable, structured_data")
       .eq("ruleset_id", rulesetId)
       .in("entry_type", category.entryTypes)
       .limit(500);
@@ -94,7 +94,10 @@ export default function WorldDesktop({
     query.then(({ data, error }) => {
       if (cancelled) return;
       if (error) console.error("compendium query error", error);
-      const mapped = (data ?? [])
+      const rows = category.objectFilter
+        ? (data ?? []).filter((row) => category.objectFilter!(row.structured_data as Record<string, unknown>))
+        : (data ?? []);
+      const mapped = rows
         .map((row) => ({
           id: row.id as string,
           name: (row.human_readable as { name?: string })?.name ?? "Sans nom",

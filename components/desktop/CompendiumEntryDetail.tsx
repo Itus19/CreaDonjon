@@ -2,7 +2,8 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { categoryForEntryType } from "@/lib/compendiumCategories";
+import { categoryForEntry } from "@/lib/compendiumCategories";
+import { translateFieldLabel, translateValue } from "@/lib/srdTranslations";
 
 type Entry = {
   id: string;
@@ -24,16 +25,16 @@ function normalizeDesc(desc: unknown): string[] {
 
 function formatValue(value: unknown): string | null {
   if (value === null || value === undefined) return null;
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
+  if (typeof value === "string") return translateValue(value);
+  if (typeof value === "number") return String(value);
+  if (typeof value === "boolean") return translateValue(String(value));
   if (Array.isArray(value)) {
     const parts = value.map(formatValue).filter((v): v is string => v !== null);
     return parts.length ? parts.join(", ") : null;
   }
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>;
-    if (typeof obj.name === "string") return obj.name;
+    if (typeof obj.name === "string") return translateValue(obj.name);
     return null;
   }
   return null;
@@ -65,7 +66,7 @@ export default function CompendiumEntryDetail({ entryId }: { entryId: string }) 
     return <p className="p-6 text-muted">Entrée introuvable.</p>;
   }
 
-  const category = categoryForEntryType(entry.entry_type);
+  const category = categoryForEntry(entry.entry_type, entry.structured_data);
   const desc = normalizeDesc(entry.human_readable?.desc);
   const detailEntries = Object.entries(entry.structured_data ?? {})
     .filter(([key]) => !SKIP_KEYS.has(key))
@@ -105,7 +106,7 @@ export default function CompendiumEntryDetail({ entryId }: { entryId: string }) 
           <div className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-xs">
             {detailEntries.map(([key, value]) => (
               <Fragment key={key}>
-                <span className="text-muted">{key.replace(/_/g, " ")}</span>
+                <span className="text-muted">{translateFieldLabel(key)}</span>
                 <span className="text-foreground">{value}</span>
               </Fragment>
             ))}
