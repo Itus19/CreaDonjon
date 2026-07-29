@@ -177,12 +177,18 @@ Une seule verticale, de bout en bout. Pas de règles, pas d'IA, pas de campagne,
 
 ## V0-01 — Authentification · `M`
 
-Email/mot de passe via Supabase Auth. Inscription, connexion, déconnexion, route protégée.
+Email/mot de passe via Supabase Auth. Inscription, connexion, déconnexion, route protégée, mot de passe oublié.
+
+**Livrables**
+- Page "mot de passe oublié" : saisie de l'email, appel a `supabase.auth.resetPasswordForEmail`, message neutre que l'email existe ou non (ne pas reveler si un compte existe).
+- Route de callback qui echange le jeton de recuperation contre une session, puis formulaire de saisie du nouveau mot de passe.
 
 **Critères d'acceptation**
 - [ ] Un visiteur non connecté sur une route protégée est redirigé.
 - [ ] La session survit à un rechargement de page.
 - [ ] Aucun jeton en `localStorage` accessible depuis un script tiers (utiliser les cookies via `@supabase/ssr`).
+- [ ] Un email de recuperation envoye a une adresse valide permet de definir un nouveau mot de passe et de se reconnecter avec.
+- [ ] Demander une recuperation pour une adresse qui n'existe pas ne revele pas cette information (meme reponse que pour une adresse existante).
 
 ---
 
