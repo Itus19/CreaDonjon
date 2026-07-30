@@ -1,25 +1,49 @@
 import { createClient } from "@/lib/supabase/server";
+import { listWorlds } from "@/src/server/services/worlds";
 import { logout } from "./login/actions";
+import CreateWorldForm from "./CreateWorldForm";
 
 export default async function Home() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const worlds = await listWorlds(supabase);
 
   return (
-    <div className="flex flex-1 items-center justify-center font-sans">
-      <div className="flex flex-col items-center gap-4">
-        <h1 className="text-2xl font-semibold tracking-wide text-accent">
-          CreaDonjon
-        </h1>
-        <p className="text-muted">Connecté en tant que {user?.email}.</p>
-        <form action={logout}>
-          <button className="rounded-full border border-border px-4 py-2 text-sm text-foreground transition-colors hover:bg-surface-hover">
-            Se déconnecter
-          </button>
-        </form>
-      </div>
+    <div className="flex flex-1 justify-center font-sans">
+      <main className="flex w-full max-w-2xl flex-col gap-6 py-16 px-8">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold tracking-wide text-accent">
+            CreaDonjon
+          </h1>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-muted">{user?.email}</span>
+            <form action={logout}>
+              <button className="rounded-full border border-border px-3 py-1 text-foreground transition-colors hover:bg-surface-hover">
+                Se déconnecter
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <CreateWorldForm />
+
+        <ul className="flex flex-col gap-2">
+          {worlds.map((world) => (
+            <li
+              key={world.id}
+              className="rounded-lg border border-border bg-surface p-4"
+            >
+              <p className="font-medium text-foreground">{world.name}</p>
+              <p className="text-sm text-muted">{world.slug}</p>
+            </li>
+          ))}
+          {worlds.length === 0 && (
+            <p className="text-muted">Aucun monde pour l&apos;instant.</p>
+          )}
+        </ul>
+      </main>
     </div>
   );
 }
