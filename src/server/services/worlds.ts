@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
 import {
+  getWorldById,
   insertWorld,
   listWorldsForCurrentUser,
   ownerHasSlug,
@@ -15,6 +16,10 @@ const MAX_SLUG_ATTEMPTS = 50;
 
 export async function listWorlds(supabase: TypedClient): Promise<WorldSummary[]> {
   return listWorldsForCurrentUser(supabase);
+}
+
+export async function getWorld(supabase: TypedClient, id: string): Promise<WorldSummary | null> {
+  return getWorldById(supabase, id);
 }
 
 /** Derive un slug unique (parmi les mondes du meme proprietaire) a partir du nom, en suffixant -2, -3... en cas de collision. */

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { listWorlds } from "@/src/server/services/worlds";
 import { logout } from "./login/actions";
@@ -31,12 +32,14 @@ export default async function Home() {
 
         <ul className="flex flex-col gap-2">
           {worlds.map((world) => (
-            <li
-              key={world.id}
-              className="rounded-lg border border-border bg-surface p-4"
-            >
-              <p className="font-medium text-foreground">{world.name}</p>
-              <p className="text-sm text-muted">{world.slug}</p>
+            <li key={world.id}>
+              <Link
+                href={`/worlds/${world.id}`}
+                className="block rounded-lg border border-border bg-surface p-4 transition-colors hover:bg-surface-hover"
+              >
+                <p className="font-medium text-foreground">{world.name}</p>
+                <p className="text-sm text-muted">{world.slug}</p>
+              </Link>
             </li>
           ))}
           {worlds.length === 0 && (

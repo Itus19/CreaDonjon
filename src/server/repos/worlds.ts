@@ -21,6 +21,30 @@ export async function listWorldsForCurrentUser(supabase: TypedClient): Promise<W
   return data;
 }
 
+/**
+ * Recherche par id, pas par slug : `worlds.slug` n'est unique que par
+ * proprietaire (`unique(owner_id, slug)`), deux mondes de deux
+ * utilisateurs differents peuvent partager le meme slug — l'utiliser
+ * seul comme cle de routage serait ambigu des qu'un utilisateur est
+ * membre de plusieurs mondes portant le meme nom.
+ *
+ * RLS filtre l'acces : renvoie null si le monde n'existe pas OU si
+ * l'utilisateur n'en est pas membre — les deux cas se traitent pareil
+ * cote appelant (404).
+ */
+export async function getWorldById(
+  supabase: TypedClient,
+  id: string
+): Promise<WorldSummary | null> {
+  const { data, error } = await supabase
+    .from("worlds")
+    .select("id, name, slug, created_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function ownerHasSlug(
   supabase: TypedClient,
   ownerId: string,
