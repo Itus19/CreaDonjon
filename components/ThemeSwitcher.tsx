@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const THEMES = [
   { id: "dark", label: "Sombre", swatch: "#0d1210", swatchAccent: "#c9a24a" },
@@ -13,9 +13,12 @@ export default function ThemeSwitcher({ currentTheme }: { currentTheme: string }
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState(currentTheme);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.cookie = `theme=${theme}; path=/; max-age=31536000`;
+  }, [theme]);
+
   function selectTheme(id: string) {
-    document.documentElement.dataset.theme = id;
-    document.cookie = `theme=${id}; path=/; max-age=31536000`;
     setTheme(id);
     setOpen(false);
   }

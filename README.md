@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CreaDonjon
 
-## Getting Started
+Plateforme web de creation, gestion et jeu de mondes narratifs : un wiki
+structure, un moteur de regles multi-systemes, et un mode solo ou une IA
+joue le maitre du jeu.
 
-First, run the development server:
+## Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # puis renseigner les valeurs (voir .env.example)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`supabase link --project-ref <ref>` pour relier le CLI au projet Supabase
+utilise en developpement (voir `docs/adr/0001-nouveau-projet-supabase.md`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Commandes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev              # serveur de developpement
+npm run build            # verifie que ca compile pour de vrai
+npm run typecheck        # tsc --noEmit
+npm run lint              # ESLint (inclut la regle no-restricted-imports sur src/core)
+npm run test              # Vitest, tout le projet
+npm run test:core         # Vitest, src/core uniquement (rapide, aucune dependance)
+npm run test:watch        # Vitest en mode watch
+npm run test:coverage     # Vitest avec couverture (src/core)
+supabase start            # base locale (necessite Docker)
+supabase db reset         # rejoue toutes les migrations + le seed
+supabase gen types typescript --local > src/types/database.ts
+```
 
-## Learn More
+## Ou trouver quoi
 
-To learn more about Next.js, take a look at the following resources:
+| Chemin | Contenu |
+|---|---|
+| `CLAUDE.md` | Regles absolues du projet (securite, IA, base de donnees, architecture) |
+| `docs/PDD.md` | Source de verite fonctionnelle |
+| `docs/SCHEMA.md` | Schema de donnees, SQL, RLS, formules |
+| `docs/BACKLOG.md` | Tickets avec criteres d'acceptation |
+| `docs/adr/` | Decisions d'architecture et leurs raisons |
+| `docs/specs/` | Specifications detaillees (regles, wiki, personnages) |
+| `src/core/**` | Noyau pur : formules, des, visibilite. Aucun import de `next`, `react` ou `@supabase/*` (verifie par ESLint) |
+| `src/server/services/**` | Logique metier |
+| `src/server/repos/**` | Seul endroit du code qui interroge Supabase |
+| `src/i18n/fr.ts` | Libelles francais de l'interface (les identifiants techniques restent en anglais) |
+| `supabase/migrations/` | Migrations SQL, appliquees et jamais modifiees une fois en place |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture en une phrase
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Le wiki et le moteur de regles ne sont pas deux systemes : chaque entite
+possede une facette narrative et une facette mecanique dans un modele de
+donnees unique. Voir `docs/PDD.md` §28 pour le detail des couches
+(composants serveur -> server actions -> services -> repos -> PostgreSQL/RLS).
