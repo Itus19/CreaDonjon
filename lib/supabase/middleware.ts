@@ -27,7 +27,27 @@ export async function updateSession(request: NextRequest) {
 
   // Touching auth.getUser() here is what actually refreshes the session
   // cookie on every request; without it, tokens silently expire mid-session.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const path = request.nextUrl.pathname;
+  const isAuthPage =
+    path === "/login" ||
+    path === "/signup" ||
+    path.startsWith("/auth/");
+
+  if (!user && !isAuthPage) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  if (user && (path === "/login" || path === "/signup")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 }
