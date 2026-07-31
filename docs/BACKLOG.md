@@ -251,12 +251,14 @@ Dans `src/core/linker` : détection des noms et alias d'entités dans un texte, 
 - Proposition à l'utilisateur ; création de lien jamais silencieuse.
 
 **Critères d'acceptation**
-- [ ] Fonction pure, testée sans base.
-- [ ] Un alias inclus dans un mot plus long n'est pas détecté (« Baldur » ne se déclenche pas dans « Baldurien »).
-- [ ] Deux entités partageant un alias produisent une ambiguïté explicite.
-- [ ] Un texte de 5 000 mots avec 200 alias se traite en moins de 100 ms.
+- [x] Fonction pure, testée sans base.
+- [x] Un alias inclus dans un mot plus long n'est pas détecté (« Baldur » ne se déclenche pas dans « Baldurien »).
+- [x] Deux entités partageant un alias produisent une ambiguïté explicite.
+- [x] Un texte de 5 000 mots avec 200 alias se traite en moins de 100 ms.
 
 **Attention :** c'est le ticket avec le plus fort risque de faux positifs, et le PDD (§6) l'identifie déjà. Commencer strict — ne détecter que les correspondances exactes de nom complet — et n'assouplir qu'ensuite, en mesurant.
+
+**Livré** : `src/core/linker/{normalize,detect}.ts` — fonction pure `detectEntityReferences`, ne modifie ni ne crée jamais rien (retourne des propositions, y compris ambiguës). Le branchement dans l'éditeur de segments (proposer un lien à l'utilisateur pendant la saisie) n'est pas fait ici — cette fonction est la brique testée, l'UI de proposition viendra avec l'éditeur de texte riche.
 
 ---
 
