@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useDesktop } from "./DesktopContext";
 
 export interface PaletteEntity {
   id: string;
@@ -37,7 +37,7 @@ export default function CommandPalette({
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const router = useRouter();
+  const desktop = useDesktop();
 
   const localResults = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -111,7 +111,11 @@ export default function CommandPalette({
 
   function navigateTo(slug: string) {
     setOpen(false);
-    router.push(`/m/${worldSlug}/f/${slug}`);
+    if (desktop) {
+      desktop.openEntity(slug);
+    } else {
+      window.location.href = `/m/${worldSlug}/f/${slug}`;
+    }
   }
 
   function onInputKeyDown(e: React.KeyboardEvent) {

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import Dropdown from "@/components/shared/Dropdown";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
+import { useDesktop } from "@/components/shell/DesktopContext";
 import { RELATION_TYPES } from "@/src/core/relations/inverses";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 
@@ -35,6 +36,7 @@ export default function RelationsChips({
   otherEntities: OtherEntityOption[];
 }) {
   const router = useRouter();
+  const desktop = useDesktop();
   const [targetEntityId, setTargetEntityId] = useState(otherEntities[0]?.id ?? "");
   const [relationType, setRelationType] = useState<(typeof RELATION_TYPES)[number]>(
     RELATION_TYPES[0]
@@ -86,6 +88,12 @@ export default function RelationsChips({
             >
               <Link
                 href={`/m/${worldSlug}/f/${relation.other.slug}`}
+                onClick={(e) => {
+                  if (!desktop) return;
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+                  e.preventDefault();
+                  desktop.openEntity(relation.other.slug);
+                }}
                 className="font-medium text-link-entity hover:underline"
               >
                 {relation.other.name}

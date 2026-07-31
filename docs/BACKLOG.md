@@ -301,12 +301,16 @@ La mécanique (V0-04) est faite ; l'esthétique des contrôles ne l'est pas enco
 - Petit écran (< 768px) : repli sur l'affichage plein écran actuel, une fiche a la fois — pas de fenêtres flottantes sur mobile.
 
 **Critères d'acceptation**
-- [ ] Ouvrir une deuxième fiche pendant qu'une autre est ouverte ajoute son slug à `?avec=`, sans perdre la première.
-- [ ] Recharger la page avec `?avec=...` rouvre exactement les mêmes fenêtres.
-- [ ] Fermer une fenêtre retire son slug de l'URL et ne casse pas les fenêtres restantes.
-- [ ] Partager l'URL d'un état à plusieurs fenêtres ouvertes reproduit le même état chez un autre membre du monde.
-- [ ] Glisser ou redimensionner une fenêtre ne modifie ni l'URL ni l'historique de navigation (pas d'entrée ajoutée au bouton retour).
-- [ ] En dessous de 768px, aucune fenêtre flottante : une fiche plein écran, comme aujourd'hui.
+- [x] Ouvrir une deuxième fiche pendant qu'une autre est ouverte ajoute son slug à `?avec=`, sans perdre la première.
+- [x] Recharger la page avec `?avec=...` rouvre exactement les mêmes fenêtres.
+- [x] Fermer une fenêtre retire son slug de l'URL et ne casse pas les fenêtres restantes.
+- [x] Partager l'URL d'un état à plusieurs fenêtres ouvertes reproduit le même état chez un autre membre du monde.
+- [x] Glisser ou redimensionner une fenêtre ne modifie ni l'URL ni l'historique de navigation (pas d'entrée ajoutée au bouton retour).
+- [x] En dessous de 768px, aucune fenêtre flottante : une fiche plein écran, comme aujourd'hui.
+
+**Livré** : `components/shell/{DesktopContext,DesktopWindows,WindowFrame,RegisterPrimaryWindow,useOpenEntityLink}.tsx`, `src/server/services/entityWindow.ts` (logique partagée entre la page SSR et la route API des fenêtres secondaires), `app/api/worlds/[worldSlug]/entities/[entitySlug]/window/route.ts`. `<WindowFrame>` est repris quasi tel quel de `master` (glisser, redimensionner, agrandir/restaurer, aimantation aux bords), adapté aux jetons de `tokens.css`. Position/taille utilisent le motif React officiel d'ajustement d'état pendant le rendu plutôt qu'un `useEffect` avec `setState` synchrone en tête de corps.
+
+**Piège trouvé en testant** : `<Sidebar>` (donc `<EntityTree>`/`<CommandPalette>`) était rendu comme frère de `<DesktopWindows>` dans `AppShell`, hors de son `DesktopContext.Provider` — `useDesktop()` y renvoyait toujours `null`, et les clics dans la barre latérale retombaient silencieusement sur une navigation classique au lieu d'ouvrir une fenêtre. Corrigé en passant `sidebar` en prop à `<DesktopWindows>`, qui le rend désormais à l'intérieur de son propre Provider.
 
 ---
 

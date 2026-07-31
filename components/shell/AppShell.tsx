@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import type { EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import type { PaletteEntity } from "./CommandPalette";
 import Sidebar from "./Sidebar";
-import Panel from "./Panel";
+import DesktopWindows from "./DesktopWindows";
 
 /**
  * Barre superieure, barre laterale, zone de travail
@@ -42,10 +43,16 @@ export default function AppShell({
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar worldId={worldId} worldSlug={worldSlug} tree={tree} entities={entities} />
-        <main className="flex flex-1 overflow-y-auto p-8">
-          <Panel>{children}</Panel>
-        </main>
+        <Suspense fallback={null}>
+          <DesktopWindows
+            worldSlug={worldSlug}
+            sidebar={
+              <Sidebar worldId={worldId} worldSlug={worldSlug} tree={tree} entities={entities} />
+            }
+          >
+            {children}
+          </DesktopWindows>
+        </Suspense>
       </div>
     </div>
   );

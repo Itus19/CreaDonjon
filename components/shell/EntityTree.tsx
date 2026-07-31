@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { EntityTreeGroup, EntityTreeNode } from "@/src/core/entity-tree/build-tree";
+import { useOpenEntityLink } from "./useOpenEntityLink";
 
 const KIND_LABELS: Record<string, string> = {
   character: "Personnages",
@@ -30,6 +31,7 @@ function NodeRow({
   const [expanded, setExpanded] = useState(true);
   const hasChildren = node.children.length > 0;
   const isActive = node.slug === currentSlug;
+  const link = useOpenEntityLink(worldSlug, node.slug);
 
   return (
     <li>
@@ -47,7 +49,8 @@ function NodeRow({
           <span className="w-4" />
         )}
         <Link
-          href={`/m/${worldSlug}/f/${node.slug}`}
+          href={link.href}
+          onClick={link.onClick}
           className={`flex-1 truncate rounded px-2 py-1 text-sm transition-colors hover:bg-panel-raised ${
             isActive ? "bg-panel-raised text-accent" : "text-ink-soft"
           }`}
