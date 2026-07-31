@@ -222,6 +222,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           data: Json
+          display: Json
           display_order: number
           entity_id: string
           id: string
@@ -235,6 +236,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data?: Json
+          display?: Json
           display_order?: number
           entity_id: string
           id?: string
@@ -248,6 +250,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data?: Json
+          display?: Json
           display_order?: number
           entity_id?: string
           id?: string

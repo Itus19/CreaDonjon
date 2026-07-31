@@ -227,12 +227,16 @@ Spécification complète : `specs/coquille-et-design.md`. À faire **avant** V0-
 
 ## V0-04 — Blocs · `M`
 
-Ajouter, éditer, réordonner, supprimer un bloc. Deux types suffisent en V0 : `notes` et `character`.
+Ajouter, éditer, réordonner, supprimer un bloc. Quatre types en V0, conformes à `docs/SCHEMA.md` §7 et `specs/wiki-blocs.md` §1 : `description`, `infobox`, `gallery`, `custom_table`. (`character` est un bloc V1, pas V0 — ne pas le construire ici.)
 
 **Critères d'acceptation**
-- [ ] Le `data` de chaque type est validé par son schéma Zod, et porte un `__v`.
-- [ ] Le réordonnancement modifie **une seule ligne** (`display_order` en `numeric`).
-- [ ] Un bloc en visibilité `gm` est absent de la réponse serveur pour un lecteur non autorisé. **Vérifié dans l'onglet réseau du navigateur, pas seulement à l'écran.**
+- [x] Le `data` de chaque type est validé par son schéma Zod, et porte un `__v`.
+- [x] Le réordonnancement modifie **une seule ligne** (`display_order` en `numeric`).
+- [x] Un bloc en visibilité `gm` est absent de la réponse serveur pour un lecteur non autorisé. **Vérifié dans l'onglet réseau du navigateur, pas seulement à l'écran.**
+
+Livré aussi dans ce ticket : relations affichées en propriétés-chips groupées par `entity_kind` de la cible (table `relations` existante), alias en chips, emplacement portrait sans upload (pas de ticket de stockage/assets en V0). La fonction pure `canSee`/`filterBlocks` (`src/core/visibility/`) et le vocabulaire fermé des relations (`src/core/relations/inverses.ts`) sont désormais du code partagé, réutilisables par les tickets suivants.
+
+**Écart connu, hors scope de ce ticket :** `entities.narrative_content` (les segments narratifs) n'est pas encore filtré côté serveur par visibilité — seuls les blocs le sont. Confirmé en conditions réelles (compte `viewer` de test) : un segment `gm` apparaît dans la réponse HTTP brute pour un lecteur non autorisé. Nécessite une conception séparée (risque de perte de données si on filtre naïvement le tableau qui alimente aussi le formulaire d'édition) — voir tâche de suivi.
 
 ---
 

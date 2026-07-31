@@ -4,32 +4,48 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import BlockShell from "@/components/blocks/BlockShell";
 import SegmentsEditor from "@/components/entities/SegmentsEditor";
+import RelationsChips, { type OtherEntityOption, type RelationChip } from "@/components/entities/RelationsChips";
+import EntityBlocks, { type BlockItem } from "@/components/blocks/EntityBlocks";
 import type { Segment } from "@/src/core/schemas/entities/segments";
 import { ENTITY_KINDS } from "@/lib/entities/schemas";
+import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import type { EntitySummary } from "@/src/server/repos/entities";
 
-const ENTITY_KIND_LABELS: Record<(typeof ENTITY_KINDS)[number], string> = {
-  character: "Personnage",
-  location: "Lieu",
-  faction: "Faction",
-  item: "Objet",
-  creature: "Créature",
-  quest: "Quête",
-  event: "Événement",
-  other: "Autre",
-};
-
-export default function EditEntityForm({ entity }: { entity: EntitySummary }) {
+export default function EditEntityForm({
+  entity,
+  worldSlug,
+  initialBlocks,
+  initialRelations,
+  otherEntities,
+}: {
+  entity: EntitySummary;
+  worldSlug: string;
+  initialBlocks: BlockItem[];
+  initialRelations: RelationChip[];
+  otherEntities: OtherEntityOption[];
+}) {
   const router = useRouter();
   const [name, setName] = useState(entity.name);
   const [entityKind, setEntityKind] = useState(entity.entity_kind);
   const [summary, setSummary] = useState(entity.summary);
-  const [aliases, setAliases] = useState(entity.aliases.join(", "));
+  const [aliases, setAliases] = useState<string[]>(entity.aliases);
+  const [newAlias, setNewAlias] = useState("");
   const [tags, setTags] = useState(entity.tags.join(", "));
   const [segments, setSegments] = useState<Segment[]>(entity.narrative_content);
   const [version, setVersion] = useState(entity.version);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "conflict" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  function addAlias() {
+    const value = newAlias.trim();
+    if (value === "" || aliases.includes(value)) return;
+    setAliases((prev) => [...prev, value]);
+    setNewAlias("");
+  }
+
+  function removeAlias(alias: string) {
+    setAliases((prev) => prev.filter((a) => a !== alias));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,7 +60,7 @@ export default function EditEntityForm({ entity }: { entity: EntitySummary }) {
         name,
         entityKind,
         summary,
-        aliases: aliases.split(",").map((s) => s.trim()).filter((s) => s.length > 0),
+        aliases,
         tags: tags.split(",").map((s) => s.trim()).filter((s) => s.length > 0),
         narrativeContent: segments,
       }),
@@ -68,38 +84,91 @@ export default function EditEntityForm({ entity }: { entity: EntitySummary }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <h1 className="font-narrative text-xl font-semibold text-accent">{name}</h1>
-        <span className="font-mech text-xs text-ink-muted">{entity.slug}</span>
+    <div className="flex flex-col gap-8">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <div className="grid grid-cols-[1fr_auto] gap-6">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h1 className="font-narrative text-xl font-semibold text-accent">{name}</h1>
+            <span className="font-mech text-xs text-ink-muted">{entity.slug}</span>
+          </div>
+
+          <label className="flex flex-col gap-1 text-sm">
+            Nom
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              type="text"
+              required
+              maxLength={200}
+              className="rounded-md border border-edge bg-transparent px-3 py-2"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm">
+            Type
+            <select
+              value={entityKind}
+              onChange={(e) => setEntityKind(e.target.value)}
+              className="rounded-md border border-edge bg-transparent px-3 py-2"
+            >
+              {ENTITY_KINDS.map((kind) => (
+                <option key={kind} value={kind}>
+                  {ENTITY_KIND_LABELS[kind]}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="flex flex-col gap-1 text-sm">
+            <span>Alias</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {aliases.map((alias) => (
+                <span
+                  key={alias}
+                  className="flex items-center gap-1 rounded-full border border-edge bg-panel-raised px-2.5 py-1 text-xs"
+                >
+                  {alias}
+                  <button
+                    type="button"
+                    onClick={() => removeAlias(alias)}
+                    className="text-ink-muted hover:text-danger"
+                    aria-label={`Retirer l'alias ${alias}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              <input
+                value={newAlias}
+                onChange={(e) => setNewAlias(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addAlias();
+                  }
+                }}
+                placeholder="+ ajouter"
+                className="w-24 rounded-full border border-edge bg-transparent px-2.5 py-1 text-xs outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1 text-sm">
+            <span>Relations</span>
+            <RelationsChips
+              entityId={entity.id}
+              worldSlug={worldSlug}
+              relations={initialRelations}
+              otherEntities={otherEntities}
+            />
+          </div>
+        </div>
+
+        <div className="flex aspect-[3/4] w-40 shrink-0 items-center justify-center rounded-2xl border border-edge bg-panel-sunken text-center text-xs text-ink-muted">
+          Portrait
+        </div>
       </div>
-
-      <label className="flex flex-col gap-1 text-sm">
-        Nom
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          type="text"
-          required
-          maxLength={200}
-          className="rounded-md border border-edge bg-transparent px-3 py-2"
-        />
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm">
-        Type
-        <select
-          value={entityKind}
-          onChange={(e) => setEntityKind(e.target.value)}
-          className="rounded-md border border-edge bg-transparent px-3 py-2"
-        >
-          {ENTITY_KINDS.map((kind) => (
-            <option key={kind} value={kind}>
-              {ENTITY_KIND_LABELS[kind]}
-            </option>
-          ))}
-        </select>
-      </label>
 
       <label className="flex flex-col gap-1 text-sm">
         Résumé
@@ -108,16 +177,6 @@ export default function EditEntityForm({ entity }: { entity: EntitySummary }) {
           onChange={(e) => setSummary(e.target.value)}
           rows={2}
           maxLength={2000}
-          className="rounded-md border border-edge bg-transparent px-3 py-2"
-        />
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm">
-        Alias (séparés par des virgules)
-        <input
-          value={aliases}
-          onChange={(e) => setAliases(e.target.value)}
-          type="text"
           className="rounded-md border border-edge bg-transparent px-3 py-2"
         />
       </label>
@@ -151,6 +210,9 @@ export default function EditEntityForm({ entity }: { entity: EntitySummary }) {
       >
         {status === "saving" ? "Enregistrement..." : "Enregistrer"}
       </button>
-    </form>
+      </form>
+
+      <EntityBlocks entityId={entity.id} initialBlocks={initialBlocks} />
+    </div>
   );
 }

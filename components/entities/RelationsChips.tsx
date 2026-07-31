@@ -1,0 +1,155 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import Link from "next/link";
+import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
+import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
+import { RELATION_TYPES } from "@/src/core/relations/inverses";
+import { RELATION_LABELS_FR } from "@/src/i18n/fr";
+
+export interface RelationChip {
+  id: string;
+  relationType: string;
+  label: string;
+  other: { id: string; name: string; slug: string; entity_kind: string };
+}
+
+export interface OtherEntityOption {
+  id: string;
+  name: string;
+  slug: string;
+  entity_kind: string;
+}
+
+export default function RelationsChips({
+  entityId,
+  worldSlug,
+  relations,
+  otherEntities,
+}: {
+  entityId: string;
+  worldSlug: string;
+  relations: RelationChip[];
+  otherEntities: OtherEntityOption[];
+}) {
+  const router = useRouter();
+  const [targetEntityId, setTargetEntityId] = useState(otherEntities[0]?.id ?? "");
+  const [relationType, setRelationType] = useState<(typeof RELATION_TYPES)[number]>(
+    RELATION_TYPES[0]
+  );
+  const [visibilityLevel, setVisibilityLevel] = useState("public");
+  const [pending, setPending] = useState(false);
+
+  const groups = new Map<string, RelationChip[]>();
+  for (const relation of relations) {
+    const kind = relation.other.entity_kind;
+    const list = groups.get(kind) ?? [];
+    list.push(relation);
+    groups.set(kind, list);
+  }
+
+  async function removeRelation(id: string) {
+    await fetch(`/api/relations/${id}`, { method: "DELETE" });
+    router.refresh();
+  }
+
+  async function addRelation() {
+    if (!targetEntityId) return;
+    setPending(true);
+    await fetch(`/api/entities/${entityId}/relations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        targetEntityId,
+        relationType,
+        visibility: { level: visibilityLevel, scopeId: null },
+      }),
+    });
+    setPending(false);
+    router.refresh();
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {[...groups.entries()].map(([kind, chips]) => (
+        <div key={kind} className="flex flex-wrap items-center gap-2">
+          <span className="w-24 shrink-0 text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            {ENTITY_KIND_LABELS[kind as keyof typeof ENTITY_KIND_LABELS] ?? kind}
+          </span>
+          {chips.map((relation) => (
+            <span
+              key={relation.id}
+              className="flex items-center gap-1.5 rounded-full border border-edge bg-panel-raised px-3 py-1 text-xs"
+              title={RELATION_LABELS_FR[relation.label] ?? relation.label}
+            >
+              <Link
+                href={`/m/${worldSlug}/f/${relation.other.slug}`}
+                className="font-medium text-link-entity hover:underline"
+              >
+                {relation.other.name}
+              </Link>
+              <button
+                type="button"
+                onClick={() => removeRelation(relation.id)}
+                className="text-ink-muted hover:text-danger"
+                aria-label="Retirer cette relation"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      ))}
+      {relations.length === 0 && (
+        <p className="text-sm text-ink-muted">Aucune relation pour l&apos;instant.</p>
+      )}
+
+      {otherEntities.length > 0 && (
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <select
+            value={relationType}
+            onChange={(e) => setRelationType(e.target.value as (typeof RELATION_TYPES)[number])}
+            className="rounded-md border border-edge bg-transparent px-2 py-1 text-xs"
+          >
+            {RELATION_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {RELATION_LABELS_FR[type] ?? type}
+              </option>
+            ))}
+          </select>
+          <select
+            value={targetEntityId}
+            onChange={(e) => setTargetEntityId(e.target.value)}
+            className="rounded-md border border-edge bg-transparent px-2 py-1 text-xs"
+          >
+            {otherEntities.map((other) => (
+              <option key={other.id} value={other.id}>
+                {other.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={visibilityLevel}
+            onChange={(e) => setVisibilityLevel(e.target.value)}
+            className="rounded-md border border-edge bg-transparent px-2 py-1 text-xs"
+          >
+            {VISIBILITY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={addRelation}
+            disabled={pending}
+            className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+          >
+            + Ajouter une relation
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
