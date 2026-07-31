@@ -7,10 +7,12 @@ import CommandPalette from "./CommandPalette";
 import EntityTree from "./EntityTree";
 
 export default function Sidebar({
+  worldId,
   worldSlug,
   tree,
   entities,
 }: {
+  worldId: string;
   worldSlug: string;
   tree: EntityTreeGroup[];
   entities: PaletteEntity[];
@@ -41,7 +43,7 @@ export default function Sidebar({
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <CommandPalette worldSlug={worldSlug} entities={entities} />
+        <CommandPalette worldId={worldId} worldSlug={worldSlug} entities={entities} />
         <div className="flex-1 overflow-y-auto" onClick={() => setOpen(false)}>
           <EntityTree groups={tree} worldSlug={worldSlug} />
         </div>

@@ -10,33 +10,74 @@ export interface PaletteEntity {
   entity_kind: string;
 }
 
+const DEBOUNCE_MS = 200;
+
 /**
  * ⌘K — recherche et navigation (specs/coquille-et-design.md §5, §8).
- * Filtrage cote client sur la liste des entites du monde courant : la
- * recherche server-side complete (V0-06) n'est pas un prealable a une
- * palette de commandes utilisable des maintenant.
+ * Etat vide : filtrage local instantane sur les entites deja chargees par
+ * le layout. Requete non vide : recherche serveur via `search_fr`
+ * (docs/BACKLOG.md V0-06, nom/alias/resume, insensible aux accents),
+ * debattue pour ne pas faire un aller-retour a chaque frappe. Le filtrage
+ * local sert aussi de resultat immediat pendant que la requete serveur
+ * est en vol, pour eviter un flash vide.
  */
 export default function CommandPalette({
+  worldId,
   worldSlug,
   entities,
 }: {
+  worldId: string;
   worldSlug: string;
   entities: PaletteEntity[];
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [serverResults, setServerResults] = useState<PaletteEntity[] | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const router = useRouter();
 
-  const results = useMemo(() => {
+  const localResults = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (q === "") return entities.slice(0, 8);
     return entities.filter((e) => e.name.toLowerCase().includes(q)).slice(0, 8);
   }, [query, entities]);
 
+  const results = query.trim() === "" ? localResults : (serverResults ?? localResults);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (trimmed === "") return;
+
+    debounceRef.current = setTimeout(() => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      fetch(`/api/search?worldId=${encodeURIComponent(worldId)}&q=${encodeURIComponent(trimmed)}`, {
+        signal: controller.signal,
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) setServerResults(data);
+        })
+        .catch(() => {
+          // Requete annulee (nouvelle frappe) ou erreur reseau : le filtrage
+          // local reste affiche, pas de raison de faire echouer la palette.
+        });
+    }, DEBOUNCE_MS);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query, worldId]);
+
   function openPalette() {
     setQuery("");
+    setServerResults(null);
     setActiveIndex(0);
     setOpen(true);
   }
@@ -46,6 +87,7 @@ export default function CommandPalette({
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setQuery("");
+        setServerResults(null);
         setActiveIndex(0);
         setOpen((o) => !o);
       } else if (e.key === "Escape") {

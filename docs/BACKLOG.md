@@ -265,10 +265,14 @@ Dans `src/core/linker` : détection des noms et alias d'entités dans un texte, 
 ## V0-06 — Recherche · `M`
 
 **Critères d'acceptation**
-- [ ] Recherche par nom, alias et résumé via `search_fr`.
-- [ ] Insensible aux accents.
-- [ ] Résultats filtrés par visibilité **côté serveur**.
-- [ ] Moins de 500 ms sur 1 000 entités (jeu de test généré).
+- [x] Recherche par nom, alias et résumé via `search_fr`.
+- [x] Insensible aux accents.
+- [x] Résultats filtrés par visibilité **côté serveur**.
+- [x] Moins de 500 ms sur 1 000 entités (jeu de test généré).
+
+**Écart trouvé et corrigé en cours de route :** `search_fr` (créé en Phase 0) n'appliquait jamais `unaccent()` malgré l'extension déjà installée — vérifié empiriquement, chercher « epee legere » ne trouvait pas « Épée Légère ». Migration `20260801110001_search_unaccent.sql` : `unaccent()` dans `app.entities_search_fr`, recalcul forcé des lignes existantes, et une fonction `public.search_entities` (`security invoker`, RLS normale) exposée via PostgREST puisque `app.*` n'est jamais exposé directement. Testé avec 1000 entités générées : ~60 ms.
+
+Branché dans `<CommandPalette>` : requête locale instantanée sur la liste déjà chargée pour l'état vide, requête serveur débattue (200 ms) dès qu'une frappe non vide existe.
 
 ---
 

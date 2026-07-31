@@ -23,6 +23,7 @@ export default async function WorldLayout({
 
   return (
     <AppShell
+      worldId={world.id}
       worldName={world.name}
       worldSlug={world.slug}
       tree={tree}

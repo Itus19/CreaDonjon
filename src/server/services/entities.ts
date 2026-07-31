@@ -5,12 +5,14 @@ import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
 import type { NarrativeContent } from "@/src/core/schemas/entities/segments";
 import { buildEntityTree, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import {
+  type EntitySearchResult,
   type EntitySummary,
   getEntityById,
   insertEntity,
   insertEntityRevision,
   listEntitiesForWorld,
   nextRevisionNumber,
+  searchEntitiesInWorld,
   updateEntityWithVersionCheck,
   worldHasSlug,
 } from "@/src/server/repos/entities";
@@ -124,4 +126,15 @@ export async function updateEntity(
   });
 
   return { ok: true, entity: updated };
+}
+
+/** Une requete vide ne vaut pas la peine d'un aller-retour base (docs/BACKLOG.md V0-06). */
+export async function searchEntities(
+  supabase: TypedClient,
+  worldId: string,
+  query: string
+): Promise<EntitySearchResult[]> {
+  const trimmed = query.trim();
+  if (trimmed === "") return [];
+  return searchEntitiesInWorld(supabase, worldId, trimmed);
 }

@@ -10,12 +10,14 @@ import Panel from "./Panel";
  * viendra en V3 : l'onglet existe pour la forme, desactive.
  */
 export default function AppShell({
+  worldId,
   worldName,
   worldSlug,
   tree,
   entities,
   children,
 }: {
+  worldId: string;
   worldName: string;
   worldSlug: string;
   tree: EntityTreeGroup[];
@@ -40,7 +42,7 @@ export default function AppShell({
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar worldSlug={worldSlug} tree={tree} entities={entities} />
+        <Sidebar worldId={worldId} worldSlug={worldSlug} tree={tree} entities={entities} />
         <main className="flex flex-1 overflow-y-auto p-8">
           <Panel>{children}</Panel>
         </main>

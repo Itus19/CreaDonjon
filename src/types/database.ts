@@ -1606,6 +1606,15 @@ export type Database = {
         Args: { p_base_system: string; p_name: string }
         Returns: string
       }
+      search_entities: {
+        Args: { p_query: string; p_world_id: string }
+        Returns: {
+          entity_kind: string
+          id: string
+          name: string
+          slug: string
+        }[]
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       unaccent: { Args: { "": string }; Returns: string }

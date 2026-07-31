@@ -180,3 +180,29 @@ export async function insertEntityRevision(
   });
   if (error) throw new Error(error.message);
 }
+
+export interface EntitySearchResult {
+  id: string;
+  name: string;
+  slug: string;
+  entity_kind: string;
+}
+
+/**
+ * Recherche via `search_fr` (nom, alias, resume — docs/BACKLOG.md V0-06).
+ * `search_entities` est `security invoker` : la RLS de `entities`
+ * s'applique normalement, aucune entite hors des mondes de l'appelant
+ * n'est jamais renvoyee (migration 20260801110001).
+ */
+export async function searchEntitiesInWorld(
+  supabase: TypedClient,
+  worldId: string,
+  query: string
+): Promise<EntitySearchResult[]> {
+  const { data, error } = await supabase.rpc("search_entities", {
+    p_world_id: worldId,
+    p_query: query,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
