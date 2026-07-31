@@ -24,8 +24,10 @@ Le développeur du projet apprend à coder sur ce projet. Explique tes choix. Ne
 | `docs/specs/regles-blocs.md` | Blocs typés des règles, primitives, mises en page | Tickets règles, import SRD |
 | `docs/specs/wiki-liens-et-personnages.md` | Liens dans le texte, mentions, modèle de personnage, modificateurs | Tickets wiki et personnage |
 | `docs/specs/wiki-blocs.md` | Catalogue des blocs de wiki, généalogie, chronologie, fiche de personnage | Tickets wiki |
+| `docs/specs/coquille-et-design.md` | Coquille, jetons de design, composants primitifs | Tout ticket produisant de l'interface |
+| `docs/specs/outils-mj.md` | Tables aléatoires, générateurs, rencontres, initiative | Tickets V2 |
 
-Ne lis que ce dont le ticket a besoin. Charger les huit documents à chaque session gaspille du contexte et disperse l'attention.
+Ne lis que ce dont le ticket a besoin. Charger les dix documents à chaque session gaspille du contexte et disperse l'attention.
 
 ---
 

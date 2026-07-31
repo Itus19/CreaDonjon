@@ -399,3 +399,192 @@ Aucune autre modification : la table `blocks` accueille tous ces types tels quel
 | Les blocs de personnage sont-ils modifiables par le joueur ou par le MJ ? | Le joueur possède son build, le MJ possède l'état de jeu. À trancher au moment des permissions fines |
 | Multiclassage dans l'interface de création | Prévu par le modèle, à ne pas exposer dans l'interface avant que le cas simple fonctionne |
 | Promotion d'une entrée en entité | Motif générique à écrire une fois, réutilisé par `timeline`, `inventory`, `random_table` |
+
+---
+
+# Partie D — Personnalité, convictions et attitudes
+
+*Ajout du 29 juillet 2026. Cible : V2. Rien à implémenter avant.*
+
+## D1. Le besoin
+
+La 5e code l'attitude d'un PNJ en trois états — hostile, indifférent, amical — et sa personnalité par un alignement en neuf cases. C'est très insuffisant pour qu'une IA joue un PNJ de façon cohérente, et surtout **ça ne garde aucune trace de ce qui a produit cet état**.
+
+**L'alignement ne suffit pas, et pas seulement par manque de finesse.** Deux personnages loyaux bons : un prêtre du soleil et un greffier de guilde. Même case, comportements opposés dès qu'on leur demande d'assouplir une règle. L'alignement est un *résumé*, pas un moteur de comportement — c'est d'ailleurs pourquoi la 5e 2024 l'a retiré des personnages joueurs.
+
+Ce qui pilote réellement le comportement d'un PNJ : ce à quoi il tient, dans quel ordre, envers qui il est loyal, ce qu'il refuse absolument, et ce qu'il pense de vous en ce moment.
+
+## D2. Trois choses distinctes, encore
+
+| Quoi | Nature | Où |
+|---|---|---|
+| **Convictions** | ce en quoi il croit — durable, partagé avec les factions | bloc `worldview` sur l'entité |
+| **Personnalité** | comment il réagit — durable, strictement individuel | bloc `personality` sur l'entité |
+| **Attitude** | ce que A ressent envers B, maintenant | état de campagne, table dédiée |
+| **Historique** | ce qui l'a fait changer | `session_events`, déjà en ajout seul |
+
+Même découpage que build / état de jeu / journal. Ce n'est pas une coïncidence : c'est le motif du projet.
+
+**Pourquoi `worldview` et `personality` sont deux blocs et pas un.** Une faction, une religion, une cité ont des convictions ; elles n'ont pas de tempérament. Séparer permet d'attacher `worldview` à n'importe quelle entité — et cela débloque D6, la détection de tension.
+
+## D3. Le bloc `worldview`
+
+```json
+{
+  "block_type": "worldview",
+  "display": { "label": "Convictions", "layout": "poles" },
+  "data": {
+    "poles": [
+      { "key": "order_freedom",        "value": -2, "note": "La loi protège les faibles." },
+      { "key": "mercy_justice",        "value":  2 },
+      { "key": "sacred_secular",       "value": -3, "note": "Croyant, mais sans clergé." },
+      { "key": "tradition_progress",   "value": -1 },
+      { "key": "individual_collective", "value": 1 },
+      { "key": "wealth_honor",         "value":  2 },
+      { "key": "peace_might",          "value":  0 }
+    ],
+    "priority": ["mercy_justice", "sacred_secular", "order_freedom"],
+    "allegiances": [
+      { "ref": { "kind": "entity", "id": "ent_3d7f" }, "strength": 2, "public": false }
+    ],
+    "lines":  ["ne trahira jamais un serment prêté à voix haute"],
+    "limits": ["mentira, mais mal et à contrecœur"],
+    "alignment": "LN"
+  }
+}
+```
+
+### L'échelle
+
+**Un seul nombre de −3 à +3 par pôle.** Le signe indique le côté, la valeur absolue indique l'intensité, et **0 signifie « ne s'en soucie pas »** — ce qui est une information, pas une absence de donnée. Un personnage à `order_freedom: 0` n'est pas neutre par indécision : le sujet ne le fait pas agir.
+
+Deux nombres (position + intensité) auraient été redondants. Un seul suffit et se lit d'un coup d'œil.
+
+### Le champ qui fait tout marcher : `priority`
+
+**Une liste de valeurs sans ordre de priorité ne sert à rien.** « Bram tient à la miséricorde et au serment » ne dit rien à l'IA quand le groupe lui demande d'épargner un homme qu'il a juré de livrer. `priority: ["mercy_justice", ...]` le dit.
+
+C'est le champ qui transforme un portrait en moteur de décision. S'il ne devait en rester qu'un, ce serait celui-là.
+
+### Pôles standard
+
+`order_freedom`, `mercy_justice`, `tradition_progress`, `individual_collective`, `sacred_secular`, `wealth_honor`, `peace_might`, `openness_insularity`.
+
+Huit par défaut, configurables par monde. Un univers politique en ajoutera, un univers d'horreur en retirera.
+
+**La religiosité n'est pas un axe à part.** C'est le pôle `sacred_secular` plus, éventuellement, une allégeance vers une entité divinité — qui a donc sa fiche de wiki. Athée, croyant sans pratique, fanatique : trois positions sur un pôle et une allégeance présente ou absente. Aucune machinerie spécifique.
+
+**L'alignement est conservé, facultatif, et ne pilote rien.** Il est stocké si le ruleset l'utilise, peut être suggéré à partir des pôles, et sert d'étiquette. Jamais d'entrée pour une décision.
+
+## D4. Le bloc `personality`
+
+```json
+{
+  "block_type": "personality",
+  "display": { "label": "Personnalité", "layout": "key_values" },
+  "data": {
+    "baseline": { "affinity": 0, "trust": -1, "respect": 0, "fear": 0 },
+    "temperament": ["bourru", "rancunier", "loyal envers les siens"],
+    "goals": [
+      { "text": "Rembourser sa dette à la guilde", "urgency": 3, "secret": true },
+      { "text": "Marier sa fille loin d'ici", "urgency": 1 }
+    ],
+    "reactions": [
+      { "when": "on lui ment et il s'en aperçoit", "axis": "trust",    "delta": -2 },
+      { "when": "on protège sa fille",             "axis": "affinity", "delta":  2 }
+    ],
+    "speech": { "register": "familier", "tics": ["appelle tout le monde « petit »"] }
+  }
+}
+```
+
+`baseline` donne l'attitude de départ envers un inconnu — c'est de là que part toute nouvelle relation.
+
+`speech` paraît anecdotique et ne l'est pas : c'est ce qui rend un PNJ reconnaissable d'une séance à l'autre quand c'est un modèle qui l'incarne.
+
+**Les `reactions` sont des indications narratives, pas des règles exécutables.** La distinction est ce qui rend ce bloc faisable aujourd'hui : « ment → confiance −2 » écrit en prose et lu par l'IA coûte trois lignes ; le même énoncé transformé en déclencheur exécutable, c'est le sujet difficile repoussé après la V1. Ne jamais confondre les deux — la tentation sera forte.
+
+## D5. La table des attitudes
+
+```sql
+create table entity_attitudes (
+  id               uuid primary key default gen_random_uuid(),
+  campaign_id      uuid not null references campaigns(id) on delete cascade,
+  source_entity_id uuid not null references entities(id) on delete cascade,  -- qui ressent
+  target_entity_id uuid not null references entities(id) on delete cascade,  -- envers qui
+  axes             jsonb not null default '{}'::jsonb,   -- { "affinity": 2, "trust": -1 }
+  note             text,                                  -- « depuis le mensonge de la séance 3 »
+  updated_by_event uuid references session_events(id),
+  updated_at       timestamptz not null default now(),
+  unique (campaign_id, source_entity_id, target_entity_id)
+);
+
+create index attitudes_source_idx on entity_attitudes (campaign_id, source_entity_id);
+create index attitudes_target_idx on entity_attitudes (campaign_id, target_entity_id);
+```
+
+**Dirigée, jamais symétrique.** A peut se méfier de B pendant que B l'adore. C'est même le cas le plus intéressant à jouer.
+
+**Portée campagne.** Les convictions de Bram sont celles de Bram partout ; son opinion du groupe est propre à une partie.
+
+**Le groupe de joueurs est une entité de type `faction`**, créée automatiquement avec la campagne. « Attitude envers le groupe » devient une ligne comme une autre. Aucun concept nouveau.
+
+**Axes standard** — échelle −3 à +3, chaque cran **nommé** :
+
+| Axe | −3 | −2 | −1 | 0 | +1 | +2 | +3 |
+|---|---|---|---|---|---|---|---|
+| `affinity` | haineux | hostile | froid | indifférent | cordial | amical | dévoué |
+| `trust` | convaincu de sa duplicité | méfiant | réservé | neutre | ouvert | confiant | aveugle |
+| `respect` | méprisant | dédaigneux | sceptique | neutre | estime | admiratif | révérencieux |
+| `fear` | le domine | l'intimide | prudent | neutre | mal à l'aise | craintif | terrifié |
+
+Le **nom** compte plus que le nombre. Envoyer `affinity: 2` à un modèle ne dit rien ; envoyer « amical » est actionnable. Les nombres servent au calcul, les libellés à l'affichage et au prompt.
+
+**Le mapping vers l'attitude officielle du ruleset est déclaré par le ruleset**, jamais codé en dur : `affinity ≤ −2` → Hostile, `−1..1` → Indifférent, `≥ 2` → Amical. Un système maison déclare son propre découpage. L'application est plus riche, le ruleset reste maître de sa catégorisation.
+
+## D6. Ce que ça débloque gratuitement
+
+`worldview` étant attachable à n'importe quelle entité, on peut **comparer celui d'un PNJ à celui de sa faction**.
+
+> Bram sert la Main Silencieuse, mais leurs convictions divergent de 4 crans sur `mercy_justice` — et c'est son pôle prioritaire.
+
+Un point de tension narratif calculé, sans qu'on l'ait saisi. Pour un outil de MJ, c'est le genre de suggestion qui vaut cher, et elle tombe toute seule.
+
+Même mécanisme entre deux factions, entre un personnage et une religion, entre un PJ et son ordre.
+
+## D7. Ce que l'IA en fait
+
+**En lecture — contexte déterministe d'un tour.** Pour chaque PNJ présent, environ 40 tokens :
+
+```
+Bram le Tavernier — envers le groupe : méfiant (a surpris un mensonge, séance 3),
+plutôt cordial. Convictions : miséricorde avant tout, croyant, la loi protège les
+faibles. Ne trahira jamais un serment prêté à voix haute. But secret : sa dette.
+Parle familièrement, appelle tout le monde « petit ».
+```
+
+C'est peu et c'est énorme : c'est exactement ce qui manque à un MJ IA pour qu'un PNJ soit le même d'une séance à l'autre. Le critère de succès V3 du PDD — « aucun PNJ inventé deux fois avec des traits contradictoires » — se joue ici.
+
+**En écriture — par proposition, comme tout le reste.** Nouveau type dans `ai_proposals` : `update_attitude`.
+
+Avec une règle de prudence qui n'existe pas pour le reste :
+
+| Ce qui change | Comportement |
+|---|---|
+| Une attitude, variation de 1 cran | appliqué automatiquement en solo, tracé |
+| Une attitude, variation de 2 crans ou plus | appliqué, mais signalé au joueur |
+| Une conviction, un but, une ligne rouge | **proposé, jamais appliqué en silence**, même en solo |
+
+Les valeurs d'un personnage qui changent, c'est un moment d'histoire, pas une mise à jour de routine. Sans ce garde-fou, un modèle réécrit lentement chaque PNJ jusqu'à ce qu'ils se ressemblent tous — c'est le mode de dégradation typique, et il est invisible tant qu'on ne compare pas à l'état initial.
+
+**En édition humaine — directement.** Le MJ modifie les curseurs dans la fiche, comme n'importe quel bloc. Les mêmes données, deux chemins d'écriture, une seule vérité.
+
+## D8. Quand l'implémenter
+
+**V2. Rien maintenant.** Aucune de ces tables n'est ajoutée aux treize migrations de la Phase 0.
+
+Règle générale, à appliquer chaque fois que la question se posera :
+
+> On crée une table en avance **uniquement si l'omettre obligerait à refaire quelque chose de déjà construit.**
+
+`entity_active_effects` a été créée tôt parce qu'elle change la signature de `characterSheet()`, une fonction écrite en V1. `entity_attitudes` ne change rien en amont : elle sera créée le jour où on l'implémentera, par une migration ordinaire.

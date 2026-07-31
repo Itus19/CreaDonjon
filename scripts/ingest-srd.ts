@@ -50,6 +50,11 @@ interface TransformedEntry {
   entry_type: EntryType;
   ai_digest: string;
   source_attribution: string;
+  // Objet JSON source integral (specs/outils-mj.md §1) : le generateur de
+  // rencontres et le suivi d'initiative (V2) auront besoin de champs (CR,
+  // XP, CA, PV...) non encore transformes en blocs. Le garder maintenant
+  // evite un reimport complet le jour ou on en a besoin.
+  source_raw: SrdRecord;
   blocks: EntryBlock[];
 }
 
@@ -420,6 +425,7 @@ function transformEntry(
     entry_type: entryType,
     ai_digest,
     source_attribution: sourceAttribution,
+    source_raw: entry,
     blocks,
   };
 }

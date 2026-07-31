@@ -1132,6 +1132,7 @@ export type Database = {
           id: string
           ruleset_id: string
           source_attribution: string | null
+          source_raw: Json | null
           updated_at: string
         }
         Insert: {
@@ -1143,6 +1144,7 @@ export type Database = {
           id?: string
           ruleset_id: string
           source_attribution?: string | null
+          source_raw?: Json | null
           updated_at?: string
         }
         Update: {
@@ -1154,6 +1156,7 @@ export type Database = {
           id?: string
           ruleset_id?: string
           source_attribution?: string | null
+          source_raw?: Json | null
           updated_at?: string
         }
         Relationships: [

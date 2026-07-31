@@ -213,6 +213,18 @@ Nom, slug, alias, résumé, tags, `entity_kind`, contenu narratif en segments.
 
 ---
 
+## V0-03b — Coquille d'application et système visuel · `L`
+
+Spécification complète : `specs/coquille-et-design.md`. À faire **avant** V0-04 : la coquille détermine le routage et la disposition, pas seulement l'apparence. La décider après huit écrans oblige à réécrire les huit.
+
+**Livrables** : jetons de design, trois familles typographiques, `<AppShell>`, routage `/m/[monde]/f/[fiche]`, arborescence dérivée, palette ⌘K, `<Panel>`, `<BlockShell>`, `<EntityChip>`, `<VisibilityBadge>`, `<EmptyState>`, reprise des écrans V0-02 et V0-03.
+
+**Critères d'acceptation** : voir §8 de la spécification.
+
+**À joindre au ticket :** les captures d'écran de référence. Claude Code sait lire les images, et une capture transmet une direction visuelle mieux que trois paragraphes.
+
+---
+
 ## V0-04 — Blocs · `M`
 
 Ajouter, éditer, réordonner, supprimer un bloc. Deux types suffisent en V0 : `notes` et `character`.
@@ -283,7 +295,7 @@ Faire réaliser le parcours complet par quelqu'un d'autre, sans assistance : cr�
 
 **V1 (fondations)** : consultation des règles SRD, fiches de règles, création de personnage, versionnage des rulesets, campagnes, distinction MJ/joueur en RLS, historique du wiki, premières fonctionnalités IA d'assistance à l'écriture.
 
-**V2 (jeu)** : outils de combat, initiative, générateurs, cartes, simulation, seeds.
+**V2 (jeu)** : outils de combat, initiative, tables aléatoires, générateurs, rencontres, cartes, simulation. Spécifiés dans `specs/outils-mj.md`.
 
 **V3 (solo)** : MJ IA, RAG, propositions validées, wiki progressif.
 
