@@ -235,11 +235,15 @@ Sans URL propre, pas de partage, pas de bouton retour, pas d'onglet, pas de lien
 
 > **Note d'implémentation (V0-03b) :** `worlds.slug` n'est unique que par propriétaire (`unique(owner_id, slug)`, SCHEMA.md §3), jamais globalement. Deux mondes de deux utilisateurs différents peuvent porter le même slug — un visiteur membre de deux mondes distincts partageant un slug rendrait `/m/[mondeSlug]` ambigu si on résolvait par slug seul. Résolution retenue : le routage `/m/[mondeSlug]/...` reste tel que spécifié pour l'URL affichée, mais la résolution serveur désambiguïse par slug **filtré par appartenance de l'utilisateur courant** (RLS ne renvoie déjà que les mondes dont il est membre) ; si cela renvoyait malgré tout plus d'une ligne pour un même utilisateur (deux mondes à lui avec le même slug — impossible, contrainte `unique(owner_id, slug)` — ou un monde à lui et un monde d'un tiers partageant le slug), la page retourne 404 plutôt que de deviner. Cas limite documenté, pas silencieusement résolu au hasard.
 
-### 4.2 Un seul panneau en V0, structure prête pour deux
+### 4.2 Fenêtres flottantes avec URL (ADR-0006)
 
-La référence montre deux fiches côte à côte, et c'est utile — comparer deux PNJ, écrire en regardant une source. Mais le multi-panneau change la disposition, l'état et l'URL.
+**Révisé après V0-06b.** La référence montre plusieurs fiches ouvertes à la fois, en fenêtres déplaçables sur un bureau — pas un panneau unique qui remplace tout l'écran. Ce document tranchait initialement pour un panneau unique en V0, le multi-panneau étant reporté en V1 ; l'écart avec l'attente s'est révélé porter sur le modèle d'interaction lui-même, pas sur un détail de finition. ADR-0006 avance donc le multi-panneau en V0, exécuté comme des fenêtres plutôt que des panneaux fixes côte à côte.
 
-Recommandation : **un panneau en V0**, avec le composant `<Panel>` déjà isolé et une URL prévue pour en accueillir un second (`?avec=[ficheSlug]`). Activer en V1 coûte alors une journée au lieu d'une refonte.
+**Ce qui ne change pas :** chaque fiche ouverte reste une URL. La première fiche ouverte occupe `/m/[mondeSlug]/f/[ficheSlug]` (rendue serveur, comme avant). Les fiches ouvertes en plus apparaissent dans un paramètre `?avec=[slug1],[slug2],...`, récupérées côté client via une route API dédiée (mêmes données que la page : entité, blocs, relations, autres entités).
+
+**Ce qui change :** `<Panel>` n'est plus le conteneur plein-page. Une couche de gestion de fenêtres maintient, par fiche ouverte, une position, une taille et un ordre d'empilement (z-index) — synchronisés avec `?avec=` sans provoquer de boucle de mise à jour. Fermer une fenêtre retire son slug du paramètre ; en faire glisser une au premier plan met à jour l'ordre d'empilement (pas l'URL, pour ne pas polluer l'historique de navigation à chaque interaction).
+
+**Petit écran :** la mécanique de fenêtres déplaçables ne s'applique pas — repli sur l'affichage plein écran actuel, une fiche à la fois (aucune régression sur le critère de lisibilité à 375px de V0-03b).
 
 ### 4.3 L'arborescence est dérivée, pas saisie
 
@@ -263,7 +267,7 @@ Presque tout ce que montre la référence est dérivable. PJ contre PNJ l'est. A
 | `<AppShell>` | barre supérieure, latérale, zone de travail, fond |
 | `<Sidebar>` · `<EntityTree>` | arborescence dérivée, repliable |
 | `<CommandPalette>` | ⌘K — recherche et navigation |
-| `<Panel>` | conteneur de fiche, isolé pour le futur multi-panneau |
+| `<WindowFrame>` | fenêtre déplaçable/redimensionnable d'une fiche (ADR-0006, remplace `<Panel>`) |
 | `<EntityChip>` · `<RuleChip>` | renvois, violet et vert d'eau, avec résumé au survol |
 | `<PropertyRow>` | une ligne de relations en en-tête de fiche |
 | `<BlockShell>` | cadre commun d'un bloc : titre, visibilité, repli, menu |

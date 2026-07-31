@@ -289,6 +289,27 @@ La mécanique (V0-04) est faite ; l'esthétique des contrôles ne l'est pas enco
 
 ---
 
+## V0-06c — Fenêtres flottantes avec URL · `L`
+
+`docs/adr/0006-fenetres-flottantes.md`. Le panneau unique de V0-03b/§4.2 ne rend pas la sensation de bureau de l'ancienne application (`master`) : plusieurs fiches ouvertes à la fois, en fenêtres déplaçables. Le multi-panneau prévu pour la V1 est avancé ici, exécuté comme des fenêtres plutôt que des panneaux fixes côte à côte — sans jamais perdre l'URL par fiche (raison documentée en §4.1 : partage, retour, rechargement).
+
+**Livrables**
+- La première fiche ouverte reste rendue serveur sur `/m/[mondeSlug]/f/[ficheSlug]`.
+- Les fiches ouvertes en plus apparaissent dans `?avec=slug1,slug2,...`, récupérées côté client via une route dédiée (mêmes données que la page : entité, blocs, relations, autres entités).
+- `<WindowFrame>` : fenêtre déplaçable et redimensionnable, avec titre, bouton de fermeture, mise au premier plan au clic.
+- Position/taille/empilement en état client, jamais dans l'URL (fermer une fenêtre retire son slug de `?avec=` ; la faire glisser ou la mettre au premier plan ne touche pas l'historique de navigation).
+- Petit écran (< 768px) : repli sur l'affichage plein écran actuel, une fiche a la fois — pas de fenêtres flottantes sur mobile.
+
+**Critères d'acceptation**
+- [ ] Ouvrir une deuxième fiche pendant qu'une autre est ouverte ajoute son slug à `?avec=`, sans perdre la première.
+- [ ] Recharger la page avec `?avec=...` rouvre exactement les mêmes fenêtres.
+- [ ] Fermer une fenêtre retire son slug de l'URL et ne casse pas les fenêtres restantes.
+- [ ] Partager l'URL d'un état à plusieurs fenêtres ouvertes reproduit le même état chez un autre membre du monde.
+- [ ] Glisser ou redimensionner une fenêtre ne modifie ni l'URL ni l'historique de navigation (pas d'entrée ajoutée au bouton retour).
+- [ ] En dessous de 768px, aucune fenêtre flottante : une fiche plein écran, comme aujourd'hui.
+
+---
+
 ## V0-07 — Partage en lecture seule · `M`
 
 Génération d'un lien avec jeton, route serveur résolvant la visibilité elle-même.
