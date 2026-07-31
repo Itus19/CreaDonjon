@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
 import type { NarrativeContent } from "@/src/core/schemas/entities/segments";
+import { buildEntityTree, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import {
   type EntitySummary,
   getEntityById,
@@ -13,6 +14,7 @@ import {
   updateEntityWithVersionCheck,
   worldHasSlug,
 } from "@/src/server/repos/entities";
+import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -20,6 +22,18 @@ const MAX_SLUG_ATTEMPTS = 50;
 
 export async function listEntities(supabase: TypedClient, worldId: string): Promise<EntitySummary[]> {
   return listEntitiesForWorld(supabase, worldId);
+}
+
+/** Barre laterale (specs/coquille-et-design.md §4.3) : arborescence derivee, jamais saisie. */
+export async function getEntityTree(
+  supabase: TypedClient,
+  worldId: string
+): Promise<EntityTreeGroup[]> {
+  const [entities, partOfEdges] = await Promise.all([
+    listEntitiesForWorld(supabase, worldId),
+    listPartOfRelationsForWorld(supabase, worldId),
+  ]);
+  return buildEntityTree(entities, partOfEdges);
 }
 
 async function generateUniqueEntitySlug(

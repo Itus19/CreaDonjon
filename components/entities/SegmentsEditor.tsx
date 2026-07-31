@@ -1,6 +1,7 @@
 "use client";
 
 import type { Segment } from "@/src/core/schemas/entities/segments";
+import VisibilityBadge from "./VisibilityBadge";
 
 // campaign/user necessitent un scopeId (une campagne ou un utilisateur
 // precis) : pas de selecteur pour ca encore, donc pas propose ici. Le
@@ -61,37 +62,37 @@ export default function SegmentsEditor({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">Contenu narratif</span>
-        <button
-          type="button"
-          onClick={addSegment}
-          className="rounded-full border border-border px-3 py-1 text-xs text-foreground transition-colors hover:bg-surface-hover"
-        >
-          + Ajouter un segment
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={addSegment}
+        className="self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+      >
+        + Ajouter un segment
+      </button>
 
       {segments.length === 0 && (
-        <p className="text-sm text-muted">Aucun segment pour l&apos;instant.</p>
+        <p className="text-sm text-ink-muted">Aucun segment pour l&apos;instant.</p>
       )}
 
       {segments.map((segment, index) => (
-        <div key={segment.id} className="flex flex-col gap-2 rounded-lg border border-border p-3">
+        <div key={segment.id} className="flex flex-col gap-2 rounded-lg border border-edge p-3">
           <div className="flex items-center justify-between">
-            <select
-              value={segment.visibility.level}
-              onChange={(e) =>
-                updateVisibilityLevel(index, e.target.value as (typeof VISIBILITY_OPTIONS)[number]["value"])
-              }
-              className="rounded-md border border-border bg-transparent px-2 py-1 text-xs"
-            >
-              {VISIBILITY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                value={segment.visibility.level}
+                onChange={(e) =>
+                  updateVisibilityLevel(index, e.target.value as (typeof VISIBILITY_OPTIONS)[number]["value"])
+                }
+                className="rounded-md border border-edge bg-transparent px-2 py-1 text-xs"
+              >
+                {VISIBILITY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <VisibilityBadge level={segment.visibility.level} />
+            </div>
             <button
               type="button"
               onClick={() => removeSegment(index)}
@@ -104,7 +105,7 @@ export default function SegmentsEditor({
             value={segmentText(segment)}
             onChange={(e) => updateText(index, e.target.value)}
             rows={3}
-            className="rounded-md border border-border bg-transparent px-3 py-2 text-sm"
+            className="prose-narrative w-full rounded-md border border-edge bg-transparent px-3 py-2"
           />
         </div>
       ))}

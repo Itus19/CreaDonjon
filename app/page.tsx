@@ -19,9 +19,9 @@ export default async function Home() {
             CreaDonjon
           </h1>
           <div className="flex items-center gap-3 text-sm">
-            <span className="text-muted">{user?.email}</span>
+            <span className="text-ink-muted">{user?.email}</span>
             <form action={logout}>
-              <button className="rounded-full border border-border px-3 py-1 text-foreground transition-colors hover:bg-surface-hover">
+              <button className="rounded-full border border-edge px-3 py-1 text-ink transition-colors hover:bg-panel-raised">
                 Se déconnecter
               </button>
             </form>
@@ -34,16 +34,16 @@ export default async function Home() {
           {worlds.map((world) => (
             <li key={world.id}>
               <Link
-                href={`/worlds/${world.id}`}
-                className="block rounded-lg border border-border bg-surface p-4 transition-colors hover:bg-surface-hover"
+                href={`/m/${world.slug}`}
+                className="block rounded-lg border border-edge bg-panel p-4 transition-colors hover:bg-panel-raised"
               >
-                <p className="font-medium text-foreground">{world.name}</p>
-                <p className="text-sm text-muted">{world.slug}</p>
+                <p className="font-medium text-ink">{world.name}</p>
+                <p className="text-sm text-ink-muted">{world.slug}</p>
               </Link>
             </li>
           ))}
           {worlds.length === 0 && (
-            <p className="text-muted">Aucun monde pour l&apos;instant.</p>
+            <p className="text-ink-muted">Aucun monde pour l&apos;instant.</p>
           )}
         </ul>
       </main>

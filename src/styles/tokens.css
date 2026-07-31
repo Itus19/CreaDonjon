@@ -1,0 +1,192 @@
+/*
+ * Jetons de design (specs/coquille-et-design.md §2). OKLCH, pas
+ * hexadecimal : la clarte L est perceptuelle, ce qui permet d'imposer un
+ * niveau de contraste garanti par mode (§2b — l'image teinte, elle ne
+ * decide pas).
+ *
+ * Valeurs de L verifiees par calcul (conversion OKLCH -> luminance
+ * relative WCAG), pas a l'oeil : tous les tons de texte (--ink, --ink-soft,
+ * --ink-muted) et les trois couleurs semantiques restent >= 7:1 contre
+ * --bg et --panel, dans les quatre modes. Changer --h ne change jamais ce
+ * ratio : --h ne pilote que la teinte des surfaces, jamais leur clarte.
+ *
+ * Aucune couleur ni taille de police en dur ailleurs dans le code : tout
+ * passe par ces variables (V0-03b, critere d'acceptation).
+ */
+
+:root,
+:root[data-mode="dark"] {
+  /* Deux variables pilotent la teinte ; --h vient de l'image de fond en V1,
+     valeur fixe (foret/mousse) tant qu'aucune extraction n'existe. */
+  --h: 152;
+  --c: 0.022;
+
+  --bg:           oklch(0.17 var(--c) var(--h));
+  --panel:        oklch(0.20 var(--c) var(--h) / 0.82);
+  --panel-raised: oklch(0.26 var(--c) var(--h) / 0.90);
+  --panel-sunken: oklch(0.14 var(--c) var(--h) / 0.60);
+  --edge:         oklch(0.40 var(--c) var(--h) / 0.55);
+  --edge-strong:  oklch(0.52 var(--c) var(--h) / 0.70);
+  --scrim:        oklch(0.12 0.01 var(--h) / 0.70);
+
+  --ink:       oklch(0.95 0.008 var(--h));
+  --ink-soft:  oklch(0.80 0.010 var(--h));
+  --ink-muted: oklch(0.735 0.012 var(--h));
+
+  --link-entity: oklch(0.76 0.13 295);
+  --link-rule:   oklch(0.76 0.10 168);
+  --gm:          oklch(0.76 0.11 45);
+
+  --accent:       oklch(0.76 0.13 78);
+  --accent-hover: oklch(0.82 0.13 78);
+  --accent-ink:   oklch(0.15 0.02 78);
+  --danger:       oklch(0.62 0.16 25);
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --blur: 20px;
+}
+
+:root[data-mode="dim"] {
+  --bg:           oklch(0.24 var(--c) var(--h));
+  --panel:        oklch(0.27 var(--c) var(--h) / 0.84);
+  --panel-raised: oklch(0.33 var(--c) var(--h) / 0.92);
+  --panel-sunken: oklch(0.21 var(--c) var(--h) / 0.60);
+  --edge:         oklch(0.47 var(--c) var(--h) / 0.55);
+  --edge-strong:  oklch(0.59 var(--c) var(--h) / 0.70);
+  --scrim:        oklch(0.19 0.01 var(--h) / 0.65);
+
+  --ink:       oklch(0.94 0.008 var(--h));
+  --ink-soft:  oklch(0.78 0.010 var(--h));
+  --ink-muted: oklch(0.775 0.012 var(--h));
+
+  --link-entity: oklch(0.80 0.13 295);
+  --link-rule:   oklch(0.80 0.10 168);
+  --gm:          oklch(0.80 0.11 45);
+}
+
+/* --accent : bouton clair sur fond sombre (dark/dim) devient bouton fonce
+   sur fond clair (soft/light), meme teinte (ambre, H=78), pour rester
+   visible contre un fond qui s'inverse. */
+:root[data-mode="soft"] {
+  --bg:           oklch(0.74 var(--c) var(--h));
+  --panel:        oklch(0.79 var(--c) var(--h) / 0.85);
+  --panel-raised: oklch(0.85 var(--c) var(--h) / 0.92);
+  --panel-sunken: oklch(0.68 var(--c) var(--h) / 0.55);
+  --edge:         oklch(0.45 var(--c) var(--h) / 0.35);
+  --edge-strong:  oklch(0.32 var(--c) var(--h) / 0.50);
+  --scrim:        oklch(0.65 0.01 var(--h) / 0.50);
+
+  --ink:       oklch(0.11 0.008 var(--h));
+  --ink-soft:  oklch(0.24 0.010 var(--h));
+  --ink-muted: oklch(0.235 0.012 var(--h));
+
+  --link-entity: oklch(0.22 0.13 295);
+  --link-rule:   oklch(0.22 0.10 168);
+  --gm:          oklch(0.22 0.11 45);
+
+  --accent:       oklch(0.42 0.13 78);
+  --accent-hover: oklch(0.48 0.13 78);
+  --accent-ink:   oklch(0.98 0.02 78);
+}
+
+:root[data-mode="light"] {
+  --bg:           oklch(0.95 var(--c) var(--h));
+  --panel:        oklch(0.985 var(--c) var(--h) / 0.88);
+  --panel-raised: oklch(0.99 var(--c) var(--h) / 0.94);
+  --panel-sunken: oklch(0.90 var(--c) var(--h) / 0.60);
+  --edge:         oklch(0.40 var(--c) var(--h) / 0.25);
+  --edge-strong:  oklch(0.25 var(--c) var(--h) / 0.40);
+  --scrim:        oklch(0.85 0.01 var(--h) / 0.45);
+
+  --ink:       oklch(0.10 0.008 var(--h));
+  --ink-soft:  oklch(0.22 0.010 var(--h));
+  --ink-muted: oklch(0.28 0.012 var(--h));
+
+  --link-entity: oklch(0.36 0.13 295);
+  --link-rule:   oklch(0.36 0.10 168);
+  --gm:          oklch(0.36 0.11 45);
+
+  --accent:       oklch(0.40 0.13 78);
+  --accent-hover: oklch(0.46 0.13 78);
+  --accent-ink:   oklch(0.99 0.02 78);
+}
+
+/*
+ * Contraste eleve : ignore l'image et la teinte, palette neutre garantie.
+ * Toujours accessible (bouton dedie), jamais enfoui — et automatique sous
+ * prefers-contrast: more (specs/coquille-et-design.md §2b, Accessibilite).
+ */
+:root[data-contrast="high"],
+:root[data-mode="dark"][data-contrast="high"] {
+  --c: 0;
+  --bg: oklch(0.12 0 0);
+  --panel: oklch(0.16 0 0 / 0.97);
+  --panel-raised: oklch(0.22 0 0 / 1);
+  --panel-sunken: oklch(0.08 0 0 / 0.9);
+  --edge: oklch(0.60 0 0 / 0.9);
+  --edge-strong: oklch(0.85 0 0 / 1);
+  --scrim: oklch(0.05 0 0 / 0.92);
+  --ink: oklch(1 0 0);
+  --ink-soft: oklch(0.92 0 0);
+  --ink-muted: oklch(0.85 0 0);
+  --link-entity: oklch(0.85 0.15 295);
+  --link-rule: oklch(0.85 0.12 168);
+  --gm: oklch(0.85 0.13 45);
+}
+
+@media (prefers-contrast: more) {
+  :root:not([data-contrast="off"]) {
+    --c: 0;
+    --bg: oklch(0.12 0 0);
+    --panel: oklch(0.16 0 0 / 0.97);
+    --panel-raised: oklch(0.22 0 0 / 1);
+    --panel-sunken: oklch(0.08 0 0 / 0.9);
+    --edge: oklch(0.60 0 0 / 0.9);
+    --edge-strong: oklch(0.85 0 0 / 1);
+    --scrim: oklch(0.05 0 0 / 0.92);
+    --ink: oklch(1 0 0);
+    --ink-soft: oklch(0.92 0 0);
+    --ink-muted: oklch(0.85 0 0);
+    --link-entity: oklch(0.85 0.15 295);
+    --link-rule: oklch(0.85 0.12 168);
+    --gm: oklch(0.85 0.13 45);
+  }
+}
+
+/*
+ * Vignettes de previsualisation pour le selecteur de mode : memes valeurs
+ * que les modes ci-dessus, dupliquees ici plutot qu'en couleur en dur dans
+ * le composant (critere "aucune couleur en dur hors de tokens.css").
+ */
+.mode-swatch-dark   { background: oklch(0.17 0.022 152); }
+.mode-swatch-dim    { background: oklch(0.24 0.022 152); }
+.mode-swatch-soft   { background: oklch(0.74 0.022 152); }
+.mode-swatch-light  { background: oklch(0.95 0.022 152); }
+.mode-swatch-dark-accent,
+.mode-swatch-dim-accent {
+  background: oklch(0.76 0.13 78);
+}
+.mode-swatch-soft-accent {
+  background: oklch(0.42 0.13 78);
+}
+.mode-swatch-light-accent {
+  background: oklch(0.40 0.13 78);
+}
+
+/* prefers-reduced-motion : desactive toute transition (critere V0-03b). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+[data-motion="off"] *,
+[data-motion="off"] *::before,
+[data-motion="off"] *::after {
+  animation-duration: 0.001ms !important;
+  transition-duration: 0.001ms !important;
+}

@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createEntitySchema } from "@/lib/entities/schemas";
 import { createEntity } from "@/src/server/services/entities";
@@ -24,6 +25,11 @@ export async function createEntityAction(
     return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
   }
 
+  const worldSlug = formData.get("worldSlug");
+  if (typeof worldSlug !== "string" || worldSlug === "") {
+    return { error: "Formulaire invalide." };
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -43,5 +49,6 @@ export async function createEntityAction(
     narrativeContent: parsed.data.narrativeContent,
   });
 
-  redirect(`/worlds/${parsed.data.worldId}/entities/${entity.slug}`);
+  revalidatePath(`/m/${worldSlug}`, "layout");
+  redirect(`/m/${worldSlug}/f/${entity.slug}`);
 }

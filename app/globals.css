@@ -1,128 +1,46 @@
 @import "tailwindcss";
-
-:root {
-  /* sombre (defaut) */
-  --background: #0d1210;
-  --bg-glow: #1a2420;
-  --surface: #161f1b;
-  --surface-glass: rgba(19, 27, 24, 0.66);
-  --surface-hover: #1c2823;
-  --foreground: #ece8dc;
-  --muted: #9aa39c;
-  --border: rgba(236, 232, 220, 0.1);
-  --accent: #c9a24a;
-  --accent-rgb: 201, 162, 74;
-  --accent-hover: #dab35a;
-  --accent-foreground: #1a1408;
-  --danger: #e0796a;
-  --bg-image: url("/backgrounds/bg-dark.webp");
-  --bg-brightness: 0.32;
-  --bg-blur: 30px;
-  --bg-contrast: 1.05;
-}
-
-html[data-theme="semi-dark"] {
-  --background: #241f1a;
-  --bg-glow: #34291f;
-  --surface: #2f2822;
-  --surface-glass: rgba(38, 32, 27, 0.68);
-  --surface-hover: #3a322a;
-  --foreground: #f1ece0;
-  --muted: #b8ad98;
-  --border: rgba(241, 236, 224, 0.12);
-  --accent: #d1a54e;
-  --accent-rgb: 209, 165, 78;
-  --accent-hover: #e0b866;
-  --accent-foreground: #1f1608;
-  --danger: #e58a7a;
-  --bg-image: url("/backgrounds/bg-semi-dark.webp");
-  --bg-brightness: 0.45;
-  --bg-blur: 26px;
-  --bg-contrast: 1.05;
-}
-
-html[data-theme="semi-light"] {
-  --background: #cdbfa4;
-  --bg-glow: #e6d8bd;
-  --surface: #ddd0b6;
-  --surface-glass: rgba(224, 213, 189, 0.72);
-  --surface-hover: #e6dac3;
-  --foreground: #2a2015;
-  --muted: #5c503e;
-  --border: rgba(42, 32, 21, 0.15);
-  --accent: #8a5a26;
-  --accent-rgb: 138, 90, 38;
-  --accent-hover: #9c6a30;
-  --accent-foreground: #f8ecd8;
-  --danger: #a8402e;
-  --bg-image: url("/backgrounds/bg-semi-light.webp");
-  --bg-brightness: 0.8;
-  --bg-blur: 22px;
-  --bg-contrast: 1;
-}
-
-html[data-theme="light"] {
-  --background: #f6f3ec;
-  --bg-glow: #ffffff;
-  --surface: #ffffff;
-  --surface-glass: rgba(255, 255, 255, 0.72);
-  --surface-hover: #f0ebe0;
-  --foreground: #22190f;
-  --muted: #6b5f4d;
-  --border: rgba(34, 25, 15, 0.12);
-  --accent: #9c6b1f;
-  --accent-rgb: 156, 107, 31;
-  --accent-hover: #b17d29;
-  --accent-foreground: #fbf3e2;
-  --danger: #b23b2a;
-  --bg-image: url("/backgrounds/bg-light.webp");
-  --bg-brightness: 0.95;
-  --bg-blur: 18px;
-  --bg-contrast: 0.97;
-}
+@import "../src/styles/tokens.css";
 
 @theme inline {
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-surface-glass: var(--surface-glass);
-  --color-surface-hover: var(--surface-hover);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-border: var(--border);
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-raised: var(--panel-raised);
+  --color-panel-sunken: var(--panel-sunken);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-link-entity: var(--link-entity);
+  --color-link-rule: var(--link-rule);
+  --color-gm: var(--gm);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
-  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-ink: var(--accent-ink);
   --color-danger: var(--danger);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-outfit);
+  --color-scrim: var(--scrim);
+
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+
+  --font-narrative: var(--font-spectral), serif;
+  --font-chrome: var(--font-inter), sans-serif;
+  --font-mech: var(--font-plex-mono), monospace;
 }
 
 body {
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-chrome), sans-serif;
 }
 
-h1, h2, h3 {
-  font-family: var(--font-display), var(--font-sans), sans-serif;
+/* Focus clavier visible sur tout element interactif (critere V0-03b). */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
-/* Immersive blurred backdrop, using the user's own generated artwork per theme */
-.app-bg {
-  position: fixed;
-  inset: 0;
-  z-index: -10;
-  pointer-events: none;
-  background-color: var(--background);
-  background-image: var(--bg-image);
-  background-size: cover;
-  background-position: center;
-  filter: blur(var(--bg-blur)) brightness(var(--bg-brightness)) contrast(var(--bg-contrast));
-  transform: scale(1.06); /* avoids pale edges from the blur */
-}
-
-/* Custom thin scrollbar, gold on hover */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -131,156 +49,55 @@ h1, h2, h3 {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--edge);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(var(--accent-rgb), 0.4);
-}
-
-@layer components {
-  .field-label {
-    @apply flex flex-col gap-1 text-sm text-muted;
-  }
-  .input-field {
-    @apply rounded-md border border-border bg-black/20 px-3 py-2 text-foreground outline-none focus:border-accent;
-  }
-  .card {
-    @apply rounded-lg border border-border bg-surface-glass p-4 backdrop-blur-xl;
-  }
-  .form-card {
-    @apply rounded-xl border border-border bg-surface-glass p-8 shadow-xl shadow-black/20 backdrop-blur-xl;
-  }
-  .btn-accent {
-    @apply rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover;
-  }
-  .btn-outline {
-    @apply rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover;
-  }
-  .chip {
-    @apply inline-flex items-center gap-1 rounded-full border border-border bg-black/20 px-3 py-1 text-xs text-foreground;
-  }
-  .chip-remove {
-    @apply text-muted transition-colors hover:text-danger;
-  }
-  .chip-relation-out {
-    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors;
-    background: rgba(var(--accent-rgb), 0.12);
-    border: 1px solid rgba(var(--accent-rgb), 0.28);
-    color: var(--accent);
-  }
-  .chip-relation-out:hover {
-    background: rgba(var(--accent-rgb), 0.2);
-  }
-  .chip-relation-in {
-    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors;
-    background: rgba(96, 165, 250, 0.1);
-    border: 1px solid rgba(96, 165, 250, 0.25);
-    color: #60a5fa;
-  }
-  .chip-relation-in:hover {
-    background: rgba(96, 165, 250, 0.18);
-  }
-  .toolbar-btn {
-    @apply rounded px-1.5 py-0.5 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground;
-  }
-  .toolbar-btn-active {
-    @apply bg-surface-hover text-accent;
-  }
+  background: var(--edge-strong);
 }
 
 /*
-  Hierarchie de tailles (du plus grand au plus petit):
-  titre de fiche (.entity-title) > titre de bloc (.block-title)
-  > H1 > H2 > H3 (dans le texte enrichi) > paragraphe (.prose-editor, 14px, >= 12px demandes)
-*/
-.entity-title {
-  font-family: var(--font-display), sans-serif;
-  font-size: 1.875rem; /* 30px */
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--foreground);
+ * Fond immersif : l'image du monde, floutee et assombrie (§1, §3). Le
+ * voile (--scrim) garantit une lisibilite constante quelle que soit
+ * l'image, sans dependre de la zone survolee.
+ */
+.app-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background-color: var(--bg);
 }
-.block-title {
-  font-family: var(--font-display), sans-serif;
-  font-size: 1.5rem; /* 24px */
-  font-weight: 700;
-  color: var(--foreground);
+.app-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--bg-image, none);
+  background-size: cover;
+  background-position: center;
+  filter: blur(var(--blur));
+  transform: scale(1.08);
+}
+.app-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
 }
 
-.prose-editor {
-  outline: none;
-  min-height: 1.75rem;
-  font-size: 0.875rem; /* 14px, au-dessus du minimum de 12px demande */
-  line-height: 1.6;
-  color: var(--foreground);
-  opacity: 0.9;
+/* Texte narratif (segments, resume) : Spectral, interligne genereux —
+   on lit ces fiches longtemps (specs/coquille-et-design.md §2). */
+.prose-narrative {
+  font-family: var(--font-narrative);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink);
 }
-.prose-editor p {
-  margin: 0 0 0.5rem 0;
-}
-.prose-editor p:last-child {
-  margin-bottom: 0;
-}
-.prose-editor h1 {
-  font-family: var(--font-display), sans-serif;
-  font-size: 1.3rem; /* 20.8px */
-  font-weight: 700;
-  margin: 0.6rem 0 0.3rem 0;
-  color: var(--foreground);
-}
-.prose-editor h2 {
-  font-family: var(--font-display), sans-serif;
-  font-size: 1.125rem; /* 18px */
-  font-weight: 700;
-  margin: 0.55rem 0 0.3rem 0;
-  color: var(--foreground);
-}
-.prose-editor h3 {
-  font-family: var(--font-display), sans-serif;
-  font-size: 1rem; /* 16px */
-  font-weight: 700;
-  margin: 0.5rem 0 0.25rem 0;
-  color: var(--foreground);
-}
-.prose-editor ul,
-.prose-editor ol {
-  padding-left: 1.25rem;
-  margin-bottom: 0.5rem;
-}
-.prose-editor ul {
-  list-style-type: disc;
-}
-.prose-editor ol {
-  list-style-type: decimal;
-}
-.prose-editor strong {
-  font-weight: 700;
-  color: var(--foreground);
-}
-.prose-editor a {
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.prose-editor :is(.mark-spoiler) {
-  background: rgba(var(--accent-rgb), 0.12);
-  border-bottom: 1px dashed rgba(var(--accent-rgb), 0.5);
-  border-radius: 2px;
-  padding: 0 2px;
-}
-.prose-editor :is(.mark-mj-hidden) {
-  background: rgba(124, 58, 237, 0.1);
-  border-bottom: 1px dashed rgba(167, 139, 250, 0.5);
-  border-radius: 2px;
-  padding: 0 2px;
-}
-.prose-editor:empty::before,
-.prose-editor p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  color: var(--muted);
-  font-style: italic;
-  float: left;
-  height: 0;
-  pointer-events: none;
+
+/* Valeurs mecaniques (formules, cles techniques) : toujours en mono, pour
+   que le lecteur sache sans reflechir ce qui est du texte et ce qui est
+   une donnee manipulee par le moteur. */
+.mech {
+  font-family: var(--font-mech);
+  font-size: 0.9em;
 }

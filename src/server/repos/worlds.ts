@@ -45,6 +45,28 @@ export async function getWorldById(
   return data;
 }
 
+/**
+ * Resolution pour le routage `/m/[mondeSlug]` (specs/coquille-et-design.md
+ * §4.1). `worlds.slug` n'est unique que par proprietaire : RLS filtre deja
+ * aux mondes dont l'utilisateur est membre, mais si cette liste filtree
+ * contient malgre tout plus d'une ligne pour ce slug (membre de deux
+ * mondes de deux proprietaires differents partageant le meme slug), on ne
+ * devine pas laquelle afficher — on traite ca comme "non trouve", pas
+ * silencieusement la premiere venue.
+ */
+export async function getWorldBySlugForCurrentUser(
+  supabase: TypedClient,
+  slug: string
+): Promise<WorldSummary | null> {
+  const { data, error } = await supabase
+    .from("worlds")
+    .select("id, name, slug, created_at")
+    .eq("slug", slug);
+  if (error) throw new Error(error.message);
+  if (data.length !== 1) return null;
+  return data[0];
+}
+
 export async function ownerHasSlug(
   supabase: TypedClient,
   ownerId: string,

@@ -16,12 +16,12 @@ export default function CreateWorldForm() {
         required
         maxLength={100}
         placeholder="Nom du monde"
-        className="flex-1 rounded-md border border-border bg-transparent px-3 py-2 text-sm"
+        className="flex-1 rounded-md border border-edge bg-transparent px-3 py-2 text-sm"
       />
       <button
         type="submit"
         disabled={pending}
-        className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50"
+        className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
       >
         {pending ? "Création..." : "Créer"}
       </button>

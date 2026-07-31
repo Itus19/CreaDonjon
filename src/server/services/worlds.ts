@@ -4,6 +4,7 @@ import type { Database } from "@/src/types/database";
 import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
 import {
   getWorldById,
+  getWorldBySlugForCurrentUser,
   insertWorld,
   listWorldsForCurrentUser,
   ownerHasSlug,
@@ -20,6 +21,13 @@ export async function listWorlds(supabase: TypedClient): Promise<WorldSummary[]>
 
 export async function getWorld(supabase: TypedClient, id: string): Promise<WorldSummary | null> {
   return getWorldById(supabase, id);
+}
+
+export async function getWorldBySlug(
+  supabase: TypedClient,
+  slug: string
+): Promise<WorldSummary | null> {
+  return getWorldBySlugForCurrentUser(supabase, slug);
 }
 
 /** Derive un slug unique (parmi les mondes du meme proprietaire) a partir du nom, en suffixant -2, -3... en cas de collision. */

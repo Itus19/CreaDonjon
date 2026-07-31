@@ -12,9 +12,9 @@ export default function SignupPage() {
   if (state && "success" in state) {
     return (
       <div className="flex flex-1 items-center justify-center font-sans">
-        <div className="flex w-full max-w-sm flex-col gap-2 rounded-lg border border-border bg-surface p-6 text-center">
+        <div className="flex w-full max-w-sm flex-col gap-2 rounded-lg border border-edge bg-panel p-6 text-center">
           <h1 className="text-xl font-semibold text-accent">Vérifiez votre email</h1>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-ink-muted">
             Un email de confirmation a été envoyé. Cliquez sur le lien qu&apos;il contient pour
             activer votre compte.
           </p>
@@ -27,7 +27,7 @@ export default function SignupPage() {
     <div className="flex flex-1 items-center justify-center font-sans">
       <form
         action={formAction}
-        className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-border bg-surface p-6"
+        className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-edge bg-panel p-6"
       >
         <h1 className="text-xl font-semibold text-accent">Créer un compte</h1>
 
@@ -38,7 +38,7 @@ export default function SignupPage() {
             type="email"
             required
             autoComplete="email"
-            className="rounded-md border border-border bg-transparent px-3 py-2"
+            className="rounded-md border border-edge bg-transparent px-3 py-2"
           />
         </label>
 
@@ -50,7 +50,7 @@ export default function SignupPage() {
             required
             autoComplete="new-password"
             minLength={8}
-            className="rounded-md border border-border bg-transparent px-3 py-2"
+            className="rounded-md border border-edge bg-transparent px-3 py-2"
           />
         </label>
 
@@ -59,12 +59,12 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50"
+          className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
         >
           {pending ? "Création..." : "Créer un compte"}
         </button>
 
-        <Link href="/login" className="text-sm text-muted hover:text-foreground">
+        <Link href="/login" className="text-sm text-ink-muted hover:text-ink">
           Déjà un compte ? Se connecter
         </Link>
       </form>

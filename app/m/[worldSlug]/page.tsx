@@ -1,0 +1,52 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { getWorldBySlug } from "@/src/server/services/worlds";
+import { listEntities } from "@/src/server/services/entities";
+import EmptyState from "@/components/shell/EmptyState";
+
+export default async function WorldHomePage({
+  params,
+}: {
+  params: Promise<{ worldSlug: string }>;
+}) {
+  const { worldSlug } = await params;
+  const supabase = await createClient();
+  const world = await getWorldBySlug(supabase, worldSlug);
+  if (!world) notFound();
+
+  const entities = await listEntities(supabase, world.id);
+
+  return (
+    <div className="flex flex-1 flex-col gap-4">
+      <h1 className="entity-title font-narrative text-2xl font-semibold text-accent">{world.name}</h1>
+
+      {entities.length === 0 ? (
+        <EmptyState
+          title="Ce monde est encore vide"
+          description="Créez votre première entité — un personnage, un lieu, une faction — pour commencer à le peupler."
+          action={
+            <Link
+              href={`/m/${worldSlug}/f/new`}
+              className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+            >
+              + Nouvelle entité
+            </Link>
+          }
+        />
+      ) : (
+        <>
+          <p className="text-sm text-ink-muted">
+            Choisissez une entité dans la barre latérale, ou créez-en une nouvelle.
+          </p>
+          <Link
+            href={`/m/${worldSlug}/f/new`}
+            className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+          >
+            + Nouvelle entité
+          </Link>
+        </>
+      )}
+    </div>
+  );
+}

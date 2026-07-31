@@ -12,9 +12,9 @@ export default function ForgotPasswordPage() {
   if (state && "success" in state) {
     return (
       <div className="flex flex-1 items-center justify-center font-sans">
-        <div className="flex w-full max-w-sm flex-col gap-2 rounded-lg border border-border bg-surface p-6 text-center">
+        <div className="flex w-full max-w-sm flex-col gap-2 rounded-lg border border-edge bg-panel p-6 text-center">
           <h1 className="text-xl font-semibold text-accent">Email envoyé</h1>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-ink-muted">
             Si un compte existe avec cette adresse, un email pour réinitialiser le mot de passe
             vient d&apos;être envoyé.
           </p>
@@ -27,10 +27,10 @@ export default function ForgotPasswordPage() {
     <div className="flex flex-1 items-center justify-center font-sans">
       <form
         action={formAction}
-        className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-border bg-surface p-6"
+        className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-edge bg-panel p-6"
       >
         <h1 className="text-xl font-semibold text-accent">Mot de passe oublié</h1>
-        <p className="text-sm text-muted">
+        <p className="text-sm text-ink-muted">
           Saisissez votre email, nous vous enverrons un lien de réinitialisation.
         </p>
 
@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
             type="email"
             required
             autoComplete="email"
-            className="rounded-md border border-border bg-transparent px-3 py-2"
+            className="rounded-md border border-edge bg-transparent px-3 py-2"
           />
         </label>
 
@@ -50,12 +50,12 @@ export default function ForgotPasswordPage() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50"
+          className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
         >
           {pending ? "Envoi..." : "Envoyer le lien"}
         </button>
 
-        <Link href="/login" className="text-sm text-muted hover:text-foreground">
+        <Link href="/login" className="text-sm text-ink-muted hover:text-ink">
           Retour à la connexion
         </Link>
       </form>

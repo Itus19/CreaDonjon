@@ -16,7 +16,7 @@ export default function LoginPage() {
     <div className="flex flex-1 items-center justify-center font-sans">
       <form
         action={formAction}
-        className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-border bg-surface p-6"
+        className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-edge bg-panel p-6"
       >
         <h1 className="text-xl font-semibold text-accent">Se connecter</h1>
 
@@ -33,7 +33,7 @@ export default function LoginPage() {
             type="email"
             required
             autoComplete="email"
-            className="rounded-md border border-border bg-transparent px-3 py-2"
+            className="rounded-md border border-edge bg-transparent px-3 py-2"
           />
         </label>
 
@@ -44,7 +44,7 @@ export default function LoginPage() {
             type="password"
             required
             autoComplete="current-password"
-            className="rounded-md border border-border bg-transparent px-3 py-2"
+            className="rounded-md border border-edge bg-transparent px-3 py-2"
           />
         </label>
 
@@ -53,16 +53,16 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50"
+          className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
         >
           {pending ? "Connexion..." : "Se connecter"}
         </button>
 
-        <div className="flex justify-between text-sm text-muted">
-          <Link href="/signup" className="hover:text-foreground">
+        <div className="flex justify-between text-sm text-ink-muted">
+          <Link href="/signup" className="hover:text-ink">
             Créer un compte
           </Link>
-          <Link href="/auth/forgot-password" className="hover:text-foreground">
+          <Link href="/auth/forgot-password" className="hover:text-ink">
             Mot de passe oublié ?
           </Link>
         </div>
