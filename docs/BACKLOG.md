@@ -270,6 +270,17 @@ Dans `src/core/linker` : détection des noms et alias d'entités dans un texte, 
 
 ---
 
+## V0-06b — Polish visuel de la fiche · `M`
+
+La mécanique (V0-04) est faite ; l'esthétique des contrôles ne l'est pas encore. Reprendre le niveau de finition de l'ancienne application (`master`, avant la refonte) : menus déroulants et combobox personnalisés plutôt que `<select>`/`<input>` bruts, contrôles d'édition qui se révèlent au survol plutôt que toujours visibles, hiérarchie typographique et espacements resserrés pour les blocs `infobox`/`custom_table`. Ne touche à aucune donnée ni schéma — uniquement `components/blocks/**` et `app/m/[worldSlug]/f/[entitySlug]/EditEntityForm.tsx`.
+
+**Critères d'acceptation**
+- [ ] Aucun `<select>` natif visible dans la fiche ; remplacés par un composant cohérent avec les jetons de `tokens.css`.
+- [ ] Les contrôles d'édition d'un bloc (visibilité, réordonnancement, suppression) n'apparaissent qu'au survol ou au focus, pas en permanence.
+- [ ] Aucune régression sur les critères d'acceptation déjà passés de V0-03b et V0-04.
+
+---
+
 ## V0-07 — Partage en lecture seule · `M`
 
 Génération d'un lien avec jeton, route serveur résolvant la visibilité elle-même.
