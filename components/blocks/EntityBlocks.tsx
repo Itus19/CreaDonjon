@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import BlockShell from "./BlockShell";
+import Dropdown from "@/components/shared/Dropdown";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import DescriptionBlockEditor from "./DescriptionBlockEditor";
 import InfoboxBlockEditor from "./InfoboxBlockEditor";
@@ -168,51 +169,48 @@ export default function EntityBlocks({
             title={block.display.label || BLOCK_TYPE_LABELS[block.blockType]}
             visibilityLevel={block.visibilityLevel}
           >
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
               <div className="flex flex-wrap items-center gap-2">
                 <input
                   value={block.display.label}
                   onChange={(e) =>
                     patchBlock(block.id, { display: { ...block.display, label: e.target.value } })
                   }
-                  className="w-48 rounded-md border border-edge bg-transparent px-2 py-1 text-sm"
+                  className="w-48 rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-sm text-ink transition-colors hover:border-edge focus:border-edge focus:outline-none"
                 />
-                <select
-                  value={block.visibilityLevel}
-                  onChange={(e) => patchBlock(block.id, { visibilityLevel: e.target.value })}
-                  className="rounded-md border border-edge bg-transparent px-2 py-1 text-xs"
-                >
-                  {VISIBILITY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => moveBlock(block.id, "up")}
-                  disabled={index === 0}
-                  className="rounded-md border border-edge px-2 py-1 text-xs text-ink disabled:opacity-30"
-                  aria-label="Monter"
-                >
-                  ▲
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moveBlock(block.id, "down")}
-                  disabled={index === sortedBlocks.length - 1}
-                  className="rounded-md border border-edge px-2 py-1 text-xs text-ink disabled:opacity-30"
-                  aria-label="Descendre"
-                >
-                  ▼
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteBlockLocal(block.id)}
-                  className="ml-auto text-xs text-danger hover:underline"
-                >
-                  Supprimer le bloc
-                </button>
+                <div className="flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <Dropdown
+                    value={block.visibilityLevel}
+                    options={VISIBILITY_OPTIONS}
+                    onChange={(v) => patchBlock(block.id, { visibilityLevel: v })}
+                    aria-label="Visibilité du bloc"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => moveBlock(block.id, "up")}
+                    disabled={index === 0}
+                    className="rounded-md border border-edge px-1.5 py-0.5 text-xs text-ink disabled:opacity-30"
+                    aria-label="Monter"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveBlock(block.id, "down")}
+                    disabled={index === sortedBlocks.length - 1}
+                    className="rounded-md border border-edge px-1.5 py-0.5 text-xs text-ink disabled:opacity-30"
+                    aria-label="Descendre"
+                  >
+                    ▼
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteBlockLocal(block.id)}
+                    className="ml-1 text-xs text-danger hover:underline"
+                  >
+                    Supprimer
+                  </button>
+                </div>
               </div>
 
               <BlockDataEditor block={block} onChange={(data) => patchBlock(block.id, { data })} />

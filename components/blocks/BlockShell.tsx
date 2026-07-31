@@ -23,7 +23,7 @@ export default function BlockShell({
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   return (
-    <section className="rounded-lg border border-edge bg-panel-sunken">
+    <section className="group rounded-lg border border-edge bg-panel-sunken">
       <button
         type="button"
         onClick={() => setCollapsed((c) => !c)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import type { PaletteEntity } from "./CommandPalette";
 import CommandPalette from "./CommandPalette";
@@ -39,13 +40,25 @@ export default function Sidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 top-14 z-50 flex w-[280px] shrink-0 flex-col gap-4 border-r border-edge bg-panel-sunken p-4 transition-transform md:static md:top-0 md:z-auto md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 top-14 z-50 flex w-[280px] shrink-0 flex-col border-r border-edge bg-panel-sunken transition-transform md:static md:top-0 md:z-auto md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <CommandPalette worldId={worldId} worldSlug={worldSlug} entities={entities} />
-        <div className="flex-1 overflow-y-auto" onClick={() => setOpen(false)}>
-          <EntityTree groups={tree} worldSlug={worldSlug} />
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+          <CommandPalette worldId={worldId} worldSlug={worldSlug} entities={entities} />
+          <div onClick={() => setOpen(false)}>
+            <EntityTree groups={tree} worldSlug={worldSlug} />
+          </div>
+        </div>
+
+        <div className="border-t border-edge p-4">
+          <Link
+            href={`/m/${worldSlug}/f/new`}
+            onClick={() => setOpen(false)}
+            className="block w-full rounded-full bg-accent px-4 py-2 text-center text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+          >
+            + Nouvelle entité
+          </Link>
         </div>
       </aside>
     </>

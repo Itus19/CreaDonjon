@@ -25,27 +25,30 @@ export default function InfoboxBlockEditor({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-0.5">
       {data.entries.map((entry, index) => (
-        <div key={index} className="flex items-center gap-2">
+        <div
+          key={index}
+          className="flex items-baseline gap-3 border-b border-edge/40 py-1.5 last:border-b-0"
+        >
           <input
             value={entry.label}
             onChange={(e) => updateEntry(index, { label: e.target.value })}
             placeholder="Population"
-            className="w-40 rounded-md border border-edge bg-transparent px-2 py-1 text-sm"
+            className="w-32 shrink-0 bg-transparent text-xs font-semibold uppercase tracking-wider text-ink-muted outline-none placeholder:normal-case placeholder:tracking-normal focus:text-ink"
           />
           <input
             value={entry.value}
             onChange={(e) => updateEntry(index, { value: e.target.value })}
             placeholder="12 000"
-            className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm"
+            className="flex-1 bg-transparent text-sm text-ink outline-none"
           />
           <button
             type="button"
             onClick={() => removeEntry(index)}
             className="text-xs text-danger hover:underline"
           >
-            Supprimer
+            ×
           </button>
         </div>
       ))}
@@ -55,7 +58,7 @@ export default function InfoboxBlockEditor({
       <button
         type="button"
         onClick={addEntry}
-        className="self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+        className="mt-2 self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
       >
         + Ajouter une entree
       </button>

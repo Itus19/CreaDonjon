@@ -35,17 +35,9 @@ export default async function WorldHomePage({
           }
         />
       ) : (
-        <>
-          <p className="text-sm text-ink-muted">
-            Choisissez une entité dans la barre latérale, ou créez-en une nouvelle.
-          </p>
-          <Link
-            href={`/m/${worldSlug}/f/new`}
-            className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
-          >
-            + Nouvelle entité
-          </Link>
-        </>
+        <p className="text-sm text-ink-muted">
+          Choisissez une entité dans la barre latérale, ou créez-en une nouvelle depuis le bouton en bas.
+        </p>
       )}
     </div>
   );

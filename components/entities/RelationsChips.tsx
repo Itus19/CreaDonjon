@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
+import Dropdown from "@/components/shared/Dropdown";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import { RELATION_TYPES } from "@/src/core/relations/inverses";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
@@ -107,39 +108,24 @@ export default function RelationsChips({
 
       {otherEntities.length > 0 && (
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <select
+          <Dropdown
             value={relationType}
-            onChange={(e) => setRelationType(e.target.value as (typeof RELATION_TYPES)[number])}
-            className="rounded-md border border-edge bg-transparent px-2 py-1 text-xs"
-          >
-            {RELATION_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {RELATION_LABELS_FR[type] ?? type}
-              </option>
-            ))}
-          </select>
-          <select
+            options={RELATION_TYPES.map((type) => ({ value: type, label: RELATION_LABELS_FR[type] ?? type }))}
+            onChange={(v) => setRelationType(v as (typeof RELATION_TYPES)[number])}
+            aria-label="Type de relation"
+          />
+          <Dropdown
             value={targetEntityId}
-            onChange={(e) => setTargetEntityId(e.target.value)}
-            className="rounded-md border border-edge bg-transparent px-2 py-1 text-xs"
-          >
-            {otherEntities.map((other) => (
-              <option key={other.id} value={other.id}>
-                {other.name}
-              </option>
-            ))}
-          </select>
-          <select
+            options={otherEntities.map((other) => ({ value: other.id, label: other.name }))}
+            onChange={setTargetEntityId}
+            aria-label="Entité cible"
+          />
+          <Dropdown
             value={visibilityLevel}
-            onChange={(e) => setVisibilityLevel(e.target.value)}
-            className="rounded-md border border-edge bg-transparent px-2 py-1 text-xs"
-          >
-            {VISIBILITY_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            options={VISIBILITY_OPTIONS}
+            onChange={setVisibilityLevel}
+            aria-label="Visibilité de la relation"
+          />
           <button
             type="button"
             onClick={addRelation}

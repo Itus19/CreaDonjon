@@ -1,18 +1,9 @@
 "use client";
 
 import type { Segment } from "@/src/core/schemas/entities/segments";
+import Dropdown from "@/components/shared/Dropdown";
+import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import VisibilityBadge from "./VisibilityBadge";
-
-// campaign/user necessitent un scopeId (une campagne ou un utilisateur
-// precis) : pas de selecteur pour ca encore, donc pas propose ici. Le
-// schema et la base acceptent deja les six niveaux, cet editeur n'en
-// expose que quatre par simplicite (V0).
-const VISIBILITY_OPTIONS: { value: "public" | "players" | "gm" | "private"; label: string }[] = [
-  { value: "public", label: "Public" },
-  { value: "players", label: "Joueurs" },
-  { value: "gm", label: "MJ uniquement" },
-  { value: "private", label: "Privé" },
-];
 
 let nextLocalId = 1;
 function generateSegmentId(): string {
@@ -75,28 +66,25 @@ export default function SegmentsEditor({
       )}
 
       {segments.map((segment, index) => (
-        <div key={segment.id} className="flex flex-col gap-2 rounded-lg border border-edge p-3">
+        <div key={segment.id} className="group flex flex-col gap-2 rounded-lg border border-edge p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <select
-                value={segment.visibility.level}
-                onChange={(e) =>
-                  updateVisibilityLevel(index, e.target.value as (typeof VISIBILITY_OPTIONS)[number]["value"])
-                }
-                className="rounded-md border border-edge bg-transparent px-2 py-1 text-xs"
-              >
-                {VISIBILITY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
               <VisibilityBadge level={segment.visibility.level} />
+              <div className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                <Dropdown
+                  value={segment.visibility.level}
+                  options={VISIBILITY_OPTIONS}
+                  onChange={(v) =>
+                    updateVisibilityLevel(index, v as (typeof VISIBILITY_OPTIONS)[number]["value"])
+                  }
+                  aria-label="Visibilité du segment"
+                />
+              </div>
             </div>
             <button
               type="button"
               onClick={() => removeSegment(index)}
-              className="text-xs text-danger hover:underline"
+              className="text-xs text-danger opacity-0 transition-opacity hover:underline group-hover:opacity-100 group-focus-within:opacity-100"
             >
               Supprimer
             </button>

@@ -49,18 +49,18 @@ export default function CustomTableBlockEditor({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr>
               {data.columns.map((column, index) => (
-                <th key={index} className="border-b border-edge p-1 text-left">
+                <th key={index} className="border-b border-edge px-1.5 py-1 text-left">
                   <div className="flex items-center gap-1">
                     <input
                       value={column}
                       onChange={(e) => renameColumn(index, e.target.value)}
-                      className="w-full rounded-md border border-edge bg-transparent px-2 py-1 text-xs font-semibold"
+                      className="w-full bg-transparent text-xs font-semibold uppercase tracking-wider text-ink-muted outline-none focus:text-ink"
                     />
                     <button
                       type="button"
@@ -72,7 +72,7 @@ export default function CustomTableBlockEditor({
                   </div>
                 </th>
               ))}
-              <th className="border-b border-edge p-1">
+              <th className="border-b border-edge px-1.5 py-1">
                 <button
                   type="button"
                   onClick={addColumn}
@@ -87,21 +87,21 @@ export default function CustomTableBlockEditor({
             {data.rows.map((row, rowIndex) => (
               <tr key={rowIndex}>
                 {data.columns.map((column) => (
-                  <td key={column} className="border-b border-edge/60 p-1">
+                  <td key={column} className="border-b border-edge/40 px-1.5 py-1">
                     <input
                       value={typeof row[column] === "string" ? (row[column] as string) : ""}
                       onChange={(e) => updateCell(rowIndex, column, e.target.value)}
-                      className="w-full rounded-md border border-edge bg-transparent px-2 py-1 text-xs"
+                      className="w-full bg-transparent text-xs text-ink outline-none"
                     />
                   </td>
                 ))}
-                <td className="border-b border-edge/60 p-1">
+                <td className="border-b border-edge/40 px-1.5 py-1">
                   <button
                     type="button"
                     onClick={() => removeRow(rowIndex)}
                     className="text-xs text-danger hover:underline"
                   >
-                    Supprimer
+                    ×
                   </button>
                 </td>
               </tr>
