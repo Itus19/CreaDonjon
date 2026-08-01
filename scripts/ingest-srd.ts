@@ -1,4 +1,4 @@
-// Import du SRD (P0-08) : charge srd-2014.json et srd-2024.json vers
+// Import du SRD (P0-08) : charge data/srd/srd-2014.json et data/srd/srd-2024.json vers
 // rulesets + ruleset_entries + ruleset_entry_blocks, sur le projet
 // Supabase configure par NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY.
 //
@@ -77,17 +77,17 @@ interface SrdVersionConfig {
 
 const SRD_VERSIONS: SrdVersionConfig[] = [
   {
-    file: "srd-2014.json",
+    file: "data/srd/srd-2014.json",
     baseSystem: "dnd_srd_51",
     rulesetName: "SRD 5.1 (2014)",
     sourceAttribution: "SRD 5.1",
   },
   {
-    file: "srd-2024.json",
+    file: "data/srd/srd-2024.json",
     baseSystem: "dnd_srd_52",
     rulesetName: "SRD 5.2.1 (2024)",
     sourceAttribution: "SRD 5.2.1",
-    mergeWithBaseFile: "srd-2014.json",
+    mergeWithBaseFile: "data/srd/srd-2014.json",
   },
 ];
 
@@ -502,7 +502,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<Record<EntryT
 }
 
 async function main() {
-  console.log("Import SRD — aucune donnee hors srd-2014.json / srd-2024.json n'est consultee.\n");
+  console.log("Import SRD — aucune donnee hors data/srd/srd-2014.json / data/srd/srd-2024.json n'est consultee.\n");
 
   for (const config of SRD_VERSIONS) {
     console.log(`--- ${config.rulesetName} ---`);
