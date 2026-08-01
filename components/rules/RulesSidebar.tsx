@@ -6,6 +6,54 @@ import { usePathname } from "next/navigation";
 import { ENTRY_TYPE_LABELS_FR } from "@/src/i18n/fr";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
 
+/** Un groupe par entry_type, pliable (meme motif que NodeRow dans components/shell/EntityTree.tsx). */
+function RuleTypeGroup({
+  entryType,
+  items,
+  worldSlug,
+  currentKey,
+  onNavigate,
+}: {
+  entryType: string;
+  items: RuleEntrySummary[];
+  worldSlug: string;
+  currentKey: string | null;
+  onNavigate: () => void;
+}) {
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        aria-label={expanded ? "Replier" : "Déplier"}
+        className="flex w-full items-center gap-1 px-1 text-xs font-semibold uppercase tracking-wide text-ink-muted"
+      >
+        <span className="w-3 text-[10px]">{expanded ? "▾" : "▸"}</span>
+        {ENTRY_TYPE_LABELS_FR[entryType] ?? entryType}
+      </button>
+      {expanded && (
+        <ul>
+          {items.map((entry) => (
+            <li key={entry.key}>
+              <Link
+                href={`/m/${worldSlug}/regles/${entry.key}`}
+                onClick={onNavigate}
+                className={`block truncate rounded px-2 py-1 text-sm transition-colors hover:bg-panel-raised ${
+                  entry.key === currentKey ? "bg-panel-raised text-accent" : "text-ink-soft"
+                }`}
+              >
+                {entry.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /**
  * Barre laterale de l'onglet Regles (miroir de components/shell/Sidebar.tsx
  * cote Monde, meme repli mobile en panneau coulissant) : filtre local +
@@ -73,26 +121,14 @@ export default function RulesSidebar({
         <nav aria-label="Règles du monde" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
           {groups.length === 0 && <p className="px-1 text-sm text-ink-muted">Aucune règle trouvée.</p>}
           {groups.map(([entryType, items]) => (
-            <div key={entryType}>
-              <p className="px-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                {ENTRY_TYPE_LABELS_FR[entryType] ?? entryType}
-              </p>
-              <ul>
-                {items.map((entry) => (
-                  <li key={entry.key}>
-                    <Link
-                      href={`/m/${worldSlug}/regles/${entry.key}`}
-                      onClick={() => setOpen(false)}
-                      className={`block truncate rounded px-2 py-1 text-sm transition-colors hover:bg-panel-raised ${
-                        entry.key === currentKey ? "bg-panel-raised text-accent" : "text-ink-soft"
-                      }`}
-                    >
-                      {entry.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <RuleTypeGroup
+              key={entryType}
+              entryType={entryType}
+              items={items}
+              worldSlug={worldSlug}
+              currentKey={currentKey}
+              onNavigate={() => setOpen(false)}
+            />
           ))}
         </nav>
       </aside>

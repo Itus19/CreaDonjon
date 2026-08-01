@@ -16,18 +16,26 @@ export default async function RuleEntryPage({
   if (!entry) notFound();
 
   return (
-    <div className="flex flex-col gap-4">
-      <header className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <h1 className="entity-title">{entry.name}</h1>
-          <span className="mech rounded-full border border-edge px-2 py-0.5 text-xs text-ink-muted">
-            {ENTRY_TYPE_LABELS_FR[entry.entryType] ?? entry.entryType}
-          </span>
+    <div className="flex flex-col gap-5">
+      {/* Meme grille que la fiche d'entite (EditEntityForm.tsx) : titre +
+          type a gauche, espace d'image a droite, meme largeur/ratio. */}
+      <div className="grid grid-cols-[1fr_auto] gap-6">
+        <div className="flex flex-col">
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="entity-title">{entry.name}</h1>
+            <span className="shrink-0 whitespace-nowrap px-1 py-1 text-sm font-medium text-ink-muted">
+              {ENTRY_TYPE_LABELS_FR[entry.entryType] ?? entry.entryType}
+            </span>
+          </div>
+          {entry.sourceAttribution && (
+            <span className="mt-0.5 font-mech text-xs text-ink-muted">{entry.sourceAttribution}</span>
+          )}
         </div>
-        {entry.sourceAttribution && (
-          <p className="text-xs text-ink-muted">{entry.sourceAttribution}</p>
-        )}
-      </header>
+
+        <div className="flex aspect-[3/4] w-56 shrink-0 items-center justify-center rounded-2xl border border-edge bg-panel-sunken text-center text-xs text-ink-muted">
+          Illustration
+        </div>
+      </div>
 
       <MissingBlocksBanner missingBlocks={entry.missingBlocks} />
 
