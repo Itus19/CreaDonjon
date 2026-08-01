@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
+import { nextNumericSlug } from "@/src/core/slug/slug";
 import { buildEntityTree, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import {
   type EntitySearchResult,
@@ -10,6 +10,7 @@ import {
   insertEntity,
   insertEntityRevision,
   listEntitiesForWorld,
+  listEntitySlugsForWorld,
   nextRevisionNumber,
   searchEntitiesInWorld,
   updateEntityWithVersionCheck,
@@ -18,8 +19,6 @@ import {
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
 
 type TypedClient = SupabaseClient<Database>;
-
-const MAX_SLUG_ATTEMPTS = 50;
 
 export async function listEntities(supabase: TypedClient, worldId: string): Promise<EntitySummary[]> {
   return listEntitiesForWorld(supabase, worldId);
@@ -37,21 +36,22 @@ export async function getEntityTree(
   return buildEntityTree(entities, partOfEdges);
 }
 
-async function generateUniqueEntitySlug(
-  supabase: TypedClient,
-  worldId: string,
-  name: string
-): Promise<string> {
-  const base = slugify(name);
-  const baseSlug = base === "" ? "entite" : base;
-
-  for (let attempt = 0; attempt < MAX_SLUG_ATTEMPTS; attempt++) {
-    const candidate = attempt === 0 ? baseSlug : nextSlugCandidate(baseSlug, attempt);
-    if (!(await worldHasSlug(supabase, worldId, candidate))) {
-      return candidate;
-    }
+/**
+ * Slug numerique (V0-06g) : le titre d'une fiche est editable en place a
+ * tout moment, un slug derive du nom au moment de la creation devient
+ * trompeur des le premier renommage. Un numero ne represente jamais que
+ * lui-meme. La collision (deux creations concurrentes calculant le meme
+ * numero) reste possible en theorie — meme profil de risque que
+ * l'ancienne verification "worldHasSlug puis retente" qu'elle remplace,
+ * pas un nouveau risque introduit ici.
+ */
+async function generateUniqueEntitySlug(supabase: TypedClient, worldId: string): Promise<string> {
+  const existingSlugs = await listEntitySlugsForWorld(supabase, worldId);
+  let candidate = nextNumericSlug(existingSlugs);
+  while (await worldHasSlug(supabase, worldId, candidate)) {
+    candidate = String(Number(candidate) + 1);
   }
-  throw new Error("Impossible de generer un slug unique.");
+  return candidate;
 }
 
 function snapshotOf(entity: EntitySummary) {
@@ -71,7 +71,7 @@ export async function createEntity(
     aliases: string[];
   }
 ): Promise<EntitySummary> {
-  const slug = await generateUniqueEntitySlug(supabase, params.worldId, params.name);
+  const slug = await generateUniqueEntitySlug(supabase, params.worldId);
   const entity = await insertEntity(supabase, { ...params, slug });
   await insertEntityRevision(supabase, {
     entityId: entity.id,

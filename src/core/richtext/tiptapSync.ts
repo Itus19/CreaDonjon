@@ -1,4 +1,4 @@
-import type { Mark, Segment, SegmentBlockType, SegmentContentNode } from "../schemas/entities/segments";
+import { MARKS, type Mark, type Segment, type SegmentBlockType, type SegmentContentNode } from "../schemas/entities/segments";
 
 /**
  * Conversion pure entre `Segment[]` (SCHEMA.md §6) et la forme JSON d'un
@@ -37,7 +37,6 @@ export interface DocJSON {
   content: BlockNodeJSON[];
 }
 
-const MARKS: readonly Mark[] = ["bold", "italic", "underline", "strike"];
 const HEADING_LEVEL_BY_BLOCK_TYPE: Partial<Record<SegmentBlockType, number>> = { h1: 1, h2: 2, h3: 3, h4: 4 };
 const BLOCK_TYPE_BY_HEADING_LEVEL: Record<number, SegmentBlockType> = { 1: "h1", 2: "h2", 3: "h3", 4: "h4" };
 const VISIBILITY_LEVELS = ["public", "players", "gm", "campaign", "user", "private"] as const;

@@ -6,7 +6,7 @@ import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import BubbleSelect from "./BubbleSelect";
-import { SegmentParagraph, SegmentHeading, RefMention } from "./extensions";
+import { SegmentParagraph, SegmentHeading, RefMention, Spoiler } from "./extensions";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import { docToSegments, segmentsToDoc, type DocJSON } from "@/src/core/richtext/tiptapSync";
 import type { Segment } from "@/src/core/schemas/entities/segments";
@@ -49,11 +49,23 @@ export default function RichTextEditor({
       SegmentHeading,
       RefMention,
       Underline,
+      Spoiler,
     ],
     content: initialDoc as unknown as Record<string, unknown>,
     immediatelyRender: false,
     editorProps: {
       attributes: { class: "rich-text-content focus:outline-none" },
+      // Reveler un spoiler est un bascule d'affichage purement local (voir
+      // le commentaire de l'extension Spoiler) : on mute l'attribut DOM
+      // directement plutot que de passer par une commande d'edition, pour
+      // ne jamais declencher onUpdate ni sauvegarder cet etat ephemere.
+      handleClick: (_view, _pos, event) => {
+        const target = (event.target as HTMLElement).closest("[data-spoiler]");
+        if (!target) return false;
+        const revealed = target.getAttribute("data-revealed") === "true";
+        target.setAttribute("data-revealed", String(!revealed));
+        return false;
+      },
     },
     onUpdate: ({ editor }) => {
       onChange(docToSegments(editor.getJSON() as DocJSON));
@@ -142,6 +154,16 @@ export default function RichTextEditor({
           className={`rounded px-2 py-1 text-xs line-through transition-colors hover:bg-panel ${editor.isActive("strike") ? "bg-panel text-accent" : "text-ink"}`}
         >
           S
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleMark("spoiler").run()}
+          aria-label="Spoiler (caviarde jusqu'au clic)"
+          aria-pressed={editor.isActive("spoiler")}
+          title="Spoiler : caviarde le passage, un clic le révèle"
+          className={`rounded px-2 py-1 text-xs transition-colors hover:bg-panel ${editor.isActive("spoiler") ? "bg-panel text-accent" : "text-ink"}`}
+        >
+          ▓
         </button>
         <span className="mx-0.5 h-4 w-px bg-edge" />
         <BubbleSelect

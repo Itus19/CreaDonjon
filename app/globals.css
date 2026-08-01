@@ -134,6 +134,25 @@ body {
   margin-left: -0.8em;
 }
 
+/* Spoiler (V0-06g) : caviarde a l'affichage, jamais a l'envoi — le texte
+   est bien present dans le DOM, seul le rendu le masque tant que
+   data-revealed n'est pas "true" (bascule au clic, purement local, cf.
+   RichTextEditor.tsx). Ne remplace jamais [data-visibility] ci-dessus,
+   qui reste la seule chose qui determine ce que le serveur envoie. */
+.rich-text-content [data-spoiler] {
+  border-radius: 3px;
+  background: var(--ink);
+  color: transparent;
+  cursor: pointer;
+  user-select: none;
+}
+.rich-text-content [data-spoiler][data-revealed="true"] {
+  background: transparent;
+  color: inherit;
+  cursor: text;
+  user-select: text;
+}
+
 /* Mention d'entite/regle dans le texte : meme convention que les liens
    d'entite ailleurs dans la coquille (souligne pointille). */
 .rich-ref-mention {

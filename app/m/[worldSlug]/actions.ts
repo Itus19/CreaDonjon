@@ -3,44 +3,36 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createEntitySchema } from "@/lib/entities/schemas";
+import { createBlankEntitySchema } from "@/lib/entities/schemas";
 import { createEntity } from "@/src/server/services/entities";
 
-export type ActionState = { error: string } | null;
-
-export async function createEntityAction(
-  _prevState: ActionState,
-  formData: FormData
-): Promise<ActionState> {
-  const parsed = createEntitySchema.safeParse({
+/**
+ * Cree une fiche vierge et y redirige immediatement (V0-06g) : pas d'ecran
+ * de creation separe a remplir avant de voir quoi que ce soit — le nom,
+ * le type et les alias se choisissent en place sur la fiche elle-meme,
+ * exactement comme toute autre modification.
+ */
+export async function createBlankEntityAction(formData: FormData): Promise<void> {
+  const parsed = createBlankEntitySchema.safeParse({
     worldId: formData.get("worldId"),
-    name: formData.get("name"),
-    entityKind: formData.get("entityKind"),
-    aliases: formData.get("aliases"),
   });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
-  }
+  if (!parsed.success) return;
 
   const worldSlug = formData.get("worldSlug");
-  if (typeof worldSlug !== "string" || worldSlug === "") {
-    return { error: "Formulaire invalide." };
-  }
+  if (typeof worldSlug !== "string" || worldSlug === "") return;
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
-    return { error: "Session expiree, reconnectez-vous." };
-  }
+  if (!user) return;
 
   const entity = await createEntity(supabase, {
     worldId: parsed.data.worldId,
     createdBy: user.id,
-    name: parsed.data.name,
-    entityKind: parsed.data.entityKind,
-    aliases: parsed.data.aliases,
+    name: "",
+    entityKind: "other",
+    aliases: [],
   });
 
   revalidatePath(`/m/${worldSlug}`, "layout");

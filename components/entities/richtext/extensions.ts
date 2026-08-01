@@ -1,4 +1,4 @@
-import { Node, mergeAttributes } from "@tiptap/core";
+import { Mark, Node, mergeAttributes } from "@tiptap/core";
 import Paragraph from "@tiptap/extension-paragraph";
 import Heading from "@tiptap/extension-heading";
 
@@ -94,5 +94,24 @@ export const RefMention = Node.create({
       mergeAttributes(HTMLAttributes, { "data-ref-mention": "", class: "rich-ref-mention" }),
       node.attrs.label as string,
     ];
+  },
+});
+
+/**
+ * Marque « spoiler » : caviarde un passage a l'affichage, revele au clic.
+ * A ne jamais confondre avec la visibilite (SCHEMA.md §7.1, `Segment.
+ * visibility`) — le texte caviarde part quand meme au client (celui qui
+ * le lit y a deja droit), seul l'AFFICHAGE initial le cache. Le clic
+ * bascule un attribut DOM local (`data-revealed`), jamais une transaction
+ * ProseMirror : reveler n'est pas une modification du document, ca ne doit
+ * ni se sauvegarder ni survivre a un rechargement.
+ */
+export const Spoiler = Mark.create({
+  name: "spoiler",
+  parseHTML() {
+    return [{ tag: "span[data-spoiler]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["span", mergeAttributes(HTMLAttributes, { "data-spoiler": "" }), 0];
   },
 });

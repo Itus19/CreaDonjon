@@ -20,3 +20,20 @@ export function slugify(name: string): string {
 export function nextSlugCandidate(baseSlug: string, attempt: number): string {
   return `${baseSlug}-${attempt + 1}`;
 }
+
+/**
+ * Slug numerique pour les entites (pas les mondes) : un nom peut changer a
+ * tout moment (titre editable en place), un slug derive du nom au moment
+ * de la creation devient alors trompeur des le premier renommage. Un
+ * numero ne ment jamais puisqu'il ne represente rien d'autre que
+ * lui-meme. Pure — l'unicite reelle (et la resolution des courses de
+ * creation concurrente) reste du ressort de la couche service.
+ */
+export function nextNumericSlug(existingSlugs: string[]): string {
+  const max = existingSlugs.reduce((acc, slug) => {
+    if (!/^\d+$/.test(slug)) return acc;
+    const n = Number(slug);
+    return n > acc ? n : acc;
+  }, 0);
+  return String(max + 1);
+}

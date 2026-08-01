@@ -46,6 +46,13 @@ export async function getEntityBySlug(
   return data as EntitySummary | null;
 }
 
+/** Slugs bruts d'un monde, pour calculer le prochain slug numerique (src/core/slug). */
+export async function listEntitySlugsForWorld(supabase: TypedClient, worldId: string): Promise<string[]> {
+  const { data, error } = await supabase.from("entities").select("slug").eq("world_id", worldId);
+  if (error) throw new Error(error.message);
+  return data.map((row) => row.slug);
+}
+
 export async function worldHasSlug(
   supabase: TypedClient,
   worldId: string,

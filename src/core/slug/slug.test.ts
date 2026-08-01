@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextSlugCandidate, slugify } from "./slug";
+import { nextNumericSlug, nextSlugCandidate, slugify } from "./slug";
 
 describe("slugify", () => {
   it("met en minuscules et remplace les espaces par des tirets", () => {
@@ -32,5 +32,24 @@ describe("nextSlugCandidate", () => {
 
   it("incremente ensuite normalement", () => {
     expect(nextSlugCandidate("valdoria", 4)).toBe("valdoria-5");
+  });
+});
+
+describe("nextNumericSlug", () => {
+  it("commence a 1 quand il n'y a aucun slug existant", () => {
+    expect(nextNumericSlug([])).toBe("1");
+  });
+
+  it("prend le plus grand numero existant et l'incremente", () => {
+    expect(nextNumericSlug(["1", "2", "3"])).toBe("4");
+    expect(nextNumericSlug(["1", "5", "3"])).toBe("6");
+  });
+
+  it("ignore les anciens slugs derives d'un nom (entites creees avant ce changement)", () => {
+    expect(nextNumericSlug(["bram", "l-ancre-rouillee", "7"])).toBe("8");
+  });
+
+  it("recommence a 1 si aucun slug existant n'est numerique", () => {
+    expect(nextNumericSlug(["bram", "l-ancre-rouillee"])).toBe("1");
   });
 });

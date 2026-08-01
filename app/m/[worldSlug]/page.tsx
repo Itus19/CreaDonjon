@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listEntities } from "@/src/server/services/entities";
 import EmptyState from "@/components/shell/EmptyState";
+import { createBlankEntityAction } from "./actions";
 
 export default async function WorldHomePage({
   params,
@@ -26,12 +26,16 @@ export default async function WorldHomePage({
           title="Ce monde est encore vide"
           description="Créez votre première entité — un personnage, un lieu, une faction — pour commencer à le peupler."
           action={
-            <Link
-              href={`/m/${worldSlug}/f/new`}
-              className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
-            >
-              + Nouvelle entité
-            </Link>
+            <form action={createBlankEntityAction}>
+              <input type="hidden" name="worldId" value={world.id} />
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+              <button
+                type="submit"
+                className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+              >
+                + Nouvelle entité
+              </button>
+            </form>
           }
         />
       ) : (

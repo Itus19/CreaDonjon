@@ -123,7 +123,12 @@ export default function EditEntityForm({
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={() => save()}
-              className="entity-title flex-1 bg-transparent outline-none focus:border-b focus:border-accent"
+              placeholder="Nouvelle entité"
+              // Fiche vierge (V0-06g) : pas d'ecran de creation separe, on
+              // arrive directement ici — le focus automatique invite a
+              // nommer la fiche tout de suite, sans action supplementaire.
+              autoFocus={entity.name === ""}
+              className="entity-title flex-1 bg-transparent outline-none placeholder:text-ink-muted focus:border-b focus:border-accent"
             />
             {/* Aligne avec le titre, comme dans l'ancienne application : le
                 type de fiche se choisit en haut a droite, pas sous le titre. */}

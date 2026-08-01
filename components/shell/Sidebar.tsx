@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import type { EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import type { PaletteEntity } from "./CommandPalette";
 import CommandPalette from "./CommandPalette";
 import EntityTree from "./EntityTree";
+import { createBlankEntityAction } from "@/app/m/[worldSlug]/actions";
 
 export default function Sidebar({
   worldId,
@@ -52,13 +52,17 @@ export default function Sidebar({
         </div>
 
         <div className="border-t border-edge p-4">
-          <Link
-            href={`/m/${worldSlug}/f/new`}
-            onClick={() => setOpen(false)}
-            className="block w-full rounded-full bg-accent px-4 py-2 text-center text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
-          >
-            + Nouvelle entité
-          </Link>
+          <form action={createBlankEntityAction}>
+            <input type="hidden" name="worldId" value={worldId} />
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            <button
+              type="submit"
+              onClick={() => setOpen(false)}
+              className="block w-full rounded-full bg-accent px-4 py-2 text-center text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+            >
+              + Nouvelle entité
+            </button>
+          </form>
         </div>
       </aside>
     </>

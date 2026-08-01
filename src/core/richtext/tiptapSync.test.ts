@@ -51,6 +51,23 @@ describe("segmentsToDoc", () => {
     expect(doc.content[0].content?.[0].marks).toEqual([{ type: "bold" }, { type: "italic" }]);
   });
 
+  it("porte la marque spoiler comme les autres marques", () => {
+    const segments: Segment[] = [
+      {
+        id: "s1",
+        blockType: "paragraph",
+        visibility: { level: "public", scopeId: null },
+        content: [{ t: "text", v: "secret", marks: ["spoiler"] }],
+      },
+    ];
+    const doc = segmentsToDoc(segments);
+    expect(doc.content[0].content?.[0].marks).toEqual([{ type: "spoiler" }]);
+    // Le noeud caviarde reste bel et bien envoye au client — spoiler n'est
+    // pas un niveau de visibilite (regle absolue n°4, cf. commentaire de
+    // src/core/schemas/entities/segments.ts).
+    expect(docToSegments(doc)[0].content[0]).toEqual({ t: "text", v: "secret", marks: ["spoiler"] });
+  });
+
   it("omet la cle marks quand le noeud n'en porte aucune", () => {
     const segments: Segment[] = [
       {

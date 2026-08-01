@@ -12,9 +12,15 @@ import { z } from "zod";
  * modele ne permettait pas). `blockType` distingue paragraphe/titres —
  * c'est un attribut du segment (un segment = un bloc, comme un paragraphe
  * ou un titre dans un editeur de texte riche), pas du contenu inline.
+ *
+ * V0-06g : `spoiler` est une marque comme les autres, PAS un niveau de
+ * visibilite — le texte est bel et bien envoye au client (celui qui le
+ * lit y a deja droit), seul l'affichage initial le caviarde jusqu'au clic.
+ * Ne remplace jamais `visibility` (la seule chose qui determine ce que le
+ * serveur envoie ou non, regle absolue n°4).
  */
 
-const MARKS = ["bold", "italic", "underline", "strike"] as const;
+export const MARKS = ["bold", "italic", "underline", "strike", "spoiler"] as const;
 export type Mark = (typeof MARKS)[number];
 
 const zTextNode = z.object({

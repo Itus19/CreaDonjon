@@ -387,11 +387,33 @@ Suite de V0-06e. Avant la refonte, `master` utilisait Tiptap avec une bulle flot
 
 **Livré** : `src/core/richtext/tiptapSync.ts` (+ tests, conversion pure `Segment[] <-> doc Tiptap`, sans dependance a `@tiptap/*` — regle absolue n°14), `components/entities/richtext/{extensions,BubbleSelect,RichTextEditor}.tsx`. Bulle flottante (`@tiptap/react/menus`) au survol d'une selection : selecteur Paragraphe/Titre 1-4 (tailles 20/18/16/14px, paragraphe a 12px), Gras/Italique/Souligne/Barre, et un selecteur de visibilite qui s'applique a tous les blocs touches par la selection. Chaque paragraphe/titre porte son propre `segmentId`/visibilite en attribut Tiptap (`data-*`), avec un lisere `--gm` (meme signe distinctif que `VisibilityBadge`, desormais retire car remplace par cet indicateur) sur tout bloc non public. La granularite de « Cacher ce passage » est le bloc (paragraphe/titre), pas une plage de mots au milieu d'une phrase — isoler un passage precis demande d'abord de le mettre sur sa propre ligne (Entree), puis de lui appliquer une visibilite ; documente comme un choix delibere plutot qu'une vraie decoupe inline, qui aurait exige un modele de visibilite par plage (hors schema actuel).
 
-**Non refait depuis `master`** : le marquage « Masquer aux joueurs »/spoiler cosmetique (HTML complet envoye quand meme au client) — contraire a la regle absolue n°4, volontairement pas repris. Lien et couleur de texte de l'ancienne bulle : hors perimetre de ce ticket (decision utilisateur), a ajouter plus tard si le besoin se confirme.
+**Non refait depuis `master`** : le marquage « Masquer aux joueurs » (visibilite cosmetique, HTML complet envoye quand meme au client) — contraire a la regle absolue n°4, volontairement pas repris. Le marquage « spoiler » (caviardage revele au clic) est repris differemment en V0-06g : comme une marque de mise en forme sans lien avec la visibilite reelle, jamais comme un substitut au filtrage serveur. Lien et couleur de texte de l'ancienne bulle : hors perimetre de ce ticket (decision utilisateur), a ajouter plus tard si le besoin se confirme.
 
 **Aussi livré dans ce ticket** (retour utilisateur sur la coquille) : en-tete de fiche aligne sur l'ancienne application — le type d'entite (« Personnage ▾ ») remonte a hauteur du titre, aligne a droite ; le slug (identifiant d'URL sans accents) descend sous le titre plutot qu'a cote (il sert de reference technique pour l'URL, retire n'aurait rien simplifie) ; la zone de portrait est agrandie pour que sa hauteur propre force un espacement visible entre les relations et le premier bloc.
 
 **Vérification de la visibilité réelle** : la chaîne de filtrage (`src/core/visibility`, `filterBlocks`/`canSee`) n'a pas été modifiée par ce ticket — seul le schéma des segments a changé, en conservant la même forme `visibility: { level, scopeId }` déjà consommée par cette chaîne, déjà vérifiée avec un compte `viewer` réel lors de V0-04. Pas re-testée de bout en bout avec un nouveau compte ici : la garantie tient à l'absence de changement du chemin de filtrage, pas à un nouveau test.
+
+---
+
+## V0-06g — Slug numérique, création instantanée, spoiler · `M`
+
+Trois retours utilisateur sur la fiche.
+
+**Slug numérique.** Le slug était dérivé du nom à la création (`slugify`) ; un nom éditable en place (V0-06d) rend un slug figé sur l'ancien nom trompeur dès le premier renommage. Remplacé par un numéro séquentiel par monde (`src/core/slug/nextNumericSlug`, pur, testé), qui ne représente jamais que lui-même. Les mondes gardent leur slug dérivé du nom (`slugify`/`nextSlugCandidate` toujours utilisés par `src/server/services/worlds.ts`) — un monde change de nom bien plus rarement qu'une entité, et son slug figure dans les URL partagées.
+
+**Création instantanée.** Plus d'écran de création séparé (`/f/new` supprimé) : « + Nouvelle entité » crée directement une fiche vierge (nom vide, type « Autre », aucun alias) et y redirige — cohérent avec le slug numérique (aucune décision de nommage ne bloque plus la création) et avec la fiche déjà entièrement éditable en place (V0-06d). Le titre reçoit le focus automatiquement. `updateEntitySchema` n'exige plus un nom non vide (`.min(1)` retiré) : imposer un nom avant tout autre changement aurait réintroduit la friction que ce ticket retire.
+
+**Spoiler.** Nouvelle marque combinable (`src/core/schemas/entities/segments.ts`, aux côtés de gras/italique/souligné/barré) : caviarde un passage à l'affichage, un clic le révèle. À ne jamais confondre avec la visibilité — le texte caviardé est bel et bien envoyé au client (qui y a déjà droit), seul l'affichage initial le masque ; la révélation bascule un attribut DOM local (`data-revealed`), jamais une transaction Tiptap, pour ne jamais se sauvegarder ni survivre à un rechargement (recaviardé à chaque lecture, comme demandé).
+
+**Critères d'acceptation**
+- [x] Créer une entité attribue un slug numérique unique par monde ; renommer l'entité ensuite ne change jamais ce slug.
+- [x] Cliquer « + Nouvelle entité » ouvre directement une fiche vierge éditable, sans écran intermédiaire.
+- [x] Un passage marqué spoiler est caviardé à l'affichage et se révèle au clic ; l'état révélé ne persiste pas au rechargement.
+- [x] Aucune régression sur les tests existants (`slug`, `segments`, `richtext`).
+
+**Livré** : `src/core/slug/slug.ts` (`nextNumericSlug`), `src/server/repos/entities.ts` (`listEntitySlugsForWorld`), `src/server/services/entities.ts` (`generateUniqueEntitySlug` sans le nom), `app/m/[worldSlug]/actions.ts` (`createBlankEntityAction`), `components/shell/Sidebar.tsx`/`app/m/[worldSlug]/page.tsx` (formulaire d'un clic au lieu d'un lien vers `/f/new`), `components/entities/richtext/extensions.ts` (`Spoiler`), CSS `.rich-text-content [data-spoiler]`.
+
+**Piège trouvé en testant** : la marque `Spoiler` rendait bien l'attribut `data-spoiler` mais la CSS ciblait une classe `.rich-spoiler` jamais posée sur l'élément — caviardage invisible tant que non corrigé (CSS reciblée sur l'attribut, cohérent avec `[data-visibility]` déjà utilisé pour le même genre d'indicateur). Egalement corrigé en passant : `src/core/richtext/tiptapSync.ts` dupliquait la liste des marques au lieu d'importer celle de `segments.ts` — la marque `spoiler` aurait été silencieusement perdue à la lecture (`isMark` ne la reconnaissant pas) sans ce partage explicite.
 
 ---
 
