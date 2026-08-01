@@ -138,7 +138,15 @@ body {
    est bien present dans le DOM, seul le rendu le masque tant que
    data-revealed n'est pas "true" (bascule au clic, purement local, cf.
    RichTextEditor.tsx). Ne remplace jamais [data-visibility] ci-dessus,
-   qui reste la seule chose qui determine ce que le serveur envoie. */
+   qui reste la seule chose qui determine ce que le serveur envoie.
+   V1 D-02 : les deux traitements ne doivent jamais se ressembler, pour
+   qu'on ne confonde jamais un caviardage cosmetique avec un secret
+   filtre par le serveur. Verifie sur les jetons (tokens.css) : le
+   lisere MJ ci-dessus est teinte (--gm, chroma ~0.11-0.13, teinte 45,
+   terracotta) alors que ce fond de caviardage est neutre (--ink, meme
+   chroma ~0.008 que le texte courant). Ce n'est pas un hasard de
+   couleurs qui pourrait diverger silencieusement — c'est le choix des
+   jetons eux-memes qui garantit la distinction. */
 .rich-text-content [data-spoiler] {
   border-radius: 3px;
   background: var(--ink);

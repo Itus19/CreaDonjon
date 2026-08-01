@@ -1454,7 +1454,7 @@ Ces questions ne bloquent pas la conception générale, mais devront être déci
 Remarques issues du démarrage de l'implémentation, à garder en tête pour la suite :
 
 - Le périmètre de ce document (25 sections) est large et volontairement exploratoire. La feuille de route (section 22) fait déjà le tri utile pour la V1 — s'y tenir strictement évite la dispersion, en cohérence avec le principe 3.7 (faisabilité, petites étapes testables).
-- Le "lien sans compte" vers un wiki (section 4.2) demandera un mécanisme distinct de celui déjà construit pour le MJ/les joueurs identifiés (RLS Postgres basée sur `auth.uid()`) : une route serveur avec jeton d'invitation, qui résout elle-même la visibilité (cohérent avec la règle déjà posée dans `Phase0_Schema_Technique_v0_1.md` : la résolution de visibilité se fait toujours côté serveur, jamais côté client). À construire seulement une fois qu'un vrai wiki existe à partager.
+- Le "lien sans compte" vers un wiki (section 4.2) demandera un mécanisme distinct de celui déjà construit pour le MJ/les joueurs identifiés (RLS Postgres basée sur `auth.uid()`) : une route serveur avec jeton d'invitation, qui résout elle-même la visibilité (cohérent avec la règle déjà posée dans `docs/SCHEMA.md` : la résolution de visibilité se fait toujours côté serveur, jamais côté client). Construit en V0-07 (`share_links`, jeton + fonction `resolve_share_link` en `security definer`) ; durci en V1 D-01 (client service-role confiné, cf. `docs/BACKLOG_V1.md`).
 - Les permissions actuelles (RLS) ne distinguent pas encore MJ vs joueur au sein d'une même campagne (section 16) : pour l'instant, seul le propriétaire du monde peut écrire. À affiner quand les campagnes seront réellement utilisées.
 
 ---
@@ -2012,7 +2012,7 @@ Contenu :
 
 ## Alignement technique — 27/07/2026
 
-Sans changer le numéro de version du document (reste v0.1), le début de l'implémentation a permis de trancher plusieurs questions ouvertes et de préciser un point du fonctionnement des joueurs. Voir aussi `Phase0_Schema_Technique_v0_1.md` et `ROADMAP.md` pour le détail technique et l'état d'avancement.
+Sans changer le numéro de version du document (reste v0.1), le début de l'implémentation a permis de trancher plusieurs questions ouvertes et de préciser un point du fonctionnement des joueurs. Voir aussi `docs/SCHEMA.md` pour le détail technique et `ROADMAP.md` pour l'état d'avancement.
 
 - choix d'architecture retenus (section 23) : Next.js + Supabase (PostgreSQL, Auth, RLS) ;
 - précision sur l'accès par lien au wiki : lecture seule, sans compte (section 4.2) ;

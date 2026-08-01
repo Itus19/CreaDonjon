@@ -1,8 +1,10 @@
 # ROADMAP — Suivi des fonctionnalités
 
-Ce document liste les fonctionnalités du projet, organisées par module, avec leur état d'avancement. Il complète `Project_Design_Document_v0.1.md` (la vision et les principes) et `Phase0_Schema_Technique_v0_1.md` (le schéma de données) : ceux-là expliquent *pourquoi* et *comment*, celui-ci répond juste à *où on en est*.
+Ce document liste les fonctionnalités du projet, organisées par module, avec leur état d'avancement. Il complète `docs/PDD.md` (la vision et les principes) et `docs/SCHEMA.md` (le schéma de données) : ceux-là expliquent *pourquoi* et *comment*, celui-ci répond juste à *où on en est*.
 
 **À maintenir à jour** à chaque fonctionnalité ajoutée, commencée ou terminée — comme le PDD, ce n'est pas figé.
+
+**Ce que ce document n'est pas (V1 D-03) :** ce n'est pas une liste de tickets. Les tickets avec leurs critères d'acceptation vivent dans `docs/BACKLOG.md` (Phase 0/V0, terminé) et `docs/BACKLOG_V1.md` (en cours) — c'est là qu'on travaille ticket par ticket. Ce document-ci est un tableau de bord transversal par module, utile pour répondre à « qu'est-ce qui existe déjà ? » sans rouvrir tous les tickets. En cas de désaccord apparent entre les deux, le backlog fait foi sur le detail d'un ticket precis ; ce document fait foi sur la vue d'ensemble par module.
 
 Statuts : `[x]` fait · `[~]` en cours / partiel · `[ ]` pas commencé
 

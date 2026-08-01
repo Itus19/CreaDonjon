@@ -37,7 +37,9 @@ supabase gen types typescript --local > src/types/database.ts
 | `CLAUDE.md` | Regles absolues du projet (securite, IA, base de donnees, architecture) |
 | `docs/PDD.md` | Source de verite fonctionnelle |
 | `docs/SCHEMA.md` | Schema de donnees, SQL, RLS, formules |
-| `docs/BACKLOG.md` | Tickets avec criteres d'acceptation |
+| `docs/BACKLOG.md` | Tickets Phase 0 et V0, avec criteres d'acceptation (termine, valeur historique) |
+| `docs/BACKLOG_V1.md` | Tickets V1, avec criteres d'acceptation (en cours) |
+| `ROADMAP.md` | Etat d'avancement par module (tableau de bord, pas une liste de tickets) |
 | `docs/adr/` | Decisions d'architecture et leurs raisons |
 | `docs/specs/` | Specifications detaillees (regles, wiki, personnages) |
 | `src/core/**` | Noyau pur : formules, des, visibilite. Aucun import de `next`, `react` ou `@supabase/*` (verifie par ESLint) |
