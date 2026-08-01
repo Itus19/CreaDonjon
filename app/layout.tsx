@@ -3,7 +3,9 @@ import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
-import ModeSwitcher from "@/components/shell/ModeSwitcher";
+import { createClient } from "@/lib/supabase/server";
+import { getOwnProfile } from "@/src/server/repos/account";
+import SettingsMenu from "@/components/shell/SettingsMenu";
 import "./globals.css";
 
 // Trois familles chargees localement (auto-hebergees a la build par
@@ -45,6 +47,14 @@ export default async function RootLayout({
   const locale = await getLocale();
   const messages = await getMessages();
 
+  // Le menu de reglages n'a de sens que pour un utilisateur connecte
+  // (compte, suppression...) : absent sur /login, /signup, /partage/*.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const profile = user ? await getOwnProfile(supabase, user.id) : null;
+
   return (
     <html
       lang={locale}
@@ -59,7 +69,15 @@ export default async function RootLayout({
           aria-hidden="true"
         />
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <ModeSwitcher currentMode={mode} currentContrast={contrast ?? "off"} />
+          {user && (
+            <SettingsMenu
+              currentMode={mode}
+              currentContrast={contrast ?? "off"}
+              currentLocale={locale}
+              email={user.email ?? ""}
+              displayName={profile?.display_name ?? ""}
+            />
+          )}
           {children}
         </NextIntlClientProvider>
       </body>

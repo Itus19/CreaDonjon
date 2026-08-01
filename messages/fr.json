@@ -52,5 +52,47 @@
       "background": "Historique",
       "species": "Espèce"
     }
+  },
+  "settings": {
+    "ouvrir": "Réglages",
+    "titre": "Réglages",
+    "fermer": "Fermer",
+    "langue": {
+      "titre": "Langue",
+      "fr": "Français",
+      "en": "English"
+    },
+    "theme": {
+      "titre": "Thème",
+      "dark": "Sombre",
+      "dim": "Demi-sombre",
+      "soft": "Demi-clair",
+      "light": "Clair",
+      "contrasteEleve": "Contraste élevé"
+    },
+    "compte": {
+      "titre": "Compte",
+      "pseudo": "Pseudo",
+      "pseudoPlaceholder": "Ton nom affiché",
+      "email": "Email",
+      "enregistrer": "Enregistrer",
+      "enregistre": "Enregistré"
+    },
+    "collaboration": {
+      "titre": "Collaboration",
+      "inviterMJ": "Inviter un MJ",
+      "bientot": "Bientôt"
+    },
+    "suppression": {
+      "titre": "Zone dangereuse",
+      "supprimerCompte": "Supprimer le compte",
+      "avertissement": "Cette action est définitive : le compte et tous les mondes dont vous êtes propriétaire seront supprimés, sans possibilité de restauration.",
+      "confirmationLabel": "Tapez SUPPRIMER pour confirmer",
+      "confirmationMot": "SUPPRIMER",
+      "confirmer": "Supprimer définitivement",
+      "annuler": "Annuler",
+      "enCours": "Suppression en cours…",
+      "erreur": "La suppression a échoué. Si le problème persiste, contactez le support."
+    }
   }
 }

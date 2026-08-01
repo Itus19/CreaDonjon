@@ -1589,6 +1589,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_own_account: { Args: never; Returns: undefined }
       import_srd_entries: {
         Args: { p_entries: Json; p_ruleset_id: string }
         Returns: number

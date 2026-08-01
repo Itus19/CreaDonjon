@@ -52,5 +52,47 @@
       "background": "Background",
       "species": "Species"
     }
+  },
+  "settings": {
+    "ouvrir": "Settings",
+    "titre": "Settings",
+    "fermer": "Close",
+    "langue": {
+      "titre": "Language",
+      "fr": "Français",
+      "en": "English"
+    },
+    "theme": {
+      "titre": "Theme",
+      "dark": "Dark",
+      "dim": "Dim",
+      "soft": "Soft light",
+      "light": "Light",
+      "contrasteEleve": "High contrast"
+    },
+    "compte": {
+      "titre": "Account",
+      "pseudo": "Display name",
+      "pseudoPlaceholder": "Your display name",
+      "email": "Email",
+      "enregistrer": "Save",
+      "enregistre": "Saved"
+    },
+    "collaboration": {
+      "titre": "Collaboration",
+      "inviterMJ": "Invite a GM",
+      "bientot": "Coming soon"
+    },
+    "suppression": {
+      "titre": "Danger zone",
+      "supprimerCompte": "Delete account",
+      "avertissement": "This action is permanent: your account and every world you own will be deleted, with no way to undo it.",
+      "confirmationLabel": "Type DELETE to confirm",
+      "confirmationMot": "DELETE",
+      "confirmer": "Delete permanently",
+      "annuler": "Cancel",
+      "enCours": "Deleting…",
+      "erreur": "Deletion failed. If the problem persists, contact support."
+    }
   }
 }

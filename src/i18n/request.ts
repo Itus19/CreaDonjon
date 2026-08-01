@@ -3,7 +3,7 @@ import { getRequestConfig } from "next-intl/server";
 
 /**
  * Locale par cookie, jamais par prefixe d'URL (V1-A1b) : meme motif que le
- * cookie "mode" du theme (ModeSwitcher.tsx) — deplacer toutes les routes
+ * cookie "mode" du theme (SettingsMenu.tsx) — deplacer toutes les routes
  * existantes sous /fr/... et /en/... aurait ete une reecriture mecanique
  * de tout l'arbre app/, pour un gain nul (pas besoin d'URLs distinctes par
  * langue ici, contrairement a un site public multilingue indexe).
