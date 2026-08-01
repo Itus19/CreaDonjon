@@ -1,13 +1,27 @@
 import "server-only";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
+import { createShareLinkServiceClient } from "@/lib/supabase/service";
 import { filterBlocks, filterSegments, type VisibilityLevel } from "@/src/core/visibility";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 import { type BlockRow, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { type EntitySummary, getEntityBySlug, listEntitiesForWorld } from "@/src/server/repos/entities";
 
-type TypedClient = SupabaseClient<Database>;
+/**
+ * Seul fichier ou `createShareLinkServiceClient` (lib/supabase/service.ts)
+ * est construit et utilise — verifie mecaniquement par une regle ESLint
+ * (eslint.config.mjs), pas seulement par convention (V1 D-01). Les pages
+ * publiques (app/partage/**) n'importent jamais de client Supabase : elles
+ * appellent les fonctions d'ici avec un jeton ou un world_id deja valide,
+ * jamais l'inverse.
+ */
+function createAnonClient() {
+  return createSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
+}
 
 export interface ResolvedShareLink {
   worldId: string;
@@ -18,15 +32,14 @@ export interface ResolvedShareLink {
 
 /**
  * Passe par la fonction `security definer` public.resolve_share_link
- * (migration 20260801140001) : fonctionne meme sans session (le client
- * anon suffit, la fonction est grantee a `anon`). `null` couvre aussi bien
+ * (migration 20260801140001) : la cle anon suffit, aucune session
+ * necessaire (la fonction est grantee a `anon`) — pas besoin du client
+ * service-role pour cette seule verification. `null` couvre aussi bien
  * "jamais existe" que "expire"/"revoque" — jamais de distinction cote
  * appelant (docs/BACKLOG.md V0-07, ne pas reveler qu'un lien a existe).
  */
-export async function resolveShareLink(
-  supabase: TypedClient,
-  token: string,
-): Promise<ResolvedShareLink | null> {
+export async function resolveShareLink(token: string): Promise<ResolvedShareLink | null> {
+  const supabase = createAnonClient();
   const { data, error } = await supabase.rpc("resolve_share_link", { p_token: token });
   if (error) throw new Error(error.message);
   const row = data?.[0];
@@ -40,11 +53,15 @@ export async function resolveShareLink(
  * voit donc la meme liste de noms qu'un membre du monde sans droit
  * particulier ; rien de nouveau introduit par le partage, meme
  * comportement que l'existant pour un world_role="viewer".
+ *
+ * `worldId` doit deja venir d'un `resolveShareLink` reussi — cette
+ * fonction ne revalide rien elle-meme, elle fait confiance a l'appelant
+ * (les deux pages publiques, qui appellent toujours resolveShareLink
+ * d'abord). Ne jamais l'exposer sur un chemin qui accepte un world_id
+ * venu directement d'un visiteur sans validation prealable.
  */
-export async function listPublicEntities(
-  supabase: TypedClient,
-  worldId: string,
-): Promise<EntitySummary[]> {
+export async function listPublicEntities(worldId: string): Promise<EntitySummary[]> {
+  const supabase = createShareLinkServiceClient();
   return listEntitiesForWorld(supabase, worldId);
 }
 
@@ -90,13 +107,17 @@ function toVisibilityAware(row: BlockRow) {
  * Entite + blocs filtres pour un visiteur anonyme (Viewer={kind:"anonymous"},
  * src/core/visibility) : la meme fonction pure canSee que pour tout autre
  * lecteur, jamais reimplementee en SQL — un seul endroit ou une visibilite
- * peut fuir, deja teste exhaustivement.
+ * peut fuir, deja teste exhaustivement (voir aussi le test d'integration
+ * publicShare.integration.test.ts, V1 D-01).
+ *
+ * Meme remarque que listPublicEntities : `worldId` doit deja venir d'un
+ * `resolveShareLink` reussi.
  */
 export async function getPublicEntityDetail(
-  supabase: TypedClient,
   worldId: string,
   entitySlug: string,
 ): Promise<{ entity: EntitySummary; blocks: PublicBlock[] } | null> {
+  const supabase = createShareLinkServiceClient();
   const entity = await getEntityBySlug(supabase, worldId, entitySlug);
   if (!entity) return null;
 

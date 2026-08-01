@@ -17,7 +17,8 @@ Le développeur du projet apprend à coder sur ce projet. Explique tes choix. Ne
 | Fichier | Contenu | Quand le lire |
 |---|---|---|
 | `docs/SCHEMA.md` | Schéma de données, SQL, RLS, formules | Avant toute migration ou requête |
-| `docs/BACKLOG.md` | Tickets avec critères d'acceptation | Au début de chaque tâche |
+| `docs/BACKLOG_V1.md` | Tickets V1 avec critères d'acceptation | Au début de chaque tâche |
+| `docs/BACKLOG.md` | Tickets Phase 0 et V0 — **terminés**, valeur historique | rarement |
 | `docs/PDD.md` | Source de vérité fonctionnelle | Avant toute décision produit |
 | `docs/adr/` | Décisions d'architecture et leurs raisons | Avant de « corriger » quelque chose qui semble étrange |
 | `docs/specs/regles-couche.md` | Anatomie d'une fiche de règle, renvois, surcharge, contrat moteur/IA | Tickets règles |
@@ -27,7 +28,7 @@ Le développeur du projet apprend à coder sur ce projet. Explique tes choix. Ne
 | `docs/specs/coquille-et-design.md` | Coquille, jetons de design, composants primitifs | Tout ticket produisant de l'interface |
 | `docs/specs/outils-mj.md` | Tables aléatoires, générateurs, rencontres, initiative | Tickets V2 |
 
-Ne lis que ce dont le ticket a besoin. Charger les dix documents à chaque session gaspille du contexte et disperse l'attention.
+Ne lis que ce dont le ticket a besoin. Charger les huit documents à chaque session gaspille du contexte et disperse l'attention.
 
 ---
 
@@ -61,6 +62,8 @@ Ces règles ne se négocient pas ticket par ticket. Si une tâche semble les exi
 2. RLS activée sur **toutes** les tables, sans exception, refus par défaut.
 3. Toute entrée de route serveur ou de *server action* est validée par un schéma Zod. Aucune exception, y compris pour les champs « qui viennent de notre propre formulaire ».
 4. La résolution de visibilité se fait **côté serveur, avant l'envoi**. Ne jamais envoyer au client une donnée cachée par CSS, ni la laisser dans un champ inutilisé d'un objet JSON.
+4 bis. **La marque `spoiler` est de la mise en forme, jamais de la sécurité.** Elle masque un texte déjà envoyé au client, comme sur Discord. Un secret de MJ passe par `visibility_level`, filtré côté serveur. Ne jamais confondre les deux, ne jamais proposer `spoiler` pour protéger une information.
+4 ter. Le client `service_role` est **confiné à `src/server/services/publicShare.ts`**. Il contourne toute la RLS : la seule barrière restante est le filtrage applicatif. Ne jamais l'importer ailleurs, ne jamais élargir sa portée.
 5. Jamais d'`eval()`, `new Function()`, ni d'interpréteur généraliste. Les formules passent par le parser fermé de `src/core/formula`.
 
 ### IA

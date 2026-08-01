@@ -42,6 +42,28 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // Le client service-role (lib/supabase/service.ts) contourne TOUTE la
+  // RLS : confine a src/server/services/publicShare.ts (CLAUDE.md, regle
+  // absolue 4 ter). Verifie mecaniquement (V1 D-01), pas seulement par le
+  // commentaire en tete de service.ts.
+  {
+    files: ["**/*.{ts,tsx}"],
+    ignores: ["src/server/services/publicShare.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["*/lib/supabase/service", "@/lib/supabase/service", "./service", "../service"],
+              message:
+                "Le client service-role est confine a src/server/services/publicShare.ts (CLAUDE.md regle 4 ter). Passe par les fonctions exportees de ce fichier plutot que de construire ce client ici.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

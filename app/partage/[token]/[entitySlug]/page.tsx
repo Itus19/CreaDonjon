@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { createShareLinkServiceClient } from "@/lib/supabase/service";
 import { resolveShareLink, getPublicEntityDetail } from "@/src/server/services/publicShare";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import PublicBlockView from "@/components/entities/public/PublicBlockView";
@@ -13,12 +11,10 @@ export default async function ShareLinkEntityPage({
 }) {
   const { token, entitySlug } = await params;
 
-  const supabase = await createClient();
-  const resolved = await resolveShareLink(supabase, token);
+  const resolved = await resolveShareLink(token);
   if (!resolved) notFound();
 
-  const serviceClient = createShareLinkServiceClient();
-  const detail = await getPublicEntityDetail(serviceClient, resolved.worldId, entitySlug);
+  const detail = await getPublicEntityDetail(resolved.worldId, entitySlug);
   if (!detail) notFound();
 
   const { entity, blocks } = detail;

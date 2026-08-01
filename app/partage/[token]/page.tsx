@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { createShareLinkServiceClient } from "@/lib/supabase/service";
 import { resolveShareLink, listPublicEntities } from "@/src/server/services/publicShare";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 
@@ -12,15 +10,13 @@ export default async function ShareLinkWorldPage({
 }) {
   const { token } = await params;
 
-  // Le jeton passe par le client normal (la fonction est security definer
-  // et grantee a anon — aucune session necessaire). Meme reponse (404)
-  // pour "jamais existe", "expire" et "revoque" (docs/BACKLOG.md V0-07).
-  const supabase = await createClient();
-  const resolved = await resolveShareLink(supabase, token);
+  // Meme reponse (404) pour "jamais existe", "expire" et "revoque"
+  // (docs/BACKLOG.md V0-07) : resolveShareLink ne distingue jamais les
+  // trois cotes appelant.
+  const resolved = await resolveShareLink(token);
   if (!resolved) notFound();
 
-  const serviceClient = createShareLinkServiceClient();
-  const entities = await listPublicEntities(serviceClient, resolved.worldId);
+  const entities = await listPublicEntities(resolved.worldId);
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 p-6">
