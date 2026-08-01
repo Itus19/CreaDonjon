@@ -32,12 +32,16 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAuthPage =
+  // /partage/* est le point d'entree public du lien de partage (V0-07,
+  // resolu par un jeton, jamais par une session) : jamais derriere le
+  // mur d'authentification, meme sans utilisateur connecte.
+  const isPublicPage =
     path === "/login" ||
     path === "/signup" ||
-    path.startsWith("/auth/");
+    path.startsWith("/auth/") ||
+    path.startsWith("/partage/");
 
-  if (!user && !isAuthPage) {
+  if (!user && !isPublicPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

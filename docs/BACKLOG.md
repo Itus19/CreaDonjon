@@ -421,11 +421,19 @@ Trois retours utilisateur sur la fiche.
 
 Génération d'un lien avec jeton, route serveur résolvant la visibilité elle-même.
 
+**Architecture** : `share_links` existait déjà depuis la Phase 0 (SCHEMA.md §18), avec sa policy RLS `is_world_member` — un visiteur anonyme n'a par construction aucune session, donc aucun moyen de la lire, même pour vérifier son propre jeton. La résolution du jeton (hachage + expiration + révocation) passe par une fonction Postgres `security definer` (`app.resolve_share_link`, même famille que les fonctions d'import SRD) — la seule opération qui contourne la RLS, strictement bornée à cette vérification. Une fois le `world_id` confirmé valide, la lecture des entités/blocs passe par un client service-role scopé (`lib/supabase/service.ts`, jamais utilisé ailleurs), puis filtrée par les mêmes fonctions pures déjà testées (`filterBlocks`/`filterSegments`, `Viewer={kind:"anonymous"}`) plutôt que par une réimplémentation de la visibilité en SQL — un seul endroit où elle peut fuir.
+
+**Décision** : `scope` reste figé à `'public_only'` à la création — `canSee` ne sait aujourd'hui traiter un visiteur anonyme qu'en public/non-public, `'players'` (déjà dans le schéma) attendra que ce cas soit réellement implémenté.
+
 **Critères d'acceptation**
-- [ ] Le jeton en clair n'est **jamais** stocké ; seul son hachage l'est.
-- [ ] La page publique affiche uniquement le contenu `public`.
-- [ ] Un lien expiré ou révoqué retourne 404, sans distinction entre les deux cas (ne pas révéler qu'un lien a existé).
-- [ ] Test explicite : le contenu `gm` est absent de la réponse HTTP brute.
+- [x] Le jeton en clair n'est **jamais** stocké ; seul son hachage l'est.
+- [x] La page publique affiche uniquement le contenu `public`.
+- [x] Un lien expiré ou révoqué retourne 404, sans distinction entre les deux cas (ne pas révéler qu'un lien a existé).
+- [x] Test explicite : le contenu `gm` est absent de la réponse HTTP brute.
+
+**Livré** : migration `20260801140001_share_link_resolve.sql` (+ deux correctifs, voir piège ci-dessous) — `app.resolve_share_link`/`public.resolve_share_link`. `src/core/shareLinks/token.ts` (génération/hachage, pur, testé). `src/server/{repos,services}/shareLinks.ts` (gestion, client authentifié normal, RLS déjà suffisante). `src/server/services/publicShare.ts` (résolution + lecture filtrée). `lib/supabase/service.ts` (client service-role, commentaire explicite contre toute réutilisation hors de ce fichier). `components/shell/ShareLinkPanel.tsx` (création/révocation depuis la page du monde). `app/partage/[token]/page.tsx` + `app/partage/[token]/[entitySlug]/page.tsx` (lecture seule, aucun composant d'édition réutilisé — `components/entities/public/*` dédiés, sans aucun appel d'écriture possible). `lib/supabase/middleware.ts` : `/partage/*` exempté du mur d'authentification.
+
+**Piège trouvé en testant** : `digest(p_token, 'sha256')` échouait en `function digest(text, unknown) does not exist` malgré pgcrypto installée (migration 001) — deux causes cumulées, trouvées en testant le lien réel plutôt qu'en le supposant correct après écriture : (1) un paramètre plpgsql typé `text` non casté ne résout aucune surcharge de `digest`, corrigé par `p_token::bytea` ; (2) pgcrypto s'installe dans le schéma `extensions` sur ce projet, jamais `public`/`app` — invisible du `search_path` de la fonction, corrigé par une qualification explicite `extensions.digest(...)`. Deux migrations de correction (`20260801140002`, `20260801140003`).
 
 ---
 

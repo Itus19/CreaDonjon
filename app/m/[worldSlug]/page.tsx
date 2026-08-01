@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listEntities } from "@/src/server/services/entities";
+import { listShareLinks } from "@/src/server/services/shareLinks";
 import EmptyState from "@/components/shell/EmptyState";
+import ShareLinkPanel from "@/components/shell/ShareLinkPanel";
 import { createBlankEntityAction } from "./actions";
 
 export default async function WorldHomePage({
@@ -15,7 +17,10 @@ export default async function WorldHomePage({
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
 
-  const entities = await listEntities(supabase, world.id);
+  const [entities, shareLinks] = await Promise.all([
+    listEntities(supabase, world.id),
+    listShareLinks(supabase, world.id),
+  ]);
 
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -43,6 +48,8 @@ export default async function WorldHomePage({
           Choisissez une entité dans la barre latérale, ou créez-en une nouvelle depuis le bouton en bas.
         </p>
       )}
+
+      <ShareLinkPanel worldId={world.id} worldSlug={worldSlug} links={shareLinks} />
     </div>
   );
 }

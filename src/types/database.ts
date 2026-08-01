@@ -1597,6 +1597,15 @@ export type Database = {
         Args: { p_base_system: string; p_name: string }
         Returns: string
       }
+      resolve_share_link: {
+        Args: { p_token: string }
+        Returns: {
+          scope: string
+          world_id: string
+          world_name: string
+          world_slug: string
+        }[]
+      }
       search_entities: {
         Args: { p_query: string; p_world_id: string }
         Returns: {

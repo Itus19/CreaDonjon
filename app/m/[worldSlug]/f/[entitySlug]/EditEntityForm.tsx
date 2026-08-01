@@ -117,7 +117,7 @@ export default function EditEntityForm({
   return (
     <div className="flex flex-col gap-5">
       <div className="grid grid-cols-[1fr_auto] gap-6">
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col">
           <div className="flex items-start justify-between gap-3">
             <input
               value={name}
@@ -141,10 +141,11 @@ export default function EditEntityForm({
           </div>
           {/* Le slug (identifiant d'URL, sans accents ni ponctuation) vit
               sous le titre — utile comme reference technique, mais pas assez
-              pour meriter la place a cote du titre. */}
-          <span className="font-mech text-xs text-ink-muted">{entity.slug}</span>
+              pour meriter la place a cote du titre. Serre contre le titre,
+              puis un espacement plus genereux avant les alias. */}
+          <span className="mt-0.5 font-mech text-xs text-ink-muted">{entity.slug}</span>
 
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <div className="mt-4 flex flex-wrap items-center gap-1.5 text-xs">
             <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
               Alias :
             </span>
@@ -178,7 +179,7 @@ export default function EditEntityForm({
             />
           </div>
 
-          <div className="mt-1 flex flex-col gap-1.5 border-t border-edge/60 pt-2.5 text-xs">
+          <div className="mt-4 flex flex-col gap-1.5 border-t border-edge/60 pt-2.5 text-xs">
             <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
               Relations :
             </span>
