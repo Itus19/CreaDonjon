@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listEntities } from "@/src/server/services/entities";
@@ -21,6 +22,8 @@ export default async function WorldHomePage({
     listEntities(supabase, world.id),
     listShareLinks(supabase, world.id),
   ]);
+  const t = await getTranslations("monde");
+  const tShell = await getTranslations("shell");
 
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -28,8 +31,8 @@ export default async function WorldHomePage({
 
       {entities.length === 0 ? (
         <EmptyState
-          title="Ce monde est encore vide"
-          description="Créez votre première entité — un personnage, un lieu, une faction — pour commencer à le peupler."
+          title={t("videTitre")}
+          description={t("videDescription")}
           action={
             <form action={createBlankEntityAction}>
               <input type="hidden" name="worldId" value={world.id} />
@@ -38,15 +41,13 @@ export default async function WorldHomePage({
                 type="submit"
                 className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
               >
-                + Nouvelle entité
+                {tShell("nouvelleEntite")}
               </button>
             </form>
           }
         />
       ) : (
-        <p className="text-sm text-ink-muted">
-          Choisissez une entité dans la barre latérale, ou créez-en une nouvelle depuis le bouton en bas.
-        </p>
+        <p className="text-sm text-ink-muted">{t("choisirEntite")}</p>
       )}
 
       <ShareLinkPanel worldId={world.id} worldSlug={worldSlug} links={shareLinks} />

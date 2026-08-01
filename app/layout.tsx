@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import { cookies } from "next/headers";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import ModeSwitcher from "@/components/shell/ModeSwitcher";
 import "./globals.css";
 
@@ -40,10 +42,12 @@ export default async function RootLayout({
   const modeCookie = cookieStore.get("mode")?.value ?? "dark";
   const mode = VALID_MODES.includes(modeCookie) ? modeCookie : "dark";
   const contrast = cookieStore.get("contrast")?.value === "high" ? "high" : undefined;
+  const locale = await getLocale();
+  const messages = await getMessages();
 
   return (
     <html
-      lang="fr"
+      lang={locale}
       data-mode={mode}
       data-contrast={contrast}
       className={`${geistSans.variable} ${outfit.variable} ${geistMono.variable} h-full antialiased`}
@@ -54,8 +58,10 @@ export default async function RootLayout({
           style={{ ["--bg-image" as string]: "url(/backgrounds/Artwork_C.png)" }}
           aria-hidden="true"
         />
-        <ModeSwitcher currentMode={mode} currentContrast={contrast ?? "off"} />
-        {children}
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <ModeSwitcher currentMode={mode} currentContrast={contrast ?? "off"} />
+          {children}
+        </NextIntlClientProvider>
       </body>
     </html>
   );

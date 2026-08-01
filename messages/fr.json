@@ -1,0 +1,56 @@
+{
+  "shell": {
+    "mesMondes": "Mes mondes",
+    "monde": "Monde",
+    "regles": "Règles",
+    "ouvrirArborescence": "Ouvrir l'arborescence",
+    "nouvelleEntite": "+ Nouvelle entité",
+    "replier": "Replier",
+    "deplier": "Déplier",
+    "aucuneEntite": "Aucune entité pour l'instant.",
+    "entitesDuMonde": "Entités du monde",
+    "rechercherEntite": "Rechercher une entité…",
+    "aucunResultat": "Aucun résultat.",
+    "rechercher": "Rechercher",
+    "paletteDeCommandes": "Palette de commandes",
+    "kindLabels": {
+      "character": "Personnages",
+      "location": "Lieux",
+      "faction": "Factions",
+      "item": "Objets",
+      "creature": "Créatures",
+      "quest": "Quêtes",
+      "event": "Événements",
+      "other": "Autre"
+    }
+  },
+  "monde": {
+    "videTitre": "Ce monde est encore vide",
+    "videDescription": "Créez votre première entité — un personnage, un lieu, une faction — pour commencer à le peupler.",
+    "choisirEntite": "Choisissez une entité dans la barre latérale, ou créez-en une nouvelle depuis le bouton en bas."
+  },
+  "regles": {
+    "rechercherRegle": "Rechercher une règle…",
+    "aucuneRegleTrouvee": "Aucune règle trouvée.",
+    "ouvrirListe": "Ouvrir la liste des règles",
+    "reglesDuMonde": "Règles du monde",
+    "pasDeRuleset": "Ce monde n'a pas encore de ruleset assigné — aucune règle à consulter pour l'instant.",
+    "choisirRegle": "Choisissez une règle dans la barre latérale.",
+    "illustration": "Illustration",
+    "missingBlocks": "Règle incomplète : {count, plural, one {bloc manquant} other {blocs manquants}} — <mech>{list}</mech>",
+    "entryTypes": {
+      "spell": "Sort",
+      "item": "Objet",
+      "weapon": "Arme",
+      "armor": "Armure",
+      "class": "Classe",
+      "subclass": "Sous-classe",
+      "feature": "Aptitude",
+      "monster": "Monstre",
+      "condition": "Condition",
+      "rule": "Règle",
+      "background": "Historique",
+      "species": "Espèce"
+    }
+  }
+}

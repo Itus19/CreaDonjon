@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { listRuleEntriesForWorld } from "@/src/server/services/rules";
 
@@ -9,14 +10,11 @@ export default async function ReglesHomePage({
   const { worldSlug } = await params;
   const supabase = await createClient();
   const entries = await listRuleEntriesForWorld(supabase, worldSlug);
+  const t = await getTranslations("regles");
 
   if (!entries || entries.length === 0) {
-    return (
-      <p className="text-sm text-ink-muted">
-        Ce monde n&apos;a pas encore de ruleset assigné — aucune règle à consulter pour l&apos;instant.
-      </p>
-    );
+    return <p className="text-sm text-ink-muted">{t("pasDeRuleset")}</p>;
   }
 
-  return <p className="text-sm text-ink-muted">Choisissez une règle dans la barre latérale.</p>;
+  return <p className="text-sm text-ink-muted">{t("choisirRegle")}</p>;
 }

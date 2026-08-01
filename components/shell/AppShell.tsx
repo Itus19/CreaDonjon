@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import SectionToggle from "./SectionToggle";
 
 /**
@@ -17,6 +18,7 @@ export default function AppShell({
   worldSlug: string;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("shell");
   return (
     <div className="flex h-screen flex-col">
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-edge bg-panel px-4">
@@ -25,7 +27,7 @@ export default function AppShell({
         </Link>
         <SectionToggle worldSlug={worldSlug} />
         <Link href="/" className="text-sm text-ink-muted hover:text-ink">
-          Mes mondes
+          {t("mesMondes")}
         </Link>
       </header>
 

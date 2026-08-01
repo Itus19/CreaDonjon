@@ -1,0 +1,56 @@
+{
+  "shell": {
+    "mesMondes": "My worlds",
+    "monde": "World",
+    "regles": "Rules",
+    "ouvrirArborescence": "Open the entity tree",
+    "nouvelleEntite": "+ New entity",
+    "replier": "Collapse",
+    "deplier": "Expand",
+    "aucuneEntite": "No entity yet.",
+    "entitesDuMonde": "World entities",
+    "rechercherEntite": "Search an entity…",
+    "aucunResultat": "No results.",
+    "rechercher": "Search",
+    "paletteDeCommandes": "Command palette",
+    "kindLabels": {
+      "character": "Characters",
+      "location": "Locations",
+      "faction": "Factions",
+      "item": "Items",
+      "creature": "Creatures",
+      "quest": "Quests",
+      "event": "Events",
+      "other": "Other"
+    }
+  },
+  "monde": {
+    "videTitre": "This world is still empty",
+    "videDescription": "Create your first entity — a character, a location, a faction — to start populating it.",
+    "choisirEntite": "Choose an entity in the sidebar, or create a new one from the button below."
+  },
+  "regles": {
+    "rechercherRegle": "Search a rule…",
+    "aucuneRegleTrouvee": "No rule found.",
+    "ouvrirListe": "Open the rule list",
+    "reglesDuMonde": "World rules",
+    "pasDeRuleset": "This world has no ruleset assigned yet — no rule to consult for now.",
+    "choisirRegle": "Choose a rule in the sidebar.",
+    "illustration": "Illustration",
+    "missingBlocks": "Incomplete rule: {count, plural, one {missing block} other {missing blocks}} — <mech>{list}</mech>",
+    "entryTypes": {
+      "spell": "Spell",
+      "item": "Item",
+      "weapon": "Weapon",
+      "armor": "Armor",
+      "class": "Class",
+      "subclass": "Subclass",
+      "feature": "Feature",
+      "monster": "Monster",
+      "condition": "Condition",
+      "rule": "Rule",
+      "background": "Background",
+      "species": "Species"
+    }
+  }
+}

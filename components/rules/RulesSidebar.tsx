@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ENTRY_TYPE_LABELS_FR } from "@/src/i18n/fr";
+import { useTranslations } from "next-intl";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
 
 /** Un groupe par entry_type, pliable (meme motif que NodeRow dans components/shell/EntityTree.tsx). */
@@ -20,6 +20,9 @@ function RuleTypeGroup({
   currentKey: string | null;
   onNavigate: () => void;
 }) {
+  const t = useTranslations("shell");
+  const tRegles = useTranslations("regles");
+  const entryTypeLabels = tRegles.raw("entryTypes") as Record<string, string>;
   const [expanded, setExpanded] = useState(true);
 
   return (
@@ -27,11 +30,11 @@ function RuleTypeGroup({
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
-        aria-label={expanded ? "Replier" : "Déplier"}
+        aria-label={expanded ? t("replier") : t("deplier")}
         className="flex w-full items-center gap-1 px-1 text-xs font-semibold uppercase tracking-wide text-ink-muted"
       >
         <span className="w-3 text-[10px]">{expanded ? "▾" : "▸"}</span>
-        {ENTRY_TYPE_LABELS_FR[entryType] ?? entryType}
+        {entryTypeLabels[entryType] ?? entryType}
       </button>
       {expanded && (
         <ul>
@@ -68,6 +71,7 @@ export default function RulesSidebar({
   worldSlug: string;
   entries: RuleEntrySummary[];
 }) {
+  const t = useTranslations("regles");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const pathname = usePathname();
@@ -92,7 +96,7 @@ export default function RulesSidebar({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Ouvrir la liste des règles"
+        aria-label={t("ouvrirListe")}
         className="fixed left-3 top-[68px] z-40 rounded-md border border-edge bg-panel-raised p-2 text-sm text-ink shadow-md md:hidden"
       >
         ☰
@@ -114,12 +118,12 @@ export default function RulesSidebar({
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Rechercher une règle…"
+          placeholder={t("rechercherRegle")}
           className="rounded-md border border-edge bg-panel-raised px-3 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
         />
 
-        <nav aria-label="Règles du monde" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-          {groups.length === 0 && <p className="px-1 text-sm text-ink-muted">Aucune règle trouvée.</p>}
+        <nav aria-label={t("reglesDuMonde")} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+          {groups.length === 0 && <p className="px-1 text-sm text-ink-muted">{t("aucuneRegleTrouvee")}</p>}
           {groups.map(([entryType, items]) => (
             <RuleTypeGroup
               key={entryType}

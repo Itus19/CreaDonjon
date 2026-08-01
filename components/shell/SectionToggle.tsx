@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 /**
  * Bascule Monde / Règles (specs/coquille-et-design.md §3) : deux sections
@@ -11,6 +12,7 @@ import { usePathname } from "next/navigation";
  * onglet.
  */
 export default function SectionToggle({ worldSlug }: { worldSlug: string }) {
+  const t = useTranslations("shell");
   const pathname = usePathname();
   const isRegles = pathname.startsWith(`/m/${worldSlug}/regles`);
 
@@ -22,7 +24,7 @@ export default function SectionToggle({ worldSlug }: { worldSlug: string }) {
           isRegles ? "text-ink-muted hover:text-ink" : "bg-panel-raised text-ink"
         }`}
       >
-        Monde
+        {t("monde")}
       </Link>
       <Link
         href={`/m/${worldSlug}/regles`}
@@ -30,7 +32,7 @@ export default function SectionToggle({ worldSlug }: { worldSlug: string }) {
           isRegles ? "bg-panel-raised text-ink" : "text-ink-muted hover:text-ink"
         }`}
       >
-        Règles
+        {t("regles")}
       </Link>
     </div>
   );

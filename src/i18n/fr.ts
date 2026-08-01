@@ -1,6 +1,12 @@
 // Libelles francais destines a l'interface. Les identifiants techniques
 // (colonnes, cles, types) restent en anglais snake_case (CLAUDE.md, regle
-// absolue 11) ; tout le francais visible par l'utilisateur vit ici.
+// absolue 11).
+//
+// V1-A1b : les libelles bilingues (coquille, types d'entree de regles)
+// vivent desormais dans messages/fr.json et messages/en.json (next-intl).
+// Ce fichier ne porte plus que ce qui n'a pas encore ete migre —
+// RELATION_LABELS_FR reste francais uniquement pour l'instant, suivi a
+// part (pas dans le perimetre de ce ticket).
 
 export const RELATION_LABELS_FR: Record<string, string> = {
   parent_of: "parent de",
@@ -43,20 +49,4 @@ export const RELATION_LABELS_FR: Record<string, string> = {
   witnessed_by: "vu par",
 };
 
-/** entry_type des regles (specs/regles-blocs.md, V1-A1) — SCHEMA.md §9. */
-export const ENTRY_TYPE_LABELS_FR: Record<string, string> = {
-  spell: "Sort",
-  item: "Objet",
-  weapon: "Arme",
-  armor: "Armure",
-  class: "Classe",
-  subclass: "Sous-classe",
-  feature: "Aptitude",
-  monster: "Monstre",
-  condition: "Condition",
-  rule: "Regle",
-  background: "Historique",
-  species: "Espece",
-};
-
-export const fr = { RELATION_LABELS_FR, ENTRY_TYPE_LABELS_FR } as const;
+export const fr = { RELATION_LABELS_FR } as const;

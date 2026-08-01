@@ -3,19 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import type { EntityTreeGroup, EntityTreeNode } from "@/src/core/entity-tree/build-tree";
 import { useOpenEntityLink } from "./useOpenEntityLink";
-
-const KIND_LABELS: Record<string, string> = {
-  character: "Personnages",
-  location: "Lieux",
-  faction: "Factions",
-  item: "Objets",
-  creature: "Créatures",
-  quest: "Quêtes",
-  event: "Événements",
-  other: "Autre",
-};
 
 function NodeRow({
   node,
@@ -28,6 +18,7 @@ function NodeRow({
   depth: number;
   currentSlug: string | null;
 }) {
+  const t = useTranslations("shell");
   const [expanded, setExpanded] = useState(true);
   const hasChildren = node.children.length > 0;
   const isActive = node.slug === currentSlug;
@@ -40,7 +31,7 @@ function NodeRow({
           <button
             type="button"
             onClick={() => setExpanded((e) => !e)}
-            aria-label={expanded ? "Replier" : "Déplier"}
+            aria-label={expanded ? t("replier") : t("deplier")}
             className="w-4 text-xs text-ink-muted"
           >
             {expanded ? "▾" : "▸"}
@@ -76,20 +67,22 @@ export default function EntityTree({
   groups: EntityTreeGroup[];
   worldSlug: string;
 }) {
+  const t = useTranslations("shell");
+  const kindLabels = t.raw("kindLabels") as Record<string, string>;
   const pathname = usePathname();
   const match = pathname.match(/\/f\/([^/]+)/);
   const currentSlug = match ? decodeURIComponent(match[1]) : null;
 
   if (groups.length === 0) {
-    return <p className="px-2 text-sm text-ink-muted">Aucune entité pour l&apos;instant.</p>;
+    return <p className="px-2 text-sm text-ink-muted">{t("aucuneEntite")}</p>;
   }
 
   return (
-    <nav aria-label="Entités du monde" className="flex flex-col gap-3">
+    <nav aria-label={t("entitesDuMonde")} className="flex flex-col gap-3">
       {groups.map((group) => (
         <div key={group.kind}>
           <p className="px-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            {KIND_LABELS[group.kind] ?? group.kind}
+            {kindLabels[group.kind] ?? group.kind}
           </p>
           <ul>
             {group.items.map((node) => (

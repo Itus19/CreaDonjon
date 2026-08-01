@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useDesktop } from "./DesktopContext";
 
 export interface PaletteEntity {
@@ -30,6 +31,7 @@ export default function CommandPalette({
   worldSlug: string;
   entities: PaletteEntity[];
 }) {
+  const t = useTranslations("shell");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -139,7 +141,7 @@ export default function CommandPalette({
         onClick={openPalette}
         className="flex items-center gap-2 rounded-md border border-edge bg-panel-sunken px-3 py-1.5 text-sm text-ink-muted transition-colors hover:bg-panel-raised"
       >
-        Rechercher <kbd className="font-mech text-xs">⌘K</kbd>
+        {t("rechercher")} <kbd className="font-mech text-xs">⌘K</kbd>
       </button>
     );
   }
@@ -150,7 +152,7 @@ export default function CommandPalette({
       onClick={() => setOpen(false)}
       role="dialog"
       aria-modal="true"
-      aria-label="Palette de commandes"
+      aria-label={t("paletteDeCommandes")}
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -161,7 +163,7 @@ export default function CommandPalette({
           value={query}
           onChange={(e) => updateQuery(e.target.value)}
           onKeyDown={onInputKeyDown}
-          placeholder="Rechercher une entité…"
+          placeholder={t("rechercherEntite")}
           className="w-full border-b border-edge bg-transparent px-4 py-3 text-ink outline-none"
         />
         <ul>
@@ -181,7 +183,7 @@ export default function CommandPalette({
             </li>
           ))}
           {results.length === 0 && (
-            <li className="px-4 py-3 text-sm text-ink-muted">Aucun résultat.</li>
+            <li className="px-4 py-3 text-sm text-ink-muted">{t("aucunResultat")}</li>
           )}
         </ul>
       </div>

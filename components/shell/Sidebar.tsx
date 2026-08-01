@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import type { PaletteEntity } from "./CommandPalette";
 import CommandPalette from "./CommandPalette";
@@ -18,6 +19,7 @@ export default function Sidebar({
   tree: EntityTreeGroup[];
   entities: PaletteEntity[];
 }) {
+  const t = useTranslations("shell");
   const [open, setOpen] = useState(false);
 
   return (
@@ -25,7 +27,7 @@ export default function Sidebar({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Ouvrir l'arborescence"
+        aria-label={t("ouvrirArborescence")}
         className="fixed left-3 top-[68px] z-40 rounded-md border border-edge bg-panel-raised p-2 text-sm text-ink shadow-md md:hidden"
       >
         ☰
@@ -60,7 +62,7 @@ export default function Sidebar({
               onClick={() => setOpen(false)}
               className="block w-full rounded-full bg-accent px-4 py-2 text-center text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
             >
-              + Nouvelle entité
+              {t("nouvelleEntite")}
             </button>
           </form>
         </div>
