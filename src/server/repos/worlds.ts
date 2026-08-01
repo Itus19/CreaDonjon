@@ -67,6 +67,20 @@ export async function getWorldBySlugForCurrentUser(
   return data[0];
 }
 
+/** Pour la resolution d'une fiche de regle (V1-A1) : quel ruleset ce monde utilise, s'il en a un. */
+export async function getWorldDefaultRulesetId(
+  supabase: TypedClient,
+  worldId: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("worlds")
+    .select("default_ruleset_id")
+    .eq("id", worldId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.default_ruleset_id ?? null;
+}
+
 export async function ownerHasSlug(
   supabase: TypedClient,
   ownerId: string,

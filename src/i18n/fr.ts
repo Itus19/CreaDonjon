@@ -43,4 +43,20 @@ export const RELATION_LABELS_FR: Record<string, string> = {
   witnessed_by: "vu par",
 };
 
-export const fr = { RELATION_LABELS_FR } as const;
+/** entry_type des regles (specs/regles-blocs.md, V1-A1) — SCHEMA.md §9. */
+export const ENTRY_TYPE_LABELS_FR: Record<string, string> = {
+  spell: "Sort",
+  item: "Objet",
+  weapon: "Arme",
+  armor: "Armure",
+  class: "Classe",
+  subclass: "Sous-classe",
+  feature: "Aptitude",
+  monster: "Monstre",
+  condition: "Condition",
+  rule: "Regle",
+  background: "Historique",
+  species: "Espece",
+};
+
+export const fr = { RELATION_LABELS_FR, ENTRY_TYPE_LABELS_FR } as const;

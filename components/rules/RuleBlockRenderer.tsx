@@ -1,0 +1,135 @@
+import type { ReactNode } from "react";
+import { formatFormulaNode } from "@/src/core/formula";
+import type {
+  ClassProgressionBlockData,
+  CustomTableBlockData,
+  DescriptionBlockData,
+  EffectsBlockData,
+  ScalingBlockData,
+  SpellCastingBlockData,
+} from "@/src/core/schemas/rule-blocks";
+import type { RuleEntryBlockView } from "@/src/server/services/rules";
+import FormulaList from "./layouts/FormulaList";
+import KeyValues from "./layouts/KeyValues";
+import Prose from "./layouts/Prose";
+import ProgressionTable from "./layouts/ProgressionTable";
+import Table from "./layouts/Table";
+
+function localizedLabel(label: Record<string, string>, fallbackKey: string): string {
+  return label.fr ?? label.en ?? Object.values(label)[0] ?? fallbackKey;
+}
+
+function cellValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+}
+
+function SpellCasting({ data }: { data: SpellCastingBlockData }) {
+  const items = [
+    { label: "Niveau", value: data.level === 0 ? "Tour de magie" : String(data.level) },
+    { label: "Ecole", value: data.school },
+    { label: "Temps d'incantation", value: data.casting_time },
+    { label: "Portee", value: data.range },
+    {
+      label: "Composantes",
+      value: data.material ? `${data.components.join(", ")} (${data.material})` : data.components.join(", "),
+    },
+    { label: "Duree", value: data.concentration ? `${data.duration} (concentration)` : data.duration },
+    { label: "Rituel", value: data.ritual ? "Oui" : "Non" },
+  ];
+  return <KeyValues items={items} />;
+}
+
+function Effects({ data }: { data: EffectsBlockData }) {
+  const items = data.effects.map((effect) => ({
+    id: effect.id,
+    trigger: effect.trigger,
+    damageType: effect.damage_type,
+    formulaText: effect.formula ? formatFormulaNode(effect.formula) : undefined,
+    save: effect.save
+      ? { ability: effect.save.ability, effectOnSuccess: effect.save.effect_on_success }
+      : undefined,
+  }));
+  return <FormulaList items={items} />;
+}
+
+function Scaling({ data }: { data: ScalingBlockData }) {
+  const rows = Object.entries(data.table ?? {})
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([level, value]) => [
+      { key: "level", value: level },
+      { key: "value", value: <span className="mech">{value}</span> },
+    ]);
+  return (
+    <ProgressionTable
+      columns={[
+        { key: "level", label: "Niveau" },
+        { key: "value", label: "Valeur" },
+      ]}
+      rows={rows}
+    />
+  );
+}
+
+function progressionCell(kind: string, value: unknown): ReactNode {
+  if (kind === "grants") {
+    if (!Array.isArray(value)) return "";
+    return value
+      .map((g) => (g && typeof g === "object" ? (g as { feature?: string; choice?: string }).feature ?? (g as { choice?: string }).choice : null))
+      .filter(Boolean)
+      .join(", ");
+  }
+  if (kind === "formula" || kind === "value") return <span className="mech">{cellValue(value)}</span>;
+  return cellValue(value);
+}
+
+function ClassProgression({ data }: { data: ClassProgressionBlockData }) {
+  const columns = data.columns.map((col) => ({ key: col.key, label: localizedLabel(col.label, col.key) }));
+  const rows = data.rows.map((row) =>
+    data.columns.map((col) => ({ key: col.key, value: progressionCell(col.kind, row[col.key]) }))
+  );
+  return <ProgressionTable columns={columns} rows={rows} />;
+}
+
+function CustomTable({ data }: { data: CustomTableBlockData }) {
+  const rows = data.rows.map((row) => {
+    const stringRow: Record<string, string> = {};
+    for (const col of data.columns) stringRow[col] = cellValue(row[col]);
+    return stringRow;
+  });
+  return <Table columns={data.columns} rows={rows} />;
+}
+
+/**
+ * Repartiteur par block_type -> mise en page generique (specs/regles-blocs.md
+ * §4-5). Aucun composant par type de bloc pour l'affichage lui-meme, les
+ * six mises en page suffisent ; ce fichier ne fait que traduire chaque
+ * bloc typé vers la forme generique attendue par sa mise en page.
+ */
+function BlockContent({ block }: { block: RuleEntryBlockView }) {
+  if (block.blockType === "description") return <Prose segments={(block.data as DescriptionBlockData).segments} />;
+  if (block.blockType === "spell_casting") return <SpellCasting data={block.data as SpellCastingBlockData} />;
+  if (block.blockType === "effects") return <Effects data={block.data as EffectsBlockData} />;
+  if (block.blockType === "scaling") return <Scaling data={block.data as ScalingBlockData} />;
+  if (block.blockType === "class_progression") return <ClassProgression data={block.data as ClassProgressionBlockData} />;
+  if (block.blockType === "custom_table") return <CustomTable data={block.data as CustomTableBlockData} />;
+  return null;
+}
+
+export default function RuleBlockRenderer({ block }: { block: RuleEntryBlockView }) {
+  if (block.display.collapsed) {
+    return (
+      <details className="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
+        <summary className="block-title mb-2 cursor-pointer">{block.display.label}</summary>
+        <BlockContent block={block} />
+      </details>
+    );
+  }
+  return (
+    <div className="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
+      <h3 className="block-title mb-2">{block.display.label}</h3>
+      <BlockContent block={block} />
+    </div>
+  );
+}

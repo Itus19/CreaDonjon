@@ -4,3 +4,4 @@ export { FORMULA_LIMITS } from "./limits";
 export { parseFormula } from "./parser";
 export { evaluate, formatTrace } from "./evaluate";
 export type { EvalMode, EvalResult, TraceStep } from "./evaluate";
+export { formatFormulaNode } from "./format";
