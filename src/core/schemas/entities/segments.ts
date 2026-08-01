@@ -5,12 +5,23 @@ import { z } from "zod";
  * personnages.md §A1). Le contenu est une liste de noeuds types, jamais
  * une chaine balisee ni des decalages : editer un noeud ne touche pas les
  * autres, aucun parsing a l'affichage.
+ *
+ * V0-06f : les noeuds `em`/`strong`/`code` (exclusifs, un noeud ne pouvait
+ * porter qu'un seul style) deviennent des marques combinables sur un noeud
+ * texte unique (gras ET italique sur le meme passage, ce que l'ancien
+ * modele ne permettait pas). `blockType` distingue paragraphe/titres —
+ * c'est un attribut du segment (un segment = un bloc, comme un paragraphe
+ * ou un titre dans un editeur de texte riche), pas du contenu inline.
  */
 
-const zTextNode = z.object({ t: z.literal("text"), v: z.string() });
-const zEmNode = z.object({ t: z.literal("em"), v: z.string() });
-const zStrongNode = z.object({ t: z.literal("strong"), v: z.string() });
-const zCodeNode = z.object({ t: z.literal("code"), v: z.string() });
+const MARKS = ["bold", "italic", "underline", "strike"] as const;
+export type Mark = (typeof MARKS)[number];
+
+const zTextNode = z.object({
+  t: z.literal("text"),
+  v: z.string(),
+  marks: z.array(z.enum(MARKS)).optional(),
+});
 
 // kind='rule' cible par cle (survit a la surcharge) ; entity/asset ciblent
 // par identifiant. Un seul objet plutot qu'une union discriminee : "t" vaut
@@ -28,8 +39,11 @@ const zRefNode = z
     message: "kind='rule' necessite key, entity/asset necessitent id.",
   });
 
-export const zSegmentContentNode = z.union([zTextNode, zEmNode, zStrongNode, zCodeNode, zRefNode]);
+export const zSegmentContentNode = z.union([zTextNode, zRefNode]);
 export type SegmentContentNode = z.infer<typeof zSegmentContentNode>;
+
+export const SEGMENT_BLOCK_TYPES = ["paragraph", "h1", "h2", "h3", "h4"] as const;
+export type SegmentBlockType = (typeof SEGMENT_BLOCK_TYPES)[number];
 
 export const zSegmentVisibility = z
   .object({
@@ -44,6 +58,7 @@ export type SegmentVisibility = z.infer<typeof zSegmentVisibility>;
 
 export const zSegment = z.object({
   id: z.string().min(1),
+  blockType: z.enum(SEGMENT_BLOCK_TYPES),
   visibility: zSegmentVisibility,
   content: z.array(zSegmentContentNode).min(1),
 });

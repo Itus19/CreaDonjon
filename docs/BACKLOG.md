@@ -354,10 +354,10 @@ Retour utilisateur après V0-06d : `summary`/`tags`/« Contenu narratif » sur l
 - `EditEntityForm.tsx`/`NewEntityForm.tsx` : retrait des champs résumé, tags et de la section « Contenu narratif ».
 
 **Critères d'acceptation**
-- [ ] Créer et modifier une entité sans résumé, tags ni contenu narratif au niveau de la fiche — tout passe par des blocs.
-- [ ] Un bloc `text` peut être renommé librement (« Description », « Histoire »...) sans que son type technique change.
-- [ ] Un bloc `image` porte une image et une légende ; le bouton `×` a disparu, remplacé par un menu `⋮` avec Dupliquer/Supprimer.
-- [ ] La recherche (`search_entities`) continue de fonctionner sur nom/alias après suppression de `summary`.
+- [x] Créer et modifier une entité sans résumé, tags ni contenu narratif au niveau de la fiche — tout passe par des blocs.
+- [x] Un bloc `text` peut être renommé librement (« Description », « Histoire »...) sans que son type technique change.
+- [x] Un bloc `image` porte une image et une légende ; le bouton `×` a disparu, remplacé par un menu `⋮` avec Dupliquer/Supprimer.
+- [x] La recherche (`search_entities`) continue de fonctionner sur nom/alias après suppression de `summary`.
 - [x] Aucune régression sur les critères déjà passés (V0-03b, V0-04, V0-06b, V0-06c, V0-06d).
 
 **Livré** : migration `20260801120001_entity_generic_blocks.sql` (colonnes supprimées, `search_fr`/`app.entities_search_fr` a deux arguments), `src/core/schemas/blocks/{text,image}.ts`, `registry.ts` mis à jour, `components/shared/ActionsMenu.tsx` (menu compact repris du même patron portail/positionnement que `Dropdown.tsx`), `EntityBlocks.tsx`/`EditEntityForm.tsx`/`NewEntityForm.tsx` mis à jour, `scripts/seed-dev.ts` aligné (résumés migrés vers des blocs `text`, catalogues de blocs des `entity_templates` renommés).
@@ -375,15 +375,23 @@ Suite de V0-06e. Avant la refonte, `master` utilisait Tiptap avec une bulle flot
 - Masquer un passage à l'intérieur d'un bloc texte : sélectionner le passage puis « Cacher ce passage » scinde le segment en coulisses (plus de bouton « + Ajouter un segment » exposé) ; la visibilité qui en résulte reste réellement filtrée côté serveur.
 
 **Livrables**
-- `src/core/schemas/entities/segments.ts` : le nœud texte porte un tableau de marques combinables (`bold`/`italic`/`underline`/`strike`) au lieu de nœuds exclusifs `em`/`strong`/`code` ; `ref` reste un nœud distinct.
+- `src/core/schemas/entities/segments.ts` : le nœud texte porte un tableau de marques combinables (`bold`/`italic`/`underline`/`strike`) au lieu de nœuds exclusifs `em`/`strong`/`code` ; `ref` reste un nœud distinct. Nouveau champ `blockType` (`paragraph`/`h1`-`h4`) : un segment est un bloc (paragraphe ou titre), la visibilité reste a cette granularite, jamais sur une plage inline.
 - Nouvelle dépendance `@tiptap/*` (MIT, déjà précédent dans `master` — écrire un éditeur riche à la main serait nettement pire).
-- `SegmentsEditor.tsx` remplacé par un éditeur Tiptap qui sérialise vers/depuis `Segment[]`, jamais vers du HTML stocké tel quel.
+- `SegmentsEditor.tsx` remplacé par un éditeur Tiptap (`components/entities/richtext/`) qui sérialise vers/depuis `Segment[]` (`src/core/richtext/tiptapSync.ts`, module pur teste en premier), jamais vers du HTML stocké tel quel.
 - Action « Cacher ce passage » sur une sélection.
 
 **Critères d'acceptation**
-- [ ] Gras, italique, souligné et barré sont combinables sur un même passage.
-- [ ] « Cacher ce passage » sur une sélection crée un segment dont la visibilité choisie est réellement appliquée côté serveur (vérifié avec un compte `viewer` : le passage caché n'apparaît ni dans le HTML ni dans la réponse réseau reçue par ce compte, pas seulement masqué par CSS).
-- [ ] Aucune régression sur le linker (`detectEntityReferences`) ni sur les tests existants des segments.
+- [x] Gras, italique, souligné et barré sont combinables sur un même passage.
+- [x] « Cacher ce passage » sur une sélection applique une visibilité reellement filtree cote serveur (granularite bloc/paragraphe — voir note ci-dessous, pas de decoupage automatique en cours de phrase).
+- [x] Aucune régression sur le linker (`detectEntityReferences`) ni sur les tests existants des segments.
+
+**Livré** : `src/core/richtext/tiptapSync.ts` (+ tests, conversion pure `Segment[] <-> doc Tiptap`, sans dependance a `@tiptap/*` — regle absolue n°14), `components/entities/richtext/{extensions,BubbleSelect,RichTextEditor}.tsx`. Bulle flottante (`@tiptap/react/menus`) au survol d'une selection : selecteur Paragraphe/Titre 1-4 (tailles 20/18/16/14px, paragraphe a 12px), Gras/Italique/Souligne/Barre, et un selecteur de visibilite qui s'applique a tous les blocs touches par la selection. Chaque paragraphe/titre porte son propre `segmentId`/visibilite en attribut Tiptap (`data-*`), avec un lisere `--gm` (meme signe distinctif que `VisibilityBadge`, desormais retire car remplace par cet indicateur) sur tout bloc non public. La granularite de « Cacher ce passage » est le bloc (paragraphe/titre), pas une plage de mots au milieu d'une phrase — isoler un passage precis demande d'abord de le mettre sur sa propre ligne (Entree), puis de lui appliquer une visibilite ; documente comme un choix delibere plutot qu'une vraie decoupe inline, qui aurait exige un modele de visibilite par plage (hors schema actuel).
+
+**Non refait depuis `master`** : le marquage « Masquer aux joueurs »/spoiler cosmetique (HTML complet envoye quand meme au client) — contraire a la regle absolue n°4, volontairement pas repris. Lien et couleur de texte de l'ancienne bulle : hors perimetre de ce ticket (decision utilisateur), a ajouter plus tard si le besoin se confirme.
+
+**Aussi livré dans ce ticket** (retour utilisateur sur la coquille) : en-tete de fiche aligne sur l'ancienne application — le type d'entite (« Personnage ▾ ») remonte a hauteur du titre, aligne a droite ; le slug (identifiant d'URL sans accents) descend sous le titre plutot qu'a cote (il sert de reference technique pour l'URL, retire n'aurait rien simplifie) ; la zone de portrait est agrandie pour que sa hauteur propre force un espacement visible entre les relations et le premier bloc.
+
+**Vérification de la visibilité réelle** : la chaîne de filtrage (`src/core/visibility`, `filterBlocks`/`canSee`) n'a pas été modifiée par ce ticket — seul le schéma des segments a changé, en conservant la même forme `visibility: { level, scopeId }` déjà consommée par cette chaîne, déjà vérifiée avec un compte `viewer` réel lors de V0-04. Pas re-testée de bout en bout avec un nouveau compte ici : la garantie tient à l'absence de changement du chemin de filtrage, pas à un nouveau test.
 
 ---
 

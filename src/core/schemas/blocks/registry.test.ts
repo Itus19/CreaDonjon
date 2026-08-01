@@ -37,6 +37,7 @@ describe("registry des blocs de wiki", () => {
       segments: [
         {
           id: "s1",
+          blockType: "paragraph" as const,
           visibility: { level: "public" as const, scopeId: null },
           content: [{ t: "text" as const, v: "Un texte." }],
         },

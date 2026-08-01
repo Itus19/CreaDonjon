@@ -118,24 +118,26 @@ export default function EditEntityForm({
     <div className="flex flex-col gap-5">
       <div className="grid grid-cols-[1fr_auto] gap-6">
         <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-start justify-between gap-3">
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={() => save()}
               className="entity-title flex-1 bg-transparent outline-none focus:border-b focus:border-accent"
             />
-            <span className="font-mech text-xs text-ink-muted">{entity.slug}</span>
-          </div>
-
-          <div className="inline-flex w-fit items-center rounded-md border border-edge bg-panel-sunken px-1">
+            {/* Aligne avec le titre, comme dans l'ancienne application : le
+                type de fiche se choisit en haut a droite, pas sous le titre. */}
             <Dropdown
               value={entityKind}
               options={ENTITY_KIND_DROPDOWN_OPTIONS}
               onChange={handleKindChange}
-              className="bg-transparent px-2 py-1 text-xs font-medium text-ink"
+              className="shrink-0 whitespace-nowrap bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
             />
           </div>
+          {/* Le slug (identifiant d'URL, sans accents ni ponctuation) vit
+              sous le titre — utile comme reference technique, mais pas assez
+              pour meriter la place a cote du titre. */}
+          <span className="font-mech text-xs text-ink-muted">{entity.slug}</span>
 
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
@@ -184,7 +186,7 @@ export default function EditEntityForm({
           </div>
         </div>
 
-        <div className="flex aspect-[3/4] w-40 shrink-0 items-center justify-center rounded-2xl border border-edge bg-panel-sunken text-center text-xs text-ink-muted">
+        <div className="flex aspect-[3/4] w-56 shrink-0 items-center justify-center rounded-2xl border border-edge bg-panel-sunken text-center text-xs text-ink-muted">
           Portrait
         </div>
       </div>

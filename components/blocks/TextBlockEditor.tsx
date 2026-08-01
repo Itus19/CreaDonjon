@@ -1,6 +1,6 @@
 "use client";
 
-import SegmentsEditor from "@/components/entities/SegmentsEditor";
+import RichTextEditor from "@/components/entities/richtext/RichTextEditor";
 import type { Segment } from "@/src/core/schemas/entities/segments";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 
@@ -12,7 +12,7 @@ export default function TextBlockEditor({
   onChange: (data: TextBlockData) => void;
 }) {
   return (
-    <SegmentsEditor
+    <RichTextEditor
       segments={data.segments}
       onChange={(segments: Segment[]) => onChange({ __v: 1, segments })}
     />

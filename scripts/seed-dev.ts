@@ -204,26 +204,26 @@ async function main() {
     await supabase.from("blocks").insert([
       {
         entity_id: IDS.entityValdoria, block_type: "text", display: { label: "Description", layout: "prose" }, visibility_level: "public", display_order: 100, created_by: mjUserId,
-        data: { __v: 1, segments: [{ id: "s1", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Un royaume côtier au climat tempéré, entre forêt et falaises." }] }] },
+        data: { __v: 1, segments: [{ id: "s1", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Un royaume côtier au climat tempéré, entre forêt et falaises." }] }] },
       },
       {
         entity_id: IDS.entityAncre, block_type: "text", display: { label: "Description", layout: "prose" }, visibility_level: "public", display_order: 100, created_by: mjUserId,
-        data: { __v: 1, segments: [{ id: "s1", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Une taverne au port, connue pour sa bière tiède et ses rumeurs fraîches." }] }] },
+        data: { __v: 1, segments: [{ id: "s1", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Une taverne au port, connue pour sa bière tiède et ses rumeurs fraîches." }] }] },
       },
       {
         entity_id: IDS.entityMain, block_type: "text", display: { label: "Description", layout: "prose" }, visibility_level: "public", display_order: 100, created_by: mjUserId,
-        data: { __v: 1, segments: [{ id: "s1", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Personne n'admet en faire partie." }] }] },
+        data: { __v: 1, segments: [{ id: "s1", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Personne n'admet en faire partie." }] }] },
       },
       {
         entity_id: IDS.entityDague, block_type: "text", display: { label: "Description", layout: "prose" }, visibility_level: "public", display_order: 100, created_by: mjUserId,
-        data: { __v: 1, segments: [{ id: "s1", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Une dague simple, sans histoire particulière — pour l'instant." }] }] },
+        data: { __v: 1, segments: [{ id: "s1", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Une dague simple, sans histoire particulière — pour l'instant." }] }] },
       },
       // Bram — description publique, deux segments dont un `ref` (SCHEMA.md
       // §6, exemple donne au mot pres).
       {
         entity_id: IDS.entityBram, block_type: "text", display: { label: "Description", layout: "prose" }, visibility_level: "public", display_order: 100, created_by: mjUserId,
         data: { __v: 1, segments: [{
-          id: "s1", visibility: { level: "public", scopeId: null },
+          id: "s1", blockType: "paragraph", visibility: { level: "public", scopeId: null },
           content: [
             { t: "text", v: "Le tavernier de " },
             { t: "ref", kind: "entity", id: IDS.entityAncre, label: "L'Ancre Rouillée" },
@@ -234,7 +234,7 @@ async function main() {
       {
         entity_id: IDS.entityBram, block_type: "text", display: { label: "Description", layout: "prose" }, visibility_level: "gm", display_order: 200, created_by: mjUserId,
         data: { __v: 1, segments: [{
-          id: "s2", visibility: { level: "gm", scopeId: null },
+          id: "s2", blockType: "paragraph", visibility: { level: "gm", scopeId: null },
           content: [
             { t: "text", v: "En réalité, il travaille pour " },
             { t: "ref", kind: "entity", id: IDS.entityMain, label: "la Main Silencieuse" },

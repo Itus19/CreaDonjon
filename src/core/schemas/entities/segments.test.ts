@@ -29,6 +29,7 @@ describe("zSegment", () => {
   it("accepte un segment avec un noeud ref vers une entite (exemple SCHEMA.md §6)", () => {
     const segment = {
       id: "s1",
+      blockType: "paragraph" as const,
       visibility: { level: "public", scopeId: null },
       content: [
         { t: "text", v: "Le tavernier de " },
@@ -42,6 +43,7 @@ describe("zSegment", () => {
   it("accepte un ref vers une regle par cle plutot que par id", () => {
     const segment = {
       id: "s2",
+      blockType: "paragraph" as const,
       visibility: { level: "gm", scopeId: null },
       content: [{ t: "ref", kind: "rule", key: "persuasion", label: "Persuasion" }],
     };
@@ -51,6 +53,7 @@ describe("zSegment", () => {
   it("refuse un ref kind=rule sans key", () => {
     const segment = {
       id: "s3",
+      blockType: "paragraph" as const,
       visibility: { level: "public", scopeId: null },
       content: [{ t: "ref", kind: "rule", label: "Persuasion" }],
     };
@@ -59,7 +62,12 @@ describe("zSegment", () => {
 
   it("refuse un segment sans contenu", () => {
     expect(() =>
-      zSegment.parse({ id: "s4", visibility: { level: "public", scopeId: null }, content: [] })
+      zSegment.parse({
+        id: "s4",
+        blockType: "paragraph",
+        visibility: { level: "public", scopeId: null },
+        content: [],
+      })
     ).toThrow();
   });
 
@@ -67,10 +75,42 @@ describe("zSegment", () => {
     expect(() =>
       zSegment.parse({
         id: "s5",
+        blockType: "paragraph",
         visibility: { level: "public", scopeId: null },
         content: [{ t: "underline", v: "x" }],
       })
     ).toThrow();
+  });
+
+  it("refuse un blockType inconnu", () => {
+    expect(() =>
+      zSegment.parse({
+        id: "s6",
+        blockType: "h5",
+        visibility: { level: "public", scopeId: null },
+        content: [{ t: "text", v: "x" }],
+      })
+    ).toThrow();
+  });
+
+  it("accepte un noeud texte avec des marques combinees (gras + italique)", () => {
+    const segment = {
+      id: "s7",
+      blockType: "paragraph" as const,
+      visibility: { level: "public", scopeId: null },
+      content: [{ t: "text", v: "important", marks: ["bold", "italic"] }],
+    };
+    expect(zSegment.parse(segment)).toEqual(segment);
+  });
+
+  it("accepte un titre (h1-h4)", () => {
+    const segment = {
+      id: "s8",
+      blockType: "h2" as const,
+      visibility: { level: "public", scopeId: null },
+      content: [{ t: "text", v: "Un titre" }],
+    };
+    expect(zSegment.parse(segment)).toEqual(segment);
   });
 });
 

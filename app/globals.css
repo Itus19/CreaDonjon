@@ -86,13 +86,62 @@ body {
   background: var(--scrim);
 }
 
-/* Texte narratif (segments, resume) : interligne genereux — on lit ces
-   fiches longtemps (specs/coquille-et-design.md §2). */
-.prose-narrative {
+/*
+ * Contenu du bloc texte (V0-06f, components/entities/richtext) : hierarchie
+ * de titres a l'interieur du texte narratif — quatre niveaux, du plus grand
+ * (Titre 1) jusqu'au paragraphe qui ferme l'echelle a 12px.
+ */
+.rich-text-content {
   font-family: var(--font-narrative);
-  font-size: 15px;
-  line-height: 1.7;
   color: var(--ink);
+}
+.rich-text-content > * + * {
+  margin-top: 0.5em;
+}
+.rich-text-content p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.rich-text-content h1 {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.rich-text-content h2 {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.rich-text-content h3 {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.rich-text-content h4 {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Le signe distinctif du produit (specs/coquille-et-design.md §1, deja
+   utilise pour les badges de visibilite) applique ici a un paragraphe ou
+   titre entier : un lisere terracotta constant sur tout passage non
+   public, jamais un simple style CSS qui masquerait sans filtrer (V0-06f,
+   la visibilite reste resolue reellement cote serveur). */
+.rich-text-content [data-visibility]:not([data-visibility="public"]) {
+  border-left: 2px solid var(--gm);
+  padding-left: 0.6em;
+  margin-left: -0.8em;
+}
+
+/* Mention d'entite/regle dans le texte : meme convention que les liens
+   d'entite ailleurs dans la coquille (souligne pointille). */
+.rich-ref-mention {
+  color: var(--link-entity);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  cursor: default;
 }
 
 /*
