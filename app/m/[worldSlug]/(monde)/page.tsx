@@ -5,7 +5,7 @@ import { listEntities } from "@/src/server/services/entities";
 import { listShareLinks } from "@/src/server/services/shareLinks";
 import EmptyState from "@/components/shell/EmptyState";
 import ShareLinkPanel from "@/components/shell/ShareLinkPanel";
-import { createBlankEntityAction } from "./actions";
+import { createBlankEntityAction } from "../actions";
 
 export default async function WorldHomePage({
   params,

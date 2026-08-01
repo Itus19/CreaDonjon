@@ -17,6 +17,7 @@ import {
   getRulesetById,
   getRulesetEntryByKey,
   listBlocksForRulesetEntry,
+  listRulesetEntries,
   type RulesetEntryRow,
 } from "@/src/server/repos/rules";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
@@ -75,7 +76,7 @@ function maxLevelForAxis(axis: ScalingBlockData["axis"]): number {
   return axis === "slot_level" ? SLOT_LEVEL_MAX : CHARACTER_LEVEL_MAX;
 }
 
-function entryNameFrom(entry: RulesetEntryRow): string {
+function entryNameFrom(entry: { entry_key: string; source_raw: unknown }): string {
   const sourceRaw = entry.source_raw as { name?: unknown } | null;
   const name = sourceRaw && typeof sourceRaw.name === "string" ? sourceRaw.name : null;
   return name ?? entry.entry_key;
@@ -156,6 +157,52 @@ export async function getRuleEntryForWorld(
       blockRows.map((b) => b.block_type)
     ),
   };
+}
+
+export interface RuleEntrySummary {
+  key: string;
+  entryType: EntryType;
+  name: string;
+}
+
+/**
+ * Meme remontee que findEntryInRulesetChain, mais pour lister plutot que
+ * chercher une cle : s'arrete au premier ruleset de la chaine qui a des
+ * entrees a lui (un monde variante sans rien a soi remonte jusqu'a son
+ * ancetre officiel). Pas de fusion base+variante ici, ce sera le travail
+ * de la resolution de surcharge (V1-A4) — ce que la variante ne possede
+ * pas encore n'existe simplement pas dans cette liste.
+ */
+async function listEntriesInRulesetChain(
+  supabase: TypedClient,
+  rulesetId: string
+): Promise<RuleEntrySummary[]> {
+  let currentId: string | null = rulesetId;
+  for (let hop = 0; currentId && hop < MAX_RULESET_CHAIN_DEPTH; hop++) {
+    const entries = await listRulesetEntries(supabase, currentId);
+    if (entries.length > 0) {
+      return entries.map((e) => ({
+        key: e.entry_key,
+        entryType: e.entry_type as EntryType,
+        name: entryNameFrom(e),
+      }));
+    }
+    const ruleset = await getRulesetById(supabase, currentId);
+    currentId = ruleset?.parent_ruleset_id ?? null;
+  }
+  return [];
+}
+
+/** Barre laterale de l'onglet Regles : `null` si le monde est introuvable, liste vide si aucun ruleset n'est assigne. */
+export async function listRuleEntriesForWorld(
+  supabase: TypedClient,
+  worldSlug: string
+): Promise<RuleEntrySummary[] | null> {
+  const world = await getWorldBySlug(supabase, worldSlug);
+  if (!world) return null;
+  const rulesetId = await getWorldDefaultRulesetId(supabase, world.id);
+  if (!rulesetId) return [];
+  return listEntriesInRulesetChain(supabase, rulesetId);
 }
 
 /** Composition pour la route `/m/[worldSlug]/regles/[cle]` : `null` si le monde ou la regle sont introuvables — la page traduit ça en 404. */

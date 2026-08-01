@@ -1,28 +1,20 @@
 import Link from "next/link";
-import { Suspense } from "react";
-import type { EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
-import type { PaletteEntity } from "./CommandPalette";
-import Sidebar from "./Sidebar";
-import DesktopWindows from "./DesktopWindows";
+import SectionToggle from "./SectionToggle";
 
 /**
- * Barre superieure, barre laterale, zone de travail
- * (specs/coquille-et-design.md §3). Le mode solo (bascule au centre)
- * viendra en V3 : l'onglet existe pour la forme, desactive.
+ * Coquille commune aux deux sections (Monde/Règles) : uniquement l'en-tete
+ * (specs/coquille-et-design.md §3). Chaque section fournit son propre
+ * contenu (barre laterale + fenetres flottantes pour Monde,
+ * liste+detail pour Regles) via son propre layout imbrique — jamais la
+ * meme barre laterale pour les deux, elles n'ont pas le meme usage.
  */
 export default function AppShell({
-  worldId,
   worldName,
   worldSlug,
-  tree,
-  entities,
   children,
 }: {
-  worldId: string;
   worldName: string;
   worldSlug: string;
-  tree: EntityTreeGroup[];
-  entities: PaletteEntity[];
   children: React.ReactNode;
 }) {
   return (
@@ -31,29 +23,13 @@ export default function AppShell({
         <Link href={`/m/${worldSlug}`} className="truncate font-chrome text-sm font-semibold text-ink">
           {worldName}
         </Link>
-        <div className="flex items-center gap-1 rounded-full border border-edge p-0.5 text-xs">
-          <span className="rounded-full bg-panel-raised px-3 py-1 text-ink">Monde</span>
-          <span className="cursor-not-allowed px-3 py-1 text-ink-muted" title="Bientôt (V1)">
-            Règles
-          </span>
-        </div>
+        <SectionToggle worldSlug={worldSlug} />
         <Link href="/" className="text-sm text-ink-muted hover:text-ink">
           Mes mondes
         </Link>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        <Suspense fallback={null}>
-          <DesktopWindows
-            worldSlug={worldSlug}
-            sidebar={
-              <Sidebar worldId={worldId} worldSlug={worldSlug} tree={tree} entities={entities} />
-            }
-          >
-            {children}
-          </DesktopWindows>
-        </Suspense>
-      </div>
+      <div className="flex flex-1 overflow-hidden">{children}</div>
     </div>
   );
 }

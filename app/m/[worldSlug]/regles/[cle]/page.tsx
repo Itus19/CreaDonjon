@@ -16,7 +16,7 @@ export default async function RuleEntryPage({
   if (!entry) notFound();
 
   return (
-    <div className="flex flex-col gap-4 p-6">
+    <div className="flex flex-col gap-4">
       <header className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <h1 className="entity-title">{entry.name}</h1>

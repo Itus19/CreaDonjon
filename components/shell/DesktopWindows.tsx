@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import WindowFrame, { type WindowGeometry } from "./WindowFrame";
 import Panel from "./Panel";
 import { DesktopContext } from "./DesktopContext";
-import EditEntityForm from "@/app/m/[worldSlug]/f/[entitySlug]/EditEntityForm";
+import EditEntityForm from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/EditEntityForm";
 import type { EntityWindowData } from "@/src/server/services/entityWindow";
 
 const DEFAULT_WIDTH = 640;

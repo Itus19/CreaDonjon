@@ -51,6 +51,41 @@ export async function getRulesetEntryByKey(
   return data;
 }
 
+export interface RulesetEntrySummaryRow {
+  entry_key: string;
+  entry_type: string;
+  source_raw: Json;
+}
+
+const LIST_PAGE_SIZE = 1000;
+
+/**
+ * Pour la barre laterale de consultation (onglet Regles) : toutes les
+ * entrees d'UN ruleset, aucune remontee de chaine ici (voir le service
+ * appelant). Pagine explicitement : PostgREST plafonne une reponse a 1000
+ * lignes par defaut (supabase/config.toml, max_rows) — un simple
+ * `.select()` sur les 1790 entrees du SRD 5.1 tronquerait silencieusement
+ * la liste, sans erreur, juste des regles absentes au hasard de l'ordre
+ * renvoye (constate en verifiant dans le navigateur : Fireball manquait).
+ */
+export async function listRulesetEntries(
+  supabase: TypedClient,
+  rulesetId: string
+): Promise<RulesetEntrySummaryRow[]> {
+  const all: RulesetEntrySummaryRow[] = [];
+  for (let from = 0; ; from += LIST_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("ruleset_entries")
+      .select("entry_key, entry_type, source_raw")
+      .eq("ruleset_id", rulesetId)
+      .range(from, from + LIST_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    all.push(...data);
+    if (data.length < LIST_PAGE_SIZE) break;
+  }
+  return all;
+}
+
 export interface RulesetEntryBlockRow {
   id: string;
   entry_id: string;
