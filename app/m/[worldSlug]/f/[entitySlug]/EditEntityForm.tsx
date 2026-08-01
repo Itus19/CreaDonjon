@@ -2,11 +2,9 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import SegmentsEditor from "@/components/entities/SegmentsEditor";
 import RelationsChips, { type OtherEntityOption, type RelationChip } from "@/components/entities/RelationsChips";
 import EntityBlocks, { type BlockItem } from "@/components/blocks/EntityBlocks";
 import Dropdown from "@/components/shared/Dropdown";
-import type { Segment } from "@/src/core/schemas/entities/segments";
 import { ENTITY_KINDS } from "@/lib/entities/schemas";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import type { EntitySummary } from "@/src/server/repos/entities";
@@ -37,11 +35,8 @@ export default function EditEntityForm({
   const router = useRouter();
   const [name, setName] = useState(entity.name);
   const [entityKind, setEntityKind] = useState(entity.entity_kind);
-  const [summary, setSummary] = useState(entity.summary);
   const [aliases, setAliases] = useState<string[]>(entity.aliases);
   const [newAlias, setNewAlias] = useState("");
-  const [tags, setTags] = useState(entity.tags.join(", "));
-  const [segments, setSegments] = useState<Segment[]>(entity.narrative_content);
   const versionRef = useRef(entity.version);
   const saveChainRef = useRef<Promise<void>>(Promise.resolve());
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "conflict" | "error">("idle");
@@ -50,10 +45,7 @@ export default function EditEntityForm({
   type SaveOverrides = {
     name?: string;
     entityKind?: string;
-    summary?: string;
     aliases?: string[];
-    tags?: string;
-    segments?: Segment[];
   };
 
   /**
@@ -74,7 +66,6 @@ export default function EditEntityForm({
     setStatus("saving");
     setErrorMessage(null);
 
-    const nextTags = overrides?.tags ?? tags;
     const res = await fetch(`/api/entities/${entity.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -82,10 +73,7 @@ export default function EditEntityForm({
         version: versionRef.current,
         name: overrides?.name ?? name,
         entityKind: overrides?.entityKind ?? entityKind,
-        summary: overrides?.summary ?? summary,
         aliases: overrides?.aliases ?? aliases,
-        tags: nextTags.split(",").map((s) => s.trim()).filter((s) => s.length > 0),
-        narrativeContent: overrides?.segments ?? segments,
       }),
     });
 
@@ -124,10 +112,6 @@ export default function EditEntityForm({
   function handleKindChange(kind: string) {
     setEntityKind(kind);
     save({ entityKind: kind });
-  }
-
-  function saveSegments() {
-    save({ segments });
   }
 
   return (
@@ -205,24 +189,6 @@ export default function EditEntityForm({
         </div>
       </div>
 
-      <textarea
-        value={summary}
-        onChange={(e) => setSummary(e.target.value)}
-        onBlur={() => save()}
-        placeholder="Résumé..."
-        rows={2}
-        maxLength={2000}
-        className="bg-transparent text-sm text-ink outline-none placeholder:italic placeholder:text-ink-muted focus:border-b focus:border-accent"
-      />
-
-      <input
-        value={tags}
-        onChange={(e) => setTags(e.target.value)}
-        onBlur={() => save()}
-        placeholder="Tags (séparés par des virgules)..."
-        className="bg-transparent text-xs text-ink-muted outline-none placeholder:italic focus:border-b focus:border-accent"
-      />
-
       {status === "conflict" && (
         <p className="text-sm text-danger">
           Cette fiche a été modifiée entre-temps. Rechargez la page avant de réessayer.
@@ -231,11 +197,8 @@ export default function EditEntityForm({
       {status === "error" && errorMessage && <p className="text-sm text-danger">{errorMessage}</p>}
 
       <div className="border-t border-edge pt-3">
-        <h2 className="block-title mb-2">Contenu narratif</h2>
-        <SegmentsEditor segments={segments} onChange={setSegments} onBlur={saveSegments} />
+        <EntityBlocks entityId={entity.id} initialBlocks={initialBlocks} />
       </div>
-
-      <EntityBlocks entityId={entity.id} initialBlocks={initialBlocks} />
     </div>
   );
 }

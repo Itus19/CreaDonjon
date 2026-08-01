@@ -29,10 +29,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     expectedVersion: parsed.data.version,
     name: parsed.data.name,
     entityKind: parsed.data.entityKind,
-    summary: parsed.data.summary,
     aliases: parsed.data.aliases,
-    tags: parsed.data.tags,
-    narrativeContent: parsed.data.narrativeContent,
   });
 
   if (!result.ok) {

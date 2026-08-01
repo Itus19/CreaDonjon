@@ -21,18 +21,9 @@ describe("registry des blocs de wiki", () => {
     expect(validateBlockData("infobox", data)).toEqual(data);
   });
 
-  it("valide une gallery avec une image portrait", () => {
-    const data = {
-      __v: 1,
-      images: [{ url: "https://example.com/bram.png", caption: "Bram", isPortrait: true }],
-    };
-    expect(validateBlockData("gallery", data)).toEqual(data);
-  });
-
-  it("rejette une gallery avec une url invalide", () => {
-    expect(() =>
-      validateBlockData("gallery", { __v: 1, images: [{ url: "pas-une-url", caption: "" }] })
-    ).toThrow();
+  it("valide une image avec une legende", () => {
+    const data = { __v: 1, url: "https://example.com/bram.png", caption: "Bram" };
+    expect(validateBlockData("image", data)).toEqual(data);
   });
 
   it("valide un custom_table", () => {
@@ -40,7 +31,7 @@ describe("registry des blocs de wiki", () => {
     expect(validateBlockData("custom_table", data)).toEqual(data);
   });
 
-  it("valide une description avec des segments", () => {
+  it("valide un texte avec des segments", () => {
     const data = {
       __v: 1,
       segments: [
@@ -51,6 +42,6 @@ describe("registry des blocs de wiki", () => {
         },
       ],
     };
-    expect(validateBlockData("description", data)).toEqual(data);
+    expect(validateBlockData("text", data)).toEqual(data);
   });
 });

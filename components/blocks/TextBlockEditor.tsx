@@ -2,14 +2,14 @@
 
 import SegmentsEditor from "@/components/entities/SegmentsEditor";
 import type { Segment } from "@/src/core/schemas/entities/segments";
-import type { DescriptionBlockData } from "@/src/core/schemas/blocks/description";
+import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 
-export default function DescriptionBlockEditor({
+export default function TextBlockEditor({
   data,
   onChange,
 }: {
-  data: DescriptionBlockData;
-  onChange: (data: DescriptionBlockData) => void;
+  data: TextBlockData;
+  onChange: (data: TextBlockData) => void;
 }) {
   return (
     <SegmentsEditor

@@ -2,14 +2,15 @@
 
 import { useRef, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
+import ActionsMenu from "@/components/shared/ActionsMenu";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
-import DescriptionBlockEditor from "./DescriptionBlockEditor";
+import TextBlockEditor from "./TextBlockEditor";
 import InfoboxBlockEditor from "./InfoboxBlockEditor";
-import GalleryBlockEditor from "./GalleryBlockEditor";
+import ImageBlockEditor from "./ImageBlockEditor";
 import CustomTableBlockEditor from "./CustomTableBlockEditor";
-import type { DescriptionBlockData } from "@/src/core/schemas/blocks/description";
+import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
-import type { GalleryBlockData } from "@/src/core/schemas/blocks/gallery";
+import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import type { CustomTableBlockData } from "@/src/core/schemas/blocks/customTable";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 
@@ -26,9 +27,9 @@ export interface BlockItem {
 }
 
 const BLOCK_TYPE_LABELS: Record<string, string> = {
-  description: "Description",
+  text: "Texte",
   infobox: "Encadré",
-  gallery: "Galerie",
+  image: "Image",
   custom_table: "Tableau",
 };
 
@@ -40,21 +41,14 @@ function BlockDataEditor({
   onChange: (data: unknown) => void;
 }) {
   switch (block.blockType) {
-    case "description":
-      return (
-        <DescriptionBlockEditor
-          data={block.data as DescriptionBlockData}
-          onChange={(d) => onChange(d)}
-        />
-      );
+    case "text":
+      return <TextBlockEditor data={block.data as TextBlockData} onChange={(d) => onChange(d)} />;
     case "infobox":
       return (
         <InfoboxBlockEditor data={block.data as InfoboxBlockData} onChange={(d) => onChange(d)} />
       );
-    case "gallery":
-      return (
-        <GalleryBlockEditor data={block.data as GalleryBlockData} onChange={(d) => onChange(d)} />
-      );
+    case "image":
+      return <ImageBlockEditor data={block.data as ImageBlockData} onChange={(d) => onChange(d)} />;
     case "custom_table":
       return (
         <CustomTableBlockEditor
@@ -71,7 +65,9 @@ function BlockDataEditor({
  * Blocs discrets, toujours editables en place — comme l'ancienne
  * application (master, EntityDetail.tsx) : pas d'encadre par bloc, juste
  * un separateur ; la sauvegarde se declenche a la perte de focus, jamais
- * par un bouton "Enregistrer" a chercher.
+ * par un bouton "Enregistrer" a chercher. Le type d'un bloc ne presuppose
+ * plus son role (V0-06e) : un bloc `text` peut porter n'importe quel titre
+ * ("Description", "Histoire"...), c'est le titre qui porte le sens.
  */
 export default function EntityBlocks({
   entityId,
@@ -191,6 +187,49 @@ export default function EntityBlocks({
     setBlocks((prev) => prev.filter((b) => b.id !== id));
   }
 
+  /**
+   * Pas de route dediee "dupliquer" : on cree un bloc vide du meme type
+   * puis on le remplit du contenu de l'original en une seconde requete —
+   * reutilise l'existant plutot qu'un nouvel endpoint pour un besoin simple.
+   * Le bloc duplique atterrit en fin de liste (meme regle que "+ Ajouter").
+   */
+  async function duplicateBlock(id: string) {
+    const original = blocks.find((b) => b.id === id);
+    if (!original) return;
+
+    const createRes = await fetch(`/api/entities/${entityId}/blocks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        entityId,
+        blockType: original.blockType,
+        label: original.display.label || BLOCK_TYPE_LABELS[original.blockType],
+        visibility: { level: original.visibilityLevel, scopeId: original.visibilityScopeId },
+      }),
+    });
+    if (!createRes.ok) return;
+    const created = (await createRes.json()) as BlockItem;
+
+    const fillRes = await fetch(`/api/blocks/${created.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        version: created.version,
+        display: original.display,
+        data: original.data,
+        visibility: { level: original.visibilityLevel, scopeId: original.visibilityScopeId },
+      }),
+    });
+    if (!fillRes.ok) {
+      versionsRef.current[created.id] = created.version;
+      setBlocks((prev) => [...prev, created]);
+      return;
+    }
+    const filled = (await fillRes.json()) as BlockItem;
+    versionsRef.current[filled.id] = filled.version;
+    setBlocks((prev) => [...prev, filled]);
+  }
+
   async function moveBlock(id: string, direction: "up" | "down") {
     const index = sortedBlocks.findIndex((b) => b.id === id);
     const swapIndex = direction === "up" ? index - 1 : index + 1;
@@ -277,13 +316,13 @@ export default function EntityBlocks({
                 >
                   ▼
                 </button>
-                <button
-                  type="button"
-                  onClick={() => deleteBlockLocal(block.id)}
-                  className="text-xs text-ink-muted transition-colors hover:text-danger"
-                >
-                  ×
-                </button>
+                <ActionsMenu
+                  aria-label="Actions du bloc"
+                  items={[
+                    { label: "Dupliquer", onSelect: () => duplicateBlock(block.id) },
+                    { label: "Supprimer", onSelect: () => deleteBlockLocal(block.id), danger: true },
+                  ]}
+                />
               </div>
             </div>
 

@@ -1,7 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
-import type { NarrativeContent } from "@/src/core/schemas/entities/segments";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -11,10 +10,7 @@ export interface EntitySummary {
   slug: string;
   name: string;
   entity_kind: string;
-  summary: string;
   aliases: string[];
-  tags: string[];
-  narrative_content: NarrativeContent;
   version: number;
   created_at: string;
   updated_at: string;
@@ -26,7 +22,7 @@ export async function listEntitiesForWorld(
 ): Promise<EntitySummary[]> {
   const { data, error } = await supabase
     .from("entities")
-    .select("id, world_id, slug, name, entity_kind, summary, aliases, tags, narrative_content, version, created_at, updated_at")
+    .select("id, world_id, slug, name, entity_kind, aliases, version, created_at, updated_at")
     .eq("world_id", worldId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
@@ -41,7 +37,7 @@ export async function getEntityBySlug(
 ): Promise<EntitySummary | null> {
   const { data, error } = await supabase
     .from("entities")
-    .select("id, world_id, slug, name, entity_kind, summary, aliases, tags, narrative_content, version, created_at, updated_at")
+    .select("id, world_id, slug, name, entity_kind, aliases, version, created_at, updated_at")
     .eq("world_id", worldId)
     .eq("slug", slug)
     .is("deleted_at", null)
@@ -73,10 +69,7 @@ export async function insertEntity(
     slug: string;
     name: string;
     entityKind: string;
-    summary: string;
     aliases: string[];
-    tags: string[];
-    narrativeContent: NarrativeContent;
   }
 ): Promise<EntitySummary> {
   const { data, error } = await supabase
@@ -87,12 +80,9 @@ export async function insertEntity(
       slug: params.slug,
       name: params.name,
       entity_kind: params.entityKind,
-      summary: params.summary,
       aliases: params.aliases,
-      tags: params.tags,
-      narrative_content: params.narrativeContent,
     })
-    .select("id, world_id, slug, name, entity_kind, summary, aliases, tags, narrative_content, version, created_at, updated_at")
+    .select("id, world_id, slug, name, entity_kind, aliases, version, created_at, updated_at")
     .single();
   if (error) throw new Error(error.message);
   return data as EntitySummary;
@@ -104,7 +94,7 @@ export async function getEntityById(
 ): Promise<EntitySummary | null> {
   const { data, error } = await supabase
     .from("entities")
-    .select("id, world_id, slug, name, entity_kind, summary, aliases, tags, narrative_content, version, created_at, updated_at")
+    .select("id, world_id, slug, name, entity_kind, aliases, version, created_at, updated_at")
     .eq("id", id)
     .is("deleted_at", null)
     .maybeSingle();
@@ -124,10 +114,7 @@ export async function updateEntityWithVersionCheck(
     expectedVersion: number;
     name: string;
     entityKind: string;
-    summary: string;
     aliases: string[];
-    tags: string[];
-    narrativeContent: NarrativeContent;
   }
 ): Promise<EntitySummary | null> {
   const { data, error } = await supabase
@@ -135,15 +122,12 @@ export async function updateEntityWithVersionCheck(
     .update({
       name: params.name,
       entity_kind: params.entityKind,
-      summary: params.summary,
       aliases: params.aliases,
-      tags: params.tags,
-      narrative_content: params.narrativeContent,
       version: params.expectedVersion + 1,
     })
     .eq("id", params.id)
     .eq("version", params.expectedVersion)
-    .select("id, world_id, slug, name, entity_kind, summary, aliases, tags, narrative_content, version, created_at, updated_at")
+    .select("id, world_id, slug, name, entity_kind, aliases, version, created_at, updated_at")
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data as EntitySummary | null;

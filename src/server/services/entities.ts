@@ -2,7 +2,6 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
-import type { NarrativeContent } from "@/src/core/schemas/entities/segments";
 import { buildEntityTree, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import {
   type EntitySearchResult,
@@ -58,9 +57,8 @@ async function generateUniqueEntitySlug(
 function snapshotOf(entity: EntitySummary) {
   // Snapshot complet plutot que diff (SCHEMA.md §15). Les blocs n'existent
   // pas encore (V0-04) : le snapshot ne porte que l'entite pour l'instant.
-  const { id, world_id, slug, name, entity_kind, summary, aliases, tags, narrative_content, version } =
-    entity;
-  return { id, world_id, slug, name, entity_kind, summary, aliases, tags, narrative_content, version };
+  const { id, world_id, slug, name, entity_kind, aliases, version } = entity;
+  return { id, world_id, slug, name, entity_kind, aliases, version };
 }
 
 export async function createEntity(
@@ -70,10 +68,7 @@ export async function createEntity(
     createdBy: string;
     name: string;
     entityKind: string;
-    summary: string;
     aliases: string[];
-    tags: string[];
-    narrativeContent: NarrativeContent;
   }
 ): Promise<EntitySummary> {
   const slug = await generateUniqueEntitySlug(supabase, params.worldId, params.name);
@@ -100,10 +95,7 @@ export async function updateEntity(
     expectedVersion: number;
     name: string;
     entityKind: string;
-    summary: string;
     aliases: string[];
-    tags: string[];
-    narrativeContent: NarrativeContent;
   }
 ): Promise<UpdateEntityResult> {
   const updated = await updateEntityWithVersionCheck(supabase, params);

@@ -586,11 +586,8 @@ export type Database = {
           entity_kind: string
           id: string
           name: string
-          narrative_content: Json
           search_fr: unknown
           slug: string
-          summary: string
-          tags: string[]
           updated_at: string
           version: number
           world_id: string
@@ -604,11 +601,8 @@ export type Database = {
           entity_kind?: string
           id?: string
           name: string
-          narrative_content?: Json
           search_fr?: unknown
           slug: string
-          summary?: string
-          tags?: string[]
           updated_at?: string
           version?: number
           world_id: string
@@ -622,11 +616,8 @@ export type Database = {
           entity_kind?: string
           id?: string
           name?: string
-          narrative_content?: Json
           search_fr?: unknown
           slug?: string
-          summary?: string
-          tags?: string[]
           updated_at?: string
           version?: number
           world_id?: string

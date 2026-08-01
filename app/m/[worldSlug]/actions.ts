@@ -16,10 +16,7 @@ export async function createEntityAction(
     worldId: formData.get("worldId"),
     name: formData.get("name"),
     entityKind: formData.get("entityKind"),
-    summary: formData.get("summary"),
     aliases: formData.get("aliases"),
-    tags: formData.get("tags"),
-    narrativeContent: formData.get("narrativeContent"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
@@ -43,10 +40,7 @@ export async function createEntityAction(
     createdBy: user.id,
     name: parsed.data.name,
     entityKind: parsed.data.entityKind,
-    summary: parsed.data.summary,
     aliases: parsed.data.aliases,
-    tags: parsed.data.tags,
-    narrativeContent: parsed.data.narrativeContent,
   });
 
   revalidatePath(`/m/${worldSlug}`, "layout");

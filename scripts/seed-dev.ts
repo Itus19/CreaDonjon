@@ -176,24 +176,26 @@ async function main() {
 
   must(
     await supabase.from("entity_templates").insert([
-      { id: IDS.templates.pnj, world_id: null, name: "PNJ", entity_kind: "character", icon: "user", blocks: ["description", "character", "relationships"], is_builtin: true },
-      { id: IDS.templates.creature, world_id: null, name: "Créature", entity_kind: "creature", icon: "paw-print", blocks: ["description", "statblock"], is_builtin: true },
-      { id: IDS.templates.lieu, world_id: null, name: "Lieu", entity_kind: "location", icon: "map-pin", blocks: ["description", "infobox", "gallery"], is_builtin: true },
-      { id: IDS.templates.faction, world_id: null, name: "Faction", entity_kind: "faction", icon: "flag", blocks: ["description", "infobox", "relationships"], is_builtin: true },
-      { id: IDS.templates.objet, world_id: null, name: "Objet", entity_kind: "item", icon: "package", blocks: ["description", "inventory"], is_builtin: true },
-      { id: IDS.templates.quete, world_id: null, name: "Quête", entity_kind: "quest", icon: "scroll", blocks: ["description"], is_builtin: true },
-      { id: IDS.templates.evenement, world_id: null, name: "Événement", entity_kind: "event", icon: "calendar", blocks: ["description", "timeline"], is_builtin: true },
+      { id: IDS.templates.pnj, world_id: null, name: "PNJ", entity_kind: "character", icon: "user", blocks: ["text", "character", "relationships"], is_builtin: true },
+      { id: IDS.templates.creature, world_id: null, name: "Créature", entity_kind: "creature", icon: "paw-print", blocks: ["text", "statblock"], is_builtin: true },
+      { id: IDS.templates.lieu, world_id: null, name: "Lieu", entity_kind: "location", icon: "map-pin", blocks: ["text", "infobox", "image"], is_builtin: true },
+      { id: IDS.templates.faction, world_id: null, name: "Faction", entity_kind: "faction", icon: "flag", blocks: ["text", "infobox", "relationships"], is_builtin: true },
+      { id: IDS.templates.objet, world_id: null, name: "Objet", entity_kind: "item", icon: "package", blocks: ["text", "inventory"], is_builtin: true },
+      { id: IDS.templates.quete, world_id: null, name: "Quête", entity_kind: "quest", icon: "scroll", blocks: ["text"], is_builtin: true },
+      { id: IDS.templates.evenement, world_id: null, name: "Événement", entity_kind: "event", icon: "calendar", blocks: ["text", "timeline"], is_builtin: true },
     ]),
     "insert entity_templates"
   );
 
+  // Plus de `summary` sur l'entite (V0-06e) : le texte descriptif vit dans
+  // un bloc `text`, comme le reste du contenu narratif.
   must(
     await supabase.from("entities").insert([
-      { id: IDS.entityValdoria, world_id: IDS.world, entity_kind: "location", slug: "valdoria-royaume", name: "Valdoria", summary: "Un royaume côtier au climat tempéré, entre forêt et falaises.", created_by: mjUserId },
-      { id: IDS.entityAncre, world_id: IDS.world, entity_kind: "location", slug: "l-ancre-rouillee", name: "L'Ancre Rouillée", summary: "Une taverne au port, connue pour sa bière tiède et ses rumeurs fraîches.", created_by: mjUserId },
-      { id: IDS.entityMain, world_id: IDS.world, entity_kind: "faction", slug: "la-main-silencieuse", name: "La Main Silencieuse", summary: "Un réseau d'informateurs qui prétend n'exister nulle part.", created_by: mjUserId },
-      { id: IDS.entityDague, world_id: IDS.world, entity_kind: "item", slug: "dague", name: "Dague", summary: "Une dague simple, comme on en trouve dans toutes les armureries.", created_by: mjUserId },
-      { id: IDS.entityBram, world_id: IDS.world, entity_kind: "character", slug: "bram-le-tavernier", name: "Bram le Tavernier", summary: "Le tenancier de L'Ancre Rouillée.", created_by: mjUserId },
+      { id: IDS.entityValdoria, world_id: IDS.world, entity_kind: "location", slug: "valdoria-royaume", name: "Valdoria", created_by: mjUserId },
+      { id: IDS.entityAncre, world_id: IDS.world, entity_kind: "location", slug: "l-ancre-rouillee", name: "L'Ancre Rouillée", created_by: mjUserId },
+      { id: IDS.entityMain, world_id: IDS.world, entity_kind: "faction", slug: "la-main-silencieuse", name: "La Main Silencieuse", created_by: mjUserId },
+      { id: IDS.entityDague, world_id: IDS.world, entity_kind: "item", slug: "dague", name: "Dague", created_by: mjUserId },
+      { id: IDS.entityBram, world_id: IDS.world, entity_kind: "character", slug: "bram-le-tavernier", name: "Bram le Tavernier", created_by: mjUserId },
     ]),
     "insert entities"
   );
@@ -201,40 +203,44 @@ async function main() {
   must(
     await supabase.from("blocks").insert([
       {
-        entity_id: IDS.entityValdoria, block_type: "description", visibility_level: "public", display_order: 100, created_by: mjUserId,
-        data: [{ id: "s1", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Un royaume côtier, entre forêt et falaises." }] }],
+        entity_id: IDS.entityValdoria, block_type: "text", display: { label: "Description", layout: "prose" }, visibility_level: "public", display_order: 100, created_by: mjUserId,
+        data: { __v: 1, segments: [{ id: "s1", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Un royaume côtier au climat tempéré, entre forêt et falaises." }] }] },
       },
       {
-        entity_id: IDS.entityMain, block_type: "description", visibility_level: "public", display_order: 100, created_by: mjUserId,
-        data: [{ id: "s1", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Personne n'admet en faire partie." }] }],
+        entity_id: IDS.entityAncre, block_type: "text", display: { label: "Description", layout: "prose" }, visibility_level: "public", display_order: 100, created_by: mjUserId,
+        data: { __v: 1, segments: [{ id: "s1", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Une taverne au port, connue pour sa bière tiède et ses rumeurs fraîches." }] }] },
       },
       {
-        entity_id: IDS.entityDague, block_type: "description", visibility_level: "public", display_order: 100, created_by: mjUserId,
-        data: [{ id: "s1", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Une dague simple, sans histoire particulière — pour l'instant." }] }],
+        entity_id: IDS.entityMain, block_type: "text", display: { label: "Description", layout: "prose" }, visibility_level: "public", display_order: 100, created_by: mjUserId,
+        data: { __v: 1, segments: [{ id: "s1", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Personne n'admet en faire partie." }] }] },
+      },
+      {
+        entity_id: IDS.entityDague, block_type: "text", display: { label: "Description", layout: "prose" }, visibility_level: "public", display_order: 100, created_by: mjUserId,
+        data: { __v: 1, segments: [{ id: "s1", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Une dague simple, sans histoire particulière — pour l'instant." }] }] },
       },
       // Bram — description publique, deux segments dont un `ref` (SCHEMA.md
       // §6, exemple donne au mot pres).
       {
-        entity_id: IDS.entityBram, block_type: "description", visibility_level: "public", display_order: 100, created_by: mjUserId,
-        data: [{
+        entity_id: IDS.entityBram, block_type: "text", display: { label: "Description", layout: "prose" }, visibility_level: "public", display_order: 100, created_by: mjUserId,
+        data: { __v: 1, segments: [{
           id: "s1", visibility: { level: "public", scopeId: null },
           content: [
             { t: "text", v: "Le tavernier de " },
             { t: "ref", kind: "entity", id: IDS.entityAncre, label: "L'Ancre Rouillée" },
             { t: "text", v: " semble jovial et accueillant." },
           ],
-        }],
+        }] },
       },
       {
-        entity_id: IDS.entityBram, block_type: "description", visibility_level: "gm", display_order: 200, created_by: mjUserId,
-        data: [{
+        entity_id: IDS.entityBram, block_type: "text", display: { label: "Description", layout: "prose" }, visibility_level: "gm", display_order: 200, created_by: mjUserId,
+        data: { __v: 1, segments: [{
           id: "s2", visibility: { level: "gm", scopeId: null },
           content: [
             { t: "text", v: "En réalité, il travaille pour " },
             { t: "ref", kind: "entity", id: IDS.entityMain, label: "la Main Silencieuse" },
             { t: "text", v: "." },
           ],
-        }],
+        }] },
       },
       {
         entity_id: IDS.entityBram, block_type: "character", visibility_level: "gm", display_order: 300, created_by: mjUserId,

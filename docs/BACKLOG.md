@@ -337,6 +337,56 @@ Après V0-06c, retour utilisateur : l'esthétique se rapproche de `master` mais 
 
 ---
 
+## V0-06e — Blocs génériques et menu compact · `L`
+
+Retour utilisateur après V0-06d : `summary`/`tags`/« Contenu narratif » sur l'entité font doublon avec les blocs (et ne sont affichés nulle part ailleurs dans l'UI actuelle — vérifié : ni aperçu, ni tooltip, ni carte). Le bloc `description` porte un nom qui présuppose son usage ; le MJ (ou l'IA) doit pouvoir en faire un bloc « Caractère », « Histoire », etc. juste en changeant son titre. `gallery` (plusieurs images) n'a jamais servi qu'à une seule image en pratique.
+
+**Décisions prises avec l'utilisateur**
+- `entities.summary`, `entities.tags`, `entities.narrative_content` : colonnes supprimées du schéma (pas seulement cachées côté UI). `search_fr` repose désormais sur `name` + `aliases` seulement.
+- Bloc `description` → renommé `text` : même contenu (segments narratifs porteurs de visibilité), mais le type ne présuppose plus un rôle — le titre libre du bloc porte le sens.
+- Bloc `gallery` → renommé `image` : une image + une légende optionnelle, plus de tableau d'images. Rien ne l'utilise en production aujourd'hui.
+- Catalogue V0 des blocs de wiki devient : `text`, `infobox`, `image`, `custom_table`.
+
+**Livrables**
+- Nouvelle migration (jamais toucher une migration déjà appliquée) : suppression des colonnes, régénération de `search_fr`/`app.entities_search_fr` (2 arguments), suppression de l'index `entities_tags_idx`.
+- `src/core/schemas/blocks/{text,image}.ts` remplacent `description.ts`/`gallery.ts` ; `registry.ts` mis à jour.
+- `EntityBlocks.tsx` : en-tête de bloc uniforme pour tous les types (chevron, titre éditable, étiquette de type, visibilité, ▲/▼ toujours visibles) + un menu compact `⋮` regroupant Dupliquer/Supprimer, à la place du bouton `×` directement exposé.
+- `EditEntityForm.tsx`/`NewEntityForm.tsx` : retrait des champs résumé, tags et de la section « Contenu narratif ».
+
+**Critères d'acceptation**
+- [ ] Créer et modifier une entité sans résumé, tags ni contenu narratif au niveau de la fiche — tout passe par des blocs.
+- [ ] Un bloc `text` peut être renommé librement (« Description », « Histoire »...) sans que son type technique change.
+- [ ] Un bloc `image` porte une image et une légende ; le bouton `×` a disparu, remplacé par un menu `⋮` avec Dupliquer/Supprimer.
+- [ ] La recherche (`search_entities`) continue de fonctionner sur nom/alias après suppression de `summary`.
+- [x] Aucune régression sur les critères déjà passés (V0-03b, V0-04, V0-06b, V0-06c, V0-06d).
+
+**Livré** : migration `20260801120001_entity_generic_blocks.sql` (colonnes supprimées, `search_fr`/`app.entities_search_fr` a deux arguments), `src/core/schemas/blocks/{text,image}.ts`, `registry.ts` mis à jour, `components/shared/ActionsMenu.tsx` (menu compact repris du même patron portail/positionnement que `Dropdown.tsx`), `EntityBlocks.tsx`/`EditEntityForm.tsx`/`NewEntityForm.tsx` mis à jour, `scripts/seed-dev.ts` aligné (résumés migrés vers des blocs `text`, catalogues de blocs des `entity_templates` renommés).
+
+**Piège trouvé en testant** : la migration renommait le catalogue de types côté code en supposant qu'aucune ligne réelle n'utilisait `description`/`gallery` — faux : des blocs créés pendant les sessions de test manuel de ce même chantier portaient encore ces valeurs, rendues « Type de bloc inconnu » une fois le code renommé (`display.layout` interne au jsonb posait le même problème, rejeté par le nouvel enum au prochain enregistrement). Corrigé par deux migrations de données supplémentaires (`20260801130001`, `20260801130002`), idempotentes, qui renomment les lignes existantes plutôt que de supposer leur absence.
+
+---
+
+## V0-06f — Éditeur de texte riche (bulle flottante) · `L`
+
+Suite de V0-06e. Avant la refonte, `master` utilisait Tiptap avec une bulle flottante (gras/italique/souligné/barré) — mais son marquage « Masquer aux joueurs » était **purement cosmétique** : le HTML complet (secret compris) partait quand même vers le client. C'est ce que la règle absolue n°4 de `CLAUDE.md` interdit. Ce ticket reprend l'expérience d'édition de `master` sans reprendre son mécanisme de masquage : le modèle de segments actuel (déjà filtré réellement côté serveur) est étendu, pas remplacé par du HTML.
+
+**Décisions prises avec l'utilisateur**
+- Gras/italique/souligné/barré uniquement pour ce ticket (lien et couleur : plus tard, si le besoin se confirme).
+- Masquer un passage à l'intérieur d'un bloc texte : sélectionner le passage puis « Cacher ce passage » scinde le segment en coulisses (plus de bouton « + Ajouter un segment » exposé) ; la visibilité qui en résulte reste réellement filtrée côté serveur.
+
+**Livrables**
+- `src/core/schemas/entities/segments.ts` : le nœud texte porte un tableau de marques combinables (`bold`/`italic`/`underline`/`strike`) au lieu de nœuds exclusifs `em`/`strong`/`code` ; `ref` reste un nœud distinct.
+- Nouvelle dépendance `@tiptap/*` (MIT, déjà précédent dans `master` — écrire un éditeur riche à la main serait nettement pire).
+- `SegmentsEditor.tsx` remplacé par un éditeur Tiptap qui sérialise vers/depuis `Segment[]`, jamais vers du HTML stocké tel quel.
+- Action « Cacher ce passage » sur une sélection.
+
+**Critères d'acceptation**
+- [ ] Gras, italique, souligné et barré sont combinables sur un même passage.
+- [ ] « Cacher ce passage » sur une sélection crée un segment dont la visibilité choisie est réellement appliquée côté serveur (vérifié avec un compte `viewer` : le passage caché n'apparaît ni dans le HTML ni dans la réponse réseau reçue par ce compte, pas seulement masqué par CSS).
+- [ ] Aucune régression sur le linker (`detectEntityReferences`) ni sur les tests existants des segments.
+
+---
+
 ## V0-07 — Partage en lecture seule · `M`
 
 Génération d'un lien avec jeton, route serveur résolvant la visibilité elle-même.
