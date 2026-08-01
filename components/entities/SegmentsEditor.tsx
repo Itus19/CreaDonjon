@@ -27,9 +27,12 @@ function segmentText(segment: Segment): string {
 export default function SegmentsEditor({
   segments,
   onChange,
+  onBlur,
 }: {
   segments: Segment[];
   onChange: (segments: Segment[]) => void;
+  /** Sauvegarde a la perte de focus (comme l'ancienne application) — optionnel : NewEntityForm n'a pas encore de fiche a sauvegarder. */
+  onBlur?: () => void;
 }) {
   function updateSegment(index: number, patch: Partial<Segment>) {
     onChange(segments.map((s, i) => (i === index ? { ...s, ...patch } : s)));
@@ -41,10 +44,12 @@ export default function SegmentsEditor({
 
   function updateVisibilityLevel(index: number, level: (typeof VISIBILITY_OPTIONS)[number]["value"]) {
     updateSegment(index, { visibility: { level, scopeId: null } });
+    onBlur?.();
   }
 
   function removeSegment(index: number) {
     onChange(segments.filter((_, i) => i !== index));
+    onBlur?.();
   }
 
   function addSegment() {
@@ -66,25 +71,21 @@ export default function SegmentsEditor({
       )}
 
       {segments.map((segment, index) => (
-        <div key={segment.id} className="group flex flex-col gap-2 rounded-lg border border-edge p-3">
+        <div key={segment.id} className="flex flex-col gap-2 rounded-lg border border-edge p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <VisibilityBadge level={segment.visibility.level} />
-              <div className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                <Dropdown
-                  value={segment.visibility.level}
-                  options={VISIBILITY_OPTIONS}
-                  onChange={(v) =>
-                    updateVisibilityLevel(index, v as (typeof VISIBILITY_OPTIONS)[number]["value"])
-                  }
-                  aria-label="Visibilité du segment"
-                />
-              </div>
+              <Dropdown
+                value={segment.visibility.level}
+                options={VISIBILITY_OPTIONS}
+                onChange={(v) => updateVisibilityLevel(index, v as (typeof VISIBILITY_OPTIONS)[number]["value"])}
+                aria-label="Visibilité du segment"
+              />
             </div>
             <button
               type="button"
               onClick={() => removeSegment(index)}
-              className="text-xs text-danger opacity-0 transition-opacity hover:underline group-hover:opacity-100 group-focus-within:opacity-100"
+              className="text-xs text-danger hover:underline"
             >
               Supprimer
             </button>
@@ -92,6 +93,7 @@ export default function SegmentsEditor({
           <textarea
             value={segmentText(segment)}
             onChange={(e) => updateText(index, e.target.value)}
+            onBlur={onBlur}
             rows={3}
             className="prose-narrative w-full rounded-md border border-edge bg-transparent px-3 py-2"
           />

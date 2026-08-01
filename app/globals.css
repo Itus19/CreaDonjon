@@ -24,9 +24,10 @@
   --radius-md: var(--r-md);
   --radius-lg: var(--r-lg);
 
-  --font-narrative: var(--font-spectral), serif;
-  --font-chrome: var(--font-inter), sans-serif;
-  --font-mech: var(--font-plex-mono), monospace;
+  --font-narrative: var(--font-geist-sans), sans-serif;
+  --font-chrome: var(--font-geist-sans), sans-serif;
+  --font-display: var(--font-outfit), sans-serif;
+  --font-mech: var(--font-geist-mono), monospace;
 }
 
 body {
@@ -85,12 +86,30 @@ body {
   background: var(--scrim);
 }
 
-/* Texte narratif (segments, resume) : Spectral, interligne genereux —
-   on lit ces fiches longtemps (specs/coquille-et-design.md §2). */
+/* Texte narratif (segments, resume) : interligne genereux — on lit ces
+   fiches longtemps (specs/coquille-et-design.md §2). */
 .prose-narrative {
   font-family: var(--font-narrative);
   font-size: 15px;
   line-height: 1.7;
+  color: var(--ink);
+}
+
+/*
+ * Hierarchie de titres, reprise de l'ancienne application (master) :
+ * titre de fiche (.entity-title) > titre de bloc (.block-title).
+ */
+.entity-title {
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.block-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
   color: var(--ink);
 }
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import BlockShell from "@/components/blocks/BlockShell";
 import SegmentsEditor from "@/components/entities/SegmentsEditor";
 import Dropdown from "@/components/shared/Dropdown";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
@@ -20,6 +19,7 @@ export default function NewEntityForm({ worldId, worldSlug }: { worldId: string;
   const [state, formAction, pending] = useActionState(createEntityAction, initialState);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [entityKind, setEntityKind] = useState<string>("other");
+  const [name, setName] = useState("");
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -28,28 +28,24 @@ export default function NewEntityForm({ worldId, worldSlug }: { worldId: string;
       <input type="hidden" name="entityKind" value={entityKind} />
       <input type="hidden" name="narrativeContent" value={JSON.stringify(segments)} />
 
-      <h1 className="font-narrative text-xl font-semibold text-accent">Nouvelle entité</h1>
+      <input
+        name="name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Nouvelle entité"
+        required
+        maxLength={200}
+        className="entity-title bg-transparent outline-none placeholder:text-ink-muted focus:border-b focus:border-accent"
+      />
 
-      <label className="flex flex-col gap-1 text-sm">
-        Nom
-        <input
-          name="name"
-          type="text"
-          required
-          maxLength={200}
-          className="rounded-md border border-edge bg-transparent px-3 py-2"
-        />
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm">
-        Type
+      <div className="inline-flex w-fit items-center rounded-md border border-edge bg-panel-sunken px-1">
         <Dropdown
           value={entityKind}
           options={ENTITY_KIND_DROPDOWN_OPTIONS}
           onChange={setEntityKind}
-          className="rounded-md border border-edge bg-transparent px-3 py-2 text-left text-sm text-ink"
+          className="bg-transparent px-2 py-1 text-xs font-medium text-ink"
         />
-      </label>
+      </div>
 
       <label className="flex flex-col gap-1 text-sm">
         Résumé
@@ -71,9 +67,10 @@ export default function NewEntityForm({ worldId, worldSlug }: { worldId: string;
         <input name="tags" type="text" className="rounded-md border border-edge bg-transparent px-3 py-2" />
       </label>
 
-      <BlockShell title="Contenu narratif">
+      <div className="border-t border-edge pt-3">
+        <h2 className="block-title mb-2">Contenu narratif</h2>
         <SegmentsEditor segments={segments} onChange={setSegments} />
-      </BlockShell>
+      </div>
 
       {state?.error && <p className="text-sm text-danger">{state.error}</p>}
 

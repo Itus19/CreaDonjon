@@ -1,27 +1,27 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Inter, Spectral } from "next/font/google";
+import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import { cookies } from "next/headers";
 import ModeSwitcher from "@/components/shell/ModeSwitcher";
 import "./globals.css";
 
 // Trois familles chargees localement (auto-hebergees a la build par
 // next/font, aucune requete a un CDN tiers au chargement de la page —
-// specs/coquille-et-design.md §2, critere V0-03b).
-const spectral = Spectral({
-  variable: "--font-spectral",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const inter = Inter({
-  variable: "--font-inter",
+// specs/coquille-et-design.md §2, critere V0-03b). Memes polices que
+// l'ancienne application (master) : Geist Sans pour le texte courant,
+// Outfit pour les titres, Geist Mono pour les valeurs mecaniques.
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -46,7 +46,7 @@ export default async function RootLayout({
       lang="fr"
       data-mode={mode}
       data-contrast={contrast}
-      className={`${spectral.variable} ${inter.variable} ${plexMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${outfit.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <div

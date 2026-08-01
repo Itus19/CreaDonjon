@@ -282,10 +282,10 @@ La mécanique (V0-04) est faite ; l'esthétique des contrôles ne l'est pas enco
 
 **Critères d'acceptation**
 - [x] Aucun `<select>` natif visible dans la fiche ; remplacés par un composant cohérent avec les jetons de `tokens.css`.
-- [x] Les contrôles d'édition d'un bloc (visibilité, réordonnancement, suppression) n'apparaissent qu'au survol ou au focus, pas en permanence.
+- [x] ~~Les contrôles d'édition d'un bloc (visibilité, réordonnancement, suppression) n'apparaissent qu'au survol ou au focus, pas en permanence.~~ **Inversé par V0-06d** : l'ancienne application (`master`) les garde toujours visibles, sans dégradé au survol — voir la note de ce ticket.
 - [x] Aucune régression sur les critères d'acceptation déjà passés de V0-03b et V0-04.
 
-**Livré** : `components/shared/Dropdown.tsx` (portail, positionnement adaptatif, fermeture au clic extérieur — repris de `master`, adapté aux jetons de `tokens.css`), branché partout où un `<select>` existait (type d'entité, visibilité des segments/blocs/relations, type de relation, entité cible). Contrôles de bloc repliés dans `group-hover`/`group-focus-within` (label de renommage volontairement toujours visible — ce n'est pas un « contrôle d'édition » au sens du critère). Bouton persistant « + Nouvelle entité » déplacé en bas de la barre latérale (bordure du haut, pleine largeur), comme dans l'ancienne application ; le lien redondant de la page d'accueil du monde a été retiré (l'état vide garde son propre bouton, critère V0-03b préservé).
+**Livré** : `components/shared/Dropdown.tsx` (portail, positionnement adaptatif, fermeture au clic extérieur — repris de `master`, adapté aux jetons de `tokens.css`), branché partout où un `<select>` existait (type d'entité, visibilité des segments/blocs/relations, type de relation, entité cible). Contrôles de bloc repliés dans `group-hover`/`group-focus-within` (label de renommage volontairement toujours visible — ce n'est pas un « contrôle d'édition » au sens du critère). Bouton persistant « + Nouvelle entité » déplacé en bas de la barre latérale (bordure du haut, pleine largeur), comme dans l'ancienne application ; le lien redondant de la page d'accueil du monde a été retiré (l'état vide garde son propre bouton, critère V0-03b préservé). **Le hover-gating des contrôles de bloc a ensuite été retiré par V0-06d**, à la demande explicite de l'utilisateur de coller au comportement de `master` (contrôles toujours visibles).
 
 ---
 
@@ -311,6 +311,29 @@ La mécanique (V0-04) est faite ; l'esthétique des contrôles ne l'est pas enco
 **Livré** : `components/shell/{DesktopContext,DesktopWindows,WindowFrame,RegisterPrimaryWindow,useOpenEntityLink}.tsx`, `src/server/services/entityWindow.ts` (logique partagée entre la page SSR et la route API des fenêtres secondaires), `app/api/worlds/[worldSlug]/entities/[entitySlug]/window/route.ts`. `<WindowFrame>` est repris quasi tel quel de `master` (glisser, redimensionner, agrandir/restaurer, aimantation aux bords), adapté aux jetons de `tokens.css`. Position/taille utilisent le motif React officiel d'ajustement d'état pendant le rendu plutôt qu'un `useEffect` avec `setState` synchrone en tête de corps.
 
 **Piège trouvé en testant** : `<Sidebar>` (donc `<EntityTree>`/`<CommandPalette>`) était rendu comme frère de `<DesktopWindows>` dans `AppShell`, hors de son `DesktopContext.Provider` — `useDesktop()` y renvoyait toujours `null`, et les clics dans la barre latérale retombaient silencieusement sur une navigation classique au lieu d'ouvrir une fenêtre. Corrigé en passant `sidebar` en prop à `<DesktopWindows>`, qui le rend désormais à l'intérieur de son propre Provider.
+
+---
+
+## V0-06d — Fidélité structurelle de la fiche à l'ancienne application · `M`
+
+Après V0-06c, retour utilisateur : l'esthétique se rapproche de `master` mais la **construction** de la fiche et de ses blocs restait celle, plus verbeuse, de V0-04/V0-06b (titre séparé du champ, blocs encadrés, boutons « Enregistrer » explicites, contrôles cachés au survol). Ce ticket reprend la structure exacte de `master` (`EntityDetail.tsx`) : titre éditable en place, type en pastille compacte, blocs discrets (pas d'encadré) toujours modifiables, sauvegarde automatique au blur/changement sans bouton dédié.
+
+**Livrables**
+- Polices exactes de `master` : `Geist Sans` (`--font-chrome`/`--font-narrative`), `Geist Mono` (`--font-mech`), `Outfit` (`--font-display`, nouveau rôle), via `next/font/google`.
+- `.entity-title`/`.block-title` dans `globals.css`, repris de `master` (Outfit, 800/700).
+- `EditEntityForm.tsx` : titre = `<input>` unique stylé `.entity-title`, plus de bouton « Enregistrer » — chaque champ sauvegarde au blur ou au changement (`save(overrides?)`).
+- `EntityBlocks.tsx` : blocs à plat (`border-b`, pas de carte), titre de bloc éditable en place, tous les contrôles (visibilité, réordonnancement, suppression) **toujours visibles** — plus de hover-gating (voir note V0-06b ci-dessus).
+- `SegmentsEditor.tsx` : même retrait du hover-gating, `onBlur` ajouté pour la sauvegarde automatique du contenu narratif.
+
+**Critères d'acceptation**
+- [x] Modifier le titre, le type, les alias, le résumé, les tags ou un segment puis quitter le champ persiste la modification côté serveur (vérifié par rechargement réel, pas seulement par l'état client).
+- [x] Modifier le titre, le type ou la visibilité d'un bloc persiste de la même façon, y compris quand deux modifications successives touchent la même ressource à quelques millisecondes d'intervalle.
+- [x] Aucun bouton « Enregistrer » visible ; aucun contrôle de bloc caché derrière un survol.
+- [x] `typecheck`, `lint`, `test` (174 tests) passent ; `next build` propre après arrêt du serveur de dev.
+
+**Piège trouvé en testant** : modifier le titre d'un bloc puis changer immédiatement sa visibilité déclenchait deux `PATCH /api/blocks/:id` quasi simultanés (un déclenché par le blur du titre vers le menu de visibilité — rendu en portail, donc hors du `<div>` du bloc —, un par le `onChange` du menu lui-même). Le second envoyait une version déjà périmée : 409 silencieux, changement de visibilité perdu sans message utile. Corrigé par sérialisation par bloc (chaîne de promesses + version suivie dans une ref, `EntityBlocks.tsx`) et le même correctif appliqué par précaution à `EditEntityForm.tsx` (même schéma de sauvegarde automatique multi-déclencheurs sur une ressource versionnée unique).
+
+**Non fait, assumé** : le point coloré par type d'entité (nécessiterait des couleurs HSL hors `tokens.css`, contraire au critère V0-03b), le glisser-déposer réel pour réordonner les blocs (gardé ▲/▼), le tiroir JSON de debug de `master`, et la reprise complète de la palette hexadécimale exacte de `master` (explorée, un vrai conflit de contraste 7:1 trouvé sur les modes clairs, mais écartée pour prioriser cette fidélité structurelle).
 
 ---
 
