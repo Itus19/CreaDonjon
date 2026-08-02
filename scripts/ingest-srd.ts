@@ -5,9 +5,10 @@
 // Lancement : npm run ingest:srd
 //
 // Le contournement du verrou is_official_base est explicite et localise
-// dans les fonctions Postgres app.import_upsert_ruleset /
-// app.import_srd_entries (migration 20260730180001) : ce script ne fait
-// jamais de set_config lui-meme, il appelle des RPC qui l'encapsulent.
+// dans les fonctions Postgres app.import_upsert_ruleset / app.import_srd_entries
+// (migration 20260730180001) et app.import_prune_stale_entries (migration
+// 20260802100001) : ce script ne fait jamais de set_config lui-meme, il
+// appelle des RPC qui l'encapsulent.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -17,6 +18,15 @@ import {
   type EntryType,
   validateBlockData,
 } from "../src/core/schemas/rule-blocks";
+import { parseFormula } from "../src/core/formula";
+
+interface ConversionFailure {
+  rulesetFile: string;
+  category: string;
+  entryKey: string;
+  entryName: string;
+  message: string;
+}
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -179,6 +189,77 @@ function extractProse(entry: SrdRecord): string | null {
   return null;
 }
 
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+interface FeatureDedup {
+  /** entry_key original (specifique a une classe) -> entry_key canonique. Identite si l'entree n'a pas de doublon. */
+  canonicalKeyByOriginalKey: Map<string, string>;
+  /** Une entree brute par groupe canonique, index reecrit sur la cle canonique. */
+  canonicalEntries: SrdRecord[];
+}
+
+/**
+ * La categorie Features du SRD modelise chaque aptitude generique une fois
+ * par classe et par niveau : "Ability Score Improvement" apparait ainsi 63
+ * fois (2014 seul), texte strictement identique, seul l'index differe
+ * (barbarian-ability-score-improvement-1, fighter-..., etc). Ce n'est pas une
+ * erreur d'import, c'est la structure meme de la donnee source — mais le
+ * wiki ne doit afficher qu'une seule fiche pour un seul mecanisme.
+ *
+ * Le regroupement se fait sur (nom, texte) strictement identiques, jamais
+ * sur le nom seul : "Divine Domain feature" apparait aussi plusieurs fois
+ * mais avec un contenu reellement distinct par classe (ou par palier) — ce
+ * n'est pas un doublon, et cette regle le laisse intact (groupe a un seul
+ * membre, cle inchangee).
+ */
+function dedupeFeatures(items: SrdRecord[]): FeatureDedup {
+  const groups = new Map<string, SrdRecord[]>();
+  for (const item of items) {
+    const name = String(item.name ?? "");
+    const prose = extractProse(item) ?? "";
+    const groupKey = `${name}::${prose}`;
+    const group = groups.get(groupKey);
+    if (group) group.push(item);
+    else groups.set(groupKey, [item]);
+  }
+
+  const canonicalKeyByOriginalKey = new Map<string, string>();
+  const canonicalEntries: SrdRecord[] = [];
+  const usedKeys = new Set(items.map((item) => String(item.index)));
+
+  for (const groupItems of groups.values()) {
+    const representative = groupItems[0];
+    const originalKey = String(representative.index);
+
+    if (groupItems.length === 1) {
+      canonicalKeyByOriginalKey.set(originalKey, originalKey);
+      canonicalEntries.push(representative);
+      continue;
+    }
+
+    const baseSlug = slugify(String(representative.name ?? originalKey));
+    let canonicalKey = baseSlug;
+    let suffix = 2;
+    while (usedKeys.has(canonicalKey)) {
+      canonicalKey = `${baseSlug}-${suffix++}`;
+    }
+    usedKeys.add(canonicalKey);
+    for (const item of groupItems) {
+      canonicalKeyByOriginalKey.set(String(item.index), canonicalKey);
+    }
+    canonicalEntries.push({ ...representative, index: canonicalKey });
+  }
+
+  return { canonicalKeyByOriginalKey, canonicalEntries };
+}
+
 function descriptionBlock(text: string): EntryBlock {
   const data = { segments: [{ text }] };
   validateBlockData("description", data);
@@ -210,6 +291,20 @@ function customTableBlock(entry: SrdRecord): EntryBlock {
   };
 }
 
+/**
+ * Parse une notation de des SRD ("8d6", "3d4 + 3"...) en FormulaNode. Le SRD
+ * contient parfois du texte libre a cette place (rare) ; un echec de parsing
+ * n'est pas fatal, l'effet reste alors sans formule plutot que de faire
+ * echouer toute l'entree — c'est a l'appelant de le consigner.
+ */
+function tryParseDiceFormula(text: string) {
+  try {
+    return parseFormula(text);
+  } catch {
+    return undefined;
+  }
+}
+
 function spellBlocks(entry: SrdRecord): EntryBlock[] {
   const blocks: EntryBlock[] = [];
 
@@ -235,11 +330,26 @@ function spellBlocks(entry: SrdRecord): EntryBlock[] {
   const damage = entry.damage as SrdRecord | undefined;
   if (damage) {
     const damageType = (damage.damage_type as SrdRecord | undefined)?.name;
+
+    // Deux formes de montee en puissance existent dans le SRD, mutuellement
+    // exclusives : les sorts avec emplacement (damage_at_slot_level, indexee
+    // par niveau d'emplacement, palier de base = niveau du sort) et les tours
+    // de magie (damage_at_character_level, indexee par niveau de personnage,
+    // palier de base = niveau 1). Avant cette version, seule la premiere
+    // etait lue : un tour de magie comme Fire Bolt n'avait donc aucune
+    // progression du tout.
+    const slotLevels = damage.damage_at_slot_level as Record<string, string> | undefined;
+    const charLevels = damage.damage_at_character_level as Record<string, string> | undefined;
+
+    const baseLevelKey = slotLevels ? String(entry.level ?? 0) : "1";
+    const baseFormulaText = slotLevels?.[baseLevelKey] ?? charLevels?.[baseLevelKey];
+
     const effectsData = {
       effects: [
         {
           id: "e1",
           damage_type: typeof damageType === "string" ? damageType : undefined,
+          formula: baseFormulaText ? tryParseDiceFormula(baseFormulaText) : undefined,
         },
       ],
     };
@@ -251,13 +361,26 @@ function spellBlocks(entry: SrdRecord): EntryBlock[] {
       display_order: 300,
     });
 
-    const slotLevels = damage.damage_at_slot_level as Record<string, string> | undefined;
     if (slotLevels && Object.keys(slotLevels).length > 0) {
       const scalingData = {
         axis: "slot_level" as const,
         base: Number(entry.level ?? 0),
         rule: null,
         table: slotLevels,
+      };
+      validateBlockData("scaling", scalingData);
+      blocks.push({
+        block_type: "scaling",
+        display: { label: "Montee en puissance", layout: "progression_table" },
+        data: scalingData,
+        display_order: 400,
+      });
+    } else if (charLevels && Object.keys(charLevels).length > 0) {
+      const scalingData = {
+        axis: "character_level" as const,
+        base: 1,
+        rule: null,
+        table: charLevels,
       };
       validateBlockData("scaling", scalingData);
       blocks.push({
@@ -273,7 +396,11 @@ function spellBlocks(entry: SrdRecord): EntryBlock[] {
 }
 
 /** Table de progression generique a partir de Levels (§7 de regles-blocs.md), colonnes derivees des cles rencontrees plutot que codees en dur par classe. */
-function classProgressionBlock(classIndex: string, levels: SrdRecord[]): EntryBlock {
+function classProgressionBlock(
+  classIndex: string,
+  levels: SrdRecord[],
+  remapFeatureKey: Map<string, string>
+): EntryBlock {
   const ownLevels = levels
     .filter((l) => (l.class as SrdRecord | undefined)?.index === classIndex)
     .sort((a, b) => Number(a.level) - Number(b.level));
@@ -310,7 +437,10 @@ function classProgressionBlock(classIndex: string, levels: SrdRecord[]): EntryBl
       level: lvl.level,
       prof_bonus: lvl.prof_bonus,
       features: Array.isArray(lvl.features)
-        ? (lvl.features as SrdRecord[]).map((f) => ({ feature: f.index }))
+        ? (lvl.features as SrdRecord[]).map((f) => {
+            const key = String(f.index);
+            return { feature: remapFeatureKey.get(key) ?? key };
+          })
         : [],
     };
     const classSpecific = (lvl.class_specific as SrdRecord | undefined) ?? {};
@@ -380,7 +510,8 @@ function transformEntry(
   category: string,
   entry: SrdRecord,
   sourceAttribution: string,
-  levelsByCategory: SrdRecord[] | undefined
+  levelsByCategory: SrdRecord[] | undefined,
+  remapFeatureKey: Map<string, string>
 ): TransformedEntry {
   const entryType: EntryType = category === "Equipment" ? equipmentEntryType(entry) : CATEGORY_ENTRY_TYPE[category];
 
@@ -412,7 +543,7 @@ function transformEntry(
   }
 
   if (entryType === "class" && levelsByCategory) {
-    blocks.push(classProgressionBlock(String(entry.index), levelsByCategory));
+    blocks.push(classProgressionBlock(String(entry.index), levelsByCategory, remapFeatureKey));
   }
 
   blocks.push(customTableBlock(entry));
@@ -439,7 +570,13 @@ function readSrdFile(file: string): Record<string, SrdRecord[]> {
   return JSON.parse(readFileSync(filePath, "utf-8")) as Record<string, SrdRecord[]>;
 }
 
-async function importSrdVersion(config: SrdVersionConfig): Promise<Record<EntryType, number>> {
+interface ImportResult {
+  counts: Record<EntryType, number>;
+  blocksTotal: number;
+  failures: ConversionFailure[];
+}
+
+async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult> {
   const ownData = readSrdFile(config.file);
   const raw = config.mergeWithBaseFile
     ? buildMergedDataset(readSrdFile(config.mergeWithBaseFile), ownData)
@@ -453,6 +590,23 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<Record<EntryT
 
   const levels = raw["Levels"];
   const counts: Partial<Record<EntryType, number>> = {};
+  const failures: ConversionFailure[] = [];
+  let blocksTotal = 0;
+
+  // Regroupe en amont les aptitudes generiques identiques (V1-A2) : le
+  // remap doit exister avant de traiter la categorie Classes, quel que soit
+  // l'ordre d'iteration des categories dans le fichier source.
+  const featureItems = raw["Features"];
+  const featureDedup = Array.isArray(featureItems) ? dedupeFeatures(featureItems) : undefined;
+  if (featureDedup) {
+    const dedupedCount = featureItems!.length - featureDedup.canonicalEntries.length;
+    if (dedupedCount > 0) {
+      console.log(
+        `  aptitudes generiques : ${featureItems!.length} entrees -> ${featureDedup.canonicalEntries.length} fiches (${dedupedCount} doublons fusionnes)`
+      );
+    }
+  }
+  const remapFeatureKey = featureDedup?.canonicalKeyByOriginalKey ?? new Map<string, string>();
 
   // Deux passes : la premiere transforme tout et desambiguise les
   // collisions d'entry_key entre categories (le SRD a par exemple a la
@@ -469,9 +623,24 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<Record<EntryT
     const isMapped = category === "Equipment" || category in CATEGORY_ENTRY_TYPE;
     if (!isMapped) continue;
 
-    const transformed = items.map((item) =>
-      transformEntry(category, item, config.sourceAttribution, levels)
-    );
+    const sourceItems = category === "Features" && featureDedup ? featureDedup.canonicalEntries : items;
+
+    const transformed: TransformedEntry[] = [];
+    for (const item of sourceItems) {
+      try {
+        const t = transformEntry(category, item, config.sourceAttribution, levels, remapFeatureKey);
+        transformed.push(t);
+        blocksTotal += t.blocks.length;
+      } catch (err) {
+        failures.push({
+          rulesetFile: config.file,
+          category,
+          entryKey: String(item.index ?? "?"),
+          entryName: String(item.name ?? "?"),
+          message: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
 
     for (const t of transformed) {
       if (seenKeys.has(t.entry_key)) {
@@ -489,6 +658,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<Record<EntryT
   }
 
   for (const { category, entries } of byCategory) {
+    if (entries.length === 0) continue;
     const { error } = await supabase.rpc("import_srd_entries", {
       p_ruleset_id: rulesetId,
       p_entries: entries,
@@ -498,20 +668,48 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<Record<EntryT
     }
   }
 
-  return counts as Record<EntryType, number>;
+  // Purge les entry_key qui n'existent plus dans ce jeu de donnees (ex :
+  // les anciennes variantes par classe d'une aptitude generique, fusionnees
+  // par dedupeFeatures) — sans ca, rejouer l'import laisserait des fiches
+  // mortes en base indefiniment (blocs et traductions cascadent avec elles).
+  const { data: prunedCount, error: pruneError } = await supabase.rpc("import_prune_stale_entries", {
+    p_ruleset_id: rulesetId,
+    p_valid_keys: [...seenKeys],
+  });
+  if (pruneError) throw new Error(`import_prune_stale_entries (${config.file}) : ${pruneError.message}`);
+  if (typeof prunedCount === "number" && prunedCount > 0) {
+    console.log(`  fiches obsoletes retirees : ${prunedCount}`);
+  }
+
+  return { counts: counts as Record<EntryType, number>, blocksTotal, failures };
 }
 
 async function main() {
   console.log("Import SRD — aucune donnee hors data/srd/srd-2014.json / data/srd/srd-2024.json n'est consultee.\n");
 
+  const allFailures: ConversionFailure[] = [];
+
   for (const config of SRD_VERSIONS) {
     console.log(`--- ${config.rulesetName} ---`);
-    const counts = await importSrdVersion(config);
+    const { counts, blocksTotal, failures } = await importSrdVersion(config);
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
     for (const [entryType, count] of Object.entries(counts).sort()) {
       console.log(`  ${entryType.padEnd(12)} ${count}`);
     }
-    console.log(`  ${"total".padEnd(12)} ${total}\n`);
+    console.log(`  ${"total".padEnd(12)} ${total}`);
+    console.log(`  ${"blocs".padEnd(12)} ${blocksTotal}`);
+    console.log(`  ${"echecs".padEnd(12)} ${failures.length}\n`);
+    allFailures.push(...failures);
+  }
+
+  if (allFailures.length > 0) {
+    console.log(`--- Echecs de conversion (${allFailures.length}) ---`);
+    for (const f of allFailures) {
+      console.log(`  [${f.rulesetFile}] ${f.category}/${f.entryKey} ("${f.entryName}") : ${f.message}`);
+    }
+    process.exitCode = 1;
+  } else {
+    console.log("Aucun echec de conversion.");
   }
 }
 

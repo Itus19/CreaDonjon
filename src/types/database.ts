@@ -1590,6 +1590,10 @@ export type Database = {
     }
     Functions: {
       delete_own_account: { Args: never; Returns: undefined }
+      import_prune_stale_entries: {
+        Args: { p_ruleset_id: string; p_valid_keys: string[] }
+        Returns: number
+      }
       import_srd_entries: {
         Args: { p_entries: Json; p_ruleset_id: string }
         Returns: number
