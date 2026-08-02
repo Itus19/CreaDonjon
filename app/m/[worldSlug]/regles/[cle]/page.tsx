@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getRuleEntryPageData } from "@/src/server/services/rules";
+import type { Locale } from "@/src/i18n/request";
 import RuleBlockRenderer from "@/components/rules/RuleBlockRenderer";
 import MissingBlocksBanner from "@/components/rules/MissingBlocksBanner";
 
@@ -12,7 +13,8 @@ export default async function RuleEntryPage({
 }) {
   const { worldSlug, cle } = await params;
   const supabase = await createClient();
-  const entry = await getRuleEntryPageData(supabase, worldSlug, cle);
+  const locale = (await getLocale()) as Locale;
+  const entry = await getRuleEntryPageData(supabase, worldSlug, cle, locale);
   if (!entry) notFound();
 
   const t = await getTranslations("regles");

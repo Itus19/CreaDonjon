@@ -1,6 +1,7 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { listRuleEntriesForWorld } from "@/src/server/services/rules";
+import type { Locale } from "@/src/i18n/request";
 
 export default async function ReglesHomePage({
   params,
@@ -9,7 +10,8 @@ export default async function ReglesHomePage({
 }) {
   const { worldSlug } = await params;
   const supabase = await createClient();
-  const entries = await listRuleEntriesForWorld(supabase, worldSlug);
+  const locale = (await getLocale()) as Locale;
+  const entries = await listRuleEntriesForWorld(supabase, worldSlug, locale);
   const t = await getTranslations("regles");
 
   if (!entries || entries.length === 0) {

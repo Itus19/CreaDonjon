@@ -14,14 +14,17 @@ import { generateScalingTable, resolveScalingTarget } from "@/src/core/rules/sca
 import { computeProgressionRows } from "@/src/core/rules/progression";
 import { missingRequiredBlocks } from "@/src/core/rules/requiredBlocks";
 import {
+  getEntryTranslation,
   getRulesetById,
   getRulesetEntryByKey,
   listBlocksForRulesetEntry,
   listRulesetEntries,
+  listTranslationsForEntries,
   type RulesetEntryRow,
 } from "@/src/server/repos/rules";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { getWorldBySlug } from "@/src/server/services/worlds";
+import type { Locale } from "@/src/i18n/request";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -93,13 +96,18 @@ function entryNameFrom(entry: { entry_key: string; source_raw: unknown }): strin
 export async function getRuleEntryForWorld(
   supabase: TypedClient,
   worldId: string,
-  entryKey: string
+  entryKey: string,
+  locale: Locale
 ): Promise<RuleEntryDetail | null> {
   const rulesetId = await getWorldDefaultRulesetId(supabase, worldId);
   if (!rulesetId) return null;
 
   const entry = await findEntryInRulesetChain(supabase, rulesetId, entryKey);
   if (!entry) return null;
+
+  // L'anglais est deja la langue source (source_raw.name) : aucune
+  // recherche de traduction n'est necessaire pour cette locale.
+  const translation = locale !== "en" ? await getEntryTranslation(supabase, entry.id, locale) : null;
 
   const blockRows = await listBlocksForRulesetEntry(supabase, entry.id);
 
@@ -149,7 +157,7 @@ export async function getRuleEntryForWorld(
     id: entry.id,
     entryKey: entry.entry_key,
     entryType: entry.entry_type as EntryType,
-    name: entryNameFrom(entry),
+    name: translation?.name ?? entryNameFrom(entry),
     sourceAttribution: entry.source_attribution,
     blocks,
     missingBlocks: missingRequiredBlocks(
@@ -175,16 +183,22 @@ export interface RuleEntrySummary {
  */
 async function listEntriesInRulesetChain(
   supabase: TypedClient,
-  rulesetId: string
+  rulesetId: string,
+  locale: Locale
 ): Promise<RuleEntrySummary[]> {
   let currentId: string | null = rulesetId;
   for (let hop = 0; currentId && hop < MAX_RULESET_CHAIN_DEPTH; hop++) {
     const entries = await listRulesetEntries(supabase, currentId);
     if (entries.length > 0) {
+      const translationByEntryId = new Map<string, string>();
+      if (locale !== "en") {
+        const translations = await listTranslationsForEntries(supabase, entries.map((e) => e.id), locale);
+        for (const t of translations) translationByEntryId.set(t.entry_id, t.name);
+      }
       return entries.map((e) => ({
         key: e.entry_key,
         entryType: e.entry_type as EntryType,
-        name: entryNameFrom(e),
+        name: translationByEntryId.get(e.id) ?? entryNameFrom(e),
       }));
     }
     const ruleset = await getRulesetById(supabase, currentId);
@@ -196,22 +210,24 @@ async function listEntriesInRulesetChain(
 /** Barre laterale de l'onglet Regles : `null` si le monde est introuvable, liste vide si aucun ruleset n'est assigne. */
 export async function listRuleEntriesForWorld(
   supabase: TypedClient,
-  worldSlug: string
+  worldSlug: string,
+  locale: Locale
 ): Promise<RuleEntrySummary[] | null> {
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) return null;
   const rulesetId = await getWorldDefaultRulesetId(supabase, world.id);
   if (!rulesetId) return [];
-  return listEntriesInRulesetChain(supabase, rulesetId);
+  return listEntriesInRulesetChain(supabase, rulesetId, locale);
 }
 
 /** Composition pour la route `/m/[worldSlug]/regles/[cle]` : `null` si le monde ou la regle sont introuvables — la page traduit ça en 404. */
 export async function getRuleEntryPageData(
   supabase: TypedClient,
   worldSlug: string,
-  entryKey: string
+  entryKey: string,
+  locale: Locale
 ): Promise<RuleEntryDetail | null> {
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) return null;
-  return getRuleEntryForWorld(supabase, world.id, entryKey);
+  return getRuleEntryForWorld(supabase, world.id, entryKey, locale);
 }

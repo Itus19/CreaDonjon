@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { listRuleEntriesForWorld } from "@/src/server/services/rules";
+import type { Locale } from "@/src/i18n/request";
 import RulesSidebar from "@/components/rules/RulesSidebar";
 import Panel from "@/components/shell/Panel";
 
@@ -13,7 +15,8 @@ export default async function ReglesLayout({
 }) {
   const { worldSlug } = await params;
   const supabase = await createClient();
-  const entries = await listRuleEntriesForWorld(supabase, worldSlug);
+  const locale = (await getLocale()) as Locale;
+  const entries = await listRuleEntriesForWorld(supabase, worldSlug, locale);
   if (entries === null) notFound();
 
   return (

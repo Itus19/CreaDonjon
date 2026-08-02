@@ -52,6 +52,7 @@ export async function getRulesetEntryByKey(
 }
 
 export interface RulesetEntrySummaryRow {
+  id: string;
   entry_key: string;
   entry_type: string;
   source_raw: Json;
@@ -76,7 +77,7 @@ export async function listRulesetEntries(
   for (let from = 0; ; from += LIST_PAGE_SIZE) {
     const { data, error } = await supabase
       .from("ruleset_entries")
-      .select("entry_key, entry_type, source_raw")
+      .select("id, entry_key, entry_type, source_raw")
       .eq("ruleset_id", rulesetId)
       .range(from, from + LIST_PAGE_SIZE - 1);
     if (error) throw new Error(error.message);
@@ -84,6 +85,63 @@ export async function listRulesetEntries(
     if (data.length < LIST_PAGE_SIZE) break;
   }
   return all;
+}
+
+export interface EntryTranslationRow {
+  entry_id: string;
+  locale: string;
+  name: string;
+  source: string;
+}
+
+/** Traduction d'une seule entree (fiche de regle) : `null` si aucune traduction n'existe pour cette locale — l'appelant retombe sur le nom source (anglais). */
+export async function getEntryTranslation(
+  supabase: TypedClient,
+  entryId: string,
+  locale: string
+): Promise<EntryTranslationRow | null> {
+  const { data, error } = await supabase
+    .from("ruleset_entry_translations")
+    .select("entry_id, locale, name, source")
+    .eq("entry_id", entryId)
+    .eq("locale", locale)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+const TRANSLATION_BATCH_SIZE = 500;
+
+/** Toutes les traductions disponibles pour un ensemble d'entrees (barre laterale) : pagine l'IN, meme raison que listRulesetEntries. */
+export async function listTranslationsForEntries(
+  supabase: TypedClient,
+  entryIds: string[],
+  locale: string
+): Promise<EntryTranslationRow[]> {
+  const all: EntryTranslationRow[] = [];
+  for (let i = 0; i < entryIds.length; i += TRANSLATION_BATCH_SIZE) {
+    const batch = entryIds.slice(i, i + TRANSLATION_BATCH_SIZE);
+    const { data, error } = await supabase
+      .from("ruleset_entry_translations")
+      .select("entry_id, locale, name, source")
+      .eq("locale", locale)
+      .in("entry_id", batch);
+    if (error) throw new Error(error.message);
+    all.push(...data);
+  }
+  return all;
+}
+
+/** Ecriture en lot (script de traduction) : une ligne par (entry_id, locale), jamais deux appels distincts pour la meme cle (primary key composite, upsert). */
+export async function upsertEntryTranslations(
+  supabase: TypedClient,
+  rows: { entryId: string; locale: string; name: string; source: string }[]
+): Promise<void> {
+  const { error } = await supabase.from("ruleset_entry_translations").upsert(
+    rows.map((r) => ({ entry_id: r.entryId, locale: r.locale, name: r.name, source: r.source })),
+    { onConflict: "entry_id,locale" }
+  );
+  if (error) throw new Error(error.message);
 }
 
 export interface RulesetEntryBlockRow {
