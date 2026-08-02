@@ -14,7 +14,8 @@
     "test:coverage": "vitest run --coverage",
     "ingest:srd": "tsx --env-file=.env.local scripts/ingest-srd.ts",
     "seed:dev": "tsx --env-file=.env.local scripts/seed-dev.ts",
-    "translate:srd-official": "tsx --env-file=.env.local scripts/translate-srd-official.ts"
+    "translate:srd-official": "tsx --env-file=.env.local scripts/translate-srd-official.ts",
+    "translate:entries": "tsx --env-file=.env.local scripts/translate-entries.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
