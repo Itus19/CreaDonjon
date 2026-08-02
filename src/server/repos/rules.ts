@@ -110,7 +110,10 @@ export async function getEntryTranslation(
   return data;
 }
 
-const TRANSLATION_BATCH_SIZE = 500;
+// 500 UUID dans un .in() depasse la limite d'en-tetes HTTP par defaut de
+// undici (16 Ko) : constate en production (HeadersOverflowError, URL de
+// 19627 caracteres). 200 est confirme sur : marge large avant la limite.
+const TRANSLATION_BATCH_SIZE = 200;
 
 /** Toutes les traductions disponibles pour un ensemble d'entrees (barre laterale) : pagine l'IN, meme raison que listRulesetEntries. */
 export async function listTranslationsForEntries(
