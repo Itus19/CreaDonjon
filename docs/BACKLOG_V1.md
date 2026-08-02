@@ -34,10 +34,12 @@ Cette clé contourne **toute** la RLS. La seule chose qui empêche une fuite est
 
 Ce n'est pas à réécrire. C'est à **doter du filet manquant** :
 
-- [ ] Un test d'intégration qui crée un monde avec un bloc `public` et un bloc `gm`, génère un lien, appelle la route publique, et vérifie que la chaîne du bloc `gm` est **absente de la réponse HTTP brute** — pas de l'écran, de la réponse.
-- [ ] Le même test pour un segment `gm` à l'intérieur d'un bloc public.
-- [ ] Le client `service_role` est confiné à `src/server/services/publicShare.ts`. Une règle ESLint interdit son import ailleurs.
-- [ ] Un commentaire en tête de `service.ts` rappelant pourquoi cette exception existe et ce qu'elle exige.
+- [x] Un test d'intégration qui crée un monde avec un bloc `public` et un bloc `gm`, génère un lien, appelle la route publique, et vérifie que la chaîne du bloc `gm` est **absente de la réponse HTTP brute** — pas de l'écran, de la réponse.
+- [x] Le même test pour un segment `gm` à l'intérieur d'un bloc public.
+- [x] Le client `service_role` est confiné à `src/server/services/publicShare.ts`. Une règle ESLint interdit son import ailleurs.
+- [x] Un commentaire en tête de `service.ts` rappelant pourquoi cette exception existe et ce qu'elle exige.
+
+**Fait** — en vérifiant, le test a trouvé un vrai bug (pas juste confirmé son absence) : `anon` n'avait jamais eu `usage on schema app`, le lien de partage ne fonctionnait jamais pour un vrai visiteur anonyme. Corrigé par migration.
 
 Sans ce test, une modification future de `getPublicEntityDetail` peut ouvrir une fuite totale sans que rien n'échoue.
 
@@ -52,26 +54,32 @@ Le code possède maintenant :
 
 Les deux se ressemblent à l'écran. La confusion est facile et coûteuse : quelqu'un — ou un agent de codage — peut un jour croire que `spoiler` protège un secret de MJ.
 
-- [ ] Le nommer explicitement dans `CLAUDE.md` : *`spoiler` est de la mise en forme, jamais de la sécurité. Un secret de MJ passe par `visibility_level`, jamais par une marque.*
-- [ ] Le rendre visible dans l'interface : les deux ne doivent pas se ressembler. Le caviardage MJ porte le liseré terracotta ; le spoiler est neutre.
+- [x] Le nommer explicitement dans `CLAUDE.md` : *`spoiler` est de la mise en forme, jamais de la sécurité. Un secret de MJ passe par `visibility_level`, jamais par une marque.*
+- [x] Le rendre visible dans l'interface : les deux ne doivent pas se ressembler. Le caviardage MJ porte le liseré terracotta ; le spoiler est neutre.
+
+**Fait** — confirmé que la distinction est garantie par les jetons de couleur eux-mêmes (`--gm` teinté terracotta, chroma ~0.11-0.13 ; caviardage en `--ink` neutre, chroma ~0.008), pas une coïncidence à surveiller.
 
 ### D-03 — Documents obsolètes à la racine · `S`
 
 `Phase0_Schema_Technique_v0_1.md` et `Project_Design_Document_v0.1.md` sont encore à la racine, alors que `docs/` contient les versions à jour. Un agent de codage qui tombe sur la v0.1 lira un schéma dont la visibilité est une chaîne encodée et dont les segments portent `text` au lieu de `content`.
 
-- [ ] Supprimer les deux fichiers de la racine (l'historique Git les conserve).
-- [ ] Vérifier que `docs/` contient bien les versions courantes de tous les documents.
-- [ ] Réconcilier `ROADMAP.md` et `docs/BACKLOG.md` : un seul des deux fait autorité.
-- [ ] Remplacer le `README.md` de `create-next-app` : installation, commandes, où trouver quoi, `NOTICE.md` d'attribution SRD.
+- [x] Supprimer les deux fichiers de la racine (l'historique Git les conserve).
+- [x] Vérifier que `docs/` contient bien les versions courantes de tous les documents.
+- [x] Réconcilier `ROADMAP.md` et `docs/BACKLOG.md` : un seul des deux fait autorité.
+- [x] Remplacer le `README.md` de `create-next-app` : installation, commandes, où trouver quoi, `NOTICE.md` d'attribution SRD.
+
+**Fait** — `ROADMAP.md` reste le tableau de bord transversal par module ; `docs/BACKLOG.md`/`docs/BACKLOG_V1.md` restent la source des tickets. Deux axes, pas deux autorités concurrentes.
 
 ### D-04 — Vérifier l'import SRD · `S`
 
 `srd-2014.json` et `srd-2024.json` sont à la racine du dépôt. Avant d'attaquer le lot A :
 
-- [ ] L'import a-t-il été exécuté et les rulesets officiels existent-ils en base ?
-- [ ] `ruleset_entries.source_raw` existe-t-il et contient-il le JSON d'origine ? (recommandé au §1 de `specs/outils-mj.md` — sans lui, tout champ non encore transformé exigera un réimport)
-- [ ] `NOTICE.md` contient-il le texte d'attribution exact des deux SRD ?
-- [ ] Déplacer les deux JSON dans `data/srd/` — ils n'ont rien à faire à la racine.
+- [x] L'import a-t-il été exécuté et les rulesets officiels existent-ils en base ?
+- [x] `ruleset_entries.source_raw` existe-t-il et contient-il le JSON d'origine ? (recommandé au §1 de `specs/outils-mj.md` — sans lui, tout champ non encore transformé exigera un réimport)
+- [x] `NOTICE.md` contient-il le texte d'attribution exact des deux SRD ?
+- [x] Déplacer les deux JSON dans `data/srd/` — ils n'ont rien à faire à la racine.
+
+**Fait** — import confirmé en base (SRD 5.1 : 1790 entrées, SRD 5.2.1 : 2195 entrées, `source_raw` peuplé sur les deux), `NOTICE.md` déjà correct.
 
 ---
 
@@ -104,11 +112,13 @@ Cinq types de blocs, pas douze. Spécification : `specs/regles-blocs.md`.
 - Routage `/m/[monde]/regles/[cle]`.
 
 **Critères**
-- [ ] Une fiche de sort affiche paramètres, effets et montée en puissance.
-- [ ] Une fiche de classe affiche sa table de progression, colonnes déclarées et lignes en données.
-- [ ] La colonne « bonus de maîtrise » est **calculée par formule**, pas saisie vingt fois.
-- [ ] Le bloc `scaling` engendre la table complète des niveaux d'emplacement à partir de sa règle — le moteur consomme la règle, l'affichage consomme la table engendrée.
-- [ ] Un `entry_type` auquel il manque un bloc requis est signalé sur la fiche, pas rejeté.
+- [x] Une fiche de sort affiche paramètres, effets et montée en puissance.
+- [x] Une fiche de classe affiche sa table de progression, colonnes déclarées et lignes en données.
+- [x] La colonne « bonus de maîtrise » est **calculée par formule**, pas saisie vingt fois.
+- [x] Le bloc `scaling` engendre la table complète des niveaux d'emplacement à partir de sa règle — le moteur consomme la règle, l'affichage consomme la table engendrée.
+- [x] Un `entry_type` auquel il manque un bloc requis est signalé sur la fiche, pas rejeté.
+
+**Fait** — vérifié dans le navigateur sur des entrées réelles (Fireball, Barbarian, Magma Mephit). La voie « colonne calculée par formule » et « scaling engendré par règle » sont testées unitairement mais pas encore exercées par une vraie donnée SRD (l'import fournit toujours des tables déjà énumérées) — le mécanisme existe et fonctionne, sans avoir encore de cas réel qui l'exige.
 
 ### V1-A2 — Conversion de l'import SRD vers les blocs · `L`
 
@@ -140,6 +150,16 @@ Le script d'import produit désormais des blocs, plus un objet plat.
 - [ ] Un ruleset publié est figé : toute édition crée `version + 1` avec le même `lineage_id`.
 - [ ] Un badge « modifiée dans ta variante » ouvre la comparaison avec l'original.
 - [ ] Les rulesets officiels restent inviolables (le trigger le prouve par un test).
+
+### V1-A5 — Finalisation de la traduction française · `M`
+
+Ajoutée en cours de route (V1-A1b) : traduction officielle des noms d'entrées du SRD vers le français, source `official_srd` (nom proposé, vérifié mot pour mot dans le texte extrait des PDF officiels CC-BY-4.0 avant écriture — jamais une correspondance non confirmée). État à l'ouverture de ce ticket : Classe/Espèce/Historique/Condition 100 %, Monstre ~84 %, Sort ~55 %, Sous-classe/Arme/Armure/Règle faites, Aptitude et Objet très partiels (catégories les plus volumineuses et répétitives).
+
+Positionnée ici, après le lot A entier plutôt qu'après A2 seul : V1-A2 change la structure des aptitudes (déduplication), V1-A3 ajoute des renvois, V1-A4 ajoute des surcharges — traduire avant que cette structure se stabilise aurait signifié refaire une partie du travail à chaque lot.
+
+- [ ] Compléter Sort et Monstre à ~100 % (le reste est vérifiable, juste pas encore fait).
+- [ ] Traduire Objet et Aptitude en tenant compte de la nouvelle structure post-V1-A2 (les aptitudes génériques dédupliquées n'ont plus qu'une seule fiche à traduire, pas une par classe).
+- [ ] Aucune traduction sans vérification mot pour mot contre `data/srd/fr-source/*.txt` — un terme non trouvé reste en anglais plutôt que d'écrire une correspondance devinée.
 
 ---
 
@@ -284,11 +304,12 @@ Et un critère technique, non négociable :
 ## 4. Ordre recommandé
 
 ```
-D-01 … D-04          dette, une session
-Lot A  (A1→A2→A3→A4) les règles deviennent consultables et personnalisables
-Lot B  (B1→B2→B3→B4) le personnage devient jouable
-Lot C  (C1→C2→C3)    plusieurs personnes, permissions réelles
-Lot D  (D1→D2→D3→D4) l'IA, instrumentée dès le premier appel
+D-01 … D-04                dette, une session
+Lot A  (A1→A2→A3→A4→A5)    les règles deviennent consultables et personnalisables,
+                            A5 (traduction FR) ferme le lot une fois la structure stable
+Lot B  (B1→B2→B3→B4)       le personnage devient jouable
+Lot C  (C1→C2→C3)          plusieurs personnes, permissions réelles
+Lot D  (D1→D2→D3→D4)       l'IA, instrumentée dès le premier appel
 ```
 
 **Ne pas paralléliser les lots.** A débloque B (une fiche de personnage a besoin des règles), B débloque C (une campagne a besoin de personnages), et D a besoin de tout le reste pour avoir quelque chose à assister.
