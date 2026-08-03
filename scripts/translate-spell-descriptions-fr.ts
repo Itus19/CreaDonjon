@@ -1,8 +1,12 @@
 // V1-A5 : traduction officielle du texte de description des sorts (pas
-// seulement leur nom). Contrairement aux noms (translate-entries.ts, simple
-// verification de sous-chaine), un paragraphe de prose ne peut pas se
-// deviner puis se verifier mot pour mot : on extrait directement le texte
-// officiel depuis le PDF CC-BY-4.0, jamais une traduction reconstruite.
+// seulement leur nom), et de leurs metadonnees d'incantation (ecole, temps
+// d'incantation, portee, composantes, duree). Contrairement aux noms
+// (translate-entries.ts, simple verification de sous-chaine), un paragraphe
+// de prose ne peut pas se deviner puis se verifier mot pour mot : on extrait
+// directement le texte officiel depuis le PDF CC-BY-4.0, jamais une
+// traduction reconstruite. Les metadonnees suivent la meme logique : elles
+// sont deja en francais juste au-dessus de la prose dans le texte source,
+// aucune raison de les laisser en anglais.
 //
 // Lancement : npm run translate:spell-descriptions
 //
@@ -11,14 +15,18 @@
 //      (data/srd/fr-source/srd-5.1-fr.txt) et detecte chaque entree par son
 //      motif fixe (nom seul sur une ligne, suivi d'une ligne "Ecole du Ne
 //      niveau" ou "Sort mineur d'Ecole", eventuellement "(rituel)").
-//   2. La prose d'une entree va de la fin de ses metadonnees (Temps
-//      d'incantation/Portee/Composantes/Duree) jusqu'au debut de l'entree
-//      suivante.
+//   2. Capture les quatre lignes de metadonnees qui suivent (Temps
+//      d'incantation/Portee/Composantes/Duree, avec suite sur plusieurs
+//      lignes geree pour Composantes), puis la prose jusqu'au debut de
+//      l'entree suivante.
 //   3. Associe chaque entree extraite a une ruleset_entries via son nom
 //      francais deja verifie (ruleset_entry_translations.name) — jamais un
 //      rapprochement suppose.
-//   4. Ecrit `blocks: { description: { segments: [{ text }] } }` sur la
-//      traduction existante (le nom reste inchange).
+//   4. Ecrit `blocks: { description: {...}, spell_casting: {...} }` sur la
+//      traduction existante (le nom reste inchange). Le service applique ces
+//      surcharges a la base AVANT resolution des surcharges de variante
+//      (V1-A4, voir getRuleEntryForWorld) : une surcharge de MJ l'emporte
+//      toujours sur le meme bloc.
 //
 // Ne couvre que le texte extrait de la SRD 5.1 : la SRD 5.2.1 n'a pas de
 // categorie Spells independante (fusionnee depuis 2014, voir ingest-srd.ts),
@@ -59,14 +67,46 @@ function isFooterNoise(line: string): boolean {
   );
 }
 
-const METADATA_LABELS = ["Temps d’incantation", "Temps d'incantation", "Portée", "Composantes", "Durée"];
-function isMetadataLine(line: string): boolean {
-  return METADATA_LABELS.some((label) => line.startsWith(label));
+const METADATA_LABELS = [
+  { key: "castingTime", labels: ["Temps d’incantation", "Temps d'incantation"] },
+  { key: "range", labels: ["Portée"] },
+  { key: "components", labels: ["Composantes"] },
+  { key: "duration", labels: ["Durée"] },
+] as const;
+type MetaKey = (typeof METADATA_LABELS)[number]["key"];
+
+function matchMetadataLabel(line: string): { key: MetaKey; value: string } | null {
+  for (const { key, labels } of METADATA_LABELS) {
+    for (const label of labels) {
+      if (line.startsWith(`${label} :`)) return { key, value: line.slice(label.length + 2).trim() };
+    }
+  }
+  return null;
+}
+
+/** "V, S, M (une petite boule de guano...)" -> lettres + composant materiel. */
+function parseComponents(raw: string): { letters: string[]; material?: string } {
+  const parenMatch = raw.match(/^([^(]+?)\s*\(([\s\S]+)\)\s*$/);
+  const lettersPart = parenMatch ? parenMatch[1] : raw;
+  const material = parenMatch ? parenMatch[2].trim() : undefined;
+  const letters = lettersPart
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s): s is "V" | "S" | "M" => s === "V" || s === "S" || s === "M");
+  return { letters, material };
 }
 
 interface ExtractedSpell {
   frenchName: string;
   prose: string;
+  school: string;
+  level: number;
+  ritual: boolean;
+  castingTime: string;
+  range: string;
+  components: { letters: string[]; material?: string };
+  duration: string;
+  concentration: boolean;
 }
 
 function extractSpells(): ExtractedSpell[] {
@@ -77,31 +117,42 @@ function extractSpells(): ExtractedSpell[] {
     .map((l) => l.trim())
     .filter((l) => !isFooterNoise(l));
 
-  const headings: { name: string; index: number }[] = [];
+  const headings: { name: string; index: number; metaLine: string }[] = [];
   for (let i = 0; i < lines.length - 1; i++) {
     const line = lines[i];
     if (!line || line.length > 60) continue;
-    if (isHeadingMeta(lines[i + 1])) headings.push({ name: line, index: i });
+    if (isHeadingMeta(lines[i + 1])) headings.push({ name: line, index: i, metaLine: lines[i + 1] });
   }
 
   const result: ExtractedSpell[] = [];
   for (let h = 0; h < headings.length; h++) {
+    const { metaLine } = headings[h];
     const bodyStart = headings[h].index + 2;
     const bodyEnd = headings[h + 1]?.index ?? lines.length;
 
+    const cantripMatch = metaLine.match(CANTRIP_RE);
+    const levelMatch = metaLine.match(LEVEL_RE);
+    const school = cantripMatch ? cantripMatch[1] : (levelMatch?.[1] ?? "");
+    const level = levelMatch ? Number(levelMatch[2]) : 0;
+    const ritual = metaLine.includes("(rituel)");
+
+    const metaValues: Partial<Record<MetaKey, string>> = {};
+    let currentKey: MetaKey | null = null;
     let idx = bodyStart;
-    let sawMetadata = false;
     while (idx < bodyEnd) {
       const l = lines[idx];
-      if (isMetadataLine(l)) {
-        sawMetadata = true;
+      const match = matchMetadataLabel(l);
+      if (match) {
+        metaValues[match.key] = match.value;
+        currentKey = match.key;
         idx++;
         continue;
       }
       // ligne de continuation d'une metadonnee (ex: composant materiel entre
       // parentheses etale sur plusieurs lignes) : pas encore le debut d'une
       // phrase franche.
-      if (sawMetadata && /^[a-zà-ÿ(]/.test(l)) {
+      if (currentKey && /^[a-zà-ÿ(]/.test(l)) {
+        metaValues[currentKey] = `${metaValues[currentKey]} ${l}`;
         idx++;
         continue;
       }
@@ -112,7 +163,20 @@ function extractSpells(): ExtractedSpell[] {
       .slice(idx, bodyEnd)
       .filter((l) => l.length > 0)
       .join(" ");
-    result.push({ frenchName: headings[h].name, prose });
+
+    const durationRaw = metaValues.duration ?? "";
+    result.push({
+      frenchName: headings[h].name,
+      prose,
+      school,
+      level,
+      ritual,
+      castingTime: metaValues.castingTime ?? "",
+      range: metaValues.range ?? "",
+      components: parseComponents(metaValues.components ?? ""),
+      duration: durationRaw,
+      concentration: /concentration/i.test(durationRaw),
+    });
   }
   return result;
 }
@@ -120,7 +184,7 @@ function extractSpells(): ExtractedSpell[] {
 async function main() {
   const extracted = extractSpells();
   console.log(`Entrees extraites depuis ${SOURCE_FILE} : ${extracted.length}`);
-  const proseByFrenchName = new Map(extracted.map((e) => [e.frenchName, e.prose]));
+  const byFrenchName = new Map(extracted.map((e) => [e.frenchName, e]));
 
   const allEntries: { id: string; entry_type: string }[] = [];
   for (let from = 0; ; from += 1000) {
@@ -139,16 +203,32 @@ async function main() {
   }
 
   const rows = translations
-    .filter((t) => proseByFrenchName.has(t.name))
-    .map((t) => ({
-      entry_id: t.entry_id,
-      locale: "fr",
-      name: t.name,
-      blocks: { description: { segments: [{ text: proseByFrenchName.get(t.name) }] } },
-      source: "official_srd",
-    }));
+    .filter((t) => byFrenchName.has(t.name))
+    .map((t) => {
+      const e = byFrenchName.get(t.name)!;
+      return {
+        entry_id: t.entry_id,
+        locale: "fr",
+        name: t.name,
+        blocks: {
+          description: { segments: [{ text: e.prose }] },
+          spell_casting: {
+            level: e.level,
+            school: e.school,
+            casting_time: e.castingTime,
+            range: e.range,
+            components: e.components.letters,
+            material: e.components.material,
+            duration: e.duration,
+            concentration: e.concentration,
+            ritual: e.ritual,
+          },
+        },
+        source: "official_srd",
+      };
+    });
 
-  console.log(`Descriptions a ecrire (nom deja traduit + prose extraite) : ${rows.length}`);
+  console.log(`Descriptions + metadonnees a ecrire (nom deja traduit + entree extraite) : ${rows.length}`);
   for (let i = 0; i < rows.length; i += 200) {
     const { error } = await supabase.from("ruleset_entry_translations").upsert(rows.slice(i, i + 200), { onConflict: "entry_id,locale" });
     if (error) throw new Error(error.message);
