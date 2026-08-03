@@ -153,15 +153,20 @@ export interface EntryTranslationRow {
   source: string;
 }
 
+export interface EntryTranslationWithBlocksRow extends EntryTranslationRow {
+  /** Surcharges de contenu par block_type (V1-A5) — ex: { description: { segments: [...] } }, texte officiel verifie mot pour mot. */
+  blocks: Json;
+}
+
 /** Traduction d'une seule entree (fiche de regle) : `null` si aucune traduction n'existe pour cette locale — l'appelant retombe sur le nom source (anglais). */
 export async function getEntryTranslation(
   supabase: TypedClient,
   entryId: string,
   locale: string
-): Promise<EntryTranslationRow | null> {
+): Promise<EntryTranslationWithBlocksRow | null> {
   const { data, error } = await supabase
     .from("ruleset_entry_translations")
-    .select("entry_id, locale, name, source")
+    .select("entry_id, locale, name, source, blocks")
     .eq("entry_id", entryId)
     .eq("locale", locale)
     .maybeSingle();

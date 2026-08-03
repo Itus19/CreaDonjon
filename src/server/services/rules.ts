@@ -251,6 +251,11 @@ export async function getRuleEntryForWorld(
   const translation = locale !== "en" ? await getEntryTranslation(supabase, entry.id, locale) : null;
 
   const blockRows = await listBlocksForRulesetEntry(supabase, entry.id);
+  // Surcharges de traduction par block_type (V1-A5, ex: description) : posees
+  // sur la base AVANT resolution des surcharges de variante, pour qu'une
+  // surcharge de variante (ecrite par un MJ, potentiellement dans une autre
+  // langue) l'emporte toujours si elle vise le meme bloc.
+  const translatedBlocks = (translation?.blocks ?? {}) as Record<string, unknown>;
   const baseEntry: ResolvableEntry = {
     entry_key: entry.entry_key,
     entry_type: entry.entry_type,
@@ -258,7 +263,7 @@ export async function getRuleEntryForWorld(
       (row): ResolvableBlock => ({
         block_type: row.block_type,
         display: row.display,
-        data: row.data,
+        data: translatedBlocks[row.block_type] ?? row.data,
         display_order: row.display_order,
       })
     ),
@@ -287,9 +292,12 @@ export async function getRuleEntryForWorld(
   // quand elle existe encore, sinon un id synthetique (bloc introduit par
   // une surcharge add_block/replace_block sans ligne source).
   const originalIdByBlockType = new Map(blockRows.map((row) => [row.block_type, row.id]));
-  // Donnee avant surcharge, pour le badge "modifiee" + comparaison (V1-A4) —
-  // seulement necessaire pour les types effectivement touches.
-  const originalDataByBlockType = new Map(blockRows.map((row) => [row.block_type, row.data]));
+  // Donnee avant surcharge de variante, pour le badge "modifiee" + comparaison
+  // (V1-A4) — depuis baseEntry (deja traduite si une traduction existe,
+  // V1-A5), pas les lignes brutes anglaises : la comparaison doit rester
+  // dans la meme langue des deux cotes, seule la surcharge de variante doit
+  // faire la difference.
+  const originalDataByBlockType = new Map(baseEntry.blocks.map((b) => [b.block_type, b.data]));
 
   const validated = resolved.blocks.map((block) => ({
     id: originalIdByBlockType.get(block.block_type) ?? `override:${block.block_type}`,

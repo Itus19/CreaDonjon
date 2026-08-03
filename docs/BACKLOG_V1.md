@@ -183,6 +183,16 @@ Positionnée ici, après le lot A entier plutôt qu'après A2 seul : V1-A2 chang
 - [ ] Compléter Sort et Monstre à ~100 % (le reste est vérifiable, juste pas encore fait).
 - [ ] Traduire Objet et Aptitude en tenant compte de la nouvelle structure post-V1-A2 (les aptitudes génériques dédupliquées n'ont plus qu'une seule fiche à traduire, pas une par classe).
 - [ ] Aucune traduction sans vérification mot pour mot contre `data/srd/fr-source/*.txt` — un terme non trouvé reste en anglais plutôt que d'écrire une correspondance devinée.
+- [x] Taille de police du texte de description vérifiée : `.rich-text-content p { font-size: 12px }` (`app/globals.css`), déjà correcte, aucun changement nécessaire.
+- [ ] Traduire aussi le **texte** des blocs `description` (pas seulement le nom de l'entrée) — ajouté en cours de route sur demande explicite.
+
+**En cours** — étape en cours, pas terminée : ~~noms~~ Sort/Monstre/Objet/Aptitude restent partiels, et seul Sort a une extraction de texte de description a ce jour.
+
+- Un paragraphe de prose ne se devine pas puis ne se vérifie pas mot pour mot comme un nom (la traduction officielle ne reproduit jamais l'anglais caractère pour caractère, même fidèle) : la méthode est différente — extraction directe du texte officiel depuis `data/srd/fr-source/srd-5.1-fr.txt`, jamais une traduction reconstruite. Script dédié : `scripts/translate-spell-descriptions-fr.ts` (`npm run translate:spell-descriptions`), détecte chaque sort par son motif fixe (nom seul, puis ligne « École du Ne niveau » ou « Sort mineur d'École »), extrait la prose jusqu'à l'entrée suivante, filtre le pied de page répété sur chaque page du PDF. Trois bugs corrigés en le construisant : suffixe `(rituel)` cassait la détection d'en-tête (avalait des dizaines de sorts en trop, ex. Communion), école commençant par une consonne utilise « de » et non « d' » (Divination, Nécromancie), dernière entrée du chapitre sans borne de fin naturelle.
+- Stockage : `ruleset_entry_translations.blocks.description.segments` (colonne déjà prévue par le schéma, jamais utilisée jusqu'ici). Le service (`getRuleEntryForWorld`) l'applique à la base **avant** la résolution des surcharges de variante (V1-A4) : une surcharge de variante l'emporte toujours si elle vise le même bloc, la traduction ne fait que remplacer le texte officiel non surchargé.
+- Bonus : la même extraction, croisée avec les données structurées déjà en base (école + niveau + notation de dés exacte, un signal indépendant de la langue), a permis de découvrir 15 noms de sorts supplémentaires sans jamais deviner — chacun vérifié à la main avant écriture (ex. "Weird" → "Ennemi subconscient", confirmé par le contenu).
+- État à la fin de cette étape (Sort) : noms 453/638 (71 %, contre 349 avant), descriptions 443/638 (69 %, 0 avant). Vérifié dans le navigateur : Boule de feu affiche le texte français officiel complet, y compris la clause « À plus haut niveau ».
+- Reste à faire : pousser Sort/Monstre vers 100 %, traduire Objet/Aptitude (noms), étendre l'extraction de description à Règle et Aptitude (Monstre n'a pas de prose officielle — sa description est une phrase synthétisée par l'import, pas du texte SRD).
 
 ---
 
