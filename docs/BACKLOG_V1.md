@@ -180,35 +180,37 @@ Ajoutée en cours de route (V1-A1b) : traduction officielle des noms d'entrées 
 
 Positionnée ici, après le lot A entier plutôt qu'après A2 seul : V1-A2 change la structure des aptitudes (déduplication), V1-A3 ajoute des renvois, V1-A4 ajoute des surcharges — traduire avant que cette structure se stabilise aurait signifié refaire une partie du travail à chaque lot.
 
-- [ ] Compléter Sort et Monstre à ~100 % (le reste est vérifiable, juste pas encore fait).
-- [ ] Traduire Objet et Aptitude en tenant compte de la nouvelle structure post-V1-A2 (les aptitudes génériques dédupliquées n'ont plus qu'une seule fiche à traduire, pas une par classe).
-- [ ] Aucune traduction sans vérification mot pour mot contre `data/srd/fr-source/*.txt` — un terme non trouvé reste en anglais plutôt que d'écrire une correspondance devinée.
+- [ ] Compléter Sort et Monstre à ~100 % (Sort à 98 %, Monstre à 88 % — très proche, reste des cas structurellement non vérifiables, voir plus bas).
+- [ ] Traduire Objet et Aptitude en tenant compte de la nouvelle structure post-V1-A2 (Objet 30 %, Aptitude 28 % — catégories les plus volumineuses, 1169 et 961 entrées, en progrès mais loin d'être finies).
+- [x] Aucune traduction sans vérification mot pour mot contre `data/srd/fr-source/*.txt` — un terme non trouvé reste en anglais plutôt que d'écrire une correspondance devinée.
 - [x] Taille de police du texte de description vérifiée : `.rich-text-content p { font-size: 12px }` (`app/globals.css`), déjà correcte, aucun changement nécessaire.
-- [ ] Traduire aussi le **texte** des blocs `description` (pas seulement le nom de l'entrée) — ajouté en cours de route sur demande explicite.
+- [x] Traduire aussi le **texte** des blocs `description` (pas seulement le nom de l'entrée) — ajouté en cours de route sur demande explicite. Fait pour Sort (mécanisme réutilisable, pas encore étendu aux autres catégories à vraie prose officielle : Règle, Aptitude).
 
-**En cours** — étape en cours, pas terminée : ~~noms~~ Sort/Monstre/Objet/Aptitude restent partiels, et seul Sort a une extraction de texte de description a ce jour.
+**En cours** — progrès substantiel sur deux sessions, ticket pas fermé : Objet et Aptitude restent les deux gros chantiers.
 
 - Un paragraphe de prose ne se devine pas puis ne se vérifie pas mot pour mot comme un nom (la traduction officielle ne reproduit jamais l'anglais caractère pour caractère, même fidèle) : la méthode est différente — extraction directe du texte officiel depuis `data/srd/fr-source/srd-5.1-fr.txt`, jamais une traduction reconstruite. Script dédié : `scripts/translate-spell-descriptions-fr.ts` (`npm run translate:spell-descriptions`), détecte chaque sort par son motif fixe (nom seul, puis ligne « École du Ne niveau » ou « Sort mineur d'École »), extrait la prose jusqu'à l'entrée suivante, filtre le pied de page répété sur chaque page du PDF. Trois bugs corrigés en le construisant : suffixe `(rituel)` cassait la détection d'en-tête (avalait des dizaines de sorts en trop, ex. Communion), école commençant par une consonne utilise « de » et non « d' » (Divination, Nécromancie), dernière entrée du chapitre sans borne de fin naturelle.
 - Stockage : `ruleset_entry_translations.blocks.description.segments` (colonne déjà prévue par le schéma, jamais utilisée jusqu'ici). Le service (`getRuleEntryForWorld`) l'applique à la base **avant** la résolution des surcharges de variante (V1-A4) : une surcharge de variante l'emporte toujours si elle vise le même bloc, la traduction ne fait que remplacer le texte officiel non surchargé.
-- Bonus : la même extraction, croisée avec les données structurées déjà en base (école + niveau + notation de dés exacte, un signal indépendant de la langue), a permis de découvrir 15 noms de sorts supplémentaires sans jamais deviner — chacun vérifié à la main avant écriture (ex. "Weird" → "Ennemi subconscient", confirmé par le contenu).
+- Astuce de recyclage : les noms déjà vérifiés pour UN ruleset (2014 ou 2024) servent de candidats croisés pour l'autre — beaucoup de « manquants » n'étaient qu'un trou de couverture sur une seule édition, pas une vraie traduction absente.
+- Bonus : croiser l'extraction de prose avec les données structurées déjà en base (école + niveau + notation de dés exacte, un signal indépendant de la langue) a permis de découvrir des noms de sorts supplémentaires sans jamais deviner (ex. « Weird » → « Ennemi subconscient », confirmé par le contenu).
+- **Limite structurelle découverte, pas un échec de méthode** : certaines entrées 5e-bits n'ont pas d'équivalent séparé dans le texte officiel — une seule fiche couvre plusieurs variantes. Confirmé pour les formes de loup-garou/vampire (« Werewolf, Human/Hybrid/Wolf Form » → une seule fiche « Loup-garou » dans le SRD) et pour les potions de résistance par type de dégâts (« Potion of Acid/Cold/Fire/... Resistance » → une seule fiche « Potion de résistance » générique, le type étant tiré au hasard). Ces cas restent en anglais en toute connaissance de cause : il n'y a rien à vérifier séparément.
 - Vérifié dans le navigateur : Boule de feu affiche le texte français officiel complet, y compris la clause « À plus haut niveau ».
 
-**État des noms par catégorie (session suivante)** :
+**État des noms par catégorie (deux sessions de suite)** :
 
-| Catégorie | Avant | Après |
-|---|---|---|
-| Sort | 349/638 (55 %) | 453/638 (71 %) |
-| Monstre | 559/668 (84 %) | 584/668 (87 %) |
-| Aptitude | 130/961 (14 %) | 196/961 (20 %) |
-| Arme | 47/78 (60 %) | 72/78 (92 %) |
-| Armure | 16/26 (62 %) | 20/26 (77 %) |
-| Sous-classe | 20/33 (61 %) | 26/33 (79 %) |
-| Règle | 33/78 (42 %) | 52/78 (67 %) |
-| Espèce | 24/52 (46 %) | 24/52 (46 %, tentative sans succès sur les lignées 2024) |
-| Objet | 92/1169 (8 %) | pas retouché cette session |
-| Classe/Historique/Condition | 100 % | inchangé |
+| Catégorie | Round 1 | Round 2 | Final |
+|---|---|---|---|
+| Sort | 55 % | 71 % | **98 %** |
+| Monstre | 84 % | 87 % | **88 %** |
+| Aptitude | 14 % | 20 % | **28 %** (961 entrées) |
+| Arme | 60 % | 92 % | **97 %** |
+| Armure | 62 % | 77 % | **96 %** |
+| Sous-classe | 61 % | 79 % | **85 %** |
+| Règle | 42 % | 67 % | **73 %** |
+| Espèce | 46 % | 46 % | 46 % (bloqué sur les lignées 2024, structure tabulaire) |
+| Objet | 8 % | 8 % | **30 %** (1169 entrées) |
+| Classe/Historique/Condition | 100 % | — | inchangé |
 
-Objet (1169 entrées) et Aptitude (961) restent les deux catégories qui pèsent le plus lourd — leur volume, pas un manque d'effort, explique le retard. Description : seul Sort a une extraction de prose à ce jour (Monstre n'a pas de prose officielle, sa description est une phrase synthétisée par l'import ; Règle et Aptitude ont une vraie prose SRD mais l'extraction n'y a pas encore été étendue).
+Objet et Aptitude restent, de loin, les deux catégories qui pèsent le plus lourd — leur volume (2130 entrées à eux deux), pas un manque d'effort, explique l'écart avec le reste. Description de texte officielle : seul Sort a une extraction de prose à ce jour ; étendre la même méthode à Règle et Aptitude (qui ont une vraie prose SRD, contrairement à Monstre dont la description est une phrase synthétisée par l'import) reste à faire.
 
 ---
 
