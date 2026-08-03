@@ -213,7 +213,8 @@ Positionnée ici, après le lot A entier plutôt qu'après A2 seul : V1-A2 chang
   - Eldritch Invocations = **Manifestations occultes** (pas « Invocations occultes ») — a permis de retrouver les 17 noms d'invocations individuelles un par un en lisant le chapitre Occultiste et en faisant correspondre chaque prérequis/mécanique (ex. Agonizing Blast = « Décharge déchirante », Lifedrinker = « Buveuse de vie »)
   - Plusieurs autres : Deflect Missiles = Parade de projectiles, Purity of Body = Pureté physique, Land's Stride = Foulée tellurique, Natural Explorer = Explorateur-né, Divine Sense = Perception divine, Font of Magic = Source de sorcellerie, Otherworldly Patron = Protecteur d'outre-monde, Mystic Arcanum = Arcanum mystique (pas « Arcane »), Song of Rest = Chant reposant.
   - Leçon pour la suite : deviner à partir de la traduction PHB grand public produit des candidats plausibles mais faux plus d'une fois sur deux (45/180 puis 85/90 vérifiés selon les lots) — il vaut mieux lire directement la table de progression de chaque classe dans `data/srd/fr-source/srd-5.1-fr.txt` (elle liste tous les noms d'aptitudes de la classe en une fois) que deviner puis vérifier.
-  - Classes couvertes en détail cette session : Guerrier, Barbare, Barde, Clerc, Druide, Moine, Paladin, Rôdeur, Roublard, Ensorceleur, Occultiste, Magicien. Restent à couvrir avec la même méthode : races (Nain fait, Elfe/Halfelin/Gnome/Demi-elfe/Demi-orc/Drakéide/Tieffelin à faire), et les variantes 2024 (Divine Order, Weapon Mastery, Epic Boon, etc., vocabulaire probablement très différent du 2014).
+  - Classes couvertes en détail cette session : Guerrier, Barbare, Barde, Clerc, Druide, Moine, Paladin, Rôdeur, Roublard, Ensorceleur, Occultiste, Magicien. Races couvertes ensuite (même méthode, lecture directe des traits raciaux) : Nain, Elfe/Haut-elfe, Halfelin, Demi-orc, Drakéide, Gnome, Tieffelin — avec de nouvelles corrections du même type (Relentless Endurance = **Acharnement** pas « Endurance implacable », Savage Attacks = **Sauvagerie** pas « Attaques sauvages », Infernal Legacy = **Ascendance infernale** pas « Héritage infernal », Elf Weapon Training = **Entraînement martial elfique** pas « elfe »). Sous-classe Lignée draconique de l'Ensorceleur également couverte (Draconic Resilience = **Résistance draconique** pas « Robustesse draconique »).
+  - Restent à couvrir avec la même méthode : Demi-elfe (partiellement lu), les variantes 2024 (Divine Order, Weapon Mastery, Epic Boon, etc., vocabulaire probablement très différent du 2014), et les autres sous-classes (Champion guerrier partiellement lu, Domaine de la vie clerc, collèges bardiques, etc.).
 
 **État des noms par catégorie (deux sessions de suite)** :
 
@@ -221,7 +222,7 @@ Positionnée ici, après le lot A entier plutôt qu'après A2 seul : V1-A2 chang
 |---|---|---|---|
 | Sort | 55 % | 71 % | **99,5 %** |
 | Monstre | 84 % | 87 % | **91 %** |
-| Aptitude | 14 % | 20 % → **45 %** | (961 entrées) |
+| Aptitude | 14 % | 20 % → **47 %** | (961 entrées) |
 | Arme | 60 % | 92 % | **97 %** |
 | Armure | 62 % | 77 % | **96 %** |
 | Sous-classe | 61 % | 79 % | **85 %** |
