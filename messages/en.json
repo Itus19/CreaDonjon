@@ -41,6 +41,9 @@
     "renvoisSortants": "Outgoing references",
     "renvoisEntrants": "Incoming references",
     "renvoiNonResolu": "not found",
+    "modifieeDansTaVariante": "Modified in your variant",
+    "original": "Original",
+    "variante": "Variant",
     "refKinds": {
       "uses_rule": "uses",
       "applies_condition": "applies",

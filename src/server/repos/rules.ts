@@ -21,6 +21,34 @@ export async function getRulesetById(supabase: TypedClient, id: string): Promise
   return data;
 }
 
+export interface RulesetOverrideRow {
+  block_type: string | null;
+  action: string;
+  payload: Json;
+  patch: Json;
+}
+
+/**
+ * Surcharges d'UNE cle, dans UN ruleset precis (V1-A4, SCHEMA.md §9.4) —
+ * aucune remontee de chaine ici, c'est le travail du service appelant
+ * (resolveRulesetChain), qui les collecte a chaque niveau de la chaine et
+ * les applique dans l'ordre racine -> feuille via src/core/rules/resolve.ts.
+ */
+export async function listOverridesForRuleset(
+  supabase: TypedClient,
+  rulesetId: string,
+  entryKey: string
+): Promise<RulesetOverrideRow[]> {
+  const { data, error } = await supabase
+    .from("ruleset_overrides")
+    .select("block_type, action, payload, patch")
+    .eq("ruleset_id", rulesetId)
+    .eq("entry_key", entryKey)
+    .order("created_at");
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export interface RulesetEntryRow {
   id: string;
   ruleset_id: string;

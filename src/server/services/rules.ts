@@ -14,12 +14,22 @@ import { generateScalingTable, resolveScalingTarget } from "@/src/core/rules/sca
 import { computeProgressionRows } from "@/src/core/rules/progression";
 import { missingRequiredBlocks } from "@/src/core/rules/requiredBlocks";
 import {
+  applyOverrides,
+  MAX_RULESET_CHAIN_DEPTH,
+  RulesetChainCycleError,
+  RulesetChainDepthError,
+  type OverrideInput,
+  type ResolvableBlock,
+  type ResolvableEntry,
+} from "@/src/core/rules/resolve";
+import {
   getEntryTranslation,
   getRulesetById,
   getRulesetEntryByKey,
   listBlocksForRulesetEntry,
   listIncomingRefsForKey,
   listOutgoingRefs,
+  listOverridesForRuleset,
   listRulesetEntries,
   listRulesetEntriesByKeys,
   listTranslationsForEntries,
@@ -31,11 +41,39 @@ import type { Locale } from "@/src/i18n/request";
 
 type TypedClient = SupabaseClient<Database>;
 
-/** Profondeur maximale de remontee vers un ruleset parent — meme borne que la resolution de surcharge (V1-A4), en attendant qu'elle existe. */
-const MAX_RULESET_CHAIN_DEPTH = 8;
-
 const SLOT_LEVEL_MAX = 9;
 const CHARACTER_LEVEL_MAX = 20;
+
+interface RulesetChainLink {
+  rulesetId: string;
+  parentRulesetId: string | null;
+}
+
+/**
+ * Chaine de heritage d'un ruleset, du plus specifique (celui du monde) au
+ * plus ancestral (l'officiel, en general) — feuille -> racine. Detection de
+ * cycle explicite (V1-A4, SCHEMA.md §9.4) : un ensemble visite, pas
+ * seulement la borne de profondeur, pour distinguer une vraie boucle
+ * (erreur) d'une chaine simplement longue (erreur differente).
+ */
+async function walkRulesetChain(supabase: TypedClient, startRulesetId: string): Promise<RulesetChainLink[]> {
+  const chain: RulesetChainLink[] = [];
+  const visited = new Set<string>();
+  let currentId: string | null = startRulesetId;
+
+  while (currentId) {
+    if (visited.has(currentId)) throw new RulesetChainCycleError(currentId);
+    visited.add(currentId);
+    if (chain.length >= MAX_RULESET_CHAIN_DEPTH) throw new RulesetChainDepthError();
+
+    const ruleset = await getRulesetById(supabase, currentId);
+    if (!ruleset) break;
+    chain.push({ rulesetId: currentId, parentRulesetId: ruleset.parent_ruleset_id });
+    currentId = ruleset.parent_ruleset_id;
+  }
+
+  return chain;
+}
 
 /**
  * Un monde variante n'a d'entrees que pour ce qu'il surcharge (V1-A4) —
@@ -66,6 +104,8 @@ export interface RuleEntryBlockView {
   display: { label: string; layout: string; collapsed?: boolean };
   data: unknown;
   displayOrder: number;
+  /** Donnee avant surcharge (V1-A4) — present seulement si ce bloc est dans modifiedBlockTypes, pour le badge "modifiee dans ta variante". */
+  originalData?: unknown;
 }
 
 /** Un renvoi affiche (V1-A3) : `key` designe l'AUTRE entree — la cible pour un renvoi sortant, la source pour un renvoi entrant. `entryType` absent = renvoi non resolu (cible disparue ou jamais importee). */
@@ -87,6 +127,8 @@ export interface RuleEntryDetail {
   missingBlocks: string[];
   outgoingRefs: RuleRefView[];
   incomingRefs: RuleRefView[];
+  /** Types de blocs modifies par une surcharge de la variante courante (V1-A4) — badge "modifiee dans ta variante". */
+  modifiedBlockTypes: string[];
 }
 
 function maxLevelForAxis(axis: ScalingBlockData["axis"]): number {
@@ -195,7 +237,13 @@ export async function getRuleEntryForWorld(
   const rulesetId = await getWorldDefaultRulesetId(supabase, worldId);
   if (!rulesetId) return null;
 
-  const entry = await findEntryInRulesetChain(supabase, rulesetId, entryKey);
+  const chain = await walkRulesetChain(supabase, rulesetId);
+
+  let entry: RulesetEntryRow | null = null;
+  for (const link of chain) {
+    entry = await getRulesetEntryByKey(supabase, link.rulesetId, entryKey);
+    if (entry) break;
+  }
   if (!entry) return null;
 
   // L'anglais est deja la langue source (source_raw.name) : aucune
@@ -203,19 +251,63 @@ export async function getRuleEntryForWorld(
   const translation = locale !== "en" ? await getEntryTranslation(supabase, entry.id, locale) : null;
 
   const blockRows = await listBlocksForRulesetEntry(supabase, entry.id);
+  const baseEntry: ResolvableEntry = {
+    entry_key: entry.entry_key,
+    entry_type: entry.entry_type,
+    blocks: blockRows.map(
+      (row): ResolvableBlock => ({
+        block_type: row.block_type,
+        display: row.display,
+        data: row.data,
+        display_order: row.display_order,
+      })
+    ),
+  };
 
-  const validated = blockRows.map((row) => ({
-    row,
-    blockType: row.block_type as BlockType,
-    data: dataSchemaForBlockType(row.block_type as BlockType).parse(row.data),
+  // Surcharges collectees racine -> feuille (chain est feuille -> racine) :
+  // la variante la plus specifique s'applique en dernier (SCHEMA.md §9.4).
+  const overrides: OverrideInput[] = [];
+  for (const link of [...chain].reverse()) {
+    const rows = await listOverridesForRuleset(supabase, link.rulesetId, entryKey);
+    for (const row of rows) {
+      overrides.push({
+        block_type: row.block_type,
+        action: row.action as OverrideInput["action"],
+        payload: row.payload,
+        patch: row.patch,
+      });
+    }
+  }
+
+  const resolved = applyOverrides(baseEntry, overrides);
+  // Desactivee dans cette variante : traitee comme absente, pas comme une erreur.
+  if (!resolved || resolved.disabled) return null;
+
+  // id stable pour l'affichage (cle React) : celui de la ligne d'origine
+  // quand elle existe encore, sinon un id synthetique (bloc introduit par
+  // une surcharge add_block/replace_block sans ligne source).
+  const originalIdByBlockType = new Map(blockRows.map((row) => [row.block_type, row.id]));
+  // Donnee avant surcharge, pour le badge "modifiee" + comparaison (V1-A4) —
+  // seulement necessaire pour les types effectivement touches.
+  const originalDataByBlockType = new Map(blockRows.map((row) => [row.block_type, row.data]));
+
+  const validated = resolved.blocks.map((block) => ({
+    id: originalIdByBlockType.get(block.block_type) ?? `override:${block.block_type}`,
+    blockType: block.block_type as BlockType,
+    data: dataSchemaForBlockType(block.block_type as BlockType).parse(block.data),
+    displayOrder: block.display_order,
+    rawDisplay: block.display,
+    originalData: resolved.modifiedBlockTypes.includes(block.block_type)
+      ? originalDataByBlockType.get(block.block_type)
+      : undefined,
   }));
 
   const effectsData = validated.find((b) => b.blockType === "effects")?.data as
     | EffectsBlockData
     | undefined;
 
-  const blocks: RuleEntryBlockView[] = validated.map(({ row, blockType, data }) => {
-    const display = zBlockDisplay.parse(row.display);
+  const blocks: RuleEntryBlockView[] = validated.map(({ id, blockType, data, displayOrder, rawDisplay, originalData }) => {
+    const display = zBlockDisplay.parse(rawDisplay);
 
     if (blockType === "scaling") {
       const scalingData = data as ScalingBlockData;
@@ -223,27 +315,22 @@ export async function getRuleEntryForWorld(
         ? resolveScalingTarget(scalingData.rule.target, effectsData)
         : undefined;
       const table = generateScalingTable(scalingData, maxLevelForAxis(scalingData.axis), baseFormula);
-      return {
-        id: row.id,
-        blockType,
-        display,
-        data: { ...scalingData, table },
-        displayOrder: row.display_order,
-      };
+      return { id, blockType, display, data: { ...scalingData, table }, displayOrder, originalData };
     }
 
     if (blockType === "class_progression") {
       const progressionData = data as ClassProgressionBlockData;
       return {
-        id: row.id,
+        id,
         blockType,
         display,
         data: { ...progressionData, rows: computeProgressionRows(progressionData) },
-        displayOrder: row.display_order,
+        displayOrder,
+        originalData,
       };
     }
 
-    return { id: row.id, blockType, display, data, displayOrder: row.display_order };
+    return { id, blockType, display, data, displayOrder, originalData };
   });
 
   const [outgoingRefs, incomingRefs] = await Promise.all([
@@ -260,10 +347,11 @@ export async function getRuleEntryForWorld(
     blocks,
     missingBlocks: missingRequiredBlocks(
       entry.entry_type as EntryType,
-      blockRows.map((b) => b.block_type)
+      resolved.blocks.map((b) => b.block_type)
     ),
     outgoingRefs,
     incomingRefs,
+    modifiedBlockTypes: resolved.modifiedBlockTypes,
   };
 }
 

@@ -1602,6 +1602,7 @@ export type Database = {
         Args: { p_base_system: string; p_name: string }
         Returns: string
       }
+      publish_ruleset: { Args: { p_ruleset_id: string }; Returns: undefined }
       resolve_share_link: {
         Args: { p_token: string }
         Returns: {
@@ -1623,6 +1624,18 @@ export type Database = {
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       unaccent: { Args: { "": string }; Returns: string }
+      upsert_ruleset_override: {
+        Args: {
+          p_action: string
+          p_block_type: string
+          p_entry_key: string
+          p_note: string
+          p_patch: Json
+          p_payload: Json
+          p_ruleset_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

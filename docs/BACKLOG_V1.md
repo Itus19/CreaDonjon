@@ -160,11 +160,19 @@ Le script d'import produit désormais des blocs, plus un objet plat.
 - Table `ruleset_overrides`, résolution pure dans `src/core/rules/resolve.ts`.
 
 **Critères**
-- [ ] « Chez moi la boule de feu fait 6d6 » est un `patch_block` sur `effects` ; le reste de la fiche suit toujours sa base.
-- [ ] Chaîne d'héritage : profondeur maximale 8, cycles détectés, erreur explicite.
-- [ ] Un ruleset publié est figé : toute édition crée `version + 1` avec le même `lineage_id`.
-- [ ] Un badge « modifiée dans ta variante » ouvre la comparaison avec l'original.
-- [ ] Les rulesets officiels restent inviolables (le trigger le prouve par un test).
+- [x] « Chez moi la boule de feu fait 6d6 » est un `patch_block` sur `effects` ; le reste de la fiche suit toujours sa base.
+- [x] Chaîne d'héritage : profondeur maximale 8, cycles détectés, erreur explicite.
+- [x] Un ruleset publié est figé : toute édition crée `version + 1` avec le même `lineage_id`.
+- [x] Un badge « modifiée dans ta variante » ouvre la comparaison avec l'original.
+- [x] Les rulesets officiels restent inviolables (le trigger le prouve par un test).
+
+**Fait** — portée volontairement limitée au moteur + verrou de version (décision explicite : pas de formulaire brut de création de surcharge, ce sera l'éditeur assisté par IA de V1-D2, pas une saisie JSON jetable).
+
+- `src/core/rules/resolve.ts` (tests d'abord, 15 cas) : merge patch RFC 7386 fait main (pas de dépendance, l'algorithme tient en une dizaine de lignes), application des sept actions de surcharge dans l'ordre donné.
+- Deux fonctions Postgres, même idiome que `app.delete_own_account` (security definer + `auth.uid()`, jamais de client service-role côté app) : `upsert_ruleset_override` refuse une surcharge directe sur un ruleset officiel et refuse l'édition par quiconque n'est pas le créateur ; éditer un ruleset publié crée `version + 1` (même `lineage_id`) et copie les surcharges existantes avant d'appliquer la nouvelle. `publish_ruleset` fige, idempotent.
+- Remontée de chaîne avec détection de cycle réelle (`Set` de rulesets visités, pas seulement la borne de profondeur) — `src/server/services/rules.ts`. Une fiche de monde variante résout maintenant ses surcharges avant validation Zod des blocs.
+- Badge + comparaison : réutilisent le même `renderBlockData` que l'affichage normal (`components/rules/blockContentRenderer.tsx`), jamais un second mapping bloc → mise en page.
+- **Test d'intégration réel** (`src/server/repos/rulesetVersioning.integration.test.ts`, même pattern que D-01) : le trigger `forbid_official_ruleset_write` — jamais testé avant ce ticket — empêche bien de modifier un ruleset officiel, y compris avec `service_role` ; `upsert_ruleset_override` refuse l'écriture directe sur l'officiel et refuse un tiers non créateur ; publier puis éditer crée bien `version + 1`, copie les surcharges, et n'affecte pas l'ancienne version. Vérifié aussi dans le navigateur avec la variante déjà semée (`seed-dev.ts`) : la description de Boule de feu affiche le texte de la variante, le badge apparaît, la comparaison montre les deux textes côte à côte.
 
 ### V1-A5 — Finalisation de la traduction française · `M`
 

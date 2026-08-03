@@ -41,6 +41,9 @@
     "renvoisSortants": "Renvois sortants",
     "renvoisEntrants": "Renvois entrants",
     "renvoiNonResolu": "introuvable",
+    "modifieeDansTaVariante": "Modifiée dans ta variante",
+    "original": "Original",
+    "variante": "Variante",
     "refKinds": {
       "uses_rule": "utilise",
       "applies_condition": "applique",
