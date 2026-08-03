@@ -142,10 +142,18 @@ Le script d'import produit désormais des blocs, plus un objet plat.
 - Table `ruleset_entry_refs`, extracteur pur dans `src/core/rules/refs.ts`.
 
 **Critères**
-- [ ] Les renvois `derived` sont recalculés à chaque écriture ; les `declared` ne sont jamais touchés.
-- [ ] Une fiche affiche ses renvois sortants **et** entrants.
-- [ ] Un renvoi surligne le chemin exact dans la structure quand on le suit.
-- [ ] `target_key` résout vers la version surchargée du ruleset courant, pas vers l'entrée d'origine.
+- [x] Les renvois `derived` sont recalculés à chaque écriture ; les `declared` ne sont jamais touchés.
+- [x] Une fiche affiche ses renvois sortants **et** entrants.
+- [x] Un renvoi surligne le chemin exact dans la structure quand on le suit.
+- [x] `target_key` résout vers la version surchargée du ruleset courant, pas vers l'entrée d'origine.
+
+**Fait** — la table et ses politiques RLS existaient déjà depuis la migration initiale (004), seul l'extracteur et le branchement manquaient.
+
+- Extracteur pur `src/core/rules/refs.ts` (tests écrits d'abord) : un seul cas produit un renvoi fiable aujourd'hui — une colonne `grants` de `class_progression` qui accorde une `feature`, seul endroit où un champ structuré (pas du JSON brut d'import) porte déjà une clé d'entrée stable. `part_of` (sous-classe → classe), `damage_type`, etc. attendront un bloc qui les porte réellement — même discipline que les blocs eux-mêmes, pas de renvoi vers une catégorie sans fiche à elle (`Damage-Types`, `Magic-Schools`...).
+- `app.import_srd_entries` (migration `20260802110001`) recalcule les renvois `derived` d'une entrée en même temps que ses blocs (supprime puis réinsère, jamais les `declared`) ; `target_entry_id` est résolu dans le même ruleset que la source — la seule résolution valide tant que la surcharge (V1-A4) n'existe pas.
+- Repo/service : `listOutgoingRefs`/`listIncomingRefsForKey`, résolution par lot (jamais une requête par renvoi), traduction incluse.
+- UI : panneau « Renvois sortants/entrants » sur chaque fiche ; suivre un renvoi entrant navigue vers la fiche source et surligne l'élément exact (`data-ref-path` + `?path=`, `RefPathHighlighter`). Bénéfice inattendu : les cellules `grants` de `class_progression` affichent désormais le nom traduit et lient vers la fiche de l'aptitude, au lieu de la clé brute — même donnée que le panneau de renvois, pas de deuxième résolution.
+- Vérifié dans le navigateur : Barbare affiche 25 renvois sortants (Rage, Reckless Attack...) ; suivre "Barbare" depuis les renvois entrants de Rage surligne exactement la cellule niveau 1. Import rejoué deux fois : 317 puis 317 renvois (5.1), 336 puis 336 (5.2.1) — stable.
 
 ### V1-A4 — Surcharge et variantes · `L`
 

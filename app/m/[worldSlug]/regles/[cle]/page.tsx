@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
@@ -5,6 +6,8 @@ import { getRuleEntryPageData } from "@/src/server/services/rules";
 import type { Locale } from "@/src/i18n/request";
 import RuleBlockRenderer from "@/components/rules/RuleBlockRenderer";
 import MissingBlocksBanner from "@/components/rules/MissingBlocksBanner";
+import RuleRefsPanel from "@/components/rules/RuleRefsPanel";
+import RefPathHighlighter from "@/components/rules/RefPathHighlighter";
 
 export default async function RuleEntryPage({
   params,
@@ -46,9 +49,15 @@ export default async function RuleEntryPage({
 
       <div className="flex flex-col">
         {entry.blocks.map((block) => (
-          <RuleBlockRenderer key={block.id} block={block} />
+          <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} />
         ))}
       </div>
+
+      <RuleRefsPanel worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} incomingRefs={entry.incomingRefs} />
+
+      <Suspense fallback={null}>
+        <RefPathHighlighter />
+      </Suspense>
     </div>
   );
 }

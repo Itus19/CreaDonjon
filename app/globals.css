@@ -42,6 +42,13 @@ body {
   outline-offset: 2px;
 }
 
+/* Suivre un renvoi entrant surligne l'element exact vise (V1-A3, RefPathHighlighter) — transitoire, retire apres quelques secondes. */
+.ref-highlight {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

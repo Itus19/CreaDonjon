@@ -51,6 +51,37 @@ export async function getRulesetEntryByKey(
   return data;
 }
 
+// Meme borne que TRANSLATION_BATCH_SIZE plus bas : defensif, les cles
+// ciblees par les renvois d'une seule entree restent en pratique tres en
+// dessous (quelques dizaines pour une classe), mais la marge ne coute rien.
+const ENTRY_KEYS_BATCH_SIZE = 200;
+
+/**
+ * Plusieurs entrees d'UN ruleset par leur entry_key, en un ou plusieurs
+ * appels plutot qu'un par cle (resolution des renvois sortants, V1-A3). Ne
+ * remonte pas la chaine de parente : l'appelant retombe sur
+ * getRulesetEntryByKey pour les cles absentes du resultat (rare tant que
+ * les surcharges, V1-A4, n'existent pas).
+ */
+export async function listRulesetEntriesByKeys(
+  supabase: TypedClient,
+  rulesetId: string,
+  entryKeys: string[]
+): Promise<RulesetEntryRow[]> {
+  const all: RulesetEntryRow[] = [];
+  for (let i = 0; i < entryKeys.length; i += ENTRY_KEYS_BATCH_SIZE) {
+    const batch = entryKeys.slice(i, i + ENTRY_KEYS_BATCH_SIZE);
+    const { data, error } = await supabase
+      .from("ruleset_entries")
+      .select("id, ruleset_id, entry_key, entry_type, source_attribution, source_raw")
+      .eq("ruleset_id", rulesetId)
+      .in("entry_key", batch);
+    if (error) throw new Error(error.message);
+    all.push(...data);
+  }
+  return all;
+}
+
 export interface RulesetEntrySummaryRow {
   id: string;
   entry_key: string;
@@ -168,4 +199,75 @@ export async function listBlocksForRulesetEntry(
     .order("display_order");
   if (error) throw new Error(error.message);
   return data;
+}
+
+export interface RulesetEntryRefRow {
+  id: string;
+  source_entry_id: string;
+  target_key: string;
+  target_entry_id: string | null;
+  ref_kind: string;
+  origin: string;
+  path: string | null;
+  note: string | null;
+}
+
+/** Renvois sortants d'une fiche (V1-A3, SCHEMA.md §9.3) : tout ce que cette entree cite. */
+export async function listOutgoingRefs(supabase: TypedClient, entryId: string): Promise<RulesetEntryRefRow[]> {
+  const { data, error } = await supabase
+    .from("ruleset_entry_refs")
+    .select("id, source_entry_id, target_key, target_entry_id, ref_kind, origin, path, note")
+    .eq("source_entry_id", entryId);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export interface IncomingRefRow extends RulesetEntryRefRow {
+  source_entry_key: string;
+  source_entry_type: string;
+  source_source_raw: Json;
+}
+
+/**
+ * Renvois entrants vers `targetKey` : tout ce qui cite cette fiche. Deux
+ * requetes a plat plutot qu'une jointure imbriquee (meme style que le reste
+ * de ce fichier) — `ruleset_entry_refs` n'a que target_key, jamais
+ * target_entry_id comme cle de recherche (SCHEMA.md §9.3 : la cle traverse
+ * la chaine d'heritage, l'identifiant non), donc on filtre par ruleset_id
+ * apres coup plutot que de faire confiance a un cache pouvant dater.
+ */
+export async function listIncomingRefsForKey(
+  supabase: TypedClient,
+  rulesetId: string,
+  targetKey: string
+): Promise<IncomingRefRow[]> {
+  const { data: refs, error: refsError } = await supabase
+    .from("ruleset_entry_refs")
+    .select("id, source_entry_id, target_key, target_entry_id, ref_kind, origin, path, note")
+    .eq("target_key", targetKey);
+  if (refsError) throw new Error(refsError.message);
+  if (refs.length === 0) return [];
+
+  const { data: sources, error: sourcesError } = await supabase
+    .from("ruleset_entries")
+    .select("id, ruleset_id, entry_key, entry_type, source_raw")
+    .in(
+      "id",
+      refs.map((r) => r.source_entry_id)
+    );
+  if (sourcesError) throw new Error(sourcesError.message);
+
+  const sourceById = new Map(sources.map((s) => [s.id, s]));
+  const result: IncomingRefRow[] = [];
+  for (const ref of refs) {
+    const source = sourceById.get(ref.source_entry_id);
+    if (!source || source.ruleset_id !== rulesetId) continue;
+    result.push({
+      ...ref,
+      source_entry_key: source.entry_key,
+      source_entry_type: source.entry_type,
+      source_source_raw: source.source_raw,
+    });
+  }
+  return result;
 }

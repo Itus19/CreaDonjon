@@ -38,6 +38,19 @@
     "choisirRegle": "Choisissez une règle dans la barre latérale.",
     "illustration": "Illustration",
     "missingBlocks": "Règle incomplète : {count, plural, one {bloc manquant} other {blocs manquants}} — <mech>{list}</mech>",
+    "renvoisSortants": "Renvois sortants",
+    "renvoisEntrants": "Renvois entrants",
+    "renvoiNonResolu": "introuvable",
+    "refKinds": {
+      "uses_rule": "utilise",
+      "applies_condition": "applique",
+      "damage_type": "type de dégâts",
+      "requires": "requiert",
+      "replaces": "remplace",
+      "see_also": "voir aussi",
+      "part_of": "fait partie de",
+      "grants": "accorde"
+    },
     "entryTypes": {
       "spell": "Sort",
       "item": "Objet",

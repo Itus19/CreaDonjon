@@ -6,9 +6,9 @@
 //
 // Le contournement du verrou is_official_base est explicite et localise
 // dans les fonctions Postgres app.import_upsert_ruleset / app.import_srd_entries
-// (migration 20260730180001) et app.import_prune_stale_entries (migration
-// 20260802100001) : ce script ne fait jamais de set_config lui-meme, il
-// appelle des RPC qui l'encapsulent.
+// (migration 20260730180001, renvois derives ajoutes en 20260802110001) et
+// app.import_prune_stale_entries (migration 20260802100001) : ce script ne
+// fait jamais de set_config lui-meme, il appelle des RPC qui l'encapsulent.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -19,6 +19,7 @@ import {
   validateBlockData,
 } from "../src/core/schemas/rule-blocks";
 import { parseFormula } from "../src/core/formula";
+import { extractDerivedRefs, type DerivedRef } from "../src/core/rules/refs";
 
 interface ConversionFailure {
   rulesetFile: string;
@@ -66,6 +67,10 @@ interface TransformedEntry {
   // evite un reimport complet le jour ou on en a besoin.
   source_raw: SrdRecord;
   blocks: EntryBlock[];
+  // Renvois derives de la structure des blocs (V1-A3, SCHEMA.md §9.3) —
+  // recalcules a chaque import, jamais les renvois `declared` (voir
+  // app.import_srd_entries, migration 20260802110001).
+  refs: DerivedRef[];
 }
 
 interface SrdVersionConfig {
@@ -558,6 +563,7 @@ function transformEntry(
     source_attribution: sourceAttribution,
     source_raw: entry,
     blocks,
+    refs: extractDerivedRefs(blocks),
   };
 }
 
@@ -573,6 +579,7 @@ function readSrdFile(file: string): Record<string, SrdRecord[]> {
 interface ImportResult {
   counts: Record<EntryType, number>;
   blocksTotal: number;
+  refsTotal: number;
   failures: ConversionFailure[];
 }
 
@@ -592,6 +599,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
   const counts: Partial<Record<EntryType, number>> = {};
   const failures: ConversionFailure[] = [];
   let blocksTotal = 0;
+  let refsTotal = 0;
 
   // Regroupe en amont les aptitudes generiques identiques (V1-A2) : le
   // remap doit exister avant de traiter la categorie Classes, quel que soit
@@ -631,6 +639,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
         const t = transformEntry(category, item, config.sourceAttribution, levels, remapFeatureKey);
         transformed.push(t);
         blocksTotal += t.blocks.length;
+        refsTotal += t.refs.length;
       } catch (err) {
         failures.push({
           rulesetFile: config.file,
@@ -681,7 +690,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
     console.log(`  fiches obsoletes retirees : ${prunedCount}`);
   }
 
-  return { counts: counts as Record<EntryType, number>, blocksTotal, failures };
+  return { counts: counts as Record<EntryType, number>, blocksTotal, refsTotal, failures };
 }
 
 async function main() {
@@ -691,13 +700,14 @@ async function main() {
 
   for (const config of SRD_VERSIONS) {
     console.log(`--- ${config.rulesetName} ---`);
-    const { counts, blocksTotal, failures } = await importSrdVersion(config);
+    const { counts, blocksTotal, refsTotal, failures } = await importSrdVersion(config);
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
     for (const [entryType, count] of Object.entries(counts).sort()) {
       console.log(`  ${entryType.padEnd(12)} ${count}`);
     }
     console.log(`  ${"total".padEnd(12)} ${total}`);
     console.log(`  ${"blocs".padEnd(12)} ${blocksTotal}`);
+    console.log(`  ${"renvois".padEnd(12)} ${refsTotal}`);
     console.log(`  ${"echecs".padEnd(12)} ${failures.length}\n`);
     allFailures.push(...failures);
   }

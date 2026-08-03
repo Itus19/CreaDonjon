@@ -38,6 +38,19 @@
     "choisirRegle": "Choose a rule in the sidebar.",
     "illustration": "Illustration",
     "missingBlocks": "Incomplete rule: {count, plural, one {missing block} other {missing blocks}} — <mech>{list}</mech>",
+    "renvoisSortants": "Outgoing references",
+    "renvoisEntrants": "Incoming references",
+    "renvoiNonResolu": "not found",
+    "refKinds": {
+      "uses_rule": "uses",
+      "applies_condition": "applies",
+      "damage_type": "damage type",
+      "requires": "requires",
+      "replaces": "replaces",
+      "see_also": "see also",
+      "part_of": "part of",
+      "grants": "grants"
+    },
     "entryTypes": {
       "spell": "Spell",
       "item": "Item",

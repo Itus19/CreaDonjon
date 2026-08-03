@@ -18,7 +18,10 @@ import {
   getRulesetById,
   getRulesetEntryByKey,
   listBlocksForRulesetEntry,
+  listIncomingRefsForKey,
+  listOutgoingRefs,
   listRulesetEntries,
+  listRulesetEntriesByKeys,
   listTranslationsForEntries,
   type RulesetEntryRow,
 } from "@/src/server/repos/rules";
@@ -65,6 +68,15 @@ export interface RuleEntryBlockView {
   displayOrder: number;
 }
 
+/** Un renvoi affiche (V1-A3) : `key` designe l'AUTRE entree — la cible pour un renvoi sortant, la source pour un renvoi entrant. `entryType` absent = renvoi non resolu (cible disparue ou jamais importee). */
+export interface RuleRefView {
+  key: string;
+  name: string;
+  entryType: EntryType | null;
+  refKind: string;
+  path: string | null;
+}
+
 export interface RuleEntryDetail {
   id: string;
   entryKey: string;
@@ -73,6 +85,8 @@ export interface RuleEntryDetail {
   sourceAttribution: string | null;
   blocks: RuleEntryBlockView[];
   missingBlocks: string[];
+  outgoingRefs: RuleRefView[];
+  incomingRefs: RuleRefView[];
 }
 
 function maxLevelForAxis(axis: ScalingBlockData["axis"]): number {
@@ -83,6 +97,85 @@ function entryNameFrom(entry: { entry_key: string; source_raw: unknown }): strin
   const sourceRaw = entry.source_raw as { name?: unknown } | null;
   const name = sourceRaw && typeof sourceRaw.name === "string" ? sourceRaw.name : null;
   return name ?? entry.entry_key;
+}
+
+/**
+ * Renvois sortants d'une fiche, prets a afficher (V1-A3). Les cles cibles
+ * sont resolues en un seul lot dans le ruleset courant — le cas normal tant
+ * que les surcharges (V1-A4) n'existent pas — puis, pour les cles absentes
+ * du lot, une par une via la remontee de chaine (rare : cible d'un ruleset
+ * parent, ou renvoi non resolu si elle n'existe nulle part).
+ */
+async function resolveOutgoingRefs(
+  supabase: TypedClient,
+  rulesetId: string,
+  rulesetEntryId: string,
+  locale: Locale
+): Promise<RuleRefView[]> {
+  const refs = await listOutgoingRefs(supabase, rulesetEntryId);
+  if (refs.length === 0) return [];
+
+  const targetKeys = [...new Set(refs.map((r) => r.target_key))];
+  const batched = await listRulesetEntriesByKeys(supabase, rulesetId, targetKeys);
+  const byKey = new Map(batched.map((e) => [e.entry_key, e]));
+
+  for (const key of targetKeys) {
+    if (byKey.has(key)) continue;
+    const found = await findEntryInRulesetChain(supabase, rulesetId, key);
+    if (found) byKey.set(key, found);
+  }
+
+  const translationByEntryId = new Map<string, string>();
+  if (locale !== "en" && byKey.size > 0) {
+    const translations = await listTranslationsForEntries(
+      supabase,
+      [...byKey.values()].map((e) => e.id),
+      locale
+    );
+    for (const t of translations) translationByEntryId.set(t.entry_id, t.name);
+  }
+
+  return refs.map((ref) => {
+    const target = byKey.get(ref.target_key);
+    return {
+      key: ref.target_key,
+      name: target ? (translationByEntryId.get(target.id) ?? entryNameFrom(target)) : ref.target_key,
+      entryType: target ? (target.entry_type as EntryType) : null,
+      refKind: ref.ref_kind,
+      path: ref.path,
+    };
+  });
+}
+
+/** Renvois entrants vers une fiche, prets a afficher (V1-A3) : tout ce qui la cite. */
+async function resolveIncomingRefs(
+  supabase: TypedClient,
+  rulesetId: string,
+  entryKey: string,
+  locale: Locale
+): Promise<RuleRefView[]> {
+  const refs = await listIncomingRefsForKey(supabase, rulesetId, entryKey);
+  if (refs.length === 0) return [];
+
+  const translationByEntryId = new Map<string, string>();
+  if (locale !== "en") {
+    const translations = await listTranslationsForEntries(
+      supabase,
+      refs.map((r) => r.source_entry_id),
+      locale
+    );
+    for (const t of translations) translationByEntryId.set(t.entry_id, t.name);
+  }
+
+  return refs.map((ref) => ({
+    key: ref.source_entry_key,
+    name:
+      translationByEntryId.get(ref.source_entry_id) ??
+      entryNameFrom({ entry_key: ref.source_entry_key, source_raw: ref.source_source_raw }),
+    entryType: ref.source_entry_type as EntryType,
+    refKind: ref.ref_kind,
+    path: ref.path,
+  }));
 }
 
 /**
@@ -153,6 +246,11 @@ export async function getRuleEntryForWorld(
     return { id: row.id, blockType, display, data, displayOrder: row.display_order };
   });
 
+  const [outgoingRefs, incomingRefs] = await Promise.all([
+    resolveOutgoingRefs(supabase, rulesetId, entry.id, locale),
+    resolveIncomingRefs(supabase, rulesetId, entry.entry_key, locale),
+  ]);
+
   return {
     id: entry.id,
     entryKey: entry.entry_key,
@@ -164,6 +262,8 @@ export async function getRuleEntryForWorld(
       entry.entry_type as EntryType,
       blockRows.map((b) => b.block_type)
     ),
+    outgoingRefs,
+    incomingRefs,
   };
 }
 

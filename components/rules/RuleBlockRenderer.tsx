@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { formatFormulaNode } from "@/src/core/formula";
 import type {
   ClassProgressionBlockData,
@@ -8,7 +9,7 @@ import type {
   ScalingBlockData,
   SpellCastingBlockData,
 } from "@/src/core/schemas/rule-blocks";
-import type { RuleEntryBlockView } from "@/src/server/services/rules";
+import type { RuleEntryBlockView, RuleRefView } from "@/src/server/services/rules";
 import FormulaList from "./layouts/FormulaList";
 import KeyValues from "./layouts/KeyValues";
 import Prose from "./layouts/Prose";
@@ -72,22 +73,73 @@ function Scaling({ data }: { data: ScalingBlockData }) {
   );
 }
 
-function progressionCell(kind: string, value: unknown): ReactNode {
-  if (kind === "grants") {
-    if (!Array.isArray(value)) return "";
-    return value
-      .map((g) => (g && typeof g === "object" ? (g as { feature?: string; choice?: string }).feature ?? (g as { choice?: string }).choice : null))
-      .filter(Boolean)
-      .join(", ");
-  }
+/**
+ * Chaque grant lie vers sa propre fiche, avec `data-ref-path` identique au
+ * chemin produit par extractDerivedRefs (src/core/rules/refs.ts) — c'est ce
+ * que RefPathHighlighter cherche pour surligner l'element exact quand on
+ * suit un renvoi entrant (V1-A3). Le nom affiche vient de outgoingRefs
+ * (deja resolu par le service, traduction comprise) plutot que de la cle
+ * brute — meme donnee que le panneau de renvois, pas de deuxieme resolution.
+ */
+function grantsCell(
+  value: unknown,
+  columnKey: string,
+  level: unknown,
+  worldSlug: string,
+  refsByKey: Map<string, RuleRefView>
+): ReactNode {
+  if (!Array.isArray(value)) return "";
+  const items = value
+    .map((g, i) => {
+      if (!g || typeof g !== "object") return null;
+      const feature = (g as { feature?: unknown }).feature;
+      const choice = (g as { choice?: unknown }).choice;
+      if (typeof feature === "string") {
+        const path = `blocks.class_progression.rows[${String(level)}].${columnKey}[${i}]`;
+        const ref = refsByKey.get(feature);
+        return (
+          <Link key={i} href={`/m/${worldSlug}/regles/${feature}`} data-ref-path={path} className="hover:underline">
+            {ref?.name ?? feature}
+          </Link>
+        );
+      }
+      if (typeof choice === "string") return <span key={i}>{choice}</span>;
+      return null;
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  return items.flatMap((item, i) => (i === 0 ? [item] : [<span key={`sep-${i}`}>, </span>, item]));
+}
+
+function progressionCell(
+  kind: string,
+  value: unknown,
+  columnKey: string,
+  level: unknown,
+  worldSlug: string,
+  refsByKey: Map<string, RuleRefView>
+): ReactNode {
+  if (kind === "grants") return grantsCell(value, columnKey, level, worldSlug, refsByKey);
   if (kind === "formula" || kind === "value") return <span className="mech">{cellValue(value)}</span>;
   return cellValue(value);
 }
 
-function ClassProgression({ data }: { data: ClassProgressionBlockData }) {
+function ClassProgression({
+  data,
+  worldSlug,
+  outgoingRefs,
+}: {
+  data: ClassProgressionBlockData;
+  worldSlug: string;
+  outgoingRefs: RuleRefView[];
+}) {
+  const refsByKey = new Map(outgoingRefs.map((r) => [r.key, r]));
   const columns = data.columns.map((col) => ({ key: col.key, label: localizedLabel(col.label, col.key) }));
   const rows = data.rows.map((row) =>
-    data.columns.map((col) => ({ key: col.key, value: progressionCell(col.kind, row[col.key]) }))
+    data.columns.map((col) => ({
+      key: col.key,
+      value: progressionCell(col.kind, row[col.key], col.key, row.level, worldSlug, refsByKey),
+    }))
   );
   return <ProgressionTable columns={columns} rows={rows} />;
 }
@@ -107,29 +159,48 @@ function CustomTable({ data }: { data: CustomTableBlockData }) {
  * six mises en page suffisent ; ce fichier ne fait que traduire chaque
  * bloc typé vers la forme generique attendue par sa mise en page.
  */
-function BlockContent({ block }: { block: RuleEntryBlockView }) {
+function BlockContent({
+  block,
+  worldSlug,
+  outgoingRefs,
+}: {
+  block: RuleEntryBlockView;
+  worldSlug: string;
+  outgoingRefs: RuleRefView[];
+}) {
   if (block.blockType === "description") return <Prose segments={(block.data as DescriptionBlockData).segments} />;
   if (block.blockType === "spell_casting") return <SpellCasting data={block.data as SpellCastingBlockData} />;
   if (block.blockType === "effects") return <Effects data={block.data as EffectsBlockData} />;
   if (block.blockType === "scaling") return <Scaling data={block.data as ScalingBlockData} />;
-  if (block.blockType === "class_progression") return <ClassProgression data={block.data as ClassProgressionBlockData} />;
+  if (block.blockType === "class_progression")
+    return (
+      <ClassProgression data={block.data as ClassProgressionBlockData} worldSlug={worldSlug} outgoingRefs={outgoingRefs} />
+    );
   if (block.blockType === "custom_table") return <CustomTable data={block.data as CustomTableBlockData} />;
   return null;
 }
 
-export default function RuleBlockRenderer({ block }: { block: RuleEntryBlockView }) {
+export default function RuleBlockRenderer({
+  block,
+  worldSlug,
+  outgoingRefs,
+}: {
+  block: RuleEntryBlockView;
+  worldSlug: string;
+  outgoingRefs: RuleRefView[];
+}) {
   if (block.display.collapsed) {
     return (
       <details className="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
         <summary className="block-title mb-2 cursor-pointer">{block.display.label}</summary>
-        <BlockContent block={block} />
+        <BlockContent block={block} worldSlug={worldSlug} outgoingRefs={outgoingRefs} />
       </details>
     );
   }
   return (
     <div className="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
       <h3 className="block-title mb-2">{block.display.label}</h3>
-      <BlockContent block={block} />
+      <BlockContent block={block} worldSlug={worldSlug} outgoingRefs={outgoingRefs} />
     </div>
   );
 }
