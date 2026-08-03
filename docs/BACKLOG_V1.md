@@ -181,7 +181,7 @@ Ajoutée en cours de route (V1-A1b) : traduction officielle des noms d'entrées 
 Positionnée ici, après le lot A entier plutôt qu'après A2 seul : V1-A2 change la structure des aptitudes (déduplication), V1-A3 ajoute des renvois, V1-A4 ajoute des surcharges — traduire avant que cette structure se stabilise aurait signifié refaire une partie du travail à chaque lot.
 
 - [ ] Compléter Sort et Monstre à ~100 % (Sort à 99,5 %, Monstre à 88 % — très proche, reste des cas structurellement non vérifiables, voir plus bas).
-- [ ] Traduire Objet et Aptitude en tenant compte de la nouvelle structure post-V1-A2 (Objet 30 % → **54 %**, Aptitude 28 % → **62 %** — catégories les plus volumineuses, 1169 et 961 entrées, en net progrès mais pas finies).
+- [ ] Traduire Objet et Aptitude en tenant compte de la nouvelle structure post-V1-A2 (Objet 30 % → **56 %**, Aptitude 28 % → **62 %** — catégories les plus volumineuses, 1169 et 961 entrées, en net progrès mais pas finies).
 - [x] Aucune traduction sans vérification mot pour mot contre `data/srd/fr-source/*.txt` — un terme non trouvé reste en anglais plutôt que d'écrire une correspondance devinée.
 - [x] Taille de police du texte de description vérifiée : `.rich-text-content p { font-size: 12px }` (`app/globals.css`), déjà correcte, aucun changement nécessaire.
 - [x] Traduire aussi le **texte** des blocs `description` (pas seulement le nom de l'entrée) — ajouté en cours de route sur demande explicite. Fait pour Sort (mécanisme réutilisable, pas encore étendu aux autres catégories à vraie prose officielle : Règle, Aptitude).
@@ -224,6 +224,7 @@ Positionnée ici, après le lot A entier plutôt qu'après A2 seul : V1-A2 chang
   - Objets magiques à bonus (+1/+2/+3) couverts en un seul motif réutilisable pour toutes les variantes : Weapon +1/+2/+3 = **Arme +1, +2 ou +3**, Armor +1/+2/+3 = **Armure +1, +2 ou +3**, Shield +1/+2/+3 = **Bouclier +1, +2 ou +3**, Ammunition +1/+2/+3 = **Munitions +1, +2 ou +3** (la rareté variable selon le bonus est décrite dans le même paragraphe que le nom générique, donc une seule fiche officielle couvre les trois bonus).
   - Sous-variantes tabulaires partiellement couvertes ensuite (Objet 52 % → 54 %) : les 9 statuettes de Figurine of Wondrous Power sont nommées individuellement en gras dans le texte (Ivory Goats = **Chèvres d'ivoire**, Bronze Griffon = **Griffon de bronze**, etc.) — vérifiées et écrites sans risque, ce sont des expressions à plusieurs mots, distinctives. Potion of Greater/Superior Healing = **Guérison importante/supérieure** (la table ne nomme que le suffixe de rareté, pas le nom complet du sous-objet, mais suffisant pour vérifier).
   - **Tenté et volontairement écarté** : les 6 variantes de Belt of X Giant Strength (« Ceinturon de force de géant des nuages », etc.) — le texte officiel ne les nomme que par la colonne d'un tableau (« Géant des nuages », rareté), jamais comme une expression complète assemblée ; la vérification mot pour mot a donc correctement rejeté ces 6 candidats plutôt que d'écrire une reconstruction non confirmée. Même limite prévisible pour Ioun Stone (14 sous-types, chacun nommé par un seul mot commun comme « Absorption » ou « Agilité » — risque de faux positif trop élevé pour vérifier par simple sous-chaîne, écarté par prudence) et Feather Token (sous-types nommés uniquement par leur forme d'animal dans une liste, pas par une expression complète).
+  - Armes et armures magiques nommées couvertes ensuite (Objet 54 % → 56 %), chacune vérifiée par sa mécanique exacte avant d'écrire (plusieurs noms très éloignés du sens littéral anglais) : Sword of Sharpness = **Épée acérée**, Flame Tongue = **Épée ardente**, Sword of Wounding = **Épée mordante**, Sun Blade = **Épée radieuse**, Dagger of Venom = **Dague venimeuse**, Berserker Axe = **Hache du berserker**, Dwarven Thrower = **Marteau de lancer nain**, Mace of Disruption/Smiting/Terror = **Masse d'anéantissement/destructrice/terrifiante**, Scimitar of Speed = **Cimeterre de célérité**, Mithral Armor = **Armure de mithral**, Demon Armor = **Armure démoniaque**, Glamoured Studded Leather Armor = **Armure de cuir clouté enchantée**.
 
 **État des noms par catégorie (deux sessions de suite)** :
 
@@ -237,10 +238,10 @@ Positionnée ici, après le lot A entier plutôt qu'après A2 seul : V1-A2 chang
 | Sous-classe | 61 % | 79 % | **85 %** |
 | Règle | 42 % | 67 % | **73 %** |
 | Espèce | 46 % | 46 % | 46 % (bloqué sur les lignées 2024, structure tabulaire) |
-| Objet | 8 % | 8 % | **30 %** (1169 entrées) |
+| Objet | 8 % | 30 % → **56 %** | (1169 entrées) |
 | Classe/Historique/Condition | 100 % | — | inchangé |
 
-Objet et Aptitude restent, de loin, les deux catégories qui pèsent le plus lourd — leur volume (2130 entrées à eux deux), pas un manque d'effort, explique l'écart avec le reste. Description de texte officielle : seul Sort a une extraction de prose à ce jour ; étendre la même méthode à Règle et Aptitude (qui ont une vraie prose SRD, contrairement à Monstre dont la description est une phrase synthétisée par l'import) reste à faire.
+Objet et Aptitude restent, de loin, les deux catégories qui pèsent le plus lourd (2130 entrées à eux deux), mais toutes deux ont dépassé la moitié de leur volume ce cycle. Description de texte officielle : seul Sort a une extraction de prose à ce jour ; étendre la même méthode à Règle et Aptitude (qui ont une vraie prose SRD, contrairement à Monstre dont la description est une phrase synthétisée par l'import) reste à faire.
 
 ---
 
