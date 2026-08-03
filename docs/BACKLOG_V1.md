@@ -191,8 +191,24 @@ Positionnée ici, après le lot A entier plutôt qu'après A2 seul : V1-A2 chang
 - Un paragraphe de prose ne se devine pas puis ne se vérifie pas mot pour mot comme un nom (la traduction officielle ne reproduit jamais l'anglais caractère pour caractère, même fidèle) : la méthode est différente — extraction directe du texte officiel depuis `data/srd/fr-source/srd-5.1-fr.txt`, jamais une traduction reconstruite. Script dédié : `scripts/translate-spell-descriptions-fr.ts` (`npm run translate:spell-descriptions`), détecte chaque sort par son motif fixe (nom seul, puis ligne « École du Ne niveau » ou « Sort mineur d'École »), extrait la prose jusqu'à l'entrée suivante, filtre le pied de page répété sur chaque page du PDF. Trois bugs corrigés en le construisant : suffixe `(rituel)` cassait la détection d'en-tête (avalait des dizaines de sorts en trop, ex. Communion), école commençant par une consonne utilise « de » et non « d' » (Divination, Nécromancie), dernière entrée du chapitre sans borne de fin naturelle.
 - Stockage : `ruleset_entry_translations.blocks.description.segments` (colonne déjà prévue par le schéma, jamais utilisée jusqu'ici). Le service (`getRuleEntryForWorld`) l'applique à la base **avant** la résolution des surcharges de variante (V1-A4) : une surcharge de variante l'emporte toujours si elle vise le même bloc, la traduction ne fait que remplacer le texte officiel non surchargé.
 - Bonus : la même extraction, croisée avec les données structurées déjà en base (école + niveau + notation de dés exacte, un signal indépendant de la langue), a permis de découvrir 15 noms de sorts supplémentaires sans jamais deviner — chacun vérifié à la main avant écriture (ex. "Weird" → "Ennemi subconscient", confirmé par le contenu).
-- État à la fin de cette étape (Sort) : noms 453/638 (71 %, contre 349 avant), descriptions 443/638 (69 %, 0 avant). Vérifié dans le navigateur : Boule de feu affiche le texte français officiel complet, y compris la clause « À plus haut niveau ».
-- Reste à faire : pousser Sort/Monstre vers 100 %, traduire Objet/Aptitude (noms), étendre l'extraction de description à Règle et Aptitude (Monstre n'a pas de prose officielle — sa description est une phrase synthétisée par l'import, pas du texte SRD).
+- Vérifié dans le navigateur : Boule de feu affiche le texte français officiel complet, y compris la clause « À plus haut niveau ».
+
+**État des noms par catégorie (session suivante)** :
+
+| Catégorie | Avant | Après |
+|---|---|---|
+| Sort | 349/638 (55 %) | 453/638 (71 %) |
+| Monstre | 559/668 (84 %) | 584/668 (87 %) |
+| Aptitude | 130/961 (14 %) | 196/961 (20 %) |
+| Arme | 47/78 (60 %) | 72/78 (92 %) |
+| Armure | 16/26 (62 %) | 20/26 (77 %) |
+| Sous-classe | 20/33 (61 %) | 26/33 (79 %) |
+| Règle | 33/78 (42 %) | 52/78 (67 %) |
+| Espèce | 24/52 (46 %) | 24/52 (46 %, tentative sans succès sur les lignées 2024) |
+| Objet | 92/1169 (8 %) | pas retouché cette session |
+| Classe/Historique/Condition | 100 % | inchangé |
+
+Objet (1169 entrées) et Aptitude (961) restent les deux catégories qui pèsent le plus lourd — leur volume, pas un manque d'effort, explique le retard. Description : seul Sort a une extraction de prose à ce jour (Monstre n'a pas de prose officielle, sa description est une phrase synthétisée par l'import ; Règle et Aptitude ont une vraie prose SRD mais l'extraction n'y a pas encore été étendue).
 
 ---
 
