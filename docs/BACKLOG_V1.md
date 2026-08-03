@@ -214,7 +214,8 @@ Positionnée ici, après le lot A entier plutôt qu'après A2 seul : V1-A2 chang
   - Plusieurs autres : Deflect Missiles = Parade de projectiles, Purity of Body = Pureté physique, Land's Stride = Foulée tellurique, Natural Explorer = Explorateur-né, Divine Sense = Perception divine, Font of Magic = Source de sorcellerie, Otherworldly Patron = Protecteur d'outre-monde, Mystic Arcanum = Arcanum mystique (pas « Arcane »), Song of Rest = Chant reposant.
   - Leçon pour la suite : deviner à partir de la traduction PHB grand public produit des candidats plausibles mais faux plus d'une fois sur deux (45/180 puis 85/90 vérifiés selon les lots) — il vaut mieux lire directement la table de progression de chaque classe dans `data/srd/fr-source/srd-5.1-fr.txt` (elle liste tous les noms d'aptitudes de la classe en une fois) que deviner puis vérifier.
   - Classes couvertes en détail cette session : Guerrier, Barbare, Barde, Clerc, Druide, Moine, Paladin, Rôdeur, Roublard, Ensorceleur, Occultiste, Magicien. Races couvertes ensuite (même méthode, lecture directe des traits raciaux) : Nain, Elfe/Haut-elfe, Halfelin, Demi-orc, Drakéide, Gnome, Tieffelin — avec de nouvelles corrections du même type (Relentless Endurance = **Acharnement** pas « Endurance implacable », Savage Attacks = **Sauvagerie** pas « Attaques sauvages », Infernal Legacy = **Ascendance infernale** pas « Héritage infernal », Elf Weapon Training = **Entraînement martial elfique** pas « elfe »). Sous-classe Lignée draconique de l'Ensorceleur également couverte (Draconic Resilience = **Résistance draconique** pas « Robustesse draconique »).
-  - Restent à couvrir avec la même méthode : Demi-elfe (partiellement lu), les variantes 2024 (Divine Order, Weapon Mastery, Epic Boon, etc., vocabulaire probablement très différent du 2014), et les autres sous-classes (Champion guerrier partiellement lu, Domaine de la vie clerc, collèges bardiques, etc.).
+  - Toutes les sous-classes SRD couvertes ensuite avec la même méthode (lecture directe, jamais devinée) : Voie de la Paume (Moine, Wholeness of Body = **Plénitude physique** pas « Intégrité du corps », Quivering Palm = **Paume vibratoire** pas « Paume vibrante »), Chasseur (Rôdeur, toute la liste Hunter's Prey/Defensive Tactics/Superior Hunter's Defense retrouvée par les choix « au choix » du texte), Voleur (Roublard, Fast Hands = **Mains lestes** pas « Mains rapides », Second-Story Work = **Monte-en-l'air**), Collège du Savoir (Barde, Cutting Words = **Mots cinglants** pas « Mots acérés »), Serment de Dévotion (Paladin), Le Fiélon (Occultiste, Dark One's Blessing = **Bénédiction du ténébreux** pas « ... du seigneur des ténèbres »), École d'Évocation (Magicien, Evocation Savant = **Évocateur érudit**), Voie du Berserker (Barbare, Retaliation = **Représailles**), Champion (Guerrier, déjà correct), Lignée draconique (Ensorceleur, déjà fait).
+  - Restent à couvrir avec la même méthode : Demi-elfe (traits déjà lus, rien de nouveau trouvé), et les variantes 2024 (Divine Order, Weapon Mastery, Epic Boon, etc., vocabulaire probablement très différent du 2014 — pas encore commencé).
 
 **État des noms par catégorie (deux sessions de suite)** :
 
@@ -222,7 +223,7 @@ Positionnée ici, après le lot A entier plutôt qu'après A2 seul : V1-A2 chang
 |---|---|---|---|
 | Sort | 55 % | 71 % | **99,5 %** |
 | Monstre | 84 % | 87 % | **91 %** |
-| Aptitude | 14 % | 20 % → **47 %** | (961 entrées) |
+| Aptitude | 14 % | 20 % → **54 %** | (961 entrées) |
 | Arme | 60 % | 92 % | **97 %** |
 | Armure | 62 % | 77 % | **96 %** |
 | Sous-classe | 61 % | 79 % | **85 %** |
