@@ -117,6 +117,40 @@ export interface RulesetEntrySummaryRow {
   source_raw: Json;
 }
 
+export interface RulesetEntryChipRow {
+  id: string;
+  entry_key: string;
+  entry_type: string;
+  source_raw: Json;
+  ai_digest: string | null;
+}
+
+/**
+ * Entrees d'UN ruleset par cle, avec leur resume `ai_digest` (V1-B2,
+ * resolution de `<RuleChip>`) — variante de `listRulesetEntriesByKeys` qui
+ * n'a pas besoin de ce champ pour les renvois (V1-A3). Aucune remontee de
+ * chaine ici, meme convention que le reste de ce fichier.
+ */
+export async function listRulesetEntryChipsByKeys(
+  supabase: TypedClient,
+  rulesetId: string,
+  entryKeys: string[]
+): Promise<RulesetEntryChipRow[]> {
+  if (entryKeys.length === 0) return [];
+  const all: RulesetEntryChipRow[] = [];
+  for (let i = 0; i < entryKeys.length; i += ENTRY_KEYS_BATCH_SIZE) {
+    const batch = entryKeys.slice(i, i + ENTRY_KEYS_BATCH_SIZE);
+    const { data, error } = await supabase
+      .from("ruleset_entries")
+      .select("id, entry_key, entry_type, source_raw, ai_digest")
+      .eq("ruleset_id", rulesetId)
+      .in("entry_key", batch);
+    if (error) throw new Error(error.message);
+    all.push(...data);
+  }
+  return all;
+}
+
 const LIST_PAGE_SIZE = 1000;
 
 /**

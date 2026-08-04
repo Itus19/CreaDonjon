@@ -30,6 +30,18 @@ export async function listEntitiesForWorld(
   return data as EntitySummary[];
 }
 
+/** Plusieurs entites par id, en un seul aller-retour (resolution de references de bloc, V1-B2). Silencieusement absentes du resultat si supprimees ou hors du monde attendu — au caller de filtrer par world_id. */
+export async function listEntitiesByIds(supabase: TypedClient, ids: string[]): Promise<EntitySummary[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase
+    .from("entities")
+    .select("id, world_id, slug, name, entity_kind, aliases, version, created_at, updated_at")
+    .in("id", ids)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
+  return data as EntitySummary[];
+}
+
 export async function getEntityBySlug(
   supabase: TypedClient,
   worldId: string,

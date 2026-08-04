@@ -8,10 +8,20 @@ import TextBlockEditor from "./TextBlockEditor";
 import InfoboxBlockEditor from "./InfoboxBlockEditor";
 import ImageBlockEditor from "./ImageBlockEditor";
 import CustomTableBlockEditor from "./CustomTableBlockEditor";
+import CharacterBlockEditor from "./CharacterBlockEditor";
+import InventoryBlockEditor from "./InventoryBlockEditor";
+import SpellcastingBlockEditor from "./SpellcastingBlockEditor";
+import ResourcesBlockEditor from "./ResourcesBlockEditor";
+import StatblockBlockEditor from "./StatblockBlockEditor";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import type { CustomTableBlockData } from "@/src/core/schemas/blocks/customTable";
+import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
+import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
+import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
+import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 
 export interface BlockItem {
@@ -31,14 +41,21 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   infobox: "Encadré",
   image: "Image",
   custom_table: "Tableau",
+  character: "Personnage",
+  inventory: "Inventaire",
+  spellcasting: "Incantation",
+  resources: "Ressources",
+  statblock: "Fiche de créature",
 };
 
 function BlockDataEditor({
   block,
   onChange,
+  worldSlug,
 }: {
   block: BlockItem;
   onChange: (data: unknown) => void;
+  worldSlug: string;
 }) {
   switch (block.blockType) {
     case "text":
@@ -56,6 +73,38 @@ function BlockDataEditor({
           onChange={(d) => onChange(d)}
         />
       );
+    case "character":
+      return (
+        <CharacterBlockEditor
+          data={block.data as CharacterBlockData}
+          onChange={(d) => onChange(d)}
+          worldSlug={worldSlug}
+        />
+      );
+    case "inventory":
+      return (
+        <InventoryBlockEditor
+          data={block.data as InventoryBlockData}
+          onChange={(d) => onChange(d)}
+          worldSlug={worldSlug}
+        />
+      );
+    case "spellcasting":
+      return (
+        <SpellcastingBlockEditor
+          data={block.data as SpellcastingBlockData}
+          onChange={(d) => onChange(d)}
+          worldSlug={worldSlug}
+        />
+      );
+    case "resources":
+      return (
+        <ResourcesBlockEditor data={block.data as ResourcesBlockData} onChange={(d) => onChange(d)} />
+      );
+    case "statblock":
+      return (
+        <StatblockBlockEditor data={block.data as StatblockBlockData} onChange={(d) => onChange(d)} />
+      );
     default:
       return <p className="text-sm text-danger">Type de bloc inconnu : {block.blockType}</p>;
   }
@@ -72,9 +121,11 @@ function BlockDataEditor({
 export default function EntityBlocks({
   entityId,
   initialBlocks,
+  worldSlug,
 }: {
   entityId: string;
   initialBlocks: BlockItem[];
+  worldSlug: string;
 }) {
   const [blocks, setBlocks] = useState<BlockItem[]>(initialBlocks);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -333,7 +384,11 @@ export default function EntityBlocks({
             )}
 
             {!isCollapsed && (
-              <BlockDataEditor block={block} onChange={(data) => patchBlock(block.id, { data })} />
+              <BlockDataEditor
+                block={block}
+                onChange={(data) => patchBlock(block.id, { data })}
+                worldSlug={worldSlug}
+              />
             )}
           </div>
         );

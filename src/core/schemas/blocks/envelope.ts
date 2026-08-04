@@ -8,7 +8,17 @@ import { z } from "zod";
  */
 export const zBlockDisplay = z.object({
   label: z.string().min(1),
-  layout: z.enum(["prose", "key_values", "image", "table"]),
+  layout: z.enum([
+    "prose",
+    "key_values",
+    "image",
+    "table",
+    "character",
+    "inventory",
+    "spellcasting",
+    "resources",
+    "statblock",
+  ]),
   collapsed: z.boolean().optional(),
 });
 export type BlockDisplay = z.infer<typeof zBlockDisplay>;

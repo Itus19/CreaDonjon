@@ -205,7 +205,7 @@ export default function EditEntityForm({
       {status === "error" && errorMessage && <p className="text-sm text-danger">{errorMessage}</p>}
 
       <div className="border-t border-edge pt-3">
-        <EntityBlocks entityId={entity.id} initialBlocks={initialBlocks} />
+        <EntityBlocks entityId={entity.id} initialBlocks={initialBlocks} worldSlug={worldSlug} />
       </div>
     </div>
   );

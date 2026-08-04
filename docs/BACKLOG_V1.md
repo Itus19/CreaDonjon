@@ -297,11 +297,20 @@ Décisions prises en écrivant le moteur, qui engagent V1-B2 et la suite :
 `character`, `inventory`, `spellcasting`, `resources`, `statblock`. Spécification : `specs/wiki-blocs.md` §4.
 
 **Critères**
-- [ ] Le bloc `character` ne stocke que le build : espèce, classe, niveau, caractéristiques, choix. Aucune valeur dérivée en base.
-- [ ] L'inventaire accepte les trois natures : référence de règle, référence d'entité, objet en ligne.
-- [ ] `statblock` permet un PNJ ou une créature **sans build** — personne ne construira un gobelin niveau par niveau.
-- [ ] Décocher « équipé » sur une armure recalcule la CA sans rechargement de page.
-- [ ] Chaque référence porte son lien : capacités, armes, sorts, dons mènent à leur fiche de règle.
+- [x] Le bloc `character` ne stocke que le build : espèce, classe, niveau, caractéristiques, choix. Aucune valeur dérivée en base.
+- [x] L'inventaire accepte les trois natures : référence de règle, référence d'entité, objet en ligne.
+- [x] `statblock` permet un PNJ ou une créature **sans build** — personne ne construira un gobelin niveau par niveau.
+- [x] Décocher « équipé » sur une armure recalcule la CA sans rechargement de page.
+- [x] Chaque référence porte son lien : capacités, armes, sorts, dons mènent à leur fiche de règle.
+
+**Fait** — cinq schémas Zod (`src/core/schemas/blocks/{character,inventory,spellcasting,resources,statblock}.ts`), enregistrés dans le registre des blocs ; cinq éditeurs UI (`components/blocks/*BlockEditor.tsx`), câblés dans `EntityBlocks.tsx` au même mécanisme générique que les blocs V0 (aucun changement de repo/service/route n'a été nécessaire, le CRUD de blocs était déjà entièrement générique) ; un résolveur de référence (`src/server/services/referenceChips.ts`, route `POST /api/worlds/[worldSlug]/reference-chips`) et un composant `<RuleChip>` réutilisant `ai_digest` et la remontée de chaîne de ruleset (V1-A4). Vérifié dans le navigateur : ajout des cinq blocs, résolution de `dwarf`→« Nain » et `scimitar`→« Cimeterre » avec lien vers la fiche de règle, et rebasculement de la CA (11 → 16 → 11) en décochant/cochant « Équipé », sans rechargement.
+
+Décisions de périmètre, documentées pour la suite :
+- **`character.species/background/classes` sont des cles de regle saisies en texte libre** — pas de recherche assistée dans ce ticket (un vrai combobox contre les entrées du ruleset est un ajout UI distinct, pas un changement de forme de données). Le `<RuleChip>` confirme immédiatement si la clé existe.
+- **Le recalcul de CA en direct utilise un `ResolvedRuleset` de démonstration**, pas l'assemblage complet depuis les règles SRD réellement importées : ce dernier suppose un bloc de règle `armor`/`weapon` qui n'existe pas encore (`specs/regles-blocs.md` : « vient quand un cas concret le réclame »). L'éditeur d'inventaire reconnaît par mot-clé (« cotte de mailles », « cuir », « bouclier ») pour prouver le mécanisme — recalcul client, aucun aller-retour réseau, via le vrai `characterSheet()` de V1-B1. L'assemblage général reste un ticket à part.
+- **`choices` (bloc `character`) s'édite en JSON brut** : un vrai parcours de choix multi-niveaux est le sujet de V1-B4, pas de ce ticket.
+- **`containers` (bloc `inventory`) et `saving_throws`/`skills` (bloc `statblock`) n'ont pas encore d'éditeur UI** — le schéma les accepte, la donnée survit si elle existe déjà, mais rien ne les crée depuis l'interface pour l'instant.
+- **Aucune vue publique dédiée** (`components/entities/public/PublicBlockView.tsx`) pour ces cinq types — un bloc personnage rendu public via un lien de partage n'affiche que son titre, aucun contenu (le dispatcher public ne connaît que `text`/`infobox`/`image`/`custom_table`), à corriger avant d'exposer ces blocs au partage anonyme.
 
 ### V1-B3 — État de jeu · `M`
 

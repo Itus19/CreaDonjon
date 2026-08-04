@@ -44,7 +44,7 @@ type TypedClient = SupabaseClient<Database>;
 const SLOT_LEVEL_MAX = 9;
 const CHARACTER_LEVEL_MAX = 20;
 
-interface RulesetChainLink {
+export interface RulesetChainLink {
   rulesetId: string;
   parentRulesetId: string | null;
 }
@@ -56,7 +56,7 @@ interface RulesetChainLink {
  * seulement la borne de profondeur, pour distinguer une vraie boucle
  * (erreur) d'une chaine simplement longue (erreur differente).
  */
-async function walkRulesetChain(supabase: TypedClient, startRulesetId: string): Promise<RulesetChainLink[]> {
+export async function walkRulesetChain(supabase: TypedClient, startRulesetId: string): Promise<RulesetChainLink[]> {
   const chain: RulesetChainLink[] = [];
   const visited = new Set<string>();
   let currentId: string | null = startRulesetId;
@@ -135,7 +135,7 @@ function maxLevelForAxis(axis: ScalingBlockData["axis"]): number {
   return axis === "slot_level" ? SLOT_LEVEL_MAX : CHARACTER_LEVEL_MAX;
 }
 
-function entryNameFrom(entry: { entry_key: string; source_raw: unknown }): string {
+export function entryNameFrom(entry: { entry_key: string; source_raw: unknown }): string {
   const sourceRaw = entry.source_raw as { name?: unknown } | null;
   const name = sourceRaw && typeof sourceRaw.name === "string" ? sourceRaw.name : null;
   return name ?? entry.entry_key;
