@@ -600,6 +600,7 @@ create table campaigns (
   gm_user_id uuid references auth.users(id),          -- null en solo, le MJ est l'IA
   mode       text not null check (mode in ('campaign','solo')),
   rng_seed   text not null default encode(gen_random_bytes(16),'hex'),
+  party_entity_id uuid references entities(id) on delete set null,  -- entite `faction` du groupe de joueurs (V1-C1, migration 20260804140001)
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz

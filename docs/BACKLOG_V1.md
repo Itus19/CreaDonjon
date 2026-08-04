@@ -357,9 +357,19 @@ Décisions de périmètre, documentées pour la suite :
 
 `campaigns`, `campaign_members`, `campaign_characters`, `campaign_entity_snapshots`.
 
-- [ ] Une campagne épingle une version précise de ruleset.
-- [ ] Le groupe de joueurs est une entité `faction` créée avec la campagne.
-- [ ] Inviter un joueur, lui attribuer un personnage.
+- [x] Une campagne épingle une version précise de ruleset.
+- [x] Le groupe de joueurs est une entité `faction` créée avec la campagne.
+- [x] Inviter un joueur, lui attribuer un personnage.
+
+**Fait** — un vrai trou de schéma est apparu en creusant ce ticket : `campaigns` n'avait aucune colonne pour référencer l'entité `faction` de son groupe de joueurs, et `docs/SCHEMA.md` ne le prévoyait pas. Décision (avec l'utilisateur, `docs/adr/0008-campagne-entite-faction.md`) : nouvelle colonne `campaigns.party_entity_id` (migration `20260804140001_campaign_party_entity.sql`, poussée sur le projet lié via `supabase db push`, types régénérés). La même migration ajoute `app.find_user_id_by_email` (+ enveloppe `public`), une fonction `security definer` étroite qui ne renvoie qu'un id — nécessaire parce que `campaign_members.user_id` exige un compte déjà existant et que `profiles` ne peut pas servir d'annuaire (RLS : `profiles_select` ne laisse lire que sa propre ligne) ; jamais de lecture directe de `auth.users` depuis l'application, jamais d'élargissement de la portée du client `service_role` (CLAUDE.md règle 4 ter) — même patron que `resolve_share_link` (V0-07).
+
+`src/server/repos/campaigns.ts` + `src/server/services/campaigns.ts` (`createCampaign` crée la faction **avant** la ligne `campaigns`, jamais l'inverse ; le créateur devient MJ en mode `campaign`, simple joueur en mode `solo` où l'IA est MJ ; `inviteCampaignMember` signale `not_found` sans erreur serveur si l'email ne correspond à aucun compte). Vérifié par un test d'intégration contre la base réelle (`campaigns.integration.test.ts`) — y compris la découverte que l'invitation doit être appelée avec un client **connecté** (`authenticated`, qui a l'accès au schéma `app`), jamais avec le client `service_role` des tests (qui ne l'a pas et ne doit pas l'avoir).
+
+Routes (`/api/worlds/[worldSlug]/campaigns`, `/api/campaigns/[campaignId]`, `.../members`, `.../characters`) + `CampaignsPanel`/`CampaignDetail` (`components/shell/`), rendus sur la page d'accueil du monde, au même endroit que `ShareLinkPanel` — **pas un nouveau troisième onglet du chrome** : `SectionToggle` porte un commentaire explicite (« le mode solo viendra en V3, pas encore de troisième onglet ») qu'il n'y avait pas de raison de contredire pour ce ticket. Vérifié dans le navigateur : création d'une campagne, confirmation en base que `party_entity_id` référence bien une entité `entity_kind='faction'`, attribution d'un personnage existant à un membre.
+
+Décisions de périmètre :
+- **Pas de sélecteur de ruleset** dans le formulaire de création — la campagne épingle toujours le ruleset par défaut du monde (`getWorldDefaultRulesetId`). Choisir une variante à la création est un ajout UI distinct, pas un changement de forme de données.
+- **Invitation = compte déjà existant, ajout immédiat, aucun email envoyé.** Cohérent avec `specs/`/`docs/BACKLOG_V1.md` §V1-C2 qui rappelle explicitement que « jusqu'à ce ticket, l'application reste à usage personnel » — un vrai flux d'invitation par courriel (compte à créer, lien à accepter) est un chantier à part, pas requis ici.
 
 ### V1-C2 — RLS fine · `L` · **le verrou de l'ouverture publique**
 

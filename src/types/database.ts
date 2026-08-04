@@ -385,6 +385,7 @@ export type Database = {
           id: string
           mode: string
           name: string
+          party_entity_id: string | null
           rng_seed: string
           ruleset_id: string
           updated_at: string
@@ -397,6 +398,7 @@ export type Database = {
           id?: string
           mode: string
           name: string
+          party_entity_id?: string | null
           rng_seed?: string
           ruleset_id: string
           updated_at?: string
@@ -409,12 +411,20 @@ export type Database = {
           id?: string
           mode?: string
           name?: string
+          party_entity_id?: string | null
           rng_seed?: string
           ruleset_id?: string
           updated_at?: string
           world_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "campaigns_party_entity_id_fkey"
+            columns: ["party_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "campaigns_ruleset_id_fkey"
             columns: ["ruleset_id"]
@@ -1590,6 +1600,7 @@ export type Database = {
     }
     Functions: {
       delete_own_account: { Args: never; Returns: undefined }
+      find_user_id_by_email: { Args: { p_email: string }; Returns: string }
       import_prune_stale_entries: {
         Args: { p_ruleset_id: string; p_valid_keys: string[] }
         Returns: number
