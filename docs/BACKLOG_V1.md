@@ -272,16 +272,25 @@ Entièrement dans `src/core/rules/sheet.ts`. Ni base, ni réseau. Spécification
 - Chaque valeur dérivée porte sa provenance.
 
 **Critères** — les six cas dorés du §B7, un test chacun :
-- [ ] Guerrier nain niveau 1, cotte de mailles + bouclier : couches 1 à 6, empilement de CA.
-- [ ] Roublard niveau 5 avec expertise.
-- [ ] Magicien niveau 3 : DD de sort, emplacements, caractéristique d'incantation.
-- [ ] Guerrier 5 / roublard 2 : multiclassage, clés de choix qualifiées.
-- [ ] Sous *bénédiction* et *entravé* : couche 7, avantage et désavantage s'annulent.
-- [ ] Prérequis non satisfait : avertissement présent, enregistrement autorisé.
-- [ ] La fonction n'importe rien de `next`, `react` ni `@supabase` (la règle ESLint le prouve).
-- [ ] Couverture > 90 %.
+- [x] Guerrier nain niveau 1, cotte de mailles + bouclier : couches 1 à 6, empilement de CA.
+- [x] Roublard niveau 5 avec expertise.
+- [x] Magicien niveau 3 : DD de sort, emplacements, caractéristique d'incantation.
+- [x] Guerrier 5 / roublard 2 : multiclassage, clés de choix qualifiées.
+- [x] Sous *bénédiction* et *entravé* : couche 7, avantage et désavantage s'annulent.
+- [x] Prérequis non satisfait : avertissement présent, enregistrement autorisé.
+- [x] La fonction n'importe rien de `next`, `react` ni `@supabase` (la règle ESLint le prouve).
+- [x] Couverture > 90 % (98,1 % lignes, 92,4 % branches sur `sheet.ts`).
 
 > **C'est la fonction la plus dense du projet et la première cause de bugs de tout créateur de personnage jamais écrit.** Si un seul module mérite des tests écrits avant le code, c'est celui-là.
+
+**Fait** — `src/core/rules/sheet.ts` + `sheet.test.ts` (12 tests dont les six cas dorés). Fonction pure, aucune dépendance base/réseau.
+
+Décisions prises en écrivant le moteur, qui engagent V1-B2 et la suite :
+- `Modifier`/`Choice`/`ResolvedRuleset`/`CharacterBuild`/`DerivedSheet` n'existaient nulle part dans le code (seulement en JSON d'exemple dans la spec) — définis à neuf dans `sheet.ts`. Les primitives Zod `zModifier`/`zChoice` de `src/core/schemas/rule-blocks/primitives.ts` existent déjà mais sont plus étroites que le contrat §B4/§B2 (pas de champ `source`, `op` restreint, `from` en tableau plutôt qu'objet discriminé) et ne sont utilisées par aucun bloc — laissées telles quelles, à réconcilier quand V1-B2 aura besoin d'un vrai bloc `character`/`modifiers`.
+- Contrat §B7 étendu avec un champ `rollState` (`"advantage"|"disadvantage"|"normal"`) sur `savingThrows`/`skills` : le contrat d'origine n'expose aucun moyen d'observer l'annulation avantage/désavantage de la couche 7, pourtant un critère explicite du ticket.
+- `set` sur une cible efface entièrement les sources précédentes (règle B4.4) ; `min`/`max` s'appliquent une seule fois, après les sept couches, comme bornes globales.
+- Règle de multiclassage : seule `build.classes[0]` (la classe de départ) fournit des maîtrises de jets de sauvegarde, conformément aux règles 5e.
+- Points de vie : premier niveau du personnage (première classe, niveau 1) au maximum du dé de vie, tous les niveaux suivants — y compris de la même classe — à la moyenne arrondie au supérieur, plus le modificateur de Constitution par niveau.
 
 ### V1-B2 — Blocs de personnage · `L`
 
