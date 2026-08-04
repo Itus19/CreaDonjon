@@ -83,7 +83,7 @@ export async function walkRulesetChain(supabase: TypedClient, startRulesetId: st
  * de la resolution de surcharge (pas de patch/replace/disable appliques
  * ici) : c'est le minimum pour qu'un ruleset "sans rien a soi" ait un sens.
  */
-async function findEntryInRulesetChain(
+export async function findEntryInRulesetChain(
   supabase: TypedClient,
   rulesetId: string,
   entryKey: string

@@ -13,6 +13,7 @@ import InventoryBlockEditor from "./InventoryBlockEditor";
 import SpellcastingBlockEditor from "./SpellcastingBlockEditor";
 import ResourcesBlockEditor from "./ResourcesBlockEditor";
 import StatblockBlockEditor from "./StatblockBlockEditor";
+import CharacterSheetPreview from "./CharacterSheetPreview";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
@@ -136,6 +137,15 @@ export default function EntityBlocks({
   const saveChainsRef = useRef<Record<string, Promise<void>>>({});
 
   const sortedBlocks = [...blocks].sort((a, b) => a.displayOrder - b.displayOrder);
+  const characterBlock = blocks.find((b) => b.blockType === "character");
+  const inventoryBlock = blocks.find((b) => b.blockType === "inventory");
+
+  function updateCharacterChoices(choices: Record<string, unknown>) {
+    if (!characterBlock) return;
+    const data = { ...(characterBlock.data as CharacterBlockData), choices };
+    patchBlock(characterBlock.id, { data });
+    saveBlock(characterBlock.id, { data });
+  }
 
   function patchBlock(id: string, patch: Partial<BlockItem>) {
     setBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
@@ -178,7 +188,7 @@ export default function EntityBlocks({
    */
   function saveBlock(
     id: string,
-    overrides?: { visibilityLevel?: string; visibilityScopeId?: string | null },
+    overrides?: { visibilityLevel?: string; visibilityScopeId?: string | null; data?: unknown },
   ) {
     const run = () => doSaveBlock(id, overrides);
     const previous = saveChainsRef.current[id] ?? Promise.resolve();
@@ -189,7 +199,7 @@ export default function EntityBlocks({
 
   async function doSaveBlock(
     id: string,
-    overrides?: { visibilityLevel?: string; visibilityScopeId?: string | null },
+    overrides?: { visibilityLevel?: string; visibilityScopeId?: string | null; data?: unknown },
   ) {
     const block = blocks.find((b) => b.id === id);
     if (!block) return;
@@ -200,7 +210,12 @@ export default function EntityBlocks({
       body: JSON.stringify({
         version: versionsRef.current[id],
         display: block.display,
-        data: block.data,
+        // "data" en surcharge, jamais lu depuis `block` : `patchBlock` puis
+        // `saveBlock` dans le meme appel synchrone (ex. updateCharacterChoices)
+        // fermerait sinon sur le `blocks` d'AVANT le patch, perime tant que
+        // React n'a pas re-rendu (meme raison que overrides.visibilityLevel
+        // ci-dessous, deja en place).
+        data: overrides && "data" in overrides ? overrides.data : block.data,
         visibility: {
           level: overrides?.visibilityLevel ?? block.visibilityLevel,
           scopeId: overrides?.visibilityScopeId ?? block.visibilityScopeId ?? null,
@@ -306,6 +321,14 @@ export default function EntityBlocks({
 
   return (
     <div className="flex flex-col">
+      {characterBlock && (
+        <CharacterSheetPreview
+          worldSlug={worldSlug}
+          character={characterBlock.data as CharacterBlockData}
+          inventory={inventoryBlock?.data as InventoryBlockData | undefined}
+          onUpdateChoices={updateCharacterChoices}
+        />
+      )}
       {sortedBlocks.map((block, index) => {
         const isCollapsed = collapsed.has(block.id);
         const hasConflict = conflictedIds.has(block.id);

@@ -329,12 +329,25 @@ Décision de périmètre : **aucune UI** dans ce ticket. Les trois critères son
 ### V1-B4 — Parcours de création · `L`
 
 **Critères**
-- [ ] L'étape « choix restants » est une **liste, pas un tunnel** : on peut revenir sur un choix jusqu'au bout.
-- [ ] La fiche se recalcule à chaque modification.
-- [ ] Un personnage illégal reste enregistrable, avec un bandeau explicite. On avertit, on n'interdit pas.
-- [ ] La CA affiche sa décomposition, pas un nombre nu.
+- [x] L'étape « choix restants » est une **liste, pas un tunnel** : on peut revenir sur un choix jusqu'au bout.
+- [x] La fiche se recalcule à chaque modification.
+- [x] Un personnage illégal reste enregistrable, avec un bandeau explicite. On avertit, on n'interdit pas.
+- [x] La CA affiche sa décomposition, pas un nombre nu.
 
----
+**Découverte qui a changé le périmètre** — en creusant ce ticket, j'ai constaté que les entrées SRD déjà importées (V1-A1/A2) portent, dans leur bloc `custom_table` (l'échappatoire de `specs/regles-blocs.md` §5) et leur bloc `class_progression`, toutes les données mécaniques structurées nécessaires : `ability_bonuses`/`speed` (espèce), `hit_die`/`saving_throws`/`spellcasting.spellcasting_ability` (classe), `spellcasting_spell_slots_level_N` par ligne de progression, `proficiency_choices` (compétences offertes), `armor_class`/`armor_category` (armure). Ça a permis de construire un **assembleur réel**, pas un jeu de démonstration comme en V1-B2/B1 — même les cas dorés de V1-B1 se rejouent maintenant avec les vraies données (`resolvedRuleset.integration.test.ts`).
+
+**Fait** :
+- `src/core/rules/srdMapping.ts` (testé, 17 tests) : extracteurs purs qui traduisent les champs SRD déjà importés vers les formes de `characterSheet()` — bonus de caractéristique/vitesse d'espèce, dé de vie/maîtrises/incantation de classe, table d'emplacements par niveau, choix de compétences offerts, compétences d'historique, et modificateur de CA d'armure (lourde = CA fixe, légère = Dex complète, moyenne = Dex plafonnée à +2, bouclier = s'ajoute).
+- `src/server/services/resolvedRuleset.ts` (`assembleResolvedRuleset`, `resolveEquipmentArmorData`) + route `POST /api/worlds/[worldSlug]/resolved-ruleset` : assemble un `ResolvedRuleset` réel pour une sélection espèce/historique/classes, avec chain-walk de variante (V1-A4) et traductions (V1-A5). Vérifié par un test d'intégration contre la base réelle : un nain guerrier assemblé ainsi reproduit exactement le cas doré de V1-B1 (CA, PV, jets de sauvegarde).
+- `CharacterSheetPreview` (`components/blocks/CharacterSheetPreview.tsx`), rendu par `EntityBlocks.tsx` (pas par l'éditeur du bloc `character` seul, car il lui faut aussi le bloc `inventory` voisin) : recalcule `characterSheet()` à chaque rendu, CA décomposée (armure réelle si équipée), PV, vitesse, bonus de maîtrise, bandeau d'avertissement, liste éditable des choix de compétences restants (cases à cocher, jamais un tunnel), liste des aptitudes accordées avec `<RuleChip>`.
+- L'ancien aperçu de démonstration de `InventoryBlockEditor.tsx` (V1-B2, reconnaissance par mot-clé) a été retiré — remplacé par ce panneau réel.
+- Vérifié dans le navigateur : ajout d'une classe « guerrier » à un nain des collines fait apparaître instantanément Style de combat/Second souffle (vraies aptitudes traduites), une liste de 8 compétences à cocher (2/2), et persiste après rechargement.
+
+Décisions de périmètre, documentées pour la suite :
+- **Un seul type de choix modélisé : les compétences de départ de classe.** Dons, style de combat, augmentation de caractéristique, choix d'historique (ability scores/feat du SRD 2024) ne sont pas dans la liste des « choix restants » — ils existent dans les données SRD (`multi_classing.prerequisites`, `feat`, etc.) mais aucun extracteur ne les lit encore.
+- **Aucun `ResolvedFeature` assemblé ne porte de `prerequisites`** — le mécanisme d'avertissement (`sheet.warnings`, testé en V1-B1) fonctionne et s'affiche correctement dans l'aperçu, mais rien dans l'assembleur actuel ne peut aujourd'hui le déclencher avec de vraies données (aucun don/multiclassage avec prérequis n'est encore mappé). Le bandeau est donc prêt, pas encore atteignable en jeu réel.
+- **Sous-race sans héritage de la race de base** — sélectionner `hill-dwarf` seul donne +1 Sagesse (sa propre `ability_bonuses`) mais pas le +2 Constitution de la race `dwarf` de base : le SRD (5e-bits) modélise chaque sous-race comme une entrée séparée, sans composition automatique. Un vrai nain des collines devrait cumuler les deux ; ce ticket ne les compose pas.
+- **`species`/`background` restent un champ unique** (pas de couple race+sous-race distinct dans le bloc `character`) — cohérent avec le point précédent.
 
 ## Lot C — Campagnes et permissions
 

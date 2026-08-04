@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
-import { characterSheet, type CharacterBuild, type EquippedItem, type Modifier, type ResolvedRuleset } from "@/src/core/rules/sheet";
 import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import ReferenceChipDisplay from "./ReferenceChipDisplay";
 import RuleEntryAutocomplete from "./RuleEntryAutocomplete";
@@ -17,54 +16,18 @@ function newItem(): InventoryItem {
 // Verifie la valeur, pas seulement la presence de la cle : apres un
 // changement de nature (setNature), l'ancienne cle peut rester presente
 // avec une valeur `undefined` le temps d'un rendu, avant d'etre elaguee
-// par Zod a l'enregistrement.
-function itemRef(item: InventoryItem): BlockReference | null {
+// par Zod a l'enregistrement. Exporte : reutilise par CharacterSheetPreview
+// (V1-B4) pour traduire l'inventaire en `EquippedItem[]`.
+export function itemRef(item: InventoryItem): BlockReference | null {
   return (item as { ref?: BlockReference }).ref ?? null;
 }
 
-function itemLabel(item: InventoryItem): string {
+export function itemLabel(item: InventoryItem): string {
   const label = (item as { label?: string }).label;
   if (label) return label;
   const ref = itemRef(item);
   if (ref) return ref.kind === "rule" ? ref.key : ref.id;
   return "";
-}
-
-/**
- * Personnage fixe pour la demonstration de recalcul (voir plus bas) : ce
- * ticket (V1-B2) prouve le mecanisme — recalcul client, sans aller-retour
- * reseau — pas l'assemblage complet d'un `ResolvedRuleset` depuis les
- * regles SRD reellement importees. Cet assemblage general (mapper chaque
- * armure/arme du SRD vers ses modificateurs) est hors perimetre : il
- * suppose un bloc de regle `armor`/`weapon` qui n'existe pas encore
- * (specs/regles-blocs.md — "vient quand un cas concret le reclame").
- */
-const DEMO_BUILD: CharacterBuild = {
-  species: "human",
-  classes: [{ key: "fighter", level: 1 }],
-  abilities: { assigned: { str: 14, dex: 12, con: 14, int: 10, wis: 10, cha: 10 } },
-  featureKeys: [],
-};
-const DEMO_RULESET: ResolvedRuleset = {
-  classes: { fighter: { key: "fighter", label: "Guerrier", hitDie: 10, savingThrowProficiencies: ["str", "con"] } },
-  features: {},
-};
-
-/** Reconnaissance grossiere par mot-cle, uniquement pour la demonstration — voir le commentaire sur DEMO_BUILD. */
-function demoAcModifiers(item: InventoryItem): Modifier[] {
-  const needle = itemLabel(item).toLowerCase();
-  const source = `item:${item.id}`;
-  const label = itemLabel(item);
-  if (/chain.?mail|cotte de mailles/.test(needle)) {
-    return [{ target: "ac", op: "set", value: 16, layer: 6, source, label }];
-  }
-  if (/leather|cuir(?! clout)/.test(needle)) {
-    return [{ target: "ac", op: "set", value: 11, layer: 6, source, label }];
-  }
-  if (/shield|bouclier/.test(needle)) {
-    return [{ target: "ac", op: "add", value: 2, layer: 6, source, label }];
-  }
-  return [];
 }
 
 export default function InventoryBlockEditor({
@@ -78,16 +41,6 @@ export default function InventoryBlockEditor({
 }) {
   const refsToResolve = useMemo(() => data.items.map(itemRef).filter((r): r is BlockReference => r !== null), [data.items]);
   const chips = useReferenceChips(worldSlug, refsToResolve);
-
-  const acPreview = useMemo(() => {
-    const equipment: EquippedItem[] = data.items.map((item) => ({
-      key: item.id,
-      label: itemLabel(item),
-      equipped: item.equipped ?? false,
-      modifiers: demoAcModifiers(item),
-    }));
-    return characterSheet(DEMO_BUILD, DEMO_RULESET, equipment, []).ac;
-  }, [data.items]);
 
   function updateItem(index: number, patch: Partial<InventoryItem>) {
     onChange({ ...data, items: data.items.map((it, i) => (i === index ? ({ ...it, ...patch } as InventoryItem) : it)) });
@@ -178,18 +131,10 @@ export default function InventoryBlockEditor({
         </button>
       </div>
 
-      <div className="rounded-md border border-edge/60 bg-panel-raised px-3 py-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-          Apercu CA (demonstration) — CA {acPreview.value}
-        </p>
-        <p className="text-xs text-ink-muted">
-          {acPreview.sources.map((s) => `${s.label} (${s.value})`).join(" + ") || "aucun objet equipe"}
-        </p>
-        <p className="mt-1 text-[10px] italic text-ink-muted">
-          Recalcule instantanement, sans rechargement, en decochant « Equipe » — reconnaissance par mot-cle
-          (« cotte de mailles », « cuir », « bouclier ») en attendant le bloc de regle armure/arme.
-        </p>
-      </div>
+      <p className="text-[10px] italic text-ink-muted">
+        L&apos;aperçu de la fiche de jeu (CA, PV, avertissements) s&apos;affiche en haut de la fiche des qu&apos;un
+        bloc « Personnage » existe sur cette entité.
+      </p>
 
       <div className="grid grid-cols-5 gap-2">
         {(["pp", "gp", "ep", "sp", "cp"] as const).map((coin) => (
