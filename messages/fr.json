@@ -3,6 +3,7 @@
     "mesMondes": "Mes mondes",
     "monde": "Monde",
     "regles": "Règles",
+    "mj": "MJ",
     "ouvrirArborescence": "Ouvrir l'arborescence",
     "nouvelleEntite": "+ Nouvelle entité",
     "replier": "Replier",
@@ -68,6 +69,13 @@
       "background": "Historique",
       "species": "Espèce"
     }
+  },
+  "mj": {
+    "campagnes": "Campagnes",
+    "tablesAleatoires": "Tables aléatoires",
+    "rencontres": "Rencontres",
+    "blocNotes": "Bloc-notes",
+    "bientot": "Bientôt"
   },
   "settings": {
     "ouvrir": "Réglages",

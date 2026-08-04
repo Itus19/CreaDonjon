@@ -3,6 +3,7 @@
     "mesMondes": "My worlds",
     "monde": "World",
     "regles": "Rules",
+    "mj": "GM",
     "ouvrirArborescence": "Open the entity tree",
     "nouvelleEntite": "+ New entity",
     "replier": "Collapse",
@@ -68,6 +69,13 @@
       "background": "Background",
       "species": "Species"
     }
+  },
+  "mj": {
+    "campagnes": "Campaigns",
+    "tablesAleatoires": "Random tables",
+    "rencontres": "Encounters",
+    "blocNotes": "Notes",
+    "bientot": "Coming soon"
   },
   "settings": {
     "ouvrir": "Settings",
