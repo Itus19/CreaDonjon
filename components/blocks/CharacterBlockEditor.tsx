@@ -6,6 +6,12 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import ReferenceChipDisplay from "./ReferenceChipDisplay";
+import RuleEntryAutocomplete from "./RuleEntryAutocomplete";
+
+const SPECIES_TYPES = ["species"] as const;
+const BACKGROUND_TYPES = ["background"] as const;
+const CLASS_TYPES = ["class"] as const;
+const SUBCLASS_TYPES = ["subclass"] as const;
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 const ABILITY_LABELS: Record<(typeof ABILITIES)[number], string> = {
@@ -24,9 +30,11 @@ function ruleRef(key: string): BlockReference | null {
 /**
  * Bloc `character` (V1-B2) : le build seul (specs/wiki-liens-et-personnages.md
  * §B1) — aucune valeur derivee editable ici, la fiche de jeu se recalcule
- * ailleurs via characterSheet(). Espece/historique/classes sont des cles de
- * regle en texte libre (pas de recherche assistee dans ce ticket) ; leur
- * `<RuleChip>` confirme immediatement si la cle existe.
+ * ailleurs via characterSheet(). Espece/historique/classes/sous-classe
+ * restent des cles de regle en texte libre (§B5 "avertir, ne pas
+ * interdire" — une cle inconnue n'est jamais bloquee), mais
+ * `RuleEntryAutocomplete` propose les entrees du ruleset pendant la frappe ;
+ * leur `<RuleChip>` confirme immediatement si la cle retenue existe.
  */
 export default function CharacterBlockEditor({
   data,
@@ -83,21 +91,23 @@ export default function CharacterBlockEditor({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
           Espece (cle de regle)
-          <input
+          <RuleEntryAutocomplete
+            worldSlug={worldSlug}
+            entryTypes={SPECIES_TYPES}
             value={data.species?.kind === "rule" ? data.species.key : ""}
-            onChange={(e) => patch({ species: ruleRef(e.target.value) })}
+            onChange={(key) => patch({ species: ruleRef(key) })}
             placeholder="dwarf"
-            className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
           />
           {data.species && <ReferenceChipDisplay reference={data.species} chip={chips.get(refIdentity(data.species))} />}
         </label>
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
           Historique (cle de regle)
-          <input
+          <RuleEntryAutocomplete
+            worldSlug={worldSlug}
+            entryTypes={BACKGROUND_TYPES}
             value={data.background?.kind === "rule" ? data.background.key : ""}
-            onChange={(e) => patch({ background: ruleRef(e.target.value) })}
+            onChange={(key) => patch({ background: ruleRef(key) })}
             placeholder="soldier"
-            className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
           />
           {data.background && (
             <ReferenceChipDisplay reference={data.background} chip={chips.get(refIdentity(data.background))} />
@@ -109,12 +119,15 @@ export default function CharacterBlockEditor({
         <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Classes</span>
         {data.classes.map((c, index) => (
           <div key={index} className="flex flex-wrap items-center gap-2 border-b border-edge/40 py-1.5">
-            <input
-              value={c.class.kind === "rule" ? c.class.key : ""}
-              onChange={(e) => updateClass(index, { class: { kind: "rule", key: e.target.value } })}
-              placeholder="fighter"
-              className="w-28 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-            />
+            <div className="w-28">
+              <RuleEntryAutocomplete
+                worldSlug={worldSlug}
+                entryTypes={CLASS_TYPES}
+                value={c.class.kind === "rule" ? c.class.key : ""}
+                onChange={(key) => updateClass(index, { class: { kind: "rule", key } })}
+                placeholder="fighter"
+              />
+            </div>
             <input
               type="number"
               min={1}
@@ -122,12 +135,15 @@ export default function CharacterBlockEditor({
               onChange={(e) => updateClass(index, { level: Math.max(1, Number(e.target.value) || 1) })}
               className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
             />
-            <input
-              value={c.subclass?.kind === "rule" ? c.subclass.key : ""}
-              onChange={(e) => updateClass(index, { subclass: ruleRef(e.target.value) })}
-              placeholder="sous-classe (optionnel)"
-              className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-            />
+            <div className="flex-1">
+              <RuleEntryAutocomplete
+                worldSlug={worldSlug}
+                entryTypes={SUBCLASS_TYPES}
+                value={c.subclass?.kind === "rule" ? c.subclass.key : ""}
+                onChange={(key) => updateClass(index, { subclass: ruleRef(key) })}
+                placeholder="sous-classe (optionnel)"
+              />
+            </div>
             <ReferenceChipDisplay reference={c.class} chip={chips.get(refIdentity(c.class))} />
             <button type="button" onClick={() => removeClass(index)} className="text-xs text-danger hover:underline">
               ×

@@ -5,8 +5,10 @@ import Dropdown from "@/components/shared/Dropdown";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import ReferenceChipDisplay from "./ReferenceChipDisplay";
+import RuleEntryAutocomplete from "./RuleEntryAutocomplete";
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
+const SPELL_TYPES = ["spell"] as const;
 
 export default function SpellcastingBlockEditor({
   data,
@@ -81,12 +83,15 @@ export default function SpellcastingBlockEditor({
         <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Sorts connus</span>
         {data.known.map((k, index) => (
           <div key={index} className="flex flex-wrap items-center gap-2 border-b border-edge/40 py-1.5">
-            <input
-              value={k.ref.kind === "rule" ? k.ref.key : ""}
-              onChange={(e) => updateKnown(index, e.target.value)}
-              placeholder="fireball"
-              className="w-32 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-            />
+            <div className="w-32">
+              <RuleEntryAutocomplete
+                worldSlug={worldSlug}
+                entryTypes={SPELL_TYPES}
+                value={k.ref.kind === "rule" ? k.ref.key : ""}
+                onChange={(key) => updateKnown(index, key)}
+                placeholder="fireball"
+              />
+            </div>
             <ReferenceChipDisplay reference={k.ref} chip={chips.get(refIdentity(k.ref))} />
             <label className="flex items-center gap-1 text-xs text-ink-muted">
               <input
