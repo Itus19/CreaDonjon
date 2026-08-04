@@ -1600,6 +1600,29 @@ export type Database = {
     }
     Functions: {
       delete_own_account: { Args: never; Returns: undefined }
+      entity_blocks_full: {
+        Args: { p_entity_id: string }
+        Returns: {
+          block_type: string
+          created_at: string
+          created_by: string | null
+          data: Json
+          display: Json
+          display_order: number
+          entity_id: string
+          id: string
+          updated_at: string
+          version: number
+          visibility_level: string
+          visibility_scope_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "blocks"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       find_user_id_by_email: { Args: { p_email: string }; Returns: string }
       import_prune_stale_entries: {
         Args: { p_ruleset_id: string; p_valid_keys: string[] }
@@ -1622,6 +1645,10 @@ export type Database = {
           world_name: string
           world_slug: string
         }[]
+      }
+      restore_entity_blocks: {
+        Args: { p_blocks: Json; p_entity_id: string }
+        Returns: undefined
       }
       search_entities: {
         Args: { p_query: string; p_world_id: string }

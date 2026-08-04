@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Json } from "@/src/types/database";
+import type { Database } from "@/src/types/database";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -150,38 +150,6 @@ export async function updateEntityWithVersionCheck(
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data as EntitySummary | null;
-}
-
-export async function nextRevisionNumber(supabase: TypedClient, entityId: string): Promise<number> {
-  const { data, error } = await supabase
-    .from("entity_revisions")
-    .select("revision_number")
-    .eq("entity_id", entityId)
-    .order("revision_number", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return (data?.revision_number ?? 0) + 1;
-}
-
-export async function insertEntityRevision(
-  supabase: TypedClient,
-  params: {
-    entityId: string;
-    revisionNumber: number;
-    snapshot: Json;
-    changeSource: "user" | "ai" | "import" | "system";
-    changedBy: string;
-  }
-): Promise<void> {
-  const { error } = await supabase.from("entity_revisions").insert({
-    entity_id: params.entityId,
-    revision_number: params.revisionNumber,
-    snapshot: params.snapshot,
-    change_source: params.changeSource,
-    changed_by: params.changedBy,
-  });
-  if (error) throw new Error(error.message);
 }
 
 export interface EntitySearchResult {

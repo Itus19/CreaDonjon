@@ -36,6 +36,7 @@ export async function PATCH(
       data: parsed.data.data,
       visibilityLevel: parsed.data.visibility.level,
       visibilityScopeId: parsed.data.visibility.scopeId,
+      changedBy: user.id,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -74,6 +75,6 @@ export async function DELETE(
     return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
   }
 
-  await deleteBlock(supabase, blockId);
+  await deleteBlock(supabase, blockId, user.id);
   return new NextResponse(null, { status: 204 });
 }

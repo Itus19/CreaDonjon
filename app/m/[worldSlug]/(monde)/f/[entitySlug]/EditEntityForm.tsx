@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import RelationsChips, { type OtherEntityOption, type RelationChip } from "@/components/entities/RelationsChips";
+import EntityHistoryPanel from "@/components/entities/EntityHistoryPanel";
 import EntityBlocks, { type BlockItem } from "@/components/blocks/EntityBlocks";
 import Dropdown from "@/components/shared/Dropdown";
 import { ENTITY_KINDS } from "@/lib/entities/schemas";
@@ -143,7 +144,10 @@ export default function EditEntityForm({
               sous le titre — utile comme reference technique, mais pas assez
               pour meriter la place a cote du titre. Serre contre le titre,
               puis un espacement plus genereux avant les alias. */}
-          <span className="mt-0.5 font-mech text-xs text-ink-muted">{entity.slug}</span>
+          <div className="mt-0.5 flex items-center gap-3">
+            <span className="font-mech text-xs text-ink-muted">{entity.slug}</span>
+            <EntityHistoryPanel entityId={entity.id} />
+          </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-1.5 text-xs">
             <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">

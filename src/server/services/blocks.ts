@@ -20,7 +20,9 @@ import {
   updateBlockDisplayOrder,
   updateBlockWithVersionCheck,
 } from "@/src/server/repos/blocks";
+import { getEntityById } from "@/src/server/repos/entities";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
+import { recordEntityRevision } from "@/src/server/services/entityHistory";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -84,6 +86,13 @@ function isBlockType(value: string): value is BlockType {
   return (BLOCK_TYPES as readonly string[]).includes(value);
 }
 
+/** Edition redactionnelle d'un bloc = nouvelle revision de son entite (V1-C3, specs/wiki-blocs.md §4.5). */
+async function recordBlockRevision(supabase: TypedClient, entityId: string, changedBy: string): Promise<void> {
+  const entity = await getEntityById(supabase, entityId);
+  if (!entity) return;
+  await recordEntityRevision(supabase, { entity, changeSource: "user", changedBy });
+}
+
 export async function createBlock(
   supabase: TypedClient,
   params: {
@@ -113,6 +122,7 @@ export async function createBlock(
     visibilityScopeId: params.visibilityScopeId,
     createdBy: params.createdBy,
   });
+  await recordBlockRevision(supabase, params.entityId, params.createdBy);
   return toVisibleBlock(row);
 }
 
@@ -125,6 +135,7 @@ export async function updateBlockContent(
     data: unknown;
     visibilityLevel: string;
     visibilityScopeId: string | null;
+    changedBy: string;
   }
 ): Promise<{ ok: true; block: VisibleBlock } | { ok: false; reason: "conflict" | "not_found" }> {
   const existing = await getBlockById(supabase, params.id);
@@ -144,6 +155,7 @@ export async function updateBlockContent(
     visibilityScopeId: params.visibilityScopeId,
   });
   if (!row) return { ok: false, reason: "conflict" };
+  await recordBlockRevision(supabase, existing.entity_id, params.changedBy);
   return { ok: true, block: toVisibleBlock(row) };
 }
 
@@ -156,6 +168,8 @@ export async function reorderBlock(
   return { ok: true, block: toVisibleBlock(row) };
 }
 
-export async function deleteBlock(supabase: TypedClient, id: string): Promise<void> {
+export async function deleteBlock(supabase: TypedClient, id: string, changedBy: string): Promise<void> {
+  const existing = await getBlockById(supabase, id);
   await repoDeleteBlock(supabase, id);
+  if (existing) await recordBlockRevision(supabase, existing.entity_id, changedBy);
 }

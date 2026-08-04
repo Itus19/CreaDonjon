@@ -8,15 +8,14 @@ import {
   type EntitySummary,
   getEntityById,
   insertEntity,
-  insertEntityRevision,
   listEntitiesForWorld,
   listEntitySlugsForWorld,
-  nextRevisionNumber,
   searchEntitiesInWorld,
   updateEntityWithVersionCheck,
   worldHasSlug,
 } from "@/src/server/repos/entities";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
+import { recordEntityRevision } from "@/src/server/services/entityHistory";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -54,13 +53,6 @@ async function generateUniqueEntitySlug(supabase: TypedClient, worldId: string):
   return candidate;
 }
 
-function snapshotOf(entity: EntitySummary) {
-  // Snapshot complet plutot que diff (SCHEMA.md §15). Les blocs n'existent
-  // pas encore (V0-04) : le snapshot ne porte que l'entite pour l'instant.
-  const { id, world_id, slug, name, entity_kind, aliases, version } = entity;
-  return { id, world_id, slug, name, entity_kind, aliases, version };
-}
-
 export async function createEntity(
   supabase: TypedClient,
   params: {
@@ -73,13 +65,7 @@ export async function createEntity(
 ): Promise<EntitySummary> {
   const slug = await generateUniqueEntitySlug(supabase, params.worldId);
   const entity = await insertEntity(supabase, { ...params, slug });
-  await insertEntityRevision(supabase, {
-    entityId: entity.id,
-    revisionNumber: 1,
-    snapshot: snapshotOf(entity),
-    changeSource: "user",
-    changedBy: params.createdBy,
-  });
+  await recordEntityRevision(supabase, { entity, changeSource: "user", changedBy: params.createdBy });
   return entity;
 }
 
@@ -108,14 +94,7 @@ export async function updateEntity(
     return { ok: false, reason: stillExists ? "conflict" : "not_found" };
   }
 
-  const revisionNumber = await nextRevisionNumber(supabase, updated.id);
-  await insertEntityRevision(supabase, {
-    entityId: updated.id,
-    revisionNumber,
-    snapshot: snapshotOf(updated),
-    changeSource: "user",
-    changedBy: params.changedBy,
-  });
+  await recordEntityRevision(supabase, { entity: updated, changeSource: "user", changedBy: params.changedBy });
 
   return { ok: true, entity: updated };
 }

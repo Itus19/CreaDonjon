@@ -400,9 +400,22 @@ Décisions de périmètre :
 
 `entity_revisions`.
 
-- [ ] Chaque enregistrement rédactionnel crée une révision avec sa source.
-- [ ] Comparer deux révisions, restaurer une version.
-- [ ] Les mutations de jeu n'y apparaissent pas.
+- [x] Chaque enregistrement rédactionnel crée une révision avec sa source.
+- [x] Comparer deux révisions, restaurer une version.
+- [x] Les mutations de jeu n'y apparaissent pas.
+
+**Fait** — `entity_revisions` existait depuis la Phase 0 mais son `snapshot` ne portait que les champs de l'entité (« les blocs n'existent pas encore », un commentaire resté vrai jusqu'ici) et seule l'édition du nom/type/alias créait une révision. Ce ticket comble les deux trous :
+- Le snapshot porte désormais l'entité **et** ses blocs en entier (SCHEMA.md §15), et toute mutation rédactionnelle de bloc (création, édition de contenu, suppression — pas le simple réordonnancement, purement présentationnel) crée elle aussi une révision, via un point d'entrée unique `recordEntityRevision` (`src/server/services/entityHistory.ts`) appelé depuis `services/entities.ts` et `services/blocks.ts`.
+- **Interaction découverte avec V1-C2**, deux fois : depuis que la RLS de `blocks` filtre par visibilité fine, (1) un joueur qui édite son propre bloc ne récupère plus, via sa propre session, les blocs `gm` d'autrui sur la même entité — l'instantané serait tronqué ; (2) restaurer une ancienne révision fait un `delete`/`insert` groupé sur `blocks`, or Postgres exige que la ligne ciblée satisfasse *aussi* la politique `select` pour un `update`/`delete`, pas seulement celle de la commande — un bloc `gm` restait donc en place silencieusement (ni erreur, ni ligne affectée) quand c'est un joueur qui restaure. Les deux corrigés par des fonctions `security definer` bornées par `is_world_member` (jamais un rôle plus large) : `public.entity_blocks_full` (migration `20260804160001`) pour la lecture complète, `public.restore_entity_blocks` (migration `20260804160002`) pour l'écriture groupée.
+- Diff pur dans `src/core/history/diff.ts` (tests d'abord) : champs d'entité + blocs ajoutés/supprimés/modifiés par id, ignore volontairement `displayOrder`.
+- Filtrage de visibilité **à la lecture de l'historique** (`getRevisionForViewer`, `compareRevisionsForViewer`) : chaque instantané est filtré par blocs visibles pour le demandeur *avant* tout affichage ou calcul de diff — un joueur ne doit même pas apprendre qu'un bloc MJ a été ajouté ou modifié, pas seulement en ignorer le contenu. La restauration elle-même reste sûre pour tout déclencheur puisqu'elle ne fait que réappliquer des niveaux de visibilité déjà présents dans l'instantané, jamais un contenu neuf exposé au client.
+- Restauration = toujours une **nouvelle** révision qui reproduit l'état ancien (esprit « ajout seul », ADR 0005), jamais une réécriture de l'historique.
+- Compatibilité avec les révisions antérieures à ce ticket (format à plat, sans clé `blocks`) : lues comme « aucun bloc connu » sans planter, et une restauration vers l'une d'elles ne touche pas aux blocs actuels (un tableau vide serait une invention, pas un fait historique) — testé explicitement (`entityHistory.integration.test.ts`).
+- UI : lien « Historique » à côté du slug dans l'en-tête de fiche (`EntityHistoryPanel.tsx`), liste des révisions, sélection de deux pour comparer, bouton restaurer par révision avec confirmation.
+
+Décisions de périmètre :
+- **Les relations n'entrent pas dans l'instantané.** Le commentaire SQL de `entity_revisions` (SCHEMA.md §15) dit explicitement « entité + blocs », pas relations — une relation est partagée entre deux fiches, sa restauration depuis l'instantané d'une seule d'entre elles soulèverait des questions distinctes (supprimer une relation que l'autre fiche ne s'attend pas à voir disparaître). Sujet à part, non traité ici.
+- **Pas d'instantané automatique de fin de séance.** `specs/wiki-blocs.md` §4 mentionne l'idée (un point de restauration par séance), mais aucune notion de « fin de séance » n'existe encore dans l'application (pas de bouton, pas de flux) — rien à quoi l'accrocher pour l'instant.
 
 ---
 
