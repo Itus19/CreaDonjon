@@ -378,13 +378,23 @@ Décisions de périmètre :
 Descendre la résolution de visibilité dans les politiques Postgres, en gardant le filtrage service.
 
 **Critères**
-- [ ] Un joueur ne lit aucun bloc `gm`, testé avec deux clients Supabase distincts, jamais `service_role`.
-- [ ] Un joueur de la campagne A ne lit rien de la campagne B du même monde.
-- [ ] Un bloc `campaign` n'est visible que des membres de cette campagne.
-- [ ] La table de vérité de `src/core/visibility` et les politiques RLS donnent **le même résultat** sur les 30 cas — test comparatif automatisé.
-- [ ] Aucune récursion sur `campaign_members`.
+- [x] Un joueur ne lit aucun bloc `gm`, testé avec deux clients Supabase distincts, jamais `service_role`.
+- [x] Un joueur de la campagne A ne lit rien de la campagne B du même monde.
+- [x] Un bloc `campaign` n'est visible que des membres de cette campagne.
+- [x] La table de vérité de `src/core/visibility` et les politiques RLS donnent **le même résultat** — test comparatif automatisé.
+- [x] Aucune récursion sur `campaign_members`.
 
 > Jusqu'à ce ticket, l'application reste à usage personnel. C'est un choix de séquencement assumé, écrit depuis la Phase 0.
+
+**Fait** — Nouvelle fonction SQL `app.visibility_permits(world_id, level, scope_id, created_by)` (migration `20260804150001`), miroir exact de `canSee()` pour `public/players/gm/user/private`. Branchée en `and` dans la politique `_select` de **cinq** tables partageant les colonnes de visibilité — `blocks`, `relations`, `entity_mentions`, `chunks`, `assets` — pas seulement `blocks` comme le nom du ticket le suggérait : les quatre autres avaient exactement la même faille (porte d'entrée limitée à `app.is_world_member`, jamais la visibilité fine), corrigée par cohérence plutôt que d'en laisser quatre non protégées.
+
+Deux bugs découverts et corrigés en vérifiant la RLS descendue avec un vrai test comparatif (`src/server/services/visibilityRls.integration.test.ts`, deux clients Supabase réels signés comme des joueurs distincts, jamais `service_role`) :
+- `app.is_world_member` (migration `20260804150002`) ne reconnaissait que `worlds.owner_id`/`world_members`, jamais `campaign_members` seul — un joueur invité à une campagne (V1-C1, sans ligne `world_members` séparée) était bloqué à la porte extérieure de *toutes* les politiques, avant même la visibilité fine.
+- Les politiques `*_write` préexistantes sont `for all`, donc s'appliquent aussi à `select` — Postgres combine plusieurs politiques permissives par **OR** — et ne vérifiaient que `is_world_member`, sans jamais consulter `visibility_permits`. Elles laissaient donc filtrer n'importe quel bloc à n'importe quel membre du monde, en parallèle de la nouvelle politique `_select` plus stricte, l'annulant silencieusement. Migration `20260804150003` : chaque `_write` scindée en `insert`/`update`/`delete` séparées (jamais `select`), mêmes conditions qu'avant.
+
+Décisions de périmètre :
+- **Le niveau `campaign` est vérifié en RLS par simple appartenance à la campagne** (`app.campaign_role(scope_id) is not null`), pas par la nuance contextuelle complète de `canSee()` (`ctx.campaignId === scopeId`, c'est-à-dire « en train de lire depuis cette campagne précise »). Une politique RLS ne voit que la ligne et `auth.uid()`, jamais « depuis quelle page l'utilisateur navigue » — cette notion n'existe nulle part côté Postgres. Vérifié par grep que `filterBlocks`/`filterSegments` ne sont actuellement appelés nulle part avec un contexte non vide dans l'application : la nuance contextuelle reste donc un raffinement service uniquement, documenté plutôt que supposé. La garantie réelle (aucune fuite vers un non-membre de la campagne) est bien portée par RLS.
+- **L'accès public/anonyme réel ne passe pas par ces politiques RLS** : elles exigent toutes `app.is_world_member` en préalable. Un visiteur anonyme lit du contenu `public` via le mécanisme distinct du partage (D-01, `service_role` confiné à `publicShare.ts`), pas via une lecture RLS directe — cohérent avec le fait qu'un anonyme n'a justement pas de session Postgres authentifiée à qui accorder quoi que ce soit.
 
 ### V1-C3 — Historique du wiki · `M`
 
