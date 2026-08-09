@@ -21,12 +21,16 @@ Le développeur du projet apprend à coder sur ce projet. Explique tes choix. Ne
 | `docs/BACKLOG.md` | Tickets Phase 0 et V0 — **terminés**, valeur historique | rarement |
 | `docs/PDD.md` | Source de vérité fonctionnelle | Avant toute décision produit |
 | `docs/adr/` | Décisions d'architecture et leurs raisons | Avant de « corriger » quelque chose qui semble étrange |
-| `docs/specs/regles-couche.md` | Anatomie d'une fiche de règle, renvois, surcharge, contrat moteur/IA | Tickets règles |
-| `docs/specs/regles-blocs.md` | Blocs typés des règles, primitives, mises en page | Tickets règles, import SRD |
-| `docs/specs/wiki-liens-et-personnages.md` | Liens dans le texte, mentions, modèle de personnage, modificateurs | Tickets wiki et personnage |
-| `docs/specs/wiki-blocs.md` | Catalogue des blocs de wiki, généalogie, chronologie, fiche de personnage | Tickets wiki |
-| `docs/specs/coquille-et-design.md` | Coquille, jetons de design, composants primitifs | Tout ticket produisant de l'interface |
-| `docs/specs/outils-mj.md` | Tables aléatoires, générateurs, rencontres, initiative | Tickets V2 |
+| `specs/regles-couche.md` | Anatomie d'une fiche de règle, renvois, surcharge, contrat moteur/IA | Tickets règles |
+| `specs/regles-blocs.md` | Blocs typés des règles, primitives, mises en page | Tickets règles, import SRD |
+| `specs/wiki-liens-et-personnages.md` | Liens dans le texte, mentions, modèle de personnage, modificateurs | Tickets wiki et personnage |
+| `specs/wiki-blocs.md` | Catalogue des blocs de wiki, généalogie, chronologie, fiche de personnage | Tickets wiki |
+| `specs/coquille-et-design.md` | Coquille, jetons de design, composants primitifs | Tout ticket produisant de l'interface |
+| `specs/outils-mj.md` | Tables aléatoires, générateurs, rencontres, initiative | Tickets V2 |
+| `specs/arbitrage-modifications.md` | Triage des demandes, où va quoi, arbitrages de fond | Avant toute décision de placement |
+| `specs/fiche-personnage-interactive.md` | Fiche jouable, actions, onglets, exports | Ticket V1-B5 |
+| `specs/psyche-pnj.md` | Relations, personnalité, pôles, historique | Tickets V2/V3 |
+| `specs/module-joueur-et-solo.md` | Compagnon PJ, interface solo, combat partagé | Tickets V3 |
 
 Ne lis que ce dont le ticket a besoin. Charger les huit documents à chaque session gaspille du contexte et disperse l'attention.
 

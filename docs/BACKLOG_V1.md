@@ -2,7 +2,7 @@
 
 **Version :** 1.0 — 30 juillet 2026
 **Établi à partir de :** dépôt `Itus19/CreaDonjon`, commit `fe3736a` (V0-07)
-**Documents liés :** `SCHEMA.md` · `specs/regles-couche.md` · `specs/regles-blocs.md` · `specs/wiki-liens-et-personnages.md` · `specs/wiki-blocs.md`
+**Documents liés :** `SCHEMA.md` · `specs/regles-couche.md` · `specs/regles-blocs.md` · `specs/wiki-liens-et-personnages.md` · `specs/wiki-blocs.md` · `specs/arbitrage-modifications.md` · `specs/fiche-personnage-interactive.md` · `specs/psyche-pnj.md` · `specs/module-joueur-et-solo.md`
 
 ---
 
@@ -349,6 +349,31 @@ Décisions de périmètre, documentées pour la suite :
 - **Sous-race sans héritage de la race de base** — sélectionner `hill-dwarf` seul donne +1 Sagesse (sa propre `ability_bonuses`) mais pas le +2 Constitution de la race `dwarf` de base : le SRD (5e-bits) modélise chaque sous-race comme une entrée séparée, sans composition automatique. Un vrai nain des collines devrait cumuler les deux ; ce ticket ne les compose pas.
 - **`species`/`background` restent un champ unique** (pas de couple race+sous-race distinct dans le bloc `character`) — cohérent avec le point précédent.
 
+### V1-B5 — Fiche de personnage jouable · `L`
+
+Ajoutée le 12 août (`specs/arbitrage-modifications.md` §3.3), après V1-B1 à B4 dont elle dépend directement. Spécification complète : `specs/fiche-personnage-interactive.md`.
+
+Une **vue** sur les blocs de personnage déjà spécifiés (`character`, `inventory`, `spellcasting`, `resources`, l'état de jeu) et sur la fiche dérivée de `characterSheet()` — pas un nouveau bloc de données. Quatre onglets (Actions, Magie, Inventaire, Traits), boutons d'attaque et de dégâts appelant `resolveAction`, avantage/désavantage en un clic, emplacements de sorts, repos court et long, exports JSON et PDF, sélecteur d'objets interrogeant règles **et** entités. Le bloc de stats affiché séparément (hors du bloc de personnage, cf. V1-C4) disparaît dans le même ticket — ses valeurs viennent de `characterSheet()`, elles n'ont pas à exister deux fois.
+
+**Critères** — §8 de la spécification :
+- [ ] Aucun composant de la fiche ne calcule une valeur de règle. Tout vient de `characterSheet()` ou de `resolveAction()`.
+- [ ] Le bloc de stats séparé n'existe plus ; ajouter un bloc `character` n'en crée pas un second.
+- [ ] Décocher « équipé » sur une armure change la CA sans rechargement de page, et la décomposition affichée suit.
+- [ ] Passer l'épuisement à 2 change la vitesse affichée, avec sa provenance.
+- [ ] Un bouton d'attaque produit un jet journalisé dans `dice_rolls`, avec sa trace lisible.
+- [ ] Avantage et désavantage sont accessibles en un clic et s'annulent mutuellement.
+- [ ] Lancer un sort de niveau 2 décompte un emplacement de niveau 2 et applique la montée en puissance du bloc `scaling`.
+- [ ] Un sort sans emplacement disponible reste visible, désactivé, avec la raison affichée.
+- [ ] L'onglet Magie est absent pour un personnage sans incantation.
+- [ ] Un repos long recharge ce que le ruleset déclare, rien de codé en dur.
+- [ ] Le même inventaire s'affiche dans la fiche et dans l'éditeur ; modifier l'un modifie l'autre.
+- [ ] Le sélecteur d'objets propose règles et entités, chacune badgée.
+- [ ] L'export JSON ne contient aucune valeur dérivée ; le réimport reconstruit une fiche identique.
+- [ ] Une mutation de jeu écrit un `session_event`, jamais une `entity_revision`.
+- [ ] La fiche reste lisible et utilisable à 375 px de large — elle servira sur téléphone en V3.
+
+---
+
 ## Lot C — Campagnes et permissions
 
 *Objectif : plusieurs personnes autour d'un monde, chacune voyant ce qu'elle doit voir.*
@@ -417,6 +442,22 @@ Décisions de périmètre :
 - **Les relations n'entrent pas dans l'instantané.** Le commentaire SQL de `entity_revisions` (SCHEMA.md §15) dit explicitement « entité + blocs », pas relations — une relation est partagée entre deux fiches, sa restauration depuis l'instantané d'une seule d'entre elles soulèverait des questions distinctes (supprimer une relation que l'autre fiche ne s'attend pas à voir disparaître). Sujet à part, non traité ici.
 - **Pas d'instantané automatique de fin de séance.** `specs/wiki-blocs.md` §4 mentionne l'idée (un point de restauration par séance), mais aucune notion de « fin de séance » n'existe encore dans l'application (pas de bouton, pas de flux) — rien à quoi l'accrocher pour l'instant.
 
+### V1-C4 — Correctifs, coquille et partage protégé · `M`
+
+Issu de `specs/arbitrage-modifications.md` §3.1 et §3.2. Petits, isolés, sans dépendance.
+
+- [ ] **Bug** : le bouton « supprimer » d'un bloc ne fonctionne pas. Écrire le test qui reproduit avant de corriger.
+- [ ] Le bloc de stats affiché hors du bloc de personnage disparaît.
+- [ ] Bouton paramètres déplacé, nom du monde à droite, menu centré sur la barre haute.
+- [ ] Bouton d'historique : icône ronde de montre inversée, à côté du bouton orange.
+- [ ] Panneau de partage déplacé dans un onglet du menu de configuration ; l'encart de l'accueil disparaît.
+- [ ] Écran d'accueil « Nouvelles aventures » ; sous le nom du monde, la liste des PJ (nom, espèce, classe, niveau).
+- [ ] Étiquette PJ/PNJ **dérivée de `campaign_characters.is_pc`**, jamais un `entity_kind` distinct.
+- [ ] Horloge temps réel en haut à droite.
+- [ ] Mot de passe optionnel sur un lien de partage : `password_hash` seul, contenu non récupéré avant validation, tentatives limitées.
+- [ ] Champs `gender` et `pronouns` sur le bloc `character`, avec `neutral` et `unspecified` distincts.
+- [ ] Règles de rédaction inclusive dans `src/i18n/fr.ts` : forme épicène, jamais de point médian (accessibilité).
+
 ---
 
 ## Lot D — Première assistance IA
@@ -474,8 +515,8 @@ Et un critère technique, non négociable :
 D-01 … D-04                dette, une session
 Lot A  (A1→A2→A3→A4→A5)    les règles deviennent consultables et personnalisables,
                             A5 (traduction FR) ferme le lot une fois la structure stable
-Lot B  (B1→B2→B3→B4)       le personnage devient jouable
-Lot C  (C1→C2→C3)          plusieurs personnes, permissions réelles
+Lot B  (B1→B2→B3→B4→B5)    le personnage devient jouable, B5 le rend interactif
+Lot C  (C1→C2→C3→C4)       plusieurs personnes, permissions réelles, C4 les correctifs
 Lot D  (D1→D2→D3→D4)       l'IA, instrumentée dès le premier appel
 ```
 
