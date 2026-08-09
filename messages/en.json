@@ -26,6 +26,9 @@
     }
   },
   "monde": {
+    "nouvellesAventures": "New adventures",
+    "personnagesJoueurs": "Player characters",
+    "aucunPj": "No player character yet — assign one from a campaign.",
     "videTitre": "This world is still empty",
     "videDescription": "Create your first entity — a character, a location, a faction — to start populating it.",
     "choisirEntite": "Choose an entity in the sidebar, or create a new one from the button below."

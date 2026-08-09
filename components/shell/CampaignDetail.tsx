@@ -109,7 +109,10 @@ export default function CampaignDetail({
             const entity = worldEntities.find((e) => e.id === c.entity_id);
             return (
               <li key={c.entity_id}>
-                {entity?.name ?? c.entity_id} {c.user_id ? `→ ${c.user_id}` : "(PNJ)"}
+                {/* Etiquette PJ/PNJ derivee de is_pc (V1-C4, jamais un
+                    entity_kind distinct — un PNJ peut devenir un PJ) */}
+                {entity?.name ?? c.entity_id} — {c.is_pc ? "PJ" : "PNJ"}
+                {c.user_id ? ` (${c.user_id})` : ""}
               </li>
             );
           })}

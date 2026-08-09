@@ -26,6 +26,9 @@
     }
   },
   "monde": {
+    "nouvellesAventures": "Nouvelles aventures",
+    "personnagesJoueurs": "Personnages joueurs",
+    "aucunPj": "Aucun personnage joueur pour l'instant — attribuez-en un depuis une campagne.",
     "videTitre": "Ce monde est encore vide",
     "videDescription": "Créez votre première entité — un personnage, un lieu, une faction — pour commencer à le peupler.",
     "choisirEntite": "Choisissez une entité dans la barre latérale, ou créez-en une nouvelle depuis le bouton en bas."

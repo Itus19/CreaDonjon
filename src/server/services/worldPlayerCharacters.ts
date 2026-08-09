@@ -1,0 +1,81 @@
+import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/src/types/database";
+import type { Locale } from "@/src/i18n/request";
+import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
+import { getEntityById } from "@/src/server/repos/entities";
+import { listBlocksForEntity } from "@/src/server/repos/blocks";
+import { listCampaignCharacters } from "@/src/server/repos/campaigns";
+import { listCampaigns } from "@/src/server/services/campaigns";
+import { assembleResolvedRuleset } from "@/src/server/services/resolvedRuleset";
+
+type TypedClient = SupabaseClient<Database>;
+
+export interface WorldPlayerCharacter {
+  entityId: string;
+  entitySlug: string;
+  entityName: string;
+  speciesLabel: string | null;
+  classesLabel: string | null;
+}
+
+/**
+ * PJ (au sens de `campaign_characters.is_pc`, jamais un `entity_kind`
+ * distinct — specs/arbitrage-modifications.md §3.1) de toutes les
+ * campagnes d'un monde, pour la liste de l'ecran d'accueil (V1-C4). Chaque
+ * personnage est resolu avec le ruleset de SA campagne (des campagnes
+ * differentes du meme monde peuvent epingler des variantes differentes).
+ */
+export async function listWorldPlayerCharacters(
+  supabase: TypedClient,
+  worldId: string,
+  locale: Locale
+): Promise<WorldPlayerCharacter[]> {
+  const campaigns = await listCampaigns(supabase, worldId);
+  const results: WorldPlayerCharacter[] = [];
+
+  for (const campaign of campaigns) {
+    const characters = await listCampaignCharacters(supabase, campaign.id);
+    for (const row of characters) {
+      if (!row.is_pc) continue;
+
+      const entity = await getEntityById(supabase, row.entity_id);
+      if (!entity) continue;
+
+      const blocks = await listBlocksForEntity(supabase, row.entity_id);
+      const characterBlock = blocks.find((b) => b.block_type === "character");
+      const characterData = characterBlock?.data as CharacterBlockData | undefined;
+
+      let speciesLabel: string | null = null;
+      let classesLabel: string | null = null;
+      if (characterData) {
+        const speciesKey = characterData.species?.kind === "rule" ? characterData.species.key : undefined;
+        const classSelections = characterData.classes
+          .filter((c) => c.class.kind === "rule" && c.class.key)
+          .map((c) => ({ key: (c.class as { kind: "rule"; key: string }).key, level: c.level }));
+
+        const assembled = await assembleResolvedRuleset(
+          supabase,
+          campaign.rulesetId,
+          { species: speciesKey, classes: classSelections },
+          locale
+        );
+        speciesLabel = speciesKey ? (assembled.ruleset.features[`species:${speciesKey}`]?.label ?? speciesKey) : null;
+        classesLabel =
+          classSelections.length > 0
+            ? classSelections.map((c) => `${assembled.ruleset.classes[c.key]?.label ?? c.key} ${c.level}`).join(" / ")
+            : null;
+      }
+
+      results.push({
+        entityId: entity.id,
+        entitySlug: entity.slug,
+        entityName: entity.name,
+        speciesLabel,
+        classesLabel,
+      });
+    }
+  }
+
+  return results;
+}

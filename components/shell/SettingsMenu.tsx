@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   deleteAccountAction,
@@ -9,6 +10,8 @@ import {
   type DeleteAccountState,
   type UpdateDisplayNameState,
 } from "@/app/settings/actions";
+import ShareLinkPanel from "./ShareLinkPanel";
+import type { ShareLinkRow } from "@/src/server/repos/shareLinks";
 
 const MODES = ["dark", "dim", "soft", "light"] as const;
 
@@ -116,6 +119,38 @@ export default function SettingsMenu({
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
   const [contrast, setContrast] = useState(currentContrast);
+
+  // Le panneau de partage a quitte l'accueil du monde pour cet onglet
+  // (V1-C4) : ce composant est rendu globalement (app/layout.tsx), hors de
+  // tout contexte serveur de monde, donc le monde courant se detecte depuis
+  // l'URL plutot que d'etre recu en props.
+  const pathname = usePathname();
+  const worldSlug = pathname.match(/^\/m\/([^/]+)/)?.[1] ?? null;
+  const [shareData, setShareData] = useState<{ worldId: string; links: ShareLinkRow[] } | null>(null);
+
+  function refreshShareData() {
+    if (!worldSlug) return;
+    fetch(`/api/worlds/${worldSlug}/share-links`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { worldId: string; links: ShareLinkRow[] } | null) => {
+        if (body) setShareData(body);
+      })
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    if (!open || !worldSlug) return;
+    let cancelled = false;
+    fetch(`/api/worlds/${worldSlug}/share-links`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { worldId: string; links: ShareLinkRow[] } | null) => {
+        if (!cancelled && body) setShareData(body);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, worldSlug]);
 
   useEffect(() => {
     document.documentElement.dataset.mode = mode;
@@ -234,6 +269,17 @@ export default function SettingsMenu({
               <p className="text-sm text-ink-muted">{email}</p>
               <DisplayNameForm initialDisplayName={displayName} />
             </section>
+
+            {worldSlug && shareData && (
+              <section className="border-t border-edge pt-4">
+                <ShareLinkPanel
+                  worldId={shareData.worldId}
+                  worldSlug={worldSlug}
+                  links={shareData.links}
+                  onMutated={refreshShareData}
+                />
+              </section>
+            )}
 
             <section className="flex flex-col gap-2 border-t border-edge pt-4">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
