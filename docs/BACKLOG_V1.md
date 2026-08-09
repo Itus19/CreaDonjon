@@ -463,17 +463,37 @@ Décisions de périmètre :
 
 Issu de `specs/arbitrage-modifications.md` §3.1 et §3.2. Petits, isolés, sans dépendance.
 
-- [ ] **Bug** : le bouton « supprimer » d'un bloc ne fonctionne pas. Écrire le test qui reproduit avant de corriger.
-- [ ] Le bloc de stats affiché hors du bloc de personnage disparaît.
-- [ ] Bouton paramètres déplacé, nom du monde à droite, menu centré sur la barre haute.
-- [ ] Bouton d'historique : icône ronde de montre inversée, à côté du bouton orange.
-- [ ] Panneau de partage déplacé dans un onglet du menu de configuration ; l'encart de l'accueil disparaît.
-- [ ] Écran d'accueil « Nouvelles aventures » ; sous le nom du monde, la liste des PJ (nom, espèce, classe, niveau).
-- [ ] Étiquette PJ/PNJ **dérivée de `campaign_characters.is_pc`**, jamais un `entity_kind` distinct.
-- [ ] Horloge temps réel en haut à droite.
-- [ ] Mot de passe optionnel sur un lien de partage : `password_hash` seul, contenu non récupéré avant validation, tentatives limitées.
-- [ ] Champs `gender` et `pronouns` sur le bloc `character`, avec `neutral` et `unspecified` distincts.
-- [ ] Règles de rédaction inclusive dans `src/i18n/fr.ts` : forme épicène, jamais de point médian (accessibilité).
+- [x] **Bug** : le bouton « supprimer » d'un bloc ne fonctionne pas. Écrire le test qui reproduit avant de corriger.
+- [x] Le bloc de stats affiché hors du bloc de personnage disparaît.
+- [x] Bouton paramètres déplacé, nom du monde à droite, menu centré sur la barre haute.
+- [x] Bouton d'historique : icône ronde de montre inversée, à côté du bouton orange.
+- [x] Panneau de partage déplacé dans un onglet du menu de configuration ; l'encart de l'accueil disparaît.
+- [x] Écran d'accueil « Nouvelles aventures » ; sous le nom du monde, la liste des PJ (nom, espèce, classe, niveau).
+- [x] Étiquette PJ/PNJ **dérivée de `campaign_characters.is_pc`**, jamais un `entity_kind` distinct.
+- [x] Horloge temps réel en haut à droite.
+- [x] Mot de passe optionnel sur un lien de partage : `password_hash` seul, contenu non récupéré avant validation, tentatives limitées.
+- [x] Champs `gender` et `pronouns` sur le bloc `character`, avec `neutral` et `unspecified` distincts.
+- [x] Règles de rédaction inclusive dans `src/i18n/fr.ts` : forme épicène, jamais de point médian (accessibilité).
+
+**Fait** — Le bug de suppression n'en était pas un côté logique : reproduit en direct (le mécanisme delete-fetch-et-retrait-local fonctionnait déjà correctement une fois `window.confirm()` contourné), la vraie cause est `window.confirm()` lui-même — boîte native sans style, incohérente avec la coquille, facile à manquer. Remplacé par `components/shared/ConfirmDialog.tsx`, un composant réutilisable (même patron d'overlay que `CommandPalette.tsx`), branché à la fois sur la suppression de bloc (`EntityBlocks.tsx`) et sur la restauration de révision (`EntityHistoryPanel.tsx`, même symptôme). Piège découvert en le branchant : `EntityHistoryPanel` a son propre overlay `z-[1000]` — `ConfirmDialog` doit rester à `z-[1100]`, au-dessus de tout modal connu de la coquille, sinon il s'ouvre invisible derrière.
+
+La fiche jouable (V1-B5) vit désormais dans la carte du bloc `character` lui-même (`EntityBlocks.tsx`, rendue juste après l'en-tête du bloc, avant son formulaire brut) plutôt qu'en panneau flottant au-dessus de la liste des blocs.
+
+Coquille : en-tête du monde passé en grille à trois colonnes égales (`grid-cols-[1fr_auto_1fr]`) pour un centrage réel du bascule Monde/Règles/MJ, bouton réglages repositionné en haut à gauche (`top-2.5` pour un centrage vertical dans la barre de 56 px), historique transformé en icône ronde (⧗) déplacée à côté du sélecteur de type d'entité — dans le même coin que les pastilles orange/rouge de la fenêtre, sans toucher au composant `WindowFrame` générique. Horloge temps réel (`components/shell/Clock.tsx`) : rien n'est rendu côté serveur (évite tout écart d'hydratation), premier affichage différé au tick suivant plutôt qu'un `setState` synchrone dans l'effet.
+
+Partage : `ShareLinkPanel` déplacé de l'accueil du monde vers un nouvel encart du menu de réglages. `SettingsMenu` est rendu globalement (`app/layout.tsx`, hors contexte serveur de monde) : le monde courant se détecte côté client depuis l'URL (`usePathname`), et les liens sont récupérés par un fetch vers la nouvelle route `/api/worlds/[worldSlug]/share-links` plutôt que par props serveur — l'encart n'apparaît que dans un contexte de monde, absent sur l'accueil global. `ShareLinkPanel` refactorisé pour exposer un `onMutated` (resynchronise la copie du parent après création/révocation, puisque la revalidation de page d'origine ne s'applique plus à un état récupéré côté client).
+
+Accueil du monde : « Nouvelles aventures » sous le nom, puis la liste des personnages joueurs (nom, espèce, classe, niveau) via un nouveau service `listWorldPlayerCharacters` — parcourt toutes les campagnes du monde, ne garde que les `campaign_characters.is_pc = true`, résout chaque personnage avec le ruleset de **sa propre** campagne (des campagnes du même monde peuvent épingler des variantes différentes). Étiquette PJ/PNJ dans `CampaignDetail.tsx` corrigée au passage : elle venait par erreur de la présence d'un `user_id` plutôt que de `is_pc` — deux concepts distincts (un PNJ contrôlé par le MJ peut très bien ne pas avoir de `user_id` sans être un PJ pour autant, et l'inverse).
+
+Mot de passe sur un lien de partage : colonnes `password_hash`/`password_attempts` sur `share_links` (migration `20260809210001`), hachage **scrypt salé côté application** (`src/core/shareLinks/password.ts`, `node:crypto`, natif — un simple SHA-256 comme pour le jeton n'aurait pas suffi, un mot de passe humain est une entrée bien plus faible qu'un jeton aléatoire de 256 bits). `resolve_share_link` étendue pour renvoyer `password_hash`/`password_attempts` (jamais transmis au client — `ShareLinkSummary`, le type exposé, ne porte qu'un booléen `hasPassword`), nouvelle fonction `record_share_link_password_attempt` (incrémente sur échec, remet à zéro sur réussite, plafond de 10 tentatives). Les deux pages publiques (`app/partage/[token]/**`) s'arrêtent avant tout appel à `listPublicEntities`/`getPublicEntityDetail` tant qu'un cookie de vérification (httpOnly, scopé au chemin exact `/partage/<token>`) n'est pas posé — jamais de contenu chargé puis masqué.
+
+`gender`/`pronouns` ajoutés au bloc `character` (`.optional()`, jamais `.default()` — les blocs antérieurs à ce ticket n'ont ni l'un ni l'autre, `.strict()` doit continuer à les valider tels quels). `gender` est soit une des quatre valeurs énumérées (`feminine`/`masculine`/`neutral`/`unspecified`), soit `{ custom: string }`. Éditeur : menu déroulant à cinq entrées (les quatre valeurs + « Personnalisé », qui révèle un champ texte) et un champ pronoms libre, dans `CharacterBlockEditor.tsx`.
+
+Règles de rédaction inclusive documentées en tête de `src/i18n/fr.ts` (forme épicène en premier choix, doublet complet en repli, jamais de point médian — raison d'accessibilité, pas de posture). Vérifié par recherche exhaustive (`grep "·"`) qu'aucun point médian n'existe déjà dans le code ou les catalogues de traduction — les quelques « · » trouvés sont des séparateurs visuels neutres entre informations distinctes (« Nain · Guerrier 1 »), pas des marques de genre, donc hors sujet et non touchés.
+
+Décisions de périmètre :
+- **CLI Supabase relinkée en cours de route.** Elle était restée pointée sur l'ancien projet `myluqabtqewpqkvokube` (aujourd'hui supprimé) depuis une investigation de sécurité interrompue plus tôt dans la session — relinkée sur `fivakjqzqgfvfpaqvqex` avant toute migration de ce ticket, sans quoi la migration du mot de passe aurait pu échouer silencieusement contre le mauvais projet.
+- **La conversion `password → hash` reste côté application, jamais en SQL.** `scrypt` n'existe pas nativement dans pgcrypto (qui offre `crypt()`/blowfish, pas scrypt) — la fonction `security definer` ne fait que stocker/comparer des hachages déjà calculés, jamais de calcul cryptographique en base.
 
 ---
 

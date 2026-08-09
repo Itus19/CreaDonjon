@@ -27,6 +27,21 @@ function ruleRef(key: string): BlockReference | null {
   return key.trim() ? { kind: "rule", key: key.trim() } : null;
 }
 
+const GENDER_OPTIONS = [
+  { value: "unspecified", label: "Non précisé" },
+  { value: "feminine", label: "Féminin" },
+  { value: "masculine", label: "Masculin" },
+  { value: "neutral", label: "Neutre" },
+  { value: "custom", label: "Personnalisé" },
+];
+
+/** `unspecified` (on ne sait pas) et `neutral` (ni l'un ni l'autre) restent deux valeurs distinctes du menu — jamais fusionnees (V1-C4). */
+function genderDropdownValue(gender: CharacterBlockData["gender"]): string {
+  if (!gender) return "unspecified";
+  if (typeof gender === "object") return "custom";
+  return gender;
+}
+
 /**
  * Bloc `character` (V1-B2) : le build seul (specs/wiki-liens-et-personnages.md
  * §B1) — aucune valeur derivee editable ici, la fiche de jeu se recalcule
@@ -112,6 +127,42 @@ export default function CharacterBlockEditor({
           {data.background && (
             <ReferenceChipDisplay reference={data.background} chip={chips.get(refIdentity(data.background))} />
           )}
+        </label>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-xs text-ink-muted">
+          Genre
+          <Dropdown
+            value={genderDropdownValue(data.gender)}
+            options={GENDER_OPTIONS}
+            onChange={(v) =>
+              patch({
+                gender:
+                  v === "custom"
+                    ? { custom: typeof data.gender === "object" ? data.gender.custom : "" }
+                    : (v as Exclude<CharacterBlockData["gender"], { custom: string } | undefined>),
+              })
+            }
+            aria-label="Genre"
+          />
+          {typeof data.gender === "object" && (
+            <input
+              value={data.gender.custom}
+              onChange={(e) => patch({ gender: { custom: e.target.value } })}
+              placeholder="préciser…"
+              className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+            />
+          )}
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-ink-muted">
+          Pronoms
+          <input
+            value={data.pronouns ?? ""}
+            onChange={(e) => patch({ pronouns: e.target.value })}
+            placeholder="elle, il, iel…"
+            className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+          />
         </label>
       </div>
 

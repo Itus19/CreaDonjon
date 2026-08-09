@@ -31,4 +31,33 @@ describe("zCharacterBlockData", () => {
   it("rejette un niveau de classe invalide (>= 1 requis)", () => {
     expect(() => zCharacterBlockData.parse({ ...valid, classes: [{ class: { kind: "rule", key: "fighter" }, level: 0, subclass: null }] })).toThrow();
   });
+
+  it("valide un bloc anterieur a V1-C4, sans gender ni pronouns", () => {
+    expect(zCharacterBlockData.parse(valid)).toEqual(valid);
+  });
+
+  it("accepte les quatre valeurs de genre enumerees", () => {
+    for (const gender of ["feminine", "masculine", "neutral", "unspecified"] as const) {
+      expect(() => zCharacterBlockData.parse({ ...valid, gender })).not.toThrow();
+    }
+  });
+
+  it("accepte un genre personnalise", () => {
+    const withCustom = { ...valid, gender: { custom: "androgyne" } };
+    expect(zCharacterBlockData.parse(withCustom)).toEqual(withCustom);
+  });
+
+  it("distingue unspecified de neutral (deux etats, jamais fusionnes)", () => {
+    const unspecified = zCharacterBlockData.parse({ ...valid, gender: "unspecified" });
+    const neutral = zCharacterBlockData.parse({ ...valid, gender: "neutral" });
+    expect(unspecified.gender).not.toEqual(neutral.gender);
+  });
+
+  it("accepte des pronoms libres", () => {
+    expect(zCharacterBlockData.parse({ ...valid, pronouns: "iel" }).pronouns).toBe("iel");
+  });
+
+  it("rejette une valeur de genre hors enumeration", () => {
+    expect(() => zCharacterBlockData.parse({ ...valid, gender: "other" })).toThrow();
+  });
 });
