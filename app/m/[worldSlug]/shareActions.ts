@@ -16,7 +16,10 @@ export async function createShareLinkAction(
   _prevState: CreateShareLinkState,
   formData: FormData,
 ): Promise<CreateShareLinkState> {
-  const parsed = createShareLinkSchema.safeParse({ worldId: formData.get("worldId") });
+  const parsed = createShareLinkSchema.safeParse({
+    worldId: formData.get("worldId"),
+    password: formData.get("password"),
+  });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
   }
@@ -27,7 +30,11 @@ export async function createShareLinkAction(
   } = await supabase.auth.getUser();
   if (!user) return { error: "Session expiree, reconnectez-vous." };
 
-  const { token } = await createShareLink(supabase, { worldId: parsed.data.worldId, createdBy: user.id });
+  const { token } = await createShareLink(supabase, {
+    worldId: parsed.data.worldId,
+    createdBy: user.id,
+    password: parsed.data.password || undefined,
+  });
 
   const worldSlug = formData.get("worldSlug");
   if (typeof worldSlug === "string" && worldSlug !== "") {

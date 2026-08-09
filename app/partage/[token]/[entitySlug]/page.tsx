@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { resolveShareLink, getPublicEntityDetail } from "@/src/server/services/publicShare";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import PublicBlockView from "@/components/entities/public/PublicBlockView";
+import { hasVerifiedSharePassword } from "../passwordActions";
+import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
 
 export default async function ShareLinkEntityPage({
   params,
@@ -13,6 +15,13 @@ export default async function ShareLinkEntityPage({
 
   const resolved = await resolveShareLink(token);
   if (!resolved) notFound();
+
+  // Meme verrou que la page de liste (V1-C4) : un visiteur qui arrive
+  // directement sur l'URL d'une fiche (lien partage plus loin) doit
+  // retrouver le mot de passe, jamais un detour qui le contournerait.
+  if (resolved.passwordHash && !(await hasVerifiedSharePassword(token))) {
+    return <SharePasswordGate token={token} worldName={resolved.worldName} />;
+  }
 
   const detail = await getPublicEntityDetail(resolved.worldId, entitySlug);
   if (!detail) notFound();

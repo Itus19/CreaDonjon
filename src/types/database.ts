@@ -1477,6 +1477,8 @@ export type Database = {
           created_by: string | null
           expires_at: string | null
           id: string
+          password_attempts: number
+          password_hash: string | null
           revoked_at: string | null
           scope: string
           token_hash: string
@@ -1488,6 +1490,8 @@ export type Database = {
           created_by?: string | null
           expires_at?: string | null
           id?: string
+          password_attempts?: number
+          password_hash?: string | null
           revoked_at?: string | null
           scope: string
           token_hash: string
@@ -1499,6 +1503,8 @@ export type Database = {
           created_by?: string | null
           expires_at?: string | null
           id?: string
+          password_attempts?: number
+          password_hash?: string | null
           revoked_at?: string | null
           scope?: string
           token_hash?: string
@@ -1637,9 +1643,15 @@ export type Database = {
         Returns: string
       }
       publish_ruleset: { Args: { p_ruleset_id: string }; Returns: undefined }
+      record_share_link_password_attempt: {
+        Args: { p_success: boolean; p_token: string }
+        Returns: undefined
+      }
       resolve_share_link: {
         Args: { p_token: string }
         Returns: {
+          password_attempts: number
+          password_hash: string
           scope: string
           world_id: string
           world_name: string

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import SectionToggle from "./SectionToggle";
+import Clock from "./Clock";
 
 /**
  * Coquille commune aux deux sections (Monde/Règles) : uniquement l'en-tete
@@ -29,9 +30,12 @@ export default function AppShell({
           {worldName}
         </Link>
         <SectionToggle worldSlug={worldSlug} />
-        <Link href="/" className="justify-self-end text-sm text-ink-muted hover:text-ink">
-          {t("mesMondes")}
-        </Link>
+        <div className="flex items-center justify-self-end gap-3">
+          <Clock />
+          <Link href="/" className="text-sm text-ink-muted hover:text-ink">
+            {t("mesMondes")}
+          </Link>
+        </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">{children}</div>

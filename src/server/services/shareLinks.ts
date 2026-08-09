@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { generateShareToken, hashShareToken } from "@/src/core/shareLinks/token";
+import { hashSharePassword } from "@/src/core/shareLinks/password";
 import {
   type ShareLinkRow,
   insertShareLink,
@@ -11,8 +12,30 @@ import {
 
 type TypedClient = SupabaseClient<Database>;
 
-export async function listShareLinks(supabase: TypedClient, worldId: string): Promise<ShareLinkRow[]> {
-  return listActiveShareLinksForWorld(supabase, worldId);
+/** Forme exposee au client : jamais `password_hash` en clair, seulement le fait qu'un mot de passe existe. */
+export interface ShareLinkSummary {
+  id: string;
+  worldId: string;
+  scope: string;
+  expiresAt: string | null;
+  createdAt: string;
+  hasPassword: boolean;
+}
+
+function toSummary(row: ShareLinkRow): ShareLinkSummary {
+  return {
+    id: row.id,
+    worldId: row.world_id,
+    scope: row.scope,
+    expiresAt: row.expires_at,
+    createdAt: row.created_at,
+    hasPassword: row.password_hash !== null,
+  };
+}
+
+export async function listShareLinks(supabase: TypedClient, worldId: string): Promise<ShareLinkSummary[]> {
+  const rows = await listActiveShareLinksForWorld(supabase, worldId);
+  return rows.map(toSummary);
 }
 
 /**
@@ -26,7 +49,7 @@ export async function listShareLinks(supabase: TypedClient, worldId: string): Pr
  */
 export async function createShareLink(
   supabase: TypedClient,
-  params: { worldId: string; createdBy: string },
+  params: { worldId: string; createdBy: string; password?: string },
 ): Promise<{ token: string; link: ShareLinkRow }> {
   const token = generateShareToken();
   const link = await insertShareLink(supabase, {
@@ -34,6 +57,7 @@ export async function createShareLink(
     tokenHash: hashShareToken(token),
     scope: "public_only",
     createdBy: params.createdBy,
+    passwordHash: params.password ? hashSharePassword(params.password) : null,
   });
   return { token, link };
 }

@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { createShareLinkServiceClient } from "@/lib/supabase/service";
 import { filterBlocks, filterSegments, type VisibilityLevel } from "@/src/core/visibility";
+import { verifySharePassword } from "@/src/core/shareLinks/password";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 import { type BlockRow, listBlocksForEntity } from "@/src/server/repos/blocks";
@@ -28,6 +29,9 @@ export interface ResolvedShareLink {
   worldName: string;
   worldSlug: string;
   scope: string;
+  /** Jamais transmis au client — sert uniquement a decider si la page doit demander un mot de passe avant tout chargement de contenu (V1-C4). */
+  passwordHash: string | null;
+  passwordAttempts: number;
 }
 
 /**
@@ -44,7 +48,42 @@ export async function resolveShareLink(token: string): Promise<ResolvedShareLink
   if (error) throw new Error(error.message);
   const row = data?.[0];
   if (!row) return null;
-  return { worldId: row.world_id, worldName: row.world_name, worldSlug: row.world_slug, scope: row.scope };
+  return {
+    worldId: row.world_id,
+    worldName: row.world_name,
+    worldSlug: row.world_slug,
+    scope: row.scope,
+    passwordHash: row.password_hash,
+    passwordAttempts: row.password_attempts,
+  };
+}
+
+/** Au-dela, le mot de passe ne protege plus rien (specs/arbitrage-modifications.md §3.2, "sinon le mot de passe ne protege rien") — le lien reste utilisable via son jeton, mais plus de nouvelle tentative de mot de passe. */
+const MAX_PASSWORD_ATTEMPTS = 10;
+
+export type SharePasswordResult = "ok" | "wrong" | "locked" | "not_required";
+
+/**
+ * Verifie le mot de passe d'un lien de partage et journalise la tentative
+ * (`app.record_share_link_password_attempt`, meme fonction `security
+ * definer` que `resolve_share_link` — l'anon n'a pas d'acces RLS en
+ * ecriture a `share_links`). Ne fait jamais confiance a un `resolved` deja
+ * en main : re-resout le jeton pour lire le compteur de tentatives a jour,
+ * au cas ou plusieurs essais arrivent en parallele.
+ */
+export async function verifyShareLinkPassword(token: string, password: string): Promise<SharePasswordResult> {
+  const resolved = await resolveShareLink(token);
+  if (!resolved) return "wrong";
+  if (!resolved.passwordHash) return "not_required";
+  if (resolved.passwordAttempts >= MAX_PASSWORD_ATTEMPTS) return "locked";
+
+  const success = verifySharePassword(password, resolved.passwordHash);
+
+  const supabase = createAnonClient();
+  const { error } = await supabase.rpc("record_share_link_password_attempt", { p_token: token, p_success: success });
+  if (error) throw new Error(error.message);
+
+  return success ? "ok" : "wrong";
 }
 
 /**

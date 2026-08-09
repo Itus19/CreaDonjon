@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { resolveShareLink, listPublicEntities } from "@/src/server/services/publicShare";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
+import { hasVerifiedSharePassword } from "./passwordActions";
+import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
 
 export default async function ShareLinkWorldPage({
   params,
@@ -15,6 +17,13 @@ export default async function ShareLinkWorldPage({
   // trois cotes appelant.
   const resolved = await resolveShareLink(token);
   if (!resolved) notFound();
+
+  // Mot de passe optionnel (V1-C4) : jamais de contenu recupere avant
+  // validation, jamais "charge puis masque" — on s'arrete ici tant que le
+  // cookie de verification n'est pas present.
+  if (resolved.passwordHash && !(await hasVerifiedSharePassword(token))) {
+    return <SharePasswordGate token={token} worldName={resolved.worldName} />;
+  }
 
   const entities = await listPublicEntities(resolved.worldId);
 

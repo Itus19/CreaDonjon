@@ -11,7 +11,7 @@ import {
   type UpdateDisplayNameState,
 } from "@/app/settings/actions";
 import ShareLinkPanel from "./ShareLinkPanel";
-import type { ShareLinkRow } from "@/src/server/repos/shareLinks";
+import type { ShareLinkSummary } from "@/src/server/services/shareLinks";
 
 const MODES = ["dark", "dim", "soft", "light"] as const;
 
@@ -126,13 +126,13 @@ export default function SettingsMenu({
   // l'URL plutot que d'etre recu en props.
   const pathname = usePathname();
   const worldSlug = pathname.match(/^\/m\/([^/]+)/)?.[1] ?? null;
-  const [shareData, setShareData] = useState<{ worldId: string; links: ShareLinkRow[] } | null>(null);
+  const [shareData, setShareData] = useState<{ worldId: string; links: ShareLinkSummary[] } | null>(null);
 
   function refreshShareData() {
     if (!worldSlug) return;
     fetch(`/api/worlds/${worldSlug}/share-links`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((body: { worldId: string; links: ShareLinkRow[] } | null) => {
+      .then((body: { worldId: string; links: ShareLinkSummary[] } | null) => {
         if (body) setShareData(body);
       })
       .catch(() => {});
@@ -143,7 +143,7 @@ export default function SettingsMenu({
     let cancelled = false;
     fetch(`/api/worlds/${worldSlug}/share-links`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((body: { worldId: string; links: ShareLinkRow[] } | null) => {
+      .then((body: { worldId: string; links: ShareLinkSummary[] } | null) => {
         if (!cancelled && body) setShareData(body);
       })
       .catch(() => {});
