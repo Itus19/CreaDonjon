@@ -200,3 +200,48 @@ export function armorAcModifier(armor: ArmorData, dexMod: number, source: string
   const cap = armor.category === "Medium" ? 2 : Infinity;
   return { target: "ac", op: "set", value: armor.base + Math.min(dexMod, cap), layer: 6, source, label };
 }
+
+export interface WeaponData {
+  damageDice: string;
+  damageType: string | null;
+  /** Degats a deux mains si la propriete `versatile` est presente, `null` sinon. */
+  versatileDamageDice: string | null;
+  /** Cles `index` des proprietes (`finesse`, `light`, `versatile`, `two-handed`, `thrown`, `ammunition`, `heavy`, `reach`, `loading`, `monk`, `special`). */
+  properties: string[];
+  isRanged: boolean;
+}
+
+/**
+ * `null` si l'entree n'a pas de donnees d'arme exploitables (ex. une
+ * armure). Contrairement a l'armure, aucun bloc `weapon` dedie n'est jamais
+ * ecrit a l'import (`scripts/ingest-srd.ts` n'a pas de `weaponBlocks()`) :
+ * tout vit dans `custom_table`, exactement comme pour l'armure.
+ */
+export function parseWeaponData(fields: ParsedFields): WeaponData | null {
+  const damage = fields.damage as { damage_dice?: string; damage_type?: { index?: string } } | undefined;
+  if (!damage || typeof damage.damage_dice !== "string") return null;
+
+  const twoHandedDamage = fields.two_handed_damage as { damage_dice?: string } | undefined;
+
+  const propertiesRaw = fields.properties;
+  const properties = Array.isArray(propertiesRaw)
+    ? (propertiesRaw as { index?: string }[]).map((p) => p.index).filter((s): s is string => typeof s === "string")
+    : [];
+
+  // SRD 2014 : `weapon_range` ("Melee"/"Ranged"). SRD 2024 : ce champ
+  // disparait, remplace par `equipment_categories` (ex. "Ranged Weapons").
+  const isRanged =
+    fields.weapon_range === "Ranged" ||
+    (Array.isArray(fields.equipment_categories) &&
+      (fields.equipment_categories as { name?: string }[]).some(
+        (c) => typeof c.name === "string" && /ranged/i.test(c.name)
+      ));
+
+  return {
+    damageDice: damage.damage_dice,
+    damageType: typeof damage.damage_type?.index === "string" ? damage.damage_type.index : null,
+    versatileDamageDice: typeof twoHandedDamage?.damage_dice === "string" ? twoHandedDamage.damage_dice : null,
+    properties,
+    isRanged,
+  };
+}

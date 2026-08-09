@@ -356,21 +356,38 @@ Ajoutée le 12 août (`specs/arbitrage-modifications.md` §3.3), après V1-B1 à
 Une **vue** sur les blocs de personnage déjà spécifiés (`character`, `inventory`, `spellcasting`, `resources`, l'état de jeu) et sur la fiche dérivée de `characterSheet()` — pas un nouveau bloc de données. Quatre onglets (Actions, Magie, Inventaire, Traits), boutons d'attaque et de dégâts appelant `resolveAction`, avantage/désavantage en un clic, emplacements de sorts, repos court et long, exports JSON et PDF, sélecteur d'objets interrogeant règles **et** entités. Le bloc de stats affiché séparément (hors du bloc de personnage, cf. V1-C4) disparaît dans le même ticket — ses valeurs viennent de `characterSheet()`, elles n'ont pas à exister deux fois.
 
 **Critères** — §8 de la spécification :
-- [ ] Aucun composant de la fiche ne calcule une valeur de règle. Tout vient de `characterSheet()` ou de `resolveAction()`.
-- [ ] Le bloc de stats séparé n'existe plus ; ajouter un bloc `character` n'en crée pas un second.
-- [ ] Décocher « équipé » sur une armure change la CA sans rechargement de page, et la décomposition affichée suit.
-- [ ] Passer l'épuisement à 2 change la vitesse affichée, avec sa provenance.
-- [ ] Un bouton d'attaque produit un jet journalisé dans `dice_rolls`, avec sa trace lisible.
-- [ ] Avantage et désavantage sont accessibles en un clic et s'annulent mutuellement.
-- [ ] Lancer un sort de niveau 2 décompte un emplacement de niveau 2 et applique la montée en puissance du bloc `scaling`.
-- [ ] Un sort sans emplacement disponible reste visible, désactivé, avec la raison affichée.
-- [ ] L'onglet Magie est absent pour un personnage sans incantation.
-- [ ] Un repos long recharge ce que le ruleset déclare, rien de codé en dur.
-- [ ] Le même inventaire s'affiche dans la fiche et dans l'éditeur ; modifier l'un modifie l'autre.
-- [ ] Le sélecteur d'objets propose règles et entités, chacune badgée.
-- [ ] L'export JSON ne contient aucune valeur dérivée ; le réimport reconstruit une fiche identique.
-- [ ] Une mutation de jeu écrit un `session_event`, jamais une `entity_revision`.
-- [ ] La fiche reste lisible et utilisable à 375 px de large — elle servira sur téléphone en V3.
+- [x] Aucun composant de la fiche ne calcule une valeur de règle. Tout vient de `characterSheet()` ou de `resolveAction()`.
+- [x] Le bloc de stats séparé n'existe plus ; ajouter un bloc `character` n'en crée pas un second.
+- [x] Décocher « équipé » sur une armure change la CA sans rechargement de page, et la décomposition affichée suit.
+- [ ] **Passer l'épuisement à 2 change la vitesse affichée, avec sa provenance.** Non fait — voir « Décisions de périmètre ».
+- [x] Un bouton d'attaque produit un jet journalisé dans `dice_rolls`, avec sa trace lisible (dans une campagne — voir périmètre).
+- [x] Avantage et désavantage sont accessibles en un clic et s'annulent mutuellement.
+- [x] Lancer un sort de niveau 2 décompte un emplacement de niveau 2 et applique la montée en puissance du bloc `scaling`.
+- [x] Un sort sans emplacement disponible reste visible, désactivé, avec la raison affichée.
+- [x] L'onglet Magie est absent pour un personnage sans incantation.
+- [x] Un repos long recharge ce que le ruleset déclare, rien de codé en dur.
+- [x] Le même inventaire s'affiche dans la fiche et dans l'éditeur ; modifier l'un modifie l'autre.
+- [x] Le sélecteur d'objets propose règles et entités, chacune badgée.
+- [x] L'export JSON ne contient aucune valeur dérivée ; le réimport reconstruit une fiche identique.
+- [x] Une mutation de jeu écrit un `session_event`, jamais une `entity_revision`.
+- [x] La fiche reste lisible et utilisable à 375 px de large — elle servira sur téléphone en V3.
+
+**Fait** — `resolveAction` n'existait nulle part dans le code malgré l'affirmation de la spec (`specs/fiche-personnage-interactive.md:58`, « existe déjà ») : construit de zéro dans `src/core/rules/action.ts` (`resolveAttackRoll`, `resolveDamageRoll`, notation `2d20kh1`/`2d20kl1` pour avantage/désavantage, doublement des dés sur critique sans doubler le modificateur), tests d'abord. `src/core/rules/srdMapping.ts` étendu avec `parseWeaponData` (tolérant aux deux formes SRD 2014/2024). Orchestration côté serveur dans `src/server/services/characterActions.ts` : `resolveCharacterActionContext` réassemble un `DerivedSheet` complet à chaque appel — jamais de nombre envoyé par le client, conformément à CLAUDE.md règle 6 — et `getOrInitializeRuntimeState` initialise PV/dés de vie au maximum une seule fois, sans journalisation (`sessionId: null, actor: "system"`), puisque ce n'est pas une action du joueur. Sessions de jeu ouvertes paresseusement (`src/server/services/sessions.ts`, `getOrOpenSessionForCampaign`) : aucune gestion de séance n'existe ailleurs dans l'application, donc aucune UI dédiée n'a été ajoutée ici.
+
+`components/blocks/PlayableCharacterSheet.tsx` remplace `CharacterSheetPreview` (V1-B4) : quatre onglets (Actions/Magie/Inventaire/Traits, Magie filtré si aucun bloc `spellcasting`), recalcul client instantané pour l'en-tête (CA/Init/Vitesse/etc., même motif que V1-B4), fetch serveur unique au montage pour l'état de jeu autoritaire. L'onglet Inventaire embarque directement `<InventoryBlockEditor>` — même composant, même canal `onChange` que l'éditeur de bloc, donc « même bloc, deux vues » sans duplication. Nouveau sélecteur `components/blocks/ItemAutocomplete.tsx` (double source : entrées de règles + entités du monde via `/api/worlds/[worldSlug]/entities-search`, badgées « règle »/« entité ») branché dans `InventoryBlockEditor`, qui ne proposait jusqu'ici que les règles malgré un schéma déjà prêt pour les deux. Export PDF par impression navigateur (`window.print()` + `@media print` dans `app/globals.css`, `print:hidden` sur l'en-tête/la barre latérale) — délibérément aucune dépendance serveur de génération PDF.
+
+Deux bugs réels trouvés et corrigés en testant dans le navigateur, tous deux préexistants à ce ticket (pas introduits par lui) :
+- `components/blocks/useResolvedRuleset.ts` effaçait tout le ruleset résolu affiché (espèce, classes, PV) dès qu'un objet d'inventaire passait en « Référence de règle » avant la moindre frappe (`ref.key = ""`, rejeté par `z.string().min(1)`, la requête échouait, le hook retombait sur un état vide sur toute réponse non-`ok`). Corrigé par un filtre `nonEmptyKeys()` appliqué à la fois à la clé de dédoublonnage et au corps de la requête.
+- `app/api/entities/[id]/sheet/route.ts` : `URLSearchParams.get("campaignId")` renvoie `""` (pas `null`) pour `?campaignId=` — la chaîne vide descendait jusqu'à `putRuntimeState`, qui l'insérait telle quelle dans une colonne `uuid`, provoquant une erreur serveur 500 systématique sur la fiche jouable hors campagne (le cas normal depuis le wiki). Corrigé en normalisant `""` en `null` dans la route.
+
+Vérification complète dans le navigateur (pas seulement les tests) : jet d'attaque et de dégâts sur une arme réelle du SRD (épée courte, finesse, mod FOR/DEX correct + maîtrise), avantage (notation `2d20kh1` confirmée dans la trace affichée), repos long restaurant PV/dés de vie, incantation avec un personnage magicien de test (emplacement de niveau 2 décompté 2/2 → 1/2), export JSON téléchargeable avec en-tête `Content-Disposition`, fiche lisible à 375 px de large.
+
+Décisions de périmètre :
+- **L'épuisement ne modifie pas encore la vitesse affichée.** La spec (§ « L'épuisement — le cas qui prouve le modèle ») suppose que la règle d'épuisement du ruleset produit déjà des modificateurs de couche 7 « à l'import » — en vérifiant ce critère, aucune conversion de ce type n'existe nulle part dans le code, pour aucune des deux éditions SRD (`data/srd/srd-2014.json` et `srd-2024.json` ne portent que du texte libre pour cette règle, pas de table structurée), et rien ne branche jamais `entity_runtime_state.exhaustion` sur `characterSheet()`'s `activeEffects` (toujours `[]`). C'est un vrai écart entre la spec et l'implémentation, pas une régression de ce ticket — construire la conversion (deux mécaniques différentes selon l'édition) est un chantier séparé, suivi comme tâche de fond.
+- **Le jet d'attaque n'est journalisé dans `dice_rolls` que depuis une campagne** (`campaignId` non nul) — le mécanisme est testé et fonctionne (intégration + navigateur), mais la fiche du wiki fonctionne toujours avec `campaignId: null` (aucune navigation ne relie encore une page d'entité à une campagne), donc les jets y restent des essais non enregistrés. Cohérent avec la décision déjà actée pour V1-B4/B5 sur ce point.
+- **Maîtrise d'arme toujours supposée.** Aucune modélisation de la maîtrise d'arme par classe n'existe dans le moteur ; ajouter cette nuance est un chantier de règles à part.
+- **`resolveAction` limité à l'attaque/dégâts à l'arme et aux sorts (emplacements + dégâts).** Pas de distinction attaque de sort contre jet de sauvegarde — non modélisée pour l'instant.
+- **Le sélecteur d'objets ne filtre pas les entités par « a une facette mécanique ».** Rien dans le modèle actuel ne marque ou n'interroge cette distinction ; le sélecteur cherche sur toutes les entités du monde.
 
 ---
 

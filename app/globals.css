@@ -203,3 +203,21 @@ body {
   font-family: var(--font-mech);
   font-size: 0.9em;
 }
+
+/* Export PDF de la fiche jouable (V1-B5, specs/fiche-personnage-interactive.md
+   §6) : impression du navigateur, pas de bibliotheque serveur — l'en-tete
+   et la barre laterale se retirent (`print:hidden`, AppShell/Sidebar), et
+   l'interface sombre par defaut devient un document lisible sur papier
+   plutot que d'imprimer un fond sombre qui gaspille l'encre. */
+@media print {
+  :root,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+  .border-edge,
+  .border-edge\/60,
+  .border-edge-strong {
+    border-color: #cccccc !important;
+  }
+}

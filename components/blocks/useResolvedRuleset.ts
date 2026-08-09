@@ -26,8 +26,21 @@ export interface RulesetSelection {
 
 const EMPTY: ResolvedRulesetView = { ruleset: { classes: {}, features: {} }, remainingChoices: [], equipment: {} };
 
+/**
+ * Une cle vide apparait des qu'un objet d'inventaire bascule en "Reference
+ * de regle" avant que l'utilisateur ait tape quoi que ce soit (`itemRef`
+ * = `{kind:"rule", key:""}`) — `resolveRulesetSchema` (`z.string().min(1)`)
+ * la rejette alors, la requete echoue, et sans ce filtre TOUT le ruleset
+ * resolu (espece, classes, choix) disparaissait pendant la frappe : un bug
+ * reel decouvert en testant V1-B5, pas propre a ce ticket (deja present
+ * dans l'ancien `CharacterSheetPreview`, meme calcul d'`equipmentKeys`).
+ */
+function nonEmptyKeys(keys: readonly string[]): string[] {
+  return keys.filter((k) => k.trim() !== "");
+}
+
 function selectionKey(s: RulesetSelection): string {
-  return JSON.stringify([s.species, s.background, s.classes, [...s.equipmentKeys].sort()]);
+  return JSON.stringify([s.species, s.background, s.classes, [...nonEmptyKeys(s.equipmentKeys)].sort()]);
 }
 
 /**
@@ -51,7 +64,7 @@ export function useResolvedRuleset(worldSlug: string, selection: RulesetSelectio
             species: selection.species,
             background: selection.background,
             classes: selection.classes,
-            equipmentKeys: selection.equipmentKeys,
+            equipmentKeys: nonEmptyKeys(selection.equipmentKeys),
           }),
         })
           .then((res) => (res.ok ? res.json() : null))

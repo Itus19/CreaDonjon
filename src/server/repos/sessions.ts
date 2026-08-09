@@ -4,6 +4,37 @@ import type { Database, Json } from "@/src/types/database";
 
 type TypedClient = SupabaseClient<Database>;
 
+export interface SessionRow {
+  id: string;
+  campaign_id: string;
+  started_at: string;
+  ended_at: string | null;
+}
+
+/** La session la plus recente sans `ended_at` — `null` si aucune n'est ouverte (SCHEMA.md §12 : `ended_at` marque la fin). */
+export async function getOpenSessionForCampaign(supabase: TypedClient, campaignId: string): Promise<SessionRow | null> {
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("id, campaign_id, started_at, ended_at")
+    .eq("campaign_id", campaignId)
+    .is("ended_at", null)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function createSession(supabase: TypedClient, campaignId: string): Promise<SessionRow> {
+  const { data, error } = await supabase
+    .from("sessions")
+    .insert({ campaign_id: campaignId })
+    .select("id, campaign_id, started_at, ended_at")
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export interface SessionEventRow {
   id: string;
   session_id: string;

@@ -13,7 +13,7 @@ import InventoryBlockEditor from "./InventoryBlockEditor";
 import SpellcastingBlockEditor from "./SpellcastingBlockEditor";
 import ResourcesBlockEditor from "./ResourcesBlockEditor";
 import StatblockBlockEditor from "./StatblockBlockEditor";
-import CharacterSheetPreview from "./CharacterSheetPreview";
+import PlayableCharacterSheet from "./PlayableCharacterSheet";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
@@ -139,12 +139,21 @@ export default function EntityBlocks({
   const sortedBlocks = [...blocks].sort((a, b) => a.displayOrder - b.displayOrder);
   const characterBlock = blocks.find((b) => b.blockType === "character");
   const inventoryBlock = blocks.find((b) => b.blockType === "inventory");
+  const spellcastingBlock = blocks.find((b) => b.blockType === "spellcasting");
+  const resourcesBlock = blocks.find((b) => b.blockType === "resources");
 
   function updateCharacterChoices(choices: Record<string, unknown>) {
     if (!characterBlock) return;
     const data = { ...(characterBlock.data as CharacterBlockData), choices };
     patchBlock(characterBlock.id, { data });
     saveBlock(characterBlock.id, { data });
+  }
+
+  /** Meme bloc `inventory` que l'onglet Inventaire de la fiche jouable et l'editeur — une seule donnee, deux vues (V1-B5, §5.1). */
+  function updateInventory(data: InventoryBlockData) {
+    if (!inventoryBlock) return;
+    patchBlock(inventoryBlock.id, { data });
+    saveBlock(inventoryBlock.id, { data });
   }
 
   function patchBlock(id: string, patch: Partial<BlockItem>) {
@@ -322,11 +331,15 @@ export default function EntityBlocks({
   return (
     <div className="flex flex-col">
       {characterBlock && (
-        <CharacterSheetPreview
+        <PlayableCharacterSheet
           worldSlug={worldSlug}
+          entityId={entityId}
           character={characterBlock.data as CharacterBlockData}
           inventory={inventoryBlock?.data as InventoryBlockData | undefined}
+          spellcasting={spellcastingBlock?.data as SpellcastingBlockData | undefined}
+          resources={resourcesBlock?.data as ResourcesBlockData | undefined}
           onUpdateChoices={updateCharacterChoices}
+          onUpdateInventory={updateInventory}
         />
       )}
       {sortedBlocks.map((block, index) => {

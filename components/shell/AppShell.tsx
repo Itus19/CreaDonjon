@@ -21,7 +21,7 @@ export default function AppShell({
   const t = useTranslations("shell");
   return (
     <div className="flex h-screen flex-col">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-edge bg-panel px-4">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-edge bg-panel px-4 print:hidden">
         <Link href={`/m/${worldSlug}`} className="truncate font-chrome text-sm font-semibold text-ink">
           {worldName}
         </Link>

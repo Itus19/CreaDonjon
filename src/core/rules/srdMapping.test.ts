@@ -11,6 +11,7 @@ import {
   mapSpeciesModifiers,
   parseArmorData,
   parseCustomTableFields,
+  parseWeaponData,
 } from "./srdMapping";
 
 // Fixtures fideles a la forme reelle des donnees SRD deja importees
@@ -211,5 +212,126 @@ describe("parseArmorData / armorAcModifier", () => {
 
   it("retourne null si les champs d'armure sont absents", () => {
     expect(parseArmorData(parseCustomTableFields([{ field: "name", value: "Fiole de sable noir" }]))).toBeNull();
+  });
+});
+
+// Fixtures fideles a la forme reelle des donnees SRD 2014 deja importees
+// (verifiees contre data/srd/srd-2014.json avant d'ecrire ce fichier).
+const SHORTSWORD_ROWS = [
+  { field: "index", value: "shortsword" },
+  { field: "weapon_category", value: "Martial" },
+  { field: "weapon_range", value: "Melee" },
+  {
+    field: "damage",
+    value: JSON.stringify({ damage_dice: "1d6", damage_type: { index: "piercing", name: "Piercing" } }),
+  },
+  { field: "range", value: JSON.stringify({ normal: 5 }) },
+  {
+    field: "properties",
+    value: JSON.stringify([
+      { index: "finesse", name: "Finesse" },
+      { index: "light", name: "Light" },
+      { index: "monk", name: "Monk" },
+    ]),
+  },
+];
+
+const LONGSWORD_ROWS = [
+  { field: "index", value: "longsword" },
+  { field: "weapon_category", value: "Martial" },
+  { field: "weapon_range", value: "Melee" },
+  {
+    field: "damage",
+    value: JSON.stringify({ damage_dice: "1d8", damage_type: { index: "slashing", name: "Slashing" } }),
+  },
+  {
+    field: "two_handed_damage",
+    value: JSON.stringify({ damage_dice: "1d10", damage_type: { index: "slashing", name: "Slashing" } }),
+  },
+  { field: "properties", value: JSON.stringify([{ index: "versatile", name: "Versatile" }]) },
+];
+
+const LONGBOW_ROWS = [
+  { field: "index", value: "longbow" },
+  { field: "weapon_category", value: "Martial" },
+  { field: "weapon_range", value: "Ranged" },
+  {
+    field: "damage",
+    value: JSON.stringify({ damage_dice: "1d8", damage_type: { index: "piercing", name: "Piercing" } }),
+  },
+  { field: "range", value: JSON.stringify({ normal: 150, long: 600 }) },
+  {
+    field: "properties",
+    value: JSON.stringify([
+      { index: "ammunition", name: "Ammunition" },
+      { index: "heavy", name: "Heavy" },
+      { index: "two-handed", name: "Two-Handed" },
+    ]),
+  },
+];
+
+// Forme SRD 2024 : `weapon_category`/`weapon_range` disparaissent au profit
+// d'`equipment_categories`, une `mastery` apparait — damage/properties inchanges.
+const SHORTSWORD_2024_ROWS = [
+  { field: "index", value: "shortsword" },
+  {
+    field: "equipment_categories",
+    value: JSON.stringify([{ index: "martial-melee-weapons", name: "Martial Melee Weapons" }]),
+  },
+  { field: "mastery", value: JSON.stringify({ index: "vex", name: "Vex" }) },
+  {
+    field: "damage",
+    value: JSON.stringify({ damage_dice: "1d6", damage_type: { index: "piercing", name: "Piercing" } }),
+  },
+  { field: "properties", value: JSON.stringify([{ index: "finesse", name: "Finesse" }]) },
+];
+
+describe("parseWeaponData", () => {
+  it("epee courte : degats, type, proprietes, corps a corps", () => {
+    const fields = parseCustomTableFields(SHORTSWORD_ROWS);
+    expect(parseWeaponData(fields)).toEqual({
+      damageDice: "1d6",
+      damageType: "piercing",
+      versatileDamageDice: null,
+      properties: ["finesse", "light", "monk"],
+      isRanged: false,
+    });
+  });
+
+  it("epee longue : versatile, degats a deux mains distincts", () => {
+    const fields = parseCustomTableFields(LONGSWORD_ROWS);
+    expect(parseWeaponData(fields)).toEqual({
+      damageDice: "1d8",
+      damageType: "slashing",
+      versatileDamageDice: "1d10",
+      properties: ["versatile"],
+      isRanged: false,
+    });
+  });
+
+  it("arc long : arme a distance", () => {
+    const fields = parseCustomTableFields(LONGBOW_ROWS);
+    const weapon = parseWeaponData(fields)!;
+    expect(weapon.isRanged).toBe(true);
+    expect(weapon.properties).toContain("ammunition");
+  });
+
+  it("tolere la forme SRD 2024 (equipment_categories au lieu de weapon_range)", () => {
+    const fields = parseCustomTableFields(SHORTSWORD_2024_ROWS);
+    expect(parseWeaponData(fields)).toEqual({
+      damageDice: "1d6",
+      damageType: "piercing",
+      versatileDamageDice: null,
+      properties: ["finesse"],
+      isRanged: false,
+    });
+  });
+
+  it("retourne null si les champs d'arme sont absents (ex. une armure)", () => {
+    const fields = parseCustomTableFields([
+      { field: "armor_category", value: "Heavy" },
+      { field: "armor_class", value: JSON.stringify({ base: 16, dex_bonus: false }) },
+    ]);
+    expect(parseWeaponData(fields)).toBeNull();
   });
 });

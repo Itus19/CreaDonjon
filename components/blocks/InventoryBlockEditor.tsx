@@ -5,9 +5,7 @@ import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/block
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import ReferenceChipDisplay from "./ReferenceChipDisplay";
-import RuleEntryAutocomplete from "./RuleEntryAutocomplete";
-
-const ITEM_REF_TYPES = ["weapon", "armor", "item"] as const;
+import ItemAutocomplete from "./ItemAutocomplete";
 
 function newItem(): InventoryItem {
   return { id: crypto.randomUUID(), label: "", qty: 1 };
@@ -80,13 +78,11 @@ export default function InventoryBlockEditor({
               </select>
               {itemReference ? (
                 <>
-                  <div className="w-32">
-                    <RuleEntryAutocomplete
+                  <div className="w-48">
+                    <ItemAutocomplete
                       worldSlug={worldSlug}
-                      entryTypes={ITEM_REF_TYPES}
-                      value={itemReference.kind === "rule" ? itemReference.key : ""}
-                      onChange={(key) => updateItem(index, { ref: { kind: "rule", key } } as Partial<InventoryItem>)}
-                      placeholder="scimitar"
+                      value={itemReference}
+                      onChange={(ref) => updateItem(index, { ref } as Partial<InventoryItem>)}
                     />
                   </div>
                   <ReferenceChipDisplay reference={itemReference} chip={chips.get(refIdentity(itemReference))} />

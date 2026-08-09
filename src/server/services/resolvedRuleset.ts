@@ -13,9 +13,11 @@ import {
   mapSpeciesModifiers,
   parseArmorData,
   parseCustomTableFields,
+  parseWeaponData,
   type ArmorData,
   type CustomTableRow,
   type ProgressionRow,
+  type WeaponData,
 } from "@/src/core/rules/srdMapping";
 import {
   getEntryTranslation,
@@ -179,6 +181,20 @@ export async function resolveEquipmentArmorData(
   for (const key of keys) {
     const found = await fetchEntryFields(supabase, rulesetId, key);
     result[key] = found ? parseArmorData(found.fields) : null;
+  }
+  return result;
+}
+
+/** Donnees mecaniques d'arme d'un objet d'equipement, par cle de regle — `null` si l'entree n'existe pas ou n'a pas de donnees d'arme (V1-B5, memes principes que resolveEquipmentArmorData). */
+export async function resolveEquipmentWeaponData(
+  supabase: TypedClient,
+  rulesetId: string,
+  keys: readonly string[]
+): Promise<Record<string, WeaponData | null>> {
+  const result: Record<string, WeaponData | null> = {};
+  for (const key of keys) {
+    const found = await fetchEntryFields(supabase, rulesetId, key);
+    result[key] = found ? parseWeaponData(found.fields) : null;
   }
   return result;
 }
