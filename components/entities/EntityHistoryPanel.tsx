@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 interface RevisionSummary {
   id: string;
@@ -71,6 +72,7 @@ export default function EntityHistoryPanel({ entityId }: { entityId: string }) {
   const [diff, setDiff] = useState<EntitySnapshotDiff | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [pendingRestore, setPendingRestore] = useState<number | null>(null);
 
   async function openPanel() {
     setOpen(true);
@@ -105,9 +107,7 @@ export default function EntityHistoryPanel({ entityId }: { entityId: string }) {
   }
 
   async function restore(revisionNumber: number) {
-    if (!window.confirm(`Restaurer la révision ${revisionNumber} ? Le contenu actuel de la fiche sera remplacé.`)) {
-      return;
-    }
+    setPendingRestore(null);
     setPending(true);
     setError(null);
     const res = await fetch(`/api/entities/${entityId}/revisions/${revisionNumber}/restore`, { method: "POST" });
@@ -125,9 +125,11 @@ export default function EntityHistoryPanel({ entityId }: { entityId: string }) {
       <button
         type="button"
         onClick={openPanel}
-        className="w-fit text-xs text-ink-muted underline-offset-2 hover:text-ink hover:underline"
+        title="Historique"
+        aria-label="Historique"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-edge text-xs text-ink-muted transition-colors hover:border-edge-strong hover:text-ink"
       >
-        Historique
+        ⧗
       </button>
 
       {open &&
@@ -180,7 +182,7 @@ export default function EntityHistoryPanel({ entityId }: { entityId: string }) {
                     <button
                       type="button"
                       disabled={pending}
-                      onClick={() => restore(revision.revision_number)}
+                      onClick={() => setPendingRestore(revision.revision_number)}
                       className="rounded-md px-2 py-0.5 text-ink-muted transition-colors hover:bg-panel hover:text-accent disabled:opacity-50"
                     >
                       Restaurer
@@ -223,6 +225,16 @@ export default function EntityHistoryPanel({ entityId }: { entityId: string }) {
           </div>,
           document.body
         )}
+
+      <ConfirmDialog
+        open={pendingRestore !== null}
+        title="Restaurer cette révision ?"
+        message={`Le contenu actuel de la fiche sera remplacé par la révision #${pendingRestore}.`}
+        confirmLabel="Restaurer"
+        danger
+        onConfirm={() => pendingRestore !== null && restore(pendingRestore)}
+        onCancel={() => setPendingRestore(null)}
+      />
     </>
   );
 }

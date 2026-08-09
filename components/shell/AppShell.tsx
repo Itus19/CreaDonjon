@@ -21,12 +21,15 @@ export default function AppShell({
   const t = useTranslations("shell");
   return (
     <div className="flex h-screen flex-col">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-edge bg-panel px-4 print:hidden">
-        <Link href={`/m/${worldSlug}`} className="truncate font-chrome text-sm font-semibold text-ink">
+      <header className="grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-edge bg-panel px-4 pl-14 print:hidden">
+        <Link
+          href={`/m/${worldSlug}`}
+          className="justify-self-start truncate font-chrome text-sm font-semibold text-ink"
+        >
           {worldName}
         </Link>
         <SectionToggle worldSlug={worldSlug} />
-        <Link href="/" className="text-sm text-ink-muted hover:text-ink">
+        <Link href="/" className="justify-self-end text-sm text-ink-muted hover:text-ink">
           {t("mesMondes")}
         </Link>
       </header>

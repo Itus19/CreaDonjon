@@ -141,7 +141,7 @@ export default function SettingsMenu({
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t("ouvrir")}
-        className="fixed left-4 top-4 z-50 flex h-9 w-9 items-center justify-center rounded-full border border-edge bg-panel text-ink shadow-lg transition-colors hover:bg-panel-raised"
+        className="fixed left-4 top-2.5 z-50 flex h-9 w-9 items-center justify-center rounded-full border border-edge bg-panel text-ink shadow-lg transition-colors hover:bg-panel-raised"
       >
         ⚙
       </button>

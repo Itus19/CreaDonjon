@@ -132,21 +132,25 @@ export default function EditEntityForm({
               className="entity-title flex-1 bg-transparent outline-none placeholder:text-ink-muted focus:border-b focus:border-accent"
             />
             {/* Aligne avec le titre, comme dans l'ancienne application : le
-                type de fiche se choisit en haut a droite, pas sous le titre. */}
-            <Dropdown
-              value={entityKind}
-              options={ENTITY_KIND_DROPDOWN_OPTIONS}
-              onChange={handleKindChange}
-              className="shrink-0 whitespace-nowrap bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
-            />
+                type de fiche se choisit en haut a droite, pas sous le titre.
+                L'historique (icone ronde) vit juste a cote, dans le meme coin
+                que les pastilles orange/rouge de la barre de fenetre au-dessus
+                (V1-C4, specs/arbitrage-modifications.md §3.1). */}
+            <div className="flex shrink-0 items-center gap-2">
+              <EntityHistoryPanel entityId={entity.id} />
+              <Dropdown
+                value={entityKind}
+                options={ENTITY_KIND_DROPDOWN_OPTIONS}
+                onChange={handleKindChange}
+                className="shrink-0 whitespace-nowrap bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+              />
+            </div>
           </div>
           {/* Le slug (identifiant d'URL, sans accents ni ponctuation) vit
               sous le titre — utile comme reference technique, mais pas assez
-              pour meriter la place a cote du titre. Serre contre le titre,
-              puis un espacement plus genereux avant les alias. */}
+              pour meriter la place a cote du titre. */}
           <div className="mt-0.5 flex items-center gap-3">
             <span className="font-mech text-xs text-ink-muted">{entity.slug}</span>
-            <EntityHistoryPanel entityId={entity.id} />
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-1.5 text-xs">

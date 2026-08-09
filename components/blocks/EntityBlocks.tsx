@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import TextBlockEditor from "./TextBlockEditor";
 import InfoboxBlockEditor from "./InfoboxBlockEditor";
@@ -131,6 +132,7 @@ export default function EntityBlocks({
   const [blocks, setBlocks] = useState<BlockItem[]>(initialBlocks);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [conflictedIds, setConflictedIds] = useState<Set<string>>(new Set());
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const versionsRef = useRef<Record<string, number>>(
     Object.fromEntries(initialBlocks.map((b) => [b.id, b.version])),
   );
@@ -256,8 +258,10 @@ export default function EntityBlocks({
     };
   }
 
-  async function deleteBlockLocal(id: string) {
-    if (!window.confirm("Supprimer ce bloc ?")) return;
+  async function confirmDeleteBlock() {
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
+    if (!id) return;
     await fetch(`/api/blocks/${id}`, { method: "DELETE" });
     setBlocks((prev) => prev.filter((b) => b.id !== id));
   }
@@ -330,18 +334,6 @@ export default function EntityBlocks({
 
   return (
     <div className="flex flex-col">
-      {characterBlock && (
-        <PlayableCharacterSheet
-          worldSlug={worldSlug}
-          entityId={entityId}
-          character={characterBlock.data as CharacterBlockData}
-          inventory={inventoryBlock?.data as InventoryBlockData | undefined}
-          spellcasting={spellcastingBlock?.data as SpellcastingBlockData | undefined}
-          resources={resourcesBlock?.data as ResourcesBlockData | undefined}
-          onUpdateChoices={updateCharacterChoices}
-          onUpdateInventory={updateInventory}
-        />
-      )}
       {sortedBlocks.map((block, index) => {
         const isCollapsed = collapsed.has(block.id);
         const hasConflict = conflictedIds.has(block.id);
@@ -407,7 +399,7 @@ export default function EntityBlocks({
                   aria-label="Actions du bloc"
                   items={[
                     { label: "Dupliquer", onSelect: () => duplicateBlock(block.id) },
-                    { label: "Supprimer", onSelect: () => deleteBlockLocal(block.id), danger: true },
+                    { label: "Supprimer", onSelect: () => setPendingDeleteId(block.id), danger: true },
                   ]}
                 />
               </div>
@@ -417,6 +409,22 @@ export default function EntityBlocks({
               <p className="mb-2 text-xs text-danger">
                 Modifié entre-temps. Rechargez la page avant de réessayer.
               </p>
+            )}
+
+            {/* La fiche jouable (V1-B5) vit dans la carte du bloc `character`
+                lui-meme — plus de panneau de stats separe au-dessus de la
+                liste des blocs (V1-C4, specs/arbitrage-modifications.md §3.1) : */}
+            {block.blockType === "character" && (
+              <PlayableCharacterSheet
+                worldSlug={worldSlug}
+                entityId={entityId}
+                character={block.data as CharacterBlockData}
+                inventory={inventoryBlock?.data as InventoryBlockData | undefined}
+                spellcasting={spellcastingBlock?.data as SpellcastingBlockData | undefined}
+                resources={resourcesBlock?.data as ResourcesBlockData | undefined}
+                onUpdateChoices={updateCharacterChoices}
+                onUpdateInventory={updateInventory}
+              />
             )}
 
             {!isCollapsed && (
@@ -452,6 +460,16 @@ export default function EntityBlocks({
           ))}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Supprimer ce bloc ?"
+        message="Cette action retire le bloc de la fiche. Il reste consultable dans l'historique de l'entité."
+        confirmLabel="Supprimer"
+        danger
+        onConfirm={confirmDeleteBlock}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 }
