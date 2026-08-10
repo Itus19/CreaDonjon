@@ -24,7 +24,6 @@ import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
 import { useResolvedRuleset, type RemainingChoiceView, type TraitGrantView } from "./useResolvedRuleset";
 import { useReferenceChips, refIdentity, type ResolvedChipView } from "./useReferenceChips";
-import RuleChip from "@/components/rules/RuleChip";
 import InventoryBlockEditor, { itemLabel, itemRef } from "./InventoryBlockEditor";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
@@ -356,19 +355,39 @@ export default function PlayableCharacterSheet({
   );
 
   /**
-   * Aptitudes de classe + dons accordes par un historique (V1-C8) —
-   * `f.key !== f.source` exclut l'entree synthetique de l'historique
-   * lui-meme (`background:acolyte`, qui porte les modificateurs de
-   * competences, pas une fiche de regle a afficher ici). Les traits
-   * d'espece/historique eux-memes restent hors de cette liste : ils
-   * n'ont pas de cle resolvable (`species:tiefling` n'est pas une entree
-   * `ruleset_entries`) — sujet complet de V1-C9, pas rouvert ici.
+   * Toutes les aptitudes accordees au personnage (V1-C9) : bundle espece,
+   * bundle historique, aptitudes de classe, dons accordes par un historique
+   * (V1-C8) — `ruleset.features` ne contient rien d'autre que ces familles,
+   * plus besoin de filtrer par source litterale.
    */
-  const classFeatures = Object.values(ruleset.features).filter(
-    (f) => f.source === "class" || (f.source.startsWith("background:") && f.key !== f.source)
-  );
-  const featureRefs = useMemo(() => classFeatures.map((f) => ({ kind: "rule" as const, key: f.key })), [classFeatures]);
-  const featureChips = useReferenceChips(worldSlug, featureRefs);
+  const traits = Object.values(ruleset.features);
+
+  /**
+   * Cle de reference reelle d'un trait (V1-C9). Les bundles espece/historique
+   * portent une cle synthetique identique a leur source (`species:tiefling`),
+   * pas une cle `ruleset_entries` — on retire le prefixe pour retomber sur la
+   * vraie cle resolvable (`tiefling`). Aptitudes de classe et dons accordes
+   * portent deja leur vraie cle dans `f.key` (`f.key !== f.source` alors).
+   */
+  function traitRefKey(f: ResolvedFeature): string {
+    return f.key === f.source && f.source.includes(":") ? f.source.slice(f.source.indexOf(":") + 1) : f.key;
+  }
+
+  /**
+   * Libelle de source d'un trait, pour affichage (V1-C9) : nom traduit de
+   * l'espece/l'historique/la classe qui l'accorde plutot que le prefixe brut
+   * (`species:tiefling` -> « Demi-elfe », `class:fighter` -> « Guerrier »).
+   * Pour le bundle espece/historique lui-meme, source et titre coincident —
+   * le SRD ne decoupe pas les traits raciaux en entrees individuelles, donc
+   * pas de distinction plus fine possible avec les donnees actuelles.
+   */
+  function traitSourceLabel(f: ResolvedFeature): string {
+    if (f.source.startsWith("class:")) return ruleset.classes[f.source.slice(6)]?.label ?? f.source;
+    return ruleset.features[f.source]?.label ?? f.source;
+  }
+
+  const traitRefs = useMemo(() => traits.map((f) => ({ kind: "rule" as const, key: traitRefKey(f) })), [traits]);
+  const traitChips = useReferenceChips(worldSlug, traitRefs);
 
   const knownSpellRefs = useMemo(
     () => (spellcasting?.known ?? []).map((k) => k.ref),
@@ -1191,19 +1210,33 @@ export default function PlayableCharacterSheet({
           {tab === "traits" && (
             <div className="flex flex-col gap-1 pt-3 text-sm">
               <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Aptitudes accordées</span>
-              {classFeatures.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {classFeatures.map((f) => {
-                    const chip = featureChips.get(refIdentity({ kind: "rule", key: f.key }));
-                    return chip?.found ? (
-                      <RuleChip key={f.key} href={chip.href} label={chip.name} summary={chip.summary} />
-                    ) : (
-                      <span key={f.key} className="text-xs italic text-ink-muted">{f.label}</span>
+              {traits.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {traits.map((f) => {
+                    const chip = traitChips.get(refIdentity({ kind: "rule", key: traitRefKey(f) }));
+                    return (
+                      <div key={f.key} className="rounded-md border border-edge/60 bg-panel-raised p-2.5">
+                        <div className="flex items-baseline justify-between gap-2">
+                          {chip?.found ? (
+                            <Link
+                              href={chip.href}
+                              className="text-sm font-semibold no-underline hover:underline"
+                              style={{ color: "var(--link-rule)" }}
+                            >
+                              {chip.name}
+                            </Link>
+                          ) : (
+                            <span className="text-sm font-semibold italic text-ink-muted">{f.label}</span>
+                          )}
+                          <span className="shrink-0 text-[10px] uppercase tracking-wide text-ink-muted">{traitSourceLabel(f)}</span>
+                        </div>
+                        {chip?.found && chip.summary && <p className="mt-1 text-xs leading-relaxed text-ink-muted">{chip.summary}</p>}
+                      </div>
                     );
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-ink-muted">Aucune aptitude de classe pour l&apos;instant.</p>
+                <p className="text-sm text-ink-muted">Aucune aptitude accordée pour l&apos;instant.</p>
               )}
 
               <span className="mt-3 text-[10px] font-bold uppercase tracking-widest text-ink-muted">Maîtrises</span>

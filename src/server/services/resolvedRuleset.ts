@@ -173,7 +173,7 @@ export async function assembleResolvedRuleset(
 
     proficiencies.push(...mapProficiencies(found.fields).map((p) => ({ ...p, source: label })));
 
-    for (const fk of extractFeatureKeysUpToLevel(found.progressionRows, cl.level)) extraFeatureKeys.set(fk, "class");
+    for (const fk of extractFeatureKeysUpToLevel(found.progressionRows, cl.level)) extraFeatureKeys.set(fk, `class:${cl.key}`);
 
     for (const choice of extractSkillChoices(found.fields)) {
       remainingChoices.push({
@@ -198,7 +198,7 @@ export async function assembleResolvedRuleset(
       features[chip.entry_key] = {
         key: chip.entry_key,
         label: translationByEntryId.get(chip.id) ?? entryNameFrom(chip),
-        source: extraFeatureKeys.get(chip.entry_key) ?? "class",
+        source: extraFeatureKeys.get(chip.entry_key) ?? "class:inconnue",
         modifiers: [],
         prerequisites: mapPrerequisites(chip.source_raw),
       };
@@ -207,7 +207,7 @@ export async function assembleResolvedRuleset(
     // quand meme, label = cle brute, pour que build.featureKeys puisse la
     // referencer sans faire echouer characterSheet().
     for (const fk of keys) {
-      if (!features[fk]) features[fk] = { key: fk, label: fk, source: extraFeatureKeys.get(fk) ?? "class", modifiers: [] };
+      if (!features[fk]) features[fk] = { key: fk, label: fk, source: extraFeatureKeys.get(fk) ?? "class:inconnue", modifiers: [] };
     }
   }
 
