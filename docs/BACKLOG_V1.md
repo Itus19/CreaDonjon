@@ -610,6 +610,39 @@ Vérifié contre `data/srd/srd-2014.json` et `srd-2024.json` avant d'écrire ces
 
 **Hors périmètre, à ne pas faire ici** : choix de don (nécessite une UI de création/montée de niveau, gros morceau à part), choix de langue d'historique (même famille), sorts « toujours préparés » sans notion de préparation existante dans le moteur (magiciens ne préparent pas comme les clercs par ex. — règle 5e réelle non modélisée, à vérifier si ça devient un problème concret plutôt que supposé).
 
+### V1-C7 — Choix de langues d'historique · `M`
+
+Suite de V1-C6 (§B, « Langues choisies par l'historique — non traité ici »). Repris comme ticket séparé plutôt que fusionné avec V1-C8 (choix de don) : même famille de mécanique (« choisir N parmi une liste »), mais taille et nature très différentes — celui-ci réutilise presque tel quel un mécanisme déjà construit, V1-C8 n'a presque rien à réutiliser.
+
+**Ce qui existe déjà et se réutilise** : `RemainingChoice { id, label, count, options }` (`src/server/services/resolvedRuleset.ts`) est déjà un mécanisme générique de choix, pas spécifique aux compétences malgré son unique usage actuel (`extractSkillChoices`) — `PlayableCharacterSheet.tsx` l'affiche déjà en liste de cases à cocher, persiste dans `character.choices[choice.id]`, jamais un tunnel (on peut toujours revenir sur un choix). Ajouter les langues consiste à alimenter ce même mécanisme depuis une deuxième source, pas à en inventer un second.
+
+**Point technique à trancher avant de coder, vérifié en amont** : `background.language_options` (ex. Acolyte : `{"choose":2,"type":"languages","from":{"option_set_type":"resource_list","resource_list_url":"/api/2014/languages"}}`) pointe vers **toute la catégorie `Languages` du SRD**, pas une liste fixée dans l'entrée elle-même (contrairement aux choix de compétences, qui sont un `options_array` explicite). Or les langues ne sont importées nulle part dans `ruleset_entries` aujourd'hui (`ENTRY_TYPES` ne connaît pas `"language"` — vérifié dans `src/core/schemas/rule-blocks/entry-types.ts`) : `extractLanguages` (V1-C6) ne lit que les langues *fixes* d'une entrée (ex. `Races.dwarf.languages`), jamais la liste complète et indépendante des 16 langues du SRD (`data/srd/srd-2014.json` → `Languages`, même compte vérifié côté 2024).
+- **Recommandation** : ajouter `"language"` à `ENTRY_TYPES` (migration légère, même forme que les autres catégories) et importer `Languages` comme `ruleset_entries` à part entière dans `scripts/ingest-srd.ts` — cohérent avec l'architecture existante (tout passe par `ruleset_entries`), et réutilisable plus tard si une vraie fiche de langue devient utile. Alternative rejetée : une liste codée en dur côté application — fonctionnerait, mais casse le principe « le SRD importé est la seule source de vérité », et ne suivrait pas une variante qui ajouterait ses propres langues maison.
+
+- [ ] `Languages` importé comme `ruleset_entries` (`entry_type: "language"`), même pipeline que les autres catégories.
+- [ ] Nouvel extracteur `extractLanguageChoices(fields): {count, options}[]` (`srdMapping.ts`, tests d'abord) qui lit `background.language_options` — options = toutes les langues du ruleset (résolues via la nouvelle entrée), pas une liste fixe extraite du champ lui-même.
+- [ ] `assembleResolvedRuleset` ajoute ces choix à `remainingChoices` (id qualifié, ex. `background:acolyte.languages`), même convention que les choix de compétences.
+- [ ] La fiche jouable affiche ce choix dans la même liste de « choix restants » que les compétences — aucun nouveau composant d'affichage, `PlayableCharacterSheet.tsx` le gère déjà génériquement.
+- [ ] Les langues choisies apparaissent dans l'onglet Traits, section Langues (V1-C6), aux côtés des langues fixes — même source affichée (« Acolyte » plutôt que « Tieffelin »).
+
+*Hors périmètre : lier une langue choisie à un effet mécanique (aucune langue n'en a dans le SRD — c'est une information de jeu de rôle, pas une donnée de règle chiffrée) ; les choix de langue d'une classe ou d'un don, s'ils existent, suivent le même mécanisme mais ne sont pas vérifiés ici.*
+
+### V1-C8 — Choix de don · `L`
+
+Suite de V1-C6 (§B, « Dons — non affichables dans ce ticket »). Plus gros que V1-C7 malgré une famille de mécanique proche : la sélection elle-même est simple (même mécanisme de choix que V1-C7), mais **aucun champ SRD structuré ne porte les effets mécaniques d'un don** — contrairement à une espèce ou une classe (`ability_bonuses`, `proficiencies`...), un don du SRD n'a qu'un texte libre (`desc`) et des prérequis structurés (`prerequisites`, déjà compatible avec `Prerequisite`/`sheet.warnings` du moteur, jamais encore atteignable en jeu réel faute de don assemblé — noté dans les « décisions de périmètre » de V1-B4).
+
+**Ce qui existe déjà et se réutilise** : `Feats` est déjà importé en `ruleset_entries` (`entry_type: "feature"`, `scripts/ingest-srd.ts:479`) — un don a donc déjà sa fiche de règle, son `<RuleChip>`, sa page `/m/[worldSlug]/regles/[cle]`, exactement comme une aptitude de classe. Le mécanisme de choix générique (`RemainingChoice`, V1-C7) se réutilise aussi pour l'étape de sélection.
+
+**Décision de périmètre à prendre avant de coder** (à trancher avec l'utilisateur, pas à deviner) : un don choisi doit-il rester **purement informationnel** pour ce ticket (apparaît dans Traits avec sa description, aucun effet chiffré sur la fiche — cohérent avec le fait que de nombreuses aptitudes de classe déjà assemblées n'ont elles-mêmes aucun modificateur), ou faut-il que ses effets soient réellement appliqués (`ResolvedFeature.modifiers`) ? La seconde option n'a pas de solution générique : il faudrait soit un mapping fait à la main don par don (maintenance qui grossit à chaque nouveau don, contraire à « pas de généralisation prématurée »), soit attendre l'éditeur de règle assisté par IA (V1-D2) pour que le contenu structuré vienne de là. **Recommandation : périmètre informationnel pour ce ticket**, comme pour les maîtrises et langues (V1-C6) — un don qui s'affiche avec sa vraie description vaut déjà largement mieux que rien.
+
+- [ ] Identifier, pour 2014 et 2024, **où un don peut être choisi** (probablement : l'amélioration de caractéristique de classe qui, en variante, propose un don à la place ; le choix espèce/historique en 2024 qui peut offrir un don directement) — point de départ des critères suivants, à vérifier contre les données SRD avant d'écrire le code, pas supposé.
+- [ ] Nouvel extracteur de choix de don (même forme que `RemainingChoice`), branché là où l'étape précédente l'a localisé.
+- [ ] Le don choisi devient une entrée de `build.featureKeys` (comme une aptitude de classe) : `ResolvedFeature` sans modificateur pour ce ticket (périmètre informationnel, voir plus haut).
+- [ ] Le don choisi apparaît dans l'onglet Traits avec un vrai lien vers sa fiche de règle (`<RuleChip>`) — contrairement aux maîtrises/langues (V1-C6), un don *mérite* ce lien puisque le SRD porte une vraie description.
+- [ ] `sheet.warnings` reste inchangé dans son fonctionnement (déjà testé, V1-B1) — si un don assemblé porte un prérequis non satisfait, le bandeau d'avertissement existant doit le montrer sans code supplémentaire.
+
+*Hors périmètre, à ne pas faire ici : effets mécaniques réels d'un don (voir décision de périmètre ci-dessus) ; amélioration de caractéristique elle-même comme choix concurrent du don (+2 ou don, règle 2014) si elle s'avère être un chantier distinct une fois le premier point de cette liste vérifié.*
+
 ---
 
 ## Lot D — Première assistance IA
@@ -668,9 +701,11 @@ D-01 … D-04                dette, une session
 Lot A  (A1→A2→A3→A4→A5)    les règles deviennent consultables et personnalisables,
                             A5 (traduction FR) ferme le lot une fois la structure stable
 Lot B  (B1→B2→B3→B4→B5)    le personnage devient jouable, B5 le rend interactif
-Lot C  (C1→C2→C3→C4→C5→C6) plusieurs personnes, permissions réelles, C4 les correctifs,
+Lot C  (C1→C2→C3→C4→C5→C6→C7→C8)
+                            plusieurs personnes, permissions réelles, C4 les correctifs,
                             C5 (sélection de ruleset) n'a de dépendance que sur C1,
-                            C6 (Actions/Magie/Traits) n'a de dépendance que sur B5
+                            C6 (Actions/Magie/Traits) n'a de dépendance que sur B5,
+                            C7 (langues d'historique) et C8 (dons) dépendent de C6
 Lot D  (D1→D2→D3→D4)       l'IA, instrumentée dès le premier appel
 ```
 
