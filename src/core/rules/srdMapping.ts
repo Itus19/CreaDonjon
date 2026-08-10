@@ -170,6 +170,52 @@ export function mapBackgroundModifiers(fields: ParsedFields, source: string, lab
   return modifiers;
 }
 
+/**
+ * Les 16 langues standard du SRD (verifie identique contre `data/srd/srd-2014.json`
+ * et `srd-2024.json`, categorie `Languages`) — meme statut que `ABILITIES`/`SKILLS`
+ * (sheet.ts) : vocabulaire de base fige du systeme, pas une donnee importee.
+ * Une variante avec des langues maison est hors perimetre tant qu'aucune UI
+ * d'edition de regle n'existe (V1-D2) — importer `Languages` en `ruleset_entries`
+ * pour ce seul cas aurait ete une generalisation prematuree (CLAUDE.md, "regle
+ * des trois").
+ */
+export const SRD_LANGUAGES = [
+  "common",
+  "dwarvish",
+  "elvish",
+  "giant",
+  "gnomish",
+  "goblin",
+  "halfling",
+  "orc",
+  "abyssal",
+  "celestial",
+  "draconic",
+  "deep-speech",
+  "infernal",
+  "primordial",
+  "sylvan",
+  "undercommon",
+] as const;
+export type LanguageKey = (typeof SRD_LANGUAGES)[number];
+
+export interface LanguageChoice {
+  count: number;
+}
+
+/**
+ * Choix de langues offert par un historique (V1-C7), ex. Acolyte : 2 parmi
+ * toutes. Contrairement a `extractSkillChoices`, `language_options` ne porte
+ * jamais de liste fixee dans l'entree elle-meme (`from.option_set_type` vaut
+ * `"resource_list"`, pas `"options_array"`) — seul le nombre est lu ici,
+ * l'appelant fournit `SRD_LANGUAGES` comme options.
+ */
+export function extractLanguageChoice(fields: ParsedFields): LanguageChoice | null {
+  const raw = fields.language_options as { choose?: number; type?: string } | undefined;
+  if (!raw || raw.type !== "languages" || typeof raw.choose !== "number") return null;
+  return { count: raw.choose };
+}
+
 export interface ArmorData {
   category: string;
   base: number;

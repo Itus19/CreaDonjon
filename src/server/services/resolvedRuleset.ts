@@ -5,6 +5,7 @@ import type { Locale } from "@/src/i18n/request";
 import type { ResolvedClass, ResolvedFeature, ResolvedRuleset } from "@/src/core/rules/sheet";
 import {
   extractFeatureKeysUpToLevel,
+  extractLanguageChoice,
   extractLanguages,
   extractSkillChoices,
   extractSlotsByLevel,
@@ -18,6 +19,7 @@ import {
   parseItemWeight,
   parseSpellLevel,
   parseWeaponData,
+  SRD_LANGUAGES,
   type ArmorData,
   type CustomTableRow,
   type ProgressionRow,
@@ -46,6 +48,8 @@ export interface RemainingChoice {
   label: string;
   count: number;
   options: string[];
+  /** Distingue le rendu cote client (V1-C7) : la liste de competences est fixe et deja affichee par ailleurs, la liste de langues ne l'est pas — deux listes de cases a cocher differentes, pas une seule generique. */
+  kind: "skill" | "language";
 }
 
 /** Maitrise ou langue accordee, avec sa source pour affichage (onglet Traits, V1-C6) — pas de lien de regle dedie, voir docs/BACKLOG_V1.md V1-C6 (le SRD ne porte aucun texte descriptif pour ces deux categories). */
@@ -130,6 +134,17 @@ export async function assembleResolvedRuleset(
       const key = `background:${selection.background}`;
       features[key] = { key, label, source: key, modifiers: mapBackgroundModifiers(found.fields, key, label) };
       proficiencies.push(...mapProficiencies(found.fields).map((p) => ({ ...p, source: label })));
+
+      const languageChoice = extractLanguageChoice(found.fields);
+      if (languageChoice) {
+        remainingChoices.push({
+          id: `${key}.languages`,
+          label: `${label} — langues`,
+          count: languageChoice.count,
+          options: [...SRD_LANGUAGES],
+          kind: "language",
+        });
+      }
     }
   }
 
@@ -160,6 +175,7 @@ export async function assembleResolvedRuleset(
         label: `${label} — compétences`,
         count: choice.count,
         options: choice.options,
+        kind: "skill",
       });
     }
   }

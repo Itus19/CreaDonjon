@@ -9,6 +9,8 @@ export interface RemainingChoiceView {
   label: string;
   count: number;
   options: string[];
+  /** Distingue le rendu cote client (V1-C7) : la liste de competences est fixe et deja affichee par ailleurs, la liste de langues ne l'est pas. */
+  kind: "skill" | "language";
 }
 
 /** Maitrise ou langue accordee, avec sa source pour affichage (onglet Traits, V1-C6). */

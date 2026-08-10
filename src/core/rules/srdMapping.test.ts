@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   armorAcModifier,
   extractFeatureKeysUpToLevel,
+  extractLanguageChoice,
   extractSkillChoices,
   extractSlotsByLevel,
   mapBackgroundModifiers,
@@ -16,6 +17,7 @@ import {
   parseItemWeight,
   parseSpellLevel,
   parseWeaponData,
+  SRD_LANGUAGES,
 } from "./srdMapping";
 
 // Fixtures fideles a la forme reelle des donnees SRD deja importees
@@ -178,6 +180,46 @@ describe("mapBackgroundModifiers", () => {
     expect(mapBackgroundModifiers(fields, "background:soldier", "Soldat")).toEqual([
       { target: "skill.athletics", op: "proficiency", layer: 4, source: "background:soldier", label: "Soldat" },
     ]);
+  });
+});
+
+// Fixture fidele a data/srd/srd-2014.json : Backgrounds.acolyte.language_options
+// pointe vers TOUTE la categorie Languages (resource_list), jamais une liste
+// fixee dans l'entree elle-meme, contrairement aux choix de competences.
+const ACOLYTE_LANGUAGE_OPTIONS_ROWS = [
+  {
+    field: "language_options",
+    value: JSON.stringify({
+      choose: 2,
+      type: "languages",
+      from: { option_set_type: "resource_list", resource_list_url: "/api/2014/languages" },
+    }),
+  },
+];
+
+describe("SRD_LANGUAGES", () => {
+  it("porte les 16 langues standard du SRD (identiques 2014/2024, verifie contre data/srd/*.json)", () => {
+    expect(SRD_LANGUAGES).toHaveLength(16);
+    expect(SRD_LANGUAGES).toContain("common");
+    expect(SRD_LANGUAGES).toContain("undercommon");
+  });
+});
+
+describe("extractLanguageChoice", () => {
+  it("lit le nombre de langues au choix d'un historique (Acolyte : 2)", () => {
+    const fields = parseCustomTableFields(ACOLYTE_LANGUAGE_OPTIONS_ROWS);
+    expect(extractLanguageChoice(fields)).toEqual({ count: 2 });
+  });
+
+  it("retourne null si le champ est absent (historique sans langue au choix)", () => {
+    expect(extractLanguageChoice(parseCustomTableFields(ACOLYTE_ROWS))).toBeNull();
+  });
+
+  it("retourne null si le champ existe mais n'est pas un choix de langues (garde-fou de forme)", () => {
+    const fields = parseCustomTableFields([
+      { field: "language_options", value: JSON.stringify({ choose: 2, type: "tools" }) },
+    ]);
+    expect(extractLanguageChoice(fields)).toBeNull();
   });
 });
 

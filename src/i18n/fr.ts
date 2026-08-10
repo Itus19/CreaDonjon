@@ -31,6 +31,7 @@
 // `elle` est un bug de prompt IA, pas une fatalite (meme doc §3.9).
 
 import type { Skill } from "@/src/core/rules/sheet";
+import type { LanguageKey } from "@/src/core/rules/srdMapping";
 
 /** Libelles officiels des competences (traduction SRD, cf. data/srd/fr-source). */
 export const SKILL_LABELS_FR: Record<Skill, string> = {
@@ -52,6 +53,26 @@ export const SKILL_LABELS_FR: Record<Skill, string> = {
   sleight_of_hand: "Escamotage",
   stealth: "Discretion",
   survival: "Survie",
+};
+
+/** Libelles officiels des langues du SRD (V1-C7, cf. SRD_LANGUAGES). */
+export const LANGUAGE_LABELS_FR: Record<LanguageKey, string> = {
+  common: "Commun",
+  dwarvish: "Nain",
+  elvish: "Elfique",
+  giant: "Geant",
+  gnomish: "Gnome",
+  goblin: "Gobelin",
+  halfling: "Halfelin",
+  orc: "Orque",
+  abyssal: "Abyssal",
+  celestial: "Celeste",
+  draconic: "Draconique",
+  "deep-speech": "Profond",
+  infernal: "Infernal",
+  primordial: "Primordial",
+  sylvan: "Sylvestre",
+  undercommon: "Sous-commun",
 };
 
 export const RELATION_LABELS_FR: Record<string, string> = {

@@ -17,12 +17,12 @@ import {
   type EquippedItem,
   type ResolvedFeature,
 } from "@/src/core/rules/sheet";
-import { armorAcModifier, mapChosenSkillModifiers, type WeaponData } from "@/src/core/rules/srdMapping";
+import { armorAcModifier, mapChosenSkillModifiers, SRD_LANGUAGES, type LanguageKey, type WeaponData } from "@/src/core/rules/srdMapping";
 import { lbToKg, totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { evaluate, type TraceStep } from "@/src/core/formula/evaluate";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
-import { useResolvedRuleset, type RemainingChoiceView } from "./useResolvedRuleset";
+import { useResolvedRuleset, type RemainingChoiceView, type TraitGrantView } from "./useResolvedRuleset";
 import { useReferenceChips, refIdentity, type ResolvedChipView } from "./useReferenceChips";
 import RuleChip from "@/components/rules/RuleChip";
 import InventoryBlockEditor, { itemLabel, itemRef } from "./InventoryBlockEditor";
@@ -30,7 +30,7 @@ import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
-import { SKILL_LABELS_FR } from "@/src/i18n/fr";
+import { LANGUAGE_LABELS_FR, SKILL_LABELS_FR } from "@/src/i18n/fr";
 
 const ABILITY_LABELS: Record<Ability, string> = {
   str: "FOR",
@@ -43,6 +43,9 @@ const ABILITY_LABELS: Record<Ability, string> = {
 
 /** Compétences triées par libellé FR (V1-C4 suite) — même ordre que la référence visuelle fournie par l'utilisateur. */
 const SORTED_SKILLS = [...SKILLS].sort((a, b) => SKILL_LABELS_FR[a].localeCompare(SKILL_LABELS_FR[b]));
+
+/** Langues triées par libellé FR (V1-C7), même motif que SORTED_SKILLS. */
+const SORTED_LANGUAGES = [...SRD_LANGUAGES].sort((a, b) => LANGUAGE_LABELS_FR[a].localeCompare(LANGUAGE_LABELS_FR[b]));
 
 /** Seuils de PX cumulés par niveau total (règle officielle 5e, identique SRD 2014/2024) — sert uniquement à dessiner la barre de progression ; aucune montée de niveau n'est automatisée à partir de ces valeurs. */
 const XP_LEVEL_THRESHOLDS = [
@@ -400,20 +403,45 @@ export default function PlayableCharacterSheet({
    * Competences liees a un choix non resolu (V1-C4 suite, sur retour
    * utilisateur) : evite la double UI "Choix restants" + liste de
    * competences — les ronds de la liste deviennent le point d'interaction
-   * unique. Toutes les options connues aujourd'hui sont des cles de
-   * competence (`extractSkillChoices`, seule source de `remainingChoices`
-   * cote serveur) ; si une autre nature de choix apparait plus tard, elle
-   * restera simplement invisible ici (aucune competence ne la reference).
+   * unique. Filtre sur `kind` (V1-C7) : les choix de langues ont leur propre
+   * liste d'options (SORTED_LANGUAGES, onglet Traits), pas la liste fixe des
+   * competences — les deux ne doivent jamais se croiser dans cette map.
    */
   const skillChoices = useMemo(() => {
     const map = new Map<string, RemainingChoiceView>();
     for (const choice of remainingChoices) {
+      if (choice.kind !== "skill") continue;
       for (const option of choice.options) {
         if (!map.has(option)) map.set(option, choice);
       }
     }
     return map;
   }, [remainingChoices]);
+
+  /** Meme motif que `skillChoices`, pour les choix de langues (V1-C7) — rendu dans l'onglet Traits, a cote des langues fixes. */
+  const languageChoices = useMemo(() => {
+    const map = new Map<string, RemainingChoiceView>();
+    for (const choice of remainingChoices) {
+      if (choice.kind !== "language") continue;
+      for (const option of choice.options) {
+        if (!map.has(option)) map.set(option, choice);
+      }
+    }
+    return map;
+  }, [remainingChoices]);
+
+  /** Langues fixes (espece/historique, V1-C6) + langues choisies (V1-C7) — meme liste affichee dans l'onglet Traits, source deduite du libellé du choix (« Acolyte — langues » -> « Acolyte »). */
+  const allLanguages = useMemo(() => {
+    const chosenGrants: TraitGrantView[] = [];
+    for (const choice of new Set(languageChoices.values())) {
+      const chosen = (character.choices[choice.id] as string[] | undefined) ?? [];
+      const source = choice.label.replace(/ — langues$/, "");
+      for (const key of chosen) {
+        chosenGrants.push({ key, name: LANGUAGE_LABELS_FR[key as LanguageKey] ?? key, source });
+      }
+    }
+    return [...languages, ...chosenGrants];
+  }, [languages, languageChoices, character.choices]);
 
   async function reloadRemote() {
     const res = await fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId ?? ""}`);
@@ -881,16 +909,18 @@ export default function PlayableCharacterSheet({
               Compétences · maîtrise {sheet.proficiencyBonus >= 0 ? "+" : ""}
               {sheet.proficiencyBonus}
             </span>
-            {remainingChoices.length > 0 && (
+            {remainingChoices.some((c) => c.kind === "skill") && (
               <div className="flex flex-col gap-0.5">
-                {remainingChoices.map((choice) => {
-                  const chosen = (character.choices[choice.id] as string[] | undefined) ?? [];
-                  return (
-                    <p key={choice.id} className="text-xs text-ink-muted">
-                      {choice.label} : {chosen.length}/{choice.count} choisie(s) — cliquez les ronds clairs ci-dessous
-                    </p>
-                  );
-                })}
+                {remainingChoices
+                  .filter((c) => c.kind === "skill")
+                  .map((choice) => {
+                    const chosen = (character.choices[choice.id] as string[] | undefined) ?? [];
+                    return (
+                      <p key={choice.id} className="text-xs text-ink-muted">
+                        {choice.label} : {chosen.length}/{choice.count} choisie(s) — cliquez les ronds clairs ci-dessous
+                      </p>
+                    );
+                  })}
               </div>
             )}
             <div className="flex flex-col gap-1">
@@ -1184,9 +1214,42 @@ export default function PlayableCharacterSheet({
               )}
 
               <span className="mt-3 text-[10px] font-bold uppercase tracking-widest text-ink-muted">Langues</span>
-              {languages.length > 0 ? (
+              {[...new Set(languageChoices.values())].map((choice) => {
+                const chosenForChoice = (character.choices[choice.id] as string[] | undefined) ?? [];
+                return (
+                  <div key={choice.id} className="flex flex-col gap-1">
+                    <p className="text-xs text-ink-muted">
+                      {choice.label} : {chosenForChoice.length}/{choice.count} choisie(s) — cliquez pour choisir
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {SORTED_LANGUAGES.map((lang) => {
+                        const isChosen = chosenForChoice.includes(lang);
+                        const canPick = isChosen || chosenForChoice.length < choice.count;
+                        return (
+                          <button
+                            key={lang}
+                            type="button"
+                            disabled={!canPick}
+                            onClick={() =>
+                              patchCharacter({
+                                choices: { ...character.choices, [choice.id]: toggleChoice(chosenForChoice, lang, choice.count) },
+                              })
+                            }
+                            className={`rounded-full border px-2 py-0.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                              isChosen ? "border-accent bg-accent/20 text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
+                            }`}
+                          >
+                            {LANGUAGE_LABELS_FR[lang]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              {allLanguages.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {languages.map((l) => (
+                  {allLanguages.map((l) => (
                     <span
                       key={`${l.source}:${l.key}`}
                       title={`Source : ${l.source}`}
