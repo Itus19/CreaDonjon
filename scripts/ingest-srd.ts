@@ -194,6 +194,72 @@ function extractProse(entry: SrdRecord): string | null {
   return null;
 }
 
+/**
+ * Repli du digest quand `extractProse` ne trouve rien (`ai_digest`, colonne
+ * de contexte IA, jamais traduite — voir docs/SCHEMA.md §9.1) : espece et
+ * historique n'ont aucune prose narrative dans les donnees SRD elles-memes
+ * (verifie sur les deux editions, `data/srd/srd-2014.json` et
+ * `srd-2024.json`) — sans ce repli, `digestSource` retombait sur
+ * `entry.name`, produisant un digest du type "Half-Elf (species) — Half-Elf"
+ * (nom repete, aucune information). Reste invisible tant qu'aucun tour
+ * d'affichage ne le montre en permanence — c'etait le cas jusqu'a V1-C9
+ * (fiche jouable, onglet Traits), qui l'affiche desormais toujours, pas
+ * seulement en infobulle.
+ *
+ * Construit un resume factuel a partir des memes champs structures que
+ * `src/core/rules/srdMapping.ts` (`ability_bonuses`, `speed`, `traits`,
+ * `starting_proficiencies`/`proficiencies`, `feat`, `feature`) — pas une
+ * reutilisation directe de ces fonctions, qui produisent des `Modifier[]`
+ * numeriques pour le moteur, pas du texte. Les deux editions n'ont pas le
+ * meme jeu de champs (2014 espece a `ability_bonuses`, 2024 non ; 2014
+ * historique a `feature.desc`, 2024 a `feat` a la place) — chaque partie est
+ * donc optionnelle, silencieusement omise si absente plutot que supposee.
+ */
+function fallbackDigestFacts(entryType: EntryType, entry: SrdRecord): string | null {
+  if (entryType === "species") {
+    const parts: string[] = [];
+
+    const speed = entry.speed;
+    if (typeof speed === "number") parts.push(`Speed ${speed} ft.`);
+
+    const bonuses = entry.ability_bonuses;
+    if (Array.isArray(bonuses) && bonuses.length > 0) {
+      const names = (bonuses as { ability_score?: { name?: string }; bonus?: number }[])
+        .filter((b) => typeof b.ability_score?.name === "string" && typeof b.bonus === "number")
+        .map((b) => `${b.ability_score!.name} +${b.bonus}`);
+      if (names.length > 0) parts.push(`Ability bonuses: ${names.join(", ")}.`);
+    }
+
+    const traits = entry.traits;
+    if (Array.isArray(traits) && traits.length > 0) {
+      const names = (traits as { name?: string }[]).map((t) => t.name).filter((n): n is string => typeof n === "string");
+      if (names.length > 0) parts.push(`Traits: ${names.join(", ")}.`);
+    }
+
+    return parts.length > 0 ? parts.join(" ") : null;
+  }
+
+  if (entryType === "background") {
+    const parts: string[] = [];
+
+    const proficiencies = entry.starting_proficiencies ?? entry.proficiencies;
+    if (Array.isArray(proficiencies) && proficiencies.length > 0) {
+      const names = (proficiencies as { name?: string }[]).map((p) => p.name).filter((n): n is string => typeof n === "string");
+      if (names.length > 0) parts.push(`Proficiencies: ${names.join(", ")}.`);
+    }
+
+    const feature = entry.feature as { name?: string } | undefined;
+    if (typeof feature?.name === "string") parts.push(`Feature: ${feature.name}.`);
+
+    const feat = entry.feat as { name?: string } | undefined;
+    if (typeof feat?.name === "string") parts.push(`Grants the ${feat.name} feat.`);
+
+    return parts.length > 0 ? parts.join(" ") : null;
+  }
+
+  return null;
+}
+
 function slugify(name: string): string {
   return name
     .toLowerCase()
@@ -553,7 +619,7 @@ function transformEntry(
 
   blocks.push(customTableBlock(entry));
 
-  const digestSource = prose ?? String(entry.name);
+  const digestSource = prose ?? fallbackDigestFacts(entryType, entry) ?? String(entry.name);
   const ai_digest = truncateForDigest(`${String(entry.name)} (${entryType}) — ${digestSource}`);
 
   return {
