@@ -17,6 +17,8 @@ export interface ResolvedRulesetView {
   equipment: Record<string, ArmorData | null>;
   /** Poids en livres, par cle de regle (encombrement, V1-C4 suite). */
   weight: Record<string, number | null>;
+  /** Niveau de sort (0 = tour de magie), par cle de regle (tri Magie, V1-C6). */
+  spellLevels: Record<string, number | null>;
 }
 
 export interface RulesetSelection {
@@ -24,9 +26,16 @@ export interface RulesetSelection {
   background?: string;
   classes: { key: string; level: number }[];
   equipmentKeys: string[];
+  spellKeys: string[];
 }
 
-const EMPTY: ResolvedRulesetView = { ruleset: { classes: {}, features: {} }, remainingChoices: [], equipment: {}, weight: {} };
+const EMPTY: ResolvedRulesetView = {
+  ruleset: { classes: {}, features: {} },
+  remainingChoices: [],
+  equipment: {},
+  weight: {},
+  spellLevels: {},
+};
 
 /**
  * Une cle vide apparait des qu'un objet d'inventaire bascule en "Reference
@@ -42,7 +51,13 @@ function nonEmptyKeys(keys: readonly string[]): string[] {
 }
 
 function selectionKey(s: RulesetSelection): string {
-  return JSON.stringify([s.species, s.background, s.classes, [...nonEmptyKeys(s.equipmentKeys)].sort()]);
+  return JSON.stringify([
+    s.species,
+    s.background,
+    s.classes,
+    [...nonEmptyKeys(s.equipmentKeys)].sort(),
+    [...nonEmptyKeys(s.spellKeys)].sort(),
+  ]);
 }
 
 /**
@@ -67,6 +82,7 @@ export function useResolvedRuleset(worldSlug: string, selection: RulesetSelectio
             background: selection.background,
             classes: selection.classes,
             equipmentKeys: nonEmptyKeys(selection.equipmentKeys),
+            spellKeys: nonEmptyKeys(selection.spellKeys),
           }),
         })
           .then((res) => (res.ok ? res.json() : null))

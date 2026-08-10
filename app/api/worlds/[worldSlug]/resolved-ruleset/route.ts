@@ -6,6 +6,7 @@ import {
   assembleResolvedRuleset,
   resolveEquipmentArmorData,
   resolveEquipmentWeight,
+  resolveSpellLevels,
 } from "@/src/server/services/resolvedRuleset";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
@@ -38,15 +39,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   ]);
   if (!rulesetId) {
     return NextResponse.json(
-      { ruleset: { classes: {}, features: {} }, remainingChoices: [], equipment: {}, weight: {} },
+      { ruleset: { classes: {}, features: {} }, remainingChoices: [], equipment: {}, weight: {}, spellLevels: {} },
       { status: 200 }
     );
   }
 
-  const [assembled, equipment, weight] = await Promise.all([
+  const [assembled, equipment, weight, spellLevels] = await Promise.all([
     assembleResolvedRuleset(supabase, rulesetId, parsed.data, locale),
     resolveEquipmentArmorData(supabase, rulesetId, parsed.data.equipmentKeys ?? []),
     resolveEquipmentWeight(supabase, rulesetId, parsed.data.equipmentKeys ?? []),
+    resolveSpellLevels(supabase, rulesetId, parsed.data.spellKeys ?? []),
   ]);
-  return NextResponse.json({ ...assembled, equipment, weight }, { status: 200 });
+  return NextResponse.json({ ...assembled, equipment, weight, spellLevels }, { status: 200 });
 }

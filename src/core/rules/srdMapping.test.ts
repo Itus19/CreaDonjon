@@ -12,6 +12,7 @@ import {
   parseArmorData,
   parseCustomTableFields,
   parseItemWeight,
+  parseSpellLevel,
   parseWeaponData,
 } from "./srdMapping";
 
@@ -355,5 +356,21 @@ describe("parseItemWeight", () => {
 
   it("retourne null si le champ est absent (contenu maison sans poids renseigne)", () => {
     expect(parseItemWeight(parseCustomTableFields([{ field: "name", value: "Fiole de sable noir" }]))).toBeNull();
+  });
+});
+
+// Champ verifie contre data/srd/srd-2014.json et srd-2024.json : `level`
+// (0 = tour de magie, sinon 1-9), meme forme sur les deux editions.
+describe("parseSpellLevel", () => {
+  it("lit le niveau d'un sort (0 = tour de magie)", () => {
+    expect(parseSpellLevel(parseCustomTableFields([{ field: "level", value: "0" }]))).toBe(0);
+  });
+
+  it("lit un niveau non nul", () => {
+    expect(parseSpellLevel(parseCustomTableFields([{ field: "level", value: "3" }]))).toBe(3);
+  });
+
+  it("retourne null si le champ est absent", () => {
+    expect(parseSpellLevel(parseCustomTableFields([{ field: "name", value: "Boule de feu" }]))).toBeNull();
   });
 });

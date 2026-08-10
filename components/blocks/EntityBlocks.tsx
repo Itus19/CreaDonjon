@@ -163,6 +163,17 @@ export default function EntityBlocks({
     if (created) setBlocks((prev) => [...prev, created]);
   }
 
+  /** Meme motif que `updateInventory` (bootstrap-si-absent) — l'onglet Magie coche « Préparé » avant qu'un bloc `spellcasting` existe forcément deja (V1-C6). */
+  async function updateSpellcasting(data: SpellcastingBlockData) {
+    if (spellcastingBlock) {
+      patchBlock(spellcastingBlock.id, { data });
+      saveBlock(spellcastingBlock.id, { data });
+      return;
+    }
+    const created = await createBlockWithData("spellcasting", data);
+    if (created) setBlocks((prev) => [...prev, created]);
+  }
+
   /** Cree un bloc puis lui pose immediatement de vraies donnees — la creation seule ne prend que le defaut du registre. Aller-retour direct plutot que `saveBlock` : juste apres `setBlocks`, le bloc cree n'est pas encore dans le `blocks` capture par la fermeture de cet appel, et `doSaveBlock` (qui cherche le bloc par id dans `blocks`) le raterait silencieusement. */
   async function createBlockWithData(blockType: string, data: unknown): Promise<BlockItem | null> {
     const res = await fetch(`/api/entities/${entityId}/blocks`, {
@@ -494,6 +505,7 @@ export default function EntityBlocks({
                 resources={resourcesBlock?.data as ResourcesBlockData | undefined}
                 onUpdateCharacter={updateCharacter}
                 onUpdateInventory={updateInventory}
+                onUpdateSpellcasting={updateSpellcasting}
               />
             ) : (
               !isCollapsed && (

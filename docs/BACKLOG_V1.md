@@ -577,10 +577,12 @@ Demande utilisateur (suite V1-B5/V1-C4) : les 4 onglets doivent être pleinement
 - Le champ `prepared: string[]` existe déjà dans `zSpellcastingBlockData` et `SpellcastingBlockEditor.tsx` (carte brute du bloc) le gère déjà avec une case à cocher — seule la fiche jouable ne l'exploite pas encore.
 - Inventaire : armes/armures/objets/pièces déjà tous listés et éditables (`InventoryBlockEditor`), le bug qui bloquait « ajouter un objet » et « ajouter des pièces » est corrigé (complément post-critères 8).
 
-**A. Magie ↔ Actions (`M`, pas de changement de schéma)**
-- [ ] Onglet Magie : sorts connus triés par niveau puis ordre alphabétique (nécessite de résoudre le niveau de chaque sort connu — nouvel extracteur `parseSpellLevel(fields)` dans `srdMapping.ts`, champ `level` déjà vérifié présent sur les entrées `Spells` des deux éditions, même forme que `parseItemWeight`).
-- [ ] Onglet Magie : case à cocher « Préparé » par sort connu (réutilise `data.prepared`), remplace le bouton de lancer direct — nécessite un nouveau prop `onUpdateSpellcasting` sur `PlayableCharacterSheet`, câblé dans `EntityBlocks.tsx` sur le même patron que `onUpdateInventory` (bootstrap-si-bloc-absent compris).
-- [ ] Onglet Actions : les sorts **préparés** (et les sorts « toujours préparés », ex. rituels innés — hors périmètre si non modélisés ailleurs) apparaissent à côté des armes équipées, avec le même bouton de lancer par niveau d'emplacement déjà existant en Magie aujourd'hui (déplacé, pas dupliqué).
+**A. Magie ↔ Actions (`M`, pas de changement de schéma) — fait.**
+- [x] Onglet Magie : sorts connus triés par niveau puis ordre alphabétique — `parseSpellLevel(fields)` (`srdMapping.ts`, même forme que `parseItemWeight`), résolu en lot via un nouveau `resolveSpellLevels` (service, même patron que `resolveEquipmentWeight`), transporté par `useResolvedRuleset` (`spellKeys`/`spellLevels`, `resolveRulesetSchema` étendu).
+- [x] Onglet Magie : case à cocher « Préparé » par sort connu (réutilise `data.prepared`) à la place du bouton de lancer direct — nouveau prop `onUpdateSpellcasting` sur `PlayableCharacterSheet`, câblé dans `EntityBlocks.tsx` (`updateSpellcasting`, même bootstrap-si-bloc-absent que `updateInventory`).
+- [x] Onglet Actions : nouvelle section « Sorts préparés », les sorts dont la clé est dans `spellcasting.prepared` y apparaissent avec le même bouton de lancer par niveau d'emplacement (déplacé de l'ancien rendu Magie, pas dupliqué).
+- Vérifié en navigateur (multiclasse Guerrier/Magicien temporaire, revert propre après test) : Armure du mage (niv. 1), Projectile magique (niv. 1), Boule de feu (niv. 3) triés correctement ; cocher « Préparé » sur Boule de feu la fait apparaître dans Actions avec son bouton de lancer niv. 1 (0/2).
+- Non traité, comme annoncé : sorts « toujours préparés » (rituels innés) — aucune notion de ce type dans le moteur aujourd'hui, pas un besoin concret observé.
 
 **B. Traits par type : dons, maîtrises, langues (`L`, nouveau travail `src/core`, tests d'abord)**
 

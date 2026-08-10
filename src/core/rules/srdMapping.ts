@@ -256,3 +256,12 @@ export function parseWeaponData(fields: ParsedFields): WeaponData | null {
 export function parseItemWeight(fields: ParsedFields): number | null {
   return typeof fields.weight === "number" ? fields.weight : null;
 }
+
+/**
+ * Niveau d'un sort (0 = tour de magie, 1-9 sinon) — champ `level` partage par
+ * les entrees `Spells` du SRD, identique en forme entre 2014 et 2024. `null`
+ * si absent (contenu maison sans niveau renseigne).
+ */
+export function parseSpellLevel(fields: ParsedFields): number | null {
+  return typeof fields.level === "number" ? fields.level : null;
+}

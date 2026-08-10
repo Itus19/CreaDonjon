@@ -236,6 +236,7 @@ export default function PlayableCharacterSheet({
   resources,
   onUpdateCharacter,
   onUpdateInventory,
+  onUpdateSpellcasting,
 }: {
   worldSlug: string;
   entityId: string;
@@ -245,6 +246,7 @@ export default function PlayableCharacterSheet({
   resources: ResourcesBlockData | undefined;
   onUpdateCharacter: (data: CharacterBlockData) => void;
   onUpdateInventory: (data: InventoryBlockData) => void;
+  onUpdateSpellcasting: (data: SpellcastingBlockData) => void;
 }) {
   const campaignId: string | null = null;
   const [tab, setTab] = useState<Tab>("actions");
@@ -287,12 +289,17 @@ export default function PlayableCharacterSheet({
     () => (inventory?.items ?? []).map(itemRef).filter((r): r is { kind: "rule"; key: string } => r?.kind === "rule").map((r) => r.key),
     [inventory]
   );
+  const spellKeys = useMemo(
+    () => (spellcasting?.known ?? []).map((k) => k.ref).filter((r): r is { kind: "rule"; key: string } => r.kind === "rule").map((r) => r.key),
+    [spellcasting]
+  );
 
-  const { ruleset, remainingChoices, equipment, weight } = useResolvedRuleset(worldSlug, {
+  const { ruleset, remainingChoices, equipment, weight, spellLevels } = useResolvedRuleset(worldSlug, {
     species: speciesKey,
     background: backgroundKey,
     classes: classSelections,
     equipmentKeys,
+    spellKeys,
   });
 
   const carriedWeight = useMemo(() => totalCarriedWeight(inventory?.items ?? [], weight), [inventory, weight]);
@@ -354,6 +361,28 @@ export default function PlayableCharacterSheet({
     [spellcasting]
   );
   const spellChips = useReferenceChips(worldSlug, knownSpellRefs);
+
+  /** Tri par niveau puis ordre alphabetique (V1-C6) — niveau resolu via `spellLevels` (0 par defaut si non resolu, ex. reference cassee). */
+  const sortedKnownSpells = useMemo(() => {
+    return (spellcasting?.known ?? [])
+      .map((known) => {
+        const chip = spellChips.get(refIdentity(known.ref));
+        const label = chip?.found ? chip.name : known.ref.kind === "rule" ? known.ref.key : known.ref.id;
+        const level = known.ref.kind === "rule" ? spellLevels[known.ref.key] ?? 0 : 0;
+        return { known, label, level };
+      })
+      .sort((a, b) => a.level - b.level || a.label.localeCompare(b.label));
+  }, [spellcasting, spellChips, spellLevels]);
+
+  const preparedSpells = sortedKnownSpells.filter((s) => s.known.ref.kind === "rule" && (spellcasting?.prepared ?? []).includes(s.known.ref.key));
+
+  function togglePrepared(key: string) {
+    if (!spellcasting) return;
+    const prepared = spellcasting.prepared.includes(key)
+      ? spellcasting.prepared.filter((k) => k !== key)
+      : [...spellcasting.prepared, key];
+    onUpdateSpellcasting({ ...spellcasting, prepared });
+  }
 
   const buildRefs = useMemo(() => {
     const refs: BlockReference[] = [];
@@ -1000,6 +1029,36 @@ export default function PlayableCharacterSheet({
                 );
               })}
 
+              {spellcasting && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Sorts préparés</span>
+                  {preparedSpells.length === 0 && (
+                    <p className="text-sm text-ink-muted">Aucun sort préparé — sélectionnez-les dans l&apos;onglet Magie.</p>
+                  )}
+                  {preparedSpells.map(({ known, label }) => (
+                    <div key={refIdentity(known.ref)} className="flex flex-wrap items-center gap-2 rounded-md border border-edge/60 px-2.5 py-1.5 text-sm">
+                      <span className="flex-1 text-ink">{label}</span>
+                      {Object.entries(sheet.spellcasting?.slots ?? {}).map(([level, total]) => {
+                        const used = runtimeState?.spell_slots_used[level] ?? 0;
+                        const available = total - used > 0;
+                        return (
+                          <button
+                            key={level}
+                            type="button"
+                            disabled={busy || !available}
+                            title={available ? `Lancer au niveau ${level}` : "Aucun emplacement disponible"}
+                            onClick={() => known.ref.kind === "rule" && cast(known.ref.key, label, Number(level))}
+                            className="rounded-full border border-edge px-2 py-0.5 text-xs disabled:opacity-30"
+                          >
+                            niv. {level} ({Math.max(0, total - used)}/{total})
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {(resources?.trackers.length ?? 0) > 0 && (
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Ressources</span>
@@ -1043,32 +1102,24 @@ export default function PlayableCharacterSheet({
 
           {tab === "magie" && spellcasting && (
             <div className="flex flex-col gap-2 pt-3">
-              {(spellcasting.known ?? []).map((known) => {
-                const chip = spellChips.get(refIdentity(known.ref));
-                const label = chip?.found ? chip.name : known.ref.kind === "rule" ? known.ref.key : known.ref.id;
-                return (
-                  <div key={refIdentity(known.ref)} className="flex flex-wrap items-center gap-2 rounded-md border border-edge/60 px-2.5 py-1.5 text-sm">
-                    <span className="flex-1 text-ink">{label}</span>
-                    {Object.entries(sheet.spellcasting?.slots ?? {}).map(([level, total]) => {
-                      const used = runtimeState?.spell_slots_used[level] ?? 0;
-                      const available = total - used > 0;
-                      return (
-                        <button
-                          key={level}
-                          type="button"
-                          disabled={busy || !available}
-                          title={available ? `Lancer au niveau ${level}` : "Aucun emplacement disponible"}
-                          onClick={() => known.ref.kind === "rule" && cast(known.ref.key, label, Number(level))}
-                          className="rounded-full border border-edge px-2 py-0.5 text-xs disabled:opacity-30"
-                        >
-                          niv. {level} ({Math.max(0, total - used)}/{total})
-                        </button>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-              {(spellcasting.known ?? []).length === 0 && <p className="text-sm text-ink-muted">Aucun sort connu.</p>}
+              <p className="text-[10px] italic text-ink-muted">
+                Sorts connus, triés par niveau. Cochez « Préparé » pour les retrouver dans l&apos;onglet Actions.
+              </p>
+              {sortedKnownSpells.map(({ known, label, level }) => (
+                <div key={refIdentity(known.ref)} className="flex flex-wrap items-center gap-2 rounded-md border border-edge/60 px-2.5 py-1.5 text-sm">
+                  <span className="w-10 shrink-0 text-xs text-ink-muted">{level === 0 ? "Tour" : `Niv. ${level}`}</span>
+                  <span className="flex-1 text-ink">{label}</span>
+                  <label className="flex items-center gap-1 text-xs text-ink-muted">
+                    <input
+                      type="checkbox"
+                      checked={known.ref.kind === "rule" && spellcasting.prepared.includes(known.ref.key)}
+                      onChange={() => known.ref.kind === "rule" && togglePrepared(known.ref.key)}
+                    />
+                    Préparé
+                  </label>
+                </div>
+              ))}
+              {sortedKnownSpells.length === 0 && <p className="text-sm text-ink-muted">Aucun sort connu.</p>}
             </div>
           )}
 

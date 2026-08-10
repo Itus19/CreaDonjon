@@ -5,4 +5,5 @@ export const resolveRulesetSchema = z.object({
   background: z.string().min(1).optional(),
   classes: z.array(z.object({ key: z.string().min(1), level: z.number().int().positive() })).max(20),
   equipmentKeys: z.array(z.string().min(1)).max(50).optional(),
+  spellKeys: z.array(z.string().min(1)).max(50).optional(),
 });

@@ -14,6 +14,7 @@ import {
   parseArmorData,
   parseCustomTableFields,
   parseItemWeight,
+  parseSpellLevel,
   parseWeaponData,
   type ArmorData,
   type CustomTableRow,
@@ -210,6 +211,20 @@ export async function resolveEquipmentWeight(
   for (const key of keys) {
     const found = await fetchEntryFields(supabase, rulesetId, key);
     result[key] = found ? parseItemWeight(found.fields) : null;
+  }
+  return result;
+}
+
+/** Niveau d'un sort connu, par cle de regle — `null` si l'entree n'existe pas ou n'a pas de niveau renseigne (tri Magie par niveau, V1-C6). */
+export async function resolveSpellLevels(
+  supabase: TypedClient,
+  rulesetId: string,
+  keys: readonly string[]
+): Promise<Record<string, number | null>> {
+  const result: Record<string, number | null> = {};
+  for (const key of keys) {
+    const found = await fetchEntryFields(supabase, rulesetId, key);
+    result[key] = found ? parseSpellLevel(found.fields) : null;
   }
   return result;
 }
