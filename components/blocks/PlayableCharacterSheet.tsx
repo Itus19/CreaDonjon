@@ -132,26 +132,42 @@ function CompactRuleField({
         <Link
           href={chip.href}
           title={chip.summary ?? chip.name}
-          className="shrink-0 text-sm no-underline transition-opacity hover:opacity-70"
+          className="max-w-[6rem] shrink-0 truncate text-xs no-underline transition-opacity hover:opacity-70"
           style={{ color: "var(--link-rule)" }}
         >
-          ↗
+          {chip.name}
         </Link>
       )}
     </div>
   );
 }
 
-/** Badge de statistique en forme de carte (V1-C4 suite) : la charte interdit les couleurs codées en dur (specs/coquille-et-design.md §2), donc CA/Initiative/Vitesse/etc. se distinguent par forme et libellé plutôt que par une couleur inventée par stat. */
+/**
+ * Badge de statistique (V1-C4 suite) : la charte interdit les couleurs
+ * codées en dur (specs/coquille-et-design.md §2), donc CA/Initiative/
+ * Vitesse/etc. se distinguent par forme et libellé plutôt que par une
+ * couleur inventée par stat. Libellé au-dessus d'un encadré de hauteur fixe
+ * (meme structure que le bouclier de CA, meme hauteur `h-14`) — sur retour
+ * utilisateur, l'ancien libellé-dans-l'encadré donnait des hauteurs
+ * variables selon que le libellé tenait sur une ou deux lignes.
+ */
 function StatBadge({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
   return (
-    <div
-      className={`flex w-[4.5rem] shrink-0 flex-col items-center gap-0.5 rounded-md border px-2 py-1.5 text-center ${
-        danger ? "border-danger/60 bg-danger/10" : "border-edge bg-panel-raised"
-      }`}
-    >
-      <span className={`text-[9px] font-bold uppercase leading-tight tracking-widest ${danger ? "text-danger" : "text-ink-muted"}`}>{label}</span>
-      <span className={`text-base font-semibold ${danger ? "text-danger" : "text-ink"}`}>{value}</span>
+    <div className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1">
+      <span
+        className={`flex h-6 items-end justify-center text-center text-[9px] font-bold uppercase leading-tight tracking-widest ${
+          danger ? "text-danger" : "text-ink-muted"
+        }`}
+      >
+        {label}
+      </span>
+      <div
+        className={`flex h-14 w-full items-center justify-center rounded-md border ${
+          danger ? "border-danger/60 bg-danger/10" : "border-edge bg-panel-raised"
+        }`}
+      >
+        <span className={`text-base font-semibold ${danger ? "text-danger" : "text-ink"}`}>{value}</span>
+      </div>
     </div>
   );
 }
@@ -223,6 +239,7 @@ export default function PlayableCharacterSheet({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [xpDelta, setXpDelta] = useState("");
+  const [hpDelta, setHpDelta] = useState("");
 
   /** Onglet Traits (V1-C4 suite) : meme bloc `character` que le reste de la fiche, une seule donnee, plusieurs vues — meme motif que `onUpdateInventory`. */
   function patchCharacter(fields: Partial<CharacterBlockData>) {
@@ -474,6 +491,14 @@ export default function PlayableCharacterSheet({
     setXpDelta("");
   }
 
+  /** Meme motif que `applyXpDelta` (V1-C4 suite, sur retour utilisateur) : remplace les boutons +1/-1 par un champ + boutons, coherent avec l'XP. */
+  function applyHpDelta(sign: 1 | -1) {
+    const amount = Math.abs(Math.trunc(Number(hpDelta)));
+    if (!amount) return;
+    changeHp(sign * amount);
+    setHpDelta("");
+  }
+
   function exportJson() {
     const a = document.createElement("a");
     a.href = `/api/entities/${entityId}/export`;
@@ -510,8 +535,8 @@ export default function PlayableCharacterSheet({
 
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-md border border-edge/60 bg-panel-raised p-3">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-wrap items-end gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap items-start gap-3">
           <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
             Espèce
             <CompactRuleField
@@ -534,11 +559,44 @@ export default function PlayableCharacterSheet({
               chip={character.background ? buildChips.get(refIdentity(character.background)) : undefined}
             />
           </label>
+          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+            Genre
+            <Dropdown
+              value={genderDropdownValue(character.gender)}
+              options={GENDER_OPTIONS}
+              onChange={(v) =>
+                patchCharacter({
+                  gender:
+                    v === "custom"
+                      ? { custom: typeof character.gender === "object" ? character.gender.custom : "" }
+                      : (v as Exclude<CharacterBlockData["gender"], { custom: string } | undefined>),
+                })
+              }
+              aria-label="Genre"
+            />
+            {typeof character.gender === "object" && (
+              <input
+                value={character.gender.custom}
+                onChange={(e) => patchCharacter({ gender: { custom: e.target.value } })}
+                placeholder="préciser…"
+                className="w-24 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+              />
+            )}
+          </label>
+          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+            Pronoms
+            <input
+              value={character.pronouns ?? ""}
+              onChange={(e) => patchCharacter({ pronouns: e.target.value })}
+              placeholder="elle, il, iel…"
+              className="w-24 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+            />
+          </label>
           <div className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
             Classes
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
               {character.classes.map((c, index) => (
-                <div key={index} className="flex items-center gap-1 rounded-md border border-edge/60 px-1.5 py-1">
+                <div key={index} className={`flex items-center gap-1 ${index > 0 ? "border-l border-edge/50 pl-2" : ""}`}>
                   <CompactRuleField
                     worldSlug={worldSlug}
                     entryTypes={CLASS_TYPES}
@@ -582,39 +640,6 @@ export default function PlayableCharacterSheet({
               </button>
             </div>
           </div>
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-            Genre
-            <Dropdown
-              value={genderDropdownValue(character.gender)}
-              options={GENDER_OPTIONS}
-              onChange={(v) =>
-                patchCharacter({
-                  gender:
-                    v === "custom"
-                      ? { custom: typeof character.gender === "object" ? character.gender.custom : "" }
-                      : (v as Exclude<CharacterBlockData["gender"], { custom: string } | undefined>),
-                })
-              }
-              aria-label="Genre"
-            />
-            {typeof character.gender === "object" && (
-              <input
-                value={character.gender.custom}
-                onChange={(e) => patchCharacter({ gender: { custom: e.target.value } })}
-                placeholder="préciser…"
-                className="w-24 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-              />
-            )}
-          </label>
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-            Pronoms
-            <input
-              value={character.pronouns ?? ""}
-              onChange={(e) => patchCharacter({ pronouns: e.target.value })}
-              placeholder="elle, il, iel…"
-              className="w-24 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-            />
-          </label>
         </div>
         <div className="flex gap-2">
           <button type="button" disabled={busy} onClick={() => rest("short")} className="rounded-full border border-edge px-2.5 py-1 text-xs text-ink hover:bg-panel disabled:opacity-50">
@@ -636,14 +661,14 @@ export default function PlayableCharacterSheet({
       </div>
 
       <div className="flex flex-wrap items-start gap-2">
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-[9px] font-bold uppercase tracking-widest text-ink-muted">CA</span>
+        <div className="flex w-12 shrink-0 flex-col items-center gap-1">
+          <span className="flex h-6 items-end justify-center text-[9px] font-bold uppercase tracking-widest text-ink-muted">CA</span>
           <div
-            className="flex h-14 w-12 items-center justify-center border-2 border-accent bg-panel-raised text-xl font-bold text-ink"
+            className="relative flex h-14 w-12 items-center justify-center border-2 border-accent bg-panel-raised"
             style={{ clipPath: "polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)" }}
-            title="Classe d'armure"
+            title="Classe d'armure — calculée automatiquement (10 + Dex + équipement)"
           >
-            {sheet.ac.value}
+            <span className="text-xl font-bold text-ink">{sheet.ac.value}</span>
           </div>
         </div>
         <StatBadge label="Initiative" value={`${sheet.abilities.dex.mod >= 0 ? "+" : ""}${sheet.abilities.dex.mod}`} />
@@ -661,14 +686,21 @@ export default function PlayableCharacterSheet({
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" disabled={busy} onClick={() => changeHp(-1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
-            −
-          </button>
           <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-panel-sunken">
             <div className={`h-full rounded-full transition-[width] ${hpLow ? "bg-danger" : "bg-accent"}`} style={{ width: `${hpPct}%` }} />
           </div>
-          <button type="button" disabled={busy} onClick={() => changeHp(1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
+          <input
+            type="number"
+            value={hpDelta}
+            onChange={(e) => setHpDelta(e.target.value)}
+            placeholder="0"
+            className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+          />
+          <button type="button" disabled={busy || !hpDelta} onClick={() => applyHpDelta(1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
             +
+          </button>
+          <button type="button" disabled={busy || !hpDelta} onClick={() => applyHpDelta(-1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
+            −
           </button>
         </div>
       </div>
@@ -714,30 +746,19 @@ export default function PlayableCharacterSheet({
       {error && <p className="text-xs text-danger">{error}</p>}
 
       <div className="flex flex-col gap-4 md:flex-row">
-        <aside className="flex flex-col gap-3 md:w-56 md:shrink-0">
+        <aside className="flex flex-col gap-3 md:w-48 md:shrink-0">
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Caractéristiques</span>
-              <Dropdown
-                value={character.abilities.method}
-                options={[
-                  { value: "standard_array", label: "Tableau standard" },
-                  { value: "point_buy", label: "Achat de points" },
-                  { value: "roll", label: "Tirage" },
-                ]}
-                onChange={(v) =>
-                  patchCharacter({ abilities: { ...character.abilities, method: v as CharacterBlockData["abilities"]["method"] } })
-                }
-                aria-label="Méthode d'attribution"
-              />
-            </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Caractéristiques</span>
             <div className="grid grid-cols-2 gap-2">
               {(Object.keys(ABILITY_LABELS) as Ability[]).map((ability) => {
                 const save = sheet.savingThrows[ability];
                 return (
-                  <label key={ability} className="flex flex-col gap-1 rounded-md border border-edge/60 bg-panel-raised px-2 py-1.5 text-[10px] text-ink-muted">
-                    {ABILITY_LABELS[ability]} ({sheet.abilities[ability].mod >= 0 ? "+" : ""}
-                    {sheet.abilities[ability].mod})
+                  <div key={ability} className="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-accent">{ABILITY_LABELS[ability]}</span>
+                    <span className="text-xl font-bold text-ink">
+                      {sheet.abilities[ability].mod >= 0 ? "+" : ""}
+                      {sheet.abilities[ability].mod}
+                    </span>
                     <input
                       type="number"
                       value={character.abilities.base[ability]}
@@ -749,14 +770,18 @@ export default function PlayableCharacterSheet({
                           },
                         })
                       }
-                      className="w-full rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                      className="w-10 rounded-full border border-edge bg-panel-sunken px-1 py-0.5 text-center text-xs text-ink-muted outline-none"
                     />
-                    <span className="flex items-center gap-1 whitespace-nowrap">
+                    <span
+                      className={`flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                        save.proficient ? "border-accent bg-accent/20 text-accent" : "border-edge text-ink-muted"
+                      }`}
+                    >
                       <span className={`h-1.5 w-1.5 rounded-full ${save.proficient ? "bg-accent" : "bg-edge"}`} aria-hidden="true" />
                       Sauv. {save.mod >= 0 ? "+" : ""}
                       {save.mod}
                     </span>
-                  </label>
+                  </div>
                 );
               })}
             </div>
@@ -829,7 +854,9 @@ export default function PlayableCharacterSheet({
                         <span className={`h-2 w-2 rounded-full ${dotClass}`} />
                       </button>
                     ) : (
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${dotClass}`} title={dotTitle} />
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center" title={dotTitle}>
+                        <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+                      </span>
                     )}
                     <span className="flex-1 text-ink">{SKILL_LABELS_FR[skill]}</span>
                     <span className="text-[10px] uppercase text-ink-muted">{ABILITY_LABELS[SKILL_ABILITIES[skill]]}</span>
