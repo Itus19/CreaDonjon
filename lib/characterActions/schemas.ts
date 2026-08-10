@@ -35,9 +35,10 @@ export const hpChangeSchema = z.object({
   delta: z.number().int(),
 });
 
+/** `delta` accepte les deltas negatifs depuis V1-C4 suite (correction manuelle d'une erreur de saisie) — le clampage a 0 minimum reste cote serveur (`changeXp`, characterActions.ts), jamais de XP negative persistee. */
 export const xpChangeSchema = z.object({
   campaignId: campaignIdField,
-  delta: z.number().int().positive(),
+  delta: z.number().int(),
 });
 
 export const resourceUsageSchema = z.object({

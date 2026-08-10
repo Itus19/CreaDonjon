@@ -17,9 +17,14 @@ export interface ActionsMenuItem {
  */
 export default function ActionsMenu({
   items,
+  label = "⋮",
+  triggerClassName = "rounded-md px-1.5 py-1 text-ink-muted transition-colors hover:bg-panel-raised hover:text-ink",
   "aria-label": ariaLabel,
 }: {
   items: ActionsMenuItem[];
+  /** Contenu du declencheur — par defaut le "⋮" compact ; un libelle explicite ("Exporter") pour les usages ou l'action doit rester decouvrable. */
+  label?: string;
+  triggerClassName?: string;
   "aria-label"?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -76,9 +81,9 @@ export default function ActionsMenu({
         aria-label={ariaLabel}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="rounded-md px-1.5 py-1 text-ink-muted transition-colors hover:bg-panel-raised hover:text-ink"
+        className={triggerClassName}
       >
-        ⋮
+        {label}
       </button>
       {open &&
         rect &&

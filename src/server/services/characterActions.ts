@@ -571,7 +571,7 @@ export async function changeXp(
     entityId: params.entityId,
     campaignId: params.campaignId,
     patch: { xp: Math.max(0, state.xp + params.delta) },
-    note: `XP +${params.delta}`,
+    note: `XP ${params.delta >= 0 ? "+" : ""}${params.delta}`,
     sessionId,
     actor: "player",
     actorUserId: params.actorUserId,

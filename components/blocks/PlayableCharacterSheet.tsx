@@ -18,13 +18,14 @@ import { armorAcModifier, mapChosenSkillModifiers, type WeaponData } from "@/src
 import { evaluate, type TraceStep } from "@/src/core/formula/evaluate";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
-import { useResolvedRuleset } from "./useResolvedRuleset";
+import { useResolvedRuleset, type RemainingChoiceView } from "./useResolvedRuleset";
 import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import RuleChip from "@/components/rules/RuleChip";
 import ReferenceChipDisplay from "./ReferenceChipDisplay";
 import InventoryBlockEditor, { itemLabel, itemRef } from "./InventoryBlockEditor";
 import RuleEntryAutocomplete from "./RuleEntryAutocomplete";
 import Dropdown from "@/components/shared/Dropdown";
+import ActionsMenu from "@/components/shared/ActionsMenu";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import { SKILLS, SKILL_ABILITIES } from "@/src/core/rules/sheet";
 
@@ -261,6 +262,25 @@ export default function PlayableCharacterSheet({
   }, [character.species, character.background, character.classes]);
   const buildChips = useReferenceChips(worldSlug, buildRefs);
 
+  /**
+   * Competences liees a un choix non resolu (V1-C4 suite, sur retour
+   * utilisateur) : evite la double UI "Choix restants" + liste de
+   * competences — les ronds de la liste deviennent le point d'interaction
+   * unique. Toutes les options connues aujourd'hui sont des cles de
+   * competence (`extractSkillChoices`, seule source de `remainingChoices`
+   * cote serveur) ; si une autre nature de choix apparait plus tard, elle
+   * restera simplement invisible ici (aucune competence ne la reference).
+   */
+  const skillChoices = useMemo(() => {
+    const map = new Map<string, RemainingChoiceView>();
+    for (const choice of remainingChoices) {
+      for (const option of choice.options) {
+        if (!map.has(option)) map.set(option, choice);
+      }
+    }
+    return map;
+  }, [remainingChoices]);
+
   async function reloadRemote() {
     const res = await fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId ?? ""}`);
     if (res.ok) setRemote(await res.json());
@@ -360,14 +380,30 @@ export default function PlayableCharacterSheet({
     reloadRemote();
   }
 
+  /** Reflete le delta immediatement (§4.5 recalcul client) avant meme la reponse serveur — les boutons +/- semblaient lents car rien ne s'affichait avant le second aller-retour (`postAction` puis `reloadRemote`). Le serveur reste la verite : `reloadRemote()` corrige ensuite si besoin. */
+  function patchRuntimeState(mutate: (state: RuntimeState) => RuntimeState) {
+    setRemote((prev) => (prev ? { ...prev, runtimeState: { ...prev.runtimeState, state: mutate(prev.runtimeState.state) } } : prev));
+  }
+
   async function changeHp(delta: number) {
+    patchRuntimeState((state) => ({ ...state, hp: { ...state.hp, current: Math.max(0, state.hp.current + delta) } }));
     await postAction("hp", { campaignId, delta });
     reloadRemote();
   }
 
   async function changeXp(delta: number) {
+    patchRuntimeState((state) => ({ ...state, xp: Math.max(0, state.xp + delta) }));
     await postAction("xp", { campaignId, delta });
     reloadRemote();
+  }
+
+  function exportJson() {
+    const a = document.createElement("a");
+    a.href = `/api/entities/${entityId}/export`;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   async function changeResource(trackerId: string, delta: number) {
@@ -384,16 +420,80 @@ export default function PlayableCharacterSheet({
     return ref?.kind === "rule" && Boolean(weaponByKey[ref.key]);
   });
 
-  const speciesLabel = speciesKey ? ruleset.features[`species:${speciesKey}`]?.label ?? speciesKey : null;
   const classesLabel = build.classes.map((c) => `${ruleset.classes[c.key]?.label ?? c.key} ${c.level}`).join(" / ");
 
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-md border border-edge/60 bg-panel-raised p-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="text-xs text-ink-muted">
-            {speciesLabel ?? "Espèce ?"} {classesLabel && `· ${classesLabel}`}
-          </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+            Espèce
+            <div className="flex items-center gap-1">
+              <div className="w-24">
+                <RuleEntryAutocomplete
+                  worldSlug={worldSlug}
+                  entryTypes={SPECIES_TYPES}
+                  value={character.species?.kind === "rule" ? character.species.key : ""}
+                  onChange={(key) => patchCharacter({ species: ruleRef(key) })}
+                  placeholder="dwarf"
+                />
+              </div>
+              {character.species && (
+                <ReferenceChipDisplay reference={character.species} chip={buildChips.get(refIdentity(character.species))} />
+              )}
+            </div>
+          </label>
+          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+            Historique
+            <div className="flex items-center gap-1">
+              <div className="w-24">
+                <RuleEntryAutocomplete
+                  worldSlug={worldSlug}
+                  entryTypes={BACKGROUND_TYPES}
+                  value={character.background?.kind === "rule" ? character.background.key : ""}
+                  onChange={(key) => patchCharacter({ background: ruleRef(key) })}
+                  placeholder="soldier"
+                />
+              </div>
+              {character.background && (
+                <ReferenceChipDisplay reference={character.background} chip={buildChips.get(refIdentity(character.background))} />
+              )}
+            </div>
+          </label>
+          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+            Genre
+            <Dropdown
+              value={genderDropdownValue(character.gender)}
+              options={GENDER_OPTIONS}
+              onChange={(v) =>
+                patchCharacter({
+                  gender:
+                    v === "custom"
+                      ? { custom: typeof character.gender === "object" ? character.gender.custom : "" }
+                      : (v as Exclude<CharacterBlockData["gender"], { custom: string } | undefined>),
+                })
+              }
+              aria-label="Genre"
+            />
+            {typeof character.gender === "object" && (
+              <input
+                value={character.gender.custom}
+                onChange={(e) => patchCharacter({ gender: { custom: e.target.value } })}
+                placeholder="préciser…"
+                className="w-24 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+              />
+            )}
+          </label>
+          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+            Pronoms
+            <input
+              value={character.pronouns ?? ""}
+              onChange={(e) => patchCharacter({ pronouns: e.target.value })}
+              placeholder="elle, il, iel…"
+              className="w-24 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+            />
+          </label>
+          {classesLabel && <span className="pb-1.5 text-xs text-ink-muted">{classesLabel}</span>}
         </div>
         <div className="flex gap-2">
           <button type="button" disabled={busy} onClick={() => rest("short")} className="rounded-full border border-edge px-2.5 py-1 text-xs text-ink hover:bg-panel disabled:opacity-50">
@@ -402,12 +502,15 @@ export default function PlayableCharacterSheet({
           <button type="button" disabled={busy} onClick={() => rest("long")} className="rounded-full border border-edge px-2.5 py-1 text-xs text-ink hover:bg-panel disabled:opacity-50">
             Repos long
           </button>
-          <a href={`/api/entities/${entityId}/export`} download className="rounded-full border border-edge px-2.5 py-1 text-xs text-ink hover:bg-panel">
-            Exporter JSON
-          </a>
-          <button type="button" onClick={() => window.print()} className="rounded-full border border-edge px-2.5 py-1 text-xs text-ink hover:bg-panel print:hidden">
-            Exporter PDF
-          </button>
+          <ActionsMenu
+            label="Exporter"
+            triggerClassName="rounded-full border border-edge px-2.5 py-1 text-xs text-ink transition-colors hover:bg-panel"
+            aria-label="Exporter la fiche"
+            items={[
+              { label: "Exporter en JSON", onSelect: exportJson },
+              { label: "Exporter en PDF", onSelect: () => window.print() },
+            ]}
+          />
         </div>
       </div>
 
@@ -425,7 +528,10 @@ export default function PlayableCharacterSheet({
           <p className="text-lg font-semibold text-ink">{sheet.speed.value} m</p>
         </div>
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Perception passive</span>
+          <span className="flex flex-col text-[10px] font-bold uppercase leading-tight tracking-widest text-ink-muted">
+            <span>Perception</span>
+            <span>passive</span>
+          </span>
           <p className="text-lg font-semibold text-ink">{10 + sheet.skills.perception.mod}</p>
         </div>
         <div>
@@ -443,6 +549,7 @@ export default function PlayableCharacterSheet({
         <div>
           <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">XP</span>
           <p className="flex items-center gap-1 text-lg font-semibold text-ink">
+            <button type="button" disabled={busy} onClick={() => changeXp(-100)} className="rounded border border-edge px-1.5 text-xs">−100</button>
             {runtimeState?.xp ?? 0}
             <button type="button" disabled={busy} onClick={() => changeXp(100)} className="rounded border border-edge px-1.5 text-xs">+100</button>
           </p>
@@ -463,34 +570,6 @@ export default function PlayableCharacterSheet({
               <li key={i}>{w.message}</li>
             ))}
           </ul>
-        </div>
-      )}
-
-      {remainingChoices.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Choix restants</span>
-          {remainingChoices.map((choice) => {
-            const chosen = (character.choices[choice.id] as string[] | undefined) ?? [];
-            return (
-              <div key={choice.id} className="text-sm">
-                <p className="text-ink-muted">
-                  {choice.label} ({chosen.length}/{choice.count})
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {choice.options.map((option) => (
-                    <label key={option} className="flex items-center gap-1 text-xs text-ink">
-                      <input
-                        type="checkbox"
-                        checked={chosen.includes(option)}
-                        onChange={() => patchCharacter({ choices: { ...character.choices, [choice.id]: toggleChoice(chosen, option, choice.count) } })}
-                      />
-                      {option}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
         </div>
       )}
 
@@ -629,71 +708,6 @@ export default function PlayableCharacterSheet({
 
       {tab === "traits" && (
         <div className="flex flex-col gap-4 text-sm">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-xs text-ink-muted">
-              Espèce (clé de règle)
-              <RuleEntryAutocomplete
-                worldSlug={worldSlug}
-                entryTypes={SPECIES_TYPES}
-                value={character.species?.kind === "rule" ? character.species.key : ""}
-                onChange={(key) => patchCharacter({ species: ruleRef(key) })}
-                placeholder="dwarf"
-              />
-              {character.species && (
-                <ReferenceChipDisplay reference={character.species} chip={buildChips.get(refIdentity(character.species))} />
-              )}
-            </label>
-            <label className="flex flex-col gap-1 text-xs text-ink-muted">
-              Historique (clé de règle)
-              <RuleEntryAutocomplete
-                worldSlug={worldSlug}
-                entryTypes={BACKGROUND_TYPES}
-                value={character.background?.kind === "rule" ? character.background.key : ""}
-                onChange={(key) => patchCharacter({ background: ruleRef(key) })}
-                placeholder="soldier"
-              />
-              {character.background && (
-                <ReferenceChipDisplay reference={character.background} chip={buildChips.get(refIdentity(character.background))} />
-              )}
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-xs text-ink-muted">
-              Genre
-              <Dropdown
-                value={genderDropdownValue(character.gender)}
-                options={GENDER_OPTIONS}
-                onChange={(v) =>
-                  patchCharacter({
-                    gender:
-                      v === "custom"
-                        ? { custom: typeof character.gender === "object" ? character.gender.custom : "" }
-                        : (v as Exclude<CharacterBlockData["gender"], { custom: string } | undefined>),
-                  })
-                }
-                aria-label="Genre"
-              />
-              {typeof character.gender === "object" && (
-                <input
-                  value={character.gender.custom}
-                  onChange={(e) => patchCharacter({ gender: { custom: e.target.value } })}
-                  placeholder="préciser…"
-                  className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-                />
-              )}
-            </label>
-            <label className="flex flex-col gap-1 text-xs text-ink-muted">
-              Pronoms
-              <input
-                value={character.pronouns ?? ""}
-                onChange={(e) => patchCharacter({ pronouns: e.target.value })}
-                placeholder="elle, il, iel…"
-                className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-              />
-            </label>
-          </div>
-
           <div className="flex flex-col gap-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Classes</span>
             {character.classes.map((c, index) => (
@@ -793,21 +807,70 @@ export default function PlayableCharacterSheet({
               Compétences · maîtrise {sheet.proficiencyBonus >= 0 ? "+" : ""}
               {sheet.proficiencyBonus}
             </span>
+            {remainingChoices.length > 0 && (
+              <div className="flex flex-col gap-0.5">
+                {remainingChoices.map((choice) => {
+                  const chosen = (character.choices[choice.id] as string[] | undefined) ?? [];
+                  return (
+                    <p key={choice.id} className="text-xs text-ink-muted">
+                      {choice.label} : {chosen.length}/{choice.count} choisie(s) — cliquez les ronds clairs ci-dessous
+                    </p>
+                  );
+                })}
+              </div>
+            )}
             <div className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
               {SORTED_SKILLS.map((skill) => {
                 const result = sheet.skills[skill];
+                const choice = skillChoices.get(skill);
+                const chosenForChoice = choice ? ((character.choices[choice.id] as string[] | undefined) ?? []) : [];
+                const isChosen = choice ? chosenForChoice.includes(skill) : false;
+                const canPick = choice ? isChosen || chosenForChoice.length < choice.count : false;
+
+                function toggle() {
+                  if (!choice) return;
+                  patchCharacter({ choices: { ...character.choices, [choice.id]: toggleChoice(chosenForChoice, skill, choice.count) } });
+                }
+
+                const dotClass = choice
+                  ? isChosen
+                    ? "bg-accent"
+                    : canPick
+                      ? "border-2 border-ink bg-transparent"
+                      : "border border-edge bg-transparent opacity-40"
+                  : result.proficiency === "expertise"
+                    ? "bg-accent"
+                    : result.proficiency === "proficient"
+                      ? "border border-accent bg-accent/40"
+                      : "border border-edge bg-transparent";
+
+                const dotTitle = choice
+                  ? isChosen
+                    ? `${choice.label} — choisie, cliquer pour retirer`
+                    : canPick
+                      ? `${choice.label} — cliquer pour choisir (${chosenForChoice.length}/${choice.count})`
+                      : `${choice.label} — choix déjà complet (${choice.count}/${choice.count})`
+                  : result.proficiency === "expertise"
+                    ? "Expertise"
+                    : result.proficiency === "proficient"
+                      ? "Maîtrisée"
+                      : "Non maîtrisée";
+
                 return (
                   <div key={skill} className="flex items-center gap-2 text-sm">
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${
-                        result.proficiency === "expertise"
-                          ? "bg-accent"
-                          : result.proficiency === "proficient"
-                            ? "border border-accent bg-accent/40"
-                            : "border border-edge bg-transparent"
-                      }`}
-                      title={result.proficiency === "expertise" ? "Expertise" : result.proficiency === "proficient" ? "Maîtrisée" : "Non maîtrisée"}
-                    />
+                    {choice ? (
+                      <button
+                        type="button"
+                        onClick={toggle}
+                        disabled={!canPick}
+                        title={dotTitle}
+                        className="flex h-4 w-4 shrink-0 items-center justify-center disabled:cursor-not-allowed"
+                      >
+                        <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+                      </button>
+                    ) : (
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${dotClass}`} title={dotTitle} />
+                    )}
                     <span className="flex-1 text-ink">{SKILL_LABELS_FR[skill]}</span>
                     <span className="text-[10px] uppercase text-ink-muted">{ABILITY_LABELS[SKILL_ABILITIES[skill]]}</span>
                     <span className="w-8 text-right font-medium text-ink">
