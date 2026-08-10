@@ -7,8 +7,9 @@ import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import ReferenceChipDisplay from "./ReferenceChipDisplay";
 import ItemAutocomplete from "./ItemAutocomplete";
 
+/** `label` non vide : `zInventoryItem` (variante en ligne) exige `z.string().min(1)` — un objet créé avec un libellé vide passait l'affichage local mais échouait silencieusement à l'enregistrement (400), ce qui donnait l'impression que « Ajouter un objet » ne faisait rien. */
 function newItem(): InventoryItem {
-  return { id: crypto.randomUUID(), label: "", qty: 1 };
+  return { id: crypto.randomUUID(), label: "Nouvel objet", qty: 1 };
 }
 
 // Verifie la valeur, pas seulement la presence de la cle : apres un

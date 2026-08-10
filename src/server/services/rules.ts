@@ -367,6 +367,17 @@ export interface RuleEntrySummary {
   key: string;
   entryType: EntryType;
   name: string;
+  /** Cle de la classe parente — seulement pour `entryType === "subclass"` (V1-C4 suite, filtrage sous-classe/classe). `undefined` si la source ne porte pas ce champ (contenu maison sans lien de classe). */
+  parentClassKey?: string;
+}
+
+/** Lit `source_raw.class.index` (forme SRD des sous-classes, verifiee en base : `{"class":{"index":"wizard",...}}`) — tolerant, jamais d'exception si la forme differe (contenu importe autrement). */
+function subclassParentClassKey(sourceRaw: unknown): string | undefined {
+  if (!sourceRaw || typeof sourceRaw !== "object") return undefined;
+  const cls = (sourceRaw as Record<string, unknown>).class;
+  if (!cls || typeof cls !== "object") return undefined;
+  const index = (cls as Record<string, unknown>).index;
+  return typeof index === "string" ? index : undefined;
 }
 
 /**
@@ -395,6 +406,7 @@ async function listEntriesInRulesetChain(
         key: e.entry_key,
         entryType: e.entry_type as EntryType,
         name: translationByEntryId.get(e.id) ?? entryNameFrom(e),
+        parentClassKey: e.entry_type === "subclass" ? subclassParentClassKey(e.source_raw) : undefined,
       }));
     }
     const ruleset = await getRulesetById(supabase, currentId);

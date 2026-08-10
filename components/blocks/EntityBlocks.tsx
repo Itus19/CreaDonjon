@@ -123,6 +123,8 @@ export default function EntityBlocks({
   const [blocks, setBlocks] = useState<BlockItem[]>(initialBlocks);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [conflictedIds, setConflictedIds] = useState<Set<string>>(new Set());
+  /** Distinct de `conflictedIds` (409, "rechargez") : un 400/500 signifie que la donnee elle-meme est rejetee (ex. `label` vide sur un objet d'inventaire) — se recharger ne change rien tant que la donnee n'est pas corrigee. Avant ce complement, `doSaveBlock` avalait ces echecs sans rien afficher : le bouton semblait "ne rien faire". */
+  const [saveErrorIds, setSaveErrorIds] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const versionsRef = useRef<Record<string, number>>(
     Object.fromEntries(initialBlocks.map((b) => [b.id, b.version])),
@@ -142,11 +144,58 @@ export default function EntityBlocks({
     saveBlock(characterBlock.id, { data });
   }
 
-  /** Meme bloc `inventory` que l'onglet Inventaire de la fiche jouable et l'editeur — une seule donnee, deux vues (V1-B5, §5.1). */
-  function updateInventory(data: InventoryBlockData) {
-    if (!inventoryBlock) return;
-    patchBlock(inventoryBlock.id, { data });
-    saveBlock(inventoryBlock.id, { data });
+  /**
+   * Meme bloc `inventory` que l'onglet Inventaire de la fiche jouable et
+   * l'editeur — une seule donnee, deux vues (V1-B5, §5.1). Cree le bloc a
+   * la volee s'il n'existe pas encore : la fiche jouable affiche toujours
+   * l'onglet Inventaire (etat vide par defaut cote `PlayableCharacterSheet`)
+   * meme quand aucun bloc `inventory` n'a ete ajoute a l'entite — sans ce
+   * bootstrap, "Ajouter un objet"/les pieces semblaient ne rien faire :
+   * `if (!inventoryBlock) return` avalait silencieusement la modification.
+   */
+  async function updateInventory(data: InventoryBlockData) {
+    if (inventoryBlock) {
+      patchBlock(inventoryBlock.id, { data });
+      saveBlock(inventoryBlock.id, { data });
+      return;
+    }
+    const created = await createBlockWithData("inventory", data);
+    if (created) setBlocks((prev) => [...prev, created]);
+  }
+
+  /** Cree un bloc puis lui pose immediatement de vraies donnees — la creation seule ne prend que le defaut du registre. Aller-retour direct plutot que `saveBlock` : juste apres `setBlocks`, le bloc cree n'est pas encore dans le `blocks` capture par la fermeture de cet appel, et `doSaveBlock` (qui cherche le bloc par id dans `blocks`) le raterait silencieusement. */
+  async function createBlockWithData(blockType: string, data: unknown): Promise<BlockItem | null> {
+    const res = await fetch(`/api/entities/${entityId}/blocks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        entityId,
+        blockType,
+        label: BLOCK_TYPE_LABELS[blockType],
+        visibility: { level: "public", scopeId: null },
+      }),
+    });
+    if (!res.ok) return null;
+    const block = (await res.json()) as BlockItem;
+    versionsRef.current[block.id] = block.version;
+
+    const patchRes = await fetch(`/api/blocks/${block.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        version: block.version,
+        display: block.display,
+        data,
+        visibility: { level: block.visibilityLevel, scopeId: block.visibilityScopeId ?? null },
+      }),
+    });
+    if (!patchRes.ok) {
+      setSaveErrorIds((prev) => new Set(prev).add(block.id));
+      return block;
+    }
+    const updated = (await patchRes.json()) as BlockItem;
+    versionsRef.current[updated.id] = updated.version;
+    return updated;
   }
 
   function patchBlock(id: string, patch: Partial<BlockItem>) {
@@ -229,12 +278,21 @@ export default function EntityBlocks({
       setConflictedIds((prev) => new Set(prev).add(id));
       return;
     }
-    if (!res.ok) return;
+    if (!res.ok) {
+      setSaveErrorIds((prev) => new Set(prev).add(id));
+      return;
+    }
 
     const updated = (await res.json()) as BlockItem;
     versionsRef.current[id] = updated.version;
     patchBlock(id, { version: updated.version });
     setConflictedIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setSaveErrorIds((prev) => {
       if (!prev.has(id)) return prev;
       const next = new Set(prev);
       next.delete(id);
@@ -328,6 +386,7 @@ export default function EntityBlocks({
       {sortedBlocks.map((block, index) => {
         const isCollapsed = collapsed.has(block.id);
         const hasConflict = conflictedIds.has(block.id);
+        const hasSaveError = saveErrorIds.has(block.id);
         return (
           <div
             key={block.id}
@@ -336,7 +395,7 @@ export default function EntityBlocks({
           >
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-1 items-center gap-1.5">
-                {block.blockType !== "character" && (
+                {block.blockType !== "character" && block.blockType !== "inventory" && (
                   <button
                     type="button"
                     onClick={() => toggleCollapsed(block.id)}
@@ -403,6 +462,11 @@ export default function EntityBlocks({
                 Modifié entre-temps. Rechargez la page avant de réessayer.
               </p>
             )}
+            {hasSaveError && (
+              <p className="mb-2 text-xs text-danger">
+                Cette modification n&apos;a pas pu être enregistrée. Vérifiez les champs (ex. un nom vide) et réessayez.
+              </p>
+            )}
 
             {/* La fiche jouable (V1-B5) vit dans la carte du bloc `character`
                 lui-meme — plus de panneau de stats separe au-dessus de la
@@ -421,6 +485,10 @@ export default function EntityBlocks({
                 onUpdateCharacter={updateCharacter}
                 onUpdateInventory={updateInventory}
               />
+            ) : block.blockType === "inventory" ? (
+              <p className="text-xs italic text-ink-muted">
+                Géré depuis l&apos;onglet Inventaire du bloc Personnage.
+              </p>
             ) : (
               !isCollapsed && (
                 <BlockDataEditor

@@ -26,6 +26,7 @@ import { useReferenceChips, refIdentity, type ResolvedChipView } from "./useRefe
 import RuleChip from "@/components/rules/RuleChip";
 import InventoryBlockEditor, { itemLabel, itemRef } from "./InventoryBlockEditor";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
+import type { RuleEntrySummary } from "@/src/server/services/rules";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
@@ -118,6 +119,7 @@ function RuleSelect({
   onChange,
   emptyLabel,
   chip,
+  filterFn,
 }: {
   worldSlug: string;
   entryTypes: readonly string[];
@@ -125,15 +127,18 @@ function RuleSelect({
   onChange: (key: string) => void;
   emptyLabel: string;
   chip: ResolvedChipView | undefined;
+  /** Filtre additionnel (V1-C4 suite) — ex. restreindre les sous-classes à celles de la classe choisie sur la même ligne. */
+  filterFn?: (entry: RuleEntrySummary) => boolean;
 }) {
   const entries = useWorldRuleEntries(worldSlug);
   const options = useMemo(() => {
     const filtered = entries
       .filter((e) => entryTypes.includes(e.entryType))
+      .filter((e) => (filterFn ? filterFn(e) : true))
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((e) => ({ value: e.key, label: e.name }));
     return [{ value: "", label: emptyLabel }, ...filtered];
-  }, [entries, entryTypes, emptyLabel]);
+  }, [entries, entryTypes, emptyLabel, filterFn]);
 
   return (
     <div className="flex items-center gap-1">
@@ -612,39 +617,43 @@ export default function PlayableCharacterSheet({
           <div className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
             Classes
             <div className="flex flex-wrap items-center gap-2">
-              {character.classes.map((c, index) => (
-                <div key={index} className={`flex items-center gap-1 ${index > 0 ? "border-l border-edge/50 pl-2" : ""}`}>
-                  <RuleSelect
-                    worldSlug={worldSlug}
-                    entryTypes={CLASS_TYPES}
-                    value={c.class.kind === "rule" ? c.class.key : ""}
-                    onChange={(key) => updateClass(index, { class: { kind: "rule", key } })}
-                    emptyLabel="Aucune classe"
-                    chip={buildChips.get(refIdentity(c.class))}
-                  />
-                  <input
-                    type="number"
-                    min={1}
-                    value={c.level}
-                    title="Niveau"
-                    onChange={(e) => updateClass(index, { level: Math.max(1, Number(e.target.value) || 1) })}
-                    className="w-9 rounded-md border border-edge bg-transparent px-1 py-1 text-sm text-ink outline-none"
-                  />
-                  <RuleSelect
-                    worldSlug={worldSlug}
-                    entryTypes={SUBCLASS_TYPES}
-                    value={c.subclass?.kind === "rule" ? c.subclass.key : ""}
-                    onChange={(key) => updateClass(index, { subclass: ruleRef(key) })}
-                    emptyLabel="Aucune sous-classe"
-                    chip={c.subclass ? buildChips.get(refIdentity(c.subclass)) : undefined}
-                  />
-                  {character.classes.length > 1 && (
-                    <button type="button" onClick={() => removeClass(index)} className="text-xs text-danger hover:underline">
-                      ×
-                    </button>
-                  )}
-                </div>
-              ))}
+              {character.classes.map((c, index) => {
+                const classKey = c.class.kind === "rule" ? c.class.key : "";
+                return (
+                  <div key={index} className={`flex items-center gap-1 ${index > 0 ? "border-l border-edge/50 pl-2" : ""}`}>
+                    <RuleSelect
+                      worldSlug={worldSlug}
+                      entryTypes={CLASS_TYPES}
+                      value={classKey}
+                      onChange={(key) => updateClass(index, { class: { kind: "rule", key }, subclass: null })}
+                      emptyLabel="Aucune classe"
+                      chip={buildChips.get(refIdentity(c.class))}
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      value={c.level}
+                      title="Niveau"
+                      onChange={(e) => updateClass(index, { level: Math.max(1, Number(e.target.value) || 1) })}
+                      className="w-9 rounded-md border border-edge bg-transparent px-1 py-1 text-sm text-ink outline-none"
+                    />
+                    <RuleSelect
+                      worldSlug={worldSlug}
+                      entryTypes={SUBCLASS_TYPES}
+                      value={c.subclass?.kind === "rule" ? c.subclass.key : ""}
+                      onChange={(key) => updateClass(index, { subclass: ruleRef(key) })}
+                      emptyLabel="Aucune sous-classe"
+                      chip={c.subclass ? buildChips.get(refIdentity(c.subclass)) : undefined}
+                      filterFn={(entry) => (classKey ? entry.parentClassKey === classKey : false)}
+                    />
+                    {character.classes.length > 1 && (
+                      <button type="button" onClick={() => removeClass(index)} className="text-xs text-danger hover:underline">
+                        ×
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
               <button
                 type="button"
                 onClick={addClass}
@@ -690,6 +699,7 @@ export default function PlayableCharacterSheet({
         <StatBadge label="Vitesse" value={`${sheet.speed.value} m`} />
         <StatBadge label="Perception passive" value={String(10 + sheet.skills.perception.mod)} />
         <StatBadge label="Maîtrise" value={`+${sheet.proficiencyBonus}`} />
+        <StatBadge label="Dés de vie" value={sheet.hitPoints.hitDice} />
         <div className="flex w-[6.5rem] shrink-0 flex-col items-center gap-1">
           <span
             className={`flex h-6 items-end justify-center text-center text-[9px] font-bold uppercase leading-tight tracking-widest ${
