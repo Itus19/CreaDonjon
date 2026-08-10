@@ -13,6 +13,8 @@
  * directement motive par ce critere — pas une extension gratuite.
  */
 
+import { computeEncumbrance, encumbranceModifiers, type EncumbranceResult } from "./encumbrance";
+
 // --- Vocabulaire de base -------------------------------------------------
 
 export type Ability = "str" | "dex" | "con" | "int" | "wis" | "cha";
@@ -198,6 +200,7 @@ export interface DerivedSheet {
   features: ResolvedFeature[];
   spellcasting?: { ability: Ability; saveDc: number; attackBonus: number; slots: Record<number, number> };
   warnings: Warning[];
+  encumbrance: EncumbranceResult;
 }
 
 // --- Empilement generique (§B4 regles 1-5) ---------------------------------
@@ -379,6 +382,8 @@ export function characterSheet(
   ruleset: ResolvedRuleset,
   equipment: EquippedItem[],
   activeEffects: ActiveEffect[],
+  /** Poids total porte (§ encombrement) — 0 par defaut, aucun appelant existant n'est affecte. */
+  carriedWeight = 0,
 ): DerivedSheet {
   const totalLevel = build.classes.reduce((sum, c) => sum + c.level, 0);
   const proficiencyBonus = proficiencyBonusForLevel(totalLevel);
@@ -414,6 +419,13 @@ export function characterSheet(
     );
     abilities[ability] = { score: value, mod: abilityModifier(value), sources };
   }
+
+  // Encombrement (couche 6) : depend du score de Force resolu ci-dessus,
+  // ajoute donc ses propres modificateurs (vitesse, desavantage) apres coup
+  // plutot que d'etre precalcule avec le reste — n'affecte jamais ability.*,
+  // ac, ni hp.max, seulement savingThrows/skills/speed ci-dessous.
+  const encumbrance = computeEncumbrance(abilities.str.score, carriedWeight);
+  allModifiers.push(...encumbranceModifiers(encumbrance, "encumbrance", "Encombrement"));
 
   // Classe d'armure : base 10 + Dex, ecrasee par un "set" d'armure lourde le cas echeant.
   const acBase = 10 + abilities.dex.mod;
@@ -468,5 +480,5 @@ export function characterSheet(
     }
   }
 
-  return { abilities, proficiencyBonus, ac, savingThrows, skills, hitPoints, speed, features, spellcasting, warnings };
+  return { abilities, proficiencyBonus, ac, savingThrows, skills, hitPoints, speed, features, spellcasting, warnings, encumbrance };
 }

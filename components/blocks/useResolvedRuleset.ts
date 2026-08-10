@@ -15,6 +15,8 @@ export interface ResolvedRulesetView {
   ruleset: ResolvedRuleset;
   remainingChoices: RemainingChoiceView[];
   equipment: Record<string, ArmorData | null>;
+  /** Poids en livres, par cle de regle (encombrement, V1-C4 suite). */
+  weight: Record<string, number | null>;
 }
 
 export interface RulesetSelection {
@@ -24,7 +26,7 @@ export interface RulesetSelection {
   equipmentKeys: string[];
 }
 
-const EMPTY: ResolvedRulesetView = { ruleset: { classes: {}, features: {} }, remainingChoices: [], equipment: {} };
+const EMPTY: ResolvedRulesetView = { ruleset: { classes: {}, features: {} }, remainingChoices: [], equipment: {}, weight: {} };
 
 /**
  * Une cle vide apparait des qu'un objet d'inventaire bascule en "Reference

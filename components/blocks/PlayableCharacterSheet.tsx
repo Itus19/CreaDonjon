@@ -18,6 +18,7 @@ import {
   type ResolvedFeature,
 } from "@/src/core/rules/sheet";
 import { armorAcModifier, mapChosenSkillModifiers, type WeaponData } from "@/src/core/rules/srdMapping";
+import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { evaluate, type TraceStep } from "@/src/core/formula/evaluate";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
@@ -287,12 +288,14 @@ export default function PlayableCharacterSheet({
     [inventory]
   );
 
-  const { ruleset, remainingChoices, equipment } = useResolvedRuleset(worldSlug, {
+  const { ruleset, remainingChoices, equipment, weight } = useResolvedRuleset(worldSlug, {
     species: speciesKey,
     background: backgroundKey,
     classes: classSelections,
     equipmentKeys,
   });
+
+  const carriedWeight = useMemo(() => totalCarriedWeight(inventory?.items ?? [], weight), [inventory, weight]);
 
   const dexScore = character.abilities.base.dex;
   const dexMod = Math.floor((dexScore - 10) / 2);
@@ -338,7 +341,8 @@ export default function PlayableCharacterSheet({
     build,
     { classes: ruleset.classes, features: { ...ruleset.features, ...choiceFeatures } },
     equippedItems,
-    []
+    [],
+    carriedWeight
   );
 
   const classFeatures = Object.values(ruleset.features).filter((f) => f.source === "class");
@@ -1069,7 +1073,25 @@ export default function PlayableCharacterSheet({
           )}
 
           {tab === "inventaire" && (
-            <div className="pt-3">
+            <div className="flex flex-col gap-3 pt-3">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+                  <span>Charge</span>
+                  <span className={sheet.encumbrance.tier !== "none" ? "text-danger" : "text-ink-muted"}>
+                    {Math.round(sheet.encumbrance.carried)}/{sheet.encumbrance.capacity} lb
+                    {sheet.encumbrance.tier === "encumbered" && " · Encombré (vitesse −10)"}
+                    {sheet.encumbrance.tier === "heavily_encumbered" && " · Lourdement encombré (vitesse −20, désavantage FOR/DEX/CON)"}
+                  </span>
+                </div>
+                <div className="h-2.5 overflow-hidden rounded-full bg-panel-sunken">
+                  <div
+                    className={`h-full rounded-full transition-[width] ${sheet.encumbrance.tier !== "none" ? "bg-danger" : "bg-accent"}`}
+                    style={{
+                      width: `${Math.min(100, sheet.encumbrance.capacity > 0 ? (sheet.encumbrance.carried / sheet.encumbrance.capacity) * 100 : 0)}%`,
+                    }}
+                  />
+                </div>
+              </div>
               <InventoryBlockEditor worldSlug={worldSlug} data={inventory ?? { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } }} onChange={onUpdateInventory} />
             </div>
           )}

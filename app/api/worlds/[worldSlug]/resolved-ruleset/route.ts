@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { resolveRulesetSchema } from "@/lib/resolvedRuleset/schemas";
-import { assembleResolvedRuleset, resolveEquipmentArmorData } from "@/src/server/services/resolvedRuleset";
+import {
+  assembleResolvedRuleset,
+  resolveEquipmentArmorData,
+  resolveEquipmentWeight,
+} from "@/src/server/services/resolvedRuleset";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import type { Locale } from "@/src/i18n/request";
@@ -34,14 +38,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   ]);
   if (!rulesetId) {
     return NextResponse.json(
-      { ruleset: { classes: {}, features: {} }, remainingChoices: [], equipment: {} },
+      { ruleset: { classes: {}, features: {} }, remainingChoices: [], equipment: {}, weight: {} },
       { status: 200 }
     );
   }
 
-  const [assembled, equipment] = await Promise.all([
+  const [assembled, equipment, weight] = await Promise.all([
     assembleResolvedRuleset(supabase, rulesetId, parsed.data, locale),
     resolveEquipmentArmorData(supabase, rulesetId, parsed.data.equipmentKeys ?? []),
+    resolveEquipmentWeight(supabase, rulesetId, parsed.data.equipmentKeys ?? []),
   ]);
-  return NextResponse.json({ ...assembled, equipment }, { status: 200 });
+  return NextResponse.json({ ...assembled, equipment, weight }, { status: 200 });
 }

@@ -13,6 +13,7 @@ import {
   mapSpeciesModifiers,
   parseArmorData,
   parseCustomTableFields,
+  parseItemWeight,
   parseWeaponData,
   type ArmorData,
   type CustomTableRow,
@@ -195,6 +196,20 @@ export async function resolveEquipmentWeaponData(
   for (const key of keys) {
     const found = await fetchEntryFields(supabase, rulesetId, key);
     result[key] = found ? parseWeaponData(found.fields) : null;
+  }
+  return result;
+}
+
+/** Poids (en livres) d'un objet d'equipement, par cle de regle — `null` si l'entree n'existe pas ou n'a pas de poids renseigne (encombrement, V1-C4 suite). */
+export async function resolveEquipmentWeight(
+  supabase: TypedClient,
+  rulesetId: string,
+  keys: readonly string[]
+): Promise<Record<string, number | null>> {
+  const result: Record<string, number | null> = {};
+  for (const key of keys) {
+    const found = await fetchEntryFields(supabase, rulesetId, key);
+    result[key] = found ? parseItemWeight(found.fields) : null;
   }
   return result;
 }

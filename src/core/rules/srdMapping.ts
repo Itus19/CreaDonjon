@@ -245,3 +245,14 @@ export function parseWeaponData(fields: ParsedFields): WeaponData | null {
     isRanged,
   };
 }
+
+/**
+ * Poids en livres d'un objet d'equipement (arme, armure, ou objet
+ * quelconque) — champ `weight` partage par toutes les entrees `Equipment`
+ * du SRD, identique en forme entre 2014 et 2024 (verifie contre les deux
+ * fichiers). `null` si absent (contenu maison sans poids renseigne), jamais
+ * une erreur.
+ */
+export function parseItemWeight(fields: ParsedFields): number | null {
+  return typeof fields.weight === "number" ? fields.weight : null;
+}

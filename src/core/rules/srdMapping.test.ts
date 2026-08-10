@@ -11,6 +11,7 @@ import {
   mapSpeciesModifiers,
   parseArmorData,
   parseCustomTableFields,
+  parseItemWeight,
   parseWeaponData,
 } from "./srdMapping";
 
@@ -333,5 +334,26 @@ describe("parseWeaponData", () => {
       { field: "armor_class", value: JSON.stringify({ base: 16, dex_bonus: false }) },
     ]);
     expect(parseWeaponData(fields)).toBeNull();
+  });
+});
+
+// Champ verifie contre data/srd/srd-2014.json et srd-2024.json : `weight` en
+// livres, present et identique sur les armes, armures et objets d'equipement
+// des deux editions (ex. dague : "weight": 1).
+describe("parseItemWeight", () => {
+  it("lit un poids en livres present sur une arme", () => {
+    expect(parseItemWeight(parseCustomTableFields([{ field: "weight", value: "1" }]))).toBe(1);
+  });
+
+  it("lit un poids present sur une armure", () => {
+    const fields = parseCustomTableFields([
+      { field: "armor_category", value: "Heavy" },
+      { field: "weight", value: "55" },
+    ]);
+    expect(parseItemWeight(fields)).toBe(55);
+  });
+
+  it("retourne null si le champ est absent (contenu maison sans poids renseigne)", () => {
+    expect(parseItemWeight(parseCustomTableFields([{ field: "name", value: "Fiole de sable noir" }]))).toBeNull();
   });
 });

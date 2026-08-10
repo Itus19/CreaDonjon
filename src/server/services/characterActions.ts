@@ -18,6 +18,7 @@ import {
   type DamageRollResult,
 } from "@/src/core/rules/action";
 import { armorAcModifier, mapChosenSkillModifiers, type WeaponData } from "@/src/core/rules/srdMapping";
+import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { generateScalingTable, resolveScalingTarget } from "@/src/core/rules/scaling";
 import { formatFormulaNode } from "@/src/core/formula/format";
 import type { RuntimeStatePatch } from "@/src/core/rules/runtimeState";
@@ -40,6 +41,7 @@ import {
   assembleResolvedRuleset,
   resolveEquipmentArmorData,
   resolveEquipmentWeaponData,
+  resolveEquipmentWeight,
 } from "@/src/server/services/resolvedRuleset";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
@@ -124,10 +126,12 @@ export async function resolveCharacterActionContext(
     .map(itemRef)
     .filter((r): r is { kind: "rule"; key: string } => r?.kind === "rule")
     .map((r) => r.key);
-  const [armorByKey, weaponByKey] = await Promise.all([
+  const [armorByKey, weaponByKey, weightByKey] = await Promise.all([
     resolveEquipmentArmorData(supabase, rulesetId, equipmentKeys),
     resolveEquipmentWeaponData(supabase, rulesetId, equipmentKeys),
+    resolveEquipmentWeight(supabase, rulesetId, equipmentKeys),
   ]);
+  const carriedWeight = totalCarriedWeight(inventoryData?.items ?? [], weightByKey);
 
   const dexScore = characterData.abilities.base.dex;
   const dexMod = Math.floor((dexScore - 10) / 2);
@@ -173,7 +177,8 @@ export async function resolveCharacterActionContext(
     build,
     { classes: assembled.ruleset.classes, features: { ...assembled.ruleset.features, ...choiceFeatures } },
     equippedItems,
-    []
+    [],
+    carriedWeight
   );
 
   const hitDiceTotals: Record<string, number> = {};

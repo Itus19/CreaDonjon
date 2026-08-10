@@ -408,3 +408,31 @@ describe("characterSheet — regles d'empilement (§B4)", () => {
     expect(typeof characterSheet).toBe("function");
   });
 });
+
+describe("characterSheet — encombrement (poids porte)", () => {
+  const build: CharacterBuild = {
+    species: "human",
+    classes: [{ key: "fighter", level: 1 }],
+    abilities: { assigned: { str: 10, dex: 14, con: 10, int: 10, wis: 10, cha: 10 } },
+    featureKeys: [],
+  };
+  const ruleset: ResolvedRuleset = { classes: { fighter: FIGHTER }, features: {} };
+
+  it("carriedWeight par defaut (0) : aucun effet, comportement inchange pour les appelants existants", () => {
+    const sheet = characterSheet(build, ruleset, [], []);
+    expect(sheet.encumbrance).toEqual({ carried: 0, capacity: 150, tier: "none", speedPenalty: 0, disadvantageAbilities: [] });
+    expect(sheet.speed.value).toBe(30);
+  });
+
+  it("lourdement encombre (FOR 10, > 100 lb) : vitesse reduite de 20, desavantage sur les sauvegardes FOR/DEX/CON", () => {
+    const sheet = characterSheet(build, ruleset, [], [], 120);
+    expect(sheet.encumbrance).toMatchObject({ tier: "heavily_encumbered", speedPenalty: 20 });
+    expect(sheet.speed.value).toBe(10); // 30 (base) - 20
+    expect(sheet.savingThrows.str.rollState).toBe("disadvantage");
+    expect(sheet.savingThrows.dex.rollState).toBe("disadvantage");
+    expect(sheet.savingThrows.con.rollState).toBe("disadvantage");
+    expect(sheet.savingThrows.wis.rollState).toBe("normal");
+    expect(sheet.skills.athletics.rollState).toBe("disadvantage");
+    expect(sheet.skills.stealth.rollState).toBe("disadvantage");
+  });
+});
