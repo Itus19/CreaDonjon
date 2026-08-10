@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ResolvedRuleset } from "@/src/core/rules/sheet";
-import type { ArmorData } from "@/src/core/rules/srdMapping";
+import type { ArmorData, WeaponData } from "@/src/core/rules/srdMapping";
 
 export interface RemainingChoiceView {
   id: string;
@@ -26,6 +26,8 @@ export interface ResolvedRulesetView {
   proficiencies: TraitGrantView[];
   languages: TraitGrantView[];
   equipment: Record<string, ArmorData | null>;
+  /** Donnees d'arme par cle de regle (onglet Actions, V1-C10) — se recalcule avec l'inventaire comme `equipment`, contrairement a l'ancienne source (`remote.weaponByKey`, un instantane fige au premier chargement). */
+  weaponByKey: Record<string, WeaponData | null>;
   /** Poids en livres, par cle de regle (encombrement, V1-C4 suite). */
   weight: Record<string, number | null>;
   /** Niveau de sort (0 = tour de magie), par cle de regle (tri Magie, V1-C6). */
@@ -46,6 +48,7 @@ const EMPTY: ResolvedRulesetView = {
   proficiencies: [],
   languages: [],
   equipment: {},
+  weaponByKey: {},
   weight: {},
   spellLevels: {},
 };

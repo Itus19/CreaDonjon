@@ -5,6 +5,7 @@ import { resolveRulesetSchema } from "@/lib/resolvedRuleset/schemas";
 import {
   assembleResolvedRuleset,
   resolveEquipmentArmorData,
+  resolveEquipmentWeaponData,
   resolveEquipmentWeight,
   resolveSpellLevels,
 } from "@/src/server/services/resolvedRuleset";
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         proficiencies: [],
         languages: [],
         equipment: {},
+        weaponByKey: {},
         weight: {},
         spellLevels: {},
       },
@@ -52,11 +54,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     );
   }
 
-  const [assembled, equipment, weight, spellLevels] = await Promise.all([
+  const [assembled, equipment, weaponByKey, weight, spellLevels] = await Promise.all([
     assembleResolvedRuleset(supabase, rulesetId, parsed.data, locale),
     resolveEquipmentArmorData(supabase, rulesetId, parsed.data.equipmentKeys ?? []),
+    resolveEquipmentWeaponData(supabase, rulesetId, parsed.data.equipmentKeys ?? []),
     resolveEquipmentWeight(supabase, rulesetId, parsed.data.equipmentKeys ?? []),
     resolveSpellLevels(supabase, rulesetId, parsed.data.spellKeys ?? []),
   ]);
-  return NextResponse.json({ ...assembled, equipment, weight, spellLevels }, { status: 200 });
+  return NextResponse.json({ ...assembled, equipment, weaponByKey, weight, spellLevels }, { status: 200 });
 }

@@ -671,6 +671,20 @@ Maîtrises et langues sont faites (V1-C6), déviation assumée non rouverte ici 
 
 *Hors périmètre, comme prévu : rouvrir la décision maîtrises/langues sans lien ; regroupement visuel par source (sous-titres) — la liste plate actuelle reste lisible avec les données réelles observées, pas de confusion constatée.*
 
+### V1-C10 — Onglet Actions : armes équipées jamais rafraîchies après un changement d'inventaire · `S` — fait
+
+Signalé par l'utilisateur : ajouter/équiper une arme dans l'onglet Inventaire ne la faisait pas apparaître dans l'onglet Actions.
+
+**Cause identifiée** : `equippedWeapons` (`PlayableCharacterSheet.tsx`) filtrait sur `weaponByKey`, lui-même lu depuis `remote.weaponByKey` — un instantané chargé **une seule fois** au montage du composant (`GET /api/entities/[id]/sheet`) et rafraîchi uniquement après une action de jeu (attaque, dégâts, sort, repos — chacune appelle `reloadRemote()`). Un changement d'inventaire seul (ajouter, équiper, déséquiper une arme) ne déclenche jamais ce rafraîchissement : une arme ajoutée après le chargement initial restait invisible dans Actions jusqu'à la prochaine attaque ou au rechargement de la page. Vérifié en reproduisant exactement ce scénario avant de corriger : ajout d'un arc court, équipé, resté absent de l'onglet Actions sans reload.
+
+**Pourquoi les sorts préparés n'avaient pas le même problème, vérifié par lecture de code** : `preparedSpells` ne dépend que de props (`spellcasting.prepared`, `spellcasting.known`) mises à jour de façon optimiste et synchrone par `EntityBlocks.updateSpellcasting` (`patchBlock` appelle `setBlocks` avant même l'appel réseau de sauvegarde) — aucun aller-retour serveur nécessaire pour que l'onglet Actions reflète un sort fraîchement préparé. Seule la donnée d'arme mécanique (dégâts, propriétés) exigeait une résolution serveur, d'où le point de défaillance unique.
+
+**Fait** :
+- `resolveEquipmentWeaponData` (déjà utilisée par `/api/entities/[id]/sheet`) branchée aussi sur `/api/worlds/[worldSlug]/resolved-ruleset` — la même route déjà réactive à `equipmentKeys` (armure via `resolveEquipmentArmorData`, poids) porte maintenant aussi les données d'arme.
+- `useResolvedRuleset` expose `weaponByKey`, recalculé à chaque changement d'inventaire comme `equipment`/`weight` — plus de dépendance à `remote`.
+- `PlayableCharacterSheet.tsx` lit ce `weaponByKey` réactif au lieu de `remote?.weaponByKey ?? {}` ; `SheetApiResponse`/la réponse de `/sheet` ne portent plus ce champ, devenu inutile côté client (`ctx.weaponByKey` reste utilisé en interne par `characterActions.ts` pour l'exécution réelle des attaques — aucun changement là, seule la copie d'affichage disparaît).
+- Vérifié en navigateur : arc court ajouté et équipé dans l'onglet Inventaire, apparaît immédiatement dans Actions sans reload ni action de jeu ; déséquipé, disparaît tout aussi immédiatement.
+
 ---
 
 ## Lot D — Première assistance IA

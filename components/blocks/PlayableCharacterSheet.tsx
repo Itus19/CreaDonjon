@@ -17,7 +17,7 @@ import {
   type EquippedItem,
   type ResolvedFeature,
 } from "@/src/core/rules/sheet";
-import { armorAcModifier, mapChosenSkillModifiers, SRD_LANGUAGES, type LanguageKey, type WeaponData } from "@/src/core/rules/srdMapping";
+import { armorAcModifier, mapChosenSkillModifiers, SRD_LANGUAGES, type LanguageKey } from "@/src/core/rules/srdMapping";
 import { lbToKg, totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { evaluate, type TraceStep } from "@/src/core/formula/evaluate";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
@@ -201,7 +201,6 @@ interface RollLogEntry {
 
 interface SheetApiResponse {
   sheet: DerivedSheet;
-  weaponByKey: Record<string, WeaponData | null>;
   hitDiceTotals: Record<string, number>;
   runtimeState: { state: RuntimeState; hpMax: number; hitDiceTotals: Record<string, number> };
 }
@@ -296,7 +295,7 @@ export default function PlayableCharacterSheet({
     [spellcasting]
   );
 
-  const { ruleset, remainingChoices, proficiencies, languages, equipment, weight, spellLevels } = useResolvedRuleset(worldSlug, {
+  const { ruleset, remainingChoices, proficiencies, languages, equipment, weaponByKey, weight, spellLevels } = useResolvedRuleset(worldSlug, {
     species: speciesKey,
     background: backgroundKey,
     classes: classSelections,
@@ -627,7 +626,6 @@ export default function PlayableCharacterSheet({
 
   const runtimeState = remote?.runtimeState.state;
   const hpMax = remote?.runtimeState.hpMax ?? sheet.hitPoints.max;
-  const weaponByKey = remote?.weaponByKey ?? {};
   const equippedWeapons = (inventory?.items ?? []).filter((item) => {
     if (!item.equipped) return false;
     const ref = itemRef(item);

@@ -8,8 +8,14 @@ import type { Locale } from "@/src/i18n/request";
  * Fiche derivee + etat de jeu d'une entite (V1-B5) : les blocs
  * character/inventory/spellcasting/resources arrivent deja au client via
  * `EntityBlocks` (meme mecanisme generique que le reste du wiki) — cette
- * route ne renvoie que ce qui exige le serveur : la fiche calculee, les
- * armes resolues depuis le SRD, et l'etat de jeu (initialise au besoin).
+ * route ne renvoie que ce qui exige le serveur : la fiche calculee et
+ * l'etat de jeu (initialise au besoin). Les donnees d'arme resolues
+ * (`ctx.weaponByKey`) ne sont plus renvoyees ici depuis V1-C10 : elles ne
+ * se rafraichissaient qu'apres une action de jeu (attaque, repos...),
+ * jamais apres un changement d'inventaire seul — l'onglet Actions les lit
+ * desormais via `useResolvedRuleset` (meme source deja reactive que
+ * l'armure/le poids), `ctx.weaponByKey` restant interne a la resolution
+ * des actions elles-memes (attaque/degats).
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: entityId } = await params;
@@ -36,7 +42,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const runtimeState = await getOrInitializeRuntimeState(supabase, ctx);
 
   return NextResponse.json(
-    { sheet: ctx.sheet, weaponByKey: ctx.weaponByKey, hitDiceTotals: ctx.hitDiceTotals, runtimeState },
+    { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState },
     { status: 200 }
   );
 }
