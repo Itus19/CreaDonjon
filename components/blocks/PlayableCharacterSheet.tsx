@@ -25,7 +25,7 @@ import { useResolvedRuleset, type RemainingChoiceView } from "./useResolvedRules
 import { useReferenceChips, refIdentity, type ResolvedChipView } from "./useReferenceChips";
 import RuleChip from "@/components/rules/RuleChip";
 import InventoryBlockEditor, { itemLabel, itemRef } from "./InventoryBlockEditor";
-import RuleEntryAutocomplete from "./RuleEntryAutocomplete";
+import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
@@ -97,45 +97,55 @@ function resourceMax(tracker: { max: { formula: import("@/src/core/formula/ast")
 }
 
 /**
- * Champ de règle compact (V1-C4 suite, sur retour utilisateur) : fusionne le
- * champ éditable et le renvoi vers la fiche de règle en un seul élément
- * plutôt qu'un champ + une pastille séparée — gagne de la place sur la ligne
- * d'en-tête. Toujours éditable (pas de mode édition, cf. décision actée dans
- * BACKLOG_V1.md), l'icône de lien n'apparaît que si la clé tapée résout
- * vraiment vers une entrée de règle. Couleur reprise de `RuleChip`
- * (`--link-rule`, specs/coquille-et-design.md §1) — même sens, pas une
- * couleur inventée.
+ * Sélecteur de règle (V1-C4 suite, sur retour utilisateur) : remplace le
+ * champ texte libre + suggestions par une vraie liste déroulante tirée du
+ * ruleset du monde. Revirement délibéré sur une décision précédente de ce
+ * même complément (qui gardait un champ libre par analogie avec §B5
+ * « avertir, ne pas interdire ») — vérification faite, §B5 concerne les
+ * prérequis de personnage, pas l'existence d'une clé de référence. Pour
+ * espèce/historique/classe/sous-classe, la clé n'a de sens que si une fiche
+ * de règle existe déjà ; un MJ qui invente une race crée d'abord sa fiche,
+ * qui apparaît alors naturellement dans cette liste — pas de valeur à
+ * accepter une clé qui ne résout jamais. Le bouton affiche directement le
+ * nom traduit (source de la même liste que l'ancien champ), donc plus
+ * besoin d'un élément séparé pour la lisibilité — juste un petit lien vers
+ * la fiche de règle à côté.
  */
-function CompactRuleField({
+function RuleSelect({
   worldSlug,
   entryTypes,
   value,
   onChange,
-  placeholder,
+  emptyLabel,
   chip,
-  width = "w-20",
 }: {
   worldSlug: string;
   entryTypes: readonly string[];
   value: string;
   onChange: (key: string) => void;
-  placeholder?: string;
+  emptyLabel: string;
   chip: ResolvedChipView | undefined;
-  width?: string;
 }) {
+  const entries = useWorldRuleEntries(worldSlug);
+  const options = useMemo(() => {
+    const filtered = entries
+      .filter((e) => entryTypes.includes(e.entryType))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((e) => ({ value: e.key, label: e.name }));
+    return [{ value: "", label: emptyLabel }, ...filtered];
+  }, [entries, entryTypes, emptyLabel]);
+
   return (
     <div className="flex items-center gap-1">
-      <div className={width}>
-        <RuleEntryAutocomplete worldSlug={worldSlug} entryTypes={entryTypes} value={value} onChange={onChange} placeholder={placeholder} />
-      </div>
+      <Dropdown value={value} options={options} onChange={onChange} />
       {chip?.found && (
         <Link
           href={chip.href}
           title={chip.summary ?? chip.name}
-          className="max-w-[6rem] shrink-0 truncate text-xs no-underline transition-opacity hover:opacity-70"
+          className="shrink-0 text-xs no-underline transition-opacity hover:opacity-70"
           style={{ color: "var(--link-rule)" }}
         >
-          {chip.name}
+          ↗
         </Link>
       )}
     </div>
@@ -546,23 +556,23 @@ export default function PlayableCharacterSheet({
         <div className="flex flex-wrap items-start gap-3">
           <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
             Espèce
-            <CompactRuleField
+            <RuleSelect
               worldSlug={worldSlug}
               entryTypes={SPECIES_TYPES}
               value={character.species?.kind === "rule" ? character.species.key : ""}
               onChange={(key) => patchCharacter({ species: ruleRef(key) })}
-              placeholder="dwarf"
+              emptyLabel="Aucune espèce"
               chip={character.species ? buildChips.get(refIdentity(character.species)) : undefined}
             />
           </label>
           <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
             Historique
-            <CompactRuleField
+            <RuleSelect
               worldSlug={worldSlug}
               entryTypes={BACKGROUND_TYPES}
               value={character.background?.kind === "rule" ? character.background.key : ""}
               onChange={(key) => patchCharacter({ background: ruleRef(key) })}
-              placeholder="soldier"
+              emptyLabel="Aucun historique"
               chip={character.background ? buildChips.get(refIdentity(character.background)) : undefined}
             />
           </label>
@@ -604,14 +614,13 @@ export default function PlayableCharacterSheet({
             <div className="flex flex-wrap items-center gap-2">
               {character.classes.map((c, index) => (
                 <div key={index} className={`flex items-center gap-1 ${index > 0 ? "border-l border-edge/50 pl-2" : ""}`}>
-                  <CompactRuleField
+                  <RuleSelect
                     worldSlug={worldSlug}
                     entryTypes={CLASS_TYPES}
                     value={c.class.kind === "rule" ? c.class.key : ""}
                     onChange={(key) => updateClass(index, { class: { kind: "rule", key } })}
-                    placeholder="fighter"
+                    emptyLabel="Aucune classe"
                     chip={buildChips.get(refIdentity(c.class))}
-                    width="w-16"
                   />
                   <input
                     type="number"
@@ -621,14 +630,13 @@ export default function PlayableCharacterSheet({
                     onChange={(e) => updateClass(index, { level: Math.max(1, Number(e.target.value) || 1) })}
                     className="w-9 rounded-md border border-edge bg-transparent px-1 py-1 text-sm text-ink outline-none"
                   />
-                  <CompactRuleField
+                  <RuleSelect
                     worldSlug={worldSlug}
                     entryTypes={SUBCLASS_TYPES}
                     value={c.subclass?.kind === "rule" ? c.subclass.key : ""}
                     onChange={(key) => updateClass(index, { subclass: ruleRef(key) })}
-                    placeholder="sous-classe"
+                    emptyLabel="Aucune sous-classe"
                     chip={c.subclass ? buildChips.get(refIdentity(c.subclass)) : undefined}
-                    width="w-20"
                   />
                   {character.classes.length > 1 && (
                     <button type="button" onClick={() => removeClass(index)} className="text-xs text-danger hover:underline">
