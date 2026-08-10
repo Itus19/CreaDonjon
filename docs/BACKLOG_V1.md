@@ -643,6 +643,24 @@ Suite de V1-C6 (§B, « Dons — non affichables dans ce ticket »). Plus gros q
 
 *Hors périmètre, à ne pas faire ici : effets mécaniques réels d'un don (voir décision de périmètre ci-dessus) ; amélioration de caractéristique elle-même comme choix concurrent du don (+2 ou don, règle 2014) si elle s'avère être un chantier distinct une fois le premier point de cette liste vérifié.*
 
+### V1-C9 — Onglet Traits : encadrés par élément, sources manquantes · `M`
+
+Relecture du message original de l'utilisateur qui a ouvert V1-C6, point par point, pour vérifier ce qui reste réellement :
+
+> « Dans l'onglet traits j'aimerais qu'il recense tous les traits par type, dons, maîtrises, langues, du personnage. Pour cela il faut qu'il y ait un encadré par élément qui possède le titre du trait, pourquoi le personnage l'a (race, classe, historique, etc.) ainsi que la description du trait dynamiquement liée à la fiche de règle correspondante. »
+
+Maîtrises et langues sont faites (V1-C6), avec une déviation assumée et déjà documentée à l'écrit : pas de lien de fiche de règle pour ces deux catégories, parce que le SRD ne porte aucun texte descriptif dessus (vérifié) — un lien mènerait vers une page vide. Cette déviation n'est pas rouverte ici. **Deux points du message original restent non faits, tous les deux sur les *aptitudes* (dons compris une fois V1-C8 fait), vérifiés contre le code actuel :**
+
+1. **Format d'affichage** — `PlayableCharacterSheet.tsx` (onglet Traits, section « Aptitudes accordées ») affiche aujourd'hui des pilules en ligne (`<RuleChip>`), pas des « encadrés » individuels. La description existe (`chip.summary`, déjà résolue) mais n'apparaît qu'en infobulle au survol (`title=` HTML) — jamais visible directement, contrairement à la demande. La source (race/classe/historique) n'est affichée nulle part, ni en infobulle ni ailleurs.
+2. **Sources manquantes** — `const classFeatures = Object.values(ruleset.features).filter((f) => f.source === "class")` (ligne vérifiée) ne garde que les entrées dont la source est littéralement `"class"`. Or `assembleResolvedRuleset` peuple aussi `ruleset.features` avec les traits d'espèce et d'historique (`source: "species:tiefling"`, `source: "background:acolyte"`) — ce filtre les exclut. Résultat concret : les traits raciaux d'un Tieffelin (Vision dans le noir, Résistance infernale, sorts innés...) n'apparaissent **nulle part** dans la fiche jouable aujourd'hui, alors que la donnée existe déjà et est déjà résolue.
+
+- [ ] Remplacer le filtre `f.source === "class"` par un affichage de **toutes** les entrées de `ruleset.features` référencées par `build.featureKeys` (espèce, historique, classe) — aucun nouvel extracteur, la donnée est déjà là.
+- [ ] Chaque trait devient un encadré (bordure, pas une pilule en ligne) avec trois champs visibles : titre (nom traduit), source (« Guerrier », « Tieffelin », « Acolyte » — dérivée du préfixe de `source`, à formater lisiblement), description (`chip.summary`, déjà récupérée par `useReferenceChips`, seulement pas affichée aujourd'hui).
+- [ ] Un trait dont le renvoi ne résout pas encore (`chip?.found` faux) garde son repli actuel (libellé brut, pas de lien) — comportement déjà correct, à ne pas casser.
+- [ ] Une fois V1-C8 fait, un don choisi apparaît dans ce même format d'encadré, pas un format différent — cohérence visuelle entre les types de traits qui *ont* une description (classe/espèce/historique/dons), par opposition aux maîtrises/langues qui n'en ont pas et restent des badges simples.
+
+*Hors périmètre : rouvrir la décision « pas de lien de règle pour maîtrises/langues » (V1-C6, déjà tranchée et vérifiée contre les données SRD) ; regrouper visuellement par source (un sous-titre « Tieffelin », un autre « Guerrier »...) plutôt qu'une liste plate — à discuter si la liste plate s'avère confuse une fois peuplée avec toutes les sources, pas supposé un problème avant de l'avoir vu.*
+
 ---
 
 ## Lot D — Première assistance IA
@@ -701,11 +719,13 @@ D-01 … D-04                dette, une session
 Lot A  (A1→A2→A3→A4→A5)    les règles deviennent consultables et personnalisables,
                             A5 (traduction FR) ferme le lot une fois la structure stable
 Lot B  (B1→B2→B3→B4→B5)    le personnage devient jouable, B5 le rend interactif
-Lot C  (C1→C2→C3→C4→C5→C6→C7→C8)
+Lot C  (C1→C2→C3→C4→C5→C6→C7→C8→C9)
                             plusieurs personnes, permissions réelles, C4 les correctifs,
                             C5 (sélection de ruleset) n'a de dépendance que sur C1,
                             C6 (Actions/Magie/Traits) n'a de dépendance que sur B5,
-                            C7 (langues d'historique) et C8 (dons) dépendent de C6
+                            C7 (langues d'historique) et C8 (dons) dépendent de C6,
+                            C9 (encadrés de l'onglet Traits) n'a de dépendance que sur C6,
+                            profite de C8 s'il est déjà fait mais ne l'exige pas
 Lot D  (D1→D2→D3→D4)       l'IA, instrumentée dès le premier appel
 ```
 
