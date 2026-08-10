@@ -41,6 +41,12 @@ export const xpChangeSchema = z.object({
   delta: z.number().int(),
 });
 
+/** Clampe a [0, 6] cote serveur (`changeExhaustion`, characterActions.ts) — meme borne que `zRuntimeState.exhaustion`. */
+export const exhaustionChangeSchema = z.object({
+  campaignId: campaignIdField,
+  delta: z.number().int(),
+});
+
 export const resourceUsageSchema = z.object({
   campaignId: campaignIdField,
   trackerId: z.string().min(1),

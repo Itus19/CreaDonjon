@@ -483,9 +483,15 @@ export default function PlayableCharacterSheet({
     reloadRemote();
   }
 
-  /** Champ + boutons (V1-C4 suite, sur retour utilisateur) : remplace les anciens boutons a montant fixe (+100) — on tape le montant une fois, "+"/"-" l'appliquent puis vident le champ. */
+  async function changeExhaustion(delta: number) {
+    patchRuntimeState((state) => ({ ...state, exhaustion: Math.max(0, Math.min(6, state.exhaustion + delta)) }));
+    await postAction("exhaustion", { campaignId, delta });
+    reloadRemote();
+  }
+
+  /** Champ + boutons (V1-C4 suite, sur retour utilisateur) : remplace les anciens boutons a montant fixe (+100) — on tape le montant une fois, "+"/"-" l'appliquent puis vident le champ. Un champ laisse vide vaut 1 (sur retour utilisateur) plutot que de ne rien faire. */
   function applyXpDelta(sign: 1 | -1) {
-    const amount = Math.abs(Math.trunc(Number(xpDelta)));
+    const amount = xpDelta.trim() === "" ? 1 : Math.abs(Math.trunc(Number(xpDelta)));
     if (!amount) return;
     changeXp(sign * amount);
     setXpDelta("");
@@ -493,7 +499,7 @@ export default function PlayableCharacterSheet({
 
   /** Meme motif que `applyXpDelta` (V1-C4 suite, sur retour utilisateur) : remplace les boutons +1/-1 par un champ + boutons, coherent avec l'XP. */
   function applyHpDelta(sign: 1 | -1) {
-    const amount = Math.abs(Math.trunc(Number(hpDelta)));
+    const amount = hpDelta.trim() === "" ? 1 : Math.abs(Math.trunc(Number(hpDelta)));
     if (!amount) return;
     changeHp(sign * amount);
     setHpDelta("");
@@ -522,6 +528,7 @@ export default function PlayableCharacterSheet({
     return ref?.kind === "rule" && Boolean(weaponByKey[ref.key]);
   });
 
+  const exhaustion = runtimeState?.exhaustion ?? 0;
   const hpCurrent = runtimeState?.hp.current ?? hpMax;
   const hpPct = hpMax > 0 ? Math.min(100, Math.max(0, (hpCurrent / hpMax) * 100)) : 0;
   const hpLow = hpMax > 0 && hpCurrent / hpMax <= 0.25;
@@ -675,7 +682,38 @@ export default function PlayableCharacterSheet({
         <StatBadge label="Vitesse" value={`${sheet.speed.value} m`} />
         <StatBadge label="Perception passive" value={String(10 + sheet.skills.perception.mod)} />
         <StatBadge label="Maîtrise" value={`+${sheet.proficiencyBonus}`} />
-        {(runtimeState?.exhaustion ?? 0) > 0 && <StatBadge label="Épuisement" value={String(runtimeState!.exhaustion)} danger />}
+        <div className="flex w-[6.5rem] shrink-0 flex-col items-center gap-1">
+          <span
+            className={`flex h-6 items-end justify-center text-center text-[9px] font-bold uppercase leading-tight tracking-widest ${
+              exhaustion > 0 ? "text-danger" : "text-ink-muted"
+            }`}
+          >
+            Épuisement
+          </span>
+          <div
+            className={`flex h-14 w-full items-center justify-center gap-2 rounded-full border px-1.5 ${
+              exhaustion > 0 ? "border-danger/60 bg-danger/10" : "border-edge bg-panel-raised"
+            }`}
+          >
+            <button
+              type="button"
+              disabled={busy || exhaustion <= 0}
+              onClick={() => changeExhaustion(-1)}
+              className="rounded-full border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-30"
+            >
+              −
+            </button>
+            <span className={`text-base font-semibold ${exhaustion > 0 ? "text-danger" : "text-ink"}`}>{exhaustion}</span>
+            <button
+              type="button"
+              disabled={busy || exhaustion >= 6}
+              onClick={() => changeExhaustion(1)}
+              className="rounded-full border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-30"
+            >
+              +
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col gap-1">
@@ -693,14 +731,14 @@ export default function PlayableCharacterSheet({
             type="number"
             value={hpDelta}
             onChange={(e) => setHpDelta(e.target.value)}
-            placeholder="0"
+            placeholder="1"
             className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
           />
-          <button type="button" disabled={busy || !hpDelta} onClick={() => applyHpDelta(1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
-            +
-          </button>
-          <button type="button" disabled={busy || !hpDelta} onClick={() => applyHpDelta(-1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={() => applyHpDelta(-1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
             −
+          </button>
+          <button type="button" disabled={busy} onClick={() => applyHpDelta(1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
+            +
           </button>
         </div>
       </div>
@@ -720,14 +758,14 @@ export default function PlayableCharacterSheet({
             type="number"
             value={xpDelta}
             onChange={(e) => setXpDelta(e.target.value)}
-            placeholder="0"
+            placeholder="1"
             className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
           />
-          <button type="button" disabled={busy || !xpDelta} onClick={() => applyXpDelta(1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
-            +
-          </button>
-          <button type="button" disabled={busy || !xpDelta} onClick={() => applyXpDelta(-1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={() => applyXpDelta(-1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
             −
+          </button>
+          <button type="button" disabled={busy} onClick={() => applyXpDelta(1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
+            +
           </button>
         </div>
       </div>
@@ -770,7 +808,7 @@ export default function PlayableCharacterSheet({
                           },
                         })
                       }
-                      className="w-10 rounded-full border border-edge bg-panel-sunken px-1 py-0.5 text-center text-xs text-ink-muted outline-none"
+                      className="w-10 rounded-full border border-edge bg-panel-sunken px-1 py-0.5 text-center text-xs text-ink-muted outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
                     <span
                       className={`flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${

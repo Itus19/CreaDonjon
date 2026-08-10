@@ -578,6 +578,24 @@ export async function changeXp(
   });
 }
 
+/** Epuisement +/- (bouton manuel de l'en-tete, V1-C4 suite) — clampe a [0, 6] comme `zRuntimeState.exhaustion`. */
+export async function changeExhaustion(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string | null; delta: number; actorUserId: string }
+): Promise<void> {
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
+  await applyRuntimeStateChange(supabase, {
+    entityId: params.entityId,
+    campaignId: params.campaignId,
+    patch: { exhaustion: Math.max(0, Math.min(6, state.exhaustion + params.delta)) },
+    note: `Épuisement ${params.delta >= 0 ? "+" : ""}${params.delta}`,
+    sessionId,
+    actor: "player",
+    actorUserId: params.actorUserId,
+  });
+}
+
 /** Consommation d'un compteur de ressource (onglet Actions) : +1 usage, ou une remise a une valeur precise (correction manuelle). */
 export async function changeResourceUsage(
   supabase: TypedClient,
