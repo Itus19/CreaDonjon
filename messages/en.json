@@ -61,6 +61,13 @@
     "erreurChargementRulesets": "Could not load the available rules.",
     "erreurChangementRuleset": "Could not switch the active rules — try again.",
     "erreurCreationVariante": "Could not create the variant — check the name and try again.",
+    "supprimerVariante": "Delete this variant",
+    "confirmerSuppressionTitre": "Delete this variant?",
+    "confirmerSuppressionMessage": "\"{name}\" will be permanently deleted. This action cannot be undone.",
+    "supprimer": "Delete",
+    "annuler": "Cancel",
+    "erreurSuppressionEnUtilisation": "This variant is used by a world or a campaign (or is the base of another variant): it cannot be deleted while in use.",
+    "erreurSuppressionVariante": "Could not delete this variant — try again.",
     "refKinds": {
       "uses_rule": "uses",
       "applies_condition": "applies",

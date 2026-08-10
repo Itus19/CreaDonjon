@@ -70,6 +70,31 @@ export async function insertRulesetVariant(
   return data;
 }
 
+export type DeleteRulesetOutcome = "deleted" | "not_found" | "in_use";
+
+/**
+ * Supprime une variante (V1-C5 suite). Trois issues, jamais une exception
+ * pour les deux dernieres — ce sont des refus attendus, pas une panne :
+ * - `not_found` : RLS (`rulesets_write`, `created_by = auth.uid()`) a
+ *   bloque en silence (0 ligne supprimee) — recouvre a la fois "n'existe
+ *   pas" et "appartient a quelqu'un d'autre", indiscernables depuis l'exterieur.
+ * - `in_use` : contrainte de cle etrangere refusee (23503) — un monde ou
+ *   une campagne pointe encore dessus (`worlds.default_ruleset_id`,
+ *   `campaigns.ruleset_id`, aucune n'a de `on delete cascade`), ou une
+ *   autre variante a `parent_ruleset_id` pointant ici. Pas de verification
+ *   prealable de chacun de ces trois cas : la contrainte fait deja ce
+ *   travail de maniere atomique, la dupliquer cote application ouvrirait
+ *   une fenetre de race (verifie -> plus vrai -> supprime quand meme).
+ */
+export async function deleteRuleset(supabase: TypedClient, id: string): Promise<DeleteRulesetOutcome> {
+  const { error, count } = await supabase.from("rulesets").delete({ count: "exact" }).eq("id", id);
+  if (error) {
+    if (error.code === "23503") return "in_use";
+    throw new Error(error.message);
+  }
+  return (count ?? 0) > 0 ? "deleted" : "not_found";
+}
+
 export interface RulesetOverrideRow {
   block_type: string | null;
   action: string;

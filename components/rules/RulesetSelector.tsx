@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 interface SelectableRuleset {
   id: string;
@@ -41,6 +42,7 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
   const [current, setCurrent] = useState<string | null>(null);
   const [variantName, setVariantName] = useState("");
   const [variantParentId, setVariantParentId] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<SelectableRuleset | null>(null);
 
   function openSelector() {
     setOpen(true);
@@ -93,6 +95,24 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
     const created = (await res.json()) as { id: string };
     setVariantName("");
     await choose(created.id);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/rulesets/${deleteTarget.id}`, { method: "DELETE" });
+    setBusy(false);
+    setDeleteTarget(null);
+    if (!res.ok) {
+      if (res.status === 409) {
+        setError(t("erreurSuppressionEnUtilisation"));
+      } else {
+        setError(t("erreurSuppressionVariante"));
+      }
+      return;
+    }
+    setOptions((prev) => prev.filter((o) => o.id !== deleteTarget.id));
   }
 
   const officials = options.filter((o) => o.is_official_base);
@@ -155,18 +175,32 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
                         </span>
                         <span className="text-sm text-ink">{ruleset.name}</span>
                       </div>
-                      {ruleset.id === current ? (
-                        <span className="text-xs font-medium text-accent">{t("rulesetActuel")}</span>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => choose(ruleset.id)}
-                          className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel disabled:opacity-50"
-                        >
-                          {t("choisir")}
-                        </button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {ruleset.id === current ? (
+                          <span className="text-xs font-medium text-accent">{t("rulesetActuel")}</span>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => choose(ruleset.id)}
+                            className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel disabled:opacity-50"
+                          >
+                            {t("choisir")}
+                          </button>
+                        )}
+                        {!ruleset.is_official_base && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setDeleteTarget(ruleset)}
+                            aria-label={t("supprimerVariante")}
+                            title={t("supprimerVariante")}
+                            className="text-sm text-danger hover:underline disabled:opacity-50"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -209,6 +243,17 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
           </div>,
           document.body
         )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={t("confirmerSuppressionTitre")}
+        message={deleteTarget ? t("confirmerSuppressionMessage", { name: deleteTarget.name }) : ""}
+        confirmLabel={t("supprimer")}
+        cancelLabel={t("annuler")}
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </>
   );
 }

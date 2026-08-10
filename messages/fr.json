@@ -61,6 +61,13 @@
     "erreurChargementRulesets": "Impossible de charger les règles disponibles.",
     "erreurChangementRuleset": "Impossible de changer les règles actives — réessayez.",
     "erreurCreationVariante": "Impossible de créer la variante — vérifiez le nom et réessayez.",
+    "supprimerVariante": "Supprimer cette variante",
+    "confirmerSuppressionTitre": "Supprimer cette variante ?",
+    "confirmerSuppressionMessage": "« {name} » sera définitivement supprimée. Cette action est irréversible.",
+    "supprimer": "Supprimer",
+    "annuler": "Annuler",
+    "erreurSuppressionEnUtilisation": "Cette variante est utilisée par un monde ou une campagne (ou sert de base à une autre variante) : elle ne peut pas être supprimée tant qu'elle est utilisée.",
+    "erreurSuppressionVariante": "Impossible de supprimer cette variante — réessayez.",
     "refKinds": {
       "uses_rule": "utilise",
       "applies_condition": "applique",

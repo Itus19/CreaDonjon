@@ -23,6 +23,7 @@ import {
   type ResolvableEntry,
 } from "@/src/core/rules/resolve";
 import {
+  deleteRuleset,
   getEntryTranslation,
   getRulesetById,
   getRulesetEntryByKey,
@@ -35,6 +36,7 @@ import {
   listRulesetEntriesByKeys,
   listSelectableRulesets,
   listTranslationsForEntries,
+  type DeleteRulesetOutcome,
   type SelectableRulesetRow,
   type RulesetEntryRow,
 } from "@/src/server/repos/rules";
@@ -493,4 +495,17 @@ export async function createRulesetVariant(
     parentRulesetId: parent.id,
     createdBy: user.id,
   });
+}
+
+/**
+ * Supprime une variante — jamais un officiel (verifie explicitement en plus
+ * de la RLS, qui l'interdirait de toute facon via `created_by = auth.uid()`
+ * puisqu'un officiel n'a pas de createur : demande utilisateur au pied de
+ * la lettre, « un bouton de suppression pour les regles autres que srd 5.1
+ * et 5.2 »).
+ */
+export async function deleteRulesetVariant(supabase: TypedClient, rulesetId: string): Promise<DeleteRulesetOutcome> {
+  const ruleset = await getRulesetById(supabase, rulesetId);
+  if (!ruleset || ruleset.is_official_base) return "not_found";
+  return deleteRuleset(supabase, rulesetId);
 }
