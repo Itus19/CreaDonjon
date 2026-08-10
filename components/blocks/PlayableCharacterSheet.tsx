@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
@@ -8,6 +9,8 @@ import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasti
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import {
   characterSheet,
+  SKILLS,
+  SKILL_ABILITIES,
   type Ability,
   type CharacterBuild,
   type DerivedSheet,
@@ -19,15 +22,13 @@ import { evaluate, type TraceStep } from "@/src/core/formula/evaluate";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
 import { useResolvedRuleset, type RemainingChoiceView } from "./useResolvedRuleset";
-import { useReferenceChips, refIdentity } from "./useReferenceChips";
+import { useReferenceChips, refIdentity, type ResolvedChipView } from "./useReferenceChips";
 import RuleChip from "@/components/rules/RuleChip";
-import ReferenceChipDisplay from "./ReferenceChipDisplay";
 import InventoryBlockEditor, { itemLabel, itemRef } from "./InventoryBlockEditor";
 import RuleEntryAutocomplete from "./RuleEntryAutocomplete";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
-import { SKILLS, SKILL_ABILITIES } from "@/src/core/rules/sheet";
 
 const ABILITY_LABELS: Record<Ability, string> = {
   str: "FOR",
@@ -40,6 +41,12 @@ const ABILITY_LABELS: Record<Ability, string> = {
 
 /** Compétences triées par libellé FR (V1-C4 suite) — même ordre que la référence visuelle fournie par l'utilisateur. */
 const SORTED_SKILLS = [...SKILLS].sort((a, b) => SKILL_LABELS_FR[a].localeCompare(SKILL_LABELS_FR[b]));
+
+/** Seuils de PX cumulés par niveau total (règle officielle 5e, identique SRD 2014/2024) — sert uniquement à dessiner la barre de progression ; aucune montée de niveau n'est automatisée à partir de ces valeurs. */
+const XP_LEVEL_THRESHOLDS = [
+  0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000,
+  265000, 305000, 355000,
+];
 
 const RECHARGE_LABELS: Record<string, string> = {
   short_rest: "repos court",
@@ -89,6 +96,66 @@ function resourceMax(tracker: { max: { formula: import("@/src/core/formula/ast")
   }
 }
 
+/**
+ * Champ de règle compact (V1-C4 suite, sur retour utilisateur) : fusionne le
+ * champ éditable et le renvoi vers la fiche de règle en un seul élément
+ * plutôt qu'un champ + une pastille séparée — gagne de la place sur la ligne
+ * d'en-tête. Toujours éditable (pas de mode édition, cf. décision actée dans
+ * BACKLOG_V1.md), l'icône de lien n'apparaît que si la clé tapée résout
+ * vraiment vers une entrée de règle. Couleur reprise de `RuleChip`
+ * (`--link-rule`, specs/coquille-et-design.md §1) — même sens, pas une
+ * couleur inventée.
+ */
+function CompactRuleField({
+  worldSlug,
+  entryTypes,
+  value,
+  onChange,
+  placeholder,
+  chip,
+  width = "w-20",
+}: {
+  worldSlug: string;
+  entryTypes: readonly string[];
+  value: string;
+  onChange: (key: string) => void;
+  placeholder?: string;
+  chip: ResolvedChipView | undefined;
+  width?: string;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <div className={width}>
+        <RuleEntryAutocomplete worldSlug={worldSlug} entryTypes={entryTypes} value={value} onChange={onChange} placeholder={placeholder} />
+      </div>
+      {chip?.found && (
+        <Link
+          href={chip.href}
+          title={chip.summary ?? chip.name}
+          className="shrink-0 text-sm no-underline transition-opacity hover:opacity-70"
+          style={{ color: "var(--link-rule)" }}
+        >
+          ↗
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/** Badge de statistique en forme de carte (V1-C4 suite) : la charte interdit les couleurs codées en dur (specs/coquille-et-design.md §2), donc CA/Initiative/Vitesse/etc. se distinguent par forme et libellé plutôt que par une couleur inventée par stat. */
+function StatBadge({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
+  return (
+    <div
+      className={`flex w-[4.5rem] shrink-0 flex-col items-center gap-0.5 rounded-md border px-2 py-1.5 text-center ${
+        danger ? "border-danger/60 bg-danger/10" : "border-edge bg-panel-raised"
+      }`}
+    >
+      <span className={`text-[9px] font-bold uppercase leading-tight tracking-widest ${danger ? "text-danger" : "text-ink-muted"}`}>{label}</span>
+      <span className={`text-base font-semibold ${danger ? "text-danger" : "text-ink"}`}>{value}</span>
+    </div>
+  );
+}
+
 interface RollLogEntry {
   id: string;
   label: string;
@@ -120,6 +187,13 @@ interface SheetApiResponse {
  * campagne dans l'URL aujourd'hui) — `campaignId` reste `null` ici, les
  * jets sont donc des essais non enregistres (specs §A1). Le brancher sur
  * une vraie campagne est un cablage de navigation a part, pas ce ticket.
+ *
+ * Mise en page (V1-C4 suite, sur retour utilisateur avec captures d'ecran de
+ * reference) : colonne gauche persistante (caracteristiques + competences,
+ * visible quel que soit l'onglet actif) + fenetre a onglets a droite
+ * (Actions/Magie/Inventaire/Traits), au lieu d'un seul bloc qui remplacait
+ * tout son contenu par onglet. Empile en une colonne sous `md` pour
+ * preserver la lisibilite a 375px (critere deja acquis en V1-B5).
  */
 export default function PlayableCharacterSheet({
   worldSlug,
@@ -148,6 +222,7 @@ export default function PlayableCharacterSheet({
   const [pendingCrit, setPendingCrit] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [xpDelta, setXpDelta] = useState("");
 
   /** Onglet Traits (V1-C4 suite) : meme bloc `character` que le reste de la fiche, une seule donnee, plusieurs vues — meme motif que `onUpdateInventory`. */
   function patchCharacter(fields: Partial<CharacterBlockData>) {
@@ -243,12 +318,6 @@ export default function PlayableCharacterSheet({
     [spellcasting]
   );
   const spellChips = useReferenceChips(worldSlug, knownSpellRefs);
-
-  const inventoryRefs = useMemo(
-    () => (inventory?.items ?? []).map(itemRef).filter((r): r is NonNullable<ReturnType<typeof itemRef>> => r !== null),
-    [inventory]
-  );
-  const inventoryChips = useReferenceChips(worldSlug, inventoryRefs);
 
   const buildRefs = useMemo(() => {
     const refs: BlockReference[] = [];
@@ -397,6 +466,14 @@ export default function PlayableCharacterSheet({
     reloadRemote();
   }
 
+  /** Champ + boutons (V1-C4 suite, sur retour utilisateur) : remplace les anciens boutons a montant fixe (+100) — on tape le montant une fois, "+"/"-" l'appliquent puis vident le champ. */
+  function applyXpDelta(sign: 1 | -1) {
+    const amount = Math.abs(Math.trunc(Number(xpDelta)));
+    if (!amount) return;
+    changeXp(sign * amount);
+    setXpDelta("");
+  }
+
   function exportJson() {
     const a = document.createElement("a");
     a.href = `/api/entities/${entityId}/export`;
@@ -420,7 +497,16 @@ export default function PlayableCharacterSheet({
     return ref?.kind === "rule" && Boolean(weaponByKey[ref.key]);
   });
 
-  const classesLabel = build.classes.map((c) => `${ruleset.classes[c.key]?.label ?? c.key} ${c.level}`).join(" / ");
+  const hpCurrent = runtimeState?.hp.current ?? hpMax;
+  const hpPct = hpMax > 0 ? Math.min(100, Math.max(0, (hpCurrent / hpMax) * 100)) : 0;
+  const hpLow = hpMax > 0 && hpCurrent / hpMax <= 0.25;
+
+  const totalLevel = Math.max(1, character.classes.reduce((sum, c) => sum + c.level, 0));
+  const levelIndex = Math.min(totalLevel, XP_LEVEL_THRESHOLDS.length) - 1;
+  const xpFloor = XP_LEVEL_THRESHOLDS[levelIndex] ?? 0;
+  const xpCeiling = XP_LEVEL_THRESHOLDS[levelIndex + 1] ?? xpFloor;
+  const xpCurrent = runtimeState?.xp ?? 0;
+  const xpPct = xpCeiling > xpFloor ? Math.min(100, Math.max(0, ((xpCurrent - xpFloor) / (xpCeiling - xpFloor)) * 100)) : 100;
 
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-md border border-edge/60 bg-panel-raised p-3">
@@ -428,38 +514,74 @@ export default function PlayableCharacterSheet({
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
             Espèce
-            <div className="flex items-center gap-1">
-              <div className="w-24">
-                <RuleEntryAutocomplete
-                  worldSlug={worldSlug}
-                  entryTypes={SPECIES_TYPES}
-                  value={character.species?.kind === "rule" ? character.species.key : ""}
-                  onChange={(key) => patchCharacter({ species: ruleRef(key) })}
-                  placeholder="dwarf"
-                />
-              </div>
-              {character.species && (
-                <ReferenceChipDisplay reference={character.species} chip={buildChips.get(refIdentity(character.species))} />
-              )}
-            </div>
+            <CompactRuleField
+              worldSlug={worldSlug}
+              entryTypes={SPECIES_TYPES}
+              value={character.species?.kind === "rule" ? character.species.key : ""}
+              onChange={(key) => patchCharacter({ species: ruleRef(key) })}
+              placeholder="dwarf"
+              chip={character.species ? buildChips.get(refIdentity(character.species)) : undefined}
+            />
           </label>
           <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
             Historique
-            <div className="flex items-center gap-1">
-              <div className="w-24">
-                <RuleEntryAutocomplete
-                  worldSlug={worldSlug}
-                  entryTypes={BACKGROUND_TYPES}
-                  value={character.background?.kind === "rule" ? character.background.key : ""}
-                  onChange={(key) => patchCharacter({ background: ruleRef(key) })}
-                  placeholder="soldier"
-                />
-              </div>
-              {character.background && (
-                <ReferenceChipDisplay reference={character.background} chip={buildChips.get(refIdentity(character.background))} />
-              )}
-            </div>
+            <CompactRuleField
+              worldSlug={worldSlug}
+              entryTypes={BACKGROUND_TYPES}
+              value={character.background?.kind === "rule" ? character.background.key : ""}
+              onChange={(key) => patchCharacter({ background: ruleRef(key) })}
+              placeholder="soldier"
+              chip={character.background ? buildChips.get(refIdentity(character.background)) : undefined}
+            />
           </label>
+          <div className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+            Classes
+            <div className="flex flex-wrap items-center gap-1.5">
+              {character.classes.map((c, index) => (
+                <div key={index} className="flex items-center gap-1 rounded-md border border-edge/60 px-1.5 py-1">
+                  <CompactRuleField
+                    worldSlug={worldSlug}
+                    entryTypes={CLASS_TYPES}
+                    value={c.class.kind === "rule" ? c.class.key : ""}
+                    onChange={(key) => updateClass(index, { class: { kind: "rule", key } })}
+                    placeholder="fighter"
+                    chip={buildChips.get(refIdentity(c.class))}
+                    width="w-16"
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    value={c.level}
+                    title="Niveau"
+                    onChange={(e) => updateClass(index, { level: Math.max(1, Number(e.target.value) || 1) })}
+                    className="w-9 rounded-md border border-edge bg-transparent px-1 py-1 text-sm text-ink outline-none"
+                  />
+                  <CompactRuleField
+                    worldSlug={worldSlug}
+                    entryTypes={SUBCLASS_TYPES}
+                    value={c.subclass?.kind === "rule" ? c.subclass.key : ""}
+                    onChange={(key) => updateClass(index, { subclass: ruleRef(key) })}
+                    placeholder="sous-classe"
+                    chip={c.subclass ? buildChips.get(refIdentity(c.subclass)) : undefined}
+                    width="w-20"
+                  />
+                  {character.classes.length > 1 && (
+                    <button type="button" onClick={() => removeClass(index)} className="text-xs text-danger hover:underline">
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addClass}
+                title="Ajouter une classe"
+                className="rounded-full border border-edge px-2 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+              >
+                +
+              </button>
+            </div>
+          </div>
           <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
             Genre
             <Dropdown
@@ -493,7 +615,6 @@ export default function PlayableCharacterSheet({
               className="w-24 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
             />
           </label>
-          {classesLabel && <span className="pb-1.5 text-xs text-ink-muted">{classesLabel}</span>}
         </div>
         <div className="flex gap-2">
           <button type="button" disabled={busy} onClick={() => rest("short")} className="rounded-full border border-edge px-2.5 py-1 text-xs text-ink hover:bg-panel disabled:opacity-50">
@@ -514,52 +635,69 @@ export default function PlayableCharacterSheet({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4">
-        <div>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">CA</span>
-          <p className="text-lg font-semibold text-ink">{sheet.ac.value}</p>
-        </div>
-        <div>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Initiative</span>
-          <p className="text-lg font-semibold text-ink">{sheet.abilities.dex.mod >= 0 ? "+" : ""}{sheet.abilities.dex.mod}</p>
-        </div>
-        <div>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Vitesse</span>
-          <p className="text-lg font-semibold text-ink">{sheet.speed.value} m</p>
-        </div>
-        <div>
-          <span className="flex flex-col text-[10px] font-bold uppercase leading-tight tracking-widest text-ink-muted">
-            <span>Perception</span>
-            <span>passive</span>
-          </span>
-          <p className="text-lg font-semibold text-ink">{10 + sheet.skills.perception.mod}</p>
-        </div>
-        <div>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Maîtrise</span>
-          <p className="text-lg font-semibold text-ink">+{sheet.proficiencyBonus}</p>
-        </div>
-        <div>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">PV</span>
-          <p className="flex items-center gap-1 text-lg font-semibold text-ink">
-            <button type="button" disabled={busy} onClick={() => changeHp(-1)} className="rounded border border-edge px-1.5 text-xs">−</button>
-            {runtimeState?.hp.current ?? hpMax}/{hpMax}
-            <button type="button" disabled={busy} onClick={() => changeHp(1)} className="rounded border border-edge px-1.5 text-xs">+</button>
-          </p>
-        </div>
-        <div>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">XP</span>
-          <p className="flex items-center gap-1 text-lg font-semibold text-ink">
-            <button type="button" disabled={busy} onClick={() => changeXp(-100)} className="rounded border border-edge px-1.5 text-xs">−100</button>
-            {runtimeState?.xp ?? 0}
-            <button type="button" disabled={busy} onClick={() => changeXp(100)} className="rounded border border-edge px-1.5 text-xs">+100</button>
-          </p>
-        </div>
-        {(runtimeState?.exhaustion ?? 0) > 0 && (
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-danger">Épuisement</span>
-            <p className="text-lg font-semibold text-danger">{runtimeState!.exhaustion}</p>
+      <div className="flex flex-wrap items-start gap-2">
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-ink-muted">CA</span>
+          <div
+            className="flex h-14 w-12 items-center justify-center border-2 border-accent bg-panel-raised text-xl font-bold text-ink"
+            style={{ clipPath: "polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)" }}
+            title="Classe d'armure"
+          >
+            {sheet.ac.value}
           </div>
-        )}
+        </div>
+        <StatBadge label="Initiative" value={`${sheet.abilities.dex.mod >= 0 ? "+" : ""}${sheet.abilities.dex.mod}`} />
+        <StatBadge label="Vitesse" value={`${sheet.speed.value} m`} />
+        <StatBadge label="Perception passive" value={String(10 + sheet.skills.perception.mod)} />
+        <StatBadge label="Maîtrise" value={`+${sheet.proficiencyBonus}`} />
+        {(runtimeState?.exhaustion ?? 0) > 0 && <StatBadge label="Épuisement" value={String(runtimeState!.exhaustion)} danger />}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+          <span>Points de vie</span>
+          <span className={hpLow ? "text-danger" : "text-ink-muted"}>
+            {hpCurrent}/{hpMax}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button type="button" disabled={busy} onClick={() => changeHp(-1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
+            −
+          </button>
+          <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-panel-sunken">
+            <div className={`h-full rounded-full transition-[width] ${hpLow ? "bg-danger" : "bg-accent"}`} style={{ width: `${hpPct}%` }} />
+          </div>
+          <button type="button" disabled={busy} onClick={() => changeHp(1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
+            +
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1 border-b border-edge/60 pb-3">
+        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+          <span>Expérience</span>
+          <span>
+            {xpCurrent} XP{totalLevel < XP_LEVEL_THRESHOLDS.length ? ` · niveau ${totalLevel + 1} à ${xpCeiling}` : ""}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-panel-sunken">
+            <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${xpPct}%` }} />
+          </div>
+          <input
+            type="number"
+            value={xpDelta}
+            onChange={(e) => setXpDelta(e.target.value)}
+            placeholder="0"
+            className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+          />
+          <button type="button" disabled={busy || !xpDelta} onClick={() => applyXpDelta(1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
+            +
+          </button>
+          <button type="button" disabled={busy || !xpDelta} onClick={() => applyXpDelta(-1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
+            −
+          </button>
+        </div>
       </div>
 
       {sheet.warnings.length > 0 && (
@@ -575,183 +713,8 @@ export default function PlayableCharacterSheet({
 
       {error && <p className="text-xs text-danger">{error}</p>}
 
-      <div className="flex gap-1 border-b border-edge/60 text-xs">
-        {(["actions", "magie", "inventaire", "traits"] as Tab[])
-          .filter((t) => t !== "magie" || spellcasting)
-          .map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={`rounded-t-md px-3 py-1.5 capitalize transition-colors ${
-                tab === t ? "border-b-2 border-accent text-ink" : "text-ink-muted hover:text-ink"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-      </div>
-
-      {tab === "actions" && (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-1 text-xs">
-            <span className="text-ink-muted">Prochain jet :</span>
-            {(["disadvantage", "normal", "advantage"] as AdvantageState[]).map((a) => (
-              <button
-                key={a}
-                type="button"
-                onClick={() => setAdvantage(a)}
-                className={`rounded-full border px-2 py-0.5 ${advantage === a ? "border-accent text-accent" : "border-edge text-ink-muted"}`}
-              >
-                {a === "normal" ? "normal" : a === "advantage" ? "avantage" : "désavantage"}
-              </button>
-            ))}
-          </div>
-
-          {equippedWeapons.length === 0 && <p className="text-sm text-ink-muted">Aucune arme équipée.</p>}
-          {equippedWeapons.map((item) => {
-            const ref = itemRef(item);
-            const weapon = ref?.kind === "rule" ? weaponByKey[ref.key] : null;
-            return (
-              <div key={item.id} className="flex flex-wrap items-center gap-2 rounded-md border border-edge/60 px-2.5 py-1.5 text-sm">
-                <span className="font-medium text-ink">{itemLabel(item)}</span>
-                <button type="button" disabled={busy} onClick={() => attack(item)} className="rounded-full border border-edge px-2.5 py-1 text-xs hover:bg-panel disabled:opacity-50">
-                  Attaquer
-                </button>
-                <button type="button" disabled={busy} onClick={() => damage(item, false)} className="rounded-full border border-edge px-2.5 py-1 text-xs hover:bg-panel disabled:opacity-50">
-                  Dégâts
-                </button>
-                {weapon?.versatileDamageDice && (
-                  <button type="button" disabled={busy} onClick={() => damage(item, true)} className="rounded-full border border-edge px-2.5 py-1 text-xs hover:bg-panel disabled:opacity-50">
-                    Dégâts (2 mains)
-                  </button>
-                )}
-              </div>
-            );
-          })}
-
-          {(resources?.trackers.length ?? 0) > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Ressources</span>
-              {resources!.trackers.map((tracker) => {
-                const max = resourceMax(tracker);
-                const used = runtimeState?.resources[tracker.id] ?? 0;
-                return (
-                  <div key={tracker.id} className="flex items-center gap-2 text-sm">
-                    <span className="flex-1 text-ink">{tracker.label}</span>
-                    <span className="text-ink-muted">
-                      {Math.max(0, max - used)}/{max} · {RECHARGE_LABELS[tracker.recharge] ?? tracker.recharge}
-                    </span>
-                    <button type="button" disabled={busy || used >= max} onClick={() => changeResource(tracker.id, 1)} className="rounded border border-edge px-1.5 text-xs disabled:opacity-50">
-                      utiliser
-                    </button>
-                    <button type="button" disabled={busy || used <= 0} onClick={() => changeResource(tracker.id, -1)} className="rounded border border-edge px-1.5 text-xs disabled:opacity-50">
-                      annuler
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {rollLog.length > 0 && (
-            <div className="flex flex-col gap-1.5 rounded-md border border-edge/60 bg-panel-sunken p-2">
-              {rollLog.map((entry) => (
-                <div key={entry.id} className="text-xs">
-                  <p className="text-ink">
-                    <span className="font-semibold">{entry.label} : {entry.total}</span>
-                    {entry.isCritical && <span className="ml-1 text-accent">critique !</span>}
-                    {entry.isCriticalFail && <span className="ml-1 text-danger">échec critique</span>}
-                  </p>
-                  {entry.trace.length > 0 && <p className="text-ink-muted">{entry.trace.map((s) => s.text).join(" ; ")}</p>}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === "magie" && spellcasting && (
-        <div className="flex flex-col gap-2">
-          {(spellcasting.known ?? []).map((known) => {
-            const chip = spellChips.get(refIdentity(known.ref));
-            const label = chip?.found ? chip.name : known.ref.kind === "rule" ? known.ref.key : known.ref.id;
-            return (
-              <div key={refIdentity(known.ref)} className="flex flex-wrap items-center gap-2 rounded-md border border-edge/60 px-2.5 py-1.5 text-sm">
-                <span className="flex-1 text-ink">{label}</span>
-                {Object.entries(sheet.spellcasting?.slots ?? {}).map(([level, total]) => {
-                  const used = runtimeState?.spell_slots_used[level] ?? 0;
-                  const available = total - used > 0;
-                  return (
-                    <button
-                      key={level}
-                      type="button"
-                      disabled={busy || !available}
-                      title={available ? `Lancer au niveau ${level}` : "Aucun emplacement disponible"}
-                      onClick={() => known.ref.kind === "rule" && cast(known.ref.key, label, Number(level))}
-                      className="rounded-full border border-edge px-2 py-0.5 text-xs disabled:opacity-30"
-                    >
-                      niv. {level} ({Math.max(0, total - used)}/{total})
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })}
-          {(spellcasting.known ?? []).length === 0 && <p className="text-sm text-ink-muted">Aucun sort connu.</p>}
-        </div>
-      )}
-
-      {tab === "inventaire" && (
-        <InventoryBlockEditor worldSlug={worldSlug} data={inventory ?? { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } }} onChange={onUpdateInventory} />
-      )}
-
-      {tab === "traits" && (
-        <div className="flex flex-col gap-4 text-sm">
-          <div className="flex flex-col gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Classes</span>
-            {character.classes.map((c, index) => (
-              <div key={index} className="flex flex-wrap items-center gap-2 border-b border-edge/40 py-1.5">
-                <div className="w-28">
-                  <RuleEntryAutocomplete
-                    worldSlug={worldSlug}
-                    entryTypes={CLASS_TYPES}
-                    value={c.class.kind === "rule" ? c.class.key : ""}
-                    onChange={(key) => updateClass(index, { class: { kind: "rule", key } })}
-                    placeholder="fighter"
-                  />
-                </div>
-                <input
-                  type="number"
-                  min={1}
-                  value={c.level}
-                  onChange={(e) => updateClass(index, { level: Math.max(1, Number(e.target.value) || 1) })}
-                  className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-                />
-                <div className="flex-1">
-                  <RuleEntryAutocomplete
-                    worldSlug={worldSlug}
-                    entryTypes={SUBCLASS_TYPES}
-                    value={c.subclass?.kind === "rule" ? c.subclass.key : ""}
-                    onChange={(key) => updateClass(index, { subclass: ruleRef(key) })}
-                    placeholder="sous-classe (optionnel)"
-                  />
-                </div>
-                <ReferenceChipDisplay reference={c.class} chip={buildChips.get(refIdentity(c.class))} />
-                <button type="button" onClick={() => removeClass(index)} className="text-xs text-danger hover:underline">
-                  ×
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={addClass}
-              className="self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
-            >
-              + Ajouter une classe
-            </button>
-          </div>
-
+      <div className="flex flex-col gap-4 md:flex-row">
+        <aside className="flex flex-col gap-3 md:w-56 md:shrink-0">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Caractéristiques</span>
@@ -768,11 +731,11 @@ export default function PlayableCharacterSheet({
                 aria-label="Méthode d'attribution"
               />
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {(Object.keys(ABILITY_LABELS) as Ability[]).map((ability) => {
                 const save = sheet.savingThrows[ability];
                 return (
-                  <label key={ability} className="flex flex-col gap-1 text-xs text-ink-muted">
+                  <label key={ability} className="flex flex-col gap-1 rounded-md border border-edge/60 bg-panel-raised px-2 py-1.5 text-[10px] text-ink-muted">
                     {ABILITY_LABELS[ability]} ({sheet.abilities[ability].mod >= 0 ? "+" : ""}
                     {sheet.abilities[ability].mod})
                     <input
@@ -786,13 +749,10 @@ export default function PlayableCharacterSheet({
                           },
                         })
                       }
-                      className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                      className="w-full rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
                     />
                     <span className="flex items-center gap-1 whitespace-nowrap">
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${save.proficient ? "bg-accent" : "bg-edge"}`}
-                        aria-hidden="true"
-                      />
+                      <span className={`h-1.5 w-1.5 rounded-full ${save.proficient ? "bg-accent" : "bg-edge"}`} aria-hidden="true" />
                       Sauv. {save.mod >= 0 ? "+" : ""}
                       {save.mod}
                     </span>
@@ -819,7 +779,7 @@ export default function PlayableCharacterSheet({
                 })}
               </div>
             )}
-            <div className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
               {SORTED_SKILLS.map((skill) => {
                 const result = sheet.skills[skill];
                 const choice = skillChoices.get(skill);
@@ -895,34 +855,163 @@ export default function PlayableCharacterSheet({
               aria-label="Méthode de points de vie"
             />
           </div>
+        </aside>
 
-          {classFeatures.length > 0 && (
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Aptitudes accordées</span>
-              <div className="flex flex-wrap gap-2">
-                {classFeatures.map((f) => {
-                  const chip = featureChips.get(refIdentity({ kind: "rule", key: f.key }));
-                  return chip?.found ? (
-                    <RuleChip key={f.key} href={chip.href} label={chip.name} summary={chip.summary} />
-                  ) : (
-                    <span key={f.key} className="text-xs italic text-ink-muted">{f.label}</span>
-                  );
-                })}
+        <div className="min-w-0 flex-1">
+          <div className="flex gap-1 border-b border-edge/60 text-xs">
+            {(["actions", "magie", "inventaire", "traits"] as Tab[])
+              .filter((t) => t !== "magie" || spellcasting)
+              .map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTab(t)}
+                  className={`rounded-t-md px-3 py-1.5 capitalize transition-colors ${
+                    tab === t ? "border-b-2 border-accent text-ink" : "text-ink-muted hover:text-ink"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+          </div>
+
+          {tab === "actions" && (
+            <div className="flex flex-col gap-3 pt-3">
+              <div className="flex items-center gap-1 text-xs">
+                <span className="text-ink-muted">Prochain jet :</span>
+                {(["disadvantage", "normal", "advantage"] as AdvantageState[]).map((a) => (
+                  <button
+                    key={a}
+                    type="button"
+                    onClick={() => setAdvantage(a)}
+                    className={`rounded-full border px-2 py-0.5 ${advantage === a ? "border-accent text-accent" : "border-edge text-ink-muted"}`}
+                  >
+                    {a === "normal" ? "normal" : a === "advantage" ? "avantage" : "désavantage"}
+                  </button>
+                ))}
               </div>
+
+              {equippedWeapons.length === 0 && <p className="text-sm text-ink-muted">Aucune arme équipée.</p>}
+              {equippedWeapons.map((item) => {
+                const ref = itemRef(item);
+                const weapon = ref?.kind === "rule" ? weaponByKey[ref.key] : null;
+                return (
+                  <div key={item.id} className="flex flex-wrap items-center gap-2 rounded-md border border-edge/60 px-2.5 py-1.5 text-sm">
+                    <span className="font-medium text-ink">{itemLabel(item)}</span>
+                    <button type="button" disabled={busy} onClick={() => attack(item)} className="rounded-full border border-edge px-2.5 py-1 text-xs hover:bg-panel disabled:opacity-50">
+                      Attaquer
+                    </button>
+                    <button type="button" disabled={busy} onClick={() => damage(item, false)} className="rounded-full border border-edge px-2.5 py-1 text-xs hover:bg-panel disabled:opacity-50">
+                      Dégâts
+                    </button>
+                    {weapon?.versatileDamageDice && (
+                      <button type="button" disabled={busy} onClick={() => damage(item, true)} className="rounded-full border border-edge px-2.5 py-1 text-xs hover:bg-panel disabled:opacity-50">
+                        Dégâts (2 mains)
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {(resources?.trackers.length ?? 0) > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Ressources</span>
+                  {resources!.trackers.map((tracker) => {
+                    const max = resourceMax(tracker);
+                    const used = runtimeState?.resources[tracker.id] ?? 0;
+                    return (
+                      <div key={tracker.id} className="flex items-center gap-2 text-sm">
+                        <span className="flex-1 text-ink">{tracker.label}</span>
+                        <span className="text-ink-muted">
+                          {Math.max(0, max - used)}/{max} · {RECHARGE_LABELS[tracker.recharge] ?? tracker.recharge}
+                        </span>
+                        <button type="button" disabled={busy || used >= max} onClick={() => changeResource(tracker.id, 1)} className="rounded border border-edge px-1.5 text-xs disabled:opacity-50">
+                          utiliser
+                        </button>
+                        <button type="button" disabled={busy || used <= 0} onClick={() => changeResource(tracker.id, -1)} className="rounded border border-edge px-1.5 text-xs disabled:opacity-50">
+                          annuler
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {rollLog.length > 0 && (
+                <div className="flex flex-col gap-1.5 rounded-md border border-edge/60 bg-panel-sunken p-2">
+                  {rollLog.map((entry) => (
+                    <div key={entry.id} className="text-xs">
+                      <p className="text-ink">
+                        <span className="font-semibold">{entry.label} : {entry.total}</span>
+                        {entry.isCritical && <span className="ml-1 text-accent">critique !</span>}
+                        {entry.isCriticalFail && <span className="ml-1 text-danger">échec critique</span>}
+                      </p>
+                      {entry.trace.length > 0 && <p className="text-ink-muted">{entry.trace.map((s) => s.text).join(" ; ")}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Objets</span>
-            <div className="flex flex-wrap gap-2">
-              {(inventory?.items ?? []).map((item) => {
-                const ref = itemRef(item);
-                if (!ref) return <span key={item.id} className="text-xs text-ink-muted">{itemLabel(item)}</span>;
-                return <ReferenceChipDisplay key={item.id} reference={ref} chip={inventoryChips.get(refIdentity(ref))} />;
+
+          {tab === "magie" && spellcasting && (
+            <div className="flex flex-col gap-2 pt-3">
+              {(spellcasting.known ?? []).map((known) => {
+                const chip = spellChips.get(refIdentity(known.ref));
+                const label = chip?.found ? chip.name : known.ref.kind === "rule" ? known.ref.key : known.ref.id;
+                return (
+                  <div key={refIdentity(known.ref)} className="flex flex-wrap items-center gap-2 rounded-md border border-edge/60 px-2.5 py-1.5 text-sm">
+                    <span className="flex-1 text-ink">{label}</span>
+                    {Object.entries(sheet.spellcasting?.slots ?? {}).map(([level, total]) => {
+                      const used = runtimeState?.spell_slots_used[level] ?? 0;
+                      const available = total - used > 0;
+                      return (
+                        <button
+                          key={level}
+                          type="button"
+                          disabled={busy || !available}
+                          title={available ? `Lancer au niveau ${level}` : "Aucun emplacement disponible"}
+                          onClick={() => known.ref.kind === "rule" && cast(known.ref.key, label, Number(level))}
+                          className="rounded-full border border-edge px-2 py-0.5 text-xs disabled:opacity-30"
+                        >
+                          niv. {level} ({Math.max(0, total - used)}/{total})
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
               })}
+              {(spellcasting.known ?? []).length === 0 && <p className="text-sm text-ink-muted">Aucun sort connu.</p>}
             </div>
-          </div>
+          )}
+
+          {tab === "inventaire" && (
+            <div className="pt-3">
+              <InventoryBlockEditor worldSlug={worldSlug} data={inventory ?? { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } }} onChange={onUpdateInventory} />
+            </div>
+          )}
+
+          {tab === "traits" && (
+            <div className="flex flex-col gap-1 pt-3 text-sm">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Aptitudes accordées</span>
+              {classFeatures.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {classFeatures.map((f) => {
+                    const chip = featureChips.get(refIdentity({ kind: "rule", key: f.key }));
+                    return chip?.found ? (
+                      <RuleChip key={f.key} href={chip.href} label={chip.name} summary={chip.summary} />
+                    ) : (
+                      <span key={f.key} className="text-xs italic text-ink-muted">{f.label}</span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-ink-muted">Aucune aptitude de classe pour l&apos;instant.</p>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
