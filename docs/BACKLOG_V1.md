@@ -495,6 +495,8 @@ Décisions de périmètre :
 - **CLI Supabase relinkée en cours de route.** Elle était restée pointée sur l'ancien projet `myluqabtqewpqkvokube` (aujourd'hui supprimé) depuis une investigation de sécurité interrompue plus tôt dans la session — relinkée sur `fivakjqzqgfvfpaqvqex` avant toute migration de ce ticket, sans quoi la migration du mot de passe aurait pu échouer silencieusement contre le mauvais projet.
 - **La conversion `password → hash` reste côté application, jamais en SQL.** `scrypt` n'existe pas nativement dans pgcrypto (qui offre `crypt()`/blowfish, pas scrypt) — la fonction `security definer` ne fait que stocker/comparer des hachages déjà calculés, jamais de calcul cryptographique en base.
 
+**Complément post-critères** — sur retour utilisateur : le bloc `character` avait toujours un formulaire brut (`CharacterBlockEditor.tsx`) sous la fiche jouable pour éditer espèce/classes/caractéristiques/genre/pronoms, une duplication qui restait visible même une fois le panneau de stats fusionné. L'onglet Traits de `PlayableCharacterSheet.tsx` édite désormais le build en entier (même style que le reste de la fiche, mêmes champs que l'ancien formulaire), et `CharacterBlockEditor.tsx` est supprimé — même principe que « même bloc, deux vues » déjà appliqué à l'Inventaire (V1-B5 §5.1). Le bouton replier/déplier disparaît aussi pour ce type de bloc : il n'y a plus rien en dessous à masquer.
+
 ---
 
 ## Lot D — Première assistance IA

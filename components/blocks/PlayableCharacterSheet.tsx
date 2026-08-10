@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
+import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
@@ -22,6 +23,8 @@ import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import RuleChip from "@/components/rules/RuleChip";
 import ReferenceChipDisplay from "./ReferenceChipDisplay";
 import InventoryBlockEditor, { itemLabel, itemRef } from "./InventoryBlockEditor";
+import RuleEntryAutocomplete from "./RuleEntryAutocomplete";
+import Dropdown from "@/components/shared/Dropdown";
 
 const ABILITY_LABELS: Record<Ability, string> = {
   str: "FOR",
@@ -38,6 +41,30 @@ const RECHARGE_LABELS: Record<string, string> = {
   dawn: "à l'aube",
   never: "jamais",
 };
+
+const SPECIES_TYPES = ["species"] as const;
+const BACKGROUND_TYPES = ["background"] as const;
+const CLASS_TYPES = ["class"] as const;
+const SUBCLASS_TYPES = ["subclass"] as const;
+
+const GENDER_OPTIONS = [
+  { value: "unspecified", label: "Non précisé" },
+  { value: "feminine", label: "Féminin" },
+  { value: "masculine", label: "Masculin" },
+  { value: "neutral", label: "Neutre" },
+  { value: "custom", label: "Personnalisé" },
+];
+
+/** `unspecified` (on ne sait pas) et `neutral` (ni l'un ni l'autre) restent deux valeurs distinctes du menu — jamais fusionnees (V1-C4). */
+function genderDropdownValue(gender: CharacterBlockData["gender"]): string {
+  if (!gender) return "unspecified";
+  if (typeof gender === "object") return "custom";
+  return gender;
+}
+
+function ruleRef(key: string): BlockReference | null {
+  return key.trim() ? { kind: "rule", key: key.trim() } : null;
+}
 
 type Tab = "actions" | "magie" | "inventaire" | "traits";
 
@@ -95,7 +122,7 @@ export default function PlayableCharacterSheet({
   inventory,
   spellcasting,
   resources,
-  onUpdateChoices,
+  onUpdateCharacter,
   onUpdateInventory,
 }: {
   worldSlug: string;
@@ -104,7 +131,7 @@ export default function PlayableCharacterSheet({
   inventory: InventoryBlockData | undefined;
   spellcasting: SpellcastingBlockData | undefined;
   resources: ResourcesBlockData | undefined;
-  onUpdateChoices: (choices: Record<string, unknown>) => void;
+  onUpdateCharacter: (data: CharacterBlockData) => void;
   onUpdateInventory: (data: InventoryBlockData) => void;
 }) {
   const campaignId: string | null = null;
@@ -115,6 +142,23 @@ export default function PlayableCharacterSheet({
   const [pendingCrit, setPendingCrit] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /** Onglet Traits (V1-C4 suite) : meme bloc `character` que le reste de la fiche, une seule donnee, plusieurs vues — meme motif que `onUpdateInventory`. */
+  function patchCharacter(fields: Partial<CharacterBlockData>) {
+    onUpdateCharacter({ ...character, ...fields });
+  }
+
+  function updateClass(index: number, patchFields: Partial<CharacterBlockData["classes"][number]>) {
+    patchCharacter({ classes: character.classes.map((c, i) => (i === index ? { ...c, ...patchFields } : c)) });
+  }
+
+  function removeClass(index: number) {
+    patchCharacter({ classes: character.classes.filter((_, i) => i !== index) });
+  }
+
+  function addClass() {
+    patchCharacter({ classes: [...character.classes, { class: { kind: "rule", key: "" }, level: 1, subclass: null }] });
+  }
 
   const speciesKey = character.species?.kind === "rule" ? character.species.key : undefined;
   const backgroundKey = character.background?.kind === "rule" ? character.background.key : undefined;
@@ -199,6 +243,18 @@ export default function PlayableCharacterSheet({
     [inventory]
   );
   const inventoryChips = useReferenceChips(worldSlug, inventoryRefs);
+
+  const buildRefs = useMemo(() => {
+    const refs: BlockReference[] = [];
+    if (character.species) refs.push(character.species);
+    if (character.background) refs.push(character.background);
+    for (const c of character.classes) {
+      refs.push(c.class);
+      if (c.subclass) refs.push(c.subclass);
+    }
+    return refs;
+  }, [character.species, character.background, character.classes]);
+  const buildChips = useReferenceChips(worldSlug, buildRefs);
 
   async function reloadRemote() {
     const res = await fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId ?? ""}`);
@@ -421,7 +477,7 @@ export default function PlayableCharacterSheet({
                       <input
                         type="checkbox"
                         checked={chosen.includes(option)}
-                        onChange={() => onUpdateChoices({ ...character.choices, [choice.id]: toggleChoice(chosen, option, choice.count) })}
+                        onChange={() => patchCharacter({ choices: { ...character.choices, [choice.id]: toggleChoice(chosen, option, choice.count) } })}
                       />
                       {option}
                     </label>
@@ -567,15 +623,168 @@ export default function PlayableCharacterSheet({
       )}
 
       {tab === "traits" && (
-        <div className="flex flex-col gap-3 text-sm">
-          <div className="flex flex-wrap gap-3 text-xs text-ink-muted">
-            {(Object.keys(ABILITY_LABELS) as Ability[]).map((ability) => (
-              <span key={ability}>
-                {ABILITY_LABELS[ability]} {sheet.abilities[ability].score} ({sheet.abilities[ability].mod >= 0 ? "+" : ""}
-                {sheet.abilities[ability].mod})
-              </span>
-            ))}
+        <div className="flex flex-col gap-4 text-sm">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1 text-xs text-ink-muted">
+              Espèce (clé de règle)
+              <RuleEntryAutocomplete
+                worldSlug={worldSlug}
+                entryTypes={SPECIES_TYPES}
+                value={character.species?.kind === "rule" ? character.species.key : ""}
+                onChange={(key) => patchCharacter({ species: ruleRef(key) })}
+                placeholder="dwarf"
+              />
+              {character.species && (
+                <ReferenceChipDisplay reference={character.species} chip={buildChips.get(refIdentity(character.species))} />
+              )}
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-ink-muted">
+              Historique (clé de règle)
+              <RuleEntryAutocomplete
+                worldSlug={worldSlug}
+                entryTypes={BACKGROUND_TYPES}
+                value={character.background?.kind === "rule" ? character.background.key : ""}
+                onChange={(key) => patchCharacter({ background: ruleRef(key) })}
+                placeholder="soldier"
+              />
+              {character.background && (
+                <ReferenceChipDisplay reference={character.background} chip={buildChips.get(refIdentity(character.background))} />
+              )}
+            </label>
           </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1 text-xs text-ink-muted">
+              Genre
+              <Dropdown
+                value={genderDropdownValue(character.gender)}
+                options={GENDER_OPTIONS}
+                onChange={(v) =>
+                  patchCharacter({
+                    gender:
+                      v === "custom"
+                        ? { custom: typeof character.gender === "object" ? character.gender.custom : "" }
+                        : (v as Exclude<CharacterBlockData["gender"], { custom: string } | undefined>),
+                  })
+                }
+                aria-label="Genre"
+              />
+              {typeof character.gender === "object" && (
+                <input
+                  value={character.gender.custom}
+                  onChange={(e) => patchCharacter({ gender: { custom: e.target.value } })}
+                  placeholder="préciser…"
+                  className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                />
+              )}
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-ink-muted">
+              Pronoms
+              <input
+                value={character.pronouns ?? ""}
+                onChange={(e) => patchCharacter({ pronouns: e.target.value })}
+                placeholder="elle, il, iel…"
+                className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+              />
+            </label>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Classes</span>
+            {character.classes.map((c, index) => (
+              <div key={index} className="flex flex-wrap items-center gap-2 border-b border-edge/40 py-1.5">
+                <div className="w-28">
+                  <RuleEntryAutocomplete
+                    worldSlug={worldSlug}
+                    entryTypes={CLASS_TYPES}
+                    value={c.class.kind === "rule" ? c.class.key : ""}
+                    onChange={(key) => updateClass(index, { class: { kind: "rule", key } })}
+                    placeholder="fighter"
+                  />
+                </div>
+                <input
+                  type="number"
+                  min={1}
+                  value={c.level}
+                  onChange={(e) => updateClass(index, { level: Math.max(1, Number(e.target.value) || 1) })}
+                  className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                />
+                <div className="flex-1">
+                  <RuleEntryAutocomplete
+                    worldSlug={worldSlug}
+                    entryTypes={SUBCLASS_TYPES}
+                    value={c.subclass?.kind === "rule" ? c.subclass.key : ""}
+                    onChange={(key) => updateClass(index, { subclass: ruleRef(key) })}
+                    placeholder="sous-classe (optionnel)"
+                  />
+                </div>
+                <ReferenceChipDisplay reference={c.class} chip={buildChips.get(refIdentity(c.class))} />
+                <button type="button" onClick={() => removeClass(index)} className="text-xs text-danger hover:underline">
+                  ×
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addClass}
+              className="self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+            >
+              + Ajouter une classe
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Caractéristiques</span>
+              <Dropdown
+                value={character.abilities.method}
+                options={[
+                  { value: "standard_array", label: "Tableau standard" },
+                  { value: "point_buy", label: "Achat de points" },
+                  { value: "roll", label: "Tirage" },
+                ]}
+                onChange={(v) =>
+                  patchCharacter({ abilities: { ...character.abilities, method: v as CharacterBlockData["abilities"]["method"] } })
+                }
+                aria-label="Méthode d'attribution"
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {(Object.keys(ABILITY_LABELS) as Ability[]).map((ability) => (
+                <label key={ability} className="flex flex-col gap-1 text-xs text-ink-muted">
+                  {ABILITY_LABELS[ability]} ({sheet.abilities[ability].mod >= 0 ? "+" : ""}
+                  {sheet.abilities[ability].mod})
+                  <input
+                    type="number"
+                    value={character.abilities.base[ability]}
+                    onChange={(e) =>
+                      patchCharacter({
+                        abilities: {
+                          ...character.abilities,
+                          base: { ...character.abilities.base, [ability]: Number(e.target.value) || 0 },
+                        },
+                      })
+                    }
+                    className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-ink-muted">Points de vie</span>
+            <Dropdown
+              value={character.hp_method}
+              options={[
+                { value: "fixed", label: "Valeur fixe" },
+                { value: "rolled", label: "Jetés" },
+              ]}
+              onChange={(v) => patchCharacter({ hp_method: v as CharacterBlockData["hp_method"] })}
+              aria-label="Méthode de points de vie"
+            />
+          </div>
+
           {classFeatures.length > 0 && (
             <div className="flex flex-col gap-1">
               <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Aptitudes accordées</span>

@@ -9,7 +9,6 @@ import TextBlockEditor from "./TextBlockEditor";
 import InfoboxBlockEditor from "./InfoboxBlockEditor";
 import ImageBlockEditor from "./ImageBlockEditor";
 import CustomTableBlockEditor from "./CustomTableBlockEditor";
-import CharacterBlockEditor from "./CharacterBlockEditor";
 import InventoryBlockEditor from "./InventoryBlockEditor";
 import SpellcastingBlockEditor from "./SpellcastingBlockEditor";
 import ResourcesBlockEditor from "./ResourcesBlockEditor";
@@ -75,14 +74,6 @@ function BlockDataEditor({
           onChange={(d) => onChange(d)}
         />
       );
-    case "character":
-      return (
-        <CharacterBlockEditor
-          data={block.data as CharacterBlockData}
-          onChange={(d) => onChange(d)}
-          worldSlug={worldSlug}
-        />
-      );
     case "inventory":
       return (
         <InventoryBlockEditor
@@ -144,9 +135,9 @@ export default function EntityBlocks({
   const spellcastingBlock = blocks.find((b) => b.blockType === "spellcasting");
   const resourcesBlock = blocks.find((b) => b.blockType === "resources");
 
-  function updateCharacterChoices(choices: Record<string, unknown>) {
+  /** Onglet Traits (V1-C4 suite) : la fiche jouable edite desormais le bloc `character` en entier — plus de formulaire brut separe en dessous. */
+  function updateCharacter(data: CharacterBlockData) {
     if (!characterBlock) return;
-    const data = { ...(characterBlock.data as CharacterBlockData), choices };
     patchBlock(characterBlock.id, { data });
     saveBlock(characterBlock.id, { data });
   }
@@ -345,15 +336,17 @@ export default function EntityBlocks({
           >
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-1 items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => toggleCollapsed(block.id)}
-                  className="shrink-0 text-ink-muted transition-transform hover:text-ink"
-                  style={{ transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
-                  title={isCollapsed ? "Déplier" : "Replier"}
-                >
-                  ▾
-                </button>
+                {block.blockType !== "character" && (
+                  <button
+                    type="button"
+                    onClick={() => toggleCollapsed(block.id)}
+                    className="shrink-0 text-ink-muted transition-transform hover:text-ink"
+                    style={{ transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
+                    title={isCollapsed ? "Déplier" : "Replier"}
+                  >
+                    ▾
+                  </button>
+                )}
                 <input
                   value={block.display.label}
                   placeholder={BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}
@@ -413,8 +406,11 @@ export default function EntityBlocks({
 
             {/* La fiche jouable (V1-B5) vit dans la carte du bloc `character`
                 lui-meme — plus de panneau de stats separe au-dessus de la
-                liste des blocs (V1-C4, specs/arbitrage-modifications.md §3.1) : */}
-            {block.blockType === "character" && (
+                liste des blocs (V1-C4, specs/arbitrage-modifications.md §3.1).
+                Son onglet Traits edite desormais le build en entier (espece,
+                classes, caracteristiques, genre/pronoms) : plus de formulaire
+                brut separe en dessous pour ce type de bloc (suite V1-C4). */}
+            {block.blockType === "character" ? (
               <PlayableCharacterSheet
                 worldSlug={worldSlug}
                 entityId={entityId}
@@ -422,17 +418,17 @@ export default function EntityBlocks({
                 inventory={inventoryBlock?.data as InventoryBlockData | undefined}
                 spellcasting={spellcastingBlock?.data as SpellcastingBlockData | undefined}
                 resources={resourcesBlock?.data as ResourcesBlockData | undefined}
-                onUpdateChoices={updateCharacterChoices}
+                onUpdateCharacter={updateCharacter}
                 onUpdateInventory={updateInventory}
               />
-            )}
-
-            {!isCollapsed && (
-              <BlockDataEditor
-                block={block}
-                onChange={(data) => patchBlock(block.id, { data })}
-                worldSlug={worldSlug}
-              />
+            ) : (
+              !isCollapsed && (
+                <BlockDataEditor
+                  block={block}
+                  onChange={(data) => patchBlock(block.id, { data })}
+                  worldSlug={worldSlug}
+                />
+              )
             )}
           </div>
         );
