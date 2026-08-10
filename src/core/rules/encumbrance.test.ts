@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeEncumbrance, encumbranceModifiers, totalCarriedWeight } from "./encumbrance";
+import { computeEncumbrance, encumbranceModifiers, lbToKg, totalCarriedWeight } from "./encumbrance";
 import type { InventoryItem } from "../schemas/blocks/inventory";
 
 // Seuils verifies dans le texte de regle du SRD 2014 (data/srd/srd-2014.json,
@@ -68,6 +68,16 @@ function refItem(id: string, key: string, qty: number): InventoryItem {
 function inlineItem(id: string, qty: number, weight?: number): InventoryItem {
   return weight === undefined ? { id, qty, label: "Objet" } : { id, qty, label: "Objet", weight: { value: weight, unit: "lb" } };
 }
+
+describe("lbToKg", () => {
+  it("convertit une capacite en livres (FOR 14 x 15 = 210 lb) en kg, arrondi a 1 decimale", () => {
+    expect(lbToKg(210)).toBe(95.3);
+  });
+
+  it("0 lb -> 0 kg", () => {
+    expect(lbToKg(0)).toBe(0);
+  });
+});
 
 describe("totalCarriedWeight", () => {
   it("somme le poids des objets de reference (resolu par cle) multiplie par la quantite", () => {

@@ -18,7 +18,7 @@ import {
   type ResolvedFeature,
 } from "@/src/core/rules/sheet";
 import { armorAcModifier, mapChosenSkillModifiers, type WeaponData } from "@/src/core/rules/srdMapping";
-import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
+import { lbToKg, totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { evaluate, type TraceStep } from "@/src/core/formula/evaluate";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
@@ -1078,7 +1078,7 @@ export default function PlayableCharacterSheet({
                 <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-ink-muted">
                   <span>Charge</span>
                   <span className={sheet.encumbrance.tier !== "none" ? "text-danger" : "text-ink-muted"}>
-                    {Math.round(sheet.encumbrance.carried)}/{sheet.encumbrance.capacity} lb
+                    {lbToKg(sheet.encumbrance.carried)}/{lbToKg(sheet.encumbrance.capacity)} kg
                     {sheet.encumbrance.tier === "encumbered" && " · Encombré (vitesse −10)"}
                     {sheet.encumbrance.tier === "heavily_encumbered" && " · Lourdement encombré (vitesse −20, désavantage FOR/DEX/CON)"}
                   </span>

@@ -395,7 +395,7 @@ export default function EntityBlocks({
           >
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-1 items-center gap-1.5">
-                {block.blockType !== "character" && block.blockType !== "inventory" && (
+                {block.blockType !== "character" && (
                   <button
                     type="button"
                     onClick={() => toggleCollapsed(block.id)}
@@ -473,7 +473,17 @@ export default function EntityBlocks({
                 liste des blocs (V1-C4, specs/arbitrage-modifications.md §3.1).
                 Son onglet Traits edite desormais le build en entier (espece,
                 classes, caracteristiques, genre/pronoms) : plus de formulaire
-                brut separe en dessous pour ce type de bloc (suite V1-C4). */}
+                brut separe en dessous pour ce type de bloc (suite V1-C4).
+
+                Le bloc `inventory`, lui, GARDE sa propre carte brute
+                (BlockDataEditor generique ci-dessous) en plus de l'onglet
+                Inventaire de la fiche jouable — demande explicite : un MJ
+                doit pouvoir montrer l'inventaire seul (ex. fenetre separee)
+                sans exposer toute la fiche de personnage. Les deux vues
+                editent le meme bloc (meme `id`, meme etat React `blocks`) :
+                une modification dans l'une declenche patchBlock/saveBlock
+                sur ce bloc, l'autre vue se re-rend avec la donnee a jour au
+                prochain rendu — synchronise sans mecanisme dedie. */}
             {block.blockType === "character" ? (
               <PlayableCharacterSheet
                 worldSlug={worldSlug}
@@ -485,10 +495,6 @@ export default function EntityBlocks({
                 onUpdateCharacter={updateCharacter}
                 onUpdateInventory={updateInventory}
               />
-            ) : block.blockType === "inventory" ? (
-              <p className="text-xs italic text-ink-muted">
-                Géré depuis l&apos;onglet Inventaire du bloc Personnage.
-              </p>
             ) : (
               !isCollapsed && (
                 <BlockDataEditor

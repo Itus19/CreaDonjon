@@ -63,6 +63,19 @@ export function encumbranceModifiers(result: EncumbranceResult, source: string, 
   return modifiers;
 }
 
+const LB_TO_KG = 0.45359237;
+
+/**
+ * Conversion d'affichage uniquement (UI, unite kg demandee par l'utilisateur)
+ * — le calcul interne (`computeEncumbrance`) reste en livres, unite native
+ * de la formule SRD (FOR x 15) : convertir les seuils eux-memes en kg
+ * n'aurait rien change au resultat, mais aurait introduit un risque
+ * d'arrondi dans le moteur pour aucun benefice. Arrondi a une decimale.
+ */
+export function lbToKg(lb: number): number {
+  return Math.round(lb * LB_TO_KG * 10) / 10;
+}
+
 /**
  * Poids total porte : pour un objet de reference de regle, le poids vient
  * de `weightByKey` (resolu cote serveur/client depuis la fiche de regle,
