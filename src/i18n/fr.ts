@@ -30,6 +30,30 @@
 // choix de redaction — un texte genere qui met "il" sur un personnage
 // `elle` est un bug de prompt IA, pas une fatalite (meme doc §3.9).
 
+import type { Skill } from "@/src/core/rules/sheet";
+
+/** Libelles officiels des competences (traduction SRD, cf. data/srd/fr-source). */
+export const SKILL_LABELS_FR: Record<Skill, string> = {
+  acrobatics: "Acrobaties",
+  animal_handling: "Dressage",
+  arcana: "Arcanes",
+  athletics: "Athletisme",
+  deception: "Tromperie",
+  history: "Histoire",
+  insight: "Intuition",
+  intimidation: "Intimidation",
+  investigation: "Investigation",
+  medicine: "Medecine",
+  nature: "Nature",
+  perception: "Perception",
+  performance: "Representation",
+  persuasion: "Persuasion",
+  religion: "Religion",
+  sleight_of_hand: "Escamotage",
+  stealth: "Discretion",
+  survival: "Survie",
+};
+
 export const RELATION_LABELS_FR: Record<string, string> = {
   parent_of: "parent de",
   child_of: "enfant de",

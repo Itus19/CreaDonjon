@@ -25,6 +25,8 @@ import ReferenceChipDisplay from "./ReferenceChipDisplay";
 import InventoryBlockEditor, { itemLabel, itemRef } from "./InventoryBlockEditor";
 import RuleEntryAutocomplete from "./RuleEntryAutocomplete";
 import Dropdown from "@/components/shared/Dropdown";
+import { SKILL_LABELS_FR } from "@/src/i18n/fr";
+import { SKILLS, SKILL_ABILITIES } from "@/src/core/rules/sheet";
 
 const ABILITY_LABELS: Record<Ability, string> = {
   str: "FOR",
@@ -34,6 +36,9 @@ const ABILITY_LABELS: Record<Ability, string> = {
   wis: "SAG",
   cha: "CHA",
 };
+
+/** Compétences triées par libellé FR (V1-C4 suite) — même ordre que la référence visuelle fournie par l'utilisateur. */
+const SORTED_SKILLS = [...SKILLS].sort((a, b) => SKILL_LABELS_FR[a].localeCompare(SKILL_LABELS_FR[b]));
 
 const RECHARGE_LABELS: Record<string, string> = {
   short_rest: "repos court",
@@ -750,25 +755,68 @@ export default function PlayableCharacterSheet({
               />
             </div>
             <div className="flex flex-wrap gap-3">
-              {(Object.keys(ABILITY_LABELS) as Ability[]).map((ability) => (
-                <label key={ability} className="flex flex-col gap-1 text-xs text-ink-muted">
-                  {ABILITY_LABELS[ability]} ({sheet.abilities[ability].mod >= 0 ? "+" : ""}
-                  {sheet.abilities[ability].mod})
-                  <input
-                    type="number"
-                    value={character.abilities.base[ability]}
-                    onChange={(e) =>
-                      patchCharacter({
-                        abilities: {
-                          ...character.abilities,
-                          base: { ...character.abilities.base, [ability]: Number(e.target.value) || 0 },
-                        },
-                      })
-                    }
-                    className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-                  />
-                </label>
-              ))}
+              {(Object.keys(ABILITY_LABELS) as Ability[]).map((ability) => {
+                const save = sheet.savingThrows[ability];
+                return (
+                  <label key={ability} className="flex flex-col gap-1 text-xs text-ink-muted">
+                    {ABILITY_LABELS[ability]} ({sheet.abilities[ability].mod >= 0 ? "+" : ""}
+                    {sheet.abilities[ability].mod})
+                    <input
+                      type="number"
+                      value={character.abilities.base[ability]}
+                      onChange={(e) =>
+                        patchCharacter({
+                          abilities: {
+                            ...character.abilities,
+                            base: { ...character.abilities.base, [ability]: Number(e.target.value) || 0 },
+                          },
+                        })
+                      }
+                      className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                    />
+                    <span className="flex items-center gap-1 whitespace-nowrap">
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${save.proficient ? "bg-accent" : "bg-edge"}`}
+                        aria-hidden="true"
+                      />
+                      Sauv. {save.mod >= 0 ? "+" : ""}
+                      {save.mod}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+              Compétences · maîtrise {sheet.proficiencyBonus >= 0 ? "+" : ""}
+              {sheet.proficiencyBonus}
+            </span>
+            <div className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
+              {SORTED_SKILLS.map((skill) => {
+                const result = sheet.skills[skill];
+                return (
+                  <div key={skill} className="flex items-center gap-2 text-sm">
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${
+                        result.proficiency === "expertise"
+                          ? "bg-accent"
+                          : result.proficiency === "proficient"
+                            ? "border border-accent bg-accent/40"
+                            : "border border-edge bg-transparent"
+                      }`}
+                      title={result.proficiency === "expertise" ? "Expertise" : result.proficiency === "proficient" ? "Maîtrisée" : "Non maîtrisée"}
+                    />
+                    <span className="flex-1 text-ink">{SKILL_LABELS_FR[skill]}</span>
+                    <span className="text-[10px] uppercase text-ink-muted">{ABILITY_LABELS[SKILL_ABILITIES[skill]]}</span>
+                    <span className="w-8 text-right font-medium text-ink">
+                      {result.mod >= 0 ? "+" : ""}
+                      {result.mod}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
