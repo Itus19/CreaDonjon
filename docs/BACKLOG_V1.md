@@ -536,6 +536,18 @@ Décisions de périmètre :
 - **Espèce/Historique/Classe/Sous-classe convertis en listes déroulantes** (nouveau composant `RuleSelect`, remplace `CompactRuleField`), tirées de `useWorldRuleEntries` filtré par `entryType`, triées par nom traduit. Le bouton affiche directement le nom résolu (« Tieffelin ▾ ») — plus besoin d'un champ texte séparé, gain de place réel par rapport à la version précédente. Petit lien « ↗ » conservé à côté pour aller à la fiche de règle. Une valeur déjà enregistrée qui ne correspond plus à rien (rare, ruleset changé) s'affiche encore via le repli `current?.label ?? value` de `<Dropdown>` — pas de perte de données silencieuse.
 - `RuleEntryAutocomplete` n'est pas supprimé du projet — il reste utilisé par l'inventaire (V1-B5, sélecteur d'objets mêlant règles et entités) et les sorts connus, où une recherche texte dans une liste beaucoup plus longue et hétérogène a plus de sens qu'un menu déroulant.
 
+### V1-C5 — Sélection et gestion du ruleset actif · `M`
+
+Vérifié dans le reste du backlog avant d'ouvrir ce ticket : **pas déjà prévu ailleurs**. V1-C1 avait explicitement écarté le sujet (« Choisir une variante à la création est un ajout UI distinct, pas un changement de forme de données »), et V1-D2 (éditeur de règle assisté par IA) ne couvre que la création de contenu à l'intérieur d'une variante déjà choisie, pas le choix de la variante elle-même. La mécanique de fond existe déjà et n'a pas besoin d'être retouchée : `rulesets.is_official_base`/`parent_ruleset_id`, la chaîne de surcharge et la publication de version (V1-A4), et `worlds.default_ruleset_id` — cette dernière colonne existe en base mais n'a **aucun point d'écriture applicatif** (grep fait : seul un test d'intégration l'écrit directement en `service_role`). Il ne manque que l'écran.
+
+- [ ] Un bouton dans la barre latérale des règles (bas de liste, même émplacement que « + Nouvelle entité » côté monde) ouvre un sélecteur de ruleset.
+- [ ] Le sélecteur liste les rulesets officiels disponibles (2014, 2024) et toute variante déjà créée pour ce monde, avec le badge « officiel »/« variante » déjà utilisé ailleurs (V1-A4).
+- [ ] Choisir une entrée met à jour `worlds.default_ruleset_id` (nouvelle fonction de service + route, RLS déjà en place sur `worlds`).
+- [ ] Depuis cet écran, créer une nouvelle variante à partir d'un ruleset officiel (réutilise `upsert_ruleset_override`/`publish_ruleset` de V1-A4, pas de nouvelle mécanique de données).
+- [ ] Un changement de ruleset actif est reflété immédiatement dans la fiche jouable et la sidebar de règles, sans rechargement de page.
+
+*Hors périmètre de ce ticket, noté ici pour ne pas l'oublier : **téléverser un fichier de règles entièrement custom** (JSON ou autre format à définir). Aucun pipeline n'existe pour ça aujourd'hui — seul le script d'import SRD existe, taillé sur mesure pour `data/srd/*.json`. Accepter un fichier arbitraire demande de définir un format, le valider, et le transformer en `ruleset_entries`/blocs : un vrai chantier de conception à part, pas une extension de ce ticket. En attendant, un MJ peut déjà construire ses propres règles à la main, entrée par entrée, via le système de variante existant.*
+
 ---
 
 ## Lot D — Première assistance IA
@@ -594,7 +606,8 @@ D-01 … D-04                dette, une session
 Lot A  (A1→A2→A3→A4→A5)    les règles deviennent consultables et personnalisables,
                             A5 (traduction FR) ferme le lot une fois la structure stable
 Lot B  (B1→B2→B3→B4→B5)    le personnage devient jouable, B5 le rend interactif
-Lot C  (C1→C2→C3→C4)       plusieurs personnes, permissions réelles, C4 les correctifs
+Lot C  (C1→C2→C3→C4→C5)    plusieurs personnes, permissions réelles, C4 les correctifs,
+                            C5 (sélection de ruleset) n'a de dépendance que sur C1
 Lot D  (D1→D2→D3→D4)       l'IA, instrumentée dès le premier appel
 ```
 
