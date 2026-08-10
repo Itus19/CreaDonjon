@@ -9,14 +9,63 @@ export interface RulesetRow {
   name: string;
   parent_ruleset_id: string | null;
   is_official_base: boolean;
+  base_system: string;
 }
 
 export async function getRulesetById(supabase: TypedClient, id: string): Promise<RulesetRow | null> {
   const { data, error } = await supabase
     .from("rulesets")
-    .select("id, name, parent_ruleset_id, is_official_base")
+    .select("id, name, parent_ruleset_id, is_official_base, base_system")
     .eq("id", id)
     .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export interface SelectableRulesetRow {
+  id: string;
+  name: string;
+  is_official_base: boolean;
+  base_system: string;
+  version: number;
+  published_at: string | null;
+}
+
+/**
+ * Rulesets qu'un utilisateur peut choisir comme actif pour un de ses mondes
+ * (V1-C5) : les officiels (2014, 2024) et les variantes qu'il a lui-meme
+ * creees. Filtre applicatif explicite plutot que de s'appuyer sur la seule
+ * RLS (`rulesets_select`) : celle-ci autorise aussi la lecture d'un ruleset
+ * lie a une campagne/un monde dont l'utilisateur est simple membre, ce qui
+ * polluerait ce selecteur avec des variantes qui ne lui appartiennent pas.
+ */
+export async function listSelectableRulesets(supabase: TypedClient, userId: string): Promise<SelectableRulesetRow[]> {
+  const { data, error } = await supabase
+    .from("rulesets")
+    .select("id, name, is_official_base, base_system, version, published_at")
+    .or(`is_official_base.eq.true,created_by.eq.${userId}`)
+    .order("is_official_base", { ascending: false })
+    .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Nouvelle variante vierge (aucune surcharge encore) enracinee sur un ruleset parent — RLS (`rulesets_write`) exige `created_by = auth.uid()`. */
+export async function insertRulesetVariant(
+  supabase: TypedClient,
+  params: { name: string; baseSystem: string; parentRulesetId: string; createdBy: string }
+): Promise<{ id: string }> {
+  const { data, error } = await supabase
+    .from("rulesets")
+    .insert({
+      name: params.name,
+      base_system: params.baseSystem,
+      parent_ruleset_id: params.parentRulesetId,
+      is_official_base: false,
+      created_by: params.createdBy,
+    })
+    .select("id")
+    .single();
   if (error) throw new Error(error.message);
   return data;
 }

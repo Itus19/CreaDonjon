@@ -26,16 +26,19 @@ import {
   getEntryTranslation,
   getRulesetById,
   getRulesetEntryByKey,
+  insertRulesetVariant,
   listBlocksForRulesetEntry,
   listIncomingRefsForKey,
   listOutgoingRefs,
   listOverridesForRuleset,
   listRulesetEntries,
   listRulesetEntriesByKeys,
+  listSelectableRulesets,
   listTranslationsForEntries,
+  type SelectableRulesetRow,
   type RulesetEntryRow,
 } from "@/src/server/repos/rules";
-import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
+import { getWorldDefaultRulesetId, setWorldDefaultRuleset } from "@/src/server/repos/worlds";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import type { Locale } from "@/src/i18n/request";
 
@@ -438,4 +441,56 @@ export async function getRuleEntryPageData(
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) return null;
   return getRuleEntryForWorld(supabase, world.id, entryKey, locale);
+}
+
+// --- Selection du ruleset actif (V1-C5) ---------------------------------
+
+/** `null` si personne n'est authentifie — l'appelant (route) traduit ça en 401 plutot que de renvoyer une liste vide trompeuse. */
+export async function listSelectableRulesetsForCurrentUser(supabase: TypedClient): Promise<SelectableRulesetRow[] | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  return listSelectableRulesets(supabase, user.id);
+}
+
+/**
+ * Change le ruleset actif d'un monde. `false` si le monde est introuvable,
+ * si le ruleset cible n'est pas lisible par l'appelant (RLS sur la lecture
+ * de `rulesets`), ou si l'appelant n'est pas le proprietaire du monde (RLS
+ * sur l'ecriture de `worlds` — `setWorldDefaultRuleset` renvoie alors
+ * `updated: false` plutot qu'une erreur).
+ */
+export async function setActiveRuleset(supabase: TypedClient, worldSlug: string, rulesetId: string): Promise<boolean> {
+  const world = await getWorldBySlug(supabase, worldSlug);
+  if (!world) return false;
+  const ruleset = await getRulesetById(supabase, rulesetId);
+  if (!ruleset) return false;
+  const { updated } = await setWorldDefaultRuleset(supabase, world.id, rulesetId);
+  return updated;
+}
+
+/**
+ * Cree une variante vierge a partir d'un ruleset officiel (V1-C5) : aucune
+ * surcharge propre pour l'instant, la chaine de resolution (V1-A4) fait
+ * remonter chaque entree jusqu'a l'officiel tant que rien ne la surcharge —
+ * un MJ peut donc commencer a jouer avec sa variante des sa creation, puis
+ * l'editer entree par entree plus tard (V1-D2).
+ */
+export async function createRulesetVariant(
+  supabase: TypedClient,
+  params: { name: string; parentRulesetId: string }
+): Promise<{ id: string } | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const parent = await getRulesetById(supabase, params.parentRulesetId);
+  if (!parent) return null;
+  return insertRulesetVariant(supabase, {
+    name: params.name,
+    baseSystem: parent.base_system,
+    parentRulesetId: parent.id,
+    createdBy: user.id,
+  });
 }

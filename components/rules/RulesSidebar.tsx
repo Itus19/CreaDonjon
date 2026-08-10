@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
+import RulesetSelector from "./RulesetSelector";
 
 /** Un groupe par entry_type, pliable (meme motif que NodeRow dans components/shell/EntityTree.tsx). */
 function RuleTypeGroup({
@@ -135,6 +136,10 @@ export default function RulesSidebar({
             />
           ))}
         </nav>
+
+        <div className="border-t border-edge pt-3">
+          <RulesetSelector worldSlug={worldSlug} />
+        </div>
       </aside>
     </>
   );

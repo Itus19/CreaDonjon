@@ -81,6 +81,27 @@ export async function getWorldDefaultRulesetId(
   return data?.default_ruleset_id ?? null;
 }
 
+/**
+ * Change le ruleset actif d'un monde (V1-C5). RLS (`worlds_write`) exige
+ * `owner_id = auth.uid()` : un appel par un simple membre met a jour 0 ligne
+ * sans erreur explicite — retourne le nombre de lignes touchees pour que le
+ * service appelant puisse distinguer "reussi" de "refuse silencieusement
+ * par la RLS" plutot que de pretendre un succes a tort.
+ */
+export async function setWorldDefaultRuleset(
+  supabase: TypedClient,
+  worldId: string,
+  rulesetId: string
+): Promise<{ updated: boolean }> {
+  const { data, error } = await supabase
+    .from("worlds")
+    .update({ default_ruleset_id: rulesetId })
+    .eq("id", worldId)
+    .select("id");
+  if (error) throw new Error(error.message);
+  return { updated: data.length > 0 };
+}
+
 export async function ownerHasSlug(
   supabase: TypedClient,
   ownerId: string,
