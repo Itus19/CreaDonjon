@@ -1,4 +1,4 @@
-import type { Ability, Modifier } from "./sheet";
+import type { Ability, Modifier, Prerequisite } from "./sheet";
 
 /**
  * Traduction des donnees SRD deja importees (ruleset_entries, V1-A1/A2)
@@ -168,6 +168,43 @@ export function mapBackgroundModifiers(fields: ParsedFields, source: string, lab
     if (skill) modifiers.push({ target: `skill.${skill}`, op: "proficiency", layer: 4, source, label });
   }
   return modifiers;
+}
+
+/**
+ * Don accorde directement par un historique (V1-C8) — verifie present sur
+ * les 4 historiques du SRD 2024 importes (`Backgrounds.*.feat.index`,
+ * toujours une entree unique, jamais un choix). Absent du SRD 2014 (aucun
+ * champ equivalent) : un historique 2014 retourne toujours `null` ici, pas
+ * une erreur — la seule voie 2014 pour un don (echanger une amelioration de
+ * caracteristique contre un don) est un texte libre sans champ structure,
+ * hors perimetre de ce ticket (voir docs/BACKLOG_V1.md V1-C8).
+ */
+export function extractBackgroundFeat(fields: ParsedFields): string | null {
+  const feat = fields.feat as { index?: string } | undefined;
+  return typeof feat?.index === "string" ? feat.index : null;
+}
+
+/**
+ * Prerequis d'une entree (don, aptitude...) — lit `source_raw` tel quel
+ * (objet JSON brut d'une ligne `ruleset_entries`, PAS le resultat de
+ * `parseCustomTableFields`, cf. `subclassParentClassKey` dans
+ * `src/server/services/rules.ts` pour le meme motif de lecture directe).
+ * Seule la forme `ability_score`/`minimum_score` du SRD est geree — c'est
+ * la seule presente dans les deux editions pour les dons.
+ */
+export function mapPrerequisites(sourceRaw: unknown): Prerequisite[] {
+  if (!sourceRaw || typeof sourceRaw !== "object") return [];
+  const raw = (sourceRaw as Record<string, unknown>).prerequisites;
+  if (!Array.isArray(raw)) return [];
+
+  const result: Prerequisite[] = [];
+  for (const p of raw as { ability_score?: { index?: string }; minimum_score?: number }[]) {
+    const ability = p.ability_score?.index;
+    if (isAbility(ability) && typeof p.minimum_score === "number") {
+      result.push({ kind: "ability", ability, min: p.minimum_score });
+    }
+  }
+  return result;
 }
 
 /**

@@ -355,7 +355,18 @@ export default function PlayableCharacterSheet({
     carriedWeight
   );
 
-  const classFeatures = Object.values(ruleset.features).filter((f) => f.source === "class");
+  /**
+   * Aptitudes de classe + dons accordes par un historique (V1-C8) —
+   * `f.key !== f.source` exclut l'entree synthetique de l'historique
+   * lui-meme (`background:acolyte`, qui porte les modificateurs de
+   * competences, pas une fiche de regle a afficher ici). Les traits
+   * d'espece/historique eux-memes restent hors de cette liste : ils
+   * n'ont pas de cle resolvable (`species:tiefling` n'est pas une entree
+   * `ruleset_entries`) — sujet complet de V1-C9, pas rouvert ici.
+   */
+  const classFeatures = Object.values(ruleset.features).filter(
+    (f) => f.source === "class" || (f.source.startsWith("background:") && f.key !== f.source)
+  );
   const featureRefs = useMemo(() => classFeatures.map((f) => ({ kind: "rule" as const, key: f.key })), [classFeatures]);
   const featureChips = useReferenceChips(worldSlug, featureRefs);
 

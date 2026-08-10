@@ -4,6 +4,7 @@ import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import type { ResolvedClass, ResolvedFeature, ResolvedRuleset } from "@/src/core/rules/sheet";
 import {
+  extractBackgroundFeat,
   extractFeatureKeysUpToLevel,
   extractLanguageChoice,
   extractLanguages,
@@ -12,6 +13,7 @@ import {
   mapBackgroundModifiers,
   mapClassCore,
   mapClassSpellcastingAbility,
+  mapPrerequisites,
   mapProficiencies,
   mapSpeciesModifiers,
   parseArmorData,
@@ -112,7 +114,8 @@ export async function assembleResolvedRuleset(
   const features: Record<string, ResolvedFeature> = {};
   const classes: Record<string, ResolvedClass> = {};
   const remainingChoices: RemainingChoice[] = [];
-  const classFeatureKeys = new Set<string>();
+  /** Cles de feature a resoudre en lot (aptitudes de classe + dons accordes, V1-C8), avec leur source pour affichage — Map plutot que Set depuis V1-C8 : toutes n'ont plus la meme source "class" litterale. */
+  const extraFeatureKeys = new Map<string, string>();
   const proficiencies: TraitGrant[] = [];
   const languages: TraitGrant[] = [];
 
@@ -145,6 +148,9 @@ export async function assembleResolvedRuleset(
           kind: "language",
         });
       }
+
+      const featKey = extractBackgroundFeat(found.fields);
+      if (featKey) extraFeatureKeys.set(featKey, key);
     }
   }
 
@@ -167,7 +173,7 @@ export async function assembleResolvedRuleset(
 
     proficiencies.push(...mapProficiencies(found.fields).map((p) => ({ ...p, source: label })));
 
-    for (const fk of extractFeatureKeysUpToLevel(found.progressionRows, cl.level)) classFeatureKeys.add(fk);
+    for (const fk of extractFeatureKeysUpToLevel(found.progressionRows, cl.level)) extraFeatureKeys.set(fk, "class");
 
     for (const choice of extractSkillChoices(found.fields)) {
       remainingChoices.push({
@@ -180,8 +186,8 @@ export async function assembleResolvedRuleset(
     }
   }
 
-  if (classFeatureKeys.size > 0) {
-    const keys = [...classFeatureKeys];
+  if (extraFeatureKeys.size > 0) {
+    const keys = [...extraFeatureKeys.keys()];
     const chips = await listRulesetEntryChipsByKeys(supabase, rulesetId, keys);
     const translationByEntryId = new Map<string, string>();
     if (locale !== "en" && chips.length > 0) {
@@ -192,15 +198,16 @@ export async function assembleResolvedRuleset(
       features[chip.entry_key] = {
         key: chip.entry_key,
         label: translationByEntryId.get(chip.id) ?? entryNameFrom(chip),
-        source: "class",
+        source: extraFeatureKeys.get(chip.entry_key) ?? "class",
         modifiers: [],
+        prerequisites: mapPrerequisites(chip.source_raw),
       };
     }
     // Cle sans entree resolue (rare : feature non importee) — conservee
     // quand meme, label = cle brute, pour que build.featureKeys puisse la
     // referencer sans faire echouer characterSheet().
     for (const fk of keys) {
-      if (!features[fk]) features[fk] = { key: fk, label: fk, source: "class", modifiers: [] };
+      if (!features[fk]) features[fk] = { key: fk, label: fk, source: extraFeatureKeys.get(fk) ?? "class", modifiers: [] };
     }
   }
 

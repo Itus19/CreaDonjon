@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   armorAcModifier,
+  extractBackgroundFeat,
   extractFeatureKeysUpToLevel,
   extractLanguageChoice,
   extractSkillChoices,
@@ -9,6 +10,7 @@ import {
   mapChosenSkillModifiers,
   mapClassCore,
   mapClassSpellcastingAbility,
+  mapPrerequisites,
   mapSpeciesModifiers,
   extractLanguages,
   mapProficiencies,
@@ -477,5 +479,43 @@ describe("parseSpellLevel", () => {
 
   it("retourne null si le champ est absent", () => {
     expect(parseSpellLevel(parseCustomTableFields([{ field: "name", value: "Boule de feu" }]))).toBeNull();
+  });
+});
+
+// Fixture fidele a data/srd/srd-2024.json : Backgrounds.acolyte.feat —
+// verifie present sur les 4 historiques 2024 importes, toujours une entree
+// unique (jamais un choix). Absent du SRD 2014 (aucun champ equivalent).
+describe("extractBackgroundFeat", () => {
+  it("lit le don accorde par un historique (Acolyte -> Magic Initiate, SRD 2024)", () => {
+    const fields = parseCustomTableFields([
+      {
+        field: "feat",
+        value: JSON.stringify({ index: "magic-initiate", name: "Magic Initiate", note: "Cleric" }),
+      },
+    ]);
+    expect(extractBackgroundFeat(fields)).toBe("magic-initiate");
+  });
+
+  it("retourne null si le champ est absent (historique SRD 2014, aucun champ equivalent)", () => {
+    expect(extractBackgroundFeat(parseCustomTableFields(ACOLYTE_ROWS))).toBeNull();
+  });
+});
+
+// Fixture fidele a data/srd/srd-2014.json : Feats.grappler.prerequisites.
+describe("mapPrerequisites", () => {
+  it("lit un prerequis de caracteristique (Grappler : FOR >= 13)", () => {
+    const sourceRaw = {
+      prerequisites: [{ ability_score: { index: "str", name: "STR" }, minimum_score: 13 }],
+    };
+    expect(mapPrerequisites(sourceRaw)).toEqual([{ kind: "ability", ability: "str", min: 13 }]);
+  });
+
+  it("retourne un tableau vide si le champ est absent (la plupart des dons d'origine 2024 n'ont pas de prerequis)", () => {
+    expect(mapPrerequisites({ index: "alert", name: "Alert" })).toEqual([]);
+  });
+
+  it("retourne un tableau vide si source_raw n'est pas un objet", () => {
+    expect(mapPrerequisites(null)).toEqual([]);
+    expect(mapPrerequisites(undefined)).toEqual([]);
   });
 });
