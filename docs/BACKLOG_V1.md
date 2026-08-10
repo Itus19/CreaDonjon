@@ -566,6 +566,35 @@ Vérifié dans le reste du backlog avant d'ouvrir ce ticket : **pas déjà prév
 
 *Hors périmètre de ce ticket, noté ici pour ne pas l'oublier : **téléverser un fichier de règles entièrement custom** (JSON ou autre format à définir). Aucun pipeline n'existe pour ça aujourd'hui — seul le script d'import SRD existe, taillé sur mesure pour `data/srd/*.json`. Accepter un fichier arbitraire demande de définir un format, le valider, et le transformer en `ruleset_entries`/blocs : un vrai chantier de conception à part, pas une extension de ce ticket. En attendant, un MJ peut déjà construire ses propres règles à la main, entrée par entrée, via le système de variante existant.*
 
+### V1-C6 — Actions, Magie et Traits : intégration complète de la fiche jouable · `L`
+
+Demande utilisateur (suite V1-B5/V1-C4) : les 4 onglets doivent être pleinement fonctionnels, pas seulement structurés. Investigation faite avant d'écrire les critères — une partie est déjà en place, à ne pas refaire :
+
+**Déjà fait, à ne pas retoucher :**
+- Attaques d'armes équipées dans l'onglet Actions (`equippedWeapons`, boutons Attaquer/Dégâts/Dégâts à deux mains) — filtré sur `item.equipped`, donc « équiper » une arme l'y fait déjà apparaître.
+- CA déjà recalculée dynamiquement à l'équipement d'une armure (`armorAcModifier`, couche 6).
+- Emplacements de sorts multi-niveaux : chaque sort connu affiche déjà un bouton de lancer par niveau d'emplacement disponible (`sheet.spellcasting.slots`) — c'est le point le plus redouté de la demande initiale, et il était déjà couvert par V1-B5.
+- Le champ `prepared: string[]` existe déjà dans `zSpellcastingBlockData` et `SpellcastingBlockEditor.tsx` (carte brute du bloc) le gère déjà avec une case à cocher — seule la fiche jouable ne l'exploite pas encore.
+- Inventaire : armes/armures/objets/pièces déjà tous listés et éditables (`InventoryBlockEditor`), le bug qui bloquait « ajouter un objet » et « ajouter des pièces » est corrigé (complément post-critères 8).
+
+**A. Magie ↔ Actions (`M`, pas de changement de schéma)**
+- [ ] Onglet Magie : sorts connus triés par niveau puis ordre alphabétique (nécessite de résoudre le niveau de chaque sort connu — nouvel extracteur `parseSpellLevel(fields)` dans `srdMapping.ts`, champ `level` déjà vérifié présent sur les entrées `Spells` des deux éditions, même forme que `parseItemWeight`).
+- [ ] Onglet Magie : case à cocher « Préparé » par sort connu (réutilise `data.prepared`), remplace le bouton de lancer direct — nécessite un nouveau prop `onUpdateSpellcasting` sur `PlayableCharacterSheet`, câblé dans `EntityBlocks.tsx` sur le même patron que `onUpdateInventory` (bootstrap-si-bloc-absent compris).
+- [ ] Onglet Actions : les sorts **préparés** (et les sorts « toujours préparés », ex. rituels innés — hors périmètre si non modélisés ailleurs) apparaissent à côté des armes équipées, avec le même bouton de lancer par niveau d'emplacement déjà existant en Magie aujourd'hui (déplacé, pas dupliqué).
+
+**B. Traits par type : dons, maîtrises, langues (`L`, nouveau travail `src/core`, tests d'abord)**
+
+Vérifié contre `data/srd/srd-2014.json` et `srd-2024.json` avant d'écrire ces critères — trois natures de données différentes, trois traitements différents :
+
+- [ ] **Maîtrises d'armure/arme/outil** : champ `proficiencies` (classe) ou `starting_proficiencies`/`proficiencies` (historique), déjà lu partiellement par `mapBackgroundModifiers` mais seulement pour les compétences (`skill-*`) — les entrées non-compétence (`light-armor`, `simple-weapons`, un kit d'outils...) sont aujourd'hui silencieusement ignorées. Nouvel extracteur `mapProficiencies(fields)` (classe et historique) qui retient ces entrées et exclut les `saving-throw-*` (déjà couvertes par `mapClassCore`).
+- [ ] **Langues** : champ `languages` (espèce), déjà vérifié présent (ex. nain → commun, nain). Nouvel extracteur `extractLanguages(fields)`.
+- [ ] Affichage : un encadré par élément (maîtrise ou langue), avec sa source (« Guerrier », « Tieffelin »...) — **pas de lien vers une fiche de règle dédiée pour ces deux catégories** : vérifié dans le SRD, les entrées `Languages`/`Proficiencies` n'ont aucun texte descriptif (juste un nom et des métadonnées), un lien mènerait vers une page quasi vide. Recommandation retenue plutôt que suivre la demande au pied de la lettre : badge simple, nom + source, cohérent avec ce que la donnée porte réellement.
+- [ ] **Dons** — **non affichables dans ce ticket**, signalé plutôt que fait à moitié : le SRD `Feats` a bien un texte descriptif complet (contrairement aux deux catégories ci-dessus, donc *ceux-là* méritent un vrai lien vers une fiche de règle), mais **aucun mécanisme n'existe pour qu'un personnage se voie accorder un don** — pas de choix de don à la création de niveau, `character.choices`/`featureKeys` ne référencent jamais d'entrée `feat`. Afficher une liste vide en permanence n'apporterait rien. Un futur ticket doit d'abord construire le choix de don (probablement à la création de personnage, V1-B4) avant que cet onglet ait quoi que ce soit à lister.
+- [ ] **Langues choisies par l'historique** (ex. Acolyte : 2 langues au choix) — **non traité ici** : `background.language_options` est une structure de choix (« 2 parmi toutes »), pas une liste fixe, donc un vrai flux de sélection serait nécessaire (même famille que les choix de compétences existants), pas un simple affichage. Seules les langues **fixes** (accordées sans choix, ex. espèce) sont dans le périmètre de ce ticket.
+- [ ] Traits déjà accordés (aptitudes de classe) : aucun changement, `classFeatures` continue de fonctionner comme aujourd'hui — ce ticket ajoute les deux nouvelles catégories à côté, ne remplace rien.
+
+**Hors périmètre, à ne pas faire ici** : choix de don (nécessite une UI de création/montée de niveau, gros morceau à part), choix de langue d'historique (même famille), sorts « toujours préparés » sans notion de préparation existante dans le moteur (magiciens ne préparent pas comme les clercs par ex. — règle 5e réelle non modélisée, à vérifier si ça devient un problème concret plutôt que supposé).
+
 ---
 
 ## Lot D — Première assistance IA
@@ -624,8 +653,9 @@ D-01 … D-04                dette, une session
 Lot A  (A1→A2→A3→A4→A5)    les règles deviennent consultables et personnalisables,
                             A5 (traduction FR) ferme le lot une fois la structure stable
 Lot B  (B1→B2→B3→B4→B5)    le personnage devient jouable, B5 le rend interactif
-Lot C  (C1→C2→C3→C4→C5)    plusieurs personnes, permissions réelles, C4 les correctifs,
-                            C5 (sélection de ruleset) n'a de dépendance que sur C1
+Lot C  (C1→C2→C3→C4→C5→C6) plusieurs personnes, permissions réelles, C4 les correctifs,
+                            C5 (sélection de ruleset) n'a de dépendance que sur C1,
+                            C6 (Actions/Magie/Traits) n'a de dépendance que sur B5
 Lot D  (D1→D2→D3→D4)       l'IA, instrumentée dès le premier appel
 ```
 
