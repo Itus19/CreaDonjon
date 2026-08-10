@@ -294,7 +294,7 @@ export default function PlayableCharacterSheet({
     [spellcasting]
   );
 
-  const { ruleset, remainingChoices, equipment, weight, spellLevels } = useResolvedRuleset(worldSlug, {
+  const { ruleset, remainingChoices, proficiencies, languages, equipment, weight, spellLevels } = useResolvedRuleset(worldSlug, {
     species: speciesKey,
     background: backgroundKey,
     classes: classSelections,
@@ -1163,6 +1163,42 @@ export default function PlayableCharacterSheet({
                 </div>
               ) : (
                 <p className="text-sm text-ink-muted">Aucune aptitude de classe pour l&apos;instant.</p>
+              )}
+
+              <span className="mt-3 text-[10px] font-bold uppercase tracking-widest text-ink-muted">Maîtrises</span>
+              {proficiencies.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {proficiencies.map((p) => (
+                    <span
+                      key={`${p.source}:${p.key}`}
+                      title={`Source : ${p.source}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-edge px-2 py-0.5 text-sm text-ink"
+                    >
+                      {p.name}
+                      <span className="text-[10px] text-ink-muted">· {p.source}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-ink-muted">Aucune maîtrise d&apos;armure/arme/outil pour l&apos;instant.</p>
+              )}
+
+              <span className="mt-3 text-[10px] font-bold uppercase tracking-widest text-ink-muted">Langues</span>
+              {languages.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {languages.map((l) => (
+                    <span
+                      key={`${l.source}:${l.key}`}
+                      title={`Source : ${l.source}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-edge px-2 py-0.5 text-sm text-ink"
+                    >
+                      {l.name}
+                      <span className="text-[10px] text-ink-muted">· {l.source}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-ink-muted">Aucune langue accordée sans choix pour l&apos;instant.</p>
               )}
             </div>
           )}

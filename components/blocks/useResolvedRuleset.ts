@@ -11,9 +11,18 @@ export interface RemainingChoiceView {
   options: string[];
 }
 
+/** Maitrise ou langue accordee, avec sa source pour affichage (onglet Traits, V1-C6). */
+export interface TraitGrantView {
+  key: string;
+  name: string;
+  source: string;
+}
+
 export interface ResolvedRulesetView {
   ruleset: ResolvedRuleset;
   remainingChoices: RemainingChoiceView[];
+  proficiencies: TraitGrantView[];
+  languages: TraitGrantView[];
   equipment: Record<string, ArmorData | null>;
   /** Poids en livres, par cle de regle (encombrement, V1-C4 suite). */
   weight: Record<string, number | null>;
@@ -32,6 +41,8 @@ export interface RulesetSelection {
 const EMPTY: ResolvedRulesetView = {
   ruleset: { classes: {}, features: {} },
   remainingChoices: [],
+  proficiencies: [],
+  languages: [],
   equipment: {},
   weight: {},
   spellLevels: {},

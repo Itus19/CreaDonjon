@@ -5,11 +5,13 @@ import type { Locale } from "@/src/i18n/request";
 import type { ResolvedClass, ResolvedFeature, ResolvedRuleset } from "@/src/core/rules/sheet";
 import {
   extractFeatureKeysUpToLevel,
+  extractLanguages,
   extractSkillChoices,
   extractSlotsByLevel,
   mapBackgroundModifiers,
   mapClassCore,
   mapClassSpellcastingAbility,
+  mapProficiencies,
   mapSpeciesModifiers,
   parseArmorData,
   parseCustomTableFields,
@@ -46,9 +48,18 @@ export interface RemainingChoice {
   options: string[];
 }
 
+/** Maitrise ou langue accordee, avec sa source pour affichage (onglet Traits, V1-C6) — pas de lien de regle dedie, voir docs/BACKLOG_V1.md V1-C6 (le SRD ne porte aucun texte descriptif pour ces deux categories). */
+export interface TraitGrant {
+  key: string;
+  name: string;
+  source: string;
+}
+
 export interface AssembledRuleset {
   ruleset: ResolvedRuleset;
   remainingChoices: RemainingChoice[];
+  proficiencies: TraitGrant[];
+  languages: TraitGrant[];
 }
 
 async function resolveEntryName(supabase: TypedClient, entry: RulesetEntryRow, locale: Locale): Promise<string> {
@@ -98,6 +109,8 @@ export async function assembleResolvedRuleset(
   const classes: Record<string, ResolvedClass> = {};
   const remainingChoices: RemainingChoice[] = [];
   const classFeatureKeys = new Set<string>();
+  const proficiencies: TraitGrant[] = [];
+  const languages: TraitGrant[] = [];
 
   if (selection.species) {
     const found = await fetchEntryFields(supabase, rulesetId, selection.species);
@@ -105,6 +118,8 @@ export async function assembleResolvedRuleset(
       const label = await resolveEntryName(supabase, found.entry, locale);
       const key = `species:${selection.species}`;
       features[key] = { key, label, source: key, modifiers: mapSpeciesModifiers(found.fields, key, label) };
+      proficiencies.push(...mapProficiencies(found.fields).map((p) => ({ ...p, source: label })));
+      languages.push(...extractLanguages(found.fields).map((l) => ({ ...l, source: label })));
     }
   }
 
@@ -114,6 +129,7 @@ export async function assembleResolvedRuleset(
       const label = await resolveEntryName(supabase, found.entry, locale);
       const key = `background:${selection.background}`;
       features[key] = { key, label, source: key, modifiers: mapBackgroundModifiers(found.fields, key, label) };
+      proficiencies.push(...mapProficiencies(found.fields).map((p) => ({ ...p, source: label })));
     }
   }
 
@@ -133,6 +149,8 @@ export async function assembleResolvedRuleset(
       savingThrowProficiencies: core.savingThrowProficiencies,
       spellcasting: spellAbility ? { ability: spellAbility, slotsByLevel } : undefined,
     };
+
+    proficiencies.push(...mapProficiencies(found.fields).map((p) => ({ ...p, source: label })));
 
     for (const fk of extractFeatureKeysUpToLevel(found.progressionRows, cl.level)) classFeatureKeys.add(fk);
 
@@ -170,7 +188,7 @@ export async function assembleResolvedRuleset(
     }
   }
 
-  return { ruleset: { classes, features }, remainingChoices };
+  return { ruleset: { classes, features }, remainingChoices, proficiencies, languages };
 }
 
 /** Donnees mecaniques d'armure d'un objet d'equipement, par cle de regle — `null` si l'entree n'existe pas ou n'a pas de donnees d'armure (une arme, par exemple). */

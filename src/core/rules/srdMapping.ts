@@ -265,3 +265,41 @@ export function parseItemWeight(fields: ParsedFields): number | null {
 export function parseSpellLevel(fields: ParsedFields): number | null {
   return typeof fields.level === "number" ? fields.level : null;
 }
+
+export interface ProficiencyEntry {
+  key: string;
+  name: string;
+}
+
+/**
+ * Maitrises d'armure/arme/outil accordees par une classe ou un historique
+ * (onglet Traits, V1-C6) — exclut les competences (`skill-*`, deja
+ * couvertes par `mapBackgroundModifiers`/`mapChosenSkillModifiers`) et les
+ * jets de sauvegarde (`saving-throw-*`, deja couverts par `mapClassCore`).
+ * Meme champ que `mapBackgroundModifiers` (`proficiencies` ou
+ * `starting_proficiencies` selon l'edition), verifie melanger ces trois
+ * natures d'entree dans le meme tableau (ex. `Classes.fighter.proficiencies`
+ * du SRD 2014).
+ */
+export function mapProficiencies(fields: ParsedFields): ProficiencyEntry[] {
+  const raw = fields.proficiencies ?? fields.starting_proficiencies;
+  if (!Array.isArray(raw)) return [];
+  return (raw as { index?: string; name?: string }[])
+    .filter((p): p is { index: string; name?: string } => typeof p.index === "string")
+    .filter((p) => !p.index.startsWith("skill-") && !p.index.startsWith("saving-throw-"))
+    .map((p) => ({ key: p.index, name: p.name ?? p.index }));
+}
+
+export interface LanguageEntry {
+  key: string;
+  name: string;
+}
+
+/** Langues fixes accordees par une espece (onglet Traits, V1-C6) — champ `languages`, verifie identique en forme entre 2014 et 2024. Ne couvre pas les langues au choix d'un historique (`language_options`, structure de choix, pas une liste — hors perimetre). */
+export function extractLanguages(fields: ParsedFields): LanguageEntry[] {
+  const raw = fields.languages;
+  if (!Array.isArray(raw)) return [];
+  return (raw as { index?: string; name?: string }[])
+    .filter((l): l is { index: string; name?: string } => typeof l.index === "string")
+    .map((l) => ({ key: l.index, name: l.name ?? l.index }));
+}

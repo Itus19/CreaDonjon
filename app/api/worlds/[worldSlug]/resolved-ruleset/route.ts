@@ -39,7 +39,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   ]);
   if (!rulesetId) {
     return NextResponse.json(
-      { ruleset: { classes: {}, features: {} }, remainingChoices: [], equipment: {}, weight: {}, spellLevels: {} },
+      {
+        ruleset: { classes: {}, features: {} },
+        remainingChoices: [],
+        proficiencies: [],
+        languages: [],
+        equipment: {},
+        weight: {},
+        spellLevels: {},
+      },
       { status: 200 }
     );
   }

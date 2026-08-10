@@ -9,6 +9,8 @@ import {
   mapClassCore,
   mapClassSpellcastingAbility,
   mapSpeciesModifiers,
+  extractLanguages,
+  mapProficiencies,
   parseArmorData,
   parseCustomTableFields,
   parseItemWeight,
@@ -176,6 +178,67 @@ describe("mapBackgroundModifiers", () => {
     expect(mapBackgroundModifiers(fields, "background:soldier", "Soldat")).toEqual([
       { target: "skill.athletics", op: "proficiency", layer: 4, source: "background:soldier", label: "Soldat" },
     ]);
+  });
+});
+
+// Fixture fidele a data/srd/srd-2014.json : `Classes.fighter.proficiencies`
+// melange armure/arme/bouclier ET jets de sauvegarde dans le meme tableau.
+const FIGHTER_PROFICIENCIES_ROWS = [
+  {
+    field: "proficiencies",
+    value: JSON.stringify([
+      { index: "all-armor", name: "All armor" },
+      { index: "shields", name: "Shields" },
+      { index: "simple-weapons", name: "Simple Weapons" },
+      { index: "martial-weapons", name: "Martial Weapons" },
+      { index: "saving-throw-str", name: "Saving Throw: STR" },
+      { index: "saving-throw-con", name: "Saving Throw: CON" },
+    ]),
+  },
+];
+
+describe("mapProficiencies", () => {
+  it("retient les maitrises d'armure/arme, exclut les jets de sauvegarde (deja couverts par mapClassCore)", () => {
+    const fields = parseCustomTableFields(FIGHTER_PROFICIENCIES_ROWS);
+    expect(mapProficiencies(fields)).toEqual([
+      { key: "all-armor", name: "All armor" },
+      { key: "shields", name: "Shields" },
+      { key: "simple-weapons", name: "Simple Weapons" },
+      { key: "martial-weapons", name: "Martial Weapons" },
+    ]);
+  });
+
+  it("exclut aussi les competences (deja couvertes par mapBackgroundModifiers/mapChosenSkillModifiers)", () => {
+    const fields = parseCustomTableFields([
+      { field: "starting_proficiencies", value: JSON.stringify([{ index: "skill-insight" }, { index: "thieves-tools" }]) },
+    ]);
+    expect(mapProficiencies(fields)).toEqual([{ key: "thieves-tools", name: "thieves-tools" }]);
+  });
+
+  it("retourne un tableau vide si le champ est absent", () => {
+    expect(mapProficiencies(parseCustomTableFields([{ field: "name", value: "Sans maitrise" }]))).toEqual([]);
+  });
+});
+
+describe("extractLanguages", () => {
+  it("lit les langues d'une espece (nain : commun, nain)", () => {
+    const fields = parseCustomTableFields([
+      {
+        field: "languages",
+        value: JSON.stringify([
+          { index: "common", name: "Common" },
+          { index: "dwarvish", name: "Dwarvish" },
+        ]),
+      },
+    ]);
+    expect(extractLanguages(fields)).toEqual([
+      { key: "common", name: "Common" },
+      { key: "dwarvish", name: "Dwarvish" },
+    ]);
+  });
+
+  it("retourne un tableau vide si le champ est absent", () => {
+    expect(extractLanguages(parseCustomTableFields([{ field: "name", value: "Sans langue" }]))).toEqual([]);
   });
 });
 
