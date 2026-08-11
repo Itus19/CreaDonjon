@@ -732,7 +732,16 @@ Suite de V1-C11, 5 ajustements sur retour utilisateur : ajout d'objet remonté s
 
 **Second ajustement (badge « Moine »)** — question de l'utilisateur sur la présence du tag « Moine » sur une dague pour un personnage Magicien : donnée SRD réelle et correcte (la dague est éligible comme arme de moine dans les règles officielles, le SRD encode ça comme une propriété de l'arme), mais sans effet sur aucun calcul affiché ici, contrairement à finesse. Sur confirmation explicite : masqué quand le personnage n'a aucun niveau dans la classe Moine (`character.classes`, comparaison sur la clé `"monk"`) — les autres propriétés restent toujours affichées, ce sont des faits sur l'arme, pas sur qui la porte.
 
-**Troisième ajustement (repli/dépli, onglet Inventaire uniquement)** — repli par défaut sur retour utilisateur (réduit l'encombrement visé depuis le début de ce ticket) : replié, seuls titre/poids/coût/quantité/suppression et les badges de propriété restent visibles ; déplié, les descriptions et les boutons d'action apparaissent. Flèche centrée exactement au milieu de l'encadré (grille `1fr auto 1fr`, pas un simple bouton placé avant celui de suppression — resterait décentré selon la largeur du titre) à la même hauteur que le titre. `ItemCard` gagne une prop `collapsible` explicite à chaque site d'appel plutôt qu'un comportement déduit implicitement : `false` dans l'onglet Actions (son seul rôle est d'utiliser l'objet, jamais replié) — `false` désactive aussi le rendu de la flèche ; `true` dans l'onglet Inventaire. Aucune flèche affichée pour un objet sans rien à replier (armure, objet en ligne sans propriété) — pas de contrôle qui ne contrôlerait rien. Vérifié en navigateur : dague repliée par défaut (titre/poids/coût/tags visibles, description/boutons cachés), dépliée au clic sur la flèche (▾ devient ▴), armure affichée sans flèche (rien à replier).
+---
+
+### V1-C13 — Encadré d'objet repliable (onglet Inventaire) · `S` — fait
+
+Réduit l'encombrement visé depuis le début de V1-C11/V1-C12 : replié par défaut, seuls titre/poids/coût/quantité/suppression et les badges de propriété restent visibles ; déplié, les descriptions et les boutons d'action apparaissent. Flèche centrée exactement au milieu de l'encadré (grille `1fr auto 1fr`, pas un simple bouton placé avant celui de suppression — resterait décentré selon la largeur du titre), à la même hauteur que le titre.
+
+**Fait** :
+- `ItemCard` gagne une prop `collapsible` explicite à chaque site d'appel plutôt qu'un comportement déduit implicitement : `false` dans l'onglet Actions (son seul rôle est d'utiliser l'objet, jamais replié — désactive aussi le rendu de la flèche) ; `true` dans l'onglet Inventaire.
+- Aucune flèche affichée pour un objet sans rien à replier (armure, objet en ligne sans propriété) — pas de contrôle qui ne contrôlerait rien.
+- Vérifié en navigateur : dague repliée par défaut (titre/poids/coût/tags visibles, description/boutons cachés), dépliée au clic sur la flèche (▾ devient ▴) ; armure affichée sans flèche (rien à replier) ; onglet Actions inchangé, toujours entièrement déplié.
 
 ---
 
