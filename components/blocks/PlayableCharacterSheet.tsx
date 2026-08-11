@@ -233,9 +233,20 @@ function ActionButton({
       onClick={onClick}
       className="flex min-w-[6.5rem] flex-col items-center gap-0.5 rounded-md border border-edge px-3 py-1.5 text-ink hover:bg-panel disabled:opacity-50"
     >
-      <span className="text-xs font-medium">{label}</span>
-      <span className="mech text-[11px]">{resolvedFormula}</span>
-      <span className="mech text-[9px] text-ink-muted">{detailFormula}</span>
+      {/* `.mech` (globals.css) impose son propre `font-size: 0.9em`, hors de
+          tout `@layer` Tailwind — il l'emporte toujours sur une classe
+          `text-[Npx]` combinee sur le meme element, peu importe l'ordre
+          ecrit ici (regle CSS Cascade Layers : le non-layer bat tout layer).
+          Seul un style en ligne (priorite maximale, avant `!important`) peut
+          fixer une taille exacte a cote de `mech` — d'ou son usage ici,
+          jamais une classe Tailwind seule. */}
+      <span className="text-[10px] font-medium">{label}</span>
+      <span className="mech" style={{ fontSize: "0.875rem" }}>
+        {resolvedFormula}
+      </span>
+      <span className="mech text-ink-muted" style={{ fontSize: "0.625rem" }}>
+        {detailFormula}
+      </span>
     </button>
   );
 }
@@ -368,9 +379,13 @@ function ItemCard({
           ) : (
             <span className="text-sm font-semibold text-ink">{title || "Sans nom"}</span>
           )}
-          {weightLb !== null && <span className="text-[10px] text-ink-muted">{lbToKg(weightLb)} kg</span>}
+          {weightLb !== null && (
+            <span className="mech text-ink-muted" style={{ fontSize: "0.625rem" }}>
+              {lbToKg(weightLb)} kg
+            </span>
+          )}
           {cost && (
-            <span className="mech text-[10px] text-ink-muted">
+            <span className="mech text-ink-muted" style={{ fontSize: "0.625rem" }}>
               {cost.quantity} {CURRENCY_LABELS_FR[cost.unit] ?? cost.unit}
             </span>
           )}
@@ -415,7 +430,7 @@ function ItemCard({
               const propChip = propertyChips.get(refIdentity({ kind: "rule", key: weaponPropertyRefKey(p.key) }));
               const description = propChip?.found && propChip.summary ? stripDigestPrefix(propChip.summary) : null;
               return description ? (
-                <p key={p.key} className="text-[10px] leading-relaxed text-ink-muted">
+                <p key={p.key} className="text-xs leading-relaxed text-ink-muted">
                   <span className="font-semibold text-ink">{p.label}</span> — {description}
                 </p>
               ) : null;

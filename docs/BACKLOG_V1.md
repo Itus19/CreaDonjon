@@ -728,6 +728,8 @@ Suite de V1-C11, 5 ajustements sur retour utilisateur : ajout d'objet remonté s
 
 *Hors périmètre : traduction française des ~11 descriptions de propriété (limite déjà documentée V1-C9, pas rouverte) ; `Weapon-Mastery-Properties` (2024, mécanique non modélisée sur la fiche jouable aujourd'hui) reste hors import.*
 
+**Ajustement suite au premier retour visuel (tailles de police)** — cause identifiée avant de corriger, pas devinée : `.mech` (`app/globals.css`) impose son propre `font-size: 0.9em` en CSS non-layé (hors de tout `@layer` Tailwind), qui l'emporte toujours sur une classe `text-[Npx]` combinée sur le même élément, quel que soit l'ordre écrit — règle CSS Cascade Layers, le non-layé bat systématiquement tout layer. Plusieurs tailles affichées ne correspondaient donc pas à la classe lue dans le code. Corrigé par un style en ligne (seule priorité qui passe devant `.mech`, jamais une classe Tailwind seule) partout où `mech` est combiné à une taille explicite : poids et coût maintenant identiques (`0.625rem`/10px, tous deux en police mécanique) ; dans un bouton d'action, la formule résolue centrale (« 1d20+2+2 ») égale la taille du titre de l'encadré (`0.875rem`/14px), le verbe et le détail symbolique descendent à `0.625rem`/10px ; descriptions de propriété passées à `text-xs` (12px). Tailles exactes vérifiées via `getComputedStyle` en navigateur, pas seulement à l'œil.
+
 ---
 
 ## Lot D — Première assistance IA
