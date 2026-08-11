@@ -75,6 +75,46 @@ export const LANGUAGE_LABELS_FR: Record<LanguageKey, string> = {
   undercommon: "Sous-commun",
 };
 
+/**
+ * Libelles des proprietes d'arme (onglet Inventaire, V1-C11) — liste
+ * complete verifiee contre `data/srd/srd-2014.json`/`srd-2024.json`
+ * (`Weapon-Properties`, non importe comme categorie a part, cf.
+ * `scripts/ingest-srd.ts` `SKIPPED_CATEGORIES` — ces cles n'ont donc pas de
+ * fiche de regle propre, juste ce libelle statique, meme motif que
+ * `SKILL_LABELS_FR`/`LANGUAGE_LABELS_FR`).
+ */
+export const WEAPON_PROPERTY_LABELS_FR: Record<string, string> = {
+  ammunition: "Munitions",
+  finesse: "Finesse",
+  heavy: "Lourde",
+  light: "Legere",
+  loading: "Rechargement",
+  monk: "Moine",
+  range: "Portee",
+  reach: "Allonge",
+  special: "Speciale",
+  thrown: "Lancer",
+  "two-handed": "A deux mains",
+  versatile: "Polyvalente",
+};
+
+/** Libelles des categories d'armure (`ArmorData.category`, onglet Inventaire, V1-C11) — valeurs verifiees identiques sur les deux editions. */
+export const ARMOR_CATEGORY_LABELS_FR: Record<string, string> = {
+  Light: "Legere",
+  Medium: "Intermediaire",
+  Heavy: "Lourde",
+  Shield: "Bouclier",
+};
+
+/** Abreviations francaises des pieces de monnaie (onglet Inventaire, V1-C11) — la grille de monnaie du bloc Inventaire garde les codes SRD bruts (pp/gp/ep/sp/cp), non repris ici (hors perimetre de ce ticket). */
+export const CURRENCY_LABELS_FR: Record<string, string> = {
+  pp: "pp",
+  gp: "po",
+  ep: "pe",
+  sp: "pa",
+  cp: "pc",
+};
+
 export const RELATION_LABELS_FR: Record<string, string> = {
   parent_of: "parent de",
   child_of: "enfant de",

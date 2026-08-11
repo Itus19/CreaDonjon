@@ -16,6 +16,7 @@ import {
   mapProficiencies,
   parseArmorData,
   parseCustomTableFields,
+  parseItemCost,
   parseItemWeight,
   parseSpellLevel,
   parseWeaponData,
@@ -463,6 +464,25 @@ describe("parseItemWeight", () => {
 
   it("retourne null si le champ est absent (contenu maison sans poids renseigne)", () => {
     expect(parseItemWeight(parseCustomTableFields([{ field: "name", value: "Fiole de sable noir" }]))).toBeNull();
+  });
+});
+
+// Champ verifie contre data/srd/srd-2014.json et srd-2024.json : `cost:
+// {quantity, unit}`, meme forme sur armes/armures/objets, les deux editions
+// (ex. dague : "cost": {"quantity": 2, "unit": "gp"}).
+describe("parseItemCost", () => {
+  it("lit un cout present sur une arme", () => {
+    const fields = parseCustomTableFields([{ field: "cost", value: JSON.stringify({ quantity: 2, unit: "gp" }) }]);
+    expect(parseItemCost(fields)).toEqual({ quantity: 2, unit: "gp" });
+  });
+
+  it("retourne null si le champ est absent (contenu maison sans cout renseigne)", () => {
+    expect(parseItemCost(parseCustomTableFields([{ field: "name", value: "Fiole de sable noir" }]))).toBeNull();
+  });
+
+  it("retourne null si la forme est incomplete (quantite manquante)", () => {
+    const fields = parseCustomTableFields([{ field: "cost", value: JSON.stringify({ unit: "gp" }) }]);
+    expect(parseItemCost(fields)).toBeNull();
   });
 });
 

@@ -18,12 +18,14 @@ import {
   mapSpeciesModifiers,
   parseArmorData,
   parseCustomTableFields,
+  parseItemCost,
   parseItemWeight,
   parseSpellLevel,
   parseWeaponData,
   SRD_LANGUAGES,
   type ArmorData,
   type CustomTableRow,
+  type ItemCost,
   type ProgressionRow,
   type WeaponData,
 } from "@/src/core/rules/srdMapping";
@@ -252,6 +254,20 @@ export async function resolveEquipmentWeight(
   for (const key of keys) {
     const found = await fetchEntryFields(supabase, rulesetId, key);
     result[key] = found ? parseItemWeight(found.fields) : null;
+  }
+  return result;
+}
+
+/** Cout d'un objet d'equipement, par cle de regle — `null` si l'entree n'existe pas ou n'a pas de cout renseigne (onglet Inventaire, V1-C11). */
+export async function resolveEquipmentCost(
+  supabase: TypedClient,
+  rulesetId: string,
+  keys: readonly string[]
+): Promise<Record<string, ItemCost | null>> {
+  const result: Record<string, ItemCost | null> = {};
+  for (const key of keys) {
+    const found = await fetchEntryFields(supabase, rulesetId, key);
+    result[key] = found ? parseItemCost(found.fields) : null;
   }
   return result;
 }

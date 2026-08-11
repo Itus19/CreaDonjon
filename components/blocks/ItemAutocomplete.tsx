@@ -30,11 +30,14 @@ export default function ItemAutocomplete({
   worldSlug,
   value,
   onChange,
+  onQueryChange,
   placeholder,
 }: {
   worldSlug: string;
   value: BlockReference | null;
   onChange: (ref: BlockReference) => void;
+  /** Texte brut tape, pour un appelant qui veut un repli objet-en-ligne quand aucune suggestion n'est choisie (onglet Inventaire, V1-C11). Optionnel, retro-compatible. */
+  onQueryChange?: (text: string) => void;
   placeholder?: string;
 }) {
   const ruleEntries = useWorldRuleEntries(worldSlug);
@@ -95,6 +98,7 @@ export default function ItemAutocomplete({
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
+          onQueryChange?.(e.target.value);
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}

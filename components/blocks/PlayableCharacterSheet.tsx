@@ -17,19 +17,34 @@ import {
   type EquippedItem,
   type ResolvedFeature,
 } from "@/src/core/rules/sheet";
-import { armorAcModifier, mapChosenSkillModifiers, SRD_LANGUAGES, type LanguageKey } from "@/src/core/rules/srdMapping";
+import {
+  armorAcModifier,
+  mapChosenSkillModifiers,
+  SRD_LANGUAGES,
+  type ArmorData,
+  type ItemCost,
+  type LanguageKey,
+  type WeaponData,
+} from "@/src/core/rules/srdMapping";
 import { lbToKg, totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { evaluate, type TraceStep } from "@/src/core/formula/evaluate";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
-import type { AdvantageState } from "@/src/core/rules/action";
+import { weaponAttackAbilityMod, type AdvantageState } from "@/src/core/rules/action";
 import { useResolvedRuleset, type RemainingChoiceView, type TraitGrantView } from "./useResolvedRuleset";
 import { useReferenceChips, refIdentity, type ResolvedChipView } from "./useReferenceChips";
-import InventoryBlockEditor, { itemLabel, itemRef } from "./InventoryBlockEditor";
+import { itemLabel, itemRef } from "./InventoryBlockEditor";
+import ItemAutocomplete from "./ItemAutocomplete";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
-import { LANGUAGE_LABELS_FR, SKILL_LABELS_FR } from "@/src/i18n/fr";
+import {
+  ARMOR_CATEGORY_LABELS_FR,
+  CURRENCY_LABELS_FR,
+  LANGUAGE_LABELS_FR,
+  SKILL_LABELS_FR,
+  WEAPON_PROPERTY_LABELS_FR,
+} from "@/src/i18n/fr";
 
 const ABILITY_LABELS: Record<Ability, string> = {
   str: "FOR",
@@ -190,6 +205,220 @@ function StatBadge({ label, value, danger }: { label: string; value: string; dan
   );
 }
 
+/**
+ * Bouton d'action a formule (V1-C11) : le libelle reste un verbe clair
+ * (« Attaquer », pas « 1d20 ») — deux boutons d'attaque cote a cote
+ * porteraient sinon le meme « 1d20 » sans rien pour les distinguer. La
+ * formule resolue (avec la bonne caracteristique, finesse comprise) va en
+ * dessous en police mecanique, jamais dans le bouton — seulement si un
+ * modificateur s'applique reellement (`formula` vide sinon).
+ */
+function ActionButton({ label, formula, busy, onClick }: { label: string; formula: string; busy: boolean; onClick: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onClick}
+        className="rounded-full border border-edge px-2.5 py-1 text-xs text-ink hover:bg-panel disabled:opacity-50"
+      >
+        {label}
+      </button>
+      {formula && <span className="mech text-[10px] text-ink-muted">{formula}</span>}
+    </div>
+  );
+}
+
+/**
+ * Encadre d'objet d'inventaire (V1-C11, sur retour utilisateur) : meme
+ * langage visuel que les encadres de l'onglet Traits (V1-C9) — titre lie a
+ * la fiche de regle, proprietes en pilules, poids/cout, actions a droite.
+ * Reutilise par l'onglet Actions (`onToggleEquipped`/`onChangeQty`/`onRemove`
+ * omis dans ce contexte : gerer l'inventaire n'est pas le role de cet
+ * onglet, seulement l'utiliser) — l'encadre d'une arme equipee y est donc
+ * litteralement le meme composant, pas une copie.
+ */
+function ItemCard({
+  item,
+  chip,
+  weapon,
+  armor,
+  weightLb,
+  cost,
+  strMod,
+  dexMod,
+  busy,
+  onAttack,
+  onDamage,
+  onToggleEquipped,
+  onChangeQty,
+  onRemove,
+}: {
+  item: InventoryItem;
+  chip: ResolvedChipView | undefined;
+  weapon: WeaponData | null;
+  armor: ArmorData | null;
+  weightLb: number | null;
+  cost: ItemCost | null;
+  strMod: number;
+  dexMod: number;
+  busy: boolean;
+  onAttack?: () => void;
+  onDamage?: (versatile: boolean) => void;
+  onToggleEquipped?: () => void;
+  onChangeQty?: (qty: number) => void;
+  onRemove?: () => void;
+}) {
+  const title = chip?.found ? chip.name : itemLabel(item);
+
+  const properties: string[] = [];
+  if (weapon) {
+    for (const p of weapon.properties) properties.push(WEAPON_PROPERTY_LABELS_FR[p] ?? p);
+  } else if (armor) {
+    properties.push(ARMOR_CATEGORY_LABELS_FR[armor.category] ?? armor.category);
+  }
+
+  // Meme regle que le serveur (`weaponAttackAbilityMod`, resolveAction.ts) —
+  // le libelle affiche ici doit refleter la meme caracteristique que celle
+  // reellement utilisee au clic, jamais une supposition separee.
+  const abilityMod = weapon ? weaponAttackAbilityMod(weapon.properties, weapon.isRanged, strMod, dexMod) : 0;
+  const abilityLabel = weapon ? (weapon.isRanged || (weapon.properties.includes("finesse") && dexMod > strMod) ? "DEX" : "FOR") : "";
+  const attackFormula = abilityMod !== 0 ? `1d20+${abilityLabel}+maîtrise` : "1d20+maîtrise";
+  const damageFormula = (dice: string) => (abilityMod !== 0 ? `${dice}+${abilityLabel}` : "");
+
+  return (
+    <div className="rounded-md border border-edge/60 bg-panel-raised p-2.5">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-col gap-1">
+          {chip?.found ? (
+            <Link href={chip.href} className="text-sm font-semibold no-underline hover:underline" style={{ color: "var(--link-rule)" }}>
+              {title}
+            </Link>
+          ) : (
+            <span className="text-sm font-semibold text-ink">{title || "Sans nom"}</span>
+          )}
+          {properties.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {properties.map((p) => (
+                <span key={p} className="rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">
+                  {p}
+                </span>
+              ))}
+            </div>
+          )}
+          {(weightLb !== null || cost) && (
+            <div className="flex gap-2 text-[10px] text-ink-muted">
+              {weightLb !== null && <span>{lbToKg(weightLb)} kg</span>}
+              {cost && (
+                <span className="mech">
+                  {cost.quantity} {CURRENCY_LABELS_FR[cost.unit] ?? cost.unit}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {onChangeQty && (
+            <input
+              type="number"
+              min={0}
+              value={item.qty}
+              onChange={(e) => onChangeQty(Number(e.target.value) || 0)}
+              className="w-12 rounded-md border border-edge bg-transparent px-1 py-0.5 text-center text-xs text-ink outline-none"
+              aria-label="Quantité"
+            />
+          )}
+          {onToggleEquipped && (
+            <button
+              type="button"
+              onClick={onToggleEquipped}
+              className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                item.equipped ? "border-accent bg-accent/20 text-accent" : "border-edge text-ink-muted hover:bg-panel"
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${item.equipped ? "bg-accent" : "bg-edge"}`} aria-hidden="true" />
+              {item.equipped ? "Équipé" : "Équiper"}
+            </button>
+          )}
+          {onRemove && (
+            <button type="button" onClick={onRemove} className="text-xs text-danger hover:underline">
+              ×
+            </button>
+          )}
+        </div>
+      </div>
+
+      {weapon && (onAttack || onDamage) && (
+        <div className="mt-2 flex flex-wrap justify-end gap-3">
+          {onAttack && <ActionButton label="Attaquer" formula={attackFormula} busy={busy} onClick={onAttack} />}
+          {onAttack && weapon.properties.includes("thrown") && (
+            <ActionButton label="Lancer" formula={attackFormula} busy={busy} onClick={onAttack} />
+          )}
+          {onDamage && (
+            <ActionButton label="Dégâts" formula={damageFormula(weapon.damageDice)} busy={busy} onClick={() => onDamage(false)} />
+          )}
+          {onDamage && weapon.versatileDamageDice && (
+            <ActionButton
+              label="Dégâts (2 mains)"
+              formula={damageFormula(weapon.versatileDamageDice)}
+              busy={busy}
+              onClick={() => onDamage(true)}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Ajout d'objet par recherche de regle (V1-C11, remplace le couple menu
+ * "Objet en ligne/Reference de regle" + champ separe) : un seul champ, une
+ * quantite, un bouton. Une suggestion choisie cree une reference ; un texte
+ * libre sans suggestion choisie cree un objet en ligne (homebrew) — les deux
+ * flux restent possibles, `ItemAutocomplete` gere deja ce repli cote UI.
+ */
+function AddItemRow({ worldSlug, onAdd }: { worldSlug: string; onAdd: (item: InventoryItem) => void }) {
+  const [resetKey, setResetKey] = useState(0);
+  const [ref, setRef] = useState<BlockReference | null>(null);
+  const [query, setQuery] = useState("");
+  const [qty, setQty] = useState(1);
+
+  function submit() {
+    const trimmed = query.trim();
+    if (!ref && trimmed === "") return;
+    const item: InventoryItem = ref ? { id: crypto.randomUUID(), qty, ref } : { id: crypto.randomUUID(), qty, label: trimmed };
+    onAdd(item);
+    setRef(null);
+    setQuery("");
+    setQty(1);
+    setResetKey((k) => k + 1);
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1">
+        <ItemAutocomplete key={resetKey} worldSlug={worldSlug} value={ref} onChange={setRef} onQueryChange={setQuery} />
+      </div>
+      <input
+        type="number"
+        min={1}
+        value={qty}
+        onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+        className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+        aria-label="Quantité"
+      />
+      <button
+        type="button"
+        onClick={submit}
+        className="shrink-0 rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+      >
+        + Ajouter
+      </button>
+    </div>
+  );
+}
+
 interface RollLogEntry {
   id: string;
   label: string;
@@ -277,6 +506,26 @@ export default function PlayableCharacterSheet({
     patchCharacter({ classes: [...character.classes, { class: { kind: "rule", key: "" }, level: 1, subclass: null }] });
   }
 
+  /** Onglet Inventaire (V1-C11) : cree le bloc `inventory` a la volee s'il n'existe pas encore — meme motif que `updateInventory` dans `EntityBlocks.tsx` (bootstrap-si-absent). */
+  function inventoryBase(): InventoryBlockData {
+    return inventory ?? { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } };
+  }
+
+  function updateInventoryItem(index: number, patch: Partial<InventoryItem>) {
+    const base = inventoryBase();
+    onUpdateInventory({ ...base, items: base.items.map((it, i) => (i === index ? ({ ...it, ...patch } as InventoryItem) : it)) });
+  }
+
+  function removeInventoryItem(index: number) {
+    const base = inventoryBase();
+    onUpdateInventory({ ...base, items: base.items.filter((_, i) => i !== index) });
+  }
+
+  function addInventoryItem(item: InventoryItem) {
+    const base = inventoryBase();
+    onUpdateInventory({ ...base, items: [...base.items, item] });
+  }
+
   const speciesKey = character.species?.kind === "rule" ? character.species.key : undefined;
   const backgroundKey = character.background?.kind === "rule" ? character.background.key : undefined;
   const classSelections = useMemo(
@@ -295,7 +544,7 @@ export default function PlayableCharacterSheet({
     [spellcasting]
   );
 
-  const { ruleset, remainingChoices, proficiencies, languages, equipment, weaponByKey, weight, spellLevels } = useResolvedRuleset(worldSlug, {
+  const { ruleset, remainingChoices, proficiencies, languages, equipment, weaponByKey, weight, cost, spellLevels } = useResolvedRuleset(worldSlug, {
     species: speciesKey,
     background: backgroundKey,
     classes: classSelections,
@@ -427,6 +676,13 @@ export default function PlayableCharacterSheet({
     return refs;
   }, [character.species, character.background, character.classes]);
   const buildChips = useReferenceChips(worldSlug, buildRefs);
+
+  /** Renvois des objets d'inventaire references par une regle (onglet Inventaire, V1-C11) — nom traduit + lien de fiche pour chaque encadre. */
+  const inventoryRefs = useMemo(
+    () => (inventory?.items ?? []).map(itemRef).filter((r): r is BlockReference => r !== null),
+    [inventory]
+  );
+  const itemChips = useReferenceChips(worldSlug, inventoryRefs);
 
   /**
    * Competences liees a un choix non resolu (V1-C4 suite, sur retour
@@ -1070,20 +1326,20 @@ export default function PlayableCharacterSheet({
                 const ref = itemRef(item);
                 const weapon = ref?.kind === "rule" ? weaponByKey[ref.key] : null;
                 return (
-                  <div key={item.id} className="flex flex-wrap items-center gap-2 rounded-md border border-edge/60 px-2.5 py-1.5 text-sm">
-                    <span className="font-medium text-ink">{itemLabel(item)}</span>
-                    <button type="button" disabled={busy} onClick={() => attack(item)} className="rounded-full border border-edge px-2.5 py-1 text-xs hover:bg-panel disabled:opacity-50">
-                      Attaquer
-                    </button>
-                    <button type="button" disabled={busy} onClick={() => damage(item, false)} className="rounded-full border border-edge px-2.5 py-1 text-xs hover:bg-panel disabled:opacity-50">
-                      Dégâts
-                    </button>
-                    {weapon?.versatileDamageDice && (
-                      <button type="button" disabled={busy} onClick={() => damage(item, true)} className="rounded-full border border-edge px-2.5 py-1 text-xs hover:bg-panel disabled:opacity-50">
-                        Dégâts (2 mains)
-                      </button>
-                    )}
-                  </div>
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    chip={ref ? itemChips.get(refIdentity(ref)) : undefined}
+                    weapon={weapon}
+                    armor={null}
+                    weightLb={null}
+                    cost={null}
+                    strMod={sheet.abilities.str.mod}
+                    dexMod={sheet.abilities.dex.mod}
+                    busy={busy}
+                    onAttack={() => attack(item)}
+                    onDamage={(versatile) => damage(item, versatile)}
+                  />
                 );
               })}
 
@@ -1201,7 +1457,54 @@ export default function PlayableCharacterSheet({
                   />
                 </div>
               </div>
-              <InventoryBlockEditor worldSlug={worldSlug} data={inventory ?? { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } }} onChange={onUpdateInventory} />
+
+              <div className="grid grid-cols-5 gap-2">
+                {(["pp", "gp", "ep", "sp", "cp"] as const).map((coin) => (
+                  <label key={coin} className="flex flex-col gap-1 text-xs text-ink-muted">
+                    {CURRENCY_LABELS_FR[coin]}
+                    <input
+                      type="number"
+                      min={0}
+                      value={inventory?.currency[coin] ?? 0}
+                      onChange={(e) => {
+                        const base = inventoryBase();
+                        onUpdateInventory({ ...base, currency: { ...base.currency, [coin]: Number(e.target.value) || 0 } });
+                      }}
+                      className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                    />
+                  </label>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {(inventory?.items ?? []).map((item, index) => {
+                  const ref = itemRef(item);
+                  const weapon = ref?.kind === "rule" ? weaponByKey[ref.key] : null;
+                  const armor = ref?.kind === "rule" ? equipment[ref.key] : null;
+                  return (
+                    <ItemCard
+                      key={item.id}
+                      item={item}
+                      chip={ref ? itemChips.get(refIdentity(ref)) : undefined}
+                      weapon={weapon}
+                      armor={armor}
+                      weightLb={ref?.kind === "rule" ? (weight[ref.key] ?? null) : null}
+                      cost={ref?.kind === "rule" ? (cost[ref.key] ?? null) : null}
+                      strMod={sheet.abilities.str.mod}
+                      dexMod={sheet.abilities.dex.mod}
+                      busy={busy}
+                      onAttack={item.equipped && weapon ? () => attack(item) : undefined}
+                      onDamage={item.equipped && weapon ? (versatile) => damage(item, versatile) : undefined}
+                      onToggleEquipped={() => updateInventoryItem(index, { equipped: !item.equipped })}
+                      onChangeQty={(qty) => updateInventoryItem(index, { qty })}
+                      onRemove={() => removeInventoryItem(index)}
+                    />
+                  );
+                })}
+                {(inventory?.items.length ?? 0) === 0 && <p className="text-sm text-ink-muted">Aucun objet pour l&apos;instant.</p>}
+              </div>
+
+              <AddItemRow worldSlug={worldSlug} onAdd={addInventoryItem} />
             </div>
           )}
 

@@ -340,6 +340,23 @@ export function parseItemWeight(fields: ParsedFields): number | null {
   return typeof fields.weight === "number" ? fields.weight : null;
 }
 
+export interface ItemCost {
+  quantity: number;
+  unit: string;
+}
+
+/**
+ * Cout d'un objet d'equipement — champ `cost: {quantity, unit}` partage par
+ * toutes les entrees `Equipment` du SRD, identique en forme entre 2014 et
+ * 2024 (verifie contre les deux fichiers, ex. dague : `{"quantity": 2,
+ * "unit": "gp"}`). `null` si absent ou incomplet, jamais une erreur.
+ */
+export function parseItemCost(fields: ParsedFields): ItemCost | null {
+  const cost = fields.cost as { quantity?: unknown; unit?: unknown } | undefined;
+  if (!cost || typeof cost.quantity !== "number" || typeof cost.unit !== "string") return null;
+  return { quantity: cost.quantity, unit: cost.unit };
+}
+
 /**
  * Niveau d'un sort (0 = tour de magie, 1-9 sinon) — champ `level` partage par
  * les entrees `Spells` du SRD, identique en forme entre 2014 et 2024. `null`

@@ -128,11 +128,6 @@ export default function InventoryBlockEditor({
         </button>
       </div>
 
-      <p className="text-[10px] italic text-ink-muted">
-        L&apos;aperçu de la fiche de jeu (CA, PV, avertissements) s&apos;affiche en haut de la fiche des qu&apos;un
-        bloc « Personnage » existe sur cette entité.
-      </p>
-
       <div className="grid grid-cols-5 gap-2">
         {(["pp", "gp", "ep", "sp", "cp"] as const).map((coin) => (
           <label key={coin} className="flex flex-col gap-1 text-xs text-ink-muted">

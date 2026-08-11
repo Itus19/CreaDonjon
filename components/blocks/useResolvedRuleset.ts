@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ResolvedRuleset } from "@/src/core/rules/sheet";
-import type { ArmorData, WeaponData } from "@/src/core/rules/srdMapping";
+import type { ArmorData, ItemCost, WeaponData } from "@/src/core/rules/srdMapping";
 
 export interface RemainingChoiceView {
   id: string;
@@ -30,6 +30,8 @@ export interface ResolvedRulesetView {
   weaponByKey: Record<string, WeaponData | null>;
   /** Poids en livres, par cle de regle (encombrement, V1-C4 suite). */
   weight: Record<string, number | null>;
+  /** Cout (quantite + unite de monnaie), par cle de regle (onglet Inventaire, V1-C11). */
+  cost: Record<string, ItemCost | null>;
   /** Niveau de sort (0 = tour de magie), par cle de regle (tri Magie, V1-C6). */
   spellLevels: Record<string, number | null>;
 }
@@ -50,6 +52,7 @@ const EMPTY: ResolvedRulesetView = {
   equipment: {},
   weaponByKey: {},
   weight: {},
+  cost: {},
   spellLevels: {},
 };
 
