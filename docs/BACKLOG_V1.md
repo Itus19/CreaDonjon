@@ -758,6 +758,18 @@ Demande explicite : dans l'onglet Inventaire, aucun bouton d'action — seulemen
 
 ---
 
+### V1-C15 — Format du texte d'arme, alignement poids/valeur/quantité, bascule de pliage en bandeau · `S` — fait
+
+Trois demandes sur l'encadré d'objet de l'onglet Inventaire : (1) le texte « Attaquer »/« Lancer »/« Dégâts » doit reprendre le même format que les autres caractéristiques de l'encadré (libellé en gras, tiret, valeur — comme les descriptions de propriété d'arme) ; (2) le poids, la valeur et la quantité doivent être alignés entre les différents objets ; (3) pour faire de la place à des titres longs, la pastille de pliage/dépliage (V1-C14) devient un bandeau horizontal pleine largeur, en haut de l'encadré — sur le modèle du bandeau vertical « Équiper », mais sur l'autre axe.
+
+**Fait** :
+- Texte d'arme reformaté à l'identique des descriptions de propriété : `<span className="font-semibold text-ink">Attaquer</span> — <span className="mech">…</span>`, même taille (`text-xs leading-relaxed`).
+- Poids (`w-12`), valeur (`w-14`) et quantité (`w-12`/`w-10`) passent en largeur fixe et texte aligné à droite (`text-right`) — alignés pixel pour pixel d'un objet à l'autre, vérifié via `getBoundingClientRect()` en navigateur. Seul le titre s'étire et se tronque (`min-w-0 flex-1 truncate`), ce qui lui laisse toute la place disponible sans désaligner les colonnes voisines.
+- La pastille ronde centrale (V1-C14) est retirée de la grille d'en-tête et remplacée par un bouton pleine largeur en tête d'encadré (`flex w-full … border-b`), au-dessus du bandeau vertical « Équiper » — la grille 3 colonnes de l'en-tête redevient un simple flex, ce qui rend la largeur gagnée disponible au titre et aux colonnes alignées.
+- Vérifié en navigateur : Dague/Cuirasse/Massue/Chemise de mailles alignées (poids à `right: 1238px`, valeur à `right: 1302px`, identique sur les quatre encadrés) ; onglet Actions inchangé (toujours sans bandeau de pliage, toujours boutons top-alignés à droite du titre).
+
+---
+
 ## Lot D — Première assistance IA
 
 *Objectif : mesurer les coûts réels avant de concevoir le mode solo.*

@@ -373,92 +373,98 @@ function ItemCard({
   const showDetails = !collapsible || !collapsed;
 
   return (
-    <div className="flex overflow-hidden rounded-md border border-edge/60 bg-panel-raised">
-      {onToggleEquipped && (
+    <div className="flex flex-col overflow-hidden rounded-md border border-edge/60 bg-panel-raised">
+      {/* Bascule pliage/depliage en bandeau horizontal (V1-C15, sur retour
+       * utilisateur) : pleine largeur en tete de l'encadre, symetrique du
+       * bandeau vertical "Equiper" plus bas (meme principe de bande
+       * cliquable, sur l'autre axe). Remplace la pastille centrale
+       * qui mordait sur la largeur disponible au titre et empechait
+       * l'alignement du poids/de la valeur/de la quantite entre objets. */}
+      {collapsible && hasCollapsibleContent && (
         <button
           type="button"
-          onClick={onToggleEquipped}
-          title={item.equipped ? "Cliquer pour déséquiper" : "Cliquer pour équiper"}
-          className={`w-7 shrink-0 border-r text-[10px] font-semibold uppercase tracking-widest transition-colors ${
-            item.equipped ? "border-accent/50 bg-accent/20 text-accent" : "border-edge/60 bg-panel text-ink-muted hover:bg-panel-raised"
-          }`}
-          style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+          onClick={() => setCollapsed((c) => !c)}
+          title={collapsed ? "Déplier" : "Replier"}
+          aria-label={collapsed ? "Déplier" : "Replier"}
+          className="flex w-full items-center justify-center border-b border-edge/60 bg-panel py-0.5 text-xs text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent"
         >
-          {item.equipped ? "Équipé" : "Équiper"}
+          {collapsed ? "▾" : "▴"}
         </button>
       )}
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2.5">
-        {/*
-         * Deux mises en page distinctes (V1-C14, sur retour utilisateur) —
-         * plus une simple option d'affichage, une vraie difference de role :
-         * l'onglet Inventaire gere l'objet (pas de des a jeter d'ici, juste
-         * du texte informatif) ; l'onglet Actions ne fait que l'utiliser
-         * (boutons, pas de prose). `collapsible` distingue deja les deux
-         * contextes a chaque site d'appel, reutilise ici tel quel plutot que
-         * d'ajouter une prop redondante.
-         *
-         * Cote Actions : titre/tags a gauche, boutons a droite, top aligne
-         * ("gagner de la place", demande explicite) — `items-start` sur le
-         * conteneur horizontal suffit, les deux colonnes partent du meme
-         * bord superieur sans calcul de hauteur a la main. `contents` sur le
-         * wrapper interne cote Inventaire : evite une boite superflue pour
-         * que titre/tags gardent leur empilement vertical d'origine, pleine
-         * largeur, inchange.
-         */}
-        <div className={collapsible ? "flex flex-col gap-1.5" : "flex items-start justify-between gap-3"}>
-          <div className={collapsible ? "contents" : "flex min-w-0 flex-col gap-1.5"}>
-            {/* Grille 3 colonnes (1fr/auto/1fr) plutot qu'un flex : la
-                fleche de pliage doit rester au centre exact de l'encadre
-                (demande explicite), pas juste "avant le bouton supprimer"
-                — une colonne centrale `auto` entre deux colonnes egales
-                fait ca sans jamais deriver selon la largeur du titre ou du
-                nombre de badges. */}
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-              <div className="flex min-w-0 flex-wrap items-center gap-3">
-                {chip?.found ? (
-                  <Link href={chip.href} className="text-sm font-semibold no-underline hover:underline" style={{ color: "var(--link-rule)" }}>
-                    {title}
-                  </Link>
-                ) : (
-                  <span className="text-sm font-semibold text-ink">{title || "Sans nom"}</span>
-                )}
-                {weightLb !== null && (
-                  <span className="mech text-ink-muted" style={{ fontSize: "0.625rem" }}>
-                    {lbToKg(weightLb)} kg
-                  </span>
-                )}
-                {cost && (
-                  <span className="mech text-ink-muted" style={{ fontSize: "0.625rem" }}>
-                    {cost.quantity} {CURRENCY_LABELS_FR[cost.unit] ?? cost.unit}
-                  </span>
-                )}
-                {onChangeQty ? (
-                  <input
-                    type="number"
-                    min={0}
-                    value={item.qty}
-                    onChange={(e) => onChangeQty(Number(e.target.value) || 0)}
-                    className="w-12 rounded-md border border-edge bg-transparent px-1 py-0.5 text-center text-xs text-ink outline-none"
-                    aria-label="Quantité"
-                  />
-                ) : (
-                  <span className="text-[10px] text-ink-muted">× {item.qty}</span>
-                )}
-              </div>
-              {collapsible && hasCollapsibleContent ? (
-                <button
-                  type="button"
-                  onClick={() => setCollapsed((c) => !c)}
-                  title={collapsed ? "Déplier" : "Replier"}
-                  aria-label={collapsed ? "Déplier" : "Replier"}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-edge bg-panel text-sm text-ink-muted transition-colors hover:border-accent hover:text-accent"
-                >
-                  {collapsed ? "▾" : "▴"}
-                </button>
-              ) : (
-                <span />
-              )}
-              <div className="flex justify-end">
+      <div className="flex">
+        {onToggleEquipped && (
+          <button
+            type="button"
+            onClick={onToggleEquipped}
+            title={item.equipped ? "Cliquer pour déséquiper" : "Cliquer pour équiper"}
+            className={`w-7 shrink-0 border-r text-[10px] font-semibold uppercase tracking-widest transition-colors ${
+              item.equipped ? "border-accent/50 bg-accent/20 text-accent" : "border-edge/60 bg-panel text-ink-muted hover:bg-panel-raised"
+            }`}
+            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+          >
+            {item.equipped ? "Équipé" : "Équiper"}
+          </button>
+        )}
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2.5">
+          {/*
+           * Deux mises en page distinctes (V1-C14, sur retour utilisateur) —
+           * plus une simple option d'affichage, une vraie difference de role :
+           * l'onglet Inventaire gere l'objet (pas de des a jeter d'ici, juste
+           * du texte informatif) ; l'onglet Actions ne fait que l'utiliser
+           * (boutons, pas de prose). `collapsible` distingue deja les deux
+           * contextes a chaque site d'appel, reutilise ici tel quel plutot que
+           * d'ajouter une prop redondante.
+           *
+           * Cote Actions : titre/tags a gauche, boutons a droite, top aligne
+           * ("gagner de la place", demande explicite) — `items-start` sur le
+           * conteneur horizontal suffit, les deux colonnes partent du meme
+           * bord superieur sans calcul de hauteur a la main. `contents` sur le
+           * wrapper interne cote Inventaire : evite une boite superflue pour
+           * que titre/tags gardent leur empilement vertical d'origine, pleine
+           * largeur, inchange.
+           */}
+          <div className={collapsible ? "flex flex-col gap-1.5" : "flex items-start justify-between gap-3"}>
+            <div className={collapsible ? "contents" : "flex min-w-0 flex-col gap-1.5"}>
+              {/* Poids/valeur/quantite a largeur fixe et texte aligne a
+                  droite (V1-C15, sur retour utilisateur) : la meme largeur
+                  pour chaque colonne d'un objet a l'autre les aligne entre
+                  encadres quel que soit le contenu ; seul le titre s'etire
+                  et se tronque (`min-w-0 flex-1 truncate`) pour laisser la
+                  place aux noms longs. */}
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  {chip?.found ? (
+                    <Link href={chip.href} className="block truncate text-sm font-semibold no-underline hover:underline" style={{ color: "var(--link-rule)" }}>
+                      {title}
+                    </Link>
+                  ) : (
+                    <span className="block truncate text-sm font-semibold text-ink">{title || "Sans nom"}</span>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {weightLb !== null && (
+                    <span className="mech w-12 text-right text-ink-muted" style={{ fontSize: "0.625rem" }}>
+                      {lbToKg(weightLb)} kg
+                    </span>
+                  )}
+                  {cost && (
+                    <span className="mech w-14 text-right text-ink-muted" style={{ fontSize: "0.625rem" }}>
+                      {cost.quantity} {CURRENCY_LABELS_FR[cost.unit] ?? cost.unit}
+                    </span>
+                  )}
+                  {onChangeQty ? (
+                    <input
+                      type="number"
+                      min={0}
+                      value={item.qty}
+                      onChange={(e) => onChangeQty(Number(e.target.value) || 0)}
+                      className="w-12 rounded-md border border-edge bg-transparent px-1 py-0.5 text-right text-xs text-ink outline-none"
+                      aria-label="Quantité"
+                    />
+                  ) : (
+                    <span className="w-10 text-right text-[10px] text-ink-muted">× {item.qty}</span>
+                  )}
+                </div>
                 {onRemove && (
                   <button
                     type="button"
@@ -471,96 +477,100 @@ function ItemCard({
                   </button>
                 )}
               </div>
+
+              {propertyRefs.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {propertyRefs.map((p) => (
+                    <span key={p.key} className="rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">
+                      {p.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {armorLabel && (
+                <div className="flex flex-wrap gap-1">
+                  <span className="rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">{armorLabel}</span>
+                </div>
+              )}
             </div>
 
-            {propertyRefs.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {propertyRefs.map((p) => (
-                  <span key={p.key} className="rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">
-                    {p.label}
-                  </span>
-                ))}
-              </div>
-            )}
-            {armorLabel && (
-              <div className="flex flex-wrap gap-1">
-                <span className="rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">{armorLabel}</span>
+            {/* Onglet Actions : boutons, jamais de texte — c'est le seul endroit ou on jette reellement les des. */}
+            {!collapsible && weapon && (onAttack || onDamage) && (
+              <div className="flex flex-wrap gap-2">
+                {onAttack && (
+                  <ActionButton label="Attaquer" resolvedFormula={attackResolved} detailFormula={attackDetail} busy={busy} onClick={onAttack} />
+                )}
+                {onAttack && weapon.properties.includes("thrown") && (
+                  <ActionButton label="Lancer" resolvedFormula={attackResolved} detailFormula={attackDetail} busy={busy} onClick={onAttack} />
+                )}
+                {onDamage && (
+                  <ActionButton
+                    label="Dégâts"
+                    resolvedFormula={damageResolved(weapon.damageDice)}
+                    detailFormula={damageDetail(weapon.damageDice)}
+                    busy={busy}
+                    onClick={() => onDamage(false)}
+                  />
+                )}
+                {onDamage && weapon.versatileDamageDice && (
+                  <ActionButton
+                    label="Dégâts (2 mains)"
+                    resolvedFormula={damageResolved(weapon.versatileDamageDice)}
+                    detailFormula={damageDetail(weapon.versatileDamageDice)}
+                    busy={busy}
+                    onClick={() => onDamage(true)}
+                  />
+                )}
               </div>
             )}
           </div>
 
-          {/* Onglet Actions : boutons, jamais de texte — c'est le seul endroit ou on jette reellement les des. */}
-          {!collapsible && weapon && (onAttack || onDamage) && (
-            <div className="flex flex-wrap gap-2">
-              {onAttack && (
-                <ActionButton label="Attaquer" resolvedFormula={attackResolved} detailFormula={attackDetail} busy={busy} onClick={onAttack} />
+          {/* Onglet Inventaire seulement : descriptions de propriete (retirees
+              de l'onglet Actions, "gagner de la place" — elles restent
+              consultables depuis la fiche de regle liee au titre). */}
+          {collapsible && showDetails && propertyRefs.length > 0 && (
+            <div className="flex flex-col gap-0.5">
+              {propertyRefs.map((p) => {
+                const propChip = propertyChips.get(refIdentity({ kind: "rule", key: weaponPropertyRefKey(p.key) }));
+                const description = propChip?.found && propChip.summary ? stripDigestPrefix(propChip.summary) : null;
+                return description ? (
+                  <p key={p.key} className="text-xs leading-relaxed text-ink-muted">
+                    <span className="font-semibold text-ink">{p.label}</span> — {description}
+                  </p>
+                ) : null;
+              })}
+            </div>
+          )}
+
+          {/* Onglet Inventaire seulement : texte informatif, jamais de bouton
+              — on ne jette pas les des depuis la gestion de l'inventaire, cf.
+              l'onglet Actions plus haut. Independant de l'equipement (contrairement
+              aux boutons) : une info sur une arme reste utile meme non equipee.
+              Meme format que les descriptions de propriete ci-dessus (V1-C15,
+              sur retour utilisateur) : libelle en gras, tiret, valeur — cette
+              ligne EST une caracteristique de l'objet, au meme titre que les
+              autres. */}
+          {collapsible && showDetails && weapon && (
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs leading-relaxed text-ink-muted">
+                <span className="font-semibold text-ink">Attaquer</span> — <span className="mech">{attackDetail}</span>
+              </p>
+              {weapon.properties.includes("thrown") && (
+                <p className="text-xs leading-relaxed text-ink-muted">
+                  <span className="font-semibold text-ink">Lancer</span> — <span className="mech">{attackDetail}</span>
+                </p>
               )}
-              {onAttack && weapon.properties.includes("thrown") && (
-                <ActionButton label="Lancer" resolvedFormula={attackResolved} detailFormula={attackDetail} busy={busy} onClick={onAttack} />
-              )}
-              {onDamage && (
-                <ActionButton
-                  label="Dégâts"
-                  resolvedFormula={damageResolved(weapon.damageDice)}
-                  detailFormula={damageDetail(weapon.damageDice)}
-                  busy={busy}
-                  onClick={() => onDamage(false)}
-                />
-              )}
-              {onDamage && weapon.versatileDamageDice && (
-                <ActionButton
-                  label="Dégâts (2 mains)"
-                  resolvedFormula={damageResolved(weapon.versatileDamageDice)}
-                  detailFormula={damageDetail(weapon.versatileDamageDice)}
-                  busy={busy}
-                  onClick={() => onDamage(true)}
-                />
+              <p className="text-xs leading-relaxed text-ink-muted">
+                <span className="font-semibold text-ink">Dégâts</span> — <span className="mech">{damageDetail(weapon.damageDice)}</span>
+              </p>
+              {weapon.versatileDamageDice && (
+                <p className="text-xs leading-relaxed text-ink-muted">
+                  <span className="font-semibold text-ink">Dégâts (2 mains)</span> — <span className="mech">{damageDetail(weapon.versatileDamageDice)}</span>
+                </p>
               )}
             </div>
           )}
         </div>
-
-        {/* Onglet Inventaire seulement : descriptions de propriete (retirees
-            de l'onglet Actions, "gagner de la place" — elles restent
-            consultables depuis la fiche de regle liee au titre). */}
-        {collapsible && showDetails && propertyRefs.length > 0 && (
-          <div className="flex flex-col gap-0.5">
-            {propertyRefs.map((p) => {
-              const propChip = propertyChips.get(refIdentity({ kind: "rule", key: weaponPropertyRefKey(p.key) }));
-              const description = propChip?.found && propChip.summary ? stripDigestPrefix(propChip.summary) : null;
-              return description ? (
-                <p key={p.key} className="text-xs leading-relaxed text-ink-muted">
-                  <span className="font-semibold text-ink">{p.label}</span> — {description}
-                </p>
-              ) : null;
-            })}
-          </div>
-        )}
-
-        {/* Onglet Inventaire seulement : texte informatif, jamais de bouton
-            — on ne jette pas les des depuis la gestion de l'inventaire, cf.
-            l'onglet Actions plus haut. Independant de l'equipement (contrairement
-            aux boutons) : une info sur une arme reste utile meme non equipee. */}
-        {collapsible && showDetails && weapon && (
-          <div className="flex flex-col gap-0.5">
-            <p className="text-xs text-ink-muted">
-              Attaquer — <span className="mech">{attackDetail}</span>
-            </p>
-            {weapon.properties.includes("thrown") && (
-              <p className="text-xs text-ink-muted">
-                Lancer — <span className="mech">{attackDetail}</span>
-              </p>
-            )}
-            <p className="text-xs text-ink-muted">
-              Dégâts — <span className="mech">{damageDetail(weapon.damageDice)}</span>
-            </p>
-            {weapon.versatileDamageDice && (
-              <p className="text-xs text-ink-muted">
-                Dégâts (2 mains) — <span className="mech">{damageDetail(weapon.versatileDamageDice)}</span>
-              </p>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
