@@ -902,6 +902,46 @@ Le morceau le plus long du lot, et le plus mécanique. Voir §6 pour la méthode
   - Le reliquat de noms Objet/Aptitude déjà documenté comme incomplet dans V1-A5 (67 % et 65,3 %) — ce ticket ne le reprend pas, il est strictement hors de son périmètre déclaré (« au-delà de ce que A5 a déjà couvert »).
 - `typecheck`/`lint`/`test` (432/432)/`build` tous verts. Import SRD rejoué (idempotent, 0 échec) pour propager le texte français des prérequis.
 
+### V1-D3b — Traduction française complète · `L`
+
+Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évitable, sur les deux rulesets. **Une nuance à poser avant de commencer, pas à découvrir en cours de route** : V1-A5 a déjà mis au jour plusieurs familles d'entrées structurellement invérifiables mot pour mot (variantes de forme — loup-garou, vampire — une seule fiche officielle pour plusieurs `entry_key` ; sous-types tabulaires — Ioun Stone, Ring of X, Potion of X Giant Strength, Barding, Dragon Scale Mail, Spell Scroll par niveau — nommés uniquement dans une colonne de tableau, jamais en expression complète ; contenu réellement absent d'une édition — Demi-elfe hors SRD 2024, `Contingency` hors SRD 5.2.1). Pour ces familles, « complet » veut dire *toutes les entrées vérifiables sont vérifiées*, pas 100 % littéral — un compteur qui plafonne sous 100 % avec le reliquat listé nommément n'est pas un échec de ce ticket, tant que rien n'est deviné pour combler l'écart.
+
+Chaque point ci-dessous est dimensionné pour tenir dans une session (le débit réel de V1-D3 sert de référence : quatre dictionnaires + un générateur + 32 sections de prose vérifiées à la main en une session). Comptes vérifiés en base au moment d'écrire ce ticket (`ruleset_entries` × `ruleset_entry_translations`, locale `fr`) :
+
+| Type | Noms 5.1 | Noms 5.2.1 |
+|---|---|---|
+| Espèce | 13/13 | 24/39 |
+| Historique | 1/1 | — |
+| Règle | 33/39 | 28/39 |
+| Classe | 12/12 | 12/12 |
+| Sous-classe | 12/12 | 21/21 |
+| Aptitude (`feature`) | 252/348 | 376/636 |
+| Sort | 319/319 | 316/319 |
+| Arme | 36/37 | 40/41 |
+| Armure | 13/13 | — (a verifier) |
+| Objet | 403/549 | 381/620 |
+| Monstre | 309/334 | 300/334 |
+
+Blocs de prose (`traits`/`actions`/`spellcasting_progression`/description de règle) : **0 entrée traduite pour l'instant**, en dehors des 8 classes 5.1 de V1-D3.
+
+**Points, dans l'ordre où les traiter** (priorité 1→5 de §6, gain rapide avant gros chantier) :
+
+1. **Espèces, historiques et règles — noms + prose officielle des règles.** Petit volume (15 noms manquants sur les deux rulesets, ~39 fiches de règle). La règle a une vraie prose officielle jamais extraite (contrairement au monstre, dont la description est une phrase synthétisée à l'import) — contenu dispersé dans tout le document plutôt que dans un chapitre unique (identifié par V1-A5, jamais traité), donc chaque section à délimiter à la main comme pour l'incantation de classe, pas un script générique.
+2. **Rattrapage des noms de classe/aptitude sur la SRD 2024 par recyclage.** Les noms déjà vérifiés côté 5.1 (252/348) sont des candidats gratuits côté 5.2.1 (376/636 seulement) — script de recyclage déjà éprouvé en V1-A5 (« beaucoup de manquants n'étaient qu'un trou de couverture sur une seule édition »), à rejouer purement mécaniquement avant de chercher de nouveaux noms.
+3. **Dictionnaire de maîtrises pour `class_basics`.** Vocabulaire fermé (~40-60 noms d'armes/armures/outils, ex. « Simple Weapons », « Thieves' Tools »), vérifié contre la section « Maîtrises » de chacune des 12 classes (déjà lue en partie pendant V1-D3) — même motif que `WEAPON_PROPERTY_LABELS_FR`.
+4. **`spellcasting_progression` pour la SRD 5.2.1.** Même méthode que V1-D3 (lecture à la main + revérification par le script), 8 classes, mais en-têtes 2024 à vérifier depuis zéro (déjà su différents : « Wizard Subclass » contre « Arcane Tradition » pour `subclass_slot`, le même écart est probable ici).
+5. **Reliquat des noms Aptitude** (96 manquants en 5.1, 260 en 5.2.1 après le point 2) — plus gros volume de noms restant, méthode déjà rodée (V1-A5 : lecture directe des tables de classe/sous-classe/espèce dans le texte officiel, jamais deviné depuis le vocabulaire PHB grand public).
+6. **Reliquat des noms Objet**, en séparant équipement mondain (priorité 4, avant) des objets magiques (priorité 5, après) — 146 manquants en 5.1, 239 en 5.2.1. C'est ici que les sous-types tabulaires structurellement bloqués (voir plus haut) feront plafonner le compteur — à documenter nommément, pas à masquer.
+7. **Générique d'extraction des blocs `traits`/`actions` de monstre — conception et validation.** Le texte officiel a un motif régulier (nom en gras, paragraphe, jusqu'à « Actions ») qui justifie un vrai script (contrairement à l'incantation de classe, trop peu de cas pour amortir la construction) — mais à construire et vérifier sur un échantillon d'une trentaine de monstres couvrant les formes distinctes (monstre simple, dragon avec actions légendaires, monstre incantateur, nuée) avant de l'exécuter en masse.
+8. **Exécution du générique sur les 334 monstres.** Grâce à `buildMergedDataset`, la plupart des monstres 5.2.1 partagent le même `source_raw` que leur équivalent 5.1 (seuls 3 monstres sont réellement natifs 2024) — une seule extraction peut donc écrire les deux rulesets en un passage, sauf pour ces 3 entrées et les cas particuliers isolés au point 7 (nuées `swarm of Tiny beasts`, formes de loup-garou/vampire déjà documentées comme non traduisibles séparément).
+9. **Rapport de couverture final et clôture.** Un tableau par type et par ruleset comme celui ci-dessus, avec une colonne « plafond structurel » distincte de « restant à faire » — condition pour cocher les critères de V1-D3 sans avoir triché sur le sens de « complet ».
+
+**Critères**
+- [ ] Chaque type d'entrée atteint son plafond structurel documenté, pas un pourcentage arbitraire arrêté en cours de route.
+- [ ] `traits`/`actions` de monstre et `spellcasting_progression` couvrent les deux rulesets.
+- [ ] Le rapport final distingue explicitement « traduit », « restant » et « structurellement invérifiable » — jamais une seule colonne qui les confond.
+- [ ] Aucune traduction sans vérification mot pour mot contre `data/srd/fr-source/*.txt` (règle absolue héritée de V1-A5/V1-D3, non négociable même sous pression de volume).
+
 ### V1-D4 — Création et édition manuelle de règles · `L`
 
 **Sans aucune IA.** L'assistant viendra par-dessus, plus tard (Lot F).
