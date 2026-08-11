@@ -781,6 +781,8 @@ Demande explicite : un champ + boutons +/- pour les pièces, à l'image de ceux 
 - Mise en page resserrée pour tenir sur une seule ligne dans la colonne étroite de l'onglet Inventaire (mesuré à 351px de large en navigateur) : `flex` sans `flex-wrap` plutôt que `flex-wrap` — à cette largeur, un retour à la ligne aurait justement contredit la demande explicite ; champs et boutons réduits (`w-9`/`w-10`, `text-xs`, `gap-1`) pour que les deux groupes cohabitent sans se chevaucher.
 - Vérifié en navigateur : dépense de 5 po avec seulement 1 pp en poche casse la pièce de platine et recompose en 5 po (`pp: 1→0`, `gp: 0→5`) ; dépense de 15 po avec la même réserve (valeur totale insuffisante) bloque et affiche le message d'erreur sans rien modifier ; les deux groupes de contrôles restent sur la même ligne (mesuré via `getBoundingClientRect()`, même `bottom`).
 
+**Direction future notée, hors V1** : les taux d'échange (`COIN_VALUE_CP`) sont des constantes codées en dur, indépendantes du système de fiches de règles — aujourd'hui, une fiche de règle modifiée par un MJ n'a aucun effet dessus. L'utilisateur souhaite qu'à terme la monnaie devienne une fiche de règle comme une autre (un MJ pourrait redéfinir « 1 po = 50 pa »), au même titre que des règles générales non liées à une entité précise (ex. le coût selon le train de vie, 5e SRD). Ça suppose un type de fiche de règle pour des constantes/tables générales du système — à concevoir avec `specs/regles-couche.md` le jour où ce chantier s'ouvre, pas anticipé ici.
+
 ---
 
 ## Lot D — Première assistance IA
