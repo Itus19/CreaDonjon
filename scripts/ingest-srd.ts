@@ -19,7 +19,15 @@ import {
   validateBlockData,
 } from "../src/core/schemas/rule-blocks";
 import { parseFormula } from "../src/core/formula";
+import type { FormulaNode } from "../src/core/formula/ast";
 import { extractDerivedRefs, type DerivedRef } from "../src/core/rules/refs";
+import {
+  mapClassCore,
+  parseArmorData,
+  parseItemCost,
+  parseItemWeight,
+  parseWeaponData,
+} from "../src/core/rules/srdMapping";
 
 interface ConversionFailure {
   rulesetFile: string;
@@ -539,6 +547,422 @@ function classProgressionBlock(
 }
 
 // --------------------------------------------------------------------
+// Blocs V1-D1 (weapon, armor, item_properties, stat_block, actions, traits,
+// prerequisites, class_basics, spellcasting_progression, subclass_slot) —
+// V1-D2 les alimente reellement depuis les donnees SRD. `charges` en est
+// volontairement absent : le SRD ne porte cette information qu'en prose
+// libre dans `desc` (ex. Cube of Force, "starts with 36 charges, and it
+// regains 1d20 expended charges daily at dawn"), jamais en champ structure
+// — un parseur regex serait fragile et donnerait de fausses valeurs
+// silencieusement, pire qu'une absence honnete. Reste attachable a la main,
+// entree par entree, comme prevu des V1-D1.
+//
+// Deux familles de retour : les blocs *requis* pour leur entry_type
+// (weapon/armor/stat_block/actions/class_basics/subclass_slot) leve une
+// exception quand la donnee source est reellement incoherente (ex. arme
+// sans categorie simple/martiale identifiable) — ca fait echouer l'entree
+// et remonte dans le rapport (« zero echec silencieux »). Les blocs
+// optionnels (traits/prerequisites/spellcasting_progression, et les blocs
+// requis quand l'absence est une propriete legitime de l'entree, ex. le
+// Filet sans dgats ou la Grenouille sans action) renvoient simplement
+// `null` : l'entree reste "incomplete" pour ce type de bloc, comportement
+// attendu du registre REQUIRED_BLOCKS, pas une erreur.
+// --------------------------------------------------------------------
+
+function quantity(value: number, unit: string) {
+  return { value, unit };
+}
+
+/** SRD 2014 : `weapon_category` ("Simple"/"Martial"). SRD 2024 : ce champ disparait, remplace par `equipment_categories`. */
+function resolveWeaponCategory(entry: SrdRecord): "simple" | "martial" | null {
+  const direct = String(entry.weapon_category ?? "");
+  if (/simple/i.test(direct)) return "simple";
+  if (/martial/i.test(direct)) return "martial";
+  const categories = entry.equipment_categories;
+  if (Array.isArray(categories)) {
+    const names = (categories as SrdRecord[]).map((c) => String(c.name ?? ""));
+    if (names.some((n) => /simple/i.test(n))) return "simple";
+    if (names.some((n) => /martial/i.test(n))) return "martial";
+  }
+  return null;
+}
+
+/**
+ * `null` si l'entree n'a pas de degats exploitables (ex. le Filet, arme au
+ * sens du SRD mais sans `damage` — sa mecanique vit entierement dans sa
+ * propriete `special`) : l'entree reste alors "incomplete", pas un echec.
+ */
+function weaponBlock(entry: SrdRecord): EntryBlock | null {
+  const weapon = parseWeaponData(entry);
+  if (!weapon) return null;
+
+  const category = resolveWeaponCategory(entry);
+  if (!category) {
+    throw new Error(`weapon : categorie simple/martiale introuvable pour "${String(entry.name)}"`);
+  }
+  const damageDice = tryParseDiceFormula(weapon.damageDice);
+  if (!damageDice) {
+    throw new Error(`weapon : degats "${weapon.damageDice}" illisibles comme formule pour "${String(entry.name)}"`);
+  }
+  const versatileDamage = weapon.versatileDamageDice ? tryParseDiceFormula(weapon.versatileDamageDice) : undefined;
+
+  // Le filet mis a part, `throw_range` (portee de lancer) prime sur `range`
+  // (allonge au corps a corps) quand les deux existent : c'est le nombre
+  // qu'un joueur utilise reellement pour attaquer avec une arme de jet.
+  const throwRange = entry.throw_range as { normal?: number; long?: number } | undefined;
+  const meleeOrShotRange = entry.range as { normal?: number; long?: number } | undefined;
+  const rangeSource = typeof throwRange?.normal === "number" ? throwRange : meleeOrShotRange;
+  const range =
+    typeof rangeSource?.normal === "number"
+      ? { normal: quantity(rangeSource.normal, "ft"), long: typeof rangeSource.long === "number" ? quantity(rangeSource.long, "ft") : undefined }
+      : undefined;
+
+  const cost = parseItemCost(entry);
+  const weight = parseItemWeight(entry);
+
+  const data = {
+    category,
+    is_ranged: weapon.isRanged,
+    damage: { dice: damageDice, type: weapon.damageType ?? undefined },
+    versatile_damage: versatileDamage,
+    properties: weapon.properties.map((p) => ({ kind: "rule" as const, key: `weapon-property-${p}` })),
+    range,
+    weight: weight !== null ? quantity(weight, "lb") : undefined,
+    cost: cost ? quantity(cost.quantity, cost.unit) : undefined,
+  };
+  validateBlockData("weapon", data);
+  return { block_type: "weapon", display: { label: "Arme", layout: "key_values" }, data, display_order: 150 };
+}
+
+function armorBlock(entry: SrdRecord): EntryBlock | null {
+  const armor = parseArmorData(entry);
+  if (!armor) return null;
+
+  const category = armor.category.toLowerCase();
+  if (category !== "light" && category !== "medium" && category !== "heavy" && category !== "shield") {
+    throw new Error(`armor : categorie inconnue "${armor.category}" pour "${String(entry.name)}"`);
+  }
+
+  const armorClass = entry.armor_class as { max_bonus?: number } | undefined;
+  const strMinimum = typeof entry.str_minimum === "number" && entry.str_minimum > 0 ? entry.str_minimum : undefined;
+  const cost = parseItemCost(entry);
+  const weight = parseItemWeight(entry);
+
+  const data = {
+    category,
+    base_ac: armor.base,
+    dex_bonus: armor.dexBonus,
+    max_dex_bonus: typeof armorClass?.max_bonus === "number" ? armorClass.max_bonus : undefined,
+    strength_minimum: strMinimum,
+    stealth_disadvantage: entry.stealth_disadvantage === true ? true : undefined,
+    weight: weight !== null ? quantity(weight, "lb") : undefined,
+    cost: cost ? quantity(cost.quantity, cost.unit) : undefined,
+  };
+  validateBlockData("armor", data);
+  return { block_type: "armor", display: { label: "Armure", layout: "key_values" }, data, display_order: 150 };
+}
+
+/**
+ * Tous les champs du schema sont optionnels (V1-D1) : `null` seulement si
+ * aucun n'a pu etre rempli, pour eviter un bloc "present" mais vide de sens
+ * (qui masquerait a tort le signal "regle incomplete").
+ */
+function itemPropertiesBlock(entry: SrdRecord): EntryBlock | null {
+  const cost = parseItemCost(entry);
+  const weight = parseItemWeight(entry);
+  const rarityRaw = entry.rarity as SrdRecord | undefined;
+  const rarity = typeof rarityRaw?.name === "string" ? rarityRaw.name : undefined;
+
+  const descArr = Array.isArray(entry.desc) ? (entry.desc as unknown[]) : typeof entry.desc === "string" ? [entry.desc] : [];
+  const firstLine = typeof descArr[0] === "string" ? (descArr[0] as string) : "";
+  const requiresAttunement = /requires attunement/i.test(firstLine) ? true : undefined;
+
+  const gearCategory = entry.gear_category as SrdRecord | undefined;
+  const equipmentCategory = entry.equipment_category as SrdRecord | undefined;
+  const category =
+    (typeof gearCategory?.name === "string" ? gearCategory.name : undefined) ??
+    (typeof equipmentCategory?.name === "string" ? equipmentCategory.name : undefined);
+
+  const data = {
+    weight: weight !== null ? quantity(weight, "lb") : undefined,
+    cost: cost ? quantity(cost.quantity, cost.unit) : undefined,
+    rarity,
+    requires_attunement: requiresAttunement,
+    category,
+  };
+  if (!data.weight && !data.cost && !data.rarity && !data.requires_attunement && !data.category) return null;
+
+  validateBlockData("item_properties", data);
+  return { block_type: "item_properties", display: { label: "Proprietes", layout: "key_values" }, data, display_order: 150 };
+}
+
+/** Chaine ou reference {index,name} -> libelle exploitable ; `null` si aucun des deux. */
+function stringOrNameList(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out = (raw as unknown[])
+    .map((v) => {
+      if (typeof v === "string") return v;
+      const named = v as SrdRecord;
+      return typeof named?.name === "string" ? named.name : null;
+    })
+    .filter((v): v is string => typeof v === "string");
+  return out.length > 0 ? out : undefined;
+}
+
+/** `null` si un des faits obligatoires du schema est absent — n'arrive jamais sur le SRD reel (verifie : 334/334 monstres 2014, 3/3 2024), un declencheur serait un vrai probleme de donnee. */
+function statBlockBlock(entry: SrdRecord): EntryBlock | null {
+  const acEntries = entry.armor_class as SrdRecord[] | undefined;
+  const ac = Array.isArray(acEntries) && typeof acEntries[0]?.value === "number" ? (acEntries[0].value as number) : undefined;
+  if (ac === undefined) throw new Error(`stat_block : CA introuvable pour "${String(entry.name)}"`);
+  if (typeof entry.hit_points !== "number") throw new Error(`stat_block : PV introuvables pour "${String(entry.name)}"`);
+  if (typeof entry.hit_dice !== "string") throw new Error(`stat_block : de de vie introuvable pour "${String(entry.name)}"`);
+
+  const abilityFields = { str: entry.strength, dex: entry.dexterity, con: entry.constitution, int: entry.intelligence, wis: entry.wisdom, cha: entry.charisma };
+  for (const [key, value] of Object.entries(abilityFields)) {
+    if (typeof value !== "number") throw new Error(`stat_block : caracteristique ${key} introuvable pour "${String(entry.name)}"`);
+  }
+
+  const speedRaw = entry.speed as SrdRecord | undefined;
+  const speed: Record<string, string> = {};
+  if (speedRaw && typeof speedRaw === "object") {
+    for (const [k, v] of Object.entries(speedRaw)) if (typeof v === "string") speed[k] = v;
+  }
+
+  const sensesRaw = entry.senses as SrdRecord | undefined;
+  const senses: Record<string, string> = {};
+  if (sensesRaw && typeof sensesRaw === "object") {
+    for (const [k, v] of Object.entries(sensesRaw)) senses[k] = String(v);
+  }
+
+  // `proficiencies` d'un monstre porte le bonus deja total (ex. {value: 6,
+  // proficiency: {index: "skill-stealth"}}), pas un modificateur brut a
+  // combiner plus tard — forme differente de `proficiencies` sur une classe.
+  const savingThrows: { ability: string; bonus: number }[] = [];
+  const skills: { name: string; bonus: number }[] = [];
+  const profRaw = entry.proficiencies;
+  if (Array.isArray(profRaw)) {
+    for (const p of profRaw as SrdRecord[]) {
+      const prof = p.proficiency as SrdRecord | undefined;
+      const idx = typeof prof?.index === "string" ? prof.index : undefined;
+      const bonus = typeof p.value === "number" ? p.value : undefined;
+      if (!idx || bonus === undefined) continue;
+      if (idx.startsWith("saving-throw-")) savingThrows.push({ ability: idx.replace("saving-throw-", ""), bonus });
+      else if (idx.startsWith("skill-")) skills.push({ name: typeof prof?.name === "string" ? prof.name : idx, bonus });
+    }
+  }
+
+  const data = {
+    size: String(entry.size ?? ""),
+    creature_type: String(entry.type ?? ""),
+    alignment: typeof entry.alignment === "string" ? entry.alignment : undefined,
+    armor_class: ac,
+    hit_points: entry.hit_points,
+    hit_dice: entry.hit_dice,
+    speed,
+    abilities: abilityFields as Record<"str" | "dex" | "con" | "int" | "wis" | "cha", number>,
+    saving_throws: savingThrows.length > 0 ? savingThrows : undefined,
+    skills: skills.length > 0 ? skills : undefined,
+    damage_vulnerabilities: stringOrNameList(entry.damage_vulnerabilities),
+    damage_resistances: stringOrNameList(entry.damage_resistances),
+    damage_immunities: stringOrNameList(entry.damage_immunities),
+    condition_immunities: stringOrNameList(entry.condition_immunities),
+    senses: Object.keys(senses).length > 0 ? senses : undefined,
+    languages: typeof entry.languages === "string" ? entry.languages : undefined,
+    challenge_rating: typeof entry.challenge_rating === "number" ? entry.challenge_rating : 0,
+    proficiency_bonus: typeof entry.proficiency_bonus === "number" ? entry.proficiency_bonus : 2,
+  };
+  validateBlockData("stat_block", data);
+  return { block_type: "stat_block", display: { label: "Caracteristiques", layout: "key_values" }, data, display_order: 150 };
+}
+
+/** `null` sans action listee (4 monstres du SRD 2014 : Grenouille, Hippocampe, Choqueur, Brume de vampire) — l'entree reste "incomplete", fidele a la donnee source. */
+function actionsBlock(entry: SrdRecord): EntryBlock | null {
+  const raw = entry.actions;
+  if (!Array.isArray(raw)) return null;
+  const actions = (raw as SrdRecord[])
+    .map((a) => {
+      const name = String(a.name ?? "");
+      const description = extractProse(a) ?? "";
+      if (!name || !description) return null;
+      const damageRaw = Array.isArray(a.damage) ? (a.damage as SrdRecord[]) : [];
+      const damage = damageRaw
+        .map((d) => {
+          const dice = typeof d.damage_dice === "string" ? tryParseDiceFormula(d.damage_dice) : undefined;
+          if (!dice) return null;
+          const damageType = d.damage_type as SrdRecord | undefined;
+          const type = typeof damageType?.name === "string" ? damageType.name : undefined;
+          return { dice, type };
+        })
+        .filter((d): d is { dice: FormulaNode; type: string | undefined } => d !== null);
+      return {
+        name,
+        description,
+        attack_bonus: typeof a.attack_bonus === "number" ? a.attack_bonus : undefined,
+        damage: damage.length > 0 ? damage : undefined,
+      };
+    })
+    .filter((a): a is NonNullable<typeof a> => a !== null);
+  if (actions.length === 0) return null;
+
+  const data = { actions };
+  validateBlockData("actions", data);
+  return { block_type: "actions", display: { label: "Actions", layout: "key_values" }, data, display_order: 350 };
+}
+
+/** `null` sans aptitude speciale listee (beaucoup de creatures de faible FP n'en ont aucune) — jamais requis, voir REQUIRED_BLOCKS. */
+function traitsBlock(entry: SrdRecord): EntryBlock | null {
+  const raw = entry.special_abilities;
+  if (!Array.isArray(raw)) return null;
+  const traits = (raw as SrdRecord[])
+    .map((t) => ({ name: String(t.name ?? ""), description: extractProse(t) ?? "" }))
+    .filter((t) => t.name && t.description);
+  if (traits.length === 0) return null;
+
+  const data = { traits };
+  validateBlockData("traits", data);
+  return { block_type: "traits", display: { label: "Aptitudes speciales", layout: "key_values" }, data, display_order: 340 };
+}
+
+/**
+ * `null` sans prerequis (l'immense majorite des dons) — jamais requis. Deux
+ * formes rencontrees dans le SRD : 2014 (`[{ability_score, minimum_score}]`)
+ * et 2024 (`{minimum_level?, feature_named?}`, objet unique, pas un tableau).
+ */
+function prerequisitesBlock(entry: SrdRecord): EntryBlock | null {
+  const raw = entry.prerequisites;
+  if (!raw) return null;
+  const items: string[] = [];
+
+  if (Array.isArray(raw)) {
+    for (const p of raw as SrdRecord[]) {
+      const ability = p.ability_score as SrdRecord | undefined;
+      if (typeof ability?.name === "string" && typeof p.minimum_score === "number") {
+        items.push(`${ability.name} ${p.minimum_score} or higher`);
+      }
+    }
+  } else if (typeof raw === "object") {
+    const p = raw as SrdRecord;
+    if (typeof p.minimum_level === "number") items.push(`Level ${p.minimum_level} or higher`);
+    if (typeof p.feature_named === "string") items.push(p.feature_named);
+  }
+  if (items.length === 0) return null;
+
+  const data = { items };
+  validateBlockData("prerequisites", data);
+  return { block_type: "prerequisites", display: { label: "Prerequis", layout: "chips" }, data, display_order: 120 };
+}
+
+/** armure/arme -> `armor_proficiencies`/`weapon_proficiencies`, outil -> `tool_proficiencies` ; verifie sur les 12 classes de base, 2014 et 2024. */
+function classifyProficiencyIndex(index: string): "armor" | "tool" | "weapon" {
+  if (/armor$/.test(index) || index === "shields") return "armor";
+  if (/-kit$/.test(index) || /-tools$/.test(index) || /^tool-/.test(index)) return "tool";
+  return "weapon";
+}
+
+/** `class_basics` n'echoue jamais : `mapClassCore` retombe sur un de de vie par defaut, les listes de maitrises restent vides plutot que d'empecher l'import. */
+function classBasicsBlock(entry: SrdRecord): EntryBlock {
+  const core = mapClassCore(entry);
+
+  const armorProf: string[] = [];
+  const weaponProf: string[] = [];
+  const toolProf: string[] = [];
+  const profRaw = entry.proficiencies;
+  if (Array.isArray(profRaw)) {
+    for (const p of profRaw as SrdRecord[]) {
+      const index = p.index;
+      if (typeof index !== "string" || index.startsWith("saving-throw-") || index.startsWith("skill-")) continue;
+      const name = typeof p.name === "string" ? p.name : index;
+      const kind = classifyProficiencyIndex(index);
+      if (kind === "armor") armorProf.push(name);
+      else if (kind === "tool") toolProf.push(name);
+      else weaponProf.push(name);
+    }
+  }
+
+  const data = {
+    hit_die: core.hitDie,
+    saving_throw_proficiencies: core.savingThrowProficiencies,
+    armor_proficiencies: armorProf.length > 0 ? armorProf : undefined,
+    weapon_proficiencies: weaponProf.length > 0 ? weaponProf : undefined,
+    tool_proficiencies: toolProf.length > 0 ? toolProf : undefined,
+  };
+  validateBlockData("class_basics", data);
+  return { block_type: "class_basics", display: { label: "Bases de classe", layout: "key_values" }, data, display_order: 150 };
+}
+
+/** `null` pour une classe qui n'incante pas (Barbare, Guerrier de base SRD) — jamais requis, voir REQUIRED_BLOCKS. */
+function spellcastingProgressionBlock(entry: SrdRecord): EntryBlock | null {
+  const spellcasting = entry.spellcasting as SrdRecord | undefined;
+  const ability = (spellcasting?.spellcasting_ability as SrdRecord | undefined)?.index;
+  if (typeof ability !== "string") return null;
+
+  const infoRaw = Array.isArray(spellcasting?.info) ? (spellcasting!.info as SrdRecord[]) : [];
+  const info = infoRaw
+    .map((i) => ({ name: String(i.name ?? ""), description: extractProse(i) ?? "" }))
+    .filter((i) => i.name && i.description);
+  if (info.length === 0) return null;
+
+  const data = {
+    ability,
+    starts_at_level: typeof spellcasting?.level === "number" ? spellcasting.level : 1,
+    info,
+  };
+  validateBlockData("spellcasting_progression", data);
+  return { block_type: "spellcasting_progression", display: { label: "Incantation", layout: "key_values" }, data, display_order: 250 };
+}
+
+/**
+ * A quel niveau une classe choisit sa sous-classe, et sous quel nom. Aucun
+ * champ direct ne le donne dans le SRD ; deux heuristiques generiques,
+ * verifiees contre les 12 classes de base des deux editions avant d'ecrire
+ * ce code (voir le detail dans docs/BACKLOG_V1.md, V1-D2) :
+ *  - 2014 porte `subclass_flavor` sur la sous-classe elle-meme (ex. "Arcane
+ *    Tradition") ; le niveau est celui de la premiere aptitude de classe
+ *    dont le nom correspond exactement (insensible a la casse).
+ *  - 2024 n'a plus `subclass_flavor` ; la sous-classe se choisit toujours a
+ *    l'aptitude dont le nom ou la cle contient "subclass" (ex. "Wizard
+ *    Subclass"), et le libelle affiche reprend le nom de cette aptitude.
+ */
+function subclassSlotBlock(classIndex: string, subclasses: SrdRecord[], levels: SrdRecord[]): EntryBlock {
+  const ownSubclasses = subclasses.filter((s) => (s.class as SrdRecord | undefined)?.index === classIndex);
+  if (ownSubclasses.length === 0) {
+    throw new Error(`subclass_slot : aucune sous-classe trouvee pour "${classIndex}"`);
+  }
+  const flavor = ownSubclasses.map((s) => s.subclass_flavor).find((f): f is string => typeof f === "string");
+
+  const ownLevels = levels
+    .filter((l) => (l.class as SrdRecord | undefined)?.index === classIndex)
+    .sort((a, b) => Number(a.level) - Number(b.level));
+
+  let chosenAtLevel: number | undefined;
+  let matchedFeatureName: string | undefined;
+  for (const lvl of ownLevels) {
+    const features = Array.isArray(lvl.features) ? (lvl.features as SrdRecord[]) : [];
+    const match = features.find((f) => {
+      const name = String(f.name ?? "");
+      if (flavor) return name.toLowerCase() === flavor.toLowerCase();
+      return /subclass/i.test(name) || /subclass/i.test(String(f.index ?? ""));
+    });
+    if (match) {
+      chosenAtLevel = Number(lvl.level);
+      matchedFeatureName = String(match.name ?? "");
+      break;
+    }
+  }
+  if (chosenAtLevel === undefined) {
+    throw new Error(`subclass_slot : niveau de choix introuvable pour "${classIndex}" (aptitude "${flavor ?? "?"}" jamais rencontree)`);
+  }
+
+  const options = ownSubclasses
+    .map((s) => (typeof s.index === "string" ? { kind: "entry" as const, key: s.index } : null))
+    .filter((r): r is { kind: "entry"; key: string } => r !== null);
+
+  const data = { label: flavor ?? matchedFeatureName ?? "Sous-classe", chosen_at_level: chosenAtLevel, options };
+  validateBlockData("subclass_slot", data);
+  return { block_type: "subclass_slot", display: { label: "Sous-classe", layout: "key_values" }, data, display_order: 250 };
+}
+
+// --------------------------------------------------------------------
 // entry_type par categorie SRD, et split de Equipment par equipment_category
 // --------------------------------------------------------------------
 
@@ -590,7 +1014,8 @@ function transformEntry(
   entry: SrdRecord,
   sourceAttribution: string,
   levelsByCategory: SrdRecord[] | undefined,
-  remapFeatureKey: Map<string, string>
+  remapFeatureKey: Map<string, string>,
+  subclassesByCategory: SrdRecord[] | undefined
 ): TransformedEntry {
   const entryType: EntryType = category === "Equipment" ? equipmentEntryType(entry) : CATEGORY_ENTRY_TYPE[category];
 
@@ -623,6 +1048,41 @@ function transformEntry(
 
   if (entryType === "class" && levelsByCategory) {
     blocks.push(classProgressionBlock(String(entry.index), levelsByCategory, remapFeatureKey));
+    blocks.push(classBasicsBlock(entry));
+    const spellcasting = spellcastingProgressionBlock(entry);
+    if (spellcasting) blocks.push(spellcasting);
+    if (subclassesByCategory) {
+      blocks.push(subclassSlotBlock(String(entry.index), subclassesByCategory, levelsByCategory));
+    }
+  }
+
+  if (entryType === "weapon") {
+    const weapon = weaponBlock(entry);
+    if (weapon) blocks.push(weapon);
+  }
+
+  if (entryType === "armor") {
+    const armor = armorBlock(entry);
+    if (armor) blocks.push(armor);
+  }
+
+  if (entryType === "item") {
+    const itemProperties = itemPropertiesBlock(entry);
+    if (itemProperties) blocks.push(itemProperties);
+  }
+
+  if (entryType === "monster") {
+    const statBlock = statBlockBlock(entry);
+    if (statBlock) blocks.push(statBlock);
+    const actions = actionsBlock(entry);
+    if (actions) blocks.push(actions);
+    const traits = traitsBlock(entry);
+    if (traits) blocks.push(traits);
+  }
+
+  if (category === "Feats") {
+    const prerequisites = prerequisitesBlock(entry);
+    if (prerequisites) blocks.push(prerequisites);
   }
 
   blocks.push(customTableBlock(entry));
@@ -682,6 +1142,15 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
   if (rulesetError) throw new Error(`import_upsert_ruleset (${config.file}) : ${rulesetError.message}`);
 
   const levels = raw["Levels"];
+  // `subclass_slot` (label + niveau de choix) doit lire les sous-classes de
+  // l'edition courante, jamais le jeu fusionne : `buildMergedDataset` garde
+  // par construction les entrees 2014 dont l'`index` a change en 2024 (ex.
+  // barbare : "berserker" -> "path-of-the-berserker", 2014 reste present a
+  // cote), et `raw["Subclasses"]` melangerait alors une sous-classe perimee
+  // avec son remplacement 2024 sous le meme `class.index`. `ownData` (avant
+  // fusion) ne porte que les 12 sous-classes reellement 2024 — verifie
+  // couvrir les 12 classes de base avant d'ecrire ce repli.
+  const subclassesForSlots = config.mergeWithBaseFile ? ownData["Subclasses"] : raw["Subclasses"];
   const counts: Partial<Record<EntryType, number>> = {};
   const failures: ConversionFailure[] = [];
   let blocksTotal = 0;
@@ -722,7 +1191,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
     const transformed: TransformedEntry[] = [];
     for (const item of sourceItems) {
       try {
-        const t = transformEntry(category, item, config.sourceAttribution, levels, remapFeatureKey);
+        const t = transformEntry(category, item, config.sourceAttribution, levels, remapFeatureKey, subclassesForSlots);
         transformed.push(t);
         blocksTotal += t.blocks.length;
         refsTotal += t.refs.length;

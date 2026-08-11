@@ -323,6 +323,21 @@ describe("parseArmorData / armorAcModifier", () => {
   it("retourne null si les champs d'armure sont absents", () => {
     expect(parseArmorData(parseCustomTableFields([{ field: "name", value: "Fiole de sable noir" }]))).toBeNull();
   });
+
+  it("forme SRD 2024 (chain shirt) : categorie deduite de equipment_categories, faute de armor_category", () => {
+    const fields = parseCustomTableFields([
+      { field: "index", value: "chain-shirt" },
+      {
+        field: "equipment_categories",
+        value: JSON.stringify([
+          { index: "armor", name: "Armor" },
+          { index: "medium-armor", name: "Medium Armor" },
+        ]),
+      },
+      { field: "armor_class", value: JSON.stringify({ base: 13, dex_bonus: true, max_bonus: 2 }) },
+    ]);
+    expect(parseArmorData(fields)).toEqual({ category: "Medium", base: 13, dexBonus: true });
+  });
 });
 
 // Fixtures fideles a la forme reelle des donnees SRD 2014 deja importees

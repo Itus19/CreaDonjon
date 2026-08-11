@@ -259,11 +259,36 @@ export interface ArmorData {
   dexBonus: boolean;
 }
 
+/**
+ * SRD 2014 : `armor_category` (chaine "Light"/"Medium"/"Heavy"/"Shield").
+ * SRD 2024 : ce champ disparait, remplace par `equipment_categories` (noms
+ * "Light Armor"/"Medium Armor"/"Heavy Armor"/"Shields") — meme repli que
+ * `isRanged` dans `parseWeaponData`. Verifie contre les deux fichiers
+ * (`data/srd/srd-2014.json` et `srd-2024.json`, ex. Chain Shirt).
+ */
+function resolveArmorCategory(fields: ParsedFields): string | null {
+  const direct = fields.armor_category;
+  if (typeof direct === "string") return direct;
+
+  const categories = fields.equipment_categories;
+  if (Array.isArray(categories)) {
+    const names = (categories as { name?: string }[])
+      .map((c) => c.name)
+      .filter((n): n is string => typeof n === "string");
+    if (names.some((n) => /light armor/i.test(n))) return "Light";
+    if (names.some((n) => /medium armor/i.test(n))) return "Medium";
+    if (names.some((n) => /heavy armor/i.test(n))) return "Heavy";
+    if (names.some((n) => /shield/i.test(n))) return "Shield";
+  }
+  return null;
+}
+
 /** `null` si l'entree n'a pas de donnees d'armure exploitables (ex. une arme, ou un objet en ligne sans reference de regle). */
 export function parseArmorData(fields: ParsedFields): ArmorData | null {
   const armorClass = fields.armor_class as { base?: number; dex_bonus?: boolean } | undefined;
-  const category = fields.armor_category;
-  if (!armorClass || typeof armorClass.base !== "number" || typeof category !== "string") return null;
+  if (!armorClass || typeof armorClass.base !== "number") return null;
+  const category = resolveArmorCategory(fields);
+  if (!category) return null;
   return { category, base: armorClass.base, dexBonus: armorClass.dex_bonus === true };
 }
 
