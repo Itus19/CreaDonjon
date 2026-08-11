@@ -708,6 +708,26 @@ Demande utilisateur en 5 points : retirer une phrase de bruit, remonter la monna
 
 *Hors périmètre, comme prévu : le libellé exact des boutons (verbe plutôt que notation dé, décision documentée ci-dessus, à ajuster si l'utilisateur préfère l'inverse) ; regroupement des propriétés d'arme sous forme d'explication longue plutôt que de badges courts (aucune prose officielle disponible pour ces clés, cf. `SKIPPED_CATEGORIES`) ; la grille de monnaie de l'éditeur générique `InventoryBlockEditor.tsx` (hors fiche jouable) garde les codes SRD bruts pp/gp/ep/sp/cp — seule celle de la fiche jouable utilise `CURRENCY_LABELS_FR`, pas homogénéisé partout, non demandé ici.*
 
+### V1-C12 — Encadré d'objet : bascule verticale, boutons à trois lignes, sens des propriétés · `M` — fait
+
+Suite de V1-C11, 5 ajustements sur retour utilisateur : ajout d'objet remonté sous la monnaie ; bouton Équiper en bandeau vertical à gauche, sur toute la hauteur de l'encadré ; titre/poids/valeur/nombre/suppression sur une seule ligne ; boutons d'action à trois lignes (verbe, formule résolue en nombres, détail symbolique en dessous) ; sous les tags de propriété, leur explication réelle tirée d'une fiche de règle.
+
+**Ce que le dernier point a changé, au-delà de l'affichage** — la partie la plus substantielle de ce ticket :
+- Les propriétés d'arme (`finesse`, `light`, `thrown`...) portent bien une vraie prose SRD (`desc`, vérifié) — la décision antérieure de ne pas les importer (`scripts/ingest-srd.ts`, `SKIPPED_CATEGORIES`, « pas de besoin concret aujourd'hui ») ne tenait plus dès qu'un besoin concret existe. Retirées de `SKIPPED_CATEGORIES`, ajoutées à `CATEGORY_ENTRY_TYPE` (`Weapon-Properties: "feature"`, même motif que `Traits`/`Feats`) — importées pour de vrai (import rejoué, 0 échec).
+- **Bug réel découvert en vérifiant, pas en supposant** : plusieurs index de propriété sont des mots ordinaires qui percutent une autre entrée déjà présente sous la même clé — `light` est aussi le sort *Lumière*, `monk` la classe Moine, `ammunition`/`versatile` d'autres entrées. Le désambiguateur générique de collision (`${clé}-${entry_type}`) évite bien un doublon en base, mais une clé devinée côté client (`{kind:"rule", key:"light"}`) aurait alors résolu la fiche du **sort**, pas de la propriété — un lien vers le mauvais contenu, pas juste une fiche manquante. Corrigé à la source : `Weapon-Properties` reçoit un préfixe dédié et permanent (`weapon-property-<index>`, ex. `weapon-property-light`) dans `transformEntry`, sans collision possible par construction — vérifié en base que `light` (sort) et `weapon-property-light` (propriété) résolvent chacun leur propre contenu.
+- Description non traduite (anglais SRD brut), même limite que partout ailleurs pour les descriptions d'aptitude (cf. V1-C9) — seuls les noms ont une traduction officielle systématique.
+- Le préfixe redondant de `ai_digest` (`"<nom> (<type>) — <texte>"`) est retiré à l'affichage (`stripDigestPrefix`) pour ne pas répéter le nom de la propriété deux fois à côté de son propre badge FR.
+
+**Fait** :
+- `ActionButton` réécrit à trois lignes (`resolvedFormula`/`detailFormula`, ex. « 1d20+2+2 » puis « 1d20+FOR+maîtrise »), tout dans le bouton.
+- Bascule Équiper en bandeau vertical (`writing-mode: vertical-rl` + rotation), pleine hauteur via le comportement `stretch` par défaut d'un conteneur flex — pas de hauteur fixée à la main.
+- Ligne d'en-tête unique : titre, poids, coût, quantité, puis suppression poussée à l'extrémité droite (`flex-1` invisible en séparateur).
+- Tags de propriété (badges courts) suivis d'un bloc de descriptions réelles, une par propriété.
+- `AddItemRow` remonté juste sous la grille de monnaie, avant la liste d'objets.
+- Vérifié en navigateur : dague — badges Finesse/Légère/Lancer/Moine, descriptions anglaises réelles en dessous (ex. « Finesse — When making an attack with a finesse weapon... »), boutons Attaquer/Lancer/Dégâts avec formule résolue (1d20+2+2) et détail (1d20+FOR+maîtrise) dans le même bouton. Cuirasse (armure intermédiaire pré-existante sur la fiche de test) : bandeau vertical, une seule ligne d'en-tête, catégorie affichée, aucun bouton d'action — cohérent avec V1-C11.
+
+*Hors périmètre : traduction française des ~11 descriptions de propriété (limite déjà documentée V1-C9, pas rouverte) ; `Weapon-Mastery-Properties` (2024, mécanique non modélisée sur la fiche jouable aujourd'hui) reste hors import.*
+
 ---
 
 ## Lot D — Première assistance IA

@@ -206,39 +206,72 @@ function StatBadge({ label, value, danger }: { label: string; value: string; dan
 }
 
 /**
- * Bouton d'action a formule (V1-C11) : le libelle reste un verbe clair
- * (« Attaquer », pas « 1d20 ») — deux boutons d'attaque cote a cote
- * porteraient sinon le meme « 1d20 » sans rien pour les distinguer. La
- * formule resolue (avec la bonne caracteristique, finesse comprise) va en
- * dessous en police mecanique, jamais dans le bouton — seulement si un
- * modificateur s'applique reellement (`formula` vide sinon).
+ * Bouton d'action a trois lignes (V1-C12, sur retour utilisateur) : verbe
+ * (« Attaquer »), formule resolue en nombres (« 1d20+2+2 »), puis le detail
+ * symbolique en police plus petite (« 1d20+DEX+maîtrise ») — tout dans le
+ * bouton, plus rien en dehors. Les deux formules sont deja calculees par
+ * l'appelant (memes valeurs que celles reellement envoyees au serveur au
+ * clic, jamais une seconde regle qui pourrait diverger).
  */
-function ActionButton({ label, formula, busy, onClick }: { label: string; formula: string; busy: boolean; onClick: () => void }) {
+function ActionButton({
+  label,
+  resolvedFormula,
+  detailFormula,
+  busy,
+  onClick,
+}: {
+  label: string;
+  resolvedFormula: string;
+  detailFormula: string;
+  busy: boolean;
+  onClick: () => void;
+}) {
   return (
-    <div className="flex flex-col items-center gap-0.5">
-      <button
-        type="button"
-        disabled={busy}
-        onClick={onClick}
-        className="rounded-full border border-edge px-2.5 py-1 text-xs text-ink hover:bg-panel disabled:opacity-50"
-      >
-        {label}
-      </button>
-      {formula && <span className="mech text-[10px] text-ink-muted">{formula}</span>}
-    </div>
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onClick}
+      className="flex min-w-[6.5rem] flex-col items-center gap-0.5 rounded-md border border-edge px-3 py-1.5 text-ink hover:bg-panel disabled:opacity-50"
+    >
+      <span className="text-xs font-medium">{label}</span>
+      <span className="mech text-[11px]">{resolvedFormula}</span>
+      <span className="mech text-[9px] text-ink-muted">{detailFormula}</span>
+    </button>
   );
 }
 
+/** Ajoute un modificateur signe a une notation de de (`"1d20"` + 2 -> `"1d20+2"`), omis si nul. */
+function withModifier(base: string, mod: number): string {
+  if (mod === 0) return base;
+  return `${base}${mod > 0 ? "+" : ""}${mod}`;
+}
+
 /**
- * Encadre d'objet d'inventaire (V1-C11, sur retour utilisateur) : meme
- * langage visuel que les encadres de l'onglet Traits (V1-C9) — titre lie a
- * la fiche de regle, proprietes en pilules, poids/cout, actions a droite.
- * Reutilise par l'onglet Actions (`onToggleEquipped`/`onChangeQty`/`onRemove`
- * omis dans ce contexte : gerer l'inventaire n'est pas le role de cet
- * onglet, seulement l'utiliser) — l'encadre d'une arme equipee y est donc
- * litteralement le meme composant, pas une copie.
+ * Retire le prefixe redondant d'un `ai_digest` (toujours `"<nom> (<type>) —
+ * <texte>"`, cf. `scripts/ingest-srd.ts`) — sans ca, une propriete d'arme
+ * affichee a cote de son propre badge FR redirait deux fois son nom (« Light
+ * — Light (feature) — A light weapon... »). Repli sur le texte complet si le
+ * motif attendu n'est pas trouve, jamais une chaine vide.
+ */
+function stripDigestPrefix(digest: string): string {
+  const match = digest.match(/^.*? \([a-z]+\) — ([\s\S]*)$/);
+  return match ? match[1] : digest;
+}
+
+/**
+ * Encadre d'objet d'inventaire (V1-C11/V1-C12, sur retours utilisateur
+ * successifs) : meme langage visuel que les encadres de l'onglet Traits
+ * (V1-C9). Reutilise par l'onglet Actions (`onToggleEquipped`/`onChangeQty`/
+ * `onRemove` omis dans ce contexte : gerer l'inventaire n'est pas le role de
+ * cet onglet, seulement l'utiliser) — l'encadre d'une arme equipee y est
+ * donc litteralement le meme composant, pas une copie.
+ *
+ * Bascule Equiper en bandeau vertical (V1-C12) : `writing-mode` + rotation
+ * plutot qu'un bouton en ligne — occupe toute la hauteur de l'encadre a
+ * gauche, `items-stretch` (comportement flex par defaut) fait le reste.
  */
 function ItemCard({
+  worldSlug,
   item,
   chip,
   weapon,
@@ -247,6 +280,7 @@ function ItemCard({
   cost,
   strMod,
   dexMod,
+  proficiencyBonus,
   busy,
   onAttack,
   onDamage,
@@ -254,6 +288,7 @@ function ItemCard({
   onChangeQty,
   onRemove,
 }: {
+  worldSlug: string;
   item: InventoryItem;
   chip: ResolvedChipView | undefined;
   weapon: WeaponData | null;
@@ -262,6 +297,7 @@ function ItemCard({
   cost: ItemCost | null;
   strMod: number;
   dexMod: number;
+  proficiencyBonus: number;
   busy: boolean;
   onAttack?: () => void;
   onDamage?: (versatile: boolean) => void;
@@ -271,25 +307,60 @@ function ItemCard({
 }) {
   const title = chip?.found ? chip.name : itemLabel(item);
 
-  const properties: string[] = [];
-  if (weapon) {
-    for (const p of weapon.properties) properties.push(WEAPON_PROPERTY_LABELS_FR[p] ?? p);
-  } else if (armor) {
-    properties.push(ARMOR_CATEGORY_LABELS_FR[armor.category] ?? armor.category);
+  /**
+   * Cle de reference + libelle FR de chaque propriete d'arme (V1-C12) — la
+   * cle sert a resoudre sa fiche de regle (`Weapon-Properties`, importee
+   * depuis ce ticket, `entry_type: "feature"` comme `Traits`/`Feats`) pour
+   * en tirer la vraie description SRD (`chip.summary`, non traduite comme
+   * le reste des descriptions d'aptitude, cf. V1-C9). Prefixe
+   * `weapon-property-` (pas l'index brut, ex. "light") : ces index sont des
+   * mots ordinaires qui percutent un sort/une classe/un objet du meme nom
+   * (verifie a l'import : "light", "monk", "ammunition", "versatile" y sont
+   * deja pris) — sans prefixe, la fiche resolue serait celle du sort
+   * "Light", pas de la propriete. Armure : un seul badge de categorie, sans
+   * fiche de regle correspondante (aucune categorie `Armor-Categories` dans
+   * le SRD) — pas de description a reporter.
+   */
+  function weaponPropertyRefKey(property: string): string {
+    return `weapon-property-${property}`;
   }
+  const propertyRefs = weapon ? weapon.properties.map((p) => ({ key: p, label: WEAPON_PROPERTY_LABELS_FR[p] ?? p })) : [];
+  const armorLabel = armor ? (ARMOR_CATEGORY_LABELS_FR[armor.category] ?? armor.category) : null;
+  // Tableau recree a chaque rendu, sans useMemo : `useReferenceChips` deduplique
+  // deja en interne sur la cle jointe des refs (`dedupeKey`), pas sur
+  // l'identite du tableau — un useMemo ici n'aurait rien evite de reel.
+  const propertyChips = useReferenceChips(
+    worldSlug,
+    propertyRefs.map((p) => ({ kind: "rule" as const, key: weaponPropertyRefKey(p.key) }))
+  );
 
   // Meme regle que le serveur (`weaponAttackAbilityMod`, resolveAction.ts) —
   // le libelle affiche ici doit refleter la meme caracteristique que celle
   // reellement utilisee au clic, jamais une supposition separee.
   const abilityMod = weapon ? weaponAttackAbilityMod(weapon.properties, weapon.isRanged, strMod, dexMod) : 0;
   const abilityLabel = weapon ? (weapon.isRanged || (weapon.properties.includes("finesse") && dexMod > strMod) ? "DEX" : "FOR") : "";
-  const attackFormula = abilityMod !== 0 ? `1d20+${abilityLabel}+maîtrise` : "1d20+maîtrise";
-  const damageFormula = (dice: string) => (abilityMod !== 0 ? `${dice}+${abilityLabel}` : "");
+  const attackResolved = withModifier(withModifier("1d20", abilityMod), proficiencyBonus);
+  const attackDetail = `1d20+${abilityLabel}+maîtrise`;
+  const damageResolved = (dice: string) => withModifier(dice, abilityMod);
+  const damageDetail = (dice: string) => (abilityMod !== 0 ? `${dice}+${abilityLabel}` : dice);
 
   return (
-    <div className="rounded-md border border-edge/60 bg-panel-raised p-2.5">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-col gap-1">
+    <div className="flex overflow-hidden rounded-md border border-edge/60 bg-panel-raised">
+      {onToggleEquipped && (
+        <button
+          type="button"
+          onClick={onToggleEquipped}
+          title={item.equipped ? "Cliquer pour déséquiper" : "Cliquer pour équiper"}
+          className={`w-7 shrink-0 border-r text-[10px] font-semibold uppercase tracking-widest transition-colors ${
+            item.equipped ? "border-accent/50 bg-accent/20 text-accent" : "border-edge/60 bg-panel text-ink-muted hover:bg-panel-raised"
+          }`}
+          style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+        >
+          {item.equipped ? "Équipé" : "Équiper"}
+        </button>
+      )}
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2.5">
+        <div className="flex flex-wrap items-center gap-3">
           {chip?.found ? (
             <Link href={chip.href} className="text-sm font-semibold no-underline hover:underline" style={{ color: "var(--link-rule)" }}>
               {title}
@@ -297,28 +368,13 @@ function ItemCard({
           ) : (
             <span className="text-sm font-semibold text-ink">{title || "Sans nom"}</span>
           )}
-          {properties.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {properties.map((p) => (
-                <span key={p} className="rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">
-                  {p}
-                </span>
-              ))}
-            </div>
+          {weightLb !== null && <span className="text-[10px] text-ink-muted">{lbToKg(weightLb)} kg</span>}
+          {cost && (
+            <span className="mech text-[10px] text-ink-muted">
+              {cost.quantity} {CURRENCY_LABELS_FR[cost.unit] ?? cost.unit}
+            </span>
           )}
-          {(weightLb !== null || cost) && (
-            <div className="flex gap-2 text-[10px] text-ink-muted">
-              {weightLb !== null && <span>{lbToKg(weightLb)} kg</span>}
-              {cost && (
-                <span className="mech">
-                  {cost.quantity} {CURRENCY_LABELS_FR[cost.unit] ?? cost.unit}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {onChangeQty && (
+          {onChangeQty ? (
             <input
               type="number"
               min={0}
@@ -327,46 +383,75 @@ function ItemCard({
               className="w-12 rounded-md border border-edge bg-transparent px-1 py-0.5 text-center text-xs text-ink outline-none"
               aria-label="Quantité"
             />
+          ) : (
+            <span className="text-[10px] text-ink-muted">× {item.qty}</span>
           )}
-          {onToggleEquipped && (
-            <button
-              type="button"
-              onClick={onToggleEquipped}
-              className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                item.equipped ? "border-accent bg-accent/20 text-accent" : "border-edge text-ink-muted hover:bg-panel"
-              }`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${item.equipped ? "bg-accent" : "bg-edge"}`} aria-hidden="true" />
-              {item.equipped ? "Équipé" : "Équiper"}
-            </button>
-          )}
+          <span className="flex-1" />
           {onRemove && (
-            <button type="button" onClick={onRemove} className="text-xs text-danger hover:underline">
+            <button type="button" onClick={onRemove} className="shrink-0 text-xs text-danger hover:underline">
               ×
             </button>
           )}
         </div>
-      </div>
 
-      {weapon && (onAttack || onDamage) && (
-        <div className="mt-2 flex flex-wrap justify-end gap-3">
-          {onAttack && <ActionButton label="Attaquer" formula={attackFormula} busy={busy} onClick={onAttack} />}
-          {onAttack && weapon.properties.includes("thrown") && (
-            <ActionButton label="Lancer" formula={attackFormula} busy={busy} onClick={onAttack} />
-          )}
-          {onDamage && (
-            <ActionButton label="Dégâts" formula={damageFormula(weapon.damageDice)} busy={busy} onClick={() => onDamage(false)} />
-          )}
-          {onDamage && weapon.versatileDamageDice && (
-            <ActionButton
-              label="Dégâts (2 mains)"
-              formula={damageFormula(weapon.versatileDamageDice)}
-              busy={busy}
-              onClick={() => onDamage(true)}
-            />
-          )}
-        </div>
-      )}
+        {propertyRefs.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {propertyRefs.map((p) => (
+              <span key={p.key} className="rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">
+                {p.label}
+              </span>
+            ))}
+          </div>
+        )}
+        {armorLabel && (
+          <div className="flex flex-wrap gap-1">
+            <span className="rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">{armorLabel}</span>
+          </div>
+        )}
+
+        {propertyRefs.length > 0 && (
+          <div className="flex flex-col gap-0.5">
+            {propertyRefs.map((p) => {
+              const propChip = propertyChips.get(refIdentity({ kind: "rule", key: weaponPropertyRefKey(p.key) }));
+              const description = propChip?.found && propChip.summary ? stripDigestPrefix(propChip.summary) : null;
+              return description ? (
+                <p key={p.key} className="text-[10px] leading-relaxed text-ink-muted">
+                  <span className="font-semibold text-ink">{p.label}</span> — {description}
+                </p>
+              ) : null;
+            })}
+          </div>
+        )}
+
+        {weapon && (onAttack || onDamage) && (
+          <div className="mt-1 flex flex-wrap justify-end gap-2">
+            {onAttack && (
+              <ActionButton label="Attaquer" resolvedFormula={attackResolved} detailFormula={attackDetail} busy={busy} onClick={onAttack} />
+            )}
+            {onAttack && weapon.properties.includes("thrown") && (
+              <ActionButton label="Lancer" resolvedFormula={attackResolved} detailFormula={attackDetail} busy={busy} onClick={onAttack} />
+            )}
+            {onDamage && (
+              <ActionButton
+                label="Dégâts"
+                resolvedFormula={damageResolved(weapon.damageDice)}
+                detailFormula={damageDetail(weapon.damageDice)}
+                busy={busy}
+                onClick={() => onDamage(false)}
+              />
+            )}
+            {onDamage && weapon.versatileDamageDice && (
+              <ActionButton
+                label="Dégâts (2 mains)"
+                resolvedFormula={damageResolved(weapon.versatileDamageDice)}
+                detailFormula={damageDetail(weapon.versatileDamageDice)}
+                busy={busy}
+                onClick={() => onDamage(true)}
+              />
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1328,6 +1413,7 @@ export default function PlayableCharacterSheet({
                 return (
                   <ItemCard
                     key={item.id}
+                    worldSlug={worldSlug}
                     item={item}
                     chip={ref ? itemChips.get(refIdentity(ref)) : undefined}
                     weapon={weapon}
@@ -1336,6 +1422,7 @@ export default function PlayableCharacterSheet({
                     cost={null}
                     strMod={sheet.abilities.str.mod}
                     dexMod={sheet.abilities.dex.mod}
+                    proficiencyBonus={sheet.proficiencyBonus}
                     busy={busy}
                     onAttack={() => attack(item)}
                     onDamage={(versatile) => damage(item, versatile)}
@@ -1476,6 +1563,8 @@ export default function PlayableCharacterSheet({
                 ))}
               </div>
 
+              <AddItemRow worldSlug={worldSlug} onAdd={addInventoryItem} />
+
               <div className="flex flex-col gap-2">
                 {(inventory?.items ?? []).map((item, index) => {
                   const ref = itemRef(item);
@@ -1484,6 +1573,7 @@ export default function PlayableCharacterSheet({
                   return (
                     <ItemCard
                       key={item.id}
+                      worldSlug={worldSlug}
                       item={item}
                       chip={ref ? itemChips.get(refIdentity(ref)) : undefined}
                       weapon={weapon}
@@ -1492,6 +1582,7 @@ export default function PlayableCharacterSheet({
                       cost={ref?.kind === "rule" ? (cost[ref.key] ?? null) : null}
                       strMod={sheet.abilities.str.mod}
                       dexMod={sheet.abilities.dex.mod}
+                      proficiencyBonus={sheet.proficiencyBonus}
                       busy={busy}
                       onAttack={item.equipped && weapon ? () => attack(item) : undefined}
                       onDamage={item.equipped && weapon ? (versatile) => damage(item, versatile) : undefined}
@@ -1503,8 +1594,6 @@ export default function PlayableCharacterSheet({
                 })}
                 {(inventory?.items.length ?? 0) === 0 && <p className="text-sm text-ink-muted">Aucun objet pour l&apos;instant.</p>}
               </div>
-
-              <AddItemRow worldSlug={worldSlug} onAdd={addInventoryItem} />
             </div>
           )}
 

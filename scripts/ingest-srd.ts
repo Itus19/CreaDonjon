@@ -160,6 +160,14 @@ function buildMergedDataset(
 // ne leur correspond, et ce ne sont pas des regles qu'on consulte comme un
 // sort ou un monstre. Ecarte deliberement (regle des trois) plutot que
 // d'elargir le schema pour un besoin qui n'existe pas encore.
+//
+// `Weapon-Properties` a quitte cette liste (V1-C12, sur retour utilisateur) :
+// besoin reel des qu'un joueur veut savoir ce que "finesse"/"legere" veulent
+// dire depuis la fiche d'un objet — chaque entree porte un vrai `desc` SRD
+// (verifie), importee comme `Traits`/`Feats` (`entry_type: "feature"`, meme
+// motif). `Weapon-Mastery-Properties` (2024 seulement, mecanique non encore
+// modelisee sur la fiche jouable) reste ecartee — pas de besoin concret
+// aujourd'hui, contrairement aux proprietes d'arme deja affichees partout.
 // --------------------------------------------------------------------
 const SKIPPED_CATEGORIES = new Set([
   "Ability-Scores",
@@ -171,7 +179,6 @@ const SKIPPED_CATEGORIES = new Set([
   "Magic-Schools",
   "Proficiencies",
   "Skills",
-  "Weapon-Properties",
   "Weapon-Mastery-Properties",
 ]);
 
@@ -544,6 +551,7 @@ const CATEGORY_ENTRY_TYPE: Record<string, EntryType> = {
   Features: "feature",
   Feats: "feature",
   Traits: "feature",
+  "Weapon-Properties": "feature",
   Monsters: "monster",
   Conditions: "condition",
   Rules: "rule",
@@ -622,8 +630,20 @@ function transformEntry(
   const digestSource = prose ?? fallbackDigestFacts(entryType, entry) ?? String(entry.name);
   const ai_digest = truncateForDigest(`${String(entry.name)} (${entryType}) — ${digestSource}`);
 
+  // Prefixe dedie pour les proprietes d'arme (V1-C12) : leurs index bruts
+  // ("light", "monk", "ammunition"...) sont des mots ordinaires qui
+  // percutent presque a coup sur un sort, une classe ou un objet du meme
+  // nom — le desambiguateur generique plus bas (`${cle}-${entry_type}`)
+  // suffit a eviter un doublon en base, mais reste dangereux a deviner cote
+  // client : `weaponData.properties` porte toujours l'index brut ("light"),
+  // et sans prefixe distinct la fiche resolue a cette cle serait celle du
+  // sort "Light", pas de la propriete — un lien vers le mauvais contenu,
+  // pas juste une fiche manquante. Le prefixe rend la cle intrinsequement
+  // sans collision possible, pas seulement corrigee apres coup.
+  const entryKey = category === "Weapon-Properties" ? `weapon-property-${String(entry.index)}` : String(entry.index);
+
   return {
-    entry_key: String(entry.index),
+    entry_key: entryKey,
     entry_type: entryType,
     ai_digest,
     source_attribution: sourceAttribution,
