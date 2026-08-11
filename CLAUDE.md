@@ -31,8 +31,9 @@ Le développeur du projet apprend à coder sur ce projet. Explique tes choix. Ne
 | `specs/fiche-personnage-interactive.md` | Fiche jouable, actions, onglets, exports | Ticket V1-B5 |
 | `specs/psyche-pnj.md` | Relations, personnalité, pôles, historique | Tickets V2/V3 |
 | `specs/module-joueur-et-solo.md` | Compagnon PJ, interface solo, combat partagé | Tickets V3 |
+| `specs/cible-locale-et-ia.md` | Cible locale, fournisseurs d'IA, contraintes à respecter | Avant toute dépendance d'infrastructure |
 
-Ne lis que ce dont le ticket a besoin. Charger les huit documents à chaque session gaspille du contexte et disperse l'attention.
+Ne lis que ce dont le ticket a besoin. Charger tous les documents à chaque session gaspille du contexte et disperse l'attention.
 
 ---
 
@@ -89,6 +90,8 @@ Ces règles ne se négocient pas ticket par ticket. Si une tâche semble les exi
 14. `src/core/**` n'importe **rien** de `next`, `react`, `@supabase`, ni aucune bibliothèque réseau. La règle ESLint le vérifie ; ne la désactive pas.
 15. Les requêtes Supabase vivent dans `src/server/repos/**`. Nulle part ailleurs.
 16. Aucun composant client n'accède directement à la base.
+16 bis. **L'application visera un fonctionnement local** (`specs/cible-locale-et-ia.md`). D'ici là : aucune fonctionnalité propre à Supabase hébergé pour une fonction essentielle ; aucune extension Postgres hors `pgcrypto`, `pg_trgm`, `unaccent`, `vector` ; le stockage de fichiers passe par une interface, jamais par un appel direct dans un composant.
+16 ter. **Aucun appel d'IA hors de `src/server/ai/`.** Un fournisseur se branche par un adaptateur derrière l'interface `AiProvider`. Ollama et LM Studio partagent le même adaptateur compatible OpenAI.
 17. `any` est interdit. `unknown` puis rétrécissement, ou un vrai type.
 
 ---

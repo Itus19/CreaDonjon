@@ -2,7 +2,9 @@
 
 **Version :** 1.0 — 30 juillet 2026
 **Établi à partir de :** dépôt `Itus19/CreaDonjon`, commit `fe3736a` (V0-07)
-**Documents liés :** `SCHEMA.md` · `specs/regles-couche.md` · `specs/regles-blocs.md` · `specs/wiki-liens-et-personnages.md` · `specs/wiki-blocs.md` · `specs/arbitrage-modifications.md` · `specs/fiche-personnage-interactive.md` · `specs/psyche-pnj.md` · `specs/module-joueur-et-solo.md`
+**Documents liés :** `SCHEMA.md` · `specs/regles-couche.md` · `specs/regles-blocs.md` · `specs/wiki-liens-et-personnages.md` · `specs/wiki-blocs.md` · `specs/arbitrage-modifications.md` · `specs/fiche-personnage-interactive.md` · `specs/psyche-pnj.md` · `specs/module-joueur-et-solo.md` · `specs/cible-locale-et-ia.md`
+
+**Mise à jour du 12 août 2026** — fusion d'une nouvelle orientation externe (`specs/cible-locale-et-ia.md` : cible locale, IA locale via Ollama/LM Studio) reçue sous forme de `CLAUDE.md`/`BACKLOG_V1.md` mis à jour. Fusionnée, pas remplacée : la version fournie ne connaissait pas l'avancement réel du dépôt (Lots A et B entièrement faits, Lot C poussé jusqu'à V1-C18) — tout ce qui est marqué fait ci-dessous le reste. Ce qui change réellement : l'ancien « Lot D — Première assistance IA » devient **Lot F**, un nouveau **Lot D — Le moteur de règles, complet** et un nouveau **Lot E — Outils de MJ déterministes** s'insèrent avant lui (§5 explique pourquoi). Rien à changer dans le schéma : la dimension d'embedding déjà retenue (`vector(1024)`) correspond déjà à la recommandation du document d'orientation.
 
 ---
 
@@ -816,18 +818,97 @@ Demande explicite : le bloc `inventory` autonome (celui qui vit à côté du blo
 
 ---
 
-## Lot D — Première assistance IA
+## Lot D — Le moteur de règles, complet
+
+*Réordonnancement du 12 août : ce lot était l'assistance IA. Justification en §5.*
+
+*Objectif : les deux SRD utilisables en français, et créer une règle à la main sans aucune IA.*
+
+### V1-D1 — Types de blocs de règles restants · `L`
+
+Les cinq de V1-A1 couvrent un sort et une classe. Il en manque pour le reste du SRD.
+
+- `class_basics`, `weapon`, `armor`, `item_properties`, `charges`, `statblock`, `actions`, `traits`, `prerequisites`, `spellcasting_progression`, `subclass_slot`.
+- Un schéma Zod par type, réutilisant les dix primitives et les six mises en page. **Aucun composant d'affichage nouveau.**
+
+**Critères**
+- [ ] Chaque `entry_type` du SRD a ses blocs requis déclarés et satisfaits.
+- [ ] La vue « règles incomplètes » d'un ruleset est vide après import.
+- [ ] Aucune mise en page ajoutée : si un bloc en réclame une septième, la question se pose avant de l'écrire.
+
+### V1-D2 — Import complet des deux SRD · `L`
+
+- Conversion vers blocs pour **tous** les types, pas seulement sorts et classes.
+- `source_raw` conservé sur chaque entrée.
+- Rapport de conversion : entrées par type, blocs produits, **échecs listés** et non avalés.
+
+**Critères**
+- [ ] SRD 5.1 et 5.2 importés, idempotents, sans contenu hors SRD.
+- [ ] `NOTICE.md` porte les deux attributions au mot près.
+- [ ] Zéro échec silencieux : tout ce qui n'a pas su être converti est listé.
+
+### V1-D3 — Traduction française · `L`
+
+Le morceau le plus long du lot, et le plus mécanique. Voir §6 pour la méthode. Distinct de V1-A5 (déjà fait) : celui-ci couvrait la traduction des noms sur les cinq types de blocs existants (sort, classe...) ; celui-ci couvre **tout** le reste du SRD une fois V1-D1/V1-D2 lui donnent des blocs à traduire (armes, armures, objets, monstres, dons, etc. au-delà de ce qu'A5 a déjà couvert).
+
+- Table `ruleset_entry_translations` alimentée depuis les SRD français officiels (CC-BY-4.0).
+- Alignement sur les clés canoniques anglaises.
+- Bascule de langue dans l'interface.
+
+**Critères**
+- [ ] Priorité respectée : sorts, classes, espèces, historiques, conditions, armes, armures d'abord. Monstres et objets magiques ensuite.
+- [ ] Chaque traduction porte sa `source` (`official_srd`, jamais `machine` sans le dire).
+- [ ] Une entrée sans traduction affiche l'anglais, jamais une chaîne vide ni une clé technique.
+- [ ] Un rapport de couverture par type : combien de traduites sur combien.
+
+### V1-D4 — Création et édition manuelle de règles · `L`
+
+**Sans aucune IA.** L'assistant viendra par-dessus, plus tard (Lot F).
+
+- Formulaires engendrés depuis les schémas Zod — l'utilisateur ne voit jamais de JSON.
+- Bac à sable avec trace : `1d8 (6) + FOR (+3) = 9 dégâts tranchants`.
+- Création d'une variante, surcharge d'un bloc, désactivation d'une règle.
+
+**Critères**
+- [ ] Créer une arme maison, l'ajouter à un inventaire, voir l'encombrement et les attaques suivre.
+- [ ] Le bac à sable utilise le même moteur que le jeu réel, pas un chemin parallèle.
+- [ ] Une règle créée ne touche jamais une base officielle.
+
+---
+
+## Lot E — Outils de MJ déterministes
+
+*Remonté de la V2. Aucun de ces outils n'a besoin d'IA.*
+
+Spécification : `specs/outils-mj.md`.
+
+| Ticket | Contenu |
+|---|---|
+| **V1-E1** `M` | Blocs `random_table`, tirage, références, tirages en cascade bornés |
+| **V1-E2** `M` | Générateurs par tables : noms, rumeurs, butin. **Pas** les descriptions en prose |
+| **V1-E3** `L` | `encounter_budget` en ruleset, générateur de rencontres, sauvegarde de combat |
+| **V1-E4** `L` | `combats` et `combat_participants`, suivi d'initiative, annulation par le journal |
+| **V1-E5** `S` | Tables de probabilités de réussite — fonction pure sur la fiche dérivée |
+| **V1-E6** `M` | Mécanisme générique de promotion en entité, réutilisé par chronologie, inventaire, tables |
+
+**Découpage important sur E2 :** un générateur de noms tire sur une table, c'est déterministe. Une description de taverne en 100 mots exige un modèle. Le premier est ici, le second au lot F. Les gabarits sont écrits maintenant, les emplacements en prose restent vides jusqu'au lot F.
+
+**V1-E5 mérite d'être fait tôt** malgré sa taille : c'est une fonction pure sur `characterSheet()`, presque gratuite, et c'est l'outil que personne d'autre ne propose.
+
+---
+
+## Lot F — Première assistance IA
 
 *Objectif : mesurer les coûts réels avant de concevoir le mode solo.*
 
-### V1-D1 — Instrumentation et garde-fous · `M` · **avant tout appel**
+### V1-F1 — Instrumentation et garde-fous · `M` · **avant tout appel**
 
 - [ ] `ai_usage_log` écrit à **chaque** appel, sans exception.
 - [ ] Limitation de débit par utilisateur sur les routes IA.
 - [ ] Clés API serveur uniquement, jamais derrière `NEXT_PUBLIC_`.
 - [ ] Le contenu de wiki inséré dans un prompt est encadré comme **donnée**, avec consigne d'ignorer toute instruction qu'il contiendrait.
 
-### V1-D2 — Éditeur de règle assisté · `L`
+### V1-F2 — Éditeur de règle assisté · `L`
 
 Le « codeur accompagnant » de `specs/regles-couche.md` §5.
 
@@ -837,13 +918,13 @@ Le « codeur accompagnant » de `specs/regles-couche.md` §5.
 - [ ] Bac à sable avec trace : `1d8 (6) + FOR (+3) = 9 dégâts tranchants`.
 - [ ] Une règle générée ne peut modifier qu'une variante, jamais une base officielle.
 
-### V1-D3 — Assistance rédactionnelle · `M`
+### V1-F3 — Assistance rédactionnelle · `M`
 
 - [ ] Toute mutation passe par `ai_proposals` : Zod, validation métier, application transactionnelle.
 - [ ] Le modèle ne peut référencer que des identifiants fournis dans le contexte du tour.
 - [ ] Budget de propositions par tour ; au-delà, rejet et journalisation.
 
-### V1-D4 — Relevé de coûts · `S`
+### V1-F4 — Relevé de coûts · `S`
 
 - [ ] Remplir la colonne « mesuré » du tableau de `PDD.md` §32.
 - [ ] Coût d'une génération de PNJ, d'une structuration de règle, d'une aide rédactionnelle.
@@ -868,20 +949,55 @@ Et un critère technique, non négociable :
 ## 4. Ordre recommandé
 
 ```
-D-01 … D-04                dette, une session
-Lot A  (A1→A2→A3→A4→A5)    les règles deviennent consultables et personnalisables,
-                            A5 (traduction FR) ferme le lot une fois la structure stable
-Lot B  (B1→B2→B3→B4→B5)    le personnage devient jouable, B5 le rend interactif
-Lot C  (C1→C2→C3→C4→C5→C6→C7→C8→C9)
-                            plusieurs personnes, permissions réelles, C4 les correctifs,
-                            C5 (sélection de ruleset) n'a de dépendance que sur C1,
-                            C6 (Actions/Magie/Traits) n'a de dépendance que sur B5,
-                            C7 (langues d'historique) et C8 (dons) dépendent de C6,
-                            C9 (encadrés de l'onglet Traits) n'a de dépendance que sur C6,
-                            profite de C8 s'il est déjà fait mais ne l'exige pas
-Lot D  (D1→D2→D3→D4)       l'IA, instrumentée dès le premier appel
+D-01 … D-04           dette, une session                        [fait]
+Lot A                 les règles consultables et personnalisables [fait]
+Lot B                 le personnage jouable                       [fait]
+Lot C  (C1 … C18)     permissions réelles, fiche jouable affinée  [fait]
+Lot D  (D1→D2→D3→D4)  le moteur de règles complet, en français
+Lot E  (E1→E6)        outils de MJ déterministes
+Lot F  (F1→F2→F3→F4)  l'IA, instrumentée dès le premier appel
 ```
 
-**Ne pas paralléliser les lots.** A débloque B (une fiche de personnage a besoin des règles), B débloque C (une campagne a besoin de personnages), et D a besoin de tout le reste pour avoir quelque chose à assister.
+**Ne pas paralléliser les lots.** A débloque B, B débloque C, D débloque E (une rencontre a besoin de blocs de créature), et F a besoin de tout le reste pour avoir quelque chose à assister.
+
+## 5. Pourquoi l'IA passe en dernier
+
+Le lot IA était placé avant les outils de MJ pour une raison : **mesurer le coût réel d'un appel avant de concevoir le mode solo**, qui en est fait de bout en bout.
+
+Cette raison supposait une application hébergée facturant des appels d'API. La cible étant désormais une application locale avec un modèle local (`specs/cible-locale-et-ia.md`), l'argument tombe : le coût marginal d'un appel devient l'électricité et l'attente, pas une facture.
+
+Trois raisons positives de reporter, en plus :
+
+1. **Rien ne dépend de l'IA.** L'éditeur de règle assisté suppose l'éditeur manuel ; l'assistance rédactionnelle suppose l'éditeur de texte. Les deux sont des surcouches.
+2. **Un moteur incomplet donne une IA inutile.** Un assistant qui structure des règles alors que la moitié des types de blocs n'existent pas produit des propositions invalides.
+3. **Un modèle local échoue plus souvent qu'une API.** Mieux vaut brancher l'IA sur un socle qui fonctionne parfaitement sans elle, pour que ses échecs soient une gêne et non une panne.
+
+Ce qui reste vrai : **F1 est un prérequis absolu**. Journalisation, limitation de débit, encadrement du contenu de wiki comme donnée. Aucun appel avant.
+
+## 6. Méthode pour la traduction
+
+C'est le ticket le plus long du lot D et il se rate facilement.
+
+**Les sources sont des PDF officiels sous CC-BY-4.0**, pas du JSON. La conversion demande une extraction puis un alignement sur les clés anglaises de `5e-bits`.
+
+**L'alignement est majoritairement déterministe.** Un sort se retrouve par son niveau, son école, son temps d'incantation et sa portée — la combinaison est presque toujours unique. Une classe se retrouve par son dé de vie et ses sauvegardes. Le script propose, un rapport liste les ambiguïtés, vous tranchez.
+
+**Ne traduisez pas tout d'un coup.** L'ordre de priorité est celui de ce qui s'affiche vraiment :
+
+| Priorité | Types | Volume approximatif |
+|---|---|---|
+| 1 | conditions, espèces, historiques, compétences | quelques dizaines |
+| 2 | classes, sous-classes, aptitudes | une centaine |
+| 3 | sorts | plusieurs centaines |
+| 4 | armes, armures, équipement | une centaine |
+| 5 | monstres, objets magiques | le gros du volume, le moins consulté |
+
+Les priorités 1 et 2 rendent l'application utilisable en français. La 5 peut attendre indéfiniment.
+
+**Une entrée non traduite affiche l'anglais**, jamais une chaîne vide ni une clé technique. Et jamais de traduction automatique présentée comme officielle : la colonne `source` existe pour ça.
+
+**Un ticket, un commit, une relecture.** La tentation d'enchaîner grandit avec l'aisance ; le risque R2 du registre aussi.
+
+**Déjà fait, à ne pas refaire** : V1-A5 (Lot A) a déjà appliqué cette méthode aux cinq types de blocs existants (sort, classe, espèce, historique, condition, arme, armure, sous-classe, règle, monstre, objet — voir le détail dans V1-A5 ci-dessus, avec ses propres tableaux de couverture par catégorie). V1-D3 reprend la même méthode pour les types de blocs que V1-D1/V1-D2 ajoutent, pas pour ce qui est déjà couvert.
 
 **Un ticket, un commit, une relecture.** La tentation d'enchaîner grandit avec l'aisance ; le risque R2 du registre aussi.
