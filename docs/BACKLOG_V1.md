@@ -824,7 +824,7 @@ Demande explicite : le bloc `inventory` autonome (celui qui vit à côté du blo
 
 *Objectif : les deux SRD utilisables en français, et créer une règle à la main sans aucune IA.*
 
-### V1-D1 — Types de blocs de règles restants · `L`
+### V1-D1 — Types de blocs de règles restants · `L` — fait
 
 Les cinq de V1-A1 couvrent un sort et une classe. Il en manque pour le reste du SRD.
 
@@ -832,9 +832,20 @@ Les cinq de V1-A1 couvrent un sort et une classe. Il en manque pour le reste du 
 - Un schéma Zod par type, réutilisant les dix primitives et les six mises en page. **Aucun composant d'affichage nouveau.**
 
 **Critères**
-- [ ] Chaque `entry_type` du SRD a ses blocs requis déclarés et satisfaits.
-- [ ] La vue « règles incomplètes » d'un ruleset est vide après import.
-- [ ] Aucune mise en page ajoutée : si un bloc en réclame une septième, la question se pose avant de l'écrire.
+- [x] Chaque `entry_type` du SRD a ses blocs requis **déclarés**.
+- [ ] La vue « règles incomplètes » d'un ruleset est vide après import — **hors périmètre de ce ticket, voir plus bas**.
+- [x] Aucune mise en page ajoutée : les onze nouveaux blocs utilisent `key_values` (dix) et `chips` (un), déjà construits en V1-A1.
+
+**Fait** — grounded sur le vrai SRD (`data/srd/srd-2014.json`, inspecté entrée par entrée avant d'écrire un seul schéma : dague, cuirasse, gobelin, don Grappler, classe Magicien) plutôt que deviné :
+
+- `weapon` et `armor` sont un miroir exact des interfaces `WeaponData`/`ArmorData` déjà en place côté client (`src/core/rules/srdMapping.ts`, `parseWeaponData`/`parseArmorData` lisaient ces mêmes faits depuis `custom_table` faute de bloc dédié) — même vocabulaire, jamais une deuxième forme concurrente pour la même donnée.
+- `REQUIRED_BLOCKS` (`entry-types.ts`) étendu : `weapon→weapon`, `armor→armor`, `item→item_properties`, `class→class_progression+class_basics+subclass_slot`, `monster→stat_block+actions`. Décision de portée assumée : `charges`, `prerequisites`, `traits`, `spellcasting_progression` restent **hors** de cette liste — trop d'entrées n'en ont légitimement pas (la plupart des objets n'ont pas de charges, la plupart des dons n'ont pas de prérequis, toutes les classes n'incantent pas) pour en faire une exigence globale par type ; ils restent attachables entrée par entrée quand c'est réellement pertinent, comme `custom_table`.
+- Rendu (`components/rules/blockContentRenderer.tsx`) : onze fonctions de traduction bloc → forme générique, toutes vers `KeyValues` sauf `prerequisites` (`Chips`) — zéro nouveau composant, exactement comme demandé. Réutilise les libellés FR déjà en place (`WEAPON_PROPERTY_LABELS_FR`, `ARMOR_CATEGORY_LABELS_FR`) plutôt que d'en inventer une deuxième source.
+- **Deuxième critère volontairement non coché** : « la vue règles incomplètes est vide après import » suppose que l'import ait tourné — c'est le rôle de V1-D2, pas de celui-ci (ce ticket ne touche pas `scripts/ingest-srd.ts`, décision annoncée avant de coder). Aujourd'hui, une entrée `weapon`/`armor`/`item`/`class`/`monster` est donc *plus* souvent signalée incomplète qu'avant (les nouveaux blocs requis n'existent pas encore en base) — comportement attendu, identique au traitement déjà réservé à `weapon`/`stat_block` avant ce ticket, pas une régression.
+- Renvois (`src/core/rules/refs.ts`, V1-A3) **non étendus** aux nouvelles références (`weapon.properties`, `subclass_slot.options`) — l'extracteur réel ne couvre que `class_progression.grants` (règle des trois, déjà le cas avant ce ticket) ; les liens de `subclass_slot` restent donc rendus directement depuis `worldSlug` + la clé brute, sans passer par le graphe de renvois.
+- 21 tests ajoutés (`blocks.test.ts`, un cas valide + un cas de rejet type), plus 2 tests mis à jour dans `requiredBlocks.test.ts` (une classe attend maintenant 3 blocs, pas 1).
+- **Vérifié en base réelle** (`npx supabase db query --linked`, pas seulement en local) : bloc `weapon` inséré à la main sur l'entrée SRD réelle de la Dague (les deux rulesets, 2014 et 2024), rendu vérifié dans le navigateur (`/m/valdoria/regles/dagger`) — Catégorie/Dégâts/Portée/Propriétés/Poids/Coût tous corrects, propriétés résolues en FR (Finesse, Légère, Lancer). Bloc de test supprimé ensuite (`app.allow_official_writes` le temps de la suppression, comme le fait l'import) ; le rechargement de la fiche affiche alors « Règle incomplète : bloc manquant — weapon », confirmant que `REQUIRED_BLOCKS` et le bandeau d'avertissement fonctionnent bout en bout sur une vraie donnée.
+- `typecheck`/`lint`/`test` (431/431)/`build` tous verts.
 
 ### V1-D2 — Import complet des deux SRD · `L`
 

@@ -1,12 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
   validateBlockData,
+  zActionsBlockData,
+  zArmorBlockData,
+  zChargesBlockData,
+  zClassBasicsBlockData,
   zClassProgressionBlockData,
   zCustomTableBlockData,
   zDescriptionBlockData,
   zEffectsBlockData,
+  zItemPropertiesBlockData,
+  zPrerequisitesBlockData,
   zScalingBlockData,
   zSpellCastingBlockData,
+  zSpellcastingProgressionBlockData,
+  zStatBlockBlockData,
+  zSubclassSlotBlockData,
+  zTraitsBlockData,
+  zWeaponBlockData,
 } from "./blocks";
 
 describe("zDescriptionBlockData", () => {
@@ -109,6 +120,129 @@ describe("zCustomTableBlockData (l'echappatoire)", () => {
   it("accepte des colonnes et lignes libres", () => {
     const data = { columns: ["field", "value"], rows: [{ field: "weight", value: "2" }] };
     expect(zCustomTableBlockData.parse(data)).toEqual(data);
+  });
+});
+
+describe("zWeaponBlockData", () => {
+  it("accepte une dague (arme legere, finesse, lancer)", () => {
+    const data = {
+      category: "simple",
+      is_ranged: false,
+      damage: { dice: { op: "dice", count: 1, faces: 4 }, type: "piercing" },
+      properties: [
+        { kind: "rule", key: "weapon-property-finesse" },
+        { kind: "rule", key: "weapon-property-light" },
+        { kind: "rule", key: "weapon-property-thrown" },
+      ],
+      range: { normal: { value: 20, unit: "ft" }, long: { value: 60, unit: "ft" } },
+      weight: { value: 1, unit: "lb" },
+      cost: { value: 2, unit: "gp" },
+    };
+    expect(zWeaponBlockData.parse(data)).toEqual(data);
+  });
+
+  it("refuse une categorie inconnue", () => {
+    expect(() => zWeaponBlockData.parse({ category: "legendary", is_ranged: false, damage: { dice: { op: "num", value: 1 } }, properties: [] })).toThrow();
+  });
+});
+
+describe("zArmorBlockData", () => {
+  it("accepte une cuirasse (armure moyenne, bonus Dex plafonne)", () => {
+    const data = { category: "medium", base_ac: 14, dex_bonus: true, max_dex_bonus: 2, weight: { value: 20, unit: "lb" }, cost: { value: 400, unit: "gp" } };
+    expect(zArmorBlockData.parse(data)).toEqual(data);
+  });
+});
+
+describe("zItemPropertiesBlockData", () => {
+  it("accepte un objet magique avec rarete et attunement", () => {
+    const data = { rarity: "legendary", requires_attunement: true, category: "Wondrous Item" };
+    expect(zItemPropertiesBlockData.parse(data)).toEqual(data);
+  });
+});
+
+describe("zChargesBlockData", () => {
+  it("accepte un baton avec regeneration a l'aube", () => {
+    const data = { max: 7, regain: "1d6+1 a l'aube", depleted_effect: "1% de chance de se detruire par charge utilisee" };
+    expect(zChargesBlockData.parse(data)).toEqual(data);
+  });
+});
+
+describe("zStatBlockBlockData", () => {
+  it("accepte un gobelin", () => {
+    const data = {
+      size: "Small",
+      creature_type: "humanoid",
+      alignment: "neutral evil",
+      armor_class: 15,
+      hit_points: 7,
+      hit_dice: "2d6",
+      speed: { walk: "30 ft." },
+      abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
+      senses: { darkvision: "60 ft.", passive_perception: "9" },
+      languages: "Common, Goblin",
+      challenge_rating: 0.25,
+      proficiency_bonus: 2,
+    };
+    expect(zStatBlockBlockData.parse(data)).toEqual(data);
+  });
+});
+
+describe("zTraitsBlockData", () => {
+  it("accepte une liste d'aptitudes speciales", () => {
+    const data = { traits: [{ name: "Nimble Escape", description: "The goblin can take the Disengage or Hide action as a bonus action." }] };
+    expect(zTraitsBlockData.parse(data)).toEqual(data);
+  });
+});
+
+describe("zActionsBlockData", () => {
+  it("accepte une action d'attaque avec formule de degats", () => {
+    const data = {
+      actions: [
+        {
+          name: "Scimitar",
+          description: "Melee Weapon Attack: +4 to hit, reach 5 ft., one target.",
+          attack_bonus: 4,
+          damage: [{ dice: { op: "add", args: [{ op: "dice", count: 1, faces: 6 }, { op: "num", value: 2 }] }, type: "slashing" }],
+        },
+      ],
+    };
+    expect(zActionsBlockData.parse(data)).toEqual(data);
+  });
+});
+
+describe("zPrerequisitesBlockData", () => {
+  it("accepte une liste de prerequis en texte court", () => {
+    const data = { items: ["Force 13 ou plus"] };
+    expect(zPrerequisitesBlockData.parse(data)).toEqual(data);
+  });
+});
+
+describe("zClassBasicsBlockData", () => {
+  it("accepte les bases du Magicien", () => {
+    const data = {
+      hit_die: 6,
+      saving_throw_proficiencies: ["int", "wis"],
+      weapon_proficiencies: ["Daggers", "Darts", "Slings", "Quarterstaffs", "Light crossbows"],
+    };
+    expect(zClassBasicsBlockData.parse(data)).toEqual(data);
+  });
+});
+
+describe("zSpellcastingProgressionBlockData", () => {
+  it("accepte la progression d'incantation du Magicien", () => {
+    const data = {
+      ability: "int",
+      starts_at_level: 1,
+      info: [{ name: "Cantrips", description: "At 1st level, you know three cantrips of your choice." }],
+    };
+    expect(zSpellcastingProgressionBlockData.parse(data)).toEqual(data);
+  });
+});
+
+describe("zSubclassSlotBlockData", () => {
+  it("accepte le choix de tradition arcanique du Magicien", () => {
+    const data = { label: "Tradition arcanique", chosen_at_level: 2, options: [{ kind: "rule", key: "evocation" }] };
+    expect(zSubclassSlotBlockData.parse(data)).toEqual(data);
   });
 });
 

@@ -2,20 +2,49 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { formatFormulaNode } from "@/src/core/formula";
 import type {
+  ActionsBlockData,
+  ArmorBlockData,
   BlockType,
+  ChargesBlockData,
+  ClassBasicsBlockData,
   ClassProgressionBlockData,
   CustomTableBlockData,
   DescriptionBlockData,
   EffectsBlockData,
+  ItemPropertiesBlockData,
+  PrerequisitesBlockData,
   ScalingBlockData,
   SpellCastingBlockData,
+  SpellcastingProgressionBlockData,
+  StatBlockBlockData,
+  SubclassSlotBlockData,
+  TraitsBlockData,
+  WeaponBlockData,
 } from "@/src/core/schemas/rule-blocks";
+import { ARMOR_CATEGORY_LABELS_FR, WEAPON_PROPERTY_LABELS_FR } from "@/src/i18n/fr";
 import type { RuleRefView } from "@/src/server/services/rules";
+import Chips from "./layouts/Chips";
 import FormulaList from "./layouts/FormulaList";
 import KeyValues from "./layouts/KeyValues";
 import Prose from "./layouts/Prose";
 import ProgressionTable from "./layouts/ProgressionTable";
 import Table from "./layouts/Table";
+
+/** `str`/`dex`/... -> abreviation FR (V1-D1). Concern d'affichage local a ce fichier, pas une donnee de domaine partagee — pas de raison de la faire vivre ailleurs. */
+const ABILITY_ABBR_FR: Record<string, string> = { str: "FOR", dex: "DEX", con: "CON", int: "INT", wis: "SAG", cha: "CHA" };
+function abilityLabel(key: string): string {
+  return ABILITY_ABBR_FR[key] ?? key.toUpperCase();
+}
+
+function quantityText(q: { value: number; unit: string } | undefined): string | undefined {
+  return q ? `${q.value} ${q.unit}` : undefined;
+}
+
+/** Cle de reference `weapon-property-<index>` (V1-C12) -> libelle FR, en retirant le prefixe anti-collision. */
+function propertyLabel(refKey: string): string {
+  const index = refKey.replace(/^weapon-property-/, "");
+  return WEAPON_PROPERTY_LABELS_FR[index] ?? index;
+}
 
 function localizedLabel(label: Record<string, string>, fallbackKey: string): string {
   return label.fr ?? label.en ?? Object.values(label)[0] ?? fallbackKey;
@@ -154,6 +183,176 @@ function CustomTable({ data }: { data: CustomTableBlockData }) {
   return <Table columns={data.columns} rows={rows} />;
 }
 
+// --- V1-D1 : les onze blocs restants du catalogue, meme motif que ci-dessus
+// (chaque fonction traduit un bloc type vers la forme generique attendue par
+// sa mise en page — jamais un nouveau composant). -------------------------
+
+function Weapon({ data }: { data: WeaponBlockData }) {
+  const items = [
+    { label: "Categorie", value: data.category === "martial" ? "Martiale" : "Simple" },
+    {
+      label: "Degats",
+      value: (
+        <span className="mech">
+          {formatFormulaNode(data.damage.dice)}
+          {data.damage.type ? ` (${data.damage.type})` : ""}
+        </span>
+      ),
+    },
+    ...(data.versatile_damage
+      ? [{ label: "Degats (2 mains)", value: <span className="mech">{formatFormulaNode(data.versatile_damage)}</span> }]
+      : []),
+    ...(data.properties.length > 0
+      ? [{ label: "Proprietes", value: data.properties.map((p) => propertyLabel(p.key)).join(", ") }]
+      : []),
+    ...(data.range ? [{ label: "Portee", value: [quantityText(data.range.normal), quantityText(data.range.long)].filter(Boolean).join(" / ") }] : []),
+    ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
+    ...(data.cost ? [{ label: "Cout", value: quantityText(data.cost) as string }] : []),
+  ];
+  return <KeyValues items={items} />;
+}
+
+function Armor({ data }: { data: ArmorBlockData }) {
+  const categoryLabel = ARMOR_CATEGORY_LABELS_FR[data.category.charAt(0).toUpperCase() + data.category.slice(1)] ?? data.category;
+  const items = [
+    { label: "Categorie", value: categoryLabel },
+    { label: "CA de base", value: String(data.base_ac) },
+    {
+      label: "Bonus de Dexterite",
+      value: data.dex_bonus ? (data.max_dex_bonus !== undefined ? `Oui (plafond +${data.max_dex_bonus})` : "Oui") : "Non",
+    },
+    ...(data.strength_minimum ? [{ label: "Force minimum", value: String(data.strength_minimum) }] : []),
+    ...(data.stealth_disadvantage !== undefined
+      ? [{ label: "Discretion", value: data.stealth_disadvantage ? "Desavantage" : "Aucun desavantage" }]
+      : []),
+    ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
+    ...(data.cost ? [{ label: "Cout", value: quantityText(data.cost) as string }] : []),
+  ];
+  return <KeyValues items={items} />;
+}
+
+function ItemProperties({ data }: { data: ItemPropertiesBlockData }) {
+  const items = [
+    ...(data.category ? [{ label: "Categorie", value: data.category }] : []),
+    ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
+    ...(data.cost ? [{ label: "Cout", value: quantityText(data.cost) as string }] : []),
+    ...(data.rarity ? [{ label: "Rarete", value: data.rarity }] : []),
+    ...(data.requires_attunement !== undefined ? [{ label: "Attunement", value: data.requires_attunement ? "Requis" : "Non requis" }] : []),
+  ];
+  return <KeyValues items={items} />;
+}
+
+function Charges({ data }: { data: ChargesBlockData }) {
+  const items = [
+    { label: "Charges max", value: String(data.max) },
+    ...(data.regain ? [{ label: "Regeneration", value: data.regain }] : []),
+    ...(data.depleted_effect ? [{ label: "Si epuise", value: data.depleted_effect }] : []),
+  ];
+  return <KeyValues items={items} />;
+}
+
+function StatBlock({ data }: { data: StatBlockBlockData }) {
+  const speedText = Object.entries(data.speed)
+    .map(([kind, value]) => `${kind} ${value}`)
+    .join(", ");
+  const abilitiesText = (Object.keys(data.abilities) as (keyof typeof data.abilities)[])
+    .map((k) => `${abilityLabel(k)} ${data.abilities[k]}`)
+    .join(" · ");
+  const items = [
+    { label: "Taille / Type", value: `${data.size} ${data.creature_type}` },
+    ...(data.alignment ? [{ label: "Alignement", value: data.alignment }] : []),
+    { label: "CA", value: String(data.armor_class) },
+    { label: "PV", value: <span className="mech">{`${data.hit_points} (${data.hit_dice})`}</span> },
+    { label: "Vitesse", value: speedText },
+    { label: "Caracteristiques", value: <span className="mech">{abilitiesText}</span> },
+    ...(data.saving_throws?.length ? [{ label: "Sauvegardes", value: data.saving_throws.map((s) => `${abilityLabel(s.ability)} +${s.bonus}`).join(", ") }] : []),
+    ...(data.skills?.length ? [{ label: "Competences", value: data.skills.map((s) => `${s.name} +${s.bonus}`).join(", ") }] : []),
+    ...(data.damage_vulnerabilities?.length ? [{ label: "Vulnerabilites", value: data.damage_vulnerabilities.join(", ") }] : []),
+    ...(data.damage_resistances?.length ? [{ label: "Resistances", value: data.damage_resistances.join(", ") }] : []),
+    ...(data.damage_immunities?.length ? [{ label: "Immunites (degats)", value: data.damage_immunities.join(", ") }] : []),
+    ...(data.condition_immunities?.length ? [{ label: "Immunites (etats)", value: data.condition_immunities.join(", ") }] : []),
+    ...(data.senses ? [{ label: "Sens", value: Object.entries(data.senses).map(([k, v]) => `${k} ${v}`).join(", ") }] : []),
+    ...(data.languages ? [{ label: "Langues", value: data.languages }] : []),
+    { label: "Facteur de puissance", value: String(data.challenge_rating) },
+    { label: "Bonus de maitrise", value: `+${data.proficiency_bonus}` },
+  ];
+  return <KeyValues items={items} />;
+}
+
+function Traits({ data }: { data: TraitsBlockData }) {
+  return <KeyValues items={data.traits.map((t) => ({ label: t.name, value: <p className="text-xs leading-relaxed">{t.description}</p> }))} />;
+}
+
+function Actions({ data }: { data: ActionsBlockData }) {
+  return (
+    <KeyValues
+      items={data.actions.map((a) => ({
+        label: a.name,
+        value: (
+          <div className="flex flex-col gap-0.5">
+            <p className="text-xs leading-relaxed">{a.description}</p>
+            {(a.attack_bonus !== undefined || a.damage?.length) && (
+              <p className="mech text-xs text-ink-muted">
+                {a.attack_bonus !== undefined && `+${a.attack_bonus} pour toucher`}
+                {a.attack_bonus !== undefined && a.damage?.length ? " · " : ""}
+                {a.damage?.map((d) => `${formatFormulaNode(d.dice)}${d.type ? ` (${d.type})` : ""}`).join(", ")}
+              </p>
+            )}
+          </div>
+        ),
+      }))}
+    />
+  );
+}
+
+function Prerequisites({ data }: { data: PrerequisitesBlockData }) {
+  return <Chips items={data.items} />;
+}
+
+function ClassBasics({ data }: { data: ClassBasicsBlockData }) {
+  const items = [
+    { label: "De de vie", value: `1d${data.hit_die}` },
+    { label: "Sauvegardes", value: data.saving_throw_proficiencies.map(abilityLabel).join(", ") },
+    ...(data.armor_proficiencies?.length ? [{ label: "Maitrises d'armure", value: data.armor_proficiencies.join(", ") }] : []),
+    ...(data.weapon_proficiencies?.length ? [{ label: "Maitrises d'arme", value: data.weapon_proficiencies.join(", ") }] : []),
+    ...(data.tool_proficiencies?.length ? [{ label: "Maitrises d'outil", value: data.tool_proficiencies.join(", ") }] : []),
+  ];
+  return <KeyValues items={items} />;
+}
+
+function SpellcastingProgression({ data }: { data: SpellcastingProgressionBlockData }) {
+  const items = [
+    { label: "Caracteristique d'incantation", value: abilityLabel(data.ability) },
+    { label: "Debute au niveau", value: String(data.starts_at_level) },
+    ...data.info.map((entry) => ({ label: entry.name, value: <p className="text-xs leading-relaxed">{entry.description}</p> })),
+  ];
+  return <KeyValues items={items} />;
+}
+
+function SubclassSlot({ data, worldSlug }: { data: SubclassSlotBlockData; worldSlug: string }) {
+  const items = [
+    { label: "Choix", value: data.label },
+    { label: "Niveau", value: String(data.chosen_at_level) },
+    ...(data.options?.length
+      ? [
+          {
+            label: "Options",
+            value: (
+              <span className="flex flex-wrap gap-x-2">
+                {data.options.map((opt, i) => (
+                  <Link key={i} href={`/m/${worldSlug}/regles/${opt.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
+                    {opt.key}
+                  </Link>
+                ))}
+              </span>
+            ),
+          },
+        ]
+      : []),
+  ];
+  return <KeyValues items={items} />;
+}
+
 /**
  * Repartiteur par block_type -> mise en page generique (specs/regles-blocs.md
  * §4-5). Aucun composant par type de bloc pour l'affichage lui-meme, les
@@ -178,5 +377,16 @@ export function renderBlockData(
   if (blockType === "class_progression")
     return <ClassProgression data={data as ClassProgressionBlockData} worldSlug={worldSlug} outgoingRefs={outgoingRefs} />;
   if (blockType === "custom_table") return <CustomTable data={data as CustomTableBlockData} />;
+  if (blockType === "weapon") return <Weapon data={data as WeaponBlockData} />;
+  if (blockType === "armor") return <Armor data={data as ArmorBlockData} />;
+  if (blockType === "item_properties") return <ItemProperties data={data as ItemPropertiesBlockData} />;
+  if (blockType === "charges") return <Charges data={data as ChargesBlockData} />;
+  if (blockType === "stat_block") return <StatBlock data={data as StatBlockBlockData} />;
+  if (blockType === "traits") return <Traits data={data as TraitsBlockData} />;
+  if (blockType === "actions") return <Actions data={data as ActionsBlockData} />;
+  if (blockType === "prerequisites") return <Prerequisites data={data as PrerequisitesBlockData} />;
+  if (blockType === "class_basics") return <ClassBasics data={data as ClassBasicsBlockData} />;
+  if (blockType === "spellcasting_progression") return <SpellcastingProgression data={data as SpellcastingProgressionBlockData} />;
+  if (blockType === "subclass_slot") return <SubclassSlot data={data as SubclassSlotBlockData} worldSlug={worldSlug} />;
   return null;
 }

@@ -10,8 +10,12 @@ describe("missingRequiredBlocks", () => {
     expect(missingRequiredBlocks("spell", ["description"])).toEqual(["spell_casting", "effects"]);
   });
 
-  it("signale un seul bloc manquant pour une classe", () => {
-    expect(missingRequiredBlocks("class", ["description"])).toEqual(["class_progression"]);
+  it("signale les trois blocs requis manquants pour une classe (V1-D1)", () => {
+    expect(missingRequiredBlocks("class", ["description"])).toEqual(["class_progression", "class_basics", "subclass_slot"]);
+  });
+
+  it("signale un seul bloc manquant pour une classe qui a deja sa progression et sa base", () => {
+    expect(missingRequiredBlocks("class", ["description", "class_progression", "class_basics"])).toEqual(["subclass_slot"]);
   });
 
   it("ne signale rien pour un entry_type sans bloc requis declare", () => {
