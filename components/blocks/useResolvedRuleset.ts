@@ -88,7 +88,14 @@ function selectionKey(s: RulesetSelection): string {
 export function useResolvedRuleset(worldSlug: string, selection: RulesetSelection): ResolvedRulesetView {
   const [data, setData] = useState<ResolvedRulesetView>(EMPTY);
   const dedupeKey = selectionKey(selection);
-  const hasAnything = selection.species || selection.background || selection.classes.length > 0;
+  /**
+   * L'equipement se resout independamment du personnage (V1-C18) : le poids
+   * et le cout d'un objet SRD ne dependent pas de qui le porte — un bloc
+   * d'inventaire seul, sur une entite sans fiche de personnage (boutique,
+   * coffre), doit pouvoir les afficher lui aussi.
+   */
+  const hasAnything =
+    selection.species || selection.background || selection.classes.length > 0 || nonEmptyKeys(selection.equipmentKeys).length > 0;
 
   useEffect(() => {
     let cancelled = false;

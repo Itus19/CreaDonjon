@@ -53,10 +53,13 @@ function BlockDataEditor({
   block,
   onChange,
   worldSlug,
+  characterData,
 }: {
   block: BlockItem;
   onChange: (data: unknown) => void;
   worldSlug: string;
+  /** Bloc `character` de la meme entite, s'il existe (V1-C18) — permet au bloc `inventory` autonome d'afficher les memes lignes Attaquer/Degats et la meme barre de charge que l'onglet Inventaire de la fiche jouable, sans dupliquer le calcul. */
+  characterData: CharacterBlockData | undefined;
 }) {
   switch (block.blockType) {
     case "text":
@@ -80,6 +83,7 @@ function BlockDataEditor({
           data={block.data as InventoryBlockData}
           onChange={(d) => onChange(d)}
           worldSlug={worldSlug}
+          character={characterData}
         />
       );
     case "spellcasting":
@@ -513,6 +517,7 @@ export default function EntityBlocks({
                   block={block}
                   onChange={(data) => patchBlock(block.id, { data })}
                   worldSlug={worldSlug}
+                  characterData={characterBlock?.data as CharacterBlockData | undefined}
                 />
               )
             )}

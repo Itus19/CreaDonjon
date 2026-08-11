@@ -799,6 +799,23 @@ Demande explicite : la marge en haut de l'encadré (au-dessus du titre) était n
 
 ---
 
+### V1-C18 — Le bloc Inventaire autonome devient un copier-coller de l'onglet Inventaire · `L` — fait
+
+Demande explicite : le bloc `inventory` autonome (celui qui vit à côté du bloc `character` sur la fiche du wiki, cf. commentaire `EntityBlocks.tsx` — « un MJ doit pouvoir montrer l'inventaire seul, ex. fenêtre séparée ») avait gardé son ancienne UI brute (V1-B2), très en retard sur l'onglet Inventaire de la fiche jouable reconstruit V1-C11→V1-C17. L'utilisateur veut un vrai copier-coller, pas une deuxième implémentation qui ressemble — et que les deux vues restent liées (ajouter un objet dans l'une l'affiche dans l'autre).
+
+**Ce qui existait déjà et n'a pas eu besoin d'être construit** : les deux vues éditent le même bloc `inventory` (même `id`, même état React `EntityBlocks.blocks`) — `patchBlock`/`saveBlock` sont déjà partagés, donc la synchronisation demandée était automatique dès que les deux composants lisent la même donnée. Rien à câbler pour ça (déjà documenté dans un commentaire `EntityBlocks.tsx` d'un ticket précédent).
+
+**Fait** :
+- `ItemCard`, `AddItemRow`, `ActionButton` et le corps entier de l'onglet (barre de charge, dépôt/dépense de pièces, liste d'objets) extraits de `PlayableCharacterSheet.tsx` vers un nouveau composant partagé `InventoryPanel.tsx` — un seul composant, deux points d'entrée (`PlayableCharacterSheet` et `InventoryBlockEditor`), jamais deux implémentations susceptibles de diverger. `itemRef`/`itemLabel`/`newItem` déplacés dans `components/blocks/inventoryItem.ts` (helpers purs, évite un import circulaire entre les deux éditeurs).
+- Nouveau hook `useCharacterSheetContext.ts` : extrait tel quel (aucun changement de comportement) la séquence de calcul de la fiche dérivée que `PlayableCharacterSheet` faisait déjà inline (`characterSheet()`, résolution du ruleset, 7 couches de modificateurs) — nécessaire pour qu'`InventoryBlockEditor` affiche les mêmes lignes Attaquer/Dégâts et la même barre de charge sans dupliquer un moteur non trivial (une deuxième implémentation, même approximative, aurait fini par diverger).
+- `character` devient un paramètre optionnel du hook (`CharacterBlockData | undefined`, jamais un appel conditionnel du hook lui-même — interdit par les règles des hooks React) : un bloc d'inventaire peut vivre sur une entité sans fiche de personnage (boutique, coffre). Sans personnage, `ItemCard` reçoit un nouveau flag explicite `showAttackInfo={false}` qui masque les lignes Attaquer/Dégâts et la barre de charge — jamais un faux « +0 » qui ferait croire à un vrai calcul. Le poids/la valeur/les tags/le pliage restent identiques dans les deux cas : ce sont des faits SRD sur l'objet, pas un calcul dérivé d'un personnage.
+- `useResolvedRuleset` (`hasAnything`) élargi pour se déclencher aussi quand l'inventaire a des objets référencés, même sans espèce/historique/classe choisis — le poids et le coût d'un objet ne dépendent pas de qui le porte ; une entité sans personnage doit pouvoir les résoudre elle aussi.
+- `EntityBlocks.tsx` passe désormais le bloc `character` de la même entité (s'il existe) à `InventoryBlockEditor` via une nouvelle prop `characterData`.
+- Vérifié en navigateur sur l'entité de test (qui a les deux blocs) : le bloc Inventaire autonome affiche exactement les mêmes encadrés (bandeau de pliage, tags/descriptions, poids/valeur alignés, barre de charge, dépôt/dépense de pièces) que l'onglet Inventaire de la fiche. Objet ajouté dans le bloc autonome → apparaît immédiatement dans l'onglet Inventaire de la fiche jouable au-dessus (même état React, pas de rechargement), et inversement. Suppression testée dans les deux sens.
+- `typecheck`/`lint`/`test` (418/418)/`build` tous verts après le déplacement.
+
+---
+
 ## Lot D — Première assistance IA
 
 *Objectif : mesurer les coûts réels avant de concevoir le mode solo.*
