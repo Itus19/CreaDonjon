@@ -293,6 +293,7 @@ function ItemCard({
   dexMod,
   proficiencyBonus,
   isMonk,
+  collapsible,
   busy,
   onAttack,
   onDamage,
@@ -312,6 +313,8 @@ function ItemCard({
   proficiencyBonus: number;
   /** Masque la propriete "monk" (V1-C12 suite, sur retour utilisateur) : pertinente seulement pour un personnage qui a des niveaux de Moine, contrairement aux autres proprietes d'arme qui restent des faits sur l'objet lui-meme. */
   isMonk: boolean;
+  /** Repliable (V1-C13, onglet Inventaire seulement) : l'onglet Actions garde ses boutons toujours visibles, c'est son seul role. Replie par defaut — les descriptions/boutons restent a un clic, pas caches definitivement. */
+  collapsible: boolean;
   busy: boolean;
   onAttack?: () => void;
   onDamage?: (versatile: boolean) => void;
@@ -319,6 +322,7 @@ function ItemCard({
   onChangeQty?: (qty: number) => void;
   onRemove?: () => void;
 }) {
+  const [collapsed, setCollapsed] = useState(collapsible);
   const title = chip?.found ? chip.name : itemLabel(item);
 
   /**
@@ -360,6 +364,9 @@ function ItemCard({
   const damageResolved = (dice: string) => withModifier(dice, abilityMod);
   const damageDetail = (dice: string) => (abilityMod !== 0 ? `${dice}+${abilityLabel}` : dice);
 
+  const hasCollapsibleContent = propertyRefs.length > 0 || Boolean(weapon && (onAttack || onDamage));
+  const showDetails = !collapsible || !collapsed;
+
   return (
     <div className="flex overflow-hidden rounded-md border border-edge/60 bg-panel-raised">
       {onToggleEquipped && (
@@ -376,42 +383,63 @@ function ItemCard({
         </button>
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2.5">
-        <div className="flex flex-wrap items-center gap-3">
-          {chip?.found ? (
-            <Link href={chip.href} className="text-sm font-semibold no-underline hover:underline" style={{ color: "var(--link-rule)" }}>
-              {title}
-            </Link>
-          ) : (
-            <span className="text-sm font-semibold text-ink">{title || "Sans nom"}</span>
-          )}
-          {weightLb !== null && (
-            <span className="mech text-ink-muted" style={{ fontSize: "0.625rem" }}>
-              {lbToKg(weightLb)} kg
-            </span>
-          )}
-          {cost && (
-            <span className="mech text-ink-muted" style={{ fontSize: "0.625rem" }}>
-              {cost.quantity} {CURRENCY_LABELS_FR[cost.unit] ?? cost.unit}
-            </span>
-          )}
-          {onChangeQty ? (
-            <input
-              type="number"
-              min={0}
-              value={item.qty}
-              onChange={(e) => onChangeQty(Number(e.target.value) || 0)}
-              className="w-12 rounded-md border border-edge bg-transparent px-1 py-0.5 text-center text-xs text-ink outline-none"
-              aria-label="Quantité"
-            />
-          ) : (
-            <span className="text-[10px] text-ink-muted">× {item.qty}</span>
-          )}
-          <span className="flex-1" />
-          {onRemove && (
-            <button type="button" onClick={onRemove} className="shrink-0 text-xs text-danger hover:underline">
-              ×
+        {/* Grille 3 colonnes (1fr/auto/1fr) plutot qu'un flex : la fleche de
+            pliage doit rester au centre exact de l'encadre (demande
+            explicite), pas juste "avant le bouton supprimer" — une colonne
+            centrale `auto` entre deux colonnes egales fait ca sans jamais
+            deriver selon la largeur du titre ou du nombre de badges. */}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            {chip?.found ? (
+              <Link href={chip.href} className="text-sm font-semibold no-underline hover:underline" style={{ color: "var(--link-rule)" }}>
+                {title}
+              </Link>
+            ) : (
+              <span className="text-sm font-semibold text-ink">{title || "Sans nom"}</span>
+            )}
+            {weightLb !== null && (
+              <span className="mech text-ink-muted" style={{ fontSize: "0.625rem" }}>
+                {lbToKg(weightLb)} kg
+              </span>
+            )}
+            {cost && (
+              <span className="mech text-ink-muted" style={{ fontSize: "0.625rem" }}>
+                {cost.quantity} {CURRENCY_LABELS_FR[cost.unit] ?? cost.unit}
+              </span>
+            )}
+            {onChangeQty ? (
+              <input
+                type="number"
+                min={0}
+                value={item.qty}
+                onChange={(e) => onChangeQty(Number(e.target.value) || 0)}
+                className="w-12 rounded-md border border-edge bg-transparent px-1 py-0.5 text-center text-xs text-ink outline-none"
+                aria-label="Quantité"
+              />
+            ) : (
+              <span className="text-[10px] text-ink-muted">× {item.qty}</span>
+            )}
+          </div>
+          {collapsible && hasCollapsibleContent ? (
+            <button
+              type="button"
+              onClick={() => setCollapsed((c) => !c)}
+              title={collapsed ? "Déplier" : "Replier"}
+              aria-label={collapsed ? "Déplier" : "Replier"}
+              className="shrink-0 px-1 text-ink-muted transition-colors hover:text-ink"
+            >
+              {collapsed ? "▾" : "▴"}
             </button>
+          ) : (
+            <span />
           )}
+          <div className="flex justify-end">
+            {onRemove && (
+              <button type="button" onClick={onRemove} className="shrink-0 text-xs text-danger hover:underline">
+                ×
+              </button>
+            )}
+          </div>
         </div>
 
         {propertyRefs.length > 0 && (
@@ -429,7 +457,7 @@ function ItemCard({
           </div>
         )}
 
-        {propertyRefs.length > 0 && (
+        {showDetails && propertyRefs.length > 0 && (
           <div className="flex flex-col gap-0.5">
             {propertyRefs.map((p) => {
               const propChip = propertyChips.get(refIdentity({ kind: "rule", key: weaponPropertyRefKey(p.key) }));
@@ -443,7 +471,7 @@ function ItemCard({
           </div>
         )}
 
-        {weapon && (onAttack || onDamage) && (
+        {showDetails && weapon && (onAttack || onDamage) && (
           <div className="mt-1 flex flex-wrap justify-end gap-2">
             {onAttack && (
               <ActionButton label="Attaquer" resolvedFormula={attackResolved} detailFormula={attackDetail} busy={busy} onClick={onAttack} />
@@ -1446,6 +1474,7 @@ export default function PlayableCharacterSheet({
                     dexMod={sheet.abilities.dex.mod}
                     proficiencyBonus={sheet.proficiencyBonus}
                     isMonk={isMonk}
+                    collapsible={false}
                     busy={busy}
                     onAttack={() => attack(item)}
                     onDamage={(versatile) => damage(item, versatile)}
@@ -1606,7 +1635,8 @@ export default function PlayableCharacterSheet({
                       strMod={sheet.abilities.str.mod}
                       dexMod={sheet.abilities.dex.mod}
                       proficiencyBonus={sheet.proficiencyBonus}
-                    isMonk={isMonk}
+                      isMonk={isMonk}
+                      collapsible={true}
                       busy={busy}
                       onAttack={item.equipped && weapon ? () => attack(item) : undefined}
                       onDamage={item.equipped && weapon ? (versatile) => damage(item, versatile) : undefined}
