@@ -292,6 +292,7 @@ function ItemCard({
   strMod,
   dexMod,
   proficiencyBonus,
+  isMonk,
   busy,
   onAttack,
   onDamage,
@@ -309,6 +310,8 @@ function ItemCard({
   strMod: number;
   dexMod: number;
   proficiencyBonus: number;
+  /** Masque la propriete "monk" (V1-C12 suite, sur retour utilisateur) : pertinente seulement pour un personnage qui a des niveaux de Moine, contrairement aux autres proprietes d'arme qui restent des faits sur l'objet lui-meme. */
+  isMonk: boolean;
   busy: boolean;
   onAttack?: () => void;
   onDamage?: (versatile: boolean) => void;
@@ -335,7 +338,9 @@ function ItemCard({
   function weaponPropertyRefKey(property: string): string {
     return `weapon-property-${property}`;
   }
-  const propertyRefs = weapon ? weapon.properties.map((p) => ({ key: p, label: WEAPON_PROPERTY_LABELS_FR[p] ?? p })) : [];
+  const propertyRefs = weapon
+    ? weapon.properties.filter((p) => p !== "monk" || isMonk).map((p) => ({ key: p, label: WEAPON_PROPERTY_LABELS_FR[p] ?? p }))
+    : [];
   const armorLabel = armor ? (ARMOR_CATEGORY_LABELS_FR[armor.category] ?? armor.category) : null;
   // Tableau recree a chaque rendu, sans useMemo : `useReferenceChips` deduplique
   // deja en interne sur la cle jointe des refs (`dedupeKey`), pas sur
@@ -635,6 +640,8 @@ export default function PlayableCharacterSheet({
         .map((c) => ({ key: (c.class as { kind: "rule"; key: string }).key, level: c.level })),
     [character.classes]
   );
+  /** Sur retour utilisateur (V1-C12 suite) : la propriete d'arme "monk" n'a de sens que pour un personnage qui a des niveaux de Moine. */
+  const isMonk = classSelections.some((c) => c.key === "monk");
   const equipmentKeys = useMemo(
     () => (inventory?.items ?? []).map(itemRef).filter((r): r is { kind: "rule"; key: string } => r?.kind === "rule").map((r) => r.key),
     [inventory]
@@ -1438,6 +1445,7 @@ export default function PlayableCharacterSheet({
                     strMod={sheet.abilities.str.mod}
                     dexMod={sheet.abilities.dex.mod}
                     proficiencyBonus={sheet.proficiencyBonus}
+                    isMonk={isMonk}
                     busy={busy}
                     onAttack={() => attack(item)}
                     onDamage={(versatile) => damage(item, versatile)}
@@ -1598,6 +1606,7 @@ export default function PlayableCharacterSheet({
                       strMod={sheet.abilities.str.mod}
                       dexMod={sheet.abilities.dex.mod}
                       proficiencyBonus={sheet.proficiencyBonus}
+                    isMonk={isMonk}
                       busy={busy}
                       onAttack={item.equipped && weapon ? () => attack(item) : undefined}
                       onDamage={item.equipped && weapon ? (versatile) => damage(item, versatile) : undefined}
