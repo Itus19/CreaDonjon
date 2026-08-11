@@ -787,6 +787,18 @@ Demande explicite : un champ + boutons +/- pour les pièces, à l'image de ceux 
 
 ---
 
+### V1-C17 — Réduit la marge haute de l'encadré d'objet, au niveau de la marge basse · `XS` — fait
+
+Demande explicite : la marge en haut de l'encadré (au-dessus du titre) était nettement plus grande que la marge en bas (entre les badges de propriété et le bord de l'encadré) — asymétrie introduite par le bandeau de pliage (V1-C15), qui ajoute sa propre hauteur en plus du padding du contenu.
+
+**Fait** :
+- Padding du contenu passé de `p-2.5` uniforme à `px-2.5 pb-2.5` + un `pt` conditionnel : `pt-1.5` quand le bandeau de pliage est affiché (redondant avec la hauteur déjà occupée par le bandeau), `pt-2.5` sinon (onglet Actions, sans bandeau — inchangé).
+- Bandeau de pliage resserré (`py-px` au lieu de `py-0.5`, `leading-none` ajouté) pour réduire sa propre hauteur au minimum lisible, plutôt que de compter uniquement sur le padding du contenu.
+- Égalité parfaite impossible sans rogner le bandeau au point de le rendre peu lisible/cliquable (c'est un vrai bouton fonctionnel, pas un espace vide) — écart ramené de 35 px à 25 px (mesuré `getBoundingClientRect()`), contre 11 px en bas, sans dégrader la cible de clic du bandeau.
+- **Gotcha de session, à retenir** : une classe Tailwind entièrement nouvelle (jamais utilisée ailleurs dans le dépôt) n'était pas recompilée par le serveur `next dev` de cette session, même après un simple redémarrage du process — la CSS servie restait figée sur l'ancien build (confirmé via requêtes réseau `304 Not Modified`, HMR qui ne poussait pas la mise à jour). Un `rm -rf .next` complet (pas seulement `.next/cache`) suivi d'un redémarrage a résolu le problème à chaque fois. Si un ajustement CSS ultérieur semble « ne rien faire » malgré un code correct, tester d'abord avec `getComputedStyle` avant de suspecter le code React.
+
+---
+
 ## Lot D — Première assistance IA
 
 *Objectif : mesurer les coûts réels avant de concevoir le mode solo.*

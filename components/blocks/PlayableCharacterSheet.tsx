@@ -387,7 +387,7 @@ function ItemCard({
           onClick={() => setCollapsed((c) => !c)}
           title={collapsed ? "Déplier" : "Replier"}
           aria-label={collapsed ? "Déplier" : "Replier"}
-          className="flex w-full items-center justify-center border-b border-edge/60 bg-panel py-0.5 text-xs text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent"
+          className="flex w-full items-center justify-center border-b border-edge/60 bg-panel py-px text-xs leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent"
         >
           {collapsed ? "▾" : "▴"}
         </button>
@@ -406,7 +406,11 @@ function ItemCard({
             {item.equipped ? "Équipé" : "Équiper"}
           </button>
         )}
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2.5">
+        <div
+          className={`flex min-w-0 flex-1 flex-col gap-1.5 px-2.5 pb-2.5 ${
+            collapsible && hasCollapsibleContent ? "pt-1.5" : "pt-2.5"
+          }`}
+        >
           {/*
            * Deux mises en page distinctes (V1-C14, sur retour utilisateur) —
            * plus une simple option d'affichage, une vraie difference de role :
