@@ -115,6 +115,62 @@ export const CURRENCY_LABELS_FR: Record<string, string> = {
   cp: "pc",
 };
 
+/**
+ * Types de creature du bloc `stat_block` (V1-D3) — les 14 types fermes du
+ * SRD, chacun verifie contre `data/srd/fr-source/srd-5.1-fr.txt` (ligne
+ * d'en-tete d'un vrai statblock, ex. "Humanoïde (gobelin) de taille P,
+ * neutre mauvais" pour le Gobelin). `swarm of Tiny beasts` (2024 seulement,
+ * quelques monstres) volontairement absent : le texte officiel l'exprime
+ * par une construction complete ("Nuée de taille M de Bêtes de taille TP"),
+ * pas un mot de vocabulaire substituable — reste en anglais plutot qu'une
+ * reconstruction non verifiee.
+ */
+export const CREATURE_TYPE_LABELS_FR: Record<string, string> = {
+  aberration: "Aberration",
+  beast: "Bête",
+  celestial: "Céleste",
+  construct: "Artificiel",
+  dragon: "Dragon",
+  elemental: "Élémentaire",
+  fey: "Fée",
+  fiend: "Fiélon",
+  giant: "Géant",
+  humanoid: "Humanoïde",
+  monstrosity: "Monstruosité",
+  ooze: "Vase",
+  plant: "Plante",
+  undead: "Mort-vivant",
+};
+
+/** Tailles du bloc `stat_block` (V1-D3) — verifiees contre les abreviations officielles (TP/P/M/G/TG/Gig) du meme texte que CREATURE_TYPE_LABELS_FR. */
+export const SIZE_LABELS_FR: Record<string, string> = {
+  Tiny: "Très petit",
+  Small: "Petit",
+  Medium: "Moyen",
+  Large: "Grand",
+  Huge: "Très grand",
+  Gargantuan: "Gigantesque",
+};
+
+/**
+ * Raretes du bloc `item_properties` (V1-D3) — verifiees contre le chapitre
+ * Objets magiques du texte officiel (ex. "Objet merveilleux, peu courant").
+ * `Artifact` absent : aucune occurrence trouvee dans le texte SRD 5.1
+ * extrait (rarete hors SRD, reservee au DMG) — reste en anglais plutot
+ * qu'une traduction non verifiee. Seules les valeurs simples sont
+ * remplacees ; une rarete composee ("Rare (+1), Very Rare (+2)...", objets
+ * a bonus variable) reste telle quelle plutot qu'une substitution partielle
+ * hasardeuse.
+ */
+export const ITEM_RARITY_LABELS_FR: Record<string, string> = {
+  Common: "Courant",
+  Uncommon: "Peu courant",
+  Rare: "Rare",
+  "Very Rare": "Très rare",
+  Legendary: "Légendaire",
+  Varies: "Variable",
+};
+
 export const RELATION_LABELS_FR: Record<string, string> = {
   parent_of: "parent de",
   child_of: "enfant de",

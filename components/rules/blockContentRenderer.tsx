@@ -21,7 +21,14 @@ import type {
   TraitsBlockData,
   WeaponBlockData,
 } from "@/src/core/schemas/rule-blocks";
-import { ARMOR_CATEGORY_LABELS_FR, WEAPON_PROPERTY_LABELS_FR } from "@/src/i18n/fr";
+import {
+  ARMOR_CATEGORY_LABELS_FR,
+  CREATURE_TYPE_LABELS_FR,
+  CURRENCY_LABELS_FR,
+  ITEM_RARITY_LABELS_FR,
+  SIZE_LABELS_FR,
+  WEAPON_PROPERTY_LABELS_FR,
+} from "@/src/i18n/fr";
 import type { RuleRefView } from "@/src/server/services/rules";
 import Chips from "./layouts/Chips";
 import FormulaList from "./layouts/FormulaList";
@@ -38,6 +45,11 @@ function abilityLabel(key: string): string {
 
 function quantityText(q: { value: number; unit: string } | undefined): string | undefined {
   return q ? `${q.value} ${q.unit}` : undefined;
+}
+
+/** Cout en pieces (V1-D1) -> memes abreviations FR que l'onglet Inventaire (V1-C11), au lieu des codes SRD bruts (gp/sp/...). */
+function costText(cost: { value: number; unit: string } | undefined): string | undefined {
+  return cost ? `${cost.value} ${CURRENCY_LABELS_FR[cost.unit] ?? cost.unit}` : undefined;
 }
 
 /** Cle de reference `weapon-property-<index>` (V1-C12) -> libelle FR, en retirant le prefixe anti-collision. */
@@ -207,7 +219,7 @@ function Weapon({ data }: { data: WeaponBlockData }) {
       : []),
     ...(data.range ? [{ label: "Portee", value: [quantityText(data.range.normal), quantityText(data.range.long)].filter(Boolean).join(" / ") }] : []),
     ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
-    ...(data.cost ? [{ label: "Cout", value: quantityText(data.cost) as string }] : []),
+    ...(data.cost ? [{ label: "Cout", value: costText(data.cost) as string }] : []),
   ];
   return <KeyValues items={items} />;
 }
@@ -226,7 +238,7 @@ function Armor({ data }: { data: ArmorBlockData }) {
       ? [{ label: "Discretion", value: data.stealth_disadvantage ? "Desavantage" : "Aucun desavantage" }]
       : []),
     ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
-    ...(data.cost ? [{ label: "Cout", value: quantityText(data.cost) as string }] : []),
+    ...(data.cost ? [{ label: "Cout", value: costText(data.cost) as string }] : []),
   ];
   return <KeyValues items={items} />;
 }
@@ -235,8 +247,8 @@ function ItemProperties({ data }: { data: ItemPropertiesBlockData }) {
   const items = [
     ...(data.category ? [{ label: "Categorie", value: data.category }] : []),
     ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
-    ...(data.cost ? [{ label: "Cout", value: quantityText(data.cost) as string }] : []),
-    ...(data.rarity ? [{ label: "Rarete", value: data.rarity }] : []),
+    ...(data.cost ? [{ label: "Cout", value: costText(data.cost) as string }] : []),
+    ...(data.rarity ? [{ label: "Rarete", value: ITEM_RARITY_LABELS_FR[data.rarity] ?? data.rarity }] : []),
     ...(data.requires_attunement !== undefined ? [{ label: "Attunement", value: data.requires_attunement ? "Requis" : "Non requis" }] : []),
   ];
   return <KeyValues items={items} />;
@@ -259,7 +271,7 @@ function StatBlock({ data }: { data: StatBlockBlockData }) {
     .map((k) => `${abilityLabel(k)} ${data.abilities[k]}`)
     .join(" · ");
   const items = [
-    { label: "Taille / Type", value: `${data.size} ${data.creature_type}` },
+    { label: "Taille / Type", value: `${SIZE_LABELS_FR[data.size] ?? data.size} ${CREATURE_TYPE_LABELS_FR[data.creature_type] ?? data.creature_type}`.trim() },
     ...(data.alignment ? [{ label: "Alignement", value: data.alignment }] : []),
     { label: "CA", value: String(data.armor_class) },
     { label: "PV", value: <span className="mech">{`${data.hit_points} (${data.hit_dice})`}</span> },

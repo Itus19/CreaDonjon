@@ -823,10 +823,22 @@ function traitsBlock(entry: SrdRecord): EntryBlock | null {
   return { block_type: "traits", display: { label: "Aptitudes speciales", layout: "key_values" }, data, display_order: 340 };
 }
 
+/** Abreviation FR d'une caracteristique (meme vocabulaire que ABILITY_ABBR_FR dans blockContentRenderer.tsx, duplique ici : concern de generation de texte a l'import, pas d'affichage). */
+const ABILITY_ABBR_FR: Record<string, string> = { str: "FOR", dex: "DEX", con: "CON", int: "INT", wis: "SAG", cha: "CHA" };
+
 /**
  * `null` sans prerequis (l'immense majorite des dons) — jamais requis. Deux
  * formes rencontrees dans le SRD : 2014 (`[{ability_score, minimum_score}]`)
  * et 2024 (`{minimum_level?, feature_named?}`, objet unique, pas un tableau).
+ *
+ * Texte engendre directement en francais (V1-D3) : contrairement aux autres
+ * blocs, ce texte n'est pas de la prose SRD extraite d'un PDF a verifier
+ * mot pour mot — c'est un gabarit ecrit par ce script a partir de faits
+ * structures (score minimum, niveau), donc le generer en francais des
+ * l'import est correct et ne demande aucune ligne de
+ * `ruleset_entry_translations`. `feature_named` (2024, ex. "Fighting
+ * Style") reste en anglais : c'est le nom d'une autre aptitude, pas un mot
+ * de vocabulaire ferme.
  */
 function prerequisitesBlock(entry: SrdRecord): EntryBlock | null {
   const raw = entry.prerequisites;
@@ -836,13 +848,14 @@ function prerequisitesBlock(entry: SrdRecord): EntryBlock | null {
   if (Array.isArray(raw)) {
     for (const p of raw as SrdRecord[]) {
       const ability = p.ability_score as SrdRecord | undefined;
-      if (typeof ability?.name === "string" && typeof p.minimum_score === "number") {
-        items.push(`${ability.name} ${p.minimum_score} or higher`);
+      const abbr = typeof ability?.index === "string" ? ABILITY_ABBR_FR[ability.index] : undefined;
+      if (abbr && typeof p.minimum_score === "number") {
+        items.push(`${abbr} ${p.minimum_score} ou plus`);
       }
     }
   } else if (typeof raw === "object") {
     const p = raw as SrdRecord;
-    if (typeof p.minimum_level === "number") items.push(`Level ${p.minimum_level} or higher`);
+    if (typeof p.minimum_level === "number") items.push(`Niveau ${p.minimum_level} ou plus`);
     if (typeof p.feature_named === "string") items.push(p.feature_named);
   }
   if (items.length === 0) return null;
