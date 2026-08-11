@@ -745,6 +745,19 @@ Réduit l'encombrement visé depuis le début de V1-C11/V1-C12 : replié par dé
 
 ---
 
+### V1-C14 — Différencie l'encadré Inventaire (texte) de l'encadré Actions (boutons) · `M` — fait
+
+Demande explicite : dans l'onglet Inventaire, aucun bouton d'action — seulement du texte informatif (« Attaquer — 1d20+FOR+maîtrise », « Dégâts — 1d4+FOR »), pas de dés à jeter depuis la gestion de l'inventaire. Dès qu'un objet est équipé et apparaît dans l'onglet Actions, ce texte disparaît au profit des vrais boutons (format V1-C12 inchangé) — seul cet onglet permet de jeter les dés. Demande secondaire : aligner le haut du bloc de boutons avec le haut du titre côté Actions, pour gagner de la place.
+
+**Fait** :
+- Onglet Inventaire : les lignes de texte (`Attaquer`/`Lancer`/`Dégâts`/`Dégâts (2 mains)`) s'affichent pour toute arme dès qu'elle est dépliée, **indépendamment de l'équipement** — contrairement aux anciens boutons, qui n'existaient que pour une arme équipée (`onAttack`/`onDamage` alors fournis). Une info sur une arme reste utile même rangée dans le sac ; corrigé au passage `hasCollapsibleContent` (la flèche de pliage doit exister dès qu'il y a du texte à déplier, pas seulement des boutons).
+- Onglet Actions : les descriptions de propriété disparaissent (retirées de ce contexte, restent consultables via le lien de la fiche de règle) ; mise en page à deux colonnes (`items-start` sur un flex horizontal) — titre/tags à gauche, boutons à droite, même bord supérieur, sans calcul de hauteur.
+- `collapsible` (déjà introduite en V1-C13) sert de signal unique pour distinguer les deux contextes plutôt que d'ajouter une prop redondante — `true` = Inventaire (texte, jamais de bouton), `false` = Actions (boutons, jamais de texte/description).
+- Sur retour utilisateur immédiat : bouton de pliage (▾/▴) et bouton de suppression (×) agrandis (`h-7 w-7`, cible tactile plus confortable) ; le bouton de pliage devient une pastille ronde bordée (`rounded-full border`), bien plus visible qu'un simple caractère flottant.
+- Vérifié en navigateur : dague dans l'onglet Inventaire affiche le texte (pas de bouton) même non équipée ; équipée, elle apparaît dans l'onglet Actions en boutons compacts, titre et rangée de boutons alignés sur la même ligne, sans description.
+
+---
+
 ## Lot D — Première assistance IA
 
 *Objectif : mesurer les coûts réels avant de concevoir le mode solo.*
