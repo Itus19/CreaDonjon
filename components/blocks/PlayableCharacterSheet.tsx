@@ -30,6 +30,7 @@ import { lbToKg, totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { evaluate, type TraceStep } from "@/src/core/formula/evaluate";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import { weaponAttackAbilityMod, type AdvantageState } from "@/src/core/rules/action";
+import { CURRENCY_ORDER, depositCoins, spendCoins, type CoinType } from "@/src/core/rules/currency";
 import { useResolvedRuleset, type RemainingChoiceView, type TraitGrantView } from "./useResolvedRuleset";
 import { useReferenceChips, refIdentity, type ResolvedChipView } from "./useReferenceChips";
 import { itemLabel, itemRef } from "./InventoryBlockEditor";
@@ -693,6 +694,9 @@ export default function PlayableCharacterSheet({
   const [error, setError] = useState<string | null>(null);
   const [xpDelta, setXpDelta] = useState("");
   const [hpDelta, setHpDelta] = useState("");
+  const [coinDelta, setCoinDelta] = useState("");
+  const [coinType, setCoinType] = useState<CoinType>("gp");
+  const [coinError, setCoinError] = useState(false);
 
   /** Onglet Traits (V1-C4 suite) : meme bloc `character` que le reste de la fiche, une seule donnee, plusieurs vues — meme motif que `onUpdateInventory`. */
   function patchCharacter(fields: Partial<CharacterBlockData>) {
@@ -729,6 +733,36 @@ export default function PlayableCharacterSheet({
   function addInventoryItem(item: InventoryItem) {
     const base = inventoryBase();
     onUpdateInventory({ ...base, items: [...base.items, item] });
+  }
+
+  /**
+   * Champ + boutons + type de piece (V1-C16, sur retour utilisateur) : meme
+   * motif que `applyHpDelta`/`applyXpDelta` (montant tape une fois, +/-
+   * l'appliquent puis vident le champ), avec un menu pour cibler la
+   * denomination. Le depot ajoute simplement au type choisi ; la depense
+   * passe par `spendCoins` (src/core/rules/currency.ts), qui casse
+   * automatiquement des pieces plus grosses si le type choisi n'en a pas
+   * assez, et recompose tout le porte-monnaie avec le moins de pieces
+   * possible — "faire le change" demande explicitement par l'utilisateur.
+   * `null` signale une valeur totale insuffisante : rien n'est modifie,
+   * seul `coinError` s'allume pour le signaler.
+   */
+  function applyCoinDelta(sign: 1 | -1) {
+    const amount = coinDelta.trim() === "" ? 1 : Math.abs(Math.trunc(Number(coinDelta)));
+    if (!amount) return;
+    const base = inventoryBase();
+    if (sign === 1) {
+      onUpdateInventory({ ...base, currency: depositCoins(base.currency, coinType, amount) });
+    } else {
+      const next = spendCoins(base.currency, coinType, amount);
+      if (!next) {
+        setCoinError(true);
+        return;
+      }
+      onUpdateInventory({ ...base, currency: next });
+    }
+    setCoinError(false);
+    setCoinDelta("");
   }
 
   const speciesKey = character.species?.kind === "rule" ? character.species.key : undefined;
@@ -1669,22 +1703,80 @@ export default function PlayableCharacterSheet({
                 </div>
               </div>
 
-              <div className="grid grid-cols-5 gap-2">
-                {(["pp", "gp", "ep", "sp", "cp"] as const).map((coin) => (
-                  <label key={coin} className="flex flex-col gap-1 text-xs text-ink-muted">
-                    {CURRENCY_LABELS_FR[coin]}
+              {/* Depot/depense a montant tape + type de piece choisi (V1-C16,
+                  sur retour utilisateur), sur la meme ligne que les cinq
+                  champs de pieces — meme motif que PV/XP plus haut, avec un
+                  menu en plus pour cibler la denomination. Colonne etroite
+                  (le panneau partage sa largeur avec les caracteristiques) :
+                  champs et boutons resserres, et pas de `flex-wrap` — a cette
+                  largeur, un retour a la ligne casserait justement la demande
+                  explicite ("sur la meme ligne"), alors qu'un shrink discret
+                  des elements suffit a tout faire tenir. */}
+              <div className="flex flex-col gap-1">
+                <div className="flex items-end gap-2">
+                  <div className="grid grid-cols-5 gap-1">
+                    {(["pp", "gp", "ep", "sp", "cp"] as const).map((coin) => (
+                      <label key={coin} className="flex flex-col gap-1 text-xs text-ink-muted">
+                        {CURRENCY_LABELS_FR[coin]}
+                        <input
+                          type="number"
+                          min={0}
+                          value={inventory?.currency[coin] ?? 0}
+                          onChange={(e) => {
+                            const base = inventoryBase();
+                            onUpdateInventory({ ...base, currency: { ...base.currency, [coin]: Number(e.target.value) || 0 } });
+                          }}
+                          className="w-full rounded-md border border-edge bg-transparent px-1 py-1 text-center text-xs text-ink outline-none"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <select
+                      value={coinType}
+                      onChange={(e) => {
+                        setCoinType(e.target.value as CoinType);
+                        setCoinError(false);
+                      }}
+                      title="Type de pièce"
+                      className="rounded-md border border-edge bg-transparent py-1 pl-1 pr-0 text-xs text-ink outline-none"
+                    >
+                      {CURRENCY_ORDER.map((coin) => (
+                        <option key={coin} value={coin}>
+                          {CURRENCY_LABELS_FR[coin]}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       type="number"
-                      min={0}
-                      value={inventory?.currency[coin] ?? 0}
+                      value={coinDelta}
                       onChange={(e) => {
-                        const base = inventoryBase();
-                        onUpdateInventory({ ...base, currency: { ...base.currency, [coin]: Number(e.target.value) || 0 } });
+                        setCoinDelta(e.target.value);
+                        setCoinError(false);
                       }}
-                      className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                      placeholder="1"
+                      aria-label="Montant"
+                      className="w-10 rounded-md border border-edge bg-transparent px-1 py-1 text-center text-xs text-ink outline-none"
                     />
-                  </label>
-                ))}
+                    <button
+                      type="button"
+                      onClick={() => applyCoinDelta(-1)}
+                      title="Retirer"
+                      className="rounded border border-edge px-1.5 py-0.5 text-xs hover:bg-panel disabled:opacity-50"
+                    >
+                      −
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyCoinDelta(1)}
+                      title="Ajouter"
+                      className="rounded border border-edge px-1.5 py-0.5 text-xs hover:bg-panel disabled:opacity-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                {coinError && <span className="text-xs text-danger">Fonds insuffisants, même en cassant des pièces plus grosses.</span>}
               </div>
 
               <AddItemRow worldSlug={worldSlug} onAdd={addInventoryItem} />

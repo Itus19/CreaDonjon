@@ -770,6 +770,19 @@ Trois demandes sur l'encadré d'objet de l'onglet Inventaire : (1) le texte « A
 
 ---
 
+### V1-C16 — Dépôt/dépense de pièces avec change automatique · `S` — fait
+
+Demande explicite : un champ + boutons +/- pour les pièces, à l'image de ceux des points de vie et de l'XP, avec en plus une liste pour choisir la dénomination (pp/po/pe/pa/pc) — sur la même ligne que les cinq champs de pièces. Clarifié avec l'utilisateur (AskUserQuestion) : « faire automatiquement le change » signifiait la vraie conversion — si la dénomination choisie n'a pas assez d'unités, casser des pièces plus grosses selon le taux d'échange standard, puis recomposer tout le porte-monnaie avec le moins de pièces possible ; bloquer sans rien modifier si la valeur totale ne suffit pas.
+
+**Fait** :
+- `src/core/rules/currency.ts` (tests d'abord, `currency.test.ts`, 8 cas) : `depositCoins` ajoute simplement au type choisi ; `spendCoins` calcule le coût et la valeur totale en pièces de cuivre (taux SRD : 1 pp = 10 po = 20 pe = 100 pa = 1000 pc), renvoie `null` sans rien modifier si la valeur totale ne suffit pas, sinon recompose tout le porte-monnaie du plus gros au plus petit (glouton, minimise le nombre de pièces).
+- Même motif que `applyHpDelta`/`applyXpDelta` (`PlayableCharacterSheet.tsx`) : un champ de montant vidé après usage, deux boutons −/+, plus un menu déroulant pour cibler la dénomination. Le dépôt (+) ne touche jamais aux autres pièces ; la dépense (−) peut recomposer l'ensemble du porte-monnaie (c'est le change automatique demandé).
+- `coinError` (état local) affiche « Fonds insuffisants, même en cassant des pièces plus grosses. » sous la ligne quand `spendCoins` renvoie `null` ; se réinitialise dès que l'utilisateur retouche le montant ou la dénomination.
+- Mise en page resserrée pour tenir sur une seule ligne dans la colonne étroite de l'onglet Inventaire (mesuré à 351px de large en navigateur) : `flex` sans `flex-wrap` plutôt que `flex-wrap` — à cette largeur, un retour à la ligne aurait justement contredit la demande explicite ; champs et boutons réduits (`w-9`/`w-10`, `text-xs`, `gap-1`) pour que les deux groupes cohabitent sans se chevaucher.
+- Vérifié en navigateur : dépense de 5 po avec seulement 1 pp en poche casse la pièce de platine et recompose en 5 po (`pp: 1→0`, `gp: 0→5`) ; dépense de 15 po avec la même réserve (valeur totale insuffisante) bloque et affiche le message d'erreur sans rien modifier ; les deux groupes de contrôles restent sur la même ligne (mesuré via `getBoundingClientRect()`, même `bottom`).
+
+---
+
 ## Lot D — Première assistance IA
 
 *Objectif : mesurer les coûts réels avant de concevoir le mode solo.*
