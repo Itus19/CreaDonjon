@@ -4,13 +4,27 @@ import { COIN_VALUE_CP, CURRENCY_ORDER, depositCoins, spendCoins, type Currency 
 const empty: Currency = { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
 
 describe("depositCoins", () => {
-  it("ajoute au type choisi sans toucher aux autres", () => {
-    const currency: Currency = { ...empty, gp: 10, sp: 3 };
-    expect(depositCoins(currency, "gp", 5)).toEqual({ ...empty, gp: 15, sp: 3 });
+  it("ajoute au type choisi quand ca ne franchit aucun seuil de conversion", () => {
+    const currency: Currency = { ...empty, gp: 5, sp: 3 };
+    expect(depositCoins(currency, "gp", 4)).toEqual({ ...empty, gp: 9, sp: 3 });
   });
 
   it("part de zero si le porte-monnaie est vide", () => {
     expect(depositCoins(empty, "cp", 7)).toEqual({ ...empty, cp: 7 });
+  });
+
+  it("convertit vers la piece superieure des que le seuil est franchi (sur retour utilisateur)", () => {
+    // 9 po + 1 po = 10 po = 1 pp : la meme conversion automatique qu'a la
+    // depense, mais dans l'autre sens.
+    const currency: Currency = { ...empty, gp: 9 };
+    expect(depositCoins(currency, "gp", 1)).toEqual({ ...empty, pp: 1 });
+  });
+
+  it("recompose tout le porte-monnaie, pas seulement le type depose", () => {
+    // 23 pa = 230 pc. Deposer 2 pa (250 pc) recompose en 2 po + 1 pe : les
+    // pa de depart disparaissent completement, pas seulement le surplus.
+    const currency: Currency = { ...empty, sp: 23 };
+    expect(depositCoins(currency, "sp", 2)).toEqual({ ...empty, gp: 2, ep: 1 });
   });
 });
 
