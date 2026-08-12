@@ -99,8 +99,17 @@ const SENTENCE_FRAGMENT_RE =
 
 function rejectsAsHeader(name: string): boolean {
   return (
-    /^(Facteur de puissance|Sens |Langues|Compétences |Jets de sauvegarde|Vitesse \d|Classe d.armure|Points de vie \d)/.test(name) ||
-    /^(Vulnérabilité|Résistance|Immunité)s? (aux? |\()/.test(name) ||
+    // "Sens vision..."/"Sens Perception..."/"Sens perception..."
+    // precisement (jamais un simple "Sens " nu) : un motif trop large
+    // rejetait a tort de vrais traits comme "Sens aiguisés" ou "Sens
+    // diminués" (pseudodragon, torve, V1-D3b).
+    /^(Facteur de puissance|Sens (vision|[Pp]erception)|Langues|Compétences |Jets de sauvegarde|Vitesse \d|Classe d.armure|Points de vie \d)/.test(name) ||
+    // "aux dégâts" precisement (jamais un simple "au"/"aux" nu) : la
+    // preambule du bloc de caracteristiques dit toujours "Résistances aux
+    // dégâts...", jamais autre chose apres "au"/"aux" — un motif plus
+    // large rejetait a tort de vrais traits comme "Résistance au renvoi"
+    // (Résistance au renvoi des morts-vivants, Liche, V1-D3b).
+    /^(Vulnérabilité|Résistance|Immunité)s? (aux dégâts|\()/.test(name) ||
     SENTENCE_FRAGMENT_RE.test(name)
   );
 }
@@ -137,11 +146,31 @@ function isHeaderAloneLine(line: string): { name: string; rest: string } | null 
  * nouveau trait). Premiere ligne de la zone toujours acceptee : rien avant
  * elle a verifier.
  */
+/**
+ * Repli pour la fin d'une liste de sorts innes ("À volonté : ...",
+ * "N/jour chacun : ..."), qui se termine par un simple nom de sort SANS
+ * point final avant l'entete suivant (ex. "...mot de pouvoir étourdissant,
+ * \nvol\nRésistance à la magie." — glabrezu). Verifie sur glabrezu, efreeti,
+ * oni, night-hag (V1-D3b) : cherche un marqueur de frequence ("volonté",
+ * "chacun", "/jour", "/repos") dans les quelques lignes qui precedent la
+ * ligne non ponctuee, jamais au-dela d'une vraie fin de phrase anterieure
+ * (qui signalerait un tout autre paragraphe, pas la meme liste).
+ */
+function precededBySpellFrequencyListTail(lines: string[], fromIndex: number): boolean {
+  for (let j = fromIndex; j >= Math.max(0, fromIndex - 6); j--) {
+    const t = lines[j].trim();
+    if (/(volonté|chacun|\/jour|\/repos)/i.test(t)) return true;
+    if (j < fromIndex && /[.!?)]\s*$/.test(t)) return false;
+  }
+  return false;
+}
+
 function precededByParagraphEnd(lines: string[], i: number): boolean {
   for (let j = i - 1; j >= 0; j--) {
     const prev = lines[j].trim();
     if (prev.length === 0) continue;
-    return /[.!?)]\s*$/.test(prev);
+    if (/[.!?)]\s*$/.test(prev)) return true;
+    return precededBySpellFrequencyListTail(lines, j);
   }
   return true;
 }
@@ -161,7 +190,11 @@ function findWrappedHeaders(lines: string[], usedIndices: Set<number>): { index:
     if (usedIndices.has(i)) continue;
     const line = lines[i].trim();
     // Ligne courte sans ponctuation finale = candidat a une fusion avec la suivante.
-    if (line.length === 0 || line.length > 45 || /[.!?:]$/.test(line)) continue;
+    // Plafond releve de 45 a 50 (chain-devil, V1-D3b) : "Chaînes animées
+    // (recharge après un repos court" fait 46 caracteres, un vrai entete
+    // coupe par la mise en page comme les autres, juste plus long a cause
+    // de son qualificatif de recharge entre parentheses.
+    if (line.length === 0 || line.length > 50 || /[.!?:]$/.test(line)) continue;
     if (!/^[A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜŸÇ]/.test(line)) continue;
     if (!precededByParagraphEnd(lines, i)) continue;
     const merged = `${line} ${lines[i + 1].trim()}`;
@@ -452,8 +485,15 @@ async function main() {
     // plus pres du nom du monstre intercale, pour ne laisser fuir dans la
     // derniere description que son nom seul (1 ligne, sans ponctuation —
     // n'affecte pas le sens), jamais ses stats.
+    // Ancre en DEBUT de ligne sur un vrai mot de type de creature (jamais
+    // un simple " de taille X," nu) : une prose de trait/action peut
+    // mentionner un changement de taille en cours de phrase (ex. Duergar,
+    // Agrandissement : "le duergar est de taille G, double ses dés...") —
+    // un faux positif confirme en debogant duergar (V1-D3b), le motif nu
+    // comptait cette mention comme un deuxieme monstre intercale et
+    // tronquait la zone en plein milieu de sa propre action.
     const sizeLineIndices = zoneLines.reduce<number[]>((acc, l, idx) => {
-      if (/ de taille [A-Z]{1,3},/.test(l)) acc.push(idx);
+      if (/^(Aberration|Artificiel|Bête|Céleste|Dragon|Fiélon|Fée|Géant|Humanoïde|Monstruosité|Mort-vivant|Plante|Vase|Élémentaire)(\s*\([^)]*\))?\s+de taille [A-Z]{1,3},/.test(l.trim())) acc.push(idx);
       return acc;
     }, []);
     if (sizeLineIndices.length >= 2) {
