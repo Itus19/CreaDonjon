@@ -383,7 +383,36 @@ async function main() {
       const window = allLines.slice(idx, idx + 20).join(" ");
       return CA_RE(row.armorClass).test(window) && HP_RE(row.hitPoints).test(window);
     });
+    // Fenetre de lignes brutes plus large que necessaire (30, pas 20) : le
+    // bruit de bas de page consomme des lignes brutes sans ajouter de
+    // contenu, donc deux occurrences identiques peuvent avoir une longueur
+    // de contenu filtre differente sur une fenetre a taille fixe si le
+    // decoupage en pages ne tombe pas au meme endroit relatif — compare
+    // seulement les 300 premiers caracteres de contenu utile, suffisant
+    // pour confirmer qu'il s'agit du meme monstre sans etre sensible a ça.
+    const windowContent = (idx: number) =>
+      allLines
+        .slice(idx, idx + 30)
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0 && !isFooterNoise(l))
+        .join(" ")
+        .slice(0, 300);
+    const identicalDuplicate = confirmed.length > 1 && confirmed.every((idx) => windowContent(idx) === windowContent(confirmed[0]));
     if (confirmed.length === 1) {
+      located.push({ ...row, headerLine: confirmed[0] });
+    } else if (confirmed.length === 0 && candidates.length === 1) {
+      // Le nom n'a qu'une seule occurrence dans tout le texte : aucune
+      // ambiguite possible a lever, la verification CA/PV (utile
+      // uniquement pour departager plusieurs occurrences) est ici sans
+      // objet. Un ecart CA/PV a cet endroit vient plutot d'une divergence
+      // connue entre le JSON source et le texte officiel (armure variable,
+      // etc.), pas d'un mauvais candidat.
+      located.push({ ...row, headerLine: candidates[0] });
+    } else if (identicalDuplicate) {
+      // Le monstre apparait deux fois mot pour mot dans le texte officiel
+      // (verifie sur Cervidé géant, present a deux endroits avec un bloc de
+      // caracteristiques identique) : n'importe laquelle des deux occurrences
+      // donne le meme resultat, la premiere est prise sans ambiguite reelle.
       located.push({ ...row, headerLine: confirmed[0] });
     } else {
       notLocated.push(`${row.entry_key} (${row.frenchName}) : ${confirmed.length} occurrence(s) confirmee(s) sur ${candidates.length} candidate(s)`);
@@ -458,7 +487,14 @@ async function main() {
     let actionsZone: string[] = [];
     if (actionsIdx !== -1) {
       const rest = zoneLines.slice(actionsIdx + 1);
-      const stopIdx = rest.findIndex((l) => l.trim() === "Réactions" || l.trim() === "Aptitudes légendaires" || l.trim() === "Actions légendaires");
+      // "Variante : ..." (ex. Nuée d'insectes) precede des sous-variantes
+      // sans bloc de caracteristiques propre (giant-rat-diseased, meme
+      // motif) : leur contenu n'est jamais compte dans les traits/actions
+      // du monstre de base par la source anglaise, jamais une action a
+      // extraire ici.
+      const stopIdx = rest.findIndex(
+        (l) => l.trim() === "Réactions" || l.trim() === "Aptitudes légendaires" || l.trim() === "Actions légendaires" || /^Variante ?:/.test(l.trim())
+      );
       actionsZone = stopIdx === -1 ? rest : rest.slice(0, stopIdx);
     }
 
