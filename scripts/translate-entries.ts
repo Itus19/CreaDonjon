@@ -59,6 +59,15 @@ async function main() {
   for (const [label, { id: rulesetId, textFile }] of Object.entries(RULESETS)) {
     console.log(`\n--- ${label} ---`);
     const text = readFileSync(textFile, "utf-8");
+    // Repli pour les en-tetes coupes sur plusieurs lignes par la mise en
+    // page du PDF (ex. "Conduit divin \r\r\n(1/repos)") : le texte brut
+    // separe les mots par un saut de ligne plutot qu'une espace, donc
+    // `text.includes(candidat)` echoue meme quand le terme est bien present.
+    // Sans danger de faux positif malgre l'aplatissement de tout le
+    // document : chaque candidat est une expression precise de plusieurs
+    // mots, jamais un mot isole susceptible d'enjamber deux paragraphes
+    // par coincidence.
+    const flatText = text.replace(/\s+/g, " ");
 
     const verified: Record<string, string> = {};
     for (const [en, fr] of Object.entries(candidates)) {
@@ -66,8 +75,12 @@ async function main() {
       // candidat ecrit avec l'apostrophe droite ne matcherait jamais sinon.
       // On stocke la forme qui a reellement matche, jamais l'inverse.
       const curly = fr.replace(/'/g, "’");
+      const frFlat = fr.replace(/\s+/g, " ");
+      const curlyFlat = curly.replace(/\s+/g, " ");
       if (text.includes(fr)) verified[en] = fr;
       else if (text.includes(curly)) verified[en] = curly;
+      else if (flatText.includes(frFlat)) verified[en] = fr;
+      else if (flatText.includes(curlyFlat)) verified[en] = curly;
       else allSkipped.push(`${en} -> "${fr}" (non trouve dans ${textFile})`);
     }
     console.log(`${Object.keys(verified).length}/${Object.keys(candidates).length} verifies dans le texte officiel.`);
