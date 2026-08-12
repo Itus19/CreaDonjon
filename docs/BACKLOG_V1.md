@@ -908,23 +908,25 @@ Le morceau le plus long du lot, et le plus mécanique. Voir §6 pour la méthode
 
 Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évitable, sur les deux rulesets. **Une nuance à poser avant de commencer, pas à découvrir en cours de route** : V1-A5 a déjà mis au jour plusieurs familles d'entrées structurellement invérifiables mot pour mot (variantes de forme — loup-garou, vampire — une seule fiche officielle pour plusieurs `entry_key` ; sous-types tabulaires — Ioun Stone, Ring of X, Potion of X Giant Strength, Barding, Dragon Scale Mail, Spell Scroll par niveau — nommés uniquement dans une colonne de tableau, jamais en expression complète ; contenu réellement absent d'une édition — Demi-elfe hors SRD 2024, `Contingency` hors SRD 5.2.1). Pour ces familles, « complet » veut dire *toutes les entrées vérifiables sont vérifiées*, pas 100 % littéral — un compteur qui plafonne sous 100 % avec le reliquat listé nommément n'est pas un échec de ce ticket, tant que rien n'est deviné pour combler l'écart.
 
-Chaque point ci-dessous est dimensionné pour tenir dans une session (le débit réel de V1-D3 sert de référence : quatre dictionnaires + un générateur + 32 sections de prose vérifiées à la main en une session). Comptes vérifiés en base au moment d'écrire ce ticket (`ruleset_entries` × `ruleset_entry_translations`, locale `fr`) :
+Chaque point ci-dessous est dimensionné pour tenir dans une session (le débit réel de V1-D3 sert de référence : quatre dictionnaires + un générateur + 32 sections de prose vérifiées à la main en une session). Comptes vérifiés en base **le 13 août 2026**, après correction de l'incident ci-dessous (`ruleset_entries` × `ruleset_entry_translations`, locale `fr`) :
 
 | Type | Noms 5.1 | Noms 5.2.1 |
 |---|---|---|
 | Espèce | 13/13 | 24/39 |
-| Historique | 1/1 | — |
-| Règle | 33/39 | 28/39 |
-| Classe | 12/12 | 12/12 |
+| Historique | 1/1 | 4/4 |
+| Règle | 34/39 (18 avec prose) | 28/39 |
+| Classe | 12/12 (8 avec `spellcasting_progression`) | 12/12 |
 | Sous-classe | 12/12 | 21/21 |
 | Aptitude (`feature`) | 252/348 | 376/636 |
 | Sort | 319/319 | 316/319 |
 | Arme | 36/37 | 40/41 |
-| Armure | 13/13 | — (a verifier) |
+| Armure | 13/13 | 12/13 |
 | Objet | 403/549 | 381/620 |
 | Monstre | 309/334 | 300/334 |
 
-Blocs de prose (`traits`/`actions`/`spellcasting_progression`/description de règle) : **0 entrée traduite pour l'instant**, en dehors des 8 classes 5.1 de V1-D3.
+Blocs de prose (`traits`/`actions`/description de règle) : encore à 0 hors des 18 fiches de règle et 8 `spellcasting_progression` déjà faits (5.1 uniquement).
+
+**Incident trouvé et corrigé le 13 août**, avant de reprendre ce ticket : les noms français de **8 classes de la SRD 2024** (Barbare, Barde, Clerc, Moine, Paladin, Ensorceleur, Occultiste, Magicien) étaient revenus à `null`. Cause : le tout premier essai de V1-D2 (le bug `subclass_slot` déjà documenté dans ce ticket) avait fait échouer la transformation de ces 8 classes ; absentes de `seenKeys`, elles ont été supprimées par `import_prune_stale_entries` comme « obsolètes » — supprimant en cascade leur traduction, acquise depuis V1-A5 — puis recréées avec un nouvel `id` une fois le bug corrigé, sans traduction. Un import réussi peut donc silencieusement effacer une traduction si l'entrée a echoué à un essai precedent de la MÊME session — mécanisme à garder en tête pour le point 8 (exécution en masse sur les monstres). Corrigé par un simple rejeu de `npm run translate:srd-official` (candidats déjà vérifiés, aucune nouvelle vérification nécessaire) ; les autres types de blocs n'ont pas cet historique d'échec et ne sont pas concernés.
 
 **Points, dans l'ordre où les traiter** (priorité 1→5 de §6, gain rapide avant gros chantier) :
 
@@ -936,7 +938,7 @@ Blocs de prose (`traits`/`actions`/`spellcasting_progression`/description de rè
    - **Une erreur de borne trouvée et corrigée avant écriture définitive**, preuve que la relecture du texte extrait (pas seulement du code) est nécessaire : la borne haute de `casting-a-spell` avait d'abord été fixée à la ligne 10754 (début, déjà connu par `translate-spell-descriptions-fr.ts`, du chapitre « Description des sorts ») en supposant que la prose s'arrêtait juste avant. En fait, une annexe « Listes de sorts » par classe (tableaux de noms, pas de la prose) s'intercale entre les deux, lignes 9873-10753 — la première extraction l'avait engloutie en entier dans la fiche de règle (28987 caractères au lieu de 14655). Repéré en relisant la fin du texte extrait avant d'écrire en base, corrigé en pointant la borne sur le vrai début de cette annexe (ligne 9873, vérifiée par lecture directe), pas sur une coïncidence de chapitre.
    - Cinq autres bornes (`ability-checks`, `damage-and-healing`, `making-an-attack`, et deux autres) relues en fin de texte extrait après correction, aucune anomalie : contenu cohérent avec le sujet de la fiche jusqu'à la toute dernière phrase.
    - Reste pour une prochaine session de ce même point : le reste des fiches de règle (groupes isolés plus loin dans le document — Objets/Poisons/Folie/Harmonisation/Pièges vers la ligne 19600-20650, Caractéristiques vers 25795, Les plans d'existence vers 36242 — chacun à re-vérifier au cas par cas, pas en série, l'homonymie déjà rencontrée ici le confirme) et l'intégralité de la SRD 5.2.1 (aucune prose de règle traduite côté 2024 pour l'instant).
-2. **Rattrapage des noms de classe/aptitude sur la SRD 2024 par recyclage.** Les noms déjà vérifiés côté 5.1 (252/348) sont des candidats gratuits côté 5.2.1 (376/636 seulement) — script de recyclage déjà éprouvé en V1-A5 (« beaucoup de manquants n'étaient qu'un trou de couverture sur une seule édition »), à rejouer purement mécaniquement avant de chercher de nouveaux noms.
+2. **Rattrapage des noms d'aptitude sur la SRD 2024 par recyclage** (Classe est déjà à 12/12 sur les deux rulesets, corrigé au passage — voir l'incident ci-dessus). Les noms déjà vérifiés côté 5.1 (252/348) sont des candidats gratuits côté 5.2.1 (376/636 seulement) — script de recyclage déjà éprouvé en V1-A5 (« beaucoup de manquants n'étaient qu'un trou de couverture sur une seule édition »), à rejouer purement mécaniquement avant de chercher de nouveaux noms.
 3. **Dictionnaire de maîtrises pour `class_basics`.** Vocabulaire fermé (~40-60 noms d'armes/armures/outils, ex. « Simple Weapons », « Thieves' Tools »), vérifié contre la section « Maîtrises » de chacune des 12 classes (déjà lue en partie pendant V1-D3) — même motif que `WEAPON_PROPERTY_LABELS_FR`.
 4. **`spellcasting_progression` pour la SRD 5.2.1.** Même méthode que V1-D3 (lecture à la main + revérification par le script), 8 classes, mais en-têtes 2024 à vérifier depuis zéro (déjà su différents : « Wizard Subclass » contre « Arcane Tradition » pour `subclass_slot`, le même écart est probable ici).
 5. **Reliquat des noms Aptitude** (96 manquants en 5.1, 260 en 5.2.1 après le point 2) — plus gros volume de noms restant, méthode déjà rodée (V1-A5 : lecture directe des tables de classe/sous-classe/espèce dans le texte officiel, jamais deviné depuis le vocabulaire PHB grand public).
