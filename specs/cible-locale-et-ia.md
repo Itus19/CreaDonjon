@@ -93,6 +93,20 @@ En mode solo, cela signifie qu'un tour raté doit être **rejouable sans perte**
 
 ---
 
+## 4.5 Un cas d'usage qui exige le local
+
+Argument identifié le 12 août, et c'est le plus fort en faveur de cette orientation.
+
+Une personne qui saisit dans son monde des règles issues d'ouvrages qu'elle possède (`specs/ruleset-personnel.md`) peut vouloir se faire aider : coller le texte, laisser l'assistant en proposer la structure.
+
+**Avec un fournisseur distant, ce texte quitte la machine** et transite chez un tiers, avec ses conditions d'utilisation. Avec Ollama ou LM Studio, il ne sort jamais.
+
+Conséquence de conception : le collage assisté sur du contenu d'ouvrage n'est proposé **que** si un fournisseur local est actif. Avec un fournisseur distant, la fonction reste disponible pour les règles maison, avec un avertissement explicite.
+
+`capabilities()` doit donc exposer aussi `isLocal: boolean` — ce n'est pas une capacité technique mais une propriété de confidentialité, et c'est elle qui conditionne l'accès à cette fonction.
+
+---
+
 ## 5. Ce qu'il ne faut pas casser d'ici là
 
 Cinq règles, à ajouter à `CLAUDE.md`.

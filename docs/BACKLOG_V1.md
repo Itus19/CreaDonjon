@@ -2,9 +2,11 @@
 
 **Version :** 1.0 — 30 juillet 2026
 **Établi à partir de :** dépôt `Itus19/CreaDonjon`, commit `fe3736a` (V0-07)
-**Documents liés :** `SCHEMA.md` · `specs/regles-couche.md` · `specs/regles-blocs.md` · `specs/wiki-liens-et-personnages.md` · `specs/wiki-blocs.md` · `specs/arbitrage-modifications.md` · `specs/fiche-personnage-interactive.md` · `specs/psyche-pnj.md` · `specs/module-joueur-et-solo.md` · `specs/cible-locale-et-ia.md`
+**Documents liés :** `SCHEMA.md` · `specs/regles-couche.md` · `specs/regles-blocs.md` · `specs/wiki-liens-et-personnages.md` · `specs/wiki-blocs.md` · `specs/arbitrage-modifications.md` · `specs/fiche-personnage-interactive.md` · `specs/psyche-pnj.md` · `specs/module-joueur-et-solo.md` · `specs/cible-locale-et-ia.md` · `specs/ruleset-personnel.md`
 
 **Mise à jour du 12 août 2026** — fusion d'une nouvelle orientation externe (`specs/cible-locale-et-ia.md` : cible locale, IA locale via Ollama/LM Studio) reçue sous forme de `CLAUDE.md`/`BACKLOG_V1.md` mis à jour. Fusionnée, pas remplacée : la version fournie ne connaissait pas l'avancement réel du dépôt (Lots A et B entièrement faits, Lot C poussé jusqu'à V1-C18) — tout ce qui est marqué fait ci-dessous le reste. Ce qui change réellement : l'ancien « Lot D — Première assistance IA » devient **Lot F**, un nouveau **Lot D — Le moteur de règles, complet** et un nouveau **Lot E — Outils de MJ déterministes** s'insèrent avant lui (§5 explique pourquoi). Rien à changer dans le schéma : la dimension d'embedding déjà retenue (`vector(1024)`) correspond déjà à la recommandation du document d'orientation.
+
+**Mise à jour du 13 août 2026** — fusion d'une seconde vague de documents externes (`specs/ruleset-personnel.md`, nouveau, plus un `CLAUDE.md`/`cible-locale-et-ia.md` précisés), reçue après qu'un usage réel a été demandé en conversation : donner accès aux manuels complets (2014/2024, au-delà du SRD) que l'utilisateur possède. Refusé tel quel — reproduire du contenu hors SRD dans le dépôt ou dans une saisie automatisée par l'agent de codage viole la règle absolue de `CLAUDE.md`, quelle que soit la possession des ouvrages. Les documents externes formalisent la réponse déjà donnée en conversation : un nouveau ticket **V1-D5** (ruleset `personal_reference`, verrouillé — non partageable, non exportable, jamais saisi par l'agent), qui ne change rien à l'architecture (`parent_ruleset_id` existe déjà) mais ajoute les garde-fous. Fusionné à nouveau sans rien écraser : Lots A à D3b restent tels que ce dépôt les a réellement avancés.
 
 ---
 
@@ -962,6 +964,30 @@ Blocs de prose (`traits`/`actions`/`spellcasting_progression`/description de rè
 - [ ] Le bac à sable utilise le même moteur que le jeu réel, pas un chemin parallèle.
 - [ ] Une règle créée ne touche jamais une base officielle.
 
+### V1-D5 — Rulesets de référence personnelle · `M`
+
+Spécification complète : `specs/ruleset-personnel.md`. Après V1-D4 (l'éditeur manuel), dont il dépend.
+
+Le besoin : un MJ possède les manuels complets (2014/2024) et veut y accéder depuis l'application pour ses propres parties. L'architecture le permet déjà sans rien ajouter de structurel — `parent_ruleset_id`, surcharges, `is_official_base` inviolable — c'est un ruleset de plus. Ce qui manque, ce sont les **garde-fous**, pas le mécanisme. Distinction centrale de la spec : la mécanique (nombres, formules, structure de résolution) n'est pas protégeable comme telle, la prose l'est — d'où un champ `page_ref` sur `description` (« Voir MM 2024, p. 232. ») plutôt qu'une recopie du texte.
+
+**Rappel qui prime sur tout le reste du ticket** : ce contenu n'est jamais saisi par l'agent de codage ni placé dans le dépôt (`CLAUDE.md`, § Rappel juridique). On construit le mécanisme de saisie et ses verrous — jamais les données elles-mêmes. Une tâche qui semblerait demander l'inverse doit s'arrêter et signaler la contradiction, pas y répondre partiellement « pour tester ».
+
+**Livrables**
+- Colonne `rulesets.content_origin` (`official_srd` | `user_created` | `personal_reference`) et migration.
+- Trois verrous en base (triggers, pas de simples avertissements d'interface) : partage (`share_links`), invitation (`campaign_invites`), membres de campagne (`campaign_members`) — tous refusés si le ruleset par défaut du monde est `personal_reference`.
+- Export d'un monde : contenu d'un ruleset `personal_reference` omis, seule la référence subsiste (« ce monde utilise un ruleset personnel non inclus »).
+- Création d'un ruleset personnel dérivant d'une base SRD, avec la phrase d'avertissement affichée au moment de la création.
+- Champ `page_ref` sur le bloc `description`, affiché comme référence (« Voir tel manuel, page N ») et jamais comme contenu narratif.
+- Badge « référence personnelle » visible sur toute fiche de règle qui en provient.
+
+**Critères**
+- [ ] Créer un lien de partage sur un monde en ruleset personnel lève une exception en base, pas seulement un message d'interface.
+- [ ] Inviter un membre dans une campagne fondée sur un ruleset personnel est refusé.
+- [ ] L'export d'un tel monde ne contient aucune entrée de règle du ruleset personnel.
+- [ ] Aucune bascule possible de `personal_reference` vers `user_created` — la bascule est interdite, pas déconseillée.
+- [ ] Le badge « référence personnelle » est visible sur toute fiche de règle qui en provient.
+- [ ] Une recherche dans le dépôt sur cinq noms de créatures hors SRD ne remonte rien.
+
 ---
 
 ## Lot E — Outils de MJ déterministes
@@ -1041,7 +1067,7 @@ D-01 … D-04           dette, une session                        [fait]
 Lot A                 les règles consultables et personnalisables [fait]
 Lot B                 le personnage jouable                       [fait]
 Lot C  (C1 … C18)     permissions réelles, fiche jouable affinée  [fait]
-Lot D  (D1→D2→D3→D4)  le moteur de règles complet, en français
+Lot D  (D1→D2→D3→D4→D5) le moteur de règles complet, en français, plus la référence personnelle
 Lot E  (E1→E6)        outils de MJ déterministes
 Lot F  (F1→F2→F3→F4)  l'IA, instrumentée dès le premier appel
 ```

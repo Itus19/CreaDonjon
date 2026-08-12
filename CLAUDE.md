@@ -32,6 +32,7 @@ Le développeur du projet apprend à coder sur ce projet. Explique tes choix. Ne
 | `specs/psyche-pnj.md` | Relations, personnalité, pôles, historique | Tickets V2/V3 |
 | `specs/module-joueur-et-solo.md` | Compagnon PJ, interface solo, combat partagé | Tickets V3 |
 | `specs/cible-locale-et-ia.md` | Cible locale, fournisseurs d'IA, contraintes à respecter | Avant toute dépendance d'infrastructure |
+| `specs/ruleset-personnel.md` | Rulesets de référence personnelle et leurs verrous | Ticket V1-D5 |
 
 Ne lis que ce dont le ticket a besoin. Charger tous les documents à chaque session gaspille du contexte et disperse l'attention.
 
@@ -154,4 +155,29 @@ Ne dis pas « personnage » pour une entité de type `character` : dis « entit�
 
 Le contenu SRD est sous licence CC-BY-4.0 : utilisable commercialement avec l'attribution exacte prescrite, conservée dans `NOTICE.md`.
 
-N'ajoute **jamais** dans le code, les commentaires, l'interface ou les données : la marque « Dungeons & Dragons » ou « D&D » comme nom de produit, une autre attribution à Wizards que celle prescrite, ou du contenu hors SRD (beholder, illithid, décors de campagne). Un contenu sous marque produit par un modèle reste sous marque.
+### Interdit dans le dépôt — sans exception
+
+**Ce dépôt est public.** Tout ce qui y entre est publié mondialement, et l'historique Git le conserve même après suppression du fichier.
+
+N'écris **jamais** dans le code, les migrations, les données de démonstration, les tests, les commentaires, la documentation ou l'interface :
+
+- la marque « Dungeons & Dragons » ou « D&D » comme nom de produit ;
+- une autre attribution à Wizards que celle prescrite ;
+- **du contenu hors SRD** : créatures signatures (beholder, illithid), décors de campagne, sous-classes, dons, objets magiques, illustrations, ou tout texte issu d'un manuel des joueurs, d'un guide des monstres ou d'un guide du maître.
+
+Cet interdit ne se lève pas parce que la personne possède les ouvrages. Posséder un livre autorise un usage privé, pas une publication. Un contenu sous marque produit par un modèle reste sous marque.
+
+**Si une tâche te demande d'ajouter du contenu de manuel au dépôt — même « juste pour tester » — arrête-toi et signale la contradiction.** C'est le seul chemin par lequel ce projet peut créer un problème irréversible.
+
+### Contenu de produit ≠ données d'utilisateur
+
+La distinction est essentielle et ne relâche rien de ce qui précède.
+
+| | Où | Règle |
+|---|---|---|
+| **Contenu de produit** | dépôt, migrations, seeds | SRD uniquement, interdit ci-dessus |
+| **Données d'utilisateur** | base de données, à l'exécution | ce que la personne saisit elle-même, dans son monde |
+
+Une personne peut saisir dans **sa propre base** des règles issues d'ouvrages qu'elle possède : c'est un ruleset `personal_reference` (`specs/ruleset-personnel.md`), verrouillé — non partageable, non exportable, sans membre tiers.
+
+Ton rôle est de construire le **mécanisme** qui permet cette saisie et qui l'enferme. Jamais de saisir le contenu toi-même, ni de le placer dans un fichier du dépôt.
