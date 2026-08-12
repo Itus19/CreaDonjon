@@ -19,8 +19,12 @@
 // de sous-titre, ex. "Poisons" table de prix vs chapitre) — memes le motif
 // deja rencontre en V1-D3b point 1.
 //
-// Lancement : npm run extract:monster-blocks -- [--limit N] [--write]
+// Lancement : npm run extract:monster-blocks -- [--limit N] [--only entry-key] [--write]
 // Sans --write : mode dry-run, rapport de couverture uniquement.
+// --only + DEBUG_ZONE=1 (variable d'environnement) : affiche le detail
+// zone/entetes/resultat d'un seul monstre pour deboguer un echec, sans
+// jamais retirer les autres du calcul des bornes de zone (necessaires au
+// monstre cible lui-meme).
 
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
@@ -74,24 +78,55 @@ interface MonsterRow {
 // suite de la description. Jamais tout en majuscules (evite les codes de
 // mise en page), jamais un chiffre en tete (evite les lignes de table).
 const HEADER_RE = /^([A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜŸÇ][^.!?:]{1,89}?)\.\s+(.*)$/;
+// Meme motif, mais l'entete occupe sa ligne SEULE jusqu'au point final —
+// sa description commence sur la ligne suivante (ex. "Nuage d'encre
+// (recharge après un repos court ou long)." puis "Un nuage d'encre...").
+// Repli de dernier recours seulement (voir findAloneHeaders) : sans le
+// texte qui suit sur la meme ligne, ce motif matche aussi de courtes
+// phrases isolees qui ne sont pas des entetes.
+const HEADER_ALONE_RE = /^([A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜŸÇ][^.!?:]{1,89}?)\.$/;
+
+// Un vrai nom de trait/action est presque toujours un groupe nominal SANS
+// article initial ("Absorption de l'acide", "Résistance légendaire",
+// "Souffle de feu"), jamais un fragment de phrase introduit par une
+// conjonction/locution subordonnante (faux positif en milieu de paragraphe,
+// ex. "Sur un résultat de 6, il devient fou.", Golem d'argile) ni par un
+// article defini/indefini (premiere phrase d'un paragraphe d'ambiance
+// generique apres la derniere action reelle, ex. "Les ecclésiastiques
+// livrent au peuple...", Ecclésiastique — V1-D3b).
+const SENTENCE_FRAGMENT_RE =
+  /^(Sur |Si |Quand |Lorsqu|Tant que|Après avoir|Alors que|Ainsi|Ensuite|Toutefois|Cependant|Par ailleurs|En outre|De plus|Dans ce cas|Les |Des |Une |Un |L’|La |Le |Ces |Cette |Chaque |Certains |Certaines |Tout |Tous |Toute |Toutes |Beaucoup |Plusieurs |Il |Elle |Ils |Elles |Vous |On )/;
+
+function rejectsAsHeader(name: string): boolean {
+  return (
+    /^(Facteur de puissance|Sens |Langues|Compétences |Jets de sauvegarde|Vitesse \d|Classe d.armure|Points de vie \d)/.test(name) ||
+    /^(Vulnérabilité|Résistance|Immunité)s? (aux? |\()/.test(name) ||
+    SENTENCE_FRAGMENT_RE.test(name)
+  );
+}
 
 function isHeaderLine(line: string): { name: string; rest: string } | null {
-  const m = HEADER_RE.exec(line.trim());
+  const trimmed = line.trim();
+  const m = HEADER_RE.exec(trimmed);
   if (!m) return null;
   const name = m[1].trim();
   // Rejette les lignes de preambule du bloc de caracteristiques, jamais des
   // traits/actions. Motifs precis (pas de simple prefixe "Résistance" ou
   // "Immunité" : ça rejetterait a tort de vrais traits comme "Résistance
   // légendaire" ou "Immunité aux ombres").
-  if (
-    /^(Facteur de puissance|Sens |Langues|Compétences |Jets de sauvegarde|Vitesse \d|Classe d.armure|Points de vie \d)/.test(name) ||
-    /^(Vulnérabilité|Résistance|Immunité)s? (aux? |\()/.test(name)
-  )
-    return null;
+  if (rejectsAsHeader(name)) return null;
   return { name, rest: m[2].trim() };
 }
 
-/** Detecte les entetes dans une zone de lignes ; tente d'abord ligne par ligne, puis un repli qui fusionne les lignes courtes sans ponctuation finale avec la suivante (entete coupe sur deux lignes par la mise en page). */
+function isHeaderAloneLine(line: string): { name: string; rest: string } | null {
+  const trimmed = line.trim();
+  const m = HEADER_ALONE_RE.exec(trimmed);
+  if (!m) return null;
+  const name = m[1].trim();
+  if (rejectsAsHeader(name)) return null;
+  return { name, rest: "" };
+}
+
 /**
  * Un vrai en-tete ne peut suivre qu'une ligne qui clot une phrase ou le
  * bloc de caracteristiques (point, point d'exclamation/interrogation, ou
@@ -136,6 +171,78 @@ function findWrappedHeaders(lines: string[], usedIndices: Set<number>): { index:
   return results;
 }
 
+/**
+ * Repli de dernier recours : un entete seul sur sa ligne, description sur
+ * la suivante (ex. "Nuage d'encre (recharge après un repos court ou
+ * long)."). N'est tente que si les paliers precedents (direct + coupe sur
+ * deux lignes) ne suffisent pas a atteindre le compte attendu — matche
+ * aussi de courtes phrases isolees qui n'en sont pas, donc jamais utilise
+ * en premier.
+ */
+function findAloneHeaders(lines: string[], usedIndices: Set<number>): { index: number; name: string; rest: string; consumed: number }[] {
+  const results: { index: number; name: string; rest: string; consumed: number }[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (usedIndices.has(i)) continue;
+    const h = isHeaderAloneLine(lines[i]);
+    if (h && precededByParagraphEnd(lines, i)) results.push({ index: i, name: h.name, rest: h.rest, consumed: 1 });
+  }
+  return results;
+}
+
+type HeaderCandidate = { index: number; name: string; rest: string; consumed: number };
+
+/**
+ * Motif rencontre chez les dragons metalliques (V1-D3b) : un souffle
+ * generique introduit par deux points ("... recourt a l'un des souffles
+ * suivants :") suivi de plusieurs options nommees ("Souffle de feu.",
+ * "Souffle soporifique."...), chacune une vraie phrase se terminant par un
+ * point — donc detectee comme un entete a part entiere par les regles
+ * normales, alors que la source anglaise (deja importee) ne compte cela
+ * que comme UNE seule action. Fusionne les options excedentaires dans le
+ * dernier entete dont le corps se termine par ":" (introduction d'une
+ * liste), en ne consommant que le nombre d'entetes surnumeraires reelement
+ * present — jamais une fusion aveugle du reste de la zone.
+ */
+function mergeColonIntroducedLists(lines: string[], headers: HeaderCandidate[], expectedCount: number): HeaderCandidate[] | null {
+  const surplus = headers.length - expectedCount;
+  if (surplus <= 0) return null;
+
+  for (let h = 0; h < headers.length; h++) {
+    // Ne regarde que le DEBUT du corps (l'introduction de la liste, avant
+    // le premier sous-element absorbe comme simple texte) : le corps
+    // complet fusionne se termine par la derniere phrase du dernier
+    // sous-element, jamais par les deux points qui n'apparaissent qu'au
+    // tout debut ("... recourt a l'un des souffles \nsuivants :"), parfois
+    // coupes sur deux lignes par la mise en page — on accumule donc jusqu'a
+    // 3 lignes avant d'abandonner.
+    const next = headers[h + 1];
+    const bodyStart = headers[h].index + headers[h].consumed;
+    const bodyEnd = next ? next.index : lines.length;
+    const bodyLinesForIntro = lines.slice(bodyStart, bodyEnd).map((l) => l.trim()).filter((l) => l.length > 0);
+    // Accumule ligne par ligne et s'arrete des qu'un ":" de fin de phrase
+    // apparait — jamais au-dela des 3 premieres lignes, pour ne pas
+    // confondre avec un ":" qui apparaitrait plus loin dans une phrase
+    // sans rapport (ex. "Attaque ... : +4 pour toucher").
+    let intro = headers[h].rest;
+    let isWrapperIntro = /:$/.test(intro.trim());
+    for (let k = 0; !isWrapperIntro && k < Math.min(3, bodyLinesForIntro.length); k++) {
+      intro = `${intro} ${bodyLinesForIntro[k]}`.trim();
+      isWrapperIntro = /:$/.test(intro);
+    }
+    if (!isWrapperIntro) continue;
+    if (h + 1 + surplus > headers.length) continue;
+
+    // consumed reste celui du seul entete conserve : les entetes
+    // surnumeraires sont simplement retires du tableau, donc leur texte
+    // (nom, reste de ligne, corps) est desormais lu comme la suite ordinaire
+    // du corps de l'entete fusionne jusqu'au PROCHAIN entete restant (ou la
+    // fin de zone), exactement comme le fait extractEntries pour tout corps.
+    const merged: HeaderCandidate = { index: headers[h].index, name: headers[h].name, rest: headers[h].rest, consumed: headers[h].consumed };
+    return [...headers.slice(0, h), merged, ...headers.slice(h + 1 + surplus)];
+  }
+  return null;
+}
+
 /** Extrait N entrees {name, description} d'une zone de texte, ou null si le compte ne correspond pas exactement au nombre attendu. */
 function extractEntries(lines: string[], expectedCount: number): { name: string; description: string }[] | null {
   // Zero attendu : tout contenu present ici est forcement le preambule du
@@ -147,9 +254,22 @@ function extractEntries(lines: string[], expectedCount: number): { name: string;
   if (headers.length !== expectedCount) {
     const used = new Set(headers.map((h) => h.index));
     const wrapped = findWrappedHeaders(lines, used);
-    const combined = [...headers, ...wrapped].sort((a, b) => a.index - b.index);
+    let combined = [...headers, ...wrapped].sort((a, b) => a.index - b.index);
+    if (combined.length !== expectedCount) {
+      // Repli de dernier recours seulement si les paliers precedents ne
+      // suffisent pas : matche aussi de courtes phrases isolees, donc
+      // jamais tente en premier (risque de faux positifs plus eleve).
+      const usedAfterWrapped = new Set(combined.map((h) => h.index));
+      const alone = findAloneHeaders(lines, usedAfterWrapped);
+      const withAlone = [...combined, ...alone].sort((a, b) => a.index - b.index);
+      if (withAlone.length === expectedCount) combined = withAlone;
+    }
     if (combined.length === expectedCount) headers = combined;
-    else return null;
+    else {
+      const merged = mergeColonIntroducedLists(lines, combined, expectedCount);
+      if (merged) headers = merged;
+      else return null;
+    }
   }
 
   const entries: { name: string; description: string }[] = [];
@@ -159,7 +279,23 @@ function extractEntries(lines: string[], expectedCount: number): { name: string;
     const bodyStart = cur.index + cur.consumed;
     const bodyEnd = next ? next.index : lines.length;
     const bodyLines = lines.slice(bodyStart, bodyEnd).map((l) => l.trim()).filter((l) => l.length > 0);
-    const description = [cur.rest, ...bodyLines].filter((s) => s.length > 0).join(" ");
+    let description = [cur.rest, ...bodyLines].filter((s) => s.length > 0).join(" ");
+    // Dernier entete de la zone seulement : un sous-titre d'espece isole
+    // ("Dragon d'argent") peut se glisser juste avant le nom du monstre
+    // suivant, quand celui-ci marque deja la borne de zone (donc invisible
+    // aux troncatures qui reperent "de taille" ou "Classe d'armure" DANS
+    // la zone). Signature : fragment final court, sans ponctuation de fin
+    // de phrase, apres le dernier point reel — jamais coupe si la
+    // description entiere se termine deja normalement.
+    if (h === headers.length - 1 && !/[.!?]$/.test(description)) {
+      const lastSentenceEnd = description.lastIndexOf(". ");
+      if (lastSentenceEnd !== -1) {
+        const tail = description.slice(lastSentenceEnd + 2);
+        if (tail.length > 0 && tail.length < 40 && /^[A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜŸÇ][^.!?]*$/.test(tail)) {
+          description = description.slice(0, lastSentenceEnd + 1);
+        }
+      }
+    }
     if (description.length === 0) return null;
     entries.push({ name: cur.name, description });
   }
@@ -218,7 +354,10 @@ async function main() {
       actions,
     });
   }
-  if (ONLY_KEY) rows = rows.filter((r) => r.entry_key === ONLY_KEY);
+  // ONLY_KEY ne filtre jamais `rows` ici : la localisation de chaque
+  // monstre depend de son voisin suivant dans le texte (borne de zone), le
+  // retirer avant cette etape fausserait la borne de tous les autres.
+  // ONLY_KEY ne sert qu'a limiter l'AFFICHAGE de debogage plus bas.
   if (LIMIT) rows = rows.slice(0, LIMIT);
 
   // Localise l'en-tete confirme de chaque monstre : parmi toutes les
@@ -301,6 +440,11 @@ async function main() {
     // "Classe d'armure", jamais presente dans le bloc du monstre courant).
     const sectionTitleIdx = zoneLines.findIndex((l) => /^Monstres \([A-ZÀ-Ü]\)$/.test(l.trim()));
     if (sectionTitleIdx !== -1) zoneLines = zoneLines.slice(0, sectionTitleIdx);
+    // Meme motif pour le tout dernier monstre du bestiaire (ex. Zombie) :
+    // la zone continue jusqu'a la fin de fichier faute de monstre suivant
+    // localise, et deborde dans l'annexe suivante ("Annexe MdJ-A : États").
+    const appendixIdx = zoneLines.findIndex((l) => /^Annexe (MdJ|MdM)-[A-Z] ?:/.test(l.trim()));
+    if (appendixIdx !== -1) zoneLines = zoneLines.slice(0, appendixIdx);
 
     const actionsIdx = zoneLines.findIndex((l) => l.trim() === "Actions");
     if (row.actions.length > 0 && actionsIdx === -1) {
@@ -318,6 +462,16 @@ async function main() {
       actionsZone = stopIdx === -1 ? rest : rest.slice(0, stopIdx);
     }
 
+    if (row.entry_key === ONLY_KEY && process.env.DEBUG_ZONE) {
+      console.log(`headerLine=${row.headerLine} nextHeaderLine=${nextHeaderLine} next-in-located=${located[i + 1]?.entry_key}`);
+      console.log(`--- traitsZone (attendu ${row.traits.length}) ---`);
+      console.log(traitsZone.join("\n"));
+      console.log("headers:", findHeaders(traitsZone).map((h) => h.name));
+      console.log(`--- actionsZone (attendu ${row.actions.length}) ---`);
+      console.log(actionsZone.join("\n"));
+      console.log("headers:", findHeaders(actionsZone).map((h) => h.name));
+    }
+
     const traitsResult = extractEntries(traitsZone, row.traits.length);
     const actionsResult = extractEntries(actionsZone, row.actions.length);
 
@@ -331,7 +485,7 @@ async function main() {
     }
 
     successCount++;
-    if (ONLY_KEY && process.env.DEBUG_ZONE) {
+    if (row.entry_key === ONLY_KEY && process.env.DEBUG_ZONE) {
       console.log(JSON.stringify({ traits: traitsResult, actions: actionsResult }, null, 2));
     }
     const blockData: Record<string, unknown> = {};
