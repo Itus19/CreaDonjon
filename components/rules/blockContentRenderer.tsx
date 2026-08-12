@@ -23,6 +23,7 @@ import type {
 } from "@/src/core/schemas/rule-blocks";
 import {
   ARMOR_CATEGORY_LABELS_FR,
+  CLASS_PROFICIENCY_LABELS_FR,
   CREATURE_TYPE_LABELS_FR,
   CURRENCY_LABELS_FR,
   ITEM_RARITY_LABELS_FR,
@@ -321,13 +322,18 @@ function Prerequisites({ data }: { data: PrerequisitesBlockData }) {
   return <Chips items={data.items} />;
 }
 
+/** `armor_proficiencies`/`weapon_proficiencies`/`tool_proficiencies` (`class_basics`, V1-D1) -> libelles FR (V1-D3b point 3). */
+function proficiencyLabel(value: string): string {
+  return CLASS_PROFICIENCY_LABELS_FR[value] ?? value;
+}
+
 function ClassBasics({ data }: { data: ClassBasicsBlockData }) {
   const items = [
     { label: "De de vie", value: `1d${data.hit_die}` },
     { label: "Sauvegardes", value: data.saving_throw_proficiencies.map(abilityLabel).join(", ") },
-    ...(data.armor_proficiencies?.length ? [{ label: "Maitrises d'armure", value: data.armor_proficiencies.join(", ") }] : []),
-    ...(data.weapon_proficiencies?.length ? [{ label: "Maitrises d'arme", value: data.weapon_proficiencies.join(", ") }] : []),
-    ...(data.tool_proficiencies?.length ? [{ label: "Maitrises d'outil", value: data.tool_proficiencies.join(", ") }] : []),
+    ...(data.armor_proficiencies?.length ? [{ label: "Maitrises d'armure", value: data.armor_proficiencies.map(proficiencyLabel).join(", ") }] : []),
+    ...(data.weapon_proficiencies?.length ? [{ label: "Maitrises d'arme", value: data.weapon_proficiencies.map(proficiencyLabel).join(", ") }] : []),
+    ...(data.tool_proficiencies?.length ? [{ label: "Maitrises d'outil", value: data.tool_proficiencies.map(proficiencyLabel).join(", ") }] : []),
   ];
   return <KeyValues items={items} />;
 }

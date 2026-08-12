@@ -106,6 +106,44 @@ export const ARMOR_CATEGORY_LABELS_FR: Record<string, string> = {
   Shield: "Bouclier",
 };
 
+/**
+ * Libelles des maitrises de `class_basics.armor_proficiencies`/
+ * `weapon_proficiencies`/`tool_proficiencies` (V1-D3b point 3) —
+ * vocabulaire ferme (23 valeurs distinctes sur les 12 classes de la SRD
+ * 5.1), chaque terme verifie mot pour mot contre la section « Maîtrises »
+ * de la classe qui l'emploie dans `data/srd/fr-source/srd-5.1-fr.txt`
+ * (jamais une pluralisation deduite du nom d'arme singulier deja connu de
+ * `ruleset_entries` type=weapon, qui aurait pu diverger de la formulation
+ * reelle des classes). Cles conservees telles quelles depuis `source_raw`
+ * (casse d'origine, y compris l'incoherence "All armor" avec un a
+ * minuscule contrairement aux autres).
+ */
+export const CLASS_PROFICIENCY_LABELS_FR: Record<string, string> = {
+  "All armor": "Toutes les armures",
+  "Light Armor": "Armures légères",
+  "Medium Armor": "Armures intermédiaires",
+  Shields: "Boucliers",
+  "Simple Weapons": "Armes courantes",
+  "Martial Weapons": "Armes de guerre",
+  Clubs: "Gourdin",
+  "Crossbows, light": "Arbalète légère",
+  Daggers: "Dague",
+  Darts: "Fléchettes",
+  "Hand crossbows": "Arbalète de poing",
+  Javelins: "Javeline",
+  Longswords: "Épée longue",
+  Maces: "Masse d'armes",
+  Quarterstaffs: "Bâton de combat",
+  Rapiers: "Rapière",
+  Scimitars: "Cimeterre",
+  Shortswords: "Épée courte",
+  Sickles: "Faucille",
+  Slings: "Fronde",
+  Spears: "Lance",
+  "Herbalism Kit": "Matériel d'herboriste",
+  "Thieves' Tools": "Outils de voleur",
+};
+
 /** Abreviations francaises des pieces de monnaie (onglet Inventaire, V1-C11) — la grille de monnaie du bloc Inventaire garde les codes SRD bruts (pp/gp/ep/sp/cp), non repris ici (hors perimetre de ce ticket). */
 export const CURRENCY_LABELS_FR: Record<string, string> = {
   pp: "pp",
