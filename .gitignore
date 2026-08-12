@@ -45,3 +45,8 @@ next-env.d.ts
 .claude/session-env/
 .claude/settings.local.json
 Thumbs.db
+
+# contenu personnel hors SRD (specs/ruleset-personnel.md §3.4) : jamais dans Git,
+# meme prive — l'historique reste permanent. Fichiers d'import pour un ruleset
+# personal_reference, jamais commites.
+data/personnel/

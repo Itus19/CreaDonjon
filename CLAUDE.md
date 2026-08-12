@@ -153,11 +153,13 @@ Ne dis pas « personnage » pour une entité de type `character` : dis « entit�
 
 ## Rappel juridique
 
-Le contenu SRD est sous licence CC-BY-4.0 : utilisable commercialement avec l'attribution exacte prescrite, conservée dans `NOTICE.md`.
+Le contenu SRD est sous licence CC-BY-4.0. **L'attribution exacte prescrite reste obligatoire quel que soit l'usage**, commercial ou non — elle est conservée dans `NOTICE.md`, au mot près, pour les deux SRD.
 
 ### Interdit dans le dépôt — sans exception
 
-**Ce dépôt est public.** Tout ce qui y entre est publié mondialement, et l'historique Git le conserve même après suppression du fichier.
+**L'historique Git est permanent.** Un fichier supprimé reste dans l'historique et dans tous les clones existants. Le dépôt est privé, ce qui réduit le risque d'exposition — pas la permanence.
+
+**Le projet n'est pas commercialisé** (PDD §34.0). Cela ne lève rien de ce qui suit, et la raison a changé : garder le dépôt propre est ce qui **préserve l'option de commercialiser un jour**. Du contenu sous droits commité aujourd'hui rendrait cette option définitivement inaccessible, parce qu'on ne nettoie pas un historique Git de façon fiable.
 
 N'écris **jamais** dans le code, les migrations, les données de démonstration, les tests, les commentaires, la documentation ou l'interface :
 
@@ -165,7 +167,7 @@ N'écris **jamais** dans le code, les migrations, les données de démonstration
 - une autre attribution à Wizards que celle prescrite ;
 - **du contenu hors SRD** : créatures signatures (beholder, illithid), décors de campagne, sous-classes, dons, objets magiques, illustrations, ou tout texte issu d'un manuel des joueurs, d'un guide des monstres ou d'un guide du maître.
 
-Cet interdit ne se lève pas parce que la personne possède les ouvrages. Posséder un livre autorise un usage privé, pas une publication. Un contenu sous marque produit par un modèle reste sous marque.
+Cet interdit ne se lève ni parce que la personne possède les ouvrages, ni parce que le dépôt est privé, ni parce que le projet n'est pas commercialisé. Posséder un livre autorise un usage privé, pas une mise en dépôt. Un contenu sous marque produit par un modèle reste sous marque.
 
 **Si une tâche te demande d'ajouter du contenu de manuel au dépôt — même « juste pour tester » — arrête-toi et signale la contradiction.** C'est le seul chemin par lequel ce projet peut créer un problème irréversible.
 
@@ -178,6 +180,6 @@ La distinction est essentielle et ne relâche rien de ce qui précède.
 | **Contenu de produit** | dépôt, migrations, seeds | SRD uniquement, interdit ci-dessus |
 | **Données d'utilisateur** | base de données, à l'exécution | ce que la personne saisit elle-même, dans son monde |
 
-Une personne peut saisir dans **sa propre base** des règles issues d'ouvrages qu'elle possède : c'est un ruleset `personal_reference` (`specs/ruleset-personnel.md`), verrouillé — non partageable, non exportable, sans membre tiers.
+Une personne peut saisir dans **sa propre base** des règles issues d'ouvrages qu'elle possède : c'est un ruleset `personal_reference` (`specs/ruleset-personnel.md`), verrouillé — non exportable, jamais indexé publiquement, consultable par le cercle de jeu privé (sa propre table) mais jamais téléchargeable par un joueur ni transférable hors de ce cercle.
 
 Ton rôle est de construire le **mécanisme** qui permet cette saisie et qui l'enferme. Jamais de saisir le contenu toi-même, ni de le placer dans un fichier du dépôt.

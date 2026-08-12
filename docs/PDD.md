@@ -1,11 +1,28 @@
 # Project Design Document (PDD)
 ## Plateforme de création, gestion, simulation et exploration de mondes narratifs
 
-**Version :** 0.2  
-**Statut :** Pré-production — conception arrêtée, prêt pour implémentation Phase 0  
+**Version :** 0.3  
+**Statut :** En développement — V1 en cours  
 **Document :** Source de vérité fonctionnelle du projet  
-**Dernière mise à jour :** 29 juillet 2026  
+**Dernière mise à jour :** 12 août 2026  
 **Documents liés :** `Phase0_Schema_Technique_v0_2.md` (schéma de données), `CLAUDE.md` (règles pour l'assistant de codage), `Backlog_Phase0_Phase1.md` (tickets)
+
+---
+
+## Ce qui change en v0.3 — 12 août 2026
+
+**Le projet n'est plus destiné à être commercialisé.** Il est développé pour un usage personnel et pour la table de jeu de son auteur.
+
+| Sujet | Effet |
+|---|---|
+| Modèle économique, tarification, quotas payants | **supprimés** — la section 32 devient une section de coûts d'exploitation |
+| Contenu hors SRD dans **sa propre base** | devient possible, encadré (`specs/ruleset-personnel.md`) |
+| Attribution CC-BY du SRD | **inchangée** — le CC-BY l'exige quel que soit l'usage |
+| Marque « D&D » comme nom de produit | **inchangé** — on continue de s'en abstenir |
+| Contenu sous droits dans le dépôt Git | **inchangé, et pour une raison nouvelle** : voir 34.0 bis et R11 |
+| Protection des données des joueurs | allégée, pas supprimée — voir 34.0 |
+
+La cible technique évolue également vers une **application locale avec modèle local** (`specs/cible-locale-et-ia.md`), ce qui rend la question des coûts d'API largement théorique.
 
 ---
 
@@ -65,7 +82,7 @@ Ajouts également dans les sections existantes : quatre principes non négociabl
 29. [Gouvernance de l'IA](#29-gouvernance-de-lia)
 30. [RAG et récupération de contexte](#30-rag-et-récupération-de-contexte)
 31. [Sécurité](#31-sécurité)
-32. [Coûts, quotas et modèle économique](#32-coûts-quotas-et-modèle-économique)
+32. [Coûts d'exploitation](#32-coûts-dexploitation)
 33. [Internationalisation et contenu des règles](#33-internationalisation-et-contenu-des-règles)
 34. [Cadre juridique et conformité](#34-cadre-juridique-et-conformité)
 35. [Qualité : tests, observabilité, performance](#35-qualité--tests-observabilité-performance)
@@ -1749,9 +1766,11 @@ Le point 4 est le plus important : les trois autres sont des atténuations, celu
 
 ---
 
-# 32. Coûts, quotas et modèle économique
+# 32. Coûts d'exploitation
 
-Cette section n'existait pas et devrait exister avant la première ligne de code du mode solo. **Un tour de jeu solo a un coût marginal réel.** Un wiki n'en a pas. Ce sont deux économies différentes dans le même produit.
+> **Révision v0.3.** Cette section traitait du modèle économique d'un produit commercial. Le projet étant désormais à usage personnel, et la cible évoluant vers un modèle local, il n'y a plus de tarification à concevoir. Ce qui reste utile, c'est la **mesure** : un tour de jeu solo consomme du temps et de la mémoire, et cela conditionne ce qui est jouable sur votre machine.
+
+**Un tour de jeu solo a un coût réel.** Un wiki n'en a pas. Avec un modèle local, ce coût n'est plus une facture mais une latence et une empreinte mémoire — ce qui reste une contrainte de conception, simplement d'une autre nature.
 
 ## Ordre de grandeur à mesurer
 
@@ -1774,16 +1793,20 @@ Tant que la dernière colonne est vide, toute discussion sur le modèle économi
 - **Résumé glissant** plutôt qu'historique complet.
 - **Contexte déterministe d'abord**, RAG en complément — récupérer par identifiant coûte une requête SQL, pas un appel d'API.
 
-## Modèle économique — décision à prendre
+## Ce qui remplace le modèle économique
 
-| Option | Avantage | Inconvénient |
-|---|---|---|
-| Gratuit sans limite | adoption | insoutenable dès quelques utilisateurs |
-| Freemium (wiki + règles gratuits, solo au quota) | aligné sur les coûts réels | complexité de facturation |
-| BYOK (l'utilisateur fournit sa clé API) | risque financier nul, lancement immédiat | friction énorme à l'inscription |
-| Abonnement unique | simple | il faut connaître ses coûts pour fixer le prix |
+Rien. Le projet est à usage personnel, l'infrastructure est celle d'un développeur seul, le modèle est local.
 
-**Recommandation :** BYOK en option dès le début (coût de développement faible, permet de tester le solo sans risque), freemium ensuite une fois les coûts réels mesurés. Décision à consigner en section 23 quand elle sera prise.
+Les seules mesures qui gardent un sens :
+
+| Grandeur | Pourquoi elle compte encore |
+|---|---|
+| Latence d'un tour solo | au-delà d'une quinzaine de secondes, le jeu n'est plus jouable |
+| Mémoire requise par le modèle | détermine quel modèle tourne sur votre machine |
+| Durée d'indexation d'un monde | ne doit pas bloquer l'usage pendant qu'elle tourne |
+| Coût d'API, **si** un fournisseur distant sert de dépannage | reste instrumenté par `ai_usage_log` |
+
+`ai_usage_log` garde son intérêt : comparer des modèles entre eux, pas facturer.
 
 ---
 
@@ -1819,6 +1842,38 @@ Une traduction automatique reste possible en dernier recours, mais elle doit alo
 # 34. Cadre juridique et conformité
 
 Cette section remplace et précise la section 21. Elle n'est pas un avis juridique : elle liste ce qui est établi, ce qui est à vérifier, et ce qui est interdit.
+
+## 34.0 Périmètre — usage personnel
+
+Décision du 12 août 2026 : **le projet n'est pas destiné à être commercialisé.** Il sert son auteur et sa table de jeu.
+
+### Ce qui devient possible
+
+Saisir dans **sa propre base** des règles issues d'ouvrages qu'on possède, sous le régime encadré de `specs/ruleset-personnel.md` : ruleset `personal_reference`, non exportable, non partageable au-delà du cercle privé de jeu.
+
+### Ce qui ne change pas — trois points souvent mal compris
+
+**L'attribution CC-BY reste obligatoire.** La licence l'exige *quel que soit l'usage*, commercial ou non. `NOTICE.md` reste, au mot près, pour les deux SRD.
+
+**On continue de s'abstenir de la marque.** Le nom du produit ne contient ni « Dungeons & Dragons » ni « D&D ». Le risque est plus faible en usage privé, la discipline ne coûte rien, et elle préserve l'avenir.
+
+**Le contenu sous droits n'entre jamais dans le dépôt Git.** La raison a changé, l'interdit non.
+
+## 34.0 bis — Pourquoi l'interdit du dépôt survit à la décision
+
+Retirer les règles non libres avant de commercialiser : c'est juste pour la base de données. **Ce ne l'est pas pour Git.**
+
+L'historique Git est permanent. Un stat-block commité aujourd'hui et supprimé demain reste dans l'historique et dans tous les clones existants. L'en retirer exige de réécrire l'historique — opération lourde, jamais tout à fait complète, et vaine si le dépôt a été public ne serait-ce qu'un moment.
+
+**Garder le dépôt propre est ce qui préserve l'option de commercialiser un jour.** C'est un argument plus fort que le risque juridique : il porte sur ce qu'on perdrait, pas sur ce qui pourrait arriver.
+
+Le contenu personnel vit dans la **base de données**, jamais dans le code. L'architecture le fait déjà : `personal_reference` est de la donnée d'exécution.
+
+## 34.0 ter — Ce qui s'allège sans disparaître
+
+**La protection des données.** Si des joueurs ont des comptes et que leurs données sont hébergées, il y a traitement de données personnelles. L'usage strictement personnel et domestique bénéficie d'une exception, et un cercle de quelques joueurs s'en approche — mais dès qu'un service en ligne héberge leurs comptes, la prudence minimale s'impose : leur dire ce qui est stocké, pouvoir supprimer un compte, ne pas conserver indéfiniment. L'export JSON par monde répond déjà à l'essentiel.
+
+**Modération et conditions d'utilisation** deviennent sans objet tant qu'il n'y a pas d'inscription ouverte au public.
 
 ## Licence des règles — établi
 
@@ -1932,6 +1987,7 @@ PITR Supabase activé, et export JSON par monde côté application — qui sert 
 | R8 | Problème juridique de marque ou de contenu | Faible | Élevé | Section 34 respectée ; nom de produit sans référence à la marque ; SRD strictement |
 | R9 | Perte de motivation sur une phase longue sans résultat visible | Élevée | Élevé | Chaque phase se termine par quelque chose d'utilisable et de montrable |
 | R10 | Développeur unique, aucune redondance | Certaine | Moyen | Documentation à jour, dépôt Git, sauvegardes, dépendances standards |
+| R11 | **Contenu sous droits versé dans l'historique Git**, rendant toute commercialisation future impossible | Moyenne | Élevé | Dépôt privé ; interdit absolu dans `CLAUDE.md` ; le contenu personnel est de la donnée d'exécution, jamais du code |
 
 R1 et R9 sont les deux risques dominants d'un projet solo ambitieux. Toute la structure de la feuille de route révisée existe pour les traiter.
 

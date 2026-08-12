@@ -50,6 +50,25 @@ D'où le champ `page_ref` :
 
 Moins de saisie, aucun texte recopié, et à la table vous ouvrez le livre. C'est plus rapide que de tout retranscrire, et c'est la position la plus nette.
 
+### 1.1 Le cas des sites de fans — question récurrente
+
+Des sites communautaires diffusent des règles hors SRD, souvent traduites en français. La question « puis-je les reprendre ? » se posera pour chacun. La réponse est la même partout.
+
+**Ces sites opèrent sous la Fan Content Policy de Wizards**, qui exige que leur contenu soit entièrement gratuit et accessible. C'est une permission unilatérale et révocable, accordée à eux, qui ne se transmet pas.
+
+**Et leur traduction est leur œuvre.** Un texte traduit est protégé en tant que tel. Le reprendre superpose deux titulaires de droits — l'éditeur d'origine et le traducteur. Que la position du site soit elle-même fragile ne rend pas son texte libre.
+
+Ce qui reste normal et sans difficulté :
+
+| Usage | Statut |
+|---|---|
+| Consulter, vérifier un terme français, comparer une formulation | consultation ordinaire |
+| Relever une **valeur mécanique** et rédiger soi-même le reste | pas de reprise d'expression |
+| Recopier des paragraphes dans sa base | reprise du travail d'un tiers |
+| Aspiration automatisée du site | sujet distinct — conditions d'usage et charge serveur |
+
+**La méthode qui expose le moins reste celle du §1 : la mécanique depuis ses propres ouvrages, une référence de page pour la prose.** Elle ne dépend d'aucun tiers, et elle produit la terminologie exacte des livres qui seront ouverts à la table.
+
 ---
 
 ## 2. Trois origines de contenu
@@ -63,7 +82,7 @@ alter table rulesets add column content_origin text not null default 'user_creat
 |---|---|---|---|
 | `official_srd` | SRD 5.1 et 5.2, CC-BY-4.0 | oui | oui, avec attribution |
 | `user_created` | vos règles maison, écrites par vous | oui | oui, elles vous appartiennent |
-| `personal_reference` | saisi depuis un ouvrage que vous possédez | **non** | **non** |
+| `personal_reference` | saisi depuis un ouvrage que vous possédez | **cercle privé seulement** | **non** |
 
 Les deux premières continuent exactement comme aujourd'hui. Seule la troisième est nouvelle, et elle est **verrouillée**.
 
@@ -96,7 +115,23 @@ create trigger share_links_no_personal
   for each row execute function app.forbid_share_personal_ruleset();
 ```
 
-Le même verrou s'applique à `campaign_invites` et à `campaign_members` : **aucun tiers** n'accède à une partie fondée sur un ruleset personnel.
+**Correction du 12 août — le verrou initial était trop strict.** Il interdisait tout membre de campagne, ce qui empêchait de jouer avec sa propre table : exactement l'usage visé.
+
+La ligne juste n'est pas « aucun tiers » mais **« le cercle privé, et rien au-delà »**. Le droit suisse traite avec souplesse l'usage privé au sein d'un cercle de personnes étroitement liées ; une table d'amis s'en approche, une communauté ouverte non.
+
+Traduction technique :
+
+| Action | Statut | Raison |
+|---|---|---|
+| Jouer une campagne avec des membres nommés | **autorisé** | un joueur qui voit un profil de créature à l'écran, c'est le MJ qui lit son livre à voix haute |
+| Lien de partage public ou anonyme | **refusé** | sortie du cercle privé |
+| Export contenant le ruleset | **refusé** | produit une copie transférable |
+| Transfert du ruleset vers un autre compte | **refusé** | idem |
+| Téléchargement du contenu par un joueur | **refusé** | chacun repartirait avec son exemplaire |
+
+La distinction tient en une phrase : **consulter pendant la partie, oui ; repartir avec une copie, non.**
+
+Un plafond souple sur le nombre de membres et un rappel à l'invitation suffisent à matérialiser le cercle. Pas de refus brutal — un avertissement explicite.
 
 ### 3.2 À l'export
 
@@ -114,9 +149,22 @@ Un export de monde omet le contenu d'un ruleset `personal_reference` et n'en gar
 
 Pas dans une migration, pas dans un fichier de données de démonstration, pas dans un test, pas dans un commentaire, pas dans un exemple de documentation.
 
-Votre dépôt `Itus19/CreaDonjon` est **public** : j'ai pu le lire sans authentification. Un stat-block du guide des monstres recopié dans un fichier de seed devient une publication mondiale, conservée dans l'historique Git même après suppression du fichier.
+L'historique Git est permanent : un fichier supprimé y reste, et dans tous les clones existants. Un stat-block du guide des monstres recopié dans un fichier de seed y resterait indéfiniment, même après suppression du fichier — que le dépôt soit public ou privé.
 
 C'est de loin le risque le plus concret de tout ce sujet, et il ne vient pas de l'application : il vient de l'agent de codage à qui on demanderait « ajoute les monstres du MM ».
+
+**Ce point survit à la décision de ne pas commercialiser** (PDD §34.0 bis) : l'historique Git est permanent, et garder le dépôt propre est ce qui préserve l'option de commercialiser un jour.
+
+### Ce qu'il faut à la place : un répertoire local ignoré
+
+```
+# .gitignore
+data/personnel/
+```
+
+Un endroit sur votre disque pour vos fichiers d'import personnels, hors de Git. C'est le confort qu'on chercherait dans un second dépôt, sans sa permanence ni le risque de confondre les deux.
+
+**Un second dépôt Git n'est pas la solution.** Il déplacerait le problème dans un endroit qu'on croit sûr, avec la même permanence d'historique. La séparation utile n'est pas entre deux dépôts, elle est entre **le code** (versionné) et **la donnée** (votre base et ce répertoire ignoré). Elle existe déjà.
 
 ---
 
@@ -159,7 +207,8 @@ Après V1-D4 (l'éditeur manuel), dont il dépend.
 
 **Critères d'acceptation**
 - [ ] Créer un lien de partage sur un monde en ruleset personnel lève une exception en base, pas seulement un message d'interface.
-- [ ] Inviter un membre dans une campagne fondée sur un ruleset personnel est refusé.
+- [ ] Inviter un membre dans une campagne fondée sur un ruleset personnel est **autorisé**, avec un rappel explicite du cadre.
+- [ ] Un joueur ne peut ni exporter, ni télécharger le contenu du ruleset personnel — il le consulte en session, rien de plus.
 - [ ] L'export d'un tel monde ne contient aucune entrée de règle du ruleset personnel.
 - [ ] Aucune bascule possible de `personal_reference` vers `user_created`.
 - [ ] Le badge « référence personnelle » est visible sur toute fiche de règle qui en provient.
