@@ -924,9 +924,20 @@ Chaque point ci-dessous est dimensionné pour tenir dans une session (le débit 
 | Arme | **37/37** | **41/41** |
 | Armure | 13/13 | 12/13 |
 | Objet | 403/549 | 381/620 |
-| Monstre | 309/334 | 300/334 |
+| Monstre | **316/334** | 303/334 |
 
 Arme 5.1 et 5.2.1 sont désormais **complètes** (le glaive manquant s'est révélé nommé « Coutille » dans le texte officiel, vérifié aux stats identiques : 1d10 tranchant, 3 kg, allonge/deux mains/lourde). Aptitude 5.1 est à son **plafond structurel** (328/348 ; les 20 manquants sont les couleurs d'Ascendance draconique/Ancêtre draconique, valeurs de colonnes de tableau sans expression complète — même motif déjà documenté pour Espèce/Objet, détail au point 5 ci-dessous).
+
+**Monstre 5.1, suite du 13 août — 7 noms trouvés sur 25 manquants, plafond structurel confirmé pour le reste.** Les 25 manquants se répartissaient en deux familles bien distinctes : 18 variantes de forme de lycanthrope/vampire (Werewolf/Wererat/Wereboar/Werebear/Weretiger × Human/Hybrid/Animal Form, Vampire × Vampire/Bat/Mist Form) — déjà identifiées dès l'ouverture de ce ticket comme structurellement invérifiables (une seule fiche officielle « Loup-garou », « Vampire »... couvre toutes les formes dans un seul bloc de statistiques, sans en-tête distinct par forme) ; et 7 vrais monstres individuels, simplement pas encore traduits. Ces 7 retrouvés en ancrant la recherche sur leurs valeurs de PV/CA (uniques ou presque dans le texte), pas sur une traduction devinée du nom anglais — la plupart des noms français n'ont aucun rapport lexical avec l'anglais :
+- Roper → **Enlaceur** (Monstruosité, CA 20, 93 PV)
+- Gibbering Mouther → **Babélien** (Aberration, CA 9, 67 PV)
+- Grimlock → **Torve** (Humanoïde, CA 11, 11 PV)
+- Merfolk → **Thalasséen (homme-poisson)** (Humanoïde, CA 11, 11 PV)
+- Drow → **Elfe drow** (Humanoïde, CA 15, 13 PV)
+- Priest → **Ecclésiastique (prêtre)** (Humanoïde, CA 13, 27 PV)
+- Giant Rat (Diseased) → **Rat géant infecté** — cas particulier : contrairement aux six précédents, ce n'est pas un bloc de statistiques séparé mais une note « Variante : Rats géants infectés » nichée dans la fiche du Rat géant normal (même Bête, même profil hormis l'action Morsure et le facteur de puissance) ; écrit à la main plutôt que via `translate:entries` pour préserver la capitalisation en début de nom (le texte source ne l'emploie qu'en milieu de phrase, « le rat géant infecté »).
+
+Monstre 5.1 passe donc à **316/334**, plafond structurel désormais atteint pour les noms (les 18 restants ne seront jamais des `ruleset_entry_translations.name` distincts — question à trancher au point 7/8 : soit on les laisse en anglais indéfiniment, soit on affiche le nom de la forme de base avec un badge de sous-forme, une décision d'affichage plutôt qu'une traduction manquante).
 
 Blocs de prose (`traits`/`actions`/description de règle) : encore à 0 hors des 32 fiches de règle et 8 `spellcasting_progression` déjà faits (5.1 uniquement).
 
