@@ -60,6 +60,16 @@ interface RuleSpan {
 // 9784, une sous-section sur les jets de sauvegarde IMPOSES PAR un sort,
 // absorbee dans `casting-a-spell`).
 const SPANS: RuleSpan[] = [
+  // La vraie fiche "Caractéristiques" (V1-D3b point 1, cherchée sans
+  // succès la session précédente) : ligne 25795 était une fausse piste,
+  // une sous-section interne à `sentient-magic-items` (25764-25925), pas
+  // ce chapitre. Le vrai en-tête, coupé sur deux lignes par la mise en
+  // page ("Utiliser les valeurs de" / "caractéristique"), ouvre le
+  // chapitre juste avant Avantage et désavantage — absorbe la sous-section
+  // sans en-tête propre en base "Valeurs et modificateurs de
+  // caractéristique" (avec sa table), même logique que le "chapitre
+  // entier" retenue pour Tests de caractéristique.
+  { entryKey: "ability-scores-and-modifiers", nameFr: "Utiliser les valeurs de", headerLine: 6857, nextHeaderLine: 6931, headerLines: 2 },
   { entryKey: "advantage-and-disadvantage", nameFr: "Avantage et désavantage", headerLine: 6931, nextHeaderLine: 6975 },
   { entryKey: "proficiency-bonus", nameFr: "Bonus de maîtrise", headerLine: 6975, nextHeaderLine: 7011 },
   { entryKey: "ability-checks", nameFr: "Tests de caractéristique", headerLine: 7011, nextHeaderLine: 7658 },
