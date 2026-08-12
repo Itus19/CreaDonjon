@@ -47,6 +47,8 @@ interface RuleSpan {
   nameFr: string;
   /** Ligne (1-indexee) de l'en-tete SUIVANT (regle suivie en base, ou borne fixe verifiee) : borne exclusive. */
   nextHeaderLine: number;
+  /** Nombre de lignes physiques que l'en-tete occupe dans le texte source (titre coupe par la mise en page du PDF, ex. "Porter et manier des objets" / "magiques") — 1 par defaut. */
+  headerLines?: number;
 }
 
 // Chaque ligne verifiee par lecture directe avant d'etre inscrite. Deux cas
@@ -61,7 +63,13 @@ const SPANS: RuleSpan[] = [
   { entryKey: "advantage-and-disadvantage", nameFr: "Avantage et désavantage", headerLine: 6931, nextHeaderLine: 6975 },
   { entryKey: "proficiency-bonus", nameFr: "Bonus de maîtrise", headerLine: 6975, nextHeaderLine: 7011 },
   { entryKey: "ability-checks", nameFr: "Tests de caractéristique", headerLine: 7011, nextHeaderLine: 7658 },
-  { entryKey: "saving-throws", nameFr: "Jets de sauvegarde", headerLine: 7658, nextHeaderLine: 7721 },
+  { entryKey: "saving-throws", nameFr: "Jets de sauvegarde", headerLine: 7658, nextHeaderLine: 7695 },
+  // Pas un fragment orphelin : "Le passage du temps" est le vrai en-tete
+  // francais de l'entree `time` ("Time") — jamais trouve par une recherche
+  // sur "Temps" seul (qui ne matche que des composes comme "Temps
+  // d'incantation"), repere en relisant la fin de Jets de sauvegarde avant
+  // d'ecrire en base.
+  { entryKey: "time", nameFr: "Le passage du temps", headerLine: 7695, nextHeaderLine: 7721 },
   { entryKey: "movement", nameFr: "Déplacement", headerLine: 7721, nextHeaderLine: 7885 },
   { entryKey: "the-environment", nameFr: "L’environnement", headerLine: 7885, nextHeaderLine: 8050 },
   { entryKey: "resting", nameFr: "Repos", headerLine: 8050, nextHeaderLine: 8103 },
@@ -73,7 +81,12 @@ const SPANS: RuleSpan[] = [
   { entryKey: "making-an-attack", nameFr: "Effectuer une attaque", headerLine: 8738, nextHeaderLine: 9008 },
   { entryKey: "damage-and-healing", nameFr: "Dégâts et soins", headerLine: 9008, nextHeaderLine: 9302 },
   { entryKey: "mounted-combat", nameFr: "Combat monté", headerLine: 9302, nextHeaderLine: 9363 },
-  { entryKey: "underwater-combat", nameFr: "Combat subaquatique", headerLine: 9363, nextHeaderLine: 9400 },
+  // Borne haute a 9390, PAS 9400 (debut de "Qu'est-ce qu'un sort ?") : le
+  // meme motif que Poisons/Harmonisation plus bas — un paragraphe
+  // d'introduction sans en-tete propre ("Sorts", l'apercu du chapitre
+  // incantation, 9390-9399) s'intercale et n'appartient pas au combat
+  // subaquatique. Laisse hors des deux fiches plutot que mal attribue.
+  { entryKey: "underwater-combat", nameFr: "Combat subaquatique", headerLine: 9363, nextHeaderLine: 9390 },
   { entryKey: "what-is-a-spell", nameFr: "Qu’est-ce qu’un sort ?", headerLine: 9400, nextHeaderLine: 9532 },
   // Borne haute = debut verifie de l'annexe "Listes de sorts" (par classe,
   // ligne 9873) : PAS le meme motif que l'entete initial cru correct au
@@ -84,13 +97,43 @@ const SPANS: RuleSpan[] = [
   { entryKey: "casting-a-spell", nameFr: "Lancer un sort", headerLine: 9532, nextHeaderLine: 9873 },
 ];
 
-function extractBody(lines: string[], headerLine: number, nextHeaderLine: number): string {
+// Second groupe contigu (V1-D3b, session suivante) : Pieges -> Poisons ->
+// Harmonisation -> Porter et manier des objets magiques. Borne basse
+// (19609) deja verifiee independamment par translate-spell-descriptions-fr.ts
+// (CHAPTER_END, "juste avant Pieges"). Borne haute (20762) verifiee par
+// lecture directe : "Les objets magiques de A à Z" marque le debut du
+// catalogue d'objets, pas une regle suivie en base.
+const SPANS_2: RuleSpan[] = [
+  { entryKey: "traps", nameFr: "Pièges", headerLine: 19609, nextHeaderLine: 20041 },
+  { entryKey: "diseases", nameFr: "Maladies", headerLine: 20041, nextHeaderLine: 20175 },
+  { entryKey: "madness", nameFr: "Folie", headerLine: 20175, nextHeaderLine: 20336 },
+  { entryKey: "objects", nameFr: "Objets", headerLine: 20336, nextHeaderLine: 20432 },
+  // "Poisons" apparait deux fois : 20432 le vrai chapitre, 20468 le titre
+  // d'une table de prix a l'interieur du meme chapitre (absorbee). Borne
+  // haute a 20588, PAS 20595 (debut de Harmonisation) : un paragraphe
+  // d'introduction sans en-tete propre ("Objets magiques", 20588-20594)
+  // s'intercale entre les deux — repere en relisant la fin du texte
+  // extrait, il ne parle pas de poisons et n'appartient pas non plus a
+  // Harmonisation (c'est une transition de chapitre, pas une sous-section
+  // de l'une ou l'autre regle) : laisse hors des deux plutot que mal
+  // attribue.
+  { entryKey: "poisons", nameFr: "Poisons", headerLine: 20432, nextHeaderLine: 20588 },
+  { entryKey: "attunement", nameFr: "Harmonisation", headerLine: 20595, nextHeaderLine: 20648 },
+  // Titre coupe sur deux lignes par la mise en page du PDF ("Porter et
+  // manier des objets" / "magiques") — headerLines:2 pour ne pas inclure
+  // "magiques" en tete du corps du texte.
+  { entryKey: "wearing-and-wielding-items", nameFr: "Porter et manier des objets", headerLine: 20648, nextHeaderLine: 20762, headerLines: 2 },
+];
+
+function extractBody(lines: string[], headerLine: number, nextHeaderLine: number, headerLines = 1): string {
   return lines
-    .slice(headerLine, nextHeaderLine - 1)
+    .slice(headerLine + headerLines - 1, nextHeaderLine - 1)
     .map((l) => l.trim())
     .filter((l) => l.length > 0 && !isFooterNoise(l))
     .join(" ");
 }
+
+const ALL_SPANS: RuleSpan[] = [...SPANS, ...SPANS_2];
 
 async function main() {
   const raw = readFileSync(SOURCE_FILE, "utf-8");
@@ -101,13 +144,13 @@ async function main() {
     .select("id, entry_key")
     .eq("ruleset_id", RULESET_ID)
     .eq("entry_type", "rule")
-    .in("entry_key", SPANS.map((s) => s.entryKey));
+    .in("entry_key", ALL_SPANS.map((s) => s.entryKey));
   if (error) throw new Error(error.message);
   const entryIdByKey = new Map(entries.map((e) => [e.entry_key, e.id]));
 
   const rows: { entry_id: string; locale: string; name: string; blocks: Record<string, unknown>; source: string }[] = [];
 
-  for (const span of SPANS) {
+  for (const span of ALL_SPANS) {
     const entryId = entryIdByKey.get(span.entryKey);
     if (!entryId) {
       console.warn(`  entree introuvable pour ${span.entryKey}, ignoree.`);
@@ -117,7 +160,7 @@ async function main() {
     if (headerText !== span.nameFr) {
       throw new Error(`${span.entryKey} : en-tete attendu "${span.nameFr}" a la ligne ${span.headerLine}, trouve "${headerText}"`);
     }
-    const description = extractBody(lines, span.headerLine, span.nextHeaderLine);
+    const description = extractBody(lines, span.headerLine, span.nextHeaderLine, span.headerLines ?? 1);
     if (description.length === 0) {
       throw new Error(`${span.entryKey} : corps vide entre les lignes ${span.headerLine} et ${span.nextHeaderLine}`);
     }
@@ -147,7 +190,7 @@ async function main() {
     const { error: upsertError } = await supabase.from("ruleset_entry_translations").upsert(rows, { onConflict: "entry_id,locale" });
     if (upsertError) throw new Error(upsertError.message);
   }
-  console.log(`\nTermine : ${rows.length} descriptions de regle ecrites (SRD 5.1, un seul groupe contigu).`);
+  console.log(`\nTermine : ${rows.length} descriptions de regle ecrites (SRD 5.1, ${SPANS.length + SPANS_2.length} fiches sur deux groupes contigus).`);
 }
 
 main().catch((err) => {
