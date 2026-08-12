@@ -125,6 +125,46 @@ const SPANS_2: RuleSpan[] = [
   { entryKey: "wearing-and-wielding-items", nameFr: "Porter et manier des objets", headerLine: 20648, nextHeaderLine: 20762, headerLines: 2 },
 ];
 
+// Troisieme groupe (V1-D3b, suite a une demande explicite sur la monnaie) :
+// deux fiches isolees repondant directement a la question posee en
+// conversation (equivalence des monnaies, "si il y a dans les srd") — le
+// SRD porte bien un `standard-exchange-rates` distinct de `equipment`, verifie
+// entree par entree dans le JSON (`Rule-Sections`) avant de chercher son
+// texte. Plus deux fiches supplementaires trouvees en cherchant la borne de
+// fin d'`equipment` : `sentient-magic-items` et `fantasy-historical-pantheons`
+// (celle-ci deja nommee, jamais sa prose), et `the-planes-of-existence`.
+const SPANS_3: RuleSpan[] = [
+  // "Équipement" (deja nommee, 100%) : uniquement l'introduction sur les
+  // pieces de monnaie (ce qu'elles valent, a quoi elles servent) — pas le
+  // reste du chapitre (armures/armes/objets d'aventurier en tables), qui
+  // relance immediatement apres "Armures" (5437) et fait double emploi avec
+  // les blocs `weapon`/`armor`/`item_properties` (V1-D1/D2) et les noms deja
+  // traduits (V1-A5) : capturer les tables ici serait une redite, pas une
+  // nouvelle information.
+  { entryKey: "equipment", nameFr: "Équipement", headerLine: 5350, nextHeaderLine: 5391 },
+  // La demande de depart, exactement : le tableau de conversion PC/PA/PE/PO/PP
+  // (verifie dans le JSON source, `Rule-Sections standard-exchange-rates`,
+  // jamais trouve cote 2014 par une recherche sur "Pièces de monnaie" —
+  // c'est le titre 2024, le 2014 dit "Taux de conversion"). "Revente du
+  // trésor" (5398) absorbee ici plutot que dans `equipment` : meme famille
+  // de sujet (l'argent, le troc), et ca evite de fragmenter `equipment` en
+  // deux plages non contigues pour un paragraphe sans en-tete propre.
+  { entryKey: "standard-exchange-rates", nameFr: "Taux de conversion", headerLine: 5391, nextHeaderLine: 5437 },
+  // Titre coupe sur deux lignes ("Les objets magiques" / "intelligents").
+  // Borne haute verifiee par lecture directe : "Les artefacts" (25925)
+  // marque la reprise du catalogue d'objets nommes, pas une sous-section.
+  { entryKey: "sentient-magic-items", nameFr: "Les objets magiques", headerLine: 25764, nextHeaderLine: 25925, headerLines: 2 },
+  // Deja nommee (V1-D3b point 1) mais sans prose. Titre coupe sur trois
+  // lignes ("Panthéons" / "historiques et" / "mythologiques"), precede
+  // d'un prefixe d'annexe ("Annexe MdJ-B : ") volontairement exclu de la
+  // verification d'en-tete (pas du contenu, juste une numerotation).
+  { entryKey: "fantasy-historical-pantheons", nameFr: "Panthéons", headerLine: 36048, nextHeaderLine: 36240, headerLines: 3 },
+  // Meme motif de prefixe d'annexe ("Annexe MdJ-C : "). Borne haute verifiee
+  // par lecture directe : "Annexe MdM-A : Créatures diverses" (36479) est
+  // deja le debut du Guide des monstres, pas une regle suivie en base.
+  { entryKey: "the-planes-of-existence", nameFr: "Les plans d’existence", headerLine: 36242, nextHeaderLine: 36479 },
+];
+
 function extractBody(lines: string[], headerLine: number, nextHeaderLine: number, headerLines = 1): string {
   return lines
     .slice(headerLine + headerLines - 1, nextHeaderLine - 1)
@@ -133,7 +173,7 @@ function extractBody(lines: string[], headerLine: number, nextHeaderLine: number
     .join(" ");
 }
 
-const ALL_SPANS: RuleSpan[] = [...SPANS, ...SPANS_2];
+const ALL_SPANS: RuleSpan[] = [...SPANS, ...SPANS_2, ...SPANS_3];
 
 async function main() {
   const raw = readFileSync(SOURCE_FILE, "utf-8");
@@ -190,7 +230,7 @@ async function main() {
     const { error: upsertError } = await supabase.from("ruleset_entry_translations").upsert(rows, { onConflict: "entry_id,locale" });
     if (upsertError) throw new Error(upsertError.message);
   }
-  console.log(`\nTermine : ${rows.length} descriptions de regle ecrites (SRD 5.1, ${SPANS.length + SPANS_2.length} fiches sur deux groupes contigus).`);
+  console.log(`\nTermine : ${rows.length} descriptions de regle ecrites (SRD 5.1, ${ALL_SPANS.length} fiches).`);
 }
 
 main().catch((err) => {
