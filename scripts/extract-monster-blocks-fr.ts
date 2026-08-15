@@ -118,6 +118,11 @@ function rejectsAsHeader(name: string): boolean {
     // large rejetait a tort de vrais traits comme "Résistance au renvoi"
     // (Résistance au renvoi des morts-vivants, Liche, V1-D3b).
     /^(Vulnérabilité|Résistance|Immunité)s? (aux dégâts|\()/.test(name) ||
+    // "DD 13." coupe par la mise en page du PDF au milieu d'une phrase
+    // ("test de Force (Athlétisme) \nDD 13. À son tour...") matche a tort
+    // le motif "Nom. description" — jamais un vrai nom de trait/action
+    // (Manteleur/Mante obscure, V1-D3b, SRD 5.2.1).
+    /^DD \d+$/.test(name) ||
     SENTENCE_FRAGMENT_RE.test(name)
   );
 }
@@ -423,10 +428,25 @@ async function main() {
   const notLocated: string[] = [];
   for (const row of rows) {
     const candidates = nameLineIndices.get(row.frenchName) ?? [];
-    const confirmed = candidates.filter((idx) => {
+    const confirmedRaw = candidates.filter((idx) => {
       const window = allLines.slice(idx, idx + 20).join(" ");
       return CA_RE(row.armorClass).test(window) && HP_RE(row.hitPoints).test(window);
     });
+    // Motif du double en-tete (SRD 5.2.1, meme cause que sur
+    // extract-monster-statblocks-en.ts cote anglais) : le nom du monstre
+    // apparait deux fois cote a cote ("Nom" en-tete de page courant, ligne
+    // vide, "Nom" titre du bloc de caracteristiques) — les DEUX occurrences
+    // passent la verification CA/PV puisque le bloc de caracteristiques
+    // reel se trouve dans la fenetre de 20 lignes des deux, donc jamais un
+    // vrai doublon "identicalDuplicate" (le contenu filtre diverge d'un mot
+    // "Nom" en tete). Touchait 146/324 monstres avant ce correctif. Fusionne
+    // les candidats confirmes separes de 3 lignes au plus, ne garde que le
+    // dernier (le plus proche du vrai bloc).
+    const confirmed: number[] = [];
+    for (const idx of confirmedRaw) {
+      if (confirmed.length > 0 && idx - confirmed[confirmed.length - 1] <= 3) confirmed[confirmed.length - 1] = idx;
+      else confirmed.push(idx);
+    }
     // Fenetre de lignes brutes plus large que necessaire (30, pas 20) : le
     // bruit de bas de page consomme des lignes brutes sans ajouter de
     // contenu, donc deux occurrences identiques peuvent avoir une longueur
@@ -478,7 +498,25 @@ async function main() {
 
   for (let i = 0; i < located.length; i++) {
     const row = located[i];
-    const nextHeaderLine = i + 1 < located.length ? located[i + 1].headerLine : allLines.length;
+    let nextHeaderLine = i + 1 < located.length ? located[i + 1].headerLine : allLines.length;
+    // Motif du double en-tete (voir plus haut) applique cette fois a la
+    // borne de fin de zone : le monstre SUIVANT peut pre-annoncer son nom
+    // seul sur une ligne quelques lignes avant sa vraie ligne de type,
+    // retenue comme headerLine. Sans ce recul, cette pre-annonce se fait
+    // avaler comme derniere phrase/action de la description courante (ex.
+    // Aboleth -> "Âme-en-peine" avalait deux de ses actions, Coup de
+    // tentacule et Succion psychique). Recule juste avant la derniere
+    // occurrence du nom du monstre suivant trouvee dans les 4 lignes
+    // precedentes.
+    if (i + 1 < located.length) {
+      const nextName = located[i + 1].frenchName;
+      for (let j = nextHeaderLine - 1; j >= Math.max(row.headerLine + 1, nextHeaderLine - 4); j--) {
+        if (allLines[j].trim() === nextName) {
+          nextHeaderLine = j;
+          break;
+        }
+      }
+    }
     let zoneLines = allLines.slice(row.headerLine + 1, nextHeaderLine).filter((l) => !isFooterNoise(l.trim()));
     // Garde-fou supplementaire : si un ou plusieurs monstres non localises
     // (nom pas encore traduit, ou homonyme ambigu) s'intercalent avant le
@@ -503,8 +541,15 @@ async function main() {
     // un faux positif confirme en debogant duergar (V1-D3b), le motif nu
     // comptait cette mention comme un deuxieme monstre intercale et
     // tronquait la zone en plein milieu de sa propre action.
+    // "de taille [A-Z]{1,3}(?: ou [A-Z]{1,3})?," : la SRD 5.2.1 introduit des
+    // tailles composees ("de taille M ou P", ex. Garde) pour les monstres
+    // dont le gabarit varie — motif absent en 2014, jamais rencontre avant
+    // cette passe. Sans le second groupe optionnel, "Capitaine de la garde"
+    // (taille M ou P) ne declenchait pas la troncature de fuite et se
+    // faisait avaler en entier dans la derniere action de "Garde".
     const sizeLineIndices = zoneLines.reduce<number[]>((acc, l, idx) => {
-      if (/^(Aberration|Artificiel|Bête|Céleste|Dragon|Fiélon|Fée|Géant|Humanoïde|Monstruosité|Mort-vivant|Plante|Vase|Élémentaire)(\s*\([^)]*\))?\s+de taille [A-Z]{1,3},/.test(l.trim())) acc.push(idx);
+      if (/^(Aberration|Artificiel|Bête|Céleste|Dragon|Fiélon|Fée|Géant|Humanoïde|Monstruosité|Mort-vivant|Plante|Vase|Élémentaire)(\s*\([^)]*\))?\s+de taille [A-Z]{1,3}(?: ou [A-Z]{1,3})?,/.test(l.trim()))
+        acc.push(idx);
       return acc;
     }, []);
     if (sizeLineIndices.length >= 2) {
@@ -556,13 +601,22 @@ async function main() {
       // le monstre suivant en entier quand aucun des trois autres arrets
       // n'intervenait avant lui (verifie sur Prêtre -> Pseudodragon,
       // detecte par le garde-fou de fuite existant plus bas).
+      // "Actions Légendaires" (Aboleth) porte une majuscule a "Légendaires"
+      // contrairement a la plupart des autres monstres ("Actions
+      // légendaires") — incoherence de casse dans la mise en page source,
+      // jamais uniforme. Compare insensible a la casse pour ce seul terme
+      // plutot que d'ajouter une troisieme variante figee au hasard.
       const stopIdx = rest.findIndex(
-        (l) =>
-          l.trim() === "Réactions" ||
-          l.trim() === "Actions Bonus" ||
-          l.trim() === "Aptitudes légendaires" ||
-          l.trim() === "Actions légendaires" ||
-          /^Variante ?:/.test(l.trim())
+        (l) => {
+          const t = l.trim();
+          return (
+            t === "Réactions" ||
+            t === "Actions Bonus" ||
+            t === "Aptitudes légendaires" ||
+            /^Actions légendaires$/i.test(t) ||
+            /^Variante ?:/.test(t)
+          );
+        }
       );
       actionsZone = stopIdx === -1 ? rest : rest.slice(0, stopIdx);
     }
@@ -617,7 +671,7 @@ async function main() {
   // attrapee (ex. deux monstres non localises consecutifs). Alerte
   // seulement, n'empeche pas l'ecriture — chaque cas releve doit etre
   // verifie a la main plutot que suppose sans preuve.
-  const CREATURE_TYPE_WORDS = /\b(Monstruosité|Humanoïde|Aberration|Dragon|Fiélon|Élémentaire|Fée|Géant|Mort-vivant|Vase|Artificiel|Céleste) de taille [A-Z]{1,3},/;
+  const CREATURE_TYPE_WORDS = /\b(Monstruosité|Humanoïde|Aberration|Dragon|Fiélon|Élémentaire|Fée|Géant|Mort-vivant|Vase|Artificiel|Céleste) de taille [A-Z]{1,3}(?: ou [A-Z]{1,3})?,/;
   const suspicious: string[] = [];
   for (const u of upserts) {
     const traitsData = (u.blocks.traits as { traits?: { name: string; description: string }[] } | undefined)?.traits ?? [];
