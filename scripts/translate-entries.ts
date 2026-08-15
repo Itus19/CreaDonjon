@@ -45,9 +45,11 @@ async function listAllEntries(rulesetId: string, entryType: string) {
 }
 
 async function main() {
-  const [entryType, candidatesPath] = process.argv.slice(2);
+  const args = process.argv.slice(2).filter((a) => a !== "--force");
+  const FORCE = process.argv.includes("--force");
+  const [entryType, candidatesPath] = args;
   if (!entryType || !candidatesPath) {
-    throw new Error("Usage: translate:entries -- <entry_type> <chemin_json_candidats>");
+    throw new Error("Usage: translate:entries -- <entry_type> <chemin_json_candidats> [--force]");
   }
 
   const candidates: Record<string, string> = JSON.parse(readFileSync(candidatesPath, "utf-8"));
@@ -86,12 +88,39 @@ async function main() {
     console.log(`${Object.keys(verified).length}/${Object.keys(candidates).length} verifies dans le texte officiel.`);
 
     const entries = await listAllEntries(rulesetId, entryType);
-    const rows: { entry_id: string; locale: string; name: string; source: string }[] = [];
+    const candidateEntryIds: string[] = [];
     for (const entry of entries) {
       const name = (entry.source_raw as { name?: unknown } | null)?.name;
-      if (typeof name === "string" && verified[name]) {
-        rows.push({ entry_id: entry.id, locale: "fr", name: verified[name], source: "official_srd" });
+      if (typeof name === "string" && verified[name]) candidateEntryIds.push(entry.id);
+    }
+
+    // Garde-fou (V1-D3b, troisieme incident du meme genre en une session) :
+    // un candidat verifie peut matcher n'importe ou dans le texte aplati
+    // (ex. un mot nu qui matche l'en-tete court d'une description, alors
+    // qu'un nom deja en base venait de la ligne de tableau plus precise,
+    // qualifiee) — jamais ecraser un nom EXISTANT et DIFFERENT sans le
+    // signaler. Sans --force, ces cas sont ignores et listes, jamais
+    // ecrits silencieusement.
+    const existingNames = new Map<string, string | null>();
+    for (let i = 0; i < candidateEntryIds.length; i += 200) {
+      const chunk = candidateEntryIds.slice(i, i + 200);
+      const { data, error } = await supabase.from("ruleset_entry_translations").select("entry_id, name").eq("locale", "fr").in("entry_id", chunk);
+      if (error) throw new Error(error.message);
+      for (const row of data) existingNames.set(row.entry_id, row.name);
+    }
+
+    const rows: { entry_id: string; locale: string; name: string; source: string }[] = [];
+    const conflicts: string[] = [];
+    for (const entry of entries) {
+      const name = (entry.source_raw as { name?: unknown } | null)?.name;
+      if (typeof name !== "string" || !verified[name]) continue;
+      const newName = verified[name];
+      const existing = existingNames.get(entry.id);
+      if (existing && existing !== newName && !FORCE) {
+        conflicts.push(`${name} : deja "${existing}" en base, candidat "${newName}" ignore (--force pour ecraser)`);
+        continue;
       }
+      rows.push({ entry_id: entry.id, locale: "fr", name: newName, source: "official_srd" });
     }
 
     const BATCH = 500;
@@ -102,6 +131,10 @@ async function main() {
       if (error) throw new Error(error.message);
     }
     console.log(`${rows.length} traductions ecrites (source='official_srd').`);
+    if (conflicts.length > 0) {
+      console.log(`${conflicts.length} conflit(s) avec un nom deja en base, ignore(s) :`);
+      for (const c of conflicts) console.log(`  - ${c}`);
+    }
     totalWritten += rows.length;
   }
 

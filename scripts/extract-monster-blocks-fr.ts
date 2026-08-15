@@ -36,8 +36,12 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 }
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-const SOURCE_FILE = "data/srd/fr-source/srd-5.1-fr.txt";
-const RULESET_ID = "41ebff94-aabc-4f5c-b437-28f2f7a195ee"; // SRD 5.1
+// --srd 5.2.1 bascule le script sur la SRD 2024 (meme logique d'extraction,
+// juste la source et le ruleset cible qui changent) ; par defaut la 5.1.
+const srdArgIdx = process.argv.indexOf("--srd");
+const SRD_VERSION = srdArgIdx >= 0 ? process.argv[srdArgIdx + 1] : "5.1";
+const SOURCE_FILE = SRD_VERSION === "5.2.1" ? "data/srd/fr-source/srd-5.2.1-fr.txt" : "data/srd/fr-source/srd-5.1-fr.txt";
+const RULESET_ID = SRD_VERSION === "5.2.1" ? "110d20e9-dd80-4752-a57e-a957601b4eae" : "41ebff94-aabc-4f5c-b437-28f2f7a195ee";
 
 const WRITE = process.argv.includes("--write");
 const limitArg = process.argv.indexOf("--limit");
@@ -52,7 +56,11 @@ function isFooterNoise(line: string): boolean {
     /^=== page \d+ ===$/.test(line) ||
     line.startsWith("Interdit à la revente") ||
     line.startsWith("ce document pour votre strict usage personnel") ||
-    /^Document de Référence du Système 5\.1(\s+\d+)?$/.test(line)
+    // 5.1 met le numero de page APRES le titre ("...5.1 363"), 5.2.1 le met
+    // AVANT ("58 Document de Référence...") — les deux formats coexistent
+    // puisque le script sert desormais aux deux editions (--srd 5.2.1).
+    /^Document de Référence du Système 5\.(1|2\.1)(\s+\d+)?$/.test(line) ||
+    /^\d+ Document de Référence du Système 5\.(1|2\.1)$/.test(line)
   );
 }
 
