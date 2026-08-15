@@ -64,6 +64,29 @@ interface MonsterEntry {
 }
 
 /**
+ * 11 monstres genuinement renommes entre 2014 et 2024 (pas absents, juste
+ * introuvables par une recherche sur leur ancien nom anglais) — verifie un
+ * par un par lecture directe du texte 2024 avant d'etre inscrits ici,
+ * jamais devine par ressemblance de concept (ex. "Quipper" -> "Piranha"
+ * ecarte : deux poissons differents, pas une simple reetiquette du meme
+ * monstre, contrairement aux onze ci-dessous). V1-D3b, passe "aller
+ * plus loin".
+ */
+const RENAMED_2024: Record<string, string> = {
+  androsphinx: "Sphinx of Valor",
+  gynosphinx: "Sphinx of Lore",
+  shrieker: "Shrieker Fungus",
+  "giant-sea-horse": "Giant Seahorse",
+  "sea-horse": "Seahorse",
+  "cult-fanatic": "Cultist Fanatic",
+  veteran: "Warrior Veteran",
+  "acolyte-monster": "Priest Acolyte",
+  "flying-sword": "Animated Flying Sword",
+  "poisonous-snake": "Venomous Snake",
+  "giant-poisonous-snake": "Giant Venomous Snake",
+};
+
+/**
  * Tous les monstres du ruleset servent de bornes de zone potentielles
  * (`needsFix: false` pour les 3 deja authentiquement 2024, ex. Aboleth) —
  * jamais seulement le sous-ensemble encore en 2014, sinon un monstre deja
@@ -90,7 +113,7 @@ async function fetchAllMonsters(): Promise<(MonsterEntry & { needsFix: boolean }
     const url = typeof raw?.url === "string" ? raw.url : "";
     const name = typeof raw?.name === "string" ? raw.name : undefined;
     if (!name) continue;
-    monsters.push({ id: e.id, entry_key: e.entry_key, englishName: name, needsFix: url.includes("/2014/") });
+    monsters.push({ id: e.id, entry_key: e.entry_key, englishName: RENAMED_2024[e.entry_key] ?? name, needsFix: url.includes("/2014/") });
   }
   return monsters;
 }

@@ -199,12 +199,59 @@
       },
       {
         "name": "Slam",
-        "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Bludgeoning damage. Animated Flying Sword",
+        "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Bludgeoning damage.",
         "attack_bonus": 4,
         "damage": [
           {
             "dice": "1d6+2",
             "type": "Bludgeoning"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "flying-sword",
+    "name": "Animated Flying Sword",
+    "index": "flying-sword",
+    "size": "Small",
+    "type": "Construct",
+    "alignment": "Unaligned",
+    "armor_class": 17,
+    "hit_points": 14,
+    "hit_dice": "4d6",
+    "speed": {
+      "walk": "5 ft.",
+      "fly": "50 ft. (hover)"
+    },
+    "abilities": {
+      "str": 12,
+      "dex": 15,
+      "con": 11,
+      "int": 1,
+      "wis": 5,
+      "cha": 1
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "blindsight": "60 ft.",
+      "passive_perception": "7"
+    },
+    "languages": "None",
+    "challenge_rating": 0.25,
+    "xp": 50,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Slash",
+        "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2) Slashing damage. Animated Rug of Smothering",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "1d8+2",
+            "type": "Slashing"
           }
         ]
       }
@@ -3780,7 +3827,7 @@
     "actions": [
       {
         "name": "Ritual Sickle",
-        "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 3 (1d4 + 1) Slashing damage plus 1 Necrotic damage. Cultist Fanatic",
+        "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 3 (1d4 + 1) Slashing damage plus 1 Necrotic damage.",
         "attack_bonus": 3,
         "damage": [
           {
@@ -3788,6 +3835,68 @@
             "type": "Slashing"
           }
         ]
+      }
+    ]
+  },
+  {
+    "entry_key": "cult-fanatic",
+    "name": "Cultist Fanatic",
+    "index": "cult-fanatic",
+    "size": "Medium or Small",
+    "type": "Humanoid",
+    "alignment": "Neutral",
+    "armor_class": 13,
+    "hit_points": 44,
+    "hit_dice": "8d8",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "abilities": {
+      "str": 11,
+      "dex": 14,
+      "con": 12,
+      "int": 10,
+      "wis": 14,
+      "cha": 13
+    },
+    "skills": [
+      {
+        "name": "Deception",
+        "bonus": 3
+      },
+      {
+        "name": "Persuasion",
+        "bonus": 3
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "passive_perception": "12"
+    },
+    "languages": "Common",
+    "challenge_rating": 2,
+    "xp": 450,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Pact Blade",
+        "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2) Slashing damage plus 7 (2d6) Necrotic damage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "1d8+2",
+            "type": "Slashing"
+          },
+          {
+            "dice": "2d6",
+            "type": "Necrotic"
+          }
+        ]
+      },
+      {
+        "name": "Spellcasting",
+        "description": "The cultist casts one of the following spells, using Wisdom as the spellcasting ability (spell save DC 12, +4 to hit with spell attacks): At Will: Light, Thaumaturgy 2/Day: Command 1/Day: Hold Person"
       }
     ]
   },
@@ -5212,6 +5321,40 @@
         ]
       }
     ]
+  },
+  {
+    "entry_key": "shrieker",
+    "name": "Shrieker Fungus",
+    "index": "shrieker",
+    "size": "Medium",
+    "type": "Plant",
+    "alignment": "Unaligned",
+    "armor_class": 5,
+    "hit_points": 13,
+    "hit_dice": "3d8",
+    "speed": {
+      "walk": "5 ft."
+    },
+    "abilities": {
+      "str": 1,
+      "dex": 1,
+      "con": 10,
+      "int": 1,
+      "wis": 3,
+      "cha": 1
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "blindsight": "30 ft.",
+      "passive_perception": "6"
+    },
+    "languages": "None",
+    "challenge_rating": 0,
+    "xp": 0,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": []
   },
   {
     "entry_key": "violet-fungus",
@@ -10451,6 +10594,75 @@
     ]
   },
   {
+    "entry_key": "acolyte-monster",
+    "name": "Priest Acolyte",
+    "index": "acolyte-monster",
+    "size": "Medium or Small",
+    "type": "Humanoid (Cleric)",
+    "alignment": "Neutral",
+    "armor_class": 13,
+    "hit_points": 11,
+    "hit_dice": "2d8",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "abilities": {
+      "str": 14,
+      "dex": 10,
+      "con": 12,
+      "int": 10,
+      "wis": 14,
+      "cha": 11
+    },
+    "skills": [
+      {
+        "name": "Medicine",
+        "bonus": 4
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "passive_perception": "12"
+    },
+    "languages": "Common",
+    "challenge_rating": 0.25,
+    "xp": 50,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Mace",
+        "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Bludgeoning damage plus 2 (1d4) Radiant damage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "1d6+2",
+            "type": "Bludgeoning"
+          },
+          {
+            "dice": "1d4",
+            "type": "Radiant"
+          }
+        ]
+      },
+      {
+        "name": "Radiant Flame",
+        "description": "Ranged Attack Roll: +4, range 60 ft. Hit: 7 (2d6) Radiant damage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "2d6",
+            "type": "Radiant"
+          }
+        ]
+      },
+      {
+        "name": "Spellcasting",
+        "description": "The priest casts one of the following spells, using Wisdom as the spellcasting ability: At Will: Light, Thaumaturgy"
+      }
+    ]
+  },
+  {
     "entry_key": "priest",
     "name": "Priest",
     "index": "priest",
@@ -12623,6 +12835,196 @@
     ]
   },
   {
+    "entry_key": "gynosphinx",
+    "name": "Sphinx of Lore",
+    "index": "gynosphinx",
+    "size": "Large",
+    "type": "Celestial",
+    "alignment": "Lawful Neutral",
+    "armor_class": 17,
+    "hit_points": 170,
+    "hit_dice": "20d10",
+    "speed": {
+      "walk": "40 ft.",
+      "fly": "60 ft."
+    },
+    "abilities": {
+      "str": 18,
+      "dex": 15,
+      "con": 16,
+      "int": 18,
+      "wis": 18,
+      "cha": 18
+    },
+    "skills": [
+      {
+        "name": "Arcana",
+        "bonus": 12
+      },
+      {
+        "name": "History",
+        "bonus": 12
+      },
+      {
+        "name": "Perception",
+        "bonus": 8
+      },
+      {
+        "name": "Religion",
+        "bonus": 12
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "truesight": "120 ft.",
+      "passive_perception": "18"
+    },
+    "languages": "Celestial, Common",
+    "challenge_rating": 11,
+    "xp": 7200,
+    "proficiency_bonus": 4,
+    "traits": [
+      {
+        "name": "Inscrutable",
+        "description": "No magic can observe the sphinx remotely or detect its thoughts without its permission. Wisdom (Insight) checks made to ascertain its intentions or sincerity are made with Disadvantage."
+      },
+      {
+        "name": "Legendary Resistance (3/Day, or 4/Day in Lair)",
+        "description": "If the sphinx fails a saving throw, it can choose to succeed instead."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The sphinx makes three Claw attacks."
+      },
+      {
+        "name": "Claw",
+        "description": "Melee Attack Roll: +8, reach 5 ft. Hit: 14 (3d6 + 4) Slashing damage.",
+        "attack_bonus": 8,
+        "damage": [
+          {
+            "dice": "3d6+4",
+            "type": "Slashing"
+          }
+        ]
+      },
+      {
+        "name": "Mind-Rending Roar (Recharge 5-6)",
+        "description": "Wisdom Saving Throw: DC 16, each enemy in a 300-foot Emanation originating from the sphinx. Failure: 35 (10d6) Psychic damage, and the target has the Incapacitated condition until the start of the sphinx's next turn.",
+        "damage": [
+          {
+            "dice": "10d6",
+            "type": "Psychic"
+          }
+        ]
+      },
+      {
+        "name": "Spellcasting",
+        "description": "The sphinx casts one of the following spells, requiring no Material components and using Intelligence as the spellcasting ability (spell save DC 16): At Will: Detect Magic, Identify, Mage Hand, Minor Illusion, Prestidigitation 1/Day Each: Dispel Magic, Legend Lore, Locate Object, Plane Shift, Remove Curse, Tongues"
+      }
+    ]
+  },
+  {
+    "entry_key": "androsphinx",
+    "name": "Sphinx of Valor",
+    "index": "androsphinx",
+    "size": "Large",
+    "type": "Celestial",
+    "alignment": "Lawful Neutral",
+    "armor_class": 17,
+    "hit_points": 199,
+    "hit_dice": "19d10",
+    "speed": {
+      "walk": "40 ft.",
+      "fly": "60 ft."
+    },
+    "abilities": {
+      "str": 22,
+      "dex": 10,
+      "con": 20,
+      "int": 16,
+      "wis": 23,
+      "cha": 18
+    },
+    "skills": [
+      {
+        "name": "Arcana",
+        "bonus": 9
+      },
+      {
+        "name": "Perception",
+        "bonus": 12
+      },
+      {
+        "name": "Religion",
+        "bonus": 15
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "truesight": "120 ft.",
+      "passive_perception": "22"
+    },
+    "languages": "Celestial, Common",
+    "challenge_rating": 17,
+    "xp": 18000,
+    "proficiency_bonus": 6,
+    "traits": [
+      {
+        "name": "Inscrutable",
+        "description": "No magic can observe the sphinx remotely or detect its thoughts without its permission. Wisdom (Insight) checks made to ascertain its intentions or sincerity are made with Disadvantage."
+      },
+      {
+        "name": "Legendary Resistance (3/Day, or 4/Day in Lair)",
+        "description": "If the sphinx fails a saving throw, it can choose to succeed instead."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The sphinx makes two Claw attacks and uses Roar."
+      },
+      {
+        "name": "Claw",
+        "description": "Melee Attack Roll: +12, reach 5 ft. Hit: 20 (4d6 + 6) Slashing damage.",
+        "attack_bonus": 12,
+        "damage": [
+          {
+            "dice": "4d6+6",
+            "type": "Slashing"
+          }
+        ]
+      },
+      {
+        "name": "Roar (3/Day)",
+        "description": "The sphinx emits a magical roar. Whenever it roars, the roar has a different effect, as detailed below (the sequence resets when it takes a Long Rest):"
+      },
+      {
+        "name": "First Roar",
+        "description": "Wisdom Saving Throw: DC 20, each enemy in a 500-foot Emanation originating from the sphinx. Failure: The target has the Frightened condition for 1 minute."
+      },
+      {
+        "name": "Second Roar",
+        "description": "Wisdom Saving Throw: DC 20, each enemy in a 500-foot Emanation originating from the sphinx. Failure: The target has the Paralyzed condition, and it repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically."
+      },
+      {
+        "name": "Third Roar",
+        "description": "Constitution Saving Throw: DC 20, each enemy in a 500-foot Emanation originating from the sphinx. Failure: 44 (8d10) Thunder damage, and the target has the Prone condition. Success: Half damage only.",
+        "damage": [
+          {
+            "dice": "8d10",
+            "type": "Thunder"
+          }
+        ]
+      },
+      {
+        "name": "Spellcasting",
+        "description": "The sphinx casts one of the following spells, requiring no Material components and using Wisdom as the spellcasting ability (spell save DC 20): At Will: Detect Evil and Good, Thaumaturgy 1/Day Each: Detect Magic, Dispel Magic, Greater Res- toration, Heroes' Feast, Zone of Truth"
+      }
+    ]
+  },
+  {
     "entry_key": "spirit-naga",
     "name": "Spirit Naga",
     "index": "spirit-naga",
@@ -13642,6 +14044,71 @@
           {
             "dice": "3d6",
             "type": "Thunder"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "veteran",
+    "name": "Warrior Veteran",
+    "index": "veteran",
+    "size": "Medium or Small",
+    "type": "Humanoid",
+    "alignment": "Neutral",
+    "armor_class": 17,
+    "hit_points": 65,
+    "hit_dice": "10d8",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "abilities": {
+      "str": 16,
+      "dex": 13,
+      "con": 14,
+      "int": 10,
+      "wis": 11,
+      "cha": 10
+    },
+    "skills": [
+      {
+        "name": "Athletics",
+        "bonus": 5
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "passive_perception": "12"
+    },
+    "languages": "Common plus one other language",
+    "challenge_rating": 3,
+    "xp": 700,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The warrior makes two Greatsword or Heavy Crossbow attacks."
+      },
+      {
+        "name": "Greatsword",
+        "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 10 (2d6 + 3) Slashing damage.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "2d6+3",
+            "type": "Slashing"
+          }
+        ]
+      },
+      {
+        "name": "Heavy Crossbow",
+        "description": "Ranged Attack Roll: +3, range 100/400 ft. Hit: 12 (2d10 + 1) Piercing damage.",
+        "attack_bonus": 3,
+        "damage": [
+          {
+            "dice": "2d10+1",
+            "type": "Piercing"
           }
         ]
       }
@@ -16885,7 +17352,7 @@
       },
       {
         "name": "Sting",
-        "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3) Piercing damage plus 11 (2d10) Poison damage. Giant Seahorse",
+        "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3) Piercing damage plus 11 (2d10) Poison damage.",
         "attack_bonus": 5,
         "damage": [
           {
@@ -16895,6 +17362,61 @@
           {
             "dice": "2d10",
             "type": "Poison"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "giant-sea-horse",
+    "name": "Giant Seahorse",
+    "index": "giant-sea-horse",
+    "size": "Large",
+    "type": "Beast",
+    "alignment": "Unaligned",
+    "armor_class": 14,
+    "hit_points": 16,
+    "hit_dice": "3d10",
+    "speed": {
+      "walk": "5 ft.",
+      "swim": "40 ft."
+    },
+    "abilities": {
+      "str": 15,
+      "dex": 12,
+      "con": 11,
+      "int": 2,
+      "wis": 12,
+      "cha": 5
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "passive_perception": "11"
+    },
+    "languages": "None",
+    "challenge_rating": 0.5,
+    "xp": 100,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Water Breathing",
+        "description": "The seahorse can breathe only underwater."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Ram",
+        "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 9 (2d6 + 2) Bludgeoning damage, or 11 (2d8 + 2) Bludgeoning damage if the seahorse moved 20+ feet straight toward the target immediately before the hit.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "2d6+2",
+            "type": "Bludgeoning"
+          },
+          {
+            "dice": "2d8+2",
+            "type": "Bludgeoning"
           }
         ]
       }
@@ -17094,11 +17616,67 @@
       },
       {
         "name": "Swallow",
-        "description": "The toad swallows a Medium or smaller target it is grappling. While swallowed, the target isn't Grappled but has the Blinded and Restrained conditions, and it has Total Cover against attacks and other effects outside the toad. In addition, the target takes 10 (3d6) Acid damage at the end of each of the toad's turns. The toad can have only one target swallowed at a time, and it can't use Bite while it has a swallowed target. If the toad dies, a swallowed creature is no longer Restrained and can escape from the corpse using 5 feet of movement, exiting with the Prone condition. Giant Venomous Snake",
+        "description": "The toad swallows a Medium or smaller target it is grappling. While swallowed, the target isn't Grappled but has the Blinded and Restrained conditions, and it has Total Cover against attacks and other effects outside the toad. In addition, the target takes 10 (3d6) Acid damage at the end of each of the toad's turns. The toad can have only one target swallowed at a time, and it can't use Bite while it has a swallowed target. If the toad dies, a swallowed creature is no longer Restrained and can escape from the corpse using 5 feet of movement, exiting with the Prone condition.",
         "damage": [
           {
             "dice": "3d6",
             "type": "Acid"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "giant-poisonous-snake",
+    "name": "Giant Venomous Snake",
+    "index": "giant-poisonous-snake",
+    "size": "Medium",
+    "type": "Beast",
+    "alignment": "Unaligned",
+    "armor_class": 14,
+    "hit_points": 11,
+    "hit_dice": "2d8",
+    "speed": {
+      "walk": "40 ft.",
+      "swim": "40 ft."
+    },
+    "abilities": {
+      "str": 10,
+      "dex": 18,
+      "con": 13,
+      "int": 2,
+      "wis": 10,
+      "cha": 3
+    },
+    "skills": [
+      {
+        "name": "Perception",
+        "bonus": 2
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "blindsight": "10 ft.",
+      "passive_perception": "12"
+    },
+    "languages": "None",
+    "challenge_rating": 0.25,
+    "xp": 50,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Bite",
+        "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 6 (1d4 + 4) Piercing damage plus 4 (1d8) Poison damage.",
+        "attack_bonus": 6,
+        "damage": [
+          {
+            "dice": "1d4+4",
+            "type": "Piercing"
+          },
+          {
+            "dice": "1d8",
+            "type": "Poison"
           }
         ]
       }
@@ -18616,16 +19194,7 @@
       "wis": 8,
       "cha": 2
     },
-    "skills": [
-      {
-        "name": "Perception",
-        "bonus": 2
-      },
-      {
-        "name": "Stealth",
-        "bonus": 5
-      }
-    ],
+    "skills": [],
     "saving_throws": [],
     "senses": {
       "blindsight": "10 ft.",
@@ -18639,7 +19208,7 @@
     "actions": [
       {
         "name": "Sting",
-        "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 1 Piercing damage plus 3 (1d6) Poison damage. Seahorse",
+        "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 1 Piercing damage plus 3 (1d6) Poison damage.",
         "attack_bonus": 2,
         "damage": [
           {
@@ -18647,6 +19216,59 @@
             "type": "Poison"
           }
         ]
+      }
+    ]
+  },
+  {
+    "entry_key": "sea-horse",
+    "name": "Seahorse",
+    "index": "sea-horse",
+    "size": "Tiny",
+    "type": "Beast",
+    "alignment": "Unaligned",
+    "armor_class": 12,
+    "hit_points": 1,
+    "hit_dice": "1d4",
+    "speed": {
+      "walk": "5 ft.",
+      "swim": "20 ft."
+    },
+    "abilities": {
+      "str": 1,
+      "dex": 12,
+      "con": 8,
+      "int": 1,
+      "wis": 10,
+      "cha": 2
+    },
+    "skills": [
+      {
+        "name": "Perception",
+        "bonus": 2
+      },
+      {
+        "name": "Stealth",
+        "bonus": 5
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "passive_perception": "12"
+    },
+    "languages": "None",
+    "challenge_rating": 0,
+    "xp": 0,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Water Breathing",
+        "description": "The seahorse can breathe only underwater."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Bubble Dash",
+        "description": "While underwater, the seahorse moves up to its Swim Speed without provoking Opportunity Attacks."
       }
     ]
   },
@@ -19109,12 +19731,63 @@
       },
       {
         "name": "Tail",
-        "description": "Melee Attack Roll: +10, reach 15 ft. Hit: 25 (4d8 + 7) Bludgeoning damage. If the target is a Huge or smaller creature, it has the Prone condition. Venomous Snake",
+        "description": "Melee Attack Roll: +10, reach 15 ft. Hit: 25 (4d8 + 7) Bludgeoning damage. If the target is a Huge or smaller creature, it has the Prone condition.",
         "attack_bonus": 10,
         "damage": [
           {
             "dice": "4d8+7",
             "type": "Bludgeoning"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "poisonous-snake",
+    "name": "Venomous Snake",
+    "index": "poisonous-snake",
+    "size": "Tiny",
+    "type": "Beast",
+    "alignment": "Unaligned",
+    "armor_class": 12,
+    "hit_points": 5,
+    "hit_dice": "2d4",
+    "speed": {
+      "walk": "30 ft.",
+      "swim": "30 ft."
+    },
+    "abilities": {
+      "str": 2,
+      "dex": 15,
+      "con": 11,
+      "int": 1,
+      "wis": 10,
+      "cha": 3
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "blindsight": "10 ft.",
+      "passive_perception": "10"
+    },
+    "languages": "None",
+    "challenge_rating": 0.125,
+    "xp": 25,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Bite",
+        "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 4 (1d4 + 2) Piercing damage plus 3 (1d6) Poison damage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "1d4+2",
+            "type": "Piercing"
+          },
+          {
+            "dice": "1d6",
+            "type": "Poison"
           }
         ]
       }
