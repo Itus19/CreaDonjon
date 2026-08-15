@@ -914,12 +914,12 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 
 **Ne pas se fier aux tableaux narratifs plus bas** (chacun est un instantané du jour où il a été écrit, jamais remis à jour après coup — c'est ce qui rend le suivi illisible d'une session à l'autre). Celui-ci est recalculé **directement en base** (compte des `ruleset_entries` avec une ligne `ruleset_entry_translations` en `fr`, tous types confondus) à chaque fois qu'une session touche à la traduction, et remplacé en entier — jamais complété à côté d'une ancienne valeur.
 
-**Dernière mesure : 15 août 2026.**
+**Dernière mesure : 15 août 2026 (après le point 11, dernier passage sur la 5.1).**
 
 | Catégorie | SRD 5.1 (2014) | SRD 5.2.1 (2024) |
 |---|---|---|
 | Aptitude | 348/348 ✅ | 498/636 |
-| Objet | 540/549 | 513/620 |
+| Objet | 548/549 | 513/620 |
 | Monstre | 334/334 ✅ | 324/334 |
 | Sort | 319/319 ✅ | 319/319 ✅ |
 | Arme | 37/37 ✅ | 41/41 ✅ |
@@ -930,11 +930,11 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 | Classe | 12/12 ✅ | 12/12 ✅ |
 | Condition | 15/15 ✅ | 15/15 ✅ |
 | Historique | 1/1 ✅ | 4/4 ✅ |
-| **Total** | **1682/1692 (99,4 %)** | **1821/2087 (87,3 %)** |
+| **Total** | **1690/1692 (99,9 %)** | **1821/2087 (87,3 %)** |
 
 **Lecture** : ce tableau compte les *noms* traduits (une ligne `ruleset_entry_translations` existe). Il ne dit rien de la richesse du contenu derrière (description traduite, mécanique 2024 réelle plutôt qu'un repli 2014 silencieux — voir V1-D6 pour Monstre, et le point 10 plus bas pour la découverte équivalente sur Sort). Un « ✅ » ici veut dire *noms complets*, pas *rien à vérifier d'autre*.
 
-La 5.1 est essentiellement terminée. Le travail restant sur la 5.2.1 se concentre sur deux masses : **Aptitude** (138 manquants) et **Objet** (107 manquants) — inchangé depuis le début de ce ticket, les deux plus gros chantiers n'ont jamais bougé de position.
+**5.1 (2014) : plafond réel atteint, 1690/1692.** Les 2 derniers manquants sont confirmés structurellement bloqués, pas des trous d'extraction : `sprig-of-mistletoe` (Objet — jamais nommé nulle part dans le texte comme entrée propre, seulement cité comme composante de sort) et `adventuring` (Règle — chapitre-chapeau sans contenu propre, son `desc` JSON est vide, tout son contenu réel vit dans 8 sous-chapitres déjà traduits séparément ; « Aventure » n'apparaît nulle part comme en-tête isolé). Le travail restant est entièrement sur la 5.2.1 (2024), concentré sur deux masses : **Aptitude** (138 manquants) et **Objet** (107 manquants).
 
 ---
 
