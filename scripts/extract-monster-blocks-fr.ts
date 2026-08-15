@@ -530,7 +530,15 @@ async function main() {
     }
 
     const traitsZoneEnd = actionsIdx === -1 ? zoneLines.length : actionsIdx;
-    const traitsZone = zoneLines.slice(0, traitsZoneEnd);
+    let traitsZone = zoneLines.slice(0, traitsZoneEnd);
+    // SRD 5.2.1 (2024) uniquement : un en-tete litteral "Traits" precede
+    // desormais la section, absent en 2014 (les traits suivaient le
+    // preambule directement). Jamais retire, le premier trait qui suit
+    // etait rejete a tort par precededByParagraphEnd (la ligne "Traits"
+    // seule ne se termine par aucune ponctuation de fin de phrase) — meme
+    // motif que "Actions", deja retire de la zone plus bas.
+    const traitsHeaderIdx = traitsZone.findIndex((l) => l.trim() === "Traits");
+    if (traitsHeaderIdx !== -1) traitsZone = traitsZone.slice(traitsHeaderIdx + 1);
 
     let actionsZone: string[] = [];
     if (actionsIdx !== -1) {
