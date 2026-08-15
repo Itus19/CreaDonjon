@@ -938,21 +938,7 @@ La 5.1 est essentiellement terminée. Le travail restant sur la 5.2.1 se concent
 
 ---
 
-Chaque point ci-dessous est dimensionné pour tenir dans une session (le débit réel de V1-D3 sert de référence : quatre dictionnaires + un générateur + 32 sections de prose vérifiées à la main en une session). **Comptes historiques, non remis à jour après leur passage — voir la table canonique ci-dessus pour l'état réel :**
-
-| Type | Noms 5.1 | Noms 5.2.1 |
-|---|---|---|
-| Espèce | 13/13 | 33/33 |
-| Historique | 1/1 | 4/4 |
-| Règle | 38/39 (32 avec prose) | 28/39 (23/39 avec prose) |
-| Classe | 12/12 (8 avec `spellcasting_progression`) | 12/12 (8/8 avec `spellcasting_progression`) |
-| Sous-classe | 12/12 | 21/21 |
-| Aptitude (`feature`) | 348/348 | 498/636 |
-| Sort | 319/319 | 319/319 |
-| Arme | 37/37 | 41/41 |
-| Armure | 13/13 | 13/13 |
-| Objet | 540/549 | 513/620 |
-| Monstre | 334/334 (333/334 avec `traits`/`actions`) | 324/334 — 292/334 avec `traits`/`actions` (donnée mécanique anglaise corrigée pour 294/334, voir V1-D6) |
+Chaque point ci-dessous est dimensionné pour tenir dans une session (le débit réel de V1-D3 sert de référence : quatre dictionnaires + un générateur + 32 sections de prose vérifiées à la main en une session). Pour les chiffres à jour, voir la table canonique ci-dessus — ce qui suit est le récit, pas le décompte.
 
 Arme 5.1 et 5.2.1 sont désormais **complètes** (le glaive manquant s'est révélé nommé « Coutille » dans le texte officiel, vérifié aux stats identiques : 1d10 tranchant, 3 kg, allonge/deux mains/lourde). Aptitude 5.1 est désormais **complète** (348/348 ; les 20 manquants — couleurs d'Ascendance draconique/Ancêtre draconique — ont été débloqués en construisant une carte par ligne de table plutôt qu'en cherchant une expression complète, voir point 10 cinquième passe).
 
@@ -1046,26 +1032,9 @@ Blocs de prose (5.1 uniquement) : 32 fiches de règle, 8 `spellcasting_progressi
    **Couverture finale, SRD 5.1 : 334/334 noms, 333/334 traits/actions (99,7 %).** Contrôle de fuite automatique (mots de type de créature au milieu d'une description) : zéro trouvé après écriture. Seul `night-hag` reste incomplet, documenté ci-dessus.
 
    Grâce à `buildMergedDataset`, la plupart des monstres 5.2.1 partagent le même `source_raw` que leur équivalent 5.1 — **reste à rejouer le même script sur `data/srd/fr-source/srd-5.2.1-fr.txt`** pour la 5.2.1 (non fait cette session, noms français encore trop incomplets côté 2024 — 303/334 — pour que la désambiguïsation par nom fonctionne aussi bien).
-9. ~~**Rapport de couverture final et clôture.**~~ **Fait le 13 août (deuxième session).** Comptes revérifiés en base pour tous les types, sur les deux rulesets, avec la distinction traduit / plafond structurel documenté / restant réellement ouvert. **Instantané du 13 août, non remis à jour depuis — pour l'état actuel, voir la table canonique en tête de ce ticket (V1-D3b, § « État actuel »).**
+9. ~~**Rapport de couverture final et clôture.**~~ **Fait le 13 août (deuxième session).** Comptes revérifiés en base pour tous les types, sur les deux rulesets, avec la distinction traduit / plafond structurel documenté / restant réellement ouvert. **Pour les chiffres à jour, voir la table canonique en tête de ce ticket (V1-D3b, § « État actuel »)** — les raisons de blocage nommées (`adventuring` : trou d'extraction PDF ; `night-hag` : « Night Hag Items » absent du texte source ; `sprig-of-mistletoe` : prose sans en-tête propre) restent valables, seuls les compteurs bougent.
 
-   | Type | 5.1 | Plafond ou reliquat 5.1 | 5.2.1 | Statut 5.2.1 |
-   |---|---|---|---|---|
-   | Espèce (noms) | 13/13 | atteint | **33/33** (voir V1-D3b point 10, septième passe) | atteint — 6 fiches obsolètes retirées (repli 2014 sous une clé jamais reprise en 2024), 39 n'était jamais le bon dénominateur |
-   | Historique (noms) | 1/1 | atteint | 4/4 | atteint |
-   | Règle (noms) | 38/39 | **plafond structurel** — `adventuring` : trou d'extraction PDF (page de titre décorative), pas un chapitre manquant | 28/39 | non retraité |
-   | Règle (prose officielle) | 32/39 fiches | reliquat volontaire : tables Équipement (déjà couvertes par les blocs V1-D1/D2, valeur ajoutée faible), reste non extrait | 0/39 | jamais commencé |
-   | Classe (noms) | 12/12 | atteint | 12/12 | atteint |
-   | Classe (`spellcasting_progression`) | 8/8 classes incantatrices | atteint | 0/8 | jamais commencé (point 4, non traité cette session) |
-   | Sous-classe (noms) | 12/12 | atteint | 21/21 | atteint |
-   | Aptitude (noms) | **348/348** (voir V1-D3b point 10, cinquième passe) | atteint | 436/636 | non retraité (vocabulaire 2024 propre, point 5) |
-   | Sort (noms) | 319/319 | atteint | 316/319 | non retraité — 3 manquants non examinés cette session |
-   | Arme (noms) | 37/37 | atteint | 41/41 | atteint |
-   | Armure (noms) | 13/13 | atteint | 12/13 | non retraité — 1 manquant non examiné cette session |
-   | Objet (noms) | **540/549** (voir V1-D3b point 10, cinquième passe — 68 des 76 « bloqués » en fait construits une carte par ligne de table) | proche du plafond réel — 8 manquants restants + 1 confirmé bloqué (`sprig-of-mistletoe`) | 432/620 | non retraité |
-   | Monstre (noms) | 334/334 | atteint | 321/334 | non retraité (a progressé incidemment de 303→321 : les 18 noms de forme lycanthrope/vampire, vérifiés contre les deux textes en une seule passe, V1-D3b point 7-8) |
-   | Monstre (`traits`/`actions`) | 333/334 | **quasi-plafond** — `night-hag` : trou réel du texte source (« Night Hag Items » absent de l'extraction française, vérifié par recherche des deux objets qu'il décrit ailleurs dans le texte) | 0/334 | jamais commencé (script réutilisable, nécessite des noms 5.2.1 plus complets pour la désambiguïsation) |
-
-   **Lecture du tableau** : la SRD 5.1 (2014) est désormais essentiellement complète — chaque type est soit à 100 %, soit à un plafond structurel vérifié et documenté nommément (jamais un pourcentage arrêté en cours de route sans preuve). La SRD 5.2.1 (2024) reste le chantier ouvert : la plupart des types n'ont pas été retraités cette session, et deux dimensions entières (prose de règle, `traits`/`actions` de monstre) n'y ont jamais été commencées. Les deux points de méthode qui ont permis d'aller aussi loin sur la 5.1 restent valables pour reprendre la 5.2.1 : ne jamais deviner un terme, toujours vérifier par le contenu mécanique distinctif plutôt que par une traduction supposée ; et rejouer `translate:entries`/`extract:monster-blocks` propage automatiquement tout candidat déjà vérifié aux deux rulesets à la fois (aucun retraitement manuel séparé nécessaire pour les termes déjà trouvés).
+   La SRD 5.1 (2014) est désormais essentiellement complète — chaque type est soit à 100 %, soit à un plafond structurel vérifié et documenté nommément (jamais un pourcentage arrêté en cours de route sans preuve). La SRD 5.2.1 (2024) reste le chantier ouvert. Les deux points de méthode qui ont permis d'aller aussi loin sur la 5.1 restent valables pour la 5.2.1 : ne jamais deviner un terme, toujours vérifier par le contenu mécanique distinctif plutôt que par une traduction supposée ; et rejouer `translate:entries`/`extract:monster-blocks` propage automatiquement tout candidat déjà vérifié aux deux rulesets à la fois.
 
 **Critères**
 - [x] Chaque type d'entrée atteint son plafond structurel documenté, pas un pourcentage arbitraire arrêté en cours de route — **vrai pour la 5.1**, pas encore pour la 5.2.1 (non retraitée).
