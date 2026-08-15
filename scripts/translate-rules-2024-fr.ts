@@ -147,7 +147,25 @@ const SPANS_2: RuleSpan[] = [
   { entryKey: "sentient-magic-items", ranges: [{ headerLine: 21275, headerText: "Objets magiques intelligents", nextHeaderLine: 21416 }] },
 ];
 
-const ALL_SPANS: RuleSpan[] = [...SPANS, ...SPANS_2];
+// Troisieme lot (V1-D3b, suite explicite sur "objects" apres l'avoir laisse
+// de cote la premiere fois) : trouve dans le "Glossaire de règles" lui-meme,
+// pas dans un chapitre narratif — mais un vrai contenu mecanique substantiel
+// (CA/PV/seuil de degats des objets, deux tables), pas une simple definition
+// d'une phrase comme la plupart des entrees de glossaire deja ecartees.
+// Nom en base "Objets", texte reel "Bris des objets" (verifie par lecture
+// directe) — meme convention que Couvert/Abri plus haut, nameFr sert
+// uniquement a verifier ce texte, jamais a ecraser le nom deja en base.
+const SPANS_3: RuleSpan[] = [
+  // Absorbe "Classe d'armure"/"Points de vie"/"Types de dégâts et
+  // objets"/"Seuil de dégâts"/"Absence de valeurs de caractéristique",
+  // tous des sous-puces du meme article de glossaire (motif "Label.
+  // contenu", verifie par lecture continue). Borne haute : "Campagne"
+  // (18488) ouvre une entree alphabetique suivante sans rapport (le
+  // glossaire est trie A -> Z), pas une sous-partie de Bris des objets.
+  { entryKey: "objects", ranges: [{ headerLine: 18441, headerText: "Bris des objets", nextHeaderLine: 18488 }] },
+];
+
+const ALL_SPANS: RuleSpan[] = [...SPANS, ...SPANS_2, ...SPANS_3];
 
 function extractBody(lines: string[], range: RuleRange): string {
   const headerLines = range.headerLines ?? 1;
