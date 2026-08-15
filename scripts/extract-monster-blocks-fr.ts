@@ -102,8 +102,12 @@ const HEADER_ALONE_RE = /^([A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜŸÇ][^.!?:]{1,89}?)\
 // article defini/indefini (premiere phrase d'un paragraphe d'ambiance
 // generique apres la derniere action reelle, ex. "Les ecclésiastiques
 // livrent au peuple...", Ecclésiastique — V1-D3b).
+// "En cas " ajoute (Cube gélatineux, SRD 5.2.1, V1-D3b) : "En cas de
+// réussite, la cible s'évade..." coupe par la mise en page en plein milieu
+// d'une phrase de resolution de degats, matchait a tort le motif d'en-tete
+// faute d'un prefixe "En " generique dans la liste (seul "En outre" y figurait).
 const SENTENCE_FRAGMENT_RE =
-  /^(Sur |Si |Quand |Lorsqu|Tant que|Après avoir|Alors que|Ainsi|Ensuite|Toutefois|Cependant|Par ailleurs|En outre|De plus|Dans ce cas|Les |Des |Une |Un |L’|La |Le |Ces |Cette |Chaque |Certains |Certaines |Tout |Tous |Toute |Toutes |Beaucoup |Plusieurs |Il |Elle |Ils |Elles |Vous |On )/;
+  /^(Sur |Si |Quand |Lorsqu|Tant que|Après avoir|Alors que|Ainsi|Ensuite|Toutefois|Cependant|Par ailleurs|En outre|En cas |De plus|Dans ce cas|Les |Des |Une |Un |L’|La |Le |Ces |Cette |Chaque |Certains |Certaines |Tout |Tous |Toute |Toutes |Beaucoup |Plusieurs |Il |Elle |Ils |Elles |Vous |On )/;
 
 function rejectsAsHeader(name: string): boolean {
   return (
@@ -118,11 +122,13 @@ function rejectsAsHeader(name: string): boolean {
     // large rejetait a tort de vrais traits comme "Résistance au renvoi"
     // (Résistance au renvoi des morts-vivants, Liche, V1-D3b).
     /^(Vulnérabilité|Résistance|Immunité)s? (aux dégâts|\()/.test(name) ||
-    // "DD 13." coupe par la mise en page du PDF au milieu d'une phrase
-    // ("test de Force (Athlétisme) \nDD 13. À son tour...") matche a tort
-    // le motif "Nom. description" — jamais un vrai nom de trait/action
-    // (Manteleur/Mante obscure, V1-D3b, SRD 5.2.1).
-    /^DD \d+$/.test(name) ||
+    // "DD 13." ou "DD 15 à condition que..." coupe par la mise en page du
+    // PDF au milieu d'une phrase ("test de Force (Athlétisme) \nDD 13. À
+    // son tour...", "...DD 15 à condition que le golem l'entende.") matche
+    // a tort le motif "Nom. description" — jamais un vrai nom de
+    // trait/action, toujours une reference de DD en cours de phrase
+    // (Manteleur/Mante obscure, Golem de chair, V1-D3b, SRD 5.2.1).
+    /^DD \d+\b/.test(name) ||
     SENTENCE_FRAGMENT_RE.test(name)
   );
 }
@@ -182,7 +188,13 @@ function precededByParagraphEnd(lines: string[], i: number): boolean {
   for (let j = i - 1; j >= 0; j--) {
     const prev = lines[j].trim();
     if (prev.length === 0) continue;
-    if (/[.!?)]\s*$/.test(prev)) return true;
+    // ":" accepte comme fin de "paragraphe" en plus de ".!?)" : un trait
+    // parent peut introduire une sous-liste de sous-traits nommes par un
+    // deux-points ("Faiblesses des vampires. ... suivantes :"), chacun un
+    // vrai en-tete distinct dans le decompte anglais (Vampirien, V1-D3b,
+    // SRD 5.2.1 — "Défense d'entrer" suivait sans etre reconnu, faisant
+    // echouer le compte de 6 traits attendus a 5 trouves).
+    if (/[.!?):]\s*$/.test(prev)) return true;
     return precededBySpellFrequencyListTail(lines, j);
   }
   return true;

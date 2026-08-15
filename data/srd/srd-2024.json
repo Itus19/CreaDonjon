@@ -37838,7 +37838,7 @@
         },
         {
           "name": "Attach",
-          "desc": "Melee Attack Roll: +6, reach 5 ft. Hit: 13 (3d6 + 3) Piercing damage. If the target is a Large or smaller creature, the cloaker attaches to it. While the cloaker is attached, the target has the Blinded condition, and the cloaker can't make Attach attacks against other targets. In addition, the cloaker halves the damage it takes (round down), and the target takes the same amount of damage.",
+          "desc": "Melee Attack Roll: +6, reach 5 ft. Hit: 13 (3d6 + 3) Piercing damage. If the target is a Large or smaller creature, the cloaker attaches to it. While the cloaker is attached, the target has the Blinded condition, and the cloaker can't make Attach attacks against other targets. In addition, the cloaker halves the damage it takes (round down), and the target takes the same amount of damage. The cloaker can detach itself by spending 5 feet of movement. The target or a creature within 5 feet of it can take an action to try to detach the cloaker, doing so by succeeding on a DC 14 Strength (Athletics) check.",
           "attack_bonus": 6,
           "damage": [
             {
@@ -37848,11 +37848,6 @@
               }
             }
           ]
-        },
-        {
-          "name": "The cloaker can detach itself by spending 5 feet of movement",
-          "desc": "The target or a creature within 5 feet of it can take an action to try to detach the cloaker, doing so by succeeding on a DC 14 Strength (Athletics) check.",
-          "damage": []
         },
         {
           "name": "Tail",
@@ -45417,11 +45412,7 @@
         },
         {
           "name": "Soul Bag",
-          "desc": "The hag has a soul bag. While holding or carrying the bag, the hag can use its Nightmare Haunting action."
-        },
-        {
-          "name": "The bag has AC 15, HP 20, and Resistance to all damage",
-          "desc": "The bag turns to dust if reduced to 0 Hit Points. If the bag is destroyed, any souls the bag is holding are released. The hag can create a new bag after 7 days."
+          "desc": "The hag has a soul bag. While holding or carrying the bag, the hag can use its Nightmare Haunting action. The bag has AC 15, HP 20, and Resistance to all damage. The bag turns to dust if reduced to 0 Hit Points. If the bag is destroyed, any souls the bag is holding are released. The hag can create a new bag after 7 days."
         }
       ],
       "actions": [
@@ -49188,7 +49179,7 @@
       "actions": [
         {
           "name": "Proboscis",
-          "desc": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6 + 3) Piercing damage, and the stirge attaches to the target. While attached, the stirge can't make Proboscis attacks, and the target takes 5 (2d4) Necrotic damage at the start of each of the stirge's turns.",
+          "desc": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6 + 3) Piercing damage, and the stirge attaches to the target. While attached, the stirge can't make Proboscis attacks, and the target takes 5 (2d4) Necrotic damage at the start of each of the stirge's turns. The stirge can detach itself by spending 5 feet of its movement. The target or a creature within 5 feet of it can detach the stirge as an action.",
           "attack_bonus": 5,
           "damage": [
             {
@@ -49204,11 +49195,6 @@
               }
             }
           ]
-        },
-        {
-          "name": "The stirge can detach itself by spending 5 feet of its movement",
-          "desc": "The target or a creature within 5 feet of it can detach the stirge as an action.",
-          "damage": []
         }
       ],
       "url": "/api/2024/monsters/stirge"
@@ -53306,13 +53292,15 @@
         },
         {
           "name": "Swallow",
-          "desc": "The frog swallows a Small or smaller target it is grappling. While swallowed, the target isn't Grappled but has the Blinded and Restrained conditions, and it has Total Cover against attacks and other effects outside the frog. While swallowing the target, the frog can't use Bite, and if the frog dies, the swallowed target is no longer Restrained and can escape from the corpse using 5 feet of movement, exiting with the Prone condition.",
-          "damage": []
-        },
-        {
-          "name": "At the end of the frog's next turn, the swallowed target takes 5 (2d4) Acid damage",
-          "desc": "If that damage doesn't kill it, the frog disgorges it, causing it to exit Prone.",
-          "damage": []
+          "desc": "The frog swallows a Small or smaller target it is grappling. While swallowed, the target isn't Grappled but has the Blinded and Restrained conditions, and it has Total Cover against attacks and other effects outside the frog. While swallowing the target, the frog can't use Bite, and if the frog dies, the swallowed target is no longer Restrained and can escape from the corpse using 5 feet of movement, exiting with the Prone condition. At the end of the frog's next turn, the swallowed target takes 5 (2d4) Acid damage. If that damage doesn't kill it, the frog disgorges it, causing it to exit Prone.",
+          "damage": [
+            {
+              "damage_dice": "2d4",
+              "damage_type": {
+                "name": "Acid"
+              }
+            }
+          ]
         }
       ],
       "url": "/api/2024/monsters/giant-frog"

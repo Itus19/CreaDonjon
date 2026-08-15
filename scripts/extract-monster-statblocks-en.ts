@@ -210,11 +210,20 @@ function parseTailFields(preamble: string) {
 // courte close par un point suivi d'une espace, avant la description.
 const HEADER_RE = /^([A-Z][^.!?:]{1,89}?)\.\s+(.*)$/;
 
+// Un vrai nom de trait/action est un groupe nominal court, jamais une
+// phrase complete (sujet + verbe) coupee par la mise en page au milieu
+// d'un paragraphe — meme motif deja durci cote francais
+// (SENTENCE_FRAGMENT_RE), jamais applique ici avant que Cloaker/Stirge/
+// Giant Frog/Night Hag ne revelent le trou (V1-D3b, deuxieme passe) :
+// "The cloaker can detach itself by spending 5 feet of movement." matchait
+// a tort HEADER_RE, gonflant le compte d'actions attendu de 1 en trop.
+const SENTENCE_FRAGMENT_RE = /^(The|A|An|If|When|While|This|It|They|She|He|You|Once|After|As|In|On|At|Each|Any|Some|Many|Most|All|Other)\b/;
+
 function extractZoneEntries(lines: string[]): ZoneEntry[] {
   const headers: { index: number; name: string; rest: string }[] = [];
   for (let i = 0; i < lines.length; i++) {
     const m = HEADER_RE.exec(lines[i].trim());
-    if (m) headers.push({ index: i, name: m[1].trim(), rest: m[2].trim() });
+    if (m && !SENTENCE_FRAGMENT_RE.test(m[1].trim())) headers.push({ index: i, name: m[1].trim(), rest: m[2].trim() });
   }
   const entries: ZoneEntry[] = [];
   for (let h = 0; h < headers.length; h++) {
