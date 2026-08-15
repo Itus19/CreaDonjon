@@ -919,7 +919,7 @@ Chaque point ci-dessous est dimensionné pour tenir dans une session (le débit 
 | Règle | **38/39** (32 avec prose) | 28/39 |
 | Classe | 12/12 (8 avec `spellcasting_progression`) | 12/12 (**8/8** avec `spellcasting_progression`) |
 | Sous-classe | 12/12 | 21/21 |
-| Aptitude (`feature`) | **328/348** | **473/636** (plafond réel bien plus bas que 636, voir point 10) |
+| Aptitude (`feature`) | **328/348** | **478/636** (plafond réel bien plus bas que 636, voir point 10) |
 | Sort | 319/319 | **319/319** |
 | Arme | **37/37** | **41/41** |
 | Armure | 13/13 | **13/13** |
@@ -1072,6 +1072,14 @@ Blocs de prose (5.1 uniquement) : 32 fiches de règle, 8 `spellcasting_progressi
     - **Ascendance draconique / Ancêtres draconiques** (`draconic-ancestry-*`, `dragon-ancestor-*`, `draconic-breath-weapon-*`, `draconic-damage-resistance-*`, ~26 `entry_key` au total) → confirmé structurellement bloqué comme en 5.1 : une table à deux colonnes (dragon → type de dégâts) dans le trait Drakéide **et** dans la sous-classe Sorcellerie draconique de l'Ensorceleur, jamais un nom complet en expression unique.
 
     **Conclusion, avant de changer de méthode comme convenu** : le plafond réel de l'Aptitude 5.2.1 est très probablement bien inférieur à 636 — une bonne partie du reliquat restant (~160 `entry_key`) hérite du détail granulaire de la SRD 2014 (variantes numérotées, invocations nommées, sous-classes secondaires) que la SRD 2024 gratuite ne reprend pas du tout, ayant réduit son contenu au strict nécessaire des règles de base. Chercher ces ~160 noms un par un donnerait un rendement très faible pour un coût élevé — l'étape utile suivante n'est plus la recherche terme à terme mais un **tri systématique par famille** (regarder chaque groupe de `entry_key` numérotés/variantes une seule fois, comme fait ici pour quatre familles, plutôt que candidat par candidat) avant de rouvrir ce chantier.
+
+    **Passe complémentaire (avant de basculer sur les monstres) — 5 trouvés (473 → 478/636), et une nuance importante à la conclusion ci-dessus : toutes les familles à variantes numérotées ne sont pas consolidées.**
+    - **Arcanum mystique** (`mystic-arcanum-6th-level` à `-9th-level`, Occultiste) → **contre-exemple à Inspiration bardique/Conduit divin/Invocations occultes** : les quatre paliers restent des sous-titres distincts et vérifiables mot pour mot dans la table de progression « Aptitudes de l'Occultiste » (« Arcanum mystique (sort du 6e/7e/8e/9e niveau) »), pas consolidés en une seule aptitude. Chaque famille numérotée doit donc être vérifiée individuellement plutôt que de généraliser la conclusion précédente à tout le reliquat.
+    - **`monk-empowered-strikes`** → « Frappes renforcées », retrouvé à la fois en cellule de table (niveau 6) et comme titre de section (« Niveau 6 : Frappes renforcées »).
+    - **Classe Moine, creusée en profondeur pour le reste du reliquat (ki, deflect-missiles, purity-of-body, tongue-of-the-sun-and-moon, diamond-soul, empty-body, monk-timeless-body, monk-monks-focus, monk-heightened-focus, monk-perfect-focus, open-hand-fleet-step, patient-defense) — rendement très faible, chapitre entièrement redessiné.** Le Ki est renommé « Crédo du Moine »/« Points de Crédo », et la plupart des aptitudes listées semblent absorbées ou renommées dans de nouveaux concepts 2024 (Autosubsistance, Parade énergétique, Survivant discipliné...) sans correspondance 1:1 fiable — forcer un rapprochement risquerait une fausse équivalence, donc rien d'autre retenu de cette classe malgré une lecture complète du chapitre (lignes 6098-6410 de `srd-5.2.1-fr.txt`).
+    - **Sorcellerie draconique (Ensorceleur) vérifiée indépendamment** (lignes 5257-5300) : confirme, sans la contredire, la conclusion déjà posée pour `draconic-ancestry-*` — le mécanisme par couleur de dragon est entièrement remplacé par « Résistance draconique » (bonus DV/CA générique) et « Affinité élémentaire » (choix d'un type de dégâts parmi cinq, résistance générique), sans sous-titre par couleur.
+    - **Autres familles vérifiées, zéro résultat** : Critique implacable (Barbare), Chant du repos (Barde), Explorateur-né (Rôdeur), Destruction des morts-vivants (Clerc) — confirmé consolidées ou disparues, pas de qualificatif par palier retrouvé.
+    - **Rendement en forte baisse** : une lecture de chapitre de classe entier pour un seul résultat net (Moine). Point d'arrêt naturel pour l'Aptitude à ce stade, sauf nouvelle piste identifiée.
 
     **Objet (188 manquants) — 37 trouvés (432 → 469/620), et une leçon de méthode plus importante que le chiffre.**
 
