@@ -1154,6 +1154,32 @@ Le besoin : un MJ possède les manuels complets (2014/2024) et veut y accéder d
 - [ ] Le badge « référence personnelle » est visible sur toute fiche de règle qui en provient.
 - [ ] Une recherche dans le dépôt sur cinq noms de créatures hors SRD ne remonte rien.
 
+### V1-D6 — Corriger la donnée mécanique des monstres SRD 5.2.1 (CA/Pv/traits/actions réellement 2014) · `L`
+
+**Découverte en marge de V1-D3b, point 10, pas un simple ajustement de script.** En cherchant pourquoi `wolf` reste bloqué à 1 trait trouvé sur 2 attendus par `extract-monster-blocks-fr.ts`, la cause n'est pas un bug de découpage : les données anglaises importées pour ce monstre (`ruleset_entries.source_raw`, `ruleset_entry_blocks` traits/actions/stat_block) viennent de `/api/2014/monsters/wolf`, alors que l'entrée appartient au ruleset **5.2.1**. Généralisé à tout le bestiaire : **331/334 monstres du ruleset 5.2.1 portent des données sourcées 2014** (`source_raw.url` contient `/2014/`), seuls 3 (Aboleth, Adult Black Dragon, Adult Blue Dragon) ont de vraies données 2024. Cause en amont, déjà documentée dans un commentaire d'`ingest-srd.ts` (ligne ~712, « vérifié : 334/334 monstres 2014, 3/3 2024 ») : `data/srd/srd-2024.json` (jeu de données JSON structuré, format API) ne contient que 3 monstres pour l'édition 2024 — ce n'est pas un import incomplet côté projet, la donnée n'existe simplement pas dans le fichier source.
+
+**Vérifié en direct sur la source amont avant d'ouvrir ce ticket** (15 août 2026) : le dataset communautaire `5e-bits/5e-database` (celui dont est dérivé `srd-2024.json`, données CC-BY-4.0/code MIT) n'a toujours que 3 monstres 2024 à ce jour — pas un problème de version obsolète de notre côté, la donnée structurée n'existe simplement pas encore dans l'écosystème open-source consulté.
+
+**Portée du problème, plus large que la traduction française** : le texte français (`srd-5.2.1-fr.txt`, déjà utilisé pour V1-D3b) est un vrai document 2024 avec le format CA/Pv/Initiative correct pour les 334 monstres. Mais la donnée anglaise structurée en base — CA, Pv, traits, actions — reste 2014 pour 331 d'entre eux, **y compris dans le moteur de règles et l'affichage aux utilisateurs**, pas seulement dans ce script d'extraction FR. Exemple concret : Loup 2024 (texte officiel) a CA 12, Pv 11, un seul trait (Tactique de meute — Perception affûtée retirée, son effet est absorbé par la Perception passive) ; la donnée 2014 encore utilisée dit CA 13, Pv 11, deux traits.
+
+**Première étape déjà faite** : le PDF officiel anglais de la SRD 5.2.1 (même source que les PDF français déjà dans le dépôt, licence CC-BY-4.0, attribution déjà couverte par `NOTICE.md` — le texte de la licence est par édition, pas par langue) a été téléchargé et son texte extrait :
+- `data/srd/en-source/SRD_CC_v5.2.1_EN.pdf` (source : https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf)
+- `data/srd/en-source/srd-5.2.1-en.txt` (`pdftotext` **sans** `-layout` : le mode `-layout` entrelace les deux colonnes de la mise en page en blocs de texte incohérents sur les pages à plusieurs monstres ; le mode simple restitue un flux linéaire propre, vérifié sur le bloc complet du Loup — nom, type, CA/Pv/Vitesse, Traits, Actions, tous lisibles et corrects dans l'ordre).
+
+**Complication identifiée, à investiguer avant d'écrire un parseur** : l'annexe des monstres n'est pas un seul passage alphabétique A→Z continu comme en 2014 — `Winter Wolf`/`Wraith`/`Zombie` apparaissent tous **avant** `Wolf` dans le flux extrait, alors que l'ordre alphabétique simple les placerait après. Hypothèse à vérifier : regroupement par catégorie (Bête/Mort-vivant/...) avec ordre alphabétique interne à chaque groupe, plutôt qu'un seul tri global — déterminant pour la stratégie de bornage de zone (le script FR borne chaque monstre par la position du suivant dans le texte, ce qui suppose de connaître l'ordre réel).
+
+**Livrables**
+- Comprendre et documenter la structure réelle de l'annexe des monstres 2024 anglaise (groupement, ordre, marqueurs de section) avant d'écrire quoi que ce soit.
+- Un parseur (nouveau script, sur le modèle de `extract-monster-blocks-fr.ts` mais plus large : CA, Pv, Vitesse, Initiative, caractéristiques, compétences, sens, langues, FP/PX, traits, actions) qui reconstruit une donnée structurée 2024 fidèle pour les 331 monstres concernés.
+- Une décision explicite sur la mécanique d'écriture : nouvelle révision mécanique (`mechanical_revisions`, immuable — CLAUDE.md règle 13) plutôt qu'une modification de `source_raw`/`ruleset_entries` existants, à confirmer avant d'écrire en base.
+- Rejouer `extract-monster-blocks-fr.ts --srd 5.2.1` une fois les comptes de traits/actions anglais corrigés : le taux de réussite actuel (70/334) devrait progresser significativement, les échecs de décompte actuels étant en bonne partie dus à ce décalage 2014/2024, pas à un vrai problème de découpage du texte français.
+
+**Critères**
+- [ ] La structure de l'annexe des monstres 2024 (groupement/ordre) est documentée avant tout code de production.
+- [ ] Un échantillon d'au moins 20 monstres couvrant plusieurs types de créature a ses CA/Pv/traits/actions 2024 vérifiés mot pour mot contre `srd-5.2.1-en.txt` avant d'écrire en base à grande échelle.
+- [ ] Les monstres absents du bestiaire 2024 restent non écrits plutôt que de conserver silencieusement leurs stats 2014 sous l'étiquette 5.2.1 (mieux vaut un trou visible qu'une donnée fausse affichée comme officielle).
+- [ ] `npm run typecheck && npm run lint && npm run test` passent après écriture.
+
 ---
 
 ## Lot E — Outils de MJ déterministes
@@ -1233,7 +1259,7 @@ D-01 … D-04           dette, une session                        [fait]
 Lot A                 les règles consultables et personnalisables [fait]
 Lot B                 le personnage jouable                       [fait]
 Lot C  (C1 … C18)     permissions réelles, fiche jouable affinée  [fait]
-Lot D  (D1→D2→D3→D4→D5) le moteur de règles complet, en français, plus la référence personnelle
+Lot D  (D1→D2→D3→D4→D5→D6) le moteur de règles complet, en français, plus la référence personnelle et la correction des données monstre 2024
 Lot E  (E1→E6)        outils de MJ déterministes
 Lot F  (F1→F2→F3→F4)  l'IA, instrumentée dès le premier appel
 ```
