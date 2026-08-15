@@ -124,16 +124,46 @@ const CATEGORY_RENAMES_2014_TO_2024: Record<string, string> = {
 };
 
 /**
+ * Index 2014 (categorie cible post-renommage -> index) a exclure de la base
+ * avant fusion : mergeByIndex ne peut reconnaitre un remplacement que si les
+ * DEUX jeux de donnees partagent le meme `index` (ex. cloaker/cloaker). Pour
+ * les lignages d'espece 2024, WotC a change le decoupage ET la cle en meme
+ * temps (Subraces "high-elf"/"rock-gnome" -> Subspecies
+ * "elven-lineage-high-elf"/"gnomish-lineage-rock-gnome") : sans cette
+ * exclusion, les deux versions coexistent en base sous ruleset 5.2.1 (l'une
+ * avec la vraie mecanique 2024, l'autre avec la mecanique 2014 — bonus de
+ * caracteristique qui n'existe plus en 2024 — silencieusement). Verifie mot
+ * pour mot dans data/srd/fr-source/srd-5.2.1-fr.txt avant d'exclure quoi que
+ * ce soit (V1-D3b, sixieme passe) :
+ *  - high-elf / rock-gnome : doublon confirme, le contenu 2024 existe bel et
+ *    bien mais sous elven-lineage-high-elf / gnomish-lineage-rock-gnome.
+ *  - half-elf / half-orc / hill-dwarf / lightfoot-halfling : aucun
+ *    equivalent 2024 sous quelque cle que ce soit (retrait de contenu
+ *    confirme par lecture directe du chapitre Especes, ligne 8291-8438 :
+ *    Halfelin et Nain n'ont plus de table de sous-lignage, Demi-elfe/
+ *    Demi-orc n'apparaissent nulle part).
+ */
+const SUPERSEDED_2014_SPECIES_INDICES: Record<string, Set<string>> = {
+  Species: new Set(["half-elf", "half-orc"]),
+  Subspecies: new Set(["high-elf", "rock-gnome", "hill-dwarf", "lightfoot-halfling"]),
+};
+
+/**
  * Fusionne deux tableaux d'objets SRD par leur `index` stable : les
  * elements de `overrides` remplacent entierement ceux de `base` partageant
  * le meme index (jamais un merge champ par champ — une revision 2024 d'un
  * sort est un texte complet, pas un patch), les elements de base sans
  * correspondance sont conserves tels quels, et les elements de overrides
- * sans correspondance sont ajoutes.
+ * sans correspondance sont ajoutes. `excludedBaseIndices` retire des elements
+ * de base AVANT la fusion (SUPERSEDED_2014_SPECIES_INDICES) : un remplacement
+ * confirme sous une cle differente, jamais une simple absence de recoupement.
  */
-function mergeByIndex(base: SrdRecord[], overrides: SrdRecord[]): SrdRecord[] {
+function mergeByIndex(base: SrdRecord[], overrides: SrdRecord[], excludedBaseIndices?: Set<string>): SrdRecord[] {
   const byIndex = new Map<string, SrdRecord>();
-  for (const item of base) byIndex.set(String(item.index), item);
+  for (const item of base) {
+    if (excludedBaseIndices?.has(String(item.index))) continue;
+    byIndex.set(String(item.index), item);
+  }
   for (const item of overrides) byIndex.set(String(item.index), item);
   return [...byIndex.values()];
 }
@@ -150,7 +180,11 @@ function buildMergedDataset(
 
   for (const [baseCategory, baseItems] of Object.entries(base)) {
     const targetCategory = CATEGORY_RENAMES_2014_TO_2024[baseCategory] ?? baseCategory;
-    merged[targetCategory] = mergeByIndex(baseItems, overrides[targetCategory] ?? []);
+    merged[targetCategory] = mergeByIndex(
+      baseItems,
+      overrides[targetCategory] ?? [],
+      SUPERSEDED_2014_SPECIES_INDICES[targetCategory]
+    );
   }
 
   const handledTargets = new Set(Object.keys(merged));
