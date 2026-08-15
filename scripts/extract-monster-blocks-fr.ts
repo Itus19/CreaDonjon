@@ -404,9 +404,12 @@ async function main() {
   // Localise l'en-tete confirme de chaque monstre : parmi toutes les
   // occurrences de son nom francais en debut de ligne, celle suivie de sa
   // CA et ses PV (depuis stat_block, deja importe) dans les ~20 lignes
-  // suivantes.
-  const CA_RE = (ac: number) => new RegExp(`Classe d.armure ${ac}\\b`);
-  const HP_RE = (hp: number) => new RegExp(`Points de vie ${hp} \\(`);
+  // suivantes. Formes differentes entre editions : 5.1 dit "Classe
+  // d'armure X"/"Points de vie X (", 5.2.1 abrege en "CA X"/"Pv X (" — les
+  // deux motifs sont acceptes, jamais un seul suppose, puisque le script
+  // sert desormais aux deux (--srd 5.2.1).
+  const CA_RE = (ac: number) => new RegExp(`(?:Classe d.armure|CA) ${ac}\\b`);
+  const HP_RE = (hp: number) => new RegExp(`(?:Points de vie|Pv) ${hp} \\(`);
 
   const nameLineIndices = new Map<string, number[]>();
   for (let i = 0; i < allLines.length; i++) {
@@ -547,9 +550,19 @@ async function main() {
       // sans bloc de caracteristiques propre (giant-rat-diseased, meme
       // motif) : leur contenu n'est jamais compte dans les traits/actions
       // du monstre de base par la source anglaise, jamais une action a
-      // extraire ici.
+      // extraire ici. "Actions Bonus" (SRD 5.2.1 uniquement, absent en
+      // 2014) manquait a cette liste : sans lui, la derniere action
+      // "normale" avalait tout jusqu'au prochain arret reconnu, y compris
+      // le monstre suivant en entier quand aucun des trois autres arrets
+      // n'intervenait avant lui (verifie sur Prêtre -> Pseudodragon,
+      // detecte par le garde-fou de fuite existant plus bas).
       const stopIdx = rest.findIndex(
-        (l) => l.trim() === "Réactions" || l.trim() === "Aptitudes légendaires" || l.trim() === "Actions légendaires" || /^Variante ?:/.test(l.trim())
+        (l) =>
+          l.trim() === "Réactions" ||
+          l.trim() === "Actions Bonus" ||
+          l.trim() === "Aptitudes légendaires" ||
+          l.trim() === "Actions légendaires" ||
+          /^Variante ?:/.test(l.trim())
       );
       actionsZone = stopIdx === -1 ? rest : rest.slice(0, stopIdx);
     }

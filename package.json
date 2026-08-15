@@ -19,7 +19,8 @@
     "translate:spell-descriptions": "tsx --env-file=.env.local scripts/translate-spell-descriptions-fr.ts",
     "translate:class-spellcasting": "tsx --env-file=.env.local scripts/translate-class-spellcasting-fr.ts",
     "translate:rules": "tsx --env-file=.env.local scripts/translate-rules-fr.ts",
-    "extract:monster-blocks": "tsx --env-file=.env.local scripts/extract-monster-blocks-fr.ts"
+    "extract:monster-blocks": "tsx --env-file=.env.local scripts/extract-monster-blocks-fr.ts",
+    "extract:monster-statblocks-en": "tsx --env-file=.env.local scripts/extract-monster-statblocks-en.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
