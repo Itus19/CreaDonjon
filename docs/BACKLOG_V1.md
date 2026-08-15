@@ -910,21 +910,49 @@ Le morceau le plus long du lot, et le plus mécanique. Voir §6 pour la méthode
 
 Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évitable, sur les deux rulesets. **Une nuance à poser avant de commencer, pas à découvrir en cours de route** : V1-A5 a déjà mis au jour plusieurs familles d'entrées structurellement invérifiables mot pour mot (variantes de forme — loup-garou, vampire — une seule fiche officielle pour plusieurs `entry_key` ; sous-types tabulaires — Ring of Resistance, Potion/Ceinturon of X Giant Strength, Barding, Dragon Scale Mail, Spell Scroll par niveau — nommés uniquement dans une colonne de tableau, jamais en expression complète ; contenu réellement absent d'une édition — Demi-elfe hors SRD 2024, `Contingency` hors SRD 5.2.1). Pour ces familles, « complet » veut dire *toutes les entrées vérifiables sont vérifiées*, pas 100 % littéral — un compteur qui plafonne sous 100 % avec le reliquat listé nommément n'est pas un échec de ce ticket, tant que rien n'est deviné pour combler l'écart. **Correction du 13 août** : cette liste incluait à tort « Ioun Stone » et « Ring of Elemental Command », en réalité nommés individuellement dans le texte officiel (en-têtes en gras au sein d'une prose partagée, pas une table) — voir point 6. Ne jamais présumer qu'une famille entière est bloquée sans avoir lu l'entrée en entier au moins une fois.
 
-Chaque point ci-dessous est dimensionné pour tenir dans une session (le débit réel de V1-D3 sert de référence : quatre dictionnaires + un générateur + 32 sections de prose vérifiées à la main en une session). Comptes vérifiés en base **le 13 août 2026** (deuxième relevé, après le point 1 étendu et le point 5 pour la 5.1 — voir plus bas) :
+#### État actuel — table canonique, unique source de vérité
+
+**Ne pas se fier aux tableaux narratifs plus bas** (chacun est un instantané du jour où il a été écrit, jamais remis à jour après coup — c'est ce qui rend le suivi illisible d'une session à l'autre). Celui-ci est recalculé **directement en base** (compte des `ruleset_entries` avec une ligne `ruleset_entry_translations` en `fr`, tous types confondus) à chaque fois qu'une session touche à la traduction, et remplacé en entier — jamais complété à côté d'une ancienne valeur.
+
+**Dernière mesure : 15 août 2026.**
+
+| Catégorie | SRD 5.1 (2014) | SRD 5.2.1 (2024) |
+|---|---|---|
+| Aptitude | 348/348 ✅ | 498/636 |
+| Objet | 540/549 | 513/620 |
+| Monstre | 334/334 ✅ | 324/334 |
+| Sort | 319/319 ✅ | 319/319 ✅ |
+| Arme | 37/37 ✅ | 41/41 ✅ |
+| Règle | 38/39 | 28/39 |
+| Espèce | 13/13 ✅ | 33/33 ✅ |
+| Sous-classe | 12/12 ✅ | 21/21 ✅ |
+| Armure | 13/13 ✅ | 13/13 ✅ |
+| Classe | 12/12 ✅ | 12/12 ✅ |
+| Condition | 15/15 ✅ | 15/15 ✅ |
+| Historique | 1/1 ✅ | 4/4 ✅ |
+| **Total** | **1682/1692 (99,4 %)** | **1821/2087 (87,3 %)** |
+
+**Lecture** : ce tableau compte les *noms* traduits (une ligne `ruleset_entry_translations` existe). Il ne dit rien de la richesse du contenu derrière (description traduite, mécanique 2024 réelle plutôt qu'un repli 2014 silencieux — voir V1-D6 pour Monstre, et le point 10 plus bas pour la découverte équivalente sur Sort). Un « ✅ » ici veut dire *noms complets*, pas *rien à vérifier d'autre*.
+
+La 5.1 est essentiellement terminée. Le travail restant sur la 5.2.1 se concentre sur deux masses : **Aptitude** (138 manquants) et **Objet** (107 manquants) — inchangé depuis le début de ce ticket, les deux plus gros chantiers n'ont jamais bougé de position.
+
+---
+
+Chaque point ci-dessous est dimensionné pour tenir dans une session (le débit réel de V1-D3 sert de référence : quatre dictionnaires + un générateur + 32 sections de prose vérifiées à la main en une session). **Comptes historiques, non remis à jour après leur passage — voir la table canonique ci-dessus pour l'état réel :**
 
 | Type | Noms 5.1 | Noms 5.2.1 |
 |---|---|---|
-| Espèce | 13/13 | **33/33** (100 %, voir point 10, sixième/septième passe — 6 fiches obsolètes retirées, pas 39) |
+| Espèce | 13/13 | 33/33 |
 | Historique | 1/1 | 4/4 |
-| Règle | **38/39** (32 avec prose) | 28/39 (**23/39 avec prose**, voir point 10) |
-| Classe | 12/12 (8 avec `spellcasting_progression`) | 12/12 (**8/8** avec `spellcasting_progression`) |
+| Règle | 38/39 (32 avec prose) | 28/39 (23/39 avec prose) |
+| Classe | 12/12 (8 avec `spellcasting_progression`) | 12/12 (8/8 avec `spellcasting_progression`) |
 | Sous-classe | 12/12 | 21/21 |
-| Aptitude (`feature`) | **348/348** (100 %, voir point 10 cinquième passe) | **478/636** (plafond réel bien plus bas que 636, voir point 10) |
-| Sort | 319/319 | **319/319** |
-| Arme | **37/37** | **41/41** |
-| Armure | 13/13 | **13/13** |
-| Objet | **540/549** (voir point 10 cinquième passe) | **513/620** (plafond réel proche, voir point 10) |
-| Monstre | **334/334** (333/334 avec `traits`/`actions`) | 324/334 (plafond probable ~324, voir point 10) — **292/334 avec `traits`/`actions`** (donnée mécanique anglaise corrigée pour 294/334, voir V1-D6) |
+| Aptitude (`feature`) | 348/348 | 498/636 |
+| Sort | 319/319 | 319/319 |
+| Arme | 37/37 | 41/41 |
+| Armure | 13/13 | 13/13 |
+| Objet | 540/549 | 513/620 |
+| Monstre | 334/334 (333/334 avec `traits`/`actions`) | 324/334 — 292/334 avec `traits`/`actions` (donnée mécanique anglaise corrigée pour 294/334, voir V1-D6) |
 
 Arme 5.1 et 5.2.1 sont désormais **complètes** (le glaive manquant s'est révélé nommé « Coutille » dans le texte officiel, vérifié aux stats identiques : 1d10 tranchant, 3 kg, allonge/deux mains/lourde). Aptitude 5.1 est désormais **complète** (348/348 ; les 20 manquants — couleurs d'Ascendance draconique/Ancêtre draconique — ont été débloqués en construisant une carte par ligne de table plutôt qu'en cherchant une expression complète, voir point 10 cinquième passe).
 
@@ -1018,7 +1046,7 @@ Blocs de prose (5.1 uniquement) : 32 fiches de règle, 8 `spellcasting_progressi
    **Couverture finale, SRD 5.1 : 334/334 noms, 333/334 traits/actions (99,7 %).** Contrôle de fuite automatique (mots de type de créature au milieu d'une description) : zéro trouvé après écriture. Seul `night-hag` reste incomplet, documenté ci-dessus.
 
    Grâce à `buildMergedDataset`, la plupart des monstres 5.2.1 partagent le même `source_raw` que leur équivalent 5.1 — **reste à rejouer le même script sur `data/srd/fr-source/srd-5.2.1-fr.txt`** pour la 5.2.1 (non fait cette session, noms français encore trop incomplets côté 2024 — 303/334 — pour que la désambiguïsation par nom fonctionne aussi bien).
-9. ~~**Rapport de couverture final et clôture.**~~ **Fait le 13 août (deuxième session).** Comptes revérifiés en base pour tous les types, sur les deux rulesets, avec la distinction traduit / plafond structurel documenté / restant réellement ouvert :
+9. ~~**Rapport de couverture final et clôture.**~~ **Fait le 13 août (deuxième session).** Comptes revérifiés en base pour tous les types, sur les deux rulesets, avec la distinction traduit / plafond structurel documenté / restant réellement ouvert. **Instantané du 13 août, non remis à jour depuis — pour l'état actuel, voir la table canonique en tête de ce ticket (V1-D3b, § « État actuel »).**
 
    | Type | 5.1 | Plafond ou reliquat 5.1 | 5.2.1 | Statut 5.2.1 |
    |---|---|---|---|---|
