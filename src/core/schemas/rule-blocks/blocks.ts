@@ -343,13 +343,31 @@ export type SubclassFeaturesBlockData = z.infer<typeof zSubclassFeaturesBlockDat
 // entry_type "feature", meme fiche que celles deja utilisees par les
 // monstres) plutot qu'un nom+texte duplique : resolu a la lecture
 // (ResolvedSpeciesTraitsBlockData, rules.ts), meme motif que
-// `weapon.properties`. `creature_type`/`size`/`speed` optionnels : absents
-// pour une sous-espece (elle n'a pas sa propre taille/vitesse, juste des
-// traits supplementaires).
+// `weapon.properties`. `creature_type`/`sizes`/`speed`/`lifespan` optionnels :
+// absents pour une sous-espece (elle n'a pas sa propre taille/vitesse/
+// esperance de vie, juste des traits supplementaires).
+//
+// `sizes` (V1-D7, retour utilisateur : "certaines especes peuvent avoir
+// plusieurs tailles possibles, ex. Humain") — tableau plutot qu'un champ
+// unique : Humain et Tieffelin ont chacun le choix entre Moyenne et Petite
+// (texte officiel verifie dans srd-5.2.1-fr.txt, ex. Humain : « M (moyenne,
+// entre 1,20 m et 2,10 m) ou P (petite, de 60 cm a 1,20 m) »). `range` vient
+// exclusivement du texte source francais (jamais du JSON anglais source,
+// verifie incomplet sur ce point precis : `Species.human.size` n'y vaut que
+// "Medium", sans le second choix pourtant present dans le texte officiel).
+//
+// `lifespan` (V1-D7, retour utilisateur) — absent du SRD (aucune mention
+// d'esperance de vie dans le texte officiel des deux editions, verifie) :
+// valeurs de reference fournies directement par l'utilisateur, jamais
+// "official_srd" comme le reste de ce bloc — memes valeurs mixtes officiel/
+// invente qu'un `background` (feat officiel + lore invente sur la meme ligne
+// de traduction).
+export const zSpeciesSizeOption = z.object({ label: z.string(), range: z.string().optional() });
 export const zSpeciesTraitsBlockData = z.object({
   creature_type: z.string().optional(),
-  size: z.string().optional(),
+  sizes: z.array(zSpeciesSizeOption).optional(),
   speed: zQuantity.optional(),
+  lifespan: z.string().optional(),
   traits: z.array(zReference),
 });
 export type SpeciesTraitsBlockData = z.infer<typeof zSpeciesTraitsBlockData>;

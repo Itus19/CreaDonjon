@@ -1589,6 +1589,20 @@ Lore inventé pour le bloc 1 : neuf espèces principales en paragraphe court (m�
 
 `npm run ingest:srd` rejoué (1906 entrées, +33 blocs `species_traits`, mêmes 9 collisions déjà connues, 0 échec) puis `npm run typecheck && npm run lint && npm run test` verts (45 fichiers, 440 tests). Vérifié en navigateur : Nain (traits liés avec nom français + texte anglais, attendu — Aptitude pas encore traduite), Goliath (lore + traits), sous-espèce Ascendance géante (aucun champ taille/type/vitesse, comme prévu), et nidification confirmée dans la sidebar pour les cinq espèces à sous-espèces (Drakéide, Elfe, Gnome, Goliath, Tieffelin).
 
+**Complément sur quatre retours utilisateur, même jour.**
+
+1. **Type et Taille séparés en deux lignes** (`SpeciesTraits`, `blockContentRenderer.tsx`) — étaient combinés en une seule valeur « Taille / Type ».
+
+2. **Taille remplacée par un tableau `sizes`** (`zSpeciesTraitsBlockData`, plutôt qu'un champ `size` unique) : Humain et Tieffelin ont chacun un vrai choix entre Moyenne et Petite dans le texte officiel — **découverte au passage** : le JSON anglais source n'a que `"Medium"` pour l'Humain (`size_options` existe bien pour le Tieffelin mais pas pour l'Humain, incohérence du JSON lui-même) alors que le texte français porte les deux choix pour les deux espèces. Les neuf fourchettes exactes extraites mot pour mot de `srd-5.2.1-fr.txt` (« Catégorie de taille : ... ») plutôt que devinées ou reprises du JSON. Écrites en surcharge de traduction uniquement (le repli anglais à l'import reste `[{label: entry.size}]`, sans fourchette — asymétrie acceptée, le français est la locale qui compte).
+
+3. **Nouveau champ `lifespan`**, absent du SRD (vérifié, aucune mention d'espérance de vie dans le texte officiel des deux éditions) — neuf valeurs de référence fournies directement par l'utilisateur (Drakéide 80 ans, Nain 350, Elfe 750, Gnome 425, Goliath 100, Halfelin 150, Humain 90, Orc 80, Tieffelin 100), jamais recherchées ni inventées par ailleurs.
+
+4. **Bug de taille de texte incohérente corrigé** : `ResolvedRefLink`/`ResolvedRefDetail` (composants partagés par Arme et Espèce) n'avaient aucune classe de taille explicite — ils héritaient du conteneur, `text-xs` quand utilisés dans une grille `KeyValues` (bloc Arme) mais la taille ambiante par défaut quand utilisés dans un simple `<div>` (bloc Traits d'Espèce, qui n'est pas une grille `KeyValues`), d'où l'incohérence visible entre les deux fiches. Classes fixées directement sur le composant (`text-xs font-bold uppercase` pour le nom, `text-sm` pour le texte) : rendu identique partout désormais, plus jamais dépendant du conteneur appelant.
+
+5. **Lore des neuf espèces principales réécrit, plus complet** : chaque paragraphe décrit maintenant l'apparence physique et les particularités visibles (silhouette, peau, traits du visage, marques distinctives) en plus du caractère déjà présent — resté `invented_lore` (aucune prose SRD à extraire, confirmé à la passe initiale). Les vingt-quatre sous-espèces gardent leur phrase courte, non concernées par cette demande.
+
+`npm run typecheck && npm run lint && npm run test` verts (45 fichiers, 440 tests) après ce complément. Vérifié en navigateur sur l'Humain (Type/Taille séparés, deux tailles avec fourchette, espérance de vie, lore étoffé) et sur une sous-espèce (Drow — aucun de ces quatre champs, comme attendu) ; comparaison Dague/Nain pour confirmer la cohérence de taille de texte entre les deux fiches.
+
 ---
 
 ## Lot E — Outils de MJ déterministes

@@ -251,21 +251,36 @@ function CustomTable({ data }: { data: CustomTableBlockData }) {
 // (chaque fonction traduit un bloc type vers la forme generique attendue par
 // sa mise en page — jamais un nouveau composant). -------------------------
 
-/** Un renvoi clique vers sa propre fiche (V1-D7, retour utilisateur — proprietes/botte d'arme deja des fiches `feature` existantes, jamais dupliquees ici). */
+/**
+ * Un renvoi clique vers sa propre fiche (V1-D7, retour utilisateur —
+ * proprietes/botte d'arme, traits d'espece, deja des fiches `feature`
+ * existantes, jamais dupliquees ici). Taille de police explicite plutot
+ * qu'heritee du conteneur (V1-D7, retour utilisateur : "la taille des
+ * textes n'est pas coherente") — ce composant s'utilise tantot dans une
+ * grille `KeyValues` (qui impose `text-xs` via `dd`), tantot dans un simple
+ * `<div>` (`SpeciesTraits`, sans ce cadre) : sans classe a lui, le meme
+ * composant rendait a deux tailles differentes selon l'appelant.
+ */
 function ResolvedRefLink({ worldSlug, refItem }: { worldSlug: string; refItem: { key: string; resolved_name: string } }) {
   return (
-    <Link href={`/m/${worldSlug}/regles/${refItem.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
+    <Link
+      href={`/m/${worldSlug}/regles/${refItem.key}`}
+      className="text-xs font-bold uppercase tracking-wide hover:underline"
+      style={{ color: "var(--link-rule)" }}
+    >
       {refItem.resolved_name}
     </Link>
   );
 }
 
-/** Nom (lien) + texte complet d'une propriete/botte d'arme (V1-D7, retour utilisateur : "il faut que ce soit directement visible sur la fiche", meme motif que le Don d'un `background`). */
+/** Nom (lien) + texte complet d'une propriete/botte d'arme ou d'un trait d'espece (V1-D7, retour utilisateur : "il faut que ce soit directement visible sur la fiche", meme motif que le Don d'un `background`). */
 function ResolvedRefDetail({ worldSlug, refItem }: { worldSlug: string; refItem: { key: string; resolved_name: string; resolved_description: string } }) {
   return (
     <div className="flex flex-col gap-1">
       <ResolvedRefLink worldSlug={worldSlug} refItem={refItem} />
-      {refItem.resolved_description && renderMarkdownBoldText(refItem.resolved_description, refItem.key)}
+      {refItem.resolved_description && (
+        <div className="text-sm text-ink-muted">{renderMarkdownBoldText(refItem.resolved_description, refItem.key)}</div>
+      )}
     </div>
   );
 }
@@ -323,17 +338,26 @@ function Weapon({ data, worldSlug }: { data: ResolvedWeaponBlockData; worldSlug:
  * blocs plein largeur nom+texte). `creature_type`/`size`/`speed` absents
  * pour une sous-espece (elle n'a pas sa propre taille/vitesse).
  */
+/** Taille(s) possibles d'une espece (V1-D7, retour utilisateur : Type et Taille separes, fourchette precisee) — plusieurs lignes si l'espece a un choix (Humain, Tieffelin). */
+function speciesSizeText(sizes: { label: string; range?: string }[]): ReactNode {
+  return (
+    <span className="flex flex-col gap-0.5">
+      {sizes.map((s, i) => (
+        <span key={i}>
+          {SIZE_LABELS_FR[s.label] ?? s.label}
+          {s.range ? ` (${s.range})` : ""}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function SpeciesTraits({ data, worldSlug }: { data: ResolvedSpeciesTraitsBlockData; worldSlug: string }) {
   const items = [
-    ...(data.creature_type || data.size
-      ? [
-          {
-            label: "Taille / Type",
-            value: `${data.size ? (SIZE_LABELS_FR[data.size] ?? data.size) : ""} ${data.creature_type ? (CREATURE_TYPE_LABELS_FR[data.creature_type] ?? data.creature_type) : ""}`.trim(),
-          },
-        ]
-      : []),
+    ...(data.creature_type ? [{ label: "Type", value: CREATURE_TYPE_LABELS_FR[data.creature_type] ?? data.creature_type }] : []),
+    ...(data.sizes && data.sizes.length > 0 ? [{ label: "Taille", value: speciesSizeText(data.sizes) }] : []),
     ...(data.speed ? [{ label: "Vitesse", value: quantityText(data.speed) as string }] : []),
+    ...(data.lifespan ? [{ label: "Esperance de vie", value: data.lifespan }] : []),
   ];
   return (
     <div className="flex flex-col gap-5">

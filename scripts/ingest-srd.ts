@@ -1302,9 +1302,17 @@ function speciesTraitsBlock(entry: SrdRecord, speciesAndSubspeciesKeys: Set<stri
     .filter((r): r is { kind: "rule"; key: string } => r !== null);
   if (traits.length === 0) return null;
 
+  // `sizes` (V1-D7, retour utilisateur) : repli minimal depuis le JSON
+  // anglais source, verifie incomplet pour au moins une espece (Humain n'y
+  // porte que "Medium", sans son second choix "Small" pourtant present dans
+  // le texte officiel francais) — la vraie donnee (fourchette de taille par
+  // categorie) vient exclusivement de la surcharge de traduction francaise,
+  // jamais de ce repli. Un seul element ici, sans fourchette.
+  const sizes = typeof entry.size === "string" ? [{ label: entry.size }] : undefined;
+
   const data = {
     creature_type: typeof entry.type === "string" ? entry.type.toLowerCase() : undefined,
-    size: typeof entry.size === "string" ? entry.size : undefined,
+    sizes,
     speed: typeof entry.speed === "number" ? quantity(entry.speed, "ft") : undefined,
     traits,
   };
