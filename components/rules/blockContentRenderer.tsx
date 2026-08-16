@@ -66,6 +66,25 @@ function skillLabel(key: string): string {
   return SKILL_LABELS_FR[key as Skill] ?? key;
 }
 
+/**
+ * Texte au format constant du SRD (traits/actions de monstre, dons,
+ * incantation de classe) : plusieurs points separes par des retours a la
+ * ligne, chacun introduit par "**Titre.**" (V1-D7, sur retour utilisateur —
+ * les asterisques s'affichaient litteralement, sans retour a la ligne).
+ * Un seul motif reconnu (`**...**` -> gras), jamais un parseur markdown
+ * complet : le SRD n'utilise que celui-la ici, et CLAUDE.md interdit tout
+ * interpreteur generaliste pour du texte qui n'en a pas besoin.
+ */
+function renderSrdText(text: string): ReactNode {
+  return text.split("\n").map((paragraph, i) => (
+    <p key={i} className="text-xs leading-relaxed">
+      {paragraph.split(/(\*\*[^*]+\*\*)/g).map((chunk, j) =>
+        chunk.startsWith("**") && chunk.endsWith("**") ? <strong key={j}>{chunk.slice(2, -2)}</strong> : chunk
+      )}
+    </p>
+  ));
+}
+
 function localizedLabel(label: Record<string, string>, fallbackKey: string): string {
   return label.fr ?? label.en ?? Object.values(label)[0] ?? fallbackKey;
 }
@@ -300,7 +319,7 @@ function StatBlock({ data }: { data: StatBlockBlockData }) {
 }
 
 function Traits({ data }: { data: TraitsBlockData }) {
-  return <KeyValues items={data.traits.map((t) => ({ label: t.name, value: <p className="text-xs leading-relaxed">{t.description}</p> }))} />;
+  return <KeyValues items={data.traits.map((t) => ({ label: t.name, value: renderSrdText(t.description) }))} />;
 }
 
 function Actions({ data }: { data: ActionsBlockData }) {
@@ -310,7 +329,7 @@ function Actions({ data }: { data: ActionsBlockData }) {
         label: a.name,
         value: (
           <div className="flex flex-col gap-0.5">
-            <p className="text-xs leading-relaxed">{a.description}</p>
+            {renderSrdText(a.description)}
             {(a.attack_bonus !== undefined || a.damage?.length) && (
               <p className="mech text-xs text-ink-muted">
                 {a.attack_bonus !== undefined && `+${a.attack_bonus} pour toucher`}
@@ -349,7 +368,7 @@ function SpellcastingProgression({ data }: { data: SpellcastingProgressionBlockD
   const items = [
     { label: "Caracteristique d'incantation", value: abilityLabel(data.ability) },
     { label: "Debute au niveau", value: String(data.starts_at_level) },
-    ...data.info.map((entry) => ({ label: entry.name, value: <p className="text-xs leading-relaxed">{entry.description}</p> })),
+    ...data.info.map((entry) => ({ label: entry.name, value: renderSrdText(entry.description) })),
   ];
   return <KeyValues items={items} />;
 }
@@ -393,7 +412,7 @@ function SubclassSlot({ data, worldSlug }: { data: SubclassSlotBlockData; worldS
 function BackgroundEquipmentCard({ option, worldSlug }: { option: ResolvedBackgroundEquipmentOption; worldSlug: string }) {
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-edge/60 bg-panel-raised px-3 py-2.5">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Choix {option.label}</span>
+      <span className="text-xs font-bold uppercase tracking-wide text-ink">Choix {option.label}</span>
       <div className="flex flex-col gap-1">
         {option.items.map((item, i) => (
           <div key={i} className="flex items-baseline gap-1.5 text-sm">
@@ -422,36 +441,42 @@ function BackgroundEquipmentCard({ option, worldSlug }: { option: ResolvedBackgr
  * propre dans ce systeme (cf. commentaire de `zBackgroundBlockData`), un
  * simple libelle suffit.
  *
- * Mise en page (V1-D7, sur retour utilisateur) : caracteristiques/outil/
- * competences sur une meme ligne (trois faits courts, `key_values`
- * standard), le don en dessous sur toute la largeur (`fullWidth`, texte
- * long), l'equipement hors de `key_values` — deux encadres cote a cote
- * plutot qu'une paire etiquette/valeur de plus, cf. BackgroundEquipmentCard.
+ * Mise en page (V1-D7, sur retour utilisateur) : trois sections nettement
+ * separees (`gap-5`, plus aere que les autres blocs `key_values`) plutot
+ * qu'une seule grille — caracteristiques/outil/competences sur une ligne,
+ * le don seul sur la sienne (toujours `fullWidth`, mais dans son propre
+ * `KeyValues` : un `gap` de conteneur, pas le `gap-y` interne de la grille,
+ * separe mieux deux sections que deux lignes d'une meme grille), puis
+ * l'equipement hors de `key_values` — deux encadres cote a cote, cf.
+ * BackgroundEquipmentCard. Le libelle "Equipement de depart" reprend le
+ * meme style que les etiquettes `KeyValues` (gras, majuscules) plutot que
+ * l'ancien style muet a 10px, pour rester coherent avec le reste du bloc.
  */
 function Background({ data, worldSlug }: { data: ResolvedBackgroundBlockData; worldSlug: string }) {
-  const items = [
+  const statItems = [
     { label: "Valeurs de caracteristique", value: data.ability_scores.map(abilityLabel).join(", ") },
     ...(data.tool_proficiency ? [{ label: "Maitrise d'outil", value: proficiencyLabel(data.tool_proficiency) }] : []),
     { label: "Maitrises de competence", value: data.skill_proficiencies.map(skillLabel).join(", ") },
-    {
-      label: "Don",
-      fullWidth: true,
-      value: (
-        <div className="flex flex-col gap-0.5">
-          <Link href={`/m/${worldSlug}/regles/${data.feat.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
-            {data.feat_name}
-          </Link>
-          {data.feat_description && <p className="text-xs leading-relaxed">{data.feat_description}</p>}
-        </div>
-      ),
-    },
   ];
+  const donItem = {
+    label: "Don",
+    fullWidth: true,
+    value: (
+      <div className="flex flex-col gap-1">
+        <Link href={`/m/${worldSlug}/regles/${data.feat.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
+          {data.feat_name}
+        </Link>
+        {data.feat_description && renderSrdText(data.feat_description)}
+      </div>
+    ),
+  };
   return (
-    <div className="flex flex-col gap-3">
-      <KeyValues items={items} />
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Equipement de depart</span>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+    <div className="flex flex-col gap-5">
+      <KeyValues items={statItems} />
+      <KeyValues items={[donItem]} />
+      <div className="flex flex-col gap-2">
+        <span className="text-xs font-bold uppercase tracking-wide text-ink">Equipement de depart</span>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {data.equipment_options.map((opt, i) => (
             <BackgroundEquipmentCard key={i} option={opt} worldSlug={worldSlug} />
           ))}

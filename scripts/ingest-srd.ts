@@ -1197,6 +1197,7 @@ function subclassSlotBlock(classIndex: string, subclasses: SrdRecord[], levels: 
  */
 const EQUIPMENT_CATEGORY_LABELS_FR: Record<string, string> = {
   "Gaming Sets": "boîte de jeux",
+  "Holy Symbols": "symbole sacré",
 };
 
 /**
@@ -1207,9 +1208,14 @@ const EQUIPMENT_CATEGORY_LABELS_FR: Record<string, string> = {
  * reference `{kind:"rule", key: index}` : verifie sur les 4 historiques,
  * ces index (dague, outils de voleur, bourse...) correspondent tous a une
  * vraie fiche Objet/Arme deja importee, sans prefixe de desambiguisation
- * (contrairement aux proprietes d'arme). Le cas `option_type: "choice"`
- * (Soldat : "choisissez un type de boite de jeux", categorie plutot
- * qu'objet precis) n'a pas de reference — seulement un libelle.
+ * (contrairement aux proprietes d'arme). Deux cas sans reference precise,
+ * memes libelles (EQUIPMENT_CATEGORY_LABELS_FR) : `option_type: "choice"`
+ * (Soldat, "choisissez un type de boite de jeux") ET un `counted_reference`
+ * dont `of.url` pointe vers `/equipment-categories/` plutot que
+ * `/equipment/` (Acolyte, "Holy Symbols" — une categorie SRD, jamais
+ * importee comme fiche a part, malgre la forme `counted_reference`
+ * identique aux vrais objets ; distinguee par l'URL, pas par
+ * `option_type`, decouvert en verifiant le rendu reel).
  */
 function parseBackgroundEquipmentOptions(entry: SrdRecord): BackgroundEquipmentOption[] {
   const optionsRaw = ((entry.equipment_options as SrdRecord[] | undefined)?.[0]?.from as SrdRecord | undefined)
@@ -1227,7 +1233,11 @@ function parseBackgroundEquipmentOptions(entry: SrdRecord): BackgroundEquipmentO
         gold = { value: Number(raw.count), unit: String(raw.unit) };
       } else if (raw.option_type === "counted_reference") {
         const of = raw.of as SrdRecord;
-        if (typeof of?.index === "string") {
+        const url = typeof of?.url === "string" ? of.url : "";
+        if (typeof of?.index === "string" && url.includes("/equipment-categories/")) {
+          const name = typeof of.name === "string" ? of.name : of.index;
+          items.push({ label: `${EQUIPMENT_CATEGORY_LABELS_FR[name] ?? name} (au choix)`, quantity: Number(raw.count ?? 1) });
+        } else if (typeof of?.index === "string") {
           items.push({ ref: { kind: "rule", key: of.index }, label: String(of.name ?? of.index), quantity: Number(raw.count ?? 1) });
         }
       } else if (raw.option_type === "choice") {
