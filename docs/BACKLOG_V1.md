@@ -914,11 +914,11 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 
 **Ne pas se fier aux tableaux narratifs plus bas** (chacun est un instantané du jour où il a été écrit, jamais remis à jour après coup — c'est ce qui rend le suivi illisible d'une session à l'autre). Celui-ci est recalculé **directement en base** (compte des `ruleset_entries` avec une ligne `ruleset_entry_translations` en `fr`, tous types confondus) à chaque fois qu'une session touche à la traduction, et remplacé en entier — jamais complété à côté d'une ancienne valeur.
 
-**Dernière mesure : 15 août 2026 (après le point 11, dernier passage sur la 5.1).**
+**Dernière mesure : 16 août 2026 (après la reprise d'Aptitude 5.2.1).**
 
 | Catégorie | SRD 5.1 (2014) | SRD 5.2.1 (2024) |
 |---|---|---|
-| Aptitude | 348/348 ✅ | 498/636 |
+| Aptitude | 348/348 ✅ | 509/636 |
 | Objet | 548/549 | 513/620 |
 | Monstre | 334/334 ✅ | 324/334 |
 | Sort | 319/319 ✅ | 319/319 ✅ |
@@ -930,7 +930,7 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 | Classe | 12/12 ✅ | 12/12 ✅ |
 | Condition | 15/15 ✅ | 15/15 ✅ |
 | Historique | 1/1 ✅ | 4/4 ✅ |
-| **Total** | **1690/1692 (99,9 %)** | **1821/2087 (87,3 %)** |
+| **Total** | **1690/1692 (99,9 %)** | **1832/2087 (87,8 %)** |
 
 **Lecture** : ce tableau compte les *noms* traduits (une ligne `ruleset_entry_translations` existe). Il ne dit rien de la richesse du contenu derrière (description traduite, mécanique 2024 réelle plutôt qu'un repli 2014 silencieux — voir V1-D6 pour Monstre, et le point 10 plus bas pour la découverte équivalente sur Sort). Un « ✅ » ici veut dire *noms complets*, pas *rien à vérifier d'autre*.
 
@@ -1256,6 +1256,23 @@ Chaque correctif vérifié séparément par relecture d'au moins un cas avant de
 **Résultat après corrections : 319/319 noms retrouvés, 319/319 descriptions 2024 écrites en base.** Vérifié en base après écriture : la 5.1 et la 5.2.1 divergent maintenant réellement (Agrandissement/rapetissement affiche deux textes différents selon le ruleset), et la 5.1 reste intacte (`bane` y est toujours « Fléau », jamais écrasé). `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
 
 **Découverte annexe, hors périmètre de cette passe : 23 sorts du texte 2024 n'ont aucun `entry_key` en base.** Le chapitre 2024 contient un vrai contenu nouveau absent de la SRD 2014 (ex. Orbe chromatique = Chromatic Orb, devenu sort mineur générique en 2024 ; Sphère de vitriol, Souffle du dragon, Convocation de dragon...). Ce n'est plus une correction de traduction mais un ajout de contenu neuf — création de nouveaux `ruleset_entries` via le chemin d'import sanctionné, jamais tenté cette passe (décision de scope à prendre séparément).
+
+**Neuvième passe, sur question explicite (« passons à la 5.2.1, est-ce qu'on arrive à avoir toutes les aptitudes ? ») — 138 manquants examinés famille par famille, 11 trouvés.** Vérifiés et écrits, chacun contre une phrase ou une table réelle du texte, jamais deviné :
+- **`gnomish-lineage-forest-gnome-feature`/`-rock-gnome-feature`** → réutilisent tels quels les noms déjà établis pour `gnomish-lineage-forest-gnome`/`-rock-gnome` (`entry_type` species) : collision d'`entry_key` confirmée dans le journal d'import (`ingest-srd.ts`), même contenu réel sous deux types d'entrée.
+- **Table « Héritages fiélons » (Tieffelin, ligne 8505-8517)** : `lineage-resistance-fire/necrotic/poison` → phrases complètes déjà dans le texte (« Résistance aux dégâts de feu »...), `lineage-spell-false-life/hellish-rebuke/ray-of-enfeeblement/ray-of-sickness` → noms de sort déjà établis en base, réutilisés à l'identique plutôt que redevinés.
+- **Table de classe Guerrier (ligne 5468, 5481)** : `extra-attack-2`/`extra-attack-3` → « Niveau 11 : Double attaque supplémentaire » / « Niveau 20 : Triple attaque supplémentaire », en-têtes de section réels, pas des paliers numérotés inventés.
+
+**Le reste (127) confirmé consolidé ou absent, catégorie par catégorie, pas laissé de côté sans vérifier :**
+- **Familles à paliers consolidées en une seule aptitude générique en 2024** (déjà documenté en partie lors d'une passe précédente, reconfirmé ici) : Inspiration bardique (`bardic-inspiration-d6/d8/d10/d12`), Conduit divin (`channel-divinity-1/2/3-rest` et les options nommées `preserve-life`/`turn-the-unholy`/`turn-undead` — le chapitre Clerc 2024 n'a plus qu'un « Conduit divin » générique, remplacé en partie par « Calcination de Mort-vivant » niveau 5, aucune option nommée séparément), Destruction des morts-vivants par palier de FP (`destroy-undead-cr-*`), Explorateur-né par terrain (`natural-explorer-*`), Critique implacable par palier (`brutal-critical-*`), Chant du repos par dé (`song-of-rest-*`).
+- **Invocations occultes nommées individuellement (14, `eldritch-invocation-*`)** : confirmé sans catalogue individuel dans la SRD 2024 gratuite (déjà établi, revérifié).
+- **Ascendance draconique du sorcier, famille `dragon-ancestor-*` (11, dont le générique)** : délibérément non écrite pour la 5.2.1 dans cette même passe (cinquième passe) — confirmé que la Sorcellerie draconique 2024 n'a plus de variante par couleur.
+- **Classe Moine (~15 : `ki`, `deflect-missiles`, `purity-of-body`, `empty-body`, `monk-*`...)** : chapitre entièrement redessiné (Crédo du Moine, Points de Crédo, Autosubsistance, Parade énergétique...), déjà exploré en profondeur lors d'une passe précédente sans correspondance 1:1 fiable — reconfirmé plutôt que retenté à l'identique.
+- **Traits génériques d'espèce à granularité 2014 disparue en 2024** (`darkvision-60`/`darkvision-120`, `elf-weapon-training`, `extra-language`, `dwarven-combat-training`, `artificers-lore`, `tinker`) : chaque espèce 2024 a sa propre Vision dans le noir/langue intégrée à son propre paragraphe, sans plus de fiche séparée par palier ou par espèce — cherché comme en-tête isolé, zéro occurrence.
+- **`high-elf-cantrip-versatility`/`wood-elf-speed-increase`** : le mécanisme existe bien (lu dans la table « Lignages elfiques », ligne 8367-8382) mais **sans en-tête propre** — c'est une phrase à l'intérieur de la cellule de « Haut-elfe »/« Elfe sylvestre », pas une sous-fiche nommée séparément ; construire un nom reviendrait à en inventer un plutôt qu'à le lire, laissé bloqué.
+- **`draconic-presence`** (capstone Sorcellerie draconique niveau 18) : zéro occurrence dans le texte 2024, cohérent avec le reste de la sous-classe redessinée.
+- **Divers Dons/Styles de combat non retrouvés** (`savage-attacker`, `menacing`, `skill-versatility`...) : recherchés par nom probable, zéro occurrence — pistes à reprendre par lecture exhaustive du chapitre Dons plutôt que par recherche ciblée, non fait cette passe faute de temps.
+
+**Résultat : Aptitude 5.2.1, 498 → 509/636.** Le plafond réel est très probablement proche de ce chiffre, pas de 636 — la majorité du reliquat vient de choix de conception 2024 (consolidation, granularité réduite) plutôt que d'un trou d'extraction. `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
 
 ---
 
