@@ -919,7 +919,7 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 | Catégorie | SRD 5.1 (2014) | SRD 5.2.1 (2024) |
 |---|---|---|
 | Aptitude | 348/348 ✅ | 540/636 en base — **318/318 (100 %) sur le vrai dénominateur** ✅, voir plus bas |
-| Objet | 548/549 | 513/620 |
+| Objet | 548/549 | 513/620 en base — **407/407 (100 %) sur le vrai dénominateur** ✅, voir plus bas |
 | Monstre | 334/334 ✅ | 324/334 |
 | Sort | 319/319 ✅ | 319/319 ✅ |
 | Arme | 37/37 ✅ | 41/41 ✅ |
@@ -930,11 +930,11 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 | Classe | 12/12 ✅ | 12/12 ✅ |
 | Condition | 15/15 ✅ | 15/15 ✅ |
 | Historique | 1/1 ✅ | 4/4 ✅ |
-| **Total** | **1690/1692 (99,9 %)** | **1859/2087 (89,1 %)** |
+| **Total** | **1690/1692 (99,9 %)** | **1866/2087 (89,4 %)** |
 
 **Lecture** : ce tableau compte les *noms* traduits (une ligne `ruleset_entry_translations` existe). Il ne dit rien de la richesse du contenu derrière (description traduite, mécanique 2024 réelle plutôt qu'un repli 2014 silencieux — voir V1-D6 pour Monstre, et le point 10 plus bas pour la découverte équivalente sur Sort). Un « ✅ » ici veut dire *noms complets*, pas *rien à vérifier d'autre*.
 
-**5.1 (2014) : plafond réel atteint, 1690/1692.** Les 2 derniers manquants sont confirmés structurellement bloqués, pas des trous d'extraction : `sprig-of-mistletoe` (Objet — jamais nommé nulle part dans le texte comme entrée propre, seulement cité comme composante de sort) et `adventuring` (Règle — chapitre-chapeau sans contenu propre, son `desc` JSON est vide, tout son contenu réel vit dans 8 sous-chapitres déjà traduits séparément ; « Aventure » n'apparaît nulle part comme en-tête isolé). **Aptitude 5.2.1 est en réalité quasi complète (314/318 sur le vrai dénominateur — les 636 affichés en base comptent ~318 fiches fantômes en repli 2014, voir onzième passe).** Le travail restant sur la 5.2.1 (2024) se concentre sur **Objet** (107 manquants) — et la même vérification de dénominateur mériterait d'être refaite pour Objet avant de considérer ce chiffre fiable.
+**5.1 (2014) : plafond réel atteint, 1690/1692.** Les 2 derniers manquants sont confirmés structurellement bloqués, pas des trous d'extraction : `sprig-of-mistletoe` (Objet — jamais nommé nulle part dans le texte comme entrée propre, seulement cité comme composante de sort) et `adventuring` (Règle — chapitre-chapeau sans contenu propre, son `desc` JSON est vide, tout son contenu réel vit dans 8 sous-chapitres déjà traduits séparément ; « Aventure » n'apparaît nulle part comme en-tête isolé). **Aptitude 5.2.1 et Objet 5.2.1 sont désormais complets sur leur vrai dénominateur** (318/318 et 407/407 — les compteurs bruts en base, 636 et 620, comptent des centaines de fiches fantômes en repli 2014, voir onzième/treizième passes). Le compteur brut de la 5.2.1 (2087 entrées, dont beaucoup en repli 2014 jamais purgé) reste trompeur tant que ce nettoyage n'est pas fait ruleset entier — chantier distinct, signalé mais pas traité.
 
 ---
 
@@ -1299,6 +1299,21 @@ Chaque correctif vérifié séparément par relecture d'au moins un cas avant de
 **Résultat final : 318/318 (100 %) sur le vrai dénominateur.** `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests). **Aptitude 5.2.1 est désormais complète** — le compteur brut en base (540/636) restera inférieur à 636 tant que les ~318 fiches fantômes en repli 2014 n'auront pas été purgées (voir « reste ouvert » ci-dessus), mais le contenu réellement défini par la SRD 2024 anglaise est intégralement traduit.
 
 **Reste ouvert, non traité cette passe** : purger de la base les ~318 fiches fantômes en repli 2014 (dont 96 encore sans traduction), pour que le compteur affiché corresponde enfin au vrai contenu 2024 — même correctif que celui déjà appliqué à Espèce (`SUPERSEDED_2014_SPECIES_INDICES` dans `ingest-srd.ts`), mais à une échelle 50 fois plus grande (318 candidats contre 6), qui demanderait de vérifier famille par famille lesquelles sont de vrais doublons d'une fiche 2024 différemment nommée (comme `gnomish-lineage-*-feature`) plutôt que de purger en bloc sur la seule foi de l'absence de surcharge 2024 — un vrai bug pourrait aussi bien être une fiche legitimement identique entre editions (comme certains sorts, voir la huitième passe). Signalé, pas corrigé.
+
+**Treizième passe, sur demande explicite (« fait ces différentes méthodes pour les objets de la 5.2.1 »).** Même méthodologie que l'Aptitude, appliquée à Objet : d'abord établir le vrai dénominateur avant de chercher quoi que ce soit.
+
+**Vrai dénominateur, confirmé par deux méthodes indépendantes qui tombent sur le même chiffre (comme pour Aptitude) :**
+- Comptage direct dans `data/srd/srd-2024.json`, catégories `Magic-Items` (262) + `Poisons` (14) + `Equipment` hors armure/arme (131) : **407**.
+- Filtrage de la base par `source_raw.url` (`/2024/` contre `/2014/`) : **407** fiches réellement sourcées 2024, exactement le même nombre.
+
+**Sur ce vrai dénominateur, Objet 5.2.1 était déjà à 400/407 (98,3 %) avant cette passe** — bien plus avancé que le 513/620 affiché ne le laissait supposer. **Les 7 derniers retrouvés et vérifiés**, chacun contre la mécanique exacte du JSON anglais plutôt qu'un nom deviné — trois d'entre eux révèlent que le traducteur 2024 s'est écarté du vocabulaire déjà établi en 5.1, confirmé par les statistiques (prix/poids) plutôt que supposé :
+- **`ammunition-1`/`-2`/`-3`** (« Ammunition, +1/+2/+3 ») → **« Projectile +1, +2 ou +3 »**, pas « Munitions » comme en 5.1 — recyclage 5.1 tenté en premier, échoué (0/4 vérifiés), retrouvé ensuite par recherche du mécanisme exact (« bonus aux jets d'attaque et de dégâts... munitions magiques »).
+- **`robe-of-useful-items`** → **« Robe du camelot »**, pas « Robe de camelot » (5.1) — un seul mot d'article différent, non recyclable tel quel.
+- **`sprig-of-mistletoe`** → **« Branche de houx »**, une divergence de traduction majeure (« houx »/holly ≠ « gui »/mistletoe littéralement) confirmée sans ambiguïté par les poids et prix identiques et dans le même ordre que la table anglaise « Druidic Focuses » (Baguette d'if/Bâton en bois/Branche de houx = Yew wand/Wooden staff/Sprig of mistletoe, ligne 9478-9484) — jamais un rapprochement de sens, une correspondance de position et de valeurs numériques exactes.
+- **`needles`** → **« Dards »** (table Munitions, ligne 9593, poids/prix confirmés : 50 unités, 0,5 kg, 1 po = 1 lb, 1 gp).
+- **`spiders-sting`** → **« Dard de l'Araignée »** (chapitre Poisons, ligne 20333, mécanique exacte : DD 13 Constitution, Empoisonné 1 h, Inconscient si raté de 5+).
+
+**Résultat final : 407/407 (100 %) sur le vrai dénominateur.** `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests). **Objet 5.2.1 est désormais complet**, comme Aptitude — même limite du compteur brut en base (513/620, restera sous 620 tant que les ~213 fiches fantômes en repli 2014 n'auront pas été purgées, même chantier signalé plus haut).
 
 ---
 
