@@ -198,6 +198,13 @@ const SUPERSEDED_2014_INDICES: Record<string, Set<string>> = {
   //    d'armure individuel, remplace par une regle generique a prix/poids
   //    calcules (x4 prix, x2 poids de l'armure equivalente, ligne 9801-9807).
   Equipment: new Set([
+    // V1-D3b vingt-deuxieme passe (volet Arme, decouvert en verifiant
+    // Classe/Condition/Armure/Arme/Historique) : meme motif que
+    // cartographer-tools/dungeoneer-pack en dix-neuvieme passe, l'ordre des
+    // mots de l'index a change (crossbow-heavy -> heavy-crossbow) sans rien
+    // changer au contenu — chaque fiche 2024 reelle deja traduite sous le
+    // meme nom francais exact (Arbalete lourde/legere/de poing).
+    "crossbow-heavy", "crossbow-light", "crossbow-hand",
     "abacus", "acid-vial", "alchemists-fire-flask", "alms-box", "antitoxin-vial", "arrow",
     "ball-bearings-bag-of-1000",
     "barding-breastplate", "barding-chain-mail", "barding-chain-shirt", "barding-half-plate",
