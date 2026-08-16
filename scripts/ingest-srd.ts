@@ -1036,6 +1036,38 @@ function traitsBlock(entry: SrdRecord): EntryBlock | null {
   return { block_type: "traits", display: { label: "Aptitudes speciales", layout: "key_values" }, data, display_order: 340 };
 }
 
+/**
+ * Decoupe `entry.description` (Condition, prose libre "While you have the
+ * X condition, you experience the following effect(s).\n**Titre.**
+ * texte...") en effets nommes (V1-D7, sur retour utilisateur explicite :
+ * "il n'y a pas de bloc de description, mais ca reste des blocs de
+ * conditions... il faut creer un bloc de conditions"). La phrase d'intro
+ * (premiere ligne) est ecartee : pur remplissage, deja implicite par le
+ * titre de la fiche elle-meme — une condition n'a donc PAS de bloc
+ * `description` du tout, seulement ce bloc `condition_effects`. `null` si
+ * aucune ligne ne correspond au motif "**Titre.** texte" (fiche source
+ * inattendue, jamais silencieusement vide).
+ */
+function conditionEffectsBlock(entry: SrdRecord): EntryBlock | null {
+  const prose = extractProse(entry);
+  if (!prose) return null;
+
+  const effects = prose
+    .split("\n")
+    .slice(1)
+    .map((line) => {
+      const match = line.match(/^\*\*([^*]+?)\.?\*\*\s*([\s\S]*)$/);
+      if (!match) return null;
+      return { name: match[1], description: match[2] };
+    })
+    .filter((e): e is { name: string; description: string } => e !== null && e.name !== "" && e.description !== "");
+  if (effects.length === 0) return null;
+
+  const data = { effects };
+  validateBlockData("condition_effects", data);
+  return { block_type: "condition_effects", display: { label: "Effets", layout: "key_values" }, data, display_order: 100 };
+}
+
 /** Abreviation FR d'une caracteristique (meme vocabulaire que ABILITY_ABBR_FR dans blockContentRenderer.tsx, duplique ici : concern de generation de texte a l'import, pas d'affichage). */
 const ABILITY_ABBR_FR: Record<string, string> = { str: "FOR", dex: "DEX", con: "CON", int: "INT", wis: "SAG", cha: "CHA" };
 
@@ -1365,7 +1397,10 @@ function transformEntry(
   const blocks: EntryBlock[] = [];
 
   const prose = extractProse(entry);
-  if (prose) {
+  // Condition n'a pas de bloc `description` du tout (V1-D7, sur retour
+  // utilisateur) : sa prose entiere devient `condition_effects` plus bas,
+  // la phrase d'intro generique n'etant pas conservee.
+  if (prose && entryType !== "condition") {
     blocks.push(descriptionBlock(prose));
   } else if (entryType === "monster") {
     const size = entry.size;
@@ -1381,7 +1416,7 @@ function transformEntry(
           `CA ${JSON.stringify(ac)}, PV ${String(hp)} (${String(hitDice)}). FP ${String(cr)}.`
       )
     );
-  } else {
+  } else if (entryType !== "condition") {
     blocks.push(descriptionBlock(`${String(entry.name)} — voir le tableau de donnees pour le detail.`));
   }
 
@@ -1431,6 +1466,11 @@ function transformEntry(
   if (entryType === "background") {
     const background = backgroundBlock(entry);
     if (background) blocks.push(background);
+  }
+
+  if (entryType === "condition") {
+    const effects = conditionEffectsBlock(entry);
+    if (effects) blocks.push(effects);
   }
 
   blocks.push(customTableBlock(entry));

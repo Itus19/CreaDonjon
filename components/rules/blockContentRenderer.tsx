@@ -8,6 +8,7 @@ import type {
   ChargesBlockData,
   ClassBasicsBlockData,
   ClassProgressionBlockData,
+  ConditionEffectsBlockData,
   CustomTableBlockData,
   DescriptionBlockData,
   EffectsBlockData,
@@ -308,6 +309,15 @@ function Traits({ data }: { data: TraitsBlockData }) {
   );
 }
 
+/** Effets d'une condition (V1-D7, sur retour utilisateur) — meme patron que `Traits`, type distinct (`ConditionEffectsBlockData`, pas `TraitsBlockData`) pour rester nomme comme tel dans un futur formulaire MJ "creer une condition". */
+function ConditionEffects({ data }: { data: ConditionEffectsBlockData }) {
+  return (
+    <KeyValues
+      items={data.effects.map((e, i) => ({ label: e.name, value: renderMarkdownBoldText(e.description, `effect-${i}`) }))}
+    />
+  );
+}
+
 function Actions({ data }: { data: ActionsBlockData }) {
   return (
     <KeyValues
@@ -508,5 +518,6 @@ export function renderBlockData(
   if (blockType === "spellcasting_progression") return <SpellcastingProgression data={data as SpellcastingProgressionBlockData} />;
   if (blockType === "subclass_slot") return <SubclassSlot data={data as SubclassSlotBlockData} worldSlug={worldSlug} />;
   if (blockType === "background") return <Background data={data as ResolvedBackgroundBlockData} worldSlug={worldSlug} />;
+  if (blockType === "condition_effects") return <ConditionEffects data={data as ConditionEffectsBlockData} />;
   return null;
 }

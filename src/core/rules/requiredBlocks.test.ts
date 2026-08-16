@@ -19,6 +19,10 @@ describe("missingRequiredBlocks", () => {
   });
 
   it("ne signale rien pour un entry_type sans bloc requis declare", () => {
-    expect(missingRequiredBlocks("condition", [])).toEqual([]);
+    expect(missingRequiredBlocks("feature", [])).toEqual([]);
+  });
+
+  it("signale le bloc d'effets manquant pour une condition (V1-D7)", () => {
+    expect(missingRequiredBlocks("condition", [])).toEqual(["condition_effects"]);
   });
 });

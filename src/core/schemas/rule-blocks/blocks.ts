@@ -35,6 +35,7 @@ export const BLOCK_TYPES = [
   "spellcasting_progression",
   "subclass_slot",
   "background",
+  "condition_effects",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -300,6 +301,19 @@ export type BackgroundEquipmentItem = z.infer<typeof zBackgroundEquipmentItem>;
 export type BackgroundEquipmentOption = z.infer<typeof zBackgroundEquipmentOption>;
 export type BackgroundBlockData = z.infer<typeof zBackgroundBlockData>;
 
+// --- condition_effects (layout: key_values, V1-D7) ----------------------
+// Effets d'une condition (ex. Neutralisé, Vitesse 0 pour Agrippé), un
+// nom + un texte par effet — meme forme que `traits` (aptitudes de
+// monstre), mais type distinct plutot que reutilise (sur retour explicite
+// de l'utilisateur : un futur formulaire MJ "creer une condition" doit
+// rester nomme comme tel, pas comme "creer des aptitudes"). Toujours
+// requis (REQUIRED_BLOCKS.condition) : une condition sans aucun effet
+// n'a pas de sens, contrairement aux aptitudes de monstre qui sont
+// legitimement absentes pour beaucoup de creatures.
+export const zConditionEffectEntry = z.object({ name: z.string(), description: z.string() });
+export const zConditionEffectsBlockData = z.object({ effects: z.array(zConditionEffectEntry) });
+export type ConditionEffectsBlockData = z.infer<typeof zConditionEffectsBlockData>;
+
 // --- Enveloppe commune (specs/regles-blocs.md §2) -----------------------
 export const zBlockDisplay = z.object({
   label: z.string(),
@@ -326,6 +340,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   spellcasting_progression: zSpellcastingProgressionBlockData,
   subclass_slot: zSubclassSlotBlockData,
   background: zBackgroundBlockData,
+  condition_effects: zConditionEffectsBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 /** Registre : le moteur demande le schema Zod d'un block_type et recoit une forme garantie. */

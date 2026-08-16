@@ -39,4 +39,5 @@ export const REQUIRED_BLOCKS: Partial<Record<EntryType, string[]>> = {
   item: ["item_properties"],
   monster: ["stat_block", "actions"],
   background: ["background"],
+  condition: ["condition_effects"],
 };

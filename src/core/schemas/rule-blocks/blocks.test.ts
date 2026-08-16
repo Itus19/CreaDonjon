@@ -7,6 +7,7 @@ import {
   zChargesBlockData,
   zClassBasicsBlockData,
   zClassProgressionBlockData,
+  zConditionEffectsBlockData,
   zCustomTableBlockData,
   zDescriptionBlockData,
   zEffectsBlockData,
@@ -280,6 +281,18 @@ describe("zBackgroundBlockData", () => {
       ],
     };
     expect(zBackgroundBlockData.parse(data)).toEqual(data);
+  });
+});
+
+describe("zConditionEffectsBlockData", () => {
+  it("accepte les effets d'Inconscient (V1-D7)", () => {
+    const data = {
+      effects: [
+        { name: "Inerte", description: "Vous subissez les états À terre et Neutralisé." },
+        { name: "Vitesse 0", description: "Votre Vitesse est de 0 et ne peut pas augmenter." },
+      ],
+    };
+    expect(zConditionEffectsBlockData.parse(data)).toEqual(data);
   });
 });
 

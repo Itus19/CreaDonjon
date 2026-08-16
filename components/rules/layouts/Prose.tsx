@@ -12,15 +12,28 @@ import type { ReactNode } from "react";
  * pourraient diverger. Jamais un parseur markdown complet (CLAUDE.md,
  * aucun interpreteur generaliste pour du texte qui n'en a pas besoin) : un
  * seul motif reconnu, celui que le SRD utilise reellement ici.
+ *
+ * Titre sur sa propre ligne (V1-D7, sur retour utilisateur — "**Titre.**
+ * texte..." restait sur une seule ligne, hierarchie peu lisible pour un
+ * paragraphe a plusieurs sous-points) : quand un paragraphe COMMENCE par
+ * "**...**" (toujours le cas dans ce motif SRD — jamais un gras en milieu
+ * de phrase), le titre devient sa propre ligne et le texte qui suit sa
+ * propre ligne en dessous, plutot que les deux cote a cote.
  */
 export function renderMarkdownBoldText(text: string, keyPrefix: string): ReactNode[] {
-  return text.split("\n").map((paragraph, i) => (
-    <p key={`${keyPrefix}-${i}`}>
-      {paragraph.split(/(\*\*[^*]+\*\*)/g).map((chunk, j) =>
-        chunk.startsWith("**") && chunk.endsWith("**") ? <strong key={j}>{chunk.slice(2, -2)}</strong> : chunk
-      )}
-    </p>
-  ));
+  return text.split("\n").flatMap((paragraph, i) => {
+    const leadingBold = paragraph.match(/^\*\*([^*]+)\*\*\s*([\s\S]*)$/);
+    if (leadingBold) {
+      const [, title, rest] = leadingBold;
+      return [
+        <p key={`${keyPrefix}-${i}-title`}>
+          <strong>{title}</strong>
+        </p>,
+        ...(rest ? [<p key={`${keyPrefix}-${i}-body`}>{rest}</p>] : []),
+      ];
+    }
+    return [<p key={`${keyPrefix}-${i}`}>{paragraph}</p>];
+  });
 }
 
 /** Mise en page `prose` (specs/regles-blocs.md §4) : segments narratifs. Une fiche de regle importee n'a que du public — pas de visibilite par segment ici (contrairement au wiki). */
