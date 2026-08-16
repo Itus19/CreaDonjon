@@ -921,7 +921,7 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 | Aptitude | 348/348 ✅ | 540/636 en base — **318/318 (100 %) sur le vrai dénominateur** ✅, voir plus bas |
 | Objet | 548/549 | 513/620 en base — **407/407 (100 %) sur le vrai dénominateur** ✅, voir plus bas |
 | Monstre | 334/334 ✅ | 324/334 en base — **294/294 (100 %) sur le vrai dénominateur** ✅ (293/294 avec `traits`/`actions`), voir plus bas |
-| Sort | 319/319 ✅ | 319/319 ✅ (23 sorts 2024 réels sans `ruleset_entry` du tout, hors périmètre — voir plus bas) |
+| Sort | 319/319 ✅ | **339/339** ✅ (20 sorts 2024 réels importés, voir dix-septième passe) |
 | Arme | 37/37 ✅ | 41/41 ✅ |
 | Règle | 38/39 | 28/39 — **28/28 (100 %) sur le vrai dénominateur** ✅ (23/28 avec prose), voir plus bas |
 | Espèce | 13/13 ✅ | 33/33 ✅ |
@@ -930,7 +930,7 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 | Classe | 12/12 ✅ | 12/12 ✅ |
 | Condition | 15/15 ✅ | 15/15 ✅ |
 | Historique | 1/1 ✅ | 4/4 ✅ |
-| **Total** | **1690/1692 (99,9 %)** | **1866/2087 (89,4 %)** |
+| **Total** | **1690/1692 (99,9 %)** | **1886/2107 (89,5 %)** |
 
 **Lecture** : ce tableau compte les *noms* traduits (une ligne `ruleset_entry_translations` existe). Il ne dit rien de la richesse du contenu derrière (description traduite, mécanique 2024 réelle plutôt qu'un repli 2014 silencieux — voir V1-D6 pour Monstre, et le point 10 plus bas pour la découverte équivalente sur Sort). Un « ✅ » ici veut dire *noms complets*, pas *rien à vérifier d'autre*.
 
@@ -1339,7 +1339,22 @@ Chaque correctif vérifié séparément par relecture d'au moins un cas avant de
 
 **Résultat : Sort 5.2.1 confirmé complet sur son périmètre actuel (319/319 noms et descriptions).** Aucune écriture nécessaire cette passe. `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
 
-**Bilan des quatre catégories vérifiées sur demande (Aptitude, Objet, Monstre, Règle, Sort) : toutes confirmées complètes sur leur vrai dénominateur**, chacune avec sa propre nuance structurelle (fiches fantômes en repli 2014 pour Aptitude/Objet/Monstre ; contenu réellement absent du texte pour Règle ; contenu réel mais jamais importé pour Sort). Le seul travail restant identifié et non traité : purger les fiches fantômes (~318 Aptitude, ~213 Objet, ~40 Monstre) et importer les 23 sorts manquants — deux chantiers distincts de la traduction proprement dite, tous deux signalés mais volontairement laissés de côté cette série de passes.
+**Bilan des cinq catégories vérifiées sur demande (Aptitude, Objet, Monstre, Règle, Sort) : toutes confirmées complètes sur leur vrai dénominateur**, chacune avec sa propre nuance structurelle (fiches fantômes en repli 2014 pour Aptitude/Objet/Monstre ; contenu réellement absent du texte pour Règle ; contenu réel mais jamais importé pour Sort).
+
+**Dix-septième passe, sur demande explicite (« alors vas-y fait cette purge et cet import »).** Import traité en premier (risque plus faible, additif, jamais destructeur) — voir la purge plus bas.
+
+**Import des sorts, par le chemin sanctionné, jamais par un raccourci.** Les 23 sorts confirmés dans le texte 2024 (seizième passe) devaient d'abord être vérifiés contre le texte **anglais** — pas reconstruits depuis le français — puisque l'anglais reste la vraie source si l'application passe un jour dans cette langue (règle rappelée par l'utilisateur, `specs/cible-locale-et-ia.md`). Chaque nom anglais hypothétique (Chromatic Orb, Vitriolic Sphere, Dragon's Breath...) vérifié comme en-tête réel dans `data/srd/en-source/srd-5.2.1-en.txt` avant d'être retenu — aucun deviné.
+
+**Découverte en cours d'extraction : 3 des 23 ne sont pas de nouveaux sorts.** `harm`, `mislead` et `spider-climb` existent déjà comme `entry_key` 2014, avec un contenu resté identique entre éditions — les ajouter comme nouvelles entrées aurait créé un doublon d'index. Vérification de leurs noms français **existants** a révélé trois erreurs de traduction préexistantes, indépendantes de cette tâche, affectant les **deux rulesets** (la mécanique 2014 confirmée identique à 2024 pour ces trois sorts, donc le bon nom l'est aussi) :
+- `harm` : « Blessure » → **« Contamination »** (confirmé mot pour mot dans `srd-5.1-fr.txt` ligne 12822, 14d6 dégâts nécrotiques + réduction du maximum de points de vie).
+- `mislead` : « Modification d'apparence » → **« Double illusoire »** (ligne 13899, invisibilité + double illusoire, niveau 5 Illusion).
+- `spider-climb` : « Toile d'araignée » → **« Pattes d'araignée »** (ligne 17234) — bug de collision de nom : « Toile d'araignée » est le nom **correct** d'un tout autre sort, `web`, confirmé en base sous ce même nom. `spider-climb` empruntait par erreur le nom d'un sort différent.
+
+Corrigés dans les deux rulesets, sans conflit (aucun autre sort n'utilisait déjà les noms corrects).
+
+**Les 20 sorts réellement nouveaux extraits du texte anglais** (niveau, école, classes, composantes, durée, description complète — jamais reconstruits depuis le français), fusionnés dans `data/srd/srd-2024.json` (catégorie `Spells`, absente jusqu'ici) et importés via `npm run ingest:srd`. Une collision d'`entry_key` détectée et gérée automatiquement par le mécanisme déjà en place : `divine-smite` existait déjà comme `feature` (l'ancienne aptitude 2014 du Paladin), le sort 2024 du même nom renommé `divine-smite-spell`. Vérifié après import : **339 sorts en 5.2.1 (319 + 20), 319 inchangés en 5.1** — aucune fuite entre rulesets. Descriptions françaises complètes écrites pour les 20, extraites du texte déjà lu en seizième passe.
+
+**Résultat : Sort 5.2.1, 319 → 339/339 (100 %), plus 3 corrections de noms préexistants sur les deux rulesets.** `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
 
 ---
 
