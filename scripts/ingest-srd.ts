@@ -1043,10 +1043,13 @@ function traitsBlock(entry: SrdRecord): EntryBlock | null {
  * "il n'y a pas de bloc de description, mais ca reste des blocs de
  * conditions... il faut creer un bloc de conditions"). La phrase d'intro
  * (premiere ligne) est ecartee : pur remplissage, deja implicite par le
- * titre de la fiche elle-meme — une condition n'a donc PAS de bloc
- * `description` du tout, seulement ce bloc `condition_effects`. `null` si
- * aucune ligne ne correspond au motif "**Titre.** texte" (fiche source
- * inattendue, jamais silencieusement vide).
+ * titre de la fiche elle-meme. Le bloc `description` (repli generique,
+ * `transformEntry`) reste present a cote de celui-ci — pas pour la prose
+ * SRD (redondante avec les effets ci-dessous), mais comme support du lore
+ * invente ecrit a la main (meme motif qu'Historique/background, sur
+ * nouveau retour utilisateur : une phrase courte, parfois amusante, avant
+ * le bloc mecanique). `null` si aucune ligne ne correspond au motif
+ * "**Titre.** texte" (fiche source inattendue, jamais silencieusement vide).
  */
 function conditionEffectsBlock(entry: SrdRecord): EntryBlock | null {
   const prose = extractProse(entry);
@@ -1065,7 +1068,7 @@ function conditionEffectsBlock(entry: SrdRecord): EntryBlock | null {
 
   const data = { effects };
   validateBlockData("condition_effects", data);
-  return { block_type: "condition_effects", display: { label: "Effets", layout: "key_values" }, data, display_order: 100 };
+  return { block_type: "condition_effects", display: { label: "Effets", layout: "key_values" }, data, display_order: 150 };
 }
 
 /** Abreviation FR d'une caracteristique (meme vocabulaire que ABILITY_ABBR_FR dans blockContentRenderer.tsx, duplique ici : concern de generation de texte a l'import, pas d'affichage). */
@@ -1397,9 +1400,12 @@ function transformEntry(
   const blocks: EntryBlock[] = [];
 
   const prose = extractProse(entry);
-  // Condition n'a pas de bloc `description` du tout (V1-D7, sur retour
-  // utilisateur) : sa prose entiere devient `condition_effects` plus bas,
-  // la phrase d'intro generique n'etant pas conservee.
+  // Condition retombe toujours sur le repli generique (V1-D7, sur retour
+  // utilisateur) : sa prose SRD entiere (intro + effets en gras) devient
+  // `condition_effects` plus bas, la description generique sert seulement
+  // de support au lore invente ecrit a la main (meme motif qu'Historique
+  // — background) — jamais le texte source brut ici, redondant avec le
+  // bloc effets.
   if (prose && entryType !== "condition") {
     blocks.push(descriptionBlock(prose));
   } else if (entryType === "monster") {
@@ -1416,7 +1422,7 @@ function transformEntry(
           `CA ${JSON.stringify(ac)}, PV ${String(hp)} (${String(hitDice)}). FP ${String(cr)}.`
       )
     );
-  } else if (entryType !== "condition") {
+  } else {
     blocks.push(descriptionBlock(`${String(entry.name)} — voir le tableau de donnees pour le detail.`));
   }
 
