@@ -914,7 +914,7 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 
 **Ne pas se fier aux tableaux narratifs plus bas** (chacun est un instantané du jour où il a été écrit, jamais remis à jour après coup — c'est ce qui rend le suivi illisible d'une session à l'autre). Celui-ci est recalculé **directement en base** (compte des `ruleset_entries` avec une ligne `ruleset_entry_translations` en `fr`, tous types confondus) à chaque fois qu'une session touche à la traduction, et remplacé en entier — jamais complété à côté d'une ancienne valeur.
 
-**Dernière mesure : 16 août 2026 (après purge des fiches fantômes Monstre).**
+**Dernière mesure : 16 août 2026 (après purge des fiches fantômes Sous-classe).**
 
 | Catégorie | SRD 5.1 (2014) | SRD 5.2.1 (2024) |
 |---|---|---|
@@ -925,12 +925,12 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 | Arme | 37/37 ✅ | 41/41 ✅ |
 | Règle | 38/39 | 28/39 — **28/28 (100 %) sur le vrai dénominateur** ✅ (23/28 avec prose), voir plus bas |
 | Espèce | 13/13 ✅ | 33/33 ✅ |
-| Sous-classe | 12/12 ✅ | 21/21 ✅ |
+| Sous-classe | 12/12 ✅ | **12/12 (100 %)** ✅, 9 fiches fantômes purgées, voir vingt-et-unième passe |
 | Armure | 13/13 ✅ | 13/13 ✅ |
 | Classe | 12/12 ✅ | 12/12 ✅ |
 | Condition | 15/15 ✅ | 15/15 ✅ |
 | Historique | 1/1 ✅ | 4/4 ✅ |
-| **Total** | **1690/1692 (99,9 %)** | **1850/1934 (95,7 %)** |
+| **Total** | **1690/1692 (99,9 %)** | **1841/1925 (95,6 %)** |
 
 **Lecture** : ce tableau compte les *noms* traduits (une ligne `ruleset_entry_translations` existe). Il ne dit rien de la richesse du contenu derrière (description traduite, mécanique 2024 réelle plutôt qu'un repli 2014 silencieux — voir V1-D6 pour Monstre, et le point 10 plus bas pour la découverte équivalente sur Sort). Un « ✅ » ici veut dire *noms complets*, pas *rien à vérifier d'autre*.
 
@@ -1414,17 +1414,22 @@ Corrigés dans les deux rulesets, sans conflit (aucun autre sort n'utilisait dé
 
 **Conséquence méthodologique à retenir pour toute future vérification de dénominateur** : `data/srd/srd-2024.json` s'est maintenant révélé incomplet à deux reprises (Objet, dix-neuvième passe ; Monstre, ici) — toujours dans le sens d'un sous-comptage, jamais d'un sur-comptage. Une absence de correspondance dans ce fichier n'est **plus une preuve d'absence du contenu réel** ; elle ne prouve que l'absence d'entrée JSON. Toute conclusion « confirmé absent » doit désormais passer par une recherche directe dans le texte français (ou anglais) avant d'être retenue — le JSON peut orienter la recherche, il ne peut plus la remplacer. `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
 
+**Vingt-et-unième passe, sur demande explicite (« continue avec la sous-classe »).** Cas le plus simple des quatre catégories purgées cette série — 21 fiches en base, 9 fantômes en repli 2014, 12 réelles en `/2024/`.
+
+**Chaque phantom est un doublon d'index exact, pas une consolidation ni un contenu manquant** : WotC a systématiquement rallongé l'index 2024 d'un qualificatif sans changer le concept (`life` → `life-domain`, `fiend` → `fiend-patron`, `evocation` → `evoker`, `open-hand` → `warrior-of-the-open-hand`, `draconic` → `draconic-sorcery`, `lore` → `college-of-lore`, `berserker` → `path-of-the-berserker`, `land` → `circle-of-the-land`, `devotion` → `oath-of-devotion`). Vérifié pour les 9 : chaque fiche 2024 réelle est **déjà traduite**, et son nom français correspond thématiquement à celui déjà traduit côté 2014 (ex. `life` → « Domaine de la Vie » = `life-domain` → « Domaine de la Vie », mot pour mot) — jamais un rapprochement supposé par la seule ressemblance d'index.
+
+**Purgés : `SUPERSEDED_2014_INDICES.Subclasses`, 9 entrées.** `npm run ingest:srd` rejoué : **« fiches obsolètes retirées : 9 »**, compteur Sous-classe 5.2.1 21 → 12, aucun effet de bord sur les autres catégories. **Sous-classe 5.2.1 est désormais 12/12 (100 %)** — la seule des quatre catégories de cette série à finir sans reliquat de contenu manquant (contrairement à Objet et surtout Monstre). `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
+
 #### Point d'étape — 16 août 2026, avant de passer à V1-D5 (ruleset personnel / règles maison)
 
-Bilan de vingt passes de vérification (V1-D3b + V1-D6) avant de changer de chantier. **Ce qui suit est la liste de référence** : tout ce qu'il reste à faire pour que les deux SRD soient propres, plus la liste de ce qui est délibérément laissé en l'état (plafond structurel, pas un oubli) pour ne pas les reconfondre plus tard. **Mise à jour après la purge Monstre (vingtième passe)** — le chantier Monstre s'est révélé être majoritairement un trou de contenu, pas une purge.
+Bilan de vingt-et-une passes de vérification (V1-D3b + V1-D6) avant de changer de chantier. **Ce qui suit est la liste de référence** : tout ce qu'il reste à faire pour que les deux SRD soient propres, plus la liste de ce qui est délibérément laissé en l'état (plafond structurel, pas un oubli) pour ne pas les reconfondre plus tard. **Mise à jour après la purge Sous-classe (vingt-et-unième passe)** — quatre catégories purgées au total désormais (Aptitude, Objet, Monstre, Sous-classe), le plus gros du reste est maintenant de l'import de contenu, pas du nettoyage.
 
-**Fini — les noms de traduction sont à 100 % sur le vrai dénominateur, dans les deux rulesets**, pour Aptitude, Objet, Sort, Règle, Espèce. **Monstre reste hors de cette liste** (voir ci-dessous, le vrai dénominateur était sous-évalué). **Fini aussi — le nettoyage des fiches fantômes réellement confirmées absentes pour Aptitude (33, dix-huitième passe), Objet (128, dix-neuvième passe) et Monstre (12, vingtième passe).**
+**Fini — les noms de traduction sont à 100 % sur le vrai dénominateur, dans les deux rulesets**, pour Aptitude, Objet, Sort, Règle, Espèce, Sous-classe. **Monstre reste hors de cette liste** (voir ci-dessous, le vrai dénominateur était sous-évalué). **Fini aussi — le nettoyage des fiches fantômes réellement confirmées absentes pour Aptitude (33, dix-huitième passe), Objet (128, dix-neuvième passe), Monstre (12, vingtième passe) et Sous-classe (9, vingt-et-unième passe — la seule des quatre à finir sans reliquat de contenu manquant).**
 
 **À faire, par ordre de priorité — le plus gros morceau restant est maintenant l'import de contenu, pas la purge :**
 - [ ] **Importer ~30 fiches de statistiques de Monstre confirmées réelles mais absentes de la base (5.2.1)**, découvertes en vingtième passe : formes uniques de lycanthrope (Loup-garou/Ours-garou/Rat-garou/Sanglier-garou/Tigre-garou) et de vampire (Vampire/Vampirien/Familier de vampire), familles par rôle Gobelin (3)/Gobelours (2)/Hobgobelin (2+), Gros-bras, Incube, Succube, Demi-dragon, Piranha, Nuée de piranhas, Nuée de serpents venimeux, Tapis étrangleur. Toutes confirmées par lecture directe de `srd-5.2.1-fr.txt` (bloc CA/Pv/Traits/Actions complet), aucune n'a de `ruleset_entries` sous quelque clé que ce soit. Même méthode que les 20 sorts (dix-septième passe) : construire les `source_raw` depuis `data/srd/en-source/srd-5.2.1-en.txt`, fusionner dans `data/srd/srd-2024.json`, importer par `npm run ingest:srd`. C'est le chantier le plus volumineux de tous ceux listés ici.
 - [ ] **Importer le contenu montures/véhicules/harnais manquant (Objet, 5.2.1), ~26 entrées.** Découverte en dix-neuvième passe : `data/srd/srd-2024.json` n'a **aucune** trace de la table « Montures et autres animaux », « Harnachement et véhicules tractés » ni « Véhicules aériens et bateaux », alors que ces trois tables existent bel et bien dans le texte officiel (`srd-5.2.1-fr.txt`, page 107 et suivantes). `camel`, `mastiff`, `pony`, `mule`, `elephant`, `donkey`, `warhorse`, `horse-riding`, `horse-draft`, `chariot`, `cart`, `carriage`, `sled`, `wagon`, `galley`, `keelboat`, `longship`, `rowboat`, `sailing-ship`, `warship`, `saddle-military/riding/exotic/pack`, `saddlebags`, `stabling-1-day`, `animal-feed-1-day` : à vérifier un par un contre `data/srd/en-source/srd-5.2.1-en.txt` avant d'écrire quoi que ce soit (certains types, notamment les bateaux, semblent avoir été réduits de six à trois en 2024 — à confirmer, pas à supposer).
 - [ ] **Vérifier le résidu Objet non encore examiné individuellement** (`hammer`, `hammer-sledge`, `wooden-staff`, `crossbow-bolt`, `blowgun-needle`, `sling-bullet`, `small-knife`, `playing-card-set`, `dice-set`, `jug-or-pitcher`, `whetstone`, `scale-merchants`, `restorative-ointment`, `flask-or-tankard`, `censer`, `block-of-incense`) — laissé de côté en dix-neuvième passe faute de temps, ni purgé ni confirmé absent avec la même rigueur que le reste du lot.
-- [ ] **Vérifier puis, le cas échéant, purger Sous-classe (5.2.1)** — 21 en base, seulement 9 confirmées par `source_raw.url` en `/2024/` ; jamais creusé famille par famille. **Vérifier d'abord dans le texte, pas seulement dans le JSON**, le même trou pouvant s'y cacher.
 - [ ] **Vérifier si Classe/Condition/Armure/Arme/Historique portent le même repli** — jamais mesuré explicitement par `source_raw.url` pour ces cinq catégories (seulement supposé sain parce que leurs compteurs 2014/2024 sont identiques et stables). À confirmer par la même méthode en une passe courte avant de déclarer le ruleset 5.2.1 entièrement propre.
 
 **Ne jamais purger sans vérification individuelle du texte — deux motifs d'exclusion à confondre à tout prix, tous deux reconfirmés en vingtième passe à une échelle bien plus grande que prévu :**
@@ -1438,7 +1443,7 @@ Bilan de vingt passes de vérification (V1-D3b + V1-D6) avant de changer de chan
 
 **Hors périmètre traduction, signalé pour mémoire :** ticket [#57] UI — distinguer les aptitudes homonymes dans la barre latérale (plusieurs `entry_key` partagent le même nom français depuis les consolidations 2024, pas encore rendu visuellement distinct).
 
-**Une fois les cases ci-dessus traitées, les deux SRD peuvent être déclarés propres et le chantier V1-D3b/V1-D6 clos.** Jusque-là, deux risques distincts subsistent : des fiches fantômes encore non purgées (Sous-classe) qui pourraient être proposées comme choix valides à tort, et — plus important maintenant — un vrai contenu 2024 (Monstre, Objet) qui manque purement et simplement au catalogue, invisible pour un MJ qui ne saurait pas qu'il devrait exister.
+**Une fois les cases ci-dessus traitées, les deux SRD peuvent être déclarés propres et le chantier V1-D3b/V1-D6 clos.** Jusque-là, le risque restant n'est plus des fiches fantômes servies à tort (Aptitude/Objet/Monstre/Sous-classe sont nettoyées) mais du vrai contenu 2024 (Monstre, Objet) qui manque purement et simplement au catalogue — invisible pour un MJ qui ne saurait pas qu'il devrait exister.
 
 ---
 

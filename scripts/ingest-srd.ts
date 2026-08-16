@@ -256,6 +256,18 @@ const SUPERSEDED_2014_INDICES: Record<string, Set<string>> = {
     "giant-rat-diseased", "minotaur", "orc",
     "swarm-of-wasps", "swarm-of-centipedes", "swarm-of-spiders", "swarm-of-beetles",
   ]),
+  // V1-D3b vingt-et-unieme passe (volet Sous-classe) : cas le plus simple des
+  // quatre categories purgees — doublon d'index confirme pour les 9, WotC
+  // ayant systematiquement rallonge l'index 2024 d'un qualificatif (domain,
+  // patron, sorcery, of-the-berserker...) sans creer de nouveau concept.
+  // Chaque paire verifiee : le nom francais deja traduit du cote 2014
+  // correspond thematiquement a la fiche 2024 reelle deja traduite
+  // separement (ex. life -> Domaine de la Vie == life-domain -> Domaine de
+  // la Vie), jamais suppose par la seule ressemblance de nom.
+  Subclasses: new Set([
+    "lore", "life", "fiend", "evocation", "open-hand", "draconic",
+    "berserker", "land", "devotion",
+  ]),
 };
 
 /**
