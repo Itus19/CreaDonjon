@@ -921,7 +921,7 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 | Aptitude | 348/348 ✅ | 540/636 en base — **318/318 (100 %) sur le vrai dénominateur** ✅, voir plus bas |
 | Objet | 548/549 | 513/620 en base — **407/407 (100 %) sur le vrai dénominateur** ✅, voir plus bas |
 | Monstre | 334/334 ✅ | 324/334 en base — **294/294 (100 %) sur le vrai dénominateur** ✅ (293/294 avec `traits`/`actions`), voir plus bas |
-| Sort | 319/319 ✅ | 319/319 ✅ |
+| Sort | 319/319 ✅ | 319/319 ✅ (23 sorts 2024 réels sans `ruleset_entry` du tout, hors périmètre — voir plus bas) |
 | Arme | 37/37 ✅ | 41/41 ✅ |
 | Règle | 38/39 | 28/39 — **28/28 (100 %) sur le vrai dénominateur** ✅ (23/28 avec prose), voir plus bas |
 | Espèce | 13/13 ✅ | 33/33 ✅ |
@@ -1330,6 +1330,16 @@ Chaque correctif vérifié séparément par relecture d'au moins un cas avant de
 **Le vrai dénominateur pour les noms est donc 28, pas 39** (39 − 11 confirmés absents) — et Règle 5.2.1 est **déjà à 28/28 (100 %)** sur ce dénominateur, sans qu'aucune écriture supplémentaire n'ait été nécessaire cette passe. Pour la prose : 23/28 (82 %) — les 5 fiches restantes (`equipment`, `movement`, `time`, `activating-an-item`, `madness`) ont un nom mais pas de prose, déjà investiguées en profondeur lors d'une « repasse » précédente (V1-D3b point 10) : aucune n'a d'en-tête de chapitre isolé ni de contenu substantiel au-delà d'un homonyme ou d'une définition d'une phrase dans le glossaire — reconfirmé plutôt que retenté à l'identique.
 
 **Résultat : Règle 5.2.1 confirmée complète sur son vrai dénominateur (28/28 noms, 100 %) sans travail supplémentaire nécessaire** — la troisième passe avait déjà fait le travail, cette passe l'a simplement vérifié par une méthode indépendante (script générique plutôt que recherche manuelle). `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
+
+**Seizième passe, sur demande explicite (« ensuite sorts »).** Cas encore différent : `data/srd/srd-2024.json` n'a pas de catégorie `Spells` (0 entrée, déjà établi lors de la huitième passe), mais contrairement à Règle, **pas d'inflation à corriger** — `data/srd/srd-2014.json` compte exactement 319 sorts bruts, le même chiffre que la base, sans écart de déduplication ni de fusion à démêler (`mergeByIndex` n'a rien à faire puisque le fichier 2024 n'apporte aucune surcharge à cette catégorie).
+
+**Vérifié directement en base : 319/319 noms, 319/319 descriptions — déjà complet**, confirmé par le travail de la huitième passe (extraction de la vraie prose 2024 depuis `srd-5.2.1-fr.txt`, deux renommages trouvés et corrigés — Bane → Imprécation, Feeblemind → Aliénation).
+
+**La seule chose qui reste n'est pas un trou de traduction mais un trou de contenu**, une catégorie différente de ce que ce ticket couvre : les **23 sorts confirmés réels dans le texte 2024** (déjà listés en huitième passe — Orbe chromatique, Sphère de vitriol, Souffle du dragon, Convocation de dragon...) **n'ont aucun `ruleset_entry` du tout**, dans aucun des deux rulesets. Ce n'est pas un nom à écrire dans `ruleset_entry_translations` — il faudrait d'abord créer 23 nouvelles entrées `ruleset_entries` par le chemin d'import sanctionné (construire leur `source_raw` structuré depuis le texte anglais, les fusionner dans `data/srd/srd-2024.json`, rejouer `ingest:srd`), un travail de nature différente de la traduction, hors périmètre de cette série de passes. Signalé, pas traité.
+
+**Résultat : Sort 5.2.1 confirmé complet sur son périmètre actuel (319/319 noms et descriptions).** Aucune écriture nécessaire cette passe. `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
+
+**Bilan des quatre catégories vérifiées sur demande (Aptitude, Objet, Monstre, Règle, Sort) : toutes confirmées complètes sur leur vrai dénominateur**, chacune avec sa propre nuance structurelle (fiches fantômes en repli 2014 pour Aptitude/Objet/Monstre ; contenu réellement absent du texte pour Règle ; contenu réel mais jamais importé pour Sort). Le seul travail restant identifié et non traité : purger les fiches fantômes (~318 Aptitude, ~213 Objet, ~40 Monstre) et importer les 23 sorts manquants — deux chantiers distincts de la traduction proprement dite, tous deux signalés mais volontairement laissés de côté cette série de passes.
 
 ---
 
