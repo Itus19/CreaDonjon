@@ -1458,7 +1458,7 @@ Corrigés dans les deux rulesets, sans conflit (aucun autre sort n'utilisait dé
 
 **Résultat final : Objet 5.2.1, 472/473 noms (99,8 %).** `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests) après chacune des deux passes.
 
-**Le chantier V1-D3b/V1-D6 est clos : les deux imports de contenu identifiés (Monstre, Objet) sont faits, le résidu Objet est traité, et plus aucune catégorie du ruleset 5.2.1 ne contient de fiche fantôme non identifiée.** Prochaine étape : V1-D5 (ruleset personnel / règles maison), sur demande explicite du 16 août.
+**Le chantier V1-D3b/V1-D6 est clos : les deux imports de contenu identifiés (Monstre, Objet) sont faits, le résidu Objet est traité, et plus aucune catégorie du ruleset 5.2.1 ne contient de fiche fantôme non identifiée.**
 
 #### Bilan de clôture — 16 août 2026, V1-D3b/V1-D6 clos, avant de passer à V1-D5 (ruleset personnel / règles maison)
 
@@ -1483,7 +1483,38 @@ Vingt-cinq passes de vérification (V1-D3b + V1-D6). **Les deux SRD sont désorm
 2. **Une famille à variantes avec un seul `index` JSON partagé peut être soit consolidée en table (une fiche réelle, variantes = lignes — purger les 2014), soit individuellement décrite malgré l'index partagé (chaque variante a son propre sous-titre en gras — ne jamais purger).** Les deux se ressemblent en base ; seule la lecture du texte les distingue (Pierre d'Ioun vs Anneau de résistance, motif exact).
 3. **Une fois du contenu réel importé pour combler un trou, les anciennes fiches fantômes de la même famille deviennent souvent de vrais doublons purgeables — jamais avant.** Signe concret à surveiller : deux fiches partageant exactement la même mécanique (CA/Pv, coût/poids) font échouer la désambiguïsation des scripts d'extraction — purger l'ancienne fiche résout le symptôme à la racine.
 
-**Prochaine étape : V1-D5 (ruleset personnel / règles maison).**
+**Prochaine étape : V1-D7 (traduction du texte de règle, ci-dessous), puis V1-D5 (ruleset personnel / règles maison).**
+
+---
+
+### V1-D7 — Traduction complète du texte de règle (descriptions) · `XL`
+
+Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. Ce ticket-ci s'attaque à autre chose : le **texte de règle lui-même** — ce qu'une aptitude *fait*, ce qu'un objet magique *fait*, ce qu'une sous-classe *accorde*. Découvert sur demande explicite de l'utilisateur (« est-ce que ça veut dire que maintenant tous les textes sont bien en français ? ») : non — en dehors de Sort (339/339, déjà fait en V1-A5) et Règle (23/28, déjà fait en V1-D3b), **aucune catégorie n'a son texte de règle traduit**, malgré des noms 100 % français. Vérifié directement en base (`ruleset_entry_translations.blocks.description`, 5.2.1) : zéro fiche Aptitude/Objet/Sous-classe/Classe/Armure/Arme/Espèce/Condition/Historique n'a de surcharge française sur ce bloc — le texte affiché est celui, brut, de `source_raw` (anglais). Exemple concret vérifié : la fiche **Rage** a le nom « Rage » mais son texte reste *« In battle, you fight with primal ferocity... »*.
+
+**Table de suivi — mise à jour à chaque catégorie traitée, jamais laissée à côté d'une ancienne valeur (même principe que la table canonique de V1-D3b).**
+
+| Catégorie | Fiches concernées (5.2.1) | Statut |
+|---|---|---|
+| Historique | 4 | ✅ 4/4, 16 août 2026 |
+| Condition | 15 | ⬜ |
+| Armure | 13 | ⬜ |
+| Sous-classe | 12 | ⬜ |
+| Classe | 12 | ⬜ |
+| Arme | 38 | ⬜ |
+| Espèce | 33 | ⬜ |
+| Objet | 473 | ⬜ |
+| Aptitude | 603 | ⬜ |
+| **Total** | **1203** | **4/1203 (0,3 %)** |
+
+**Ordre choisi** : du plus petit volume au plus gros, pour valider la méthode (extraction du texte officiel français, jamais une reconstruction ou une traduction automatique — même règle absolue que tout le reste de cette série) sur des lots courts avant Objet et Aptitude, les deux gros morceaux. Historique d'abord sur demande explicite.
+
+**Rappel de méthode, hérité de tout ce qui précède dans ce document** : le texte français vient de `data/srd/fr-source/srd-5.2.1-fr.txt`, jamais deviné ni traduit automatiquement — chaque fiche localisée par son nom déjà vérifié, sa description extraite mot pour mot, écrite dans `ruleset_entry_translations.blocks.description` (le bloc de base `source_raw` reste en anglais, jamais modifié — seule la surcharge change, même précédent que Sort/Règle/Monstre). Un échec de localisation ou de découpage est signalé, jamais comblé par une supposition.
+
+**SRD 5.1 (2014) : statut non mesuré dans ce ticket** — à vérifier séparément si repris, le texte français de 2014 existe depuis longtemps (`srd-5.1-fr.txt`) mais sa couverture `blocks.description` par catégorie n'a jamais été auditée avec cette rigueur.
+
+**Première passe, Historique (4/4).** Aucune prose dans la SRD pour cette catégorie — confirmé à la fois côté anglais (`source_raw` n'a jamais de champ `desc` pour un historique, seulement des données structurées : valeurs de caractéristique, don, maîtrises, équipement) et côté français (chapitre « Description des historiques », `srd-5.2.1-fr.txt` ligne 8124-8161, présente ces mêmes éléments en liste compacte, jamais en paragraphe narratif). Le texte français de chaque champ, déjà vérifié mot pour mot, a été assemblé en une description lisible et écrit dans `ruleset_entry_translations.blocks.description` pour les 4 fiches (`acolyte`, `criminal`, `sage`, `soldier`) — la section « Description » de la fiche affiche désormais ce texte complet en français au lieu du placeholder générique.
+
+**Découverte en vérifiant le rendu réel (navigateur) : un problème distinct, hors du périmètre traduction.** Sous la description, chaque fiche Historique affiche un panneau « Données brutes (SRD) » (`components/rules/layouts/Table.tsx`, bloc `custom_table`) qui liste les champs bruts (`ability_scores`, `feat`, `proficiencies`, `equipment_options`) avec leurs clés ET leurs valeurs en anglais non résolues (ex. `"Choose A or B: (A) Calligrapher's Supplies..."`), y compris pour les 4 fiches désormais traduites. Ce n'est pas un trou de traduction au sens de ce ticket — Historique n'a pas de composant de mise en page dédié (contrairement à `class_progression`, qui résout ses références), donc ce bloc tombe dans le rendu générique brut. **Signalé pour arbitrage séparé, jamais traité ici** : corriger ce panneau demande un composant de rendu dédié (travail d'interface), pas une correction de contenu — à cadrer dans un ticket à part si l'utilisateur le souhaite. Les autres catégories utilisant `custom_table` pour leurs données structurées (à vérifier) pourraient porter le même symptôme.
 
 ---
 
