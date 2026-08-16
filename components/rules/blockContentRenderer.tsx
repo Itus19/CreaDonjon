@@ -36,7 +36,7 @@ import type { ResolvedBackgroundBlockData, ResolvedBackgroundEquipmentOption, Ru
 import Chips from "./layouts/Chips";
 import FormulaList from "./layouts/FormulaList";
 import KeyValues from "./layouts/KeyValues";
-import Prose from "./layouts/Prose";
+import Prose, { renderMarkdownBoldText } from "./layouts/Prose";
 import ProgressionTable from "./layouts/ProgressionTable";
 import Table from "./layouts/Table";
 
@@ -66,24 +66,6 @@ function skillLabel(key: string): string {
   return SKILL_LABELS_FR[key as Skill] ?? key;
 }
 
-/**
- * Texte au format constant du SRD (traits/actions de monstre, dons,
- * incantation de classe) : plusieurs points separes par des retours a la
- * ligne, chacun introduit par "**Titre.**" (V1-D7, sur retour utilisateur —
- * les asterisques s'affichaient litteralement, sans retour a la ligne).
- * Un seul motif reconnu (`**...**` -> gras), jamais un parseur markdown
- * complet : le SRD n'utilise que celui-la ici, et CLAUDE.md interdit tout
- * interpreteur generaliste pour du texte qui n'en a pas besoin.
- */
-function renderSrdText(text: string): ReactNode {
-  return text.split("\n").map((paragraph, i) => (
-    <p key={i} className="text-xs leading-relaxed">
-      {paragraph.split(/(\*\*[^*]+\*\*)/g).map((chunk, j) =>
-        chunk.startsWith("**") && chunk.endsWith("**") ? <strong key={j}>{chunk.slice(2, -2)}</strong> : chunk
-      )}
-    </p>
-  ));
-}
 
 function localizedLabel(label: Record<string, string>, fallbackKey: string): string {
   return label.fr ?? label.en ?? Object.values(label)[0] ?? fallbackKey;
@@ -319,17 +301,21 @@ function StatBlock({ data }: { data: StatBlockBlockData }) {
 }
 
 function Traits({ data }: { data: TraitsBlockData }) {
-  return <KeyValues items={data.traits.map((t) => ({ label: t.name, value: renderSrdText(t.description) }))} />;
+  return (
+    <KeyValues
+      items={data.traits.map((t, i) => ({ label: t.name, value: renderMarkdownBoldText(t.description, `trait-${i}`) }))}
+    />
+  );
 }
 
 function Actions({ data }: { data: ActionsBlockData }) {
   return (
     <KeyValues
-      items={data.actions.map((a) => ({
+      items={data.actions.map((a, i) => ({
         label: a.name,
         value: (
           <div className="flex flex-col gap-0.5">
-            {renderSrdText(a.description)}
+            {renderMarkdownBoldText(a.description, `action-${i}`)}
             {(a.attack_bonus !== undefined || a.damage?.length) && (
               <p className="mech text-xs text-ink-muted">
                 {a.attack_bonus !== undefined && `+${a.attack_bonus} pour toucher`}
@@ -368,7 +354,7 @@ function SpellcastingProgression({ data }: { data: SpellcastingProgressionBlockD
   const items = [
     { label: "Caracteristique d'incantation", value: abilityLabel(data.ability) },
     { label: "Debute au niveau", value: String(data.starts_at_level) },
-    ...data.info.map((entry) => ({ label: entry.name, value: renderSrdText(entry.description) })),
+    ...data.info.map((entry, i) => ({ label: entry.name, value: renderMarkdownBoldText(entry.description, `info-${i}`) })),
   ];
   return <KeyValues items={items} />;
 }
@@ -466,7 +452,7 @@ function Background({ data, worldSlug }: { data: ResolvedBackgroundBlockData; wo
         <Link href={`/m/${worldSlug}/regles/${data.feat.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
           {data.feat_name}
         </Link>
-        {data.feat_description && renderSrdText(data.feat_description)}
+        {data.feat_description && renderMarkdownBoldText(data.feat_description, "feat")}
       </div>
     ),
   };
