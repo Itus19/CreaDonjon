@@ -10,7 +10,9 @@ import {
   type ClassProgressionBlockData,
   type EffectsBlockData,
   type EntryType,
+  type ReferencePrimitive,
   type ScalingBlockData,
+  type SubclassSlotBlockData,
   zBlockDisplay,
 } from "@/src/core/schemas/rule-blocks";
 import { generateScalingTable, resolveScalingTarget } from "@/src/core/rules/scaling";
@@ -116,13 +118,15 @@ export interface RuleEntryBlockView {
   originalData?: unknown;
 }
 
-/** Un renvoi affiche (V1-A3) : `key` designe l'AUTRE entree — la cible pour un renvoi sortant, la source pour un renvoi entrant. `entryType` absent = renvoi non resolu (cible disparue ou jamais importee). */
+/** Un renvoi affiche (V1-A3) : `key` designe l'AUTRE entree — la cible pour un renvoi sortant, la source pour un renvoi entrant. `entryType` absent = renvoi non resolu (cible disparue ou jamais importee). `level`/`description` (V1-D7, retour utilisateur) : uniquement pour un renvoi sortant `grants` (classe -> aptitude accordee a un niveau) — le niveau vient du `path`, le texte de la fiche visee, pour qu'un joueur voie l'effet sans quitter la fiche de classe. */
 export interface RuleRefView {
   key: string;
   name: string;
   entryType: EntryType | null;
   refKind: string;
   path: string | null;
+  level?: number;
+  description?: string;
 }
 
 export interface RuleEntryDetail {
@@ -185,14 +189,32 @@ async function resolveOutgoingRefs(
     for (const t of translations) translationByEntryId.set(t.entry_id, t.name);
   }
 
+  // V1-D7 (retour utilisateur) : un renvoi "grants" (le seul produit
+  // aujourd'hui, cf. extractDerivedRefs) affiche aussi le texte de
+  // l'aptitude visee et son niveau dans le panneau de renvois sortants, pour
+  // qu'un joueur voie l'effet sans quitter la fiche de classe. Uniquement ce
+  // ref_kind : un futur ref_kind sans niveau/texte pertinent (requires,
+  // see_also...) resterait un simple nom.
+  const grantsKeys = [...new Set(refs.filter((r) => r.ref_kind === "grants").map((r) => r.target_key))];
+  const grantsDescriptions = new Map(
+    (
+      await Promise.all(
+        grantsKeys.map(async (key) => [key, await resolveEntryDetail(supabase, rulesetId, key, locale)] as const)
+      )
+    ).map(([key, detail]) => [key, detail?.description])
+  );
+
   return refs.map((ref) => {
     const target = byKey.get(ref.target_key);
+    const levelMatch = ref.ref_kind === "grants" ? ref.path?.match(/rows\[(\d+)\]/) : null;
     return {
       key: ref.target_key,
       name: target ? (translationByEntryId.get(target.id) ?? entryNameFrom(target)) : ref.target_key,
       entryType: target ? (target.entry_type as EntryType) : null,
       refKind: ref.ref_kind,
       path: ref.path,
+      level: levelMatch ? Number(levelMatch[1]) : undefined,
+      description: grantsDescriptions.get(ref.target_key) || undefined,
     };
   });
 }
@@ -249,19 +271,32 @@ export type ResolvedBackgroundBlockData = Omit<BackgroundBlockData, "equipment_o
 };
 
 /**
- * Nom + description (deja traduite si `locale !== "en"`) de l'entree
- * `feature` visee par `background.feat`. `null` seulement si la cle ne
- * resout dans aucun ruleset de la chaine (donnee source incoherente) —
- * l'appelant retombe alors sur la cle brute plutot que d'echouer la fiche
- * entiere pour un seul champ manquant.
+ * `subclass_slot.options` (V1-D7, retour utilisateur : le lien de chaque
+ * sous-classe affichait sa cle technique brute, ex. "evoker") augmente d'un
+ * nom resolu par option, meme motif que `ResolvedBackgroundBlockData`
+ * ci-dessus — jamais stocke ainsi, calcule a la lecture.
  */
-async function resolveFeatDetail(
+export type ResolvedSubclassSlotBlockData = Omit<SubclassSlotBlockData, "options"> & {
+  options?: (ReferencePrimitive & { resolved_name: string })[];
+};
+
+/**
+ * Nom + description (deja traduite si `locale !== "en"`) d'une entree
+ * quelconque de la chaine de ruleset. `null` seulement si la cle ne resout
+ * dans aucun ruleset de la chaine (donnee source incoherente) — l'appelant
+ * retombe alors sur la cle brute plutot que d'echouer la fiche entiere pour
+ * un seul champ manquant. Utilise par `background.feat` (nom d'origine,
+ * resolveFeatDetail) et par l'enrichissement des renvois "grants" du
+ * panneau de renvois sortants (V1-D7, retour utilisateur) — generalisee au
+ * deuxieme cas concret plutot que dupliquee.
+ */
+async function resolveEntryDetail(
   supabase: TypedClient,
   rulesetId: string,
-  featKey: string,
+  entryKey: string,
   locale: Locale
 ): Promise<{ name: string; description: string } | null> {
-  const featEntry = await findEntryInRulesetChain(supabase, rulesetId, featKey);
+  const featEntry = await findEntryInRulesetChain(supabase, rulesetId, entryKey);
   if (!featEntry) return null;
 
   const translation = locale !== "en" ? await getEntryTranslation(supabase, featEntry.id, locale) : null;
@@ -455,7 +490,7 @@ export async function getRuleEntryForWorld(
     const bgData = blocks[backgroundBlockIndex].data as BackgroundBlockData;
     const itemKeys = bgData.equipment_options.flatMap((opt) => opt.items.flatMap((it) => (it.ref ? [it.ref.key] : [])));
     const [featDetail, itemNames] = await Promise.all([
-      resolveFeatDetail(supabase, rulesetId, bgData.feat.key, locale),
+      resolveEntryDetail(supabase, rulesetId, bgData.feat.key, locale),
       resolveEntryNames(supabase, rulesetId, itemKeys, locale),
     ]);
     blocks[backgroundBlockIndex] = {
@@ -469,6 +504,23 @@ export async function getRuleEntryForWorld(
           items: opt.items.map((it) => ({ ...it, resolved_label: it.ref ? (itemNames.get(it.ref.key) ?? it.label) : it.label })),
         })),
       } satisfies ResolvedBackgroundBlockData,
+    };
+  }
+
+  // Augmente le bloc `subclass_slot` avec le nom resolu de chaque option
+  // (V1-D7, retour utilisateur : le lien affichait la cle technique brute,
+  // ex. "evoker") — meme motif que `background` ci-dessus.
+  const subclassSlotBlockIndex = blocks.findIndex((b) => b.blockType === "subclass_slot");
+  if (subclassSlotBlockIndex !== -1) {
+    const slotData = blocks[subclassSlotBlockIndex].data as SubclassSlotBlockData;
+    const optionKeys = slotData.options?.map((o) => o.key) ?? [];
+    const optionNames = await resolveEntryNames(supabase, rulesetId, optionKeys, locale);
+    blocks[subclassSlotBlockIndex] = {
+      ...blocks[subclassSlotBlockIndex],
+      data: {
+        ...slotData,
+        options: slotData.options?.map((o) => ({ ...o, resolved_name: optionNames.get(o.key) ?? o.key })),
+      } satisfies ResolvedSubclassSlotBlockData,
     };
   }
 

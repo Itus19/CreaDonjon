@@ -47,13 +47,23 @@ export default async function RuleEntryPage({
 
       <MissingBlocksBanner missingBlocks={entry.missingBlocks} />
 
+      {/* Renvois places juste avant "Donnees brutes (SRD)", jamais apres
+          (V1-D7, retour utilisateur) : custom_table porte toujours le plus
+          grand display_order (900, scripts/ingest-srd.ts), donc le separer
+          du reste suffit a l'isoler en fin de liste sans trier a la main. */}
       <div className="flex flex-col">
-        {entry.blocks.map((block) => (
-          <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} />
-        ))}
+        {entry.blocks
+          .filter((block) => block.blockType !== "custom_table")
+          .map((block) => (
+            <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} />
+          ))}
+        <RuleRefsPanel worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} incomingRefs={entry.incomingRefs} />
+        {entry.blocks
+          .filter((block) => block.blockType === "custom_table")
+          .map((block) => (
+            <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} />
+          ))}
       </div>
-
-      <RuleRefsPanel worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} incomingRefs={entry.incomingRefs} />
 
       <Suspense fallback={null}>
         <RefPathHighlighter />

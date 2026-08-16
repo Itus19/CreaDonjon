@@ -19,7 +19,6 @@ import type {
   SpellcastingProgressionBlockData,
   StatBlockBlockData,
   SubclassFeaturesBlockData,
-  SubclassSlotBlockData,
   TraitsBlockData,
   WeaponBlockData,
 } from "@/src/core/schemas/rule-blocks";
@@ -35,7 +34,12 @@ import {
 } from "@/src/i18n/fr";
 import type { Skill } from "@/src/core/rules/sheet";
 import { ftToM, lbToKg } from "@/src/core/rules/encumbrance";
-import type { ResolvedBackgroundBlockData, ResolvedBackgroundEquipmentOption, RuleRefView } from "@/src/server/services/rules";
+import type {
+  ResolvedBackgroundBlockData,
+  ResolvedBackgroundEquipmentOption,
+  ResolvedSubclassSlotBlockData,
+  RuleRefView,
+} from "@/src/server/services/rules";
 import Chips from "./layouts/Chips";
 import FormulaList from "./layouts/FormulaList";
 import KeyValues from "./layouts/KeyValues";
@@ -132,8 +136,8 @@ function Scaling({ data }: { data: ScalingBlockData }) {
   return (
     <ProgressionTable
       columns={[
-        { key: "level", label: "Niveau" },
-        { key: "value", label: "Valeur" },
+        { key: "level", label: "Niveau", align: "center" },
+        { key: "value", label: "Valeur", align: "center" },
       ]}
       rows={rows}
     />
@@ -201,7 +205,14 @@ function ClassProgression({
   outgoingRefs: RuleRefView[];
 }) {
   const refsByKey = new Map(outgoingRefs.map((r) => [r.key, r]));
-  const columns = data.columns.map((col) => ({ key: col.key, label: localizedLabel(col.label, col.key) }));
+  const columns = data.columns.map((col) => ({
+    key: col.key,
+    label: localizedLabel(col.label, col.key),
+    // Valeurs numeriques centrees sous leur en-tete (V1-D7, retour
+    // utilisateur) ; "grants" reste a gauche, une liste de liens de longueur
+    // variable ne se centre pas lisiblement.
+    align: (col.kind === "grants" ? "left" : "center") as "left" | "center",
+  }));
   const rows = data.rows.map((row) =>
     data.columns.map((col) => ({
       key: col.key,
@@ -413,7 +424,7 @@ function SpellcastingProgression({ data }: { data: SpellcastingProgressionBlockD
   return <KeyValues items={items} />;
 }
 
-function SubclassSlot({ data, worldSlug }: { data: SubclassSlotBlockData; worldSlug: string }) {
+function SubclassSlot({ data, worldSlug }: { data: ResolvedSubclassSlotBlockData; worldSlug: string }) {
   const items = [
     { label: "Choix", value: data.label },
     { label: "Niveau", value: String(data.chosen_at_level) },
@@ -425,7 +436,7 @@ function SubclassSlot({ data, worldSlug }: { data: SubclassSlotBlockData; worldS
               <span className="flex flex-wrap gap-x-2">
                 {data.options.map((opt, i) => (
                   <Link key={i} href={`/m/${worldSlug}/regles/${opt.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
-                    {opt.key}
+                    {opt.resolved_name}
                   </Link>
                 ))}
               </span>
@@ -560,7 +571,7 @@ export function renderBlockData(
   if (blockType === "prerequisites") return <Prerequisites data={data as PrerequisitesBlockData} />;
   if (blockType === "class_basics") return <ClassBasics data={data as ClassBasicsBlockData} />;
   if (blockType === "spellcasting_progression") return <SpellcastingProgression data={data as SpellcastingProgressionBlockData} />;
-  if (blockType === "subclass_slot") return <SubclassSlot data={data as SubclassSlotBlockData} worldSlug={worldSlug} />;
+  if (blockType === "subclass_slot") return <SubclassSlot data={data as ResolvedSubclassSlotBlockData} worldSlug={worldSlug} />;
   if (blockType === "background") return <Background data={data as ResolvedBackgroundBlockData} worldSlug={worldSlug} />;
   if (blockType === "condition_effects") return <ConditionEffects data={data as ConditionEffectsBlockData} />;
   if (blockType === "subclass_features") return <SubclassFeatures data={data as SubclassFeaturesBlockData} />;
