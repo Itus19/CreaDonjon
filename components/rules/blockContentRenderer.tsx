@@ -28,9 +28,11 @@ import {
   CURRENCY_LABELS_FR,
   ITEM_RARITY_LABELS_FR,
   SIZE_LABELS_FR,
+  SKILL_LABELS_FR,
   WEAPON_PROPERTY_LABELS_FR,
 } from "@/src/i18n/fr";
-import type { RuleRefView } from "@/src/server/services/rules";
+import type { Skill } from "@/src/core/rules/sheet";
+import type { ResolvedBackgroundBlockData, RuleRefView } from "@/src/server/services/rules";
 import Chips from "./layouts/Chips";
 import FormulaList from "./layouts/FormulaList";
 import KeyValues from "./layouts/KeyValues";
@@ -57,6 +59,11 @@ function costText(cost: { value: number; unit: string } | undefined): string | u
 function propertyLabel(refKey: string): string {
   const index = refKey.replace(/^weapon-property-/, "");
   return WEAPON_PROPERTY_LABELS_FR[index] ?? index;
+}
+
+/** `background.skill_proficiencies` (V1-D7, cles `Skill` snake_case) -> libelle FR, meme table que la fiche de personnage. */
+function skillLabel(key: string): string {
+  return SKILL_LABELS_FR[key as Skill] ?? key;
 }
 
 function localizedLabel(label: Record<string, string>, fallbackKey: string): string {
@@ -372,6 +379,35 @@ function SubclassSlot({ data, worldSlug }: { data: SubclassSlotBlockData; worldS
 }
 
 /**
+ * Le don accorde lie vers sa propre fiche ET reprend sa propre description
+ * (V1-D7) — `data.feat_name`/`data.feat_description` sont ajoutes a la
+ * lecture par le service (ResolvedBackgroundBlockData), jamais stockes tels
+ * quels dans le bloc. Seul le don beneficie de cette resolution : les
+ * maitrises de competence/outil n'ont pas de fiche propre dans ce systeme
+ * (cf. commentaire de `zBackgroundBlockData`), un simple libelle suffit.
+ */
+function Background({ data, worldSlug }: { data: ResolvedBackgroundBlockData; worldSlug: string }) {
+  const items = [
+    { label: "Valeurs de caracteristique", value: data.ability_scores.map(abilityLabel).join(", ") },
+    {
+      label: "Don",
+      value: (
+        <div className="flex flex-col gap-0.5">
+          <Link href={`/m/${worldSlug}/regles/${data.feat.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
+            {data.feat_name}
+          </Link>
+          {data.feat_description && <p className="text-xs leading-relaxed">{data.feat_description}</p>}
+        </div>
+      ),
+    },
+    { label: "Maitrises de competence", value: data.skill_proficiencies.map(skillLabel).join(", ") },
+    ...(data.tool_proficiency ? [{ label: "Maitrise d'outil", value: proficiencyLabel(data.tool_proficiency) }] : []),
+    { label: "Equipement de depart", value: data.equipment_choice },
+  ];
+  return <KeyValues items={items} />;
+}
+
+/**
  * Repartiteur par block_type -> mise en page generique (specs/regles-blocs.md
  * §4-5). Aucun composant par type de bloc pour l'affichage lui-meme, les
  * six mises en page suffisent ; ce fichier ne fait que traduire chaque bloc
@@ -406,5 +442,6 @@ export function renderBlockData(
   if (blockType === "class_basics") return <ClassBasics data={data as ClassBasicsBlockData} />;
   if (blockType === "spellcasting_progression") return <SpellcastingProgression data={data as SpellcastingProgressionBlockData} />;
   if (blockType === "subclass_slot") return <SubclassSlot data={data as SubclassSlotBlockData} worldSlug={worldSlug} />;
+  if (blockType === "background") return <Background data={data as ResolvedBackgroundBlockData} worldSlug={worldSlug} />;
   return null;
 }

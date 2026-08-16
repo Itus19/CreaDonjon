@@ -3,6 +3,7 @@ import {
   validateBlockData,
   zActionsBlockData,
   zArmorBlockData,
+  zBackgroundBlockData,
   zChargesBlockData,
   zClassBasicsBlockData,
   zClassProgressionBlockData,
@@ -243,6 +244,29 @@ describe("zSubclassSlotBlockData", () => {
   it("accepte le choix de tradition arcanique du Magicien", () => {
     const data = { label: "Tradition arcanique", chosen_at_level: 2, options: [{ kind: "rule", key: "evocation" }] };
     expect(zSubclassSlotBlockData.parse(data)).toEqual(data);
+  });
+});
+
+describe("zBackgroundBlockData", () => {
+  it("accepte l'historique Criminel", () => {
+    const data = {
+      ability_scores: ["dex", "con", "int"],
+      feat: { kind: "rule", key: "alert" },
+      skill_proficiencies: ["sleight_of_hand", "stealth"],
+      tool_proficiency: "Thieves' Tools",
+      equipment_choice: "Choisissez A ou B : (A) 2 dagues, outils de voleur, pied-de-biche, 2 bourses, tenue de voyageur, 16 po ; ou (B) 50 po",
+    };
+    expect(zBackgroundBlockData.parse(data)).toEqual(data);
+  });
+
+  it("accepte l'absence de maitrise d'outil fixe (choix libre, ex. Soldat)", () => {
+    const data = {
+      ability_scores: ["str", "dex", "con"],
+      feat: { kind: "rule", key: "savage-attacker" },
+      skill_proficiencies: ["athletics", "intimidation"],
+      equipment_choice: "Choisissez A ou B : (A) Lance, arc court, ... ; ou (B) 50 po",
+    };
+    expect(zBackgroundBlockData.parse(data)).toEqual(data);
   });
 });
 

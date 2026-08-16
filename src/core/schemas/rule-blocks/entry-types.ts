@@ -38,4 +38,5 @@ export const REQUIRED_BLOCKS: Partial<Record<EntryType, string[]>> = {
   armor: ["armor"],
   item: ["item_properties"],
   monster: ["stat_block", "actions"],
+  background: ["background"],
 };

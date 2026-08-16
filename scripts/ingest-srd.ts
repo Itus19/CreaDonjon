@@ -1187,6 +1187,62 @@ function subclassSlotBlock(classIndex: string, subclasses: SrdRecord[], levels: 
   return { block_type: "subclass_slot", display: { label: "Sous-classe", layout: "key_values" }, data, display_order: 250 };
 }
 
+/**
+ * `null` quand la forme source n'est pas celle du SRD 2024 (`ability_scores`
+ * + `feat` structures) — le SRD 2014 des historiques (une seule entree,
+ * "acolyte", toujours ecrasee par la version 2024 de meme index avant que
+ * cette fonction ne s'execute) n'a jamais cette forme. Les 4 historiques
+ * reellement en base passent tous par la branche remplie ; `null` reste la
+ * pour une entree maison qui n'aurait pas encore cette structure, jamais
+ * une exception qui ferait echouer tout l'import.
+ *
+ * `skill_proficiencies` normalise vers les cles `Skill` (src/core/rules/sheet.ts,
+ * "skill-sleight-of-hand" -> "sleight_of_hand") plutot que le nom anglais
+ * brut : blockContentRenderer.tsx peut alors reutiliser SKILL_LABELS_FR
+ * (deja complet, 18 competences) sans nouvelle table de correspondance.
+ * `tool_proficiency` garde au contraire le nom anglais affichable (comme
+ * `class_basics.tool_proficiencies`) : reutilise CLASS_PROFICIENCY_LABELS_FR,
+ * complete au besoin plutot que duplique. Le choix d'outil libre (ex.
+ * Soldat, "choisissez un type de boite de jeux") vient de
+ * `proficiency_choices[0].desc` quand aucune maitrise fixe n'existe.
+ */
+function backgroundBlock(entry: SrdRecord): EntryBlock | null {
+  const abilityScoresRaw = entry.ability_scores;
+  const featRaw = entry.feat as SrdRecord | undefined;
+  if (!Array.isArray(abilityScoresRaw) || typeof featRaw?.index !== "string") return null;
+
+  const abilityScores = (abilityScoresRaw as SrdRecord[])
+    .map((a) => (typeof a.index === "string" ? a.index : null))
+    .filter((a): a is string => a !== null);
+  if (abilityScores.length !== 3) return null;
+
+  const profRaw = Array.isArray(entry.proficiencies) ? (entry.proficiencies as SrdRecord[]) : [];
+  const skillProficiencies = profRaw
+    .filter((p) => typeof p.index === "string" && p.index.startsWith("skill-"))
+    .map((p) => (p.index as string).replace(/^skill-/, "").replace(/-/g, "_"));
+  const fixedTool = profRaw.find((p) => typeof p.index === "string" && p.index.startsWith("tool-"));
+  const choiceRaw = Array.isArray(entry.proficiency_choices)
+    ? (entry.proficiency_choices[0] as SrdRecord | undefined)
+    : undefined;
+  const fixedToolName = typeof fixedTool?.name === "string" ? fixedTool.name.replace(/^Tool: /, "") : undefined;
+  const toolProficiency = fixedToolName ?? (typeof choiceRaw?.desc === "string" ? choiceRaw.desc : undefined);
+
+  const equipmentRaw = Array.isArray(entry.equipment_options)
+    ? (entry.equipment_options[0] as SrdRecord | undefined)
+    : undefined;
+  const equipmentChoice = typeof equipmentRaw?.desc === "string" ? equipmentRaw.desc : "";
+
+  const data = {
+    ability_scores: abilityScores,
+    feat: { kind: "rule" as const, key: featRaw.index },
+    skill_proficiencies: skillProficiencies,
+    tool_proficiency: toolProficiency,
+    equipment_choice: equipmentChoice,
+  };
+  validateBlockData("background", data);
+  return { block_type: "background", display: { label: "Historique", layout: "key_values" }, data, display_order: 150 };
+}
+
 // --------------------------------------------------------------------
 // entry_type par categorie SRD, et split de Equipment par equipment_category
 // --------------------------------------------------------------------
@@ -1308,6 +1364,11 @@ function transformEntry(
   if (category === "Feats") {
     const prerequisites = prerequisitesBlock(entry);
     if (prerequisites) blocks.push(prerequisites);
+  }
+
+  if (entryType === "background") {
+    const background = backgroundBlock(entry);
+    if (background) blocks.push(background);
   }
 
   blocks.push(customTableBlock(entry));

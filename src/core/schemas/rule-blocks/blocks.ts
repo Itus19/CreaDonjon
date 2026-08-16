@@ -34,6 +34,7 @@ export const BLOCK_TYPES = [
   "class_basics",
   "spellcasting_progression",
   "subclass_slot",
+  "background",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -256,6 +257,29 @@ export const zSubclassSlotBlockData = z.object({
 });
 export type SubclassSlotBlockData = z.infer<typeof zSubclassSlotBlockData>;
 
+// --- background (layout: key_values, V1-D7) -----------------------------
+// Donnees mecaniques d'un historique : valeurs de caracteristique, don
+// accorde, maitrises, equipement de depart. Le don est une vraie reference
+// (`zReference`, kind "rule", categorie SRD "Feats" -> entry_type
+// "feature") pour permettre un affichage resolu (nom + description reprise
+// de sa propre fiche, cf. resolveFeatDetail dans rules.ts) — c'est le seul
+// champ ici qui pointe vers une fiche existante. Les maitrises de
+// competence/outil n'ont PAS d'entree dediee dans ce systeme (categorie
+// "Skills" absente de CATEGORY_ENTRY_TYPE, scripts/ingest-srd.ts) : simples
+// libelles, meme choix que `class_basics.tool_proficiencies` deja en place.
+// L'equipement de depart ("Choisissez A ou B : ...") reste un texte plutot
+// qu'une structure : le SRD le fournit deja tout fait (`equipment_options[].desc`),
+// et la structure imbriquee sous-jacente est trop riche pour une primitive
+// existante sans en inventer une onzieme (specs/regles-blocs.md §3, a eviter).
+export const zBackgroundBlockData = z.object({
+  ability_scores: z.array(z.string()).length(3),
+  feat: zReference,
+  skill_proficiencies: z.array(z.string()),
+  tool_proficiency: z.string().optional(),
+  equipment_choice: z.string(),
+});
+export type BackgroundBlockData = z.infer<typeof zBackgroundBlockData>;
+
 // --- Enveloppe commune (specs/regles-blocs.md §2) -----------------------
 export const zBlockDisplay = z.object({
   label: z.string(),
@@ -281,6 +305,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   class_basics: zClassBasicsBlockData,
   spellcasting_progression: zSpellcastingProgressionBlockData,
   subclass_slot: zSubclassSlotBlockData,
+  background: zBackgroundBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 /** Registre : le moteur demande le schema Zod d'un block_type et recoit une forme garantie. */

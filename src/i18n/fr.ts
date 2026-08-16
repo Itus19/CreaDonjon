@@ -142,6 +142,8 @@ export const CLASS_PROFICIENCY_LABELS_FR: Record<string, string> = {
   Spears: "Lance",
   "Herbalism Kit": "Matériel d'herboriste",
   "Thieves' Tools": "Outils de voleur",
+  // V1-D7 (bloc `background`) : maitrise d'outil fixe des historiques Acolyte/Sage.
+  "Calligrapher's Supplies": "Matériel de calligraphe",
 };
 
 /** Abreviations francaises des pieces de monnaie (onglet Inventaire, V1-C11) — la grille de monnaie du bloc Inventaire garde les codes SRD bruts (pp/gp/ep/sp/cp), non repris ici (hors perimetre de ce ticket). */

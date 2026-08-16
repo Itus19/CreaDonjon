@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import {
   dataSchemaForBlockType,
+  type BackgroundBlockData,
   type BlockType,
   type ClassProgressionBlockData,
   type EffectsBlockData,
@@ -226,6 +227,54 @@ async function resolveIncomingRefs(
 }
 
 /**
+ * `background.feat` (V1-D7) augmente de son propre nom et de sa propre
+ * description au moment de la lecture — jamais stocke ainsi (le bloc en
+ * base ne porte que la reference `{kind, key}`), memes noms que
+ * `BackgroundBlockData` en plus. Portee volontairement limitee a ce seul
+ * bloc : le mecanisme general de renvois (`outgoingRefs`/`RuleRefView`) ne
+ * transporte que des noms, jamais de texte de description, et l'etendre
+ * pour ce seul besoin aurait touche le panneau de renvois existant pour
+ * rien — cf. plan approuve, ne pas generaliser sans un deuxieme cas concret.
+ */
+export type ResolvedBackgroundBlockData = BackgroundBlockData & {
+  feat_name: string;
+  feat_description: string;
+};
+
+/**
+ * Nom + description (deja traduite si `locale !== "en"`) de l'entree
+ * `feature` visee par `background.feat`. `null` seulement si la cle ne
+ * resout dans aucun ruleset de la chaine (donnee source incoherente) —
+ * l'appelant retombe alors sur la cle brute plutot que d'echouer la fiche
+ * entiere pour un seul champ manquant.
+ */
+async function resolveFeatDetail(
+  supabase: TypedClient,
+  rulesetId: string,
+  featKey: string,
+  locale: Locale
+): Promise<{ name: string; description: string } | null> {
+  const featEntry = await findEntryInRulesetChain(supabase, rulesetId, featKey);
+  if (!featEntry) return null;
+
+  const translation = locale !== "en" ? await getEntryTranslation(supabase, featEntry.id, locale) : null;
+  const translatedBlocks = (translation?.blocks ?? {}) as Record<string, unknown>;
+
+  let description = "";
+  const translatedDescription = translatedBlocks.description as { segments?: { text: string }[] } | undefined;
+  if (translatedDescription?.segments) {
+    description = translatedDescription.segments.map((s) => s.text).join("\n\n");
+  } else {
+    const blockRows = await listBlocksForRulesetEntry(supabase, featEntry.id);
+    const descriptionRow = blockRows.find((b) => b.block_type === "description");
+    const data = descriptionRow?.data as { segments?: { text: string }[] } | undefined;
+    description = data?.segments?.map((s) => s.text).join("\n\n") ?? "";
+  }
+
+  return { name: translation?.name ?? entryNameFrom(featEntry), description };
+}
+
+/**
  * Assemble une fiche de regle complete pour l'affichage : resout le
  * ruleset du monde, trouve l'entree, valide chaque bloc via son schema
  * (le moteur ne recoit jamais une forme non garantie), engendre la table
@@ -350,6 +399,23 @@ export async function getRuleEntryForWorld(
     resolveOutgoingRefs(supabase, rulesetId, entry.id, locale),
     resolveIncomingRefs(supabase, rulesetId, entry.entry_key, locale),
   ]);
+
+  // Augmente le bloc `background` avec le nom+description de son don (V1-D7)
+  // — cf. ResolvedBackgroundBlockData, meme motif que `scaling`/`class_progression`
+  // ci-dessus (donnee calculee a la lecture, ajoutee a la forme validee).
+  const backgroundBlockIndex = blocks.findIndex((b) => b.blockType === "background");
+  if (backgroundBlockIndex !== -1) {
+    const bgData = blocks[backgroundBlockIndex].data as BackgroundBlockData;
+    const featDetail = await resolveFeatDetail(supabase, rulesetId, bgData.feat.key, locale);
+    blocks[backgroundBlockIndex] = {
+      ...blocks[backgroundBlockIndex],
+      data: {
+        ...bgData,
+        feat_name: featDetail?.name ?? bgData.feat.key,
+        feat_description: featDetail?.description ?? "",
+      } satisfies ResolvedBackgroundBlockData,
+    };
+  }
 
   return {
     id: entry.id,
