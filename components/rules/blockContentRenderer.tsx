@@ -33,6 +33,7 @@ import {
   WEAPON_PROPERTY_LABELS_FR,
 } from "@/src/i18n/fr";
 import type { Skill } from "@/src/core/rules/sheet";
+import { ftToM, lbToKg } from "@/src/core/rules/encumbrance";
 import type { ResolvedBackgroundBlockData, ResolvedBackgroundEquipmentOption, RuleRefView } from "@/src/server/services/rules";
 import Chips from "./layouts/Chips";
 import FormulaList from "./layouts/FormulaList";
@@ -47,8 +48,21 @@ function abilityLabel(key: string): string {
   return ABILITY_ABBR_FR[key] ?? key.toUpperCase();
 }
 
+/**
+ * Poids (lb) et distances (ft) du SRD converties en unites metriques a
+ * l'affichage (V1-D7, sur retour utilisateur : "il faudrait que les poids
+ * soient en kilogramme... pareil pour les mesures de distances") — meme
+ * conversion que l'onglet Inventaire (`lbToKg`, deja demandee et posee la
+ * pour cette meme raison), etendue ici a `ftToM` pour la portee d'arme.
+ * La donnee stockee reste en unites SRD (lb/ft) ; seule cette fonction
+ * d'affichage change. Toute autre unite (rare, ex. gp deja gere a part par
+ * `costText`) passe telle quelle.
+ */
 function quantityText(q: { value: number; unit: string } | undefined): string | undefined {
-  return q ? `${q.value} ${q.unit}` : undefined;
+  if (!q) return undefined;
+  if (q.unit === "lb") return `${lbToKg(q.value)} kg`;
+  if (q.unit === "ft") return `${ftToM(q.value)} m`;
+  return `${q.value} ${q.unit}`;
 }
 
 /** Cout en pieces (V1-D1) -> memes abreviations FR que l'onglet Inventaire (V1-C11), au lieu des codes SRD bruts (gp/sp/...). */

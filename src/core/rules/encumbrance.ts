@@ -76,6 +76,19 @@ export function lbToKg(lb: number): number {
   return Math.round(lb * LB_TO_KG * 10) / 10;
 }
 
+const FT_TO_M = 0.3048;
+
+/**
+ * Meme principe que `lbToKg` (conversion d'affichage uniquement, V1-D7 sur
+ * retour utilisateur : "il faudrait que les poids soient en kilogramme...
+ * pareil pour les mesures de distances"). La portee d'une arme
+ * (`weapon.range`, zQuantity) reste stockee en pieds (unite native du SRD) ;
+ * seul l'affichage passe en metres. Arrondi a une decimale.
+ */
+export function ftToM(ft: number): number {
+  return Math.round(ft * FT_TO_M * 10) / 10;
+}
+
 /**
  * Poids total porte : pour un objet de reference de regle, le poids vient
  * de `weightByKey` (resolu cote serveur/client depuis la fiche de regle,

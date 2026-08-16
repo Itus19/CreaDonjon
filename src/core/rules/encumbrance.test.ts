@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeEncumbrance, encumbranceModifiers, lbToKg, totalCarriedWeight } from "./encumbrance";
+import { computeEncumbrance, encumbranceModifiers, ftToM, lbToKg, totalCarriedWeight } from "./encumbrance";
 import type { InventoryItem } from "../schemas/blocks/inventory";
 
 // Seuils verifies dans le texte de regle du SRD 2014 (data/srd/srd-2014.json,
@@ -76,6 +76,16 @@ describe("lbToKg", () => {
 
   it("0 lb -> 0 kg", () => {
     expect(lbToKg(0)).toBe(0);
+  });
+});
+
+describe("ftToM", () => {
+  it("convertit une portee d'arme en pieds (portee courte de l'arc court, 80 ft) en metres, arrondi a 1 decimale", () => {
+    expect(ftToM(80)).toBe(24.4);
+  });
+
+  it("0 ft -> 0 m", () => {
+    expect(ftToM(0)).toBe(0);
   });
 });
 
