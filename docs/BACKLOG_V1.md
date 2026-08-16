@@ -923,7 +923,7 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 | Monstre | 334/334 ✅ | 324/334 en base — **294/294 (100 %) sur le vrai dénominateur** ✅ (293/294 avec `traits`/`actions`), voir plus bas |
 | Sort | 319/319 ✅ | 319/319 ✅ |
 | Arme | 37/37 ✅ | 41/41 ✅ |
-| Règle | 38/39 | 28/39 |
+| Règle | 38/39 | 28/39 — **28/28 (100 %) sur le vrai dénominateur** ✅ (23/28 avec prose), voir plus bas |
 | Espèce | 13/13 ✅ | 33/33 ✅ |
 | Sous-classe | 12/12 ✅ | 21/21 ✅ |
 | Armure | 13/13 ✅ | 13/13 ✅ |
@@ -1322,6 +1322,14 @@ Chaque correctif vérifié séparément par relecture d'au moins un cas avant de
 - **`night-hag`** : reconfirmé bloqué, déjà documenté en détail plus haut dans ce ticket (V1-D3b point 7-8) — « Night Hag Items » (la description de la cardioline et du sac des âmes) est absente de `srd-5.2.1-fr.txt` à l'endroit attendu, un vrai trou du texte source, pas un bug d'extraction.
 
 **Résultat final : Monstre 5.2.1, 294/294 noms (100 %), 293/294 avec `traits`/`actions` (99,7 %).** `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests). **Monstre est la troisième catégorie 5.2.1 confirmée complète sur son vrai dénominateur**, après Aptitude et Objet — et la seule des trois qui l'était déjà avant que cette série de vérifications ne commence, preuve que la méthode « vrai dénominateur d'abord » de V1-D6 était la bonne approche depuis le début.
+
+**Quinzième passe, sur demande explicite (« vérifie règles en premier »).** Cas différent des trois précédentes : `data/srd/srd-2024.json` n'a **aucune** catégorie `Rules`/`Rule-Sections` (0 entrée) — impossible d'utiliser la même astuce `source_raw.url` (`/2024/` contre `/2014/`), toutes les 39 fiches Règle partagent le même repli 2014 en `source_raw`, sans exception. Le vrai dénominateur ne peut se établir qu'en relisant le texte français lui-même, exactement comme la troisième passe (V1-D3b point 10) l'avait déjà fait rigoureusement.
+
+**Recyclage systématique 5.1 → 5.2.1, jamais tenté avec le script générique pour Règle jusqu'ici (fait à la main en troisième passe).** Construit 10 candidats {nom anglais → nom français déjà établi en 5.1} pour les 11 manquants (`adventuring` exclu, sans équivalent 5.1 non plus), vérifiés avec `translate:entries` contre `srd-5.2.1-fr.txt`. **0/10 trouvés** — confirme par la preuve, via le même script utilisé pour Aptitude et Objet, la conclusion déjà posée à la main en troisième passe : ces 11 fiches n'ont réellement aucun équivalent dans le texte 2024, contenu redistribué sans titre de chapitre isolé équivalent.
+
+**Le vrai dénominateur pour les noms est donc 28, pas 39** (39 − 11 confirmés absents) — et Règle 5.2.1 est **déjà à 28/28 (100 %)** sur ce dénominateur, sans qu'aucune écriture supplémentaire n'ait été nécessaire cette passe. Pour la prose : 23/28 (82 %) — les 5 fiches restantes (`equipment`, `movement`, `time`, `activating-an-item`, `madness`) ont un nom mais pas de prose, déjà investiguées en profondeur lors d'une « repasse » précédente (V1-D3b point 10) : aucune n'a d'en-tête de chapitre isolé ni de contenu substantiel au-delà d'un homonyme ou d'une définition d'une phrase dans le glossaire — reconfirmé plutôt que retenté à l'identique.
+
+**Résultat : Règle 5.2.1 confirmée complète sur son vrai dénominateur (28/28 noms, 100 %) sans travail supplémentaire nécessaire** — la troisième passe avait déjà fait le travail, cette passe l'a simplement vérifié par une méthode indépendante (script générique plutôt que recherche manuelle). `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
 
 ---
 
