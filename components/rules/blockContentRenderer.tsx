@@ -27,6 +27,7 @@ import {
   CLASS_PROFICIENCY_LABELS_FR,
   CREATURE_TYPE_LABELS_FR,
   CURRENCY_LABELS_FR,
+  DAMAGE_TYPE_LABELS_FR,
   ITEM_RARITY_LABELS_FR,
   SIZE_LABELS_FR,
   SKILL_LABELS_FR,
@@ -81,6 +82,18 @@ function propertyLabel(refKey: string): string {
   return WEAPON_PROPERTY_LABELS_FR[index] ?? index;
 }
 
+/**
+ * Type de degats brut -> libelle FR (V1-D7, decouvert sur Arme). Deux
+ * formats coexistent selon le bloc, verifie dans scripts/ingest-srd.ts :
+ * `weapon.damage.type` stocke l'index SRD en minuscules ("piercing"), tandis
+ * que `effects[].damage_type` et `actions[].damage[].type` stockent le nom
+ * anglais capitalise ("Piercing") — mise en minuscules avant recherche
+ * plutot que deux tables, meme jeu de 13 valeurs des deux cotes.
+ */
+function damageTypeLabel(type: string): string {
+  return DAMAGE_TYPE_LABELS_FR[type.toLowerCase()] ?? type;
+}
+
 /** `background.skill_proficiencies` (V1-D7, cles `Skill` snake_case) -> libelle FR, meme table que la fiche de personnage. */
 function skillLabel(key: string): string {
   return SKILL_LABELS_FR[key as Skill] ?? key;
@@ -117,7 +130,7 @@ function Effects({ data }: { data: EffectsBlockData }) {
   const items = data.effects.map((effect) => ({
     id: effect.id,
     trigger: effect.trigger,
-    damageType: effect.damage_type,
+    damageType: effect.damage_type ? damageTypeLabel(effect.damage_type) : undefined,
     formulaText: effect.formula ? formatFormulaNode(effect.formula) : undefined,
     save: effect.save
       ? { ability: effect.save.ability, effectOnSuccess: effect.save.effect_on_success }
@@ -252,7 +265,7 @@ function Weapon({ data }: { data: WeaponBlockData }) {
       value: (
         <span className="mech">
           {formatFormulaNode(data.damage.dice)}
-          {data.damage.type ? ` (${data.damage.type})` : ""}
+          {data.damage.type ? ` (${damageTypeLabel(data.damage.type)})` : ""}
         </span>
       ),
     },
@@ -394,7 +407,7 @@ function Actions({ data }: { data: ActionsBlockData }) {
               <p className="mech text-xs text-ink-muted">
                 {a.attack_bonus !== undefined && `+${a.attack_bonus} pour toucher`}
                 {a.attack_bonus !== undefined && a.damage?.length ? " · " : ""}
-                {a.damage?.map((d) => `${formatFormulaNode(d.dice)}${d.type ? ` (${d.type})` : ""}`).join(", ")}
+                {a.damage?.map((d) => `${formatFormulaNode(d.dice)}${d.type ? ` (${damageTypeLabel(d.type)})` : ""}`).join(", ")}
               </p>
             )}
           </div>

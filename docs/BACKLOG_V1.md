@@ -1500,11 +1500,11 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 | Armure | 13 | ✅ 13/13, 16 août 2026 |
 | Sous-classe | 12 | ✅ 12/12, 16 août 2026 |
 | Classe | 12 | ✅ 12/12, 16 août 2026 |
-| Arme | 38 | ⬜ |
+| Arme | 38 | ✅ 38/38, 16 août 2026 |
 | Espèce | 33 | ⬜ |
 | Objet | 473 | ⬜ |
 | Aptitude | 603 | ⬜ |
-| **Total** | **1203** | **56/1203 (4,7 %)** |
+| **Total** | **1203** | **94/1203 (7,8 %)** |
 
 **Ordre choisi** : du plus petit volume au plus gros, pour valider la méthode (extraction du texte officiel français, jamais une reconstruction ou une traduction automatique — même règle absolue que tout le reste de cette série) sur des lots courts avant Objet et Aptitude, les deux gros morceaux. Historique d'abord sur demande explicite.
 
@@ -1551,9 +1551,24 @@ Deux vrais bugs de donnée trouvés et corrigés au passage, hors du périmètre
 - **`class_progression` (bloc mécanique) affichait des clés anglaises brutes en en-tête de colonne** (`cantrips_known`, `rage_count`...) — ces colonnes sont découvertes dynamiquement à l'import depuis les champs `class_specific`/`spellcasting` du SRD, jamais couvertes par une traduction faute d'être un ensemble fixe. Deux nouvelles tables de correspondance dans `scripts/ingest-srd.ts` (`CLASS_SPECIFIC_COLUMN_LABELS_FR`, 14 clés ; `SPELLCASTING_COLUMN_LABELS_FR`, avec un gabarit `spell_slots_level_N` → « Emplacements niv. N ») construites en énumérant les colonnes réelles des douze classes plutôt que devinées. Repli sur la clé brute si une classe maison future introduit une clé inédite — jamais une exception qui casserait l'import.
 - **`spellcasting_progression.info[]` (huit classes incantatrices) n'avait tout simplement aucune traduction française** — texte anglais du JSON 5e-bits affiché tel quel. Extraction directe depuis `srd-5.2.1-fr.txt` (Barde, Clerc, Druide, Ensorceleur, Magicien, Occultiste, Paladin, Rôdeur), jamais une traduction du JSON anglais : une vraie erreur de donnée y a été trouvée en comparant, sur le Magicien, « choose two level four spells from your spellbook » (anglais) contre « choisissez quatre sorts de votre grimoire » (français officiel, confirmé par lecture directe) — la source anglaise 5e-bits est elle-même fautive à cet endroit, pas seulement non traduite.
 
-**Troisième correction, plus petite : `subclass_slot.label`** affichait aussi la clé de l'aptitude anglaise brute (« Wizard Subclass ») dans l'encadré « Sous-classe » de chaque fiche de Classe — traduit pour les douze classes (« Sous-classe de Magicien », etc.), même phrasing que le SRD français (« Niveau 3 : Sous-classe de Magicien »). **Non corrigé, signalé séparément** : le lien de chaque option de sous-classe dans ce même encadré affiche encore la clé technique brute (`evoker`) au lieu du nom résolu (« Évocateur ») — bug de rendu pré-existant, indépendant de la locale, hors périmètre de ce ticket de traduction ; tâche de suivi créée.
+**Troisième correction, plus petite : `subclass_slot.label`** affichait aussi la clé de l'aptitude anglaise brute (« Wizard Subclass ») dans l'encadré « Sous-classe » de chaque fiche de Classe — traduit pour les douze classes (« Sous-classe de Magicien », etc.), même phrasing que le SRD français (« Niveau 3 : Sous-classe de Magicien »).
 
 `npm run typecheck && npm run lint && npm run test` verts (45 fichiers, 440 tests) après cette passe. Vérifié en navigateur sur Magicien (classe incantatrice) et Barbare (classe non incantatrice) : description, colonnes de progression et bloc Incantation tous en français, encadré Sous-classe au bon libellé.
+
+**Série de retours utilisateur sur la Classe, avant de passer à Arme (16 août 2026).** Cinq changements, tous vérifiés en navigateur sur Magicien et Barbare :
+- **Colonnes numériques centrées** dans `ProgressionTable` (`class_progression`, `scaling`) — `align` par colonne, déjà introduit pour `SubclassFeatures`, simplement étendu.
+- **Bug corrigé** : le lien de chaque option de sous-classe dans l'encadré « Sous-classe » affichait encore la clé technique brute (`evoker`) au lieu du nom résolu — `ResolvedSubclassSlotBlockData` (nouveau, `src/server/services/rules.ts`), même motif que `ResolvedBackgroundBlockData` (résolution à la lecture, jamais stockée). `resolveFeatDetail` généralisé en `resolveEntryDetail` (même fonction, deuxième appelant).
+- **Panneau de renvois sortants déplacé au-dessus de « Données brutes (SRD) »**, replié par défaut (`<details>`, même motif que les blocs `display.collapsed`), et enrichi du niveau + texte complet de l'aptitude accordée (`RuleRefView.level`/`description`, remplis uniquement pour `ref_kind: "grants"` — niveau extrait du `path` par regex, texte via `resolveEntryDetail`). Renommé **« Détails Aptitudes »** sur retour utilisateur (`messages/fr.json`, `renvoisSortants`). **Limite connue, signalée à l'utilisateur** : le texte affiché est celui, brut, de la fiche Aptitude visée — reste en anglais tant qu'Aptitude (603 fiches, dernière catégorie de ce ticket) n'a pas sa propre passe.
+- **Bloc Incantation refondu** : chaque section `spellcasting_progression.info[]` sort de la grille `KeyValues` à trois colonnes (un paragraphe de plusieurs phrases écrasé dans un tiers de largeur ne se lisait pas) et s'empile en pleine largeur avec un vrai sous-titre, même langage visuel que `SubclassFeatures`.
+- **En-tête à deux lignes optionnel dans `ProgressionTable`** (`group` par colonne) : les neuf colonnes d'emplacement de sort de `class_progression` partagent un seul en-tête « Emplacements » avec un sous-libellé court par niveau (« Niv. 1 »...) au lieu de répéter « Emplacements niv. N » neuf fois — table sensiblement plus étroite. Rétro-compatible (`Scaling`/`SubclassFeatures`, sans colonne groupée, gardent leur rendu à une ligne).
+
+**Sixième passe, Arme (38/38, 16 août 2026).** Même situation que Classe : aucune prose SRD par arme (juste une table « Armes », vérifié dans `srd-5.2.1-fr.txt`) — bloc 1 en lore inventé, un court paragraphe par arme calibré sur ses propres traits mécaniques déjà en base (portée, propriétés, deux mains...).
+
+**Décision prise en cours de route, pas exécutée : `weapon.mastery`.** Le JSON source (2024) porte un champ `mastery` par arme (ex. dague → `Nick`, huit valeurs 2024 au total) totalement absent du schéma `WeaponBlockData` et de l'import. Décision déjà documentée dans `scripts/ingest-srd.ts` (`SKIPPED_CATEGORIES`, commentaire `Weapon-Mastery-Properties`) : écarté délibérément faute de besoin concret sur la fiche jouable (règle des trois) — pas un oubli, une frontière de périmètre déjà tranchée. Non rouverte ici.
+
+**Bug transverse trouvé et corrigé en même temps : type de dégâts brut affiché en anglais.** Trois blocs différents montrent un type de dégâts entre parenthèses à côté d'une formule — `weapon.damage.type` (Arme), `effects[].damage_type` (Sort), `actions[].damage[].type` (Monstre) — et aucun des trois ne traduisait la valeur SRD brute (« piercing », « Fire »...). Nouvelle table `DAMAGE_TYPE_LABELS_FR` (`src/i18n/fr.ts`, 13 valeurs, reprises telles quelles de la table « Types de dégâts » du glossaire français) et fonction `damageTypeLabel()` partagée par les trois composants. Complication découverte à la vérification : les deux formats coexistent selon le bloc (`weapon` stocke l'index SRD en minuscules, `effects`/`actions` stockent le nom anglais capitalisé) — `damageTypeLabel()` met en minuscules avant la recherche plutôt que de dupliquer la table. Vérifié en navigateur sur trois fiches distinctes (Dague, Trait de feu, un monstre à corps à corps) : les trois affichent désormais le type en français.
+
+`npm run typecheck && npm run lint && npm run test` verts (45 fichiers, 440 tests) après cette passe.
 
 ---
 

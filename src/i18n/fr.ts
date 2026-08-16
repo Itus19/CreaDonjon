@@ -107,6 +107,31 @@ export const ARMOR_CATEGORY_LABELS_FR: Record<string, string> = {
 };
 
 /**
+ * Libelles des types de degats (`weapon.damage.type`, `effects[].damage_type`,
+ * `actions[].damage[].type` — meme cle brute anglaise partout, 13 valeurs
+ * fermees). V1-D7, decouvert en passant sur Arme : ces trois blocs
+ * affichaient encore la cle SRD brute ("piercing") entre parentheses a
+ * cote de la formule de degats. Forme officielle reprise telle quelle de
+ * la table « Types de degats » du glossaire francais (adjectif au pluriel
+ * meme en position d'etiquette isolee, ex. "Perforants" pas "Perforant").
+ */
+export const DAMAGE_TYPE_LABELS_FR: Record<string, string> = {
+  acid: "Acide",
+  bludgeoning: "Contondants",
+  cold: "Froid",
+  fire: "Feu",
+  force: "Force",
+  lightning: "Foudre",
+  necrotic: "Necrotiques",
+  piercing: "Perforants",
+  poison: "Poison",
+  psychic: "Psychiques",
+  radiant: "Radiants",
+  slashing: "Tranchants",
+  thunder: "Tonnerre",
+};
+
+/**
  * Libelles des maitrises de `class_basics.armor_proficiencies`/
  * `weapon_proficiencies`/`tool_proficiencies` (V1-D3b point 3) —
  * vocabulaire ferme (23 valeurs distinctes sur les 12 classes de la SRD
