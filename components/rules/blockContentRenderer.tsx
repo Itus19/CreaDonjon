@@ -343,8 +343,8 @@ function ConditionEffects({ data }: { data: ConditionEffectsBlockData }) {
  */
 function SubclassFeatures({ data }: { data: SubclassFeaturesBlockData }) {
   const sorted = [...data.features].sort((a, b) => a.level - b.level);
-  const columns = [
-    { key: "level", label: "Niveau" },
+  const columns: { key: string; label: string; align?: "left" | "center" }[] = [
+    { key: "level", label: "Niveau", align: "center" },
     { key: "feature", label: "Aptitude" },
   ];
   const rows = sorted.map((f, i) => [
