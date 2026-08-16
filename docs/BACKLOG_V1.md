@@ -914,11 +914,11 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 
 **Ne pas se fier aux tableaux narratifs plus bas** (chacun est un instantané du jour où il a été écrit, jamais remis à jour après coup — c'est ce qui rend le suivi illisible d'une session à l'autre). Celui-ci est recalculé **directement en base** (compte des `ruleset_entries` avec une ligne `ruleset_entry_translations` en `fr`, tous types confondus) à chaque fois qu'une session touche à la traduction, et remplacé en entier — jamais complété à côté d'une ancienne valeur.
 
-**Dernière mesure : 16 août 2026 (après la reprise d'Aptitude 5.2.1).**
+**Dernière mesure : 16 août 2026 (après la question sur le vrai dénominateur d'Aptitude).**
 
 | Catégorie | SRD 5.1 (2014) | SRD 5.2.1 (2024) |
 |---|---|---|
-| Aptitude | 348/348 ✅ | 509/636 |
+| Aptitude | 348/348 ✅ | 536/636 (dénominateur suspect, voir plus bas) |
 | Objet | 548/549 | 513/620 |
 | Monstre | 334/334 ✅ | 324/334 |
 | Sort | 319/319 ✅ | 319/319 ✅ |
@@ -930,7 +930,7 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 | Classe | 12/12 ✅ | 12/12 ✅ |
 | Condition | 15/15 ✅ | 15/15 ✅ |
 | Historique | 1/1 ✅ | 4/4 ✅ |
-| **Total** | **1690/1692 (99,9 %)** | **1832/2087 (87,8 %)** |
+| **Total** | **1690/1692 (99,9 %)** | **1859/2087 (89,1 %)** |
 
 **Lecture** : ce tableau compte les *noms* traduits (une ligne `ruleset_entry_translations` existe). Il ne dit rien de la richesse du contenu derrière (description traduite, mécanique 2024 réelle plutôt qu'un repli 2014 silencieux — voir V1-D6 pour Monstre, et le point 10 plus bas pour la découverte équivalente sur Sort). Un « ✅ » ici veut dire *noms complets*, pas *rien à vérifier d'autre*.
 
@@ -1275,6 +1275,12 @@ Chaque correctif vérifié séparément par relecture d'au moins un cas avant de
 **Résultat : Aptitude 5.2.1, 498 → 509/636.** Le plafond réel est très probablement proche de ce chiffre, pas de 636 — la majorité du reliquat vient de choix de conception 2024 (consolidation, granularité réduite) plutôt que d'un trou d'extraction. `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
 
 **Vérification complémentaire, sur question explicite (« les aptitudes 2014 sont sûrement aussi présentes en 2024, tu as vérifié ? »)** — non, pas systématiquement, jusqu'à cette question. Corrigé : construit 94 candidats {nom anglais → nom français déjà établi en 5.1} pour les `entry_key` manquants côté 5.2.1 qui existent aussi en 5.1 (127 manquants, 96 avec un équivalent 5.1 traduit, 94 chargés par `translate:entries`), puis vérifiés avec le script générique contre `srd-5.2.1-fr.txt`. **0/94 trouvés.** Confirme par la preuve, pas seulement par lecture manuelle, que ces noms 2014 ne survivent tels quels dans aucun cas de ce lot — le recyclage qui avait bien marché pour Objet et Sort ne s'applique pas à l'Aptitude, la catégorie la plus retravaillée entre éditions (consolidation par palier, restructuration de sous-classe). Aucune écriture supplémentaire côté 5.2.1 ; les 96 réécritures côté 5.1 rapportées par le script sont des no-op sans effet (même valeur déjà en base, la garde anti-conflit du script l'a confirmé).
+
+**Dixième passe, sur question décisive (« comment peux-tu dire qu'il y a 636 aptitudes en 2024 si tu n'en trouves que 509 ? »).** Question qui a fait tomber une hypothèse jamais vérifiée : 636 n'est pas « le nombre d'aptitudes qui existent dans le texte 2024 », c'est juste le nombre de lignes `ruleset_entries` issues du même mécanisme de fusion base-2014-plus-surcharges-2024 déjà en cause pour Espèce (V1-D3b point 10, septième passe). Vérifié directement : sur les 636, **318 ont un `source_raw.url` en `/2024/`** (vraie donnée 2024, 287 déjà traduites, 31 manquantes) et **318 sont un pur repli `/2014/`**, jamais touchées par la moindre surcharge 2024 (222 traduites, 96 manquantes). Autrement dit, la moitié du dénominateur n'a jamais été confirmée comme appartenant réellement à 2024 — même bug que les 6 fiches fantômes d'Espèce, mais jamais recherché à cette échelle jusqu'à cette question.
+
+**Chassé en priorité les 31 « source 2024 confirmée, sans traduction »** — celles-là sont garanties réelles, contrairement au reste du reliquat. Retrouvées par lecture directe des tables de classe/sous-classe (Guerrier, Occultiste, Moine, Clerc, Druide, Rôdeur, Paladin, Ensorceleur, Barde) plutôt que par un nom deviné à partir de l'anglais — chaque candidat confirmé par sa mécanique exacte lue dans `data/srd/srd-2024.json` (champ `description`) avant d'être cherché dans le texte français. **27 des 31 retrouvées et vérifiées avec `translate:entries`** (25 automatiquement, 2 de plus à la main pour `darkvision-60`/`darkvision-120`, seule construction entre parenthèses du lot — même motif que les autres constructions de cette session, jamais un nom deviné). Exemples : `otherworldly-presence` → « Présence d'outre-monde » (Tieffelin, déjà lu dans une passe précédente sans être relié au bon `entry_key`) ; `monk-monks-focus`/`-heightened-focus`/`-perfect-focus`/`-deflect-energy` → « Credo du Moine »/« Credo accru »/« Credo parachevé »/« Parade énergétique » (chapitre Moine, confirmés par mécanique exacte, contredisant la conclusion trop rapide d'une passe précédente qui avait classé tout le Moine « sans correspondance fiable ») ; `fighter-indomitable`/`-tactical-master` → « Inflexible »/« Botte tactique » ; `warlock-mystic-arcanum` → « Arcanum mystique » (le générique, distinct des 4 paliers déjà trouvés). 4 restent introuvables malgré une source 2024 confirmée (`high-elf-cantrip-versatility`, `wood-elf-speed-increase` : mécanique bien réelle mais embarquée dans la cellule de table d'un lignage déjà nommé, sans en-tête propre — construire un nom inventerait une expression ; `savage-attacker` : Don cherché par mécanique distinctive, zéro occurrence ; `superior-hunters-defense-stand-against-the-tide`/`hunters-prey-giant-killer` : options 2014 par palier absentes du texte 2024, qui n'en garde plus que deux au lieu de trois).
+
+**Résultat : Aptitude 5.2.1, 509 → 536/636.** Le dénominateur lui-même reste à fiabiliser — comme pour Espèce, une partie des 318 fiches en pur repli 2014 (dont 96 encore sans traduction) représente probablement du contenu consolidé ou disparu en 2024 et ne devrait pas compter dans le total, mais établir lesquelles précisément (famille par famille, comme fait pour Espèce à six reprises) dépasse le périmètre de cette passe. `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
 
 ---
 
