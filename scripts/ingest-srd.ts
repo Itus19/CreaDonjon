@@ -694,6 +694,35 @@ function spellBlocks(entry: SrdRecord): EntryBlock[] {
   return blocks;
 }
 
+/**
+ * Libelles FR des colonnes dynamiques de `class_progression` (V1-D7, sur
+ * retour utilisateur implicite — decouvertes non traduites, ex.
+ * "cantrips_known" affiche tel quel comme en-tete de colonne). Cles
+ * derivees de `class_specific`/`spellcasting` (5e-bits), enumerees en
+ * verifiant les 12 classes de base des deux editions — completee au besoin
+ * si une classe maison en introduit une nouvelle (repli sur la cle brute).
+ */
+const CLASS_SPECIFIC_COLUMN_LABELS_FR: Record<string, string> = {
+  bardic_inspiration_die: "De d'Inspiration bardique",
+  channel_divinity_charges: "Utilisations de Conduit divin",
+  eldritch_invocations: "Invocations occultes",
+  favored_enemies: "Ennemis jures",
+  focus_points: "Points de Credo",
+  martial_arts_die: "De d'Arts martiaux",
+  rage_count: "Rages",
+  rage_damage_bonus: "Bonus aux degats de Rage",
+  second_wind_uses: "Utilisations de Second souffle",
+  sneak_attack: "Attaque sournoise",
+  sorcery_points: "Points de Sorcellerie",
+  unarmored_movement_bonus: "Bonus de Deplacement sans armure",
+  weapon_mastery: "Maitrise des armes",
+  wild_shape_uses: "Utilisations de Forme sauvage",
+};
+const SPELLCASTING_COLUMN_LABELS_FR: Record<string, string> = {
+  cantrips_known: "Sorts mineurs connus",
+  prepared_spells: "Sorts prepares",
+};
+
 /** Table de progression generique a partir de Levels (§7 de regles-blocs.md), colonnes derivees des cles rencontrees plutot que codees en dur par classe. */
 function classProgressionBlock(
   classIndex: string,
@@ -721,14 +750,14 @@ function classProgressionBlock(
     { key: "features", label: { fr: "Aptitudes", en: "Features" }, kind: "grants" as const },
     ...[...classSpecificKeys].map((k) => ({
       key: `class_specific_${k}`,
-      label: { fr: k, en: k },
+      label: { fr: CLASS_SPECIFIC_COLUMN_LABELS_FR[k] ?? k, en: k },
       kind: "value" as const,
     })),
-    ...[...spellcastingKeys].map((k) => ({
-      key: `spellcasting_${k}`,
-      label: { fr: k, en: k },
-      kind: "value" as const,
-    })),
+    ...[...spellcastingKeys].map((k) => {
+      const slotMatch = k.match(/^spell_slots_level_(\d)$/);
+      const fr = slotMatch ? `Emplacements niv. ${slotMatch[1]}` : (SPELLCASTING_COLUMN_LABELS_FR[k] ?? k);
+      return { key: `spellcasting_${k}`, label: { fr, en: k }, kind: "value" as const };
+    }),
   ];
 
   const rows = ownLevels.map((lvl) => {

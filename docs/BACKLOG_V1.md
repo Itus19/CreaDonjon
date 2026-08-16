@@ -1499,12 +1499,12 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 | Condition | 15 | ✅ 15/15, 16 août 2026 |
 | Armure | 13 | ✅ 13/13, 16 août 2026 |
 | Sous-classe | 12 | ✅ 12/12, 16 août 2026 |
-| Classe | 12 | ⬜ |
+| Classe | 12 | ✅ 12/12, 16 août 2026 |
 | Arme | 38 | ⬜ |
 | Espèce | 33 | ⬜ |
 | Objet | 473 | ⬜ |
 | Aptitude | 603 | ⬜ |
-| **Total** | **1203** | **44/1203 (3,7 %)** |
+| **Total** | **1203** | **56/1203 (4,7 %)** |
 
 **Ordre choisi** : du plus petit volume au plus gros, pour valider la méthode (extraction du texte officiel français, jamais une reconstruction ou une traduction automatique — même règle absolue que tout le reste de cette série) sur des lots courts avant Objet et Aptitude, les deux gros morceaux. Historique d'abord sur demande explicite.
 
@@ -1544,6 +1544,16 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 **Correction transverse : unités métriques (16 août 2026, retour utilisateur).** « Il faudrait que les poids soient en kilogramme... pareil pour les mesures de distances » — `quantityText` (`blockContentRenderer.tsx`, utilisée par `Weapon`/`Armor`/`ItemProperties`) convertit désormais lb → kg et ft → m à l'affichage, même conversion que l'onglet Inventaire (`lbToKg`, déjà en place pour la même raison). Nouvelle fonction `ftToM` dans `src/core/rules/encumbrance.ts`, testée, même arrondi (1 décimale) que `lbToKg`. La donnée stockée reste en unités SRD — seul l'affichage change. **Portée volontairement limitée** : les statblocks de Monstre (`speed`/`senses`) portent leurs unités dans du texte libre importé tel quel (ex. `"60 ft."` `"Darkvision 120 ft."`), pas dans un `zQuantity` structuré — un remplacement de texte plus risqué, jamais traité ici, signalé à l'utilisateur comme correctif séparé à faire si demandé.
 
 **Quatrième passe, Sous-classe (12/12, 16 août 2026).** Contrairement à Historique/Condition, une sous-classe a une vraie prose officielle 2024 (`entry.description`, une accroche + un ou deux paragraphes) ET une liste d'aptitudes déjà structurée dans le SRD (`entry.features: [{name, level, description}]`) — aucune extraction depuis de la prose libre à faire ici, contrairement à `condition_effects`. Nouveau type de bloc `subclass_features` (même raisonnement que `condition_effects` : forme identique à `traits`, mais type distinct pour un futur formulaire MJ « créer une sous-classe », plus un champ `level` que `traits` n'a pas). Toujours requis. Bloc 1 = accroche + prose traduite fidèlement (`source: official_srd`, pas de lore inventé — la matière existe déjà) ; bloc 2 = chaque aptitude par niveau, triée à l'affichage (`SubclassFeatures`, `[...features].sort`), sous-titres en gras conservés quand une aptitude a ses propres choix internes (ex. Chasseur : Briseur de hordes / Goût du sang). Les douze fiches localisées et extraites une par une dans leur chapitre de classe respectif (`srd-5.2.1-fr.txt`, en-tête « Sous-classe de \<Classe\> : \<Nom\> »), jamais consolidées dans une seule annexe contrairement au Glossaire des Conditions — passe la plus longue de ce ticket jusqu'ici (12 fiches, ~60 aptitudes, plusieurs tables de sorts par niveau intégrées telles quelles dans le texte).
+
+**Cinquième passe, Classe (12/12, 16 août 2026).** Contrairement à Sous-classe, la 5.2.1 n'a **aucune prose de classe** (vérifié dans `srd-5.2.1-fr.txt` : « Classes » enchaîne directement sur « Barbare » puis « Traits de base du Barbare », aucun paragraphe d'accroche entre les deux) — bloc 1 en lore **inventé** (`source: invented_lore`), douze paragraphes courts capturant l'archétype de chaque classe, même registre qu'Historique/Condition/Armure.
+
+Deux vrais bugs de donnée trouvés et corrigés au passage, hors du périmètre strict « bloc 1 » :
+- **`class_progression` (bloc mécanique) affichait des clés anglaises brutes en en-tête de colonne** (`cantrips_known`, `rage_count`...) — ces colonnes sont découvertes dynamiquement à l'import depuis les champs `class_specific`/`spellcasting` du SRD, jamais couvertes par une traduction faute d'être un ensemble fixe. Deux nouvelles tables de correspondance dans `scripts/ingest-srd.ts` (`CLASS_SPECIFIC_COLUMN_LABELS_FR`, 14 clés ; `SPELLCASTING_COLUMN_LABELS_FR`, avec un gabarit `spell_slots_level_N` → « Emplacements niv. N ») construites en énumérant les colonnes réelles des douze classes plutôt que devinées. Repli sur la clé brute si une classe maison future introduit une clé inédite — jamais une exception qui casserait l'import.
+- **`spellcasting_progression.info[]` (huit classes incantatrices) n'avait tout simplement aucune traduction française** — texte anglais du JSON 5e-bits affiché tel quel. Extraction directe depuis `srd-5.2.1-fr.txt` (Barde, Clerc, Druide, Ensorceleur, Magicien, Occultiste, Paladin, Rôdeur), jamais une traduction du JSON anglais : une vraie erreur de donnée y a été trouvée en comparant, sur le Magicien, « choose two level four spells from your spellbook » (anglais) contre « choisissez quatre sorts de votre grimoire » (français officiel, confirmé par lecture directe) — la source anglaise 5e-bits est elle-même fautive à cet endroit, pas seulement non traduite.
+
+**Troisième correction, plus petite : `subclass_slot.label`** affichait aussi la clé de l'aptitude anglaise brute (« Wizard Subclass ») dans l'encadré « Sous-classe » de chaque fiche de Classe — traduit pour les douze classes (« Sous-classe de Magicien », etc.), même phrasing que le SRD français (« Niveau 3 : Sous-classe de Magicien »). **Non corrigé, signalé séparément** : le lien de chaque option de sous-classe dans ce même encadré affiche encore la clé technique brute (`evoker`) au lieu du nom résolu (« Évocateur ») — bug de rendu pré-existant, indépendant de la locale, hors périmètre de ce ticket de traduction ; tâche de suivi créée.
+
+`npm run typecheck && npm run lint && npm run test` verts (45 fichiers, 440 tests) après cette passe. Vérifié en navigateur sur Magicien (classe incantatrice) et Barbare (classe non incantatrice) : description, colonnes de progression et bloc Incantation tous en français, encadré Sous-classe au bon libellé.
 
 ---
 
