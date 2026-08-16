@@ -918,7 +918,7 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 
 | Catégorie | SRD 5.1 (2014) | SRD 5.2.1 (2024) |
 |---|---|---|
-| Aptitude | 348/348 ✅ | 536/636 en base — **314/318 (98,7 %) sur le vrai dénominateur**, voir plus bas |
+| Aptitude | 348/348 ✅ | 538/636 en base — **316/318 (99,4 %) sur le vrai dénominateur**, voir plus bas |
 | Objet | 548/549 | 513/620 |
 | Monstre | 334/334 ✅ | 324/334 |
 | Sort | 319/319 ✅ | 319/319 ✅ |
@@ -1289,7 +1289,14 @@ Chaque correctif vérifié séparément par relecture d'au moins un cas avant de
 
 **Ce chiffre confirme, au chiffre près, la mesure indépendante faite côté base de données** (« 318 fiches avec `source_raw.url` en `/2024/` », dixième passe ci-dessus) — deux méthodes complètement différentes (comptage direct du JSON anglais vs filtrage de la base déjà importée) tombent exactement sur le même nombre. Le vrai dénominateur d'Aptitude 5.2.1 est **318, pas 636** — les 318 fiches restantes du total en base sont un repli 2014 jamais remplacé, une pollution du même mécanisme de fusion que celui corrigé pour Espèce, pas du contenu 2024 réel en attente de traduction.
 
-**Sur ce vrai dénominateur : 314/318 (98,7 %).** Les 27 aptitudes trouvées dans la passe précédente couvrent la quasi-totalité de l'écart (287 → 314). Il ne reste que 4 aptitudes confirmées réelles mais introuvables dans le texte français (`high-elf-cantrip-versatility`, `wood-elf-speed-increase`, `savage-attacker`, plus un cas marginal) — déjà documentées comme structurellement embarquées sans en-tête propre, ou absentes du texte.
+**Sur ce vrai dénominateur : 314/318 (98,7 %).** Les 27 aptitudes trouvées dans la passe précédente couvrent la quasi-totalité de l'écart (287 → 314).
+
+**Douzième passe, sur demande explicite (« il manque toujours 4 aptitudes, lesquelles ? compare au JSON anglais »).** Les 4 identifiées précisément par leur `entry_key`, chacune relue dans `data/srd/srd-2024.json` (champ `description`) avant recherche :
+- **`open-hand-fleet-step`** (« Fleet Step », Moine Paume Ouverte niveau 11) → trouvé : « Niveau 11 : Foulée preste » (ligne 6395), texte identique mot pour mot (« Lorsque vous entreprenez une action Bonus autre que Porté par le vent, vous pouvez aussi recourir à Porté par le vent aussitôt après cette action Bonus »). **Écrit.**
+- **`savage-attacker`** (Don d'origines) → les suppositions de nom (« Assaillant féroce ») étaient fausses ; retrouvé par la mécanique exacte (« lancer deux fois les dés de dégâts de l'arme ») sous un nom totalement différent : **« Sauvagerie martiale »** (ligne 8575-8581, chapitre Dons d'origines). **Écrit.**
+- **`high-elf-cantrip-versatility`** et **`wood-elf-speed-increase`** : confirmés réels (JSON 2024 exact, mécanique déjà lue dans la table « Lignages elfiques », ligne 8367-8382) mais **sans en-tête propre** dans le texte français — le mécanisme est une phrase dans la cellule « Haut-elfe »/« Elfe sylvestre » du tableau, jamais un sous-titre en gras séparé comme pour l'Ascendance gigante ou le Tieffelin. Construire un nom reviendrait à en inventer un, pas à le lire — laissés bloqués en toute connaissance de cause.
+
+**Résultat final : 316/318 (99,4 %) sur le vrai dénominateur.** Les 2 derniers ne sont pas un échec de recherche mais une limite structurelle du texte source déjà documentée ailleurs dans ce ticket (contenu réel sans en-tête isolé).
 
 **Reste ouvert, non traité cette passe** : purger de la base les ~318 fiches fantômes en repli 2014 (dont 96 encore sans traduction), pour que le compteur affiché corresponde enfin au vrai contenu 2024 — même correctif que celui déjà appliqué à Espèce (`SUPERSEDED_2014_SPECIES_INDICES` dans `ingest-srd.ts`), mais à une échelle 50 fois plus grande (318 candidats contre 6), qui demanderait de vérifier famille par famille lesquelles sont de vrais doublons d'une fiche 2024 différemment nommée (comme `gnomish-lineage-*-feature`) plutôt que de purger en bloc sur la seule foi de l'absence de surcharge 2024 — un vrai bug pourrait aussi bien être une fiche legitimement identique entre editions (comme certains sorts, voir la huitième passe). Signalé, pas corrigé.
 
