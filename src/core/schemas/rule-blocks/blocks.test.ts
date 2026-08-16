@@ -17,6 +17,7 @@ import {
   zSpellCastingBlockData,
   zSpellcastingProgressionBlockData,
   zStatBlockBlockData,
+  zSubclassFeaturesBlockData,
   zSubclassSlotBlockData,
   zTraitsBlockData,
   zWeaponBlockData,
@@ -293,6 +294,18 @@ describe("zConditionEffectsBlockData", () => {
       ],
     };
     expect(zConditionEffectsBlockData.parse(data)).toEqual(data);
+  });
+});
+
+describe("zSubclassFeaturesBlockData", () => {
+  it("accepte les aptitudes du Domaine de la Vie, non triees par niveau (V1-D7)", () => {
+    const data = {
+      features: [
+        { name: "Guérison suprême", level: 17, description: "..." },
+        { name: "Disciple de la Vie", level: 3, description: "..." },
+      ],
+    };
+    expect(zSubclassFeaturesBlockData.parse(data)).toEqual(data);
   });
 });
 

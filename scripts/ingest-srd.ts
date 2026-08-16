@@ -1224,6 +1224,25 @@ function subclassSlotBlock(classIndex: string, subclasses: SrdRecord[], levels: 
 }
 
 /**
+ * `entry.features` (Sous-classe, deja `[{name, level, description}]` dans
+ * le SRD — contrairement aux monstres/conditions, aucun decoupage de prose
+ * libre n'est necessaire ici). `null` si absent (fiche source inattendue,
+ * jamais silencieusement vide — toutes les sous-classes du SRD en ont).
+ */
+function subclassFeaturesBlock(entry: SrdRecord): EntryBlock | null {
+  const raw = entry.features;
+  if (!Array.isArray(raw)) return null;
+  const features = (raw as SrdRecord[])
+    .map((f) => ({ name: String(f.name ?? ""), level: Number(f.level), description: extractProse(f) ?? "" }))
+    .filter((f) => f.name && f.description && Number.isInteger(f.level) && f.level > 0);
+  if (features.length === 0) return null;
+
+  const data = { features };
+  validateBlockData("subclass_features", data);
+  return { block_type: "subclass_features", display: { label: "Aptitudes", layout: "key_values" }, data, display_order: 150 };
+}
+
+/**
  * Categorie d'equipement (SRD `equipment_categories`, ex. "Gaming Sets") ->
  * libelle FR — rencontree seulement pour le choix d'outil du Soldat
  * (V1-D7), pas de table plus large (`Equipment-Categories` n'est pas une
@@ -1477,6 +1496,11 @@ function transformEntry(
   if (entryType === "condition") {
     const effects = conditionEffectsBlock(entry);
     if (effects) blocks.push(effects);
+  }
+
+  if (entryType === "subclass") {
+    const features = subclassFeaturesBlock(entry);
+    if (features) blocks.push(features);
   }
 
   blocks.push(customTableBlock(entry));

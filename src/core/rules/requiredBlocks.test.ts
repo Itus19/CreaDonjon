@@ -25,4 +25,8 @@ describe("missingRequiredBlocks", () => {
   it("signale le bloc d'effets manquant pour une condition (V1-D7)", () => {
     expect(missingRequiredBlocks("condition", [])).toEqual(["condition_effects"]);
   });
+
+  it("signale le bloc d'aptitudes manquant pour une sous-classe (V1-D7)", () => {
+    expect(missingRequiredBlocks("subclass", [])).toEqual(["subclass_features"]);
+  });
 });

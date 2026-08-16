@@ -18,6 +18,7 @@ import type {
   SpellCastingBlockData,
   SpellcastingProgressionBlockData,
   StatBlockBlockData,
+  SubclassFeaturesBlockData,
   SubclassSlotBlockData,
   TraitsBlockData,
   WeaponBlockData,
@@ -332,6 +333,19 @@ function ConditionEffects({ data }: { data: ConditionEffectsBlockData }) {
   );
 }
 
+/** Aptitudes accordees par une sous-classe, par niveau (V1-D7) — niveau integre au libelle (ex. "Frenesie (niveau 3)"), pas de colonne separee : meme patron `key_values` que les autres blocs a liste, aucune raison d'en inventer un nouveau pour ce seul champ. */
+function SubclassFeatures({ data }: { data: SubclassFeaturesBlockData }) {
+  const sorted = [...data.features].sort((a, b) => a.level - b.level);
+  return (
+    <KeyValues
+      items={sorted.map((f, i) => ({
+        label: `${f.name} (niveau ${f.level})`,
+        value: renderMarkdownBoldText(f.description, `feature-${i}`),
+      }))}
+    />
+  );
+}
+
 function Actions({ data }: { data: ActionsBlockData }) {
   return (
     <KeyValues
@@ -533,5 +547,6 @@ export function renderBlockData(
   if (blockType === "subclass_slot") return <SubclassSlot data={data as SubclassSlotBlockData} worldSlug={worldSlug} />;
   if (blockType === "background") return <Background data={data as ResolvedBackgroundBlockData} worldSlug={worldSlug} />;
   if (blockType === "condition_effects") return <ConditionEffects data={data as ConditionEffectsBlockData} />;
+  if (blockType === "subclass_features") return <SubclassFeatures data={data as SubclassFeaturesBlockData} />;
   return null;
 }

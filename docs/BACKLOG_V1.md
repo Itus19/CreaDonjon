@@ -1498,13 +1498,13 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 | Historique | 4 | ✅ 4/4, 16 août 2026 |
 | Condition | 15 | ✅ 15/15, 16 août 2026 |
 | Armure | 13 | ✅ 13/13, 16 août 2026 |
-| Sous-classe | 12 | ⬜ |
+| Sous-classe | 12 | ✅ 12/12, 16 août 2026 |
 | Classe | 12 | ⬜ |
 | Arme | 38 | ⬜ |
 | Espèce | 33 | ⬜ |
 | Objet | 473 | ⬜ |
 | Aptitude | 603 | ⬜ |
-| **Total** | **1203** | **32/1203 (2,7 %)** |
+| **Total** | **1203** | **44/1203 (3,7 %)** |
 
 **Ordre choisi** : du plus petit volume au plus gros, pour valider la méthode (extraction du texte officiel français, jamais une reconstruction ou une traduction automatique — même règle absolue que tout le reste de cette série) sur des lots courts avant Objet et Aptitude, les deux gros morceaux. Historique d'abord sur demande explicite.
 
@@ -1540,6 +1540,10 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 **Bloc 1 réintroduit (16 août 2026, retour utilisateur, sur avoir vu le rendu).** « Est-ce que ce serait une bonne idée de faire un bloc de description avant, avec une petite phrase toute simple, peut-être rigolote ? » — même logique qu'Historique (lore avant mécanique), adaptée à la légèreté attendue pour une simple description d'état (une phrase, pas un paragraphe). Le bloc `description` redevient présent dans l'import (`transformEntry` retombe sur le repli générique « voir le tableau de données », comme Historique/Espèce sans prose SRD utilisable — la vraie prose SRD reste dans `condition_effects`, jamais dupliquée dans la description). Surcharge FR écrite à la main pour les 15 conditions, une phrase légère par condition (ex. Agrippé : « Une poigne ferme — ou pire, des tentacules — vient de se refermer sur vous. Impossible de vous dégager sans agir. »). `source: invented_lore` pour toute la ligne, comme Historique — le bloc `condition_effects` qui l'accompagne reste une traduction fidèle, mais un seul champ `source` couvre toute la ligne (voir migration `20260816160001`).
 
 **Troisième passe, Armure (13/13, 16 août 2026).** Aucun changement de structure cette fois — contrairement à Historique et Condition, `armor` (bloc 2, caractéristiques : catégorie, CA de base, bonus de Dextérité, Force minimum, discrétion, poids, coût) existe déjà depuis V1-D1/V1-D2 et n'avait besoin de rien de nouveau, juste du lore manquant en bloc 1. Treize descriptions courtes (2-3 phrases), écrites à la main à partir de la matière et de la construction réelles de chaque armure (cuir bouilli, mailles, plaques rivetées...), calibrées sur ses propres caractéristiques déjà en base (poids, catégorie légère/intermédiaire/lourde) pour rester cohérentes avec le bloc mécanique juste en dessous. `source: invented_lore` (aucune prose officielle 2024 pour cette catégorie). Aucun changement de schéma, aucune migration — le cas le plus simple rencontré dans ce ticket jusqu'ici.
+
+**Correction transverse : unités métriques (16 août 2026, retour utilisateur).** « Il faudrait que les poids soient en kilogramme... pareil pour les mesures de distances » — `quantityText` (`blockContentRenderer.tsx`, utilisée par `Weapon`/`Armor`/`ItemProperties`) convertit désormais lb → kg et ft → m à l'affichage, même conversion que l'onglet Inventaire (`lbToKg`, déjà en place pour la même raison). Nouvelle fonction `ftToM` dans `src/core/rules/encumbrance.ts`, testée, même arrondi (1 décimale) que `lbToKg`. La donnée stockée reste en unités SRD — seul l'affichage change. **Portée volontairement limitée** : les statblocks de Monstre (`speed`/`senses`) portent leurs unités dans du texte libre importé tel quel (ex. `"60 ft."` `"Darkvision 120 ft."`), pas dans un `zQuantity` structuré — un remplacement de texte plus risqué, jamais traité ici, signalé à l'utilisateur comme correctif séparé à faire si demandé.
+
+**Quatrième passe, Sous-classe (12/12, 16 août 2026).** Contrairement à Historique/Condition, une sous-classe a une vraie prose officielle 2024 (`entry.description`, une accroche + un ou deux paragraphes) ET une liste d'aptitudes déjà structurée dans le SRD (`entry.features: [{name, level, description}]`) — aucune extraction depuis de la prose libre à faire ici, contrairement à `condition_effects`. Nouveau type de bloc `subclass_features` (même raisonnement que `condition_effects` : forme identique à `traits`, mais type distinct pour un futur formulaire MJ « créer une sous-classe », plus un champ `level` que `traits` n'a pas). Toujours requis. Bloc 1 = accroche + prose traduite fidèlement (`source: official_srd`, pas de lore inventé — la matière existe déjà) ; bloc 2 = chaque aptitude par niveau, triée à l'affichage (`SubclassFeatures`, `[...features].sort`), sous-titres en gras conservés quand une aptitude a ses propres choix internes (ex. Chasseur : Briseur de hordes / Goût du sang). Les douze fiches localisées et extraites une par une dans leur chapitre de classe respectif (`srd-5.2.1-fr.txt`, en-tête « Sous-classe de \<Classe\> : \<Nom\> »), jamais consolidées dans une seule annexe contrairement au Glossaire des Conditions — passe la plus longue de ce ticket jusqu'ici (12 fiches, ~60 aptitudes, plusieurs tables de sorts par niveau intégrées telles quelles dans le texte).
 
 ---
 

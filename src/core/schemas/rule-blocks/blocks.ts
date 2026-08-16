@@ -36,6 +36,7 @@ export const BLOCK_TYPES = [
   "subclass_slot",
   "background",
   "condition_effects",
+  "subclass_features",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -314,6 +315,18 @@ export const zConditionEffectEntry = z.object({ name: z.string(), description: z
 export const zConditionEffectsBlockData = z.object({ effects: z.array(zConditionEffectEntry) });
 export type ConditionEffectsBlockData = z.infer<typeof zConditionEffectsBlockData>;
 
+// --- subclass_features (layout: key_values, V1-D7) -----------------------
+// Aptitudes qu'une sous-classe accorde, par niveau (ex. Domaine de la Vie :
+// Disciple de la vie au niveau 3) — le SRD les porte directement sur
+// l'entree sous-classe elle-meme (`features: [{name, level, description}]`),
+// contrairement aux traits de monstre qui n'ont pas de niveau. Type
+// distinct de `traits`/`condition_effects` (meme raison qu'eux : un futur
+// formulaire MJ "creer une sous-classe" reste nomme comme tel). Toujours
+// requis : une sous-classe sans aptitude n'a pas de sens.
+export const zSubclassFeatureEntry = z.object({ name: z.string(), level: z.number().int().positive(), description: z.string() });
+export const zSubclassFeaturesBlockData = z.object({ features: z.array(zSubclassFeatureEntry) });
+export type SubclassFeaturesBlockData = z.infer<typeof zSubclassFeaturesBlockData>;
+
 // --- Enveloppe commune (specs/regles-blocs.md §2) -----------------------
 export const zBlockDisplay = z.object({
   label: z.string(),
@@ -341,6 +354,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   subclass_slot: zSubclassSlotBlockData,
   background: zBackgroundBlockData,
   condition_effects: zConditionEffectsBlockData,
+  subclass_features: zSubclassFeaturesBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 /** Registre : le moteur demande le schema Zod d'un block_type et recoit une forme garantie. */
