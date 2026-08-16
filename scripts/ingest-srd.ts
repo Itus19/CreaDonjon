@@ -386,9 +386,9 @@ function buildMergedDataset(
 // besoin reel des qu'un joueur veut savoir ce que "finesse"/"legere" veulent
 // dire depuis la fiche d'un objet — chaque entree porte un vrai `desc` SRD
 // (verifie), importee comme `Traits`/`Feats` (`entry_type: "feature"`, meme
-// motif). `Weapon-Mastery-Properties` (2024 seulement, mecanique non encore
-// modelisee sur la fiche jouable) reste ecartee — pas de besoin concret
-// aujourd'hui, contrairement aux proprietes d'arme deja affichees partout.
+// motif). `Weapon-Mastery-Properties` l'a rejointe (V1-D7, retour utilisateur
+// explicite : "il manque les bottes d'armes dans un bloc a part") — meme
+// motif exact, chaque entree porte elle aussi un vrai `desc` SRD.
 // --------------------------------------------------------------------
 const SKIPPED_CATEGORIES = new Set([
   "Ability-Scores",
@@ -400,7 +400,6 @@ const SKIPPED_CATEGORIES = new Set([
   "Magic-Schools",
   "Proficiencies",
   "Skills",
-  "Weapon-Mastery-Properties",
 ]);
 
 // --------------------------------------------------------------------
@@ -862,12 +861,19 @@ function weaponBlock(entry: SrdRecord): EntryBlock | null {
   const cost = parseItemCost(entry);
   const weight = parseItemWeight(entry);
 
+  // Botte d'arme (V1-D7, retour utilisateur) : mecanique 2024 uniquement,
+  // absente du SRD 5.1 — `entry.mastery` y est simplement absent, `mastery`
+  // reste `undefined` pour ces armes plutot qu'une erreur.
+  const masteryRaw = entry.mastery as SrdRecord | undefined;
+  const masteryIndex = typeof masteryRaw?.index === "string" ? masteryRaw.index : undefined;
+
   const data = {
     category,
     is_ranged: weapon.isRanged,
     damage: { dice: damageDice, type: weapon.damageType ?? undefined },
     versatile_damage: versatileDamage,
     properties: weapon.properties.map((p) => ({ kind: "rule" as const, key: `weapon-property-${p}` })),
+    mastery: masteryIndex ? { kind: "rule" as const, key: `weapon-mastery-${masteryIndex}` } : undefined,
     range,
     weight: weight !== null ? quantity(weight, "lb") : undefined,
     cost: cost ? quantity(cost.quantity, cost.unit) : undefined,
@@ -1402,6 +1408,7 @@ const CATEGORY_ENTRY_TYPE: Record<string, EntryType> = {
   Feats: "feature",
   Traits: "feature",
   "Weapon-Properties": "feature",
+  "Weapon-Mastery-Properties": "feature",
   Monsters: "monster",
   Conditions: "condition",
   Rules: "rule",
@@ -1546,8 +1553,14 @@ function transformEntry(
   // et sans prefixe distinct la fiche resolue a cette cle serait celle du
   // sort "Light", pas de la propriete — un lien vers le mauvais contenu,
   // pas juste une fiche manquante. Le prefixe rend la cle intrinsequement
-  // sans collision possible, pas seulement corrigee apres coup.
-  const entryKey = category === "Weapon-Properties" ? `weapon-property-${String(entry.index)}` : String(entry.index);
+  // sans collision possible, pas seulement corrigee apres coup. Meme motif
+  // pour les bottes d'arme (V1-D7) : "slow" percuterait le sort Lenteur.
+  const entryKey =
+    category === "Weapon-Properties"
+      ? `weapon-property-${String(entry.index)}`
+      : category === "Weapon-Mastery-Properties"
+        ? `weapon-mastery-${String(entry.index)}`
+        : String(entry.index);
 
   return {
     entry_key: entryKey,

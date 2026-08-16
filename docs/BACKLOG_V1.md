@@ -1503,8 +1503,8 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 | Arme | 38 | ✅ 38/38, 16 août 2026 |
 | Espèce | 33 | ⬜ |
 | Objet | 473 | ⬜ |
-| Aptitude | 603 | ⬜ |
-| **Total** | **1203** | **94/1203 (7,8 %)** |
+| Aptitude | 611 | ⬜ (8/611 déjà faites — bottes d'arme, voir ci-dessous) |
+| **Total** | **1211** | **102/1211 (8,4 %)** |
 
 **Ordre choisi** : du plus petit volume au plus gros, pour valider la méthode (extraction du texte officiel français, jamais une reconstruction ou une traduction automatique — même règle absolue que tout le reste de cette série) sur des lots courts avant Objet et Aptitude, les deux gros morceaux. Historique d'abord sur demande explicite.
 
@@ -1564,11 +1564,18 @@ Deux vrais bugs de donnée trouvés et corrigés au passage, hors du périmètre
 
 **Sixième passe, Arme (38/38, 16 août 2026).** Même situation que Classe : aucune prose SRD par arme (juste une table « Armes », vérifié dans `srd-5.2.1-fr.txt`) — bloc 1 en lore inventé, un court paragraphe par arme calibré sur ses propres traits mécaniques déjà en base (portée, propriétés, deux mains...).
 
-**Décision prise en cours de route, pas exécutée : `weapon.mastery`.** Le JSON source (2024) porte un champ `mastery` par arme (ex. dague → `Nick`, huit valeurs 2024 au total) totalement absent du schéma `WeaponBlockData` et de l'import. Décision déjà documentée dans `scripts/ingest-srd.ts` (`SKIPPED_CATEGORIES`, commentaire `Weapon-Mastery-Properties`) : écarté délibérément faute de besoin concret sur la fiche jouable (règle des trois) — pas un oubli, une frontière de périmètre déjà tranchée. Non rouverte ici.
+**Décision documentée puis rouverte sur demande explicite : `weapon.mastery`.** Le JSON source (2024) porte un champ `mastery` par arme (ex. dague → `Nick`, huit valeurs 2024 au total) totalement absent du schéma `WeaponBlockData` et de l'import — décision déjà documentée dans `scripts/ingest-srd.ts` (`SKIPPED_CATEGORIES`, commentaire `Weapon-Mastery-Properties`) : écarté faute de besoin concret sur la fiche jouable (règle des trois), pas un oubli. Signalé tel quel à l'utilisateur, qui a fourni le besoin concret manquant (« il manque les bottes d'armes dans un bloc à part ») — implémenté dans la foulée, ce n'est pas « corriger un choix qui semblait étrange » mais répondre à la raison qui manquait pour le lever.
 
-**Bug transverse trouvé et corrigé en même temps : type de dégâts brut affiché en anglais.** Trois blocs différents montrent un type de dégâts entre parenthèses à côté d'une formule — `weapon.damage.type` (Arme), `effects[].damage_type` (Sort), `actions[].damage[].type` (Monstre) — et aucun des trois ne traduisait la valeur SRD brute (« piercing », « Fire »...). Nouvelle table `DAMAGE_TYPE_LABELS_FR` (`src/i18n/fr.ts`, 13 valeurs, reprises telles quelles de la table « Types de dégâts » du glossaire français) et fonction `damageTypeLabel()` partagée par les trois composants. Complication découverte à la vérification : les deux formats coexistent selon le bloc (`weapon` stocke l'index SRD en minuscules, `effects`/`actions` stockent le nom anglais capitalisé) — `damageTypeLabel()` met en minuscules avant la recherche plutôt que de dupliquer la table. Vérifié en navigateur sur trois fiches distinctes (Dague, Trait de feu, un monstre à corps à corps) : les trois affichent désormais le type en français.
+**Ce qui a été construit :**
+- `mastery: zReference.optional()` ajouté à `zWeaponBlockData` (`src/core/schemas/rule-blocks/blocks.ts`) — optionnel au niveau du schéma bien que les 38 armes de la 5.2.1 en aient toutes une (vérifié), pour ne pas casser une arme maison future sans botte.
+- `Weapon-Mastery-Properties` retirée de `SKIPPED_CATEGORIES` et ajoutée à `CATEGORY_ENTRY_TYPE` (`"feature"`, même traitement que `Weapon-Properties`, V1-C12) — même préfixe anti-collision `weapon-mastery-<index>` (`slow` percuterait sinon le sort Lenteur). `weaponBlock()` lit `entry.mastery` et pose la référence.
+- **Propriétés d'arme et botte d'arme transformées en liens cliquables** vers leur propre fiche déjà existante (`ResolvedWeaponBlockData`, nouveau dans `src/server/services/rules.ts`, même motif de résolution à la lecture que `ResolvedSubclassSlotBlockData`) — répond à la troisième demande de l'utilisateur (« pouvoir lire ce que les propriétés veulent dire ») sans dupliquer le texte sur chaque arme : une seule source de vérité par propriété, cohérent avec le principe déjà appliqué à `class_progression` (`grantsCell`).
+- Les 8 bottes d'arme traduites immédiatement (`source: official_srd`), texte officiel déjà extrait du chapitre Armes lors de cette même passe (Coup double, Écorchure, Enchaînement, Ouverture, Poussée, Ralentissement, Renversement, Sape) — comptent désormais dans le total Aptitude (611, pas 603) plutôt que dans Arme, puisque ce sont des fiches `feature` à part entière.
+- Libellé **« Cout » renommé en « Valeur »** (retour utilisateur) — appliqué aux trois blocs qui le partagent (`Weapon`, `Armor`, `ItemProperties`) plutôt qu'au seul bloc Arme, pour éviter une incohérence entre catégories d'objets.
 
-`npm run typecheck && npm run lint && npm run test` verts (45 fichiers, 440 tests) après cette passe.
+**Bug transverse trouvé et corrigé dans la même passe : type de dégâts brut affiché en anglais.** Trois blocs différents montrent un type de dégâts entre parenthèses à côté d'une formule — `weapon.damage.type` (Arme), `effects[].damage_type` (Sort), `actions[].damage[].type` (Monstre) — et aucun des trois ne traduisait la valeur SRD brute (« piercing », « Fire »...). Nouvelle table `DAMAGE_TYPE_LABELS_FR` (`src/i18n/fr.ts`, 13 valeurs, reprises telles quelles de la table « Types de dégâts » du glossaire français) et fonction `damageTypeLabel()` partagée par les trois composants. Complication découverte à la vérification : les deux formats coexistent selon le bloc (`weapon` stocke l'index SRD en minuscules, `effects`/`actions` stockent le nom anglais capitalisé) — `damageTypeLabel()` met en minuscules avant la recherche plutôt que de dupliquer la table. Vérifié en navigateur sur trois fiches distinctes (Dague, Trait de feu, un monstre à corps à corps) : les trois affichent désormais le type en français.
+
+`npm run ingest:srd` rejoué (1898 → 1906 entrées, +8 features, 0 échec) puis `npm run typecheck && npm run lint && npm run test` verts (45 fichiers, 440 tests) après cette passe. Vérifié en navigateur sur la Dague (propriétés + botte cliquables, résolues en français) et sur l'Armure d'écailles (« Valeur »).
 
 ---
 

@@ -13,6 +13,7 @@ import {
   type ReferencePrimitive,
   type ScalingBlockData,
   type SubclassSlotBlockData,
+  type WeaponBlockData,
   zBlockDisplay,
 } from "@/src/core/schemas/rule-blocks";
 import { generateScalingTable, resolveScalingTarget } from "@/src/core/rules/scaling";
@@ -281,6 +282,18 @@ export type ResolvedSubclassSlotBlockData = Omit<SubclassSlotBlockData, "options
 };
 
 /**
+ * `weapon.properties`/`weapon.mastery` (V1-D7, retour utilisateur : "pouvoir
+ * lire ce que les proprietes veulent dire") augmentes d'un nom resolu, meme
+ * motif que `ResolvedSubclassSlotBlockData` — chaque propriete/botte pointe
+ * deja vers sa propre fiche `feature` existante (V1-C12/V1-D7), jamais
+ * dupliquee ici : juste son nom pour en faire un lien cliquable.
+ */
+export type ResolvedWeaponBlockData = Omit<WeaponBlockData, "properties" | "mastery"> & {
+  properties: (ReferencePrimitive & { resolved_name: string })[];
+  mastery?: ReferencePrimitive & { resolved_name: string };
+};
+
+/**
  * Nom + description (deja traduite si `locale !== "en"`) d'une entree
  * quelconque de la chaine de ruleset. `null` seulement si la cle ne resout
  * dans aucun ruleset de la chaine (donnee source incoherente) — l'appelant
@@ -521,6 +534,26 @@ export async function getRuleEntryForWorld(
         ...slotData,
         options: slotData.options?.map((o) => ({ ...o, resolved_name: optionNames.get(o.key) ?? o.key })),
       } satisfies ResolvedSubclassSlotBlockData,
+    };
+  }
+
+  // Augmente le bloc `weapon` avec le nom resolu de chaque propriete et de
+  // la botte d'arme (V1-D7, retour utilisateur : pouvoir lire ce que
+  // "Finesse"/"Legere" veulent dire, et afficher la botte d'arme) — meme
+  // motif que `subclass_slot` ci-dessus.
+  const weaponBlockIndex = blocks.findIndex((b) => b.blockType === "weapon");
+  if (weaponBlockIndex !== -1) {
+    const weaponData = blocks[weaponBlockIndex].data as WeaponBlockData;
+    const propertyKeys = weaponData.properties.map((p) => p.key);
+    const namesToResolve = weaponData.mastery ? [...propertyKeys, weaponData.mastery.key] : propertyKeys;
+    const names = await resolveEntryNames(supabase, rulesetId, namesToResolve, locale);
+    blocks[weaponBlockIndex] = {
+      ...blocks[weaponBlockIndex],
+      data: {
+        ...weaponData,
+        properties: weaponData.properties.map((p) => ({ ...p, resolved_name: names.get(p.key) ?? p.key })),
+        mastery: weaponData.mastery ? { ...weaponData.mastery, resolved_name: names.get(weaponData.mastery.key) ?? weaponData.mastery.key } : undefined,
+      } satisfies ResolvedWeaponBlockData,
     };
   }
 

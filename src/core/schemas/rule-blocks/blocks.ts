@@ -129,6 +129,11 @@ export const zWeaponBlockData = z.object({
   versatile_damage: zFormulaNode.optional(),
   // `kind: "rule"`, `key: "weapon-property-<index>"` — meme prefixe anti-collision que l'import (V1-C12).
   properties: z.array(zReference),
+  // `key: "weapon-mastery-<index>"` (V1-D7, retour utilisateur) — meme motif de prefixe anti-collision
+  // que `properties` ci-dessus (l'index brut, ex. "slow", percute le sort Lenteur sans lui).
+  // Optionnel au niveau du schema (toute arme 2024 en a une, verifie contre les 38 armes de la SRD,
+  // mais rien ne garantit qu'une arme maison future en porte une).
+  mastery: zReference.optional(),
   range: z.object({ normal: zQuantity, long: zQuantity.optional() }).optional(),
   weight: zQuantity.optional(),
   cost: zQuantity.optional(),

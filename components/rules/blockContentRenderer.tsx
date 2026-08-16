@@ -20,7 +20,6 @@ import type {
   StatBlockBlockData,
   SubclassFeaturesBlockData,
   TraitsBlockData,
-  WeaponBlockData,
 } from "@/src/core/schemas/rule-blocks";
 import {
   ARMOR_CATEGORY_LABELS_FR,
@@ -31,7 +30,6 @@ import {
   ITEM_RARITY_LABELS_FR,
   SIZE_LABELS_FR,
   SKILL_LABELS_FR,
-  WEAPON_PROPERTY_LABELS_FR,
 } from "@/src/i18n/fr";
 import type { Skill } from "@/src/core/rules/sheet";
 import { ftToM, lbToKg } from "@/src/core/rules/encumbrance";
@@ -39,6 +37,7 @@ import type {
   ResolvedBackgroundBlockData,
   ResolvedBackgroundEquipmentOption,
   ResolvedSubclassSlotBlockData,
+  ResolvedWeaponBlockData,
   RuleRefView,
 } from "@/src/server/services/rules";
 import Chips from "./layouts/Chips";
@@ -74,12 +73,6 @@ function quantityText(q: { value: number; unit: string } | undefined): string | 
 /** Cout en pieces (V1-D1) -> memes abreviations FR que l'onglet Inventaire (V1-C11), au lieu des codes SRD bruts (gp/sp/...). */
 function costText(cost: { value: number; unit: string } | undefined): string | undefined {
   return cost ? `${cost.value} ${CURRENCY_LABELS_FR[cost.unit] ?? cost.unit}` : undefined;
-}
-
-/** Cle de reference `weapon-property-<index>` (V1-C12) -> libelle FR, en retirant le prefixe anti-collision. */
-function propertyLabel(refKey: string): string {
-  const index = refKey.replace(/^weapon-property-/, "");
-  return WEAPON_PROPERTY_LABELS_FR[index] ?? index;
 }
 
 /**
@@ -257,7 +250,16 @@ function CustomTable({ data }: { data: CustomTableBlockData }) {
 // (chaque fonction traduit un bloc type vers la forme generique attendue par
 // sa mise en page — jamais un nouveau composant). -------------------------
 
-function Weapon({ data }: { data: WeaponBlockData }) {
+/** Un renvoi clique vers sa propre fiche (V1-D7, retour utilisateur — proprietes/botte d'arme deja des fiches `feature` existantes, jamais dupliquees ici). */
+function ResolvedRefLink({ worldSlug, refItem }: { worldSlug: string; refItem: { key: string; resolved_name: string } }) {
+  return (
+    <Link href={`/m/${worldSlug}/regles/${refItem.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
+      {refItem.resolved_name}
+    </Link>
+  );
+}
+
+function Weapon({ data, worldSlug }: { data: ResolvedWeaponBlockData; worldSlug: string }) {
   const items = [
     { label: "Categorie", value: data.category === "martial" ? "Martiale" : "Simple" },
     {
@@ -273,11 +275,23 @@ function Weapon({ data }: { data: WeaponBlockData }) {
       ? [{ label: "Degats (2 mains)", value: <span className="mech">{formatFormulaNode(data.versatile_damage)}</span> }]
       : []),
     ...(data.properties.length > 0
-      ? [{ label: "Proprietes", value: data.properties.map((p) => propertyLabel(p.key)).join(", ") }]
+      ? [
+          {
+            label: "Proprietes",
+            value: (
+              <span className="flex flex-wrap gap-x-2">
+                {data.properties.map((p, i) => (
+                  <ResolvedRefLink key={i} worldSlug={worldSlug} refItem={p} />
+                ))}
+              </span>
+            ),
+          },
+        ]
       : []),
+    ...(data.mastery ? [{ label: "Botte d'arme", value: <ResolvedRefLink worldSlug={worldSlug} refItem={data.mastery} /> }] : []),
     ...(data.range ? [{ label: "Portee", value: [quantityText(data.range.normal), quantityText(data.range.long)].filter(Boolean).join(" / ") }] : []),
     ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
-    ...(data.cost ? [{ label: "Cout", value: costText(data.cost) as string }] : []),
+    ...(data.cost ? [{ label: "Valeur", value: costText(data.cost) as string }] : []),
   ];
   return <KeyValues items={items} />;
 }
@@ -296,7 +310,7 @@ function Armor({ data }: { data: ArmorBlockData }) {
       ? [{ label: "Discretion", value: data.stealth_disadvantage ? "Desavantage" : "Aucun desavantage" }]
       : []),
     ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
-    ...(data.cost ? [{ label: "Cout", value: costText(data.cost) as string }] : []),
+    ...(data.cost ? [{ label: "Valeur", value: costText(data.cost) as string }] : []),
   ];
   return <KeyValues items={items} />;
 }
@@ -305,7 +319,7 @@ function ItemProperties({ data }: { data: ItemPropertiesBlockData }) {
   const items = [
     ...(data.category ? [{ label: "Categorie", value: data.category }] : []),
     ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
-    ...(data.cost ? [{ label: "Cout", value: costText(data.cost) as string }] : []),
+    ...(data.cost ? [{ label: "Valeur", value: costText(data.cost) as string }] : []),
     ...(data.rarity ? [{ label: "Rarete", value: ITEM_RARITY_LABELS_FR[data.rarity] ?? data.rarity }] : []),
     ...(data.requires_attunement !== undefined ? [{ label: "Attunement", value: data.requires_attunement ? "Requis" : "Non requis" }] : []),
   ];
@@ -605,7 +619,7 @@ export function renderBlockData(
   if (blockType === "class_progression")
     return <ClassProgression data={data as ClassProgressionBlockData} worldSlug={worldSlug} outgoingRefs={outgoingRefs} />;
   if (blockType === "custom_table") return <CustomTable data={data as CustomTableBlockData} />;
-  if (blockType === "weapon") return <Weapon data={data as WeaponBlockData} />;
+  if (blockType === "weapon") return <Weapon data={data as ResolvedWeaponBlockData} worldSlug={worldSlug} />;
   if (blockType === "armor") return <Armor data={data as ArmorBlockData} />;
   if (blockType === "item_properties") return <ItemProperties data={data as ItemPropertiesBlockData} />;
   if (blockType === "charges") return <Charges data={data as ChargesBlockData} />;
