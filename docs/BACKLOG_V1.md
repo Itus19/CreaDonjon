@@ -1375,6 +1375,27 @@ Corrigés dans les deux rulesets, sans conflit (aucun autre sort n'utilisait dé
 
 **Objet (~213 fantômes) et Monstre (~40 fantômes) volontairement non purgés cette passe.** Contrairement à Aptitude, ces deux catégories n'ont pas reçu de vérification individuelle par famille comparable — seule Aptitude a été creusée à ce niveau de détail (dixième à douzième passe). Purger sans cette étape referait l'erreur évitée de justesse avec les Invocations occultes, à une échelle où l'erreur serait plus difficile à repérer (Objet en particulier : beaucoup de sous-types tabulaires déjà identifiés comme structurellement ambigus en V1-D3b, section d'introduction). Signalé, pas traité — à reprendre dans une passe dédiée si demandé, avec la même exigence de vérification directe famille par famille avant toute exclusion.
 
+#### Point d'étape — 16 août 2026, avant de passer à V1-D5 (ruleset personnel / règles maison)
+
+Bilan de dix-huit passes de vérification (V1-D3b + V1-D6) avant de changer de chantier. **Ce qui suit est la liste de référence** : tout ce qu'il reste à faire pour que les deux SRD soient propres, plus la liste de ce qui est délibérément laissé en l'état (plafond structurel, pas un oubli) pour ne pas les reconfondre plus tard.
+
+**Fini — les noms de traduction sont à 100 % sur le vrai dénominateur, dans les deux rulesets**, pour les six catégories creusées en profondeur : Aptitude, Objet, Monstre, Sort, Règle, Espèce. Rien à écrire de plus ici sans nouveau contenu source.
+
+**À faire, par ordre de priorité — nettoyage de la base (compteurs bruts encore trompeurs, doublons en repli 2014 silencieux) :**
+- [ ] **Purger les ~213 fiches fantômes d'Objet (5.2.1)** — même méthode que la purge Aptitude (dix-huitième passe ci-dessus) : vérifier chaque famille individuellement dans le texte 2024 avant de l'exclure, jamais par préfixe en bloc. Priorité la plus haute : c'est le plus gros volume de fantômes restant et la catégorie la moins creusée famille par famille jusqu'ici.
+- [ ] **Purger les ~40 fiches fantômes de Monstre (5.2.1).** Une partie a déjà été qualifiée individuellement lors de V1-D6 (renommages 2024, créatures absentes du SRD gratuit) — cette investigation peut probablement être recyclée directement en liste d'exclusion, à revérifier avant d'écrire.
+- [ ] **Vérifier puis, le cas échéant, purger Sous-classe (5.2.1)** — 21 en base, seulement 9 confirmées par `source_raw.url` en `/2024/` ; jamais creusé famille par famille, contrairement à Aptitude/Objet/Monstre. À faire une fois les deux purges ci-dessus terminées.
+- [ ] **Vérifier si Classe/Condition/Armure/Arme/Historique portent le même repli** — jamais mesuré explicitement par `source_raw.url` pour ces cinq catégories (seulement supposé sain parce que leurs compteurs 2014/2024 sont identiques et stables). À confirmer par la même méthode en une passe courte avant de déclarer le ruleset 5.2.1 entièrement propre.
+
+**Laissé tel quel — plafonds structurels déjà vérifiés, pas des trous à combler :**
+- 5.1 (2014) : `sprig-of-mistletoe` (Objet) et `adventuring` (Règle), 1690/1692 — confirmés sans en-tête propre dans le texte source, rien à traduire.
+- 5.2.1 (2024), Monstre : `traits`/`actions` manquent pour 42/334 (292/334 couverts) — créatures absentes du SRD gratuit ou redesign sans correspondance 1:1 (formes de loup-garou fusionnées, Gobelin éclaté par rôle...). `night-hag` en particulier : « Night Hag Items » absent du texte source à l'endroit attendu.
+- 5.2.1 (2024), Règle : prose manquante pour 5/28 (`equipment`, `movement`, `time`, `activating-an-item`, `madness`) — confirmé sans contenu séparé dans le texte 2024.
+
+**Hors périmètre traduction, signalé pour mémoire :** ticket [#57] UI — distinguer les aptitudes homonymes dans la barre latérale (plusieurs `entry_key` partagent le même nom français depuis les consolidations 2024, pas encore rendu visuellement distinct).
+
+**Une fois les quatre cases à cocher ci-dessus traitées, les deux SRD peuvent être déclarés propres et le chantier V1-D3b/V1-D6 clos.** Jusque-là, un MJ qui parcourt le catalogue Objet/Monstre/Sous-classe 5.2.1 peut encore tomber sur une fiche fantôme (mécanique 2014 périmée sous un nom français correct) sans indication qu'elle ne devrait pas être proposée comme choix valide — le même risque silencieux que celui déjà corrigé pour Espèce et Aptitude.
+
 ---
 
 ## Lot E — Outils de MJ déterministes
