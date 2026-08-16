@@ -1274,6 +1274,8 @@ Chaque correctif vérifié séparément par relecture d'au moins un cas avant de
 
 **Résultat : Aptitude 5.2.1, 498 → 509/636.** Le plafond réel est très probablement proche de ce chiffre, pas de 636 — la majorité du reliquat vient de choix de conception 2024 (consolidation, granularité réduite) plutôt que d'un trou d'extraction. `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
 
+**Vérification complémentaire, sur question explicite (« les aptitudes 2014 sont sûrement aussi présentes en 2024, tu as vérifié ? »)** — non, pas systématiquement, jusqu'à cette question. Corrigé : construit 94 candidats {nom anglais → nom français déjà établi en 5.1} pour les `entry_key` manquants côté 5.2.1 qui existent aussi en 5.1 (127 manquants, 96 avec un équivalent 5.1 traduit, 94 chargés par `translate:entries`), puis vérifiés avec le script générique contre `srd-5.2.1-fr.txt`. **0/94 trouvés.** Confirme par la preuve, pas seulement par lecture manuelle, que ces noms 2014 ne survivent tels quels dans aucun cas de ce lot — le recyclage qui avait bien marché pour Objet et Sort ne s'applique pas à l'Aptitude, la catégorie la plus retravaillée entre éditions (consolidation par palier, restructuration de sous-classe). Aucune écriture supplémentaire côté 5.2.1 ; les 96 réécritures côté 5.1 rapportées par le script sont des no-op sans effet (même valeur déjà en base, la garde anti-conflit du script l'a confirmé).
+
 ---
 
 ## Lot E — Outils de MJ déterministes
