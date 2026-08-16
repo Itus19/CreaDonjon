@@ -262,6 +262,20 @@ const SUPERSEDED_2014_INDICES: Record<string, Set<string>> = {
     "drow", "duergar", "lizardfolk", "tribal-warrior", "deep-gnome-svirfneblin",
     "giant-rat-diseased", "minotaur", "orc",
     "swarm-of-wasps", "swarm-of-centipedes", "swarm-of-spiders", "swarm-of-beetles",
+    // V1-D3b vingt-troisieme passe : les ~30 fiches reelles importees depuis
+    // le texte anglais (voir extraction dediee, scripts/data/new-monsters-2024-en.json)
+    // rendent ces fantomes 2014 reellement superflus desormais — impossible
+    // avant, faute de remplacement reel en base. Chaque remplacement
+    // confirme individuellement (nom francais deja verifie + mecanique
+    // recoupee), jamais suppose par famille.
+    "werewolf-wolf", "werewolf-human", "werewolf-hybrid",
+    "werebear-bear", "werebear-human", "werebear-hybrid",
+    "wererat-rat", "wererat-human", "wererat-hybrid",
+    "wereboar-boar", "wereboar-human", "wereboar-hybrid",
+    "weretiger-tiger", "weretiger-human", "weretiger-hybrid",
+    "vampire-vampire", "vampire-mist", "vampire-bat",
+    "goblin", "bugbear", "hobgoblin", "thug", "succubus-incubus",
+    "quipper", "swarm-of-quippers", "swarm-of-poisonous-snakes", "rug-of-smothering",
   ]),
   // V1-D3b vingt-et-unieme passe (volet Sous-classe) : cas le plus simple des
   // quatre categories purgees — doublon d'index confirme pour les 9, WotC

@@ -1,0 +1,1550 @@
+[
+  {
+    "entry_key": "animated-rug-of-smothering",
+    "name": "Animated Rug of Smothering",
+    "index": "animated-rug-of-smothering",
+    "size": "Large",
+    "type": "Construct",
+    "alignment": "Unaligned",
+    "armor_class": 12,
+    "hit_points": 27,
+    "hit_dice": "5d10",
+    "speed": {
+      "walk": "10 ft."
+    },
+    "abilities": {
+      "str": 17,
+      "dex": 14,
+      "con": 10,
+      "int": 1,
+      "wis": 3,
+      "cha": 1
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "blindsight": "60 ft.",
+      "passive_perception": "6"
+    },
+    "languages": "None",
+    "challenge_rating": 2,
+    "xp": 450,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Smother",
+        "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 10 (2d6 + 3) Bludgeoning damage. If the target is a Medium or smaller creature, the rug can give it the Grappled condition (escape DC 13) instead of dealing damage. Until the grapple ends, the target has the Blinded and Restrained conditions, is suffocating, and takes 10 (2d6 + 3) Bludgeoning damage at the start of each of its turns. The rug can smother only one creature at a time. While grappling the target, the rug can't take this action, the rug halves the damage it takes (round down), and the target takes the same amount of damage.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "2d6+3",
+            "type": "Bludgeoning"
+          },
+          {
+            "dice": "2d6+3",
+            "type": "Bludgeoning"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "bugbear-stalker",
+    "name": "Bugbear Stalker",
+    "index": "bugbear-stalker",
+    "size": "Medium",
+    "type": "Fey (Goblinoid)",
+    "alignment": "Chaotic Evil",
+    "armor_class": 15,
+    "hit_points": 65,
+    "hit_dice": "10d8",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "abilities": {
+      "str": 17,
+      "dex": 14,
+      "con": 14,
+      "int": 11,
+      "wis": 12,
+      "cha": 11
+    },
+    "skills": [
+      {
+        "name": "Stealth",
+        "bonus": 6
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "11"
+    },
+    "languages": "Common, Goblin",
+    "challenge_rating": 3,
+    "xp": 700,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Abduct",
+        "description": "The bugbear needn't spend extra movement to move a creature it is grappling."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The bugbear makes two Javelin or Morningstar attacks."
+      },
+      {
+        "name": "Javelin",
+        "description": "Melee or Ranged Attack Roll: +5, reach 10 ft. or range 30/120 ft. Hit: 13 (3d6 + 3) Piercing damage.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "3d6+3",
+            "type": "Piercing"
+          }
+        ]
+      },
+      {
+        "name": "Morningstar",
+        "description": "Melee Attack Roll: +5 (with Advantage if the target is Grappled by the bugbear), reach 10 ft. Hit: 12 (2d8 + 3) Piercing damage.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "2d8+3",
+            "type": "Piercing"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "bugbear-warrior",
+    "name": "Bugbear Warrior",
+    "index": "bugbear-warrior",
+    "size": "Medium",
+    "type": "Fey (Goblinoid)",
+    "alignment": "Chaotic Evil",
+    "armor_class": 14,
+    "hit_points": 33,
+    "hit_dice": "6d8",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "abilities": {
+      "str": 15,
+      "dex": 14,
+      "con": 13,
+      "int": 8,
+      "wis": 11,
+      "cha": 9
+    },
+    "skills": [
+      {
+        "name": "Stealth",
+        "bonus": 6
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "10"
+    },
+    "languages": "Common, Goblin",
+    "challenge_rating": 1,
+    "xp": 200,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Abduct",
+        "description": "The bugbear needn't spend extra movement to move a creature it is grappling."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Grab",
+        "description": "Melee Attack Roll: +4, reach 10 ft. Hit: 9 (2d6 + 2) Bludgeoning damage. If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 12).",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "2d6+2",
+            "type": "Bludgeoning"
+          }
+        ]
+      },
+      {
+        "name": "Light Hammer",
+        "description": "Melee or Ranged Attack Roll: +4 (with Advantage if the target is Grappled by the bugbear), reach 10 ft. or range 20/60 ft. Hit: 9 (3d4 + 2) Bludgeoning damage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "3d4+2",
+            "type": "Bludgeoning"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "goblin-minion",
+    "name": "Goblin Minion",
+    "index": "goblin-minion",
+    "size": "Small",
+    "type": "Fey (Goblinoid)",
+    "alignment": "Chaotic Neutral",
+    "armor_class": 12,
+    "hit_points": 7,
+    "hit_dice": "2d6",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "abilities": {
+      "str": 8,
+      "dex": 15,
+      "con": 10,
+      "int": 10,
+      "wis": 8,
+      "cha": 8
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "9"
+    },
+    "languages": "Common, Goblin",
+    "challenge_rating": 0.125,
+    "xp": 25,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Dagger",
+        "description": "Melee or Ranged Attack Roll: +4, reach 5 ft. or range 20/60 ft. Hit: 4 (1d4 + 2) Piercing damage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "1d4+2",
+            "type": "Piercing"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "goblin-warrior",
+    "name": "Goblin Warrior",
+    "index": "goblin-warrior",
+    "size": "Small",
+    "type": "Fey (Goblinoid)",
+    "alignment": "Chaotic Neutral",
+    "armor_class": 15,
+    "hit_points": 10,
+    "hit_dice": "3d6",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "abilities": {
+      "str": 8,
+      "dex": 15,
+      "con": 10,
+      "int": 10,
+      "wis": 8,
+      "cha": 8
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "9"
+    },
+    "languages": "Common, Goblin",
+    "challenge_rating": 0.25,
+    "xp": 50,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Scimitar",
+        "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Slashing damage, plus 2 (1d4) Slashing damage if the attack roll had Advantage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "1d6+2",
+            "type": "Slashing"
+          },
+          {
+            "dice": "1d4",
+            "type": "Slashing"
+          }
+        ]
+      },
+      {
+        "name": "Shortbow",
+        "description": "Ranged Attack Roll: +4, range 80/320 ft. Hit: 5 (1d6 + 2) Piercing damage, plus 2 (1d4) Piercing damage if the attack roll had Advantage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "1d6+2",
+            "type": "Piercing"
+          },
+          {
+            "dice": "1d4",
+            "type": "Piercing"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "goblin-boss",
+    "name": "Goblin Boss",
+    "index": "goblin-boss",
+    "size": "Small",
+    "type": "Fey (Goblinoid)",
+    "alignment": "Chaotic Neutral",
+    "armor_class": 17,
+    "hit_points": 21,
+    "hit_dice": "6d6",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "abilities": {
+      "str": 10,
+      "dex": 15,
+      "con": 10,
+      "int": 10,
+      "wis": 8,
+      "cha": 10
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "9"
+    },
+    "languages": "Common, Goblin",
+    "challenge_rating": 1,
+    "xp": 200,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The goblin makes two attacks, using Scimitar or Shortbow in any combination."
+      },
+      {
+        "name": "Scimitar",
+        "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Slashing damage, plus 2 (1d4) Slashing damage if the attack roll had Advantage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "1d6+2",
+            "type": "Slashing"
+          },
+          {
+            "dice": "1d4",
+            "type": "Slashing"
+          }
+        ]
+      },
+      {
+        "name": "Shortbow",
+        "description": "Ranged Attack Roll: +4, range 80/320 ft. Hit: 5 (1d6 + 2) Piercing damage, plus 2 (1d4) Piercing damage if the attack roll had Advantage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "1d6+2",
+            "type": "Piercing"
+          },
+          {
+            "dice": "1d4",
+            "type": "Piercing"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "half-dragon",
+    "name": "Half-Dragon",
+    "index": "half-dragon",
+    "size": "Medium",
+    "type": "Dragon",
+    "alignment": "Neutral",
+    "armor_class": 18,
+    "hit_points": 105,
+    "hit_dice": "14d8",
+    "speed": {
+      "walk": "40 ft."
+    },
+    "abilities": {
+      "str": 19,
+      "dex": 14,
+      "con": 16,
+      "int": 10,
+      "wis": 15,
+      "cha": 14
+    },
+    "skills": [
+      {
+        "name": "Athletics",
+        "bonus": 7
+      },
+      {
+        "name": "Perception",
+        "bonus": 5
+      },
+      {
+        "name": "Stealth",
+        "bonus": 5
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "blindsight": "10 ft., Darkvision 60 ft.",
+      "passive_perception": "15"
+    },
+    "languages": "Common, Draconic",
+    "challenge_rating": 5,
+    "xp": 1800,
+    "proficiency_bonus": 3,
+    "traits": [
+      {
+        "name": "Draconic Origin",
+        "description": "The half-dragon is related to a type of dragon associated with one of the following damage types (GM's choice): Acid, Cold, Fire, Lightning, or Poison. This choice affects other aspects of the stat block."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The half-dragon makes two Claw attacks."
+      },
+      {
+        "name": "Claw",
+        "description": "Melee Attack Roll: +7, reach 10 ft. Hit: 6 (1d4 + 4) Slashing damage plus 7 (2d6) damage of the type chosen for the Draconic Origin trait.",
+        "attack_bonus": 7,
+        "damage": [
+          {
+            "dice": "1d4+4",
+            "type": "Slashing"
+          }
+        ]
+      },
+      {
+        "name": "Dragon's Breath (Recharge 5-6)",
+        "description": "Dexterity Saving Throw: DC 14, each creature in a 30-foot Cone. Failure: 28 (8d6) damage of the type chosen for the Draconic Origin trait. Success: Half damage."
+      }
+    ]
+  },
+  {
+    "entry_key": "hobgoblin-warrior",
+    "name": "Hobgoblin Warrior",
+    "index": "hobgoblin-warrior",
+    "size": "Medium",
+    "type": "Fey (Goblinoid)",
+    "alignment": "Lawful Evil",
+    "armor_class": 18,
+    "hit_points": 11,
+    "hit_dice": "2d8",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "abilities": {
+      "str": 13,
+      "dex": 12,
+      "con": 12,
+      "int": 10,
+      "wis": 10,
+      "cha": 9
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "10"
+    },
+    "languages": "Common, Goblin",
+    "challenge_rating": 0.5,
+    "xp": 100,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Pack Tactics",
+        "description": "The hobgoblin has Advantage on an attack roll against a creature if at least one of the hobgoblin's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Longsword",
+        "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 12 (2d10 + 1) Slashing damage.",
+        "attack_bonus": 3,
+        "damage": [
+          {
+            "dice": "2d10+1",
+            "type": "Slashing"
+          }
+        ]
+      },
+      {
+        "name": "Longbow",
+        "description": "Ranged Attack Roll: +3, range 150/600 ft. Hit: 5 (1d8 + 1) Piercing damage plus 7 (3d4) Poison damage.",
+        "attack_bonus": 3,
+        "damage": [
+          {
+            "dice": "1d8+1",
+            "type": "Piercing"
+          },
+          {
+            "dice": "3d4",
+            "type": "Poison"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "hobgoblin-captain",
+    "name": "Hobgoblin Captain",
+    "index": "hobgoblin-captain",
+    "size": "Medium",
+    "type": "Fey (Goblinoid)",
+    "alignment": "Lawful Evil",
+    "armor_class": 17,
+    "hit_points": 58,
+    "hit_dice": "9d8",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "abilities": {
+      "str": 15,
+      "dex": 14,
+      "con": 14,
+      "int": 12,
+      "wis": 10,
+      "cha": 13
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "10"
+    },
+    "languages": "Common, Goblin",
+    "challenge_rating": 3,
+    "xp": 700,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Aura of Authority",
+        "description": "While in a 10-foot Emanation originating from the hobgoblin, the hobgoblin and its allies have Advantage on attack rolls and saving throws, provided the hobgoblin doesn't have the Incapacitated condition."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The hobgoblin makes two attacks, using Greatsword or Longbow in any combination."
+      },
+      {
+        "name": "Greatsword",
+        "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 9 (2d6 + 2) Slashing damage plus 3 (1d6) Poison damage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "2d6+2",
+            "type": "Slashing"
+          },
+          {
+            "dice": "1d6",
+            "type": "Poison"
+          }
+        ]
+      },
+      {
+        "name": "Longbow",
+        "description": "Ranged Attack Roll: +4, range 150/600 ft. Hit: 6 (1d8 + 2) Piercing damage plus 5 (2d4) Poison damage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "1d8+2",
+            "type": "Piercing"
+          },
+          {
+            "dice": "2d4",
+            "type": "Poison"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "incubus",
+    "name": "Incubus",
+    "index": "incubus",
+    "size": "Medium",
+    "type": "Fiend",
+    "alignment": "Neutral Evil",
+    "armor_class": 15,
+    "hit_points": 66,
+    "hit_dice": "12d8",
+    "speed": {
+      "walk": "30 ft.",
+      "fly": "60 ft."
+    },
+    "abilities": {
+      "str": 8,
+      "dex": 17,
+      "con": 13,
+      "int": 15,
+      "wis": 12,
+      "cha": 20
+    },
+    "skills": [
+      {
+        "name": "Deception",
+        "bonus": 9
+      },
+      {
+        "name": "Insight",
+        "bonus": 5
+      },
+      {
+        "name": "Perception",
+        "bonus": 5
+      },
+      {
+        "name": "Persuasion",
+        "bonus": 9
+      },
+      {
+        "name": "Stealth",
+        "bonus": 7
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "15"
+    },
+    "languages": "Abyssal, Common, Infernal; telepathy 60 ft",
+    "challenge_rating": 4,
+    "xp": 1100,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Succubus Form",
+        "description": "When the incubus finishes a Long Rest, it can shape-shift into a Succubus, using that stat block instead of this one. Any equipment it is wearing or carrying isn't transformed."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The incubus makes two Restless Touch attacks."
+      },
+      {
+        "name": "Restless Touch",
+        "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 15 (3d6 + 5) Psychic damage, and the target is cursed for 24 hours or until the incubus dies. Until the curse ends, the target gains no benefit from finishing Short Rests.",
+        "attack_bonus": 7,
+        "damage": [
+          {
+            "dice": "3d6+5",
+            "type": "Psychic"
+          }
+        ]
+      },
+      {
+        "name": "Spellcasting",
+        "description": "The incubus casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 15): At Will: Disguise Self, Etherealness 1/Day Each: Dream, Hypnotic Pattern"
+      }
+    ]
+  },
+  {
+    "entry_key": "succubus",
+    "name": "Succubus",
+    "index": "succubus",
+    "size": "Medium",
+    "type": "Fiend",
+    "alignment": "Neutral Evil",
+    "armor_class": 15,
+    "hit_points": 71,
+    "hit_dice": "13d8",
+    "speed": {
+      "walk": "30 ft.",
+      "fly": "60 ft."
+    },
+    "abilities": {
+      "str": 8,
+      "dex": 17,
+      "con": 13,
+      "int": 15,
+      "wis": 12,
+      "cha": 20
+    },
+    "skills": [
+      {
+        "name": "Deception",
+        "bonus": 9
+      },
+      {
+        "name": "Insight",
+        "bonus": 5
+      },
+      {
+        "name": "Perception",
+        "bonus": 5
+      },
+      {
+        "name": "Persuasion",
+        "bonus": 9
+      },
+      {
+        "name": "Stealth",
+        "bonus": 7
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "15"
+    },
+    "languages": "Abyssal, Common, Infernal; telepathy 60 ft",
+    "challenge_rating": 4,
+    "xp": 1100,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Incubus Form",
+        "description": "When the succubus finishes a Long Rest, it can shape-shift into an Incubus, using that stat block instead of this one."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The succubus makes one Fiendish Touch attack and uses Charm or Draining Kiss."
+      },
+      {
+        "name": "Fiendish Touch",
+        "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 16 (2d10 + 5) Psychic damage.",
+        "attack_bonus": 7,
+        "damage": [
+          {
+            "dice": "2d10+5",
+            "type": "Psychic"
+          }
+        ]
+      },
+      {
+        "name": "Charm",
+        "description": "The succubus casts Dominate Person (level 8 version), requiring no spell components and using Charisma as the spellcasting ability (spell save DC 15)."
+      },
+      {
+        "name": "Draining Kiss",
+        "description": "Constitution Saving Throw: DC 15, one creature Charmed by the succubus within 5 feet. Failure: 13 (3d8) Psychic damage. Success: Half damage. Failure or Success: The target's Hit Point maximum decreases by an amount equal to the damage taken.",
+        "damage": [
+          {
+            "dice": "3d8",
+            "type": "Psychic"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "tough",
+    "name": "Tough",
+    "index": "tough",
+    "size": "Medium or Small",
+    "type": "Humanoid",
+    "alignment": "Neutral",
+    "armor_class": 12,
+    "hit_points": 32,
+    "hit_dice": "5d8",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "abilities": {
+      "str": 15,
+      "dex": 12,
+      "con": 14,
+      "int": 10,
+      "wis": 10,
+      "cha": 11
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "passive_perception": "10"
+    },
+    "languages": "Common",
+    "challenge_rating": 0.5,
+    "xp": 100,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Pack Tactics",
+        "description": "The tough has Advantage on an attack roll against a creature if at least one of the tough's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Mace",
+        "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Bludgeoning damage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "1d6+2",
+            "type": "Bludgeoning"
+          }
+        ]
+      },
+      {
+        "name": "Heavy Crossbow",
+        "description": "Ranged Attack Roll: +3, range 100/400 ft. Hit: 6 (1d10 + 1) Piercing damage. Tough Boss",
+        "attack_bonus": 3,
+        "damage": [
+          {
+            "dice": "1d10+1",
+            "type": "Piercing"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "vampire-familiar",
+    "name": "Vampire Familiar",
+    "index": "vampire-familiar",
+    "size": "Medium or Small",
+    "type": "Humanoid",
+    "alignment": "Neutral Evil",
+    "armor_class": 15,
+    "hit_points": 65,
+    "hit_dice": "10d8",
+    "speed": {
+      "walk": "30 ft.",
+      "climb": "30 ft."
+    },
+    "abilities": {
+      "str": 17,
+      "dex": 16,
+      "con": 15,
+      "int": 10,
+      "wis": 10,
+      "cha": 14
+    },
+    "skills": [
+      {
+        "name": "Perception",
+        "bonus": 4
+      },
+      {
+        "name": "Persuasion",
+        "bonus": 4
+      },
+      {
+        "name": "Stealth",
+        "bonus": 7
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "14"
+    },
+    "languages": "Common plus one other language",
+    "challenge_rating": 3,
+    "xp": 700,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Vampiric Connection",
+        "description": "While the familiar and its vampire master are on the same plane of existence, the vampire can communicate with the familiar telepathically, and the vampire can perceive through the familiar's senses."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The familiar makes two Umbral Dagger attacks."
+      },
+      {
+        "name": "Umbral Dagger",
+        "description": "Melee or Ranged Attack Roll: +5, reach 5 ft. or range 20/60 ft. Hit: 5 (1d4 + 3) Piercing damage plus 7 (3d4) Necrotic damage. If the target is reduced to 0 Hit Points by this attack, the target becomes Stable but has the Poisoned condition for 1 hour. While it has the Poisoned condition, the target has the Paralyzed condition.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "1d4+3",
+            "type": "Piercing"
+          },
+          {
+            "dice": "3d4",
+            "type": "Necrotic"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "vampire",
+    "name": "Vampire",
+    "index": "vampire",
+    "size": "Medium or Small",
+    "type": "Undead",
+    "alignment": "Lawful Evil",
+    "armor_class": 16,
+    "hit_points": 195,
+    "hit_dice": "23d8",
+    "speed": {
+      "walk": "40 ft.",
+      "climb": "40 ft."
+    },
+    "abilities": {
+      "str": 18,
+      "dex": 18,
+      "con": 18,
+      "int": 17,
+      "wis": 15,
+      "cha": 18
+    },
+    "skills": [
+      {
+        "name": "Perception",
+        "bonus": 7
+      },
+      {
+        "name": "Stealth",
+        "bonus": 9
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "120 ft.",
+      "passive_perception": "17"
+    },
+    "languages": "Common plus two other languages",
+    "challenge_rating": 13,
+    "xp": 10000,
+    "proficiency_bonus": 5,
+    "traits": [
+      {
+        "name": "Legendary Resistance (3/Day, or 4/Day in Lair)",
+        "description": "If the vampire fails a saving throw, it can choose to succeed instead."
+      },
+      {
+        "name": "Misty Escape",
+        "description": "If the vampire drops to 0 Hit Points outside its resting place, the vampire uses Shape-Shift to become mist (no action required). If it can't use ShapeShift, it is destroyed. While it has 0 Hit Points in mist form, it can't return to its vampire form, and it must reach its resting place within 2 hours or be destroyed. Once in its resting place, it returns to its vampire form and has the Paralyzed condition until it regains any Hit Points, and it regains 1 Hit Point after spending 1 hour there."
+      },
+      {
+        "name": "Spider Climb",
+        "description": "The vampire can climb difficult surfaces, including along ceilings, without needing to make an ability check."
+      },
+      {
+        "name": "Vampire Weakness",
+        "description": "The vampire has these weaknesses:"
+      },
+      {
+        "name": "Forbiddance",
+        "description": "The vampire can't enter a residence without an invitation from an occupant."
+      },
+      {
+        "name": "Running Water",
+        "description": "The vampire takes 20 Acid damage if it ends its turn in running water."
+      },
+      {
+        "name": "Stake to the Heart",
+        "description": "If a weapon that deals Piercing damage is driven into the vampire's heart while the vampire has the Incapacitated condition in its resting place, the vampire has the Paralyzed condition until the weapon is removed."
+      },
+      {
+        "name": "Sunlight",
+        "description": "The vampire takes 20 Radiant damage if it starts its turn in sunlight. While in sunlight, it has Disadvantage on attack rolls and ability checks."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Multiattack (Vampire Form Only)",
+        "description": "The vampire makes two Grave Strike attacks and uses Bite."
+      },
+      {
+        "name": "Grave Strike (Vampire Form Only)",
+        "description": "Melee Attack Roll: +9, reach 5 ft. Hit: 8 (1d8 + 4) Bludgeoning damage plus 7 (2d6) Necrotic damage. If the target is a Large or smaller creature, it has the Grappled condition (escape DC 14) from one of two hands.",
+        "attack_bonus": 9,
+        "damage": [
+          {
+            "dice": "1d8+4",
+            "type": "Bludgeoning"
+          },
+          {
+            "dice": "2d6",
+            "type": "Necrotic"
+          }
+        ]
+      },
+      {
+        "name": "Bite (Bat or Vampire Form Only)",
+        "description": "Constitution Saving Throw: DC 17, one creature within 5 feet that is willing or that has the Grappled, Incapacitated, or Restrained condition. Failure: 6 (1d4 + 4) Piercing damage plus 13 (3d8) Necrotic damage. The target's Hit Point maximum decreases by an amount equal to the Necrotic damage taken, and the vampire regains Hit Points equal to that amount. A Humanoid reduced to 0 Hit Points by this damage and then buried rises the following sunset as a Vampire Spawn under the vampire's control.",
+        "damage": [
+          {
+            "dice": "1d4+4",
+            "type": "Piercing"
+          },
+          {
+            "dice": "3d8",
+            "type": "Necrotic"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "werebear",
+    "name": "Werebear",
+    "index": "werebear",
+    "size": "Medium or Small",
+    "type": "Monstrosity (Lycanthrope)",
+    "alignment": "Neutral Good",
+    "armor_class": 15,
+    "hit_points": 135,
+    "hit_dice": "18d8",
+    "speed": {
+      "walk": "30 ft., 40 ft. (bear form only)",
+      "climb": "30 ft. (bear  form only)"
+    },
+    "abilities": {
+      "str": 19,
+      "dex": 10,
+      "con": 17,
+      "int": 11,
+      "wis": 12,
+      "cha": 12
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "17"
+    },
+    "languages": "Common (can't speak in bear form)",
+    "challenge_rating": 5,
+    "xp": 1800,
+    "proficiency_bonus": 3,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The werebear makes two attacks, using Handaxe or Rend in any combination. It can replace one attack with a Bite attack."
+      },
+      {
+        "name": "Bite (Bear or Hybrid Form Only)",
+        "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 17 (2d12 + 4) Piercing damage. If the target is a Humanoid, it is subjected to the following effect. Constitution Saving Throw: DC 14. Failure: The target is cursed. If the cursed target drops to 0 Hit Points, it instead becomes a Werebear under the GM's control and has 10 Hit Points. Success: The target is immune to this werebear's curse for 24 hours.",
+        "attack_bonus": 7,
+        "damage": [
+          {
+            "dice": "2d12+4",
+            "type": "Piercing"
+          }
+        ]
+      },
+      {
+        "name": "Handaxe (Humanoid or Hybrid Form Only)",
+        "description": "Melee or Ranged Attack Roll: +7, reach 5 ft or range 20/60 ft. Hit: 14 (3d6 + 4) Slashing damage.",
+        "attack_bonus": 7,
+        "damage": [
+          {
+            "dice": "3d6+4",
+            "type": "Slashing"
+          }
+        ]
+      },
+      {
+        "name": "Rend (Bear or Hybrid Form Only)",
+        "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 13 (2d8 + 4) Slashing damage.",
+        "attack_bonus": 7,
+        "damage": [
+          {
+            "dice": "2d8+4",
+            "type": "Slashing"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "wereboar",
+    "name": "Wereboar",
+    "index": "wereboar",
+    "size": "Medium or Small",
+    "type": "Monstrosity (Lycanthrope)",
+    "alignment": "Neutral Evil",
+    "armor_class": 15,
+    "hit_points": 97,
+    "hit_dice": "15d8",
+    "speed": {
+      "walk": "30 ft., 40 ft. (boar form only)"
+    },
+    "abilities": {
+      "str": 17,
+      "dex": 10,
+      "con": 15,
+      "int": 10,
+      "wis": 11,
+      "cha": 8
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "passive_perception": "12"
+    },
+    "languages": "Common (can't speak in boar form)",
+    "challenge_rating": 4,
+    "xp": 1100,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The wereboar makes two attacks, using Javelin or Tusk in any combination. It can replace one attack with a Gore attack."
+      },
+      {
+        "name": "Gore (Boar or Hybrid Form Only)",
+        "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 12 (2d8 + 3) Piercing damage. If the target is a Humanoid, it is subjected to the following effect. Constitution Saving Throw: DC 12. Failure: The target is cursed. If the cursed target drops to 0 Hit Points, it instead becomes a Wereboar under the GM's control and has 10 Hit Points. Success: The target is immune to this wereboar's curse for 24 hours.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "2d8+3",
+            "type": "Piercing"
+          }
+        ]
+      },
+      {
+        "name": "Javelin (Humanoid or Hybrid Form Only)",
+        "description": "Melee or Ranged Attack Roll: +5, reach 5 ft. or range 30/120 ft. Hit: 13 (3d6 + 3) Piercing damage.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "3d6+3",
+            "type": "Piercing"
+          }
+        ]
+      },
+      {
+        "name": "Tusk (Boar or Hybrid Form Only)",
+        "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 10 (2d6 + 3) Piercing damage. If the target is a Medium or smaller creature and the wereboar moved 20+ feet straight toward it immediately before the hit, the target takes an extra 7 (2d6) Piercing damage and has the Prone condition.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "2d6+3",
+            "type": "Piercing"
+          },
+          {
+            "dice": "2d6",
+            "type": "Piercing"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "wererat",
+    "name": "Wererat",
+    "index": "wererat",
+    "size": "Medium or Small",
+    "type": "Monstrosity (Lycanthrope)",
+    "alignment": "Lawful Evil",
+    "armor_class": 13,
+    "hit_points": 60,
+    "hit_dice": "11d8",
+    "speed": {
+      "walk": "30 ft.",
+      "climb": "30 ft."
+    },
+    "abilities": {
+      "str": 10,
+      "dex": 16,
+      "con": 12,
+      "int": 11,
+      "wis": 10,
+      "cha": 8
+    },
+    "skills": [
+      {
+        "name": "Perception",
+        "bonus": 4
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "14"
+    },
+    "languages": "Common (can't speak in rat form)",
+    "challenge_rating": 2,
+    "xp": 450,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The wererat makes two attacks, using Scratch or Hand Crossbow in any combination. It can replace one attack with a Bite attack."
+      },
+      {
+        "name": "Bite (Rat or Hybrid Form Only)",
+        "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 8 (2d4 + 3) Piercing damage. If the target is a Humanoid, it is subjected to the following effect. Constitution Saving Throw: DC 11. Failure: The target is cursed. If the cursed target drops to 0 Hit Points, it instead becomes a Wererat under the GM's control and has 10 Hit Points. Success: The target is immune to this wererat's curse for 24 hours.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "2d4+3",
+            "type": "Piercing"
+          }
+        ]
+      },
+      {
+        "name": "Scratch",
+        "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6 + 3) Slashing damage.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "1d6+3",
+            "type": "Slashing"
+          }
+        ]
+      },
+      {
+        "name": "Hand Crossbow (Humanoid or Hybrid Form Only)",
+        "description": "Ranged Attack Roll: +5, range 30/120 ft. Hit: 6 (1d6 + 3) Piercing damage.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "1d6+3",
+            "type": "Piercing"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "weretiger",
+    "name": "Weretiger",
+    "index": "weretiger",
+    "size": "Medium or Small",
+    "type": "Monstrosity (Lycanthrope)",
+    "alignment": "Neutral",
+    "armor_class": 12,
+    "hit_points": 120,
+    "hit_dice": "16d8",
+    "speed": {
+      "walk": "30 ft., 40 ft. (tiger form only)"
+    },
+    "abilities": {
+      "str": 17,
+      "dex": 15,
+      "con": 16,
+      "int": 10,
+      "wis": 13,
+      "cha": 11
+    },
+    "skills": [
+      {
+        "name": "Perception",
+        "bonus": 5
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "15"
+    },
+    "languages": "Common (can't speak in tiger form)",
+    "challenge_rating": 4,
+    "xp": 1100,
+    "proficiency_bonus": 2,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The weretiger makes two attacks, using Scratch or Longbow in any combination. It can replace one attack with a Bite attack."
+      },
+      {
+        "name": "Bite (Tiger or Hybrid Form Only)",
+        "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 12 (2d8 + 3) Piercing damage. If the target is a Humanoid, it is subjected to the following effect. Constitution Saving Throw: DC 13. Failure: The target is cursed. If the cursed target drops to 0 Hit Points, it instead becomes a Weretiger under the GM's control and has 10 Hit Points. Success: The target is immune to this weretiger's curse for 24 hours.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "2d8+3",
+            "type": "Piercing"
+          }
+        ]
+      },
+      {
+        "name": "Scratch",
+        "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 10 (2d6 + 3) Slashing damage.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "2d6+3",
+            "type": "Slashing"
+          }
+        ]
+      },
+      {
+        "name": "Longbow (Humanoid or Hybrid Form Only)",
+        "description": "Ranged Attack Roll: +4, range 150/600 ft. Hit: 11 (2d8 + 2) Piercing damage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "2d8+2",
+            "type": "Piercing"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "werewolf",
+    "name": "Werewolf",
+    "index": "werewolf",
+    "size": "Medium or Small",
+    "type": "Monstrosity (Lycanthrope)",
+    "alignment": "Chaotic Evil",
+    "armor_class": 15,
+    "hit_points": 71,
+    "hit_dice": "11d8",
+    "speed": {
+      "walk": "30 ft., 40 ft. (wolf form only)"
+    },
+    "abilities": {
+      "str": 16,
+      "dex": 14,
+      "con": 14,
+      "int": 10,
+      "wis": 11,
+      "cha": 10
+    },
+    "skills": [
+      {
+        "name": "Perception",
+        "bonus": 4
+      }
+    ],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "14"
+    },
+    "languages": "Common (can't speak in wolf form)",
+    "challenge_rating": 3,
+    "xp": 700,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Pack Tactics",
+        "description": "The werewolf has Advantage on an attack roll against a creature if at least one of the werewolf's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The werewolf makes two attacks, using Scratch or Longbow in any combination. It can replace one attack with a Bite attack."
+      },
+      {
+        "name": "Bite (Wolf or Hybrid Form Only)",
+        "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 12 (2d8 + 3) Piercing damage. If the target is a Humanoid, it is subjected to the following effect. Constitution Saving Throw: DC 12. Failure: The target is cursed. If the cursed target drops to 0 Hit Points, it instead becomes a Werewolf under the GM's control and has 10 Hit Points. Success: The target is immune to this werewolf's curse for 24 hours.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "2d8+3",
+            "type": "Piercing"
+          }
+        ]
+      },
+      {
+        "name": "Scratch",
+        "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 10 (2d6 + 3) Slashing damage.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "2d6+3",
+            "type": "Slashing"
+          }
+        ]
+      },
+      {
+        "name": "Longbow (Humanoid or Hybrid Form Only)",
+        "description": "Ranged Attack Roll: +4, range 150/600 ft. Hit: 11 (2d8 + 2) Piercing damage.",
+        "attack_bonus": 4,
+        "damage": [
+          {
+            "dice": "2d8+2",
+            "type": "Piercing"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "piranha",
+    "name": "Piranha",
+    "index": "piranha",
+    "size": "Tiny",
+    "type": "Beast",
+    "alignment": "Unaligned",
+    "armor_class": 13,
+    "hit_points": 1,
+    "hit_dice": "1d4",
+    "speed": {
+      "walk": "5 ft.",
+      "swim": "40 ft."
+    },
+    "abilities": {
+      "str": 2,
+      "dex": 16,
+      "con": 9,
+      "int": 1,
+      "wis": 7,
+      "cha": 2
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "8"
+    },
+    "languages": "None",
+    "challenge_rating": 0,
+    "xp": 10,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Water Breathing",
+        "description": "The piranha can breathe only underwater."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Bite",
+        "description": "Melee Attack Roll: +5 (with Advantage if the target doesn't have all its Hit Points), reach 5 ft. Hit: 1 Piercing damage.",
+        "attack_bonus": 5
+      }
+    ]
+  },
+  {
+    "entry_key": "swarm-of-piranhas",
+    "name": "Swarm of Piranhas",
+    "index": "swarm-of-piranhas",
+    "size": "Medium",
+    "type": "Swarm of Tiny Beast",
+    "alignment": "Unaligned",
+    "armor_class": 13,
+    "hit_points": 28,
+    "hit_dice": "8d8",
+    "speed": {
+      "walk": "5 ft.",
+      "swim": "40 ft."
+    },
+    "abilities": {
+      "str": 13,
+      "dex": 16,
+      "con": 9,
+      "int": 1,
+      "wis": 7,
+      "cha": 2
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "darkvision": "60 ft.",
+      "passive_perception": "8"
+    },
+    "languages": "None",
+    "challenge_rating": 1,
+    "xp": 200,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Swarm",
+        "description": "The swarm can occupy another creature's space and vice versa, and the swarm can move through any opening large enough for a Tiny piranha. The swarm can't regain Hit Points or gain Temporary Hit Points."
+      },
+      {
+        "name": "Water Breathing",
+        "description": "The swarm can breathe only underwater."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Bites",
+        "description": "Melee Attack Roll: +5 (with Advantage if the target doesn't have all its Hit Points), reach 5 ft. Hit: 8 (2d4 + 3) Piercing damage, or 5 (1d4 + 3) Piercing damage if the swarm is Bloodied.",
+        "attack_bonus": 5,
+        "damage": [
+          {
+            "dice": "2d4+3",
+            "type": "Piercing"
+          },
+          {
+            "dice": "1d4+3",
+            "type": "Piercing"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entry_key": "swarm-of-venomous-snakes",
+    "name": "Swarm of Venomous Snakes",
+    "index": "swarm-of-venomous-snakes",
+    "size": "Medium",
+    "type": "Swarm of Tiny Beast",
+    "alignment": "Unaligned",
+    "armor_class": 14,
+    "hit_points": 36,
+    "hit_dice": "8d8",
+    "speed": {
+      "walk": "30 ft.",
+      "swim": "30 ft."
+    },
+    "abilities": {
+      "str": 8,
+      "dex": 18,
+      "con": 11,
+      "int": 1,
+      "wis": 10,
+      "cha": 3
+    },
+    "skills": [],
+    "saving_throws": [],
+    "senses": {
+      "blindsight": "10 ft.",
+      "passive_perception": "10"
+    },
+    "languages": "None",
+    "challenge_rating": 2,
+    "xp": 450,
+    "proficiency_bonus": 2,
+    "traits": [
+      {
+        "name": "Swarm",
+        "description": "The swarm can occupy another creature's space and vice versa, and the swarm can move through any opening large enough for a Tiny snake. The swarm can't regain Hit Points or gain Temporary Hit Points."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Bites",
+        "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 8 (1d8 + 4) Piercing damage--or 6 (1d4 + 4) Piercing damage if the swarm is Bloodied--plus 10 (3d6) Poison damage.",
+        "attack_bonus": 6,
+        "damage": [
+          {
+            "dice": "1d8+4",
+            "type": "Piercing"
+          },
+          {
+            "dice": "1d4+4",
+            "type": "Piercing"
+          },
+          {
+            "dice": "3d6",
+            "type": "Poison"
+          }
+        ]
+      }
+    ]
+  }
+]

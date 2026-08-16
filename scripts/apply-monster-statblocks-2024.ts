@@ -120,7 +120,12 @@ function toRawMonster(m: ParsedMonster, index: string): Record<string, unknown> 
 const ALREADY_AUTHENTIC_2024 = new Set(["aboleth", "adult-black-dragon", "adult-blue-dragon"]);
 
 function main() {
-  const parsed: ParsedMonster[] = JSON.parse(readFileSync("scripts/data/monster-statblocks-2024-en.json", "utf-8"));
+  // Argument optionnel : chemin du fichier source, pour reutiliser ce
+  // script sur un lot different sans dupliquer sa logique de fusion (ex.
+  // V1-D3b vingtieme passe, nouveaux monstres jamais presents en base plutot
+  // que corrections de monstres deja importes en repli 2014).
+  const inputPath = process.argv[2] ?? "scripts/data/monster-statblocks-2024-en.json";
+  const parsed: ParsedMonster[] = JSON.parse(readFileSync(inputPath, "utf-8"));
   const srd2024 = JSON.parse(readFileSync("data/srd/srd-2024.json", "utf-8"));
   const srd2014 = JSON.parse(readFileSync("data/srd/srd-2014.json", "utf-8"));
   const baseIndices = new Set<string>((srd2014.Monsters ?? []).map((m: Record<string, unknown>) => String(m.index)));
