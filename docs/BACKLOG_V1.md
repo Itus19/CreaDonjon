@@ -1496,7 +1496,7 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 | Catégorie | Fiches concernées (5.2.1) | Statut |
 |---|---|---|
 | Historique | 4 | ✅ 4/4, 16 août 2026 |
-| Condition | 15 | ⬜ |
+| Condition | 15 | ✅ 15/15, 16 août 2026 |
 | Armure | 13 | ⬜ |
 | Sous-classe | 12 | ⬜ |
 | Classe | 12 | ⬜ |
@@ -1504,7 +1504,7 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 | Espèce | 33 | ⬜ |
 | Objet | 473 | ⬜ |
 | Aptitude | 603 | ⬜ |
-| **Total** | **1203** | **4/1203 (0,3 %)** |
+| **Total** | **1203** | **19/1203 (1,6 %)** |
 
 **Ordre choisi** : du plus petit volume au plus gros, pour valider la méthode (extraction du texte officiel français, jamais une reconstruction ou une traduction automatique — même règle absolue que tout le reste de cette série) sur des lots courts avant Objet et Aptitude, les deux gros morceaux. Historique d'abord sur demande explicite.
 
@@ -1525,6 +1525,10 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 **Historique (4/4) — état final.** Les 4 fiches (`acolyte`, `criminal`, `sage`, `soldier`) ont leurs trois blocs en français : lore inventé en description, tableau mécanique complet (caractéristiques, don avec lien + description repris de sa propre fiche, maîtrises, équipement) en bloc 2, données brutes SRD inchangées en bloc 3. Vérifié en navigateur sur les 4 fiches.
 
 **Itération de mise en page du bloc 2 (16 août 2026, retour utilisateur).** Deux ajustements : (1) `KeyValues` (mise en page partagée, tous les blocs) gagne un champ `fullWidth` optionnel par paire — le Don s'étire désormais sur toute la largeur, sous la ligne caractéristiques/outil/compétences, plutôt que de se disputer une colonne pour un texte long. (2) `equipment_choice` (texte figé, ex. « Choisissez A ou B : (A) 2 dagues... ») remplacé par `equipment_options` structuré (une option par choix, chaque objet une vraie référence `{kind:"rule", key}` vers sa fiche Objet/Arme, plus un montant d'or optionnel) — vérifié que les objets courants (dague, outils de voleur, bourse, parchemin...) ont tous une fiche importée, sans exception à gérer. Rendu en encadrés inspirés d'`ItemCard` (onglet Inventaire de la fiche jouable) — même langage visuel, simplifié (pas de quantité modifiable ni de bouton, une fiche de règle n'est jamais un inventaire). Nom de chaque objet résolu à la lecture (`resolveEntryNames`, service, même motif batché que `resolveOutgoingRefs`) plutôt que traduit à la main par historique : la traduction vit une seule fois, sur la fiche de l'objet lui-même. Un seul cas sans référence (Soldat, « choisissez un type de boîte de jeux » — un choix de catégorie, pas un objet précis) : simple libellé, pas de lien.
+
+**Correction transverse : rendu du texte SRD (`**Titre.**` + retours à la ligne).** Le texte des dons repris dans le bloc `background` (ex. Vigilant, Initié à la magie) s'affichait sur une seule ligne avec des astérisques littéraux. La fonction de rendu (un seul motif reconnu, `**...**` → gras, `\n` → nouveau paragraphe, jamais un parseur markdown complet) vit maintenant dans `components/rules/layouts/Prose.tsx` (`renderMarkdownBoldText`, exportée) et alimente à la fois le bloc `description` générique (donc les fiches d'Aptitude elles-mêmes, ex. `/regles/alert`) et `Traits`/`Actions`/`SpellcastingProgression`/`Background` dans `blockContentRenderer.tsx` — un seul point de rendu, jamais deux implémentations qui auraient pu diverger. **Vérifié en conditions réelles, à la demande de l'utilisateur** : un marqueur temporaire ajouté au texte de Vigilant sur sa propre fiche est apparu immédiatement sur la fiche Criminel (qui le cite), preuve que `resolveFeatDetail` (rules.ts) lit toujours la donnée en direct — le bloc `background` ne stocke qu'une référence `{kind, key}`, jamais une copie du texte. Marqueur retiré après vérification.
+
+**Deuxième passe, Condition (15/15, 16 août 2026).** Catégorie choisie pour sa faible interconnexion (aucune condition ne référence une autre fiche, le texte est toujours autonome — contrairement à Aptitude qui a le même profil mais 40× le volume) plutôt que l'ordre strictement croissant en taille. Aucun lore à inventer : chaque condition a une vraie prose officielle (Glossaire de règles, `srd-5.2.1-fr.txt`, entrées marquées « [État] », lignes 18215–19267), un seul bloc `description` suffit — pas de bloc 2 structuré, une condition n'a aucune donnée tabulaire (contrairement à Historique). Texte extrait mot pour mot, sous-titres en gras découpés dans le même ordre que `data/srd/srd-2024.json` (`Conditions[].description`, motif `**Titre.**` identique). `source: official_srd` (traduction fidèle, pas de lore inventé ici — `invented_lore` ne s'applique pas à cette catégorie).
 
 ---
 
