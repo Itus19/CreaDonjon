@@ -169,6 +169,75 @@ const SUPERSEDED_2014_INDICES: Record<string, Set<string>> = {
     "dragon-ancestor-green---poison-damage", "dragon-ancestor-red---fire-damage",
     "dragon-ancestor-silver---cold-damage", "dragon-ancestor-white---cold-damage",
   ]),
+  // V1-D3b dix-huitieme passe (volet Objet) : trois motifs distincts, chacun
+  // confirme par lecture directe de data/srd/fr-source/srd-5.2.1-fr.txt avant
+  // exclusion — jamais sur la seule absence de surcharge JSON (celle-ci s'est
+  // revelee a plusieurs reprises incomplete par rapport au texte officiel
+  // reellement publie, ex. la table "Montures et vehicules" existe en clair
+  // dans le texte mais n'a aucune trace dans data/srd/srd-2024.json ; ces
+  // entrees-la sont un vrai trou de contenu, pas un phantome, et restent hors
+  // de cette liste) :
+  //  - doublon d'index confirme (mergeByIndex ne l'a pas reconnu car WotC a
+  //    change l'index entre editions, ex. cartographers-tools/2014 vs
+  //    cartographer-tools/2024) : le nouvel index a deja son propre
+  //    ruleset_entries verifie et traduit ailleurs.
+  //  - variante par couleur/tier consolidee en une seule fiche generique avec
+  //    table de conversion interne (Ceinturon/Potion de force de geant,
+  //    Anneau/Potion de resistance, Ecailles de dragon, Gemme elementaire,
+  //    Manuel des golems, Corne de Valhalla, Parchemin de sort par niveau,
+  //    Tapis volant par taille, Pierre de bonne fortune, tiers de Potion de
+  //    guerison) : verifie table par table, jamais suppose par famille —
+  //    a distinguer des familles qui ONT une sous-fiche individuelle malgre
+  //    un index JSON partage (Pierre d'Ioun, Anneau de commandement
+  //    elementaire, Sac a malices, Figurine merveilleuse, Plume magique :
+  //    verifiees a l'identique et confirmees NON exclues, chacune garde son
+  //    propre sous-titre en gras dans le texte).
+  //  - contenu mineur reellement absent du texte 2024 (confirme par recherche
+  //    directe, aucune trace nulle part) : petits objets de remplissage 2014
+  //    sans equivalent (craie, savon, sablier...), et Barde par type
+  //    d'armure individuel, remplace par une regle generique a prix/poids
+  //    calcules (x4 prix, x2 poids de l'armure equivalente, ligne 9801-9807).
+  Equipment: new Set([
+    "abacus", "acid-vial", "alchemists-fire-flask", "alms-box", "antitoxin-vial", "arrow",
+    "ball-bearings-bag-of-1000",
+    "barding-breastplate", "barding-chain-mail", "barding-chain-shirt", "barding-half-plate",
+    "barding-hide", "barding-leather", "barding-padded", "barding-plate", "barding-ring-mail",
+    "barding-scale-mail", "barding-splint", "barding-studded-leather",
+    "bit-and-bridle", "cartographers-tools", "chain-10-feet", "chalk-1-piece", "clothes-costume",
+    "diplomats-pack", "dungeoneers-pack", "fishing-tackle", "holy-water-flask", "hourglass",
+    "ink-1-ounce-bottle", "ladder-10-foot", "little-bag-of-sand", "mess-kit", "mirror-steel",
+    "oil-flask", "paper-one-sheet", "parchment-one-sheet", "perfume-vial", "pick-miners", "piton",
+    "poison-basic-vial", "pole-10-foot", "rations-1-day", "robes", "rope-hempen-50-feet",
+    "rope-silk-50-feet", "sealing-wax", "signet-ring", "soap", "spike-iron", "string-10-feet",
+    "tent-two-person", "totem", "vestments",
+  ]),
+  "Magic-Items": new Set([
+    "belt-of-giant-strength-cloud", "belt-of-giant-strength-fire", "belt-of-giant-strength-frost",
+    "belt-of-giant-strength-hill", "belt-of-giant-strength-stone", "belt-of-giant-strength-storm",
+    "carpet-of-flying-3x5", "carpet-of-flying-4x6", "carpet-of-flying-5x7", "carpet-of-flying-6x9",
+    "dragon-scale-mail-black", "dragon-scale-mail-blue", "dragon-scale-mail-brass",
+    "dragon-scale-mail-bronze", "dragon-scale-mail-copper", "dragon-scale-mail-gold",
+    "dragon-scale-mail-green", "dragon-scale-mail-red", "dragon-scale-mail-silver",
+    "dragon-scale-mail-white",
+    "elemental-gem-air", "elemental-gem-earth", "elemental-gem-fire", "elemental-gem-water",
+    "horn-of-valhalla-brass", "horn-of-valhalla-bronze", "horn-of-valhalla-iron", "horn-of-valhalla-silver",
+    "manual-of-golems-clay", "manual-of-golems-flesh", "manual-of-golems-iron", "manual-of-golems-stone",
+    "potion-of-giant-strength-cloud", "potion-of-giant-strength-fire", "potion-of-giant-strength-frost",
+    "potion-of-giant-strength-hill", "potion-of-giant-strength-stone", "potion-of-giant-strength-storm",
+    "potion-of-healing", "potion-of-healing-common", "potion-of-healing-greater",
+    "potion-of-healing-superior", "potion-of-healing-supreme",
+    "potion-of-resistance-acid", "potion-of-resistance-cold", "potion-of-resistance-fire",
+    "potion-of-resistance-force", "potion-of-resistance-lightning", "potion-of-resistance-necrotic",
+    "potion-of-resistance-poison", "potion-of-resistance-psychic", "potion-of-resistance-radiant",
+    "potion-of-resistance-thunder",
+    "ring-of-resistance-acid", "ring-of-resistance-cold", "ring-of-resistance-fire",
+    "ring-of-resistance-force", "ring-of-resistance-lightning", "ring-of-resistance-necrotic",
+    "ring-of-resistance-poison", "ring-of-resistance-psychic", "ring-of-resistance-radiant",
+    "ring-of-resistance-thunder",
+    "spell-scroll-1st", "spell-scroll-2nd", "spell-scroll-3rd", "spell-scroll-4th", "spell-scroll-5th",
+    "spell-scroll-6th", "spell-scroll-7th", "spell-scroll-8th", "spell-scroll-9th",
+    "spell-scroll-cantrip", "stone-of-good-luck-luckstone",
+  ]),
 };
 
 /**
