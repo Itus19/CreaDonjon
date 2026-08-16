@@ -7,19 +7,54 @@ import { useTranslations } from "next-intl";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
 import RulesetSelector from "./RulesetSelector";
 
-/** Un groupe par entry_type, pliable (meme motif que NodeRow dans components/shell/EntityTree.tsx). */
+function RuleEntryLink({
+  entry,
+  worldSlug,
+  currentKey,
+  onNavigate,
+  nested,
+}: {
+  entry: RuleEntrySummary;
+  worldSlug: string;
+  currentKey: string | null;
+  onNavigate: () => void;
+  nested?: boolean;
+}) {
+  return (
+    <Link
+      href={`/m/${worldSlug}/regles/${entry.key}`}
+      onClick={onNavigate}
+      className={`block truncate rounded px-2 py-1 text-sm transition-colors hover:bg-panel-raised ${
+        entry.key === currentKey ? "bg-panel-raised text-accent" : "text-ink-soft"
+      }`}
+      style={nested ? { paddingLeft: "22px" } : undefined}
+    >
+      {entry.name}
+    </Link>
+  );
+}
+
+/**
+ * Un groupe par entry_type, pliable (meme motif que NodeRow dans
+ * components/shell/EntityTree.tsx). `subclassesByParent` (V1-D7, sur
+ * retour utilisateur : "je dois pouvoir trouver Évocateur sous Magicien")
+ * n'est fourni que par le groupe Classe — chaque sous-classe s'affiche
+ * directement sous sa classe (`entry.key`), pas dans un groupe a part.
+ */
 function RuleTypeGroup({
   entryType,
   items,
   worldSlug,
   currentKey,
   onNavigate,
+  subclassesByParent,
 }: {
   entryType: string;
   items: RuleEntrySummary[];
   worldSlug: string;
   currentKey: string | null;
   onNavigate: () => void;
+  subclassesByParent?: Map<string, RuleEntrySummary[]>;
 }) {
   const t = useTranslations("shell");
   const tRegles = useTranslations("regles");
@@ -41,15 +76,10 @@ function RuleTypeGroup({
         <ul>
           {items.map((entry) => (
             <li key={entry.key}>
-              <Link
-                href={`/m/${worldSlug}/regles/${entry.key}`}
-                onClick={onNavigate}
-                className={`block truncate rounded px-2 py-1 text-sm transition-colors hover:bg-panel-raised ${
-                  entry.key === currentKey ? "bg-panel-raised text-accent" : "text-ink-soft"
-                }`}
-              >
-                {entry.name}
-              </Link>
+              <RuleEntryLink entry={entry} worldSlug={worldSlug} currentKey={currentKey} onNavigate={onNavigate} />
+              {subclassesByParent?.get(entry.key)?.map((sub) => (
+                <RuleEntryLink key={sub.key} entry={sub} worldSlug={worldSlug} currentKey={currentKey} onNavigate={onNavigate} nested />
+              ))}
             </li>
           ))}
         </ul>
@@ -79,17 +109,44 @@ export default function RulesSidebar({
   const match = pathname.match(/\/regles\/([^/]+)/);
   const currentKey = match ? decodeURIComponent(match[1]) : null;
 
-  const groups = useMemo(() => {
+  const { groups, subclassesByParent } = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = q === "" ? entries : entries.filter((e) => e.name.toLowerCase().includes(q));
+
+    // Sous-classe nichee sous sa classe (V1-D7, sur retour utilisateur :
+    // "je dois pouvoir trouver Évocateur sous Magicien"), jamais un groupe
+    // a part — sauf si la classe elle-meme n'est pas dans le resultat
+    // filtre (recherche sur le nom d'une sous-classe seule, ou classe
+    // parente absente du ruleset) : repli dans un groupe "subclass" normal
+    // plutot que de la faire disparaitre silencieusement.
+    const classKeys = new Set(filtered.filter((e) => e.entryType === "class").map((e) => e.key));
+    const subclassesByParent = new Map<string, RuleEntrySummary[]>();
+    const orphanSubclasses: RuleEntrySummary[] = [];
+    for (const entry of filtered) {
+      if (entry.entryType !== "subclass") continue;
+      if (entry.parentClassKey && classKeys.has(entry.parentClassKey)) {
+        const list = subclassesByParent.get(entry.parentClassKey) ?? [];
+        list.push(entry);
+        subclassesByParent.set(entry.parentClassKey, list);
+      } else {
+        orphanSubclasses.push(entry);
+      }
+    }
+    for (const list of subclassesByParent.values()) list.sort((a, b) => a.name.localeCompare(b.name));
+
     const byType = new Map<string, RuleEntrySummary[]>();
     for (const entry of filtered) {
+      if (entry.entryType === "subclass") continue;
       const list = byType.get(entry.entryType) ?? [];
       list.push(entry);
       byType.set(entry.entryType, list);
     }
     for (const list of byType.values()) list.sort((a, b) => a.name.localeCompare(b.name));
-    return [...byType.entries()].sort(([a], [b]) => a.localeCompare(b));
+    if (orphanSubclasses.length > 0) {
+      byType.set("subclass", [...orphanSubclasses].sort((a, b) => a.name.localeCompare(b.name)));
+    }
+
+    return { groups: [...byType.entries()].sort(([a], [b]) => a.localeCompare(b)), subclassesByParent };
   }, [entries, query]);
 
   return (
@@ -133,6 +190,7 @@ export default function RulesSidebar({
               worldSlug={worldSlug}
               currentKey={currentKey}
               onNavigate={() => setOpen(false)}
+              subclassesByParent={entryType === "class" ? subclassesByParent : undefined}
             />
           ))}
         </nav>

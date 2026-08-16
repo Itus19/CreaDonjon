@@ -333,17 +333,33 @@ function ConditionEffects({ data }: { data: ConditionEffectsBlockData }) {
   );
 }
 
-/** Aptitudes accordees par une sous-classe, par niveau (V1-D7) — niveau integre au libelle (ex. "Frenesie (niveau 3)"), pas de colonne separee : meme patron `key_values` que les autres blocs a liste, aucune raison d'en inventer un nouveau pour ce seul champ. */
+/**
+ * Aptitudes accordees par une sous-classe, par niveau (V1-D7, sur retour
+ * utilisateur — remplace la grille de cartes `key_values` par un vrai
+ * tableau a lignes, une progression par niveau se lisant mieux ainsi,
+ * meme mise en page que `class_progression`/`scaling`). Meme police que
+ * les autres blocs conservee (nom en gras, memes classes que l'etiquette
+ * `KeyValues`) — seul le conteneur change.
+ */
 function SubclassFeatures({ data }: { data: SubclassFeaturesBlockData }) {
   const sorted = [...data.features].sort((a, b) => a.level - b.level);
-  return (
-    <KeyValues
-      items={sorted.map((f, i) => ({
-        label: `${f.name} (niveau ${f.level})`,
-        value: renderMarkdownBoldText(f.description, `feature-${i}`),
-      }))}
-    />
-  );
+  const columns = [
+    { key: "level", label: "Niveau" },
+    { key: "feature", label: "Aptitude" },
+  ];
+  const rows = sorted.map((f, i) => [
+    { key: "level", value: <span className="mech">{f.level}</span> },
+    {
+      key: "feature",
+      value: (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-bold uppercase tracking-wide text-ink">{f.name}</span>
+          <div className="text-ink-muted">{renderMarkdownBoldText(f.description, `feature-${i}`)}</div>
+        </div>
+      ),
+    },
+  ]);
+  return <ProgressionTable columns={columns} rows={rows} />;
 }
 
 function Actions({ data }: { data: ActionsBlockData }) {

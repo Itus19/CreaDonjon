@@ -1239,7 +1239,7 @@ function subclassFeaturesBlock(entry: SrdRecord): EntryBlock | null {
 
   const data = { features };
   validateBlockData("subclass_features", data);
-  return { block_type: "subclass_features", display: { label: "Aptitudes", layout: "key_values" }, data, display_order: 150 };
+  return { block_type: "subclass_features", display: { label: "Aptitudes", layout: "progression_table" }, data, display_order: 150 };
 }
 
 /**
