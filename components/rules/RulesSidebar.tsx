@@ -36,10 +36,12 @@ function RuleEntryLink({
 
 /**
  * Un groupe par entry_type, pliable (meme motif que NodeRow dans
- * components/shell/EntityTree.tsx). `subclassesByParent` (V1-D7, sur
- * retour utilisateur : "je dois pouvoir trouver Évocateur sous Magicien")
- * n'est fourni que par le groupe Classe — chaque sous-classe s'affiche
- * directement sous sa classe (`entry.key`), pas dans un groupe a part.
+ * components/shell/EntityTree.tsx). `childrenByParent` (V1-D7, sur retour
+ * utilisateur : "je dois pouvoir trouver Évocateur sous Magicien", puis
+ * "les sous-especes dependantes de leur espece principale") n'est fourni
+ * que par les groupes Classe et Espece — chaque sous-classe/sous-espece
+ * s'affiche directement sous son parent (`entry.key`), pas dans un groupe
+ * a part.
  */
 function RuleTypeGroup({
   entryType,
@@ -47,14 +49,14 @@ function RuleTypeGroup({
   worldSlug,
   currentKey,
   onNavigate,
-  subclassesByParent,
+  childrenByParent,
 }: {
   entryType: string;
   items: RuleEntrySummary[];
   worldSlug: string;
   currentKey: string | null;
   onNavigate: () => void;
-  subclassesByParent?: Map<string, RuleEntrySummary[]>;
+  childrenByParent?: Map<string, RuleEntrySummary[]>;
 }) {
   const t = useTranslations("shell");
   const tRegles = useTranslations("regles");
@@ -77,7 +79,7 @@ function RuleTypeGroup({
           {items.map((entry) => (
             <li key={entry.key}>
               <RuleEntryLink entry={entry} worldSlug={worldSlug} currentKey={currentKey} onNavigate={onNavigate} />
-              {subclassesByParent?.get(entry.key)?.map((sub) => (
+              {childrenByParent?.get(entry.key)?.map((sub) => (
                 <RuleEntryLink key={sub.key} entry={sub} worldSlug={worldSlug} currentKey={currentKey} onNavigate={onNavigate} nested />
               ))}
             </li>
@@ -109,7 +111,7 @@ export default function RulesSidebar({
   const match = pathname.match(/\/regles\/([^/]+)/);
   const currentKey = match ? decodeURIComponent(match[1]) : null;
 
-  const { groups, subclassesByParent } = useMemo(() => {
+  const { groups, subclassesByParent, subspeciesByParent } = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = q === "" ? entries : entries.filter((e) => e.name.toLowerCase().includes(q));
 
@@ -134,9 +136,28 @@ export default function RulesSidebar({
     }
     for (const list of subclassesByParent.values()) list.sort((a, b) => a.name.localeCompare(b.name));
 
+    // Sous-espece nichee sous son espece (V1-D7, sur retour utilisateur),
+    // meme principe que sous-classe/classe ci-dessus — mais sans repli
+    // "orphelins" distinct : contrairement a Sous-classe, une sous-espece
+    // partage `entryType: "species"` avec son parent (la 5.2.1 n'a pas
+    // d'entry_type dedie), donc une sous-espece dont le parent est absent
+    // du filtre reste deja dans le groupe "species" normal ci-dessous, sans
+    // rien retirer a part.
+    const speciesKeys = new Set(filtered.filter((e) => e.entryType === "species" && !e.parentSpeciesKey).map((e) => e.key));
+    const subspeciesByParent = new Map<string, RuleEntrySummary[]>();
+    for (const entry of filtered) {
+      if (entry.entryType !== "species" || !entry.parentSpeciesKey) continue;
+      if (!speciesKeys.has(entry.parentSpeciesKey)) continue;
+      const list = subspeciesByParent.get(entry.parentSpeciesKey) ?? [];
+      list.push(entry);
+      subspeciesByParent.set(entry.parentSpeciesKey, list);
+    }
+    for (const list of subspeciesByParent.values()) list.sort((a, b) => a.name.localeCompare(b.name));
+
     const byType = new Map<string, RuleEntrySummary[]>();
     for (const entry of filtered) {
       if (entry.entryType === "subclass") continue;
+      if (entry.entryType === "species" && entry.parentSpeciesKey && speciesKeys.has(entry.parentSpeciesKey)) continue;
       const list = byType.get(entry.entryType) ?? [];
       list.push(entry);
       byType.set(entry.entryType, list);
@@ -146,7 +167,7 @@ export default function RulesSidebar({
       byType.set("subclass", [...orphanSubclasses].sort((a, b) => a.name.localeCompare(b.name)));
     }
 
-    return { groups: [...byType.entries()].sort(([a], [b]) => a.localeCompare(b)), subclassesByParent };
+    return { groups: [...byType.entries()].sort(([a], [b]) => a.localeCompare(b)), subclassesByParent, subspeciesByParent };
   }, [entries, query]);
 
   return (
@@ -190,7 +211,7 @@ export default function RulesSidebar({
               worldSlug={worldSlug}
               currentKey={currentKey}
               onNavigate={() => setOpen(false)}
-              subclassesByParent={entryType === "class" ? subclassesByParent : undefined}
+              childrenByParent={entryType === "class" ? subclassesByParent : entryType === "species" ? subspeciesByParent : undefined}
             />
           ))}
         </nav>

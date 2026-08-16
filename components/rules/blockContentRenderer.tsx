@@ -36,6 +36,7 @@ import { ftToM, lbToKg } from "@/src/core/rules/encumbrance";
 import type {
   ResolvedBackgroundBlockData,
   ResolvedBackgroundEquipmentOption,
+  ResolvedSpeciesTraitsBlockData,
   ResolvedSubclassSlotBlockData,
   ResolvedWeaponBlockData,
   RuleRefView,
@@ -312,6 +313,36 @@ function Weapon({ data, worldSlug }: { data: ResolvedWeaponBlockData; worldSlug:
     <div className="flex flex-col gap-5">
       <KeyValues items={items} />
       {detailItems.length > 0 && <KeyValues items={detailItems} />}
+    </div>
+  );
+}
+
+/**
+ * Traits d'une espece ou d'une sous-espece (V1-D7, retour utilisateur —
+ * meme motif que `Weapon` ci-dessus : faits courts en grille, traits en
+ * blocs plein largeur nom+texte). `creature_type`/`size`/`speed` absents
+ * pour une sous-espece (elle n'a pas sa propre taille/vitesse).
+ */
+function SpeciesTraits({ data, worldSlug }: { data: ResolvedSpeciesTraitsBlockData; worldSlug: string }) {
+  const items = [
+    ...(data.creature_type || data.size
+      ? [
+          {
+            label: "Taille / Type",
+            value: `${data.size ? (SIZE_LABELS_FR[data.size] ?? data.size) : ""} ${data.creature_type ? (CREATURE_TYPE_LABELS_FR[data.creature_type] ?? data.creature_type) : ""}`.trim(),
+          },
+        ]
+      : []),
+    ...(data.speed ? [{ label: "Vitesse", value: quantityText(data.speed) as string }] : []),
+  ];
+  return (
+    <div className="flex flex-col gap-5">
+      {items.length > 0 && <KeyValues items={items} />}
+      <div className="flex flex-col gap-3">
+        {data.traits.map((t, i) => (
+          <ResolvedRefDetail key={i} worldSlug={worldSlug} refItem={t} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -640,6 +671,7 @@ export function renderBlockData(
     return <ClassProgression data={data as ClassProgressionBlockData} worldSlug={worldSlug} outgoingRefs={outgoingRefs} />;
   if (blockType === "custom_table") return <CustomTable data={data as CustomTableBlockData} />;
   if (blockType === "weapon") return <Weapon data={data as ResolvedWeaponBlockData} worldSlug={worldSlug} />;
+  if (blockType === "species_traits") return <SpeciesTraits data={data as ResolvedSpeciesTraitsBlockData} worldSlug={worldSlug} />;
   if (blockType === "armor") return <Armor data={data as ArmorBlockData} />;
   if (blockType === "item_properties") return <ItemProperties data={data as ItemPropertiesBlockData} />;
   if (blockType === "charges") return <Charges data={data as ChargesBlockData} />;

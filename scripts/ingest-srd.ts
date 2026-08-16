@@ -1278,6 +1278,41 @@ function subclassFeaturesBlock(entry: SrdRecord): EntryBlock | null {
 }
 
 /**
+ * Traits d'une espece ou d'une sous-espece (V1-D7, retour utilisateur sur
+ * la nidification sous-espece/espece dans la sidebar). `entry.traits`
+ * porte deja des references (`{index, name}`) vers des fiches `feature`
+ * existantes (categorie SRD "Traits") — jamais de nom+texte duplique ici.
+ * `speciesAndSubspeciesKeys` predit le suffixe "-feature" qu'une aptitude
+ * en collision avec sa propre entree espece/sous-espece recevra plus loin
+ * dans l'import (ex. "giant-ancestry-clouds-jaunt", Goliath) — deterministe,
+ * jamais devine (voir le calcul de l'ensemble, plus haut dans ce fichier).
+ * `creature_type`/`size`/`speed` absents pour une sous-espece (elle n'en a
+ * pas en propre) : `null` renvoye seulement si meme `traits` est vide,
+ * jamais a cause des trois autres champs.
+ */
+function speciesTraitsBlock(entry: SrdRecord, speciesAndSubspeciesKeys: Set<string>): EntryBlock | null {
+  const rawTraits = Array.isArray(entry.traits) ? (entry.traits as SrdRecord[]) : [];
+  const traits = rawTraits
+    .map((t) => {
+      const index = t.index;
+      if (typeof index !== "string") return null;
+      const key = speciesAndSubspeciesKeys.has(index) ? `${index}-feature` : index;
+      return { kind: "rule" as const, key };
+    })
+    .filter((r): r is { kind: "rule"; key: string } => r !== null);
+  if (traits.length === 0) return null;
+
+  const data = {
+    creature_type: typeof entry.type === "string" ? entry.type.toLowerCase() : undefined,
+    size: typeof entry.size === "string" ? entry.size : undefined,
+    speed: typeof entry.speed === "number" ? quantity(entry.speed, "ft") : undefined,
+    traits,
+  };
+  validateBlockData("species_traits", data);
+  return { block_type: "species_traits", display: { label: "Traits", layout: "key_values" }, data, display_order: 150 };
+}
+
+/**
  * Categorie d'equipement (SRD `equipment_categories`, ex. "Gaming Sets") ->
  * libelle FR — rencontree seulement pour le choix d'outil du Soldat
  * (V1-D7), pas de table plus large (`Equipment-Categories` n'est pas une
@@ -1448,7 +1483,8 @@ function transformEntry(
   sourceAttribution: string,
   levelsByCategory: SrdRecord[] | undefined,
   remapFeatureKey: Map<string, string>,
-  subclassesByCategory: SrdRecord[] | undefined
+  subclassesByCategory: SrdRecord[] | undefined,
+  speciesAndSubspeciesKeys: Set<string>
 ): TransformedEntry {
   const entryType: EntryType = category === "Equipment" ? equipmentEntryType(entry) : CATEGORY_ENTRY_TYPE[category];
 
@@ -1539,6 +1575,11 @@ function transformEntry(
     if (features) blocks.push(features);
   }
 
+  if (entryType === "species") {
+    const speciesTraits = speciesTraitsBlock(entry, speciesAndSubspeciesKeys);
+    if (speciesTraits) blocks.push(speciesTraits);
+  }
+
   blocks.push(customTableBlock(entry));
 
   const digestSource = prose ?? fallbackDigestFacts(entryType, entry) ?? String(entry.name);
@@ -1611,6 +1652,20 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
   // fusion) ne porte que les 12 sous-classes reellement 2024 — verifie
   // couvrir les 12 classes de base avant d'ecrire ce repli.
   const subclassesForSlots = config.mergeWithBaseFile ? ownData["Subclasses"] : raw["Subclasses"];
+
+  // Cles des especes/sous-especes (V1-D7) : necessaire pour predire quelles
+  // entrees "Traits" seront desambiguisees plus bas dans cette meme passe —
+  // une sous-espece et son aptitude descriptive partagent parfois le meme
+  // index brut (ex. "giant-ancestry-clouds-jaunt", Goliath). Species/
+  // Subspecies sont traitees avant Traits dans l'ordre du fichier source
+  // (voir la boucle de desambiguation plus bas), donc l'aptitude perd
+  // toujours la cle nue et recoit le suffixe "-feature" — deterministe,
+  // jamais devine dans speciesTraitsBlock.
+  const speciesAndSubspeciesKeys = new Set([
+    ...(Array.isArray(raw["Species"]) ? raw["Species"].map((e) => String(e.index)) : []),
+    ...(Array.isArray(raw["Subspecies"]) ? raw["Subspecies"].map((e) => String(e.index)) : []),
+  ]);
+
   const counts: Partial<Record<EntryType, number>> = {};
   const failures: ConversionFailure[] = [];
   let blocksTotal = 0;
@@ -1651,7 +1706,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
     const transformed: TransformedEntry[] = [];
     for (const item of sourceItems) {
       try {
-        const t = transformEntry(category, item, config.sourceAttribution, levels, remapFeatureKey, subclassesForSlots);
+        const t = transformEntry(category, item, config.sourceAttribution, levels, remapFeatureKey, subclassesForSlots, speciesAndSubspeciesKeys);
         transformed.push(t);
         blocksTotal += t.blocks.length;
         refsTotal += t.refs.length;

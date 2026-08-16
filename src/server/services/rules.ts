@@ -12,6 +12,7 @@ import {
   type EntryType,
   type ReferencePrimitive,
   type ScalingBlockData,
+  type SpeciesTraitsBlockData,
   type SubclassSlotBlockData,
   type WeaponBlockData,
   zBlockDisplay,
@@ -295,6 +296,15 @@ export type ResolvedWeaponBlockData = Omit<WeaponBlockData, "properties" | "mast
 };
 
 /**
+ * `species_traits.traits` (V1-D7, retour utilisateur — meme niveau de
+ * detail que les proprietes d'arme ci-dessus) augmentes du nom ET de la
+ * description de chaque trait, jamais dupliques en base.
+ */
+export type ResolvedSpeciesTraitsBlockData = Omit<SpeciesTraitsBlockData, "traits"> & {
+  traits: (ReferencePrimitive & { resolved_name: string; resolved_description: string })[];
+};
+
+/**
  * Nom + description (deja traduite si `locale !== "en"`) d'une entree
  * quelconque de la chaine de ruleset. `null` seulement si la cle ne resout
  * dans aucun ruleset de la chaine (donnee source incoherente) — l'appelant
@@ -328,6 +338,26 @@ async function resolveEntryDetail(
   }
 
   return { name: translation?.name ?? entryNameFrom(featEntry), description };
+}
+
+/**
+ * `resolveEntryDetail` sur un lot de cles uniques, en parallele (V1-D7,
+ * troisieme appelant apres `weapon` et `species_traits` — generalise plutot
+ * que duplique une troisieme fois, meme raison que `resolveEntryDetail`
+ * lui-meme). Peu de cles par appelant (1 a 10), un `Promise.all` suffit,
+ * pas besoin du lot SQL batche de `resolveEntryNames`.
+ */
+async function resolveEntryDetails(
+  supabase: TypedClient,
+  rulesetId: string,
+  keys: string[],
+  locale: Locale
+): Promise<Map<string, { name: string; description: string } | null>> {
+  const uniqueKeys = [...new Set(keys)];
+  const entries = await Promise.all(
+    uniqueKeys.map(async (key) => [key, await resolveEntryDetail(supabase, rulesetId, key, locale)] as const)
+  );
+  return new Map(entries);
 }
 
 /**
@@ -541,18 +571,13 @@ export async function getRuleEntryForWorld(
   // Augmente le bloc `weapon` avec le nom ET le texte de chaque propriete et
   // de la botte d'arme (V1-D7, retour utilisateur : d'abord un lien, puis
   // "il faut que ca soit directement visible sur la fiche", meme niveau de
-  // detail que le Don d'un `background` ci-dessus) — un `resolveEntryDetail`
-  // par cle unique plutot qu'un lot (peu de cles par arme, 1 a 4).
+  // detail que le Don d'un `background` ci-dessus).
   const weaponBlockIndex = blocks.findIndex((b) => b.blockType === "weapon");
   if (weaponBlockIndex !== -1) {
     const weaponData = blocks[weaponBlockIndex].data as WeaponBlockData;
     const propertyKeys = weaponData.properties.map((p) => p.key);
-    const keysToResolve = [...new Set(weaponData.mastery ? [...propertyKeys, weaponData.mastery.key] : propertyKeys)];
-    const details = new Map(
-      (
-        await Promise.all(keysToResolve.map(async (key) => [key, await resolveEntryDetail(supabase, rulesetId, key, locale)] as const))
-      ).map(([key, detail]) => [key, detail])
-    );
+    const keysToResolve = weaponData.mastery ? [...propertyKeys, weaponData.mastery.key] : propertyKeys;
+    const details = await resolveEntryDetails(supabase, rulesetId, keysToResolve, locale);
     blocks[weaponBlockIndex] = {
       ...blocks[weaponBlockIndex],
       data: {
@@ -570,6 +595,32 @@ export async function getRuleEntryForWorld(
             }
           : undefined,
       } satisfies ResolvedWeaponBlockData,
+    };
+  }
+
+  // Augmente le bloc `species_traits` avec le nom ET le texte de chaque
+  // trait (V1-D7, retour utilisateur : "botte et caracteristiques... un
+  // bloc comme pour Don") — meme motif que `weapon` ci-dessus, applique des
+  // le depart a la description plutot qu'au seul nom.
+  const speciesTraitsBlockIndex = blocks.findIndex((b) => b.blockType === "species_traits");
+  if (speciesTraitsBlockIndex !== -1) {
+    const traitsData = blocks[speciesTraitsBlockIndex].data as SpeciesTraitsBlockData;
+    const details = await resolveEntryDetails(
+      supabase,
+      rulesetId,
+      traitsData.traits.map((t) => t.key),
+      locale
+    );
+    blocks[speciesTraitsBlockIndex] = {
+      ...blocks[speciesTraitsBlockIndex],
+      data: {
+        ...traitsData,
+        traits: traitsData.traits.map((t) => ({
+          ...t,
+          resolved_name: details.get(t.key)?.name ?? t.key,
+          resolved_description: details.get(t.key)?.description ?? "",
+        })),
+      } satisfies ResolvedSpeciesTraitsBlockData,
     };
   }
 
@@ -596,6 +647,15 @@ export interface RuleEntrySummary {
   name: string;
   /** Cle de la classe parente — seulement pour `entryType === "subclass"` (V1-C4 suite, filtrage sous-classe/classe). `undefined` si la source ne porte pas ce champ (contenu maison sans lien de classe). */
   parentClassKey?: string;
+  /**
+   * Cle de l'espece parente (V1-D7, retour utilisateur : nicher les
+   * sous-especes sous leur espece dans la sidebar, meme motif que
+   * `parentClassKey`). Difference cle avec Classe/Sous-classe : la 5.2.1 ne
+   * porte pas d'`entry_type` distinct pour les sous-especes — une ascendance
+   * draconique, une lignee elfique... sont `entry_type: "species"` au meme
+   * titre que l'espece elle-meme, seule la presence de ce champ les distingue.
+   */
+  parentSpeciesKey?: string;
 }
 
 /** Lit `source_raw.class.index` (forme SRD des sous-classes, verifiee en base : `{"class":{"index":"wizard",...}}`) — tolerant, jamais d'exception si la forme differe (contenu importe autrement). */
@@ -604,6 +664,15 @@ function subclassParentClassKey(sourceRaw: unknown): string | undefined {
   const cls = (sourceRaw as Record<string, unknown>).class;
   if (!cls || typeof cls !== "object") return undefined;
   const index = (cls as Record<string, unknown>).index;
+  return typeof index === "string" ? index : undefined;
+}
+
+/** Lit `source_raw.species.index` (forme SRD des sous-especes, verifiee en base : `{"species":{"index":"dragonborn",...}}`) — meme tolerance que `subclassParentClassKey`. */
+function speciesParentKey(sourceRaw: unknown): string | undefined {
+  if (!sourceRaw || typeof sourceRaw !== "object") return undefined;
+  const species = (sourceRaw as Record<string, unknown>).species;
+  if (!species || typeof species !== "object") return undefined;
+  const index = (species as Record<string, unknown>).index;
   return typeof index === "string" ? index : undefined;
 }
 
@@ -634,6 +703,7 @@ async function listEntriesInRulesetChain(
         entryType: e.entry_type as EntryType,
         name: translationByEntryId.get(e.id) ?? entryNameFrom(e),
         parentClassKey: e.entry_type === "subclass" ? subclassParentClassKey(e.source_raw) : undefined,
+        parentSpeciesKey: e.entry_type === "species" ? speciesParentKey(e.source_raw) : undefined,
       }));
     }
     const ruleset = await getRulesetById(supabase, currentId);

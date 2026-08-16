@@ -37,6 +37,7 @@ export const BLOCK_TYPES = [
   "background",
   "condition_effects",
   "subclass_features",
+  "species_traits",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -332,6 +333,27 @@ export const zSubclassFeatureEntry = z.object({ name: z.string(), level: z.numbe
 export const zSubclassFeaturesBlockData = z.object({ features: z.array(zSubclassFeatureEntry) });
 export type SubclassFeaturesBlockData = z.infer<typeof zSubclassFeaturesBlockData>;
 
+// --- species_traits (layout: key_values, V1-D7) --------------------------
+// Traits d'une espece, ou d'une sous-espece (ascendance/lignee/heritage
+// choisis au sein d'une espece, ex. "Ascendance draconique (Noir)") : la
+// 5.2.1 ne porte pas d'entry_type distinct pour les secondes, contrairement
+// a Classe/Sous-classe — seule la presence de `source_raw.species` (lue
+// cote service, RuleEntrySummary.parentSpeciesKey) les distingue. Chaque
+// trait EST une reference (`kind: "rule"`, categorie SRD "Traits" ->
+// entry_type "feature", meme fiche que celles deja utilisees par les
+// monstres) plutot qu'un nom+texte duplique : resolu a la lecture
+// (ResolvedSpeciesTraitsBlockData, rules.ts), meme motif que
+// `weapon.properties`. `creature_type`/`size`/`speed` optionnels : absents
+// pour une sous-espece (elle n'a pas sa propre taille/vitesse, juste des
+// traits supplementaires).
+export const zSpeciesTraitsBlockData = z.object({
+  creature_type: z.string().optional(),
+  size: z.string().optional(),
+  speed: zQuantity.optional(),
+  traits: z.array(zReference),
+});
+export type SpeciesTraitsBlockData = z.infer<typeof zSpeciesTraitsBlockData>;
+
 // --- Enveloppe commune (specs/regles-blocs.md §2) -----------------------
 export const zBlockDisplay = z.object({
   label: z.string(),
@@ -360,6 +382,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   background: zBackgroundBlockData,
   condition_effects: zConditionEffectsBlockData,
   subclass_features: zSubclassFeaturesBlockData,
+  species_traits: zSpeciesTraitsBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 /** Registre : le moteur demande le schema Zod d'un block_type et recoit une forme garantie. */
