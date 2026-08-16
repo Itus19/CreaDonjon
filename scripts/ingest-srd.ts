@@ -238,6 +238,24 @@ const SUPERSEDED_2014_INDICES: Record<string, Set<string>> = {
     "spell-scroll-6th", "spell-scroll-7th", "spell-scroll-8th", "spell-scroll-9th",
     "spell-scroll-cantrip", "stone-of-good-luck-luckstone",
   ]),
+  // V1-D3b vingtieme passe (volet Monstre) : sur les ~40 candidats, seuls ces
+  // 12 sont confirmes absents du texte 2024 apres recherche directe dans
+  // data/srd/fr-source/srd-5.2.1-fr.txt (chapitre Bestiaire, ligne 26545+) —
+  // aucune trace, sous aucun nom alternatif plausible teste. Les 28 autres
+  // candidats (formes de lycanthrope/vampire, familles Gobelin/Gobelours/
+  // Hobgobelin par role, Gros-bras, Incube/Succube, Demi-dragon, Piranha et
+  // ses nuees, Nuee de serpents venimeux, Tapis etrangleur...) se sont averes
+  // REELS : nommement confirmes comme fiches de statistiques a part entiere
+  // dans le texte officiel, simplement absents de data/srd/srd-2024.json (le
+  // meme trou methodologique deja trouve pour Objet — Montures et vehicules
+  // — mais a une echelle bien plus grande ici). Ne jamais les purger : ce
+  // sont des fiches a importer, pas des fantomes a supprimer (V1-D3b, point
+  // d'etape).
+  Monsters: new Set([
+    "drow", "duergar", "lizardfolk", "tribal-warrior", "deep-gnome-svirfneblin",
+    "giant-rat-diseased", "minotaur", "orc",
+    "swarm-of-wasps", "swarm-of-centipedes", "swarm-of-spiders", "swarm-of-beetles",
+  ]),
 };
 
 /**
