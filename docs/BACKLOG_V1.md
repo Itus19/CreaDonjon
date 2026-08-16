@@ -920,7 +920,7 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 |---|---|---|
 | Aptitude | 348/348 ✅ | 540/636 en base — **318/318 (100 %) sur le vrai dénominateur** ✅, voir plus bas |
 | Objet | 548/549 | 513/620 en base — **407/407 (100 %) sur le vrai dénominateur** ✅, voir plus bas |
-| Monstre | 334/334 ✅ | 324/334 |
+| Monstre | 334/334 ✅ | 324/334 en base — **294/294 (100 %) sur le vrai dénominateur** ✅ (293/294 avec `traits`/`actions`), voir plus bas |
 | Sort | 319/319 ✅ | 319/319 ✅ |
 | Arme | 37/37 ✅ | 41/41 ✅ |
 | Règle | 38/39 | 28/39 |
@@ -1314,6 +1314,14 @@ Chaque correctif vérifié séparément par relecture d'au moins un cas avant de
 - **`spiders-sting`** → **« Dard de l'Araignée »** (chapitre Poisons, ligne 20333, mécanique exacte : DD 13 Constitution, Empoisonné 1 h, Inconscient si raté de 5+).
 
 **Résultat final : 407/407 (100 %) sur le vrai dénominateur.** `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests). **Objet 5.2.1 est désormais complet**, comme Aptitude — même limite du compteur brut en base (513/620, restera sous 620 tant que les ~213 fiches fantômes en repli 2014 n'auront pas été purgées, même chantier signalé plus haut).
+
+**Quatorzième passe, sur demande explicite (« fait pareil avec les monstres »).** Vrai dénominateur : comptage direct de `data/srd/srd-2024.json`, catégorie `Monsters` seule (sans fusion) : **294** — exactement le chiffre déjà établi en V1-D6 lors de la découverte des 11 monstres renommés (RENAMED_2024), confirmant que ce travail avait déjà visé le bon dénominateur depuis le début, contrairement à Aptitude et Objet.
+
+**Sur ce vrai dénominateur, Monstre 5.2.1 était déjà à 294/294 (100 %) pour les noms avant cette passe.** Traits/actions : 292/294. Les deux manquants examinés :
+- **`bandit-captain`** : le nom stocké en base, « Capitaine bandit », était **faux** — jamais vérifié mot pour mot contre le texte, seule entrée de ce genre trouvée pour Monstre. Le vrai nom 2024 est **« Chef de bande »** (ligne 26904), confirmé sans ambiguïté par la mécanique exacte : FP 2 (450 PX, correspond exactement au `xp: 450` du JSON anglais), actions Attaques multiples/Cimeterre/Pistolet, réaction Parade — tout correspond. Corrigé en base, puis `extract-monster-blocks-fr.ts --srd 5.2.1 --write` rejoué : traits/actions extraits avec succès (294 → 295 monstres localisés, `bandit-captain` disparaît de la liste des échecs).
+- **`night-hag`** : reconfirmé bloqué, déjà documenté en détail plus haut dans ce ticket (V1-D3b point 7-8) — « Night Hag Items » (la description de la cardioline et du sac des âmes) est absente de `srd-5.2.1-fr.txt` à l'endroit attendu, un vrai trou du texte source, pas un bug d'extraction.
+
+**Résultat final : Monstre 5.2.1, 294/294 noms (100 %), 293/294 avec `traits`/`actions` (99,7 %).** `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests). **Monstre est la troisième catégorie 5.2.1 confirmée complète sur son vrai dénominateur**, après Aptitude et Objet — et la seule des trois qui l'était déjà avant que cette série de vérifications ne commence, preuve que la méthode « vrai dénominateur d'abord » de V1-D6 était la bonne approche depuis le début.
 
 ---
 
