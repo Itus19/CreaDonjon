@@ -914,13 +914,13 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 
 **Ne pas se fier aux tableaux narratifs plus bas** (chacun est un instantané du jour où il a été écrit, jamais remis à jour après coup — c'est ce qui rend le suivi illisible d'une session à l'autre). Celui-ci est recalculé **directement en base** (compte des `ruleset_entries` avec une ligne `ruleset_entry_translations` en `fr`, tous types confondus) à chaque fois qu'une session touche à la traduction, et remplacé en entier — jamais complété à côté d'une ancienne valeur.
 
-**Dernière mesure : 16 août 2026 (après correction du dénominateur d'Aptitude).**
+**Dernière mesure : 16 août 2026 (après purge des fiches fantômes Aptitude).**
 
 | Catégorie | SRD 5.1 (2014) | SRD 5.2.1 (2024) |
 |---|---|---|
-| Aptitude | 348/348 ✅ | 540/636 en base — **318/318 (100 %) sur le vrai dénominateur** ✅, voir plus bas |
-| Objet | 548/549 | 513/620 en base — **407/407 (100 %) sur le vrai dénominateur** ✅, voir plus bas |
-| Monstre | 334/334 ✅ | 324/334 en base — **294/294 (100 %) sur le vrai dénominateur** ✅ (293/294 avec `traits`/`actions`), voir plus bas |
+| Aptitude | 348/348 ✅ | 540/603 en base — **318/318 (100 %) sur le vrai dénominateur** ✅, 33 fiches fantômes purgées, voir dix-huitième passe |
+| Objet | 548/549 | 513/620 en base — **407/407 (100 %) sur le vrai dénominateur** ✅, ~213 fiches fantômes encore en base, non purgées (voir dix-huitième passe) |
+| Monstre | 334/334 ✅ | 324/334 en base — **294/294 (100 %) sur le vrai dénominateur** ✅ (293/294 avec `traits`/`actions`), ~40 fiches fantômes encore en base, non purgées |
 | Sort | 319/319 ✅ | **339/339** ✅ (20 sorts 2024 réels importés, voir dix-septième passe) |
 | Arme | 37/37 ✅ | 41/41 ✅ |
 | Règle | 38/39 | 28/39 — **28/28 (100 %) sur le vrai dénominateur** ✅ (23/28 avec prose), voir plus bas |
@@ -930,7 +930,7 @@ Suite directe de V1-D3. Objectif affiché : plus aucun trou de traduction évita
 | Classe | 12/12 ✅ | 12/12 ✅ |
 | Condition | 15/15 ✅ | 15/15 ✅ |
 | Historique | 1/1 ✅ | 4/4 ✅ |
-| **Total** | **1690/1692 (99,9 %)** | **1886/2107 (89,5 %)** |
+| **Total** | **1690/1692 (99,9 %)** | **1886/2074 (90,9 %)** |
 
 **Lecture** : ce tableau compte les *noms* traduits (une ligne `ruleset_entry_translations` existe). Il ne dit rien de la richesse du contenu derrière (description traduite, mécanique 2024 réelle plutôt qu'un repli 2014 silencieux — voir V1-D6 pour Monstre, et le point 10 plus bas pour la découverte équivalente sur Sort). Un « ✅ » ici veut dire *noms complets*, pas *rien à vérifier d'autre*.
 
@@ -1298,7 +1298,7 @@ Chaque correctif vérifié séparément par relecture d'au moins un cas avant de
 
 **Résultat final : 318/318 (100 %) sur le vrai dénominateur.** `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests). **Aptitude 5.2.1 est désormais complète** — le compteur brut en base (540/636) restera inférieur à 636 tant que les ~318 fiches fantômes en repli 2014 n'auront pas été purgées (voir « reste ouvert » ci-dessus), mais le contenu réellement défini par la SRD 2024 anglaise est intégralement traduit.
 
-**Reste ouvert, non traité cette passe** : purger de la base les ~318 fiches fantômes en repli 2014 (dont 96 encore sans traduction), pour que le compteur affiché corresponde enfin au vrai contenu 2024 — même correctif que celui déjà appliqué à Espèce (`SUPERSEDED_2014_SPECIES_INDICES` dans `ingest-srd.ts`), mais à une échelle 50 fois plus grande (318 candidats contre 6), qui demanderait de vérifier famille par famille lesquelles sont de vrais doublons d'une fiche 2024 différemment nommée (comme `gnomish-lineage-*-feature`) plutôt que de purger en bloc sur la seule foi de l'absence de surcharge 2024 — un vrai bug pourrait aussi bien être une fiche legitimement identique entre editions (comme certains sorts, voir la huitième passe). Signalé, pas corrigé.
+**Reste ouvert à ce stade de la passe** : purger de la base les ~318 fiches fantômes en repli 2014 (dont 96 encore sans traduction), pour que le compteur affiché corresponde enfin au vrai contenu 2024 — même correctif que celui déjà appliqué à Espèce (`SUPERSEDED_2014_SPECIES_INDICES` dans `ingest-srd.ts`), mais à une échelle bien plus grande (318 candidats contre 6), qui demanderait de vérifier famille par famille lesquelles sont de vrais doublons d'une fiche 2024 différemment nommée (comme `gnomish-lineage-*-feature`) plutôt que de purger en bloc sur la seule foi de l'absence de surcharge 2024 — un vrai bug pourrait aussi bien être une fiche legitimement identique entre editions (comme certains sorts, voir la huitième passe). Signalé, pas corrigé — **traité en partie dix-huitième passe, voir plus bas.**
 
 **Treizième passe, sur demande explicite (« fait ces différentes méthodes pour les objets de la 5.2.1 »).** Même méthodologie que l'Aptitude, appliquée à Objet : d'abord établir le vrai dénominateur avant de chercher quoi que ce soit.
 
@@ -1355,6 +1355,25 @@ Corrigés dans les deux rulesets, sans conflit (aucun autre sort n'utilisait dé
 **Les 20 sorts réellement nouveaux extraits du texte anglais** (niveau, école, classes, composantes, durée, description complète — jamais reconstruits depuis le français), fusionnés dans `data/srd/srd-2024.json` (catégorie `Spells`, absente jusqu'ici) et importés via `npm run ingest:srd`. Une collision d'`entry_key` détectée et gérée automatiquement par le mécanisme déjà en place : `divine-smite` existait déjà comme `feature` (l'ancienne aptitude 2014 du Paladin), le sort 2024 du même nom renommé `divine-smite-spell`. Vérifié après import : **339 sorts en 5.2.1 (319 + 20), 319 inchangés en 5.1** — aucune fuite entre rulesets. Descriptions françaises complètes écrites pour les 20, extraites du texte déjà lu en seizième passe.
 
 **Résultat : Sort 5.2.1, 319 → 339/339 (100 %), plus 3 corrections de noms préexistants sur les deux rulesets.** `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
+
+**Dix-huitième passe, même demande (« alors vas-y fait cette purge »), volet Aptitude.** Construction de la liste de candidats à la purge des ~318 fiches fantômes d'Aptitude (dixième/onzième passe) par famille, jamais en bloc — chaque famille retenue relit le texte 2024 pour confirmer une vraie consolidation, jamais une simple absence de surcharge.
+
+**Faux départ corrigé avant toute écriture — leçon à retenir pour Objet/Monstre.** Une première liste construite par préfixe d'`entry_key` (ex. tout `eldritch-invocation-*`) incluait 69 candidats. Vérification de sécurité obligatoire avant toute purge (« aucun candidat n'a déjà de nom français en base ») : **25 des 69 en avaient déjà un** (ex. `eldritch-invocation-repelling-blast` → « Décharge répulsive », `eldritch-invocation-lifedrinker` → « Buveuse de vie »). Preuve que l'affirmation narrative d'une passe antérieure (« Invocations occultes, aucune cataloguée individuellement en 2024 ») était une généralisation excessive à partir d'un échantillon partiel, pas un fait vérifié pour tout le catalogue. Retirés de la liste avant toute écriture : `eldritch-invocation-*` en entier, les 3 options de Conduit divin nommées (`preserve-life`/`turn-undead`/`turn-the-unholy` — la généricité du reste de la famille Conduit divin, elle, restait confirmée), `draconic-presence`.
+
+**33 candidats retenus, chacun avec une confirmation directe et fraîche du texte 2024 (pas une réutilisation de conclusion antérieure) :**
+- Inspiration bardique par dé (4) : `bardic-inspiration-d6/d8/d10/d12` — zéro occurrence de ces paliers en en-tête dans `srd-5.2.1-fr.txt`.
+- Conduit divin par nombre d'utilisations (3) : `channel-divinity-1/2/3-rest` — le Clerc 2024 n'a plus qu'un « Conduit divin » générique.
+- Destruction des morts-vivants par palier de FP (5) : `destroy-undead-cr-*` — confirmé remplacé par une unique « Niveau 5 : Calcination de Mort-vivant » (lignes 3745, 3889, table de classe Clerc).
+- Explorateur-né par terrain (3), Critique implacable par palier (3), Chant du repos par dé (4) : zéro occurrence de `Explorateur-né`/`Critique brutal`/`Chant reposant` en en-tête, confirmé par grep direct sur le texte source.
+- Ascendance draconique par couleur (11, dont le générique `dragon-ancestor`) : confirmé de longue date (cinquième passe) que la Sorcellerie draconique 2024 n'a plus de variante par couleur.
+
+**Vérification de sécurité finale sur les 33 : 0 ont déjà un nom français en base** (condition impérative avant toute purge — si un seul avait eu une traduction, cela aurait signalé une fiche 2024 réelle mal identifiée, comme pour les Invocations occultes). Les 33 confirmés provenir uniquement de la catégorie JSON brute `Features` (jamais `Feats`/`Traits`/`Weapon-Properties`), ce qui détermine où brancher l'exclusion dans `ingest-srd.ts`.
+
+**Mécanisme réutilisé, pas réinventé.** `SUPERSEDED_2014_SPECIES_INDICES` (sixième passe) renommé `SUPERSEDED_2014_INDICES` et étendu avec une clé `Features` portant les 33 `entry_key`, toujours branché au même point (`mergeByIndex`, avant fusion). `npm run ingest:srd` rejoué : **« fiches obsolètes retirées : 33 »**, `feature` passe de 636 à 603 en base pour la 5.2.1, tous les autres compteurs inchangés (armure 13, objet 620, monstre 334, sort 339, aucun effet de bord). Vérifié directement en base après import : count `feature` = 603, et les 7 `entry_key` échantillonnés du lot purgé sont bien absents. `npm run typecheck && npm run lint && npm run test` toujours verts (45 fichiers, 432 tests).
+
+**Résultat : Aptitude 5.2.1, compteur brut 636 → 603 (540/603 en base), toujours 318/318 (100 %) sur le vrai dénominateur — mais désormais le compteur brut reflète le vrai contenu 2024, plus une différence artificielle de 318 fiches fantômes.**
+
+**Objet (~213 fantômes) et Monstre (~40 fantômes) volontairement non purgés cette passe.** Contrairement à Aptitude, ces deux catégories n'ont pas reçu de vérification individuelle par famille comparable — seule Aptitude a été creusée à ce niveau de détail (dixième à douzième passe). Purger sans cette étape referait l'erreur évitée de justesse avec les Invocations occultes, à une échelle où l'erreur serait plus difficile à repérer (Objet en particulier : beaucoup de sous-types tabulaires déjà identifiés comme structurellement ambigus en V1-D3b, section d'introduction). Signalé, pas traité — à reprendre dans une passe dédiée si demandé, avec la même exigence de vérification directe famille par famille avant toute exclusion.
 
 ---
 

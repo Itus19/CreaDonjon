@@ -126,26 +126,49 @@ const CATEGORY_RENAMES_2014_TO_2024: Record<string, string> = {
 /**
  * Index 2014 (categorie cible post-renommage -> index) a exclure de la base
  * avant fusion : mergeByIndex ne peut reconnaitre un remplacement que si les
- * DEUX jeux de donnees partagent le meme `index` (ex. cloaker/cloaker). Pour
- * les lignages d'espece 2024, WotC a change le decoupage ET la cle en meme
- * temps (Subraces "high-elf"/"rock-gnome" -> Subspecies
- * "elven-lineage-high-elf"/"gnomish-lineage-rock-gnome") : sans cette
- * exclusion, les deux versions coexistent en base sous ruleset 5.2.1 (l'une
- * avec la vraie mecanique 2024, l'autre avec la mecanique 2014 — bonus de
- * caracteristique qui n'existe plus en 2024 — silencieusement). Verifie mot
- * pour mot dans data/srd/fr-source/srd-5.2.1-fr.txt avant d'exclure quoi que
- * ce soit (V1-D3b, sixieme passe) :
- *  - high-elf / rock-gnome : doublon confirme, le contenu 2024 existe bel et
- *    bien mais sous elven-lineage-high-elf / gnomish-lineage-rock-gnome.
- *  - half-elf / half-orc / hill-dwarf / lightfoot-halfling : aucun
- *    equivalent 2024 sous quelque cle que ce soit (retrait de contenu
- *    confirme par lecture directe du chapitre Especes, ligne 8291-8438 :
- *    Halfelin et Nain n'ont plus de table de sous-lignage, Demi-elfe/
- *    Demi-orc n'apparaissent nulle part).
+ * DEUX jeux de donnees partagent le meme `index` (ex. cloaker/cloaker). Sans
+ * cette exclusion, un concept consolide ou retire en 2024 reste visible sous
+ * ruleset 5.2.1 avec sa mecanique 2014 — silencieusement, la meme classe de
+ * bug a chaque fois. Chaque entree ci-dessous verifiee mot pour mot dans
+ * data/srd/fr-source/srd-5.2.1-fr.txt avant d'etre ajoutee, jamais une
+ * famille exclue en bloc sur la seule absence de surcharge 2024 (V1-D3b,
+ * dix-septieme passe : une premiere tentative d'exclure "toutes les
+ * Invocations occultes" a ete corrigee a temps — 25 des ~40 avaient en fait
+ * deja un nom francais verifie, preuve qu'elles existent bien en 2024 sous
+ * un sous-titre propre, seule une partie du catalogue avait ete verifiee
+ * absente lors d'une passe anterieure).
  */
-const SUPERSEDED_2014_SPECIES_INDICES: Record<string, Set<string>> = {
+const SUPERSEDED_2014_INDICES: Record<string, Set<string>> = {
+  // V1-D3b sixieme passe : lignages d'espece.
+  //  - high-elf / rock-gnome : doublon confirme, le contenu 2024 existe bel
+  //    et bien mais sous elven-lineage-high-elf / gnomish-lineage-rock-gnome.
+  //  - half-elf / half-orc / hill-dwarf / lightfoot-halfling : aucun
+  //    equivalent 2024 sous quelque cle que ce soit (retrait de contenu
+  //    confirme par lecture directe du chapitre Especes, ligne 8291-8438 :
+  //    Halfelin et Nain n'ont plus de table de sous-lignage, Demi-elfe/
+  //    Demi-orc n'apparaissent nulle part).
   Species: new Set(["half-elf", "half-orc"]),
   Subspecies: new Set(["high-elf", "rock-gnome", "hill-dwarf", "lightfoot-halfling"]),
+  // V1-D3b dix-septieme passe : aptitudes consolidees en une seule fiche
+  // generique en 2024 (verifie par lecture directe du chapitre de classe
+  // concerne, jamais par la seule absence de surcharge) ou par famille dont
+  // le mecanisme par couleur a disparu (Sorcellerie draconique 2024, deja
+  // confirme au point 10 neuvieme passe).
+  Features: new Set([
+    "bardic-inspiration-d6", "bardic-inspiration-d8", "bardic-inspiration-d10", "bardic-inspiration-d12",
+    "channel-divinity-1-rest", "channel-divinity-2-rest", "channel-divinity-3-rest",
+    "destroy-undead-cr-1-2-or-below", "destroy-undead-cr-1-or-below", "destroy-undead-cr-2-or-below",
+    "destroy-undead-cr-3-or-below", "destroy-undead-cr-4-or-below",
+    "natural-explorer-1-terrain-type", "natural-explorer-2-terrain-types", "natural-explorer-3-terrain-types",
+    "brutal-critical-1-die", "brutal-critical-2-dice", "brutal-critical-3-dice",
+    "song-of-rest-d6", "song-of-rest-d8", "song-of-rest-d10", "song-of-rest-d12",
+    "dragon-ancestor",
+    "dragon-ancestor-black---acid-damage", "dragon-ancestor-blue---lightning-damage",
+    "dragon-ancestor-brass---fire-damage", "dragon-ancestor-bronze---lightning-damage",
+    "dragon-ancestor-copper---acid-damage", "dragon-ancestor-gold---fire-damage",
+    "dragon-ancestor-green---poison-damage", "dragon-ancestor-red---fire-damage",
+    "dragon-ancestor-silver---cold-damage", "dragon-ancestor-white---cold-damage",
+  ]),
 };
 
 /**
@@ -155,7 +178,7 @@ const SUPERSEDED_2014_SPECIES_INDICES: Record<string, Set<string>> = {
  * sort est un texte complet, pas un patch), les elements de base sans
  * correspondance sont conserves tels quels, et les elements de overrides
  * sans correspondance sont ajoutes. `excludedBaseIndices` retire des elements
- * de base AVANT la fusion (SUPERSEDED_2014_SPECIES_INDICES) : un remplacement
+ * de base AVANT la fusion (SUPERSEDED_2014_INDICES) : un remplacement
  * confirme sous une cle differente, jamais une simple absence de recoupement.
  */
 function mergeByIndex(base: SrdRecord[], overrides: SrdRecord[], excludedBaseIndices?: Set<string>): SrdRecord[] {
@@ -183,7 +206,7 @@ function buildMergedDataset(
     merged[targetCategory] = mergeByIndex(
       baseItems,
       overrides[targetCategory] ?? [],
-      SUPERSEDED_2014_SPECIES_INDICES[targetCategory]
+      SUPERSEDED_2014_INDICES[targetCategory]
     );
   }
 
