@@ -205,6 +205,36 @@ const SUPERSEDED_2014_INDICES: Record<string, Set<string>> = {
     // changer au contenu — chaque fiche 2024 reelle deja traduite sous le
     // meme nom francais exact (Arbalete lourde/legere/de poing).
     "crossbow-heavy", "crossbow-light", "crossbow-hand",
+    // V1-D3b vingt-quatrieme passe (volet Objet, montures/vehicules) : les
+    // 24 fiches reelles du meme chapitre ont ete importees (voir
+    // scripts/data/new-mounts-vehicles-2024-en.json) — celles-ci, en
+    // revanche, confirmees absentes des tables "Mounts and Other Animals"/
+    // "Tack, Harness, and Drawn Vehicles" de srd-5.2.1-en.txt (verifie ligne
+    // 6780-6873) : donkey n'apparait plus dans la table des montures
+    // (seulement Camel/Elephant/Horse/Mastiff/Mule/Pony/Warhorse, 8 entrees
+    // exactement) ; saddle-pack et saddlebags ont disparu du texte entier
+    // (recherche "saddlebag" ne trouve plus qu'une mention du Sac a dos
+    // pouvant en tenir lieu, ligne 6566 — plus de fiche a part entiere).
+    "donkey", "saddle-pack", "saddlebags",
+    // V1-D3b vingt-cinquieme passe (residu Objet, dernier lot) : deux motifs
+    // distincts, chacun verifie contre srd-5.2.1-en.txt (liste complete des
+    // 131 objets generiques 2024) puis contre le texte francais avant
+    // exclusion.
+    //  - doublon d'index confirme par recoupement cout/poids/quantite EXACT
+    //    (meme motif que cartographer-tools/heavy-crossbow) : 2024 a
+    //    simplifie l'intitule ("Wooden staff"->"Staff", "Crossbow bolt"->
+    //    "Bolts", "Blowgun needle"->"Needles", "Sling bullet"->"Bullets,
+    //    Sling", "Playing Card Set"->"Playing Cards", "Dice Set"->"Dice",
+    //    "Jug or pitcher"->"Jug", "Flask or tankard"->"Flask") — chaque
+    //    fiche 2024 reelle deja traduite sous le nom francais deja etabli.
+    "wooden-staff", "crossbow-bolt", "blowgun-needle", "sling-bullet",
+    "playing-card-set", "dice-set", "jug-or-pitcher", "flask-or-tankard",
+    //  - confirme reellement absent : aucune occurrence dans la liste
+    //    complete des objets generiques 2024 ni dans une recherche directe
+    //    du texte francais (marteau/masse/petit couteau/pierre a aiguiser/
+    //    balance de marchand/encensoir/bloc d'encens, zero resultat).
+    "hammer", "hammer-sledge", "small-knife", "whetstone", "scale-merchants",
+    "censer", "block-of-incense",
     "abacus", "acid-vial", "alchemists-fire-flask", "alms-box", "antitoxin-vial", "arrow",
     "ball-bearings-bag-of-1000",
     "barding-breastplate", "barding-chain-mail", "barding-chain-shirt", "barding-half-plate",
@@ -219,6 +249,11 @@ const SUPERSEDED_2014_INDICES: Record<string, Set<string>> = {
     "tent-two-person", "totem", "vestments",
   ]),
   "Magic-Items": new Set([
+    // V1-D3b vingt-cinquieme passe : aucune occurrence de "Restorative
+    // Ointment"/"Onguent reparateur"/"Onguent restaurateur" ni dans le JSON
+    // ni dans le texte francais — confirme reellement absent, pas une
+    // simple absence de correspondance.
+    "restorative-ointment",
     "belt-of-giant-strength-cloud", "belt-of-giant-strength-fire", "belt-of-giant-strength-frost",
     "belt-of-giant-strength-hill", "belt-of-giant-strength-stone", "belt-of-giant-strength-storm",
     "carpet-of-flying-3x5", "carpet-of-flying-4x6", "carpet-of-flying-5x7", "carpet-of-flying-6x9",
