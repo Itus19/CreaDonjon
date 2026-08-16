@@ -205,14 +205,23 @@ function ClassProgression({
   outgoingRefs: RuleRefView[];
 }) {
   const refsByKey = new Map(outgoingRefs.map((r) => [r.key, r]));
-  const columns = data.columns.map((col) => ({
-    key: col.key,
-    label: localizedLabel(col.label, col.key),
-    // Valeurs numeriques centrees sous leur en-tete (V1-D7, retour
-    // utilisateur) ; "grants" reste a gauche, une liste de liens de longueur
-    // variable ne se centre pas lisiblement.
-    align: (col.kind === "grants" ? "left" : "center") as "left" | "center",
-  }));
+  const columns = data.columns.map((col) => {
+    // Colonnes d'emplacement de sort ("spellcasting_spell_slots_level_N",
+    // scripts/ingest-srd.ts) regroupees sous un seul en-tete "Emplacements"
+    // avec un sous-libelle court par niveau (V1-D7, retour utilisateur :
+    // la table etait trop large avec "Emplacements niv. N" repete sur
+    // chaque colonne) — detecte sur la cle, jamais stocke ainsi.
+    const slotMatch = col.key.match(/^spellcasting_spell_slots_level_(\d)$/);
+    return {
+      key: col.key,
+      label: slotMatch ? `Niv. ${slotMatch[1]}` : localizedLabel(col.label, col.key),
+      group: slotMatch ? "Emplacements" : undefined,
+      // Valeurs numeriques centrees sous leur en-tete (V1-D7, retour
+      // utilisateur) ; "grants" reste a gauche, une liste de liens de
+      // longueur variable ne se centre pas lisiblement.
+      align: (col.kind === "grants" ? "left" : "center") as "left" | "center",
+    };
+  });
   const rows = data.rows.map((row) =>
     data.columns.map((col) => ({
       key: col.key,
@@ -415,13 +424,35 @@ function ClassBasics({ data }: { data: ClassBasicsBlockData }) {
   return <KeyValues items={items} />;
 }
 
+/**
+ * Refonte (V1-D7, retour utilisateur : "la presentation n'est pas tres
+ * lisible") — les deux faits courts (caracteristique, niveau de depart)
+ * restent en `KeyValues`, mais chaque section d'`info` (plusieurs
+ * paragraphes de regle, ex. "Sorts prepares du 1er niveau et plus") sort de
+ * la grille a trois colonnes : un texte long ecrase dans un tiers de
+ * largeur ne se lit pas. Empilees en pleine largeur avec un vrai
+ * sous-titre, meme langage visuel que `SubclassFeatures` (nom en gras,
+ * texte en dessous) plutot qu'une etiquette minuscule en majuscules.
+ */
 function SpellcastingProgression({ data }: { data: SpellcastingProgressionBlockData }) {
-  const items = [
-    { label: "Caracteristique d'incantation", value: abilityLabel(data.ability) },
-    { label: "Debute au niveau", value: String(data.starts_at_level) },
-    ...data.info.map((entry, i) => ({ label: entry.name, value: renderMarkdownBoldText(entry.description, `info-${i}`) })),
-  ];
-  return <KeyValues items={items} />;
+  return (
+    <div className="flex flex-col gap-5">
+      <KeyValues
+        items={[
+          { label: "Caracteristique d'incantation", value: abilityLabel(data.ability) },
+          { label: "Debute au niveau", value: String(data.starts_at_level) },
+        ]}
+      />
+      <div className="flex flex-col">
+        {data.info.map((entry, i) => (
+          <div key={i} className="flex flex-col gap-1.5 border-b border-edge/40 py-3 first:pt-0 last:border-b-0 last:pb-0">
+            <h4 className="text-sm font-bold text-ink">{entry.name}</h4>
+            <div className="text-sm leading-relaxed text-ink-muted">{renderMarkdownBoldText(entry.description, `info-${i}`)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function SubclassSlot({ data, worldSlug }: { data: ResolvedSubclassSlotBlockData; worldSlug: string }) {
