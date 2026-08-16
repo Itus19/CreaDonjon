@@ -259,6 +259,16 @@ function ResolvedRefLink({ worldSlug, refItem }: { worldSlug: string; refItem: {
   );
 }
 
+/** Nom (lien) + texte complet d'une propriete/botte d'arme (V1-D7, retour utilisateur : "il faut que ce soit directement visible sur la fiche", meme motif que le Don d'un `background`). */
+function ResolvedRefDetail({ worldSlug, refItem }: { worldSlug: string; refItem: { key: string; resolved_name: string; resolved_description: string } }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <ResolvedRefLink worldSlug={worldSlug} refItem={refItem} />
+      {refItem.resolved_description && renderMarkdownBoldText(refItem.resolved_description, refItem.key)}
+    </div>
+  );
+}
+
 function Weapon({ data, worldSlug }: { data: ResolvedWeaponBlockData; worldSlug: string }) {
   const items = [
     { label: "Categorie", value: data.category === "martial" ? "Martiale" : "Simple" },
@@ -274,26 +284,36 @@ function Weapon({ data, worldSlug }: { data: ResolvedWeaponBlockData; worldSlug:
     ...(data.versatile_damage
       ? [{ label: "Degats (2 mains)", value: <span className="mech">{formatFormulaNode(data.versatile_damage)}</span> }]
       : []),
-    ...(data.properties.length > 0
-      ? [
-          {
-            label: "Proprietes",
-            value: (
-              <span className="flex flex-wrap gap-x-2">
-                {data.properties.map((p, i) => (
-                  <ResolvedRefLink key={i} worldSlug={worldSlug} refItem={p} />
-                ))}
-              </span>
-            ),
-          },
-        ]
-      : []),
-    ...(data.mastery ? [{ label: "Botte d'arme", value: <ResolvedRefLink worldSlug={worldSlug} refItem={data.mastery} /> }] : []),
     ...(data.range ? [{ label: "Portee", value: [quantityText(data.range.normal), quantityText(data.range.long)].filter(Boolean).join(" / ") }] : []),
     ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
     ...(data.cost ? [{ label: "Valeur", value: costText(data.cost) as string }] : []),
   ];
-  return <KeyValues items={items} />;
+  const detailItems = [
+    ...(data.properties.length > 0
+      ? [
+          {
+            label: "Proprietes",
+            fullWidth: true,
+            value: (
+              <div className="flex flex-col gap-3">
+                {data.properties.map((p, i) => (
+                  <ResolvedRefDetail key={i} worldSlug={worldSlug} refItem={p} />
+                ))}
+              </div>
+            ),
+          },
+        ]
+      : []),
+    ...(data.mastery
+      ? [{ label: "Botte d'arme", fullWidth: true, value: <ResolvedRefDetail worldSlug={worldSlug} refItem={data.mastery} /> }]
+      : []),
+  ];
+  return (
+    <div className="flex flex-col gap-5">
+      <KeyValues items={items} />
+      {detailItems.length > 0 && <KeyValues items={detailItems} />}
+    </div>
+  );
 }
 
 function Armor({ data }: { data: ArmorBlockData }) {

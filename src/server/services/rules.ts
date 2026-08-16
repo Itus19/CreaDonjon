@@ -282,15 +282,16 @@ export type ResolvedSubclassSlotBlockData = Omit<SubclassSlotBlockData, "options
 };
 
 /**
- * `weapon.properties`/`weapon.mastery` (V1-D7, retour utilisateur : "pouvoir
- * lire ce que les proprietes veulent dire") augmentes d'un nom resolu, meme
- * motif que `ResolvedSubclassSlotBlockData` — chaque propriete/botte pointe
- * deja vers sa propre fiche `feature` existante (V1-C12/V1-D7), jamais
- * dupliquee ici : juste son nom pour en faire un lien cliquable.
+ * `weapon.properties`/`weapon.mastery` (V1-D7, retour utilisateur : d'abord
+ * un simple lien, puis "il faut que ça soit directement visible sur la
+ * fiche" — meme niveau de detail que `feat_name`/`feat_description` du bloc
+ * `background`) augmentes du nom ET du texte de chaque propriete/botte,
+ * jamais dupliques en base : lus a la lecture depuis leur propre fiche
+ * `feature` existante (V1-C12/V1-D7), meme motif que `resolveEntryDetail`.
  */
 export type ResolvedWeaponBlockData = Omit<WeaponBlockData, "properties" | "mastery"> & {
-  properties: (ReferencePrimitive & { resolved_name: string })[];
-  mastery?: ReferencePrimitive & { resolved_name: string };
+  properties: (ReferencePrimitive & { resolved_name: string; resolved_description: string })[];
+  mastery?: ReferencePrimitive & { resolved_name: string; resolved_description: string };
 };
 
 /**
@@ -537,22 +538,37 @@ export async function getRuleEntryForWorld(
     };
   }
 
-  // Augmente le bloc `weapon` avec le nom resolu de chaque propriete et de
-  // la botte d'arme (V1-D7, retour utilisateur : pouvoir lire ce que
-  // "Finesse"/"Legere" veulent dire, et afficher la botte d'arme) — meme
-  // motif que `subclass_slot` ci-dessus.
+  // Augmente le bloc `weapon` avec le nom ET le texte de chaque propriete et
+  // de la botte d'arme (V1-D7, retour utilisateur : d'abord un lien, puis
+  // "il faut que ca soit directement visible sur la fiche", meme niveau de
+  // detail que le Don d'un `background` ci-dessus) — un `resolveEntryDetail`
+  // par cle unique plutot qu'un lot (peu de cles par arme, 1 a 4).
   const weaponBlockIndex = blocks.findIndex((b) => b.blockType === "weapon");
   if (weaponBlockIndex !== -1) {
     const weaponData = blocks[weaponBlockIndex].data as WeaponBlockData;
     const propertyKeys = weaponData.properties.map((p) => p.key);
-    const namesToResolve = weaponData.mastery ? [...propertyKeys, weaponData.mastery.key] : propertyKeys;
-    const names = await resolveEntryNames(supabase, rulesetId, namesToResolve, locale);
+    const keysToResolve = [...new Set(weaponData.mastery ? [...propertyKeys, weaponData.mastery.key] : propertyKeys)];
+    const details = new Map(
+      (
+        await Promise.all(keysToResolve.map(async (key) => [key, await resolveEntryDetail(supabase, rulesetId, key, locale)] as const))
+      ).map(([key, detail]) => [key, detail])
+    );
     blocks[weaponBlockIndex] = {
       ...blocks[weaponBlockIndex],
       data: {
         ...weaponData,
-        properties: weaponData.properties.map((p) => ({ ...p, resolved_name: names.get(p.key) ?? p.key })),
-        mastery: weaponData.mastery ? { ...weaponData.mastery, resolved_name: names.get(weaponData.mastery.key) ?? weaponData.mastery.key } : undefined,
+        properties: weaponData.properties.map((p) => ({
+          ...p,
+          resolved_name: details.get(p.key)?.name ?? p.key,
+          resolved_description: details.get(p.key)?.description ?? "",
+        })),
+        mastery: weaponData.mastery
+          ? {
+              ...weaponData.mastery,
+              resolved_name: details.get(weaponData.mastery.key)?.name ?? weaponData.mastery.key,
+              resolved_description: details.get(weaponData.mastery.key)?.description ?? "",
+            }
+          : undefined,
       } satisfies ResolvedWeaponBlockData,
     };
   }
