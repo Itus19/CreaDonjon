@@ -1497,14 +1497,14 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 |---|---|---|
 | Historique | 4 | ✅ 4/4, 16 août 2026 |
 | Condition | 15 | ✅ 15/15, 16 août 2026 |
-| Armure | 13 | ⬜ |
+| Armure | 13 | ✅ 13/13, 16 août 2026 |
 | Sous-classe | 12 | ⬜ |
 | Classe | 12 | ⬜ |
 | Arme | 38 | ⬜ |
 | Espèce | 33 | ⬜ |
 | Objet | 473 | ⬜ |
 | Aptitude | 603 | ⬜ |
-| **Total** | **1203** | **19/1203 (1,6 %)** |
+| **Total** | **1203** | **32/1203 (2,7 %)** |
 
 **Ordre choisi** : du plus petit volume au plus gros, pour valider la méthode (extraction du texte officiel français, jamais une reconstruction ou une traduction automatique — même règle absolue que tout le reste de cette série) sur des lots courts avant Objet et Aptitude, les deux gros morceaux. Historique d'abord sur demande explicite.
 
@@ -1538,6 +1538,8 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 - Traduction française migrée du bloc `description` (retiré à ce stade) vers `condition_effects` (nouveau), même texte que la première passe, simplement redécoupé en paires nom/texte plutôt qu'un seul bloc de prose.
 
 **Bloc 1 réintroduit (16 août 2026, retour utilisateur, sur avoir vu le rendu).** « Est-ce que ce serait une bonne idée de faire un bloc de description avant, avec une petite phrase toute simple, peut-être rigolote ? » — même logique qu'Historique (lore avant mécanique), adaptée à la légèreté attendue pour une simple description d'état (une phrase, pas un paragraphe). Le bloc `description` redevient présent dans l'import (`transformEntry` retombe sur le repli générique « voir le tableau de données », comme Historique/Espèce sans prose SRD utilisable — la vraie prose SRD reste dans `condition_effects`, jamais dupliquée dans la description). Surcharge FR écrite à la main pour les 15 conditions, une phrase légère par condition (ex. Agrippé : « Une poigne ferme — ou pire, des tentacules — vient de se refermer sur vous. Impossible de vous dégager sans agir. »). `source: invented_lore` pour toute la ligne, comme Historique — le bloc `condition_effects` qui l'accompagne reste une traduction fidèle, mais un seul champ `source` couvre toute la ligne (voir migration `20260816160001`).
+
+**Troisième passe, Armure (13/13, 16 août 2026).** Aucun changement de structure cette fois — contrairement à Historique et Condition, `armor` (bloc 2, caractéristiques : catégorie, CA de base, bonus de Dextérité, Force minimum, discrétion, poids, coût) existe déjà depuis V1-D1/V1-D2 et n'avait besoin de rien de nouveau, juste du lore manquant en bloc 1. Treize descriptions courtes (2-3 phrases), écrites à la main à partir de la matière et de la construction réelles de chaque armure (cuir bouilli, mailles, plaques rivetées...), calibrées sur ses propres caractéristiques déjà en base (poids, catégorie légère/intermédiaire/lourde) pour rester cohérentes avec le bloc mécanique juste en dessous. `source: invented_lore` (aucune prose officielle 2024 pour cette catégorie). Aucun changement de schéma, aucune migration — le cas le plus simple rencontré dans ce ticket jusqu'ici.
 
 ---
 
