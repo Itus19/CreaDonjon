@@ -42,7 +42,7 @@
     "choisirRegle": "Choisissez une règle dans la barre latérale.",
     "illustration": "Illustration",
     "missingBlocks": "Règle incomplète : {count, plural, one {bloc manquant} other {blocs manquants}} — <mech>{list}</mech>",
-    "renvoisSortants": "Renvois sortants",
+    "renvoisSortants": "Détails Aptitudes",
     "renvoisEntrants": "Renvois entrants",
     "renvoiNonResolu": "introuvable",
     "modifieeDansTaVariante": "Modifiée dans ta variante",

@@ -42,7 +42,7 @@
     "choisirRegle": "Choose a rule in the sidebar.",
     "illustration": "Illustration",
     "missingBlocks": "Incomplete rule: {count, plural, one {missing block} other {missing blocks}} — <mech>{list}</mech>",
-    "renvoisSortants": "Outgoing references",
+    "renvoisSortants": "Ability details",
     "renvoisEntrants": "Incoming references",
     "renvoiNonResolu": "not found",
     "modifieeDansTaVariante": "Modified in your variant",
