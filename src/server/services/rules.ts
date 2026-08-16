@@ -4,6 +4,8 @@ import type { Database } from "@/src/types/database";
 import {
   dataSchemaForBlockType,
   type BackgroundBlockData,
+  type BackgroundEquipmentItem,
+  type BackgroundEquipmentOption,
   type BlockType,
   type ClassProgressionBlockData,
   type EffectsBlockData,
@@ -236,9 +238,14 @@ async function resolveIncomingRefs(
  * pour ce seul besoin aurait touche le panneau de renvois existant pour
  * rien — cf. plan approuve, ne pas generaliser sans un deuxieme cas concret.
  */
-export type ResolvedBackgroundBlockData = BackgroundBlockData & {
+export type ResolvedBackgroundEquipmentItem = BackgroundEquipmentItem & { resolved_label: string };
+export type ResolvedBackgroundEquipmentOption = Omit<BackgroundEquipmentOption, "items"> & {
+  items: ResolvedBackgroundEquipmentItem[];
+};
+export type ResolvedBackgroundBlockData = Omit<BackgroundBlockData, "equipment_options"> & {
   feat_name: string;
   feat_description: string;
+  equipment_options: ResolvedBackgroundEquipmentOption[];
 };
 
 /**
@@ -272,6 +279,45 @@ async function resolveFeatDetail(
   }
 
   return { name: translation?.name ?? entryNameFrom(featEntry), description };
+}
+
+/**
+ * Nom (deja traduit si `locale !== "en"`) de chaque cle donnee, resolue
+ * dans le ruleset ou sa chaine — meme lot batche + repli chaine que
+ * `resolveOutgoingRefs`, extrait ici pour etre reutilise par
+ * `background.equipment_options[].items[].ref` (V1-D7) sans dupliquer la
+ * logique. Une cle absente du resultat n'a pas de fiche resoluble ;
+ * l'appelant retombe alors sur le libelle fige ecrit a l'import.
+ */
+async function resolveEntryNames(
+  supabase: TypedClient,
+  rulesetId: string,
+  keys: string[],
+  locale: Locale
+): Promise<Map<string, string>> {
+  const uniqueKeys = [...new Set(keys)];
+  if (uniqueKeys.length === 0) return new Map();
+
+  const batched = await listRulesetEntriesByKeys(supabase, rulesetId, uniqueKeys);
+  const byKey = new Map(batched.map((e) => [e.entry_key, e]));
+  for (const key of uniqueKeys) {
+    if (byKey.has(key)) continue;
+    const found = await findEntryInRulesetChain(supabase, rulesetId, key);
+    if (found) byKey.set(key, found);
+  }
+
+  const translationByEntryId = new Map<string, string>();
+  if (locale !== "en" && byKey.size > 0) {
+    const translations = await listTranslationsForEntries(supabase, [...byKey.values()].map((e) => e.id), locale);
+    for (const t of translations) translationByEntryId.set(t.entry_id, t.name);
+  }
+
+  const result = new Map<string, string>();
+  for (const key of uniqueKeys) {
+    const entry = byKey.get(key);
+    if (entry) result.set(key, translationByEntryId.get(entry.id) ?? entryNameFrom(entry));
+  }
+  return result;
 }
 
 /**
@@ -400,19 +446,28 @@ export async function getRuleEntryForWorld(
     resolveIncomingRefs(supabase, rulesetId, entry.entry_key, locale),
   ]);
 
-  // Augmente le bloc `background` avec le nom+description de son don (V1-D7)
-  // — cf. ResolvedBackgroundBlockData, meme motif que `scaling`/`class_progression`
+  // Augmente le bloc `background` avec le nom+description de son don et le
+  // nom de chaque objet d'equipement reference (V1-D7) — cf.
+  // ResolvedBackgroundBlockData, meme motif que `scaling`/`class_progression`
   // ci-dessus (donnee calculee a la lecture, ajoutee a la forme validee).
   const backgroundBlockIndex = blocks.findIndex((b) => b.blockType === "background");
   if (backgroundBlockIndex !== -1) {
     const bgData = blocks[backgroundBlockIndex].data as BackgroundBlockData;
-    const featDetail = await resolveFeatDetail(supabase, rulesetId, bgData.feat.key, locale);
+    const itemKeys = bgData.equipment_options.flatMap((opt) => opt.items.flatMap((it) => (it.ref ? [it.ref.key] : [])));
+    const [featDetail, itemNames] = await Promise.all([
+      resolveFeatDetail(supabase, rulesetId, bgData.feat.key, locale),
+      resolveEntryNames(supabase, rulesetId, itemKeys, locale),
+    ]);
     blocks[backgroundBlockIndex] = {
       ...blocks[backgroundBlockIndex],
       data: {
         ...bgData,
         feat_name: featDetail?.name ?? bgData.feat.key,
         feat_description: featDetail?.description ?? "",
+        equipment_options: bgData.equipment_options.map((opt) => ({
+          ...opt,
+          items: opt.items.map((it) => ({ ...it, resolved_label: it.ref ? (itemNames.get(it.ref.key) ?? it.label) : it.label })),
+        })),
       } satisfies ResolvedBackgroundBlockData,
     };
   }

@@ -32,7 +32,7 @@ import {
   WEAPON_PROPERTY_LABELS_FR,
 } from "@/src/i18n/fr";
 import type { Skill } from "@/src/core/rules/sheet";
-import type { ResolvedBackgroundBlockData, RuleRefView } from "@/src/server/services/rules";
+import type { ResolvedBackgroundBlockData, ResolvedBackgroundEquipmentOption, RuleRefView } from "@/src/server/services/rules";
 import Chips from "./layouts/Chips";
 import FormulaList from "./layouts/FormulaList";
 import KeyValues from "./layouts/KeyValues";
@@ -379,18 +379,63 @@ function SubclassSlot({ data, worldSlug }: { data: SubclassSlotBlockData; worldS
 }
 
 /**
+ * Un encadre par option d'equipement de depart (V1-D7, sur retour
+ * utilisateur — remplace le texte "Choisissez A ou B" affiche tel quel) :
+ * meme langage visuel que `ItemCard` de l'onglet Inventaire de la fiche
+ * jouable (`components/blocks/PlayableCharacterSheet.tsx`), en simplifie
+ * (pas d'equipement/quantite modifiable, pas de bouton d'action — cette
+ * fiche n'est jamais l'inventaire de quelqu'un, seulement la description
+ * d'un choix). `resolved_label` est deja traduit par le service quand
+ * l'objet a sa propre fiche (`ResolvedBackgroundBlockData`) ; sans
+ * reference (ex. « boite de jeux, au choix »), `resolved_label` reste le
+ * libelle fige ecrit a l'import.
+ */
+function BackgroundEquipmentCard({ option, worldSlug }: { option: ResolvedBackgroundEquipmentOption; worldSlug: string }) {
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md border border-edge/60 bg-panel-raised px-3 py-2.5">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Choix {option.label}</span>
+      <div className="flex flex-col gap-1">
+        {option.items.map((item, i) => (
+          <div key={i} className="flex items-baseline gap-1.5 text-sm">
+            <span className="mech shrink-0 text-ink-muted">×{item.quantity}</span>
+            {item.ref ? (
+              <Link href={`/m/${worldSlug}/regles/${item.ref.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
+                {item.resolved_label}
+              </Link>
+            ) : (
+              <span>{item.resolved_label}</span>
+            )}
+          </div>
+        ))}
+      </div>
+      {option.gold && <div className="mech text-sm text-ink-muted">{costText(option.gold)}</div>}
+    </div>
+  );
+}
+
+/**
  * Le don accorde lie vers sa propre fiche ET reprend sa propre description
  * (V1-D7) — `data.feat_name`/`data.feat_description` sont ajoutes a la
  * lecture par le service (ResolvedBackgroundBlockData), jamais stockes tels
- * quels dans le bloc. Seul le don beneficie de cette resolution : les
- * maitrises de competence/outil n'ont pas de fiche propre dans ce systeme
- * (cf. commentaire de `zBackgroundBlockData`), un simple libelle suffit.
+ * quels dans le bloc. Seul le don beneficie de cette resolution parmi les
+ * champs simples : les maitrises de competence/outil n'ont pas de fiche
+ * propre dans ce systeme (cf. commentaire de `zBackgroundBlockData`), un
+ * simple libelle suffit.
+ *
+ * Mise en page (V1-D7, sur retour utilisateur) : caracteristiques/outil/
+ * competences sur une meme ligne (trois faits courts, `key_values`
+ * standard), le don en dessous sur toute la largeur (`fullWidth`, texte
+ * long), l'equipement hors de `key_values` — deux encadres cote a cote
+ * plutot qu'une paire etiquette/valeur de plus, cf. BackgroundEquipmentCard.
  */
 function Background({ data, worldSlug }: { data: ResolvedBackgroundBlockData; worldSlug: string }) {
   const items = [
     { label: "Valeurs de caracteristique", value: data.ability_scores.map(abilityLabel).join(", ") },
+    ...(data.tool_proficiency ? [{ label: "Maitrise d'outil", value: proficiencyLabel(data.tool_proficiency) }] : []),
+    { label: "Maitrises de competence", value: data.skill_proficiencies.map(skillLabel).join(", ") },
     {
       label: "Don",
+      fullWidth: true,
       value: (
         <div className="flex flex-col gap-0.5">
           <Link href={`/m/${worldSlug}/regles/${data.feat.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
@@ -400,11 +445,20 @@ function Background({ data, worldSlug }: { data: ResolvedBackgroundBlockData; wo
         </div>
       ),
     },
-    { label: "Maitrises de competence", value: data.skill_proficiencies.map(skillLabel).join(", ") },
-    ...(data.tool_proficiency ? [{ label: "Maitrise d'outil", value: proficiencyLabel(data.tool_proficiency) }] : []),
-    { label: "Equipement de depart", value: data.equipment_choice },
   ];
-  return <KeyValues items={items} />;
+  return (
+    <div className="flex flex-col gap-3">
+      <KeyValues items={items} />
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Equipement de depart</span>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {data.equipment_options.map((opt, i) => (
+            <BackgroundEquipmentCard key={i} option={opt} worldSlug={worldSlug} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /**

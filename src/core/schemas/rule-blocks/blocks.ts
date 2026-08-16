@@ -263,21 +263,41 @@ export type SubclassSlotBlockData = z.infer<typeof zSubclassSlotBlockData>;
 // (`zReference`, kind "rule", categorie SRD "Feats" -> entry_type
 // "feature") pour permettre un affichage resolu (nom + description reprise
 // de sa propre fiche, cf. resolveFeatDetail dans rules.ts) — c'est le seul
-// champ ici qui pointe vers une fiche existante. Les maitrises de
-// competence/outil n'ont PAS d'entree dediee dans ce systeme (categorie
-// "Skills" absente de CATEGORY_ENTRY_TYPE, scripts/ingest-srd.ts) : simples
-// libelles, meme choix que `class_basics.tool_proficiencies` deja en place.
-// L'equipement de depart ("Choisissez A ou B : ...") reste un texte plutot
-// qu'une structure : le SRD le fournit deja tout fait (`equipment_options[].desc`),
-// et la structure imbriquee sous-jacente est trop riche pour une primitive
-// existante sans en inventer une onzieme (specs/regles-blocs.md §3, a eviter).
+// champ de premier niveau qui pointe vers une fiche existante. Les
+// maitrises de competence/outil n'ont PAS d'entree dediee dans ce systeme
+// (categorie "Skills" absente de CATEGORY_ENTRY_TYPE, scripts/ingest-srd.ts) :
+// simples libelles, meme choix que `class_basics.tool_proficiencies` deja
+// en place.
+//
+// `equipment_options` (V1-D7, sur retour utilisateur — remplace un premier
+// jet en texte libre) reprend fidelement la forme du SRD (toujours "choisir
+// A ou B", chaque option une liste d'objets + un montant d'or optionnel) :
+// chaque objet EST une reference (`kind: "rule"`) des qu'il correspond a une
+// vraie fiche Objet/Arme importee (le cas courant, verifie sur les 4
+// historiques), pour un rendu en encadres inspire de l'onglet Inventaire de
+// la fiche jouable (meme langage visuel, demande explicite) avec liens
+// resolus plutot qu'un texte fige. `label` reste toujours rempli en repli
+// (jamais de reference : un choix de categorie, ex. "un type de boite de
+// jeux" pour le Soldat, qui ne designe aucun objet precis).
+export const zBackgroundEquipmentItem = z.object({
+  ref: zReference.optional(),
+  label: z.string(),
+  quantity: z.number().int().positive(),
+});
+export const zBackgroundEquipmentOption = z.object({
+  label: z.string(),
+  items: z.array(zBackgroundEquipmentItem),
+  gold: zQuantity.optional(),
+});
 export const zBackgroundBlockData = z.object({
   ability_scores: z.array(z.string()).length(3),
   feat: zReference,
   skill_proficiencies: z.array(z.string()),
   tool_proficiency: z.string().optional(),
-  equipment_choice: z.string(),
+  equipment_options: z.array(zBackgroundEquipmentOption).min(1),
 });
+export type BackgroundEquipmentItem = z.infer<typeof zBackgroundEquipmentItem>;
+export type BackgroundEquipmentOption = z.infer<typeof zBackgroundEquipmentOption>;
 export type BackgroundBlockData = z.infer<typeof zBackgroundBlockData>;
 
 // --- Enveloppe commune (specs/regles-blocs.md §2) -----------------------

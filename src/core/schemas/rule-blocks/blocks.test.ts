@@ -254,7 +254,17 @@ describe("zBackgroundBlockData", () => {
       feat: { kind: "rule", key: "alert" },
       skill_proficiencies: ["sleight_of_hand", "stealth"],
       tool_proficiency: "Thieves' Tools",
-      equipment_choice: "Choisissez A ou B : (A) 2 dagues, outils de voleur, pied-de-biche, 2 bourses, tenue de voyageur, 16 po ; ou (B) 50 po",
+      equipment_options: [
+        {
+          label: "A",
+          items: [
+            { ref: { kind: "rule", key: "dagger" }, label: "Dagger", quantity: 2 },
+            { ref: { kind: "rule", key: "thieves-tools" }, label: "Thieves' Tools", quantity: 1 },
+          ],
+          gold: { value: 16, unit: "gp" },
+        },
+        { label: "B", items: [], gold: { value: 50, unit: "gp" } },
+      ],
     };
     expect(zBackgroundBlockData.parse(data)).toEqual(data);
   });
@@ -264,7 +274,10 @@ describe("zBackgroundBlockData", () => {
       ability_scores: ["str", "dex", "con"],
       feat: { kind: "rule", key: "savage-attacker" },
       skill_proficiencies: ["athletics", "intimidation"],
-      equipment_choice: "Choisissez A ou B : (A) Lance, arc court, ... ; ou (B) 50 po",
+      equipment_options: [
+        { label: "A", items: [{ label: "Boîte de jeux (au choix)", quantity: 1 }], gold: { value: 14, unit: "gp" } },
+        { label: "B", items: [], gold: { value: 50, unit: "gp" } },
+      ],
     };
     expect(zBackgroundBlockData.parse(data)).toEqual(data);
   });

@@ -14,6 +14,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import {
+  type BackgroundEquipmentOption,
   type BlockType,
   type EntryType,
   validateBlockData,
@@ -1188,6 +1189,62 @@ function subclassSlotBlock(classIndex: string, subclasses: SrdRecord[], levels: 
 }
 
 /**
+ * Categorie d'equipement (SRD `equipment_categories`, ex. "Gaming Sets") ->
+ * libelle FR — rencontree seulement pour le choix d'outil du Soldat
+ * (V1-D7), pas de table plus large (`Equipment-Categories` n'est pas une
+ * categorie importee a part, meme motif que `WEAPON_PROPERTY_LABELS_FR`).
+ * Etendre au besoin plutot qu'a l'avance (regle des trois).
+ */
+const EQUIPMENT_CATEGORY_LABELS_FR: Record<string, string> = {
+  "Gaming Sets": "boîte de jeux",
+};
+
+/**
+ * `equipment_options[].from.options` (SRD 2024, V1-D7) -> options
+ * structurees du bloc `background`. Chaque option est soit `option_type:
+ * "multiple"` (une liste d'objets/monnaie), soit directement `"money"`
+ * (option B pure, dans les 4 historiques actuels). Chaque objet devient une
+ * reference `{kind:"rule", key: index}` : verifie sur les 4 historiques,
+ * ces index (dague, outils de voleur, bourse...) correspondent tous a une
+ * vraie fiche Objet/Arme deja importee, sans prefixe de desambiguisation
+ * (contrairement aux proprietes d'arme). Le cas `option_type: "choice"`
+ * (Soldat : "choisissez un type de boite de jeux", categorie plutot
+ * qu'objet precis) n'a pas de reference — seulement un libelle.
+ */
+function parseBackgroundEquipmentOptions(entry: SrdRecord): BackgroundEquipmentOption[] {
+  const optionsRaw = ((entry.equipment_options as SrdRecord[] | undefined)?.[0]?.from as SrdRecord | undefined)
+    ?.options as SrdRecord[] | undefined;
+  if (!Array.isArray(optionsRaw)) return [];
+
+  const letters = ["A", "B", "C", "D"];
+  return optionsRaw.map((opt, i) => {
+    const rawItems = opt.option_type === "multiple" ? (opt.items as SrdRecord[]) : [opt];
+    const items: BackgroundEquipmentOption["items"] = [];
+    let gold: BackgroundEquipmentOption["gold"];
+
+    for (const raw of rawItems) {
+      if (raw.option_type === "money") {
+        gold = { value: Number(raw.count), unit: String(raw.unit) };
+      } else if (raw.option_type === "counted_reference") {
+        const of = raw.of as SrdRecord;
+        if (typeof of?.index === "string") {
+          items.push({ ref: { kind: "rule", key: of.index }, label: String(of.name ?? of.index), quantity: Number(raw.count ?? 1) });
+        }
+      } else if (raw.option_type === "choice") {
+        const categoryName = ((raw.choice as SrdRecord | undefined)?.from as SrdRecord | undefined)?.equipment_category as
+          | SrdRecord
+          | undefined;
+        const name = typeof categoryName?.name === "string" ? categoryName.name : undefined;
+        const label = name ? `${EQUIPMENT_CATEGORY_LABELS_FR[name] ?? name} (au choix)` : "Choix libre";
+        items.push({ label, quantity: 1 });
+      }
+    }
+
+    return { label: letters[i] ?? String(i + 1), items, gold };
+  });
+}
+
+/**
  * `null` quand la forme source n'est pas celle du SRD 2024 (`ability_scores`
  * + `feat` structures) — le SRD 2014 des historiques (une seule entree,
  * "acolyte", toujours ecrasee par la version 2024 de meme index avant que
@@ -1227,17 +1284,12 @@ function backgroundBlock(entry: SrdRecord): EntryBlock | null {
   const fixedToolName = typeof fixedTool?.name === "string" ? fixedTool.name.replace(/^Tool: /, "") : undefined;
   const toolProficiency = fixedToolName ?? (typeof choiceRaw?.desc === "string" ? choiceRaw.desc : undefined);
 
-  const equipmentRaw = Array.isArray(entry.equipment_options)
-    ? (entry.equipment_options[0] as SrdRecord | undefined)
-    : undefined;
-  const equipmentChoice = typeof equipmentRaw?.desc === "string" ? equipmentRaw.desc : "";
-
   const data = {
     ability_scores: abilityScores,
     feat: { kind: "rule" as const, key: featRaw.index },
     skill_proficiencies: skillProficiencies,
     tool_proficiency: toolProficiency,
-    equipment_choice: equipmentChoice,
+    equipment_options: parseBackgroundEquipmentOptions(entry),
   };
   validateBlockData("background", data);
   return { block_type: "background", display: { label: "Historique", layout: "key_values" }, data, display_order: 150 };
