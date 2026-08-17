@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyOverrides, jsonMergePatch } from "./resolve";
+import { applyOverrides, jsonMergePatch, mergeHomebrewEntries } from "./resolve";
 
 describe("jsonMergePatch", () => {
   it("fusionne un patch objet dans la cible, champ par champ", () => {
@@ -138,5 +138,31 @@ describe("applyOverrides", () => {
 
   it("sans entree de base et sans add_entry, renvoie null", () => {
     expect(applyOverrides(null, [{ block_type: "effects", action: "patch_block", payload: null, patch: {} }])).toBeNull();
+  });
+});
+
+describe("mergeHomebrewEntries", () => {
+  const longsword = { key: "longsword", entryType: "weapon", name: "Épée longue" };
+  const shortsword = { key: "shortsword", entryType: "weapon", name: "Épée courte" };
+  const base = [longsword, shortsword];
+
+  it("sans fiche maison, renvoie la base inchangee", () => {
+    expect(mergeHomebrewEntries(base, [], new Set())).toEqual(base);
+  });
+
+  it("ajoute une fiche maison qui n'a pas de fiche de base correspondante", () => {
+    const homemade = { key: "sword-of-gabriel", entryType: "weapon", name: "Épée de Gabriel" };
+    expect(mergeHomebrewEntries(base, [homemade], new Set())).toEqual([...base, homemade]);
+  });
+
+  it("une fiche maison qui reprend la cle d'une fiche de base existante n'est pas ajoutee en double (ce n'est pas son role, c'est replace_entry)", () => {
+    const collision = { key: "longsword", entryType: "weapon", name: "Une autre épée longue" };
+    expect(mergeHomebrewEntries(base, [collision], new Set())).toEqual(base);
+  });
+
+  it("une cle desactivee est retiree, qu'elle soit heritee ou maison", () => {
+    const homemade = { key: "sword-of-gabriel", entryType: "weapon", name: "Épée de Gabriel" };
+    const resolved = mergeHomebrewEntries(base, [homemade], new Set(["shortsword", "sword-of-gabriel"]));
+    expect(resolved).toEqual([longsword]);
   });
 });

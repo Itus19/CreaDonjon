@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { zWeaponBlockData } from "@/src/core/schemas/rule-blocks";
 
 export const setActiveRulesetSchema = z.object({
   rulesetId: z.string().uuid(),
@@ -7,4 +8,11 @@ export const setActiveRulesetSchema = z.object({
 export const createRulesetVariantSchema = z.object({
   name: z.string().min(1).max(120),
   parentRulesetId: z.string().uuid(),
+});
+
+export const createHomebrewWeaponSchema = z.object({
+  rulesetId: z.string().uuid(),
+  name: z.string().min(1).max(120),
+  weapon: zWeaponBlockData,
+  note: z.string().min(1).max(500).optional(),
 });

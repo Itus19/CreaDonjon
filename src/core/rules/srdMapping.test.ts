@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   armorAcModifier,
+  armorDataFromBlock,
+  costFromQuantity,
   extractBackgroundFeat,
   extractFeatureKeysUpToLevel,
   extractLanguageChoice,
@@ -21,7 +23,10 @@ import {
   parseSpellLevel,
   parseWeaponData,
   SRD_LANGUAGES,
+  weaponDataFromBlock,
+  weightFromQuantity,
 } from "./srdMapping";
+import type { ArmorBlockData, WeaponBlockData } from "../schemas/rule-blocks";
 
 // Fixtures fideles a la forme reelle des donnees SRD deja importees
 // (verifie contre la base reelle avant d'ecrire ce fichier).
@@ -479,6 +484,74 @@ describe("parseItemWeight", () => {
 
   it("retourne null si le champ est absent (contenu maison sans poids renseigne)", () => {
     expect(parseItemWeight(parseCustomTableFields([{ field: "name", value: "Fiole de sable noir" }]))).toBeNull();
+  });
+});
+
+// V1-D4 : meme resultat que parseWeaponData/parseArmorData/parseItemWeight/
+// parseItemCost, mais depuis le bloc dedie plutot que custom_table — chemin
+// necessaire pour une fiche maison (aucun custom_table de secours).
+describe("weaponDataFromBlock", () => {
+  it("epee courte : meme resultat que parseWeaponData depuis le bloc dedie", () => {
+    const data: WeaponBlockData = {
+      category: "martial",
+      is_ranged: false,
+      damage: { dice: { op: "dice", count: 1, faces: 6 }, type: "piercing" },
+      properties: [{ kind: "rule", key: "weapon-property-finesse" }, { kind: "rule", key: "weapon-property-light" }],
+    };
+    expect(weaponDataFromBlock(data)).toEqual({
+      damageDice: "1d6",
+      damageType: "piercing",
+      versatileDamageDice: null,
+      properties: ["finesse", "light"],
+      isRanged: false,
+    });
+  });
+
+  it("epee longue : versatile converti en notation de des", () => {
+    const data: WeaponBlockData = {
+      category: "martial",
+      is_ranged: false,
+      damage: { dice: { op: "dice", count: 1, faces: 8 }, type: "slashing" },
+      versatile_damage: { op: "dice", count: 1, faces: 10 },
+      properties: [{ kind: "rule", key: "weapon-property-versatile" }],
+    };
+    expect(weaponDataFromBlock(data)).toEqual({
+      damageDice: "1d8",
+      damageType: "slashing",
+      versatileDamageDice: "1d10",
+      properties: ["versatile"],
+      isRanged: false,
+    });
+  });
+});
+
+describe("armorDataFromBlock", () => {
+  it("armure legere : categorie capitalisee comme resolveArmorCategory", () => {
+    const data: ArmorBlockData = { category: "light", base_ac: 11, dex_bonus: true };
+    expect(armorDataFromBlock(data)).toEqual({ category: "Light", base: 11, dexBonus: true });
+  });
+
+  it("bouclier : meme libelle que parseArmorData pour armorAcModifier", () => {
+    const data: ArmorBlockData = { category: "shield", base_ac: 2, dex_bonus: false };
+    expect(armorDataFromBlock(data)).toEqual({ category: "Shield", base: 2, dexBonus: false });
+  });
+});
+
+describe("weightFromQuantity / costFromQuantity", () => {
+  it("lit la valeur d'une Quantity de poids", () => {
+    expect(weightFromQuantity({ value: 2, unit: "lb" })).toBe(2);
+  });
+
+  it("retourne null sans Quantity (champ optionnel absent du bloc)", () => {
+    expect(weightFromQuantity(undefined)).toBeNull();
+  });
+
+  it("lit valeur+unite d'une Quantity de cout", () => {
+    expect(costFromQuantity({ value: 10, unit: "gp" })).toEqual({ quantity: 10, unit: "gp" });
+  });
+
+  it("retourne null sans Quantity de cout", () => {
+    expect(costFromQuantity(undefined)).toBeNull();
   });
 });
 

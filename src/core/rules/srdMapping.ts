@@ -1,4 +1,6 @@
 import type { Ability, Modifier, Prerequisite } from "./sheet";
+import { formatFormulaNode } from "../formula/format";
+import type { ArmorBlockData, Quantity, WeaponBlockData } from "../schemas/rule-blocks";
 
 /**
  * Traduction des donnees SRD deja importees (ruleset_entries, V1-A1/A2)
@@ -387,6 +389,58 @@ export function parseItemCost(fields: ParsedFields): ItemCost | null {
   const cost = fields.cost as { quantity?: unknown; unit?: unknown } | undefined;
   if (!cost || typeof cost.quantity !== "number" || typeof cost.unit !== "string") return null;
   return { quantity: cost.quantity, unit: cost.unit };
+}
+
+/**
+ * Meme resultat que `parseWeaponData`/`parseArmorData`/`parseItemWeight`/
+ * `parseItemCost`, mais depuis les blocs dedies `weapon`/`armor`
+ * (V1-D1/V1-D2) plutot que depuis `custom_table` — necessaire pour toute
+ * entree qui n'a jamais eu de `custom_table` d'origine SRD a cote (V1-D4,
+ * une fiche maison creee via `ruleset_overrides` n'en ecrit aucun). Chaque
+ * entree officielle en porte encore un aujourd'hui (l'import ecrit les deux
+ * en parallele), mais la resolution de surcharge ne doit pas en dependre.
+ *
+ * `stripReferencePrefix` retire le prefixe anti-collision ("weapon-property-",
+ * "weapon-mastery-", V1-C12) qu'aucune des deux formes n'avait avant :
+ * `parseWeaponData` lit directement `index` depuis le JSON SRD brut
+ * ("finesse"), jamais prefixe.
+ */
+function stripReferencePrefix(key: string): string {
+  return key.replace(/^weapon-(property|mastery)-/, "");
+}
+
+export function weaponDataFromBlock(data: WeaponBlockData): WeaponData {
+  return {
+    damageDice: formatFormulaNode(data.damage.dice),
+    damageType: data.damage.type ?? null,
+    versatileDamageDice: data.versatile_damage ? formatFormulaNode(data.versatile_damage) : null,
+    properties: data.properties.map((p) => stripReferencePrefix(p.key)),
+    isRanged: data.is_ranged,
+  };
+}
+
+// `armorAcModifier` compare `category` aux libelles anglais capitalises que
+// produisait `resolveArmorCategory` depuis le JSON SRD brut ("Shield",
+// "Medium"...) — le bloc dedie porte la meme information en minuscules
+// (`zArmorBlockData.category`), simple table de correspondance plutot que
+// de changer la comparaison des deux cotes.
+const ARMOR_CATEGORY_LABELS: Record<ArmorBlockData["category"], string> = {
+  light: "Light",
+  medium: "Medium",
+  heavy: "Heavy",
+  shield: "Shield",
+};
+
+export function armorDataFromBlock(data: ArmorBlockData): ArmorData {
+  return { category: ARMOR_CATEGORY_LABELS[data.category], base: data.base_ac, dexBonus: data.dex_bonus };
+}
+
+export function weightFromQuantity(quantity: Quantity | undefined): number | null {
+  return quantity ? quantity.value : null;
+}
+
+export function costFromQuantity(quantity: Quantity | undefined): ItemCost | null {
+  return quantity ? { quantity: quantity.value, unit: quantity.unit } : null;
 }
 
 /**

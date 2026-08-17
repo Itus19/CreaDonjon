@@ -249,7 +249,21 @@ export default function RulesSidebar({
           ))}
         </nav>
 
-        <div className="border-t border-edge pt-3">
+        <div className="flex flex-col gap-2 border-t border-edge pt-3">
+          <Link
+            href={`/m/${worldSlug}/regles/nouvelle-arme`}
+            onClick={() => setOpen(false)}
+            className="block w-full rounded-full bg-accent px-4 py-2 text-center text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+          >
+            {t("creerArmeMaison")}
+          </Link>
+          <Link
+            href={`/m/${worldSlug}/regles/bac-a-sable`}
+            onClick={() => setOpen(false)}
+            className="block w-full rounded-full border border-edge px-4 py-2 text-center text-sm font-medium text-ink transition-colors hover:bg-panel-raised"
+          >
+            {t("bacASable")}
+          </Link>
           <RulesetSelector worldSlug={worldSlug} />
         </div>
       </aside>

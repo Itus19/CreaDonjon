@@ -1,8 +1,11 @@
 import "server-only";
+import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/src/types/database";
+import type { Database, Json } from "@/src/types/database";
 import {
   dataSchemaForBlockType,
+  zWeaponBlockData,
+  type AddEntryPayload,
   type BackgroundBlockData,
   type BackgroundEquipmentItem,
   type BackgroundEquipmentOption,
@@ -16,13 +19,16 @@ import {
   type SpeciesTraitsBlockData,
   type SubclassSlotBlockData,
   type WeaponBlockData,
+  zAddEntryPayload,
   zBlockDisplay,
 } from "@/src/core/schemas/rule-blocks";
 import { generateScalingTable, resolveScalingTarget } from "@/src/core/rules/scaling";
 import { computeProgressionRows } from "@/src/core/rules/progression";
 import { missingRequiredBlocks } from "@/src/core/rules/requiredBlocks";
+import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
 import {
   applyOverrides,
+  mergeHomebrewEntries,
   MAX_RULESET_CHAIN_DEPTH,
   RulesetChainCycleError,
   RulesetChainDepthError,
@@ -37,6 +43,7 @@ import {
   getRulesetEntryByKey,
   insertRulesetVariant,
   listBlocksForRulesetEntry,
+  listEntryLevelOverridesForRuleset,
   listIncomingRefsForKey,
   listOutgoingRefs,
   listOverridesForRuleset,
@@ -44,6 +51,7 @@ import {
   listRulesetEntriesByKeys,
   listSelectableRulesets,
   listTranslationsForEntries,
+  upsertRulesetOverride,
   type DeleteRulesetOutcome,
   type SelectableRulesetRow,
   type RulesetEntryRow,
@@ -109,6 +117,89 @@ export async function findEntryInRulesetChain(
     currentId = ruleset?.parent_ruleset_id ?? null;
   }
   return null;
+}
+
+export interface ResolvedEntryBlocks {
+  entryType: EntryType;
+  /** Donnee de chaque bloc deja validee par son schema Zod, indexee par block_type — jamais la ligne brute. */
+  blocksByType: Map<string, unknown>;
+}
+
+/**
+ * Resout une entree jusqu'a ses blocs valides : base (si elle existe dans
+ * la chaine) + TOUTES les surcharges de la chaine, racine -> feuille
+ * (V1-A4/V1-D4) — meme moteur (`applyOverrides`) que `getRuleEntryForWorld`,
+ * mais sans ses etapes d'affichage (traductions, renvois, augmentation de
+ * noms) : pour les consommateurs mecaniques (`resolvedRuleset.ts`, actions
+ * de jeu) qui n'ont besoin que de la donnee brute d'un bloc, jamais de sa
+ * mise en page. Contrairement a `findEntryInRulesetChain` (utilise par ce
+ * meme fichier pour d'autres besoins, jamais surcharge-aware), une fiche
+ * qui n'existe que par une surcharge `add_entry` (aucune ligne
+ * `ruleset_entries`, V1-D4) resout ici correctement. `null` si l'entree
+ * n'existe nulle part dans la chaine (ni base, ni `add_entry`) ou si une
+ * surcharge l'a desactivee.
+ */
+export async function resolveEntryBlocksInRuleset(
+  supabase: TypedClient,
+  rulesetId: string,
+  entryKey: string
+): Promise<ResolvedEntryBlocks | null> {
+  const chain = await walkRulesetChain(supabase, rulesetId);
+
+  let entry: RulesetEntryRow | null = null;
+  for (const link of chain) {
+    entry = await getRulesetEntryByKey(supabase, link.rulesetId, entryKey);
+    if (entry) break;
+  }
+
+  const blockRows = entry ? await listBlocksForRulesetEntry(supabase, entry.id) : [];
+  const baseEntry: ResolvableEntry | null = entry
+    ? {
+        entry_key: entry.entry_key,
+        entry_type: entry.entry_type,
+        blocks: blockRows.map(
+          (row): ResolvableBlock => ({
+            block_type: row.block_type,
+            display: row.display,
+            data: row.data,
+            display_order: row.display_order,
+          })
+        ),
+      }
+    : null;
+
+  const overrides: OverrideInput[] = [];
+  for (const link of [...chain].reverse()) {
+    const rows = await listOverridesForRuleset(supabase, link.rulesetId, entryKey);
+    for (const row of rows) {
+      if (row.action === "add_entry") {
+        const addEntry = zAddEntryPayload.parse(row.payload);
+        overrides.push({
+          block_type: null,
+          action: "add_entry",
+          payload: { entry_key: entryKey, entry_type: addEntry.entry_type, blocks: [] } satisfies ResolvableEntry,
+          patch: null,
+        });
+        continue;
+      }
+      overrides.push({
+        block_type: row.block_type,
+        action: row.action as OverrideInput["action"],
+        payload: row.payload,
+        patch: row.patch,
+      });
+    }
+  }
+
+  const resolved = applyOverrides(baseEntry, overrides);
+  if (!resolved || resolved.disabled) return null;
+
+  const blocksByType = new Map<string, unknown>();
+  for (const block of resolved.blocks) {
+    blocksByType.set(block.block_type, dataSchemaForBlockType(block.block_type as BlockType).parse(block.data));
+  }
+
+  return { entryType: resolved.entry_type as EntryType, blocksByType };
 }
 
 export interface RuleEntryBlockView {
@@ -435,37 +526,57 @@ export async function getRuleEntryForWorld(
     entry = await getRulesetEntryByKey(supabase, link.rulesetId, entryKey);
     if (entry) break;
   }
-  if (!entry) return null;
 
   // L'anglais est deja la langue source (source_raw.name) : aucune
-  // recherche de traduction n'est necessaire pour cette locale.
-  const translation = locale !== "en" ? await getEntryTranslation(supabase, entry.id, locale) : null;
-
-  const blockRows = await listBlocksForRulesetEntry(supabase, entry.id);
+  // recherche de traduction n'est necessaire pour cette locale. Une fiche
+  // maison (V1-D4, `entry` absent de toute base de la chaine) n'a par
+  // definition ni traduction ni bloc en base — son contenu voyage entier
+  // dans les surcharges collectees plus bas.
+  const translation = entry && locale !== "en" ? await getEntryTranslation(supabase, entry.id, locale) : null;
+  const blockRows = entry ? await listBlocksForRulesetEntry(supabase, entry.id) : [];
   // Surcharges de traduction par block_type (V1-A5, ex: description) : posees
   // sur la base AVANT resolution des surcharges de variante, pour qu'une
   // surcharge de variante (ecrite par un MJ, potentiellement dans une autre
   // langue) l'emporte toujours si elle vise le meme bloc.
   const translatedBlocks = (translation?.blocks ?? {}) as Record<string, unknown>;
-  const baseEntry: ResolvableEntry = {
-    entry_key: entry.entry_key,
-    entry_type: entry.entry_type,
-    blocks: blockRows.map(
-      (row): ResolvableBlock => ({
-        block_type: row.block_type,
-        display: row.display,
-        data: translatedBlocks[row.block_type] ?? row.data,
-        display_order: row.display_order,
-      })
-    ),
-  };
+  const baseEntry: ResolvableEntry | null = entry
+    ? {
+        entry_key: entry.entry_key,
+        entry_type: entry.entry_type,
+        blocks: blockRows.map(
+          (row): ResolvableBlock => ({
+            block_type: row.block_type,
+            display: row.display,
+            data: translatedBlocks[row.block_type] ?? row.data,
+            display_order: row.display_order,
+          })
+        ),
+      }
+    : null;
 
   // Surcharges collectees racine -> feuille (chain est feuille -> racine) :
   // la variante la plus specifique s'applique en dernier (SCHEMA.md §9.4).
+  // `add_entry` porte une charge utile courte (`zAddEntryPayload` : nom +
+  // type, V1-D4) — traduite ici en la forme `ResolvableEntry` complete
+  // (cle + type + blocs vides, les blocs arrivent par des `add_block`
+  // separes) qu'attend `applyOverrides`, pour que le coeur pur reste
+  // ignorant de ce detail d'encodage.
   const overrides: OverrideInput[] = [];
+  let homebrewName: string | null = null;
   for (const link of [...chain].reverse()) {
     const rows = await listOverridesForRuleset(supabase, link.rulesetId, entryKey);
     for (const row of rows) {
+      if (row.action === "add_entry") {
+        const addEntry = zAddEntryPayload.parse(row.payload);
+        homebrewName = addEntry.name;
+        overrides.push({
+          block_type: null,
+          action: "add_entry",
+          payload: { entry_key: entryKey, entry_type: addEntry.entry_type, blocks: [] } satisfies ResolvableEntry,
+          patch: null,
+        });
+        continue;
+      }
       overrides.push({
         block_type: row.block_type,
         action: row.action as OverrideInput["action"],
@@ -477,6 +588,7 @@ export async function getRuleEntryForWorld(
 
   const resolved = applyOverrides(baseEntry, overrides);
   // Desactivee dans cette variante : traitee comme absente, pas comme une erreur.
+  // Ni base ni `add_entry` : la fiche n'existe simplement pas.
   if (!resolved || resolved.disabled) return null;
 
   // id stable pour l'affichage (cle React) : celui de la ligne d'origine
@@ -487,8 +599,9 @@ export async function getRuleEntryForWorld(
   // (V1-A4) — depuis baseEntry (deja traduite si une traduction existe,
   // V1-A5), pas les lignes brutes anglaises : la comparaison doit rester
   // dans la meme langue des deux cotes, seule la surcharge de variante doit
-  // faire la difference.
-  const originalDataByBlockType = new Map(baseEntry.blocks.map((b) => [b.block_type, b.data]));
+  // faire la difference. Vide pour une fiche maison : rien a comparer, elle
+  // n'a pas d'"avant".
+  const originalDataByBlockType = new Map((baseEntry?.blocks ?? []).map((b) => [b.block_type, b.data]));
 
   const validated = resolved.blocks.map((block) => ({
     id: originalIdByBlockType.get(block.block_type) ?? `override:${block.block_type}`,
@@ -532,9 +645,13 @@ export async function getRuleEntryForWorld(
     return { id, blockType, display, data, displayOrder, originalData };
   });
 
+  // Une fiche maison n'a pas de `ruleset_entry_refs` (la table exige un
+  // `source_entry_id` reel) : aucun renvoi sortant deduit pour elle, mais
+  // elle peut toujours etre visee par le renvoi ENTRANT d'une autre fiche
+  // (`resolveIncomingRefs` ne prend qu'une cle, jamais un id).
   const [outgoingRefs, incomingRefs] = await Promise.all([
-    resolveOutgoingRefs(supabase, rulesetId, entry.id, locale),
-    resolveIncomingRefs(supabase, rulesetId, entry.entry_key, locale),
+    entry ? resolveOutgoingRefs(supabase, rulesetId, entry.id, locale) : Promise.resolve([]),
+    resolveIncomingRefs(supabase, rulesetId, entryKey, locale),
   ]);
 
   // Augmente le bloc `background` avec le nom+description de son don et le
@@ -653,15 +770,19 @@ export async function getRuleEntryForWorld(
     };
   }
 
+  // `entry` peut etre absent (fiche maison, V1-D4) : `resolved` porte alors
+  // le type resolu depuis la charge utile `add_entry`, et `homebrewName` son
+  // nom (aucun des deux ne passe par `entryNameFrom`/la table de traduction,
+  // qui exigent tous deux une ligne `ruleset_entries` reelle).
   return {
-    id: entry.id,
-    entryKey: entry.entry_key,
-    entryType: entry.entry_type as EntryType,
-    name: translation?.name ?? entryNameFrom(entry),
-    sourceAttribution: entry.source_attribution,
+    id: entry?.id ?? entryKey,
+    entryKey,
+    entryType: resolved.entry_type as EntryType,
+    name: entry ? (translation?.name ?? entryNameFrom(entry)) : (homebrewName ?? entryKey),
+    sourceAttribution: entry?.source_attribution ?? null,
     blocks,
     missingBlocks: missingRequiredBlocks(
-      entry.entry_type as EntryType,
+      resolved.entry_type as EntryType,
       resolved.blocks.map((b) => b.block_type)
     ),
     outgoingRefs,
@@ -719,9 +840,12 @@ function speciesParentKey(sourceRaw: unknown): string | undefined {
  * Meme remontee que findEntryInRulesetChain, mais pour lister plutot que
  * chercher une cle : s'arrete au premier ruleset de la chaine qui a des
  * entrees a lui (un monde variante sans rien a soi remonte jusqu'a son
- * ancetre officiel). Pas de fusion base+variante ici, ce sera le travail
- * de la resolution de surcharge (V1-A4) — ce que la variante ne possede
- * pas encore n'existe simplement pas dans cette liste.
+ * ancetre officiel). Les surcharges `add_entry`/`disable_entry` de CHAQUE
+ * niveau traverse (V1-D4) sont collectees au passage puis fusionnees une
+ * fois la base atteinte via `mergeHomebrewEntries` — une fiche maison n'a
+ * de sens qu'a la fusion : elle n'a par definition pas de fiche de base
+ * correspondante, seul son entry_key/entry_type/name portes par la
+ * surcharge elle-meme la decrivent.
  */
 async function listEntriesInRulesetChain(
   supabase: TypedClient,
@@ -729,7 +853,20 @@ async function listEntriesInRulesetChain(
   locale: Locale
 ): Promise<RuleEntrySummary[]> {
   let currentId: string | null = rulesetId;
+  const homebrewEntries: RuleEntrySummary[] = [];
+  const disabledKeys = new Set<string>();
+
   for (let hop = 0; currentId && hop < MAX_RULESET_CHAIN_DEPTH; hop++) {
+    const levelOverrides = await listEntryLevelOverridesForRuleset(supabase, currentId);
+    for (const ov of levelOverrides) {
+      if (ov.action === "disable_entry") {
+        disabledKeys.add(ov.entry_key);
+      } else if (ov.action === "add_entry") {
+        const payload = zAddEntryPayload.parse(ov.payload);
+        homebrewEntries.push({ key: ov.entry_key, entryType: payload.entry_type as EntryType, name: payload.name });
+      }
+    }
+
     const entries = await listRulesetEntries(supabase, currentId);
     if (entries.length > 0) {
       const translationByEntryId = new Map<string, string>();
@@ -737,7 +874,7 @@ async function listEntriesInRulesetChain(
         const translations = await listTranslationsForEntries(supabase, entries.map((e) => e.id), locale);
         for (const t of translations) translationByEntryId.set(t.entry_id, t.name);
       }
-      return entries.map((e) => ({
+      const baseSummaries = entries.map((e) => ({
         key: e.entry_key,
         entryType: e.entry_type as EntryType,
         name: translationByEntryId.get(e.id) ?? entryNameFrom(e),
@@ -745,11 +882,12 @@ async function listEntriesInRulesetChain(
           e.entry_type === "subclass" || e.entry_type === "feature" ? subclassParentClassKey(e.source_raw) : undefined,
         parentSpeciesKey: e.entry_type === "species" ? speciesParentKey(e.source_raw) : undefined,
       }));
+      return mergeHomebrewEntries(baseSummaries, homebrewEntries, disabledKeys);
     }
     const ruleset = await getRulesetById(supabase, currentId);
     currentId = ruleset?.parent_ruleset_id ?? null;
   }
-  return [];
+  return mergeHomebrewEntries([], homebrewEntries, disabledKeys);
 }
 
 /** Barre laterale de l'onglet Regles : `null` si le monde est introuvable, liste vide si aucun ruleset n'est assigne. */
@@ -840,4 +978,73 @@ export async function deleteRulesetVariant(supabase: TypedClient, rulesetId: str
   const ruleset = await getRulesetById(supabase, rulesetId);
   if (!ruleset || ruleset.is_official_base) return "not_found";
   return deleteRuleset(supabase, rulesetId);
+}
+
+const zCreateHomebrewWeaponInput = z.object({
+  rulesetId: z.string().uuid(),
+  name: z.string().min(1),
+  weapon: zWeaponBlockData,
+  note: z.string().min(1).optional(),
+});
+export type CreateHomebrewWeaponInput = z.infer<typeof zCreateHomebrewWeaponInput>;
+
+/**
+ * Cree une arme maison (V1-D4) : deux surcharges dans le meme ruleset,
+ * l'`add_entry` qui fait exister la fiche (nom + entry_type, forme
+ * `AddEntryPayload`) puis l'`add_block` qui lui donne son bloc `weapon`
+ * (meme enveloppe que l'import SRD — `weaponBlock` dans
+ * `scripts/ingest-srd.ts`). Seul type de fiche en portee pour ce ticket :
+ * un formulaire dedie par type de bloc plutot qu'un moteur generique
+ * (regle des trois), la fonction porte donc son nom plutot qu'un
+ * `blockType` en parametre.
+ *
+ * La cle est deduite du nom (`slugify`) et desambiguee si necessaire
+ * contre TOUTE la chaine de ruleset, pas seulement ce niveau : une cle qui
+ * collisionnerait avec une entree heritee masquerait silencieusement
+ * l'entree de base au lieu de creer une nouvelle fiche a cote.
+ */
+export async function createHomebrewWeapon(
+  supabase: TypedClient,
+  input: CreateHomebrewWeaponInput
+): Promise<{ entryKey: string; rulesetId: string }> {
+  const parsed = zCreateHomebrewWeaponInput.parse(input);
+
+  const existingKeys = new Set((await listEntriesInRulesetChain(supabase, parsed.rulesetId, "fr")).map((e) => e.key));
+  const baseSlug = slugify(parsed.name);
+  let entryKey = baseSlug;
+  for (let attempt = 1; existingKeys.has(entryKey); attempt++) {
+    entryKey = nextSlugCandidate(baseSlug, attempt);
+  }
+
+  const addEntryPayload: AddEntryPayload = zAddEntryPayload.parse({ name: parsed.name, entry_type: "weapon" });
+  const rulesetIdAfterEntry = await upsertRulesetOverride(supabase, {
+    rulesetId: parsed.rulesetId,
+    entryKey,
+    blockType: null,
+    action: "add_entry",
+    payload: addEntryPayload as unknown as Json,
+    patch: null,
+    note: parsed.note ?? null,
+  });
+
+  const weaponBlock: ResolvableBlock = {
+    block_type: "weapon",
+    display: { label: "Arme", layout: "key_values" },
+    data: parsed.weapon,
+    display_order: 150,
+  };
+  const rulesetIdAfterBlock = await upsertRulesetOverride(supabase, {
+    // Reutilise l'id renvoye par le premier appel, pas parsed.rulesetId :
+    // si le ruleset etait deja publie, le premier appel a fork une v+1 —
+    // ce second appel doit viser cette meme nouvelle version, pas l'originale figee.
+    rulesetId: rulesetIdAfterEntry,
+    entryKey,
+    blockType: "weapon",
+    action: "add_block",
+    payload: weaponBlock as unknown as Json,
+    patch: null,
+    note: parsed.note ?? null,
+  });
+
+  return { entryKey, rulesetId: rulesetIdAfterBlock };
 }

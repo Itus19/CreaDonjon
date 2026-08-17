@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
+import type { OverrideAction } from "@/src/core/rules/resolve";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -121,6 +122,86 @@ export async function listOverridesForRuleset(
     .order("created_at");
   if (error) throw new Error(error.message);
   return data;
+}
+
+export interface EntryLevelOverrideRow {
+  entry_key: string;
+  action: string;
+  payload: Json;
+}
+
+/**
+ * Surcharges de niveau ENTREE (`add_entry`/`disable_entry`, `block_type is
+ * null`) d'UN ruleset, toutes cles confondues (V1-D4) — complement de
+ * `listOverridesForRuleset`, qui exige de connaitre la cle d'avance. Sert au
+ * listing (barre laterale, auto-completion) : une fiche maison n'a par
+ * definition aucune cle connue tant qu'elle n'est pas apparue dans une liste.
+ * Ne remonte pas la chaine : meme convention que le reste de ce fichier,
+ * c'est au service appelant de la parcourir niveau par niveau.
+ */
+export async function listEntryLevelOverridesForRuleset(
+  supabase: TypedClient,
+  rulesetId: string
+): Promise<EntryLevelOverrideRow[]> {
+  const { data, error } = await supabase
+    .from("ruleset_overrides")
+    .select("entry_key, action, payload")
+    .eq("ruleset_id", rulesetId)
+    .is("block_type", null)
+    .in("action", ["add_entry", "disable_entry"]);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export interface UpsertRulesetOverrideParams {
+  rulesetId: string;
+  entryKey: string;
+  blockType: string | null;
+  action: OverrideAction;
+  payload: Json;
+  patch: Json;
+  note: string | null;
+}
+
+/**
+ * Ecrit une surcharge via `app.upsert_ruleset_override` (migration
+ * 20260803090001, V1-A4) plutot qu'un insert direct dans
+ * `ruleset_overrides` : la fonction verifie le verrou officiel et gere le
+ * fork-sur-publication cote serveur (`security definer`, `auth.uid()` lu a
+ * l'interieur) — dupliquer cette logique cote TypeScript ouvrirait une
+ * fenetre pour la contourner. Renvoie l'id du ruleset qui a reellement
+ * recu la ligne : identique a `rulesetId` si le brouillon etait encore
+ * modifiable, differe si l'appel a du forker une nouvelle version (ruleset
+ * deja publie) — l'appelant doit reutiliser cet id pour toute surcharge
+ * suivante visant la meme fiche (ex: `add_entry` puis `add_block`).
+ *
+ * `blockType`/`note` castes en `string` au point d'appel : le generateur de
+ * types Supabase ne modelise jamais la nullabilite d'un parametre de
+ * fonction (seulement celle des colonnes de table), alors que
+ * `block_type is null` est la forme valide pour `add_entry`/`disable_entry`/
+ * `replace_entry` (SCHEMA.md §9.4, contrainte `overrides_block_required`).
+ */
+export async function upsertRulesetOverride(
+  supabase: TypedClient,
+  params: UpsertRulesetOverrideParams
+): Promise<string> {
+  const { data, error } = await supabase.rpc("upsert_ruleset_override", {
+    p_ruleset_id: params.rulesetId,
+    p_entry_key: params.entryKey,
+    p_block_type: params.blockType as unknown as string,
+    p_action: params.action,
+    p_payload: params.payload,
+    p_patch: params.patch,
+    p_note: params.note as unknown as string,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Fige la version courante du ruleset (V1-A4, SCHEMA.md §9.4/§3.4) — idempotent, aucun effet si deja publie. */
+export async function publishRuleset(supabase: TypedClient, rulesetId: string): Promise<void> {
+  const { error } = await supabase.rpc("publish_ruleset", { p_ruleset_id: rulesetId });
+  if (error) throw new Error(error.message);
 }
 
 export interface RulesetEntryRow {

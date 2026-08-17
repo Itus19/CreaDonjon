@@ -148,3 +148,30 @@ export function applyOverrides(base: ResolvableEntry | null, overrides: Override
   if (!entry) return null;
   return { ...entry, disabled, modifiedBlockTypes: [...modifiedBlockTypes] };
 }
+
+/**
+ * Fusionne, pour une LISTE de fiches (barre laterale, auto-completion —
+ * V1-D4), les fiches heritees d'une base avec les fiches maison d'une
+ * variante (surcharges `add_entry` sans aucune fiche de base correspondante
+ * dans la chaine). Complement de `applyOverrides`, qui ne resout qu'une
+ * fiche a la fois une fois sa cle deja connue : une fiche maison n'a par
+ * definition aucune cle connue d'avance, elle doit d'abord apparaitre dans
+ * une liste pour pouvoir etre ouverte.
+ *
+ * Delibarement plus simple que la resolution complete par cle : pas de
+ * remontee multi-niveaux ni de `replace_entry`/patch au niveau liste (une
+ * fiche modifiee reste sous sa cle d'origine, seul son contenu change,
+ * jamais sa presence dans la liste) — seuls `add_entry` (ajoute une entree
+ * absente) et `disable_entry` (retire une entree, maison ou heritee) ont un
+ * effet sur la simple PRESENCE d'une fiche dans un listing.
+ */
+export function mergeHomebrewEntries<T extends { key: string }>(
+  baseEntries: readonly T[],
+  addedEntries: readonly { key: string }[],
+  disabledKeys: ReadonlySet<string>
+): T[] {
+  const baseKeys = new Set(baseEntries.map((e) => e.key));
+  const kept = baseEntries.filter((e) => !disabledKeys.has(e.key));
+  const extra = addedEntries.filter((e) => !baseKeys.has(e.key) && !disabledKeys.has(e.key));
+  return [...kept, ...(extra as T[])];
+}

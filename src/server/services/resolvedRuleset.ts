@@ -4,6 +4,8 @@ import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import type { ResolvedClass, ResolvedFeature, ResolvedRuleset } from "@/src/core/rules/sheet";
 import {
+  armorDataFromBlock,
+  costFromQuantity,
   extractBackgroundFeat,
   extractFeatureKeysUpToLevel,
   extractLanguageChoice,
@@ -23,12 +25,15 @@ import {
   parseSpellLevel,
   parseWeaponData,
   SRD_LANGUAGES,
+  weaponDataFromBlock,
+  weightFromQuantity,
   type ArmorData,
   type CustomTableRow,
   type ItemCost,
   type ProgressionRow,
   type WeaponData,
 } from "@/src/core/rules/srdMapping";
+import type { ArmorBlockData, ItemPropertiesBlockData, WeaponBlockData } from "@/src/core/schemas/rule-blocks";
 import {
   getEntryTranslation,
   listBlocksForRulesetEntry,
@@ -36,7 +41,7 @@ import {
   listTranslationsForEntries,
   type RulesetEntryRow,
 } from "@/src/server/repos/rules";
-import { entryNameFrom, findEntryInRulesetChain } from "./rules";
+import { entryNameFrom, findEntryInRulesetChain, resolveEntryBlocksInRuleset } from "./rules";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -216,6 +221,37 @@ export async function assembleResolvedRuleset(
   return { ruleset: { classes, features }, remainingChoices, proficiencies, languages };
 }
 
+interface EquipmentBlocks {
+  fields: Record<string, unknown>;
+  weapon?: WeaponBlockData;
+  armor?: ArmorBlockData;
+  itemProperties?: ItemPropertiesBlockData;
+}
+
+/**
+ * Blocs mecaniques d'un objet d'equipement, base + TOUTES les surcharges de
+ * la chaine (`resolveEntryBlocksInRuleset`, V1-A4/V1-D4) — contrairement a
+ * `fetchEntryFields` ci-dessus (espece/historique/classe, jamais surcharge-
+ * aware, hors de portee de ce correctif), une fiche qui n'existe que par
+ * une surcharge `add_entry` (aucune ligne `ruleset_entries`, arme maison
+ * V1-D4) doit resoudre ici. `weapon`/`armor`/`itemProperties` : les blocs
+ * dedies (V1-D1/V1-D2) quand ils existent — `fields` (`custom_table`) reste
+ * le repli pour tout contenu qui n'en a pas (une fiche maison n'en ecrit
+ * aucun, V1-D4 : `createHomebrewWeapon` ne pose qu'un bloc `weapon`).
+ */
+async function fetchEquipmentBlocks(supabase: TypedClient, rulesetId: string, key: string): Promise<EquipmentBlocks | null> {
+  const resolved = await resolveEntryBlocksInRuleset(supabase, rulesetId, key);
+  if (!resolved) return null;
+
+  const customTable = resolved.blocksByType.get("custom_table") as { rows: CustomTableRow[] } | undefined;
+  return {
+    fields: customTable ? parseCustomTableFields(customTable.rows) : {},
+    weapon: resolved.blocksByType.get("weapon") as WeaponBlockData | undefined,
+    armor: resolved.blocksByType.get("armor") as ArmorBlockData | undefined,
+    itemProperties: resolved.blocksByType.get("item_properties") as ItemPropertiesBlockData | undefined,
+  };
+}
+
 /** Donnees mecaniques d'armure d'un objet d'equipement, par cle de regle — `null` si l'entree n'existe pas ou n'a pas de donnees d'armure (une arme, par exemple). */
 export async function resolveEquipmentArmorData(
   supabase: TypedClient,
@@ -224,8 +260,8 @@ export async function resolveEquipmentArmorData(
 ): Promise<Record<string, ArmorData | null>> {
   const result: Record<string, ArmorData | null> = {};
   for (const key of keys) {
-    const found = await fetchEntryFields(supabase, rulesetId, key);
-    result[key] = found ? parseArmorData(found.fields) : null;
+    const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
+    result[key] = found ? (found.armor ? armorDataFromBlock(found.armor) : parseArmorData(found.fields)) : null;
   }
   return result;
 }
@@ -238,8 +274,8 @@ export async function resolveEquipmentWeaponData(
 ): Promise<Record<string, WeaponData | null>> {
   const result: Record<string, WeaponData | null> = {};
   for (const key of keys) {
-    const found = await fetchEntryFields(supabase, rulesetId, key);
-    result[key] = found ? parseWeaponData(found.fields) : null;
+    const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
+    result[key] = found ? (found.weapon ? weaponDataFromBlock(found.weapon) : parseWeaponData(found.fields)) : null;
   }
   return result;
 }
@@ -252,8 +288,9 @@ export async function resolveEquipmentWeight(
 ): Promise<Record<string, number | null>> {
   const result: Record<string, number | null> = {};
   for (const key of keys) {
-    const found = await fetchEntryFields(supabase, rulesetId, key);
-    result[key] = found ? parseItemWeight(found.fields) : null;
+    const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
+    const dedicated = found?.weapon?.weight ?? found?.armor?.weight ?? found?.itemProperties?.weight;
+    result[key] = found ? (dedicated !== undefined ? weightFromQuantity(dedicated) : parseItemWeight(found.fields)) : null;
   }
   return result;
 }
@@ -266,8 +303,9 @@ export async function resolveEquipmentCost(
 ): Promise<Record<string, ItemCost | null>> {
   const result: Record<string, ItemCost | null> = {};
   for (const key of keys) {
-    const found = await fetchEntryFields(supabase, rulesetId, key);
-    result[key] = found ? parseItemCost(found.fields) : null;
+    const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
+    const dedicated = found?.weapon?.cost ?? found?.armor?.cost ?? found?.itemProperties?.cost;
+    result[key] = found ? (dedicated !== undefined ? costFromQuantity(dedicated) : parseItemCost(found.fields)) : null;
   }
   return result;
 }
