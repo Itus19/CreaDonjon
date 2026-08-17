@@ -1503,7 +1503,7 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 | Arme | 38 | ✅ 38/38, 16 août 2026 |
 | Espèce | 33 | ✅ 33/33, 16 août 2026 |
 | Objet | 471 | ✅ 471/471 (471 pour mondain/magique/monture), 17 août 2026 — table non mise à jour après les treizième/quatorzième étapes ci-dessous, corrigé ici |
-| Aptitude | 611 | ⬜ (611 noms traduits depuis la seizième étape, 0 description — dernier gros chantier de ce ticket) |
+| Aptitude | 611 | 🟡 en cours (dix-septième étape) — chapitre Dons + propriétés/bottes d'armes fait, voir ci-dessous |
 | **Total** | **1209** | **598/1209 (49,5 %)** |
 
 **Ordre choisi** : du plus petit volume au plus gros, pour valider la méthode (extraction du texte officiel français, jamais une reconstruction ou une traduction automatique — même règle absolue que tout le reste de cette série) sur des lots courts avant Objet et Aptitude, les deux gros morceaux. Historique d'abord sur demande explicite.
@@ -1744,6 +1744,20 @@ Sept objets concernés en 5.2.1 (Acide, Feu grégeois, Eau bénite, Poison stand
 **Point 3 — bloc de règle « lisible pour un langage de programmation ».** Recommandation donnée en texte, pas de mise en œuvre : les mécaniques fondamentales concernées (modificateur de caractéristique, bonus de maîtrise par niveau, avantage/désavantage) sont déjà codées en dur dans `src/core` parce qu'elles ne varient jamais — construire un bloc structuré pour les rendre surchargeables ajouterait une indirection pour un besoin hypothétique, contraire à la règle des trois de CLAUDE.md. À reconsidérer si une vraie règle maison touche un jour ces fondamentaux.
 
 `npm run typecheck && npm run lint && npm run test` verts (45 fichiers, 444 tests — données uniquement, aucun schéma touché). Vérifié : script d'audit final sur les 78 fiches (39 × 2 éditions) — une seule reste en un seul paragraphe (`time`, 568 caractères, cohérent tel quel), aucun résidu de bruit de PDF. Vérifié en navigateur (`using-each-ability` : 129 paragraphes distincts ; `damage-and-healing` : 25 paragraphes, sous-titres en gras).
+
+**Dix-septième étape, Aptitude — descriptions, phase de reconnaissance et premier lot (17 août 2026, retour utilisateur « oui, vas-y »).**
+
+**Découverte qui recadre tout le chantier avant d'écrire quoi que ce soit.** Contrairement à Objet magique (un seul chapitre concentré du SRD, 665 fiches), les 611 fiches Aptitude de la 5.2.1 sont éparpillées sur plus de 30 chapitres — 12 classes (480 fiches liées à `source_raw.class`), plus 131 sans classe (espèces, dons, propriétés d'arme, divers). Deuxième découverte, plus importante : en regroupant les 611 fiches par leur **nom français**, il n'y a que **428 contenus réellement uniques** — le reste sont des doublons d'import (ex. `wizard-arcane-recovery`, texte anglais vide, et `arcane-recovery`, texte anglais réel, portent tous deux le nom « Restauration magique »). Sur ces 428 groupes, 256 ont au moins un texte anglais source exploitable (`source_raw.desc` sur un des jumeaux), 172 n'en ont aucun et demandent une localisation directe dans le texte français.
+
+**Méthode adoptée à partir de ce constat** : extraire **une seule fois par groupe de nom**, puis appliquer le même texte français à toutes les clés qui partagent ce nom (`entry_key` différentes, même fiche conceptuelle) — la clé de recherche en base n'est jamais le nom seul (l'homonymie existe, ex. sept classes ont chacune leur propre « Incantation »), mais le nom **et** l'absence de description déjà écrite, pour ne jamais écraser un texte propre à une classe précise sous un texte générique d'une autre.
+
+**Premier lot traité, le chapitre « Dons » (pages 92-95 du SRD 5.2.1)** : concentré et au motif régulier comme Objet magique (Nom / « Don de <catégorie>[ (prérequis...)] » / corps), donc un vrai parseur plutôt qu'une transcription manuelle (`scripts/_tmp-parse-feats.mjs`, supprimé après usage comme tous les scripts éphémères de cette série). 17 dons extraits automatiquement (Origines : Doué, Initié à la magie, Sauvagerie martiale, Vigilant ; Général : Amélioration de caractéristique, Empoigneur ; Style de combat : Archerie, Armes à deux mains, Combat à deux armes, Défense ; Faveur épique : les sept dons de niveau 19+). Les paragraphes internes (« Répétable. », « Augmentation de caractéristique. »...) reformatés en gras sur leur propre ligne dès l'extraction, même convention que la passe Règle.
+
+**Deux noms corrigés au passage** : `skilled` portait le nom « Compétent » et `grappler` le nom « Lutteur » en base, alors que le SRD français nomme ces dons **Doué** et **Empoigneur** — incohérence de la passe de noms V1-A5 antérieure à cette session, corrigée en même temps que la description (nom et texte réécrits ensemble, jamais l'un sans l'autre).
+
+**Deuxième lot, les propriétés et bottes d'armes** (juste après le chapitre Dons dans le SRD, pages 93-97) — ces 18 entrées (Allonge, Chargement, Deux mains, Finesse, Lancer, Légère, Lourde, Munitions, Polyvalente, Portée, et les huit bottes : Coup double, Écorchure, Enchaînement, Ouverture, Poussée, Ralentissement, Renversement, Sape) sont elles aussi taguées `entry_type: feature` en base malgré leur lien plus étroit avec le bloc `weapon` — explique pourquoi elles apparaissaient dans le lot « sans classe » de l'audit initial. Texte court, un seul paragraphe chacune, extrait directement sans script dédié.
+
+`npm run typecheck && npm run lint && npm run test` verts (45 fichiers, 444 tests — données uniquement). Vérifié en navigateur (`grappler` : titre « Empoigneur », quatre sous-titres en gras rendus correctement). **Bilan de cette étape : 38 noms uniques couverts sur 428 (≈ 9 %), le reste — surtout les 12 classes et leurs sous-classes, ~40 fiches chacune — reste à faire dans une prochaine session.**
 
 ---
 
