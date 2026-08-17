@@ -1503,8 +1503,8 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 | Arme | 38 | ✅ 38/38, 16 août 2026 |
 | Espèce | 33 | ✅ 33/33, 16 août 2026 |
 | Objet | 471 | ✅ 471/471 (471 pour mondain/magique/monture), 17 août 2026 ; +1 fantôme corrigé à la dix-huitième étape (`shield-magic_item`) |
-| Aptitude | 611 | 🟡 en cours (dix-huitième étape) — 420/611 en 5.2.1 (dont 25 plafonnées : 15 Occultiste, 10 Bard/Wizard/Rogue/Barbarian/Cleric/Fighter), voir ci-dessous. **5.1 : 0/348, jamais commencée.** |
-| **Total (5.2.1 seulement)** | **1209** | **1059/1209 (87,6 %)** |
+| Aptitude | 611 | 🟡 en cours (dix-huitième étape) — 423/611 en 5.2.1 (dont 25 plafonnées : 15 Occultiste, 10 Bard/Wizard/Rogue/Barbarian/Cleric/Fighter — compté en base, pas recalculé à la main), voir ci-dessous. **5.1 : 0/348, jamais commencée.** |
+| **Total (5.2.1 seulement)** | **1209** | **1062/1209 (87,8 %)** |
 
 Colonne « Fiches concernées » = 5.2.1 uniquement. La 5.1 (2014) n'avait jamais été mesurée pour ce ticket avant la dix-huitième étape — audit complet réalisé alors : toutes les catégories ci-dessus sont **déjà à 100 % en 5.1 aussi** (par ricochet des passes V1-A5/V1-D3b antérieures), sauf Aptitude (0/348, chantier entier restant).
 
