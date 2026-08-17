@@ -375,8 +375,15 @@ export interface ItemCost {
  * toutes les entrees `Equipment` du SRD, identique en forme entre 2014 et
  * 2024 (verifie contre les deux fichiers, ex. dague : `{"quantity": 2,
  * "unit": "gp"}`). `null` si absent ou incomplet, jamais une erreur.
+ *
+ * La categorie `Poisons` (V1-D7, decouverte en ecrivant leur lore) porte
+ * `cost` comme un simple nombre plutot que `{quantity, unit}` — verifie
+ * contre les deux editions, toujours implicitement en po (le texte SRD
+ * francais l'affiche systematiquement ainsi, ex. « Sang d'assassin (150
+ * po) »). Repli explicite sur `"gp"` plutot qu'un champ invente.
  */
 export function parseItemCost(fields: ParsedFields): ItemCost | null {
+  if (typeof fields.cost === "number") return { quantity: fields.cost, unit: "gp" };
   const cost = fields.cost as { quantity?: unknown; unit?: unknown } | undefined;
   if (!cost || typeof cost.quantity !== "number" || typeof cost.unit !== "string") return null;
   return { quantity: cost.quantity, unit: cost.unit };

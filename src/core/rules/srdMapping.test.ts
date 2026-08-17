@@ -499,6 +499,11 @@ describe("parseItemCost", () => {
     const fields = parseCustomTableFields([{ field: "cost", value: JSON.stringify({ unit: "gp" }) }]);
     expect(parseItemCost(fields)).toBeNull();
   });
+
+  it("lit un cout en nombre nu (categorie Poisons, implicitement en po)", () => {
+    const fields = parseCustomTableFields([{ field: "cost", value: "150" }]);
+    expect(parseItemCost(fields)).toEqual({ quantity: 150, unit: "gp" });
+  });
 });
 
 // Champ verifie contre data/srd/srd-2014.json et srd-2024.json : `level`
