@@ -1810,7 +1810,11 @@ Vérifié en base : **111/348**.
 
 **Moine + Paladin (46/46), Rôdeur + Roublard (50/50) — quatre classes de plus, toujours aucune fiche plafonnée.** Découverte notable, Rôdeur : contrairement à la 5.2.1 où la sous-classe Chasseur avait perdu une option sur trois par palier de choix (2014→2024), la 5.1 conserve les **trois options complètes** à chaque palier (Proie du chasseur : Briseur de hordes/Goût du sang/Tueur de géants ; Tactiques défensives : Cauchemar de la horde/Défense contre les attaques multiples/Moral d'acier ; Défense de chasseur supérieure : Esquive instinctive/Esquive totale/Retour de bâton) — la 2014 est la structure d'origine, rien à reconstituer. Seul écart méthodologique : `vanish` (Rôdeur, « Disparition ») avait été laissé plafonné en 5.2.1 faute d'équivalent net, mais son texte 5.1 d'origine existe bel et bien et a été récupéré ici.
 
-Vérifié en base : **207/348**. Reste : Ensorceleur + Magicien (42), Occultiste (49, probable plus gros chantier comme en 5.2.1), et les 50 fiches sans classe (Race + Dons).
+Vérifié en base : **207/348**.
+
+**Ensorceleur + Magicien (32/42, 10 plafonnées).** Seul plafond de cette étape : les 10 fiches `dragon-ancestor-{couleur}---{dégâts}-damage` (Lignée draconique) — même motif déjà rencontré deux fois (noms Aptitude 5.1, chapitre Espèce 5.2.1) : le texte officiel ne donne qu'une table couleur→type de dégâts sans paragraphe propre par couleur, jamais un paragraphe individuel à inventer. `dragon-ancestor` (la fiche générique « Ancêtre draconique ») récupère en revanche la vraie prose plus la table. Magicien entièrement écrit sans aucun plafond.
+
+Vérifié en base : **239/348**. Reste : Occultiste (49, probable plus gros chantier comme en 5.2.1), et les 50 fiches sans classe (Race + Dons).
 
 ---
 
