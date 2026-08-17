@@ -674,7 +674,17 @@ export interface RuleEntrySummary {
   key: string;
   entryType: EntryType;
   name: string;
-  /** Cle de la classe parente — seulement pour `entryType === "subclass"` (V1-C4 suite, filtrage sous-classe/classe). `undefined` si la source ne porte pas ce champ (contenu maison sans lien de classe). */
+  /**
+   * Cle de la classe parente, pour `entryType === "subclass"` (V1-C4 suite,
+   * filtrage sous-classe/classe) ou `entryType === "feature"` (ticket #57,
+   * sur retour utilisateur : desambiguer les aptitudes homonymes dans la
+   * sidebar — sept classes ont chacune leur propre "Sorts", une quinzaine
+   * partagent "Amélioration de caractéristique"). Jamais utilisé pour nicher
+   * les Aptitudes sous leur classe comme les sous-classes : la sidebar
+   * s'en sert seulement pour afficher un suffixe de classe sur les noms en
+   * double. `undefined` si la source ne porte pas ce champ (dons, propriétés
+   * d'arme, traits d'espèce... aucun lien de classe).
+   */
   parentClassKey?: string;
   /**
    * Cle de l'espece parente (V1-D7, retour utilisateur : nicher les
@@ -731,7 +741,8 @@ async function listEntriesInRulesetChain(
         key: e.entry_key,
         entryType: e.entry_type as EntryType,
         name: translationByEntryId.get(e.id) ?? entryNameFrom(e),
-        parentClassKey: e.entry_type === "subclass" ? subclassParentClassKey(e.source_raw) : undefined,
+        parentClassKey:
+          e.entry_type === "subclass" || e.entry_type === "feature" ? subclassParentClassKey(e.source_raw) : undefined,
         parentSpeciesKey: e.entry_type === "species" ? speciesParentKey(e.source_raw) : undefined,
       }));
     }

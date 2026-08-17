@@ -13,12 +13,15 @@ function RuleEntryLink({
   currentKey,
   onNavigate,
   nested,
+  disambiguation,
 }: {
   entry: RuleEntrySummary;
   worldSlug: string;
   currentKey: string | null;
   onNavigate: () => void;
   nested?: boolean;
+  /** Nom de classe affiché en retrait sous le nom (ticket #57) — seulement pour les Aptitudes dont le nom est partagé par plusieurs classes. */
+  disambiguation?: string;
 }) {
   return (
     <Link
@@ -30,6 +33,7 @@ function RuleEntryLink({
       style={nested ? { paddingLeft: "22px" } : undefined}
     >
       {entry.name}
+      {disambiguation && <span className="ml-1 text-xs text-ink-muted">— {disambiguation}</span>}
     </Link>
   );
 }
@@ -50,6 +54,7 @@ function RuleTypeGroup({
   currentKey,
   onNavigate,
   childrenByParent,
+  classNameByKey,
 }: {
   entryType: string;
   items: RuleEntrySummary[];
@@ -57,11 +62,23 @@ function RuleTypeGroup({
   currentKey: string | null;
   onNavigate: () => void;
   childrenByParent?: Map<string, RuleEntrySummary[]>;
+  /** Nom de classe par `entry_key` de classe (ticket #57) — seulement fourni pour le groupe "feature", sert à désambiguer les noms d'Aptitude partagés par plusieurs classes ("Sorts", "Amélioration de caractéristique"...). */
+  classNameByKey?: Map<string, string>;
 }) {
   const t = useTranslations("shell");
   const tRegles = useTranslations("regles");
   const entryTypeLabels = tRegles.raw("entryTypes") as Record<string, string>;
   const [expanded, setExpanded] = useState(true);
+
+  // Un nom n'est desambigue que s'il est vraiment partage par plusieurs
+  // fiches de ce groupe — jamais un suffixe systematique qui alourdirait
+  // les Aptitudes deja uniques (la grande majorite).
+  const duplicateNames = useMemo(() => {
+    if (!classNameByKey) return null;
+    const counts = new Map<string, number>();
+    for (const entry of items) counts.set(entry.name, (counts.get(entry.name) ?? 0) + 1);
+    return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([name]) => name));
+  }, [items, classNameByKey]);
 
   return (
     <div>
@@ -78,7 +95,17 @@ function RuleTypeGroup({
         <ul>
           {items.map((entry) => (
             <li key={entry.key}>
-              <RuleEntryLink entry={entry} worldSlug={worldSlug} currentKey={currentKey} onNavigate={onNavigate} />
+              <RuleEntryLink
+                entry={entry}
+                worldSlug={worldSlug}
+                currentKey={currentKey}
+                onNavigate={onNavigate}
+                disambiguation={
+                  duplicateNames?.has(entry.name) && entry.parentClassKey
+                    ? classNameByKey?.get(entry.parentClassKey)
+                    : undefined
+                }
+              />
               {childrenByParent?.get(entry.key)?.map((sub) => (
                 <RuleEntryLink key={sub.key} entry={sub} worldSlug={worldSlug} currentKey={currentKey} onNavigate={onNavigate} nested />
               ))}
@@ -111,7 +138,7 @@ export default function RulesSidebar({
   const match = pathname.match(/\/regles\/([^/]+)/);
   const currentKey = match ? decodeURIComponent(match[1]) : null;
 
-  const { groups, subclassesByParent, subspeciesByParent } = useMemo(() => {
+  const { groups, subclassesByParent, subspeciesByParent, classNameByKey } = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = q === "" ? entries : entries.filter((e) => e.name.toLowerCase().includes(q));
 
@@ -167,7 +194,12 @@ export default function RulesSidebar({
       byType.set("subclass", [...orphanSubclasses].sort((a, b) => a.name.localeCompare(b.name)));
     }
 
-    return { groups: [...byType.entries()].sort(([a], [b]) => a.localeCompare(b)), subclassesByParent, subspeciesByParent };
+    // Nom de classe par cle (ticket #57) : construit sur `entries` en
+    // entier, jamais sur `filtered` — une recherche qui exclut le groupe
+    // Classe ne doit pas priver les Aptitudes filtrees de leur suffixe.
+    const classNameByKey = new Map(entries.filter((e) => e.entryType === "class").map((e) => [e.key, e.name]));
+
+    return { groups: [...byType.entries()].sort(([a], [b]) => a.localeCompare(b)), subclassesByParent, subspeciesByParent, classNameByKey };
   }, [entries, query]);
 
   return (
@@ -212,6 +244,7 @@ export default function RulesSidebar({
               currentKey={currentKey}
               onNavigate={() => setOpen(false)}
               childrenByParent={entryType === "class" ? subclassesByParent : entryType === "species" ? subspeciesByParent : undefined}
+              classNameByKey={entryType === "feature" ? classNameByKey : undefined}
             />
           ))}
         </nav>
