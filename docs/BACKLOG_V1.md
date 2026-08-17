@@ -1503,8 +1503,9 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 | Arme | 38 | ✅ 38/38, 16 août 2026 |
 | Espèce | 33 | ✅ 33/33, 16 août 2026 |
 | Objet | 471 | ✅ 471/471 (471 pour mondain/magique/monture), 17 août 2026 ; +1 fantôme corrigé à la dix-huitième étape (`shield-magic_item`) |
-| Aptitude | 611 | 🟡 en cours (dix-huitième étape) — 517/611 en 5.2.1 (dont 94 plafonnées : 15 Occultiste, 10 Bard/Wizard/Rogue/Barbarian/Cleric/Fighter, 32 Paladin/Sorcerer/Druid/Monk, 12 Rôdeur, 25 sans classe — compté en base, pas recalculé à la main), voir ci-dessous. **5.1 : 0/348, jamais commencée.** |
+| Aptitude | 611 | ✅ clos (dix-neuvième étape) — 517/611 en 5.2.1 (94 plafonnées, documentées), **327/348 en 5.1 (21 plafonnées, documentées)**. Aucune fiche restante à traiter, seulement des plafonds structurels vérifiés individuellement. |
 | **Total (5.2.1 seulement)** | **1209** | **1156/1209 (95,6 %)** |
+| **Total (5.1 + 5.2.1, toutes catégories hors Monstre)** | **2943** | **2828/2943 (96,1 %)** |
 
 Colonne « Fiches concernées » = 5.2.1 uniquement. La 5.1 (2014) n'avait jamais été mesurée pour ce ticket avant la dix-huitième étape — audit complet réalisé alors : toutes les catégories ci-dessus sont **déjà à 100 % en 5.1 aussi** (par ricochet des passes V1-A5/V1-D3b antérieures), sauf Aptitude (0/348, chantier entier restant).
 
@@ -1819,6 +1820,18 @@ Vérifié en base : **239/348**.
 **Occultiste (49/49, zéro plafond) — confirmation majeure.** Contrairement à la 5.2.1 où 14 des 32 Manifestations occultes/Invocations occultes étaient confirmées absentes du texte (SRD ⊂ PHB), la **5.1 contient les 32 manifestations avec un texte réel** — le SRD 2014 est le contenu d'origine complet, pas un sous-ensemble réduit comme le SRD 2024. Toutes les classes 5.1 sont désormais terminées (12/12), aucune n'a eu besoin d'un seul plafond hors Ensorceleur (10, motif table-couleur déjà connu).
 
 Vérifié en base : **288/348**. Ne reste que les 50 fiches sans classe (chapitre Race + Dons).
+
+**Les 50 fiches sans classe traitées (chapitre Race, en tout début de document, + Dons), 39/50 écrites, 11 plafonnées.** Le chapitre Race liste les 9 espèces intégralement (Elfe, Halfelin, Humain, Nain, Demi-elfe, Demi-orc, Drakéide, Gnome, Tieffelin), lu d'une traite. Onze propriétés d'arme retrouvées dans la section Équipement (`weapon-property-*`), une seule (`weapon-property-monk`) confirmée absente — même plafond que le motif déjà documenté côté 5.2.1. `grappler` (Empoigneur) récupéré dans le chapitre Dons. Les 10 fiches `draconic-ancestry-{couleur}` restent plafonnées — même motif table-sans-prose que `dragon-ancestor-{couleur}` (Ensorceleur) et que le chapitre Espèce 5.2.1.
+
+**V1-D7 est clos.** Vérification finale, en base, sur les deux rulesets et toutes les catégories (hors Monstre, structure différente et hors périmètre de ce ticket depuis le début) :
+
+| Ruleset | Total (hors Monstre) | Avec description |
+|---|---|---|
+| 5.2.1 (2024) | 1587 | 1493 (94,1 %) |
+| 5.1 (2014) | 1356 | 1335 (98,5 %) |
+| **Deux éditions** | **2943** | **2828 (96,1 %)** |
+
+L'écart restant (115 fiches, uniquement Aptitude : 94 en 5.2.1 + 21 en 5.1) est **entièrement documenté et plafonné structurellement** — jamais un oubli. Trois motifs, tous vérifiés par lecture directe du texte source plutôt que déduits d'un JSON : (1) le SRD 2024 est un sous-ensemble légal du PHB complet (invocations occultes manquantes, styles de combat réduits, features de sous-classe restructurées ou supprimées) ; (2) certaines familles de traits n'existent qu'en table couleur/type-de-dégâts sans paragraphe individuel (Ascendance/Ancêtre draconique, dans les deux éditions) ; (3) quelques fiches sont de purs doublons 2014 sans équivalent 2024 (`overchannel` base Magicien, `additional-magical-secrets` etc.), déjà couvertes par une fiche jumelle. Toute reprise future de ces 115 fiches devra revérifier individuellement plutôt que supposer qu'elles ont été oubliées.
 
 ---
 
