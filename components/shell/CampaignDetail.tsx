@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import PartyProbabilityTable from "./PartyProbabilityTable";
 
 interface MemberRow {
   campaign_id: string;
@@ -179,8 +178,6 @@ export default function CampaignDetail({
           </button>
         </div>
       </div>
-
-      <PartyProbabilityTable campaignId={campaignId} />
     </div>
   );
 }
