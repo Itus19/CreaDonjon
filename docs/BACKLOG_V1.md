@@ -1502,9 +1502,9 @@ Suite directe de V1-D3b. Celui-ci a fini le *nom* de chaque fiche des deux SRD. 
 | Classe | 12 | ✅ 12/12, 16 août 2026 |
 | Arme | 38 | ✅ 38/38, 16 août 2026 |
 | Espèce | 33 | ✅ 33/33, 16 août 2026 |
-| Objet | 473 | ⬜ |
-| Aptitude | 611 | ⬜ (8/611 déjà faites — bottes d'arme, voir ci-dessous) |
-| **Total** | **1211** | **135/1211 (11,1 %)** |
+| Objet | 471 | ✅ 471/471 (471 pour mondain/magique/monture), 17 août 2026 — table non mise à jour après les treizième/quatorzième étapes ci-dessous, corrigé ici |
+| Aptitude | 611 | ⬜ (611 noms traduits depuis la seizième étape, 0 description — dernier gros chantier de ce ticket) |
+| **Total** | **1209** | **598/1209 (49,5 %)** |
 
 **Ordre choisi** : du plus petit volume au plus gros, pour valider la méthode (extraction du texte officiel français, jamais une reconstruction ou une traduction automatique — même règle absolue que tout le reste de cette série) sur des lots courts avant Objet et Aptitude, les deux gros morceaux. Historique d'abord sur demande explicite.
 
