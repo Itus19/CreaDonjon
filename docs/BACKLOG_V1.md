@@ -1814,7 +1814,11 @@ Vérifié en base : **207/348**.
 
 **Ensorceleur + Magicien (32/42, 10 plafonnées).** Seul plafond de cette étape : les 10 fiches `dragon-ancestor-{couleur}---{dégâts}-damage` (Lignée draconique) — même motif déjà rencontré deux fois (noms Aptitude 5.1, chapitre Espèce 5.2.1) : le texte officiel ne donne qu'une table couleur→type de dégâts sans paragraphe propre par couleur, jamais un paragraphe individuel à inventer. `dragon-ancestor` (la fiche générique « Ancêtre draconique ») récupère en revanche la vraie prose plus la table. Magicien entièrement écrit sans aucun plafond.
 
-Vérifié en base : **239/348**. Reste : Occultiste (49, probable plus gros chantier comme en 5.2.1), et les 50 fiches sans classe (Race + Dons).
+Vérifié en base : **239/348**.
+
+**Occultiste (49/49, zéro plafond) — confirmation majeure.** Contrairement à la 5.2.1 où 14 des 32 Manifestations occultes/Invocations occultes étaient confirmées absentes du texte (SRD ⊂ PHB), la **5.1 contient les 32 manifestations avec un texte réel** — le SRD 2014 est le contenu d'origine complet, pas un sous-ensemble réduit comme le SRD 2024. Toutes les classes 5.1 sont désormais terminées (12/12), aucune n'a eu besoin d'un seul plafond hors Ensorceleur (10, motif table-couleur déjà connu).
+
+Vérifié en base : **288/348**. Ne reste que les 50 fiches sans classe (chapitre Race + Dons).
 
 ---
 
