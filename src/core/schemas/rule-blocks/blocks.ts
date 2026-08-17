@@ -156,13 +156,30 @@ export const zArmorBlockData = z.object({
 export type ArmorBlockData = z.infer<typeof zArmorBlockData>;
 
 // --- item_properties (layout: key_values, V1-D1) ------------------------
-// Objets non-arme/non-armure : matériel d'aventurier, objets magiques.
+// Bloc unique partage par les trois entry_type "objet" (item, magic_item,
+// mount — V1-D7, retour utilisateur explicite : "un bloc d'objet qui va
+// pour tout les objets") : chaque champ optionnel n'apparait que sur les
+// fiches concernees, jamais un bloc different par categorie. Champs ajoutes
+// en V1-D7 : `attunement_restriction` (SRD `limited-to`, ex. "Nain ou
+// creature en Harmonie avec une Ceinture de force naine" — 23 objets sur
+// 262 en portent une, jusque-la perdue), `capacity` (uniquement les
+// montures — texte brut deja mis en forme cote SRD, ex. "450 lb.", jamais
+// reparse), `contents` (paquetages d'aventurier, reference vers chaque
+// objet inclus, meme forme que `background.equipment_options[].items`).
+// Recherche faite avant d'ecrire ce bloc : aucun champ "longueur"/"largeur"/
+// "capacite de contenant" structure dans le SRD (une echelle "10 pieds de
+// haut" ou un sac "jusqu'a 30 livres" ne vivent que dans le texte libre de
+// description) — pas de champ invente pour une donnee qui n'existe nulle
+// part de facon structuree.
 export const zItemPropertiesBlockData = z.object({
   weight: zQuantity.optional(),
   cost: zQuantity.optional(),
   rarity: z.string().optional(),
   requires_attunement: z.boolean().optional(),
+  attunement_restriction: z.string().optional(),
   category: z.string().optional(),
+  capacity: z.string().optional(),
+  contents: z.array(z.object({ ref: zReference.optional(), label: z.string(), quantity: z.number().int().positive() })).optional(),
 });
 export type ItemPropertiesBlockData = z.infer<typeof zItemPropertiesBlockData>;
 

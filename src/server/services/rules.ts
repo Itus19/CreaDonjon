@@ -10,6 +10,7 @@ import {
   type ClassProgressionBlockData,
   type EffectsBlockData,
   type EntryType,
+  type ItemPropertiesBlockData,
   type ReferencePrimitive,
   type ScalingBlockData,
   type SpeciesTraitsBlockData,
@@ -302,6 +303,17 @@ export type ResolvedWeaponBlockData = Omit<WeaponBlockData, "properties" | "mast
  */
 export type ResolvedSpeciesTraitsBlockData = Omit<SpeciesTraitsBlockData, "traits"> & {
   traits: (ReferencePrimitive & { resolved_name: string; resolved_description: string })[];
+};
+
+/**
+ * `item_properties.contents` (V1-D7, passe Objet — paquetages d'aventurier)
+ * augmente du nom resolu de chaque objet contenu, meme motif que
+ * `background.equipment_options[].items` : seul le nom est necessaire (pas
+ * de description imbriquee, contrairement a `weapon`/`species_traits`), donc
+ * `resolveEntryNames` suffit plutot que `resolveEntryDetails`.
+ */
+export type ResolvedItemPropertiesBlockData = Omit<ItemPropertiesBlockData, "contents"> & {
+  contents?: { ref?: ReferencePrimitive; label: string; quantity: number; resolved_label: string }[];
 };
 
 /**
@@ -621,6 +633,23 @@ export async function getRuleEntryForWorld(
           resolved_description: details.get(t.key)?.description ?? "",
         })),
       } satisfies ResolvedSpeciesTraitsBlockData,
+    };
+  }
+
+  // Augmente le bloc `item_properties` avec le nom resolu de chaque objet
+  // d'un paquetage (V1-D7, passe Objet) — meme motif que
+  // `background.equipment_options` ci-dessus, seul le nom est necessaire.
+  const itemPropertiesBlockIndex = blocks.findIndex((b) => b.blockType === "item_properties");
+  if (itemPropertiesBlockIndex !== -1) {
+    const itemData = blocks[itemPropertiesBlockIndex].data as ItemPropertiesBlockData;
+    const contentKeys = itemData.contents?.flatMap((c) => (c.ref ? [c.ref.key] : [])) ?? [];
+    const contentNames = await resolveEntryNames(supabase, rulesetId, contentKeys, locale);
+    blocks[itemPropertiesBlockIndex] = {
+      ...blocks[itemPropertiesBlockIndex],
+      data: {
+        ...itemData,
+        contents: itemData.contents?.map((c) => ({ ...c, resolved_label: c.ref ? (contentNames.get(c.ref.key) ?? c.label) : c.label })),
+      } satisfies ResolvedItemPropertiesBlockData,
     };
   }
 

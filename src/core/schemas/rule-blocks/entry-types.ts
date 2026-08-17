@@ -1,4 +1,9 @@
-/** Liste fermee de ruleset_entries.entry_type (SCHEMA.md §9). */
+/**
+ * Liste fermee de ruleset_entries.entry_type (SCHEMA.md §9). `magic_item`
+ * et `mount` ajoutes en V1-D7 (passe Objet, retour utilisateur explicite) —
+ * meme migration `20260817120001` cote base (le CHECK constraint est aussi
+ * une liste fermee, jamais un texte libre).
+ */
 export const ENTRY_TYPES = [
   "spell",
   "item",
@@ -12,6 +17,8 @@ export const ENTRY_TYPES = [
   "rule",
   "background",
   "species",
+  "magic_item",
+  "mount",
 ] as const;
 export type EntryType = (typeof ENTRY_TYPES)[number];
 
@@ -42,4 +49,6 @@ export const REQUIRED_BLOCKS: Partial<Record<EntryType, string[]>> = {
   condition: ["condition_effects"],
   subclass: ["subclass_features"],
   species: ["species_traits"],
+  magic_item: ["item_properties"],
+  mount: ["item_properties"],
 };

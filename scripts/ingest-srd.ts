@@ -931,14 +931,46 @@ function itemPropertiesBlock(entry: SrdRecord): EntryBlock | null {
     (typeof gearCategory?.name === "string" ? gearCategory.name : undefined) ??
     (typeof equipmentCategory?.name === "string" ? equipmentCategory.name : undefined);
 
+  // Champs ajoutes en V1-D7 (bloc unique pour item/magic_item/mount, retour
+  // utilisateur) : `limited-to` (23 objets sur 262, ex. "Nain ou creature en
+  // Harmonie avec une Ceinture de force naine"), `capacity` (uniquement les
+  // montures, texte SRD deja mis en forme, ex. "450 lb.", jamais reparse),
+  // `contents` (paquetages d'aventurier — chaque objet inclus EST une
+  // reference, meme motif que `background.equipment_options[].items`).
+  const attunementRestriction = typeof entry["limited-to"] === "string" ? (entry["limited-to"] as string) : undefined;
+  const capacity = typeof entry.capacity === "string" ? (entry.capacity as string) : undefined;
+  const rawContents = Array.isArray(entry.contents) ? (entry.contents as SrdRecord[]) : [];
+  const contents = rawContents
+    .map((c) => {
+      const item = c.item as SrdRecord | undefined;
+      const index = item?.index;
+      const name = item?.name;
+      if (typeof index !== "string" || typeof name !== "string" || typeof c.quantity !== "number") return null;
+      return { ref: { kind: "rule" as const, key: index }, label: name, quantity: c.quantity };
+    })
+    .filter((c): c is { ref: { kind: "rule"; key: string }; label: string; quantity: number } => c !== null);
+
   const data = {
     weight: weight !== null ? quantity(weight, "lb") : undefined,
     cost: cost ? quantity(cost.quantity, cost.unit) : undefined,
     rarity,
     requires_attunement: requiresAttunement,
+    attunement_restriction: attunementRestriction,
     category,
+    capacity,
+    contents: contents.length > 0 ? contents : undefined,
   };
-  if (!data.weight && !data.cost && !data.rarity && !data.requires_attunement && !data.category) return null;
+  if (
+    !data.weight &&
+    !data.cost &&
+    !data.rarity &&
+    !data.requires_attunement &&
+    !data.attunement_restriction &&
+    !data.category &&
+    !data.capacity &&
+    !data.contents
+  )
+    return null;
 
   validateBlockData("item_properties", data);
   return { block_type: "item_properties", display: { label: "Proprietes", layout: "key_values" }, data, display_order: 150 };
@@ -1443,7 +1475,7 @@ function backgroundBlock(entry: SrdRecord): EntryBlock | null {
 
 const CATEGORY_ENTRY_TYPE: Record<string, EntryType> = {
   Spells: "spell",
-  "Magic-Items": "item",
+  "Magic-Items": "magic_item",
   Poisons: "item",
   Classes: "class",
   Subclasses: "subclass",
@@ -1467,6 +1499,12 @@ const CATEGORY_ENTRY_TYPE: Record<string, EntryType> = {
  * 2014 porte une seule categorie (equipment_category, objet singulier),
  * 2024 en porte plusieurs (equipment_categories, tableau) — les deux formes
  * sont couvertes ici plutot que dupliquees par version de SRD.
+ *
+ * `mount` (V1-D7, retour utilisateur) se detecte via `vehicle_category`,
+ * seul champ fiable : les huit montures achetables (cheval, mule, chameau...)
+ * portent `vehicle_category: "Mounts and Other Animals"` alors que leur
+ * `equipment_category` reste le generique "Mounts and Vehicles" partage avec
+ * le harnachement et les vehicules a rames — verifie sur les deux editions.
  */
 function equipmentEntryType(entry: SrdRecord): EntryType {
   const single = entry.equipment_category as SrdRecord | undefined;
@@ -1476,10 +1514,20 @@ function equipmentEntryType(entry: SrdRecord): EntryType {
     ...(multiple ? multiple.map((c) => c.name) : []),
   ].filter((n): n is string => typeof n === "string");
 
+  if (entry.vehicle_category === "Mounts and Other Animals") return "mount";
   if (names.some((n) => /armor|shield/i.test(n))) return "armor";
   if (names.some((n) => /weapon/i.test(n))) return "weapon";
   return "item";
 }
+
+/**
+ * Deux entrees "Equipment" sont en realite des lignes de cout de la regle
+ * "Pieces de monnaie" (ecuries, fourrage), pas des objets — V1-D7, retour
+ * utilisateur explicite ("ecurie par jour... plutot une regle generale de
+ * cout non ?"). Exclues ici plutot que reclassees : leur contenu rejoint
+ * `standard-exchange-rates` a la main (aucune fiche Objet equivalente).
+ */
+const EXCLUDED_SERVICE_COST_INDICES = new Set(["stabling-1-day", "animal-feed-1-day"]);
 
 // --------------------------------------------------------------------
 // Transformation d'une entree brute -> entree typee (blocs)
@@ -1549,7 +1597,7 @@ function transformEntry(
     if (armor) blocks.push(armor);
   }
 
-  if (entryType === "item") {
+  if (entryType === "item" || entryType === "magic_item" || entryType === "mount") {
     const itemProperties = itemPropertiesBlock(entry);
     if (itemProperties) blocks.push(itemProperties);
   }
@@ -1713,6 +1761,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
 
     const transformed: TransformedEntry[] = [];
     for (const item of sourceItems) {
+      if (typeof item.index === "string" && EXCLUDED_SERVICE_COST_INDICES.has(item.index)) continue;
       try {
         const t = transformEntry(category, item, config.sourceAttribution, levels, remapFeatureKey, subclassesForSlots, speciesAndSubspeciesKeys);
         transformed.push(t);

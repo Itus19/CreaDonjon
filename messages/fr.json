@@ -90,7 +90,9 @@
       "condition": "Condition",
       "rule": "Règle",
       "background": "Historique",
-      "species": "Espèce"
+      "species": "Espèce",
+      "magic_item": "Objet magique",
+      "mount": "Monture"
     }
   },
   "mj": {

@@ -90,7 +90,9 @@
       "condition": "Condition",
       "rule": "Rule",
       "background": "Background",
-      "species": "Species"
+      "species": "Species",
+      "magic_item": "Magic item",
+      "mount": "Mount"
     }
   },
   "mj": {

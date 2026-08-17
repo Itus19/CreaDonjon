@@ -12,7 +12,6 @@ import type {
   CustomTableBlockData,
   DescriptionBlockData,
   EffectsBlockData,
-  ItemPropertiesBlockData,
   PrerequisitesBlockData,
   ScalingBlockData,
   SpellCastingBlockData,
@@ -36,6 +35,7 @@ import { ftToM, lbToKg } from "@/src/core/rules/encumbrance";
 import type {
   ResolvedBackgroundBlockData,
   ResolvedBackgroundEquipmentOption,
+  ResolvedItemPropertiesBlockData,
   ResolvedSpeciesTraitsBlockData,
   ResolvedSubclassSlotBlockData,
   ResolvedWeaponBlockData,
@@ -390,13 +390,45 @@ function Armor({ data }: { data: ArmorBlockData }) {
   return <KeyValues items={items} />;
 }
 
-function ItemProperties({ data }: { data: ItemPropertiesBlockData }) {
+/**
+ * Bloc unique partage par item/magic_item/mount (V1-D7, passe Objet, retour
+ * utilisateur) : chaque ligne n'apparait que si la fiche porte la donnee —
+ * une monture n'a pas de rarete, un objet mondain n'a pas de capacite de
+ * charge, un paquetage n'a ni l'un ni l'autre.
+ */
+function ItemProperties({ data, worldSlug }: { data: ResolvedItemPropertiesBlockData; worldSlug: string }) {
   const items = [
     ...(data.category ? [{ label: "Categorie", value: data.category }] : []),
     ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
     ...(data.cost ? [{ label: "Valeur", value: costText(data.cost) as string }] : []),
+    ...(data.capacity ? [{ label: "Capacite de charge", value: data.capacity }] : []),
     ...(data.rarity ? [{ label: "Rarete", value: ITEM_RARITY_LABELS_FR[data.rarity] ?? data.rarity }] : []),
-    ...(data.requires_attunement !== undefined ? [{ label: "Attunement", value: data.requires_attunement ? "Requis" : "Non requis" }] : []),
+    ...(data.requires_attunement !== undefined ? [{ label: "Harmonisation", value: data.requires_attunement ? "Requise" : "Non requise" }] : []),
+    ...(data.attunement_restriction ? [{ label: "Restriction d'harmonisation", value: data.attunement_restriction }] : []),
+    ...(data.contents && data.contents.length > 0
+      ? [
+          {
+            label: "Contenu",
+            fullWidth: true,
+            value: (
+              <div className="flex flex-col gap-1">
+                {data.contents.map((item, i) => (
+                  <div key={i} className="flex items-baseline gap-1.5 text-sm">
+                    <span className="mech shrink-0 text-ink-muted">×{item.quantity}</span>
+                    {item.ref ? (
+                      <Link href={`/m/${worldSlug}/regles/${item.ref.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
+                        {item.resolved_label}
+                      </Link>
+                    ) : (
+                      <span>{item.resolved_label}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ),
+          },
+        ]
+      : []),
   ];
   return <KeyValues items={items} />;
 }
@@ -697,7 +729,7 @@ export function renderBlockData(
   if (blockType === "weapon") return <Weapon data={data as ResolvedWeaponBlockData} worldSlug={worldSlug} />;
   if (blockType === "species_traits") return <SpeciesTraits data={data as ResolvedSpeciesTraitsBlockData} worldSlug={worldSlug} />;
   if (blockType === "armor") return <Armor data={data as ArmorBlockData} />;
-  if (blockType === "item_properties") return <ItemProperties data={data as ItemPropertiesBlockData} />;
+  if (blockType === "item_properties") return <ItemProperties data={data as ResolvedItemPropertiesBlockData} worldSlug={worldSlug} />;
   if (blockType === "charges") return <Charges data={data as ChargesBlockData} />;
   if (blockType === "stat_block") return <StatBlock data={data as StatBlockBlockData} />;
   if (blockType === "traits") return <Traits data={data as TraitsBlockData} />;
