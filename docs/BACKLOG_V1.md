@@ -1863,7 +1863,7 @@ Spécification : `specs/outils-mj.md`.
 
 | Ticket | Contenu |
 |---|---|
-| **V1-E1** `M` | Blocs `random_table`, tirage, références, tirages en cascade bornés |
+| **V1-E1** `M` | Blocs `random_table`, tirage, références, tirages en cascade bornés — **fait** |
 | **V1-E2** `M` | Générateurs par tables : noms, rumeurs, butin. **Pas** les descriptions en prose |
 | **V1-E3** `L` | `encounter_budget` en ruleset, générateur de rencontres, sauvegarde de combat |
 | **V1-E4** `L` | `combats` et `combat_participants`, suivi d'initiative, annulation par le journal |
@@ -1873,6 +1873,20 @@ Spécification : `specs/outils-mj.md`.
 **Découpage important sur E2 :** un générateur de noms tire sur une table, c'est déterministe. Une description de taverne en 100 mots exige un modèle. Le premier est ici, le second au lot F. Les gabarits sont écrits maintenant, les emplacements en prose restent vides jusqu'au lot F.
 
 **V1-E5 mérite d'être fait tôt** malgré sa taille : c'est une fonction pure sur `characterSheet()`, presque gratuite, et c'est l'outil que personne d'autre ne propose.
+
+### V1-E1 — Blocs `random_table` · `M` — fait
+
+Spécification complète : `specs/outils-mj.md` §2.
+
+**Fait** :
+
+- **Noyau pur, tests d'abord** (`src/core/tables/roll.ts`, 15 tests) : selection d'une entree par plage de de (`pickEntryForRoll`), extraction/interpolation des references en cascade (`{table:cle}`), `drawOnce`/`drawMultiple` — `unique_draws` implemente par rejet borne puis repli deterministe sur les entrees encore inutilisees (jamais de boucle infinie sur une table desequilibree). `weight` est documentaire (affichage), pas un second axe de selection independant de `range` — les deux coincident dans tous les exemples de la spec, garder une seule source de verite pour la selection reelle evite toute ambiguite si un auteur les laissait diverger.
+- **Bloc `random_table` cote entite** (`src/core/schemas/blocks/randomTable.ts`, miroir Zod exact des types purs comme `zFormulaNode`/`FormulaNode`) : `key` (ajoute au-dela de la spec — necessaire pour qu'une reference `{table:cle}` designe une AUTRE table sans ambiguite, une entite peut porter plusieurs tables), `die`, `entries` (range/poids/texte/refs), `unique_draws`, `attribution`. `refs` reutilise `zBlockReference` tel quel (meme primitive que l'inventaire/le personnage), jamais une troisieme forme concurrente.
+- **Portee volontairement limitee a l'attache ENTITE** (« propre au monde »), pas encore l'attache ruleset (« bibliotheque partagee », specs/outils-mj.md §2.2) — meme discipline que V1-D4 (bloc `weapon` seul, pas un moteur generique) : un cas concret a la fois. De meme, la cascade ne resout que les tables de la MEME entite — une bibliotheque de tables partagee entre entites reste a ouvrir avec son propre besoin concret.
+- **Service + route de tirage** (`src/server/services/tables.ts`, `POST /api/blocks/[blockId]/draw`) : `serverRng` (jamais `Math.random()` cote client, CLAUDE.md regle 6), profondeur de cascade bornee a 3, cycles detectes (`TableCascadeCycleError`/`TableCascadeDepthError`, 400 pas 500 — une table mal construite par son auteur, pas une panne serveur). Aucune fuite de visibilite par la cascade : `getBlockById` reste soumis a la RLS de l'appelant, une table `gm`-only referencee depuis une table publique resout simplement a rien (le `{table:x}` reste tel quel) si l'appelant ne peut pas la lire. Quatre tests d'integration sur base reelle (tirage simple, cascade reelle entre deux blocs, cycle detecte, bloc introuvable).
+- **Editeur + tirage dans l'interface** (`components/blocks/RandomTableBlockEditor.tsx`, meme precedent que les autres editeurs de bloc de wiki — toujours editable en place) : cle/de/repetition/attribution, liste d'entrees (plage/texte), bouton « Tirer » avec compte, resultats affiches. **Pas encore d'editeur pour `refs`** (le clic sur un resultat vers l'entite/la regle referencee) — porte par le schema et le moteur, pas par cette interface : un cas concret pour un prochain ticket.
+- Verifie dans le navigateur de bout en bout, sur la base reelle : bloc cree sur « L'Ancre Rouillee », entree de rumeur saisie et sauvegardee, tirage reussi via `/api/blocks/[blockId]/draw` (roll serveur, resultat affiche).
+- `typecheck`/`lint`/`test` (487/487, dont 19 nouveaux tests purs+integration)/`build` tous verts.
 
 ---
 

@@ -31,6 +31,35 @@ describe("registry des blocs de wiki", () => {
     expect(validateBlockData("custom_table", data)).toEqual(data);
   });
 
+  it("valide un random_table avec une reference d'entite", () => {
+    const data = {
+      __v: 1,
+      key: "rumeurs",
+      die: "d20",
+      entries: [
+        {
+          range: { min: 1, max: 3 },
+          weight: 3,
+          text: "Un enfant a disparu près du vieux moulin.",
+          refs: [{ kind: "entity" as const, id: "ent_moulin" }],
+        },
+      ],
+      unique_draws: false,
+    };
+    expect(validateBlockData("random_table", data)).toEqual(data);
+  });
+
+  it("rejette une notation de dé invalide sur random_table", () => {
+    const data = {
+      __v: 1,
+      key: "rumeurs",
+      die: "20",
+      entries: [{ range: { min: 1, max: 20 }, weight: 20, text: "x" }],
+      unique_draws: false,
+    };
+    expect(() => validateBlockData("random_table", data)).toThrow();
+  });
+
   it("valide un texte avec des segments", () => {
     const data = {
       __v: 1,

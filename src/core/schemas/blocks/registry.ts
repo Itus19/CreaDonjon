@@ -9,12 +9,16 @@ import { zInventoryBlockData } from "./inventory";
 import { zSpellcastingBlockData } from "./spellcasting";
 import { zResourcesBlockData } from "./resources";
 import { zStatblockBlockData } from "./statblock";
+import { zRandomTableBlockData } from "./randomTable";
 
 /**
  * Catalogue des blocs de wiki (specs/wiki-blocs.md §1, docs/SCHEMA.md §7).
  * V0 : text, infobox, image, custom_table (`text` ex-`description` et
  * `image` ex-`gallery`, renommes en V0-06e). V1 (V1-B2) : character,
- * inventory, spellcasting, resources, statblock.
+ * inventory, spellcasting, resources, statblock. V1-E1 : random_table
+ * (specs/outils-mj.md §2) — attache entite seulement pour l'instant,
+ * l'attache ruleset (bibliotheque partagee) reste a ouvrir avec son propre
+ * cas concret (regle des trois, meme decision que V1-D4 pour weapon).
  */
 export const BLOCK_TYPES = [
   "text",
@@ -26,6 +30,7 @@ export const BLOCK_TYPES = [
   "spellcasting",
   "resources",
   "statblock",
+  "random_table",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -39,6 +44,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   spellcasting: "spellcasting",
   resources: "resources",
   statblock: "statblock",
+  random_table: "table",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -52,6 +58,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   spellcasting: zSpellcastingBlockData,
   resources: zResourcesBlockData,
   statblock: zStatblockBlockData,
+  random_table: zRandomTableBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -59,6 +66,13 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
   infobox: { __v: 1, entries: [] },
   image: { __v: 1, url: "", caption: "" },
   custom_table: { __v: 1, columns: [], rows: [] },
+  random_table: {
+    __v: 1,
+    key: "nouvelle-table",
+    die: "d20",
+    entries: [{ range: { min: 1, max: 20 }, weight: 20, text: "Nouveau résultat" }],
+    unique_draws: false,
+  },
   character: {
     __v: 1,
     species: null,

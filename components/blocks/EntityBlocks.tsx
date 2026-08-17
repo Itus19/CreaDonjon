@@ -9,6 +9,7 @@ import TextBlockEditor from "./TextBlockEditor";
 import InfoboxBlockEditor from "./InfoboxBlockEditor";
 import ImageBlockEditor from "./ImageBlockEditor";
 import CustomTableBlockEditor from "./CustomTableBlockEditor";
+import RandomTableBlockEditor from "./RandomTableBlockEditor";
 import InventoryBlockEditor from "./InventoryBlockEditor";
 import SpellcastingBlockEditor from "./SpellcastingBlockEditor";
 import ResourcesBlockEditor from "./ResourcesBlockEditor";
@@ -18,6 +19,7 @@ import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import type { CustomTableBlockData } from "@/src/core/schemas/blocks/customTable";
+import type { RandomTableBlockData } from "@/src/core/schemas/blocks/randomTable";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
@@ -42,6 +44,7 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   infobox: "Encadré",
   image: "Image",
   custom_table: "Tableau",
+  random_table: "Table aléatoire",
   character: "Personnage",
   inventory: "Inventaire",
   spellcasting: "Incantation",
@@ -75,6 +78,14 @@ function BlockDataEditor({
         <CustomTableBlockEditor
           data={block.data as CustomTableBlockData}
           onChange={(d) => onChange(d)}
+        />
+      );
+    case "random_table":
+      return (
+        <RandomTableBlockEditor
+          data={block.data as RandomTableBlockData}
+          onChange={(d) => onChange(d)}
+          blockId={block.id}
         />
       );
     case "inventory":
