@@ -1627,6 +1627,24 @@ Les trois recommandations (fusionner Écurie/Nourriture dans la règle « Pièce
 
 **Reste à faire pour cette passe** : le contenu réel (lore inventé + vérification des propriétés mécaniques) des ~471 fiches Objet elles-mêmes n'est pas commencé — ce qui précède ne fait que poser la structure qui l'accueillera.
 
+**Neuvième étape, Objet mondain — description (146/160, SRD 5.2.1, 17 août 2026).** À la différence d'Arme/Classe/Espèce, l'objet mondain **porte une vraie prose SRD** : sections « Outils » (p.99) et « Matériel d'aventurier » (p.100-106) de `srd-5.2.1-fr.txt`, un paragraphe officiel par objet dans l'ordre alphabétique — passe d'**extraction**, pas d'invention, découverte en ouvrant le chantier plutôt que supposée. Vérifié au préalable que `blocks.description` de ces 160 fiches était vide malgré `source: official_srd` déjà posé sur le nom seul (passe V1-A5, qui n'avait traduit que les noms) — l'anglais brut s'affichait donc encore sur chaque fiche (ex. Sac à dos : *"A Backpack holds up to 30 pounds..."*).
+
+**Deux erreurs de la passe V1-A5 corrigées au passage** (même logique que les points 1 à 6 de la passe Espèce : corriger ce qu'on croise en travaillant, pas partir à la chasse) :
+- `flask` et `vial` partageaient le même nom français « Fiole » — le SRD distingue pourtant Fiole (1 po, 120 ml) de Flasque (2 pc, 0,5 l). `flask` renommé en « Flasque ».
+- `clothes-common` (« Clothes, common ») n'avait jamais reçu de nom français — entrée fusionnée depuis la 5.1 (2014), absente du jeu de données 2024 propre, oubliée de la passe de noms. Renommée « Vêtements courants », description courte `invented_lore` (aucune prose SRD, seule exception `invented_lore` de cette étape).
+
+**Ce qui a été extrait (`source: official_srd`, 134 entrées) :**
+- ~90 objets de « Matériel d'aventurier » — paragraphe dédié par objet (Corde, Grappin, Trousse de soins...), y compris les huit paquetages d'aventurier (texte officiel de composition, redondant avec mais distinct du bloc structuré `contents` posé à l'étape précédente).
+- 22 outils — la fiche officielle n'est pas un paragraphe narratif mais une entrée structurée (Caractéristique associée / Utilisation / Artisanat), reformatée en une phrase de prose plutôt qu'inventée, jamais reparse depuis le JSON anglais qui ne porte pas ces informations.
+- 25 variantes partageant un seul paragraphe générique du SRD lui-même (pas une simplification de ce chantier) : cinq focaliseurs arcaniques (Baguette, Bâton, Cristal, Orbe, Sceptre), deux focaliseurs druidiques (Baguette d'if, Branche de houx), trois symboles sacrés (Amulette, Emblème, Reliquaire), dix instruments de musique, quatre jeux, cinq munitions.
+- Grimoire et les trois Selles (texte trouvé hors de la section Équipement — le premier dans la fiche de classe Magicien, les secondes dans « Montures et véhicules »).
+
+**Onze véhicules et bateaux en `invented_lore`** (Charrette, Traîneau, Calèche, Chariot, Char, Barque, Galère, Barge, Drakkar, Bateau à voiles, Navire de guerre) : confirmé qu'aucun ne porte de paragraphe propre dans le SRD — seulement des règles génériques (Barde/Selles/cargaison pour les véhicules tractés, Vitesse/Équipage/Passagers pour les bateaux), même situation que les armes. Un court paragraphe calibré sur le rôle mécanique déjà en base (poids, capacité, prix), même registre que la passe Arme.
+
+**Reste (14 fiches, Poisons — `assassins-blood`, `burnt-othur-fumes`, `crawler-mucus`, `essence-of-ether`, `malice`, `midnight-tears`, `oil-of-taggit`, `pale-tincture`, `purple-worm-poison`, `serpent-venom`, `spiders-sting`, `torpor`, `truth-serum`, `wyvern-poison`)** : catégorie SRD séparée (`Poisons` dans `CATEGORY_ENTRY_TYPE`), pas encore localisée dans le texte français — probablement liée à la fiche Règle « Poison » plutôt qu'au chapitre Équipement, à vérifier avant d'écrire quoi que ce soit. Edition 5.1 (2014, 176 fiches `item`) pas encore traitée non plus — mêmes objets pour l'essentiel, mais fichier source et compte différents.
+
+`npm run typecheck && npm run lint && npm run test` verts (45 fichiers, 440 tests) après cette étape (aucun fichier de code touché, uniquement des données). Vérifié en navigateur : Sac à dos et Outils de voleur (prose française), Flasque (nom corrigé, distinct de Fiole), Navire de guerre (lore inventé, catégorie Monture/Véhicule).
+
 ---
 
 ## Lot E — Outils de MJ déterministes
