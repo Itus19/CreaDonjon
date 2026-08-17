@@ -1867,7 +1867,7 @@ Spécification : `specs/outils-mj.md`.
 | **V1-E2** `M` | Générateurs par tables : noms, rumeurs, butin. **Pas** les descriptions en prose |
 | **V1-E3** `L` | `encounter_budget` en ruleset, générateur de rencontres, sauvegarde de combat |
 | **V1-E4** `L` | `combats` et `combat_participants`, suivi d'initiative, annulation par le journal |
-| **V1-E5** `S` | Tables de probabilités de réussite — fonction pure sur la fiche dérivée |
+| **V1-E5** `S` | Tables de probabilités de réussite — fonction pure sur la fiche dérivée — **fait** |
 | **V1-E6** `M` | Mécanisme générique de promotion en entité, réutilisé par chronologie, inventaire, tables |
 
 **Découpage important sur E2 :** un générateur de noms tire sur une table, c'est déterministe. Une description de taverne en 100 mots exige un modèle. Le premier est ici, le second au lot F. Les gabarits sont écrits maintenant, les emplacements en prose restent vides jusqu'au lot F.
@@ -1887,6 +1887,20 @@ Spécification complète : `specs/outils-mj.md` §2.
 - **Editeur + tirage dans l'interface** (`components/blocks/RandomTableBlockEditor.tsx`, meme precedent que les autres editeurs de bloc de wiki — toujours editable en place) : cle/de/repetition/attribution, liste d'entrees (plage/texte), bouton « Tirer » avec compte, resultats affiches. **Pas encore d'editeur pour `refs`** (le clic sur un resultat vers l'entite/la regle referencee) — porte par le schema et le moteur, pas par cette interface : un cas concret pour un prochain ticket.
 - Verifie dans le navigateur de bout en bout, sur la base reelle : bloc cree sur « L'Ancre Rouillee », entree de rumeur saisie et sauvegardee, tirage reussi via `/api/blocks/[blockId]/draw` (roll serveur, resultat affiche).
 - `typecheck`/`lint`/`test` (487/487, dont 19 nouveaux tests purs+integration)/`build` tous verts.
+
+### V1-E5 — Tables de probabilités de réussite · `S` — fait
+
+Spécification complète : `specs/arbitrage-modifications.md` §3.6.
+
+**Fait** :
+
+- **Noyau pur, tests d'abord** (`src/core/rules/probability.ts`, 11 tests) : `successProbability(mod, dd, rollState)` — `P(1d20 + mod >= DD)` par enumeration brute (20 issues en jet normal, 400 en avantage/desavantage — max/min des deux des) plutot qu'une formule fermee, plus facile a lire et a tester pour un volume negligeable. `skillProbabilityTable(sheet, dcs = [10, 15, 20])` reprend directement `DerivedSheet.skills` (mod + `rollState` deja portes par V1-B1, §B4 regle 6) — confirme que la fonction est bien « presque gratuite » comme l'annoncait la spec : aucune nouvelle donnee en base, aucun nouveau champ sur la fiche.
+- **Choix de portee explicitement demande a l'utilisateur** : la spec dit « un tableau PJ × competence » sans preciser si c'est la fiche d'un seul personnage ou une vue MJ multi-PJ. Question posee, reponse : **une vue MJ groupant tous les PJ d'une campagne**, pas un ajout a la fiche jouable individuelle — c'est ce qui est construit.
+- **Agregation serveur** (`src/server/services/partyProbabilities.ts`) : liste les personnages `is_pc = true` d'une campagne (`listCampaignCharacters`), resout la fiche derivee de chacun via `resolveCharacterActionContext` (le meme calcul que les actions de jeu reelles, jamais recalcule autrement), silencieusement absent du resultat si sa fiche est incomplete — un tableau MJ n'a pas a bloquer sur UN PJ mal rempli parmi d'autres.
+- **Route** `GET /api/campaigns/[campaignId]/probabilities` : DD fixes a 10/15/20 (§3.6), pas de parametre de personnalisation — un seul cas concret pour l'instant, comme le reste du lot E.
+- **Interface** (`components/shell/PartyProbabilityTable.tsx`, integre a `CampaignDetail.tsx`) : jamais charge en avance (bouton « Afficher », meme discipline que le reste de `CampaignDetail`), un mini-tableau competence × DD par PJ, avantage/desavantage signale en regard de la competence concernee.
+- Verifie dans le navigateur sur la base reelle (campagne « La Croisade des Ombres », PJ Jean-Pascal) : valeurs exactes (mod +0 → 55 %/30 %/5 % aux DD 10/15/20, mod +2 → 65 %/40 %/15 %), coherentes avec le calcul attendu.
+- `typecheck`/`lint`/`test` (498/498, dont 11 nouveaux tests purs)/`build` tous verts.
 
 ---
 
