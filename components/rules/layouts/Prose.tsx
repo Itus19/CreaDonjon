@@ -36,11 +36,21 @@ export function renderMarkdownBoldText(text: string, keyPrefix: string): ReactNo
   });
 }
 
-/** Mise en page `prose` (specs/regles-blocs.md §4) : segments narratifs. Une fiche de regle importee n'a que du public — pas de visibilite par segment ici (contrairement au wiki). */
-export default function Prose({ segments }: { segments: { text: string }[] }) {
+/**
+ * Mise en page `prose` (specs/regles-blocs.md §4) : segments narratifs. Une
+ * fiche de regle importee n'a que du public — pas de visibilite par segment
+ * ici (contrairement au wiki).
+ *
+ * `pageRef` (V1-D5, specs/ruleset-personnel.md §1) : une reference de page
+ * ("Voir MM 2024, p. 232."), jamais du contenu narratif — rendue en dehors
+ * du flux de `segments`, visuellement distincte (italique, muette), pour
+ * qu'elle ne se confonde jamais avec la prose elle-meme.
+ */
+export default function Prose({ segments, pageRef }: { segments: { text: string }[]; pageRef?: string }) {
   return (
     <div className="rich-text-content flex flex-col gap-2">
       {segments.flatMap((segment, i) => renderMarkdownBoldText(segment.text, `seg-${i}`))}
+      {pageRef && <p className="text-sm italic text-ink-muted">{pageRef}</p>}
     </div>
   );
 }

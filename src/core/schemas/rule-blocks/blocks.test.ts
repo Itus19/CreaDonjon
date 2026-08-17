@@ -29,6 +29,13 @@ describe("zDescriptionBlockData", () => {
       segments: [{ text: "Un texte." }],
     });
   });
+
+  it("accepte une reference de page optionnelle (V1-D5, ruleset personnel)", () => {
+    expect(zDescriptionBlockData.parse({ segments: [], page_ref: "Voir MM 2024, p. 232." })).toEqual({
+      segments: [],
+      page_ref: "Voir MM 2024, p. 232.",
+    });
+  });
 });
 
 describe("zSpellCastingBlockData", () => {

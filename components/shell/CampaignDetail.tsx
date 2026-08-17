@@ -17,7 +17,11 @@ interface CharacterRow {
 interface CampaignDetailData {
   members: MemberRow[];
   characters: CharacterRow[];
+  rulesetContentOrigin: string | null;
 }
+
+/** V1-D5, specs/ruleset-personnel.md §3.1 : une table de jeu ordinaire (4-6 joueurs + MJ) reste bien en-deca — au-dela, un rappel plus explicite, jamais un refus. */
+const PERSONAL_REFERENCE_CIRCLE_SOFT_CAP = 7;
 
 /** Detail d'une campagne (V1-C1) : membres + personnages attribues, invitation par email, attribution d'un personnage. Charge a l'ouverture (jamais en avance — une campagne repliee ne coute rien). */
 export default function CampaignDetail({
@@ -36,8 +40,8 @@ export default function CampaignDetail({
   function reload() {
     fetch(`/api/campaigns/${campaignId}`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((body: { members: MemberRow[]; characters: CharacterRow[] } | null) => {
-        if (body) setData({ members: body.members, characters: body.characters });
+      .then((body: { members: MemberRow[]; characters: CharacterRow[]; rulesetContentOrigin: string | null } | null) => {
+        if (body) setData({ members: body.members, characters: body.characters, rulesetContentOrigin: body.rulesetContentOrigin });
       })
       .catch(() => {});
   }
@@ -87,6 +91,29 @@ export default function CampaignDetail({
             </li>
           ))}
         </ul>
+        {data.rulesetContentOrigin === "personal_reference" && (
+          <>
+            {/* Rappel explicite du cadre (V1-D5, specs/ruleset-personnel.md §3.1) :
+                l'invitation reste AUTORISEE — c'est le cercle prive vise, jamais un
+                refus — seul un rappel visible avant d'inviter. Meme couleur que le
+                badge de fiche (--danger), meme signification : attention, pas blocage. */}
+            <p className="mt-2 text-xs text-danger">
+              Cette campagne utilise un ruleset de référence personnelle : les membres invités pourront consulter les
+              fiches en session, mais ne pourront jamais les exporter ni en repartir avec une copie.
+            </p>
+            {/* Plafond souple (§3.1 : "un plafond souple sur le nombre de
+                membres... suffit a materialiser le cercle. Pas de refus
+                brutal — un avertissement explicite.") — jamais un blocage,
+                juste un rappel qui se renforce au-dela d'une table de jeu
+                ordinaire (4-6 joueurs + MJ). */}
+            {data.members.length > PERSONAL_REFERENCE_CIRCLE_SOFT_CAP && (
+              <p className="mt-1 text-xs text-danger">
+                {data.members.length} membres : au-delà d’une table de jeu, ce n’est plus le cercle privé visé par une
+                référence personnelle.
+              </p>
+            )}
+          </>
+        )}
         <form onSubmit={invite} className="mt-2 flex items-center gap-2">
           <input
             type="email"

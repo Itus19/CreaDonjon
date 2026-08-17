@@ -14,6 +14,7 @@ import {
   type CampaignMemberRow,
   type CampaignRow,
 } from "@/src/server/repos/campaigns";
+import { getRulesetById } from "@/src/server/repos/rules";
 import { createEntity } from "@/src/server/services/entities";
 
 type TypedClient = SupabaseClient<Database>;
@@ -50,6 +51,19 @@ export async function listCampaigns(supabase: TypedClient, worldId: string): Pro
 export async function getCampaign(supabase: TypedClient, id: string): Promise<CampaignSummary | null> {
   const row = await getCampaignById(supabase, id);
   return row ? toSummary(row) : null;
+}
+
+/**
+ * Origine du ruleset epingle par une campagne (V1-D5, specs/ruleset-personnel.md
+ * §3.1) : "inviter un membre reste autorise, avec un rappel explicite du
+ * cadre" — pas un refus, juste de quoi afficher le rappel cote UI avant
+ * l'invitation. `null` si la campagne ou son ruleset sont introuvables.
+ */
+export async function getCampaignRulesetOrigin(supabase: TypedClient, campaignId: string): Promise<string | null> {
+  const campaign = await getCampaignById(supabase, campaignId);
+  if (!campaign) return null;
+  const ruleset = await getRulesetById(supabase, campaign.ruleset_id);
+  return ruleset?.content_origin ?? null;
 }
 
 /**

@@ -13,6 +13,7 @@ interface SelectableRuleset {
   base_system: string;
   version: number;
   published_at: string | null;
+  content_origin: string;
 }
 
 /**
@@ -42,6 +43,7 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
   const [current, setCurrent] = useState<string | null>(null);
   const [variantName, setVariantName] = useState("");
   const [variantParentId, setVariantParentId] = useState("");
+  const [personalReference, setPersonalReference] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SelectableRuleset | null>(null);
 
   function openSelector() {
@@ -85,7 +87,7 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
     const res = await fetch(`/api/worlds/${worldSlug}/ruleset`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: variantName.trim(), parentRulesetId: variantParentId }),
+      body: JSON.stringify({ name: variantName.trim(), parentRulesetId: variantParentId, personalReference }),
     });
     if (!res.ok) {
       setBusy(false);
@@ -94,6 +96,7 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
     }
     const created = (await res.json()) as { id: string };
     setVariantName("");
+    setPersonalReference(false);
     await choose(created.id);
   }
 
@@ -173,6 +176,14 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
                         >
                           {ruleset.is_official_base ? t("rulesetOfficiel") : t("variante")}
                         </span>
+                        {ruleset.content_origin === "personal_reference" && (
+                          <span
+                            className="rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                            style={{ borderColor: "var(--danger)", color: "var(--danger)" }}
+                          >
+                            {t("referencePersonnelle")}
+                          </span>
+                        )}
                         <span className="text-sm text-ink">{ruleset.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -237,6 +248,16 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
                       {t("creer")}
                     </button>
                   </div>
+                  <label className="flex items-start gap-2 text-xs text-ink-muted">
+                    <input
+                      type="checkbox"
+                      checked={personalReference}
+                      onChange={(e) => setPersonalReference(e.target.checked)}
+                      className="mt-0.5"
+                    />
+                    {t("referencePersonnelleOption")}
+                  </label>
+                  {personalReference && <p className="text-xs text-danger">{t("referencePersonnelleAvertissement")}</p>}
                 </form>
               )}
             </div>

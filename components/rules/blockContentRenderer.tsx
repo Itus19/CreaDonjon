@@ -740,7 +740,10 @@ export function renderBlockData(
   worldSlug: string = "",
   outgoingRefs: RuleRefView[] = []
 ): ReactNode {
-  if (blockType === "description") return <Prose segments={(data as DescriptionBlockData).segments} />;
+  if (blockType === "description") {
+    const descData = data as DescriptionBlockData;
+    return <Prose segments={descData.segments} pageRef={descData.page_ref} />;
+  }
   if (blockType === "spell_casting") return <SpellCasting data={data as SpellCastingBlockData} />;
   if (blockType === "effects") return <Effects data={data as EffectsBlockData} />;
   if (blockType === "scaling") return <Scaling data={data as ScalingBlockData} />;

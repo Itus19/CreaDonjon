@@ -48,6 +48,13 @@ export type BlockType = (typeof BLOCK_TYPES)[number];
 // n'a de raison d'etre cache au moment de l'import).
 export const zDescriptionBlockData = z.object({
   segments: z.array(z.object({ text: z.string() })),
+  // Reference de page (V1-D5, specs/ruleset-personnel.md §1) : pour une
+  // fiche d'un ruleset `personal_reference`, jamais de prose recopiee d'un
+  // ouvrage sous droits — seulement "Voir tel manuel, page N." La distinction
+  // qui commande tout : la mecanique se saisit, la prose se reference.
+  // Optionnel et generique (pas reserve au personal_reference) : rien n'y
+  // force la valeur a un ouvrage precis, cote schema.
+  page_ref: z.string().optional(),
 });
 export type DescriptionBlockData = z.infer<typeof zDescriptionBlockData>;
 

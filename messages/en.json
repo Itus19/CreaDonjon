@@ -101,6 +101,10 @@
     "evaluer": "Evaluate",
     "resultat": "Result",
     "erreurEvaluationFormule": "Could not evaluate this formula — check the syntax.",
+    "referencePersonnelle": "Personal reference",
+    "referencePersonnelleOption": "Personal reference — content entered from a book I own",
+    "referencePersonnelleAvertissement": "This content stays within your private play circle: never a share link, an export, or a switch to an ordinary homebrew rule — your players consult it in session, without ever leaving with a copy.",
+    "referencePersonnelleFicheTitre": "This entry comes from a personal-reference ruleset — private play circle only, never shared or exported.",
     "refKinds": {
       "uses_rule": "uses",
       "applies_condition": "applies",

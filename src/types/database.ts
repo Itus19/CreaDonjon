@@ -1350,6 +1350,7 @@ export type Database = {
       rulesets: {
         Row: {
           base_system: string
+          content_origin: string
           created_at: string
           created_by: string | null
           id: string
@@ -1362,6 +1363,7 @@ export type Database = {
         }
         Insert: {
           base_system: string
+          content_origin?: string
           created_at?: string
           created_by?: string | null
           id?: string
@@ -1374,6 +1376,7 @@ export type Database = {
         }
         Update: {
           base_system?: string
+          content_origin?: string
           created_at?: string
           created_by?: string | null
           id?: string

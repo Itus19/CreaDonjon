@@ -75,7 +75,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
   }
 
-  const variant = await createRulesetVariant(supabase, parsed.data);
+  const variant = await createRulesetVariant(supabase, {
+    name: parsed.data.name,
+    parentRulesetId: parsed.data.parentRulesetId,
+    personalReference: parsed.data.personalReference,
+  });
   if (!variant) {
     return NextResponse.json({ error: "Ruleset parent introuvable." }, { status: 404 });
   }

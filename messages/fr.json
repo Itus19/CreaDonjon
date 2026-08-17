@@ -101,6 +101,10 @@
     "evaluer": "Évaluer",
     "resultat": "Résultat",
     "erreurEvaluationFormule": "Impossible d'évaluer cette formule — vérifiez la syntaxe.",
+    "referencePersonnelle": "Référence personnelle",
+    "referencePersonnelleOption": "Référence personnelle — contenu saisi depuis un ouvrage que je possède",
+    "referencePersonnelleAvertissement": "Ce contenu reste dans votre cercle de jeu privé : jamais de lien de partage, d'export, ni de bascule vers une règle maison ordinaire — vos joueurs le consultent en session, sans repartir avec une copie.",
+    "referencePersonnelleFicheTitre": "Cette fiche provient d'un ruleset de référence personnelle — cercle de jeu privé uniquement, jamais partagée ni exportée.",
     "refKinds": {
       "uses_rule": "utilise",
       "applies_condition": "applique",

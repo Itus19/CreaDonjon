@@ -31,9 +31,20 @@ export default async function RuleEntryPage({
         <div className="flex flex-col">
           <div className="flex items-start justify-between gap-3">
             <h1 className="entity-title">{entry.name}</h1>
-            <span className="shrink-0 whitespace-nowrap px-1 py-1 text-sm font-medium text-ink-muted">
-              {entryTypeLabels[entry.entryType] ?? entry.entryType}
-            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              {entry.personalReference && (
+                <span
+                  className="whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                  style={{ borderColor: "var(--danger)", color: "var(--danger)" }}
+                  title={t("referencePersonnelleFicheTitre")}
+                >
+                  {t("referencePersonnelle")}
+                </span>
+              )}
+              <span className="whitespace-nowrap px-1 py-1 text-sm font-medium text-ink-muted">
+                {entryTypeLabels[entry.entryType] ?? entry.entryType}
+              </span>
+            </div>
           </div>
           {entry.sourceAttribution && (
             <span className="mt-0.5 font-mech text-xs text-ink-muted">{entry.sourceAttribution}</span>

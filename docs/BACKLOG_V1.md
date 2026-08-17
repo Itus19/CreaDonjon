@@ -1164,13 +1164,24 @@ Le besoin : un MJ possède les manuels complets (2014/2024) et veut y accéder d
 - `data/personnel/` en `.gitignore` : un répertoire local pour les fichiers d'import personnels, jamais un second dépôt Git.
 
 **Critères**
-- [ ] Créer un lien de partage sur un monde en ruleset personnel lève une exception en base, pas seulement un message d'interface.
-- [ ] Inviter un membre dans une campagne fondée sur un ruleset personnel est **autorisé**, avec un rappel explicite du cadre.
-- [ ] Un joueur ne peut ni exporter, ni télécharger le contenu du ruleset personnel — il le consulte en session, rien de plus.
-- [ ] L'export d'un tel monde ne contient aucune entrée de règle du ruleset personnel.
-- [ ] Aucune bascule possible de `personal_reference` vers `user_created` — la bascule est interdite, pas déconseillée.
-- [ ] Le badge « référence personnelle » est visible sur toute fiche de règle qui en provient.
-- [ ] Une recherche dans le dépôt sur cinq noms de créatures hors SRD ne remonte rien.
+- [x] Créer un lien de partage sur un monde en ruleset personnel lève une exception en base, pas seulement un message d'interface.
+- [x] Inviter un membre dans une campagne fondée sur un ruleset personnel est **autorisé**, avec un rappel explicite du cadre.
+- [x] Un joueur ne peut ni exporter, ni télécharger le contenu du ruleset personnel — il le consulte en session, rien de plus.
+- [ ] L'export d'un tel monde ne contient aucune entrée de règle du ruleset personnel — **hors périmètre de ce ticket, voir plus bas**.
+- [x] Aucune bascule possible de `personal_reference` vers `user_created` — la bascule est interdite, pas déconseillée.
+- [x] Le badge « référence personnelle » est visible sur toute fiche de règle qui en provient.
+- [x] Une recherche dans le dépôt sur cinq noms de créatures hors SRD ne remonte rien.
+
+**Fait** :
+
+- **Colonne `content_origin` + trois triggers** (migration `20260817130001_ruleset_content_origin.sql`) : `official_srd`/`user_created`/`personal_reference`, backfill des rulesets officiels existants (a exigé d'étendre `app.forbid_official_ruleset_write`, qui verrouillait déjà toute écriture — y compris ce backfill — avec l'échappatoire `app.allow_official_writes` que ses deux triggers sœurs avaient déjà). `app.forbid_share_personal_ruleset` (avant insert sur `share_links`) vérifie **et** le ruleset par défaut du monde **et**, si le lien cible une campagne précise, le ruleset que *cette campagne* épingle — `campaigns.ruleset_id` peut différer du ruleset par défaut du monde (V1-C1, une campagne choisit son propre ruleset à la création) : un lien scopé à une campagne personal_reference doit être refusé même si le monde par défaut ne l'est pas. `app.forbid_personal_reference_downgrade` (avant update) interdit toute bascule hors de `personal_reference`. Les deux `security definer` (comme `app.is_world_member`) : la vérification doit voir l'état réel des tables jointes, pas ce que la RLS de l'appelant laisserait filtrer. Six tests d'intégration sur base réelle (`rulesetContentOrigin.integration.test.ts`), dont le cas campagne/monde divergents.
+- **`page_ref`** sur `zDescriptionBlockData` (optionnel), rendu par `Prose.tsx` en légende italique distincte des `segments` — jamais mélangé au flux narratif.
+- **Création d'un ruleset personnel** : case à cocher dans le formulaire existant de création de variante (`RulesetSelector.tsx`), phrase d'avertissement affichée en une ligne dès qu'elle est cochée (pas dans des conditions d'utilisation, §3.3). Le service `createRulesetVariant` exige un parent officiel pour `personalReference` (« dérivant d'une base SRD », §4.1) — jamais un `content_origin` brut envoyé par le client, seulement un booléen.
+- **Badge** : `getRuleEntryForWorld` distingue une fiche réellement *touchée* par une surcharge d'un niveau `personal_reference` de la chaîne d'une fiche simplement *héritée* du SRD à travers une telle variante (une variante personnelle peut très bien ne rien surcharger sur telle entrée précise) — vérifié par deux tests d'intégration dédiés (`personalReferenceBadge.integration.test.ts`) et confirmé dans le navigateur : une arme maison créée dans une variante personnelle porte le badge, le Bouclier du SRD consulté à travers la même variante ne le porte pas.
+- **Rappel à l'invitation** : `CampaignDetail.tsx` affiche un bandeau (jamais un blocage — l'invitation reste autorisée, §3.1) quand la campagne repose sur un ruleset `personal_reference`, plus un plafond souple (7 membres) qui renforce le rappel sans jamais refuser — matérialise le cercle sans y mettre un mur.
+- **Décision prise en conversation, avant d'écrire du code** : le ticket suppose un « export de monde » qui omettrait le contenu personnel — cette fonctionnalité n'existe nulle part dans le produit (seul l'export JSON *par personnage*, V1-B5, existe) et `docs/PDD.md` §26 liste explicitement « import/export de mondes » comme hors périmètre, volontairement exclu jusqu'à décision contraire. Construire un export de monde entier pour ce seul critère aurait très largement dépassé le calibrage `M` du ticket et contredit une décision produit déjà actée ailleurs. Vérifié que ça ne laisse aucun trou concret : l'export par personnage existant ne réexpose jamais le texte d'une fiche de règle (seulement les clés choisies par le joueur — arme, sort — jamais leur description), donc rien à garder aujourd'hui.
+- **Recherche de cinq noms de créatures hors SRD** (`beholder`, `illithid`/`mind flayer`, `githyanki`) dans tout le dépôt : aucune occurrence en dehors des documents de gouvernance eux-mêmes (`CLAUDE.md`, `docs/PDD.md`, `specs/ruleset-personnel.md`, qui les nomment comme exemples de ce qui est interdit) et de « Tarrasque », qui est une créature SRD légitime (CC-BY) déjà couverte par le passe V1-D6.
+- `typecheck`/`lint`/`test` (466/466, dont 8 nouveaux tests d'intégration)/`build` tous verts. Vérifié dans le navigateur de bout en bout : création d'une variante `personal_reference` avec avertissement → arme maison créée dedans → badge affiché sur sa fiche, absent sur une fiche SRD consultée à travers la même variante.
 
 ### V1-D6 — Corriger la donnée mécanique des monstres SRD 5.2.1 (CA/Pv/traits/actions réellement 2014) · `L`
 

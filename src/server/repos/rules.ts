@@ -11,12 +11,13 @@ export interface RulesetRow {
   parent_ruleset_id: string | null;
   is_official_base: boolean;
   base_system: string;
+  content_origin: string;
 }
 
 export async function getRulesetById(supabase: TypedClient, id: string): Promise<RulesetRow | null> {
   const { data, error } = await supabase
     .from("rulesets")
-    .select("id, name, parent_ruleset_id, is_official_base, base_system")
+    .select("id, name, parent_ruleset_id, is_official_base, base_system, content_origin")
     .eq("id", id)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -30,6 +31,7 @@ export interface SelectableRulesetRow {
   base_system: string;
   version: number;
   published_at: string | null;
+  content_origin: string;
 }
 
 /**
@@ -43,7 +45,7 @@ export interface SelectableRulesetRow {
 export async function listSelectableRulesets(supabase: TypedClient, userId: string): Promise<SelectableRulesetRow[]> {
   const { data, error } = await supabase
     .from("rulesets")
-    .select("id, name, is_official_base, base_system, version, published_at")
+    .select("id, name, is_official_base, base_system, version, published_at, content_origin")
     .or(`is_official_base.eq.true,created_by.eq.${userId}`)
     .order("is_official_base", { ascending: false })
     .order("name", { ascending: true });
@@ -51,10 +53,24 @@ export async function listSelectableRulesets(supabase: TypedClient, userId: stri
   return data;
 }
 
-/** Nouvelle variante vierge (aucune surcharge encore) enracinee sur un ruleset parent — RLS (`rulesets_write`) exige `created_by = auth.uid()`. */
+/**
+ * Nouvelle variante vierge (aucune surcharge encore) enracinee sur un
+ * ruleset parent — RLS (`rulesets_write`) exige `created_by = auth.uid()`.
+ * `contentOrigin` : jamais `official_srd` ici (reserve a l'import SRD,
+ * jamais a une creation utilisateur) — `user_created` (regle maison) ou
+ * `personal_reference` (V1-D5, specs/ruleset-personnel.md), verrouille une
+ * fois pose (`rulesets_forbid_personal_reference_downgrade`, migration
+ * 20260817130001 : aucune bascule hors de `personal_reference`).
+ */
 export async function insertRulesetVariant(
   supabase: TypedClient,
-  params: { name: string; baseSystem: string; parentRulesetId: string; createdBy: string }
+  params: {
+    name: string;
+    baseSystem: string;
+    parentRulesetId: string;
+    createdBy: string;
+    contentOrigin: "user_created" | "personal_reference";
+  }
 ): Promise<{ id: string }> {
   const { data, error } = await supabase
     .from("rulesets")
@@ -64,6 +80,7 @@ export async function insertRulesetVariant(
       parent_ruleset_id: params.parentRulesetId,
       is_official_base: false,
       created_by: params.createdBy,
+      content_origin: params.contentOrigin,
     })
     .select("id")
     .single();

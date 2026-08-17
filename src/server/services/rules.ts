@@ -68,6 +68,8 @@ const CHARACTER_LEVEL_MAX = 20;
 export interface RulesetChainLink {
   rulesetId: string;
   parentRulesetId: string | null;
+  /** V1-D5, specs/ruleset-personnel.md — sert a marquer une fiche "reference personnelle" quand une surcharge de ce niveau la touche reellement. */
+  contentOrigin: string;
 }
 
 /**
@@ -89,7 +91,7 @@ export async function walkRulesetChain(supabase: TypedClient, startRulesetId: st
 
     const ruleset = await getRulesetById(supabase, currentId);
     if (!ruleset) break;
-    chain.push({ rulesetId: currentId, parentRulesetId: ruleset.parent_ruleset_id });
+    chain.push({ rulesetId: currentId, parentRulesetId: ruleset.parent_ruleset_id, contentOrigin: ruleset.content_origin });
     currentId = ruleset.parent_ruleset_id;
   }
 
@@ -235,6 +237,8 @@ export interface RuleEntryDetail {
   incomingRefs: RuleRefView[];
   /** Types de blocs modifies par une surcharge de la variante courante (V1-A4) — badge "modifiee dans ta variante". */
   modifiedBlockTypes: string[];
+  /** V1-D5, specs/ruleset-personnel.md — badge "reference personnelle" : au moins une surcharge d'un ruleset personal_reference de la chaine touche reellement cette fiche. */
+  personalReference: boolean;
 }
 
 function maxLevelForAxis(axis: ScalingBlockData["axis"]): number {
@@ -563,8 +567,15 @@ export async function getRuleEntryForWorld(
   // ignorant de ce detail d'encodage.
   const overrides: OverrideInput[] = [];
   let homebrewName: string | null = null;
+  // V1-D5, specs/ruleset-personnel.md : le badge "reference personnelle" ne
+  // marque que les fiches reellement touchees par une surcharge d'un niveau
+  // personal_reference — jamais une fiche purement heritee de la base
+  // officielle qu'on regarde "a travers" une telle variante (une variante
+  // personal_reference peut tres bien ne rien surcharger sur telle entree).
+  let personalReference = false;
   for (const link of [...chain].reverse()) {
     const rows = await listOverridesForRuleset(supabase, link.rulesetId, entryKey);
+    if (rows.length > 0 && link.contentOrigin === "personal_reference") personalReference = true;
     for (const row of rows) {
       if (row.action === "add_entry") {
         const addEntry = zAddEntryPayload.parse(row.payload);
@@ -788,6 +799,7 @@ export async function getRuleEntryForWorld(
     outgoingRefs,
     incomingRefs,
     modifiedBlockTypes: resolved.modifiedBlockTypes,
+    personalReference,
   };
 }
 
@@ -948,10 +960,17 @@ export async function setActiveRuleset(supabase: TypedClient, worldSlug: string,
  * remonter chaque entree jusqu'a l'officiel tant que rien ne la surcharge —
  * un MJ peut donc commencer a jouer avec sa variante des sa creation, puis
  * l'editer entree par entree plus tard (V1-D2).
+ *
+ * `personalReference` (V1-D5, specs/ruleset-personnel.md §2) : pose
+ * `content_origin = 'personal_reference'` plutot que `user_created` —
+ * verrouille en base des la creation (aucune bascule possible ensuite,
+ * migration 20260817130001). Exige un parent officiel, jamais une autre
+ * variante : "un ruleset personnel derivant d'une base SRD" (§4.1), pas
+ * une reference imbriquee dans une regle maison.
  */
 export async function createRulesetVariant(
   supabase: TypedClient,
-  params: { name: string; parentRulesetId: string }
+  params: { name: string; parentRulesetId: string; personalReference?: boolean }
 ): Promise<{ id: string } | null> {
   const {
     data: { user },
@@ -959,11 +978,13 @@ export async function createRulesetVariant(
   if (!user) return null;
   const parent = await getRulesetById(supabase, params.parentRulesetId);
   if (!parent) return null;
+  if (params.personalReference && !parent.is_official_base) return null;
   return insertRulesetVariant(supabase, {
     name: params.name,
     baseSystem: parent.base_system,
     parentRulesetId: parent.id,
     createdBy: user.id,
+    contentOrigin: params.personalReference ? "personal_reference" : "user_created",
   });
 }
 

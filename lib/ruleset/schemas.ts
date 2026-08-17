@@ -8,6 +8,10 @@ export const setActiveRulesetSchema = z.object({
 export const createRulesetVariantSchema = z.object({
   name: z.string().min(1).max(120),
   parentRulesetId: z.string().uuid(),
+  // Jamais un content_origin brut depuis le client (specs/ruleset-personnel.md
+  // §2) : un simple booleau, la seule chose que ce formulaire a jamais a
+  // choisir — 'official_srd' n'est possible que par l'import SRD.
+  personalReference: z.boolean().optional(),
 });
 
 export const createHomebrewWeaponSchema = z.object({
