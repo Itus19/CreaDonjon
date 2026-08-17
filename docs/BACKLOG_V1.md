@@ -1645,9 +1645,21 @@ Les trois recommandations (fusionner Écurie/Nourriture dans la règle « Pièce
 
 **Bug transverse trouvé et corrigé en vérifiant les fiches Poisons : `Règle incomplète : bloc manquant — item_properties` sur les quatorze.** `parseItemCost()` (`src/core/rules/srdMapping.ts`) attendait `cost: {quantity, unit}` — forme partagée par toutes les autres entrées `Equipment`, mais la catégorie `Poisons` porte `cost` comme un simple nombre (`150`, pas `{quantity: 150, unit: "gp"}`), implicitement en po d'après le texte français lui-même (« Sang d'assassin (150 po) »). Repli explicite sur `"gp"` ajouté à la fonction, jamais un champ inventé. Test ajouté (`srdMapping.test.ts`) avant de relancer l'import complet (idempotent, translations conservées, +14 blocs `item_properties`).
 
-**Les 160 fiches `item` du SRD 5.2.1 (2024) ont maintenant leur description en français.** Édition 5.1 (2014, 176 fiches `item`) toujours pas traitée — mêmes objets pour l'essentiel, mais fichier source et compte différents.
+**Les 160 fiches `item` du SRD 5.2.1 (2024) ont maintenant leur description en français.**
 
 `npm run typecheck && npm run lint && npm run test` verts (45 fichiers, 441 tests — un test de plus pour le repli `parseItemCost`). Vérifié en navigateur : Sac à dos et Outils de voleur (prose française), Flasque (nom corrigé, distinct de Fiole), Navire de guerre (lore inventé, catégorie Monture/Véhicule), Poison de ver pourpre (prose + Valeur affichée, le bandeau d'incomplétude a disparu).
+
+**Onzième étape, Objet mondain — édition 5.1 (176/176, SRD 5.1 (2014), 17 août 2026).** Même travail que l'étape précédente, refait pour la seconde édition — fichier source (`srd-5.1-fr.txt`) et jeu d'entrées différents, aucune réutilisation directe possible du texte 2024.
+
+**Structure du texte officiel différente de 2024**, découverte en ouvrant le fichier : la 5.1 imprime les paragraphes en continu (« Nom. Texte. » à la suite les uns des autres) plutôt qu'un bloc séparé par objet, et une bonne partie du détail utile n'est pas dans ces paragraphes mais dans deux tables à part — « Contenance des récipients » (Bouteille, Coffre, Cruche, Fiole, Flasque, Outre, Panier, Pot en fer, Sac, Sac à dos, Seau, Tonneau) et « Paquetages » (composition exacte des huit paquetages d'aventurier). Les deux ont été extraites au même titre que les paragraphes.
+
+**Section Outils nettement moins détaillée qu'en 2024** : pas de fiche Caractéristique/Utilisation/Artisanat par outil — dix-sept variétés d'outils d'artisan (alchimiste, brasseur, calligraphe, charpentier...) partagent un seul paragraphe générique « Outils d'artisan », contre une fiche structurée par outil en 2024. Reflété fidèlement plutôt que enrichi artificiellement pour égaler l'édition 2024.
+
+**123 entrées en `official_srd`** (paragraphe dédié, table de contenance, composition de paquetage, ou paragraphe générique partagé — focaliseurs, symboles sacrés, instruments de musique, boîtes de jeux, montures/munitions/barde, mêmes regroupements qu'en 2024) ; **53 entrées en `invented_lore`** pour les objets qui n'ont ni paragraphe ni table dans le texte officiel (Boulier, Grappin, Cloche, Couverture, Sac de couchage, tous les véhicules et bateaux, les fournitures de paquetage sans fiche propre comme Encensoir ou Petit sac de sable...) — même principe que les véhicules de l'étape précédente, jamais de texte 2024 recopié pour combler un vide 2014.
+
+**Nom corrigé au passage** : `sprig-of-mistletoe` n'avait jamais été traduit (`?` en base, oubli de la passe de noms V1-A5) — renommé « Branche de houx » d'après la table des focaliseurs druidiques.
+
+`npm run typecheck && npm run lint && npm run test` verts (45 fichiers, 441 tests — données uniquement, aucun fichier de code touché). Vérifié en navigateur via le sélecteur de règles actives (bascule SRD 5.2.1 → SRD 5.1) : Branche de houx (nom corrigé, texte 2014 propre), Sac à dos (texte différent de la version 2024, tiré de la table de contenance), Chariot (lore inventé). Les deux éditions du SRD ont maintenant leurs 336 fiches Objet mondain (160 + 176) intégralement décrites.
 
 ---
 
