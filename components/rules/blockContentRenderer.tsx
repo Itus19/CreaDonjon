@@ -405,6 +405,27 @@ function ItemProperties({ data, worldSlug }: { data: ResolvedItemPropertiesBlock
     ...(data.rarity ? [{ label: "Rarete", value: ITEM_RARITY_LABELS_FR[data.rarity] ?? data.rarity }] : []),
     ...(data.requires_attunement !== undefined ? [{ label: "Harmonisation", value: data.requires_attunement ? "Requise" : "Non requise" }] : []),
     ...(data.attunement_restriction ? [{ label: "Restriction d'harmonisation", value: data.attunement_restriction }] : []),
+    ...(data.damage
+      ? [
+          {
+            label: "Degats",
+            value: (
+              <span className="mech">
+                {formatFormulaNode(data.damage.formula)}
+                {data.damage.damage_type ? ` (${damageTypeLabel(data.damage.damage_type)})` : ""}
+              </span>
+            ),
+          },
+        ]
+      : []),
+    ...(data.save
+      ? [
+          {
+            label: "Jet de sauvegarde",
+            value: `${abilityLabel(data.save.ability)} DD ${data.save.dc}${data.save.effect_on_success ? ` (reussite : ${data.save.effect_on_success})` : ""}`,
+          },
+        ]
+      : []),
     ...(data.contents && data.contents.length > 0
       ? [
           {

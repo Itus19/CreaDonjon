@@ -171,6 +171,31 @@ export type ArmorBlockData = z.infer<typeof zArmorBlockData>;
 // haut" ou un sac "jusqu'a 30 livres" ne vivent que dans le texte libre de
 // description) — pas de champ invente pour une donnee qui n'existe nulle
 // part de facon structuree.
+// `damage`/`save` ajoutes sur retour utilisateur (V1-D7 : "acide... besoin
+// de champ de degats... ou de jet de sauvegarde") — decision explicite de
+// les poser directement sur item_properties plutot que de reutiliser le
+// bloc `effects` des Sorts (dont le champ `save` n'est lui-meme rempli nulle
+// part dans le projet, meme pas par Boule de feu). `save.dc` reste une
+// chaine plutot qu'un FormulaNode : pour la plupart de ces objets (Acide,
+// Feu gregeois, Eau benite) le DD depend du lanceur ("8 + bonus de maitrise
+// + modificateur de Dexterite"), une formule relative au personnage jamais
+// serialisee nulle part dans le projet — seuls les DD fixes poses par
+// l'objet lui-meme (Chausse-trappes, Piege a machoires : DD 15/13) auraient
+// pu etre un nombre, mais un type mixte str/number aurait complique la
+// lecture pour un gain nul. Seuls les objets ou le SRD precise reellement
+// ces informations en portent — jamais devine pour un objet qui n'a que
+// des degats "a l'impact" sans mecanique de jet (ex. Huile, conditionnelle
+// a un embrasement ulterieur, volontairement laissee hors de ce bloc).
+export const zItemDamageData = z.object({
+  formula: zFormulaNode,
+  damage_type: z.string().optional(),
+});
+export const zItemSaveData = z.object({
+  ability: z.string(),
+  dc: z.string(),
+  effect_on_success: z.string().optional(),
+});
+
 export const zItemPropertiesBlockData = z.object({
   weight: zQuantity.optional(),
   cost: zQuantity.optional(),
@@ -180,6 +205,8 @@ export const zItemPropertiesBlockData = z.object({
   category: z.string().optional(),
   capacity: z.string().optional(),
   contents: z.array(z.object({ ref: zReference.optional(), label: z.string(), quantity: z.number().int().positive() })).optional(),
+  damage: zItemDamageData.optional(),
+  save: zItemSaveData.optional(),
 });
 export type ItemPropertiesBlockData = z.infer<typeof zItemPropertiesBlockData>;
 

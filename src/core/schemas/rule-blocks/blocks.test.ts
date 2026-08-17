@@ -161,6 +161,24 @@ describe("zItemPropertiesBlockData", () => {
     const data = { rarity: "legendary", requires_attunement: true, category: "Wondrous Item" };
     expect(zItemPropertiesBlockData.parse(data)).toEqual(data);
   });
+
+  it("accepte des degats avec jet de sauvegarde (Acide, DD relatif au lanceur)", () => {
+    const data = {
+      damage: { formula: { op: "dice" as const, count: 2, faces: 6 }, damage_type: "Acid" },
+      save: { ability: "dex", dc: "8 + bonus de maitrise + modificateur de Dexterite", effect_on_success: "Aucun degat" },
+    };
+    expect(zItemPropertiesBlockData.parse(data)).toEqual(data);
+  });
+
+  it("accepte des degats sans jet de sauvegarde (attaque a distance, edition 5.1)", () => {
+    const data = { damage: { formula: { op: "dice" as const, count: 2, faces: 6 }, damage_type: "Acid" } };
+    expect(zItemPropertiesBlockData.parse(data)).toEqual(data);
+  });
+
+  it("accepte un jet de sauvegarde sans degats (Billes, DD fixe)", () => {
+    const data = { save: { ability: "dex", dc: "10", effect_on_success: "Ne tombe pas a terre" } };
+    expect(zItemPropertiesBlockData.parse(data)).toEqual(data);
+  });
 });
 
 describe("zChargesBlockData", () => {

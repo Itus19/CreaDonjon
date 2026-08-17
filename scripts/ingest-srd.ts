@@ -911,11 +911,50 @@ function armorBlock(entry: SrdRecord): EntryBlock | null {
 }
 
 /**
+ * Degats/jet de sauvegarde de quelques objets (V1-D7, retour utilisateur
+ * explicite : "acide... besoin de champ de degats... ou de jet de
+ * sauvegarde"). Aucune des deux editions ne porte ces informations sous
+ * forme structuree dans le JSON source (verifie : seul un paragraphe libre
+ * existe, ex. `acid.description` en 2024) — extrait a la main du texte SRD
+ * francais deja verifie lors de la passe de description, jamais devine.
+ * Cle = `sourceAttribution` (edition) + `entry_key`, pour ne pas confondre
+ * les valeurs entre 5.1 et 5.2.1 (ex. Poison standard a un jet de
+ * sauvegarde en 5.1 mais pas en 5.2.1). `dc` reste une chaine plutot qu'un
+ * FormulaNode : la plupart de ces DD dependent du lanceur ("8 + bonus de
+ * maitrise + modificateur de Dexterite"), une formule relative au
+ * personnage jamais serialisee nulle part ailleurs dans le projet — un
+ * champ invente pour un seul ticket n'aurait rien resolu de plus qu'un
+ * texte clair. Huile volontairement absente : ses degats sont
+ * conditionnels a un embrasement ulterieur, pas une mecanique de jet direct.
+ */
+const WIELDER_DC = "8 + bonus de maitrise + modificateur de Dexterite";
+const ITEM_DAMAGE_SAVE: Record<string, Record<string, { damage?: { formula: FormulaNode; damage_type?: string }; save?: { ability: string; dc: string; effect_on_success?: string } }>> = {
+  "SRD 5.2.1": {
+    acid: { damage: { formula: { op: "dice", count: 2, faces: 6 }, damage_type: "Acid" }, save: { ability: "dex", dc: WIELDER_DC, effect_on_success: "Aucun degat" } },
+    "alchemists-fire": { damage: { formula: { op: "dice", count: 1, faces: 4 }, damage_type: "Fire" }, save: { ability: "dex", dc: WIELDER_DC, effect_on_success: "Aucun degat, ne prend pas feu" } },
+    "holy-water": { damage: { formula: { op: "dice", count: 2, faces: 8 }, damage_type: "Radiant" }, save: { ability: "dex", dc: WIELDER_DC, effect_on_success: "Aucun degat" } },
+    "poison-basic": { damage: { formula: { op: "dice", count: 1, faces: 4 }, damage_type: "Poison" } },
+    caltrops: { damage: { formula: { op: "num", value: 1 }, damage_type: "Piercing" }, save: { ability: "dex", dc: "15", effect_on_success: "Aucun effet" } },
+    "hunting-trap": { damage: { formula: { op: "dice", count: 1, faces: 4 }, damage_type: "Piercing" }, save: { ability: "dex", dc: "13", effect_on_success: "Aucun effet" } },
+    "ball-bearings": { save: { ability: "dex", dc: "10", effect_on_success: "Ne tombe pas a terre" } },
+  },
+  "SRD 5.1": {
+    "acid-vial": { damage: { formula: { op: "dice", count: 2, faces: 6 }, damage_type: "Acid" } },
+    "alchemists-fire-flask": { damage: { formula: { op: "dice", count: 1, faces: 4 }, damage_type: "Fire" } },
+    "holy-water-flask": { damage: { formula: { op: "dice", count: 2, faces: 6 }, damage_type: "Radiant" } },
+    "poison-basic-vial": { damage: { formula: { op: "dice", count: 1, faces: 4 }, damage_type: "Poison" }, save: { ability: "con", dc: "10", effect_on_success: "Aucun degat" } },
+    caltrops: { damage: { formula: { op: "num", value: 1 }, damage_type: "Piercing" }, save: { ability: "dex", dc: "15", effect_on_success: "Aucun effet" } },
+    "hunting-trap": { damage: { formula: { op: "dice", count: 1, faces: 4 }, damage_type: "Piercing" }, save: { ability: "dex", dc: "13", effect_on_success: "Aucun effet" } },
+    "ball-bearings-bag-of-1000": { save: { ability: "dex", dc: "10", effect_on_success: "Ne tombe pas a terre" } },
+  },
+};
+
+/**
  * Tous les champs du schema sont optionnels (V1-D1) : `null` seulement si
  * aucun n'a pu etre rempli, pour eviter un bloc "present" mais vide de sens
  * (qui masquerait a tort le signal "regle incomplete").
  */
-function itemPropertiesBlock(entry: SrdRecord): EntryBlock | null {
+function itemPropertiesBlock(entry: SrdRecord, sourceAttribution: string): EntryBlock | null {
   const cost = parseItemCost(entry);
   const weight = parseItemWeight(entry);
   const rarityRaw = entry.rarity as SrdRecord | undefined;
@@ -950,6 +989,8 @@ function itemPropertiesBlock(entry: SrdRecord): EntryBlock | null {
     })
     .filter((c): c is { ref: { kind: "rule"; key: string }; label: string; quantity: number } => c !== null);
 
+  const damageSave = typeof entry.index === "string" ? ITEM_DAMAGE_SAVE[sourceAttribution]?.[entry.index] : undefined;
+
   const data = {
     weight: weight !== null ? quantity(weight, "lb") : undefined,
     cost: cost ? quantity(cost.quantity, cost.unit) : undefined,
@@ -959,6 +1000,8 @@ function itemPropertiesBlock(entry: SrdRecord): EntryBlock | null {
     category,
     capacity,
     contents: contents.length > 0 ? contents : undefined,
+    damage: damageSave?.damage,
+    save: damageSave?.save,
   };
   if (
     !data.weight &&
@@ -968,7 +1011,9 @@ function itemPropertiesBlock(entry: SrdRecord): EntryBlock | null {
     !data.attunement_restriction &&
     !data.category &&
     !data.capacity &&
-    !data.contents
+    !data.contents &&
+    !data.damage &&
+    !data.save
   )
     return null;
 
@@ -1598,7 +1643,7 @@ function transformEntry(
   }
 
   if (entryType === "item" || entryType === "magic_item" || entryType === "mount") {
-    const itemProperties = itemPropertiesBlock(entry);
+    const itemProperties = itemPropertiesBlock(entry, sourceAttribution);
     if (itemProperties) blocks.push(itemProperties);
   }
 
