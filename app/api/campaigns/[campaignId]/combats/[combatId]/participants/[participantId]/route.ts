@@ -25,6 +25,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     participantId,
     patch: {
       initiative: parsed.data.initiative,
+      ac: parsed.data.ac,
       hpCurrent: parsed.data.hpCurrent,
       tempHp: parsed.data.tempHp,
       conditions: parsed.data.conditions,

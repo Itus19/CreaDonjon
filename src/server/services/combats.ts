@@ -129,29 +129,23 @@ export interface StartCombatMonsterInput {
   count: number;
 }
 
-/**
- * Cree un combat (statut `draft`) depuis une composition de monstres — le
- * point d'entree du bouton "Lancer le combat" de l'outil Rencontres
- * (V1-E3). Un monstre en plusieurs exemplaires est eclate en autant de
- * participants numerotes ("Gobelin 1", "Gobelin 2"...), chacun avec sa
- * propre CA/PV lus depuis son bloc `stat_block`. Les PJ ne sont PAS
- * ajoutes automatiquement — le MJ les ajoute depuis l'ecran d'initiative
- * (`addEntityParticipant`), portee volontairement reduite pour ce ticket.
- */
-export async function createCombatFromMonsters(
-  supabase: TypedClient,
-  params: { campaignId: string; rulesetId: string; name: string | null; monsters: readonly StartCombatMonsterInput[] }
-): Promise<CombatRow> {
-  const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
-  const combat = await insertCombat(supabase, { campaignId: params.campaignId, sessionId, name: params.name });
+async function nextDisplayOrder(supabase: TypedClient, combatId: string): Promise<number> {
+  const participants = await listCombatParticipants(supabase, combatId);
+  return participants.length > 0 ? Math.max(...participants.map((p) => p.display_order)) + 1 : 1;
+}
 
-  let order = 0;
+/** Insere une composition de monstres comme participants, numerotes s'il y en a plusieurs du meme type ("Gobelin 1", "Gobelin 2"...), CA/PV lus depuis leur bloc `stat_block`. Partagee entre la creation d'un combat et l'ajout a un combat existant (meme insertion, seul le point de depart de `display_order` change). */
+async function insertMonsterParticipants(
+  supabase: TypedClient,
+  params: { combatId: string; rulesetId: string; monsters: readonly StartCombatMonsterInput[]; startOrder: number }
+): Promise<void> {
+  let order = params.startOrder;
   for (const monster of params.monsters) {
     const stats = await getMonsterCombatStats(supabase, params.rulesetId, monster.entryKey);
     for (let i = 1; i <= monster.count; i++) {
       order += 1;
       await insertCombatParticipant(supabase, {
-        combatId: combat.id,
+        combatId: params.combatId,
         sourceKind: "statblock",
         entityId: null,
         ruleKey: monster.entryKey,
@@ -164,13 +158,34 @@ export async function createCombatFromMonsters(
       });
     }
   }
+}
 
+/**
+ * Cree un combat (statut `draft`) depuis une composition de monstres — le
+ * point d'entree du bouton "Lancer le combat" de l'outil Rencontres
+ * (V1-E3), quand la campagne n'a pas deja de combat en cours (sinon
+ * `addMonstersToCombat`, retour utilisateur : exporter une nouvelle
+ * generation dans l'ecran Initiative ne doit pas fragmenter le combat en
+ * cours). Les PJ ne sont PAS ajoutes automatiquement — le MJ les ajoute
+ * depuis l'ecran d'initiative (`addEntityParticipant`).
+ */
+export async function createCombatFromMonsters(
+  supabase: TypedClient,
+  params: { campaignId: string; rulesetId: string; name: string | null; monsters: readonly StartCombatMonsterInput[] }
+): Promise<CombatRow> {
+  const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
+  const combat = await insertCombat(supabase, { campaignId: params.campaignId, sessionId, name: params.name });
+  await insertMonsterParticipants(supabase, { combatId: combat.id, rulesetId: params.rulesetId, monsters: params.monsters, startOrder: 0 });
   return combat;
 }
 
-async function nextDisplayOrder(supabase: TypedClient, combatId: string): Promise<number> {
-  const participants = await listCombatParticipants(supabase, combatId);
-  return participants.length > 0 ? Math.max(...participants.map((p) => p.display_order)) + 1 : 1;
+/** Exporte une composition de monstres dans un combat DEJA EN COURS (draft ou en cours) — retour explicite de l'utilisateur : generer une nouvelle rencontre doit pouvoir l'ajouter au combat affiche dans l'ecran Initiative plutot que d'en creer un second qui l'abandonne. */
+export async function addMonstersToCombat(
+  supabase: TypedClient,
+  params: { combatId: string; rulesetId: string; monsters: readonly StartCombatMonsterInput[] }
+): Promise<void> {
+  const startOrder = (await nextDisplayOrder(supabase, params.combatId)) - 1;
+  await insertMonsterParticipants(supabase, { combatId: params.combatId, rulesetId: params.rulesetId, monsters: params.monsters, startOrder });
 }
 
 /** Ajoute un PJ/PNJ nomme (entite du monde) au combat — CA/PV lus depuis sa fiche derivee, PV courants depuis `entity_runtime_state` (jamais une copie figee : c'est la meme source que la fiche jouable). */
@@ -334,6 +349,7 @@ export const retreatCombatTurn = (supabase: TypedClient, params: { combatId: str
 
 export interface ParticipantPatchInput {
   initiative?: number;
+  ac?: number;
   hpCurrent?: number;
   tempHp?: number;
   conditions?: string[];
@@ -361,6 +377,7 @@ export async function patchCombatParticipant(
 
   const updated = await updateCombatParticipant(supabase, participant.id, {
     initiative: params.patch.initiative,
+    ac: params.patch.ac,
     hpCurrent: params.patch.hpCurrent,
     tempHp: params.patch.tempHp,
     conditions: params.patch.conditions as unknown as Json | undefined,

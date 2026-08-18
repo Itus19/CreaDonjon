@@ -34,6 +34,7 @@ export const addParticipantSchema = z.discriminatedUnion("sourceKind", [
 
 export const patchParticipantSchema = z.object({
   initiative: z.number().int().optional(),
+  ac: z.number().int().positive().optional(),
   hpCurrent: z.number().int().nonnegative().optional(),
   tempHp: z.number().int().nonnegative().optional(),
   conditions: z.array(z.string()).optional(),

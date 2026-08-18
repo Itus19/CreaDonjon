@@ -1945,6 +1945,15 @@ L'utilisateur a fourni dix captures d'écran d'une maquette de suivi d'initiativ
 - Vérifié en navigateur de bout en bout, sur la base réelle : composition dans Rencontres (4 monstres) → « Lancer le combat » → 4 participants créés avec CA/PV corrects (confirmés contre leurs fiches de règle) → « Lancer toutes les initiatives » (18/16/15/14, triés) → « Go » (round 1, tour du participant d'initiative la plus haute en surbrillance) → tour suivant (surbrillance suit) → PV modifié (22→21) → condition « Empoisonné » ajoutée → « Annuler » (retire exactement la condition, laisse le changement de PV précédent intact) → « Stop » (statut « Terminé »).
 - `typecheck`/`lint`/`test` (554/554, dont 17 nouveaux tests purs)/`build` tous verts.
 
+**Retouches suite à retour utilisateur sur la première version livrée** :
+
+- Bulle d'initiative agrandie (`h-12 w-12`, bordure épaisse, chiffre centré et plus grand) — lisibilité en jeu.
+- Bouton de relance d'initiative (🎲) : fonctionnait déjà (confirmé en navigateur avant toute modification — valeur mise à jour, requête 200), seul l'habillage visuel manquait d'affordance ; bordure et survol ajoutés.
+- CA d'un participant rendue éditable (était un `<span>` en lecture seule pré-rempli depuis le bloc `stat_block`) : `combat_participants.ac` déjà en base, il manquait le chemin d'écriture — schéma (`patchParticipantSchema`), repo (`updateCombatParticipant`), service (`patchCombatParticipant`), route PATCH, et champ `<input>` du même motif non contrôlé que l'initiative/PV temp.
+- « Lancer le combat » depuis Rencontres **rejoint le combat actif de la campagne au lieu d'en créer un second** : `getActiveCombatForCampaign` vérifié avant `createCombatFromMonsters` ; si un combat `draft`/`running` existe déjà, les nouveaux monstres sont ajoutés via `addMonstersToCombat` (réponse 200) plutôt que de fragmenter la partie en deux combats concurrents. Sans ce garde-fou, une seconde génération depuis Rencontres pendant un combat en cours abandonnait silencieusement les participants déjà en jeu sur l'écran Initiative.
+- Vérifié en navigateur, bout en bout, base réelle : composition d'un « Aigle » dans Rencontres pendant qu'un combat brouillon contenant un « Rat » était déjà actif → « Lancer le combat » → requête `POST .../combats` en **200** (pas 201) → écran Initiative : le même combat « Combat » contient désormais Rat ET Aigle.
+- `typecheck`/`lint`/`test`/`build` tous verts après ces retouches.
+
 ### V1-E5 — Tables de probabilités de réussite · `S` — fait
 
 Spécification complète : `specs/arbitrage-modifications.md` §3.6.

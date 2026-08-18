@@ -417,22 +417,22 @@ export default function InitiativeTracker({
                 isActive ? "border-accent bg-panel-raised" : "border-edge/60"
               }`}
             >
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-3">
                 <input
-                  key={`${p.id}-${p.initiative ?? "none"}`}
+                  key={`${p.id}-init-${p.initiative ?? "none"}`}
                   type="number"
                   defaultValue={p.initiative ?? ""}
                   onBlur={(e) => {
                     const value = Number(e.target.value);
                     if (Number.isFinite(value) && value !== p.initiative) void patchParticipant(p.id, { initiative: value }, "Initiative modifiée");
                   }}
-                  className="mech w-10 rounded-md border border-edge bg-panel-sunken px-1 py-0.5 text-center text-sm text-ink outline-none"
+                  className="mech flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border-2 border-edge bg-panel-sunken text-center text-lg font-bold text-ink outline-none focus:border-accent"
                   title="Initiative"
                 />
                 <button
                   type="button"
                   onClick={() => rollOne(p.id)}
-                  className="text-xs text-ink-muted hover:text-accent"
+                  className="rounded-md border border-edge px-2 py-1.5 text-sm text-ink transition-colors hover:border-accent hover:bg-panel-raised"
                   title="Relancer l'initiative"
                 >
                   🎲
@@ -452,7 +452,19 @@ export default function InitiativeTracker({
                     {p.label}
                   </span>
                 )}
-                {p.ac !== null && <span className="text-[10px] text-ink-muted">CA {p.ac}</span>}
+                <label className="flex items-center gap-1 text-[10px] text-ink-muted">
+                  CA
+                  <input
+                    key={`${p.id}-ac-${p.ac ?? "none"}`}
+                    type="number"
+                    defaultValue={p.ac ?? ""}
+                    onBlur={(e) => {
+                      const value = Number(e.target.value);
+                      if (Number.isFinite(value) && value !== p.ac) void patchParticipant(p.id, { ac: value }, "CA modifiée");
+                    }}
+                    className="mech w-10 rounded-md border border-edge bg-panel-sunken px-1 py-0.5 text-center text-ink outline-none"
+                  />
+                </label>
                 <button
                   type="button"
                   onClick={() => removeParticipant(p.id)}

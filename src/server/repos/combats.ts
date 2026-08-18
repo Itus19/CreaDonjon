@@ -153,6 +153,7 @@ export async function insertCombatParticipant(
 
 export interface CombatParticipantPatch {
   initiative?: number | null;
+  ac?: number | null;
   hpCurrent?: number | null;
   tempHp?: number;
   conditions?: Json;
@@ -166,6 +167,7 @@ export async function updateCombatParticipant(
 ): Promise<CombatParticipantRow> {
   const update: Database["public"]["Tables"]["combat_participants"]["Update"] = {};
   if (patch.initiative !== undefined) update.initiative = patch.initiative;
+  if (patch.ac !== undefined) update.ac = patch.ac;
   if (patch.hpCurrent !== undefined) update.hp_current = patch.hpCurrent;
   if (patch.tempHp !== undefined) update.temp_hp = patch.tempHp;
   if (patch.conditions !== undefined) update.conditions = patch.conditions;
