@@ -124,7 +124,7 @@ export default function WindowFrame({
 
   return (
     <div
-      className={`absolute flex flex-col overflow-hidden rounded-2xl border bg-panel shadow-2xl backdrop-blur-[var(--blur)] transition-[border-color] ${
+      className={`window-frame absolute flex flex-col overflow-hidden rounded-2xl border bg-panel shadow-2xl backdrop-blur-[var(--blur)] transition-[border-color] ${
         isFocused ? "border-accent/40" : "border-edge"
       }`}
       style={
@@ -141,7 +141,7 @@ export default function WindowFrame({
       onMouseDown={onFocus}
     >
       <div
-        className="flex h-[38px] shrink-0 cursor-move items-center justify-between gap-2 border-b border-edge bg-panel-sunken px-3"
+        className="window-titlebar flex h-[38px] shrink-0 cursor-move items-center justify-between gap-2 border-b border-edge bg-panel-sunken px-3"
         onMouseDown={handleDragStart}
         onDoubleClick={toggleMaximize}
       >
@@ -171,12 +171,12 @@ export default function WindowFrame({
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6">{children}</div>
+      <div className="window-content flex-1 overflow-auto p-6">{children}</div>
 
       {!win.isMaximized && (
         <div
           onMouseDown={handleResizeStart}
-          className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize"
+          className="window-resize-handle absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize"
         />
       )}
     </div>

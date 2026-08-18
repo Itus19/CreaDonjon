@@ -208,9 +208,36 @@ body {
    §6) : impression du navigateur, pas de bibliotheque serveur — l'en-tete
    et la barre laterale se retirent (`print:hidden`, AppShell/Sidebar), et
    l'interface sombre par defaut devient un document lisible sur papier
-   plutot que d'imprimer un fond sombre qui gaspille l'encre. */
+   plutot que d'imprimer un fond sombre qui gaspille l'encre.
+   Les jetons eux-memes sont ecrases ici (pas seulement `body`/`:root`) :
+   toute surface de l'interface (`bg-panel`, `bg-panel-raised`,
+   `bg-panel-sunken`, jusqu'a la fenetre flottante de la fiche) lit sa
+   couleur via ces variables (`@theme inline` ci-dessus) — sans ca, seul le
+   fond de la PAGE devenait blanc, la fenetre elle-meme restant sombre et
+   opaque par-dessus : une page d'impression quasi noire (bug reellement
+   rencontre). `!important` necessaire : `:root[data-mode="dark"]` etc.
+   (src/styles/tokens.css) a une specificite plus forte qu'un `:root` nu. */
 @media print {
-  :root,
+  :root {
+    --bg: #ffffff !important;
+    --panel: #ffffff !important;
+    --panel-raised: #ffffff !important;
+    --panel-sunken: #f2f2f2 !important;
+    --edge: #cccccc !important;
+    --edge-strong: #999999 !important;
+    --scrim: transparent !important;
+    --ink: #111111 !important;
+    --ink-soft: #333333 !important;
+    --ink-muted: #555555 !important;
+    --link-entity: #111111 !important;
+    --link-rule: #111111 !important;
+    --gm: #111111 !important;
+    --accent: #111111 !important;
+    --accent-hover: #111111 !important;
+    --accent-ink: #ffffff !important;
+    --danger: #b00020 !important;
+    --blur: 0px !important;
+  }
   body {
     background: #ffffff !important;
     color: #111111 !important;
@@ -219,5 +246,30 @@ body {
   .border-edge\/60,
   .border-edge-strong {
     border-color: #cccccc !important;
+  }
+
+  /* La fenetre flottante (WindowFrame.tsx) porte sa position/taille en
+     `style` inline (glisser/redimensionner) : redevient un bloc normal en
+     flux plutot qu'une zone `overflow: auto` de taille d'ecran, sinon seul
+     ce qui etait visible a l'ecran au moment du clic s'imprime, le reste de
+     la fiche disparait silencieusement. */
+  .window-frame {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    backdrop-filter: none !important;
+  }
+  .window-titlebar,
+  .window-resize-handle {
+    display: none !important;
+  }
+  .window-content {
+    overflow: visible !important;
+    height: auto !important;
   }
 }
