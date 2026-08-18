@@ -2109,11 +2109,29 @@ Le « codeur accompagnant » de `specs/regles-couche.md` §5.
 - **Vérifié dans le navigateur, bout en bout, avec LM Studio réel** : description libre (« Une hallebarde de guerre inflige 1d10 tranchant, pèse 6 livres et coûte 20 pièces d'or ») → catégorie/dégâts/type/poids/coût pré-remplis et badgés « Rempli par l'IA » → nom saisi → « Créer l'arme » → fiche réelle créée (`Hallebarde de Gabriel V1-F2`, Martiale, 1d10 tranchant, 2,7 kg, 20 po) → ligne `ai_usage_log` confirmée en base (`purpose=structure_rule`, `model=gemma-4-e4b-uncensored-hauhaucs-aggressive`, tokens réels).
 - `typecheck`/`lint`/`test` (580/580)/`build` tous verts.
 
-### V1-F3 — Assistance rédactionnelle · `M`
+### V1-F3 — Assistance rédactionnelle · `M` — fait
 
-- [ ] Toute mutation passe par `ai_proposals` : Zod, validation métier, application transactionnelle.
-- [ ] Le modèle ne peut référencer que des identifiants fournis dans le contexte du tour.
-- [ ] Budget de propositions par tour ; au-delà, rejet et journalisation.
+- [x] Toute mutation passe par `ai_proposals` : Zod, validation métier, application transactionnelle.
+- [x] Le modèle ne peut référencer que des identifiants fournis dans le contexte du tour.
+- [x] Budget de propositions par tour ; au-delà, rejet et journalisation.
+
+**Premier vrai consommateur de `ai_proposals`** (contrairement à V1-F2, qui ciblait des surcharges de `ruleset_entries` — hors de la forme de cette table). Périmètre : un bloc `text` déjà existant (comme V1-F2 pour l'arme, pas de création de bloc depuis l'IA dans ce ticket). L'utilisateur donne une instruction libre, l'IA propose un paragraphe (texte brut, jamais un segment complet avec visibilité/références — trop pour un petit modèle local, et l'utilisateur choisit lui-même où l'appliquer), la proposition reste `pending` jusqu'à ce qu'un humain clique « Accepter » ou « Rejeter ».
+
+**Le garde-fou anti-hallucination est structurel, pas seulement documenté** : `zTextProposal` (`src/core/ai/writingProposal.ts`) n'a même pas de champ id — le seul identifiant qui compte (quel bloc est modifié) est fixé côté serveur depuis la route (`blockId` du chemin), jamais lu dans la sortie du modèle. Vérifié par un test dédié : un modèle qui tente de glisser un `blockId`/`entityId` inventé dans son appel d'outil voit ces champs simplement ignorés.
+
+- `src/core/ai/writingProposal.ts` : `zTextProposal` (texte brut, 1-2000 caractères) + `textProposalToolSchema`.
+- `src/server/repos/aiProposals.ts` : CRUD minimal sur `ai_proposals` (déjà migrée depuis la Phase 0, aucune nouvelle migration).
+- `src/server/ai/writingAssist.ts` : `proposeTextForBlock` — chaque appel d'outil devient une ligne `ai_proposals`. Budget : 3 propositions max par appel ; le surplus est inséré comme `rejected` avec `validation_errors: {reason: "budget_exceeded"}` — jamais silencieusement perdu, journalisé comme le critère l'exige. `purpose: "assist_writing"`, ajouté à `AiUsagePurpose` (V1-F1) : aucune des cinq valeurs d'origine ne correspondait.
+- `src/server/services/aiProposals.ts` : `applyAiProposal` (ajoute le segment, `changeSource: "ai"` sur la révision — `recordBlockRevision`/`updateBlockContent` de V1-C3 acceptaient déjà cette valeur, jamais câblée avant ce ticket) / `rejectAiProposal`.
+- Routes : `POST /api/blocks/[blockId]/writing-assist`, `GET /api/entities/[id]/ai-proposals`, `POST /api/ai-proposals/[id]/apply`, `POST /api/ai-proposals/[id]/reject`.
+- `TextBlockEditor.tsx` : zone « Assistance IA » (instruction + Proposer), propositions en attente avec Accepter/Rejeter, propositions rejetées affichées en petit (jamais cachées).
+
+**Bug trouvé et corrigé en vérifiant dans le navigateur** : `RichTextEditor` (Tiptap, V0-06f) capture son contenu une seule fois au montage (`useState(() => segmentsToDoc(segments))`, volontaire — un éditeur « contrôlé » depuis l'extérieur perdrait le curseur à chaque frappe). Une proposition acceptée écrit `data` par une voie qui contourne cet éditeur : sans resynchronisation explicite, le nouveau segment restait invisible jusqu'au rechargement de la page, alors même que l'écriture serveur était correcte (vérifié directement en base). Corrigé par une clé de remontage ciblé (`remountKey`, incrémentée uniquement après une application IA, jamais pendant la frappe normale) — testé en direct, deux propositions acceptées successivement s'affichent immédiatement sans rechargement.
+
+**Faux conflit évité** : une proposition appliquée écrit le bloc côté serveur en dehors de la chaîne `saveBlock` habituelle d'`EntityBlocks.tsx` — sans synchronisation, `versionsRef` restait périmé et la prochaine édition manuelle échouait en 409. Un nouveau callback `onBlockRefreshed` (déclenché seulement après une application, jamais à chaque frappe) resynchronise `versionsRef` et l'état local ensemble.
+
+- Vérifié dans le navigateur, bout en bout, avec LM Studio réel : instruction libre sur un bloc `text` vide → proposition affichée → Accepter → segment réellement écrit (confirmé en base, révision `changeSource: "ai"`) → visible immédiatement dans l'éditeur, sans rechargement → une seconde proposition acceptée s'ajoute à la suite, ordre correct.
+- `typecheck`/`lint`/`test` (593, dont 1 test réel LM Studio intermittent sous charge parallèle — passe systématiquement seul, non lié à ce ticket, hérité de V1-F2)/`build` tous verts.
 
 ### V1-F4 — Relevé de coûts · `S`
 

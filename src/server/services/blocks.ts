@@ -86,11 +86,16 @@ function isBlockType(value: string): value is BlockType {
   return (BLOCK_TYPES as readonly string[]).includes(value);
 }
 
-/** Edition redactionnelle d'un bloc = nouvelle revision de son entite (V1-C3, specs/wiki-blocs.md §4.5). */
-async function recordBlockRevision(supabase: TypedClient, entityId: string, changedBy: string): Promise<void> {
+/** Edition redactionnelle d'un bloc = nouvelle revision de son entite (V1-C3, specs/wiki-blocs.md §4.5). `changeSource` distingue une proposition IA appliquee (V1-F3) d'une edition manuelle. */
+async function recordBlockRevision(
+  supabase: TypedClient,
+  entityId: string,
+  changedBy: string,
+  changeSource: "user" | "ai" = "user"
+): Promise<void> {
   const entity = await getEntityById(supabase, entityId);
   if (!entity) return;
-  await recordEntityRevision(supabase, { entity, changeSource: "user", changedBy });
+  await recordEntityRevision(supabase, { entity, changeSource, changedBy });
 }
 
 export async function createBlock(
@@ -136,6 +141,7 @@ export async function updateBlockContent(
     visibilityLevel: string;
     visibilityScopeId: string | null;
     changedBy: string;
+    changeSource?: "user" | "ai";
   }
 ): Promise<{ ok: true; block: VisibleBlock } | { ok: false; reason: "conflict" | "not_found" }> {
   const existing = await getBlockById(supabase, params.id);
@@ -155,7 +161,7 @@ export async function updateBlockContent(
     visibilityScopeId: params.visibilityScopeId,
   });
   if (!row) return { ok: false, reason: "conflict" };
-  await recordBlockRevision(supabase, existing.entity_id, params.changedBy);
+  await recordBlockRevision(supabase, existing.entity_id, params.changedBy, params.changeSource ?? "user");
   return { ok: true, block: toVisibleBlock(row) };
 }
 

@@ -60,16 +60,27 @@ function BlockDataEditor({
   onChange,
   worldSlug,
   characterData,
+  onBlockRefreshed,
 }: {
   block: BlockItem;
   onChange: (data: unknown) => void;
   worldSlug: string;
   /** Bloc `character` de la meme entite, s'il existe (V1-C18) — permet au bloc `inventory` autonome d'afficher les memes lignes Attaquer/Degats et la meme barre de charge que l'onglet Inventaire de la fiche jouable, sans dupliquer le calcul. */
   characterData: CharacterBlockData | undefined;
+  /** Assistance IA du bloc `text` (V1-F3) : une proposition appliquee ecrit cote serveur, ce callback resynchronise l'etat local (donnee + version). */
+  onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
 }) {
   switch (block.blockType) {
     case "text":
-      return <TextBlockEditor data={block.data as TextBlockData} onChange={(d) => onChange(d)} />;
+      return (
+        <TextBlockEditor
+          data={block.data as TextBlockData}
+          onChange={(d) => onChange(d)}
+          entityId={block.entityId}
+          blockId={block.id}
+          onBlockRefreshed={onBlockRefreshed}
+        />
+      );
     case "infobox":
       return (
         <InfoboxBlockEditor data={block.data as InfoboxBlockData} onChange={(d) => onChange(d)} />
@@ -233,6 +244,18 @@ export default function EntityBlocks({
 
   function patchBlock(id: string, patch: Partial<BlockItem>) {
     setBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+  }
+
+  /**
+   * Une proposition IA appliquee (V1-F3) ecrit le bloc cote serveur en
+   * dehors de la chaine `saveBlock` habituelle — `versionsRef` doit suivre,
+   * sinon la prochaine edition manuelle de ce bloc PATCH avec une version
+   * perimee et echoue en 409 (conflit fantome, alors que rien n'est
+   * reellement en conflit du point de vue de l'utilisateur).
+   */
+  function handleBlockRefreshed(fresh: { id: string; data: unknown; version: number }) {
+    versionsRef.current[fresh.id] = fresh.version;
+    patchBlock(fresh.id, { data: fresh.data, version: fresh.version });
   }
 
   function toggleCollapsed(id: string) {
@@ -542,6 +565,7 @@ export default function EntityBlocks({
                   onChange={(data) => patchBlock(block.id, { data })}
                   worldSlug={worldSlug}
                   characterData={characterBlock?.data as CharacterBlockData | undefined}
+                  onBlockRefreshed={handleBlockRefreshed}
                 />
               )
             )}

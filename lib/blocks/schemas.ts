@@ -26,3 +26,8 @@ export const reorderBlockSchema = z.object({
 export const drawTableSchema = z.object({
   count: z.number().int().min(1).max(20).default(1),
 });
+
+/** Assistance redactionnelle (V1-F3) — instruction libre envoyee au modele, jamais un identifiant : le bloc cible vient de la route, pas du corps. */
+export const writingAssistSchema = z.object({
+  instruction: z.string().trim().min(1).max(500),
+});
