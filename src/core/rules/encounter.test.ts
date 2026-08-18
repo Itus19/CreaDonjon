@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { encounterBudget, encounterCost, parseEncounterBudgetRows, type EncounterBudgetRow } from "./encounter";
+import {
+  encounterBudget,
+  encounterCost,
+  formatChallengeRating,
+  generateRandomEncounter,
+  parseEncounterBudgetRows,
+  type EncounterBudgetRow,
+  type EncounterMonsterOption,
+} from "./encounter";
+import { SeededRng } from "../dice/rng";
 
 // Table "Budget de PX par personnage" (SRD 5.2.1, § « Difficulté d'une
 // rencontre de combat ») — 20 lignes verifiees mot pour mot dans
@@ -79,5 +88,66 @@ describe("parseEncounterBudgetRows", () => {
   it("ignore une ligne dont un champ numerique est illisible plutot que de produire NaN", () => {
     const rows = [{ Niveau: "1", Faible: "cinquante", Modérée: "75", Élevée: "100" }];
     expect(parseEncounterBudgetRows(rows)).toEqual([]);
+  });
+});
+
+describe("formatChallengeRating", () => {
+  it("affiche les fractions usuelles du SRD", () => {
+    expect(formatChallengeRating(0.125)).toBe("1/8");
+    expect(formatChallengeRating(0.25)).toBe("1/4");
+    expect(formatChallengeRating(0.5)).toBe("1/2");
+  });
+
+  it("affiche un facteur entier tel quel", () => {
+    expect(formatChallengeRating(0)).toBe("0");
+    expect(formatChallengeRating(1)).toBe("1");
+    expect(formatChallengeRating(20)).toBe("20");
+  });
+});
+
+describe("generateRandomEncounter", () => {
+  const POOL: EncounterMonsterOption[] = [
+    { entryKey: "goblin", xp: 50 },
+    { entryKey: "orc", xp: 100 },
+    { entryKey: "owlbear", xp: 700 },
+  ];
+
+  it("un budget de zero ne genere aucun participant", () => {
+    expect(generateRandomEncounter(0, POOL, new SeededRng(1))).toEqual([]);
+  });
+
+  it("un pool vide ne genere aucun participant", () => {
+    expect(generateRandomEncounter(500, [], new SeededRng(1))).toEqual([]);
+  });
+
+  it("ne depasse jamais le budget cible, quelle que soit la graine", () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const result = generateRandomEncounter(500, POOL, new SeededRng(seed));
+      const cost = result.reduce((sum, p) => {
+        const option = POOL.find((o) => o.entryKey === p.entryKey)!;
+        return sum + option.xp * p.count;
+      }, 0);
+      expect(cost).toBeLessThanOrEqual(500);
+    }
+  });
+
+  it("aucune option ne rentrant dans le budget -> aucun participant", () => {
+    expect(generateRandomEncounter(40, POOL, new SeededRng(1))).toEqual([]);
+  });
+
+  it("une seule option qui rentre exactement -> la sature completement", () => {
+    const result = generateRandomEncounter(150, [{ entryKey: "goblin", xp: 50 }], new SeededRng(1));
+    expect(result).toEqual([{ entryKey: "goblin", count: 3 }]);
+  });
+
+  it("meme graine -> meme resultat (reproductible)", () => {
+    const a = generateRandomEncounter(500, POOL, new SeededRng(42));
+    const b = generateRandomEncounter(500, POOL, new SeededRng(42));
+    expect(a).toEqual(b);
+  });
+
+  it("ecarte une option a PX nul ou negatif avant tirage (jamais de boucle infinie)", () => {
+    const result = generateRandomEncounter(100, [{ entryKey: "gratuit", xp: 0 }], new SeededRng(1));
+    expect(result).toEqual([]);
   });
 });

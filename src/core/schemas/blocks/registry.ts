@@ -11,7 +11,6 @@ import { zResourcesBlockData } from "./resources";
 import { zStatblockBlockData } from "./statblock";
 import { zRandomTableBlockData } from "./randomTable";
 import { zGeneratorBlockData } from "./generator";
-import { zEncounterBlockData } from "./encounter";
 
 /**
  * Catalogue des blocs de wiki (specs/wiki-blocs.md §1, docs/SCHEMA.md §7).
@@ -24,9 +23,10 @@ import { zEncounterBlockData } from "./encounter";
  * V1-E2 : generator (specs/outils-mj.md §3) — trois emplois concrets
  * (noms, rumeurs, butin), pas la recette complete a `rule_query`/promotion
  * en entite de la spec (V2, cf. src/core/generators/types.ts).
- * V1-E3 : encounter (specs/outils-mj.md §4.3) — composition d'une rencontre
- * de combat sur une entite (lieu/quete), PX saisis par le MJ (pas de
- * resolution automatique depuis le ruleset dans ce ticket).
+ * Pas de bloc `encounter` : le generateur de rencontres (V1-E3) est un
+ * outil d'ecran MJ autonome (table `campaign_encounters`), jamais attache
+ * a une fiche — decision explicite de l'utilisateur, revenant sur le plan
+ * initial de docs/SCHEMA.md qui le prevoyait en bloc V2.
  */
 export const BLOCK_TYPES = [
   "text",
@@ -40,7 +40,6 @@ export const BLOCK_TYPES = [
   "statblock",
   "random_table",
   "generator",
-  "encounter",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -56,7 +55,6 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   statblock: "statblock",
   random_table: "table",
   generator: "prose",
-  encounter: "prose",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -72,7 +70,6 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   statblock: zStatblockBlockData,
   random_table: zRandomTableBlockData,
   generator: zGeneratorBlockData,
-  encounter: zEncounterBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -92,7 +89,6 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
     slots: [{ key: "resultat", table: "nouvelle-table" }],
     template: "{resultat}",
   },
-  encounter: { __v: 1, partyLevels: [1, 1, 1, 1], participants: [] },
   character: {
     __v: 1,
     species: null,

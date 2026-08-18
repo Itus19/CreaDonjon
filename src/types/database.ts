@@ -305,6 +305,53 @@ export type Database = {
           },
         ]
       }
+      campaign_encounters: {
+        Row: {
+          band: string | null
+          campaign_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          participants: Json
+          party_level: number
+          party_size: number
+          updated_at: string
+        }
+        Insert: {
+          band?: string | null
+          campaign_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          participants?: Json
+          party_level: number
+          party_size: number
+          updated_at?: string
+        }
+        Update: {
+          band?: string | null
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          participants?: Json
+          party_level?: number
+          party_size?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_encounters_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_entity_snapshots: {
         Row: {
           campaign_id: string

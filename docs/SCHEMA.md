@@ -275,7 +275,7 @@ create index blocks_type_idx   on blocks (block_type);
 
 **`display_order` est un `numeric`.** Insérer entre le 3ᵉ et le 4ᵉ s'écrit `3.5` — une seule ligne modifiée. Avec des entiers, il faut réécrire toute la liste à chaque déplacement.
 
-**Types de blocs.** V0 : `description`, `infobox`, `gallery`, `custom_table`. V1 : `character`, `inventory`, `spellcasting`, `resources`, `statblock`, `timeline`, `relationships`. V2 : `genealogy`, `random_table`, `quest`, `encounter`, `loot`, `map_pins`, `quote`, `session_log`.
+**Types de blocs.** V0 : `description`, `infobox`, `gallery`, `custom_table`. V1 : `character`, `inventory`, `spellcasting`, `resources`, `statblock`, `timeline`, `relationships`. V2 : `genealogy`, `random_table`, `quest`, `loot`, `map_pins`, `quote`, `session_log`. Le générateur de rencontres (V1-E3) n'est **pas** un bloc de wiki : refonte en outil MJ autonome (table `campaign_encounters`), décision explicite de l'utilisateur — voir `docs/BACKLOG_V1.md` §V1-E3.
 
 Chaque type a un schéma Zod dans `src/core/schemas/blocks/<type>.ts` et une version stockée dans `data.__v`. Catalogue et spécification détaillée dans `Spec_Blocs_de_Wiki_v0_1.md`.
 
@@ -632,6 +632,25 @@ create table campaign_entity_snapshots (
 ```
 
 `rng_seed` permet de rejouer une partie solo à l'identique et de diagnostiquer un bug de règle.
+
+**`campaign_encounters`** (migration `20260818110001_campaign_encounters.sql`, V1-E3) — rencontres composées par le générateur MJ (outil autonome, jamais un bloc de wiki, voir §7) :
+
+```sql
+create table campaign_encounters (
+  id           uuid primary key default gen_random_uuid(),
+  campaign_id  uuid not null references campaigns(id) on delete cascade,
+  name         text not null default 'Rencontre',
+  party_size   int not null check (party_size > 0),
+  party_level  int not null check (party_level between 1 and 20),
+  band         text check (band in ('low','moderate','high')),
+  participants jsonb not null default '[]'::jsonb,  -- instantané figé : cle/nom/FP/PX au moment de la sauvegarde
+  created_by   uuid references auth.users(id),
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+```
+
+`participants` n'est jamais recalculé depuis le ruleset à la lecture — une rencontre sauvegardée ne doit pas changer de composition si une traduction ou une entrée de ruleset est modifiée plus tard. RLS : même politique que `dice_rolls`/`entity_discoveries` (`app.is_world_member(app.campaign_world_id(campaign_id))`).
 
 ---
 

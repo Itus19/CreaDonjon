@@ -15,6 +15,8 @@
  * pas de valeur inventee pour 2014).
  */
 
+import type { Rng } from "../dice/rng";
+
 export type EncounterBudgetBand = "low" | "moderate" | "high";
 
 export interface EncounterBudgetRow {
@@ -52,6 +54,69 @@ export function encounterBudget(
 /** Cout en PX d'une composition de creatures : `xp` unitaire (deja fourni par le SRD) multiplie par le nombre de creatures, somme sur tous les participants. */
 export function encounterCost(participants: readonly { xp: number; count: number }[]): number {
   return participants.reduce((sum, p) => sum + p.xp * p.count, 0);
+}
+
+const CHALLENGE_RATING_FRACTIONS: Readonly<Record<number, string>> = {
+  0.125: "1/8",
+  0.25: "1/4",
+  0.5: "1/2",
+};
+
+/** Affiche un facteur de puissance comme au tableau du SRD ("1/4", "1/2", "7"...) — `source_raw.challenge_rating` est un nombre decimal, jamais la fraction attendue par un MJ. */
+export function formatChallengeRating(cr: number): string {
+  return CHALLENGE_RATING_FRACTIONS[cr] ?? String(cr);
+}
+
+export interface EncounterMonsterOption {
+  entryKey: string;
+  xp: number;
+}
+
+export interface GeneratedEncounterParticipant {
+  entryKey: string;
+  count: number;
+}
+
+/**
+ * Solveur aleatoire (V1-E3, specs/outils-mj.md §4.3, mockup "Generation
+ * Aleatoire") : pioche des monstres au hasard dans `pool` jusqu'a saturer
+ * `targetBudget`, sans jamais le depasser. Portee volontairement reduite
+ * pour ce ticket : aucune contrainte de type/environnement (la spec en
+ * mentionne, mais aucun monstre du SRD n'a encore de champ environnement
+ * exploitable) — un tirage purement par PX, comme le texte officiel le
+ * permet deja (« choisissez des monstres jusqu'a epuiser le budget »).
+ *
+ * Rejet uniquement parmi les options qui *tiennent* dans le budget
+ * restant : le cout final ne peut donc jamais depasser `targetBudget`
+ * (il peut rester en dessous si aucune option ne rentre dans le reliquat).
+ * Une option de PX 0 ou negatif est ecartee avant tirage : elle romprait
+ * la garantie de terminaison (une infinite de creatures gratuites).
+ */
+export function generateRandomEncounter(
+  targetBudget: number,
+  pool: readonly EncounterMonsterOption[],
+  rng: Rng
+): GeneratedEncounterParticipant[] {
+  const options = pool.filter((o) => o.xp > 0);
+  if (options.length === 0 || targetBudget <= 0) return [];
+
+  const counts = new Map<string, number>();
+  let remaining = targetBudget;
+  // Borne de securite : au pire une creature au PX le plus bas repetee
+  // jusqu'a epuiser le budget, plus une marge — jamais de boucle infinie
+  // meme si une future extension change la logique de filtrage ci-dessus.
+  const minXp = Math.min(...options.map((o) => o.xp));
+  const maxIterations = Math.ceil(targetBudget / minXp) + 1;
+
+  for (let i = 0; i < maxIterations; i++) {
+    const affordable = options.filter((o) => o.xp <= remaining);
+    if (affordable.length === 0) break;
+    const pick = affordable[rng.nextInt(affordable.length)];
+    counts.set(pick.entryKey, (counts.get(pick.entryKey) ?? 0) + 1);
+    remaining -= pick.xp;
+  }
+
+  return [...counts.entries()].map(([entryKey, count]) => ({ entryKey, count }));
 }
 
 /**

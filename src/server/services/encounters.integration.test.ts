@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
-import { getEncounterBudgetTable } from "./encounters";
+import { getEncounterBudgetTable, listMonstersForRuleset } from "./encounters";
 
 /**
  * V1-E3 : verifie que la table "Budget de PX par personnage" ecrite par
@@ -34,5 +34,19 @@ describe.skipIf(!hasCreds)("getEncounterBudgetTable (integration, base reelle)",
   it("renvoie null pour le SRD 5.1, qui ne republie pas cette table (jamais une valeur inventee)", async () => {
     const rows = await getEncounterBudgetTable(admin, RULESET_5_1);
     expect(rows).toBeNull();
+  });
+});
+
+describe.skipIf(!hasCreds)("listMonstersForRuleset (integration, base reelle)", () => {
+  const admin: SupabaseClient = createSupabaseClient(SUPABASE_URL ?? "", SERVICE_ROLE_KEY ?? "", {
+    auth: { persistSession: false },
+  });
+
+  it("retrouve le gobelin-guerrier du SRD 5.2.1 avec ses PX et son FP", async () => {
+    const monsters = await listMonstersForRuleset(admin, RULESET_5_2_1, "fr");
+    const goblin = monsters.find((m) => m.key === "goblin-warrior");
+    expect(goblin).toBeDefined();
+    expect(goblin?.xp).toBe(50);
+    expect(goblin?.challengeRatingLabel).toBe("1/4");
   });
 });

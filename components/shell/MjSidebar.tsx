@@ -7,10 +7,11 @@ import { useTranslations } from "next-intl";
 
 /**
  * Barre laterale du Compagnon MJ (nouvel onglet, meme repli mobile que
- * RulesSidebar/Sidebar) : campagnes et probabilites aujourd'hui (V1-E5), le
- * reste en reserve — generateurs/rencontres sont explicitement V2
- * (specs/outils-mj.md), le bloc-notes attend son propre ticket. Les
- * entrees reservees restent visibles (pas de fonctionnalite cachee) mais
+ * RulesSidebar/Sidebar) : campagnes, probabilites (V1-E5) et rencontres
+ * (V1-E3, refonte en outil MJ autonome sur demande explicite de
+ * l'utilisateur — initialement prevu V2 comme bloc d'entite, docs/SCHEMA.md
+ * §7). Tables aleatoires/bloc-notes restent en reserve. Les entrees
+ * reservees restent visibles (pas de fonctionnalite cachee) mais
  * desactivees, meme convention que "Inviter un MJ" dans le menu de reglages.
  */
 export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
@@ -20,8 +21,9 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
   const pathname = usePathname();
   const isCampagnes = pathname === `/m/${worldSlug}/mj`;
   const isProbabilites = pathname === `/m/${worldSlug}/mj/probabilites`;
+  const isRencontres = pathname === `/m/${worldSlug}/mj/rencontres`;
 
-  const reserved = [t("tablesAleatoires"), t("rencontres"), t("blocNotes")];
+  const reserved = [t("tablesAleatoires"), t("blocNotes")];
 
   return (
     <>
@@ -65,6 +67,16 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
           }`}
         >
           {t("probabilites")}
+        </Link>
+
+        <Link
+          href={`/m/${worldSlug}/mj/rencontres`}
+          onClick={() => setOpen(false)}
+          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
+            isRencontres ? "bg-panel-raised text-accent" : "text-ink-soft"
+          }`}
+        >
+          {t("rencontres")}
         </Link>
 
         <div className="mt-3 flex flex-col gap-1 border-t border-edge/60 pt-3">
