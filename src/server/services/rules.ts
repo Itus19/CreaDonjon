@@ -17,6 +17,7 @@ import {
   type ReferencePrimitive,
   type ScalingBlockData,
   type SpeciesTraitsBlockData,
+  type StatBlockBlockData,
   type SubclassSlotBlockData,
   type WeaponBlockData,
   zAddEntryPayload,
@@ -655,6 +656,19 @@ export async function getRuleEntryForWorld(
 
     return { id, blockType, display, data, displayOrder, originalData };
   });
+
+  // Le SRD porte les PX de chaque monstre (`source_raw.xp`), mais
+  // l'extraction initiale du bloc `stat_block` (V1-D3b) ne l'a jamais copie
+  // dans ses donnees — retour utilisateur : injecte a la lecture, jamais un
+  // backfill des lignes stockees, jamais une valeur inventee si absente de
+  // la source (monstres sans XP dans le SRD, rares mais existants).
+  if (entry?.entry_type === "monster") {
+    const rawXp = (entry.source_raw as { xp?: unknown } | null)?.xp;
+    if (typeof rawXp === "number") {
+      const statBlock = blocks.find((b) => b.blockType === "stat_block");
+      if (statBlock) statBlock.data = { ...(statBlock.data as StatBlockBlockData), xp: rawXp };
+    }
+  }
 
   // Une fiche maison n'a pas de `ruleset_entry_refs` (la table exige un
   // `source_entry_id` reel) : aucun renvoi sortant deduit pour elle, mais

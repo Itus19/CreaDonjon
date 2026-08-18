@@ -486,6 +486,7 @@ function StatBlock({ data }: { data: StatBlockBlockData }) {
     ...(data.senses ? [{ label: "Sens", value: Object.entries(data.senses).map(([k, v]) => `${k} ${v}`).join(", ") }] : []),
     ...(data.languages ? [{ label: "Langues", value: data.languages }] : []),
     { label: "Facteur de puissance", value: String(data.challenge_rating) },
+    ...(data.xp !== undefined ? [{ label: "PX", value: <span className="mech">{data.xp}</span> }] : []),
     { label: "Bonus de maitrise", value: `+${data.proficiency_bonus}` },
   ];
   return <KeyValues items={items} />;

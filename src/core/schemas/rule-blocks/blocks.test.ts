@@ -213,6 +213,22 @@ describe("zStatBlockBlockData", () => {
     };
     expect(zStatBlockBlockData.parse(data)).toEqual(data);
   });
+
+  it("accepte un champ xp optionnel (V1-E3, injecte a la lecture depuis source_raw)", () => {
+    const data = {
+      size: "Small",
+      creature_type: "humanoid",
+      armor_class: 15,
+      hit_points: 7,
+      hit_dice: "2d6",
+      speed: { walk: "30 ft." },
+      abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
+      challenge_rating: 0.25,
+      proficiency_bonus: 2,
+      xp: 50,
+    };
+    expect(zStatBlockBlockData.parse(data)).toEqual(data);
+  });
 });
 
 describe("zTraitsBlockData", () => {

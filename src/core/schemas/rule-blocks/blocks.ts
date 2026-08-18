@@ -256,6 +256,11 @@ export const zStatBlockBlockData = z.object({
   languages: z.string().optional(),
   challenge_rating: z.number(),
   proficiency_bonus: z.number().int(),
+  // Optionnel : jamais stocke a l'extraction initiale (V1-D3b), injecte a la
+  // lecture depuis `ruleset_entries.source_raw.xp` (V1-E3, retour utilisateur
+  // — le SRD porte cette valeur pour chaque monstre, elle manquait a
+  // l'affichage). Jamais une valeur inventee si absente de la source.
+  xp: z.number().optional(),
 });
 export type StatBlockBlockData = z.infer<typeof zStatBlockBlockData>;
 
