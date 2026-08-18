@@ -486,27 +486,71 @@ function StatBadge({ label, value }: { label: string; value: string }) {
   );
 }
 
+function FeatureCard({
+  name,
+  description,
+  keyPrefix,
+  meta,
+}: {
+  name: string;
+  description: string;
+  keyPrefix: string;
+  meta?: string;
+}) {
+  return (
+    <div className="rounded-md border border-edge/60 bg-panel-raised p-2.5 text-sm text-ink">
+      <span className="font-semibold">{name}.</span> {renderMarkdownBoldText(description, keyPrefix)}
+      {meta && <p className="mech text-xs text-ink-muted">{meta}</p>}
+    </div>
+  );
+}
+
+function actionMeta(a: ActionsBlockData["actions"][number]): string | undefined {
+  if (a.attack_bonus === undefined && !a.damage?.length) return undefined;
+  const parts: string[] = [];
+  if (a.attack_bonus !== undefined) parts.push(`+${a.attack_bonus} pour toucher`);
+  if (a.damage?.length) parts.push(a.damage.map((d) => `${formatFormulaNode(d.dice)}${d.type ? ` (${damageTypeLabel(d.type)})` : ""}`).join(", "));
+  return parts.join(" · ");
+}
+
 /**
- * Fiche de créature (V1-E4 suite, retour utilisateur : « leur bloc
- * Caractéristiques... devrait ressembler à ce qu'on a fait pour le bloc de
- * personnage ») — même architecture visuelle que `PlayableCharacterSheet`/
- * `MonsterStatblockSheet` (V1-B5/V1-E4) : CA en écusson, PV/vitesse/FP en
- * badges, caractéristiques en boîtes avec sauvegarde, plutôt que la grille
- * `KeyValues` générique utilisée par les autres blocs de règle. Modèle
- * validé sur Aboleth avant extension aux autres monstres — lecture seule,
- * aucune saisie : une fiche de règle SRD ne s'édite jamais ici.
+ * Fiche de créature (V1-E4 suite, retour utilisateur) — même architecture
+ * visuelle que `PlayableCharacterSheet`/`MonsterStatblockSheet` (V1-B5/
+ * V1-E4) : colonne de gauche fixe (caractéristiques en boîtes 2 colonnes ×
+ * 3 lignes, compétences, sens/langues), colonne principale à droite —
+ * jamais des onglets ici (demande explicite), Actions puis Aptitudes
+ * spéciales à la suite l'une de l'autre. `traits`/`actions` fusionnés dans
+ * CE même bloc visuel plutôt que rendus comme deux sections séparées :
+ * `page.tsx` retire ces deux blocs de la liste normale quand un
+ * `stat_block` est présent dans la même fiche et les passe ici. Modèle
+ * validé sur Aboleth — lecture seule, aucune saisie : une fiche de règle
+ * SRD ne s'édite jamais ici.
+ *
+ * Compromis assumé : un `traits`/`actions` surchargé isolément par une
+ * variante (V1-A4) perd son propre badge « modifiée dans ta variante »
+ * une fois fusionné ici (celui du `stat_block` reste, porté par
+ * `RuleBlockRenderer` en amont) — cas marginal, pas dans le périmètre de
+ * cette refonte visuelle.
  */
-function StatBlock({ data }: { data: StatBlockBlockData }) {
-  const speedText = Object.entries(data.speed)
+export function MonsterCard({
+  statBlock,
+  traits,
+  actions,
+}: {
+  statBlock: StatBlockBlockData;
+  traits?: TraitsBlockData;
+  actions?: ActionsBlockData;
+}) {
+  const speedText = Object.entries(statBlock.speed)
     .map(([kind, value]) => `${kind} ${value}`)
     .join(", ");
-  const savingThrowByAbility = new Map((data.saving_throws ?? []).map((s) => [s.ability, s.bonus]));
+  const savingThrowByAbility = new Map((statBlock.saving_throws ?? []).map((s) => [s.ability, s.bonus]));
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-x-2 text-sm text-ink-muted">
-        <span>{`${SIZE_LABELS_FR[data.size] ?? data.size} ${CREATURE_TYPE_LABELS_FR[data.creature_type] ?? data.creature_type}`.trim()}</span>
-        {data.alignment && <span>· {data.alignment}</span>}
+        <span>{`${SIZE_LABELS_FR[statBlock.size] ?? statBlock.size} ${CREATURE_TYPE_LABELS_FR[statBlock.creature_type] ?? statBlock.creature_type}`.trim()}</span>
+        {statBlock.alignment && <span>· {statBlock.alignment}</span>}
       </div>
 
       <div className="flex flex-wrap items-start gap-3">
@@ -516,46 +560,46 @@ function StatBlock({ data }: { data: StatBlockBlockData }) {
             className="relative flex h-14 w-12 items-center justify-center border-2 border-accent bg-panel-raised"
             style={{ clipPath: "polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)" }}
           >
-            <span className="text-xl font-bold text-ink">{data.armor_class}</span>
+            <span className="text-xl font-bold text-ink">{statBlock.armor_class}</span>
           </div>
         </div>
-        <StatBadge label="PV" value={`${data.hit_points} (${data.hit_dice})`} />
+        <StatBadge label="PV" value={`${statBlock.hit_points} (${statBlock.hit_dice})`} />
         <StatBadge label="Vitesse" value={speedText} />
-        <StatBadge label="FP" value={String(data.challenge_rating)} />
-        <StatBadge label="Maîtrise" value={`+${data.proficiency_bonus}`} />
-        {data.xp !== undefined && <StatBadge label="PX" value={String(data.xp)} />}
+        <StatBadge label="FP" value={String(statBlock.challenge_rating)} />
+        <StatBadge label="Maîtrise" value={`+${statBlock.proficiency_bonus}`} />
+        {statBlock.xp !== undefined && <StatBadge label="PX" value={String(statBlock.xp)} />}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-        {STAT_BLOCK_ABILITIES.map((ability) => {
-          const score = data.abilities[ability];
-          const save = savingThrowByAbility.get(ability);
-          return (
-            <div
-              key={ability}
-              className="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center"
-            >
-              <span className="text-[10px] font-bold uppercase tracking-widest text-accent">{abilityLabel(ability)}</span>
-              <span className="text-xl font-bold text-ink">{fmtMod(abilityMod(score))}</span>
-              <span className="mech text-xs text-ink-muted">{score}</span>
-              {save !== undefined && (
-                <span className="flex items-center gap-1 whitespace-nowrap rounded-full border border-accent bg-accent/20 px-2 py-0.5 text-[11px] font-semibold text-accent">
-                  <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
-                  Sauv. {fmtMod(save)}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <div className="flex flex-col gap-4 md:flex-row">
+        <aside className="flex flex-col gap-3 md:w-48 md:shrink-0">
+          <div className="grid grid-cols-2 gap-2">
+            {STAT_BLOCK_ABILITIES.map((ability) => {
+              const score = statBlock.abilities[ability];
+              const save = savingThrowByAbility.get(ability);
+              return (
+                <div
+                  key={ability}
+                  className="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center"
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-accent">{abilityLabel(ability)}</span>
+                  <span className="text-xl font-bold text-ink">{fmtMod(abilityMod(score))}</span>
+                  <span className="mech text-xs text-ink-muted">{score}</span>
+                  {save !== undefined && (
+                    <span className="flex items-center gap-1 whitespace-nowrap rounded-full border border-accent bg-accent/20 px-2 py-0.5 text-[11px] font-semibold text-accent">
+                      <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+                      Sauv. {fmtMod(save)}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
-      {(!!data.skills?.length || data.senses || data.languages) && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:gap-10">
-          {!!data.skills?.length && (
+          {!!statBlock.skills?.length && (
             <div className="flex flex-col gap-1">
               <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Compétences</span>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                {data.skills.map((s) => (
+              <div className="flex flex-col gap-0.5 text-sm">
+                {statBlock.skills.map((s) => (
                   <span key={s.name} className="text-ink">
                     {s.name} <span className="mech text-ink-muted">{fmtMod(s.bonus)}</span>
                   </span>
@@ -563,68 +607,88 @@ function StatBlock({ data }: { data: StatBlockBlockData }) {
               </div>
             </div>
           )}
-          <div className="flex flex-col gap-1 text-sm">
-            {data.senses && (
-              <p>
-                <span className="text-ink-muted">Sens </span>
-                {Object.entries(data.senses)
-                  .map(([k, v]) => `${k} ${v}`)
-                  .join(", ")}
-              </p>
-            )}
-            {data.languages && (
-              <p>
-                <span className="text-ink-muted">Langues </span>
-                {data.languages}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
 
-      {(!!data.damage_vulnerabilities?.length ||
-        !!data.damage_resistances?.length ||
-        !!data.damage_immunities?.length ||
-        !!data.condition_immunities?.length) && (
-        <div className="flex flex-col gap-1 text-sm">
-          {!!data.damage_vulnerabilities?.length && (
-            <p>
-              <span className="text-ink-muted">Vulnérabilités </span>
-              {data.damage_vulnerabilities.join(", ")}
-            </p>
+          {(statBlock.senses || statBlock.languages) && (
+            <div className="flex flex-col gap-1 text-sm">
+              {statBlock.senses && (
+                <p>
+                  <span className="text-ink-muted">Sens </span>
+                  {Object.entries(statBlock.senses)
+                    .map(([k, v]) => `${k} ${v}`)
+                    .join(", ")}
+                </p>
+              )}
+              {statBlock.languages && (
+                <p>
+                  <span className="text-ink-muted">Langues </span>
+                  {statBlock.languages}
+                </p>
+              )}
+            </div>
           )}
-          {!!data.damage_resistances?.length && (
-            <p>
-              <span className="text-ink-muted">Résistances </span>
-              {data.damage_resistances.join(", ")}
-            </p>
+
+          {(!!statBlock.damage_vulnerabilities?.length ||
+            !!statBlock.damage_resistances?.length ||
+            !!statBlock.damage_immunities?.length ||
+            !!statBlock.condition_immunities?.length) && (
+            <div className="flex flex-col gap-1 text-sm">
+              {!!statBlock.damage_vulnerabilities?.length && (
+                <p>
+                  <span className="text-ink-muted">Vulnérabilités </span>
+                  {statBlock.damage_vulnerabilities.join(", ")}
+                </p>
+              )}
+              {!!statBlock.damage_resistances?.length && (
+                <p>
+                  <span className="text-ink-muted">Résistances </span>
+                  {statBlock.damage_resistances.join(", ")}
+                </p>
+              )}
+              {!!statBlock.damage_immunities?.length && (
+                <p>
+                  <span className="text-ink-muted">Immunités (dégâts) </span>
+                  {statBlock.damage_immunities.join(", ")}
+                </p>
+              )}
+              {!!statBlock.condition_immunities?.length && (
+                <p>
+                  <span className="text-ink-muted">Immunités (états) </span>
+                  {statBlock.condition_immunities.join(", ")}
+                </p>
+              )}
+            </div>
           )}
-          {!!data.damage_immunities?.length && (
-            <p>
-              <span className="text-ink-muted">Immunités (dégâts) </span>
-              {data.damage_immunities.join(", ")}
-            </p>
+        </aside>
+
+        <div className="flex flex-1 flex-col gap-4">
+          {!!actions?.actions.length && (
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Actions</span>
+              {actions.actions.map((a, i) => (
+                <FeatureCard key={i} name={a.name} description={a.description} keyPrefix={`action-${i}`} meta={actionMeta(a)} />
+              ))}
+            </div>
           )}
-          {!!data.condition_immunities?.length && (
-            <p>
-              <span className="text-ink-muted">Immunités (états) </span>
-              {data.condition_immunities.join(", ")}
-            </p>
+          {!!traits?.traits.length && (
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Aptitudes spéciales</span>
+              {traits.traits.map((t, i) => (
+                <FeatureCard key={i} name={t.name} description={t.description} keyPrefix={`trait-${i}`} />
+              ))}
+            </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-/** Cartes plutôt que la grille `KeyValues` générique — même habillage que les actions (V1-E4 suite), pour une lecture cohérente entre les deux blocs d'une fiche de créature. */
+/** Fallback quand `traits`/`actions` apparaissent sans `stat_block` dans la même fiche (rare — un bloc n'est pas réservé aux monstres) : mêmes cartes que `MonsterCard`, sans la colonne caractéristiques. */
 function Traits({ data }: { data: TraitsBlockData }) {
   return (
     <div className="flex flex-col gap-2">
       {data.traits.map((t, i) => (
-        <div key={i} className="rounded-md border border-edge/60 bg-panel-raised p-2.5 text-sm text-ink">
-          <span className="font-semibold">{t.name}.</span> {renderMarkdownBoldText(t.description, `trait-${i}`)}
-        </div>
+        <FeatureCard key={i} name={t.name} description={t.description} keyPrefix={`trait-${i}`} />
       ))}
     </div>
   );
@@ -668,21 +732,12 @@ function SubclassFeatures({ data }: { data: SubclassFeaturesBlockData }) {
   return <ProgressionTable columns={columns} rows={rows} />;
 }
 
-/** Cartes plutôt que la grille `KeyValues` générique (V1-E4 suite, meme motif que `Traits`) — la ligne bonus/degats reste separee en petit texte technique sous la description, deja son habillage d'origine. */
+/** Fallback quand `actions` apparaît sans `stat_block` dans la même fiche — voir `Traits` ci-dessus. */
 function Actions({ data }: { data: ActionsBlockData }) {
   return (
     <div className="flex flex-col gap-2">
       {data.actions.map((a, i) => (
-        <div key={i} className="rounded-md border border-edge/60 bg-panel-raised p-2.5 text-sm text-ink">
-          <span className="font-semibold">{a.name}.</span> {renderMarkdownBoldText(a.description, `action-${i}`)}
-          {(a.attack_bonus !== undefined || a.damage?.length) && (
-            <p className="mech text-xs text-ink-muted">
-              {a.attack_bonus !== undefined && `+${a.attack_bonus} pour toucher`}
-              {a.attack_bonus !== undefined && a.damage?.length ? " · " : ""}
-              {a.damage?.map((d) => `${formatFormulaNode(d.dice)}${d.type ? ` (${damageTypeLabel(d.type)})` : ""}`).join(", ")}
-            </p>
-          )}
-        </div>
+        <FeatureCard key={i} name={a.name} description={a.description} keyPrefix={`action-${i}`} meta={actionMeta(a)} />
       ))}
     </div>
   );
@@ -884,7 +939,7 @@ export function renderBlockData(
   if (blockType === "armor") return <Armor data={data as ArmorBlockData} />;
   if (blockType === "item_properties") return <ItemProperties data={data as ResolvedItemPropertiesBlockData} worldSlug={worldSlug} />;
   if (blockType === "charges") return <Charges data={data as ChargesBlockData} />;
-  if (blockType === "stat_block") return <StatBlock data={data as StatBlockBlockData} />;
+  if (blockType === "stat_block") return <MonsterCard statBlock={data as StatBlockBlockData} />;
   if (blockType === "traits") return <Traits data={data as TraitsBlockData} />;
   if (blockType === "actions") return <Actions data={data as ActionsBlockData} />;
   if (blockType === "prerequisites") return <Prerequisites data={data as PrerequisitesBlockData} />;

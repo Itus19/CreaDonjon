@@ -4,7 +4,9 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getRuleEntryPageData } from "@/src/server/services/rules";
 import type { Locale } from "@/src/i18n/request";
+import type { ActionsBlockData, StatBlockBlockData, TraitsBlockData } from "@/src/core/schemas/rule-blocks";
 import RuleBlockRenderer from "@/components/rules/RuleBlockRenderer";
+import { MonsterCard } from "@/components/rules/blockContentRenderer";
 import MissingBlocksBanner from "@/components/rules/MissingBlocksBanner";
 import RuleRefsPanel from "@/components/rules/RuleRefsPanel";
 import RefPathHighlighter from "@/components/rules/RefPathHighlighter";
@@ -22,6 +24,19 @@ export default async function RuleEntryPage({
 
   const t = await getTranslations("regles");
   const entryTypeLabels = t.raw("entryTypes") as Record<string, string>;
+
+  // Fiche de creature (V1-E4 suite, retour utilisateur) : stat_block,
+  // traits et actions fusionnes dans UN seul bloc visuel (MonsterCard)
+  // plutot que trois sections separees — jamais d'onglets, Actions puis
+  // Aptitudes speciales a la suite. traits/actions sont retires de la
+  // boucle normale quand un stat_block existe dans la meme fiche ; sans
+  // stat_block (rare, un type de bloc n'est pas reserve aux monstres), ils
+  // restent rendus par RuleBlockRenderer comme avant (Traits/Actions,
+  // blockContentRenderer.tsx).
+  const statBlockEntry = entry.blocks.find((b) => b.blockType === "stat_block");
+  const traitsEntry = entry.blocks.find((b) => b.blockType === "traits");
+  const actionsEntry = entry.blocks.find((b) => b.blockType === "actions");
+  const mergedIds = statBlockEntry ? new Set([traitsEntry?.id, actionsEntry?.id].filter((id): id is string => !!id)) : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -64,10 +79,21 @@ export default async function RuleEntryPage({
           du reste suffit a l'isoler en fin de liste sans trier a la main. */}
       <div className="flex flex-col">
         {entry.blocks
-          .filter((block) => block.blockType !== "custom_table")
-          .map((block) => (
-            <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} />
-          ))}
+          .filter((block) => block.blockType !== "custom_table" && !mergedIds?.has(block.id))
+          .map((block) =>
+            statBlockEntry && block.id === statBlockEntry.id ? (
+              <div key={block.id} className="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
+                <h3 className="block-title mb-2">{block.display.label}</h3>
+                <MonsterCard
+                  statBlock={block.data as StatBlockBlockData}
+                  traits={traitsEntry?.data as TraitsBlockData | undefined}
+                  actions={actionsEntry?.data as ActionsBlockData | undefined}
+                />
+              </div>
+            ) : (
+              <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} />
+            )
+          )}
         <RuleRefsPanel worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} incomingRefs={entry.incomingRefs} />
         {entry.blocks
           .filter((block) => block.blockType === "custom_table")
