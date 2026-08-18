@@ -463,40 +463,170 @@ function Charges({ data }: { data: ChargesBlockData }) {
   return <KeyValues items={items} />;
 }
 
+const STAT_BLOCK_ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
+
+function abilityMod(score: number): number {
+  return Math.floor((score - 10) / 2);
+}
+
+function fmtMod(mod: number): string {
+  return `${mod >= 0 ? "+" : ""}${mod}`;
+}
+
+function StatBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-[4.5rem] shrink-0 flex-col items-center gap-1">
+      <span className="flex h-6 items-end justify-center text-center text-[9px] font-bold uppercase leading-tight tracking-widest text-ink-muted">
+        {label}
+      </span>
+      <div className="flex h-14 min-w-full items-center justify-center rounded-md border border-edge bg-panel-raised px-2">
+        <span className="mech whitespace-normal break-words text-center text-sm font-semibold text-ink">{value}</span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Fiche de créature (V1-E4 suite, retour utilisateur : « leur bloc
+ * Caractéristiques... devrait ressembler à ce qu'on a fait pour le bloc de
+ * personnage ») — même architecture visuelle que `PlayableCharacterSheet`/
+ * `MonsterStatblockSheet` (V1-B5/V1-E4) : CA en écusson, PV/vitesse/FP en
+ * badges, caractéristiques en boîtes avec sauvegarde, plutôt que la grille
+ * `KeyValues` générique utilisée par les autres blocs de règle. Modèle
+ * validé sur Aboleth avant extension aux autres monstres — lecture seule,
+ * aucune saisie : une fiche de règle SRD ne s'édite jamais ici.
+ */
 function StatBlock({ data }: { data: StatBlockBlockData }) {
   const speedText = Object.entries(data.speed)
     .map(([kind, value]) => `${kind} ${value}`)
     .join(", ");
-  const abilitiesText = (Object.keys(data.abilities) as (keyof typeof data.abilities)[])
-    .map((k) => `${abilityLabel(k)} ${data.abilities[k]}`)
-    .join(" · ");
-  const items = [
-    { label: "Taille / Type", value: `${SIZE_LABELS_FR[data.size] ?? data.size} ${CREATURE_TYPE_LABELS_FR[data.creature_type] ?? data.creature_type}`.trim() },
-    ...(data.alignment ? [{ label: "Alignement", value: data.alignment }] : []),
-    { label: "CA", value: String(data.armor_class) },
-    { label: "PV", value: <span className="mech">{`${data.hit_points} (${data.hit_dice})`}</span> },
-    { label: "Vitesse", value: speedText },
-    { label: "Caracteristiques", value: <span className="mech">{abilitiesText}</span> },
-    ...(data.saving_throws?.length ? [{ label: "Sauvegardes", value: data.saving_throws.map((s) => `${abilityLabel(s.ability)} +${s.bonus}`).join(", ") }] : []),
-    ...(data.skills?.length ? [{ label: "Competences", value: data.skills.map((s) => `${s.name} +${s.bonus}`).join(", ") }] : []),
-    ...(data.damage_vulnerabilities?.length ? [{ label: "Vulnerabilites", value: data.damage_vulnerabilities.join(", ") }] : []),
-    ...(data.damage_resistances?.length ? [{ label: "Resistances", value: data.damage_resistances.join(", ") }] : []),
-    ...(data.damage_immunities?.length ? [{ label: "Immunites (degats)", value: data.damage_immunities.join(", ") }] : []),
-    ...(data.condition_immunities?.length ? [{ label: "Immunites (etats)", value: data.condition_immunities.join(", ") }] : []),
-    ...(data.senses ? [{ label: "Sens", value: Object.entries(data.senses).map(([k, v]) => `${k} ${v}`).join(", ") }] : []),
-    ...(data.languages ? [{ label: "Langues", value: data.languages }] : []),
-    { label: "Facteur de puissance", value: String(data.challenge_rating) },
-    ...(data.xp !== undefined ? [{ label: "PX", value: <span className="mech">{data.xp}</span> }] : []),
-    { label: "Bonus de maitrise", value: `+${data.proficiency_bonus}` },
-  ];
-  return <KeyValues items={items} />;
+  const savingThrowByAbility = new Map((data.saving_throws ?? []).map((s) => [s.ability, s.bonus]));
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-x-2 text-sm text-ink-muted">
+        <span>{`${SIZE_LABELS_FR[data.size] ?? data.size} ${CREATURE_TYPE_LABELS_FR[data.creature_type] ?? data.creature_type}`.trim()}</span>
+        {data.alignment && <span>· {data.alignment}</span>}
+      </div>
+
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="flex w-12 shrink-0 flex-col items-center gap-1">
+          <span className="flex h-6 items-end justify-center text-[9px] font-bold uppercase tracking-widest text-ink-muted">CA</span>
+          <div
+            className="relative flex h-14 w-12 items-center justify-center border-2 border-accent bg-panel-raised"
+            style={{ clipPath: "polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)" }}
+          >
+            <span className="text-xl font-bold text-ink">{data.armor_class}</span>
+          </div>
+        </div>
+        <StatBadge label="PV" value={`${data.hit_points} (${data.hit_dice})`} />
+        <StatBadge label="Vitesse" value={speedText} />
+        <StatBadge label="FP" value={String(data.challenge_rating)} />
+        <StatBadge label="Maîtrise" value={`+${data.proficiency_bonus}`} />
+        {data.xp !== undefined && <StatBadge label="PX" value={String(data.xp)} />}
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        {STAT_BLOCK_ABILITIES.map((ability) => {
+          const score = data.abilities[ability];
+          const save = savingThrowByAbility.get(ability);
+          return (
+            <div
+              key={ability}
+              className="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center"
+            >
+              <span className="text-[10px] font-bold uppercase tracking-widest text-accent">{abilityLabel(ability)}</span>
+              <span className="text-xl font-bold text-ink">{fmtMod(abilityMod(score))}</span>
+              <span className="mech text-xs text-ink-muted">{score}</span>
+              {save !== undefined && (
+                <span className="flex items-center gap-1 whitespace-nowrap rounded-full border border-accent bg-accent/20 px-2 py-0.5 text-[11px] font-semibold text-accent">
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+                  Sauv. {fmtMod(save)}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {(!!data.skills?.length || data.senses || data.languages) && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-10">
+          {!!data.skills?.length && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Compétences</span>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                {data.skills.map((s) => (
+                  <span key={s.name} className="text-ink">
+                    {s.name} <span className="mech text-ink-muted">{fmtMod(s.bonus)}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex flex-col gap-1 text-sm">
+            {data.senses && (
+              <p>
+                <span className="text-ink-muted">Sens </span>
+                {Object.entries(data.senses)
+                  .map(([k, v]) => `${k} ${v}`)
+                  .join(", ")}
+              </p>
+            )}
+            {data.languages && (
+              <p>
+                <span className="text-ink-muted">Langues </span>
+                {data.languages}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {(!!data.damage_vulnerabilities?.length ||
+        !!data.damage_resistances?.length ||
+        !!data.damage_immunities?.length ||
+        !!data.condition_immunities?.length) && (
+        <div className="flex flex-col gap-1 text-sm">
+          {!!data.damage_vulnerabilities?.length && (
+            <p>
+              <span className="text-ink-muted">Vulnérabilités </span>
+              {data.damage_vulnerabilities.join(", ")}
+            </p>
+          )}
+          {!!data.damage_resistances?.length && (
+            <p>
+              <span className="text-ink-muted">Résistances </span>
+              {data.damage_resistances.join(", ")}
+            </p>
+          )}
+          {!!data.damage_immunities?.length && (
+            <p>
+              <span className="text-ink-muted">Immunités (dégâts) </span>
+              {data.damage_immunities.join(", ")}
+            </p>
+          )}
+          {!!data.condition_immunities?.length && (
+            <p>
+              <span className="text-ink-muted">Immunités (états) </span>
+              {data.condition_immunities.join(", ")}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
+/** Cartes plutôt que la grille `KeyValues` générique — même habillage que les actions (V1-E4 suite), pour une lecture cohérente entre les deux blocs d'une fiche de créature. */
 function Traits({ data }: { data: TraitsBlockData }) {
   return (
-    <KeyValues
-      items={data.traits.map((t, i) => ({ label: t.name, value: renderMarkdownBoldText(t.description, `trait-${i}`) }))}
-    />
+    <div className="flex flex-col gap-2">
+      {data.traits.map((t, i) => (
+        <div key={i} className="rounded-md border border-edge/60 bg-panel-raised p-2.5 text-sm text-ink">
+          <span className="font-semibold">{t.name}.</span> {renderMarkdownBoldText(t.description, `trait-${i}`)}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -538,25 +668,23 @@ function SubclassFeatures({ data }: { data: SubclassFeaturesBlockData }) {
   return <ProgressionTable columns={columns} rows={rows} />;
 }
 
+/** Cartes plutôt que la grille `KeyValues` générique (V1-E4 suite, meme motif que `Traits`) — la ligne bonus/degats reste separee en petit texte technique sous la description, deja son habillage d'origine. */
 function Actions({ data }: { data: ActionsBlockData }) {
   return (
-    <KeyValues
-      items={data.actions.map((a, i) => ({
-        label: a.name,
-        value: (
-          <div className="flex flex-col gap-0.5">
-            {renderMarkdownBoldText(a.description, `action-${i}`)}
-            {(a.attack_bonus !== undefined || a.damage?.length) && (
-              <p className="mech text-xs text-ink-muted">
-                {a.attack_bonus !== undefined && `+${a.attack_bonus} pour toucher`}
-                {a.attack_bonus !== undefined && a.damage?.length ? " · " : ""}
-                {a.damage?.map((d) => `${formatFormulaNode(d.dice)}${d.type ? ` (${damageTypeLabel(d.type)})` : ""}`).join(", ")}
-              </p>
-            )}
-          </div>
-        ),
-      }))}
-    />
+    <div className="flex flex-col gap-2">
+      {data.actions.map((a, i) => (
+        <div key={i} className="rounded-md border border-edge/60 bg-panel-raised p-2.5 text-sm text-ink">
+          <span className="font-semibold">{a.name}.</span> {renderMarkdownBoldText(a.description, `action-${i}`)}
+          {(a.attack_bonus !== undefined || a.damage?.length) && (
+            <p className="mech text-xs text-ink-muted">
+              {a.attack_bonus !== undefined && `+${a.attack_bonus} pour toucher`}
+              {a.attack_bonus !== undefined && a.damage?.length ? " · " : ""}
+              {a.damage?.map((d) => `${formatFormulaNode(d.dice)}${d.type ? ` (${damageTypeLabel(d.type)})` : ""}`).join(", ")}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 

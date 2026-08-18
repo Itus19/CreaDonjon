@@ -14,7 +14,7 @@ import GeneratorBlockEditor from "./GeneratorBlockEditor";
 import InventoryBlockEditor from "./InventoryBlockEditor";
 import SpellcastingBlockEditor from "./SpellcastingBlockEditor";
 import ResourcesBlockEditor from "./ResourcesBlockEditor";
-import StatblockBlockEditor from "./StatblockBlockEditor";
+import MonsterStatblockSheet from "./MonsterStatblockSheet";
 import PlayableCharacterSheet from "./PlayableCharacterSheet";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
@@ -119,10 +119,6 @@ function BlockDataEditor({
     case "resources":
       return (
         <ResourcesBlockEditor data={block.data as ResourcesBlockData} onChange={(d) => onChange(d)} />
-      );
-    case "statblock":
-      return (
-        <StatblockBlockEditor data={block.data as StatblockBlockData} onChange={(d) => onChange(d)} />
       );
     default:
       return <p className="text-sm text-danger">Type de bloc inconnu : {block.blockType}</p>;
@@ -432,7 +428,7 @@ export default function EntityBlocks({
           >
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-1 items-center gap-1.5">
-                {block.blockType !== "character" && (
+                {block.blockType !== "character" && block.blockType !== "statblock" && (
                   <button
                     type="button"
                     onClick={() => toggleCollapsed(block.id)}
@@ -532,6 +528,11 @@ export default function EntityBlocks({
                 onUpdateCharacter={updateCharacter}
                 onUpdateInventory={updateInventory}
                 onUpdateSpellcasting={updateSpellcasting}
+              />
+            ) : block.blockType === "statblock" ? (
+              <MonsterStatblockSheet
+                data={block.data as StatblockBlockData}
+                onChange={(data) => patchBlock(block.id, { data })}
               />
             ) : (
               !isCollapsed && (
