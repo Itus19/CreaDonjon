@@ -21,6 +21,7 @@ import type {
   TraitsBlockData,
 } from "@/src/core/schemas/rule-blocks";
 import {
+  ALIGNMENT_WORD_LABELS_FR,
   ARMOR_CATEGORY_LABELS_FR,
   CLASS_PROFICIENCY_LABELS_FR,
   CREATURE_TYPE_LABELS_FR,
@@ -148,6 +149,35 @@ function translateLanguagesText(text: string): string {
     result = result.replace(new RegExp(`\\b${en}\\b`, "g"), fr);
   }
   return result.replace(/\btelepathy\b/gi, "télépathie");
+}
+
+/**
+ * `stat_block.alignment` (V1-E4 retour utilisateur — badge "Alignement")
+ * n'est pas non plus une valeur fermee : "lawful evil", "unaligned", mais
+ * aussi "any non-good alignment" ou "neutral good (50%) or neutral evil
+ * (50%)". Substitution mot a mot (`ALIGNMENT_WORD_LABELS_FR`) plutot qu'une
+ * table de correspondance exacte — donne le meme resultat sur les neuf
+ * alignements simples ("lawful evil" -> "loyal mauvais") et reste lisible
+ * sur les formulations composees, sans jamais inventer de texte absent de
+ * la source (CLAUDE.md).
+ */
+function alignmentLabel(raw: string): string {
+  return raw
+    .split(/([\s-]+)/)
+    .map((token) => ALIGNMENT_WORD_LABELS_FR[token.toLowerCase()] ?? token)
+    .join("");
+}
+
+/**
+ * Meme alignement, en lignes empilables dans le badge (V1-E4 retour
+ * utilisateur : « tu peux superposer les deux caracteristiques d'alignement
+ * comme tu l'as fait pour la vitesse ? ») — une ligne par mot separe par un
+ * espace dans la source ("lawful evil" -> "loyal"/"mauvais" sur deux lignes),
+ * chaque mot traduit via `alignmentLabel`. Un alignement a un seul mot
+ * ("unaligned") reste sur une seule ligne.
+ */
+function alignmentLines(raw: string): string[] {
+  return raw.split(/\s+/).map((token) => alignmentLabel(token));
 }
 
 
@@ -530,15 +560,34 @@ function fmtMod(mod: number): string {
   return `${mod >= 0 ? "+" : ""}${mod}`;
 }
 
-function StatBadge({ label, value }: { label: string; value: string }) {
+function StatBadge({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex min-w-[4.5rem] shrink-0 flex-col items-center gap-1">
+    <div className="flex min-w-[3.75rem] shrink-0 flex-col items-center gap-1">
       <span className="flex h-6 items-end justify-center text-center text-[9px] font-bold uppercase leading-tight tracking-widest text-ink-muted">
         {label}
       </span>
-      <div className="flex h-14 min-w-full items-center justify-center rounded-md border border-edge bg-panel-raised px-2">
+      <div className="flex min-h-14 min-w-full items-center justify-center rounded-md border border-edge bg-panel-raised px-1.5 py-1">
         <span className="mech whitespace-normal break-words text-center text-sm font-semibold text-ink">{value}</span>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Ligne point + libelle (+ valeur optionnelle a droite) — V1-E4 retour
+ * utilisateur : meme esthetique pour Competences, Sens et Langues plutot
+ * que du texte brut separe par des virgules. Le point est toujours plein
+ * (pas de motif "choix"/"maitrise partielle" comme sur `PlayableCharacterSheet` :
+ * une fiche de monstre ne liste que ce qu'elle possede deja).
+ */
+function DotRow({ label, value }: { label: string; value?: ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+        <span className="h-2 w-2 rounded-full bg-accent" />
+      </span>
+      <span className="flex-1 text-ink">{label}</span>
+      {value !== undefined && <span className="text-right font-medium text-ink">{value}</span>}
     </div>
   );
 }
@@ -619,19 +668,12 @@ export function MonsterCard({
   traits?: TraitsBlockData;
   actions?: ActionsBlockData;
 }) {
-  const speedText = Object.entries(statBlock.speed)
-    .map(([kind, value]) => `${SPEED_LABELS_FR[kind] ?? kind} ${metricizeFeet(value)}`)
-    .join(", ");
+  const speedEntries = Object.entries(statBlock.speed).map(([kind, value]) => `${SPEED_LABELS_FR[kind] ?? kind} ${metricizeFeet(value)}`);
   const savingThrowByAbility = new Map((statBlock.saving_throws ?? []).map((s) => [s.ability, s.bonus]));
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-x-2 text-sm text-ink-muted">
-        <span>{`${SIZE_LABELS_FR[statBlock.size] ?? statBlock.size} ${CREATURE_TYPE_LABELS_FR[statBlock.creature_type] ?? statBlock.creature_type}`.trim()}</span>
-        {statBlock.alignment && <span>· {statBlock.alignment}</span>}
-      </div>
-
-      <div className="flex flex-wrap items-start gap-3">
+      <div className="flex flex-wrap items-start gap-2">
         <div className="flex w-12 shrink-0 flex-col items-center gap-1">
           <span className="flex h-6 items-end justify-center text-[9px] font-bold uppercase tracking-widest text-ink-muted">CA</span>
           <div
@@ -641,9 +683,32 @@ export function MonsterCard({
             <span className="text-xl font-bold text-ink">{statBlock.armor_class}</span>
           </div>
         </div>
+        <StatBadge label="Taille" value={SIZE_LABELS_FR[statBlock.size] ?? statBlock.size} />
+        <StatBadge label="Type" value={CREATURE_TYPE_LABELS_FR[statBlock.creature_type] ?? statBlock.creature_type} />
+        {statBlock.alignment && (
+          <StatBadge
+            label="Alignement"
+            value={
+              <span className="flex flex-col items-center gap-0.5">
+                {alignmentLines(statBlock.alignment).map((s, i) => (
+                  <span key={i}>{s}</span>
+                ))}
+              </span>
+            }
+          />
+        )}
         <StatBadge label="PV" value={String(statBlock.hit_points)} />
         <StatBadge label="Dés de vie" value={statBlock.hit_dice} />
-        <StatBadge label="Vitesse" value={speedText} />
+        <StatBadge
+          label="Vitesse"
+          value={
+            <span className="flex flex-col items-center gap-0.5">
+              {speedEntries.map((s, i) => (
+                <span key={i}>{s}</span>
+              ))}
+            </span>
+          }
+        />
         <StatBadge label="FP" value={String(statBlock.challenge_rating)} />
         <StatBadge label="Maîtrise" value={`+${statBlock.proficiency_bonus}`} />
         {statBlock.xp !== undefined && <StatBadge label="PX" value={String(statBlock.xp)} />}
@@ -679,34 +744,35 @@ export function MonsterCard({
               <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Compétences</span>
               <div className="flex flex-col gap-0.5">
                 {statBlock.skills.map((s) => (
-                  <div key={s.name} className="flex items-center gap-2 text-sm">
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center" title="Maîtrisée">
-                      <span className="h-2 w-2 rounded-full bg-accent" />
-                    </span>
-                    <span className="flex-1 text-ink">{monsterSkillLabel(s.name)}</span>
-                    <span className="w-8 text-right font-medium text-ink">{fmtMod(s.bonus)}</span>
-                  </div>
+                  <DotRow key={s.name} label={monsterSkillLabel(s.name)} value={fmtMod(s.bonus)} />
                 ))}
               </div>
             </div>
           )}
 
-          {(statBlock.senses || statBlock.languages) && (
-            <div className="flex flex-col gap-1 text-sm">
-              {statBlock.senses && (
-                <p>
-                  <span className="text-ink-muted">Sens </span>
-                  {Object.entries(statBlock.senses)
-                    .map(([k, v]) => `${SENSE_LABELS_FR[k] ?? k} ${metricizeFeet(v)}`)
-                    .join(", ")}
-                </p>
-              )}
-              {statBlock.languages && (
-                <p>
-                  <span className="text-ink-muted">Langues </span>
-                  {translateLanguagesText(statBlock.languages)}
-                </p>
-              )}
+          {statBlock.senses && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Sens</span>
+              <div className="flex flex-col gap-0.5">
+                {Object.entries(statBlock.senses).map(([k, v]) => (
+                  <DotRow key={k} label={SENSE_LABELS_FR[k] ?? k} value={metricizeFeet(v)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {statBlock.languages && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Langues</span>
+              <div className="flex flex-col gap-0.5">
+                {statBlock.languages
+                  .split(",")
+                  .map((seg) => seg.trim())
+                  .filter(Boolean)
+                  .map((seg, i) => (
+                    <DotRow key={i} label={translateLanguagesText(seg)} />
+                  ))}
+              </div>
             </div>
           )}
 

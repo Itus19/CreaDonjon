@@ -84,6 +84,28 @@ export const SPEED_LABELS_FR: Record<string, string> = {
   burrow: "Fouissement",
 };
 
+/**
+ * Traduction mot a mot de `stat_block.alignment` (V1-E4 retour utilisateur,
+ * "Taille/Type/Alignement en encadres"). Le champ SRD n'est pas une valeur
+ * fermee ("lawful evil", "unaligned", mais aussi "any non-good alignment"
+ * ou "neutral good (50%) or neutral evil (50%)") — impossible a couvrir par
+ * une table de correspondance exacte. Une substitution mot a mot (voir
+ * `alignmentLabel`, blockContentRenderer.tsx) donne un resultat correct sur
+ * les neuf alignements simples et lisible sur les formulations composees,
+ * sans jamais inventer de texte absent de la source.
+ */
+export const ALIGNMENT_WORD_LABELS_FR: Record<string, string> = {
+  lawful: "loyal",
+  chaotic: "chaotique",
+  neutral: "neutre",
+  good: "bon",
+  evil: "mauvais",
+  unaligned: "sans alignement",
+  any: "n'importe quel",
+  alignment: "alignement",
+  or: "ou",
+};
+
 /** Libelles des sens d'un monstre (`stat_block.senses`, cles SRD, V1-E4 retour utilisateur point 3). */
 export const SENSE_LABELS_FR: Record<string, string> = {
   darkvision: "Vision dans le noir",
