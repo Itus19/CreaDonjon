@@ -24,6 +24,18 @@ export async function getRulesetById(supabase: TypedClient, id: string): Promise
   return data;
 }
 
+/** Ruleset officiel de base d'un systeme donne ('dnd_srd_51'|'dnd_srd_52') — `null` si aucun (base custom sans officiel). Un seul par systeme en pratique (verrou officiel, SCHEMA.md §9.5). */
+export async function getOfficialBaseRulesetId(supabase: TypedClient, baseSystem: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("rulesets")
+    .select("id")
+    .eq("is_official_base", true)
+    .eq("base_system", baseSystem)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.id ?? null;
+}
+
 export interface SelectableRulesetRow {
   id: string;
   name: string;

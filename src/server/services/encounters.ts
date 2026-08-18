@@ -10,7 +10,13 @@ import {
   type EncounterBudgetRow,
 } from "@/src/core/rules/encounter";
 import type { Rng } from "@/src/core/dice/rng";
-import { getRulesetEntryByKey, listBlocksForRulesetEntry, listRulesetEntries, listTranslationsForEntries } from "@/src/server/repos/rules";
+import {
+  getOfficialBaseRulesetId,
+  getRulesetEntryByKey,
+  listBlocksForRulesetEntry,
+  listRulesetEntries,
+  listTranslationsForEntries,
+} from "@/src/server/repos/rules";
 import { entryNameFrom } from "@/src/server/services/rules";
 import { getCampaign } from "@/src/server/services/campaigns";
 import {
@@ -46,6 +52,40 @@ export async function getEncounterBudgetTable(
   const rows = (table.data as unknown as { rows?: Record<string, unknown>[] }).rows ?? [];
   const parsed = parseEncounterBudgetRows(rows);
   return parsed.length > 0 ? parsed : null;
+}
+
+export interface EncounterBudgetResolution {
+  rows: EncounterBudgetRow[];
+  /** `true` si ces lignes viennent du SRD 2024 de reference plutot que du ruleset demande — voir la note ci-dessous. */
+  isFallback: boolean;
+}
+
+/** Systeme du SRD qui porte la table de budget (V1-E3) — seule edition ou elle est republiee sous licence libre, voir getEncounterBudgetTable. */
+const REFERENCE_BUDGET_BASE_SYSTEM = "dnd_srd_52";
+
+/**
+ * Table de budget pour UN ruleset, avec repli sur le SRD 2024 de
+ * reference si ce ruleset precis ne la porte pas — retour explicite de
+ * l'utilisateur : « je veux que cet outil soit disponible dans tous les
+ * cas, peu importe le ruleset, même si c'est pour l'utiliser avec le
+ * 2014 ». Le 2014 ne republie pas cette table (voir getEncounterBudgetTable),
+ * mais les seuils de difficulte par niveau n'ont pas change d'edition a
+ * edition au point de rendre le repli absurde — mieux vaut une reference
+ * empruntee et signalee comme telle qu'un outil indisponible. `null`
+ * seulement si meme le ruleset 2024 officiel est absent de l'installation.
+ */
+export async function getEncounterBudgetTableForRuleset(
+  supabase: TypedClient,
+  rulesetId: string
+): Promise<EncounterBudgetResolution | null> {
+  const own = await getEncounterBudgetTable(supabase, rulesetId);
+  if (own) return { rows: own, isFallback: false };
+
+  const referenceRulesetId = await getOfficialBaseRulesetId(supabase, REFERENCE_BUDGET_BASE_SYSTEM);
+  if (!referenceRulesetId || referenceRulesetId === rulesetId) return null;
+
+  const fallbackRows = await getEncounterBudgetTable(supabase, referenceRulesetId);
+  return fallbackRows ? { rows: fallbackRows, isFallback: true } : null;
 }
 
 export interface EncounterMonsterSummary {
@@ -158,10 +198,10 @@ export async function generateEncounterForCampaign(
   const campaign = await getCampaign(supabase, campaignId);
   if (!campaign) return { ok: false, reason: "campaign_not_found" };
 
-  const budgetTable = await getEncounterBudgetTable(supabase, campaign.rulesetId);
-  if (!budgetTable) return { ok: false, reason: "budget_unavailable" };
+  const resolution = await getEncounterBudgetTableForRuleset(supabase, campaign.rulesetId);
+  if (!resolution) return { ok: false, reason: "budget_unavailable" };
 
-  const budget = encounterBudget(Array(params.partySize).fill(params.partyLevel), params.band, budgetTable);
+  const budget = encounterBudget(Array(params.partySize).fill(params.partyLevel), params.band, resolution.rows);
   const monsters = await listMonstersForRuleset(supabase, campaign.rulesetId, locale);
   const monsterByKey = new Map(monsters.map((m) => [m.key, m]));
 

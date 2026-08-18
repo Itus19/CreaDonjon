@@ -31,11 +31,14 @@ function formatDate(iso: string): string {
 export default function EncounterBuilder({
   campaignId,
   budgetTable,
+  budgetIsFallback,
   monsters,
   initialSavedEncounters,
 }: {
   campaignId: string;
   budgetTable: EncounterBudgetRow[] | null;
+  /** `true` si `budgetTable` vient du SRD 2024 de reference plutot que du ruleset propre de la campagne (V1-E3 : disponible quel que soit le ruleset, sur demande explicite de l'utilisateur). */
+  budgetIsFallback: boolean;
   monsters: EncounterMonsterSummary[];
   initialSavedEncounters: CampaignEncounterRow[];
 }) {
@@ -161,7 +164,14 @@ export default function EncounterBuilder({
 
       {!budgetTable && (
         <p className="text-xs text-ink-muted">
-          Budget de rencontre non disponible pour le ruleset de cette campagne (aucune table de budget de PX connue).
+          Budget de rencontre non disponible : aucune table de budget de PX connue, même en repli sur le SRD 2024 de
+          référence.
+        </p>
+      )}
+      {budgetTable && budgetIsFallback && (
+        <p className="text-xs text-ink-muted">
+          Le ruleset de cette campagne ne republie pas la table de budget de PX — valeurs empruntées au SRD 2024 de
+          référence.
         </p>
       )}
       {budgetTable && budget !== null && (

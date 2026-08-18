@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
-import { getEncounterBudgetTable, listMonstersForRuleset } from "./encounters";
+import { getEncounterBudgetTable, getEncounterBudgetTableForRuleset, listMonstersForRuleset } from "./encounters";
 
 /**
  * V1-E3 : verifie que la table "Budget de PX par personnage" ecrite par
@@ -34,6 +34,24 @@ describe.skipIf(!hasCreds)("getEncounterBudgetTable (integration, base reelle)",
   it("renvoie null pour le SRD 5.1, qui ne republie pas cette table (jamais une valeur inventee)", async () => {
     const rows = await getEncounterBudgetTable(admin, RULESET_5_1);
     expect(rows).toBeNull();
+  });
+});
+
+describe.skipIf(!hasCreds)("getEncounterBudgetTableForRuleset (integration, base reelle)", () => {
+  const admin: SupabaseClient = createSupabaseClient(SUPABASE_URL ?? "", SERVICE_ROLE_KEY ?? "", {
+    auth: { persistSession: false },
+  });
+
+  it("le SRD 5.2.1 n'a pas besoin de repli : ses propres lignes, isFallback a false", async () => {
+    const resolution = await getEncounterBudgetTableForRuleset(admin, RULESET_5_2_1);
+    expect(resolution?.isFallback).toBe(false);
+    expect(resolution?.rows).toHaveLength(20);
+  });
+
+  it("le SRD 5.1 replie sur le SRD 2024 officiel, isFallback a true, memes valeurs que 5.2.1 (retour utilisateur : outil disponible quel que soit le ruleset)", async () => {
+    const resolution = await getEncounterBudgetTableForRuleset(admin, RULESET_5_1);
+    expect(resolution?.isFallback).toBe(true);
+    expect(resolution?.rows.find((r) => r.level === 1)).toEqual({ level: 1, low: 50, moderate: 75, high: 100 });
   });
 });
 
