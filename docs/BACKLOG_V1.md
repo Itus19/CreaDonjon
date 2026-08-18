@@ -2081,15 +2081,33 @@ Spécification complète : `specs/arbitrage-modifications.md` §3.6.
 - Table `ai_usage_log` déjà migrée depuis la Phase 0 (`20260730120003_ai.sql`) — aucune nouvelle migration nécessaire, seulement le câblage.
 - Vérification : `src/core/ai/*.test.ts` (noyau pur), `src/server/ai/callAi.integration.test.ts` (base réelle, fournisseur factice — journalisation succès/échec, blocage par limite de débit sans toucher le fournisseur). `typecheck`/`lint`/`test` (567/567)/`build` tous verts.
 
-### V1-F2 — Éditeur de règle assisté · `L`
+### V1-F2 — Éditeur de règle assisté · `L` — fait (arme)
 
 Le « codeur accompagnant » de `specs/regles-couche.md` §5.
 
-- [ ] Le modèle propose des blocs par appel d'outil, jamais du JSON extrait de prose.
-- [ ] Échec de validation → deux tentatives, puis formulaire vide rendu à l'utilisateur.
-- [ ] **L'utilisateur ne voit jamais de JSON** : formulaire engendré depuis le schéma Zod.
-- [ ] Bac à sable avec trace : `1d8 (6) + FOR (+3) = 9 dégâts tranchants`.
-- [ ] Une règle générée ne peut modifier qu'une variante, jamais une base officielle.
+- [x] Le modèle propose des blocs par appel d'outil, jamais du JSON extrait de prose.
+- [x] Échec de validation → deux tentatives, puis formulaire vide rendu à l'utilisateur.
+- [x] **L'utilisateur ne voit jamais de JSON** : formulaire engendré depuis le schéma Zod — *nuance ci-dessous*.
+- [x] Bac à sable avec trace : `1d8 (6) + FOR (+3) = 9 dégâts tranchants` — déjà fait par V1-D4, inchangé.
+- [x] Une règle générée ne peut modifier qu'une variante, jamais une base officielle — même verrou serveur que V1-D4, inchangé.
+
+**Décision de conception, avant tout code** : le ticket dit « formulaire engendré depuis le schéma Zod », mais V1-D4 a explicitement tranché le contraire — un formulaire dédié par type de bloc, jamais un générateur générique (« même précédent que les éditeurs de bloc de personnage »). L'assistance IA vient donc se greffer sur `CreateHomebrewWeaponForm.tsx` (V1-D4) plutôt que le remplacer : le modèle pré-remplit les champs existants, l'utilisateur relit et corrige avant de cliquer sur le même bouton « Créer l'arme » qu'avant. Aucune table `ai_proposals` dans ce flux : `ai_proposals` (SCHEMA.md §16.2) est taillée pour des mutations d'**entité** (`target_entity_id`), pas pour une surcharge de `ruleset_entries` — la validation explicite est déjà le clic de l'utilisateur sur le formulaire pré-rempli, exactement comme une saisie manuelle.
+
+**Périmètre choisi, une seule fois** : l'arme (même cas concret que V1-D4), avec les champs `versatile_dice_count`/`versatile_dice_faces` ajoutés au formulaire (absents jusqu'ici, nécessaires à l'exemple même de la spec — une épée longue polyvalente). `properties`/`mastery` (références à des entrées existantes du ruleset) restent hors périmètre : le formulaire manuel ne les propose pas non plus aujourd'hui.
+
+**Premier fournisseur IA réel du projet** (`src/server/ai/adapters/openAiCompatible.ts`) : adaptateur partagé Ollama/LM Studio (specs/cible-locale-et-ia.md §3, point d'accès compatible OpenAI), configuré par `AI_LOCAL_BASE_URL`/`AI_LOCAL_MODEL` (`.env.local`, jamais commité — placeholders dans `.env.example`). Pas de configuration par monde/utilisateur pour l'instant : un seul fournisseur actif dans ce ticket, à ouvrir quand un deuxième cas concret le demandera (même raisonnement que le formulaire dédié).
+
+- `src/core/ai/weaponProposal.ts` : `zWeaponProposal` (forme simple miroir du formulaire, pas le bloc `zWeaponBlockData` complet — bornes numériques étroites, mêmes limites d'esprit que les garde-fous de l'AST) + `weaponProposalToolSchema` (JSON Schema écrit à la main, neuf champs, pas de dépendance pour si peu).
+- `src/server/ai/adapters/openAiCompatible.ts` : `OpenAiCompatibleProvider` (implémente `AiProvider` de V1-F1). Verifié contre un serveur LM Studio réel (voir plus bas).
+- `src/server/ai/rulesEditor.ts` : `proposeWeaponFromDescription` — appel d'outil, validation Zod, en cas d'échec les erreurs Zod repartent au modèle pour une seconde tentative (deux maximum), puis abandon. Passe systématiquement par `runAiCompletion` (V1-F1) : limite de débit et journalisation déjà garanties.
+- `POST /api/worlds/[worldSlug]/rules/weapons/propose` : nouvelle route, ne mute jamais rien — la création reste `POST /api/worlds/[worldSlug]/rules/weapons` (V1-D4), inchangée.
+- `CreateHomebrewWeaponForm.tsx` : zone de description libre + bouton « Proposer avec l'IA » au-dessus du formulaire existant ; chaque champ pré-rempli par le modèle porte un badge « Rempli par l'IA » (specs/regles-couche.md §5.2), qui disparaît dès que l'utilisateur touche ce champ.
+
+**Trouvé en vérifiant contre un vrai serveur local** : le premier modèle chargé (`qwen3-14b-claude-sonnet-4.5-reasoning-distill`, un modèle de raisonnement) mettait 18 à 90+ secondes par appel — la majorité des tokens dépensés dans `reasoning_content` avant la moindre réponse — et avec `tool_choice: "required"` (forme objet OpenAI standard, refusée par LM Studio : seules les valeurs chaîne none/auto/required sont supportées), il écrivait l'appel d'outil en texte brut dans `reasoning_content` au lieu de la reponse structurée `tool_calls`, pire que de le laisser libre. Corrigé par `tool_choice: "auto"` (géré comme un échec ordinaire, retenté par `proposeWeaponFromDescription`, si le modèle ne rend toujours pas d'appel d'outil) et par le choix d'un modèle plus léger sans trace de raisonnement pour ce poste (`gemma-4-e4b...`, ~1,4 s par appel) — un choix d'environnement local, `AI_LOCAL_MODEL` n'est lié à aucun modèle particulier dans le code.
+- Test réel : `src/server/ai/adapters/openAiCompatible.integration.test.ts` (`describe.skipIf` si `AI_LOCAL_BASE_URL` absent ou serveur injoignable, même motif que les tests Supabase).
+- Tests avec fournisseur factice (base réelle) : `src/server/ai/rulesEditor.integration.test.ts` — succès direct, retenter sur erreur Zod, retenter sur absence d'appel d'outil, abandon après deux échecs, journalisation `purpose=structure_rule`.
+- **Vérifié dans le navigateur, bout en bout, avec LM Studio réel** : description libre (« Une hallebarde de guerre inflige 1d10 tranchant, pèse 6 livres et coûte 20 pièces d'or ») → catégorie/dégâts/type/poids/coût pré-remplis et badgés « Rempli par l'IA » → nom saisi → « Créer l'arme » → fiche réelle créée (`Hallebarde de Gabriel V1-F2`, Martiale, 1d10 tranchant, 2,7 kg, 20 po) → ligne `ai_usage_log` confirmée en base (`purpose=structure_rule`, `model=gemma-4-e4b-uncensored-hauhaucs-aggressive`, tokens réels).
+- `typecheck`/`lint`/`test` (580/580)/`build` tous verts.
 
 ### V1-F3 — Assistance rédactionnelle · `M`
 

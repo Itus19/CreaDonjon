@@ -20,3 +20,8 @@ export const createHomebrewWeaponSchema = z.object({
   weapon: zWeaponBlockData,
   note: z.string().min(1).max(500).optional(),
 });
+
+/** V1-F2 : description libre en francais, entree de l'editeur de regle assiste. */
+export const proposeWeaponSchema = z.object({
+  description: z.string().min(1).max(1000),
+});
