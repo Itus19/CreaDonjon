@@ -2133,6 +2133,8 @@ Le « codeur accompagnant » de `specs/regles-couche.md` §5.
 - Vérifié dans le navigateur, bout en bout, avec LM Studio réel : instruction libre sur un bloc `text` vide → proposition affichée → Accepter → segment réellement écrit (confirmé en base, révision `changeSource: "ai"`) → visible immédiatement dans l'éditeur, sans rechargement → une seconde proposition acceptée s'ajoute à la suite, ordre correct.
 - `typecheck`/`lint`/`test` (593, dont 1 test réel LM Studio intermittent sous charge parallèle — passe systématiquement seul, non lié à ce ticket, hérité de V1-F2)/`build` tous verts.
 
+**Observation à corriger plus tard (retour utilisateur, non traité dans ce ticket)** : `proposeTextForBlock` n'envoie au modèle que le prompt système générique et l'instruction de l'utilisateur — **aucun contexte de la fiche elle-même**. Constaté en vérifiant : sur la fiche « L'Ancre Rouillée », une instruction « mentionne le tavernier borgne » a produit un paragraphe commençant par « L'établissement, baptisé "Le Corbeau Boiteux"... » — le modèle invente un nom au lieu de reprendre celui de l'entité, faute de le connaître. Correctif proposé pour plus tard : passer au modèle, en lecture seule, le nom de l'entité et le texte déjà présent dans le bloc (segments existants), encadrés via `fenceUntrustedData` (V1-F1, construit mais jamais encore exercé par une vraie fonctionnalité — c'est exactement le cas d'usage prévu : contenu du wiki inséré dans un prompt comme donnée, jamais comme instruction). Rester borné : le nom et le texte déjà écrit dans ce bloc, pas toute la fiche.
+
 ### V1-F4 — Relevé de coûts · `S`
 
 - [ ] Remplir la colonne « mesuré » du tableau de `PDD.md` §32.
