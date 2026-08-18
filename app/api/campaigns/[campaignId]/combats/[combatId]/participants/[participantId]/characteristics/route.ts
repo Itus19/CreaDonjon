@@ -2,10 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCombatParticipantById } from "@/src/server/repos/combats";
-import { getParticipantActionsSummary } from "@/src/server/services/combats";
+import { getParticipantCharacteristics } from "@/src/server/services/combats";
 import type { Locale } from "@/src/i18n/request";
 
-/** Actions/traits possibles d'un participant (V1-E4) — panneau deroulant de l'ecran Initiative, pour eviter les allers-retours vers les fiches. */
+/** Caracteristiques completes d'un participant (V1-E4 suite) — derouleur "Caracteristiques" de l'ecran Initiative : bloc de monstre complet ou reference vers la fiche de personnage. */
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ campaignId: string; participantId: string }> }
@@ -17,6 +17,6 @@ export async function GET(
     return NextResponse.json({ error: "Participant introuvable." }, { status: 404 });
   }
   const locale = (await getLocale()) as Locale;
-  const summary = await getParticipantActionsSummary(supabase, { participant, campaignId, locale });
-  return NextResponse.json(summary, { status: 200 });
+  const characteristics = await getParticipantCharacteristics(supabase, { participant, campaignId, locale });
+  return NextResponse.json(characteristics, { status: 200 });
 }

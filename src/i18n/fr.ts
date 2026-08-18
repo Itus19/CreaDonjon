@@ -100,7 +100,7 @@ export const ALIGNMENT_WORD_LABELS_FR: Record<string, string> = {
   neutral: "neutre",
   good: "bon",
   evil: "mauvais",
-  unaligned: "sans alignement",
+  unaligned: "-",
   any: "n'importe quel",
   alignment: "alignement",
   or: "ou",

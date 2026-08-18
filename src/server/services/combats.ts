@@ -13,7 +13,7 @@ import {
 import type { Rng } from "@/src/core/dice/rng";
 import { mergeRuntimeState, type RuntimeStatePatch } from "@/src/core/rules/runtimeState";
 import { zRuntimeState } from "@/src/core/schemas/runtimeState";
-import type { ActionsBlockData, StatBlockBlockData, TraitsBlockData } from "@/src/core/schemas/rule-blocks";
+import type { ActionsBlockData, LegendaryActionsBlockData, StatBlockBlockData, TraitsBlockData } from "@/src/core/schemas/rule-blocks";
 import {
   deleteCombat,
   deleteCombatParticipant,
@@ -38,7 +38,6 @@ import { getCampaign } from "@/src/server/services/campaigns";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { resolveCharacterActionContext } from "@/src/server/services/characterActions";
-import { DAMAGE_TYPE_LABELS_FR } from "@/src/i18n/fr";
 import type { Locale } from "@/src/i18n/request";
 
 type TypedClient = SupabaseClient<Database>;
@@ -88,91 +87,51 @@ async function dexModifierForParticipant(
   return 0; // saisie libre (piege...) : le MJ fixe l'initiative a la main.
 }
 
-export interface CombatActionEntry {
-  name: string;
-  description?: string;
-  /** Present si l'action pointe vers une fiche de regle complete (`/regles/[cle]`) — meme convention que le nom d'un participant `statblock`. */
-  ruleKey?: string;
-}
+export type ParticipantCharacteristics =
+  | { kind: "monster"; statBlock: StatBlockBlockData; traits?: TraitsBlockData; actions?: ActionsBlockData; legendaryActions?: LegendaryActionsBlockData }
+  | { kind: "character"; entityId: string }
+  | { kind: "none" };
 
-export interface CombatActionsSummary {
-  traits: CombatActionEntry[];
-  actions: CombatActionEntry[];
-}
-
-const EMPTY_ACTIONS_SUMMARY: CombatActionsSummary = { traits: [], actions: [] };
+const NO_CHARACTERISTICS: ParticipantCharacteristics = { kind: "none" };
 
 /**
- * Resume des actions possibles d'un participant, pour le panneau
- * deroulant de l'ecran Initiative (V1-E4, retour utilisateur : "je n'ai
- * pas a faire des allers-retours entre les fiches"). Deux sources, jamais
- * une troisieme copie de la donnee :
- * - `statblock` (monstre) : blocs `traits`/`actions` de sa fiche de regle
- *   (`getRuleEntryForWorld`, meme resolution — traduction, surcharges —
- *   que la page `/regles/[cle]`).
- * - `entity` (PJ/PNJ nomme) : armes equipees, sorts prepares, ressources
- *   de classe de son contexte de jeu (`resolveCharacterActionContext`,
- *   meme calcul que la fiche jouable, V1-B5) — jamais un recalcul separe.
+ * Caracteristiques completes d'un participant, pour le derouleur
+ * "Caracteristiques" de l'ecran Initiative (V1-E4 suite, retour
+ * utilisateur : "nous venons de construire un bloc de monstre complet...
+ * on va maintenant l'utiliser tel quel pour notre outil d'initiative").
+ * Remplace l'ancien resume d'actions (V1-E4) : plus de recalcul separe ici,
+ * juste assez pour identifier QUOI afficher — `MonsterCard`
+ * (`components/rules/blockContentRenderer.tsx`) et `ParticipantCharacterSheet`
+ * (`components/shell/ParticipantCharacterSheet.tsx`, cote client) recuperent
+ * eux-memes le detail complet, exactement comme `/regles/[cle]` et la fiche
+ * du wiki.
  */
-export async function getParticipantActionsSummary(
+export async function getParticipantCharacteristics(
   supabase: TypedClient,
   params: { participant: CombatParticipantRow; campaignId: string; locale: Locale }
-): Promise<CombatActionsSummary> {
+): Promise<ParticipantCharacteristics> {
   const { participant, campaignId, locale } = params;
 
   if (participant.source_kind === "statblock" && participant.rule_key) {
     const campaign = await getCampaign(supabase, campaignId);
-    if (!campaign) return EMPTY_ACTIONS_SUMMARY;
+    if (!campaign) return NO_CHARACTERISTICS;
     const entry = await getRuleEntryForWorld(supabase, campaign.worldId, participant.rule_key, locale);
-    if (!entry) return EMPTY_ACTIONS_SUMMARY;
-    const traitsData = entry.blocks.find((b) => b.blockType === "traits")?.data as TraitsBlockData | undefined;
-    const actionsData = entry.blocks.find((b) => b.blockType === "actions")?.data as ActionsBlockData | undefined;
+    const statBlock = entry?.blocks.find((b) => b.blockType === "stat_block")?.data as StatBlockBlockData | undefined;
+    if (!statBlock) return NO_CHARACTERISTICS;
     return {
-      traits: (traitsData?.traits ?? []).map((t) => ({ name: t.name, description: t.description })),
-      actions: (actionsData?.actions ?? []).map((a) => ({ name: a.name, description: a.description })),
+      kind: "monster",
+      statBlock,
+      traits: entry!.blocks.find((b) => b.blockType === "traits")?.data as TraitsBlockData | undefined,
+      actions: entry!.blocks.find((b) => b.blockType === "actions")?.data as ActionsBlockData | undefined,
+      legendaryActions: entry!.blocks.find((b) => b.blockType === "legendary_actions")?.data as LegendaryActionsBlockData | undefined,
     };
   }
 
   if (participant.source_kind === "entity" && participant.entity_id) {
-    const ctx = await resolveCharacterActionContext(supabase, participant.entity_id, campaignId, locale);
-    if (!ctx) return EMPTY_ACTIONS_SUMMARY;
-
-    const actions: CombatActionEntry[] = [];
-
-    const equippedItems = (ctx.inventoryData?.items ?? []).filter((item) => item.equipped);
-    for (const item of equippedItems) {
-      const ref = "ref" in item ? item.ref : null;
-      if (ref?.kind === "rule") {
-        const weapon = ctx.weaponByKey[ref.key];
-        if (!weapon) continue; // equipe mais pas une arme (armure, bouclier...)
-        const entry = await getRuleEntryForWorld(supabase, ctx.worldId, ref.key, locale);
-        const damageType = weapon.damageType ? DAMAGE_TYPE_LABELS_FR[weapon.damageType] ?? weapon.damageType : "";
-        actions.push({
-          name: entry?.name ?? ref.key,
-          description: `Dégâts : ${weapon.damageDice}${damageType ? ` ${damageType.toLowerCase()}` : ""}`,
-          ruleKey: ref.key,
-        });
-      } else if ("label" in item) {
-        actions.push({ name: item.label });
-      }
-    }
-
-    if (ctx.spellcastingData) {
-      for (const known of ctx.spellcastingData.known) {
-        if (known.ref.kind !== "rule" || !ctx.spellcastingData.prepared.includes(known.ref.key)) continue;
-        const entry = await getRuleEntryForWorld(supabase, ctx.worldId, known.ref.key, locale);
-        actions.push({ name: entry?.name ?? known.ref.key, description: "Sort préparé", ruleKey: known.ref.key });
-      }
-    }
-
-    for (const tracker of ctx.resourcesData?.trackers ?? []) {
-      actions.push({ name: tracker.label, ruleKey: tracker.source?.kind === "rule" ? tracker.source.key : undefined });
-    }
-
-    return { traits: [], actions };
+    return { kind: "character", entityId: participant.entity_id };
   }
 
-  return EMPTY_ACTIONS_SUMMARY;
+  return NO_CHARACTERISTICS;
 }
 
 interface CombatEventPayload {

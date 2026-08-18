@@ -214,11 +214,14 @@ interface SheetApiResponse {
  * relance ses propres calculs, jamais confiance dans un nombre envoye par
  * ce composant (CLAUDE.md regle 6 : les des sont lances par le serveur).
  *
- * Decision de perimetre : aucun contexte de campagne n'est encore
- * accessible depuis la fiche du wiki (rien ne lie une page d'entite a une
- * campagne dans l'URL aujourd'hui) — `campaignId` reste `null` ici, les
- * jets sont donc des essais non enregistres (specs §A1). Le brancher sur
- * une vraie campagne est un cablage de navigation a part, pas ce ticket.
+ * `campaignId` : `null` depuis la fiche du wiki (rien ne lie une page
+ * d'entite a une campagne dans l'URL) — les jets y sont des essais non
+ * enregistres (specs §A1). Une vraie campagne (V1-E4 suite, ecran
+ * Initiative, retour utilisateur : "utiliser le bloc qu'on vient de
+ * construire... ouvre leur fiche de personnage") passe l'id reel : mêmes
+ * routes `/api/entities/[id]/actions/*`, deja prevues pour les deux
+ * (`campaignId` accepte `null`, cf. `resolveCharacterActionContext`) —
+ * aucun branchement supplementaire cote serveur.
  *
  * Mise en page (V1-C4 suite, sur retour utilisateur avec captures d'ecran de
  * reference) : colonne gauche persistante (caracteristiques + competences,
@@ -230,6 +233,7 @@ interface SheetApiResponse {
 export default function PlayableCharacterSheet({
   worldSlug,
   entityId,
+  campaignId,
   character,
   inventory,
   spellcasting,
@@ -240,6 +244,7 @@ export default function PlayableCharacterSheet({
 }: {
   worldSlug: string;
   entityId: string;
+  campaignId: string | null;
   character: CharacterBlockData;
   inventory: InventoryBlockData | undefined;
   spellcasting: SpellcastingBlockData | undefined;
@@ -248,7 +253,6 @@ export default function PlayableCharacterSheet({
   onUpdateInventory: (data: InventoryBlockData) => void;
   onUpdateSpellcasting: (data: SpellcastingBlockData) => void;
 }) {
-  const campaignId: string | null = null;
   const [tab, setTab] = useState<Tab>("actions");
   const [advantage, setAdvantage] = useState<AdvantageState>("normal");
   const [remote, setRemote] = useState<SheetApiResponse | null>(null);

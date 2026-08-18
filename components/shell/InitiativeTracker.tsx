@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
-import type { CombatActionsSummary, CombatDetail } from "@/src/server/services/combats";
+import { MonsterCard } from "@/components/rules/blockContentRenderer";
+import ParticipantCharacterSheet from "./ParticipantCharacterSheet";
+import type { CombatDetail, ParticipantCharacteristics } from "@/src/server/services/combats";
 import type { CombatParticipantRow, CombatRow } from "@/src/server/repos/combats";
 import type { EncounterMonsterSummary } from "@/src/server/services/encounters";
 
@@ -37,10 +39,14 @@ type AddParticipantMode = "entity" | "statblock" | "custom";
  * (`patchCombatParticipant`), cette interface se contente d'appeler la
  * meme route pour tous les types de participants.
  *
- * Le nom d'un participant `statblock` renvoie vers sa fiche de regle
- * complete (`/regles/[cle]`, deja construite avec Actions/Traits/reactions)
- * plutot que de dupliquer ce rendu dans un panneau separe — meme donnee,
- * un seul endroit qui l'affiche.
+ * Le nom d'un participant `statblock` renvoie aussi vers sa fiche de regle
+ * complete (`/regles/[cle]`) dans un nouvel onglet — en plus du derouleur
+ * "Caracteristiques" ci-dessous (V1-E4 suite), qui affiche desormais le
+ * meme bloc de monstre complet (`MonsterCard`) directement en place, sans
+ * aller-retour. Un participant `entity` (PJ/PNJ) affiche de la meme facon
+ * sa fiche de personnage complete (`PlayableCharacterSheet`, meme campagne
+ * reelle branchee — les jets et changements de PV faits ici comptent pour
+ * de vrai).
  */
 export default function InitiativeTracker({
   worldSlug,
@@ -69,44 +75,44 @@ export default function InitiativeTracker({
   const [customLabel, setCustomLabel] = useState("");
   const [selectedPcId, setSelectedPcId] = useState(pcOptions[0]?.id ?? "");
   const [combatsList, setCombatsList] = useState<CombatRow[]>(savedCombats);
-  const [openActionIds, setOpenActionIds] = useState<Set<string>>(new Set());
-  const [actionsById, setActionsById] = useState<Record<string, CombatActionsSummary | "loading">>({});
+  const [openCharacteristicsIds, setOpenCharacteristicsIds] = useState<Set<string>>(new Set());
+  const [characteristicsById, setCharacteristicsById] = useState<Record<string, ParticipantCharacteristics | "loading">>({});
   const lastAutoOpenedTurnKey = useRef<string | null>(null);
 
   const running = combat?.status === "running";
   const activeParticipant = running && combat ? participants[combat.turn_index] : null;
 
-  // Ouvre automatiquement le panneau Actions du participant dont c'est le
-  // tour (retour explicite de l'utilisateur : "quand le tour arrive a
-  // cette entite, cette partie action s'ouvre") — une seule fois par tour,
-  // l'utilisateur reste ensuite libre de la refermer sans qu'elle se
-  // rouvre toute seule au prochain rendu.
+  // Ouvre automatiquement le panneau Caracteristiques du participant dont
+  // c'est le tour (retour explicite de l'utilisateur : "quand le tour
+  // arrive a cette entite, cette partie action s'ouvre") — une seule fois
+  // par tour, l'utilisateur reste ensuite libre de la refermer sans qu'elle
+  // se rouvre toute seule au prochain rendu.
   useEffect(() => {
     if (!combat || !running || !activeParticipant) return;
     const turnKey = `${combat.id}-${combat.round}-${combat.turn_index}`;
     if (lastAutoOpenedTurnKey.current === turnKey) return;
     lastAutoOpenedTurnKey.current = turnKey;
-    setOpenActionIds((prev) => (prev.has(activeParticipant.id) ? prev : new Set(prev).add(activeParticipant.id)));
-    void loadActions(activeParticipant.id);
+    setOpenCharacteristicsIds((prev) => (prev.has(activeParticipant.id) ? prev : new Set(prev).add(activeParticipant.id)));
+    void loadCharacteristics(activeParticipant.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [combat?.id, combat?.round, combat?.turn_index, running, activeParticipant?.id]);
 
-  async function loadActions(participantId: string) {
-    setActionsById((prev) => ({ ...prev, [participantId]: "loading" }));
-    const res = await fetch(`/api/campaigns/${campaignId}/combats/${combat?.id}/participants/${participantId}/actions`);
-    const data: CombatActionsSummary = res.ok ? await res.json() : { traits: [], actions: [] };
-    setActionsById((prev) => ({ ...prev, [participantId]: data }));
+  async function loadCharacteristics(participantId: string) {
+    setCharacteristicsById((prev) => ({ ...prev, [participantId]: "loading" }));
+    const res = await fetch(`/api/campaigns/${campaignId}/combats/${combat?.id}/participants/${participantId}/characteristics`);
+    const data: ParticipantCharacteristics = res.ok ? await res.json() : { kind: "none" };
+    setCharacteristicsById((prev) => ({ ...prev, [participantId]: data }));
   }
 
-  function toggleActions(participantId: string) {
-    const willOpen = !openActionIds.has(participantId);
-    setOpenActionIds((prev) => {
+  function toggleCharacteristics(participantId: string) {
+    const willOpen = !openCharacteristicsIds.has(participantId);
+    setOpenCharacteristicsIds((prev) => {
       const next = new Set(prev);
       if (willOpen) next.add(participantId);
       else next.delete(participantId);
       return next;
     });
-    if (willOpen && !actionsById[participantId]) void loadActions(participantId);
+    if (willOpen && !characteristicsById[participantId]) void loadCharacteristics(participantId);
   }
 
   async function loadCombat(combatId: string) {
@@ -118,8 +124,8 @@ export default function InitiativeTracker({
       const detail = (await res.json()) as CombatDetail;
       setCombat(detail.combat);
       setParticipants(detail.participants);
-      setOpenActionIds(new Set());
-      setActionsById({});
+      setOpenCharacteristicsIds(new Set());
+      setCharacteristicsById({});
       lastAutoOpenedTurnKey.current = null;
     } finally {
       setBusy(false);
@@ -674,12 +680,14 @@ export default function InitiativeTracker({
               <div className="flex flex-col gap-1.5">
                 <button
                   type="button"
-                  onClick={() => toggleActions(p.id)}
+                  onClick={() => toggleCharacteristics(p.id)}
                   className="self-start text-[10px] font-bold uppercase tracking-widest text-ink-muted transition-colors hover:text-accent"
                 >
-                  {openActionIds.has(p.id) ? "▾" : "▸"} Actions
+                  {openCharacteristicsIds.has(p.id) ? "▾" : "▸"} Caractéristiques
                 </button>
-                {openActionIds.has(p.id) && <ParticipantActions summary={actionsById[p.id]} worldSlug={worldSlug} />}
+                {openCharacteristicsIds.has(p.id) && (
+                  <ParticipantCharacteristicsPanel characteristics={characteristicsById[p.id]} worldSlug={worldSlug} campaignId={campaignId} />
+                )}
               </div>
             </div>
           );
@@ -691,45 +699,41 @@ export default function InitiativeTracker({
   );
 }
 
-/** Contenu du panneau deroulant "Actions" d'un participant — traits/actions de sa fiche de regle (monstre) ou armes/sorts/ressources de son contexte de jeu (PJ/PNJ), V1-E4. */
-function ParticipantActions({ summary, worldSlug }: { summary: CombatActionsSummary | "loading" | undefined; worldSlug: string }) {
-  if (!summary || summary === "loading") {
+/**
+ * Contenu du derouleur "Caracteristiques" d'un participant (V1-E4 suite,
+ * retour utilisateur : "nous venons de construire un bloc de monstre
+ * complet... on va maintenant l'utiliser tel quel"). Reutilise integralement
+ * les fiches deja construites plutot qu'un resume separe : `MonsterCard`
+ * (meme composant que `/regles/[cle]`) pour un participant `statblock`,
+ * `ParticipantCharacterSheet` (meme `PlayableCharacterSheet` que la fiche du
+ * wiki, campagne reelle branchee) pour un participant `entity`.
+ */
+function ParticipantCharacteristicsPanel({
+  characteristics,
+  worldSlug,
+  campaignId,
+}: {
+  characteristics: ParticipantCharacteristics | "loading" | undefined;
+  worldSlug: string;
+  campaignId: string;
+}) {
+  if (!characteristics || characteristics === "loading") {
     return <p className="pl-2 text-xs italic text-ink-muted">Chargement…</p>;
   }
-  if (summary.traits.length === 0 && summary.actions.length === 0) {
-    return <p className="pl-2 text-xs italic text-ink-muted">Aucune action connue pour cette fiche.</p>;
+  if (characteristics.kind === "none") {
+    return <p className="pl-2 text-xs italic text-ink-muted">Aucune caractéristique disponible pour cette entrée.</p>;
   }
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-edge/40 bg-panel-sunken p-2.5 pl-3">
-      {summary.traits.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <span className="text-[9px] font-bold uppercase tracking-widest text-ink-muted">Traits</span>
-          {summary.traits.map((t, i) => (
-            <p key={i} className="text-xs text-ink">
-              <span className="font-medium">{t.name}.</span> {t.description}
-            </p>
-          ))}
-        </div>
-      )}
-      {summary.actions.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <span className="text-[9px] font-bold uppercase tracking-widest text-ink-muted">Actions</span>
-          {summary.actions.map((a, i) => (
-            <p key={i} className="text-xs text-ink">
-              <span className="font-medium">
-                {a.ruleKey ? (
-                  <a href={`/m/${worldSlug}/regles/${a.ruleKey}`} target="_blank" rel="noreferrer" className="hover:text-accent hover:underline">
-                    {a.name}
-                  </a>
-                ) : (
-                  a.name
-                )}
-                .
-              </span>{" "}
-              {a.description}
-            </p>
-          ))}
-        </div>
+    <div className="rounded-md border border-edge/40 bg-panel-sunken p-2.5 pl-3">
+      {characteristics.kind === "monster" ? (
+        <MonsterCard
+          statBlock={characteristics.statBlock}
+          traits={characteristics.traits}
+          actions={characteristics.actions}
+          legendaryActions={characteristics.legendaryActions}
+        />
+      ) : (
+        <ParticipantCharacterSheet worldSlug={worldSlug} campaignId={campaignId} entityId={characteristics.entityId} />
       )}
     </div>
   );

@@ -521,6 +521,7 @@ export default function EntityBlocks({
               <PlayableCharacterSheet
                 worldSlug={worldSlug}
                 entityId={entityId}
+                campaignId={null}
                 character={block.data as CharacterBlockData}
                 inventory={inventoryBlock?.data as InventoryBlockData | undefined}
                 spellcasting={spellcastingBlock?.data as SpellcastingBlockData | undefined}
