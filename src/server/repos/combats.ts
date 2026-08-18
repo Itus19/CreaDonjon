@@ -186,3 +186,9 @@ export async function deleteCombatParticipant(supabase: TypedClient, id: string)
   const { error } = await supabase.from("combat_participants").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
+
+/** Suppression definitive d'un combat ("Mes combats", V1-E4) — ses participants suivent par `on delete cascade`. */
+export async function deleteCombat(supabase: TypedClient, id: string): Promise<void> {
+  const { error } = await supabase.from("combats").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}

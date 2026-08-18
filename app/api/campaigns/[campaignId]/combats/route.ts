@@ -2,12 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCampaign } from "@/src/server/services/campaigns";
 import { createCombatSchema } from "@/lib/combats/schemas";
-import {
-  addMonstersToCombat,
-  createCombatFromMonsters,
-  getActiveCombatForCampaign,
-  listCombatsForCampaign,
-} from "@/src/server/services/combats";
+import { createCombatFromMonsters, listCombatsForCampaign } from "@/src/server/services/combats";
 
 /** "Mes combats" (V1-E4) — les combats d'une campagne, plus recents d'abord. */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
@@ -17,13 +12,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   return NextResponse.json({ combats }, { status: 200 });
 }
 
-/**
- * "Lancer le combat" (V1-E4, depuis la composition de Rencontres, V1-E3).
- * Si la campagne a deja un combat en cours (draft ou en cours), la
- * composition s'y AJOUTE plutot que de creer un second combat qui
- * l'abandonnerait — retour explicite de l'utilisateur : exporter une
- * nouvelle generation doit rejoindre l'ecran Initiative deja ouvert.
- */
+/** "Lancer le combat" (V1-E4, depuis la composition de Rencontres, V1-E3) — chaque generation cree un nouveau combat separe. */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await params;
 
@@ -44,12 +33,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const campaign = await getCampaign(supabase, campaignId);
   if (!campaign) {
     return NextResponse.json({ error: "Campagne introuvable." }, { status: 404 });
-  }
-
-  const active = await getActiveCombatForCampaign(supabase, campaignId);
-  if (active) {
-    await addMonstersToCombat(supabase, { combatId: active.id, rulesetId: campaign.rulesetId, monsters: parsed.data.monsters });
-    return NextResponse.json(active, { status: 200 });
   }
 
   const combat = await createCombatFromMonsters(supabase, {

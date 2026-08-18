@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
-import type { CombatDetail } from "@/src/server/services/combats";
+import type { CombatActionsSummary, CombatDetail } from "@/src/server/services/combats";
 import type { CombatParticipantRow, CombatRow } from "@/src/server/repos/combats";
 import type { EncounterMonsterSummary } from "@/src/server/services/encounters";
 
@@ -63,6 +63,73 @@ export default function InitiativeTracker({
   const [monsterSearch, setMonsterSearch] = useState("");
   const [customLabel, setCustomLabel] = useState("");
   const [selectedPcId, setSelectedPcId] = useState(pcOptions[0]?.id ?? "");
+  const [combatsList, setCombatsList] = useState<CombatRow[]>(savedCombats);
+  const [openActionIds, setOpenActionIds] = useState<Set<string>>(new Set());
+  const [actionsById, setActionsById] = useState<Record<string, CombatActionsSummary | "loading">>({});
+  const lastAutoOpenedTurnKey = useRef<string | null>(null);
+
+  const running = combat?.status === "running";
+  const activeParticipant = running && combat ? participants[combat.turn_index] : null;
+
+  // Ouvre automatiquement le panneau Actions du participant dont c'est le
+  // tour (retour explicite de l'utilisateur : "quand le tour arrive a
+  // cette entite, cette partie action s'ouvre") — une seule fois par tour,
+  // l'utilisateur reste ensuite libre de la refermer sans qu'elle se
+  // rouvre toute seule au prochain rendu.
+  useEffect(() => {
+    if (!combat || !running || !activeParticipant) return;
+    const turnKey = `${combat.id}-${combat.round}-${combat.turn_index}`;
+    if (lastAutoOpenedTurnKey.current === turnKey) return;
+    lastAutoOpenedTurnKey.current = turnKey;
+    setOpenActionIds((prev) => (prev.has(activeParticipant.id) ? prev : new Set(prev).add(activeParticipant.id)));
+    void loadActions(activeParticipant.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [combat?.id, combat?.round, combat?.turn_index, running, activeParticipant?.id]);
+
+  async function loadActions(participantId: string) {
+    setActionsById((prev) => ({ ...prev, [participantId]: "loading" }));
+    const res = await fetch(`/api/campaigns/${campaignId}/combats/${combat?.id}/participants/${participantId}/actions`);
+    const data: CombatActionsSummary = res.ok ? await res.json() : { traits: [], actions: [] };
+    setActionsById((prev) => ({ ...prev, [participantId]: data }));
+  }
+
+  function toggleActions(participantId: string) {
+    const willOpen = !openActionIds.has(participantId);
+    setOpenActionIds((prev) => {
+      const next = new Set(prev);
+      if (willOpen) next.add(participantId);
+      else next.delete(participantId);
+      return next;
+    });
+    if (willOpen && !actionsById[participantId]) void loadActions(participantId);
+  }
+
+  async function loadCombat(combatId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/campaigns/${campaignId}/combats/${combatId}`);
+      if (!res.ok) return;
+      const detail = (await res.json()) as CombatDetail;
+      setCombat(detail.combat);
+      setParticipants(detail.participants);
+      setOpenActionIds(new Set());
+      setActionsById({});
+      lastAutoOpenedTurnKey.current = null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteCombatEntry(combatId: string) {
+    if (!window.confirm("Supprimer définitivement ce combat ? Cette action est irréversible.")) return;
+    await fetch(`/api/campaigns/${campaignId}/combats/${combatId}`, { method: "DELETE" });
+    setCombatsList((prev) => prev.filter((c) => c.id !== combatId));
+    if (combat?.id === combatId) {
+      setCombat(null);
+      setParticipants([]);
+    }
+  }
 
   async function refreshCombat(combatId: string) {
     const res = await fetch(`/api/campaigns/${campaignId}/combats/${combatId}`);
@@ -88,6 +155,7 @@ export default function InitiativeTracker({
       }
       setCombat(body);
       setParticipants([]);
+      setCombatsList((prev) => [body, ...prev]);
     } finally {
       setBusy(false);
     }
@@ -185,6 +253,16 @@ export default function InitiativeTracker({
     }
   }
 
+  async function bumpInitiative(participant: CombatParticipantRow, delta: number) {
+    const next = (participant.initiative ?? 0) + delta;
+    await patchParticipant(participant.id, { initiative: next }, `Initiative ${delta >= 0 ? "+" : ""}${delta}`);
+  }
+
+  async function bumpAc(participant: CombatParticipantRow, delta: number) {
+    const next = Math.max(0, (participant.ac ?? 10) + delta);
+    await patchParticipant(participant.id, { ac: next }, `CA ${delta >= 0 ? "+" : ""}${delta}`);
+  }
+
   async function changeHp(participant: CombatParticipantRow, delta: number) {
     const current = participant.hp_current ?? 0;
     const max = participant.hp_max ?? current;
@@ -260,13 +338,10 @@ export default function InitiativeTracker({
         <p className="text-xs italic text-ink-muted">
           Ou composez une rencontre dans l&apos;onglet Rencontres et cliquez « Lancer le combat ».
         </p>
-        <SavedCombatsList combats={savedCombats} />
+        <SavedCombatsList combats={combatsList} activeCombatId={null} onSelect={loadCombat} onDelete={deleteCombatEntry} />
       </div>
     );
   }
-
-  const running = combat.status === "running";
-  const activeParticipant = running ? participants[combat.turn_index] : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -418,17 +493,35 @@ export default function InitiativeTracker({
               }`}
             >
               <div className="flex flex-wrap items-center gap-3">
-                <input
-                  key={`${p.id}-init-${p.initiative ?? "none"}`}
-                  type="number"
-                  defaultValue={p.initiative ?? ""}
-                  onBlur={(e) => {
-                    const value = Number(e.target.value);
-                    if (Number.isFinite(value) && value !== p.initiative) void patchParticipant(p.id, { initiative: value }, "Initiative modifiée");
-                  }}
-                  className="mech flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border-2 border-edge bg-panel-sunken text-center text-lg font-bold text-ink outline-none focus:border-accent"
-                  title="Initiative"
-                />
+                <div className="mech flex h-14 w-12 shrink-0 flex-col overflow-hidden rounded-lg border-2 border-edge bg-panel-sunken text-ink">
+                  <button
+                    type="button"
+                    onClick={() => bumpInitiative(p, 1)}
+                    className="flex h-4 w-full items-center justify-center text-[9px] leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent"
+                    title="Augmenter l'initiative"
+                  >
+                    ▲
+                  </button>
+                  <input
+                    key={`${p.id}-init-${p.initiative ?? "none"}`}
+                    type="number"
+                    defaultValue={p.initiative ?? ""}
+                    onBlur={(e) => {
+                      const value = Number(e.target.value);
+                      if (Number.isFinite(value) && value !== p.initiative) void patchParticipant(p.id, { initiative: value }, "Initiative modifiée");
+                    }}
+                    className="w-full flex-1 border-y border-edge/60 bg-transparent text-center text-lg font-bold text-ink outline-none focus:border-accent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    title="Initiative"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => bumpInitiative(p, -1)}
+                    className="flex h-4 w-full items-center justify-center text-[9px] leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent"
+                    title="Diminuer l'initiative"
+                  >
+                    ▼
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => rollOne(p.id)}
@@ -452,19 +545,37 @@ export default function InitiativeTracker({
                     {p.label}
                   </span>
                 )}
-                <label className="flex items-center gap-1 text-[10px] text-ink-muted">
-                  CA
-                  <input
-                    key={`${p.id}-ac-${p.ac ?? "none"}`}
-                    type="number"
-                    defaultValue={p.ac ?? ""}
-                    onBlur={(e) => {
-                      const value = Number(e.target.value);
-                      if (Number.isFinite(value) && value !== p.ac) void patchParticipant(p.id, { ac: value }, "CA modifiée");
-                    }}
-                    className="mech w-10 rounded-md border border-edge bg-panel-sunken px-1 py-0.5 text-center text-ink outline-none"
-                  />
-                </label>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] uppercase tracking-wider text-ink-muted">CA</span>
+                  <div className="mech flex h-11 w-10 shrink-0 flex-col overflow-hidden rounded-lg border-2 border-edge bg-panel-sunken text-ink">
+                    <button
+                      type="button"
+                      onClick={() => bumpAc(p, 1)}
+                      className="flex h-3.5 w-full items-center justify-center text-[8px] leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent"
+                      title="Augmenter la CA"
+                    >
+                      ▲
+                    </button>
+                    <input
+                      key={`${p.id}-ac-${p.ac ?? "none"}`}
+                      type="number"
+                      defaultValue={p.ac ?? ""}
+                      onBlur={(e) => {
+                        const value = Number(e.target.value);
+                        if (Number.isFinite(value) && value !== p.ac) void patchParticipant(p.id, { ac: value }, "CA modifiée");
+                      }}
+                      className="w-full flex-1 border-y border-edge/60 bg-transparent text-center text-sm font-bold text-ink outline-none focus:border-accent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => bumpAc(p, -1)}
+                      className="flex h-3.5 w-full items-center justify-center text-[8px] leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent"
+                      title="Diminuer la CA"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => removeParticipant(p.id)}
@@ -525,17 +636,82 @@ export default function InitiativeTracker({
                   options={[{ value: "", label: "+ Condition" }, ...conditions.map((c) => ({ value: c, label: c }))]}
                 />
               </div>
+
+              <div className="flex flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => toggleActions(p.id)}
+                  className="self-start text-[10px] font-bold uppercase tracking-widest text-ink-muted transition-colors hover:text-accent"
+                >
+                  {openActionIds.has(p.id) ? "▾" : "▸"} Actions
+                </button>
+                {openActionIds.has(p.id) && <ParticipantActions summary={actionsById[p.id]} worldSlug={worldSlug} />}
+              </div>
             </div>
           );
         })}
       </div>
 
-      <SavedCombatsList combats={savedCombats} />
+      <SavedCombatsList combats={combatsList} activeCombatId={combat.id} onSelect={loadCombat} onDelete={deleteCombatEntry} />
     </div>
   );
 }
 
-function SavedCombatsList({ combats }: { combats: CombatRow[] }) {
+/** Contenu du panneau deroulant "Actions" d'un participant — traits/actions de sa fiche de regle (monstre) ou armes/sorts/ressources de son contexte de jeu (PJ/PNJ), V1-E4. */
+function ParticipantActions({ summary, worldSlug }: { summary: CombatActionsSummary | "loading" | undefined; worldSlug: string }) {
+  if (!summary || summary === "loading") {
+    return <p className="pl-2 text-xs italic text-ink-muted">Chargement…</p>;
+  }
+  if (summary.traits.length === 0 && summary.actions.length === 0) {
+    return <p className="pl-2 text-xs italic text-ink-muted">Aucune action connue pour cette fiche.</p>;
+  }
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-edge/40 bg-panel-sunken p-2.5 pl-3">
+      {summary.traits.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-ink-muted">Traits</span>
+          {summary.traits.map((t, i) => (
+            <p key={i} className="text-xs text-ink">
+              <span className="font-medium">{t.name}.</span> {t.description}
+            </p>
+          ))}
+        </div>
+      )}
+      {summary.actions.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-ink-muted">Actions</span>
+          {summary.actions.map((a, i) => (
+            <p key={i} className="text-xs text-ink">
+              <span className="font-medium">
+                {a.ruleKey ? (
+                  <a href={`/m/${worldSlug}/regles/${a.ruleKey}`} target="_blank" rel="noreferrer" className="hover:text-accent hover:underline">
+                    {a.name}
+                  </a>
+                ) : (
+                  a.name
+                )}
+                .
+              </span>{" "}
+              {a.description}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SavedCombatsList({
+  combats,
+  activeCombatId,
+  onSelect,
+  onDelete,
+}: {
+  combats: CombatRow[];
+  activeCombatId: string | null;
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
   return (
     <div className="flex flex-col gap-2 border-t border-edge/60 pt-4">
       <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Mes combats ({combats.length})</span>
@@ -544,10 +720,25 @@ function SavedCombatsList({ combats }: { combats: CombatRow[] }) {
       ) : (
         <div className="flex flex-col gap-1.5">
           {combats.map((c) => (
-            <div key={c.id} className="flex items-center gap-2 rounded-md border border-edge/60 px-2 py-1.5 text-xs">
-              <span className="flex-1 text-ink">{c.name ?? "Combat"}</span>
-              <span className="text-ink-muted">{STATUS_LABELS[c.status] ?? c.status}</span>
-              <span className="text-ink-muted">{formatDate(c.created_at)}</span>
+            <div
+              key={c.id}
+              className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs ${
+                c.id === activeCombatId ? "border-accent bg-panel-raised" : "border-edge/60"
+              }`}
+            >
+              <button type="button" onClick={() => onSelect(c.id)} className="flex flex-1 items-center gap-2 text-left hover:text-accent">
+                <span className="flex-1 text-ink">{c.name ?? "Combat"}</span>
+                <span className="text-ink-muted">{STATUS_LABELS[c.status] ?? c.status}</span>
+                <span className="text-ink-muted">{formatDate(c.created_at)}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onDelete(c.id)}
+                className="text-danger hover:underline"
+                title="Supprimer définitivement"
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>
