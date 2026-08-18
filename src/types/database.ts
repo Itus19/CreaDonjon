@@ -544,6 +544,129 @@ export type Database = {
           },
         ]
       }
+      combat_participants: {
+        Row: {
+          ac: number | null
+          combat_id: string
+          concentration: Json | null
+          conditions: Json
+          created_at: string
+          display_order: number
+          entity_id: string | null
+          hp_current: number | null
+          hp_max: number | null
+          id: string
+          initiative: number | null
+          is_ally: boolean
+          label: string
+          rule_key: string | null
+          source_kind: string
+          temp_hp: number
+        }
+        Insert: {
+          ac?: number | null
+          combat_id: string
+          concentration?: Json | null
+          conditions?: Json
+          created_at?: string
+          display_order?: number
+          entity_id?: string | null
+          hp_current?: number | null
+          hp_max?: number | null
+          id?: string
+          initiative?: number | null
+          is_ally?: boolean
+          label: string
+          rule_key?: string | null
+          source_kind: string
+          temp_hp?: number
+        }
+        Update: {
+          ac?: number | null
+          combat_id?: string
+          concentration?: Json | null
+          conditions?: Json
+          created_at?: string
+          display_order?: number
+          entity_id?: string | null
+          hp_current?: number | null
+          hp_max?: number | null
+          id?: string
+          initiative?: number | null
+          is_ally?: boolean
+          label?: string
+          rule_key?: string | null
+          source_kind?: string
+          temp_hp?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat_participants_combat_id_fkey"
+            columns: ["combat_id"]
+            isOneToOne: false
+            referencedRelation: "combats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat_participants_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combats: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          name: string | null
+          round: number
+          session_id: string | null
+          status: string
+          turn_index: number
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          name?: string | null
+          round?: number
+          session_id?: string | null
+          status?: string
+          turn_index?: number
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          name?: string | null
+          round?: number
+          session_id?: string | null
+          status?: string
+          turn_index?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combats_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combats_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dice_rolls: {
         Row: {
           ast: Json

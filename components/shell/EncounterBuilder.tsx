@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Dropdown from "@/components/shared/Dropdown";
 import { encounterBudget, encounterCost, type EncounterBudgetBand, type EncounterBudgetRow } from "@/src/core/rules/encounter";
 import type { EncounterMonsterSummary } from "@/src/server/services/encounters";
@@ -24,17 +25,18 @@ function formatDate(iso: string): string {
  * a gauche, rencontre en cours de composition a droite, barre de budget en
  * direct (memes fonctions pures que l'ancien bloc d'entite, `encounterBudget`/
  * `encounterCost`), solveur aleatoire cote serveur, "Mes combats" persiste
- * dans `campaign_encounters`. "Lancer le combat" est desactive : V1-E4
- * (suivi d'initiative) n'existe pas encore, pas de fonctionnalite cachee,
- * juste indisponible pour l'instant (meme convention que MjSidebar).
+ * dans `campaign_encounters`. "Lancer le combat" (V1-E4) cree le combat
+ * depuis la composition courante et navigue vers l'ecran Initiative.
  */
 export default function EncounterBuilder({
+  worldSlug,
   campaignId,
   budgetTable,
   budgetIsFallback,
   monsters,
   initialSavedEncounters,
 }: {
+  worldSlug: string;
   campaignId: string;
   budgetTable: EncounterBudgetRow[] | null;
   /** `true` si `budgetTable` vient du SRD 2024 de reference plutot que du ruleset propre de la campagne (V1-E3 : disponible quel que soit le ruleset, sur demande explicite de l'utilisateur). */
@@ -42,6 +44,8 @@ export default function EncounterBuilder({
   monsters: EncounterMonsterSummary[];
   initialSavedEncounters: CampaignEncounterRow[];
 }) {
+  const router = useRouter();
+  const [launching, setLaunching] = useState(false);
   const [partySize, setPartySize] = useState(4);
   const [partyLevel, setPartyLevel] = useState(1);
   const [band, setBand] = useState<EncounterBudgetBand>("moderate");
@@ -135,6 +139,30 @@ export default function EncounterBuilder({
     setParticipants([]);
     setName("Rencontre");
     setError(null);
+  }
+
+  /** "Lancer le combat" (V1-E4) — cree le combat depuis la composition en cours (monstres seulement, les PJ s'ajoutent ensuite depuis l'ecran Initiative), puis y navigue directement. */
+  async function handleLaunchCombat() {
+    setLaunching(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/campaigns/${campaignId}/combats`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          monsters: participants.map((p) => ({ entryKey: p.entryKey, label: p.name, count: p.count })),
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? "Impossible de lancer le combat.");
+        return;
+      }
+      router.push(`/m/${worldSlug}/mj/initiative?campagne=${campaignId}`);
+    } finally {
+      setLaunching(false);
+    }
   }
 
   return (
@@ -276,11 +304,11 @@ export default function EncounterBuilder({
             </button>
             <button
               type="button"
-              disabled
-              title="Bientôt (suivi d'initiative, V1-E4)"
-              className="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted opacity-60"
+              onClick={handleLaunchCombat}
+              disabled={launching || participants.length === 0}
+              className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-panel transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              Lancer le combat
+              {launching ? "Lancement…" : "Lancer le combat"}
             </button>
           </div>
         </div>

@@ -75,6 +75,7 @@ export default async function MjRencontresPage({
           )}
           {selected && (
             <EncounterBuilder
+              worldSlug={worldSlug}
               campaignId={selected.id}
               budgetTable={budgetResolution?.rows ?? null}
               budgetIsFallback={budgetResolution?.isFallback ?? false}
