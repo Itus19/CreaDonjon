@@ -2064,12 +2064,22 @@ Spécification complète : `specs/arbitrage-modifications.md` §3.6.
 
 *Objectif : mesurer les coûts réels avant de concevoir le mode solo.*
 
-### V1-F1 — Instrumentation et garde-fous · `M` · **avant tout appel**
+### V1-F1 — Instrumentation et garde-fous · `M` · **avant tout appel** — fait
 
-- [ ] `ai_usage_log` écrit à **chaque** appel, sans exception.
-- [ ] Limitation de débit par utilisateur sur les routes IA.
-- [ ] Clés API serveur uniquement, jamais derrière `NEXT_PUBLIC_`.
-- [ ] Le contenu de wiki inséré dans un prompt est encadré comme **donnée**, avec consigne d'ignorer toute instruction qu'il contiendrait.
+- [x] `ai_usage_log` écrit à **chaque** appel, sans exception.
+- [x] Limitation de débit par utilisateur sur les routes IA.
+- [x] Clés API serveur uniquement, jamais derrière `NEXT_PUBLIC_`.
+- [x] Le contenu de wiki inséré dans un prompt est encadré comme **donnée**, avec consigne d'ignorer toute instruction qu'il contiendrait.
+
+**Portée volontairement bornée à l'instrumentation, pas aux fournisseurs.** Aucun `AiProvider` concret (Ollama, LM Studio, API distante) n'existe encore dans `src/server/ai/` — les écrire maintenant serait construire un client sans consommateur, avant le premier ticket qui fait un vrai appel (V1-F2). Ce ticket construit uniquement le point de passage obligé par lequel ce premier appel devra transiter.
+
+- `src/core/ai/promptSafety.ts` : `fenceUntrustedData(label, content)` encadre tout contenu externe inséré dans un prompt avec la consigne explicite de l'ignorer comme instruction (CLAUDE.md règle 8). Encadrement au meilleur effort — du texte pour le modèle, pas des balises analysées par un parseur.
+- `src/core/ai/rateLimit.ts` : `decideRateLimit` — décision pure (compte dans la fenêtre glissante vs limite), testable sans horloge réelle.
+- `src/server/ai/provider.ts` : interface `AiProvider` (`complete`/`embed`/`capabilities`, avec `isLocal` — specs/cible-locale-et-ia.md §3 et §4.5) — le seul type que le reste du code est autorisé à connaître (CLAUDE.md règle 16 ter).
+- `src/server/repos/aiUsage.ts` : `insertAiUsageLog`, `getAiUsageWindowStats` (fenêtre glissante sur l'index déjà posé par la migration 009).
+- `src/server/ai/rateLimit.ts` + `src/server/ai/callAi.ts` : `runAiCompletion`/`runAiEmbedding`, point de passage obligé — vérifie la limite de débit (fenêtre d'une heure, 30 appels par défaut, configurable), appelle le fournisseur, journalise systématiquement dans `ai_usage_log` **même en cas d'échec du fournisseur** (l'erreur d'origine est propagée telle quelle, jamais masquée par la journalisation).
+- Table `ai_usage_log` déjà migrée depuis la Phase 0 (`20260730120003_ai.sql`) — aucune nouvelle migration nécessaire, seulement le câblage.
+- Vérification : `src/core/ai/*.test.ts` (noyau pur), `src/server/ai/callAi.integration.test.ts` (base réelle, fournisseur factice — journalisation succès/échec, blocage par limite de débit sans toucher le fournisseur). `typecheck`/`lint`/`test` (567/567)/`build` tous verts.
 
 ### V1-F2 — Éditeur de règle assisté · `L`
 
