@@ -4,7 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getRuleEntryPageData } from "@/src/server/services/rules";
 import type { Locale } from "@/src/i18n/request";
-import type { ActionsBlockData, StatBlockBlockData, TraitsBlockData } from "@/src/core/schemas/rule-blocks";
+import type { ActionsBlockData, LegendaryActionsBlockData, StatBlockBlockData, TraitsBlockData } from "@/src/core/schemas/rule-blocks";
 import RuleBlockRenderer from "@/components/rules/RuleBlockRenderer";
 import { MonsterCard } from "@/components/rules/blockContentRenderer";
 import MissingBlocksBanner from "@/components/rules/MissingBlocksBanner";
@@ -26,17 +26,21 @@ export default async function RuleEntryPage({
   const entryTypeLabels = t.raw("entryTypes") as Record<string, string>;
 
   // Fiche de creature (V1-E4 suite, retour utilisateur) : stat_block,
-  // traits et actions fusionnes dans UN seul bloc visuel (MonsterCard)
-  // plutot que trois sections separees — jamais d'onglets, Actions puis
-  // Aptitudes speciales a la suite. traits/actions sont retires de la
-  // boucle normale quand un stat_block existe dans la meme fiche ; sans
-  // stat_block (rare, un type de bloc n'est pas reserve aux monstres), ils
-  // restent rendus par RuleBlockRenderer comme avant (Traits/Actions,
+  // traits, actions et actions legendaires (V1-E4b) fusionnes dans UN seul
+  // bloc visuel (MonsterCard) plutot que quatre sections separees — jamais
+  // d'onglets, Actions puis Actions legendaires puis Aptitudes speciales a
+  // la suite. Ces trois derniers sont retires de la boucle normale quand un
+  // stat_block existe dans la meme fiche ; sans stat_block (rare, un type de
+  // bloc n'est pas reserve aux monstres), ils restent rendus par
+  // RuleBlockRenderer comme avant (Traits/Actions/LegendaryActions,
   // blockContentRenderer.tsx).
   const statBlockEntry = entry.blocks.find((b) => b.blockType === "stat_block");
   const traitsEntry = entry.blocks.find((b) => b.blockType === "traits");
   const actionsEntry = entry.blocks.find((b) => b.blockType === "actions");
-  const mergedIds = statBlockEntry ? new Set([traitsEntry?.id, actionsEntry?.id].filter((id): id is string => !!id)) : null;
+  const legendaryActionsEntry = entry.blocks.find((b) => b.blockType === "legendary_actions");
+  const mergedIds = statBlockEntry
+    ? new Set([traitsEntry?.id, actionsEntry?.id, legendaryActionsEntry?.id].filter((id): id is string => !!id))
+    : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -88,6 +92,7 @@ export default async function RuleEntryPage({
                   statBlock={block.data as StatBlockBlockData}
                   traits={traitsEntry?.data as TraitsBlockData | undefined}
                   actions={actionsEntry?.data as ActionsBlockData | undefined}
+                  legendaryActions={legendaryActionsEntry?.data as LegendaryActionsBlockData | undefined}
                 />
               </div>
             ) : (

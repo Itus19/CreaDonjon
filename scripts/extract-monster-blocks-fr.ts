@@ -79,6 +79,7 @@ interface MonsterRow {
   hitPoints: number;
   traits: EnglishEntry[];
   actions: EnglishEntry[];
+  legendaryActions: EnglishEntry[];
 }
 
 // En-tete de trait/action : debut de ligne, majuscule initiale, phrase
@@ -383,7 +384,7 @@ async function main() {
     .from("ruleset_entry_blocks")
     .select("entry_id, block_type, data")
     .in("entry_id", entries.map((e) => e.id))
-    .in("block_type", ["stat_block", "traits", "actions"]);
+    .in("block_type", ["stat_block", "traits", "actions", "legendary_actions"]);
   if (e3) throw new Error(e3.message);
 
   const blocksByEntry = new Map<string, Record<string, unknown>>();
@@ -402,6 +403,7 @@ async function main() {
     if (!statBlock || typeof statBlock.armor_class !== "number" || typeof statBlock.hit_points !== "number") continue;
     const traits = ((b?.traits as { traits?: EnglishEntry[] } | undefined)?.traits ?? []) as EnglishEntry[];
     const actions = ((b?.actions as { actions?: EnglishEntry[] } | undefined)?.actions ?? []) as EnglishEntry[];
+    const legendaryActions = ((b?.legendary_actions as { actions?: EnglishEntry[] } | undefined)?.actions ?? []) as EnglishEntry[];
     rows.push({
       id: entry.id,
       entry_key: entry.entry_key,
@@ -410,6 +412,7 @@ async function main() {
       hitPoints: statBlock.hit_points,
       traits,
       actions,
+      legendaryActions,
     });
   }
   // ONLY_KEY ne filtre jamais `rows` ici : la localisation de chaque
@@ -600,37 +603,50 @@ async function main() {
     const traitsHeaderIdx = traitsZone.findIndex((l) => l.trim() === "Traits");
     if (traitsHeaderIdx !== -1) traitsZone = traitsZone.slice(traitsHeaderIdx + 1);
 
+    // "Variante : ..." (ex. Nuée d'insectes) precede des sous-variantes sans
+    // bloc de caracteristiques propre (giant-rat-diseased, meme motif) :
+    // leur contenu n'est jamais compte dans les traits/actions du monstre de
+    // base par la source anglaise, jamais une action a extraire ici.
+    // "Actions Bonus" (SRD 5.2.1 uniquement, absent en 2014) manquait a
+    // cette liste : sans lui, la derniere action "normale" avalait tout
+    // jusqu'au prochain arret reconnu, y compris le monstre suivant en
+    // entier quand aucun des trois autres arrets n'intervenait avant lui
+    // (verifie sur Prêtre -> Pseudodragon, detecte par le garde-fou de fuite
+    // existant plus bas). "Actions Légendaires" (Aboleth) porte une
+    // majuscule a "Légendaires" contrairement a la plupart des autres
+    // monstres ("Actions légendaires") — incoherence de casse dans la mise
+    // en page source, jamais uniforme. Compare insensible a la casse pour ce
+    // seul terme plutot que d'ajouter une troisieme variante figee au hasard.
+    const isLegendaryMarker = (t: string) => t === "Aptitudes légendaires" || /^Actions légendaires$/i.test(t);
+    const isOtherSectionMarker = (t: string) => t === "Réactions" || t === "Actions Bonus" || /^Variante ?:/.test(t);
+
     let actionsZone: string[] = [];
+    // V1-E4b (retour utilisateur : "il manque les actions legendaires") :
+    // au lieu de simplement s'arreter au marqueur "Actions légendaires"
+    // (auparavant un simple point d'arret jamais exploite), on releve
+    // TOUTES les positions de marqueur de section dans l'ordre pour isoler
+    // la zone "Actions légendaires" elle-meme, bornee par le marqueur
+    // suivant (ou la fin de la zone du monstre) — jamais une hypothese sur
+    // l'ordre relatif de Réactions/Actions légendaires, meme si l'ordre
+    // canonique du SRD place toujours les actions legendaires en dernier.
+    let legendaryActionsZone: string[] = [];
     if (actionsIdx !== -1) {
       const rest = zoneLines.slice(actionsIdx + 1);
-      // "Variante : ..." (ex. Nuée d'insectes) precede des sous-variantes
-      // sans bloc de caracteristiques propre (giant-rat-diseased, meme
-      // motif) : leur contenu n'est jamais compte dans les traits/actions
-      // du monstre de base par la source anglaise, jamais une action a
-      // extraire ici. "Actions Bonus" (SRD 5.2.1 uniquement, absent en
-      // 2014) manquait a cette liste : sans lui, la derniere action
-      // "normale" avalait tout jusqu'au prochain arret reconnu, y compris
-      // le monstre suivant en entier quand aucun des trois autres arrets
-      // n'intervenait avant lui (verifie sur Prêtre -> Pseudodragon,
-      // detecte par le garde-fou de fuite existant plus bas).
-      // "Actions Légendaires" (Aboleth) porte une majuscule a "Légendaires"
-      // contrairement a la plupart des autres monstres ("Actions
-      // légendaires") — incoherence de casse dans la mise en page source,
-      // jamais uniforme. Compare insensible a la casse pour ce seul terme
-      // plutot que d'ajouter une troisieme variante figee au hasard.
-      const stopIdx = rest.findIndex(
-        (l) => {
-          const t = l.trim();
-          return (
-            t === "Réactions" ||
-            t === "Actions Bonus" ||
-            t === "Aptitudes légendaires" ||
-            /^Actions légendaires$/i.test(t) ||
-            /^Variante ?:/.test(t)
-          );
-        }
-      );
-      actionsZone = stopIdx === -1 ? rest : rest.slice(0, stopIdx);
+      const markers: { idx: number; legendary: boolean }[] = [];
+      rest.forEach((l, idx) => {
+        const t = l.trim();
+        if (isLegendaryMarker(t)) markers.push({ idx, legendary: true });
+        else if (isOtherSectionMarker(t)) markers.push({ idx, legendary: false });
+      });
+      const firstMarkerIdx = markers.length > 0 ? markers[0].idx : rest.length;
+      actionsZone = rest.slice(0, firstMarkerIdx);
+
+      const legendaryPos = markers.findIndex((m) => m.legendary);
+      if (legendaryPos !== -1) {
+        const zoneStart = markers[legendaryPos].idx + 1;
+        const zoneEnd = legendaryPos + 1 < markers.length ? markers[legendaryPos + 1].idx : rest.length;
+        legendaryActionsZone = rest.slice(zoneStart, zoneEnd);
+      }
     }
 
     if (row.entry_key === ONLY_KEY && process.env.DEBUG_ZONE) {
@@ -641,10 +657,14 @@ async function main() {
       console.log(`--- actionsZone (attendu ${row.actions.length}) ---`);
       console.log(actionsZone.join("\n"));
       console.log("headers:", findHeaders(actionsZone).map((h) => h.name));
+      console.log(`--- legendaryActionsZone (attendu ${row.legendaryActions.length}) ---`);
+      console.log(legendaryActionsZone.join("\n"));
+      console.log("headers:", findHeaders(legendaryActionsZone).map((h) => h.name));
     }
 
     const traitsResult = extractEntries(traitsZone, row.traits.length);
     const actionsResult = extractEntries(actionsZone, row.actions.length);
+    const legendaryActionsResult = extractEntries(legendaryActionsZone, row.legendaryActions.length);
 
     if (traitsResult === null) {
       failures.push(`${row.entry_key} : ${row.traits.length} trait(s) attendu(s), decoupage echoue`);
@@ -654,10 +674,14 @@ async function main() {
       failures.push(`${row.entry_key} : ${row.actions.length} action(s) attendue(s), decoupage echoue`);
       continue;
     }
+    if (legendaryActionsResult === null) {
+      failures.push(`${row.entry_key} : ${row.legendaryActions.length} action(s) legendaire(s) attendue(s), decoupage echoue`);
+      continue;
+    }
 
     successCount++;
     if (row.entry_key === ONLY_KEY && process.env.DEBUG_ZONE) {
-      console.log(JSON.stringify({ traits: traitsResult, actions: actionsResult }, null, 2));
+      console.log(JSON.stringify({ traits: traitsResult, actions: actionsResult, legendaryActions: legendaryActionsResult }, null, 2));
     }
     const blockData: Record<string, unknown> = {};
     if (traitsResult.length > 0) blockData.traits = { traits: traitsResult };
@@ -668,6 +692,16 @@ async function main() {
           description: a.description,
           attack_bonus: row.actions[idx]?.attack_bonus,
           damage: row.actions[idx]?.damage,
+        })),
+      };
+    }
+    if (legendaryActionsResult.length > 0) {
+      blockData.legendary_actions = {
+        actions: legendaryActionsResult.map((a, idx) => ({
+          name: a.name,
+          description: a.description,
+          attack_bonus: row.legendaryActions[idx]?.attack_bonus,
+          damage: row.legendaryActions[idx]?.damage,
         })),
       };
     }
@@ -688,7 +722,9 @@ async function main() {
   for (const u of upserts) {
     const traitsData = (u.blocks.traits as { traits?: { name: string; description: string }[] } | undefined)?.traits ?? [];
     const actionsData = (u.blocks.actions as { actions?: { name: string; description: string }[] } | undefined)?.actions ?? [];
-    for (const e of [...traitsData, ...actionsData]) {
+    const legendaryActionsData =
+      (u.blocks.legendary_actions as { actions?: { name: string; description: string }[] } | undefined)?.actions ?? [];
+    for (const e of [...traitsData, ...actionsData, ...legendaryActionsData]) {
       if (CREATURE_TYPE_WORDS.test(e.description)) suspicious.push(`${u.entry_id} / ${e.name}`);
     }
   }

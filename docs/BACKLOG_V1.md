@@ -2004,18 +2004,32 @@ L'utilisateur a fourni dix captures d'écran d'une maquette de suivi d'initiativ
 - Vérifié en navigateur sur Aboleth et Gobelin : Sens/Langues en points, dix badges sur une seule ligne, alignement empilé lisible dans les deux cas (`"loyal"`/`"mauvais"` et `"neutre"`/`"mauvais"`).
 - `typecheck`/`lint`/`test` (554/554)/`build` tous verts.
 
-### V1-E4b — Actions légendaires des monstres · `M` — à faire
+**Sixième tour de retouches** :
 
-Repéré pendant les retouches V1-E4 ci-dessus (retour utilisateur : « il manque les actions légendaires non ? »). Investigation faite, rien codé.
+- **Vulnérabilités/Résistances/Immunités au même format `DotRow`** que Compétences/Sens/Langues (retour utilisateur explicite) — remplace les quatre paragraphes séparés par virgules par une liste à points, une entrée par ligne, cohérent avec le reste de la colonne. **Langues déplacé en dernier** dans l'ordre d'affichage (demande explicite) : Compétences → Sens → Vulnérabilités → Résistances → Immunités (dégâts) → Immunités (états) → Langues.
+- **Traduction des qualificatifs de dégâts** (`DAMAGE_QUALIFIER_LABELS_FR`, `src/i18n/fr.ts` + `damageQualifierLabel`, `blockContentRenderer.tsx`) : chaque entrée est soit un type de dégâts simple (déjà couvert par `DAMAGE_TYPE_LABELS_FR`), soit une phrase composée du SRD (`"bludgeoning, piercing, and slashing from nonmagical weapons"`) — les 7 variantes qui existent dans le SRD 5.1 (`grep` sur les 334 monstres), traduites mot pour mot en table exacte plutôt qu'une substitution générique (grammaire plus fiable pour un nombre de cas aussi restreint). Texte brut affiché si aucune des deux tables ne correspond, jamais une traduction inventée.
+- **Traduction des 15 conditions** (`CONDITION_LABELS_FR`, `src/i18n/fr.ts` + `conditionLabel`) : mêmes 15 fiches que la barre latérale « CONDITION », table exacte (`Grappled` → `Agrippé`, etc.).
+- Vérifié en navigateur sur Élémentaire de l'air (résistances composées, immunité de dégâts simple, 8 immunités d'état) : toutes les lignes traduites et en points, Langues bien en dernier.
+- `typecheck`/`lint`/`test` (554/554)/`build` tous verts.
 
-**Constat** : `data/srd/srd-2014.json` porte un champ `legendary_actions` sur 32 monstres (`grep` confirmé), forme `[{name: "Detect", desc: "..."}, {name: "Tail Swipe", desc: "..."}, ...]` — vérifié en détail sur Aboleth. Aucun des trois scripts d'extraction (`ingest-srd.ts`, `extract-monster-blocks-fr.ts`, `extract-monster-statblocks-en.ts`) ne le lit : silencieusement perdu à l'import, contrairement à `xp` (V1-E3) qui est un simple nombre injecté à la lecture sans traduction.
+### V1-E4b — Actions légendaires des monstres · `M` — fait
 
-**Portée, plus grande que les retouches V1-E4** :
-- Nouveau type de bloc `legendary_actions` (`src/core/schemas/rule-blocks/blocks.ts`, `registry.ts`), même forme que `traits`/`actions` (`{name, description}[]`).
-- Extraction depuis `source_raw.legendary_actions` dans `ingest-srd.ts` (comme `traits`/`actions`), pour les deux SRD (5.1/5.2.1 — vérifier si `legendary_actions` existe aussi côté 2024, pas encore vérifié).
-- **Traduction FR nécessaire** : contrairement à `xp`, `name`/`desc` sont du texte anglais du manuel — même travail que les traductions officielles Monstre déjà faites (V1-A5), à étendre à ce nouveau contenu pour les ~32 monstres concernés.
-- Probablement un réimport (`supabase db reset` + rejoue des scripts) pour propager le nouveau bloc sans casser les traductions déjà en base — vérifier l'idempotence comme pour les tours V1-A2/V1-D3b précédents.
-- Section « Actions légendaires » dans `MonsterCard` (`components/rules/blockContentRenderer.tsx`), juste après « Actions » — demande explicite de l'utilisateur sur l'emplacement.
+Repéré pendant les retouches V1-E4 ci-dessus (retour utilisateur : « il manque les actions légendaires non ? »), scopé dans un premier temps comme ticket séparé (portée plus grande que les six points de retouches légères), puis traité sur confirmation explicite de l'utilisateur (« on peut faire V1-E4b »).
+
+**Constat de départ** : `data/srd/srd-2014.json` porte un champ `legendary_actions` sur 32 monstres, forme `[{name: "Detect", desc: "..."}, {name: "Tail Swipe", desc: "..."}, ...]` (parfois avec `attack_bonus`/`damage`, ex. « Psychic Drain » d'Aboleth — même forme qu'une action normale). Aucun des trois scripts d'extraction (`ingest-srd.ts`, `extract-monster-blocks-fr.ts`, `extract-monster-statblocks-en.ts`) ne le lisait : silencieusement perdu à l'import.
+
+**Fait** :
+
+- **Nouveau type de bloc `legendary_actions`** (`src/core/schemas/rule-blocks/blocks.ts`) : `zLegendaryActionsBlockData` réutilise `zActionEntry` telle quelle (même forme que `actions`, `attack_bonus`/`damage` optionnels inclus) — ajouté à `BLOCK_TYPES` et à `DATA_SCHEMA_BY_BLOCK_TYPE`. Jamais dans `REQUIRED_BLOCKS` (la grande majorité des monstres n'en ont aucune, comme `traits`).
+- **Extraction anglaise** (`scripts/ingest-srd.ts`, `legendaryActionsBlock`) : miroir exact de `actionsBlock` sur `entry.legendary_actions`, appelée après `actionsBlock` pour les entrées `monster`, `display_order: 360`.
+- **Rendu** (`components/rules/blockContentRenderer.tsx`) : nouvelle section « Actions légendaires » dans `MonsterCard`, juste après « Actions » et avant « Aptitudes spéciales » (emplacement demandé explicitement) — mêmes `FeatureCard`/`ActionRolls` (boutons de jet) que les actions normales. Fallback `LegendaryActions` (composant autonome) pour le cas rare sans `stat_block` sibling, câblé dans le répartiteur de blocs et dans `page.tsx` (`mergedIds`, transmis en prop `legendaryActions`).
+- **Réimport** (`npm run ingest:srd`) pour propager le nouveau bloc aux 651 entrées existantes des deux SRD — confirmé 0 échec de conversion sur les deux éditions.
+  - **Incident détecté et corrigé** : le réimport a supprimé la fiche `encounter-budget` (SRD 5.2.1) — cette fiche est écrite par un script séparé (`write-encounter-budget-2024.ts`, V1-E3), absente du JSON source, donc traitée comme « obsolète » par la routine d'élagage de `ingest-srd.ts` (`fiches obsoletes retirees : 1` dans le rapport). Détecté par la suite complète (`getEncounterBudgetTableForRuleset`, test en échec), corrigé en rejouant `write-encounter-budget-2024.ts --write`. **Point de procédure à retenir pour un futur réimport** : toute fiche écrite par un script d'auteur séparé (hors JSON SRD) doit être rejouée après `npm run ingest:srd`.
+- **Traduction officielle FR** (`scripts/extract-monster-blocks-fr.ts`) : la zone « Actions légendaires » était déjà détectée comme simple marqueur d'arrêt de la zone Actions (jamais exploitée) — remplacée par un relevé de TOUS les marqueurs de section dans l'ordre (Actions Bonus/Réactions/Actions légendaires/Variante), pour isoler la zone « Actions légendaires » elle-même bornée par le marqueur suivant, sans hypothèse sur l'ordre relatif. Réutilise `extractEntries` telle quelle (même moteur de détection d'en-tête, même garde-fou de comptage exact). **Zéro régression** : dry-run avant/après identique mot pour mot sur les 18 échecs préexistants (aucun n'est un monstre à actions légendaires) et les 5 non-localisés.
+  - Vérifié en détail sur Aboleth (3 actions légendaires, dont une avec dégâts) et Dragon rouge adulte (3 actions légendaires) — texte extrait mot pour mot conforme à la source officielle, aucun échec de comptage spécifique aux actions légendaires sur l'ensemble des deux SRD (0/329 sur 5.1, 0/315 sur 5.2.1).
+  - Écrit en base pour les deux éditions (`--write`, `--srd 5.2.1 --write`) : 311 fiches (5.1) + 313 fiches (5.2.1).
+- Vérifié en navigateur de bout en bout sur Aboleth : section « Actions légendaires » en français, juste après Actions, bouton de jet fonctionnel sur « Succion psychique » (3d6 dégâts psychiques).
+- `typecheck`/`lint`/`test` (554/554)/`build` tous verts.
 
 ### V1-E5 — Tables de probabilités de réussite · `S` — fait
 

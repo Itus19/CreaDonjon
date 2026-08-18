@@ -172,6 +172,48 @@ export const DAMAGE_TYPE_LABELS_FR: Record<string, string> = {
 };
 
 /**
+ * Qualificatifs composes de `stat_block.damage_resistances`/
+ * `damage_vulnerabilities`/`damage_immunities` (V1-E4 retour utilisateur)
+ * quand la valeur SRD n'est pas un simple type de degats mais une phrase
+ * ("bludgeoning, piercing, and slashing from nonmagical weapons") — les 6
+ * variantes qui existent dans le SRD 5.1 (`grep` sur les 334 monstres),
+ * traduites mot pour mot une fois pour toutes plutot qu'une substitution
+ * generique. Cle en minuscules, identique a la valeur brute du SRD.
+ */
+export const DAMAGE_QUALIFIER_LABELS_FR: Record<string, string> = {
+  "bludgeoning, piercing, and slashing from nonmagical weapons": "Contondants, perforants et tranchants d'armes non magiques",
+  "damage from spells": "Dégâts causés par les sorts",
+  "bludgeoning, piercing, and slashing from nonmagical attacks (from stoneskin)":
+    "Contondants, perforants et tranchants d'attaques non magiques (via Peau de pierre)",
+  "bludgeoning, piercing, and slashing from nonmagical weapons that aren't silvered":
+    "Contondants, perforants et tranchants d'armes non magiques qui ne sont pas en argent",
+  "bludgeoning, piercing, and slashing from nonmagical weapons that aren't adamantine":
+    "Contondants, perforants et tranchants d'armes non magiques qui ne sont pas en adamantite",
+  "piercing and slashing from nonmagical weapons that aren't adamantine":
+    "Perforants et tranchants d'armes non magiques qui ne sont pas en adamantite",
+  "piercing from magic weapons wielded by good creatures": "Perforants d'armes magiques maniées par des créatures bonnes",
+};
+
+/** Libelles officiels des 15 conditions du SRD (`stat_block.condition_immunities`, memes 15 fiches que la barre laterale "CONDITION"). */
+export const CONDITION_LABELS_FR: Record<string, string> = {
+  Blinded: "Aveuglé",
+  Charmed: "Charmé",
+  Deafened: "Assourdi",
+  Exhaustion: "Épuisement",
+  Frightened: "Effrayé",
+  Grappled: "Agrippé",
+  Incapacitated: "Neutralisé",
+  Invisible: "Invisible",
+  Paralyzed: "Paralysé",
+  Petrified: "Pétrifié",
+  Poisoned: "Empoisonné",
+  Prone: "À terre",
+  Restrained: "Entravé",
+  Stunned: "Étourdi",
+  Unconscious: "Inconscient",
+};
+
+/**
  * Libelles des maitrises de `class_basics.armor_proficiencies`/
  * `weapon_proficiencies`/`tool_proficiencies` (V1-D3b point 3) —
  * vocabulaire ferme (23 valeurs distinctes sur les 12 classes de la SRD

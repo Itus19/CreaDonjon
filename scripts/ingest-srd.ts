@@ -1134,6 +1134,47 @@ function actionsBlock(entry: SrdRecord): EntryBlock | null {
   return { block_type: "actions", display: { label: "Actions", layout: "key_values" }, data, display_order: 350 };
 }
 
+/**
+ * `null` sans action legendaire listee (la grande majorite des monstres) —
+ * jamais requis, voir REQUIRED_BLOCKS. Meme forme et meme logique que
+ * `actionsBlock` (V1-E4b, retour utilisateur : "il manque les actions
+ * legendaires") : le SRD porte les memes champs `attack_bonus`/`damage` sur
+ * `entry.legendary_actions` que sur `entry.actions` (verifie sur Aboleth,
+ * "Psychic Drain" a un `damage` sans `attack_bonus`).
+ */
+function legendaryActionsBlock(entry: SrdRecord): EntryBlock | null {
+  const raw = entry.legendary_actions;
+  if (!Array.isArray(raw)) return null;
+  const actions = (raw as SrdRecord[])
+    .map((a) => {
+      const name = String(a.name ?? "");
+      const description = extractProse(a) ?? "";
+      if (!name || !description) return null;
+      const damageRaw = Array.isArray(a.damage) ? (a.damage as SrdRecord[]) : [];
+      const damage = damageRaw
+        .map((d) => {
+          const dice = typeof d.damage_dice === "string" ? tryParseDiceFormula(d.damage_dice) : undefined;
+          if (!dice) return null;
+          const damageType = d.damage_type as SrdRecord | undefined;
+          const type = typeof damageType?.name === "string" ? damageType.name : undefined;
+          return { dice, type };
+        })
+        .filter((d): d is { dice: FormulaNode; type: string | undefined } => d !== null);
+      return {
+        name,
+        description,
+        attack_bonus: typeof a.attack_bonus === "number" ? a.attack_bonus : undefined,
+        damage: damage.length > 0 ? damage : undefined,
+      };
+    })
+    .filter((a): a is NonNullable<typeof a> => a !== null);
+  if (actions.length === 0) return null;
+
+  const data = { actions };
+  validateBlockData("legendary_actions", data);
+  return { block_type: "legendary_actions", display: { label: "Actions legendaires", layout: "key_values" }, data, display_order: 360 };
+}
+
 /** `null` sans aptitude speciale listee (beaucoup de creatures de faible FP n'en ont aucune) — jamais requis, voir REQUIRED_BLOCKS. */
 function traitsBlock(entry: SrdRecord): EntryBlock | null {
   const raw = entry.special_abilities;
@@ -1652,6 +1693,8 @@ function transformEntry(
     if (statBlock) blocks.push(statBlock);
     const actions = actionsBlock(entry);
     if (actions) blocks.push(actions);
+    const legendaryActions = legendaryActionsBlock(entry);
+    if (legendaryActions) blocks.push(legendaryActions);
     const traits = traitsBlock(entry);
     if (traits) blocks.push(traits);
   }

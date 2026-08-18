@@ -12,6 +12,7 @@ import type {
   CustomTableBlockData,
   DescriptionBlockData,
   EffectsBlockData,
+  LegendaryActionsBlockData,
   PrerequisitesBlockData,
   ScalingBlockData,
   SpellCastingBlockData,
@@ -24,8 +25,10 @@ import {
   ALIGNMENT_WORD_LABELS_FR,
   ARMOR_CATEGORY_LABELS_FR,
   CLASS_PROFICIENCY_LABELS_FR,
+  CONDITION_LABELS_FR,
   CREATURE_TYPE_LABELS_FR,
   CURRENCY_LABELS_FR,
+  DAMAGE_QUALIFIER_LABELS_FR,
   DAMAGE_TYPE_LABELS_FR,
   ITEM_RARITY_LABELS_FR,
   LANGUAGE_LABELS_FR,
@@ -92,6 +95,25 @@ function costText(cost: { value: number; unit: string } | undefined): string | u
  */
 function damageTypeLabel(type: string): string {
   return DAMAGE_TYPE_LABELS_FR[type.toLowerCase()] ?? type;
+}
+
+/**
+ * `stat_block.damage_resistances`/`damage_vulnerabilities`/`damage_immunities`
+ * (V1-E4 retour utilisateur) : chaque entree est soit un type de degats
+ * simple ("lightning", deja couvert par `DAMAGE_TYPE_LABELS_FR`), soit une
+ * phrase composee ("bludgeoning, piercing, and slashing from nonmagical
+ * weapons", couverte par `DAMAGE_QUALIFIER_LABELS_FR` — les 7 variantes qui
+ * existent dans le SRD 5.1). Le texte brut reste affiche si aucune des deux
+ * tables ne correspond, plutot que d'inventer une traduction.
+ */
+function damageQualifierLabel(raw: string): string {
+  const lower = raw.toLowerCase();
+  return DAMAGE_TYPE_LABELS_FR[lower] ?? DAMAGE_QUALIFIER_LABELS_FR[lower] ?? raw;
+}
+
+/** `stat_block.condition_immunities` (V1-E4 retour utilisateur) -> libelle FR, memes 15 conditions que la barre laterale "CONDITION". */
+function conditionLabel(raw: string): string {
+  return CONDITION_LABELS_FR[raw] ?? raw;
 }
 
 /** `background.skill_proficiencies` (V1-D7, cles `Skill` snake_case) -> libelle FR, meme table que la fiche de personnage. */
@@ -663,10 +685,12 @@ export function MonsterCard({
   statBlock,
   traits,
   actions,
+  legendaryActions,
 }: {
   statBlock: StatBlockBlockData;
   traits?: TraitsBlockData;
   actions?: ActionsBlockData;
+  legendaryActions?: LegendaryActionsBlockData;
 }) {
   const speedEntries = Object.entries(statBlock.speed).map(([kind, value]) => `${SPEED_LABELS_FR[kind] ?? kind} ${metricizeFeet(value)}`);
   const savingThrowByAbility = new Map((statBlock.saving_throws ?? []).map((s) => [s.ability, s.bonus]));
@@ -761,6 +785,50 @@ export function MonsterCard({
             </div>
           )}
 
+          {!!statBlock.damage_vulnerabilities?.length && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Vulnérabilités</span>
+              <div className="flex flex-col gap-0.5">
+                {statBlock.damage_vulnerabilities.map((v, i) => (
+                  <DotRow key={i} label={damageQualifierLabel(v)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!!statBlock.damage_resistances?.length && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Résistances</span>
+              <div className="flex flex-col gap-0.5">
+                {statBlock.damage_resistances.map((v, i) => (
+                  <DotRow key={i} label={damageQualifierLabel(v)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!!statBlock.damage_immunities?.length && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Immunités (dégâts)</span>
+              <div className="flex flex-col gap-0.5">
+                {statBlock.damage_immunities.map((v, i) => (
+                  <DotRow key={i} label={damageQualifierLabel(v)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!!statBlock.condition_immunities?.length && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Immunités (états)</span>
+              <div className="flex flex-col gap-0.5">
+                {statBlock.condition_immunities.map((v, i) => (
+                  <DotRow key={i} label={conditionLabel(v)} />
+                ))}
+              </div>
+            </div>
+          )}
+
           {statBlock.languages && (
             <div className="flex flex-col gap-1">
               <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Langues</span>
@@ -775,38 +843,6 @@ export function MonsterCard({
               </div>
             </div>
           )}
-
-          {(!!statBlock.damage_vulnerabilities?.length ||
-            !!statBlock.damage_resistances?.length ||
-            !!statBlock.damage_immunities?.length ||
-            !!statBlock.condition_immunities?.length) && (
-            <div className="flex flex-col gap-1 text-sm">
-              {!!statBlock.damage_vulnerabilities?.length && (
-                <p>
-                  <span className="text-ink-muted">Vulnérabilités </span>
-                  {statBlock.damage_vulnerabilities.join(", ")}
-                </p>
-              )}
-              {!!statBlock.damage_resistances?.length && (
-                <p>
-                  <span className="text-ink-muted">Résistances </span>
-                  {statBlock.damage_resistances.join(", ")}
-                </p>
-              )}
-              {!!statBlock.damage_immunities?.length && (
-                <p>
-                  <span className="text-ink-muted">Immunités (dégâts) </span>
-                  {statBlock.damage_immunities.join(", ")}
-                </p>
-              )}
-              {!!statBlock.condition_immunities?.length && (
-                <p>
-                  <span className="text-ink-muted">Immunités (états) </span>
-                  {statBlock.condition_immunities.join(", ")}
-                </p>
-              )}
-            </div>
-          )}
         </aside>
 
         <div className="flex flex-1 flex-col gap-4">
@@ -815,6 +851,14 @@ export function MonsterCard({
               <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Actions</span>
               {actions.actions.map((a, i) => (
                 <FeatureCard key={i} name={a.name} description={a.description} keyPrefix={`action-${i}`} meta={<ActionRolls action={a} />} />
+              ))}
+            </div>
+          )}
+          {!!legendaryActions?.actions.length && (
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Actions légendaires</span>
+              {legendaryActions.actions.map((a, i) => (
+                <FeatureCard key={i} name={a.name} description={a.description} keyPrefix={`legendary-action-${i}`} meta={<ActionRolls action={a} />} />
               ))}
             </div>
           )}
@@ -887,6 +931,17 @@ function Actions({ data }: { data: ActionsBlockData }) {
     <div className="flex flex-col gap-2">
       {data.actions.map((a, i) => (
         <FeatureCard key={i} name={a.name} description={a.description} keyPrefix={`action-${i}`} meta={<ActionRolls action={a} />} />
+      ))}
+    </div>
+  );
+}
+
+/** Fallback quand `legendary_actions` apparaît sans `stat_block` dans la même fiche — voir `Traits` ci-dessus. */
+function LegendaryActions({ data }: { data: LegendaryActionsBlockData }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {data.actions.map((a, i) => (
+        <FeatureCard key={i} name={a.name} description={a.description} keyPrefix={`legendary-action-${i}`} meta={<ActionRolls action={a} />} />
       ))}
     </div>
   );
@@ -1091,6 +1146,7 @@ export function renderBlockData(
   if (blockType === "stat_block") return <MonsterCard statBlock={data as StatBlockBlockData} />;
   if (blockType === "traits") return <Traits data={data as TraitsBlockData} />;
   if (blockType === "actions") return <Actions data={data as ActionsBlockData} />;
+  if (blockType === "legendary_actions") return <LegendaryActions data={data as LegendaryActionsBlockData} />;
   if (blockType === "prerequisites") return <Prerequisites data={data as PrerequisitesBlockData} />;
   if (blockType === "class_basics") return <ClassBasics data={data as ClassBasicsBlockData} />;
   if (blockType === "spellcasting_progression") return <SpellcastingProgression data={data as SpellcastingProgressionBlockData} />;

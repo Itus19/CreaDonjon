@@ -30,6 +30,7 @@ export const BLOCK_TYPES = [
   "stat_block",
   "traits",
   "actions",
+  "legendary_actions",
   "prerequisites",
   "class_basics",
   "spellcasting_progression",
@@ -282,6 +283,14 @@ export const zActionEntry = z.object({
 export const zActionsBlockData = z.object({ actions: z.array(zActionEntry) });
 export type ActionsBlockData = z.infer<typeof zActionsBlockData>;
 
+// --- legendary_actions (layout: key_values, V1-E4b) ---------------------
+// Meme forme que `actions` (le SRD porte les memes champs `attack_bonus`/
+// `damage` sur une action legendaire qui attaque directement, ex. "Tail
+// Swipe" d'un dragon) — jamais dans REQUIRED_BLOCKS, la plupart des
+// monstres n'en ont aucune.
+export const zLegendaryActionsBlockData = z.object({ actions: z.array(zActionEntry) });
+export type LegendaryActionsBlockData = z.infer<typeof zLegendaryActionsBlockData>;
+
 // --- prerequisites (layout: chips, V1-D1) -------------------------------
 // Optionnel : la plupart des dons/sous-classes n'ont pas de prerequis.
 // Texte court plutot qu'une structure — les formes varient trop (score
@@ -449,6 +458,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   stat_block: zStatBlockBlockData,
   traits: zTraitsBlockData,
   actions: zActionsBlockData,
+  legendary_actions: zLegendaryActionsBlockData,
   prerequisites: zPrerequisitesBlockData,
   class_basics: zClassBasicsBlockData,
   spellcasting_progression: zSpellcastingProgressionBlockData,
