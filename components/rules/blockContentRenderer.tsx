@@ -27,11 +27,16 @@ import {
   CURRENCY_LABELS_FR,
   DAMAGE_TYPE_LABELS_FR,
   ITEM_RARITY_LABELS_FR,
+  LANGUAGE_LABELS_FR,
+  SENSE_LABELS_FR,
   SIZE_LABELS_FR,
   SKILL_LABELS_FR,
+  SPEED_LABELS_FR,
 } from "@/src/i18n/fr";
 import type { Skill } from "@/src/core/rules/sheet";
+import type { LanguageKey } from "@/src/core/rules/srdMapping";
 import { ftToM, lbToKg } from "@/src/core/rules/encumbrance";
+import MonsterRollButton from "./MonsterRollButton";
 import type {
   ResolvedBackgroundBlockData,
   ResolvedBackgroundEquipmentOption,
@@ -91,6 +96,58 @@ function damageTypeLabel(type: string): string {
 /** `background.skill_proficiencies` (V1-D7, cles `Skill` snake_case) -> libelle FR, meme table que la fiche de personnage. */
 function skillLabel(key: string): string {
   return SKILL_LABELS_FR[key as Skill] ?? key;
+}
+
+/**
+ * `stat_block.skills[].name` (V1-E4 retour utilisateur point 3) n'est pas
+ * une cle `Skill` snake_case comme `background.skill_proficiencies` : c'est
+ * le libelle anglais brut du SRD, prefixe "Skill: " inclus (verifie dans
+ * data/srd/srd-2014.json — le champ `proficiency.name` porte litteralement
+ * "Skill: Perception"). On retire ce prefixe puis on normalise vers la
+ * meme forme snake_case que `SKILL_LABELS_FR` avant de chercher le libelle.
+ */
+function monsterSkillLabel(raw: string): string {
+  const stripped = raw.replace(/^Skill:\s*/i, "");
+  const key = stripped.toLowerCase().replace(/\s+/g, "_") as Skill;
+  return SKILL_LABELS_FR[key] ?? stripped;
+}
+
+/**
+ * Convertit chaque occurrence "N ft." d'un texte en metres (V1-E4 retour
+ * utilisateur point 4) — meme conversion que `quantityText` (`ftToM`),
+ * etendue ici a des champs de texte libre (`speed`/`senses`/`languages` du
+ * `stat_block`) plutot qu'a une `Quantity` structuree.
+ */
+function metricizeFeet(text: string): string {
+  return text.replace(/(\d+(?:\.\d+)?)\s*ft\.?/gi, (_, n: string) => `${ftToM(Number(n))} m`);
+}
+
+/**
+ * `stat_block.languages` (V1-E4 retour utilisateur point 3) est un texte
+ * libre du SRD ("Deep Speech, telepathy 120 ft."), jamais une liste de
+ * `LanguageKey` structuree — impossible a traduire par une simple recherche
+ * de cle. On remplace les noms de langue connus (memes 16 valeurs que
+ * `LANGUAGE_LABELS_FR`) et "telepathy" par leur forme FR, puis on convertit
+ * les distances. Toute prose non reconnue (rare, quelques monstres a
+ * langage particulier) reste en anglais plutot que d'inventer une
+ * traduction — CLAUDE.md, contenu jamais invente.
+ */
+const LANGUAGE_EN_TO_FR: [string, string][] = (Object.keys(LANGUAGE_LABELS_FR) as LanguageKey[])
+  .map((key): [string, string] => [
+    key
+      .split("-")
+      .map((w) => w[0].toUpperCase() + w.slice(1))
+      .join(" "),
+    LANGUAGE_LABELS_FR[key],
+  ])
+  .sort((a, b) => b[0].length - a[0].length);
+
+function translateLanguagesText(text: string): string {
+  let result = metricizeFeet(text);
+  for (const [en, fr] of LANGUAGE_EN_TO_FR) {
+    result = result.replace(new RegExp(`\\b${en}\\b`, "g"), fr);
+  }
+  return result.replace(/\btelepathy\b/gi, "télépathie");
 }
 
 
@@ -495,22 +552,43 @@ function FeatureCard({
   name: string;
   description: string;
   keyPrefix: string;
-  meta?: string;
+  meta?: ReactNode;
 }) {
   return (
     <div className="rounded-md border border-edge/60 bg-panel-raised p-2.5 text-sm text-ink">
       <span className="font-semibold">{name}.</span> {renderMarkdownBoldText(description, keyPrefix)}
-      {meta && <p className="mech text-xs text-ink-muted">{meta}</p>}
+      {meta && <div className="mt-1.5 flex flex-wrap items-center gap-1.5">{meta}</div>}
     </div>
   );
 }
 
-function actionMeta(a: ActionsBlockData["actions"][number]): string | undefined {
-  if (a.attack_bonus === undefined && !a.damage?.length) return undefined;
-  const parts: string[] = [];
-  if (a.attack_bonus !== undefined) parts.push(`+${a.attack_bonus} pour toucher`);
-  if (a.damage?.length) parts.push(a.damage.map((d) => `${formatFormulaNode(d.dice)}${d.type ? ` (${damageTypeLabel(d.type)})` : ""}`).join(", "));
-  return parts.join(" · ");
+/** Formule "1d20 + N" (signe explicite) pour un jet de toucher — meme moteur/formule que `damage.dice`, jamais du texte statique. */
+function attackFormula(bonus: number): string {
+  return `1d20 ${bonus >= 0 ? "+" : "-"} ${Math.abs(bonus)}`;
+}
+
+/**
+ * Boutons de jet d'une action (V1-E4 retour utilisateur point 6) —
+ * remplace l'ancien texte statique "+9 pour toucher · 2d6+5" : un bouton
+ * "Toucher" et un bouton "Dégâts" par ligne de dégâts, meme motif que les
+ * boutons Attaquer/Dégâts de `PlayableCharacterSheet`/`InventoryPanel`, mais
+ * autonomes (`MonsterRollButton`) puisqu'une fiche de regle SRD n'a ni
+ * personnage ni campagne a s'accrocher.
+ */
+function ActionRolls({ action }: { action: ActionsBlockData["actions"][number] }) {
+  if (action.attack_bonus === undefined && !action.damage?.length) return null;
+  return (
+    <>
+      {action.attack_bonus !== undefined && <MonsterRollButton label="Toucher" formula={attackFormula(action.attack_bonus)} />}
+      {action.damage?.map((d, i) => (
+        <MonsterRollButton
+          key={i}
+          label={d.type ? `Dégâts (${damageTypeLabel(d.type)})` : "Dégâts"}
+          formula={formatFormulaNode(d.dice)}
+        />
+      ))}
+    </>
+  );
 }
 
 /**
@@ -542,7 +620,7 @@ export function MonsterCard({
   actions?: ActionsBlockData;
 }) {
   const speedText = Object.entries(statBlock.speed)
-    .map(([kind, value]) => `${kind} ${value}`)
+    .map(([kind, value]) => `${SPEED_LABELS_FR[kind] ?? kind} ${metricizeFeet(value)}`)
     .join(", ");
   const savingThrowByAbility = new Map((statBlock.saving_throws ?? []).map((s) => [s.ability, s.bonus]));
 
@@ -563,7 +641,8 @@ export function MonsterCard({
             <span className="text-xl font-bold text-ink">{statBlock.armor_class}</span>
           </div>
         </div>
-        <StatBadge label="PV" value={`${statBlock.hit_points} (${statBlock.hit_dice})`} />
+        <StatBadge label="PV" value={String(statBlock.hit_points)} />
+        <StatBadge label="Dés de vie" value={statBlock.hit_dice} />
         <StatBadge label="Vitesse" value={speedText} />
         <StatBadge label="FP" value={String(statBlock.challenge_rating)} />
         <StatBadge label="Maîtrise" value={`+${statBlock.proficiency_bonus}`} />
@@ -598,11 +677,15 @@ export function MonsterCard({
           {!!statBlock.skills?.length && (
             <div className="flex flex-col gap-1">
               <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Compétences</span>
-              <div className="flex flex-col gap-0.5 text-sm">
+              <div className="flex flex-col gap-0.5">
                 {statBlock.skills.map((s) => (
-                  <span key={s.name} className="text-ink">
-                    {s.name} <span className="mech text-ink-muted">{fmtMod(s.bonus)}</span>
-                  </span>
+                  <div key={s.name} className="flex items-center gap-2 text-sm">
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center" title="Maîtrisée">
+                      <span className="h-2 w-2 rounded-full bg-accent" />
+                    </span>
+                    <span className="flex-1 text-ink">{monsterSkillLabel(s.name)}</span>
+                    <span className="w-8 text-right font-medium text-ink">{fmtMod(s.bonus)}</span>
+                  </div>
                 ))}
               </div>
             </div>
@@ -614,14 +697,14 @@ export function MonsterCard({
                 <p>
                   <span className="text-ink-muted">Sens </span>
                   {Object.entries(statBlock.senses)
-                    .map(([k, v]) => `${k} ${v}`)
+                    .map(([k, v]) => `${SENSE_LABELS_FR[k] ?? k} ${metricizeFeet(v)}`)
                     .join(", ")}
                 </p>
               )}
               {statBlock.languages && (
                 <p>
                   <span className="text-ink-muted">Langues </span>
-                  {statBlock.languages}
+                  {translateLanguagesText(statBlock.languages)}
                 </p>
               )}
             </div>
@@ -665,7 +748,7 @@ export function MonsterCard({
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Actions</span>
               {actions.actions.map((a, i) => (
-                <FeatureCard key={i} name={a.name} description={a.description} keyPrefix={`action-${i}`} meta={actionMeta(a)} />
+                <FeatureCard key={i} name={a.name} description={a.description} keyPrefix={`action-${i}`} meta={<ActionRolls action={a} />} />
               ))}
             </div>
           )}
@@ -737,7 +820,7 @@ function Actions({ data }: { data: ActionsBlockData }) {
   return (
     <div className="flex flex-col gap-2">
       {data.actions.map((a, i) => (
-        <FeatureCard key={i} name={a.name} description={a.description} keyPrefix={`action-${i}`} meta={actionMeta(a)} />
+        <FeatureCard key={i} name={a.name} description={a.description} keyPrefix={`action-${i}`} meta={<ActionRolls action={a} />} />
       ))}
     </div>
   );

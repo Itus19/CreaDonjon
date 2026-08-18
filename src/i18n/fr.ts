@@ -75,6 +75,24 @@ export const LANGUAGE_LABELS_FR: Record<LanguageKey, string> = {
   undercommon: "Sous-commun",
 };
 
+/** Libelles des modes de deplacement d'un monstre (`stat_block.speed`, cles SRD, V1-E4 retour utilisateur point 3). */
+export const SPEED_LABELS_FR: Record<string, string> = {
+  walk: "Marche",
+  swim: "Nage",
+  fly: "Vol",
+  climb: "Escalade",
+  burrow: "Fouissement",
+};
+
+/** Libelles des sens d'un monstre (`stat_block.senses`, cles SRD, V1-E4 retour utilisateur point 3). */
+export const SENSE_LABELS_FR: Record<string, string> = {
+  darkvision: "Vision dans le noir",
+  blindsight: "Vue aveugle",
+  tremorsense: "Perception des vibrations",
+  truesight: "Vue veritable",
+  passive_perception: "Perception passive",
+};
+
 /**
  * Libelles des proprietes d'arme (onglet Inventaire, V1-C11) — liste
  * complete verifiee contre `data/srd/srd-2014.json`/`srd-2024.json`
