@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Json } from "@/src/types/database";
 import { createEntity } from "./entities";
-import { createBlock } from "./blocks";
+import { createBlock, updateBlockContent } from "./blocks";
 import {
   compareRevisionsForViewer,
   getRevisionForViewer,
@@ -208,5 +209,73 @@ describe.skipIf(!hasCreds)("historique du wiki (integration, base reelle)", () =
     const latestRevisions = await listRevisions(ownerClient, entityId);
     const afterRestore = await getRevisionForViewer(ownerClient, worldId, entityId, latestRevisions[0].revision_number, ownerId);
     expect(afterRestore?.snapshot.blocks).toHaveLength(1);
+  });
+
+  /**
+   * Reproduction directe du bug de concurrence rapporte en jouant (hors
+   * ticket V1-C3) : deux blocs de la MEME entite sauvegardes a quelques
+   * millisecondes d'intervalle (handleBlockBlur sur deux blocs differents)
+   * declenchaient chacun recordEntityRevision en parallele, et l'ancien
+   * SELECT max()+1 puis INSERT separes (deux requetes) pouvait lire le meme
+   * max et planter en 500 sur la contrainte unique
+   * entity_revisions_entity_id_revision_number_key. Entite dediee, pour ne
+   * pas perturber les numeros de revision fixes que les tests precedents
+   * verifient en dur.
+   */
+  it("deux blocs de la meme entite sauvegardes en parallele ne collisionnent pas sur revision_number", async () => {
+    const entity = await createEntity(ownerClient, {
+      worldId,
+      createdBy: ownerId,
+      name: "Cible de test concurrence",
+      entityKind: "character",
+      aliases: [],
+    });
+
+    const blockA = await createBlock(ownerClient, {
+      entityId: entity.id,
+      blockType: "text",
+      label: "Bloc A",
+      visibilityLevel: "public",
+      visibilityScopeId: null,
+      createdBy: ownerId,
+    });
+    const blockB = await createBlock(ownerClient, {
+      entityId: entity.id,
+      blockType: "text",
+      label: "Bloc B",
+      visibilityLevel: "public",
+      visibilityScopeId: null,
+      createdBy: ownerId,
+    });
+
+    const [resultA, resultB] = await Promise.all([
+      updateBlockContent(ownerClient, {
+        id: blockA.id,
+        expectedVersion: blockA.version,
+        display: blockA.display as unknown as Json,
+        data: blockA.data,
+        visibilityLevel: blockA.visibilityLevel,
+        visibilityScopeId: blockA.visibilityScopeId,
+        changedBy: ownerId,
+      }),
+      updateBlockContent(ownerClient, {
+        id: blockB.id,
+        expectedVersion: blockB.version,
+        display: blockB.display as unknown as Json,
+        data: blockB.data,
+        visibilityLevel: blockB.visibilityLevel,
+        visibilityScopeId: blockB.visibilityScopeId,
+        changedBy: ownerId,
+      }),
+    ]);
+
+    expect(resultA.ok).toBe(true);
+    expect(resultB.ok).toBe(true);
+
+    const revisions = await listRevisions(ownerClient, entity.id);
+    // Creation entite + 2 creations de bloc + 2 mises a jour = 5 revisions,
+    // toutes distinctes : aucune collision malgre les deux ecritures paralleles.
+    expect(revisions).toHaveLength(5);
+    expect(new Set(revisions.map((r) => r.revision_number)).size).toBe(5);
   });
 });

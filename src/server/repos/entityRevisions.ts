@@ -28,36 +28,35 @@ export async function fetchAllBlocksForEntity(supabase: TypedClient, entityId: s
   return data as BlockRow[];
 }
 
-export async function nextRevisionNumber(supabase: TypedClient, entityId: string): Promise<number> {
-  const { data, error } = await supabase
-    .from("entity_revisions")
-    .select("revision_number")
-    .eq("entity_id", entityId)
-    .order("revision_number", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return (data?.revision_number ?? 0) + 1;
-}
-
+/**
+ * Calcule le prochain revision_number ET insere en une seule requete SQL
+ * (public.insert_entity_revision, migration 20260818100001), serialisee par
+ * un verrou consultatif par entite. Ne PAS revenir a un SELECT max()+1 suivi
+ * d'un INSERT separes cote TypeScript : deux appels concurrents sur la meme
+ * entite (ex. deux blocs sauvegardes a quelques millisecondes d'intervalle)
+ * peuvent alors lire le meme max et entrer en collision sur la contrainte
+ * unique (entity_id, revision_number) — bug reellement observe en jouant.
+ */
 export async function insertEntityRevision(
   supabase: TypedClient,
   params: {
     entityId: string;
-    revisionNumber: number;
     snapshot: Json;
     changeSource: "user" | "ai" | "import" | "system";
     changeNote?: string;
     changedBy: string;
   }
 ): Promise<void> {
-  const { error } = await supabase.from("entity_revisions").insert({
-    entity_id: params.entityId,
-    revision_number: params.revisionNumber,
-    snapshot: params.snapshot,
-    change_source: params.changeSource,
-    change_note: params.changeNote ?? null,
-    changed_by: params.changedBy,
+  const { error } = await supabase.rpc("insert_entity_revision", {
+    p_entity_id: params.entityId,
+    p_snapshot: params.snapshot,
+    p_change_source: params.changeSource,
+    // Le generateur de types de la fonction typent p_change_note en `string`
+    // non-nullable alors que la colonne et le parametre Postgres acceptent
+    // bien NULL (cf. le meme contournement deja etabli pour p_note dans
+    // src/server/repos/rules.ts) : caster plutot que d'inventer une valeur.
+    p_change_note: (params.changeNote ?? null) as unknown as string,
+    p_changed_by: params.changedBy,
   });
   if (error) throw new Error(error.message);
 }

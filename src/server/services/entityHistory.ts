@@ -11,7 +11,6 @@ import {
   getEntityRevisionByNumber,
   insertEntityRevision,
   listEntityRevisionSummaries,
-  nextRevisionNumber,
   type RevisionSummaryRow,
 } from "@/src/server/repos/entityRevisions";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
@@ -79,11 +78,12 @@ function hadCapturedBlocks(raw: unknown): boolean {
 
 /**
  * Point d'entree unique pour enregistrer une revision (V1-C3) : appele
- * apres toute mutation redactionnelle (entite ou bloc). Ne fait rien de
- * plus qu'un instantane + insertion — la concurrence (deux edits sur la
- * meme entite a quelques millisecondes d'intervalle) partage le meme
- * profil de risque que le reste de l'app (versions optimistes sur
- * entities/blocks), pas un nouveau risque introduit ici.
+ * apres toute mutation redactionnelle (entite ou bloc). Instantane + calcul
+ * du numero + insertion sont atomiques cote base (public.insert_entity_
+ * revision, migration 20260818100001) : deux edits sur la meme entite a
+ * quelques millisecondes d'intervalle (ex. deux blocs sauvegardes presque
+ * simultanement) sont serialises par un verrou consultatif plutot que de
+ * risquer une collision sur (entity_id, revision_number).
  */
 export async function recordEntityRevision(
   supabase: TypedClient,
@@ -95,10 +95,8 @@ export async function recordEntityRevision(
   }
 ): Promise<void> {
   const snapshot = await buildEntitySnapshot(supabase, params.entity);
-  const revisionNumber = await nextRevisionNumber(supabase, params.entity.id);
   await insertEntityRevision(supabase, {
     entityId: params.entity.id,
-    revisionNumber,
     snapshot: snapshot as unknown as Json,
     changeSource: params.changeSource,
     changeNote: params.changeNote,

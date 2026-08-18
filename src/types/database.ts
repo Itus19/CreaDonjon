@@ -1645,6 +1645,31 @@ export type Database = {
         Args: { p_base_system: string; p_name: string }
         Returns: string
       }
+      insert_entity_revision: {
+        Args: {
+          p_change_note: string
+          p_change_source: string
+          p_changed_by: string
+          p_entity_id: string
+          p_snapshot: Json
+        }
+        Returns: {
+          change_note: string | null
+          change_source: string
+          changed_by: string | null
+          created_at: string
+          entity_id: string
+          id: string
+          revision_number: number
+          snapshot: Json
+        }
+        SetofOptions: {
+          from: "*"
+          to: "entity_revisions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       publish_ruleset: { Args: { p_ruleset_id: string }; Returns: undefined }
       record_share_link_password_attempt: {
         Args: { p_success: boolean; p_token: string }
