@@ -10,6 +10,7 @@ import { zSpellcastingBlockData } from "./spellcasting";
 import { zResourcesBlockData } from "./resources";
 import { zStatblockBlockData } from "./statblock";
 import { zRandomTableBlockData } from "./randomTable";
+import { zGeneratorBlockData } from "./generator";
 
 /**
  * Catalogue des blocs de wiki (specs/wiki-blocs.md §1, docs/SCHEMA.md §7).
@@ -19,6 +20,9 @@ import { zRandomTableBlockData } from "./randomTable";
  * (specs/outils-mj.md §2) — attache entite seulement pour l'instant,
  * l'attache ruleset (bibliotheque partagee) reste a ouvrir avec son propre
  * cas concret (regle des trois, meme decision que V1-D4 pour weapon).
+ * V1-E2 : generator (specs/outils-mj.md §3) — trois emplois concrets
+ * (noms, rumeurs, butin), pas la recette complete a `rule_query`/promotion
+ * en entite de la spec (V2, cf. src/core/generators/types.ts).
  */
 export const BLOCK_TYPES = [
   "text",
@@ -31,6 +35,7 @@ export const BLOCK_TYPES = [
   "resources",
   "statblock",
   "random_table",
+  "generator",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -45,6 +50,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   resources: "resources",
   statblock: "statblock",
   random_table: "table",
+  generator: "prose",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -59,6 +65,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   resources: zResourcesBlockData,
   statblock: zStatblockBlockData,
   random_table: zRandomTableBlockData,
+  generator: zGeneratorBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -72,6 +79,11 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
     die: "d20",
     entries: [{ range: { min: 1, max: 20 }, weight: 20, text: "Nouveau résultat" }],
     unique_draws: false,
+  },
+  generator: {
+    __v: 1,
+    slots: [{ key: "resultat", table: "nouvelle-table" }],
+    template: "{resultat}",
   },
   character: {
     __v: 1,

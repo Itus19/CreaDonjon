@@ -33,7 +33,7 @@ export interface ResolvedTableDraw {
  * `interpolateCascadeResults`) si l'appelant ne peut pas la lire — jamais
  * de fuite de visibilite par ce chemin.
  */
-async function findTableBlockByKey(
+export async function findTableBlockByKey(
   supabase: TypedClient,
   entityId: string,
   key: string
@@ -53,8 +53,12 @@ async function findTableBlockByKey(
  * 3, cycles detectes"). `visited` porte les cles deja traversees sur CE
  * chemin de descente (pas globalement) — deux branches independantes
  * peuvent referencer la meme table sans que ce soit un cycle.
+ *
+ * Exportee pour reutilisation par `generators.ts` (V1-E2) : un emplacement
+ * de generateur tire sur une table exactement comme un tirage direct, meme
+ * moteur, memes garde-fous de profondeur/cycle.
  */
-async function resolveCascade(
+export async function resolveCascade(
   supabase: TypedClient,
   entityId: string,
   draw: TableDraw,

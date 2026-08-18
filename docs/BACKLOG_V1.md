@@ -1864,7 +1864,7 @@ Spécification : `specs/outils-mj.md`.
 | Ticket | Contenu |
 |---|---|
 | **V1-E1** `M` | Blocs `random_table`, tirage, références, tirages en cascade bornés — **fait** |
-| **V1-E2** `M` | Générateurs par tables : noms, rumeurs, butin. **Pas** les descriptions en prose |
+| **V1-E2** `M` | Générateurs par tables : noms, rumeurs, butin. **Pas** les descriptions en prose — **fait** |
 | **V1-E3** `L` | `encounter_budget` en ruleset, générateur de rencontres, sauvegarde de combat |
 | **V1-E4** `L` | `combats` et `combat_participants`, suivi d'initiative, annulation par le journal |
 | **V1-E5** `S` | Tables de probabilités de réussite — fonction pure sur la fiche dérivée — **fait** |
@@ -1887,6 +1887,22 @@ Spécification complète : `specs/outils-mj.md` §2.
 - **Editeur + tirage dans l'interface** (`components/blocks/RandomTableBlockEditor.tsx`, meme precedent que les autres editeurs de bloc de wiki — toujours editable en place) : cle/de/repetition/attribution, liste d'entrees (plage/texte), bouton « Tirer » avec compte, resultats affiches. **Pas encore d'editeur pour `refs`** (le clic sur un resultat vers l'entite/la regle referencee) — porte par le schema et le moteur, pas par cette interface : un cas concret pour un prochain ticket.
 - Verifie dans le navigateur de bout en bout, sur la base reelle : bloc cree sur « L'Ancre Rouillee », entree de rumeur saisie et sauvegardee, tirage reussi via `/api/blocks/[blockId]/draw` (roll serveur, resultat affiche).
 - `typecheck`/`lint`/`test` (487/487, dont 19 nouveaux tests purs+integration)/`build` tous verts.
+
+### V1-E2 — Générateurs par tables · `M` — fait
+
+Spécification complète : `specs/outils-mj.md` §3 — portée volontairement réduite, voir plus bas.
+
+**Fait** :
+
+- **Portée reduite a trois cas concrets** (noms, rumeurs, butin — la liste du ticket, pas celle de la spec complete qui inclut PNJ/taverne/echoppe) : **aucun** `inputs`/`rule_query` (interroger le ruleset pour choisir une espece etc. reste V2, aucun des trois cas ne l'exige), **aucune** visibilite par emplacement (aucun secret MJ dans noms/rumeurs/butin, contrairement au « secret » d'un PNJ genere), **aucune** promotion en entite (V1-E6, le mecanisme generique n'est pas encore ecrit — un generateur produit un texte affiche, pas une fiche). Chaque emplacement tire sur une table `random_table` de la MEME entite, meme discipline que la cascade de V1-E1 — un cas concret a la fois, meme precedent que V1-D4/V1-E1.
+- **Noyau pur, tests d'abord** (`src/core/generators/render.ts`, 6 tests) : `renderGeneratorTemplate(template, slotTexts)` remplace chaque `{cle}` par le texte tire — une cle sans resultat reste affichee telle quelle plutot que de disparaitre ou de faire echouer tout le tirage, meme discipline que `interpolateCascadeResults` pour les references de table (un gabarit mal configure doit rester visible pour etre corrige, jamais un echec silencieux).
+- **Bloc `generator` cote entite** (`src/core/schemas/blocks/generator.ts`, miroir Zod de `src/core/generators/types.ts` comme `zRandomTableBlockData`) : `slots` (`{key, table}` — `table` designe la cle d'un bloc `random_table` de la meme entite), `template`. Layout `prose` (repris de l'exemple de la spec).
+- **Service reutilise integralement le moteur de V1-E1** (`src/server/services/generators.ts`) : `findTableBlockByKey`/`resolveCascade` exportes depuis `src/server/services/tables.ts` (prive jusqu'ici) plutot que dupliques — un emplacement de generateur tire et resout sa cascade exactement comme un tirage direct, meme garde-fous de profondeur/cycle. Un emplacement dont la table est introuvable/illisible (RLS) laisse son `{cle}` intact dans le gabarit, jamais une erreur qui bloquerait tout le tirage. Quatre tests d'integration sur base reelle (deux tables assemblees, cascade a l'interieur d'un emplacement, table absente, bloc introuvable).
+- **Route** `POST /api/blocks/[blockId]/generate` : `serverRng`, pas de corps de requete (un generateur produit un seul resultat structure, pas de parametre `count` comme une table).
+- **Editeur + generation dans l'interface** (`components/blocks/GeneratorBlockEditor.tsx`, meme precedent que les autres editeurs de bloc) : liste d'emplacements (cle -> cle de table), gabarit en zone de texte, bouton « Générer » affichant le texte assemble.
+- **Bug de concurrence repere en passant, hors perimetre** : deux blocs de la meme entite sauvegardes a quelques millisecondes d'intervalle peuvent entrer en collision sur `entity_revisions_entity_id_revision_number_key` (calcul non atomique du prochain `revision_number`). Sans rapport avec le mecanisme de generateur — signale comme tache separee (`entityRevisions.ts`), pas corrige ici pour ne pas elargir ce ticket.
+- Verifie dans le navigateur de bout en bout, sur la base reelle : deux tables (« prenoms », « metiers ») et un generateur crees sur « L'Ancre Rouillee », gabarit `{prenom}, {metier}`, tirage reussi via `/api/blocks/[blockId]/generate` → `"Aldric, tisserand"`.
+- `typecheck`/`lint`/`test` (508/508, dont 10 nouveaux tests purs+integration)/`build` tous verts.
 
 ### V1-E5 — Tables de probabilités de réussite · `S` — fait
 
