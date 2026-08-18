@@ -12,6 +12,14 @@ export const createCombatSchema = z.object({
   ),
 });
 
+/** Renommage et/ou changement de statut manuel (V1-E4) — au moins un des deux, jamais un corps vide. */
+export const patchCombatSchema = z
+  .object({
+    name: z.string().trim().max(200).nullable().optional(),
+    status: z.enum(["draft", "running", "ended"]).optional(),
+  })
+  .refine((data) => data.name !== undefined || data.status !== undefined, { message: "Rien à modifier." });
+
 export const turnSchema = z.object({
   direction: z.enum(["next", "previous"]),
 });

@@ -6,7 +6,12 @@ import type { CombatActionsSummary, CombatDetail } from "@/src/server/services/c
 import type { CombatParticipantRow, CombatRow } from "@/src/server/repos/combats";
 import type { EncounterMonsterSummary } from "@/src/server/services/encounters";
 
-const STATUS_LABELS: Record<string, string> = { draft: "Brouillon", running: "En cours", ended: "Terminé" };
+const STATUS_LABELS: Record<string, string> = { draft: "Pas engagé", running: "Commencé", ended: "Terminé" };
+const STATUS_OPTIONS = [
+  { value: "draft", label: "Pas engagé" },
+  { value: "running", label: "Commencé" },
+  { value: "ended", label: "Terminé" },
+];
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
@@ -137,6 +142,21 @@ export default function InitiativeTracker({
     const detail = (await res.json()) as CombatDetail;
     setCombat(detail.combat);
     setParticipants(detail.participants);
+  }
+
+  /** Renommage et/ou changement manuel de statut (V1-E4) — le MJ choisit librement parmi les trois statuts en cliquant sur le badge. */
+  async function patchCombat(patch: { name?: string | null; status?: string }) {
+    if (!combat) return;
+    const res = await fetch(`/api/campaigns/${campaignId}/combats/${combat.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (res.ok) {
+      const updated = (await res.json()) as CombatRow;
+      setCombat(updated);
+      setCombatsList((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+    }
   }
 
   async function createDraftCombat() {
@@ -346,11 +366,25 @@ export default function InitiativeTracker({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-sm font-medium text-ink">{combat.name ?? "Combat"}</span>
-        <span className="rounded-full border border-edge px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted">
-          {STATUS_LABELS[combat.status] ?? combat.status}
-          {running ? ` · Round ${combat.round}` : ""}
-        </span>
+        <input
+          key={`name-${combat.id}-${combat.name ?? ""}`}
+          type="text"
+          defaultValue={combat.name ?? ""}
+          placeholder="Combat"
+          onBlur={(e) => {
+            const value = e.target.value.trim();
+            if (value !== (combat.name ?? "")) void patchCombat({ name: value || null });
+          }}
+          className="rounded-md border border-transparent bg-transparent px-1 py-0.5 text-sm font-medium text-ink outline-none transition-colors hover:border-edge/60 focus:border-accent"
+        />
+        <Dropdown
+          value={combat.status}
+          onChange={(status) => patchCombat({ status })}
+          options={STATUS_OPTIONS}
+          aria-label="Statut du combat"
+          className="rounded-full border border-edge px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted outline-none transition-colors hover:bg-panel-raised"
+        />
+        {running && <span className="text-[10px] uppercase tracking-wider text-ink-muted">· Round {combat.round}</span>}
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"

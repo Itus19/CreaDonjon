@@ -65,9 +65,10 @@ export async function listCombatsForCampaign(supabase: TypedClient, campaignId: 
 export async function updateCombat(
   supabase: TypedClient,
   id: string,
-  patch: { round?: number; turnIndex?: number; status?: string }
+  patch: { name?: string | null; round?: number; turnIndex?: number; status?: string }
 ): Promise<CombatRow> {
   const update: Database["public"]["Tables"]["combats"]["Update"] = {};
+  if (patch.name !== undefined) update.name = patch.name;
   if (patch.round !== undefined) update.round = patch.round;
   if (patch.turnIndex !== undefined) update.turn_index = patch.turnIndex;
   if (patch.status !== undefined) update.status = patch.status;

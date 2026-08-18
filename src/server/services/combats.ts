@@ -361,40 +361,57 @@ export async function rollAllInitiatives(
   return updated;
 }
 
-/** Passe le combat en `running`, initiative deja lancee — round 1, premier participant de l'ordre trie. */
-export async function beginCombat(
+const COMBAT_STATUS_LABELS_FR: Record<string, string> = { draft: "Pas engagé", running: "Commencé", ended: "Terminé" };
+
+/**
+ * Change le statut d'un combat — trois valeurs (`draft`/`running`/`ended`),
+ * toutes librement choisies par le MJ (V1-E4, retour utilisateur : "ces
+ * trois statuts sont editables par le MJ en cliquant dessus"), pas
+ * seulement les transitions "Go"/"Stop" qui l'appellent aussi. Entrer dans
+ * `running` (re)calcule le round/tour de depart — round 1, premier
+ * participant de l'ordre trie — jamais un round fige a l'ancienne valeur,
+ * y compris en rouvrant un combat deja `ended`.
+ */
+export async function setCombatStatus(
   supabase: TypedClient,
-  params: { combatId: string; actorUserId: string }
+  params: { combatId: string; status: "draft" | "running" | "ended"; actorUserId: string }
 ): Promise<CombatRow> {
   const combat = await getCombatById(supabase, params.combatId);
   if (!combat) throw new Error("Combat introuvable.");
-  const participants = await listCombatParticipants(supabase, params.combatId);
-  const turn = computeStartCombat(participants.length);
-  const updated = await updateCombat(supabase, params.combatId, { round: turn.round, turnIndex: turn.turnIndex, status: "running" });
+  if (combat.status === params.status) return combat;
+
+  let round: number | undefined;
+  let turnIndex: number | undefined;
+  if (params.status === "running") {
+    const participants = await listCombatParticipants(supabase, params.combatId);
+    if (participants.length > 0) {
+      const turn = computeStartCombat(participants.length);
+      round = turn.round;
+      turnIndex = turn.turnIndex;
+    }
+  }
+
+  const updated = await updateCombat(supabase, params.combatId, { round, turnIndex, status: params.status });
   await journalCombatEvent(supabase, combat, {
     target: "combat",
     targetId: combat.id,
     before: { round: combat.round, turn_index: combat.turn_index, status: combat.status },
     after: { round: updated.round, turn_index: updated.turn_index, status: updated.status },
-    note: "Combat lance",
+    note: `Statut : ${COMBAT_STATUS_LABELS_FR[params.status] ?? params.status}`,
     actorUserId: params.actorUserId,
   });
   return updated;
 }
 
-export async function endCombat(supabase: TypedClient, params: { combatId: string; actorUserId: string }): Promise<CombatRow> {
-  const combat = await getCombatById(supabase, params.combatId);
-  if (!combat) throw new Error("Combat introuvable.");
-  const updated = await updateCombat(supabase, params.combatId, { status: "ended" });
-  await journalCombatEvent(supabase, combat, {
-    target: "combat",
-    targetId: combat.id,
-    before: { round: combat.round, turn_index: combat.turn_index, status: combat.status },
-    after: { round: updated.round, turn_index: updated.turn_index, status: updated.status },
-    note: "Combat termine",
-    actorUserId: params.actorUserId,
-  });
-  return updated;
+export const beginCombat = (supabase: TypedClient, params: { combatId: string; actorUserId: string }) =>
+  setCombatStatus(supabase, { ...params, status: "running" });
+
+export const endCombat = (supabase: TypedClient, params: { combatId: string; actorUserId: string }) =>
+  setCombatStatus(supabase, { ...params, status: "ended" });
+
+/** Renomme un combat ("Rencontre", "Embuscade au pont"...) — retour explicite de l'utilisateur, le nom par defaut ne suffit pas pour retrouver une bataille dans "Mes combats". */
+export async function renameCombat(supabase: TypedClient, params: { combatId: string; name: string | null }): Promise<CombatRow> {
+  return updateCombat(supabase, params.combatId, { name: params.name });
 }
 
 async function moveTurn(
