@@ -2135,13 +2135,30 @@ Le « codeur accompagnant » de `specs/regles-couche.md` §5.
 
 **Observation à corriger plus tard (retour utilisateur, non traité dans ce ticket)** : `proposeTextForBlock` n'envoie au modèle que le prompt système générique et l'instruction de l'utilisateur — **aucun contexte de la fiche elle-même**. Constaté en vérifiant : sur la fiche « L'Ancre Rouillée », une instruction « mentionne le tavernier borgne » a produit un paragraphe commençant par « L'établissement, baptisé "Le Corbeau Boiteux"... » — le modèle invente un nom au lieu de reprendre celui de l'entité, faute de le connaître. Correctif proposé pour plus tard : passer au modèle, en lecture seule, le nom de l'entité et le texte déjà présent dans le bloc (segments existants), encadrés via `fenceUntrustedData` (V1-F1, construit mais jamais encore exercé par une vraie fonctionnalité — c'est exactement le cas d'usage prévu : contenu du wiki inséré dans un prompt comme donnée, jamais comme instruction). Rester borné : le nom et le texte déjà écrit dans ce bloc, pas toute la fiche.
 
-### V1-F4 — Relevé de coûts · `S`
+### V1-F4 — Relevé de coûts · `S` — fait
 
-- [ ] Remplir la colonne « mesuré » du tableau de `PDD.md` §32.
-- [ ] Coût d'une génération de PNJ, d'une structuration de règle, d'une aide rédactionnelle.
-- [ ] Décider du modèle économique et le consigner en §23 du PDD.
+- [x] Remplir la colonne « mesuré » du tableau de `PDD.md` §32.
+- [x] Coût d'une génération de PNJ, d'une structuration de règle, d'une aide rédactionnelle.
+- [x] Décider du modèle économique et le consigner en §23 du PDD.
 
 > Tant que ce tableau est vide, toute discussion sur le modèle économique est spéculative — et le mode solo se conçoit sans savoir ce qu'il coûte.
+
+**Nuance découverte en faisant le ticket** : le tableau original (tokens par tour solo, tours par session, coût d'une session) porte sur le **mode solo**, qui n'existe pas encore (V3) — rien à y mesurer honnêtement, marqué « non mesurable » plutôt qu'inventé. **Génération de PNJ** n'existe pas non plus : l'infrastructure déterministe de générateur (V1-E2) est faite, mais le contenu narratif riche d'un générateur de PNJ (nécessite un modèle, pas un tirage sur table) n'a jamais eu de ticket V1 propre — hors périmètre, pas simplement reporté. Les deux seules fonctionnalités IA réellement construites et mesurables aujourd'hui sont V1-F2 (`structure_rule`) et V1-F3 (`assist_writing`) — mesurées à la place, avec le modèle réellement chargé sur ce poste (`gemma-4-e4b-uncensored-hauhaucs-aggressive`, LM Studio local) :
+
+| Fonctionnalité | Latence moyenne | Tokens d'entrée moyens | Tokens de sortie moyens |
+|---|---|---|---|
+| `structure_rule` (V1-F2) | 6,6 s | 313 | 544 |
+| `assist_writing` (V1-F3) | 3,2 s | 144 | 267 |
+
+Mesuré sur trois appels réels par fonctionnalité (script instrumenté, jamais commité) plus les lignes déjà accumulées dans `ai_usage_log` par la vérification navigateur de V1-F2/V1-F3. **Le choix du modèle compte plus que le prompt** : le modèle de raisonnement testé plus tôt dans la session (`qwen3-14b-claude-sonnet-4.5-reasoning-distill`) mettait 18 à 90+ secondes pour le même type d'appel — facteur 10 à 50 sur la latence, confirmant specs/cible-locale-et-ia.md §4.
+
+**Modèle économique consigné en `PDD.md` §23** (nouvelle sous-section « Ajouts v0.3 ») : formalise ce que la révision v0.3 de §32 disait déjà en prose depuis le 12 août — aucun modèle économique à concevoir, usage personnel, cible locale. Ce qui reste mesuré : latence, mémoire, durée d'indexation, jamais un coût en devise (sauf recours ponctuel à un fournisseur distant, toujours instrumenté par `ai_usage_log`).
+
+- `docs/PDD.md` §32 : colonne « Mesuré » remplie (non-mesurable là où c'est honnête, chiffres réels là où une fonctionnalité existe) + nouvelle sous-section « Mesures réelles disponibles aujourd'hui ».
+- `docs/PDD.md` §23 : nouvelle sous-section « Ajouts v0.3 (12 août 2026) », trois décisions consignées formellement (usage personnel, cible locale, aucun modèle économique).
+- Aucun changement de code : ticket purement documentaire, `typecheck`/`lint`/`test`/`build` inchangés (déjà verts depuis V1-F3).
+
+**Lot F terminé.** Reste le critère de fin de V1 (§3, ci-dessous) — à vérifier avec quelqu'un d'autre que l'auteur.
 
 ---
 

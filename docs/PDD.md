@@ -1399,6 +1399,12 @@ Décisions prises lors de la revue d'architecture.
 - [x] Formules stockées sous forme d'arbre syntaxique, jamais de chaîne re-parsée, jamais d'`eval()`.
 - [x] Journal d'événements en ajout seul : c'est lui, la sauvegarde.
 - [x] Étape V0 insérée avant la V1 dans la feuille de route.
+
+## Ajouts v0.3 (12 août 2026)
+
+- [x] Le projet n'est pas destiné à être commercialisé — usage personnel, sa table de jeu (§34.0).
+- [x] Cible locale à terme : application et modèle IA locaux, configurables via Ollama ou LM Studio (specs/cible-locale-et-ia.md).
+- [x] **Aucun modèle économique à concevoir.** Conséquence directe des deux décisions précédentes : pas de tarification, pas de facturation à l'usage. Ce qui reste mesuré (§32) : latence d'un appel, mémoire requise par le modèle, durée d'indexation — jamais un coût en devise, sauf si un fournisseur distant sert un jour de dépannage ponctuel (`ai_usage_log` resterait alors le point d'instrumentation, inchangé).
 - [x] Hors périmètre explicite (section 26), avec règle des trois pour l'abstraction du moteur de règles.
 - [x] SRD 5.1 et 5.2 sous CC-BY-4.0, usage commercial autorisé avec attribution exacte ; versions françaises officielles disponibles sous la même licence.
 - [x] Le nom du produit ne contiendra ni « Dungeons & Dragons » ni « D&D ».
@@ -1778,13 +1784,24 @@ Instrumenter dès le premier prototype via `ai_usage_log`, et **inscrire les mes
 
 | Grandeur | Estimation initiale | Mesuré |
 |---|---|---|
-| Tokens d'entrée par tour solo | 4 000 – 10 000 | à remplir |
-| Tokens de sortie par tour | 400 – 1 200 | à remplir |
-| Tours par session de 30 min | 15 – 25 | à remplir |
-| Coût d'une session de 30 min | à calculer | à remplir |
-| Coût d'indexation d'un monde de 200 fiches | à calculer | à remplir |
+| Tokens d'entrée par tour solo | 4 000 – 10 000 | non mesurable — le mode solo n'existe pas encore (V3), rien à instrumenter |
+| Tokens de sortie par tour | 400 – 1 200 | non mesurable — idem |
+| Tours par session de 30 min | 15 – 25 | non mesurable — idem |
+| Coût d'une session de 30 min | à calculer | non mesurable — idem |
+| Coût d'indexation d'un monde de 200 fiches | à calculer | non mesurable — RAG/embeddings (SCHEMA.md §17) pas construits (V2) |
 
-Tant que la dernière colonne est vide, toute discussion sur le modèle économique est spéculative.
+Tant que la dernière colonne est vide, toute discussion sur le modèle économique du mode solo reste spéculative — ce que confirme la révision v0.3 ci-dessus : de toute façon, il n'y a plus de tarification à concevoir.
+
+### Mesures réelles disponibles aujourd'hui (V1-F4, 18 août 2026)
+
+Le mode solo n'existe pas encore, mais deux fonctionnalités IA réelles tournent déjà (V1-F2, éditeur de règle assisté ; V1-F3, assistance rédactionnelle) — chacune un seul appel d'outil, pas un tour conversationnel. Mesuré via `ai_usage_log` (usage réel) et un script instrumenté (latence, six appels), sur ce poste : LM Studio local, modèle `gemma-4-e4b-uncensored-hauhaucs-aggressive` (7,5 Md de paramètres, aucune trace de raisonnement). **Ces chiffres dépendent entièrement du modèle chargé** — un modèle de raisonnement testé plus tôt dans la même session (`qwen3-14b-claude-sonnet-4.5-reasoning-distill`) mettait 18 à 90+ secondes pour le même type d'appel, l'essentiel des tokens partant dans un raisonnement interne jamais montré à l'utilisateur.
+
+| Fonctionnalité | Latence moyenne | Tokens d'entrée moyens | Tokens de sortie moyens |
+|---|---|---|---|
+| `structure_rule` (éditeur d'arme, V1-F2) | 6,6 s | 313 | 544 |
+| `assist_writing` (assistance rédactionnelle, V1-F3) | 3,2 s | 144 | 267 |
+
+Deux enseignements qui dépassent ces deux fonctionnalités précises : le **choix du modèle compte plus que le prompt** (facteur 10 à 50 sur la latence entre les deux modèles testés, pour la même tâche) — confirme specs/cible-locale-et-ia.md §4 (« le choix du modèle est un réglage du monde ou de l'utilisateur »). Et un one-shot bien en dessous du seuil de 15 s jugé injouable pour un tour — mais un vrai tour solo (plusieurs échanges, plus de contexte système et de règles) coûtera nécessairement plus que ces deux exemples, qui n'établissent qu'un plancher.
 
 ## Leviers de réduction
 
