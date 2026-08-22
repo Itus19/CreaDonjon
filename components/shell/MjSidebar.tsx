@@ -91,6 +91,19 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
         </Link>
 
         <div className="mt-3 flex flex-col gap-1 border-t border-edge/60 pt-3">
+          {/* V2-S1 : ecran jetable de l'experience, garde comme trace — pas une fonctionnalite du produit, jamais scope au monde courant (fixture dediee, docs/adr/0009-viabilite-solo.md). */}
+          <a
+            href="/spike-solo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded px-2 py-1.5 text-sm text-ink-muted transition-colors hover:bg-panel-raised hover:text-ink-soft"
+            title="Ecran d'experience V2-S1 — fixture dediee, sans rapport avec ce monde"
+          >
+            {t("spikeSolo")}
+          </a>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-1 border-t border-edge/60 pt-3">
           {reserved.map((label) => (
             <span
               key={label}
