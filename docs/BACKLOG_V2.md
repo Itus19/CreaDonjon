@@ -155,11 +155,13 @@ Spécification : `coquille-et-design.md` §2b.
 
 1255 lignes pour six fonctions de premier niveau. C'est la principale dette du dépôt, et **V2-G1 va y toucher** (montée de niveau, application des dégâts).
 
-- [ ] Un composant par onglet : `ActionsTab`, `MagicTab`, `InventoryTab`, `TraitsTab`.
-- [ ] L'en-tête (identité, PV, XP, repos) extrait à part.
-- [ ] Aucun changement de comportement : découpage pur, vérifié par les tests existants.
+- [x] Un composant par onglet : `ActionsTab`, `MagicTab`, `InventoryTab`, `TraitsTab`.
+- [x] L'en-tête (identité, PV, XP, repos) extrait à part.
+- [x] Aucun changement de comportement : découpage pur, vérifié par les tests existants.
 
 **À faire avant G1, pas pendant.** Découper et modifier dans le même commit rend la relecture impossible.
+
+Fait. `PlayableCharacterSheet.tsx` reste l'orchestrateur (état, appels serveur) ; les quatre onglets et l'en-tête sont des composants purs recevant des props déjà prêtes à afficher. Aucun test automatisé ne couvrait ce composant avant (aucun fichier `*.test.tsx` ne le référence) — vérification manuelle en navigateur sur les trois onglets (actions, inventaire, traits), `typecheck`/`lint`/`test` verts (seul échec : le flake connu de l'intégration LM Studio, pré-existant, sans rapport).
 
 ### V2-G6 — `characterSheet()` côté client · `S` · *issu de la revue de code*
 

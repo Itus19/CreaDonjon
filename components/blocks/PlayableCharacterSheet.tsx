@@ -1,27 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import { SKILLS, SKILL_ABILITIES, type Ability, type DerivedSheet, type ResolvedFeature } from "@/src/core/rules/sheet";
-import { SRD_LANGUAGES, type LanguageKey } from "@/src/core/rules/srdMapping";
-import { evaluate, type TraceStep } from "@/src/core/formula/evaluate";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
+import type { TraceStep } from "@/src/core/formula/evaluate";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
 import type { RemainingChoiceView, TraitGrantView } from "./useResolvedRuleset";
-import { useReferenceChips, refIdentity, type ResolvedChipView } from "./useReferenceChips";
+import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import { itemRef } from "./inventoryItem";
-import InventoryPanel, { ItemCard } from "./InventoryPanel";
-import { useWorldRuleEntries } from "./useWorldRuleEntries";
-import type { RuleEntrySummary } from "@/src/server/services/rules";
 import Dropdown from "@/components/shared/Dropdown";
-import ActionsMenu from "@/components/shared/ActionsMenu";
-import { LANGUAGE_LABELS_FR, SKILL_LABELS_FR } from "@/src/i18n/fr";
+import { SKILL_LABELS_FR, LANGUAGE_LABELS_FR } from "@/src/i18n/fr";
+import type { LanguageKey } from "@/src/core/rules/srdMapping";
+import CharacterSheetHeader from "./CharacterSheetHeader";
+import ActionsTab, { type PreparedSpellView } from "./ActionsTab";
+import MagicTab, { type KnownSpellView } from "./MagicTab";
+import InventoryTab from "./InventoryTab";
+import TraitsTab from "./TraitsTab";
+import { toggleChoice } from "./characterChoiceUtils";
 
 const ABILITY_LABELS: Record<Ability, string> = {
   str: "FOR",
@@ -35,161 +36,15 @@ const ABILITY_LABELS: Record<Ability, string> = {
 /** Compétences triées par libellé FR (V1-C4 suite) — même ordre que la référence visuelle fournie par l'utilisateur. */
 const SORTED_SKILLS = [...SKILLS].sort((a, b) => SKILL_LABELS_FR[a].localeCompare(SKILL_LABELS_FR[b]));
 
-/** Langues triées par libellé FR (V1-C7), même motif que SORTED_SKILLS. */
-const SORTED_LANGUAGES = [...SRD_LANGUAGES].sort((a, b) => LANGUAGE_LABELS_FR[a].localeCompare(LANGUAGE_LABELS_FR[b]));
-
 /** Seuils de PX cumulés par niveau total (règle officielle 5e, identique SRD 2014/2024) — sert uniquement à dessiner la barre de progression ; aucune montée de niveau n'est automatisée à partir de ces valeurs. */
 const XP_LEVEL_THRESHOLDS = [
   0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000,
   265000, 305000, 355000,
 ];
 
-const RECHARGE_LABELS: Record<string, string> = {
-  short_rest: "repos court",
-  long_rest: "repos long",
-  dawn: "à l'aube",
-  never: "jamais",
-};
-
-const SPECIES_TYPES = ["species"] as const;
-const BACKGROUND_TYPES = ["background"] as const;
-const CLASS_TYPES = ["class"] as const;
-const SUBCLASS_TYPES = ["subclass"] as const;
-
-const GENDER_OPTIONS = [
-  { value: "unspecified", label: "Non précisé" },
-  { value: "feminine", label: "Féminin" },
-  { value: "masculine", label: "Masculin" },
-  { value: "neutral", label: "Neutre" },
-  { value: "custom", label: "Personnalisé" },
-];
-
-/** `unspecified` (on ne sait pas) et `neutral` (ni l'un ni l'autre) restent deux valeurs distinctes du menu — jamais fusionnees (V1-C4). */
-function genderDropdownValue(gender: CharacterBlockData["gender"]): string {
-  if (!gender) return "unspecified";
-  if (typeof gender === "object") return "custom";
-  return gender;
-}
-
-function ruleRef(key: string): BlockReference | null {
-  return key.trim() ? { kind: "rule", key: key.trim() } : null;
-}
-
 type Tab = "actions" | "magie" | "inventaire" | "traits";
 
-function toggleChoice(current: string[], option: string, max: number): string[] {
-  if (current.includes(option)) return current.filter((o) => o !== option);
-  if (current.length >= max) return current;
-  return [...current, option];
-}
-
-function resourceMax(tracker: { max: { formula: import("@/src/core/formula/ast").FormulaNode } }): number {
-  const neverRolls = { nextInt: () => { throw new Error("le mode max n'appelle jamais le RNG"); } };
-  try {
-    return evaluate(tracker.max.formula, {}, neverRolls, "max").value;
-  } catch {
-    return 0;
-  }
-}
-
-/**
- * Sélecteur de règle (V1-C4 suite, sur retour utilisateur) : remplace le
- * champ texte libre + suggestions par une vraie liste déroulante tirée du
- * ruleset du monde. Revirement délibéré sur une décision précédente de ce
- * même complément (qui gardait un champ libre par analogie avec §B5
- * « avertir, ne pas interdire ») — vérification faite, §B5 concerne les
- * prérequis de personnage, pas l'existence d'une clé de référence. Pour
- * espèce/historique/classe/sous-classe, la clé n'a de sens que si une fiche
- * de règle existe déjà ; un MJ qui invente une race crée d'abord sa fiche,
- * qui apparaît alors naturellement dans cette liste — pas de valeur à
- * accepter une clé qui ne résout jamais. Le bouton affiche directement le
- * nom traduit (source de la même liste que l'ancien champ), donc plus
- * besoin d'un élément séparé pour la lisibilité — juste un petit lien vers
- * la fiche de règle à côté.
- */
-function RuleSelect({
-  worldSlug,
-  entryTypes,
-  value,
-  onChange,
-  emptyLabel,
-  chip,
-  filterFn,
-}: {
-  worldSlug: string;
-  entryTypes: readonly string[];
-  value: string;
-  onChange: (key: string) => void;
-  emptyLabel: string;
-  chip: ResolvedChipView | undefined;
-  /** Filtre additionnel (V1-C4 suite) — ex. restreindre les sous-classes à celles de la classe choisie sur la même ligne. */
-  filterFn?: (entry: RuleEntrySummary) => boolean;
-}) {
-  const entries = useWorldRuleEntries(worldSlug);
-  const options = useMemo(() => {
-    const filtered = entries
-      .filter((e) => entryTypes.includes(e.entryType))
-      .filter((e) => (filterFn ? filterFn(e) : true))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((e) => ({ value: e.key, label: e.name }));
-    return [{ value: "", label: emptyLabel }, ...filtered];
-  }, [entries, entryTypes, emptyLabel, filterFn]);
-
-  return (
-    <div className="flex items-center gap-1">
-      <Dropdown value={value} options={options} onChange={onChange} />
-      {chip?.found && (
-        <Link
-          href={chip.href}
-          title={chip.summary ?? chip.name}
-          className="shrink-0 text-xs no-underline transition-opacity hover:opacity-70"
-          style={{ color: "var(--link-rule)" }}
-        >
-          ↗
-        </Link>
-      )}
-    </div>
-  );
-}
-
-/**
- * Badge de statistique (V1-C4 suite) : la charte interdit les couleurs
- * codées en dur (specs/coquille-et-design.md §2), donc CA/Initiative/
- * Vitesse/etc. se distinguent par forme et libellé plutôt que par une
- * couleur inventée par stat. Libellé au-dessus d'un encadré de hauteur fixe
- * (meme structure que le bouclier de CA, meme hauteur `h-14`) — sur retour
- * utilisateur, l'ancien libellé-dans-l'encadré donnait des hauteurs
- * variables selon que le libellé tenait sur une ou deux lignes.
- */
-function StatBadge({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
-  return (
-    <div className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1">
-      <span
-        className={`flex h-6 items-end justify-center text-center text-[9px] font-bold uppercase leading-tight tracking-widest ${
-          danger ? "text-danger" : "text-ink-muted"
-        }`}
-      >
-        {label}
-      </span>
-      <div
-        className={`flex h-14 w-full items-center justify-center rounded-md border ${
-          danger ? "border-danger/60 bg-danger/10" : "border-edge bg-panel-raised"
-        }`}
-      >
-        <span className={`text-base font-semibold ${danger ? "text-danger" : "text-ink"}`}>{value}</span>
-      </div>
-    </div>
-  );
-}
-
-/**
- * `ActionButton`, `ItemCard`, `AddItemRow` (V1-C18) : deplaces dans
- * `InventoryPanel.tsx`, partages avec le bloc d'inventaire autonome
- * (`InventoryBlockEditor`) — voir ce fichier pour l'encadre d'objet et
- * l'ajout d'objet, tels quels, importes ci-dessous.
- */
-
-interface RollLogEntry {
+export interface RollLogEntry {
   id: string;
   label: string;
   total: number;
@@ -229,6 +84,12 @@ interface SheetApiResponse {
  * (Actions/Magie/Inventaire/Traits), au lieu d'un seul bloc qui remplacait
  * tout son contenu par onglet. Empile en une colonne sous `md` pour
  * preserver la lisibilite a 375px (critere deja acquis en V1-B5).
+ *
+ * V2-G5 : decoupe en en-tete (`CharacterSheetHeader.tsx`) + un composant par
+ * onglet (`ActionsTab`/`MagicTab`/`InventoryTab`/`TraitsTab.tsx`) — pur
+ * decoupage, aucun changement de comportement. Ce fichier reste
+ * l'orchestrateur : tout l'etat et les appels serveur restent ici, les
+ * enfants ne recoivent que des props deja pretes a afficher.
  */
 export default function PlayableCharacterSheet({
   worldSlug,
@@ -325,7 +186,7 @@ export default function PlayableCharacterSheet({
   const spellChips = useReferenceChips(worldSlug, knownSpellRefs);
 
   /** Tri par niveau puis ordre alphabetique (V1-C6) — niveau resolu via `spellLevels` (0 par defaut si non resolu, ex. reference cassee). */
-  const sortedKnownSpells = useMemo(() => {
+  const sortedKnownSpells: KnownSpellView[] = useMemo(() => {
     return (spellcasting?.known ?? [])
       .map((known) => {
         const chip = spellChips.get(refIdentity(known.ref));
@@ -336,7 +197,9 @@ export default function PlayableCharacterSheet({
       .sort((a, b) => a.level - b.level || a.label.localeCompare(b.label));
   }, [spellcasting, spellChips, spellLevels]);
 
-  const preparedSpells = sortedKnownSpells.filter((s) => s.known.ref.kind === "rule" && (spellcasting?.prepared ?? []).includes(s.known.ref.key));
+  const preparedSpells: PreparedSpellView[] = sortedKnownSpells
+    .filter((s) => s.known.ref.kind === "rule" && (spellcasting?.prepared ?? []).includes(s.known.ref.key))
+    .map((s) => ({ ref: s.known.ref, label: s.label }));
 
   function togglePrepared(key: string) {
     if (!spellcasting) return;
@@ -583,249 +446,38 @@ export default function PlayableCharacterSheet({
 
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-md border border-edge/60 bg-panel-raised p-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-wrap items-start gap-3">
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-            Espèce
-            <RuleSelect
-              worldSlug={worldSlug}
-              entryTypes={SPECIES_TYPES}
-              value={character.species?.kind === "rule" ? character.species.key : ""}
-              onChange={(key) => patchCharacter({ species: ruleRef(key) })}
-              emptyLabel="Aucune espèce"
-              chip={character.species ? buildChips.get(refIdentity(character.species)) : undefined}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-            Historique
-            <RuleSelect
-              worldSlug={worldSlug}
-              entryTypes={BACKGROUND_TYPES}
-              value={character.background?.kind === "rule" ? character.background.key : ""}
-              onChange={(key) => patchCharacter({ background: ruleRef(key) })}
-              emptyLabel="Aucun historique"
-              chip={character.background ? buildChips.get(refIdentity(character.background)) : undefined}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-            Genre
-            <Dropdown
-              value={genderDropdownValue(character.gender)}
-              options={GENDER_OPTIONS}
-              onChange={(v) =>
-                patchCharacter({
-                  gender:
-                    v === "custom"
-                      ? { custom: typeof character.gender === "object" ? character.gender.custom : "" }
-                      : (v as Exclude<CharacterBlockData["gender"], { custom: string } | undefined>),
-                })
-              }
-              aria-label="Genre"
-            />
-            {typeof character.gender === "object" && (
-              <input
-                value={character.gender.custom}
-                onChange={(e) => patchCharacter({ gender: { custom: e.target.value } })}
-                placeholder="préciser…"
-                className="w-24 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-              />
-            )}
-          </label>
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-            Pronoms
-            <input
-              value={character.pronouns ?? ""}
-              onChange={(e) => patchCharacter({ pronouns: e.target.value })}
-              placeholder="elle, il, iel…"
-              className="w-24 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-            />
-          </label>
-          <div className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-            Classes
-            <div className="flex flex-wrap items-center gap-2">
-              {character.classes.map((c, index) => {
-                const classKey = c.class.kind === "rule" ? c.class.key : "";
-                return (
-                  <div key={index} className={`flex items-center gap-1 ${index > 0 ? "border-l border-edge/50 pl-2" : ""}`}>
-                    <RuleSelect
-                      worldSlug={worldSlug}
-                      entryTypes={CLASS_TYPES}
-                      value={classKey}
-                      onChange={(key) => updateClass(index, { class: { kind: "rule", key }, subclass: null })}
-                      emptyLabel="Aucune classe"
-                      chip={buildChips.get(refIdentity(c.class))}
-                    />
-                    <input
-                      type="number"
-                      min={1}
-                      value={c.level}
-                      title="Niveau"
-                      onChange={(e) => updateClass(index, { level: Math.max(1, Number(e.target.value) || 1) })}
-                      className="w-9 rounded-md border border-edge bg-transparent px-1 py-1 text-sm text-ink outline-none"
-                    />
-                    <RuleSelect
-                      worldSlug={worldSlug}
-                      entryTypes={SUBCLASS_TYPES}
-                      value={c.subclass?.kind === "rule" ? c.subclass.key : ""}
-                      onChange={(key) => updateClass(index, { subclass: ruleRef(key) })}
-                      emptyLabel="Aucune sous-classe"
-                      chip={c.subclass ? buildChips.get(refIdentity(c.subclass)) : undefined}
-                      filterFn={(entry) => (classKey ? entry.parentClassKey === classKey : false)}
-                    />
-                    {character.classes.length > 1 && (
-                      <button type="button" onClick={() => removeClass(index)} className="text-xs text-danger hover:underline">
-                        ×
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-              <button
-                type="button"
-                onClick={addClass}
-                title="Ajouter une classe"
-                className="rounded-full border border-edge px-2 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
-              >
-                +
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button type="button" disabled={busy} onClick={() => rest("short")} className="rounded-full border border-edge px-2.5 py-1 text-xs text-ink hover:bg-panel disabled:opacity-50">
-            Repos court
-          </button>
-          <button type="button" disabled={busy} onClick={() => rest("long")} className="rounded-full border border-edge px-2.5 py-1 text-xs text-ink hover:bg-panel disabled:opacity-50">
-            Repos long
-          </button>
-          <ActionsMenu
-            label="Exporter"
-            triggerClassName="rounded-full border border-edge px-2.5 py-1 text-xs text-ink transition-colors hover:bg-panel"
-            aria-label="Exporter la fiche"
-            items={[
-              { label: "Exporter en JSON", onSelect: exportJson },
-              { label: "Exporter en PDF", onSelect: () => window.print() },
-            ]}
-          />
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-start gap-2">
-        <div className="flex w-12 shrink-0 flex-col items-center gap-1">
-          <span className="flex h-6 items-end justify-center text-[9px] font-bold uppercase tracking-widest text-ink-muted">CA</span>
-          <div
-            className="relative flex h-14 w-12 items-center justify-center border-2 border-accent bg-panel-raised"
-            style={{ clipPath: "polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)" }}
-            title="Classe d'armure — calculée automatiquement (10 + Dex + équipement)"
-          >
-            <span className="text-xl font-bold text-ink">{sheet.ac.value}</span>
-          </div>
-        </div>
-        <StatBadge label="Initiative" value={`${sheet.abilities.dex.mod >= 0 ? "+" : ""}${sheet.abilities.dex.mod}`} />
-        <StatBadge label="Vitesse" value={`${sheet.speed.value} m`} />
-        <StatBadge label="Perception passive" value={String(10 + sheet.skills.perception.mod)} />
-        <StatBadge label="Maîtrise" value={`+${sheet.proficiencyBonus}`} />
-        <StatBadge label="Dés de vie" value={sheet.hitPoints.hitDice} />
-        <div className="flex w-[6.5rem] shrink-0 flex-col items-center gap-1">
-          <span
-            className={`flex h-6 items-end justify-center text-center text-[9px] font-bold uppercase leading-tight tracking-widest ${
-              exhaustion > 0 ? "text-danger" : "text-ink-muted"
-            }`}
-          >
-            Épuisement
-          </span>
-          <div
-            className={`flex h-14 w-full items-center justify-center gap-2 rounded-full border px-1.5 ${
-              exhaustion > 0 ? "border-danger/60 bg-danger/10" : "border-edge bg-panel-raised"
-            }`}
-          >
-            <button
-              type="button"
-              disabled={busy || exhaustion <= 0}
-              onClick={() => changeExhaustion(-1)}
-              className="rounded-full border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-30"
-            >
-              −
-            </button>
-            <span className={`text-base font-semibold ${exhaustion > 0 ? "text-danger" : "text-ink"}`}>{exhaustion}</span>
-            <button
-              type="button"
-              disabled={busy || exhaustion >= 6}
-              onClick={() => changeExhaustion(1)}
-              className="rounded-full border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-30"
-            >
-              +
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-          <span>Points de vie</span>
-          <span className={hpLow ? "text-danger" : "text-ink-muted"}>
-            {hpCurrent}/{hpMax}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-panel-sunken">
-            <div className={`h-full rounded-full transition-[width] ${hpLow ? "bg-danger" : "bg-accent"}`} style={{ width: `${hpPct}%` }} />
-          </div>
-          <input
-            type="number"
-            value={hpDelta}
-            onChange={(e) => setHpDelta(e.target.value)}
-            placeholder="1"
-            className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-          />
-          <button type="button" disabled={busy} onClick={() => applyHpDelta(-1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
-            −
-          </button>
-          <button type="button" disabled={busy} onClick={() => applyHpDelta(1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
-            +
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1 border-b border-edge/60 pb-3">
-        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-          <span>Expérience</span>
-          <span>
-            {xpCurrent} XP{totalLevel < XP_LEVEL_THRESHOLDS.length ? ` · niveau ${totalLevel + 1} à ${xpCeiling}` : ""}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-panel-sunken">
-            <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${xpPct}%` }} />
-          </div>
-          <input
-            type="number"
-            value={xpDelta}
-            onChange={(e) => setXpDelta(e.target.value)}
-            placeholder="1"
-            className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-          />
-          <button type="button" disabled={busy} onClick={() => applyXpDelta(-1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
-            −
-          </button>
-          <button type="button" disabled={busy} onClick={() => applyXpDelta(1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
-            +
-          </button>
-        </div>
-      </div>
-
-      {sheet.warnings.length > 0 && (
-        <div className="rounded-md border border-danger/60 bg-danger/10 px-3 py-2 text-sm text-danger">
-          <p className="font-semibold">Personnage illégal — enregistrable quand même :</p>
-          <ul className="list-inside list-disc">
-            {sheet.warnings.map((w, i) => (
-              <li key={i}>{w.message}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {error && <p className="text-xs text-danger">{error}</p>}
+      <CharacterSheetHeader
+        worldSlug={worldSlug}
+        character={character}
+        patchCharacter={patchCharacter}
+        updateClass={updateClass}
+        removeClass={removeClass}
+        addClass={addClass}
+        buildChips={buildChips}
+        refIdentity={refIdentity}
+        sheet={sheet}
+        busy={busy}
+        exhaustion={exhaustion}
+        onChangeExhaustion={changeExhaustion}
+        hpCurrent={hpCurrent}
+        hpMax={hpMax}
+        hpLow={hpLow}
+        hpPct={hpPct}
+        hpDelta={hpDelta}
+        setHpDelta={setHpDelta}
+        applyHpDelta={applyHpDelta}
+        xpCurrent={xpCurrent}
+        xpCeiling={xpCeiling}
+        xpPct={xpPct}
+        totalLevel={totalLevel}
+        xpLevelThresholdsLength={XP_LEVEL_THRESHOLDS.length}
+        xpDelta={xpDelta}
+        setXpDelta={setXpDelta}
+        applyXpDelta={applyXpDelta}
+        onRest={rest}
+        onExportJson={exportJson}
+        error={error}
+      />
 
       <div className="flex flex-col gap-4 md:flex-row">
         <aside className="flex flex-col gap-3 md:w-48 md:shrink-0">
@@ -987,266 +639,64 @@ export default function PlayableCharacterSheet({
           </div>
 
           {tab === "actions" && (
-            <div className="flex flex-col gap-3 pt-3">
-              <div className="flex items-center gap-1 text-xs">
-                <span className="text-ink-muted">Prochain jet :</span>
-                {(["disadvantage", "normal", "advantage"] as AdvantageState[]).map((a) => (
-                  <button
-                    key={a}
-                    type="button"
-                    onClick={() => setAdvantage(a)}
-                    className={`rounded-full border px-2 py-0.5 ${advantage === a ? "border-accent text-accent" : "border-edge text-ink-muted"}`}
-                  >
-                    {a === "normal" ? "normal" : a === "advantage" ? "avantage" : "désavantage"}
-                  </button>
-                ))}
-              </div>
-
-              {equippedWeapons.length === 0 && <p className="text-sm text-ink-muted">Aucune arme équipée.</p>}
-              {equippedWeapons.map((item) => {
-                const ref = itemRef(item);
-                const weapon = ref?.kind === "rule" ? weaponByKey[ref.key] : null;
-                return (
-                  <ItemCard
-                    key={item.id}
-                    worldSlug={worldSlug}
-                    item={item}
-                    chip={ref ? itemChips.get(refIdentity(ref)) : undefined}
-                    weapon={weapon}
-                    armor={null}
-                    weightLb={null}
-                    cost={null}
-                    strMod={sheet.abilities.str.mod}
-                    dexMod={sheet.abilities.dex.mod}
-                    proficiencyBonus={sheet.proficiencyBonus}
-                    isMonk={isMonk}
-                    showAttackInfo={true}
-                    collapsible={false}
-                    busy={busy}
-                    onAttack={() => attack(item)}
-                    onDamage={(versatile) => damage(item, versatile)}
-                  />
-                );
-              })}
-
-              {spellcasting && (
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Sorts préparés</span>
-                  {preparedSpells.length === 0 && (
-                    <p className="text-sm text-ink-muted">Aucun sort préparé — sélectionnez-les dans l&apos;onglet Magie.</p>
-                  )}
-                  {preparedSpells.map(({ known, label }) => (
-                    <div key={refIdentity(known.ref)} className="flex flex-wrap items-center gap-2 rounded-md border border-edge/60 px-2.5 py-1.5 text-sm">
-                      <span className="flex-1 text-ink">{label}</span>
-                      {Object.entries(sheet.spellcasting?.slots ?? {}).map(([level, total]) => {
-                        const used = runtimeState?.spell_slots_used[level] ?? 0;
-                        const available = total - used > 0;
-                        return (
-                          <button
-                            key={level}
-                            type="button"
-                            disabled={busy || !available}
-                            title={available ? `Lancer au niveau ${level}` : "Aucun emplacement disponible"}
-                            onClick={() => known.ref.kind === "rule" && cast(known.ref.key, label, Number(level))}
-                            className="rounded-full border border-edge px-2 py-0.5 text-xs disabled:opacity-30"
-                          >
-                            niv. {level} ({Math.max(0, total - used)}/{total})
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {(resources?.trackers.length ?? 0) > 0 && (
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Ressources</span>
-                  {resources!.trackers.map((tracker) => {
-                    const max = resourceMax(tracker);
-                    const used = runtimeState?.resources[tracker.id] ?? 0;
-                    return (
-                      <div key={tracker.id} className="flex items-center gap-2 text-sm">
-                        <span className="flex-1 text-ink">{tracker.label}</span>
-                        <span className="text-ink-muted">
-                          {Math.max(0, max - used)}/{max} · {RECHARGE_LABELS[tracker.recharge] ?? tracker.recharge}
-                        </span>
-                        <button type="button" disabled={busy || used >= max} onClick={() => changeResource(tracker.id, 1)} className="rounded border border-edge px-1.5 text-xs disabled:opacity-50">
-                          utiliser
-                        </button>
-                        <button type="button" disabled={busy || used <= 0} onClick={() => changeResource(tracker.id, -1)} className="rounded border border-edge px-1.5 text-xs disabled:opacity-50">
-                          annuler
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {rollLog.length > 0 && (
-                <div className="flex flex-col gap-1.5 rounded-md border border-edge/60 bg-panel-sunken p-2">
-                  {rollLog.map((entry) => (
-                    <div key={entry.id} className="text-xs">
-                      <p className="text-ink">
-                        <span className="font-semibold">{entry.label} : {entry.total}</span>
-                        {entry.isCritical && <span className="ml-1 text-accent">critique !</span>}
-                        {entry.isCriticalFail && <span className="ml-1 text-danger">échec critique</span>}
-                      </p>
-                      {entry.trace.length > 0 && <p className="text-ink-muted">{entry.trace.map((s) => s.text).join(" ; ")}</p>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <ActionsTab
+              worldSlug={worldSlug}
+              busy={busy}
+              advantage={advantage}
+              setAdvantage={setAdvantage}
+              equippedWeapons={equippedWeapons}
+              itemChips={itemChips}
+              weaponByKey={weaponByKey}
+              strMod={sheet.abilities.str.mod}
+              dexMod={sheet.abilities.dex.mod}
+              proficiencyBonus={sheet.proficiencyBonus}
+              isMonk={isMonk}
+              onAttack={attack}
+              onDamage={damage}
+              spellcasting={spellcasting}
+              preparedSpells={preparedSpells}
+              spellSlots={sheet.spellcasting?.slots ?? {}}
+              spellSlotsUsed={runtimeState?.spell_slots_used ?? {}}
+              onCast={cast}
+              resources={resources}
+              resourcesUsed={runtimeState?.resources ?? {}}
+              onChangeResource={changeResource}
+              rollLog={rollLog}
+            />
           )}
 
           {tab === "magie" && spellcasting && (
-            <div className="flex flex-col gap-2 pt-3">
-              <p className="text-[10px] italic text-ink-muted">
-                Sorts connus, triés par niveau. Cochez « Préparé » pour les retrouver dans l&apos;onglet Actions.
-              </p>
-              {sortedKnownSpells.map(({ known, label, level }) => (
-                <div key={refIdentity(known.ref)} className="flex flex-wrap items-center gap-2 rounded-md border border-edge/60 px-2.5 py-1.5 text-sm">
-                  <span className="w-10 shrink-0 text-xs text-ink-muted">{level === 0 ? "Tour" : `Niv. ${level}`}</span>
-                  <span className="flex-1 text-ink">{label}</span>
-                  <label className="flex items-center gap-1 text-xs text-ink-muted">
-                    <input
-                      type="checkbox"
-                      checked={known.ref.kind === "rule" && spellcasting.prepared.includes(known.ref.key)}
-                      onChange={() => known.ref.kind === "rule" && togglePrepared(known.ref.key)}
-                    />
-                    Préparé
-                  </label>
-                </div>
-              ))}
-              {sortedKnownSpells.length === 0 && <p className="text-sm text-ink-muted">Aucun sort connu.</p>}
-            </div>
+            <MagicTab sortedKnownSpells={sortedKnownSpells} spellcasting={spellcasting} onTogglePrepared={togglePrepared} />
           )}
 
           {tab === "inventaire" && (
-            <div className="pt-3">
-              {/* Corps entier de l'onglet partage avec le bloc d'inventaire
-                  autonome (V1-C18, demande explicite : « un copier-coller de
-                  cet onglet ») — voir `InventoryPanel.tsx`. */}
-              <InventoryPanel
-                worldSlug={worldSlug}
-                inventory={inventory}
-                onUpdateInventory={onUpdateInventory}
-                strMod={sheet.abilities.str.mod}
-                dexMod={sheet.abilities.dex.mod}
-                proficiencyBonus={sheet.proficiencyBonus}
-                isMonk={isMonk}
-                showAttackInfo={true}
-                weaponByKey={weaponByKey}
-                equipment={equipment}
-                weight={weight}
-                cost={cost}
-                encumbrance={sheet.encumbrance}
-              />
-            </div>
+            <InventoryTab
+              worldSlug={worldSlug}
+              inventory={inventory}
+              onUpdateInventory={onUpdateInventory}
+              strMod={sheet.abilities.str.mod}
+              dexMod={sheet.abilities.dex.mod}
+              proficiencyBonus={sheet.proficiencyBonus}
+              isMonk={isMonk}
+              weaponByKey={weaponByKey}
+              equipment={equipment}
+              weight={weight}
+              cost={cost}
+              encumbrance={sheet.encumbrance}
+            />
           )}
 
           {tab === "traits" && (
-            <div className="flex flex-col gap-1 pt-3 text-sm">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Aptitudes accordées</span>
-              {traits.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {traits.map((f) => {
-                    const chip = traitChips.get(refIdentity({ kind: "rule", key: traitRefKey(f) }));
-                    return (
-                      <div key={f.key} className="rounded-md border border-edge/60 bg-panel-raised p-2.5">
-                        <div className="flex items-baseline justify-between gap-2">
-                          {chip?.found ? (
-                            <Link
-                              href={chip.href}
-                              className="text-sm font-semibold no-underline hover:underline"
-                              style={{ color: "var(--link-rule)" }}
-                            >
-                              {chip.name}
-                            </Link>
-                          ) : (
-                            <span className="text-sm font-semibold italic text-ink-muted">{f.label}</span>
-                          )}
-                          <span className="shrink-0 text-[10px] uppercase tracking-wide text-ink-muted">{traitSourceLabel(f)}</span>
-                        </div>
-                        {chip?.found && chip.summary && <p className="mt-1 text-xs leading-relaxed text-ink-muted">{chip.summary}</p>}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-ink-muted">Aucune aptitude accordée pour l&apos;instant.</p>
-              )}
-
-              <span className="mt-3 text-[10px] font-bold uppercase tracking-widest text-ink-muted">Maîtrises</span>
-              {proficiencies.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {proficiencies.map((p) => (
-                    <span
-                      key={`${p.source}:${p.key}`}
-                      title={`Source : ${p.source}`}
-                      className="inline-flex items-center gap-1 rounded-full border border-edge px-2 py-0.5 text-sm text-ink"
-                    >
-                      {p.name}
-                      <span className="text-[10px] text-ink-muted">· {p.source}</span>
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-ink-muted">Aucune maîtrise d&apos;armure/arme/outil pour l&apos;instant.</p>
-              )}
-
-              <span className="mt-3 text-[10px] font-bold uppercase tracking-widest text-ink-muted">Langues</span>
-              {[...new Set(languageChoices.values())].map((choice) => {
-                const chosenForChoice = (character.choices[choice.id] as string[] | undefined) ?? [];
-                return (
-                  <div key={choice.id} className="flex flex-col gap-1">
-                    <p className="text-xs text-ink-muted">
-                      {choice.label} : {chosenForChoice.length}/{choice.count} choisie(s) — cliquez pour choisir
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {SORTED_LANGUAGES.map((lang) => {
-                        const isChosen = chosenForChoice.includes(lang);
-                        const canPick = isChosen || chosenForChoice.length < choice.count;
-                        return (
-                          <button
-                            key={lang}
-                            type="button"
-                            disabled={!canPick}
-                            onClick={() =>
-                              patchCharacter({
-                                choices: { ...character.choices, [choice.id]: toggleChoice(chosenForChoice, lang, choice.count) },
-                              })
-                            }
-                            className={`rounded-full border px-2 py-0.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                              isChosen ? "border-accent bg-accent/20 text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
-                            }`}
-                          >
-                            {LANGUAGE_LABELS_FR[lang]}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-              {allLanguages.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {allLanguages.map((l) => (
-                    <span
-                      key={`${l.source}:${l.key}`}
-                      title={`Source : ${l.source}`}
-                      className="inline-flex items-center gap-1 rounded-full border border-edge px-2 py-0.5 text-sm text-ink"
-                    >
-                      {l.name}
-                      <span className="text-[10px] text-ink-muted">· {l.source}</span>
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-ink-muted">Aucune langue accordée sans choix pour l&apos;instant.</p>
-              )}
-            </div>
+            <TraitsTab
+              traits={traits}
+              traitChips={traitChips}
+              traitSourceLabel={traitSourceLabel}
+              proficiencies={proficiencies}
+              languageChoices={languageChoices}
+              character={character}
+              patchCharacter={patchCharacter}
+              allLanguages={allLanguages}
+            />
           )}
         </div>
       </div>
