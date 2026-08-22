@@ -17,7 +17,8 @@ Le développeur du projet apprend à coder sur ce projet. Explique tes choix. Ne
 | Fichier | Contenu | Quand le lire |
 |---|---|---|
 | `docs/SCHEMA.md` | Schéma de données, SQL, RLS, formules | Avant toute migration ou requête |
-| `docs/BACKLOG_V1.md` | Tickets V1 avec critères d'acceptation | Au début de chaque tâche |
+| `docs/BACKLOG_V2.md` | Tickets V2 avec critères d'acceptation | Au début de chaque tâche |
+| `docs/BACKLOG_V1.md` | Tickets V1 — **terminés**, valeur historique | rarement |
 | `docs/BACKLOG.md` | Tickets Phase 0 et V0 — **terminés**, valeur historique | rarement |
 | `docs/PDD.md` | Source de vérité fonctionnelle | Avant toute décision produit |
 | `docs/adr/` | Décisions d'architecture et leurs raisons | Avant de « corriger » quelque chose qui semble étrange |
