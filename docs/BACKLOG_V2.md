@@ -57,7 +57,7 @@ Lot J     génération assistée et confort
 
 ---
 
-## S1 — Spike : le mode solo est-il viable sur votre machine ? · `M`
+## S1 — Spike : le mode solo est-il viable sur votre machine ? · `M` — fait
 
 **Ce n'est pas un ticket de fonctionnalité. C'est une expérience, avec un verdict.**
 
@@ -118,10 +118,12 @@ Et c'est **la même infrastructure** : contexte déterministe, propositions vali
 
 ### Critères
 
-- [ ] Vingt tours joués, mesures relevées au fil de l'eau.
-- [ ] Zéro identifiant inventé accepté par la validation.
-- [ ] Verdict écrit dans un ADR : `docs/adr/NNNN-viabilite-solo.md`.
-- [ ] Si repli : la V3 est réécrite en conséquence **avant** d'ouvrir le lot G.
+- [x] Vingt tours joués, mesures relevées au fil de l'eau.
+- [x] Zéro identifiant inventé accepté par la validation.
+- [x] Verdict écrit dans un ADR : `docs/adr/0009-viabilite-solo.md`.
+- [ ] Si repli : la V3 est réécrite en conséquence **avant** d'ouvrir le lot G — **prochaine étape, pas encore faite** : le verdict recommande le repli (MJ assisté), mais aucune V3 formelle n'existe encore à réécrire (seulement le tableau §4 ci-dessous). À faire avant le lot G.
+
+**Verdict (ADR 0009, 22 août 2026) : repli sur le MJ assisté.** Mesures objectives dans le budget (latence ~10 s, tokens ~1400, 0 identifiant inventé, 5 % d'appels malformés une fois l'incident d'infrastructure retiré) — c'est la cohérence narrative dans la durée qui déçoit à cette taille de modèle (répétitions verbatim, dérive de personnage, PNJ omniprésent hors de sa scène). Point ouvert : le lien fait-mécanique → narration n'a en réalité jamais été observé de bout en bout (panne réseau sur l'unique tentative) — à reboucler avant conclusion définitive. Détail complet et enseignements de conception (suivi de scène, contexte de personnage vivant, voix des PNJ incidents) dans l'ADR.
 
 ---
 
