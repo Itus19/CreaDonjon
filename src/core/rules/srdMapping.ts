@@ -452,6 +452,18 @@ export function parseSpellLevel(fields: ParsedFields): number | null {
   return typeof fields.level === "number" ? fields.level : null;
 }
 
+/**
+ * Classes qui peuvent apprendre un sort — champ `classes` du SRD (tableau de
+ * references `{index, name, url}`), identique en forme entre 2014 et 2024.
+ * Sert a filtrer la liste de sorts proposee a l'etape de creation de
+ * personnage par la classe du personnage, jamais stocke tel quel ailleurs.
+ */
+export function parseSpellClasses(fields: ParsedFields): string[] {
+  const raw = fields.classes;
+  if (!Array.isArray(raw)) return [];
+  return (raw as { index?: string }[]).filter((c): c is { index: string } => typeof c.index === "string").map((c) => c.index);
+}
+
 export interface ProficiencyEntry {
   key: string;
   name: string;

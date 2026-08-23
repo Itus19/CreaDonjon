@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
 import { GENDER_OPTIONS, genderDropdownValue } from "./CharacterSheetHeader";
 import Dropdown from "@/components/shared/Dropdown";
@@ -12,6 +13,7 @@ import RemainingChoicesStep from "./characterCreatorSteps/RemainingChoicesStep";
 import LevelClassesStep from "./characterCreatorSteps/LevelClassesStep";
 import SpeciesStep from "./characterCreatorSteps/SpeciesStep";
 import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreatorSteps/BackgroundStep";
+import SpellSelectionStep from "./characterCreatorSteps/SpellSelectionStep";
 import PreviewStep from "./characterCreatorSteps/PreviewStep";
 import { createCharacterFromWizardAction } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
 
@@ -35,7 +37,24 @@ const EMPTY_INVENTORY: InventoryBlockData = {
   currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
 };
 
-const STEPS = ["Espèce", "Classe", "Caractéristiques", "Historique", "Équipement", "Choix restants", "Aperçu"] as const;
+const EMPTY_SPELLCASTING: SpellcastingBlockData = {
+  __v: 1,
+  sources: [],
+  known: [],
+  prepared: [],
+  slot_override: null,
+};
+
+const STEPS = [
+  "Espèce",
+  "Classe",
+  "Caractéristiques",
+  "Historique",
+  "Équipement",
+  "Choix restants",
+  "Sorts",
+  "Aperçu",
+] as const;
 
 /**
  * Assistant de creation de personnage (V2-G1, ecran MJ — sur demande
@@ -50,14 +69,18 @@ const STEPS = ["Espèce", "Classe", "Caractéristiques", "Historique", "Équipem
  * d'inventaire autonome s'en sert deja) : l'apercu en direct est calcule par
  * le vrai moteur de regles, pas une approximation propre a l'assistant.
  *
- * Aucune etape "sorts" : hors perimetre de §B8, laisse au bloc `spellcasting`
- * ajoutable ensuite comme aujourd'hui (menu "+ Incantation").
+ * Huitieme etape "Sorts" ajoutee en plus de §B8 (retour utilisateur) : un
+ * budget de cantrips/sorts par classe incantatrice, lu directement dans son
+ * `class_progression` (`SpellSelectionStep.tsx`), ecrit dans le bloc
+ * `spellcasting` — separe de `character`, cree a la validation seulement si
+ * au moins un sort a ete choisi.
  */
 export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSlug: string; worldId: string }) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [character, setCharacter] = useState<CharacterBlockData>(EMPTY_CHARACTER);
   const [inventory, setInventory] = useState<InventoryBlockData>(EMPTY_INVENTORY);
+  const [spellcasting, setSpellcasting] = useState<SpellcastingBlockData>(EMPTY_SPELLCASTING);
   const [abilityPool, setAbilityPool] = useState<AbilityPoolAssignment>(EMPTY_ABILITY_POOL_ASSIGNMENT);
   const [bgEquipmentChoice, setBgEquipmentChoice] = useState<BackgroundEquipmentChoice | null>(null);
   const [busy, setBusy] = useState(false);
@@ -74,6 +97,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
     equipment,
     weight,
     cost,
+    spellLevels,
     proficiencies,
     languages,
     isMonk,
@@ -85,7 +109,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
     itemChips,
     equippedWeapons,
     buildChips,
-  } = useCharacterSheetContext(worldSlug, character, inventory, undefined);
+  } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
 
   async function submit() {
     setBusy(true);
@@ -96,6 +120,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
         name,
         character,
         inventory: inventory.items.length > 0 ? inventory : undefined,
+        spellcasting: spellcasting.known.length > 0 ? spellcasting : undefined,
       });
       if (result?.error) setError(result.error);
     } finally {
@@ -209,7 +234,9 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
         />
       )}
 
-      {step === 6 && (
+      {step === 6 && <SpellSelectionStep worldSlug={worldSlug} character={character} spellcasting={spellcasting} onUpdateSpellcasting={setSpellcasting} />}
+
+      {step === 7 && (
         <div className="flex flex-col gap-3">
           <PreviewStep
             worldSlug={worldSlug}
@@ -217,6 +244,9 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
             patchCharacter={patchCharacter}
             inventory={inventory}
             onUpdateInventory={setInventory}
+            spellcasting={spellcasting}
+            onUpdateSpellcasting={setSpellcasting}
+            spellLevels={spellLevels}
             sheet={sheet}
             traits={traits}
             traitChips={traitChips}

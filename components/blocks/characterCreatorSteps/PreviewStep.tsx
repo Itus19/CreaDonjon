@@ -1,20 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { DerivedSheet, ResolvedFeature } from "@/src/core/rules/sheet";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { ArmorData, ItemCost, WeaponData } from "@/src/core/rules/srdMapping";
 import { XP_LEVEL_THRESHOLDS } from "@/src/core/rules/experience";
 import type { RemainingChoiceView, TraitGrantView } from "../useResolvedRuleset";
-import { refIdentity, type ResolvedChipView } from "../useReferenceChips";
+import { useReferenceChips, refIdentity, type ResolvedChipView } from "../useReferenceChips";
 import CharacterSheetHeader from "../CharacterSheetHeader";
-import ActionsTab from "../ActionsTab";
+import ActionsTab, { type PreparedSpellView } from "../ActionsTab";
+import MagicTab, { type KnownSpellView } from "../MagicTab";
 import InventoryTab from "../InventoryTab";
 import TraitsTab from "../TraitsTab";
 
-type PreviewTab = "actions" | "inventaire" | "traits";
+type PreviewTab = "actions" | "magie" | "inventaire" | "traits";
 
 function noop() {}
 
@@ -39,6 +41,9 @@ export default function PreviewStep({
   patchCharacter,
   inventory,
   onUpdateInventory,
+  spellcasting,
+  onUpdateSpellcasting,
+  spellLevels,
   sheet,
   traits,
   traitChips,
@@ -60,6 +65,9 @@ export default function PreviewStep({
   patchCharacter: (fields: Partial<CharacterBlockData>) => void;
   inventory: InventoryBlockData;
   onUpdateInventory: (data: InventoryBlockData) => void;
+  spellcasting: SpellcastingBlockData;
+  onUpdateSpellcasting: (data: SpellcastingBlockData) => void;
+  spellLevels: Record<string, number | null>;
   sheet: DerivedSheet;
   traits: ResolvedFeature[];
   traitChips: Map<string, ResolvedChipView>;
@@ -93,6 +101,29 @@ export default function PreviewStep({
 
   const totalLevel = Math.max(1, character.classes.reduce((sum, c) => sum + c.level, 0));
   const xpCeiling = XP_LEVEL_THRESHOLDS[totalLevel] ?? XP_LEVEL_THRESHOLDS[XP_LEVEL_THRESHOLDS.length - 1];
+
+  const knownSpellRefs = useMemo(() => spellcasting.known.map((k) => k.ref), [spellcasting]);
+  const spellChips = useReferenceChips(worldSlug, knownSpellRefs);
+
+  const sortedKnownSpells: KnownSpellView[] = useMemo(() => {
+    return spellcasting.known
+      .map((known) => {
+        const chip = spellChips.get(refIdentity(known.ref));
+        const label = chip?.found ? chip.name : known.ref.kind === "rule" ? known.ref.key : known.ref.id;
+        const level = known.ref.kind === "rule" ? (spellLevels[known.ref.key] ?? 0) : 0;
+        return { known, label, level };
+      })
+      .sort((a, b) => a.level - b.level || a.label.localeCompare(b.label));
+  }, [spellcasting, spellChips, spellLevels]);
+
+  const preparedSpells: PreparedSpellView[] = sortedKnownSpells
+    .filter((s) => s.known.ref.kind === "rule" && spellcasting.prepared.includes(s.known.ref.key))
+    .map((s) => ({ ref: s.known.ref, label: s.label }));
+
+  function togglePrepared(key: string) {
+    const prepared = spellcasting.prepared.includes(key) ? spellcasting.prepared.filter((k) => k !== key) : [...spellcasting.prepared, key];
+    onUpdateSpellcasting({ ...spellcasting, prepared });
+  }
 
   return (
     <div className="flex flex-col gap-3 rounded-md border border-edge/60 bg-panel-raised p-3">
@@ -130,7 +161,9 @@ export default function PreviewStep({
       />
 
       <div className="flex gap-1 border-b border-edge/60 text-xs">
-        {(["actions", "inventaire", "traits"] as PreviewTab[]).map((t) => (
+        {(["actions", "magie", "inventaire", "traits"] as PreviewTab[])
+          .filter((t) => t !== "magie" || spellcasting.known.length > 0)
+          .map((t) => (
           <button
             key={t}
             type="button"
@@ -159,9 +192,9 @@ export default function PreviewStep({
           isMonk={isMonk}
           onAttack={noop}
           onDamage={noop}
-          spellcasting={undefined}
-          preparedSpells={[]}
-          spellSlots={{}}
+          spellcasting={spellcasting.known.length > 0 ? spellcasting : undefined}
+          preparedSpells={preparedSpells}
+          spellSlots={sheet.spellcasting?.slots ?? {}}
           spellSlotsUsed={{}}
           onCast={noop}
           resources={undefined}
@@ -169,6 +202,10 @@ export default function PreviewStep({
           onChangeResource={noop}
           rollLog={[]}
         />
+      )}
+
+      {tab === "magie" && spellcasting.known.length > 0 && (
+        <MagicTab sortedKnownSpells={sortedKnownSpells} spellcasting={spellcasting} onTogglePrepared={togglePrepared} />
       )}
 
       {tab === "inventaire" && (

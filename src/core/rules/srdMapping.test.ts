@@ -20,6 +20,7 @@ import {
   parseCustomTableFields,
   parseItemCost,
   parseItemWeight,
+  parseSpellClasses,
   parseSpellLevel,
   parseWeaponData,
   SRD_LANGUAGES,
@@ -592,6 +593,22 @@ describe("parseSpellLevel", () => {
 
   it("retourne null si le champ est absent", () => {
     expect(parseSpellLevel(parseCustomTableFields([{ field: "name", value: "Boule de feu" }]))).toBeNull();
+  });
+});
+
+// Fixture fidele a data\srd\srd-2024.json : Spells.aura-of-life.classes
+// (tableau de references {index, name, url}), meme forme sur les deux
+// editions — sert a filtrer la liste de sorts par classe a la creation.
+describe("parseSpellClasses", () => {
+  it("lit les classes qui peuvent apprendre un sort", () => {
+    const fields = parseCustomTableFields([
+      { field: "classes", value: JSON.stringify([{ index: "cleric", name: "Cleric" }, { index: "paladin", name: "Paladin" }]) },
+    ]);
+    expect(parseSpellClasses(fields)).toEqual(["cleric", "paladin"]);
+  });
+
+  it("retourne un tableau vide si le champ est absent", () => {
+    expect(parseSpellClasses(parseCustomTableFields([{ field: "level", value: "1" }]))).toEqual([]);
   });
 });
 

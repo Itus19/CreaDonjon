@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { zCharacterBlockData } from "@/src/core/schemas/blocks/character";
 import { zInventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import { zSpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 
 /**
  * Sortie de l'assistant de creation de personnage (specs/wiki-liens-et-
@@ -13,4 +14,5 @@ export const createCharacterFromWizardSchema = z.object({
   name: z.string().trim().min(1, "Le nom est requis.").max(200, "200 caracteres maximum."),
   character: zCharacterBlockData,
   inventory: zInventoryBlockData.optional(),
+  spellcasting: zSpellcastingBlockData.optional(),
 });

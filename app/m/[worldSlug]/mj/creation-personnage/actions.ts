@@ -11,6 +11,7 @@ export interface CreateCharacterFromWizardInput {
   name: string;
   character: unknown;
   inventory?: unknown;
+  spellcasting?: unknown;
 }
 
 /**
@@ -43,6 +44,7 @@ export async function createCharacterFromWizardAction(
     name: parsed.data.name,
     character: parsed.data.character,
     inventory: parsed.data.inventory,
+    spellcasting: parsed.data.spellcasting,
   });
 
   revalidatePath(`/m/${worldSlug}`, "layout");

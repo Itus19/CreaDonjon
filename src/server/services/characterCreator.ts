@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import { defaultBlockDisplay } from "@/src/core/schemas/blocks/registry";
 import { createEntity } from "@/src/server/services/entities";
 import { insertBlock } from "@/src/server/repos/blocks";
@@ -30,6 +31,7 @@ export async function createCharacterFromWizard(
     name: string;
     character: CharacterBlockData;
     inventory: InventoryBlockData | undefined;
+    spellcasting: SpellcastingBlockData | undefined;
   }
 ): Promise<EntitySummary> {
   const entity = await createEntity(supabase, {
@@ -58,6 +60,19 @@ export async function createCharacterFromWizard(
       display: defaultBlockDisplay("inventory", "Inventaire"),
       data: params.inventory as Json,
       displayOrder: 2000,
+      visibilityLevel: "public",
+      visibilityScopeId: null,
+      createdBy: params.createdBy,
+    });
+  }
+
+  if (params.spellcasting && params.spellcasting.known.length > 0) {
+    await insertBlock(supabase, {
+      entityId: entity.id,
+      blockType: "spellcasting",
+      display: defaultBlockDisplay("spellcasting", "Incantation"),
+      data: params.spellcasting as Json,
+      displayOrder: 3000,
       visibilityLevel: "public",
       visibilityScopeId: null,
       createdBy: params.createdBy,
