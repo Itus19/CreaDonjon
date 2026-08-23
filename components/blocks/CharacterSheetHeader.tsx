@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { DerivedSheet } from "@/src/core/rules/sheet";
+import { ftToM } from "@/src/core/rules/encumbrance";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
 import type { ResolvedChipView } from "./useReferenceChips";
@@ -336,7 +337,7 @@ export default function CharacterSheetHeader({
           </div>
         </div>
         <StatBadge label="Initiative" value={`${sheet.abilities.dex.mod >= 0 ? "+" : ""}${sheet.abilities.dex.mod}`} />
-        <StatBadge label="Vitesse" value={`${sheet.speed.value} m`} />
+        <StatBadge label="Vitesse" value={`${ftToM(sheet.speed.value)} m`} />
         <StatBadge label="Perception passive" value={String(10 + sheet.skills.perception.mod)} />
         <StatBadge label="Maîtrise" value={`+${sheet.proficiencyBonus}`} />
         <StatBadge label="Dés de vie" value={sheet.hitPoints.hitDice} />

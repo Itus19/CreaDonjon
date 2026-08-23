@@ -7,14 +7,15 @@ import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
 import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import { RuleSelect, StatBadge, GENDER_OPTIONS, genderDropdownValue } from "./CharacterSheetHeader";
+import { ftToM } from "@/src/core/rules/encumbrance";
 import Dropdown from "@/components/shared/Dropdown";
 import InventoryTab from "./InventoryTab";
 import AbilityScoreStep, { EMPTY_ABILITY_POOL_ASSIGNMENT, type AbilityPoolAssignment } from "./characterCreatorSteps/AbilityScoreStep";
 import RemainingChoicesStep from "./characterCreatorSteps/RemainingChoicesStep";
 import LevelClassesStep from "./characterCreatorSteps/LevelClassesStep";
+import SpeciesStep from "./characterCreatorSteps/SpeciesStep";
 import { createCharacterFromWizardAction } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
 
-const SPECIES_TYPES = ["species"] as const;
 const BACKGROUND_TYPES = ["background"] as const;
 
 const EMPTY_CHARACTER: CharacterBlockData = {
@@ -160,24 +161,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
         ))}
       </div>
 
-      {step === 0 && (
-        <div className="flex flex-col gap-2">
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-            Espèce
-            <RuleSelect
-              worldSlug={worldSlug}
-              entryTypes={SPECIES_TYPES}
-              value={character.species?.kind === "rule" ? character.species.key : ""}
-              onChange={(key) => patchCharacter({ species: ruleRef(key) })}
-              emptyLabel="Aucune espèce"
-              chip={character.species ? buildChips.get(refIdentity(character.species)) : undefined}
-            />
-          </label>
-          {character.species && buildChips.get(refIdentity(character.species))?.summary && (
-            <p className="text-xs text-ink-muted">{buildChips.get(refIdentity(character.species))?.summary}</p>
-          )}
-        </div>
-      )}
+      {step === 0 && <SpeciesStep worldSlug={worldSlug} character={character} patchCharacter={patchCharacter} />}
 
       {step === 1 && <LevelClassesStep worldSlug={worldSlug} character={character} patchCharacter={patchCharacter} />}
 
@@ -250,7 +234,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
               </div>
             </div>
             <StatBadge label="Initiative" value={`${sheet.abilities.dex.mod >= 0 ? "+" : ""}${sheet.abilities.dex.mod}`} />
-            <StatBadge label="Vitesse" value={`${sheet.speed.value} m`} />
+            <StatBadge label="Vitesse" value={`${ftToM(sheet.speed.value)} m`} />
             <StatBadge label="Points de vie" value={String(sheet.hitPoints.max)} />
             <StatBadge label="Maîtrise" value={`+${sheet.proficiencyBonus}`} />
           </div>
