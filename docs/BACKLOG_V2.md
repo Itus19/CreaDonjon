@@ -139,7 +139,14 @@ Et c'est **la même infrastructure** : contexte déterministe, propositions vali
 - [ ] **Panneaux multiples** : deux fiches côte à côte, via `?avec=[slug]`. Le composant `<Panel>` a été isolé pour ça.
 - [ ] **Export et import de monde** en JSON. L'export omet le contenu `personal_reference` (`ruleset-personnel.md` §3.2).
 
-**Périmètre étendu sur demande explicite** : l'assistant de création de personnage (§B8) devient un outil partagé par trois points d'entrée, dans cet ordre — 1) outil complet dans l'écran MJ (`/mj/creation-personnage`), 2) bloc distinct sur une entité (édition actuelle de `PlayableCharacterSheet` conservée telle quelle), 3) onglet de montée de niveau sur la fiche jouable, activé au franchissement d'un seuil de PX. Le point 1 est fait : sept étapes (espèce, classe niveau 1, caractéristiques — tableau standard/achat de points/tirage —, historique, équipement, choix restants en liste, aperçu), même moteur de résolution que la fiche jouable (`useCharacterSheetContext`), crée une vraie entité + bloc `character` (+ `inventory` si équipé). Points 2 et 3 restent à faire ; le pré-remplissage par IA (§B8 « en surcouche ») est délibérément reporté au lot J.
+**Périmètre étendu sur demande explicite** : l'assistant de création de personnage (§B8) devient un outil partagé par trois points d'entrée, dans cet ordre — 1) outil complet dans l'écran MJ (`/mj/creation-personnage`), 2) bloc distinct sur une entité (édition actuelle de `PlayableCharacterSheet` conservée telle quelle), 3) onglet de montée de niveau sur la fiche jouable, activé au franchissement d'un seuil de PX. Le point 1 est fait et enrichi sur retour utilisateur (onze points corrigés/ajoutés après la première passe — voir historique des commits) :
+
+- Huit étapes au lieu de sept : espèce (boutons, lignées gérées comme les sous-classes), classe (boutons, niveau et multiclassage complets, sous-classe gatée par niveau), caractéristiques (tableau standard/achat de points/tirage, stats dérivées en direct), historique (boutons, vrai choix d'équipement contre or), équipement, choix restants (liste + acquis fixes), **sorts** (budget par classe incantatrice, lu dans `class_progression`), aperçu.
+- L'aperçu réutilise les vrais composants de la fiche jouable (en-tête + onglets Actions/Magie/Inventaire/Traits), pas une mini-fiche à part.
+- Bug pré-existant corrigé au passage : le cache client de `useWorldRuleEntries.ts` ne se rafraîchissait jamais au changement de ruleset actif (`RulesetSelector.tsx`).
+- Reste signalé, non corrigé : les résumés de chip (`ai_digest`) sont en anglais et en pieds — généré par `scripts/ingest-srd.ts`, hors périmètre de ce ticket.
+
+Points 2 et 3 restent à faire ; le pré-remplissage par IA (§B8 « en surcouche ») est délibérément reporté au lot J.
 
 ### V2-G4 — Thème dérivé de l'image · `M` · *issu de la revue de code*
 
