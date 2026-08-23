@@ -50,7 +50,7 @@ function ruleRef(key: string): BlockReference | null {
  * besoin d'un élément séparé pour la lisibilité — juste un petit lien vers
  * la fiche de règle à côté.
  */
-function RuleSelect({
+export function RuleSelect({
   worldSlug,
   entryTypes,
   value,
@@ -104,7 +104,7 @@ function RuleSelect({
  * utilisateur, l'ancien libellé-dans-l'encadré donnait des hauteurs
  * variables selon que le libellé tenait sur une ou deux lignes.
  */
-function StatBadge({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
+export function StatBadge({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
   return (
     <div className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1">
       <span

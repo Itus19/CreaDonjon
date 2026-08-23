@@ -23,6 +23,7 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
   const isProbabilites = pathname === `/m/${worldSlug}/mj/probabilites`;
   const isRencontres = pathname === `/m/${worldSlug}/mj/rencontres`;
   const isInitiative = pathname === `/m/${worldSlug}/mj/initiative`;
+  const isCreationPersonnage = pathname === `/m/${worldSlug}/mj/creation-personnage`;
 
   const reserved = [t("tablesAleatoires"), t("blocNotes")];
 
@@ -88,6 +89,16 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
           }`}
         >
           {t("initiative")}
+        </Link>
+
+        <Link
+          href={`/m/${worldSlug}/mj/creation-personnage`}
+          onClick={() => setOpen(false)}
+          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
+            isCreationPersonnage ? "bg-panel-raised text-accent" : "text-ink-soft"
+          }`}
+        >
+          {t("creationPersonnage")}
         </Link>
 
         <div className="mt-3 flex flex-col gap-1 border-t border-edge/60 pt-3">

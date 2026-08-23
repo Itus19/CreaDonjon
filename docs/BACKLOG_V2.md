@@ -139,6 +139,8 @@ Et c'est **la même infrastructure** : contexte déterministe, propositions vali
 - [ ] **Panneaux multiples** : deux fiches côte à côte, via `?avec=[slug]`. Le composant `<Panel>` a été isolé pour ça.
 - [ ] **Export et import de monde** en JSON. L'export omet le contenu `personal_reference` (`ruleset-personnel.md` §3.2).
 
+**Périmètre étendu sur demande explicite** : l'assistant de création de personnage (§B8) devient un outil partagé par trois points d'entrée, dans cet ordre — 1) outil complet dans l'écran MJ (`/mj/creation-personnage`), 2) bloc distinct sur une entité (édition actuelle de `PlayableCharacterSheet` conservée telle quelle), 3) onglet de montée de niveau sur la fiche jouable, activé au franchissement d'un seuil de PX. Le point 1 est fait : sept étapes (espèce, classe niveau 1, caractéristiques — tableau standard/achat de points/tirage —, historique, équipement, choix restants en liste, aperçu), même moteur de résolution que la fiche jouable (`useCharacterSheetContext`), crée une vraie entité + bloc `character` (+ `inventory` si équipé). Points 2 et 3 restent à faire ; le pré-remplissage par IA (§B8 « en surcouche ») est délibérément reporté au lot J.
+
 ### V2-G4 — Thème dérivé de l'image · `M` · *issu de la revue de code*
 
 Le socle est là — `tokens.css` en OKLCH, `data-mode` sur `<html>`, les quatre modes. **Il manque toute la chaîne d'extraction.**
