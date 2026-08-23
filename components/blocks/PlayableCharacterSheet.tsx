@@ -6,17 +6,15 @@ import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
-import { SKILLS, SKILL_ABILITIES, type Ability, type DerivedSheet, type ResolvedFeature } from "@/src/core/rules/sheet";
+import { SKILLS, SKILL_ABILITIES, type Ability, type DerivedSheet } from "@/src/core/rules/sheet";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { TraceStep } from "@/src/core/formula/evaluate";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
-import type { RemainingChoiceView, TraitGrantView } from "./useResolvedRuleset";
 import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import { itemRef } from "./inventoryItem";
 import Dropdown from "@/components/shared/Dropdown";
-import { SKILL_LABELS_FR, LANGUAGE_LABELS_FR } from "@/src/i18n/fr";
-import type { LanguageKey } from "@/src/core/rules/srdMapping";
+import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import CharacterSheetHeader from "./CharacterSheetHeader";
 import ActionsTab, { type PreparedSpellView } from "./ActionsTab";
 import MagicTab, { type KnownSpellView } from "./MagicTab";
@@ -149,35 +147,23 @@ export default function PlayableCharacterSheet({
    * modificateurs — une deuxieme implementation, meme approximative,
    * diverge tot ou tard).
    */
-  const { ruleset, remainingChoices, proficiencies, languages, equipment, weaponByKey, weight, cost, spellLevels, isMonk, sheet, traits } =
-    useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
-
-  /**
-   * Cle de reference reelle d'un trait (V1-C9). Les bundles espece/historique
-   * portent une cle synthetique identique a leur source (`species:tiefling`),
-   * pas une cle `ruleset_entries` — on retire le prefixe pour retomber sur la
-   * vraie cle resolvable (`tiefling`). Aptitudes de classe et dons accordes
-   * portent deja leur vraie cle dans `f.key` (`f.key !== f.source` alors).
-   */
-  function traitRefKey(f: ResolvedFeature): string {
-    return f.key === f.source && f.source.includes(":") ? f.source.slice(f.source.indexOf(":") + 1) : f.key;
-  }
-
-  /**
-   * Libelle de source d'un trait, pour affichage (V1-C9) : nom traduit de
-   * l'espece/l'historique/la classe qui l'accorde plutot que le prefixe brut
-   * (`species:tiefling` -> « Demi-elfe », `class:fighter` -> « Guerrier »).
-   * Pour le bundle espece/historique lui-meme, source et titre coincident —
-   * le SRD ne decoupe pas les traits raciaux en entrees individuelles, donc
-   * pas de distinction plus fine possible avec les donnees actuelles.
-   */
-  function traitSourceLabel(f: ResolvedFeature): string {
-    if (f.source.startsWith("class:")) return ruleset.classes[f.source.slice(6)]?.label ?? f.source;
-    return ruleset.features[f.source]?.label ?? f.source;
-  }
-
-  const traitRefs = useMemo(() => traits.map((f) => ({ kind: "rule" as const, key: traitRefKey(f) })), [traits]);
-  const traitChips = useReferenceChips(worldSlug, traitRefs);
+  const {
+    remainingChoices,
+    proficiencies,
+    equipment,
+    weaponByKey,
+    weight,
+    cost,
+    spellLevels,
+    isMonk,
+    sheet,
+    traits,
+    traitChips,
+    traitSourceLabel,
+    skillChoices,
+    languageChoices,
+    allLanguages,
+  } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
 
   const knownSpellRefs = useMemo(
     () => (spellcasting?.known ?? []).map((k) => k.ref),
@@ -227,50 +213,6 @@ export default function PlayableCharacterSheet({
     [inventory]
   );
   const itemChips = useReferenceChips(worldSlug, inventoryRefs);
-
-  /**
-   * Competences liees a un choix non resolu (V1-C4 suite, sur retour
-   * utilisateur) : evite la double UI "Choix restants" + liste de
-   * competences — les ronds de la liste deviennent le point d'interaction
-   * unique. Filtre sur `kind` (V1-C7) : les choix de langues ont leur propre
-   * liste d'options (SORTED_LANGUAGES, onglet Traits), pas la liste fixe des
-   * competences — les deux ne doivent jamais se croiser dans cette map.
-   */
-  const skillChoices = useMemo(() => {
-    const map = new Map<string, RemainingChoiceView>();
-    for (const choice of remainingChoices) {
-      if (choice.kind !== "skill") continue;
-      for (const option of choice.options) {
-        if (!map.has(option)) map.set(option, choice);
-      }
-    }
-    return map;
-  }, [remainingChoices]);
-
-  /** Meme motif que `skillChoices`, pour les choix de langues (V1-C7) — rendu dans l'onglet Traits, a cote des langues fixes. */
-  const languageChoices = useMemo(() => {
-    const map = new Map<string, RemainingChoiceView>();
-    for (const choice of remainingChoices) {
-      if (choice.kind !== "language") continue;
-      for (const option of choice.options) {
-        if (!map.has(option)) map.set(option, choice);
-      }
-    }
-    return map;
-  }, [remainingChoices]);
-
-  /** Langues fixes (espece/historique, V1-C6) + langues choisies (V1-C7) — meme liste affichee dans l'onglet Traits, source deduite du libellé du choix (« Acolyte — langues » -> « Acolyte »). */
-  const allLanguages = useMemo(() => {
-    const chosenGrants: TraitGrantView[] = [];
-    for (const choice of new Set(languageChoices.values())) {
-      const chosen = (character.choices[choice.id] as string[] | undefined) ?? [];
-      const source = choice.label.replace(/ — langues$/, "");
-      for (const key of chosen) {
-        chosenGrants.push({ key, name: LANGUAGE_LABELS_FR[key as LanguageKey] ?? key, source });
-      }
-    }
-    return [...languages, ...chosenGrants];
-  }, [languages, languageChoices, character.choices]);
 
   async function reloadRemote() {
     const res = await fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId ?? ""}`);

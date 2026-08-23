@@ -8,8 +8,11 @@ import { characterSheet, type CharacterBuild, type DerivedSheet, type EquippedIt
 import { armorAcModifier, mapChosenSkillModifiers, type ArmorData, type ItemCost, type WeaponData } from "@/src/core/rules/srdMapping";
 import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { useResolvedRuleset, type RemainingChoiceView, type TraitGrantView } from "./useResolvedRuleset";
+import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
 import { itemLabel, itemRef } from "./inventoryItem";
 import type { ResolvedRuleset } from "@/src/core/rules/sheet";
+import { LANGUAGE_LABELS_FR } from "@/src/i18n/fr";
+import type { LanguageKey } from "@/src/core/rules/srdMapping";
 
 export interface CharacterSheetContext {
   ruleset: ResolvedRuleset;
@@ -27,6 +30,27 @@ export interface CharacterSheetContext {
   build: CharacterBuild;
   sheet: DerivedSheet;
   traits: ResolvedFeature[];
+  /** Onglet Traits (V1-C9) : chips resolus des memes traits, pour un lien + resume vers leur fiche de regle. */
+  traitChips: Map<string, ResolvedChipView>;
+  /** Libelle de source d'un trait pour affichage — nom traduit de l'espece/l'historique/la classe qui l'accorde. */
+  traitSourceLabel: (f: ResolvedFeature) => string;
+  /** Choix de competences non resolus, indexes par option (V1-C4 suite) — memes cles que la liste fixe de competences. */
+  skillChoices: Map<string, RemainingChoiceView>;
+  /** Meme motif que `skillChoices`, pour les choix de langues (V1-C7). */
+  languageChoices: Map<string, RemainingChoiceView>;
+  /** Langues fixes + langues choisies (V1-C7), une seule liste pour l'affichage. */
+  allLanguages: TraitGrantView[];
+}
+
+/**
+ * Cle de reference reelle d'un trait (V1-C9). Les bundles espece/historique
+ * portent une cle synthetique identique a leur source (`species:tiefling`),
+ * pas une cle `ruleset_entries` — on retire le prefixe pour retomber sur la
+ * vraie cle resolvable (`tiefling`). Aptitudes de classe et dons accordes
+ * portent deja leur vraie cle dans `f.key` (`f.key !== f.source` alors).
+ */
+function traitRefKey(f: ResolvedFeature): string {
+  return f.key === f.source && f.source.includes(":") ? f.source.slice(f.source.indexOf(":") + 1) : f.key;
 }
 
 /** Six 10 par defaut (aucun modificateur) — jamais affiche tel quel : `InventoryPanel` gate ses lignes Attaquer/Degats derriere `showAttackInfo`, jamais deduit de ce defaut. */
@@ -137,6 +161,48 @@ export function useCharacterSheetContext(
 
   const traits = Object.values(ruleset.features);
 
+  const traitRefs = useMemo(() => traits.map((f) => ({ kind: "rule" as const, key: traitRefKey(f) })), [traits]);
+  const traitChips = useReferenceChips(worldSlug, traitRefs);
+
+  function traitSourceLabel(f: ResolvedFeature): string {
+    if (f.source.startsWith("class:")) return ruleset.classes[f.source.slice(6)]?.label ?? f.source;
+    return ruleset.features[f.source]?.label ?? f.source;
+  }
+
+  const skillChoices = useMemo(() => {
+    const map = new Map<string, RemainingChoiceView>();
+    for (const choice of remainingChoices) {
+      if (choice.kind !== "skill") continue;
+      for (const option of choice.options) {
+        if (!map.has(option)) map.set(option, choice);
+      }
+    }
+    return map;
+  }, [remainingChoices]);
+
+  const languageChoices = useMemo(() => {
+    const map = new Map<string, RemainingChoiceView>();
+    for (const choice of remainingChoices) {
+      if (choice.kind !== "language") continue;
+      for (const option of choice.options) {
+        if (!map.has(option)) map.set(option, choice);
+      }
+    }
+    return map;
+  }, [remainingChoices]);
+
+  const allLanguages = useMemo(() => {
+    const chosenGrants: TraitGrantView[] = [];
+    for (const choice of new Set(languageChoices.values())) {
+      const chosen = (character?.choices[choice.id] as string[] | undefined) ?? [];
+      const source = choice.label.replace(/ — langues$/, "");
+      for (const key of chosen) {
+        chosenGrants.push({ key, name: LANGUAGE_LABELS_FR[key as LanguageKey] ?? key, source });
+      }
+    }
+    return [...languages, ...chosenGrants];
+  }, [languages, languageChoices, character?.choices]);
+
   return {
     ruleset,
     remainingChoices,
@@ -153,5 +219,10 @@ export function useCharacterSheetContext(
     build,
     sheet,
     traits,
+    traitChips,
+    traitSourceLabel,
+    skillChoices,
+    languageChoices,
+    allLanguages,
   };
 }
