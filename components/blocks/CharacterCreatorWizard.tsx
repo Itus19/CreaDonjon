@@ -1,12 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
-import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
-import { useReferenceChips, refIdentity } from "./useReferenceChips";
-import { RuleSelect, StatBadge, GENDER_OPTIONS, genderDropdownValue } from "./CharacterSheetHeader";
+import { StatBadge, GENDER_OPTIONS, genderDropdownValue } from "./CharacterSheetHeader";
 import { ftToM } from "@/src/core/rules/encumbrance";
 import Dropdown from "@/components/shared/Dropdown";
 import InventoryTab from "./InventoryTab";
@@ -14,9 +12,8 @@ import AbilityScoreStep, { EMPTY_ABILITY_POOL_ASSIGNMENT, type AbilityPoolAssign
 import RemainingChoicesStep from "./characterCreatorSteps/RemainingChoicesStep";
 import LevelClassesStep from "./characterCreatorSteps/LevelClassesStep";
 import SpeciesStep from "./characterCreatorSteps/SpeciesStep";
+import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreatorSteps/BackgroundStep";
 import { createCharacterFromWizardAction } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
-
-const BACKGROUND_TYPES = ["background"] as const;
 
 const EMPTY_CHARACTER: CharacterBlockData = {
   __v: 1,
@@ -40,10 +37,6 @@ const EMPTY_INVENTORY: InventoryBlockData = {
 
 const STEPS = ["Espèce", "Classe", "Caractéristiques", "Historique", "Équipement", "Choix restants", "Aperçu"] as const;
 
-function ruleRef(key: string): BlockReference | null {
-  return key.trim() ? { kind: "rule", key: key.trim() } : null;
-}
-
 /**
  * Assistant de creation de personnage (V2-G1, ecran MJ — sur demande
  * explicite : "d'abord un outil complet dans l'ecran MJ avant de
@@ -66,6 +59,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
   const [character, setCharacter] = useState<CharacterBlockData>(EMPTY_CHARACTER);
   const [inventory, setInventory] = useState<InventoryBlockData>(EMPTY_INVENTORY);
   const [abilityPool, setAbilityPool] = useState<AbilityPoolAssignment>(EMPTY_ABILITY_POOL_ASSIGNMENT);
+  const [bgEquipmentChoice, setBgEquipmentChoice] = useState<BackgroundEquipmentChoice | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,18 +73,6 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
     inventory,
     undefined
   );
-
-  const buildRefs = useMemo(() => {
-    const refs: BlockReference[] = [];
-    if (character.species) refs.push(character.species);
-    if (character.background) refs.push(character.background);
-    for (const c of character.classes) {
-      if (c.class.kind === "rule" && c.class.key) refs.push(c.class);
-      if (c.subclass) refs.push(c.subclass);
-    }
-    return refs;
-  }, [character.species, character.background, character.classes]);
-  const buildChips = useReferenceChips(worldSlug, buildRefs);
 
   async function submit() {
     setBusy(true);
@@ -176,22 +158,15 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
       )}
 
       {step === 3 && (
-        <div className="flex flex-col gap-2">
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-            Historique
-            <RuleSelect
-              worldSlug={worldSlug}
-              entryTypes={BACKGROUND_TYPES}
-              value={character.background?.kind === "rule" ? character.background.key : ""}
-              onChange={(key) => patchCharacter({ background: ruleRef(key) })}
-              emptyLabel="Aucun historique"
-              chip={character.background ? buildChips.get(refIdentity(character.background)) : undefined}
-            />
-          </label>
-          {character.background && buildChips.get(refIdentity(character.background))?.summary && (
-            <p className="text-xs text-ink-muted">{buildChips.get(refIdentity(character.background))?.summary}</p>
-          )}
-        </div>
+        <BackgroundStep
+          worldSlug={worldSlug}
+          character={character}
+          patchCharacter={patchCharacter}
+          inventory={inventory}
+          onUpdateInventory={setInventory}
+          choice={bgEquipmentChoice}
+          onChooseOption={setBgEquipmentChoice}
+        />
       )}
 
       {step === 4 && (
