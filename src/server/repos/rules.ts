@@ -263,6 +263,22 @@ export async function getRulesetEntryByKey(
   return data;
 }
 
+/**
+ * Un lot de cles/ids en plusieurs requetes PARALLELES plutot que
+ * sequentielles (V2-G1, retour utilisateur : "lenteur generale" — chaque
+ * paire de lots attendait la precedente avant de lancer la suivante, un
+ * total qui peut depasser dix allers-retours des qu'un ruleset officiel
+ * approche ou depasse le millier d'entrees, mesure a ~4s pour le SRD 2024
+ * complet). Chaque lot ne depend d'aucun autre : les lancer ensemble ne
+ * change rien au resultat, seulement au temps d'attente.
+ */
+async function fetchBatched<T, R>(items: T[], batchSize: number, fetchBatch: (batch: T[]) => Promise<R[]>): Promise<R[]> {
+  const batches: T[][] = [];
+  for (let i = 0; i < items.length; i += batchSize) batches.push(items.slice(i, i + batchSize));
+  const results = await Promise.all(batches.map(fetchBatch));
+  return results.flat();
+}
+
 // Meme borne que TRANSLATION_BATCH_SIZE plus bas : defensif, les cles
 // ciblees par les renvois d'une seule entree restent en pratique tres en
 // dessous (quelques dizaines pour une classe), mais la marge ne coute rien.
@@ -280,18 +296,15 @@ export async function listRulesetEntriesByKeys(
   rulesetId: string,
   entryKeys: string[]
 ): Promise<RulesetEntryRow[]> {
-  const all: RulesetEntryRow[] = [];
-  for (let i = 0; i < entryKeys.length; i += ENTRY_KEYS_BATCH_SIZE) {
-    const batch = entryKeys.slice(i, i + ENTRY_KEYS_BATCH_SIZE);
+  return fetchBatched(entryKeys, ENTRY_KEYS_BATCH_SIZE, async (batch) => {
     const { data, error } = await supabase
       .from("ruleset_entries")
       .select("id, ruleset_id, entry_key, entry_type, source_attribution, source_raw")
       .eq("ruleset_id", rulesetId)
       .in("entry_key", batch);
     if (error) throw new Error(error.message);
-    all.push(...data);
-  }
-  return all;
+    return data;
+  });
 }
 
 export interface RulesetEntrySummaryRow {
@@ -321,18 +334,15 @@ export async function listRulesetEntryChipsByKeys(
   entryKeys: string[]
 ): Promise<RulesetEntryChipRow[]> {
   if (entryKeys.length === 0) return [];
-  const all: RulesetEntryChipRow[] = [];
-  for (let i = 0; i < entryKeys.length; i += ENTRY_KEYS_BATCH_SIZE) {
-    const batch = entryKeys.slice(i, i + ENTRY_KEYS_BATCH_SIZE);
+  return fetchBatched(entryKeys, ENTRY_KEYS_BATCH_SIZE, async (batch) => {
     const { data, error } = await supabase
       .from("ruleset_entries")
       .select("id, entry_key, entry_type, source_raw, ai_digest")
       .eq("ruleset_id", rulesetId)
       .in("entry_key", batch);
     if (error) throw new Error(error.message);
-    all.push(...data);
-  }
-  return all;
+    return data;
+  });
 }
 
 const LIST_PAGE_SIZE = 1000;
@@ -346,22 +356,38 @@ const LIST_PAGE_SIZE = 1000;
  * la liste, sans erreur, juste des regles absentes au hasard de l'ordre
  * renvoye (constate en verifiant dans le navigateur : Fireball manquait).
  */
+/**
+ * Marge de pages tirees en parallele apres la premiere (V2-G1, retour
+ * utilisateur : "lenteur generale" — /rule-entries prenait ~4s pour le SRD
+ * 2024, 1904 entrees en pages sequentielles). Le total est inconnu tant que
+ * la premiere page n'est pas revenue (on ne sait pas s'il y en a une
+ * deuxieme) ; au-dela, largement assez pour tout ruleset reel (9 pages
+ * de plus = jusqu'a 10 000 entrees) — quelques pages vides en trop pres de
+ * la limite reelle coutent moins cher qu'un aller-retour sequentiel de plus.
+ */
+const MAX_EXTRA_PAGES = 9;
+
 export async function listRulesetEntries(
   supabase: TypedClient,
   rulesetId: string
 ): Promise<RulesetEntrySummaryRow[]> {
-  const all: RulesetEntrySummaryRow[] = [];
-  for (let from = 0; ; from += LIST_PAGE_SIZE) {
+  const fetchPage = async (from: number) => {
     const { data, error } = await supabase
       .from("ruleset_entries")
       .select("id, entry_key, entry_type, source_raw")
       .eq("ruleset_id", rulesetId)
       .range(from, from + LIST_PAGE_SIZE - 1);
     if (error) throw new Error(error.message);
-    all.push(...data);
-    if (data.length < LIST_PAGE_SIZE) break;
-  }
-  return all;
+    return data;
+  };
+
+  const first = await fetchPage(0);
+  if (first.length < LIST_PAGE_SIZE) return first;
+
+  const extraPages = await Promise.all(
+    Array.from({ length: MAX_EXTRA_PAGES }, (_, i) => fetchPage((i + 1) * LIST_PAGE_SIZE))
+  );
+  return [first, ...extraPages].flat();
 }
 
 export interface EntryTranslationRow {
@@ -409,18 +435,15 @@ export async function listEntryTranslationsWithBlocks(
   locale: string
 ): Promise<EntryTranslationWithBlocksRow[]> {
   if (entryIds.length === 0) return [];
-  const all: EntryTranslationWithBlocksRow[] = [];
-  for (let i = 0; i < entryIds.length; i += TRANSLATION_BATCH_SIZE) {
-    const batch = entryIds.slice(i, i + TRANSLATION_BATCH_SIZE);
+  return fetchBatched(entryIds, TRANSLATION_BATCH_SIZE, async (batch) => {
     const { data, error } = await supabase
       .from("ruleset_entry_translations")
       .select("entry_id, locale, name, source, blocks")
       .eq("locale", locale)
       .in("entry_id", batch);
     if (error) throw new Error(error.message);
-    all.push(...data);
-  }
-  return all;
+    return data;
+  });
 }
 
 /** Toutes les traductions disponibles pour un ensemble d'entrees (barre laterale) : pagine l'IN, meme raison que listRulesetEntries. */
@@ -429,18 +452,15 @@ export async function listTranslationsForEntries(
   entryIds: string[],
   locale: string
 ): Promise<EntryTranslationRow[]> {
-  const all: EntryTranslationRow[] = [];
-  for (let i = 0; i < entryIds.length; i += TRANSLATION_BATCH_SIZE) {
-    const batch = entryIds.slice(i, i + TRANSLATION_BATCH_SIZE);
+  return fetchBatched(entryIds, TRANSLATION_BATCH_SIZE, async (batch) => {
     const { data, error } = await supabase
       .from("ruleset_entry_translations")
       .select("entry_id, locale, name, source")
       .eq("locale", locale)
       .in("entry_id", batch);
     if (error) throw new Error(error.message);
-    all.push(...data);
-  }
-  return all;
+    return data;
+  });
 }
 
 /** Ecriture en lot (script de traduction) : une ligne par (entry_id, locale), jamais deux appels distincts pour la meme cle (primary key composite, upsert). */
@@ -489,18 +509,15 @@ export async function listBlocksForRulesetEntry(
  */
 export async function listBlocksForRulesetEntries(supabase: TypedClient, entryIds: string[]): Promise<RulesetEntryBlockRow[]> {
   if (entryIds.length === 0) return [];
-  const all: RulesetEntryBlockRow[] = [];
-  for (let i = 0; i < entryIds.length; i += ENTRY_KEYS_BATCH_SIZE) {
-    const batch = entryIds.slice(i, i + ENTRY_KEYS_BATCH_SIZE);
+  return fetchBatched(entryIds, ENTRY_KEYS_BATCH_SIZE, async (batch) => {
     const { data, error } = await supabase
       .from("ruleset_entry_blocks")
       .select("id, entry_id, block_type, schema_version, display, data, display_order")
       .in("entry_id", batch)
       .order("display_order");
     if (error) throw new Error(error.message);
-    all.push(...data);
-  }
-  return all;
+    return data;
+  });
 }
 
 export interface RulesetEntryRefRow {

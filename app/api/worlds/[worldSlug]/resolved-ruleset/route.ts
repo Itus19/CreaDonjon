@@ -2,14 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { resolveRulesetSchema } from "@/lib/resolvedRuleset/schemas";
-import {
-  assembleResolvedRuleset,
-  resolveEquipmentArmorData,
-  resolveEquipmentCost,
-  resolveEquipmentWeaponData,
-  resolveEquipmentWeight,
-  resolveSpellLevels,
-} from "@/src/server/services/resolvedRuleset";
+import { assembleResolvedRuleset, resolveEquipmentData, resolveSpellLevels } from "@/src/server/services/resolvedRuleset";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import type { Locale } from "@/src/i18n/request";
@@ -56,13 +49,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     );
   }
 
-  const [assembled, equipment, weaponByKey, weight, cost, spellLevels] = await Promise.all([
+  const [assembled, equipmentData, spellLevels] = await Promise.all([
     assembleResolvedRuleset(supabase, rulesetId, parsed.data, locale),
-    resolveEquipmentArmorData(supabase, rulesetId, parsed.data.equipmentKeys ?? []),
-    resolveEquipmentWeaponData(supabase, rulesetId, parsed.data.equipmentKeys ?? []),
-    resolveEquipmentWeight(supabase, rulesetId, parsed.data.equipmentKeys ?? []),
-    resolveEquipmentCost(supabase, rulesetId, parsed.data.equipmentKeys ?? []),
+    resolveEquipmentData(supabase, rulesetId, parsed.data.equipmentKeys ?? []),
     resolveSpellLevels(supabase, rulesetId, parsed.data.spellKeys ?? []),
   ]);
+  const { armor: equipment, weapon: weaponByKey, weight, cost } = equipmentData;
   return NextResponse.json({ ...assembled, equipment, weaponByKey, weight, cost, spellLevels }, { status: 200 });
 }

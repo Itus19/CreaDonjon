@@ -32,6 +32,7 @@ import {
   DAMAGE_TYPE_LABELS_FR,
   ITEM_RARITY_LABELS_FR,
   LANGUAGE_LABELS_FR,
+  MAGIC_SCHOOL_LABELS_FR,
   SENSE_LABELS_FR,
   SIZE_LABELS_FR,
   SKILL_LABELS_FR,
@@ -44,6 +45,7 @@ import MonsterRollButton from "./MonsterRollButton";
 import type {
   ResolvedBackgroundBlockData,
   ResolvedBackgroundEquipmentOption,
+  ResolvedClassEquipmentBlockData,
   ResolvedItemPropertiesBlockData,
   ResolvedSpeciesTraitsBlockData,
   ResolvedSubclassSlotBlockData,
@@ -216,7 +218,7 @@ function cellValue(value: unknown): string {
 function SpellCasting({ data }: { data: SpellCastingBlockData }) {
   const items = [
     { label: "Niveau", value: data.level === 0 ? "Tour de magie" : String(data.level) },
-    { label: "Ecole", value: data.school },
+    { label: "Ecole", value: MAGIC_SCHOOL_LABELS_FR[data.school] ?? data.school },
     { label: "Temps d'incantation", value: data.casting_time },
     { label: "Portee", value: data.range },
     {
@@ -1113,6 +1115,47 @@ function Background({ data, worldSlug }: { data: ResolvedBackgroundBlockData; wo
 }
 
 /**
+ * Equipement de depart d'une classe (V2-G1, point 9 du retour utilisateur)
+ * — `fixed` (toujours accorde, simple liste) puis un encadre `Choix N` par
+ * element de `choices`, chacun affichant ses options en cartes
+ * `BackgroundEquipmentCard` (memes cartes qu'un historique : un choix de
+ * classe n'est jamais qu'un choix d'historique avec plusieurs choix
+ * INDEPENDANTS au lieu d'un seul, jamais une deuxieme mise en page).
+ */
+function ClassEquipment({ data, worldSlug }: { data: ResolvedClassEquipmentBlockData; worldSlug: string }) {
+  return (
+    <div className="flex flex-col gap-4">
+      {data.fixed.length > 0 && (
+        <div className="flex flex-col gap-1">
+          {data.fixed.map((item, i) => (
+            <div key={i} className="flex items-baseline gap-1.5 text-sm">
+              <span className="mech shrink-0 text-ink-muted">×{item.quantity}</span>
+              {item.ref ? (
+                <Link href={`/m/${worldSlug}/regles/${item.ref.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
+                  {item.resolved_label}
+                </Link>
+              ) : (
+                <span>{item.resolved_label}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {data.choices.map((choice, i) => (
+        <div key={i} className="flex flex-col gap-2">
+          <span className="text-xs font-bold uppercase tracking-wide text-ink">Choix {i + 1}</span>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {choice.options.map((opt, j) => (
+              <BackgroundEquipmentCard key={j} option={opt} worldSlug={worldSlug} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
  * Repartiteur par block_type -> mise en page generique (specs/regles-blocs.md
  * §4-5). Aucun composant par type de bloc pour l'affichage lui-meme, les
  * six mises en page suffisent ; ce fichier ne fait que traduire chaque bloc
@@ -1153,6 +1196,7 @@ export function renderBlockData(
   if (blockType === "spellcasting_progression") return <SpellcastingProgression data={data as SpellcastingProgressionBlockData} />;
   if (blockType === "subclass_slot") return <SubclassSlot data={data as ResolvedSubclassSlotBlockData} worldSlug={worldSlug} />;
   if (blockType === "background") return <Background data={data as ResolvedBackgroundBlockData} worldSlug={worldSlug} />;
+  if (blockType === "class_equipment") return <ClassEquipment data={data as ResolvedClassEquipmentBlockData} worldSlug={worldSlug} />;
   if (blockType === "condition_effects") return <ConditionEffects data={data as ConditionEffectsBlockData} />;
   if (blockType === "subclass_features") return <SubclassFeatures data={data as SubclassFeaturesBlockData} />;
   return null;

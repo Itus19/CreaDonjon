@@ -35,13 +35,14 @@ import {
 } from "@/src/core/rules/srdMapping";
 import type { ArmorBlockData, ItemPropertiesBlockData, WeaponBlockData } from "@/src/core/schemas/rule-blocks";
 import {
-  getEntryTranslation,
-  listBlocksForRulesetEntry,
+  listBlocksForRulesetEntries,
+  listEntryTranslationsWithBlocks,
+  listRulesetEntriesByKeys,
   listRulesetEntryChipsByKeys,
   listTranslationsForEntries,
   type RulesetEntryRow,
 } from "@/src/server/repos/rules";
-import { entryNameFrom, findEntryInRulesetChain, resolveEntryBlocksInRuleset } from "./rules";
+import { entryNameFrom, resolveEntryBlocksInRuleset, walkRulesetChain } from "./rules";
 import { WEAPON_ARMOR_PROFICIENCY_LABELS_FR } from "@/src/i18n/fr";
 
 type TypedClient = SupabaseClient<Database>;
@@ -76,32 +77,81 @@ export interface AssembledRuleset {
   languages: TraitGrant[];
 }
 
-async function resolveEntryName(supabase: TypedClient, entry: RulesetEntryRow, locale: Locale): Promise<string> {
-  if (locale === "en") return entryNameFrom(entry);
-  const translation = await getEntryTranslation(supabase, entry.id, locale);
-  return translation?.name ?? entryNameFrom(entry);
+interface BatchEntry {
+  entry: RulesetEntryRow;
+  name: string;
+  fields: Record<string, unknown>;
+  progressionRows: ProgressionRow[];
 }
 
-async function fetchEntryFields(
+/**
+ * `fetchEntryFields`+`resolveEntryName` fusionnes puis batches pour un LOT
+ * de cles (V2-G1 suite, retour utilisateur : "lenteur generale" persistante
+ * meme apres le premier correctif N+1 de l'assistant) — mesure : assembler
+ * un personnage a une seule classe prenait ~1.3s, chaque espece/historique/
+ * classe/sort refaisant sa PROPRE remontee de chaine de rulesets (2-4
+ * allers-retours chacune), jamais partagee entre elles ni avec les autres.
+ * Meme simplification assumee que `fetchEntryFields` avant lui : PAS de
+ * resolution de surcharge de variante — l'espece/l'historique/la classe/le
+ * sort choisi par un joueur ne sont jamais des fiches maison (seul un OBJET
+ * d'equipement peut l'etre, cf. `fetchEquipmentBlocks` plus bas, qui reste
+ * override-aware, une remontee bien plus couteuse justifiee par ce besoin
+ * reel).
+ */
+async function fetchEntriesBatch(
   supabase: TypedClient,
   rulesetId: string,
-  key: string
-): Promise<{ entry: RulesetEntryRow; fields: Record<string, unknown>; progressionRows: ProgressionRow[] } | null> {
-  const entry = await findEntryInRulesetChain(supabase, rulesetId, key);
-  if (!entry) return null;
+  keys: string[],
+  locale: Locale
+): Promise<Map<string, BatchEntry>> {
+  const result = new Map<string, BatchEntry>();
+  const remaining = new Set(keys.filter((k) => k.trim() !== ""));
+  if (remaining.size === 0) return result;
 
-  const blocks = await listBlocksForRulesetEntry(supabase, entry.id);
-  const customTable = blocks.find((b) => b.block_type === "custom_table");
-  const progression = blocks.find((b) => b.block_type === "class_progression");
+  const chain = await walkRulesetChain(supabase, rulesetId);
 
-  const fields = customTable
-    ? parseCustomTableFields((customTable.data as unknown as { rows: CustomTableRow[] }).rows)
-    : {};
-  const progressionRows = progression
-    ? ((progression.data as unknown as { rows: ProgressionRow[] }).rows ?? [])
-    : [];
+  for (const link of chain) {
+    if (remaining.size === 0) break;
+    const entries = await listRulesetEntriesByKeys(supabase, link.rulesetId, [...remaining]);
+    if (entries.length === 0) continue;
 
-  return { entry, fields, progressionRows };
+    const entryIds = entries.map((e) => e.id);
+    const [blockRows, translations] = await Promise.all([
+      listBlocksForRulesetEntries(supabase, entryIds),
+      locale !== "en" ? listEntryTranslationsWithBlocks(supabase, entryIds, locale) : Promise.resolve([]),
+    ]);
+
+    const translationByEntryId = new Map(translations.map((t) => [t.entry_id, t]));
+    const blocksByEntryId = new Map<string, typeof blockRows>();
+    for (const row of blockRows) {
+      const list = blocksByEntryId.get(row.entry_id) ?? [];
+      list.push(row);
+      blocksByEntryId.set(row.entry_id, list);
+    }
+
+    for (const entry of entries) {
+      const translation = translationByEntryId.get(entry.id);
+      const overrideBlocks = (translation?.blocks ?? {}) as Record<string, unknown>;
+      const rows = blocksByEntryId.get(entry.id) ?? [];
+      const customTableRow = rows.find((r) => r.block_type === "custom_table");
+      const progressionRow = rows.find((r) => r.block_type === "class_progression");
+
+      const customTableData = (overrideBlocks.custom_table ?? customTableRow?.data) as { rows: CustomTableRow[] } | undefined;
+      const progressionData = (overrideBlocks.class_progression ?? progressionRow?.data) as
+        | { rows: ProgressionRow[] }
+        | undefined;
+
+      result.set(entry.entry_key, {
+        entry,
+        name: translation?.name ?? entryNameFrom(entry),
+        fields: customTableData ? parseCustomTableFields(customTableData.rows) : {},
+        progressionRows: progressionData?.rows ?? [],
+      });
+      remaining.delete(entry.entry_key);
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -127,10 +177,17 @@ export async function assembleResolvedRuleset(
   const proficiencies: TraitGrant[] = [];
   const languages: TraitGrant[] = [];
 
+  const topKeys = [
+    ...(selection.species ? [selection.species] : []),
+    ...(selection.background ? [selection.background] : []),
+    ...selection.classes.map((c) => c.key),
+  ];
+  const batch = await fetchEntriesBatch(supabase, rulesetId, topKeys, locale);
+
   if (selection.species) {
-    const found = await fetchEntryFields(supabase, rulesetId, selection.species);
+    const found = batch.get(selection.species);
     if (found) {
-      const label = await resolveEntryName(supabase, found.entry, locale);
+      const label = found.name;
       const key = `species:${selection.species}`;
       features[key] = { key, label, source: key, modifiers: mapSpeciesModifiers(found.fields, key, label) };
       proficiencies.push(...mapProficiencies(found.fields).map((p) => ({ ...p, source: label })));
@@ -139,9 +196,9 @@ export async function assembleResolvedRuleset(
   }
 
   if (selection.background) {
-    const found = await fetchEntryFields(supabase, rulesetId, selection.background);
+    const found = batch.get(selection.background);
     if (found) {
-      const label = await resolveEntryName(supabase, found.entry, locale);
+      const label = found.name;
       const key = `background:${selection.background}`;
       features[key] = { key, label, source: key, modifiers: mapBackgroundModifiers(found.fields, key, label) };
       proficiencies.push(...mapProficiencies(found.fields).map((p) => ({ ...p, source: label })));
@@ -163,10 +220,10 @@ export async function assembleResolvedRuleset(
   }
 
   for (const cl of selection.classes) {
-    const found = await fetchEntryFields(supabase, rulesetId, cl.key);
+    const found = batch.get(cl.key);
     if (!found) continue;
 
-    const label = await resolveEntryName(supabase, found.entry, locale);
+    const label = found.name;
     const core = mapClassCore(found.fields);
     const spellAbility = mapClassSpellcastingAbility(found.fields);
     const slotsByLevel = extractSlotsByLevel(found.progressionRows);
@@ -194,58 +251,72 @@ export async function assembleResolvedRuleset(
     }
   }
 
-  if (extraFeatureKeys.size > 0) {
-    const keys = [...extraFeatureKeys.keys()];
-    const chips = await listRulesetEntryChipsByKeys(supabase, rulesetId, keys);
-    const translationByEntryId = new Map<string, string>();
-    if (locale !== "en" && chips.length > 0) {
-      const translations = await listTranslationsForEntries(supabase, chips.map((c) => c.id), locale);
-      for (const t of translations) translationByEntryId.set(t.entry_id, t.name);
-    }
-    for (const chip of chips) {
-      features[chip.entry_key] = {
-        key: chip.entry_key,
-        label: translationByEntryId.get(chip.id) ?? entryNameFrom(chip),
-        source: extraFeatureKeys.get(chip.entry_key) ?? "class:inconnue",
-        modifiers: [],
-        prerequisites: mapPrerequisites(chip.source_raw),
-      };
-    }
-    // Cle sans entree resolue (rare : feature non importee) — conservee
-    // quand meme, label = cle brute, pour que build.featureKeys puisse la
-    // referencer sans faire echouer characterSheet().
-    for (const fk of keys) {
-      if (!features[fk]) features[fk] = { key: fk, label: fk, source: extraFeatureKeys.get(fk) ?? "class:inconnue", modifiers: [] };
-    }
+  // Regle universelle 2024 (retour utilisateur, V2-G1, point 3) : le SRD
+  // 5.2.1 ne rattache plus AUCUNE langue a l'espece ni a l'historique
+  // (contrairement a 2014, qui les accorde par espece — `mapSpeciesModifiers`
+  // au-dessus) : la regle generale du personnage s'applique alors ("Choisissez
+  // vos langues", data/srd/fr-source/srd-5.2.1-fr.txt : "Le commun, plus deux
+  // langues determinees au hasard ou choisies"). Jamais tabulee nulle part
+  // dans le SRD structure faute d'un champ dedie, donc jamais deduite d'une
+  // fiche — codee ici comme repli explicite. Ne se declenche jamais sous une
+  // regle qui fournit deja ses propres langues (2014) : `languages` porte
+  // alors deja au moins le Commun via l'espece, et ce bloc reste muet.
+  if (languages.length === 0 && !remainingChoices.some((c) => c.kind === "language")) {
+    languages.push({ key: "common", name: "Common", source: "Personnage" });
+    remainingChoices.push({
+      id: "character.languages",
+      label: "Langues",
+      count: 2,
+      options: SRD_LANGUAGES.filter((l) => l !== "common"),
+      kind: "language",
+    });
   }
 
-  // Traduit les maitrises resolubles (V2-G1 suite, retour utilisateur :
-  // "outils de voleur" etc. restaient en anglais dans "Choix restants" et
-  // l'onglet Traits) — `mapProficiencies` ne connait que le nom brut du SRD
-  // (`p.name`), jamais le nom traduit de la fiche de regle qu'un index
-  // d'outil/arme/armure resout pourtant souvent (ex. "thieves-tools" a bien
-  // sa propre fiche Objet). Categories generiques sans fiche propre (ex.
-  // "daggers", "light-armor" — `Proficiencies` est explicitement exclue de
-  // l'import, scripts/ingest-srd.ts `SKIPPED_CATEGORIES`) retombent sur
-  // `WEAPON_ARMOR_PROFICIENCY_LABELS_FR`, un lexique statique dedie
-  // (retour utilisateur : "Daggers"/"Darts" etc. restaient en anglais).
-  if (proficiencies.length > 0) {
-    const keys = [...new Set(proficiencies.map((p) => p.key))];
-    const chips = await listRulesetEntryChipsByKeys(supabase, rulesetId, keys);
-    const nameByKey = new Map<string, string>();
+  // Aptitudes de classe/dons accordes ET maitrises resolubles en UN seul
+  // aller-retour de chips + un seul de traductions (V2-G1 suite, retour
+  // utilisateur : "lenteur generale" persistante) — les deux etaient avant
+  // deux paires sequentielles independantes (`listRulesetEntryChipsByKeys` +
+  // `listTranslationsForEntries`), jamais fusionnees alors qu'elles portent
+  // exactement la meme forme (cle -> nom traduit). `mapProficiencies` ne
+  // connait que le nom brut du SRD (`p.name`), jamais le nom traduit de la
+  // fiche de regle qu'un index d'outil/arme/armure resout pourtant souvent
+  // (ex. "thieves-tools" a bien sa propre fiche Objet) ; les categories
+  // generiques sans fiche propre (ex. "daggers", "light-armor" —
+  // `Proficiencies` est explicitement exclue de l'import,
+  // scripts/ingest-srd.ts `SKIPPED_CATEGORIES`) retombent sur
+  // `WEAPON_ARMOR_PROFICIENCY_LABELS_FR`, un lexique statique dedie.
+  const featureKeys = [...extraFeatureKeys.keys()];
+  const proficiencyKeys = [...new Set(proficiencies.map((p) => p.key))];
+  const combinedKeys = [...new Set([...featureKeys, ...proficiencyKeys])];
+  if (combinedKeys.length > 0) {
+    const chips = await listRulesetEntryChipsByKeys(supabase, rulesetId, combinedKeys);
+    const nameByChipEntryId = new Map<string, string>();
     if (locale !== "en" && chips.length > 0) {
-      const translations = await listTranslationsForEntries(
-        supabase,
-        chips.map((c) => c.id),
-        locale
-      );
-      const translationByEntryId = new Map(translations.map((t) => [t.entry_id, t.name]));
-      for (const chip of chips) nameByKey.set(chip.entry_key, translationByEntryId.get(chip.id) ?? entryNameFrom(chip));
-    } else {
-      for (const chip of chips) nameByKey.set(chip.entry_key, entryNameFrom(chip));
+      const translations = await listTranslationsForEntries(supabase, chips.map((c) => c.id), locale);
+      for (const t of translations) nameByChipEntryId.set(t.entry_id, t.name);
     }
+    const chipByKey = new Map(chips.map((c) => [c.entry_key, c]));
+
+    for (const fk of featureKeys) {
+      const chip = chipByKey.get(fk);
+      features[fk] = chip
+        ? {
+            key: fk,
+            label: nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip),
+            source: extraFeatureKeys.get(fk) ?? "class:inconnue",
+            modifiers: [],
+            prerequisites: mapPrerequisites(chip.source_raw),
+          }
+        : // Cle sans entree resolue (rare : feature non importee) — conservee
+          // quand meme, label = cle brute, pour que build.featureKeys puisse
+          // la referencer sans faire echouer characterSheet().
+          { key: fk, label: fk, source: extraFeatureKeys.get(fk) ?? "class:inconnue", modifiers: [] };
+    }
+
     for (const p of proficiencies) {
-      p.name = nameByKey.get(p.key) ?? (locale !== "en" ? WEAPON_ARMOR_PROFICIENCY_LABELS_FR[p.key] : undefined) ?? p.name;
+      const chip = chipByKey.get(p.key);
+      const resolved = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : undefined;
+      p.name = resolved ?? (locale !== "en" ? WEAPON_ARMOR_PROFICIENCY_LABELS_FR[p.key] : undefined) ?? p.name;
     }
   }
 
@@ -283,6 +354,47 @@ async function fetchEquipmentBlocks(supabase: TypedClient, rulesetId: string, ke
   };
 }
 
+/**
+ * Armure/arme/poids/cout d'un lot d'objets d'equipement EN UNE PASSE (V2-G1
+ * suite, retour utilisateur : "lenteur generale" persistante) — appeler
+ * `resolveEquipmentArmorData`/`resolveEquipmentWeaponData`/
+ * `resolveEquipmentWeight`/`resolveEquipmentCost` separement sur le MEME lot
+ * de cles (ce que faisaient l'API et `characterActions.ts`) refaisait
+ * `fetchEquipmentBlocks` — chain-walk + surcharges incluses, le plus couteux
+ * des deux repartiteurs ci-dessus — 3 ou 4 fois pour chaque objet. Ici, une
+ * seule fois par objet, les objets entre eux en parallele (`Promise.all`,
+ * aucun ne depend d'un autre).
+ */
+export async function resolveEquipmentData(
+  supabase: TypedClient,
+  rulesetId: string,
+  keys: readonly string[]
+): Promise<{
+  armor: Record<string, ArmorData | null>;
+  weapon: Record<string, WeaponData | null>;
+  weight: Record<string, number | null>;
+  cost: Record<string, ItemCost | null>;
+}> {
+  const armor: Record<string, ArmorData | null> = {};
+  const weapon: Record<string, WeaponData | null> = {};
+  const weight: Record<string, number | null> = {};
+  const cost: Record<string, ItemCost | null> = {};
+
+  await Promise.all(
+    keys.map(async (key) => {
+      const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
+      armor[key] = found ? (found.armor ? armorDataFromBlock(found.armor) : parseArmorData(found.fields)) : null;
+      weapon[key] = found ? (found.weapon ? weaponDataFromBlock(found.weapon) : parseWeaponData(found.fields)) : null;
+      const dedicatedWeight = found?.weapon?.weight ?? found?.armor?.weight ?? found?.itemProperties?.weight;
+      weight[key] = found ? (dedicatedWeight !== undefined ? weightFromQuantity(dedicatedWeight) : parseItemWeight(found.fields)) : null;
+      const dedicatedCost = found?.weapon?.cost ?? found?.armor?.cost ?? found?.itemProperties?.cost;
+      cost[key] = found ? (dedicatedCost !== undefined ? costFromQuantity(dedicatedCost) : parseItemCost(found.fields)) : null;
+    })
+  );
+
+  return { armor, weapon, weight, cost };
+}
+
 /** Donnees mecaniques d'armure d'un objet d'equipement, par cle de regle — `null` si l'entree n'existe pas ou n'a pas de donnees d'armure (une arme, par exemple). */
 export async function resolveEquipmentArmorData(
   supabase: TypedClient,
@@ -290,10 +402,12 @@ export async function resolveEquipmentArmorData(
   keys: readonly string[]
 ): Promise<Record<string, ArmorData | null>> {
   const result: Record<string, ArmorData | null> = {};
-  for (const key of keys) {
-    const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
-    result[key] = found ? (found.armor ? armorDataFromBlock(found.armor) : parseArmorData(found.fields)) : null;
-  }
+  await Promise.all(
+    keys.map(async (key) => {
+      const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
+      result[key] = found ? (found.armor ? armorDataFromBlock(found.armor) : parseArmorData(found.fields)) : null;
+    })
+  );
   return result;
 }
 
@@ -304,10 +418,12 @@ export async function resolveEquipmentWeaponData(
   keys: readonly string[]
 ): Promise<Record<string, WeaponData | null>> {
   const result: Record<string, WeaponData | null> = {};
-  for (const key of keys) {
-    const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
-    result[key] = found ? (found.weapon ? weaponDataFromBlock(found.weapon) : parseWeaponData(found.fields)) : null;
-  }
+  await Promise.all(
+    keys.map(async (key) => {
+      const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
+      result[key] = found ? (found.weapon ? weaponDataFromBlock(found.weapon) : parseWeaponData(found.fields)) : null;
+    })
+  );
   return result;
 }
 
@@ -318,11 +434,13 @@ export async function resolveEquipmentWeight(
   keys: readonly string[]
 ): Promise<Record<string, number | null>> {
   const result: Record<string, number | null> = {};
-  for (const key of keys) {
-    const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
-    const dedicated = found?.weapon?.weight ?? found?.armor?.weight ?? found?.itemProperties?.weight;
-    result[key] = found ? (dedicated !== undefined ? weightFromQuantity(dedicated) : parseItemWeight(found.fields)) : null;
-  }
+  await Promise.all(
+    keys.map(async (key) => {
+      const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
+      const dedicated = found?.weapon?.weight ?? found?.armor?.weight ?? found?.itemProperties?.weight;
+      result[key] = found ? (dedicated !== undefined ? weightFromQuantity(dedicated) : parseItemWeight(found.fields)) : null;
+    })
+  );
   return result;
 }
 
@@ -333,11 +451,13 @@ export async function resolveEquipmentCost(
   keys: readonly string[]
 ): Promise<Record<string, ItemCost | null>> {
   const result: Record<string, ItemCost | null> = {};
-  for (const key of keys) {
-    const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
-    const dedicated = found?.weapon?.cost ?? found?.armor?.cost ?? found?.itemProperties?.cost;
-    result[key] = found ? (dedicated !== undefined ? costFromQuantity(dedicated) : parseItemCost(found.fields)) : null;
-  }
+  await Promise.all(
+    keys.map(async (key) => {
+      const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
+      const dedicated = found?.weapon?.cost ?? found?.armor?.cost ?? found?.itemProperties?.cost;
+      result[key] = found ? (dedicated !== undefined ? costFromQuantity(dedicated) : parseItemCost(found.fields)) : null;
+    })
+  );
   return result;
 }
 
@@ -347,9 +467,14 @@ export async function resolveSpellLevels(
   rulesetId: string,
   keys: readonly string[]
 ): Promise<Record<string, number | null>> {
+  // Locale "en" : seul `fields.level` (numerique, jamais traduit) est lu
+  // ici, `fetchEntriesBatch` saute alors la jointure de traduction — meme
+  // comportement que l'ancien `fetchEntryFields`, qui ne l'appliquait
+  // jamais non plus.
+  const batch = await fetchEntriesBatch(supabase, rulesetId, [...keys], "en");
   const result: Record<string, number | null> = {};
   for (const key of keys) {
-    const found = await fetchEntryFields(supabase, rulesetId, key);
+    const found = batch.get(key);
     result[key] = found ? parseSpellLevel(found.fields) : null;
   }
   return result;

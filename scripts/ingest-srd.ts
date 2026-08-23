@@ -1467,11 +1467,15 @@ const EQUIPMENT_CATEGORY_LABELS_FR: Record<string, string> = {
  * identique aux vrais objets ; distinguee par l'URL, pas par
  * `option_type`, decouvert en verifiant le rendu reel).
  */
-function parseBackgroundEquipmentOptions(entry: SrdRecord): BackgroundEquipmentOption[] {
-  const optionsRaw = ((entry.equipment_options as SrdRecord[] | undefined)?.[0]?.from as SrdRecord | undefined)
-    ?.options as SrdRecord[] | undefined;
-  if (!Array.isArray(optionsRaw)) return [];
-
+/**
+ * Coeur partage par `parseBackgroundEquipmentOptions` (un seul choix "A ou
+ * B" par historique) et `parseClassEquipmentChoices` (V2-G1, plusieurs choix
+ * INDEPENDANTS par classe, ex. Magicien 2014 : "baton de combat OU dague",
+ * PUIS separement "besace a composants OU focaliseur") — meme forme SRD
+ * (`from.options`) dans les deux cas, jamais deux lectures distinctes du
+ * meme JSON.
+ */
+function parseEquipmentOptionsFromArray(optionsRaw: SrdRecord[]): BackgroundEquipmentOption[] {
   const letters = ["A", "B", "C", "D"];
   return optionsRaw.map((opt, i) => {
     const rawItems = opt.option_type === "multiple" ? (opt.items as SrdRecord[]) : [opt];
@@ -1502,6 +1506,66 @@ function parseBackgroundEquipmentOptions(entry: SrdRecord): BackgroundEquipmentO
 
     return { label: letters[i] ?? String(i + 1), items, gold };
   });
+}
+
+function parseBackgroundEquipmentOptions(entry: SrdRecord): BackgroundEquipmentOption[] {
+  const optionsRaw = ((entry.equipment_options as SrdRecord[] | undefined)?.[0]?.from as SrdRecord | undefined)
+    ?.options as SrdRecord[] | undefined;
+  if (!Array.isArray(optionsRaw)) return [];
+  return parseEquipmentOptionsFromArray(optionsRaw);
+}
+
+/**
+ * Equipement de depart d'une classe (V2-G1, retour utilisateur point 9) —
+ * `starting_equipment` (objets TOUJOURS accordes, jamais un choix) et
+ * `starting_equipment_options` (N choix INDEPENDANTS, chacun sous la meme
+ * forme `from.options` qu'un historique) verifies identiques en structure
+ * entre 2014 et 2024 sur les classes du SRD deja importees.
+ */
+function parseClassFixedEquipment(entry: SrdRecord): BackgroundEquipmentOption["items"] {
+  const raw = entry.starting_equipment;
+  if (!Array.isArray(raw)) return [];
+  const items: BackgroundEquipmentOption["items"] = [];
+  for (const row of raw as SrdRecord[]) {
+    const equipment = row.equipment as SrdRecord | undefined;
+    if (typeof equipment?.index !== "string") continue;
+    items.push({
+      ref: { kind: "rule", key: equipment.index },
+      label: String(equipment.name ?? equipment.index),
+      quantity: Number(row.quantity ?? 1),
+    });
+  }
+  return items;
+}
+
+function parseClassEquipmentChoices(entry: SrdRecord): { options: BackgroundEquipmentOption[] }[] {
+  const raw = entry.starting_equipment_options;
+  if (!Array.isArray(raw)) return [];
+  const choices: { options: BackgroundEquipmentOption[] }[] = [];
+  for (const choice of raw as SrdRecord[]) {
+    const optionsRaw = (choice.from as SrdRecord | undefined)?.options as SrdRecord[] | undefined;
+    if (!Array.isArray(optionsRaw)) continue;
+    const options = parseEquipmentOptionsFromArray(optionsRaw);
+    if (options.length > 0) choices.push({ options });
+  }
+  return choices;
+}
+
+/**
+ * Bloc `class_equipment` (V2-G1) — `null` seulement si la classe n'a NI
+ * objet fixe NI choix (jamais rencontre sur les classes reellement
+ * importees, mais une classe maison pourrait ne pas encore avoir cette
+ * donnee) : un bloc vide n'aurait rien a montrer, ne pas le poser plutot
+ * que poser un bloc sans contenu.
+ */
+function classEquipmentBlock(entry: SrdRecord): EntryBlock | null {
+  const fixed = parseClassFixedEquipment(entry);
+  const choices = parseClassEquipmentChoices(entry);
+  if (fixed.length === 0 && choices.length === 0) return null;
+
+  const data = { fixed, choices };
+  validateBlockData("class_equipment", data);
+  return { block_type: "class_equipment", display: { label: "Équipement de départ", layout: "key_values" }, data, display_order: 160 };
 }
 
 /**
@@ -1671,6 +1735,8 @@ function transformEntry(
     if (subclassesByCategory) {
       blocks.push(subclassSlotBlock(String(entry.index), subclassesByCategory, levelsByCategory));
     }
+    const classEquipment = classEquipmentBlock(entry);
+    if (classEquipment) blocks.push(classEquipment);
   }
 
   if (entryType === "weapon") {

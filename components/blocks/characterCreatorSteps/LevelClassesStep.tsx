@@ -1,12 +1,25 @@
 "use client";
 
+import { useEffect } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
-import type { BlockType, ClassBasicsBlockData, SubclassSlotBlockData } from "@/src/core/schemas/rule-blocks";
+import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
+import type {
+  BackgroundEquipmentOption,
+  BlockType,
+  ClassBasicsBlockData,
+  ClassEquipmentBlockData,
+  SubclassSlotBlockData,
+} from "@/src/core/schemas/rule-blocks";
 import { renderBlockData } from "@/components/rules/blockContentRenderer";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
 
 const ABILITY_LABELS: Record<string, string> = { str: "FOR", dex: "DEX", con: "CON", int: "INT", wis: "SAG", cha: "CHA" };
+
+export interface ClassEquipmentChoiceState {
+  optionLabel: string;
+  appliedGold: { value: number; unit: string } | null;
+}
 
 function findBlock<T>(blocks: RuleEntryBlockData[] | undefined, blockType: string): T | null {
   const found = blocks?.find((b) => b.blockType === blockType);
@@ -30,14 +43,24 @@ function classCardSubtitle(basics: ClassBasicsBlockData | null): string | null {
  * `class_basics`/`description` viennent de `useRuleEntryBlocks`, jamais du
  * resume fige `ai_digest` des chips — a jour si le MJ edite la fiche.
  */
+const EQUIPMENT_TAG_PREFIX = "class-equipment:";
+
 export default function LevelClassesStep({
   worldSlug,
   character,
   patchCharacter,
+  inventory,
+  onUpdateInventory,
+  equipmentChoices,
+  onChooseEquipmentChoices,
 }: {
   worldSlug: string;
   character: CharacterBlockData;
   patchCharacter: (fields: Partial<CharacterBlockData>) => void;
+  inventory: InventoryBlockData;
+  onUpdateInventory: (data: InventoryBlockData) => void;
+  equipmentChoices: (ClassEquipmentChoiceState | null)[];
+  onChooseEquipmentChoices: (choices: (ClassEquipmentChoiceState | null)[]) => void;
 }) {
   const entries = useWorldRuleEntries(worldSlug);
   const classEntries = entries.filter((e) => e.entryType === "class");
@@ -51,6 +74,13 @@ export default function LevelClassesStep({
 
   const totalLevel = character.classes.reduce((sum, c) => sum + c.level, 0);
 
+  // Equipement de depart : seule la PREMIERE classe en accorde a la
+  // creation (retour utilisateur, point 9 — meme regle que le jeu reel : le
+  // multiclassage ne redonne jamais d'equipement de depart, seule la classe
+  // initiale en octroie).
+  const firstClassKey = character.classes[0]?.class.kind === "rule" ? character.classes[0].class.key : "";
+  const firstClassEquipment = findBlock<ClassEquipmentBlockData>(blocksByKey[firstClassKey], "class_equipment");
+
   function updateSlot(index: number, patch: Partial<CharacterBlockData["classes"][number]>) {
     patchCharacter({ classes: character.classes.map((c, i) => (i === index ? { ...c, ...patch } : c)) });
   }
@@ -62,6 +92,80 @@ export default function LevelClassesStep({
   function addSlot() {
     patchCharacter({ classes: [...character.classes, { class: { kind: "rule", key: "" }, level: 1, subclass: null }] });
   }
+
+  function selectClass(index: number, key: string, previousKey: string) {
+    updateSlot(index, { class: { kind: "rule", key }, subclass: null });
+    if (index !== 0 || key === previousKey) return;
+
+    // Changer de premiere classe retire les choix d'equipement (et leur or)
+    // de l'ancienne — les objets fixes se reconcilient d'eux-memes plus bas
+    // des que la fiche de la nouvelle classe est chargee.
+    const items = inventory.items.filter((it) => !it.notes?.startsWith(`${EQUIPMENT_TAG_PREFIX}choice:`));
+    const currency = { ...inventory.currency };
+    for (const choice of equipmentChoices) {
+      if (choice?.appliedGold) {
+        const unit = choice.appliedGold.unit as keyof typeof currency;
+        if (unit in currency) currency[unit] = Math.max(0, currency[unit] - choice.appliedGold.value);
+      }
+    }
+    onUpdateInventory({ ...inventory, items, currency });
+    onChooseEquipmentChoices([]);
+  }
+
+  function chooseEquipmentOption(choiceIndex: number, option: BackgroundEquipmentOption) {
+    const prior = equipmentChoices[choiceIndex] ?? null;
+    let items = inventory.items.filter((it) => it.notes !== `${EQUIPMENT_TAG_PREFIX}choice:${choiceIndex}`);
+    const currency = { ...inventory.currency };
+    if (prior?.appliedGold) {
+      const unit = prior.appliedGold.unit as keyof typeof currency;
+      if (unit in currency) currency[unit] = Math.max(0, currency[unit] - prior.appliedGold.value);
+    }
+
+    const tag = `${EQUIPMENT_TAG_PREFIX}choice:${choiceIndex}`;
+    const newItems: InventoryItem[] = option.items.map((it, i) => ({
+      id: `class-choice-${firstClassKey}-${choiceIndex}-${i}`,
+      qty: it.quantity,
+      notes: tag,
+      ...(it.ref?.kind === "rule" ? { ref: { kind: "rule" as const, key: it.ref.key } } : { label: it.label }),
+    }));
+    items = [...items, ...newItems];
+
+    if (option.gold) {
+      const unit = option.gold.unit as keyof typeof currency;
+      if (unit in currency) currency[unit] = (currency[unit] ?? 0) + option.gold.value;
+    }
+
+    onUpdateInventory({ ...inventory, items, currency });
+    const nextChoices = [...equipmentChoices];
+    nextChoices[choiceIndex] = { optionLabel: option.label, appliedGold: option.gold ?? null };
+    onChooseEquipmentChoices(nextChoices);
+  }
+
+  // Objets TOUJOURS accordes par la premiere classe (`class_equipment.fixed`,
+  // ex. le Grimoire du Magicien) — reconcilies automatiquement, sans bouton :
+  // contrairement a un choix, il n'y a rien a decider. Un `useEffect` plutot
+  // qu'un appel direct dans `selectClass` : la fiche de la classe choisie
+  // (`blocksByKey`) n'est pas forcement encore chargee au moment du clic,
+  // cet effet se redeclenche de lui-meme des qu'elle arrive.
+  useEffect(() => {
+    const fixedTag = `${EQUIPMENT_TAG_PREFIX}fixed:${firstClassKey}`;
+    const stale = inventory.items.filter((it) => it.notes?.startsWith(`${EQUIPMENT_TAG_PREFIX}fixed:`) && it.notes !== fixedTag);
+    const alreadyApplied = inventory.items.some((it) => it.notes === fixedTag);
+    const desiredFixed = firstClassEquipment?.fixed ?? [];
+    if (stale.length === 0 && (alreadyApplied || desiredFixed.length === 0)) return;
+
+    const items = inventory.items.filter((it) => !it.notes?.startsWith(`${EQUIPMENT_TAG_PREFIX}fixed:`));
+    const newItems: InventoryItem[] = alreadyApplied
+      ? []
+      : desiredFixed.map((it, i) => ({
+          id: `class-fixed-${firstClassKey}-${i}`,
+          qty: it.quantity,
+          notes: fixedTag,
+          ...(it.ref?.kind === "rule" ? { ref: { kind: "rule" as const, key: it.ref.key } } : { label: it.label }),
+        }));
+    onUpdateInventory({ ...inventory, items: [...items, ...newItems] });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firstClassKey, firstClassEquipment]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -116,7 +220,7 @@ export default function LevelClassesStep({
                     <button
                       key={e.key}
                       type="button"
-                      onClick={() => updateSlot(index, { class: { kind: "rule", key: e.key }, subclass: null })}
+                      onClick={() => selectClass(index, e.key, classKey)}
                       className={`flex flex-col items-start gap-0.5 rounded-lg border px-2.5 py-2 text-left transition-colors ${
                         isSelected ? "border-accent bg-accent/10" : "border-edge/60 bg-panel-raised hover:bg-panel"
                       }`}
@@ -136,6 +240,38 @@ export default function LevelClassesStep({
                     <div key={i}>{renderBlockData(b.blockType as BlockType, b.data, worldSlug)}</div>
                   ))}
               </div>
+            )}
+
+            {/* Equipement de depart, uniquement pour la premiere classe
+                (retour utilisateur, point 9) : fiche complete (objets fixes
+                + chaque choix, deja resolus) suivie des boutons de choix,
+                meme separation fiche/boutons que l'historique
+                (`BackgroundStep`). */}
+            {index === 0 && firstClassEquipment && (
+              <>
+                <div className="flex flex-col gap-2 rounded-md border border-edge/40 bg-panel-sunken p-2.5 text-sm text-ink">
+                  {renderBlockData("class_equipment", firstClassEquipment, worldSlug)}
+                </div>
+                {firstClassEquipment.choices.map((choice, choiceIndex) => (
+                  <div key={choiceIndex} className="flex flex-wrap gap-2">
+                    {choice.options.map((option) => {
+                      const isChosen = equipmentChoices[choiceIndex]?.optionLabel === option.label;
+                      return (
+                        <button
+                          key={option.label}
+                          type="button"
+                          onClick={() => chooseEquipmentOption(choiceIndex, option)}
+                          className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
+                            isChosen ? "border-accent bg-accent/10 text-accent" : "border-edge/60 bg-panel-raised text-ink hover:bg-panel"
+                          }`}
+                        >
+                          Choisir {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </>
             )}
 
             {/* Sous-classe sous la fiche de classe (retour utilisateur,

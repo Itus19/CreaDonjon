@@ -10,6 +10,7 @@ import {
   type BackgroundEquipmentItem,
   type BackgroundEquipmentOption,
   type BlockType,
+  type ClassEquipmentBlockData,
   type ClassProgressionBlockData,
   type EffectsBlockData,
   type EntryType,
@@ -372,6 +373,19 @@ export type ResolvedBackgroundBlockData = Omit<BackgroundBlockData, "equipment_o
 };
 
 /**
+ * `class_equipment.fixed`/`.choices[].options` (V2-G1, point 9 du retour
+ * utilisateur) augmentes du nom resolu de chaque objet reference, meme
+ * motif exact que `ResolvedBackgroundBlockData` ci-dessus (memes types
+ * d'item/d'option, reutilises tels quels — un choix d'equipement de classe
+ * n'est jamais qu'un choix d'historique avec plusieurs choix INDEPENDANTS
+ * au lieu d'un seul, pas une forme differente).
+ */
+export type ResolvedClassEquipmentBlockData = {
+  fixed: ResolvedBackgroundEquipmentItem[];
+  choices: { options: ResolvedBackgroundEquipmentOption[] }[];
+};
+
+/**
  * `subclass_slot.options` (V1-D7, retour utilisateur : le lien de chaque
  * sous-classe affichait sa cle technique brute, ex. "evoker") augmente d'un
  * nom resolu par option, meme motif que `ResolvedBackgroundBlockData`
@@ -704,6 +718,30 @@ export async function getRuleEntryForWorld(
           items: opt.items.map((it) => ({ ...it, resolved_label: it.ref ? (itemNames.get(it.ref.key) ?? it.label) : it.label })),
         })),
       } satisfies ResolvedBackgroundBlockData,
+    };
+  }
+
+  // Augmente le bloc `class_equipment` avec le nom de chaque objet
+  // reference (V2-G1, point 9) — meme motif exact que `background`
+  // ci-dessus, sur `fixed` ET chaque `choices[].options[]`.
+  const classEquipmentBlockIndex = blocks.findIndex((b) => b.blockType === "class_equipment");
+  if (classEquipmentBlockIndex !== -1) {
+    const ceData = blocks[classEquipmentBlockIndex].data as ClassEquipmentBlockData;
+    const itemKeys = [
+      ...ceData.fixed.flatMap((it) => (it.ref ? [it.ref.key] : [])),
+      ...ceData.choices.flatMap((c) => c.options.flatMap((opt) => opt.items.flatMap((it) => (it.ref ? [it.ref.key] : [])))),
+    ];
+    const itemNames = await resolveEntryNames(supabase, rulesetId, itemKeys, locale);
+    const resolveItem = (it: BackgroundEquipmentItem) => ({
+      ...it,
+      resolved_label: it.ref ? (itemNames.get(it.ref.key) ?? it.label) : it.label,
+    });
+    blocks[classEquipmentBlockIndex] = {
+      ...blocks[classEquipmentBlockIndex],
+      data: {
+        fixed: ceData.fixed.map(resolveItem),
+        choices: ceData.choices.map((c) => ({ options: c.options.map((opt) => ({ ...opt, items: opt.items.map(resolveItem) })) })),
+      } satisfies ResolvedClassEquipmentBlockData,
     };
   }
 
@@ -1081,6 +1119,10 @@ export async function listRuleEntryBlocksByKeys(
       } else if (block.blockType === "item_properties") {
         const data = block.data as ItemPropertiesBlockData;
         for (const c of data.contents ?? []) if (c.ref) refKeys.add(c.ref.key);
+      } else if (block.blockType === "class_equipment") {
+        const data = block.data as ClassEquipmentBlockData;
+        for (const it of data.fixed) if (it.ref) refKeys.add(it.ref.key);
+        for (const c of data.choices) for (const opt of c.options) for (const it of opt.items) if (it.ref) refKeys.add(it.ref.key);
       }
     }
   }
@@ -1160,6 +1202,19 @@ export async function listRuleEntryBlocksByKeys(
                 resolved_label: c.ref ? (resolved.get(c.ref.key)?.name ?? c.label) : c.label,
               })),
             } satisfies ResolvedItemPropertiesBlockData,
+          };
+        } else if (block.blockType === "class_equipment") {
+          const data = block.data as ClassEquipmentBlockData;
+          const resolveItem = (it: BackgroundEquipmentItem) => ({
+            ...it,
+            resolved_label: it.ref ? (resolved.get(it.ref.key)?.name ?? it.label) : it.label,
+          });
+          blocks[i] = {
+            ...block,
+            data: {
+              fixed: data.fixed.map(resolveItem),
+              choices: data.choices.map((c) => ({ options: c.options.map((opt) => ({ ...opt, items: opt.items.map(resolveItem) })) })),
+            } satisfies ResolvedClassEquipmentBlockData,
           };
         }
       }

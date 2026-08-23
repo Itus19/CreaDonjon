@@ -10,7 +10,7 @@ import Dropdown from "@/components/shared/Dropdown";
 import InventoryTab from "./InventoryTab";
 import AbilityScoreStep, { EMPTY_ABILITY_POOL_ASSIGNMENT, type AbilityPoolAssignment } from "./characterCreatorSteps/AbilityScoreStep";
 import RemainingChoicesStep from "./characterCreatorSteps/RemainingChoicesStep";
-import LevelClassesStep from "./characterCreatorSteps/LevelClassesStep";
+import LevelClassesStep, { type ClassEquipmentChoiceState } from "./characterCreatorSteps/LevelClassesStep";
 import SpeciesStep from "./characterCreatorSteps/SpeciesStep";
 import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreatorSteps/BackgroundStep";
 import SpellSelectionStep from "./characterCreatorSteps/SpellSelectionStep";
@@ -83,6 +83,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
   const [spellcasting, setSpellcasting] = useState<SpellcastingBlockData>(EMPTY_SPELLCASTING);
   const [abilityPool, setAbilityPool] = useState<AbilityPoolAssignment>(EMPTY_ABILITY_POOL_ASSIGNMENT);
   const [bgEquipmentChoice, setBgEquipmentChoice] = useState<BackgroundEquipmentChoice | null>(null);
+  const [classEquipmentChoices, setClassEquipmentChoices] = useState<(ClassEquipmentChoiceState | null)[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -183,7 +184,17 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
 
       {step === 0 && <SpeciesStep worldSlug={worldSlug} character={character} patchCharacter={patchCharacter} />}
 
-      {step === 1 && <LevelClassesStep worldSlug={worldSlug} character={character} patchCharacter={patchCharacter} />}
+      {step === 1 && (
+        <LevelClassesStep
+          worldSlug={worldSlug}
+          character={character}
+          patchCharacter={patchCharacter}
+          inventory={inventory}
+          onUpdateInventory={setInventory}
+          equipmentChoices={classEquipmentChoices}
+          onChooseEquipmentChoices={setClassEquipmentChoices}
+        />
+      )}
 
       {step === 2 && (
         <AbilityScoreStep

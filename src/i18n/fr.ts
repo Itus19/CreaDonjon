@@ -76,6 +76,24 @@ export const LANGUAGE_LABELS_FR: Record<LanguageKey, string> = {
 };
 
 /**
+ * Ecoles de magie (`spell_casting.school`, cle brute anglaise du SRD, ex.
+ * "Evocation") -> libelle officiel francais (V2-G1, retour utilisateur —
+ * badge colore par ecole dans l'etape Sorts de l'assistant). "Conjuration"
+ * -> "Invocation" verifie mot pour mot dans data/srd/fr-source/srd-5.2.1-fr.txt
+ * (le faux ami le plus probable des huit).
+ */
+export const MAGIC_SCHOOL_LABELS_FR: Record<string, string> = {
+  Abjuration: "Abjuration",
+  Conjuration: "Invocation",
+  Divination: "Divination",
+  Enchantment: "Enchantement",
+  Evocation: "Evocation",
+  Illusion: "Illusion",
+  Necromancy: "Necromancie",
+  Transmutation: "Transmutation",
+};
+
+/**
  * Libelles des maitrises d'armes et d'armures accordees par une classe/
  * espece/historique (`mapProficiencies`, `p.key` = index SRD, ex.
  * "daggers"/"light-armor") — V2-G1 retour utilisateur : ces categories

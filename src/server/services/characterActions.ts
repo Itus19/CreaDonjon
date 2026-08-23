@@ -37,12 +37,7 @@ import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { listBlocksForRulesetEntry, type RulesetEntryRow } from "@/src/server/repos/rules";
 import { findEntryInRulesetChain } from "@/src/server/services/rules";
-import {
-  assembleResolvedRuleset,
-  resolveEquipmentArmorData,
-  resolveEquipmentWeaponData,
-  resolveEquipmentWeight,
-} from "@/src/server/services/resolvedRuleset";
+import { assembleResolvedRuleset, resolveEquipmentData } from "@/src/server/services/resolvedRuleset";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
@@ -126,11 +121,11 @@ export async function resolveCharacterActionContext(
     .map(itemRef)
     .filter((r): r is { kind: "rule"; key: string } => r?.kind === "rule")
     .map((r) => r.key);
-  const [armorByKey, weaponByKey, weightByKey] = await Promise.all([
-    resolveEquipmentArmorData(supabase, rulesetId, equipmentKeys),
-    resolveEquipmentWeaponData(supabase, rulesetId, equipmentKeys),
-    resolveEquipmentWeight(supabase, rulesetId, equipmentKeys),
-  ]);
+  const {
+    armor: armorByKey,
+    weapon: weaponByKey,
+    weight: weightByKey,
+  } = await resolveEquipmentData(supabase, rulesetId, equipmentKeys);
   const carriedWeight = totalCarriedWeight(inventoryData?.items ?? [], weightByKey);
 
   const dexScore = characterData.abilities.base.dex;

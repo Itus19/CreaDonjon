@@ -39,6 +39,7 @@ export const BLOCK_TYPES = [
   "condition_effects",
   "subclass_features",
   "species_traits",
+  "class_equipment",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -437,6 +438,32 @@ export const zSpeciesTraitsBlockData = z.object({
 });
 export type SpeciesTraitsBlockData = z.infer<typeof zSpeciesTraitsBlockData>;
 
+// --- class_equipment (layout: key_values, V2-G1) ------------------------
+// Equipement de depart d'une classe (retour utilisateur : "il manque les
+// objets de depart dans la fiche de regle des classes", point 9 de la
+// passe V2-G1) — le SRD porte deux champs distincts, contrairement a un
+// historique qui n'a qu'un unique choix "A ou B" :
+//
+//   - `fixed` (`starting_equipment`) : objets TOUJOURS accordes, sans
+//     choix (ex. le Grimoire du Magicien). Absent pour une classe qui n'a
+//     que des choix (verifie : le Magicien 2024 n'a AUCUN `starting_equipment`,
+//     seulement des `starting_equipment_options`).
+//   - `choices` (`starting_equipment_options`) : plusieurs choix
+//     INDEPENDANTS l'un de l'autre (ex. Magicien 2014 : "baton de combat OU
+//     dague", PUIS separement "besace a composants OU focaliseur", PUIS
+//     "sac d'erudit OU sac d'explorateur" — trois choix, pas un seul).
+//     Chaque choix reutilise `zBackgroundEquipmentOption` (memes objets,
+//     memes references resolues, meme `gold` optionnel) : un choix de
+//     classe n'est jamais qu'un historique avec un nombre d'options
+//     different, la meme forme suffit sans variante.
+export const zClassEquipmentChoice = z.object({ options: z.array(zBackgroundEquipmentOption).min(1) });
+export const zClassEquipmentBlockData = z.object({
+  fixed: z.array(zBackgroundEquipmentItem),
+  choices: z.array(zClassEquipmentChoice),
+});
+export type ClassEquipmentChoice = z.infer<typeof zClassEquipmentChoice>;
+export type ClassEquipmentBlockData = z.infer<typeof zClassEquipmentBlockData>;
+
 // --- Enveloppe commune (specs/regles-blocs.md §2) -----------------------
 export const zBlockDisplay = z.object({
   label: z.string(),
@@ -467,6 +494,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   condition_effects: zConditionEffectsBlockData,
   subclass_features: zSubclassFeaturesBlockData,
   species_traits: zSpeciesTraitsBlockData,
+  class_equipment: zClassEquipmentBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 /** Registre : le moteur demande le schema Zod d'un block_type et recoit une forme garantie. */
