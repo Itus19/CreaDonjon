@@ -11,12 +11,11 @@ import Dropdown from "@/components/shared/Dropdown";
 import InventoryTab from "./InventoryTab";
 import AbilityScoreStep, { EMPTY_ABILITY_POOL_ASSIGNMENT, type AbilityPoolAssignment } from "./characterCreatorSteps/AbilityScoreStep";
 import RemainingChoicesStep from "./characterCreatorSteps/RemainingChoicesStep";
+import LevelClassesStep from "./characterCreatorSteps/LevelClassesStep";
 import { createCharacterFromWizardAction } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
 
 const SPECIES_TYPES = ["species"] as const;
 const BACKGROUND_TYPES = ["background"] as const;
-const CLASS_TYPES = ["class"] as const;
-const SUBCLASS_TYPES = ["subclass"] as const;
 
 const EMPTY_CHARACTER: CharacterBlockData = {
   __v: 1,
@@ -73,11 +72,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
     setCharacter((prev) => ({ ...prev, ...fields }));
   }
 
-  function updateClass(patch: Partial<CharacterBlockData["classes"][number]>) {
-    patchCharacter({ classes: [{ ...character.classes[0], ...patch }] });
-  }
-
-  const { remainingChoices, sheet, weaponByKey, equipment, weight, cost, proficiencies, languages } = useCharacterSheetContext(
+  const { remainingChoices, sheet, weaponByKey, equipment, weight, cost, proficiencies, languages, isMonk } = useCharacterSheetContext(
     worldSlug,
     character,
     inventory,
@@ -88,13 +83,13 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
     const refs: BlockReference[] = [];
     if (character.species) refs.push(character.species);
     if (character.background) refs.push(character.background);
-    if (character.classes[0].class.kind === "rule" && character.classes[0].class.key) refs.push(character.classes[0].class);
-    if (character.classes[0].subclass) refs.push(character.classes[0].subclass);
+    for (const c of character.classes) {
+      if (c.class.kind === "rule" && c.class.key) refs.push(c.class);
+      if (c.subclass) refs.push(c.subclass);
+    }
     return refs;
   }, [character.species, character.background, character.classes]);
   const buildChips = useReferenceChips(worldSlug, buildRefs);
-
-  const classKey = character.classes[0].class.kind === "rule" ? character.classes[0].class.key : "";
 
   async function submit() {
     setBusy(true);
@@ -184,36 +179,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
         </div>
       )}
 
-      {step === 1 && (
-        <div className="flex flex-col gap-2">
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-            Classe (niveau 1)
-            <RuleSelect
-              worldSlug={worldSlug}
-              entryTypes={CLASS_TYPES}
-              value={classKey}
-              onChange={(key) => updateClass({ class: { kind: "rule", key }, subclass: null })}
-              emptyLabel="Aucune classe"
-              chip={buildChips.get(refIdentity(character.classes[0].class))}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-            Sous-classe (si le niveau 1 en accorde une)
-            <RuleSelect
-              worldSlug={worldSlug}
-              entryTypes={SUBCLASS_TYPES}
-              value={character.classes[0].subclass?.kind === "rule" ? character.classes[0].subclass.key : ""}
-              onChange={(key) => updateClass({ subclass: ruleRef(key) })}
-              emptyLabel="Aucune sous-classe"
-              chip={character.classes[0].subclass ? buildChips.get(refIdentity(character.classes[0].subclass)) : undefined}
-              filterFn={(entry) => (classKey ? entry.parentClassKey === classKey : false)}
-            />
-          </label>
-          {buildChips.get(refIdentity(character.classes[0].class))?.summary && (
-            <p className="text-xs text-ink-muted">{buildChips.get(refIdentity(character.classes[0].class))?.summary}</p>
-          )}
-        </div>
-      )}
+      {step === 1 && <LevelClassesStep worldSlug={worldSlug} character={character} patchCharacter={patchCharacter} />}
 
       {step === 2 && (
         <AbilityScoreStep
@@ -252,7 +218,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
           strMod={sheet.abilities.str.mod}
           dexMod={sheet.abilities.dex.mod}
           proficiencyBonus={sheet.proficiencyBonus}
-          isMonk={classKey === "monk"}
+          isMonk={isMonk}
           weaponByKey={weaponByKey}
           equipment={equipment}
           weight={weight}
