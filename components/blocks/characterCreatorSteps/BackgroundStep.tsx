@@ -18,12 +18,6 @@ function findBlock<T>(blocks: RuleEntryBlockData[] | undefined, blockType: strin
   return found ? (found.data as T) : null;
 }
 
-function optionSummary(option: BackgroundEquipmentOption): string {
-  const parts = option.items.map((it) => (it.quantity > 1 ? `${it.quantity}x ${it.label}` : it.label));
-  if (option.gold) parts.push(`${option.gold.value} ${option.gold.unit}`);
-  return parts.join(", ");
-}
-
 const TAG_PREFIX = "background:";
 
 /**
@@ -128,8 +122,13 @@ export default function BackgroundStep({
 
       {backgroundData && backgroundData.equipment_options.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Équipement de départ</span>
-          <div className="flex flex-col gap-2">
+          {/* Boutons de choix seuls, sans repeter le detail des objets — deja
+              visible juste au-dessus dans la fiche generique (`Background()`,
+              blockContentRenderer.tsx), qui montre chaque option en carte avec
+              son detail complet. Repeter ce detail ici (retour utilisateur,
+              V2-G1 : "hierarchisation confuse") faisait doublon. */}
+          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Choix de l&apos;équipement</span>
+          <div className="flex flex-wrap gap-2">
             {backgroundData.equipment_options.map((option) => {
               const isChosen = choice?.backgroundKey === currentKey && choice.optionLabel === option.label;
               return (
@@ -137,12 +136,11 @@ export default function BackgroundStep({
                   key={option.label}
                   type="button"
                   onClick={() => applyOption(option)}
-                  className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                    isChosen ? "border-accent bg-accent/10" : "border-edge/60 bg-panel-raised hover:bg-panel"
+                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
+                    isChosen ? "border-accent bg-accent/10 text-accent" : "border-edge/60 bg-panel-raised text-ink hover:bg-panel"
                   }`}
                 >
-                  <span className="font-bold text-accent">{option.label}</span>
-                  <span className="text-ink">{optionSummary(option)}</span>
+                  Choisir {option.label}
                 </button>
               );
             })}

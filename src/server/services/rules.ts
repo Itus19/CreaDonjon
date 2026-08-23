@@ -855,12 +855,20 @@ function subclassParentClassKey(sourceRaw: unknown): string | undefined {
   return typeof index === "string" ? index : undefined;
 }
 
-/** Lit `source_raw.species.index` (forme SRD des sous-especes, verifiee en base : `{"species":{"index":"dragonborn",...}}`) — meme tolerance que `subclassParentClassKey`. */
+/**
+ * Lit `source_raw.species.index` (SRD 2024, "Subspecies" -> `{"species":
+ * {"index":"dragonborn",...}}`) OU `source_raw.race.index` (SRD 2014,
+ * "Subraces" -> `{"race":{"index":"dwarf",...}}`, bug reel trouve en
+ * verifiant l'assistant : "Nain des collines" remontait comme espece de
+ * base independante, jamais nichee sous "Nain", car cette fonction ne
+ * lisait que la forme 2024) — meme tolerance que `subclassParentClassKey`.
+ */
 function speciesParentKey(sourceRaw: unknown): string | undefined {
   if (!sourceRaw || typeof sourceRaw !== "object") return undefined;
-  const species = (sourceRaw as Record<string, unknown>).species;
-  if (!species || typeof species !== "object") return undefined;
-  const index = (species as Record<string, unknown>).index;
+  const record = sourceRaw as Record<string, unknown>;
+  const parent = record.species ?? record.race;
+  if (!parent || typeof parent !== "object") return undefined;
+  const index = (parent as Record<string, unknown>).index;
   return typeof index === "string" ? index : undefined;
 }
 
@@ -953,6 +961,59 @@ export interface RawRuleEntryBlock {
  * dont le texte est surcharge par une variante maison montrerait donc le
  * texte officiel pendant le choix, jamais dans le personnage cree.
  */
+/**
+ * `resolveEntryNames`/`resolveEntryDetails` fusionnes puis rendus batches
+ * (V2-G1 suite, retour utilisateur : les fiches de l'assistant montraient
+ * "undefined" a la place du nom d'un trait, d'une option de sous-classe ou
+ * d'un objet d'equipement resolu depuis une reference). Meme chaine de
+ * rulesets que `listRuleEntryBlocksByKeys` ci-dessous, mais parcourue UNE
+ * fois pour tout le lot de cles referencees plutot qu'un aller-retour par
+ * cle (`resolveEntryDetail` fait ce dernier, tolerable pour les 1 a 10 cles
+ * d'une seule fiche via `getRuleEntryForWorld`, pas pour le batch entier de
+ * l'assistant).
+ */
+async function resolveNamesAndDescriptionsBatched(
+  supabase: TypedClient,
+  rulesetId: string,
+  keys: string[],
+  locale: Locale
+): Promise<Map<string, { name: string; description: string }>> {
+  const result = new Map<string, { name: string; description: string }>();
+  const remaining = new Set(keys);
+  if (remaining.size === 0) return result;
+
+  const chain = await walkRulesetChain(supabase, rulesetId);
+
+  for (const link of chain) {
+    if (remaining.size === 0) break;
+    const entries = await listRulesetEntriesByKeys(supabase, link.rulesetId, [...remaining]);
+    if (entries.length === 0) continue;
+
+    const entryIds = entries.map((e) => e.id);
+    const [blockRows, translations] = await Promise.all([
+      listBlocksForRulesetEntries(supabase, entryIds),
+      locale !== "en" ? listEntryTranslationsWithBlocks(supabase, entryIds, locale) : Promise.resolve([]),
+    ]);
+
+    const translationByEntryId = new Map(translations.map((t) => [t.entry_id, t]));
+    const descriptionRowByEntryId = new Map(
+      blockRows.filter((r) => r.block_type === "description").map((r) => [r.entry_id, r.data])
+    );
+
+    for (const entry of entries) {
+      const translation = translationByEntryId.get(entry.id);
+      const name = translation?.name ?? entryNameFrom(entry);
+      const overrideDescription = (translation?.blocks as Record<string, unknown> | undefined)?.description;
+      const rawDescription = overrideDescription ?? descriptionRowByEntryId.get(entry.id);
+      const segments = (rawDescription as { segments?: { text: string }[] } | undefined)?.segments;
+      result.set(entry.entry_key, { name, description: segments?.map((s) => s.text).join("\n\n") ?? "" });
+      remaining.delete(entry.entry_key);
+    }
+  }
+
+  return result;
+}
+
 export async function listRuleEntryBlocksByKeys(
   supabase: TypedClient,
   worldId: string,
@@ -989,6 +1050,119 @@ export async function listRuleEntryBlocksByKeys(
     for (const entry of entries) {
       result[entry.entry_key] = blocksByEntryId.get(entry.id) ?? [];
       remaining.delete(entry.entry_key);
+    }
+  }
+
+  // Deuxieme passe : resout les references internes que certains blocs
+  // portent comme simple cle technique (don d'un historique, options d'une
+  // sous-classe, proprietes/botte d'une arme, traits d'une espece, contenu
+  // d'un paquetage) — memes "Resolved*BlockData" que `getRuleEntryForWorld`,
+  // en un seul lot pour tout le batch plutot qu'un aller-retour par entree.
+  // Bug reel corrige ici : sans cette passe, ces champs restaient absents
+  // et `blockContentRenderer.tsx` affichait litteralement "undefined" a la
+  // place du nom (`ResolvedRefLink`), ou une description vide.
+  const refKeys = new Set<string>();
+  for (const blocks of Object.values(result)) {
+    for (const block of blocks) {
+      if (block.blockType === "background") {
+        const data = block.data as BackgroundBlockData;
+        refKeys.add(data.feat.key);
+        for (const opt of data.equipment_options) for (const it of opt.items) if (it.ref) refKeys.add(it.ref.key);
+      } else if (block.blockType === "subclass_slot") {
+        const data = block.data as SubclassSlotBlockData;
+        for (const o of data.options ?? []) refKeys.add(o.key);
+      } else if (block.blockType === "weapon") {
+        const data = block.data as WeaponBlockData;
+        for (const p of data.properties) refKeys.add(p.key);
+        if (data.mastery) refKeys.add(data.mastery.key);
+      } else if (block.blockType === "species_traits") {
+        const data = block.data as SpeciesTraitsBlockData;
+        for (const t of data.traits) refKeys.add(t.key);
+      } else if (block.blockType === "item_properties") {
+        const data = block.data as ItemPropertiesBlockData;
+        for (const c of data.contents ?? []) if (c.ref) refKeys.add(c.ref.key);
+      }
+    }
+  }
+
+  if (refKeys.size > 0) {
+    const resolved = await resolveNamesAndDescriptionsBatched(supabase, rulesetId, [...refKeys], locale);
+    for (const blocks of Object.values(result)) {
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i];
+        if (block.blockType === "background") {
+          const data = block.data as BackgroundBlockData;
+          blocks[i] = {
+            ...block,
+            data: {
+              ...data,
+              feat_name: resolved.get(data.feat.key)?.name ?? data.feat.key,
+              feat_description: resolved.get(data.feat.key)?.description ?? "",
+              equipment_options: data.equipment_options.map((opt) => ({
+                ...opt,
+                items: opt.items.map((it) => ({
+                  ...it,
+                  resolved_label: it.ref ? (resolved.get(it.ref.key)?.name ?? it.label) : it.label,
+                })),
+              })),
+            } satisfies ResolvedBackgroundBlockData,
+          };
+        } else if (block.blockType === "subclass_slot") {
+          const data = block.data as SubclassSlotBlockData;
+          blocks[i] = {
+            ...block,
+            data: {
+              ...data,
+              options: data.options?.map((o) => ({ ...o, resolved_name: resolved.get(o.key)?.name ?? o.key })),
+            } satisfies ResolvedSubclassSlotBlockData,
+          };
+        } else if (block.blockType === "weapon") {
+          const data = block.data as WeaponBlockData;
+          blocks[i] = {
+            ...block,
+            data: {
+              ...data,
+              properties: data.properties.map((p) => ({
+                ...p,
+                resolved_name: resolved.get(p.key)?.name ?? p.key,
+                resolved_description: resolved.get(p.key)?.description ?? "",
+              })),
+              mastery: data.mastery
+                ? {
+                    ...data.mastery,
+                    resolved_name: resolved.get(data.mastery.key)?.name ?? data.mastery.key,
+                    resolved_description: resolved.get(data.mastery.key)?.description ?? "",
+                  }
+                : undefined,
+            } satisfies ResolvedWeaponBlockData,
+          };
+        } else if (block.blockType === "species_traits") {
+          const data = block.data as SpeciesTraitsBlockData;
+          blocks[i] = {
+            ...block,
+            data: {
+              ...data,
+              traits: data.traits.map((t) => ({
+                ...t,
+                resolved_name: resolved.get(t.key)?.name ?? t.key,
+                resolved_description: resolved.get(t.key)?.description ?? "",
+              })),
+            } satisfies ResolvedSpeciesTraitsBlockData,
+          };
+        } else if (block.blockType === "item_properties") {
+          const data = block.data as ItemPropertiesBlockData;
+          blocks[i] = {
+            ...block,
+            data: {
+              ...data,
+              contents: data.contents?.map((c) => ({
+                ...c,
+                resolved_label: c.ref ? (resolved.get(c.ref.key)?.name ?? c.label) : c.label,
+              })),
+            } satisfies ResolvedItemPropertiesBlockData,
+          };
+        }
+      }
     }
   }
 

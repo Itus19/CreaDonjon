@@ -33,7 +33,16 @@ export default function RemainingChoicesStep({
   proficiencies: TraitGrantView[];
   languages: TraitGrantView[];
 }) {
-  const alreadyGranted = [...proficiencies, ...languages];
+  // Les langues n'ont pas de fiche de regle (`Languages` est explicitement
+  // exclue de l'import, scripts/ingest-srd.ts `SKIPPED_CATEGORIES`) : leur
+  // nom brut (`g.name`) reste toujours l'anglais du SRD, contrairement aux
+  // maitrises deja traduites cote serveur (`assembleResolvedRuleset`) —
+  // retour utilisateur, meme lexique statique que les options de choix
+  // ci-dessous (`LANGUAGE_LABELS_FR`).
+  const alreadyGranted = [
+    ...proficiencies,
+    ...languages.map((g) => ({ ...g, name: LANGUAGE_LABELS_FR[g.key as LanguageKey] ?? g.name })),
+  ];
 
   return (
     <div className="flex flex-col gap-4">

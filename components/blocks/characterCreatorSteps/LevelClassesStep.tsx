@@ -128,6 +128,21 @@ export default function LevelClassesStep({
                 })}
             </div>
 
+            {classKey && classBlocks && classBlocks.length > 0 && (
+              <div className="flex flex-col gap-2 rounded-md border border-edge/40 bg-panel-sunken p-2.5 text-sm text-ink">
+                {classBlocks
+                  .filter((b) => b.blockType === "description" || b.blockType === "class_basics")
+                  .map((b, i) => (
+                    <div key={i}>{renderBlockData(b.blockType as BlockType, b.data, worldSlug)}</div>
+                  ))}
+              </div>
+            )}
+
+            {/* Sous-classe sous la fiche de classe (retour utilisateur,
+                V2-G1) : choisir une sous-classe AJOUTE sa propre fiche en
+                dessous plutot que de remplacer celle de la classe — les deux
+                restent visibles a la fois, meme motif que espece/lignee
+                (`SpeciesStep`). */}
             {showSubclass && availableSubclasses.length > 0 && (
               <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                 {availableSubclasses.map((e) => (
@@ -142,16 +157,6 @@ export default function LevelClassesStep({
                     {e.name}
                   </button>
                 ))}
-              </div>
-            )}
-
-            {classKey && classBlocks && classBlocks.length > 0 && (
-              <div className="flex flex-col gap-2 rounded-md border border-edge/40 bg-panel-sunken p-2.5 text-sm text-ink">
-                {classBlocks
-                  .filter((b) => b.blockType === "description" || b.blockType === "class_basics")
-                  .map((b, i) => (
-                    <div key={i}>{renderBlockData(b.blockType as BlockType, b.data, worldSlug)}</div>
-                  ))}
               </div>
             )}
 

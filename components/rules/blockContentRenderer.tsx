@@ -1083,22 +1083,23 @@ function Background({ data, worldSlug }: { data: ResolvedBackgroundBlockData; wo
     ...(data.tool_proficiency ? [{ label: "Maitrise d'outil", value: proficiencyLabel(data.tool_proficiency) }] : []),
     { label: "Maitrises de competence", value: data.skill_proficiencies.map(skillLabel).join(", ") },
   ];
-  const donItem = {
-    label: "Don",
-    fullWidth: true,
-    value: (
-      <div className="flex flex-col gap-1">
-        <Link href={`/m/${worldSlug}/regles/${data.feat.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
-          {data.feat_name}
-        </Link>
-        {data.feat_description && renderMarkdownBoldText(data.feat_description, "feat")}
-      </div>
-    ),
-  };
   return (
     <div className="flex flex-col gap-5">
       <KeyValues items={statItems} />
-      <KeyValues items={[donItem]} />
+      {/* Titre "DON : <nom>" plutot qu'une paire etiquette/valeur separee
+          (retour utilisateur, V2-G1 : la hierarchie label "Don" + lien en
+          valeur lisait mal) — meme gabarit que `ResolvedRefDetail` (lien
+          gras en capitales + texte en dessous), pas un nouveau style. */}
+      <div className="flex flex-col gap-1">
+        <Link
+          href={`/m/${worldSlug}/regles/${data.feat.key}`}
+          className="text-xs font-bold uppercase tracking-wide hover:underline"
+          style={{ color: "var(--link-rule)" }}
+        >
+          Don : {data.feat_name}
+        </Link>
+        {data.feat_description && <div className="text-sm text-ink-muted">{renderMarkdownBoldText(data.feat_description, "feat")}</div>}
+      </div>
       <div className="flex flex-col gap-2">
         <span className="text-xs font-bold uppercase tracking-wide text-ink">Equipement de depart</span>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

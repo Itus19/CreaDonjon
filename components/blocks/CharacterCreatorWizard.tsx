@@ -51,7 +51,7 @@ const STEPS = [
   "Caractéristiques",
   "Historique",
   "Équipement",
-  "Choix restants",
+  "Compétences",
   "Sorts",
   "Aperçu",
 ] as const;

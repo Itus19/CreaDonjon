@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ClassProgressionBlockData, CustomTableBlockData, SpellcastingProgressionBlockData } from "@/src/core/schemas/rule-blocks";
 import { parseCustomTableFields, parseSpellClasses, parseSpellLevel, type CustomTableRow } from "@/src/core/rules/srdMapping";
+import { renderBlockData } from "@/components/rules/blockContentRenderer";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
 
@@ -58,6 +60,76 @@ function computeBudget(classKey: string, className: string, level: number, block
   }
 
   return { classKey, className, ability: spellInfo.ability, cantripsAllowed, spellsAllowed, maxSpellLevel };
+}
+
+/**
+ * Encadre depliable, meme langage visuel que `ItemCard` (InventoryPanel.tsx)
+ * sans en reutiliser le composant — celui-ci porte poids/cout/equipement,
+ * des notions qu'un sort n'a pas (retour utilisateur, V2-G1 : "un peu à la
+ * manière des objets dans inventaire"). Selection (bouton principal) et
+ * depliage de la description sont deux interactions separees, comme sur
+ * `ItemCard` : cliquer le nom choisit/deselectionne le sort, la fleche ne
+ * fait que montrer/cacher son texte.
+ */
+function SpellCard({
+  worldSlug,
+  entry,
+  level,
+  isChosen,
+  canPick,
+  blocks,
+  onToggle,
+}: {
+  worldSlug: string;
+  entry: { key: string; name: string };
+  level: number | null;
+  isChosen: boolean;
+  canPick: boolean;
+  blocks: RuleEntryBlockData[] | undefined;
+  onToggle: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const descriptionBlocks = blocks?.filter((b) => b.blockType === "description") ?? [];
+
+  return (
+    <div
+      className={`flex flex-col overflow-hidden rounded-md border transition-colors ${
+        isChosen ? "border-accent bg-accent/10" : "border-edge/60 bg-panel-raised"
+      }`}
+    >
+      <div className="flex items-center gap-2 px-2.5 py-1.5">
+        <button
+          type="button"
+          disabled={!canPick}
+          onClick={onToggle}
+          className={`min-w-0 flex-1 truncate text-left text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
+            isChosen ? "text-accent" : "text-ink"
+          }`}
+        >
+          {entry.name}
+        </button>
+        {level !== null && <span className="mech shrink-0 text-[10px] text-ink-muted">{level === 0 ? "Mineur" : `Niv. ${level}`}</span>}
+        {descriptionBlocks.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            title={expanded ? "Replier" : "Déplier"}
+            aria-label={expanded ? "Replier" : "Déplier"}
+            className="shrink-0 rounded-full px-1.5 text-xs text-ink-muted transition-colors hover:bg-panel hover:text-accent"
+          >
+            {expanded ? "▴" : "▾"}
+          </button>
+        )}
+      </div>
+      {expanded && descriptionBlocks.length > 0 && (
+        <div className="border-t border-edge/40 px-2.5 py-2 text-xs text-ink-muted">
+          {descriptionBlocks.map((b, i) => (
+            <div key={i}>{renderBlockData("description", b.data, worldSlug)}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function spellClassesAndLevel(blocks: RuleEntryBlockData[] | undefined): { classes: string[]; level: number | null } {
@@ -159,22 +231,21 @@ export default function SpellSelectionStep({
                 <p className="text-xs text-ink-muted">
                   Sorts mineurs : {knownCantrips}/{budget.cantripsAllowed} choisis
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {cantripPool.map((e) => {
                     const isChosen = spellcasting.known.some((k) => k.ref.kind === "rule" && k.ref.key === e.key);
                     const canPick = isChosen || knownCantrips < budget.cantripsAllowed;
                     return (
-                      <button
+                      <SpellCard
                         key={e.key}
-                        type="button"
-                        disabled={!canPick}
-                        onClick={() => toggleSpell(budget, e.key, "cantrip")}
-                        className={`rounded-full border px-2.5 py-1 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                          isChosen ? "border-accent bg-accent/20 text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
-                        }`}
-                      >
-                        {e.name}
-                      </button>
+                        worldSlug={worldSlug}
+                        entry={e}
+                        level={0}
+                        isChosen={isChosen}
+                        canPick={canPick}
+                        blocks={blocksByKey[e.key]}
+                        onToggle={() => toggleSpell(budget, e.key, "cantrip")}
+                      />
                     );
                   })}
                 </div>
@@ -186,23 +257,22 @@ export default function SpellSelectionStep({
                 <p className="text-xs text-ink-muted">
                   Sorts : {knownSpells}/{budget.spellsAllowed} choisis (niveau max {budget.maxSpellLevel})
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {spellPool.map((e) => {
                     const isChosen = spellcasting.known.some((k) => k.ref.kind === "rule" && k.ref.key === e.key);
                     const canPick = isChosen || knownSpells < budget.spellsAllowed;
                     const { level } = spellClassesAndLevel(blocksByKey[e.key]);
                     return (
-                      <button
+                      <SpellCard
                         key={e.key}
-                        type="button"
-                        disabled={!canPick}
-                        onClick={() => toggleSpell(budget, e.key, "spell")}
-                        className={`rounded-full border px-2.5 py-1 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                          isChosen ? "border-accent bg-accent/20 text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
-                        }`}
-                      >
-                        {e.name} <span className="text-[10px] text-ink-muted">(niv. {level})</span>
-                      </button>
+                        worldSlug={worldSlug}
+                        entry={e}
+                        level={level}
+                        isChosen={isChosen}
+                        canPick={canPick}
+                        blocks={blocksByKey[e.key]}
+                        onToggle={() => toggleSpell(budget, e.key, "spell")}
+                      />
                     );
                   })}
                 </div>

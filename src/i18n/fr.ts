@@ -75,6 +75,77 @@ export const LANGUAGE_LABELS_FR: Record<LanguageKey, string> = {
   undercommon: "Sous-commun",
 };
 
+/**
+ * Libelles des maitrises d'armes et d'armures accordees par une classe/
+ * espece/historique (`mapProficiencies`, `p.key` = index SRD, ex.
+ * "daggers"/"light-armor") — V2-G1 retour utilisateur : ces categories
+ * n'ont pas de fiche de regle propre (`Proficiencies` est explicitement
+ * exclue de l'import, scripts/ingest-srd.ts `SKIPPED_CATEGORIES`), donc la
+ * resolution par fiche (`assembleResolvedRuleset`) ne les traduit jamais —
+ * contrairement a une maitrise d'outil comme "Calligrapher's Supplies" qui,
+ * elle, correspond a un objet reellement importe. Traduit depuis
+ * data/srd/fr-source/srd-5.1-fr.txt (tables Armes/Armures, memes termes
+ * officiels que le reste de ce fichier).
+ */
+export const WEAPON_ARMOR_PROFICIENCY_LABELS_FR: Record<string, string> = {
+  "simple-weapons": "Armes courantes",
+  "martial-weapons": "Armes de guerre",
+  clubs: "Gourdins",
+  daggers: "Dagues",
+  greatclubs: "Massues",
+  handaxes: "Hachettes",
+  javelins: "Javelines",
+  "light-hammers": "Marteaux legers",
+  maces: "Masses d'armes",
+  quarterstaffs: "Batons de combat",
+  sickles: "Serpes",
+  spears: "Lances",
+  "crossbows-light": "Arbaletes legeres",
+  darts: "Flechettes",
+  shortbows: "Arcs courts",
+  slings: "Frondes",
+  battleaxes: "Haches d'armes",
+  flails: "Fleaux d'armes",
+  glaives: "Coutilles",
+  greataxes: "Haches a deux mains",
+  greatswords: "Epees a deux mains",
+  halberds: "Hallebardes",
+  lances: "Lances d'arcon",
+  longswords: "Epees longues",
+  mauls: "Maillets d'armes",
+  morningstars: "Morgensterns",
+  pikes: "Piques",
+  rapiers: "Rapieres",
+  scimitars: "Cimeterres",
+  shortswords: "Epees courtes",
+  tridents: "Tridents",
+  "war-picks": "Pics de guerre",
+  warhammers: "Marteaux de guerre",
+  whips: "Fouets",
+  blowguns: "Sarbacanes",
+  "hand-crossbows": "Arbaletes de poing",
+  "crossbows-heavy": "Arbaletes lourdes",
+  longbows: "Arcs longs",
+  nets: "Filets",
+  "light-armor": "Armures legeres",
+  "medium-armor": "Armures intermediaires",
+  "heavy-armor": "Armures lourdes",
+  "all-armor": "Toutes les armures",
+  "padded-armor": "Armure matelassee",
+  "leather-armor": "Armure de cuir",
+  "studded-leather-armor": "Armure de cuir cloute",
+  "hide-armor": "Armure de peaux",
+  "chain-shirt": "Chemise de mailles",
+  "scale-mail": "Armure d'ecailles",
+  breastplate: "Cuirasse",
+  "half-plate-armor": "Demi-plate",
+  "ring-mail": "Broigne",
+  "chain-mail": "Cotte de mailles",
+  "splint-armor": "Clibanion",
+  "plate-armor": "Harnois",
+  shields: "Bouclier",
+};
+
 /** Libelles des modes de deplacement d'un monstre (`stat_block.speed`, cles SRD, V1-E4 retour utilisateur point 3). */
 export const SPEED_LABELS_FR: Record<string, string> = {
   walk: "Marche",

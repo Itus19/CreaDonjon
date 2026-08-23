@@ -6,6 +6,7 @@ import type { AbilityScores } from "@/src/core/schemas/blocks/abilities";
 import type { Ability, DerivedSheet } from "@/src/core/rules/sheet";
 import { POINT_BUY_BUDGET, POINT_BUY_MAX, POINT_BUY_MIN, STANDARD_ARRAY, pointBuyCost } from "@/src/core/rules/abilityGeneration";
 import Dropdown from "@/components/shared/Dropdown";
+import { StatBadge } from "@/components/blocks/CharacterSheetHeader";
 
 const ABILITY_LABELS: Record<Ability, string> = { str: "FOR", dex: "DEX", con: "CON", int: "INT", wis: "SAG", cha: "CHA" };
 const ABILITIES: Ability[] = ["str", "dex", "con", "int", "wis", "cha"];
@@ -14,9 +15,12 @@ function modifierOf(score: number): number {
   return Math.floor((score - 10) / 2);
 }
 
-function formatMod(score: number): string {
-  const mod = modifierOf(score);
+function formatSigned(mod: number): string {
   return `${mod >= 0 ? "+" : ""}${mod}`;
+}
+
+function formatMod(score: number): string {
+  return formatSigned(modifierOf(score));
 }
 
 export interface AbilityPoolAssignment {
@@ -164,6 +168,7 @@ export default function AbilityScoreStep({
                   aria-label={`Valeur de ${ABILITY_LABELS[ability]}`}
                 />
                 <span className="text-xs text-ink-muted">{score !== null ? formatMod(score) : "—"}</span>
+                <span className="text-[10px] text-ink-muted">Sauv. {formatSigned(sheet.savingThrows[ability].mod)}</span>
               </div>
             );
           })}
@@ -201,6 +206,7 @@ export default function AbilityScoreStep({
                     </button>
                   </div>
                   <span className="text-xs text-ink-muted">{formatMod(score)}</span>
+                  <span className="text-[10px] text-ink-muted">Sauv. {formatSigned(sheet.savingThrows[ability].mod)}</span>
                 </div>
               );
             })}
@@ -208,29 +214,24 @@ export default function AbilityScoreStep({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-3 border-t border-edge/60 pt-3 text-xs text-ink-muted">
-        <span>
-          CA <strong className="text-ink">{sheet.ac.value}</strong>
-        </span>
-        <span>
-          Initiative{" "}
-          <strong className="text-ink">
-            {sheet.abilities.dex.mod >= 0 ? "+" : ""}
-            {sheet.abilities.dex.mod}
-          </strong>
-        </span>
-        <span>
-          Perception passive <strong className="text-ink">{10 + sheet.skills.perception.mod}</strong>
-        </span>
-        {ABILITIES.map((a) => (
-          <span key={a}>
-            Sauv. {ABILITY_LABELS[a]}{" "}
-            <strong className="text-ink">
-              {sheet.savingThrows[a].mod >= 0 ? "+" : ""}
-              {sheet.savingThrows[a].mod}
-            </strong>
-          </span>
-        ))}
+      {/* CA (bouclier) + Initiative/Perception passive, memes composants que
+          l'en-tete de la vraie fiche (`CharacterSheetHeader`) — jamais une
+          deuxieme presentation. Centres (retour utilisateur, V2-G1) : les
+          jets de sauvegarde qui accompagnaient ce bandeau sont montes dans
+          chaque encadre de caracteristique ci-dessus, sous le modificateur. */}
+      <div className="flex justify-center gap-2 border-t border-edge/60 pt-3">
+        <div className="flex w-12 shrink-0 flex-col items-center gap-1">
+          <span className="flex h-6 items-end justify-center text-[9px] font-bold uppercase tracking-widest text-ink-muted">CA</span>
+          <div
+            className="relative flex h-14 w-12 items-center justify-center border-2 border-accent bg-panel-raised"
+            style={{ clipPath: "polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)" }}
+            title="Classe d'armure — calculée automatiquement (10 + Dex + équipement)"
+          >
+            <span className="text-xl font-bold text-ink">{sheet.ac.value}</span>
+          </div>
+        </div>
+        <StatBadge label="Initiative" value={formatSigned(sheet.abilities.dex.mod)} />
+        <StatBadge label="Perception passive" value={String(10 + sheet.skills.perception.mod)} />
       </div>
     </div>
   );

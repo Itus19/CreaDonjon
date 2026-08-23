@@ -42,6 +42,7 @@ import {
   type RulesetEntryRow,
 } from "@/src/server/repos/rules";
 import { entryNameFrom, findEntryInRulesetChain, resolveEntryBlocksInRuleset } from "./rules";
+import { WEAPON_ARMOR_PROFICIENCY_LABELS_FR } from "@/src/i18n/fr";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -215,6 +216,36 @@ export async function assembleResolvedRuleset(
     // referencer sans faire echouer characterSheet().
     for (const fk of keys) {
       if (!features[fk]) features[fk] = { key: fk, label: fk, source: extraFeatureKeys.get(fk) ?? "class:inconnue", modifiers: [] };
+    }
+  }
+
+  // Traduit les maitrises resolubles (V2-G1 suite, retour utilisateur :
+  // "outils de voleur" etc. restaient en anglais dans "Choix restants" et
+  // l'onglet Traits) — `mapProficiencies` ne connait que le nom brut du SRD
+  // (`p.name`), jamais le nom traduit de la fiche de regle qu'un index
+  // d'outil/arme/armure resout pourtant souvent (ex. "thieves-tools" a bien
+  // sa propre fiche Objet). Categories generiques sans fiche propre (ex.
+  // "daggers", "light-armor" — `Proficiencies` est explicitement exclue de
+  // l'import, scripts/ingest-srd.ts `SKIPPED_CATEGORIES`) retombent sur
+  // `WEAPON_ARMOR_PROFICIENCY_LABELS_FR`, un lexique statique dedie
+  // (retour utilisateur : "Daggers"/"Darts" etc. restaient en anglais).
+  if (proficiencies.length > 0) {
+    const keys = [...new Set(proficiencies.map((p) => p.key))];
+    const chips = await listRulesetEntryChipsByKeys(supabase, rulesetId, keys);
+    const nameByKey = new Map<string, string>();
+    if (locale !== "en" && chips.length > 0) {
+      const translations = await listTranslationsForEntries(
+        supabase,
+        chips.map((c) => c.id),
+        locale
+      );
+      const translationByEntryId = new Map(translations.map((t) => [t.entry_id, t.name]));
+      for (const chip of chips) nameByKey.set(chip.entry_key, translationByEntryId.get(chip.id) ?? entryNameFrom(chip));
+    } else {
+      for (const chip of chips) nameByKey.set(chip.entry_key, entryNameFrom(chip));
+    }
+    for (const p of proficiencies) {
+      p.name = nameByKey.get(p.key) ?? (locale !== "en" ? WEAPON_ARMOR_PROFICIENCY_LABELS_FR[p.key] : undefined) ?? p.name;
     }
   }
 
