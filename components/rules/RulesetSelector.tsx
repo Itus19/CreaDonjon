@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
 
 interface SelectableRuleset {
   id: string;
@@ -28,9 +29,16 @@ interface SelectableRuleset {
  * "Reflete immediatement... sans rechargement de page" : `router.refresh()`
  * re-execute les composants serveur de cette page (la liste de regles vient
  * de la, elle change donc sans reload navigateur). La fiche jouable, elle,
- * relit toujours `worlds.default_ruleset_id` a chaque appel API — elle
- * n'a besoin d'aucune plomberie supplementaire pour rester exacte au
- * prochain chargement/interaction, meme dans une autre fenetre.
+ * relit toujours `worlds.default_ruleset_id` a chaque appel API — elle n'a
+ * besoin d'aucune plomberie supplementaire pour rester exacte au prochain
+ * chargement/interaction, meme dans une autre fenetre.
+ *
+ * `clearWorldRuleEntriesCache` (bug reel trouve en verifiant l'assistant de
+ * creation de personnage) : `useWorldRuleEntries.ts` garde son propre cache
+ * module-level cote client, que `router.refresh()` ne touche jamais (il ne
+ * revalide que les composants serveur) — sans cet appel, les listes
+ * espece/classe/historique de l'assistant continuaient de montrer l'ancien
+ * ruleset tant que la page n'etait pas rechargee entierement.
  */
 export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
   const t = useTranslations("regles");
@@ -75,6 +83,7 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
       return;
     }
     setCurrent(rulesetId);
+    clearWorldRuleEntriesCache(worldSlug);
     router.refresh();
     setOpen(false);
   }
