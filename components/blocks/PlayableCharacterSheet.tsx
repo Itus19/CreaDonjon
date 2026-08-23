@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
-import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
@@ -12,7 +11,6 @@ import type { AdvantageState } from "@/src/core/rules/action";
 import type { TraceStep } from "@/src/core/formula/evaluate";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
 import { useReferenceChips, refIdentity } from "./useReferenceChips";
-import { itemRef } from "./inventoryItem";
 import Dropdown from "@/components/shared/Dropdown";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import CharacterSheetHeader from "./CharacterSheetHeader";
@@ -163,6 +161,9 @@ export default function PlayableCharacterSheet({
     skillChoices,
     languageChoices,
     allLanguages,
+    itemChips,
+    equippedWeapons,
+    buildChips,
   } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
 
   const knownSpellRefs = useMemo(
@@ -194,25 +195,6 @@ export default function PlayableCharacterSheet({
       : [...spellcasting.prepared, key];
     onUpdateSpellcasting({ ...spellcasting, prepared });
   }
-
-  const buildRefs = useMemo(() => {
-    const refs: BlockReference[] = [];
-    if (character.species) refs.push(character.species);
-    if (character.background) refs.push(character.background);
-    for (const c of character.classes) {
-      refs.push(c.class);
-      if (c.subclass) refs.push(c.subclass);
-    }
-    return refs;
-  }, [character.species, character.background, character.classes]);
-  const buildChips = useReferenceChips(worldSlug, buildRefs);
-
-  /** Renvois des objets d'inventaire references par une regle (onglet Inventaire, V1-C11) — nom traduit + lien de fiche pour chaque encadre. */
-  const inventoryRefs = useMemo(
-    () => (inventory?.items ?? []).map(itemRef).filter((r): r is BlockReference => r !== null),
-    [inventory]
-  );
-  const itemChips = useReferenceChips(worldSlug, inventoryRefs);
 
   async function reloadRemote() {
     const res = await fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId ?? ""}`);
@@ -368,11 +350,6 @@ export default function PlayableCharacterSheet({
 
   const runtimeState = remote?.runtimeState.state;
   const hpMax = remote?.runtimeState.hpMax ?? sheet.hitPoints.max;
-  const equippedWeapons = (inventory?.items ?? []).filter((item) => {
-    if (!item.equipped) return false;
-    const ref = itemRef(item);
-    return ref?.kind === "rule" && Boolean(weaponByKey[ref.key]);
-  });
 
   const exhaustion = runtimeState?.exhaustion ?? 0;
   const hpCurrent = runtimeState?.hp.current ?? hpMax;

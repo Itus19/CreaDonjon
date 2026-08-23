@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
-import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
+import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import { characterSheet, type CharacterBuild, type DerivedSheet, type EquippedItem, type ResolvedFeature } from "@/src/core/rules/sheet";
 import { armorAcModifier, mapChosenSkillModifiers, type ArmorData, type ItemCost, type WeaponData } from "@/src/core/rules/srdMapping";
@@ -40,6 +41,12 @@ export interface CharacterSheetContext {
   languageChoices: Map<string, RemainingChoiceView>;
   /** Langues fixes + langues choisies (V1-C7), une seule liste pour l'affichage. */
   allLanguages: TraitGrantView[];
+  /** Chips des objets d'inventaire references par une regle (onglet Inventaire/Actions) — nom traduit + lien de fiche. */
+  itemChips: Map<string, ResolvedChipView>;
+  /** Armes equipees dont la fiche de regle resout reellement (onglet Actions) — memes criteres que l'affichage attaque/degats. */
+  equippedWeapons: InventoryItem[];
+  /** Chips espece/historique/classes/sous-classes (en-tete) — nom traduit + lien de fiche pour chaque champ d'identite. */
+  buildChips: Map<string, ResolvedChipView>;
 }
 
 /**
@@ -203,6 +210,34 @@ export function useCharacterSheetContext(
     return [...languages, ...chosenGrants];
   }, [languages, languageChoices, character?.choices]);
 
+  const inventoryRefs = useMemo(
+    () => (inventory?.items ?? []).map(itemRef).filter((r): r is BlockReference => r !== null),
+    [inventory]
+  );
+  const itemChips = useReferenceChips(worldSlug, inventoryRefs);
+
+  const equippedWeapons = useMemo(
+    () =>
+      (inventory?.items ?? []).filter((item) => {
+        if (!item.equipped) return false;
+        const ref = itemRef(item);
+        return ref?.kind === "rule" && Boolean(weaponByKey[ref.key]);
+      }),
+    [inventory, weaponByKey]
+  );
+
+  const buildRefs = useMemo(() => {
+    const refs: BlockReference[] = [];
+    if (character?.species) refs.push(character.species);
+    if (character?.background) refs.push(character.background);
+    for (const c of characterClasses) {
+      if (c.class.kind === "rule" && c.class.key) refs.push(c.class);
+      if (c.subclass) refs.push(c.subclass);
+    }
+    return refs;
+  }, [character, characterClasses]);
+  const buildChips = useReferenceChips(worldSlug, buildRefs);
+
   return {
     ruleset,
     remainingChoices,
@@ -224,5 +259,8 @@ export function useCharacterSheetContext(
     skillChoices,
     languageChoices,
     allLanguages,
+    itemChips,
+    equippedWeapons,
+    buildChips,
   };
 }
