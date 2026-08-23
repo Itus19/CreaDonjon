@@ -9,20 +9,42 @@ export interface RuleEntryBlockData {
 
 const EMPTY: Record<string, RuleEntryBlockData[]> = {};
 
+// Cache module-level, meme motif que `useWorldRuleEntries.ts` : les memes
+// cles (ex. la liste complete des sorts) sont redemandees a chaque etape du
+// wizard visitee, sans que le contenu ait change entre-temps.
+const cache = new Map<string, Record<string, RuleEntryBlockData[]>>();
+
+function cacheKey(worldSlug: string, dedupeKey: string): string {
+  return `${worldSlug}:${dedupeKey}`;
+}
+
+/** Meme raison que `clearWorldRuleEntriesCache` (`useWorldRuleEntries.ts`) : a appeler au changement de ruleset actif d'un monde. */
+export function clearRuleEntryBlocksCache(worldSlug: string): void {
+  for (const key of cache.keys()) {
+    if (key.startsWith(`${worldSlug}:`)) cache.delete(key);
+  }
+}
+
 /**
  * Blocs bruts (description, bases de classe...) d'un lot de fiches de regle
- * (assistant de creation de personnage, V2-G1) — recharge des que la liste
- * de cles change, pour rester a jour si le MJ edite la fiche pendant la
- * session (contrairement au resume fige `ai_digest` des chips).
+ * (assistant de creation de personnage, V2-G1) — mis en cache par lot de
+ * cles (retour utilisateur : revisiter une etape du wizard redemandait tout
+ * a chaque fois, alors que `listRuleEntryBlocksByKeys` reste plus lent que
+ * `useWorldRuleEntries` — une liste de sorts pese plus d'une seconde meme
+ * une fois le N+1 corrige cote serveur). Invalide au changement de ruleset
+ * actif (`clearRuleEntryBlocksCache`), jamais pendant l'edition normale
+ * d'une fiche de regle — meme compromis que `useWorldRuleEntries`.
  */
 export function useRuleEntryBlocks(worldSlug: string, keys: readonly string[]): Record<string, RuleEntryBlockData[]> {
-  const [data, setData] = useState<Record<string, RuleEntryBlockData[]>>(EMPTY);
   const dedupeKey = JSON.stringify([...keys].sort());
+  const [data, setData] = useState<Record<string, RuleEntryBlockData[]>>(() => cache.get(cacheKey(worldSlug, dedupeKey)) ?? EMPTY);
 
   useEffect(() => {
     let cancelled = false;
-    const request: Promise<Record<string, RuleEntryBlockData[]>> =
-      keys.length === 0
+    const cached = cache.get(cacheKey(worldSlug, dedupeKey));
+    const request: Promise<Record<string, RuleEntryBlockData[]>> = cached
+      ? Promise.resolve(cached)
+      : keys.length === 0
         ? Promise.resolve(EMPTY)
         : fetch(`/api/worlds/${worldSlug}/rule-entry-blocks`, {
             method: "POST",
@@ -34,7 +56,9 @@ export function useRuleEntryBlocks(worldSlug: string, keys: readonly string[]): 
 
     request
       .then((body) => {
-        if (!cancelled) setData(body);
+        if (cancelled) return;
+        cache.set(cacheKey(worldSlug, dedupeKey), body);
+        setData(body);
       })
       .catch(() => {
         if (!cancelled) setData(EMPTY);

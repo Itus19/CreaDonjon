@@ -397,6 +397,32 @@ export async function getEntryTranslation(
 // 19627 caracteres). 200 est confirme sur : marge large avant la limite.
 const TRANSLATION_BATCH_SIZE = 200;
 
+/**
+ * Meme lecture que `getEntryTranslation` (avec les surcharges `blocks`, pas
+ * seulement nom/source comme `listTranslationsForEntries`), pour PLUSIEURS
+ * entrees en lot — assistant de creation de personnage, meme raison que
+ * `listBlocksForRulesetEntries`.
+ */
+export async function listEntryTranslationsWithBlocks(
+  supabase: TypedClient,
+  entryIds: string[],
+  locale: string
+): Promise<EntryTranslationWithBlocksRow[]> {
+  if (entryIds.length === 0) return [];
+  const all: EntryTranslationWithBlocksRow[] = [];
+  for (let i = 0; i < entryIds.length; i += TRANSLATION_BATCH_SIZE) {
+    const batch = entryIds.slice(i, i + TRANSLATION_BATCH_SIZE);
+    const { data, error } = await supabase
+      .from("ruleset_entry_translations")
+      .select("entry_id, locale, name, source, blocks")
+      .eq("locale", locale)
+      .in("entry_id", batch);
+    if (error) throw new Error(error.message);
+    all.push(...data);
+  }
+  return all;
+}
+
 /** Toutes les traductions disponibles pour un ensemble d'entrees (barre laterale) : pagine l'IN, meme raison que listRulesetEntries. */
 export async function listTranslationsForEntries(
   supabase: TypedClient,
@@ -450,6 +476,31 @@ export async function listBlocksForRulesetEntry(
     .order("display_order");
   if (error) throw new Error(error.message);
   return data;
+}
+
+/**
+ * Meme lecture que `listBlocksForRulesetEntry`, pour PLUSIEURS entrees en un
+ * ou plusieurs appels (assistant de creation de personnage, V2-G1 suite) —
+ * evite le N+1 d'un appel par sort quand la liste candidate compte plusieurs
+ * centaines d'entrees (bug reel trouve en verifiant l'etape Sorts : plusieurs
+ * secondes de chargement, chaque cle refaisant tout le travail de
+ * `getRuleEntryPageData` — monde, chaine de rulesets, entree, traduction,
+ * blocs — depuis zero).
+ */
+export async function listBlocksForRulesetEntries(supabase: TypedClient, entryIds: string[]): Promise<RulesetEntryBlockRow[]> {
+  if (entryIds.length === 0) return [];
+  const all: RulesetEntryBlockRow[] = [];
+  for (let i = 0; i < entryIds.length; i += ENTRY_KEYS_BATCH_SIZE) {
+    const batch = entryIds.slice(i, i + ENTRY_KEYS_BATCH_SIZE);
+    const { data, error } = await supabase
+      .from("ruleset_entry_blocks")
+      .select("id, entry_id, block_type, schema_version, display, data, display_order")
+      .in("entry_id", batch)
+      .order("display_order");
+    if (error) throw new Error(error.message);
+    all.push(...data);
+  }
+  return all;
 }
 
 export interface RulesetEntryRefRow {

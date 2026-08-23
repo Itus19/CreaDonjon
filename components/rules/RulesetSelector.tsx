@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
+import { clearRuleEntryBlocksCache } from "@/components/blocks/useRuleEntryBlocks";
 
 interface SelectableRuleset {
   id: string;
@@ -84,6 +85,7 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
     }
     setCurrent(rulesetId);
     clearWorldRuleEntriesCache(worldSlug);
+    clearRuleEntryBlocksCache(worldSlug);
     router.refresh();
     setOpen(false);
   }

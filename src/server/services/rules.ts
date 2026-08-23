@@ -44,7 +44,9 @@ import {
   getRulesetEntryByKey,
   insertRulesetVariant,
   listBlocksForRulesetEntry,
+  listBlocksForRulesetEntries,
   listEntryLevelOverridesForRuleset,
+  listEntryTranslationsWithBlocks,
   listIncomingRefsForKey,
   listOutgoingRefs,
   listOverridesForRuleset,
@@ -927,6 +929,70 @@ export async function listRuleEntriesForWorld(
   const rulesetId = await getWorldDefaultRulesetId(supabase, world.id);
   if (!rulesetId) return [];
   return listEntriesInRulesetChain(supabase, rulesetId, locale);
+}
+
+export interface RawRuleEntryBlock {
+  blockType: string;
+  data: unknown;
+}
+
+/**
+ * Blocs bruts (assistant de creation de personnage, V2-G1 suite) pour un LOT
+ * de cles — jamais une par une via `getRuleEntryForWorld`/`getRuleEntryPageData`,
+ * qui refont chacune tout le travail (monde, chaine de rulesets, entree,
+ * traduction, blocs) depuis zero. Bug reel trouve en verifiant l'etape
+ * Sorts : la liste candidate (jusqu'a 339 sorts) prenait plusieurs secondes,
+ * chaque cle valant une demi-douzaine d'allers-retours DB independants.
+ *
+ * Simplification assumee par rapport a `getRuleEntryForWorld` : les
+ * surcharges de variante (`ruleset_entry_overrides`, V1-A4) ne sont PAS
+ * appliquees ici. Cet endpoint sert uniquement l'assistant, un outil
+ * d'aide au choix pendant la creation — la fiche reelle de l'entite creee
+ * ne passe jamais par ce chemin, elle referme la cle choisie et la resout
+ * normalement (overrides inclus) partout ailleurs dans l'app. Un sort
+ * dont le texte est surcharge par une variante maison montrerait donc le
+ * texte officiel pendant le choix, jamais dans le personnage cree.
+ */
+export async function listRuleEntryBlocksByKeys(
+  supabase: TypedClient,
+  worldId: string,
+  entryKeys: string[],
+  locale: Locale
+): Promise<Record<string, RawRuleEntryBlock[]>> {
+  const result: Record<string, RawRuleEntryBlock[]> = {};
+  const rulesetId = await getWorldDefaultRulesetId(supabase, worldId);
+  if (!rulesetId) return result;
+
+  const chain = await walkRulesetChain(supabase, rulesetId);
+  const remaining = new Set(entryKeys);
+
+  for (const link of chain) {
+    if (remaining.size === 0) break;
+    const entries = await listRulesetEntriesByKeys(supabase, link.rulesetId, [...remaining]);
+    if (entries.length === 0) continue;
+
+    const entryIds = entries.map((e) => e.id);
+    const [blockRows, translations] = await Promise.all([
+      listBlocksForRulesetEntries(supabase, entryIds),
+      locale !== "en" ? listEntryTranslationsWithBlocks(supabase, entryIds, locale) : Promise.resolve([]),
+    ]);
+
+    const translationByEntryId = new Map(translations.map((t) => [t.entry_id, (t.blocks ?? {}) as Record<string, unknown>]));
+    const blocksByEntryId = new Map<string, RawRuleEntryBlock[]>();
+    for (const row of blockRows) {
+      const overrides = translationByEntryId.get(row.entry_id) ?? {};
+      const list = blocksByEntryId.get(row.entry_id) ?? [];
+      list.push({ blockType: row.block_type, data: overrides[row.block_type] ?? row.data });
+      blocksByEntryId.set(row.entry_id, list);
+    }
+
+    for (const entry of entries) {
+      result[entry.entry_key] = blocksByEntryId.get(entry.id) ?? [];
+      remaining.delete(entry.entry_key);
+    }
+  }
+
+  return result;
 }
 
 /** Composition pour la route `/m/[worldSlug]/regles/[cle]` : `null` si le monde ou la regle sont introuvables — la page traduit ça en 404. */
