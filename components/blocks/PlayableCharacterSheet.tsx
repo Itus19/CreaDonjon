@@ -6,6 +6,7 @@ import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/block
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import { SKILLS, SKILL_ABILITIES, type Ability, type DerivedSheet } from "@/src/core/rules/sheet";
+import { XP_LEVEL_THRESHOLDS } from "@/src/core/rules/experience";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { TraceStep } from "@/src/core/formula/evaluate";
@@ -31,12 +32,6 @@ const ABILITY_LABELS: Record<Ability, string> = {
 
 /** Compétences triées par libellé FR (V1-C4 suite) — même ordre que la référence visuelle fournie par l'utilisateur. */
 const SORTED_SKILLS = [...SKILLS].sort((a, b) => SKILL_LABELS_FR[a].localeCompare(SKILL_LABELS_FR[b]));
-
-/** Seuils de PX cumulés par niveau total (règle officielle 5e, identique SRD 2014/2024) — sert uniquement à dessiner la barre de progression ; aucune montée de niveau n'est automatisée à partir de ces valeurs. */
-const XP_LEVEL_THRESHOLDS = [
-  0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000,
-  265000, 305000, 355000,
-];
 
 type Tab = "actions" | "magie" | "inventaire" | "traits";
 

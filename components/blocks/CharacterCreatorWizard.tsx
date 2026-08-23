@@ -4,8 +4,7 @@ import { useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
-import { StatBadge, GENDER_OPTIONS, genderDropdownValue } from "./CharacterSheetHeader";
-import { ftToM } from "@/src/core/rules/encumbrance";
+import { GENDER_OPTIONS, genderDropdownValue } from "./CharacterSheetHeader";
 import Dropdown from "@/components/shared/Dropdown";
 import InventoryTab from "./InventoryTab";
 import AbilityScoreStep, { EMPTY_ABILITY_POOL_ASSIGNMENT, type AbilityPoolAssignment } from "./characterCreatorSteps/AbilityScoreStep";
@@ -13,6 +12,7 @@ import RemainingChoicesStep from "./characterCreatorSteps/RemainingChoicesStep";
 import LevelClassesStep from "./characterCreatorSteps/LevelClassesStep";
 import SpeciesStep from "./characterCreatorSteps/SpeciesStep";
 import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreatorSteps/BackgroundStep";
+import PreviewStep from "./characterCreatorSteps/PreviewStep";
 import { createCharacterFromWizardAction } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
 
 const EMPTY_CHARACTER: CharacterBlockData = {
@@ -67,12 +67,25 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
     setCharacter((prev) => ({ ...prev, ...fields }));
   }
 
-  const { remainingChoices, sheet, weaponByKey, equipment, weight, cost, proficiencies, languages, isMonk } = useCharacterSheetContext(
-    worldSlug,
-    character,
-    inventory,
-    undefined
-  );
+  const {
+    remainingChoices,
+    sheet,
+    weaponByKey,
+    equipment,
+    weight,
+    cost,
+    proficiencies,
+    languages,
+    isMonk,
+    traits,
+    traitChips,
+    traitSourceLabel,
+    languageChoices,
+    allLanguages,
+    itemChips,
+    equippedWeapons,
+    buildChips,
+  } = useCharacterSheetContext(worldSlug, character, inventory, undefined);
 
   async function submit() {
     setBusy(true);
@@ -198,21 +211,28 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
 
       {step === 6 && (
         <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap gap-2">
-            <div className="flex w-12 shrink-0 flex-col items-center gap-1">
-              <span className="flex h-6 items-end justify-center text-[9px] font-bold uppercase tracking-widest text-ink-muted">CA</span>
-              <div
-                className="relative flex h-14 w-12 items-center justify-center border-2 border-accent bg-panel-raised"
-                style={{ clipPath: "polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)" }}
-              >
-                <span className="text-xl font-bold text-ink">{sheet.ac.value}</span>
-              </div>
-            </div>
-            <StatBadge label="Initiative" value={`${sheet.abilities.dex.mod >= 0 ? "+" : ""}${sheet.abilities.dex.mod}`} />
-            <StatBadge label="Vitesse" value={`${ftToM(sheet.speed.value)} m`} />
-            <StatBadge label="Points de vie" value={String(sheet.hitPoints.max)} />
-            <StatBadge label="Maîtrise" value={`+${sheet.proficiencyBonus}`} />
-          </div>
+          <PreviewStep
+            worldSlug={worldSlug}
+            character={character}
+            patchCharacter={patchCharacter}
+            inventory={inventory}
+            onUpdateInventory={setInventory}
+            sheet={sheet}
+            traits={traits}
+            traitChips={traitChips}
+            traitSourceLabel={traitSourceLabel}
+            proficiencies={proficiencies}
+            languageChoices={languageChoices}
+            allLanguages={allLanguages}
+            weaponByKey={weaponByKey}
+            equipment={equipment}
+            weight={weight}
+            cost={cost}
+            itemChips={itemChips}
+            equippedWeapons={equippedWeapons}
+            isMonk={isMonk}
+            buildChips={buildChips}
+          />
 
           {sheet.warnings.length > 0 && (
             <div className="rounded-md border border-danger/60 bg-danger/10 px-3 py-2 text-sm text-danger">
