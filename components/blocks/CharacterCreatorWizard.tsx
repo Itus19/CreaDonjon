@@ -6,9 +6,10 @@ import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
 import { useReferenceChips, refIdentity } from "./useReferenceChips";
-import { RuleSelect, StatBadge } from "./CharacterSheetHeader";
+import { RuleSelect, StatBadge, GENDER_OPTIONS, genderDropdownValue } from "./CharacterSheetHeader";
+import Dropdown from "@/components/shared/Dropdown";
 import InventoryTab from "./InventoryTab";
-import AbilityScoreStep from "./characterCreatorSteps/AbilityScoreStep";
+import AbilityScoreStep, { EMPTY_ABILITY_POOL_ASSIGNMENT, type AbilityPoolAssignment } from "./characterCreatorSteps/AbilityScoreStep";
 import RemainingChoicesStep from "./characterCreatorSteps/RemainingChoicesStep";
 import { createCharacterFromWizardAction } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
 
@@ -64,6 +65,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
   const [name, setName] = useState("");
   const [character, setCharacter] = useState<CharacterBlockData>(EMPTY_CHARACTER);
   const [inventory, setInventory] = useState<InventoryBlockData>(EMPTY_INVENTORY);
+  const [abilityPool, setAbilityPool] = useState<AbilityPoolAssignment>(EMPTY_ABILITY_POOL_ASSIGNMENT);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,7 +77,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
     patchCharacter({ classes: [{ ...character.classes[0], ...patch }] });
   }
 
-  const { remainingChoices, sheet, weaponByKey, equipment, weight, cost } = useCharacterSheetContext(
+  const { remainingChoices, sheet, weaponByKey, equipment, weight, cost, proficiencies, languages } = useCharacterSheetContext(
     worldSlug,
     character,
     inventory,
@@ -112,15 +114,41 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
 
   return (
     <div className="flex flex-col gap-4 rounded-md border border-edge/60 bg-panel-raised p-4">
-      <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-        Nom du personnage
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nom…"
-          className="w-full max-w-sm rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-        />
-      </label>
+      <div className="flex flex-wrap gap-3">
+        <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+          Nom du personnage
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nom…"
+            className="w-full max-w-sm rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+          Genre
+          <Dropdown
+            value={genderDropdownValue(character.gender)}
+            options={GENDER_OPTIONS}
+            onChange={(v) =>
+              patchCharacter({
+                gender:
+                  v === "custom"
+                    ? { custom: typeof character.gender === "object" ? character.gender.custom : "" }
+                    : (v as Exclude<CharacterBlockData["gender"], { custom: string } | undefined>),
+              })
+            }
+            aria-label="Genre"
+          />
+          {typeof character.gender === "object" && (
+            <input
+              value={character.gender.custom}
+              onChange={(e) => patchCharacter({ gender: { custom: e.target.value } })}
+              placeholder="préciser…"
+              className="w-32 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+            />
+          )}
+        </label>
+      </div>
 
       <div className="flex flex-wrap gap-1 border-b border-edge/60 pb-3 text-xs">
         {STEPS.map((label, i) => (
@@ -187,7 +215,15 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
         </div>
       )}
 
-      {step === 2 && <AbilityScoreStep character={character} patchCharacter={patchCharacter} />}
+      {step === 2 && (
+        <AbilityScoreStep
+          character={character}
+          patchCharacter={patchCharacter}
+          pool={abilityPool}
+          onChangePool={setAbilityPool}
+          sheet={sheet}
+        />
+      )}
 
       {step === 3 && (
         <div className="flex flex-col gap-2">
@@ -225,7 +261,15 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
         />
       )}
 
-      {step === 5 && <RemainingChoicesStep remainingChoices={remainingChoices} character={character} patchCharacter={patchCharacter} />}
+      {step === 5 && (
+        <RemainingChoicesStep
+          remainingChoices={remainingChoices}
+          character={character}
+          patchCharacter={patchCharacter}
+          proficiencies={proficiencies}
+          languages={languages}
+        />
+      )}
 
       {step === 6 && (
         <div className="flex flex-col gap-3">

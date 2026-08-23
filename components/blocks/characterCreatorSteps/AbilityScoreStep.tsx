@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { AbilityScores } from "@/src/core/schemas/blocks/abilities";
-import type { Ability } from "@/src/core/rules/sheet";
+import type { Ability, DerivedSheet } from "@/src/core/rules/sheet";
 import { POINT_BUY_BUDGET, POINT_BUY_MAX, POINT_BUY_MIN, STANDARD_ARRAY, pointBuyCost } from "@/src/core/rules/abilityGeneration";
 import Dropdown from "@/components/shared/Dropdown";
 
@@ -19,6 +19,13 @@ function formatMod(score: number): string {
   return `${mod >= 0 ? "+" : ""}${mod}`;
 }
 
+export interface AbilityPoolAssignment {
+  rolledPool: number[] | null;
+  assignment: Partial<Record<Ability, number>>;
+}
+
+export const EMPTY_ABILITY_POOL_ASSIGNMENT: AbilityPoolAssignment = { rolledPool: null, assignment: {} };
+
 /**
  * Etape 3 du parcours de creation (specs/wiki-liens-et-personnages.md §B8) :
  * les trois methodes officielles d'attribution des caracteristiques.
@@ -30,36 +37,45 @@ function formatMod(score: number): string {
  * tirage peut produire deux totaux identiques par coincidence (deux 4d6kh3
  * a 13, par exemple), et une assignation par valeur libererait alors les
  * deux emplacements a la fois des qu'on en change un.
+ *
+ * `pool`/`onChangePool` sont controles par le parent (pas un `useState` ici)
+ * — ce composant est demonte/remonte a chaque changement d'etape du wizard
+ * (`{step === 2 && <AbilityScoreStep/>}`), un etat local y serait perdu a
+ * chaque aller-retour meme si `character.abilities.base` reste correct
+ * (bug reel trouve en verifiant l'assistant en navigateur).
  */
 export default function AbilityScoreStep({
   character,
   patchCharacter,
+  pool: poolState,
+  onChangePool,
+  sheet,
 }: {
   character: CharacterBlockData;
   patchCharacter: (fields: Partial<CharacterBlockData>) => void;
+  pool: AbilityPoolAssignment;
+  onChangePool: (next: AbilityPoolAssignment) => void;
+  sheet: DerivedSheet;
 }) {
-  const [rolledPool, setRolledPool] = useState<number[] | null>(null);
-  const [assignment, setAssignment] = useState<Partial<Record<Ability, number>>>({});
   const [rolling, setRolling] = useState(false);
   const [rollError, setRollError] = useState<string | null>(null);
 
   const method = character.abilities.method;
-  const pool = method === "standard_array" ? [...STANDARD_ARRAY] : method === "roll" ? rolledPool : null;
+  const pool = method === "standard_array" ? [...STANDARD_ARRAY] : method === "roll" ? poolState.rolledPool : null;
 
   function setMethod(next: CharacterBlockData["abilities"]["method"]) {
-    setAssignment({});
-    setRolledPool(null);
+    onChangePool(EMPTY_ABILITY_POOL_ASSIGNMENT);
     patchCharacter({
       abilities: { method: next, base: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 } },
     });
   }
 
   function assignFromPool(ability: Ability, poolIndex: number | null, poolValues: number[]) {
-    const next = { ...assignment, [ability]: poolIndex ?? undefined };
-    setAssignment(next);
+    const nextAssignment = { ...poolState.assignment, [ability]: poolIndex ?? undefined };
+    onChangePool({ ...poolState, assignment: nextAssignment });
     const base: AbilityScores = { ...character.abilities.base };
     for (const a of ABILITIES) {
-      const idx = next[a];
+      const idx = nextAssignment[a];
       base[a] = idx !== undefined ? poolValues[idx] : 10;
     }
     patchCharacter({ abilities: { ...character.abilities, base } });
@@ -75,8 +91,7 @@ export default function AbilityScoreStep({
         return;
       }
       const body: { rolls: number[] } = await res.json();
-      setRolledPool(body.rolls);
-      setAssignment({});
+      onChangePool({ rolledPool: body.rolls, assignment: {} });
       patchCharacter({ abilities: { ...character.abilities, base: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 } } });
     } finally {
       setRolling(false);
@@ -113,7 +128,7 @@ export default function AbilityScoreStep({
             disabled={rolling}
             className="rounded-full border border-edge px-3 py-1.5 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
           >
-            {rolledPool ? "Relancer les dés" : "Lancer les dés"}
+            {poolState.rolledPool ? "Relancer les dés" : "Lancer les dés"}
           </button>
           {rollError && <span className="text-xs text-danger">{rollError}</span>}
         </div>
@@ -122,13 +137,13 @@ export default function AbilityScoreStep({
       {(method === "standard_array" || method === "roll") && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {ABILITIES.map((ability) => {
-            const currentIdx = assignment[ability];
+            const currentIdx = poolState.assignment[ability];
             // Un indice deja pris par une AUTRE caracteristique disparait de
             // ce menu (une seule caracteristique par valeur du bassin) — sans
             // ce filtre, rien n'empechait d'assigner 15 a la fois a FOR et
             // DEX, un bug reel trouve en verifiant l'assistant en navigateur.
             const usedByOthers = new Set(
-              ABILITIES.filter((a) => a !== ability && assignment[a] !== undefined).map((a) => assignment[a])
+              ABILITIES.filter((a) => a !== ability && poolState.assignment[a] !== undefined).map((a) => poolState.assignment[a])
             );
             const options = pool
               ? [
@@ -138,16 +153,18 @@ export default function AbilityScoreStep({
                     .filter((o) => !usedByOthers.has(o.idx)),
                 ]
               : [{ value: "", label: "Tirez d'abord les dés" }];
+            const score = currentIdx !== undefined && pool ? pool[currentIdx] : null;
             return (
-              <label key={ability} className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-                {ABILITY_LABELS[ability]}
+              <div key={ability} className="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-accent">{ABILITY_LABELS[ability]}</span>
                 <Dropdown
                   value={currentIdx !== undefined ? String(currentIdx) : ""}
                   options={options}
                   onChange={(v) => pool && assignFromPool(ability, v === "" ? null : Number(v), pool)}
                   aria-label={`Valeur de ${ABILITY_LABELS[ability]}`}
                 />
-              </label>
+                <span className="text-xs text-ink-muted">{score !== null ? formatMod(score) : "—"}</span>
+              </div>
             );
           })}
         </div>
@@ -190,6 +207,31 @@ export default function AbilityScoreStep({
           </div>
         </div>
       )}
+
+      <div className="flex flex-wrap gap-3 border-t border-edge/60 pt-3 text-xs text-ink-muted">
+        <span>
+          CA <strong className="text-ink">{sheet.ac.value}</strong>
+        </span>
+        <span>
+          Initiative{" "}
+          <strong className="text-ink">
+            {sheet.abilities.dex.mod >= 0 ? "+" : ""}
+            {sheet.abilities.dex.mod}
+          </strong>
+        </span>
+        <span>
+          Perception passive <strong className="text-ink">{10 + sheet.skills.perception.mod}</strong>
+        </span>
+        {ABILITIES.map((a) => (
+          <span key={a}>
+            Sauv. {ABILITY_LABELS[a]}{" "}
+            <strong className="text-ink">
+              {sheet.savingThrows[a].mod >= 0 ? "+" : ""}
+              {sheet.savingThrows[a].mod}
+            </strong>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

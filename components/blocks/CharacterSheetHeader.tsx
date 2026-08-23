@@ -16,7 +16,7 @@ const BACKGROUND_TYPES = ["background"] as const;
 const CLASS_TYPES = ["class"] as const;
 const SUBCLASS_TYPES = ["subclass"] as const;
 
-const GENDER_OPTIONS = [
+export const GENDER_OPTIONS = [
   { value: "unspecified", label: "Non précisé" },
   { value: "feminine", label: "Féminin" },
   { value: "masculine", label: "Masculin" },
@@ -25,7 +25,7 @@ const GENDER_OPTIONS = [
 ];
 
 /** `unspecified` (on ne sait pas) et `neutral` (ni l'un ni l'autre) restent deux valeurs distinctes du menu — jamais fusionnees (V1-C4). */
-function genderDropdownValue(gender: CharacterBlockData["gender"]): string {
+export function genderDropdownValue(gender: CharacterBlockData["gender"]): string {
   if (!gender) return "unspecified";
   if (typeof gender === "object") return "custom";
   return gender;
