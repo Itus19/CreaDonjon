@@ -3,6 +3,8 @@
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { BackgroundBlockData, BackgroundEquipmentOption, BlockType } from "@/src/core/schemas/rule-blocks";
+import type { Skill } from "@/src/core/rules/sheet";
+import { CLASS_PROFICIENCY_LABELS_FR, SKILL_LABELS_FR } from "@/src/i18n/fr";
 import { renderBlockData } from "@/components/rules/blockContentRenderer";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
@@ -13,9 +15,37 @@ export interface BackgroundEquipmentChoice {
   appliedGold: { value: number; unit: string } | null;
 }
 
+const ABILITY_LABELS: Record<string, string> = { str: "FOR", dex: "DEX", con: "CON", int: "INT", wis: "SAG", cha: "CHA" };
+
 function findBlock<T>(blocks: RuleEntryBlockData[] | undefined, blockType: string): T | null {
   const found = blocks?.find((b) => b.blockType === blockType);
   return found ? (found.data as T) : null;
+}
+
+interface BackgroundCardInfo {
+  featName: string | null;
+  statsLine: string | null;
+  toolLine: string | null;
+  skillsLine: string | null;
+}
+
+/**
+ * Don lie, valeurs de caracteristique, maitrise d'outil et maitrises de
+ * competence d'un historique, pour les afficher directement sur son bouton
+ * (retour utilisateur, V2-G1 — meme demande que pour les boutons d'espece,
+ * `SpeciesStep.tsx`). `feat_name` vient de la resolution serveur
+ * (`listRuleEntryBlocksByKeys`, ResolvedBackgroundBlockData) deja appliquee
+ * a ce bloc — jamais recalculee ici, seulement lue.
+ */
+function backgroundCardInfo(blocks: RuleEntryBlockData[] | undefined): BackgroundCardInfo | null {
+  const data = findBlock<BackgroundBlockData & { feat_name?: string }>(blocks, "background");
+  if (!data) return null;
+  return {
+    featName: data.feat_name ?? null,
+    statsLine: data.ability_scores.map((a) => ABILITY_LABELS[a] ?? a.toUpperCase()).join(", "),
+    toolLine: data.tool_proficiency ? (CLASS_PROFICIENCY_LABELS_FR[data.tool_proficiency] ?? data.tool_proficiency) : null,
+    skillsLine: data.skill_proficiencies.map((s) => SKILL_LABELS_FR[s as Skill] ?? s).join(", "),
+  };
 }
 
 const TAG_PREFIX = "background:";
@@ -96,18 +126,25 @@ export default function BackgroundStep({
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        {entries.map((e) => (
-          <button
-            key={e.key}
-            type="button"
-            onClick={() => select(e.key)}
-            className={`rounded-lg border px-2.5 py-2 text-left text-sm font-semibold transition-colors ${
-              e.key === currentKey ? "border-accent bg-accent/10 text-ink" : "border-edge/60 bg-panel-raised text-ink hover:bg-panel"
-            }`}
-          >
-            {e.name}
-          </button>
-        ))}
+        {entries.map((e) => {
+          const info = backgroundCardInfo(blocksByKey[e.key]);
+          return (
+            <button
+              key={e.key}
+              type="button"
+              onClick={() => select(e.key)}
+              className={`flex flex-col items-start gap-0.5 rounded-lg border px-2.5 py-2 text-left transition-colors ${
+                e.key === currentKey ? "border-accent bg-accent/10" : "border-edge/60 bg-panel-raised hover:bg-panel"
+              }`}
+            >
+              <span className="text-sm font-semibold text-ink">{e.name}</span>
+              {info?.featName && <span className="text-[10px] text-ink-muted">Don : {info.featName}</span>}
+              {info?.statsLine && <span className="text-[10px] text-ink-muted">{info.statsLine}</span>}
+              {info?.toolLine && <span className="text-[10px] text-ink-muted">{info.toolLine}</span>}
+              {info?.skillsLine && <span className="text-[10px] text-ink-muted">{info.skillsLine}</span>}
+            </button>
+          );
+        })}
       </div>
 
       {currentKey && currentBlocks && currentBlocks.length > 0 && (
