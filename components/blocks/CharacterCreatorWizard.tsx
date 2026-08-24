@@ -16,6 +16,8 @@ import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreat
 import SpellSelectionStep from "./characterCreatorSteps/SpellSelectionStep";
 import PreviewStep from "./characterCreatorSteps/PreviewStep";
 import { createCharacterFromWizardAction } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
+import { useWorldRuleEntries } from "./useWorldRuleEntries";
+import { useRuleEntryBlocks } from "./useRuleEntryBlocks";
 
 const EMPTY_CHARACTER: CharacterBlockData = {
   __v: 1,
@@ -90,6 +92,19 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
   function patchCharacter(fields: Partial<CharacterBlockData>) {
     setCharacter((prev) => ({ ...prev, ...fields }));
   }
+
+  // Prechargement des sorts en arriere-plan (retour utilisateur : "l'onglet
+  // sorts prend vraiment longtemps a charger") — les blocs de tous les
+  // sorts du monde (jusqu'a 339 sous le SRD 2024) ne dependent d'aucun choix
+  // du joueur, seulement du monde ; `useRuleEntryBlocks` (cache module-level
+  // partage par cle) permet donc de lancer cette requete des l'etape 1
+  // (Espece) plutot que d'attendre l'etape 7 (Sorts) — le temps reel
+  // d'aller-retour reseau (~1s, base Supabase hebergee) est alors deja passe
+  // pendant que le joueur choisit espece/classe/historique/equipement, et
+  // `SpellSelectionStep` retrouve le resultat en cache, instantanement.
+  const allEntries = useWorldRuleEntries(worldSlug);
+  const allSpellKeys = allEntries.filter((e) => e.entryType === "spell").map((e) => e.key);
+  useRuleEntryBlocks(worldSlug, allSpellKeys);
 
   const {
     remainingChoices,

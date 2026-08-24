@@ -318,8 +318,19 @@ export default function SpellSelectionStep({
   const spellEntries = entries.filter((e) => e.entryType === "spell");
   const classKeys = character.classes.filter((c) => c.class.kind === "rule" && c.class.key).map((c) => (c.class as { kind: "rule"; key: string }).key);
 
-  const neededKeys = [...new Set([...classKeys, ...spellEntries.map((e) => e.key)])];
-  const blocksByKey = useRuleEntryBlocks(worldSlug, neededKeys);
+  // Deux appels separes plutot qu'un seul lot fusionne (retour utilisateur :
+  // "l'onglet sorts prend vraiment longtemps a charger") : le lot des sorts
+  // (`spellEntries`) est EXACTEMENT le meme ensemble de cles que le
+  // prechargement lance des l'etape 1 par `CharacterCreatorWizard`
+  // (`useRuleEntryBlocks` met en cache par le JSON trie des cles demandees)
+  // — y ajouter les cles de classe changerait ce JSON et manquerait le
+  // cache prechauffe, ce qui annulait l'essentiel du gain mesure en test.
+  const spellBlocksByKey = useRuleEntryBlocks(
+    worldSlug,
+    spellEntries.map((e) => e.key)
+  );
+  const classBlocksByKey = useRuleEntryBlocks(worldSlug, classKeys);
+  const blocksByKey = { ...spellBlocksByKey, ...classBlocksByKey };
 
   const budgets = character.classes
     .filter((c) => c.class.kind === "rule" && c.class.key)
