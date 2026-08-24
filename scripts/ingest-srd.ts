@@ -726,11 +726,36 @@ const SPELLCASTING_COLUMN_LABELS_FR: Record<string, string> = {
 function classProgressionBlock(
   classIndex: string,
   levels: SrdRecord[],
-  remapFeatureKey: Map<string, string>
+  remapFeatureKey: Map<string, string>,
+  sourceAttribution: string
 ): EntryBlock {
-  const ownLevels = levels
+  const rawLevels = levels
     .filter((l) => (l.class as SrdRecord | undefined)?.index === classIndex)
     .sort((a, b) => Number(a.level) - Number(b.level));
+
+  // Maitrise d'armes de Paladin/Rodeur/Roublard (SRD 2024 UNIQUEMENT, retour
+  // utilisateur V2-G1) : leur `class_specific` ne porte JAMAIS
+  // `weapon_mastery`, contrairement a Barbare/Guerrier — verifie sur les
+  // cinq classes, leur texte de capacite ne mentionne d'ailleurs aucune
+  // progression (invariant "deux" du niveau 1 au niveau 20, jamais un
+  // "trois" a un palier comme Barbare/Guerrier). Injecte ici plutot qu'en
+  // aval (resolvedRuleset.ts) : les trois suivent alors EXACTEMENT le meme
+  // chemin de lecture que Barbare/Guerrier (`class_progression`, colonne
+  // `class_specific_weapon_mastery`), aucun repli special-case necessaire
+  // cote serveur. Garde `sourceAttribution === "SRD 5.2.1"` explicite : la
+  // maitrise d'armes n'existe pas du tout sous 2014, un Paladin 2014 (meme
+  // `classIndex`) ne doit jamais en heriter. Copie plutot que mutation de
+  // `lvl` : `levels` reste la donnee source brute, potentiellement relue
+  // ailleurs.
+  const WEAPON_MASTERY_FIXED_COUNT: Record<string, number> = { paladin: 2, ranger: 2, rogue: 2 };
+  const fixedWeaponMastery = sourceAttribution === "SRD 5.2.1" ? WEAPON_MASTERY_FIXED_COUNT[classIndex] : undefined;
+  const ownLevels: SrdRecord[] =
+    fixedWeaponMastery === undefined
+      ? rawLevels
+      : rawLevels.map((lvl) => ({
+          ...lvl,
+          class_specific: { ...((lvl.class_specific as SrdRecord | undefined) ?? {}), weapon_mastery: fixedWeaponMastery },
+        }));
 
   const classSpecificKeys = new Set<string>();
   const spellcastingKeys = new Set<string>();
@@ -1728,7 +1753,7 @@ function transformEntry(
   }
 
   if (entryType === "class" && levelsByCategory) {
-    blocks.push(classProgressionBlock(String(entry.index), levelsByCategory, remapFeatureKey));
+    blocks.push(classProgressionBlock(String(entry.index), levelsByCategory, remapFeatureKey, sourceAttribution));
     blocks.push(classBasicsBlock(entry));
     const spellcasting = spellcastingProgressionBlock(entry);
     if (spellcasting) blocks.push(spellcasting);

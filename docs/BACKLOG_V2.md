@@ -168,6 +168,13 @@ Et c'est **la même infrastructure** : contexte déterministe, propositions vali
 
 Points 2 et 3 restent à faire ; le pré-remplissage par IA (§B8 « en surcouche ») est délibérément reporté au lot J.
 
+**Cinquième passe de retour utilisateur** :
+
+- Boutons d'historique enrichis (don lié, valeurs de caractéristique, maîtrise d'outil, maîtrises de compétence), même motif que les boutons d'espèce (`BackgroundStep.tsx`).
+- Étape « Sorts » masquée (jamais un onglet adaptatif) pour toute classe sans progression d'incantation dans le ruleset actif — `CharacterCreatorWizard.tsx`, présence du bloc `spellcasting_progression`.
+- **Maîtrise d'armes** (SRD 2024 — Barbare, Guerrier, Paladin, Rôdeur, Roublard) : choix en étape 6, résolu côté serveur (`assembleResolvedRuleset`) au même titre que compétences/langues. Les armes éligibles se lisent dans les vraies maîtrises d'armes de la classe (jamais une liste recopiée à la main) ; seule la restriction « corps à corps » du Barbare reste un fait sur sa capacité, pas sur les armes (`is_ranged` existe déjà par arme et ne suffit pas à l'exprimer). Le nombre par classe est désormais lu uniformément dans `class_progression` (colonne `class_specific_weapon_mastery`) pour les cinq classes : Paladin/Rôdeur/Roublard ne l'avaient jamais nativement (leur texte de capacité ne tabule aucune progression, toujours « deux »), la valeur est injectée à l'import (`scripts/ingest-srd.ts`, `classProgressionBlock`, strictement gardé à `sourceAttribution === "SRD 5.2.1"` — la maîtrise d'armes n'existe pas sous 2014) plutôt que codée en dur dans `resolvedRuleset.ts`. Onglet dédié sur la fiche jouable, remis à zéro à chaque repos long (`characterActions.ts`, `takeLongRest`), avec un badge « Botte disponible » sur une arme équipée actuellement maîtrisée — l'effet de la botte reste à résoudre à la main (hors périmètre : modéliser les huit propriétés de maîtrise comme de vraies mécaniques de combat est un chantier à part).
+- Régression de performance détectée et corrigée en cours de route : le catalogue d'armes se chargeait même pour une classe qui n'accorde pas la maîtrise dans le ruleset actif (ex. Guerrier sous 2014) — repéré par un test d'intégration qui a commencé à expirer.
+
 ### V2-G4 — Thème dérivé de l'image · `M` · *issu de la revue de code*
 
 Le socle est là — `tokens.css` en OKLCH, `data-mode` sur `<html>`, les quatre modes. **Il manque toute la chaîne d'extraction.**

@@ -65,39 +65,30 @@ export interface RemainingChoice {
 }
 
 /**
- * Maitrise d'armes (SRD 2024, retour utilisateur, V2-G1 — "il y a le choix de
- * maitrises d'armes... plutot mettre ce choix dans l'onglet 6") : les cinq
- * classes qui l'accordent. Rien ici n'est devine — chaque champ correspond a
- * un vrai trou de la donnee SRD, verifie contre les cinq fiches de classe et
- * leur feature "Weapon Mastery" :
- *
- * - Le NOMBRE d'armes maitrisees EST tabule par niveau pour Barbare/Guerrier
- *   (`class_progression`, colonne `class_specific_weapon_mastery`, deja
- *   importee) — jamais pour Paladin/Rodeur/Roublard, qui n'ont aucune
- *   colonne de ce nom dans leur table de classe (verifie : le nombre "deux"
- *   n'existe que dans le texte de la feature, jamais tabule). `fixedCount`
- *   couvre ce trou pour ces trois-la — invariant par niveau, confirme par le
- *   texte officiel qui ne mentionne aucune progression pour elles.
- * - QUELLES armes sont eligibles ne vient JAMAIS d'une liste ecrite ici : elle
- *   se lit dans les vraies maitrises d'armes de la classe (`mapProficiencies`,
- *   deja affichees sur sa fiche — "Armes courantes, Armes de guerre"), voir
- *   `weaponMasteryOptions`. `meleeOnly` est la seule exception reelle : le
- *   Barbare reste maitre des armes a distance (elles sont dans sa liste de
- *   maitrise generale), mais le texte de sa feature "Weapon Mastery" restreint
- *   specifiquement CE choix aux armes de corps-a-corps — une regle sur la
- *   feature, jamais sur l'arme elle-meme (qui porte deja son propre `is_ranged`
- *   structure), donc jamais deductible d'ailleurs que du texte.
+ * Restriction "corps a corps seulement" de la maitrise d'armes du Barbare
+ * (SRD 2024, retour utilisateur, V2-G1) : le Barbare reste maitre des armes
+ * a distance en general (elles sont dans sa liste de maitrise generale,
+ * "Armes courantes, Armes de guerre" — `mapProficiencies`), mais le texte de
+ * sa feature "Weapon Mastery" restreint SPECIFIQUEMENT ce choix aux armes de
+ * corps-a-corps. Une regle sur la feature, jamais sur l'arme elle-meme (qui
+ * porte deja son propre `is_ranged`, deja lu ici) — aucune classification
+ * d'arme, si detaillee soit-elle, ne peut la remplacer : ce n'est vrai que
+ * pour cette capacite precise, pas une propriete universelle des armes.
+ * Seul repli restant, faute d'un champ structure pour ce fait dans le SRD.
  */
-const WEAPON_MASTERY_RULES: Record<string, { meleeOnly?: boolean; fixedCount?: number }> = {
-  barbarian: { meleeOnly: true },
-  fighter: {},
-  paladin: { fixedCount: 2 },
-  ranger: { fixedCount: 2 },
-  rogue: { fixedCount: 2 },
-};
+const WEAPON_MASTERY_MELEE_ONLY_CLASSES = new Set(["barbarian"]);
 
-function weaponMasteryCount(rule: { fixedCount?: number }, progressionRows: ProgressionRow[], level: number): number {
-  if (rule.fixedCount !== undefined) return rule.fixedCount;
+/**
+ * Nombre d'armes maitrisees, lu UNIFORMEMENT dans `class_progression`
+ * (colonne `class_specific_weapon_mastery`) pour les cinq classes
+ * concernees — Barbare/Guerrier l'ont nativement du SRD (le nombre
+ * augmente avec le niveau) ; Paladin/Rodeur/Roublard ne l'avaient jamais
+ * (leur texte de feature ne tabule aucune progression, toujours "deux"), la
+ * valeur est desormais injectee a l'import (`scripts/ingest-srd.ts`,
+ * `classProgressionBlock`) plutot que codee en dur ici — un seul chemin de
+ * lecture pour les cinq, aucun special-case par classe.
+ */
+function weaponMasteryCount(progressionRows: ProgressionRow[], level: number): number {
   const row = progressionRows.find((r) => r.level === level);
   const value = row?.class_specific_weapon_mastery;
   return typeof value === "number" ? value : 0;
@@ -285,20 +276,19 @@ export async function assembleResolvedRuleset(
 
   // Le catalogue d'armes n'est charge que si une classe choisie accorde
   // REELLEMENT une maitrise d'armes DANS CE RULESET — jamais seulement parce
-  // que sa cle figure dans `WEAPON_MASTERY_RULES` (V2-G1, regression
-  // detectee par un test d'integration : "fighter" existe aussi sous le SRD
-  // 2014, qui n'a pas la maitrise d'armes — sans ce filtre, l'aller-retour
-  // se payait quand meme pour un resultat qui finissait toujours ecarte,
-  // exactement le genre de cout perdu que les deux correctifs precedents de
-  // cette session visaient a eliminer). Le nombre se lit dans les donnees
-  // DEJA chargees par `fetchEntriesBatch` (`progressionRows`), donc avant de
-  // decider si le catalogue vaut la peine d'etre charge.
+  // que sa cle correspond a l'une des cinq classes concernees (V2-G1,
+  // regression detectee par un test d'integration : "fighter" existe aussi
+  // sous le SRD 2014, qui n'a pas la maitrise d'armes — sans ce filtre,
+  // l'aller-retour se payait quand meme pour un resultat qui finissait
+  // toujours ecarte). Le nombre se lit dans les donnees DEJA chargees par
+  // `fetchEntriesBatch` (`progressionRows`), donc avant de decider si le
+  // catalogue vaut la peine d'etre charge — un seul chemin de lecture pour
+  // les cinq classes (`weaponMasteryCount`), plus de liste de cles a part.
   const weaponMasteryCounts = new Map<string, number>();
   for (const cl of selection.classes) {
-    const rule = WEAPON_MASTERY_RULES[cl.key];
-    const found = rule ? batch.get(cl.key) : undefined;
+    const found = batch.get(cl.key);
     if (!found) continue;
-    const count = weaponMasteryCount(rule, found.progressionRows, cl.level);
+    const count = weaponMasteryCount(found.progressionRows, cl.level);
     if (count > 0) weaponMasteryCounts.set(cl.key, count);
   }
   const weaponPool = weaponMasteryCounts.size > 0 ? await fetchWeaponPool(supabase, rulesetId) : null;
@@ -375,7 +365,7 @@ export async function assembleResolvedRuleset(
       const options = weaponMasteryOptions(
         classProficiencies.map((p) => p.key),
         weaponPool,
-        WEAPON_MASTERY_RULES[cl.key]?.meleeOnly ?? false
+        WEAPON_MASTERY_MELEE_ONLY_CLASSES.has(cl.key)
       );
       if (options.length > 0) {
         remainingChoices.push({
