@@ -211,7 +211,13 @@ function localizedLabel(label: Record<string, string>, fallbackKey: string): str
 
 function cellValue(value: unknown): string {
   if (value === null || value === undefined) return "";
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+  // "true"/"false" ne se seraient jamais affiches traduits (retour
+  // utilisateur, V2-G1 : meme categorie de bug que les libelles anglais
+  // deja corriges ailleurs) — un booleen dans une table (ex.
+  // `weapon_mastery_melee_only`) est toujours une reponse oui/non, jamais
+  // du texte a afficher tel quel.
+  if (typeof value === "boolean") return value ? "Oui" : "Non";
+  if (typeof value === "string" || typeof value === "number") return String(value);
   return JSON.stringify(value);
 }
 

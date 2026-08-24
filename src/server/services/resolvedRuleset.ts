@@ -65,33 +65,29 @@ export interface RemainingChoice {
 }
 
 /**
- * Restriction "corps a corps seulement" de la maitrise d'armes du Barbare
- * (SRD 2024, retour utilisateur, V2-G1) : le Barbare reste maitre des armes
- * a distance en general (elles sont dans sa liste de maitrise generale,
- * "Armes courantes, Armes de guerre" — `mapProficiencies`), mais le texte de
- * sa feature "Weapon Mastery" restreint SPECIFIQUEMENT ce choix aux armes de
- * corps-a-corps. Une regle sur la feature, jamais sur l'arme elle-meme (qui
- * porte deja son propre `is_ranged`, deja lu ici) — aucune classification
- * d'arme, si detaillee soit-elle, ne peut la remplacer : ce n'est vrai que
- * pour cette capacite precise, pas une propriete universelle des armes.
- * Seul repli restant, faute d'un champ structure pour ce fait dans le SRD.
- */
-const WEAPON_MASTERY_MELEE_ONLY_CLASSES = new Set(["barbarian"]);
-
-/**
- * Nombre d'armes maitrisees, lu UNIFORMEMENT dans `class_progression`
- * (colonne `class_specific_weapon_mastery`) pour les cinq classes
- * concernees — Barbare/Guerrier l'ont nativement du SRD (le nombre
- * augmente avec le niveau) ; Paladin/Rodeur/Roublard ne l'avaient jamais
- * (leur texte de feature ne tabule aucune progression, toujours "deux"), la
- * valeur est desormais injectee a l'import (`scripts/ingest-srd.ts`,
- * `classProgressionBlock`) plutot que codee en dur ici — un seul chemin de
- * lecture pour les cinq, aucun special-case par classe.
+ * Nombre d'armes maitrisees et restriction "corps a corps seulement",
+ * lus UNIFORMEMENT dans `class_progression` pour les cinq classes
+ * concernees (colonnes `class_specific_weapon_mastery`/
+ * `class_specific_weapon_mastery_melee_only`) — Barbare/Guerrier ont le
+ * nombre nativement du SRD (il augmente avec le niveau) et le Barbare seul
+ * porte la restriction corps-a-corps (son texte de feature "Weapon Mastery"
+ * la restreint specifiquement, alors qu'il reste maitre des armes a
+ * distance en general) ; Paladin/Rodeur/Roublard n'ont jamais le nombre
+ * nativement (leur texte de feature ne tabule aucune progression, toujours
+ * "deux"). Les deux trous sont desormais injectes a l'import
+ * (`scripts/ingest-srd.ts`, `classProgressionBlock`) plutot que codes en
+ * dur ici — un seul chemin de lecture pour les cinq classes, aucun
+ * special-case par classe cote serveur.
  */
 function weaponMasteryCount(progressionRows: ProgressionRow[], level: number): number {
   const row = progressionRows.find((r) => r.level === level);
   const value = row?.class_specific_weapon_mastery;
   return typeof value === "number" ? value : 0;
+}
+
+function weaponMasteryMeleeOnly(progressionRows: ProgressionRow[], level: number): boolean {
+  const row = progressionRows.find((r) => r.level === level);
+  return row?.class_specific_weapon_mastery_melee_only === true;
 }
 
 /**
@@ -365,7 +361,7 @@ export async function assembleResolvedRuleset(
       const options = weaponMasteryOptions(
         classProficiencies.map((p) => p.key),
         weaponPool,
-        WEAPON_MASTERY_MELEE_ONLY_CLASSES.has(cl.key)
+        weaponMasteryMeleeOnly(found.progressionRows, cl.level)
       );
       if (options.length > 0) {
         remainingChoices.push({

@@ -715,6 +715,7 @@ const CLASS_SPECIFIC_COLUMN_LABELS_FR: Record<string, string> = {
   sorcery_points: "Points de Sorcellerie",
   unarmored_movement_bonus: "Bonus de Deplacement sans armure",
   weapon_mastery: "Maitrise des armes",
+  weapon_mastery_melee_only: "Maitrise corps a corps seulement",
   wild_shape_uses: "Utilisations de Forme sauvage",
 };
 const SPELLCASTING_COLUMN_LABELS_FR: Record<string, string> = {
@@ -733,28 +734,41 @@ function classProgressionBlock(
     .filter((l) => (l.class as SrdRecord | undefined)?.index === classIndex)
     .sort((a, b) => Number(a.level) - Number(b.level));
 
-  // Maitrise d'armes de Paladin/Rodeur/Roublard (SRD 2024 UNIQUEMENT, retour
-  // utilisateur V2-G1) : leur `class_specific` ne porte JAMAIS
-  // `weapon_mastery`, contrairement a Barbare/Guerrier — verifie sur les
-  // cinq classes, leur texte de capacite ne mentionne d'ailleurs aucune
-  // progression (invariant "deux" du niveau 1 au niveau 20, jamais un
-  // "trois" a un palier comme Barbare/Guerrier). Injecte ici plutot qu'en
-  // aval (resolvedRuleset.ts) : les trois suivent alors EXACTEMENT le meme
-  // chemin de lecture que Barbare/Guerrier (`class_progression`, colonne
-  // `class_specific_weapon_mastery`), aucun repli special-case necessaire
-  // cote serveur. Garde `sourceAttribution === "SRD 5.2.1"` explicite : la
-  // maitrise d'armes n'existe pas du tout sous 2014, un Paladin 2014 (meme
-  // `classIndex`) ne doit jamais en heriter. Copie plutot que mutation de
-  // `lvl` : `levels` reste la donnee source brute, potentiellement relue
-  // ailleurs.
-  const WEAPON_MASTERY_FIXED_COUNT: Record<string, number> = { paladin: 2, ranger: 2, rogue: 2 };
-  const fixedWeaponMastery = sourceAttribution === "SRD 5.2.1" ? WEAPON_MASTERY_FIXED_COUNT[classIndex] : undefined;
+  // Complements SRD 2024 UNIQUEMENT (retour utilisateur, V2-G1) pour la
+  // maitrise d'armes, un par classe concernee — deux trous reels du SRD,
+  // jamais devines, chacun verifie contre le texte officiel de la capacite
+  // "Weapon Mastery" :
+  // - Paladin/Rodeur/Roublard : `class_specific` ne porte JAMAIS
+  //   `weapon_mastery`, contrairement a Barbare/Guerrier — leur texte de
+  //   capacite ne mentionne d'ailleurs aucune progression (invariant "deux"
+  //   du niveau 1 au niveau 20, jamais un palier comme Barbare/Guerrier).
+  // - Barbare : `weapon_mastery_melee_only` — son texte de capacite
+  //   restreint SPECIFIQUEMENT ce choix aux armes de corps-a-corps, alors
+  //   qu'il reste maitre des armes a distance en general (elles sont dans
+  //   sa liste de maitrise generale, "Armes courantes, Armes de guerre").
+  //   Un fait sur la CAPACITE, jamais sur l'arme elle-meme (qui porte deja
+  //   son propre `is_ranged`, insuffisant pour l'exprimer).
+  // Injecte ici plutot qu'en aval (resolvedRuleset.ts) : les cinq classes
+  // suivent alors EXACTEMENT le meme chemin de lecture
+  // (`class_progression`), aucun repli special-case necessaire cote
+  // serveur. Garde `sourceAttribution === "SRD 5.2.1"` explicite : la
+  // maitrise d'armes n'existe pas du tout sous 2014, un Barbare/Paladin
+  // 2014 (meme `classIndex`) ne doit jamais en heriter. Copie plutot que
+  // mutation de `lvl` : `levels` reste la donnee source brute,
+  // potentiellement relue ailleurs.
+  const WEAPON_MASTERY_PATCH: Record<string, SrdRecord> = {
+    barbarian: { weapon_mastery_melee_only: true },
+    paladin: { weapon_mastery: 2 },
+    ranger: { weapon_mastery: 2 },
+    rogue: { weapon_mastery: 2 },
+  };
+  const weaponMasteryPatch = sourceAttribution === "SRD 5.2.1" ? WEAPON_MASTERY_PATCH[classIndex] : undefined;
   const ownLevels: SrdRecord[] =
-    fixedWeaponMastery === undefined
+    weaponMasteryPatch === undefined
       ? rawLevels
       : rawLevels.map((lvl) => ({
           ...lvl,
-          class_specific: { ...((lvl.class_specific as SrdRecord | undefined) ?? {}), weapon_mastery: fixedWeaponMastery },
+          class_specific: { ...((lvl.class_specific as SrdRecord | undefined) ?? {}), ...weaponMasteryPatch },
         }));
 
   const classSpecificKeys = new Set<string>();
