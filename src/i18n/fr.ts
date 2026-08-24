@@ -94,6 +94,23 @@ export const MAGIC_SCHOOL_LABELS_FR: Record<string, string> = {
 };
 
 /**
+ * Jeton de couleur (`src/styles/tokens.css`, ADR 0002) par ecole de magie —
+ * retour utilisateur, V2-G1 : differencier les badges d'ecole de l'onglet
+ * Sorts. Jamais une couleur en dur ici : une variable CSS par ecole,
+ * exactement comme les trois couleurs de lien deja sanctionnees.
+ */
+export const MAGIC_SCHOOL_COLOR_VAR: Record<string, string> = {
+  Abjuration: "--school-abjuration",
+  Conjuration: "--school-conjuration",
+  Divination: "--school-divination",
+  Enchantment: "--school-enchantment",
+  Evocation: "--school-evocation",
+  Illusion: "--school-illusion",
+  Necromancy: "--school-necromancy",
+  Transmutation: "--school-transmutation",
+};
+
+/**
  * Libelles des maitrises d'armes et d'armures accordees par une classe/
  * espece/historique (`mapProficiencies`, `p.key` = index SRD, ex.
  * "daggers"/"light-armor") — V2-G1 retour utilisateur : ces categories

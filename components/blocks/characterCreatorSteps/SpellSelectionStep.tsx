@@ -15,7 +15,7 @@ import type {
 import type { Ability } from "@/src/core/rules/sheet";
 import { parseCustomTableFields, parseSpellClasses, parseSpellLevel, type CustomTableRow } from "@/src/core/rules/srdMapping";
 import { renderBlockData } from "@/components/rules/blockContentRenderer";
-import { MAGIC_SCHOOL_LABELS_FR } from "@/src/i18n/fr";
+import { MAGIC_SCHOOL_LABELS_FR, MAGIC_SCHOOL_COLOR_VAR } from "@/src/i18n/fr";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
 
@@ -108,10 +108,13 @@ function spellClassesAndLevel(blocks: RuleEntryBlockData[] | undefined): { class
   return { classes: parseSpellClasses(fields), level: parseSpellLevel(fields) };
 }
 
-function spellSchool(blocks: RuleEntryBlockData[] | undefined): string | null {
+function spellSchool(blocks: RuleEntryBlockData[] | undefined): { label: string; colorVar: string } | null {
   const casting = findBlock<SpellCastingBlockData>(blocks, "spell_casting");
   if (!casting) return null;
-  return MAGIC_SCHOOL_LABELS_FR[casting.school] ?? casting.school;
+  return {
+    label: MAGIC_SCHOOL_LABELS_FR[casting.school] ?? casting.school,
+    colorVar: MAGIC_SCHOOL_COLOR_VAR[casting.school] ?? "--link-rule",
+  };
 }
 
 function descriptionPreview(blocks: RuleEntryBlockData[] | undefined): string {
@@ -127,10 +130,11 @@ function descriptionPreview(blocks: RuleEntryBlockData[] | undefined): string {
  * toujours visible en dessous, description complete depliable a la
  * demande. Selectionner (bande cliquable sur toute la ligne) et deplier
  * (bouton dedie a droite) restent deux interactions separees. Le badge
- * d'ecole reste dans le meme style neutre que les autres badges de ce
- * fichier — la charte interdit une couleur par categorie inventee
- * (specs/coquille-et-design.md §2, "Aucune couleur en dur"), contrairement
- * a une reference visuelle qui en donnait une par ecole.
+ * d'ecole porte une teinte par ecole (retour utilisateur, V2-G1 — un badge
+ * neutre unique etait illisible a distinguer d'un coup d'oeil) : une
+ * quatrieme categorie de couleur sanctionnee (`docs/adr/0010-couleurs-
+ * ecoles-de-magie.md`), jamais une valeur en dur — chaque teinte vit dans
+ * `tokens.css` (`--school-<ecole>`), jamais ici.
  */
 function SpellRow({
   worldSlug,
@@ -179,9 +183,9 @@ function SpellRow({
             {school && (
               <span
                 className="rounded-full border px-1.5 py-0 text-[10px]"
-                style={{ borderColor: "var(--link-rule)", color: "var(--link-rule)" }}
+                style={{ borderColor: `var(${school.colorVar})`, color: `var(${school.colorVar})` }}
               >
-                {school}
+                {school.label}
               </span>
             )}
             {level !== null && <span className="mech shrink-0 text-[10px] text-ink-muted">{level === 0 ? "Mineur" : `Niv. ${level}`}</span>}
@@ -272,7 +276,10 @@ function SpellPool({
         placeholder={`Rechercher — ${title.toLowerCase()}…`}
         className="w-full rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none"
       />
-      <div className="flex flex-col overflow-hidden rounded-md border border-edge/60 bg-panel-raised">
+      {/* Hauteur plafonnee a environ 5-6 sorts (retour utilisateur) — une
+          liste de 300+ sorts (Magicien 2024) restait sinon une page entiere
+          a parcourir avant d'atteindre la recherche du pool suivant. */}
+      <div className="flex max-h-80 flex-col overflow-y-auto rounded-md border border-edge/60 bg-panel-raised">
         {filtered.length === 0 ? (
           <p className="px-2.5 py-2 text-xs text-ink-muted">Aucun sort ne correspond.</p>
         ) : (

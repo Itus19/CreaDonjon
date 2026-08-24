@@ -19,12 +19,16 @@ import { useWorldRuleEntries } from "../useWorldRuleEntries";
  * d'arme, jamais des codes statiques comme les competences/langues) en noms
  * affichables.
  *
- * Affiche aussi les acquis FIXES (maitrises, langues deja accordees sans
- * choix — ex. le Commun) : sans cette section, rien ne montre qu'ils sont
- * deja la, et le retour utilisateur ("le Commun devrait etre coche") venait
- * de cette absence, pas d'un bug du moteur (`extractLanguages`/
- * `extractLanguageChoice` separent deja correctement l'acquis fixe du choix
- * — le Commun n'apparait jamais dans les options d'un choix de langue).
+ * Affiche aussi les maitrises FIXES (armure/arme/outil deja accordees sans
+ * choix) a part, dans "Deja acquis". Les LANGUES fixes (ex. le Commun)
+ * vivent depuis peu directement dans la liste "Langues" elle-meme (retour
+ * utilisateur, V2-G1 : "j'aimerais que la selection soit dans les langues
+ * pas au dessus... sous la forme d'un bouton de langue selectionne") —
+ * rendues comme des boutons deja coches, non desactivables, avant les
+ * options reelles du choix. Jamais comptees dans le "X/Y choisie(s)" du
+ * choix (`extractLanguages`/`extractLanguageChoice` separent deja
+ * correctement l'acquis fixe du choix cote serveur — le Commun n'apparait
+ * jamais dans les options d'un choix de langue).
  */
 export default function RemainingChoicesStep({
   worldSlug,
@@ -41,26 +45,20 @@ export default function RemainingChoicesStep({
   proficiencies: TraitGrantView[];
   languages: TraitGrantView[];
 }) {
-  // Les langues n'ont pas de fiche de regle (`Languages` est explicitement
-  // exclue de l'import, scripts/ingest-srd.ts `SKIPPED_CATEGORIES`) : leur
-  // nom brut (`g.name`) reste toujours l'anglais du SRD, contrairement aux
-  // maitrises deja traduites cote serveur (`assembleResolvedRuleset`) —
-  // retour utilisateur, meme lexique statique que les options de choix
-  // ci-dessous (`LANGUAGE_LABELS_FR`).
-  const alreadyGranted = [
-    ...proficiencies,
-    ...languages.map((g) => ({ ...g, name: LANGUAGE_LABELS_FR[g.key as LanguageKey] ?? g.name })),
-  ];
-
   const weaponNameByKey = new Map(useWorldRuleEntries(worldSlug).filter((e) => e.entryType === "weapon").map((e) => [e.key, e.name]));
+
+  // Attachees au PREMIER choix de langue rencontre seulement — en pratique
+  // il n'y en a jamais qu'un, mais deux choix de langue simultanes (rare,
+  // improbable) ne doivent pas les repeter deux fois.
+  const firstLanguageChoiceId = remainingChoices.find((c) => c.kind === "language")?.id;
 
   return (
     <div className="flex flex-col gap-4">
-      {alreadyGranted.length > 0 && (
+      {proficiencies.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Déjà acquis (espèce, historique)</span>
           <div className="flex flex-wrap gap-2">
-            {alreadyGranted.map((g) => (
+            {proficiencies.map((g) => (
               <span
                 key={`${g.source}:${g.key}`}
                 title={`Source : ${g.source}`}
@@ -78,12 +76,22 @@ export default function RemainingChoicesStep({
 
       {remainingChoices.map((choice) => {
         const chosen = (character.choices[choice.id] as string[] | undefined) ?? [];
+        const grantedLanguages = choice.id === firstLanguageChoiceId ? languages : [];
         return (
           <div key={choice.id} className="flex flex-col gap-1.5">
             <p className="text-xs text-ink-muted">
               {choice.label} : {chosen.length}/{choice.count} choisie(s)
             </p>
             <div className="flex flex-wrap gap-2">
+              {grantedLanguages.map((g) => (
+                <span
+                  key={`granted:${g.key}`}
+                  title={`Déjà acquis · ${g.source}`}
+                  className="rounded-full border border-accent bg-accent/20 px-2.5 py-1 text-xs text-accent"
+                >
+                  {LANGUAGE_LABELS_FR[g.key as LanguageKey] ?? g.name}
+                </span>
+              ))}
               {choice.options.map((option) => {
                 const isChosen = chosen.includes(option);
                 const canPick = isChosen || chosen.length < choice.count;

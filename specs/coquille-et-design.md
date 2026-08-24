@@ -32,6 +32,8 @@ C'est le seul effet un peu coûteux du système. Il est justifié : c'est ce qui
 
 Trois couleurs de lien, jamais mélangées :
 
+*(Une quatrième catégorie sémantique existe depuis `docs/adr/0010-couleurs-ecoles-de-magie.md` : une teinte par école de magie, pour les badges de l'onglet Sorts — ce ne sont jamais des couleurs de LIEN, elles ne pointent vers aucune fiche, la distinction avec les trois ci-dessous reste nette. Mêmes garanties de contraste, mêmes L/C par mode, seule la teinte change.)*
+
 | Couleur | Signifie | Exemple |
 |---|---|---|
 | Violet doux | renvoi vers une **entité du wiki** | « la Main Silencieuse » |

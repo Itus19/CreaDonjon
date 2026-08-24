@@ -37,6 +37,20 @@
   --link-rule:   oklch(0.76 0.10 168);
   --gm:          oklch(0.76 0.11 45);
 
+  /* Ecoles de magie (specs/coquille-et-design.md §1 amende — ADR 0002) :
+     quatrieme categorie semantique sanctionnee, memes L/C que les trois
+     couleurs de lien ci-dessus (>= 7:1 deja verifie a ces valeurs), la
+     teinte seule varie et porte le sens. Cles alignees sur MAGIC_SCHOOL_
+     LABELS_FR (src/i18n/fr.ts). */
+  --school-abjuration:    oklch(0.76 0.11 250);
+  --school-conjuration:   oklch(0.76 0.11 35);
+  --school-divination:    oklch(0.76 0.11 195);
+  --school-enchantment:   oklch(0.76 0.11 340);
+  --school-evocation:     oklch(0.76 0.11 10);
+  --school-illusion:      oklch(0.76 0.11 270);
+  --school-necromancy:    oklch(0.76 0.11 140);
+  --school-transmutation: oklch(0.76 0.11 95);
+
   --accent:       oklch(0.76 0.13 78);
   --accent-hover: oklch(0.82 0.13 78);
   --accent-ink:   oklch(0.15 0.02 78);
@@ -64,6 +78,15 @@
   --link-entity: oklch(0.80 0.13 295);
   --link-rule:   oklch(0.80 0.10 168);
   --gm:          oklch(0.80 0.11 45);
+
+  --school-abjuration:    oklch(0.80 0.11 250);
+  --school-conjuration:   oklch(0.80 0.11 35);
+  --school-divination:    oklch(0.80 0.11 195);
+  --school-enchantment:   oklch(0.80 0.11 340);
+  --school-evocation:     oklch(0.80 0.11 10);
+  --school-illusion:      oklch(0.80 0.11 270);
+  --school-necromancy:    oklch(0.80 0.11 140);
+  --school-transmutation: oklch(0.80 0.11 95);
 }
 
 /* --accent : bouton clair sur fond sombre (dark/dim) devient bouton fonce
@@ -86,6 +109,15 @@
   --link-rule:   oklch(0.22 0.10 168);
   --gm:          oklch(0.22 0.11 45);
 
+  --school-abjuration:    oklch(0.22 0.11 250);
+  --school-conjuration:   oklch(0.22 0.11 35);
+  --school-divination:    oklch(0.22 0.11 195);
+  --school-enchantment:   oklch(0.22 0.11 340);
+  --school-evocation:     oklch(0.22 0.11 10);
+  --school-illusion:      oklch(0.22 0.11 270);
+  --school-necromancy:    oklch(0.22 0.11 140);
+  --school-transmutation: oklch(0.22 0.11 95);
+
   --accent:       oklch(0.42 0.13 78);
   --accent-hover: oklch(0.48 0.13 78);
   --accent-ink:   oklch(0.98 0.02 78);
@@ -107,6 +139,15 @@
   --link-entity: oklch(0.36 0.13 295);
   --link-rule:   oklch(0.36 0.10 168);
   --gm:          oklch(0.36 0.11 45);
+
+  --school-abjuration:    oklch(0.36 0.11 250);
+  --school-conjuration:   oklch(0.36 0.11 35);
+  --school-divination:    oklch(0.36 0.11 195);
+  --school-enchantment:   oklch(0.36 0.11 340);
+  --school-evocation:     oklch(0.36 0.11 10);
+  --school-illusion:      oklch(0.36 0.11 270);
+  --school-necromancy:    oklch(0.36 0.11 140);
+  --school-transmutation: oklch(0.36 0.11 95);
 
   --accent:       oklch(0.40 0.13 78);
   --accent-hover: oklch(0.46 0.13 78);
@@ -134,6 +175,14 @@
   --link-entity: oklch(0.85 0.15 295);
   --link-rule: oklch(0.85 0.12 168);
   --gm: oklch(0.85 0.13 45);
+  --school-abjuration: oklch(0.85 0.15 250);
+  --school-conjuration: oklch(0.85 0.15 35);
+  --school-divination: oklch(0.85 0.15 195);
+  --school-enchantment: oklch(0.85 0.15 340);
+  --school-evocation: oklch(0.85 0.15 10);
+  --school-illusion: oklch(0.85 0.15 270);
+  --school-necromancy: oklch(0.85 0.15 140);
+  --school-transmutation: oklch(0.85 0.15 95);
 }
 
 @media (prefers-contrast: more) {
@@ -152,6 +201,14 @@
     --link-entity: oklch(0.85 0.15 295);
     --link-rule: oklch(0.85 0.12 168);
     --gm: oklch(0.85 0.13 45);
+    --school-abjuration: oklch(0.85 0.15 250);
+    --school-conjuration: oklch(0.85 0.15 35);
+    --school-divination: oklch(0.85 0.15 195);
+    --school-enchantment: oklch(0.85 0.15 340);
+    --school-evocation: oklch(0.85 0.15 10);
+    --school-illusion: oklch(0.85 0.15 270);
+    --school-necromancy: oklch(0.85 0.15 140);
+    --school-transmutation: oklch(0.85 0.15 95);
   }
 }
 
