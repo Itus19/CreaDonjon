@@ -101,6 +101,7 @@ describe.skipIf(!hasCreds)("arme maison : ecriture + resolution mecanique (integ
       versatileDamageDice: null,
       properties: ["finesse"],
       isRanged: false,
+      masteryKey: null,
     });
     expect(weightByKey[entryKey]).toBe(3);
     expect(costByKey[entryKey]).toEqual({ quantity: 15, unit: "gp" });

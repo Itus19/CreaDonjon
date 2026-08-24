@@ -37,6 +37,7 @@ import type { ArmorBlockData, ItemPropertiesBlockData, WeaponBlockData } from "@
 import {
   listBlocksForRulesetEntries,
   listEntryTranslationsWithBlocks,
+  listRulesetEntries,
   listRulesetEntriesByKeys,
   listRulesetEntryChipsByKeys,
   listTranslationsForEntries,
@@ -60,7 +61,105 @@ export interface RemainingChoice {
   count: number;
   options: string[];
   /** Distingue le rendu cote client (V1-C7) : la liste de competences est fixe et deja affichee par ailleurs, la liste de langues ne l'est pas — deux listes de cases a cocher differentes, pas une seule generique. */
-  kind: "skill" | "language";
+  kind: "skill" | "language" | "weapon_mastery";
+}
+
+/**
+ * Maitrise d'armes (SRD 2024, retour utilisateur, V2-G1 — "il y a le choix de
+ * maitrises d'armes... plutot mettre ce choix dans l'onglet 6") : les cinq
+ * classes qui l'accordent. Rien ici n'est devine — chaque champ correspond a
+ * un vrai trou de la donnee SRD, verifie contre les cinq fiches de classe et
+ * leur feature "Weapon Mastery" :
+ *
+ * - Le NOMBRE d'armes maitrisees EST tabule par niveau pour Barbare/Guerrier
+ *   (`class_progression`, colonne `class_specific_weapon_mastery`, deja
+ *   importee) — jamais pour Paladin/Rodeur/Roublard, qui n'ont aucune
+ *   colonne de ce nom dans leur table de classe (verifie : le nombre "deux"
+ *   n'existe que dans le texte de la feature, jamais tabule). `fixedCount`
+ *   couvre ce trou pour ces trois-la — invariant par niveau, confirme par le
+ *   texte officiel qui ne mentionne aucune progression pour elles.
+ * - QUELLES armes sont eligibles ne vient JAMAIS d'une liste ecrite ici : elle
+ *   se lit dans les vraies maitrises d'armes de la classe (`mapProficiencies`,
+ *   deja affichees sur sa fiche — "Armes courantes, Armes de guerre"), voir
+ *   `weaponMasteryOptions`. `meleeOnly` est la seule exception reelle : le
+ *   Barbare reste maitre des armes a distance (elles sont dans sa liste de
+ *   maitrise generale), mais le texte de sa feature "Weapon Mastery" restreint
+ *   specifiquement CE choix aux armes de corps-a-corps — une regle sur la
+ *   feature, jamais sur l'arme elle-meme (qui porte deja son propre `is_ranged`
+ *   structure), donc jamais deductible d'ailleurs que du texte.
+ */
+const WEAPON_MASTERY_RULES: Record<string, { meleeOnly?: boolean; fixedCount?: number }> = {
+  barbarian: { meleeOnly: true },
+  fighter: {},
+  paladin: { fixedCount: 2 },
+  ranger: { fixedCount: 2 },
+  rogue: { fixedCount: 2 },
+};
+
+function weaponMasteryCount(rule: { fixedCount?: number }, progressionRows: ProgressionRow[], level: number): number {
+  if (rule.fixedCount !== undefined) return rule.fixedCount;
+  const row = progressionRows.find((r) => r.level === level);
+  const value = row?.class_specific_weapon_mastery;
+  return typeof value === "number" ? value : 0;
+}
+
+/**
+ * Armes eligibles a la maitrise pour une classe, a partir de ses VRAIES
+ * maitrises d'armes (`mapProficiencies`, jamais une liste recopiee a la
+ * main). "simple-weapons"/"martial-weapons" couvrent une categorie entiere ;
+ * une maitrise nommee (ex. "longswords", Roublard) desingularise vers la cle
+ * de la fiche d'arme correspondante ("longsword") — les noms d'armes du SRD
+ * ne portent jamais d'exception de pluriel irreguliere, verifie contre les
+ * six cas reels (Roublard).
+ */
+function weaponMasteryOptions(
+  proficiencyKeys: string[],
+  pool: Map<string, { category: "simple" | "martial"; isRanged: boolean }>,
+  meleeOnly: boolean
+): string[] {
+  const categories = new Set<"simple" | "martial">();
+  const specific = new Set<string>();
+  for (const key of proficiencyKeys) {
+    if (key === "simple-weapons") categories.add("simple");
+    else if (key === "martial-weapons") categories.add("martial");
+    else {
+      const singular = key.replace(/s$/, "");
+      if (pool.has(singular)) specific.add(singular);
+    }
+  }
+  const options: string[] = [];
+  for (const [key, data] of pool) {
+    if (meleeOnly && data.isRanged) continue;
+    if (categories.has(data.category) || specific.has(key)) options.push(key);
+  }
+  return options;
+}
+
+/**
+ * Toutes les armes de la chaine de ruleset avec leur categorie/portee (une
+ * seule fois par assemblage, jamais par classe) — memes principes que
+ * `fetchEntriesBatch` (surcharge la plus proche gagne), mais un SCAN complet
+ * du type "weapon" plutot qu'un lot de cles precises : necessaire ici, la
+ * liste des armes eligibles n'est jamais connue a l'avance.
+ */
+async function fetchWeaponPool(
+  supabase: TypedClient,
+  rulesetId: string
+): Promise<Map<string, { category: "simple" | "martial"; isRanged: boolean }>> {
+  const chain = await walkRulesetChain(supabase, rulesetId);
+  const result = new Map<string, { category: "simple" | "martial"; isRanged: boolean }>();
+  for (const link of chain) {
+    const entries = await listRulesetEntries(supabase, link.rulesetId);
+    const weaponEntries = entries.filter((e) => e.entry_type === "weapon" && !result.has(e.entry_key));
+    if (weaponEntries.length === 0) continue;
+    const blockRows = await listBlocksForRulesetEntries(supabase, weaponEntries.map((e) => e.id));
+    const dataByEntryId = new Map(blockRows.filter((r) => r.block_type === "weapon").map((r) => [r.entry_id, r.data as WeaponBlockData]));
+    for (const e of weaponEntries) {
+      const data = dataByEntryId.get(e.id);
+      if (data) result.set(e.entry_key, { category: data.category, isRanged: data.is_ranged });
+    }
+  }
+  return result;
 }
 
 /** Maitrise ou langue accordee, avec sa source pour affichage (onglet Traits, V1-C6) — pas de lien de regle dedie, voir docs/BACKLOG_V1.md V1-C6 (le SRD ne porte aucun texte descriptif pour ces deux categories). */
@@ -184,6 +283,26 @@ export async function assembleResolvedRuleset(
   ];
   const batch = await fetchEntriesBatch(supabase, rulesetId, topKeys, locale);
 
+  // Le catalogue d'armes n'est charge que si une classe choisie accorde
+  // REELLEMENT une maitrise d'armes DANS CE RULESET — jamais seulement parce
+  // que sa cle figure dans `WEAPON_MASTERY_RULES` (V2-G1, regression
+  // detectee par un test d'integration : "fighter" existe aussi sous le SRD
+  // 2014, qui n'a pas la maitrise d'armes — sans ce filtre, l'aller-retour
+  // se payait quand meme pour un resultat qui finissait toujours ecarte,
+  // exactement le genre de cout perdu que les deux correctifs precedents de
+  // cette session visaient a eliminer). Le nombre se lit dans les donnees
+  // DEJA chargees par `fetchEntriesBatch` (`progressionRows`), donc avant de
+  // decider si le catalogue vaut la peine d'etre charge.
+  const weaponMasteryCounts = new Map<string, number>();
+  for (const cl of selection.classes) {
+    const rule = WEAPON_MASTERY_RULES[cl.key];
+    const found = rule ? batch.get(cl.key) : undefined;
+    if (!found) continue;
+    const count = weaponMasteryCount(rule, found.progressionRows, cl.level);
+    if (count > 0) weaponMasteryCounts.set(cl.key, count);
+  }
+  const weaponPool = weaponMasteryCounts.size > 0 ? await fetchWeaponPool(supabase, rulesetId) : null;
+
   if (selection.species) {
     const found = batch.get(selection.species);
     if (found) {
@@ -236,7 +355,8 @@ export async function assembleResolvedRuleset(
       spellcasting: spellAbility ? { ability: spellAbility, slotsByLevel } : undefined,
     };
 
-    proficiencies.push(...mapProficiencies(found.fields).map((p) => ({ ...p, source: label })));
+    const classProficiencies = mapProficiencies(found.fields);
+    proficiencies.push(...classProficiencies.map((p) => ({ ...p, source: label })));
 
     for (const fk of extractFeatureKeysUpToLevel(found.progressionRows, cl.level)) extraFeatureKeys.set(fk, `class:${cl.key}`);
 
@@ -248,6 +368,24 @@ export async function assembleResolvedRuleset(
         options: choice.options,
         kind: "skill",
       });
+    }
+
+    const weaponMasteryCountForClass = weaponMasteryCounts.get(cl.key);
+    if (weaponMasteryCountForClass !== undefined && weaponPool) {
+      const options = weaponMasteryOptions(
+        classProficiencies.map((p) => p.key),
+        weaponPool,
+        WEAPON_MASTERY_RULES[cl.key]?.meleeOnly ?? false
+      );
+      if (options.length > 0) {
+        remainingChoices.push({
+          id: `${cl.key}.weapon_mastery`,
+          label: `${label} — maîtrise d'armes`,
+          count: weaponMasteryCountForClass,
+          options,
+          kind: "weapon_mastery",
+        });
+      }
     }
   }
 

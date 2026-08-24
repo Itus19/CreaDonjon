@@ -19,6 +19,7 @@ import ActionsTab, { type PreparedSpellView } from "./ActionsTab";
 import MagicTab, { type KnownSpellView } from "./MagicTab";
 import InventoryTab from "./InventoryTab";
 import TraitsTab from "./TraitsTab";
+import WeaponMasteryTab from "./WeaponMasteryTab";
 import { toggleChoice } from "./characterChoiceUtils";
 
 const ABILITY_LABELS: Record<Ability, string> = {
@@ -33,7 +34,16 @@ const ABILITY_LABELS: Record<Ability, string> = {
 /** Compétences triées par libellé FR (V1-C4 suite) — même ordre que la référence visuelle fournie par l'utilisateur. */
 const SORTED_SKILLS = [...SKILLS].sort((a, b) => SKILL_LABELS_FR[a].localeCompare(SKILL_LABELS_FR[b]));
 
-type Tab = "actions" | "magie" | "inventaire" | "traits";
+type Tab = "actions" | "magie" | "inventaire" | "traits" | "maitrise";
+
+/** Libelles d'onglet (retour utilisateur, V2-G1) : "maitrise" seule ne suffit pas comme les autres onglets a un seul mot, la classe `capitalize` (par mot) l'aurait rendu "Maîtrise D'armes". */
+const TAB_LABELS: Record<Tab, string> = {
+  actions: "Actions",
+  magie: "Magie",
+  inventaire: "Inventaire",
+  traits: "Traits",
+  maitrise: "Maîtrise d'armes",
+};
 
 export interface RollLogEntry {
   id: string;
@@ -159,7 +169,11 @@ export default function PlayableCharacterSheet({
     itemChips,
     equippedWeapons,
     buildChips,
+    weaponMasteryChips,
+    masteredWeaponKeys,
   } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
+
+  const weaponMasteryChoices = remainingChoices.filter((c) => c.kind === "weapon_mastery");
 
   const knownSpellRefs = useMemo(
     () => (spellcasting?.known ?? []).map((k) => k.ref),
@@ -536,21 +550,30 @@ export default function PlayableCharacterSheet({
 
         <div className="min-w-0 flex-1">
           <div className="flex gap-1 border-b border-edge/60 text-xs">
-            {(["actions", "magie", "inventaire", "traits"] as Tab[])
-              .filter((t) => t !== "magie" || spellcasting)
+            {(["actions", "magie", "inventaire", "traits", "maitrise"] as Tab[])
+              .filter((t) => (t !== "magie" || spellcasting) && (t !== "maitrise" || weaponMasteryChoices.length > 0))
               .map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setTab(t)}
-                  className={`rounded-t-md px-3 py-1.5 capitalize transition-colors ${
+                  className={`rounded-t-md px-3 py-1.5 transition-colors ${
                     tab === t ? "border-b-2 border-accent text-ink" : "text-ink-muted hover:text-ink"
                   }`}
                 >
-                  {t}
+                  {TAB_LABELS[t]}
                 </button>
               ))}
           </div>
+
+          {tab === "maitrise" && (
+            <WeaponMasteryTab
+              choices={weaponMasteryChoices}
+              chips={weaponMasteryChips}
+              characterChoices={character.choices}
+              onChangeChoices={(choices) => patchCharacter({ choices })}
+            />
+          )}
 
           {tab === "actions" && (
             <ActionsTab
@@ -561,6 +584,7 @@ export default function PlayableCharacterSheet({
               equippedWeapons={equippedWeapons}
               itemChips={itemChips}
               weaponByKey={weaponByKey}
+              masteredWeaponKeys={masteredWeaponKeys}
               strMod={sheet.abilities.str.mod}
               dexMod={sheet.abilities.dex.mod}
               proficiencyBonus={sheet.proficiencyBonus}

@@ -47,6 +47,10 @@ export interface CharacterSheetContext {
   equippedWeapons: InventoryItem[];
   /** Chips espece/historique/classes/sous-classes (en-tete) — nom traduit + lien de fiche pour chaque champ d'identite. */
   buildChips: Map<string, ResolvedChipView>;
+  /** Chips des options de maitrise d'armes (onglet Actions) — nom traduit + lien de fiche pour chaque arme eligible. */
+  weaponMasteryChips: Map<string, ResolvedChipView>;
+  /** Cles d'armes actuellement maitrisees (onglet Actions) — pour la botte disponible sur une arme equipee. */
+  masteredWeaponKeys: Set<string>;
 }
 
 /**
@@ -226,6 +230,35 @@ export function useCharacterSheetContext(
     [inventory, weaponByKey]
   );
 
+  // Options du choix de maitrise d'armes (retour utilisateur, V2-G1 — editable
+  // sur la fiche jouable, pas seulement a la creation, cf. `assembleResolvedRuleset`
+  // : "Whenever you finish a Long Rest, you can change..."), traduites en noms
+  // affichables comme `itemChips` — memes cles de fiche d'arme, jamais un
+  // lexique statique (ce ne sont pas des codes fermes comme skill/langue).
+  const weaponMasteryRefs = useMemo(
+    () =>
+      remainingChoices
+        .filter((c) => c.kind === "weapon_mastery")
+        .flatMap((c) => c.options)
+        .map((key): BlockReference => ({ kind: "rule", key })),
+    [remainingChoices]
+  );
+  const weaponMasteryChips = useReferenceChips(worldSlug, weaponMasteryRefs);
+
+  // Armes actuellement maitrisees (retour utilisateur, V2-G1) : croise les
+  // options de chaque choix de maitrise d'armes avec ce qui est reellement
+  // choisi (`character.choices`) — sert a l'onglet Actions pour afficher la
+  // botte disponible sur une arme equipee, sans dupliquer cette logique.
+  const masteredWeaponKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const choice of remainingChoices) {
+      if (choice.kind !== "weapon_mastery") continue;
+      const chosen = (character?.choices[choice.id] as string[] | undefined) ?? [];
+      for (const key of chosen) keys.add(key);
+    }
+    return keys;
+  }, [remainingChoices, character?.choices]);
+
   const buildRefs = useMemo(() => {
     const refs: BlockReference[] = [];
     if (character?.species) refs.push(character.species);
@@ -262,5 +295,7 @@ export function useCharacterSheetContext(
     itemChips,
     equippedWeapons,
     buildChips,
+    weaponMasteryChips,
+    masteredWeaponKeys,
   };
 }

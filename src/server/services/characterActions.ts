@@ -30,14 +30,14 @@ import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { EffectsBlockData, ScalingBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 import { getEntityById } from "@/src/server/repos/entities";
-import { listBlocksForEntity } from "@/src/server/repos/blocks";
+import { listBlocksForEntity, updateBlockWithVersionCheck, type BlockRow } from "@/src/server/repos/blocks";
 import { getRuntimeState as getRuntimeStateRow } from "@/src/server/repos/runtimeState";
 import { getCampaignById } from "@/src/server/repos/campaigns";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { listBlocksForRulesetEntry, type RulesetEntryRow } from "@/src/server/repos/rules";
 import { findEntryInRulesetChain } from "@/src/server/services/rules";
-import { assembleResolvedRuleset, resolveEquipmentData } from "@/src/server/services/resolvedRuleset";
+import { assembleResolvedRuleset, resolveEquipmentData, type RemainingChoice } from "@/src/server/services/resolvedRuleset";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
@@ -60,6 +60,8 @@ export interface CharacterActionContext {
   worldId: string;
   campaignId: string | null;
   characterData: CharacterBlockData;
+  /** Ligne brute du bloc `character` (id/version/visibilite) — necessaire pour le repatcher (V2-G1, remise a zero de la maitrise d'armes au repos long), jamais pour son seul contenu deja porte par `characterData`. */
+  characterBlockRow: BlockRow;
   inventoryData: InventoryBlockData | undefined;
   spellcastingData: SpellcastingBlockData | undefined;
   resourcesData: ResourcesBlockData | undefined;
@@ -68,6 +70,8 @@ export interface CharacterActionContext {
   weaponByKey: Record<string, WeaponData | null>;
   /** Total de des de vie par de ("d10" -> 5), pour l'initialisation et les repos longs. */
   hitDiceTotals: Record<string, number>;
+  /** Choix non resolus (competences/langues/maitrise d'armes) du personnage — V2-G1, necessaire au repos long pour retrouver les cles de maitrise d'armes a effacer. */
+  remainingChoices: RemainingChoice[];
 }
 
 /**
@@ -189,6 +193,7 @@ export async function resolveCharacterActionContext(
     worldId: entity.world_id,
     campaignId,
     characterData,
+    characterBlockRow: characterRow,
     inventoryData,
     spellcastingData,
     resourcesData,
@@ -196,6 +201,7 @@ export async function resolveCharacterActionContext(
     sheet,
     weaponByKey,
     hitDiceTotals,
+    remainingChoices: assembled.remainingChoices,
   };
 }
 
@@ -508,6 +514,29 @@ export async function takeLongRest(
   for (const [dieKey, total] of Object.entries(ctx.hitDiceTotals)) {
     const regained = Math.max(1, Math.floor(total / 2));
     nextHitDice[dieKey] = Math.min(total, (currentHitDice[dieKey] ?? 0) + regained);
+  }
+
+  // Maitrise d'armes remise a zero a chaque repos long (retour utilisateur,
+  // V2-G1 : "une fois qu'il valide un long repos, ce choix se remet a
+  // zero") — texte SRD 2024 ("Whenever you finish a Long Rest...") simplifie
+  // ici en repli complet plutot qu'un "changer une seule arme" plus fidele
+  // mais plus complexe a interfacer, choix explicite de l'utilisateur. Ecrit
+  // directement dans le bloc `character` (`choices`), pas dans
+  // `entity_runtime_state` : reutilise le meme stockage que le choix initial
+  // de l'assistant de creation plutot que d'ouvrir un second mecanisme de
+  // persistance pour la meme donnee.
+  const weaponMasteryChoiceIds = ctx.remainingChoices.filter((c) => c.kind === "weapon_mastery").map((c) => c.id);
+  if (weaponMasteryChoiceIds.some((id) => id in ctx.characterData.choices)) {
+    const nextChoices = { ...ctx.characterData.choices };
+    for (const id of weaponMasteryChoiceIds) delete nextChoices[id];
+    await updateBlockWithVersionCheck(supabase, {
+      id: ctx.characterBlockRow.id,
+      expectedVersion: ctx.characterBlockRow.version,
+      display: ctx.characterBlockRow.display,
+      data: { ...ctx.characterData, choices: nextChoices } as unknown as Json,
+      visibilityLevel: ctx.characterBlockRow.visibility_level,
+      visibilityScopeId: ctx.characterBlockRow.visibility_scope_id,
+    });
   }
 
   const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;

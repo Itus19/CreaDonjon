@@ -426,6 +426,7 @@ describe("parseWeaponData", () => {
       versatileDamageDice: null,
       properties: ["finesse", "light", "monk"],
       isRanged: false,
+      masteryKey: null,
     });
   });
 
@@ -437,6 +438,7 @@ describe("parseWeaponData", () => {
       versatileDamageDice: "1d10",
       properties: ["versatile"],
       isRanged: false,
+      masteryKey: null,
     });
   });
 
@@ -455,6 +457,7 @@ describe("parseWeaponData", () => {
       versatileDamageDice: null,
       properties: ["finesse"],
       isRanged: false,
+      masteryKey: "vex",
     });
   });
 
@@ -505,6 +508,7 @@ describe("weaponDataFromBlock", () => {
       versatileDamageDice: null,
       properties: ["finesse", "light"],
       isRanged: false,
+      masteryKey: null,
     });
   });
 
@@ -522,7 +526,19 @@ describe("weaponDataFromBlock", () => {
       versatileDamageDice: "1d10",
       properties: ["versatile"],
       isRanged: false,
+      masteryKey: null,
     });
+  });
+
+  it("masse d'armes : botte d'arme SRD 2024 lue depuis data.mastery, prefixe retire", () => {
+    const data: WeaponBlockData = {
+      category: "simple",
+      is_ranged: false,
+      damage: { dice: { op: "dice", count: 1, faces: 6 }, type: "bludgeoning" },
+      properties: [],
+      mastery: { kind: "rule", key: "weapon-mastery-sap" },
+    };
+    expect(weaponDataFromBlock(data).masteryKey).toBe("sap");
   });
 });
 

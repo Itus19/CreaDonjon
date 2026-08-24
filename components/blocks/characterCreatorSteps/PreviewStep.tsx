@@ -51,6 +51,7 @@ export default function PreviewStep({
   proficiencies,
   languageChoices,
   allLanguages,
+  remainingChoices,
   weaponByKey,
   equipment,
   weight,
@@ -75,6 +76,7 @@ export default function PreviewStep({
   proficiencies: TraitGrantView[];
   languageChoices: Map<string, RemainingChoiceView>;
   allLanguages: TraitGrantView[];
+  remainingChoices: RemainingChoiceView[];
   weaponByKey: Record<string, WeaponData | null>;
   equipment: Record<string, ArmorData | null>;
   weight: Record<string, number | null>;
@@ -104,6 +106,21 @@ export default function PreviewStep({
 
   const knownSpellRefs = useMemo(() => spellcasting.known.map((k) => k.ref), [spellcasting]);
   const spellChips = useReferenceChips(worldSlug, knownSpellRefs);
+
+  // Le choix de maitrise d'armes se fait a l'etape 6 (Competences,
+  // `RemainingChoicesStep`) — repeter un editeur ici ferait doublon (meme
+  // motif que l'equipement d'historique, cf. commentaire dans
+  // `BackgroundStep.tsx`). Seul ce qui est deja choisi sert ici, pour la
+  // botte disponible sur une arme equipee.
+  const masteredWeaponKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const choice of remainingChoices) {
+      if (choice.kind !== "weapon_mastery") continue;
+      const chosen = (character.choices[choice.id] as string[] | undefined) ?? [];
+      for (const key of chosen) keys.add(key);
+    }
+    return keys;
+  }, [remainingChoices, character.choices]);
 
   const sortedKnownSpells: KnownSpellView[] = useMemo(() => {
     return spellcasting.known
@@ -186,6 +203,7 @@ export default function PreviewStep({
           equippedWeapons={equippedWeapons}
           itemChips={itemChips}
           weaponByKey={weaponByKey}
+          masteredWeaponKeys={masteredWeaponKeys}
           strMod={sheet.abilities.str.mod}
           dexMod={sheet.abilities.dex.mod}
           proficiencyBonus={sheet.proficiencyBonus}

@@ -319,6 +319,8 @@ export interface WeaponData {
   /** Cles `index` des proprietes (`finesse`, `light`, `versatile`, `two-handed`, `thrown`, `ammunition`, `heavy`, `reach`, `loading`, `monk`, `special`). */
   properties: string[];
   isRanged: boolean;
+  /** Cle `index` de la botte d'arme (SRD 2024 uniquement — `WEAPON_MASTERY_LABELS_FR`), `null` sous 2014 ou une arme sans botte renseignee. */
+  masteryKey: string | null;
 }
 
 /**
@@ -347,12 +349,15 @@ export function parseWeaponData(fields: ParsedFields): WeaponData | null {
         (c) => typeof c.name === "string" && /ranged/i.test(c.name)
       ));
 
+  const masteryRaw = fields.mastery as { index?: string } | undefined;
+
   return {
     damageDice: damage.damage_dice,
     damageType: typeof damage.damage_type?.index === "string" ? damage.damage_type.index : null,
     versatileDamageDice: typeof twoHandedDamage?.damage_dice === "string" ? twoHandedDamage.damage_dice : null,
     properties,
     isRanged,
+    masteryKey: typeof masteryRaw?.index === "string" ? masteryRaw.index : null,
   };
 }
 
@@ -416,6 +421,7 @@ export function weaponDataFromBlock(data: WeaponBlockData): WeaponData {
     versatileDamageDice: data.versatile_damage ? formatFormulaNode(data.versatile_damage) : null,
     properties: data.properties.map((p) => stripReferencePrefix(p.key)),
     isRanged: data.is_ranged,
+    masteryKey: data.mastery ? stripReferencePrefix(data.mastery.key) : null,
   };
 }
 

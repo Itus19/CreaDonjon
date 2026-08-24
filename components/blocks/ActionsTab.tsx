@@ -11,6 +11,7 @@ import { itemRef } from "./inventoryItem";
 import { ItemCard } from "./InventoryPanel";
 import { refIdentity, type ResolvedChipView } from "./useReferenceChips";
 import type { WeaponData } from "@/src/core/rules/srdMapping";
+import { WEAPON_MASTERY_LABELS_FR } from "@/src/i18n/fr";
 import type { RollLogEntry } from "./PlayableCharacterSheet";
 
 const RECHARGE_LABELS: Record<string, string> = {
@@ -48,6 +49,7 @@ export default function ActionsTab({
   equippedWeapons,
   itemChips,
   weaponByKey,
+  masteredWeaponKeys,
   strMod,
   dexMod,
   proficiencyBonus,
@@ -71,6 +73,8 @@ export default function ActionsTab({
   equippedWeapons: InventoryItem[];
   itemChips: Map<string, ResolvedChipView>;
   weaponByKey: Record<string, WeaponData | null>;
+  /** Armes actuellement maitrisees (V2-G1, retour utilisateur) — choix vit dans l'onglet dedie "Maîtrise d'armes", ici seulement pour savoir quelle botte afficher comme disponible. */
+  masteredWeaponKeys: Set<string>;
   strMod: number;
   dexMod: number;
   proficiencyBonus: number;
@@ -107,26 +111,40 @@ export default function ActionsTab({
       {equippedWeapons.map((item) => {
         const ref = itemRef(item);
         const weapon = ref?.kind === "rule" ? weaponByKey[ref.key] : null;
+        // Botte disponible (V2-G1, retour utilisateur) : purement informatif —
+        // annonce que la botte de cette arme est debloquee tant qu'elle reste
+        // maitrisee, mais son EFFET (jet, poussee, chute...) reste a resoudre
+        // a la main, comme le reste des regles non encore simulees.
+        const masteryLabel =
+          ref?.kind === "rule" && weapon?.masteryKey && masteredWeaponKeys.has(ref.key)
+            ? (WEAPON_MASTERY_LABELS_FR[weapon.masteryKey] ?? weapon.masteryKey)
+            : null;
         return (
-          <ItemCard
-            key={item.id}
-            worldSlug={worldSlug}
-            item={item}
-            chip={ref ? itemChips.get(refIdentity(ref)) : undefined}
-            weapon={weapon}
-            armor={null}
-            weightLb={null}
-            cost={null}
-            strMod={strMod}
-            dexMod={dexMod}
-            proficiencyBonus={proficiencyBonus}
-            isMonk={isMonk}
-            showAttackInfo={true}
-            collapsible={false}
-            busy={busy}
-            onAttack={() => onAttack(item)}
-            onDamage={(versatile) => onDamage(item, versatile)}
-          />
+          <div key={item.id} className="flex flex-col gap-1">
+            {masteryLabel && (
+              <span className="w-fit rounded-full border border-accent px-2 py-0.5 text-[10px] text-accent">
+                Botte disponible : {masteryLabel}
+              </span>
+            )}
+            <ItemCard
+              worldSlug={worldSlug}
+              item={item}
+              chip={ref ? itemChips.get(refIdentity(ref)) : undefined}
+              weapon={weapon}
+              armor={null}
+              weightLb={null}
+              cost={null}
+              strMod={strMod}
+              dexMod={dexMod}
+              proficiencyBonus={proficiencyBonus}
+              isMonk={isMonk}
+              showAttackInfo={true}
+              collapsible={false}
+              busy={busy}
+              onAttack={() => onAttack(item)}
+              onDamage={(versatile) => onDamage(item, versatile)}
+            />
+          </div>
         );
       })}
 

@@ -9,8 +9,16 @@ export interface RemainingChoiceView {
   label: string;
   count: number;
   options: string[];
-  /** Distingue le rendu cote client (V1-C7) : la liste de competences est fixe et deja affichee par ailleurs, la liste de langues ne l'est pas. */
-  kind: "skill" | "language";
+  /**
+   * Distingue le rendu cote client (V1-C7) : la liste de competences est
+   * fixe et deja affichee par ailleurs, la liste de langues ne l'est pas ;
+   * `weapon_mastery` (retour utilisateur, V2-G1) porte des cles de fiche
+   * d'arme plutot qu'un code statique. Comme skill/language, emis par
+   * `assembleResolvedRuleset` (server) — la fiche jouable l'ignore pour
+   * l'instant (son filtre explicite `kind === "skill"`), rien ne l'empeche
+   * de l'afficher plus tard sans changer ce type.
+   */
+  kind: "skill" | "language" | "weapon_mastery";
 }
 
 /** Maitrise ou langue accordee, avec sa source pour affichage (onglet Traits, V1-C6). */

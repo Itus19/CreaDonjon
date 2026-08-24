@@ -47,7 +47,7 @@ const EMPTY_SPELLCASTING: SpellcastingBlockData = {
   slot_override: null,
 };
 
-const STEPS = [
+const ALL_STEPS = [
   "Espèce",
   "Classe",
   "Caractéristiques",
@@ -78,7 +78,7 @@ const STEPS = [
  * au moins un sort a ete choisi.
  */
 export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSlug: string; worldId: string }) {
-  const [step, setStep] = useState(0);
+  const [rawStep, setStep] = useState(0);
   const [name, setName] = useState("");
   const [character, setCharacter] = useState<CharacterBlockData>(EMPTY_CHARACTER);
   const [inventory, setInventory] = useState<InventoryBlockData>(EMPTY_INVENTORY);
@@ -105,6 +105,20 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
   const allEntries = useWorldRuleEntries(worldSlug);
   const allSpellKeys = allEntries.filter((e) => e.entryType === "spell").map((e) => e.key);
   useRuleEntryBlocks(worldSlug, allSpellKeys);
+
+  // Etape "Sorts" masquee pour une classe qui n'incante jamais (retour
+  // utilisateur : "un onglet adaptatif" propose puis ecarte au profit de
+  // cette solution plus simple — l'onglet 7 reste dedie aux sorts, il
+  // disparait juste pour Barbare/Guerrier/etc. plutot que de changer de
+  // contenu selon la classe). Presence du bloc `spellcasting_progression`
+  // sur la classe = meme test que `computeBudget` dans `SpellSelectionStep`,
+  // sans dupliquer son calcul de budget (qui depend du niveau et n'est pas
+  // necessaire ici, juste "cette classe incante-t-elle un jour ?").
+  const classKeys = character.classes.filter((c) => c.class.kind === "rule" && c.class.key).map((c) => (c.class as { kind: "rule"; key: string }).key);
+  const classBlocksByKey = useRuleEntryBlocks(worldSlug, classKeys);
+  const hasSpellcastingClass = classKeys.some((key) => classBlocksByKey[key]?.some((b) => b.blockType === "spellcasting_progression"));
+  const steps = hasSpellcastingClass ? ALL_STEPS : ALL_STEPS.filter((label) => label !== "Sorts");
+  const step = Math.min(rawStep, steps.length - 1);
 
   const {
     remainingChoices,
@@ -183,7 +197,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
       </div>
 
       <div className="flex flex-wrap gap-1 border-b border-edge/60 pb-3 text-xs">
-        {STEPS.map((label, i) => (
+        {steps.map((label, i) => (
           <button
             key={label}
             type="button"
@@ -197,9 +211,9 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
         ))}
       </div>
 
-      {step === 0 && <SpeciesStep worldSlug={worldSlug} character={character} patchCharacter={patchCharacter} />}
+      {steps[step] === "Espèce" && <SpeciesStep worldSlug={worldSlug} character={character} patchCharacter={patchCharacter} />}
 
-      {step === 1 && (
+      {steps[step] === "Classe" && (
         <LevelClassesStep
           worldSlug={worldSlug}
           character={character}
@@ -211,7 +225,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
         />
       )}
 
-      {step === 2 && (
+      {steps[step] === "Caractéristiques" && (
         <AbilityScoreStep
           character={character}
           patchCharacter={patchCharacter}
@@ -221,7 +235,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
         />
       )}
 
-      {step === 3 && (
+      {steps[step] === "Historique" && (
         <BackgroundStep
           worldSlug={worldSlug}
           character={character}
@@ -233,7 +247,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
         />
       )}
 
-      {step === 4 && (
+      {steps[step] === "Équipement" && (
         <InventoryTab
           worldSlug={worldSlug}
           inventory={inventory}
@@ -250,8 +264,9 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
         />
       )}
 
-      {step === 5 && (
+      {steps[step] === "Compétences" && (
         <RemainingChoicesStep
+          worldSlug={worldSlug}
           remainingChoices={remainingChoices}
           character={character}
           patchCharacter={patchCharacter}
@@ -260,9 +275,11 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
         />
       )}
 
-      {step === 6 && <SpellSelectionStep worldSlug={worldSlug} character={character} spellcasting={spellcasting} onUpdateSpellcasting={setSpellcasting} />}
+      {steps[step] === "Sorts" && (
+        <SpellSelectionStep worldSlug={worldSlug} character={character} spellcasting={spellcasting} onUpdateSpellcasting={setSpellcasting} />
+      )}
 
-      {step === 7 && (
+      {steps[step] === "Aperçu" && (
         <div className="flex flex-col gap-3">
           <PreviewStep
             worldSlug={worldSlug}
@@ -280,6 +297,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
             proficiencies={proficiencies}
             languageChoices={languageChoices}
             allLanguages={allLanguages}
+            remainingChoices={remainingChoices}
             weaponByKey={weaponByKey}
             equipment={equipment}
             weight={weight}
@@ -326,8 +344,8 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
         </button>
         <button
           type="button"
-          disabled={step === STEPS.length - 1}
-          onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
+          disabled={step === steps.length - 1}
+          onClick={() => setStep((s) => Math.min(steps.length - 1, s + 1))}
           className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel disabled:opacity-30"
         >
           Suivant

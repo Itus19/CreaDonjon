@@ -6,12 +6,18 @@ import { toggleChoice } from "@/components/blocks/characterChoiceUtils";
 import { SKILL_LABELS_FR, LANGUAGE_LABELS_FR } from "@/src/i18n/fr";
 import type { Skill } from "@/src/core/rules/sheet";
 import type { LanguageKey } from "@/src/core/rules/srdMapping";
+import { useWorldRuleEntries } from "../useWorldRuleEntries";
 
 /**
  * Etape 6 (specs/wiki-liens-et-personnages.md §B8) : "une liste, pas un
- * tunnel" — tous les choix non resolus (competences, langues) affiches d'un
- * bloc, modifiables jusqu'au bout. Meme donnee que les onglets Traits/aside
- * de la fiche jouable (`character.choices`), meme fonction `toggleChoice`.
+ * tunnel" — tous les choix non resolus (competences, langues, maitrise
+ * d'armes) affiches d'un bloc, modifiables jusqu'au bout. Meme donnee que
+ * les onglets Traits/aside de la fiche jouable (`character.choices`), meme
+ * fonction `toggleChoice`. Le choix de maitrise d'armes (retour utilisateur,
+ * V2-G1) vient d'`assembleResolvedRuleset` comme competences/langues — ici,
+ * `weaponEntries` sert uniquement a traduire ses options (des cles de fiche
+ * d'arme, jamais des codes statiques comme les competences/langues) en noms
+ * affichables.
  *
  * Affiche aussi les acquis FIXES (maitrises, langues deja accordees sans
  * choix — ex. le Commun) : sans cette section, rien ne montre qu'ils sont
@@ -21,12 +27,14 @@ import type { LanguageKey } from "@/src/core/rules/srdMapping";
  * — le Commun n'apparait jamais dans les options d'un choix de langue).
  */
 export default function RemainingChoicesStep({
+  worldSlug,
   remainingChoices,
   character,
   patchCharacter,
   proficiencies,
   languages,
 }: {
+  worldSlug: string;
   remainingChoices: RemainingChoiceView[];
   character: CharacterBlockData;
   patchCharacter: (fields: Partial<CharacterBlockData>) => void;
@@ -43,6 +51,8 @@ export default function RemainingChoicesStep({
     ...proficiencies,
     ...languages.map((g) => ({ ...g, name: LANGUAGE_LABELS_FR[g.key as LanguageKey] ?? g.name })),
   ];
+
+  const weaponNameByKey = new Map(useWorldRuleEntries(worldSlug).filter((e) => e.entryType === "weapon").map((e) => [e.key, e.name]));
 
   return (
     <div className="flex flex-col gap-4">
@@ -77,7 +87,12 @@ export default function RemainingChoicesStep({
               {choice.options.map((option) => {
                 const isChosen = chosen.includes(option);
                 const canPick = isChosen || chosen.length < choice.count;
-                const label = choice.kind === "language" ? LANGUAGE_LABELS_FR[option as LanguageKey] ?? option : SKILL_LABELS_FR[option as Skill] ?? option;
+                const label =
+                  choice.kind === "language"
+                    ? LANGUAGE_LABELS_FR[option as LanguageKey] ?? option
+                    : choice.kind === "weapon_mastery"
+                      ? weaponNameByKey.get(option) ?? option
+                      : SKILL_LABELS_FR[option as Skill] ?? option;
                 return (
                   <button
                     key={option}

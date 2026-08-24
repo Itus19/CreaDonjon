@@ -227,6 +227,23 @@ export const WEAPON_PROPERTY_LABELS_FR: Record<string, string> = {
   versatile: "Polyvalente",
 };
 
+/**
+ * Botte d'arme (SRD 2024 uniquement, "Propriétés botte" — retour utilisateur,
+ * V2-G1) : meme motif que `WEAPON_PROPERTY_LABELS_FR`, termes releves mot
+ * pour mot dans data/srd/fr-source/srd-5.2.1-fr.txt (section juste apres
+ * "Propriétés botte", ligne ~8871) plutot qu'une traduction inventee.
+ */
+export const WEAPON_MASTERY_LABELS_FR: Record<string, string> = {
+  cleave: "Enchaînement",
+  graze: "Écorchure",
+  nick: "Coup double",
+  push: "Poussée",
+  sap: "Sape",
+  slow: "Ralentissement",
+  topple: "Renversement",
+  vex: "Ouverture",
+};
+
 /** Libelles des categories d'armure (`ArmorData.category`, onglet Inventaire, V1-C11) — valeurs verifiees identiques sur les deux editions. */
 export const ARMOR_CATEGORY_LABELS_FR: Record<string, string> = {
   Light: "Legere",
