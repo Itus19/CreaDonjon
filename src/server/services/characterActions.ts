@@ -378,10 +378,20 @@ export async function castSpell(
     return { error: "item_not_found" };
   }
 
-  const available = availableSlotsAt(ctx, params.slotLevel);
-  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
-  const used = state.spell_slots_used[String(params.slotLevel)] ?? 0;
-  if (used >= available) return { error: "no_slot_available" };
+  // Sort mineur (retour utilisateur, V2-G1 suite) : `slotLevel: 0` ne
+  // consomme jamais d'emplacement (regle 2024, toujours disponible) — ni
+  // verification de disponibilite, ni decompte d'etat d'execution, seul le
+  // jet de degats eventuel (identique a un sort normal) s'applique plus bas.
+  const isCantrip = params.slotLevel === 0;
+  let available = 0;
+  let used = 0;
+  let state: Awaited<ReturnType<typeof getEntityRuntimeState>> | null = null;
+  if (!isCantrip) {
+    available = availableSlotsAt(ctx, params.slotLevel);
+    state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+    used = state.spell_slots_used[String(params.slotLevel)] ?? 0;
+    if (used >= available) return { error: "no_slot_available" };
+  }
 
   let damage: DamageRollResult | undefined;
   const entry = await findEntryInRulesetChain(supabase, ctx.rulesetId, params.spellKey);
@@ -406,18 +416,20 @@ export async function castSpell(
     }
   }
 
-  const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
-  await applyRuntimeStateChange(supabase, {
-    entityId: params.entityId,
-    campaignId: params.campaignId,
-    patch: { spell_slots_used: { ...state.spell_slots_used, [String(params.slotLevel)]: used + 1 } },
-    note: `Sort ${params.spellKey} lance (emplacement niveau ${params.slotLevel})`,
-    sessionId,
-    actor: "player",
-    actorUserId: params.actorUserId,
-  });
+  if (!isCantrip && state) {
+    const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
+    await applyRuntimeStateChange(supabase, {
+      entityId: params.entityId,
+      campaignId: params.campaignId,
+      patch: { spell_slots_used: { ...state.spell_slots_used, [String(params.slotLevel)]: used + 1 } },
+      note: `Sort ${params.spellKey} lance (emplacement niveau ${params.slotLevel})`,
+      sessionId,
+      actor: "player",
+      actorUserId: params.actorUserId,
+    });
+  }
 
-  return { slotLevelConsumed: params.slotLevel, remainingSlots: available - used - 1, damage };
+  return { slotLevelConsumed: params.slotLevel, remainingSlots: isCantrip ? 0 : available - used - 1, damage };
 }
 
 /** `sheet.spellcasting.slots` est deja le resultat combine (characterSheet(), V1-B1) : rien a recombiner ici. */

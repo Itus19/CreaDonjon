@@ -19,9 +19,12 @@ import { ARMOR_CATEGORY_LABELS_FR, CURRENCY_LABELS_FR, WEAPON_PROPERTY_LABELS_FR
  * symbolique en police plus petite (« 1d20+DEX+maîtrise ») — tout dans le
  * bouton, plus rien en dehors. Les deux formules sont deja calculees par
  * l'appelant (memes valeurs que celles reellement envoyees au serveur au
- * clic, jamais une seconde regle qui pourrait diverger).
+ * clic, jamais une seconde regle qui pourrait diverger). Exporte (retour
+ * utilisateur, sorts a lancer "meme esthetique que les objets equipes") :
+ * reutilise tel quel par `ActionsTab.tsx` pour les boutons de sort, jamais
+ * une deuxieme version qui pourrait diverger visuellement.
  */
-function ActionButton({
+export function ActionButton({
   label,
   resolvedFormula,
   detailFormula,

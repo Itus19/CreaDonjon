@@ -8,7 +8,7 @@ import type { AdvantageState } from "@/src/core/rules/action";
 import type { TraceStep } from "@/src/core/formula/evaluate";
 import { evaluate } from "@/src/core/formula/evaluate";
 import { itemRef } from "./inventoryItem";
-import { ItemCard } from "./InventoryPanel";
+import { ActionButton, ItemCard } from "./InventoryPanel";
 import { refIdentity, type ResolvedChipView } from "./useReferenceChips";
 import type { WeaponData } from "@/src/core/rules/srdMapping";
 import { WEAPON_MASTERY_LABELS_FR } from "@/src/i18n/fr";
@@ -33,6 +33,84 @@ function resourceMax(tracker: { max: { formula: import("@/src/core/formula/ast")
 export interface PreparedSpellView {
   ref: BlockReference;
   label: string;
+  /** 0 = sort mineur (retour utilisateur, V2-G1 suite) — jamais d'emplacement, distinct des niveaux 1-9. */
+  level: number;
+}
+
+/**
+ * Un sort prepare, en carte (retour utilisateur, V2-G1 suite : "même
+ * esthétique que pour l'action des objets équipés") — meme squelette que
+ * `ItemCard` en mode non repliable (titre+tags a gauche, boutons `ActionButton`
+ * a droite), sans reutiliser le composant lui-meme : un sort n'a ni poids ni
+ * arme a resoudre, seulement un niveau et des emplacements.
+ *
+ * Sort mineur (`spell.level === 0`) : un seul bouton "Lancer", jamais de
+ * choix d'emplacement — la regle 2024 ne lui en fait jamais consommer un
+ * (`slotLevel: 0` cote serveur, cf. `castSpell`). Sort avec niveau : un
+ * bouton par emplacement DISPONIBLE A CE NIVEAU OU AU-DESSUS seulement
+ * (surclassement) — jamais un emplacement d'un niveau inferieur au sort,
+ * bug reel corrige ici (l'ancienne liste affichait tous les niveaux
+ * d'emplacement du personnage sans filtrer par le niveau du sort lui-meme).
+ */
+function PreparedSpellCard({
+  spell,
+  spellSlots,
+  spellSlotsUsed,
+  busy,
+  onCast,
+}: {
+  spell: PreparedSpellView;
+  spellSlots: Record<string, number>;
+  spellSlotsUsed: Record<string, number>;
+  busy: boolean;
+  onCast: (spellKey: string, label: string, slotLevel: number) => void;
+}) {
+  const { ref, label, level } = spell;
+  const isCantrip = level === 0;
+  const validSlotLevels = isCantrip
+    ? []
+    : Object.entries(spellSlots)
+        .map(([slotLevel, total]) => ({ slotLevel: Number(slotLevel), total }))
+        .filter((s) => s.slotLevel >= level)
+        .sort((a, b) => a.slotLevel - b.slotLevel);
+
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-md border border-edge/60 bg-panel-raised px-2.5 py-2.5">
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <span className="truncate text-sm font-semibold text-ink">{label}</span>
+        <span className="w-fit rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">
+          {isCantrip ? "Sort mineur" : `Niv. ${level}`}
+        </span>
+      </div>
+      <div className="flex flex-wrap justify-end gap-2">
+        {isCantrip && (
+          <ActionButton
+            label="Lancer"
+            resolvedFormula="Sort mineur"
+            detailFormula="sans emplacement"
+            busy={busy}
+            onClick={() => ref.kind === "rule" && onCast(ref.key, label, 0)}
+          />
+        )}
+        {!isCantrip && validSlotLevels.length === 0 && <span className="text-xs text-ink-muted">Aucun emplacement de ce niveau.</span>}
+        {!isCantrip &&
+          validSlotLevels.map(({ slotLevel, total }) => {
+            const used = spellSlotsUsed[String(slotLevel)] ?? 0;
+            const available = Math.max(0, total - used);
+            return (
+              <ActionButton
+                key={slotLevel}
+                label={`Niv. ${slotLevel}`}
+                resolvedFormula={`${available}/${total}`}
+                detailFormula="emplacements"
+                busy={busy || available === 0}
+                onClick={() => ref.kind === "rule" && onCast(ref.key, label, slotLevel)}
+              />
+            );
+          })}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -91,6 +169,9 @@ export default function ActionsTab({
   onChangeResource: (trackerId: string, delta: number) => void;
   rollLog: RollLogEntry[];
 }) {
+  const cantripSpells = preparedSpells.filter((s) => s.level === 0);
+  const leveledSpells = preparedSpells.filter((s) => s.level > 0);
+
   return (
     <div className="flex flex-col gap-3 pt-3">
       <div className="flex items-center gap-1 text-xs">
@@ -149,32 +230,41 @@ export default function ActionsTab({
       })}
 
       {spellcasting && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-3">
           <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Sorts préparés</span>
           {preparedSpells.length === 0 && (
             <p className="text-sm text-ink-muted">Aucun sort préparé — sélectionnez-les dans l&apos;onglet Magie.</p>
           )}
-          {preparedSpells.map(({ ref, label }) => (
-            <div key={refIdentity(ref)} className="flex flex-wrap items-center gap-2 rounded-md border border-edge/60 px-2.5 py-1.5 text-sm">
-              <span className="flex-1 text-ink">{label}</span>
-              {Object.entries(spellSlots).map(([level, total]) => {
-                const used = spellSlotsUsed[level] ?? 0;
-                const available = total - used > 0;
-                return (
-                  <button
-                    key={level}
-                    type="button"
-                    disabled={busy || !available}
-                    title={available ? `Lancer au niveau ${level}` : "Aucun emplacement disponible"}
-                    onClick={() => ref.kind === "rule" && onCast(ref.key, label, Number(level))}
-                    className="rounded-full border border-edge px-2 py-0.5 text-xs disabled:opacity-30"
-                  >
-                    niv. {level} ({Math.max(0, total - used)}/{total})
-                  </button>
-                );
-              })}
+          {cantripSpells.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Sorts mineurs — sans emplacement</span>
+              {cantripSpells.map((spell) => (
+                <PreparedSpellCard
+                  key={refIdentity(spell.ref)}
+                  spell={spell}
+                  spellSlots={spellSlots}
+                  spellSlotsUsed={spellSlotsUsed}
+                  busy={busy}
+                  onCast={onCast}
+                />
+              ))}
             </div>
-          ))}
+          )}
+          {leveledSpells.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Sorts avec emplacement</span>
+              {leveledSpells.map((spell) => (
+                <PreparedSpellCard
+                  key={refIdentity(spell.ref)}
+                  spell={spell}
+                  spellSlots={spellSlots}
+                  spellSlotsUsed={spellSlotsUsed}
+                  busy={busy}
+                  onCast={onCast}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -18,7 +18,9 @@ export const weaponDamageSchema = z.object({
 export const castSpellSchema = z.object({
   campaignId: campaignIdField,
   spellKey: z.string().min(1),
-  slotLevel: z.number().int().min(1).max(9),
+  // 0 = sort mineur (retour utilisateur, V2-G1 suite) : ne consomme jamais
+  // d'emplacement (regle 2024), distinct des niveaux 1-9 qui en consomment un.
+  slotLevel: z.number().int().min(0).max(9),
 });
 
 export const shortRestSchema = z.object({

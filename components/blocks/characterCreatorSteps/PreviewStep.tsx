@@ -135,7 +135,7 @@ export default function PreviewStep({
 
   const preparedSpells: PreparedSpellView[] = sortedKnownSpells
     .filter((s) => s.known.ref.kind === "rule" && spellcasting.prepared.includes(s.known.ref.key))
-    .map((s) => ({ ref: s.known.ref, label: s.label }));
+    .map((s) => ({ ref: s.known.ref, label: s.label, level: s.level }));
 
   function togglePrepared(key: string) {
     const prepared = spellcasting.prepared.includes(key) ? spellcasting.prepared.filter((k) => k !== key) : [...spellcasting.prepared, key];
