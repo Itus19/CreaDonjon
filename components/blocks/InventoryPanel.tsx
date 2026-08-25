@@ -6,7 +6,7 @@ import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/block
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { weaponAttackAbilityMod } from "@/src/core/rules/action";
 import type { ArmorData, ItemCost, WeaponData } from "@/src/core/rules/srdMapping";
-import { lbToKg } from "@/src/core/rules/encumbrance";
+import { lbToKg, ftToM } from "@/src/core/rules/encumbrance";
 import { CURRENCY_ORDER, depositCoins, spendCoins, type CoinType } from "@/src/core/rules/currency";
 import { useReferenceChips, refIdentity, type ResolvedChipView } from "./useReferenceChips";
 import { itemLabel, itemRef } from "./inventoryItem";
@@ -552,8 +552,8 @@ export default function InventoryPanel({
             <span>Charge</span>
             <span className={encumbrance.tier !== "none" ? "text-danger" : "text-ink-muted"}>
               {lbToKg(encumbrance.carried)}/{lbToKg(encumbrance.capacity)} kg
-              {encumbrance.tier === "encumbered" && " · Encombré (vitesse −10)"}
-              {encumbrance.tier === "heavily_encumbered" && " · Lourdement encombré (vitesse −20, désavantage FOR/DEX/CON)"}
+              {encumbrance.tier === "encumbered" && ` · Encombré (vitesse −${ftToM(10)} m)`}
+              {encumbrance.tier === "heavily_encumbered" && ` · Lourdement encombré (vitesse −${ftToM(20)} m, désavantage FOR/DEX/CON)`}
             </span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-panel-sunken">
