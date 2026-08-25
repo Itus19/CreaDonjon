@@ -10,7 +10,7 @@ import type { TraceStep } from "@/src/core/formula/evaluate";
 import { evaluate } from "@/src/core/formula/evaluate";
 import { formatFormulaNode } from "@/src/core/formula/format";
 import { resolveScaledFormulaText } from "@/src/core/rules/scaling";
-import type { EffectsBlockData, ScalingBlockData } from "@/src/core/schemas/rule-blocks";
+import type { DescriptionBlockData, EffectsBlockData, ScalingBlockData } from "@/src/core/schemas/rule-blocks";
 import { itemRef } from "./inventoryItem";
 import { ActionButton, ItemCard, withModifier } from "./InventoryPanel";
 import { refIdentity, type ResolvedChipView } from "./useReferenceChips";
@@ -23,6 +23,13 @@ import type { RollLogEntry } from "./PlayableCharacterSheet";
 function findBlock<T>(blocks: RuleEntryBlockData[] | undefined, blockType: string): T | null {
   const found = blocks?.find((b) => b.blockType === blockType);
   return found ? (found.data as T) : null;
+}
+
+/** Meme troncature que `SpellSelectionStep.tsx` (assistant de creation) — un seul apercu court, jamais deux styles de resume pour le meme sort selon l'ecran. */
+function descriptionPreview(blocks: RuleEntryBlockData[] | undefined): string {
+  const data = findBlock<DescriptionBlockData>(blocks, "description");
+  const text = data?.segments.map((s) => s.text).join(" ") ?? "";
+  return text.length > 130 ? `${text.slice(0, 130)}…` : text;
 }
 
 const RECHARGE_LABELS: Record<string, string> = {
@@ -162,6 +169,7 @@ function PreparedSpellCard({
 
   const attackResolved = withModifier("1d20", spellAttackBonus);
   const attackDetail = `1d20+${spellAbilityLabel}+maîtrise`;
+  const preview = descriptionPreview(blocks);
 
   const available = !isCantrip ? Math.max(0, (spellSlots[String(castLevel)] ?? 0) - (spellSlotsUsed[String(castLevel)] ?? 0)) : Infinity;
 
@@ -214,6 +222,7 @@ function PreparedSpellCard({
           )}
         </div>
       </div>
+      {preview && <p className="text-xs leading-relaxed text-ink-muted">{preview}</p>}
     </div>
   );
 }
