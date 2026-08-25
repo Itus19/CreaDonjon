@@ -101,6 +101,10 @@ export default function BackgroundStep({
   // retour utilisateur V2-G1 — indexe par `<option.label>:<index d'item>`,
   // remis a zero au changement d'historique pour ne jamais heriter une
   // selection d'un autre historique reutilisant les memes labels "A"/"B".
+  // Vide (cle absente) tant que le joueur n'a pas explicitement choisi
+  // (retour utilisateur suite : jamais de premier membre presuppose) — l'item
+  // reste alors un objet generique sans reference, comme avant cette
+  // fonctionnalite.
   const [categorySelections, setCategorySelections] = useState<Record<string, string>>({});
 
   function select(key: string) {
@@ -123,9 +127,7 @@ export default function BackgroundStep({
 
     const tag = `${TAG_PREFIX}${currentKey}:${option.label}`;
     const newItems: InventoryItem[] = option.items.map((it, i) => {
-      const categoryKey = it.category_options?.length
-        ? (selections[`${option.label}:${i}`] ?? it.category_options[0].key)
-        : undefined;
+      const categoryKey = it.category_options?.length ? selections[`${option.label}:${i}`] : undefined;
       const ref =
         it.ref?.kind === "rule" ? { kind: "rule" as const, key: it.ref.key } : categoryKey ? { kind: "rule" as const, key: categoryKey } : undefined;
       return {
@@ -163,12 +165,7 @@ export default function BackgroundStep({
           if (option) applyOption(option);
         },
         categoryChoice: {
-          selectedKey: (optionLabel, itemIndex) => {
-            const item = backgroundData.equipment_options.find((o) => o.label === optionLabel)?.items[itemIndex];
-            const opts = item?.category_options;
-            if (!opts?.length) return "";
-            return categorySelections[`${optionLabel}:${itemIndex}`] ?? opts[0].key;
-          },
+          selectedKey: (optionLabel, itemIndex) => categorySelections[`${optionLabel}:${itemIndex}`] ?? "",
           onSelectKey: (optionLabel, itemIndex, key) => {
             const stateKey = `${optionLabel}:${itemIndex}`;
             const next = { ...categorySelections, [stateKey]: key };

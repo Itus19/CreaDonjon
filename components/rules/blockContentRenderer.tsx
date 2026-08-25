@@ -1059,9 +1059,11 @@ export interface EquipmentCardInteraction {
    * Choix du membre reel d'une categorie "au choix" (V2-G1, retour
    * utilisateur : transformer "Symbole sacre (au choix)" en vraie liste
    * choisissable) — seulement pour les items dont `resolved_category_options`
-   * est non vide. `selectedKey` retourne toujours une cle valide (le premier
-   * membre par defaut), jamais un etat vide, pour que la liste deroulante
-   * n'affiche jamais un champ sans valeur.
+   * est non vide. `selectedKey` retourne "" tant que le joueur n'a rien
+   * choisi (retour utilisateur suite : le bouton doit afficher le libelle
+   * generique "au choix" par defaut, jamais presupposer le premier membre) —
+   * la liste deroulante affiche alors `resolved_label` grace a une option
+   * "placeholder" ajoutee par `BackgroundEquipmentCard`.
    */
   categoryChoice?: {
     selectedKey: (optionLabel: string, itemIndex: number) => string;
@@ -1106,12 +1108,20 @@ function BackgroundEquipmentCard({
           const categoryChoice = interaction?.categoryChoice;
           const categoryOptions = item.resolved_category_options;
           if (categoryChoice && categoryOptions && categoryOptions.length > 0) {
+            // Option "placeholder" (valeur "") en tete de liste — affiche le
+            // libelle generique "au choix" tant que rien n'est choisi (retour
+            // utilisateur, V2-G1 suite), plutot que de presupposer le premier
+            // membre reel de la categorie.
+            const dropdownOptions = [
+              { value: "", label: item.resolved_label },
+              ...categoryOptions.map((c) => ({ value: c.key, label: c.resolved_label })),
+            ];
             return (
               <div key={i} className="flex items-center gap-1.5 text-sm" onClick={(e) => e.stopPropagation()}>
                 <span className="mech shrink-0 text-ink-muted">×{item.quantity}</span>
                 <Dropdown
                   value={categoryChoice.selectedKey(option.label, i)}
-                  options={categoryOptions.map((c) => ({ value: c.key, label: c.resolved_label }))}
+                  options={dropdownOptions}
                   onChange={(key) => categoryChoice.onSelectKey(option.label, i, key)}
                   aria-label={item.resolved_label}
                   className="rounded-md border border-edge px-2 py-0.5 text-sm text-ink outline-none transition-colors hover:bg-panel"

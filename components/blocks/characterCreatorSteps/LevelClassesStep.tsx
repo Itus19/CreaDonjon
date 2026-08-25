@@ -131,9 +131,7 @@ export default function LevelClassesStep({
 
     const tag = `${EQUIPMENT_TAG_PREFIX}choice:${choiceIndex}`;
     const newItems: InventoryItem[] = option.items.map((it, i) => {
-      const categoryKey = it.category_options?.length
-        ? (selections[`${choiceIndex}:${option.label}:${i}`] ?? it.category_options[0].key)
-        : undefined;
+      const categoryKey = it.category_options?.length ? selections[`${choiceIndex}:${option.label}:${i}`] : undefined;
       const ref =
         it.ref?.kind === "rule" ? { kind: "rule" as const, key: it.ref.key } : categoryKey ? { kind: "rule" as const, key: categoryKey } : undefined;
       return {
@@ -279,14 +277,8 @@ export default function LevelClassesStep({
                         if (option) chooseEquipmentOption(choiceIndex, option);
                       },
                       categoryChoice: {
-                        selectedKey: (optionLabel, itemIndex) => {
-                          const item = firstClassEquipment.choices[choiceIndex]?.options.find((o) => o.label === optionLabel)?.items[
-                            itemIndex
-                          ];
-                          const opts = item?.category_options;
-                          if (!opts?.length) return "";
-                          return categorySelections[`${choiceIndex}:${optionLabel}:${itemIndex}`] ?? opts[0].key;
-                        },
+                        selectedKey: (optionLabel, itemIndex) =>
+                          categorySelections[`${choiceIndex}:${optionLabel}:${itemIndex}`] ?? "",
                         onSelectKey: (optionLabel, itemIndex, key) => {
                           const stateKey = `${choiceIndex}:${optionLabel}:${itemIndex}`;
                           const next = { ...categorySelections, [stateKey]: key };
