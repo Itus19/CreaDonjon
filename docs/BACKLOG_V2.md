@@ -440,13 +440,15 @@ Fait — `minimizedIds` (nouvel état local dans `DesktopWindowsProvider.tsx`, j
 
 Fait — `<Tabs>` (`components/shared/Tabs.tsx`) est un primitif controlé (`value`/`items`/`onChange`), reprenant le style déjà établi par `SectionToggle.tsx` (segments égaux dans un conteneur arrondi) plutôt qu'une deuxième présentation d'onglets. Deux onglets aujourd'hui : **Général** (Langue, Thème, Compte, liens de partage, Suppression — tout ce qui existait déjà) et **Collaboration** (le bouton désactivé « Inviter un MJ », déplacé tel quel). Le troisième onglet (Règles) n'est pas créé ici : K6 l'introduira avec son vrai contenu plutôt que de poser un onglet vide en attendant. Nouvelle clé de traduction `settings.general` (fr/en). Aucune section déplacée n'a changé de comportement. Vérifié en navigateur : bascule entre les deux onglets, contenu identique à avant. `typecheck`/`lint`/`test` verts (605/606, 1 ignoré).
 
-### V2-K6 — Ruleset actif déplacé dans les Réglages · `S`
+### V2-K6 — Ruleset actif déplacé dans les Réglages · `S` — fait
 
 *Dépend de K5.*
 
-- [ ] `RulesetSelector` (`components/rules/RulesetSelector.tsx`) quitte le bas de `RulesSidebar` pour un onglet des Réglages généraux.
-- [ ] Même comportement (choix du ruleset actif, création de variante, suppression) — seul l'emplacement change.
-- [ ] Cohérent avec K2 : la sidebar Règles redevient une simple liste, sans réglage mélangé dedans.
+- [x] `RulesetSelector` (`components/rules/RulesetSelector.tsx`) quitte le bas de `RulesSidebar` pour un onglet des Réglages généraux.
+- [x] Même comportement (choix du ruleset actif, création de variante, suppression) — seul l'emplacement change.
+- [x] Cohérent avec K2 : la sidebar Règles redevient une simple liste, sans réglage mélangé dedans.
+
+Fait — `RulesetSelector` n'a pas bougé lui-même (déjà autonome, déjà en portail) : seul son point de montage change, de `RulesSidebar.tsx` vers un nouvel onglet « Règles » de `SettingsMenu.tsx`, visible uniquement dans le contexte d'un monde (`worldSlug` détecté depuis l'URL, même mécanisme que le panneau de partage). Aucune ligne de `RulesetSelector.tsx` modifiée. Vérifié en navigateur : le bouton « Règles actives » et sa boîte de dialogue (choisir/créer une variante/supprimer) fonctionnent à l'identique depuis les Réglages ; la sidebar Règles est redevenue une simple liste + les deux boutons de création. `typecheck`/`lint`/`test` verts (605/606, 1 ignoré).
 
 ### V2-K7 — Onglet Collaboration dans les Réglages · `S`
 

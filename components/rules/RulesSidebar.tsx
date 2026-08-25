@@ -8,7 +8,6 @@ import type { RuleEntrySummary } from "@/src/server/services/rules";
 import { useOpenRuleLink } from "@/components/shell/useOpenRuleLink";
 import SectionToggle from "@/components/shell/SectionToggle";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
-import RulesetSelector from "./RulesetSelector";
 
 function RuleEntryLink({
   entry,
@@ -267,7 +266,6 @@ export default function RulesSidebar({ worldSlug }: { worldSlug: string }) {
           >
             {t("bacASable")}
           </Link>
-          <RulesetSelector worldSlug={worldSlug} />
         </div>
       </aside>
     </>

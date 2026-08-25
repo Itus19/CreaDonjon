@@ -13,6 +13,7 @@ import {
 import ShareLinkPanel from "./ShareLinkPanel";
 import type { ShareLinkSummary } from "@/src/server/services/shareLinks";
 import Tabs from "@/components/shared/Tabs";
+import RulesetSelector from "@/components/rules/RulesetSelector";
 
 const MODES = ["dark", "dim", "soft", "light"] as const;
 
@@ -117,12 +118,14 @@ export default function SettingsMenu({
   displayName: string;
 }) {
   const t = useTranslations("settings");
+  const tShell = useTranslations("shell");
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
   const [contrast, setContrast] = useState(currentContrast);
   // Premier composant d'onglets du depot (V2-K5) — pur decoupage des
-  // sections deja existantes, aucun changement de comportement.
-  const [tab, setTab] = useState<"general" | "collaboration">("general");
+  // sections deja existantes, aucun changement de comportement. L'onglet
+  // "regles" n'existe que dans le contexte d'un monde (V2-K6).
+  const [tab, setTab] = useState<"general" | "regles" | "collaboration">("general");
 
   // Le panneau de partage a quitte l'accueil du monde pour cet onglet
   // (V1-C4) : ce composant est rendu globalement (app/layout.tsx), hors de
@@ -211,9 +214,10 @@ export default function SettingsMenu({
 
             <Tabs
               value={tab}
-              onChange={(v) => setTab(v as "general" | "collaboration")}
+              onChange={(v) => setTab(v as "general" | "regles" | "collaboration")}
               items={[
                 { value: "general", label: t("general") },
+                ...(worldSlug ? [{ value: "regles", label: tShell("regles") }] : []),
                 { value: "collaboration", label: t("collaboration.titre") },
               ]}
             />
@@ -303,6 +307,12 @@ export default function SettingsMenu({
                   <DeleteAccountSection />
                 </section>
               </>
+            )}
+
+            {tab === "regles" && worldSlug && (
+              <section className="flex flex-col gap-2">
+                <RulesetSelector worldSlug={worldSlug} />
+              </section>
             )}
 
             {tab === "collaboration" && (
