@@ -114,7 +114,7 @@ export default function CommandPalette({
   function navigateTo(slug: string) {
     setOpen(false);
     if (desktop) {
-      desktop.openEntity(slug);
+      desktop.openRef({ kind: "entity", key: slug });
     } else {
       window.location.href = `/m/${worldSlug}/f/${slug}`;
     }

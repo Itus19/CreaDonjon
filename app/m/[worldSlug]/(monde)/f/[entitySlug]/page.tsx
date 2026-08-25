@@ -17,9 +17,10 @@ export default async function EntityPage({
   return (
     <>
       <RegisterPrimaryWindow
-        slug={data.entity.slug}
+        windowRef={{ kind: "entity", key: data.entity.slug }}
         name={data.entity.name}
-        kind={data.entity.entity_kind}
+        badge={data.entity.entity_kind}
+        homeHref={`/m/${worldSlug}`}
       />
       <EditEntityForm
         entity={data.entity}

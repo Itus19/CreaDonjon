@@ -1,14 +1,14 @@
-import { Suspense } from "react";
 import type { EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import type { PaletteEntity } from "./CommandPalette";
 import Sidebar from "./Sidebar";
-import DesktopWindows from "./DesktopWindows";
+import WindowsDesktop from "./WindowsDesktop";
 
 /**
- * Contenu de la section Monde : barre laterale des entites + fenetres
- * flottantes (ADR-0006). Extrait de l'ancien AppShell pour que la section
- * Regles puisse avoir sa propre barre laterale sans ce mecanisme, qui
- * n'a de sens que pour l'edition de fiches en parallele.
+ * Contenu de la section Monde : barre laterale des entites + rendu des
+ * fenetres flottantes (ADR-0011). L'etat des fenetres lui-meme vit plus
+ * haut (`DesktopWindowsProvider`, monte dans `app/m/[worldSlug]/layout.tsx`,
+ * partage avec Regles) — ce composant ne monte que le rendu et sa propre
+ * barre laterale.
  */
 export default function MondeShell({
   worldId,
@@ -24,13 +24,9 @@ export default function MondeShell({
   children: React.ReactNode;
 }) {
   return (
-    <Suspense fallback={null}>
-      <DesktopWindows
-        worldSlug={worldSlug}
-        sidebar={<Sidebar worldId={worldId} worldSlug={worldSlug} tree={tree} entities={entities} />}
-      >
-        {children}
-      </DesktopWindows>
-    </Suspense>
+    <>
+      <Sidebar worldId={worldId} worldSlug={worldSlug} tree={tree} entities={entities} />
+      <WindowsDesktop worldSlug={worldSlug}>{children}</WindowsDesktop>
+    </>
   );
 }

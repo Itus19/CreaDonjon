@@ -377,6 +377,79 @@ Le lot E de la V1 a écrit les générateurs avec leurs emplacements de prose **
 
 ---
 
+## Lot K — Refonte de la coquille : sidebar unifiée et fenêtres
+
+*Née d'une demande explicite de restructuration de l'interface (2026-08-25). Indépendant de H/I/J — peut se glisser n'importe quand, mais mieux vaut finir le lot avant d'en ouvrir un autre : rouvrir la coquille deux fois coûte plus cher que de la faire d'un bloc.*
+
+### Décisions de conception, à prendre avant d'écrire
+
+**Adressage mixte d'une fenêtre.** `?avec=` ne portait jusqu'ici que des slugs d'entité. Afficher une fiche de règle et une fiche de monde dans le même espace de travail oblige à distinguer les deux types sans ambiguïté — préfixer (`?avec=entite:pont-de-pierre,regle:boule-de-feu`) plutôt que deviner le type en cherchant le slug dans les deux tables (plus lent, et ambigu si le même slug existe des deux côtés).
+
+**Taille fixe des fenêtres : la valeur se choisit en la voyant, pas a priori.** Tester contre les blocs les plus denses (fiche de personnage jouable, inventaire, tableau de compétences) avant de figer un nombre dans le code.
+
+### V2-K1 — Fenêtres partagées entre Monde et Règles · `L` — fait
+
+Aujourd'hui `DesktopWindows`/`WindowFrame` (`components/shell/DesktopWindows.tsx`, `components/shell/WindowFrame.tsx`) ne vivent que sous la route `(monde)` : une fiche de règle (`/m/[worldSlug]/regles/[cle]`) s'affiche toujours en page pleine, jamais en fenêtre. C'est le verrou qui empêche d'afficher monde et règles en même temps — pas un manque de fonctionnalité de fenêtre, qui existe déjà (ADR-0006).
+
+- [x] Remonter le gestionnaire de fenêtres au niveau de `app/m/[worldSlug]/layout.tsx`, partagé par Monde/Règles/MJ.
+- [x] `?avec=` accepte des références mixtes (entité et entrée de règle — voir décision ci-dessus), chacune résolue par sa route API existante.
+- [x] Ouvrir une fiche de règle depuis la vue Règles l'ajoute comme fenêtre, sans quitter la vue courante.
+- [x] Changer de vue (Monde/Règles/MJ) ne ferme plus les fenêtres ouvertes.
+
+**Préalable à K2 et K4** — ils supposent que les fenêtres survivent au changement de vue.
+
+Fait — décision d'architecture (état partagé + rendu dupliqué par section, MJ non concerné) dans `docs/adr/0011-fenetres-partagees-monde-regles.md`. `DesktopWindows.tsx` scindé en `DesktopWindowsProvider.tsx` (état, monté une fois) et `WindowsDesktop.tsx` (rendu, monté par Monde et par Règles). Adressage mixte dans `components/shell/windowRefs.ts`. `RegisterPrimaryWindow`, `useOpenEntityLink`/`useOpenRuleLink` généralisés sur un `WindowRef`. Une fiche de règle partage désormais `RuleEntryView` entre son rendu serveur (fenêtre primaire) et sa récupération client (`/api/worlds/[worldSlug]/regles/[cle]/window`, fenêtre secondaire), même motif que `EditEntityForm`. `RulesSidebar` récupère désormais sa liste côté client (`useWorldRuleEntries`, déjà utilisé ailleurs) plutôt que par props serveur, pour ne pas payer ce coût sur les pages Monde. Piège trouvé et corrigé : la clé d'effet déclenchant la récupération d'une fenêtre secondaire dépendait à tort de primaire+avec combinés — une référence passant de primaire à secondaire pouvait laisser cette clé combinée inchangée et l'effet ne se redéclenchait pas ; corrigé en la faisant dépendre de `avec` seul. Vérifié en navigateur : ouverture d'une fiche de règle et d'une fiche d'entité simultanément, aller-retour Monde → Règles → MJ → Monde sans perte de fenêtre, fermeture d'une fenêtre individuelle. `typecheck`/`lint` verts ; `test` vert sur les tests unitaires (595/606, le reste exige une base Supabase locale indisponible dans cet environnement, sans rapport avec ce ticket).
+
+### V2-K2 — Sidebar unifiée comme sélecteur de vue · `M`
+
+*Dépend de K1.*
+
+- [ ] Le bandeau `Monde / Règles / MJ` (`components/shell/SectionToggle.tsx`) quitte la barre supérieure, remonte dans la sidebar, au-dessus du champ de recherche.
+- [ ] Choisir une vue change le contenu de l'arborescence (`EntityTree`, liste de `RulesSidebar`, navigation de `MjSidebar`) **sans navigation de page complète** — l'espace de travail (fenêtres ouvertes) ne bouge pas.
+- [ ] L'URL continue de refléter la vue active (lien partageable, bouton retour), sans démonter le gestionnaire de fenêtres.
+- [ ] Les boutons propres à chaque vue (bas de sidebar) restent inchangés, sauf ce que déplacent K6 et K7.
+
+### V2-K3 — Taille fixe des fenêtres · `S`
+
+- [ ] Poignées de redimensionnement retirées de `WindowFrame.tsx`.
+- [ ] Une seule taille à l'ouverture, quel que soit le contenu (voir décision ci-dessus).
+- [ ] Déplacement (drag) et agrandissement/restauration (maximiser) inchangés.
+
+### V2-K4 — Réduction de fenêtre en onglet de bas d'écran · `M`
+
+*Dépend de K1.*
+
+- [ ] Un bouton « réduire » sur chaque fenêtre, à côté de fermer/agrandir.
+- [ ] Fenêtre réduite → un onglet compact en bas de l'espace de travail (nom de la fiche) ; la fenêtre elle-même se masque.
+- [ ] Cliquer l'onglet restaure la fenêtre à sa position précédente.
+- [ ] L'état réduit est un état d'affichage local, **jamais dans `?avec=`** ni dans l'URL — même logique que l'ordre d'empilement, déjà non persisté (`docs/adr/0006-fenetres-flottantes.md`).
+
+### V2-K5 — Réglages à onglets · `S`
+
+`components/shell/SettingsMenu.tsx` est aujourd'hui une seule modale à sections empilées (Langue, Thème, Compte, liens de partage, Collaboration, Suppression). Premier composant d'onglets du dépôt — un `<Tabs>` générique, pas un cas particulier à cet écran.
+
+- [ ] `<Tabs>` générique (`components/shared/`, même famille que `Dropdown`).
+- [ ] Sections existantes réparties en onglets (Général + les deux onglets neufs ci-dessous).
+- [ ] Aucun changement de comportement sur les sections déplacées — pur découpage, comme V2-G5.
+
+### V2-K6 — Ruleset actif déplacé dans les Réglages · `S`
+
+*Dépend de K5.*
+
+- [ ] `RulesetSelector` (`components/rules/RulesetSelector.tsx`) quitte le bas de `RulesSidebar` pour un onglet des Réglages généraux.
+- [ ] Même comportement (choix du ruleset actif, création de variante, suppression) — seul l'emplacement change.
+- [ ] Cohérent avec K2 : la sidebar Règles redevient une simple liste, sans réglage mélangé dedans.
+
+### V2-K7 — Onglet Collaboration dans les Réglages · `S`
+
+*Dépend de K5.*
+
+- [ ] Le bouton désactivé « Inviter un MJ (bientôt) » (`SettingsMenu.tsx`) devient un onglet Collaboration fonctionnel.
+- [ ] Reprend le flux d'invitation par e-mail déjà existant au niveau campagne (`CampaignDetail.tsx`) plutôt que d'en écrire un second.
+- [ ] Liste les invitations actives, quel que soit le monde ou la campagne concernée.
+
+---
+
 ## 3. Critère de fin de V2
 
 > Mener une séance complète avec votre table — préparation, PNJ cohérents, carte, combat, notes — sans ouvrir aucun autre outil.

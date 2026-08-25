@@ -16,7 +16,7 @@ export function useOpenEntityLink(worldSlug: string, slug: string) {
       if (!desktop) return;
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
       e.preventDefault();
-      desktop.openEntity(slug);
+      desktop.openRef({ kind: "entity", key: slug });
     },
   };
 }

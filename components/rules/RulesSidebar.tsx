@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
+import { useOpenRuleLink } from "@/components/shell/useOpenRuleLink";
+import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 import RulesetSelector from "./RulesetSelector";
 
 function RuleEntryLink({
@@ -23,10 +25,14 @@ function RuleEntryLink({
   /** Nom de classe affiché en retrait sous le nom (ticket #57) — seulement pour les Aptitudes dont le nom est partagé par plusieurs classes. */
   disambiguation?: string;
 }) {
+  const link = useOpenRuleLink(worldSlug, entry.key);
   return (
     <Link
-      href={`/m/${worldSlug}/regles/${entry.key}`}
-      onClick={onNavigate}
+      href={link.href}
+      onClick={(e) => {
+        link.onClick(e);
+        onNavigate();
+      }}
       className={`block truncate rounded px-2 py-1 text-sm transition-colors hover:bg-panel-raised ${
         entry.key === currentKey ? "bg-panel-raised text-accent" : "text-ink-soft"
       }`}
@@ -124,13 +130,8 @@ function RuleTypeGroup({
  * quelques milliers d'entrees filtrees en memoire suffisent, meme ordre de
  * grandeur que la liste d'entites d'un monde deja geree ainsi.
  */
-export default function RulesSidebar({
-  worldSlug,
-  entries,
-}: {
-  worldSlug: string;
-  entries: RuleEntrySummary[];
-}) {
+export default function RulesSidebar({ worldSlug }: { worldSlug: string }) {
+  const entries = useWorldRuleEntries(worldSlug);
   const t = useTranslations("regles");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");

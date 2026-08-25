@@ -92,7 +92,7 @@ export default function RelationsChips({
                   if (!desktop) return;
                   if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
                   e.preventDefault();
-                  desktop.openEntity(relation.other.slug);
+                  desktop.openRef({ kind: "entity", key: relation.other.slug });
                 }}
                 className="font-medium text-link-entity hover:underline"
               >
