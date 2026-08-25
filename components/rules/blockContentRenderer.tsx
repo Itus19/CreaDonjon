@@ -1041,17 +1041,64 @@ function SubclassSlot({ data, worldSlug }: { data: ResolvedSubclassSlotBlockData
  * l'objet a sa propre fiche (`ResolvedBackgroundBlockData`) ; sans
  * reference (ex. « boite de jeux, au choix »), `resolved_label` reste le
  * libelle fige ecrit a l'import.
+ *
+ * `interaction` (optionnel, retour utilisateur V2-G1 : "remplacer les
+ * boutons Choisir A/B par un clic direct sur l'encadre") rend tout
+ * l'encadre cliquable — l'assistant de creation le fournit, une fiche de
+ * regle en lecture seule (`/regles/<cle>`) ne le fournit jamais, l'encadre
+ * y reste alors statique comme avant. `role="button"` plutot qu'un vrai
+ * `<button>` : la carte contient deja un lien vers la fiche de chaque objet,
+ * imbriquer un `<a>` dans un `<button>` est invalide — le lien appelle
+ * `stopPropagation` pour naviguer sans selectionner l'option au passage.
  */
-function BackgroundEquipmentCard({ option, worldSlug }: { option: ResolvedBackgroundEquipmentOption; worldSlug: string }) {
+export interface EquipmentCardInteraction {
+  isChosen: (optionLabel: string) => boolean;
+  onSelect: (optionLabel: string) => void;
+}
+
+function BackgroundEquipmentCard({
+  option,
+  worldSlug,
+  interaction,
+}: {
+  option: ResolvedBackgroundEquipmentOption;
+  worldSlug: string;
+  interaction?: EquipmentCardInteraction;
+}) {
+  const isChosen = interaction?.isChosen(option.label) ?? false;
   return (
-    <div className="flex flex-col gap-1.5 rounded-md border border-edge/60 bg-panel-raised px-3 py-2.5">
-      <span className="text-xs font-bold uppercase tracking-wide text-ink">Choix {option.label}</span>
+    <div
+      role={interaction ? "button" : undefined}
+      tabIndex={interaction ? 0 : undefined}
+      onClick={interaction ? () => interaction.onSelect(option.label) : undefined}
+      onKeyDown={
+        interaction
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                interaction.onSelect(option.label);
+              }
+            }
+          : undefined
+      }
+      className={`flex flex-col gap-1.5 rounded-md border px-3 py-2.5 transition-colors ${
+        interaction
+          ? `cursor-pointer ${isChosen ? "border-accent bg-accent/10" : "border-edge/60 bg-panel-raised hover:bg-panel"}`
+          : "border-edge/60 bg-panel-raised"
+      }`}
+    >
+      <span className={`text-xs font-bold uppercase tracking-wide ${isChosen ? "text-accent" : "text-ink"}`}>Choix {option.label}</span>
       <div className="flex flex-col gap-1">
         {option.items.map((item, i) => (
           <div key={i} className="flex items-baseline gap-1.5 text-sm">
             <span className="mech shrink-0 text-ink-muted">×{item.quantity}</span>
             {item.ref ? (
-              <Link href={`/m/${worldSlug}/regles/${item.ref.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
+              <Link
+                href={`/m/${worldSlug}/regles/${item.ref.key}`}
+                onClick={interaction ? (e) => e.stopPropagation() : undefined}
+                className="hover:underline"
+                style={{ color: "var(--link-rule)" }}
+              >
                 {item.resolved_label}
               </Link>
             ) : (
@@ -1085,7 +1132,15 @@ function BackgroundEquipmentCard({ option, worldSlug }: { option: ResolvedBackgr
  * meme style que les etiquettes `KeyValues` (gras, majuscules) plutot que
  * l'ancien style muet a 10px, pour rester coherent avec le reste du bloc.
  */
-function Background({ data, worldSlug }: { data: ResolvedBackgroundBlockData; worldSlug: string }) {
+function Background({
+  data,
+  worldSlug,
+  equipmentInteraction,
+}: {
+  data: ResolvedBackgroundBlockData;
+  worldSlug: string;
+  equipmentInteraction?: EquipmentCardInteraction;
+}) {
   const statItems = [
     { label: "Valeurs de caracteristique", value: data.ability_scores.map(abilityLabel).join(", ") },
     ...(data.tool_proficiency ? [{ label: "Maitrise d'outil", value: proficiencyLabel(data.tool_proficiency) }] : []),
@@ -1112,7 +1167,7 @@ function Background({ data, worldSlug }: { data: ResolvedBackgroundBlockData; wo
         <span className="text-xs font-bold uppercase tracking-wide text-ink">Equipement de depart</span>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {data.equipment_options.map((opt, i) => (
-            <BackgroundEquipmentCard key={i} option={opt} worldSlug={worldSlug} />
+            <BackgroundEquipmentCard key={i} option={opt} worldSlug={worldSlug} interaction={equipmentInteraction} />
           ))}
         </div>
       </div>
@@ -1128,7 +1183,16 @@ function Background({ data, worldSlug }: { data: ResolvedBackgroundBlockData; wo
  * classe n'est jamais qu'un choix d'historique avec plusieurs choix
  * INDEPENDANTS au lieu d'un seul, jamais une deuxieme mise en page).
  */
-function ClassEquipment({ data, worldSlug }: { data: ResolvedClassEquipmentBlockData; worldSlug: string }) {
+function ClassEquipment({
+  data,
+  worldSlug,
+  equipmentInteractions,
+}: {
+  data: ResolvedClassEquipmentBlockData;
+  worldSlug: string;
+  /** Un par element de `data.choices`, meme index — chaque choix de classe reste independant des autres. */
+  equipmentInteractions?: EquipmentCardInteraction[];
+}) {
   return (
     <div className="flex flex-col gap-4">
       {data.fixed.length > 0 && (
@@ -1152,7 +1216,7 @@ function ClassEquipment({ data, worldSlug }: { data: ResolvedClassEquipmentBlock
           <span className="text-xs font-bold uppercase tracking-wide text-ink">Choix {i + 1}</span>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {choice.options.map((opt, j) => (
-              <BackgroundEquipmentCard key={j} option={opt} worldSlug={worldSlug} />
+              <BackgroundEquipmentCard key={j} option={opt} worldSlug={worldSlug} interaction={equipmentInteractions?.[i]} />
             ))}
           </div>
         </div>
@@ -1176,7 +1240,9 @@ export function renderBlockData(
   blockType: BlockType,
   data: unknown,
   worldSlug: string = "",
-  outgoingRefs: RuleRefView[] = []
+  outgoingRefs: RuleRefView[] = [],
+  /** Consomme uniquement par "background" (un objet) et "class_equipment" (un tableau, un par choix) — cf. `EquipmentCardInteraction`. */
+  equipmentInteraction?: EquipmentCardInteraction | EquipmentCardInteraction[]
 ): ReactNode {
   if (blockType === "description") {
     const descData = data as DescriptionBlockData;
@@ -1201,8 +1267,22 @@ export function renderBlockData(
   if (blockType === "class_basics") return <ClassBasics data={data as ClassBasicsBlockData} />;
   if (blockType === "spellcasting_progression") return <SpellcastingProgression data={data as SpellcastingProgressionBlockData} />;
   if (blockType === "subclass_slot") return <SubclassSlot data={data as ResolvedSubclassSlotBlockData} worldSlug={worldSlug} />;
-  if (blockType === "background") return <Background data={data as ResolvedBackgroundBlockData} worldSlug={worldSlug} />;
-  if (blockType === "class_equipment") return <ClassEquipment data={data as ResolvedClassEquipmentBlockData} worldSlug={worldSlug} />;
+  if (blockType === "background")
+    return (
+      <Background
+        data={data as ResolvedBackgroundBlockData}
+        worldSlug={worldSlug}
+        equipmentInteraction={equipmentInteraction as EquipmentCardInteraction | undefined}
+      />
+    );
+  if (blockType === "class_equipment")
+    return (
+      <ClassEquipment
+        data={data as ResolvedClassEquipmentBlockData}
+        worldSlug={worldSlug}
+        equipmentInteractions={equipmentInteraction as EquipmentCardInteraction[] | undefined}
+      />
+    );
   if (blockType === "condition_effects") return <ConditionEffects data={data as ConditionEffectsBlockData} />;
   if (blockType === "subclass_features") return <SubclassFeatures data={data as SubclassFeaturesBlockData} />;
   return null;

@@ -10,7 +10,7 @@ import type {
   ClassEquipmentBlockData,
   SubclassSlotBlockData,
 } from "@/src/core/schemas/rule-blocks";
-import { renderBlockData } from "@/components/rules/blockContentRenderer";
+import { renderBlockData, type EquipmentCardInteraction } from "@/components/rules/blockContentRenderer";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
 
@@ -244,34 +244,29 @@ export default function LevelClassesStep({
 
             {/* Equipement de depart, uniquement pour la premiere classe
                 (retour utilisateur, point 9) : fiche complete (objets fixes
-                + chaque choix, deja resolus) suivie des boutons de choix,
-                meme separation fiche/boutons que l'historique
-                (`BackgroundStep`). */}
+                + chaque choix, deja resolus). Clic direct sur l'encadre de
+                chaque choix pour le selectionner (retour utilisateur,
+                V2-G1 — remplace les boutons "Choisir A/B" separes), meme
+                mecanisme que l'historique (`BackgroundStep`) — un
+                `EquipmentCardInteraction` par choix independant. */}
             {index === 0 && firstClassEquipment && (
-              <>
-                <div className="flex flex-col gap-2 rounded-md border border-edge/40 bg-panel-sunken p-2.5 text-sm text-ink">
-                  {renderBlockData("class_equipment", firstClassEquipment, worldSlug)}
-                </div>
-                {firstClassEquipment.choices.map((choice, choiceIndex) => (
-                  <div key={choiceIndex} className="flex flex-wrap gap-2">
-                    {choice.options.map((option) => {
-                      const isChosen = equipmentChoices[choiceIndex]?.optionLabel === option.label;
-                      return (
-                        <button
-                          key={option.label}
-                          type="button"
-                          onClick={() => chooseEquipmentOption(choiceIndex, option)}
-                          className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
-                            isChosen ? "border-accent bg-accent/10 text-accent" : "border-edge/60 bg-panel-raised text-ink hover:bg-panel"
-                          }`}
-                        >
-                          Choisir {option.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))}
-              </>
+              <div className="flex flex-col gap-2 rounded-md border border-edge/40 bg-panel-sunken p-2.5 text-sm text-ink">
+                {renderBlockData(
+                  "class_equipment",
+                  firstClassEquipment,
+                  worldSlug,
+                  [],
+                  firstClassEquipment.choices.map(
+                    (_, choiceIndex): EquipmentCardInteraction => ({
+                      isChosen: (optionLabel) => equipmentChoices[choiceIndex]?.optionLabel === optionLabel,
+                      onSelect: (optionLabel) => {
+                        const option = firstClassEquipment.choices[choiceIndex]?.options.find((o) => o.label === optionLabel);
+                        if (option) chooseEquipmentOption(choiceIndex, option);
+                      },
+                    })
+                  )
+                )}
+              </div>
             )}
 
             {/* Sous-classe sous la fiche de classe (retour utilisateur,

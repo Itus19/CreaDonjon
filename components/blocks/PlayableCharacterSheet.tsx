@@ -22,7 +22,7 @@ import TraitsTab from "./TraitsTab";
 import WeaponMasteryTab from "./WeaponMasteryTab";
 import { toggleChoice } from "./characterChoiceUtils";
 
-const ABILITY_LABELS: Record<Ability, string> = {
+export const ABILITY_LABELS: Record<Ability, string> = {
   str: "FOR",
   dex: "DEX",
   con: "CON",
@@ -31,8 +31,8 @@ const ABILITY_LABELS: Record<Ability, string> = {
   cha: "CHA",
 };
 
-/** Compétences triées par libellé FR (V1-C4 suite) — même ordre que la référence visuelle fournie par l'utilisateur. */
-const SORTED_SKILLS = [...SKILLS].sort((a, b) => SKILL_LABELS_FR[a].localeCompare(SKILL_LABELS_FR[b]));
+/** Compétences triées par libellé FR (V1-C4 suite) — même ordre que la référence visuelle fournie par l'utilisateur. Exportée pour `RemainingChoicesStep.tsx` (assistant de création, V2-G1) — même esthétique, jamais un deuxième tri recalculé. */
+export const SORTED_SKILLS = [...SKILLS].sort((a, b) => SKILL_LABELS_FR[a].localeCompare(SKILL_LABELS_FR[b]));
 
 type Tab = "actions" | "magie" | "inventaire" | "traits" | "maitrise";
 

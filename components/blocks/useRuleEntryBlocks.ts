@@ -14,6 +14,13 @@ const EMPTY: Record<string, RuleEntryBlockData[]> = {};
 // wizard visitee, sans que le contenu ait change entre-temps.
 const cache = new Map<string, Record<string, RuleEntryBlockData[]>>();
 
+// Requetes EN COURS — meme raison que `useWorldRuleEntries.ts` (retour
+// utilisateur, V2-G1) : sans ce suivi, le prechargement des sorts de
+// `CharacterCreatorWizard` et un deuxieme appelant sur la meme cle (React
+// StrictMode en dev double le montage, ou deux composants reels) lancent
+// chacun leur propre POST identique au lieu de partager la meme reponse.
+const inFlight = new Map<string, Promise<Record<string, RuleEntryBlockData[]>>>();
+
 function cacheKey(worldSlug: string, dedupeKey: string): string {
   return `${worldSlug}:${dedupeKey}`;
 }
@@ -41,23 +48,36 @@ export function useRuleEntryBlocks(worldSlug: string, keys: readonly string[]): 
 
   useEffect(() => {
     let cancelled = false;
-    const cached = cache.get(cacheKey(worldSlug, dedupeKey));
-    const request: Promise<Record<string, RuleEntryBlockData[]>> = cached
-      ? Promise.resolve(cached)
-      : keys.length === 0
-        ? Promise.resolve(EMPTY)
-        : fetch(`/api/worlds/${worldSlug}/rule-entry-blocks`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ keys }),
-          })
-            .then((res) => (res.ok ? res.json() : null))
-            .then((body: Record<string, RuleEntryBlockData[]> | null) => body ?? EMPTY);
+    const key = cacheKey(worldSlug, dedupeKey);
+    const cached = cache.get(key);
+    let request: Promise<Record<string, RuleEntryBlockData[]>>;
+    if (cached) {
+      request = Promise.resolve(cached);
+    } else if (keys.length === 0) {
+      request = Promise.resolve(EMPTY);
+    } else {
+      const pending = inFlight.get(key);
+      if (pending) {
+        request = pending;
+      } else {
+        request = fetch(`/api/worlds/${worldSlug}/rule-entry-blocks`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ keys }),
+        })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((body: Record<string, RuleEntryBlockData[]> | null) => body ?? EMPTY);
+        inFlight.set(key, request);
+        request.finally(() => {
+          if (inFlight.get(key) === request) inFlight.delete(key);
+        });
+      }
+    }
 
     request
       .then((body) => {
         if (cancelled) return;
-        cache.set(cacheKey(worldSlug, dedupeKey), body);
+        cache.set(key, body);
         setData(body);
       })
       .catch(() => {

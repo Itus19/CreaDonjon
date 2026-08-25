@@ -5,7 +5,7 @@ import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/block
 import type { BackgroundBlockData, BackgroundEquipmentOption, BlockType } from "@/src/core/schemas/rule-blocks";
 import type { Skill } from "@/src/core/rules/sheet";
 import { CLASS_PROFICIENCY_LABELS_FR, SKILL_LABELS_FR } from "@/src/i18n/fr";
-import { renderBlockData } from "@/components/rules/blockContentRenderer";
+import { renderBlockData, type EquipmentCardInteraction } from "@/components/rules/blockContentRenderer";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
 
@@ -63,6 +63,11 @@ const TAG_PREFIX = "background:";
  * change d'avis — jamais une deuxieme fois la meme option, jamais un residu
  * de l'ancienne quand on en choisit une autre. L'or ajoute est retire a
  * l'identique avant d'appliquer le nouveau choix.
+ *
+ * Selection par clic direct sur l'encadre (retour utilisateur, V2-G1 —
+ * remplace les boutons "Choisir A/B" separes) : `equipmentInteraction`
+ * rend l'encadre de `Background()` (blockContentRenderer.tsx) cliquable,
+ * jamais sur une fiche de regle en lecture seule.
  */
 export default function BackgroundStep({
   worldSlug,
@@ -123,6 +128,21 @@ export default function BackgroundStep({
     onChooseOption({ backgroundKey: currentKey, optionLabel: option.label, appliedGold: option.gold ?? null });
   }
 
+  // Clic direct sur l'encadre de choix (retour utilisateur, V2-G1 — remplace
+  // les boutons "Choisir A/B" separes) : l'encadre vient de la fiche
+  // generique (`Background()`, blockContentRenderer.tsx), cette interaction
+  // le rend cliquable uniquement ici, jamais sur une fiche de regle en
+  // lecture seule.
+  const equipmentInteraction: EquipmentCardInteraction | undefined = backgroundData
+    ? {
+        isChosen: (optionLabel) => choice?.backgroundKey === currentKey && choice.optionLabel === optionLabel,
+        onSelect: (optionLabel) => {
+          const option = backgroundData.equipment_options.find((o) => o.label === optionLabel);
+          if (option) applyOption(option);
+        },
+      }
+    : undefined;
+
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -152,36 +172,16 @@ export default function BackgroundStep({
           {currentBlocks
             .filter((b) => b.blockType === "description" || b.blockType === "background")
             .map((b, i) => (
-              <div key={i}>{renderBlockData(b.blockType as BlockType, b.data, worldSlug)}</div>
+              <div key={i}>
+                {renderBlockData(
+                  b.blockType as BlockType,
+                  b.data,
+                  worldSlug,
+                  [],
+                  b.blockType === "background" ? equipmentInteraction : undefined
+                )}
+              </div>
             ))}
-        </div>
-      )}
-
-      {backgroundData && backgroundData.equipment_options.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          {/* Boutons de choix seuls, sans repeter le detail des objets — deja
-              visible juste au-dessus dans la fiche generique (`Background()`,
-              blockContentRenderer.tsx), qui montre chaque option en carte avec
-              son detail complet. Repeter ce detail ici (retour utilisateur,
-              V2-G1 : "hierarchisation confuse") faisait doublon. */}
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Choix de l&apos;équipement</span>
-          <div className="flex flex-wrap gap-2">
-            {backgroundData.equipment_options.map((option) => {
-              const isChosen = choice?.backgroundKey === currentKey && choice.optionLabel === option.label;
-              return (
-                <button
-                  key={option.label}
-                  type="button"
-                  onClick={() => applyOption(option)}
-                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
-                    isChosen ? "border-accent bg-accent/10 text-accent" : "border-edge/60 bg-panel-raised text-ink hover:bg-panel"
-                  }`}
-                >
-                  Choisir {option.label}
-                </button>
-              );
-            })}
-          </div>
         </div>
       )}
     </div>

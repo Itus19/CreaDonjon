@@ -139,6 +139,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
     itemChips,
     equippedWeapons,
     buildChips,
+    skillChoices,
   } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
 
   async function submit() {
@@ -272,6 +273,8 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
           patchCharacter={patchCharacter}
           proficiencies={proficiencies}
           languages={languages}
+          sheet={sheet}
+          skillChoices={skillChoices}
         />
       )}
 
