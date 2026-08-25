@@ -8,7 +8,7 @@ import type { DerivedSheet } from "@/src/core/rules/sheet";
 import { ftToM } from "@/src/core/rules/encumbrance";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
-import type { ResolvedChipView } from "./useReferenceChips";
+import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 
@@ -196,6 +196,28 @@ export default function CharacterSheetHeader({
   onExportJson: () => void;
   error: string | null;
 }) {
+  // Lignee (retour utilisateur : "il manque la sous-espece") — meme mecanisme
+  // que classe/sous-classe cote donnees, mais `character.species` ne porte
+  // qu'UNE seule cle (jamais deux champs distincts) : une lignee est un
+  // `entry_type: "species"` a part entiere qui REMPLACE la cle de base
+  // (`parentSpeciesKey` la relie a son espece), exactement comme
+  // `SpeciesStep.tsx` (assistant de creation) le fait deja. Le menu "Espèce"
+  // n'affiche donc que les especes DE BASE (`filterFn` sur `!parentSpeciesKey`)
+  // et affiche toujours la cle de base meme si une lignee est choisie ; le
+  // menu "Lignée" filtre par cette meme cle de base, memes deux dropdowns
+  // cote a cote que classe/sous-classe.
+  const speciesEntries = useWorldRuleEntries(worldSlug).filter((e) => e.entryType === "species");
+  const currentSpeciesKey = character.species?.kind === "rule" ? character.species.key : "";
+  const currentSpeciesEntry = speciesEntries.find((e) => e.key === currentSpeciesKey);
+  const baseSpeciesKey = currentSpeciesEntry ? (currentSpeciesEntry.parentSpeciesKey ?? currentSpeciesEntry.key) : "";
+  const lineageSelected = currentSpeciesKey !== "" && currentSpeciesKey !== baseSpeciesKey;
+  const baseSpeciesRefs = useMemo<BlockReference[]>(
+    () => (baseSpeciesKey ? [{ kind: "rule", key: baseSpeciesKey }] : []),
+    [baseSpeciesKey]
+  );
+  const baseSpeciesChips = useReferenceChips(worldSlug, baseSpeciesRefs);
+  const baseSpeciesChip = baseSpeciesKey ? baseSpeciesChips.get(refIdentity({ kind: "rule", key: baseSpeciesKey })) : undefined;
+
   return (
     <>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -205,10 +227,25 @@ export default function CharacterSheetHeader({
             <RuleSelect
               worldSlug={worldSlug}
               entryTypes={SPECIES_TYPES}
-              value={character.species?.kind === "rule" ? character.species.key : ""}
+              value={baseSpeciesKey}
               onChange={(key) => patchCharacter({ species: ruleRef(key) })}
               emptyLabel="Aucune espèce"
-              chip={character.species ? buildChips.get(refIdentity(character.species)) : undefined}
+              chip={baseSpeciesChip}
+              filterFn={(entry) => !entry.parentSpeciesKey}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+            Lignée
+            <RuleSelect
+              worldSlug={worldSlug}
+              entryTypes={SPECIES_TYPES}
+              value={lineageSelected ? currentSpeciesKey : ""}
+              onChange={(key) =>
+                patchCharacter({ species: key.trim() ? { kind: "rule", key: key.trim() } : ruleRef(baseSpeciesKey) })
+              }
+              emptyLabel="Aucune lignée"
+              chip={lineageSelected && character.species ? buildChips.get(refIdentity(character.species)) : undefined}
+              filterFn={(entry) => (baseSpeciesKey ? entry.parentSpeciesKey === baseSpeciesKey : false)}
             />
           </label>
           <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">

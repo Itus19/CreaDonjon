@@ -376,6 +376,16 @@ export async function listRulesetEntries(
       .from("ruleset_entries")
       .select("id, entry_key, entry_type, source_raw")
       .eq("ruleset_id", rulesetId)
+      // `.order()` explicite (bug reel trouve en verifiant la sous-espece,
+      // V2-G1 suite) — sans lui, Postgres ne garantit AUCUN ordre stable
+      // entre deux executions de la meme requete : deux `.range()` qui se
+      // pensent contigus peuvent alors se chevaucher ou laisser un trou,
+      // des entrees apparaissant/disparaissant au hasard d'un appel a
+      // l'autre (constate : nain/elfe/humain/halfelin manquants une fois
+      // sur plusieurs, jamais les memes). `id` est la cle primaire, jamais
+      // ambigu contrairement a `entry_key` qui pourrait un jour ne pas etre
+      // unique a lui seul.
+      .order("id")
       .range(from, from + LIST_PAGE_SIZE - 1);
     if (error) throw new Error(error.message);
     return data;
