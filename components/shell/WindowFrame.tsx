@@ -11,13 +11,12 @@ export interface WindowGeometry {
 }
 
 const SNAP_THRESHOLD = 28;
-const MIN_WIDTH = 320;
-const MIN_HEIGHT = 240;
 
 /**
- * Fenetre deplacable/redimensionnable d'une fiche (ADR-0006), reprise de
- * l'ancienne application (`master`, components/desktop/WindowFrame.tsx)
- * et adaptee aux jetons de tokens.css. Position/taille sont un etat
+ * Fenetre deplacable d'une fiche (ADR-0006), reprise de l'ancienne
+ * application (`master`, components/desktop/WindowFrame.tsx) et adaptee
+ * aux jetons de tokens.css. Position (mais plus la taille depuis V2-K3,
+ * volontairement fixe — voir DesktopWindowsProvider.tsx) est un etat
  * purement client (`onUpdate`) — jamais dans l'URL, pour ne pas polluer
  * l'historique de navigation a chaque glissement.
  */
@@ -43,7 +42,6 @@ export default function WindowFrame({
   children: React.ReactNode;
 }) {
   const dragStart = useRef({ mx: 0, my: 0, wx: 0, wy: 0 });
-  const resizeStart = useRef({ mx: 0, my: 0, ww: 0, wh: 0 });
 
   const toggleMaximize = useCallback(() => {
     onUpdate({ isMaximized: !win.isMaximized });
@@ -96,32 +94,6 @@ export default function WindowFrame({
     [win.x, win.y, win.isMaximized, onFocus, onUpdate, containerRef]
   );
 
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent) => {
-      if (win.isMaximized) return;
-      e.preventDefault();
-      e.stopPropagation();
-      resizeStart.current = { mx: e.clientX, my: e.clientY, ww: win.width, wh: win.height };
-      onFocus();
-
-      const onMove = (ev: MouseEvent) => {
-        const dx = ev.clientX - resizeStart.current.mx;
-        const dy = ev.clientY - resizeStart.current.my;
-        onUpdate({
-          width: Math.max(MIN_WIDTH, resizeStart.current.ww + dx),
-          height: Math.max(MIN_HEIGHT, resizeStart.current.wh + dy),
-        });
-      };
-      const onUp = () => {
-        document.removeEventListener("mousemove", onMove);
-        document.removeEventListener("mouseup", onUp);
-      };
-      document.addEventListener("mousemove", onMove);
-      document.addEventListener("mouseup", onUp);
-    },
-    [win.width, win.height, win.isMaximized, onFocus, onUpdate]
-  );
-
   return (
     <div
       className={`window-frame absolute flex flex-col overflow-hidden rounded-2xl border bg-panel shadow-2xl backdrop-blur-[var(--blur)] transition-[border-color] ${
@@ -172,13 +144,6 @@ export default function WindowFrame({
       </div>
 
       <div className="window-content flex-1 overflow-auto p-6">{children}</div>
-
-      {!win.isMaximized && (
-        <div
-          onMouseDown={handleResizeStart}
-          className="window-resize-handle absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize"
-        />
-      )}
     </div>
   );
 }

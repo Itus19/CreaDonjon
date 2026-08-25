@@ -16,8 +16,8 @@ import {
 import type { EntityWindowData } from "@/src/server/services/entityWindow";
 import type { RuleEntryDetail } from "@/src/server/services/rules";
 
-const DEFAULT_WIDTH = 640;
-const DEFAULT_HEIGHT = 600;
+const DEFAULT_WIDTH = 860;
+const DEFAULT_HEIGHT = 760;
 
 function defaultGeometry(index: number): WindowGeometry {
   const offset = (index % 6) * 28;

@@ -411,11 +411,13 @@ Fait — décision d'architecture (état partagé + rendu dupliqué par section,
 
 Fait — décision prise avec l'utilisateur avant d'écrire : Monde/Règles/MJ restent de vraies routes Next.js (pas un état client décroché de l'URL), option la moins invasive puisque K1 garantit déjà la survie des fenêtres à travers une navigation. `SectionToggle` quitte `AppShell.tsx` (l'en-tête redevient juste nom du monde + horloge + « Mes mondes ») et se monte désormais en haut de chacune des trois barres latérales (`Sidebar.tsx`, `RulesSidebar.tsx`, `MjSidebar.tsx`), au-dessus de leur champ de recherche respectif (MJ n'en a pas, le bandeau y est simplement en tête de liste). Le composant passe d'une pastille centrée (pensée pour une barre de 56px) à trois segments `flex-1` pleine largeur, pensés pour une colonne de 280px. Aucun changement de comportement de navigation au-delà de ça — le fond du travail (état partagé, repli de la primaire dans `avec`) était déjà celui de K1. Vérifié en navigateur sur les trois sections ; `typecheck`/`lint`/`test` verts (605/606, 1 ignoré).
 
-### V2-K3 — Taille fixe des fenêtres · `S`
+### V2-K3 — Taille fixe des fenêtres · `S` — fait
 
-- [ ] Poignées de redimensionnement retirées de `WindowFrame.tsx`.
-- [ ] Une seule taille à l'ouverture, quel que soit le contenu (voir décision ci-dessus).
-- [ ] Déplacement (drag) et agrandissement/restauration (maximiser) inchangés.
+- [x] Poignées de redimensionnement retirées de `WindowFrame.tsx`.
+- [x] Une seule taille à l'ouverture, quel que soit le contenu (voir décision ci-dessus).
+- [x] Déplacement (drag) et agrandissement/restauration (maximiser) inchangés.
+
+Fait — taille choisie en la voyant (comme décidé) : 860×760, testée contre la fiche de personnage jouable (grille de caractéristiques, compétences, cartes de sorts) et la table de progression de classe la plus large du dépôt (Magicien), aucune des deux ne déborde ni ne semble à l'étroit. 860px reprend d'ailleurs la largeur déjà validée de `Panel.tsx` pour le même contenu. Poignée de redimensionnement (coin bas-droit) et sa logique retirées de `WindowFrame.tsx` ; l'aimantation sur les bords (glisser près d'un bord tuile la fenêtre à moitié écran) reste inchangée, ce n'est pas une poignée de redimensionnement et le ticket ne demandait pas de la retirer. Déplacement et agrandir/restaurer vérifiés en navigateur. `typecheck`/`lint`/`test` verts (605/606, 1 ignoré).
 
 ### V2-K4 — Réduction de fenêtre en onglet de bas d'écran · `M`
 
