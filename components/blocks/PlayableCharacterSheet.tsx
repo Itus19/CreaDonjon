@@ -474,7 +474,13 @@ export default function PlayableCharacterSheet({
                 const choice = skillChoices.get(skill);
                 const chosenForChoice = choice ? ((character.choices[choice.id] as string[] | undefined) ?? []) : [];
                 const isChosen = choice ? chosenForChoice.includes(skill) : false;
-                const canPick = choice ? isChosen || chosenForChoice.length < choice.count : false;
+                // Deja maitrisee par une autre source (retour utilisateur,
+                // V2-G1) : voir le commentaire jumeau dans
+                // `RemainingChoicesStep.tsx` (assistant de creation), meme
+                // logique ici pour un choix de competence encore ouvert sur
+                // la fiche jouable (montee de niveau future).
+                const alreadyGrantedElsewhere = choice ? !isChosen && result.proficiency !== "none" : false;
+                const canPick = choice ? isChosen || (chosenForChoice.length < choice.count && !alreadyGrantedElsewhere) : false;
 
                 function toggle() {
                   if (!choice) return;
@@ -484,9 +490,11 @@ export default function PlayableCharacterSheet({
                 const dotClass = choice
                   ? isChosen
                     ? "bg-accent"
-                    : canPick
-                      ? "border-2 border-ink bg-transparent"
-                      : "border border-edge bg-transparent opacity-40"
+                    : alreadyGrantedElsewhere
+                      ? "border border-accent bg-accent/40"
+                      : canPick
+                        ? "border-2 border-ink bg-transparent"
+                        : "border border-edge bg-transparent opacity-40"
                   : result.proficiency === "expertise"
                     ? "bg-accent"
                     : result.proficiency === "proficient"
@@ -496,9 +504,11 @@ export default function PlayableCharacterSheet({
                 const dotTitle = choice
                   ? isChosen
                     ? `${choice.label} — choisie, cliquer pour retirer`
-                    : canPick
-                      ? `${choice.label} — cliquer pour choisir (${chosenForChoice.length}/${choice.count})`
-                      : `${choice.label} — choix déjà complet (${choice.count}/${choice.count})`
+                    : alreadyGrantedElsewhere
+                      ? "Déjà maîtrisée par une autre source — choisissez une compétence différente"
+                      : canPick
+                        ? `${choice.label} — cliquer pour choisir (${chosenForChoice.length}/${choice.count})`
+                        : `${choice.label} — choix déjà complet (${choice.count}/${choice.count})`
                   : result.proficiency === "expertise"
                     ? "Expertise"
                     : result.proficiency === "proficient"

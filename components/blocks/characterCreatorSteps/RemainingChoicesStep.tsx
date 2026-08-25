@@ -168,7 +168,17 @@ export default function RemainingChoicesStep({
             const choice = skillChoices.get(skill);
             const chosenForChoice = choice ? ((character.choices[choice.id] as string[] | undefined) ?? []) : [];
             const isChosen = choice ? chosenForChoice.includes(skill) : false;
-            const canPick = choice ? isChosen || chosenForChoice.length < choice.count : false;
+            // Deja maitrisee par une AUTRE source (retour utilisateur, V2-G1 :
+            // choisir Arcanes deja a +2 via l'historique ne la fait jamais
+            // passer a +4 — la maitrise est oui/non, jamais cumulable). Se
+            // detecte sans recalcul : si ce choix precis n'est pas coche et
+            // que la fiche derivee montre deja une maitrise, elle vient
+            // forcement d'ailleurs (espece, historique, autre classe). Rendue
+            // non selectionnable plutot que de laisser gacher le choix — la
+            // regle 2024 dit explicitement de choisir une competence
+            // differente dans ce cas.
+            const alreadyGrantedElsewhere = choice ? !isChosen && result.proficiency !== "none" : false;
+            const canPick = choice ? isChosen || (chosenForChoice.length < choice.count && !alreadyGrantedElsewhere) : false;
 
             function toggle() {
               if (!choice) return;
@@ -178,9 +188,11 @@ export default function RemainingChoicesStep({
             const dotClass = choice
               ? isChosen
                 ? "bg-accent"
-                : canPick
-                  ? "border-2 border-ink bg-transparent"
-                  : "border border-edge bg-transparent opacity-40"
+                : alreadyGrantedElsewhere
+                  ? "border border-accent bg-accent/40"
+                  : canPick
+                    ? "border-2 border-ink bg-transparent"
+                    : "border border-edge bg-transparent opacity-40"
               : result.proficiency === "expertise"
                 ? "bg-accent"
                 : result.proficiency === "proficient"
@@ -190,16 +202,18 @@ export default function RemainingChoicesStep({
             const dotTitle = choice
               ? isChosen
                 ? `${choice.label} — choisie, cliquer pour retirer`
-                : canPick
-                  ? `${choice.label} — cliquer pour choisir (${chosenForChoice.length}/${choice.count})`
-                  : `${choice.label} — choix déjà complet (${choice.count}/${choice.count})`
+                : alreadyGrantedElsewhere
+                  ? "Déjà maîtrisée par une autre source — choisissez une compétence différente"
+                  : canPick
+                    ? `${choice.label} — cliquer pour choisir (${chosenForChoice.length}/${choice.count})`
+                    : `${choice.label} — choix déjà complet (${choice.count}/${choice.count})`
               : result.proficiency === "expertise"
                 ? "Expertise"
                 : result.proficiency === "proficient"
                   ? "Maîtrisée"
                   : "Non maîtrisée";
 
-            const rowInk = choice ? "text-ink" : "text-ink-muted";
+            const rowInk = choice && !alreadyGrantedElsewhere ? "text-ink" : "text-ink-muted";
 
             return (
               <div key={skill} className="flex items-center gap-2 text-sm">
