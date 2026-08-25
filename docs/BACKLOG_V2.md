@@ -430,13 +430,15 @@ Fait — taille choisie en la voyant (comme décidé) : 860×760, testée contre
 
 Fait — `minimizedIds` (nouvel état local dans `DesktopWindowsProvider.tsx`, jamais lu ni écrit depuis `?avec=`) et une barre d'onglets (`WindowsDesktop.tsx`) listant toute fenêtre réduite, primaire comme secondaire. Piège réel : réduire la fenêtre PRIMAIRE ne doit jamais retirer `children` de l'arbre React — c'est elle qui porte `RegisterPrimaryWindow`, la démonter aurait désenregistré la primaire et fait disparaître son propre onglet réduit. Corrigé en la gardant montée mais masquée (`className="hidden"`) plutôt qu'omise du rendu. `windowContentLabel` (nouveau, `windowRefs.ts`) factorise le calcul nom/badge d'une fenêtre secondaire, déjà dupliqué avant ce ticket. Vérifié : réduire/restaurer la primaire et une secondaire (bouton et via le DOM), position restaurée à l'identique, `?avec=`/URL inchangés pendant toute l'opération (confirmé par `window.location.href`), le bouton "Restaurer" est bien présent et accessible (arbre d'accessibilité) même quand la capture d'écran de cet environnement ne le compose pas visiblement (flou d'arrière-plan). `typecheck`/`lint`/`test` verts (605/606, 1 ignoré).
 
-### V2-K5 — Réglages à onglets · `S`
+### V2-K5 — Réglages à onglets · `S` — fait
 
 `components/shell/SettingsMenu.tsx` est aujourd'hui une seule modale à sections empilées (Langue, Thème, Compte, liens de partage, Collaboration, Suppression). Premier composant d'onglets du dépôt — un `<Tabs>` générique, pas un cas particulier à cet écran.
 
-- [ ] `<Tabs>` générique (`components/shared/`, même famille que `Dropdown`).
-- [ ] Sections existantes réparties en onglets (Général + les deux onglets neufs ci-dessous).
-- [ ] Aucun changement de comportement sur les sections déplacées — pur découpage, comme V2-G5.
+- [x] `<Tabs>` générique (`components/shared/`, même famille que `Dropdown`).
+- [x] Sections existantes réparties en onglets (Général + les deux onglets neufs ci-dessous).
+- [x] Aucun changement de comportement sur les sections déplacées — pur découpage, comme V2-G5.
+
+Fait — `<Tabs>` (`components/shared/Tabs.tsx`) est un primitif controlé (`value`/`items`/`onChange`), reprenant le style déjà établi par `SectionToggle.tsx` (segments égaux dans un conteneur arrondi) plutôt qu'une deuxième présentation d'onglets. Deux onglets aujourd'hui : **Général** (Langue, Thème, Compte, liens de partage, Suppression — tout ce qui existait déjà) et **Collaboration** (le bouton désactivé « Inviter un MJ », déplacé tel quel). Le troisième onglet (Règles) n'est pas créé ici : K6 l'introduira avec son vrai contenu plutôt que de poser un onglet vide en attendant. Nouvelle clé de traduction `settings.general` (fr/en). Aucune section déplacée n'a changé de comportement. Vérifié en navigateur : bascule entre les deux onglets, contenu identique à avant. `typecheck`/`lint`/`test` verts (605/606, 1 ignoré).
 
 ### V2-K6 — Ruleset actif déplacé dans les Réglages · `S`
 

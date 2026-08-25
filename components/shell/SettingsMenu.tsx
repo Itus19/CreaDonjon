@@ -12,6 +12,7 @@ import {
 } from "@/app/settings/actions";
 import ShareLinkPanel from "./ShareLinkPanel";
 import type { ShareLinkSummary } from "@/src/server/services/shareLinks";
+import Tabs from "@/components/shared/Tabs";
 
 const MODES = ["dark", "dim", "soft", "light"] as const;
 
@@ -119,6 +120,9 @@ export default function SettingsMenu({
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
   const [contrast, setContrast] = useState(currentContrast);
+  // Premier composant d'onglets du depot (V2-K5) — pur decoupage des
+  // sections deja existantes, aucun changement de comportement.
+  const [tab, setTab] = useState<"general" | "collaboration">("general");
 
   // Le panneau de partage a quitte l'accueil du monde pour cet onglet
   // (V1-C4) : ce composant est rendu globalement (app/layout.tsx), hors de
@@ -205,102 +209,114 @@ export default function SettingsMenu({
               </button>
             </div>
 
-            <section className="flex flex-col gap-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                {t("langue.titre")}
-              </h3>
-              <form action={setLocaleAction} className="flex gap-2">
-                {(["fr", "en"] as const).map((locale) => (
-                  <button
-                    key={locale}
-                    type="submit"
-                    name="locale"
-                    value={locale}
-                    className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                      currentLocale === locale
-                        ? "border-accent text-accent"
-                        : "border-edge text-ink-muted hover:text-ink"
-                    }`}
-                  >
-                    {t(`langue.${locale}`)}
-                  </button>
-                ))}
-              </form>
-            </section>
+            <Tabs
+              value={tab}
+              onChange={(v) => setTab(v as "general" | "collaboration")}
+              items={[
+                { value: "general", label: t("general") },
+                { value: "collaboration", label: t("collaboration.titre") },
+              ]}
+            />
 
-            <section className="flex flex-col gap-2 border-t border-edge pt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                {t("theme.titre")}
-              </h3>
-              <div className="flex flex-wrap gap-1.5">
-                {MODES.map((m) => (
+            {tab === "general" && (
+              <>
+                <section className="flex flex-col gap-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                    {t("langue.titre")}
+                  </h3>
+                  <form action={setLocaleAction} className="flex gap-2">
+                    {(["fr", "en"] as const).map((locale) => (
+                      <button
+                        key={locale}
+                        type="submit"
+                        name="locale"
+                        value={locale}
+                        className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                          currentLocale === locale
+                            ? "border-accent text-accent"
+                            : "border-edge text-ink-muted hover:text-ink"
+                        }`}
+                      >
+                        {t(`langue.${locale}`)}
+                      </button>
+                    ))}
+                  </form>
+                </section>
+
+                <section className="flex flex-col gap-2 border-t border-edge pt-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                    {t("theme.titre")}
+                  </h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MODES.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setMode(m)}
+                        className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-ink transition-colors hover:bg-panel ${
+                          mode === m ? "ring-1 ring-accent" : ""
+                        }`}
+                      >
+                        <span
+                          className={`flex h-4 w-4 items-center justify-center rounded-full border border-edge mode-swatch-${m}`}
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full mode-swatch-${m}-accent`} />
+                        </span>
+                        {t(`theme.${m}`)}
+                      </button>
+                    ))}
+                  </div>
                   <button
-                    key={m}
                     type="button"
-                    onClick={() => setMode(m)}
-                    className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-ink transition-colors hover:bg-panel ${
-                      mode === m ? "ring-1 ring-accent" : ""
+                    onClick={toggleContrast}
+                    className={`self-start rounded-md border border-edge px-2.5 py-1.5 text-left text-sm text-ink transition-colors hover:bg-panel ${
+                      contrast === "high" ? "text-accent" : ""
                     }`}
                   >
-                    <span
-                      className={`flex h-4 w-4 items-center justify-center rounded-full border border-edge mode-swatch-${m}`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full mode-swatch-${m}-accent`} />
-                    </span>
-                    {t(`theme.${m}`)}
+                    {t("theme.contrasteEleve")} {contrast === "high" ? "✓" : ""}
                   </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={toggleContrast}
-                className={`self-start rounded-md border border-edge px-2.5 py-1.5 text-left text-sm text-ink transition-colors hover:bg-panel ${
-                  contrast === "high" ? "text-accent" : ""
-                }`}
-              >
-                {t("theme.contrasteEleve")} {contrast === "high" ? "✓" : ""}
-              </button>
-            </section>
+                </section>
 
-            <section className="flex flex-col gap-2 border-t border-edge pt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                {t("compte.titre")}
-              </h3>
-              <p className="text-sm text-ink-muted">{email}</p>
-              <DisplayNameForm initialDisplayName={displayName} />
-            </section>
+                <section className="flex flex-col gap-2 border-t border-edge pt-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                    {t("compte.titre")}
+                  </h3>
+                  <p className="text-sm text-ink-muted">{email}</p>
+                  <DisplayNameForm initialDisplayName={displayName} />
+                </section>
 
-            {worldSlug && shareData && (
-              <section className="border-t border-edge pt-4">
-                <ShareLinkPanel
-                  worldId={shareData.worldId}
-                  worldSlug={worldSlug}
-                  links={shareData.links}
-                  onMutated={refreshShareData}
-                />
-              </section>
+                {worldSlug && shareData && (
+                  <section className="border-t border-edge pt-4">
+                    <ShareLinkPanel
+                      worldId={shareData.worldId}
+                      worldSlug={worldSlug}
+                      links={shareData.links}
+                      onMutated={refreshShareData}
+                    />
+                  </section>
+                )}
+
+                <section className="flex flex-col gap-2 border-t border-edge pt-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                    {t("suppression.titre")}
+                  </h3>
+                  <DeleteAccountSection />
+                </section>
+              </>
             )}
 
-            <section className="flex flex-col gap-2 border-t border-edge pt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                {t("collaboration.titre")}
-              </h3>
-              <button
-                type="button"
-                disabled
-                title={t("collaboration.bientot")}
-                className="cursor-not-allowed self-start rounded-md border border-edge px-3 py-1.5 text-sm text-ink-muted opacity-60"
-              >
-                {t("collaboration.inviterMJ")} — {t("collaboration.bientot")}
-              </button>
-            </section>
-
-            <section className="flex flex-col gap-2 border-t border-edge pt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                {t("suppression.titre")}
-              </h3>
-              <DeleteAccountSection />
-            </section>
+            {tab === "collaboration" && (
+              <section className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  disabled
+                  title={t("collaboration.bientot")}
+                  className="cursor-not-allowed self-start rounded-md border border-edge px-3 py-1.5 text-sm text-ink-muted opacity-60"
+                >
+                  {t("collaboration.inviterMJ")} — {t("collaboration.bientot")}
+                </button>
+              </section>
+            )}
           </div>
         </div>
       )}
