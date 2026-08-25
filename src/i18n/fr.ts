@@ -98,6 +98,16 @@ export const MAGIC_SCHOOL_LABELS_FR: Record<string, string> = {
  * retour utilisateur, V2-G1 : differencier les badges d'ecole de l'onglet
  * Sorts. Jamais une couleur en dur ici : une variable CSS par ecole,
  * exactement comme les trois couleurs de lien deja sanctionnees.
+ *
+ * Deux jeux de cles (bug reel trouve en verifiant ce meme retour
+ * utilisateur, "les couleurs n'ont pas change") : le champ `school`
+ * (`SpellCastingBlockData`) arrive DEJA traduit en francais pour les
+ * quatre ecoles dont le nom differe de l'anglais — verifie directement
+ * contre la reponse serveur ("Invocation"/"Enchantement"/"Evocation"/
+ * "Necromancie", jamais "Conjuration"/"Enchantment"/"Evocation"/
+ * "Necromancy"). Les quatre autres sont des cognats identiques dans les
+ * deux langues, d'ou l'absence de bug visible sur elles. L'anglais reste
+ * ici pour la locale "en", jamais remplace — juste complete.
  */
 export const MAGIC_SCHOOL_COLOR_VAR: Record<string, string> = {
   Abjuration: "--school-abjuration",
@@ -108,6 +118,10 @@ export const MAGIC_SCHOOL_COLOR_VAR: Record<string, string> = {
   Illusion: "--school-illusion",
   Necromancy: "--school-necromancy",
   Transmutation: "--school-transmutation",
+  Invocation: "--school-conjuration",
+  Enchantement: "--school-enchantment",
+  Évocation: "--school-evocation",
+  Nécromancie: "--school-necromancy",
 };
 
 /**
