@@ -30,7 +30,7 @@ Créer un bloc unique « fiche de personnage » qui contiendrait tout recréerai
 │ FOR +0  DEX +1  CON +2  INT +1  SAG +3  CHA −1           │
 │ Compétences ▾                                             │
 ├──────────────────────────────────────────────────────────┤
-│  Actions  │  Magie  │  Inventaire  │  Traits             │
+│  Actions  │  Inventaire  │  Magie  │  Traits             │
 ├──────────────────────────────────────────────────────────┤
 │  … contenu de l'onglet …                                 │
 └──────────────────────────────────────────────────────────┘
@@ -43,8 +43,8 @@ Vos captures affichent la CA deux fois et un portrait. Les deux sautent : la CA 
 | Onglet | Contenu |
 |---|---|
 | **Actions** | attaques, capacités actives, ressources, compteurs |
-| **Magie** | incantation, emplacements, sorts connus et préparés — masqué si le personnage ne lance pas de sorts |
 | **Inventaire** | armure, armes, objets, encombrement, bourse |
+| **Magie** | incantation, emplacements, sorts connus et préparés — masqué si le personnage ne lance pas de sorts |
 | **Traits** | espèce, classe, historique, dons, maîtrises, langues |
 
 L'onglet Magie **n'existe pas** pour un barbare. Un onglet vide est un onglet qui fait douter.

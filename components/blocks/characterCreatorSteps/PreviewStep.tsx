@@ -178,7 +178,7 @@ export default function PreviewStep({
       />
 
       <div className="flex gap-1 border-b border-edge/60 text-xs">
-        {(["actions", "magie", "inventaire", "traits"] as PreviewTab[])
+        {(["actions", "inventaire", "magie", "traits"] as PreviewTab[])
           .filter((t) => t !== "magie" || spellcasting.known.length > 0)
           .map((t) => (
           <button
@@ -223,7 +223,13 @@ export default function PreviewStep({
       )}
 
       {tab === "magie" && spellcasting.known.length > 0 && (
-        <MagicTab sortedKnownSpells={sortedKnownSpells} spellcasting={spellcasting} onTogglePrepared={togglePrepared} />
+        <MagicTab
+          worldSlug={worldSlug}
+          sortedKnownSpells={sortedKnownSpells}
+          spellChips={spellChips}
+          spellcasting={spellcasting}
+          onTogglePrepared={togglePrepared}
+        />
       )}
 
       {tab === "inventaire" && (

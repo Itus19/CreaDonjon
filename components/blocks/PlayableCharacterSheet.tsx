@@ -82,7 +82,8 @@ interface SheetApiResponse {
  * Mise en page (V1-C4 suite, sur retour utilisateur avec captures d'ecran de
  * reference) : colonne gauche persistante (caracteristiques + competences,
  * visible quel que soit l'onglet actif) + fenetre a onglets a droite
- * (Actions/Magie/Inventaire/Traits), au lieu d'un seul bloc qui remplacait
+ * (Actions/Inventaire/Magie/Traits — ordre revu sur retour utilisateur, la
+ * Magie place naturellement apres l'Inventaire), au lieu d'un seul bloc qui remplacait
  * tout son contenu par onglet. Empile en une colonne sous `md` pour
  * preserver la lisibilite a 375px (critere deja acquis en V1-B5).
  *
@@ -560,7 +561,7 @@ export default function PlayableCharacterSheet({
 
         <div className="min-w-0 flex-1">
           <div className="flex gap-1 border-b border-edge/60 text-xs">
-            {(["actions", "magie", "inventaire", "traits", "maitrise"] as Tab[])
+            {(["actions", "inventaire", "magie", "traits", "maitrise"] as Tab[])
               .filter((t) => (t !== "magie" || spellcasting) && (t !== "maitrise" || weaponMasteryChoices.length > 0))
               .map((t) => (
                 <button
@@ -614,7 +615,13 @@ export default function PlayableCharacterSheet({
           )}
 
           {tab === "magie" && spellcasting && (
-            <MagicTab sortedKnownSpells={sortedKnownSpells} spellcasting={spellcasting} onTogglePrepared={togglePrepared} />
+            <MagicTab
+              worldSlug={worldSlug}
+              sortedKnownSpells={sortedKnownSpells}
+              spellChips={spellChips}
+              spellcasting={spellcasting}
+              onTogglePrepared={togglePrepared}
+            />
           )}
 
           {tab === "inventaire" && (
