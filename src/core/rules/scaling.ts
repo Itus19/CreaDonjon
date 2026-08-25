@@ -53,6 +53,26 @@ export function resolveScalingTarget(
 }
 
 /**
+ * Formule de degats resolue a un palier donne (emplacement pour un sort a
+ * emplacement, niveau de personnage pour un tour de magie — meme cle que
+ * celle reellement envoyee au serveur au clic, cf. `castSpell`) — partagee
+ * entre le serveur (`castSpell`, degats effectivement lances) et le client
+ * (bouton de degats de l'onglet Actions, formule affichee AVANT le clic) :
+ * une seule implementation, jamais un calcul client qui pourrait diverger
+ * du jet reellement effectue.
+ */
+export function resolveScaledFormulaText(
+  scalingData: ScalingBlockData,
+  level: number,
+  effectsData: EffectsBlockData | undefined,
+  baseFormula: FormulaNode
+): string {
+  const target = scalingData.rule?.target ? resolveScalingTarget(scalingData.rule.target, effectsData) : baseFormula;
+  const table = generateScalingTable(scalingData, level, target ?? baseFormula);
+  return table[String(level)] ?? formatFormulaNode(baseFormula);
+}
+
+/**
  * Fusionne deux termes quand c'est arithmetiquement fidele de le faire
  * (memes des, ou deux nombres) : "8d6" + "1d6" par palier doit s'afficher
  * "9d6", pas "8d6 + 1d6 + 1d6...". Sans point commun, addition explicite.

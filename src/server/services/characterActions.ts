@@ -19,7 +19,7 @@ import {
 } from "@/src/core/rules/action";
 import { armorAcModifier, mapChosenSkillModifiers, type WeaponData } from "@/src/core/rules/srdMapping";
 import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
-import { generateScalingTable, resolveScalingTarget } from "@/src/core/rules/scaling";
+import { resolveScaledFormulaText } from "@/src/core/rules/scaling";
 import { formatFormulaNode } from "@/src/core/formula/format";
 import type { RuntimeStatePatch } from "@/src/core/rules/runtimeState";
 import { zRuntimeState, type RuntimeState } from "@/src/core/schemas/runtimeState";
@@ -264,7 +264,7 @@ async function recordRoll(
   });
 }
 
-export type ActionErrorReason = "not_found" | "item_not_found" | "not_a_weapon";
+export type ActionErrorReason = "not_found" | "item_not_found" | "not_a_weapon" | "not_a_spellcaster";
 
 export interface WeaponRollOutcome {
   weaponLabel: string;
@@ -353,13 +353,42 @@ export interface CastSpellOutcome {
   damage?: DamageRollResult;
 }
 
+/** Jet d'attaque de sort (retour utilisateur, boutons d'action des sorts — meme motif que `rollWeaponAttack`) : 1d20 + `sheet.spellcasting.attackBonus`, deja la somme caracteristique+maitrise (V1-B1) — jamais recompose ici. */
+export async function rollSpellAttack(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string | null; spellKey: string; advantage: AdvantageState; locale: Locale }
+): Promise<{ attack: AttackRollResult; recorded: boolean } | { error: ActionErrorReason }> {
+  const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+  if (!ctx) return { error: "not_found" };
+  if (!ctx.spellcastingData?.known.some((k) => k.ref.kind === "rule" && k.ref.key === params.spellKey)) {
+    return { error: "item_not_found" };
+  }
+  if (!ctx.sheet.spellcasting) return { error: "not_a_spellcaster" };
+
+  const attack = resolveAttackRoll(
+    { abilityMod: ctx.sheet.spellcasting.attackBonus, proficiencyBonus: 0, proficient: false, advantage: params.advantage },
+    serverRng
+  );
+
+  await recordRoll(supabase, params.campaignId, {
+    expression: attack.expression,
+    ast: attack.ast,
+    context: { mod: ctx.sheet.spellcasting.attackBonus },
+    result: attack.total,
+    detail: { trace: attack.trace, isCritical: attack.isCritical, isCriticalFail: attack.isCriticalFail, advantage: params.advantage, spellKey: params.spellKey },
+  });
+
+  return { attack, recorded: params.campaignId !== null };
+}
+
 /**
  * Lance un sort connu : decompte l'emplacement du niveau choisi et, si le
  * sort porte une formule de degats (bloc `effects`, mise a l'echelle par
- * `scaling` — V1-A1), la lance. Le jet d'attaque de sort (contre CA) ou
- * l'annonce d'un DD de sauvegarde restent hors perimetre de ce ticket :
- * specs/fiche-personnage-interactive.md §3 ne decrit que "choisir un
- * niveau, lancer et decompter".
+ * `scaling` — V1-A1), la lance. `critical` vient du jet d'attaque de sort
+ * precedent (`rollSpellAttack` ci-dessus, meme motif que
+ * `rollWeaponDamage`/`critical`) — seuls les sorts a attaque en ont un,
+ * jamais applique a un sort a sauvegarde (regle 2024 : un coup critique ne
+ * touche que les jets d'attaque).
  */
 export async function castSpell(
   supabase: TypedClient,
@@ -368,6 +397,7 @@ export async function castSpell(
     campaignId: string | null;
     spellKey: string;
     slotLevel: number;
+    critical: boolean;
     actorUserId: string;
     locale: Locale;
   }
@@ -403,9 +433,9 @@ export async function castSpell(
     const baseFormula = effectsData?.effects[0]?.formula;
     if (baseFormula) {
       const formulaText = scalingBlock
-        ? resolveScaledFormula(scalingBlock.data as unknown as ScalingBlockData, params.slotLevel, effectsData, baseFormula)
+        ? resolveScaledFormulaText(scalingBlock.data as unknown as ScalingBlockData, params.slotLevel, effectsData, baseFormula)
         : formatFormulaNode(baseFormula);
-      damage = resolveDamageRoll({ formula: formulaText, critical: false }, serverRng);
+      damage = resolveDamageRoll({ formula: formulaText, critical: params.critical }, serverRng);
       await recordRoll(supabase, params.campaignId, {
         expression: damage.expression,
         ast: damage.ast,
@@ -435,17 +465,6 @@ export async function castSpell(
 /** `sheet.spellcasting.slots` est deja le resultat combine (characterSheet(), V1-B1) : rien a recombiner ici. */
 function availableSlotsAt(ctx: CharacterActionContext, slotLevel: number): number {
   return ctx.sheet.spellcasting?.slots[slotLevel] ?? 0;
-}
-
-function resolveScaledFormula(
-  scalingData: ScalingBlockData,
-  slotLevel: number,
-  effectsData: EffectsBlockData | undefined,
-  baseFormula: import("@/src/core/formula/ast").FormulaNode
-): string {
-  const target = scalingData.rule?.target ? resolveScalingTarget(scalingData.rule.target, effectsData) : baseFormula;
-  const table = generateScalingTable(scalingData, slotLevel, target ?? baseFormula);
-  return table[String(slotLevel)] ?? formatFormulaNode(baseFormula);
 }
 
 export interface RestOutcome {

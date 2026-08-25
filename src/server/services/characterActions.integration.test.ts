@@ -217,6 +217,7 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
       campaignId,
       spellKey: "fireball",
       slotLevel: 3,
+      critical: false,
       actorUserId: ownerId,
       locale: "fr",
     });

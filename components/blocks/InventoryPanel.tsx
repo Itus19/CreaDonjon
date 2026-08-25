@@ -62,8 +62,8 @@ export function ActionButton({
   );
 }
 
-/** Ajoute un modificateur signe a une notation de de (`"1d20"` + 2 -> `"1d20+2"`), omis si nul. */
-function withModifier(base: string, mod: number): string {
+/** Ajoute un modificateur signe a une notation de de (`"1d20"` + 2 -> `"1d20+2"`), omis si nul. Exporte (meme raison que `ActionButton`) : reutilise par `ActionsTab.tsx` pour le jet d'attaque de sort. */
+export function withModifier(base: string, mod: number): string {
   if (mod === 0) return base;
   return `${base}${mod > 0 ? "+" : ""}${mod}`;
 }

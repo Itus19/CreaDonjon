@@ -281,15 +281,41 @@ export default function PlayableCharacterSheet({
     pushLog({ label: `${result.weaponLabel} — dégâts${critical ? " (critique)" : ""}`, total: result.damage.total, trace: result.damage.trace });
   }
 
+  /** Cle de `pendingCrit` pour un sort — prefixee (retour utilisateur, boutons d'action des sorts) pour ne jamais entrer en collision avec un id d'objet d'inventaire, meme etat partage que les armes. */
+  function spellCritKey(spellKey: string): string {
+    return `spell:${spellKey}`;
+  }
+
+  /** Jet d'attaque de sort (retour utilisateur, boutons d'action des sorts) — informatif, ne consomme jamais d'emplacement (comme "Attaquer" pour une arme), alimente `pendingCrit` pour que le bouton de degats double les des sur un coup critique. */
+  async function castSpellAttack(spellKey: string, spellLabel: string) {
+    const result = await postAction<{ attack?: { total: number; isCritical: boolean; isCriticalFail: boolean; trace: TraceStep[] } }>(
+      "roll-spell-attack",
+      { campaignId, spellKey, advantage }
+    );
+    if (!result?.attack) return;
+    setPendingCrit((prev) => ({ ...prev, [spellCritKey(spellKey)]: result.attack!.isCritical }));
+    pushLog({
+      label: `${spellLabel} — attaque`,
+      total: result.attack.total,
+      trace: result.attack.trace,
+      isCritical: result.attack.isCritical,
+      isCriticalFail: result.attack.isCriticalFail,
+    });
+  }
+
   async function cast(spellKey: string, spellLabel: string, slotLevel: number) {
+    const critical = pendingCrit[spellCritKey(spellKey)] ?? false;
     const result = await postAction<{ remainingSlots: number; damage?: { total: number; trace: TraceStep[] } }>("cast-spell", {
       campaignId,
       spellKey,
       slotLevel,
+      critical,
     });
     if (!result) return;
     pushLog({
-      label: result.damage ? `${spellLabel} (niv. ${slotLevel})` : `${spellLabel} (niv. ${slotLevel}) lancé`,
+      label: result.damage
+        ? `${spellLabel} (niv. ${slotLevel})${critical ? " (critique)" : ""}`
+        : `${spellLabel} (niv. ${slotLevel}) lancé`,
       total: result.damage?.total ?? 0,
       trace: result.damage?.trace ?? [],
     });
@@ -606,7 +632,11 @@ export default function PlayableCharacterSheet({
               preparedSpells={preparedSpells}
               spellSlots={sheet.spellcasting?.slots ?? {}}
               spellSlotsUsed={runtimeState?.spell_slots_used ?? {}}
+              spellAttackBonus={sheet.spellcasting?.attackBonus ?? 0}
+              spellSaveDc={sheet.spellcasting?.saveDc ?? 0}
+              spellAbilityLabel={sheet.spellcasting ? ABILITY_LABELS[sheet.spellcasting.ability] : ""}
               onCast={cast}
+              onCastAttack={castSpellAttack}
               resources={resources}
               resourcesUsed={runtimeState?.resources ?? {}}
               onChangeResource={changeResource}

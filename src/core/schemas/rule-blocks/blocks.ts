@@ -81,6 +81,12 @@ export const zEffectData = z.object({
   damage_type: z.string().optional(),
   formula: zFormulaNode.optional(),
   save: z.object({ ability: z.string(), effect_on_success: z.string().optional() }).optional(),
+  // Jet d'attaque de sort (retour utilisateur, boutons d'action des sorts) —
+  // exclusif avec `save` (le SRD ne pose jamais les deux sur un meme sort :
+  // verifie sur les 339 sorts de la 5.2.1). `range` distingue melee/distance
+  // comme `WeaponData.isRanged`, meme motif que les armes : determine la
+  // caracteristique employee jamais separement du sort lui-meme.
+  attack: z.object({ range: z.enum(["melee", "ranged"]) }).optional(),
 });
 export const zEffectsBlockData = z.object({
   effects: z.array(zEffectData),

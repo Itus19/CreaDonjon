@@ -21,6 +21,16 @@ export const castSpellSchema = z.object({
   // 0 = sort mineur (retour utilisateur, V2-G1 suite) : ne consomme jamais
   // d'emplacement (regle 2024), distinct des niveaux 1-9 qui en consomment un.
   slotLevel: z.number().int().min(0).max(9),
+  // Vient du jet d'attaque de sort precedent (`spellAttackSchema` ci-dessous),
+  // meme motif que `weaponDamageSchema.critical` — l'appelant le sait deja,
+  // jamais recalcule ici.
+  critical: z.boolean().default(false),
+});
+
+export const spellAttackSchema = z.object({
+  campaignId: campaignIdField,
+  spellKey: z.string().min(1),
+  advantage: z.enum(["normal", "advantage", "disadvantage"]),
 });
 
 export const shortRestSchema = z.object({

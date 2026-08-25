@@ -643,12 +643,23 @@ function spellBlocks(entry: SrdRecord): EntryBlock[] {
     const baseLevelKey = slotLevels ? String(entry.level ?? 0) : "1";
     const baseFormulaText = slotLevels?.[baseLevelKey] ?? charLevels?.[baseLevelKey];
 
+    // `dc`/`attack_type` (retour utilisateur, boutons d'action des sorts) —
+    // mutuellement exclusifs dans le SRD (verifie sur les 339 sorts de la
+    // 5.2.1 : jamais les deux a la fois sur un meme sort), jamais devine
+    // quand absent (sort a sauvegarde/attaque non modelise autrement, ex.
+    // Sommeil n'a ni l'un ni l'autre malgre un effet reel).
+    const dc = entry.dc as SrdRecord | undefined;
+    const dcAbility = (dc?.dc_type as SrdRecord | undefined)?.index;
+    const attackType = entry.attack_type;
+
     const effectsData = {
       effects: [
         {
           id: "e1",
           damage_type: typeof damageType === "string" ? damageType : undefined,
           formula: baseFormulaText ? tryParseDiceFormula(baseFormulaText) : undefined,
+          save: typeof dcAbility === "string" ? { ability: dcAbility, effect_on_success: String(dc?.dc_success ?? "") } : undefined,
+          attack: attackType === "melee" || attackType === "ranged" ? { range: attackType } : undefined,
         },
       ],
     };

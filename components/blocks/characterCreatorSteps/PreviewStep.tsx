@@ -12,6 +12,7 @@ import type { RemainingChoiceView, TraitGrantView } from "../useResolvedRuleset"
 import { useReferenceChips, refIdentity, type ResolvedChipView } from "../useReferenceChips";
 import CharacterSheetHeader from "../CharacterSheetHeader";
 import ActionsTab, { type PreparedSpellView } from "../ActionsTab";
+import { ABILITY_LABELS } from "../PlayableCharacterSheet";
 import MagicTab, { type KnownSpellView } from "../MagicTab";
 import InventoryTab from "../InventoryTab";
 import TraitsTab from "../TraitsTab";
@@ -214,7 +215,11 @@ export default function PreviewStep({
           preparedSpells={preparedSpells}
           spellSlots={sheet.spellcasting?.slots ?? {}}
           spellSlotsUsed={{}}
+          spellAttackBonus={sheet.spellcasting?.attackBonus ?? 0}
+          spellSaveDc={sheet.spellcasting?.saveDc ?? 0}
+          spellAbilityLabel={sheet.spellcasting ? ABILITY_LABELS[sheet.spellcasting.ability] : ""}
           onCast={noop}
+          onCastAttack={noop}
           resources={undefined}
           resourcesUsed={{}}
           onChangeResource={noop}
