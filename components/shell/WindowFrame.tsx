@@ -28,6 +28,7 @@ export default function WindowFrame({
   subtitle,
   onFocus,
   onClose,
+  onMinimize,
   onUpdate,
   children,
 }: {
@@ -38,6 +39,7 @@ export default function WindowFrame({
   subtitle?: string | null;
   onFocus: () => void;
   onClose: () => void;
+  onMinimize: () => void;
   onUpdate: (updates: Partial<WindowGeometry>) => void;
   children: React.ReactNode;
 }) {
@@ -126,6 +128,13 @@ export default function WindowFrame({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2.5">
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={onMinimize}
+            title="Réduire"
+            className="h-[11px] w-[11px] rounded-full bg-edge-strong transition-all hover:scale-110 hover:bg-ink-muted"
+          />
           <button
             type="button"
             onMouseDown={(e) => e.stopPropagation()}

@@ -1,3 +1,6 @@
+import type { EntityWindowData } from "@/src/server/services/entityWindow";
+import type { RuleEntryDetail } from "@/src/server/services/rules";
+
 /**
  * Adressage d'une fenetre ouverte (ADR-0011) : `?avec=` melange desormais
  * des entites de monde et des entrees de regle. Prefixe explicite
@@ -51,4 +54,14 @@ export function windowHref(worldSlug: string, ref: WindowRef): string {
 
 export function sectionHomeHref(worldSlug: string, kind: WindowRef["kind"]): string {
   return kind === "entity" ? `/m/${worldSlug}` : `/m/${worldSlug}/regles`;
+}
+
+/** Nom/badge d'une fenetre secondaire a partir de sa donnee recuperee — le meme calcul servait deux fois (rendu, onglet reduit V2-K4). */
+export function windowContentLabel(
+  data: EntityWindowData | RuleEntryDetail | undefined,
+  fallbackKey: string
+): { name: string; badge: string | null } {
+  if (!data) return { name: fallbackKey, badge: null };
+  if ("entity" in data) return { name: data.entity.name, badge: data.entity.entity_kind };
+  return { name: data.name, badge: data.entryType };
 }

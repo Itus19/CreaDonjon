@@ -10,6 +10,7 @@ import {
   refsEqual,
   sectionHomeHref,
   serializeAvecParam,
+  windowContentLabel,
   windowHref,
   type WindowRef,
 } from "./windowRefs";
@@ -34,17 +35,30 @@ export interface AvecWindowEntry {
   ref: WindowRef;
   geometry: WindowGeometry;
   isFocused: boolean;
+  isMinimized: boolean;
   data: EntityWindowData | RuleEntryDetail | undefined;
+}
+
+/** Un onglet reduit en bas de l'espace de travail (V2-K4). */
+export interface MinimizedTab {
+  id: string;
+  ref: WindowRef;
+  name: string;
+  badge: string | null;
 }
 
 export interface DesktopWindowsState {
   primary: PrimaryWindowInfo | null;
   primaryGeometry: WindowGeometry | undefined;
   isPrimaryFocused: boolean;
+  isPrimaryMinimized: boolean;
   avecWindows: AvecWindowEntry[];
+  minimizedTabs: MinimizedTab[];
   focusWindow: (id: string) => void;
   closeWindow: (ref: WindowRef) => void;
   updateGeometry: (ref: WindowRef, updates: Partial<WindowGeometry>) => void;
+  minimizeWindow: (ref: WindowRef) => void;
+  restoreWindow: (ref: WindowRef) => void;
 }
 
 /**
@@ -75,6 +89,9 @@ export default function DesktopWindowsProvider({
   const [geometries, setGeometries] = useState<Record<string, WindowGeometry>>({});
   const [avecData, setAvecData] = useState<Record<string, EntityWindowData | RuleEntryDetail>>({});
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  // Etat d'affichage purement local (V2-K4) — jamais dans `?avec=` ni dans
+  // l'URL, meme logique que l'ordre d'empilement (docs/adr/0006).
+  const [minimizedIds, setMinimizedIds] = useState<Record<string, boolean>>({});
 
   const avecRefs = parseAvecParam(searchParams.get("avec")).filter(
     (ref) => !primary || !refsEqual(ref, primary.ref)
@@ -154,7 +171,17 @@ export default function DesktopWindowsProvider({
     [primary, avecRefsKey, worldSlug]
   );
 
+  function clearMinimized(id: string) {
+    setMinimizedIds((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }
+
   function closeWindow(ref: WindowRef) {
+    clearMinimized(refId(ref));
     if (primary && refsEqual(ref, primary.ref)) {
       // Fermer la primaire revient a l'accueil de sa section, sans perdre
       // les autres fenetres deja ouvertes.
@@ -170,22 +197,45 @@ export default function DesktopWindowsProvider({
     setGeometries((prev) => ({ ...prev, [id]: { ...prev[id], ...updates } }));
   }
 
+  function minimizeWindow(ref: WindowRef) {
+    setMinimizedIds((prev) => ({ ...prev, [refId(ref)]: true }));
+  }
+
+  function restoreWindow(ref: WindowRef) {
+    const id = refId(ref);
+    setMinimizedIds((prev) => (prev[id] ? { ...prev, [id]: false } : prev));
+    setFocusedId(id);
+  }
+
   const avecWindows: AvecWindowEntry[] = [];
+  const minimizedTabs: MinimizedTab[] = [];
   for (const ref of avecRefs) {
     const id = refId(ref);
     const geometry = geometries[id];
     if (!geometry) continue;
-    avecWindows.push({ ref, geometry, isFocused: focusedId === id, data: avecData[id] });
+    const isMinimized = Boolean(minimizedIds[id]);
+    avecWindows.push({ ref, geometry, isFocused: focusedId === id, isMinimized, data: avecData[id] });
+    if (isMinimized) {
+      const { name, badge } = windowContentLabel(avecData[id], ref.key);
+      minimizedTabs.push({ id, ref, name, badge });
+    }
+  }
+  if (primary && minimizedIds[refId(primary.ref)]) {
+    minimizedTabs.unshift({ id: refId(primary.ref), ref: primary.ref, name: primary.name, badge: primary.badge });
   }
 
   const state: DesktopWindowsState = {
     primary,
     primaryGeometry: primary ? geometries[refId(primary.ref)] : undefined,
     isPrimaryFocused: primary ? focusedId === refId(primary.ref) : false,
+    isPrimaryMinimized: primary ? Boolean(minimizedIds[refId(primary.ref)]) : false,
     avecWindows,
+    minimizedTabs,
     focusWindow: setFocusedId,
     closeWindow,
     updateGeometry,
+    minimizeWindow,
+    restoreWindow,
   };
 
   return (

@@ -419,14 +419,16 @@ Fait — décision prise avec l'utilisateur avant d'écrire : Monde/Règles/MJ r
 
 Fait — taille choisie en la voyant (comme décidé) : 860×760, testée contre la fiche de personnage jouable (grille de caractéristiques, compétences, cartes de sorts) et la table de progression de classe la plus large du dépôt (Magicien), aucune des deux ne déborde ni ne semble à l'étroit. 860px reprend d'ailleurs la largeur déjà validée de `Panel.tsx` pour le même contenu. Poignée de redimensionnement (coin bas-droit) et sa logique retirées de `WindowFrame.tsx` ; l'aimantation sur les bords (glisser près d'un bord tuile la fenêtre à moitié écran) reste inchangée, ce n'est pas une poignée de redimensionnement et le ticket ne demandait pas de la retirer. Déplacement et agrandir/restaurer vérifiés en navigateur. `typecheck`/`lint`/`test` verts (605/606, 1 ignoré).
 
-### V2-K4 — Réduction de fenêtre en onglet de bas d'écran · `M`
+### V2-K4 — Réduction de fenêtre en onglet de bas d'écran · `M` — fait
 
 *Dépend de K1.*
 
-- [ ] Un bouton « réduire » sur chaque fenêtre, à côté de fermer/agrandir.
-- [ ] Fenêtre réduite → un onglet compact en bas de l'espace de travail (nom de la fiche) ; la fenêtre elle-même se masque.
-- [ ] Cliquer l'onglet restaure la fenêtre à sa position précédente.
-- [ ] L'état réduit est un état d'affichage local, **jamais dans `?avec=`** ni dans l'URL — même logique que l'ordre d'empilement, déjà non persisté (`docs/adr/0006-fenetres-flottantes.md`).
+- [x] Un bouton « réduire » sur chaque fenêtre, à côté de fermer/agrandir.
+- [x] Fenêtre réduite → un onglet compact en bas de l'espace de travail (nom de la fiche) ; la fenêtre elle-même se masque.
+- [x] Cliquer l'onglet restaure la fenêtre à sa position précédente.
+- [x] L'état réduit est un état d'affichage local, **jamais dans `?avec=`** ni dans l'URL — même logique que l'ordre d'empilement, déjà non persisté (`docs/adr/0006-fenetres-flottantes.md`).
+
+Fait — `minimizedIds` (nouvel état local dans `DesktopWindowsProvider.tsx`, jamais lu ni écrit depuis `?avec=`) et une barre d'onglets (`WindowsDesktop.tsx`) listant toute fenêtre réduite, primaire comme secondaire. Piège réel : réduire la fenêtre PRIMAIRE ne doit jamais retirer `children` de l'arbre React — c'est elle qui porte `RegisterPrimaryWindow`, la démonter aurait désenregistré la primaire et fait disparaître son propre onglet réduit. Corrigé en la gardant montée mais masquée (`className="hidden"`) plutôt qu'omise du rendu. `windowContentLabel` (nouveau, `windowRefs.ts`) factorise le calcul nom/badge d'une fenêtre secondaire, déjà dupliqué avant ce ticket. Vérifié : réduire/restaurer la primaire et une secondaire (bouton et via le DOM), position restaurée à l'identique, `?avec=`/URL inchangés pendant toute l'opération (confirmé par `window.location.href`), le bouton "Restaurer" est bien présent et accessible (arbre d'accessibilité) même quand la capture d'écran de cet environnement ne le compose pas visiblement (flou d'arrière-plan). `typecheck`/`lint`/`test` verts (605/606, 1 ignoré).
 
 ### V2-K5 — Réglages à onglets · `S`
 

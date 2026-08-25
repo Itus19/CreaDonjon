@@ -5,7 +5,7 @@ import WindowFrame from "./WindowFrame";
 import Panel from "./Panel";
 import { useDesktop } from "./DesktopContext";
 import { useDesktopWindowsState } from "./DesktopWindowsProvider";
-import { refId } from "./windowRefs";
+import { refId, windowContentLabel } from "./windowRefs";
 import EditEntityForm from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/EditEntityForm";
 import RuleEntryView from "@/components/rules/RuleEntryView";
 import type { EntityWindowData } from "@/src/server/services/entityWindow";
@@ -57,53 +57,78 @@ export default function WindowsDesktop({ worldSlug, children }: { worldSlug: str
       )}
 
       {state.primary && state.primaryGeometry && (
-        <WindowFrame
-          win={state.primaryGeometry}
-          isFocused={state.isPrimaryFocused}
-          containerRef={desktopRef}
-          title={state.primary.name}
-          subtitle={state.primary.badge}
-          onFocus={() => state.focusWindow(refId(state.primary!.ref))}
-          onClose={() => state.closeWindow(state.primary!.ref)}
-          onUpdate={(updates) => state.updateGeometry(state.primary!.ref, updates)}
-        >
-          {children}
-        </WindowFrame>
+        state.isPrimaryMinimized ? (
+          // La fiche primaire reste montee (masquee, pas retiree) : c'est
+          // elle qui porte `RegisterPrimaryWindow` — la demonter perdrait
+          // l'enregistrement et l'onglet reduit avec (V2-K4).
+          <div className="hidden">{children}</div>
+        ) : (
+          <WindowFrame
+            win={state.primaryGeometry}
+            isFocused={state.isPrimaryFocused}
+            containerRef={desktopRef}
+            title={state.primary.name}
+            subtitle={state.primary.badge}
+            onFocus={() => state.focusWindow(refId(state.primary!.ref))}
+            onClose={() => state.closeWindow(state.primary!.ref)}
+            onMinimize={() => state.minimizeWindow(state.primary!.ref)}
+            onUpdate={(updates) => state.updateGeometry(state.primary!.ref, updates)}
+          >
+            {children}
+          </WindowFrame>
+        )
       )}
 
-      {state.avecWindows.map(({ ref, geometry, isFocused, data }) => (
-        <WindowFrame
-          key={refId(ref)}
-          win={geometry}
-          isFocused={isFocused}
-          containerRef={desktopRef}
-          title={
-            data
-              ? isEntityWindowData(data)
-                ? data.entity.name
-                : data.name
-              : ref.key
-          }
-          subtitle={data ? (isEntityWindowData(data) ? data.entity.entity_kind : data.entryType) : null}
-          onFocus={() => state.focusWindow(refId(ref))}
-          onClose={() => state.closeWindow(ref)}
-          onUpdate={(updates) => state.updateGeometry(ref, updates)}
-        >
-          {!data ? (
-            <p className="text-sm text-ink-muted">Chargement...</p>
-          ) : isEntityWindowData(data) ? (
-            <EditEntityForm
-              entity={data.entity}
-              worldSlug={data.worldSlug}
-              initialBlocks={data.blocks}
-              initialRelations={data.relations}
-              otherEntities={data.otherEntities}
-            />
-          ) : (
-            <RuleEntryView entry={data} worldSlug={worldSlug} />
-          )}
-        </WindowFrame>
-      ))}
+      {state.avecWindows
+        .filter((w) => !w.isMinimized)
+        .map(({ ref, geometry, isFocused, data }) => {
+          const { name, badge } = windowContentLabel(data, ref.key);
+          return (
+            <WindowFrame
+              key={refId(ref)}
+              win={geometry}
+              isFocused={isFocused}
+              containerRef={desktopRef}
+              title={name}
+              subtitle={badge}
+              onFocus={() => state.focusWindow(refId(ref))}
+              onClose={() => state.closeWindow(ref)}
+              onMinimize={() => state.minimizeWindow(ref)}
+              onUpdate={(updates) => state.updateGeometry(ref, updates)}
+            >
+              {!data ? (
+                <p className="text-sm text-ink-muted">Chargement...</p>
+              ) : isEntityWindowData(data) ? (
+                <EditEntityForm
+                  entity={data.entity}
+                  worldSlug={data.worldSlug}
+                  initialBlocks={data.blocks}
+                  initialRelations={data.relations}
+                  otherEntities={data.otherEntities}
+                />
+              ) : (
+                <RuleEntryView entry={data} worldSlug={worldSlug} />
+              )}
+            </WindowFrame>
+          );
+        })}
+
+      {state.minimizedTabs.length > 0 && (
+        <div className="absolute inset-x-0 bottom-0 z-40 flex flex-wrap items-center gap-2 border-t border-edge bg-panel-sunken/95 p-2 backdrop-blur-[var(--blur)]">
+          {state.minimizedTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => state.restoreWindow(tab.ref)}
+              title="Restaurer"
+              className="flex items-center gap-1.5 rounded-md border border-edge bg-panel-raised px-3 py-1.5 text-xs text-ink-soft transition-colors hover:border-accent/40 hover:text-ink"
+            >
+              <span className="max-w-[160px] truncate">{tab.name}</span>
+              {tab.badge && <span className="shrink-0 text-[10px] text-ink-muted">{tab.badge}</span>}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
