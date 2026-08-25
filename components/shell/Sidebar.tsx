@@ -6,6 +6,7 @@ import type { EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import type { PaletteEntity } from "./CommandPalette";
 import CommandPalette from "./CommandPalette";
 import EntityTree from "./EntityTree";
+import SectionToggle from "./SectionToggle";
 import { createBlankEntityAction } from "@/app/m/[worldSlug]/actions";
 
 export default function Sidebar({
@@ -47,6 +48,7 @@ export default function Sidebar({
         }`}
       >
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+          <SectionToggle worldSlug={worldSlug} />
           <CommandPalette worldId={worldId} worldSlug={worldSlug} entities={entities} />
           <div onClick={() => setOpen(false)}>
             <EntityTree groups={tree} worldSlug={worldSlug} />

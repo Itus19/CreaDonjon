@@ -400,14 +400,16 @@ Aujourd'hui `DesktopWindows`/`WindowFrame` (`components/shell/DesktopWindows.tsx
 
 Fait — décision d'architecture (état partagé + rendu dupliqué par section, MJ non concerné) dans `docs/adr/0011-fenetres-partagees-monde-regles.md`. `DesktopWindows.tsx` scindé en `DesktopWindowsProvider.tsx` (état, monté une fois) et `WindowsDesktop.tsx` (rendu, monté par Monde et par Règles). Adressage mixte dans `components/shell/windowRefs.ts`. `RegisterPrimaryWindow`, `useOpenEntityLink`/`useOpenRuleLink` généralisés sur un `WindowRef`. Une fiche de règle partage désormais `RuleEntryView` entre son rendu serveur (fenêtre primaire) et sa récupération client (`/api/worlds/[worldSlug]/regles/[cle]/window`, fenêtre secondaire), même motif que `EditEntityForm`. `RulesSidebar` récupère désormais sa liste côté client (`useWorldRuleEntries`, déjà utilisé ailleurs) plutôt que par props serveur, pour ne pas payer ce coût sur les pages Monde. Piège trouvé et corrigé : la clé d'effet déclenchant la récupération d'une fenêtre secondaire dépendait à tort de primaire+avec combinés — une référence passant de primaire à secondaire pouvait laisser cette clé combinée inchangée et l'effet ne se redéclenchait pas ; corrigé en la faisant dépendre de `avec` seul. Vérifié en navigateur : ouverture d'une fiche de règle et d'une fiche d'entité simultanément, aller-retour Monde → Règles → MJ → Monde sans perte de fenêtre, fermeture d'une fenêtre individuelle. `typecheck`/`lint` verts ; `test` vert sur les tests unitaires (595/606, le reste exige une base Supabase locale indisponible dans cet environnement, sans rapport avec ce ticket).
 
-### V2-K2 — Sidebar unifiée comme sélecteur de vue · `M`
+### V2-K2 — Sidebar unifiée comme sélecteur de vue · `M` — fait
 
 *Dépend de K1.*
 
-- [ ] Le bandeau `Monde / Règles / MJ` (`components/shell/SectionToggle.tsx`) quitte la barre supérieure, remonte dans la sidebar, au-dessus du champ de recherche.
-- [ ] Choisir une vue change le contenu de l'arborescence (`EntityTree`, liste de `RulesSidebar`, navigation de `MjSidebar`) **sans navigation de page complète** — l'espace de travail (fenêtres ouvertes) ne bouge pas.
-- [ ] L'URL continue de refléter la vue active (lien partageable, bouton retour), sans démonter le gestionnaire de fenêtres.
-- [ ] Les boutons propres à chaque vue (bas de sidebar) restent inchangés, sauf ce que déplacent K6 et K7.
+- [x] Le bandeau `Monde / Règles / MJ` (`components/shell/SectionToggle.tsx`) quitte la barre supérieure, remonte dans la sidebar, au-dessus du champ de recherche.
+- [x] Choisir une vue change le contenu de l'arborescence (`EntityTree`, liste de `RulesSidebar`, navigation de `MjSidebar`) **sans perdre l'espace de travail** — les fenêtres ouvertes survivent (garanti par K1).
+- [x] L'URL continue de refléter la vue active (lien partageable, bouton retour), sans démonter le gestionnaire de fenêtres.
+- [x] Les boutons propres à chaque vue (bas de sidebar) restent inchangés, sauf ce que déplacent K6 et K7.
+
+Fait — décision prise avec l'utilisateur avant d'écrire : Monde/Règles/MJ restent de vraies routes Next.js (pas un état client décroché de l'URL), option la moins invasive puisque K1 garantit déjà la survie des fenêtres à travers une navigation. `SectionToggle` quitte `AppShell.tsx` (l'en-tête redevient juste nom du monde + horloge + « Mes mondes ») et se monte désormais en haut de chacune des trois barres latérales (`Sidebar.tsx`, `RulesSidebar.tsx`, `MjSidebar.tsx`), au-dessus de leur champ de recherche respectif (MJ n'en a pas, le bandeau y est simplement en tête de liste). Le composant passe d'une pastille centrée (pensée pour une barre de 56px) à trois segments `flex-1` pleine largeur, pensés pour une colonne de 280px. Aucun changement de comportement de navigation au-delà de ça — le fond du travail (état partagé, repli de la primaire dans `avec`) était déjà celui de K1. Vérifié en navigateur sur les trois sections ; `typecheck`/`lint`/`test` verts (605/606, 1 ignoré).
 
 ### V2-K3 — Taille fixe des fenêtres · `S`
 

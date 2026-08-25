@@ -7,11 +7,12 @@ import { useDesktopWindowsState } from "./DesktopWindowsProvider";
 import { serializeAvecParam } from "./windowRefs";
 
 /**
- * Bascule Monde / Règles / MJ (specs/coquille-et-design.md §3) : chrome
- * distinct par section (fenêtres flottantes pour les fiches — communes à
- * Monde et Règles depuis ADR-0011 —, sidebar d'outils plein cadre pour le
- * MJ, sans fenêtre). Le mode solo (V3) est un sujet distinct, pas un
- * onglet de plus ici.
+ * Bascule Monde / Règles / MJ, en haut de la barre laterale de chaque
+ * section, au-dessus de son champ de recherche (V2-K2 — quittait la barre
+ * superieure). Chrome distinct par section (fenêtres flottantes pour les
+ * fiches — communes à Monde et Règles depuis ADR-0011 —, sidebar d'outils
+ * plein cadre pour le MJ, sans fenêtre). Le mode solo (V3) est un sujet
+ * distinct, pas un onglet de plus ici.
  *
  * Changer de section est une navigation de page complète (nouvelle route),
  * ce qui remettrait `?avec=` à zéro si on n'y prenait pas garde : la
@@ -47,11 +48,11 @@ export default function SectionToggle({ worldSlug }: { worldSlug: string }) {
   }
 
   return (
-    <div className="flex items-center gap-1 rounded-full border border-edge p-0.5 text-xs">
+    <div className="flex w-full items-center gap-1 rounded-full border border-edge p-0.5 text-xs">
       <Link
         href={hrefWithWindows(`/m/${worldSlug}`)}
         onClick={(e) => navigate(e, `/m/${worldSlug}`)}
-        className={`rounded-full px-3 py-1 transition-colors ${
+        className={`flex-1 rounded-full px-2 py-1 text-center transition-colors ${
           isMonde ? "bg-panel-raised text-ink" : "text-ink-muted hover:text-ink"
         }`}
       >
@@ -60,7 +61,7 @@ export default function SectionToggle({ worldSlug }: { worldSlug: string }) {
       <Link
         href={hrefWithWindows(`/m/${worldSlug}/regles`)}
         onClick={(e) => navigate(e, `/m/${worldSlug}/regles`)}
-        className={`rounded-full px-3 py-1 transition-colors ${
+        className={`flex-1 rounded-full px-2 py-1 text-center transition-colors ${
           isRegles ? "bg-panel-raised text-ink" : "text-ink-muted hover:text-ink"
         }`}
       >
@@ -69,7 +70,7 @@ export default function SectionToggle({ worldSlug }: { worldSlug: string }) {
       <Link
         href={hrefWithWindows(`/m/${worldSlug}/mj`)}
         onClick={(e) => navigate(e, `/m/${worldSlug}/mj`)}
-        className={`rounded-full px-3 py-1 transition-colors ${
+        className={`flex-1 rounded-full px-2 py-1 text-center transition-colors ${
           isMj ? "bg-panel-raised text-ink" : "text-ink-muted hover:text-ink"
         }`}
       >

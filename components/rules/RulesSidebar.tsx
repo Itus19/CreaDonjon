@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
 import { useOpenRuleLink } from "@/components/shell/useOpenRuleLink";
+import SectionToggle from "@/components/shell/SectionToggle";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 import RulesetSelector from "./RulesetSelector";
 
@@ -227,6 +228,7 @@ export default function RulesSidebar({ worldSlug }: { worldSlug: string }) {
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
+        <SectionToggle worldSlug={worldSlug} />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}

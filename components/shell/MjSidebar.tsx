@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import SectionToggle from "./SectionToggle";
 
 /**
  * Barre laterale du Compagnon MJ (nouvel onglet, meme repli mobile que
@@ -51,6 +52,7 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
+        <SectionToggle worldSlug={worldSlug} />
         <Link
           href={`/m/${worldSlug}/mj`}
           onClick={() => setOpen(false)}
