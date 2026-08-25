@@ -16,6 +16,7 @@ import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreat
 import SpellSelectionStep from "./characterCreatorSteps/SpellSelectionStep";
 import PreviewStep from "./characterCreatorSteps/PreviewStep";
 import { createCharacterFromWizardAction } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
+import { overwriteCharacterFromWizardAction } from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/actions";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import { useRuleEntryBlocks } from "./useRuleEntryBlocks";
 
@@ -77,12 +78,41 @@ const ALL_STEPS = [
  * `spellcasting` — separe de `character`, cree a la validation seulement si
  * au moins un sort a ete choisi.
  */
-export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSlug: string; worldId: string }) {
+/**
+ * Reutilisation depuis une fiche EXISTANTE (retour utilisateur : "Assistant
+ * de creation" lance depuis une fiche) — remplace le trajet "creer une
+ * nouvelle entite" par "ecraser celle-ci en place", jamais de redirection
+ * (l'URL de la fiche ne change jamais, le slug est independant du nom).
+ * `initialName` vient du nom ACTUEL de la fiche (jamais du bloc `character`,
+ * qui n'en porte aucun) — mentionne au MJ quel personnage il s'apprete a
+ * ecraser, meme si le champ reste librement modifiable.
+ */
+export interface CharacterWizardEntityMode {
+  entityId: string;
+  expectedVersion: number;
+  initialName: string;
+  initialCharacter?: CharacterBlockData;
+  initialInventory?: InventoryBlockData;
+  initialSpellcasting?: SpellcastingBlockData;
+  onCancel: () => void;
+  onDone: (result: { name: string; version: number }) => void;
+}
+
+export default function CharacterCreatorWizard({
+  worldSlug,
+  worldId,
+  entityMode,
+}: {
+  worldSlug: string;
+  /** Requis seulement hors `entityMode` (creation d'une nouvelle entite). */
+  worldId?: string;
+  entityMode?: CharacterWizardEntityMode;
+}) {
   const [rawStep, setStep] = useState(0);
-  const [name, setName] = useState("");
-  const [character, setCharacter] = useState<CharacterBlockData>(EMPTY_CHARACTER);
-  const [inventory, setInventory] = useState<InventoryBlockData>(EMPTY_INVENTORY);
-  const [spellcasting, setSpellcasting] = useState<SpellcastingBlockData>(EMPTY_SPELLCASTING);
+  const [name, setName] = useState(entityMode?.initialName ?? "");
+  const [character, setCharacter] = useState<CharacterBlockData>(entityMode?.initialCharacter ?? EMPTY_CHARACTER);
+  const [inventory, setInventory] = useState<InventoryBlockData>(entityMode?.initialInventory ?? EMPTY_INVENTORY);
+  const [spellcasting, setSpellcasting] = useState<SpellcastingBlockData>(entityMode?.initialSpellcasting ?? EMPTY_SPELLCASTING);
   const [abilityPool, setAbilityPool] = useState<AbilityPoolAssignment>(EMPTY_ABILITY_POOL_ASSIGNMENT);
   const [bgEquipmentChoice, setBgEquipmentChoice] = useState<BackgroundEquipmentChoice | null>(null);
   const [classEquipmentChoices, setClassEquipmentChoices] = useState<(ClassEquipmentChoiceState | null)[]>([]);
@@ -146,8 +176,25 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
     setBusy(true);
     setError(null);
     try {
+      if (entityMode) {
+        const result = await overwriteCharacterFromWizardAction(worldSlug, {
+          entityId: entityMode.entityId,
+          expectedVersion: entityMode.expectedVersion,
+          name,
+          character,
+          inventory: inventory.items.length > 0 ? inventory : undefined,
+          spellcasting: spellcasting.known.length > 0 ? spellcasting : undefined,
+        });
+        if ("error" in result) {
+          setError(result.error);
+          return;
+        }
+        entityMode.onDone({ name: result.name, version: result.version });
+        return;
+      }
+
       const result = await createCharacterFromWizardAction(worldSlug, {
-        worldId,
+        worldId: worldId!,
         name,
         character,
         inventory: inventory.items.length > 0 ? inventory : undefined,
@@ -161,6 +208,20 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
 
   return (
     <div className="flex flex-col gap-4 rounded-md border border-edge/60 bg-panel-raised p-4">
+      {entityMode && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-ink-muted">
+            Assistant de création — remplace le personnage actuel de cette fiche à la validation.
+          </p>
+          <button
+            type="button"
+            onClick={entityMode.onCancel}
+            className="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted transition-colors hover:bg-panel"
+          >
+            Fermer sans enregistrer
+          </button>
+        </div>
+      )}
       <div className="flex flex-wrap gap-3">
         <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
           Nom du personnage
@@ -331,7 +392,7 @@ export default function CharacterCreatorWizard({ worldSlug, worldId }: { worldSl
             className="w-fit rounded-full border border-accent px-4 py-1.5 text-sm text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
             title={!name.trim() ? "Donnez un nom au personnage d'abord" : undefined}
           >
-            Créer le personnage
+            {entityMode ? "Enregistrer le personnage" : "Créer le personnage"}
           </button>
         </div>
       )}

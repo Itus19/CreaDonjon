@@ -4,9 +4,10 @@ import type { Database, Json } from "@/src/types/database";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
-import { defaultBlockDisplay } from "@/src/core/schemas/blocks/registry";
-import { createEntity } from "@/src/server/services/entities";
-import { insertBlock } from "@/src/server/repos/blocks";
+import { defaultBlockDisplay, type BlockType } from "@/src/core/schemas/blocks/registry";
+import { createEntity, updateEntity, type UpdateEntityResult } from "@/src/server/services/entities";
+import { getEntityById } from "@/src/server/repos/entities";
+import { insertBlock, listBlocksForEntity, updateBlockWithVersionCheck, type BlockRow } from "@/src/server/repos/blocks";
 import type { EntitySummary } from "@/src/server/repos/entities";
 
 type TypedClient = SupabaseClient<Database>;
@@ -80,4 +81,123 @@ export async function createCharacterFromWizard(
   }
 
   return entity;
+}
+
+/**
+ * Met a jour le bloc `data` d'un type donne s'il existe deja (ecrase en
+ * place, meme si la nouvelle donnee est "vide" — `overwriteCharacterFromWizard`
+ * ci-dessous doit vraiment ECRASER, pas fusionner), sinon en cree un
+ * seulement si `data` n'est pas vide (`shouldCreateIfMissing`) — memes
+ * regles que `createCharacterFromWizard` : ne jamais poser un bloc
+ * inventaire/incantation vide qu'un "+ Personnage" tout seul n'aurait pas.
+ */
+async function upsertWizardBlock(
+  supabase: TypedClient,
+  params: {
+    entityId: string;
+    existingBlocks: BlockRow[];
+    blockType: BlockType;
+    label: string;
+    displayOrder: number;
+    data: unknown;
+    shouldCreateIfMissing: boolean;
+    createdBy: string;
+  }
+): Promise<void> {
+  const found = params.existingBlocks.find((b) => b.block_type === params.blockType);
+  if (found) {
+    await updateBlockWithVersionCheck(supabase, {
+      id: found.id,
+      expectedVersion: found.version,
+      display: found.display,
+      data: params.data as Json,
+      visibilityLevel: found.visibility_level,
+      visibilityScopeId: found.visibility_scope_id,
+    });
+    return;
+  }
+  if (!params.shouldCreateIfMissing) return;
+  await insertBlock(supabase, {
+    entityId: params.entityId,
+    blockType: params.blockType,
+    display: defaultBlockDisplay(params.blockType, params.label),
+    data: params.data as Json,
+    displayOrder: params.displayOrder,
+    visibilityLevel: "public",
+    visibilityScopeId: null,
+    createdBy: params.createdBy,
+  });
+}
+
+/**
+ * Ecrase une entite EXISTANTE avec le resultat de l'assistant (retour
+ * utilisateur : "Assistant de creation" lance depuis une fiche) — jamais de
+ * nouvelle entite, jamais de changement de slug (independant du nom,
+ * specs verifiees dans `src/server/repos/entities.ts`). Renomme l'entite au
+ * nom du personnage et force `entity_kind: "character"` (l'assistant ne
+ * produit jamais qu'un personnage), memes types/`entity_kind`/`aliases`
+ * actuels preserves sauf le nom — sinon ecrase les blocs
+ * `character`/`inventory`/`spellcasting` en place.
+ */
+export async function overwriteCharacterFromWizard(
+  supabase: TypedClient,
+  params: {
+    entityId: string;
+    expectedVersion: number;
+    changedBy: string;
+    name: string;
+    character: CharacterBlockData;
+    inventory: InventoryBlockData | undefined;
+    spellcasting: SpellcastingBlockData | undefined;
+  }
+): Promise<UpdateEntityResult> {
+  const current = await getEntityById(supabase, params.entityId);
+  if (!current) return { ok: false, reason: "not_found" };
+
+  const renamed = await updateEntity(supabase, {
+    id: params.entityId,
+    changedBy: params.changedBy,
+    expectedVersion: params.expectedVersion,
+    name: params.name,
+    entityKind: "character",
+    aliases: current.aliases,
+  });
+  if (!renamed.ok) return renamed;
+
+  const existingBlocks = await listBlocksForEntity(supabase, params.entityId);
+
+  await upsertWizardBlock(supabase, {
+    entityId: params.entityId,
+    existingBlocks,
+    blockType: "character",
+    label: "Personnage",
+    displayOrder: 1000,
+    data: params.character,
+    shouldCreateIfMissing: true,
+    createdBy: params.changedBy,
+  });
+
+  await upsertWizardBlock(supabase, {
+    entityId: params.entityId,
+    existingBlocks,
+    blockType: "inventory",
+    label: "Inventaire",
+    displayOrder: 2000,
+    data: params.inventory ?? { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } },
+    shouldCreateIfMissing: Boolean(params.inventory && params.inventory.items.length > 0),
+    createdBy: params.changedBy,
+  });
+
+  await upsertWizardBlock(supabase, {
+    entityId: params.entityId,
+    existingBlocks,
+    blockType: "spellcasting",
+    label: "Incantation",
+    displayOrder: 3000,
+    data: params.spellcasting ?? { __v: 1, sources: [], known: [], prepared: [], slot_override: null },
+    shouldCreateIfMissing: Boolean(params.spellcasting && params.spellcasting.known.length > 0),
+    createdBy: params.changedBy,
+  });
+
+  return renamed;
 }

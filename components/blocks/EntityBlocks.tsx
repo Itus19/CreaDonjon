@@ -148,10 +148,13 @@ export default function EntityBlocks({
   entityId,
   initialBlocks,
   worldSlug,
+  onLaunchWizard,
 }: {
   entityId: string;
   initialBlocks: BlockItem[];
   worldSlug: string;
+  /** Assistant de creation (retour utilisateur, suite) — omis quand aucun parent ne le fournit (ex. contextes hors fiche de monde), le bouton reste alors absent plutot que sans effet. */
+  onLaunchWizard?: () => void;
 }) {
   const [blocks, setBlocks] = useState<BlockItem[]>(initialBlocks);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -583,6 +586,16 @@ export default function EntityBlocks({
           Ajouter un bloc :
         </span>
         <div className="flex flex-wrap items-center gap-2">
+          {onLaunchWizard && (
+            <button
+              type="button"
+              onClick={onLaunchWizard}
+              title={characterBlock ? "Remplace le personnage actuel de cette fiche" : undefined}
+              className="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
+            >
+              + Assistant de création
+            </button>
+          )}
           {Object.entries(BLOCK_TYPE_LABELS).map(([type, label]) => (
             <button
               key={type}

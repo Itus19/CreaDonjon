@@ -5,10 +5,14 @@ import { useRouter } from "next/navigation";
 import RelationsChips, { type OtherEntityOption, type RelationChip } from "@/components/entities/RelationsChips";
 import EntityHistoryPanel from "@/components/entities/EntityHistoryPanel";
 import EntityBlocks, { type BlockItem } from "@/components/blocks/EntityBlocks";
+import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
 import Dropdown from "@/components/shared/Dropdown";
 import { ENTITY_KINDS } from "@/lib/entities/schemas";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import type { EntitySummary } from "@/src/server/repos/entities";
+import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
+import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 
 const ENTITY_KIND_DROPDOWN_OPTIONS = ENTITY_KINDS.map((kind) => ({
   value: kind,
@@ -42,6 +46,42 @@ export default function EditEntityForm({
   const saveChainRef = useRef<Promise<void>>(Promise.resolve());
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "conflict" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Assistant de creation lance depuis cette fiche (retour utilisateur) :
+  // remplace TOUT le contenu de la fiche tant qu'il est ouvert (en-tete,
+  // blocs, relations) — jamais un bloc de plus a cote des autres, l'ecran du
+  // wizard "prend la place de la fiche" le temps de la composition.
+  const [wizardOpen, setWizardOpen] = useState(false);
+  // Version capturee au lancement (pas versionRef.current directement : un
+  // ref ne se lit jamais pendant le rendu, react-hooks/refs). Suffisant ici
+  // car rien d'autre ne modifie la version pendant que le wizard est ouvert.
+  const [wizardVersion, setWizardVersion] = useState(entity.version);
+
+  if (wizardOpen) {
+    const characterBlock = initialBlocks.find((b) => b.blockType === "character");
+    const inventoryBlock = initialBlocks.find((b) => b.blockType === "inventory");
+    const spellcastingBlock = initialBlocks.find((b) => b.blockType === "spellcasting");
+    return (
+      <CharacterCreatorWizard
+        worldSlug={worldSlug}
+        entityMode={{
+          entityId: entity.id,
+          expectedVersion: wizardVersion,
+          initialName: name,
+          initialCharacter: characterBlock?.data as CharacterBlockData | undefined,
+          initialInventory: inventoryBlock?.data as InventoryBlockData | undefined,
+          initialSpellcasting: spellcastingBlock?.data as SpellcastingBlockData | undefined,
+          onCancel: () => setWizardOpen(false),
+          onDone: (result) => {
+            setName(result.name);
+            versionRef.current = result.version;
+            setWizardVersion(result.version);
+            setWizardOpen(false);
+            router.refresh();
+          },
+        }}
+      />
+    );
+  }
 
   type SaveOverrides = {
     name?: string;
@@ -213,7 +253,15 @@ export default function EditEntityForm({
       {status === "error" && errorMessage && <p className="text-sm text-danger">{errorMessage}</p>}
 
       <div className="border-t border-edge pt-3">
-        <EntityBlocks entityId={entity.id} initialBlocks={initialBlocks} worldSlug={worldSlug} />
+        <EntityBlocks
+          entityId={entity.id}
+          initialBlocks={initialBlocks}
+          worldSlug={worldSlug}
+          onLaunchWizard={() => {
+            setWizardVersion(versionRef.current);
+            setWizardOpen(true);
+          }}
+        />
       </div>
     </div>
   );
