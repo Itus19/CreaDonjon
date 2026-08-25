@@ -14,6 +14,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import {
+  type BackgroundEquipmentItem,
   type BackgroundEquipmentOption,
   type BlockType,
   type EntryType,
@@ -1479,14 +1480,24 @@ function speciesTraitsBlock(entry: SrdRecord, speciesAndSubspeciesKeys: Set<stri
 
 /**
  * Categorie d'equipement (SRD `equipment_categories`, ex. "Gaming Sets") ->
- * libelle FR — rencontree seulement pour le choix d'outil du Soldat
- * (V1-D7), pas de table plus large (`Equipment-Categories` n'est pas une
+ * libelle FR — pas de table plus large (`Equipment-Categories` n'est pas une
  * categorie importee a part, meme motif que `WEAPON_PROPERTY_LABELS_FR`).
- * Etendre au besoin plutot qu'a l'avance (regle des trois).
+ * Completee (V2-G1, retour utilisateur : "au choix" devient une vraie liste
+ * choisissable) apres avoir scanne TOUTES les categories reellement
+ * rencontrees dans un `equipment_options`/`starting_equipment_options` des
+ * deux editions — plus seulement Soldat/Acolyte.
  */
 const EQUIPMENT_CATEGORY_LABELS_FR: Record<string, string> = {
   "Gaming Sets": "boîte de jeux",
   "Holy Symbols": "symbole sacré",
+  "Musical Instruments": "instrument de musique",
+  "Martial Melee Weapons": "arme de guerre de mêlée",
+  "Simple Weapons": "arme courante",
+  "Simple Melee Weapons": "arme courante de mêlée",
+  "Druidic Foci": "focaliseur druidique",
+  "Martial Weapons": "arme de guerre",
+  "Arcane Foci": "focaliseur arcanique",
+  "Artisan's Tools": "outils d'artisan",
 };
 
 /**
@@ -1507,6 +1518,20 @@ const EQUIPMENT_CATEGORY_LABELS_FR: Record<string, string> = {
  * `option_type`, decouvert en verifiant le rendu reel).
  */
 /**
+ * Membres reels d'une categorie (`category_options`, retour utilisateur
+ * V2-G1) — cherches dans `categoryMembersByName` (construite une fois par
+ * fichier SRD depuis `Equipment-Categories[].equipment`, deja des index de
+ * vraies fiches Objet/Arme importees). `undefined` si la categorie n'a pas
+ * ete trouvee : le libelle "(au choix)" reste alors seul, comme avant,
+ * jamais une erreur qui ferait echouer l'import.
+ */
+function categoryOptionsFor(name: string, categoryMembersByName: Map<string, string[]>): BackgroundEquipmentItem["category_options"] {
+  const members = categoryMembersByName.get(name);
+  if (!members || members.length === 0) return undefined;
+  return members.map((key) => ({ kind: "rule" as const, key }));
+}
+
+/**
  * Coeur partage par `parseBackgroundEquipmentOptions` (un seul choix "A ou
  * B" par historique) et `parseClassEquipmentChoices` (V2-G1, plusieurs choix
  * INDEPENDANTS par classe, ex. Magicien 2014 : "baton de combat OU dague",
@@ -1514,7 +1539,10 @@ const EQUIPMENT_CATEGORY_LABELS_FR: Record<string, string> = {
  * (`from.options`) dans les deux cas, jamais deux lectures distinctes du
  * meme JSON.
  */
-function parseEquipmentOptionsFromArray(optionsRaw: SrdRecord[]): BackgroundEquipmentOption[] {
+function parseEquipmentOptionsFromArray(
+  optionsRaw: SrdRecord[],
+  categoryMembersByName: Map<string, string[]>
+): BackgroundEquipmentOption[] {
   const letters = ["A", "B", "C", "D"];
   return optionsRaw.map((opt, i) => {
     const rawItems = opt.option_type === "multiple" ? (opt.items as SrdRecord[]) : [opt];
@@ -1529,7 +1557,11 @@ function parseEquipmentOptionsFromArray(optionsRaw: SrdRecord[]): BackgroundEqui
         const url = typeof of?.url === "string" ? of.url : "";
         if (typeof of?.index === "string" && url.includes("/equipment-categories/")) {
           const name = typeof of.name === "string" ? of.name : of.index;
-          items.push({ label: `${EQUIPMENT_CATEGORY_LABELS_FR[name] ?? name} (au choix)`, quantity: Number(raw.count ?? 1) });
+          items.push({
+            label: `${EQUIPMENT_CATEGORY_LABELS_FR[name] ?? name} (au choix)`,
+            quantity: Number(raw.count ?? 1),
+            category_options: categoryOptionsFor(name, categoryMembersByName),
+          });
         } else if (typeof of?.index === "string") {
           items.push({ ref: { kind: "rule", key: of.index }, label: String(of.name ?? of.index), quantity: Number(raw.count ?? 1) });
         }
@@ -1539,7 +1571,7 @@ function parseEquipmentOptionsFromArray(optionsRaw: SrdRecord[]): BackgroundEqui
           | undefined;
         const name = typeof categoryName?.name === "string" ? categoryName.name : undefined;
         const label = name ? `${EQUIPMENT_CATEGORY_LABELS_FR[name] ?? name} (au choix)` : "Choix libre";
-        items.push({ label, quantity: 1 });
+        items.push({ label, quantity: 1, category_options: name ? categoryOptionsFor(name, categoryMembersByName) : undefined });
       }
     }
 
@@ -1547,11 +1579,11 @@ function parseEquipmentOptionsFromArray(optionsRaw: SrdRecord[]): BackgroundEqui
   });
 }
 
-function parseBackgroundEquipmentOptions(entry: SrdRecord): BackgroundEquipmentOption[] {
+function parseBackgroundEquipmentOptions(entry: SrdRecord, categoryMembersByName: Map<string, string[]>): BackgroundEquipmentOption[] {
   const optionsRaw = ((entry.equipment_options as SrdRecord[] | undefined)?.[0]?.from as SrdRecord | undefined)
     ?.options as SrdRecord[] | undefined;
   if (!Array.isArray(optionsRaw)) return [];
-  return parseEquipmentOptionsFromArray(optionsRaw);
+  return parseEquipmentOptionsFromArray(optionsRaw, categoryMembersByName);
 }
 
 /**
@@ -1577,14 +1609,17 @@ function parseClassFixedEquipment(entry: SrdRecord): BackgroundEquipmentOption["
   return items;
 }
 
-function parseClassEquipmentChoices(entry: SrdRecord): { options: BackgroundEquipmentOption[] }[] {
+function parseClassEquipmentChoices(
+  entry: SrdRecord,
+  categoryMembersByName: Map<string, string[]>
+): { options: BackgroundEquipmentOption[] }[] {
   const raw = entry.starting_equipment_options;
   if (!Array.isArray(raw)) return [];
   const choices: { options: BackgroundEquipmentOption[] }[] = [];
   for (const choice of raw as SrdRecord[]) {
     const optionsRaw = (choice.from as SrdRecord | undefined)?.options as SrdRecord[] | undefined;
     if (!Array.isArray(optionsRaw)) continue;
-    const options = parseEquipmentOptionsFromArray(optionsRaw);
+    const options = parseEquipmentOptionsFromArray(optionsRaw, categoryMembersByName);
     if (options.length > 0) choices.push({ options });
   }
   return choices;
@@ -1597,9 +1632,9 @@ function parseClassEquipmentChoices(entry: SrdRecord): { options: BackgroundEqui
  * donnee) : un bloc vide n'aurait rien a montrer, ne pas le poser plutot
  * que poser un bloc sans contenu.
  */
-function classEquipmentBlock(entry: SrdRecord): EntryBlock | null {
+function classEquipmentBlock(entry: SrdRecord, categoryMembersByName: Map<string, string[]>): EntryBlock | null {
   const fixed = parseClassFixedEquipment(entry);
-  const choices = parseClassEquipmentChoices(entry);
+  const choices = parseClassEquipmentChoices(entry, categoryMembersByName);
   if (fixed.length === 0 && choices.length === 0) return null;
 
   const data = { fixed, choices };
@@ -1626,7 +1661,7 @@ function classEquipmentBlock(entry: SrdRecord): EntryBlock | null {
  * Soldat, "choisissez un type de boite de jeux") vient de
  * `proficiency_choices[0].desc` quand aucune maitrise fixe n'existe.
  */
-function backgroundBlock(entry: SrdRecord): EntryBlock | null {
+function backgroundBlock(entry: SrdRecord, categoryMembersByName: Map<string, string[]>): EntryBlock | null {
   const abilityScoresRaw = entry.ability_scores;
   const featRaw = entry.feat as SrdRecord | undefined;
   if (!Array.isArray(abilityScoresRaw) || typeof featRaw?.index !== "string") return null;
@@ -1652,7 +1687,7 @@ function backgroundBlock(entry: SrdRecord): EntryBlock | null {
     feat: { kind: "rule" as const, key: featRaw.index },
     skill_proficiencies: skillProficiencies,
     tool_proficiency: toolProficiency,
-    equipment_options: parseBackgroundEquipmentOptions(entry),
+    equipment_options: parseBackgroundEquipmentOptions(entry, categoryMembersByName),
   };
   validateBlockData("background", data);
   return { block_type: "background", display: { label: "Historique", layout: "key_values" }, data, display_order: 150 };
@@ -1729,7 +1764,8 @@ function transformEntry(
   levelsByCategory: SrdRecord[] | undefined,
   remapFeatureKey: Map<string, string>,
   subclassesByCategory: SrdRecord[] | undefined,
-  speciesAndSubspeciesKeys: Set<string>
+  speciesAndSubspeciesKeys: Set<string>,
+  categoryMembersByName: Map<string, string[]>
 ): TransformedEntry {
   const entryType: EntryType = category === "Equipment" ? equipmentEntryType(entry) : CATEGORY_ENTRY_TYPE[category];
 
@@ -1774,7 +1810,7 @@ function transformEntry(
     if (subclassesByCategory) {
       blocks.push(subclassSlotBlock(String(entry.index), subclassesByCategory, levelsByCategory));
     }
-    const classEquipment = classEquipmentBlock(entry);
+    const classEquipment = classEquipmentBlock(entry, categoryMembersByName);
     if (classEquipment) blocks.push(classEquipment);
   }
 
@@ -1810,7 +1846,7 @@ function transformEntry(
   }
 
   if (entryType === "background") {
-    const background = backgroundBlock(entry);
+    const background = backgroundBlock(entry, categoryMembersByName);
     if (background) blocks.push(background);
   }
 
@@ -1915,6 +1951,23 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
     ...(Array.isArray(raw["Subspecies"]) ? raw["Subspecies"].map((e) => String(e.index)) : []),
   ]);
 
+  // Membres reels de chaque categorie d'equipement "au choix" (V2-G1, retour
+  // utilisateur) — `Equipment-Categories[].equipment` (deja des index de
+  // vraies fiches Objet/Arme importees ailleurs dans ce meme fichier SRD,
+  // verifie sur Holy Symbols/Gaming Sets). Categorie skippee comme entry_type
+  // a part (`SKIPPED_CATEGORIES`) mais `raw` la garde disponible ici.
+  const equipmentCategories = raw["Equipment-Categories"];
+  const categoryMembersByName = new Map<string, string[]>(
+    Array.isArray(equipmentCategories)
+      ? equipmentCategories
+          .filter((c) => typeof c.name === "string" && Array.isArray(c.equipment))
+          .map((c) => [
+            c.name as string,
+            (c.equipment as SrdRecord[]).map((m) => String(m.index)).filter((k) => k.length > 0),
+          ])
+      : []
+  );
+
   const counts: Partial<Record<EntryType, number>> = {};
   const failures: ConversionFailure[] = [];
   let blocksTotal = 0;
@@ -1956,7 +2009,16 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
     for (const item of sourceItems) {
       if (typeof item.index === "string" && EXCLUDED_SERVICE_COST_INDICES.has(item.index)) continue;
       try {
-        const t = transformEntry(category, item, config.sourceAttribution, levels, remapFeatureKey, subclassesForSlots, speciesAndSubspeciesKeys);
+        const t = transformEntry(
+          category,
+          item,
+          config.sourceAttribution,
+          levels,
+          remapFeatureKey,
+          subclassesForSlots,
+          speciesAndSubspeciesKeys,
+          categoryMembersByName
+        );
         transformed.push(t);
         blocksTotal += t.blocks.length;
         refsTotal += t.refs.length;

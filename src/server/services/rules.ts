@@ -362,7 +362,11 @@ async function resolveIncomingRefs(
  * pour ce seul besoin aurait touche le panneau de renvois existant pour
  * rien — cf. plan approuve, ne pas generaliser sans un deuxieme cas concret.
  */
-export type ResolvedBackgroundEquipmentItem = BackgroundEquipmentItem & { resolved_label: string };
+export type ResolvedBackgroundEquipmentItem = BackgroundEquipmentItem & {
+  resolved_label: string;
+  /** Membres reels d'une categorie "au choix" (V2-G1, retour utilisateur), pour la liste deroulante du joueur — absent si `category_options` l'etait deja. */
+  resolved_category_options?: { key: string; resolved_label: string }[];
+};
 export type ResolvedBackgroundEquipmentOption = Omit<BackgroundEquipmentOption, "items"> & {
   items: ResolvedBackgroundEquipmentItem[];
 };
@@ -702,7 +706,10 @@ export async function getRuleEntryForWorld(
   const backgroundBlockIndex = blocks.findIndex((b) => b.blockType === "background");
   if (backgroundBlockIndex !== -1) {
     const bgData = blocks[backgroundBlockIndex].data as BackgroundBlockData;
-    const itemKeys = bgData.equipment_options.flatMap((opt) => opt.items.flatMap((it) => (it.ref ? [it.ref.key] : [])));
+    const itemKeys = [
+      ...bgData.equipment_options.flatMap((opt) => opt.items.flatMap((it) => (it.ref ? [it.ref.key] : []))),
+      ...bgData.equipment_options.flatMap((opt) => opt.items.flatMap((it) => it.category_options?.map((c) => c.key) ?? [])),
+    ];
     const [featDetail, itemNames] = await Promise.all([
       resolveEntryDetail(supabase, rulesetId, bgData.feat.key, locale),
       resolveEntryNames(supabase, rulesetId, itemKeys, locale),
@@ -715,7 +722,11 @@ export async function getRuleEntryForWorld(
         feat_description: featDetail?.description ?? "",
         equipment_options: bgData.equipment_options.map((opt) => ({
           ...opt,
-          items: opt.items.map((it) => ({ ...it, resolved_label: it.ref ? (itemNames.get(it.ref.key) ?? it.label) : it.label })),
+          items: opt.items.map((it) => ({
+            ...it,
+            resolved_label: it.ref ? (itemNames.get(it.ref.key) ?? it.label) : it.label,
+            resolved_category_options: it.category_options?.map((c) => ({ key: c.key, resolved_label: itemNames.get(c.key) ?? c.key })),
+          })),
         })),
       } satisfies ResolvedBackgroundBlockData,
     };
@@ -729,12 +740,15 @@ export async function getRuleEntryForWorld(
     const ceData = blocks[classEquipmentBlockIndex].data as ClassEquipmentBlockData;
     const itemKeys = [
       ...ceData.fixed.flatMap((it) => (it.ref ? [it.ref.key] : [])),
+      ...ceData.fixed.flatMap((it) => it.category_options?.map((c) => c.key) ?? []),
       ...ceData.choices.flatMap((c) => c.options.flatMap((opt) => opt.items.flatMap((it) => (it.ref ? [it.ref.key] : [])))),
+      ...ceData.choices.flatMap((c) => c.options.flatMap((opt) => opt.items.flatMap((it) => it.category_options?.map((co) => co.key) ?? []))),
     ];
     const itemNames = await resolveEntryNames(supabase, rulesetId, itemKeys, locale);
     const resolveItem = (it: BackgroundEquipmentItem) => ({
       ...it,
       resolved_label: it.ref ? (itemNames.get(it.ref.key) ?? it.label) : it.label,
+      resolved_category_options: it.category_options?.map((c) => ({ key: c.key, resolved_label: itemNames.get(c.key) ?? c.key })),
     });
     blocks[classEquipmentBlockIndex] = {
       ...blocks[classEquipmentBlockIndex],
@@ -1105,7 +1119,11 @@ export async function listRuleEntryBlocksByKeys(
       if (block.blockType === "background") {
         const data = block.data as BackgroundBlockData;
         refKeys.add(data.feat.key);
-        for (const opt of data.equipment_options) for (const it of opt.items) if (it.ref) refKeys.add(it.ref.key);
+        for (const opt of data.equipment_options)
+          for (const it of opt.items) {
+            if (it.ref) refKeys.add(it.ref.key);
+            for (const c of it.category_options ?? []) refKeys.add(c.key);
+          }
       } else if (block.blockType === "subclass_slot") {
         const data = block.data as SubclassSlotBlockData;
         for (const o of data.options ?? []) refKeys.add(o.key);
@@ -1121,8 +1139,16 @@ export async function listRuleEntryBlocksByKeys(
         for (const c of data.contents ?? []) if (c.ref) refKeys.add(c.ref.key);
       } else if (block.blockType === "class_equipment") {
         const data = block.data as ClassEquipmentBlockData;
-        for (const it of data.fixed) if (it.ref) refKeys.add(it.ref.key);
-        for (const c of data.choices) for (const opt of c.options) for (const it of opt.items) if (it.ref) refKeys.add(it.ref.key);
+        for (const it of data.fixed) {
+          if (it.ref) refKeys.add(it.ref.key);
+          for (const c of it.category_options ?? []) refKeys.add(c.key);
+        }
+        for (const c of data.choices)
+          for (const opt of c.options)
+            for (const it of opt.items) {
+              if (it.ref) refKeys.add(it.ref.key);
+              for (const co of it.category_options ?? []) refKeys.add(co.key);
+            }
       }
     }
   }
@@ -1145,6 +1171,10 @@ export async function listRuleEntryBlocksByKeys(
                 items: opt.items.map((it) => ({
                   ...it,
                   resolved_label: it.ref ? (resolved.get(it.ref.key)?.name ?? it.label) : it.label,
+                  resolved_category_options: it.category_options?.map((c) => ({
+                    key: c.key,
+                    resolved_label: resolved.get(c.key)?.name ?? c.key,
+                  })),
                 })),
               })),
             } satisfies ResolvedBackgroundBlockData,
@@ -1208,6 +1238,10 @@ export async function listRuleEntryBlocksByKeys(
           const resolveItem = (it: BackgroundEquipmentItem) => ({
             ...it,
             resolved_label: it.ref ? (resolved.get(it.ref.key)?.name ?? it.label) : it.label,
+            resolved_category_options: it.category_options?.map((c) => ({
+              key: c.key,
+              resolved_label: resolved.get(c.key)?.name ?? c.key,
+            })),
           });
           blocks[i] = {
             ...block,

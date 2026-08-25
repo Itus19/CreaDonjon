@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { BackgroundBlockData, BackgroundEquipmentOption, BlockType } from "@/src/core/schemas/rule-blocks";
@@ -96,12 +97,22 @@ export default function BackgroundStep({
   const currentBlocks = blocksByKey[currentKey];
   const backgroundData = findBlock<BackgroundBlockData>(currentBlocks, "background");
 
+  // Membre choisi pour un item "au choix" (ex. Symbole sacre -> Amulette),
+  // retour utilisateur V2-G1 — indexe par `<option.label>:<index d'item>`,
+  // remis a zero au changement d'historique pour ne jamais heriter une
+  // selection d'un autre historique reutilisant les memes labels "A"/"B".
+  const [categorySelections, setCategorySelections] = useState<Record<string, string>>({});
+
   function select(key: string) {
     patchCharacter({ background: { kind: "rule", key } });
-    if (key !== currentKey) onChooseOption(null);
+    if (key !== currentKey) {
+      onChooseOption(null);
+      setCategorySelections({});
+    }
   }
 
-  function applyOption(option: BackgroundEquipmentOption) {
+  function applyOption(option: BackgroundEquipmentOption, overrides?: Record<string, string>) {
+    const selections = overrides ?? categorySelections;
     let items: InventoryItem[] = inventory.items.filter((it) => !it.notes?.startsWith(TAG_PREFIX));
     const currency = { ...inventory.currency };
 
@@ -111,12 +122,19 @@ export default function BackgroundStep({
     }
 
     const tag = `${TAG_PREFIX}${currentKey}:${option.label}`;
-    const newItems: InventoryItem[] = option.items.map((it, i) => ({
-      id: `bg-${currentKey}-${option.label}-${i}`,
-      qty: it.quantity,
-      notes: tag,
-      ...(it.ref?.kind === "rule" ? { ref: { kind: "rule" as const, key: it.ref.key } } : { label: it.label }),
-    }));
+    const newItems: InventoryItem[] = option.items.map((it, i) => {
+      const categoryKey = it.category_options?.length
+        ? (selections[`${option.label}:${i}`] ?? it.category_options[0].key)
+        : undefined;
+      const ref =
+        it.ref?.kind === "rule" ? { kind: "rule" as const, key: it.ref.key } : categoryKey ? { kind: "rule" as const, key: categoryKey } : undefined;
+      return {
+        id: `bg-${currentKey}-${option.label}-${i}`,
+        qty: it.quantity,
+        notes: tag,
+        ...(ref ? { ref } : { label: it.label }),
+      };
+    });
     items = [...items, ...newItems];
 
     if (option.gold) {
@@ -132,13 +150,34 @@ export default function BackgroundStep({
   // les boutons "Choisir A/B" separes) : l'encadre vient de la fiche
   // generique (`Background()`, blockContentRenderer.tsx), cette interaction
   // le rend cliquable uniquement ici, jamais sur une fiche de regle en
-  // lecture seule.
+  // lecture seule. `categoryChoice` (meme retour utilisateur, suite) laisse
+  // choisir le membre reel d'une categorie "au choix" (ex. Symbole sacre) —
+  // reapplique immediatement si l'option est deja la selection active, pour
+  // que l'inventaire reflete toujours le dernier choix sans reclic sur
+  // l'encadre.
   const equipmentInteraction: EquipmentCardInteraction | undefined = backgroundData
     ? {
         isChosen: (optionLabel) => choice?.backgroundKey === currentKey && choice.optionLabel === optionLabel,
         onSelect: (optionLabel) => {
           const option = backgroundData.equipment_options.find((o) => o.label === optionLabel);
           if (option) applyOption(option);
+        },
+        categoryChoice: {
+          selectedKey: (optionLabel, itemIndex) => {
+            const item = backgroundData.equipment_options.find((o) => o.label === optionLabel)?.items[itemIndex];
+            const opts = item?.category_options;
+            if (!opts?.length) return "";
+            return categorySelections[`${optionLabel}:${itemIndex}`] ?? opts[0].key;
+          },
+          onSelectKey: (optionLabel, itemIndex, key) => {
+            const stateKey = `${optionLabel}:${itemIndex}`;
+            const next = { ...categorySelections, [stateKey]: key };
+            setCategorySelections(next);
+            if (choice?.backgroundKey === currentKey && choice.optionLabel === optionLabel) {
+              const option = backgroundData.equipment_options.find((o) => o.label === optionLabel);
+              if (option) applyOption(option, next);
+            }
+          },
         },
       }
     : undefined;

@@ -42,6 +42,7 @@ import type { Skill } from "@/src/core/rules/sheet";
 import type { LanguageKey } from "@/src/core/rules/srdMapping";
 import { ftToM, lbToKg } from "@/src/core/rules/encumbrance";
 import MonsterRollButton from "./MonsterRollButton";
+import Dropdown from "@/components/shared/Dropdown";
 import type {
   ResolvedBackgroundBlockData,
   ResolvedBackgroundEquipmentOption,
@@ -1054,6 +1055,18 @@ function SubclassSlot({ data, worldSlug }: { data: ResolvedSubclassSlotBlockData
 export interface EquipmentCardInteraction {
   isChosen: (optionLabel: string) => boolean;
   onSelect: (optionLabel: string) => void;
+  /**
+   * Choix du membre reel d'une categorie "au choix" (V2-G1, retour
+   * utilisateur : transformer "Symbole sacre (au choix)" en vraie liste
+   * choisissable) — seulement pour les items dont `resolved_category_options`
+   * est non vide. `selectedKey` retourne toujours une cle valide (le premier
+   * membre par defaut), jamais un etat vide, pour que la liste deroulante
+   * n'affiche jamais un champ sans valeur.
+   */
+  categoryChoice?: {
+    selectedKey: (optionLabel: string, itemIndex: number) => string;
+    onSelectKey: (optionLabel: string, itemIndex: number, key: string) => void;
+  };
 }
 
 function BackgroundEquipmentCard({
@@ -1089,23 +1102,41 @@ function BackgroundEquipmentCard({
     >
       <span className={`text-xs font-bold uppercase tracking-wide ${isChosen ? "text-accent" : "text-ink"}`}>Choix {option.label}</span>
       <div className="flex flex-col gap-1">
-        {option.items.map((item, i) => (
-          <div key={i} className="flex items-baseline gap-1.5 text-sm">
-            <span className="mech shrink-0 text-ink-muted">×{item.quantity}</span>
-            {item.ref ? (
-              <Link
-                href={`/m/${worldSlug}/regles/${item.ref.key}`}
-                onClick={interaction ? (e) => e.stopPropagation() : undefined}
-                className="hover:underline"
-                style={{ color: "var(--link-rule)" }}
-              >
-                {item.resolved_label}
-              </Link>
-            ) : (
-              <span>{item.resolved_label}</span>
-            )}
-          </div>
-        ))}
+        {option.items.map((item, i) => {
+          const categoryChoice = interaction?.categoryChoice;
+          const categoryOptions = item.resolved_category_options;
+          if (categoryChoice && categoryOptions && categoryOptions.length > 0) {
+            return (
+              <div key={i} className="flex items-center gap-1.5 text-sm" onClick={(e) => e.stopPropagation()}>
+                <span className="mech shrink-0 text-ink-muted">×{item.quantity}</span>
+                <Dropdown
+                  value={categoryChoice.selectedKey(option.label, i)}
+                  options={categoryOptions.map((c) => ({ value: c.key, label: c.resolved_label }))}
+                  onChange={(key) => categoryChoice.onSelectKey(option.label, i, key)}
+                  aria-label={item.resolved_label}
+                  className="rounded-md border border-edge px-2 py-0.5 text-sm text-ink outline-none transition-colors hover:bg-panel"
+                />
+              </div>
+            );
+          }
+          return (
+            <div key={i} className="flex items-baseline gap-1.5 text-sm">
+              <span className="mech shrink-0 text-ink-muted">×{item.quantity}</span>
+              {item.ref ? (
+                <Link
+                  href={`/m/${worldSlug}/regles/${item.ref.key}`}
+                  onClick={interaction ? (e) => e.stopPropagation() : undefined}
+                  className="hover:underline"
+                  style={{ color: "var(--link-rule)" }}
+                >
+                  {item.resolved_label}
+                </Link>
+              ) : (
+                <span>{item.resolved_label}</span>
+              )}
+            </div>
+          );
+        })}
       </div>
       {option.gold && <div className="mech text-sm text-ink-muted">{costText(option.gold)}</div>}
     </div>

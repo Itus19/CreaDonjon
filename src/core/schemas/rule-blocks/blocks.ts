@@ -357,6 +357,12 @@ export const zBackgroundEquipmentItem = z.object({
   ref: zReference.optional(),
   label: z.string(),
   quantity: z.number().int().positive(),
+  // Membres reels d'une categorie SRD ("au choix" — ex. Symbole sacre :
+  // Amulette/Embleme/Reliquaire), retour utilisateur V2-G1. Present
+  // uniquement quand `ref` est absent (jamais les deux a la fois) : le SRD
+  // structure deja `Equipment-Categories[].equipment` comme une vraie liste
+  // de fiches Objet/Arme importees, jamais un texte fige seul.
+  category_options: z.array(zReference).optional(),
 });
 export const zBackgroundEquipmentOption = z.object({
   label: z.string(),

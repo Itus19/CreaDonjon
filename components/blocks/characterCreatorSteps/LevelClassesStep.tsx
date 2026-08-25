@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type {
@@ -81,6 +81,12 @@ export default function LevelClassesStep({
   const firstClassKey = character.classes[0]?.class.kind === "rule" ? character.classes[0].class.key : "";
   const firstClassEquipment = findBlock<ClassEquipmentBlockData>(blocksByKey[firstClassKey], "class_equipment");
 
+  // Membre choisi pour un item "au choix" (retour utilisateur, V2-G1),
+  // indexe par `<choiceIndex>:<option.label>:<index d'item>` — plusieurs
+  // choix independants par classe (contrairement a l'historique, un seul
+  // choix), meme motif que BackgroundStep sinon.
+  const [categorySelections, setCategorySelections] = useState<Record<string, string>>({});
+
   function updateSlot(index: number, patch: Partial<CharacterBlockData["classes"][number]>) {
     patchCharacter({ classes: character.classes.map((c, i) => (i === index ? { ...c, ...patch } : c)) });
   }
@@ -110,9 +116,11 @@ export default function LevelClassesStep({
     }
     onUpdateInventory({ ...inventory, items, currency });
     onChooseEquipmentChoices([]);
+    setCategorySelections({});
   }
 
-  function chooseEquipmentOption(choiceIndex: number, option: BackgroundEquipmentOption) {
+  function chooseEquipmentOption(choiceIndex: number, option: BackgroundEquipmentOption, overrides?: Record<string, string>) {
+    const selections = overrides ?? categorySelections;
     const prior = equipmentChoices[choiceIndex] ?? null;
     let items = inventory.items.filter((it) => it.notes !== `${EQUIPMENT_TAG_PREFIX}choice:${choiceIndex}`);
     const currency = { ...inventory.currency };
@@ -122,12 +130,19 @@ export default function LevelClassesStep({
     }
 
     const tag = `${EQUIPMENT_TAG_PREFIX}choice:${choiceIndex}`;
-    const newItems: InventoryItem[] = option.items.map((it, i) => ({
-      id: `class-choice-${firstClassKey}-${choiceIndex}-${i}`,
-      qty: it.quantity,
-      notes: tag,
-      ...(it.ref?.kind === "rule" ? { ref: { kind: "rule" as const, key: it.ref.key } } : { label: it.label }),
-    }));
+    const newItems: InventoryItem[] = option.items.map((it, i) => {
+      const categoryKey = it.category_options?.length
+        ? (selections[`${choiceIndex}:${option.label}:${i}`] ?? it.category_options[0].key)
+        : undefined;
+      const ref =
+        it.ref?.kind === "rule" ? { kind: "rule" as const, key: it.ref.key } : categoryKey ? { kind: "rule" as const, key: categoryKey } : undefined;
+      return {
+        id: `class-choice-${firstClassKey}-${choiceIndex}-${i}`,
+        qty: it.quantity,
+        notes: tag,
+        ...(ref ? { ref } : { label: it.label }),
+      };
+    });
     items = [...items, ...newItems];
 
     if (option.gold) {
@@ -262,6 +277,25 @@ export default function LevelClassesStep({
                       onSelect: (optionLabel) => {
                         const option = firstClassEquipment.choices[choiceIndex]?.options.find((o) => o.label === optionLabel);
                         if (option) chooseEquipmentOption(choiceIndex, option);
+                      },
+                      categoryChoice: {
+                        selectedKey: (optionLabel, itemIndex) => {
+                          const item = firstClassEquipment.choices[choiceIndex]?.options.find((o) => o.label === optionLabel)?.items[
+                            itemIndex
+                          ];
+                          const opts = item?.category_options;
+                          if (!opts?.length) return "";
+                          return categorySelections[`${choiceIndex}:${optionLabel}:${itemIndex}`] ?? opts[0].key;
+                        },
+                        onSelectKey: (optionLabel, itemIndex, key) => {
+                          const stateKey = `${choiceIndex}:${optionLabel}:${itemIndex}`;
+                          const next = { ...categorySelections, [stateKey]: key };
+                          setCategorySelections(next);
+                          if (equipmentChoices[choiceIndex]?.optionLabel === optionLabel) {
+                            const option = firstClassEquipment.choices[choiceIndex]?.options.find((o) => o.label === optionLabel);
+                            if (option) chooseEquipmentOption(choiceIndex, option, next);
+                          }
+                        },
                       },
                     })
                   )
