@@ -267,7 +267,9 @@ export default function LevelUpWizard({
         />
       )}
 
-      {steps[step] === "Points de vie" && <HpRollStep grants={hpGrants} choiceAt={hpChoiceAt} onChoose={setHpChoiceAt} />}
+      {steps[step] === "Points de vie" && (
+        <HpRollStep grants={hpGrants} conMod={sheet.abilities.con.mod} choiceAt={hpChoiceAt} onChoose={setHpChoiceAt} />
+      )}
 
       {steps[step] === "Caractéristiques" && <AsiStep character={character} patchCharacter={patchCharacter} sheet={sheet} grants={asiGrants} />}
 

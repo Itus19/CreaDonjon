@@ -11,6 +11,7 @@ import InventoryTab from "./InventoryTab";
 import AbilityScoreStep, { EMPTY_ABILITY_POOL_ASSIGNMENT, type AbilityPoolAssignment } from "./characterCreatorSteps/AbilityScoreStep";
 import RemainingChoicesStep from "./characterCreatorSteps/RemainingChoicesStep";
 import LevelClassesStep, { type ClassEquipmentChoiceState } from "./characterCreatorSteps/LevelClassesStep";
+import CreationHpRollStep, { type CreationHpGrant } from "./characterCreatorSteps/CreationHpRollStep";
 import SpeciesStep from "./characterCreatorSteps/SpeciesStep";
 import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreatorSteps/BackgroundStep";
 import SpellSelectionStep from "./characterCreatorSteps/SpellSelectionStep";
@@ -52,6 +53,7 @@ const ALL_STEPS = [
   "Espèce",
   "Classe",
   "Caractéristiques",
+  "Points de vie",
   "Historique",
   "Équipement",
   "Compétences",
@@ -147,12 +149,11 @@ export default function CharacterCreatorWizard({
   const classKeys = character.classes.filter((c) => c.class.kind === "rule" && c.class.key).map((c) => (c.class as { kind: "rule"; key: string }).key);
   const classBlocksByKey = useRuleEntryBlocks(worldSlug, classKeys);
   const hasSpellcastingClass = classKeys.some((key) => classBlocksByKey[key]?.some((b) => b.blockType === "spellcasting_progression"));
-  const steps = hasSpellcastingClass ? ALL_STEPS : ALL_STEPS.filter((label) => label !== "Sorts");
-  const step = Math.min(rawStep, steps.length - 1);
 
   const {
     remainingChoices,
     sheet,
+    ruleset,
     weaponByKey,
     equipment,
     weight,
@@ -171,6 +172,33 @@ export default function CharacterCreatorWizard({
     buildChips,
     skillChoices,
   } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
+
+  // Points de vie (V2-G1, retour utilisateur) : un demarrage au-dela du
+  // niveau 1 (personnage OU classe multiclassee choisie directement a un
+  // niveau superieur) a besoin d'un choix moyenne/jet par niveau non
+  // exempte, exactement comme a la montee de niveau — seul le tout premier
+  // niveau du personnage (premiere classe, niveau 1) est exempt.
+  const hpGrants: CreationHpGrant[] = [];
+  character.classes.forEach((c, index) => {
+    if (c.class.kind !== "rule" || !c.class.key) return;
+    const classKey = c.class.key;
+    const exemptLevel = index === 0 ? 1 : 0;
+    if (c.level <= exemptLevel) return;
+    const levels: number[] = [];
+    for (let lvl = exemptLevel + 1; lvl <= c.level; lvl++) levels.push(lvl);
+    hpGrants.push({
+      classIndex: index,
+      classKey,
+      className: ruleset.classes[classKey]?.label ?? classKey,
+      dieFaces: ruleset.classes[classKey]?.hitDie ?? 6,
+      levels,
+    });
+  });
+
+  const steps = ALL_STEPS.filter(
+    (label) => (label !== "Sorts" || hasSpellcastingClass) && (label !== "Points de vie" || hpGrants.length > 0)
+  );
+  const step = Math.min(rawStep, steps.length - 1);
 
   async function submit() {
     setBusy(true);
@@ -295,6 +323,10 @@ export default function CharacterCreatorWizard({
           onChangePool={setAbilityPool}
           sheet={sheet}
         />
+      )}
+
+      {steps[step] === "Points de vie" && (
+        <CreationHpRollStep character={character} patchCharacter={patchCharacter} grants={hpGrants} conMod={sheet.abilities.con.mod} />
       )}
 
       {steps[step] === "Historique" && (
