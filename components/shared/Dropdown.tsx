@@ -19,12 +19,14 @@ export default function Dropdown({
   options,
   onChange,
   className,
+  disabled,
   "aria-label": ariaLabel,
 }: {
   value: string;
   options: DropdownOption[];
   onChange: (value: string) => void;
   className?: string;
+  disabled?: boolean;
   "aria-label"?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -80,6 +82,7 @@ export default function Dropdown({
         ref={triggerRef}
         type="button"
         onClick={toggle}
+        disabled={disabled}
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}

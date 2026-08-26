@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Dropdown from "@/components/shared/Dropdown";
 
 /**
  * Import de monde depuis un fichier JSON exporte (V2-G1, dernier point) :
@@ -85,14 +86,16 @@ export default function ImportWorldForm() {
       {fileName && <span className="text-sm text-ink-muted">{fileName}</span>}
       {fileChosen && (
         <>
-          <select
+          <Dropdown
             value={mode}
-            onChange={(e) => setMode(e.target.value as "campaign" | "solo")}
-            className="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-ink"
-          >
-            <option value="campaign">Campagne (MJ humain)</option>
-            <option value="solo">Solo (MJ IA)</option>
-          </select>
+            onChange={(v) => setMode(v as "campaign" | "solo")}
+            options={[
+              { value: "campaign", label: "Campagne (MJ humain)" },
+              { value: "solo", label: "Solo (MJ IA)" },
+            ]}
+            aria-label="Mode de jeu"
+            className="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+          />
           <button
             type="button"
             onClick={handleCancel}

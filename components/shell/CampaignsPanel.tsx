@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Dropdown from "@/components/shared/Dropdown";
 import CampaignDetail from "./CampaignDetail";
 
 export interface CampaignSummaryView {
@@ -103,14 +104,16 @@ export default function CampaignsPanel({
               placeholder="Nom de la campagne"
               className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
             />
-            <select
+            <Dropdown
               value={mode}
-              onChange={(e) => setMode(e.target.value as "campaign" | "solo")}
-              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-            >
-              <option value="campaign">Campagne (MJ humain)</option>
-              <option value="solo">Solo (MJ IA)</option>
-            </select>
+              onChange={(v) => setMode(v as "campaign" | "solo")}
+              options={[
+                { value: "campaign", label: "Campagne (MJ humain)" },
+                { value: "solo", label: "Solo (MJ IA)" },
+              ]}
+              aria-label="Mode de jeu"
+              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+            />
             <button
               type="submit"
               disabled={pending || !name.trim()}
@@ -135,16 +138,17 @@ export default function CampaignsPanel({
                 >
                   {c.name}
                 </button>
-                <select
+                <Dropdown
                   value={c.mode}
+                  onChange={(v) => switchMode(c.id, v as "campaign" | "solo")}
+                  options={[
+                    { value: "campaign", label: MODE_LABELS.campaign },
+                    { value: "solo", label: MODE_LABELS.solo },
+                  ]}
                   disabled={pending}
-                  onChange={(e) => switchMode(c.id, e.target.value as "campaign" | "solo")}
                   aria-label="Mode de jeu"
-                  className="rounded-full border border-edge bg-transparent px-2 py-0.5 text-xs text-ink-muted outline-none disabled:opacity-50"
-                >
-                  <option value="campaign">{MODE_LABELS.campaign}</option>
-                  <option value="solo">{MODE_LABELS.solo}</option>
-                </select>
+                  className="rounded-full border border-edge bg-transparent px-2 py-0.5 text-xs text-ink-muted outline-none transition-colors hover:bg-panel-raised disabled:opacity-50"
+                />
               </div>
               {expandedId === c.id && <CampaignDetail campaignId={c.id} worldEntities={worldEntities} />}
             </li>
