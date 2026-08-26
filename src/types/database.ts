@@ -1687,6 +1687,7 @@ export type Database = {
           password_hash: string | null
           revoked_at: string | null
           scope: string
+          token: string | null
           token_hash: string
           world_id: string
         }
@@ -1700,6 +1701,7 @@ export type Database = {
           password_hash?: string | null
           revoked_at?: string | null
           scope: string
+          token?: string | null
           token_hash: string
           world_id: string
         }
@@ -1713,6 +1715,7 @@ export type Database = {
           password_hash?: string | null
           revoked_at?: string | null
           scope?: string
+          token?: string | null
           token_hash?: string
           world_id?: string
         }
@@ -1773,6 +1776,7 @@ export type Database = {
           owner_id: string
           slug: string
           updated_at: string
+          wiki_welcome_message: string | null
         }
         Insert: {
           calendar?: Json
@@ -1784,6 +1788,7 @@ export type Database = {
           owner_id: string
           slug: string
           updated_at?: string
+          wiki_welcome_message?: string | null
         }
         Update: {
           calendar?: Json
@@ -1795,6 +1800,7 @@ export type Database = {
           owner_id?: string
           slug?: string
           updated_at?: string
+          wiki_welcome_message?: string | null
         }
         Relationships: [
           {

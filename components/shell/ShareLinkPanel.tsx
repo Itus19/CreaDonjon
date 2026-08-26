@@ -16,11 +16,33 @@ async function revokeWrapper(_prev: string | null, formData: FormData): Promise<
 }
 
 /**
- * Le jeton en clair ne s'affiche qu'une fois, juste apres la creation
- * (jamais stocke — SCHEMA.md §18) : perdu, il faut un nouveau lien, pas de
- * "revoir le lien" possible ensuite. Meme regle pour le mot de passe
- * optionnel (V1-C4) : une fois saisi a la creation, il n'est plus jamais
- * lisible — seul `hasPassword` (jamais le hachage) atteint ce composant.
+ * Bouton copier reutilisable : un seul etat "juste copie" partage par tous
+ * les liens de ce panneau (identifie par l'URL elle-meme), pour eviter de
+ * garder un `useState` par ligne.
+ */
+function CopyButton({ url, copiedUrl, onCopy }: { url: string; copiedUrl: string | null; onCopy: (url: string) => void }) {
+  const copied = copiedUrl === url;
+  return (
+    <button
+      type="button"
+      onClick={() => navigator.clipboard.writeText(url).then(() => onCopy(url))}
+      className="shrink-0 rounded-md border border-accent px-2.5 py-1.5 text-xs text-accent transition-colors hover:bg-accent/10"
+    >
+      {copied ? "Copié ✓" : "Copier"}
+    </button>
+  );
+}
+
+/**
+ * Le jeton en clair est conserve (migration 20260826180001, decision
+ * explicite de l'utilisateur) : un lien de partage n'ouvre jamais qu'une
+ * vue en lecture seule du contenu public d'un monde, jamais une capacite de
+ * modification — pas le meme profil de risque qu'un mot de passe ou une
+ * cle d'API, donc pas de raison de le rendre irrecuperable apres coup.
+ * `link.token` est `null` seulement pour un lien cree avant cette decision
+ * (jamais conserve a l'epoque, impossible a reconstituer). Le mot de passe
+ * optionnel (V1-C4), lui, reste a usage unique : une fois saisi a la
+ * creation, plus jamais lisible — seul `hasPassword` atteint ce composant.
  *
  * `onMutated` : ce panneau vit desormais dans le menu de reglages (rendu
  * global, hors contexte serveur de monde — SettingsMenu.tsx recupere
@@ -44,6 +66,7 @@ export default function ShareLinkPanel({
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const links = initialLinks.filter((l) => !removedIds.has(l.id));
   const [password, setPassword] = useState("");
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   const [state, formAction, pending] = useActionState(createShareLinkAction, initialState);
   const [revokedId, revokeAction] = useActionState<string | null, FormData>(revokeWrapper, null);
@@ -56,10 +79,11 @@ export default function ShareLinkPanel({
     if (revokedId) onMutated?.();
   }, [revokedId, onMutated]);
 
-  const shareUrl =
-    state && "token" in state && typeof window !== "undefined"
-      ? `${window.location.origin}/partage/${state.token}`
-      : null;
+  function urlForToken(token: string): string {
+    return `${window.location.origin}/partage/${token}`;
+  }
+
+  const freshUrl = state && "token" in state ? urlForToken(state.token) : null;
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-edge bg-panel-sunken p-4">
@@ -95,17 +119,18 @@ export default function ShareLinkPanel({
 
       {state && "error" in state && <p className="text-sm text-danger">{state.error}</p>}
 
-      {shareUrl && (
+      {freshUrl && (
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-            Copiez ce lien maintenant — il ne réapparaîtra plus :
-          </span>
-          <input
-            readOnly
-            value={shareUrl}
-            onFocus={(e) => e.currentTarget.select()}
-            className="font-mech w-full rounded-md border border-accent bg-transparent px-2.5 py-1.5 text-xs text-ink outline-none"
-          />
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Lien créé :</span>
+          <div className="flex items-center gap-2">
+            <input
+              readOnly
+              value={freshUrl}
+              onFocus={(e) => e.currentTarget.select()}
+              className="font-mech w-full min-w-0 flex-1 rounded-md border border-accent bg-transparent px-2.5 py-1.5 text-xs text-ink outline-none"
+            />
+            <CopyButton url={freshUrl} copiedUrl={copiedUrl} onCopy={setCopiedUrl} />
+          </div>
         </div>
       )}
 
@@ -117,17 +142,20 @@ export default function ShareLinkPanel({
                 Créé le {formatDate(link.createdAt)}
                 {link.hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
               </span>
-              <form
-                action={revokeAction}
-                onSubmit={() => setRemovedIds((prev) => new Set(prev).add(link.id))}
-              >
-                <input type="hidden" name="id" value={link.id} />
-                <input type="hidden" name="worldId" value={worldId} />
-                <input type="hidden" name="worldSlug" value={worldSlug} />
-                <button type="submit" className="text-danger hover:underline">
-                  Révoquer
-                </button>
-              </form>
+              <div className="flex items-center gap-2">
+                {link.token && <CopyButton url={urlForToken(link.token)} copiedUrl={copiedUrl} onCopy={setCopiedUrl} />}
+                <form
+                  action={revokeAction}
+                  onSubmit={() => setRemovedIds((prev) => new Set(prev).add(link.id))}
+                >
+                  <input type="hidden" name="id" value={link.id} />
+                  <input type="hidden" name="worldId" value={worldId} />
+                  <input type="hidden" name="worldSlug" value={worldSlug} />
+                  <button type="submit" className="text-danger hover:underline">
+                    Révoquer
+                  </button>
+                </form>
+              </div>
             </li>
           ))}
         </ul>

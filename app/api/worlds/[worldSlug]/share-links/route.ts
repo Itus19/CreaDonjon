@@ -28,5 +28,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   }
 
   const links = await listShareLinks(supabase, world.id);
-  return NextResponse.json({ worldId: world.id, links }, { status: 200 });
+  return NextResponse.json(
+    { worldId: world.id, links, wikiWelcomeMessage: world.wiki_welcome_message },
+    { status: 200 },
+  );
 }

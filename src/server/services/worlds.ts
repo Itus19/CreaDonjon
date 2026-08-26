@@ -11,6 +11,7 @@ import {
   listWorldsForCurrentUser,
   ownerHasSlug,
   setWorldDefaultRuleset,
+  setWorldWikiWelcomeMessage,
   type WorldCard,
   type WorldSummary,
 } from "@/src/server/repos/worlds";
@@ -61,6 +62,15 @@ export async function getWorldBySlug(
   slug: string
 ): Promise<WorldSummary | null> {
   return getWorldBySlugForCurrentUser(supabase, slug);
+}
+
+/** Panneau de publication (V2-G2, extension) : `message` vide efface la personnalisation. */
+export async function updateWikiWelcomeMessage(
+  supabase: TypedClient,
+  worldId: string,
+  message: string
+): Promise<{ updated: boolean }> {
+  return setWorldWikiWelcomeMessage(supabase, worldId, message === "" ? null : message);
 }
 
 /** Derive un slug unique (parmi les mondes du meme proprietaire) a partir du nom, en suffixant -2, -3... en cas de collision. */

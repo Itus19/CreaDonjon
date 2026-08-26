@@ -263,16 +263,38 @@ Fait. `PlayableCharacterSheet.tsx` reste l'orchestrateur (état, appels serveur)
 
 Vérifié en direct sur la vraie fiche de Jean-Pascal (Valdoria) : équiper/déséquiper une arme met à jour le bouton instantanément (aucune requête réseau dans le chemin critique), la persistance en base est confirmée après coup par lecture directe, l'objet remis dans son état d'origine après le test.
 
-### V2-G2 — Wiki public en présentation « livre » · `M`
+### V2-G2 — Wiki public en présentation « livre » · `M` — fait, étendu
 
 Seconde peau de la coquille, pas une refonte. Mêmes composants, jetons différents.
 
-- [ ] Colonne de gauche en sommaire hiérarchique plutôt qu'en arborescence d'édition.
-- [ ] Corps de texte à largeur mesurée, **65 à 75 caractères par ligne**.
-- [ ] Aucune commande d'édition visible.
-- [ ] Le thème dérivé de l'image s'applique aussi à cette peau.
+- [x] Colonne de gauche en sommaire hiérarchique plutôt qu'en arborescence d'édition.
+- [x] Corps de texte à largeur mesurée, **65 à 75 caractères par ligne**.
+- [x] Aucune commande d'édition visible.
+- [x] Le thème dérivé de l'image s'applique aussi à cette peau.
 
-À faire quand le wiki public a du contenu à montrer. Habiller trois fiches de test n'apprend rien.
+**Ce qui existait déjà et n'a pas été reconstruit** : le mécanisme de publication lui-même (`share_links`, `app/partage/[token]/**`, `src/server/services/publicShare.ts`) était déjà complet — jeton révocable, mot de passe optionnel, filtrage par visibilité identique au reste de l'app. Il ne portait aucun habillage. `components/shell/EntityTree.tsx` (+ `buildEntityTree`, `src/core/entity-tree/build-tree.ts`) était déjà exactement le sommaire hiérarchique demandé par le premier critère — son seul couplage à l'édition (`useOpenEntityLink`, qui ouvre une fenêtre flottante) a reçu un paramètre optionnel `hrefBase` : fourni, navigation normale sans interception ; absent, comportement d'édition inchangé. Le thème dérivé de l'image (V2-G4) s'appliquait déjà de lui-même : `resolveBackgroundSelection` retombe sur le fond par défaut sans jamais toucher Supabase quand aucun cookie `background` n'existe — rien à coder, seulement vérifié en navigateur.
+
+**Extension demandée après coup : un onglet Publication + une prévisualisation.** L'utilisateur a demandé, en plus des 4 critères, une adresse facile à trouver pour que les joueurs consultent le wiki, et un moyen de voir le rendu sans generer un lien. Réalisé :
+- `components/entities/public/BookSkin.tsx` (nouveau) : sommaire (`EntityTree` + `hrefBase`) + colonne de contenu `max-w-[70ch]`, réutilisé tel quel par `/partage/[token]/**` et par la nouvelle prévisualisation ci-dessous — un seul skin, deux routes fines, comme le demandait le ticket.
+- `src/server/services/publicShare.ts` : nouvelle `getPublicEntityTree(worldId)`, même schéma que `getEntityTree` (édition) mais via le client `service_role` déjà confiné à ce fichier.
+- **Prévisualisation = route authentifiée, pas un lien jetable** : `GET /m/[worldSlug]/apercu` et `/apercu/[entitySlug]` (nouveaux), gardés par le même `getWorldBySlug` (RLS) que le reste du monde édité, appelant directement les fonctions de `publicShare.ts` avec le `worldId` — jamais de jeton ni de mot de passe. Montre exactement la vue anonyme (`public_only`), sans « dépenser » de vrai lien et même quand aucun lien n'existe encore.
+- `components/shell/SettingsMenu.tsx` : nouvel onglet « Publication » (gardé par `worldSlug`, même motif que « Règles ») — y déplace `ShareLinkPanel` (retiré de l'onglet « Général ») et ajoute le lien « Prévisualiser ↗ » vers `/apercu`.
+
+**Vérifié en navigateur** : `/m/valdoria/apercu` (sommaire complet, navigation entre fiches, surbrillance de la fiche courante, contenu de Jean-Pascal correctement filtré) puis un vrai lien créé depuis le nouvel onglet Publication et ouvert dans un onglet séparé (`/partage/[token]`) — rendu identique, aucune chrome d'édition. Lien de test révoqué après vérification.
+
+**Hors périmètre, explicitement** : pas d'image d'en-tête façon capture d'écran de référence (`entity_assets.role='banner'` existe en schéma mais n'a jamais été câblé — un chantier à part) ; pas de prévisualisation « en tant que joueur d'une campagne » (seule la vue anonyme `public_only`) ; pas de fond d'écran propre au monde (contredirait la décision déjà prise en V2-G4, par joueur jamais par monde). Aussi noté au passage, préexistant et non traité ici : `PublicBlockView` ne rend que text/infobox/image/custom_table — un bloc `character`/`inventory`/`music`/etc. n'affiche que son titre publiquement, aucun contenu.
+
+**Trois retouches supplémentaires, après un premier retour utilisateur sur la peau :**
+- **Champ de recherche** dans le sommaire, entre le titre et la première catégorie — filtre local (`filterEntityTree`, `src/core/entity-tree/build-tree.ts`, testé) sur l'arborescence déjà chargée, pas de nouvel appel serveur pour une poignée d'entités. Un nœud correspondant garde tous ses enfants visibles ; un parent non-correspondant survit si un descendant correspond.
+- **Nom de la campagne à la place du nom du monde**, partout dans la peau « livre » (« un monde = une campagne », migration `20260826100001`) — et affiché *en plus* du nom du monde dans la barre supérieure de l'écran MJ uniquement (`AppShell.tsx`, détection de section par `usePathname`).
+- **Message d'accueil personnalisable** (nouvelle colonne `worlds.wiki_welcome_message`, migration `20260826170001`) : remplace, sur la page d'accueil du **vrai** lien de partage seulement (pas la prévisualisation, sur demande explicite), le gros titre par un message éditable depuis l'onglet Publication — vide, un message par défaut est calculé (« Bienvenue dans la campagne — {campagne} ! L'aventure commence ici ! »), jamais stocké tant que non personnalisé. Le texte « Lecture seule — lien de partage » a été retiré de cette même page.
+- **Espacement du sommaire** : le titre butait contre le bouton Réglages (`fixed left-4 top-2.5`, hors du flux du document) sur `/partage`, qui n'a pas d'en-tête d'application au-dessus. `pt-16` sur la colonne de gauche au lieu de `py-10`, dégageant le bouton.
+
+Vérifié en navigateur pour les quatre : recherche filtrant en direct, nom de campagne affiché aux deux endroits attendus (et seulement là), message par défaut puis personnalisé puis effacé (repli confirmé), `/apercu` inchangée comme demandé. Lien de partage et personnalisation de test nettoyés après vérification.
+
+**Lien de partage perdu trop facilement, trois retours successifs.** Premier retour : le jeton en clair (visible une seule fois, jamais stocké en base à l'origine) n'avait pas de bouton Copier, seule une sélection manuelle du champ. Ajouté : bouton « Copier » (`navigator.clipboard`) juste à côté du champ, à la création. Second retour (capture à l'appui, un lien déjà dans la liste « Créé le… ») : demande d'un bouton Copier sur un lien déjà créé — à l'époque impossible par construction (le jeton n'existait plus nulle part après le premier affichage), corrigé provisoirement en le mémorisant en `sessionStorage` le temps de la session du navigateur.
+
+**Troisième retour : décision explicite de revenir sur la règle elle-même.** L'utilisateur a jugé que « jamais stocké » n'avait pas lieu d'être pour un lien qui n'ouvre qu'une vue en lecture seule, sans capacité de modification — pas le même profil de risque qu'un mot de passe ou une clé d'API. Le raisonnement tient : la règle protégeait contre une fuite de la base de données (un jeton haché y reste inutilisable même en cas de fuite), pas contre le compte du monde lui-même (qui donne de toute façon un accès en édition bien supérieur à un simple lien de lecture). Réalisé : nouvelle colonne `share_links.token` (migration `20260826180001`), le jeton en clair est désormais conservé en base en plus de `token_hash` (inchangé, toujours utilisé pour la résolution). `ShareLinkSummary`/`listShareLinks` l'exposent désormais, chaque ligne « Créé le… » porte son propre bouton Copier — le contournement `sessionStorage` du retour précédent est devenu inutile et a été retiré. Les liens créés avant cette migration n'ont jamais eu leur jeton conservé : `token` y reste `null`, pas de bouton Copier pour ceux-là (aucun moyen de le reconstituer). Vérifié en navigateur : nouveau lien créé, jeton visible et copiable immédiatement puis retrouvé et copiable à nouveau depuis la liste après fermeture/réouverture des Réglages.
 
 ### V2-G3 — Bloc musique · `S` — fait
 

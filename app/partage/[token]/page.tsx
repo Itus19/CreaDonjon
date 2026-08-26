@@ -1,9 +1,13 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { resolveShareLink, listPublicEntities } from "@/src/server/services/publicShare";
-import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
+import {
+  resolveShareLink,
+  getPublicEntityTree,
+  getPublicCampaignName,
+  getPublicWikiWelcomeMessage,
+} from "@/src/server/services/publicShare";
 import { hasVerifiedSharePassword } from "./passwordActions";
 import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
+import BookSkin from "@/components/entities/public/BookSkin";
 
 export default async function ShareLinkWorldPage({
   params,
@@ -25,32 +29,23 @@ export default async function ShareLinkWorldPage({
     return <SharePasswordGate token={token} worldName={resolved.worldName} />;
   }
 
-  const entities = await listPublicEntities(resolved.worldId);
+  const [tree, campaignName, welcomeMessage] = await Promise.all([
+    getPublicEntityTree(resolved.worldId),
+    getPublicCampaignName(resolved.worldId),
+    getPublicWikiWelcomeMessage(resolved.worldId),
+  ]);
+  const title = campaignName ?? resolved.worldName;
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 p-6">
-      <p className="font-mech text-xs text-ink-muted">Lecture seule — lien de partage</p>
-      <h1 className="entity-title">{resolved.worldName}</h1>
-
-      {entities.length === 0 ? (
-        <p className="text-sm text-ink-muted">Ce monde n&apos;a encore aucun contenu public.</p>
+    <BookSkin title={title} worldSlug={resolved.worldSlug} tree={tree} hrefBase={`/partage/${token}`}>
+      <h1 className="entity-title whitespace-pre-line">
+        {welcomeMessage || `Bienvenue dans la campagne — ${title} ! L'aventure commence ici !`}
+      </h1>
+      {tree.length === 0 ? (
+        <p className="mt-4 text-sm text-ink-muted">Ce monde n&apos;a encore aucun contenu public.</p>
       ) : (
-        <ul className="flex flex-col gap-1.5">
-          {entities.map((entity) => (
-            <li key={entity.id}>
-              <Link
-                href={`/partage/${token}/${entity.slug}`}
-                className="flex items-center justify-between gap-2 rounded-md border border-edge px-3 py-2 text-sm transition-colors hover:bg-panel-raised"
-              >
-                <span>{entity.name || "(sans nom)"}</span>
-                <span className="text-xs text-ink-muted">
-                  {ENTITY_KIND_LABELS[entity.entity_kind as keyof typeof ENTITY_KIND_LABELS] ?? entity.entity_kind}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <p className="mt-4 text-sm text-ink-muted">Choisissez une entité dans le sommaire.</p>
       )}
-    </div>
+    </BookSkin>
   );
 }

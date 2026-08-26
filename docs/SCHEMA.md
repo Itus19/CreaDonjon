@@ -96,6 +96,7 @@ create table worlds (
   owner_id            uuid not null references auth.users(id),
   default_ruleset_id  uuid,                                -- FK en migration 004
   calendar            jsonb not null default '{}'::jsonb,  -- mois, jours, ères ; un seul par monde en V1
+  wiki_welcome_message text,                               -- V2-G2 : remplace le titre par defaut du wiki public ; null = message calcule (nom de campagne), jamais stocke tant que non personnalise
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now(),
   deleted_at          timestamptz,
@@ -933,7 +934,8 @@ create table share_links (
   id          uuid primary key default gen_random_uuid(),
   world_id    uuid not null references worlds(id) on delete cascade,
   campaign_id uuid references campaigns(id) on delete cascade,
-  token_hash  text not null unique,      -- SHA-256 du jeton ; le jeton en clair n'est jamais stocké
+  token_hash  text not null unique,      -- SHA-256 du jeton, utilisé pour la résolution (resolve_share_link)
+  token       text,                      -- jeton en clair (migration 20260826180001, décision explicite) — voir note ci-dessous
   scope       text not null check (scope in ('public_only','players')),
   expires_at  timestamptz,
   revoked_at  timestamptz,
@@ -941,6 +943,8 @@ create table share_links (
   created_at  timestamptz not null default now()
 );
 ```
+
+**`token` en clair, conservé par choix explicite.** Un lien de partage n'ouvre jamais qu'une vue en lecture seule du contenu public d'un monde — jamais une capacité de modification — donc pas le même profil de risque qu'un mot de passe ou une clé d'API : le conserver permet de le retrouver et de le recopier depuis l'interface à tout moment, plutôt que de le perdre définitivement s'il n'a pas été copié au moment de la création. `token_hash` reste la colonne utilisée pour la résolution, inchangée. Colonne `token` nullable : les liens créés avant cette décision n'ont jamais eu leur jeton en clair conservé nulle part, impossible de le reconstituer après coup.
 
 **Supabase Storage, buckets privés, URLs signées de courte durée.** Un bucket public réduirait à néant tout le travail sur la visibilité — une carte avec les emplacements secrets serait accessible par URL directe.
 

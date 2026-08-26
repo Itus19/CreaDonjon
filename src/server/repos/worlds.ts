@@ -9,13 +9,16 @@ export interface WorldSummary {
   name: string;
   slug: string;
   created_at: string;
+  wiki_welcome_message: string | null;
 }
+
+const WORLD_SUMMARY_COLUMNS = "id, name, slug, created_at, wiki_welcome_message";
 
 /** RLS filtre deja par appartenance au monde (SCHEMA.md §19.2) : rien a ajouter ici. */
 export async function listWorldsForCurrentUser(supabase: TypedClient): Promise<WorldSummary[]> {
   const { data, error } = await supabase
     .from("worlds")
-    .select("id, name, slug, created_at")
+    .select(WORLD_SUMMARY_COLUMNS)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data;
@@ -38,7 +41,7 @@ export async function getWorldById(
 ): Promise<WorldSummary | null> {
   const { data, error } = await supabase
     .from("worlds")
-    .select("id, name, slug, created_at")
+    .select(WORLD_SUMMARY_COLUMNS)
     .eq("id", id)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -60,7 +63,7 @@ export async function getWorldBySlugForCurrentUser(
 ): Promise<WorldSummary | null> {
   const { data, error } = await supabase
     .from("worlds")
-    .select("id, name, slug, created_at")
+    .select(WORLD_SUMMARY_COLUMNS)
     .eq("slug", slug);
   if (error) throw new Error(error.message);
   if (data.length !== 1) return null;
@@ -202,8 +205,23 @@ export async function insertWorld(
   const { data, error } = await supabase
     .from("worlds")
     .insert({ owner_id: params.ownerId, name: params.name, slug: params.slug })
-    .select("id, name, slug, created_at")
+    .select(WORLD_SUMMARY_COLUMNS)
     .single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+/** Panneau de publication (V2-G2, extension) : `null` efface la personnalisation, l'appelant retombe alors sur le message calcule. */
+export async function setWorldWikiWelcomeMessage(
+  supabase: TypedClient,
+  worldId: string,
+  message: string | null
+): Promise<{ updated: boolean }> {
+  const { data, error } = await supabase
+    .from("worlds")
+    .update({ wiki_welcome_message: message })
+    .eq("id", worldId)
+    .select("id");
+  if (error) throw new Error(error.message);
+  return { updated: data.length > 0 };
 }

@@ -8,6 +8,10 @@ import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 import { type BlockRow, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { type EntitySummary, getEntityBySlug, listEntitiesForWorld } from "@/src/server/repos/entities";
+import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
+import { listCampaignsForWorld } from "@/src/server/repos/campaigns";
+import { getWorldById } from "@/src/server/repos/worlds";
+import { buildEntityTree, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 
 /**
  * Seul fichier ou `createShareLinkServiceClient` (lib/supabase/service.ts)
@@ -102,6 +106,46 @@ export async function verifyShareLinkPassword(token: string, password: string): 
 export async function listPublicEntities(worldId: string): Promise<EntitySummary[]> {
   const supabase = createShareLinkServiceClient();
   return listEntitiesForWorld(supabase, worldId);
+}
+
+/**
+ * Sommaire hiérarchique pour la peau « livre » (V2-G2) : même arborescence
+ * que la barre latérale d'édition (`getEntityTree`,
+ * `src/server/services/entities.ts`), même fonction pure `buildEntityTree`
+ * — seule la source des lignes change (client `service_role`, jamais de
+ * session necessaire, comme `listPublicEntities` ci-dessus).
+ */
+export async function getPublicEntityTree(worldId: string): Promise<EntityTreeGroup[]> {
+  const supabase = createShareLinkServiceClient();
+  const [entities, partOfEdges] = await Promise.all([
+    listEntitiesForWorld(supabase, worldId),
+    listPartOfRelationsForWorld(supabase, worldId),
+  ]);
+  return buildEntityTree(entities, partOfEdges);
+}
+
+/**
+ * Nom de la campagne du monde, affiché dans la peau « livre » à la place du
+ * nom du monde (retour utilisateur) — « un monde = une campagne » (décision
+ * produit, migration 20260826100001), donc au plus une ligne non supprimée.
+ * `null` si le monde n'a pas encore de campagne (fiche appelante retombe
+ * alors sur le nom du monde).
+ */
+export async function getPublicCampaignName(worldId: string): Promise<string | null> {
+  const supabase = createShareLinkServiceClient();
+  const campaigns = await listCampaignsForWorld(supabase, worldId);
+  return campaigns[0]?.name ?? null;
+}
+
+/**
+ * Message d'accueil personnalise (V2-G2, extension) : `null` si la personne
+ * n'a rien saisi — l'appelant retombe alors sur un message calcule (nom de
+ * la campagne), jamais stocke tant qu'il n'est pas personnalise.
+ */
+export async function getPublicWikiWelcomeMessage(worldId: string): Promise<string | null> {
+  const supabase = createShareLinkServiceClient();
+  const world = await getWorldById(supabase, worldId);
+  return world?.wiki_welcome_message ?? null;
 }
 
 export interface PublicBlock {

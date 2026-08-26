@@ -79,3 +79,27 @@ export function buildEntityTree(
 
   return result.sort((a, b) => a.kind.localeCompare(b.kind));
 }
+
+/**
+ * Recherche locale dans le sommaire (peau « livre », V2-G2) : sous-chaine
+ * insensible a la casse sur le nom. Un noeud correspondant garde tous ses
+ * enfants (contexte de navigation preserve) ; un noeud non-correspondant
+ * survit seulement si un de ses descendants correspond. Purement client —
+ * l'arborescence est deja chargee en entier, pas besoin d'aller-retour
+ * serveur pour filtrer une poignee d'entites.
+ */
+export function filterEntityTree(groups: EntityTreeGroup[], query: string): EntityTreeGroup[] {
+  const q = query.trim().toLowerCase();
+  if (q === "") return groups;
+
+  function filterNode(node: EntityTreeNode): EntityTreeNode | null {
+    if (node.name.toLowerCase().includes(q)) return node;
+    const children = node.children.map(filterNode).filter((n): n is EntityTreeNode => n !== null);
+    if (children.length === 0) return null;
+    return { ...node, children };
+  }
+
+  return groups
+    .map((group) => ({ ...group, items: group.items.map(filterNode).filter((n): n is EntityTreeNode => n !== null) }))
+    .filter((group) => group.items.length > 0);
+}

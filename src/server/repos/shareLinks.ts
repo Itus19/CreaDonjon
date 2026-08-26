@@ -12,9 +12,10 @@ export interface ShareLinkRow {
   revoked_at: string | null;
   created_at: string;
   password_hash: string | null;
+  token: string | null;
 }
 
-const SHARE_LINK_COLUMNS = "id, world_id, scope, expires_at, revoked_at, created_at, password_hash";
+const SHARE_LINK_COLUMNS = "id, world_id, scope, expires_at, revoked_at, created_at, password_hash, token";
 
 /** Actifs seulement (ni expires ni revoques) : geres depuis le monde par un membre — RLS share_links_select (is_world_member). */
 export async function listActiveShareLinksForWorld(
@@ -34,12 +35,20 @@ export async function listActiveShareLinksForWorld(
 
 export async function insertShareLink(
   supabase: TypedClient,
-  params: { worldId: string; tokenHash: string; scope: string; createdBy: string; passwordHash?: string | null },
+  params: {
+    worldId: string;
+    token: string;
+    tokenHash: string;
+    scope: string;
+    createdBy: string;
+    passwordHash?: string | null;
+  },
 ): Promise<ShareLinkRow> {
   const { data, error } = await supabase
     .from("share_links")
     .insert({
       world_id: params.worldId,
+      token: params.token,
       token_hash: params.tokenHash,
       scope: params.scope,
       created_by: params.createdBy,

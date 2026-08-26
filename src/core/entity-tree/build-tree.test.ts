@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildEntityTree } from "./build-tree";
+import { buildEntityTree, filterEntityTree } from "./build-tree";
 
 describe("buildEntityTree", () => {
   it("groupe par entity_kind", () => {
@@ -53,5 +53,45 @@ describe("buildEntityTree", () => {
 
   it("renvoie une liste vide pour un monde sans entite", () => {
     expect(buildEntityTree([], [])).toEqual([]);
+  });
+});
+
+describe("filterEntityTree", () => {
+  const entities = [
+    { id: "valdoria", name: "Valdoria", slug: "valdoria", entity_kind: "location" },
+    { id: "ancre", name: "L'Ancre Rouillée", slug: "l-ancre", entity_kind: "location" },
+    { id: "bram", name: "Bram", slug: "bram", entity_kind: "character" },
+  ];
+  const edges = [{ source_entity_id: "ancre", target_entity_id: "valdoria" }];
+  const groups = buildEntityTree(entities, edges);
+
+  it("requete vide renvoie l'arbre tel quel", () => {
+    expect(filterEntityTree(groups, "")).toBe(groups);
+  });
+
+  it("insensible a la casse et aux sous-chaines", () => {
+    const filtered = filterEntityTree(groups, "bram");
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].items[0].name).toBe("Bram");
+  });
+
+  it("un enfant correspondant garde son parent visible, avec seulement les enfants correspondants", () => {
+    const filtered = filterEntityTree(groups, "rouillée");
+    const locationGroup = filtered.find((g) => g.kind === "location")!;
+    expect(locationGroup.items).toHaveLength(1);
+    expect(locationGroup.items[0].name).toBe("Valdoria");
+    expect(locationGroup.items[0].children).toHaveLength(1);
+    expect(locationGroup.items[0].children[0].name).toBe("L'Ancre Rouillée");
+  });
+
+  it("un parent correspondant garde tous ses enfants, meme non-correspondants", () => {
+    const filtered = filterEntityTree(groups, "valdoria");
+    const locationGroup = filtered.find((g) => g.kind === "location")!;
+    expect(locationGroup.items[0].children).toHaveLength(1);
+  });
+
+  it("aucune correspondance retire le groupe entier", () => {
+    const filtered = filterEntityTree(groups, "zzz");
+    expect(filtered).toEqual([]);
   });
 });

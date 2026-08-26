@@ -1,10 +1,15 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { resolveShareLink, getPublicEntityDetail } from "@/src/server/services/publicShare";
+import {
+  resolveShareLink,
+  getPublicEntityDetail,
+  getPublicEntityTree,
+  getPublicCampaignName,
+} from "@/src/server/services/publicShare";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import PublicBlockView from "@/components/entities/public/PublicBlockView";
 import { hasVerifiedSharePassword } from "../passwordActions";
 import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
+import BookSkin from "@/components/entities/public/BookSkin";
 
 export default async function ShareLinkEntityPage({
   params,
@@ -23,17 +28,18 @@ export default async function ShareLinkEntityPage({
     return <SharePasswordGate token={token} worldName={resolved.worldName} />;
   }
 
-  const detail = await getPublicEntityDetail(resolved.worldId, entitySlug);
+  const [detail, tree, campaignName] = await Promise.all([
+    getPublicEntityDetail(resolved.worldId, entitySlug),
+    getPublicEntityTree(resolved.worldId),
+    getPublicCampaignName(resolved.worldId),
+  ]);
   if (!detail) notFound();
 
   const { entity, blocks } = detail;
+  const title = campaignName ?? resolved.worldName;
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 p-6">
-      <Link href={`/partage/${token}`} className="text-xs text-ink-muted hover:underline">
-        ← {resolved.worldName}
-      </Link>
-
+    <BookSkin title={title} worldSlug={resolved.worldSlug} tree={tree} hrefBase={`/partage/${token}`}>
       <div className="flex items-start justify-between gap-3">
         <h1 className="entity-title flex-1">{entity.name || "(sans nom)"}</h1>
         <span className="shrink-0 whitespace-nowrap text-sm font-medium text-ink-muted">
@@ -42,18 +48,18 @@ export default async function ShareLinkEntityPage({
       </div>
 
       {entity.aliases.length > 0 && (
-        <p className="text-xs text-ink-muted">Alias : {entity.aliases.join(", ")}</p>
+        <p className="mt-1 text-xs text-ink-muted">Alias : {entity.aliases.join(", ")}</p>
       )}
 
       {blocks.length === 0 ? (
-        <p className="text-sm text-ink-muted">Aucun contenu public pour cette fiche.</p>
+        <p className="mt-4 text-sm text-ink-muted">Aucun contenu public pour cette fiche.</p>
       ) : (
-        <div className="flex flex-col">
+        <div className="mt-4 flex flex-col">
           {blocks.map((block) => (
             <PublicBlockView key={block.id} block={block} />
           ))}
         </div>
       )}
-    </div>
+    </BookSkin>
   );
 }

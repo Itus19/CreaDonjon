@@ -10,6 +10,7 @@ import {
   type DeleteAccountState,
   type UpdateDisplayNameState,
 } from "@/app/settings/actions";
+import { updateWikiWelcomeMessageAction, type UpdateWikiWelcomeMessageState } from "@/app/m/[worldSlug]/wikiSettingsActions";
 import ShareLinkPanel from "./ShareLinkPanel";
 import type { ShareLinkSummary } from "@/src/server/services/shareLinks";
 import Tabs from "@/components/shared/Tabs";
@@ -44,6 +45,44 @@ function DisplayNameForm({ initialDisplayName }: { initialDisplayName: string })
         className="shrink-0 rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
       >
         {state && "ok" in state ? t("enregistre") : t("enregistrer")}
+      </button>
+      {state && "error" in state && <p className="text-xs text-danger">{state.error}</p>}
+    </form>
+  );
+}
+
+/**
+ * Message d'accueil du wiki public (V2-G2, extension) : remplace le gros
+ * titre de la page d'accueil du lien de partage — voir `BookSkin` et
+ * `app/partage/[token]/page.tsx`. Vide = pas de personnalisation, la page
+ * publique retombe alors sur un message calcule (nom de la campagne).
+ */
+function WikiWelcomeMessageForm({ worldId, initialMessage }: { worldId: string; initialMessage: string }) {
+  const [state, formAction, pending] = useActionState<UpdateWikiWelcomeMessageState, FormData>(
+    updateWikiWelcomeMessageAction,
+    null,
+  );
+
+  return (
+    <form action={formAction} className="flex flex-col gap-2">
+      <input type="hidden" name="worldId" value={worldId} />
+      <label className="flex flex-col gap-1 text-xs text-ink-muted">
+        Message d&apos;accueil du wiki
+        <textarea
+          name="message"
+          defaultValue={initialMessage}
+          maxLength={500}
+          rows={2}
+          placeholder="Bienvenue dans la campagne — … ! L'aventure commence ici !"
+          className="w-full resize-y rounded-md border border-edge bg-panel-raised px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
+        />
+      </label>
+      <button
+        type="submit"
+        disabled={pending}
+        className="self-start rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+      >
+        {state && "ok" in state ? "Enregistré" : "Enregistrer"}
       </button>
       {state && "error" in state && <p className="text-xs text-danger">{state.error}</p>}
     </form>
@@ -272,8 +311,10 @@ export default function SettingsMenu({
   const [bgBlur, setBgBlur] = useState(currentBgBlur);
   // Premier composant d'onglets du depot (V2-K5) — pur decoupage des
   // sections deja existantes, aucun changement de comportement. L'onglet
-  // "regles" n'existe que dans le contexte d'un monde (V2-K6).
-  const [tab, setTab] = useState<"general" | "regles" | "collaboration">("general");
+  // "regles" n'existe que dans le contexte d'un monde (V2-K6), tout comme
+  // "publication" (V2-G2) qui recoit desormais ShareLinkPanel — hors du
+  // contexte d'un monde il n'y a rien a publier.
+  const [tab, setTab] = useState<"general" | "regles" | "publication" | "collaboration">("general");
 
   // Le panneau de partage a quitte l'accueil du monde pour cet onglet
   // (V1-C4) : ce composant est rendu globalement (app/layout.tsx), hors de
@@ -281,13 +322,17 @@ export default function SettingsMenu({
   // l'URL plutot que d'etre recu en props.
   const pathname = usePathname();
   const worldSlug = pathname.match(/^\/m\/([^/]+)/)?.[1] ?? null;
-  const [shareData, setShareData] = useState<{ worldId: string; links: ShareLinkSummary[] } | null>(null);
+  const [shareData, setShareData] = useState<{
+    worldId: string;
+    links: ShareLinkSummary[];
+    wikiWelcomeMessage: string | null;
+  } | null>(null);
 
   function refreshShareData() {
     if (!worldSlug) return;
     fetch(`/api/worlds/${worldSlug}/share-links`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((body: { worldId: string; links: ShareLinkSummary[] } | null) => {
+      .then((body: { worldId: string; links: ShareLinkSummary[]; wikiWelcomeMessage: string | null } | null) => {
         if (body) setShareData(body);
       })
       .catch(() => {});
@@ -298,7 +343,7 @@ export default function SettingsMenu({
     let cancelled = false;
     fetch(`/api/worlds/${worldSlug}/share-links`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((body: { worldId: string; links: ShareLinkSummary[] } | null) => {
+      .then((body: { worldId: string; links: ShareLinkSummary[]; wikiWelcomeMessage: string | null } | null) => {
         if (!cancelled && body) setShareData(body);
       })
       .catch(() => {});
@@ -387,10 +432,11 @@ export default function SettingsMenu({
 
             <Tabs
               value={tab}
-              onChange={(v) => setTab(v as "general" | "regles" | "collaboration")}
+              onChange={(v) => setTab(v as "general" | "regles" | "publication" | "collaboration")}
               items={[
                 { value: "general", label: t("general") },
                 ...(worldSlug ? [{ value: "regles", label: tShell("regles") }] : []),
+                ...(worldSlug ? [{ value: "publication", label: "Publication" }] : []),
                 { value: "collaboration", label: t("collaboration.titre") },
               ]}
             />
@@ -480,17 +526,6 @@ export default function SettingsMenu({
                   <DisplayNameForm initialDisplayName={displayName} />
                 </section>
 
-                {worldSlug && shareData && (
-                  <section className="border-t border-edge pt-4">
-                    <ShareLinkPanel
-                      worldId={shareData.worldId}
-                      worldSlug={worldSlug}
-                      links={shareData.links}
-                      onMutated={refreshShareData}
-                    />
-                  </section>
-                )}
-
                 <section className="flex flex-col gap-2 border-t border-edge pt-4">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
                     {t("suppression.titre")}
@@ -503,6 +538,33 @@ export default function SettingsMenu({
             {tab === "regles" && worldSlug && (
               <section className="flex flex-col gap-2">
                 <RulesetSelector worldSlug={worldSlug} />
+              </section>
+            )}
+
+            {tab === "publication" && worldSlug && (
+              <section className="flex flex-col gap-3">
+                <a
+                  href={`/m/${worldSlug}/apercu`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="self-start rounded-full border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:bg-panel-raised"
+                >
+                  Prévisualiser ↗
+                </a>
+                {shareData && (
+                  <>
+                    <WikiWelcomeMessageForm
+                      worldId={shareData.worldId}
+                      initialMessage={shareData.wikiWelcomeMessage ?? ""}
+                    />
+                    <ShareLinkPanel
+                      worldId={shareData.worldId}
+                      worldSlug={worldSlug}
+                      links={shareData.links}
+                      onMutated={refreshShareData}
+                    />
+                  </>
+                )}
               </section>
             )}
 
