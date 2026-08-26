@@ -78,6 +78,8 @@ export default function InitiativeTracker({
   const [combatsList, setCombatsList] = useState<CombatRow[]>(savedCombats);
   const [openCharacteristicsIds, setOpenCharacteristicsIds] = useState<Set<string>>(new Set());
   const [characteristicsById, setCharacteristicsById] = useState<Record<string, ParticipantCharacteristics | "loading">>({});
+  const [damageAmount, setDamageAmount] = useState("");
+  const [damageTargetId, setDamageTargetId] = useState("");
   const lastAutoOpenedTurnKey = useRef<string | null>(null);
 
   const running = combat?.status === "running";
@@ -301,6 +303,30 @@ export default function InitiativeTracker({
     await patchParticipant(participant.id, { tempHp: Math.max(0, value) }, "PV temporaires");
   }
 
+  /**
+   * Application des degats a une cible (V2-G1) — jusqu'ici la V1 ne
+   * permettait que de les SUBIR manuellement (le stepper PV de chaque
+   * ligne, qui ne sait ajuster que le participant sous les yeux). Un seul
+   * controle pour toute la liste, jamais un par ligne : le MJ tape un
+   * montant et choisit la cible, quel que soit son `source_kind` (PJ,
+   * monstre ou saisie libre n'ont pas tous une arme a "attaquer avec").
+   * Les PV temporaires absorbent en premier (regle 5e), le reste retombe
+   * sur les PV reels — jamais sous 0.
+   */
+  async function applyDamage() {
+    const amount = Number(damageAmount);
+    const target = participants.find((p) => p.id === damageTargetId);
+    if (!target || !Number.isFinite(amount) || amount <= 0) return;
+    const temp = target.temp_hp ?? 0;
+    const absorbedByTemp = Math.min(temp, amount);
+    const remaining = amount - absorbedByTemp;
+    const hpMax = target.hp_max ?? 0;
+    const hpCurrent = target.hp_current ?? 0;
+    const nextHp = Math.max(0, Math.min(hpMax, hpCurrent - remaining));
+    await patchParticipant(target.id, { hpCurrent: nextHp, tempHp: temp - absorbedByTemp }, `Dégâts subis : ${amount}`);
+    setDamageAmount("");
+  }
+
   async function toggleCondition(participant: CombatParticipantRow, condition: string) {
     const current = (participant.conditions as unknown as string[]) ?? [];
     const next = current.includes(condition) ? current.filter((c) => c !== condition) : [...current, condition];
@@ -517,6 +543,35 @@ export default function InitiativeTracker({
         </div>
       )}
 
+      {participants.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-edge/60 bg-panel-sunken p-3">
+          <span className="text-xs font-medium text-ink-muted">Appliquer des dégâts</span>
+          <input
+            type="number"
+            min={1}
+            value={damageAmount}
+            onChange={(e) => setDamageAmount(e.target.value)}
+            placeholder="Montant"
+            aria-label="Montant des dégâts"
+            className="w-20 rounded-md border border-edge bg-transparent px-2 py-1 text-center text-xs text-ink outline-none"
+          />
+          <Dropdown
+            value={damageTargetId}
+            onChange={setDamageTargetId}
+            options={[{ value: "", label: "Cible…" }, ...participants.map((p) => ({ value: p.id, label: p.label }))]}
+            aria-label="Cible des dégâts"
+          />
+          <button
+            type="button"
+            onClick={applyDamage}
+            disabled={busy || !damageAmount || !damageTargetId}
+            className="rounded-full border border-danger px-3 py-1 text-xs text-danger transition-colors hover:bg-panel-raised disabled:opacity-50"
+          >
+            Appliquer
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
         {participants.length === 0 && (
           <p className="text-xs italic text-ink-muted">Aucun participant — ajoutez-en ci-dessus.</p>
@@ -615,15 +670,17 @@ export default function InitiativeTracker({
                     />
                   </div>
                   <div className="flex items-center gap-2 text-xs text-ink-muted">
-                    <button type="button" onClick={() => changeHp(p, -1)} className="rounded border border-edge px-1.5 hover:bg-panel-raised">
-                      −
-                    </button>
-                    <span className="mech text-ink">
-                      {hpCurrent} / {hpMax}
-                    </span>
-                    <button type="button" onClick={() => changeHp(p, 1)} className="rounded border border-edge px-1.5 hover:bg-panel-raised">
-                      +
-                    </button>
+                    <Stepper
+                      onIncrement={() => changeHp(p, 1)}
+                      onDecrement={() => changeHp(p, -1)}
+                      incrementLabel="Augmenter les PV"
+                      decrementLabel="Diminuer les PV"
+                      className="w-16"
+                    >
+                      <span className="text-ink">
+                        {hpCurrent} / {hpMax}
+                      </span>
+                    </Stepper>
                     <span className="ml-2">PV temp.</span>
                     <input
                       key={`${p.id}-temp-${p.temp_hp}`}
