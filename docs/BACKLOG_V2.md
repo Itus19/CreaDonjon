@@ -234,7 +234,7 @@ Spécification : `coquille-et-design.md` §2b (le choix "par monde" de la spec a
 
 Vérifié en direct à chaque étape (téléversement, sélection en direct sans rechargement, suppression avec repli propre, absence de scintillement au rechargement, les neuf images fournies, un second compte qui ne voit jamais les images de l'autre). `typecheck`/`lint`/`test` verts (638 tests).
 
-### V2-G5 — Découper `PlayableCharacterSheet.tsx` · `M` · *issu de la revue de code*
+### V2-G5 — Découper `PlayableCharacterSheet.tsx` · `M` · *issu de la revue de code* — fait
 
 1255 lignes pour six fonctions de premier niveau. C'est la principale dette du dépôt, et **V2-G1 va y toucher** (montée de niveau, application des dégâts).
 
