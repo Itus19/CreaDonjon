@@ -29,7 +29,7 @@ Inspection faite le 2 septembre. Cinq points sur six sont acquis.
 | Six cas dorés de `characterSheet()` | **acquis** — présents, plus deux cas d'encombrement |
 | `AiProvider` + adaptateur local | **acquis** — `openAiCompatible.ts`, prêt pour Ollama et LM Studio |
 | `ai_usage_log` à chaque appel | **acquis** — écrit même quand l'appel échoue |
-| **Thème dérivé de l'image** | **incomplet** — voir V2-G4 |
+| **Thème dérivé de l'image** | **fait** — voir V2-G4 (reformulé : par joueur, pas par monde) |
 
 ### Restent à confirmer par vous (invisibles depuis le dépôt)
 
@@ -210,17 +210,29 @@ Connu et accepté, pas un bug : dupliquer un monde recrée en double son entité
 
 **Panneaux multiples (point 4 du ticket) : déjà fait, par un autre chemin que celui décrit.** Le texte du ticket décrit le plan d'origine (des `<Panel>` fixes côte à côte) — mais `ADR-0006` (docs/adr/0006-fenetres-flottantes.md) avait déjà devancé et remplacé ce plan **avant même que ce ticket soit écrit** : `?avec=` est une liste de références (`entite:slug`/`regle:slug`, `components/shell/windowRefs.ts`) qui ouvre chaque fiche dans sa propre fenêtre flottante (`WindowFrame`/`DesktopWindowsProvider`), pas dans un `<Panel>`. Plusieurs fiches sont donc déjà visibles en même temps aujourd'hui — vérifié en direct (`/m/valdoria?avec=entite:7,entite:1`, deux fenêtres empilées à l'écran) — livré dès la V0 (V0-06c) et étendu en V2-K1 (adressage mixte entité/règle). `<Panel>` lui-même ne sert plus qu'à l'affichage mobile et au fond vide du bureau avant ouverture d'une fiche ; son commentaire, qui prétendait le contraire, est corrigé.
 
-### V2-G4 — Thème dérivé de l'image · `M` · *issu de la revue de code*
+### V2-G4 — Thème dérivé de l'image · `M` · *issu de la revue de code* — fait, reformulé
 
 Le socle est là — `tokens.css` en OKLCH, `data-mode` sur `<html>`, les quatre modes. **Il manque toute la chaîne d'extraction.**
 
-- [ ] Téléversement d'une image de fond par monde.
-- [ ] Extraction de palette **côté serveur, au téléversement** — jamais dans le navigateur au chargement.
-- [ ] Vignette 32×32 floutée en base64, stockée dans `worlds.theme` ; l'image pleine résolution n'est jamais chargée en fond.
-- [ ] Contrôle de contraste sur les quatre modes ; un mode qui échoue n'est pas proposé, et on le dit.
-- [ ] Variables injectées dans le HTML rendu côté serveur — aucun scintillement au premier rendu.
+- [x] Téléversement d'une image de fond — **par joueur, pas par monde** (reformulation explicite du client : le fond doit rester un réglage personnel, changeable à sa guise, indépendant de la partie ouverte — voir "Ce qui a changé" ci-dessous).
+- [x] Extraction de palette **côté serveur, au téléversement** — jamais dans le navigateur au chargement (`src/server/backgroundImageProcessing.ts`, `sharp`).
+- [x] Vignette nette (pas floutée, retour utilisateur ultérieur) en base64 pour la grille de sélection — **stockée dans une table dédiée `background_images` (personnelle, pas dans `worlds.theme` qui n'existe pas)**, plus une seconde image pour le fond réel, à l'aspect préservé, servie par sa propre route (jamais l'image d'origine telle quelle, jamais plus de 1920px).
+- [x] Contrôle de contraste sur les quatre modes (`availableModesFor`, `src/core/theme/oklch.ts`) ; un mode qui échoue n'est pas proposé (désactivé, info-bulle), et on le dit — en pratique n'échoue quasiment jamais avec les jetons actuels, la teinte/chroma ne pilotant jamais la clarté des surfaces (voir le code).
+- [x] Variables injectées dans le HTML rendu côté serveur (`app/layout.tsx`, cookie lu avant le premier rendu) — aucun scintillement au premier rendu.
 
-Spécification : `coquille-et-design.md` §2b.
+Spécification : `coquille-et-design.md` §2b (le choix "par monde" de la spec a été explicitement écarté par le client — voir ci-dessous).
+
+**Ce qui a changé par rapport à la spec d'origine, sur demande explicite du client** : le fond n'est pas un réglage du monde mais du joueur, réglable depuis Réglages → Général indépendamment de toute partie ouverte. Bibliothèque strictement **personnelle** (jamais partagée entre comptes) plus les images déjà fournies avec l'application (`public/backgrounds/`, toujours proposées, non supprimables). La palette dérivée s'applique **en plus** des quatre modes existants, jamais à leur place — confirmé explicitement par le client après une clarification, à l'encontre de la lecture initiale ("teinte indépendante du mode").
+
+**Deux compléments demandés après la première livraison** :
+- Un curseur de flou du fond (0–40px), pour ne pas imposer un flou fixe — variable CSS dédiée `--bg-blur`, volontairement distincte de `--blur` (le flou "verre dépoli" des fenêtres/panneaux, `WindowFrame.tsx`/`Panel.tsx`) : les deux se valaient 20px par coïncidence, jamais la même intention.
+- Miniatures nettes dans la grille de sélection (pas floutées à la source) — pour que la personne voie ce qu'elle choisit.
+
+**Deux bugs réels trouvés et corrigés en testant contre la vraie base, pas en théorie** :
+- Une miniature 64×64 suffisait pour l'icône de la grille mais devenait visiblement pixelisée une fois étirée plein écran dès que le flou baisse (et son recadrage carré centrait mal l'image sur un écran rectangulaire) — corrigé en générant une seconde image dédiée au fond, à l'aspect d'origine préservé, plafonnée à 1920px, stockée en `bytea` et servie par sa propre route (jamais embarquée dans le HTML, à la différence de la miniature).
+- `url(...)` CSS sans guillemets s'arrête à la première parenthèse rencontrée — les noms de fichiers fournis contenant des parenthèses littérales ("Artwork_B (1).png") cassaient silencieusement le chargement de trois images sur neuf. Corrigé en entourant systématiquement les URL injectées de guillemets (`url("...")`).
+
+Vérifié en direct à chaque étape (téléversement, sélection en direct sans rechargement, suppression avec repli propre, absence de scintillement au rechargement, les neuf images fournies, un second compte qui ne voit jamais les images de l'autre). `typecheck`/`lint`/`test` verts (638 tests).
 
 ### V2-G5 — Découper `PlayableCharacterSheet.tsx` · `M` · *issu de la revue de code*
 
@@ -234,15 +246,22 @@ Spécification : `coquille-et-design.md` §2b.
 
 Fait. `PlayableCharacterSheet.tsx` reste l'orchestrateur (état, appels serveur) ; les quatre onglets et l'en-tête sont des composants purs recevant des props déjà prêtes à afficher. Aucun test automatisé ne couvrait ce composant avant (aucun fichier `*.test.tsx` ne le référence) — vérification manuelle en navigateur sur les trois onglets (actions, inventaire, traits), `typecheck`/`lint`/`test` verts (seul échec : le flake connu de l'intégration LM Studio, pré-existant, sans rapport).
 
-### V2-G6 — `characterSheet()` côté client · `S` · *issu de la revue de code*
+### V2-G6 — `characterSheet()` côté client · `S` · *issu de la revue de code* — déjà satisfait, aucun travail nécessaire
 
 `characterSheet()` n'est appelée que côté serveur. La fonction étant pure et sans dépendance, elle peut tourner dans le navigateur — c'était l'intérêt de la contrainte `src/core`.
 
-- [ ] Décocher « équipé » recalcule la CA **sans aller-retour serveur**.
-- [ ] Le serveur reste l'autorité pour tout ce qui engage la partie ; le client ne recalcule que l'affichage.
-- [ ] Même fonction des deux côtés — aucune divergence possible.
+- [x] Décocher « équipé » recalcule la CA **sans aller-retour serveur**.
+- [x] Le serveur reste l'autorité pour tout ce qui engage la partie ; le client ne recalcule que l'affichage.
+- [x] Même fonction des deux côtés — aucune divergence possible.
 
 À faire seulement si la latence actuelle gêne réellement. Mesurez avant.
+
+**Mesuré : la latence n'existe déjà pas.** Le ticket demandait de mesurer avant d'agir — la mesure montre que l'architecture actuelle satisfait déjà les trois critères, sans code à écrire :
+- `useCharacterSheetContext.ts` (`"use client"`) appelle déjà `characterSheet()` directement dans le navigateur, pour calculer `sheet` (CA incluse) à partir de `inventory` — la même fonction que celle utilisée côté serveur (`resolveCharacterActionContext`, `characterActions.ts`), aucune seconde implémentation.
+- Cocher/décocher « équipé » (`InventoryPanel.tsx`) appelle `onUpdateInventory` → `patchBlock` (`EntityBlocks.tsx`) : une simple mise à jour d'état React **synchrone**, jamais un `await` sur le réseau. La persistance réelle (`saveBlock`, PATCH `/api/blocks/[id]`) est chaînée en arrière-plan, sans jamais bloquer le rendu.
+- Les actions qui engagent réellement la partie (attaque, dégâts, sort, repos...) passent toutes par `postAction`/les routes serveur dédiées (`characterActions.ts`) — seul l'**affichage** (CA, modificateurs) est recalculé côté client, jamais un jet de dé ni une mutation de règle.
+
+Vérifié en direct sur la vraie fiche de Jean-Pascal (Valdoria) : équiper/déséquiper une arme met à jour le bouton instantanément (aucune requête réseau dans le chemin critique), la persistance en base est confirmée après coup par lecture directe, l'objet remis dans son état d'origine après le test.
 
 ### V2-G2 — Wiki public en présentation « livre » · `M`
 
