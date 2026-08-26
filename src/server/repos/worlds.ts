@@ -117,6 +117,75 @@ export async function ownerHasSlug(
   return data !== null;
 }
 
+export interface WorldCard {
+  id: string;
+  name: string;
+  slug: string;
+  /** `null` : monde sans campagne — ne devrait plus arriver pour un monde cree apres la migration 20260826100001, mais reste possible pour un monde plus ancien pas encore complete. */
+  mode: "campaign" | "solo" | null;
+  rulesetName: string | null;
+  players: string[];
+  /** Le plus recent entre `worlds.updated_at` et l'edition la plus recente d'une entite du monde — calcule par l'appelant (`listWorldCardsForCurrentUser`), jamais en base. */
+  lastModified: string;
+}
+
+/**
+ * Ecran d'accueil enrichi (prepa V2-G1 export/import, decision produit "un
+ * monde = une campagne") : une seule requete imbriquee (monde -> campagne
+ * -> personnages de campagne -> entites) plutot que N+1 allers-retours par
+ * monde. RLS filtre deja l'appartenance (SCHEMA.md §19.2) : rien a ajouter
+ * ici pour la visibilite.
+ */
+export async function listWorldCardsForCurrentUser(supabase: TypedClient): Promise<WorldCard[]> {
+  const { data, error } = await supabase
+    .from("worlds")
+    .select(
+      `id, name, slug, updated_at,
+       campaigns ( mode, rulesets ( name ), campaign_characters ( is_pc, entities ( name ) ) )`
+    )
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+
+  const worldIds = data.map((w) => w.id);
+  const lastEntityEditByWorld = await latestEntityEditByWorld(supabase, worldIds);
+
+  return data.map((w) => {
+    const campaign = w.campaigns[0] as
+      | { mode: string; rulesets: { name: string } | null; campaign_characters: { is_pc: boolean; entities: { name: string } | null }[] }
+      | undefined;
+    const players = (campaign?.campaign_characters ?? [])
+      .filter((c) => c.is_pc && c.entities)
+      .map((c) => c.entities!.name);
+    const entityLast = lastEntityEditByWorld.get(w.id);
+    const lastModified = entityLast && entityLast > w.updated_at ? entityLast : w.updated_at;
+    return {
+      id: w.id,
+      name: w.name,
+      slug: w.slug,
+      mode: (campaign?.mode as "campaign" | "solo" | undefined) ?? null,
+      rulesetName: campaign?.rulesets?.name ?? null,
+      players,
+      lastModified,
+    };
+  });
+}
+
+/** Edition la plus recente d'une entite, par monde — une seule requete triee plutot qu'un `MAX(updated_at) GROUP BY` cote base (pas de vue SQL pour un besoin d'affichage seul). */
+async function latestEntityEditByWorld(supabase: TypedClient, worldIds: string[]): Promise<Map<string, string>> {
+  if (worldIds.length === 0) return new Map();
+  const { data, error } = await supabase
+    .from("entities")
+    .select("world_id, updated_at")
+    .in("world_id", worldIds)
+    .order("updated_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  const map = new Map<string, string>();
+  for (const row of data) {
+    if (!map.has(row.world_id)) map.set(row.world_id, row.updated_at);
+  }
+  return map;
+}
+
 export async function insertWorld(
   supabase: TypedClient,
   params: { ownerId: string; name: string; slug: string }

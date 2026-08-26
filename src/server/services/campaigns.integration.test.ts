@@ -6,7 +6,13 @@ import {
   getCampaignCharacters,
   getCampaignMembers,
   inviteCampaignMember,
+  type CampaignSummary,
 } from "./campaigns";
+
+/** Un monde = une campagne (migration 20260826100001) : chaque test qui cree une campagne a desormais besoin de son PROPRE monde, jamais un `worldId` partage entre plusieurs `it()`. */
+function assertCampaign(result: CampaignSummary | "world_already_has_campaign"): asserts result is CampaignSummary {
+  if (result === "world_already_has_campaign") throw new Error("Campagne attendue, la contrainte d'unicite a repondu un conflit.");
+}
 
 /**
  * V1-C1 : sans ce test, rien ne prouve que creer une campagne cree bien sa
@@ -36,14 +42,26 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
   let gmUserId: string;
   let playerUserId: string;
   let playerEmail: string;
-  let worldId: string;
   let rulesetId: string;
+  const createdWorldIds: string[] = [];
 
   async function signedInClient(email: string, password: string): Promise<SupabaseClient> {
     const client = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
     const { error } = await client.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
     return client;
+  }
+
+  /** Un monde = une campagne (migration 20260826100001) : un monde frais par test qui cree une campagne, jamais partage. */
+  async function createTestWorld(): Promise<string> {
+    const { data: world, error: worldError } = await admin
+      .from("worlds")
+      .insert({ name: "Monde de test campagnes", slug: `integration-test-campaigns-${Date.now()}-${createdWorldIds.length}`, owner_id: gmUserId })
+      .select("id")
+      .single();
+    if (worldError || !world) throw new Error(worldError?.message ?? "creation monde echouee");
+    createdWorldIds.push(world.id);
+    return world.id;
   }
 
   beforeAll(async () => {
@@ -69,14 +87,6 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
     if (playerError || !playerData.user) throw new Error(playerError?.message ?? "creation joueur echouee");
     playerUserId = playerData.user.id;
 
-    const { data: world, error: worldError } = await admin
-      .from("worlds")
-      .insert({ name: "Monde de test campagnes", slug: `integration-test-campaigns-${Date.now()}`, owner_id: gmUserId })
-      .select("id")
-      .single();
-    if (worldError || !world) throw new Error(worldError?.message ?? "creation monde echouee");
-    worldId = world.id;
-
     const { data: official, error: officialError } = await admin
       .from("rulesets")
       .select("id")
@@ -88,12 +98,13 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
   });
 
   afterAll(async () => {
-    if (worldId) await admin.from("worlds").delete().eq("id", worldId);
+    for (const worldId of createdWorldIds) await admin.from("worlds").delete().eq("id", worldId);
     if (gmUserId) await admin.auth.admin.deleteUser(gmUserId);
     if (playerUserId) await admin.auth.admin.deleteUser(playerUserId);
   });
 
   it("cree la faction avant la campagne, et le createur devient MJ (mode campaign)", async () => {
+    const worldId = await createTestWorld();
     const campaign = await createCampaign(admin, {
       worldId,
       createdBy: gmUserId,
@@ -101,6 +112,7 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
       rulesetId,
       mode: "campaign",
     });
+    assertCampaign(campaign);
 
     expect(campaign.partyEntityId).not.toBeNull();
     const { data: partyEntity } = await admin
@@ -115,6 +127,7 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
   });
 
   it("le createur devient simple joueur en mode solo (l'IA est MJ)", async () => {
+    const worldId = await createTestWorld();
     const campaign = await createCampaign(admin, {
       worldId,
       createdBy: gmUserId,
@@ -122,6 +135,7 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
       rulesetId,
       mode: "solo",
     });
+    assertCampaign(campaign);
 
     expect(campaign.gmUserId).toBeNull();
     const members = await getCampaignMembers(admin, campaign.id);
@@ -129,6 +143,7 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
   });
 
   it("invite un joueur par email existant, signale l'absence de compte sinon", async () => {
+    const worldId = await createTestWorld();
     const campaign = await createCampaign(admin, {
       worldId,
       createdBy: gmUserId,
@@ -136,6 +151,7 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
       rulesetId,
       mode: "campaign",
     });
+    assertCampaign(campaign);
 
     const invited = await inviteCampaignMember(gmClient, { campaignId: campaign.id, email: playerEmail, role: "player" });
     expect(invited).toEqual({ ok: true, userId: playerUserId });
@@ -152,6 +168,7 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
   });
 
   it("attribue un personnage a un membre de la campagne", async () => {
+    const worldId = await createTestWorld();
     const campaign = await createCampaign(admin, {
       worldId,
       createdBy: gmUserId,
@@ -159,6 +176,7 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
       rulesetId,
       mode: "campaign",
     });
+    assertCampaign(campaign);
     await inviteCampaignMember(gmClient, { campaignId: campaign.id, email: playerEmail, role: "player" });
 
     const { data: characterEntity, error: entityError } = await admin

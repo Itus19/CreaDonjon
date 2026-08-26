@@ -22,6 +22,7 @@ describe.skipIf(!hasCreds)("etat de jeu (integration, base reelle)", () => {
   let admin: SupabaseClient;
   let userId: string;
   let worldId: string;
+  let worldBId: string;
   let entityId: string;
   let rulesetId: string;
   let campaignAId: string;
@@ -73,9 +74,23 @@ describe.skipIf(!hasCreds)("etat de jeu (integration, base reelle)", () => {
     if (campaignAError || !campaignA) throw new Error(campaignAError?.message ?? "creation campagne A echouee");
     campaignAId = campaignA.id;
 
+    // Un monde = une campagne (migration 20260826100001) : la campagne B ne
+    // peut plus vivre dans le meme monde que la campagne A. L'invariant
+    // teste ici (le meme personnage a un etat distinct par campagne) ne
+    // depend pas du monde — `entity_runtime_state` n'a pas de colonne
+    // world_id — donc un second monde, cree juste pour heberger cette
+    // campagne, suffit sans rien affaiblir du test.
+    const { data: worldB, error: worldBError } = await admin
+      .from("worlds")
+      .insert({ name: "Monde de test etat de jeu (B)", slug: `integration-test-runtime-b-${Date.now()}`, owner_id: userId })
+      .select("id")
+      .single();
+    if (worldBError || !worldB) throw new Error(worldBError?.message ?? "creation monde B echouee");
+    worldBId = worldB.id;
+
     const { data: campaignB, error: campaignBError } = await admin
       .from("campaigns")
-      .insert({ world_id: worldId, name: "Campagne B", ruleset_id: rulesetId, mode: "solo" })
+      .insert({ world_id: worldBId, name: "Campagne B", ruleset_id: rulesetId, mode: "solo" })
       .select("id")
       .single();
     if (campaignBError || !campaignB) throw new Error(campaignBError?.message ?? "creation campagne B echouee");
@@ -94,6 +109,7 @@ describe.skipIf(!hasCreds)("etat de jeu (integration, base reelle)", () => {
     // world_id est en cascade sur entities/campaigns/sessions/session_events/
     // entity_runtime_state (SCHEMA.md §11-§12) : supprimer le monde suffit.
     if (worldId) await admin.from("worlds").delete().eq("id", worldId);
+    if (worldBId) await admin.from("worlds").delete().eq("id", worldBId);
     if (userId) await admin.auth.admin.deleteUser(userId);
   });
 

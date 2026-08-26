@@ -40,10 +40,11 @@ export async function getCampaignById(supabase: TypedClient, id: string): Promis
   return data;
 }
 
+/** `"world_already_has_campaign"` : violation de `campaigns_world_id_unique` (migration 20260826100001, "un monde = une campagne") — jamais une exception non geree, un monde deja complete peut re-tenter cet appel (double-soumission, etat client perime). */
 export async function insertCampaign(
   supabase: TypedClient,
   params: { worldId: string; name: string; rulesetId: string; mode: string; gmUserId: string | null; partyEntityId: string }
-): Promise<CampaignRow> {
+): Promise<CampaignRow | "world_already_has_campaign"> {
   const { data, error } = await supabase
     .from("campaigns")
     .insert({
@@ -56,6 +57,30 @@ export async function insertCampaign(
     })
     .select(CAMPAIGN_COLUMNS)
     .single();
+  if (error) {
+    if (error.code === "23505") return "world_already_has_campaign";
+    throw new Error(error.message);
+  }
+  return data;
+}
+
+/**
+ * Bascule le mode d'une campagne (V2-G1 prepa, mode modifiable apres
+ * creation par decision explicite de l'utilisateur) — `gm_user_id` suit la
+ * meme regle qu'a la creation (`createCampaign`) : MJ humain en `campaign`,
+ * `null` (l'IA) en `solo`.
+ */
+export async function updateCampaignMode(
+  supabase: TypedClient,
+  params: { campaignId: string; mode: string; gmUserId: string | null }
+): Promise<CampaignRow | null> {
+  const { data, error } = await supabase
+    .from("campaigns")
+    .update({ mode: params.mode, gm_user_id: params.gmUserId })
+    .eq("id", params.campaignId)
+    .is("deleted_at", null)
+    .select(CAMPAIGN_COLUMNS)
+    .maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 }

@@ -24,6 +24,15 @@ import type { Viewer, VisibilityLevel } from "../../core/visibility/types";
  * les deux mesurent alors la garantie de securite reelle (jamais de fuite
  * vers un non-membre), qui est ce que RLS peut effectivement garantir.
  *
+ * Profil retire (migration 20260826100001, "un monde = une campagne") : ce
+ * fichier testait un profil "joueur d'une AUTRE campagne du meme monde",
+ * pour verifier qu'il n'heritait pas du niveau 'players' par simple
+ * appartenance au monde. La contrainte d'unicite `campaigns_world_id_unique`
+ * rend ce profil desormais impossible a construire (un monde n'a plus
+ * qu'une seule campagne) — pas juste deplace ailleurs : un membre d'une
+ * campagne d'un AUTRE monde n'a aucun lien avec ce monde-ci et se confond
+ * avec le profil "outsider" deja couvert, sans rien tester de plus.
+ *
  * Contact reel a Supabase : se saute silencieusement si .env.local n'est
  * pas configure (meme pattern que les autres tests d'integration).
  */
@@ -38,7 +47,6 @@ describe.skipIf(!hasCreds)("descente de la visibilite dans les politiques RLS (i
   let entityId: string;
   let rulesetId: string;
   let campaignAId: string;
-  let campaignBId: string;
 
   const userIds: Record<string, string> = {};
   const clients: Record<string, SupabaseClient> = {};
@@ -57,17 +65,17 @@ describe.skipIf(!hasCreds)("descente de la visibilite dans les politiques RLS (i
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    // Six profils, refletant ceux de canSee.test.ts : proprietaire, simple
+    // Cinq profils, refletant ceux de canSee.test.ts : proprietaire, simple
     // spectateur du monde (aucune campagne), joueur d'UNE campagne SANS
     // ligne world_members separee (verifie le correctif is_world_member,
-    // migration 20260804150002), MJ de cette meme campagne, joueur d'une
-    // AUTRE campagne du meme monde, et un tiers sans aucun lien.
-    const [owner, worldViewer, campaignPlayer, campaignGm, otherCampaignPlayer, outsider] = await Promise.all([
+    // migration 20260804150002), MJ de cette meme campagne, et un tiers sans
+    // aucun lien. (Le profil "joueur d'une autre campagne du meme monde" a
+    // ete retire — voir commentaire de tete de fichier.)
+    const [owner, worldViewer, campaignPlayer, campaignGm, outsider] = await Promise.all([
       createProfile("owner"),
       createProfile("world-viewer"),
       createProfile("campaign-player"),
       createProfile("campaign-gm"),
-      createProfile("other-campaign-player"),
       createProfile("outsider"),
     ]);
     userIds.owner = owner.id;
@@ -78,8 +86,6 @@ describe.skipIf(!hasCreds)("descente de la visibilite dans les politiques RLS (i
     clients.campaignPlayer = campaignPlayer.client;
     userIds.campaignGm = campaignGm.id;
     clients.campaignGm = campaignGm.client;
-    userIds.otherCampaignPlayer = otherCampaignPlayer.id;
-    clients.otherCampaignPlayer = otherCampaignPlayer.client;
     userIds.outsider = outsider.id;
     clients.outsider = outsider.client;
 
@@ -121,18 +127,9 @@ describe.skipIf(!hasCreds)("descente de la visibilite dans les politiques RLS (i
     if (campaignAError || !campaignA) throw new Error(campaignAError?.message ?? "creation campagne A echouee");
     campaignAId = campaignA.id;
 
-    const { data: campaignB, error: campaignBError } = await admin
-      .from("campaigns")
-      .insert({ world_id: worldId, name: "Campagne B", ruleset_id: rulesetId, mode: "campaign" })
-      .select("id")
-      .single();
-    if (campaignBError || !campaignB) throw new Error(campaignBError?.message ?? "creation campagne B echouee");
-    campaignBId = campaignB.id;
-
     const { error: membersError } = await admin.from("campaign_members").insert([
       { campaign_id: campaignAId, user_id: userIds.campaignPlayer, role: "player" },
       { campaign_id: campaignAId, user_id: userIds.campaignGm, role: "gm" },
-      { campaign_id: campaignBId, user_id: userIds.otherCampaignPlayer, role: "player" },
     ]);
     if (membersError) throw new Error(membersError.message);
   });
@@ -180,13 +177,6 @@ describe.skipIf(!hasCreds)("descente de la visibilite dans les politiques RLS (i
         return { kind: "user", userId: userIds.campaignPlayer, worldRole: null, campaignRoles: { [campaignAId]: "player" } };
       case "campaignGm":
         return { kind: "user", userId: userIds.campaignGm, worldRole: null, campaignRoles: { [campaignAId]: "gm" } };
-      case "otherCampaignPlayer":
-        return {
-          kind: "user",
-          userId: userIds.otherCampaignPlayer,
-          worldRole: null,
-          campaignRoles: { [campaignBId]: "player" },
-        };
       case "outsider":
         return { kind: "user", userId: userIds.outsider, worldRole: null, campaignRoles: {} };
       default:
@@ -194,7 +184,7 @@ describe.skipIf(!hasCreds)("descente de la visibilite dans les politiques RLS (i
     }
   }
 
-  const PROFILES = ["owner", "worldViewer", "campaignPlayer", "campaignGm", "otherCampaignPlayer", "outsider"] as const;
+  const PROFILES = ["owner", "worldViewer", "campaignPlayer", "campaignGm", "outsider"] as const;
 
   it("niveau 'public' : la garde d'appartenance au monde prime (divergence assumee pour 'outsider', cf. D-01)", async () => {
     const blockId = await insertBlock({ level: "public", scopeId: null, createdBy: null });
@@ -222,7 +212,6 @@ describe.skipIf(!hasCreds)("descente de la visibilite dans les politiques RLS (i
       worldViewer: false,
       campaignPlayer: true,
       campaignGm: true,
-      otherCampaignPlayer: true,
       outsider: false,
     };
     for (const profile of PROFILES) {
@@ -240,7 +229,6 @@ describe.skipIf(!hasCreds)("descente de la visibilite dans les politiques RLS (i
       worldViewer: false,
       campaignPlayer: false,
       campaignGm: true,
-      otherCampaignPlayer: false,
       outsider: false,
     };
     for (const profile of PROFILES) {
@@ -259,7 +247,6 @@ describe.skipIf(!hasCreds)("descente de la visibilite dans les politiques RLS (i
       worldViewer: false,
       campaignPlayer: true,
       campaignGm: true,
-      otherCampaignPlayer: false,
       outsider: false,
     };
     for (const profile of PROFILES) {

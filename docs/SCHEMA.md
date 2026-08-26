@@ -606,6 +606,12 @@ create table campaigns (
   deleted_at timestamptz
 );
 
+-- Un monde = une campagne (decision produit, migration 20260826100001) : au
+-- plus une campagne vivante par monde. Index partiel, pas une contrainte
+-- simple sur la colonne — une campagne soft-supprimee ne doit jamais
+-- bloquer la creation de la suivante.
+create unique index campaigns_world_id_unique on campaigns (world_id) where deleted_at is null;
+
 create table campaign_members (
   campaign_id uuid not null references campaigns(id) on delete cascade,
   user_id     uuid not null references auth.users(id) on delete cascade,

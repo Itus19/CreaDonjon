@@ -10,6 +10,7 @@ import {
   listCampaignMembers,
   listCampaignsForWorld,
   listGmCampaignsForUser,
+  updateCampaignMode,
   upsertCampaignCharacter,
   type CampaignCharacterRow,
   type CampaignMemberRow,
@@ -73,11 +74,17 @@ export async function getCampaignRulesetOrigin(supabase: TypedClient, campaignId
  * — la fenetre sans faction reste la plus courte possible. Le createur
  * devient MJ humain en mode `campaign`, simple joueur en mode `solo` (le MJ
  * y est l'IA, `gm_user_id` reste `null`, SCHEMA.md §11).
+ *
+ * `"world_already_has_campaign"` (V2-G1 prepa, "un monde = une campagne") :
+ * la contrainte d'unicite (migration 20260826100001) a rejete l'insertion —
+ * la faction, elle, reste creee (fenetre de risque acceptee, deja le cas
+ * pour cet enchainement sans transaction explicite) ; l'appelant ne doit
+ * jamais pretendre un succes dans ce cas.
  */
 export async function createCampaign(
   supabase: TypedClient,
   params: { worldId: string; createdBy: string; name: string; rulesetId: string; mode: "campaign" | "solo" }
-): Promise<CampaignSummary> {
+): Promise<CampaignSummary | "world_already_has_campaign"> {
   const partyEntity = await createEntity(supabase, {
     worldId: params.worldId,
     createdBy: params.createdBy,
@@ -94,6 +101,7 @@ export async function createCampaign(
     gmUserId: params.mode === "campaign" ? params.createdBy : null,
     partyEntityId: partyEntity.id,
   });
+  if (campaign === "world_already_has_campaign") return campaign;
 
   await insertCampaignMember(supabase, {
     campaignId: campaign.id,
@@ -106,6 +114,24 @@ export async function createCampaign(
 
 export async function getCampaignMembers(supabase: TypedClient, campaignId: string): Promise<CampaignMemberRow[]> {
   return listCampaignMembers(supabase, campaignId);
+}
+
+/**
+ * Mode modifiable apres creation (V2-G1 prepa, "un monde = une campagne") :
+ * `gmUserId` suit la meme regle qu'a la creation — celui qui bascule vers
+ * `campaign` en devient le MJ humain, `null` (l'IA) en `solo`. `null` si la
+ * campagne est introuvable.
+ */
+export async function setCampaignMode(
+  supabase: TypedClient,
+  params: { campaignId: string; mode: "campaign" | "solo"; actorUserId: string }
+): Promise<CampaignSummary | null> {
+  const row = await updateCampaignMode(supabase, {
+    campaignId: params.campaignId,
+    mode: params.mode,
+    gmUserId: params.mode === "campaign" ? params.actorUserId : null,
+  });
+  return row ? toSummary(row) : null;
 }
 
 export async function getCampaignCharacters(supabase: TypedClient, campaignId: string): Promise<CampaignCharacterRow[]> {

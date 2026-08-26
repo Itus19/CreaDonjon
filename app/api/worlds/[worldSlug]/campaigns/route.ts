@@ -46,5 +46,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     rulesetId: parsed.data.rulesetId,
     mode: parsed.data.mode,
   });
+  if (campaign === "world_already_has_campaign") {
+    return NextResponse.json({ error: "Ce monde a déjà une campagne (un monde = une campagne)." }, { status: 409 });
+  }
   return NextResponse.json(campaign, { status: 201 });
 }

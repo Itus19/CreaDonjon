@@ -41,8 +41,6 @@ const IDS = {
   mechRev1: "aaaaaaaa-0000-0000-0000-00000000c001",
   mechRev2: "aaaaaaaa-0000-0000-0000-00000000c002",
   campaignGroup: "aaaaaaaa-0000-0000-0000-000000000005",
-  campaignSolo: "aaaaaaaa-0000-0000-0000-000000000006",
-  session: "aaaaaaaa-0000-0000-0000-000000000007",
   templates: {
     pnj: "aaaaaaaa-0000-0000-0000-0000000000e1",
     creature: "aaaaaaaa-0000-0000-0000-0000000000e2",
@@ -52,6 +50,28 @@ const IDS = {
     quete: "aaaaaaaa-0000-0000-0000-0000000000e6",
     evenement: "aaaaaaaa-0000-0000-0000-0000000000e7",
   },
+} as const;
+
+// Ids historiques de la campagne solo qui vivait autrefois DANS Valdoria
+// (avant "un monde = une campagne", migration 20260826100001) — conserves
+// ici uniquement pour le nettoyage idempotent d'une base deja seedee avec
+// l'ancienne forme (`cleanupLegacySoloCampaignInValdoria`), jamais reutilises
+// pour creer quoi que ce soit de nouveau.
+const LEGACY_SOLO_IN_VALDORIA = {
+  campaign: "aaaaaaaa-0000-0000-0000-000000000006",
+  session: "aaaaaaaa-0000-0000-0000-000000000007",
+} as const;
+
+// Un monde = une campagne (decision produit, migration 20260826100001) : la
+// demonstration solo "Bram, une nuit tranquille" ne peut plus cohabiter avec
+// "La Garde de L'Ancre" dans Valdoria — elle vit desormais dans son propre
+// monde, avec sa propre copie de Bram (une entite appartient a un seul
+// monde, jamais partagee).
+const SOLO_IDS = {
+  world: "bbbbbbbb-0000-0000-0000-000000000001",
+  entityBram: "bbbbbbbb-0000-0000-0000-00000000b001",
+  campaign: "bbbbbbbb-0000-0000-0000-000000000005",
+  session: "bbbbbbbb-0000-0000-0000-000000000007",
 } as const;
 
 async function ensureUser(email: string): Promise<string> {
@@ -77,16 +97,6 @@ function must(result: { error: { message: string } | null }, label: string): voi
 }
 
 async function main() {
-  const { data: existingWorld } = await supabase
-    .from("worlds")
-    .select("id")
-    .eq("slug", "valdoria")
-    .maybeSingle();
-  if (existingWorld) {
-    console.log("Le monde 'valdoria' existe deja — rien a faire.");
-    return;
-  }
-
   const { data: officialRuleset, error: officialRulesetError } = await supabase
     .from("rulesets")
     .select("id")
@@ -98,6 +108,21 @@ async function main() {
     throw new Error(
       "Aucun ruleset officiel SRD 5.1 en base. Lancer `npm run ingest:srd` avant `npm run seed:dev`."
     );
+  }
+
+  // Par id fixe, jamais par slug : le slug n'est unique que par
+  // proprietaire (`ownerHasSlug`), et un autre compte peut tres bien avoir
+  // lui aussi nomme l'un de ses mondes "Valdoria".
+  const { data: existingWorld } = await supabase
+    .from("worlds")
+    .select("id")
+    .eq("id", IDS.world)
+    .maybeSingle();
+  if (existingWorld) {
+    console.log("Le monde 'valdoria' existe deja.");
+    await cleanupLegacySoloCampaignInValdoria();
+    await ensureSoloDemoWorld(officialRuleset.id);
+    return;
   }
 
   const mjUserId = await ensureUser("mj-demo@creadonjon.local");
@@ -243,7 +268,11 @@ async function main() {
         }] },
       },
       {
-        entity_id: IDS.entityBram, block_type: "character", visibility_level: "gm", display_order: 300, created_by: mjUserId,
+        // `display: {}` explicite : un insert par lot ou un seul objet omet
+        // la cle envoie `null` (pas la valeur par defaut de la colonne) des
+        // qu'un AUTRE objet du meme lot la fournit — comportement de
+        // PostgREST sur `insert` heterogene, verifie empiriquement.
+        entity_id: IDS.entityBram, block_type: "character", display: {}, visibility_level: "gm", display_order: 300, created_by: mjUserId,
         data: {
           species: { kind: "rule", key: "human" },
           background: null,
@@ -255,7 +284,7 @@ async function main() {
         },
       },
       {
-        entity_id: IDS.entityBram, block_type: "inventory", visibility_level: "gm", display_order: 400, created_by: mjUserId,
+        entity_id: IDS.entityBram, block_type: "inventory", display: {}, visibility_level: "gm", display_order: 400, created_by: mjUserId,
         data: {
           items: [
             { id: "i1", ref: { kind: "entity", id: IDS.entityDague }, qty: 1, equipped: true, slot: "main_hand" },
@@ -291,11 +320,14 @@ async function main() {
     "update entities.current_mechanical_revision_id"
   );
 
+  // Un monde = une campagne (migration 20260826100001) : Valdoria n'a plus
+  // qu'une seule campagne ("La Garde de L'Ancre", mode groupe). La
+  // demonstration solo vit desormais dans son propre monde, cree ci-dessous
+  // par `ensureSoloDemoWorld`.
   must(
-    await supabase.from("campaigns").insert([
-      { id: IDS.campaignGroup, world_id: IDS.world, ruleset_id: IDS.rulesetVariant, gm_user_id: mjUserId, mode: "campaign", name: "La Garde de L'Ancre" },
-      { id: IDS.campaignSolo, world_id: IDS.world, ruleset_id: IDS.rulesetVariant, gm_user_id: null, mode: "solo", name: "Bram, une nuit tranquille" },
-    ]),
+    await supabase.from("campaigns").insert({
+      id: IDS.campaignGroup, world_id: IDS.world, ruleset_id: IDS.rulesetVariant, gm_user_id: mjUserId, mode: "campaign", name: "La Garde de L'Ancre",
+    }),
     "insert campaigns"
   );
 
@@ -303,43 +335,144 @@ async function main() {
     await supabase.from("campaign_members").insert([
       { campaign_id: IDS.campaignGroup, user_id: mjUserId, role: "gm" },
       { campaign_id: IDS.campaignGroup, user_id: playerUserId, role: "player" },
-      { campaign_id: IDS.campaignSolo, user_id: playerUserId, role: "player" },
     ]),
     "insert campaign_members"
   );
 
+  await ensureSoloDemoWorld(officialRuleset.id);
+
+  console.log("Jeu de donnees de demonstration cree : monde Valdoria, 5 entites, 1 campagne, 1 monde de demo solo.");
+}
+
+/**
+ * Nettoyage a usage unique : les bases seedees avant la migration
+ * 20260826100001 ("un monde = une campagne") ont encore l'ancienne
+ * campagne solo DANS Valdoria (id fixe `LEGACY_SOLO_IN_VALDORIA`), ce qui
+ * viole desormais la contrainte d'unicite et bloque toute nouvelle
+ * campagne sur ce monde. Sans effet sur une base deja a jour (la ligne
+ * n'existe plus, la fonction retourne immediatement).
+ */
+async function cleanupLegacySoloCampaignInValdoria(): Promise<void> {
+  const { data: legacy } = await supabase
+    .from("campaigns")
+    .select("id")
+    .eq("id", LEGACY_SOLO_IN_VALDORIA.campaign)
+    .maybeSingle();
+  if (!legacy) return;
+
+  console.log("Nettoyage de l'ancienne campagne solo dans Valdoria (deplacee vers son propre monde)...");
+  must(await supabase.from("session_events").delete().eq("session_id", LEGACY_SOLO_IN_VALDORIA.session), "delete session_events (legacy)");
+  must(await supabase.from("sessions").delete().eq("id", LEGACY_SOLO_IN_VALDORIA.session), "delete sessions (legacy)");
+  must(await supabase.from("entity_runtime_state").delete().eq("campaign_id", LEGACY_SOLO_IN_VALDORIA.campaign), "delete entity_runtime_state (legacy)");
+  must(await supabase.from("campaign_characters").delete().eq("campaign_id", LEGACY_SOLO_IN_VALDORIA.campaign), "delete campaign_characters (legacy)");
+  must(await supabase.from("campaign_members").delete().eq("campaign_id", LEGACY_SOLO_IN_VALDORIA.campaign), "delete campaign_members (legacy)");
+  must(await supabase.from("campaigns").delete().eq("id", LEGACY_SOLO_IN_VALDORIA.campaign), "delete campaigns (legacy)");
+}
+
+/**
+ * Monde de demonstration dedie au solo : "Bram, une nuit tranquille" ne
+ * peut plus cohabiter avec "La Garde de L'Ancre" dans Valdoria (un monde =
+ * une campagne). Bram y est une entite DIFFERENTE de celle de Valdoria
+ * (`entities.world_id` est exclusif a un monde) — une copie autonome du
+ * tavernier, sans le fil "travaille en secret pour la Main Silencieuse"
+ * qui appartient au recit de Valdoria et referencerait une entite d'un
+ * autre monde. Idempotent sur le slug `bram-solo`.
+ */
+async function ensureSoloDemoWorld(officialRulesetId: string): Promise<void> {
+  const { data: existing } = await supabase.from("worlds").select("id").eq("id", SOLO_IDS.world).maybeSingle();
+  if (existing) {
+    console.log("Le monde de demo solo existe deja — rien a faire.");
+    return;
+  }
+
+  const playerUserId = await ensureUser("joueur-demo@creadonjon.local");
+
   must(
-    await supabase.from("campaign_characters").insert({
-      campaign_id: IDS.campaignSolo, entity_id: IDS.entityBram, user_id: playerUserId, is_pc: true,
+    await supabase.from("worlds").insert({
+      id: SOLO_IDS.world, owner_id: playerUserId, name: "Bram, une nuit tranquille", slug: "bram-solo",
+      default_ruleset_id: officialRulesetId,
     }),
-    "insert campaign_characters"
+    "insert worlds (demo solo)"
+  );
+
+  must(
+    await supabase.from("entities").insert({
+      id: SOLO_IDS.entityBram, world_id: SOLO_IDS.world, entity_kind: "character", slug: "bram-le-tavernier", name: "Bram le Tavernier", created_by: playerUserId,
+    }),
+    "insert entities (demo solo)"
+  );
+
+  must(
+    await supabase.from("blocks").insert([
+      {
+        entity_id: SOLO_IDS.entityBram, block_type: "text", display: { label: "Description", layout: "prose" }, visibility_level: "public", display_order: 100, created_by: playerUserId,
+        data: { __v: 1, segments: [{ id: "s1", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Le tavernier de L'Ancre Rouillée, jovial et accueillant." }] }] },
+      },
+      {
+        // `display: {}` explicite, meme raison qu'au-dessus pour Valdoria.
+        entity_id: SOLO_IDS.entityBram, block_type: "character", display: {}, visibility_level: "gm", display_order: 300, created_by: playerUserId,
+        data: {
+          species: { kind: "rule", key: "human" }, background: null, classes: [],
+          abilities: { method: "standard_array", base: { str: 11, dex: 12, con: 12, int: 10, wis: 13, cha: 14 } },
+          choices: {}, hp_method: "fixed", portrait_asset_id: null,
+        },
+      },
+      {
+        entity_id: SOLO_IDS.entityBram, block_type: "inventory", display: {}, visibility_level: "gm", display_order: 400, created_by: playerUserId,
+        data: {
+          items: [
+            { id: "i1", label: "Dague", qty: 1, equipped: true, slot: "main_hand" },
+            { id: "i2", label: "Trousseau de clés de la taverne", qty: 1 },
+          ],
+          containers: [],
+          currency: { pp: 0, gp: 14, ep: 0, sp: 6, cp: 0 },
+        },
+      },
+    ]),
+    "insert blocks (demo solo)"
+  );
+
+  must(
+    await supabase.from("campaigns").insert({
+      id: SOLO_IDS.campaign, world_id: SOLO_IDS.world, ruleset_id: officialRulesetId, gm_user_id: null, mode: "solo", name: "Bram, une nuit tranquille",
+    }),
+    "insert campaigns (demo solo)"
+  );
+
+  must(
+    await supabase.from("campaign_members").insert({ campaign_id: SOLO_IDS.campaign, user_id: playerUserId, role: "player" }),
+    "insert campaign_members (demo solo)"
+  );
+
+  must(
+    await supabase.from("campaign_characters").insert({ campaign_id: SOLO_IDS.campaign, entity_id: SOLO_IDS.entityBram, user_id: playerUserId, is_pc: true }),
+    "insert campaign_characters (demo solo)"
   );
 
   must(
     await supabase.from("entity_runtime_state").insert({
-      entity_id: IDS.entityBram, campaign_id: IDS.campaignSolo,
+      entity_id: SOLO_IDS.entityBram, campaign_id: SOLO_IDS.campaign,
       state: { hp: { current: 9, temp: 0 }, hit_dice: { d8: 1 }, exhaustion: 0, conditions: [] },
     }),
-    "insert entity_runtime_state"
+    "insert entity_runtime_state (demo solo)"
   );
 
   must(
-    await supabase.from("sessions").insert({ id: IDS.session, campaign_id: IDS.campaignSolo, title: "Une nuit tranquille à L'Ancre" }),
-    "insert sessions"
+    await supabase.from("sessions").insert({ id: SOLO_IDS.session, campaign_id: SOLO_IDS.campaign, title: "Une nuit tranquille à L'Ancre" }),
+    "insert sessions (demo solo)"
   );
 
   must(
     await supabase.from("session_events").insert([
-      { session_id: IDS.session, seq: 1, kind: "narration", actor: "ai", payload: { text: "La taverne est calme en ce début de soirée." } },
-      { session_id: IDS.session, seq: 2, kind: "player_action", actor: "player", actor_user_id: playerUserId, payload: { text: "Bram range les chopes derrière le comptoir." } },
-      { session_id: IDS.session, seq: 3, kind: "roll", actor: "system", payload: { expression: "1d20+1", result: 14, reason: "perception" } },
-      { session_id: IDS.session, seq: 4, kind: "rule_application", actor: "ai", payload: { rule_key: "perception", outcome: "Bram remarque un individu louche près de la porte." } },
-      { session_id: IDS.session, seq: 5, kind: "world_update", actor: "system", payload: { entity_discovery: { entity_id: IDS.entityMain, detail_level: "mentioned" } } },
+      { session_id: SOLO_IDS.session, seq: 1, kind: "narration", actor: "ai", payload: { text: "La taverne est calme en ce début de soirée." } },
+      { session_id: SOLO_IDS.session, seq: 2, kind: "player_action", actor: "player", actor_user_id: playerUserId, payload: { text: "Bram range les chopes derrière le comptoir." } },
+      { session_id: SOLO_IDS.session, seq: 3, kind: "roll", actor: "system", payload: { expression: "1d20+1", result: 14, reason: "perception" } },
+      { session_id: SOLO_IDS.session, seq: 4, kind: "rule_application", actor: "ai", payload: { rule_key: "perception", outcome: "Bram remarque un individu louche près de la porte." } },
     ]),
-    "insert session_events"
+    "insert session_events (demo solo)"
   );
 
-  console.log("Jeu de donnees de demonstration cree : monde Valdoria, 5 entites, 2 campagnes, 1 session.");
+  console.log("Monde de demonstration solo cree : Bram, une nuit tranquille.");
 }
 
 main().catch((err) => {

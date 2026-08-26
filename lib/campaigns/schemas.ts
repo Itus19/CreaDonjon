@@ -6,6 +6,11 @@ export const createCampaignSchema = z.object({
   mode: z.enum(["campaign", "solo"]),
 });
 
+/** Mode modifiable apres creation (V2-G1 prepa, "un monde = une campagne") — seul le mode se change ici, jamais le ruleset ni le nom via cette route. */
+export const updateCampaignSchema = z.object({
+  mode: z.enum(["campaign", "solo"]),
+});
+
 export const inviteMemberSchema = z.object({
   email: z.string().trim().email("Adresse courriel invalide."),
   role: z.enum(["gm", "player"]),
