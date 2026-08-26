@@ -39,6 +39,14 @@ export default function ImportWorldForm() {
     }
   }
 
+  function handleCancel() {
+    setFileName(null);
+    setParsedData(null);
+    setError(null);
+    setMode("campaign");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   async function handleImport() {
     if (!parsedData) {
       setError("Choisissez d'abord un fichier.");
@@ -61,18 +69,21 @@ export default function ImportWorldForm() {
     router.push(mode === "solo" ? `/m/${world.slug}/mj/creation-personnage` : `/m/${world.slug}`);
   }
 
+  const fileChosen = parsedData !== null;
+
   return (
     <>
       <button
         type="button"
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => (fileChosen ? handleImport() : fileInputRef.current?.click())}
+        disabled={pending}
         className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
       >
-        Importer
+        {pending ? "Import..." : fileChosen ? "Confirmer l'import" : "Importer"}
       </button>
       <input ref={fileInputRef} type="file" accept="application/json" onChange={handleFileChange} className="hidden" />
       {fileName && <span className="text-sm text-ink-muted">{fileName}</span>}
-      {parsedData !== null && (
+      {fileChosen && (
         <>
           <select
             value={mode}
@@ -84,11 +95,13 @@ export default function ImportWorldForm() {
           </select>
           <button
             type="button"
-            onClick={handleImport}
+            onClick={handleCancel}
             disabled={pending}
-            className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
+            title="Annuler l'import"
+            aria-label="Annuler l'import"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-base text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
           >
-            {pending ? "Import..." : "Confirmer l'import"}
+            ×
           </button>
         </>
       )}
