@@ -14,6 +14,8 @@
  */
 
 import { computeEncumbrance, encumbranceModifiers, type EncumbranceResult } from "./encumbrance";
+import { rollDice } from "../dice/roll";
+import type { Rng } from "../dice/rng";
 
 // --- Vocabulaire de base -------------------------------------------------
 
@@ -139,6 +141,16 @@ export interface ClassLevel {
   key: string;
   level: number;
   subclass?: string;
+  /**
+   * PV gagnes niveau par niveau au-dela du tout premier niveau du
+   * personnage (V2-G1, jet de de de vie) — dans l'ORDRE d'acquisition,
+   * jamais recalcules : un jet est un fait qui s'est produit, pas une
+   * valeur derivable. Absent ou plus court que le nombre de niveaux
+   * concernes = personnage anterieur a cette fonctionnalite ou niveaux pas
+   * encore joues ; `computeHitPoints` comble alors avec la moyenne, exactement
+   * le calcul d'avant (aucun changement pour les personnages existants).
+   */
+  hpRolls?: number[];
 }
 
 export interface CharacterBuild {
@@ -290,10 +302,17 @@ function proficiencyBonusForLevel(totalLevel: number): number {
   return 2 + Math.floor((totalLevel - 1) / 4);
 }
 
-// --- Points de vie (multiclassage, §B3) ------------------------------------
+// --- Points de vie (multiclassage, §B3 ; jet de de, V2-G1) -----------------
 
-function averageHitDie(faces: number): number {
+export function averageHitDie(faces: number): number {
   return Math.floor(faces / 2) + 1;
+}
+
+export type HpGainChoice = "average" | "rolled";
+
+/** Un seul gain de PV (V2-G1) : la moyenne 5e (arrondie au superieur), ou un jet reel via le RNG injecte — jamais `Math.random()` (CLAUDE.md regle 6). Pure : le RNG vient toujours de l'appelant (le serveur pour une vraie montee de niveau). */
+export function resolveHpGain(choice: HpGainChoice, dieFaces: number, rng: Rng): number {
+  return choice === "average" ? averageHitDie(dieFaces) : rollDice(1, dieFaces, rng).total;
 }
 
 function computeHitPoints(
@@ -314,10 +333,15 @@ function computeHitPoints(
 
     // Seul le tout premier niveau du personnage (premiere classe, niveau 1)
     // prend le maximum du de de vie ; tous les autres niveaux — y compris
-    // les suivants de la meme classe — prennent la moyenne (§B3).
+    // les suivants de la meme classe — prennent soit une valeur JETEE et
+    // enregistree (`hpRolls`, V2-G1), soit a defaut la moyenne (§B3,
+    // comportement inchange pour un personnage sans historique de jets).
     const levelsAtAverage = index === 0 ? cl.level - 1 : cl.level;
     if (index === 0) diceTotal += klass.hitDie;
-    diceTotal += levelsAtAverage * averageHitDie(klass.hitDie);
+    const rolls = cl.hpRolls ?? [];
+    const recordedCount = Math.min(rolls.length, levelsAtAverage);
+    for (let i = 0; i < recordedCount; i++) diceTotal += rolls[i];
+    diceTotal += (levelsAtAverage - recordedCount) * averageHitDie(klass.hitDie);
   });
 
   const conTotal = conMod * totalLevel;

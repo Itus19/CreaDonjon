@@ -10,6 +10,7 @@ const ERROR_MESSAGES: Record<ApplyLevelUpError, string> = {
   conflict: "Cette fiche a été modifiée entre-temps. Rechargez la page avant de réessayer.",
   invalid_level_change: "Les niveaux ne peuvent que monter, jamais descendre.",
   invalid_asi: "Choix d'amélioration de caractéristique invalide.",
+  invalid_hp_choice: "Choix de points de vie manquant ou incohérent avec les niveaux gagnés.",
   xp_insufficient: "Le total de PX actuel ne justifie plus cette montée de niveau.",
   forbidden_field_change: "La montée de niveau ne peut pas changer l'espèce, l'historique ou l'identité du personnage.",
 };
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     expectedVersion: parsed.data.expectedVersion,
     character: parsed.data.character,
     spellcasting: parsed.data.spellcasting,
+    hpChoices: parsed.data.hpChoices,
     actorUserId: user.id,
     locale,
   });

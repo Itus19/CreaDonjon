@@ -99,7 +99,7 @@ export default function LevelClassesStep({
   }
 
   function addSlot() {
-    patchCharacter({ classes: [...character.classes, { class: { kind: "rule", key: "" }, level: 1, subclass: null }] });
+    patchCharacter({ classes: [...character.classes, { class: { kind: "rule", key: "" }, level: 1, subclass: null, hp_rolls: [] }] });
   }
 
   function selectClass(index: number, key: string, previousKey: string) {

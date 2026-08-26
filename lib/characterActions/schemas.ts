@@ -73,4 +73,7 @@ export const applyLevelUpSchema = z.object({
   expectedVersion: z.number().int().nonnegative(),
   character: zCharacterBlockData,
   spellcasting: zSpellcastingBlockData.optional(),
+  // Une INTENTION par nouveau niveau gagne, par classe (V2-G1) — jamais une
+  // valeur de PV : le jet reel se fait cote serveur (CLAUDE.md regle 6).
+  hpChoices: z.record(z.string(), z.array(z.enum(["average", "rolled"]))).default({}),
 });

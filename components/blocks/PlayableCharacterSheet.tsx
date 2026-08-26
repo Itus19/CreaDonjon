@@ -156,7 +156,7 @@ export default function PlayableCharacterSheet({
   }
 
   function addClass() {
-    patchCharacter({ classes: [...character.classes, { class: { kind: "rule", key: "" }, level: 1, subclass: null }] });
+    patchCharacter({ classes: [...character.classes, { class: { kind: "rule", key: "" }, level: 1, subclass: null, hp_rolls: [] }] });
   }
 
   /**

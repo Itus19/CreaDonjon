@@ -5,9 +5,11 @@ import type { Locale } from "@/src/i18n/request";
 import {
   ABILITIES,
   characterSheet,
+  resolveHpGain,
   type CharacterBuild,
   type DerivedSheet,
   type EquippedItem,
+  type HpGainChoice,
   type ResolvedClass,
   type ResolvedFeature,
 } from "@/src/core/rules/sheet";
@@ -210,6 +212,7 @@ export async function resolveCharacterActionContext(
         key: (c.class as { kind: "rule"; key: string }).key,
         level: c.level,
         subclass: c.subclass?.kind === "rule" ? c.subclass.key : undefined,
+        hpRolls: c.hp_rolls,
       })),
     abilities: { assigned: characterData.abilities.base },
     featureKeys: [...Object.keys(assembled.ruleset.features), ...choiceFeatureKeys],
@@ -638,6 +641,7 @@ export type ApplyLevelUpError =
   | "conflict"
   | "invalid_level_change"
   | "invalid_asi"
+  | "invalid_hp_choice"
   | "xp_insufficient"
   | "forbidden_field_change";
 
@@ -689,6 +693,8 @@ export async function applyLevelUp(
     expectedVersion: number;
     character: CharacterBlockData;
     spellcasting: SpellcastingBlockData | undefined;
+    /** Un choix moyenne/jet par NOUVEAU niveau gagne, par classe (V2-G1) — jamais une valeur, seulement une intention ; le jet lui-meme se fait ici (regle 6). */
+    hpChoices: Record<string, HpGainChoice[]>;
     actorUserId: string;
     locale: Locale;
   }
@@ -737,6 +743,35 @@ export async function applyLevelUp(
     params.locale
   );
 
+  // Jet de de de vie (V2-G1) : chaque niveau NOUVELLEMENT gagne (jamais un
+  // niveau deja possede) exige un choix moyenne/jet explicite, un par
+  // niveau — jamais un choix global qui masquerait de quelle classe/de il
+  // s'agit. Le client ne propose qu'une INTENTION (`params.hpChoices`) ;
+  // le jet lui-meme est execute ici, jamais fait confiance venant du client
+  // (CLAUDE.md regle 6). Les classes qui ne gagnent aucun niveau cette
+  // fois-ci gardent leur historique EXACT de `old`, jamais celui que `next`
+  // pretend porter — meme discipline que `sameBlockReference` plus haut.
+  const finalClasses: CharacterBlockData["classes"] = [];
+  for (const c of next.classes) {
+    if (c.class.kind !== "rule" || !c.class.key) {
+      finalClasses.push(c);
+      continue;
+    }
+    const key = c.class.key;
+    const oldRolls = old.classes.find((oc) => oc.class.kind === "rule" && oc.class.key === key)?.hp_rolls ?? [];
+    const delta = c.level - (oldLevelByKey.get(key) ?? 0);
+    if (delta <= 0) {
+      finalClasses.push({ ...c, hp_rolls: oldRolls });
+      continue;
+    }
+    const klass = assembled.ruleset.classes[key];
+    if (!klass) return { error: "invalid_level_change" };
+    const choices = params.hpChoices[key];
+    if (!choices || choices.length !== delta) return { error: "invalid_hp_choice" };
+    const newRolls = choices.map((choice) => resolveHpGain(choice, klass.hitDie, serverRng));
+    finalClasses.push({ ...c, hp_rolls: [...oldRolls, ...newRolls] });
+  }
+
   const choiceFeatures: Record<string, ResolvedFeature> = {};
   const choiceFeatureKeys: string[] = [];
   for (const choice of assembled.remainingChoices) {
@@ -763,12 +798,13 @@ export async function applyLevelUp(
 
   const build: CharacterBuild = {
     species: speciesKey ?? "",
-    classes: next.classes
+    classes: finalClasses
       .filter((c) => c.class.kind === "rule" && c.class.key)
       .map((c) => ({
         key: (c.class as { kind: "rule"; key: string }).key,
         level: c.level,
         subclass: c.subclass?.kind === "rule" ? c.subclass.key : undefined,
+        hpRolls: c.hp_rolls,
       })),
     abilities: { assigned: next.abilities.base },
     featureKeys: [...Object.keys(assembled.ruleset.features), ...choiceFeatureKeys],
@@ -787,7 +823,7 @@ export async function applyLevelUp(
     id: ctx.characterBlockRow.id,
     expectedVersion: ctx.characterBlockRow.version,
     display: ctx.characterBlockRow.display,
-    data: next as unknown as Json,
+    data: { ...next, classes: finalClasses } as unknown as Json,
     visibilityLevel: ctx.characterBlockRow.visibility_level,
     visibilityScopeId: ctx.characterBlockRow.visibility_scope_id,
   });

@@ -24,7 +24,7 @@ const EMPTY_CHARACTER: CharacterBlockData = {
   __v: 1,
   species: null,
   background: null,
-  classes: [{ class: { kind: "rule", key: "" }, level: 1, subclass: null }],
+  classes: [{ class: { kind: "rule", key: "" }, level: 1, subclass: null, hp_rolls: [] }],
   abilities: { method: "standard_array", base: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 } },
   choices: {},
   hp_method: "fixed",

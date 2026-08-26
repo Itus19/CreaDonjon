@@ -99,7 +99,7 @@ export default function PreviewStep({
   }
 
   function addClass() {
-    patchCharacter({ classes: [...character.classes, { class: { kind: "rule", key: "" }, level: 1, subclass: null }] });
+    patchCharacter({ classes: [...character.classes, { class: { kind: "rule", key: "" }, level: 1, subclass: null, hp_rolls: [] }] });
   }
 
   const totalLevel = Math.max(1, character.classes.reduce((sum, c) => sum + c.level, 0));

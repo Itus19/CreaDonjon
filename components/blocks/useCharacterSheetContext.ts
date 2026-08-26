@@ -190,6 +190,7 @@ export function useCharacterSheetContext(
         key: (c.class as { kind: "rule"; key: string }).key,
         level: c.level,
         subclass: c.subclass?.kind === "rule" ? c.subclass.key : undefined,
+        hpRolls: c.hp_rolls,
       })),
     abilities: { assigned: abilitiesBase },
     featureKeys: [...Object.keys(ruleset.features), ...choiceFeatureKeys],

@@ -4,11 +4,13 @@ import { useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
+import type { HpGainChoice } from "@/src/core/rules/sheet";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import { useRuleEntryBlocks } from "./useRuleEntryBlocks";
 import LevelClassesStep, { type ClassEquipmentChoiceState } from "./characterCreatorSteps/LevelClassesStep";
 import AsiStep, { type AsiGrant } from "./characterCreatorSteps/AsiStep";
+import HpRollStep, { type HpGrant } from "./characterCreatorSteps/HpRollStep";
 import RemainingChoicesStep from "./characterCreatorSteps/RemainingChoicesStep";
 import SpellSelectionStep from "./characterCreatorSteps/SpellSelectionStep";
 
@@ -44,8 +46,10 @@ export interface LevelUpWizardDoneResult {
  * `SpellSelectionStep` — ces deux derniers sont deja ecrits en "budget
  * total moins deja choisi", recalcule au niveau courant : rien a changer
  * pour qu'ils n'affichent que ce qu'un niveau supplementaire debloque de
- * neuf. `AsiStep` est nouveau (aucune etape existante ne geculait
- * l'amelioration de caracteristique). L'etape Aperceu, elle, n'est PAS
+ * neuf. `AsiStep`/`HpRollStep` sont nouveaux (aucune etape existante ne
+ * gerait l'amelioration de caracteristique ni le jet de de de vie —
+ * `computeHitPoints` prenait jusqu'ici systematiquement la moyenne).
+ * L'etape Aperceu, elle, n'est PAS
  * `PreviewStep` (qui fabrique un personnage flambant neuf : PV max, 0 PX —
  * correct a la creation, trompeur ici ou l'entite a un etat de jeu reel) :
  * un resume plus simple, propre a ce contexte.
@@ -72,11 +76,24 @@ export default function LevelUpWizard({
   onDone: (result: LevelUpWizardDoneResult) => void;
 }) {
   const [rawStep, setStep] = useState(0);
-  const [character, setCharacter] = useState<CharacterBlockData>(initialCharacter);
+  // Ouvrir l'assistant doit deja proposer UNE montee, pas un ecran a "niveau
+  // X -> X" que l'utilisateur doit d'abord corriger lui-meme (retour
+  // utilisateur direct) : +1 sur la PREMIERE classe par defaut, le cas le
+  // plus frequent ("ajouter un niveau a une classe existante"). L'etape
+  // Classe reste l'endroit pour rediriger ce niveau vers une autre classe
+  // (multiclassage) ou vers une nouvelle, exactement comme avant.
+  const [character, setCharacter] = useState<CharacterBlockData>(() => {
+    if (initialCharacter.classes.length === 0) return initialCharacter;
+    return {
+      ...initialCharacter,
+      classes: initialCharacter.classes.map((c, i) => (i === 0 ? { ...c, level: c.level + 1 } : c)),
+    };
+  });
   const [spellcasting, setSpellcasting] = useState<SpellcastingBlockData>(
     initialSpellcasting ?? { __v: 1, sources: [], known: [], prepared: [], slot_override: null }
   );
   const [equipmentChoices, setEquipmentChoices] = useState<(ClassEquipmentChoiceState | null)[]>([]);
+  const [hpChoices, setHpChoices] = useState<Record<string, HpGainChoice[]>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,6 +128,40 @@ export default function LevelUpWizard({
   const allEntries = useWorldRuleEntries(worldSlug);
   useRuleEntryBlocks(worldSlug, hasSpellcastingClass ? allEntries.filter((e) => e.entryType === "spell").map((e) => e.key) : []);
 
+  // Points de vie (V2-G1) : un choix moyenne/jet par niveau NOUVELLEMENT
+  // gagne, par classe — jamais un choix global (deux classes, ou deux
+  // niveaux d'une meme classe, peuvent avoir des des ou des choix
+  // differents). "average" par defaut (comportement identique a avant
+  // cette fonctionnalite tant que personne ne choisit "Jeter").
+  const hpGrants: HpGrant[] = [];
+  for (const slot of character.classes) {
+    const classKey = classKeyOf(slot);
+    if (!classKey) continue;
+    const oldLevel = oldLevelByKey.get(classKey) ?? 0;
+    if (slot.level <= oldLevel) continue;
+    const levels: number[] = [];
+    for (let lvl = oldLevel + 1; lvl <= slot.level; lvl++) levels.push(lvl);
+    hpGrants.push({
+      classKey,
+      className: ruleset.classes[classKey]?.label ?? classKey,
+      dieFaces: ruleset.classes[classKey]?.hitDie ?? 6,
+      levels,
+    });
+  }
+
+  function hpChoiceAt(classKey: string, index: number): HpGainChoice {
+    return hpChoices[classKey]?.[index] ?? "average";
+  }
+
+  function setHpChoiceAt(classKey: string, index: number, choice: HpGainChoice) {
+    setHpChoices((prev) => {
+      const current = [...(prev[classKey] ?? [])];
+      while (current.length <= index) current.push("average");
+      current[index] = choice;
+      return { ...prev, [classKey]: current };
+    });
+  }
+
   const asiGrants: AsiGrant[] = [];
   for (const slot of character.classes) {
     const classKey = classKeyOf(slot);
@@ -127,11 +178,14 @@ export default function LevelUpWizard({
     }
   }
 
+  const hasPendingHpRoll = hpGrants.some((grant) => grant.levels.some((_, i) => hpChoiceAt(grant.classKey, i) === "rolled"));
+
   const totalLevelBefore = initialCharacter.classes.reduce((sum, c) => sum + c.level, 0);
   const totalLevelAfter = character.classes.reduce((sum, c) => sum + c.level, 0);
 
   const steps = [
     "Classe",
+    ...(hpGrants.length > 0 ? ["Points de vie"] : []),
     ...(asiGrants.length > 0 ? ["Caractéristiques"] : []),
     ...(remainingChoices.length > 0 ? ["Compétences"] : []),
     ...(hasSpellcastingClass ? ["Sorts"] : []),
@@ -143,6 +197,10 @@ export default function LevelUpWizard({
     setBusy(true);
     setError(null);
     try {
+      const hpChoicesPayload: Record<string, HpGainChoice[]> = {};
+      for (const grant of hpGrants) {
+        hpChoicesPayload[grant.classKey] = grant.levels.map((_, i) => hpChoiceAt(grant.classKey, i));
+      }
       const res = await fetch(`/api/entities/${entityId}/actions/level-up`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -151,6 +209,7 @@ export default function LevelUpWizard({
           expectedVersion,
           character,
           spellcasting: spellcasting.known.length > 0 ? spellcasting : undefined,
+          hpChoices: hpChoicesPayload,
         }),
       });
       if (!res.ok) {
@@ -208,6 +267,8 @@ export default function LevelUpWizard({
         />
       )}
 
+      {steps[step] === "Points de vie" && <HpRollStep grants={hpGrants} choiceAt={hpChoiceAt} onChoose={setHpChoiceAt} />}
+
       {steps[step] === "Caractéristiques" && <AsiStep character={character} patchCharacter={patchCharacter} sheet={sheet} grants={asiGrants} />}
 
       {steps[step] === "Compétences" && (
@@ -245,8 +306,11 @@ export default function LevelUpWizard({
               })}
             </ul>
             <p className="text-ink-muted">
-              Points de vie maximum : <span className="text-ink">{sheet.hitPoints.max}</span>
+              Points de vie maximum : <span className="text-ink">{hasPendingHpRoll ? `≈ ${sheet.hitPoints.max}` : sheet.hitPoints.max}</span>
             </p>
+            {hasPendingHpRoll && (
+              <p className="text-xs text-ink-muted">Estimation à la moyenne — le jet réel a lieu à la confirmation.</p>
+            )}
           </div>
 
           {sheet.warnings.length > 0 && (

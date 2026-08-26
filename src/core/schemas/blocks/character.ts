@@ -6,6 +6,8 @@ const zClassLevel = z.object({
   class: zBlockReference,
   level: z.number().int().positive(),
   subclass: zBlockReference.nullable(),
+  /** PV jetes niveau par niveau au-dela du tout premier (V2-G1) — voir `ClassLevel.hpRolls` dans `src/core/rules/sheet.ts`. `.default([])` : les blocs ecrits avant cette fonctionnalite n'ont pas ce champ. */
+  hp_rolls: z.array(z.number().int().positive()).default([]),
 });
 
 /**

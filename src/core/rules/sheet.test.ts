@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  averageHitDie,
   characterSheet,
+  resolveHpGain,
   type ActiveEffect,
   type CharacterBuild,
   type EquippedItem,
   type ResolvedRuleset,
 } from "./sheet";
+import type { Rng } from "../dice/rng";
 
 // Classes reutilisees par plusieurs cas.
 const FIGHTER = {
@@ -229,6 +232,61 @@ describe("characterSheet — cas dores (specs/wiki-liens-et-personnages.md §B7)
     expect(sheet.savingThrows.int).toMatchObject({ mod: 0, proficient: false });
     expect(sheet.hitPoints.hitDice).toBe("5d10 + 2d8");
     expect(sheet.hitPoints.max).toBe(58);
+  });
+
+  it("guerrier niveau 3, PV jetes aux niveaux 2 et 3 (V2-G1) : les valeurs enregistrees remplacent la moyenne", () => {
+    const build: CharacterBuild = {
+      species: "human",
+      classes: [{ key: "fighter", level: 3, hpRolls: [10, 3] }],
+      abilities: { assigned: { str: 14, dex: 10, con: 12, int: 10, wis: 10, cha: 10 } },
+      featureKeys: [],
+    };
+    const ruleset: ResolvedRuleset = { classes: { fighter: FIGHTER }, features: {} };
+
+    const sheet = characterSheet(build, ruleset, [], []);
+
+    // Niveau 1 (max, 10) + jet niveau 2 (10) + jet niveau 3 (3) + Con (+1 * 3).
+    expect(sheet.hitPoints.max).toBe(10 + 10 + 3 + 3);
+  });
+
+  it("guerrier niveau 3, un seul PV jete sur deux (V2-G1) : le niveau restant retombe sur la moyenne, comme avant cette fonctionnalite", () => {
+    const build: CharacterBuild = {
+      species: "human",
+      classes: [{ key: "fighter", level: 3, hpRolls: [10] }],
+      abilities: { assigned: { str: 14, dex: 10, con: 12, int: 10, wis: 10, cha: 10 } },
+      featureKeys: [],
+    };
+    const ruleset: ResolvedRuleset = { classes: { fighter: FIGHTER }, features: {} };
+
+    const sheet = characterSheet(build, ruleset, [], []);
+
+    // Niveau 1 (max, 10) + jet niveau 2 (10) + moyenne niveau 3 (6) + Con (+1 * 3).
+    expect(sheet.hitPoints.max).toBe(10 + 10 + averageHitDie(10) + 3);
+  });
+
+  it("magicien 3 / roublard 2 (multiclassage) : les PV jetes de la SECONDE classe couvrent aussi son propre premier niveau (jamais exempte, seule la toute premiere classe l'est)", () => {
+    const build: CharacterBuild = {
+      species: "human",
+      classes: [
+        { key: "wizard", level: 3 },
+        { key: "rogue", level: 2, hpRolls: [7, 2] },
+      ],
+      abilities: { assigned: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 } },
+      featureKeys: [],
+    };
+    const ruleset: ResolvedRuleset = { classes: { wizard: WIZARD, rogue: ROGUE }, features: {} };
+
+    const sheet = characterSheet(build, ruleset, [], []);
+
+    // Magicien : niveau 1 (max, 6) + 2 niveaux a la moyenne (4 chacun).
+    // Roublard : deux jets explicites (7 + 2), aucune exemption (pas la premiere classe).
+    expect(sheet.hitPoints.max).toBe(6 + 4 + 4 + 7 + 2);
+  });
+
+  it("resolveHpGain (V2-G1) : moyenne 5e sans RNG, jet reel via le RNG injecte", () => {
+    const fixedRoll: Rng = { nextInt: () => 4 }; // rollDice fait +1 : jet = 5
+    expect(resolveHpGain("average", 10, fixedRoll)).toBe(averageHitDie(10));
+    expect(resolveHpGain("rolled", 10, fixedRoll)).toBe(5);
   });
 
   it("sous benediction et entrave : couche 7, avantage et desavantage s'annulent", () => {

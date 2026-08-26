@@ -6,7 +6,7 @@ describe("zCharacterBlockData", () => {
     __v: 1 as const,
     species: { kind: "rule" as const, key: "orc" },
     background: { kind: "rule" as const, key: "soldier" },
-    classes: [{ class: { kind: "rule" as const, key: "fighter" }, level: 1, subclass: null }],
+    classes: [{ class: { kind: "rule" as const, key: "fighter" }, level: 1, subclass: null, hp_rolls: [] as number[] }],
     abilities: {
       method: "standard_array" as const,
       base: { str: 15, dex: 14, con: 15, int: 12, wis: 10, cha: 8 },
