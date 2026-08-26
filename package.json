@@ -24,6 +24,9 @@
     "extract:monster-statblocks-en": "tsx --env-file=.env.local scripts/extract-monster-statblocks-en.ts"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.9",
     "@tiptap/core": "^3.29.2",

@@ -1,6 +1,17 @@
 "use client";
 
 import { useRef, useState } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
@@ -54,6 +65,28 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   resources: "Ressources",
   statblock: "Fiche de créature",
 };
+
+/**
+ * Nouvel emplacement d'un bloc depose (V2-G1, glisser-deposer) : meme
+ * logique d'ecart que les boutons Monter/Descendre (`moveBlock` plus bas),
+ * generalisee a une position d'arrivee arbitraire plutot qu'un simple
+ * echange avec le voisin — `display_order` reste un `numeric`, jamais une
+ * renumerotation de toute la liste (docs/SCHEMA.md). `null` si le depot
+ * n'a rien deplace (cible introuvable ou identique).
+ */
+function computeDroppedDisplayOrder(sortedBlocks: BlockItem[], activeId: string, overId: string): number | null {
+  const oldIndex = sortedBlocks.findIndex((b) => b.id === activeId);
+  const newIndex = sortedBlocks.findIndex((b) => b.id === overId);
+  if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return null;
+  const reordered = arrayMove(sortedBlocks, oldIndex, newIndex);
+  const finalIndex = reordered.findIndex((b) => b.id === activeId);
+  const before = reordered[finalIndex - 1];
+  const after = reordered[finalIndex + 1];
+  if (before && after) return (before.displayOrder + after.displayOrder) / 2;
+  if (before) return before.displayOrder + 1000;
+  if (after) return after.displayOrder - 1000;
+  return 1000;
+}
 
 function BlockDataEditor({
   block,
@@ -417,18 +450,10 @@ export default function EntityBlocks({
     setBlocks((prev) => [...prev, filled]);
   }
 
-  async function moveBlock(id: string, direction: "up" | "down") {
-    const index = sortedBlocks.findIndex((b) => b.id === id);
-    const swapIndex = direction === "up" ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= sortedBlocks.length) return;
-
-    const current = sortedBlocks[index];
-    const neighbor = sortedBlocks[swapIndex];
-    const beyond = direction === "up" ? sortedBlocks[swapIndex - 1] : sortedBlocks[swapIndex + 1];
-    const newOrder = beyond
-      ? (beyond.displayOrder + neighbor.displayOrder) / 2
-      : neighbor.displayOrder + (direction === "up" ? -1000 : 1000);
-
+  /** Ecrit le nouveau `display_order` (une seule colonne, une seule ligne) — commun aux boutons Monter/Descendre et au glisser-deposer, qui ne different que par le calcul de `newOrder` en amont. */
+  async function moveBlockTo(id: string, newOrder: number) {
+    const current = blocks.find((b) => b.id === id);
+    if (!current) return;
     const res = await fetch(`/api/blocks/${id}/order`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -440,144 +465,82 @@ export default function EntityBlocks({
     patchBlock(id, { displayOrder: updated.displayOrder, version: updated.version });
   }
 
+  async function moveBlock(id: string, direction: "up" | "down") {
+    const index = sortedBlocks.findIndex((b) => b.id === id);
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= sortedBlocks.length) return;
+
+    const neighbor = sortedBlocks[swapIndex];
+    const beyond = direction === "up" ? sortedBlocks[swapIndex - 1] : sortedBlocks[swapIndex + 1];
+    const newOrder = beyond
+      ? (beyond.displayOrder + neighbor.displayOrder) / 2
+      : neighbor.displayOrder + (direction === "up" ? -1000 : 1000);
+    await moveBlockTo(id, newOrder);
+  }
+
+  /**
+   * Glisser-deposer (V2-G1) : memes garanties que Monter/Descendre — un
+   * seul `PATCH /api/blocks/[id]/order`, la meme verification de version
+   * cote serveur (`reorderBlock`), jamais un lot special pour le
+   * glisser-depose. `PointerSensor` couvre souris ET tactile ; `KeyboardSensor`
+   * rend la liste reordonnable au clavier (Tab jusqu'a la poignee, puis
+   * fleches), ce que les boutons Monter/Descendre offraient deja mais que
+   * le glisser-depose natif HTML5 n'aurait pas fourni tout seul.
+   */
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const newOrder = computeDroppedDisplayOrder(sortedBlocks, String(active.id), String(over.id));
+    if (newOrder === null) return;
+    void moveBlockTo(String(active.id), newOrder);
+  }
+
   return (
     <div className="flex flex-col">
-      {sortedBlocks.map((block, index) => {
-        const isCollapsed = collapsed.has(block.id);
-        const hasConflict = conflictedIds.has(block.id);
-        const hasSaveError = saveErrorIds.has(block.id);
-        return (
-          <div
-            key={block.id}
-            onBlur={handleBlockBlur(block.id)}
-            className="border-b border-edge/60 py-4 first:pt-0 last:border-b-0"
-          >
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-1 items-center gap-1.5">
-                {block.blockType !== "character" && block.blockType !== "statblock" && (
-                  <button
-                    type="button"
-                    onClick={() => toggleCollapsed(block.id)}
-                    className="shrink-0 text-ink-muted transition-transform hover:text-ink"
-                    style={{ transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
-                    title={isCollapsed ? "Déplier" : "Replier"}
-                  >
-                    ▾
-                  </button>
-                )}
-                <input
-                  value={block.display.label}
-                  placeholder={BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}
-                  onChange={(e) =>
-                    patchBlock(block.id, { display: { ...block.display, label: e.target.value } })
-                  }
-                  className="block-title flex-1 bg-transparent outline-none placeholder:font-sans placeholder:text-base placeholder:font-normal placeholder:italic placeholder:text-ink-muted focus:border-b focus:border-accent"
-                />
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink-muted">
-                  {BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}
-                </span>
-                <Dropdown
-                  value={block.visibilityLevel}
-                  options={VISIBILITY_OPTIONS}
-                  onChange={(v) => {
-                    patchBlock(block.id, { visibilityLevel: v });
-                    saveBlock(block.id, { visibilityLevel: v });
-                  }}
-                  aria-label="Visibilité du bloc"
-                  className="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink transition-colors hover:bg-panel"
-                />
-                <button
-                  type="button"
-                  onClick={() => moveBlock(block.id, "up")}
-                  disabled={index === 0}
-                  className="text-xs text-ink-muted transition-colors hover:text-ink disabled:opacity-30"
-                  aria-label="Monter"
-                >
-                  ▲
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moveBlock(block.id, "down")}
-                  disabled={index === sortedBlocks.length - 1}
-                  className="text-xs text-ink-muted transition-colors hover:text-ink disabled:opacity-30"
-                  aria-label="Descendre"
-                >
-                  ▼
-                </button>
-                <ActionsMenu
-                  aria-label="Actions du bloc"
-                  items={[
-                    { label: "Dupliquer", onSelect: () => duplicateBlock(block.id) },
-                    { label: "Supprimer", onSelect: () => setPendingDeleteId(block.id), danger: true },
-                  ]}
-                />
-              </div>
-            </div>
-
-            {hasConflict && (
-              <p className="mb-2 text-xs text-danger">
-                Modifié entre-temps. Rechargez la page avant de réessayer.
-              </p>
-            )}
-            {hasSaveError && (
-              <p className="mb-2 text-xs text-danger">
-                Cette modification n&apos;a pas pu être enregistrée. Vérifiez les champs (ex. un nom vide) et réessayez.
-              </p>
-            )}
-
-            {/* La fiche jouable (V1-B5) vit dans la carte du bloc `character`
-                lui-meme — plus de panneau de stats separe au-dessus de la
-                liste des blocs (V1-C4, specs/arbitrage-modifications.md §3.1).
-                Son onglet Traits edite desormais le build en entier (espece,
-                classes, caracteristiques, genre/pronoms) : plus de formulaire
-                brut separe en dessous pour ce type de bloc (suite V1-C4).
-
-                Le bloc `inventory`, lui, GARDE sa propre carte brute
-                (BlockDataEditor generique ci-dessous) en plus de l'onglet
-                Inventaire de la fiche jouable — demande explicite : un MJ
-                doit pouvoir montrer l'inventaire seul (ex. fenetre separee)
-                sans exposer toute la fiche de personnage. Les deux vues
-                editent le meme bloc (meme `id`, meme etat React `blocks`) :
-                une modification dans l'une declenche patchBlock/saveBlock
-                sur ce bloc, l'autre vue se re-rend avec la donnee a jour au
-                prochain rendu — synchronise sans mecanisme dedie. */}
-            {block.blockType === "character" ? (
-              <PlayableCharacterSheet
-                worldSlug={worldSlug}
-                entityId={entityId}
-                campaignId={null}
-                character={block.data as CharacterBlockData}
-                inventory={inventoryBlock?.data as InventoryBlockData | undefined}
-                spellcasting={spellcastingBlock?.data as SpellcastingBlockData | undefined}
-                resources={resourcesBlock?.data as ResourcesBlockData | undefined}
-                characterBlockId={block.id}
-                characterBlockVersion={block.version}
-                onUpdateCharacter={updateCharacter}
-                onUpdateInventory={updateInventory}
-                onUpdateSpellcasting={updateSpellcasting}
-                onBlockRefreshed={handleBlockRefreshed}
-              />
-            ) : block.blockType === "statblock" ? (
-              <MonsterStatblockSheet
-                data={block.data as StatblockBlockData}
-                onChange={(data) => patchBlock(block.id, { data })}
-              />
-            ) : (
-              !isCollapsed && (
-                <BlockDataEditor
-                  block={block}
-                  onChange={(data) => patchBlock(block.id, { data })}
-                  worldSlug={worldSlug}
-                  characterData={characterBlock?.data as CharacterBlockData | undefined}
-                  onBlockRefreshed={handleBlockRefreshed}
-                />
-              )
-            )}
-          </div>
-        );
-      })}
+      {/* `id` fige (V2-G1) : sans lui, l'identifiant interne d'accessibilite
+          de dnd-kit (`aria-describedby="DndDescribedBy-N"`) est un compteur
+          incremente a chaque montage — different entre le rendu serveur et
+          l'hydratation client des qu'une AUTRE instance de ce composant a
+          deja incremente ce compteur ailleurs sur la page (ex. plusieurs
+          fenetres d'entite ouvertes). Base sur `entityId`, deja stable et
+          identique cote serveur/client. */}
+      <DndContext id={`entity-blocks-${entityId}`} sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={sortedBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+          {sortedBlocks.map((block, index) => (
+            <SortableBlockCard
+              key={block.id}
+              block={block}
+              index={index}
+              lastIndex={sortedBlocks.length - 1}
+              isCollapsed={collapsed.has(block.id)}
+              hasConflict={conflictedIds.has(block.id)}
+              hasSaveError={saveErrorIds.has(block.id)}
+              worldSlug={worldSlug}
+              entityId={entityId}
+              characterBlock={characterBlock}
+              inventoryBlock={inventoryBlock}
+              spellcastingBlock={spellcastingBlock}
+              resourcesBlock={resourcesBlock}
+              onToggleCollapsed={toggleCollapsed}
+              onPatchBlock={patchBlock}
+              onSaveBlock={saveBlock}
+              onMoveBlock={moveBlock}
+              onDuplicateBlock={duplicateBlock}
+              onRequestDelete={setPendingDeleteId}
+              onUpdateCharacter={updateCharacter}
+              onUpdateInventory={updateInventory}
+              onUpdateSpellcasting={updateSpellcasting}
+              onBlockRefreshed={handleBlockRefreshed}
+              onBlur={handleBlockBlur(block.id)}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
       {sortedBlocks.length === 0 && (
         <p className="py-4 text-center text-xs italic text-ink-muted">
           Aucun bloc. Utilisez la barre ci-dessous pour en ajouter.
@@ -621,6 +584,202 @@ export default function EntityBlocks({
         onConfirm={confirmDeleteBlock}
         onCancel={() => setPendingDeleteId(null)}
       />
+    </div>
+  );
+}
+
+/**
+ * Une carte de bloc, glissable (V2-G1) — extraite d'`EntityBlocks` pour que
+ * `useSortable` (un hook) s'appelle une fois PAR INSTANCE de composant,
+ * jamais une fois par iteration d'une boucle `.map()` a l'interieur du
+ * composant parent (regle des hooks : leur nombre d'appels ne doit jamais
+ * dependre du nombre de blocs).
+ */
+function SortableBlockCard({
+  block,
+  index,
+  lastIndex,
+  isCollapsed,
+  hasConflict,
+  hasSaveError,
+  worldSlug,
+  entityId,
+  characterBlock,
+  inventoryBlock,
+  spellcastingBlock,
+  resourcesBlock,
+  onToggleCollapsed,
+  onPatchBlock,
+  onSaveBlock,
+  onMoveBlock,
+  onDuplicateBlock,
+  onRequestDelete,
+  onUpdateCharacter,
+  onUpdateInventory,
+  onUpdateSpellcasting,
+  onBlockRefreshed,
+  onBlur,
+}: {
+  block: BlockItem;
+  index: number;
+  lastIndex: number;
+  isCollapsed: boolean;
+  hasConflict: boolean;
+  hasSaveError: boolean;
+  worldSlug: string;
+  entityId: string;
+  characterBlock: BlockItem | undefined;
+  inventoryBlock: BlockItem | undefined;
+  spellcastingBlock: BlockItem | undefined;
+  resourcesBlock: BlockItem | undefined;
+  onToggleCollapsed: (id: string) => void;
+  onPatchBlock: (id: string, patch: Partial<BlockItem>) => void;
+  onSaveBlock: (id: string, overrides?: { visibilityLevel?: string; visibilityScopeId?: string | null; data?: unknown }) => void;
+  onMoveBlock: (id: string, direction: "up" | "down") => void;
+  onDuplicateBlock: (id: string) => void;
+  onRequestDelete: (id: string) => void;
+  onUpdateCharacter: (data: CharacterBlockData) => void;
+  onUpdateInventory: (data: InventoryBlockData) => void;
+  onUpdateSpellcasting: (data: SpellcastingBlockData) => void;
+  onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
+  onBlur: (e: React.FocusEvent<HTMLDivElement>) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      onBlur={onBlur}
+      className={`border-b border-edge/60 py-4 first:pt-0 last:border-b-0 ${isDragging ? "relative z-10 bg-panel opacity-90" : ""}`}
+    >
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-1 items-center gap-1.5">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className="touch-none cursor-grab text-ink-muted transition-colors hover:text-ink active:cursor-grabbing"
+            title="Glisser pour réordonner"
+            aria-label="Réordonner ce bloc"
+          >
+            ⠿
+          </button>
+          {block.blockType !== "character" && block.blockType !== "statblock" && (
+            <button
+              type="button"
+              onClick={() => onToggleCollapsed(block.id)}
+              className="shrink-0 text-ink-muted transition-transform hover:text-ink"
+              style={{ transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
+              title={isCollapsed ? "Déplier" : "Replier"}
+            >
+              ▾
+            </button>
+          )}
+          <input
+            value={block.display.label}
+            placeholder={BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}
+            onChange={(e) => onPatchBlock(block.id, { display: { ...block.display, label: e.target.value } })}
+            className="block-title flex-1 bg-transparent outline-none placeholder:font-sans placeholder:text-base placeholder:font-normal placeholder:italic placeholder:text-ink-muted focus:border-b focus:border-accent"
+          />
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink-muted">
+            {BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}
+          </span>
+          <Dropdown
+            value={block.visibilityLevel}
+            options={VISIBILITY_OPTIONS}
+            onChange={(v) => {
+              onPatchBlock(block.id, { visibilityLevel: v });
+              onSaveBlock(block.id, { visibilityLevel: v });
+            }}
+            aria-label="Visibilité du bloc"
+            className="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink transition-colors hover:bg-panel"
+          />
+          <button
+            type="button"
+            onClick={() => onMoveBlock(block.id, "up")}
+            disabled={index === 0}
+            className="text-xs text-ink-muted transition-colors hover:text-ink disabled:opacity-30"
+            aria-label="Monter"
+          >
+            ▲
+          </button>
+          <button
+            type="button"
+            onClick={() => onMoveBlock(block.id, "down")}
+            disabled={index === lastIndex}
+            className="text-xs text-ink-muted transition-colors hover:text-ink disabled:opacity-30"
+            aria-label="Descendre"
+          >
+            ▼
+          </button>
+          <ActionsMenu
+            aria-label="Actions du bloc"
+            items={[
+              { label: "Dupliquer", onSelect: () => onDuplicateBlock(block.id) },
+              { label: "Supprimer", onSelect: () => onRequestDelete(block.id), danger: true },
+            ]}
+          />
+        </div>
+      </div>
+
+      {hasConflict && (
+        <p className="mb-2 text-xs text-danger">Modifié entre-temps. Rechargez la page avant de réessayer.</p>
+      )}
+      {hasSaveError && (
+        <p className="mb-2 text-xs text-danger">
+          Cette modification n&apos;a pas pu être enregistrée. Vérifiez les champs (ex. un nom vide) et réessayez.
+        </p>
+      )}
+
+      {/* La fiche jouable (V1-B5) vit dans la carte du bloc `character`
+          lui-meme — plus de panneau de stats separe au-dessus de la
+          liste des blocs (V1-C4, specs/arbitrage-modifications.md §3.1).
+          Son onglet Traits edite desormais le build en entier (espece,
+          classes, caracteristiques, genre/pronoms) : plus de formulaire
+          brut separe en dessous pour ce type de bloc (suite V1-C4).
+
+          Le bloc `inventory`, lui, GARDE sa propre carte brute
+          (BlockDataEditor generique ci-dessous) en plus de l'onglet
+          Inventaire de la fiche jouable — demande explicite : un MJ
+          doit pouvoir montrer l'inventaire seul (ex. fenetre separee)
+          sans exposer toute la fiche de personnage. Les deux vues
+          editent le meme bloc (meme `id`, meme etat React `blocks`) :
+          une modification dans l'une declenche patchBlock/saveBlock
+          sur ce bloc, l'autre vue se re-rend avec la donnee a jour au
+          prochain rendu — synchronise sans mecanisme dedie. */}
+      {block.blockType === "character" ? (
+        <PlayableCharacterSheet
+          worldSlug={worldSlug}
+          entityId={entityId}
+          campaignId={null}
+          character={block.data as CharacterBlockData}
+          inventory={inventoryBlock?.data as InventoryBlockData | undefined}
+          spellcasting={spellcastingBlock?.data as SpellcastingBlockData | undefined}
+          resources={resourcesBlock?.data as ResourcesBlockData | undefined}
+          characterBlockId={block.id}
+          characterBlockVersion={block.version}
+          onUpdateCharacter={onUpdateCharacter}
+          onUpdateInventory={onUpdateInventory}
+          onUpdateSpellcasting={onUpdateSpellcasting}
+          onBlockRefreshed={onBlockRefreshed}
+        />
+      ) : block.blockType === "statblock" ? (
+        <MonsterStatblockSheet data={block.data as StatblockBlockData} onChange={(data) => onPatchBlock(block.id, { data })} />
+      ) : (
+        !isCollapsed && (
+          <BlockDataEditor
+            block={block}
+            onChange={(data) => onPatchBlock(block.id, { data })}
+            worldSlug={worldSlug}
+            characterData={characterBlock?.data as CharacterBlockData | undefined}
+            onBlockRefreshed={onBlockRefreshed}
+          />
+        )
+      )}
     </div>
   );
 }
