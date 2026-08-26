@@ -61,6 +61,7 @@ import {
   type RulesetEntryRow,
 } from "@/src/server/repos/rules";
 import { getWorldDefaultRulesetId, setWorldDefaultRuleset } from "@/src/server/repos/worlds";
+import { listCampaignsForWorld, updateCampaignRuleset } from "@/src/server/repos/campaigns";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import type { Locale } from "@/src/i18n/request";
 
@@ -1287,6 +1288,14 @@ export async function listSelectableRulesetsForCurrentUser(supabase: TypedClient
  * de `rulesets`), ou si l'appelant n'est pas le proprietaire du monde (RLS
  * sur l'ecriture de `worlds` — `setWorldDefaultRuleset` renvoie alors
  * `updated: false` plutot qu'une erreur).
+ *
+ * Propage aussi a la campagne unique du monde (V2-G1 suite, "un monde = une
+ * campagne") : le verrou "une campagne epingle son ruleset, jamais
+ * retroactif" (SCHEMA.md §9.5) protegeait a l'origine les AUTRES campagnes
+ * d'un meme monde — un risque qui n'existe plus a une seule campagne par
+ * monde. Sans cette propagation, changer le ruleset ici n'aurait aucun
+ * effet sur les jets/fiches reels, contradiction constatee en direct
+ * (l'ecran d'accueil affichait 2014 alors que Reglages affichait 2024).
  */
 export async function setActiveRuleset(supabase: TypedClient, worldSlug: string, rulesetId: string): Promise<boolean> {
   const world = await getWorldBySlug(supabase, worldSlug);
@@ -1294,7 +1303,13 @@ export async function setActiveRuleset(supabase: TypedClient, worldSlug: string,
   const ruleset = await getRulesetById(supabase, rulesetId);
   if (!ruleset) return false;
   const { updated } = await setWorldDefaultRuleset(supabase, world.id, rulesetId);
-  return updated;
+  if (!updated) return false;
+
+  const campaigns = await listCampaignsForWorld(supabase, world.id);
+  if (campaigns.length > 0) {
+    await updateCampaignRuleset(supabase, { campaignId: campaigns[0].id, rulesetId });
+  }
+  return true;
 }
 
 /**

@@ -85,6 +85,20 @@ export async function updateCampaignMode(
   return data;
 }
 
+/**
+ * Change le ruleset epingle par une campagne (V2-G1 suite, "un monde = une
+ * campagne") : le verrou d'origine ("une campagne epingle un ruleset precis,
+ * jamais retroactif" — SCHEMA.md §9.5) protegeait les AUTRES campagnes d'un
+ * meme monde d'un changement involontaire. Ce risque n'existe plus des lors
+ * qu'un monde n'a plus qu'une seule campagne : `setActiveRuleset` propage
+ * donc desormais le changement choisi en Reglages jusqu'ici, pour que les
+ * jets et fiches de personnage utilisent reellement le ruleset affiche.
+ */
+export async function updateCampaignRuleset(supabase: TypedClient, params: { campaignId: string; rulesetId: string }): Promise<void> {
+  const { error } = await supabase.from("campaigns").update({ ruleset_id: params.rulesetId }).eq("id", params.campaignId);
+  if (error) throw new Error(error.message);
+}
+
 export interface CampaignMemberRow {
   campaign_id: string;
   user_id: string;

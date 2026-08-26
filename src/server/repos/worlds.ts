@@ -124,6 +124,15 @@ export async function ownerHasSlug(
   return data !== null;
 }
 
+/** Une ligne par PJ sur la carte de monde de l'ecran d'accueil (V2-G1 suite, retour utilisateur) — nom, espece et classe(s)/niveau, mêmes libelles que la page d'accueil du monde (`listWorldPlayerCharacters`), jamais une seconde resolution de regles. */
+export interface WorldCardPlayerCharacter {
+  entityId: string;
+  entitySlug: string;
+  name: string;
+  speciesLabel: string | null;
+  classesLabel: string | null;
+}
+
 export interface WorldCard {
   id: string;
   name: string;
@@ -131,25 +140,23 @@ export interface WorldCard {
   /** `null` : monde sans campagne — ne devrait plus arriver pour un monde cree apres la migration 20260826100001, mais reste possible pour un monde plus ancien pas encore complete. */
   mode: "campaign" | "solo" | null;
   rulesetName: string | null;
-  players: string[];
+  /** Rempli par le service (`listWorldCards`), pas par cette fonction : resoudre espece/classe exige `assembleResolvedRuleset` (locale-dependant), hors de portee d'un simple repo. */
+  players: WorldCardPlayerCharacter[];
   /** Le plus recent entre `worlds.updated_at` et l'edition la plus recente d'une entite du monde — calcule par l'appelant (`listWorldCardsForCurrentUser`), jamais en base. */
   lastModified: string;
 }
 
 /**
  * Ecran d'accueil enrichi (prepa V2-G1 export/import, decision produit "un
- * monde = une campagne") : une seule requete imbriquee (monde -> campagne
- * -> personnages de campagne -> entites) plutot que N+1 allers-retours par
- * monde. RLS filtre deja l'appartenance (SCHEMA.md §19.2) : rien a ajouter
- * ici pour la visibilite.
+ * monde = une campagne") : une seule requete imbriquee (monde -> campagne)
+ * plutot que N+1 allers-retours par monde. RLS filtre deja l'appartenance
+ * (SCHEMA.md §19.2) : rien a ajouter ici pour la visibilite. `players` part
+ * volontairement vide ici — voir `listWorldCards` (service), qui la remplit.
  */
 export async function listWorldCardsForCurrentUser(supabase: TypedClient): Promise<WorldCard[]> {
   const { data, error } = await supabase
     .from("worlds")
-    .select(
-      `id, name, slug, updated_at,
-       campaigns ( mode, rulesets ( name ), campaign_characters ( is_pc, entities ( name ) ) )`
-    )
+    .select(`id, name, slug, updated_at, campaigns ( mode, rulesets ( name ) )`)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
 
@@ -157,12 +164,7 @@ export async function listWorldCardsForCurrentUser(supabase: TypedClient): Promi
   const lastEntityEditByWorld = await latestEntityEditByWorld(supabase, worldIds);
 
   return data.map((w) => {
-    const campaign = w.campaigns[0] as
-      | { mode: string; rulesets: { name: string } | null; campaign_characters: { is_pc: boolean; entities: { name: string } | null }[] }
-      | undefined;
-    const players = (campaign?.campaign_characters ?? [])
-      .filter((c) => c.is_pc && c.entities)
-      .map((c) => c.entities!.name);
+    const campaign = w.campaigns[0] as { mode: string; rulesets: { name: string } | null } | undefined;
     const entityLast = lastEntityEditByWorld.get(w.id);
     const lastModified = entityLast && entityLast > w.updated_at ? entityLast : w.updated_at;
     return {
@@ -171,7 +173,7 @@ export async function listWorldCardsForCurrentUser(supabase: TypedClient): Promi
       slug: w.slug,
       mode: (campaign?.mode as "campaign" | "solo" | undefined) ?? null,
       rulesetName: campaign?.rulesets?.name ?? null,
-      players,
+      players: [],
       lastModified,
     };
   });

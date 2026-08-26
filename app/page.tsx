@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { listWorldCards } from "@/src/server/services/worlds";
 import { listSelectableRulesetsForCurrentUser } from "@/src/server/services/rules";
+import type { Locale } from "@/src/i18n/request";
 import { logout } from "./login/actions";
 import CreateWorldForm from "./CreateWorldForm";
 import ImportWorldForm from "./ImportWorldForm";
@@ -18,8 +20,9 @@ export default async function Home() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const locale = (await getLocale()) as Locale;
   const [worlds, selectableRulesets] = await Promise.all([
-    listWorldCards(supabase),
+    listWorldCards(supabase, locale),
     listSelectableRulesetsForCurrentUser(supabase),
   ]);
   const officialRulesets = (selectableRulesets ?? []).filter((r) => r.is_official_base);
@@ -61,9 +64,20 @@ export default async function Home() {
                 <p className="text-sm text-ink-muted">
                   {world.rulesetName ?? "Aucun ruleset"} · Modifié le {formatDate(world.lastModified)}
                 </p>
-                <p className="text-sm text-ink-muted">
-                  {world.players.length > 0 ? world.players.join(", ") : "Aucun joueur"}
-                </p>
+                {world.players.length > 0 ? (
+                  <ul className="mt-0.5 flex flex-col">
+                    {world.players.map((pc) => (
+                      <li key={pc.entityId} className="text-sm text-ink-muted">
+                        {pc.name}
+                        {(pc.speciesLabel || pc.classesLabel) && (
+                          <> — {[pc.speciesLabel, pc.classesLabel].filter(Boolean).join(" · ")}</>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-ink-muted">Aucun joueur</p>
+                )}
               </Link>
               <WorldCardActions worldSlug={world.slug} />
             </li>

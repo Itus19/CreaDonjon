@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
+import type { Locale } from "@/src/i18n/request";
 import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
 import {
   getWorldById,
@@ -14,6 +15,7 @@ import {
   type WorldSummary,
 } from "@/src/server/repos/worlds";
 import { createCampaign, type CampaignSummary } from "@/src/server/services/campaigns";
+import { listWorldPlayerCharacters } from "@/src/server/services/worldPlayerCharacters";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -23,8 +25,31 @@ export async function listWorlds(supabase: TypedClient): Promise<WorldSummary[]>
   return listWorldsForCurrentUser(supabase);
 }
 
-export async function listWorldCards(supabase: TypedClient): Promise<WorldCard[]> {
-  return listWorldCardsForCurrentUser(supabase);
+/**
+ * `players` par carte (retour utilisateur, V2-G1 suite) : une ligne par PJ
+ * avec espece et classe(s)/niveau, jamais un simple nom — reutilise
+ * `listWorldPlayerCharacters` (deja la source de la page d'accueil d'un
+ * monde), aucune seconde resolution de regles ecrite ici. Un appel par
+ * monde (N+1 assume, meme convention que `listMyGmCampaignsWithMembers` —
+ * un compte gere en pratique quelques mondes, pas des milliers).
+ */
+export async function listWorldCards(supabase: TypedClient, locale: Locale): Promise<WorldCard[]> {
+  const cards = await listWorldCardsForCurrentUser(supabase);
+  return Promise.all(
+    cards.map(async (card) => {
+      const characters = await listWorldPlayerCharacters(supabase, card.id, locale);
+      return {
+        ...card,
+        players: characters.map((c) => ({
+          entityId: c.entityId,
+          entitySlug: c.entitySlug,
+          name: c.entityName,
+          speciesLabel: c.speciesLabel,
+          classesLabel: c.classesLabel,
+        })),
+      };
+    })
+  );
 }
 
 export async function getWorld(supabase: TypedClient, id: string): Promise<WorldSummary | null> {
