@@ -11,6 +11,7 @@ import { CURRENCY_ORDER, depositCoins, spendCoins, type CoinType } from "@/src/c
 import { useReferenceChips, refIdentity, type ResolvedChipView } from "./useReferenceChips";
 import { itemLabel, itemRef } from "./inventoryItem";
 import ItemAutocomplete from "./ItemAutocomplete";
+import Stepper from "@/components/shared/Stepper";
 import { ARMOR_CATEGORY_LABELS_FR, CURRENCY_LABELS_FR, WEAPON_PROPERTY_LABELS_FR } from "@/src/i18n/fr";
 
 /**
@@ -612,33 +613,19 @@ export default function InventoryPanel({
                 </option>
               ))}
             </select>
-            <input
-              type="number"
-              value={coinDelta}
-              onChange={(e) => {
-                setCoinDelta(e.target.value);
-                setCoinError(false);
-              }}
-              placeholder="1"
-              aria-label="Montant"
-              className="w-10 rounded-md border border-edge bg-transparent px-1 py-1 text-center text-xs text-ink outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => applyCoinDelta(-1)}
-              title="Retirer"
-              className="rounded border border-edge px-1.5 py-0.5 text-xs hover:bg-panel disabled:opacity-50"
-            >
-              −
-            </button>
-            <button
-              type="button"
-              onClick={() => applyCoinDelta(1)}
-              title="Ajouter"
-              className="rounded border border-edge px-1.5 py-0.5 text-xs hover:bg-panel disabled:opacity-50"
-            >
-              +
-            </button>
+            <Stepper onIncrement={() => applyCoinDelta(1)} onDecrement={() => applyCoinDelta(-1)} incrementLabel="Ajouter" decrementLabel="Retirer" className="h-10 w-12">
+              <input
+                type="number"
+                value={coinDelta}
+                onChange={(e) => {
+                  setCoinDelta(e.target.value);
+                  setCoinError(false);
+                }}
+                placeholder="1"
+                aria-label="Montant"
+                className="w-full bg-transparent text-center text-xs text-ink outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+            </Stepper>
           </div>
         </div>
         {coinError && <span className="text-xs text-danger">Fonds insuffisants, même en cassant des pièces plus grosses.</span>}

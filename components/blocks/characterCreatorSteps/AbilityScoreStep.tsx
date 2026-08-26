@@ -6,6 +6,7 @@ import type { AbilityScores } from "@/src/core/schemas/blocks/abilities";
 import type { Ability, DerivedSheet } from "@/src/core/rules/sheet";
 import { POINT_BUY_BUDGET, POINT_BUY_MAX, POINT_BUY_MIN, STANDARD_ARRAY, pointBuyCost } from "@/src/core/rules/abilityGeneration";
 import Dropdown from "@/components/shared/Dropdown";
+import Stepper from "@/components/shared/Stepper";
 import { StatBadge } from "@/components/blocks/CharacterSheetHeader";
 
 const ABILITY_LABELS: Record<Ability, string> = { str: "FOR", dex: "DEX", con: "CON", int: "INT", wis: "SAG", cha: "CHA" };
@@ -186,25 +187,19 @@ export default function AbilityScoreStep({
               return (
                 <div key={ability} className="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-accent">{ABILITY_LABELS[ability]}</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={score <= POINT_BUY_MIN}
-                      onClick={() => setPointBuyScore(ability, score - 1)}
-                      className="rounded-full border border-edge px-2 text-sm hover:bg-panel disabled:opacity-30"
-                    >
-                      −
-                    </button>
-                    <span className="w-6 text-center text-xl font-bold text-ink">{score}</span>
-                    <button
-                      type="button"
-                      disabled={score >= POINT_BUY_MAX || pointBuyCost({ ...character.abilities.base, [ability]: score + 1 }) > POINT_BUY_BUDGET}
-                      onClick={() => setPointBuyScore(ability, score + 1)}
-                      className="rounded-full border border-edge px-2 text-sm hover:bg-panel disabled:opacity-30"
-                    >
-                      +
-                    </button>
-                  </div>
+                  <Stepper
+                    onIncrement={() => setPointBuyScore(ability, score + 1)}
+                    onDecrement={() => setPointBuyScore(ability, score - 1)}
+                    incrementDisabled={
+                      score >= POINT_BUY_MAX || pointBuyCost({ ...character.abilities.base, [ability]: score + 1 }) > POINT_BUY_BUDGET
+                    }
+                    decrementDisabled={score <= POINT_BUY_MIN}
+                    incrementLabel={`Augmenter ${ABILITY_LABELS[ability]}`}
+                    decrementLabel={`Diminuer ${ABILITY_LABELS[ability]}`}
+                    className="h-12 w-14"
+                  >
+                    <span className="text-xl font-bold text-ink">{score}</span>
+                  </Stepper>
                   <span className="text-xs text-ink-muted">{formatMod(score)}</span>
                   <span className="text-[10px] text-ink-muted">Sauv. {formatSigned(sheet.savingThrows[ability].mod)}</span>
                 </div>

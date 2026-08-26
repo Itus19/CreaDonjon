@@ -11,6 +11,7 @@ import type { RuleEntrySummary } from "@/src/server/services/rules";
 import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
+import Stepper from "@/components/shared/Stepper";
 
 const SPECIES_TYPES = ["species"] as const;
 const BACKGROUND_TYPES = ["background"] as const;
@@ -391,29 +392,17 @@ export default function CharacterSheetHeader({
           >
             Épuisement
           </span>
-          <div
-            className={`flex h-14 w-full items-center justify-center gap-2 rounded-full border px-1.5 ${
-              exhaustion > 0 ? "border-danger/60 bg-danger/10" : "border-edge bg-panel-raised"
-            }`}
+          <Stepper
+            onIncrement={() => onChangeExhaustion(1)}
+            onDecrement={() => onChangeExhaustion(-1)}
+            incrementDisabled={busy || exhaustion >= 6}
+            decrementDisabled={busy || exhaustion <= 0}
+            incrementLabel="Augmenter l'épuisement"
+            decrementLabel="Diminuer l'épuisement"
+            className={`h-14 w-full ${exhaustion > 0 ? "border-danger/60 bg-danger/10" : ""}`}
           >
-            <button
-              type="button"
-              disabled={busy || exhaustion <= 0}
-              onClick={() => onChangeExhaustion(-1)}
-              className="rounded-full border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-30"
-            >
-              −
-            </button>
             <span className={`text-base font-semibold ${exhaustion > 0 ? "text-danger" : "text-ink"}`}>{exhaustion}</span>
-            <button
-              type="button"
-              disabled={busy || exhaustion >= 6}
-              onClick={() => onChangeExhaustion(1)}
-              className="rounded-full border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-30"
-            >
-              +
-            </button>
-          </div>
+          </Stepper>
         </div>
       </div>
 
@@ -428,19 +417,23 @@ export default function CharacterSheetHeader({
           <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-panel-sunken">
             <div className={`h-full rounded-full transition-[width] ${hpLow ? "bg-danger" : "bg-accent"}`} style={{ width: `${hpPct}%` }} />
           </div>
-          <input
-            type="number"
-            value={hpDelta}
-            onChange={(e) => setHpDelta(e.target.value)}
-            placeholder="1"
-            className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-          />
-          <button type="button" disabled={busy} onClick={() => applyHpDelta(-1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
-            −
-          </button>
-          <button type="button" disabled={busy} onClick={() => applyHpDelta(1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
-            +
-          </button>
+          <Stepper
+            onIncrement={() => applyHpDelta(1)}
+            onDecrement={() => applyHpDelta(-1)}
+            incrementDisabled={busy}
+            decrementDisabled={busy}
+            incrementLabel="Ajouter aux points de vie"
+            decrementLabel="Retirer des points de vie"
+            className="h-10 w-16"
+          >
+            <input
+              type="number"
+              value={hpDelta}
+              onChange={(e) => setHpDelta(e.target.value)}
+              placeholder="1"
+              className="w-full bg-transparent text-center text-sm text-ink outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+          </Stepper>
         </div>
       </div>
 
@@ -455,19 +448,23 @@ export default function CharacterSheetHeader({
           <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-panel-sunken">
             <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${xpPct}%` }} />
           </div>
-          <input
-            type="number"
-            value={xpDelta}
-            onChange={(e) => setXpDelta(e.target.value)}
-            placeholder="1"
-            className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-          />
-          <button type="button" disabled={busy} onClick={() => applyXpDelta(-1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
-            −
-          </button>
-          <button type="button" disabled={busy} onClick={() => applyXpDelta(1)} className="rounded border border-edge px-2 py-0.5 text-sm hover:bg-panel disabled:opacity-50">
-            +
-          </button>
+          <Stepper
+            onIncrement={() => applyXpDelta(1)}
+            onDecrement={() => applyXpDelta(-1)}
+            incrementDisabled={busy}
+            decrementDisabled={busy}
+            incrementLabel="Ajouter des points d'expérience"
+            decrementLabel="Retirer des points d'expérience"
+            className="h-10 w-16"
+          >
+            <input
+              type="number"
+              value={xpDelta}
+              onChange={(e) => setXpDelta(e.target.value)}
+              placeholder="1"
+              className="w-full bg-transparent text-center text-sm text-ink outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+          </Stepper>
         </div>
         {canLevelUp && (
           <button

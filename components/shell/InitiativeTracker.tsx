@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
+import Stepper from "@/components/shared/Stepper";
 import { MonsterCard } from "@/components/rules/blockContentRenderer";
 import ParticipantCharacterSheet from "./ParticipantCharacterSheet";
 import type { CombatDetail, ParticipantCharacteristics } from "@/src/server/services/combats";
@@ -533,15 +534,13 @@ export default function InitiativeTracker({
               }`}
             >
               <div className="flex flex-wrap items-center gap-3">
-                <div className="mech flex h-14 w-12 shrink-0 flex-col overflow-hidden rounded-lg border-2 border-edge bg-panel-sunken text-ink">
-                  <button
-                    type="button"
-                    onClick={() => bumpInitiative(p, 1)}
-                    className="flex h-4 w-full items-center justify-center text-[9px] leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent"
-                    title="Augmenter l'initiative"
-                  >
-                    ▲
-                  </button>
+                <Stepper
+                  onIncrement={() => bumpInitiative(p, 1)}
+                  onDecrement={() => bumpInitiative(p, -1)}
+                  incrementLabel="Augmenter l'initiative"
+                  decrementLabel="Diminuer l'initiative"
+                  className="h-14 w-12"
+                >
                   <input
                     key={`${p.id}-init-${p.initiative ?? "none"}`}
                     type="number"
@@ -550,18 +549,10 @@ export default function InitiativeTracker({
                       const value = Number(e.target.value);
                       if (Number.isFinite(value) && value !== p.initiative) void patchParticipant(p.id, { initiative: value }, "Initiative modifiée");
                     }}
-                    className="w-full flex-1 border-y border-edge/60 bg-transparent text-center text-lg font-bold text-ink outline-none focus:border-accent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className="w-full border-y border-edge/60 bg-transparent text-center text-lg font-bold text-ink outline-none focus:border-accent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     title="Initiative"
                   />
-                  <button
-                    type="button"
-                    onClick={() => bumpInitiative(p, -1)}
-                    className="flex h-4 w-full items-center justify-center text-[9px] leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent"
-                    title="Diminuer l'initiative"
-                  >
-                    ▼
-                  </button>
-                </div>
+                </Stepper>
                 <button
                   type="button"
                   onClick={() => rollOne(p.id)}
@@ -587,15 +578,13 @@ export default function InitiativeTracker({
                 )}
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="text-[9px] uppercase tracking-wider text-ink-muted">CA</span>
-                  <div className="mech flex h-11 w-10 shrink-0 flex-col overflow-hidden rounded-lg border-2 border-edge bg-panel-sunken text-ink">
-                    <button
-                      type="button"
-                      onClick={() => bumpAc(p, 1)}
-                      className="flex h-3.5 w-full items-center justify-center text-[8px] leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent"
-                      title="Augmenter la CA"
-                    >
-                      ▲
-                    </button>
+                  <Stepper
+                    onIncrement={() => bumpAc(p, 1)}
+                    onDecrement={() => bumpAc(p, -1)}
+                    incrementLabel="Augmenter la CA"
+                    decrementLabel="Diminuer la CA"
+                    className="h-11 w-10"
+                  >
                     <input
                       key={`${p.id}-ac-${p.ac ?? "none"}`}
                       type="number"
@@ -604,17 +593,9 @@ export default function InitiativeTracker({
                         const value = Number(e.target.value);
                         if (Number.isFinite(value) && value !== p.ac) void patchParticipant(p.id, { ac: value }, "CA modifiée");
                       }}
-                      className="w-full flex-1 border-y border-edge/60 bg-transparent text-center text-sm font-bold text-ink outline-none focus:border-accent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      className="w-full border-y border-edge/60 bg-transparent text-center text-sm font-bold text-ink outline-none focus:border-accent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
-                    <button
-                      type="button"
-                      onClick={() => bumpAc(p, -1)}
-                      className="flex h-3.5 w-full items-center justify-center text-[8px] leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent"
-                      title="Diminuer la CA"
-                    >
-                      ▼
-                    </button>
-                  </div>
+                  </Stepper>
                 </div>
                 <button
                   type="button"
