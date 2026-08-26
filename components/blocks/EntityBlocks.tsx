@@ -552,9 +552,12 @@ export default function EntityBlocks({
                 inventory={inventoryBlock?.data as InventoryBlockData | undefined}
                 spellcasting={spellcastingBlock?.data as SpellcastingBlockData | undefined}
                 resources={resourcesBlock?.data as ResourcesBlockData | undefined}
+                characterBlockId={block.id}
+                characterBlockVersion={block.version}
                 onUpdateCharacter={updateCharacter}
                 onUpdateInventory={updateInventory}
                 onUpdateSpellcasting={updateSpellcasting}
+                onBlockRefreshed={handleBlockRefreshed}
               />
             ) : block.blockType === "statblock" ? (
               <MonsterStatblockSheet

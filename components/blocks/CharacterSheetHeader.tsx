@@ -161,6 +161,8 @@ export default function CharacterSheetHeader({
   xpDelta,
   setXpDelta,
   applyXpDelta,
+  canLevelUp,
+  onLevelUp,
   onRest,
   onExportJson,
   error,
@@ -192,6 +194,9 @@ export default function CharacterSheetHeader({
   xpDelta: string;
   setXpDelta: (v: string) => void;
   applyXpDelta: (sign: 1 | -1) => void;
+  /** Seuil de PX du niveau suivant atteint (V2-G1, montee de niveau accompagnee) — voir `hasReachedNextLevel`, `src/core/rules/experience.ts`. */
+  canLevelUp: boolean;
+  onLevelUp: () => void;
   onRest: (kind: "short" | "long") => void;
   onExportJson: () => void;
   error: string | null;
@@ -464,6 +469,15 @@ export default function CharacterSheetHeader({
             +
           </button>
         </div>
+        {canLevelUp && (
+          <button
+            type="button"
+            onClick={onLevelUp}
+            className="w-full rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+          >
+            Monter de niveau
+          </button>
+        )}
       </div>
 
       {sheet.warnings.length > 0 && (

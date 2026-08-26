@@ -53,6 +53,7 @@ export default function LevelClassesStep({
   onUpdateInventory,
   equipmentChoices,
   onChooseEquipmentChoices,
+  hideEquipment = false,
 }: {
   worldSlug: string;
   character: CharacterBlockData;
@@ -61,6 +62,8 @@ export default function LevelClassesStep({
   onUpdateInventory: (data: InventoryBlockData) => void;
   equipmentChoices: (ClassEquipmentChoiceState | null)[];
   onChooseEquipmentChoices: (choices: (ClassEquipmentChoiceState | null)[]) => void;
+  /** Montee de niveau (V2-G1) : la premiere classe a deja recu son equipement de depart il y a longtemps — jamais reproposer cette section, meme si la fiche de classe en porte un. */
+  hideEquipment?: boolean;
 }) {
   const entries = useWorldRuleEntries(worldSlug);
   const classEntries = entries.filter((e) => e.entryType === "class");
@@ -161,6 +164,7 @@ export default function LevelClassesStep({
   // (`blocksByKey`) n'est pas forcement encore chargee au moment du clic,
   // cet effet se redeclenche de lui-meme des qu'elle arrive.
   useEffect(() => {
+    if (hideEquipment) return;
     const fixedTag = `${EQUIPMENT_TAG_PREFIX}fixed:${firstClassKey}`;
     const stale = inventory.items.filter((it) => it.notes?.startsWith(`${EQUIPMENT_TAG_PREFIX}fixed:`) && it.notes !== fixedTag);
     const alreadyApplied = inventory.items.some((it) => it.notes === fixedTag);
@@ -262,7 +266,7 @@ export default function LevelClassesStep({
                 V2-G1 — remplace les boutons "Choisir A/B" separes), meme
                 mecanisme que l'historique (`BackgroundStep`) — un
                 `EquipmentCardInteraction` par choix independant. */}
-            {index === 0 && firstClassEquipment && (
+            {index === 0 && firstClassEquipment && !hideEquipment && (
               <div className="flex flex-col gap-2 rounded-md border border-edge/40 bg-panel-sunken p-2.5 text-sm text-ink">
                 {renderBlockData(
                   "class_equipment",

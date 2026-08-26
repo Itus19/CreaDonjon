@@ -173,6 +173,8 @@ export default function PreviewStep({
         xpDelta=""
         setXpDelta={noop}
         applyXpDelta={noop}
+        canLevelUp={false}
+        onLevelUp={noop}
         onRest={noop}
         onExportJson={noop}
         error={null}

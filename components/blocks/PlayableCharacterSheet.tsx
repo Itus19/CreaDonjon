@@ -6,7 +6,7 @@ import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/block
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import { SKILLS, SKILL_ABILITIES, type Ability, type DerivedSheet } from "@/src/core/rules/sheet";
-import { XP_LEVEL_THRESHOLDS } from "@/src/core/rules/experience";
+import { XP_LEVEL_THRESHOLDS, hasReachedNextLevel } from "@/src/core/rules/experience";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { TraceStep } from "@/src/core/formula/evaluate";
@@ -21,6 +21,7 @@ import InventoryTab from "./InventoryTab";
 import TraitsTab from "./TraitsTab";
 import WeaponMasteryTab from "./WeaponMasteryTab";
 import { toggleChoice } from "./characterChoiceUtils";
+import LevelUpWizard from "./LevelUpWizard";
 
 export const ABILITY_LABELS: Record<Ability, string> = {
   str: "FOR",
@@ -101,9 +102,12 @@ export default function PlayableCharacterSheet({
   inventory,
   spellcasting,
   resources,
+  characterBlockId,
+  characterBlockVersion,
   onUpdateCharacter,
   onUpdateInventory,
   onUpdateSpellcasting,
+  onBlockRefreshed,
 }: {
   worldSlug: string;
   entityId: string;
@@ -112,9 +116,14 @@ export default function PlayableCharacterSheet({
   inventory: InventoryBlockData | undefined;
   spellcasting: SpellcastingBlockData | undefined;
   resources: ResourcesBlockData | undefined;
+  /** Bloc `character` (id/version) — V2-G1, requis pour lancer une montee de niveau (sauvegarde chirurgicale avec verification de version). */
+  characterBlockId: string;
+  characterBlockVersion: number;
   onUpdateCharacter: (data: CharacterBlockData) => void;
   onUpdateInventory: (data: InventoryBlockData) => void;
   onUpdateSpellcasting: (data: SpellcastingBlockData) => void;
+  /** Un bloc a ete ecrit par une autre voie que la sauvegarde normale de ce composant (V2-G1, montee de niveau) — synchronise la version locale sans redeclencher une sauvegarde (meme motif que `BlockDataEditor`/`EntityBlocks.handleBlockRefreshed`). */
+  onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
 }) {
   const [tab, setTab] = useState<Tab>("actions");
   const [advantage, setAdvantage] = useState<AdvantageState>("normal");
@@ -125,6 +134,13 @@ export default function PlayableCharacterSheet({
   const [error, setError] = useState<string | null>(null);
   const [xpDelta, setXpDelta] = useState("");
   const [hpDelta, setHpDelta] = useState("");
+  // Montee de niveau (V2-G1) : le meme motif que "wizardOpen" dans
+  // EditEntityForm.tsx — l'assistant remplace tout le rendu de cette fiche
+  // tant qu'il est ouvert. L'etat vit ici (avec les autres), mais le
+  // "return" anticipe qui remplace le rendu doit attendre la fin de TOUS
+  // les hooks de ce composant (react-hooks/rules-of-hooks) — il vit plus
+  // bas, juste apres le dernier `useEffect`.
+  const [levelUpOpen, setLevelUpOpen] = useState(false);
 
   /** Onglet Traits (V1-C4 suite) : meme bloc `character` que le reste de la fiche, une seule donnee, plusieurs vues — meme motif que `onUpdateInventory`. */
   function patchCharacter(fields: Partial<CharacterBlockData>) {
@@ -227,6 +243,32 @@ export default function PlayableCharacterSheet({
       cancelled = true;
     };
   }, [entityId, campaignId]);
+
+  if (levelUpOpen) {
+    return (
+      <LevelUpWizard
+        worldSlug={worldSlug}
+        entityId={entityId}
+        campaignId={campaignId}
+        expectedVersion={characterBlockVersion}
+        initialCharacter={character}
+        initialInventory={inventory ?? { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } }}
+        initialSpellcasting={spellcasting}
+        onCancel={() => setLevelUpOpen(false)}
+        onDone={(result) => {
+          onBlockRefreshed({ id: characterBlockId, data: result.character.data, version: result.character.version });
+          if (result.spellcasting) onBlockRefreshed(result.spellcasting);
+          setLevelUpOpen(false);
+          // `remote.runtimeState.hpMax` (V1-B5) vient de `/sheet`, chargee
+          // une seule fois au montage — sans ce rechargement, la barre de PV
+          // resterait plafonnee a l'ANCIEN niveau jusqu'au prochain rechargement
+          // complet de la page, alors que le bloc `character` local, lui, est
+          // deja a jour (V2-G1).
+          reloadRemote();
+        }}
+      />
+    );
+  }
 
   function pushLog(entry: Omit<RollLogEntry, "id">) {
     setRollLog((prev) => [{ ...entry, id: crypto.randomUUID() }, ...prev].slice(0, 8));
@@ -398,6 +440,7 @@ export default function PlayableCharacterSheet({
   const xpCeiling = XP_LEVEL_THRESHOLDS[levelIndex + 1] ?? xpFloor;
   const xpCurrent = runtimeState?.xp ?? 0;
   const xpPct = xpCeiling > xpFloor ? Math.min(100, Math.max(0, ((xpCurrent - xpFloor) / (xpCeiling - xpFloor)) * 100)) : 100;
+  const canLevelUp = hasReachedNextLevel(totalLevel, xpCurrent);
 
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-md border border-edge/60 bg-panel-raised p-3">
@@ -429,6 +472,8 @@ export default function PlayableCharacterSheet({
         xpDelta={xpDelta}
         setXpDelta={setXpDelta}
         applyXpDelta={applyXpDelta}
+        canLevelUp={canLevelUp}
+        onLevelUp={() => setLevelUpOpen(true)}
         onRest={rest}
         onExportJson={exportJson}
         error={error}

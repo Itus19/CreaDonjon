@@ -92,6 +92,51 @@ describe("characterSheet — cas dores (specs/wiki-liens-et-personnages.md §B7)
     expect(sheet.warnings).toEqual([]);
   });
 
+  it("un modificateur couche 5 (ASI, V2-G1) s'empile sur un modificateur couche 2 (espece) sur la meme caracteristique", () => {
+    // Non-regression : confirme que resolveTargetStack ordonne deja
+    // correctement les couches, sans aucun changement dans sheet.ts —
+    // une amelioration de caracteristique choisie a la montee de niveau
+    // devient une ResolvedFeature synthetique de plus (meme mecanisme que
+    // dwarf_traits ci-dessus), jamais un chemin special.
+    const build: CharacterBuild = {
+      species: "dwarf",
+      classes: [{ key: "fighter", level: 4 }],
+      abilities: { assigned: { str: 16, dex: 10, con: 12, int: 8, wis: 13, cha: 10 } },
+      featureKeys: ["dwarf_traits", "fighter_asi_l4"],
+    };
+    const ruleset: ResolvedRuleset = {
+      classes: { fighter: FIGHTER },
+      features: {
+        dwarf_traits: {
+          key: "dwarf_traits",
+          label: "Traits nains",
+          source: "species:dwarf",
+          modifiers: [
+            { target: "ability.con", op: "add", value: 2, layer: 2, source: "species:dwarf", label: "Espece : nain" },
+          ],
+        },
+        fighter_asi_l4: {
+          key: "fighter_asi_l4",
+          label: "ASI (Guerrier niv. 4)",
+          source: "asi:fighter.l4",
+          modifiers: [
+            { target: "ability.con", op: "add", value: 1, layer: 5, source: "asi:fighter.l4", label: "ASI (Guerrier niv. 4)" },
+          ],
+        },
+      },
+    };
+
+    const sheet = characterSheet(build, ruleset, [], []);
+
+    // 12 (assignee) + 2 (espece, couche 2) + 1 (ASI, couche 5) = 15
+    expect(sheet.abilities.con.score).toBe(15);
+    expect(sheet.abilities.con.sources).toEqual([
+      { label: "Valeur attribuee", value: 12 },
+      { label: "Espece : nain", value: 2 },
+      { label: "ASI (Guerrier niv. 4)", value: 1 },
+    ]);
+  });
+
   it("roublard niveau 5 avec expertise : maitrise, expertise, bonus de maitrise", () => {
     const build: CharacterBuild = {
       species: "human",

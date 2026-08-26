@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { zCharacterBlockData } from "@/src/core/schemas/blocks/character";
+import { zSpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 
 const campaignIdField = z.string().uuid().nullable();
 
@@ -63,4 +65,12 @@ export const resourceUsageSchema = z.object({
   campaignId: campaignIdField,
   trackerId: z.string().min(1),
   delta: z.number().int(),
+});
+
+/** Montee de niveau accompagnee (V2-G1) — validation de forme seulement, les regles metier (niveaux qui ne peuvent que monter, plafond d'ASI, seuil de PX) vivent dans `applyLevelUp` (characterActions.ts), pas ici. */
+export const applyLevelUpSchema = z.object({
+  campaignId: campaignIdField,
+  expectedVersion: z.number().int().nonnegative(),
+  character: zCharacterBlockData,
+  spellcasting: zSpellcastingBlockData.optional(),
 });

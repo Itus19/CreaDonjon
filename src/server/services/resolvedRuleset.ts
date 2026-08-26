@@ -6,6 +6,7 @@ import type { ResolvedClass, ResolvedFeature, ResolvedRuleset } from "@/src/core
 import {
   armorDataFromBlock,
   costFromQuantity,
+  extractAsiGrantedLevels,
   extractBackgroundFeat,
   extractFeatureKeysUpToLevel,
   extractLanguageChoice,
@@ -161,6 +162,8 @@ export interface AssembledRuleset {
   remainingChoices: RemainingChoice[];
   proficiencies: TraitGrant[];
   languages: TraitGrant[];
+  /** Niveaux ou chaque classe accorde une amelioration de caracteristique (V2-G1, montee de niveau accompagnee) — jamais code en dur, lu dans `progressionRows` (`extractAsiGrantedLevels`). */
+  asiGrantedLevels: Record<string, number[]>;
 }
 
 interface BatchEntry {
@@ -262,6 +265,7 @@ export async function assembleResolvedRuleset(
   const extraFeatureKeys = new Map<string, string>();
   const proficiencies: TraitGrant[] = [];
   const languages: TraitGrant[] = [];
+  const asiGrantedLevels: Record<string, number[]> = {};
 
   const topKeys = [
     ...(selection.species ? [selection.species] : []),
@@ -345,6 +349,8 @@ export async function assembleResolvedRuleset(
     proficiencies.push(...classProficiencies.map((p) => ({ ...p, source: label })));
 
     for (const fk of extractFeatureKeysUpToLevel(found.progressionRows, cl.level)) extraFeatureKeys.set(fk, `class:${cl.key}`);
+
+    asiGrantedLevels[cl.key] = extractAsiGrantedLevels(found.progressionRows, cl.key);
 
     for (const choice of extractSkillChoices(found.fields)) {
       remainingChoices.push({
@@ -444,7 +450,7 @@ export async function assembleResolvedRuleset(
     }
   }
 
-  return { ruleset: { classes, features }, remainingChoices, proficiencies, languages };
+  return { ruleset: { classes, features }, remainingChoices, proficiencies, languages, asiGrantedLevels };
 }
 
 interface EquipmentBlocks {

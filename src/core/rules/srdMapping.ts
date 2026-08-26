@@ -116,15 +116,53 @@ export function extractSlotsByLevel(rows: readonly ProgressionRow[]): Record<num
   return bySlotLevel;
 }
 
-/** Cles de feature accordees jusqu'a un niveau donne (colonne `features` du bloc `class_progression`) — affichage uniquement, ces cles n'ont pas forcement leurs propres modificateurs. */
-export function extractFeatureKeysUpToLevel(rows: readonly ProgressionRow[], level: number): string[] {
+/**
+ * Cles de feature accordees jusqu'a un niveau donne (colonne `features` du
+ * bloc `class_progression`) — affichage uniquement, ces cles n'ont pas
+ * forcement leurs propres modificateurs. `fromLevelExclusive` (V2-G1,
+ * montee de niveau accompagnee) restreint a la tranche (fromLevelExclusive,
+ * level] — ce qu'une montee de niveau debloque de neuf, sans rejouer ce
+ * qui l'etait deja. Defaut 0 : comportement inchange pour les appelants
+ * existants (construction depuis zero).
+ */
+export function extractFeatureKeysUpToLevel(
+  rows: readonly ProgressionRow[],
+  level: number,
+  fromLevelExclusive = 0
+): string[] {
   const keys: string[] = [];
   for (const row of rows) {
-    if (row.level <= level) {
+    if (row.level > fromLevelExclusive && row.level <= level) {
       for (const f of row.features ?? []) keys.push(f.feature);
     }
   }
   return keys;
+}
+
+/**
+ * Une feature accorde-t-elle une amelioration de caracteristique (V2-G1) ?
+ * SRD 2024 : une cle par classe (`${classKey}-ability-score-improvement`,
+ * import verifie). SRD 2014 : la deduplication de `scripts/ingest-srd.ts`
+ * fusionne le texte identique de 10 classes sur 12 sous la cle partagee
+ * `ability-score-improvement` (detectee ici) ; les ASI supplementaires du
+ * Guerrier/Roublard (texte propre a leur classe) atterrissent sous une cle
+ * sans marqueur (`ability-score-improvement-2`/`-3`, artefact d'ordre
+ * d'insertion) — non detectables sans corriger l'import ET reimporter les
+ * donnees, trou de donnees documente et accepte (V2-G1), pas dans le
+ * perimetre de cette fonction.
+ */
+export function isAbilityScoreImprovementGrant(featureKey: string, classKey: string): boolean {
+  return featureKey === "ability-score-improvement" || featureKey.startsWith(`${classKey}-ability-score-improvement`);
+}
+
+/** Niveaux ou cette classe accorde une amelioration de caracteristique (V2-G1) — jamais une liste codee en dur, toujours lue dans les donnees de progression importees. */
+export function extractAsiGrantedLevels(rows: readonly ProgressionRow[], classKey: string): number[] {
+  const levels: number[] = [];
+  for (const row of rows) {
+    const grantsAsi = (row.features ?? []).some((f) => isAbilityScoreImprovementGrant(f.feature, classKey));
+    if (grantsAsi) levels.push(row.level);
+  }
+  return levels;
 }
 
 export interface SkillChoice {

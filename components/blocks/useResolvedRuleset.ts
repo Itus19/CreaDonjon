@@ -42,6 +42,8 @@ export interface ResolvedRulesetView {
   cost: Record<string, ItemCost | null>;
   /** Niveau de sort (0 = tour de magie), par cle de regle (tri Magie, V1-C6). */
   spellLevels: Record<string, number | null>;
+  /** Niveaux ou chaque classe accorde une amelioration de caracteristique, par cle de classe (V2-G1, montee de niveau accompagnee). */
+  asiGrantedLevels: Record<string, number[]>;
 }
 
 export interface RulesetSelection {
@@ -62,6 +64,7 @@ const EMPTY: ResolvedRulesetView = {
   weight: {},
   cost: {},
   spellLevels: {},
+  asiGrantedLevels: {},
 };
 
 /**

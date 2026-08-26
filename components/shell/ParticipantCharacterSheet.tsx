@@ -61,6 +61,12 @@ export default function ParticipantCharacterSheet({
     setBlocks((prev) => (Array.isArray(prev) ? prev.map((b) => (b.id === id ? { ...b, data } : b)) : prev));
   }
 
+  /** Un bloc a ete ecrit par une autre voie que `saveBlock` (V2-G1, montee de niveau — sauvegarde chirurgicale avec sa propre verification de version) — meme motif que `EntityBlocks.handleBlockRefreshed` : synchronise version ET donnee sans redeclencher une sauvegarde. */
+  function handleBlockRefreshed(fresh: { id: string; data: unknown; version: number }) {
+    versionsRef.current[fresh.id] = fresh.version;
+    setBlocks((prev) => (Array.isArray(prev) ? prev.map((b) => (b.id === fresh.id ? { ...b, data: fresh.data, version: fresh.version } : b)) : prev));
+  }
+
   /** Meme motif de chaine de promesses par bloc que `EntityBlocks.tsx` (`saveBlock`) : un blur et un clic voisin peuvent partir a quelques millisecondes d'intervalle sur le meme bloc, la chaine garantit que le second n'ecrit qu'apres la version a jour du premier. */
   function saveBlock(id: string, data: unknown) {
     const run = () => doSaveBlock(id, data);
@@ -160,9 +166,12 @@ export default function ParticipantCharacterSheet({
       inventory={inventoryBlock?.data as InventoryBlockData | undefined}
       spellcasting={spellcastingBlock?.data as SpellcastingBlockData | undefined}
       resources={resourcesBlock?.data as ResourcesBlockData | undefined}
+      characterBlockId={characterBlock.id}
+      characterBlockVersion={characterBlock.version}
       onUpdateCharacter={updateCharacter}
       onUpdateInventory={updateInventory}
       onUpdateSpellcasting={updateSpellcasting}
+      onBlockRefreshed={handleBlockRefreshed}
     />
   );
 }

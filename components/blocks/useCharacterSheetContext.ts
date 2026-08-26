@@ -7,6 +7,7 @@ import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import { characterSheet, type CharacterBuild, type DerivedSheet, type EquippedItem, type ResolvedFeature } from "@/src/core/rules/sheet";
 import { armorAcModifier, mapChosenSkillModifiers, type ArmorData, type ItemCost, type WeaponData } from "@/src/core/rules/srdMapping";
+import { asiModifiers, parseAsiChoice } from "@/src/core/rules/abilityScoreImprovement";
 import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { useResolvedRuleset, type RemainingChoiceView, type TraitGrantView } from "./useResolvedRuleset";
 import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
@@ -51,6 +52,8 @@ export interface CharacterSheetContext {
   weaponMasteryChips: Map<string, ResolvedChipView>;
   /** Cles d'armes actuellement maitrisees (onglet Actions) — pour la botte disponible sur une arme equipee. */
   masteredWeaponKeys: Set<string>;
+  /** Niveaux ou chaque classe accorde une amelioration de caracteristique, par cle de classe (V2-G1, montee de niveau accompagnee). */
+  asiGrantedLevels: Record<string, number[]>;
 }
 
 /**
@@ -62,6 +65,17 @@ export interface CharacterSheetContext {
  */
 function traitRefKey(f: ResolvedFeature): string {
   return f.key === f.source && f.source.includes(":") ? f.source.slice(f.source.indexOf(":") + 1) : f.key;
+}
+
+/** Cle d'un choix d'ASI : `"<classe>.l<niveau>.asi"` (V2-G1, montee de niveau accompagnee — meme convention que les autres cles de `character.choices`). */
+const ASI_CHOICE_KEY = /^(.+)\.l(\d+)\.asi$/;
+
+function asiChoiceLabel(choiceKey: string, ruleset: ResolvedRuleset): string {
+  const match = ASI_CHOICE_KEY.exec(choiceKey);
+  if (!match) return "Amélioration de caractéristique";
+  const [, classKey, level] = match;
+  const className = ruleset.classes[classKey]?.label ?? classKey;
+  return `Amélioration de caractéristique (${className} niv. ${level})`;
 }
 
 /** Six 10 par defaut (aucun modificateur) — jamais affiche tel quel : `InventoryPanel` gate ses lignes Attaquer/Degats derriere `showAttackInfo`, jamais deduit de ce defaut. */
@@ -111,13 +125,14 @@ export function useCharacterSheetContext(
     [spellcasting]
   );
 
-  const { ruleset, remainingChoices, proficiencies, languages, equipment, weaponByKey, weight, cost, spellLevels } = useResolvedRuleset(worldSlug, {
-    species: speciesKey,
-    background: backgroundKey,
-    classes: classSelections,
-    equipmentKeys,
-    spellKeys,
-  });
+  const { ruleset, remainingChoices, proficiencies, languages, equipment, weaponByKey, weight, cost, spellLevels, asiGrantedLevels } =
+    useResolvedRuleset(worldSlug, {
+      species: speciesKey,
+      background: backgroundKey,
+      classes: classSelections,
+      equipmentKeys,
+      spellKeys,
+    });
 
   const carriedWeight = useMemo(() => totalCarriedWeight(inventory?.items ?? [], weight), [inventory, weight]);
 
@@ -146,6 +161,24 @@ export function useCharacterSheetContext(
     const chosen = (character?.choices[choice.id] as string[] | undefined) ?? [];
     const key = `choice:${choice.id}`;
     choiceFeatures[key] = { key, label: choice.label, source: "choice", modifiers: mapChosenSkillModifiers(chosen, choice.id, choice.label) };
+    choiceFeatureKeys.push(key);
+  }
+
+  // Amelioration de caracteristique (V2-G1, montee de niveau accompagnee) :
+  // un choix d'ASI vit dans `character.choices` comme n'importe quel autre
+  // choix, mais n'a pas de `RemainingChoice` correspondant (il n'est jamais
+  // "restant" — l'etape qui le propose disparait des qu'il est fait), donc
+  // une boucle a part plutot qu'un branchement dans celle du dessus. Meme
+  // hook pour la fiche jouable et les deux assistants : un personnage deja
+  // monte de niveau affiche son bonus partout, pas seulement pendant la
+  // montee elle-meme.
+  for (const [choiceKey, rawValue] of Object.entries(character?.choices ?? {})) {
+    if (!choiceKey.endsWith(".asi")) continue;
+    const asi = parseAsiChoice(rawValue);
+    if (!asi) continue;
+    const key = `choice:${choiceKey}`;
+    const label = asiChoiceLabel(choiceKey, ruleset);
+    choiceFeatures[key] = { key, label, source: `asi:${choiceKey}`, modifiers: asiModifiers(asi, `asi:${choiceKey}`, label) };
     choiceFeatureKeys.push(key);
   }
 
@@ -297,5 +330,6 @@ export function useCharacterSheetContext(
     buildChips,
     weaponMasteryChips,
     masteredWeaponKeys,
+    asiGrantedLevels,
   };
 }

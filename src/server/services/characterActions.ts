@@ -3,12 +3,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import {
+  ABILITIES,
   characterSheet,
   type CharacterBuild,
   type DerivedSheet,
   type EquippedItem,
+  type ResolvedClass,
   type ResolvedFeature,
 } from "@/src/core/rules/sheet";
+import { hasReachedNextLevel } from "@/src/core/rules/experience";
+import { asiModifiers, isValidAsiChoice, parseAsiChoice } from "@/src/core/rules/abilityScoreImprovement";
 import {
   resolveAttackRoll,
   resolveDamageRoll,
@@ -30,7 +34,8 @@ import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { EffectsBlockData, ScalingBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 import { getEntityById } from "@/src/server/repos/entities";
-import { listBlocksForEntity, updateBlockWithVersionCheck, type BlockRow } from "@/src/server/repos/blocks";
+import { insertBlock, listBlocksForEntity, updateBlockWithVersionCheck, type BlockRow } from "@/src/server/repos/blocks";
+import { defaultBlockDisplay } from "@/src/core/schemas/blocks/registry";
 import { getRuntimeState as getRuntimeStateRow } from "@/src/server/repos/runtimeState";
 import { getCampaignById } from "@/src/server/repos/campaigns";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
@@ -53,6 +58,41 @@ function itemLabel(item: InventoryItem): string {
   const ref = itemRef(item);
   if (ref) return ref.kind === "rule" ? ref.key : ref.id;
   return "";
+}
+
+const ASI_CHOICE_KEY = /^(.+)\.l(\d+)\.asi$/;
+
+/**
+ * Reconstruit les `ResolvedFeature` synthetiques pour chaque choix d'ASI
+ * deja enregistre dans `character.choices` (V2-G1) — sans cet appel dans
+ * `resolveCharacterActionContext`, un bonus d'ASI deja applique resterait
+ * invisible a TOUT calcul serveur (jets d'attaque, CA de sort, `/sheet`),
+ * puisque seule `applyLevelUp` construisait cette feature jusqu'ici. Un
+ * choix invalide (donnee corrompue, ruleset change depuis) est ignore en
+ * silence ici — un jet de combat ne doit jamais echouer a cause d'un vieux
+ * choix illisible ; `applyLevelUp`, lui, reste strict sur ses PROPRES
+ * validations a l'ecriture (voir plus bas).
+ */
+function buildAsiChoiceFeatures(
+  choices: CharacterBlockData["choices"],
+  asiGrantedLevels: Record<string, number[]>,
+  classes: Record<string, ResolvedClass>
+): { features: Record<string, ResolvedFeature>; keys: string[] } {
+  const features: Record<string, ResolvedFeature> = {};
+  const keys: string[] = [];
+  for (const [choiceKey, rawValue] of Object.entries(choices)) {
+    const match = ASI_CHOICE_KEY.exec(choiceKey);
+    if (!match) continue;
+    const [, classKey, levelText] = match;
+    const asi = parseAsiChoice(rawValue);
+    if (!asi || !isValidAsiChoice(asi)) continue;
+    if (!(asiGrantedLevels[classKey] ?? []).includes(Number(levelText))) continue;
+    const key = `choice:${choiceKey}`;
+    const label = `Amélioration de caractéristique (${classes[classKey]?.label ?? classKey} niv. ${levelText})`;
+    features[key] = { key, label, source: `asi:${choiceKey}`, modifiers: asiModifiers(asi, `asi:${choiceKey}`, label) };
+    keys.push(key);
+  }
+  return { features, keys };
 }
 
 export interface CharacterActionContext {
@@ -158,6 +198,9 @@ export async function resolveCharacterActionContext(
     };
     choiceFeatureKeys.push(key);
   }
+  const asiFeatures = buildAsiChoiceFeatures(characterData.choices, assembled.asiGrantedLevels, assembled.ruleset.classes);
+  Object.assign(choiceFeatures, asiFeatures.features);
+  choiceFeatureKeys.push(...asiFeatures.keys);
 
   const build: CharacterBuild = {
     species: speciesKey ?? "",
@@ -588,6 +631,201 @@ export async function takeLongRest(
   });
 
   return { ok: true };
+}
+
+export type ApplyLevelUpError =
+  | "not_found"
+  | "conflict"
+  | "invalid_level_change"
+  | "invalid_asi"
+  | "xp_insufficient"
+  | "forbidden_field_change";
+
+export interface ApplyLevelUpOutcome {
+  character: BlockRow;
+  spellcasting?: BlockRow;
+}
+
+/**
+ * Compare deux `BlockReference | null` par leur CONTENU, jamais par
+ * `JSON.stringify` : `ctx.characterData` vient d'une colonne `jsonb`, qui ne
+ * garantit pas l'ordre des cles d'un objet apres un aller-retour — deux
+ * objets identiques (`{kind:"rule",key:"dwarf"}` vs `{key:"dwarf",kind:"rule"}`)
+ * produiraient des chaines differentes et declencheraient un rejet
+ * `forbidden_field_change` a tort.
+ */
+function sameBlockReference(a: BlockReference | null, b: BlockReference | null): boolean {
+  if (a === null || b === null) return a === b;
+  if (a.kind !== b.kind) return false;
+  return a.kind === "rule" && b.kind === "rule" ? a.key === b.key : a.kind === "entity" && b.kind === "entity" ? a.id === b.id : false;
+}
+
+/**
+ * Montee de niveau accompagnee (V2-G1) : ajoute un niveau a une classe
+ * existante ou en demarre une nouvelle (multiclassage), applique les choix
+ * qui en decoulent (competences, sorts, amelioration de caracteristique).
+ * Chirurgical par construction — ne touche jamais l'inventaire, l'espece,
+ * l'historique, le portrait, le genre ni les pronoms, meme si le payload
+ * les porte tous : `LevelUpWizard` (cote client) n'expose aucune interface
+ * pour les changer, mais le serveur ne fait jamais confiance a une
+ * interface seule pour garantir une invariante (`forbidden_field_change`
+ * ci-dessous). Ne renomme jamais l'entite — contrairement a
+ * `overwriteCharacterFromWizard`, le mauvais outil pour un ajout
+ * chirurgical.
+ *
+ * Validations dans l'ordre : version attendue, champs hors perimetre
+ * inchanges, niveaux qui ne peuvent que monter, seuil de PX reellement
+ * atteint, puis un recalcul complet de la fiche CANDIDATE (jamais
+ * `ctx.sheet`, qui est l'ancienne) pour verifier le plafond de 20 et la
+ * legitimite de chaque choix d'ASI (le niveau accorde-t-il vraiment une
+ * amelioration de caracteristique pour cette classe, lu dans
+ * `assembleResolvedRuleset` — jamais une liste de niveaux codee en dur).
+ */
+export async function applyLevelUp(
+  supabase: TypedClient,
+  params: {
+    entityId: string;
+    campaignId: string | null;
+    expectedVersion: number;
+    character: CharacterBlockData;
+    spellcasting: SpellcastingBlockData | undefined;
+    actorUserId: string;
+    locale: Locale;
+  }
+): Promise<ApplyLevelUpOutcome | { error: ApplyLevelUpError }> {
+  const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+  if (!ctx) return { error: "not_found" };
+  if (ctx.characterBlockRow.version !== params.expectedVersion) return { error: "conflict" };
+
+  const old = ctx.characterData;
+  const next = params.character;
+  if (
+    !sameBlockReference(old.species, next.species) ||
+    !sameBlockReference(old.background, next.background) ||
+    old.portrait_asset_id !== next.portrait_asset_id ||
+    (old.gender ?? null) !== (next.gender ?? null) ||
+    (old.pronouns ?? "") !== (next.pronouns ?? "")
+  ) {
+    return { error: "forbidden_field_change" };
+  }
+
+  const oldLevelByKey = new Map(
+    old.classes.filter((c) => c.class.kind === "rule" && c.class.key).map((c) => [(c.class as { kind: "rule"; key: string }).key, c.level])
+  );
+  for (const c of next.classes) {
+    if (c.class.kind !== "rule" || !c.class.key) continue;
+    if (c.level < (oldLevelByKey.get(c.class.key) ?? 0)) return { error: "invalid_level_change" };
+  }
+  const oldTotalLevel = old.classes.reduce((sum, c) => sum + c.level, 0);
+  const newTotalLevel = next.classes.reduce((sum, c) => sum + c.level, 0);
+  if (newTotalLevel <= oldTotalLevel) return { error: "invalid_level_change" };
+
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  if (!hasReachedNextLevel(oldTotalLevel, state.xp)) return { error: "xp_insufficient" };
+
+  // Fiche CANDIDATE : reconstruit avec les NOUVEAUX niveaux et choix — jamais
+  // ctx.sheet, qui reste celle d'avant la montee.
+  const speciesKey = next.species?.kind === "rule" ? next.species.key : undefined;
+  const backgroundKey = next.background?.kind === "rule" ? next.background.key : undefined;
+  const classSelections = next.classes
+    .filter((c) => c.class.kind === "rule" && c.class.key)
+    .map((c) => ({ key: (c.class as { kind: "rule"; key: string }).key, level: c.level }));
+  const assembled = await assembleResolvedRuleset(
+    supabase,
+    ctx.rulesetId,
+    { species: speciesKey, background: backgroundKey, classes: classSelections },
+    params.locale
+  );
+
+  const choiceFeatures: Record<string, ResolvedFeature> = {};
+  const choiceFeatureKeys: string[] = [];
+  for (const choice of assembled.remainingChoices) {
+    const chosen = (next.choices[choice.id] as string[] | undefined) ?? [];
+    const key = `choice:${choice.id}`;
+    choiceFeatures[key] = { key, label: choice.label, source: "choice", modifiers: mapChosenSkillModifiers(chosen, choice.id, choice.label) };
+    choiceFeatureKeys.push(key);
+  }
+
+  const ASI_CHOICE_KEY = /^(.+)\.l(\d+)\.asi$/;
+  for (const [choiceKey, rawValue] of Object.entries(next.choices)) {
+    const match = ASI_CHOICE_KEY.exec(choiceKey);
+    if (!match) continue;
+    const [, classKey, levelText] = match;
+    const asi = parseAsiChoice(rawValue);
+    if (!asi || !isValidAsiChoice(asi)) return { error: "invalid_asi" };
+    if (!(assembled.asiGrantedLevels[classKey] ?? []).includes(Number(levelText))) return { error: "invalid_asi" };
+
+    const key = `choice:${choiceKey}`;
+    const label = `Amélioration de caractéristique (${assembled.ruleset.classes[classKey]?.label ?? classKey} niv. ${levelText})`;
+    choiceFeatures[key] = { key, label, source: `asi:${choiceKey}`, modifiers: asiModifiers(asi, `asi:${choiceKey}`, label) };
+    choiceFeatureKeys.push(key);
+  }
+
+  const build: CharacterBuild = {
+    species: speciesKey ?? "",
+    classes: next.classes
+      .filter((c) => c.class.kind === "rule" && c.class.key)
+      .map((c) => ({
+        key: (c.class as { kind: "rule"; key: string }).key,
+        level: c.level,
+        subclass: c.subclass?.kind === "rule" ? c.subclass.key : undefined,
+      })),
+    abilities: { assigned: next.abilities.base },
+    featureKeys: [...Object.keys(assembled.ruleset.features), ...choiceFeatureKeys],
+  };
+  const candidateSheet = characterSheet(
+    build,
+    { classes: assembled.ruleset.classes, features: { ...assembled.ruleset.features, ...choiceFeatures } },
+    [],
+    []
+  );
+  for (const ability of ABILITIES) {
+    if (candidateSheet.abilities[ability].score > 20) return { error: "invalid_asi" };
+  }
+
+  const updatedCharacter = await updateBlockWithVersionCheck(supabase, {
+    id: ctx.characterBlockRow.id,
+    expectedVersion: ctx.characterBlockRow.version,
+    display: ctx.characterBlockRow.display,
+    data: next as unknown as Json,
+    visibilityLevel: ctx.characterBlockRow.visibility_level,
+    visibilityScopeId: ctx.characterBlockRow.visibility_scope_id,
+  });
+  if (!updatedCharacter) return { error: "conflict" };
+
+  let updatedSpellcasting: BlockRow | undefined;
+  if (params.spellcasting) {
+    const blocks = await listBlocksForEntity(supabase, params.entityId);
+    const spellcastingRow = blocks.find((b) => b.block_type === "spellcasting");
+    if (spellcastingRow) {
+      updatedSpellcasting =
+        (await updateBlockWithVersionCheck(supabase, {
+          id: spellcastingRow.id,
+          expectedVersion: spellcastingRow.version,
+          display: spellcastingRow.display,
+          data: params.spellcasting as unknown as Json,
+          visibilityLevel: spellcastingRow.visibility_level,
+          visibilityScopeId: spellcastingRow.visibility_scope_id,
+        })) ?? undefined;
+    } else if (params.spellcasting.known.length > 0) {
+      // Une classe non incantatrice qui multiclasse vers une classe qui
+      // l'est n'a encore aucun bloc spellcasting — cree seulement s'il y a
+      // deja un sort connu, jamais un bloc vide (meme regle qu'a la
+      // creation, `createCharacterFromWizard`).
+      updatedSpellcasting = await insertBlock(supabase, {
+        entityId: params.entityId,
+        blockType: "spellcasting",
+        display: defaultBlockDisplay("spellcasting", "Incantation"),
+        data: params.spellcasting as unknown as Json,
+        displayOrder: 3000,
+        visibilityLevel: "public",
+        visibilityScopeId: null,
+        createdBy: params.actorUserId,
+      });
+    }
+  }
+
+  return { character: updatedCharacter, spellcasting: updatedSpellcasting };
 }
 
 function rechargeResources(

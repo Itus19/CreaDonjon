@@ -5,9 +5,11 @@ import {
   costFromQuantity,
   extractBackgroundFeat,
   extractFeatureKeysUpToLevel,
+  extractAsiGrantedLevels,
   extractLanguageChoice,
   extractSkillChoices,
   extractSlotsByLevel,
+  isAbilityScoreImprovementGrant,
   mapBackgroundModifiers,
   mapChosenSkillModifiers,
   mapClassCore,
@@ -155,6 +157,43 @@ describe("extractSlotsByLevel / extractFeatureKeysUpToLevel", () => {
   it("cumule les cles de feature jusqu'au niveau donne", () => {
     expect(extractFeatureKeysUpToLevel(PROGRESSION_ROWS, 2)).toEqual(["wizard-arcane-recovery", "wizard-scholar"]);
   });
+
+  it("ne garde que la tranche (niveau exclusif, niveau] quand fromLevelExclusive est fourni (V2-G1, montee de niveau)", () => {
+    expect(extractFeatureKeysUpToLevel(PROGRESSION_ROWS, 3, 1)).toEqual(["wizard-scholar"]);
+  });
+});
+
+describe("isAbilityScoreImprovementGrant / extractAsiGrantedLevels (V2-G1, montee de niveau)", () => {
+  // Cles reelles du SRD 2024 (import verifie) : une cle par classe,
+  // reutilisee a chaque niveau d'ASI de cette classe.
+  const FIGHTER_PROGRESSION_ROWS = [
+    { level: 1, features: [{ feature: "fighter-fighting-style" }] },
+    { level: 4, features: [{ feature: "fighter-ability-score-improvement" }] },
+    { level: 6, features: [{ feature: "fighter-ability-score-improvement" }] },
+    { level: 8, features: [{ feature: "fighter-ability-score-improvement" }] },
+  ];
+
+  it("reconnait la cle prefixee par la classe (SRD 2024)", () => {
+    expect(isAbilityScoreImprovementGrant("fighter-ability-score-improvement", "fighter")).toBe(true);
+    expect(isAbilityScoreImprovementGrant("fighter-fighting-style", "fighter")).toBe(false);
+  });
+
+  it("reconnait la cle partagee sans prefixe (SRD 2014, feature dedupliquee entre classes)", () => {
+    expect(isAbilityScoreImprovementGrant("ability-score-improvement", "wizard")).toBe(true);
+  });
+
+  it("liste tous les niveaux d'ASI d'une classe, y compris ses niveaux supplementaires", () => {
+    expect(extractAsiGrantedLevels(FIGHTER_PROGRESSION_ROWS, "fighter")).toEqual([4, 6, 8]);
+  });
+
+  // Trou de donnees connu et accepte (V2-G1) : sous le SRD 2014, la
+  // deduplication de scripts/ingest-srd.ts fusionne les ASI supplementaires
+  // du Guerrier/Roublard (texte propre a leur classe) sous une cle sans
+  // aucun marqueur ("ability-score-improvement-2"/"-3", ordre d'insertion
+  // de la Map, pas un identifiant stable) — indetectable sans corriger
+  // l'import ET reimporter les donnees deja en base. Volontairement non
+  // couvert : ce test documente la limite plutot que de la cacher.
+  it.todo("SRD 2014 : les ASI supplementaires du Guerrier/Roublard ne sont pas detectees (cle sans marqueur apres deduplication)");
 });
 
 describe("extractSkillChoices / mapChosenSkillModifiers", () => {
