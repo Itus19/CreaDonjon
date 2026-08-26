@@ -181,8 +181,16 @@
     },
     "collaboration": {
       "titre": "Collaboration",
-      "inviterMJ": "Invite a GM",
-      "bientot": "Coming soon"
+      "mesCampagnes": "My campaigns",
+      "aucuneCampagneMj": "You are not the GM of any campaign.",
+      "inviterPlaceholder": "Email to invite",
+      "inviter": "Invite",
+      "roleGm": "GM",
+      "rolePlayer": "Player",
+      "membres": "Members",
+      "aucunMembre": "No members yet.",
+      "erreurInvitation": "Invitation failed.",
+      "erreurChargement": "Couldn't load your campaigns."
     },
     "suppression": {
       "titre": "Danger zone",

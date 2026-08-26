@@ -9,6 +9,7 @@ import {
   listCampaignCharacters,
   listCampaignMembers,
   listCampaignsForWorld,
+  listGmCampaignsForUser,
   upsertCampaignCharacter,
   type CampaignCharacterRow,
   type CampaignMemberRow,
@@ -122,6 +123,40 @@ export async function inviteCampaignMember(
   if (!userId) return { ok: false, reason: "not_found" };
   await insertCampaignMember(supabase, { campaignId: params.campaignId, userId, role: params.role });
   return { ok: true, userId };
+}
+
+export interface GmCampaignSummary {
+  campaignId: string;
+  campaignName: string;
+  worldId: string;
+  worldName: string;
+  worldSlug: string;
+  members: { userId: string; role: string }[];
+}
+
+/**
+ * Vue transversale pour l'onglet Collaboration des Reglages (V2-K7) :
+ * toutes les campagnes dont l'utilisateur courant est MJ, mondes
+ * confondus, avec leurs membres actuels. Une requete par campagne pour la
+ * liste des membres (N+1 assume) — un MJ gere en pratique quelques
+ * campagnes, pas des milliers ; a mesurer avant d'optimiser si ca devient
+ * un vrai probleme (meme principe que V2-G6).
+ */
+export async function listMyGmCampaignsWithMembers(supabase: TypedClient, userId: string): Promise<GmCampaignSummary[]> {
+  const rows = await listGmCampaignsForUser(supabase, userId);
+  const summaries: GmCampaignSummary[] = [];
+  for (const row of rows) {
+    const members = await listCampaignMembers(supabase, row.campaign_id);
+    summaries.push({
+      campaignId: row.campaign_id,
+      campaignName: row.campaign_name,
+      worldId: row.world_id,
+      worldName: row.world_name,
+      worldSlug: row.world_slug,
+      members: members.map((m) => ({ userId: m.user_id, role: m.role })),
+    });
+  }
+  return summaries;
 }
 
 export async function assignCampaignCharacter(

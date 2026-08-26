@@ -49,6 +49,145 @@ function DisplayNameForm({ initialDisplayName }: { initialDisplayName: string })
   );
 }
 
+interface GmCampaignSummary {
+  campaignId: string;
+  campaignName: string;
+  worldId: string;
+  worldName: string;
+  worldSlug: string;
+  members: { userId: string; role: string }[];
+}
+
+/**
+ * Onglet Collaboration (V2-K7) : reprend le flux d'invitation deja
+ * existant au niveau campagne (`CampaignDetail.tsx`, meme route API
+ * `/api/campaigns/[campaignId]/members`) plutot que d'en ecrire un
+ * second — seul ce qui manquait avant ce ticket est nouveau : une vue
+ * transversale (`/api/campaigns/mine`) listant les campagnes dont
+ * l'utilisateur est MJ, tous mondes confondus, pour choisir la cible de
+ * l'invitation et voir les membres deja presents partout.
+ */
+function CollaborationTab() {
+  const t = useTranslations("settings.collaboration");
+  const [campaigns, setCampaigns] = useState<GmCampaignSummary[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"gm" | "player">("player");
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  function load() {
+    fetch("/api/campaigns/mine")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
+      .then((body: { campaigns: GmCampaignSummary[] }) => {
+        setCampaigns(body.campaigns);
+        setSelectedId((prev) => prev || body.campaigns[0]?.campaignId || "");
+      })
+      .catch(() => setLoadError(t("erreurChargement")));
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule fois au montage (activation de l'onglet), pas a chaque frappe de traduction
+  useEffect(load, []);
+
+  async function invite(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedId || !email.trim()) return;
+    setBusy(true);
+    setInviteError(null);
+    const res = await fetch(`/api/campaigns/${selectedId}/members`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim(), role }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setInviteError(body?.error ?? t("erreurInvitation"));
+      return;
+    }
+    setEmail("");
+    load();
+  }
+
+  if (campaigns === null) {
+    return loadError ? (
+      <p className="text-xs text-danger">{loadError}</p>
+    ) : (
+      <p className="text-xs text-ink-muted">…</p>
+    );
+  }
+
+  if (campaigns.length === 0) {
+    return <p className="text-sm text-ink-muted">{t("aucuneCampagneMj")}</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <form onSubmit={invite} className="flex flex-col gap-2">
+        <select
+          value={selectedId}
+          onChange={(e) => setSelectedId(e.target.value)}
+          className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
+        >
+          {campaigns.map((c) => (
+            <option key={c.campaignId} value={c.campaignId}>
+              {c.campaignName} — {c.worldName}
+            </option>
+          ))}
+        </select>
+        <div className="flex items-center gap-2">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={t("inviterPlaceholder")}
+            className="flex-1 rounded-md border border-edge bg-panel-raised px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
+          />
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as "gm" | "player")}
+            className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
+          >
+            <option value="player">{t("rolePlayer")}</option>
+            <option value="gm">{t("roleGm")}</option>
+          </select>
+          <button
+            type="submit"
+            disabled={busy || !email.trim()}
+            className="shrink-0 rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+          >
+            {t("inviter")}
+          </button>
+        </div>
+        {inviteError && <p className="text-xs text-danger">{inviteError}</p>}
+      </form>
+
+      <div className="flex flex-col gap-3 border-t border-edge pt-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{t("mesCampagnes")}</h3>
+        {campaigns.map((c) => (
+          <div key={c.campaignId} className="flex flex-col gap-1">
+            <p className="text-sm text-ink">
+              {c.campaignName} <span className="text-xs text-ink-muted">— {c.worldName}</span>
+            </p>
+            {c.members.length === 0 ? (
+              <p className="text-xs text-ink-muted">{t("aucunMembre")}</p>
+            ) : (
+              <ul className="flex flex-col gap-0.5 text-xs text-ink-muted">
+                {c.members.map((m) => (
+                  <li key={m.userId}>
+                    {m.role === "gm" ? t("roleGm") : t("rolePlayer")} — {m.userId}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DeleteAccountSection() {
   const t = useTranslations("settings.suppression");
   const [revealed, setRevealed] = useState(false);
@@ -317,14 +456,7 @@ export default function SettingsMenu({
 
             {tab === "collaboration" && (
               <section className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  disabled
-                  title={t("collaboration.bientot")}
-                  className="cursor-not-allowed self-start rounded-md border border-edge px-3 py-1.5 text-sm text-ink-muted opacity-60"
-                >
-                  {t("collaboration.inviterMJ")} — {t("collaboration.bientot")}
-                </button>
+                <CollaborationTab />
               </section>
             )}
           </div>

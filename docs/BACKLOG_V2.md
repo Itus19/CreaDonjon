@@ -450,13 +450,19 @@ Fait — `<Tabs>` (`components/shared/Tabs.tsx`) est un primitif controlé (`val
 
 Fait — `RulesetSelector` n'a pas bougé lui-même (déjà autonome, déjà en portail) : seul son point de montage change, de `RulesSidebar.tsx` vers un nouvel onglet « Règles » de `SettingsMenu.tsx`, visible uniquement dans le contexte d'un monde (`worldSlug` détecté depuis l'URL, même mécanisme que le panneau de partage). Aucune ligne de `RulesetSelector.tsx` modifiée. Vérifié en navigateur : le bouton « Règles actives » et sa boîte de dialogue (choisir/créer une variante/supprimer) fonctionnent à l'identique depuis les Réglages ; la sidebar Règles est redevenue une simple liste + les deux boutons de création. `typecheck`/`lint`/`test` verts (605/606, 1 ignoré).
 
-### V2-K7 — Onglet Collaboration dans les Réglages · `S`
+### V2-K7 — Onglet Collaboration dans les Réglages · `S` — fait
 
 *Dépend de K5.*
 
-- [ ] Le bouton désactivé « Inviter un MJ (bientôt) » (`SettingsMenu.tsx`) devient un onglet Collaboration fonctionnel.
-- [ ] Reprend le flux d'invitation par e-mail déjà existant au niveau campagne (`CampaignDetail.tsx`) plutôt que d'en écrire un second.
-- [ ] Liste les invitations actives, quel que soit le monde ou la campagne concernée.
+- [x] Le bouton désactivé « Inviter un MJ (bientôt) » (`SettingsMenu.tsx`) devient un onglet Collaboration fonctionnel.
+- [x] Reprend le flux d'invitation par e-mail déjà existant au niveau campagne (`CampaignDetail.tsx`) plutôt que d'en écrire un second.
+- [x] Liste les invitations actives, quel que soit le monde ou la campagne concernée.
+
+**Divergence trouvée avant d'écrire, tranchée avec l'utilisateur** : il n'existe aucune invitation « en attente » dans ce dépôt — inviter (`inviteCampaignMember`, `src/server/services/campaigns.ts`) ajoute la personne IMMÉDIATEMENT comme membre si un compte existe déjà pour son e-mail (404 sinon), sans statut ni étape d'acceptation. Construire un vrai système d'invitation en attente aurait exigé une migration de schéma (table nouvelle, RLS, flux d'acceptation) — hors de portée d'un ticket `S`. Décision : reprendre le flux existant tel quel, transversalement.
+
+Fait — nouvelle vue transversale : `listGmCampaignsForUser` (`src/server/repos/campaigns.ts`, jointure `campaign_members → campaigns → worlds`, RLS déjà filtrante) + `listMyGmCampaignsWithMembers` (`src/server/services/campaigns.ts`) + route `GET /api/campaigns/mine`. `SettingsMenu.tsx` : nouveau `CollaborationTab`, un sélecteur parmi les campagnes dont l'utilisateur est MJ (tous mondes confondus) + un formulaire d'invitation (e-mail + rôle MJ/joueur) qui appelle la MÊME route `POST /api/campaigns/[campaignId]/members` que `CampaignDetail.tsx` — aucune deuxième implémentation du flux d'invitation. En dessous, la liste de toutes les campagnes MJ avec leurs membres actuels. Vérifié en navigateur : campagne existante listée avec son membre, invitation vers un e-mail sans compte renvoie bien « Aucun compte n'existe pour cette adresse » (même message que le flux d'origine). `typecheck`/`lint`/`test` verts (605/606, 1 ignoré).
+
+**Lot K terminé** (K1 à K7).
 
 ---
 

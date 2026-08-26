@@ -125,6 +125,37 @@ export async function upsertCampaignCharacter(
   return data;
 }
 
+export interface GmCampaignRow {
+  campaign_id: string;
+  campaign_name: string;
+  world_id: string;
+  world_name: string;
+  world_slug: string;
+}
+
+/**
+ * Campagnes ou l'utilisateur courant est MJ, toutes mondes confondus
+ * (V2-K7, onglet Collaboration des Reglages — pas de vue equivalente
+ * avant ce ticket, `getCampaignRolesForWorld` etant deja bornee a un seul
+ * monde). RLS filtre deja `campaign_members`/`campaigns`/`worlds` par
+ * appartenance (SCHEMA.md §19) : rien a ajouter ici.
+ */
+export async function listGmCampaignsForUser(supabase: TypedClient, userId: string): Promise<GmCampaignRow[]> {
+  const { data, error } = await supabase
+    .from("campaign_members")
+    .select("campaign_id, campaigns!inner(name, world_id, worlds!inner(name, slug))")
+    .eq("user_id", userId)
+    .eq("role", "gm");
+  if (error) throw new Error(error.message);
+  return data.map((row) => ({
+    campaign_id: row.campaign_id,
+    campaign_name: row.campaigns.name,
+    world_id: row.campaigns.world_id,
+    world_name: row.campaigns.worlds.name,
+    world_slug: row.campaigns.worlds.slug,
+  }));
+}
+
 /**
  * Resout un email en id de compte, sans jamais lire `auth.users` depuis
  * l'application (SCHEMA.md §3) : passe par `find_user_id_by_email`

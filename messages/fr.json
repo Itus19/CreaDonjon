@@ -181,8 +181,16 @@
     },
     "collaboration": {
       "titre": "Collaboration",
-      "inviterMJ": "Inviter un MJ",
-      "bientot": "Bientôt"
+      "mesCampagnes": "Mes campagnes",
+      "aucuneCampagneMj": "Vous n'êtes MJ d'aucune campagne.",
+      "inviterPlaceholder": "Courriel à inviter",
+      "inviter": "Inviter",
+      "roleGm": "MJ",
+      "rolePlayer": "Joueur",
+      "membres": "Membres",
+      "aucunMembre": "Aucun membre pour l'instant.",
+      "erreurInvitation": "Échec de l'invitation.",
+      "erreurChargement": "Impossible de charger vos campagnes."
     },
     "suppression": {
       "titre": "Zone dangereuse",
