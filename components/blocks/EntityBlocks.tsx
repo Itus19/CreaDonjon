@@ -25,6 +25,7 @@ import GeneratorBlockEditor from "./GeneratorBlockEditor";
 import InventoryBlockEditor from "./InventoryBlockEditor";
 import SpellcastingBlockEditor from "./SpellcastingBlockEditor";
 import ResourcesBlockEditor from "./ResourcesBlockEditor";
+import MusicBlockEditor from "./MusicBlockEditor";
 import MonsterStatblockSheet from "./MonsterStatblockSheet";
 import PlayableCharacterSheet from "./PlayableCharacterSheet";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
@@ -37,6 +38,7 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
+import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
 import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 
@@ -64,6 +66,7 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   spellcasting: "Incantation",
   resources: "Ressources",
   statblock: "Fiche de créature",
+  music: "Musique",
 };
 
 /**
@@ -163,6 +166,10 @@ function BlockDataEditor({
     case "resources":
       return (
         <ResourcesBlockEditor data={block.data as ResourcesBlockData} onChange={(d) => onChange(d)} />
+      );
+    case "music":
+      return (
+        <MusicBlockEditor data={block.data as MusicBlockData} onChange={(d) => onChange(d)} blockId={block.id} />
       );
     default:
       return <p className="text-sm text-danger">Type de bloc inconnu : {block.blockType}</p>;

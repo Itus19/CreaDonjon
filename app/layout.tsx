@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/src/server/repos/account";
 import { resolveBackgroundSelection } from "@/src/server/services/backgroundImages";
 import SettingsMenu from "@/components/shell/SettingsMenu";
+import { MusicPlaybackProvider } from "@/components/shell/MusicPlaybackContext";
 import "./globals.css";
 
 // Trois familles chargees localement (auto-hebergees a la build par
@@ -84,19 +85,21 @@ export default async function RootLayout({
           aria-hidden="true"
         />
         <NextIntlClientProvider locale={locale} messages={messages}>
-          {user && (
-            <SettingsMenu
-              currentMode={mode}
-              currentContrast={contrast ?? "off"}
-              currentLocale={locale}
-              email={user.email ?? ""}
-              displayName={profile?.display_name ?? ""}
-              currentBackgroundRef={background.ref}
-              currentBackgroundAvailableModes={background.availableModes}
-              currentBgBlur={bgBlur}
-            />
-          )}
-          {children}
+          <MusicPlaybackProvider>
+            {user && (
+              <SettingsMenu
+                currentMode={mode}
+                currentContrast={contrast ?? "off"}
+                currentLocale={locale}
+                email={user.email ?? ""}
+                displayName={profile?.display_name ?? ""}
+                currentBackgroundRef={background.ref}
+                currentBackgroundAvailableModes={background.availableModes}
+                currentBgBlur={bgBlur}
+              />
+            )}
+            {children}
+          </MusicPlaybackProvider>
         </NextIntlClientProvider>
       </body>
     </html>

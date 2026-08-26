@@ -11,6 +11,7 @@ import { zResourcesBlockData } from "./resources";
 import { zStatblockBlockData } from "./statblock";
 import { zRandomTableBlockData } from "./randomTable";
 import { zGeneratorBlockData } from "./generator";
+import { zMusicBlockData } from "./music";
 
 /**
  * Catalogue des blocs de wiki (specs/wiki-blocs.md §1, docs/SCHEMA.md §7).
@@ -27,6 +28,12 @@ import { zGeneratorBlockData } from "./generator";
  * outil d'ecran MJ autonome (table `campaign_encounters`), jamais attache
  * a une fiche — decision explicite de l'utilisateur, revenant sur le plan
  * initial de docs/SCHEMA.md qui le prevoyait en bloc V2.
+ * V2-G3 : music — jamais de fichier audio heberge par nous, une "station"
+ * est un bloc nomme portant une liste de liens Spotify/SoundCloud/YouTube
+ * (`src/core/music/embedUrl.ts` valide le domaine et traduit chaque lien
+ * en URL d'integration). Le nom de la station est choisi par la personne
+ * elle-meme (le `display.label` du bloc, comme tout bloc) — jamais une
+ * categorie ou une marque de franchise fournie par l'application.
  */
 export const BLOCK_TYPES = [
   "text",
@@ -40,6 +47,7 @@ export const BLOCK_TYPES = [
   "statblock",
   "random_table",
   "generator",
+  "music",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -55,6 +63,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   statblock: "statblock",
   random_table: "table",
   generator: "prose",
+  music: "music",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -70,6 +79,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   statblock: zStatblockBlockData,
   random_table: zRandomTableBlockData,
   generator: zGeneratorBlockData,
+  music: zMusicBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -117,6 +127,7 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
     reactions: [],
     legendary_actions: [],
   },
+  music: { __v: 1, tracks: [] },
 };
 
 export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny {

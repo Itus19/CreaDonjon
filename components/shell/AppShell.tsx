@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import Clock from "./Clock";
+import RadioWidget from "./RadioWidget";
 
 /**
  * Coquille commune aux trois sections (Monde/Règles/MJ) : uniquement
@@ -26,6 +27,7 @@ export default function AppShell({
           {worldName}
         </Link>
         <div className="flex items-center gap-3">
+          <RadioWidget />
           <Clock />
           <Link href="/" className="text-sm text-ink-muted hover:text-ink">
             {t("mesMondes")}

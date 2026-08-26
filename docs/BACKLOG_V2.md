@@ -274,11 +274,26 @@ Seconde peau de la coquille, pas une refonte. Mêmes composants, jetons différe
 
 À faire quand le wiki public a du contenu à montrer. Habiller trois fiches de test n'apprend rien.
 
-### V2-G3 — Bloc musique · `S`
+### V2-G3 — Bloc musique · `S` — fait
 
-- [ ] Bloc `music` : un lien Spotify, SoundCloud ou YouTube, avec lecteur.
-- [ ] **Le lecteur ne se charge qu'au clic.** Une intégration tierce chargée automatiquement dépose des traceurs sur toute fiche qui en contient une.
-- [ ] URL validée contre une liste de domaines autorisés — sinon c'est un vecteur d'injection.
+- [x] Bloc `music` : un lien Spotify, SoundCloud ou YouTube, avec lecteur.
+- [x] **Le lecteur ne se charge qu'au clic.** Une intégration tierce chargée automatiquement dépose des traceurs sur toute fiche qui en contient une.
+- [x] URL validée contre une liste de domaines autorisés — sinon c'est un vecteur d'injection.
+
+**Question posée en cours de route : la « radio » de vvd.world.** Avant d'implémenter, la demande initiale évoquait une inspiration : la radio de vvd.world propose plusieurs « stations » dont certaines nommées d'après des franchises (Final Fantasy, The Witcher…). La fonctionnalité est cachée derrière leur connexion — impossible à inspecter davantage. Deux lectures possibles étaient en jeu : héberger nous-mêmes de la musique de licence (infraction directe), ou nommer une station d'après une franchise même sans en jouer la musique (fausse affiliation implicite, exactement le risque déjà couvert par la politique SRD stricte de ce dépôt). Les deux ont été signalées explicitement à l'utilisateur avant d'écrire du code.
+
+**Décision retenue, sur choix explicite de l'utilisateur** : une « station » n'est jamais une catégorie fournie par l'application — c'est le bloc `music` lui-même, avec son `display.label` choisi par la personne (comme tout bloc). Plusieurs stations sur une même fiche = plusieurs blocs `music`. Aucun fichier audio n'est jamais hébergé par nous : chaque piste est un lien externe vers une plateforme qui porte elle-même la licence (Spotify, SoundCloud, YouTube), résolu et validé par `src/core/music/embedUrl.ts` (`detectProvider`/`toEmbedUrl`, testés dans `embedUrl.test.ts`, y compris un essai explicite de mystification de domaine — `open.spotify.com.evil.com` — correctement rejeté). Le fournisseur n'est jamais stocké côté client : toujours redérivé de l'URL réelle à la validation.
+
+**Vérifié en navigateur** sur la fiche de Jean-Pascal : ajout du bloc, rejet d'une URL à domaine mystifié avec le message d'erreur attendu, ajout d'une piste YouTube valide, lecteur non chargé tant que « ▶ Lecture » n'est pas cliqué, chargement effectif au clic, ajout d'une seconde piste (SoundCloud) avec navigation ‹/› entre les pistes et réinitialisation correcte du chargement au changement de piste, suppression de piste, suppression du bloc — fiche restaurée à son état d'origine après le test.
+
+**Extension demandée après coup : radio d'arrière-plan + refonte du bloc.** Deux retours explicites une fois le premier jet vu : (1) le premier jet donnait un bloc avec navigation entre pistes, mais l'utilisateur voulait un bouton lecture par piste, sans aucun lecteur visible — juste « un lien, un bouton play, un nom » ; (2) il manquait la vraie demande initiale, un bouton de musique de fond en haut à droite (à côté de l'horloge, comme la radio de vvd.world), avec des « stations » nommées par la personne — même principe de sécurité que le bloc (jamais une catégorie fournie par l'application). Les deux doivent s'exclure mutuellement : lancer une piste de bloc met en pause la radio, et inversement.
+
+Réalisé en réutilisant un seul mécanisme pour les deux : `MusicPlaybackProvider` (`components/shell/MusicPlaybackContext.tsx`), monté une fois dans `app/layout.tsx` (donc jamais démonté par la navigation entre pages), qui ne garde qu'une seule iframe cachée à la fois — en démarrer une en démonte forcément une autre, ce qui donne l'exclusion mutuelle sans dépendre de l'API JS propre à chaque fournisseur. L'iframe est rendue hors champ (1px, opacité nulle) plutôt qu'en `display:none`, pour ne pas risquer que le moteur coupe l'audio d'un élément qu'il considère non affiché. `toEmbedUrl` accepte désormais `{ autoplay: true }` (`src/core/music/embedUrl.ts`) : le clic sur play est le geste utilisateur qui autorise la lecture automatique dans l'iframe.
+
+- `components/shell/RadioWidget.tsx` : bouton en ligne dans `AppShell.tsx`, à gauche de l'horloge (un bouton `fixed` indépendant du fil d'en-tête finissait par chevaucher le lien "Mes mondes"), stations `{label, url}` nommées par la personne, persistées en `localStorage` (préférence de navigateur, même raisonnement que `mode`/`background` avant leur lecture serveur — rien ici n'appelle une synchronisation entre appareils). Icône maison en SVG (ondes de diffusion, `currentColor`) plutôt qu'un emoji — retour explicite, même registre que les glyphes déjà utilisés dans la coquille (⚙, ▾, ×).
+- `components/blocks/MusicBlockEditor.tsx` : refonte complète — plus de lecteur visible ni de navigation entre pistes, chaque piste de la liste porte son propre bouton ▶/⏸ et un champ de nom éditable (ex. « Arrivée du méchant »), exactement la demande.
+
+**Vérifié en navigateur** : création de la station « Fireren Radio » avec le lien playlist fourni, lecture lancée (iframe cachée confirmée par script avec `autoplay=1` dans l'URL), persistance de la lecture après une navigation interne (clic sur un lien, pas un rechargement complet) vers la fiche de Jean-Pascal. Ajout d'une piste nommée « Arrivée du méchant » dans le bloc `music` de cette fiche : lecture de la piste met bien la radio en pause (bouton radio repasse en `▶`, iframe repointée vers la piste du bloc), puis relancer la radio met bien la piste du bloc en pause — exclusion mutuelle confirmée dans les deux sens.
 
 ---
 

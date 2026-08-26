@@ -18,6 +18,7 @@ export const zBlockDisplay = z.object({
     "spellcasting",
     "resources",
     "statblock",
+    "music",
   ]),
   collapsed: z.boolean().optional(),
 });
