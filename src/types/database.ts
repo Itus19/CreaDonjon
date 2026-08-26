@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   graphql_public: {
     Tables: {
@@ -215,6 +215,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      background_images: {
+        Row: {
+          available_modes: string[]
+          backdrop_image: string
+          chroma: number
+          created_at: string
+          hue: number
+          id: string
+          owner_id: string
+          thumb_data_url: string
+        }
+        Insert: {
+          available_modes: string[]
+          backdrop_image: string
+          chroma: number
+          created_at?: string
+          hue: number
+          id?: string
+          owner_id: string
+          thumb_data_url: string
+        }
+        Update: {
+          available_modes?: string[]
+          backdrop_image?: string
+          chroma?: number
+          created_at?: string
+          hue?: number
+          id?: string
+          owner_id?: string
+          thumb_data_url?: string
+        }
+        Relationships: []
       }
       blocks: {
         Row: {

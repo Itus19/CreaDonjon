@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/src/server/repos/account";
+import { resolveBackgroundSelection } from "@/src/server/services/backgroundImages";
 import SettingsMenu from "@/components/shell/SettingsMenu";
 import "./globals.css";
 
@@ -55,17 +56,31 @@ export default async function RootLayout({
   } = await supabase.auth.getUser();
   const profile = user ? await getOwnProfile(supabase, user.id) : null;
 
+  // Fond d'ecran personnel (V2-G4 reformule) : meme technique que
+  // data-mode/data-contrast ci-dessus (cookie lu et applique cote serveur,
+  // avant le premier rendu) — aucun scintillement au chargement.
+  const backgroundRef = cookieStore.get("background")?.value;
+  const background = await resolveBackgroundSelection(supabase, backgroundRef);
+
+  // Flou du fond, reglable (retour utilisateur) : --bg-blur est distinct de
+  // --blur (flou verre depoli des fenetres/panneaux, app/globals.css) —
+  // 20px par defaut, comportement inchangé pour qui n'a jamais touche au
+  // curseur.
+  const bgBlurCookie = Number(cookieStore.get("bgBlur")?.value);
+  const bgBlur = Number.isFinite(bgBlurCookie) && bgBlurCookie >= 0 && bgBlurCookie <= 40 ? bgBlurCookie : 20;
+
   return (
     <html
       lang={locale}
       data-mode={mode}
       data-contrast={contrast}
+      style={{ ["--h" as string]: background.hue, ["--c" as string]: background.chroma, ["--bg-blur" as string]: `${bgBlur}px` }}
       className={`${geistSans.variable} ${outfit.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <div
           className="app-backdrop"
-          style={{ ["--bg-image" as string]: "url(/backgrounds/Artwork_C.png)" }}
+          style={{ ["--bg-image" as string]: `url("${background.backdropUrl}")` }}
           aria-hidden="true"
         />
         <NextIntlClientProvider locale={locale} messages={messages}>
@@ -76,6 +91,9 @@ export default async function RootLayout({
               currentLocale={locale}
               email={user.email ?? ""}
               displayName={profile?.display_name ?? ""}
+              currentBackgroundRef={background.ref}
+              currentBackgroundAvailableModes={background.availableModes}
+              currentBgBlur={bgBlur}
             />
           )}
           {children}

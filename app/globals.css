@@ -83,7 +83,12 @@ body {
   background-image: var(--bg-image, none);
   background-size: cover;
   background-position: center;
-  filter: blur(var(--blur));
+  /* --bg-blur (reglable par la personne, V2-G4 reformule) est distinct de
+     --blur (flou verre depoli des fenetres/panneaux, WindowFrame.tsx,
+     Panel.tsx, WindowsDesktop.tsx) : les deux se valaient 20px par
+     coincidence avant ce ticket, jamais la meme intention — regler l'un ne
+     doit jamais changer l'autre. */
+  filter: blur(var(--bg-blur, 20px));
   transform: scale(1.08);
 }
 .app-backdrop::after {

@@ -944,6 +944,29 @@ create table share_links (
 
 **Supabase Storage, buckets privés, URLs signées de courte durée.** Un bucket public réduirait à néant tout le travail sur la visibilité — une carte avec les emplacements secrets serait accessible par URL directe.
 
+### 18.1 `background_images` — fond d'écran personnel (V2-G4 reformulé)
+
+Distincte d'`assets` : ce n'est jamais un fichier d'un monde, mais un réglage **du joueur**, indépendant de toute partie ouverte (`specs/coquille-et-design.md` §2b). Le fichier d'origine n'est jamais conservé tel quel — l'image est retraitée une fois à l'envoi (`src/server/backgroundImageProcessing.ts`) en deux formes distinctes, plus la teinte/chroma OKLCH (`src/core/theme/oklch.ts`) :
+- `thumb_data_url` : miniature CARRÉE nette 64×64 en base64, pour la grille de sélection des Réglages seulement — un recadrage carré y est un choix d'icône assumé.
+- `backdrop_image` : le fond réellement affiché, aspect d'origine préservé (jamais recadré en carré — un recadrage carré, une fois étiré plein écran par le CSS, centrait mal l'image), plafonné à 1920px sur son plus grand côté. Correction après coup (retour utilisateur) : une image plus petite que ça devenait visiblement pixelisée dès que `--bg-blur` (réglable) descend vers 0. Stocké en `bytea` (pas en base64/texte comme `thumb_data_url`) et servi par sa propre route (`GET /api/settings/background/[id]/image`, cache `immutable`), jamais embarqué dans le HTML — à la différence de la miniature, minuscule et faite pour ça.
+
+Le flou du fond se règle à l'affichage (`--bg-blur`, `app/globals.css`), jamais à la source.
+
+```sql
+create table background_images (
+  id              uuid primary key default gen_random_uuid(),
+  owner_id        uuid not null references auth.users(id) on delete cascade,
+  thumb_data_url  text not null,
+  backdrop_image  bytea not null,
+  hue             numeric not null,
+  chroma          numeric not null,
+  available_modes text[] not null,
+  created_at      timestamptz not null default now()
+);
+```
+
+RLS : `owner_id = auth.uid()`, même motif le plus simple que `profiles` (§3) — aucune notion de monde ou de membre, un compte est seul propriétaire de ses lignes. Bibliothèque strictement personnelle, jamais partagée entre comptes (décision explicite). La sélection courante (laquelle des images — personnelles ou fournies par l'application — est active) est un cookie, pas une colonne : même mécanisme que `data-mode` (`app/layout.tsx`, `components/shell/SettingsMenu.tsx`), pour la même raison (préférence de session, aucune synchronisation multi-appareil demandée).
+
 ---
 
 ## 19. Row Level Security

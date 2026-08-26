@@ -1,0 +1,13 @@
+-- Correction apres coup (retour utilisateur, V2-G4 reformule) : la
+-- miniature carree 64x64 (thumb_data_url) suffit pour la grille de
+-- selection, mais pas pour le fond d'ecran lui-meme des que le flou baisse
+-- (--bg-blur reglable, deja livre) — une image quatre fois trop petite,
+-- agrandie plein ecran, devient visiblement pixelisee, et son recadrage
+-- carre force un mauvais centrage une fois etiree sur un ecran rectangulaire.
+-- Une image plus grande, PAS recadree en carre (aspect d'origine preserve,
+-- `fit: inside`), est necessaire specifiquement pour le rendu du fond.
+--
+-- Stockee en bytea (pas en base64/text comme thumb_data_url) : cette image
+-- est desormais servie par sa propre route (jamais embarquee dans le HTML),
+-- bytea evite le gonflement de ~33% du base64 en base comme sur le reseau.
+alter table background_images add column backdrop_image bytea not null;

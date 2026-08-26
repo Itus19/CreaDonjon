@@ -14,6 +14,7 @@ import ShareLinkPanel from "./ShareLinkPanel";
 import type { ShareLinkSummary } from "@/src/server/services/shareLinks";
 import Tabs from "@/components/shared/Tabs";
 import RulesetSelector from "@/components/rules/RulesetSelector";
+import BackgroundPicker, { type BackgroundSelection } from "./BackgroundPicker";
 
 const MODES = ["dark", "dim", "soft", "light"] as const;
 
@@ -249,18 +250,26 @@ export default function SettingsMenu({
   currentLocale,
   email,
   displayName,
+  currentBackgroundRef,
+  currentBackgroundAvailableModes,
+  currentBgBlur,
 }: {
   currentMode: string;
   currentContrast: string;
   currentLocale: string;
   email: string;
   displayName: string;
+  currentBackgroundRef: string;
+  currentBackgroundAvailableModes: string[];
+  currentBgBlur: number;
 }) {
   const t = useTranslations("settings");
   const tShell = useTranslations("shell");
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
   const [contrast, setContrast] = useState(currentContrast);
+  const [backgroundAvailableModes, setBackgroundAvailableModes] = useState(currentBackgroundAvailableModes);
+  const [bgBlur, setBgBlur] = useState(currentBgBlur);
   // Premier composant d'onglets du depot (V2-K5) — pur decoupage des
   // sections deja existantes, aucun changement de comportement. L'onglet
   // "regles" n'existe que dans le contexte d'un monde (V2-K6).
@@ -315,6 +324,31 @@ export default function SettingsMenu({
   function toggleContrast() {
     setContrast((c) => (c === "high" ? "off" : "high"));
   }
+
+  /**
+   * Applique une selection de fond d'ecran (V2-G4 reformule) : meme
+   * technique que `mode`/`contrast` ci-dessus (cookie + ecriture DOM
+   * directe, aucun rechargement) — mais `--h`/`--c` vivent sur `<html>` et
+   * `--bg-image` sur `.app-backdrop`, un frere de ce composant dans
+   * `app/layout.tsx`, jamais un ancetre React de celui-ci : d'ou la
+   * selection par attribut plutot qu'une ref.
+   */
+  function handleBackgroundSelection(selection: BackgroundSelection) {
+    document.documentElement.style.setProperty("--h", String(selection.hue));
+    document.documentElement.style.setProperty("--c", String(selection.chroma));
+    document.querySelector<HTMLElement>(".app-backdrop")?.style.setProperty("--bg-image", `url("${selection.backdropUrl}")`);
+    setBackgroundAvailableModes(selection.availableModes);
+    if (!selection.availableModes.includes(mode)) {
+      const fallbackMode = selection.availableModes[0];
+      if (fallbackMode) setMode(fallbackMode);
+    }
+    setCookie("background", selection.ref);
+  }
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--bg-blur", `${bgBlur}px`);
+    setCookie("bgBlur", String(bgBlur));
+  }, [bgBlur]);
 
   return (
     <>
@@ -391,24 +425,42 @@ export default function SettingsMenu({
                     {t("theme.titre")}
                   </h3>
                   <div className="flex flex-wrap gap-1.5">
-                    {MODES.map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setMode(m)}
-                        className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-ink transition-colors hover:bg-panel ${
-                          mode === m ? "ring-1 ring-accent" : ""
-                        }`}
-                      >
-                        <span
-                          className={`flex h-4 w-4 items-center justify-center rounded-full border border-edge mode-swatch-${m}`}
+                    {MODES.map((m) => {
+                      const disabled = !backgroundAvailableModes.includes(m);
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setMode(m)}
+                          disabled={disabled}
+                          title={disabled ? "Ce fond ne permet pas ce mode de façon lisible" : undefined}
+                          className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-ink transition-colors hover:bg-panel disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent ${
+                            mode === m ? "ring-1 ring-accent" : ""
+                          }`}
                         >
-                          <span className={`h-1.5 w-1.5 rounded-full mode-swatch-${m}-accent`} />
-                        </span>
-                        {t(`theme.${m}`)}
-                      </button>
-                    ))}
+                          <span
+                            className={`flex h-4 w-4 items-center justify-center rounded-full border border-edge mode-swatch-${m}`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full mode-swatch-${m}-accent`} />
+                          </span>
+                          {t(`theme.${m}`)}
+                        </button>
+                      );
+                    })}
                   </div>
+                  <BackgroundPicker currentRef={currentBackgroundRef} onSelectionChange={handleBackgroundSelection} />
+                  <label className="flex flex-col gap-1 text-xs text-ink-muted">
+                    Flou du fond ({bgBlur}px)
+                    <input
+                      type="range"
+                      min={0}
+                      max={40}
+                      step={2}
+                      value={bgBlur}
+                      onChange={(e) => setBgBlur(Number(e.target.value))}
+                      className="accent-accent"
+                    />
+                  </label>
                   <button
                     type="button"
                     onClick={toggleContrast}
