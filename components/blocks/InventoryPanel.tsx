@@ -613,7 +613,7 @@ export default function InventoryPanel({
                 </option>
               ))}
             </select>
-            <Stepper onIncrement={() => applyCoinDelta(1)} onDecrement={() => applyCoinDelta(-1)} incrementLabel="Ajouter" decrementLabel="Retirer" className="h-10 w-12">
+            <Stepper onIncrement={() => applyCoinDelta(1)} onDecrement={() => applyCoinDelta(-1)} incrementLabel="Ajouter" decrementLabel="Retirer" className="w-12">
               <input
                 type="number"
                 value={coinDelta}

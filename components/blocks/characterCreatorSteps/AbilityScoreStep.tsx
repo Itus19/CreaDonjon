@@ -196,7 +196,7 @@ export default function AbilityScoreStep({
                     decrementDisabled={score <= POINT_BUY_MIN}
                     incrementLabel={`Augmenter ${ABILITY_LABELS[ability]}`}
                     decrementLabel={`Diminuer ${ABILITY_LABELS[ability]}`}
-                    className="h-12 w-14"
+                    className="w-14"
                   >
                     <span className="text-xl font-bold text-ink">{score}</span>
                   </Stepper>

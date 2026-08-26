@@ -399,7 +399,7 @@ export default function CharacterSheetHeader({
             decrementDisabled={busy || exhaustion <= 0}
             incrementLabel="Augmenter l'épuisement"
             decrementLabel="Diminuer l'épuisement"
-            className={`h-14 w-full ${exhaustion > 0 ? "border-danger/60 bg-danger/10" : ""}`}
+            className={`w-full ${exhaustion > 0 ? "border-danger/60 bg-danger/10" : ""}`}
           >
             <span className={`text-base font-semibold ${exhaustion > 0 ? "text-danger" : "text-ink"}`}>{exhaustion}</span>
           </Stepper>
@@ -424,7 +424,7 @@ export default function CharacterSheetHeader({
             decrementDisabled={busy}
             incrementLabel="Ajouter aux points de vie"
             decrementLabel="Retirer des points de vie"
-            className="h-10 w-16"
+            className="w-16"
           >
             <input
               type="number"
@@ -455,7 +455,7 @@ export default function CharacterSheetHeader({
             decrementDisabled={busy}
             incrementLabel="Ajouter des points d'expérience"
             decrementLabel="Retirer des points d'expérience"
-            className="h-10 w-16"
+            className="w-16"
           >
             <input
               type="number"

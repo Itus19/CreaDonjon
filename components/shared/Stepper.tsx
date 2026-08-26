@@ -10,6 +10,13 @@ import type { ReactNode } from "react";
  * achat de points), ou un `<input>` pour un montant tape puis applique
  * (PV/PX, pieces) — cette case ne decide jamais laquelle, seulement
  * `onIncrement`/`onDecrement`.
+ *
+ * Hauteur INTRINSEQUE, jamais fixee par `className` (retour utilisateur :
+ * une hauteur devinee en pixels coupait l'affichage de la valeur — jusqu'a
+ * ne laisser que 4px pour un texte qui en demandait 12). Les deux bandes
+ * flechees gardent une hauteur fixe (`h-4`), le contenu central prend la
+ * hauteur que sa police exige — `className` ne doit fournir qu'une largeur
+ * (`w-*`).
  */
 export default function Stepper({
   onIncrement,
@@ -41,7 +48,7 @@ export default function Stepper({
       >
         ▲
       </button>
-      <div className="flex flex-1 items-center justify-center overflow-hidden">{children}</div>
+      <div className="flex items-center justify-center py-0.5">{children}</div>
       <button
         type="button"
         disabled={decrementDisabled}

@@ -539,7 +539,7 @@ export default function InitiativeTracker({
                   onDecrement={() => bumpInitiative(p, -1)}
                   incrementLabel="Augmenter l'initiative"
                   decrementLabel="Diminuer l'initiative"
-                  className="h-14 w-12"
+                  className="w-12"
                 >
                   <input
                     key={`${p.id}-init-${p.initiative ?? "none"}`}
@@ -583,7 +583,7 @@ export default function InitiativeTracker({
                     onDecrement={() => bumpAc(p, -1)}
                     incrementLabel="Augmenter la CA"
                     decrementLabel="Diminuer la CA"
-                    className="h-11 w-10"
+                    className="w-10"
                   >
                     <input
                       key={`${p.id}-ac-${p.ac ?? "none"}`}
