@@ -102,6 +102,13 @@ export async function setWorldDefaultRuleset(
   return { updated: data.length > 0 };
 }
 
+/** Export/duplication (V2-G1) : reserves au proprietaire, jamais a un simple membre invite — produit une copie transferable, la meme ligne que trace specs/ruleset-personnel.md §3.1 pour le ruleset personnel. */
+export async function getWorldOwnerId(supabase: TypedClient, worldId: string): Promise<string | null> {
+  const { data, error } = await supabase.from("worlds").select("owner_id").eq("id", worldId).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.owner_id ?? null;
+}
+
 export async function ownerHasSlug(
   supabase: TypedClient,
   ownerId: string,

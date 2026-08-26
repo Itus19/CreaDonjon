@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { zWorldExport } from "@/src/core/schemas/worldExport";
 
 /**
  * Un monde = une campagne (decision produit, prepa V2-G1 export/import) :
@@ -11,4 +12,10 @@ export const createWorldSchema = z.object({
   name: z.string().trim().min(1, "Le nom est requis.").max(100, "100 caracteres maximum."),
   rulesetId: z.string().uuid("Choisissez un ruleset."),
   mode: z.enum(["campaign", "solo"]),
+});
+
+/** Import de monde (V2-G1, dernier point) : mode choisi par la personne qui importe, jamais impose par le fichier — meme logique qu'a la creation. */
+export const importWorldSchema = z.object({
+  mode: z.enum(["campaign", "solo"]),
+  data: zWorldExport,
 });

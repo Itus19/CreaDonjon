@@ -24,7 +24,7 @@ Audit du code de `C:\Users\Gabriel\.gemini\antigravity\scratch\dnd-companion` (2
 - **Dossiers de la barre latérale + glisser-déposer** (`Sidebar.tsx`) — chez eux : 15 dossiers par défaut (rattachement par préfixe d'id), dossiers personnalisés, réordonnancement en drag-and-drop, onglets Monde/Règles séparés, recherche. Notre barre latérale actuelle (groupement plat par `entity_kind`) couvre le besoin de base ; ceci n'est utile que si un monde grossit beaucoup.
 - **Historique des révisions / annulation** (déjà listée) — chez eux : jusqu'à 15 versions par page en localStorage, restauration. Chez nous, la table `entity_mechanical_revisions` existe déjà en base mais rien ne l'utilise.
 - **Blocs structurés additionnels** (arme, sort, monstre/statblock, classe, espèce...) — logique à faire après le bloc personnage, une fois le principe validé.
-- **Export/import d'un monde en JSON** — simple et utile, faisable rapidement quand on voudra.
+- ~~**Export/import d'un monde en JSON**~~ — fait (V2-G1, dernier point, `docs/BACKLOG_V2.md`) : export/import/duplication d'un monde (entités, blocs, relations, ruleset), ruleset personnel omis a l'export.
 - **Génération de contenu par IA avec repli procédural** (`loreGenerator.ts`) — déjà listée (Assistant IA). Dépend d'abord de choisir un modèle/fournisseur (question ouverte du PDD).
 
 **Priorité basse / plus tard :**

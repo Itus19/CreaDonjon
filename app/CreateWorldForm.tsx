@@ -21,7 +21,15 @@ export default function CreateWorldForm({
   const [state, formAction, pending] = useActionState(createWorldAction, initialState);
 
   return (
-    <form action={formAction} className="flex flex-wrap items-center gap-2">
+    // `contents` : ce formulaire ne genere pas sa propre boite de mise en
+    // page — ses champs deviennent des elements flex directs du conteneur
+    // partage avec ImportWorldForm (app/page.tsx), pour que "Creer" et
+    // "Importer" restent sur la meme ligne au lieu de deux contextes de
+    // retour a la ligne independants qui se desynchronisent selon la
+    // largeur d'ecran. La soumission par Entree et `useActionState`
+    // fonctionnent pareil : `contents` ne change que l'affichage, jamais
+    // l'arbre DOM ni le rattachement du formulaire a ses champs.
+    <form action={formAction} className="contents">
       <input
         name="name"
         type="text"

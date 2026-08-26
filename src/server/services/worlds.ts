@@ -39,7 +39,7 @@ export async function getWorldBySlug(
 }
 
 /** Derive un slug unique (parmi les mondes du meme proprietaire) a partir du nom, en suffixant -2, -3... en cas de collision. */
-async function generateUniqueSlug(
+export async function generateUniqueSlug(
   supabase: TypedClient,
   ownerId: string,
   name: string
