@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import type { FamilyTreeNode } from "@/src/core/genealogy/buildFamilyTree";
 
@@ -17,9 +17,21 @@ import type { FamilyTreeNode } from "@/src/core/genealogy/buildFamilyTree";
  * vraiment, jamais un placeholder qui laisserait passer l'etat casse du
  * navigateur le temps d'un aller-retour reseau (le 404 arrive apres le
  * premier rendu, jamais avant).
+ *
+ * Retour utilisateur (portrait de Fine parfois reste bloque sur
+ * l'initiale) : une image deja en cache navigateur peut finir de charger
+ * de facon synchrone des que `src` est pose, avant que React n'ait
+ * attache `onLoad` — l'evenement part alors dans le vide. Le callback de
+ * ref verifie `complete`/`naturalWidth` a l'attachement du nœud pour
+ * rattraper exactement ce cas, en plus de `onLoad` pour le chargement
+ * normal (reseau).
  */
 export default function FamilyTreeCard({ node, href }: { node: FamilyTreeNode; href: string }) {
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+
+  const checkAlreadyLoaded = useCallback((img: HTMLImageElement | null) => {
+    if (img?.complete) setStatus(img.naturalWidth > 0 ? "loaded" : "error");
+  }, []);
 
   return (
     <Link href={href} className="relative block h-full w-full">
@@ -32,6 +44,7 @@ export default function FamilyTreeCard({ node, href }: { node: FamilyTreeNode; h
         {status !== "error" && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            ref={checkAlreadyLoaded}
             src={`/api/entities/${node.id}/portrait`}
             alt=""
             onLoad={() => setStatus("loaded")}
