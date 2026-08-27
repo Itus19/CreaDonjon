@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 
 /** Largeur de base a 100% (correspond a l'ancien `w-56` fixe) — la case grandit/retrecit autour de cette reference, 50-200%. */
@@ -34,6 +34,16 @@ export default function PortraitUpload({
   const [sizePct, setSizePct] = useState(initialLayout.displaySizePct);
   const [align, setAlign] = useState<"left" | "right">(initialLayout.align);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Retour utilisateur (icone d'image cassee visible sur une fiche sans
+  // portrait, meme cause que PublicPortrait.tsx/FamilyTreeCard.tsx) : un
+  // 404 deja en cache navigateur peut se resoudre de facon synchrone des
+  // que `src` est pose, avant que React n'ait attache `onError`. Le
+  // callback de ref verifie `complete`/`naturalWidth` a l'attachement du
+  // nœud pour rattraper ce cas, en plus de `onError` pour le reseau normal.
+  const checkAlreadyFailed = useCallback((img: HTMLImageElement | null) => {
+    if (img?.complete && img.naturalWidth === 0) setHasPortrait(false);
+  }, []);
 
   async function saveLayout(layout: EntityPortraitLayout) {
     await fetch(`/api/entities/${entityId}/portrait/layout`, {
@@ -117,6 +127,7 @@ export default function PortraitUpload({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
+          ref={checkAlreadyFailed}
           src={`/api/entities/${entityId}/portrait?v=${cacheBust}`}
           alt="Portrait"
           onError={() => setHasPortrait(false)}
