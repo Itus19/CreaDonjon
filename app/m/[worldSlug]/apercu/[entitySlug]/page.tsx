@@ -27,7 +27,13 @@ export default async function ApercuEntityPage({
   const title = campaigns[0]?.name ?? world.name;
 
   return (
-    <BookSkin title={title} worldSlug={world.slug} tree={tree} hrefBase={`/m/${world.slug}/apercu`}>
+    <BookSkin
+      title={title}
+      worldSlug={world.slug}
+      tree={tree}
+      hrefBase={`/m/${world.slug}/apercu`}
+      wikiBackground={detail.wikiBackground}
+    >
       <p className="mb-1 font-mech text-xs text-ink-muted">Prévisualisation — vue d&apos;un visiteur anonyme</p>
       <PublicEntityBody {...detail} hrefBase={`/m/${world.slug}/apercu`} />
     </BookSkin>

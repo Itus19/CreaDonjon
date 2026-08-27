@@ -10,6 +10,8 @@ import { relationLabel, type RelationType } from "@/src/core/relations/inverses"
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { type BlockRow, getBlockById, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { getBlockImage, type BlockImage } from "@/src/server/repos/blockImages";
+import { getBackgroundMetaForBlock } from "@/src/server/services/blockImages";
+import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import { type EntitySummary, getEntityBySlug, listEntitiesForWorld } from "@/src/server/repos/entities";
 import { listPartOfRelationsForWorld, listRelationsForEntity, type OtherEntityRef } from "@/src/server/repos/relations";
 import { listCampaignsForWorld } from "@/src/server/repos/campaigns";
@@ -234,11 +236,28 @@ function toVisibilityAware(row: BlockRow) {
  * Meme remarque que listPublicEntities : `worldId` doit deja venir d'un
  * `resolveShareLink` reussi.
  */
+export interface WikiBackground {
+  /** Servie par la meme route que le contenu du bloc (`/api/blocks/[id]/image`) — revalide la visibilite a chaque chargement, jamais un raccourci. */
+  imageUrl: string;
+  blurPx: number;
+  fadeMs: number;
+  hue: number;
+  chroma: number;
+  /** Premier mode de `available_modes` (`src/core/theme/oklch.ts`, deja ordonne dark→dim→soft→light) : garde un contraste texte/fond lisible. */
+  mode: string;
+}
+
 export async function getPublicEntityDetail(
   worldId: string,
   entitySlug: string,
 ): Promise<
-  { entity: EntitySummary; blocks: PublicBlock[]; relations: PublicRelation[]; portraitLayout: EntityPortraitLayout }
+  {
+    entity: EntitySummary;
+    blocks: PublicBlock[];
+    relations: PublicRelation[];
+    portraitLayout: EntityPortraitLayout;
+    wikiBackground: WikiBackground | null;
+  }
   | null
 > {
   const supabase = createShareLinkServiceClient();
@@ -265,7 +284,29 @@ export async function getPublicEntityDetail(
     }))
     .sort((a, b) => a.displayOrder - b.displayOrder);
 
-  return { entity, blocks, relations: toPublicRelations(relationRows), portraitLayout };
+  // Le bloc de fond n'est cherche que parmi les blocs DEJA filtres par
+  // visibilite (`blocks`, ci-dessus) : un bloc reserve au MJ ne peut donc
+  // jamais imposer un fond a un visiteur qui ne le voit pas.
+  const backgroundBlock = blocks.find(
+    (b) => b.blockType === "image" && (b.data as unknown as ImageBlockData).useAsWikiBackground
+  );
+  let wikiBackground: WikiBackground | null = null;
+  if (backgroundBlock) {
+    const meta = await getBackgroundMetaForBlock(supabase, backgroundBlock.id);
+    if (meta) {
+      const data = backgroundBlock.data as unknown as ImageBlockData;
+      wikiBackground = {
+        imageUrl: data.url,
+        blurPx: data.backgroundBlurPx,
+        fadeMs: data.fadeMs,
+        hue: meta.hue,
+        chroma: meta.chroma,
+        mode: meta.availableModes[0] ?? "dark",
+      };
+    }
+  }
+
+  return { entity, blocks, relations: toPublicRelations(relationRows), portraitLayout, wikiBackground };
 }
 
 /**

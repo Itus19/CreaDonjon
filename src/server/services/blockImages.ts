@@ -4,11 +4,14 @@ import sharp from "sharp";
 import type { Database } from "@/src/types/database";
 import type { VisibilityLevel } from "@/src/core/visibility";
 import { filterBlocks } from "@/src/core/visibility";
+import { availableModesFor, deriveHueChroma } from "@/src/core/theme/oklch";
 import {
   deleteBlockImage as deleteBlockImageRow,
   getBlockImage,
+  getBlockImageBackgroundMeta,
   upsertBlockImage,
   type BlockImage,
+  type BlockImageBackgroundMeta,
 } from "@/src/server/repos/blockImages";
 import { getBlockById } from "@/src/server/repos/blocks";
 import { getEntityById } from "@/src/server/repos/entities";
@@ -36,10 +39,16 @@ export async function uploadBlockImage(
     fit: "inside",
     withoutEnlargement: true,
   });
-  const [image, metadata] = await Promise.all([
+  const [image, metadata, stats] = await Promise.all([
     processed.clone().webp({ quality: 82 }).toBuffer(),
     processed.clone().metadata(),
+    processed.clone().stats(),
   ]);
+
+  // Calculee a chaque televersement (V2-G13), meme si ce bloc ne sert pas
+  // encore de fond de page — evite un recalcul special au moment ou l'auteur
+  // coche "definir le fond du wiki" sur une image deja televersee.
+  const { hue, chroma } = deriveHueChroma(stats.dominant);
 
   await upsertBlockImage(supabase, {
     blockId: params.blockId,
@@ -47,6 +56,9 @@ export async function uploadBlockImage(
     mimeType: "image/webp",
     width: metadata.width ?? IMAGE_MAX_DIMENSION,
     height: metadata.height ?? IMAGE_MAX_DIMENSION,
+    hue,
+    chroma,
+    availableModes: availableModesFor(hue, chroma),
   });
   return { ok: true };
 }
@@ -90,4 +102,11 @@ export async function getImageForBlockAsUser(
 
 export async function removeBlockImage(supabase: TypedClient, blockId: string): Promise<void> {
   return deleteBlockImageRow(supabase, blockId);
+}
+
+export async function getBackgroundMetaForBlock(
+  supabase: TypedClient,
+  blockId: string
+): Promise<BlockImageBackgroundMeta | null> {
+  return getBlockImageBackgroundMeta(supabase, blockId);
 }

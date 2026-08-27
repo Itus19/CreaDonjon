@@ -37,7 +37,13 @@ export default async function ShareLinkEntityPage({
   const title = campaignName ?? resolved.worldName;
 
   return (
-    <BookSkin title={title} worldSlug={resolved.worldSlug} tree={tree} hrefBase={`/partage/${token}`}>
+    <BookSkin
+      title={title}
+      worldSlug={resolved.worldSlug}
+      tree={tree}
+      hrefBase={`/partage/${token}`}
+      wikiBackground={detail.wikiBackground}
+    >
       <PublicEntityBody {...detail} hrefBase={`/partage/${token}`} />
     </BookSkin>
   );

@@ -85,7 +85,17 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
   text: { __v: 1, segments: [] },
   infobox: { __v: 1, entries: [] },
-  image: { __v: 1, url: "", caption: "", wrapMode: "intercalate", align: "center", sizePct: 100 },
+  image: {
+    __v: 1,
+    url: "",
+    caption: "",
+    wrapMode: "intercalate",
+    align: "center",
+    sizePct: 100,
+    useAsWikiBackground: false,
+    backgroundBlurPx: 20,
+    fadeMs: 600,
+  },
   custom_table: { __v: 1, columns: [], rows: [] },
   random_table: {
     __v: 1,

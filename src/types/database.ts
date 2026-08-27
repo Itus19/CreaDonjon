@@ -251,25 +251,34 @@ export type Database = {
       }
       block_images: {
         Row: {
+          available_modes: string[] | null
           block_id: string
+          chroma: number | null
           created_at: string
           height: number
+          hue: number | null
           image: string
           mime_type: string
           width: number
         }
         Insert: {
+          available_modes?: string[] | null
           block_id: string
+          chroma?: number | null
           created_at?: string
           height: number
+          hue?: number | null
           image: string
           mime_type: string
           width: number
         }
         Update: {
+          available_modes?: string[] | null
           block_id?: string
+          chroma?: number | null
           created_at?: string
           height?: number
+          hue?: number | null
           image?: string
           mime_type?: string
           width?: number

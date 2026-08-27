@@ -15,7 +15,8 @@
  */
 
 :root,
-:root[data-mode="dark"] {
+:root[data-mode="dark"],
+.wiki-bg-scope[data-mode="dark"] {
   /* Deux variables pilotent la teinte ; --h vient de l'image de fond en V1,
      valeur fixe (foret/mousse) tant qu'aucune extraction n'existe. */
   --h: 152;
@@ -62,7 +63,8 @@
   --blur: 20px;
 }
 
-:root[data-mode="dim"] {
+:root[data-mode="dim"],
+.wiki-bg-scope[data-mode="dim"] {
   --bg:           oklch(0.24 var(--c) var(--h));
   --panel:        oklch(0.27 var(--c) var(--h) / 0.84);
   --panel-raised: oklch(0.33 var(--c) var(--h) / 0.92);
@@ -92,7 +94,8 @@
 /* --accent : bouton clair sur fond sombre (dark/dim) devient bouton fonce
    sur fond clair (soft/light), meme teinte (ambre, H=78), pour rester
    visible contre un fond qui s'inverse. */
-:root[data-mode="soft"] {
+:root[data-mode="soft"],
+.wiki-bg-scope[data-mode="soft"] {
   --bg:           oklch(0.74 var(--c) var(--h));
   --panel:        oklch(0.79 var(--c) var(--h) / 0.85);
   --panel-raised: oklch(0.85 var(--c) var(--h) / 0.92);
@@ -123,7 +126,8 @@
   --accent-ink:   oklch(0.98 0.02 78);
 }
 
-:root[data-mode="light"] {
+:root[data-mode="light"],
+.wiki-bg-scope[data-mode="light"] {
   --bg:           oklch(0.95 var(--c) var(--h));
   --panel:        oklch(0.985 var(--c) var(--h) / 0.88);
   --panel-raised: oklch(0.99 var(--c) var(--h) / 0.94);

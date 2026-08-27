@@ -99,6 +99,41 @@ body {
 }
 
 /*
+ * Fond de PAGE wiki, par bloc image (V2-G13) — jamais le fond de
+ * l'application : meme structure que .app-backdrop juste au-dessus
+ * (z-index -5, entre l'app-backdrop a -10 et le contenu de la page en
+ * flux normal), mais rendu uniquement par BookSkin.tsx quand une fiche a
+ * un bloc image "definir le fond du wiki" actif. `opacity`/
+ * `transition-duration` sont pilotes en `style` inline (React) pour un
+ * fondu dont la duree est reglable par bloc (`fadeMs`), jamais une valeur
+ * fixe ici.
+ */
+.wiki-bg-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -5;
+  pointer-events: none;
+  transition-property: opacity;
+  transition-timing-function: ease;
+}
+.wiki-bg-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--wiki-bg-image, none);
+  background-size: cover;
+  background-position: center;
+  filter: blur(var(--wiki-bg-blur, 20px));
+  transform: scale(1.08);
+}
+.wiki-bg-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+}
+
+/*
  * Contenu du bloc texte (V0-06f, components/entities/richtext) : hierarchie
  * de titres a l'interieur du texte narratif — quatre niveaux, du plus grand
  * (Titre 1) jusqu'au paragraphe qui ferme l'echelle a 12px.

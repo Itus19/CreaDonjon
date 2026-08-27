@@ -28,6 +28,9 @@ describe("registry des blocs de wiki", () => {
       wrapMode: "intercalate",
       align: "center",
       sizePct: 100,
+      useAsWikiBackground: false,
+      backgroundBlurPx: 20,
+      fadeMs: 600,
     });
   });
 

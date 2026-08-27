@@ -171,6 +171,60 @@ export default function ImageBlockEditor({
           </label>
         </div>
       </div>
+
+      {/* Fond de page (V2-G13) : n'a de sens que si une image existe deja —
+          pas de bascule sur un bloc vide. Un seul bloc actif a la fois par
+          fiche, applique cote serveur (src/server/services/blocks.ts) :
+          cocher celui-ci decoche silencieusement tout autre bloc image de
+          la meme entite (reflete au prochain rechargement). */}
+      {data.url && (
+        <div className="flex flex-col gap-2 border-t border-edge/60 pt-2 text-xs">
+          <label className="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              checked={data.useAsWikiBackground}
+              onChange={(e) => onChange({ ...data, useAsWikiBackground: e.target.checked })}
+            />
+            Définir comme fond du wiki de cette fiche
+          </label>
+          {data.useAsWikiBackground && (
+            <div className="flex flex-wrap items-start gap-4 pl-5">
+              <div className="flex min-w-32 flex-1 flex-col gap-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Flou du fond</span>
+                <label className="flex items-center gap-1.5">
+                  <span className="shrink-0 text-ink-soft">{data.backgroundBlurPx}px</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={40}
+                    step={1}
+                    value={data.backgroundBlurPx}
+                    onChange={(e) => onChange({ ...data, backgroundBlurPx: Number(e.target.value) })}
+                    aria-label="Flou du fond du wiki"
+                    className="w-full"
+                  />
+                </label>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Durée du fondu</span>
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min={0}
+                    max={3000}
+                    step={100}
+                    value={data.fadeMs}
+                    onChange={(e) => onChange({ ...data, fadeMs: Number(e.target.value) })}
+                    aria-label="Durée du fondu d'entrée en millisecondes"
+                    className="w-20 rounded-md border border-edge bg-transparent px-2 py-1"
+                  />
+                  <span className="text-ink-soft">ms</span>
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

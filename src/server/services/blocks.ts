@@ -86,6 +86,30 @@ function isBlockType(value: string): value is BlockType {
   return (BLOCK_TYPES as readonly string[]).includes(value);
 }
 
+/**
+ * Un seul fond de wiki actif a la fois par fiche (V2-G13, retour
+ * utilisateur) : applique cote serveur, pas seulement dans l'UI — cocher
+ * "definir le fond du wiki" sur un bloc decoche silencieusement ce meme
+ * champ sur tout autre bloc `image` de la meme entite, jamais une race qui
+ * pourrait en laisser deux actifs entre deux onglets.
+ */
+async function clearOtherWikiBackgrounds(supabase: TypedClient, entityId: string, exceptBlockId: string): Promise<void> {
+  const rows = await listBlocksForEntity(supabase, entityId);
+  for (const row of rows) {
+    if (row.id === exceptBlockId || row.block_type !== "image") continue;
+    const data = row.data as { useAsWikiBackground?: boolean } | null;
+    if (!data?.useAsWikiBackground) continue;
+    await updateBlockWithVersionCheck(supabase, {
+      id: row.id,
+      expectedVersion: row.version,
+      display: row.display,
+      data: { ...data, useAsWikiBackground: false } as Json,
+      visibilityLevel: row.visibility_level,
+      visibilityScopeId: row.visibility_scope_id,
+    });
+  }
+}
+
 /** Edition redactionnelle d'un bloc = nouvelle revision de son entite (V1-C3, specs/wiki-blocs.md §4.5). `changeSource` distingue une proposition IA appliquee (V1-F3) d'une edition manuelle. */
 async function recordBlockRevision(
   supabase: TypedClient,
@@ -162,6 +186,11 @@ export async function updateBlockContent(
   });
   if (!row) return { ok: false, reason: "conflict" };
   await recordBlockRevision(supabase, existing.entity_id, params.changedBy, params.changeSource ?? "user");
+
+  if (existing.block_type === "image" && (validatedData as { useAsWikiBackground?: boolean }).useAsWikiBackground) {
+    await clearOtherWikiBackgrounds(supabase, existing.entity_id, params.id);
+  }
+
   return { ok: true, block: toVisibleBlock(row) };
 }
 
