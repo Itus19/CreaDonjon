@@ -16,6 +16,8 @@
     "paletteDeCommandes": "Command palette",
     "kindLabels": {
       "character": "Characters",
+      "pj": "PCs",
+      "pnj": "NPCs",
       "location": "Locations",
       "faction": "Factions",
       "item": "Items",

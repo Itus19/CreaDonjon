@@ -10,8 +10,9 @@ import { type BlockRow, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { type EntitySummary, getEntityBySlug, listEntitiesForWorld } from "@/src/server/repos/entities";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
 import { listCampaignsForWorld } from "@/src/server/repos/campaigns";
-import { getWorldById } from "@/src/server/repos/worlds";
-import { buildEntityTree, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
+import { getWorldById, getWorldEntityKindOrder } from "@/src/server/repos/worlds";
+import { buildEntityTree, withPlayerCharacterKinds, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
+import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerCharacters";
 
 /**
  * Seul fichier ou `createShareLinkServiceClient` (lib/supabase/service.ts)
@@ -117,11 +118,13 @@ export async function listPublicEntities(worldId: string): Promise<EntitySummary
  */
 export async function getPublicEntityTree(worldId: string): Promise<EntityTreeGroup[]> {
   const supabase = createShareLinkServiceClient();
-  const [entities, partOfEdges] = await Promise.all([
+  const [entities, partOfEdges, playerCharacterIds, kindOrder] = await Promise.all([
     listEntitiesForWorld(supabase, worldId),
     listPartOfRelationsForWorld(supabase, worldId),
+    listPlayerCharacterEntityIds(supabase, worldId),
+    getWorldEntityKindOrder(supabase, worldId),
   ]);
-  return buildEntityTree(entities, partOfEdges);
+  return buildEntityTree(withPlayerCharacterKinds(entities, playerCharacterIds), partOfEdges, kindOrder);
 }
 
 /**

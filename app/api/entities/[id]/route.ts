@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { updateEntitySchema } from "@/lib/entities/schemas";
-import { updateEntity } from "@/src/server/services/entities";
+import { deleteEntity, updateEntity } from "@/src/server/services/entities";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -43,4 +43,24 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   return NextResponse.json(result.entity, { status: 200 });
+}
+
+/** Suppression douce (entities.deleted_at) — RLS restreint deja l'ecriture aux membres du monde, la fiche disparait de toute lecture sans jamais quitter la base (annulable en base directement si besoin, aucune UI de restauration pour l'instant). */
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+  }
+
+  const { deleted } = await deleteEntity(supabase, id);
+  if (!deleted) {
+    return NextResponse.json({ error: "Entite introuvable." }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true }, { status: 200 });
 }

@@ -10,8 +10,9 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { computeDroppedOrder } from "@/src/core/ordering/computeDroppedOrder";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
@@ -68,28 +69,6 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   statblock: "Fiche de créature",
   music: "Musique",
 };
-
-/**
- * Nouvel emplacement d'un bloc depose (V2-G1, glisser-deposer) : meme
- * logique d'ecart que les boutons Monter/Descendre (`moveBlock` plus bas),
- * generalisee a une position d'arrivee arbitraire plutot qu'un simple
- * echange avec le voisin — `display_order` reste un `numeric`, jamais une
- * renumerotation de toute la liste (docs/SCHEMA.md). `null` si le depot
- * n'a rien deplace (cible introuvable ou identique).
- */
-function computeDroppedDisplayOrder(sortedBlocks: BlockItem[], activeId: string, overId: string): number | null {
-  const oldIndex = sortedBlocks.findIndex((b) => b.id === activeId);
-  const newIndex = sortedBlocks.findIndex((b) => b.id === overId);
-  if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return null;
-  const reordered = arrayMove(sortedBlocks, oldIndex, newIndex);
-  const finalIndex = reordered.findIndex((b) => b.id === activeId);
-  const before = reordered[finalIndex - 1];
-  const after = reordered[finalIndex + 1];
-  if (before && after) return (before.displayOrder + after.displayOrder) / 2;
-  if (before) return before.displayOrder + 1000;
-  if (after) return after.displayOrder - 1000;
-  return 1000;
-}
 
 function BlockDataEditor({
   block,
@@ -502,7 +481,7 @@ export default function EntityBlocks({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const newOrder = computeDroppedDisplayOrder(sortedBlocks, String(active.id), String(over.id));
+    const newOrder = computeDroppedOrder(sortedBlocks, String(active.id), String(over.id));
     if (newOrder === null) return;
     void moveBlockTo(String(active.id), newOrder);
   }

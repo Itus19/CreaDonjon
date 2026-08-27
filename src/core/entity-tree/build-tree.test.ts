@@ -54,6 +54,54 @@ describe("buildEntityTree", () => {
   it("renvoie une liste vide pour un monde sans entite", () => {
     expect(buildEntityTree([], [])).toEqual([]);
   });
+
+  it("trie les fiches d'un groupe par display_order croissant (V2-G9, glisser-depose)", () => {
+    const entities = [
+      { id: "1", name: "Bram", slug: "bram", entity_kind: "character", display_order: 2000 },
+      { id: "2", name: "Anna", slug: "anna", entity_kind: "character", display_order: 1000 },
+      { id: "3", name: "Zed", slug: "zed", entity_kind: "character", display_order: 3000 },
+    ];
+    const groups = buildEntityTree(entities, []);
+    expect(groups[0].items.map((i) => i.id)).toEqual(["2", "1", "3"]);
+  });
+
+  it("display_order egaux : repli sur le nom (deterministe avant tout glisser-depose)", () => {
+    const entities = [
+      { id: "1", name: "Zed", slug: "zed", entity_kind: "character", display_order: 0 },
+      { id: "2", name: "Anna", slug: "anna", entity_kind: "character", display_order: 0 },
+    ];
+    const groups = buildEntityTree(entities, []);
+    expect(groups[0].items.map((i) => i.name)).toEqual(["Anna", "Zed"]);
+  });
+
+  it("display_order absent (fiches historiques) : traite comme 0, ne plante pas", () => {
+    const entities = [
+      { id: "1", name: "Bram", slug: "bram", entity_kind: "character" },
+      { id: "2", name: "Anna", slug: "anna", entity_kind: "character" },
+    ];
+    const groups = buildEntityTree(entities, []);
+    expect(groups[0].items.map((i) => i.name)).toEqual(["Anna", "Bram"]);
+  });
+
+  it("kindOrder : place les groupes connus dans l'ordre donne, les inconnus ensuite par ordre alphabetique", () => {
+    const entities = [
+      { id: "1", name: "A", slug: "a", entity_kind: "location", display_order: 0 },
+      { id: "2", name: "B", slug: "b", entity_kind: "character", display_order: 0 },
+      { id: "3", name: "C", slug: "c", entity_kind: "faction", display_order: 0 },
+      { id: "4", name: "D", slug: "d", entity_kind: "item", display_order: 0 },
+    ];
+    const groups = buildEntityTree(entities, [], ["faction", "character"]);
+    expect(groups.map((g) => g.kind)).toEqual(["faction", "character", "item", "location"]);
+  });
+
+  it("kindOrder vide : comportement alphabetique actuel inchange", () => {
+    const entities = [
+      { id: "1", name: "A", slug: "a", entity_kind: "location", display_order: 0 },
+      { id: "2", name: "B", slug: "b", entity_kind: "character", display_order: 0 },
+    ];
+    const groups = buildEntityTree(entities, [], []);
+    expect(groups.map((g) => g.kind)).toEqual(["character", "location"]);
+  });
 });
 
 describe("filterEntityTree", () => {

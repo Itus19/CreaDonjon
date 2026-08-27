@@ -51,7 +51,12 @@ export default function Sidebar({
           <SectionToggle worldSlug={worldSlug} />
           <CommandPalette worldId={worldId} worldSlug={worldSlug} entities={entities} />
           <div onClick={() => setOpen(false)}>
-            <EntityTree groups={tree} worldSlug={worldSlug} />
+            <EntityTree
+              groups={tree}
+              worldSlug={worldSlug}
+              editable
+              collapseStorageKey={`creadonjon:collapsed:entityTree:${worldSlug}`}
+            />
           </div>
         </div>
 

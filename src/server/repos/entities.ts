@@ -12,6 +12,7 @@ export interface EntitySummary {
   entity_kind: string;
   aliases: string[];
   version: number;
+  display_order: number;
   created_at: string;
   updated_at: string;
 }
@@ -22,7 +23,7 @@ export async function listEntitiesForWorld(
 ): Promise<EntitySummary[]> {
   const { data, error } = await supabase
     .from("entities")
-    .select("id, world_id, slug, name, entity_kind, aliases, version, created_at, updated_at")
+    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
     .eq("world_id", worldId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
@@ -35,7 +36,7 @@ export async function listEntitiesByIds(supabase: TypedClient, ids: string[]): P
   if (ids.length === 0) return [];
   const { data, error } = await supabase
     .from("entities")
-    .select("id, world_id, slug, name, entity_kind, aliases, version, created_at, updated_at")
+    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
     .in("id", ids)
     .is("deleted_at", null);
   if (error) throw new Error(error.message);
@@ -49,7 +50,7 @@ export async function getEntityBySlug(
 ): Promise<EntitySummary | null> {
   const { data, error } = await supabase
     .from("entities")
-    .select("id, world_id, slug, name, entity_kind, aliases, version, created_at, updated_at")
+    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
     .eq("world_id", worldId)
     .eq("slug", slug)
     .is("deleted_at", null)
@@ -80,6 +81,25 @@ export async function worldHasSlug(
   return data !== null;
 }
 
+/** Rang de glisser-depose (V2-G9) pour une nouvelle fiche de ce type : en dessous de la derniere, jamais 0 (qui la ferait apparaitre en tete apres le premier reordonnancement du groupe). */
+export async function maxEntityDisplayOrderForKind(
+  supabase: TypedClient,
+  worldId: string,
+  entityKind: string
+): Promise<number> {
+  const { data, error } = await supabase
+    .from("entities")
+    .select("display_order")
+    .eq("world_id", worldId)
+    .eq("entity_kind", entityKind)
+    .is("deleted_at", null)
+    .order("display_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.display_order ?? 0;
+}
+
 export async function insertEntity(
   supabase: TypedClient,
   params: {
@@ -89,6 +109,7 @@ export async function insertEntity(
     name: string;
     entityKind: string;
     aliases: string[];
+    displayOrder: number;
   }
 ): Promise<EntitySummary> {
   const { data, error } = await supabase
@@ -100,8 +121,9 @@ export async function insertEntity(
       name: params.name,
       entity_kind: params.entityKind,
       aliases: params.aliases,
+      display_order: params.displayOrder,
     })
-    .select("id, world_id, slug, name, entity_kind, aliases, version, created_at, updated_at")
+    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
     .single();
   if (error) throw new Error(error.message);
   return data as EntitySummary;
@@ -113,7 +135,7 @@ export async function getEntityById(
 ): Promise<EntitySummary | null> {
   const { data, error } = await supabase
     .from("entities")
-    .select("id, world_id, slug, name, entity_kind, aliases, version, created_at, updated_at")
+    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
     .eq("id", id)
     .is("deleted_at", null)
     .maybeSingle();
@@ -146,10 +168,52 @@ export async function updateEntityWithVersionCheck(
     })
     .eq("id", params.id)
     .eq("version", params.expectedVersion)
-    .select("id, world_id, slug, name, entity_kind, aliases, version, created_at, updated_at")
+    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data as EntitySummary | null;
+}
+
+/** Glisser-depose (V2-G9) : une seule colonne, une seule ligne — copie de updateBlockDisplayOrder (src/server/repos/blocks.ts). */
+export async function updateEntityDisplayOrder(
+  supabase: TypedClient,
+  params: { id: string; expectedVersion: number; displayOrder: number }
+): Promise<EntitySummary | null> {
+  const { data, error } = await supabase
+    .from("entities")
+    .update({ display_order: params.displayOrder, version: params.expectedVersion + 1 })
+    .eq("id", params.id)
+    .eq("version", params.expectedVersion)
+    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as EntitySummary | null;
+}
+
+/** Idempotent : supprimer une entite deja supprimee ne change rien (pas d'erreur), meme convention que revokeShareLink. */
+export async function softDeleteEntity(supabase: TypedClient, id: string): Promise<{ deleted: boolean }> {
+  const { data, error } = await supabase
+    .from("entities")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("deleted_at", null)
+    .select("id");
+  if (error) throw new Error(error.message);
+  return { deleted: data.length > 0 };
+}
+
+const FIXED_ENTITY_KINDS = ["character", "location", "faction", "item", "creature", "quest", "event", "other"];
+
+/** Categories personnalisees deja utilisees dans ce monde (V2-G7) : pour qu'une deuxieme fiche puisse rejoindre la meme categorie plutot que d'en recreer une a chaque fois. */
+export async function listCustomEntityKindsForWorld(supabase: TypedClient, worldId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("entities")
+    .select("entity_kind")
+    .eq("world_id", worldId)
+    .is("deleted_at", null)
+    .not("entity_kind", "in", `(${FIXED_ENTITY_KINDS.join(",")})`);
+  if (error) throw new Error(error.message);
+  return [...new Set(data.map((row) => row.entity_kind))].sort((a, b) => a.localeCompare(b));
 }
 
 export interface EntitySearchResult {

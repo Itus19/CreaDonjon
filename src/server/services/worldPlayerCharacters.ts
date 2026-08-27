@@ -79,3 +79,24 @@ export async function listWorldPlayerCharacters(
 
   return results;
 }
+
+/**
+ * Version legere de `listWorldPlayerCharacters` ci-dessus : aucune
+ * resolution de ruleset (especes/classes), juste l'ensemble des entites
+ * marquees PJ (`campaign_characters.is_pc`) — pour scinder le groupe
+ * "Personnages" du sommaire en PJ/PNJ (V2-G7, `buildEntityTree`). PJ/PNJ
+ * n'est jamais un `entity_kind` distinct (specs/arbitrage-modifications.md
+ * §3.1) : ce Set n'est utilise qu'au moment de construire le sommaire,
+ * jamais ecrit nulle part.
+ */
+export async function listPlayerCharacterEntityIds(supabase: TypedClient, worldId: string): Promise<Set<string>> {
+  const campaigns = await listCampaigns(supabase, worldId);
+  const ids = new Set<string>();
+  for (const campaign of campaigns) {
+    const characters = await listCampaignCharacters(supabase, campaign.id);
+    for (const row of characters) {
+      if (row.is_pc) ids.add(row.entity_id);
+    }
+  }
+  return ids;
+}

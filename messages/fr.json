@@ -16,6 +16,8 @@
     "paletteDeCommandes": "Palette de commandes",
     "kindLabels": {
       "character": "Personnages",
+      "pj": "PJ",
+      "pnj": "PNJ",
       "location": "Lieux",
       "faction": "Factions",
       "item": "Objets",

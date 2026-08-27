@@ -105,6 +105,10 @@ export default function WindowsDesktop({ worldSlug, children }: { worldSlug: str
                   initialBlocks={data.blocks}
                   initialRelations={data.relations}
                   otherEntities={data.otherEntities}
+                  worldCustomKinds={data.worldCustomKinds}
+                  campaignId={data.campaignId}
+                  initialIsPc={data.isPc}
+                  campaignCharacterUserId={data.campaignCharacterUserId}
                 />
               ) : (
                 <RuleEntryView entry={data} worldSlug={worldSlug} />

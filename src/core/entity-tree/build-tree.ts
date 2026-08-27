@@ -9,6 +9,10 @@ export interface EntityNodeInput {
   name: string;
   slug: string;
   entity_kind: string;
+  /** Rang de glisser-depose (V2-G9) — absent pour d'anciennes fiches jamais reordonnees, traite alors comme 0. */
+  display_order?: number;
+  /** Concurrence optimiste (V2-G9) — porte jusqu'au client pour la requete de reordonnancement, absent dans les tests qui ne testent pas ce chemin (defaut 1, comme la colonne en base). */
+  version?: number;
 }
 
 export interface PartOfEdge {
@@ -16,10 +20,32 @@ export interface PartOfEdge {
   target_entity_id: string;
 }
 
+/**
+ * PJ/PNJ n'est jamais un `entity_kind` distinct (specs/arbitrage-modifications.md
+ * §3.1, un PJ se reconnait par `campaign_characters.is_pc`) — ce
+ * remappage n'existe que pour grouper le sommaire (V2-G7), avant
+ * `buildEntityTree`, jamais ecrit en base : le selecteur de type d'une
+ * fiche continue de proposer "Personnage" tel quel.
+ */
+export function withPlayerCharacterKinds<T extends EntityNodeInput>(
+  entities: T[],
+  playerCharacterIds: Set<string>
+): T[] {
+  return entities.map((entity) =>
+    entity.entity_kind === "character"
+      ? { ...entity, entity_kind: playerCharacterIds.has(entity.id) ? "pj" : "pnj" }
+      : entity
+  );
+}
+
 export interface EntityTreeNode {
   id: string;
   name: string;
   slug: string;
+  /** Rang de glisser-depose (V2-G9) — porte jusqu'au client pour calculer le prochain rang sur depot. */
+  displayOrder: number;
+  /** Concurrence optimiste (V2-G9) — porte jusqu'au client pour la requete de reordonnancement. */
+  version: number;
   children: EntityTreeNode[];
 }
 
@@ -34,15 +60,29 @@ export interface EntityTreeGroup {
  * qui traverserait les groupes (rare, part_of etant essentiellement
  * spatial) laisse l'entite racine dans son propre groupe plutot que de
  * deviner ou l'accrocher.
+ *
+ * `kindOrder` (V2-G9, glisser-depose des categories) : les cles presentes y
+ * apparaissent dans cet ordre, les cles absentes ensuite par ordre
+ * alphabetique (comportement d'origine, avant toute reorganisation) —
+ * jamais persiste ici, l'appelant fournit l'ordre du monde.
  */
 export function buildEntityTree(
   entities: EntityNodeInput[],
-  partOfEdges: PartOfEdge[]
+  partOfEdges: PartOfEdge[],
+  kindOrder: string[] = []
 ): EntityTreeGroup[] {
-  const kindOf = new Map(entities.map((e) => [e.id, e.entity_kind]));
+  // Tri par display_order avant tout regroupement (V2-G9) : les listes de
+  // racines et d'enfants en heritent automatiquement, un seul tri couvre
+  // les deux niveaux. Egalite (fiches jamais reordonnees, ou display_order
+  // absent) -> repli sur le nom pour un resultat deterministe.
+  const sortedEntities = entities
+    .slice()
+    .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0) || a.name.localeCompare(b.name));
+
+  const kindOf = new Map(sortedEntities.map((e) => [e.id, e.entity_kind]));
 
   const groups = new Map<string, EntityNodeInput[]>();
-  for (const entity of entities) {
+  for (const entity of sortedEntities) {
     const list = groups.get(entity.entity_kind) ?? [];
     list.push(entity);
     groups.set(entity.entity_kind, list);
@@ -58,7 +98,10 @@ export function buildEntityTree(
   const result: EntityTreeGroup[] = [];
   for (const [kind, items] of groups) {
     const nodeById = new Map<string, EntityTreeNode>(
-      items.map((e) => [e.id, { id: e.id, name: e.name, slug: e.slug, children: [] }])
+      items.map((e) => [
+        e.id,
+        { id: e.id, name: e.name, slug: e.slug, displayOrder: e.display_order ?? 0, version: e.version ?? 1, children: [] },
+      ])
     );
     const roots: EntityTreeNode[] = [];
 
@@ -77,7 +120,15 @@ export function buildEntityTree(
     result.push({ kind, items: roots });
   }
 
-  return result.sort((a, b) => a.kind.localeCompare(b.kind));
+  const orderIndex = new Map(kindOrder.map((kind, index) => [kind, index]));
+  return result.sort((a, b) => {
+    const ai = orderIndex.get(a.kind);
+    const bi = orderIndex.get(b.kind);
+    if (ai !== undefined && bi !== undefined) return ai - bi;
+    if (ai !== undefined) return -1;
+    if (bi !== undefined) return 1;
+    return a.kind.localeCompare(b.kind);
+  });
 }
 
 /**

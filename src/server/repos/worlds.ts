@@ -225,3 +225,29 @@ export async function setWorldWikiWelcomeMessage(
   if (error) throw new Error(error.message);
   return { updated: data.length > 0 };
 }
+
+/** Ordre des categories de la sidebar (V2-G9, glisser-depose) : vide tant que jamais reordonne, l'appelant retombe alors sur l'ordre alphabetique. */
+export async function getWorldEntityKindOrder(supabase: TypedClient, worldId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("worlds")
+    .select("entity_kind_order")
+    .eq("id", worldId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data?.entity_kind_order as string[] | null) ?? [];
+}
+
+/** Remplace le tableau entier (pas de version : un seul JSON par monde, dernier ecrivain gagne — meme profil que setWorldWikiWelcomeMessage). */
+export async function setWorldEntityKindOrder(
+  supabase: TypedClient,
+  worldId: string,
+  order: string[]
+): Promise<{ updated: boolean }> {
+  const { data, error } = await supabase
+    .from("worlds")
+    .update({ entity_kind_order: order })
+    .eq("id", worldId)
+    .select("id");
+  if (error) throw new Error(error.message);
+  return { updated: data.length > 0 };
+}

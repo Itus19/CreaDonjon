@@ -37,6 +37,10 @@ export default function BookSkin({
 }) {
   const [query, setQuery] = useState("");
   const filteredTree = filterEntityTree(tree, query);
+  // Premiere visite (retour utilisateur) : seule la categorie PJ est
+  // depliee — calcule depuis `tree` (jamais `filteredTree`, qui varie a
+  // chaque frappe dans la recherche et ferait bouger ce defaut).
+  const defaultCollapsedKinds = tree.map((group) => group.kind).filter((kind) => kind !== "pj");
 
   return (
     <div className="flex w-full min-h-full">
@@ -50,7 +54,13 @@ export default function BookSkin({
           placeholder="Rechercher…"
           className="mb-4 w-full rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
         />
-        <EntityTree groups={filteredTree} worldSlug={worldSlug} hrefBase={hrefBase} />
+        <EntityTree
+          groups={filteredTree}
+          worldSlug={worldSlug}
+          hrefBase={hrefBase}
+          collapseStorageKey={`creadonjon:collapsed:wiki:${worldSlug}`}
+          defaultCollapsedKinds={defaultCollapsedKinds}
+        />
       </aside>
       <main className="min-w-0 flex-1 px-8 py-10">
         <div className="mx-auto max-w-[70ch]">{children}</div>

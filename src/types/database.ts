@@ -796,6 +796,7 @@ export type Database = {
           created_by: string | null
           current_mechanical_revision_id: string | null
           deleted_at: string | null
+          display_order: number
           entity_kind: string
           id: string
           name: string
@@ -811,6 +812,7 @@ export type Database = {
           created_by?: string | null
           current_mechanical_revision_id?: string | null
           deleted_at?: string | null
+          display_order?: number
           entity_kind?: string
           id?: string
           name: string
@@ -826,6 +828,7 @@ export type Database = {
           created_by?: string | null
           current_mechanical_revision_id?: string | null
           deleted_at?: string | null
+          display_order?: number
           entity_kind?: string
           id?: string
           name?: string
@@ -1119,6 +1122,41 @@ export type Database = {
             columns: ["world_id"]
             isOneToOne: false
             referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_portraits: {
+        Row: {
+          created_at: string
+          entity_id: string
+          height: number
+          image: string
+          mime_type: string
+          width: number
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          height: number
+          image: string
+          mime_type: string
+          width: number
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          height?: number
+          image?: string
+          mime_type?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_portraits_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
         ]
@@ -1771,6 +1809,7 @@ export type Database = {
           created_at: string
           default_ruleset_id: string | null
           deleted_at: string | null
+          entity_kind_order: Json
           id: string
           name: string
           owner_id: string
@@ -1783,6 +1822,7 @@ export type Database = {
           created_at?: string
           default_ruleset_id?: string | null
           deleted_at?: string | null
+          entity_kind_order?: Json
           id?: string
           name: string
           owner_id: string
@@ -1795,6 +1835,7 @@ export type Database = {
           created_at?: string
           default_ruleset_id?: string | null
           deleted_at?: string | null
+          entity_kind_order?: Json
           id?: string
           name?: string
           owner_id?: string

@@ -1,13 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import RelationsChips, { type OtherEntityOption, type RelationChip } from "@/components/entities/RelationsChips";
 import EntityHistoryPanel from "@/components/entities/EntityHistoryPanel";
+import PortraitUpload from "@/components/entities/PortraitUpload";
 import EntityBlocks, { type BlockItem } from "@/components/blocks/EntityBlocks";
 import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
 import Dropdown from "@/components/shared/Dropdown";
-import { ENTITY_KINDS } from "@/lib/entities/schemas";
+import { DEFAULT_ENTITY_NAME, ENTITY_KINDS } from "@/lib/entities/schemas";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import type { EntitySummary } from "@/src/server/repos/entities";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
@@ -18,6 +19,19 @@ const ENTITY_KIND_DROPDOWN_OPTIONS = ENTITY_KINDS.map((kind) => ({
   value: kind,
   label: ENTITY_KIND_LABELS[kind],
 }));
+
+/** Sentinelle jamais persistee (V2-G7) : selectionner cette option ouvre un champ, ne sauvegarde rien tant qu'un nom n'est pas confirme. */
+const CUSTOM_KIND_OPTION = "__custom__";
+
+/**
+ * PJ/PNJ (V2-G10, specs/arbitrage-modifications.md §3.1) : jamais un
+ * `entity_kind` distinct — ces deux valeurs de selecteur persistent toutes
+ * les deux `entityKind: "character"`, seul `campaign_characters.is_pc`
+ * change. Sentinelles composees pour rester distinctes de "character" tout
+ * en restant reconnaissables dans `kindOptions`.
+ */
+const PJ_VALUE = "character:pj";
+const PNJ_VALUE = "character:pnj";
 
 /**
  * Toujours editable en place, comme l'ancienne application (master,
@@ -30,18 +44,34 @@ export default function EditEntityForm({
   initialBlocks,
   initialRelations,
   otherEntities,
+  worldCustomKinds,
+  campaignId,
+  initialIsPc,
+  campaignCharacterUserId,
 }: {
   entity: EntitySummary;
   worldSlug: string;
   initialBlocks: BlockItem[];
   initialRelations: RelationChip[];
   otherEntities: OtherEntityOption[];
+  worldCustomKinds: string[];
+  /** null si le monde n'a pas encore de campagne (ne devrait plus arriver, "un monde = une campagne") : le choix PJ/PNJ n'a alors pas de sens et n'ecrit rien. */
+  campaignId: string | null;
+  initialIsPc: boolean;
+  /** Compte joueur deja attribue (panneau MJ) — jamais efface par un changement PJ/PNJ depuis la fiche. */
+  campaignCharacterUserId: string | null;
 }) {
   const router = useRouter();
   const [name, setName] = useState(entity.name);
   const [entityKind, setEntityKind] = useState(entity.entity_kind);
+  const [isPc, setIsPc] = useState(initialIsPc);
   const [aliases, setAliases] = useState<string[]>(entity.aliases);
   const [newAlias, setNewAlias] = useState("");
+  // Categorie personnalisee (V2-G7) : `null` hors edition, une chaine
+  // (meme vide) pendant la composition du nom — rien n'est sauvegarde tant
+  // que ce champ n'est pas confirme (Entree) ou abandonne (Echap/blur vide).
+  const [customCategoryDraft, setCustomCategoryDraft] = useState<string | null>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const versionRef = useRef(entity.version);
   const saveChainRef = useRef<Promise<void>>(Promise.resolve());
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "conflict" | "error">("idle");
@@ -55,6 +85,16 @@ export default function EditEntityForm({
   // ref ne se lit jamais pendant le rendu, react-hooks/refs). Suffisant ici
   // car rien d'autre ne modifie la version pendant que le wizard est ouvert.
   const [wizardVersion, setWizardVersion] = useState(entity.version);
+
+  useEffect(() => {
+    // Fiche fraiche (V2-G8) : le nom par defaut est deja selectionne au
+    // montage pour que la premiere frappe le remplace directement, sans
+    // devoir le vider a la main — jamais reexecute au fil des re-rendus.
+    if (entity.name === DEFAULT_ENTITY_NAME) {
+      titleInputRef.current?.select();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (wizardOpen) {
     const characterBlock = initialBlocks.find((b) => b.blockType === "character");
@@ -150,10 +190,64 @@ export default function EditEntityForm({
     save({ aliases: next });
   }
 
+  /** N'ecrit rien si le monde n'a pas de campagne (ne devrait plus arriver) : is_pc n'a pas de sens hors campagne. */
+  async function assignCampaignRole(nextIsPc: boolean) {
+    if (!campaignId) return;
+    await fetch(`/api/campaigns/${campaignId}/characters`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entityId: entity.id, userId: campaignCharacterUserId, isPc: nextIsPc }),
+    });
+    router.refresh();
+  }
+
   function handleKindChange(kind: string) {
+    if (kind === CUSTOM_KIND_OPTION) {
+      setCustomCategoryDraft("");
+      return;
+    }
+    if (kind === PJ_VALUE || kind === PNJ_VALUE) {
+      const nextIsPc = kind === PJ_VALUE;
+      setIsPc(nextIsPc);
+      if (entityKind !== "character") {
+        setEntityKind("character");
+        save({ entityKind: "character" });
+      }
+      void assignCampaignRole(nextIsPc);
+      return;
+    }
     setEntityKind(kind);
     save({ entityKind: kind });
   }
+
+  function confirmCustomCategory() {
+    const value = (customCategoryDraft ?? "").trim();
+    setCustomCategoryDraft(null);
+    if (value === "" || value === entityKind) return;
+    setEntityKind(value);
+    save({ entityKind: value });
+  }
+
+  // Categories deja utilisees dans ce monde (fixes + personnelles) plus,
+  // en dernier, l'option qui ouvre le champ de creation — jamais l'inverse
+  // (V2-G7 : "en dernier choix"). La valeur courante est ajoutee si elle
+  // n'y figure pas deja (categorie personnalisee saisie par une AUTRE
+  // fiche de ce monde depuis, ou creee ailleurs entre deux chargements).
+  //
+  // "Personnage" n'apparait jamais tel quel (V2-G10) : PJ/PNJ a la place,
+  // deux entrees qui persistent toutes les deux entityKind "character" —
+  // jamais un entity_kind distinct (specs/arbitrage-modifications.md §3.1).
+  const knownKinds = new Set([...ENTITY_KINDS, ...worldCustomKinds]);
+  const fixedOptions = ENTITY_KIND_DROPDOWN_OPTIONS.flatMap((opt) =>
+    opt.value === "character" ? [{ value: PJ_VALUE, label: "PJ" }, { value: PNJ_VALUE, label: "PNJ" }] : [opt]
+  );
+  const kindOptions = [
+    ...fixedOptions,
+    ...worldCustomKinds.map((kind) => ({ value: kind, label: kind })),
+    ...(knownKinds.has(entityKind) ? [] : [{ value: entityKind, label: entityKind }]),
+    { value: CUSTOM_KIND_OPTION, label: "+ Créer une catégorie…" },
+  ];
+  const kindDropdownValue = entityKind === "character" ? (isPc ? PJ_VALUE : PNJ_VALUE) : entityKind;
 
   return (
     <div className="flex flex-col gap-5">
@@ -161,6 +255,7 @@ export default function EditEntityForm({
         <div className="flex flex-col">
           <div className="flex items-start justify-between gap-3">
             <input
+              ref={titleInputRef}
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={() => save()}
@@ -168,7 +263,7 @@ export default function EditEntityForm({
               // Fiche vierge (V0-06g) : pas d'ecran de creation separe, on
               // arrive directement ici — le focus automatique invite a
               // nommer la fiche tout de suite, sans action supplementaire.
-              autoFocus={entity.name === ""}
+              autoFocus={entity.name === DEFAULT_ENTITY_NAME}
               className="entity-title flex-1 bg-transparent outline-none placeholder:text-ink-muted focus:border-b focus:border-accent"
             />
             {/* Aligne avec le titre, comme dans l'ancienne application : le
@@ -178,12 +273,32 @@ export default function EditEntityForm({
                 (V1-C4, specs/arbitrage-modifications.md §3.1). */}
             <div className="flex shrink-0 items-center gap-2">
               <EntityHistoryPanel entityId={entity.id} />
-              <Dropdown
-                value={entityKind}
-                options={ENTITY_KIND_DROPDOWN_OPTIONS}
-                onChange={handleKindChange}
-                className="shrink-0 whitespace-nowrap bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
-              />
+              {customCategoryDraft !== null ? (
+                <input
+                  autoFocus
+                  value={customCategoryDraft}
+                  onChange={(e) => setCustomCategoryDraft(e.target.value)}
+                  onBlur={confirmCustomCategory}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmCustomCategory();
+                    } else if (e.key === "Escape") {
+                      setCustomCategoryDraft(null);
+                    }
+                  }}
+                  placeholder="Nom de la catégorie"
+                  maxLength={40}
+                  className="w-40 shrink-0 rounded-md border border-accent bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                />
+              ) : (
+                <Dropdown
+                  value={kindDropdownValue}
+                  options={kindOptions}
+                  onChange={handleKindChange}
+                  className="shrink-0 whitespace-nowrap bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+                />
+              )}
             </div>
           </div>
           {/* Le slug (identifiant d'URL, sans accents ni ponctuation) vit
@@ -240,9 +355,7 @@ export default function EditEntityForm({
           </div>
         </div>
 
-        <div className="flex aspect-[3/4] w-56 shrink-0 items-center justify-center rounded-2xl border border-edge bg-panel-sunken text-center text-xs text-ink-muted">
-          Portrait
-        </div>
+        <PortraitUpload entityId={entity.id} />
       </div>
 
       {status === "conflict" && (

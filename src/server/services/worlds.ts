@@ -11,6 +11,7 @@ import {
   listWorldsForCurrentUser,
   ownerHasSlug,
   setWorldDefaultRuleset,
+  setWorldEntityKindOrder,
   setWorldWikiWelcomeMessage,
   type WorldCard,
   type WorldSummary,
@@ -71,6 +72,15 @@ export async function updateWikiWelcomeMessage(
   message: string
 ): Promise<{ updated: boolean }> {
   return setWorldWikiWelcomeMessage(supabase, worldId, message === "" ? null : message);
+}
+
+/** Ordre des categories de la sidebar (V2-G9, glisser-depose) : remplace le tableau entier. */
+export async function updateEntityKindOrder(
+  supabase: TypedClient,
+  worldId: string,
+  order: string[]
+): Promise<{ updated: boolean }> {
+  return setWorldEntityKindOrder(supabase, worldId, order);
 }
 
 /** Derive un slug unique (parmi les mondes du meme proprietaire) a partir du nom, en suffixant -2, -3... en cas de collision. */

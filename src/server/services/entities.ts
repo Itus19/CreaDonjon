@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { nextNumericSlug } from "@/src/core/slug/slug";
-import { buildEntityTree, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
+import { buildEntityTree, withPlayerCharacterKinds, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import {
   type EntitySearchResult,
   type EntitySummary,
@@ -10,12 +10,18 @@ import {
   insertEntity,
   listEntitiesForWorld,
   listEntitySlugsForWorld,
+  maxEntityDisplayOrderForKind,
   searchEntitiesInWorld,
+  softDeleteEntity,
+  updateEntityDisplayOrder,
   updateEntityWithVersionCheck,
   worldHasSlug,
 } from "@/src/server/repos/entities";
+import { getWorldEntityKindOrder } from "@/src/server/repos/worlds";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
+import { insertBlock, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { recordEntityRevision } from "@/src/server/services/entityHistory";
+import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerCharacters";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -28,11 +34,13 @@ export async function getEntityTree(
   supabase: TypedClient,
   worldId: string
 ): Promise<EntityTreeGroup[]> {
-  const [entities, partOfEdges] = await Promise.all([
+  const [entities, partOfEdges, playerCharacterIds, kindOrder] = await Promise.all([
     listEntitiesForWorld(supabase, worldId),
     listPartOfRelationsForWorld(supabase, worldId),
+    listPlayerCharacterEntityIds(supabase, worldId),
+    getWorldEntityKindOrder(supabase, worldId),
   ]);
-  return buildEntityTree(entities, partOfEdges);
+  return buildEntityTree(withPlayerCharacterKinds(entities, playerCharacterIds), partOfEdges, kindOrder);
 }
 
 /**
@@ -63,10 +71,23 @@ export async function createEntity(
     aliases: string[];
   }
 ): Promise<EntitySummary> {
-  const slug = await generateUniqueEntitySlug(supabase, params.worldId);
-  const entity = await insertEntity(supabase, { ...params, slug });
+  const [slug, displayOrder] = await Promise.all([
+    generateUniqueEntitySlug(supabase, params.worldId),
+    maxEntityDisplayOrderForKind(supabase, params.worldId, params.entityKind).then((max) => max + 1000),
+  ]);
+  const entity = await insertEntity(supabase, { ...params, slug, displayOrder });
   await recordEntityRevision(supabase, { entity, changeSource: "user", changedBy: params.createdBy });
   return entity;
+}
+
+/** Glisser-depose (V2-G9) : une seule colonne, une seule ligne — copie de reorderBlock (src/server/services/blocks.ts). */
+export async function reorderEntity(
+  supabase: TypedClient,
+  params: { id: string; expectedVersion: number; displayOrder: number }
+): Promise<{ ok: true; entity: EntitySummary } | { ok: false; reason: "conflict" }> {
+  const entity = await updateEntityDisplayOrder(supabase, params);
+  if (!entity) return { ok: false, reason: "conflict" };
+  return { ok: true, entity };
 }
 
 export type UpdateEntityResult =
@@ -97,6 +118,56 @@ export async function updateEntity(
   await recordEntityRevision(supabase, { entity: updated, changeSource: "user", changedBy: params.changedBy });
 
   return { ok: true, entity: updated };
+}
+
+/** Idempotent (voir softDeleteEntity) — un menu qui rappelle "Supprimer" deux fois de suite ne doit jamais lever d'erreur. */
+export async function deleteEntity(supabase: TypedClient, id: string): Promise<{ deleted: boolean }> {
+  return softDeleteEntity(supabase, id);
+}
+
+/**
+ * Copie la fiche (nouveau slug, nom suffixe) et ses blocs — jamais les
+ * relations (un graphe de relations duplique serait ambigu : la copie
+ * "parle" comme l'original a des entites qui, elles, n'ont pas change) ni
+ * le portrait (V2-G7, hors perimetre demande).
+ */
+export async function duplicateEntity(
+  supabase: TypedClient,
+  params: { id: string; duplicatedBy: string }
+): Promise<EntitySummary | null> {
+  const original = await getEntityById(supabase, params.id);
+  if (!original) return null;
+
+  const [slug, displayOrder] = await Promise.all([
+    generateUniqueEntitySlug(supabase, original.world_id),
+    maxEntityDisplayOrderForKind(supabase, original.world_id, original.entity_kind).then((max) => max + 1000),
+  ]);
+  const copy = await insertEntity(supabase, {
+    worldId: original.world_id,
+    createdBy: params.duplicatedBy,
+    slug,
+    name: `${original.name} (copie)`,
+    entityKind: original.entity_kind,
+    aliases: original.aliases,
+    displayOrder,
+  });
+  await recordEntityRevision(supabase, { entity: copy, changeSource: "user", changedBy: params.duplicatedBy });
+
+  const blocks = await listBlocksForEntity(supabase, original.id);
+  for (const block of blocks) {
+    await insertBlock(supabase, {
+      entityId: copy.id,
+      blockType: block.block_type,
+      display: block.display,
+      data: block.data,
+      displayOrder: block.display_order,
+      visibilityLevel: block.visibility_level,
+      visibilityScopeId: block.visibility_scope_id,
+      createdBy: params.duplicatedBy,
+    });
+  }
+
+  return copy;
 }
 
 /** Une requete vide ne vaut pas la peine d'un aller-retour base (docs/BACKLOG.md V0-06). */

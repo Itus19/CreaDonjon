@@ -28,11 +28,36 @@ export const createBlankEntitySchema = z.object({
 // place des sa creation, sans ecran separe ni nom impose au prealable —
 // exiger un nom bloquerait par exemple un changement de type avant que
 // l'auteur ait pense a nommer sa fiche.
+//
+// `entityKind` : texte libre plutot que `z.enum(ENTITY_KINDS)` (retour
+// utilisateur — categorie personnalisee, V2-G7). `entities.entity_kind`
+// n'a jamais eu de contrainte CHECK en base (verifie dans les migrations),
+// seul ce schema le verrouillait aux 8 valeurs fixes — les desserrer ici
+// suffit, aucun changement de schema necessaire.
 export const updateEntitySchema = z.object({
   version: z.number().int().positive(),
   name: z.string().trim().max(200, "200 caracteres maximum."),
-  entityKind: z.enum(ENTITY_KINDS),
+  entityKind: z.string().trim().min(1, "Choisissez un type.").max(40, "40 caractères maximum."),
   aliases: z.array(z.string()).default([]),
 });
+
+// Glisser-depose (V2-G9) : copie de reorderBlockSchema (lib/blocks/schemas.ts).
+export const reorderEntitySchema = z.object({
+  version: z.number().int().positive(),
+  displayOrder: z.number(),
+});
+
+// Ordre des categories de la sidebar (V2-G9) : tableau complet, remplace a
+// chaque glisser-depose plutot qu'un delta — peu d'elements (moins d'une
+// vingtaine de categories dans le pire cas), pas besoin d'un ajustement fin.
+export const reorderEntityKindsSchema = z.object({
+  order: z.array(z.string().trim().min(1)).max(50),
+});
+
+// Nom donne a une fiche vierge (V2-G8, retour utilisateur : un nom vide
+// laissait des lignes blanches illisibles dans la barre laterale) — un vrai
+// nom persiste des la creation plutot qu'une chaine vide, jamais impose : le
+// champ reste modifiable/effaçable comme n'importe quel autre nom.
+export const DEFAULT_ENTITY_NAME = "Nouvelle entité";
 
 export { ENTITY_KINDS };

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createBlankEntitySchema } from "@/lib/entities/schemas";
+import { createBlankEntitySchema, DEFAULT_ENTITY_NAME } from "@/lib/entities/schemas";
 import { createEntity } from "@/src/server/services/entities";
 
 /**
@@ -30,7 +30,7 @@ export async function createBlankEntityAction(formData: FormData): Promise<void>
   const entity = await createEntity(supabase, {
     worldId: parsed.data.worldId,
     createdBy: user.id,
-    name: "",
+    name: DEFAULT_ENTITY_NAME,
     entityKind: "other",
     aliases: [],
   });

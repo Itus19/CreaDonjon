@@ -28,6 +28,10 @@ export default async function EntityPage({
         initialBlocks={data.blocks}
         initialRelations={data.relations}
         otherEntities={data.otherEntities}
+        worldCustomKinds={data.worldCustomKinds}
+        campaignId={data.campaignId}
+        initialIsPc={data.isPc}
+        campaignCharacterUserId={data.campaignCharacterUserId}
       />
     </>
   );

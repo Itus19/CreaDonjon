@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
 import { useOpenRuleLink } from "@/components/shell/useOpenRuleLink";
+import { useCollapsedGroups } from "@/components/shell/useCollapsedGroups";
 import SectionToggle from "@/components/shell/SectionToggle";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 
@@ -61,6 +62,8 @@ function RuleTypeGroup({
   onNavigate,
   childrenByParent,
   classNameByKey,
+  collapsed,
+  onToggle,
 }: {
   entryType: string;
   items: RuleEntrySummary[];
@@ -70,11 +73,13 @@ function RuleTypeGroup({
   childrenByParent?: Map<string, RuleEntrySummary[]>;
   /** Nom de classe par `entry_key` de classe (ticket #57) — seulement fourni pour le groupe "feature", sert à désambiguer les noms d'Aptitude partagés par plusieurs classes ("Sorts", "Amélioration de caractéristique"...). */
   classNameByKey?: Map<string, string>;
+  collapsed: boolean;
+  onToggle: () => void;
 }) {
   const t = useTranslations("shell");
   const tRegles = useTranslations("regles");
   const entryTypeLabels = tRegles.raw("entryTypes") as Record<string, string>;
-  const [expanded, setExpanded] = useState(true);
+  const expanded = !collapsed;
 
   // Un nom n'est desambigue que s'il est vraiment partage par plusieurs
   // fiches de ce groupe — jamais un suffixe systematique qui alourdirait
@@ -90,7 +95,7 @@ function RuleTypeGroup({
     <div>
       <button
         type="button"
-        onClick={() => setExpanded((e) => !e)}
+        onClick={onToggle}
         aria-label={expanded ? t("replier") : t("deplier")}
         className="flex w-full items-center gap-1 px-1 text-xs font-semibold uppercase tracking-wide text-ink-muted"
       >
@@ -135,6 +140,7 @@ export default function RulesSidebar({ worldSlug }: { worldSlug: string }) {
   const t = useTranslations("regles");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const { isCollapsed, toggle } = useCollapsedGroups(`creadonjon:collapsed:rules:${worldSlug}`);
   const pathname = usePathname();
   const match = pathname.match(/\/regles\/([^/]+)/);
   const currentKey = match ? decodeURIComponent(match[1]) : null;
@@ -247,6 +253,8 @@ export default function RulesSidebar({ worldSlug }: { worldSlug: string }) {
               onNavigate={() => setOpen(false)}
               childrenByParent={entryType === "class" ? subclassesByParent : entryType === "species" ? subspeciesByParent : undefined}
               classNameByKey={entryType === "feature" ? classNameByKey : undefined}
+              collapsed={isCollapsed(entryType)}
+              onToggle={() => toggle(entryType)}
             />
           ))}
         </nav>
