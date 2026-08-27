@@ -21,9 +21,14 @@ describe("registry des blocs de wiki", () => {
     expect(validateBlockData("infobox", data)).toEqual(data);
   });
 
-  it("valide une image avec une legende", () => {
+  it("valide une image avec une legende (mise en page par defaut ajoutee)", () => {
     const data = { __v: 1, url: "https://example.com/bram.png", caption: "Bram" };
-    expect(validateBlockData("image", data)).toEqual(data);
+    expect(validateBlockData("image", data)).toEqual({
+      ...data,
+      wrapMode: "intercalate",
+      align: "center",
+      sizePct: 100,
+    });
   });
 
   it("valide un custom_table", () => {

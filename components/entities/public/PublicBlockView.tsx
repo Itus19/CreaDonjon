@@ -61,12 +61,28 @@ function PublicInfoboxBlock({ data }: { data: InfoboxBlockData }) {
   );
 }
 
-function PublicImageBlock({ data }: { data: ImageBlockData }) {
+/** Largeur de reference a 100% (V2-G12) — meme mecanique que le portrait (`PortraitUpload.tsx`/`PublicPortrait.tsx`), une autre reference car une image de bloc peut occuper toute la colonne de prose (`max-w-[70ch]`), pas juste une case de cote. */
+const BASE_IMAGE_WIDTH_PX = 480;
+
+export function PublicImageBlock({ data }: { data: ImageBlockData }) {
   if (!data.url) return null;
+  const widthPx = (BASE_IMAGE_WIDTH_PX * data.sizePct) / 100;
+  const wrapping = data.wrapMode === "wrap";
   return (
-    <figure className="flex flex-col gap-1.5">
+    <figure
+      className={`flex flex-col gap-1.5 ${
+        wrapping
+          ? `${data.align === "left" ? "float-left mr-4" : "float-right ml-4"} mb-3`
+          : data.align === "left"
+            ? "items-start"
+            : data.align === "right"
+              ? "items-end ml-auto"
+              : "items-center mx-auto"
+      }`}
+      style={{ width: `${widthPx}px`, maxWidth: "100%" }}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={data.url} alt={data.caption} className="max-h-96 w-auto rounded-md object-cover" />
+      <img src={data.url} alt={data.caption} className="w-full rounded-md object-cover" />
       {data.caption && <figcaption className="text-xs italic text-ink-muted">{data.caption}</figcaption>}
     </figure>
   );
@@ -110,7 +126,11 @@ function PublicCustomTableBlock({ data }: { data: CustomTableBlockData }) {
 export default function PublicBlockView({ block }: { block: PublicBlock }) {
   return (
     <div className="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
-      <h3 className="block-title mb-2">{block.display.label}</h3>
+      {/* Retour utilisateur : le titre du bloc (souvent juste "Image") est
+          redondant avec l'image/la legende elle-meme sur le wiki public —
+          jamais affiche pour ce type, contrairement a l'editeur ou il
+          reste utile pour s'y retrouver parmi plusieurs blocs. */}
+      {block.blockType !== "image" && <h3 className="block-title mb-2">{block.display.label}</h3>}
       {block.blockType === "text" && <PublicTextBlock data={block.data as unknown as TextBlockData} />}
       {block.blockType === "infobox" && <PublicInfoboxBlock data={block.data as unknown as InfoboxBlockData} />}
       {block.blockType === "image" && <PublicImageBlock data={block.data as unknown as ImageBlockData} />}

@@ -249,6 +249,41 @@ export type Database = {
         }
         Relationships: []
       }
+      block_images: {
+        Row: {
+          block_id: string
+          created_at: string
+          height: number
+          image: string
+          mime_type: string
+          width: number
+        }
+        Insert: {
+          block_id: string
+          created_at?: string
+          height: number
+          image: string
+          mime_type: string
+          width: number
+        }
+        Update: {
+          block_id?: string
+          created_at?: string
+          height?: number
+          image?: string
+          mime_type?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "block_images_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: true
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blocks: {
         Row: {
           block_type: string

@@ -101,7 +101,7 @@ function BlockDataEditor({
         <InfoboxBlockEditor data={block.data as InfoboxBlockData} onChange={(d) => onChange(d)} />
       );
     case "image":
-      return <ImageBlockEditor data={block.data as ImageBlockData} onChange={(d) => onChange(d)} />;
+      return <ImageBlockEditor blockId={block.id} data={block.data as ImageBlockData} onChange={(d) => onChange(d)} />;
     case "custom_table":
       return (
         <CustomTableBlockEditor
