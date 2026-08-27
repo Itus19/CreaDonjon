@@ -91,18 +91,84 @@ export default function ImageBlockEditor({
         {error && <p className="text-xs text-danger">{error}</p>}
       </div>
 
-      {/* `self-start` (retour utilisateur, rognage) : sans lui, le
-          conteneur parent (`flex flex-col`) etire ce flex-item en largeur
-          (`align-items: stretch`, la valeur par defaut) malgre `w-auto` —
-          une image plus large que haute se retrouvait alors dans une boite
-          pleine largeur x 240px, rognee par `object-cover` pour la remplir. */}
+      {/* Apercu a gauche, reglages empiles a droite (retour utilisateur) —
+          une ligne par type de parametre : le libelle, puis ses boutons
+          juste en dessous. */}
       {data.url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={data.url}
-          alt={data.caption}
-          className="max-h-60 w-auto self-start rounded-md object-cover"
-        />
+        <div className="flex items-start gap-4 border-t border-edge/60 pt-2">
+          {/* `self-start` (retour utilisateur, rognage) : sans lui, le
+              conteneur parent (`flex`) etire ce flex-item en largeur
+              (`align-items: stretch`, la valeur par defaut) malgre `w-auto` —
+              une image plus large que haute se retrouvait alors dans une
+              boite pleine largeur x 240px, rognee par `object-cover` pour la
+              remplir. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={data.url}
+            alt={data.caption}
+            className="max-h-60 w-auto shrink-0 self-start rounded-md object-cover"
+          />
+          <div className="flex flex-1 flex-col gap-3 text-xs">
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Comportement du texte</span>
+              <div className="flex gap-1">
+                {WRAP_MODE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    title={opt.title}
+                    onClick={() => {
+                      // "wrap" ne connait pas "center" : on retombe sur "left"
+                      // si c'etait la valeur choisie en "intercalate".
+                      const nextAlign = opt.value === "wrap" && data.align === "center" ? "left" : data.align;
+                      onChange({ ...data, wrapMode: opt.value, align: nextAlign });
+                    }}
+                    aria-pressed={data.wrapMode === opt.value}
+                    className={`rounded-full border px-2 py-0.5 transition-colors ${
+                      data.wrapMode === opt.value ? "border-accent text-accent" : "border-edge text-ink-soft hover:text-ink"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Alignement</span>
+              <div className="flex gap-1">
+                {alignOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => onChange({ ...data, align: opt.value })}
+                    aria-pressed={data.align === opt.value}
+                    className={`rounded-full border px-2 py-0.5 transition-colors ${
+                      data.align === opt.value ? "border-accent text-accent" : "border-edge text-ink-soft hover:text-ink"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Taille de l&apos;image</span>
+              <label className="flex items-center gap-1.5">
+                <span className="shrink-0 text-ink-soft">{data.sizePct}%</span>
+                <input
+                  type="range"
+                  min={50}
+                  max={200}
+                  step={5}
+                  value={data.sizePct}
+                  onChange={(e) => onChange({ ...data, sizePct: Number(e.target.value) })}
+                  aria-label="Taille de l'image dans le wiki"
+                  className="w-full max-w-48"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
       )}
 
       <input
@@ -111,67 +177,6 @@ export default function ImageBlockEditor({
         placeholder="Légende (optionnelle)"
         className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm italic placeholder:not-italic placeholder:text-ink-muted"
       />
-
-      <div className="flex flex-wrap items-start gap-4 border-t border-edge/60 pt-2 text-xs">
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Comportement du texte</span>
-          <div className="flex gap-1">
-            {WRAP_MODE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                title={opt.title}
-                onClick={() => {
-                  // "wrap" ne connait pas "center" : on retombe sur "left" si
-                  // c'etait la valeur choisie en "intercalate".
-                  const nextAlign = opt.value === "wrap" && data.align === "center" ? "left" : data.align;
-                  onChange({ ...data, wrapMode: opt.value, align: nextAlign });
-                }}
-                aria-pressed={data.wrapMode === opt.value}
-                className={`rounded-full border px-2 py-0.5 transition-colors ${
-                  data.wrapMode === opt.value ? "border-accent text-accent" : "border-edge text-ink-soft hover:text-ink"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Alignement</span>
-          <div className="flex gap-1">
-            {alignOptions.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => onChange({ ...data, align: opt.value })}
-                aria-pressed={data.align === opt.value}
-                className={`rounded-full border px-2 py-0.5 transition-colors ${
-                  data.align === opt.value ? "border-accent text-accent" : "border-edge text-ink-soft hover:text-ink"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex min-w-40 flex-1 flex-col gap-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Taille de l&apos;image</span>
-          <label className="flex items-center gap-1.5">
-            <span className="shrink-0 text-ink-soft">{data.sizePct}%</span>
-            <input
-              type="range"
-              min={50}
-              max={200}
-              step={5}
-              value={data.sizePct}
-              onChange={(e) => onChange({ ...data, sizePct: Number(e.target.value) })}
-              aria-label="Taille de l'image dans le wiki"
-              className="w-full"
-            />
-          </label>
-        </div>
-      </div>
 
       {/* Fond de page (V2-G13) : n'a de sens que si une image existe deja —
           pas de bascule sur un bloc vide. Un seul bloc actif a la fois par
