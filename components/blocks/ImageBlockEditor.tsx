@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
-import Stepper from "@/components/shared/Stepper";
 
 const WRAP_MODE_OPTIONS: { value: ImageBlockData["wrapMode"]; label: string; title: string }[] = [
   { value: "intercalate", label: "Intercaler", title: "L'image reste un bloc à part entière, pleine largeur" },
@@ -201,18 +200,20 @@ export default function ImageBlockEditor({
                   </label>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Durée du fondu (ms)</span>
-                  <Stepper
-                    onIncrement={() => onChange({ ...data, fadeMs: Math.min(3000, data.fadeMs + 100) })}
-                    onDecrement={() => onChange({ ...data, fadeMs: Math.max(0, data.fadeMs - 100) })}
-                    incrementDisabled={data.fadeMs >= 3000}
-                    decrementDisabled={data.fadeMs <= 0}
-                    incrementLabel="Augmenter la durée du fondu"
-                    decrementLabel="Diminuer la durée du fondu"
-                    className="w-16"
-                  >
-                    <span className="text-sm text-ink">{data.fadeMs}</span>
-                  </Stepper>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Durée du fondu</span>
+                  <label className="flex items-center gap-1.5">
+                    <span className="shrink-0 text-ink-soft">{data.fadeMs}ms</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={3000}
+                      step={100}
+                      value={data.fadeMs}
+                      onChange={(e) => onChange({ ...data, fadeMs: Number(e.target.value) })}
+                      aria-label="Durée du fondu d'entrée et de sortie"
+                      className="w-full max-w-48"
+                    />
+                  </label>
                 </div>
               </>
             )}
