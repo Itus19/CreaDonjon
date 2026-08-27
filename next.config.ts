@@ -11,6 +11,15 @@ const nextConfig: NextConfig = {
   // Node externe au lieu de tenter de le bundler — Vercel trace alors
   // correctement le binaire natif lui-meme.
   serverExternalPackages: ["sharp"],
+  // Insuffisant seul (constate en deploiement reel) : le traceur de
+  // fichiers de Next ne peut pas deviner qu'un module natif charge par
+  // dlopen() a besoin de ses .so — il ne suit que les require()/import()
+  // qu'il peut analyser statiquement. Sans cette inclusion manuelle, le
+  // dossier @img/sharp-libvips-linux-x64 (qui contient libvips-cpp.so)
+  // n'est simplement pas copie dans la fonction deployee.
+  outputFileTracingIncludes: {
+    "/**": ["./node_modules/@img/**/*"],
+  },
 };
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
