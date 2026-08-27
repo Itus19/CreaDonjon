@@ -69,4 +69,15 @@ export const portraitLayoutSchema = z.object({
 // champ reste modifiable/effaçable comme n'importe quel autre nom.
 export const DEFAULT_ENTITY_NAME = "Nouvelle entité";
 
+// Creation a la volee depuis le bloc genealogie (V2-H3) : contrairement a
+// createBlankEntitySchema (server action, redirige toujours vers la
+// nouvelle fiche), ce chemin JSON cree une entite SANS quitter le bloc —
+// le nom est deja connu (tape dans la carte vide), jamais "Nouvelle
+// entite" a renommer ensuite.
+export const createEntityWithNameSchema = z.object({
+  worldId: z.guid(),
+  name: z.string().trim().min(1, "Un nom est requis.").max(200, "200 caracteres maximum."),
+  entityKind: z.string().trim().min(1).max(40).default("character"),
+});
+
 export { ENTITY_KINDS };

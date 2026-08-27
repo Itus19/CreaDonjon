@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   KeyboardSensor,
@@ -27,8 +28,10 @@ import InventoryBlockEditor from "./InventoryBlockEditor";
 import SpellcastingBlockEditor from "./SpellcastingBlockEditor";
 import ResourcesBlockEditor from "./ResourcesBlockEditor";
 import MusicBlockEditor from "./MusicBlockEditor";
+import GenealogyBlockEditor from "./GenealogyBlockEditor";
 import MonsterStatblockSheet from "./MonsterStatblockSheet";
 import PlayableCharacterSheet from "./PlayableCharacterSheet";
+import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
@@ -41,6 +44,7 @@ import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasti
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
 import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
+import type { GenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 
 export interface BlockItem {
@@ -68,18 +72,28 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   resources: "Ressources",
   statblock: "Fiche de créature",
   music: "Musique",
+  genealogy: "Généalogie",
 };
 
 function BlockDataEditor({
   block,
   onChange,
   worldSlug,
+  worldId,
+  otherEntities,
+  onRelationsChanged,
   characterData,
   onBlockRefreshed,
 }: {
   block: BlockItem;
   onChange: (data: unknown) => void;
   worldSlug: string;
+  /** V2-H3 : necessaire pour "creer la carte «X»" depuis le bloc genealogie sans faire remonter le monde entier. */
+  worldId: string;
+  /** V2-H3 : meme liste que RelationsChips.tsx, reutilisee pour la recherche du "+" du bloc genealogie. */
+  otherEntities: OtherEntityOption[];
+  /** V2-H3 : rafraichit la section "Relations" en tete de fiche apres un ajout depuis le bloc genealogie. */
+  onRelationsChanged: () => void;
   /** Bloc `character` de la meme entite, s'il existe (V1-C18) — permet au bloc `inventory` autonome d'afficher les memes lignes Attaquer/Degats et la meme barre de charge que l'onglet Inventaire de la fiche jouable, sans dupliquer le calcul. */
   characterData: CharacterBlockData | undefined;
   /** Assistance IA du bloc `text` (V1-F3) : une proposition appliquee ecrit cote serveur, ce callback resynchronise l'etat local (donnee + version). */
@@ -150,6 +164,17 @@ function BlockDataEditor({
       return (
         <MusicBlockEditor data={block.data as MusicBlockData} onChange={(d) => onChange(d)} blockId={block.id} />
       );
+    case "genealogy":
+      return (
+        <GenealogyBlockEditor
+          entityId={block.entityId}
+          worldId={worldId}
+          worldSlug={worldSlug}
+          data={block.data as GenealogyBlockData}
+          otherEntities={otherEntities}
+          onRelationsChanged={onRelationsChanged}
+        />
+      );
     default:
       return <p className="text-sm text-danger">Type de bloc inconnu : {block.blockType}</p>;
   }
@@ -165,16 +190,23 @@ function BlockDataEditor({
  */
 export default function EntityBlocks({
   entityId,
+  worldId,
   initialBlocks,
   worldSlug,
+  otherEntities,
   onLaunchWizard,
 }: {
   entityId: string;
+  /** V2-H3 : necessaire pour "creer la carte «X»" depuis le bloc genealogie. */
+  worldId: string;
   initialBlocks: BlockItem[];
   worldSlug: string;
+  /** V2-H3 : meme liste que RelationsChips.tsx, reutilisee par le bloc genealogie. */
+  otherEntities: OtherEntityOption[];
   /** Assistant de creation (retour utilisateur, suite) — omis quand aucun parent ne le fournit (ex. contextes hors fiche de monde), le bouton reste alors absent plutot que sans effet. */
   onLaunchWizard?: () => void;
 }) {
+  const router = useRouter();
   const [blocks, setBlocks] = useState<BlockItem[]>(initialBlocks);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [conflictedIds, setConflictedIds] = useState<Set<string>>(new Set());
@@ -507,6 +539,9 @@ export default function EntityBlocks({
               hasConflict={conflictedIds.has(block.id)}
               hasSaveError={saveErrorIds.has(block.id)}
               worldSlug={worldSlug}
+              worldId={worldId}
+              otherEntities={otherEntities}
+              onRelationsChanged={() => router.refresh()}
               entityId={entityId}
               characterBlock={characterBlock}
               inventoryBlock={inventoryBlock}
@@ -589,6 +624,9 @@ function SortableBlockCard({
   hasConflict,
   hasSaveError,
   worldSlug,
+  worldId,
+  otherEntities,
+  onRelationsChanged,
   entityId,
   characterBlock,
   inventoryBlock,
@@ -613,6 +651,9 @@ function SortableBlockCard({
   hasConflict: boolean;
   hasSaveError: boolean;
   worldSlug: string;
+  worldId: string;
+  otherEntities: OtherEntityOption[];
+  onRelationsChanged: () => void;
   entityId: string;
   characterBlock: BlockItem | undefined;
   inventoryBlock: BlockItem | undefined;
@@ -761,6 +802,9 @@ function SortableBlockCard({
             block={block}
             onChange={(data) => onPatchBlock(block.id, { data })}
             worldSlug={worldSlug}
+            worldId={worldId}
+            otherEntities={otherEntities}
+            onRelationsChanged={onRelationsChanged}
             characterData={characterBlock?.data as CharacterBlockData | undefined}
             onBlockRefreshed={onBlockRefreshed}
           />

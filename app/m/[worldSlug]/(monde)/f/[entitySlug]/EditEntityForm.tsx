@@ -371,8 +371,10 @@ export default function EditEntityForm({
       <div className="border-t border-edge pt-3">
         <EntityBlocks
           entityId={entity.id}
+          worldId={entity.world_id}
           initialBlocks={initialBlocks}
           worldSlug={worldSlug}
+          otherEntities={otherEntities}
           onLaunchWizard={() => {
             setWizardVersion(versionRef.current);
             setWizardOpen(true);

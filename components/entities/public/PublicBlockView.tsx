@@ -6,6 +6,7 @@ import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import type { CustomTableBlockData } from "@/src/core/schemas/blocks/customTable";
 import type { PublicBlock } from "@/src/server/services/publicShare";
 import SpoilerSpan from "./SpoilerSpan";
+import PublicGenealogyBlock from "./PublicGenealogyBlock";
 
 const TAG_BY_BLOCK_TYPE: Record<Segment["blockType"], string> = {
   paragraph: "p",
@@ -123,7 +124,7 @@ function PublicCustomTableBlock({ data }: { data: CustomTableBlockData }) {
  * appel d'ecriture possible. Garantit qu'un visiteur anonyme ne peut
  * jamais declencher une mutation, meme par accident.
  */
-export default function PublicBlockView({ block }: { block: PublicBlock }) {
+export default function PublicBlockView({ block, hrefBase }: { block: PublicBlock; hrefBase: string }) {
   // Retour utilisateur (V2-G13) : une image active comme fond de page est
   // deja rendue par WikiBackgroundProvider (position fixed, plein ecran) —
   // la rendre en plus a sa place dans le corps de la fiche la dupliquerait
@@ -141,6 +142,9 @@ export default function PublicBlockView({ block }: { block: PublicBlock }) {
       {block.blockType === "text" && <PublicTextBlock data={block.data as unknown as TextBlockData} />}
       {block.blockType === "infobox" && <PublicInfoboxBlock data={block.data as unknown as InfoboxBlockData} />}
       {block.blockType === "image" && <PublicImageBlock data={block.data as unknown as ImageBlockData} />}
+      {block.blockType === "genealogy" && block.genealogyTree && (
+        <PublicGenealogyBlock tree={block.genealogyTree} hrefBase={hrefBase} />
+      )}
       {block.blockType === "custom_table" && (
         <PublicCustomTableBlock data={block.data as unknown as CustomTableBlockData} />
       )}

@@ -19,6 +19,7 @@ export const zBlockDisplay = z.object({
     "resources",
     "statblock",
     "music",
+    "graph",
   ]),
   collapsed: z.boolean().optional(),
 });

@@ -18,6 +18,9 @@ import { listCampaignsForWorld } from "@/src/server/repos/campaigns";
 import { getWorldById, getWorldEntityKindOrder } from "@/src/server/repos/worlds";
 import { getPortraitLayout } from "@/src/server/services/entityPortraits";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
+import { zGenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
+import { getFamilyTree } from "@/src/server/services/genealogy";
+import type { FamilyTree } from "@/src/core/genealogy/buildFamilyTree";
 import { buildEntityTree, withPlayerCharacterKinds, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerCharacters";
 
@@ -194,6 +197,8 @@ export interface PublicBlock {
   display: BlockDisplay;
   data: Json;
   displayOrder: number;
+  /** Calcule cote serveur pour les blocs `genealogy` seulement (V2-H3) — voir plus bas dans `getPublicEntityDetail`. */
+  genealogyTree?: FamilyTree;
 }
 
 function filterTextBlockSegments(blockType: string, data: Json): Json {
@@ -306,7 +311,25 @@ export async function getPublicEntityDetail(
     }
   }
 
-  return { entity, blocks, relations: toPublicRelations(relationRows), portraitLayout, wikiBackground };
+  // Genealogie (V2-H3) : meme calcul que l'editeur (getFamilyTree,
+  // src/server/services/genealogy.ts), juste avec un viewer anonyme — un
+  // lien cache disparait de l'arbre avant meme d'atteindre cette reponse.
+  const blocksWithGenealogy = await Promise.all(
+    blocks.map(async (block) => {
+      if (block.blockType !== "genealogy") return block;
+      const genealogyData = zGenealogyBlockData.parse(block.data);
+      const genealogyTree = await getFamilyTree(supabase, {
+        worldId,
+        rootEntityId: genealogyData.rootEntityId ?? entity.id,
+        depthUp: genealogyData.depthUp,
+        depthDown: genealogyData.depthDown,
+        viewer: { kind: "anonymous" },
+      });
+      return { ...block, genealogyTree };
+    })
+  );
+
+  return { entity, blocks: blocksWithGenealogy, relations: toPublicRelations(relationRows), portraitLayout, wikiBackground };
 }
 
 /**

@@ -84,8 +84,8 @@ export default function RelationsChips({
             <span
               key={relation.id}
               className="flex items-center gap-1.5 rounded-full border border-edge bg-panel-raised px-3 py-1 text-xs"
-              title={RELATION_LABELS_FR[relation.label] ?? relation.label}
             >
+              <span className="text-ink-muted">{RELATION_LABELS_FR[relation.label] ?? relation.label}</span>
               <Link
                 href={`/m/${worldSlug}/f/${relation.other.slug}`}
                 onClick={(e) => {

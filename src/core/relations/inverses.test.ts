@@ -16,6 +16,13 @@ describe("relationLabel", () => {
     expect(relationLabel("sibling_of", "in")).toBe("sibling_of");
   });
 
+  it("connait les quatre types ajoutes pour le bloc genealogie (V2-H3)", () => {
+    expect(relationLabel("partner_of", "in")).toBe("partner_of");
+    expect(relationLabel("ex_partner_of", "in")).toBe("ex_partner_of");
+    expect(relationLabel("half_sibling_of", "in")).toBe("half_sibling_of");
+    expect(relationLabel("step_parent_of", "in")).toBe("step_child_of");
+  });
+
   it("definit un inverse pour chaque type du vocabulaire ferme", () => {
     for (const type of RELATION_TYPES) {
       expect(relationLabel(type, "in")).toBeTruthy();

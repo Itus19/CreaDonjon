@@ -12,6 +12,7 @@ import { zStatblockBlockData } from "./statblock";
 import { zRandomTableBlockData } from "./randomTable";
 import { zGeneratorBlockData } from "./generator";
 import { zMusicBlockData } from "./music";
+import { zGenealogyBlockData } from "./genealogy";
 
 /**
  * Catalogue des blocs de wiki (specs/wiki-blocs.md §1, docs/SCHEMA.md §7).
@@ -34,6 +35,11 @@ import { zMusicBlockData } from "./music";
  * en URL d'integration). Le nom de la station est choisi par la personne
  * elle-meme (le `display.label` du bloc, comme tout bloc) — jamais une
  * categorie ou une marque de franchise fournie par l'application.
+ * V2-H3 : genealogy — arbre genealogique derive de `relations`, jamais
+ * stocke lui-meme (specs/wiki-blocs.md §2). Pas de bloc `relationships`
+ * (liste simple) separe : cette information est deja affichee sans
+ * condition en tete de fiche (`RelationsChips.tsx`/`PublicRelations.tsx`,
+ * V2-G11), un bloc dedie ne ferait que la dupliquer.
  */
 export const BLOCK_TYPES = [
   "text",
@@ -48,6 +54,7 @@ export const BLOCK_TYPES = [
   "random_table",
   "generator",
   "music",
+  "genealogy",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -64,6 +71,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   random_table: "table",
   generator: "prose",
   music: "music",
+  genealogy: "graph",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -80,6 +88,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   random_table: zRandomTableBlockData,
   generator: zGeneratorBlockData,
   music: zMusicBlockData,
+  genealogy: zGenealogyBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -138,6 +147,7 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
     legendary_actions: [],
   },
   music: { __v: 1, tracks: [] },
+  genealogy: { __v: 1, rootEntityId: null, depthUp: 2, depthDown: 2 },
 };
 
 export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny {

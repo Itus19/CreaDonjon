@@ -53,16 +53,16 @@ export default function PublicEntityBody({
           <p className="mt-1 text-xs text-ink-muted">Alias : {entity.aliases.join(", ")}</p>
         )}
         <PublicRelations relations={relations} hrefBase={hrefBase} />
-        {firstBlockWraps && <PublicBlockView block={firstBlock} />}
+        {firstBlockWraps && <PublicBlockView block={firstBlock} hrefBase={hrefBase} />}
       </div>
 
       {blocks.length === 0 && <p className="mt-4 text-sm text-ink-muted">Aucun contenu public pour cette fiche.</p>}
-      {restBlocks.length > 0 && <div className="mt-4 flex flex-col">{renderWrappedBlocks(restBlocks)}</div>}
+      {restBlocks.length > 0 && <div className="mt-4 flex flex-col">{renderWrappedBlocks(restBlocks, hrefBase)}</div>}
     </>
   );
 }
 
-function renderWrappedBlocks(blocks: PublicBlock[]) {
+function renderWrappedBlocks(blocks: PublicBlock[], hrefBase: string) {
   const nodes: React.ReactNode[] = [];
   let i = 0;
   while (i < blocks.length) {
@@ -72,13 +72,13 @@ function renderWrappedBlocks(blocks: PublicBlock[]) {
     if (isWrappingImage) {
       nodes.push(
         <div key={block.id} className="flow-root">
-          <PublicBlockView block={block} />
-          {next && <PublicBlockView block={next} />}
+          <PublicBlockView block={block} hrefBase={hrefBase} />
+          {next && <PublicBlockView block={next} hrefBase={hrefBase} />}
         </div>
       );
       i += next ? 2 : 1;
     } else {
-      nodes.push(<PublicBlockView key={block.id} block={block} />);
+      nodes.push(<PublicBlockView key={block.id} block={block} hrefBase={hrefBase} />);
       i += 1;
     }
   }

@@ -9,6 +9,13 @@ export const RELATION_TYPES = [
   "married_to",
   "adopted_by",
   "ancestor_of",
+  // V2-H3, bloc genealogie : vocabulaire etendu sur demande explicite de
+  // l'utilisateur (esthetique de reference avec Partner/Ex/Half-Sibling/
+  // Step-Parent) — toujours des valeurs figees, jamais de texte libre.
+  "partner_of",
+  "ex_partner_of",
+  "half_sibling_of",
+  "step_parent_of",
   "friend_of",
   "rival_of",
   "mentor_of",
@@ -40,6 +47,10 @@ const INVERSE: Record<RelationType, string> = {
   married_to: "married_to",
   adopted_by: "adopted",
   ancestor_of: "descendant_of",
+  partner_of: "partner_of",
+  ex_partner_of: "ex_partner_of",
+  half_sibling_of: "half_sibling_of",
+  step_parent_of: "step_child_of",
   friend_of: "friend_of",
   rival_of: "rival_of",
   mentor_of: "apprentice_of",
