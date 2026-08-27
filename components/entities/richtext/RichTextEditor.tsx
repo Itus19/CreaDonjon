@@ -19,6 +19,34 @@ const BLOCK_TYPE_OPTIONS = [
   { value: "h4", label: "Titre 4" },
 ];
 
+const ALIGN_OPTIONS: { value: string; label: string }[] = [
+  { value: "left", label: "Aligner à gauche" },
+  { value: "center", label: "Centrer" },
+  { value: "right", label: "Aligner à droite" },
+  { value: "justify", label: "Justifier" },
+];
+
+/**
+ * Icone "lignes de texte" classique (retour utilisateur : les lettres G/C/D/J
+ * ne sont pas reconnaissables, l'utilisateur veut le pictogramme qu'on
+ * retrouve dans tout traitement de texte). Quatre barres — pas une police
+ * d'icones, juste des `<rect>` positionnes selon l'alignement represente :
+ * calees a gauche/au centre/a droite pour left/center/right, toutes pleine
+ * largeur pour justify.
+ */
+function AlignIcon({ value }: { value: string }) {
+  const widths = [16, 10, 16, 7];
+  return (
+    <svg viewBox="0 0 18 14" width="14" height="14" aria-hidden="true">
+      {widths.map((w, i) => {
+        const width = value === "justify" ? 16 : w;
+        const x = value === "center" ? (18 - width) / 2 : value === "right" ? 17 - width : 1;
+        return <rect key={i} x={x} y={i * 4 + 0.5} width={width} height={1.6} rx={0.8} fill="currentColor" />;
+      })}
+    </svg>
+  );
+}
+
 /**
  * Remplace `SegmentsEditor.tsx` (V0-06f) : une seule zone de texte
  * editable, plus de bouton « + Ajouter un segment ». Les segments existent
@@ -111,6 +139,28 @@ export default function RichTextEditor({
       .run();
   }
 
+  const currentAlign =
+    (editor.getAttributes("paragraph").align as string | undefined) ??
+    (editor.getAttributes("heading").align as string | undefined) ??
+    "left";
+
+  /** Meme patron que setVisibilityForSelection ci-dessus (V2-G14, retour utilisateur) : un attribut de bloc, jamais une marque sur le contenu. */
+  function setAlignForSelection(align: string) {
+    const { from, to } = editor!.state.selection;
+    editor!
+      .chain()
+      .focus()
+      .command(({ tr, state }) => {
+        state.doc.nodesBetween(from, to, (node, pos) => {
+          if (node.type.name === "paragraph" || node.type.name === "heading") {
+            tr.setNodeMarkup(pos, undefined, { ...node.attrs, align });
+          }
+        });
+        return true;
+      })
+      .run();
+  }
+
   return (
     <div className="flex flex-col gap-1">
       <BubbleMenu
@@ -118,6 +168,20 @@ export default function RichTextEditor({
         className="flex items-center gap-0.5 rounded-lg border border-edge-strong bg-panel-raised px-1.5 py-1 shadow-2xl"
       >
         <BubbleSelect value={currentBlockType} options={BLOCK_TYPE_OPTIONS} onChange={setBlockType} aria-label="Type de texte" />
+        <span className="mx-0.5 h-4 w-px bg-edge" />
+        {ALIGN_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setAlignForSelection(opt.value)}
+            aria-label={opt.label}
+            title={opt.label}
+            aria-pressed={currentAlign === opt.value}
+            className={`flex items-center justify-center rounded px-1.5 py-1 transition-colors hover:bg-panel ${currentAlign === opt.value ? "bg-panel text-accent" : "text-ink"}`}
+          >
+            <AlignIcon value={opt.value} />
+          </button>
+        ))}
         <span className="mx-0.5 h-4 w-px bg-edge" />
         <button
           type="button"

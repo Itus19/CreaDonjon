@@ -51,6 +51,13 @@ export type SegmentContentNode = z.infer<typeof zSegmentContentNode>;
 export const SEGMENT_BLOCK_TYPES = ["paragraph", "h1", "h2", "h3", "h4"] as const;
 export type SegmentBlockType = (typeof SEGMENT_BLOCK_TYPES)[number];
 
+// Alignement (V2-G14, retour utilisateur — bulle de mise en forme) :
+// attribut du segment, comme blockType/visibility — un mot aligne
+// differemment du reste de son paragraphe n'existe pas dans un traitement
+// de texte, jamais une marque inline sur le contenu.
+export const SEGMENT_ALIGNS = ["left", "center", "right", "justify"] as const;
+export type SegmentAlign = (typeof SEGMENT_ALIGNS)[number];
+
 export const zSegmentVisibility = z
   .object({
     level: z.enum(["public", "players", "gm", "campaign", "user", "private"]),
@@ -67,6 +74,7 @@ export const zSegment = z.object({
   blockType: z.enum(SEGMENT_BLOCK_TYPES),
   visibility: zSegmentVisibility,
   content: z.array(zSegmentContentNode).min(1),
+  align: z.enum(SEGMENT_ALIGNS).default("left"),
 });
 export type Segment = z.infer<typeof zSegment>;
 

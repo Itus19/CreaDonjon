@@ -10,6 +10,7 @@ describe("segmentsToDoc", () => {
         blockType: "paragraph",
         visibility: { level: "public", scopeId: null },
         content: [{ t: "text", v: "Bonjour." }],
+        align: "left",
       },
     ];
     expect(segmentsToDoc(segments)).toEqual({
@@ -17,11 +18,24 @@ describe("segmentsToDoc", () => {
       content: [
         {
           type: "paragraph",
-          attrs: { segmentId: "s1", visibilityLevel: "public", visibilityScopeId: null },
+          attrs: { segmentId: "s1", visibilityLevel: "public", visibilityScopeId: null, align: "left" },
           content: [{ type: "text", text: "Bonjour." }],
         },
       ],
     });
+  });
+
+  it("porte un alignement non par defaut jusque dans les attrs", () => {
+    const segments: Segment[] = [
+      {
+        id: "s1",
+        blockType: "paragraph",
+        visibility: { level: "public", scopeId: null },
+        content: [{ t: "text", v: "Centre." }],
+        align: "center",
+      },
+    ];
+    expect(segmentsToDoc(segments).content[0].attrs?.align).toBe("center");
   });
 
   it("convertit un titre h2 avec le niveau attendu", () => {
@@ -31,6 +45,7 @@ describe("segmentsToDoc", () => {
         blockType: "h2",
         visibility: { level: "public", scopeId: null },
         content: [{ t: "text", v: "Un titre" }],
+        align: "left",
       },
     ];
     const doc = segmentsToDoc(segments);
@@ -45,6 +60,7 @@ describe("segmentsToDoc", () => {
         blockType: "paragraph",
         visibility: { level: "public", scopeId: null },
         content: [{ t: "text", v: "important", marks: ["bold", "italic"] }],
+        align: "left",
       },
     ];
     const doc = segmentsToDoc(segments);
@@ -58,6 +74,7 @@ describe("segmentsToDoc", () => {
         blockType: "paragraph",
         visibility: { level: "public", scopeId: null },
         content: [{ t: "text", v: "secret", marks: ["spoiler"] }],
+        align: "left",
       },
     ];
     const doc = segmentsToDoc(segments);
@@ -75,6 +92,7 @@ describe("segmentsToDoc", () => {
         blockType: "paragraph",
         visibility: { level: "public", scopeId: null },
         content: [{ t: "text", v: "simple" }],
+        align: "left",
       },
     ];
     const doc = segmentsToDoc(segments);
@@ -88,6 +106,7 @@ describe("segmentsToDoc", () => {
         blockType: "paragraph",
         visibility: { level: "gm", scopeId: null },
         content: [{ t: "ref", kind: "entity", id: "ent1", label: "L'Ancre Rouillée" }],
+        align: "left",
       },
     ];
     const doc = segmentsToDoc(segments);
@@ -104,6 +123,7 @@ describe("segmentsToDoc", () => {
         blockType: "paragraph",
         visibility: { level: "public", scopeId: null },
         content: [{ t: "text", v: "" }],
+        align: "left",
       },
     ];
     const doc = segmentsToDoc(segments);
@@ -119,6 +139,7 @@ describe("docToSegments", () => {
         blockType: "h1",
         visibility: { level: "public", scopeId: null },
         content: [{ t: "text", v: "Titre" }],
+        align: "center",
       },
       {
         id: "s2",
@@ -128,9 +149,27 @@ describe("docToSegments", () => {
           { t: "text", v: "secret sur " },
           { t: "ref", kind: "entity", id: "ent1", label: "Bram" },
         ],
+        align: "justify",
       },
     ];
     expect(docToSegments(segmentsToDoc(segments))).toEqual(segments);
+  });
+
+  it("repli sur left quand align est absent ou invalide dans le document", () => {
+    const doc: DocJSON = {
+      type: "doc",
+      content: [
+        { type: "paragraph", attrs: { segmentId: "s1", visibilityLevel: "public", visibilityScopeId: null }, content: [{ type: "text", text: "x" }] },
+        {
+          type: "paragraph",
+          attrs: { segmentId: "s2", visibilityLevel: "public", visibilityScopeId: null, align: "diagonal" },
+          content: [{ type: "text", text: "y" }],
+        },
+      ],
+    };
+    const segments = docToSegments(doc);
+    expect(segments[0].align).toBe("left");
+    expect(segments[1].align).toBe("left");
   });
 
   it("attribue un identifiant neuf a un segmentId manquant", () => {

@@ -36,6 +36,7 @@ describe("zSegment", () => {
         { t: "ref", kind: "entity", id: "ent_9b1c", label: "L'Ancre Rouillée" },
         { t: "text", v: " semble jovial et accueillant. " },
       ],
+      align: "left" as const,
     };
     expect(zSegment.parse(segment)).toEqual(segment);
   });
@@ -46,6 +47,7 @@ describe("zSegment", () => {
       blockType: "paragraph" as const,
       visibility: { level: "gm", scopeId: null },
       content: [{ t: "ref", kind: "rule", key: "persuasion", label: "Persuasion" }],
+      align: "left" as const,
     };
     expect(zSegment.parse(segment)).toEqual(segment);
   });
@@ -99,6 +101,7 @@ describe("zSegment", () => {
       blockType: "paragraph" as const,
       visibility: { level: "public", scopeId: null },
       content: [{ t: "text", v: "important", marks: ["bold", "italic"] }],
+      align: "left" as const,
     };
     expect(zSegment.parse(segment)).toEqual(segment);
   });
@@ -109,8 +112,31 @@ describe("zSegment", () => {
       blockType: "h2" as const,
       visibility: { level: "public", scopeId: null },
       content: [{ t: "text", v: "Un titre" }],
+      align: "center" as const,
     };
     expect(zSegment.parse(segment)).toEqual(segment);
+  });
+
+  it("retombe sur left quand align est absent (segments anterieurs a V2-G14)", () => {
+    const segment = {
+      id: "s9",
+      blockType: "paragraph" as const,
+      visibility: { level: "public", scopeId: null },
+      content: [{ t: "text", v: "x" }],
+    };
+    expect(zSegment.parse(segment).align).toBe("left");
+  });
+
+  it("refuse un alignement inconnu", () => {
+    expect(() =>
+      zSegment.parse({
+        id: "s10",
+        blockType: "paragraph",
+        visibility: { level: "public", scopeId: null },
+        content: [{ t: "text", v: "x" }],
+        align: "diagonal",
+      })
+    ).toThrow();
   });
 });
 

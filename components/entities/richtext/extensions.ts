@@ -29,6 +29,15 @@ const segmentAttributes = {
     renderHTML: (attrs: { visibilityScopeId?: string | null }) =>
       attrs.visibilityScopeId ? { "data-visibility-scope": attrs.visibilityScopeId } : {},
   },
+  // Alignement (V2-G14, retour utilisateur — bulle de mise en forme) :
+  // meme mecanique que visibilityLevel ci-dessus, jamais une marque sur le
+  // contenu (un mot aligne differemment du reste de son paragraphe n'existe
+  // pas dans un traitement de texte).
+  align: {
+    default: "left",
+    parseHTML: (element: HTMLElement) => element.getAttribute("data-align") ?? "left",
+    renderHTML: (attrs: { align?: string }) => ({ "data-align": attrs.align ?? "left" }),
+  },
 };
 
 export const SegmentParagraph = Paragraph.extend({

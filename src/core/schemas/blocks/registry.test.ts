@@ -77,6 +77,7 @@ describe("registry des blocs de wiki", () => {
           blockType: "paragraph" as const,
           visibility: { level: "public" as const, scopeId: null },
           content: [{ t: "text" as const, v: "Un texte." }],
+          align: "left" as const,
         },
       ],
     };

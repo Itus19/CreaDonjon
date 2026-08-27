@@ -1,4 +1,12 @@
-import { MARKS, type Mark, type Segment, type SegmentBlockType, type SegmentContentNode } from "../schemas/entities/segments";
+import {
+  MARKS,
+  SEGMENT_ALIGNS,
+  type Mark,
+  type Segment,
+  type SegmentAlign,
+  type SegmentBlockType,
+  type SegmentContentNode,
+} from "../schemas/entities/segments";
 
 /**
  * Conversion pure entre `Segment[]` (SCHEMA.md §6) et la forme JSON d'un
@@ -28,6 +36,7 @@ export interface BlockNodeJSON {
     segmentId?: string;
     visibilityLevel?: string;
     visibilityScopeId?: string | null;
+    align?: string;
   };
   content?: InlineNodeJSON[];
 }
@@ -55,6 +64,10 @@ function isVisibilityLevel(value: string): value is (typeof VISIBILITY_LEVELS)[n
   return (VISIBILITY_LEVELS as readonly string[]).includes(value);
 }
 
+function isSegmentAlign(value: string): value is SegmentAlign {
+  return (SEGMENT_ALIGNS as readonly string[]).includes(value);
+}
+
 export function docToSegments(doc: DocJSON): Segment[] {
   const seenIds = new Set<string>();
 
@@ -69,6 +82,9 @@ export function docToSegments(doc: DocJSON): Segment[] {
     const rawLevel = node.attrs?.visibilityLevel;
     const level = rawLevel && isVisibilityLevel(rawLevel) ? rawLevel : "public";
     const scopeId = level === "campaign" || level === "user" ? (node.attrs?.visibilityScopeId ?? null) : null;
+
+    const rawAlign = node.attrs?.align;
+    const align: SegmentAlign = rawAlign && isSegmentAlign(rawAlign) ? rawAlign : "left";
 
     const content: SegmentContentNode[] = (node.content ?? [])
       .map((inline): SegmentContentNode | null => {
@@ -94,6 +110,7 @@ export function docToSegments(doc: DocJSON): Segment[] {
       blockType,
       visibility: { level, scopeId },
       content: content.length > 0 ? content : [{ t: "text", v: "" }],
+      align,
     };
   });
 }
@@ -124,6 +141,7 @@ export function segmentsToDoc(segments: Segment[]): DocJSON {
           segmentId: segment.id,
           visibilityLevel: segment.visibility.level,
           visibilityScopeId: segment.visibility.scopeId,
+          align: segment.align,
         },
         content,
       };

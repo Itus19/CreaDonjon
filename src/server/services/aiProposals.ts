@@ -45,6 +45,7 @@ export async function applyAiProposal(
     blockType: "paragraph",
     visibility: { level: "public", scopeId: null },
     content: [{ t: "text", v: payload.text }],
+    align: "left",
   };
   const nextData: TextBlockData = { __v: 1, segments: [...currentData.segments, newSegment] };
 

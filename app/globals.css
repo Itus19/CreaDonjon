@@ -136,7 +136,8 @@ body {
 /*
  * Contenu du bloc texte (V0-06f, components/entities/richtext) : hierarchie
  * de titres a l'interieur du texte narratif — quatre niveaux, du plus grand
- * (Titre 1) jusqu'au paragraphe qui ferme l'echelle a 12px.
+ * (Titre 1) jusqu'au paragraphe qui ferme l'echelle a 14px (V2-G14, retour
+ * utilisateur — echelle entiere decalee de +2px, meme ecart qu'avant).
  */
 .rich-text-content {
   font-family: var(--font-narrative);
@@ -146,28 +147,44 @@ body {
   margin-top: 0.5em;
 }
 .rich-text-content p {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.6;
 }
 .rich-text-content h1 {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1.3;
 }
 .rich-text-content h2 {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1.3;
 }
 .rich-text-content h3 {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   line-height: 1.35;
 }
 .rich-text-content h4 {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.4;
+}
+
+/* Alignement de texte (V2-G14, retour utilisateur — bulle de mise en forme) :
+   attribut de segment rendu en data-align par extensions.ts (editeur) et
+   PublicBlockView.tsx (wiki public), jamais une marque sur le contenu. */
+.rich-text-content [data-align="left"] {
+  text-align: left;
+}
+.rich-text-content [data-align="center"] {
+  text-align: center;
+}
+.rich-text-content [data-align="right"] {
+  text-align: right;
+}
+.rich-text-content [data-align="justify"] {
+  text-align: justify;
 }
 
 /* Le signe distinctif du produit (specs/coquille-et-design.md §1, deja

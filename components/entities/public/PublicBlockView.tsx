@@ -40,7 +40,7 @@ function PublicTextBlock({ data }: { data: TextBlockData }) {
         const tag = TAG_BY_BLOCK_TYPE[segment.blockType] ?? "p";
         return createElement(
           tag,
-          { key: segment.id },
+          { key: segment.id, "data-align": segment.align },
           segment.content.map((node, i) => renderNode(node, i)),
         );
       })}
@@ -124,6 +124,13 @@ function PublicCustomTableBlock({ data }: { data: CustomTableBlockData }) {
  * jamais declencher une mutation, meme par accident.
  */
 export default function PublicBlockView({ block }: { block: PublicBlock }) {
+  // Retour utilisateur (V2-G13) : une image active comme fond de page est
+  // deja rendue par WikiBackgroundProvider (position fixed, plein ecran) —
+  // la rendre en plus a sa place dans le corps de la fiche la dupliquerait
+  // ("en fond" ET "au fond de la page"). Elle ne s'affiche plus qu'en fond.
+  if (block.blockType === "image" && (block.data as unknown as ImageBlockData).useAsWikiBackground) {
+    return null;
+  }
   return (
     <div className="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
       {/* Retour utilisateur : le titre du bloc (souvent juste "Image") est
