@@ -1128,7 +1128,9 @@ export type Database = {
       }
       entity_portraits: {
         Row: {
+          align: string
           created_at: string
+          display_size_pct: number
           entity_id: string
           height: number
           image: string
@@ -1136,7 +1138,9 @@ export type Database = {
           width: number
         }
         Insert: {
+          align?: string
           created_at?: string
+          display_size_pct?: number
           entity_id: string
           height: number
           image: string
@@ -1144,7 +1148,9 @@ export type Database = {
           width: number
         }
         Update: {
+          align?: string
           created_at?: string
+          display_size_pct?: number
           entity_id?: string
           height?: number
           image?: string

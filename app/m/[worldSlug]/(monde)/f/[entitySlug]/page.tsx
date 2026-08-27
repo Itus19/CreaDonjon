@@ -32,6 +32,7 @@ export default async function EntityPage({
         campaignId={data.campaignId}
         initialIsPc={data.isPc}
         campaignCharacterUserId={data.campaignCharacterUserId}
+        initialPortraitLayout={data.portraitLayout}
       />
     </>
   );

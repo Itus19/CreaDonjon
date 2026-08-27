@@ -11,6 +11,7 @@ import Dropdown from "@/components/shared/Dropdown";
 import { DEFAULT_ENTITY_NAME, ENTITY_KINDS } from "@/lib/entities/schemas";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import type { EntitySummary } from "@/src/server/repos/entities";
+import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
@@ -48,6 +49,7 @@ export default function EditEntityForm({
   campaignId,
   initialIsPc,
   campaignCharacterUserId,
+  initialPortraitLayout,
 }: {
   entity: EntitySummary;
   worldSlug: string;
@@ -60,6 +62,7 @@ export default function EditEntityForm({
   initialIsPc: boolean;
   /** Compte joueur deja attribue (panneau MJ) — jamais efface par un changement PJ/PNJ depuis la fiche. */
   campaignCharacterUserId: string | null;
+  initialPortraitLayout: EntityPortraitLayout;
 }) {
   const router = useRouter();
   const [name, setName] = useState(entity.name);
@@ -355,7 +358,7 @@ export default function EditEntityForm({
           </div>
         </div>
 
-        <PortraitUpload entityId={entity.id} />
+        <PortraitUpload entityId={entity.id} initialLayout={initialPortraitLayout} />
       </div>
 
       {status === "conflict" && (

@@ -54,6 +54,15 @@ export const reorderEntityKindsSchema = z.object({
   order: z.array(z.string().trim().min(1)).max(50),
 });
 
+// Mise en page du portrait dans le wiki (V2-G11) : taille en % et
+// alignement gauche/droite (jamais centre — un flottement centre n'a pas de
+// sens en CSS, le texte du premier bloc contourne le portrait a droite ou a
+// gauche).
+export const portraitLayoutSchema = z.object({
+  displaySizePct: z.number().int().min(50).max(200),
+  align: z.enum(["left", "right"]),
+});
+
 // Nom donne a une fiche vierge (V2-G8, retour utilisateur : un nom vide
 // laissait des lignes blanches illisibles dans la barre laterale) — un vrai
 // nom persiste des la creation plutot qu'une chaine vide, jamais impose : le

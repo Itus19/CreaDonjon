@@ -6,11 +6,15 @@ import { filterBlocks, filterSegments, type VisibilityLevel } from "@/src/core/v
 import { verifySharePassword } from "@/src/core/shareLinks/password";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
+import { relationLabel, type RelationType } from "@/src/core/relations/inverses";
+import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { type BlockRow, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { type EntitySummary, getEntityBySlug, listEntitiesForWorld } from "@/src/server/repos/entities";
-import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
+import { listPartOfRelationsForWorld, listRelationsForEntity, type OtherEntityRef } from "@/src/server/repos/relations";
 import { listCampaignsForWorld } from "@/src/server/repos/campaigns";
 import { getWorldById, getWorldEntityKindOrder } from "@/src/server/repos/worlds";
+import { getPortraitLayout } from "@/src/server/services/entityPortraits";
+import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import { buildEntityTree, withPlayerCharacterKinds, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerCharacters";
 
@@ -151,6 +155,36 @@ export async function getPublicWikiWelcomeMessage(worldId: string): Promise<stri
   return world?.wiki_welcome_message ?? null;
 }
 
+export interface PublicRelation {
+  id: string;
+  relationType: string;
+  label: string;
+  other: OtherEntityRef;
+}
+
+/** Meme filtrage que listVisibleRelations (src/server/services/relations.ts), pour un visiteur anonyme plutot qu'un utilisateur authentifie — filterBlocks (src/core/visibility) est generique sur toute ligne {visibility}, deja reutilise ici pour les blocs. */
+function toPublicRelations(rows: Awaited<ReturnType<typeof listRelationsForEntity>>): PublicRelation[] {
+  const visible = filterBlocks(
+    rows.map((r) => ({
+      ...r,
+      visibility: { level: r.visibility_level as VisibilityLevel, scopeId: r.visibility_scope_id, createdBy: r.created_by },
+    })),
+    { kind: "anonymous" }
+  );
+  return visible.map((r) => {
+    const rawLabel = relationLabel(r.relation_type as RelationType, r.direction);
+    return {
+      id: r.id,
+      relationType: r.relation_type,
+      // Meme traduction que RelationsChips.tsx (fiche d'edition,
+      // RELATION_LABELS_FR) — jamais la cle brute ("friend_of") affichee au
+      // visiteur du wiki.
+      label: RELATION_LABELS_FR[rawLabel] ?? rawLabel,
+      other: r.other,
+    };
+  });
+}
+
 export interface PublicBlock {
   id: string;
   blockType: string;
@@ -202,12 +236,19 @@ function toVisibilityAware(row: BlockRow) {
 export async function getPublicEntityDetail(
   worldId: string,
   entitySlug: string,
-): Promise<{ entity: EntitySummary; blocks: PublicBlock[] } | null> {
+): Promise<
+  { entity: EntitySummary; blocks: PublicBlock[]; relations: PublicRelation[]; portraitLayout: EntityPortraitLayout }
+  | null
+> {
   const supabase = createShareLinkServiceClient();
   const entity = await getEntityBySlug(supabase, worldId, entitySlug);
   if (!entity) return null;
 
-  const rows = await listBlocksForEntity(supabase, entity.id);
+  const [rows, relationRows, portraitLayout] = await Promise.all([
+    listBlocksForEntity(supabase, entity.id),
+    listRelationsForEntity(supabase, entity.id),
+    getPortraitLayout(supabase, entity.id),
+  ]);
   const visible = filterBlocks(rows.map(toVisibilityAware), { kind: "anonymous" });
   const blocks: PublicBlock[] = visible
     .map((row) => ({
@@ -223,5 +264,5 @@ export async function getPublicEntityDetail(
     }))
     .sort((a, b) => a.displayOrder - b.displayOrder);
 
-  return { entity, blocks };
+  return { entity, blocks, relations: toPublicRelations(relationRows), portraitLayout };
 }

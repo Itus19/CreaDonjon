@@ -11,6 +11,8 @@ import {
 import { listVisibleBlocks, type VisibleBlock } from "@/src/server/services/blocks";
 import { listVisibleRelations, type VisibleRelation } from "@/src/server/services/relations";
 import { getCampaignCharacters, listCampaigns } from "@/src/server/services/campaigns";
+import { getPortraitLayout } from "@/src/server/services/entityPortraits";
+import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -35,6 +37,8 @@ export interface EntityWindowData {
   isPc: boolean;
   /** Compte joueur deja attribue (panneau MJ, CampaignDetail.tsx) — jamais efface par un simple changement PJ/PNJ depuis la fiche. */
   campaignCharacterUserId: string | null;
+  /** Taille/alignement du portrait dans le wiki (V2-G11) — valeurs par defaut si aucun portrait n'a encore ete televerse. */
+  portraitLayout: EntityPortraitLayout;
 }
 
 /**
@@ -61,12 +65,13 @@ export async function getEntityWindowData(
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [blocks, relations, allEntities, worldCustomKinds, campaigns] = await Promise.all([
+  const [blocks, relations, allEntities, worldCustomKinds, campaigns, portraitLayout] = await Promise.all([
     listVisibleBlocks(supabase, world.id, entity.id, user.id),
     listVisibleRelations(supabase, world.id, entity.id, user.id),
     listEntitiesForWorld(supabase, world.id),
     listCustomEntityKindsForWorld(supabase, world.id),
     listCampaigns(supabase, world.id),
+    getPortraitLayout(supabase, entity.id),
   ]);
 
   const otherEntities = allEntities
@@ -89,5 +94,6 @@ export async function getEntityWindowData(
     campaignId: campaign?.id ?? null,
     isPc: campaignCharacter?.is_pc ?? false,
     campaignCharacterUserId: campaignCharacter?.user_id ?? null,
+    portraitLayout,
   };
 }

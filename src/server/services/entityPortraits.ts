@@ -5,8 +5,11 @@ import type { Database } from "@/src/types/database";
 import {
   deleteEntityPortrait as deleteEntityPortraitRow,
   getEntityPortrait,
+  getEntityPortraitLayout,
+  updateEntityPortraitLayout,
   upsertEntityPortrait,
   type EntityPortrait,
+  type EntityPortraitLayout,
 } from "@/src/server/repos/entityPortraits";
 
 type TypedClient = SupabaseClient<Database>;
@@ -55,4 +58,16 @@ export async function getPortraitForEntity(supabase: TypedClient, entityId: stri
 /** `false` si la fiche n'a pas de portrait ou est hors de portee (RLS) — refus explicite plutot qu'un succes silencieux. */
 export async function removeEntityPortrait(supabase: TypedClient, entityId: string): Promise<boolean> {
   return deleteEntityPortraitRow(supabase, entityId);
+}
+
+export async function getPortraitLayout(supabase: TypedClient, entityId: string): Promise<EntityPortraitLayout> {
+  return getEntityPortraitLayout(supabase, entityId);
+}
+
+export async function setPortraitLayout(
+  supabase: TypedClient,
+  entityId: string,
+  layout: EntityPortraitLayout
+): Promise<void> {
+  return updateEntityPortraitLayout(supabase, entityId, layout);
 }
