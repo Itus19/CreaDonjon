@@ -66,11 +66,18 @@ export default function BookSkin({
 
   return (
     <div
-      className={`flex w-full min-h-full ${displayed ? "wiki-bg-scope" : ""}`}
+      className={`flex w-full h-full ${displayed ? "wiki-bg-scope" : ""}`}
       data-mode={displayed?.mode}
       style={scopeStyle}
     >
-      <aside className="w-64 shrink-0 px-6 pb-10 pt-16">
+      {/* `overflow-y-auto` sur l'aside ET le main (retour utilisateur, la
+          molette ne faisait rien) : `/m/[worldSlug]/apercu/**` est imbrique
+          dans `AppShell.tsx`, qui borne la page a `h-screen` avec
+          `overflow-hidden` (les fenetres flottantes de l'editeur gerent
+          deja leur propre defilement de cette maniere) — sans sa propre
+          zone de defilement, un contenu plus long que l'ecran restait
+          simplement coupe, sans barre ni molette pour l'atteindre. */}
+      <aside className="w-64 shrink-0 overflow-y-auto px-6 pb-10 pt-16">
         <Link href={hrefBase} className="mb-4 block font-chrome text-base font-semibold text-ink hover:text-accent">
           {title}
         </Link>
@@ -88,7 +95,7 @@ export default function BookSkin({
           defaultCollapsedKinds={defaultCollapsedKinds}
         />
       </aside>
-      <main className="min-w-0 flex-1 px-8 py-10">
+      <main className="min-w-0 flex-1 overflow-y-auto px-8 py-10">
         <div className="mx-auto max-w-[70ch]">{children}</div>
       </main>
     </div>
