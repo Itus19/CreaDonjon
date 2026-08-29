@@ -43,6 +43,16 @@ export async function listFamilyRelationsForWorld(
   return data as FamilyRelationRow[];
 }
 
+/** Meme forme que `listFamilyRelationsForWorld`, sans filtre de type — V2-H1 phase 5, bloc `relations_graph` : tout type de relation peut apparaitre dans le graphe, pas seulement la famille. */
+export async function listAllRelationsForWorld(supabase: TypedClient, worldId: string): Promise<FamilyRelationRow[]> {
+  const { data, error } = await supabase
+    .from("relations")
+    .select("id, source_entity_id, target_entity_id, relation_type, visibility_level, visibility_scope_id, created_by")
+    .eq("world_id", worldId);
+  if (error) throw new Error(error.message);
+  return data as FamilyRelationRow[];
+}
+
 export interface OtherEntityRef {
   id: string;
   name: string;
@@ -127,5 +137,18 @@ export async function insertRelation(
 
 export async function deleteRelation(supabase: TypedClient, id: string): Promise<void> {
   const { error } = await supabase.from("relations").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/** V2-H1 phase 5 : « masquer un lien » dans `relations_graph` change la visibilite de la relation elle-meme — reutilise la barriere existante, jamais un second systeme de masquage. */
+export async function updateRelationVisibility(
+  supabase: TypedClient,
+  id: string,
+  params: { visibilityLevel: string; visibilityScopeId: string | null }
+): Promise<void> {
+  const { error } = await supabase
+    .from("relations")
+    .update({ visibility_level: params.visibilityLevel, visibility_scope_id: params.visibilityScopeId })
+    .eq("id", id);
   if (error) throw new Error(error.message);
 }

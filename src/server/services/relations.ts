@@ -7,6 +7,7 @@ import {
   deleteRelation as repoDeleteRelation,
   insertRelation,
   listRelationsForEntity,
+  updateRelationVisibility,
   type InsertRelationResult,
   type OtherEntityRef,
 } from "@/src/server/repos/relations";
@@ -69,4 +70,13 @@ export async function addRelation(
 
 export async function removeRelation(supabase: TypedClient, id: string): Promise<void> {
   await repoDeleteRelation(supabase, id);
+}
+
+/** V2-H1 phase 5 : « masquer un lien » dans `relations_graph` — meme barriere que la visibilite des relations partout ailleurs. */
+export async function changeRelationVisibility(
+  supabase: TypedClient,
+  id: string,
+  params: { visibilityLevel: string; visibilityScopeId: string | null }
+): Promise<void> {
+  await updateRelationVisibility(supabase, id, params);
 }

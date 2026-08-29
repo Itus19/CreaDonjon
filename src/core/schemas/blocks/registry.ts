@@ -18,6 +18,7 @@ import { zSessionLogBlockData } from "./sessionLog";
 import { zPersonalityBlockData } from "./personality";
 import { zRelationshipBlockData } from "./relationship";
 import { zWorldviewBlockData } from "./worldview";
+import { zRelationsGraphBlockData } from "./relationsGraph";
 import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
 
 /**
@@ -70,6 +71,12 @@ import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/ke
  * `personality` (l'entite seule). Partage le meme journal
  * (`personality_events`) plutot qu'une nouvelle table : filtre par cles
  * de poles a l'affichage, jamais un evenement mal range.
+ * V2-H1 : relations_graph — graphe auto-organise des vraies relations de
+ * l'entite (n'importe quel type, contrairement a `genealogy`). Fourche
+ * tranchee avec l'utilisateur : ce qu'il decrivait pour "worldview"
+ * (survol des liens, degre configurable, masquage coordonne) n'a de sens
+ * que sur un vrai graphe de relations, jamais sur des poles abstraits —
+ * devient ce bloc separe plutot qu'une fonctionnalite de `worldview`.
  */
 export const BLOCK_TYPES = [
   "text",
@@ -90,6 +97,7 @@ export const BLOCK_TYPES = [
   "personality",
   "relationship",
   "worldview",
+  "relations_graph",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -112,6 +120,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   personality: "poles",
   relationship: "poles",
   worldview: "poles",
+  relations_graph: "graph",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -134,6 +143,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   personality: zPersonalityBlockData,
   relationship: zRelationshipBlockData,
   worldview: zWorldviewBlockData,
+  relations_graph: zRelationsGraphBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -207,6 +217,7 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
   },
   relationship: { __v: 1, target: null, knownAs: "", historyVisible: 20 },
   worldview: { __v: 1, poles: WORLDVIEW_POLE_KEYS.map((key) => ({ key, value: 0 })), priority: [] },
+  relations_graph: { __v: 1, rootEntityId: null, degreesVisible: 1 },
 };
 
 export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny {

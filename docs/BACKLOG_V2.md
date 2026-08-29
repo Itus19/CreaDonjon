@@ -323,7 +323,7 @@ Réalisé en réutilisant un seul mécanisme pour les deux : `MusicPlaybackProvi
 
 *Ce qui donne de la mémoire et de la profondeur au monde. Le lot le plus utile pour la V3.*
 
-### V2-H1 — Psyché des PNJ · `L` — en cours (phase 5/5 : `relations_graph`)
+### V2-H1 — Psyché des PNJ · `L` — fait (5 phases)
 
 Spécification complète : `specs/psyche-pnj.md`. Découpage en phases annoncé au client avant de commencer (schéma → `personality` → `relationship` → `worldview` → graphe), avec point de vérification après chacune. **Fourche ajoutée en cours de route, tranchée avec le client** : ce que le client décrivait pour « worldview » (survol qui met en surbrillance les liens de premier degré, degré de liens configurable, masquage coordonné avec la liste de relations) ne peut porter sur les 7 pôles moraux/politiques abstraits de la spec — un ensemble de nombres n'a ni « liens » ni « degré ». Décision explicite : les deux existent, séparément — `worldview` reste les 7 pôles de la spec (phase 4), et un nouveau bloc `relations_graph` (phase 5) porte la description du client, un graphe des vraies relations de l'entité.
 
@@ -340,6 +340,22 @@ Spécification complète : `specs/psyche-pnj.md`. Découpage en phases annoncé 
 - [ ] Valeurs stockées de −100 à +100 ; l'écran et le contexte IA affichent la **bande nommée**, jamais le nombre — les bandes des 7 axes de relation sont définies (`bands.ts`, réutilisées depuis la phase 1) mais pas encore affichées à l'écran (le radar/les curseurs montrent la valeur exacte, pas le mot) ; le contexte IA lui-même reste à écrire (V3). Bandes de `personality` toujours pas définies.
 - [ ] `known_as` est **stocké** et affiché dans l'éditeur — pas encore **appliqué** : aucun contexte IA n'existe encore pour vérifier qu'il protège réellement une identité (V3).
 - [ ] Comparaison automatique entre les convictions d'un PNJ et celles de sa faction, avec signalement des divergences fortes — pas encore construite (nécessite un vrai cas concret : un monde avec PNJ et faction porteurs de `worldview` tous les deux).
+
+**Ticket clos avec deux critères non cochés, sciemment.** Les deux dépendent d'un consommateur qui n'existe pas encore : les bandes nommées à l'écran et `known_as` appliqué supposent un contexte IA (V3, pas commencée) ; la comparaison PNJ/faction suppose un monde réel avec les deux porteurs de `worldview` (aucun cas concret sous la main pour la construire sans deviner sa forme). Tout le reste — schéma, cinq blocs, trois routes journalisées, deux bugs transversaux trouvés et corrigés — est fait et vérifié en direct.
+
+**Phase 5 — bloc `relations_graph`, fait.** Graphe auto-organisé des vraies relations de l'entité (n'importe quel type, contrairement à `genealogy`) — nouvelle dépendance **d3-force** (MIT, ~20 Ko gzippé) annoncée et actée avec le client avant installation, comme `@dnd-kit` en V2-G1 : un moteur de simulation de forces fait main aurait été nettement pire pour ce cas précis.
+
+- **Traversée BFS pure et testée** (`src/core/relationsGraph/buildRelationsGraph.ts`) — non orientée (une relation stockée une fois se traverse dans les deux sens pour la découverte de voisins), bornée par `degreesVisible` (1 par défaut, demande du client), jamais une arête dont une extrémité est hors de portée ou de visibilité.
+- **Positionnement d3-force calculé une fois, statique à l'affichage** (`RelationsGraphCanvas.tsx`) — 300 itérations de simulation puis arrêt, pas d'animation continue : un graphe de fiche n'a pas besoin de « respirer ».
+- **Survol = surbrillance du nœud et de ses liens de premier degré**, le reste s'estompe — demande explicite du client.
+- **Couleur des liens directs depuis la racine dérivée de `friendship_hostility`** (`relationshipColor.ts`, écrite en phase 3 exactement pour cet usage) — un lien entre deux AUTRES entités reste neutre (aucune attitude connue depuis cette fiche).
+- **« Masquer un lien » réutilise la visibilité existante des relations** — nouvelle route `PATCH /api/relations/[id]` (n'existait pas : seule la suppression était possible avant), `changeRelationVisibility` (`src/server/services/relations.ts`). Coordination avec la liste de relations en tête de fiche vérifiée en direct sur `/apercu` : masquer un lien dans le graphe le fait disparaître **entièrement** de l'en-tête pour un visiteur anonyme, jamais un simple badge — même mécanisme de filtrage serveur que tout le reste (aucun second système de masquage écrit).
+
+**Vérifié en direct** (fiche de Candide Fausset) : bloc créé, degré de liens changé 1→3, clic sur un lien → panneau de visibilité, bascule public→MJ confirmée par une requête base directe et par `/apercu` (relation disparue de l'en-tête), bascule inverse revérifiée.
+
+**Bug réel trouvé et corrigé en testant** : le trait d'un lien (1,5 px de large) était pratiquement impossible à cliquer avec précision, y compris pour l'assistant qui teste avec des coordonnées calculées. Corrigé dans `RelationsGraphCanvas.tsx` : un second trait invisible mais large (14 px) superposé au trait visible sert de zone de clic — motif SVG courant, la même explication vaudrait pour n'importe quel utilisateur réel à la souris.
+
+**Hors périmètre, explicitement** : pas de rendu public pour `relations_graph` (même décision que `relationship` — mérite sa propre passe) ; pas de sélecteur de racine (toujours l'entité hôte elle-même, jamais une autre fiche) ; la coloration des liens ne couvre que ceux qui touchent directement la racine, pas les liens entre deux autres entités du graphe.
 
 **Phase 4 — bloc `worldview`, fait.** Convictions morales/politiques (`src/core/schemas/blocks/worldview.ts`) : les 7 pôles de la spec (ordre↔liberté, miséricorde↔justice, sacré↔profane, tradition↔progrès, individu↔collectif, richesse↔honneur, paix↔force) + `priority`. Même portée que `personality` (l'entité seule, jamais la campagne).
 

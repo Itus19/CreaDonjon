@@ -34,6 +34,7 @@ import SessionLogBlockEditor from "./SessionLogBlockEditor";
 import PersonalityBlockEditor from "./PersonalityBlockEditor";
 import RelationshipBlockEditor from "./RelationshipBlockEditor";
 import WorldviewBlockEditor from "./WorldviewBlockEditor";
+import RelationsGraphBlockEditor from "./RelationsGraphBlockEditor";
 import MonsterStatblockSheet from "./MonsterStatblockSheet";
 import PlayableCharacterSheet from "./PlayableCharacterSheet";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
@@ -55,6 +56,7 @@ import type { SessionLogBlockData } from "@/src/core/schemas/blocks/sessionLog";
 import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
 import type { RelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
 import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
+import type { RelationsGraphBlockData } from "@/src/core/schemas/blocks/relationsGraph";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 
 export interface BlockItem {
@@ -88,6 +90,7 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   personality: "Personnalité",
   relationship: "Relation",
   worldview: "Convictions",
+  relations_graph: "Réseau",
 };
 
 function BlockDataEditor({
@@ -239,6 +242,15 @@ function BlockDataEditor({
           data={block.data as WorldviewBlockData}
           onChange={(d) => onChange(d)}
           onBlockRefreshed={onBlockRefreshed}
+        />
+      );
+    case "relations_graph":
+      return (
+        <RelationsGraphBlockEditor
+          entityId={block.entityId}
+          worldSlug={worldSlug}
+          data={block.data as RelationsGraphBlockData}
+          onChange={(d) => onChange(d)}
         />
       );
     default:
