@@ -193,7 +193,9 @@ export default function RelationsChips({
           />
           <Dropdown
             value={targetEntityId}
-            options={otherEntities.map((other) => ({ value: other.id, label: other.name }))}
+            options={otherEntities
+              .map((other) => ({ value: other.id, label: other.name }))
+              .sort((a, b) => a.label.localeCompare(b.label, "fr"))}
             onChange={setTargetEntityId}
             aria-label="Entité cible"
           />
