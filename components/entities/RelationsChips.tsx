@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import Dropdown from "@/components/shared/Dropdown";
+import EyeIcon from "@/components/shared/EyeIcon";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import { useDesktop } from "@/components/shell/DesktopContext";
 import { RELATION_TYPES } from "@/src/core/relations/inverses";
@@ -15,6 +16,7 @@ export interface RelationChip {
   relationType: string;
   label: string;
   other: { id: string; name: string; slug: string; entity_kind: string };
+  visibilityLevel: string;
 }
 
 export interface OtherEntityOption {
@@ -55,6 +57,17 @@ export default function RelationsChips({
 
   async function removeRelation(id: string) {
     await fetch(`/api/relations/${id}`, { method: "DELETE" });
+    router.refresh();
+  }
+
+  /** Bascule œil (retour utilisateur) : public/gm seulement, meme binaire que le masquage d'un lien depuis le bloc reseau (`RelationsGraphBlockEditor.tsx`) — pas le selecteur complet a 6 niveaux pour un geste rapide. */
+  async function toggleVisibility(relation: RelationChip) {
+    const nextLevel = relation.visibilityLevel === "gm" ? "public" : "gm";
+    await fetch(`/api/relations/${relation.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visibility: { level: nextLevel, scopeId: null } }),
+    });
     router.refresh();
   }
 
@@ -105,6 +118,15 @@ export default function RelationsChips({
               >
                 {relation.other.name}
               </Link>
+              <button
+                type="button"
+                onClick={() => toggleVisibility(relation)}
+                className="text-ink-muted hover:text-ink"
+                aria-label={relation.visibilityLevel === "gm" ? "Rendre cette relation publique" : "Masquer cette relation aux joueurs"}
+                title={relation.visibilityLevel === "gm" ? "Masquée aux joueurs — cliquer pour rendre publique" : "Visible publiquement — cliquer pour masquer"}
+              >
+                <EyeIcon open={relation.visibilityLevel !== "gm"} className="h-3.5 w-3.5" />
+              </button>
               <button
                 type="button"
                 onClick={() => removeRelation(relation.id)}

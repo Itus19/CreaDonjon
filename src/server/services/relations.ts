@@ -20,6 +20,7 @@ export interface VisibleRelation {
   relationType: string;
   label: string;
   other: OtherEntityRef;
+  visibilityLevel: string;
 }
 
 export async function listVisibleRelations(
@@ -50,6 +51,7 @@ export async function listVisibleRelations(
     relationType: r.relation_type,
     label: relationLabel(r.relation_type as RelationType, r.direction),
     other: r.other,
+    visibilityLevel: r.visibility_level,
   }));
 }
 
