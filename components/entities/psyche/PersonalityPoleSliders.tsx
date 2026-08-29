@@ -29,9 +29,29 @@ export default function PersonalityPoleSliders({
   disabled?: boolean;
 }) {
   const [liveValues, setLiveValues] = useState<Record<string, number>>({});
+  // Miroir synchrone de `liveValues`, meme motif que `blocksRef` dans
+  // EntityBlocks.tsx : sur un clic (pas seulement un glisse), `onChange`
+  // (evenement 'input') et `onMouseUp` peuvent survenir dans le meme
+  // batch React — `commit` lisait alors `liveValues` via la fermeture du
+  // rendu en cours, PERIME tant que React n'a pas rejoue ce batch. Le
+  // curseur ne bougeait jamais : `current` valait `undefined`, le retour
+  // anticipe annulait tout silencieusement. Bug reel signale par l'utilisateur.
+  const liveValuesRef = useRef<Record<string, number>>({});
   const dragStartRef = useRef<Record<string, number>>({});
 
   const valueOf = (key: PersonalityPoleKey, fallback: number) => liveValues[key] ?? fallback;
+
+  function setLiveValue(key: PersonalityPoleKey, value: number) {
+    liveValuesRef.current = { ...liveValuesRef.current, [key]: value };
+    setLiveValues(liveValuesRef.current);
+  }
+
+  function clearLiveValue(key: PersonalityPoleKey) {
+    const next = { ...liveValuesRef.current };
+    delete next[key];
+    liveValuesRef.current = next;
+    setLiveValues(next);
+  }
 
   function startDrag(key: PersonalityPoleKey, current: number) {
     dragStartRef.current[key] = current;
@@ -39,17 +59,13 @@ export default function PersonalityPoleSliders({
 
   function commit(key: PersonalityPoleKey) {
     const start = dragStartRef.current[key];
-    const current = liveValues[key];
+    const current = liveValuesRef.current[key];
     delete dragStartRef.current[key];
     // Efface la valeur locale tout de suite, succes ou non : si l'appelant
     // refuse (delta > 40 non confirme, conflit serveur...), l'affichage
     // retombe sur `poles` (la valeur reellement enregistree) plutot que de
     // rester bloque sur une valeur jamais sauvegardee.
-    setLiveValues((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
+    clearLiveValue(key);
     if (start === undefined || current === undefined || current === start) return;
     onCommit(key, current - start);
   }
@@ -76,7 +92,7 @@ export default function PersonalityPoleSliders({
               onMouseDown={() => startDrag(key, stored)}
               onTouchStart={() => startDrag(key, stored)}
               onFocus={() => startDrag(key, stored)}
-              onChange={(e) => setLiveValues((prev) => ({ ...prev, [key]: Number(e.target.value) }))}
+              onChange={(e) => setLiveValue(key, Number(e.target.value))}
               onMouseUp={() => commit(key)}
               onTouchEnd={() => commit(key)}
               onBlur={() => commit(key)}

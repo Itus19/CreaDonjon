@@ -24,9 +24,27 @@ export default function WorldviewPoleSliders({
   disabled?: boolean;
 }) {
   const [liveValues, setLiveValues] = useState<Record<string, number>>({});
+  // Miroir synchrone, meme motif que `blocksRef` (EntityBlocks.tsx) : sur
+  // un clic (pas seulement un glisse), `onChange` et `onMouseUp` peuvent
+  // survenir dans le meme batch React — lire `liveValues` via la fermeture
+  // du rendu en cours dans `commit` le rendait PERIME, le curseur ne
+  // bougeait jamais. Bug reel signale par l'utilisateur.
+  const liveValuesRef = useRef<Record<string, number>>({});
   const dragStartRef = useRef<Record<string, number>>({});
 
   const valueOf = (key: WorldviewPoleKey, fallback: number) => liveValues[key] ?? fallback;
+
+  function setLiveValue(key: WorldviewPoleKey, value: number) {
+    liveValuesRef.current = { ...liveValuesRef.current, [key]: value };
+    setLiveValues(liveValuesRef.current);
+  }
+
+  function clearLiveValue(key: WorldviewPoleKey) {
+    const next = { ...liveValuesRef.current };
+    delete next[key];
+    liveValuesRef.current = next;
+    setLiveValues(next);
+  }
 
   function startDrag(key: WorldviewPoleKey, current: number) {
     dragStartRef.current[key] = current;
@@ -34,13 +52,9 @@ export default function WorldviewPoleSliders({
 
   function commit(key: WorldviewPoleKey) {
     const start = dragStartRef.current[key];
-    const current = liveValues[key];
+    const current = liveValuesRef.current[key];
     delete dragStartRef.current[key];
-    setLiveValues((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
+    clearLiveValue(key);
     if (start === undefined || current === undefined || current === start) return;
     onCommit(key, current - start);
   }
@@ -67,7 +81,7 @@ export default function WorldviewPoleSliders({
               onMouseDown={() => startDrag(key, stored)}
               onTouchStart={() => startDrag(key, stored)}
               onFocus={() => startDrag(key, stored)}
-              onChange={(e) => setLiveValues((prev) => ({ ...prev, [key]: Number(e.target.value) }))}
+              onChange={(e) => setLiveValue(key, Number(e.target.value))}
               onMouseUp={() => commit(key)}
               onTouchEnd={() => commit(key)}
               onBlur={() => commit(key)}
