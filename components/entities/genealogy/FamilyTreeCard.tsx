@@ -2,13 +2,15 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import type { FamilyTreeNode } from "@/src/core/genealogy/buildFamilyTree";
 
 /**
  * Carte portrait + etiquette de nom arrondie (esthetique de reference
  * fournie par l'utilisateur, V2-H3) — meme mecanique de repli que
  * `PublicPortrait.tsx` (une entite sans portrait affiche son initiale
- * plutot qu'une image cassee).
+ * plutot qu'une image cassee). Type de `node` reduit au strict necessaire
+ * (id, name) plutot que `FamilyTreeNode` : reutilisee telle quelle par
+ * `RelationsGraphCanvas` (V2-H1 phase 5, reprise visuelle) — meme carte,
+ * deux graphes differents, jamais une deuxieme copie de ce repli.
  *
  * Trois etats plutot que deux (retour utilisateur : icone d'image cassee
  * visible un instant sur les cartes sans portrait) : l'image reste
@@ -26,7 +28,7 @@ import type { FamilyTreeNode } from "@/src/core/genealogy/buildFamilyTree";
  * rattraper exactement ce cas, en plus de `onLoad` pour le chargement
  * normal (reseau).
  */
-export default function FamilyTreeCard({ node, href }: { node: FamilyTreeNode; href: string }) {
+export default function FamilyTreeCard({ node, href }: { node: { id: string; name: string }; href: string }) {
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
 
   const checkAlreadyLoaded = useCallback((img: HTMLImageElement | null) => {
