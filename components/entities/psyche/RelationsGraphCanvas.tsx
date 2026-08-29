@@ -123,16 +123,26 @@ export default function RelationsGraphCanvas({
     return null;
   }, [hoveredId, hoveredEdgeId, graph.edges]);
 
-  // Etiquette(s) affichee(s) (retour utilisateur) : au survol d'un PORTRAIT,
-  // toutes ses aretes directes a la fois (pas une seule) ; sinon, la seule
-  // arete survolee/epinglee comme avant.
-  const edgesToLabel = hoveredId
-    ? graph.edges.filter((e) => e.fromId === hoveredId || e.toId === hoveredId)
-    : (() => {
-        const id = pinnedEdgeId ?? hoveredEdgeId;
-        const edge = graph.edges.find((e) => e.id === id);
-        return edge ? [edge] : [];
-      })();
+  // Etiquette(s) affichee(s) (retour utilisateur) : un lien EPINGLE reste
+  // toujours visible (petit bug corrige : survoler un autre portrait le
+  // faisait disparaitre avant), auquel s'ajoutent toutes les aretes
+  // directes du portrait survole (pas une seule a la fois) ou, a defaut,
+  // la seule arete directement survolee.
+  const edgesToLabel = (() => {
+    const byId = new Map(graph.edges.map((e) => [e.id, e] as const));
+    const result = new Map<string, RelationsGraphEdge>();
+    const pinned = pinnedEdgeId ? byId.get(pinnedEdgeId) : undefined;
+    if (pinned) result.set(pinned.id, pinned);
+    if (hoveredId) {
+      for (const e of graph.edges) {
+        if (e.fromId === hoveredId || e.toId === hoveredId) result.set(e.id, e);
+      }
+    } else if (hoveredEdgeId) {
+      const e = byId.get(hoveredEdgeId);
+      if (e) result.set(e.id, e);
+    }
+    return [...result.values()];
+  })();
 
   const nodesSignature = graph.nodes
     .map((n) => n.id)

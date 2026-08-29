@@ -172,6 +172,31 @@ export default function GenealogyBlockEditor({
     onRelationsChanged();
   }
 
+  /**
+   * Bouton oeil sur le portrait (V2, retour utilisateur suite) : bascule
+   * TOUTES les aretes qui touchent ce nœud dans l'arbre affiche, en un
+   * seul geste — un nœud relie par plusieurs liens (ex. un partenaire ET
+   * des enfants) apparait/disparait en bloc plutot que de devoir epingler
+   * chaque trait un par un. Public si au moins une arete l'est deja
+   * (coherent avec `FamilyTreeCanvas` : une seule arete publique suffit a
+   * garder le nœud atteignable) -> tout masquer ; sinon tout rendre public.
+   */
+  async function toggleNodeVisibility(_node: FamilyTreeNode, edges: FamilyTreeEdge[]) {
+    const anyPublic = edges.some((e) => e.visibilityLevel === "public");
+    const nextLevel = anyPublic ? "gm" : "public";
+    await Promise.all(
+      edges.map((edge) =>
+        fetch(`/api/relations/${edge.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ visibility: { level: nextLevel, scopeId: null } }),
+        })
+      )
+    );
+    await loadTree();
+    onRelationsChanged();
+  }
+
   if (!tree) return <p className="text-sm text-ink-muted">Chargement de l&apos;arbre…</p>;
 
   const matches =
@@ -194,8 +219,10 @@ export default function GenealogyBlockEditor({
     <>
       <FamilyTreeCanvas
         tree={tree}
+        rootId={rootEntityId}
         onDeleteEdge={deleteEdge}
         onToggleEdgeVisibility={toggleEdgeVisibility}
+        onToggleNodeVisibility={toggleNodeVisibility}
         renderCard={(node: FamilyTreeNode) => <FamilyTreeCard node={node} href={`/m/${worldSlug}/f/${node.slug}`} />}
         renderNodeOverlay={(node, scale) => (
           <button

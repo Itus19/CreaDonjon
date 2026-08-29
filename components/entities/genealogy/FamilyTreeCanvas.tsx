@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import EyeIcon from "@/components/shared/EyeIcon";
 import type { FamilyTree, FamilyTreeEdge, FamilyTreeNode } from "@/src/core/genealogy/buildFamilyTree";
 
 const CARD_WIDTH = 120;
@@ -59,12 +60,16 @@ function clamp(value: number, min: number, max: number): number {
  */
 export default function FamilyTreeCanvas({
   tree,
+  rootId,
   renderCard,
   renderNodeOverlay,
   onDeleteEdge,
   onToggleEdgeVisibility,
+  onToggleNodeVisibility,
 }: {
   tree: FamilyTree;
+  /** L'entite dont c'est la fiche/l'arbre — jamais de bouton oeil sur son propre portrait (retour utilisateur : "seul le portrait de l'entite centrale n'aurait pas ce bouton, car c'est SON arbre"). Optionnel : sans effet en lecture seule (wiki public), ou `onToggleNodeVisibility` n'est de toute facon jamais fourni. */
+  rootId?: string;
   renderCard: (node: FamilyTreeNode) => ReactNode;
   /**
    * Controles d'edition (bouton "+") positionnes sur chaque carte — omis
@@ -79,6 +84,14 @@ export default function FamilyTreeCanvas({
   onDeleteEdge?: (edge: FamilyTreeEdge) => void;
   /** V2, retour utilisateur : bouton oeil sur le trait epingle — masque/affiche au wiki public, meme relation que la liste du haut de fiche et le bloc reseau. Omis en lecture seule. */
   onToggleEdgeVisibility?: (edge: FamilyTreeEdge) => void;
+  /**
+   * V2, retour utilisateur (suite) : bouton oeil directement sur le
+   * portrait plutot que sur le trait epingle — bascule TOUTES les aretes
+   * qui touchent ce nœud dans l'arbre affiche (un nœud avec plusieurs
+   * liens, ex. un partenaire ET des enfants, disparait ou reapparait en
+   * bloc). Omis en lecture seule.
+   */
+  onToggleNodeVisibility?: (node: FamilyTreeNode, edges: FamilyTreeEdge[]) => void;
 }) {
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [pinnedEdgeId, setPinnedEdgeId] = useState<string | null>(null);
@@ -180,16 +193,26 @@ export default function FamilyTreeCanvas({
       )
     : null;
 
-  // Etiquette(s) affichee(s) : soit tous les liens directs du portrait
-  // survole (retour utilisateur : "les etiquettes s'affichent", au
-  // pluriel), soit le seul lien survole/epingle directement.
-  const edgesToLabel = hoveredNodeId
-    ? tree.edges.filter((e) => e.fromId === hoveredNodeId || e.toId === hoveredNodeId)
-    : (() => {
-        const id = pinnedEdgeId ?? hoveredEdgeId;
-        const edge = tree.edges.find((e) => e.id === id);
-        return edge ? [edge] : [];
-      })();
+  // Etiquette(s) affichee(s) : un trait EPINGLE reste toujours visible
+  // (petit bug corrige : survoler un autre portrait le faisait disparaitre
+  // avant), auquel s'ajoutent tous les liens directs du portrait survole
+  // (retour utilisateur : "les etiquettes s'affichent", au pluriel) ou, a
+  // defaut, le seul lien directement survole.
+  const edgesToLabel = (() => {
+    const byId = new Map(tree.edges.map((e) => [e.id, e] as const));
+    const result = new Map<string, FamilyTreeEdge>();
+    const pinned = pinnedEdgeId ? byId.get(pinnedEdgeId) : undefined;
+    if (pinned) result.set(pinned.id, pinned);
+    if (hoveredNodeId) {
+      for (const e of tree.edges) {
+        if (e.fromId === hoveredNodeId || e.toId === hoveredNodeId) result.set(e.id, e);
+      }
+    } else if (hoveredEdgeId) {
+      const e = byId.get(hoveredEdgeId);
+      if (e) result.set(e.id, e);
+    }
+    return [...result.values()];
+  })();
 
   return (
     <div
@@ -269,6 +292,12 @@ export default function FamilyTreeCanvas({
         {tree.nodes.map((node) => {
           const slot = slotById.get(node.id)!;
           const dimmed = highlightedNodeIds ? !highlightedNodeIds.has(node.id) : false;
+          const touchingEdges = tree.edges.filter((e) => e.fromId === node.id || e.toId === node.id);
+          // Etat affiche par l'oeil : visible tant qu'AU MOINS une des
+          // aretes qui touchent ce nœud est publique — cohérent avec le
+          // fait qu'une seule arete encore publique suffit a garder le
+          // nœud atteignable depuis la racine sur le wiki public.
+          const nodeIsPublic = touchingEdges.length === 0 || touchingEdges.some((e) => e.visibilityLevel === "public");
           return (
             <div
               key={node.id}
@@ -279,6 +308,22 @@ export default function FamilyTreeCanvas({
             >
               {renderCard(node)}
               {renderNodeOverlay?.(node, view.scale)}
+              {onToggleNodeVisibility && node.id !== rootId && touchingEdges.length > 0 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onToggleNodeVisibility(node, touchingEdges);
+                  }}
+                  aria-label={nodeIsPublic ? `Masquer ${node.name} au wiki public` : `Rendre ${node.name} visible au wiki public`}
+                  title={nodeIsPublic ? "Visible au wiki public — cliquer pour masquer" : "Masqué au wiki public — cliquer pour afficher"}
+                  style={{ transform: `scale(${1 / view.scale})`, transformOrigin: "top left" }}
+                  className="absolute -left-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-edge-strong bg-panel-raised text-ink shadow-md hover:bg-panel"
+                >
+                  <EyeIcon open={nodeIsPublic} className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           );
         })}
