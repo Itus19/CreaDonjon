@@ -2,6 +2,7 @@ import { z } from "zod";
 import { BLOCK_TYPES } from "@/src/core/schemas/blocks/registry";
 import { zBlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zVisibilityInput } from "@/lib/visibility/schemas";
+import { PERSONALITY_POLE_KEYS } from "@/src/core/psyche/keys";
 
 export const createBlockSchema = z.object({
   entityId: z.guid(),
@@ -37,4 +38,21 @@ export const toggleQuestObjectiveSchema = z.object({
   version: z.number().int().positive(),
   objectiveId: z.string().min(1),
   done: z.boolean(),
+});
+
+/** Souvenir ajoute a un bloc personality (V2-H1) — au moins un pole touche, sinon rien a journaliser. */
+export const addPersonalityEventSchema = z.object({
+  version: z.number().int().positive(),
+  summary: z.string().trim().min(1).max(500),
+  // `z.record(z.enum(...), ...)` exigerait TOUTES les cles de l'enum (Zod v4,
+  // les enums sont des cles "fermees") — un souvenir n'en touche presque
+  // jamais six a la fois, donc cle libre + verification manuelle.
+  deltas: z
+    .record(z.string(), z.number().int().min(-100).max(100))
+    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un pole doit etre touche." })
+    .refine((d) => Object.keys(d).every((k) => (PERSONALITY_POLE_KEYS as readonly string[]).includes(k)), {
+      message: "Pole inconnu.",
+    }),
+  occurredAtIngame: z.string().trim().max(200).nullable().default(null),
+  confirmed: z.boolean().default(false),
 });

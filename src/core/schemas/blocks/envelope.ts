@@ -22,6 +22,7 @@ export const zBlockDisplay = z.object({
     "graph",
     "quest",
     "session_log",
+    "poles",
   ]),
   collapsed: z.boolean().optional(),
 });

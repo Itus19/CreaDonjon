@@ -31,6 +31,7 @@ import MusicBlockEditor from "./MusicBlockEditor";
 import GenealogyBlockEditor from "./GenealogyBlockEditor";
 import QuestBlockEditor from "./QuestBlockEditor";
 import SessionLogBlockEditor from "./SessionLogBlockEditor";
+import PersonalityBlockEditor from "./PersonalityBlockEditor";
 import MonsterStatblockSheet from "./MonsterStatblockSheet";
 import PlayableCharacterSheet from "./PlayableCharacterSheet";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
@@ -49,6 +50,7 @@ import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import type { GenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
 import type { QuestBlockData } from "@/src/core/schemas/blocks/quest";
 import type { SessionLogBlockData } from "@/src/core/schemas/blocks/sessionLog";
+import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 
 export interface BlockItem {
@@ -79,6 +81,7 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   genealogy: "Généalogie",
   quest: "Quête",
   session_log: "Journal de séance",
+  personality: "Personnalité",
 };
 
 function BlockDataEditor({
@@ -201,6 +204,17 @@ function BlockDataEditor({
           onBlockRefreshed={onBlockRefreshed}
         />
       );
+    case "personality":
+      return (
+        <PersonalityBlockEditor
+          blockId={block.id}
+          version={block.version}
+          entityId={block.entityId}
+          data={block.data as PersonalityBlockData}
+          onChange={(d) => onChange(d)}
+          onBlockRefreshed={onBlockRefreshed}
+        />
+      );
     default:
       return <p className="text-sm text-danger">Type de bloc inconnu : {block.blockType}</p>;
   }
@@ -243,6 +257,22 @@ export default function EntityBlocks({
     Object.fromEntries(initialBlocks.map((b) => [b.id, b.version])),
   );
   const saveChainsRef = useRef<Record<string, Promise<void>>>({});
+  /**
+   * Miroir synchrone de `blocks`, mis a jour dans le meme appel que
+   * `setBlocks` (jamais via un effet — un effet ne se declenche qu'apres
+   * le rendu suivant, trop tard pour l'usage vise ici). `doSaveBlock` lit
+   * ce ref plutot que `blocks` : un blur peut survenir avant que React
+   * n'ait rendu la mise a jour du tout dernier `onChange` (frappe rapide
+   * puis clic hors du bloc), auquel cas `blocks` ferme sur une valeur
+   * perimee et la sauvegarde envoie l'AVANT-derniere frappe, pas la
+   * derniere — bug reel trouve en testant le bloc `personality` (V2-H1),
+   * touchait potentiellement tout champ texte de tout type de bloc.
+   */
+  const blocksRef = useRef<BlockItem[]>(initialBlocks);
+  function updateBlocks(updater: (prev: BlockItem[]) => BlockItem[]) {
+    blocksRef.current = updater(blocksRef.current);
+    setBlocks(blocksRef.current);
+  }
 
   const sortedBlocks = [...blocks].sort((a, b) => a.displayOrder - b.displayOrder);
   const characterBlock = blocks.find((b) => b.blockType === "character");
@@ -273,7 +303,7 @@ export default function EntityBlocks({
       return;
     }
     const created = await createBlockWithData("inventory", data);
-    if (created) setBlocks((prev) => [...prev, created]);
+    if (created) updateBlocks((prev) => [...prev, created]);
   }
 
   /** Meme motif que `updateInventory` (bootstrap-si-absent) — l'onglet Magie coche « Préparé » avant qu'un bloc `spellcasting` existe forcément deja (V1-C6). */
@@ -284,7 +314,7 @@ export default function EntityBlocks({
       return;
     }
     const created = await createBlockWithData("spellcasting", data);
-    if (created) setBlocks((prev) => [...prev, created]);
+    if (created) updateBlocks((prev) => [...prev, created]);
   }
 
   /** Cree un bloc puis lui pose immediatement de vraies donnees — la creation seule ne prend que le defaut du registre. Aller-retour direct plutot que `saveBlock` : juste apres `setBlocks`, le bloc cree n'est pas encore dans le `blocks` capture par la fermeture de cet appel, et `doSaveBlock` (qui cherche le bloc par id dans `blocks`) le raterait silencieusement. */
@@ -323,7 +353,7 @@ export default function EntityBlocks({
   }
 
   function patchBlock(id: string, patch: Partial<BlockItem>) {
-    setBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+    updateBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
   }
 
   /**
@@ -361,7 +391,7 @@ export default function EntityBlocks({
     if (!res.ok) return;
     const block = (await res.json()) as BlockItem;
     versionsRef.current[block.id] = block.version;
-    setBlocks((prev) => [...prev, block]);
+    updateBlocks((prev) => [...prev, block]);
   }
 
   /**
@@ -388,7 +418,7 @@ export default function EntityBlocks({
     id: string,
     overrides?: { visibilityLevel?: string; visibilityScopeId?: string | null; data?: unknown },
   ) {
-    const block = blocks.find((b) => b.id === id);
+    const block = blocksRef.current.find((b) => b.id === id);
     if (!block) return;
 
     const res = await fetch(`/api/blocks/${id}`, {
@@ -448,7 +478,7 @@ export default function EntityBlocks({
     setPendingDeleteId(null);
     if (!id) return;
     await fetch(`/api/blocks/${id}`, { method: "DELETE" });
-    setBlocks((prev) => prev.filter((b) => b.id !== id));
+    updateBlocks((prev) => prev.filter((b) => b.id !== id));
   }
 
   /**
@@ -458,7 +488,7 @@ export default function EntityBlocks({
    * Le bloc duplique atterrit en fin de liste (meme regle que "+ Ajouter").
    */
   async function duplicateBlock(id: string) {
-    const original = blocks.find((b) => b.id === id);
+    const original = blocksRef.current.find((b) => b.id === id);
     if (!original) return;
 
     const createRes = await fetch(`/api/entities/${entityId}/blocks`, {
@@ -486,17 +516,17 @@ export default function EntityBlocks({
     });
     if (!fillRes.ok) {
       versionsRef.current[created.id] = created.version;
-      setBlocks((prev) => [...prev, created]);
+      updateBlocks((prev) => [...prev, created]);
       return;
     }
     const filled = (await fillRes.json()) as BlockItem;
     versionsRef.current[filled.id] = filled.version;
-    setBlocks((prev) => [...prev, filled]);
+    updateBlocks((prev) => [...prev, filled]);
   }
 
   /** Ecrit le nouveau `display_order` (une seule colonne, une seule ligne) — commun aux boutons Monter/Descendre et au glisser-deposer, qui ne different que par le calcul de `newOrder` en amont. */
   async function moveBlockTo(id: string, newOrder: number) {
-    const current = blocks.find((b) => b.id === id);
+    const current = blocksRef.current.find((b) => b.id === id);
     if (!current) return;
     const res = await fetch(`/api/blocks/${id}/order`, {
       method: "PATCH",

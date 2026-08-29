@@ -15,6 +15,8 @@ import { zMusicBlockData } from "./music";
 import { zGenealogyBlockData } from "./genealogy";
 import { zQuestBlockData } from "./quest";
 import { zSessionLogBlockData } from "./sessionLog";
+import { zPersonalityBlockData } from "./personality";
+import { PERSONALITY_POLE_KEYS } from "@/src/core/psyche/keys";
 
 /**
  * Catalogue des blocs de wiki (specs/wiki-blocs.md §1, docs/SCHEMA.md §7).
@@ -51,6 +53,11 @@ import { zSessionLogBlockData } from "./sessionLog";
  * une copie de son resume : `sessions.summary` reste la seule source de
  * verite (docs/SCHEMA.md §12), ce bloc ne fait que la montrer/l'editer a
  * cote de son fil de `session_events`.
+ * V2-H1 : personality — temperament d'une entite, portee entite (pas
+ * campagne, docs/adr/0013-tables-psyche-pnj.md). Les valeurs de `poles`
+ * changent uniquement via `POST /api/blocks/[id]/personality-event`
+ * (journalise dans `personality_events` ET applique le delta), jamais par
+ * le PATCH generique des blocs.
  */
 export const BLOCK_TYPES = [
   "text",
@@ -68,6 +75,7 @@ export const BLOCK_TYPES = [
   "genealogy",
   "quest",
   "session_log",
+  "personality",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -87,6 +95,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   genealogy: "graph",
   quest: "quest",
   session_log: "session_log",
+  personality: "poles",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -106,6 +115,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   genealogy: zGenealogyBlockData,
   quest: zQuestBlockData,
   session_log: zSessionLogBlockData,
+  personality: zPersonalityBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -167,6 +177,16 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
   genealogy: { __v: 1, rootEntityId: null, depthUp: 2, depthDown: 2 },
   quest: { __v: 1, state: "not_started", giver: null, objectives: [], rewards: [], prerequisites: [] },
   session_log: { __v: 1, sessionId: null },
+  personality: {
+    __v: 1,
+    poles: PERSONALITY_POLE_KEYS.map((key) => ({ key, value: 0 })),
+    priority: [],
+    aspirations: [],
+    lines: [],
+    limits: [],
+    baseline: { trust: 0, affinity: 0, respect: 0, fear: 0 },
+    speech: { register: "", tics: [] },
+  },
 };
 
 export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny {

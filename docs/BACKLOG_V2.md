@@ -323,7 +323,7 @@ Réalisé en réutilisant un seul mécanisme pour les deux : `MusicPlaybackProvi
 
 *Ce qui donne de la mémoire et de la profondeur au monde. Le lot le plus utile pour la V3.*
 
-### V2-H1 — Psyché des PNJ · `L` — en cours (phase 1/4 : schéma)
+### V2-H1 — Psyché des PNJ · `L` — en cours (phase 2/4 : bloc `personality`)
 
 Spécification complète : `specs/psyche-pnj.md`. Découpage en quatre phases annoncé au client avant de commencer (schéma → bloc `personality` → bloc `relationship` → bloc `worldview`), avec point de vérification après chacune.
 
@@ -335,10 +335,25 @@ Spécification complète : `specs/psyche-pnj.md`. Découpage en quatre phases an
 - [x] Rendements décroissants : s'éloigner du centre s'amortit, y revenir garde son plein effet.
 - [x] `deltas` stocke le **brut** ; rejouer le journal reproduit exactement la valeur courante.
 - [x] Après 50 événements simulés d'ampleur « notable », aucun axe n'est saturé.
-- [ ] Valeurs stockées de −100 à +100 ; l'écran et le contexte IA affichent la **bande nommée**, jamais le nombre — bandes définies côté pur (`src/core/psyche/bands.ts`), pas encore branchées à un écran (phases 2/3).
-- [ ] Un delta brut supérieur à 40 exige confirmation.
-- [ ] `known_as` respecté : le contexte IA ne révèle pas une identité que le PNJ ignore.
-- [ ] Comparaison automatique entre les convictions d'un PNJ et celles de sa faction, avec signalement des divergences fortes.
+- [x] Un delta brut supérieur à 40 exige confirmation — fait pour `personality` (client ET serveur) ; `relationship` (phase 3) reprendra la même route/le même garde-fou.
+- [ ] Valeurs stockées de −100 à +100 ; l'écran et le contexte IA affichent la **bande nommée**, jamais le nombre — bandes de `personality` pas encore définies (seules celles de `relationship`, phase 3, le sont dans `bands.ts`) ; le contexte IA lui-même reste à écrire (V3).
+- [ ] `known_as` respecté : le contexte IA ne révèle pas une identité que le PNJ ignore — concerne `relationship` (phase 3), pas `personality`.
+- [ ] Comparaison automatique entre les convictions d'un PNJ et celles de sa faction, avec signalement des divergences fortes — concerne `worldview` (phase 4).
+
+**Phase 2 — bloc `personality`, fait.** Schéma complet (`src/core/schemas/blocks/personality.ts`) : pôles, priorité, aspirations à trois horizons, lignes rouges/limites, `baseline`, `speech`.
+
+- **Radar hexagonal SVG** (`components/entities/psyche/PersonalityRadar.tsx`) — 0 au centre, ±100 au bord ; un PNJ neutre dessine un hexagone régulier, jamais un point.
+- **Archétype visuel** (`src/core/psyche/archetype.ts`, fonction pure testée) : nom + couleur dérivés des deux pôles les plus marqués (hors bande neutre) — pas un alignement D&D, un trait de tempérament dominant. Douze nouveaux jetons `--pole-*` dans `src/styles/tokens.css` (même L/C que les écoles de magie par mode, seule la teinte varie).
+- **Curseurs** (`PersonalityPoleSliders.tsx`) — ne commitent qu'au relâchement (pas à chaque pixel glissé), et **passent par la même route que le tableau de souvenirs** (`POST /api/blocks/[id]/personality-event`, `src/server/services/psyche.ts`) : jamais une écriture silencieuse, un résumé auto-généré si le MJ ne tape rien, journalisé comme n'importe quel souvenir.
+- **Tableau de souvenirs** (`PersonalityEventTable.tsx`) — date IRL auto (`created_at`), date ingame en texte libre, description, effets. Delta > 40 : confirmation JS puis, si refusée côté serveur, message clair (jamais un plantage).
+
+**Vérifié en direct** (fiche de Candide Fausset) : bloc créé, souvenir « A vu Kor'nok mourir devant ses yeux » avec Empathie −15 → radar déformé de façon asymétrique, archétype passé à « Impitoyable », couleur assortie, ligne ajoutée au tableau — persistant après rechargement complet. Requête directe en base : `personality_events` porte bien la ligne. Delta de 55 sans confirmation : `window.confirm` refusé côté test → aucune écriture, valeur retombée à l'état d'origine après le correctif ci-dessous.
+
+**Deux bugs réels trouvés et corrigés en testant** :
+- **Le curseur ne revenait pas en arrière après un refus de confirmation** : la valeur affichée restait bloquée sur la tentative jamais enregistrée. Corrigé dans `PersonalityPoleSliders.tsx` — la valeur locale s'efface systématiquement après une tentative de commit, succès ou non, l'affichage retombe alors sur la valeur réellement stockée.
+- **Perte silencieuse de frappe sur n'importe quel champ texte de n'importe quel bloc, pas seulement `personality`** : `doSaveBlock`/`handleBlockBlur` (`EntityBlocks.tsx`) lisaient `blocks`, une variable fermée sur le rendu React en cours — un blur qui survient avant que React n'ait rendu le tout dernier `onChange` (frappe rapide puis clic hors du bloc) envoyait l'avant-dernière valeur, pas la dernière. Reproduit et confirmé par une requête serveur (400, « expected string, received undefined » sur un champ qui pourtant s'affichait correctement rempli à l'écran). Corrigé par un miroir synchrone (`blocksRef`, mis à jour dans le même appel que `setBlocks`, jamais via un effet) : `doSaveBlock` lit désormais ce ref, plus jamais `blocks`. Même famille de bug que le correctif `Dropdown.tsx` de V2-H4, cause différente (frappe rapide vs. focus volé par un portail) — même remède de fond (ne jamais lire un état qui peut être périmé au moment de sauvegarder).
+
+**Non fait dans cette phase, à noter** : pas d'éditeur pour `baseline` (les quatre valeurs de départ trust/affinity/respect/fear) — champ gardé dans le schéma avec ses valeurs par défaut, aucune UI dessus ; à ajouter si un besoin concret se présente.
 
 **Phase 1 — schéma et fonction pure, faite.** Quatre points tranchés avec le client avant d'écrire du code (récapitulatif complet dans `docs/adr/0013-tables-psyche-pnj.md`) :
 - **Tableau de souvenirs : deux tables séparées, pas une table unifiée.** `attitude_events` (déjà spécifiée, par paire source/cible) et une nouvelle `personality_events` (par entité seule, hors campagne — même portée que le bloc `personality` lui-même). Le même souvenir peut être saisi indépendamment dans plusieurs blocs concernés (ex. la victime d'un harcèlement et le témoin qui n'est pas intervenu), chaque saisie portant ses propres deltas — assumé, pas un doublon à corriger.

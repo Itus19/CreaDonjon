@@ -52,6 +52,24 @@
   --school-necromancy:    oklch(0.76 0.11 150);
   --school-transmutation: oklch(0.76 0.11 105);
 
+  /* Poles de temperament (V2-H1, specs/psyche-pnj.md §2) : archetype visuel
+     du bloc personality — meme L/C que les ecoles de magie ci-dessus,
+     seule la teinte varie. Cles alignees sur PersonalityPoleKey
+     (src/core/psyche/keys.ts), un token par direction (positive/negative). */
+  --pole-curiosity:    oklch(0.76 0.11 195);
+  --pole-caution:      oklch(0.76 0.11 45);
+  --pole-altruism:     oklch(0.76 0.11 140);
+  --pole-selfishness:  oklch(0.76 0.11 15);
+  --pole-empathy:      oklch(0.76 0.11 350);
+  --pole-hardness:     oklch(0.76 0.11 230);
+  --pole-impulse:      oklch(0.76 0.11 25);
+  --pole-prudence:     oklch(0.76 0.11 210);
+  --pole-extraversion: oklch(0.76 0.11 80);
+  --pole-reserve:      oklch(0.76 0.11 260);
+  --pole-authority:    oklch(0.76 0.11 300);
+  --pole-independence: oklch(0.76 0.11 170);
+  --pole-neutral:      oklch(0.76 0.02 var(--h));
+
   --accent:       oklch(0.76 0.13 78);
   --accent-hover: oklch(0.82 0.13 78);
   --accent-ink:   oklch(0.15 0.02 78);
@@ -89,6 +107,20 @@
   --school-illusion:      oklch(0.80 0.11 285);
   --school-necromancy:    oklch(0.80 0.11 150);
   --school-transmutation: oklch(0.80 0.11 105);
+
+  --pole-curiosity:    oklch(0.80 0.11 195);
+  --pole-caution:      oklch(0.80 0.11 45);
+  --pole-altruism:     oklch(0.80 0.11 140);
+  --pole-selfishness:  oklch(0.80 0.11 15);
+  --pole-empathy:      oklch(0.80 0.11 350);
+  --pole-hardness:     oklch(0.80 0.11 230);
+  --pole-impulse:      oklch(0.80 0.11 25);
+  --pole-prudence:     oklch(0.80 0.11 210);
+  --pole-extraversion: oklch(0.80 0.11 80);
+  --pole-reserve:      oklch(0.80 0.11 260);
+  --pole-authority:    oklch(0.80 0.11 300);
+  --pole-independence: oklch(0.80 0.11 170);
+  --pole-neutral:      oklch(0.80 0.02 var(--h));
 }
 
 /* --accent : bouton clair sur fond sombre (dark/dim) devient bouton fonce
@@ -121,6 +153,20 @@
   --school-necromancy:    oklch(0.22 0.11 150);
   --school-transmutation: oklch(0.22 0.11 105);
 
+  --pole-curiosity:    oklch(0.22 0.11 195);
+  --pole-caution:      oklch(0.22 0.11 45);
+  --pole-altruism:     oklch(0.22 0.11 140);
+  --pole-selfishness:  oklch(0.22 0.11 15);
+  --pole-empathy:      oklch(0.22 0.11 350);
+  --pole-hardness:     oklch(0.22 0.11 230);
+  --pole-impulse:      oklch(0.22 0.11 25);
+  --pole-prudence:     oklch(0.22 0.11 210);
+  --pole-extraversion: oklch(0.22 0.11 80);
+  --pole-reserve:      oklch(0.22 0.11 260);
+  --pole-authority:    oklch(0.22 0.11 300);
+  --pole-independence: oklch(0.22 0.11 170);
+  --pole-neutral:      oklch(0.22 0.02 var(--h));
+
   --accent:       oklch(0.42 0.13 78);
   --accent-hover: oklch(0.48 0.13 78);
   --accent-ink:   oklch(0.98 0.02 78);
@@ -152,6 +198,20 @@
   --school-illusion:      oklch(0.36 0.11 285);
   --school-necromancy:    oklch(0.36 0.11 150);
   --school-transmutation: oklch(0.36 0.11 105);
+
+  --pole-curiosity:    oklch(0.36 0.11 195);
+  --pole-caution:      oklch(0.36 0.11 45);
+  --pole-altruism:     oklch(0.36 0.11 140);
+  --pole-selfishness:  oklch(0.36 0.11 15);
+  --pole-empathy:      oklch(0.36 0.11 350);
+  --pole-hardness:     oklch(0.36 0.11 230);
+  --pole-impulse:      oklch(0.36 0.11 25);
+  --pole-prudence:     oklch(0.36 0.11 210);
+  --pole-extraversion: oklch(0.36 0.11 80);
+  --pole-reserve:      oklch(0.36 0.11 260);
+  --pole-authority:    oklch(0.36 0.11 300);
+  --pole-independence: oklch(0.36 0.11 170);
+  --pole-neutral:      oklch(0.36 0.02 var(--h));
 
   --accent:       oklch(0.40 0.13 78);
   --accent-hover: oklch(0.46 0.13 78);
