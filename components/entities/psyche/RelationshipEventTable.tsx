@@ -5,9 +5,8 @@ import Dropdown from "@/components/shared/Dropdown";
 import EyeIcon from "@/components/shared/EyeIcon";
 import GameDateInput from "@/components/shared/GameDateInput";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
-import { DEFAULT_CALENDAR } from "@/src/core/calendar/defaultCalendar";
+import { useWorldCalendar } from "@/components/shared/useWorldCalendar";
 import type { GameDate } from "@/src/core/calendar/types";
-import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import { RELATIONSHIP_AXIS_KEYS, type RelationshipAxisKey } from "@/src/core/psyche/keys";
 
 const BLANK_DATE: GameDate = { year: 0, month: null, day: null, precision: "year", end: null, label: null };
@@ -53,7 +52,7 @@ export default function RelationshipEventTable({
   const [summary, setSummary] = useState("");
   const [hasIngameDate, setHasIngameDate] = useState(false);
   const [occurredAtIngame, setOccurredAtIngame] = useState<GameDate>(BLANK_DATE);
-  const [calendar, setCalendar] = useState<CalendarConfigInput | null>(null);
+  const activeCalendar = useWorldCalendar(worldSlug);
   const [rows, setRows] = useState<{ id: string; key: RelationshipAxisKey; delta: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -76,20 +75,6 @@ export default function RelationshipEventTable({
       body: JSON.stringify({ isPublic: next }),
     });
   }
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/worlds/${worldSlug}/calendar`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body: { calendar: CalendarConfigInput } | null) => {
-        if (!cancelled) setCalendar(body?.calendar ?? DEFAULT_CALENDAR);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [worldSlug]);
-
-  const activeCalendar = calendar ?? DEFAULT_CALENDAR;
 
   function addRow() {
     setRows((prev) => [...prev, { id: crypto.randomUUID(), key: RELATIONSHIP_AXIS_KEYS[0], delta: "" }]);

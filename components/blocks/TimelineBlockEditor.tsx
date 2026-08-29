@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import GameDateInput from "@/components/shared/GameDateInput";
 import TimelineAxis from "@/components/entities/timeline/TimelineAxis";
 import { computeSortKey } from "@/src/core/calendar/sortKey";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
-import { DEFAULT_CALENDAR } from "@/src/core/calendar/defaultCalendar";
-import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
+import { useWorldCalendar } from "@/components/shared/useWorldCalendar";
 import type { GameDate } from "@/src/core/calendar/types";
 import { TIMELINE_ENTRY_KINDS, type TimelineBlockData, type TimelineEntry, type TimelineEntryKind } from "@/src/core/schemas/blocks/timeline";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
@@ -75,7 +74,7 @@ export default function TimelineBlockEditor({
   onChange: (data: TimelineBlockData) => void;
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
 }) {
-  const [calendar, setCalendar] = useState<CalendarConfigInput | null>(null);
+  const activeCalendar = useWorldCalendar(worldSlug);
   const [entityLookup, setEntityLookup] = useState<Record<string, { name: string; slug: string }>>(() =>
     Object.fromEntries(otherEntities.map((e) => [e.id, { name: e.name, slug: e.slug }]))
   );
@@ -83,20 +82,6 @@ export default function TimelineBlockEditor({
   const [error, setError] = useState<string | null>(null);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/worlds/${worldSlug}/calendar`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body: { calendar: CalendarConfigInput } | null) => {
-        if (!cancelled) setCalendar(body?.calendar ?? DEFAULT_CALENDAR);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [worldSlug]);
-
-  const activeCalendar = calendar ?? DEFAULT_CALENDAR;
 
   const sorted = [...data.entries].sort(
     (a, b) => computeSortKey(a.date, activeCalendar) - computeSortKey(b.date, activeCalendar)
