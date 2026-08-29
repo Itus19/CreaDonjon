@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { zWorldExport } from "@/src/core/schemas/worldExport";
+import { zCalendarConfig } from "@/src/core/schemas/calendar";
 
 /**
  * Un monde = une campagne (decision produit, prepa V2-G1 export/import) :
@@ -19,6 +20,9 @@ export const importWorldSchema = z.object({
   mode: z.enum(["campaign", "solo"]),
   data: zWorldExport,
 });
+
+/** Reglage du calendrier du monde (V2-H2, onglet MJ) : remplace le calendrier entier. */
+export const updateCalendarSchema = zCalendarConfig;
 
 export const updateWikiWelcomeMessageSchema = z.object({
   worldId: z.guid(),

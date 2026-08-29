@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/src/types/database";
+import type { Database, Json } from "@/src/types/database";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -222,6 +222,24 @@ export async function setWorldWikiWelcomeMessage(
     .update({ wiki_welcome_message: message })
     .eq("id", worldId)
     .select("id");
+  if (error) throw new Error(error.message);
+  return { updated: data.length > 0 };
+}
+
+/** Calendrier brut d'un monde (V2-H2) : `{}` tant que le MJ n'a rien regle — l'appelant (`getCalendar`, services/worlds.ts) retombe alors sur `DEFAULT_CALENDAR`, jamais valide ici (pas de dependance zod dans la couche repo). */
+export async function getWorldCalendar(supabase: TypedClient, worldId: string): Promise<Json | null> {
+  const { data, error } = await supabase.from("worlds").select("calendar").eq("id", worldId).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.calendar ?? null;
+}
+
+/** Remplace le calendrier entier (deja valide par l'appelant) : un seul JSON par monde, meme profil que `setWorldEntityKindOrder`. */
+export async function setWorldCalendar(
+  supabase: TypedClient,
+  worldId: string,
+  calendar: Json
+): Promise<{ updated: boolean }> {
+  const { data, error } = await supabase.from("worlds").update({ calendar }).eq("id", worldId).select("id");
   if (error) throw new Error(error.message);
   return { updated: data.length > 0 };
 }

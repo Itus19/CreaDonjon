@@ -426,6 +426,23 @@ Réalisé : migration `20260829120001_psyche_tables.sql` (`entity_attitudes`, `a
 - [ ] Une entrée en ligne se promeut en entité d'un clic, sans rien perdre.
 - [ ] **Migrer les dates ingame en texte libre saisies avant ce ticket** vers le vrai calendrier une fois qu'il existe — au moins le tableau de souvenirs des blocs `personality`/`relationship` (V2-H1, `personality_events`/`attitude_events`, champ `occurred_at_ingame` texte libre en attendant), et tout autre champ « date ingame » ajouté entre-temps. Sans perte des valeurs déjà saisies : une conversion texte → date structurée, jamais un vidage.
 
+Découpage en trois phases annoncé au client avant de commencer (noyau + réglages → bloc `timeline` → migration des dates ingame existantes), même rythme que V2-H1.
+
+**Phase 1 — noyau calendrier pur et réglages du monde, faite.** `worlds.calendar` (jsonb) existait déjà depuis la migration 002 (`accounts.sql`) — aucune migration de schéma nécessaire pour cette phase, seulement du code.
+
+- `src/core/calendar/` : `types.ts` (`CalendarConfig`, `GameDate`, `DatePrecision`), `defaultCalendar.ts` (calendrier neutre — douze mois de trente jours, sans ère, jamais présenté comme LE calendrier officiel d'un monde), `sortKey.ts`/`formatDate.ts` — fonctions pures, testées en premier (`src/core`, CLAUDE.md). Un mois/jour absent (précision plus large que jour/mois) compte comme le début de la période, jamais un cas d'erreur.
+- Trois des quatre premiers critères sont déjà couverts par ces fonctions pures et leurs tests, avant même que le bloc `timeline` existe : le tri fonctionne avec treize mois de vingt-huit jours (`sortKey.test.ts`), `label` prime toujours à l'affichage, `end` compose une période (`formatDate.test.ts`). `precision` gère l'imprécision par construction (`year`/`decade`/`era` ne lisent jamais `month`/`day`) — pas de vocabulaire de saison inventé pour `precision: "season"` (non demandé, `label` couvre déjà ce besoin), repli sur l'affichage annuel documenté dans le code. Cases non cochées ci-dessus : le critère porte sur le tri **et le filtrage** d'une vraie chronologie, qui n'existe qu'à partir de la phase 2.
+- `src/core/schemas/calendar.ts` (`zCalendarConfig`) — validation à l'écriture seulement ; une valeur stockée vide ou corrompue retombe silencieusement sur `DEFAULT_CALENDAR` à la lecture (`getCalendar`, `src/server/services/worlds.ts`) plutôt que de faire échouer une fiche qui en dépend.
+- Panneau de réglage (`CalendarSettingsPanel.tsx`, nouvel onglet « Calendrier » dans la barre latérale MJ, `/m/[worldSlug]/mj/calendrier`) : noms des mois (réordonnables), jours par mois, jours par semaine, ères nommées — `PATCH /api/worlds/[worldSlug]/calendar`, même profil que `entity-kind-order` (un seul JSON remplacé en entier, pas de version).
+
+**Vérifié en direct** (monde Valdoria) : calendrier changé à treize mois de vingt-huit jours + une ère, enregistré (200), persiste après rechargement de page. Données de test remises au calendrier neutre par défaut après vérification (n'affecte aucun autre chantier — le calendrier n'a encore aucun consommateur avant la phase 2).
+
+**Découverte en vérifiant, hors périmètre de cette phase** : un second monde nommé « Valdoria » existe en base (fixture de `scripts/seed-dev.ts`, id fixe `aaaaaaaa-...`), avec un calendrier déjà rempli (mois nommés « Semailles », « Floraison »…) mais en `snake_case` (`starts_year`, `days_per_week`) — écrit avant que ce ticket n'existe, sans rapport avec `zCalendarConfig` (`camelCase`, comme tout le reste des données JSON de bloc dans ce dépôt, CLAUDE.md règle 11 ne s'applique qu'aux identifiants de colonnes). Non touché : `getCalendar` y répondrait par le calendrier neutre par défaut (échec de validation silencieux) si jamais quelqu'un l'ouvrait via ce nouveau code — inoffensif, mais à corriger dans la fixture le jour où `seed-dev.ts` sert réellement à démontrer la chronologie.
+
+**Phase 2 — bloc `timeline`, pas commencée.**
+
+**Phase 3 — migration des dates ingame existantes, pas commencée.**
+
 ### V2-H3 — Généalogie et relations · `M` — fait
 
 - Bloc `relationships` (liste simple) **avant** `genealogy` (arbre visuel).

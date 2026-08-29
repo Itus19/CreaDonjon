@@ -3,13 +3,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
+import { zCalendarConfig, type CalendarConfigInput } from "@/src/core/schemas/calendar";
+import { DEFAULT_CALENDAR } from "@/src/core/calendar/defaultCalendar";
 import {
   getWorldById,
   getWorldBySlugForCurrentUser,
+  getWorldCalendar,
   insertWorld,
   listWorldCardsForCurrentUser,
   listWorldsForCurrentUser,
   ownerHasSlug,
+  setWorldCalendar,
   setWorldDefaultRuleset,
   setWorldEntityKindOrder,
   setWorldWikiWelcomeMessage,
@@ -81,6 +85,27 @@ export async function updateEntityKindOrder(
   order: string[]
 ): Promise<{ updated: boolean }> {
   return setWorldEntityKindOrder(supabase, worldId, order);
+}
+
+/**
+ * Calendrier d'un monde (V2-H2, specs/wiki-blocs.md §3) : `{}` (jamais
+ * regle) ou une valeur corrompue retombent silencieusement sur
+ * `DEFAULT_CALENDAR` plutot que de faire echouer la fiche qui en depend —
+ * la validation stricte n'intervient qu'a l'ECRITURE (`updateCalendar`).
+ */
+export async function getCalendar(supabase: TypedClient, worldId: string): Promise<CalendarConfigInput> {
+  const raw = await getWorldCalendar(supabase, worldId);
+  const parsed = zCalendarConfig.safeParse(raw);
+  return parsed.success ? parsed.data : DEFAULT_CALENDAR;
+}
+
+/** Remplace le calendrier entier (deja valide par l'appelant via `zCalendarConfig`, meme profil que `updateEntityKindOrder`). */
+export async function updateCalendar(
+  supabase: TypedClient,
+  worldId: string,
+  calendar: CalendarConfigInput
+): Promise<{ updated: boolean }> {
+  return setWorldCalendar(supabase, worldId, calendar);
 }
 
 /** Derive un slug unique (parmi les mondes du meme proprietaire) a partir du nom, en suffixant -2, -3... en cas de collision. */
