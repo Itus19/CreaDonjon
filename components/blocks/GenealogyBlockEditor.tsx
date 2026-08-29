@@ -181,7 +181,7 @@ export default function GenealogyBlockEditor({
         tree={tree}
         onDeleteEdge={deleteEdge}
         renderCard={(node: FamilyTreeNode) => <FamilyTreeCard node={node} href={`/m/${worldSlug}/f/${node.slug}`} />}
-        renderNodeOverlay={(node) => (
+        renderNodeOverlay={(node, scale) => (
           <button
             type="button"
             onClick={(e) => {
@@ -190,6 +190,11 @@ export default function GenealogyBlockEditor({
               openMenu(node.id, e.currentTarget.getBoundingClientRect());
             }}
             aria-label={`Ajouter un proche de ${node.name}`}
+            // Contre-echelle (retour utilisateur) : garde un bouton de 24px
+            // a l'ecran quel que soit le zoom du canevas — sans ca, un
+            // arbre dezoome (MIN_ZOOM 0.3) le retrecit a ~7px, quasi
+            // impossible a viser a la souris.
+            style={{ transform: `scale(${1 / scale})`, transformOrigin: "top right" }}
             className="absolute -right-2 -top-2 hidden h-6 w-6 items-center justify-center rounded-full border border-edge-strong bg-panel-raised text-sm text-ink shadow-md hover:bg-panel group-hover:flex"
           >
             +

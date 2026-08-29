@@ -12,11 +12,17 @@ type TypedClient = SupabaseClient<Database>;
 /**
  * Construit l'arbre genealogique d'une fiche (V2-H3) : les aretes viennent
  * de `relations`, filtrees par visibilite AVANT de quitter le serveur — un
- * lien cache disparait de l'arbre, il ne s'affiche jamais grise
- * (specs/wiki-blocs.md §2, "le point sensible : les secrets de famille").
- * Meme fonction pour l'editeur (`viewer` authentifie) et le wiki public
- * (`viewer: {kind: "anonymous"}`, publicShare.ts) — un seul calcul, jamais
- * deux chemins qui pourraient diverger sur ce qui est filtre.
+ * lien cache disparait de l'arbre POUR UN VISITEUR QUI N'Y A PAS DROIT
+ * (joueur, wiki public), il ne s'affiche jamais grise (specs/wiki-blocs.md
+ * §2, "le point sensible : les secrets de famille"). Meme fonction pour
+ * l'editeur (`viewer` authentifie) et le wiki public (`viewer: {kind:
+ * "anonymous"}`, publicShare.ts) — un seul calcul, jamais deux chemins qui
+ * pourraient diverger sur ce qui est filtre.
+ *
+ * Pour le MJ (owner/editor, `canSee` bypasse tous les niveaux), rien n'est
+ * retire — `FamilyEdgeInput.visibilityLevel` (V2, retour utilisateur point
+ * 3) porte le niveau d'origine jusqu'au canevas, qui grise cote client les
+ * liens qui n'apparaitront pas aux joueurs/au wiki public.
  */
 export async function getFamilyTree(
   supabase: TypedClient,
@@ -60,6 +66,7 @@ export async function getFamilyTree(
     targetId: r.target_entity_id,
     relationType: r.relation_type,
     label: RELATION_LABELS_FR[r.relation_type] ?? r.relation_type,
+    visibilityLevel: r.visibility_level,
   }));
 
   return buildFamilyTree({

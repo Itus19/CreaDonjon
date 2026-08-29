@@ -26,6 +26,17 @@ export interface OtherEntityOption {
   entity_kind: string;
 }
 
+/**
+ * Pseudo-type, jamais stocke tel quel (retour utilisateur : impossible de
+ * dire "cette fiche est enfant de X" depuis sa propre liste de relations —
+ * `RELATION_TYPES` ne contient que les sens canoniques, `parent_of` mais
+ * jamais `child_of`, meme motif que la contrainte SQL). Selectionne, il
+ * inverse source/cible a l'envoi (`addRelation`) et ecrit `parent_of`
+ * avec l'AUTRE entite comme source — la seule chose qui manquait, pas un
+ * nouveau vocabulaire de relation.
+ */
+const CHILD_OF_OPTION = "child_of";
+
 export default function RelationsChips({
   entityId,
   worldSlug,
@@ -40,15 +51,27 @@ export default function RelationsChips({
   const router = useRouter();
   const desktop = useDesktop();
   const [targetEntityId, setTargetEntityId] = useState(otherEntities[0]?.id ?? "");
-  const [relationType, setRelationType] = useState<(typeof RELATION_TYPES)[number]>(
-    RELATION_TYPES[0]
-  );
+  const [relationType, setRelationType] = useState<string>(RELATION_TYPES[0]);
   const [visibilityLevel, setVisibilityLevel] = useState("public");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Miroir local (retour utilisateur : le bouton oeil "mettait du temps a
+  // s'enclencher") — bascule affichee immediatement, sans attendre le
+  // rechargement complet de la page que `router.refresh()` declenche pour
+  // tout le reste (ajout/suppression, qui changent l'ENSEMBLE des lignes,
+  // pas seulement un champ). Resynchronise "pendant le rendu" (React,
+  // "Adjusting state when a prop changes") plutot que dans un effet — la
+  // liste change quand le serveur en renvoie une nouvelle (ajout/
+  // suppression, navigation vers une autre fiche), jamais a chaque rendu.
+  const [prevRelations, setPrevRelations] = useState(relations);
+  const [localRelations, setLocalRelations] = useState(relations);
+  if (relations !== prevRelations) {
+    setPrevRelations(relations);
+    setLocalRelations(relations);
+  }
 
   const groups = new Map<string, RelationChip[]>();
-  for (const relation of relations) {
+  for (const relation of localRelations) {
     const kind = relation.other.entity_kind;
     const list = groups.get(kind) ?? [];
     list.push(relation);
@@ -60,27 +83,32 @@ export default function RelationsChips({
     router.refresh();
   }
 
-  /** Bascule œil (retour utilisateur) : public/gm seulement, meme binaire que le masquage d'un lien depuis le bloc reseau (`RelationsGraphBlockEditor.tsx`) — pas le selecteur complet a 6 niveaux pour un geste rapide. */
+  /** Bascule œil (retour utilisateur) : public/gm seulement, meme binaire que le masquage d'un lien depuis le bloc reseau (`RelationsGraphBlockEditor.tsx`) — pas le selecteur complet a 6 niveaux pour un geste rapide. Optimiste : la puce reflete le nouvel etat tout de suite, la requete part en arriere-plan. */
   async function toggleVisibility(relation: RelationChip) {
     const nextLevel = relation.visibilityLevel === "gm" ? "public" : "gm";
+    setLocalRelations((prev) => prev.map((r) => (r.id === relation.id ? { ...r, visibilityLevel: nextLevel } : r)));
     await fetch(`/api/relations/${relation.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ visibility: { level: nextLevel, scopeId: null } }),
     });
-    router.refresh();
   }
 
   async function addRelation() {
     if (!targetEntityId) return;
     setPending(true);
     setError(null);
-    const res = await fetch(`/api/entities/${entityId}/relations`, {
+    // "Enfant de" (retour utilisateur) : l'AUTRE entite devient la source
+    // de la requete, cette fiche la cible — meme ecriture `parent_of` que
+    // si on l'avait faite depuis la fiche de l'autre entite, juste sans
+    // avoir a y naviguer.
+    const isChildOf = relationType === CHILD_OF_OPTION;
+    const res = await fetch(`/api/entities/${isChildOf ? targetEntityId : entityId}/relations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        targetEntityId,
-        relationType,
+        targetEntityId: isChildOf ? entityId : targetEntityId,
+        relationType: isChildOf ? "parent_of" : relationType,
         visibility: { level: visibilityLevel, scopeId: null },
       }),
     });
@@ -139,7 +167,7 @@ export default function RelationsChips({
           ))}
         </div>
       ))}
-      {relations.length === 0 && (
+      {localRelations.length === 0 && (
         <p className="text-sm text-ink-muted">Aucune relation pour l&apos;instant.</p>
       )}
 
@@ -147,8 +175,12 @@ export default function RelationsChips({
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <Dropdown
             value={relationType}
-            options={RELATION_TYPES.map((type) => ({ value: type, label: RELATION_LABELS_FR[type] ?? type }))}
-            onChange={(v) => setRelationType(v as (typeof RELATION_TYPES)[number])}
+            options={[
+              { value: RELATION_TYPES[0], label: RELATION_LABELS_FR[RELATION_TYPES[0]] ?? RELATION_TYPES[0] },
+              { value: CHILD_OF_OPTION, label: RELATION_LABELS_FR[CHILD_OF_OPTION] ?? CHILD_OF_OPTION },
+              ...RELATION_TYPES.slice(1).map((type) => ({ value: type, label: RELATION_LABELS_FR[type] ?? type })),
+            ]}
+            onChange={setRelationType}
             aria-label="Type de relation"
           />
           <Dropdown

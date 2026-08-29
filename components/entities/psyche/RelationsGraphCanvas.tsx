@@ -27,7 +27,10 @@ function layout(graph: RelationsGraph): PositionedNode[] {
 
   const simulation = forceSimulation(nodes)
     .force("charge", forceManyBody().strength(-260))
-    .force("link", forceLink(links).id((d) => (d as PositionedNode).id).distance(110))
+    // Retour utilisateur : distance doublee (110 -> 220) pour respirer un
+    // peu plus entre les nœuds — la seule valeur touchee, charge/collision
+    // inchangees.
+    .force("link", forceLink(links).id((d) => (d as PositionedNode).id).distance(220))
     .force("center", forceCenter(0, 0))
     .force("collide", forceCollide(ROOT_ICON_SIZE / 2 + 20))
     .stop();
@@ -242,6 +245,11 @@ export default function RelationsGraphCanvas({
               const to = byId.get(edge.toId);
               if (!from || !to) return null;
               const dimmed = highlightedNodeIds ? !(highlightedNodeIds.has(edge.fromId) && highlightedNodeIds.has(edge.toId)) : false;
+              // Retour utilisateur : un lien masque au wiki public (tout
+              // sauf `public`) reste grise, meme survole/epingle — pour que
+              // ce qui n'apparaitra jamais aux joueurs se distingue d'un
+              // coup d'œil, sans avoir a ouvrir chaque lien pour verifier.
+              const hiddenFromPublic = edge.visibilityLevel !== "public";
               const x1 = (from.x ?? 0) - bounds.minX;
               const y1 = (from.y ?? 0) - bounds.minY;
               const x2 = (to.x ?? 0) - bounds.minX;
@@ -264,9 +272,10 @@ export default function RelationsGraphCanvas({
                     y1={y1}
                     x2={x2}
                     y2={y2}
-                    stroke={edgeColor(edge)}
+                    stroke={hiddenFromPublic ? "var(--ink-muted)" : edgeColor(edge)}
                     strokeWidth={displayEdgeId === edge.id ? 3 : 1.5}
-                    opacity={dimmed ? 0.15 : 0.8}
+                    strokeDasharray={hiddenFromPublic ? "4 3" : undefined}
+                    opacity={dimmed ? 0.15 : hiddenFromPublic ? 0.45 : 0.8}
                   />
                 </g>
               );

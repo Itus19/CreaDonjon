@@ -27,6 +27,8 @@ export interface FamilyEdgeInput {
   relationType: FamilyRelationType;
   /** Libelle deja resolu (RELATION_LABELS_FR), affiche au survol du trait. */
   label: string;
+  /** V2, retour utilisateur : pour griser au rendu un lien masque au wiki public — jamais utilise pour filtrer, `filterBlocks` l'a deja fait avant d'arriver ici. */
+  visibilityLevel: string;
 }
 
 export interface FamilyEntityInput {
@@ -51,6 +53,7 @@ export interface FamilyTreeEdge {
   fromId: string;
   toId: string;
   label: string;
+  visibilityLevel: string;
 }
 
 export interface FamilyTree {
@@ -65,6 +68,7 @@ interface ParentChildLink {
   parentId: string;
   childId: string;
   label: string;
+  visibilityLevel: string;
 }
 
 interface PairLink {
@@ -72,6 +76,7 @@ interface PairLink {
   aId: string;
   bId: string;
   label: string;
+  visibilityLevel: string;
 }
 
 function normalizeParentChild(edge: FamilyEdgeInput): ParentChildLink | null {
@@ -79,10 +84,10 @@ function normalizeParentChild(edge: FamilyEdgeInput): ParentChildLink | null {
     // source = parent, target = enfant.
     case "parent_of":
     case "step_parent_of":
-      return { id: edge.id, parentId: edge.sourceId, childId: edge.targetId, label: edge.label };
+      return { id: edge.id, parentId: edge.sourceId, childId: edge.targetId, label: edge.label, visibilityLevel: edge.visibilityLevel };
     // adopted_by : la source est l'adopte(e), la cible l'adoptant — sens inverse de parent_of.
     case "adopted_by":
-      return { id: edge.id, parentId: edge.targetId, childId: edge.sourceId, label: edge.label };
+      return { id: edge.id, parentId: edge.targetId, childId: edge.sourceId, label: edge.label, visibilityLevel: edge.visibilityLevel };
     default:
       return null;
   }
@@ -125,11 +130,11 @@ export function buildFamilyTree(params: {
       continue;
     }
     if (isPartnerType(edge.relationType)) {
-      partnerLinks.push({ id: edge.id, aId: edge.sourceId, bId: edge.targetId, label: edge.label });
+      partnerLinks.push({ id: edge.id, aId: edge.sourceId, bId: edge.targetId, label: edge.label, visibilityLevel: edge.visibilityLevel });
       continue;
     }
     if (isSiblingType(edge.relationType)) {
-      siblingLinks.push({ id: edge.id, aId: edge.sourceId, bId: edge.targetId, label: edge.label });
+      siblingLinks.push({ id: edge.id, aId: edge.sourceId, bId: edge.targetId, label: edge.label, visibilityLevel: edge.visibilityLevel });
     }
   }
 
@@ -227,18 +232,18 @@ export function buildFamilyTree(params: {
   const treeEdges: FamilyTreeEdge[] = [];
   for (const link of parentChildLinks) {
     if (!generationOf.has(link.parentId) || !generationOf.has(link.childId)) continue;
-    treeEdges.push({ id: link.id, kind: "parent-child", fromId: link.parentId, toId: link.childId, label: link.label });
+    treeEdges.push({ id: link.id, kind: "parent-child", fromId: link.parentId, toId: link.childId, label: link.label, visibilityLevel: link.visibilityLevel });
   }
   for (const link of partnerLinks) {
     if (!generationOf.has(link.aId) || !generationOf.has(link.bId)) continue;
-    treeEdges.push({ id: link.id, kind: "partner", fromId: link.aId, toId: link.bId, label: link.label });
+    treeEdges.push({ id: link.id, kind: "partner", fromId: link.aId, toId: link.bId, label: link.label, visibilityLevel: link.visibilityLevel });
   }
   for (const link of siblingLinks) {
     if (!generationOf.has(link.aId) || !generationOf.has(link.bId)) continue;
     // Deja visuellement relies par un connecteur parent-enfant commun —
     // un trait direct en plus ferait doublon.
     if (sharesParent(link.aId, link.bId)) continue;
-    treeEdges.push({ id: link.id, kind: "sibling", fromId: link.aId, toId: link.bId, label: link.label });
+    treeEdges.push({ id: link.id, kind: "sibling", fromId: link.aId, toId: link.bId, label: link.label, visibilityLevel: link.visibilityLevel });
   }
 
   const generations = [...generationOf.values()];

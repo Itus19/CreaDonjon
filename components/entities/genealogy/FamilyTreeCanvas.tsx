@@ -57,8 +57,15 @@ export default function FamilyTreeCanvas({
 }: {
   tree: FamilyTree;
   renderCard: (node: FamilyTreeNode) => ReactNode;
-  /** Controles d'edition (bouton "+") positionnes sur chaque carte — omis en lecture seule. */
-  renderNodeOverlay?: (node: FamilyTreeNode) => ReactNode;
+  /**
+   * Controles d'edition (bouton "+") positionnes sur chaque carte — omis
+   * en lecture seule. `scale` (retour utilisateur) : le zoom courant du
+   * canevas, pour que l'appelant puisse contre-appliquer une echelle
+   * inverse et garder un bouton de taille constante a l'ecran — sinon un
+   * arbre dezoome (beaucoup de nœuds, `MIN_ZOOM` 0.3) retrecit le "+"
+   * jusqu'a le rendre quasi impossible a viser.
+   */
+  renderNodeOverlay?: (node: FamilyTreeNode, scale: number) => ReactNode;
   /** Bouton de suppression sur le trait epingle (clic) — omis en lecture seule (wiki public). */
   onDeleteEdge?: (edge: FamilyTreeEdge) => void;
 }) {
@@ -184,7 +191,12 @@ export default function FamilyTreeCanvas({
             const to = slotById.get(edge.toId);
             if (!from || !to) return null;
             const isActive = edge.id === displayEdgeId;
-            const stroke = isActive ? "var(--accent)" : "var(--edge-strong)";
+            // Retour utilisateur : un lien masque au wiki public (tout
+            // sauf `public`) reste grise et pointille — meme traitement
+            // que le bloc reseau (RelationsGraphCanvas.tsx).
+            const hiddenFromPublic = edge.visibilityLevel !== "public";
+            const stroke = isActive ? "var(--accent)" : hiddenFromPublic ? "var(--ink-muted)" : "var(--edge-strong)";
+            const dash = !isActive && hiddenFromPublic ? "4 3" : undefined;
 
             const handlers = {
               onMouseEnter: () => setHoveredEdgeId(edge.id),
@@ -206,7 +218,7 @@ export default function FamilyTreeCanvas({
                 <g key={edge.id} className="pointer-events-auto cursor-pointer" {...handlers}>
                   {/* Trait large invisible : la ligne visible (1.5px) est trop fine pour un survol/clic fiable — meme technique que les cibles tactiles agrandies ailleurs dans l'app. */}
                   <polyline points={points} fill="none" stroke="transparent" strokeWidth={16} />
-                  <polyline points={points} fill="none" stroke={stroke} strokeWidth={isActive ? 2 : 1.5} />
+                  <polyline points={points} fill="none" stroke={stroke} strokeWidth={isActive ? 2 : 1.5} strokeDasharray={dash} />
                 </g>
               );
             }
@@ -218,7 +230,7 @@ export default function FamilyTreeCanvas({
             return (
               <g key={edge.id} className="pointer-events-auto cursor-pointer" {...handlers}>
                 <line x1={x1} y1={y} x2={x2} y2={y} stroke="transparent" strokeWidth={16} />
-                <line x1={x1} y1={y} x2={x2} y2={y} stroke={stroke} strokeWidth={isActive ? 2 : 1.5} />
+                <line x1={x1} y1={y} x2={x2} y2={y} stroke={stroke} strokeWidth={isActive ? 2 : 1.5} strokeDasharray={dash} />
               </g>
             );
           })}
@@ -233,7 +245,7 @@ export default function FamilyTreeCanvas({
               style={{ left: slot.x + 16, top: slot.y + 16, width: CARD_WIDTH, height: CARD_HEIGHT }}
             >
               {renderCard(node)}
-              {renderNodeOverlay?.(node)}
+              {renderNodeOverlay?.(node, view.scale)}
             </div>
           );
         })}
