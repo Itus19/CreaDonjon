@@ -21,6 +21,7 @@ export const zBlockDisplay = z.object({
     "music",
     "graph",
     "quest",
+    "session_log",
   ]),
   collapsed: z.boolean().optional(),
 });

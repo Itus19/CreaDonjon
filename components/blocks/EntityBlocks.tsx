@@ -30,6 +30,7 @@ import ResourcesBlockEditor from "./ResourcesBlockEditor";
 import MusicBlockEditor from "./MusicBlockEditor";
 import GenealogyBlockEditor from "./GenealogyBlockEditor";
 import QuestBlockEditor from "./QuestBlockEditor";
+import SessionLogBlockEditor from "./SessionLogBlockEditor";
 import MonsterStatblockSheet from "./MonsterStatblockSheet";
 import PlayableCharacterSheet from "./PlayableCharacterSheet";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
@@ -47,6 +48,7 @@ import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
 import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import type { GenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
 import type { QuestBlockData } from "@/src/core/schemas/blocks/quest";
+import type { SessionLogBlockData } from "@/src/core/schemas/blocks/sessionLog";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 
 export interface BlockItem {
@@ -76,6 +78,7 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   music: "Musique",
   genealogy: "Généalogie",
   quest: "Quête",
+  session_log: "Journal de séance",
 };
 
 function BlockDataEditor({
@@ -186,6 +189,15 @@ function BlockDataEditor({
           data={block.data as QuestBlockData}
           otherEntities={otherEntities}
           onChange={(d) => onChange(d)}
+          onBlockRefreshed={onBlockRefreshed}
+        />
+      );
+    case "session_log":
+      return (
+        <SessionLogBlockEditor
+          blockId={block.id}
+          version={block.version}
+          data={block.data as SessionLogBlockData}
           onBlockRefreshed={onBlockRefreshed}
         />
       );

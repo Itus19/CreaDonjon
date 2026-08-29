@@ -7,15 +7,50 @@ type TypedClient = SupabaseClient<Database>;
 export interface SessionRow {
   id: string;
   campaign_id: string;
+  title: string | null;
+  summary: string | null;
   started_at: string;
   ended_at: string | null;
+}
+
+export async function getSessionById(supabase: TypedClient, id: string): Promise<SessionRow | null> {
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("id, campaign_id, title, summary, started_at, ended_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Le resume glissant d'une session (docs/SCHEMA.md §12) est modifie ici seulement — jamais copie dans un bloc de wiki (V2-H4, `session_log`). */
+export async function updateSessionSummary(supabase: TypedClient, id: string, summary: string): Promise<SessionRow> {
+  const { data, error } = await supabase
+    .from("sessions")
+    .update({ summary })
+    .eq("id", id)
+    .select("id, campaign_id, title, summary, started_at, ended_at")
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Le fil d'une session, du plus ancien au plus recent — l'ordre naturel d'un journal, oppose a `session_events_session_idx` (seq desc) qui sert le cas "dernier evenement d'abord" (annulation). */
+export async function listSessionEvents(supabase: TypedClient, sessionId: string): Promise<SessionEventRow[]> {
+  const { data, error } = await supabase
+    .from("session_events")
+    .select("id, session_id, seq, kind, actor, actor_user_id, payload, created_at")
+    .eq("session_id", sessionId)
+    .order("seq", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 /** La session la plus recente sans `ended_at` — `null` si aucune n'est ouverte (SCHEMA.md §12 : `ended_at` marque la fin). */
 export async function getOpenSessionForCampaign(supabase: TypedClient, campaignId: string): Promise<SessionRow | null> {
   const { data, error } = await supabase
     .from("sessions")
-    .select("id, campaign_id, started_at, ended_at")
+    .select("id, campaign_id, title, summary, started_at, ended_at")
     .eq("campaign_id", campaignId)
     .is("ended_at", null)
     .order("started_at", { ascending: false })
@@ -29,7 +64,7 @@ export async function createSession(supabase: TypedClient, campaignId: string): 
   const { data, error } = await supabase
     .from("sessions")
     .insert({ campaign_id: campaignId })
-    .select("id, campaign_id, started_at, ended_at")
+    .select("id, campaign_id, title, summary, started_at, ended_at")
     .single();
   if (error) throw new Error(error.message);
   return data;

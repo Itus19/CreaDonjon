@@ -380,7 +380,7 @@ Spécification complète : `specs/psyche-pnj.md`.
 
 **Limite connue, non corrigée** : le bloc généalogie charge son arbre une seule fois côté client et ne se resynchronise pas automatiquement quand une relation est ajoutée ailleurs sur la même page (le formulaire d'en-tête, `RelationsChips.tsx`) — seul son propre bouton « + » interne déclenche un rechargement immédiat. Un rechargement de page suffit à voir l'arbre à jour (la donnée elle-même est toujours correcte, jamais mise en cache côté serveur), mais ce n'est pas encore instantané entre les deux surfaces d'édition. À corriger si ça gêne en usage réel — pas fait ici pour rester dans le périmètre de la vérification.
 
-### V2-H4 — Quêtes et journal de séance · `M`
+### V2-H4 — Quêtes et journal de séance · `M` — fait
 
 - Bloc `quest` : objectifs, état, récompenses, commanditaire, prérequis.
 - Bloc `session_log` relié aux `session_events`.
@@ -397,6 +397,14 @@ Cocher un objectif est un fait de partie, pas une édition rédactionnelle silen
 Troisième critère non coché mais préparé : `listActiveQuestsForWorld` (`src/server/services/quests.ts`) liste les quêtes en état "en cours", déjà filtrées par visibilité (règle 9 de `CLAUDE.md`) — rien ne l'appelle encore hors des tests, la V3 (mode solo, contexte déterministe) n'existe pas. Écrite maintenant pour que ce travail n'ait pas à être refait quand la V3 arrivera, sans construire le reste du mécanisme de contexte lui-même.
 
 **Bug réel trouvé et corrigé en testant, sans rapport avec les quêtes** : sélectionner une valeur dans n'importe quel `Dropdown` (état de la quête, mais aussi tout autre menu déroulant de la coquille — visibilité, dé d'une table aléatoire, etc.) juste avant de quitter le bloc pouvait perdre la sélection silencieusement. Cause : le panneau du menu est rendu dans un portail (`document.body`), hors du conteneur DOM du bloc — cliquer une option y déplace le focus AVANT que le clic n'applique la valeur, ce qui déclenchait la sauvegarde au blur (`EntityBlocks.tsx`, `handleBlockBlur`) avec l'état encore ANCIEN. Reproduit et confirmé par une vérification base réelle (rechargement après sélection : la valeur était bien retombée à l'ancienne). Corrigé dans `components/shared/Dropdown.tsx` : `onMouseDown={(e) => e.preventDefault()}` sur chaque option, pour que le focus ne quitte jamais le bloc pendant la sélection — revérifié en direct, la valeur survit maintenant au rechargement.
+
+**Bloc `session_log` — fait.** Décision de conception : le résumé rédactionnel n'est **jamais dupliqué** dans la donnée du bloc — `sessions.summary` (`docs/SCHEMA.md` §12, « réinjecté dans le contexte IA ») reste l'unique source de vérité ; le bloc ne stocke qu'un `sessionId` et sert de fenêtre dessus (`src/core/schemas/blocks/sessionLog.ts`). Pas de vrai sélecteur de séance — cohérent avec la limite déjà posée dans `src/server/services/sessions.ts` (« aucune interface de gestion de séance n'existe encore ») : le bloc s'attache tout seul, une fois, à la séance en cours de la campagne du monde (`attachSessionLogBlock`, route `POST /api/blocks/[blockId]/session-log/attach`, réutilise `getOrOpenSessionForCampaign`). Sans campagne active, le bloc reste vide plutôt que d'échouer.
+
+Une fois attaché : zone de texte pour le résumé (sauvegardée à la perte de focus via `PATCH /api/sessions/[id]`, jamais par le mécanisme générique des blocs) et le fil des `session_events` de cette séance en lecture seule en dessous (`GET /api/sessions/[id]/events`), du plus ancien au plus récent.
+
+**Vérifié en direct** (fiche de Candide Fausset, même monde que le test du bloc quête) : création du bloc → rattachement automatique confirmé par requête réseau → le journal affiché reprend fidèlement les vrais `session_events` de la session, **y compris la ligne « Objectif coché » écrite quelques minutes plus tôt en testant `quest`** — même séance, deux blocs différents, un seul journal. Résumé tapé, sauvegardé au blur, confirmé après rechargement complet de la page. Bloc de test et résumé nettoyés après vérification (la séance touchée est la vraie séance en cours de la campagne de l'utilisateur, pas une séance jetable).
+
+**Hors périmètre, explicitement** : pas de rendu public pour `session_log` (comme `character`/`inventory`/`music`, seul le titre s'affiche sur le wiki public, `PublicBlockView.tsx`) — un journal de séance est un outil de suivi de partie, pas du contenu de lore destiné aux joueurs.
 
 ---
 
