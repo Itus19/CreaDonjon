@@ -13,7 +13,7 @@ import {
 import { zSessionLogBlockData } from "@/src/core/schemas/blocks/sessionLog";
 import { getBlockById } from "@/src/server/repos/blocks";
 import { getEntityById } from "@/src/server/repos/entities";
-import { listCampaigns } from "@/src/server/services/campaigns";
+import { resolveCampaignId } from "@/src/server/services/campaigns";
 import { updateBlockContent, type VisibleBlock } from "@/src/server/services/blocks";
 
 type TypedClient = SupabaseClient<Database>;
@@ -32,12 +32,6 @@ export async function getOrOpenSessionForCampaign(supabase: TypedClient, campaig
   if (existing) return existing.id;
   const created = await createSession(supabase, campaignId);
   return created.id;
-}
-
-/** "Un monde = une campagne" (migration 20260826100001) : au plus une ligne. Meme resolution que `quests.ts`. */
-async function resolveCampaignId(supabase: TypedClient, worldId: string): Promise<string | null> {
-  const campaigns = await listCampaigns(supabase, worldId);
-  return campaigns[0]?.id ?? null;
 }
 
 export type AttachSessionLogResult =

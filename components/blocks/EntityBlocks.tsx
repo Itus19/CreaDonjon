@@ -32,6 +32,7 @@ import GenealogyBlockEditor from "./GenealogyBlockEditor";
 import QuestBlockEditor from "./QuestBlockEditor";
 import SessionLogBlockEditor from "./SessionLogBlockEditor";
 import PersonalityBlockEditor from "./PersonalityBlockEditor";
+import RelationshipBlockEditor from "./RelationshipBlockEditor";
 import MonsterStatblockSheet from "./MonsterStatblockSheet";
 import PlayableCharacterSheet from "./PlayableCharacterSheet";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
@@ -51,6 +52,7 @@ import type { GenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
 import type { QuestBlockData } from "@/src/core/schemas/blocks/quest";
 import type { SessionLogBlockData } from "@/src/core/schemas/blocks/sessionLog";
 import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
+import type { RelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 
 export interface BlockItem {
@@ -82,6 +84,7 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   quest: "Quête",
   session_log: "Journal de séance",
   personality: "Personnalité",
+  relationship: "Relation",
 };
 
 function BlockDataEditor({
@@ -213,6 +216,15 @@ function BlockDataEditor({
           data={block.data as PersonalityBlockData}
           onChange={(d) => onChange(d)}
           onBlockRefreshed={onBlockRefreshed}
+        />
+      );
+    case "relationship":
+      return (
+        <RelationshipBlockEditor
+          entityId={block.entityId}
+          data={block.data as RelationshipBlockData}
+          otherEntities={otherEntities}
+          onChange={(d) => onChange(d)}
         />
       );
     default:

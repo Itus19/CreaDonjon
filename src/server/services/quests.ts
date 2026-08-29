@@ -4,23 +4,13 @@ import type { Database, Json } from "@/src/types/database";
 import { zQuestBlockData, type QuestBlockData } from "@/src/core/schemas/blocks/quest";
 import { getBlockById, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { getEntityById, listEntitiesForWorld } from "@/src/server/repos/entities";
-import { listCampaigns } from "@/src/server/services/campaigns";
+import { resolveCampaignId } from "@/src/server/services/campaigns";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { updateBlockContent, type VisibleBlock } from "@/src/server/services/blocks";
 import { filterBlocks, type VisibilityLevel, type Viewer } from "@/src/core/visibility";
 
 type TypedClient = SupabaseClient<Database>;
-
-/**
- * "Un monde = une campagne" (migration 20260826100001) : au plus une ligne.
- * `null` hors partie — rien a journaliser, meme regle que
- * `applyRuntimeStateChange` (runtimeState.ts).
- */
-async function resolveCampaignId(supabase: TypedClient, worldId: string): Promise<string | null> {
-  const campaigns = await listCampaigns(supabase, worldId);
-  return campaigns[0]?.id ?? null;
-}
 
 export type ToggleQuestObjectiveResult =
   | { ok: true; block: VisibleBlock }

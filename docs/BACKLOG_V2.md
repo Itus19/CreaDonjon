@@ -323,7 +323,7 @@ Réalisé en réutilisant un seul mécanisme pour les deux : `MusicPlaybackProvi
 
 *Ce qui donne de la mémoire et de la profondeur au monde. Le lot le plus utile pour la V3.*
 
-### V2-H1 — Psyché des PNJ · `L` — en cours (phase 2/4 : bloc `personality`)
+### V2-H1 — Psyché des PNJ · `L` — en cours (phase 4/4 : bloc `worldview`)
 
 Spécification complète : `specs/psyche-pnj.md`. Découpage en quatre phases annoncé au client avant de commencer (schéma → bloc `personality` → bloc `relationship` → bloc `worldview`), avec point de vérification après chacune.
 
@@ -335,9 +335,10 @@ Spécification complète : `specs/psyche-pnj.md`. Découpage en quatre phases an
 - [x] Rendements décroissants : s'éloigner du centre s'amortit, y revenir garde son plein effet.
 - [x] `deltas` stocke le **brut** ; rejouer le journal reproduit exactement la valeur courante.
 - [x] Après 50 événements simulés d'ampleur « notable », aucun axe n'est saturé.
-- [x] Un delta brut supérieur à 40 exige confirmation — fait pour `personality` (client ET serveur) ; `relationship` (phase 3) reprendra la même route/le même garde-fou.
-- [ ] Valeurs stockées de −100 à +100 ; l'écran et le contexte IA affichent la **bande nommée**, jamais le nombre — bandes de `personality` pas encore définies (seules celles de `relationship`, phase 3, le sont dans `bands.ts`) ; le contexte IA lui-même reste à écrire (V3).
-- [ ] `known_as` respecté : le contexte IA ne révèle pas une identité que le PNJ ignore — concerne `relationship` (phase 3), pas `personality`.
+- [x] Un delta brut supérieur à 40 exige confirmation — fait pour `personality` ET `relationship` (client ET serveur, même garde-fou dans `addAttitudeEvent`).
+- [x] Un bloc `relationship` par relation, avec les sept axes et `known_as`.
+- [ ] Valeurs stockées de −100 à +100 ; l'écran et le contexte IA affichent la **bande nommée**, jamais le nombre — les bandes des 7 axes de relation sont définies (`bands.ts`, réutilisées depuis la phase 1) mais pas encore affichées à l'écran (le radar/les curseurs montrent la valeur exacte, pas le mot) ; le contexte IA lui-même reste à écrire (V3). Bandes de `personality` toujours pas définies.
+- [ ] `known_as` est **stocké** et affiché dans l'éditeur — pas encore **appliqué** : aucun contexte IA n'existe encore pour vérifier qu'il protège réellement une identité (V3).
 - [ ] Comparaison automatique entre les convictions d'un PNJ et celles de sa faction, avec signalement des divergences fortes — concerne `worldview` (phase 4).
 
 **Phase 2 — bloc `personality`, fait.** Schéma complet (`src/core/schemas/blocks/personality.ts`) : pôles, priorité, aspirations à trois horizons, lignes rouges/limites, `baseline`, `speech`.
@@ -352,6 +353,18 @@ Spécification complète : `specs/psyche-pnj.md`. Découpage en quatre phases an
 **Deux bugs réels trouvés et corrigés en testant** :
 - **Le curseur ne revenait pas en arrière après un refus de confirmation** : la valeur affichée restait bloquée sur la tentative jamais enregistrée. Corrigé dans `PersonalityPoleSliders.tsx` — la valeur locale s'efface systématiquement après une tentative de commit, succès ou non, l'affichage retombe alors sur la valeur réellement stockée.
 - **Perte silencieuse de frappe sur n'importe quel champ texte de n'importe quel bloc, pas seulement `personality`** : `doSaveBlock`/`handleBlockBlur` (`EntityBlocks.tsx`) lisaient `blocks`, une variable fermée sur le rendu React en cours — un blur qui survient avant que React n'ait rendu le tout dernier `onChange` (frappe rapide puis clic hors du bloc) envoyait l'avant-dernière valeur, pas la dernière. Reproduit et confirmé par une requête serveur (400, « expected string, received undefined » sur un champ qui pourtant s'affichait correctement rempli à l'écran). Corrigé par un miroir synchrone (`blocksRef`, mis à jour dans le même appel que `setBlocks`, jamais via un effet) : `doSaveBlock` lit désormais ce ref, plus jamais `blocks`. Même famille de bug que le correctif `Dropdown.tsx` de V2-H4, cause différente (frappe rapide vs. focus volé par un portail) — même remède de fond (ne jamais lire un état qui peut être périmé au moment de sauvegarder).
+
+**Phase 3 — bloc `relationship`, fait.** Différence structurante avec `personality` : les valeurs des sept axes ne vivent **pas** dans le bloc — `personality` est propre à l'entité (« Bram est Bram partout »), une relation est propre à une **campagne** (« son opinion du groupe est propre à une partie », specs/psyche-pnj.md §6). Le bloc (`src/core/schemas/blocks/relationship.ts`) ne stocke que le structurel : `target`, `knownAs`, `historyVisible`. Les valeurs vivent dans `entity_attitudes` (cache par paire) / `attitude_events` (journal), déjà créées en phase 1, lues et écrites par `getCurrentAttitude`/`addAttitudeEvent` (`src/server/services/psyche.ts`) qui résolvent la campagne du monde tout seuls (même mécanisme que `personality-event`) — le client n'a jamais besoin de connaître l'id de campagne.
+
+- **Radar à 7 axes** (`RelationshipRadar.tsx`) — même géométrie que le radar de personnalité, généralisée à N pointes.
+- **Couleur du polygone dérivée de `friendship_hostility`** (`src/core/psyche/relationshipColor.ts`, fonction pure testée) : blanc/gris neutre au centre, dégradé vers le vert (amical) ou le rouge (hostile), rose si le type de relation est romantique (`partner_of`/`married_to`/`ex_partner_of`, vocabulaire déjà existant) — la romance l'emporte toujours sur le dégradé. **Écrite pour être réutilisée telle quelle par les liens du graphe `worldview` (phase 4)**, exactement la demande initiale du client.
+- **Curseurs et tableau de souvenirs** — même patron que `personality` (commit au relâchement, route dédiée `POST /api/entities/[id]/attitude-events`, confirmation au-delà de 40), historique **par paire** (jamais global, specs/psyche-pnj.md §4).
+- **Sans campagne active** : la relation reste définie (cible, `knownAs`) mais le message « ce monde n'a pas de campagne active » remplace le radar — jamais une page qui plante ou des valeurs à zéro trompeuses.
+- **Refactor de cohérence** : `resolveCampaignId` (« un monde = une campagne, au plus une ligne ») était dupliquée dans `quests.ts` et `sessions.ts` ; en l'écrivant une troisième fois pour `psyche.ts`, extraite dans `src/server/services/campaigns.ts` (exportée), les deux autres fichiers mis à jour pour l'importer — troisième occurrence, règle des trois.
+
+**Vérifié en direct** (fiche de Candide Fausset envers Kor'nok Oorvarsh) : cible choisie, radar heptagonal affiché, souvenir « A menacé Candide devant tout le monde » avec Indépendance −20 → radar déformé, couleur réchauffée vers le rouge, ligne au tableau — persistant après un blur suivi d'un rechargement complet. Testé aussi **sans blur avant rechargement** : la sélection de cible se perd, comportement attendu et déjà documenté de l'architecture « sauvegarde à la perte de focus » (pas un bug, juste vérifié pour ne pas le confondre avec un).
+
+**Hors périmètre, explicitement** : pas de détection automatique des types de relation romantiques pour la couleur du radar de CE bloc (nécessiterait de charger les `relations` réelles entre les deux entités, pas encore câblé côté client — `relationTypes` passé vide) ; pas de rendu public pour `relationship` (l'axe attirance/répulsion doit rester MJ par défaut et `known_as` protège une identité — mérite sa propre passe de conception plutôt qu'une décision rapide).
 
 **Non fait dans cette phase, à noter** : pas d'éditeur pour `baseline` (les quatre valeurs de départ trust/affinity/respect/fear) — champ gardé dans le schéma avec ses valeurs par défaut, aucune UI dessus ; à ajouter si un besoin concret se présente.
 

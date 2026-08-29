@@ -50,6 +50,12 @@ export async function listCampaigns(supabase: TypedClient, worldId: string): Pro
   return rows.map(toSummary);
 }
 
+/** "Un monde = une campagne" (migration 20260826100001) : au plus une ligne. Reutilise partout ou une fonctionnalite doit se rattacher a "la" campagne d'un monde sans que l'appelant en connaisse deja l'id (quests.ts, sessions.ts, psyche.ts). */
+export async function resolveCampaignId(supabase: TypedClient, worldId: string): Promise<string | null> {
+  const campaigns = await listCampaigns(supabase, worldId);
+  return campaigns[0]?.id ?? null;
+}
+
 export async function getCampaign(supabase: TypedClient, id: string): Promise<CampaignSummary | null> {
   const row = await getCampaignById(supabase, id);
   return row ? toSummary(row) : null;

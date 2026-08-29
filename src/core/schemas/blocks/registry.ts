@@ -16,6 +16,7 @@ import { zGenealogyBlockData } from "./genealogy";
 import { zQuestBlockData } from "./quest";
 import { zSessionLogBlockData } from "./sessionLog";
 import { zPersonalityBlockData } from "./personality";
+import { zRelationshipBlockData } from "./relationship";
 import { PERSONALITY_POLE_KEYS } from "@/src/core/psyche/keys";
 
 /**
@@ -58,6 +59,12 @@ import { PERSONALITY_POLE_KEYS } from "@/src/core/psyche/keys";
  * changent uniquement via `POST /api/blocks/[id]/personality-event`
  * (journalise dans `personality_events` ET applique le delta), jamais par
  * le PATCH generique des blocs.
+ * V2-H1 : relationship — un bloc par relation, mais ne stocke PAS les
+ * valeurs d'axes : elles vivent dans `entity_attitudes`/`attitude_events`,
+ * portee CAMPAGNE (contrairement a `personality`). Le bloc ne porte que le
+ * structurel (cible, `knownAs`, `historyVisible`) ; les axes se lisent/
+ * s'ecrivent via `src/server/services/psyche.ts` (memes fonctions que
+ * `personality`, pattern partage, portee differente).
  */
 export const BLOCK_TYPES = [
   "text",
@@ -76,6 +83,7 @@ export const BLOCK_TYPES = [
   "quest",
   "session_log",
   "personality",
+  "relationship",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -96,6 +104,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   quest: "quest",
   session_log: "session_log",
   personality: "poles",
+  relationship: "poles",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -116,6 +125,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   quest: zQuestBlockData,
   session_log: zSessionLogBlockData,
   personality: zPersonalityBlockData,
+  relationship: zRelationshipBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -187,6 +197,7 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
     baseline: { trust: 0, affinity: 0, respect: 0, fear: 0 },
     speech: { register: "", tics: [] },
   },
+  relationship: { __v: 1, target: null, knownAs: "", historyVisible: 20 },
 };
 
 export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny {

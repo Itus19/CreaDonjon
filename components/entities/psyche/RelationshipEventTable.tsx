@@ -1,0 +1,199 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Dropdown from "@/components/shared/Dropdown";
+import { RELATIONSHIP_AXIS_KEYS, type RelationshipAxisKey } from "@/src/core/psyche/keys";
+
+const AXIS_LABELS_FR: Record<RelationshipAxisKey, string> = {
+  trust_distrust: "Confiance ↔ Méfiance",
+  friendship_hostility: "Amitié ↔ Hostilité",
+  respect_contempt: "Respect ↔ Mépris",
+  attraction_repulsion: "Attirance ↔ Répulsion",
+  debt_independence: "Dette ↔ Indépendance",
+  fear_assurance: "Peur ↔ Assurance",
+  interest_indifference: "Intérêt ↔ Indifférence",
+};
+
+interface AttitudeEventInfo {
+  id: string;
+  summary: string;
+  deltas: Partial<Record<RelationshipAxisKey, number>>;
+  occurred_at_ingame: string | null;
+  created_at: string;
+}
+
+function formatDeltas(deltas: Partial<Record<RelationshipAxisKey, number>>): string {
+  return Object.entries(deltas)
+    .map(([key, delta]) => `${AXIS_LABELS_FR[key as RelationshipAxisKey].split(" ↔ ")[0]} ${delta! > 0 ? "+" : ""}${delta}`)
+    .join(", ");
+}
+
+/** Tableau de souvenirs d'UNE relation (V2-H1) — historique par paire, jamais global (specs/psyche-pnj.md §4). */
+export default function RelationshipEventTable({
+  sourceEntityId,
+  targetEntityId,
+  onAxesChanged,
+}: {
+  sourceEntityId: string;
+  targetEntityId: string;
+  onAxesChanged: (axes: Partial<Record<RelationshipAxisKey, number>>) => void;
+}) {
+  const [events, setEvents] = useState<AttitudeEventInfo[]>([]);
+  const [summary, setSummary] = useState("");
+  const [occurredAtIngame, setOccurredAtIngame] = useState("");
+  const [rows, setRows] = useState<{ id: string; key: RelationshipAxisKey; delta: string }[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  function loadEvents() {
+    fetch(`/api/entities/${sourceEntityId}/attitudes/${targetEntityId}/events`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setEvents);
+  }
+
+  useEffect(loadEvents, [sourceEntityId, targetEntityId]);
+
+  function addRow() {
+    setRows((prev) => [...prev, { id: crypto.randomUUID(), key: RELATIONSHIP_AXIS_KEYS[0], delta: "" }]);
+  }
+  function updateRow(id: string, patch: Partial<{ key: RelationshipAxisKey; delta: string }>) {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  }
+  function removeRow(id: string) {
+    setRows((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  async function submit() {
+    const deltas: Partial<Record<RelationshipAxisKey, number>> = {};
+    for (const row of rows) {
+      const n = Number(row.delta);
+      if (row.delta.trim() !== "" && Number.isFinite(n) && n !== 0) deltas[row.key] = n;
+    }
+    if (!summary.trim() || Object.keys(deltas).length === 0) {
+      setError("Une description et au moins un axe touché sont requis.");
+      return;
+    }
+    const hasLarge = Object.values(deltas).some((d) => Math.abs(d as number) > 40);
+    if (hasLarge && !window.confirm("Ce changement est important (> 40). Confirmer ?")) return;
+
+    setPending(true);
+    setError(null);
+    const res = await fetch(`/api/entities/${sourceEntityId}/attitude-events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        targetEntityId,
+        summary: summary.trim(),
+        deltas,
+        occurredAtIngame: occurredAtIngame.trim() || null,
+        confirmed: true,
+      }),
+    });
+    setPending(false);
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      setError(body?.error ?? "Impossible d'ajouter ce souvenir.");
+      return;
+    }
+    const body = (await res.json()) as { axes: Partial<Record<RelationshipAxisKey, number>> };
+    onAxesChanged(body.axes);
+    setSummary("");
+    setOccurredAtIngame("");
+    setRows([]);
+    loadEvents();
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-3">
+      <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Souvenirs</span>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-edge/60 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+              <th className="py-1 pr-4">Date IRL</th>
+              <th className="py-1 pr-4">Date ingame</th>
+              <th className="py-1 pr-4">Événement</th>
+              <th className="py-1 pr-4">Effet</th>
+            </tr>
+          </thead>
+          <tbody>
+            {events.map((event) => (
+              <tr key={event.id} className="border-b border-edge/30 align-top">
+                <td className="whitespace-nowrap py-1.5 pr-4 text-xs text-ink-muted">
+                  {new Date(event.created_at).toLocaleDateString("fr-FR")}
+                </td>
+                <td className="whitespace-nowrap py-1.5 pr-4 text-xs text-ink-muted">
+                  {event.occurred_at_ingame || "—"}
+                </td>
+                <td className="py-1.5 pr-4">{event.summary}</td>
+                <td className="py-1.5 pr-4 text-xs text-ink-muted">{formatDeltas(event.deltas)}</td>
+              </tr>
+            ))}
+            {events.length === 0 && (
+              <tr>
+                <td colSpan={4} className="py-2 text-xs italic text-ink-muted">
+                  Aucun souvenir pour l&apos;instant.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-md border border-edge p-2">
+        <div className="flex flex-wrap gap-2">
+          <input
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            placeholder="A insulté un passant devant elle…"
+            className="min-w-[240px] flex-1 bg-transparent text-sm text-ink outline-none"
+          />
+          <input
+            value={occurredAtIngame}
+            onChange={(e) => setOccurredAtIngame(e.target.value)}
+            placeholder="Date ingame (texte libre)"
+            className="w-48 bg-transparent text-xs text-ink-muted outline-none"
+          />
+        </div>
+        {rows.map((row) => (
+          <div key={row.id} className="flex items-center gap-2">
+            <Dropdown
+              value={row.key}
+              options={RELATIONSHIP_AXIS_KEYS.map((k) => ({ value: k, label: AXIS_LABELS_FR[k] }))}
+              onChange={(v) => updateRow(row.id, { key: v as RelationshipAxisKey })}
+              aria-label="Axe touché"
+            />
+            <input
+              type="number"
+              value={row.delta}
+              onChange={(e) => updateRow(row.id, { delta: e.target.value })}
+              placeholder="+10"
+              className="w-20 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none"
+            />
+            <button type="button" onClick={() => removeRow(row.id)} className="text-xs text-danger hover:underline">
+              ×
+            </button>
+          </div>
+        ))}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={addRow}
+            className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+          >
+            + Axe touché
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={pending}
+            className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+          >
+            Ajouter le souvenir
+          </button>
+          {error && <span className="text-xs text-danger">{error}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
