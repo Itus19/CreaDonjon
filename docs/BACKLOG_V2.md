@@ -557,6 +557,26 @@ Fait — nouvelle vue transversale : `listGmCampaignsForUser` (`src/server/repos
 
 ---
 
+## Lot L — Infrastructure et hébergement
+
+*Né du déploiement réel sur Vercel + Supabase (paliers gratuits), pas d'une fonctionnalité de wiki — voir `docs/adr/0012-hebergement-vercel-supabase-gratuit.md` pour le contexte complet de la décision.*
+
+### V2-L1 — Stockage des images hors de la base (Supabase Storage) · `M`
+
+Aujourd'hui, `entity_portraits`, `block_images` et `background_images` stockent l'image directement dans une colonne `bytea` Postgres — un choix simple fait pendant la V2-G/H, jamais pensé pour tenir à l'échelle d'un compendium illustré. Ces octets comptent contre les **500 Mo de la base** du palier gratuit Supabase, jamais contre le **1 Go de stockage fichiers**, qui reste vide. L'ambition d'illustrer tout le compendium SRD 2024 (~800 entrées, 3-4 images chacune) sature la base bien avant de toucher au stockage si rien ne change.
+
+**Point de vigilance, pas un détail** : un bloc peut être en visibilité `gm` (règle absolue 4 du `CLAUDE.md` — la visibilité se résout côté serveur, avant l'envoi). Si le bucket Storage est configuré en accès public pour simplifier, l'image d'un bloc `gm` devient joignable par n'importe qui connaissant l'URL, sans repasser par le filtrage — exactement la fuite que `publicShare.ts` existe pour éviter côté texte. Le bucket doit rester privé, avec une URL signée générée côté serveur après revérification de la visibilité, jamais un lien public direct.
+
+**Critères**
+- [ ] `entity_portraits.image`, `block_images.image`, `background_images.backdrop_image` migrent vers des objets du bucket Supabase Storage ; la colonne `bytea` est retirée une fois la bascule confirmée.
+- [ ] Une interface de stockage sépare l'appelant du fournisseur concret (`specs/cible-locale-et-ia.md` règle 4) — remplaçable par le système de fichiers le jour de la cible locale, sans toucher au reste du code.
+- [ ] Les images déjà en place au moment de la migration sont copiées vers le bucket, pas seulement le code qui en écrit de nouvelles — aucune image existante perdue.
+- [ ] Un bloc/portrait dont la visibilité n'est pas publique reste inaccessible par URL directe à un visiteur qui n'y a pas droit (URL signée à durée limitée, jamais un bucket public en lecture libre).
+- [ ] Après migration, la taille de la base de données redescend nettement ; celle du bucket reflète le poids réel des images.
+- [ ] Vérifié en conditions réelles (déploiement Vercel, pas seulement en local) : upload, affichage public et privé d'un portrait et d'une image de bloc.
+
+---
+
 ## 3. Critère de fin de V2
 
 > Mener une séance complète avec votre table — préparation, PNJ cohérents, carte, combat, notes — sans ouvrir aucun autre outil.
