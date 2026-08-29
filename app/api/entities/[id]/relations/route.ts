@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Entite introuvable." }, { status: 404 });
   }
 
-  await addRelation(supabase, {
+  const result = await addRelation(supabase, {
     worldId: entity.world_id,
     sourceEntityId: entityId,
     targetEntityId: parsed.data.targetEntityId,
@@ -38,6 +38,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     visibilityScopeId: parsed.data.visibility.scopeId,
     createdBy: user.id,
   });
+  if (!result.ok) {
+    const message =
+      result.reason === "duplicate" ? "Cette relation existe déjà." : "Cette relation créerait un cycle de parenté.";
+    return NextResponse.json({ error: message }, { status: 409 });
+  }
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }

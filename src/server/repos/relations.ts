@@ -88,6 +88,16 @@ export async function listRelationsForEntity(
   ];
 }
 
+export type InsertRelationResult = { ok: true } | { ok: false; reason: "duplicate" | "cycle" };
+
+/**
+ * `23505` (contrainte d'unicite sur source/cible/type) et `P0001` (le
+ * declencheur anti-cycle de parent_of/part_of, genealogy_relations.sql) sont
+ * deux refus attendus, pas des pannes — un clic sur "+ Ajouter une relation"
+ * avec la selection par defaut (premiere entite, premier type) tombe
+ * facilement sur l'un des deux. Toute autre erreur Postgres reste une
+ * exception non rattrapee.
+ */
 export async function insertRelation(
   supabase: TypedClient,
   params: {
@@ -99,7 +109,7 @@ export async function insertRelation(
     visibilityScopeId: string | null;
     createdBy: string;
   }
-): Promise<void> {
+): Promise<InsertRelationResult> {
   const { error } = await supabase.from("relations").insert({
     world_id: params.worldId,
     source_entity_id: params.sourceEntityId,
@@ -109,7 +119,10 @@ export async function insertRelation(
     visibility_scope_id: params.visibilityScopeId,
     created_by: params.createdBy,
   });
-  if (error) throw new Error(error.message);
+  if (!error) return { ok: true };
+  if (error.code === "23505") return { ok: false, reason: "duplicate" };
+  if (error.code === "P0001") return { ok: false, reason: "cycle" };
+  throw new Error(error.message);
 }
 
 export async function deleteRelation(supabase: TypedClient, id: string): Promise<void> {

@@ -355,18 +355,30 @@ Spécification complète : `specs/psyche-pnj.md`.
 - [ ] `label` prime à l'affichage : « le Troisième Hiver Noir » plutôt qu'une date.
 - [ ] Une entrée en ligne se promeut en entité d'un clic, sans rien perdre.
 
-### V2-H3 — Généalogie et relations · `M`
+### V2-H3 — Généalogie et relations · `M` — fait
 
 - Bloc `relationships` (liste simple) **avant** `genealogy` (arbre visuel).
 - `genealogy` ne stocke que la configuration d'affichage ; les liens vivent dans `relations`.
 
 **Critères**
-- [ ] Ajouter un parent se fait en créant une relation ; tous les arbres qui incluent la personne se mettent à jour.
-- [ ] **Le graphe est construit côté serveur, après filtrage.** Une parenté en visibilité `gm` n'est pas dans la réponse HTTP.
-- [ ] Un nœud dont la relation est cachée **disparaît**, il ne s'affiche pas grisé.
-- [ ] Cycles sur `part_of` et sur `parent_of` refusés par déclencheur.
+- [x] Ajouter un parent se fait en créant une relation ; tous les arbres qui incluent la personne se mettent à jour.
+- [x] **Le graphe est construit côté serveur, après filtrage.** Une parenté en visibilité `gm` n'est pas dans la réponse HTTP.
+- [x] Un nœud dont la relation est cachée **disparaît**, il ne s'affiche pas grisé.
+- [x] Cycles sur `part_of` et sur `parent_of` refusés par déclencheur.
 
 > Construisez `relationships` d'abord et servez-vous-en une semaine. Vous découvrirez peut-être que l'arbre visuel n'est pas nécessaire.
+
+**Pas de bloc `relationships` séparé, décision explicite** : cette liste simple existait déjà, sans condition, en tête de fiche (`RelationsChips.tsx`/`PublicRelations.tsx`, V2-G11) — un bloc dédié n'aurait fait que dupliquer la même donnée. `genealogy` (`FamilyTreeCanvas`/`FamilyTreeCard`) dérive l'arbre en direct de `relations` via une seule fonction partagée (`getFamilyTree`, `src/server/services/genealogy.ts`) entre l'éditeur et le wiki public — jamais deux chemins de filtrage qui pourraient diverger. Navigation clic-glisser et zoom (centré sur la souris) ajoutés à la demande, arbre centré/ajusté à l'ouverture ; suppression de lien directement depuis l'arête épinglée ; menu de choix du type de relation positionné exactement sur le bouton cliqué plutôt qu'en bas de l'écran.
+
+**Vérifié en direct, les quatre critères** (monde Valdoria, fiche de Sah Lââm) :
+- Relation `parent_of` ajoutée en visibilité MJ uniquement (Sah → Naivara Amakiir) : le nouveau nœud apparaît dans l'arbre pour un visiteur MJ après rechargement, avec son propre portrait.
+- `/m/valdoria/apercu/test-v0-06e` (prévisualisation anonyme, même filtrage que `/partage`) : le nœud Naivara est **entièrement absent** du conteneur de l'arbre (vérifié par script, pas seulement à l'œil), alors que le reste de la fiche est visible — la relation n'a jamais quitté le serveur, pas un simple masquage CSS.
+- Tentative de cycle (Naivara `parent_of` Sah, alors que Sah `parent_of` Naivara existe déjà) : rejetée par le déclencheur `check_parent_of_no_cycle` (`supabase/migrations/20260827170001_genealogy_relations.sql`).
+- Relation et nœud de test retirés après vérification, fiches restaurées à leur état d'origine.
+
+**Bug réel trouvé et corrigé en testant** : le bouton « + Ajouter une relation » (`RelationsChips.tsx`, partagé par toute fiche) soumet la sélection par défaut du formulaire (première entité, premier type) — qui entre facilement en collision avec une relation déjà existante ou déclenche le refus de cycle. Le serveur laissait alors remonter une exception Postgres non rattrapée (500, `uncaughtException` côté serveur) sans aucun message pour la personne. Corrigé : `insertRelation` (`src/server/repos/relations.ts`) distingue maintenant les deux refus attendus (`23505` unicité, `P0001` cycle — le code du déclencheur) d'une vraie panne, la route (`app/api/entities/[id]/relations/route.ts`) répond `409` avec un message clair, et `RelationsChips.tsx` l'affiche à côté du bouton plutôt que d'échouer en silence.
+
+**Limite connue, non corrigée** : le bloc généalogie charge son arbre une seule fois côté client et ne se resynchronise pas automatiquement quand une relation est ajoutée ailleurs sur la même page (le formulaire d'en-tête, `RelationsChips.tsx`) — seul son propre bouton « + » interne déclenche un rechargement immédiat. Un rechargement de page suffit à voir l'arbre à jour (la donnée elle-même est toujours correcte, jamais mise en cache côté serveur), mais ce n'est pas encore instantané entre les deux surfaces d'édition. À corriger si ça gêne en usage réel — pas fait ici pour rester dans le périmètre de la vérification.
 
 ### V2-H4 — Quêtes et journal de séance · `M`
 

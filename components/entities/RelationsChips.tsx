@@ -43,6 +43,7 @@ export default function RelationsChips({
   );
   const [visibilityLevel, setVisibilityLevel] = useState("public");
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const groups = new Map<string, RelationChip[]>();
   for (const relation of relations) {
@@ -60,7 +61,8 @@ export default function RelationsChips({
   async function addRelation() {
     if (!targetEntityId) return;
     setPending(true);
-    await fetch(`/api/entities/${entityId}/relations`, {
+    setError(null);
+    const res = await fetch(`/api/entities/${entityId}/relations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -70,6 +72,11 @@ export default function RelationsChips({
       }),
     });
     setPending(false);
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      setError(body?.error ?? "Impossible d'ajouter cette relation.");
+      return;
+    }
     router.refresh();
   }
 
@@ -142,6 +149,7 @@ export default function RelationsChips({
           >
             + Ajouter une relation
           </button>
+          {error && <span className="text-xs text-danger">{error}</span>}
         </div>
       )}
     </div>

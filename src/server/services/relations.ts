@@ -7,6 +7,7 @@ import {
   deleteRelation as repoDeleteRelation,
   insertRelation,
   listRelationsForEntity,
+  type InsertRelationResult,
   type OtherEntityRef,
 } from "@/src/server/repos/relations";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
@@ -62,8 +63,8 @@ export async function addRelation(
     visibilityScopeId: string | null;
     createdBy: string;
   }
-): Promise<void> {
-  await insertRelation(supabase, params);
+): Promise<InsertRelationResult> {
+  return insertRelation(supabase, params);
 }
 
 export async function removeRelation(supabase: TypedClient, id: string): Promise<void> {
