@@ -182,10 +182,12 @@ export default function RelationsChips({
           <Dropdown
             value={relationType}
             options={[
-              { value: RELATION_TYPES[0], label: RELATION_LABELS_FR[RELATION_TYPES[0]] ?? RELATION_TYPES[0] },
+              ...RELATION_TYPES.map((type) => ({ value: type, label: RELATION_LABELS_FR[type] ?? type })),
               { value: CHILD_OF_OPTION, label: RELATION_LABELS_FR[CHILD_OF_OPTION] ?? CHILD_OF_OPTION },
-              ...RELATION_TYPES.slice(1).map((type) => ({ value: type, label: RELATION_LABELS_FR[type] ?? type })),
-            ]}
+              // Retour utilisateur : options triees par ordre alphabetique du
+              // libelle affiche (pas de l'ordre du vocabulaire ferme ci-dessus,
+              // qui suit un tout autre critere — voir inverses.ts).
+            ].sort((a, b) => a.label.localeCompare(b.label, "fr"))}
             onChange={setRelationType}
             aria-label="Type de relation"
           />
