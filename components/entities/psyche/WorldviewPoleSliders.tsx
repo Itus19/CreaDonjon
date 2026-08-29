@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { WORLDVIEW_POLE_KEYS, type WorldviewPoleKey } from "@/src/core/psyche/keys";
+import { WORLDVIEW_POLE_DESCRIPTIONS_FR } from "@/src/i18n/fr";
 
 const POLE_ENDS_FR: Record<WorldviewPoleKey, { positive: string; negative: string }> = {
   order_freedom: { positive: "Liberté", negative: "Ordre" },
@@ -87,7 +88,10 @@ export default function WorldviewPoleSliders({
         const ends = POLE_ENDS_FR[key];
         return (
           <div key={key} className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-between text-[10px] text-ink-muted">
+            <div
+              className="flex items-center justify-between text-[10px] text-ink-muted"
+              title={WORLDVIEW_POLE_DESCRIPTIONS_FR[key]}
+            >
               <span>{ends.negative}</span>
               <span className="font-mono text-ink">{value}</span>
               <span>{ends.positive}</span>

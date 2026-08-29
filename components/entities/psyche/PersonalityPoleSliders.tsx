@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { PERSONALITY_POLE_KEYS, type PersonalityPoleKey } from "@/src/core/psyche/keys";
+import { PERSONALITY_POLE_DESCRIPTIONS_FR } from "@/src/i18n/fr";
 
 const POLE_ENDS_FR: Record<PersonalityPoleKey, { positive: string; negative: string }> = {
   curiosity_caution: { positive: "Curiosité", negative: "Prudence" },
@@ -99,7 +100,10 @@ export default function PersonalityPoleSliders({
         const ends = POLE_ENDS_FR[key];
         return (
           <div key={key} className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-between text-[10px] text-ink-muted">
+            <div
+              className="flex items-center justify-between text-[10px] text-ink-muted"
+              title={PERSONALITY_POLE_DESCRIPTIONS_FR[key]}
+            >
               <span>{ends.negative}</span>
               <span className="font-mono text-ink">{value}</span>
               <span>{ends.positive}</span>

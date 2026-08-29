@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { RELATIONSHIP_AXIS_KEYS, type RelationshipAxisKey } from "@/src/core/psyche/keys";
+import { RELATIONSHIP_AXIS_DESCRIPTIONS_FR } from "@/src/i18n/fr";
 
 const AXIS_ENDS_FR: Record<RelationshipAxisKey, { positive: string; negative: string }> = {
   trust_distrust: { positive: "Confiance", negative: "Méfiance" },
@@ -87,7 +88,10 @@ export default function RelationshipAxisSliders({
         const ends = AXIS_ENDS_FR[key];
         return (
           <div key={key} className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-between text-[10px] text-ink-muted">
+            <div
+              className="flex items-center justify-between text-[10px] text-ink-muted"
+              title={RELATIONSHIP_AXIS_DESCRIPTIONS_FR[key]}
+            >
               <span>{ends.negative}</span>
               <span className="font-mono text-ink">{value}</span>
               <span>{ends.positive}</span>

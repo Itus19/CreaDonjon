@@ -1,4 +1,5 @@
 import { WORLDVIEW_POLE_KEYS, type WorldviewPoleKey } from "@/src/core/psyche/keys";
+import { WORLDVIEW_POLE_DESCRIPTIONS_FR } from "@/src/i18n/fr";
 
 const AXIS_LABELS_FR: Record<WorldviewPoleKey, string> = {
   order_freedom: "Ordre",
@@ -64,6 +65,7 @@ export default function WorldviewRadar({ poles }: { poles: { key: WorldviewPoleK
             dominantBaseline="middle"
             className="fill-[var(--ink-muted)] text-[9px]"
           >
+            <title>{WORLDVIEW_POLE_DESCRIPTIONS_FR[key]}</title>
             {AXIS_LABELS_FR[key]}
           </text>
         );

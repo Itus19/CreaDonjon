@@ -501,6 +501,70 @@ export const RELATION_LABELS_FR: Record<string, string> = {
   witnessed_by: "vu par",
 };
 
+/**
+ * Infobulles au survol des poles de personnalite (V2, retour utilisateur
+ * point 6) — une phrase qui explique ce que veut dire chaque extremite,
+ * reprise a l'identique dans le curseur MJ et le radar public (meme
+ * composant `PersonalityRadar` sur les deux surfaces).
+ */
+export const PERSONALITY_POLE_DESCRIPTIONS_FR: Record<string, string> = {
+  curiosity_caution:
+    "Curiosite : cherche a explorer, questionner, ouvrir ce qui est ferme. Prudence : prefere le connu, evalue le risque avant d'agir.",
+  altruism_selfishness:
+    "Altruisme : place le bien d'autrui avant le sien. Egoisme : priorise son propre interet, quitte a sacrifier celui des autres.",
+  empathy_hardness:
+    "Empathie : ressent et prend en compte les emotions d'autrui. Durete : reste insensible ou indifferent·e a la souffrance d'autrui.",
+  impulse_prudence:
+    "Impulsivite : agit sur l'instant, sans peser les consequences. Prudence : reflechit et temporise avant d'agir.",
+  extraversion_reserve:
+    "Extraversion : puise son energie dans le contact social, s'exprime ouvertement. Reserve : se livre peu, prefere l'observation ou la solitude.",
+  authority_independence:
+    "Autorite : cherche a diriger, decider pour le groupe. Independance : refuse d'obeir comme de commander, agit seul·e.",
+};
+
+/**
+ * Meme principe que `PERSONALITY_POLE_DESCRIPTIONS_FR` pour les axes du
+ * bloc `relationship` — une relation precise (A envers B), jamais un trait
+ * general de personnalite.
+ */
+export const RELATIONSHIP_AXIS_DESCRIPTIONS_FR: Record<string, string> = {
+  trust_distrust:
+    "Confiance : croit en la parole et aux intentions de l'autre. Mefiance : doute, s'attend a etre trompe·e ou trahi·e.",
+  friendship_hostility:
+    "Amitie : apprecie la compagnie de l'autre, souhaite son bien. Hostilite : eprouve de l'antipathie, cherche a nuire.",
+  respect_contempt:
+    "Respect : reconnait la valeur ou les competences de l'autre. Mepris : le·la considere comme inferieur·e ou negligeable.",
+  attraction_repulsion:
+    "Attirance : ressent un desir ou un magnetisme envers l'autre. Repulsion : eprouve un rejet ou un degout.",
+  debt_independence:
+    "Dette : se sent redevable, oblige·e envers l'autre. Independance : ne se sent lie·e par aucune obligation envers lui.",
+  fear_assurance:
+    "Peur : redoute l'autre, anticipe une menace. Assurance : se sent en securite, superieur·e ou indifferent·e au danger qu'il represente.",
+  interest_indifference:
+    "Interet : accorde de l'attention, veut en savoir plus sur l'autre. Indifference : n'accorde aucune importance a sa presence ou son sort.",
+};
+
+/**
+ * Meme principe pour les convictions morales/politiques du bloc
+ * `worldview` — un positionnement de valeurs, pas une relation ni un trait.
+ */
+export const WORLDVIEW_POLE_DESCRIPTIONS_FR: Record<string, string> = {
+  order_freedom:
+    "Ordre : privilegie la regle, la hierarchie et la structure. Liberte : privilegie l'autonomie individuelle, quitte a defier la regle.",
+  mercy_justice:
+    "Misericorde : privilegie le pardon et la clemence. Justice : privilegie que chacun·e reponde de ses actes, y compris par la punition.",
+  sacred_profane:
+    "Sacre : accorde une valeur spirituelle ou rituelle aux choses. Profane : les considere de facon purement pratique, sans dimension sacree.",
+  tradition_progress:
+    "Tradition : valorise les coutumes et l'heritage du passe. Progres : valorise le changement et la remise en question de l'ordre etabli.",
+  individual_collective:
+    "Individu : fait primer la liberte et les besoins de la personne. Collectif : fait primer l'interet et la cohesion du groupe.",
+  wealth_honor:
+    "Richesse : mesure la reussite a l'accumulation de biens ou de pouvoir. Honneur : la mesure au respect de sa parole et de sa reputation.",
+  peace_force:
+    "Paix : privilegie le dialogue et la resolution non violente. Force : considere la violence comme un moyen legitime ou necessaire.",
+};
+
 export const QUEST_STATE_LABELS_FR: Record<string, string> = {
   not_started: "Non commencée",
   in_progress: "En cours",

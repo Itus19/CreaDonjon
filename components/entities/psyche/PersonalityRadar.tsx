@@ -1,5 +1,6 @@
 import { PERSONALITY_POLE_KEYS, type PersonalityPoleKey } from "@/src/core/psyche/keys";
 import type { PersonalityArchetype } from "@/src/core/psyche/archetype";
+import { PERSONALITY_POLE_DESCRIPTIONS_FR } from "@/src/i18n/fr";
 
 const AXIS_LABELS_FR: Record<PersonalityPoleKey, string> = {
   curiosity_caution: "Curiosité",
@@ -75,6 +76,7 @@ export default function PersonalityRadar({
               dominantBaseline="middle"
               className="fill-[var(--ink-muted)] text-[9px]"
             >
+              <title>{PERSONALITY_POLE_DESCRIPTIONS_FR[key]}</title>
               {AXIS_LABELS_FR[key]}
             </text>
           );

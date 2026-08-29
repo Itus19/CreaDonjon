@@ -1,5 +1,6 @@
 import { RELATIONSHIP_AXIS_KEYS, type RelationshipAxisKey } from "@/src/core/psyche/keys";
 import { relationshipColor } from "@/src/core/psyche/relationshipColor";
+import { RELATIONSHIP_AXIS_DESCRIPTIONS_FR } from "@/src/i18n/fr";
 
 const AXIS_LABELS_FR: Record<RelationshipAxisKey, string> = {
   trust_distrust: "Confiance",
@@ -70,6 +71,7 @@ export default function RelationshipRadar({
             dominantBaseline="middle"
             className="fill-[var(--ink-muted)] text-[9px]"
           >
+            <title>{RELATIONSHIP_AXIS_DESCRIPTIONS_FR[key]}</title>
             {AXIS_LABELS_FR[key]}
           </text>
         );
