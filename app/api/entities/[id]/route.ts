@@ -30,6 +30,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     name: parsed.data.name,
     entityKind: parsed.data.entityKind,
     aliases: parsed.data.aliases,
+    isPublic: parsed.data.isPublic,
   });
 
   if (!result.ok) {

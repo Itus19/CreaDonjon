@@ -88,3 +88,8 @@ export const addWorldviewEventSchema = z.object({
     }),
   occurredAtIngame: zGameDate.nullable().default(null),
 });
+
+/** Bascule "afficher au wiki" d'une ligne de souvenir (V2, retour utilisateur point 5) — meme schema pour `personality_events` (partage personality/worldview) et `attitude_events`. */
+export const setEventVisibilitySchema = z.object({
+  isPublic: z.boolean(),
+});

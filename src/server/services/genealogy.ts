@@ -22,7 +22,7 @@ export async function getFamilyTree(
   supabase: TypedClient,
   params: { worldId: string; rootEntityId: string; depthUp: number; depthDown: number; viewer: Viewer }
 ): Promise<FamilyTree> {
-  const [rows, entities] = await Promise.all([
+  const [rows, allEntities] = await Promise.all([
     listFamilyRelationsForWorld(supabase, params.worldId),
     listEntitiesForWorld(supabase, params.worldId),
   ]);
@@ -39,7 +39,22 @@ export async function getFamilyTree(
     params.viewer
   );
 
-  const edges: FamilyEdgeInput[] = visible.map((r) => ({
+  // Fiche masquee (V2, retour utilisateur point 2) : seul le visiteur
+  // anonyme perd les entites `is_public: false` — le MJ authentifie voit
+  // toujours tout, meme comportement que le reste de l'editeur. Filtre
+  // aussi les aretes qui touchent une entite masquee (pas seulement la
+  // liste d'entites) : `buildFamilyTree` (src/core, `entityById.get(id) as
+  // FamilyEntityInput`) suppose que toute arete visible reference une
+  // entite presente dans la liste — la laisser passer sans l'entite
+  // ferait planter le rendu au lieu de simplement masquer le lien.
+  const entities = params.viewer.kind === "anonymous" ? allEntities.filter((e) => e.is_public) : allEntities;
+  const visibleEntityIds = new Set(entities.map((e) => e.id));
+  const edgesVisible =
+    params.viewer.kind === "anonymous"
+      ? visible.filter((r) => visibleEntityIds.has(r.source_entity_id) && visibleEntityIds.has(r.target_entity_id))
+      : visible;
+
+  const edges: FamilyEdgeInput[] = edgesVisible.map((r) => ({
     id: r.id,
     sourceId: r.source_entity_id,
     targetId: r.target_entity_id,

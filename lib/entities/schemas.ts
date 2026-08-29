@@ -39,6 +39,7 @@ export const updateEntitySchema = z.object({
   name: z.string().trim().max(200, "200 caracteres maximum."),
   entityKind: z.string().trim().min(1, "Choisissez un type.").max(40, "40 caractères maximum."),
   aliases: z.array(z.string()).default([]),
+  isPublic: z.boolean(),
 });
 
 // Glisser-depose (V2-G9) : copie de reorderBlockSchema (lib/blocks/schemas.ts).

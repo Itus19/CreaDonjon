@@ -228,14 +228,26 @@ export default function PublicBlockView({ block, hrefBase }: { block: PublicBloc
         <PublicQuestBlock data={block.data as unknown as QuestBlockData} questRefs={block.questRefs} hrefBase={hrefBase} />
       )}
       {block.blockType === "personality" && (
-        <PublicPersonalityBlock data={block.data as unknown as PersonalityBlockData} />
+        <PublicPersonalityBlock
+          data={block.data as unknown as PersonalityBlockData}
+          events={block.personalityEvents ?? []}
+          calendar={block.timelineCalendar ?? null}
+        />
       )}
-      {block.blockType === "worldview" && <PublicWorldviewBlock data={block.data as unknown as WorldviewBlockData} />}
+      {block.blockType === "worldview" && (
+        <PublicWorldviewBlock
+          data={block.data as unknown as WorldviewBlockData}
+          events={block.personalityEvents ?? []}
+          calendar={block.timelineCalendar ?? null}
+        />
+      )}
       {block.blockType === "relationship" && (
         <PublicRelationshipBlock
           axes={block.relationshipAxes ?? {}}
           target={block.relationshipTarget ?? null}
           hrefBase={hrefBase}
+          events={block.relationshipEvents ?? []}
+          calendar={block.timelineCalendar ?? null}
         />
       )}
       {block.blockType === "relations_graph" && block.relationsGraph && (

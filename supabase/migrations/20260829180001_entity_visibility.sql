@@ -1,0 +1,13 @@
+-- V2 (retour utilisateur, point 2) : bouton de visibilite generale de
+-- fiche, a cote du selecteur de type. Contrairement au reste du modele
+-- (SCHEMA.md §4, "les entites elles-memes ne portent pas de visibilite
+-- propre"), l'entite porte ici un simple bascule public/masque — jamais
+-- les 6 niveaux de `visibility_level`, meme geste binaire que l'oeil des
+-- bulles de relation et des liens du bloc reseau.
+--
+-- Defaut `true` : une fiche existante ne disparait jamais du wiki public a
+-- cause de cette migration (aucun masquage retroactif d'un contenu deja
+-- publie). Seules les fiches creees a partir de maintenant naissent
+-- masquees — impose par le code (src/server/services/entities.ts,
+-- `createEntity`), jamais par ce defaut de colonne.
+alter table entities add column is_public boolean not null default true;

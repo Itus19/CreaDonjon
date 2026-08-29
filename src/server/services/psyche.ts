@@ -22,6 +22,8 @@ import {
   insertPersonalityEvent,
   listAttitudeEvents,
   listPersonalityEvents,
+  updateAttitudeEventVisibility,
+  updatePersonalityEventVisibility,
   upsertAttitude,
   type AttitudeEventRow,
   type PersonalityEventRow,
@@ -140,24 +142,47 @@ export async function addWorldviewEvent(
   });
 }
 
-/** Le journal partage (`personality_events`) filtre par cles de poles a l'affichage — le bloc `personality` ne montre que SES souvenirs, `worldview` les siens, meme si les deux ecrivent dans la meme table (meme entite, meme portee). */
+/**
+ * Le journal partage (`personality_events`) filtre par cles de poles a
+ * l'affichage — le bloc `personality` ne montre que SES souvenirs,
+ * `worldview` les siens, meme si les deux ecrivent dans la meme table
+ * (meme entite, meme portee). `onlyPublic` (V2, retour utilisateur point
+ * 5) : le filtre `is_public` s'applique AVANT le `slice(0, 20)`, jamais
+ * apres — sinon un souvenir recent mais masque ferait perdre a tort un
+ * souvenir plus ancien mais public, au-dela de la fenetre des 20.
+ */
 async function listPoleEvents(
   supabase: TypedClient,
   entityId: string,
-  validKeys: readonly string[]
+  validKeys: readonly string[],
+  onlyPublic: boolean
 ): Promise<PersonalityEventRow[]> {
   const events = await listPersonalityEvents(supabase, entityId, 50);
   return events
     .filter((event) => Object.keys(event.deltas as Record<string, number>).some((key) => validKeys.includes(key)))
+    .filter((event) => !onlyPublic || event.is_public)
     .slice(0, 20);
 }
 
-export async function getPersonalityEvents(supabase: TypedClient, entityId: string): Promise<PersonalityEventRow[]> {
-  return listPoleEvents(supabase, entityId, PERSONALITY_POLE_KEYS);
+export async function getPersonalityEvents(
+  supabase: TypedClient,
+  entityId: string,
+  onlyPublic = false
+): Promise<PersonalityEventRow[]> {
+  return listPoleEvents(supabase, entityId, PERSONALITY_POLE_KEYS, onlyPublic);
 }
 
-export async function getWorldviewEvents(supabase: TypedClient, entityId: string): Promise<PersonalityEventRow[]> {
-  return listPoleEvents(supabase, entityId, WORLDVIEW_POLE_KEYS);
+export async function getWorldviewEvents(
+  supabase: TypedClient,
+  entityId: string,
+  onlyPublic = false
+): Promise<PersonalityEventRow[]> {
+  return listPoleEvents(supabase, entityId, WORLDVIEW_POLE_KEYS, onlyPublic);
+}
+
+/** Bascule "afficher au wiki" d'un souvenir de personnalite/convictions (V2, retour utilisateur point 5). */
+export async function setPersonalityEventVisibility(supabase: TypedClient, id: string, isPublic: boolean): Promise<void> {
+  await updatePersonalityEventVisibility(supabase, id, isPublic);
 }
 
 export interface AttitudeAxes {
@@ -246,13 +271,21 @@ export async function addAttitudeEvent(
   return { ok: true, axes: nextAxes, event };
 }
 
+/** `onlyPublic` (V2, retour utilisateur point 5) : meme raison que `listPoleEvents` — filtre AVANT de retenir les 20 dernieres, jamais apres. */
 export async function getAttitudeEvents(
   supabase: TypedClient,
   sourceEntityId: string,
-  targetEntityId: string
+  targetEntityId: string,
+  onlyPublic = false
 ): Promise<AttitudeEventRow[]> {
   const entity = await getEntityById(supabase, sourceEntityId);
   const campaignId = entity ? await resolveCampaignId(supabase, entity.world_id) : null;
   if (!campaignId) return [];
-  return listAttitudeEvents(supabase, { campaignId, sourceEntityId, targetEntityId });
+  const events = await listAttitudeEvents(supabase, { campaignId, sourceEntityId, targetEntityId }, 50);
+  return events.filter((event) => !onlyPublic || event.is_public).slice(0, 20);
+}
+
+/** Bascule "afficher au wiki" d'un souvenir de relation (V2, retour utilisateur point 5). */
+export async function setAttitudeEventVisibility(supabase: TypedClient, id: string, isPublic: boolean): Promise<void> {
+  await updateAttitudeEventVisibility(supabase, id, isPublic);
 }

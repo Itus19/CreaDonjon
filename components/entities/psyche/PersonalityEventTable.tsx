@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
+import EyeIcon from "@/components/shared/EyeIcon";
 import GameDateInput from "@/components/shared/GameDateInput";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
 import { DEFAULT_CALENDAR } from "@/src/core/calendar/defaultCalendar";
@@ -26,6 +27,7 @@ interface PersonalityEventInfo {
   deltas: Partial<Record<PersonalityPoleKey, number>>;
   occurred_at_ingame: GameDate | null;
   created_at: string;
+  is_public: boolean;
 }
 
 function formatDeltas(deltas: Partial<Record<PersonalityPoleKey, number>>): string {
@@ -70,6 +72,17 @@ export default function PersonalityEventTable({
   }
 
   useEffect(loadEvents, [entityId, reloadSignal]);
+
+  /** Bascule "afficher au wiki" (V2, retour utilisateur point 5) — mise a jour optimiste locale, meme geste que RelationsChips.tsx. */
+  async function toggleEventPublic(event: PersonalityEventInfo) {
+    const next = !event.is_public;
+    setEvents((prev) => prev.map((e) => (e.id === event.id ? { ...e, is_public: next } : e)));
+    await fetch(`/api/personality-events/${event.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isPublic: next }),
+    });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -140,6 +153,7 @@ export default function PersonalityEventTable({
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-edge/60 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+              <th className="py-1 pr-4">Wiki</th>
               <th className="py-1 pr-4">Date IRL</th>
               <th className="py-1 pr-4">Date ingame</th>
               <th className="py-1 pr-4">Événement</th>
@@ -149,6 +163,17 @@ export default function PersonalityEventTable({
           <tbody>
             {events.map((event) => (
               <tr key={event.id} className="border-b border-edge/30 align-top">
+                <td className="py-1.5 pr-4">
+                  <button
+                    type="button"
+                    onClick={() => toggleEventPublic(event)}
+                    className="text-ink-muted hover:text-ink"
+                    aria-label={event.is_public ? "Masquer ce souvenir au wiki public" : "Afficher ce souvenir au wiki public"}
+                    title={event.is_public ? "Visible au wiki public — cliquer pour masquer" : "Masqué au wiki public — cliquer pour afficher"}
+                  >
+                    <EyeIcon open={event.is_public} className="h-3.5 w-3.5" />
+                  </button>
+                </td>
                 <td className="whitespace-nowrap py-1.5 pr-4 text-xs text-ink-muted">
                   {new Date(event.created_at).toLocaleDateString("fr-FR")}
                 </td>
@@ -161,7 +186,7 @@ export default function PersonalityEventTable({
             ))}
             {events.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-2 text-xs italic text-ink-muted">
+                <td colSpan={5} className="py-2 text-xs italic text-ink-muted">
                   Aucun souvenir pour l&apos;instant.
                 </td>
               </tr>

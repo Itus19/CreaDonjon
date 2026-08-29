@@ -8,6 +8,7 @@ import PortraitUpload from "@/components/entities/PortraitUpload";
 import EntityBlocks, { type BlockItem } from "@/components/blocks/EntityBlocks";
 import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
 import Dropdown from "@/components/shared/Dropdown";
+import EyeIcon from "@/components/shared/EyeIcon";
 import { DEFAULT_ENTITY_NAME, ENTITY_KINDS } from "@/lib/entities/schemas";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import type { EntitySummary } from "@/src/server/repos/entities";
@@ -67,6 +68,7 @@ export default function EditEntityForm({
   const router = useRouter();
   const [name, setName] = useState(entity.name);
   const [entityKind, setEntityKind] = useState(entity.entity_kind);
+  const [isPublic, setIsPublic] = useState(entity.is_public);
   const [isPc, setIsPc] = useState(initialIsPc);
   const [aliases, setAliases] = useState<string[]>(entity.aliases);
   const [newAlias, setNewAlias] = useState("");
@@ -130,6 +132,7 @@ export default function EditEntityForm({
     name?: string;
     entityKind?: string;
     aliases?: string[];
+    isPublic?: boolean;
   };
 
   /**
@@ -158,6 +161,7 @@ export default function EditEntityForm({
         name: overrides?.name ?? name,
         entityKind: overrides?.entityKind ?? entityKind,
         aliases: overrides?.aliases ?? aliases,
+        isPublic: overrides?.isPublic ?? isPublic,
       }),
     });
 
@@ -223,6 +227,13 @@ export default function EditEntityForm({
     save({ entityKind: kind });
   }
 
+  /** Bouton oeil a cote du type de fiche (V2, retour utilisateur point 2) — bascule binaire, meme geste que RelationsChips.tsx. */
+  function toggleEntityPublic() {
+    const next = !isPublic;
+    setIsPublic(next);
+    save({ isPublic: next });
+  }
+
   function confirmCustomCategory() {
     const value = (customCategoryDraft ?? "").trim();
     setCustomCategoryDraft(null);
@@ -276,6 +287,15 @@ export default function EditEntityForm({
                 (V1-C4, specs/arbitrage-modifications.md §3.1). */}
             <div className="flex shrink-0 items-center gap-2">
               <EntityHistoryPanel entityId={entity.id} />
+              <button
+                type="button"
+                onClick={toggleEntityPublic}
+                className="text-ink-muted hover:text-ink"
+                aria-label={isPublic ? "Masquer cette fiche au wiki public" : "Rendre cette fiche visible au wiki public"}
+                title={isPublic ? "Visible au wiki public — cliquer pour masquer" : "Masquée au wiki public — cliquer pour rendre visible"}
+              >
+                <EyeIcon open={isPublic} className="h-4 w-4" />
+              </button>
               {customCategoryDraft !== null ? (
                 <input
                   autoFocus

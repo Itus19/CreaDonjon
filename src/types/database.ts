@@ -222,6 +222,7 @@ export type Database = {
           created_at: string
           deltas: Json
           id: string
+          is_public: boolean
           occurred_at_ingame: Json | null
           origin: string
           session_event_id: string | null
@@ -234,6 +235,7 @@ export type Database = {
           created_at?: string
           deltas?: Json
           id?: string
+          is_public?: boolean
           occurred_at_ingame?: Json | null
           origin: string
           session_event_id?: string | null
@@ -246,6 +248,7 @@ export type Database = {
           created_at?: string
           deltas?: Json
           id?: string
+          is_public?: boolean
           occurred_at_ingame?: Json | null
           origin?: string
           session_event_id?: string | null
@@ -911,6 +914,7 @@ export type Database = {
           display_order: number
           entity_kind: string
           id: string
+          is_public: boolean
           name: string
           search_fr: unknown
           slug: string
@@ -927,6 +931,7 @@ export type Database = {
           display_order?: number
           entity_kind?: string
           id?: string
+          is_public?: boolean
           name: string
           search_fr?: unknown
           slug: string
@@ -943,6 +948,7 @@ export type Database = {
           display_order?: number
           entity_kind?: string
           id?: string
+          is_public?: boolean
           name?: string
           search_fr?: unknown
           slug?: string
@@ -1455,6 +1461,7 @@ export type Database = {
           deltas: Json
           entity_id: string
           id: string
+          is_public: boolean
           occurred_at_ingame: Json | null
           origin: string
           session_event_id: string | null
@@ -1465,6 +1472,7 @@ export type Database = {
           deltas?: Json
           entity_id: string
           id?: string
+          is_public?: boolean
           occurred_at_ingame?: Json | null
           origin: string
           session_event_id?: string | null
@@ -1475,6 +1483,7 @@ export type Database = {
           deltas?: Json
           entity_id?: string
           id?: string
+          is_public?: boolean
           occurred_at_ingame?: Json | null
           origin?: string
           session_event_id?: string | null

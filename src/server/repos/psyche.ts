@@ -13,7 +13,12 @@ export interface PersonalityEventRow {
   session_event_id: string | null;
   occurred_at_ingame: Json | null;
   created_at: string;
+  /** Affichage au wiki public (V2, retour utilisateur point 5) — bascule binaire par ligne, masquee par defaut. */
+  is_public: boolean;
 }
+
+const PERSONALITY_EVENT_COLUMNS =
+  "id, entity_id, summary, deltas, origin, session_event_id, occurred_at_ingame, created_at, is_public";
 
 /** Journal en ajout seul (docs/adr/0013-tables-psyche-pnj.md) — jamais de mise a jour ni de suppression ici. */
 export async function insertPersonalityEvent(
@@ -37,7 +42,7 @@ export async function insertPersonalityEvent(
       session_event_id: params.sessionEventId,
       occurred_at_ingame: params.occurredAtIngame,
     })
-    .select("id, entity_id, summary, deltas, origin, session_event_id, occurred_at_ingame, created_at")
+    .select(PERSONALITY_EVENT_COLUMNS)
     .single();
   if (error) throw new Error(error.message);
   return data;
@@ -51,12 +56,22 @@ export async function listPersonalityEvents(
 ): Promise<PersonalityEventRow[]> {
   const { data, error } = await supabase
     .from("personality_events")
-    .select("id, entity_id, summary, deltas, origin, session_event_id, occurred_at_ingame, created_at")
+    .select(PERSONALITY_EVENT_COLUMNS)
     .eq("entity_id", entityId)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
   return data;
+}
+
+/** Bascule "afficher au wiki" d'un souvenir (V2, retour utilisateur point 5) — pas de verification de version, meme discipline que `updateRelationVisibility` (src/server/repos/relations.ts) : un champ independant, pas de conflit possible avec une autre ecriture. */
+export async function updatePersonalityEventVisibility(
+  supabase: TypedClient,
+  id: string,
+  isPublic: boolean
+): Promise<void> {
+  const { error } = await supabase.from("personality_events").update({ is_public: isPublic }).eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 export interface EntityAttitudeRow {
@@ -118,7 +133,12 @@ export interface AttitudeEventRow {
   session_event_id: string | null;
   occurred_at_ingame: Json | null;
   created_at: string;
+  /** Affichage au wiki public (V2, retour utilisateur point 5) — bascule binaire par ligne, masquee par defaut. */
+  is_public: boolean;
 }
+
+const ATTITUDE_EVENT_COLUMNS =
+  "id, campaign_id, source_entity_id, target_entity_id, summary, deltas, origin, session_event_id, occurred_at_ingame, created_at, is_public";
 
 /** Journal en ajout seul, par paire (specs/psyche-pnj.md §4). */
 export async function insertAttitudeEvent(
@@ -146,7 +166,7 @@ export async function insertAttitudeEvent(
       session_event_id: params.sessionEventId,
       occurred_at_ingame: params.occurredAtIngame,
     })
-    .select("id, campaign_id, source_entity_id, target_entity_id, summary, deltas, origin, session_event_id, occurred_at_ingame, created_at")
+    .select(ATTITUDE_EVENT_COLUMNS)
     .single();
   if (error) throw new Error(error.message);
   return data;
@@ -160,7 +180,7 @@ export async function listAttitudeEvents(
 ): Promise<AttitudeEventRow[]> {
   const { data, error } = await supabase
     .from("attitude_events")
-    .select("id, campaign_id, source_entity_id, target_entity_id, summary, deltas, origin, session_event_id, occurred_at_ingame, created_at")
+    .select(ATTITUDE_EVENT_COLUMNS)
     .eq("campaign_id", params.campaignId)
     .eq("source_entity_id", params.sourceEntityId)
     .eq("target_entity_id", params.targetEntityId)
@@ -168,4 +188,14 @@ export async function listAttitudeEvents(
     .limit(limit);
   if (error) throw new Error(error.message);
   return data;
+}
+
+/** Meme discipline que `updatePersonalityEventVisibility` ci-dessus. */
+export async function updateAttitudeEventVisibility(
+  supabase: TypedClient,
+  id: string,
+  isPublic: boolean
+): Promise<void> {
+  const { error } = await supabase.from("attitude_events").update({ is_public: isPublic }).eq("id", id);
+  if (error) throw new Error(error.message);
 }

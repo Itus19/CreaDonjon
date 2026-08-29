@@ -15,7 +15,11 @@ export interface EntitySummary {
   display_order: number;
   created_at: string;
   updated_at: string;
+  /** Visibilite generale de la fiche (V2, retour utilisateur point 2) — bascule binaire, jamais les 6 niveaux de `visibility_level`. */
+  is_public: boolean;
 }
+
+const ENTITY_COLUMNS = "id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at, is_public";
 
 export async function listEntitiesForWorld(
   supabase: TypedClient,
@@ -23,7 +27,7 @@ export async function listEntitiesForWorld(
 ): Promise<EntitySummary[]> {
   const { data, error } = await supabase
     .from("entities")
-    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
+    .select(ENTITY_COLUMNS)
     .eq("world_id", worldId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
@@ -36,7 +40,7 @@ export async function listEntitiesByIds(supabase: TypedClient, ids: string[]): P
   if (ids.length === 0) return [];
   const { data, error } = await supabase
     .from("entities")
-    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
+    .select(ENTITY_COLUMNS)
     .in("id", ids)
     .is("deleted_at", null);
   if (error) throw new Error(error.message);
@@ -50,7 +54,7 @@ export async function getEntityBySlug(
 ): Promise<EntitySummary | null> {
   const { data, error } = await supabase
     .from("entities")
-    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
+    .select(ENTITY_COLUMNS)
     .eq("world_id", worldId)
     .eq("slug", slug)
     .is("deleted_at", null)
@@ -110,6 +114,7 @@ export async function insertEntity(
     entityKind: string;
     aliases: string[];
     displayOrder: number;
+    isPublic: boolean;
   }
 ): Promise<EntitySummary> {
   const { data, error } = await supabase
@@ -122,8 +127,9 @@ export async function insertEntity(
       entity_kind: params.entityKind,
       aliases: params.aliases,
       display_order: params.displayOrder,
+      is_public: params.isPublic,
     })
-    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
+    .select(ENTITY_COLUMNS)
     .single();
   if (error) throw new Error(error.message);
   return data as EntitySummary;
@@ -135,7 +141,7 @@ export async function getEntityById(
 ): Promise<EntitySummary | null> {
   const { data, error } = await supabase
     .from("entities")
-    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
+    .select(ENTITY_COLUMNS)
     .eq("id", id)
     .is("deleted_at", null)
     .maybeSingle();
@@ -156,6 +162,7 @@ export async function updateEntityWithVersionCheck(
     name: string;
     entityKind: string;
     aliases: string[];
+    isPublic: boolean;
   }
 ): Promise<EntitySummary | null> {
   const { data, error } = await supabase
@@ -164,11 +171,12 @@ export async function updateEntityWithVersionCheck(
       name: params.name,
       entity_kind: params.entityKind,
       aliases: params.aliases,
+      is_public: params.isPublic,
       version: params.expectedVersion + 1,
     })
     .eq("id", params.id)
     .eq("version", params.expectedVersion)
-    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
+    .select(ENTITY_COLUMNS)
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data as EntitySummary | null;
@@ -184,7 +192,7 @@ export async function updateEntityDisplayOrder(
     .update({ display_order: params.displayOrder, version: params.expectedVersion + 1 })
     .eq("id", params.id)
     .eq("version", params.expectedVersion)
-    .select("id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at")
+    .select(ENTITY_COLUMNS)
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data as EntitySummary | null;

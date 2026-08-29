@@ -20,7 +20,7 @@ export async function getRelationsGraph(
   supabase: TypedClient,
   params: { worldId: string; rootEntityId: string; maxDegree: number; viewer: Viewer }
 ): Promise<RelationsGraph> {
-  const [rows, entities] = await Promise.all([
+  const [rows, allEntities] = await Promise.all([
     listAllRelationsForWorld(supabase, params.worldId),
     listEntitiesForWorld(supabase, params.worldId),
   ]);
@@ -37,7 +37,19 @@ export async function getRelationsGraph(
     params.viewer
   );
 
-  const edges: GraphEdgeInput[] = visible.map((r) => ({
+  // Fiche masquee (V2, retour utilisateur point 2), meme filtre et meme
+  // raison que getFamilyTree.ts : le visiteur anonyme perd les entites
+  // `is_public: false`, aretes touchant une entite masquee comprises —
+  // `buildRelationsGraph` (src/core) suppose que toute arete visible
+  // reference une entite presente dans la liste.
+  const entities = params.viewer.kind === "anonymous" ? allEntities.filter((e) => e.is_public) : allEntities;
+  const visibleEntityIds = new Set(entities.map((e) => e.id));
+  const edgesVisible =
+    params.viewer.kind === "anonymous"
+      ? visible.filter((r) => visibleEntityIds.has(r.source_entity_id) && visibleEntityIds.has(r.target_entity_id))
+      : visible;
+
+  const edges: GraphEdgeInput[] = edgesVisible.map((r) => ({
     id: r.id,
     sourceId: r.source_entity_id,
     targetId: r.target_entity_id,

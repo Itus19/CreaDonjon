@@ -27,7 +27,13 @@ import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerC
 import { zTimelineBlockData } from "@/src/core/schemas/blocks/timeline";
 import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
 import { zRelationsGraphBlockData } from "@/src/core/schemas/blocks/relationsGraph";
-import { getCurrentAttitude } from "@/src/server/services/psyche";
+import {
+  getAttitudeEvents,
+  getCurrentAttitude,
+  getPersonalityEvents,
+  getWorldviewEvents,
+} from "@/src/server/services/psyche";
+import type { AttitudeEventRow, PersonalityEventRow } from "@/src/server/repos/psyche";
 import { getRelationsGraph } from "@/src/server/services/relationsGraph";
 import type { RelationsGraph } from "@/src/core/relationsGraph/buildRelationsGraph";
 import type { RelationshipAxisKey } from "@/src/core/psyche/keys";
@@ -112,11 +118,13 @@ export async function verifyShareLinkPassword(token: string, password: string): 
 }
 
 /**
- * Les entites elles-memes ne portent pas de visibilite propre (SCHEMA.md
- * §5) — seuls leurs blocs/segments en portent une. Un visiteur anonyme
- * voit donc la meme liste de noms qu'un membre du monde sans droit
- * particulier ; rien de nouveau introduit par le partage, meme
- * comportement que l'existant pour un world_role="viewer".
+ * La plupart des entites ne portent pas de visibilite propre (SCHEMA.md
+ * §5) — seuls leurs blocs/segments en portent une. Exception delimitee
+ * (V2, retour utilisateur point 2) : `is_public` bascule la fiche entiere,
+ * un simple binaire distinct des 6 niveaux de `visibility_level`. Un
+ * visiteur anonyme ne voit donc plus la meme liste de noms qu'un membre du
+ * monde — les fiches masquees disparaissent ici, avant meme d'atteindre
+ * `buildEntityTree`.
  *
  * `worldId` doit deja venir d'un `resolveShareLink` reussi — cette
  * fonction ne revalide rien elle-meme, elle fait confiance a l'appelant
@@ -126,7 +134,8 @@ export async function verifyShareLinkPassword(token: string, password: string): 
  */
 export async function listPublicEntities(worldId: string): Promise<EntitySummary[]> {
   const supabase = createShareLinkServiceClient();
-  return listEntitiesForWorld(supabase, worldId);
+  const entities = await listEntitiesForWorld(supabase, worldId);
+  return entities.filter((e) => e.is_public);
 }
 
 /**
@@ -135,15 +144,25 @@ export async function listPublicEntities(worldId: string): Promise<EntitySummary
  * `src/server/services/entities.ts`), même fonction pure `buildEntityTree`
  * — seule la source des lignes change (client `service_role`, jamais de
  * session necessaire, comme `listPublicEntities` ci-dessus).
+ *
+ * Filtre par `is_public` AVANT `buildEntityTree` (pas apres) : une fiche
+ * masquee ne doit jamais apparaitre comme racine ni comme enfant. Les
+ * aretes `part_of` qui pointent vers une entite filtree restent dans
+ * `partOfEdges` sans etre retirees a la main — `buildEntityTree` est pure
+ * et ignore deja toute arete dont une extremite est absente de la liste
+ * (elle compare alors `undefined !== <kind>`), l'enfant public d'un parent
+ * masque redevient simplement une racine plutot que de disparaitre ou de
+ * planter.
  */
 export async function getPublicEntityTree(worldId: string): Promise<EntityTreeGroup[]> {
   const supabase = createShareLinkServiceClient();
-  const [entities, partOfEdges, playerCharacterIds, kindOrder] = await Promise.all([
+  const [allEntities, partOfEdges, playerCharacterIds, kindOrder] = await Promise.all([
     listEntitiesForWorld(supabase, worldId),
     listPartOfRelationsForWorld(supabase, worldId),
     listPlayerCharacterEntityIds(supabase, worldId),
     getWorldEntityKindOrder(supabase, worldId),
   ]);
+  const entities = allEntities.filter((e) => e.is_public);
   return buildEntityTree(withPlayerCharacterKinds(entities, playerCharacterIds), partOfEdges, kindOrder);
 }
 
@@ -178,13 +197,23 @@ export interface PublicRelation {
   other: OtherEntityRef;
 }
 
-/** Meme filtrage que listVisibleRelations (src/server/services/relations.ts), pour un visiteur anonyme plutot qu'un utilisateur authentifie — filterBlocks (src/core/visibility) est generique sur toute ligne {visibility}, deja reutilise ici pour les blocs. */
+/**
+ * Meme filtrage que listVisibleRelations (src/server/services/relations.ts),
+ * pour un visiteur anonyme plutot qu'un utilisateur authentifie —
+ * filterBlocks (src/core/visibility) est generique sur toute ligne
+ * {visibility}, deja reutilise ici pour les blocs. Retire en plus toute
+ * relation dont la CIBLE est une fiche masquee (V2, retour utilisateur
+ * point 2) : sinon le nom et le lien mort de la fiche cachee fuiraient
+ * quand meme via la relation, meme si la relation elle-meme est publique.
+ */
 function toPublicRelations(rows: Awaited<ReturnType<typeof listRelationsForEntity>>): PublicRelation[] {
   const visible = filterBlocks(
-    rows.map((r) => ({
-      ...r,
-      visibility: { level: r.visibility_level as VisibilityLevel, scopeId: r.visibility_scope_id, createdBy: r.created_by },
-    })),
+    rows
+      .filter((r) => r.other.is_public)
+      .map((r) => ({
+        ...r,
+        visibility: { level: r.visibility_level as VisibilityLevel, scopeId: r.visibility_scope_id, createdBy: r.created_by },
+      })),
     { kind: "anonymous" }
   );
   return visible.map((r) => {
@@ -215,6 +244,10 @@ export interface PublicBlock {
   relationshipAxes?: Partial<Record<RelationshipAxisKey, number>>;
   /** Blocs `relationship` seulement : nom/slug de la cible, pour legender le radar ("Envers X") — la donnee du bloc ne porte que son id. `null` si la cible n'existe plus/n'est pas resolvable. */
   relationshipTarget?: { name: string; slug: string } | null;
+  /** Blocs `personality`/`worldview` seulement (V2, retour utilisateur point 5) : souvenirs marques `is_public`, deja filtres — table optionnelle sous le radar, absente si aucun souvenir n'est public. */
+  personalityEvents?: PersonalityEventRow[];
+  /** Bloc `relationship` seulement, meme motif que `personalityEvents`. */
+  relationshipEvents?: AttitudeEventRow[];
   /** Blocs `relations_graph` seulement (V2-H2) : meme fonction que l'editeur, viewer anonyme (getRelationsGraph deja concue pour les deux, voir son commentaire). */
   relationsGraph?: RelationsGraph;
   /** Blocs `timeline` seulement (V2-H2) : calendrier du monde, necessaire a `TimelineAxis` pour placer les entrees (deja filtrees, voir `filterTimelineEntries`) — jamais dans la donnee du bloc lui-meme. */
@@ -305,7 +338,10 @@ export async function getPublicEntityDetail(
 > {
   const supabase = createShareLinkServiceClient();
   const entity = await getEntityBySlug(supabase, worldId, entitySlug);
-  if (!entity) return null;
+  // Fiche masquee (V2, retour utilisateur point 2) : meme reponse que
+  // "n'existe pas", jamais de distinction qui revelerait qu'une fiche
+  // cachee existe a cette adresse (meme discipline que resolveShareLink).
+  if (!entity || !entity.is_public) return null;
 
   const [rows, relationRows, portraitLayout] = await Promise.all([
     listBlocksForEntity(supabase, entity.id),
@@ -368,23 +404,40 @@ export async function getPublicEntityDetail(
     })
   );
 
-  // "Juste la partie schema" (V2-H2, retour utilisateur) : `personality`/
-  // `worldview` n'ont besoin de rien de plus — leurs poles sont deja dans
-  // la donnee du bloc, deja filtree par visibilite. `relationship` et
-  // `relations_graph` ont besoin d'une resolution supplementaire.
+  // "Juste la partie schema" (V2-H2, retour utilisateur) pour le radar —
+  // `personality`/`worldview` n'ont besoin de rien de plus pour LUI, leurs
+  // poles sont deja dans la donnee du bloc, deja filtree par visibilite.
+  // `relationship` et `relations_graph` ont besoin d'une resolution
+  // supplementaire. V2 (retour utilisateur point 5) etend la portee : les
+  // trois blocs recoivent aussi leurs souvenirs marques `is_public`, pour
+  // le tableau optionnel sous le radar (`onlyPublic: true` partout —
+  // jamais un souvenir MJ qui fuit parce que le bloc lui-meme est public).
   const blocksWithRelationshipAxes = await Promise.all(
     blocksWithGenealogy.map(async (block) => {
+      if (block.blockType === "personality") {
+        const personalityEvents = await getPersonalityEvents(supabase, entity.id, true);
+        return { ...block, personalityEvents };
+      }
+      if (block.blockType === "worldview") {
+        const personalityEvents = await getWorldviewEvents(supabase, entity.id, true);
+        return { ...block, personalityEvents };
+      }
       if (block.blockType !== "relationship") return block;
       const relationshipData = zRelationshipBlockData.parse(block.data);
       if (relationshipData.target?.kind !== "entity") return block;
-      const [{ axes }, targetEntity] = await Promise.all([
+      const [{ axes }, targetEntity, relationshipEvents] = await Promise.all([
         getCurrentAttitude(supabase, entity.id, relationshipData.target.id),
         getEntityById(supabase, relationshipData.target.id),
+        getAttitudeEvents(supabase, entity.id, relationshipData.target.id, true),
       ]);
+      // Fiche masquee (V2, retour utilisateur point 2) : meme motif que
+      // `toPublicRelations`, jamais le nom d'une cible cachee dans la
+      // legende du radar public.
       return {
         ...block,
         relationshipAxes: axes,
-        relationshipTarget: targetEntity ? { name: targetEntity.name, slug: targetEntity.slug } : null,
+        relationshipTarget: targetEntity?.is_public ? { name: targetEntity.name, slug: targetEntity.slug } : null,
+        relationshipEvents,
       };
     })
   );
@@ -411,23 +464,42 @@ export async function getPublicEntityDetail(
 
   // Chronologie (V2-H2) : le calendrier du monde n'est jamais dans la
   // donnee du bloc, une seule lecture pour tous les blocs `timeline` de
-  // cette fiche (comme `entityLookup` plus bas pour les quetes).
-  const hasTimelineBlock = blocksWithRelationsGraph.some((b) => b.blockType === "timeline");
-  const timelineCalendar = hasTimelineBlock ? await getCalendar(supabase, worldId) : null;
+  // cette fiche (comme `entityLookup` plus bas pour les quetes). V2 (retour
+  // utilisateur point 5) etend le besoin : le tableau de souvenirs public
+  // formate lui aussi une date ingame, meme calendrier, meme lecture unique.
+  const hasDateFormattingBlock = blocksWithRelationsGraph.some(
+    (b) =>
+      b.blockType === "timeline" ||
+      (b.blockType === "personality" && (b.personalityEvents?.length ?? 0) > 0) ||
+      (b.blockType === "worldview" && (b.personalityEvents?.length ?? 0) > 0) ||
+      (b.blockType === "relationship" && (b.relationshipEvents?.length ?? 0) > 0)
+  );
+  const timelineCalendar = hasDateFormattingBlock ? await getCalendar(supabase, worldId) : null;
   const blocksWithTimelineCalendar = blocksWithRelationsGraph.map((block) =>
-    block.blockType === "timeline" && timelineCalendar ? { ...block, timelineCalendar } : block
+    timelineCalendar &&
+    (block.blockType === "timeline" ||
+      block.blockType === "personality" ||
+      block.blockType === "worldview" ||
+      block.blockType === "relationship")
+      ? { ...block, timelineCalendar }
+      : block
   );
 
   // Quete (V2-H4) : resout les id d'entite references (commanditaire,
   // objectifs, recompenses, prerequis) en nom/slug — la donnee du bloc ne
-  // stocke que des id, insuffisant pour un lien cote wiki public. L'entite
-  // n'a pas de visibilite propre (seuls ses blocs en ont une), son nom est
-  // donc toujours resolvable, meme motif que `otherEntities` cote editeur.
+  // stocke que des id, insuffisant pour un lien cote wiki public. Filtre
+  // par `is_public` (V2, retour utilisateur point 2) : une reference vers
+  // une fiche masquee reste donc irresolvable ici, meme motif que
+  // `toPublicRelations` — jamais de nom ni de lien mort qui la revele.
   const hasQuestBlock = blocksWithTimelineCalendar.some((b) => b.blockType === "quest");
   const hasTimelineBlockRefs = blocksWithTimelineCalendar.some((b) => b.blockType === "timeline");
   const entityLookup =
     hasQuestBlock || hasTimelineBlockRefs
-      ? new Map((await listEntitiesForWorld(supabase, worldId)).map((e) => [e.id, { name: e.name, slug: e.slug }]))
+      ? new Map(
+          (await listEntitiesForWorld(supabase, worldId))
+            .filter((e) => e.is_public)
+            .map((e) => [e.id, { name: e.name, slug: e.slug }])
+        )
       : null;
   const blocksWithQuestRefs = blocksWithTimelineCalendar.map((block) => {
     if (block.blockType === "timeline" && entityLookup) {

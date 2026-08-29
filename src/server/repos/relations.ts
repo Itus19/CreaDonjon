@@ -58,6 +58,8 @@ export interface OtherEntityRef {
   name: string;
   slug: string;
   entity_kind: string;
+  /** V2, retour utilisateur point 2 — pour que publicShare.ts puisse retirer une relation qui pointe vers une fiche masquee. */
+  is_public: boolean;
 }
 
 export interface RelationRow {
@@ -79,13 +81,13 @@ export async function listRelationsForEntity(
     supabase
       .from("relations")
       .select(
-        "id, relation_type, visibility_level, visibility_scope_id, created_by, other:target_entity_id(id, name, slug, entity_kind)"
+        "id, relation_type, visibility_level, visibility_scope_id, created_by, other:target_entity_id(id, name, slug, entity_kind, is_public)"
       )
       .eq("source_entity_id", entityId),
     supabase
       .from("relations")
       .select(
-        "id, relation_type, visibility_level, visibility_scope_id, created_by, other:source_entity_id(id, name, slug, entity_kind)"
+        "id, relation_type, visibility_level, visibility_scope_id, created_by, other:source_entity_id(id, name, slug, entity_kind, is_public)"
       )
       .eq("target_entity_id", entityId),
   ]);

@@ -61,6 +61,13 @@ async function generateUniqueEntitySlug(supabase: TypedClient, worldId: string):
   return candidate;
 }
 
+/**
+ * `isPublic: false` toujours, quel que soit l'appelant (creation vierge,
+ * ajout a la volee depuis la genealogie, assistant de creation, import
+ * d'un monde exporte...) — un seul choke point, "toute fiche nait masquee"
+ * (V2, retour utilisateur point 2). Jamais un parametre que l'appelant
+ * pourrait oublier de passer.
+ */
 export async function createEntity(
   supabase: TypedClient,
   params: {
@@ -75,7 +82,7 @@ export async function createEntity(
     generateUniqueEntitySlug(supabase, params.worldId),
     maxEntityDisplayOrderForKind(supabase, params.worldId, params.entityKind).then((max) => max + 1000),
   ]);
-  const entity = await insertEntity(supabase, { ...params, slug, displayOrder });
+  const entity = await insertEntity(supabase, { ...params, slug, displayOrder, isPublic: false });
   await recordEntityRevision(supabase, { entity, changeSource: "user", changedBy: params.createdBy });
   return entity;
 }
@@ -103,6 +110,7 @@ export async function updateEntity(
     name: string;
     entityKind: string;
     aliases: string[];
+    isPublic: boolean;
   }
 ): Promise<UpdateEntityResult> {
   const updated = await updateEntityWithVersionCheck(supabase, params);
@@ -150,6 +158,11 @@ export async function duplicateEntity(
     entityKind: original.entity_kind,
     aliases: original.aliases,
     displayOrder,
+    // Contrairement a createEntity (toujours masquee) : une copie reprend
+    // la visibilite de l'original, meme logique que les blocs copies juste
+    // en dessous (visibilityLevel: block.visibility_level) — une fiche deja
+    // publique dont on fait un doublon ne doit pas disparaitre du wiki.
+    isPublic: original.is_public,
   });
   await recordEntityRevision(supabase, { entity: copy, changeSource: "user", changedBy: params.duplicatedBy });
 

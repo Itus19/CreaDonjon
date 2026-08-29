@@ -161,6 +161,7 @@ export async function overwriteCharacterFromWizard(
     name: params.name,
     entityKind: "character",
     aliases: current.aliases,
+    isPublic: current.is_public,
   });
   if (!renamed.ok) return renamed;
 
