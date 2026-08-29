@@ -98,8 +98,6 @@ export default function RelationshipEventTable({
       setError("Une description et au moins un axe touché sont requis.");
       return;
     }
-    const hasLarge = Object.values(deltas).some((d) => Math.abs(d as number) > 40);
-    if (hasLarge && !window.confirm("Ce changement est important (> 40). Confirmer ?")) return;
 
     setPending(true);
     setError(null);
@@ -111,7 +109,6 @@ export default function RelationshipEventTable({
         summary: summary.trim(),
         deltas,
         occurredAtIngame: hasIngameDate ? occurredAtIngame : null,
-        confirmed: true,
       }),
     });
     setPending(false);

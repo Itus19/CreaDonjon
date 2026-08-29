@@ -64,18 +64,14 @@ export default function WorldviewBlockEditor({
 
   const radarPoles = data.poles.map((p) => ({ ...p, value: liveOverride[p.key] ?? p.value }));
 
-  async function commitSlider(key: WorldviewPoleKey, delta: number, confirmed = false) {
-    if (!confirmed && Math.abs(delta) > 40) {
-      if (!window.confirm("Ce changement est important (> 40). Confirmer ?")) return;
-      confirmed = true;
-    }
+  async function commitSlider(key: WorldviewPoleKey, delta: number) {
     setSliderPending(true);
     setSliderError(null);
     const summary = `Réglage manuel : ${POLE_LABELS_FR[key].split(" ↔ ")[0]} ${delta > 0 ? "+" : ""}${delta}`;
     const res = await fetch(`/api/blocks/${blockId}/worldview-event`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ version, summary, deltas: { [key]: delta }, occurredAtIngame: null, confirmed: true }),
+      body: JSON.stringify({ version, summary, deltas: { [key]: delta }, occurredAtIngame: null }),
     });
     setSliderPending(false);
     if (!res.ok) {

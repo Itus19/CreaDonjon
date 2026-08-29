@@ -67,19 +67,15 @@ export default function RelationshipBlockEditor({
       });
   }, [entityId, targetId]);
 
-  async function commitAxis(key: RelationshipAxisKey, delta: number, confirmed = false) {
+  async function commitAxis(key: RelationshipAxisKey, delta: number) {
     if (!targetId) return;
-    if (!confirmed && Math.abs(delta) > 40) {
-      if (!window.confirm("Ce changement est important (> 40). Confirmer ?")) return;
-      confirmed = true;
-    }
     setPending(true);
     setError(null);
     const summary = `Réglage manuel : ${key} ${delta > 0 ? "+" : ""}${delta}`;
     const res = await fetch(`/api/entities/${entityId}/attitude-events`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targetEntityId: targetId, summary, deltas: { [key]: delta }, occurredAtIngame: null, confirmed: true }),
+      body: JSON.stringify({ targetEntityId: targetId, summary, deltas: { [key]: delta }, occurredAtIngame: null }),
     });
     setPending(false);
     if (!res.ok) {

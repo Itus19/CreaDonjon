@@ -30,12 +30,9 @@ import { updateBlockContent, type VisibleBlock } from "@/src/server/services/blo
 
 type TypedClient = SupabaseClient<Database>;
 
-/** Un delta brut au-dela de ce seuil exige une confirmation explicite (specs/psyche-pnj.md §4). */
-const CONFIRMATION_THRESHOLD = 40;
-
 export type AddPoleEventResult =
   | { ok: true; block: VisibleBlock; event: PersonalityEventRow }
-  | { ok: false; reason: "not_found" | "wrong_block_type" | "unknown_pole" | "needs_confirmation" | "conflict" };
+  | { ok: false; reason: "not_found" | "wrong_block_type" | "unknown_pole" | "conflict" };
 
 /**
  * Ajoute un souvenir a un bloc de poles hors campagne (`personality` ou
@@ -57,7 +54,6 @@ async function addPoleEvent<TData extends { poles: { key: string; value: number;
     deltas: Record<string, number>;
     occurredAtIngame: GameDate | null;
     origin: "gm" | "ai" | "player" | "system";
-    confirmed: boolean;
     actorUserId: string;
   }
 ): Promise<AddPoleEventResult> {
@@ -69,8 +65,6 @@ async function addPoleEvent<TData extends { poles: { key: string; value: number;
   if (deltaEntries.some(([key]) => !params.validKeys.includes(key))) {
     return { ok: false, reason: "unknown_pole" };
   }
-  const hasLargeDelta = deltaEntries.some(([, delta]) => Math.abs(delta) > CONFIRMATION_THRESHOLD);
-  if (hasLargeDelta && !params.confirmed) return { ok: false, reason: "needs_confirmation" };
 
   const data = params.parse(existing.data);
   const nextData: TData = {
@@ -113,7 +107,6 @@ export async function addPersonalityEvent(
     deltas: Partial<Record<PersonalityPoleKey, number>>;
     occurredAtIngame: GameDate | null;
     origin: "gm" | "ai" | "player" | "system";
-    confirmed: boolean;
     actorUserId: string;
   }
 ): Promise<AddPoleEventResult> {
@@ -135,7 +128,6 @@ export async function addWorldviewEvent(
     deltas: Partial<Record<WorldviewPoleKey, number>>;
     occurredAtIngame: GameDate | null;
     origin: "gm" | "ai" | "player" | "system";
-    confirmed: boolean;
     actorUserId: string;
   }
 ): Promise<AddPoleEventResult> {
@@ -195,7 +187,7 @@ export async function getCurrentAttitude(
 
 export type AddAttitudeEventResult =
   | { ok: true; axes: Partial<Record<RelationshipAxisKey, number>>; event: AttitudeEventRow }
-  | { ok: false; reason: "no_campaign" | "unknown_axis" | "needs_confirmation" };
+  | { ok: false; reason: "no_campaign" | "unknown_axis" };
 
 /**
  * Ajoute un souvenir a une relation (V2-H1) : journalise dans
@@ -215,15 +207,12 @@ export async function addAttitudeEvent(
     deltas: Partial<Record<RelationshipAxisKey, number>>;
     occurredAtIngame: GameDate | null;
     origin: "gm" | "ai" | "player" | "system";
-    confirmed: boolean;
   }
 ): Promise<AddAttitudeEventResult> {
   const deltaEntries = Object.entries(params.deltas) as [RelationshipAxisKey, number][];
   if (deltaEntries.some(([key]) => !RELATIONSHIP_AXIS_KEYS.includes(key))) {
     return { ok: false, reason: "unknown_axis" };
   }
-  const hasLargeDelta = deltaEntries.some(([, delta]) => Math.abs(delta) > CONFIRMATION_THRESHOLD);
-  if (hasLargeDelta && !params.confirmed) return { ok: false, reason: "needs_confirmation" };
 
   const entity = await getEntityById(supabase, params.sourceEntityId);
   const campaignId = entity ? await resolveCampaignId(supabase, entity.world_id) : null;

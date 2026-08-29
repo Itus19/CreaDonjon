@@ -32,20 +32,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     deltas: parsed.data.deltas,
     occurredAtIngame: parsed.data.occurredAtIngame,
     origin: "gm",
-    confirmed: parsed.data.confirmed,
   });
 
   if (!result.ok) {
     if (result.reason === "no_campaign") {
       return NextResponse.json({ error: "Ce monde n'a pas de campagne active." }, { status: 400 });
     }
-    if (result.reason === "unknown_axis") {
-      return NextResponse.json({ error: "Axe inconnu." }, { status: 400 });
-    }
-    return NextResponse.json(
-      { error: "Un changement de cette ampleur exige une confirmation explicite.", needsConfirmation: true },
-      { status: 409 }
-    );
+    return NextResponse.json({ error: "Axe inconnu." }, { status: 400 });
   }
 
   return NextResponse.json({ axes: result.axes, event: result.event }, { status: 200 });

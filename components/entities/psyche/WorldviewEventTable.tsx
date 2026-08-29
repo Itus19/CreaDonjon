@@ -90,7 +90,7 @@ export default function WorldviewEventTable({
     setRows((prev) => prev.filter((r) => r.id !== id));
   }
 
-  async function submit(confirmed = false) {
+  async function submit() {
     const deltas: Partial<Record<WorldviewPoleKey, number>> = {};
     for (const row of rows) {
       const n = Number(row.delta);
@@ -99,10 +99,6 @@ export default function WorldviewEventTable({
     if (!summary.trim() || Object.keys(deltas).length === 0) {
       setError("Une description et au moins un pôle touché sont requis.");
       return;
-    }
-    if (!confirmed) {
-      const hasLarge = Object.values(deltas).some((d) => Math.abs(d as number) > 40);
-      if (hasLarge && !window.confirm("Ce changement est important (> 40). Confirmer ?")) return;
     }
 
     setPending(true);
@@ -115,7 +111,6 @@ export default function WorldviewEventTable({
         summary: summary.trim(),
         deltas,
         occurredAtIngame: hasIngameDate ? occurredAtIngame : null,
-        confirmed: true,
       }),
     });
     setPending(false);

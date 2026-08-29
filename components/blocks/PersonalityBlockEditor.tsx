@@ -117,18 +117,14 @@ export default function PersonalityBlockEditor({
   const radarPoles = data.poles.map((p) => ({ ...p, value: liveOverride[p.key] ?? p.value }));
   const archetype = archetypeFor(Object.fromEntries(radarPoles.map((p) => [p.key, p.value])));
 
-  async function commitSlider(key: PersonalityPoleKey, delta: number, confirmed = false) {
-    if (!confirmed && Math.abs(delta) > 40) {
-      if (!window.confirm("Ce changement est important (> 40). Confirmer ?")) return;
-      confirmed = true;
-    }
+  async function commitSlider(key: PersonalityPoleKey, delta: number) {
     setSliderPending(true);
     setSliderError(null);
     const summary = `Réglage manuel : ${POLE_LABELS_FR[key].split(" ↔ ")[0]} ${delta > 0 ? "+" : ""}${delta}`;
     const res = await fetch(`/api/blocks/${blockId}/personality-event`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ version, summary, deltas: { [key]: delta }, occurredAtIngame: null, confirmed: true }),
+      body: JSON.stringify({ version, summary, deltas: { [key]: delta }, occurredAtIngame: null }),
     });
     setSliderPending(false);
     if (!res.ok) {

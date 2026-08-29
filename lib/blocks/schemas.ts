@@ -61,7 +61,6 @@ export const addPersonalityEventSchema = z.object({
       message: "Pole inconnu.",
     }),
   occurredAtIngame: zGameDate.nullable().default(null),
-  confirmed: z.boolean().default(false),
 });
 
 /** Souvenir ajoute a une relation (V2-H1, bloc `relationship`) — meme forme que `addPersonalityEventSchema`, cle libre pour la meme raison, plus la cible (la paire n'est jamais dans l'URL seule, `POST` groupe la creation). */
@@ -75,7 +74,6 @@ export const addAttitudeEventSchema = z.object({
       message: "Axe inconnu.",
     }),
   occurredAtIngame: zGameDate.nullable().default(null),
-  confirmed: z.boolean().default(false),
 });
 
 /** Souvenir ajoute a un bloc worldview (V2-H1) — meme forme que `addPersonalityEventSchema`, poles moraux/politiques au lieu du temperament. */
@@ -89,5 +87,4 @@ export const addWorldviewEventSchema = z.object({
       message: "Pole inconnu.",
     }),
   occurredAtIngame: zGameDate.nullable().default(null),
-  confirmed: z.boolean().default(false),
 });

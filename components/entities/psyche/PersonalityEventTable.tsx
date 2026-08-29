@@ -36,9 +36,7 @@ function formatDeltas(deltas: Partial<Record<PersonalityPoleKey, number>>): stri
 
 /**
  * Tableau de souvenirs sous le radar (V2-H1) — un souvenir peut toucher
- * plusieurs poles a la fois. Delta > 40 en valeur absolue : confirmation
- * cote client (avant envoi) ET cote serveur (`addPersonalityEvent`,
- * defense en profondeur).
+ * plusieurs poles a la fois.
  */
 export default function PersonalityEventTable({
   entityId,
@@ -97,7 +95,7 @@ export default function PersonalityEventTable({
     setRows((prev) => prev.filter((r) => r.id !== id));
   }
 
-  async function submit(confirmed = false) {
+  async function submit() {
     const deltas: Partial<Record<PersonalityPoleKey, number>> = {};
     for (const row of rows) {
       const n = Number(row.delta);
@@ -106,10 +104,6 @@ export default function PersonalityEventTable({
     if (!summary.trim() || Object.keys(deltas).length === 0) {
       setError("Une description et au moins un pôle touché sont requis.");
       return;
-    }
-    if (!confirmed) {
-      const hasLarge = Object.values(deltas).some((d) => Math.abs(d as number) > 40);
-      if (hasLarge && !window.confirm("Ce changement est important (> 40). Confirmer ?")) return;
     }
 
     setPending(true);
@@ -122,7 +116,6 @@ export default function PersonalityEventTable({
         summary: summary.trim(),
         deltas,
         occurredAtIngame: hasIngameDate ? occurredAtIngame : null,
-        confirmed: true,
       }),
     });
     setPending(false);

@@ -33,7 +33,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     deltas: parsed.data.deltas,
     occurredAtIngame: parsed.data.occurredAtIngame,
     origin: "gm",
-    confirmed: parsed.data.confirmed,
     actorUserId: user.id,
   });
 
@@ -46,12 +45,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     if (result.reason === "unknown_pole") {
       return NextResponse.json({ error: "Pôle inconnu." }, { status: 400 });
-    }
-    if (result.reason === "needs_confirmation") {
-      return NextResponse.json(
-        { error: "Un changement de cette ampleur exige une confirmation explicite.", needsConfirmation: true },
-        { status: 409 }
-      );
     }
     return NextResponse.json(
       { error: "Ce bloc a ete modifie entre-temps. Rechargez avant de reessayer." },
