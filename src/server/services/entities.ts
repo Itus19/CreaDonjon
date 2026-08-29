@@ -13,7 +13,6 @@ import {
   maxEntityDisplayOrderForKind,
   searchEntitiesInWorld,
   softDeleteEntity,
-  updateEntityDisplayOrder,
   updateEntityWithVersionCheck,
   worldHasSlug,
 } from "@/src/server/repos/entities";
@@ -85,16 +84,6 @@ export async function createEntity(
   const entity = await insertEntity(supabase, { ...params, slug, displayOrder, isPublic: false });
   await recordEntityRevision(supabase, { entity, changeSource: "user", changedBy: params.createdBy });
   return entity;
-}
-
-/** Glisser-depose (V2-G9) : une seule colonne, une seule ligne — copie de reorderBlock (src/server/services/blocks.ts). */
-export async function reorderEntity(
-  supabase: TypedClient,
-  params: { id: string; expectedVersion: number; displayOrder: number }
-): Promise<{ ok: true; entity: EntitySummary } | { ok: false; reason: "conflict" }> {
-  const entity = await updateEntityDisplayOrder(supabase, params);
-  if (!entity) return { ok: false, reason: "conflict" };
-  return { ok: true, entity };
 }
 
 export type UpdateEntityResult =

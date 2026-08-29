@@ -182,22 +182,6 @@ export async function updateEntityWithVersionCheck(
   return data as EntitySummary | null;
 }
 
-/** Glisser-depose (V2-G9) : une seule colonne, une seule ligne — copie de updateBlockDisplayOrder (src/server/repos/blocks.ts). */
-export async function updateEntityDisplayOrder(
-  supabase: TypedClient,
-  params: { id: string; expectedVersion: number; displayOrder: number }
-): Promise<EntitySummary | null> {
-  const { data, error } = await supabase
-    .from("entities")
-    .update({ display_order: params.displayOrder, version: params.expectedVersion + 1 })
-    .eq("id", params.id)
-    .eq("version", params.expectedVersion)
-    .select(ENTITY_COLUMNS)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data as EntitySummary | null;
-}
-
 /** Idempotent : supprimer une entite deja supprimee ne change rien (pas d'erreur), meme convention que revokeShareLink. */
 export async function softDeleteEntity(supabase: TypedClient, id: string): Promise<{ deleted: boolean }> {
   const { data, error } = await supabase

@@ -55,26 +55,17 @@ describe("buildEntityTree", () => {
     expect(buildEntityTree([], [])).toEqual([]);
   });
 
-  it("trie les fiches d'un groupe par display_order croissant (V2-G9, glisser-depose)", () => {
+  it("trie les fiches d'un groupe par nom, quel que soit display_order (V2, retour utilisateur : faciliter la recherche)", () => {
     const entities = [
-      { id: "1", name: "Bram", slug: "bram", entity_kind: "character", display_order: 2000 },
-      { id: "2", name: "Anna", slug: "anna", entity_kind: "character", display_order: 1000 },
-      { id: "3", name: "Zed", slug: "zed", entity_kind: "character", display_order: 3000 },
+      { id: "1", name: "Zed", slug: "zed", entity_kind: "character", display_order: 1000 },
+      { id: "2", name: "Anna", slug: "anna", entity_kind: "character", display_order: 3000 },
+      { id: "3", name: "Bram", slug: "bram", entity_kind: "character", display_order: 2000 },
     ];
     const groups = buildEntityTree(entities, []);
-    expect(groups[0].items.map((i) => i.id)).toEqual(["2", "1", "3"]);
+    expect(groups[0].items.map((i) => i.name)).toEqual(["Anna", "Bram", "Zed"]);
   });
 
-  it("display_order egaux : repli sur le nom (deterministe avant tout glisser-depose)", () => {
-    const entities = [
-      { id: "1", name: "Zed", slug: "zed", entity_kind: "character", display_order: 0 },
-      { id: "2", name: "Anna", slug: "anna", entity_kind: "character", display_order: 0 },
-    ];
-    const groups = buildEntityTree(entities, []);
-    expect(groups[0].items.map((i) => i.name)).toEqual(["Anna", "Zed"]);
-  });
-
-  it("display_order absent (fiches historiques) : traite comme 0, ne plante pas", () => {
+  it("display_order absent (fiches historiques) : ne plante pas, tri alphabetique quand meme", () => {
     const entities = [
       { id: "1", name: "Bram", slug: "bram", entity_kind: "character" },
       { id: "2", name: "Anna", slug: "anna", entity_kind: "character" },

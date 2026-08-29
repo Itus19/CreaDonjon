@@ -16,7 +16,6 @@ import {
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { EntityTreeGroup, EntityTreeNode } from "@/src/core/entity-tree/build-tree";
-import { computeDroppedOrder } from "@/src/core/ordering/computeDroppedOrder";
 import { useOpenEntityLink } from "./useOpenEntityLink";
 import { useCollapsedGroups } from "./useCollapsedGroups";
 import ActionsMenu from "@/components/shared/ActionsMenu";
@@ -44,10 +43,6 @@ function NodeRow({
   const hasChildren = node.children.length > 0;
   const isActive = node.slug === currentSlug;
   const link = useOpenEntityLink(worldSlug, node.slug, hrefBase);
-  // Toujours appele (regle des hooks), meme hors DndContext (peau publique,
-  // jamais `editable`) : dnd-kit retombe alors sur des valeurs inertes, la
-  // poignee n'est de toute facon jamais rendue dans ce cas.
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: node.id });
 
   async function duplicate() {
     await fetch(`/api/entities/${node.id}/duplicate`, { method: "POST" });
@@ -62,31 +57,10 @@ function NodeRow({
 
   return (
     <li>
-      {/* `group` porte le survol (retour utilisateur) : le menu "..." et la
-          poignee de glisser ne s'affichent qu'au survol de la ligne, jamais
-          en permanence — une ligne de sommaire n'est pas un bloc, pas de
-          chrome systematique. */}
-      <div
-        ref={setNodeRef}
-        className={`group flex items-center ${isDragging ? "relative z-10 bg-panel-raised opacity-90" : ""}`}
-        style={{ paddingLeft: `${depth * 14}px`, transform: CSS.Transform.toString(transform), transition }}
-      >
-        {/* Uniquement au premier niveau d'un groupe (V2-G9, portee volontaire) :
-            un enfant imbrique (part_of) reste triable par display_order mais
-            pas encore glissable dans cette passe, trop rare dans les donnees
-            actuelles pour justifier des listes triables imbriquees. */}
-        {editable && depth === 0 && (
-          <button
-            type="button"
-            {...attributes}
-            {...listeners}
-            className="shrink-0 touch-none cursor-grab text-xs text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 group-hover:opacity-100 active:cursor-grabbing"
-            title="Glisser pour réordonner"
-            aria-label={`Réordonner ${node.name || "(sans nom)"}`}
-          >
-            ⠿
-          </button>
-        )}
+      {/* `group` porte le survol (retour utilisateur) : le menu "..." ne
+          s'affiche qu'au survol de la ligne, jamais en permanence — une
+          ligne de sommaire n'est pas un bloc, pas de chrome systematique. */}
+      <div className="group flex items-center" style={{ paddingLeft: `${depth * 14}px` }}>
         {hasChildren ? (
           <button
             type="button"
@@ -153,6 +127,12 @@ function NodeRow({
  * `useSortable` s'appelle une fois PAR INSTANCE, jamais dans la `.map()` du
  * parent.
  */
+/** Cherche `slug` dans une liste de nœuds, enfants `part_of` compris (recursif). */
+function containsSlug(nodes: EntityTreeNode[], slug: string | null): boolean {
+  if (!slug) return false;
+  return nodes.some((n) => n.slug === slug || containsSlug(n.children, slug));
+}
+
 function SortableGroupHeader({
   groupKind,
   label,
@@ -242,11 +222,10 @@ export default function EntityTree({
   );
 
   /**
-   * Un seul gestionnaire pour les deux listes glissables (categories ET
-   * fiches, V2-G9) : distingue par l'id depose (une cle de groupe, ou un
-   * uuid de fiche) plutot que deux `DndContext` a synchroniser. Un depot
-   * entre deux categories differentes pour une fiche est ignore (portee
-   * volontaire — changer de categorie reste le selecteur de type, V2-G7).
+   * Categories seulement (V2-G9) — le classement des fiches DANS une
+   * categorie est desormais fixe (alphabetique, `buildEntityTree`, retour
+   * utilisateur "faciliter la recherche") : plus de glisser-depose par
+   * fiche, qui n'aurait plus d'effet visible des le prochain rendu.
    */
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -255,30 +234,12 @@ export default function EntityTree({
     const overId = String(over.id);
 
     const groupKinds = groups.map((g) => g.kind);
-    if (groupKinds.includes(activeId)) {
-      if (!groupKinds.includes(overId)) return;
-      const reordered = arrayMove(groupKinds, groupKinds.indexOf(activeId), groupKinds.indexOf(overId));
-      void fetch(`/api/worlds/${worldSlug}/entity-kind-order`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order: reordered }),
-      }).then(() => router.refresh());
-      return;
-    }
-
-    const group = groups.find((g) => g.items.some((i) => i.id === activeId));
-    const target = group?.items.find((i) => i.id === activeId);
-    if (!group || !target || !group.items.some((i) => i.id === overId)) return;
-    const newOrder = computeDroppedOrder(
-      group.items.map((i) => ({ id: i.id, displayOrder: i.displayOrder })),
-      activeId,
-      overId
-    );
-    if (newOrder === null) return;
-    void fetch(`/api/entities/${activeId}/order`, {
+    if (!groupKinds.includes(activeId) || !groupKinds.includes(overId)) return;
+    const reordered = arrayMove(groupKinds, groupKinds.indexOf(activeId), groupKinds.indexOf(overId));
+    void fetch(`/api/worlds/${worldSlug}/entity-kind-order`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ version: target.version, displayOrder: newOrder }),
+      body: JSON.stringify({ order: reordered }),
     }).then(() => router.refresh());
   }
 
@@ -291,7 +252,14 @@ export default function EntityTree({
       <SortableContext items={groups.map((g) => g.kind)} strategy={verticalListSortingStrategy}>
         <nav aria-label={t("entitesDuMonde")} className="flex flex-col gap-3">
           {groups.map((group) => {
-            const collapsed = isCollapsed(group.kind);
+            // Retour utilisateur (wiki public) : naviguer vers une fiche
+            // via un lien du contenu (genealogie, reseau, relations...) ne
+            // doit jamais laisser la fiche active cachee dans une categorie
+            // repliee, sans aucun repere de position dans le sommaire —
+            // deplie de force la categorie qui la contient, sans toucher a
+            // la preference memorisee (`isCollapsed` reste la source de
+            // verite si on la replie de nouveau a la main).
+            const collapsed = isCollapsed(group.kind) && !containsSlug(group.items, currentSlug);
             return (
               <div key={group.kind}>
                 <SortableGroupHeader
@@ -302,21 +270,19 @@ export default function EntityTree({
                   onToggle={() => toggle(group.kind)}
                 />
                 {!collapsed && (
-                  <SortableContext items={group.items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-                    <ul>
-                      {group.items.map((node) => (
-                        <NodeRow
-                          key={node.id}
-                          node={node}
-                          worldSlug={worldSlug}
-                          depth={0}
-                          currentSlug={currentSlug}
-                          hrefBase={hrefBase}
-                          editable={editable}
-                        />
-                      ))}
-                    </ul>
-                  </SortableContext>
+                  <ul>
+                    {group.items.map((node) => (
+                      <NodeRow
+                        key={node.id}
+                        node={node}
+                        worldSlug={worldSlug}
+                        depth={0}
+                        currentSlug={currentSlug}
+                        hrefBase={hrefBase}
+                        editable={editable}
+                      />
+                    ))}
+                  </ul>
                 )}
               </div>
             );

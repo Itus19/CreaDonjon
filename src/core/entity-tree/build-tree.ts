@@ -71,13 +71,14 @@ export function buildEntityTree(
   partOfEdges: PartOfEdge[],
   kindOrder: string[] = []
 ): EntityTreeGroup[] {
-  // Tri par display_order avant tout regroupement (V2-G9) : les listes de
-  // racines et d'enfants en heritent automatiquement, un seul tri couvre
-  // les deux niveaux. Egalite (fiches jamais reordonnees, ou display_order
-  // absent) -> repli sur le nom pour un resultat deterministe.
-  const sortedEntities = entities
-    .slice()
-    .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0) || a.name.localeCompare(b.name));
+  // Tri alphabetique avant tout regroupement (V2, retour utilisateur :
+  // "faciliter la recherche") : les listes de racines et d'enfants en
+  // heritent automatiquement, un seul tri couvre les deux niveaux.
+  // Remplace l'ancien tri par `display_order` (V2-G9, glisser-depose par
+  // fiche) — abandonne cote sommaire au profit d'un ordre fixe et
+  // previsible ; `display_order` reste en base (rang de creation, encore
+  // utilise ailleurs) mais ne pilote plus ce classement.
+  const sortedEntities = entities.slice().sort((a, b) => a.name.localeCompare(b.name));
 
   const kindOf = new Map(sortedEntities.map((e) => [e.id, e.entity_kind]));
 

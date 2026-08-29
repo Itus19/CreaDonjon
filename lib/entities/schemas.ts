@@ -42,12 +42,6 @@ export const updateEntitySchema = z.object({
   isPublic: z.boolean(),
 });
 
-// Glisser-depose (V2-G9) : copie de reorderBlockSchema (lib/blocks/schemas.ts).
-export const reorderEntitySchema = z.object({
-  version: z.number().int().positive(),
-  displayOrder: z.number(),
-});
-
 // Ordre des categories de la sidebar (V2-G9) : tableau complet, remplace a
 // chaque glisser-depose plutot qu'un delta — peu d'elements (moins d'une
 // vingtaine de categories dans le pire cas), pas besoin d'un ajustement fin.
