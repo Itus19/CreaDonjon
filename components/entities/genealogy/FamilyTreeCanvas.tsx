@@ -49,14 +49,17 @@ function clamp(value: number, min: number, max: number): number {
  * relation), jamais sur un simple re-rendu.
  *
  * Survol d'un TRAIT = apercu ephemere de son libelle (hoveredEdgeId) ;
- * clic = "epingle" (pinnedEdgeId), qui seul fait apparaitre les boutons
- * masquer/supprimer — sans cette distinction, deplacer la souris du trait
- * vers le bouton declenche un mouseleave qui referme tout avant d'avoir pu
- * cliquer. Survol d'un PORTRAIT (retour utilisateur) = met en surbrillance
- * ses liens directs et estompe le reste, ET affiche le libelle de CHACUN
- * de ces liens a la fois (pas un seul) — meme principe que le bloc reseau
- * (`RelationsGraphCanvas.tsx`), duplique plutot que partage (mises en page
- * trop differentes, meme raisonnement deja pose pour ce couple de blocs).
+ * clic = "epingle" (pinnedEdgeId), qui seul fait apparaitre le bouton de
+ * suppression — sans cette distinction, deplacer la souris du trait vers
+ * le bouton declenche un mouseleave qui referme tout avant d'avoir pu
+ * cliquer. Le masquage au wiki public, lui, ne passe plus par le trait
+ * (retire a la demande de l'utilisateur) : voir le bouton oeil sur chaque
+ * portrait, plus bas. Survol d'un PORTRAIT (retour utilisateur) = met en
+ * surbrillance ses liens directs et estompe le reste, ET affiche le
+ * libelle de CHACUN de ces liens a la fois (pas un seul) — meme principe
+ * que le bloc reseau (`RelationsGraphCanvas.tsx`), duplique plutot que
+ * partage (mises en page trop differentes, meme raisonnement deja pose
+ * pour ce couple de blocs).
  */
 export default function FamilyTreeCanvas({
   tree,
@@ -64,7 +67,6 @@ export default function FamilyTreeCanvas({
   renderCard,
   renderNodeOverlay,
   onDeleteEdge,
-  onToggleEdgeVisibility,
   onToggleNodeVisibility,
 }: {
   tree: FamilyTree;
@@ -82,14 +84,12 @@ export default function FamilyTreeCanvas({
   renderNodeOverlay?: (node: FamilyTreeNode, scale: number) => ReactNode;
   /** Bouton de suppression sur le trait epingle (clic) — omis en lecture seule (wiki public). */
   onDeleteEdge?: (edge: FamilyTreeEdge) => void;
-  /** V2, retour utilisateur : bouton oeil sur le trait epingle — masque/affiche au wiki public, meme relation que la liste du haut de fiche et le bloc reseau. Omis en lecture seule. */
-  onToggleEdgeVisibility?: (edge: FamilyTreeEdge) => void;
   /**
-   * V2, retour utilisateur (suite) : bouton oeil directement sur le
-   * portrait plutot que sur le trait epingle — bascule TOUTES les aretes
-   * qui touchent ce nœud dans l'arbre affiche (un nœud avec plusieurs
-   * liens, ex. un partenaire ET des enfants, disparait ou reapparait en
-   * bloc). Omis en lecture seule.
+   * V2, retour utilisateur : bouton oeil directement sur le portrait
+   * (jamais sur le trait — l'utilisateur a prefere n'avoir qu'un seul
+   * geste) — bascule TOUTES les aretes qui touchent ce nœud dans l'arbre
+   * affiche (un nœud avec plusieurs liens, ex. un partenaire ET des
+   * enfants, disparait ou reapparait en bloc). Omis en lecture seule.
    */
   onToggleNodeVisibility?: (node: FamilyTreeNode, edges: FamilyTreeEdge[]) => void;
 }) {
@@ -346,15 +346,6 @@ export default function FamilyTreeCanvas({
               onClick={(e) => e.stopPropagation()}
             >
               {edge.label}
-              {isPinned && onToggleEdgeVisibility && (
-                <button
-                  type="button"
-                  onClick={() => onToggleEdgeVisibility(edge)}
-                  className="rounded-full px-2 py-0.5 text-ink transition-colors hover:bg-panel"
-                >
-                  {edge.visibilityLevel === "gm" ? "Rendre visible aux joueurs" : "Masquer aux joueurs"}
-                </button>
-              )}
               {isPinned && onDeleteEdge && (
                 <button
                   type="button"
