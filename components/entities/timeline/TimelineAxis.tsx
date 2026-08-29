@@ -52,8 +52,10 @@ export default function TimelineAxis({
   calendar: CalendarConfigInput;
   selectedEntryId: string | null;
   onSelectEntry: (id: string) => void;
-  onCreateEntry: (date: GameDate) => void;
+  /** Omis en lecture seule (wiki public, `PublicTimelineBlock`) : pan/zoom et clic sur une entree existante restent actifs, mais plus d'ajout par clic/glisse ni d'apercu "cliquer pour ajouter". */
+  onCreateEntry?: (date: GameDate) => void;
 }) {
+  const readOnly = !onCreateEntry;
   const [view, setView] = useState({ x: 0, pxPerYear: 8 });
   const [containerWidth, setContainerWidth] = useState(800);
   const [isPanning, setIsPanning] = useState(false);
@@ -145,13 +147,13 @@ export default function TimelineAxis({
     if (e.button !== 0) return;
     const screenX = screenXFromClientX(e.clientX);
     panRef.current = { startX: e.clientX, startPanX: view.x, moved: false };
-    createDragRef.current = { startScreenX: screenX, moved: false };
+    if (!readOnly) createDragRef.current = { startScreenX: screenX, moved: false };
     setIsPanning(true);
   }
 
   function handleMouseMove(e: React.MouseEvent) {
     const screenX = screenXFromClientX(e.clientX);
-    setHoverScreenX(screenX);
+    if (!readOnly) setHoverScreenX(screenX);
 
     const pan = panRef.current;
     if (!pan) return;
@@ -188,6 +190,7 @@ export default function TimelineAxis({
     const startYear = yearAtScreenX(create.startScreenX);
     const endYear = yearAtScreenX(endScreenX);
 
+    if (!onCreateEntry) return;
     if (!create.moved) {
       onCreateEntry(dateAtYearPosition(startYear, calendar));
     } else {
@@ -224,13 +227,14 @@ export default function TimelineAxis({
     ticks.push(y);
   }
 
-  const hoverDate = hoverScreenX !== null && !isPanning ? dateAtYearPosition(yearAtScreenX(hoverScreenX), calendar) : null;
+  const hoverDate =
+    !readOnly && hoverScreenX !== null && !isPanning ? dateAtYearPosition(yearAtScreenX(hoverScreenX), calendar) : null;
 
   return (
     <div className="flex flex-col gap-1.5">
       <div
         ref={containerRef}
-        className={`relative select-none overflow-hidden rounded-xl border border-edge/60 ${isPanning ? "cursor-grabbing" : "cursor-crosshair"}`}
+        className={`relative select-none overflow-hidden rounded-xl border border-edge/60 ${isPanning ? "cursor-grabbing" : readOnly ? "cursor-grab" : "cursor-crosshair"}`}
         style={{
           height: HEIGHT,
           backgroundImage: "radial-gradient(var(--edge) 1px, transparent 1px)",
@@ -355,7 +359,9 @@ export default function TimelineAxis({
         </div>
       </div>
       <p className="text-[10px] text-ink-muted">
-        Cliquer sur l&apos;axe ajoute un événement à cette date · glisser ajoute une période. Molette pour zoomer, glisser pour déplacer.
+        {readOnly
+          ? "Molette pour zoomer, glisser pour déplacer."
+          : "Cliquer sur l'axe ajoute un événement à cette date · glisser ajoute une période. Molette pour zoomer, glisser pour déplacer."}
       </p>
     </div>
   );

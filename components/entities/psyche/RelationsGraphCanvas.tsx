@@ -60,12 +60,13 @@ function clamp(value: number, min: number, max: number): number {
  */
 export default function RelationsGraphCanvas({
   graph,
-  worldSlug,
+  hrefBase,
   edgeColor,
   onToggleEdgeVisibility,
 }: {
   graph: RelationsGraph;
-  worldSlug: string;
+  /** Base des liens vers une fiche — `/m/[worldSlug]/f` en edition, `/m/[worldSlug]/apercu` (ou `/partage/[token]`) sur le wiki public. Meme motif que `PublicGenealogyBlock`/`PublicQuestBlock`. */
+  hrefBase: string;
   /** Couleur d'un lien direct depuis la racine (relationshipColor si une attitude existe), sinon `var(--edge)`. */
   edgeColor: (edge: RelationsGraphEdge) => string;
   onToggleEdgeVisibility?: (edge: RelationsGraphEdge) => void;
@@ -265,7 +266,7 @@ export default function RelationsGraphCanvas({
             return (
               <Link
                 key={node.id}
-                href={`/m/${worldSlug}/f/${node.slug}`}
+                href={`${hrefBase}/${node.slug}`}
                 onClick={(e) => openEntity(node, e)}
                 className="absolute -translate-x-1/2 -translate-y-1/2"
                 style={{ left: node.x, top: node.y, opacity: dimmed ? 0.3 : 1 }}

@@ -9,8 +9,16 @@ import type { QuestBlockData, QuestNote, QuestObjective } from "@/src/core/schem
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { PublicBlock } from "@/src/server/services/publicShare";
 import { QUEST_STATE_LABELS_FR } from "@/src/i18n/fr";
+import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
+import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
+import type { TimelineBlockData } from "@/src/core/schemas/blocks/timeline";
 import SpoilerSpan from "./SpoilerSpan";
 import PublicGenealogyBlock from "./PublicGenealogyBlock";
+import PublicPersonalityBlock from "./PublicPersonalityBlock";
+import PublicWorldviewBlock from "./PublicWorldviewBlock";
+import PublicRelationshipBlock from "./PublicRelationshipBlock";
+import PublicRelationsGraphBlock from "./PublicRelationsGraphBlock";
+import PublicTimelineBlock from "./PublicTimelineBlock";
 
 const TAG_BY_BLOCK_TYPE: Record<Segment["blockType"], string> = {
   paragraph: "p",
@@ -218,6 +226,28 @@ export default function PublicBlockView({ block, hrefBase }: { block: PublicBloc
       )}
       {block.blockType === "quest" && (
         <PublicQuestBlock data={block.data as unknown as QuestBlockData} questRefs={block.questRefs} hrefBase={hrefBase} />
+      )}
+      {block.blockType === "personality" && (
+        <PublicPersonalityBlock data={block.data as unknown as PersonalityBlockData} />
+      )}
+      {block.blockType === "worldview" && <PublicWorldviewBlock data={block.data as unknown as WorldviewBlockData} />}
+      {block.blockType === "relationship" && (
+        <PublicRelationshipBlock
+          axes={block.relationshipAxes ?? {}}
+          target={block.relationshipTarget ?? null}
+          hrefBase={hrefBase}
+        />
+      )}
+      {block.blockType === "relations_graph" && block.relationsGraph && (
+        <PublicRelationsGraphBlock graph={block.relationsGraph} hrefBase={hrefBase} />
+      )}
+      {block.blockType === "timeline" && block.timelineCalendar && (
+        <PublicTimelineBlock
+          data={block.data as unknown as TimelineBlockData}
+          calendar={block.timelineCalendar}
+          refs={block.timelineRefs ?? {}}
+          hrefBase={hrefBase}
+        />
       )}
     </div>
   );

@@ -101,7 +101,7 @@ export default function RelationsGraphBlockEditor({
       {graph && graph.nodes.length > 1 && (
         <RelationsGraphCanvas
           graph={graph}
-          worldSlug={worldSlug}
+          hrefBase={`/m/${worldSlug}/f`}
           edgeColor={edgeColor}
           onToggleEdgeVisibility={toggleEdgeVisibility}
         />

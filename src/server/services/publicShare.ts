@@ -12,7 +12,7 @@ import { type BlockRow, getBlockById, listBlocksForEntity } from "@/src/server/r
 import { getBlockImage, type BlockImage } from "@/src/server/repos/blockImages";
 import { getBackgroundMetaForBlock } from "@/src/server/services/blockImages";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
-import { type EntitySummary, getEntityBySlug, listEntitiesForWorld } from "@/src/server/repos/entities";
+import { type EntitySummary, getEntityById, getEntityBySlug, listEntitiesForWorld } from "@/src/server/repos/entities";
 import { listPartOfRelationsForWorld, listRelationsForEntity, type OtherEntityRef } from "@/src/server/repos/relations";
 import { listCampaignsForWorld } from "@/src/server/repos/campaigns";
 import { getWorldById, getWorldEntityKindOrder } from "@/src/server/repos/worlds";
@@ -24,6 +24,15 @@ import type { FamilyTree } from "@/src/core/genealogy/buildFamilyTree";
 import { zQuestBlockData } from "@/src/core/schemas/blocks/quest";
 import { buildEntityTree, withPlayerCharacterKinds, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerCharacters";
+import { zTimelineBlockData } from "@/src/core/schemas/blocks/timeline";
+import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
+import { zRelationsGraphBlockData } from "@/src/core/schemas/blocks/relationsGraph";
+import { getCurrentAttitude } from "@/src/server/services/psyche";
+import { getRelationsGraph } from "@/src/server/services/relationsGraph";
+import type { RelationsGraph } from "@/src/core/relationsGraph/buildRelationsGraph";
+import type { RelationshipAxisKey } from "@/src/core/psyche/keys";
+import { getCalendar } from "@/src/server/services/worlds";
+import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 
 /**
  * Seul fichier ou `createShareLinkServiceClient` (lib/supabase/service.ts)
@@ -202,6 +211,16 @@ export interface PublicBlock {
   genealogyTree?: FamilyTree;
   /** Blocs `quest` seulement (V2-H4) : nom/slug des entites referencees par un objectif/une recompense/un prerequis/le commanditaire — la donnee du bloc ne porte que des id, jamais assez pour un lien lisible cote public. */
   questRefs?: Record<string, { name: string; slug: string }>;
+  /** Blocs `relationship` seulement (V2-H2, "juste la partie schema") : les axes ne vivent pas dans la donnee du bloc (portee campagne, entity_attitudes) — resolus ici pour le radar public. */
+  relationshipAxes?: Partial<Record<RelationshipAxisKey, number>>;
+  /** Blocs `relationship` seulement : nom/slug de la cible, pour legender le radar ("Envers X") — la donnee du bloc ne porte que son id. `null` si la cible n'existe plus/n'est pas resolvable. */
+  relationshipTarget?: { name: string; slug: string } | null;
+  /** Blocs `relations_graph` seulement (V2-H2) : meme fonction que l'editeur, viewer anonyme (getRelationsGraph deja concue pour les deux, voir son commentaire). */
+  relationsGraph?: RelationsGraph;
+  /** Blocs `timeline` seulement (V2-H2) : calendrier du monde, necessaire a `TimelineAxis` pour placer les entrees (deja filtrees, voir `filterTimelineEntries`) — jamais dans la donnee du bloc lui-meme. */
+  timelineCalendar?: CalendarConfigInput;
+  /** Blocs `timeline` seulement : nom/slug des entites promues referencees par une entree (`entry.ref`) — meme motif que `questRefs`, la donnee du bloc ne porte que des id. */
+  timelineRefs?: Record<string, { name: string; slug: string }>;
 }
 
 function filterTextBlockSegments(blockType: string, data: Json): Json {
@@ -221,6 +240,22 @@ function filterTextBlockSegments(blockType: string, data: Json): Json {
     visibility: { level: visibility.level, scopeId: visibility.scopeId },
   }));
   return { ...parsed.data, segments } as unknown as Json;
+}
+
+/** Meme motif que `filterTextBlockSegments` : la visibilite du bloc `timeline` ne suffit pas, chaque entree porte la sienne (specs/wiki-blocs.md §3) — jamais une entree `gm` qui fuit parce que le bloc lui-meme est public. */
+function filterTimelineEntries(blockType: string, data: Json): Json {
+  if (blockType !== "timeline") return data;
+  const parsed = zTimelineBlockData.safeParse(data);
+  if (!parsed.success) return data;
+  const aware = parsed.data.entries.map((entry) => ({
+    ...entry,
+    visibility: { ...entry.visibility, createdBy: null },
+  }));
+  const entries = filterSegments(aware, { kind: "anonymous" }).map(({ visibility, ...rest }) => ({
+    ...rest,
+    visibility: { level: visibility.level, scopeId: visibility.scopeId },
+  }));
+  return { ...parsed.data, entries } as unknown as Json;
 }
 
 function toVisibilityAware(row: BlockRow) {
@@ -286,8 +321,9 @@ export async function getPublicEntityDetail(
       // Un bloc `text` peut lui-meme etre public tout en contenant un
       // segment gm (SCHEMA.md §7.1, exemple Bram) : la visibilite du bloc
       // ne suffit pas, chaque segment est filtre a son tour avant de
-      // jamais quitter le serveur.
-      data: filterTextBlockSegments(row.block_type, row.data),
+      // jamais quitter le serveur. Meme principe pour les entrees d'un
+      // bloc `timeline` (V2-H2).
+      data: filterTimelineEntries(row.block_type, filterTextBlockSegments(row.block_type, row.data)),
       displayOrder: row.display_order,
     }))
     .sort((a, b) => a.displayOrder - b.displayOrder);
@@ -332,16 +368,79 @@ export async function getPublicEntityDetail(
     })
   );
 
+  // "Juste la partie schema" (V2-H2, retour utilisateur) : `personality`/
+  // `worldview` n'ont besoin de rien de plus — leurs poles sont deja dans
+  // la donnee du bloc, deja filtree par visibilite. `relationship` et
+  // `relations_graph` ont besoin d'une resolution supplementaire.
+  const blocksWithRelationshipAxes = await Promise.all(
+    blocksWithGenealogy.map(async (block) => {
+      if (block.blockType !== "relationship") return block;
+      const relationshipData = zRelationshipBlockData.parse(block.data);
+      if (relationshipData.target?.kind !== "entity") return block;
+      const [{ axes }, targetEntity] = await Promise.all([
+        getCurrentAttitude(supabase, entity.id, relationshipData.target.id),
+        getEntityById(supabase, relationshipData.target.id),
+      ]);
+      return {
+        ...block,
+        relationshipAxes: axes,
+        relationshipTarget: targetEntity ? { name: targetEntity.name, slug: targetEntity.slug } : null,
+      };
+    })
+  );
+
+  // Reseau (V2-H1 phase 5) : meme fonction que l'editeur (getRelationsGraph,
+  // deja concue pour un viewer anonyme, voir son commentaire) — un lien
+  // cache disparait du graphe avant meme d'atteindre cette reponse. Pas de
+  // coloration par attitude ici (contrairement a l'editeur) : demanderait de
+  // resoudre une campagne pour un simple embellissement visuel, non demande
+  // au-dela de "voir le schema" — tous les liens restent neutres.
+  const blocksWithRelationsGraph = await Promise.all(
+    blocksWithRelationshipAxes.map(async (block) => {
+      if (block.blockType !== "relations_graph") return block;
+      const graphData = zRelationsGraphBlockData.parse(block.data);
+      const relationsGraph = await getRelationsGraph(supabase, {
+        worldId,
+        rootEntityId: graphData.rootEntityId ?? entity.id,
+        maxDegree: graphData.degreesVisible,
+        viewer: { kind: "anonymous" },
+      });
+      return { ...block, relationsGraph };
+    })
+  );
+
+  // Chronologie (V2-H2) : le calendrier du monde n'est jamais dans la
+  // donnee du bloc, une seule lecture pour tous les blocs `timeline` de
+  // cette fiche (comme `entityLookup` plus bas pour les quetes).
+  const hasTimelineBlock = blocksWithRelationsGraph.some((b) => b.blockType === "timeline");
+  const timelineCalendar = hasTimelineBlock ? await getCalendar(supabase, worldId) : null;
+  const blocksWithTimelineCalendar = blocksWithRelationsGraph.map((block) =>
+    block.blockType === "timeline" && timelineCalendar ? { ...block, timelineCalendar } : block
+  );
+
   // Quete (V2-H4) : resout les id d'entite references (commanditaire,
   // objectifs, recompenses, prerequis) en nom/slug — la donnee du bloc ne
   // stocke que des id, insuffisant pour un lien cote wiki public. L'entite
   // n'a pas de visibilite propre (seuls ses blocs en ont une), son nom est
   // donc toujours resolvable, meme motif que `otherEntities` cote editeur.
-  const hasQuestBlock = blocksWithGenealogy.some((b) => b.blockType === "quest");
-  const entityLookup = hasQuestBlock
-    ? new Map((await listEntitiesForWorld(supabase, worldId)).map((e) => [e.id, { name: e.name, slug: e.slug }]))
-    : null;
-  const blocksWithQuestRefs = blocksWithGenealogy.map((block) => {
+  const hasQuestBlock = blocksWithTimelineCalendar.some((b) => b.blockType === "quest");
+  const hasTimelineBlockRefs = blocksWithTimelineCalendar.some((b) => b.blockType === "timeline");
+  const entityLookup =
+    hasQuestBlock || hasTimelineBlockRefs
+      ? new Map((await listEntitiesForWorld(supabase, worldId)).map((e) => [e.id, { name: e.name, slug: e.slug }]))
+      : null;
+  const blocksWithQuestRefs = blocksWithTimelineCalendar.map((block) => {
+    if (block.blockType === "timeline" && entityLookup) {
+      const timeline = zTimelineBlockData.safeParse(block.data);
+      if (!timeline.success) return block;
+      const timelineRefs: Record<string, { name: string; slug: string }> = {};
+      for (const entry of timeline.data.entries) {
+        if (entry.ref?.kind !== "entity") continue;
+        const found = entityLookup.get(entry.ref.id);
+        if (found) timelineRefs[entry.ref.id] = found;
+      }
+      return { ...block, timelineRefs };
+    }
     if (block.blockType !== "quest" || !entityLookup) return block;
     const quest = zQuestBlockData.safeParse(block.data);
     if (!quest.success) return block;
