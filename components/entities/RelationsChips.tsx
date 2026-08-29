@@ -105,6 +105,15 @@ export default function RelationsChips({
               key={relation.id}
               className="flex items-center gap-1.5 rounded-full border border-edge bg-panel-raised px-3 py-1 text-xs"
             >
+              <button
+                type="button"
+                onClick={() => toggleVisibility(relation)}
+                className="text-ink-muted hover:text-ink"
+                aria-label={relation.visibilityLevel === "gm" ? "Rendre cette relation publique" : "Masquer cette relation aux joueurs"}
+                title={relation.visibilityLevel === "gm" ? "Masquée aux joueurs — cliquer pour rendre publique" : "Visible publiquement — cliquer pour masquer"}
+              >
+                <EyeIcon open={relation.visibilityLevel !== "gm"} className="h-3.5 w-3.5" />
+              </button>
               <span className="text-ink-muted">{RELATION_LABELS_FR[relation.label] ?? relation.label}</span>
               <Link
                 href={`/m/${worldSlug}/f/${relation.other.slug}`}
@@ -118,15 +127,6 @@ export default function RelationsChips({
               >
                 {relation.other.name}
               </Link>
-              <button
-                type="button"
-                onClick={() => toggleVisibility(relation)}
-                className="text-ink-muted hover:text-ink"
-                aria-label={relation.visibilityLevel === "gm" ? "Rendre cette relation publique" : "Masquer cette relation aux joueurs"}
-                title={relation.visibilityLevel === "gm" ? "Masquée aux joueurs — cliquer pour rendre publique" : "Visible publiquement — cliquer pour masquer"}
-              >
-                <EyeIcon open={relation.visibilityLevel !== "gm"} className="h-3.5 w-3.5" />
-              </button>
               <button
                 type="button"
                 onClick={() => removeRelation(relation.id)}
