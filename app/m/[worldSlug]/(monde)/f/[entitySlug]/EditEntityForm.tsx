@@ -90,6 +90,15 @@ export default function EditEntityForm({
   // ref ne se lit jamais pendant le rendu, react-hooks/refs). Suffisant ici
   // car rien d'autre ne modifie la version pendant que le wizard est ouvert.
   const [wizardVersion, setWizardVersion] = useState(entity.version);
+  // Retour utilisateur : les blocs genealogie/reseau chargent leur propre
+  // graphe via `useEffect` (entityId, degre...) — une relation ajoutee ou
+  // masquee ailleurs sur la page (cette liste, l'autre bloc) ne les fait
+  // jamais rejouer cet effet, `router.refresh()` ne remonte pas ces
+  // composants client. Ce compteur, partage entre RelationsChips et
+  // EntityBlocks (qui le relaie aux deux blocs), force leur refetch a
+  // chaque changement de relation, peu importe d'ou il vient.
+  const [relationsReloadSignal, setRelationsReloadSignal] = useState(0);
+  const bumpRelationsReloadSignal = () => setRelationsReloadSignal((n) => n + 1);
 
   useEffect(() => {
     // Fiche fraiche (V2-G8) : le nom par defaut est deja selectionne au
@@ -374,6 +383,7 @@ export default function EditEntityForm({
               worldSlug={worldSlug}
               relations={initialRelations}
               otherEntities={otherEntities}
+              onRelationsChanged={bumpRelationsReloadSignal}
             />
           </div>
         </div>
@@ -395,6 +405,8 @@ export default function EditEntityForm({
           initialBlocks={initialBlocks}
           worldSlug={worldSlug}
           otherEntities={otherEntities}
+          relationsReloadSignal={relationsReloadSignal}
+          onRelationsChanged={bumpRelationsReloadSignal}
           onLaunchWizard={() => {
             setWizardVersion(versionRef.current);
             setWizardOpen(true);

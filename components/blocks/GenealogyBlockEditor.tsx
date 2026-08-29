@@ -57,6 +57,7 @@ export default function GenealogyBlockEditor({
   data,
   otherEntities,
   onRelationsChanged,
+  reloadSignal,
 }: {
   entityId: string;
   worldId: string;
@@ -65,6 +66,8 @@ export default function GenealogyBlockEditor({
   otherEntities: OtherEntityOption[];
   /** Rafraichit la section "Relations" en tete de fiche — meme table, deux vues (V2-H3). */
   onRelationsChanged: () => void;
+  /** V2, retour utilisateur : incremente par un ancetre quand une relation change ailleurs (liste du haut, bloc reseau) — force le rechargement de l'arbre, qui sinon ne rejoue jamais son effet (`genealogyUrl` seul en dependance). */
+  reloadSignal?: number;
 }) {
   const [tree, setTree] = useState<FamilyTree | null>(null);
   const [menu, setMenu] = useState<MenuStep | null>(null);
@@ -89,7 +92,7 @@ export default function GenealogyBlockEditor({
     return () => {
       cancelled = true;
     };
-  }, [genealogyUrl]);
+  }, [genealogyUrl, reloadSignal]);
 
   /** Reappel imperatif apres l'ajout/la suppression d'une relation (pas dans un effet, donc sans le meme garde-fou de setState). */
   async function loadTree() {
@@ -157,6 +160,18 @@ export default function GenealogyBlockEditor({
     onRelationsChanged();
   }
 
+  /** Bouton oeil sur le trait epingle (V2, retour utilisateur point 4) — meme route et meme bascule binaire que RelationsChips.tsx et RelationsGraphBlockEditor.tsx : les trois vues d'une meme relation restent synchronisees. */
+  async function toggleEdgeVisibility(edge: FamilyTreeEdge) {
+    const nextLevel = edge.visibilityLevel === "gm" ? "public" : "gm";
+    await fetch(`/api/relations/${edge.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visibility: { level: nextLevel, scopeId: null } }),
+    });
+    await loadTree();
+    onRelationsChanged();
+  }
+
   if (!tree) return <p className="text-sm text-ink-muted">Chargement de l&apos;arbre…</p>;
 
   const matches =
@@ -180,6 +195,7 @@ export default function GenealogyBlockEditor({
       <FamilyTreeCanvas
         tree={tree}
         onDeleteEdge={deleteEdge}
+        onToggleEdgeVisibility={toggleEdgeVisibility}
         renderCard={(node: FamilyTreeNode) => <FamilyTreeCard node={node} href={`/m/${worldSlug}/f/${node.slug}`} />}
         renderNodeOverlay={(node, scale) => (
           <button

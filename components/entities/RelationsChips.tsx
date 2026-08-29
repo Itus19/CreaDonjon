@@ -42,11 +42,14 @@ export default function RelationsChips({
   worldSlug,
   relations,
   otherEntities,
+  onRelationsChanged,
 }: {
   entityId: string;
   worldSlug: string;
   relations: RelationChip[];
   otherEntities: OtherEntityOption[];
+  /** V2, retour utilisateur : signale aux blocs genealogie/reseau (qui chargent leur graphe a part) qu'une relation a change ici, pour qu'ils se rechargent aussi. */
+  onRelationsChanged?: () => void;
 }) {
   const router = useRouter();
   const desktop = useDesktop();
@@ -81,6 +84,7 @@ export default function RelationsChips({
   async function removeRelation(id: string) {
     await fetch(`/api/relations/${id}`, { method: "DELETE" });
     router.refresh();
+    onRelationsChanged?.();
   }
 
   /** Bascule œil (retour utilisateur) : public/gm seulement, meme binaire que le masquage d'un lien depuis le bloc reseau (`RelationsGraphBlockEditor.tsx`) — pas le selecteur complet a 6 niveaux pour un geste rapide. Optimiste : la puce reflete le nouvel etat tout de suite, la requete part en arriere-plan. */
@@ -92,6 +96,7 @@ export default function RelationsChips({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ visibility: { level: nextLevel, scopeId: null } }),
     });
+    onRelationsChanged?.();
   }
 
   async function addRelation() {
@@ -119,6 +124,7 @@ export default function RelationsChips({
       return;
     }
     router.refresh();
+    onRelationsChanged?.();
   }
 
   return (

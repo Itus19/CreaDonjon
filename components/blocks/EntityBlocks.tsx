@@ -14,6 +14,7 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { computeDroppedOrder } from "@/src/core/ordering/computeDroppedOrder";
+import { useCollapsedGroups } from "@/components/shell/useCollapsedGroups";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
@@ -103,6 +104,7 @@ function BlockDataEditor({
   worldId,
   otherEntities,
   onRelationsChanged,
+  relationsReloadSignal,
   characterData,
   onBlockRefreshed,
 }: {
@@ -115,6 +117,8 @@ function BlockDataEditor({
   otherEntities: OtherEntityOption[];
   /** V2-H3 : rafraichit la section "Relations" en tete de fiche apres un ajout depuis le bloc genealogie. */
   onRelationsChanged: () => void;
+  /** V2, retour utilisateur : incremente ailleurs sur la page (liste de relations, autre bloc) — force genealogie/reseau a recharger leur graphe, qu'ils chargent via leur propre `useEffect` sans jamais dependre de `router.refresh()`. */
+  relationsReloadSignal: number;
   /** Bloc `character` de la meme entite, s'il existe (V1-C18) — permet au bloc `inventory` autonome d'afficher les memes lignes Attaquer/Degats et la meme barre de charge que l'onglet Inventaire de la fiche jouable, sans dupliquer le calcul. */
   characterData: CharacterBlockData | undefined;
   /** Assistance IA du bloc `text` (V1-F3) : une proposition appliquee ecrit cote serveur, ce callback resynchronise l'etat local (donnee + version). */
@@ -194,6 +198,7 @@ function BlockDataEditor({
           data={block.data as GenealogyBlockData}
           otherEntities={otherEntities}
           onRelationsChanged={onRelationsChanged}
+          reloadSignal={relationsReloadSignal}
         />
       );
     case "quest":
@@ -257,6 +262,8 @@ function BlockDataEditor({
           worldSlug={worldSlug}
           data={block.data as RelationsGraphBlockData}
           onChange={(d) => onChange(d)}
+          onRelationsChanged={onRelationsChanged}
+          reloadSignal={relationsReloadSignal}
         />
       );
     case "timeline":
@@ -291,6 +298,8 @@ export default function EntityBlocks({
   worldSlug,
   otherEntities,
   onLaunchWizard,
+  relationsReloadSignal,
+  onRelationsChanged: onRelationsChangedFromParent,
 }: {
   entityId: string;
   /** V2-H3 : necessaire pour "creer la carte «X»" depuis le bloc genealogie. */
@@ -301,10 +310,17 @@ export default function EntityBlocks({
   otherEntities: OtherEntityOption[];
   /** Assistant de creation (retour utilisateur, suite) — omis quand aucun parent ne le fournit (ex. contextes hors fiche de monde), le bouton reste alors absent plutot que sans effet. */
   onLaunchWizard?: () => void;
+  /** V2, retour utilisateur : compteur possede par le parent (EditEntityForm), partage avec RelationsChips — force genealogie/reseau a recharger quand une relation change ailleurs sur la page. Absent hors contexte de fiche complete (ex. fenetre isolee) : les deux blocs retombent alors sur leur seul rechargement interne. */
+  relationsReloadSignal?: number;
+  onRelationsChanged?: () => void;
 }) {
   const router = useRouter();
   const [blocks, setBlocks] = useState<BlockItem[]>(initialBlocks);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Retour utilisateur : le pli/depli d'un bloc ne survivait pas a un
+  // rechargement (Set en memoire) — meme mecanisme de persistance que le
+  // sommaire (`useCollapsedGroups`, deja teste), une cle par fiche pour ne
+  // jamais melanger les plis d'une fiche avec ceux d'une autre.
+  const { isCollapsed, toggle: toggleCollapsed } = useCollapsedGroups(`creadonjon:collapsed:blocks:${entityId}`);
   const [conflictedIds, setConflictedIds] = useState<Set<string>>(new Set());
   /** Distinct de `conflictedIds` (409, "rechargez") : un 400/500 signifie que la donnee elle-meme est rejetee (ex. `label` vide sur un objet d'inventaire) — se recharger ne change rien tant que la donnee n'est pas corrigee. Avant ce complement, `doSaveBlock` avalait ces echecs sans rien afficher : le bouton semblait "ne rien faire". */
   const [saveErrorIds, setSaveErrorIds] = useState<Set<string>>(new Set());
@@ -422,15 +438,6 @@ export default function EntityBlocks({
   function handleBlockRefreshed(fresh: { id: string; data: unknown; version: number }) {
     versionsRef.current[fresh.id] = fresh.version;
     patchBlock(fresh.id, { data: fresh.data, version: fresh.version });
-  }
-
-  function toggleCollapsed(id: string) {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
   }
 
   async function addBlock(blockType: string) {
@@ -647,13 +654,17 @@ export default function EntityBlocks({
               block={block}
               index={index}
               lastIndex={sortedBlocks.length - 1}
-              isCollapsed={collapsed.has(block.id)}
+              isCollapsed={isCollapsed(block.id)}
               hasConflict={conflictedIds.has(block.id)}
               hasSaveError={saveErrorIds.has(block.id)}
               worldSlug={worldSlug}
               worldId={worldId}
               otherEntities={otherEntities}
-              onRelationsChanged={() => router.refresh()}
+              onRelationsChanged={() => {
+                router.refresh();
+                onRelationsChangedFromParent?.();
+              }}
+              relationsReloadSignal={relationsReloadSignal ?? 0}
               entityId={entityId}
               characterBlock={characterBlock}
               inventoryBlock={inventoryBlock}
@@ -739,6 +750,7 @@ function SortableBlockCard({
   worldId,
   otherEntities,
   onRelationsChanged,
+  relationsReloadSignal,
   entityId,
   characterBlock,
   inventoryBlock,
@@ -766,6 +778,7 @@ function SortableBlockCard({
   worldId: string;
   otherEntities: OtherEntityOption[];
   onRelationsChanged: () => void;
+  relationsReloadSignal: number;
   entityId: string;
   characterBlock: BlockItem | undefined;
   inventoryBlock: BlockItem | undefined;
@@ -805,7 +818,7 @@ function SortableBlockCard({
           >
             ⠿
           </button>
-          {block.blockType !== "character" && block.blockType !== "statblock" && (
+          {block.blockType !== "statblock" && (
             <button
               type="button"
               onClick={() => onToggleCollapsed(block.id)}
@@ -891,21 +904,23 @@ function SortableBlockCard({
           sur ce bloc, l'autre vue se re-rend avec la donnee a jour au
           prochain rendu — synchronise sans mecanisme dedie. */}
       {block.blockType === "character" ? (
-        <PlayableCharacterSheet
-          worldSlug={worldSlug}
-          entityId={entityId}
-          campaignId={null}
-          character={block.data as CharacterBlockData}
-          inventory={inventoryBlock?.data as InventoryBlockData | undefined}
-          spellcasting={spellcastingBlock?.data as SpellcastingBlockData | undefined}
-          resources={resourcesBlock?.data as ResourcesBlockData | undefined}
-          characterBlockId={block.id}
-          characterBlockVersion={block.version}
-          onUpdateCharacter={onUpdateCharacter}
-          onUpdateInventory={onUpdateInventory}
-          onUpdateSpellcasting={onUpdateSpellcasting}
-          onBlockRefreshed={onBlockRefreshed}
-        />
+        !isCollapsed && (
+          <PlayableCharacterSheet
+            worldSlug={worldSlug}
+            entityId={entityId}
+            campaignId={null}
+            character={block.data as CharacterBlockData}
+            inventory={inventoryBlock?.data as InventoryBlockData | undefined}
+            spellcasting={spellcastingBlock?.data as SpellcastingBlockData | undefined}
+            resources={resourcesBlock?.data as ResourcesBlockData | undefined}
+            characterBlockId={block.id}
+            characterBlockVersion={block.version}
+            onUpdateCharacter={onUpdateCharacter}
+            onUpdateInventory={onUpdateInventory}
+            onUpdateSpellcasting={onUpdateSpellcasting}
+            onBlockRefreshed={onBlockRefreshed}
+          />
+        )
       ) : block.blockType === "statblock" ? (
         <MonsterStatblockSheet data={block.data as StatblockBlockData} onChange={(data) => onPatchBlock(block.id, { data })} />
       ) : (
@@ -917,6 +932,7 @@ function SortableBlockCard({
             worldId={worldId}
             otherEntities={otherEntities}
             onRelationsChanged={onRelationsChanged}
+            relationsReloadSignal={relationsReloadSignal}
             characterData={characterBlock?.data as CharacterBlockData | undefined}
             onBlockRefreshed={onBlockRefreshed}
           />

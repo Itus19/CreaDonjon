@@ -20,11 +20,17 @@ export default function RelationsGraphBlockEditor({
   worldSlug,
   data,
   onChange,
+  onRelationsChanged,
+  reloadSignal,
 }: {
   entityId: string;
   worldSlug: string;
   data: RelationsGraphBlockData;
   onChange: (data: RelationsGraphBlockData) => void;
+  /** V2, retour utilisateur : signale au reste de la fiche (liste du haut, bloc genealogie) qu'une visibilite a change ici. */
+  onRelationsChanged?: () => void;
+  /** V2, retour utilisateur : incremente par un ancetre quand une relation change ailleurs — force le rechargement du graphe, qui sinon ne rejoue jamais son effet (`data.degreesVisible` seul en dependance). */
+  reloadSignal?: number;
 }) {
   const [graph, setGraph] = useState<RelationsGraph | null>(null);
   const [edgeColors, setEdgeColors] = useState<Record<string, string>>({});
@@ -33,7 +39,7 @@ export default function RelationsGraphBlockEditor({
     fetch(`/api/entities/${entityId}/relations-graph?rootEntityId=${entityId}&maxDegree=${data.degreesVisible}`)
       .then((res) => (res.ok ? res.json() : { nodes: [], edges: [] }))
       .then((g: RelationsGraph) => setGraph(g));
-  }, [entityId, data.degreesVisible]);
+  }, [entityId, data.degreesVisible, reloadSignal]);
 
   // Couleur des liens qui touchent directement la racine : derivee de
   // l'attitude reelle (friendship_hostility) si une campagne/relation
@@ -76,6 +82,7 @@ export default function RelationsGraphBlockEditor({
         ? { ...prev, edges: prev.edges.map((e) => (e.id === edge.id ? { ...e, visibilityLevel: nextLevel } : e)) }
         : prev
     );
+    onRelationsChanged?.();
   }
 
   function edgeColor(edge: RelationsGraphEdge): string {
