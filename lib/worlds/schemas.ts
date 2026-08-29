@@ -24,6 +24,23 @@ export const importWorldSchema = z.object({
 /** Reglage du calendrier du monde (V2-H2, onglet MJ) : remplace le calendrier entier. */
 export const updateCalendarSchema = zCalendarConfig;
 
+/** Renommage (V2, retour utilisateur, ecran d'accueil) : jamais le slug — voir `updateWorldName` (repo). */
+export const renameWorldSchema = z.object({
+  worldId: z.guid(),
+  name: z.string().trim().min(1, "Le nom est requis.").max(100, "100 caracteres maximum."),
+});
+
+/**
+ * Suppression definitive (V2, retour utilisateur, ecran d'accueil) : la
+ * confirmation n'est pas un mot fixe (contrairement a `deleteAccountSchema`)
+ * mais le nom EXACT du monde — verifie cote service, pas ici, puisque ce
+ * schema ne connait pas le nom du monde concerne.
+ */
+export const deleteWorldSchema = z.object({
+  worldId: z.guid(),
+  confirmation: z.string().trim().min(1, "Tapez le nom du monde pour confirmer."),
+});
+
 export const updateWikiWelcomeMessageSchema = z.object({
   worldId: z.guid(),
   // "" (champ vide du formulaire) efface la personnalisation — l'appelant

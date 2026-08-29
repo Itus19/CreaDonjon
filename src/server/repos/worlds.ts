@@ -138,6 +138,8 @@ export interface WorldCardPlayerCharacter {
 
 export interface WorldCard {
   id: string;
+  /** V2, retour utilisateur (ecran d'accueil) : distingue "proprietaire" de "simple membre invite" pour n'afficher Renommer/Supprimer qu'au premier — RLS (`worlds_write`) les refuserait de toute facon au second, mais autant ne pas afficher un bouton qui echoue toujours. */
+  ownerId: string;
   name: string;
   slug: string;
   /** `null` : monde sans campagne — ne devrait plus arriver pour un monde cree apres la migration 20260826100001, mais reste possible pour un monde plus ancien pas encore complete. */
@@ -159,7 +161,7 @@ export interface WorldCard {
 export async function listWorldCardsForCurrentUser(supabase: TypedClient): Promise<WorldCard[]> {
   const { data, error } = await supabase
     .from("worlds")
-    .select(`id, name, slug, updated_at, campaigns ( mode, rulesets ( name ) )`)
+    .select(`id, owner_id, name, slug, updated_at, campaigns ( mode, rulesets ( name ) )`)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
 
@@ -172,6 +174,7 @@ export async function listWorldCardsForCurrentUser(supabase: TypedClient): Promi
     const lastModified = entityLast && entityLast > w.updated_at ? entityLast : w.updated_at;
     return {
       id: w.id,
+      ownerId: w.owner_id,
       name: w.name,
       slug: w.slug,
       mode: (campaign?.mode as "campaign" | "solo" | undefined) ?? null,
@@ -196,6 +199,34 @@ async function latestEntityEditByWorld(supabase: TypedClient, worldIds: string[]
     if (!map.has(row.world_id)) map.set(row.world_id, row.updated_at);
   }
   return map;
+}
+
+/**
+ * Renommage (V2, retour utilisateur, ecran d'accueil) : ne touche jamais
+ * `slug` — les liens `/m/[slug]` et les liens de partage restent stables
+ * apres un renommage, seul le nom affiche change.
+ */
+export async function updateWorldName(
+  supabase: TypedClient,
+  worldId: string,
+  name: string
+): Promise<{ updated: boolean }> {
+  const { data, error } = await supabase.from("worlds").update({ name }).eq("id", worldId).select("id");
+  if (error) throw new Error(error.message);
+  return { updated: data.length > 0 };
+}
+
+/**
+ * Suppression definitive (V2, retour utilisateur, ecran d'accueil) : RLS
+ * (`worlds_write`) restreint deja l'ecriture au proprietaire, et
+ * `supabase/tests/p0-06_world_deletion_no_orphans.sql` garantit qu'aucune
+ * ligne dependante (entites, campagnes, relations...) ne survit — un
+ * simple DELETE suffit, la cascade est verifiee cote base.
+ */
+export async function deleteWorldRow(supabase: TypedClient, worldId: string): Promise<{ deleted: boolean }> {
+  const { data, error } = await supabase.from("worlds").delete().eq("id", worldId).select("id");
+  if (error) throw new Error(error.message);
+  return { deleted: data.length > 0 };
 }
 
 export async function insertWorld(

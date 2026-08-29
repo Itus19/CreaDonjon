@@ -6,9 +6,11 @@ import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
 import { zCalendarConfig, type CalendarConfigInput } from "@/src/core/schemas/calendar";
 import { DEFAULT_CALENDAR } from "@/src/core/calendar/defaultCalendar";
 import {
+  deleteWorldRow,
   getWorldById,
   getWorldBySlugForCurrentUser,
   getWorldCalendar,
+  getWorldOwnerId,
   insertWorld,
   listWorldCardsForCurrentUser,
   listWorldsForCurrentUser,
@@ -17,6 +19,7 @@ import {
   setWorldDefaultRuleset,
   setWorldEntityKindOrder,
   setWorldWikiWelcomeMessage,
+  updateWorldName,
   type WorldCard,
   type WorldSummary,
 } from "@/src/server/repos/worlds";
@@ -106,6 +109,42 @@ export async function updateCalendar(
   calendar: CalendarConfigInput
 ): Promise<{ updated: boolean }> {
   return setWorldCalendar(supabase, worldId, calendar);
+}
+
+/**
+ * Renommage (V2, retour utilisateur, ecran d'accueil) : verification
+ * explicite du proprietaire, meme si RLS (`worlds_write`) la refuserait de
+ * toute facon — meme convention que la route de duplication
+ * (`/api/worlds/[worldSlug]/duplicate`), qui distingue deja "monde
+ * introuvable" de "pas le proprietaire" plutot que de laisser la base
+ * echouer silencieusement.
+ */
+export async function renameWorld(
+  supabase: TypedClient,
+  params: { worldId: string; userId: string; name: string }
+): Promise<{ updated: boolean; error?: "not_found" | "forbidden" }> {
+  const ownerId = await getWorldOwnerId(supabase, params.worldId);
+  if (ownerId === null) return { updated: false, error: "not_found" };
+  if (ownerId !== params.userId) return { updated: false, error: "forbidden" };
+  return updateWorldName(supabase, params.worldId, params.name);
+}
+
+/**
+ * Suppression definitive (V2, retour utilisateur, ecran d'accueil) : la
+ * confirmation doit egaler le nom EXACT du monde (pas un mot fixe) — verifie
+ * ici, cote serveur, jamais seulement dans le formulaire. Meme verification
+ * de proprietaire explicite que `renameWorld` ci-dessus.
+ */
+export async function deleteWorldWithConfirmation(
+  supabase: TypedClient,
+  params: { worldId: string; userId: string; confirmation: string }
+): Promise<{ deleted: boolean; error?: "not_found" | "forbidden" | "mismatch" }> {
+  const world = await getWorldById(supabase, params.worldId);
+  if (!world) return { deleted: false, error: "not_found" };
+  const ownerId = await getWorldOwnerId(supabase, params.worldId);
+  if (ownerId !== params.userId) return { deleted: false, error: "forbidden" };
+  if (params.confirmation !== world.name) return { deleted: false, error: "mismatch" };
+  return deleteWorldRow(supabase, params.worldId);
 }
 
 /** Derive un slug unique (parmi les mondes du meme proprietaire) a partir du nom, en suffixant -2, -3... en cas de collision. */

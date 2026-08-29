@@ -1,10 +1,156 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
+import { deleteWorldAction, renameWorldAction, type DeleteWorldState, type RenameWorldState } from "@/app/actions";
 
-/** Exporter/dupliquer un monde depuis l'ecran d'accueil (V2-G1, dernier point) — hors du <Link> de la carte, ce sont des actions, pas une navigation. */
-export default function WorldCardActions({ worldSlug }: { worldSlug: string }) {
+/**
+ * Renommage (V2, retour utilisateur, ecran d'accueil) : "etes-vous sur ?"
+ * avant d'ecrire, meme reflexe que `DeleteWorldSection` ci-dessous mais
+ * sans mot de confirmation — un renommage se defait (on peut retaper
+ * l'ancien nom), une suppression non.
+ */
+function RenameWorldSection({ worldId, worldName }: { worldId: string; worldName: string }) {
+  const [revealed, setRevealed] = useState(false);
+  const [name, setName] = useState(worldName);
+  const [state, formAction, pending] = useActionState<RenameWorldState, FormData>(renameWorldAction, null);
+  // Ferme le panneau des la reussite — ajustement pendant le rendu (React,
+  // "Adjusting state when a prop changes"), pas dans un effet : meme motif
+  // que `prevRelations` dans RelationsChips.tsx, la regle react-hooks
+  // refuse un `setState` synchrone dans un effet pour ce cas.
+  const [prevState, setPrevState] = useState(state);
+  if (state !== prevState) {
+    setPrevState(state);
+    if (state && "ok" in state) setRevealed(false);
+  }
+
+  if (!revealed) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setName(worldName);
+          setRevealed(true);
+        }}
+        className="rounded-full border border-edge px-2 py-0.5 text-[11px] text-ink-muted transition-colors hover:bg-panel-raised"
+      >
+        Renommer
+      </button>
+    );
+  }
+
+  return (
+    <form action={formAction} className="flex w-full flex-col gap-2 rounded-md border border-edge bg-panel-raised p-3">
+      <input type="hidden" name="worldId" value={worldId} />
+      <label className="flex flex-col gap-1 text-xs text-ink-muted">
+        Nouveau nom
+        <input
+          name="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={100}
+          autoFocus
+          className="w-full rounded-md border border-edge bg-panel px-2.5 py-1.5 text-sm text-ink outline-none"
+        />
+      </label>
+      <p className="text-xs text-ink-muted">Êtes-vous sûr de vouloir renommer ce monde ?</p>
+      {state && "error" in state && <p className="text-xs text-danger">{state.error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={pending || name.trim() === "" || name.trim() === worldName}
+          className="rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:bg-panel disabled:opacity-40"
+        >
+          {pending ? "Renommage..." : "Confirmer"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setRevealed(false)}
+          className="rounded-md border border-edge px-3 py-1.5 text-sm text-ink-muted transition-colors hover:bg-panel-raised"
+        >
+          Annuler
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Suppression definitive (V2, retour utilisateur, ecran d'accueil) : meme
+ * DA que `DeleteAccountSection` (SettingsMenu.tsx) — mais le mot de
+ * confirmation est le nom EXACT du monde, pas un mot fixe, puisqu'il n'y a
+ * ici aucune traduction figee a comparer.
+ */
+function DeleteWorldSection({ worldId, worldName }: { worldId: string; worldName: string }) {
+  const [revealed, setRevealed] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
+  const [state, formAction, pending] = useActionState<DeleteWorldState, FormData>(deleteWorldAction, null);
+
+  if (!revealed) {
+    return (
+      <button
+        type="button"
+        onClick={() => setRevealed(true)}
+        className="rounded-full border border-danger/50 px-2 py-0.5 text-[11px] text-danger transition-colors hover:bg-danger/10"
+      >
+        Supprimer
+      </button>
+    );
+  }
+
+  return (
+    <form action={formAction} className="flex w-full flex-col gap-2 rounded-md border border-danger/50 bg-danger/5 p-3">
+      <input type="hidden" name="worldId" value={worldId} />
+      <p className="text-xs text-danger">
+        Suppression définitive : le monde, ses fiches et son historique seront perdus, sans retour en arrière possible.
+      </p>
+      <label className="flex flex-col gap-1 text-xs text-ink-muted">
+        Tapez « {worldName} » pour confirmer
+        <input
+          name="confirmation"
+          value={confirmation}
+          onChange={(e) => setConfirmation(e.target.value)}
+          autoComplete="off"
+          className="w-full rounded-md border border-edge bg-panel-raised px-2.5 py-1.5 font-mech text-sm text-ink outline-none"
+        />
+      </label>
+      {state?.error && <p className="text-xs text-danger">{state.error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={pending || confirmation !== worldName}
+          className="rounded-md bg-danger px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-danger/90 disabled:opacity-40"
+        >
+          {pending ? "Suppression..." : "Confirmer"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setRevealed(false);
+            setConfirmation("");
+          }}
+          className="rounded-md border border-edge px-3 py-1.5 text-sm text-ink-muted transition-colors hover:bg-panel-raised"
+        >
+          Annuler
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** Exporter/dupliquer/renommer/supprimer un monde depuis l'ecran d'accueil (V2-G1, dernier point ; V2 renommage+suppression) — hors du <Link> de la carte, ce sont des actions, pas une navigation. */
+export default function WorldCardActions({
+  worldId,
+  worldSlug,
+  worldName,
+  isOwner,
+}: {
+  worldId: string;
+  worldSlug: string;
+  worldName: string;
+  /** Renommer/supprimer sont reserves au proprietaire (RLS `worlds_write` les refuserait sinon) — inutile d'afficher un bouton qui echoue toujours a un simple membre invite. */
+  isOwner: boolean;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState<"export" | "duplicate" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,24 +195,28 @@ export default function WorldCardActions({ worldSlug }: { worldSlug: string }) {
   }
 
   return (
-    <div className="flex items-center gap-2 pt-1">
-      <button
-        type="button"
-        onClick={handleExport}
-        disabled={pending !== null}
-        className="rounded-full border border-edge px-2 py-0.5 text-[11px] text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
-      >
-        {pending === "export" ? "Export..." : "Exporter"}
-      </button>
-      <button
-        type="button"
-        onClick={handleDuplicate}
-        disabled={pending !== null}
-        className="rounded-full border border-edge px-2 py-0.5 text-[11px] text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
-      >
-        {pending === "duplicate" ? "Duplication..." : "Dupliquer"}
-      </button>
-      {error && <p className="text-[11px] text-danger">{error}</p>}
+    <div className="flex flex-col gap-2 pt-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={pending !== null}
+          className="rounded-full border border-edge px-2 py-0.5 text-[11px] text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
+        >
+          {pending === "export" ? "Export..." : "Exporter"}
+        </button>
+        <button
+          type="button"
+          onClick={handleDuplicate}
+          disabled={pending !== null}
+          className="rounded-full border border-edge px-2 py-0.5 text-[11px] text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
+        >
+          {pending === "duplicate" ? "Duplication..." : "Dupliquer"}
+        </button>
+        {isOwner && <RenameWorldSection worldId={worldId} worldName={worldName} />}
+        {isOwner && <DeleteWorldSection worldId={worldId} worldName={worldName} />}
+        {error && <p className="text-[11px] text-danger">{error}</p>}
+      </div>
     </div>
   );
 }

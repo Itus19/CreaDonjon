@@ -79,7 +79,12 @@ export default async function Home() {
                   <p className="text-sm text-ink-muted">Aucun joueur</p>
                 )}
               </Link>
-              <WorldCardActions worldSlug={world.slug} />
+              <WorldCardActions
+                worldId={world.id}
+                worldSlug={world.slug}
+                worldName={world.name}
+                isOwner={world.ownerId === user?.id}
+              />
             </li>
           ))}
           {worlds.length === 0 && (
