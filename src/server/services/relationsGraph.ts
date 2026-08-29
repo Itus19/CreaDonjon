@@ -2,24 +2,39 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { filterBlocks, type Viewer, type VisibilityLevel } from "@/src/core/visibility";
-import { buildRelationsGraph, type GraphEdgeInput, type RelationsGraph } from "@/src/core/relationsGraph/buildRelationsGraph";
+import {
+  buildRelationsGraph,
+  type GraphEdgeInput,
+  type GraphEntityInput,
+  type RelationsGraph,
+} from "@/src/core/relationsGraph/buildRelationsGraph";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { listAllRelationsForWorld } from "@/src/server/repos/relations";
 import { listEntitiesForWorld } from "@/src/server/repos/entities";
 
 type TypedClient = SupabaseClient<Database>;
 
+export interface RelationsGraphData {
+  edges: GraphEdgeInput[];
+  entities: GraphEntityInput[];
+}
+
 /**
- * Construit le graphe de relations d'une fiche (V2-H1 phase 5) — memes
- * garanties que `getFamilyTree` (V2-H3) : les aretes viennent de
- * `relations`, filtrees par visibilite AVANT de quitter le serveur, meme
- * fonction pour l'editeur et le wiki public. Difference : tout type de
- * relation compte, pas seulement la famille.
+ * Aretes + entites d'un monde, deja filtrees par visibilite — TOUT ce qui
+ * precede le calcul du parcours en largeur (`buildRelationsGraph`), qui
+ * lui seul depend de `maxDegree`. Extrait de `getRelationsGraph` (retour
+ * utilisateur : "changer le degre met du temps a charger") — le degre
+ * choisi ne change JAMAIS cette partie couteuse (deux requetes sur toute
+ * la base du monde), seulement le parcours en largeur PUR (src/core, sans
+ * reseau) applique par-dessus. `RelationsGraphBlockEditor.tsx` ne
+ * recupere donc ces donnees qu'une fois par montage, puis recalcule le
+ * graphe visible localement, sans aucun aller-retour serveur, a chaque
+ * changement de degre.
  */
-export async function getRelationsGraph(
+export async function getRelationsGraphData(
   supabase: TypedClient,
-  params: { worldId: string; rootEntityId: string; maxDegree: number; viewer: Viewer }
-): Promise<RelationsGraph> {
+  params: { worldId: string; viewer: Viewer }
+): Promise<RelationsGraphData> {
   const [rows, allEntities] = await Promise.all([
     listAllRelationsForWorld(supabase, params.worldId),
     listEntitiesForWorld(supabase, params.worldId),
@@ -58,10 +73,24 @@ export async function getRelationsGraph(
     visibilityLevel: r.visibility_level,
   }));
 
-  return buildRelationsGraph({
-    rootId: params.rootEntityId,
-    maxDegree: params.maxDegree,
-    edges,
-    entities: entities.map((e) => ({ id: e.id, name: e.name, slug: e.slug, entityKind: e.entity_kind })),
-  });
+  return { edges, entities: entities.map((e) => ({ id: e.id, name: e.name, slug: e.slug, entityKind: e.entity_kind })) };
+}
+
+/**
+ * Construit le graphe de relations d'une fiche (V2-H1 phase 5) — memes
+ * garanties que `getFamilyTree` (V2-H3) : les aretes viennent de
+ * `relations`, filtrees par visibilite AVANT de quitter le serveur, meme
+ * fonction pour l'editeur et le wiki public. Difference : tout type de
+ * relation compte, pas seulement la famille.
+ *
+ * Simple composition de `getRelationsGraphData` + `buildRelationsGraph` —
+ * gardee pour le wiki public, qui n'a pas de degre a changer en direct
+ * (un seul calcul par affichage, jamais besoin du decoupage cote client).
+ */
+export async function getRelationsGraph(
+  supabase: TypedClient,
+  params: { worldId: string; rootEntityId: string; maxDegree: number; viewer: Viewer }
+): Promise<RelationsGraph> {
+  const { edges, entities } = await getRelationsGraphData(supabase, { worldId: params.worldId, viewer: params.viewer });
+  return buildRelationsGraph({ rootId: params.rootEntityId, maxDegree: params.maxDegree, edges, entities });
 }
