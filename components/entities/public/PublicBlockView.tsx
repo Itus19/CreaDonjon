@@ -1,10 +1,14 @@
 import { createElement } from "react";
+import Link from "next/link";
 import type { Segment, SegmentContentNode } from "@/src/core/schemas/entities/segments";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import type { CustomTableBlockData } from "@/src/core/schemas/blocks/customTable";
+import type { QuestBlockData, QuestNote, QuestObjective } from "@/src/core/schemas/blocks/quest";
+import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { PublicBlock } from "@/src/server/services/publicShare";
+import { QUEST_STATE_LABELS_FR } from "@/src/i18n/fr";
 import SpoilerSpan from "./SpoilerSpan";
 import PublicGenealogyBlock from "./PublicGenealogyBlock";
 
@@ -118,6 +122,70 @@ function PublicCustomTableBlock({ data }: { data: CustomTableBlockData }) {
   );
 }
 
+function questRefLink(
+  ref: BlockReference | null | undefined,
+  questRefs: Record<string, { name: string; slug: string }> | undefined,
+  hrefBase: string
+) {
+  if (!ref || ref.kind !== "entity") return null;
+  const found = questRefs?.[ref.id];
+  if (!found) return null;
+  return (
+    <Link href={`${hrefBase}/${found.slug}`} className="rich-ref-mention">
+      {found.name}
+    </Link>
+  );
+}
+
+function PublicQuestBlock({
+  data,
+  questRefs,
+  hrefBase,
+}: {
+  data: QuestBlockData;
+  questRefs: Record<string, { name: string; slug: string }> | undefined;
+  hrefBase: string;
+}) {
+  function noteList(items: QuestNote[], label: string) {
+    if (items.length === 0) return null;
+    return (
+      <div>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{label}</span>
+        <ul className="mt-1 list-disc pl-5 text-sm">
+          {items.map((item) => (
+            <li key={item.id}>
+              {item.text} {questRefLink(item.ref, questRefs, hrefBase)}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3 text-sm">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
+        <span className="rounded-full border border-edge px-2 py-0.5">{QUEST_STATE_LABELS_FR[data.state] ?? data.state}</span>
+        {questRefLink(data.giver, questRefs, hrefBase) && <span>Commanditaire : {questRefLink(data.giver, questRefs, hrefBase)}</span>}
+      </div>
+      {data.objectives.length > 0 && (
+        <ul className="flex flex-col gap-1">
+          {data.objectives.map((objective: QuestObjective) => (
+            <li key={objective.id} className={`flex items-start gap-2 ${objective.done ? "text-ink-muted line-through" : ""}`}>
+              <span aria-hidden>{objective.done ? "☑" : "☐"}</span>
+              <span>
+                {objective.text} {questRefLink(objective.ref, questRefs, hrefBase)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {noteList(data.rewards, "Récompenses")}
+      {noteList(data.prerequisites, "Prérequis")}
+    </div>
+  );
+}
+
 /**
  * Rendu dedie a la page publique de partage — pas les editeurs
  * (components/blocks/*BlockEditor.tsx) : aucun champ, aucun bouton, aucun
@@ -147,6 +215,9 @@ export default function PublicBlockView({ block, hrefBase }: { block: PublicBloc
       )}
       {block.blockType === "custom_table" && (
         <PublicCustomTableBlock data={block.data as unknown as CustomTableBlockData} />
+      )}
+      {block.blockType === "quest" && (
+        <PublicQuestBlock data={block.data as unknown as QuestBlockData} questRefs={block.questRefs} hrefBase={hrefBase} />
       )}
     </div>
   );

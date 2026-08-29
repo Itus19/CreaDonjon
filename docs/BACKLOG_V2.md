@@ -386,9 +386,17 @@ Spécification complète : `specs/psyche-pnj.md`.
 - Bloc `session_log` relié aux `session_events`.
 
 **Critères**
-- [ ] États : non commencée, en cours, réussie, échouée, abandonnée.
-- [ ] Un objectif référence des entités ; les cocher est journalisé.
+- [x] États : non commencée, en cours, réussie, échouée, abandonnée.
+- [x] Un objectif référence des entités ; les cocher est journalisé.
 - [ ] Les quêtes actives entrent dans le contexte déterministe de la V3.
+
+**Bloc `quest` — fait.** Schéma (`src/core/schemas/blocks/quest.ts`) : état (les cinq valeurs du critère), commanditaire et chaque objectif/récompense/prérequis peuvent référencer une entité (`zBlockReference`, même primitive que l'inventaire). **Décision explicite, sur clarification demandée à l'utilisateur** : récompenses et prérequis restent du texte libre avec référence optionnelle — pas un vrai graphe de dépendances entre quêtes (une quête qui en bloque une autre), non demandé par le ticket et nettement plus de code pour un besoin non détaillé.
+
+Cocher un objectif est un fait de partie, pas une édition rédactionnelle silencieuse : route dédiée `POST /api/blocks/[blockId]/quest-objective` (`src/server/services/quests.ts`, `toggleQuestObjective`) qui écrit la donnée du bloc ET journalise un `session_event` (kind `world_update`, même convention que `runtimeState.ts`) si une session de campagne est ouverte pour le monde — sans campagne, la case se coche quand même, seul le journal est absent. Vérifié en direct (fiche de Candide Fausset) : objectif coché → `session_events` porte bien la ligne (`payload.note`, `payload.patch.objectiveId`), requête directe en base après coup. Rendu public : `getPublicEntityDetail` (`publicShare.ts`) résout les id référencés en nom/slug pour un lien cliquable, jamais un UUID brut envoyé au visiteur — vérifié sur `/apercu`, lien vers l'entité référencée fonctionnel.
+
+Troisième critère non coché mais préparé : `listActiveQuestsForWorld` (`src/server/services/quests.ts`) liste les quêtes en état "en cours", déjà filtrées par visibilité (règle 9 de `CLAUDE.md`) — rien ne l'appelle encore hors des tests, la V3 (mode solo, contexte déterministe) n'existe pas. Écrite maintenant pour que ce travail n'ait pas à être refait quand la V3 arrivera, sans construire le reste du mécanisme de contexte lui-même.
+
+**Bug réel trouvé et corrigé en testant, sans rapport avec les quêtes** : sélectionner une valeur dans n'importe quel `Dropdown` (état de la quête, mais aussi tout autre menu déroulant de la coquille — visibilité, dé d'une table aléatoire, etc.) juste avant de quitter le bloc pouvait perdre la sélection silencieusement. Cause : le panneau du menu est rendu dans un portail (`document.body`), hors du conteneur DOM du bloc — cliquer une option y déplace le focus AVANT que le clic n'applique la valeur, ce qui déclenchait la sauvegarde au blur (`EntityBlocks.tsx`, `handleBlockBlur`) avec l'état encore ANCIEN. Reproduit et confirmé par une vérification base réelle (rechargement après sélection : la valeur était bien retombée à l'ancienne). Corrigé dans `components/shared/Dropdown.tsx` : `onMouseDown={(e) => e.preventDefault()}` sur chaque option, pour que le focus ne quitte jamais le bloc pendant la sélection — revérifié en direct, la valeur survit maintenant au rechargement.
 
 ---
 

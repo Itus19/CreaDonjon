@@ -108,6 +108,15 @@ export default function Dropdown({
                 type="button"
                 role="option"
                 aria-selected={opt.value === value}
+                // Empeche le mousedown de deplacer le focus DOM vers ce
+                // bouton, qui vit dans un portail hors du conteneur du bloc
+                // (`document.body`) : sans ce garde, le focus quittait le
+                // bloc AVANT que `onClick` n'applique la selection, ce qui
+                // declenchait la sauvegarde au blur (EntityBlocks.tsx,
+                // handleBlockBlur) avec l'ETAT PRECEDENT — la valeur tout
+                // juste choisie disparaissait silencieusement au premier
+                // rechargement, sans qu'aucun message ne le signale.
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => select(opt.value)}
                 className={`block w-full whitespace-nowrap px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-panel ${
                   opt.value === value ? "text-accent" : "text-ink"

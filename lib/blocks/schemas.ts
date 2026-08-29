@@ -31,3 +31,10 @@ export const drawTableSchema = z.object({
 export const writingAssistSchema = z.object({
   instruction: z.string().trim().min(1).max(500),
 });
+
+/** Bascule d'un objectif de quete (V2-H4) — jamais la donnee entiere du bloc : un seul objectif, par id, pour rester journalisable sans ambiguite sur ce qui a change. */
+export const toggleQuestObjectiveSchema = z.object({
+  version: z.number().int().positive(),
+  objectiveId: z.string().min(1),
+  done: z.boolean(),
+});

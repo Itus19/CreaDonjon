@@ -13,6 +13,7 @@ import { zRandomTableBlockData } from "./randomTable";
 import { zGeneratorBlockData } from "./generator";
 import { zMusicBlockData } from "./music";
 import { zGenealogyBlockData } from "./genealogy";
+import { zQuestBlockData } from "./quest";
 
 /**
  * Catalogue des blocs de wiki (specs/wiki-blocs.md §1, docs/SCHEMA.md §7).
@@ -40,6 +41,11 @@ import { zGenealogyBlockData } from "./genealogy";
  * (liste simple) separe : cette information est deja affichee sans
  * condition en tete de fiche (`RelationsChips.tsx`/`PublicRelations.tsx`,
  * V2-G11), un bloc dedie ne ferait que la dupliquer.
+ * V2-H4 : quest — cocher un objectif est un fait de partie, pas une simple
+ * edition redactionnelle : passe par sa propre route
+ * (`app/api/blocks/[blockId]/quest-objective`), qui ecrit aussi un
+ * `session_event` (kind `world_update`, meme convention que
+ * `runtimeState.ts`) si une session de campagne est ouverte pour le monde.
  */
 export const BLOCK_TYPES = [
   "text",
@@ -55,6 +61,7 @@ export const BLOCK_TYPES = [
   "generator",
   "music",
   "genealogy",
+  "quest",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -72,6 +79,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   generator: "prose",
   music: "music",
   genealogy: "graph",
+  quest: "quest",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -89,6 +97,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   generator: zGeneratorBlockData,
   music: zMusicBlockData,
   genealogy: zGenealogyBlockData,
+  quest: zQuestBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -148,6 +157,7 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
   },
   music: { __v: 1, tracks: [] },
   genealogy: { __v: 1, rootEntityId: null, depthUp: 2, depthDown: 2 },
+  quest: { __v: 1, state: "not_started", giver: null, objectives: [], rewards: [], prerequisites: [] },
 };
 
 export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny {

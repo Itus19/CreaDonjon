@@ -501,4 +501,12 @@ export const RELATION_LABELS_FR: Record<string, string> = {
   witnessed_by: "vu par",
 };
 
-export const fr = { RELATION_LABELS_FR } as const;
+export const QUEST_STATE_LABELS_FR: Record<string, string> = {
+  not_started: "Non commencée",
+  in_progress: "En cours",
+  succeeded: "Réussie",
+  failed: "Échouée",
+  abandoned: "Abandonnée",
+};
+
+export const fr = { RELATION_LABELS_FR, QUEST_STATE_LABELS_FR } as const;

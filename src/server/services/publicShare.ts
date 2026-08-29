@@ -21,6 +21,7 @@ import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import { zGenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
 import { getFamilyTree } from "@/src/server/services/genealogy";
 import type { FamilyTree } from "@/src/core/genealogy/buildFamilyTree";
+import { zQuestBlockData } from "@/src/core/schemas/blocks/quest";
 import { buildEntityTree, withPlayerCharacterKinds, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerCharacters";
 
@@ -199,6 +200,8 @@ export interface PublicBlock {
   displayOrder: number;
   /** Calcule cote serveur pour les blocs `genealogy` seulement (V2-H3) — voir plus bas dans `getPublicEntityDetail`. */
   genealogyTree?: FamilyTree;
+  /** Blocs `quest` seulement (V2-H4) : nom/slug des entites referencees par un objectif/une recompense/un prerequis/le commanditaire — la donnee du bloc ne porte que des id, jamais assez pour un lien lisible cote public. */
+  questRefs?: Record<string, { name: string; slug: string }>;
 }
 
 function filterTextBlockSegments(blockType: string, data: Json): Json {
@@ -329,7 +332,33 @@ export async function getPublicEntityDetail(
     })
   );
 
-  return { entity, blocks: blocksWithGenealogy, relations: toPublicRelations(relationRows), portraitLayout, wikiBackground };
+  // Quete (V2-H4) : resout les id d'entite references (commanditaire,
+  // objectifs, recompenses, prerequis) en nom/slug — la donnee du bloc ne
+  // stocke que des id, insuffisant pour un lien cote wiki public. L'entite
+  // n'a pas de visibilite propre (seuls ses blocs en ont une), son nom est
+  // donc toujours resolvable, meme motif que `otherEntities` cote editeur.
+  const hasQuestBlock = blocksWithGenealogy.some((b) => b.blockType === "quest");
+  const entityLookup = hasQuestBlock
+    ? new Map((await listEntitiesForWorld(supabase, worldId)).map((e) => [e.id, { name: e.name, slug: e.slug }]))
+    : null;
+  const blocksWithQuestRefs = blocksWithGenealogy.map((block) => {
+    if (block.blockType !== "quest" || !entityLookup) return block;
+    const quest = zQuestBlockData.safeParse(block.data);
+    if (!quest.success) return block;
+    const ids = new Set<string>();
+    if (quest.data.giver?.kind === "entity") ids.add(quest.data.giver.id);
+    for (const list of [quest.data.objectives, quest.data.rewards, quest.data.prerequisites]) {
+      for (const item of list) if (item.ref?.kind === "entity") ids.add(item.ref.id);
+    }
+    const questRefs: Record<string, { name: string; slug: string }> = {};
+    for (const id of ids) {
+      const found = entityLookup.get(id);
+      if (found) questRefs[id] = found;
+    }
+    return { ...block, questRefs };
+  });
+
+  return { entity, blocks: blocksWithQuestRefs, relations: toPublicRelations(relationRows), portraitLayout, wikiBackground };
 }
 
 /**
