@@ -34,6 +34,22 @@ export default function RelationshipBlockEditor({
   const [loadedTargetId, setLoadedTargetId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Position en cours de glissement, remontee par le curseur a chaque pixel
+  // (avant tout appel reseau) : sans ca, le radar n'a que la valeur
+  // enregistree en base et ne bouge qu'apres l'aller-retour du commit.
+  const [liveOverride, setLiveOverride] = useState<Partial<Record<RelationshipAxisKey, number>>>({});
+
+  function handleLiveChange(key: RelationshipAxisKey, value: number | null) {
+    setLiveOverride((prev) => {
+      if (value === null) {
+        if (!(key in prev)) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return { ...prev, [key]: value };
+    });
+  }
 
   const targetId = data.target?.kind === "entity" ? data.target.id : null;
   const loaded = !targetId || loadedTargetId === targetId;
@@ -110,9 +126,14 @@ export default function RelationshipBlockEditor({
       {targetId && loaded && campaignId && (
         <>
           <div className="flex flex-wrap gap-6">
-            <RelationshipRadar axes={axes} relationTypes={[]} />
+            <RelationshipRadar axes={{ ...axes, ...liveOverride }} relationTypes={[]} />
             <div className="min-w-[220px] flex-1">
-              <RelationshipAxisSliders axes={axes} onCommit={commitAxis} disabled={pending} />
+              <RelationshipAxisSliders
+                axes={axes}
+                onCommit={commitAxis}
+                onLiveChange={handleLiveChange}
+                disabled={pending}
+              />
               {error && <p className="mt-1 text-xs text-danger">{error}</p>}
             </div>
           </div>

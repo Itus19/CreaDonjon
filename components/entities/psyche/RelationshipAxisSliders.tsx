@@ -17,10 +17,13 @@ const AXIS_ENDS_FR: Record<RelationshipAxisKey, { positive: string; negative: st
 export default function RelationshipAxisSliders({
   axes,
   onCommit,
+  onLiveChange,
   disabled,
 }: {
   axes: Partial<Record<RelationshipAxisKey, number>>;
-  onCommit: (key: RelationshipAxisKey, delta: number) => void;
+  onCommit: (key: RelationshipAxisKey, delta: number) => Promise<void> | void;
+  /** Remonte la position en cours de glissement au parent (radar en direct) — `null` efface l'ecrasement local. */
+  onLiveChange?: (key: RelationshipAxisKey, value: number | null) => void;
   disabled?: boolean;
 }) {
   const [liveValues, setLiveValues] = useState<Record<string, number>>({});
@@ -31,12 +34,19 @@ export default function RelationshipAxisSliders({
   // bougeait jamais. Bug reel signale par l'utilisateur.
   const liveValuesRef = useRef<Record<string, number>>({});
   const dragStartRef = useRef<Record<string, number>>({});
+  // Un `commit` en cours pour une cle : la desactivation du curseur pendant
+  // la sauvegarde (`disabled={pending}`) force un `blur` natif, qui rappelle
+  // `commit` une seconde fois AVANT que la premiere requete ait fini. Sans ce
+  // garde, ce second appel effacait la valeur locale tout de suite — retour
+  // en arriere visible puis re-saut a la reponse du serveur.
+  const committingRef = useRef<Record<string, boolean>>({});
 
   const valueOf = (key: RelationshipAxisKey, fallback: number) => liveValues[key] ?? fallback;
 
   function setLiveValue(key: RelationshipAxisKey, value: number) {
     liveValuesRef.current = { ...liveValuesRef.current, [key]: value };
     setLiveValues(liveValuesRef.current);
+    onLiveChange?.(key, value);
   }
 
   function clearLiveValue(key: RelationshipAxisKey) {
@@ -44,19 +54,29 @@ export default function RelationshipAxisSliders({
     delete next[key];
     liveValuesRef.current = next;
     setLiveValues(next);
+    onLiveChange?.(key, null);
   }
 
   function startDrag(key: RelationshipAxisKey, current: number) {
     dragStartRef.current[key] = current;
   }
 
-  function commit(key: RelationshipAxisKey) {
+  async function commit(key: RelationshipAxisKey) {
+    if (committingRef.current[key]) return;
     const start = dragStartRef.current[key];
     const current = liveValuesRef.current[key];
     delete dragStartRef.current[key];
-    clearLiveValue(key);
-    if (start === undefined || current === undefined || current === start) return;
-    onCommit(key, current - start);
+    if (start === undefined || current === undefined || current === start) {
+      clearLiveValue(key);
+      return;
+    }
+    committingRef.current[key] = true;
+    try {
+      await onCommit(key, current - start);
+    } finally {
+      committingRef.current[key] = false;
+      clearLiveValue(key);
+    }
   }
 
   return (

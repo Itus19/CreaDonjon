@@ -22,10 +22,13 @@ const POLE_ENDS_FR: Record<PersonalityPoleKey, { positive: string; negative: str
 export default function PersonalityPoleSliders({
   poles,
   onCommit,
+  onLiveChange,
   disabled,
 }: {
   poles: { key: PersonalityPoleKey; value: number }[];
-  onCommit: (key: PersonalityPoleKey, delta: number) => void;
+  onCommit: (key: PersonalityPoleKey, delta: number) => Promise<void> | void;
+  /** Remonte la position en cours de glissement au parent (radar en direct) — `null` efface l'ecrasement local. */
+  onLiveChange?: (key: PersonalityPoleKey, value: number | null) => void;
   disabled?: boolean;
 }) {
   const [liveValues, setLiveValues] = useState<Record<string, number>>({});
@@ -38,12 +41,21 @@ export default function PersonalityPoleSliders({
   // anticipe annulait tout silencieusement. Bug reel signale par l'utilisateur.
   const liveValuesRef = useRef<Record<string, number>>({});
   const dragStartRef = useRef<Record<string, number>>({});
+  // Un `commit` en cours pour une cle : la desactivation du curseur pendant
+  // la sauvegarde (`disabled={sliderPending}`) force un `blur` natif, qui
+  // rappelle `commit` une seconde fois AVANT que la premiere requete ait
+  // fini. Sans ce garde, ce second appel effacait la valeur locale tout de
+  // suite — le curseur (et le radar) retombait un instant sur l'ancienne
+  // valeur puis re-sautait sur la nouvelle a la reponse du serveur. C'etait
+  // le "temps de latence bizarre" signale par l'utilisateur.
+  const committingRef = useRef<Record<string, boolean>>({});
 
   const valueOf = (key: PersonalityPoleKey, fallback: number) => liveValues[key] ?? fallback;
 
   function setLiveValue(key: PersonalityPoleKey, value: number) {
     liveValuesRef.current = { ...liveValuesRef.current, [key]: value };
     setLiveValues(liveValuesRef.current);
+    onLiveChange?.(key, value);
   }
 
   function clearLiveValue(key: PersonalityPoleKey) {
@@ -51,23 +63,32 @@ export default function PersonalityPoleSliders({
     delete next[key];
     liveValuesRef.current = next;
     setLiveValues(next);
+    onLiveChange?.(key, null);
   }
 
   function startDrag(key: PersonalityPoleKey, current: number) {
     dragStartRef.current[key] = current;
   }
 
-  function commit(key: PersonalityPoleKey) {
+  async function commit(key: PersonalityPoleKey) {
+    if (committingRef.current[key]) return;
     const start = dragStartRef.current[key];
     const current = liveValuesRef.current[key];
     delete dragStartRef.current[key];
-    // Efface la valeur locale tout de suite, succes ou non : si l'appelant
-    // refuse (delta > 40 non confirme, conflit serveur...), l'affichage
-    // retombe sur `poles` (la valeur reellement enregistree) plutot que de
-    // rester bloque sur une valeur jamais sauvegardee.
-    clearLiveValue(key);
-    if (start === undefined || current === undefined || current === start) return;
-    onCommit(key, current - start);
+    if (start === undefined || current === undefined || current === start) {
+      clearLiveValue(key);
+      return;
+    }
+    committingRef.current[key] = true;
+    try {
+      await onCommit(key, current - start);
+    } finally {
+      committingRef.current[key] = false;
+      // Efface la valeur locale seulement maintenant : succes ou non, `poles`
+      // (la prop) reflete deja la verite — la valeur enregistree si l'appel a
+      // reussi, l'ancienne sinon (delta > 40 non confirme, conflit serveur...).
+      clearLiveValue(key);
+    }
   }
 
   return (

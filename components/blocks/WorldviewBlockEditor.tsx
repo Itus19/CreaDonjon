@@ -43,6 +43,24 @@ export default function WorldviewBlockEditor({
   const [sliderPending, setSliderPending] = useState(false);
   const [sliderError, setSliderError] = useState<string | null>(null);
   const [reloadSignal, setReloadSignal] = useState(0);
+  // Position en cours de glissement, remontee par le curseur a chaque pixel
+  // (avant tout appel reseau) : sans ca, le radar n'a que la valeur
+  // enregistree en base et ne bouge qu'apres l'aller-retour du commit.
+  const [liveOverride, setLiveOverride] = useState<Partial<Record<WorldviewPoleKey, number>>>({});
+
+  function handleLiveChange(key: WorldviewPoleKey, value: number | null) {
+    setLiveOverride((prev) => {
+      if (value === null) {
+        if (!(key in prev)) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return { ...prev, [key]: value };
+    });
+  }
+
+  const radarPoles = data.poles.map((p) => ({ ...p, value: liveOverride[p.key] ?? p.value }));
 
   async function commitSlider(key: WorldviewPoleKey, delta: number, confirmed = false) {
     if (!confirmed && Math.abs(delta) > 40) {
@@ -76,9 +94,14 @@ export default function WorldviewBlockEditor({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap gap-6">
-        <WorldviewRadar poles={data.poles} />
+        <WorldviewRadar poles={radarPoles} />
         <div className="min-w-[220px] flex-1">
-          <WorldviewPoleSliders poles={data.poles} onCommit={commitSlider} disabled={sliderPending} />
+          <WorldviewPoleSliders
+            poles={data.poles}
+            onCommit={commitSlider}
+            onLiveChange={handleLiveChange}
+            disabled={sliderPending}
+          />
           {sliderError && <p className="mt-1 text-xs text-danger">{sliderError}</p>}
         </div>
       </div>
