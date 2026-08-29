@@ -101,12 +101,19 @@ export default function PersonalityPoleSliders({
         return (
           <div key={key} className="flex flex-col gap-0.5">
             <div
-              className="flex items-center justify-between text-[10px] text-ink-muted"
+              className="grid grid-cols-[1fr_auto_1fr] items-center text-[10px] text-ink-muted"
               title={PERSONALITY_POLE_DESCRIPTIONS_FR[key]}
             >
-              <span>{ends.negative}</span>
-              <span className="font-mono text-ink">{value}</span>
-              <span>{ends.positive}</span>
+              <span className="text-left">{ends.negative}</span>
+              {/* Largeur fixe + centrage (retour utilisateur : les valeurs
+                  n'etaient pas alignees verticalement) — avec `justify-
+                  between`, la position de la valeur suivait la longueur des
+                  deux etiquettes voisines, jamais la meme colonne d'un pole
+                  a l'autre. Colonnes exterieures egales (1fr) : la colonne
+                  du milieu reste au centre mathematique de la ligne, quelle
+                  que soit la longueur de "Curiosite" ou "Autorite". */}
+              <span className="w-10 text-center font-mono text-ink">{value}</span>
+              <span className="text-right">{ends.positive}</span>
             </div>
             <input
               type="range"
