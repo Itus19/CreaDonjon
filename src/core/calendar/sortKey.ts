@@ -1,6 +1,7 @@
 import type { CalendarConfig, GameDate } from "./types";
 
-function yearLength(calendar: CalendarConfig): number {
+/** Nombre total de jours d'une annee de ce calendrier — exporte pour `axisPosition.ts` (position continue sur l'axe horizontal de la chronologie). */
+export function yearLength(calendar: CalendarConfig): number {
   return calendar.months.reduce((sum, m) => sum + m.days, 0);
 }
 

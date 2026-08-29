@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import GameDateInput from "@/components/shared/GameDateInput";
+import TimelineAxis from "@/components/entities/timeline/TimelineAxis";
 import { computeSortKey } from "@/src/core/calendar/sortKey";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
 import { DEFAULT_CALENDAR } from "@/src/core/calendar/defaultCalendar";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
+import type { GameDate } from "@/src/core/calendar/types";
 import { TIMELINE_ENTRY_KINDS, type TimelineBlockData, type TimelineEntry, type TimelineEntryKind } from "@/src/core/schemas/blocks/timeline";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 
@@ -26,10 +28,10 @@ const KIND_LABELS_FR: Record<TimelineEntryKind, string> = {
   custom: "Autre",
 };
 
-function blankEntry(): TimelineEntry {
+function blankEntry(date: GameDate = { year: 0, month: null, day: null, precision: "year", end: null, label: null }): TimelineEntry {
   return {
     id: crypto.randomUUID(),
-    date: { year: 0, month: null, day: null, precision: "year", end: null, label: null },
+    date,
     kind: "custom",
     title: "",
     summary: "",
@@ -79,6 +81,8 @@ export default function TimelineBlockEditor({
   );
   const [pendingPromote, setPendingPromote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +112,19 @@ export default function TimelineBlockEditor({
     onChange({ ...data, entries: [...data.entries, blankEntry()] });
   }
 
+  /** Cree depuis l'axe (clic = point, glisse = periode avec `date.end`) — meme chemin d'ecriture que `addEntry`, juste avec une date deja calculee au lieu du reglage par defaut. */
+  function createEntryAt(date: GameDate) {
+    const entry = blankEntry(date);
+    onChange({ ...data, entries: [...data.entries, entry] });
+    setSelectedEntryId(entry.id);
+    requestAnimationFrame(() => rowRefs.current[entry.id]?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  }
+
+  function selectEntry(id: string) {
+    setSelectedEntryId(id);
+    rowRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
   async function promote(entry: TimelineEntry) {
     setPendingPromote(entry.id);
     setError(null);
@@ -132,12 +149,29 @@ export default function TimelineBlockEditor({
 
   return (
     <div className="flex flex-col gap-4">
+      <TimelineAxis
+        entries={data.entries}
+        calendar={activeCalendar}
+        selectedEntryId={selectedEntryId}
+        onSelectEntry={selectEntry}
+        onCreateEntry={createEntryAt}
+      />
+
       <div className="flex flex-col gap-2">
         {sorted.length === 0 && <p className="text-sm italic text-ink-muted">Aucun événement pour l&apos;instant.</p>}
         {sorted.map((entry) => {
           const linkedEntity = entry.ref?.kind === "entity" ? entityLookup[entry.ref.id] : undefined;
           return (
-            <div key={entry.id} className="flex flex-col gap-1.5 rounded border border-edge p-3">
+            <div
+              key={entry.id}
+              ref={(el) => {
+                rowRefs.current[entry.id] = el;
+              }}
+              onClick={() => setSelectedEntryId(entry.id)}
+              className={`flex flex-col gap-1.5 rounded border p-3 transition-colors ${
+                entry.id === selectedEntryId ? "border-accent" : "border-edge"
+              }`}
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Dropdown
