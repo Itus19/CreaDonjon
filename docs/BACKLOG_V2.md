@@ -323,22 +323,30 @@ Réalisé en réutilisant un seul mécanisme pour les deux : `MusicPlaybackProvi
 
 *Ce qui donne de la mémoire et de la profondeur au monde. Le lot le plus utile pour la V3.*
 
-### V2-H1 — Psyché des PNJ · `L`
+### V2-H1 — Psyché des PNJ · `L` — en cours (phase 1/4 : schéma)
 
-Spécification complète : `specs/psyche-pnj.md`.
+Spécification complète : `specs/psyche-pnj.md`. Découpage en quatre phases annoncé au client avant de commencer (schéma → bloc `personality` → bloc `relationship` → bloc `worldview`), avec point de vérification après chacune.
 
 - Blocs `personality`, `worldview`, `relationship` (un par relation).
 - Table `entity_attitudes` (valeurs courantes, portée campagne) et `attitude_events` (ajout seul).
 - `applyDelta` dans `src/core/psyche/` — fonction pure.
 
 **Critères**
-- [ ] Valeurs stockées de −100 à +100 ; l'écran et le contexte IA affichent la **bande nommée**, jamais le nombre.
-- [ ] Rendements décroissants : s'éloigner du centre s'amortit, y revenir garde son plein effet.
-- [ ] `deltas` stocke le **brut** ; rejouer le journal reproduit exactement la valeur courante.
-- [ ] Après 50 événements simulés d'ampleur « notable », aucun axe n'est saturé.
+- [x] Rendements décroissants : s'éloigner du centre s'amortit, y revenir garde son plein effet.
+- [x] `deltas` stocke le **brut** ; rejouer le journal reproduit exactement la valeur courante.
+- [x] Après 50 événements simulés d'ampleur « notable », aucun axe n'est saturé.
+- [ ] Valeurs stockées de −100 à +100 ; l'écran et le contexte IA affichent la **bande nommée**, jamais le nombre — bandes définies côté pur (`src/core/psyche/bands.ts`), pas encore branchées à un écran (phases 2/3).
 - [ ] Un delta brut supérieur à 40 exige confirmation.
 - [ ] `known_as` respecté : le contexte IA ne révèle pas une identité que le PNJ ignore.
 - [ ] Comparaison automatique entre les convictions d'un PNJ et celles de sa faction, avec signalement des divergences fortes.
+
+**Phase 1 — schéma et fonction pure, faite.** Quatre points tranchés avec le client avant d'écrire du code (récapitulatif complet dans `docs/adr/0013-tables-psyche-pnj.md`) :
+- **Tableau de souvenirs : deux tables séparées, pas une table unifiée.** `attitude_events` (déjà spécifiée, par paire source/cible) et une nouvelle `personality_events` (par entité seule, hors campagne — même portée que le bloc `personality` lui-même). Le même souvenir peut être saisi indépendamment dans plusieurs blocs concernés (ex. la victime d'un harcèlement et le témoin qui n'est pas intervenu), chaque saisie portant ses propres deltas — assumé, pas un doublon à corriger.
+- **L'archétype visuel (forme/couleur du radar) dérive des 6 pôles de tempérament du bloc `personality`**, pas des pôles moraux/politiques de `worldview` (qui aura son propre diagramme réseau, sans radar).
+- **« Masquer un lien » dans le futur bloc `worldview` réutilisera la visibilité existante des relations** (`relations.visibility_level`), jamais un second système de masquage — une seule barrière, cohérent avec le reste du modèle.
+- **Date ingame du tableau de souvenirs : texte libre pour l'instant** (`occurred_at_ingame`), faute de calendrier réel (V2-H2, pas construit) — critère de migration ajouté à V2-H2 ci-dessus pour ne pas perdre ces saisies une fois le calendrier écrit.
+
+Réalisé : migration `20260829120001_psyche_tables.sql` (`entity_attitudes`, `attitude_events`, `personality_events`, RLS même patron que `sessions`/`entity_runtime_state` — appartenance au monde seulement, la bande nommée et `known_as` restent une responsabilité de la couche service) appliquée en base réelle (`supabase db push`) et types régénérés (`supabase gen types typescript --linked`). `src/core/psyche/` : vocabulaire des clés de pôles/axes (`keys.ts`), `applyDelta`/`clamp`/`replayDeltas` (`apply.ts`) et les bandes nommées des sept axes de relation (`bands.ts`) — testés aux bornes exactes de la spec, `typecheck`/`lint`/`test` verts (692 tests).
 
 ### V2-H2 — Chronologie et calendrier · `L`
 
@@ -354,6 +362,7 @@ Spécification complète : `specs/psyche-pnj.md`.
 - [ ] `end` permet les périodes ; une guerre dure.
 - [ ] `label` prime à l'affichage : « le Troisième Hiver Noir » plutôt qu'une date.
 - [ ] Une entrée en ligne se promeut en entité d'un clic, sans rien perdre.
+- [ ] **Migrer les dates ingame en texte libre saisies avant ce ticket** vers le vrai calendrier une fois qu'il existe — au moins le tableau de souvenirs des blocs `personality`/`relationship` (V2-H1, `personality_events`/`attitude_events`, champ `occurred_at_ingame` texte libre en attendant), et tout autre champ « date ingame » ajouté entre-temps. Sans perte des valeurs déjà saisies : une conversion texte → date structurée, jamais un vidage.
 
 ### V2-H3 — Généalogie et relations · `M` — fait
 

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -212,6 +212,74 @@ export type Database = {
             columns: ["world_id"]
             isOneToOne: false
             referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attitude_events: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          deltas: Json
+          id: string
+          occurred_at_ingame: string | null
+          origin: string
+          session_event_id: string | null
+          source_entity_id: string
+          summary: string
+          target_entity_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          deltas?: Json
+          id?: string
+          occurred_at_ingame?: string | null
+          origin: string
+          session_event_id?: string | null
+          source_entity_id: string
+          summary: string
+          target_entity_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          deltas?: Json
+          id?: string
+          occurred_at_ingame?: string | null
+          origin?: string
+          session_event_id?: string | null
+          source_entity_id?: string
+          summary?: string
+          target_entity_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attitude_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attitude_events_session_event_id_fkey"
+            columns: ["session_event_id"]
+            isOneToOne: false
+            referencedRelation: "session_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attitude_events_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attitude_events_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
         ]
@@ -1006,6 +1074,55 @@ export type Database = {
           },
         ]
       }
+      entity_attitudes: {
+        Row: {
+          axes: Json
+          campaign_id: string
+          id: string
+          source_entity_id: string
+          target_entity_id: string
+          updated_at: string
+        }
+        Insert: {
+          axes?: Json
+          campaign_id: string
+          id?: string
+          source_entity_id: string
+          target_entity_id: string
+          updated_at?: string
+        }
+        Update: {
+          axes?: Json
+          campaign_id?: string
+          id?: string
+          source_entity_id?: string
+          target_entity_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_attitudes_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_attitudes_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_attitudes_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entity_discoveries: {
         Row: {
           campaign_id: string
@@ -1328,6 +1445,54 @@ export type Database = {
             columns: ["world_id"]
             isOneToOne: false
             referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      personality_events: {
+        Row: {
+          created_at: string
+          deltas: Json
+          entity_id: string
+          id: string
+          occurred_at_ingame: string | null
+          origin: string
+          session_event_id: string | null
+          summary: string
+        }
+        Insert: {
+          created_at?: string
+          deltas?: Json
+          entity_id: string
+          id?: string
+          occurred_at_ingame?: string | null
+          origin: string
+          session_event_id?: string | null
+          summary: string
+        }
+        Update: {
+          created_at?: string
+          deltas?: Json
+          entity_id?: string
+          id?: string
+          occurred_at_ingame?: string | null
+          origin?: string
+          session_event_id?: string | null
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personality_events_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personality_events_session_event_id_fkey"
+            columns: ["session_event_id"]
+            isOneToOne: false
+            referencedRelation: "session_events"
             referencedColumns: ["id"]
           },
         ]
