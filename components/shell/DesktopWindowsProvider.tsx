@@ -72,6 +72,18 @@ export interface DesktopWindowsState {
  * `?avec=` melange desormais entites et entrees de regle (`windowRefs.ts`).
  * Position/taille/empilement restent un etat purement client — jamais dans
  * l'URL, pour ne pas polluer l'historique de navigation.
+ *
+ * Ouvrir/fermer une fenetre secondaire (`avec`) ne change JAMAIS le contenu
+ * de la page courante : son contenu vient de `windowDataUrl` (fetch client
+ * separe, ci-dessous), jamais du rendu serveur de la primaire. Faire passer
+ * ce changement par `router.replace` forcerait donc un aller-retour serveur
+ * (re-rendu RSC complet de la page courante) pour un parametre que ce rendu
+ * n'utilise meme pas — mesure comme un cout reel a l'usage. `avecParam` est
+ * donc synchronise directement via `history.replaceState` (URL/historique
+ * a jour, aucune requete), avec un `popstate` pour suivre precedent/suivant
+ * du navigateur. Une vraie navigation (fermer la primaire, changer de
+ * section) reste un `router.push` normal : la page de destination a un
+ * contenu different, un aller-retour serveur y est necessaire.
  */
 export default function DesktopWindowsProvider({
   worldSlug,
@@ -92,10 +104,17 @@ export default function DesktopWindowsProvider({
   // Etat d'affichage purement local (V2-K4) — jamais dans `?avec=` ni dans
   // l'URL, meme logique que l'ordre d'empilement (docs/adr/0006).
   const [minimizedIds, setMinimizedIds] = useState<Record<string, boolean>>({});
+  const [avecParam, setAvecParam] = useState<string | null>(() => searchParams.get("avec"));
 
-  const avecRefs = parseAvecParam(searchParams.get("avec")).filter(
-    (ref) => !primary || !refsEqual(ref, primary.ref)
-  );
+  useEffect(() => {
+    function onPopState() {
+      setAvecParam(new URLSearchParams(window.location.search).get("avec"));
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const avecRefs = parseAvecParam(avecParam).filter((ref) => !primary || !refsEqual(ref, primary.ref));
   const avecRefsKey = avecRefs.map(refId).join(",");
   const activeRefs = primary ? [primary.ref, ...avecRefs] : avecRefs;
   const activeIdsKey = activeRefs.map(refId).join(",");
@@ -140,13 +159,15 @@ export default function DesktopWindowsProvider({
 
   function updateAvecParam(nextRefs: WindowRef[]) {
     const params = new URLSearchParams(searchParams);
-    if (nextRefs.length > 0) {
-      params.set("avec", nextRefs.map(refId).join(","));
+    const next = nextRefs.length > 0 ? nextRefs.map(refId).join(",") : null;
+    if (next) {
+      params.set("avec", next);
     } else {
       params.delete("avec");
     }
     const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    window.history.replaceState(null, "", query ? `${pathname}?${query}` : pathname);
+    setAvecParam(next);
   }
 
   const openRef = useCallback(
@@ -157,6 +178,7 @@ export default function DesktopWindowsProvider({
         // la nouvelle fenetre devient primaire SANS les fermer.
         const remaining = avecRefs.filter((r) => !refsEqual(r, ref));
         const query = remaining.length > 0 ? `?avec=${encodeURIComponent(serializeAvecParam(remaining))}` : "";
+        setAvecParam(remaining.length > 0 ? remaining.map(refId).join(",") : null);
         router.push(`${windowHref(worldSlug, ref)}${query}`);
         return;
       }

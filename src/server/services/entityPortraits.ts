@@ -1,6 +1,5 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import sharp from "sharp";
 import type { Database } from "@/src/types/database";
 import {
   deleteEntityPortrait as deleteEntityPortraitRow,
@@ -32,6 +31,11 @@ export async function uploadEntityPortrait(
   if (params.buffer.byteLength > MAX_UPLOAD_BYTES) return { ok: false, reason: "too_large" };
   if (!ALLOWED_MIME_TYPES.has(params.mimeType)) return { ok: false, reason: "unsupported_type" };
 
+  // Import dynamique : `sharp` charge un binaire natif (libvips) au demarrage.
+  // Un import statique en tete de fichier le chargerait pour tout consommateur
+  // de ce module — y compris `getPortraitLayout`, appelee a chaque rendu de
+  // fiche — alors que seul ce televersement en a besoin.
+  const { default: sharp } = await import("sharp");
   const processed = sharp(params.buffer).resize(PORTRAIT_MAX_DIMENSION, PORTRAIT_MAX_DIMENSION, {
     fit: "inside",
     withoutEnlargement: true,

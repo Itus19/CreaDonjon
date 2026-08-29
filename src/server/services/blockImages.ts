@@ -1,6 +1,5 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import sharp from "sharp";
 import type { Database } from "@/src/types/database";
 import type { VisibilityLevel } from "@/src/core/visibility";
 import { filterBlocks } from "@/src/core/visibility";
@@ -35,6 +34,10 @@ export async function uploadBlockImage(
   if (params.buffer.byteLength > MAX_UPLOAD_BYTES) return { ok: false, reason: "too_large" };
   if (!ALLOWED_MIME_TYPES.has(params.mimeType)) return { ok: false, reason: "unsupported_type" };
 
+  // Import dynamique : voir la meme remarque dans entityPortraits.ts —
+  // `sharp` ne doit se charger que pour ce televersement, pas pour tout
+  // consommateur de ce module (ex. la lecture de blocs a chaque rendu de fiche).
+  const { default: sharp } = await import("sharp");
   const processed = sharp(params.buffer).resize(IMAGE_MAX_DIMENSION, IMAGE_MAX_DIMENSION, {
     fit: "inside",
     withoutEnlargement: true,

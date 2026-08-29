@@ -1,4 +1,3 @@
-import sharp from "sharp";
 import { availableModesFor, deriveHueChroma, type ThemeMode } from "@/src/core/theme/oklch";
 
 /**
@@ -46,6 +45,10 @@ export interface ProcessedBackground {
  * directement depuis `public/backgrounds/`, jamais retraite).
  */
 export async function processBackgroundImage(buffer: Buffer): Promise<ProcessedBackground> {
+  // Import dynamique : voir la meme remarque dans entityPortraits.ts —
+  // charger `sharp` (binaire natif) ne doit couter qu'a ce traitement, pas a
+  // tout module qui lit un fond d'ecran deja calcule.
+  const { default: sharp } = await import("sharp");
   const image = sharp(buffer);
 
   const [thumbBuffer, backdropImage, stats] = await Promise.all([
