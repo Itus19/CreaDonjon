@@ -5,8 +5,11 @@ import type { FamilyTree, FamilyTreeEdge, FamilyTreeNode } from "@/src/core/gene
 
 const CARD_WIDTH = 120;
 const CARD_HEIGHT = 150;
-const COL_GAP = 44;
-const ROW_GAP = 84;
+// Retour utilisateur : plus d'ecart entre les portraits (44/84 -> 80/120)
+// pour que les traits (surtout une fratrie qui se separe en deux) restent
+// lisibles sans se chevaucher.
+const COL_GAP = 80;
+const ROW_GAP = 120;
 const COL_WIDTH = CARD_WIDTH + COL_GAP;
 const ROW_HEIGHT = CARD_HEIGHT + ROW_GAP;
 const VIEWPORT_HEIGHT = 440;
@@ -44,16 +47,22 @@ function clamp(value: number, min: number, max: number): number {
  * visible) — recalcule quand le nombre de nœuds change (nouvelle
  * relation), jamais sur un simple re-rendu.
  *
- * Survol = apercu ephemere du libelle (hoveredEdgeId) ; clic = "epingle"
- * (pinnedEdgeId), qui seul fait apparaitre le bouton de suppression —
- * sans cette distinction, deplacer la souris du trait vers le bouton
- * declenche un mouseleave qui referme tout avant d'avoir pu cliquer.
+ * Survol d'un TRAIT = apercu ephemere de son libelle (hoveredEdgeId) ;
+ * clic = "epingle" (pinnedEdgeId), qui seul fait apparaitre les boutons
+ * masquer/supprimer — sans cette distinction, deplacer la souris du trait
+ * vers le bouton declenche un mouseleave qui referme tout avant d'avoir pu
+ * cliquer. Survol d'un PORTRAIT (retour utilisateur) = met en surbrillance
+ * ses liens directs et estompe le reste, ET affiche le libelle de CHACUN
+ * de ces liens a la fois (pas un seul) — meme principe que le bloc reseau
+ * (`RelationsGraphCanvas.tsx`), duplique plutot que partage (mises en page
+ * trop differentes, meme raisonnement deja pose pour ce couple de blocs).
  */
 export default function FamilyTreeCanvas({
   tree,
   renderCard,
   renderNodeOverlay,
   onDeleteEdge,
+  onToggleEdgeVisibility,
 }: {
   tree: FamilyTree;
   renderCard: (node: FamilyTreeNode) => ReactNode;
@@ -68,9 +77,12 @@ export default function FamilyTreeCanvas({
   renderNodeOverlay?: (node: FamilyTreeNode, scale: number) => ReactNode;
   /** Bouton de suppression sur le trait epingle (clic) — omis en lecture seule (wiki public). */
   onDeleteEdge?: (edge: FamilyTreeEdge) => void;
+  /** V2, retour utilisateur : bouton oeil sur le trait epingle — masque/affiche au wiki public, meme relation que la liste du haut de fiche et le bloc reseau. Omis en lecture seule. */
+  onToggleEdgeVisibility?: (edge: FamilyTreeEdge) => void;
 }) {
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [pinnedEdgeId, setPinnedEdgeId] = useState<string | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
   const [isDragging, setIsDragging] = useState(false);
 
@@ -160,8 +172,24 @@ export default function FamilyTreeCanvas({
     return <p className="text-sm text-ink-muted">Aucune parente visible pour l&apos;instant.</p>;
   }
 
-  const displayEdgeId = pinnedEdgeId ?? hoveredEdgeId;
-  const activeEdge = tree.edges.find((e) => e.id === displayEdgeId);
+  // Survol d'un portrait : lui + ses voisins directs restent nets, le
+  // reste s'estompe (retour utilisateur, meme principe que le bloc reseau).
+  const highlightedNodeIds = hoveredNodeId
+    ? new Set(
+        [hoveredNodeId, ...tree.edges.flatMap((e) => (e.fromId === hoveredNodeId ? [e.toId] : e.toId === hoveredNodeId ? [e.fromId] : []))]
+      )
+    : null;
+
+  // Etiquette(s) affichee(s) : soit tous les liens directs du portrait
+  // survole (retour utilisateur : "les etiquettes s'affichent", au
+  // pluriel), soit le seul lien survole/epingle directement.
+  const edgesToLabel = hoveredNodeId
+    ? tree.edges.filter((e) => e.fromId === hoveredNodeId || e.toId === hoveredNodeId)
+    : (() => {
+        const id = pinnedEdgeId ?? hoveredEdgeId;
+        const edge = tree.edges.find((e) => e.id === id);
+        return edge ? [edge] : [];
+      })();
 
   return (
     <div
@@ -190,13 +218,15 @@ export default function FamilyTreeCanvas({
             const from = slotById.get(edge.fromId);
             const to = slotById.get(edge.toId);
             if (!from || !to) return null;
-            const isActive = edge.id === displayEdgeId;
+            const isActive = edge.id === pinnedEdgeId || edge.id === hoveredEdgeId || edgesToLabel.some((e) => e.id === edge.id);
+            const dimmed = highlightedNodeIds ? !(highlightedNodeIds.has(edge.fromId) && highlightedNodeIds.has(edge.toId)) : false;
             // Retour utilisateur : un lien masque au wiki public (tout
             // sauf `public`) reste grise et pointille — meme traitement
             // que le bloc reseau (RelationsGraphCanvas.tsx).
             const hiddenFromPublic = edge.visibilityLevel !== "public";
             const stroke = isActive ? "var(--accent)" : hiddenFromPublic ? "var(--ink-muted)" : "var(--edge-strong)";
             const dash = !isActive && hiddenFromPublic ? "4 3" : undefined;
+            const opacity = dimmed ? 0.15 : 1;
 
             const handlers = {
               onMouseEnter: () => setHoveredEdgeId(edge.id),
@@ -215,7 +245,7 @@ export default function FamilyTreeCanvas({
               const busY = y1 + (y2 - y1) / 2;
               const points = `${x1},${y1} ${x1},${busY} ${x2},${busY} ${x2},${y2}`;
               return (
-                <g key={edge.id} className="pointer-events-auto cursor-pointer" {...handlers}>
+                <g key={edge.id} className="pointer-events-auto cursor-pointer" style={{ opacity }} {...handlers}>
                   {/* Trait large invisible : la ligne visible (1.5px) est trop fine pour un survol/clic fiable — meme technique que les cibles tactiles agrandies ailleurs dans l'app. */}
                   <polyline points={points} fill="none" stroke="transparent" strokeWidth={16} />
                   <polyline points={points} fill="none" stroke={stroke} strokeWidth={isActive ? 2 : 1.5} strokeDasharray={dash} />
@@ -228,7 +258,7 @@ export default function FamilyTreeCanvas({
             const x1 = from.x + CARD_WIDTH / 2;
             const x2 = to.x + CARD_WIDTH / 2;
             return (
-              <g key={edge.id} className="pointer-events-auto cursor-pointer" {...handlers}>
+              <g key={edge.id} className="pointer-events-auto cursor-pointer" style={{ opacity }} {...handlers}>
                 <line x1={x1} y1={y} x2={x2} y2={y} stroke="transparent" strokeWidth={16} />
                 <line x1={x1} y1={y} x2={x2} y2={y} stroke={stroke} strokeWidth={isActive ? 2 : 1.5} strokeDasharray={dash} />
               </g>
@@ -238,11 +268,14 @@ export default function FamilyTreeCanvas({
 
         {tree.nodes.map((node) => {
           const slot = slotById.get(node.id)!;
+          const dimmed = highlightedNodeIds ? !highlightedNodeIds.has(node.id) : false;
           return (
             <div
               key={node.id}
               className="group absolute"
-              style={{ left: slot.x + 16, top: slot.y + 16, width: CARD_WIDTH, height: CARD_HEIGHT }}
+              style={{ left: slot.x + 16, top: slot.y + 16, width: CARD_WIDTH, height: CARD_HEIGHT, opacity: dimmed ? 0.3 : 1 }}
+              onMouseEnter={() => setHoveredNodeId(node.id)}
+              onMouseLeave={() => setHoveredNodeId((current) => (current === node.id ? null : current))}
             >
               {renderCard(node)}
               {renderNodeOverlay?.(node, view.scale)}
@@ -250,41 +283,50 @@ export default function FamilyTreeCanvas({
           );
         })}
 
-        {activeEdge &&
-          (() => {
-            const from = slotById.get(activeEdge.fromId);
-            const to = slotById.get(activeEdge.toId);
-            if (!from || !to) return null;
-            const midX = (from.x + to.x) / 2 + CARD_WIDTH / 2 + 16;
-            const midY =
-              activeEdge.kind === "parent-child"
-                ? from.y + CARD_HEIGHT + (to.y - (from.y + CARD_HEIGHT)) / 2 + 16
-                : from.y + CARD_HEIGHT / 2 + 16;
-            const isPinned = activeEdge.id === pinnedEdgeId;
-            return (
-              <div
-                className={`absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-edge-strong bg-panel-raised py-1 text-xs text-ink shadow-lg ${isPinned ? "pl-2.5 pr-1" : "pointer-events-none px-2.5"} flex items-center gap-1.5`}
-                style={{ left: midX, top: midY }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {activeEdge.label}
-                {isPinned && onDeleteEdge && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onDeleteEdge(activeEdge);
-                      setPinnedEdgeId(null);
-                    }}
-                    aria-label={`Supprimer le lien ${activeEdge.label}`}
-                    title="Supprimer ce lien"
-                    className="rounded-full px-1.5 text-danger hover:bg-panel"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            );
-          })()}
+        {edgesToLabel.map((edge) => {
+          const from = slotById.get(edge.fromId);
+          const to = slotById.get(edge.toId);
+          if (!from || !to) return null;
+          const midX = (from.x + to.x) / 2 + CARD_WIDTH / 2 + 16;
+          const midY =
+            edge.kind === "parent-child"
+              ? from.y + CARD_HEIGHT + (to.y - (from.y + CARD_HEIGHT)) / 2 + 16
+              : from.y + CARD_HEIGHT / 2 + 16;
+          const isPinned = edge.id === pinnedEdgeId;
+          return (
+            <div
+              key={edge.id}
+              className={`absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-edge-strong bg-panel-raised py-1 text-xs text-ink shadow-lg ${isPinned ? "pl-2.5 pr-1" : "pointer-events-none px-2.5"} flex items-center gap-1.5`}
+              style={{ left: midX, top: midY }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {edge.label}
+              {isPinned && onToggleEdgeVisibility && (
+                <button
+                  type="button"
+                  onClick={() => onToggleEdgeVisibility(edge)}
+                  className="rounded-full px-2 py-0.5 text-ink transition-colors hover:bg-panel"
+                >
+                  {edge.visibilityLevel === "gm" ? "Rendre visible aux joueurs" : "Masquer aux joueurs"}
+                </button>
+              )}
+              {isPinned && onDeleteEdge && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDeleteEdge(edge);
+                    setPinnedEdgeId(null);
+                  }}
+                  aria-label={`Supprimer le lien ${edge.label}`}
+                  title="Supprimer ce lien"
+                  className="rounded-full px-1.5 text-danger hover:bg-panel"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

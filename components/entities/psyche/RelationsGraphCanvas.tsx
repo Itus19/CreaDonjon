@@ -57,12 +57,13 @@ function clamp(value: number, min: number, max: number): number {
  * pas la deuxieme, CLAUDE.md).
  *
  * Survol d'un nœud = met en surbrillance le nœud et ses liens de premier
- * degre, estompe le reste (demande du client). Survol d'un LIEN = meme
- * estompage sur ses deux extremites, plus son libelle affiche au-dessus
- * (« membre de », « parent de »...) — sans action, juste l'explication ;
- * cliquer le lien l'EPINGLE (le libelle reste affiche apres avoir bouge la
- * souris) et revele en plus le bouton masquer/afficher, si fourni. Clic
- * sur un nœud ouvre sa fiche.
+ * degre, estompe le reste, ET affiche le libelle de CHACUN de ces liens a
+ * la fois (retour utilisateur — pas un seul). Survol d'un LIEN = meme
+ * estompage sur ses deux extremites, plus son propre libelle affiche
+ * au-dessus (« membre de », « parent de »...) — sans action, juste
+ * l'explication ; cliquer le lien l'EPINGLE (le libelle reste affiche
+ * apres avoir bouge la souris) et revele en plus le bouton masquer/
+ * afficher, si fourni. Clic sur un nœud ouvre sa fiche.
  */
 export default function RelationsGraphCanvas({
   graph,
@@ -122,7 +123,16 @@ export default function RelationsGraphCanvas({
     return null;
   }, [hoveredId, hoveredEdgeId, graph.edges]);
 
-  const displayEdgeId = pinnedEdgeId ?? hoveredEdgeId;
+  // Etiquette(s) affichee(s) (retour utilisateur) : au survol d'un PORTRAIT,
+  // toutes ses aretes directes a la fois (pas une seule) ; sinon, la seule
+  // arete survolee/epinglee comme avant.
+  const edgesToLabel = hoveredId
+    ? graph.edges.filter((e) => e.fromId === hoveredId || e.toId === hoveredId)
+    : (() => {
+        const id = pinnedEdgeId ?? hoveredEdgeId;
+        const edge = graph.edges.find((e) => e.id === id);
+        return edge ? [edge] : [];
+      })();
 
   const nodesSignature = graph.nodes
     .map((n) => n.id)
@@ -209,8 +219,6 @@ export default function RelationsGraphCanvas({
     return <p className="text-sm text-ink-muted">Aucune relation visible pour l&apos;instant.</p>;
   }
 
-  const activeEdge = graph.edges.find((e) => e.id === displayEdgeId) ?? null;
-
   return (
     <div className="flex flex-col gap-2">
       <div
@@ -273,7 +281,7 @@ export default function RelationsGraphCanvas({
                     x2={x2}
                     y2={y2}
                     stroke={hiddenFromPublic ? "var(--ink-muted)" : edgeColor(edge)}
-                    strokeWidth={displayEdgeId === edge.id ? 3 : 1.5}
+                    strokeWidth={edgesToLabel.some((e) => e.id === edge.id) ? 3 : 1.5}
                     strokeDasharray={hiddenFromPublic ? "4 3" : undefined}
                     opacity={dimmed ? 0.15 : hiddenFromPublic ? 0.45 : 0.8}
                   />
@@ -301,33 +309,33 @@ export default function RelationsGraphCanvas({
             );
           })}
 
-          {activeEdge &&
-            (() => {
-              const from = byId.get(activeEdge.fromId);
-              const to = byId.get(activeEdge.toId);
-              if (!from || !to) return null;
-              const midX = ((from.x ?? 0) + (to.x ?? 0)) / 2;
-              const midY = ((from.y ?? 0) + (to.y ?? 0)) / 2;
-              const isPinned = activeEdge.id === pinnedEdgeId;
-              return (
-                <div
-                  className={`pointer-events-none absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-edge-strong bg-panel-raised py-1 text-xs text-ink shadow-lg ${isPinned ? "pointer-events-auto pl-2.5 pr-1" : "px-2.5"}`}
-                  style={{ left: midX, top: midY }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <span className="text-ink-muted">{activeEdge.label}</span>
-                  {isPinned && onToggleEdgeVisibility && (
-                    <button
-                      type="button"
-                      onClick={() => onToggleEdgeVisibility(activeEdge)}
-                      className="rounded-full px-2 py-0.5 text-ink transition-colors hover:bg-panel"
-                    >
-                      {activeEdge.visibilityLevel === "gm" ? "Rendre visible aux joueurs" : "Masquer aux joueurs"}
-                    </button>
-                  )}
-                </div>
-              );
-            })()}
+          {edgesToLabel.map((edge) => {
+            const from = byId.get(edge.fromId);
+            const to = byId.get(edge.toId);
+            if (!from || !to) return null;
+            const midX = ((from.x ?? 0) + (to.x ?? 0)) / 2;
+            const midY = ((from.y ?? 0) + (to.y ?? 0)) / 2;
+            const isPinned = edge.id === pinnedEdgeId;
+            return (
+              <div
+                key={edge.id}
+                className={`pointer-events-none absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-edge-strong bg-panel-raised py-1 text-xs text-ink shadow-lg ${isPinned ? "pointer-events-auto pl-2.5 pr-1" : "px-2.5"}`}
+                style={{ left: midX, top: midY }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="text-ink-muted">{edge.label}</span>
+                {isPinned && onToggleEdgeVisibility && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleEdgeVisibility(edge)}
+                    className="rounded-full px-2 py-0.5 text-ink transition-colors hover:bg-panel"
+                  >
+                    {edge.visibilityLevel === "gm" ? "Rendre visible aux joueurs" : "Masquer aux joueurs"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
