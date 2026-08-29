@@ -53,10 +53,13 @@ function clamp(value: number, min: number, max: number): number {
  * differentes pour un seul composant (troisieme occurrence a generaliser,
  * pas la deuxieme, CLAUDE.md).
  *
- * Survol = met en surbrillance le nœud et ses liens de premier degre,
- * estompe le reste (demande du client). Clic sur un nœud ouvre sa fiche ;
- * clic sur un lien permet de le masquer/afficher (reutilise la visibilite
- * des relations, docs/adr — jamais un second systeme de masquage).
+ * Survol d'un nœud = met en surbrillance le nœud et ses liens de premier
+ * degre, estompe le reste (demande du client). Survol d'un LIEN = meme
+ * estompage sur ses deux extremites, plus son libelle affiche au-dessus
+ * (« membre de », « parent de »...) — sans action, juste l'explication ;
+ * cliquer le lien l'EPINGLE (le libelle reste affiche apres avoir bouge la
+ * souris) et revele en plus le bouton masquer/afficher, si fourni. Clic
+ * sur un nœud ouvre sa fiche.
  */
 export default function RelationsGraphCanvas({
   graph,
@@ -73,6 +76,7 @@ export default function RelationsGraphCanvas({
 }) {
   const desktop = useDesktop();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [pinnedEdgeId, setPinnedEdgeId] = useState<string | null>(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
   const [isDragging, setIsDragging] = useState(false);
@@ -100,14 +104,22 @@ export default function RelationsGraphCanvas({
   }, [positioned]);
 
   const highlightedNodeIds = useMemo(() => {
-    if (!hoveredId) return null;
-    const ids = new Set([hoveredId]);
-    for (const edge of graph.edges) {
-      if (edge.fromId === hoveredId) ids.add(edge.toId);
-      if (edge.toId === hoveredId) ids.add(edge.fromId);
+    if (hoveredId) {
+      const ids = new Set([hoveredId]);
+      for (const edge of graph.edges) {
+        if (edge.fromId === hoveredId) ids.add(edge.toId);
+        if (edge.toId === hoveredId) ids.add(edge.fromId);
+      }
+      return ids;
     }
-    return ids;
-  }, [hoveredId, graph.edges]);
+    if (hoveredEdgeId) {
+      const edge = graph.edges.find((e) => e.id === hoveredEdgeId);
+      if (edge) return new Set([edge.fromId, edge.toId]);
+    }
+    return null;
+  }, [hoveredId, hoveredEdgeId, graph.edges]);
+
+  const displayEdgeId = pinnedEdgeId ?? hoveredEdgeId;
 
   const nodesSignature = graph.nodes
     .map((n) => n.id)
@@ -194,7 +206,7 @@ export default function RelationsGraphCanvas({
     return <p className="text-sm text-ink-muted">Aucune relation visible pour l&apos;instant.</p>;
   }
 
-  const pinnedEdge = graph.edges.find((e) => e.id === pinnedEdgeId) ?? null;
+  const activeEdge = graph.edges.find((e) => e.id === displayEdgeId) ?? null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -241,9 +253,11 @@ export default function RelationsGraphCanvas({
                     e.stopPropagation();
                     setPinnedEdgeId(edge.id === pinnedEdgeId ? null : edge.id);
                   }}
+                  onMouseEnter={() => setHoveredEdgeId(edge.id)}
+                  onMouseLeave={() => setHoveredEdgeId((current) => (current === edge.id ? null : current))}
                   className="pointer-events-auto cursor-pointer"
                 >
-                  {/* Trait invisible mais large : le trait visible (1.5px) est bien trop fin pour cliquer de maniere fiable a la souris — meme zone de clic que le trait rendu, juste plus genereuse. */}
+                  {/* Trait invisible mais large : le trait visible (1.5px) est bien trop fin pour cliquer/survoler de maniere fiable a la souris — meme zone de clic que le trait rendu, juste plus genereuse. */}
                   <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="transparent" strokeWidth={14} />
                   <line
                     x1={x1}
@@ -251,7 +265,7 @@ export default function RelationsGraphCanvas({
                     x2={x2}
                     y2={y2}
                     stroke={edgeColor(edge)}
-                    strokeWidth={pinnedEdgeId === edge.id ? 3 : 1.5}
+                    strokeWidth={displayEdgeId === edge.id ? 3 : 1.5}
                     opacity={dimmed ? 0.15 : 0.8}
                   />
                 </g>
@@ -278,27 +292,28 @@ export default function RelationsGraphCanvas({
             );
           })}
 
-          {pinnedEdge &&
+          {activeEdge &&
             (() => {
-              const from = byId.get(pinnedEdge.fromId);
-              const to = byId.get(pinnedEdge.toId);
+              const from = byId.get(activeEdge.fromId);
+              const to = byId.get(activeEdge.toId);
               if (!from || !to) return null;
               const midX = ((from.x ?? 0) + (to.x ?? 0)) / 2;
               const midY = ((from.y ?? 0) + (to.y ?? 0)) / 2;
+              const isPinned = activeEdge.id === pinnedEdgeId;
               return (
                 <div
-                  className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-edge-strong bg-panel-raised py-1 pl-2.5 pr-1 text-xs text-ink shadow-lg"
+                  className={`pointer-events-none absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-edge-strong bg-panel-raised py-1 text-xs text-ink shadow-lg ${isPinned ? "pointer-events-auto pl-2.5 pr-1" : "px-2.5"}`}
                   style={{ left: midX, top: midY }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <span className="text-ink-muted">{pinnedEdge.label}</span>
-                  {onToggleEdgeVisibility && (
+                  <span className="text-ink-muted">{activeEdge.label}</span>
+                  {isPinned && onToggleEdgeVisibility && (
                     <button
                       type="button"
-                      onClick={() => onToggleEdgeVisibility(pinnedEdge)}
+                      onClick={() => onToggleEdgeVisibility(activeEdge)}
                       className="rounded-full px-2 py-0.5 text-ink transition-colors hover:bg-panel"
                     >
-                      {pinnedEdge.visibilityLevel === "gm" ? "Rendre visible aux joueurs" : "Masquer aux joueurs"}
+                      {activeEdge.visibilityLevel === "gm" ? "Rendre visible aux joueurs" : "Masquer aux joueurs"}
                     </button>
                   )}
                 </div>
