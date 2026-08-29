@@ -750,6 +750,144 @@ Aujourd'hui, `entity_portraits`, `block_images` et `background_images` stockent 
 
 ---
 
+## Lot M — Comptes, rôles et accès multi-joueurs
+
+*Ticket hors série (29-30 août 2026, retour utilisateur) : l'application passe d'un usage solo à un usage entre amis. Ce lot construit ce que `module-joueur-et-solo.md` partie A prévoyait déjà pour la V3 (compagnon joueur, `canEditEntity`), avancé en V2 parce que le besoin est là maintenant. Un ticket à la fois, dans cet ordre — M3 avant M4 n'est pas négociable : la RLS d'écriture actuelle est trop large pour laisser un ami s'y connecter avant qu'elle ne soit resserrée (voir M3).*
+
+**Décisions prises avec l'utilisateur (29 août) :**
+- Un compte réel Supabase par ami, créé silencieusement au premier clic sur son lien (mot de passe généré, jamais vu) — pas de compte anonyme Supabase (perdrait l'identité au changement d'appareil), pas d'email/mot de passe visible pour l'ami.
+- Un lien par personne (généré depuis le panneau superadmin), mais l'écran d'arrivée demande quand même le nom de l'ami au moment de choisir son rôle et, s'il est PJ, son personnage — le lien n'est pas pré-assigné à un personnage précis.
+- Les amis MJ ont aussi le bouton « Créer un monde » (mode campagne uniquement, jamais solo), en plus de collaborer sur une copie de Valdoria.
+- Révoquer l'accès d'un PJ à un personnage libère seulement la fiche (redevient sélectionnable) ; le compte de l'ami reste en sommeil, pas supprimé.
+- Le compte de l'utilisateur (email/mot de passe existant) devient **superadmin** : seul à avoir le mode solo, seul à voir/gérer tous les comptes et tous les accès, avec un journal fusionné de qui a modifié quoi.
+
+### V2-M1 — Nom de campagne visible et modifiable sur l'écran de choix de monde · `S`
+
+Motivation immédiate : l'utilisateur va avoir trois copies du même monde (Valdoria) — une pour ses propres tests, une avec Jérémy, une avec Antoine — indiscernables aujourd'hui sur `/` puisque seul `worlds.name` y est affiché. Renommer la **campagne** (pas forcément le monde) en « La Croisade des Ombres avec Jérémy » résout ça sans toucher au nom du monde ni à son slug.
+
+`listWorldCardsForCurrentUser` (`src/server/repos/worlds.ts`) sélectionne déjà `campaigns(mode, rulesets(name))` mais jamais `campaigns.id`/`campaigns.name` — à ajouter à la requête et à `WorldCard`. Aucune fonction de renommage de campagne n'existe (`src/server/repos/campaigns.ts` n'a que `updateCampaignMode`/`updateCampaignRuleset`) : `updateCampaignName` est à écrire. `campaigns_write` (RLS) autorise aujourd'hui l'écriture à N'IMPORTE QUEL membre du monde, pas seulement au propriétaire (même lacune que `entities_write`, voir M3) — en attendant que M3 la resserre, suivre le même principe que le renommage/suppression de monde déjà fait (`app/actions.ts`) : vérification explicite du propriétaire dans le service, pas seulement confiance en la RLS.
+
+**Critères**
+- [ ] Le nom de la campagne apparaît sur chaque carte de monde de `/`, à côté ou sous le nom du monde.
+- [ ] Un bouton « Renommer » (même DA que celui du monde, `app/WorldCardActions.tsx`) permet de changer `campaigns.name` sans toucher à `worlds.name` ni au slug.
+- [ ] Réservé au propriétaire du monde, vérifié côté serveur explicitement (pas seulement la RLS).
+- [ ] Les trois copies de Valdoria de l'utilisateur restent distinguables d'un coup d'œil sur l'écran d'accueil.
+
+### V2-M2 — Rôle superadmin et verrouillage du mode solo · `M`
+
+```sql
+alter table profiles add column account_role text not null default 'member'
+  check (account_role in ('member', 'superadmin'));
+```
+
+Un seul compte (celui de l'utilisateur) passe à `superadmin`, à la main, dans la migration de seed — aucune interface de self-service pour ce champ, pas de deuxième superadmin sans repasser par une migration. `app.is_superadmin()` (security definer, même patron que `app.is_world_member`) devient le point d'entrée unique utilisé par M3/M4/M5 — jamais un test `profile.account_role === 'superadmin'` répété en dur à plusieurs endroits.
+
+Le mode solo (choix `mode: 'solo'` à la création d'un monde, `CreateWorldForm.tsx`/`createWorldSchema`/`createWorldAction`, et le bascule après coup dans `CampaignsPanel.tsx`/`setCampaignMode`) devient refusé côté serveur à qui n'est pas superadmin — l'option reste visible ou non dans l'interface, mais le vrai verrou est dans l'action, jamais seulement un `<option>` masqué (règle absolue CLAUDE.md : vérifié côté serveur).
+
+Décision structurante : un ADR (`docs/adr/0014-role-superadmin.md` ou suivant) documente pourquoi ce rôle contourne la logique habituelle « appartenance à un monde/une campagne » par une fonction RLS dédiée plutôt que par le client `service_role` — celui-ci reste confiné à `publicShare.ts` (règle absolue 4 ter), ce choix ne le remet pas en cause.
+
+**Critères**
+- [ ] `profiles.account_role` existe, un seul compte à `superadmin` après la migration de seed.
+- [ ] `app.is_superadmin()` existe et n'est jamais dupliqué en dur ailleurs.
+- [ ] Créer un monde en mode solo échoue côté serveur pour un compte non-superadmin, même en forgeant la requête (testé en contournant le formulaire).
+- [ ] Basculer une campagne existante en solo échoue de la même façon.
+- [ ] ADR écrit et validé avant d'attaquer M4/M5, qui dépendent de `is_superadmin()`.
+
+### V2-M3 — `canEditEntity`, `entity_grants` et resserrement de la RLS d'écriture · `L`
+
+**Le ticket le plus risqué du lot — à faire et à tester avant qu'un seul ami ait un lien fonctionnel.** Vérifié en lisant `supabase/migrations/20260730150001_rls.sql` : `entities_write` ET `campaigns_write` ET `campaign_members_write` autorisent aujourd'hui l'écriture à n'importe quel membre du monde (`app.is_world_member`), jamais restreint à « c'est sa fiche » ou « c'est son propre rôle ». Sans risque tant que seuls des comptes créés à la main y accèdent ; devient une vraie faille dès qu'un ami PJ obtient un compte en un clic (M4) — il pourrait alors modifier n'importe quelle fiche du monde, y compris celles des autres joueurs ou les fiches MJ.
+
+```sql
+create table entity_grants (
+  entity_id  uuid not null references entities(id) on delete cascade,
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  granted_by uuid not null references auth.users(id),
+  granted_at timestamptz not null default now(),
+  primary key (entity_id, user_id)
+);
+```
+
+`src/core/permissions/canEditEntity.ts` (pur, testable, `specs/module-joueur-et-solo.md` §A2) : propriétaire/éditeur du monde, ou bien c'est le personnage du joueur dans cette campagne (`campaign_characters.user_id`), ou bien une ligne `entity_grants` l'autorise explicitement. Appelé dans la couche service à chaque mutation d'entité/bloc — jamais seulement en RLS, jamais seulement en masquant un bouton (même doctrine que `canSee`, PDD §28 : « la RLS n'est pas la sécurité, c'est le filet »). La RLS elle-même (`entities_write`, `blocks_write`, `campaigns_write`, `campaign_members_write`) est resserrée en miroir, avec le même test d'intégration que `visibilityRls.integration.test.ts` (précédent déjà dans le dépôt).
+
+**Critères**
+- [ ] `canEditEntity` couvre les trois cas (owner/éditeur du monde, sa propre fiche PJ, `entity_grants`) et rien d'autre — table de vérité testée en millisecondes, sans base.
+- [ ] Aucune route/service de mutation d'entité ou de bloc n'écrit sans passer par `canEditEntity`.
+- [ ] Un simple joueur (`campaign_members.role = 'player'`) ne peut plus, ni via l'interface ni en forgeant une requête, modifier une fiche qui n'est pas la sienne et n'a pas de `entity_grants` pour lui.
+- [ ] Un MJ garde l'écriture complète sur tout le monde, sans régression.
+- [ ] Test d'intégration RLS dédié (même famille que `visibilityRls.integration.test.ts`), pas seulement une vérification manuelle.
+
+### V2-M4 — Liens d'invitation nominatifs et écran « MJ / PJ » · `L`
+
+Reprend la table `campaign_invites` déjà dessinée dans `specs/module-joueur-et-solo.md` §A1, avec une différence : le jeton reste la porte d'entrée **permanente** de la personne (pas un usage unique), pour qu'elle retrouve son compte depuis n'importe quel appareil sans jamais voir d'email ni de mot de passe.
+
+```sql
+create table campaign_invites (
+  id                uuid primary key default gen_random_uuid(),
+  campaign_id       uuid references campaigns(id) on delete cascade,   -- nul = invitation de monde (MJ), voir M8
+  world_id          uuid references worlds(id) on delete cascade,
+  token_hash        text not null unique,        -- SHA-256, comme share_links
+  intended_role     text check (intended_role in ('gm','player')),  -- nul = au choix de l'invité·e
+  claimed_by_user_id uuid references auth.users(id),  -- nul tant que jamais ouvert
+  claimed_name      text,                          -- nom tape par l'ami au premier passage
+  revoked_at        timestamptz,
+  created_by        uuid not null references auth.users(id),
+  created_at        timestamptz not null default now()
+);
+```
+
+Premier passage sur le lien : compte créé (mot de passe aléatoire, API admin Supabase, module confiné comme `publicShare.ts`), écran « Je suis MJ / Je suis PJ », nom demandé, si PJ liste des `campaign_characters` où `is_pc = true and user_id is null` à choisir. Passage suivant : jeton déjà `claimed_by_user_id`, connexion directe, retour à l'écran adapté à son rôle. Un jeton `revoked_at` non nul refuse l'accès (le superadmin peut couper un lien sans supprimer le compte).
+
+**Critères**
+- [ ] Un lien non réclamé propose le choix de rôle puis, en PJ, la liste des personnages non réclamés.
+- [ ] Réclamer un personnage l'enlève immédiatement de la liste pour tout autre lien (personne d'autre ne peut le prendre en double).
+- [ ] Rouvrir le même lien plus tard, sur un autre appareil, reconnecte le même compte sans nouvel écran de choix.
+- [ ] Un lien révoqué refuse l'accès sans supprimer le compte ni libérer sa fiche.
+- [ ] Aucune valeur de mot de passe générée n'est jamais visible côté client, ni journalisée en clair.
+
+### V2-M5 — Panneau superadmin : comptes, accès et journal fusionné · `M`
+
+Vue transversale, réservée à `is_superadmin()`, qui traverse les mondes sans passer par `is_world_member` — c'est précisément le rôle de la fonction RLS posée en M2. Le journal n'est presque pas une nouveauté : `entity_revisions.changed_by` et `session_events.actor_user_id` existent déjà et portent l'auteur de chaque changement ; ce ticket est surtout une vue de lecture qui fusionne les deux tri par date, filtrable par compte/monde.
+
+- Liste des comptes créés via M4, avec leur(s) monde(s)/personnage(s), et trois actions : révoquer (libère la fiche, comme M4/M6), réinitialiser (régénère le jeton, invalide l'ancien lien), supprimer (compte + ses revendications).
+- Journal fusionné `entity_revisions` + `session_events`, même principe de fusion que celui décrit dans `specs/module-joueur-et-solo.md` §A3 pour le MJ, mais sans le filtre par campagne — superadmin voit tout.
+
+**Critères**
+- [ ] Le panneau n'est accessible qu'à `is_superadmin()`, refusé côté serveur pour tout autre compte.
+- [ ] Réinitialiser un lien invalide l'ancien jeton immédiatement.
+- [ ] Supprimer un compte libère ses fiches revendiquées et ses `entity_grants`.
+- [ ] Le journal affiche, pour un monde donné, les modifications de tous les comptes qui y ont touché, triées par date, sans confondre révision de fiche et événement de jeu.
+
+### V2-M6 — Panneau MJ : accorder l'édition d'une fiche à un joueur · `S`/`M`
+
+Le pendant « par monde » de M5, pour un MJ qui n'est pas superadmin (utilisateur normal ou ami MJ) : gérer `entity_grants` pour ses propres fiches, et révoquer une fiche PJ réclamée dans sa campagne. Probablement un nouvel onglet dans `SettingsMenu.tsx` (à côté de Collaboration) plutôt qu'un écran séparé — à confirmer une fois M3 posé.
+
+**Critères**
+- [ ] Un MJ propriétaire/éditeur du monde peut accorder ou retirer l'édition d'une fiche précise à un joueur de sa campagne.
+- [ ] Un MJ peut révoquer la fiche PJ d'un joueur (elle redevient sélectionnable), sans passer par le superadmin.
+- [ ] Aucune action de ce panneau n'est disponible à un simple joueur.
+
+### V2-M7 — Interface PJ allégée · `M`
+
+Même coquille que la MJ (`MondeShell`/`AppShell`), sans les onglets Règles ni les outils MJ, sidebar remplacée par la liste `{sa fiche PJ} ∪ {entity_grants pour lui}` plutôt que l'arbre complet par `entity_kind`. S'appuie entièrement sur `canEditEntity` (M3) pour savoir quoi afficher en écriture, et sur la visibilité existante pour le reste du wiki (comportement déjà en place, rien à changer côté serveur).
+
+**Critères**
+- [ ] Un PJ voit sa fiche et les fiches qui lui ont été accordées, rien d'autre dans sa sidebar.
+- [ ] Aucun onglet Règles ni outil MJ n'apparaît pour ce rôle.
+- [ ] Le wiki reste consultable en lecture selon la visibilité normale (public/joueurs), sans régression.
+- [ ] Utilisable sur téléphone (même contrainte 375 px que la fiche jouable, `specs/module-joueur-et-solo.md` §A5).
+
+### V2-M8 — Collaboration MJ amis : dupliquer Valdoria, ajouter des éditeurs · `S`
+
+S'appuie sur l'export/duplication déjà en place (session du 29 août) et sur `world_members` (`role: 'editor'`), préparé depuis la Phase 0 mais jamais branché. Un lien M4 avec `intended_role = 'gm'` et `world_id` renseigné (pas de `campaign_id`) ajoute l'ami en `world_members(role: 'editor')` sur cette copie précise, en plus de sa place normale de MJ sur sa propre campagne si `createCampaign` la crée pour lui. Un ami MJ garde par ailleurs le bouton « Créer un monde » (mode campagne uniquement — verrouillé par M2), sans lien avec cette collaboration.
+
+**Critères**
+- [ ] Dupliquer Valdoria trois fois donne trois mondes distincts, chacun avec son propre nom de campagne (M1) pour les distinguer.
+- [ ] Un ami ajouté via un lien `gm` édite la copie visée, jamais les deux autres.
+- [ ] Un ami MJ peut créer ses propres mondes, jamais en mode solo.
+- [ ] Le journal superadmin (M5) distingue clairement quel compte a modifié quelle copie.
+
+---
+
 ## 3. Critère de fin de V2
 
 > Mener une séance complète avec votre table — préparation, PNJ cohérents, carte, combat, notes — sans ouvrir aucun autre outil.
@@ -764,10 +902,10 @@ Et un critère technique : **le verdict de S1 est écrit et la V3 est cadrée en
 
 | Contenu | Note |
 |---|---|
-| Compagnon joueur | `module-joueur-et-solo.md` partie A — la vraie nouveauté est le modèle de permissions |
+| Compagnon joueur | **avancé en V2, voir Lot M** — `module-joueur-et-solo.md` partie A |
 | Mode solo ou MJ assisté | forme déterminée par S1 |
 | RAG sur le wiki | `SCHEMA.md` §17 — la dimension d'embedding doit être figée avant la première indexation |
-| Édition élargie par les joueurs | `canEditEntity` est déjà le point d'extension |
+| Édition élargie par les joueurs | **avancé en V2, voir Lot M** — `canEditEntity`/`entity_grants` (V2-M3) |
 | Passage à l'application locale | `cible-locale-et-ia.md` §6 — la question « local seul ou local d'abord » reste ouverte |
 | Génération procédurale de cartes | idée future, jamais un ticket tant que le reste n'est pas solide |
 
