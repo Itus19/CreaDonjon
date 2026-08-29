@@ -2,7 +2,7 @@ import { z } from "zod";
 import { BLOCK_TYPES } from "@/src/core/schemas/blocks/registry";
 import { zBlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zVisibilityInput } from "@/lib/visibility/schemas";
-import { PERSONALITY_POLE_KEYS, RELATIONSHIP_AXIS_KEYS } from "@/src/core/psyche/keys";
+import { PERSONALITY_POLE_KEYS, RELATIONSHIP_AXIS_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
 
 export const createBlockSchema = z.object({
   entityId: z.guid(),
@@ -66,6 +66,20 @@ export const addAttitudeEventSchema = z.object({
     .refine((d) => Object.keys(d).length > 0, { message: "Au moins un axe doit etre touche." })
     .refine((d) => Object.keys(d).every((k) => (RELATIONSHIP_AXIS_KEYS as readonly string[]).includes(k)), {
       message: "Axe inconnu.",
+    }),
+  occurredAtIngame: z.string().trim().max(200).nullable().default(null),
+  confirmed: z.boolean().default(false),
+});
+
+/** Souvenir ajoute a un bloc worldview (V2-H1) — meme forme que `addPersonalityEventSchema`, poles moraux/politiques au lieu du temperament. */
+export const addWorldviewEventSchema = z.object({
+  version: z.number().int().positive(),
+  summary: z.string().trim().min(1).max(500),
+  deltas: z
+    .record(z.string(), z.number().int().min(-100).max(100))
+    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un pole doit etre touche." })
+    .refine((d) => Object.keys(d).every((k) => (WORLDVIEW_POLE_KEYS as readonly string[]).includes(k)), {
+      message: "Pole inconnu.",
     }),
   occurredAtIngame: z.string().trim().max(200).nullable().default(null),
   confirmed: z.boolean().default(false),

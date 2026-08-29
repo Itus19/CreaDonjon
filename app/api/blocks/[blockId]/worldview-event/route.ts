@@ -1,19 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { addPersonalityEventSchema } from "@/lib/blocks/schemas";
-import { addPersonalityEvent } from "@/src/server/services/psyche";
+import { addWorldviewEventSchema } from "@/lib/blocks/schemas";
+import { addWorldviewEvent } from "@/src/server/services/psyche";
 
-/**
- * Ajoute un souvenir a un bloc `personality` (V2-H1) — journalise ET
- * applique les deltas aux poles concernes, meme route pour un curseur
- * deplace a la main (le client genere alors un `summary` par defaut) et
- * pour un vrai souvenir raconte.
- */
+/** Ajoute un souvenir a un bloc `worldview` (V2-H1) — meme patron que `personality-event`. */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ blockId: string }> }) {
   const { blockId } = await params;
 
   const body = await request.json().catch(() => null);
-  const parsed = addPersonalityEventSchema.safeParse(body);
+  const parsed = addWorldviewEventSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Corps invalide." }, { status: 400 });
   }
@@ -26,7 +21,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
   }
 
-  const result = await addPersonalityEvent(supabase, {
+  const result = await addWorldviewEvent(supabase, {
     blockId,
     expectedVersion: parsed.data.version,
     summary: parsed.data.summary,
@@ -42,7 +37,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Bloc introuvable." }, { status: 404 });
     }
     if (result.reason === "wrong_block_type") {
-      return NextResponse.json({ error: "Ce bloc n'est pas une personnalité." }, { status: 400 });
+      return NextResponse.json({ error: "Ce bloc n'est pas une worldview." }, { status: 400 });
     }
     if (result.reason === "unknown_pole") {
       return NextResponse.json({ error: "Pôle inconnu." }, { status: 400 });

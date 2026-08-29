@@ -17,7 +17,8 @@ import { zQuestBlockData } from "./quest";
 import { zSessionLogBlockData } from "./sessionLog";
 import { zPersonalityBlockData } from "./personality";
 import { zRelationshipBlockData } from "./relationship";
-import { PERSONALITY_POLE_KEYS } from "@/src/core/psyche/keys";
+import { zWorldviewBlockData } from "./worldview";
+import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
 
 /**
  * Catalogue des blocs de wiki (specs/wiki-blocs.md §1, docs/SCHEMA.md §7).
@@ -65,6 +66,10 @@ import { PERSONALITY_POLE_KEYS } from "@/src/core/psyche/keys";
  * structurel (cible, `knownAs`, `historyVisible`) ; les axes se lisent/
  * s'ecrivent via `src/server/services/psyche.ts` (memes fonctions que
  * `personality`, pattern partage, portee differente).
+ * V2-H1 : worldview — convictions morales/politiques, meme portee que
+ * `personality` (l'entite seule). Partage le meme journal
+ * (`personality_events`) plutot qu'une nouvelle table : filtre par cles
+ * de poles a l'affichage, jamais un evenement mal range.
  */
 export const BLOCK_TYPES = [
   "text",
@@ -84,6 +89,7 @@ export const BLOCK_TYPES = [
   "session_log",
   "personality",
   "relationship",
+  "worldview",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -105,6 +111,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   session_log: "session_log",
   personality: "poles",
   relationship: "poles",
+  worldview: "poles",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -126,6 +133,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   session_log: zSessionLogBlockData,
   personality: zPersonalityBlockData,
   relationship: zRelationshipBlockData,
+  worldview: zWorldviewBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -198,6 +206,7 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
     speech: { register: "", tics: [] },
   },
   relationship: { __v: 1, target: null, knownAs: "", historyVisible: 20 },
+  worldview: { __v: 1, poles: WORLDVIEW_POLE_KEYS.map((key) => ({ key, value: 0 })), priority: [] },
 };
 
 export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny {

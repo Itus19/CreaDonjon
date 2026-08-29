@@ -2,7 +2,15 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { zPersonalityBlockData, type PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
-import { PERSONALITY_POLE_KEYS, RELATIONSHIP_AXIS_KEYS, type PersonalityPoleKey, type RelationshipAxisKey } from "@/src/core/psyche/keys";
+import { zWorldviewBlockData, type WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
+import {
+  PERSONALITY_POLE_KEYS,
+  RELATIONSHIP_AXIS_KEYS,
+  WORLDVIEW_POLE_KEYS,
+  type PersonalityPoleKey,
+  type RelationshipAxisKey,
+  type WorldviewPoleKey,
+} from "@/src/core/psyche/keys";
 import { applyDelta } from "@/src/core/psyche/apply";
 import { getBlockById } from "@/src/server/repos/blocks";
 import { getEntityById } from "@/src/server/repos/entities";
@@ -24,44 +32,47 @@ type TypedClient = SupabaseClient<Database>;
 /** Un delta brut au-dela de ce seuil exige une confirmation explicite (specs/psyche-pnj.md §4). */
 const CONFIRMATION_THRESHOLD = 40;
 
-export type AddPersonalityEventResult =
+export type AddPoleEventResult =
   | { ok: true; block: VisibleBlock; event: PersonalityEventRow }
-  | { ok: false; reason: "not_found" | "not_a_personality" | "unknown_pole" | "needs_confirmation" | "conflict" };
+  | { ok: false; reason: "not_found" | "wrong_block_type" | "unknown_pole" | "needs_confirmation" | "conflict" };
 
 /**
- * Ajoute un souvenir au bloc `personality` (V2-H1) : journalise dans
- * `personality_events` (ajout seul) ET applique chaque delta au pole
- * correspondant dans la donnee du bloc (`applyDelta`, amorti vers les
- * extremes) — les deux ecritures ou aucune, jamais l'une sans l'autre.
- * Meme chemin pour un curseur deplace a la main (`summary` auto-genere
- * alors) et pour un vrai souvenir raconte : une seule source de verite.
+ * Ajoute un souvenir a un bloc de poles hors campagne (`personality` ou
+ * `worldview`, V2-H1) : journalise dans `personality_events` (ajout seul,
+ * partage entre les deux types — meme portee, meme forme) ET applique
+ * chaque delta au pole correspondant (`applyDelta`) — les deux ecritures
+ * ou aucune. Meme chemin pour un curseur deplace a la main (`summary`
+ * auto-genere alors) et pour un vrai souvenir raconte.
  */
-export async function addPersonalityEvent(
+async function addPoleEvent<TData extends { poles: { key: string; value: number; note?: string }[] }>(
   supabase: TypedClient,
   params: {
+    blockType: "personality" | "worldview";
+    validKeys: readonly string[];
+    parse: (data: unknown) => TData;
     blockId: string;
     expectedVersion: number;
     summary: string;
-    deltas: Partial<Record<PersonalityPoleKey, number>>;
+    deltas: Record<string, number>;
     occurredAtIngame: string | null;
     origin: "gm" | "ai" | "player" | "system";
     confirmed: boolean;
     actorUserId: string;
   }
-): Promise<AddPersonalityEventResult> {
+): Promise<AddPoleEventResult> {
   const existing = await getBlockById(supabase, params.blockId);
   if (!existing) return { ok: false, reason: "not_found" };
-  if (existing.block_type !== "personality") return { ok: false, reason: "not_a_personality" };
+  if (existing.block_type !== params.blockType) return { ok: false, reason: "wrong_block_type" };
 
-  const deltaEntries = Object.entries(params.deltas) as [PersonalityPoleKey, number][];
-  if (deltaEntries.some(([key]) => !PERSONALITY_POLE_KEYS.includes(key))) {
+  const deltaEntries = Object.entries(params.deltas);
+  if (deltaEntries.some(([key]) => !params.validKeys.includes(key))) {
     return { ok: false, reason: "unknown_pole" };
   }
   const hasLargeDelta = deltaEntries.some(([, delta]) => Math.abs(delta) > CONFIRMATION_THRESHOLD);
   if (hasLargeDelta && !params.confirmed) return { ok: false, reason: "needs_confirmation" };
 
-  const data = zPersonalityBlockData.parse(existing.data);
-  const nextData: PersonalityBlockData = {
+  const data = params.parse(existing.data);
+  const nextData: TData = {
     ...data,
     poles: data.poles.map((pole) => {
       const delta = params.deltas[pole.key];
@@ -92,8 +103,68 @@ export async function addPersonalityEvent(
   return { ok: true, block: result.block, event };
 }
 
+export async function addPersonalityEvent(
+  supabase: TypedClient,
+  params: {
+    blockId: string;
+    expectedVersion: number;
+    summary: string;
+    deltas: Partial<Record<PersonalityPoleKey, number>>;
+    occurredAtIngame: string | null;
+    origin: "gm" | "ai" | "player" | "system";
+    confirmed: boolean;
+    actorUserId: string;
+  }
+): Promise<AddPoleEventResult> {
+  return addPoleEvent<PersonalityBlockData>(supabase, {
+    ...params,
+    deltas: params.deltas as Record<string, number>,
+    blockType: "personality",
+    validKeys: PERSONALITY_POLE_KEYS,
+    parse: (data) => zPersonalityBlockData.parse(data),
+  });
+}
+
+export async function addWorldviewEvent(
+  supabase: TypedClient,
+  params: {
+    blockId: string;
+    expectedVersion: number;
+    summary: string;
+    deltas: Partial<Record<WorldviewPoleKey, number>>;
+    occurredAtIngame: string | null;
+    origin: "gm" | "ai" | "player" | "system";
+    confirmed: boolean;
+    actorUserId: string;
+  }
+): Promise<AddPoleEventResult> {
+  return addPoleEvent<WorldviewBlockData>(supabase, {
+    ...params,
+    deltas: params.deltas as Record<string, number>,
+    blockType: "worldview",
+    validKeys: WORLDVIEW_POLE_KEYS,
+    parse: (data) => zWorldviewBlockData.parse(data),
+  });
+}
+
+/** Le journal partage (`personality_events`) filtre par cles de poles a l'affichage — le bloc `personality` ne montre que SES souvenirs, `worldview` les siens, meme si les deux ecrivent dans la meme table (meme entite, meme portee). */
+async function listPoleEvents(
+  supabase: TypedClient,
+  entityId: string,
+  validKeys: readonly string[]
+): Promise<PersonalityEventRow[]> {
+  const events = await listPersonalityEvents(supabase, entityId, 50);
+  return events
+    .filter((event) => Object.keys(event.deltas as Record<string, number>).some((key) => validKeys.includes(key)))
+    .slice(0, 20);
+}
+
 export async function getPersonalityEvents(supabase: TypedClient, entityId: string): Promise<PersonalityEventRow[]> {
-  return listPersonalityEvents(supabase, entityId);
+  return listPoleEvents(supabase, entityId, PERSONALITY_POLE_KEYS);
+}
+
+export async function getWorldviewEvents(supabase: TypedClient, entityId: string): Promise<PersonalityEventRow[]> {
+  return listPoleEvents(supabase, entityId, WORLDVIEW_POLE_KEYS);
 }
 
 export interface AttitudeAxes {

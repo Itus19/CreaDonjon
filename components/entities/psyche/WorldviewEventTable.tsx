@@ -1,0 +1,203 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Dropdown from "@/components/shared/Dropdown";
+import { WORLDVIEW_POLE_KEYS, type WorldviewPoleKey } from "@/src/core/psyche/keys";
+
+const POLE_LABELS_FR: Record<WorldviewPoleKey, string> = {
+  order_freedom: "Ordre ↔ Liberté",
+  mercy_justice: "Miséricorde ↔ Justice",
+  sacred_profane: "Sacré ↔ Profane",
+  tradition_progress: "Tradition ↔ Progrès",
+  individual_collective: "Individu ↔ Collectif",
+  wealth_honor: "Richesse ↔ Honneur",
+  peace_force: "Paix ↔ Force",
+};
+
+interface WorldviewEventInfo {
+  id: string;
+  summary: string;
+  deltas: Partial<Record<WorldviewPoleKey, number>>;
+  occurred_at_ingame: string | null;
+  created_at: string;
+}
+
+function formatDeltas(deltas: Partial<Record<WorldviewPoleKey, number>>): string {
+  return Object.entries(deltas)
+    .map(([key, delta]) => `${POLE_LABELS_FR[key as WorldviewPoleKey].split(" ↔ ")[0]} ${delta! > 0 ? "+" : ""}${delta}`)
+    .join(", ");
+}
+
+/** Tableau de souvenirs sous le radar (V2-H1) — memes conventions que `PersonalityEventTable`, journal partage filtre par cles de poles. */
+export default function WorldviewEventTable({
+  entityId,
+  blockId,
+  version,
+  onBlockRefreshed,
+}: {
+  entityId: string;
+  blockId: string;
+  version: number;
+  onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
+}) {
+  const [events, setEvents] = useState<WorldviewEventInfo[]>([]);
+  const [summary, setSummary] = useState("");
+  const [occurredAtIngame, setOccurredAtIngame] = useState("");
+  const [rows, setRows] = useState<{ id: string; key: WorldviewPoleKey; delta: string }[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  function loadEvents() {
+    fetch(`/api/entities/${entityId}/worldview-events`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setEvents);
+  }
+
+  useEffect(loadEvents, [entityId]);
+
+  function addRow() {
+    setRows((prev) => [...prev, { id: crypto.randomUUID(), key: WORLDVIEW_POLE_KEYS[0], delta: "" }]);
+  }
+  function updateRow(id: string, patch: Partial<{ key: WorldviewPoleKey; delta: string }>) {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  }
+  function removeRow(id: string) {
+    setRows((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  async function submit(confirmed = false) {
+    const deltas: Partial<Record<WorldviewPoleKey, number>> = {};
+    for (const row of rows) {
+      const n = Number(row.delta);
+      if (row.delta.trim() !== "" && Number.isFinite(n) && n !== 0) deltas[row.key] = n;
+    }
+    if (!summary.trim() || Object.keys(deltas).length === 0) {
+      setError("Une description et au moins un pôle touché sont requis.");
+      return;
+    }
+    if (!confirmed) {
+      const hasLarge = Object.values(deltas).some((d) => Math.abs(d as number) > 40);
+      if (hasLarge && !window.confirm("Ce changement est important (> 40). Confirmer ?")) return;
+    }
+
+    setPending(true);
+    setError(null);
+    const res = await fetch(`/api/blocks/${blockId}/worldview-event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        version,
+        summary: summary.trim(),
+        deltas,
+        occurredAtIngame: occurredAtIngame.trim() || null,
+        confirmed: true,
+      }),
+    });
+    setPending(false);
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      setError(body?.error ?? "Impossible d'ajouter ce souvenir.");
+      return;
+    }
+    const body = (await res.json()) as { block: { id: string; data: unknown; version: number } };
+    onBlockRefreshed(body.block);
+    setSummary("");
+    setOccurredAtIngame("");
+    setRows([]);
+    loadEvents();
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-3">
+      <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Souvenirs</span>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-edge/60 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+              <th className="py-1 pr-4">Date IRL</th>
+              <th className="py-1 pr-4">Date ingame</th>
+              <th className="py-1 pr-4">Événement</th>
+              <th className="py-1 pr-4">Effet</th>
+            </tr>
+          </thead>
+          <tbody>
+            {events.map((event) => (
+              <tr key={event.id} className="border-b border-edge/30 align-top">
+                <td className="whitespace-nowrap py-1.5 pr-4 text-xs text-ink-muted">
+                  {new Date(event.created_at).toLocaleDateString("fr-FR")}
+                </td>
+                <td className="whitespace-nowrap py-1.5 pr-4 text-xs text-ink-muted">
+                  {event.occurred_at_ingame || "—"}
+                </td>
+                <td className="py-1.5 pr-4">{event.summary}</td>
+                <td className="py-1.5 pr-4 text-xs text-ink-muted">{formatDeltas(event.deltas)}</td>
+              </tr>
+            ))}
+            {events.length === 0 && (
+              <tr>
+                <td colSpan={4} className="py-2 text-xs italic text-ink-muted">
+                  Aucun souvenir pour l&apos;instant.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-md border border-edge p-2">
+        <div className="flex flex-wrap gap-2">
+          <input
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            placeholder="A vu son mentor trahir ses idéaux…"
+            className="min-w-[240px] flex-1 bg-transparent text-sm text-ink outline-none"
+          />
+          <input
+            value={occurredAtIngame}
+            onChange={(e) => setOccurredAtIngame(e.target.value)}
+            placeholder="Date ingame (texte libre)"
+            className="w-48 bg-transparent text-xs text-ink-muted outline-none"
+          />
+        </div>
+        {rows.map((row) => (
+          <div key={row.id} className="flex items-center gap-2">
+            <Dropdown
+              value={row.key}
+              options={WORLDVIEW_POLE_KEYS.map((k) => ({ value: k, label: POLE_LABELS_FR[k] }))}
+              onChange={(v) => updateRow(row.id, { key: v as WorldviewPoleKey })}
+              aria-label="Pôle touché"
+            />
+            <input
+              type="number"
+              value={row.delta}
+              onChange={(e) => updateRow(row.id, { delta: e.target.value })}
+              placeholder="+10"
+              className="w-20 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none"
+            />
+            <button type="button" onClick={() => removeRow(row.id)} className="text-xs text-danger hover:underline">
+              ×
+            </button>
+          </div>
+        ))}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={addRow}
+            className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+          >
+            + Pôle touché
+          </button>
+          <button
+            type="button"
+            onClick={() => submit()}
+            disabled={pending}
+            className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+          >
+            Ajouter le souvenir
+          </button>
+          {error && <span className="text-xs text-danger">{error}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
