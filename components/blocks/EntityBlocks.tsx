@@ -222,6 +222,7 @@ function BlockDataEditor({
           blockId={block.id}
           version={block.version}
           entityId={block.entityId}
+          worldSlug={worldSlug}
           data={block.data as PersonalityBlockData}
           onChange={(d) => onChange(d)}
           onBlockRefreshed={onBlockRefreshed}
@@ -231,6 +232,7 @@ function BlockDataEditor({
       return (
         <RelationshipBlockEditor
           entityId={block.entityId}
+          worldSlug={worldSlug}
           data={block.data as RelationshipBlockData}
           otherEntities={otherEntities}
           onChange={(d) => onChange(d)}
@@ -242,6 +244,7 @@ function BlockDataEditor({
           blockId={block.id}
           version={block.version}
           entityId={block.entityId}
+          worldSlug={worldSlug}
           data={block.data as WorldviewBlockData}
           onChange={(d) => onChange(d)}
           onBlockRefreshed={onBlockRefreshed}

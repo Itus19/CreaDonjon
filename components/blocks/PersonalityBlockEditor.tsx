@@ -81,6 +81,7 @@ export default function PersonalityBlockEditor({
   blockId,
   version,
   entityId,
+  worldSlug,
   data,
   onChange,
   onBlockRefreshed,
@@ -88,6 +89,7 @@ export default function PersonalityBlockEditor({
   blockId: string;
   version: number;
   entityId: string;
+  worldSlug: string;
   data: PersonalityBlockData;
   onChange: (data: PersonalityBlockData) => void;
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
@@ -287,6 +289,7 @@ export default function PersonalityBlockEditor({
         entityId={entityId}
         blockId={blockId}
         version={version}
+        worldSlug={worldSlug}
         onBlockRefreshed={onBlockRefreshed}
         reloadSignal={reloadSignal}
       />

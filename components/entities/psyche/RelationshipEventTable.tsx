@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
+import GameDateInput from "@/components/shared/GameDateInput";
+import { formatGameDate } from "@/src/core/calendar/formatDate";
+import { DEFAULT_CALENDAR } from "@/src/core/calendar/defaultCalendar";
+import type { GameDate } from "@/src/core/calendar/types";
+import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import { RELATIONSHIP_AXIS_KEYS, type RelationshipAxisKey } from "@/src/core/psyche/keys";
+
+const BLANK_DATE: GameDate = { year: 0, month: null, day: null, precision: "year", end: null, label: null };
 
 const AXIS_LABELS_FR: Record<RelationshipAxisKey, string> = {
   trust_distrust: "Confiance ↔ Méfiance",
@@ -18,7 +25,7 @@ interface AttitudeEventInfo {
   id: string;
   summary: string;
   deltas: Partial<Record<RelationshipAxisKey, number>>;
-  occurred_at_ingame: string | null;
+  occurred_at_ingame: GameDate | null;
   created_at: string;
 }
 
@@ -32,15 +39,19 @@ function formatDeltas(deltas: Partial<Record<RelationshipAxisKey, number>>): str
 export default function RelationshipEventTable({
   sourceEntityId,
   targetEntityId,
+  worldSlug,
   onAxesChanged,
 }: {
   sourceEntityId: string;
   targetEntityId: string;
+  worldSlug: string;
   onAxesChanged: (axes: Partial<Record<RelationshipAxisKey, number>>) => void;
 }) {
   const [events, setEvents] = useState<AttitudeEventInfo[]>([]);
   const [summary, setSummary] = useState("");
-  const [occurredAtIngame, setOccurredAtIngame] = useState("");
+  const [hasIngameDate, setHasIngameDate] = useState(false);
+  const [occurredAtIngame, setOccurredAtIngame] = useState<GameDate>(BLANK_DATE);
+  const [calendar, setCalendar] = useState<CalendarConfigInput | null>(null);
   const [rows, setRows] = useState<{ id: string; key: RelationshipAxisKey; delta: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -52,6 +63,20 @@ export default function RelationshipEventTable({
   }
 
   useEffect(loadEvents, [sourceEntityId, targetEntityId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/worlds/${worldSlug}/calendar`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { calendar: CalendarConfigInput } | null) => {
+        if (!cancelled) setCalendar(body?.calendar ?? DEFAULT_CALENDAR);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [worldSlug]);
+
+  const activeCalendar = calendar ?? DEFAULT_CALENDAR;
 
   function addRow() {
     setRows((prev) => [...prev, { id: crypto.randomUUID(), key: RELATIONSHIP_AXIS_KEYS[0], delta: "" }]);
@@ -85,7 +110,7 @@ export default function RelationshipEventTable({
         targetEntityId,
         summary: summary.trim(),
         deltas,
-        occurredAtIngame: occurredAtIngame.trim() || null,
+        occurredAtIngame: hasIngameDate ? occurredAtIngame : null,
         confirmed: true,
       }),
     });
@@ -98,7 +123,8 @@ export default function RelationshipEventTable({
     const body = (await res.json()) as { axes: Partial<Record<RelationshipAxisKey, number>> };
     onAxesChanged(body.axes);
     setSummary("");
-    setOccurredAtIngame("");
+    setHasIngameDate(false);
+    setOccurredAtIngame(BLANK_DATE);
     setRows([]);
     loadEvents();
   }
@@ -123,7 +149,7 @@ export default function RelationshipEventTable({
                   {new Date(event.created_at).toLocaleDateString("fr-FR")}
                 </td>
                 <td className="whitespace-nowrap py-1.5 pr-4 text-xs text-ink-muted">
-                  {event.occurred_at_ingame || "—"}
+                  {event.occurred_at_ingame ? formatGameDate(event.occurred_at_ingame, activeCalendar) : "—"}
                 </td>
                 <td className="py-1.5 pr-4">{event.summary}</td>
                 <td className="py-1.5 pr-4 text-xs text-ink-muted">{formatDeltas(event.deltas)}</td>
@@ -148,13 +174,14 @@ export default function RelationshipEventTable({
             placeholder="A insulté un passant devant elle…"
             className="min-w-[240px] flex-1 bg-transparent text-sm text-ink outline-none"
           />
-          <input
-            value={occurredAtIngame}
-            onChange={(e) => setOccurredAtIngame(e.target.value)}
-            placeholder="Date ingame (texte libre)"
-            className="w-48 bg-transparent text-xs text-ink-muted outline-none"
-          />
         </div>
+        <label className="flex items-center gap-1.5 text-xs text-ink-muted">
+          <input type="checkbox" checked={hasIngameDate} onChange={(e) => setHasIngameDate(e.target.checked)} />
+          Date ingame connue
+        </label>
+        {hasIngameDate && (
+          <GameDateInput calendar={activeCalendar} value={occurredAtIngame} onChange={setOccurredAtIngame} />
+        )}
         {rows.map((row) => (
           <div key={row.id} className="flex items-center gap-2">
             <Dropdown

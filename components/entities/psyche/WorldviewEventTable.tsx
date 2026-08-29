@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
+import GameDateInput from "@/components/shared/GameDateInput";
+import { formatGameDate } from "@/src/core/calendar/formatDate";
+import { DEFAULT_CALENDAR } from "@/src/core/calendar/defaultCalendar";
+import type { GameDate } from "@/src/core/calendar/types";
+import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import { WORLDVIEW_POLE_KEYS, type WorldviewPoleKey } from "@/src/core/psyche/keys";
+
+const BLANK_DATE: GameDate = { year: 0, month: null, day: null, precision: "year", end: null, label: null };
 
 const POLE_LABELS_FR: Record<WorldviewPoleKey, string> = {
   order_freedom: "Ordre ↔ Liberté",
@@ -18,7 +25,7 @@ interface WorldviewEventInfo {
   id: string;
   summary: string;
   deltas: Partial<Record<WorldviewPoleKey, number>>;
-  occurred_at_ingame: string | null;
+  occurred_at_ingame: GameDate | null;
   created_at: string;
 }
 
@@ -33,16 +40,20 @@ export default function WorldviewEventTable({
   entityId,
   blockId,
   version,
+  worldSlug,
   onBlockRefreshed,
 }: {
   entityId: string;
   blockId: string;
   version: number;
+  worldSlug: string;
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
 }) {
   const [events, setEvents] = useState<WorldviewEventInfo[]>([]);
   const [summary, setSummary] = useState("");
-  const [occurredAtIngame, setOccurredAtIngame] = useState("");
+  const [hasIngameDate, setHasIngameDate] = useState(false);
+  const [occurredAtIngame, setOccurredAtIngame] = useState<GameDate>(BLANK_DATE);
+  const [calendar, setCalendar] = useState<CalendarConfigInput | null>(null);
   const [rows, setRows] = useState<{ id: string; key: WorldviewPoleKey; delta: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -54,6 +65,20 @@ export default function WorldviewEventTable({
   }
 
   useEffect(loadEvents, [entityId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/worlds/${worldSlug}/calendar`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { calendar: CalendarConfigInput } | null) => {
+        if (!cancelled) setCalendar(body?.calendar ?? DEFAULT_CALENDAR);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [worldSlug]);
+
+  const activeCalendar = calendar ?? DEFAULT_CALENDAR;
 
   function addRow() {
     setRows((prev) => [...prev, { id: crypto.randomUUID(), key: WORLDVIEW_POLE_KEYS[0], delta: "" }]);
@@ -89,7 +114,7 @@ export default function WorldviewEventTable({
         version,
         summary: summary.trim(),
         deltas,
-        occurredAtIngame: occurredAtIngame.trim() || null,
+        occurredAtIngame: hasIngameDate ? occurredAtIngame : null,
         confirmed: true,
       }),
     });
@@ -102,7 +127,8 @@ export default function WorldviewEventTable({
     const body = (await res.json()) as { block: { id: string; data: unknown; version: number } };
     onBlockRefreshed(body.block);
     setSummary("");
-    setOccurredAtIngame("");
+    setHasIngameDate(false);
+    setOccurredAtIngame(BLANK_DATE);
     setRows([]);
     loadEvents();
   }
@@ -127,7 +153,7 @@ export default function WorldviewEventTable({
                   {new Date(event.created_at).toLocaleDateString("fr-FR")}
                 </td>
                 <td className="whitespace-nowrap py-1.5 pr-4 text-xs text-ink-muted">
-                  {event.occurred_at_ingame || "—"}
+                  {event.occurred_at_ingame ? formatGameDate(event.occurred_at_ingame, activeCalendar) : "—"}
                 </td>
                 <td className="py-1.5 pr-4">{event.summary}</td>
                 <td className="py-1.5 pr-4 text-xs text-ink-muted">{formatDeltas(event.deltas)}</td>
@@ -152,13 +178,14 @@ export default function WorldviewEventTable({
             placeholder="A vu son mentor trahir ses idéaux…"
             className="min-w-[240px] flex-1 bg-transparent text-sm text-ink outline-none"
           />
-          <input
-            value={occurredAtIngame}
-            onChange={(e) => setOccurredAtIngame(e.target.value)}
-            placeholder="Date ingame (texte libre)"
-            className="w-48 bg-transparent text-xs text-ink-muted outline-none"
-          />
         </div>
+        <label className="flex items-center gap-1.5 text-xs text-ink-muted">
+          <input type="checkbox" checked={hasIngameDate} onChange={(e) => setHasIngameDate(e.target.checked)} />
+          Date ingame connue
+        </label>
+        {hasIngameDate && (
+          <GameDateInput calendar={activeCalendar} value={occurredAtIngame} onChange={setOccurredAtIngame} />
+        )}
         {rows.map((row) => (
           <div key={row.id} className="flex items-center gap-2">
             <Dropdown

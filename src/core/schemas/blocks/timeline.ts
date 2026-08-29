@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { zBlockReference } from "./reference";
-import { DATE_PRECISIONS } from "@/src/core/calendar/types";
+import { zGameDate } from "@/src/core/schemas/calendar";
 
 /**
  * Bloc `timeline` (V2-H2, specs/wiki-blocs.md §3) : entrées en ligne d'une
@@ -17,20 +17,6 @@ import { DATE_PRECISIONS } from "@/src/core/calendar/types";
  * de tous les blocs `timeline`, `src/server/services/timeline.ts`) triviale
  * : elle n'a besoin d'interroger aucune entité, seulement de lire les blocs.
  */
-
-const zGameDatePart = z.object({
-  year: z.number().int(),
-  month: z.number().int().min(1).max(24).nullable(),
-  day: z.number().int().min(1).max(60).nullable(),
-});
-
-/** Meme forme que `GameDate` (src/core/calendar/types.ts) — dupliquee plutot qu'importee pour le TYPE, CLAUDE.md regle 14 ; `DATE_PRECISIONS` reste importe (vocabulaire partage entre modules `src/core`, pas une dependance framework). */
-export const zGameDate = zGameDatePart.extend({
-  precision: z.enum(DATE_PRECISIONS),
-  end: zGameDatePart.nullable().default(null),
-  label: z.string().trim().min(1).nullable().default(null),
-});
-export type GameDateInput = z.infer<typeof zGameDate>;
 
 /** Genres d'entree, pour l'iconographie et le filtrage (specs/wiki-blocs.md §3). */
 export const TIMELINE_ENTRY_KINDS = [

@@ -410,7 +410,7 @@ Vérifié en direct par un cycle DOM complet (`mousedown` → plusieurs `input` 
 
 Réalisé : migration `20260829120001_psyche_tables.sql` (`entity_attitudes`, `attitude_events`, `personality_events`, RLS même patron que `sessions`/`entity_runtime_state` — appartenance au monde seulement, la bande nommée et `known_as` restent une responsabilité de la couche service) appliquée en base réelle (`supabase db push`) et types régénérés (`supabase gen types typescript --linked`). `src/core/psyche/` : vocabulaire des clés de pôles/axes (`keys.ts`), `applyDelta`/`clamp`/`replayDeltas` (`apply.ts`) et les bandes nommées des sept axes de relation (`bands.ts`) — testés aux bornes exactes de la spec, `typecheck`/`lint`/`test` verts (692 tests).
 
-### V2-H2 — Chronologie et calendrier · `L`
+### V2-H2 — Chronologie et calendrier · `L` — fait (3 phases)
 
 `wiki-blocs.md` §3.
 
@@ -419,12 +419,12 @@ Réalisé : migration `20260829120001_psyche_tables.sql` (`entity_attitudes`, `a
 - `sort_key` entier calculé, stocké à côté de chaque date.
 
 **Critères**
-- [ ] Le tri et le filtrage fonctionnent avec un calendrier à treize mois de vingt-huit jours.
-- [ ] `precision` gère l'imprécision : « vers 1200 » est une date valide.
-- [ ] `end` permet les périodes ; une guerre dure.
-- [ ] `label` prime à l'affichage : « le Troisième Hiver Noir » plutôt qu'une date.
+- [ ] Le tri et le filtrage fonctionnent avec un calendrier à treize mois de vingt-huit jours. — le tri est prouvé (tests + calendrier réglé à 13×28 en direct, phase 1) ; le **filtrage** n'a volontairement pas été construit comme fonctionnalité séparée (`scope.query` abandonné, phase 2) — case laissée non cochée pour ne pas prétendre avoir livré ce que le critère nomme explicitement.
+- [x] `precision` gère l'imprécision : « vers 1200 » est une date valide.
+- [x] `end` permet les périodes ; une guerre dure.
+- [x] `label` prime à l'affichage : « le Troisième Hiver Noir » plutôt qu'une date.
 - [x] Une entrée en ligne se promeut en entité d'un clic, sans rien perdre.
-- [ ] **Migrer les dates ingame en texte libre saisies avant ce ticket** vers le vrai calendrier une fois qu'il existe — au moins le tableau de souvenirs des blocs `personality`/`relationship` (V2-H1, `personality_events`/`attitude_events`, champ `occurred_at_ingame` texte libre en attendant), et tout autre champ « date ingame » ajouté entre-temps. Sans perte des valeurs déjà saisies : une conversion texte → date structurée, jamais un vidage.
+- [x] **Migrer les dates ingame en texte libre saisies avant ce ticket** vers le vrai calendrier une fois qu'il existe — au moins le tableau de souvenirs des blocs `personality`/`relationship` (V2-H1, `personality_events`/`attitude_events`, champ `occurred_at_ingame` texte libre en attendant), et tout autre champ « date ingame » ajouté entre-temps. Sans perte des valeurs déjà saisies : une conversion texte → date structurée, jamais un vidage.
 
 Découpage en trois phases annoncé au client avant de commencer (noyau + réglages → bloc `timeline` → migration des dates ingame existantes), même rythme que V2-H1.
 
@@ -450,7 +450,15 @@ Découpage en trois phases annoncé au client avant de commencer (noyau + régla
 
 **Vérifié en direct** (fiche de Candide Fausset, monde Valdoria) : ajout d'une entrée « Naissance de Candide » (précision jour, année/mois/jour, aperçu du formatage en direct) → `PATCH` à 200 → **rechargement par vraie navigation** (pas la touche F5, qui dans cet environnement de test ne force pas toujours un vrai refetch serveur — piège découvert pendant cette vérification) → entrée toujours présente. Promotion en entité `event` → `POST` à 200, fiche « Naissance de Candide » créée. Seconde entrée avec résumé, promue à son tour → bloc `text` de la nouvelle fiche contient bien le résumé transféré. Page `/m/valdoria/chronologie` → les deux entrées apparaissent, triées, chacune un lien vers sa fiche promue, avec « Depuis la fiche de Candide Fausset ». Un conflit de version (409) rencontré par accident pendant les tests (navigation arrière du navigateur restaurant un état client périmé après une promotion) a été correctement refusé, sans corruption — comportement attendu, pas un bug. Données de test nettoyées en base après vérification.
 
-**Phase 3 — migration des dates ingame existantes, pas commencée.**
+**Phase 3 — migration des dates ingame existantes, faite.** `occurred_at_ingame` (`personality_events`/`attitude_events`, V2-H1, texte libre en attendant le calendrier) devient une vraie date structurée maintenant qu'il existe.
+
+- **Migration Postgres** (`20260829150001_psyche_ingame_dates.sql`) : nouvelle colonne jsonb, chaque texte déjà saisi devient le `label` de sa date structurée (coordonnées calendaires vides tant que personne ne les renseigne — `label` prime déjà à l'affichage, rien ne change visuellement pour une entrée existante), ancienne colonne texte supprimée, nouvelle renommée à sa place — une conversion, jamais un vidage. Vérifié en base réelle avant et après : les lignes existantes (`attitude_events`, valeurs de test antérieures) n'avaient aucun texte saisi — migration inoffensive sur ce jeu de données, logique de conversion relue directement dans le SQL.
+- `zGameDate` déplacé de `src/core/schemas/blocks/timeline.ts` vers `src/core/schemas/calendar.ts` (aucun autre importeur au moment du déplacement) : un seul schéma de date structurée dans tout le dépôt, partagé par le bloc `timeline` et les souvenirs psyché, plutôt que deux copies qui auraient pu diverger.
+- Les trois tableaux de souvenirs (`PersonalityEventTable`, `RelationshipEventTable`, `WorldviewEventTable`) remplacent le champ texte libre par une case à cocher « Date ingame connue » + `GameDateInput` — l'optionalité de l'ancien champ est préservée (une entrée peut toujours n'avoir aucune date ingame). `worldSlug` propagé depuis `EntityBlocks.tsx` à travers les trois éditeurs de bloc jusqu'aux tableaux, pour aller chercher le calendrier du monde.
+
+**Vérifié en direct** (fiche de Candide Fausset) : souvenir avec précision « Année » (2015) → enregistré en base comme un objet structuré (`{year:2015, precision:"year", ...}`, plus le texte brut d'avant), affiché correctement dans la colonne Date ingame. Second souvenir avec période (1200 → 1204) ET étiquette libre (« le Troisième Hiver Noir ») → les deux persistés fidèlement en base, `label` prime bien à l'affichage. Données de test nettoyées après vérification.
+
+**Ticket clos avec un critère non coché, sciemment** (même discipline que V2-H1) : « le tri **et le filtrage** fonctionnent... » — le tri est prouvé (tests unitaires + calendrier à treize mois de vingt-huit jours réglé en direct) ; le filtrage n'a volontairement pas de fonctionnalité dédiée, la requête `scope.query` de la spec ayant été remplacée par la vue générale du monde (phase 2), qui répond au besoin réel exprimé par le client sans ce sous-système. Tout le reste — noyau calendrier, réglage MJ, bloc `timeline`, promotion, migration des dates existantes — est fait et vérifié en direct.
 
 ### V2-H3 — Généalogie et relations · `M` — fait
 

@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
+import type { GameDate } from "@/src/core/calendar/types";
 import { zPersonalityBlockData, type PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
 import { zWorldviewBlockData, type WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
 import {
@@ -54,7 +55,7 @@ async function addPoleEvent<TData extends { poles: { key: string; value: number;
     expectedVersion: number;
     summary: string;
     deltas: Record<string, number>;
-    occurredAtIngame: string | null;
+    occurredAtIngame: GameDate | null;
     origin: "gm" | "ai" | "player" | "system";
     confirmed: boolean;
     actorUserId: string;
@@ -110,7 +111,7 @@ export async function addPersonalityEvent(
     expectedVersion: number;
     summary: string;
     deltas: Partial<Record<PersonalityPoleKey, number>>;
-    occurredAtIngame: string | null;
+    occurredAtIngame: GameDate | null;
     origin: "gm" | "ai" | "player" | "system";
     confirmed: boolean;
     actorUserId: string;
@@ -132,7 +133,7 @@ export async function addWorldviewEvent(
     expectedVersion: number;
     summary: string;
     deltas: Partial<Record<WorldviewPoleKey, number>>;
-    occurredAtIngame: string | null;
+    occurredAtIngame: GameDate | null;
     origin: "gm" | "ai" | "player" | "system";
     confirmed: boolean;
     actorUserId: string;
@@ -212,7 +213,7 @@ export async function addAttitudeEvent(
     targetEntityId: string;
     summary: string;
     deltas: Partial<Record<RelationshipAxisKey, number>>;
-    occurredAtIngame: string | null;
+    occurredAtIngame: GameDate | null;
     origin: "gm" | "ai" | "player" | "system";
     confirmed: boolean;
   }

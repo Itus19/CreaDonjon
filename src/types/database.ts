@@ -222,7 +222,7 @@ export type Database = {
           created_at: string
           deltas: Json
           id: string
-          occurred_at_ingame: string | null
+          occurred_at_ingame: Json | null
           origin: string
           session_event_id: string | null
           source_entity_id: string
@@ -234,7 +234,7 @@ export type Database = {
           created_at?: string
           deltas?: Json
           id?: string
-          occurred_at_ingame?: string | null
+          occurred_at_ingame?: Json | null
           origin: string
           session_event_id?: string | null
           source_entity_id: string
@@ -246,7 +246,7 @@ export type Database = {
           created_at?: string
           deltas?: Json
           id?: string
-          occurred_at_ingame?: string | null
+          occurred_at_ingame?: Json | null
           origin?: string
           session_event_id?: string | null
           source_entity_id?: string
@@ -1455,7 +1455,7 @@ export type Database = {
           deltas: Json
           entity_id: string
           id: string
-          occurred_at_ingame: string | null
+          occurred_at_ingame: Json | null
           origin: string
           session_event_id: string | null
           summary: string
@@ -1465,7 +1465,7 @@ export type Database = {
           deltas?: Json
           entity_id: string
           id?: string
-          occurred_at_ingame?: string | null
+          occurred_at_ingame?: Json | null
           origin: string
           session_event_id?: string | null
           summary: string
@@ -1475,7 +1475,7 @@ export type Database = {
           deltas?: Json
           entity_id?: string
           id?: string
-          occurred_at_ingame?: string | null
+          occurred_at_ingame?: Json | null
           origin?: string
           session_event_id?: string | null
           summary?: string

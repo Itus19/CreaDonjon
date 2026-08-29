@@ -2,6 +2,7 @@ import { z } from "zod";
 import { BLOCK_TYPES } from "@/src/core/schemas/blocks/registry";
 import { zBlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zVisibilityInput } from "@/lib/visibility/schemas";
+import { zGameDate } from "@/src/core/schemas/calendar";
 import { PERSONALITY_POLE_KEYS, RELATIONSHIP_AXIS_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
 
 export const createBlockSchema = z.object({
@@ -59,7 +60,7 @@ export const addPersonalityEventSchema = z.object({
     .refine((d) => Object.keys(d).every((k) => (PERSONALITY_POLE_KEYS as readonly string[]).includes(k)), {
       message: "Pole inconnu.",
     }),
-  occurredAtIngame: z.string().trim().max(200).nullable().default(null),
+  occurredAtIngame: zGameDate.nullable().default(null),
   confirmed: z.boolean().default(false),
 });
 
@@ -73,7 +74,7 @@ export const addAttitudeEventSchema = z.object({
     .refine((d) => Object.keys(d).every((k) => (RELATIONSHIP_AXIS_KEYS as readonly string[]).includes(k)), {
       message: "Axe inconnu.",
     }),
-  occurredAtIngame: z.string().trim().max(200).nullable().default(null),
+  occurredAtIngame: zGameDate.nullable().default(null),
   confirmed: z.boolean().default(false),
 });
 
@@ -87,6 +88,6 @@ export const addWorldviewEventSchema = z.object({
     .refine((d) => Object.keys(d).every((k) => (WORLDVIEW_POLE_KEYS as readonly string[]).includes(k)), {
       message: "Pole inconnu.",
     }),
-  occurredAtIngame: z.string().trim().max(200).nullable().default(null),
+  occurredAtIngame: zGameDate.nullable().default(null),
   confirmed: z.boolean().default(false),
 });

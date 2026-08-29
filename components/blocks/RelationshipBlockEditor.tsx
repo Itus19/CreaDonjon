@@ -20,11 +20,13 @@ const NO_ENTITY = "";
  */
 export default function RelationshipBlockEditor({
   entityId,
+  worldSlug,
   data,
   otherEntities,
   onChange,
 }: {
   entityId: string;
+  worldSlug: string;
   data: RelationshipBlockData;
   otherEntities: OtherEntityOption[];
   onChange: (data: RelationshipBlockData) => void;
@@ -137,7 +139,12 @@ export default function RelationshipBlockEditor({
               {error && <p className="mt-1 text-xs text-danger">{error}</p>}
             </div>
           </div>
-          <RelationshipEventTable sourceEntityId={entityId} targetEntityId={targetId} onAxesChanged={setAxes} />
+          <RelationshipEventTable
+            sourceEntityId={entityId}
+            targetEntityId={targetId}
+            worldSlug={worldSlug}
+            onAxesChanged={setAxes}
+          />
         </>
       )}
     </div>

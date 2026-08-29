@@ -11,7 +11,7 @@ export interface PersonalityEventRow {
   deltas: Json;
   origin: string;
   session_event_id: string | null;
-  occurred_at_ingame: string | null;
+  occurred_at_ingame: Json | null;
   created_at: string;
 }
 
@@ -24,7 +24,7 @@ export async function insertPersonalityEvent(
     deltas: Json;
     origin: string;
     sessionEventId: string | null;
-    occurredAtIngame: string | null;
+    occurredAtIngame: Json | null;
   }
 ): Promise<PersonalityEventRow> {
   const { data, error } = await supabase
@@ -116,7 +116,7 @@ export interface AttitudeEventRow {
   deltas: Json;
   origin: string;
   session_event_id: string | null;
-  occurred_at_ingame: string | null;
+  occurred_at_ingame: Json | null;
   created_at: string;
 }
 
@@ -131,7 +131,7 @@ export async function insertAttitudeEvent(
     deltas: Json;
     origin: string;
     sessionEventId: string | null;
-    occurredAtIngame: string | null;
+    occurredAtIngame: Json | null;
   }
 ): Promise<AttitudeEventRow> {
   const { data, error } = await supabase
