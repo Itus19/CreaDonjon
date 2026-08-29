@@ -96,6 +96,14 @@ export function buildRelationsGraph(params: {
   for (const edge of edges) {
     if (seenEdgeIds.has(edge.id)) continue;
     if (!degreeOf.has(edge.sourceId) || !degreeOf.has(edge.targetId)) continue;
+    // Retour utilisateur : au degre N, on voit les nœuds JUSQU'AU degre N,
+    // mais une arete entre deux nœuds tous deux AU degre maximal (aucun des
+    // deux n'est "plus proche" que la limite) reste cachee — sinon
+    // n'importe quel lien entre deux voisins directs de la racine
+    // apparaitrait deja au degre 1, avant meme d'avoir choisi de "monter
+    // d'un cran". Un lien qui touche la racine (degre 0) passe toujours ce
+    // test des que maxDegree >= 1.
+    if (Math.min(degreeOf.get(edge.sourceId) as number, degreeOf.get(edge.targetId) as number) >= maxDegree) continue;
     seenEdgeIds.add(edge.id);
     graphEdges.push({
       id: edge.id,

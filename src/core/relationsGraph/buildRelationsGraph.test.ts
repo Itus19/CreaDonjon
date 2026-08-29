@@ -47,6 +47,22 @@ describe("buildRelationsGraph", () => {
     expect(graph).toEqual({ nodes: [], edges: [] });
   });
 
+  it("cache une arete entre deux nœuds au degre maximal (retour utilisateur : pas de lien visible entre deux entites du meme degre tant qu'on ne monte pas d'un cran)", () => {
+    // b et c sont tous deux voisins directs de a (degre 1) ET relies entre
+    // eux — ce troisieme lien ne doit apparaitre qu'a partir du degre 2,
+    // jamais au degre 1 meme si les deux extremites sont deja visibles.
+    const star: GraphEdgeInput[] = [
+      { id: "ab", sourceId: "a", targetId: "b", relationType: "friend_of", label: "ami(e) de", visibilityLevel: "public" },
+      { id: "ac", sourceId: "a", targetId: "c", relationType: "friend_of", label: "ami(e) de", visibilityLevel: "public" },
+      { id: "bc", sourceId: "b", targetId: "c", relationType: "partner_of", label: "partenaire de", visibilityLevel: "public" },
+    ];
+    const atDegree1 = buildRelationsGraph({ rootId: "a", maxDegree: 1, edges: star, entities });
+    expect(atDegree1.edges.map((e) => e.id).sort()).toEqual(["ab", "ac"]);
+
+    const atDegree2 = buildRelationsGraph({ rootId: "a", maxDegree: 2, edges: star, entities });
+    expect(atDegree2.edges.map((e) => e.id).sort()).toEqual(["ab", "ac", "bc"]);
+  });
+
   it("ignore une arete dont une extremite n'existe pas parmi les entites fournies", () => {
     const withGhost: GraphEdgeInput[] = [
       ...edges,
