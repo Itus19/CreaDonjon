@@ -35,6 +35,7 @@ import PersonalityBlockEditor from "./PersonalityBlockEditor";
 import RelationshipBlockEditor from "./RelationshipBlockEditor";
 import WorldviewBlockEditor from "./WorldviewBlockEditor";
 import RelationsGraphBlockEditor from "./RelationsGraphBlockEditor";
+import TimelineBlockEditor from "./TimelineBlockEditor";
 import MonsterStatblockSheet from "./MonsterStatblockSheet";
 import PlayableCharacterSheet from "./PlayableCharacterSheet";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
@@ -57,6 +58,7 @@ import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality
 import type { RelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
 import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
 import type { RelationsGraphBlockData } from "@/src/core/schemas/blocks/relationsGraph";
+import type { TimelineBlockData } from "@/src/core/schemas/blocks/timeline";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 
 export interface BlockItem {
@@ -91,6 +93,7 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   relationship: "Relation",
   worldview: "Convictions",
   relations_graph: "Réseau",
+  timeline: "Chronologie",
 };
 
 function BlockDataEditor({
@@ -251,6 +254,18 @@ function BlockDataEditor({
           worldSlug={worldSlug}
           data={block.data as RelationsGraphBlockData}
           onChange={(d) => onChange(d)}
+        />
+      );
+    case "timeline":
+      return (
+        <TimelineBlockEditor
+          blockId={block.id}
+          version={block.version}
+          worldSlug={worldSlug}
+          data={block.data as TimelineBlockData}
+          otherEntities={otherEntities}
+          onChange={(d) => onChange(d)}
+          onBlockRefreshed={onBlockRefreshed}
         />
       );
     default:

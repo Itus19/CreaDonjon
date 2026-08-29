@@ -19,6 +19,7 @@ import { zPersonalityBlockData } from "./personality";
 import { zRelationshipBlockData } from "./relationship";
 import { zWorldviewBlockData } from "./worldview";
 import { zRelationsGraphBlockData } from "./relationsGraph";
+import { zTimelineBlockData } from "./timeline";
 import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
 
 /**
@@ -77,6 +78,13 @@ import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/ke
  * (survol des liens, degre configurable, masquage coordonne) n'a de sens
  * que sur un vrai graphe de relations, jamais sur des poles abstraits —
  * devient ce bloc separe plutot qu'une fonctionnalite de `worldview`.
+ * V2-H2 : timeline — entrees en ligne d'une chronologie, attachable a
+ * n'importe quelle entite, plusieurs fois (specs/wiki-blocs.md §7). Chaque
+ * entree porte toujours sa propre date complete ; `ref` (vers une entite
+ * `event` promue) ne sert qu'a la navigation, jamais de source de date —
+ * simplification actee avec l'utilisateur par rapport a la requete
+ * `scope.query` par tags de la spec, remplacee par la vue generale du
+ * monde qui agrege directement les entrees de tous les blocs `timeline`.
  */
 export const BLOCK_TYPES = [
   "text",
@@ -98,6 +106,7 @@ export const BLOCK_TYPES = [
   "relationship",
   "worldview",
   "relations_graph",
+  "timeline",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -121,6 +130,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   relationship: "poles",
   worldview: "poles",
   relations_graph: "graph",
+  timeline: "timeline",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -144,6 +154,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   relationship: zRelationshipBlockData,
   worldview: zWorldviewBlockData,
   relations_graph: zRelationsGraphBlockData,
+  timeline: zTimelineBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -218,6 +229,7 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
   relationship: { __v: 1, target: null, knownAs: "", historyVisible: 20 },
   worldview: { __v: 1, poles: WORLDVIEW_POLE_KEYS.map((key) => ({ key, value: 0 })), priority: [] },
   relations_graph: { __v: 1, rootEntityId: null, degreesVisible: 1 },
+  timeline: { __v: 1, entries: [], groupBy: "none" },
 };
 
 export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny {

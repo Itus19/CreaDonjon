@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import type { PaletteEntity } from "./CommandPalette";
@@ -50,6 +51,13 @@ export default function Sidebar({
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
           <SectionToggle worldSlug={worldSlug} />
           <CommandPalette worldId={worldId} worldSlug={worldSlug} entities={entities} />
+          <Link
+            href={`/m/${worldSlug}/chronologie`}
+            onClick={() => setOpen(false)}
+            className="rounded px-2 py-1.5 text-sm text-ink-soft transition-colors hover:bg-panel-raised hover:text-ink"
+          >
+            {t("chronologie")}
+          </Link>
           <div onClick={() => setOpen(false)}>
             <EntityTree
               groups={tree}

@@ -32,6 +32,22 @@ export async function listBlocksForEntity(supabase: TypedClient, entityId: strin
   return data as BlockRow[];
 }
 
+/** Vue generale du monde (V2-H2) : tous les blocs d'un type donne parmi une liste d'entites — pas de `world_id` sur `blocks`, l'appelant fournit deja les entites du monde (`listEntitiesForWorld`) plutot qu'une jointure ici. */
+export async function listBlocksByTypeForEntities(
+  supabase: TypedClient,
+  entityIds: string[],
+  blockType: string
+): Promise<BlockRow[]> {
+  if (entityIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("blocks")
+    .select(BLOCK_COLUMNS)
+    .in("entity_id", entityIds)
+    .eq("block_type", blockType);
+  if (error) throw new Error(error.message);
+  return data as BlockRow[];
+}
+
 export async function getBlockById(supabase: TypedClient, id: string): Promise<BlockRow | null> {
   const { data, error } = await supabase
     .from("blocks")

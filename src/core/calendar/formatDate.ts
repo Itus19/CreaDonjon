@@ -4,8 +4,8 @@ function monthName(calendar: CalendarConfig, month: number): string {
   return calendar.months[month - 1]?.name ?? `mois ${month}`;
 }
 
-/** La derniere ere dont `startYear` ne depasse pas `year` — `null` si aucune ere ne la couvre encore. */
-function eraNameFor(calendar: CalendarConfig, year: number): string | null {
+/** La derniere ere dont `startYear` ne depasse pas `year` — `null` si aucune ere ne la couvre encore. Exportee pour le regroupement par ere de la vue generale du monde (V2-H2 phase 2). */
+export function eraNameFor(calendar: CalendarConfig, year: number): string | null {
   let found: string | null = null;
   let latestStart = -Infinity;
   for (const era of calendar.eras) {

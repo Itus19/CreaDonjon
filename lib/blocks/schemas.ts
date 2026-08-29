@@ -40,6 +40,12 @@ export const toggleQuestObjectiveSchema = z.object({
   done: z.boolean(),
 });
 
+/** Promotion d'une entree de timeline en entite (V2-H2) — jamais l'inverse, jamais deux fois la meme entree (verifie cote service : `entry.ref` deja pose). */
+export const promoteTimelineEntrySchema = z.object({
+  version: z.number().int().positive(),
+  entryId: z.string().min(1),
+});
+
 /** Souvenir ajoute a un bloc personality (V2-H1) — au moins un pole touche, sinon rien a journaliser. */
 export const addPersonalityEventSchema = z.object({
   version: z.number().int().positive(),
