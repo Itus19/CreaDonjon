@@ -42,11 +42,14 @@ export default function RelationshipEventTable({
   targetEntityId,
   worldSlug,
   onAxesChanged,
+  reloadSignal,
 }: {
   sourceEntityId: string;
   targetEntityId: string;
   worldSlug: string;
   onAxesChanged: (axes: Partial<Record<RelationshipAxisKey, number>>) => void;
+  /** Incremente par le parent apres un curseur deplace a la main (meme souvenir, ecrit ailleurs) — force le rechargement de la liste. Bug reel trouve en verifiant ce bloc : sans ca, un souvenir cree par le curseur n'apparaissait jamais dans ce tableau tant qu'on ne changeait pas de cible ou ne rechargeait pas la page. */
+  reloadSignal?: number;
 }) {
   const [events, setEvents] = useState<AttitudeEventInfo[]>([]);
   const [summary, setSummary] = useState("");
@@ -63,7 +66,7 @@ export default function RelationshipEventTable({
       .then(setEvents);
   }
 
-  useEffect(loadEvents, [sourceEntityId, targetEntityId]);
+  useEffect(loadEvents, [sourceEntityId, targetEntityId, reloadSignal]);
 
   /** Bascule "afficher au wiki" (V2, retour utilisateur point 5) — meme geste que PersonalityEventTable.tsx, table `attitude_events`. */
   async function toggleEventPublic(event: AttitudeEventInfo) {

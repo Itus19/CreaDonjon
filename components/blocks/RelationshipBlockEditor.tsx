@@ -11,6 +11,17 @@ import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 
 const NO_ENTITY = "";
 
+/** Meme libelles que RelationshipEventTable.tsx/RelationshipAxisSliders.tsx — jamais la cle brute ("trust_distrust") dans un resume genere. */
+const AXIS_LABELS_FR: Record<RelationshipAxisKey, string> = {
+  trust_distrust: "Confiance ↔ Méfiance",
+  friendship_hostility: "Amitié ↔ Hostilité",
+  respect_contempt: "Respect ↔ Mépris",
+  attraction_repulsion: "Attirance ↔ Répulsion",
+  debt_independence: "Dette ↔ Indépendance",
+  fear_assurance: "Peur ↔ Assurance",
+  interest_indifference: "Intérêt ↔ Indifférence",
+};
+
 /**
  * Bloc `relationship` (V2-H1) : radar + curseurs + tableau de souvenirs,
  * meme esthetique que `personality` mais sur des valeurs qui ne vivent PAS
@@ -36,6 +47,13 @@ export default function RelationshipBlockEditor({
   const [loadedTargetId, setLoadedTargetId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Bug reel trouve en verifiant ce bloc : deplacer un curseur cree bien
+  // le souvenir cote serveur (`commitAxis`), mais `RelationshipEventTable`
+  // ne le voyait jamais tant que sa propre liste n'etait pas rechargee par
+  // un autre moyen (changer de cible, recharger la page) — contrairement a
+  // `PersonalityBlockEditor`/`WorldviewBlockEditor`, qui font deja rejouer
+  // le tableau de souvenirs apres un reglage manuel via ce meme mecanisme.
+  const [reloadSignal, setReloadSignal] = useState(0);
   // Position en cours de glissement, remontee par le curseur a chaque pixel
   // (avant tout appel reseau) : sans ca, le radar n'a que la valeur
   // enregistree en base et ne bouge qu'apres l'aller-retour du commit.
@@ -58,20 +76,34 @@ export default function RelationshipBlockEditor({
 
   useEffect(() => {
     if (!targetId) return;
+    // Garde d'annulation (petit bug trouve en verifiant ce bloc) : sans
+    // elle, changer de cible deux fois rapidement (A -> B -> A) pouvait
+    // laisser la reponse de B arriver APRES celle de A et ecraser les
+    // bons axes avec ceux de la mauvaise cible, tout en marquant `loaded`
+    // comme si tout etait a jour.
+    let cancelled = false;
     fetch(`/api/entities/${entityId}/attitudes/${targetId}`)
       .then((res) => (res.ok ? res.json() : { axes: {}, campaignId: null }))
       .then((body: { axes: Partial<Record<RelationshipAxisKey, number>>; campaignId: string | null }) => {
+        if (cancelled) return;
         setAxes(body.axes);
         setCampaignId(body.campaignId);
         setLoadedTargetId(targetId);
       });
+    return () => {
+      cancelled = true;
+    };
   }, [entityId, targetId]);
 
   async function commitAxis(key: RelationshipAxisKey, delta: number) {
     if (!targetId) return;
     setPending(true);
     setError(null);
-    const summary = `Réglage manuel : ${key} ${delta > 0 ? "+" : ""}${delta}`;
+    // Meme libelle francais que le tableau de souvenirs (bug trouve en
+    // verifiant ce bloc) : le resume auto-genere affichait la cle brute
+    // ("trust_distrust +38") au lieu du nom francais, contrairement aux
+    // blocs personality/worldview qui font deja cette traduction.
+    const summary = `Réglage manuel : ${AXIS_LABELS_FR[key].split(" ↔ ")[0]} ${delta > 0 ? "+" : ""}${delta}`;
     const res = await fetch(`/api/entities/${entityId}/attitude-events`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -85,6 +117,7 @@ export default function RelationshipBlockEditor({
     }
     const body = (await res.json()) as { axes: Partial<Record<RelationshipAxisKey, number>> };
     setAxes(body.axes);
+    setReloadSignal((n) => n + 1);
   }
 
   return (
@@ -140,6 +173,7 @@ export default function RelationshipBlockEditor({
             targetEntityId={targetId}
             worldSlug={worldSlug}
             onAxesChanged={setAxes}
+            reloadSignal={reloadSignal}
           />
         </>
       )}
