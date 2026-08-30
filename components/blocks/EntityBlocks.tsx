@@ -300,6 +300,7 @@ export default function EntityBlocks({
   onLaunchWizard,
   relationsReloadSignal,
   onRelationsChanged: onRelationsChangedFromParent,
+  restrictAddableTypes,
 }: {
   entityId: string;
   /** V2-H3 : necessaire pour "creer la carte «X»" depuis le bloc genealogie. */
@@ -310,6 +311,8 @@ export default function EntityBlocks({
   otherEntities: OtherEntityOption[];
   /** Assistant de creation (retour utilisateur, suite) — omis quand aucun parent ne le fournit (ex. contextes hors fiche de monde), le bouton reste alors absent plutot que sans effet. */
   onLaunchWizard?: () => void;
+  /** Coquille joueur (retour utilisateur, V2-M7b) : "je ne leur donnerais pas le droit d'ajouter d'autre bloc que ceux de texte, si les joueurs veulent ajouter des choses il faudra demander au MJ" — limite la barre "Ajouter un bloc" a ces types, `undefined` (MJ) laisse tout disponible. */
+  restrictAddableTypes?: string[];
   /** V2, retour utilisateur : compteur possede par le parent (EditEntityForm), partage avec RelationsChips — force genealogie/reseau a recharger quand une relation change ailleurs sur la page. Absent hors contexte de fiche complete (ex. fenetre isolee) : les deux blocs retombent alors sur leur seul rechargement interne. */
   relationsReloadSignal?: number;
   onRelationsChanged?: () => void;
@@ -706,7 +709,9 @@ export default function EntityBlocks({
               + Assistant de création
             </button>
           )}
-          {Object.entries(BLOCK_TYPE_LABELS).map(([type, label]) => (
+          {Object.entries(BLOCK_TYPE_LABELS)
+            .filter(([type]) => !restrictAddableTypes || restrictAddableTypes.includes(type))
+            .map(([type, label]) => (
             <button
               key={type}
               type="button"

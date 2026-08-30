@@ -47,6 +47,7 @@ export default async function JoueurFichePage({ params }: { params: Promise<{ wo
       initialIsPc={data.isPc}
       campaignCharacterUserId={data.campaignCharacterUserId}
       initialPortraitLayout={data.portraitLayout}
+      playerRestricted
     />
   );
 }

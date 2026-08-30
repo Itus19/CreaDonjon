@@ -51,6 +51,7 @@ export default function EditEntityForm({
   initialIsPc,
   campaignCharacterUserId,
   initialPortraitLayout,
+  playerRestricted,
 }: {
   entity: EntitySummary;
   worldSlug: string;
@@ -64,6 +65,8 @@ export default function EditEntityForm({
   /** Compte joueur deja attribue (panneau MJ) — jamais efface par un changement PJ/PNJ depuis la fiche. */
   campaignCharacterUserId: string | null;
   initialPortraitLayout: EntityPortraitLayout;
+  /** Coquille joueur (retour utilisateur, V2-M7b) : masque l'assistant de creation et limite "Ajouter un bloc" au texte — "si les joueurs veulent ajouter des choses il faudra demander au MJ". `undefined`/`false` en contexte MJ, rien ne change. */
+  playerRestricted?: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState(entity.name);
@@ -407,10 +410,15 @@ export default function EditEntityForm({
           otherEntities={otherEntities}
           relationsReloadSignal={relationsReloadSignal}
           onRelationsChanged={bumpRelationsReloadSignal}
-          onLaunchWizard={() => {
-            setWizardVersion(versionRef.current);
-            setWizardOpen(true);
-          }}
+          onLaunchWizard={
+            playerRestricted
+              ? undefined
+              : () => {
+                  setWizardVersion(versionRef.current);
+                  setWizardOpen(true);
+                }
+          }
+          restrictAddableTypes={playerRestricted ? ["text"] : undefined}
         />
       </div>
     </div>
