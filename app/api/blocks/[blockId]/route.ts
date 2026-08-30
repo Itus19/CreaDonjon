@@ -52,6 +52,9 @@ export async function PATCH(
     if (result.reason === "not_found") {
       return NextResponse.json({ error: "Bloc introuvable." }, { status: 404 });
     }
+    if (result.reason === "forbidden") {
+      return NextResponse.json({ error: "Vous n'avez pas le droit de modifier ce bloc." }, { status: 403 });
+    }
     return NextResponse.json(
       { error: "Ce bloc a ete modifie entre-temps. Rechargez avant de reessayer." },
       { status: 409 }
@@ -75,6 +78,9 @@ export async function DELETE(
     return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
   }
 
-  await deleteBlock(supabase, blockId, user.id);
+  const result = await deleteBlock(supabase, blockId, user.id);
+  if (!result.ok) {
+    return NextResponse.json({ error: "Vous n'avez pas le droit de supprimer ce bloc." }, { status: 403 });
+  }
   return new NextResponse(null, { status: 204 });
 }

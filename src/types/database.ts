@@ -1181,6 +1181,35 @@ export type Database = {
           },
         ]
       }
+      entity_grants: {
+        Row: {
+          entity_id: string
+          granted_at: string
+          granted_by: string
+          user_id: string
+        }
+        Insert: {
+          entity_id: string
+          granted_at?: string
+          granted_by: string
+          user_id: string
+        }
+        Update: {
+          entity_id?: string
+          granted_at?: string
+          granted_by?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_grants_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entity_mechanical_revisions: {
         Row: {
           based_on_ruleset_entry_id: string | null

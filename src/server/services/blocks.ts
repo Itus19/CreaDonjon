@@ -23,6 +23,7 @@ import {
 import { getEntityById } from "@/src/server/repos/entities";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { recordEntityRevision } from "@/src/server/services/entityHistory";
+import { canUserEditEntityById } from "@/src/server/services/permissions";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -122,6 +123,8 @@ async function recordBlockRevision(
   await recordEntityRevision(supabase, { entity, changeSource, changedBy });
 }
 
+export type CreateBlockResult = { ok: true; block: VisibleBlock } | { ok: false; reason: "forbidden" };
+
 export async function createBlock(
   supabase: TypedClient,
   params: {
@@ -132,10 +135,15 @@ export async function createBlock(
     visibilityScopeId: string | null;
     createdBy: string;
   }
-): Promise<VisibleBlock> {
+): Promise<CreateBlockResult> {
   if (!isBlockType(params.blockType)) {
     throw new Error(`Type de bloc inconnu : ${params.blockType}`);
   }
+
+  // V2-M3 (Lot M) : ajouter un bloc a une entite est une ecriture sur
+  // cette entite, meme garde que `updateEntity`.
+  const allowed = await canUserEditEntityById(supabase, { entityId: params.entityId, userId: params.createdBy });
+  if (!allowed) return { ok: false, reason: "forbidden" };
 
   const display = defaultBlockDisplay(params.blockType, params.label);
   const data = defaultBlockData(params.blockType);
@@ -152,7 +160,7 @@ export async function createBlock(
     createdBy: params.createdBy,
   });
   await recordBlockRevision(supabase, params.entityId, params.createdBy);
-  return toVisibleBlock(row);
+  return { ok: true, block: toVisibleBlock(row) };
 }
 
 export async function updateBlockContent(
@@ -167,12 +175,17 @@ export async function updateBlockContent(
     changedBy: string;
     changeSource?: "user" | "ai";
   }
-): Promise<{ ok: true; block: VisibleBlock } | { ok: false; reason: "conflict" | "not_found" }> {
+): Promise<{ ok: true; block: VisibleBlock } | { ok: false; reason: "conflict" | "not_found" | "forbidden" }> {
   const existing = await getBlockById(supabase, params.id);
   if (!existing) return { ok: false, reason: "not_found" };
   if (!isBlockType(existing.block_type)) {
     throw new Error(`Type de bloc inconnu en base : ${existing.block_type}`);
   }
+
+  // V2-M3 (Lot M) : verifie avant de valider/ecrire — un refus ne doit pas
+  // dependre de la forme des donnees envoyees.
+  const allowed = await canUserEditEntityById(supabase, { entityId: existing.entity_id, userId: params.changedBy });
+  if (!allowed) return { ok: false, reason: "forbidden" };
 
   const validatedData = dataSchemaForBlockType(existing.block_type).parse(params.data);
 
@@ -196,15 +209,29 @@ export async function updateBlockContent(
 
 export async function reorderBlock(
   supabase: TypedClient,
-  params: { id: string; expectedVersion: number; displayOrder: number }
-): Promise<{ ok: true; block: VisibleBlock } | { ok: false; reason: "conflict" }> {
+  params: { id: string; expectedVersion: number; displayOrder: number; changedBy: string }
+): Promise<{ ok: true; block: VisibleBlock } | { ok: false; reason: "conflict" | "not_found" | "forbidden" }> {
+  const existing = await getBlockById(supabase, params.id);
+  if (!existing) return { ok: false, reason: "not_found" };
+  const allowed = await canUserEditEntityById(supabase, { entityId: existing.entity_id, userId: params.changedBy });
+  if (!allowed) return { ok: false, reason: "forbidden" };
+
   const row = await updateBlockDisplayOrder(supabase, params);
   if (!row) return { ok: false, reason: "conflict" };
   return { ok: true, block: toVisibleBlock(row) };
 }
 
-export async function deleteBlock(supabase: TypedClient, id: string, changedBy: string): Promise<void> {
+export async function deleteBlock(
+  supabase: TypedClient,
+  id: string,
+  changedBy: string
+): Promise<{ ok: true } | { ok: false; reason: "forbidden" }> {
   const existing = await getBlockById(supabase, id);
+  if (!existing) return { ok: true }; // idempotent (voir l'appelant) : rien a faire n'est pas un refus
+  const allowed = await canUserEditEntityById(supabase, { entityId: existing.entity_id, userId: changedBy });
+  if (!allowed) return { ok: false, reason: "forbidden" };
+
   await repoDeleteBlock(supabase, id);
-  if (existing) await recordBlockRevision(supabase, existing.entity_id, changedBy);
+  await recordBlockRevision(supabase, existing.entity_id, changedBy);
+  return { ok: true };
 }

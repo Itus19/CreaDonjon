@@ -181,6 +181,28 @@ export async function upsertCampaignCharacter(
   return data;
 }
 
+/**
+ * V2-M3 (Lot M) : cette entite est-elle la fiche PJ que CET utilisateur a
+ * revendiquee dans une campagne de ce monde ? Un monde n'a qu'une seule
+ * campagne (migration 20260826100001) mais cette requete ne suppose pas
+ * cette contrainte — elle traverse toutes les campagnes du monde, pas
+ * seulement "la" campagne, par robustesse si cette regle change un jour.
+ */
+export async function isOwnCampaignCharacter(
+  supabase: TypedClient,
+  params: { worldId: string; entityId: string; userId: string }
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("campaign_characters")
+    .select("entity_id, campaigns!inner(world_id)")
+    .eq("entity_id", params.entityId)
+    .eq("user_id", params.userId)
+    .eq("campaigns.world_id", params.worldId)
+    .limit(1);
+  if (error) throw new Error(error.message);
+  return data.length > 0;
+}
+
 export interface GmCampaignRow {
   campaign_id: string;
   campaign_name: string;

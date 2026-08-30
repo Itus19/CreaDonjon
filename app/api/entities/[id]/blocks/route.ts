@@ -48,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
   }
 
-  const block = await createBlock(supabase, {
+  const result = await createBlock(supabase, {
     entityId,
     blockType: parsed.data.blockType,
     label: parsed.data.label,
@@ -56,6 +56,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     visibilityScopeId: parsed.data.visibility.scopeId,
     createdBy: user.id,
   });
+  if (!result.ok) {
+    return NextResponse.json({ error: "Vous n'avez pas le droit d'ajouter un bloc a cette fiche." }, { status: 403 });
+  }
 
-  return NextResponse.json(block, { status: 201 });
+  return NextResponse.json(result.block, { status: 201 });
 }

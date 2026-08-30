@@ -112,7 +112,7 @@ describe.skipIf(!hasCreds)("historique du wiki (integration, base reelle)", () =
     entityId = entity.id;
 
     // Bloc gm cree par le proprietaire (statblock reserve au MJ).
-    await createBlock(ownerClient, {
+    const gmBlock = await createBlock(ownerClient, {
       entityId,
       blockType: "text",
       label: "Secrets du MJ",
@@ -120,10 +120,18 @@ describe.skipIf(!hasCreds)("historique du wiki (integration, base reelle)", () =
       visibilityScopeId: null,
       createdBy: ownerId,
     });
+    if (!gmBlock.ok) throw new Error("creation bloc gm refusee");
+
+    // V2-M3 (Lot M) : cette entite n'est ni la fiche PJ du joueur ni une
+    // fiche qui lui a ete accordee — sans cet octroi explicite, sa propre
+    // ecriture ci-dessous serait desormais refusee (`canEditEntity`), ce
+    // qui est le comportement voulu, pas une regression a contourner.
+    const { error: grantError } = await admin.from("entity_grants").insert({ entity_id: entityId, user_id: playerId, granted_by: ownerId });
+    if (grantError) throw new Error(grantError.message);
 
     // Le joueur edite SON propre bloc (visible de tous les joueurs) : ceci
     // declenche une nouvelle revision via son propre client, RLS-gate.
-    await createBlock(playerClient, {
+    const playerBlock = await createBlock(playerClient, {
       entityId,
       blockType: "text",
       label: "Notes du joueur",
@@ -131,6 +139,7 @@ describe.skipIf(!hasCreds)("historique du wiki (integration, base reelle)", () =
       visibilityScopeId: null,
       createdBy: playerId,
     });
+    if (!playerBlock.ok) throw new Error("creation bloc joueur refusee");
 
     const revisions = await listRevisions(ownerClient, entityId);
     const latest = revisions[0];
@@ -231,7 +240,7 @@ describe.skipIf(!hasCreds)("historique du wiki (integration, base reelle)", () =
       aliases: [],
     });
 
-    const blockA = await createBlock(ownerClient, {
+    const createdA = await createBlock(ownerClient, {
       entityId: entity.id,
       blockType: "text",
       label: "Bloc A",
@@ -239,7 +248,7 @@ describe.skipIf(!hasCreds)("historique du wiki (integration, base reelle)", () =
       visibilityScopeId: null,
       createdBy: ownerId,
     });
-    const blockB = await createBlock(ownerClient, {
+    const createdB = await createBlock(ownerClient, {
       entityId: entity.id,
       blockType: "text",
       label: "Bloc B",
@@ -247,6 +256,9 @@ describe.skipIf(!hasCreds)("historique du wiki (integration, base reelle)", () =
       visibilityScopeId: null,
       createdBy: ownerId,
     });
+    if (!createdA.ok || !createdB.ok) throw new Error("creation bloc refusee");
+    const blockA = createdA.block;
+    const blockB = createdB.block;
 
     const [resultA, resultB] = await Promise.all([
       updateBlockContent(ownerClient, {

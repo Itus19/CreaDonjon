@@ -34,9 +34,16 @@ export async function PATCH(
     id: blockId,
     expectedVersion: parsed.data.version,
     displayOrder: parsed.data.displayOrder,
+    changedBy: user.id,
   });
 
   if (!result.ok) {
+    if (result.reason === "not_found") {
+      return NextResponse.json({ error: "Bloc introuvable." }, { status: 404 });
+    }
+    if (result.reason === "forbidden") {
+      return NextResponse.json({ error: "Vous n'avez pas le droit de reorganiser ce bloc." }, { status: 403 });
+    }
     return NextResponse.json(
       { error: "Ce bloc a ete modifie entre-temps. Rechargez avant de reessayer." },
       { status: 409 }

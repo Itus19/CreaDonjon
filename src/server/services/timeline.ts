@@ -79,7 +79,7 @@ export async function getWorldTimeline(
 
 export type PromoteTimelineEntryResult =
   | { ok: true; entity: EntitySummary; block: VisibleBlock }
-  | { ok: false; reason: "conflict" | "not_found" | "already_promoted" };
+  | { ok: false; reason: "conflict" | "not_found" | "already_promoted" | "forbidden" };
 
 /**
  * Promotion d'une entree en entite (specs/wiki-blocs.md §3, §7 — motif
@@ -113,7 +113,7 @@ export async function promoteTimelineEntry(
   });
 
   if (entry.summary.trim() !== "") {
-    const textBlock = await createBlock(supabase, {
+    const created = await createBlock(supabase, {
       entityId: newEntity.id,
       blockType: "text",
       label: "Description",
@@ -121,6 +121,12 @@ export async function promoteTimelineEntry(
       visibilityScopeId: entry.visibility.scopeId,
       createdBy: params.createdBy,
     });
+    // `newEntity` vient d'etre creee par ce meme `createdBy` : seul un
+    // proprietaire/editeur/MJ peut alors echouer ici (aucune revendication
+    // ni octroi possible sur une entite qui vient de naitre) — mais un
+    // refus reste un refus, jamais suppose impossible.
+    if (!created.ok) return { ok: false, reason: "forbidden" };
+    const textBlock = created.block;
     const seeded = zTextBlockData.parse({
       __v: 1,
       segments: [

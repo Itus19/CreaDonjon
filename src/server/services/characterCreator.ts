@@ -9,6 +9,7 @@ import { createEntity, updateEntity, type UpdateEntityResult } from "@/src/serve
 import { getEntityById } from "@/src/server/repos/entities";
 import { insertBlock, listBlocksForEntity, updateBlockWithVersionCheck, type BlockRow } from "@/src/server/repos/blocks";
 import type { EntitySummary } from "@/src/server/repos/entities";
+import { canUserEditEntity } from "@/src/server/services/permissions";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -153,6 +154,18 @@ export async function overwriteCharacterFromWizard(
 ): Promise<UpdateEntityResult> {
   const current = await getEntityById(supabase, params.entityId);
   if (!current) return { ok: false, reason: "not_found" };
+
+  // V2-M3 (Lot M) : cette fonction ecrase ensuite les blocs directement via
+  // le repo (`upsertWizardBlock`), en contournant `blocks.ts` — le seul
+  // garde-fou cote service pour tout ce module est donc ici, avant la
+  // premiere ecriture. `updateEntity` (appele juste apres) revalide de son
+  // cote pour le renommage, mais pas pour les blocs qui suivent.
+  const allowed = await canUserEditEntity(supabase, {
+    worldId: current.world_id,
+    entityId: params.entityId,
+    userId: params.changedBy,
+  });
+  if (!allowed) return { ok: false, reason: "forbidden" };
 
   const renamed = await updateEntity(supabase, {
     id: params.entityId,

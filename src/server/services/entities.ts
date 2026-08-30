@@ -21,6 +21,7 @@ import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
 import { insertBlock, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { recordEntityRevision } from "@/src/server/services/entityHistory";
 import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerCharacters";
+import { canUserEditEntity } from "@/src/server/services/permissions";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -88,7 +89,7 @@ export async function createEntity(
 
 export type UpdateEntityResult =
   | { ok: true; entity: EntitySummary }
-  | { ok: false; reason: "conflict" | "not_found" };
+  | { ok: false; reason: "conflict" | "not_found" | "forbidden" };
 
 export async function updateEntity(
   supabase: TypedClient,
@@ -102,14 +103,25 @@ export async function updateEntity(
     isPublic: boolean;
   }
 ): Promise<UpdateEntityResult> {
+  // V2-M3 (Lot M) : `canEditEntity` avant toute ecriture — la RLS resserree
+  // par la meme migration refuserait de toute facon l'appel a
+  // `updateEntityWithVersionCheck`, mais l'appelant a alors besoin de
+  // distinguer "refuse" de "conflit de version"/"introuvable", ce que RLS
+  // seule ne permettrait pas (elle renverrait 0 ligne dans tous les cas).
+  const existing = await getEntityById(supabase, params.id);
+  if (!existing) return { ok: false, reason: "not_found" };
+  const allowed = await canUserEditEntity(supabase, {
+    worldId: existing.world_id,
+    entityId: params.id,
+    userId: params.changedBy,
+  });
+  if (!allowed) return { ok: false, reason: "forbidden" };
+
   const updated = await updateEntityWithVersionCheck(supabase, params);
   if (!updated) {
-    // Version perimee ou entite absente/inaccessible (RLS) : on ne peut
-    // pas distinguer les deux sans une lecture supplementaire, et ca ne
-    // changerait rien cote appelant (409 dans les deux cas est correct :
-    // "not_found" resterait un echec d'ecriture, pas un 404 de lecture).
-    const stillExists = await getEntityById(supabase, params.id);
-    return { ok: false, reason: stillExists ? "conflict" : "not_found" };
+    // Version perimee (l'existence et le droit d'ecrire viennent d'etre
+    // confirmes juste au-dessus) : le seul cas restant est un conflit.
+    return { ok: false, reason: "conflict" };
   }
 
   await recordEntityRevision(supabase, { entity: updated, changeSource: "user", changedBy: params.changedBy });
@@ -118,8 +130,19 @@ export async function updateEntity(
 }
 
 /** Idempotent (voir softDeleteEntity) — un menu qui rappelle "Supprimer" deux fois de suite ne doit jamais lever d'erreur. */
-export async function deleteEntity(supabase: TypedClient, id: string): Promise<{ deleted: boolean }> {
-  return softDeleteEntity(supabase, id);
+export async function deleteEntity(
+  supabase: TypedClient,
+  params: { id: string; userId: string }
+): Promise<{ deleted: boolean; error?: "not_found" | "forbidden" }> {
+  const existing = await getEntityById(supabase, params.id);
+  if (!existing) return { deleted: false, error: "not_found" };
+  const allowed = await canUserEditEntity(supabase, {
+    worldId: existing.world_id,
+    entityId: params.id,
+    userId: params.userId,
+  });
+  if (!allowed) return { deleted: false, error: "forbidden" };
+  return softDeleteEntity(supabase, params.id);
 }
 
 /**

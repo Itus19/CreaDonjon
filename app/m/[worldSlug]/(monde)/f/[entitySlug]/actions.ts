@@ -51,12 +51,12 @@ export async function overwriteCharacterFromWizardAction(
   });
 
   if (!result.ok) {
-    return {
-      error:
-        result.reason === "conflict"
-          ? "Cette fiche a été modifiée entre-temps. Rechargez la page avant de réessayer."
-          : "Fiche introuvable.",
+    const messages = {
+      conflict: "Cette fiche a été modifiée entre-temps. Rechargez la page avant de réessayer.",
+      forbidden: "Vous n'avez pas le droit de modifier cette fiche.",
+      not_found: "Fiche introuvable.",
     };
+    return { error: messages[result.reason] };
   }
 
   revalidatePath(`/m/${worldSlug}`, "layout");

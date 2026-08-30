@@ -47,7 +47,7 @@ describe.skipIf(!hasCreds)("applyAiProposal / rejectAiProposal (integration, bas
     if (entityError || !entity) throw new Error(entityError?.message ?? "creation entite echouee");
     entityId = entity.id;
 
-    const block = await createBlock(admin, {
+    const created = await createBlock(admin, {
       entityId,
       blockType: "text",
       label: "Description",
@@ -55,7 +55,8 @@ describe.skipIf(!hasCreds)("applyAiProposal / rejectAiProposal (integration, bas
       visibilityScopeId: null,
       createdBy: userId,
     });
-    blockId = block.id;
+    if (!created.ok) throw new Error("creation bloc refusee");
+    blockId = created.block.id;
   });
 
   afterAll(async () => {
