@@ -761,17 +761,17 @@ Aujourd'hui, `entity_portraits`, `block_images` et `background_images` stockent 
 - Révoquer l'accès d'un PJ à un personnage libère seulement la fiche (redevient sélectionnable) ; le compte de l'ami reste en sommeil, pas supprimé.
 - Le compte de l'utilisateur (email/mot de passe existant) devient **superadmin** : seul à avoir le mode solo, seul à voir/gérer tous les comptes et tous les accès, avec un journal fusionné de qui a modifié quoi.
 
-### V2-M1 — Nom de campagne visible et modifiable sur l'écran de choix de monde · `S`
+### V2-M1 — Nom de campagne visible et modifiable sur l'écran de choix de monde · `S` — fait
 
 Motivation immédiate : l'utilisateur va avoir trois copies du même monde (Valdoria) — une pour ses propres tests, une avec Jérémy, une avec Antoine — indiscernables aujourd'hui sur `/` puisque seul `worlds.name` y est affiché. Renommer la **campagne** (pas forcément le monde) en « La Croisade des Ombres avec Jérémy » résout ça sans toucher au nom du monde ni à son slug.
 
 `listWorldCardsForCurrentUser` (`src/server/repos/worlds.ts`) sélectionne déjà `campaigns(mode, rulesets(name))` mais jamais `campaigns.id`/`campaigns.name` — à ajouter à la requête et à `WorldCard`. Aucune fonction de renommage de campagne n'existe (`src/server/repos/campaigns.ts` n'a que `updateCampaignMode`/`updateCampaignRuleset`) : `updateCampaignName` est à écrire. `campaigns_write` (RLS) autorise aujourd'hui l'écriture à N'IMPORTE QUEL membre du monde, pas seulement au propriétaire (même lacune que `entities_write`, voir M3) — en attendant que M3 la resserre, suivre le même principe que le renommage/suppression de monde déjà fait (`app/actions.ts`) : vérification explicite du propriétaire dans le service, pas seulement confiance en la RLS.
 
 **Critères**
-- [ ] Le nom de la campagne apparaît sur chaque carte de monde de `/`, à côté ou sous le nom du monde.
-- [ ] Un bouton « Renommer » (même DA que celui du monde, `app/WorldCardActions.tsx`) permet de changer `campaigns.name` sans toucher à `worlds.name` ni au slug.
-- [ ] Réservé au propriétaire du monde, vérifié côté serveur explicitement (pas seulement la RLS).
-- [ ] Les trois copies de Valdoria de l'utilisateur restent distinguables d'un coup d'œil sur l'écran d'accueil.
+- [x] Le nom de la campagne apparaît sur chaque carte de monde de `/`, à côté ou sous le nom du monde.
+- [x] Un bouton « Renommer » (même DA que celui du monde, `app/WorldCardActions.tsx`) permet de changer `campaigns.name` sans toucher à `worlds.name` ni au slug.
+- [x] Réservé au propriétaire du monde, vérifié côté serveur explicitement (pas seulement la RLS).
+- [x] Les trois copies de Valdoria de l'utilisateur restent distinguables d'un coup d'œil sur l'écran d'accueil (vérifié avec Faerûn/Valdoria, la troisième copie n'existe pas encore — voir M8).
 
 ### V2-M2 — Rôle superadmin et verrouillage du mode solo · `M`
 
