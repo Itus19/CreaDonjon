@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createWorldSchema, deleteWorldSchema, renameWorldSchema } from "@/lib/worlds/schemas";
+import { renameCampaignSchema } from "@/lib/campaigns/schemas";
 import { createWorldWithCampaign, deleteWorldWithConfirmation, renameWorld } from "@/src/server/services/worlds";
+import { renameCampaign } from "@/src/server/services/campaigns";
 
 export type ActionState = { error: string } | null;
 
@@ -80,6 +82,44 @@ export async function renameWorldAction(
         error === "forbidden"
           ? "Seul le proprietaire du monde peut le renommer."
           : "Impossible de renommer ce monde.",
+    };
+  }
+  revalidatePath("/");
+  return { ok: true };
+}
+
+/** Renommage de la campagne depuis l'ecran de choix de monde (V2-M1, retour utilisateur : distinguer plusieurs copies du meme monde). */
+export type RenameCampaignState = { error: string } | { ok: true } | null;
+
+export async function renameCampaignAction(
+  _prevState: RenameCampaignState,
+  formData: FormData
+): Promise<RenameCampaignState> {
+  const parsed = renameCampaignSchema.safeParse({
+    campaignId: formData.get("campaignId"),
+    name: formData.get("name"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Session expiree, reconnectez-vous." };
+
+  const { updated, error } = await renameCampaign(supabase, {
+    campaignId: parsed.data.campaignId,
+    userId: user.id,
+    name: parsed.data.name,
+  });
+  if (!updated) {
+    return {
+      error:
+        error === "forbidden"
+          ? "Seul le proprietaire du monde peut renommer sa campagne."
+          : "Impossible de renommer cette campagne.",
     };
   }
   revalidatePath("/");

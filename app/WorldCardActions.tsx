@@ -2,7 +2,14 @@
 
 import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
-import { deleteWorldAction, renameWorldAction, type DeleteWorldState, type RenameWorldState } from "@/app/actions";
+import {
+  deleteWorldAction,
+  renameCampaignAction,
+  renameWorldAction,
+  type DeleteWorldState,
+  type RenameCampaignState,
+  type RenameWorldState,
+} from "@/app/actions";
 
 /**
  * Renommage (V2, retour utilisateur, ecran d'accueil) : "etes-vous sur ?"
@@ -59,6 +66,74 @@ function RenameWorldSection({ worldId, worldName }: { worldId: string; worldName
         <button
           type="submit"
           disabled={pending || name.trim() === "" || name.trim() === worldName}
+          className="rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:bg-panel disabled:opacity-40"
+        >
+          {pending ? "Renommage..." : "Confirmer"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setRevealed(false)}
+          className="rounded-md border border-edge px-3 py-1.5 text-sm text-ink-muted transition-colors hover:bg-panel-raised"
+        >
+          Annuler
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Renommage de la CAMPAGNE, pas du monde (V2-M1, retour utilisateur :
+ * plusieurs copies d'un meme monde — une par ami MJ — deviennent
+ * distinguables par le nom de leur campagne, ex. "La Croisade des Ombres
+ * avec Jérémy"). Meme reflexe que `RenameWorldSection`, sur un champ
+ * different.
+ */
+function RenameCampaignSection({ campaignId, campaignName }: { campaignId: string; campaignName: string }) {
+  const [revealed, setRevealed] = useState(false);
+  const [name, setName] = useState(campaignName);
+  const [state, formAction, pending] = useActionState<RenameCampaignState, FormData>(renameCampaignAction, null);
+  const [prevState, setPrevState] = useState(state);
+  if (state !== prevState) {
+    setPrevState(state);
+    if (state && "ok" in state) setRevealed(false);
+  }
+
+  if (!revealed) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setName(campaignName);
+          setRevealed(true);
+        }}
+        className="rounded-full border border-edge px-2 py-0.5 text-[11px] text-ink-muted transition-colors hover:bg-panel-raised"
+      >
+        Renommer la campagne
+      </button>
+    );
+  }
+
+  return (
+    <form action={formAction} className="flex w-full flex-col gap-2 rounded-md border border-edge bg-panel-raised p-3">
+      <input type="hidden" name="campaignId" value={campaignId} />
+      <label className="flex flex-col gap-1 text-xs text-ink-muted">
+        Nom de la campagne
+        <input
+          name="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={100}
+          autoFocus
+          className="w-full rounded-md border border-edge bg-panel px-2.5 py-1.5 text-sm text-ink outline-none"
+        />
+      </label>
+      <p className="text-xs text-ink-muted">Êtes-vous sûr de vouloir renommer cette campagne ?</p>
+      {state && "error" in state && <p className="text-xs text-danger">{state.error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={pending || name.trim() === "" || name.trim() === campaignName}
           className="rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:bg-panel disabled:opacity-40"
         >
           {pending ? "Renommage..." : "Confirmer"}
@@ -143,11 +218,16 @@ export default function WorldCardActions({
   worldId,
   worldSlug,
   worldName,
+  campaignId,
+  campaignName,
   isOwner,
 }: {
   worldId: string;
   worldSlug: string;
   worldName: string;
+  /** `null` : monde sans campagne (ancien monde pas encore complete) — pas de bouton "Renommer la campagne" dans ce cas. */
+  campaignId: string | null;
+  campaignName: string | null;
   /** Renommer/supprimer sont reserves au proprietaire (RLS `worlds_write` les refuserait sinon) — inutile d'afficher un bouton qui echoue toujours a un simple membre invite. */
   isOwner: boolean;
 }) {
@@ -214,6 +294,9 @@ export default function WorldCardActions({
           {pending === "duplicate" ? "Duplication..." : "Dupliquer"}
         </button>
         {isOwner && <RenameWorldSection worldId={worldId} worldName={worldName} />}
+        {isOwner && campaignId && campaignName && (
+          <RenameCampaignSection campaignId={campaignId} campaignName={campaignName} />
+        )}
         {isOwner && <DeleteWorldSection worldId={worldId} worldName={worldName} />}
         {error && <p className="text-[11px] text-danger">{error}</p>}
       </div>

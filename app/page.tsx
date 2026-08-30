@@ -61,6 +61,9 @@ export default async function Home() {
                     </span>
                   )}
                 </div>
+                {world.campaignName && (
+                  <p className="text-xs text-ink-muted">Campagne : {world.campaignName}</p>
+                )}
                 <p className="text-sm text-ink-muted">
                   {world.rulesetName ?? "Aucun ruleset"} · Modifié le {formatDate(world.lastModified)}
                 </p>
@@ -83,6 +86,8 @@ export default async function Home() {
                 worldId={world.id}
                 worldSlug={world.slug}
                 worldName={world.name}
+                campaignId={world.campaignId}
+                campaignName={world.campaignName}
                 isOwner={world.ownerId === user?.id}
               />
             </li>

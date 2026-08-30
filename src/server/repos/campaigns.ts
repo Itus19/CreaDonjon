@@ -99,6 +99,23 @@ export async function updateCampaignRuleset(supabase: TypedClient, params: { cam
   if (error) throw new Error(error.message);
 }
 
+/** Renommage depuis l'ecran de choix de monde (V2-M1, retour utilisateur : distinguer plusieurs copies d'un meme monde) — ne touche ni au nom du monde ni a son slug, seul `campaigns.name` change. */
+export async function updateCampaignName(
+  supabase: TypedClient,
+  campaignId: string,
+  name: string
+): Promise<CampaignRow | null> {
+  const { data, error } = await supabase
+    .from("campaigns")
+    .update({ name })
+    .eq("id", campaignId)
+    .is("deleted_at", null)
+    .select(CAMPAIGN_COLUMNS)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export interface CampaignMemberRow {
   campaign_id: string;
   user_id: string;

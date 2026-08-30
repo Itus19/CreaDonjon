@@ -144,6 +144,9 @@ export interface WorldCard {
   slug: string;
   /** `null` : monde sans campagne — ne devrait plus arriver pour un monde cree apres la migration 20260826100001, mais reste possible pour un monde plus ancien pas encore complete. */
   mode: "campaign" | "solo" | null;
+  /** V2-M1, retour utilisateur : distinguer plusieurs copies d'un meme monde (une par ami MJ) par le nom de la CAMPAGNE, pas celui du monde — les deux `null` ensemble avec `mode`. */
+  campaignId: string | null;
+  campaignName: string | null;
   rulesetName: string | null;
   /** Rempli par le service (`listWorldCards`), pas par cette fonction : resoudre espece/classe exige `assembleResolvedRuleset` (locale-dependant), hors de portee d'un simple repo. */
   players: WorldCardPlayerCharacter[];
@@ -161,7 +164,7 @@ export interface WorldCard {
 export async function listWorldCardsForCurrentUser(supabase: TypedClient): Promise<WorldCard[]> {
   const { data, error } = await supabase
     .from("worlds")
-    .select(`id, owner_id, name, slug, updated_at, campaigns ( mode, rulesets ( name ) )`)
+    .select(`id, owner_id, name, slug, updated_at, campaigns ( id, name, mode, rulesets ( name ) )`)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
 
@@ -169,7 +172,7 @@ export async function listWorldCardsForCurrentUser(supabase: TypedClient): Promi
   const lastEntityEditByWorld = await latestEntityEditByWorld(supabase, worldIds);
 
   return data.map((w) => {
-    const campaign = w.campaigns[0] as { mode: string; rulesets: { name: string } | null } | undefined;
+    const campaign = w.campaigns[0] as { id: string; name: string; mode: string; rulesets: { name: string } | null } | undefined;
     const entityLast = lastEntityEditByWorld.get(w.id);
     const lastModified = entityLast && entityLast > w.updated_at ? entityLast : w.updated_at;
     return {
@@ -178,6 +181,8 @@ export async function listWorldCardsForCurrentUser(supabase: TypedClient): Promi
       name: w.name,
       slug: w.slug,
       mode: (campaign?.mode as "campaign" | "solo" | undefined) ?? null,
+      campaignId: campaign?.id ?? null,
+      campaignName: campaign?.name ?? null,
       rulesetName: campaign?.rulesets?.name ?? null,
       players: [],
       lastModified,

@@ -11,12 +11,14 @@ import {
   listCampaignsForWorld,
   listGmCampaignsForUser,
   updateCampaignMode,
+  updateCampaignName,
   upsertCampaignCharacter,
   type CampaignCharacterRow,
   type CampaignMemberRow,
   type CampaignRow,
 } from "@/src/server/repos/campaigns";
 import { getRulesetById } from "@/src/server/repos/rules";
+import { getWorldOwnerId } from "@/src/server/repos/worlds";
 import { createEntity } from "@/src/server/services/entities";
 
 type TypedClient = SupabaseClient<Database>;
@@ -138,6 +140,27 @@ export async function setCampaignMode(
     gmUserId: params.mode === "campaign" ? params.actorUserId : null,
   });
   return row ? toSummary(row) : null;
+}
+
+/**
+ * Renommage depuis l'ecran de choix de monde (V2-M1) : verification
+ * explicite du proprietaire du MONDE, pas seulement confiance en
+ * `campaigns_write` — cette politique RLS autorise aujourd'hui l'ecriture a
+ * n'importe quel membre du monde, pas seulement au proprietaire (resserre
+ * par V2-M3, pas encore fait). Meme principe que `renameWorld`/
+ * `deleteWorldWithConfirmation` (app/actions.ts) : la RLS reste un filet,
+ * jamais la seule barriere (PDD §28).
+ */
+export async function renameCampaign(
+  supabase: TypedClient,
+  params: { campaignId: string; userId: string; name: string }
+): Promise<{ updated: boolean; error?: "not_found" | "forbidden" }> {
+  const campaign = await getCampaignById(supabase, params.campaignId);
+  if (!campaign) return { updated: false, error: "not_found" };
+  const ownerId = await getWorldOwnerId(supabase, campaign.world_id);
+  if (ownerId !== params.userId) return { updated: false, error: "forbidden" };
+  const row = await updateCampaignName(supabase, params.campaignId, params.name);
+  return { updated: row !== null };
 }
 
 export async function getCampaignCharacters(supabase: TypedClient, campaignId: string): Promise<CampaignCharacterRow[]> {
