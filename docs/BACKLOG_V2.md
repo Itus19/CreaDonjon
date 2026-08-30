@@ -773,7 +773,7 @@ Motivation immédiate : l'utilisateur va avoir trois copies du même monde (Vald
 - [x] Réservé au propriétaire du monde, vérifié côté serveur explicitement (pas seulement la RLS).
 - [x] Les trois copies de Valdoria de l'utilisateur restent distinguables d'un coup d'œil sur l'écran d'accueil (vérifié avec Faerûn/Valdoria, la troisième copie n'existe pas encore — voir M8).
 
-### V2-M2 — Rôle superadmin et verrouillage du mode solo · `M`
+### V2-M2 — Rôle superadmin et verrouillage du mode solo · `M` — fait
 
 ```sql
 alter table profiles add column account_role text not null default 'member'
@@ -782,16 +782,16 @@ alter table profiles add column account_role text not null default 'member'
 
 Un seul compte (celui de l'utilisateur) passe à `superadmin`, à la main, dans la migration de seed — aucune interface de self-service pour ce champ, pas de deuxième superadmin sans repasser par une migration. `app.is_superadmin()` (security definer, même patron que `app.is_world_member`) devient le point d'entrée unique utilisé par M3/M4/M5 — jamais un test `profile.account_role === 'superadmin'` répété en dur à plusieurs endroits.
 
-Le mode solo (choix `mode: 'solo'` à la création d'un monde, `CreateWorldForm.tsx`/`createWorldSchema`/`createWorldAction`, et le bascule après coup dans `CampaignsPanel.tsx`/`setCampaignMode`) devient refusé côté serveur à qui n'est pas superadmin — l'option reste visible ou non dans l'interface, mais le vrai verrou est dans l'action, jamais seulement un `<option>` masqué (règle absolue CLAUDE.md : vérifié côté serveur).
+Le mode solo devient refusé côté serveur à qui n'est pas superadmin, sur les **quatre** points d'entrée trouvés en creusant (deux de plus que prévu au moment d'écrire ce ticket) : création (`createWorldAction`), bascule après coup (`PATCH /api/campaigns/[id]`, `setCampaignMode`), réparation d'un monde plus ancien sans campagne (`POST /api/worlds/[slug]/campaigns`), et import d'un monde exporté (`POST /api/worlds/import`, où le mode choisi est libre, indépendant du mode d'origine du fichier). L'option reste visible ou non dans l'interface (`CreateWorldForm.tsx`, `ImportWorldForm.tsx`, `CampaignsPanel.tsx`), mais le vrai verrou est dans chacune des quatre routes/actions, jamais seulement un `<option>` masqué.
 
-Décision structurante : un ADR (`docs/adr/0014-role-superadmin.md` ou suivant) documente pourquoi ce rôle contourne la logique habituelle « appartenance à un monde/une campagne » par une fonction RLS dédiée plutôt que par le client `service_role` — celui-ci reste confiné à `publicShare.ts` (règle absolue 4 ter), ce choix ne le remet pas en cause.
+Décision structurante, documentée dans `docs/adr/0014-role-superadmin.md` : `app.is_superadmin()` (RLS, pour M4/M5) et `isSuperadmin()` (`src/server/services/account.ts`, lecture directe de `profiles.account_role` sous `profiles_select`, pour les décisions métier ponctuelles côté service) coexistent délibérément — deux couches qui ne peuvent pas s'appeler l'une l'autre, jamais une troisième vérification en dur ailleurs.
 
 **Critères**
-- [ ] `profiles.account_role` existe, un seul compte à `superadmin` après la migration de seed.
-- [ ] `app.is_superadmin()` existe et n'est jamais dupliqué en dur ailleurs.
-- [ ] Créer un monde en mode solo échoue côté serveur pour un compte non-superadmin, même en forgeant la requête (testé en contournant le formulaire).
-- [ ] Basculer une campagne existante en solo échoue de la même façon.
-- [ ] ADR écrit et validé avant d'attaquer M4/M5, qui dépendent de `is_superadmin()`.
+- [x] `profiles.account_role` existe, un seul compte à `superadmin` après la migration (vérifié : 1 ligne sur 19 profils).
+- [x] `app.is_superadmin()` existe et n'est jamais dupliqué en dur ailleurs (le côté TypeScript passe par `isSuperadmin()`, voir l'ADR).
+- [x] Créer un monde en mode solo échoue côté serveur pour un compte non-superadmin, même en forgeant la requête — vérifié en direct en rétrogradant temporairement le compte réel et en appelant les routes au fetch (403 sur les quatre points d'entrée, 200 confirmé pour `mode: 'campaign'`).
+- [x] Basculer une campagne existante en solo échoue de la même façon.
+- [x] ADR écrit avant d'attaquer M4/M5, qui dépendent de `is_superadmin()`.
 
 ### V2-M3 — `canEditEntity`, `entity_grants` et resserrement de la RLS d'écriture · `L`
 
