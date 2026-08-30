@@ -42,8 +42,8 @@ export async function listWorlds(supabase: TypedClient): Promise<WorldSummary[]>
  * monde (N+1 assume, meme convention que `listMyGmCampaignsWithMembers` —
  * un compte gere en pratique quelques mondes, pas des milliers).
  */
-export async function listWorldCards(supabase: TypedClient, locale: Locale): Promise<WorldCard[]> {
-  const cards = await listWorldCardsForCurrentUser(supabase);
+export async function listWorldCards(supabase: TypedClient, locale: Locale, userId: string): Promise<WorldCard[]> {
+  const cards = await listWorldCardsForCurrentUser(supabase, userId);
   return Promise.all(
     cards.map(async (card) => {
       const characters = await listWorldPlayerCharacters(supabase, card.id, locale);

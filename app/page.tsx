@@ -10,8 +10,6 @@ import CreateWorldForm from "./CreateWorldForm";
 import ImportWorldForm from "./ImportWorldForm";
 import WorldCardActions from "./WorldCardActions";
 
-const MODE_LABELS: Record<"campaign" | "solo", string> = { campaign: "MJ", solo: "Solo" };
-
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 }
@@ -23,7 +21,7 @@ export default async function Home() {
   } = await supabase.auth.getUser();
   const locale = (await getLocale()) as Locale;
   const [worlds, selectableRulesets, canUseSoloMode] = await Promise.all([
-    listWorldCards(supabase, locale),
+    user ? listWorldCards(supabase, locale, user.id) : Promise.resolve([]),
     listSelectableRulesetsForCurrentUser(supabase),
     user ? isSuperadmin(supabase, user.id) : Promise.resolve(false),
   ]);
@@ -52,48 +50,66 @@ export default async function Home() {
         </div>
 
         <ul className="flex flex-col gap-2">
-          {worlds.map((world) => (
-            <li key={world.id} className="rounded-lg border border-edge bg-panel p-4 transition-colors hover:bg-panel-raised">
-              <Link href={`/m/${world.slug}`} className="block">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium text-ink">{world.name}</p>
-                  {world.mode && (
+          {worlds.map((world) => {
+            // V2-M5, retour utilisateur 30 août : le rôle réel dans CE
+            // monde, jamais un rôle global de compte — un même compte peut
+            // être MJ ici et joueur ailleurs (voir Préalable, Lot M).
+            const roleLabel = world.myRole === "player" ? "Joueur" : world.mode === "solo" ? "Solo" : "MJ";
+            const href =
+              world.myRole === "player" && world.myCharacter
+                ? `/m/${world.slug}/f/${world.myCharacter.entitySlug}`
+                : `/m/${world.slug}`;
+            return (
+              <li key={world.id} className="rounded-lg border border-edge bg-panel p-4 transition-colors hover:bg-panel-raised">
+                <Link href={href} className="block">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-ink">{world.name}</p>
                     <span className="shrink-0 rounded-full border border-edge px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted">
-                      {MODE_LABELS[world.mode]}
+                      {roleLabel}
                     </span>
+                  </div>
+                  {world.campaignName && (
+                    <p className="text-xs text-ink-muted">Campagne : {world.campaignName}</p>
                   )}
-                </div>
-                {world.campaignName && (
-                  <p className="text-xs text-ink-muted">Campagne : {world.campaignName}</p>
+                  {world.myRole === "player" ? (
+                    <p className="text-sm text-ink-muted">
+                      {world.myCharacter ? world.myCharacter.name : "Personnage introuvable"}
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-ink-muted">
+                        {world.rulesetName ?? "Aucun ruleset"} · Modifié le {formatDate(world.lastModified)}
+                      </p>
+                      {world.players.length > 0 ? (
+                        <ul className="mt-0.5 flex flex-col">
+                          {world.players.map((pc) => (
+                            <li key={pc.entityId} className="text-sm text-ink-muted">
+                              {pc.name}
+                              {(pc.speciesLabel || pc.classesLabel) && (
+                                <> — {[pc.speciesLabel, pc.classesLabel].filter(Boolean).join(" · ")}</>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-ink-muted">Aucun joueur</p>
+                      )}
+                    </>
+                  )}
+                </Link>
+                {world.myRole !== "player" && (
+                  <WorldCardActions
+                    worldId={world.id}
+                    worldSlug={world.slug}
+                    worldName={world.name}
+                    campaignId={world.campaignId}
+                    campaignName={world.campaignName}
+                    isOwner={world.ownerId === user?.id}
+                  />
                 )}
-                <p className="text-sm text-ink-muted">
-                  {world.rulesetName ?? "Aucun ruleset"} · Modifié le {formatDate(world.lastModified)}
-                </p>
-                {world.players.length > 0 ? (
-                  <ul className="mt-0.5 flex flex-col">
-                    {world.players.map((pc) => (
-                      <li key={pc.entityId} className="text-sm text-ink-muted">
-                        {pc.name}
-                        {(pc.speciesLabel || pc.classesLabel) && (
-                          <> — {[pc.speciesLabel, pc.classesLabel].filter(Boolean).join(" · ")}</>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-ink-muted">Aucun joueur</p>
-                )}
-              </Link>
-              <WorldCardActions
-                worldId={world.id}
-                worldSlug={world.slug}
-                worldName={world.name}
-                campaignId={world.campaignId}
-                campaignName={world.campaignName}
-                isOwner={world.ownerId === user?.id}
-              />
-            </li>
-          ))}
+              </li>
+            );
+          })}
           {worlds.length === 0 && (
             <p className="text-ink-muted">Aucun monde pour l&apos;instant.</p>
           )}

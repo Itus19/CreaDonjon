@@ -152,6 +152,16 @@ export interface WorldCard {
   players: WorldCardPlayerCharacter[];
   /** Le plus recent entre `worlds.updated_at` et l'edition la plus recente d'une entite du monde — calcule par l'appelant (`listWorldCardsForCurrentUser`), jamais en base. */
   lastModified: string;
+  /**
+   * Role de l'utilisateur COURANT dans CE monde (V2-M5, ecran d'accueil
+   * unifie, retour utilisateur 30 aout) — jamais un role global de compte :
+   * un meme compte peut etre MJ d'un monde et joueur d'un autre. `null`
+   * seulement pour un `world_members.role = 'viewer'` pur, sans role de
+   * campagne (cas theorique, jamais produit par un flux existant).
+   */
+  myRole: "gm" | "player" | null;
+  /** Rempli seulement si `myRole === 'player'` et qu'un personnage est deja reclame dans la campagne de ce monde. */
+  myCharacter: { entityId: string; entitySlug: string; name: string } | null;
 }
 
 /**
@@ -161,7 +171,7 @@ export interface WorldCard {
  * (SCHEMA.md §19.2) : rien a ajouter ici pour la visibilite. `players` part
  * volontairement vide ici — voir `listWorldCards` (service), qui la remplit.
  */
-export async function listWorldCardsForCurrentUser(supabase: TypedClient): Promise<WorldCard[]> {
+export async function listWorldCardsForCurrentUser(supabase: TypedClient, userId: string): Promise<WorldCard[]> {
   const { data, error } = await supabase
     .from("worlds")
     .select(`id, owner_id, name, slug, updated_at, campaigns ( id, name, mode, rulesets ( name ) )`)
@@ -169,12 +179,23 @@ export async function listWorldCardsForCurrentUser(supabase: TypedClient): Promi
   if (error) throw new Error(error.message);
 
   const worldIds = data.map((w) => w.id);
-  const lastEntityEditByWorld = await latestEntityEditByWorld(supabase, worldIds);
+  const campaignIdByWorldId = new Map(
+    data
+      .map((w) => [w.id, (w.campaigns[0] as { id: string } | undefined)?.id])
+      .filter((pair): pair is [string, string] => pair[1] !== undefined)
+  );
+  const [lastEntityEditByWorld, myRoleByWorld, myCharacterByCampaign] = await Promise.all([
+    latestEntityEditByWorld(supabase, worldIds),
+    getMyRolePerWorld(supabase, { userId, worldIds, campaignIdByWorldId }),
+    getMyClaimedCharacterPerCampaign(supabase, { userId, campaignIds: [...campaignIdByWorldId.values()] }),
+  ]);
 
   return data.map((w) => {
     const campaign = w.campaigns[0] as { id: string; name: string; mode: string; rulesets: { name: string } | null } | undefined;
     const entityLast = lastEntityEditByWorld.get(w.id);
     const lastModified = entityLast && entityLast > w.updated_at ? entityLast : w.updated_at;
+    const myRole = w.owner_id === userId ? "gm" : (myRoleByWorld.get(w.id) ?? null);
+    const myCharacter = myRole === "player" && campaign ? (myCharacterByCampaign.get(campaign.id) ?? null) : null;
     return {
       id: w.id,
       ownerId: w.owner_id,
@@ -186,8 +207,78 @@ export async function listWorldCardsForCurrentUser(supabase: TypedClient): Promi
       rulesetName: campaign?.rulesets?.name ?? null,
       players: [],
       lastModified,
+      myRole,
+      myCharacter,
     };
   });
+}
+
+/**
+ * Role de l'utilisateur COURANT, par monde (V2-M5) : proprietaire du monde
+ * deja tranche par l'appelant (`w.owner_id === userId`) — ici seulement
+ * `world_members` (owner/editor => MJ) et `campaign_members` (gm => MJ,
+ * player => Joueur), sans faire N requetes (une par table, jamais une par
+ * monde).
+ */
+async function getMyRolePerWorld(
+  supabase: TypedClient,
+  params: { userId: string; worldIds: string[]; campaignIdByWorldId: Map<string, string> }
+): Promise<Map<string, "gm" | "player">> {
+  const result = new Map<string, "gm" | "player">();
+  if (params.worldIds.length === 0) return result;
+
+  const { data: worldMemberRows, error: worldMemberError } = await supabase
+    .from("world_members")
+    .select("world_id, role")
+    .eq("user_id", params.userId)
+    .in("world_id", params.worldIds);
+  if (worldMemberError) throw new Error(worldMemberError.message);
+  for (const row of worldMemberRows) {
+    if (row.role === "owner" || row.role === "editor") result.set(row.world_id, "gm");
+  }
+
+  const campaignIds = [...params.campaignIdByWorldId.values()];
+  if (campaignIds.length > 0) {
+    const { data: campaignMemberRows, error: campaignMemberError } = await supabase
+      .from("campaign_members")
+      .select("campaign_id, role")
+      .eq("user_id", params.userId)
+      .in("campaign_id", campaignIds);
+    if (campaignMemberError) throw new Error(campaignMemberError.message);
+    const roleByCampaignId = new Map(campaignMemberRows.map((r) => [r.campaign_id, r.role as "gm" | "player"]));
+    for (const [worldId, campaignId] of params.campaignIdByWorldId) {
+      const role = roleByCampaignId.get(campaignId);
+      // Un role MJ (world_members) l'emporte deja ; ne jamais ecraser "gm"
+      // par "player" si les deux existent (ne devrait pas arriver, mais un
+      // proprietaire pourrait theoriquement avoir aussi une ligne
+      // campaign_members "player" residuelle).
+      if (role === "gm") result.set(worldId, "gm");
+      else if (role === "player" && !result.has(worldId)) result.set(worldId, "player");
+    }
+  }
+
+  return result;
+}
+
+/** Personnage reclame par l'utilisateur COURANT, par campagne (V2-M5) — une seule requete, jamais une par monde. */
+async function getMyClaimedCharacterPerCampaign(
+  supabase: TypedClient,
+  params: { userId: string; campaignIds: string[] }
+): Promise<Map<string, { entityId: string; entitySlug: string; name: string }>> {
+  const result = new Map<string, { entityId: string; entitySlug: string; name: string }>();
+  if (params.campaignIds.length === 0) return result;
+
+  const { data, error } = await supabase
+    .from("campaign_characters")
+    .select("campaign_id, entities ( id, slug, name )")
+    .eq("user_id", params.userId)
+    .in("campaign_id", params.campaignIds);
+  if (error) throw new Error(error.message);
+  for (const row of data) {
+    const entity = row.entities as { id: string; slug: string; name: string } | null;
+    if (entity) result.set(row.campaign_id, { entityId: entity.id, entitySlug: entity.slug, name: entity.name });
+  }
+  return result;
 }
 
 /** Edition la plus recente d'une entite, par monde — une seule requete triee plutot qu'un `MAX(updated_at) GROUP BY` cote base (pas de vue SQL pour un besoin d'affichage seul). */
