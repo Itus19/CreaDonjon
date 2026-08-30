@@ -864,17 +864,17 @@ Trouvé en discutant M5 (retour utilisateur 30 août : « Jérémy MJ dans un mo
 
 **Reformulation du reste du lot, retour utilisateur 30 août** : pas trois écrans d'accueil séparés par rôle fixe, mais **un seul écran d'accueil unifié** qui recense, pour chaque monde/campagne où le compte participe, le rôle qu'il y tient — puisqu'un même compte peut désormais être MJ ici et joueur là. Le superadmin voit ce même écran (ce sont aussi ses mondes), avec une section Administration en plus. L'image de tableau de bord fournie comme inspiration (cartes de stats, graphiques) sert de ton, pas de gabarit visuel — tout est reconstruit avec nos propres jetons (`panel`, `accent`, `font-mech`), jamais le thème Bootstrap générique de l'image.
 
-### V2-M5 — Écran d'accueil unifié : mes mondes et mon rôle dans chacun · `M`
+### V2-M5 — Écran d'accueil unifié : mes mondes et mon rôle dans chacun · `M` — fait
 
 Remplace l'écran actuel de `/` (aujourd'hui : une simple liste de mondes, sans distinguer le rôle qu'on y tient). Pour chaque monde/campagne dont le compte est membre : le nom, **le rôle qu'on y tient** (MJ, ou Joueur avec le nom du personnage réclamé), et un lien vers le bon endroit — `/m/[slug]` pour un rôle MJ (comportement actuel, inchangé), la fiche du personnage réclamé pour un rôle Joueur (`campaign_characters` où `user_id = auth.uid()`, déjà résolu par `getClaimedCharacterEntityId`, V2-M4).
 
 `listWorldCardsForCurrentUser` (`src/server/repos/worlds.ts`) donne déjà la liste des mondes accessibles ; il manque le rôle par ligne et, pour un rôle Joueur, le personnage réclamé — à ajouter à la même requête plutôt qu'un aller-retour séparé par monde.
 
 **Critères**
-- [ ] Chaque monde listé affiche le rôle réel du compte dans CE monde (pas un rôle global figé) — un compte MJ d'un monde et joueur d'un autre voit les deux étiquettes correctement.
-- [ ] Un rôle Joueur affiche le nom du personnage réclamé et mène directement à sa fiche.
-- [ ] Un rôle MJ mène à `/m/[slug]`, comme aujourd'hui — aucune régression sur ce chemin déjà utilisé quotidiennement.
-- [ ] Le superadmin voit cet écran comme n'importe quel compte pour ses propres mondes (Valdoria, Faerûn...).
+- [x] Chaque monde listé affiche le rôle réel du compte dans CE monde (pas un rôle global figé) — un compte MJ d'un monde et joueur d'un autre voit les deux étiquettes correctement (vérifié par test d'intégration dédié, `src/server/repos/worlds.integration.test.ts`).
+- [x] Un rôle Joueur affiche le nom du personnage réclamé et mène directement à sa fiche.
+- [x] Un rôle MJ mène à `/m/[slug]`, comme aujourd'hui — aucune régression sur ce chemin déjà utilisé quotidiennement (vérifié en direct : Faerûn/Valdoria inchangés pour le superadmin, propriétaire des deux).
+- [x] Le superadmin voit cet écran comme n'importe quel compte pour ses propres mondes (Valdoria, Faerûn...).
 
 ### V2-M6 — Section Administration (superadmin) sur l'écran d'accueil · `M`
 
