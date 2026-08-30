@@ -793,7 +793,7 @@ Décision structurante, documentée dans `docs/adr/0014-role-superadmin.md` : `a
 - [x] Basculer une campagne existante en solo échoue de la même façon.
 - [x] ADR écrit avant d'attaquer M4/M5, qui dépendent de `is_superadmin()`.
 
-### V2-M3 — `canEditEntity`, `entity_grants` et resserrement de la RLS d'écriture · `L`
+### V2-M3 — `canEditEntity`, `entity_grants` et resserrement de la RLS d'écriture · `L` — fait
 
 **Le ticket le plus risqué du lot — à faire et à tester avant qu'un seul ami ait un lien fonctionnel.** Vérifié en lisant `supabase/migrations/20260730150001_rls.sql` : `entities_write` ET `campaigns_write` ET `campaign_members_write` autorisent aujourd'hui l'écriture à n'importe quel membre du monde (`app.is_world_member`), jamais restreint à « c'est sa fiche » ou « c'est son propre rôle ». Sans risque tant que seuls des comptes créés à la main y accèdent ; devient une vraie faille dès qu'un ami PJ obtient un compte en un clic (M4) — il pourrait alors modifier n'importe quelle fiche du monde, y compris celles des autres joueurs ou les fiches MJ.
 
@@ -810,11 +810,15 @@ create table entity_grants (
 `src/core/permissions/canEditEntity.ts` (pur, testable, `specs/module-joueur-et-solo.md` §A2) : propriétaire/éditeur du monde, ou bien c'est le personnage du joueur dans cette campagne (`campaign_characters.user_id`), ou bien une ligne `entity_grants` l'autorise explicitement. Appelé dans la couche service à chaque mutation d'entité/bloc — jamais seulement en RLS, jamais seulement en masquant un bouton (même doctrine que `canSee`, PDD §28 : « la RLS n'est pas la sécurité, c'est le filet »). La RLS elle-même (`entities_write`, `blocks_write`, `campaigns_write`, `campaign_members_write`) est resserrée en miroir, avec le même test d'intégration que `visibilityRls.integration.test.ts` (précédent déjà dans le dépôt).
 
 **Critères**
-- [ ] `canEditEntity` couvre les trois cas (owner/éditeur du monde, sa propre fiche PJ, `entity_grants`) et rien d'autre — table de vérité testée en millisecondes, sans base.
-- [ ] Aucune route/service de mutation d'entité ou de bloc n'écrit sans passer par `canEditEntity`.
-- [ ] Un simple joueur (`campaign_members.role = 'player'`) ne peut plus, ni via l'interface ni en forgeant une requête, modifier une fiche qui n'est pas la sienne et n'a pas de `entity_grants` pour lui.
-- [ ] Un MJ garde l'écriture complète sur tout le monde, sans régression.
-- [ ] Test d'intégration RLS dédié (même famille que `visibilityRls.integration.test.ts`), pas seulement une vérification manuelle.
+- [x] `canEditEntity` couvre **quatre** cas, pas trois (un de plus que prévu à l'écriture du ticket) — owner/éditeur du monde, MJ d'une campagne du monde (`campaignRoles` contient `gm`, sans quoi le flux d'invitation par email déjà existant, qui n'écrit que dans `campaign_members`, cassait pour un co-MJ non propriétaire/éditeur), sa propre fiche PJ, `entity_grants`. Table de vérité testée en millisecondes, sans base (`canEditEntity.test.ts`, 6 cas).
+- [x] Aucune route/service de mutation d'entité ou de bloc **public** (routes API atteignables depuis l'interface) n'écrit sans passer par `canEditEntity` — `updateEntity`/`deleteEntity`, `createBlock`/`updateBlockContent`/`reorderBlock`/`deleteBlock`, `overwriteCharacterFromWizard`.
+- [x] Un simple joueur (`campaign_members.role = 'player'`) ne peut plus, ni via l'interface ni en forgeant une requête, modifier une fiche qui n'est pas la sienne et n'a pas de `entity_grants` pour lui — vérifié par le test d'intégration ET en direct (ajout/suppression de bloc par le propriétaire, sans régression).
+- [x] Un MJ garde l'écriture complète sur tout le monde, sans régression — y compris un MJ invité par email sans ligne `world_members` (cas réel trouvé en traçant les appelants, voir le 4ᵉ cas ci-dessus).
+- [x] Test d'intégration RLS dédié (`canEditEntityRls.integration.test.ts`, même famille que `visibilityRls.integration.test.ts`) : 7 profils, `entities` (UPDATE/DELETE), `blocks` (INSERT), `campaigns`/`campaign_members` (le resserrement `is_world_admin`, découvert nécessaire en écrivant ce ticket — sans lui, un simple joueur pouvait renommer la campagne ou s'auto-promouvoir MJ).
+
+**Dette assumée, à garder en tête avant M4 (ne pas oublier) :**
+- `characterActions.ts` (actions de la fiche jouable : dégâts, emplacements de sorts, équipement...) écrit directement sur `blocks` via le repo, sans passer par `canUserEditEntity` côté service — **déjà couvert par la RLS resserrée** (même garantie de sécurité), juste pas par le garde-fou de service en double défense. Laissé de côté pour ne pas faire déborder ce ticket déjà `L` ; à couvrir dans un ticket dédié si on veut la même défense en profondeur que le reste.
+- **`campaign_characters_write` reste aussi large qu'avant** (`app.is_world_member`, jamais resserrée par ce ticket) : n'importe quel membre du monde peut aujourd'hui réassigner ou libérer N'IMPORTE QUELLE ligne `campaign_characters`, pas seulement la sienne. Sans conséquence tant qu'aucun ami n'a de compte ; devient directement exploitable dès M4 (un ami pourrait voler la fiche PJ d'un autre en forgeant une requête, contournant l'écran de sélection). **M4 doit resserrer cette politique avant d'ouvrir le premier lien** — logique proposée : un MJ (`is_world_admin`) peut tout faire ; un joueur peut prendre une ligne `user_id is null` ou libérer/modifier SA PROPRE ligne (`user_id = auth.uid()`), jamais celle d'un autre.
 
 ### V2-M4 — Liens d'invitation nominatifs et écran « MJ / PJ » · `L`
 
@@ -836,6 +840,8 @@ create table campaign_invites (
 ```
 
 Premier passage sur le lien : compte créé (mot de passe aléatoire, API admin Supabase, module confiné comme `publicShare.ts`), écran « Je suis MJ / Je suis PJ », nom demandé, si PJ liste des `campaign_characters` où `is_pc = true and user_id is null` à choisir. Passage suivant : jeton déjà `claimed_by_user_id`, connexion directe, retour à l'écran adapté à son rôle. Un jeton `revoked_at` non nul refuse l'accès (le superadmin peut couper un lien sans supprimer le compte).
+
+**Préalable, trouvé en écrivant V2-M3 — à faire avant tout le reste de ce ticket** : `campaign_members_write` reste large (`app.is_world_member`) : n'importe quel membre du monde peut aujourd'hui réassigner ou libérer N'IMPORTE QUELLE ligne, pas seulement la sienne. Sans ce resserrement, la garantie « une fiche prise ne peut pas être volée » (2ᵉ critère ci-dessous) n'est qu'une convention d'interface, pas une vraie barrière. Resserrer avant d'émettre le premier lien : MJ (`is_world_admin`) → tout ; joueur → seulement prendre une ligne `user_id is null` ou toucher SA PROPRE ligne (`user_id = auth.uid()`).
 
 **Critères**
 - [ ] Un lien non réclamé propose le choix de rôle puis, en PJ, la liste des personnages non réclamés.
