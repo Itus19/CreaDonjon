@@ -12,6 +12,7 @@ import {
   getWorldCalendar,
   getWorldOwnerId,
   insertWorld,
+  listWorldAdminUserIds,
   listWorldCardsForCurrentUser,
   listWorldsForCurrentUser,
   ownerHasSlug,
@@ -25,6 +26,7 @@ import {
 } from "@/src/server/repos/worlds";
 import { createCampaign, type CampaignSummary } from "@/src/server/services/campaigns";
 import { listWorldPlayerCharacters } from "@/src/server/services/worldPlayerCharacters";
+import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -35,30 +37,47 @@ export async function listWorlds(supabase: TypedClient): Promise<WorldSummary[]>
 }
 
 /**
- * `players` par carte (retour utilisateur, V2-G1 suite) : une ligne par PJ
- * avec espece et classe(s)/niveau, jamais un simple nom — reutilise
- * `listWorldPlayerCharacters` (deja la source de la page d'accueil d'un
- * monde), aucune seconde resolution de regles ecrite ici. Un appel par
- * monde (N+1 assume, meme convention que `listMyGmCampaignsWithMembers` —
- * un compte gere en pratique quelques mondes, pas des milliers).
+ * `players` par carte (retour utilisateur, V2-G1 suite ; "jouée par ..."
+ * ajoute plus tard) : une ligne par PJ avec espece et classe(s)/niveau,
+ * jamais un simple nom — reutilise `listWorldPlayerCharacters` (deja la
+ * source de la page d'accueil d'un monde), aucune seconde resolution de
+ * regles ecrite ici. `gmNames` (retour utilisateur : "marquer les MJ qui
+ * sont sur la campagne/monde") vient de `listWorldAdminUserIds`. Les deux
+ * necessitent un nom de compte : une SEULE requete groupee
+ * (`getDisplayNamesForUsers`) pour tous les id de tous les mondes, jamais
+ * une par PJ/MJ. Un appel par monde pour le reste (N+1 assume, meme
+ * convention que `listMyGmCampaignsWithMembers` — un compte gere en
+ * pratique quelques mondes, pas des milliers).
  */
 export async function listWorldCards(supabase: TypedClient, locale: Locale, userId: string): Promise<WorldCard[]> {
   const cards = await listWorldCardsForCurrentUser(supabase, userId);
-  return Promise.all(
-    cards.map(async (card) => {
-      const characters = await listWorldPlayerCharacters(supabase, card.id, locale);
-      return {
-        ...card,
-        players: characters.map((c) => ({
-          entityId: c.entityId,
-          entitySlug: c.entitySlug,
-          name: c.entityName,
-          speciesLabel: c.speciesLabel,
-          classesLabel: c.classesLabel,
-        })),
-      };
-    })
+  const perCard = await Promise.all(
+    cards.map(async (card) => ({
+      card,
+      characters: await listWorldPlayerCharacters(supabase, card.id, locale),
+      adminIds: await listWorldAdminUserIds(supabase, { worldId: card.id, ownerId: card.ownerId }),
+    }))
   );
+
+  const allUserIds = perCard.flatMap(({ characters, adminIds }) => [
+    ...characters.map((c) => c.claimedByUserId).filter((id): id is string => id !== null),
+    ...adminIds,
+  ]);
+  const namesByAccount = await getDisplayNamesForUsers(supabase, allUserIds);
+  const nameFor = (id: string) => namesByAccount.get(id) || "Compte sans nom";
+
+  return perCard.map(({ card, characters, adminIds }) => ({
+    ...card,
+    players: characters.map((c) => ({
+      entityId: c.entityId,
+      entitySlug: c.entitySlug,
+      name: c.entityName,
+      speciesLabel: c.speciesLabel,
+      classesLabel: c.classesLabel,
+      claimedByDisplayName: c.claimedByUserId ? nameFor(c.claimedByUserId) : null,
+    })),
+    gmNames: adminIds.map(nameFor),
+  }));
 }
 
 export async function getWorld(supabase: TypedClient, id: string): Promise<WorldSummary | null> {

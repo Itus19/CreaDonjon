@@ -17,6 +17,8 @@ export interface WorldPlayerCharacter {
   entityName: string;
   speciesLabel: string | null;
   classesLabel: string | null;
+  /** Compte qui a reclame ce PJ (`campaign_characters.user_id`) — `null` si pas encore reclame. Le nom d'affichage est resolu par l'appelant (`listWorldCards`), jamais ici. */
+  claimedByUserId: string | null;
 }
 
 /**
@@ -73,6 +75,7 @@ export async function listWorldPlayerCharacters(
         entityName: entity.name,
         speciesLabel,
         classesLabel,
+        claimedByUserId: row.user_id,
       });
     }
   }

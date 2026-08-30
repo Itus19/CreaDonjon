@@ -138,6 +138,46 @@ export interface WorldCardPlayerCharacter {
   name: string;
   speciesLabel: string | null;
   classesLabel: string | null;
+  /** Nom du compte qui a reclame ce PJ (retour utilisateur : "Fine Lââm jouée par ...") — `null` si pas encore reclame. Resolu par le service (`listWorldCards`), pas ici. */
+  claimedByDisplayName: string | null;
+}
+
+/**
+ * Comptes qui administrent CE monde (retour utilisateur, carte de l'ecran
+ * d'accueil : "les MJ qui sont sur la campagne/monde") — proprietaire,
+ * `world_members` (owner/editor), et MJ humain de chaque campagne du monde.
+ * Memes trois cas que `app.is_world_admin` (SQL), cote applicatif. Dedupe
+ * les id : un proprietaire qui est aussi MJ de sa propre campagne ne doit
+ * apparaitre qu'une fois.
+ */
+export async function listWorldAdminUserIds(
+  supabase: TypedClient,
+  params: { worldId: string; ownerId: string }
+): Promise<string[]> {
+  const ids = new Set<string>([params.ownerId]);
+
+  const { data: memberRows, error: memberError } = await supabase
+    .from("world_members")
+    .select("user_id, role")
+    .eq("world_id", params.worldId)
+    .in("role", ["owner", "editor"]);
+  if (memberError) throw new Error(memberError.message);
+  for (const row of memberRows) ids.add(row.user_id);
+
+  const { data: campaigns, error: campaignsError } = await supabase.from("campaigns").select("id").eq("world_id", params.worldId);
+  if (campaignsError) throw new Error(campaignsError.message);
+  const campaignIds = campaigns.map((c) => c.id);
+  if (campaignIds.length > 0) {
+    const { data: gmRows, error: gmError } = await supabase
+      .from("campaign_members")
+      .select("user_id")
+      .in("campaign_id", campaignIds)
+      .eq("role", "gm");
+    if (gmError) throw new Error(gmError.message);
+    for (const row of gmRows) ids.add(row.user_id);
+  }
+
+  return [...ids];
 }
 
 export interface WorldCard {
@@ -154,6 +194,8 @@ export interface WorldCard {
   rulesetName: string | null;
   /** Rempli par le service (`listWorldCards`), pas par cette fonction : resoudre espece/classe exige `assembleResolvedRuleset` (locale-dependant), hors de portee d'un simple repo. */
   players: WorldCardPlayerCharacter[];
+  /** Noms des comptes qui administrent ce monde (retour utilisateur) — proprietaire, editeurs, MJ humains des campagnes. Rempli par le service (`listWorldCards`), `listWorldAdminUserIds` ci-dessus ne resout que les id. */
+  gmNames: string[];
   /** Le plus recent entre `worlds.updated_at` et l'edition la plus recente d'une entite du monde — calcule par l'appelant (`listWorldCardsForCurrentUser`), jamais en base. */
   lastModified: string;
   /**
@@ -232,6 +274,7 @@ export async function listWorldCardsForCurrentUser(supabase: TypedClient, userId
       campaignName: campaign?.name ?? null,
       rulesetName: campaign?.rulesets?.name ?? null,
       players: [],
+      gmNames: [],
       lastModified,
       myRole,
       myCharacter,

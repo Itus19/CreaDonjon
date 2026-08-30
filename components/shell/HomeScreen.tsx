@@ -18,7 +18,8 @@ export interface HomeWorldCard {
   lastModified: string;
   myRole: "gm" | "player" | null;
   myCharacter: { entityId: string; entitySlug: string; name: string } | null;
-  players: { entityId: string; name: string; speciesLabel: string | null; classesLabel: string | null }[];
+  players: { entityId: string; name: string; speciesLabel: string | null; classesLabel: string | null; claimedByDisplayName: string | null }[];
+  gmNames: string[];
 }
 
 function formatDate(iso: string): string {
@@ -180,9 +181,27 @@ export default function HomeScreen({
                   {world.myRole === "player" ? (
                     <p className="text-sm text-ink-muted">{world.myCharacter ? world.myCharacter.name : "Personnage introuvable"}</p>
                   ) : (
-                    <p className="text-sm text-ink-muted">
-                      {world.rulesetName ?? "Aucun ruleset"} · Modifié le {formatDate(world.lastModified)}
-                    </p>
+                    <>
+                      <p className="text-sm text-ink-muted">
+                        {world.rulesetName ?? "Aucun ruleset"} · Modifié le {formatDate(world.lastModified)}
+                      </p>
+                      {world.gmNames.length > 0 && <p className="text-xs text-ink-muted">MJ : {world.gmNames.join(", ")}</p>}
+                      {world.players.length > 0 ? (
+                        <ul className="mt-0.5 flex flex-col">
+                          {world.players.map((pc) => (
+                            <li key={pc.entityId} className="text-sm text-ink-muted">
+                              {pc.name}
+                              {(pc.speciesLabel || pc.classesLabel) && (
+                                <> — {[pc.speciesLabel, pc.classesLabel].filter(Boolean).join(" · ")}</>
+                              )}
+                              {pc.claimedByDisplayName && <> · jouée par {pc.claimedByDisplayName}</>}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-ink-muted">Aucun joueur</p>
+                      )}
+                    </>
                   )}
                 </button>
               </li>
