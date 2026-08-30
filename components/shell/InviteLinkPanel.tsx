@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Dropdown from "@/components/shared/Dropdown";
 import type { CampaignInviteSummary } from "@/src/server/services/campaignInvites";
 
 const ROLE_LABELS: Record<string, string> = { gm: "MJ", player: "Joueur" };
+const ROLE_OPTIONS = [
+  { value: "", label: "Au choix" },
+  { value: "player", label: "Joueur" },
+  { value: "gm", label: "MJ" },
+];
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
@@ -169,15 +175,13 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
       <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Liens d&apos;invitation (sans email)</p>
 
       <form onSubmit={generate} className="flex items-center gap-2">
-        <select
+        <Dropdown
           value={role}
-          onChange={(e) => setRole(e.target.value as "gm" | "player" | "")}
-          className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-        >
-          <option value="">Au choix</option>
-          <option value="player">Joueur</option>
-          <option value="gm">MJ</option>
-        </select>
+          options={ROLE_OPTIONS}
+          onChange={(v) => setRole(v as "gm" | "player" | "")}
+          aria-label="Rôle du lien"
+          className="shrink-0 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+        />
         <input
           type="password"
           value={password}
