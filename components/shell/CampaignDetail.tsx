@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 
+/** Meme convention que `InviteLinkPanel.tsx` (Administration) : le role stocke en base reste en anglais (identifiant technique, CLAUDE.md §11), jamais affiche tel quel. */
+const ROLE_LABELS: Record<string, string> = { gm: "MJ", player: "Joueur" };
+
 interface MemberRow {
   campaign_id: string;
   user_id: string;
@@ -163,7 +166,7 @@ export default function CampaignDetail({
   const displayName = (userId: string) => data.displayNames[userId] || userId;
   const memberOptions = [
     { value: "", label: "PNJ (sans joueur)" },
-    ...data.members.map((m) => ({ value: m.user_id, label: `${m.role} — ${displayName(m.user_id)}` })),
+    ...data.members.map((m) => ({ value: m.user_id, label: `${ROLE_LABELS[m.role] ?? m.role} — ${displayName(m.user_id)}` })),
   ];
   const entityOptions = [
     { value: "", label: "Choisir un personnage…" },
@@ -185,7 +188,7 @@ export default function CampaignDetail({
         <ul className="flex flex-col gap-1 text-xs">
           {data.members.map((m) => (
             <li key={m.user_id}>
-              {m.role} — {displayName(m.user_id)}
+              {ROLE_LABELS[m.role] ?? m.role} — {displayName(m.user_id)}
             </li>
           ))}
         </ul>

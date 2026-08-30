@@ -26,6 +26,16 @@
       "quest": "Quêtes",
       "event": "Événements",
       "other": "Autre"
+    },
+    "kindLabelsSingular": {
+      "character": "Personnage",
+      "location": "Lieu",
+      "faction": "Faction",
+      "item": "Objet",
+      "creature": "Créature",
+      "quest": "Quête",
+      "event": "Événement",
+      "other": "Autre"
     }
   },
   "monde": {

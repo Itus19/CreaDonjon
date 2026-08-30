@@ -32,6 +32,7 @@ export default function CommandPalette({
   entities: PaletteEntity[];
 }) {
   const t = useTranslations("shell");
+  const kindLabels = t.raw("kindLabelsSingular") as Record<string, string>;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -178,7 +179,7 @@ export default function CommandPalette({
                 }`}
               >
                 <span>{entity.name}</span>
-                <span className="text-xs text-ink-muted">{entity.entity_kind}</span>
+                <span className="text-xs text-ink-muted">{kindLabels[entity.entity_kind] ?? entity.entity_kind}</span>
               </button>
             </li>
           ))}

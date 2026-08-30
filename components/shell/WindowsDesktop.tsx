@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import WindowFrame from "./WindowFrame";
 import Panel from "./Panel";
 import { useDesktop } from "./DesktopContext";
 import { useDesktopWindowsState } from "./DesktopWindowsProvider";
-import { refId, windowContentLabel } from "./windowRefs";
+import { refId, windowContentLabel, type WindowRef } from "./windowRefs";
 import EditEntityForm from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/EditEntityForm";
 import RuleEntryView from "@/components/rules/RuleEntryView";
 import type { EntityWindowData } from "@/src/server/services/entityWindow";
@@ -28,6 +29,19 @@ export default function WindowsDesktop({ worldSlug, children }: { worldSlug: str
   const state = useDesktopWindowsState();
   const desktopRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
+  // Sous-titre de fenetre (retour utilisateur : "certaines choses sont en
+  // anglais") — `badge` vient directement de `entity_kind`/`entryType`
+  // (identifiants techniques anglais, CLAUDE.md §11), jamais affiches tels
+  // quels. Distinct de `kindLabels` (pluriel, en-tetes de categorie de la
+  // barre laterale) : un sous-titre de fenetre porte sur UNE fiche.
+  const tShell = useTranslations("shell");
+  const tRegles = useTranslations("regles");
+  const entityKindLabels = tShell.raw("kindLabelsSingular") as Record<string, string>;
+  const entryTypeLabels = tRegles.raw("entryTypes") as Record<string, string>;
+  function translateBadge(kind: WindowRef["kind"], raw: string | null): string | null {
+    if (!raw) return raw;
+    return (kind === "entity" ? entityKindLabels[raw] : entryTypeLabels[raw]) ?? raw;
+  }
 
   useEffect(() => {
     function checkWidth() {
@@ -68,7 +82,7 @@ export default function WindowsDesktop({ worldSlug, children }: { worldSlug: str
             isFocused={state.isPrimaryFocused}
             containerRef={desktopRef}
             title={state.primary.name}
-            subtitle={state.primary.badge}
+            subtitle={translateBadge(state.primary.ref.kind, state.primary.badge)}
             onFocus={() => state.focusWindow(refId(state.primary!.ref))}
             onClose={() => state.closeWindow(state.primary!.ref)}
             onMinimize={() => state.minimizeWindow(state.primary!.ref)}
@@ -90,7 +104,7 @@ export default function WindowsDesktop({ worldSlug, children }: { worldSlug: str
               isFocused={isFocused}
               containerRef={desktopRef}
               title={name}
-              subtitle={badge}
+              subtitle={translateBadge(ref.kind, badge)}
               onFocus={() => state.focusWindow(refId(ref))}
               onClose={() => state.closeWindow(ref)}
               onMinimize={() => state.minimizeWindow(ref)}
@@ -129,7 +143,9 @@ export default function WindowsDesktop({ worldSlug, children }: { worldSlug: str
               className="flex items-center gap-1.5 rounded-md border border-edge bg-panel-raised px-3 py-1.5 text-xs text-ink-soft transition-colors hover:border-accent/40 hover:text-ink"
             >
               <span className="max-w-[160px] truncate">{tab.name}</span>
-              {tab.badge && <span className="shrink-0 text-[10px] text-ink-muted">{tab.badge}</span>}
+              {tab.badge && (
+                <span className="shrink-0 text-[10px] text-ink-muted">{translateBadge(tab.ref.kind, tab.badge)}</span>
+              )}
             </button>
           ))}
         </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listEntities } from "@/src/server/services/entities";
@@ -23,6 +24,8 @@ export default async function JoueurWikiPage({ params }: { params: Promise<{ wor
   // wiki, meme pour son propre createur (deja exclue des AUTRES comptes par
   // `listEntities`, ici en plus exclue de la sienne aussi).
   const entities = (await listEntities(supabase, world.id, user?.id ?? null)).filter((e) => e.entity_kind !== "notes");
+  const t = await getTranslations("shell");
+  const kindLabels = t.raw("kindLabelsSingular") as Record<string, string>;
 
   return (
     <div className="flex flex-col gap-2">
@@ -36,7 +39,7 @@ export default async function JoueurWikiPage({ params }: { params: Promise<{ wor
               className="block rounded-md border border-edge bg-panel px-3 py-2 text-sm text-ink transition-colors hover:bg-panel-raised"
             >
               {e.name}
-              <span className="ml-2 text-xs text-ink-muted">{e.entity_kind}</span>
+              <span className="ml-2 text-xs text-ink-muted">{kindLabels[e.entity_kind] ?? e.entity_kind}</span>
             </Link>
           </li>
         ))}

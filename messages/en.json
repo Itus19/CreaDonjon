@@ -25,6 +25,16 @@
       "quest": "Quests",
       "event": "Events",
       "other": "Other"
+    },
+    "kindLabelsSingular": {
+      "character": "Character",
+      "location": "Location",
+      "faction": "Faction",
+      "item": "Item",
+      "creature": "Creature",
+      "quest": "Quest",
+      "event": "Event",
+      "other": "Other"
     }
   },
   "monde": {
