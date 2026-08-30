@@ -214,7 +214,14 @@ export default function HomeScreen({
 
       <div className="h-full min-h-0 rounded-lg border border-edge bg-panel-sunken p-4">
         {selected ? (
-          <WorldDetail world={selected} currentUserId={currentUserId} />
+          // `key` force un remontage complet a chaque changement de monde
+          // selectionne : sans lui, `WorldCardActions`/`RenameWorldSection`
+          // gardent leur etat local (`revealed`, `name`) d'un monde a l'autre
+          // (bug reel constate : renommage de Valdoria en "Faerûn" apres
+          // avoir ouvert "Renommer" sur Faerûn puis change de selection sans
+          // fermer le panneau — le nom tape restait celui de l'ancien monde
+          // pendant que `worldId` (input cache) pointait deja sur le nouveau).
+          <WorldDetail key={selected.id} world={selected} currentUserId={currentUserId} />
         ) : (
           <p className="text-sm text-ink-muted">Sélectionnez un monde pour voir son détail.</p>
         )}
