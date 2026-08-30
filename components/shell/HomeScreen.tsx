@@ -82,6 +82,7 @@ function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUs
                 <span className="text-ink-muted">
                   {entry.label}
                   {entry.entityName && <> — {entry.entityName}</>}
+                  {entry.blockLabel && <> ({entry.blockLabel})</>}
                 </span>
                 <div className="text-ink-muted">
                   {entry.accountName} · {formatDateTime(entry.createdAt)}

@@ -57,7 +57,7 @@ function isLegacySnapshot(raw: unknown): raw is LegacyStoredSnapshot {
  * pas planter : `blocks` y est simplement absent, traite comme "aucun bloc
  * connu" (pas une supposition sur ce qu'il y avait reellement).
  */
-function normalizeStoredSnapshot(raw: unknown): EntitySnapshot {
+export function normalizeStoredSnapshot(raw: unknown): EntitySnapshot {
   if (isLegacySnapshot(raw)) {
     return { entity: { name: raw.name, entityKind: raw.entity_kind, aliases: raw.aliases }, blocks: [] };
   }

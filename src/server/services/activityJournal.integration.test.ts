@@ -87,6 +87,27 @@ describe.skipIf(!hasCreds)("journal cote joueur restreint aux fiches PJ (integra
       .from("entity_revisions")
       .insert({ entity_id: npcEntityId, revision_number: 1, snapshot: {}, change_source: "user", changed_by: ownerId });
     if (npcRevisionError) throw new Error(npcRevisionError.message);
+
+    const { data: session, error: sessionError } = await admin
+      .from("sessions")
+      .insert({ campaign_id: campaign.id })
+      .select("id")
+      .single();
+    if (sessionError || !session) throw new Error(sessionError?.message ?? "creation session echouee");
+
+    // Evenement de jeu qui reference la fiche PNJ secrete via payload.entity_id
+    // (meme forme qu'un vrai world_update, ex. objectif coche lie a une
+    // fiche) — doit rester invisible cote joueur, meme motif que la
+    // revision du PNJ ci-dessus.
+    const { error: eventError } = await admin.from("session_events").insert({
+      session_id: session.id,
+      seq: 1,
+      kind: "world_update",
+      actor: "gm",
+      actor_user_id: ownerId,
+      payload: { note: "Secret touchant le PNJ", entity_id: npcEntityId },
+    });
+    if (eventError) throw new Error(eventError.message);
   });
 
   afterAll(async () => {
@@ -106,5 +127,15 @@ describe.skipIf(!hasCreds)("journal cote joueur restreint aux fiches PJ (integra
     const entityNames = entries.map((e) => e.entityName);
     expect(entityNames).toContain("Personnage joueur");
     expect(entityNames).toContain("PNJ secret du MJ");
+  });
+
+  it("un evenement de jeu qui reference le PNJ secret (payload.entity_id) ne revele pas son nom cote joueur, mais le revele cote MJ", async () => {
+    const playerEntries = await getPlayerJournalForWorld(admin, worldId);
+    const playerEvent = playerEntries.find((e) => e.source === "jeu");
+    expect(playerEvent?.entityName).toBeNull();
+
+    const gmEntries = await getMergedJournalForWorld(admin, worldId);
+    const gmEvent = gmEntries.find((e) => e.source === "jeu");
+    expect(gmEvent?.entityName).toBe("PNJ secret du MJ");
   });
 });

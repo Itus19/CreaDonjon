@@ -75,6 +75,8 @@ export interface SessionEventJournalRow {
   actor: string;
   actor_user_id: string | null;
   created_at: string;
+  /** Certains evenements (ex. `world_update`) portent un `entity_id` — extrait par le service, jamais interprete ici (jsonb libre par kind). */
+  payload: unknown;
 }
 
 /**
@@ -97,7 +99,7 @@ export async function listSessionEventsForWorld(supabase: TypedClient, worldId: 
 
   const { data, error } = await supabase
     .from("session_events")
-    .select("id, kind, actor, actor_user_id, created_at")
+    .select("id, kind, actor, actor_user_id, created_at, payload")
     .in("session_id", sessionIds)
     .order("created_at", { ascending: false })
     .limit(JOURNAL_LIMIT);

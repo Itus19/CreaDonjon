@@ -41,6 +41,7 @@ export default function GmJournalPanel({ worldSlug }: { worldSlug: string }) {
                 {"  "}
                 {entry.label}
                 {entry.entityName && <> — {entry.entityName}</>}
+                {entry.blockLabel && <> ({entry.blockLabel})</>}
               </span>
               <span className="shrink-0 text-ink-muted">
                 {entry.accountName} · {formatDateTime(entry.createdAt)}

@@ -74,6 +74,29 @@ export async function listEntityRevisionSummaries(
   return data as RevisionSummaryRow[];
 }
 
+/**
+ * Instantanes d'une plage de numeros de revision, pour UNE entite (retour
+ * utilisateur, journal : quel bloc a change entre deux revisions
+ * consecutives). Une seule requete par entite plutot qu'un aller-retour par
+ * revision — le journal affiche jusqu'a 100 lignes mais rarement plus d'une
+ * poignee d'entites distinctes.
+ */
+export async function listRevisionSnapshotsInRange(
+  supabase: TypedClient,
+  entityId: string,
+  fromRevisionNumber: number,
+  toRevisionNumber: number
+): Promise<{ revision_number: number; snapshot: Json }[]> {
+  const { data, error } = await supabase
+    .from("entity_revisions")
+    .select("revision_number, snapshot")
+    .eq("entity_id", entityId)
+    .gte("revision_number", fromRevisionNumber)
+    .lte("revision_number", toRevisionNumber);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function getEntityRevisionByNumber(
   supabase: TypedClient,
   entityId: string,
