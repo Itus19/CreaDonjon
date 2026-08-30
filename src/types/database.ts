@@ -552,7 +552,10 @@ export type Database = {
           created_by: string
           id: string
           intended_role: string | null
+          password_attempts: number
+          password_hash: string | null
           revoked_at: string | null
+          token: string | null
           token_hash: string
           world_id: string | null
         }
@@ -564,7 +567,10 @@ export type Database = {
           created_by: string
           id?: string
           intended_role?: string | null
+          password_attempts?: number
+          password_hash?: string | null
           revoked_at?: string | null
+          token?: string | null
           token_hash: string
           world_id?: string | null
         }
@@ -576,7 +582,10 @@ export type Database = {
           created_by?: string
           id?: string
           intended_role?: string | null
+          password_attempts?: number
+          password_hash?: string | null
           revoked_at?: string | null
+          token?: string | null
           token_hash?: string
           world_id?: string | null
         }
@@ -2238,6 +2247,10 @@ export type Database = {
         }[]
       }
       publish_ruleset: { Args: { p_ruleset_id: string }; Returns: undefined }
+      record_campaign_invite_password_attempt: {
+        Args: { p_success: boolean; p_token: string }
+        Returns: undefined
+      }
       record_share_link_password_attempt: {
         Args: { p_success: boolean; p_token: string }
         Returns: undefined
@@ -2250,6 +2263,8 @@ export type Database = {
           claimed_name: string
           id: string
           intended_role: string
+          password_attempts: number
+          password_hash: string
           world_id: string
         }[]
       }
@@ -2276,6 +2291,10 @@ export type Database = {
           name: string
           slug: string
         }[]
+      }
+      set_campaign_invite_password: {
+        Args: { p_invite_id: string; p_password_hash: string }
+        Returns: boolean
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }

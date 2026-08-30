@@ -2,12 +2,16 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { generateCampaignInviteToken, hashCampaignInviteToken } from "@/src/core/campaignInvites/token";
+import { hashSharePassword, verifySharePassword } from "@/src/core/shareLinks/password";
 import {
+  getOwnCampaignInvite,
   insertCampaignInvite,
   listCampaignInvitesForCampaign,
   listUnclaimedCampaignCharactersForToken,
+  recordCampaignInvitePasswordAttempt,
   resolveCampaignInviteToken,
   revokeCampaignInvite,
+  setCampaignInvitePasswordHash,
   type CampaignInviteRow,
   type ResolvedCampaignInvite,
   type UnclaimedCampaignCharacter,
@@ -28,6 +32,9 @@ export interface CampaignInviteSummary {
   claimedName: string | null;
   revokedAt: string | null;
   createdAt: string;
+  /** Recuperable a tout moment (retour utilisateur 30 aout, meme choix que share_links) — jamais `null` pour un lien cree apres la migration 20260830160001. */
+  token: string | null;
+  hasPassword: boolean;
 }
 
 function toSummary(row: CampaignInviteRow): CampaignInviteSummary {
@@ -40,25 +47,36 @@ function toSummary(row: CampaignInviteRow): CampaignInviteSummary {
     claimedName: row.claimed_name,
     revokedAt: row.revoked_at,
     createdAt: row.created_at,
+    token: row.token,
+    hasPassword: row.password_hash !== null,
   };
 }
 
 /**
  * Cree un lien nominatif (V2-M4, retour utilisateur 29 aout : "un lien par
- * personne mais tu leur demande leur nom aussi") — le jeton en clair n'est
- * renvoye qu'ICI, une seule fois : ni la table ni aucune fonction de
- * lecture ne le reconstituent ensuite (seul `token_hash` est stocke).
+ * personne mais tu leur demande leur nom aussi"). Le jeton en clair est
+ * desormais conserve (retour utilisateur 30 aout, meme choix que
+ * `share_links` — migration 20260826180001) : recuperable plus tard via
+ * `listCampaignInvites`, pas seulement au moment de cet appel.
  */
 export async function createCampaignInvite(
   supabase: TypedClient,
-  params: { campaignId: string | null; worldId: string | null; intendedRole: "gm" | "player" | null; createdBy: string }
+  params: {
+    campaignId: string | null;
+    worldId: string | null;
+    intendedRole: "gm" | "player" | null;
+    password?: string;
+    createdBy: string;
+  }
 ): Promise<{ invite: CampaignInviteSummary; token: string }> {
   const token = generateCampaignInviteToken();
   const invite = await insertCampaignInvite(supabase, {
     campaignId: params.campaignId,
     worldId: params.worldId,
     intendedRole: params.intendedRole,
+    token,
     tokenHash: hashCampaignInviteToken(token),
+    passwordHash: params.password ? hashSharePassword(params.password) : null,
     createdBy: params.createdBy,
   });
   return { invite: toSummary(invite), token };
@@ -69,9 +87,51 @@ export async function listCampaignInvites(supabase: TypedClient, campaignId: str
   return rows.map(toSummary);
 }
 
+/** « Mon lien » (V2-M4 suite) : l'invite reclame par CET utilisateur, s'il en a un — jamais celui d'un autre (`campaign_invites_select_own`, RLS). */
+export async function getMyInvite(supabase: TypedClient, userId: string): Promise<CampaignInviteSummary | null> {
+  const row = await getOwnCampaignInvite(supabase, userId);
+  return row ? toSummary(row) : null;
+}
+
 export async function revokeInvite(supabase: TypedClient, id: string): Promise<{ revoked: boolean }> {
   const { updated } = await revokeCampaignInvite(supabase, id);
   return { revoked: updated };
+}
+
+/**
+ * Definit/change/efface (`password: null`) le mot de passe d'un lien —
+ * reserve au superadmin/MJ du monde OU a la personne qui l'a reclame,
+ * verifie a l'interieur de `app.set_campaign_invite_password` (jamais par
+ * une politique RLS large sur toute la ligne).
+ */
+export async function setInvitePassword(
+  supabase: TypedClient,
+  params: { inviteId: string; password: string | null }
+): Promise<{ allowed: boolean }> {
+  return setCampaignInvitePasswordHash(supabase, {
+    inviteId: params.inviteId,
+    passwordHash: params.password ? hashSharePassword(params.password) : null,
+  });
+}
+
+const MAX_PASSWORD_ATTEMPTS = 10;
+
+export type InvitePasswordResult = "ok" | "wrong" | "locked" | "not_required";
+
+/**
+ * Verifie le mot de passe d'un lien d'invitation (meme doctrine que
+ * `verifyShareLinkPassword`) : re-resout le jeton pour lire le compteur de
+ * tentatives a jour, au cas ou plusieurs essais arrivent en parallele.
+ */
+export async function verifyInvitePassword(supabase: TypedClient, token: string, password: string): Promise<InvitePasswordResult> {
+  const resolved = await resolveCampaignInviteToken(supabase, token);
+  if (!resolved) return "wrong";
+  if (!resolved.passwordHash) return "not_required";
+  if (resolved.passwordAttempts >= MAX_PASSWORD_ATTEMPTS) return "locked";
+
+  const success = verifySharePassword(password, resolved.passwordHash);
+  await recordCampaignInvitePasswordAttempt(supabase, token, success);
+  return success ? "ok" : "wrong";
 }
 
 export type ResolveInviteForJoinResult =

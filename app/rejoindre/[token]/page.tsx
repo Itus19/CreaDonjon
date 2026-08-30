@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { listUnclaimedCharactersForToken, resolveInviteForJoin } from "@/src/server/services/campaignInvites";
+import { hasVerifiedInvitePassword } from "./passwordActions";
+import InvitePasswordGate from "./InvitePasswordGate";
 import JoinForm from "./JoinForm";
 
 /**
@@ -22,6 +24,13 @@ export default async function JoinInvitePage({ params }: { params: Promise<{ tok
         </div>
       </div>
     );
+  }
+
+  // Mot de passe optionnel (V2-M4 suite, retour utilisateur 30 août) :
+  // jamais l'ecran de choix ni la reconnexion avant validation — meme
+  // discipline que le partage public (SharePasswordGate).
+  if (resolved.invite.passwordHash && !(await hasVerifiedInvitePassword(token))) {
+    return <InvitePasswordGate token={token} />;
   }
 
   if (resolved.invite.claimedByUserId) {

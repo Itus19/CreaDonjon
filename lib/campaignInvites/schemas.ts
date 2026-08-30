@@ -3,6 +3,17 @@ import { z } from "zod";
 export const createCampaignInviteSchema = z.object({
   campaignId: z.string().min(1),
   intendedRole: z.enum(["gm", "player"]).nullable(),
+  password: z.string().trim().max(200).optional().or(z.literal("")),
+});
+
+export const setCampaignInvitePasswordSchema = z.object({
+  inviteId: z.string().min(1),
+  // "" (champ vide) efface le mot de passe — jamais une chaine vide stockee.
+  password: z.string().trim().max(200).optional().or(z.literal("")),
+});
+
+export const verifyCampaignInvitePasswordSchema = z.object({
+  password: z.string().min(1),
 });
 
 export const joinCampaignInviteSchema = z.object({

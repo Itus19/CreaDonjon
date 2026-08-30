@@ -192,15 +192,7 @@
       "membres": "Members",
       "aucunMembre": "No members yet.",
       "erreurInvitation": "Invitation failed.",
-      "erreurChargement": "Couldn't load your campaigns.",
-      "lienTitre": "Invite link (no email needed)",
-      "roleAuChoix": "Their choice",
-      "genererLien": "Generate a link",
-      "generationEnCours": "Generating...",
-      "erreurGenerationLien": "Failed to generate the link.",
-      "lienGenereAvertissement": "Copy this link now: it will never be shown again.",
-      "copier": "Copy",
-      "copie": "Copied"
+      "erreurChargement": "Couldn't load your campaigns."
     },
     "suppression": {
       "titre": "Danger zone",

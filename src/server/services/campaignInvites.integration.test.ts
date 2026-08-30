@@ -6,6 +6,8 @@ import {
   listUnclaimedCharactersForToken,
   resolveDestinationForInvitedUser,
   resolveInviteForJoin,
+  setInvitePassword,
+  verifyInvitePassword,
 } from "./campaignInvites";
 
 /**
@@ -194,5 +196,61 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
     const anon = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
     const resolved = await resolveInviteForJoin(anon, token);
     expect(resolved.ok).toBe(false);
+  });
+
+  it("un lien protege refuse un mauvais mot de passe et accepte le bon, avec verrouillage au-dela de 10 essais", async () => {
+    const { token } = await createCampaignInvite(ownerClient, {
+      campaignId,
+      worldId: null,
+      intendedRole: "player",
+      password: "secret-jeremy",
+      createdBy: ownerId,
+    });
+    const anon = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
+
+    expect(await verifyInvitePassword(anon, token, "mauvais-mot-de-passe")).toBe("wrong");
+    expect(await verifyInvitePassword(anon, token, "secret-jeremy")).toBe("ok");
+
+    for (let i = 0; i < 10; i++) {
+      await verifyInvitePassword(anon, token, "encore-mauvais");
+    }
+    expect(await verifyInvitePassword(anon, token, "secret-jeremy")).toBe("locked");
+  });
+
+  it("le mot de passe est modifiable par le proprietaire du monde, par la personne qui a reclame le lien, mais pas par un tiers", async () => {
+    const { invite, token } = await createCampaignInvite(ownerClient, { campaignId, worldId: null, intendedRole: "gm", createdBy: ownerId });
+    const anon = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
+    const resolved = await resolveInviteForJoin(anon, token);
+    if (!resolved.ok) throw new Error("resolution echouee");
+    const claim = await claimInvite({ invite: resolved.invite, claim: { role: "gm", name: "Antoine MJ" } });
+    if (!claim.ok) throw new Error("reclamation echouee");
+    const { data: session, error: sessionError } = await anon.auth.verifyOtp({ type: "magiclink", token_hash: claim.tokenHash });
+    if (sessionError || !session.user) throw new Error("session echouee");
+    createdInvitedUserIds.push(session.user.id);
+
+    // Le proprietaire du monde peut poser un mot de passe.
+    const byOwner = await setInvitePassword(ownerClient, { inviteId: invite.id, password: "pose-par-le-mj" });
+    expect(byOwner.allowed).toBe(true);
+
+    // La personne qui a reclame ce lien peut le changer elle-meme.
+    const byClaimant = await setInvitePassword(anon, { inviteId: invite.id, password: "change-par-lui-meme" });
+    expect(byClaimant.allowed).toBe(true);
+
+    // Un tiers sans lien avec cette invitation ne le peut pas.
+    const outsiderEmail = `integration-test-invites-outsider-${Date.now()}@creadonjon.local`;
+    const outsiderPassword = `integration-test-${Date.now()}`;
+    const { data: outsiderUser, error: outsiderError } = await admin.auth.admin.createUser({
+      email: outsiderEmail,
+      password: outsiderPassword,
+      email_confirm: true,
+    });
+    if (outsiderError || !outsiderUser.user) throw new Error("creation tiers echouee");
+    createdInvitedUserIds.push(outsiderUser.user.id);
+    const outsiderClient = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
+    const { error: outsiderSignInError } = await outsiderClient.auth.signInWithPassword({ email: outsiderEmail, password: outsiderPassword });
+    if (outsiderSignInError) throw new Error(outsiderSignInError.message);
+
+    const byOutsider = await setInvitePassword(outsiderClient, { inviteId: invite.id, password: "vole-par-un-tiers" });
+    expect(byOutsider.allowed).toBe(false);
   });
 });

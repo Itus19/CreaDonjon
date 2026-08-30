@@ -1,7 +1,22 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createCampaignInviteSchema } from "@/lib/campaignInvites/schemas";
-import { createCampaignInvite } from "@/src/server/services/campaignInvites";
+import { createCampaignInvite, listCampaignInvites } from "@/src/server/services/campaignInvites";
+
+/** Liste les liens actifs d'une campagne (V2-M4 suite) — reserve aux MJ/proprietaires/editeurs du monde (`campaign_invites_select`, RLS) : une simple liste vide pour tout autre compte. */
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
+  const { campaignId } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
+  }
+
+  const invites = await listCampaignInvites(supabase, campaignId);
+  return NextResponse.json({ invites }, { status: 200 });
+}
 
 /**
  * Génère un lien d'invitation nominatif (V2-M4, Lot M) — un par ami,
@@ -31,9 +46,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       campaignId,
       worldId: null,
       intendedRole: parsed.data.intendedRole,
+      password: parsed.data.password || undefined,
       createdBy: user.id,
     });
-    return NextResponse.json({ invite, token, url: `/rejoindre/${token}` }, { status: 201 });
+    return NextResponse.json({ invite, url: `/rejoindre/${token}` }, { status: 201 });
   } catch {
     return NextResponse.json(
       { error: "Impossible de créer ce lien — seul le MJ propriétaire du monde peut inviter." },

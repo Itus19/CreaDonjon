@@ -14,10 +14,12 @@ export interface CampaignInviteRow {
   revoked_at: string | null;
   created_by: string;
   created_at: string;
+  token: string | null;
+  password_hash: string | null;
 }
 
 const CAMPAIGN_INVITE_COLUMNS =
-  "id, campaign_id, world_id, intended_role, claimed_by_user_id, claimed_name, revoked_at, created_by, created_at";
+  "id, campaign_id, world_id, intended_role, claimed_by_user_id, claimed_name, revoked_at, created_by, created_at, token, password_hash";
 
 export async function insertCampaignInvite(
   supabase: TypedClient,
@@ -25,7 +27,9 @@ export async function insertCampaignInvite(
     campaignId: string | null;
     worldId: string | null;
     intendedRole: "gm" | "player" | null;
+    token: string;
     tokenHash: string;
+    passwordHash: string | null;
     createdBy: string;
   }
 ): Promise<CampaignInviteRow> {
@@ -35,7 +39,9 @@ export async function insertCampaignInvite(
       campaign_id: params.campaignId,
       world_id: params.worldId,
       intended_role: params.intendedRole,
+      token: params.token,
       token_hash: params.tokenHash,
+      password_hash: params.passwordHash,
       created_by: params.createdBy,
     })
     .select(CAMPAIGN_INVITE_COLUMNS)
@@ -49,7 +55,20 @@ export async function listCampaignInvitesForCampaign(supabase: TypedClient, camp
     .from("campaign_invites")
     .select(CAMPAIGN_INVITE_COLUMNS)
     .eq("campaign_id", campaignId)
+    .is("revoked_at", null)
     .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** V2-M4 (suite) : « mon lien », pour l'ecran de l'ami invite lui-meme — jamais la liste d'un autre (`campaign_invites_select_own`, RLS). */
+export async function getOwnCampaignInvite(supabase: TypedClient, userId: string): Promise<CampaignInviteRow | null> {
+  const { data, error } = await supabase
+    .from("campaign_invites")
+    .select(CAMPAIGN_INVITE_COLUMNS)
+    .eq("claimed_by_user_id", userId)
+    .is("revoked_at", null)
+    .maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 }
@@ -60,6 +79,28 @@ export async function revokeCampaignInvite(supabase: TypedClient, id: string): P
   return { updated: data.length > 0 };
 }
 
+/**
+ * Passe par `app.set_campaign_invite_password` (migration 20260830160001) :
+ * ne touche jamais qu'une seule colonne, et verifie ELLE-MEME le droit
+ * (superadmin/MJ du monde OU la personne qui a reclame ce lien) — jamais
+ * une ecriture large sur la ligne entiere qui laisserait un ami reecrire
+ * son propre role ou la campagne visee.
+ */
+export async function setCampaignInvitePasswordHash(
+  supabase: TypedClient,
+  params: { inviteId: string; passwordHash: string | null }
+): Promise<{ allowed: boolean }> {
+  const { data, error } = await supabase.rpc("set_campaign_invite_password", {
+    p_invite_id: params.inviteId,
+    // Le parametre SQL accepte NULL (efface le mot de passe) ; le type
+    // genere ne le sait pas car la fonction ne declare pas `default null`
+    // explicitement — cast assume, verifie par le test d'integration.
+    p_password_hash: params.passwordHash as string,
+  });
+  if (error) throw new Error(error.message);
+  return { allowed: data === true };
+}
+
 export interface ResolvedCampaignInvite {
   id: string;
   campaignId: string | null;
@@ -67,6 +108,8 @@ export interface ResolvedCampaignInvite {
   intendedRole: "gm" | "player" | null;
   claimedByUserId: string | null;
   claimedName: string | null;
+  passwordHash: string | null;
+  passwordAttempts: number;
 }
 
 /**
@@ -89,7 +132,15 @@ export async function resolveCampaignInviteToken(supabase: TypedClient, token: s
     intendedRole: row.intended_role as "gm" | "player" | null,
     claimedByUserId: row.claimed_by_user_id,
     claimedName: row.claimed_name,
+    passwordHash: row.password_hash,
+    passwordAttempts: row.password_attempts,
   };
+}
+
+/** Journalise une tentative de mot de passe (`app.record_campaign_invite_password_attempt`, meme motif que le partage public). */
+export async function recordCampaignInvitePasswordAttempt(supabase: TypedClient, token: string, success: boolean): Promise<void> {
+  const { error } = await supabase.rpc("record_campaign_invite_password_attempt", { p_token: token, p_success: success });
+  if (error) throw new Error(error.message);
 }
 
 export interface UnclaimedCampaignCharacter {
