@@ -23,9 +23,20 @@ export async function hasEntityGrant(supabase: TypedClient, params: { entityId: 
   return data !== null;
 }
 
-/** V2-M6 (Lot M, pas encore ecrit) : liste des octrois d'une entite, pour le panneau MJ. Ajoutee des maintenant — meme table, meme repo, jamais deux points d'ecriture. */
+/** V2-M7 (Lot M) : liste des octrois d'une entite, pour le panneau MJ. */
 export async function listEntityGrants(supabase: TypedClient, entityId: string): Promise<EntityGrantRow[]> {
   const { data, error } = await supabase.from("entity_grants").select("entity_id, user_id, granted_by, granted_at").eq("entity_id", entityId);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** V2-M7 (Lot M) : meme chose que ci-dessus mais pour plusieurs entites d'un coup (les fiches PJ d'une campagne) — evite un aller-retour par fiche dans `GET /api/campaigns/[campaignId]`. */
+export async function listEntityGrantsForEntityIds(supabase: TypedClient, entityIds: string[]): Promise<EntityGrantRow[]> {
+  if (entityIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("entity_grants")
+    .select("entity_id, user_id, granted_by, granted_at")
+    .in("entity_id", entityIds);
   if (error) throw new Error(error.message);
   return data;
 }

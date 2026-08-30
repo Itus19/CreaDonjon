@@ -888,15 +888,19 @@ Visible uniquement pour `is_superadmin()`, sur ce même écran (pas une page sé
 - [x] Supprimer un compte libère ses fiches revendiquées et ses `entity_grants`.
 - [x] Le journal affiche, pour un monde donné, les modifications de tous les comptes qui y ont touché, triées par date, sans confondre révision de fiche et événement de jeu.
 
-### V2-M7 — Journal MJ par monde et octroi d'édition d'une fiche · `S`/`M`
+### V2-M7 — Journal MJ par monde et octroi d'édition d'une fiche · `S`/`M` — fait
 
 Le pendant « par monde » de M6, pour un MJ qui n'est pas superadmin (propriétaire/éditeur normal, ou ami MJ) : dans l'espace MJ d'un monde (`/m/[slug]/mj`), le même principe de journal fusionné que M6 mais filtré à CE monde (`specs/module-joueur-et-solo.md` §A3), plus la gestion de `entity_grants` pour ses propres fiches et la révocation d'une fiche PJ réclamée dans sa campagne.
 
+`app.is_world_admin` (SQL, migration V2-M3) existait déjà comme gate RLS d'écriture pour `entity_grants`/`campaigns`/`campaign_members` ; ce ticket lui ajoute son miroir côté service (`isWorldAdmin`, `src/server/services/permissions.ts`) — troisième copie déliberée de la même règle que `canEditEntity`/`canSee` (RLS ne peut pas exécuter du TypeScript). `listEntityGrants`/`grantEntityAccess`/`revokeEntityAccess` (repo) existaient déjà depuis M3, jamais exposés côté interface avant ce ticket. La révocation d'une fiche PJ réutilise l'endpoint d'attribution existant (`POST /api/campaigns/[id]/characters`) avec `isPc: true, userId: null` — jamais le même geste que « PNJ (sans joueur) », qui mettrait `isPc: false` et rendrait la fiche non sélectionnable par un nouveau joueur.
+
+Effet de bord trouvé en vérifiant en direct : le monde de démo `mj-demo@creadonjon.local` (`scripts/seed-dev.ts`) partageait le slug littéral `valdoria` avec la vraie Valdoria de Gabriel — invisible tant que `worlds_select` ne voyait que les mondes du compte courant, devenu bloquant pour le superadmin depuis M6 (`getWorldBySlugForCurrentUser` refuse de deviner entre plusieurs lignes). Corrigé en renommant le slug de seed en `valdoria-mj-demo` (jamais le nom affiché ni le contenu) — l'idempotence du script est basée sur un id fixe, jamais sur ce slug, donc sans risque.
+
 **Critères**
-- [ ] Un MJ propriétaire/éditeur du monde voit le journal fusionné filtré à son monde, jamais les autres mondes du compte qui le consulte.
-- [ ] Un MJ propriétaire/éditeur du monde peut accorder ou retirer l'édition d'une fiche précise à un joueur de sa campagne.
-- [ ] Un MJ peut révoquer la fiche PJ d'un joueur (elle redevient sélectionnable), sans passer par le superadmin.
-- [ ] Aucune action de ce panneau n'est disponible à un simple joueur.
+- [x] Un MJ propriétaire/éditeur du monde voit le journal fusionné filtré à son monde, jamais les autres mondes du compte qui le consulte.
+- [x] Un MJ propriétaire/éditeur du monde peut accorder ou retirer l'édition d'une fiche précise à un joueur de sa campagne.
+- [x] Un MJ peut révoquer la fiche PJ d'un joueur (elle redevient sélectionnable), sans passer par le superadmin.
+- [x] Aucune action de ce panneau n'est disponible à un simple joueur (vérifié par test d'intégration dédié, `src/server/services/entityGrants.integration.test.ts` : `isWorldAdmin` et les trois services `entity_grants` refusent un simple joueur, `forbidden`).
 
 ### V2-M7b — Coquille joueur allégée · `M`
 

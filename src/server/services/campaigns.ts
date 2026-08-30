@@ -20,6 +20,7 @@ import {
 import { getRulesetById } from "@/src/server/repos/rules";
 import { getWorldOwnerId } from "@/src/server/repos/worlds";
 import { createEntity } from "@/src/server/services/entities";
+import { listEntityGrantsForEntityIds, type EntityGrantRow } from "@/src/server/repos/entityGrants";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -165,6 +166,14 @@ export async function renameCampaign(
 
 export async function getCampaignCharacters(supabase: TypedClient, campaignId: string): Promise<CampaignCharacterRow[]> {
   return listCampaignCharacters(supabase, campaignId);
+}
+
+/** V2-M7 (Lot M) : octrois d'edition (`entity_grants`) des fiches de cette campagne, pour le panneau MJ — pas d'authorization ici, meme niveau de lecture que `getCampaignCharacters`/`getCampaignMembers` ci-dessus (deja ouvert a tout membre via RLS). */
+export async function getCampaignCharacterGrants(
+  supabase: TypedClient,
+  characters: CampaignCharacterRow[]
+): Promise<EntityGrantRow[]> {
+  return listEntityGrantsForEntityIds(supabase, characters.map((c) => c.entity_id));
 }
 
 export type InviteResult = { ok: true; userId: string } | { ok: false; reason: "not_found" };

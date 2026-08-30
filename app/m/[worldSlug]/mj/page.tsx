@@ -5,7 +5,9 @@ import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { listEntities } from "@/src/server/services/entities";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import { isSuperadmin } from "@/src/server/services/account";
+import { isWorldAdmin } from "@/src/server/services/permissions";
 import CampaignsPanel from "@/components/shell/CampaignsPanel";
+import GmJournalPanel from "@/components/shell/GmJournalPanel";
 
 export default async function MjCampagnesPage({
   params,
@@ -21,20 +23,31 @@ export default async function MjCampagnesPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [entities, campaigns, defaultRulesetId, superadmin] = await Promise.all([
+  const [entities, campaigns, defaultRulesetId, superadmin, gm] = await Promise.all([
     listEntities(supabase, world.id),
     listCampaigns(supabase, world.id),
     getWorldDefaultRulesetId(supabase, world.id),
     user ? isSuperadmin(supabase, user.id) : Promise.resolve(false),
+    user ? isWorldAdmin(supabase, { worldId: world.id, userId: user.id }) : Promise.resolve(false),
   ]);
 
   return (
-    <CampaignsPanel
-      worldSlug={worldSlug}
-      defaultRulesetId={defaultRulesetId}
-      initialCampaigns={campaigns}
-      worldEntities={entities.filter((e) => e.entity_kind === "character").map((e) => ({ id: e.id, name: e.name }))}
-      canUseSoloMode={superadmin}
-    />
+    <div className="flex flex-col gap-4">
+      {/* V2-M7 (Lot M) : journal + octrois d'edition (dans CampaignsPanel ->
+          CampaignDetail) reserves au MJ reel de ce monde — un simple joueur
+          qui atteindrait cette page (RLS le permet, is_world_member seul,
+          lacune preexistante hors perimetre de ce ticket) ne voit ni l'un ni
+          l'autre. Verifie cote serveur ici ET dans chaque route API
+          concernee (isWorldAdmin), jamais seulement en cachant le composant. */}
+      {gm && <GmJournalPanel worldSlug={worldSlug} />}
+      <CampaignsPanel
+        worldSlug={worldSlug}
+        defaultRulesetId={defaultRulesetId}
+        initialCampaigns={campaigns}
+        worldEntities={entities.filter((e) => e.entity_kind === "character").map((e) => ({ id: e.id, name: e.name }))}
+        canUseSoloMode={superadmin}
+        canManage={gm}
+      />
+    </div>
   );
 }

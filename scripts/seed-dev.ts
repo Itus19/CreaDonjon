@@ -133,7 +133,15 @@ async function main() {
       id: IDS.world,
       owner_id: mjUserId,
       name: "Valdoria",
-      slug: "valdoria",
+      // Pas "valdoria" (retour utilisateur 30 aout, V2-M7) : `worlds.slug`
+      // n'est unique que par proprietaire, et un vrai compte peut choisir le
+      // meme nom pour son propre monde — collision reelle une fois que le
+      // superadmin voit tous les mondes (`worlds_select`, V2-M6), qui
+      // rendait `/m/valdoria` introuvable pour lui (`getWorldBySlugForCurrentUser`
+      // refuse de deviner entre plusieurs lignes). Verifie par id fixe
+      // (IDS.world) ci-dessus, jamais par ce slug — le changer ici est sans
+      // risque pour l'idempotence.
+      slug: "valdoria-mj-demo",
       calendar: {
         name: "Calendrier de Valdoria",
         days_per_week: 7,

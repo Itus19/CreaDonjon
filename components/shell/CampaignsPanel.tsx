@@ -32,6 +32,7 @@ export default function CampaignsPanel({
   initialCampaigns,
   worldEntities,
   canUseSoloMode,
+  canManage,
 }: {
   worldSlug: string;
   defaultRulesetId: string | null;
@@ -39,6 +40,8 @@ export default function CampaignsPanel({
   worldEntities: { id: string; name: string }[];
   /** V2-M2 (Lot M) : le mode solo est reserve au superadmin — verifie cote serveur (route `/api/campaigns/[id]` et `/api/worlds/[slug]/campaigns`), cette prop ne fait qu'eviter d'afficher une option qui echouerait toujours. */
   canUseSoloMode: boolean;
+  /** V2-M7 (Lot M) : revocation de fiche PJ et octrois d'edition (`CampaignDetail`) reserves au MJ reel de ce monde (`isWorldAdmin`, deja verifie cote serveur par la page appelante) — cette prop ne fait qu'eviter d'afficher des actions qui echoueraient toujours pour un simple joueur qui atteindrait cette page. */
+  canManage: boolean;
 }) {
   const [campaigns, setCampaigns] = useState(initialCampaigns);
   const [name, setName] = useState("");
@@ -151,7 +154,7 @@ export default function CampaignsPanel({
                   className="rounded-full border border-edge bg-transparent px-2 py-0.5 text-xs text-ink-muted outline-none transition-colors hover:bg-panel-raised disabled:opacity-50"
                 />
               </div>
-              {expandedId === c.id && <CampaignDetail campaignId={c.id} worldEntities={worldEntities} />}
+              {expandedId === c.id && <CampaignDetail campaignId={c.id} worldEntities={worldEntities} canManage={canManage} />}
             </li>
           ))}
         </ul>

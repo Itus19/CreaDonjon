@@ -75,4 +75,10 @@ export const createEntityWithNameSchema = z.object({
   entityKind: z.string().trim().min(1).max(40).default("character"),
 });
 
+// Octroi d'edition d'une fiche a un joueur precis (V2-M7, panneau MJ) —
+// meme remarque que createBlankEntitySchema sur z.guid() vs z.uuid().
+export const grantEntityAccessSchema = z.object({
+  userId: z.guid(),
+});
+
 export { ENTITY_KINDS };

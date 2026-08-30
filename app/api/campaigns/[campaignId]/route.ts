@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { updateCampaignSchema } from "@/lib/campaigns/schemas";
 import {
   getCampaign,
+  getCampaignCharacterGrants,
   getCampaignCharacters,
   getCampaignMembers,
   getCampaignRulesetOrigin,
@@ -24,8 +25,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     getCampaignCharacters(supabase, campaignId),
     getCampaignRulesetOrigin(supabase, campaignId),
   ]);
+  const grants = await getCampaignCharacterGrants(supabase, characters);
 
-  return NextResponse.json({ campaign, members, characters, rulesetContentOrigin }, { status: 200 });
+  return NextResponse.json({ campaign, members, characters, rulesetContentOrigin, grants }, { status: 200 });
 }
 
 /** Mode modifiable apres creation (V2-G1 prepa, "un monde = une campagne") — seul endpoint d'ecriture de ce fichier jusqu'ici. */

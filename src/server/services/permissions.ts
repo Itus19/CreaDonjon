@@ -48,3 +48,25 @@ export async function canUserEditEntityById(
   if (!entity) return false;
   return canUserEditEntity(supabase, { worldId: entity.world_id, entityId: params.entityId, userId: params.userId });
 }
+
+/**
+ * "Cette personne administre-t-elle ce monde" (V2-M7, Lot M) : proprietaire/
+ * editeur du monde, ou MJ humain d'une campagne de ce monde — memes deux
+ * premiers cas que `canEditEntity` (`src/core/permissions/canEditEntity.ts`)
+ * et miroir de `app.is_world_admin` (SQL, meme nom). Troisieme copie
+ * deliberee de la meme regle plutot qu'une abstraction partagee entre les
+ * trois couches : RLS ne peut pas executer du TypeScript, et le noyau pur
+ * (`canEditEntity`) ne doit pas dependre d'un acces base pour resoudre le
+ * `Viewer` lui-meme. Sert a gater le panneau MJ (journal filtre au monde,
+ * octroi d'edition, revocation de fiche PJ) : jamais une simple fiche
+ * precise (voir `canUserEditEntity` ci-dessus pour ce cas plus fin).
+ */
+export async function isWorldAdmin(supabase: TypedClient, params: { worldId: string; userId: string }): Promise<boolean> {
+  const viewer = await buildViewerForWorld(supabase, params.worldId, params.userId);
+  if (viewer.kind === "anonymous") return false;
+  return (
+    viewer.worldRole === "owner" ||
+    viewer.worldRole === "editor" ||
+    Object.values(viewer.campaignRoles).includes("gm")
+  );
+}
