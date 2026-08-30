@@ -26,9 +26,9 @@ export default async function Home() {
   const officialRulesets = (selectableRulesets ?? []).filter((r) => r.is_official_base);
 
   return (
-    <div className="flex flex-1 justify-center font-sans">
-      <main className="flex w-full max-w-[1600px] flex-col gap-6 py-16 px-10">
-        <div className="flex items-center justify-between">
+    <div className="flex h-dvh justify-center overflow-hidden font-sans">
+      <main className="flex h-full w-full max-w-[1600px] flex-col gap-4 py-8 px-10">
+        <div className="flex shrink-0 items-center justify-between">
           <h1 className="text-2xl font-semibold tracking-wide text-accent">
             CreaDonjon
           </h1>
@@ -46,20 +46,25 @@ export default async function Home() {
             mondes/campagnes, detail du monde selectionne — remplace
             l'ancienne colonne unique (V2-M5). L'Administration (superadmin,
             M6) vit sous le profil, dans la meme colonne (retour utilisateur :
-            liberer l'espace en hauteur plutot qu'un bandeau pleine largeur). */}
-        <HomeScreen
-          worlds={worlds}
-          currentUserId={user?.id ?? ""}
-          email={user?.email ?? ""}
-          displayName={profile?.display_name ?? ""}
-          adminPanel={canUseSoloMode ? <AdminPanel /> : null}
-          createTools={
-            <div className="flex flex-wrap items-center gap-2">
-              <CreateWorldForm officialRulesets={officialRulesets} canUseSoloMode={canUseSoloMode} />
-              <ImportWorldForm canUseSoloMode={canUseSoloMode} />
-            </div>
-          }
-        />
+            liberer l'espace en hauteur plutot qu'un bandeau pleine largeur).
+            Tient sur un seul ecran (retour utilisateur) : `flex-1 min-h-0`
+            laisse HomeScreen occuper le reste de la hauteur, dont chaque
+            colonne fait defiler son propre contenu (jamais la page entiere). */}
+        <div className="min-h-0 flex-1">
+          <HomeScreen
+            worlds={worlds}
+            currentUserId={user?.id ?? ""}
+            email={user?.email ?? ""}
+            displayName={profile?.display_name ?? ""}
+            adminPanel={canUseSoloMode ? <AdminPanel /> : null}
+            createTools={
+              <div className="flex flex-wrap items-center gap-2">
+                <CreateWorldForm officialRulesets={officialRulesets} canUseSoloMode={canUseSoloMode} />
+                <ImportWorldForm canUseSoloMode={canUseSoloMode} />
+              </div>
+            }
+          />
+        </div>
       </main>
     </div>
   );

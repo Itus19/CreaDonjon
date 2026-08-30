@@ -48,8 +48,8 @@ function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUs
       : `/m/${world.slug}`;
 
   return (
-    <div className="flex h-full flex-col gap-3">
-      <div>
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="shrink-0">
         <div className="flex items-center justify-between gap-2">
           <p className="font-medium text-ink">{world.name}</p>
           <span className="shrink-0 rounded-full border border-edge px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted">
@@ -64,7 +64,10 @@ function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUs
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {/* Seule cette partie defile (retour utilisateur) : Rejoindre et les
+          actions MJ ci-dessous restent toujours visibles, jamais au fond
+          d'une zone qui defile. */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Journal récent</span>
         {loadError && <p className="mt-1 text-xs text-danger">{loadError}</p>}
         {entries === null && !loadError && <p className="mt-1 text-xs text-ink-muted">…</p>}
@@ -90,19 +93,21 @@ function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUs
       </div>
 
       {world.myRole !== "player" && (
-        <WorldCardActions
-          worldId={world.id}
-          worldSlug={world.slug}
-          worldName={world.name}
-          campaignId={world.campaignId}
-          campaignName={world.campaignName}
-          isOwner={world.ownerId === currentUserId}
-        />
+        <div className="shrink-0">
+          <WorldCardActions
+            worldId={world.id}
+            worldSlug={world.slug}
+            worldName={world.name}
+            campaignId={world.campaignId}
+            campaignName={world.campaignName}
+            isOwner={world.ownerId === currentUserId}
+          />
+        </div>
       )}
 
       <Link
         href={href}
-        className="self-end rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+        className="shrink-0 self-end rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
       >
         Rejoindre
       </Link>
@@ -140,15 +145,19 @@ export default function HomeScreen({
   const selected = worlds.find((w) => w.id === selectedId) ?? null;
 
   return (
-    <div className="grid grid-cols-3 gap-6">
-      <div className="flex flex-col gap-4">
+    <div className="grid h-full min-h-0 grid-cols-3 gap-6">
+      {/* Colonne profil (retour utilisateur, tient sur un ecran) : defile
+          comme un bloc si Administration + Profil depassent la hauteur
+          disponible — chacun des deux garde deja son propre plafond interne
+          (AdminPanel plafonne son journal a 320px). */}
+      <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto">
         <HomeProfilePanel email={email} displayName={displayName} />
         {adminPanel}
       </div>
 
-      <div className="flex flex-col gap-4">
-        {createTools}
-        <ul className="flex flex-col gap-2">
+      <div className="flex h-full min-h-0 flex-col gap-4">
+        <div className="shrink-0">{createTools}</div>
+        <ul className="min-h-0 flex-1 overflow-y-auto flex flex-col gap-2">
           {worlds.map((world) => {
             const roleLabel = world.myRole === "player" ? "Joueur" : world.mode === "solo" ? "Solo" : "MJ";
             return (
@@ -182,7 +191,7 @@ export default function HomeScreen({
         </ul>
       </div>
 
-      <div className="rounded-lg border border-edge bg-panel-sunken p-4">
+      <div className="h-full min-h-0 rounded-lg border border-edge bg-panel-sunken p-4">
         {selected ? (
           <WorldDetail world={selected} currentUserId={currentUserId} />
         ) : (
