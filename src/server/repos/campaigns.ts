@@ -203,6 +203,22 @@ export async function isOwnCampaignCharacter(
   return data.length > 0;
 }
 
+/** V2-M4 (Lot M) : vers quelle fiche rediriger un joueur qui vient de se connecter (premiere reclamation ou reouverture du meme lien) — l'inverse de `isOwnCampaignCharacter` (qui verifie UNE entite precise), ici on cherche LAQUELLE. `null` si aucune (MJ, ou joueur sans personnage revendique). */
+export async function getClaimedCharacterEntityId(
+  supabase: TypedClient,
+  params: { campaignId: string; userId: string }
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("campaign_characters")
+    .select("entity_id")
+    .eq("campaign_id", params.campaignId)
+    .eq("user_id", params.userId)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.entity_id ?? null;
+}
+
 export interface GmCampaignRow {
   campaign_id: string;
   campaign_name: string;

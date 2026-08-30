@@ -543,6 +543,60 @@ export type Database = {
           },
         ]
       }
+      campaign_invites: {
+        Row: {
+          campaign_id: string | null
+          claimed_by_user_id: string | null
+          claimed_name: string | null
+          created_at: string
+          created_by: string
+          id: string
+          intended_role: string | null
+          revoked_at: string | null
+          token_hash: string
+          world_id: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          claimed_by_user_id?: string | null
+          claimed_name?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          intended_role?: string | null
+          revoked_at?: string | null
+          token_hash: string
+          world_id?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          claimed_by_user_id?: string | null
+          claimed_name?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          intended_role?: string | null
+          revoked_at?: string | null
+          token_hash?: string
+          world_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_invites_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_invites_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_members: {
         Row: {
           campaign_id: string
@@ -2176,10 +2230,28 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      list_unclaimed_campaign_characters: {
+        Args: { p_token: string }
+        Returns: {
+          entity_id: string
+          entity_name: string
+        }[]
+      }
       publish_ruleset: { Args: { p_ruleset_id: string }; Returns: undefined }
       record_share_link_password_attempt: {
         Args: { p_success: boolean; p_token: string }
         Returns: undefined
+      }
+      resolve_campaign_invite: {
+        Args: { p_token: string }
+        Returns: {
+          campaign_id: string
+          claimed_by_user_id: string
+          claimed_name: string
+          id: string
+          intended_role: string
+          world_id: string
+        }[]
       }
       resolve_share_link: {
         Args: { p_token: string }

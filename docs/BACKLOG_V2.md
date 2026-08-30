@@ -820,7 +820,7 @@ create table entity_grants (
 - `characterActions.ts` (actions de la fiche jouable : dégâts, emplacements de sorts, équipement...) écrit directement sur `blocks` via le repo, sans passer par `canUserEditEntity` côté service — **déjà couvert par la RLS resserrée** (même garantie de sécurité), juste pas par le garde-fou de service en double défense. Laissé de côté pour ne pas faire déborder ce ticket déjà `L` ; à couvrir dans un ticket dédié si on veut la même défense en profondeur que le reste.
 - **`campaign_characters_write` reste aussi large qu'avant** (`app.is_world_member`, jamais resserrée par ce ticket) : n'importe quel membre du monde peut aujourd'hui réassigner ou libérer N'IMPORTE QUELLE ligne `campaign_characters`, pas seulement la sienne. Sans conséquence tant qu'aucun ami n'a de compte ; devient directement exploitable dès M4 (un ami pourrait voler la fiche PJ d'un autre en forgeant une requête, contournant l'écran de sélection). **M4 doit resserrer cette politique avant d'ouvrir le premier lien** — logique proposée : un MJ (`is_world_admin`) peut tout faire ; un joueur peut prendre une ligne `user_id is null` ou libérer/modifier SA PROPRE ligne (`user_id = auth.uid()`), jamais celle d'un autre.
 
-### V2-M4 — Liens d'invitation nominatifs et écran « MJ / PJ » · `L`
+### V2-M4 — Liens d'invitation nominatifs et écran « MJ / PJ » · `L` — fait
 
 Reprend la table `campaign_invites` déjà dessinée dans `specs/module-joueur-et-solo.md` §A1, avec une différence : le jeton reste la porte d'entrée **permanente** de la personne (pas un usage unique), pour qu'elle retrouve son compte depuis n'importe quel appareil sans jamais voir d'email ni de mot de passe.
 
@@ -839,16 +839,22 @@ create table campaign_invites (
 );
 ```
 
-Premier passage sur le lien : compte créé (mot de passe aléatoire, API admin Supabase, module confiné comme `publicShare.ts`), écran « Je suis MJ / Je suis PJ », nom demandé, si PJ liste des `campaign_characters` où `is_pc = true and user_id is null` à choisir. Passage suivant : jeton déjà `claimed_by_user_id`, connexion directe, retour à l'écran adapté à son rôle. Un jeton `revoked_at` non nul refuse l'accès (le superadmin peut couper un lien sans supprimer le compte).
+**Écart avec la description initiale, en mieux : aucun mot de passe n'est jamais généré, pas même en interne.** Le compte invité est créé sans mot de passe du tout (`email_confirm: true` seul), puis chaque connexion (premier passage ou réouverture) passe par un lien de connexion magique généré côté serveur (`auth.admin.generateLink`) et vérifié immédiatement (`verifyOtp`) — le dernier critère de ce ticket (« aucun mot de passe... ») devient trivialement vrai par construction plutôt que par discipline de ne pas l'afficher.
 
-**Préalable, trouvé en écrivant V2-M3 — à faire avant tout le reste de ce ticket** : `campaign_members_write` reste large (`app.is_world_member`) : n'importe quel membre du monde peut aujourd'hui réassigner ou libérer N'IMPORTE QUELLE ligne, pas seulement la sienne. Sans ce resserrement, la garantie « une fiche prise ne peut pas être volée » (2ᵉ critère ci-dessous) n'est qu'une convention d'interface, pas une vraie barrière. Resserrer avant d'émettre le premier lien : MJ (`is_world_admin`) → tout ; joueur → seulement prendre une ligne `user_id is null` ou toucher SA PROPRE ligne (`user_id = auth.uid()`).
+Premier passage sur le lien : compte créé, écran « Je suis MJ / Je suis PJ », nom demandé, si PJ liste des `campaign_characters` où `is_pc = true and user_id is null` à choisir (elle aussi accessible sans session, via une deuxième fonction `security definer` qui revalide le jeton). Passage suivant : jeton déjà `claimed_by_user_id`, lien magique régénéré pour le même compte, retour à l'écran adapté à son rôle (calculé en relisant l'état réel — jamais un rôle mémorisé côté client). Un jeton `revoked_at` non nul refuse l'accès (le superadmin peut couper un lien sans supprimer le compte).
+
+**Deuxième trou confiné dans le client service-role**, documenté dans `docs/adr/0015-provisioning-comptes-invites.md` : `lib/supabase/serviceAccountProvisioning.ts` + `src/server/services/accountProvisioning.ts`, jamais une extension de `publicShare.ts` (qui reste scopé à la lecture de partage).
+
+**Préalable trouvé en écrivant V2-M3, fait en tête de ce ticket** : `campaign_characters_write` (le backlog disait par erreur `campaign_members_write` — la table qui gère les personnages revendiqués, pas les rôles gm/player) était encore large (`app.is_world_member`). Resserré : MJ (`is_world_admin`) → tout ; joueur → seulement prendre une ligne `user_id is null` ou toucher SA PROPRE ligne (`user_id = auth.uid()`).
 
 **Critères**
-- [ ] Un lien non réclamé propose le choix de rôle puis, en PJ, la liste des personnages non réclamés.
-- [ ] Réclamer un personnage l'enlève immédiatement de la liste pour tout autre lien (personne d'autre ne peut le prendre en double).
-- [ ] Rouvrir le même lien plus tard, sur un autre appareil, reconnecte le même compte sans nouvel écran de choix.
-- [ ] Un lien révoqué refuse l'accès sans supprimer le compte ni libérer sa fiche.
-- [ ] Aucune valeur de mot de passe générée n'est jamais visible côté client, ni journalisée en clair.
+- [x] Un lien non réclamé propose le choix de rôle puis, en PJ, la liste des personnages non réclamés.
+- [x] Réclamer un personnage l'enlève immédiatement de la liste pour tout autre lien (personne d'autre ne peut le prendre en double) — vérifié par un test d'intégration dédié (deux réclamations concurrentes sur le même personnage, une seule réussit).
+- [x] Rouvrir le même lien plus tard, sur un autre appareil, reconnecte le même compte sans nouvel écran de choix — vérifié par test d'intégration (deux sessions distinctes, même `user.id`).
+- [x] Un lien révoqué refuse l'accès sans supprimer le compte ni libérer sa fiche.
+- [x] Aucune valeur de mot de passe générée n'est jamais visible côté client, ni journalisée en clair — vrai par construction (aucun mot de passe n'existe pour ces comptes).
+
+**Livré dans ce ticket, en plus du strict nécessaire pour le tester** : un générateur de lien minimal dans l'onglet Collaboration des Réglages (choix du rôle, un lien affiché une seule fois, à copier). La gestion complète (lister/révoquer les liens déjà émis, voir qui a réclamé quoi) reste V2-M5, pas encore écrite — ce générateur suffisait à tester le ticket de bout en bout sans l'anticiper.
 
 ### V2-M5 — Panneau superadmin : comptes, accès et journal fusionné · `M`
 

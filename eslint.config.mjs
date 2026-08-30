@@ -64,6 +64,32 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // Deuxieme trou confine, meme discipline (docs/adr/0015-provisioning-comptes-invites.md) :
+  // creation de comptes invites (V2-M4), jamais reutilise le premier trou
+  // (portee differente : lecture de partage public seulement).
+  {
+    files: ["**/*.{ts,tsx}"],
+    ignores: ["src/server/services/accountProvisioning.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "*/lib/supabase/serviceAccountProvisioning",
+                "@/lib/supabase/serviceAccountProvisioning",
+                "./serviceAccountProvisioning",
+                "../serviceAccountProvisioning",
+              ],
+              message:
+                "Le client service-role de provisioning est confine a src/server/services/accountProvisioning.ts (docs/adr/0015-provisioning-comptes-invites.md). Passe par les fonctions exportees de ce fichier plutot que de construire ce client ici.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

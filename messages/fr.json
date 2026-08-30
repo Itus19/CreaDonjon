@@ -194,7 +194,15 @@
       "membres": "Membres",
       "aucunMembre": "Aucun membre pour l'instant.",
       "erreurInvitation": "Échec de l'invitation.",
-      "erreurChargement": "Impossible de charger vos campagnes."
+      "erreurChargement": "Impossible de charger vos campagnes.",
+      "lienTitre": "Lien d'invitation (sans email)",
+      "roleAuChoix": "Au choix",
+      "genererLien": "Générer un lien",
+      "generationEnCours": "Génération...",
+      "erreurGenerationLien": "Échec de la génération du lien.",
+      "lienGenereAvertissement": "Copiez ce lien maintenant : il ne sera plus jamais affiché.",
+      "copier": "Copier",
+      "copie": "Copié"
     },
     "suppression": {
       "titre": "Zone dangereuse",

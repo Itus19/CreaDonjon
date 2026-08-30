@@ -99,6 +99,94 @@ interface GmCampaignSummary {
 }
 
 /**
+ * Générateur de lien d'invitation (V2-M4, Lot M) : un lien par ami, jamais
+ * réaffiché après coup (le jeton en clair ne survit qu'en mémoire de ce
+ * composant) — copiez-le maintenant ou régénérez-en un autre. La gestion
+ * complète (lister/révoquer les liens déjà émis) est V2-M5, pas encore
+ * écrite ; ceci n'est que la génération, suffisante pour ouvrir le premier
+ * lien.
+ */
+function InviteLinkGenerator({ campaignId }: { campaignId: string }) {
+  const t = useTranslations("settings.collaboration");
+  const [role, setRole] = useState<"gm" | "player" | "">("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [url, setUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function generate() {
+    setBusy(true);
+    setError(null);
+    setUrl(null);
+    const res = await fetch(`/api/campaigns/${campaignId}/invites`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ intendedRole: role || null }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setError(t("erreurGenerationLien"));
+      return;
+    }
+    const body = (await res.json()) as { url: string };
+    setUrl(`${window.location.origin}${body.url}`);
+    setCopied(false);
+  }
+
+  async function copy() {
+    if (!url) return;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-edge bg-panel-sunken p-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{t("lienTitre")}</p>
+      <div className="flex items-center gap-2">
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value as "gm" | "player" | "")}
+          className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
+        >
+          <option value="">{t("roleAuChoix")}</option>
+          <option value="player">{t("rolePlayer")}</option>
+          <option value="gm">{t("roleGm")}</option>
+        </select>
+        <button
+          type="button"
+          onClick={generate}
+          disabled={busy}
+          className="shrink-0 rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+        >
+          {busy ? t("generationEnCours") : t("genererLien")}
+        </button>
+      </div>
+      {error && <p className="text-xs text-danger">{error}</p>}
+      {url && (
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-danger">{t("lienGenereAvertissement")}</p>
+          <div className="flex items-center gap-2">
+            <input
+              readOnly
+              value={url}
+              onFocus={(e) => e.currentTarget.select()}
+              className="flex-1 rounded-md border border-edge bg-panel-raised px-2 py-1 text-xs text-ink outline-none"
+            />
+            <button
+              type="button"
+              onClick={copy}
+              className="shrink-0 rounded-md border border-edge px-2 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+            >
+              {copied ? t("copie") : t("copier")}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * Onglet Collaboration (V2-K7) : reprend le flux d'invitation deja
  * existant au niveau campagne (`CampaignDetail.tsx`, meme route API
  * `/api/campaigns/[campaignId]/members`) plutot que d'en ecrire un
@@ -221,6 +309,7 @@ function CollaborationTab() {
                 ))}
               </ul>
             )}
+            <InviteLinkGenerator campaignId={c.campaignId} />
           </div>
         ))}
       </div>

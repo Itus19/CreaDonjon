@@ -1,0 +1,55 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { joinCampaignInviteSchema } from "@/lib/campaignInvites/schemas";
+import { claimInvite, resolveDestinationForInvitedUser, resolveInviteForJoin } from "@/src/server/services/campaignInvites";
+
+export type JoinInviteState = { error: string } | null;
+
+/**
+ * Rejoindre via un lien (V2-M4, Lot M) : ne fait jamais confiance a un
+ * `campaignId`/`worldId` transmis par le formulaire — tout part du jeton,
+ * revalide ici cote serveur, jamais du contenu cache par l'ecran precedent.
+ */
+export async function joinInviteAction(_prevState: JoinInviteState, formData: FormData): Promise<JoinInviteState> {
+  const parsed = joinCampaignInviteSchema.safeParse({
+    token: formData.get("token"),
+    role: formData.get("role"),
+    name: formData.get("name"),
+    entityId: formData.get("entityId") || undefined,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
+  }
+
+  const supabase = await createClient();
+  const resolved = await resolveInviteForJoin(supabase, parsed.data.token);
+  if (!resolved.ok) {
+    return { error: "Ce lien n'est plus valide." };
+  }
+
+  const result = await claimInvite({
+    invite: resolved.invite,
+    claim: { role: parsed.data.role, name: parsed.data.name, entityId: parsed.data.entityId },
+  });
+  if (!result.ok) {
+    const messages = {
+      role_mismatch: "Ce lien est réservé à un autre rôle.",
+      missing_entity: "Choisis un personnage.",
+      character_already_taken: "Ce personnage vient d'être pris par quelqu'un d'autre — choisis-en un autre.",
+      invite_already_claimed: "Ce lien vient d'être utilisé par quelqu'un d'autre — demande-en un nouveau.",
+    };
+    return { error: messages[result.reason] };
+  }
+
+  const { data: verified, error: verifyError } = await supabase.auth.verifyOtp({
+    type: "magiclink",
+    token_hash: result.tokenHash,
+  });
+  if (verifyError || !verified.user) {
+    return { error: "Connexion impossible, réessaie." };
+  }
+
+  redirect(await resolveDestinationForInvitedUser(supabase, resolved.invite, verified.user.id));
+}
