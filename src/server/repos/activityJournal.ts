@@ -41,6 +41,34 @@ export async function listEntityRevisionsForWorld(supabase: TypedClient, worldId
   }));
 }
 
+/**
+ * Meme forme que `listEntityRevisionsForWorld` (V2-M6) mais filtree a un
+ * ENSEMBLE d'entites precises plutot qu'un monde entier — sert au journal
+ * cote joueur (ecran d'accueil, retour utilisateur), restreint aux fiches
+ * PJ de sa campagne (jamais les fiches PNJ/lieux, qui pourraient reveler un
+ * secret de MJ). `entities!inner` reste necessaire pour le nom/slug affiches,
+ * plus de filtre par world_id ici puisque les entityIds le sont deja.
+ */
+export async function listEntityRevisionsForEntities(supabase: TypedClient, entityIds: string[]): Promise<EntityRevisionJournalRow[]> {
+  if (entityIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("entity_revisions")
+    .select("revision_number, change_source, changed_by, created_at, entities!inner(id, name, slug)")
+    .in("entity_id", entityIds)
+    .order("created_at", { ascending: false })
+    .limit(JOURNAL_LIMIT);
+  if (error) throw new Error(error.message);
+  return data.map((row) => ({
+    entity_id: row.entities.id,
+    entity_name: row.entities.name,
+    entity_slug: row.entities.slug,
+    revision_number: row.revision_number,
+    change_source: row.change_source,
+    changed_by: row.changed_by,
+    created_at: row.created_at,
+  }));
+}
+
 export interface SessionEventJournalRow {
   id: string;
   kind: string;

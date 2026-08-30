@@ -203,6 +203,22 @@ export async function isOwnCampaignCharacter(
   return data.length > 0;
 }
 
+/**
+ * Fiches PJ (`is_pc = true`) de la campagne d'UN monde ("un monde = une
+ * campagne", V2-G1) — sert a restreindre le journal cote joueur (ecran
+ * d'accueil) aux seules fiches de personnages joueurs, jamais les PNJ/lieux
+ * du MJ qui pourraient reveler un secret.
+ */
+export async function listPcEntityIdsForWorld(supabase: TypedClient, worldId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("campaign_characters")
+    .select("entity_id, campaigns!inner(world_id)")
+    .eq("campaigns.world_id", worldId)
+    .eq("is_pc", true);
+  if (error) throw new Error(error.message);
+  return data.map((r) => r.entity_id);
+}
+
 /** V2-M4 (Lot M) : vers quelle fiche rediriger un joueur qui vient de se connecter (premiere reclamation ou reouverture du meme lien) — l'inverse de `isOwnCampaignCharacter` (qui verifie UNE entite precise), ici on cherche LAQUELLE. `null` si aucune (MJ, ou joueur sans personnage revendique). */
 export async function getClaimedCharacterEntityId(
   supabase: TypedClient,

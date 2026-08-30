@@ -1,7 +1,15 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { getDisplayNamesForUsers, listEntityRevisionsForWorld, listSessionEventsForWorld } from "@/src/server/repos/activityJournal";
+import {
+  getDisplayNamesForUsers,
+  listEntityRevisionsForEntities,
+  listEntityRevisionsForWorld,
+  listSessionEventsForWorld,
+  type EntityRevisionJournalRow,
+  type SessionEventJournalRow,
+} from "@/src/server/repos/activityJournal";
+import { listPcEntityIdsForWorld } from "@/src/server/repos/campaigns";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -25,19 +33,11 @@ export interface JournalEntry {
   entityName: string | null;
 }
 
-/**
- * Journal fusionne (V2-M6, section Administration) : `entity_revisions`
- * (edition redactionnelle) et `session_events` (mutation de jeu) sont deux
- * canaux distincts depuis V1 (specs/module-joueur-et-solo.md §A3, jamais
- * confondus) — fusionnes ici uniquement pour l'AFFICHAGE, tries par date,
- * chaque ligne indiquant sa source.
- */
-export async function getMergedJournalForWorld(supabase: TypedClient, worldId: string): Promise<JournalEntry[]> {
-  const [revisions, events] = await Promise.all([
-    listEntityRevisionsForWorld(supabase, worldId),
-    listSessionEventsForWorld(supabase, worldId),
-  ]);
-
+async function mergeJournal(
+  supabase: TypedClient,
+  revisions: EntityRevisionJournalRow[],
+  events: SessionEventJournalRow[]
+): Promise<JournalEntry[]> {
   const accountIds = [
     ...revisions.map((r) => r.changed_by).filter((id): id is string => id !== null),
     ...events.map((e) => e.actor_user_id).filter((id): id is string => id !== null),
@@ -64,4 +64,39 @@ export async function getMergedJournalForWorld(supabase: TypedClient, worldId: s
   }));
 
   return [...revisionEntries, ...eventEntries].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+/**
+ * Journal fusionne (V2-M6/M7) : `entity_revisions` (edition redactionnelle)
+ * et `session_events` (mutation de jeu) sont deux canaux distincts depuis V1
+ * (specs/module-joueur-et-solo.md §A3, jamais confondus) — fusionnes ici
+ * uniquement pour l'AFFICHAGE, tries par date, chaque ligne indiquant sa
+ * source. Vue complete, jamais filtree — reservee au MJ/superadmin (verifie
+ * par l'appelant), voir `getPlayerJournalForWorld` pour la vue joueur.
+ */
+export async function getMergedJournalForWorld(supabase: TypedClient, worldId: string): Promise<JournalEntry[]> {
+  const [revisions, events] = await Promise.all([
+    listEntityRevisionsForWorld(supabase, worldId),
+    listSessionEventsForWorld(supabase, worldId),
+  ]);
+  return mergeJournal(supabase, revisions, events);
+}
+
+/**
+ * Variante cote joueur (retour utilisateur, ecran d'accueil 3 colonnes) :
+ * memes evenements de jeu (une seule campagne par monde, V2-G1 — rien a
+ * filtrer de plus que ce que `session_events_select` autorise deja), mais
+ * les revisions sont restreintes aux fiches PJ de la campagne
+ * (`listPcEntityIdsForWorld`) — jamais les PNJ/lieux du MJ, qui pourraient
+ * reveler un secret pas encore decouvert. Correspond a l'intention
+ * d'origine du suivi en direct (specs/module-joueur-et-solo.md §A3 : "le MJ
+ * voit les modifications des fiches PJ"), ici cote joueur.
+ */
+export async function getPlayerJournalForWorld(supabase: TypedClient, worldId: string): Promise<JournalEntry[]> {
+  const pcEntityIds = await listPcEntityIdsForWorld(supabase, worldId);
+  const [revisions, events] = await Promise.all([
+    listEntityRevisionsForEntities(supabase, pcEntityIds),
+    listSessionEventsForWorld(supabase, worldId),
+  ]);
+  return mergeJournal(supabase, revisions, events);
 }

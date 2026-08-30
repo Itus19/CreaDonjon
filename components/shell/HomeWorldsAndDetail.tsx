@@ -1,0 +1,178 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import type { JournalEntry } from "@/src/server/services/activityJournal";
+import WorldCardActions from "@/app/WorldCardActions";
+
+export interface HomeWorldCard {
+  id: string;
+  ownerId: string;
+  name: string;
+  slug: string;
+  mode: "campaign" | "solo" | null;
+  campaignId: string | null;
+  campaignName: string | null;
+  rulesetName: string | null;
+  lastModified: string;
+  myRole: "gm" | "player" | null;
+  myCharacter: { entityId: string; entitySlug: string; name: string } | null;
+  players: { entityId: string; name: string; speciesLabel: string | null; classesLabel: string | null }[];
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+/** Journal recent + bouton Rejoindre (retour utilisateur, colonne de droite) — le serveur adapte deja le detail au role (`/journal/mine`), rien a filtrer ici. */
+function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUserId: string }) {
+  const [entries, setEntries] = useState<JournalEntry[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/worlds/${world.slug}/journal/mine`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
+      .then((body: { entries: JournalEntry[] }) => setEntries(body.entries))
+      .catch(() => setLoadError("Impossible de charger le journal."));
+  }, [world.slug]);
+
+  const roleLabel = world.myRole === "player" ? "Joueur" : world.mode === "solo" ? "Solo" : "MJ";
+  const href =
+    world.myRole === "player" && world.myCharacter
+      ? `/m/${world.slug}/f/${world.myCharacter.entitySlug}`
+      : `/m/${world.slug}`;
+
+  return (
+    <div className="flex h-full flex-col gap-3">
+      <div>
+        <div className="flex items-center justify-between gap-2">
+          <p className="font-medium text-ink">{world.name}</p>
+          <span className="shrink-0 rounded-full border border-edge px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted">
+            {roleLabel}
+          </span>
+        </div>
+        {world.campaignName && <p className="text-xs text-ink-muted">Campagne : {world.campaignName}</p>}
+        {world.myRole !== "player" && (
+          <p className="text-xs text-ink-muted">
+            {world.rulesetName ?? "Aucun ruleset"} · Modifié le {formatDate(world.lastModified)}
+          </p>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Journal récent</span>
+        {loadError && <p className="mt-1 text-xs text-danger">{loadError}</p>}
+        {entries === null && !loadError && <p className="mt-1 text-xs text-ink-muted">…</p>}
+        {entries && entries.length === 0 && <p className="mt-1 text-xs text-ink-muted">Aucune activité pour l&apos;instant.</p>}
+        {entries && entries.length > 0 && (
+          <ul className="mt-1 flex flex-col gap-1.5 text-xs">
+            {entries.slice(0, 30).map((entry, i) => (
+              <li key={i} className="border-b border-edge/30 pb-1">
+                <span className={entry.source === "wiki" ? "text-accent" : "text-ink"}>
+                  {entry.source === "wiki" ? "wiki" : "jeu"}
+                </span>{" "}
+                <span className="text-ink-muted">
+                  {entry.label}
+                  {entry.entityName && <> — {entry.entityName}</>}
+                </span>
+                <div className="text-ink-muted">
+                  {entry.accountName} · {formatDateTime(entry.createdAt)}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {world.myRole !== "player" && (
+        <WorldCardActions
+          worldId={world.id}
+          worldSlug={world.slug}
+          worldName={world.name}
+          campaignId={world.campaignId}
+          campaignName={world.campaignName}
+          isOwner={world.ownerId === currentUserId}
+        />
+      )}
+
+      <Link
+        href={href}
+        className="self-end rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+      >
+        Rejoindre
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * Ecran d'accueil en trois colonnes (retour utilisateur) : liste des mondes
+ * au centre, detail (journal + actions + Rejoindre) a droite quand on en
+ * selectionne un — la selection reste locale a ce composant, jamais dans
+ * l'URL (pas de navigation tant qu'on n'a pas clique "Rejoindre").
+ */
+export default function HomeWorldsAndDetail({
+  worlds,
+  currentUserId,
+  createTools,
+}: {
+  worlds: HomeWorldCard[];
+  currentUserId: string;
+  /** Formulaires de creation/import (retour utilisateur : "en haut de la colonne centrale") — rendus ici plutot que par l'appelant pour rester au-dessus de la liste dans la MEME colonne du grid. */
+  createTools: React.ReactNode;
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = worlds.find((w) => w.id === selectedId) ?? null;
+
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
+      <div className="flex flex-col gap-4">
+        {createTools}
+        <ul className="flex flex-col gap-2">
+        {worlds.map((world) => {
+          const roleLabel = world.myRole === "player" ? "Joueur" : world.mode === "solo" ? "Solo" : "MJ";
+          return (
+            <li key={world.id}>
+              <button
+                type="button"
+                onClick={() => setSelectedId(world.id)}
+                className={`w-full rounded-lg border p-4 text-left transition-colors hover:bg-panel-raised ${
+                  selectedId === world.id ? "border-accent bg-panel-raised" : "border-edge bg-panel"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium text-ink">{world.name}</p>
+                  <span className="shrink-0 rounded-full border border-edge px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted">
+                    {roleLabel}
+                  </span>
+                </div>
+                {world.campaignName && <p className="text-xs text-ink-muted">Campagne : {world.campaignName}</p>}
+                {world.myRole === "player" ? (
+                  <p className="text-sm text-ink-muted">{world.myCharacter ? world.myCharacter.name : "Personnage introuvable"}</p>
+                ) : (
+                  <p className="text-sm text-ink-muted">
+                    {world.rulesetName ?? "Aucun ruleset"} · Modifié le {formatDate(world.lastModified)}
+                  </p>
+                )}
+              </button>
+            </li>
+          );
+        })}
+        {worlds.length === 0 && <p className="text-ink-muted">Aucun monde pour l&apos;instant.</p>}
+        </ul>
+      </div>
+
+      <div className="rounded-lg border border-edge bg-panel-sunken p-4">
+        {selected ? (
+          <WorldDetail world={selected} currentUserId={currentUserId} />
+        ) : (
+          <p className="text-sm text-ink-muted">Sélectionnez un monde pour voir son détail.</p>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -6,15 +6,15 @@ import { useTranslations } from "next-intl";
 import {
   deleteAccountAction,
   setLocaleAction,
-  updateDisplayNameAction,
   type DeleteAccountState,
-  type UpdateDisplayNameState,
 } from "@/app/settings/actions";
 import { updateWikiWelcomeMessageAction, type UpdateWikiWelcomeMessageState } from "@/app/m/[worldSlug]/wikiSettingsActions";
 import ShareLinkPanel from "./ShareLinkPanel";
 import type { ShareLinkSummary } from "@/src/server/services/shareLinks";
 import InviteLinkPanel from "./InviteLinkPanel";
 import MyInvitePanel from "./MyInvitePanel";
+import DisplayNameForm from "./DisplayNameForm";
+import PasswordForm from "./PasswordForm";
 import Tabs from "@/components/shared/Tabs";
 import RulesetSelector from "@/components/rules/RulesetSelector";
 import BackgroundPicker, { type BackgroundSelection } from "./BackgroundPicker";
@@ -23,34 +23,6 @@ const MODES = ["dark", "dim", "soft", "light"] as const;
 
 function setCookie(name: string, value: string) {
   document.cookie = `${name}=${value}; path=/; max-age=31536000`;
-}
-
-function DisplayNameForm({ initialDisplayName }: { initialDisplayName: string }) {
-  const t = useTranslations("settings.compte");
-  const [state, formAction, pending] = useActionState<UpdateDisplayNameState, FormData>(
-    updateDisplayNameAction,
-    null,
-  );
-
-  return (
-    <form action={formAction} className="flex items-center gap-2">
-      <input
-        name="displayName"
-        defaultValue={initialDisplayName}
-        placeholder={t("pseudoPlaceholder")}
-        maxLength={80}
-        className="flex-1 rounded-md border border-edge bg-panel-raised px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
-      />
-      <button
-        type="submit"
-        disabled={pending}
-        className="shrink-0 rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
-      >
-        {state && "ok" in state ? t("enregistre") : t("enregistrer")}
-      </button>
-      {state && "error" in state && <p className="text-xs text-danger">{state.error}</p>}
-    </form>
-  );
 }
 
 /**
@@ -527,6 +499,7 @@ export default function SettingsMenu({
                   </h3>
                   <p className="text-sm text-ink-muted">{email}</p>
                   <DisplayNameForm initialDisplayName={displayName} />
+                  <PasswordForm />
                 </section>
 
                 <MyInvitePanel />

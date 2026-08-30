@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { setLocaleSchema, updateDisplayNameSchema, deleteAccountSchema } from "@/lib/settings/schemas";
+import { resetPasswordSchema } from "@/lib/auth/schemas";
 import { updateOwnProfile, deleteOwnAccount } from "@/src/server/repos/account";
 
 /** Cookie seul (comme "mode"), plus profiles.locale pour que la preference survive un changement de navigateur/appareil. */
@@ -43,6 +44,38 @@ export async function updateDisplayNameAction(
 
   await updateOwnProfile(supabase, user.id, { displayName: parsed.data.displayName });
   revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export type UpdatePasswordState = { error: string } | { ok: true } | null;
+
+/**
+ * Definir/changer son propre mot de passe (retour utilisateur, ecran
+ * d'accueil 3 colonnes) — toujours optionnel : les comptes invites restent
+ * SANS mot de passe par defaut (lien magique uniquement, ADR provisioning),
+ * ceci n'est jamais impose ni requis pour rejoindre. Reutilise
+ * `resetPasswordSchema` (meme regle que "mot de passe oublie") et le meme
+ * appel `auth.updateUser`, sans le redirect de `app/auth/reset-password/
+ * actions.ts` — ici c'est un formulaire en place, pas une page dediee.
+ */
+export async function updateOwnPasswordAction(
+  _prevState: UpdatePasswordState,
+  formData: FormData,
+): Promise<UpdatePasswordState> {
+  const parsed = resetPasswordSchema.safeParse({ password: formData.get("password") });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Session expiree, reconnectez-vous." };
+
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  if (error) return { error: "Impossible de mettre a jour le mot de passe." };
+
   return { ok: true };
 }
 

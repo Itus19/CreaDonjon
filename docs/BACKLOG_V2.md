@@ -902,6 +902,17 @@ Effet de bord trouvé en vérifiant en direct : le monde de démo `mj-demo@cread
 - [x] Un MJ peut révoquer la fiche PJ d'un joueur (elle redevient sélectionnable), sans passer par le superadmin.
 - [x] Aucune action de ce panneau n'est disponible à un simple joueur (vérifié par test d'intégration dédié, `src/server/services/entityGrants.integration.test.ts` : `isWorldAdmin` et les trois services `entity_grants` refusent un simple joueur, `forbidden`).
 
+### V2-M7c — Écran d'accueil en trois colonnes · `M` — fait
+
+Retour utilisateur (30 août) : refonte de `/` en trois colonnes — profil (nom et mot de passe modifiables en place, toujours optionnel pour les comptes invités), mondes/campagnes au centre (création/import en haut, liste en dessous), détail du monde sélectionné à droite (journal récent + bouton Rejoindre + actions Exporter/Dupliquer/Renommer/Supprimer pour un MJ). La sélection reste locale au composant (pas de navigation avant de cliquer Rejoindre).
+
+Le journal de la colonne de droite s'adapte au rôle plutôt que de dupliquer une route par rôle (`GET /api/worlds/[worldSlug]/journal/mine`) : un MJ reçoit le journal complet du monde (`getMergedJournalForWorld`, M6/M7), un joueur reçoit une vue restreinte aux fiches PJ de sa campagne (`getPlayerJournalForWorld`, nouveau) — jamais les PNJ/lieux du MJ, qui pourraient révéler un secret pas encore découvert. Correspond à l'intention d'origine du suivi en direct (specs/module-joueur-et-solo.md §A3 : « le MJ voit les modifications des fiches PJ »), étendue ici côté joueur.
+
+**Critères**
+- [x] Colonne profil : nom modifiable en place avec bouton Enregistrer (réutilise `DisplayNameForm`, déjà en place depuis V1-A1) et mot de passe modifiable en place, toujours optionnel — jamais imposé aux comptes invités (lien magique uniquement).
+- [x] Colonne centrale : création/import de monde en haut, liste des mondes/campagnes en dessous.
+- [x] Colonne de droite : cliquer un monde affiche son journal récent et un bouton Rejoindre — le contenu du journal dépend du rôle réel du compte dans ce monde (vérifié par test d'intégration dédié, `src/server/services/activityJournal.integration.test.ts` : un PNJ secret n'apparaît jamais dans la vue joueur, apparaît dans la vue MJ).
+
 ### V2-M7b — Coquille joueur allégée · `M`
 
 Plus tard, une fois l'écran d'accueil unifié et la fiche de personnage réclamée éprouvés en usage réel — voir comment ça se sent avant d'investir dans une coquille dédiée. Même coquille que la MJ (`MondeShell`/`AppShell`), sans les onglets Règles ni les outils MJ, sidebar remplacée par la liste `{sa fiche PJ} ∪ {entity_grants pour lui}` plutôt que l'arbre complet par `entity_kind`. S'appuie entièrement sur `canEditEntity` (M3) pour savoir quoi afficher en écriture, et sur la visibilité existante pour le reste du wiki (comportement déjà en place, rien à changer côté serveur).
