@@ -153,6 +153,7 @@ export async function listUnclaimedCharactersForToken(supabase: TypedClient, tok
 export async function claimInvite(params: {
   invite: ResolvedCampaignInvite;
   claim?: { role: "gm" | "player"; name: string; entityId?: string };
+  existingUserId?: string;
 }): Promise<ProvisionInviteResult> {
   return provisionInviteSession(params);
 }

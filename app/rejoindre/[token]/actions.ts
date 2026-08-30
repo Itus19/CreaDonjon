@@ -37,9 +37,17 @@ export async function joinInviteAction(_prevState: JoinInviteState, formData: Fo
     return { error: "Mot de passe requis." };
   }
 
+  // Retour utilisateur 30 aout ("Jeremy MJ dans un monde ET joueur dans un
+  // autre") : une session deja ouverte (via un lien precedent) recoit ce
+  // nouveau role/personnage sur le MEME compte, jamais un second.
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+
   const result = await claimInvite({
     invite: resolved.invite,
     claim: { role: parsed.data.role, name: parsed.data.name, entityId: parsed.data.entityId },
+    existingUserId: currentUser?.id,
   });
   if (!result.ok) {
     const messages = {
@@ -51,13 +59,18 @@ export async function joinInviteAction(_prevState: JoinInviteState, formData: Fo
     return { error: messages[result.reason] };
   }
 
-  const { data: verified, error: verifyError } = await supabase.auth.verifyOtp({
-    type: "magiclink",
-    token_hash: result.tokenHash,
-  });
-  if (verifyError || !verified.user) {
-    return { error: "Connexion impossible, réessaie." };
+  let userId = currentUser?.id;
+  if (result.tokenHash) {
+    const { data: verified, error: verifyError } = await supabase.auth.verifyOtp({
+      type: "magiclink",
+      token_hash: result.tokenHash,
+    });
+    if (verifyError || !verified.user) {
+      return { error: "Connexion impossible, réessaie." };
+    }
+    userId = verified.user.id;
   }
+  if (!userId) throw new Error("Session introuvable apres reclamation (invariant interne).");
 
-  redirect(await resolveDestinationForInvitedUser(supabase, resolved.invite, verified.user.id));
+  redirect(await resolveDestinationForInvitedUser(supabase, resolved.invite, userId));
 }

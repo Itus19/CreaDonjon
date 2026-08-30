@@ -25,19 +25,28 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.redirect(new URL(`/rejoindre/${token}`, request.url));
   }
 
-  const result = await claimInvite({ invite: resolved.invite });
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+
+  const result = await claimInvite({ invite: resolved.invite, existingUserId: currentUser?.id });
   if (!result.ok) {
     return NextResponse.redirect(new URL(`/rejoindre/${token}`, request.url));
   }
 
-  const { data: verified, error: verifyError } = await supabase.auth.verifyOtp({
-    type: "magiclink",
-    token_hash: result.tokenHash,
-  });
-  if (verifyError || !verified.user) {
-    return NextResponse.redirect(new URL(`/rejoindre/${token}`, request.url));
+  let userId = currentUser?.id;
+  if (result.tokenHash) {
+    const { data: verified, error: verifyError } = await supabase.auth.verifyOtp({
+      type: "magiclink",
+      token_hash: result.tokenHash,
+    });
+    if (verifyError || !verified.user) {
+      return NextResponse.redirect(new URL(`/rejoindre/${token}`, request.url));
+    }
+    userId = verified.user.id;
   }
+  if (!userId) return NextResponse.redirect(new URL(`/rejoindre/${token}`, request.url));
 
-  const destination = await resolveDestinationForInvitedUser(supabase, resolved.invite, verified.user.id);
+  const destination = await resolveDestinationForInvitedUser(supabase, resolved.invite, userId);
   return NextResponse.redirect(new URL(destination, request.url));
 }

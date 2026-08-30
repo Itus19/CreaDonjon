@@ -122,6 +122,7 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
     const claim = await claimInvite({ invite: resolved.invite, claim: { role: "player", name: "Jérémy", entityId: entityAId } });
     expect(claim.ok).toBe(true);
     if (!claim.ok) return;
+    if (!claim.tokenHash) throw new Error("premiere reclamation sans session existante : un tokenHash est toujours attendu");
 
     const { data: verified, error: verifyError } = await anon.auth.verifyOtp({ type: "magiclink", token_hash: claim.tokenHash });
     if (verifyError || !verified.user) throw new Error(verifyError?.message ?? "session non etablie");
@@ -172,6 +173,7 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
     if (!firstResolve.ok) throw new Error("resolution echouee");
     const firstClaim = await claimInvite({ invite: firstResolve.invite, claim: { role: "gm", name: "Jérémy MJ" } });
     if (!firstClaim.ok) throw new Error("reclamation echouee");
+    if (!firstClaim.tokenHash) throw new Error("premiere reclamation sans session existante : un tokenHash est toujours attendu");
     const { data: firstSession, error: firstError } = await anon.auth.verifyOtp({ type: "magiclink", token_hash: firstClaim.tokenHash });
     if (firstError || !firstSession.user) throw new Error("premiere session echouee");
     createdInvitedUserIds.push(firstSession.user.id);
@@ -183,6 +185,7 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
 
     const secondClaim = await claimInvite({ invite: secondResolve.invite });
     if (!secondClaim.ok) throw new Error("reouverture echouee");
+    if (!secondClaim.tokenHash) throw new Error("reouverture sans existingUserId : un tokenHash est toujours attendu ici");
     const { data: secondSession, error: secondError } = await anon.auth.verifyOtp({ type: "magiclink", token_hash: secondClaim.tokenHash });
     if (secondError || !secondSession.user) throw new Error("seconde session echouee");
 
@@ -224,6 +227,7 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
     if (!resolved.ok) throw new Error("resolution echouee");
     const claim = await claimInvite({ invite: resolved.invite, claim: { role: "gm", name: "Antoine MJ" } });
     if (!claim.ok) throw new Error("reclamation echouee");
+    if (!claim.tokenHash) throw new Error("premiere reclamation sans session existante : un tokenHash est toujours attendu");
     const { data: session, error: sessionError } = await anon.auth.verifyOtp({ type: "magiclink", token_hash: claim.tokenHash });
     if (sessionError || !session.user) throw new Error("session echouee");
     createdInvitedUserIds.push(session.user.id);
@@ -252,5 +256,98 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
 
     const byOutsider = await setInvitePassword(outsiderClient, { inviteId: invite.id, password: "vole-par-un-tiers" });
     expect(byOutsider.allowed).toBe(false);
+  });
+
+  it("une session deja ouverte qui reclame un second lien ajoute le role au MEME compte, jamais un second (retour utilisateur : MJ dans un monde ET joueur dans un autre)", async () => {
+    // Deuxieme monde/campagne, distinct de la fixture partagee : c'est
+    // precisement le scenario "un role different dans un AUTRE monde".
+    const { data: secondWorld, error: secondWorldError } = await admin
+      .from("worlds")
+      .insert({ name: "Second monde de test invitations", slug: `integration-test-invites-2-${Date.now()}`, owner_id: ownerId })
+      .select("id")
+      .single();
+    if (secondWorldError || !secondWorld) throw new Error(secondWorldError?.message ?? "creation second monde echouee");
+
+    const { data: official } = await admin.from("rulesets").select("id").eq("is_official_base", true).limit(1).single();
+    const { data: secondCampaign, error: secondCampaignError } = await admin
+      .from("campaigns")
+      .insert({ world_id: secondWorld.id, name: "Seconde campagne de test", ruleset_id: official!.id, mode: "campaign" })
+      .select("id")
+      .single();
+    if (secondCampaignError || !secondCampaign) throw new Error(secondCampaignError?.message ?? "creation seconde campagne echouee");
+
+    // Un troisieme personnage, dedie a ce test : `entityAId`/`entityBId`
+    // sont deja reclames par des tests precedents de ce meme fichier.
+    const { data: entityC, error: entityCError } = await admin
+      .from("entities")
+      .insert({ world_id: worldId, slug: `pj-c-${Date.now()}`, name: "PJ C", entity_kind: "character", created_by: ownerId })
+      .select("id")
+      .single();
+    if (entityCError || !entityC) throw new Error(entityCError?.message ?? "creation entite echouee");
+    const { error: entityCCharacterError } = await admin
+      .from("campaign_characters")
+      .insert({ campaign_id: campaignId, entity_id: entityC.id, is_pc: true, user_id: null });
+    if (entityCCharacterError) throw new Error(entityCCharacterError.message);
+
+    try {
+      // Premier lien : Jeremy rejoint comme JOUEUR sur la campagne de la fixture.
+      const { token: firstToken } = await createCampaignInvite(ownerClient, {
+        campaignId,
+        worldId: null,
+        intendedRole: "player",
+        createdBy: ownerId,
+      });
+      const anon = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
+      const firstResolved = await resolveInviteForJoin(anon, firstToken);
+      if (!firstResolved.ok) throw new Error("premiere resolution echouee");
+      const firstClaim = await claimInvite({
+        invite: firstResolved.invite,
+        claim: { role: "player", name: "Jérémy", entityId: entityC.id },
+      });
+      if (!firstClaim.ok) throw new Error("premiere reclamation echouee");
+      if (!firstClaim.tokenHash) throw new Error("premiere reclamation sans session existante : un tokenHash est toujours attendu");
+      const { data: firstSession, error: firstSessionError } = await anon.auth.verifyOtp({
+        type: "magiclink",
+        token_hash: firstClaim.tokenHash,
+      });
+      if (firstSessionError || !firstSession.user) throw new Error("premiere session echouee");
+      createdInvitedUserIds.push(firstSession.user.id);
+
+      // Deuxieme lien, SUR LE SECOND MONDE, reclame en tant que MJ — la
+      // session de `anon` est deja ouverte (meme client reutilise) : ceci
+      // exerce `existingUserId`, jamais un compte createUser une seconde fois.
+      const { token: secondToken } = await createCampaignInvite(ownerClient, {
+        campaignId: secondCampaign.id,
+        worldId: null,
+        intendedRole: "gm",
+        createdBy: ownerId,
+      });
+      const secondResolved = await resolveInviteForJoin(anon, secondToken);
+      if (!secondResolved.ok) throw new Error("seconde resolution echouee");
+      const {
+        data: { user: sessionBeforeSecondClaim },
+      } = await anon.auth.getUser();
+      const secondClaim = await claimInvite({
+        invite: secondResolved.invite,
+        claim: { role: "gm", name: "Jérémy MJ" },
+        existingUserId: sessionBeforeSecondClaim?.id,
+      });
+      if (!secondClaim.ok) throw new Error("seconde reclamation echouee");
+
+      // Aucune nouvelle session necessaire : c'est le signal que le role
+      // s'est ajoute au compte courant, pas a un nouveau.
+      expect(secondClaim.tokenHash).toBeNull();
+
+      // Le MEME compte porte desormais les deux roles, sur deux mondes distincts.
+      const { data: membership } = await anon
+        .from("campaign_members")
+        .select("campaign_id, role")
+        .eq("user_id", firstSession.user.id);
+      const roles = new Map(membership?.map((m) => [m.campaign_id, m.role]));
+      expect(roles.get(campaignId)).toBe("player");
+      expect(roles.get(secondCampaign.id)).toBe("gm");
+    } finally {
+      await admin.from("worlds").delete().eq("id", secondWorld.id);
+    }
   });
 });
