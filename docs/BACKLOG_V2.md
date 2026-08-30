@@ -858,37 +858,57 @@ Premier passage sur le lien : compte créé, écran « Je suis MJ / Je suis PJ �
 
 **Suite, retour utilisateur 30 août — le générateur minimal ci-dessus est remplacé par un panneau complet, même principe que `ShareLinkPanel.tsx`** : le jeton en clair est désormais conservé (`campaign_invites.token`, même choix que `share_links` — migration 20260826180001), une vraie liste (créer/copier/révoquer) plutôt qu'un lien perdu après affichage. Ajout demandé en plus : un mot de passe optionnel sur le lien (`password_hash`/`password_attempts`, même mécanisme scrypt que `share_links` — migration 20260809210001, code réutilisé tel quel), modifiable uniquement par le superadmin/MJ du monde OU par la personne qui a réclamé ce lien précis, jamais un tiers — vérifié par une fonction dédiée (`app.set_campaign_invite_password`) qui ne touche jamais que cette seule colonne, jamais par une politique RLS large qui aurait laissé l'ami réécrire son propre rôle. Testé par 2 tests d'intégration de plus (verrouillage à 10 essais ; les trois profils de droit sur le mot de passe). Reste dans le périmètre de V2-M5 : le panneau **superadmin** transversal (tous mondes confondus) et le journal fusionné — ce qui précède est le panneau **par campagne**, dans Collaboration.
 
-### V2-M5 — Panneau superadmin : comptes, accès et journal fusionné · `M`
+### Préalable — un compte, plusieurs rôles · fait
 
-Vue transversale, réservée à `is_superadmin()`, qui traverse les mondes sans passer par `is_world_member` — c'est précisément le rôle de la fonction RLS posée en M2. Le journal n'est presque pas une nouveauté : `entity_revisions.changed_by` et `session_events.actor_user_id` existent déjà et portent l'auteur de chaque changement ; ce ticket est surtout une vue de lecture qui fusionne les deux tri par date, filtrable par compte/monde.
+Trouvé en discutant M5 (retour utilisateur 30 août : « Jérémy MJ dans un monde ET joueur dans un autre »). Réclamer un lien pas encore réclamé, depuis une session déjà ouverte (via un lien précédent), ajoute désormais ce nouveau rôle/personnage à CE compte plutôt que d'en créer un second — `provisionInviteSession` accepte `existingUserId`, le marquage « invitation réclamée » est devenu course-safe par lui-même (`UPDATE ... WHERE claimed_by_user_id IS NULL`, ne dépend plus de l'unicité d'email de GoTrue). Vérifié par un test d'intégration dédié (même compte, joueur sur un monde et MJ sur un second).
 
-- Liste des comptes créés via M4, avec leur(s) monde(s)/personnage(s), et trois actions : révoquer (libère la fiche, comme M4/M6), réinitialiser (régénère le jeton, invalide l'ancien lien), supprimer (compte + ses revendications).
-- Journal fusionné `entity_revisions` + `session_events`, même principe de fusion que celui décrit dans `specs/module-joueur-et-solo.md` §A3 pour le MJ, mais sans le filtre par campagne — superadmin voit tout.
+**Reformulation du reste du lot, retour utilisateur 30 août** : pas trois écrans d'accueil séparés par rôle fixe, mais **un seul écran d'accueil unifié** qui recense, pour chaque monde/campagne où le compte participe, le rôle qu'il y tient — puisqu'un même compte peut désormais être MJ ici et joueur là. Le superadmin voit ce même écran (ce sont aussi ses mondes), avec une section Administration en plus. L'image de tableau de bord fournie comme inspiration (cartes de stats, graphiques) sert de ton, pas de gabarit visuel — tout est reconstruit avec nos propres jetons (`panel`, `accent`, `font-mech`), jamais le thème Bootstrap générique de l'image.
+
+### V2-M5 — Écran d'accueil unifié : mes mondes et mon rôle dans chacun · `M`
+
+Remplace l'écran actuel de `/` (aujourd'hui : une simple liste de mondes, sans distinguer le rôle qu'on y tient). Pour chaque monde/campagne dont le compte est membre : le nom, **le rôle qu'on y tient** (MJ, ou Joueur avec le nom du personnage réclamé), et un lien vers le bon endroit — `/m/[slug]` pour un rôle MJ (comportement actuel, inchangé), la fiche du personnage réclamé pour un rôle Joueur (`campaign_characters` où `user_id = auth.uid()`, déjà résolu par `getClaimedCharacterEntityId`, V2-M4).
+
+`listWorldCardsForCurrentUser` (`src/server/repos/worlds.ts`) donne déjà la liste des mondes accessibles ; il manque le rôle par ligne et, pour un rôle Joueur, le personnage réclamé — à ajouter à la même requête plutôt qu'un aller-retour séparé par monde.
 
 **Critères**
-- [ ] Le panneau n'est accessible qu'à `is_superadmin()`, refusé côté serveur pour tout autre compte.
+- [ ] Chaque monde listé affiche le rôle réel du compte dans CE monde (pas un rôle global figé) — un compte MJ d'un monde et joueur d'un autre voit les deux étiquettes correctement.
+- [ ] Un rôle Joueur affiche le nom du personnage réclamé et mène directement à sa fiche.
+- [ ] Un rôle MJ mène à `/m/[slug]`, comme aujourd'hui — aucune régression sur ce chemin déjà utilisé quotidiennement.
+- [ ] Le superadmin voit cet écran comme n'importe quel compte pour ses propres mondes (Valdoria, Faerûn...).
+
+### V2-M6 — Section Administration (superadmin) sur l'écran d'accueil · `M`
+
+Visible uniquement pour `is_superadmin()`, sur ce même écran (pas une page séparée) — c'est précisément le rôle de `app.is_superadmin()` posé en M2. Reprend et étend `InviteLinkPanel.tsx` (V2-M4, aujourd'hui limité à une campagne à la fois) en vue transversale tous mondes confondus : lister/révoquer/réinitialiser un lien, supprimer un compte, et le journal fusionné (`entity_revisions.changed_by` + `session_events.actor_user_id`, déjà porteurs de l'auteur — surtout une vue de lecture qui fusionne les deux triée par date, filtrable par compte/monde, sans le filtre par campagne que M7 impose à la version MJ).
+
+**Critères**
+- [ ] La section n'est visible et accessible qu'à `is_superadmin()`, refusé côté serveur pour tout autre compte.
 - [ ] Réinitialiser un lien invalide l'ancien jeton immédiatement.
 - [ ] Supprimer un compte libère ses fiches revendiquées et ses `entity_grants`.
 - [ ] Le journal affiche, pour un monde donné, les modifications de tous les comptes qui y ont touché, triées par date, sans confondre révision de fiche et événement de jeu.
 
-### V2-M6 — Panneau MJ : accorder l'édition d'une fiche à un joueur · `S`/`M`
+### V2-M7 — Journal MJ par monde et octroi d'édition d'une fiche · `S`/`M`
 
-Le pendant « par monde » de M5, pour un MJ qui n'est pas superadmin (utilisateur normal ou ami MJ) : gérer `entity_grants` pour ses propres fiches, et révoquer une fiche PJ réclamée dans sa campagne. Probablement un nouvel onglet dans `SettingsMenu.tsx` (à côté de Collaboration) plutôt qu'un écran séparé — à confirmer une fois M3 posé.
+Le pendant « par monde » de M6, pour un MJ qui n'est pas superadmin (propriétaire/éditeur normal, ou ami MJ) : dans l'espace MJ d'un monde (`/m/[slug]/mj`), le même principe de journal fusionné que M6 mais filtré à CE monde (`specs/module-joueur-et-solo.md` §A3), plus la gestion de `entity_grants` pour ses propres fiches et la révocation d'une fiche PJ réclamée dans sa campagne.
 
 **Critères**
+- [ ] Un MJ propriétaire/éditeur du monde voit le journal fusionné filtré à son monde, jamais les autres mondes du compte qui le consulte.
 - [ ] Un MJ propriétaire/éditeur du monde peut accorder ou retirer l'édition d'une fiche précise à un joueur de sa campagne.
 - [ ] Un MJ peut révoquer la fiche PJ d'un joueur (elle redevient sélectionnable), sans passer par le superadmin.
 - [ ] Aucune action de ce panneau n'est disponible à un simple joueur.
 
-### V2-M7 — Interface PJ allégée · `M`
+### V2-M7b — Coquille joueur allégée · `M`
 
-Même coquille que la MJ (`MondeShell`/`AppShell`), sans les onglets Règles ni les outils MJ, sidebar remplacée par la liste `{sa fiche PJ} ∪ {entity_grants pour lui}` plutôt que l'arbre complet par `entity_kind`. S'appuie entièrement sur `canEditEntity` (M3) pour savoir quoi afficher en écriture, et sur la visibilité existante pour le reste du wiki (comportement déjà en place, rien à changer côté serveur).
+Plus tard, une fois l'écran d'accueil unifié et la fiche de personnage réclamée éprouvés en usage réel — voir comment ça se sent avant d'investir dans une coquille dédiée. Même coquille que la MJ (`MondeShell`/`AppShell`), sans les onglets Règles ni les outils MJ, sidebar remplacée par la liste `{sa fiche PJ} ∪ {entity_grants pour lui}` plutôt que l'arbre complet par `entity_kind`. S'appuie entièrement sur `canEditEntity` (M3) pour savoir quoi afficher en écriture, et sur la visibilité existante pour le reste du wiki (comportement déjà en place, rien à changer côté serveur).
 
 **Critères**
 - [ ] Un PJ voit sa fiche et les fiches qui lui ont été accordées, rien d'autre dans sa sidebar.
 - [ ] Aucun onglet Règles ni outil MJ n'apparaît pour ce rôle.
 - [ ] Le wiki reste consultable en lecture selon la visibilité normale (public/joueurs), sans régression.
 - [ ] Utilisable sur téléphone (même contrainte 375 px que la fiche jouable, `specs/module-joueur-et-solo.md` §A5).
+
+### Idée future — stats de jets amusantes
+
+Notée telle quelle (retour utilisateur 30 août), pas un ticket : des statistiques rigolotes de jets de dés — les siens en tant que joueur, ceux de chaque joueur pour son MJ. Suppose de vérifier d'abord que les jets individuels sont conservés sous une forme exploitable pour un tel calcul (`session_events` de type `roll`, à confirmer) avant d'y engager du travail réel.
 
 ### V2-M8 — Collaboration MJ amis : dupliquer Valdoria, ajouter des éditeurs · `S`
 
@@ -898,7 +918,7 @@ S'appuie sur l'export/duplication déjà en place (session du 29 août) et sur `
 - [ ] Dupliquer Valdoria trois fois donne trois mondes distincts, chacun avec son propre nom de campagne (M1) pour les distinguer.
 - [ ] Un ami ajouté via un lien `gm` édite la copie visée, jamais les deux autres.
 - [ ] Un ami MJ peut créer ses propres mondes, jamais en mode solo.
-- [ ] Le journal superadmin (M5) distingue clairement quel compte a modifié quelle copie.
+- [ ] Le journal superadmin (M6) distingue clairement quel compte a modifié quelle copie.
 
 ---
 
