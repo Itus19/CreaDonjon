@@ -165,7 +165,7 @@ describe.skipIf(!hasCreds)("resserrement de la RLS d'ecriture (integration, base
   ] as const;
 
   function ctxFor(profile: string) {
-    return { isOwnCharacter: profile === "ownCharacterPlayer", isGranted: profile === "grantedPlayer" };
+    return { isOwnCharacter: profile === "ownCharacterPlayer", isGranted: profile === "grantedPlayer", isOwnPrivateNotes: false };
   }
 
   async function canRenameEntity(client: SupabaseClient, name: string): Promise<boolean> {
@@ -231,5 +231,27 @@ describe.skipIf(!hasCreds)("resserrement de la RLS d'ecriture (integration, base
     const { data, error } = await clients.campaignGm.from("campaigns").update({ name: "Campagne renommee par le MJ" }).eq("id", campaignId).select("id");
     if (error) throw new Error(error.message);
     expect(data?.length ?? 0).toBe(1);
+  });
+
+  it("entity_kind 'notes' : son createur peut la modifier, un autre membre du monde ne peut pas (5e cas de canEditEntity, V2-M7b)", async () => {
+    const { data: notesEntity, error: insertError } = await clients.plainPlayer
+      .from("entities")
+      .insert({ world_id: worldId, slug: "notes-plainplayer-test", name: "Mes notes", entity_kind: "notes", created_by: userIds.plainPlayer })
+      .select("id")
+      .single();
+    if (insertError) throw new Error(insertError.message);
+
+    expect(canEditEntity(viewerFor("plainPlayer"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: true })).toBe(true);
+    expect(canEditEntity(viewerFor("outsider"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false })).toBe(false);
+
+    const byCreator = await clients.plainPlayer.from("entities").update({ name: "Mes notes (modifiees)" }).eq("id", notesEntity.id).select("id");
+    if (byCreator.error) throw new Error(byCreator.error.message);
+    expect(byCreator.data?.length ?? 0).toBe(1);
+
+    const byOtherMember = await clients.grantedPlayer.from("entities").update({ name: "Vole" }).eq("id", notesEntity.id).select("id");
+    if (byOtherMember.error) throw new Error(byOtherMember.error.message);
+    expect(byOtherMember.data?.length ?? 0).toBe(0);
+
+    await admin.from("entities").delete().eq("id", notesEntity.id);
   });
 });

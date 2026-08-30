@@ -10,10 +10,11 @@ import { getEntityById } from "@/src/server/repos/entities";
 type TypedClient = SupabaseClient<Database>;
 
 /**
- * V2-M3 (Lot M) — seul point d'appel de `canEditEntity` cote service :
- * resout les trois faits dont la fonction pure a besoin (`worldRole`,
- * `campaignRoles`, `isOwnCharacter`, `isGranted`) puis l'applique. Jamais un
- * second test ecrit en dur dans `entities.ts`/`blocks.ts`/ailleurs.
+ * V2-M3 (Lot M ; 5e fait V2-M7b) — seul point d'appel de `canEditEntity`
+ * cote service : resout les faits dont la fonction pure a besoin
+ * (`worldRole`, `campaignRoles`, `isOwnCharacter`, `isGranted`,
+ * `isOwnPrivateNotes`) puis l'applique. Jamais un second test ecrit en dur
+ * dans `entities.ts`/`blocks.ts`/ailleurs.
  *
  * Verifie ici, cote service (PDD §28 : « la RLS n'est pas la securite,
  * c'est le filet ») — la RLS resserree par la meme migration reste le
@@ -25,12 +26,14 @@ export async function canUserEditEntity(
   supabase: TypedClient,
   params: { worldId: string; entityId: string; userId: string }
 ): Promise<boolean> {
-  const [viewer, isOwnCharacter, isGranted] = await Promise.all([
+  const [viewer, isOwnCharacter, isGranted, entity] = await Promise.all([
     buildViewerForWorld(supabase, params.worldId, params.userId),
     isOwnCampaignCharacter(supabase, params),
     hasEntityGrant(supabase, params),
+    getEntityById(supabase, params.entityId),
   ]);
-  return canEditEntity(viewer, { isOwnCharacter, isGranted });
+  const isOwnPrivateNotes = entity?.entity_kind === "notes" && entity.created_by === params.userId;
+  return canEditEntity(viewer, { isOwnCharacter, isGranted, isOwnPrivateNotes });
 }
 
 /**

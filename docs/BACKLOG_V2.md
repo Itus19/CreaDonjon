@@ -930,15 +930,29 @@ Le filet de sécurité (cookie httpOnly `view_as_admin_uid`, bandeau permanent `
 - [x] Le changement de session est réel : la page suivante reflète exactement le rôle et les données visibles par ce compte (vérifié en direct : rôle Joueur, campagne correcte, personnage introuvable car non réclamé).
 - [x] Un bandeau reste visible sur toute page tant que ce mode est actif, avec un retour immédiat vers le compte superadmin — vérifié en direct, cycle complet aller-retour dans le même onglet sans perte d'accès.
 
-### V2-M7b — Coquille joueur allégée · `M`
+### V2-M7b — Coquille joueur allégée · `M` — fait (première tranche)
 
-Plus tard, une fois l'écran d'accueil unifié et la fiche de personnage réclamée éprouvés en usage réel — voir comment ça se sent avant d'investir dans une coquille dédiée. Même coquille que la MJ (`MondeShell`/`AppShell`), sans les onglets Règles ni les outils MJ, sidebar remplacée par la liste `{sa fiche PJ} ∪ {entity_grants pour lui}` plutôt que l'arbre complet par `entity_kind`. S'appuie entièrement sur `canEditEntity` (M3) pour savoir quoi afficher en écriture, et sur la visibilité existante pour le reste du wiki (comportement déjà en place, rien à changer côté serveur).
+Retour utilisateur (30 août, avec maquette) : révise le plan initial ci-dessous sur deux points, après discussion et une maquette mobile validée.
+
+**Révision 1 — quatre onglets, pas trois.** Fiche / Notes / Wiki / Règles, jamais l'onglet MJ. Wiki et Règles restent SÉPARÉS (pas fusionnés) : le joueur garde la possibilité de se balader dans les deux, en lecture seule. Barre d'onglets en bas sur mobile (zone du pouce, inspiration DnD Beyond), même quatre destinations en rail latéral sur tablette/PC — un seul composant responsive (`PlayerShell`), jamais deux implémentations.
+
+**Révision 2 — route et coquille propres, pas une variante de celle du MJ.** Nouvelle route `/m/[worldSlug]/joueur/*`, en dehors de `MondeShell`/`WindowsDesktop` (le systeme de fenêtres flottantes est un paradigme desktop, pas mobile) — hérite `AppShell`/`DesktopWindowsProvider` du layout parent (`app/m/[worldSlug]/layout.tsx`, inévitable en Next.js App Router) mais ne les utilise pas, ils s'effacent (`WindowsDesktop` sans provider actif rend ses enfants tels quels). Distinct de `/j/[token]/[campagne]` (specs/module-joueur-et-solo.md §A5) : cette dernière route est le futur Compagnon PJ (V3, session live avec IA) — un produit différent, pas une variante de cette coquille.
+
+**Notes — tranché dans `specs/module-joueur-et-solo.md` (« Ce qui reste ouvert ») : une entité `notes` privée par joueur, avec les blocs existants, pas de second système.** Trouvé en creusant : ça exige deux choses qui n'existaient pas —
+1. `canEditEntity` n'avait aucun cas pour « j'ai créé cette entité » — une 5ᵉ branche ajoutée (mirroir SQL `app.can_edit_entity` inclus, migration dédiée), sinon un joueur peut créer sa fiche de notes (`entities_insert` est déjà ouvert à tout membre) mais jamais y toucher ensuite.
+2. Rien ne filtrait une entité par son créateur dans l'arbre de la sidebar MJ (`getEntityTree`) — sans ça, « Notes de Claude » apparaîtrait dans la sidebar de Gabriel, contredisant le critère « invisibles du MJ tant qu'il ne les partage pas ». Filtré par `entity_kind === 'notes' && created_by !== viewer`.
+
+**Wiki en lecture seule — l'UI d'édition ne se cache pas d'elle-même aujourd'hui.** Trouvé en vérifiant : `EditEntityForm`/`EntityBlocks` affichent les boutons d'édition à quiconque charge la page, quel que soit son droit — seule l'écriture serveur est bloquée (`canUserEditEntity`, appelé au moment de sauver, jamais avant). Un lecteur seul verrait donc des boutons qui échouent toujours. Le rendu en lecture réutilise l'approche déjà écrite pour `/partage/[token]` (`PublicBlockView`/`PublicEntityBody`, purement présentationnels) plutôt que de la dupliquer — adaptée pour lire depuis la vraie visibilité du joueur (`canSee`/`filterBlocks`) au lieu du filtre `is_public` du partage anonyme, qui montre STRICTEMENT moins qu'un vrai membre du monde n'a le droit de voir.
 
 **Critères**
-- [ ] Un PJ voit sa fiche et les fiches qui lui ont été accordées, rien d'autre dans sa sidebar.
-- [ ] Aucun onglet Règles ni outil MJ n'apparaît pour ce rôle.
-- [ ] Le wiki reste consultable en lecture selon la visibilité normale (public/joueurs), sans régression.
-- [ ] Utilisable sur téléphone (même contrainte 375 px que la fiche jouable, `specs/module-joueur-et-solo.md` §A5).
+- [x] Un PJ voit sa fiche en entier (lecture/écriture, comme aujourd'hui), Wiki et Règles en lecture seule, Notes en écriture sur sa propre entité privée — jamais l'onglet MJ.
+- [x] Une entité `notes` créée par un joueur est invisible dans la sidebar MJ, éditable uniquement par son créateur (vérifié par test d'intégration RLS dédié, `canEditEntityRls.integration.test.ts`).
+- [x] Le wiki reste consultable en lecture selon la visibilité normale (public/joueurs), sans régression — première tranche : blocs texte/infobox/image couverts (`PlayerBlockView.tsx`), le reste (personnage, inventaire, sorts, statblock...) affiche un repli explicite (« pas encore de vue simplifiée ») plutôt qu'un vide silencieux ou un crash — vérifié en direct sur une fiche réelle avec un bloc `random_table` non couvert.
+- [x] Utilisable sur téléphone (même contrainte 375 px que la fiche jouable, `specs/module-joueur-et-solo.md` §A5) — vérifié en direct sur les trois largeurs (375 px, 768 px, desktop) : barre d'onglets en bas sous 768px, rail latéral au-dessus, même composant (`PlayerShell.tsx`).
+
+### Idée future — journal des lancés de dés
+
+Notée telle quelle (retour utilisateur 30 août, en discutant la coquille joueur), pas un ticket : avant les statistiques rigolotes déjà notées plus bas, un journal simple des jets — les siens en tant que joueur. Rejoint la même question ouverte : vérifier d'abord que `session_events` de type `roll` conserve assez de détail pour un tel journal avant d'y engager du travail réel.
 
 ### Idée future — stats de jets amusantes
 

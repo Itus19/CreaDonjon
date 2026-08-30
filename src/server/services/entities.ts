@@ -25,14 +25,28 @@ import { canUserEditEntity } from "@/src/server/services/permissions";
 
 type TypedClient = SupabaseClient<Database>;
 
-export async function listEntities(supabase: TypedClient, worldId: string): Promise<EntitySummary[]> {
-  return listEntitiesForWorld(supabase, worldId);
+/**
+ * V2-M7b (Lot M) : exclut la fiche de notes privee d'un AUTRE compte —
+ * `entity_kind = 'notes'` n'est jamais visible que de son createur
+ * (`entities.created_by`), meme motif que `canEditEntity` (5e cas). Point
+ * de filtrage unique : tout appelant de `listEntitiesForWorld` doit passer
+ * par ici plutot que par le repo directement, jamais un second filtre
+ * ecrit ailleurs.
+ */
+function excludeOthersPrivateNotes(entities: EntitySummary[], userId: string | null): EntitySummary[] {
+  return entities.filter((e) => e.entity_kind !== "notes" || e.created_by === userId);
+}
+
+export async function listEntities(supabase: TypedClient, worldId: string, userId: string | null): Promise<EntitySummary[]> {
+  const entities = await listEntitiesForWorld(supabase, worldId);
+  return excludeOthersPrivateNotes(entities, userId);
 }
 
 /** Barre laterale (specs/coquille-et-design.md §4.3) : arborescence derivee, jamais saisie. */
 export async function getEntityTree(
   supabase: TypedClient,
-  worldId: string
+  worldId: string,
+  userId: string | null
 ): Promise<EntityTreeGroup[]> {
   const [entities, partOfEdges, playerCharacterIds, kindOrder] = await Promise.all([
     listEntitiesForWorld(supabase, worldId),
@@ -40,7 +54,8 @@ export async function getEntityTree(
     listPlayerCharacterEntityIds(supabase, worldId),
     getWorldEntityKindOrder(supabase, worldId),
   ]);
-  return buildEntityTree(withPlayerCharacterKinds(entities, playerCharacterIds), partOfEdges, kindOrder);
+  const visibleEntities = excludeOthersPrivateNotes(entities, userId);
+  return buildEntityTree(withPlayerCharacterKinds(visibleEntities, playerCharacterIds), partOfEdges, kindOrder);
 }
 
 /**

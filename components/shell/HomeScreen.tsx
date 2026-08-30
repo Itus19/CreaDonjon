@@ -43,10 +43,11 @@ function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUs
   }, [world.slug]);
 
   const roleLabel = world.myRole === "player" ? "Joueur" : world.mode === "solo" ? "Solo" : "MJ";
-  const href =
-    world.myRole === "player" && world.myCharacter
-      ? `/m/${world.slug}/f/${world.myCharacter.entitySlug}`
-      : `/m/${world.slug}`;
+  // V2-M7b (Lot M, coquille joueur) : un role Joueur mene desormais a la
+  // coquille allegee (Fiche/Notes/Wiki/Regles), jamais directement a la
+  // fiche brute — celle-ci gere elle-meme le cas "personnage pas encore
+  // reclame".
+  const href = world.myRole === "player" ? `/m/${world.slug}/joueur` : `/m/${world.slug}`;
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">

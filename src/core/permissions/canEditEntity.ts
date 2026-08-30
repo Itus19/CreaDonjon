@@ -11,12 +11,14 @@ export interface CanEditEntityContext {
   isOwnCharacter: boolean;
   /** Vrai si une ligne `entity_grants` autorise explicitement ce joueur sur cette entite. */
   isGranted: boolean;
+  /** Vrai si cette entite est de type `notes` ET a ete creee par ce viewer (`entities.created_by`) — V2-M7b, coquille joueur : une fiche de notes privee, jamais visible d'un autre compte (voir `getEntityTree`). */
+  isOwnPrivateNotes: boolean;
 }
 
 /**
- * Autorisation d'ECRITURE sur une entite (V2-M3, Lot M) — jamais confondue
- * avec `canSee` (LECTURE, dossier voisin `visibility/`). Quatre cas, et
- * rien d'autre :
+ * Autorisation d'ECRITURE sur une entite (V2-M3, Lot M ; 5e cas V2-M7b) —
+ * jamais confondue avec `canSee` (LECTURE, dossier voisin `visibility/`).
+ * Cinq cas, et rien d'autre :
  *
  * 1. Proprietaire ou editeur du MONDE (`worldRole`) — memes roles que
  *    `ADMIN_WORLD_ROLES` dans `canSee.ts`.
@@ -28,6 +30,11 @@ export interface CanEditEntityContext {
  *    ticket a l'origine, ajoute en verifiant les appelants reels.
  * 3. C'est SA PROPRE fiche PJ dans une campagne de ce monde.
  * 4. Une ligne `entity_grants` l'autorise explicitement sur cette entite.
+ * 5. C'est SA PROPRE fiche de notes privee (`entity_kind = 'notes'`,
+ *    `created_by = auth.uid()`) — sans ce cas, `entities_insert` (deja
+ *    ouvert a tout membre du monde) laisserait un joueur creer sa fiche de
+ *    notes mais jamais y toucher ensuite : aucun des quatre cas ci-dessus
+ *    ne couvre "je l'ai creee moi-meme".
  *
  * Un visiteur anonyme n'ecrit jamais rien.
  */
@@ -35,5 +42,5 @@ export function canEditEntity(viewer: Viewer, ctx: CanEditEntityContext): boolea
   if (viewer.kind === "anonymous") return false;
   if (viewer.worldRole && EDITOR_WORLD_ROLES.has(viewer.worldRole)) return true;
   if (Object.values(viewer.campaignRoles).includes("gm")) return true;
-  return ctx.isOwnCharacter || ctx.isGranted;
+  return ctx.isOwnCharacter || ctx.isGranted || ctx.isOwnPrivateNotes;
 }

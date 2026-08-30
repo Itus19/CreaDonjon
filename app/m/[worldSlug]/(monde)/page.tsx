@@ -18,10 +18,13 @@ export default async function WorldHomePage({
   const supabase = await createClient();
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const locale = (await getLocale()) as Locale;
   const [entities, playerCharacters] = await Promise.all([
-    listEntities(supabase, world.id),
+    listEntities(supabase, world.id, user?.id ?? null),
     listWorldPlayerCharacters(supabase, world.id, locale),
   ]);
   const t = await getTranslations("monde");

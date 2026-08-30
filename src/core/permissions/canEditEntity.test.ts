@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { canEditEntity, type CanEditEntityContext } from "./canEditEntity";
 import type { Viewer } from "@/src/core/visibility/types";
 
-const NEITHER: CanEditEntityContext = { isOwnCharacter: false, isGranted: false };
-const OWN_CHARACTER: CanEditEntityContext = { isOwnCharacter: true, isGranted: false };
-const GRANTED: CanEditEntityContext = { isOwnCharacter: false, isGranted: true };
+const NEITHER: CanEditEntityContext = { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false };
+const OWN_CHARACTER: CanEditEntityContext = { isOwnCharacter: true, isGranted: false, isOwnPrivateNotes: false };
+const GRANTED: CanEditEntityContext = { isOwnCharacter: false, isGranted: true, isOwnPrivateNotes: false };
+const OWN_NOTES: CanEditEntityContext = { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: true };
 
 function viewer(partial: Partial<Extract<Viewer, { kind: "user" }>> = {}): Viewer {
   return { kind: "user", userId: "u1", worldRole: null, campaignRoles: {}, ...partial };
@@ -41,5 +42,13 @@ describe("canEditEntity — table de verite (V2-M3, Lot M)", () => {
     expect(canEditEntity(viewer(), OWN_CHARACTER)).toBe(true);
     expect(canEditEntity(viewer(), GRANTED)).toBe(true);
     expect(canEditEntity(viewer(), NEITHER)).toBe(false);
+  });
+
+  it("un utilisateur sans aucun role peut ecrire sa propre fiche de notes privee (V2-M7b)", () => {
+    expect(canEditEntity(viewer(), OWN_NOTES)).toBe(true);
+  });
+
+  it("un visiteur anonyme n'ecrit pas non plus une fiche de notes marquee sienne (cas impossible en pratique, mais la regle reste absolue)", () => {
+    expect(canEditEntity({ kind: "anonymous" }, OWN_NOTES)).toBe(false);
   });
 });

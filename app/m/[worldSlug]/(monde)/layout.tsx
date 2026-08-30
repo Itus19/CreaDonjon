@@ -15,10 +15,13 @@ export default async function MondeLayout({
   const supabase = await createClient();
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const [tree, entities] = await Promise.all([
-    getEntityTree(supabase, world.id),
-    listEntities(supabase, world.id),
+    getEntityTree(supabase, world.id, user?.id ?? null),
+    listEntities(supabase, world.id, user?.id ?? null),
   ]);
 
   return (

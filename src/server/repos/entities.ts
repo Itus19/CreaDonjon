@@ -17,9 +17,12 @@ export interface EntitySummary {
   updated_at: string;
   /** Visibilite generale de la fiche (V2, retour utilisateur point 2) — bascule binaire, jamais les 6 niveaux de `visibility_level`. */
   is_public: boolean;
+  /** V2-M7b (Lot M) : necessaire pour reconnaitre sa propre fiche de notes privee (`canEditEntity`) et pour la masquer de la sidebar des autres comptes (`getEntityTree`). */
+  created_by: string | null;
 }
 
-const ENTITY_COLUMNS = "id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at, is_public";
+const ENTITY_COLUMNS =
+  "id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at, is_public, created_by";
 
 export async function listEntitiesForWorld(
   supabase: TypedClient,
@@ -45,6 +48,23 @@ export async function listEntitiesByIds(supabase: TypedClient, ids: string[]): P
     .is("deleted_at", null);
   if (error) throw new Error(error.message);
   return data as EntitySummary[];
+}
+
+/** V2-M7b (Lot M) : retrouve la fiche de notes privee d'un compte (au plus une par monde, jamais applique aux autres `entity_kind`). */
+export async function findEntityByCreatorAndKind(
+  supabase: TypedClient,
+  params: { worldId: string; createdBy: string; entityKind: string }
+): Promise<EntitySummary | null> {
+  const { data, error } = await supabase
+    .from("entities")
+    .select(ENTITY_COLUMNS)
+    .eq("world_id", params.worldId)
+    .eq("created_by", params.createdBy)
+    .eq("entity_kind", params.entityKind)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as EntitySummary | null;
 }
 
 export async function getEntityBySlug(

@@ -24,7 +24,7 @@ export default async function MjCampagnesPage({
   } = await supabase.auth.getUser();
 
   const [entities, campaigns, defaultRulesetId, superadmin, gm] = await Promise.all([
-    listEntities(supabase, world.id),
+    listEntities(supabase, world.id, user?.id ?? null),
     listCampaigns(supabase, world.id),
     getWorldDefaultRulesetId(supabase, world.id),
     user ? isSuperadmin(supabase, user.id) : Promise.resolve(false),
