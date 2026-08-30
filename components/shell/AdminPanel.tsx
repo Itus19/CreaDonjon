@@ -1,15 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Dropdown from "@/components/shared/Dropdown";
 import type { CampaignInviteAdminSummary } from "@/src/server/services/campaignInvites";
-import type { JournalEntry } from "@/src/server/services/activityJournal";
 
 const ROLE_LABELS: Record<string, string> = { gm: "MJ", player: "Joueur" };
-
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-}
 
 function CopyButton({ url, copiedUrl, onCopy }: { url: string; copiedUrl: string | null; onCopy: (url: string) => void }) {
   const copied = copiedUrl === url;
@@ -214,74 +208,21 @@ function InviteAdminRow({
   );
 }
 
-function JournalSection() {
-  const [worlds, setWorlds] = useState<{ id: string; name: string }[] | null>(null);
-  const [worldId, setWorldId] = useState("");
-  const [entries, setEntries] = useState<JournalEntry[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/admin/worlds")
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then((body: { worlds: { id: string; name: string }[] }) => {
-        setWorlds(body.worlds);
-        setWorldId((prev) => prev || body.worlds[0]?.id || "");
-      })
-      .catch(() => setLoadError("Impossible de charger les mondes."));
-  }, []);
-
-  useEffect(() => {
-    if (!worldId) return;
-    fetch(`/api/admin/journal?worldId=${worldId}`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then((body: { entries: JournalEntry[] }) => setEntries(body.entries))
-      .catch(() => setLoadError("Impossible de charger le journal."));
-  }, [worldId]);
-
-  if (worlds === null) {
-    return loadError ? <p className="text-xs text-danger">{loadError}</p> : <p className="text-xs text-ink-muted">…</p>;
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <Dropdown
-        value={worldId}
-        onChange={setWorldId}
-        options={worlds.map((w) => ({ value: w.id, label: w.name }))}
-        aria-label="Monde"
-        className="self-start rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
-      />
-      {loadError && <p className="text-xs text-danger">{loadError}</p>}
-      {entries && entries.length === 0 && <p className="text-xs text-ink-muted">Aucune activité pour l&apos;instant.</p>}
-      {entries && entries.length > 0 && (
-        <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto text-xs">
-          {entries.map((entry, i) => (
-            <li key={i} className="flex items-center justify-between gap-2 border-b border-edge/30 pb-1">
-              <span className="text-ink-muted">
-                <span className={entry.source === "wiki" ? "text-accent" : "text-ink"}>
-                  {entry.source === "wiki" ? "wiki" : "jeu"}
-                </span>
-                {"  "}
-                {entry.label}
-                {entry.entityName && <> — {entry.entityName}</>}
-                {entry.blockLabel && <> ({entry.blockLabel})</>}
-              </span>
-              <span className="shrink-0 text-ink-muted">
-                {entry.accountName} · {formatDateTime(entry.createdAt)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 /**
  * Section Administration (V2-M6, Lot M) — visible uniquement pour
  * `is_superadmin()` (verifie cote serveur avant meme de rendre ce
- * composant, voir app/page.tsx). Deux blocs : la liste transversale des
- * liens d'invitation, et le journal fusionne par monde.
+ * composant, voir app/page.tsx). Liste transversale des liens
+ * d'invitation, tous mondes confondus.
+ *
+ * Le journal fusionne transversal (V2-M6) a ete retire d'ici (retour
+ * utilisateur) : il faisait doublon exact avec celui de la colonne de
+ * droite de l'ecran d'accueil (meme fonction, `getMergedJournalForWorld`)
+ * tant que le superadmin est membre de tous les mondes existants — ce qui
+ * est toujours le cas aujourd'hui. Redeviendra utile avec V2-M8 (dupliquer
+ * Valdoria pour un ami MJ) : un monde appartenant entierement a un ami,
+ * absent de la liste personnelle du superadmin, mais que ce dernier garde
+ * le droit de consulter. `getMergedJournalForWorld`/`/api/admin/journal`
+ * restent en place, prets a etre reexposes a ce moment-la.
  */
 export default function AdminPanel() {
   const [invites, setInvites] = useState<CampaignInviteAdminSummary[] | null>(null);
@@ -317,11 +258,6 @@ export default function AdminPanel() {
             ))}
           </ul>
         )}
-      </section>
-
-      <section className="flex flex-col gap-2 border-t border-edge/60 pt-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Journal fusionné</h3>
-        <JournalSection />
       </section>
     </div>
   );

@@ -884,6 +884,8 @@ Visible uniquement pour `is_superadmin()`, sur ce même écran (pas une page sé
 
 Élargir `worlds_select` à `is_superadmin()` (pour le sélecteur de monde du journal) a eu un effet de bord repéré en vérifiant en direct : l'écran d'accueil PERSONNEL du superadmin (`listWorldCardsForCurrentUser`) s'appuyait entièrement sur cette même RLS pour scoper « mes mondes », sans filtre applicatif — il listait donc soudain tous les mondes de la base, étiquetés « MJ » à tort, boutons Renommer/Supprimer affichés. Corrigé en filtrant explicitement à `owner_id === userId` ou un rôle réel (`src/server/repos/worlds.ts`), même discipline que `renameWorld`/`deleteWorldWithConfirmation` (CLAUDE.md §1, la RLS est le filet, pas la vérification) — aucune faille réelle cela dit, ces deux actions vérifient déjà la propriété côté service, indépendamment de la RLS.
 
+**Le journal fusionné transversal retiré de l'interface (retour utilisateur, après V2-M7c)** : une fois l'écran d'accueil en trois colonnes en place, ce panneau faisait doublon exact avec le journal de la colonne de droite (même fonction, `getMergedJournalForWorld`) tant que le superadmin est membre de tous les mondes existants — toujours le cas aujourd'hui. Le service et la route (`getMergedJournalForWorld`, `/api/admin/journal`, `/api/admin/worlds`) restent en place, prêts à être réexposés avec V2-M8 (un monde appartenant entièrement à un ami, absent de la liste personnelle du superadmin).
+
 **Critères**
 - [x] La section n'est visible et accessible qu'à `is_superadmin()`, refusé côté serveur pour tout autre compte.
 - [x] Réinitialiser un lien invalide l'ancien jeton immédiatement.
