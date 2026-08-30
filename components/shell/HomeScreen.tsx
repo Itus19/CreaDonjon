@@ -124,12 +124,15 @@ export default function HomeScreen({
   currentUserId,
   email,
   displayName,
+  adminPanel,
   createTools,
 }: {
   worlds: HomeWorldCard[];
   currentUserId: string;
   email: string;
   displayName: string;
+  /** Section Administration (superadmin, M6) — sous le profil, dans la meme colonne (retour utilisateur : libere l'espace en hauteur plutot qu'un bandeau pleine largeur). `null` pour tout compte non-superadmin. */
+  adminPanel: React.ReactNode;
   /** Formulaires de creation/import (retour utilisateur : "en haut de la colonne centrale") — rendus ici plutot que par l'appelant pour rester au-dessus de la liste dans la MEME colonne du grid. */
   createTools: React.ReactNode;
 }) {
@@ -138,7 +141,10 @@ export default function HomeScreen({
 
   return (
     <div className="grid grid-cols-3 gap-6">
-      <HomeProfilePanel email={email} displayName={displayName} />
+      <div className="flex flex-col gap-4">
+        <HomeProfilePanel email={email} displayName={displayName} />
+        {adminPanel}
+      </div>
 
       <div className="flex flex-col gap-4">
         {createTools}

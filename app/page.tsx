@@ -42,16 +42,17 @@ export default async function Home() {
           </div>
         </div>
 
-        {canUseSoloMode && <AdminPanel />}
-
         {/* Ecran d'accueil en trois colonnes (retour utilisateur) : profil,
             mondes/campagnes, detail du monde selectionne — remplace
-            l'ancienne colonne unique (V2-M5). */}
+            l'ancienne colonne unique (V2-M5). L'Administration (superadmin,
+            M6) vit sous le profil, dans la meme colonne (retour utilisateur :
+            liberer l'espace en hauteur plutot qu'un bandeau pleine largeur). */}
         <HomeScreen
           worlds={worlds}
           currentUserId={user?.id ?? ""}
           email={user?.email ?? ""}
           displayName={profile?.display_name ?? ""}
+          adminPanel={canUseSoloMode ? <AdminPanel /> : null}
           createTools={
             <div className="flex flex-wrap items-center gap-2">
               <CreateWorldForm officialRulesets={officialRulesets} canUseSoloMode={canUseSoloMode} />
