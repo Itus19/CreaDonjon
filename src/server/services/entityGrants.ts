@@ -2,6 +2,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { getEntityById } from "@/src/server/repos/entities";
+import { listCampaignMembers } from "@/src/server/repos/campaigns";
+import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
 import {
   grantEntityAccess,
   listEntityGrants,
@@ -9,11 +11,21 @@ import {
   type EntityGrantRow,
 } from "@/src/server/repos/entityGrants";
 import { isWorldAdmin } from "@/src/server/services/permissions";
+import { resolveCampaignId } from "@/src/server/services/campaigns";
 
 type TypedClient = SupabaseClient<Database>;
 
 export type EntityGrantsResult = { ok: true; grants: EntityGrantRow[] } | { ok: false; reason: "not_found" | "forbidden" };
 export type EntityGrantActionResult = { ok: true } | { ok: false; reason: "not_found" | "forbidden" };
+
+export interface GrantCandidate {
+  userId: string;
+  displayName: string;
+  granted: boolean;
+}
+export type GrantCandidatesResult =
+  | { ok: true; candidates: GrantCandidate[] }
+  | { ok: false; reason: "not_found" | "forbidden" };
 
 /**
  * "Le MJ de ce monde peut-il gerer les octrois de CETTE entite" (V2-M7) —
@@ -62,4 +74,45 @@ export async function revokeEntityEditAccess(
   if (!check.ok) return check;
   await revokeEntityAccess(supabase, { entityId: params.entityId, userId: params.granteeUserId });
   return { ok: true };
+}
+
+/**
+ * "A qui puis-je accorder CETTE fiche" (V2-M9, raccourci sidebar MJ) — les
+ * joueurs de la campagne de ce monde (jamais les MJ, memes critere que le
+ * selecteur existant `CampaignDetail.tsx`), avec leur nom affichable et si
+ * l'octroi existe deja. Trouve en construisant ce raccourci : le panneau
+ * "Octrois d'edition" existant n'affiche que les octrois sur des fiches deja
+ * attribuees comme personnage de campagne (`getCampaignCharacterGrants`,
+ * filtre par `campaign_characters`) — celui-ci fonctionne sur N'IMPORTE
+ * QUELLE fiche du monde, cote serveur comme cote affichage.
+ */
+export async function listGrantCandidatesForEntity(
+  supabase: TypedClient,
+  params: { entityId: string; callerId: string }
+): Promise<GrantCandidatesResult> {
+  const check = await requireWorldAdminForEntity(supabase, { entityId: params.entityId, userId: params.callerId });
+  if (!check.ok) return check;
+
+  const campaignId = await resolveCampaignId(supabase, check.worldId);
+  if (!campaignId) return { ok: true, candidates: [] };
+
+  const [members, grants] = await Promise.all([
+    listCampaignMembers(supabase, campaignId),
+    listEntityGrants(supabase, params.entityId),
+  ]);
+  const players = members.filter((m) => m.role === "player");
+  const grantedUserIds = new Set(grants.map((g) => g.user_id));
+  const displayNames = await getDisplayNamesForUsers(
+    supabase,
+    players.map((p) => p.user_id)
+  );
+
+  return {
+    ok: true,
+    candidates: players.map((p) => ({
+      userId: p.user_id,
+      displayName: displayNames.get(p.user_id) || "Compte sans nom",
+      granted: grantedUserIds.has(p.user_id),
+    })),
+  };
 }

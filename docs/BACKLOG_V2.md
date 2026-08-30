@@ -919,6 +919,8 @@ Le journal de la colonne de droite s'adapte au rôle plutôt que de dupliquer un
 
 Bug trouvé pendant cette vérification en direct (retour utilisateur : « teste avec un compte joueur ») : `profiles_select` (jamais élargie depuis la migration d'origine, sauf pour le superadmin en M6) affichait « Compte sans nom » pour toute revision/événement dont l'auteur n'est ni le viewer ni le superadmin — y compris un MJ ordinaire consultant le journal de son propre monde (M7), pas seulement le cas rare du joueur. Corrigé (migration `20260830200001_profiles_select_shared_world.sql`) : un compte peut désormais lire le nom d'un autre s'ils partagent au moins un monde (`app.shares_world_with`, même triple critère que `app.is_world_member`) — strictement moins révélateur que ce qui fuit déjà ailleurs (le panneau Membres d'une campagne affiche l'UUID brut à tout co-membre).
 
+**Incident trouvé le 30 août, sans rapport avec le critère ci-dessus** : le monde Valdoria s'est retrouvé avec `name = "Faerûn"` en base (repéré via l'en-tête affiché, incohérent avec l'URL et le contenu). Cause réelle, confirmée en lisant le code : `WorldDetail`/`WorldCardActions` (`HomeScreen.tsx`) n'étaient jamais remontés en changeant de monde sélectionné — seulement re-rendus avec de nouvelles props. Ouvrir « Renommer » sur un monde puis changer la sélection sans valider laissait l'état local du formulaire (`name`, texte tapé) sur l'ANCIEN monde pendant que le champ caché `worldId` pointait déjà sur le nouveau — valider dans cet état renommait le mauvais monde avec le mauvais nom. Corrigé par `key={selected.id}` sur `WorldDetail`, qui force React à réinitialiser tout état local (dont celui du renommage) à chaque changement de sélection. Nom de Valdoria restauré ; aucune autre donnée affectée (vérifié via `updated_at` sur tous les mondes).
+
 ### V2-M7d — « Voir comme » un compte invité, section Administration · `S` — fait
 
 Retour utilisateur : depuis Administration, un bouton « Voir comme » sur chaque ligne de compte réclamé — changement de session RÉEL vers ce compte (ADR 0016, choix délibéré de l'utilisateur après rappel du risque), pas une superposition en lecture seule. Réutilise le mécanisme de lien magique déjà bâti pour les comptes invités (`accountProvisioning.ts`, ADR 0015) : `mintSessionForInvitedAccount` (refuse tout compte non issu d'un lien), consommé via la page `/auth/confirm` déjà existante.
@@ -929,6 +931,17 @@ Le filet de sécurité (cookie httpOnly `view_as_admin_uid`, bandeau permanent `
 - [x] Le bouton n'apparaît que pour un compte réellement réclamé via un lien d'invitation, jamais pour un id arbitraire.
 - [x] Le changement de session est réel : la page suivante reflète exactement le rôle et les données visibles par ce compte (vérifié en direct : rôle Joueur, campagne correcte, personnage introuvable car non réclamé).
 - [x] Un bandeau reste visible sur toute page tant que ce mode est actif, avec un retour immédiat vers le compte superadmin — vérifié en direct, cycle complet aller-retour dans le même onglet sans perte d'accès.
+
+### V2-M7e — Partager l'édition depuis la sidebar MJ · `S` — fait
+
+Retour utilisateur (pendant le test de la coquille joueur) : « dans la side bar pour les mj, un endroit pour sélectionner les fiches et donner le droit d'édition à certains membres de la campagne ». Nouvel item « Partager l'édition » dans le menu « … » de chaque fiche (`EntityTree.tsx`), ouvrant `GrantsDialog.tsx` — une case à cocher par joueur de la campagne, écriture immédiate à chaque bascule (`POST`/`DELETE /api/entities/[id]/grants`), jamais un brouillon à valider en bloc.
+
+Corrige au passage l'angle mort noté dans M7b (Révision 3) : le panneau existant « Octrois d'édition » (`CampaignDetail.tsx`) n'affichait que les octrois sur des fiches déjà attribuées comme personnage de campagne. Le nouveau raccourci fonctionne sur n'importe quelle fiche du monde — nouveau service `listGrantCandidatesForEntity` (`entityGrants.ts`), nouvelle route `GET /api/entities/[id]/grant-candidates`, réutilise `isWorldAdmin`/`listCampaignMembers`/`getDisplayNamesForUsers` déjà en place ailleurs plutôt que de dupliquer la résolution des noms.
+
+**Critères**
+- [x] Réservé au MJ réel du monde (même garde `isWorldAdmin` que le reste des octrois, testé côté serveur, jamais seulement caché côté client).
+- [x] Liste les joueurs de la campagne (jamais les MJ) avec leur nom affichable, coché si l'octroi existe déjà sur cette fiche précise.
+- [x] Cocher/décocher accorde ou révoque immédiatement — vérifié en direct (Faerûn/Campagne test, fiche Brennan Toram, joueur Claude) : `POST` 201 puis `DELETE` 200, confirmés en relisant `entity_grants`.
 
 ### V2-M7b — Coquille joueur allégée · `M` — fait (première tranche)
 
@@ -944,11 +957,19 @@ Retour utilisateur (30 août, avec maquette) : révise le plan initial ci-dessou
 
 **Wiki en lecture seule — l'UI d'édition ne se cache pas d'elle-même aujourd'hui.** Trouvé en vérifiant : `EditEntityForm`/`EntityBlocks` affichent les boutons d'édition à quiconque charge la page, quel que soit son droit — seule l'écriture serveur est bloquée (`canUserEditEntity`, appelé au moment de sauver, jamais avant). Un lecteur seul verrait donc des boutons qui échouent toujours. Le rendu en lecture réutilise l'approche déjà écrite pour `/partage/[token]` (`PublicBlockView`/`PublicEntityBody`, purement présentationnels) plutôt que de la dupliquer — adaptée pour lire depuis la vraie visibilité du joueur (`canSee`/`filterBlocks`) au lieu du filtre `is_public` du partage anonyme, qui montre STRICTEMENT moins qu'un vrai membre du monde n'a le droit de voir.
 
+**Révision 3 (30 août, test en direct avec un second compte réel, « Claude », sur téléphone) — trois trous trouvés en vérifiant, tous corrigés :**
+1. **Le Wiki ne rendait jamais éditable une fiche que le joueur avait pourtant le droit d'éditer.** `wiki/[entitySlug]/page.tsx` rendait toujours `PlayerBlockView` (lecture seule), sans jamais appeler `canUserEditEntity` — ni sa propre fiche PJ atteinte par le Wiki plutôt que l'onglet Fiche, ni une fiche de lore accordée par le MJ (`entity_grants`, V2-M7) n'étaient éditables par ce chemin. Corrigé : la page teste `canUserEditEntity` d'abord et bascule sur `EditEntityForm` (même composant que l'onglet Fiche) si vrai.
+2. **Un joueur pouvait ajouter n'importe quel type de bloc** (personnage, inventaire, tableau...) sur sa fiche ou une fiche de lore accordée — retour utilisateur : « je ne pense pas que je leur donnerait le droit d'ajouter d'autre bloc que ceux de texte dans les fiches, si les joueurs veulent ajouter des choses il faudra demander au MJ ». Nouveau prop `restrictAddableTypes` sur `EntityBlocks`, `playerRestricted` sur `EditEntityForm` (limite à `+ Texte`, masque l'assistant de création) — activé sur les deux pages joueur qui rendent `EditEntityForm` (Fiche, Wiki en édition), jamais côté MJ.
+3. **La barre d'onglets bas-d'écran sortait de l'écran dès que le bandeau « voir comme » était actif** (`AppShell` en `h-dvh` fixe, alors qu'il n'est pas toujours le seul enfant de `<body>` — le bandeau s'empile au-dessus). Corrigé en `flex-1 min-h-0` : touche aussi MJ/Monde/Règles sous « voir comme », pas seulement la coquille joueur.
+
+Repéré en testant : le panneau MJ « Octrois d'édition » (`CampaignDetail.tsx`) n'affiche que les octrois sur des fiches déjà attribuées comme personnage de campagne (`getCampaignCharacterGrants`, filtré par `campaign_characters`) — un octroi créé sur une fiche de lore quelconque (via l'API, correctement appliqué et respecté par `canEditEntity`) restait invisible dans cette liste. Pas un problème de sécurité (le filtrage server-side est correct), un angle mort d'affichage seulement — résolu par le raccourci sidebar MJ, voir V2-M7e ci-dessous.
+
 **Critères**
-- [x] Un PJ voit sa fiche en entier (lecture/écriture, comme aujourd'hui), Wiki et Règles en lecture seule, Notes en écriture sur sa propre entité privée — jamais l'onglet MJ.
+- [x] Un PJ voit sa fiche en entier (lecture/écriture, comme aujourd'hui), Wiki et Règles en lecture seule sauf fiche accordée ou propre fiche (Révision 3), Notes en écriture sur sa propre entité privée — jamais l'onglet MJ.
 - [x] Une entité `notes` créée par un joueur est invisible dans la sidebar MJ, éditable uniquement par son créateur (vérifié par test d'intégration RLS dédié, `canEditEntityRls.integration.test.ts`).
 - [x] Le wiki reste consultable en lecture selon la visibilité normale (public/joueurs), sans régression — première tranche : blocs texte/infobox/image couverts (`PlayerBlockView.tsx`), le reste (personnage, inventaire, sorts, statblock...) affiche un repli explicite (« pas encore de vue simplifiée ») plutôt qu'un vide silencieux ou un crash — vérifié en direct sur une fiche réelle avec un bloc `random_table` non couvert.
 - [x] Utilisable sur téléphone (même contrainte 375 px que la fiche jouable, `specs/module-joueur-et-solo.md` §A5) — vérifié en direct sur les trois largeurs (375 px, 768 px, desktop) : barre d'onglets en bas sous 768px, rail latéral au-dessus, même composant (`PlayerShell.tsx`).
+- [x] Testé de bout en bout avec un second compte réel (« Claude », créé via lien d'invitation, rôle joueur sur Campagne test/Faerûn) sur viewport téléphone (375×812) : fiche propre éditable, fiche de lore accordée éditable, fiche non accordée en lecture seule, notes privées sauvegardées.
 
 ### Idée future — journal des lancés de dés
 
