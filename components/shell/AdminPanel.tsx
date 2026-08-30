@@ -130,13 +130,25 @@ function InviteAdminRow({
   return (
     <li className="flex flex-col gap-1 border-b border-edge/40 pb-2 last:border-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-ink-muted">
-          <span className="text-ink">{invite.worldName ?? "?"}</span>
-          {invite.campaignName && <> — {invite.campaignName}</>}
-          {" · "}
-          {invite.intendedRole ? ROLE_LABELS[invite.intendedRole] : "Au choix"}
-          {invite.claimedName && <> · Réclamé par {invite.claimedName}</>}
-          {invite.hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
+        <span className="flex flex-wrap items-center gap-2 text-ink-muted">
+          <span>
+            <span className="text-ink">{invite.worldName ?? "?"}</span>
+            {invite.campaignName && <> — {invite.campaignName}</>}
+            {" · "}
+            {invite.intendedRole ? ROLE_LABELS[invite.intendedRole] : "Au choix"}
+            {invite.claimedName && <> · Réclamé par {invite.claimedName}</>}
+            {invite.hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
+          </span>
+          {invite.claimedByUserId && (
+            <button
+              type="button"
+              onClick={viewAs}
+              disabled={busy}
+              className="shrink-0 rounded-md border border-accent px-2 py-1 text-xs text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+            >
+              Voir comme
+            </button>
+          )}
         </span>
         <div className="flex items-center gap-2">
           {url && <CopyButton url={url} copiedUrl={copiedUrl} onCopy={onCopy} />}
@@ -163,16 +175,6 @@ function InviteAdminRow({
           >
             Révoquer
           </button>
-          {invite.claimedByUserId && (
-            <button
-              type="button"
-              onClick={viewAs}
-              disabled={busy}
-              className="shrink-0 rounded-md border border-accent px-2 py-1 text-xs text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
-            >
-              Voir comme
-            </button>
-          )}
           {invite.claimedByUserId && (
             <button
               type="button"
