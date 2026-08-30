@@ -3,12 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { updateCampaignSchema } from "@/lib/campaigns/schemas";
 import {
   getCampaign,
-  getCampaignCharacterGrants,
+  getCampaignGrants,
   getCampaignCharacters,
   getCampaignMembers,
   getCampaignRulesetOrigin,
   setCampaignMode,
 } from "@/src/server/services/campaigns";
+import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
 import { isSuperadmin } from "@/src/server/services/account";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
@@ -20,14 +21,21 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Campagne introuvable." }, { status: 404 });
   }
 
-  const [members, characters, rulesetContentOrigin] = await Promise.all([
+  const [members, characters, rulesetContentOrigin, grants] = await Promise.all([
     getCampaignMembers(supabase, campaignId),
     getCampaignCharacters(supabase, campaignId),
     getCampaignRulesetOrigin(supabase, campaignId),
+    getCampaignGrants(supabase, campaign.worldId),
   ]);
-  const grants = await getCampaignCharacterGrants(supabase, characters);
 
-  return NextResponse.json({ campaign, members, characters, rulesetContentOrigin, grants }, { status: 200 });
+  // Noms affichables (V2-M9, retour utilisateur : "voir qu'est-ce qui est
+  // deja permis ou non") plutot que l'uuid brut deja affiche partout
+  // ailleurs dans ce panneau — une seule resolution groupee, jamais un
+  // aller-retour par ligne.
+  const userIds = [...members.map((m) => m.user_id), ...characters.flatMap((c) => (c.user_id ? [c.user_id] : []))];
+  const displayNames = Object.fromEntries(await getDisplayNamesForUsers(supabase, userIds));
+
+  return NextResponse.json({ campaign, members, characters, rulesetContentOrigin, grants, displayNames }, { status: 200 });
 }
 
 /** Mode modifiable apres creation (V2-G1 prepa, "un monde = une campagne") — seul endpoint d'ecriture de ce fichier jusqu'ici. */

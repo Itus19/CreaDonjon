@@ -19,7 +19,7 @@ import {
 } from "@/src/server/repos/campaigns";
 import { getRulesetById } from "@/src/server/repos/rules";
 import { getWorldOwnerId } from "@/src/server/repos/worlds";
-import { createEntity } from "@/src/server/services/entities";
+import { createEntity, listEntities } from "@/src/server/services/entities";
 import { listEntityGrantsForEntityIds, type EntityGrantRow } from "@/src/server/repos/entityGrants";
 
 type TypedClient = SupabaseClient<Database>;
@@ -168,12 +168,22 @@ export async function getCampaignCharacters(supabase: TypedClient, campaignId: s
   return listCampaignCharacters(supabase, campaignId);
 }
 
-/** V2-M7 (Lot M) : octrois d'edition (`entity_grants`) des fiches de cette campagne, pour le panneau MJ — pas d'authorization ici, meme niveau de lecture que `getCampaignCharacters`/`getCampaignMembers` ci-dessus (deja ouvert a tout membre via RLS). */
-export async function getCampaignCharacterGrants(
-  supabase: TypedClient,
-  characters: CampaignCharacterRow[]
-): Promise<EntityGrantRow[]> {
-  return listEntityGrantsForEntityIds(supabase, characters.map((c) => c.entity_id));
+/**
+ * V2-M9 (Lot M, retour utilisateur : "un outil... qui reference ainsi TOUT
+ * les octrois d'edition") : les octrois de N'IMPORTE QUELLE fiche du monde,
+ * pas seulement celles deja attribuees comme personnage de campagne.
+ * Remplace `getCampaignCharacterGrants` (V2-M7), dont le filtre par
+ * `campaign_characters` cachait tout octroi sur une fiche de lore
+ * quelconque (ex. un PNJ jamais attribue comme personnage) — trouve en
+ * verifiant en direct que le panneau affichait "Aucun octroi" alors qu'un
+ * octroi existait bel et bien en base. "Un monde = une campagne" : le monde
+ * de cette campagne est la portee naturelle, pas d'authorization ici, meme
+ * niveau de lecture que `getCampaignCharacters`/`getCampaignMembers`
+ * ci-dessus (deja ouvert a tout membre via RLS).
+ */
+export async function getCampaignGrants(supabase: TypedClient, worldId: string): Promise<EntityGrantRow[]> {
+  const entities = await listEntities(supabase, worldId, null);
+  return listEntityGrantsForEntityIds(supabase, entities.map((e) => e.id));
 }
 
 export type InviteResult = { ok: true; userId: string } | { ok: false; reason: "not_found" };

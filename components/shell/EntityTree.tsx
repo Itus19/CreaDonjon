@@ -20,7 +20,6 @@ import { useOpenEntityLink } from "./useOpenEntityLink";
 import { useCollapsedGroups } from "./useCollapsedGroups";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import GrantsDialog from "@/components/shared/GrantsDialog";
 
 function NodeRow({
   node,
@@ -41,7 +40,6 @@ function NodeRow({
   const router = useRouter();
   const [expanded, setExpanded] = useState(true);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [sharingOpen, setSharingOpen] = useState(false);
   const hasChildren = node.children.length > 0;
   const isActive = node.slug === currentSlug;
   const link = useOpenEntityLink(worldSlug, node.slug, hrefBase);
@@ -89,7 +87,6 @@ function NodeRow({
             aria-label={`Actions sur ${node.name}`}
             triggerClassName="shrink-0 rounded-md px-1.5 py-1 text-xs text-ink-muted opacity-0 transition-opacity hover:bg-panel-raised hover:text-ink focus-visible:opacity-100 group-hover:opacity-100"
             items={[
-              { label: "Partager l'édition", onSelect: () => setSharingOpen(true) },
               { label: "Dupliquer", onSelect: duplicate },
               { label: "Supprimer", onSelect: () => setConfirmingDelete(true), danger: true },
             ]}
@@ -105,7 +102,6 @@ function NodeRow({
         onConfirm={confirmDelete}
         onCancel={() => setConfirmingDelete(false)}
       />
-      <GrantsDialog open={sharingOpen} entityId={node.id} entityName={node.name} onClose={() => setSharingOpen(false)} />
       {hasChildren && expanded && (
         <ul>
           {node.children.map((child) => (

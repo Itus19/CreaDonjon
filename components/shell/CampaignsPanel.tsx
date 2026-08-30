@@ -31,6 +31,7 @@ export default function CampaignsPanel({
   defaultRulesetId,
   initialCampaigns,
   worldEntities,
+  grantableEntities,
   canUseSoloMode,
   canManage,
 }: {
@@ -38,6 +39,8 @@ export default function CampaignsPanel({
   defaultRulesetId: string | null;
   initialCampaigns: CampaignSummaryView[];
   worldEntities: { id: string; name: string }[];
+  /** V2-M9 (Lot M) : toutes les fiches du monde (pas seulement les personnages) — pour le selecteur "Octrois d'edition" de `CampaignDetail`, distinct de `worldEntities` (reserve a "Personnages attribues"). */
+  grantableEntities: { id: string; name: string }[];
   /** V2-M2 (Lot M) : le mode solo est reserve au superadmin — verifie cote serveur (route `/api/campaigns/[id]` et `/api/worlds/[slug]/campaigns`), cette prop ne fait qu'eviter d'afficher une option qui echouerait toujours. */
   canUseSoloMode: boolean;
   /** V2-M7 (Lot M) : revocation de fiche PJ et octrois d'edition (`CampaignDetail`) reserves au MJ reel de ce monde (`isWorldAdmin`, deja verifie cote serveur par la page appelante) — cette prop ne fait qu'eviter d'afficher des actions qui echoueraient toujours pour un simple joueur qui atteindrait cette page. */
@@ -154,7 +157,9 @@ export default function CampaignsPanel({
                   className="rounded-full border border-edge bg-transparent px-2 py-0.5 text-xs text-ink-muted outline-none transition-colors hover:bg-panel-raised disabled:opacity-50"
                 />
               </div>
-              {expandedId === c.id && <CampaignDetail campaignId={c.id} worldEntities={worldEntities} canManage={canManage} />}
+              {expandedId === c.id && (
+                <CampaignDetail campaignId={c.id} worldEntities={worldEntities} grantableEntities={grantableEntities} canManage={canManage} />
+              )}
             </li>
           ))}
         </ul>

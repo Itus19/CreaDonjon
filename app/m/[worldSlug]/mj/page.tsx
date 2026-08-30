@@ -45,6 +45,13 @@ export default async function MjCampagnesPage({
         defaultRulesetId={defaultRulesetId}
         initialCampaigns={campaigns}
         worldEntities={entities.filter((e) => e.entity_kind === "character").map((e) => ({ id: e.id, name: e.name }))}
+        // V2-M9 (Lot M) : "Octrois d'edition" doit pouvoir porter sur
+        // N'IMPORTE QUELLE fiche du monde (lieu, faction, objet...), pas
+        // seulement les personnages — distinct de `worldEntities` ci-dessus,
+        // qui reste reserve a "Personnages attribues" (assigner un PJ/PNJ
+        // n'a de sens que pour une fiche de type personnage). `notes` deja
+        // exclu par `listEntities` (fiches privees).
+        grantableEntities={entities.map((e) => ({ id: e.id, name: e.name }))}
         canUseSoloMode={superadmin}
         canManage={gm}
       />
