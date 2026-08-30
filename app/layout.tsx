@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/src/server/repos/account";
 import { resolveBackgroundSelection } from "@/src/server/services/backgroundImages";
 import SettingsMenu from "@/components/shell/SettingsMenu";
+import ViewAsBanner from "@/components/shell/ViewAsBanner";
 import { MusicPlaybackProvider } from "@/components/shell/MusicPlaybackContext";
 import "./globals.css";
 
@@ -70,6 +71,13 @@ export default async function RootLayout({
   const bgBlurCookie = Number(cookieStore.get("bgBlur")?.value);
   const bgBlur = Number.isFinite(bgBlurCookie) && bgBlurCookie >= 0 && bgBlurCookie <= 40 ? bgBlurCookie : 20;
 
+  // "Voir comme" (retour utilisateur, section Administration) : le cookie
+  // httpOnly pose par /api/admin/view-as est la seule trace de ce mode — la
+  // session courante EST deja celle du compte cible a ce stade, jamais
+  // distinguable autrement. Bandeau rendu ici (racine) pour rester visible
+  // sur TOUTE page, pas seulement l'ecran d'accueil.
+  const viewingAsAdminUid = cookieStore.get("view_as_admin_uid")?.value;
+
   return (
     <html
       lang={locale}
@@ -86,6 +94,7 @@ export default async function RootLayout({
         />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <MusicPlaybackProvider>
+            {viewingAsAdminUid && user && <ViewAsBanner viewingAsEmail={profile?.display_name || user.email || ""} />}
             {user && (
               <SettingsMenu
                 currentMode={mode}

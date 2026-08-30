@@ -103,6 +103,30 @@ function InviteAdminRow({
     onRevoked(invite.id);
   }
 
+  /**
+   * "Voir comme" (retour utilisateur) : changement de session REEL — un
+   * bandeau (ViewAsBanner, rendu depuis app/layout.tsx) reste visible
+   * partout tant que ce mode est actif, avec un bouton de retour immediat.
+   */
+  async function viewAs() {
+    if (!invite.claimedByUserId) return;
+    setBusy(true);
+    setError(null);
+    const res = await fetch("/api/admin/view-as", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetUserId: invite.claimedByUserId }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setError(body?.error ?? "Échec du changement de session.");
+      return;
+    }
+    const { url } = (await res.json()) as { url: string };
+    window.location.href = url;
+  }
+
   return (
     <li className="flex flex-col gap-1 border-b border-edge/40 pb-2 last:border-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -124,6 +148,11 @@ function InviteAdminRow({
           <button type="button" onClick={revoke} disabled={busy} className="text-danger hover:underline disabled:opacity-50">
             Révoquer
           </button>
+          {invite.claimedByUserId && (
+            <button type="button" onClick={viewAs} disabled={busy} className="text-accent hover:underline disabled:opacity-50">
+              Voir comme
+            </button>
+          )}
           {invite.claimedByUserId && (
             <button type="button" onClick={deleteAccount} disabled={busy} className="text-danger hover:underline disabled:opacity-50">
               Supprimer le compte

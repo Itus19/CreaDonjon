@@ -212,3 +212,69 @@ export async function deleteInvitedAccount(userId: string): Promise<DeleteInvite
   await admin.auth.admin.deleteUser(userId);
   return { ok: true };
 }
+
+export type MintSessionResult = { ok: true; tokenHash: string } | { ok: false; reason: "not_found" | "not_an_invited_account" };
+
+/**
+ * Genere un lien de connexion pour un compte EXISTANT, par id (retour
+ * utilisateur : "voir l'interface du point de vue de..."). Meme garde-fou
+ * que `deleteInvitedAccount` ci-dessus (refuse un compte jamais issu d'un
+ * lien d'invitation) : ce mecanisme sert a voir comme un profil invite,
+ * jamais a se reconnecter comme n'importe quel compte au hasard.
+ * L'autorisation ("qui a le droit d'appeler ceci") est verifiee par
+ * l'appelant (`src/server/services/viewAs.ts`), pas ici.
+ */
+export async function mintSessionForInvitedAccount(userId: string): Promise<MintSessionResult> {
+  const admin = createAccountProvisioningServiceClient();
+
+  const { data: ownInvites, error: ownInvitesError } = await admin
+    .from("campaign_invites")
+    .select("id")
+    .eq("claimed_by_user_id", userId)
+    .limit(1);
+  if (ownInvitesError) throw new Error(ownInvitesError.message);
+  if (ownInvites.length === 0) return { ok: false, reason: "not_an_invited_account" };
+
+  const { data: userData, error: userError } = await admin.auth.admin.getUserById(userId);
+  if (userError || !userData.user?.email) return { ok: false, reason: "not_found" };
+
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({ type: "magiclink", email: userData.user.email });
+  if (linkError) throw new Error(linkError.message);
+  return { ok: true, tokenHash: linkData.properties.hashed_token };
+}
+
+/**
+ * Genere un lien de connexion pour retrouver SON PROPRE compte apres
+ * "voir comme" (retour utilisateur) — jamais pour un compte invite (aucun
+ * garde-fou `campaign_invites` ici, contrairement a `mintSessionForInvitedAccount`
+ * ci-dessus) : c'est le chemin de retour vers le superadmin, pas une variante
+ * du meme mecanisme. L'autorisation ("cet id est-il vraiment superadmin")
+ * est verifiee par l'appelant (`src/server/services/viewAs.ts`), via une
+ * lecture service_role — la session courante au moment de l'appel est celle
+ * du compte IMPERSONNE, jamais celle du superadmin, RLS ne peut donc pas
+ * servir de garde ici.
+ */
+export async function mintSessionForOwnAccount(userId: string): Promise<MintSessionResult> {
+  const admin = createAccountProvisioningServiceClient();
+  const { data: userData, error: userError } = await admin.auth.admin.getUserById(userId);
+  if (userError || !userData.user?.email) return { ok: false, reason: "not_found" };
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({ type: "magiclink", email: userData.user.email });
+  if (linkError) throw new Error(linkError.message);
+  return { ok: true, tokenHash: linkData.properties.hashed_token };
+}
+
+/**
+ * "Cet id est-il superadmin" via service_role, jamais via la RLS de la
+ * session courante — necessaire pour le retour de "voir comme" : au moment
+ * de l'appel, la session active est celle du compte IMPERSONNE (pas le
+ * superadmin), `profiles_select` ne garantit pas qu'il puisse lire le profil
+ * du superadmin (seulement s'ils partagent un monde, `app.shares_world_with`).
+ * Lecture d'un seul booleen, jamais de donnee sensible — meme perimetre
+ * restreint que le reste de ce module.
+ */
+export async function isSuperadminByIdViaServiceRole(userId: string): Promise<boolean> {
+  const admin = createAccountProvisioningServiceClient();
+  const { data, error } = await admin.from("profiles").select("account_role").eq("id", userId).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.account_role === "superadmin";
+}

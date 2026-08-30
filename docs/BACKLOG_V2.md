@@ -915,6 +915,17 @@ Le journal de la colonne de droite s'adapte au rôle plutôt que de dupliquer un
 
 Bug trouvé pendant cette vérification en direct (retour utilisateur : « teste avec un compte joueur ») : `profiles_select` (jamais élargie depuis la migration d'origine, sauf pour le superadmin en M6) affichait « Compte sans nom » pour toute revision/événement dont l'auteur n'est ni le viewer ni le superadmin — y compris un MJ ordinaire consultant le journal de son propre monde (M7), pas seulement le cas rare du joueur. Corrigé (migration `20260830200001_profiles_select_shared_world.sql`) : un compte peut désormais lire le nom d'un autre s'ils partagent au moins un monde (`app.shares_world_with`, même triple critère que `app.is_world_member`) — strictement moins révélateur que ce qui fuit déjà ailleurs (le panneau Membres d'une campagne affiche l'UUID brut à tout co-membre).
 
+### V2-M7d — « Voir comme » un compte invité, section Administration · `S` — fait
+
+Retour utilisateur : depuis Administration, un bouton « Voir comme » sur chaque ligne de compte réclamé — changement de session RÉEL vers ce compte (ADR 0016, choix délibéré de l'utilisateur après rappel du risque), pas une superposition en lecture seule. Réutilise le mécanisme de lien magique déjà bâti pour les comptes invités (`accountProvisioning.ts`, ADR 0015) : `mintSessionForInvitedAccount` (refuse tout compte non issu d'un lien), consommé via la page `/auth/confirm` déjà existante.
+
+Le filet de sécurité (cookie httpOnly `view_as_admin_uid`, bandeau permanent `ViewAsBanner` rendu depuis `app/layout.tsx`, retour vérifié par lecture `service_role` puisque la session courante n'est plus celle du superadmin) est la partie non négociable — sans lui, ce mécanisme reproduirait le piège vécu dans cette même session (perte d'accès à son propre compte via un cookie partagé entre onglets).
+
+**Critères**
+- [x] Le bouton n'apparaît que pour un compte réellement réclamé via un lien d'invitation, jamais pour un id arbitraire.
+- [x] Le changement de session est réel : la page suivante reflète exactement le rôle et les données visibles par ce compte (vérifié en direct : rôle Joueur, campagne correcte, personnage introuvable car non réclamé).
+- [x] Un bandeau reste visible sur toute page tant que ce mode est actif, avec un retour immédiat vers le compte superadmin — vérifié en direct, cycle complet aller-retour dans le même onglet sans perte d'accès.
+
 ### V2-M7b — Coquille joueur allégée · `M`
 
 Plus tard, une fois l'écran d'accueil unifié et la fiche de personnage réclamée éprouvés en usage réel — voir comment ça se sent avant d'investir dans une coquille dédiée. Même coquille que la MJ (`MondeShell`/`AppShell`), sans les onglets Règles ni les outils MJ, sidebar remplacée par la liste `{sa fiche PJ} ∪ {entity_grants pour lui}` plutôt que l'arbre complet par `entity_kind`. S'appuie entièrement sur `canEditEntity` (M3) pour savoir quoi afficher en écriture, et sur la visibilité existante pour le reste du wiki (comportement déjà en place, rien à changer côté serveur).
