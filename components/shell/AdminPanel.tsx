@@ -135,32 +135,56 @@ function InviteAdminRow({
           {invite.campaignName && <> — {invite.campaignName}</>}
           {" · "}
           {invite.intendedRole ? ROLE_LABELS[invite.intendedRole] : "Au choix"}
+          {invite.claimedName && <> · Réclamé par {invite.claimedName}</>}
           {invite.hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
         </span>
         <div className="flex items-center gap-2">
           {url && <CopyButton url={url} copiedUrl={copiedUrl} onCopy={onCopy} />}
-          <button type="button" onClick={() => setEditingPassword((v) => !v)} className="text-ink-muted hover:text-ink">
+          <button
+            type="button"
+            onClick={() => setEditingPassword((v) => !v)}
+            className="shrink-0 rounded-md border border-edge px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-panel-raised"
+          >
             Mot de passe
           </button>
-          <button type="button" onClick={reset} disabled={busy} className="text-ink-muted hover:text-ink disabled:opacity-50">
+          <button
+            type="button"
+            onClick={reset}
+            disabled={busy}
+            className="shrink-0 rounded-md border border-edge px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
+          >
             Réinitialiser
           </button>
-          <button type="button" onClick={revoke} disabled={busy} className="text-danger hover:underline disabled:opacity-50">
+          <button
+            type="button"
+            onClick={revoke}
+            disabled={busy}
+            className="shrink-0 rounded-md border border-danger px-2 py-1 text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
+          >
             Révoquer
           </button>
           {invite.claimedByUserId && (
-            <button type="button" onClick={viewAs} disabled={busy} className="text-accent hover:underline disabled:opacity-50">
+            <button
+              type="button"
+              onClick={viewAs}
+              disabled={busy}
+              className="shrink-0 rounded-md border border-accent px-2 py-1 text-xs text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+            >
               Voir comme
             </button>
           )}
           {invite.claimedByUserId && (
-            <button type="button" onClick={deleteAccount} disabled={busy} className="text-danger hover:underline disabled:opacity-50">
+            <button
+              type="button"
+              onClick={deleteAccount}
+              disabled={busy}
+              className="shrink-0 rounded-md border border-danger px-2 py-1 text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
+            >
               Supprimer le compte
             </button>
           )}
         </div>
       </div>
-      {invite.claimedName && <span className="text-[11px] text-ink-muted">Réclamé par {invite.claimedName}</span>}
       {freshUrl && (
         <p className="text-[11px] text-danger">Nouveau lien généré — copiez-le maintenant, l&apos;ancien ne fonctionne plus.</p>
       )}
