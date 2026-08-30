@@ -419,7 +419,7 @@ export default function SettingsMenu({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[80vh] w-full max-w-md flex-col gap-5 overflow-y-auto rounded-lg border border-edge-strong bg-panel-raised p-5 shadow-2xl"
+            className="flex max-h-[80vh] w-full max-w-2xl flex-col gap-5 overflow-y-auto rounded-lg border border-edge-strong bg-panel-raised p-5 shadow-2xl"
           >
             <div className="flex items-center justify-between">
               <h2 className="block-title text-lg">{t("titre")}</h2>
