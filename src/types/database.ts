@@ -2044,6 +2044,7 @@ export type Database = {
           password_hash: string | null
           revoked_at: string | null
           scope: string
+          slug: string | null
           token: string | null
           token_hash: string
           world_id: string
@@ -2058,6 +2059,7 @@ export type Database = {
           password_hash?: string | null
           revoked_at?: string | null
           scope: string
+          slug?: string | null
           token?: string | null
           token_hash: string
           world_id: string
@@ -2072,6 +2074,7 @@ export type Database = {
           password_hash?: string | null
           revoked_at?: string | null
           scope?: string
+          slug?: string | null
           token?: string | null
           token_hash?: string
           world_id?: string

@@ -992,6 +992,18 @@ S'appuie sur l'export/duplication déjà en place (session du 29 août) et sur `
 - [ ] Un ami MJ peut créer ses propres mondes, jamais en mode solo.
 - [ ] Le journal superadmin (M6) distingue clairement quel compte a modifié quelle copie.
 
+### V2-M10 — Alias court pour un lien de partage `public_only` · `S` — fait
+
+Retour utilisateur : « personnaliser l'url de partage du wiki... le plus court et explicite possible... y mettre le nom de la campagne ». Discuté d'abord (tension court/explicite vs sécurité) — un slug devinable serait une vraie régression pour un lien `players` (contenu réservé à la table), mais sans risque pour `public_only` (le contenu qu'il expose est déjà destiné à n'importe qui). Décision : slug automatique uniquement pour `public_only` — qui couvre en pratique 100% des liens émis aujourd'hui, `players` n'étant pas encore branché côté création (`src/server/services/shareLinks.ts`, `scope` y reste figé).
+
+Nouvelle colonne `share_links.slug` (unique, nullable — migration `20260830220001_share_links_slug.sql`), dérivée du nom de la campagne du monde (`slugify`, même utilitaire que les slugs de monde) avec le même mécanisme de collision par suffixe numérique (`nextSlugCandidate`). Résolution (`app.resolve_share_link`/`record_share_link_password_attempt`) acceptant désormais le slug OU le jeton d'origine dans le même paramètre — sans ambiguïté possible (un slug ne fait jamais 43 caractères base64url) — donc `/partage/[token]` continue de fonctionner tel quel pour tout lien plus ancien, sans migration de données.
+
+**Critères**
+- [x] Un nouveau lien `public_only` obtient une URL du type `/partage/nom-de-campagne`, jamais le jeton aléatoire, tant qu'un ne rentre pas en collision.
+- [x] Une collision de slug se résout par un suffixe numérique (`-2`, `-3`...), jamais une erreur visible.
+- [x] Le jeton aléatoire d'origine reste une deuxième porte d'entrée valide vers le même lien (vérifié par test d'intégration dédié, `shareLinks.integration.test.ts`).
+- [x] Vérifié en direct (Faerûn/Campagne test) : lien créé en `/partage/campagne-test`, page publique et navigation vers une fiche (`/partage/campagne-test/6`) fonctionnelles.
+
 ---
 
 ## 3. Critère de fin de V2

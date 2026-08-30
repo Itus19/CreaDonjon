@@ -13,9 +13,11 @@ export interface ShareLinkRow {
   created_at: string;
   password_hash: string | null;
   token: string | null;
+  /** V2-M10 (Lot M) : alias court (nom de campagne slugifie), `public_only` seulement — `null` pour un lien `players` ou cree avant cette fonctionnalite. */
+  slug: string | null;
 }
 
-const SHARE_LINK_COLUMNS = "id, world_id, scope, expires_at, revoked_at, created_at, password_hash, token";
+const SHARE_LINK_COLUMNS = "id, world_id, scope, expires_at, revoked_at, created_at, password_hash, token, slug";
 
 /** Actifs seulement (ni expires ni revoques) : geres depuis le monde par un membre — RLS share_links_select (is_world_member). */
 export async function listActiveShareLinksForWorld(
@@ -42,6 +44,7 @@ export async function insertShareLink(
     scope: string;
     createdBy: string;
     passwordHash?: string | null;
+    slug?: string | null;
   },
 ): Promise<ShareLinkRow> {
   const { data, error } = await supabase
@@ -53,11 +56,19 @@ export async function insertShareLink(
       scope: params.scope,
       created_by: params.createdBy,
       password_hash: params.passwordHash ?? null,
+      slug: params.slug ?? null,
     })
     .select(SHARE_LINK_COLUMNS)
     .single();
   if (error) throw new Error(error.message);
   return data as ShareLinkRow;
+}
+
+/** V2-M10 (Lot M) : unicite globale du slug (colonne `unique`, table non partitionnee par monde) — meme motif que `ownerHasSlug` pour les mondes. */
+export async function shareLinkSlugExists(supabase: TypedClient, slug: string): Promise<boolean> {
+  const { data, error } = await supabase.from("share_links").select("id").eq("slug", slug).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data !== null;
 }
 
 /** Idempotent : revoquer un lien deja revoque ne change rien (pas d'erreur). */

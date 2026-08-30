@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createShareLinkSchema, revokeShareLinkSchema } from "@/lib/shareLinks/schemas";
 import { createShareLink, revokeShareLink } from "@/src/server/services/shareLinks";
 
-export type CreateShareLinkState = { error: string } | { token: string } | null;
+export type CreateShareLinkState = { error: string } | { token: string; slug: string | null } | null;
 
 /**
  * useActionState (pas un simple <form action>) : le jeton en clair doit
@@ -30,7 +30,7 @@ export async function createShareLinkAction(
   } = await supabase.auth.getUser();
   if (!user) return { error: "Session expiree, reconnectez-vous." };
 
-  const { token } = await createShareLink(supabase, {
+  const { token, link } = await createShareLink(supabase, {
     worldId: parsed.data.worldId,
     createdBy: user.id,
     password: parsed.data.password || undefined,
@@ -41,7 +41,7 @@ export async function createShareLinkAction(
     revalidatePath(`/m/${worldSlug}`, "page");
   }
 
-  return { token };
+  return { token, slug: link.slug };
 }
 
 export async function revokeShareLinkAction(formData: FormData): Promise<void> {

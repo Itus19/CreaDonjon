@@ -79,11 +79,11 @@ export default function ShareLinkPanel({
     if (revokedId) onMutated?.();
   }, [revokedId, onMutated]);
 
-  function urlForToken(token: string): string {
-    return `${window.location.origin}/partage/${token}`;
+  function urlFor(identifier: string): string {
+    return `${window.location.origin}/partage/${identifier}`;
   }
 
-  const freshUrl = state && "token" in state ? urlForToken(state.token) : null;
+  const freshUrl = state && "token" in state ? urlFor(state.slug ?? state.token) : null;
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-edge bg-panel-sunken p-4">
@@ -143,7 +143,9 @@ export default function ShareLinkPanel({
                 {link.hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
               </span>
               <div className="flex items-center gap-2">
-                {link.token && <CopyButton url={urlForToken(link.token)} copiedUrl={copiedUrl} onCopy={setCopiedUrl} />}
+                {(link.slug || link.token) && (
+                  <CopyButton url={urlFor(link.slug ?? link.token!)} copiedUrl={copiedUrl} onCopy={setCopiedUrl} />
+                )}
                 <form
                   action={revokeAction}
                   onSubmit={() => setRemovedIds((prev) => new Set(prev).add(link.id))}
