@@ -911,7 +911,9 @@ Le journal de la colonne de droite s'adapte au rôle plutôt que de dupliquer un
 **Critères**
 - [x] Colonne profil : nom modifiable en place avec bouton Enregistrer (réutilise `DisplayNameForm`, déjà en place depuis V1-A1) et mot de passe modifiable en place, toujours optionnel — jamais imposé aux comptes invités (lien magique uniquement).
 - [x] Colonne centrale : création/import de monde en haut, liste des mondes/campagnes en dessous.
-- [x] Colonne de droite : cliquer un monde affiche son journal récent et un bouton Rejoindre — le contenu du journal dépend du rôle réel du compte dans ce monde (vérifié par test d'intégration dédié, `src/server/services/activityJournal.integration.test.ts` : un PNJ secret n'apparaît jamais dans la vue joueur, apparaît dans la vue MJ).
+- [x] Colonne de droite : cliquer un monde affiche son journal récent et un bouton Rejoindre — le contenu du journal dépend du rôle réel du compte dans ce monde (vérifié par test d'intégration dédié, `src/server/services/activityJournal.integration.test.ts` : un PNJ secret n'apparaît jamais dans la vue joueur, apparaît dans la vue MJ ; et en direct avec un vrai compte joueur temporaire dans Valdoria — aucune fuite des cinq PNJ testés).
+
+Bug trouvé pendant cette vérification en direct (retour utilisateur : « teste avec un compte joueur ») : `profiles_select` (jamais élargie depuis la migration d'origine, sauf pour le superadmin en M6) affichait « Compte sans nom » pour toute revision/événement dont l'auteur n'est ni le viewer ni le superadmin — y compris un MJ ordinaire consultant le journal de son propre monde (M7), pas seulement le cas rare du joueur. Corrigé (migration `20260830200001_profiles_select_shared_world.sql`) : un compte peut désormais lire le nom d'un autre s'ils partagent au moins un monde (`app.shares_world_with`, même triple critère que `app.is_world_member`) — strictement moins révélateur que ce qui fuit déjà ailleurs (le panneau Membres d'une campagne affiche l'UUID brut à tout co-membre).
 
 ### V2-M7b — Coquille joueur allégée · `M`
 
