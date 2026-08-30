@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { JournalEntry } from "@/src/server/services/activityJournal";
 import WorldCardActions from "@/app/WorldCardActions";
+import HomeProfilePanel from "./HomeProfilePanel";
 
 export interface HomeWorldCard {
   id: string;
@@ -110,18 +111,25 @@ function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUs
 }
 
 /**
- * Ecran d'accueil en trois colonnes (retour utilisateur) : liste des mondes
- * au centre, detail (journal + actions + Rejoindre) a droite quand on en
- * selectionne un — la selection reste locale a ce composant, jamais dans
+ * Ecran d'accueil en trois colonnes (retour utilisateur) : profil, mondes,
+ * detail du monde selectionne — une seule grille a trois pistes egales
+ * (`grid-cols-3`) plutot qu'une grille imbriquee, pour une repartition
+ * homogene de la largeur d'ecran (retour utilisateur : "mieux repartir
+ * l'espace... aussi leur repartition dans l'ecran", pas seulement l'espace
+ * entre colonnes). La selection reste locale a ce composant, jamais dans
  * l'URL (pas de navigation tant qu'on n'a pas clique "Rejoindre").
  */
-export default function HomeWorldsAndDetail({
+export default function HomeScreen({
   worlds,
   currentUserId,
+  email,
+  displayName,
   createTools,
 }: {
   worlds: HomeWorldCard[];
   currentUserId: string;
+  email: string;
+  displayName: string;
   /** Formulaires de creation/import (retour utilisateur : "en haut de la colonne centrale") — rendus ici plutot que par l'appelant pour rester au-dessus de la liste dans la MEME colonne du grid. */
   createTools: React.ReactNode;
 }) {
@@ -129,40 +137,42 @@ export default function HomeWorldsAndDetail({
   const selected = worlds.find((w) => w.id === selectedId) ?? null;
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
+    <div className="grid grid-cols-3 gap-6">
+      <HomeProfilePanel email={email} displayName={displayName} />
+
       <div className="flex flex-col gap-4">
         {createTools}
         <ul className="flex flex-col gap-2">
-        {worlds.map((world) => {
-          const roleLabel = world.myRole === "player" ? "Joueur" : world.mode === "solo" ? "Solo" : "MJ";
-          return (
-            <li key={world.id}>
-              <button
-                type="button"
-                onClick={() => setSelectedId(world.id)}
-                className={`w-full rounded-lg border p-4 text-left transition-colors hover:bg-panel-raised ${
-                  selectedId === world.id ? "border-accent bg-panel-raised" : "border-edge bg-panel"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium text-ink">{world.name}</p>
-                  <span className="shrink-0 rounded-full border border-edge px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted">
-                    {roleLabel}
-                  </span>
-                </div>
-                {world.campaignName && <p className="text-xs text-ink-muted">Campagne : {world.campaignName}</p>}
-                {world.myRole === "player" ? (
-                  <p className="text-sm text-ink-muted">{world.myCharacter ? world.myCharacter.name : "Personnage introuvable"}</p>
-                ) : (
-                  <p className="text-sm text-ink-muted">
-                    {world.rulesetName ?? "Aucun ruleset"} · Modifié le {formatDate(world.lastModified)}
-                  </p>
-                )}
-              </button>
-            </li>
-          );
-        })}
-        {worlds.length === 0 && <p className="text-ink-muted">Aucun monde pour l&apos;instant.</p>}
+          {worlds.map((world) => {
+            const roleLabel = world.myRole === "player" ? "Joueur" : world.mode === "solo" ? "Solo" : "MJ";
+            return (
+              <li key={world.id}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(world.id)}
+                  className={`w-full rounded-lg border p-4 text-left transition-colors hover:bg-panel-raised ${
+                    selectedId === world.id ? "border-accent bg-panel-raised" : "border-edge bg-panel"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-ink">{world.name}</p>
+                    <span className="shrink-0 rounded-full border border-edge px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted">
+                      {roleLabel}
+                    </span>
+                  </div>
+                  {world.campaignName && <p className="text-xs text-ink-muted">Campagne : {world.campaignName}</p>}
+                  {world.myRole === "player" ? (
+                    <p className="text-sm text-ink-muted">{world.myCharacter ? world.myCharacter.name : "Personnage introuvable"}</p>
+                  ) : (
+                    <p className="text-sm text-ink-muted">
+                      {world.rulesetName ?? "Aucun ruleset"} · Modifié le {formatDate(world.lastModified)}
+                    </p>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+          {worlds.length === 0 && <p className="text-ink-muted">Aucun monde pour l&apos;instant.</p>}
         </ul>
       </div>
 

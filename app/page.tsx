@@ -9,8 +9,7 @@ import { logout } from "./login/actions";
 import CreateWorldForm from "./CreateWorldForm";
 import ImportWorldForm from "./ImportWorldForm";
 import AdminPanel from "@/components/shell/AdminPanel";
-import HomeProfilePanel from "@/components/shell/HomeProfilePanel";
-import HomeWorldsAndDetail from "@/components/shell/HomeWorldsAndDetail";
+import HomeScreen from "@/components/shell/HomeScreen";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -28,7 +27,7 @@ export default async function Home() {
 
   return (
     <div className="flex flex-1 justify-center font-sans">
-      <main className="flex w-full max-w-6xl flex-col gap-6 py-16 px-8">
+      <main className="flex w-full max-w-[1600px] flex-col gap-6 py-16 px-10">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold tracking-wide text-accent">
             CreaDonjon
@@ -48,19 +47,18 @@ export default async function Home() {
         {/* Ecran d'accueil en trois colonnes (retour utilisateur) : profil,
             mondes/campagnes, detail du monde selectionne — remplace
             l'ancienne colonne unique (V2-M5). */}
-        <div className="grid grid-cols-[220px_minmax(0,2fr)] gap-4">
-          <HomeProfilePanel email={user?.email ?? ""} displayName={profile?.display_name ?? ""} />
-          <HomeWorldsAndDetail
-            worlds={worlds}
-            currentUserId={user?.id ?? ""}
-            createTools={
-              <div className="flex flex-wrap items-center gap-2">
-                <CreateWorldForm officialRulesets={officialRulesets} canUseSoloMode={canUseSoloMode} />
-                <ImportWorldForm canUseSoloMode={canUseSoloMode} />
-              </div>
-            }
-          />
-        </div>
+        <HomeScreen
+          worlds={worlds}
+          currentUserId={user?.id ?? ""}
+          email={user?.email ?? ""}
+          displayName={profile?.display_name ?? ""}
+          createTools={
+            <div className="flex flex-wrap items-center gap-2">
+              <CreateWorldForm officialRulesets={officialRulesets} canUseSoloMode={canUseSoloMode} />
+              <ImportWorldForm canUseSoloMode={canUseSoloMode} />
+            </div>
+          }
+        />
       </main>
     </div>
   );
