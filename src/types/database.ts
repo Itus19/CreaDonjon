@@ -1508,6 +1508,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_role: string
           created_at: string
           display_name: string
           id: string
@@ -1515,6 +1516,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_role?: string
           created_at?: string
           display_name?: string
           id: string
@@ -1522,6 +1524,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_role?: string
           created_at?: string
           display_name?: string
           id?: string

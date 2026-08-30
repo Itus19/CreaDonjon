@@ -7,6 +7,7 @@ import { createWorldSchema, deleteWorldSchema, renameWorldSchema } from "@/lib/w
 import { renameCampaignSchema } from "@/lib/campaigns/schemas";
 import { createWorldWithCampaign, deleteWorldWithConfirmation, renameWorld } from "@/src/server/services/worlds";
 import { renameCampaign } from "@/src/server/services/campaigns";
+import { isSuperadmin } from "@/src/server/services/account";
 
 export type ActionState = { error: string } | null;
 
@@ -38,6 +39,13 @@ export async function createWorldAction(
   } = await supabase.auth.getUser();
   if (!user) {
     return { error: "Session expiree, reconnectez-vous." };
+  }
+
+  // V2-M2 (Lot M) : le mode solo est reserve au superadmin — verifie ici,
+  // jamais seulement absent d'un <select>. Un formulaire force (DevTools,
+  // requete directe) echoue de la meme facon qu'un vrai formulaire.
+  if (parsed.data.mode === "solo" && !(await isSuperadmin(supabase, user.id))) {
+    return { error: "Le mode solo est réservé au superadmin." };
   }
 
   const { world } = await createWorldWithCampaign(supabase, {

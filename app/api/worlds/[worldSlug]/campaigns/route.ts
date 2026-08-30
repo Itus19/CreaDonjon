@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createCampaignSchema } from "@/lib/campaigns/schemas";
 import { createCampaign, listCampaigns } from "@/src/server/services/campaigns";
 import { getWorldBySlug } from "@/src/server/services/worlds";
+import { isSuperadmin } from "@/src/server/services/account";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ worldSlug: string }> }) {
   const { worldSlug } = await params;
@@ -37,6 +38,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) {
     return NextResponse.json({ error: "Monde introuvable." }, { status: 404 });
+  }
+
+  // V2-M2 (Lot M) : meme verrou que la creation de monde — ce chemin de
+  // reparation (monde plus ancien sans campagne) ne doit pas devenir une
+  // troisieme facon de contourner le mode solo.
+  if (parsed.data.mode === "solo" && !(await isSuperadmin(supabase, user.id))) {
+    return NextResponse.json({ error: "Le mode solo est réservé au superadmin." }, { status: 403 });
   }
 
   const campaign = await createCampaign(supabase, {

@@ -10,7 +10,7 @@ import Dropdown from "@/components/shared/Dropdown";
  * fichier (`suggestedMode`) — la validation qui compte se fait cote serveur
  * (`importWorldSchema`, zod), ce parsing client n'est qu'un confort d'UI.
  */
-export default function ImportWorldForm() {
+export default function ImportWorldForm({ canUseSoloMode }: { canUseSoloMode: boolean }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -18,6 +18,12 @@ export default function ImportWorldForm() {
   const [mode, setMode] = useState<"campaign" | "solo">("campaign");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const modeOptions = canUseSoloMode
+    ? [
+        { value: "campaign", label: "Campagne (MJ humain)" },
+        { value: "solo", label: "Solo (MJ IA)" },
+      ]
+    : [{ value: "campaign", label: "Campagne (MJ humain)" }];
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -32,7 +38,7 @@ export default function ImportWorldForm() {
       const text = await file.text();
       const json = JSON.parse(text);
       setParsedData(json);
-      if (json?.suggestedMode === "solo" || json?.suggestedMode === "campaign") {
+      if (json?.suggestedMode === "campaign" || (json?.suggestedMode === "solo" && canUseSoloMode)) {
         setMode(json.suggestedMode);
       }
     } catch {
@@ -89,10 +95,7 @@ export default function ImportWorldForm() {
           <Dropdown
             value={mode}
             onChange={(v) => setMode(v as "campaign" | "solo")}
-            options={[
-              { value: "campaign", label: "Campagne (MJ humain)" },
-              { value: "solo", label: "Solo (MJ IA)" },
-            ]}
+            options={modeOptions}
             aria-label="Mode de jeu"
             className="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
           />

@@ -15,8 +15,6 @@ export interface CampaignSummaryView {
   createdAt: string;
 }
 
-const MODE_LABELS: Record<string, string> = { campaign: "Campagne", solo: "Solo" };
-
 /**
  * La campagne du monde (V1-C1, revu V2-G1 "un monde = une campagne") : au
  * plus une par monde desormais (contrainte d'unicite, migration
@@ -33,11 +31,14 @@ export default function CampaignsPanel({
   defaultRulesetId,
   initialCampaigns,
   worldEntities,
+  canUseSoloMode,
 }: {
   worldSlug: string;
   defaultRulesetId: string | null;
   initialCampaigns: CampaignSummaryView[];
   worldEntities: { id: string; name: string }[];
+  /** V2-M2 (Lot M) : le mode solo est reserve au superadmin — verifie cote serveur (route `/api/campaigns/[id]` et `/api/worlds/[slug]/campaigns`), cette prop ne fait qu'eviter d'afficher une option qui echouerait toujours. */
+  canUseSoloMode: boolean;
 }) {
   const [campaigns, setCampaigns] = useState(initialCampaigns);
   const [name, setName] = useState("");
@@ -45,6 +46,12 @@ export default function CampaignsPanel({
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const modeOptions = canUseSoloMode
+    ? [
+        { value: "campaign", label: "Campagne (MJ humain)" },
+        { value: "solo", label: "Solo (MJ IA)" },
+      ]
+    : [{ value: "campaign", label: "Campagne (MJ humain)" }];
 
   async function createCampaign(e: React.FormEvent) {
     e.preventDefault();
@@ -107,10 +114,7 @@ export default function CampaignsPanel({
             <Dropdown
               value={mode}
               onChange={(v) => setMode(v as "campaign" | "solo")}
-              options={[
-                { value: "campaign", label: "Campagne (MJ humain)" },
-                { value: "solo", label: "Solo (MJ IA)" },
-              ]}
+              options={modeOptions}
               aria-label="Mode de jeu"
               className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
             />
@@ -141,10 +145,7 @@ export default function CampaignsPanel({
                 <Dropdown
                   value={c.mode}
                   onChange={(v) => switchMode(c.id, v as "campaign" | "solo")}
-                  options={[
-                    { value: "campaign", label: MODE_LABELS.campaign },
-                    { value: "solo", label: MODE_LABELS.solo },
-                  ]}
+                  options={modeOptions}
                   disabled={pending}
                   aria-label="Mode de jeu"
                   className="rounded-full border border-edge bg-transparent px-2 py-0.5 text-xs text-ink-muted outline-none transition-colors hover:bg-panel-raised disabled:opacity-50"

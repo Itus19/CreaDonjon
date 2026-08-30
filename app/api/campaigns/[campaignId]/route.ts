@@ -8,6 +8,7 @@ import {
   getCampaignRulesetOrigin,
   setCampaignMode,
 } from "@/src/server/services/campaigns";
+import { isSuperadmin } from "@/src/server/services/account";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await params;
@@ -42,6 +43,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
+  }
+
+  // V2-M2 (Lot M) : basculer une campagne existante en solo est refuse au
+  // meme titre qu'en creer une directement en solo — meme verrou, deux
+  // points d'entree.
+  if (parsed.data.mode === "solo" && !(await isSuperadmin(supabase, user.id))) {
+    return NextResponse.json({ error: "Le mode solo est réservé au superadmin." }, { status: 403 });
   }
 
   const updated = await setCampaignMode(supabase, { campaignId, mode: parsed.data.mode, actorUserId: user.id });

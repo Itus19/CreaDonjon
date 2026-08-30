@@ -16,12 +16,21 @@ const initialState: ActionState = null;
  */
 export default function CreateWorldForm({
   officialRulesets,
+  canUseSoloMode,
 }: {
   officialRulesets: { id: string; name: string }[];
+  /** V2-M2 (Lot M) : le mode solo est reserve au superadmin — verifie cote serveur (`createWorldAction`), cette prop ne fait qu'eviter d'afficher une option qui echouerait toujours. */
+  canUseSoloMode: boolean;
 }) {
   const [state, formAction, pending] = useActionState(createWorldAction, initialState);
   const [rulesetId, setRulesetId] = useState("");
   const [mode, setMode] = useState<"campaign" | "solo">("campaign");
+  const modeOptions = canUseSoloMode
+    ? [
+        { value: "campaign", label: "Campagne (MJ humain)" },
+        { value: "solo", label: "Solo (MJ IA)" },
+      ]
+    : [{ value: "campaign", label: "Campagne (MJ humain)" }];
 
   return (
     // `contents` : ce formulaire ne genere pas sa propre boite de mise en
@@ -53,10 +62,7 @@ export default function CreateWorldForm({
       <Dropdown
         value={mode}
         onChange={(v) => setMode(v as "campaign" | "solo")}
-        options={[
-          { value: "campaign", label: "Campagne (MJ humain)" },
-          { value: "solo", label: "Solo (MJ IA)" },
-        ]}
+        options={modeOptions}
         aria-label="Mode de jeu"
         className="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
       />

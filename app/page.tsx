@@ -3,6 +3,7 @@ import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { listWorldCards } from "@/src/server/services/worlds";
 import { listSelectableRulesetsForCurrentUser } from "@/src/server/services/rules";
+import { isSuperadmin } from "@/src/server/services/account";
 import type { Locale } from "@/src/i18n/request";
 import { logout } from "./login/actions";
 import CreateWorldForm from "./CreateWorldForm";
@@ -21,9 +22,10 @@ export default async function Home() {
     data: { user },
   } = await supabase.auth.getUser();
   const locale = (await getLocale()) as Locale;
-  const [worlds, selectableRulesets] = await Promise.all([
+  const [worlds, selectableRulesets, canUseSoloMode] = await Promise.all([
     listWorldCards(supabase, locale),
     listSelectableRulesetsForCurrentUser(supabase),
+    user ? isSuperadmin(supabase, user.id) : Promise.resolve(false),
   ]);
   const officialRulesets = (selectableRulesets ?? []).filter((r) => r.is_official_base);
 
@@ -45,8 +47,8 @@ export default async function Home() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <CreateWorldForm officialRulesets={officialRulesets} />
-          <ImportWorldForm />
+          <CreateWorldForm officialRulesets={officialRulesets} canUseSoloMode={canUseSoloMode} />
+          <ImportWorldForm canUseSoloMode={canUseSoloMode} />
         </div>
 
         <ul className="flex flex-col gap-2">

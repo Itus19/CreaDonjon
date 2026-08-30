@@ -8,12 +8,13 @@ export interface ProfileRow {
   id: string;
   display_name: string;
   locale: string;
+  account_role: string;
 }
 
 export async function getOwnProfile(supabase: TypedClient, userId: string): Promise<ProfileRow | null> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, locale")
+    .select("id, display_name, locale, account_role")
     .eq("id", userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
