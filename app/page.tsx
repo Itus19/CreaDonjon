@@ -9,6 +9,7 @@ import { logout } from "./login/actions";
 import CreateWorldForm from "./CreateWorldForm";
 import ImportWorldForm from "./ImportWorldForm";
 import WorldCardActions from "./WorldCardActions";
+import AdminPanel from "@/components/shell/AdminPanel";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
@@ -43,6 +44,8 @@ export default async function Home() {
             </form>
           </div>
         </div>
+
+        {canUseSoloMode && <AdminPanel />}
 
         <div className="flex flex-wrap items-center gap-2">
           <CreateWorldForm officialRulesets={officialRulesets} canUseSoloMode={canUseSoloMode} />

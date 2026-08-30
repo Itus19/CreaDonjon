@@ -160,3 +160,55 @@ export async function provisionInviteSession(params: {
   if (linkError) throw new Error(linkError.message);
   return { ok: true, tokenHash: linkData.properties.hashed_token };
 }
+
+export type DeleteInvitedAccountResult = { ok: true } | { ok: false; reason: "not_superadmin" | "not_an_invited_account" };
+
+/**
+ * Supprime un compte invite (V2-M6, Lot M) — jamais un compte cree a la
+ * main (garde-fou : refuse si aucune ligne `campaign_invites` n'a jamais
+ * ete reclamee par ce compte). L'autorisation (superadmin uniquement) est
+ * verifiee par l'appelant (`src/server/services/campaignInvites.ts`), pas
+ * ici — ce module n'a pas de notion de "qui appelle", seulement de "quel
+ * compte cible".
+ *
+ * Libere d'abord tout ce qui bloquerait sinon la suppression ou laisserait
+ * un acces residuel : `campaign_characters.user_id` (aucune cascade, la
+ * fiche elle-meme survit, seul le lien au compte disparait) et
+ * `campaign_invites.claimed_by_user_id` (aucune cascade non plus, jamais
+ * reutilisable ensuite — `revoked_at` pose en plus). `campaign_members`
+ * et `entity_grants` ont deja `on delete cascade` sur `user_id`, rien a
+ * faire pour eux.
+ *
+ * La suppression finale (`auth.admin.deleteUser`) peut echouer si ce
+ * compte a lui-meme cree du contenu (`entities.created_by`,
+ * `blocks.created_by`, `session_events.actor_user_id`,
+ * `campaign_invites.created_by`...) : ces colonnes d'auteur n'ont
+ * volontairement PAS de cascade, le journal fusionne (V2-M6) doit survivre
+ * a la suppression d'un compte. Dans ce cas, le compte reste en sommeil
+ * sans plus aucun acces reel — l'objectif de securite (plus aucun droit)
+ * est deja atteint par les etapes precedentes, jamais un echec bruyant
+ * pour autant.
+ */
+export async function deleteInvitedAccount(userId: string): Promise<DeleteInvitedAccountResult> {
+  const admin = createAccountProvisioningServiceClient();
+
+  const { data: ownInvites, error: ownInvitesError } = await admin
+    .from("campaign_invites")
+    .select("id")
+    .eq("claimed_by_user_id", userId)
+    .limit(1);
+  if (ownInvitesError) throw new Error(ownInvitesError.message);
+  if (ownInvites.length === 0) return { ok: false, reason: "not_an_invited_account" };
+
+  const { error: releaseCharactersError } = await admin.from("campaign_characters").update({ user_id: null }).eq("user_id", userId);
+  if (releaseCharactersError) throw new Error(releaseCharactersError.message);
+
+  const { error: releaseInvitesError } = await admin
+    .from("campaign_invites")
+    .update({ claimed_by_user_id: null, revoked_at: new Date().toISOString() })
+    .eq("claimed_by_user_id", userId);
+  if (releaseInvitesError) throw new Error(releaseInvitesError.message);
+
+  await admin.auth.admin.deleteUser(userId);
+  return { ok: true };
+}

@@ -61,6 +61,39 @@ export async function listCampaignInvitesForCampaign(supabase: TypedClient, camp
   return data;
 }
 
+/**
+ * V2-M6 (Lot M) : TOUS les liens actifs, tous mondes confondus — repose
+ * entierement sur la RLS (`campaign_invites_select`, migration
+ * 20260830170001) pour ne renvoyer que ce que l'appelant a le droit de
+ * voir. Pour un superadmin, ca veut dire litteralement tout ; pour
+ * n'importe quel autre compte, seulement ses propres mondes/campagnes
+ * (meme resultat qu'un appel repete a `listCampaignInvitesForCampaign`,
+ * jamais une fuite specifique a cette fonction).
+ */
+export async function listAllCampaignInvites(supabase: TypedClient): Promise<CampaignInviteRow[]> {
+  const { data, error } = await supabase
+    .from("campaign_invites")
+    .select(CAMPAIGN_INVITE_COLUMNS)
+    .is("revoked_at", null)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** V2-M6 (Lot M) : nouveau jeton pour un lien existant (le compte/role/campagne restent identiques) — invalide l'ancien immediatement, `token_hash` etant unique. */
+export async function resetCampaignInviteToken(
+  supabase: TypedClient,
+  params: { inviteId: string; token: string; tokenHash: string }
+): Promise<{ updated: boolean }> {
+  const { data, error } = await supabase
+    .from("campaign_invites")
+    .update({ token: params.token, token_hash: params.tokenHash })
+    .eq("id", params.inviteId)
+    .select("id");
+  if (error) throw new Error(error.message);
+  return { updated: data.length > 0 };
+}
+
 /** V2-M4 (suite) : « mon lien », pour l'ecran de l'ami invite lui-meme — jamais la liste d'un autre (`campaign_invites_select_own`, RLS). */
 export async function getOwnCampaignInvite(supabase: TypedClient, userId: string): Promise<CampaignInviteRow | null> {
   const { data, error } = await supabase

@@ -14,12 +14,16 @@ export interface WorldSummary {
 
 const WORLD_SUMMARY_COLUMNS = "id, name, slug, created_at, wiki_welcome_message";
 
-/** RLS filtre deja par appartenance au monde (SCHEMA.md §19.2) : rien a ajouter ici. */
+/**
+ * RLS filtre deja par appartenance au monde (SCHEMA.md §19.2) — sauf pour
+ * le superadmin, qui voit TOUS les mondes (`worlds_select`, migration
+ * 20260830180001, V2-M6 : le selecteur de monde du journal fusionne doit
+ * pouvoir viser n'importe quel monde, pas seulement les siens). Trie par
+ * nom (pas par date de creation) : c'est aussi le selecteur de la section
+ * Administration, jamais utilise ailleurs pour l'instant.
+ */
 export async function listWorldsForCurrentUser(supabase: TypedClient): Promise<WorldSummary[]> {
-  const { data, error } = await supabase
-    .from("worlds")
-    .select(WORLD_SUMMARY_COLUMNS)
-    .order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("worlds").select(WORLD_SUMMARY_COLUMNS).order("name");
   if (error) throw new Error(error.message);
   return data;
 }
@@ -167,16 +171,39 @@ export interface WorldCard {
 /**
  * Ecran d'accueil enrichi (prepa V2-G1 export/import, decision produit "un
  * monde = une campagne") : une seule requete imbriquee (monde -> campagne)
- * plutot que N+1 allers-retours par monde. RLS filtre deja l'appartenance
- * (SCHEMA.md §19.2) : rien a ajouter ici pour la visibilite. `players` part
- * volontairement vide ici — voir `listWorldCards` (service), qui la remplit.
+ * plutot que N+1 allers-retours par monde.
+ *
+ * RLS ne suffit plus seule pour scoper "mes mondes" depuis que
+ * `worlds_select` laisse aussi passer `app.is_superadmin()` (migration
+ * 20260830180001, V2-M6) : sans filtre applicatif ici, l'ecran d'accueil du
+ * superadmin listerait TOUS les mondes de la base, mal etiquetes "MJ" par
+ * `app/page.tsx` (myRole null traite comme MJ), avec les actions
+ * proprietaire (Renommer/Supprimer) affichees a tort. On filtre donc
+ * explicitement a owner_id === userId OU un role reel via
+ * `getMyRolePerWorld` — meme discipline que `renameWorld`/
+ * `deleteWorldWithConfirmation` (CLAUDE.md §1 : la RLS est le filet, pas la
+ * verification). `players` part volontairement vide ici — voir
+ * `listWorldCards` (service), qui la remplit.
  */
 export async function listWorldCardsForCurrentUser(supabase: TypedClient, userId: string): Promise<WorldCard[]> {
-  const { data, error } = await supabase
+  const { data: rawData, error } = await supabase
     .from("worlds")
     .select(`id, owner_id, name, slug, updated_at, campaigns ( id, name, mode, rulesets ( name ) )`)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
+
+  const rawWorldIds = rawData.map((w) => w.id);
+  const rawCampaignIdByWorldId = new Map(
+    rawData
+      .map((w) => [w.id, (w.campaigns[0] as { id: string } | undefined)?.id])
+      .filter((pair): pair is [string, string] => pair[1] !== undefined)
+  );
+  const myRoleByWorld = await getMyRolePerWorld(supabase, {
+    userId,
+    worldIds: rawWorldIds,
+    campaignIdByWorldId: rawCampaignIdByWorldId,
+  });
+  const data = rawData.filter((w) => w.owner_id === userId || myRoleByWorld.has(w.id));
 
   const worldIds = data.map((w) => w.id);
   const campaignIdByWorldId = new Map(
@@ -184,9 +211,8 @@ export async function listWorldCardsForCurrentUser(supabase: TypedClient, userId
       .map((w) => [w.id, (w.campaigns[0] as { id: string } | undefined)?.id])
       .filter((pair): pair is [string, string] => pair[1] !== undefined)
   );
-  const [lastEntityEditByWorld, myRoleByWorld, myCharacterByCampaign] = await Promise.all([
+  const [lastEntityEditByWorld, myCharacterByCampaign] = await Promise.all([
     latestEntityEditByWorld(supabase, worldIds),
-    getMyRolePerWorld(supabase, { userId, worldIds, campaignIdByWorldId }),
     getMyClaimedCharacterPerCampaign(supabase, { userId, campaignIds: [...campaignIdByWorldId.values()] }),
   ]);
 

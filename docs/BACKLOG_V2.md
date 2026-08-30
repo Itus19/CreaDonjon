@@ -876,15 +876,17 @@ Remplace l'écran actuel de `/` (aujourd'hui : une simple liste de mondes, sans 
 - [x] Un rôle MJ mène à `/m/[slug]`, comme aujourd'hui — aucune régression sur ce chemin déjà utilisé quotidiennement (vérifié en direct : Faerûn/Valdoria inchangés pour le superadmin, propriétaire des deux).
 - [x] Le superadmin voit cet écran comme n'importe quel compte pour ses propres mondes (Valdoria, Faerûn...).
 
-### V2-M6 — Section Administration (superadmin) sur l'écran d'accueil · `M`
+### V2-M6 — Section Administration (superadmin) sur l'écran d'accueil · `M` — fait
 
 Visible uniquement pour `is_superadmin()`, sur ce même écran (pas une page séparée) — c'est précisément le rôle de `app.is_superadmin()` posé en M2. Reprend et étend `InviteLinkPanel.tsx` (V2-M4, aujourd'hui limité à une campagne à la fois) en vue transversale tous mondes confondus : lister/révoquer/réinitialiser un lien, supprimer un compte, et le journal fusionné (`entity_revisions.changed_by` + `session_events.actor_user_id`, déjà porteurs de l'auteur — surtout une vue de lecture qui fusionne les deux triée par date, filtrable par compte/monde, sans le filtre par campagne que M7 impose à la version MJ).
 
+Élargir `worlds_select` à `is_superadmin()` (pour le sélecteur de monde du journal) a eu un effet de bord repéré en vérifiant en direct : l'écran d'accueil PERSONNEL du superadmin (`listWorldCardsForCurrentUser`) s'appuyait entièrement sur cette même RLS pour scoper « mes mondes », sans filtre applicatif — il listait donc soudain tous les mondes de la base, étiquetés « MJ » à tort, boutons Renommer/Supprimer affichés. Corrigé en filtrant explicitement à `owner_id === userId` ou un rôle réel (`src/server/repos/worlds.ts`), même discipline que `renameWorld`/`deleteWorldWithConfirmation` (CLAUDE.md §1, la RLS est le filet, pas la vérification) — aucune faille réelle cela dit, ces deux actions vérifient déjà la propriété côté service, indépendamment de la RLS.
+
 **Critères**
-- [ ] La section n'est visible et accessible qu'à `is_superadmin()`, refusé côté serveur pour tout autre compte.
-- [ ] Réinitialiser un lien invalide l'ancien jeton immédiatement.
-- [ ] Supprimer un compte libère ses fiches revendiquées et ses `entity_grants`.
-- [ ] Le journal affiche, pour un monde donné, les modifications de tous les comptes qui y ont touché, triées par date, sans confondre révision de fiche et événement de jeu.
+- [x] La section n'est visible et accessible qu'à `is_superadmin()`, refusé côté serveur pour tout autre compte.
+- [x] Réinitialiser un lien invalide l'ancien jeton immédiatement.
+- [x] Supprimer un compte libère ses fiches revendiquées et ses `entity_grants`.
+- [x] Le journal affiche, pour un monde donné, les modifications de tous les comptes qui y ont touché, triées par date, sans confondre révision de fiche et événement de jeu.
 
 ### V2-M7 — Journal MJ par monde et octroi d'édition d'une fiche · `S`/`M`
 

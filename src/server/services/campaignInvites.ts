@@ -6,9 +6,11 @@ import { hashSharePassword, verifySharePassword } from "@/src/core/shareLinks/pa
 import {
   getOwnCampaignInvite,
   insertCampaignInvite,
+  listAllCampaignInvites,
   listCampaignInvitesForCampaign,
   listUnclaimedCampaignCharactersForToken,
   recordCampaignInvitePasswordAttempt,
+  resetCampaignInviteToken,
   resolveCampaignInviteToken,
   revokeCampaignInvite,
   setCampaignInvitePasswordHash,
@@ -16,10 +18,16 @@ import {
   type ResolvedCampaignInvite,
   type UnclaimedCampaignCharacter,
 } from "@/src/server/repos/campaignInvites";
-import { provisionInviteSession, type ProvisionInviteResult } from "@/src/server/services/accountProvisioning";
+import {
+  deleteInvitedAccount as deleteInvitedAccountService,
+  provisionInviteSession,
+  type DeleteInvitedAccountResult,
+  type ProvisionInviteResult,
+} from "@/src/server/services/accountProvisioning";
 import { getCampaignById, getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { getWorldById } from "@/src/server/repos/worlds";
 import { getEntityById } from "@/src/server/repos/entities";
+import { isSuperadmin } from "@/src/server/services/account";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -85,6 +93,59 @@ export async function createCampaignInvite(
 export async function listCampaignInvites(supabase: TypedClient, campaignId: string): Promise<CampaignInviteSummary[]> {
   const rows = await listCampaignInvitesForCampaign(supabase, campaignId);
   return rows.map(toSummary);
+}
+
+export interface CampaignInviteAdminSummary extends CampaignInviteSummary {
+  worldName: string | null;
+  campaignName: string | null;
+}
+
+/**
+ * V2-M6 (Lot M) — vue transversale (section Administration, superadmin) :
+ * repose sur `listAllCampaignInvites` (RLS `is_superadmin()`, migration
+ * 20260830170001) pour la portee, puis resout le nom du monde/de la
+ * campagne de chaque ligne — un aller-retour par invite (N+1 assume, meme
+ * convention que `listMyGmCampaignsWithMembers` : quelques amis, pas des
+ * milliers de liens).
+ */
+export async function listAllInvitesForAdmin(supabase: TypedClient): Promise<CampaignInviteAdminSummary[]> {
+  const rows = await listAllCampaignInvites(supabase);
+  return Promise.all(
+    rows.map(async (row) => {
+      const summary = toSummary(row);
+      if (row.campaign_id) {
+        const campaign = await getCampaignById(supabase, row.campaign_id);
+        const world = campaign ? await getWorldById(supabase, campaign.world_id) : null;
+        return { ...summary, worldName: world?.name ?? null, campaignName: campaign?.name ?? null };
+      }
+      if (row.world_id) {
+        const world = await getWorldById(supabase, row.world_id);
+        return { ...summary, worldName: world?.name ?? null, campaignName: null };
+      }
+      return { ...summary, worldName: null, campaignName: null };
+    })
+  );
+}
+
+/** V2-M6 (Lot M) : nouveau jeton pour un lien existant (compte/role/campagne inchanges) — invalide l'ancien immediatement, jamais reaffiche apres coup (meme discipline qu'a la creation). */
+export async function resetInviteToken(supabase: TypedClient, inviteId: string): Promise<{ token: string } | null> {
+  const token = generateCampaignInviteToken();
+  const { updated } = await resetCampaignInviteToken(supabase, { inviteId, token, tokenHash: hashCampaignInviteToken(token) });
+  return updated ? { token } : null;
+}
+
+/**
+ * Reserve au superadmin (V2-M6, section Administration) — verifie ici,
+ * avant de relayer vers le module confine (`accountProvisioning.ts`, qui
+ * n'a pas de notion de "qui appelle").
+ */
+export async function deleteInvitedAccount(
+  supabase: TypedClient,
+  params: { callerId: string; targetUserId: string }
+): Promise<DeleteInvitedAccountResult> {
+  const allowed = await isSuperadmin(supabase, params.callerId);
+  if (!allowed) return { ok: false, reason: "not_superadmin" };
+  return deleteInvitedAccountService(params.targetUserId);
 }
 
 /** « Mon lien » (V2-M4 suite) : l'invite reclame par CET utilisateur, s'il en a un — jamais celui d'un autre (`campaign_invites_select_own`, RLS). */
