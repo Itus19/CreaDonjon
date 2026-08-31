@@ -22,7 +22,8 @@ import type { Rng } from "../dice/rng";
 export type Ability = "str" | "dex" | "con" | "int" | "wis" | "cha";
 export const ABILITIES: readonly Ability[] = ["str", "dex", "con", "int", "wis", "cha"];
 
-const ABILITY_LABELS: Record<Ability, string> = {
+/** V2-M11 (Lot M) : exporte pour construire les libelles de jet ("Test de Force", "Sauvegarde de Sagesse") sans dupliquer cette table ailleurs — meme convention que les `sources` ci-dessous, qui l'utilisent deja. */
+export const ABILITY_LABELS: Record<Ability, string> = {
   str: "Force",
   dex: "Dexterite",
   con: "Constitution",

@@ -9,7 +9,6 @@ import { SKILLS, SKILL_ABILITIES, type Ability, type DerivedSheet } from "@/src/
 import { XP_LEVEL_THRESHOLDS, hasReachedNextLevel } from "@/src/core/rules/experience";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
-import type { TraceStep } from "@/src/core/formula/evaluate";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
 import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import Dropdown from "@/components/shared/Dropdown";
@@ -22,6 +21,7 @@ import TraitsTab from "./TraitsTab";
 import WeaponMasteryTab from "./WeaponMasteryTab";
 import { toggleChoice } from "./characterChoiceUtils";
 import LevelUpWizard from "./LevelUpWizard";
+import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 
 export const ABILITY_LABELS: Record<Ability, string> = {
   str: "FOR",
@@ -45,15 +45,6 @@ const TAB_LABELS: Record<Tab, string> = {
   traits: "Traits",
   maitrise: "Maîtrise d'armes",
 };
-
-export interface RollLogEntry {
-  id: string;
-  label: string;
-  total: number;
-  trace: TraceStep[];
-  isCritical?: boolean;
-  isCriticalFail?: boolean;
-}
 
 interface SheetApiResponse {
   sheet: DerivedSheet;
@@ -128,7 +119,6 @@ export default function PlayableCharacterSheet({
   const [tab, setTab] = useState<Tab>("actions");
   const [advantage, setAdvantage] = useState<AdvantageState>("normal");
   const [remote, setRemote] = useState<SheetApiResponse | null>(null);
-  const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
   const [pendingCrit, setPendingCrit] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,6 +131,9 @@ export default function PlayableCharacterSheet({
   // les hooks de ce composant (react-hooks/rules-of-hooks) — il vit plus
   // bas, juste apres le dernier `useEffect`.
   const [levelUpOpen, setLevelUpOpen] = useState(false);
+
+  /** V2-M11 : jets de test/competence/sauvegarde/initiative depuis cette fiche — alimentent le volet, jamais un second affichage local (voir CLAUDE.md, "resultats de des uniquement dans ce volet"). */
+  const { rollAbility, rollSkill, rollSave, rollInitiative } = useDiceRoll();
 
   /** Onglet Traits (V1-C4 suite) : meme bloc `character` que le reste de la fiche, une seule donnee, plusieurs vues — meme motif que `onUpdateInventory`. */
   function patchCharacter(fields: Partial<CharacterBlockData>) {
@@ -270,10 +263,6 @@ export default function PlayableCharacterSheet({
     );
   }
 
-  function pushLog(entry: Omit<RollLogEntry, "id">) {
-    setRollLog((prev) => [{ ...entry, id: crypto.randomUUID() }, ...prev].slice(0, 8));
-  }
-
   async function postAction<T>(path: string, body: unknown): Promise<T | null> {
     setBusy(true);
     setError(null);
@@ -298,29 +287,15 @@ export default function PlayableCharacterSheet({
   async function attack(item: InventoryItem) {
     const result = await postAction<{
       weaponLabel: string;
-      attack?: { total: number; isCritical: boolean; isCriticalFail: boolean; trace: TraceStep[] };
+      attack?: { total: number; isCritical: boolean; isCriticalFail: boolean };
     }>("attack", { campaignId, itemId: item.id, advantage });
     if (!result?.attack) return;
     setPendingCrit((prev) => ({ ...prev, [item.id]: result.attack!.isCritical }));
-    pushLog({
-      label: `${result.weaponLabel} — attaque`,
-      total: result.attack.total,
-      trace: result.attack.trace,
-      isCritical: result.attack.isCritical,
-      isCriticalFail: result.attack.isCriticalFail,
-    });
   }
 
   async function damage(item: InventoryItem, versatile: boolean) {
     const critical = pendingCrit[item.id] ?? false;
-    const result = await postAction<{ weaponLabel: string; damage?: { total: number; trace: TraceStep[] } }>("damage", {
-      campaignId,
-      itemId: item.id,
-      critical,
-      versatile,
-    });
-    if (!result?.damage) return;
-    pushLog({ label: `${result.weaponLabel} — dégâts${critical ? " (critique)" : ""}`, total: result.damage.total, trace: result.damage.trace });
+    await postAction("damage", { campaignId, itemId: item.id, critical, versatile });
   }
 
   /** Cle de `pendingCrit` pour un sort — prefixee (retour utilisateur, boutons d'action des sorts) pour ne jamais entrer en collision avec un id d'objet d'inventaire, meme etat partage que les armes. */
@@ -329,38 +304,16 @@ export default function PlayableCharacterSheet({
   }
 
   /** Jet d'attaque de sort (retour utilisateur, boutons d'action des sorts) — informatif, ne consomme jamais d'emplacement (comme "Attaquer" pour une arme), alimente `pendingCrit` pour que le bouton de degats double les des sur un coup critique. */
-  async function castSpellAttack(spellKey: string, spellLabel: string) {
-    const result = await postAction<{ attack?: { total: number; isCritical: boolean; isCriticalFail: boolean; trace: TraceStep[] } }>(
-      "roll-spell-attack",
-      { campaignId, spellKey, advantage }
-    );
+  async function castSpellAttack(spellKey: string) {
+    const result = await postAction<{ attack?: { isCritical: boolean } }>("roll-spell-attack", { campaignId, spellKey, advantage });
     if (!result?.attack) return;
     setPendingCrit((prev) => ({ ...prev, [spellCritKey(spellKey)]: result.attack!.isCritical }));
-    pushLog({
-      label: `${spellLabel} — attaque`,
-      total: result.attack.total,
-      trace: result.attack.trace,
-      isCritical: result.attack.isCritical,
-      isCriticalFail: result.attack.isCriticalFail,
-    });
   }
 
-  async function cast(spellKey: string, spellLabel: string, slotLevel: number) {
+  async function cast(spellKey: string, slotLevel: number) {
     const critical = pendingCrit[spellCritKey(spellKey)] ?? false;
-    const result = await postAction<{ remainingSlots: number; damage?: { total: number; trace: TraceStep[] } }>("cast-spell", {
-      campaignId,
-      spellKey,
-      slotLevel,
-      critical,
-    });
+    const result = await postAction("cast-spell", { campaignId, spellKey, slotLevel, critical });
     if (!result) return;
-    pushLog({
-      label: result.damage
-        ? `${spellLabel} (niv. ${slotLevel})${critical ? " (critique)" : ""}`
-        : `${spellLabel} (niv. ${slotLevel}) lancé`,
-      total: result.damage?.total ?? 0,
-      trace: result.damage?.trace ?? [],
-    });
     reloadRemote();
   }
 
@@ -476,6 +429,7 @@ export default function PlayableCharacterSheet({
         onLevelUp={() => setLevelUpOpen(true)}
         onRest={rest}
         onExportJson={exportJson}
+        onRollInitiative={() => rollInitiative(entityId, advantage)}
         error={error}
       />
 
@@ -489,10 +443,15 @@ export default function PlayableCharacterSheet({
                 return (
                   <div key={ability} className="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-accent">{ABILITY_LABELS[ability]}</span>
-                    <span className="text-xl font-bold text-ink">
+                    <button
+                      type="button"
+                      title={`Lancer un test de ${ABILITY_LABELS[ability]}`}
+                      onClick={() => rollAbility(entityId, ability, advantage)}
+                      className="text-xl font-bold text-ink hover:text-accent"
+                    >
                       {sheet.abilities[ability].mod >= 0 ? "+" : ""}
                       {sheet.abilities[ability].mod}
-                    </span>
+                    </button>
                     <input
                       type="number"
                       value={character.abilities.base[ability]}
@@ -506,15 +465,18 @@ export default function PlayableCharacterSheet({
                       }
                       className="w-10 rounded-full border border-edge bg-panel-sunken px-1 py-0.5 text-center text-xs text-ink-muted outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
-                    <span
-                      className={`flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                    <button
+                      type="button"
+                      title={`Lancer une sauvegarde de ${ABILITY_LABELS[ability]}`}
+                      onClick={() => rollSave(entityId, ability, advantage)}
+                      className={`flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold hover:border-accent ${
                         save.proficient ? "border-accent bg-accent/20 text-accent" : "border-edge text-ink-muted"
                       }`}
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${save.proficient ? "bg-accent" : "bg-edge"}`} aria-hidden="true" />
                       Sauv. {save.mod >= 0 ? "+" : ""}
                       {save.mod}
-                    </span>
+                    </button>
                   </div>
                 );
               })}
@@ -604,12 +566,19 @@ export default function PlayableCharacterSheet({
                         <span className={`h-2 w-2 rounded-full ${dotClass}`} />
                       </span>
                     )}
-                    <span className="flex-1 text-ink">{SKILL_LABELS_FR[skill]}</span>
-                    <span className="text-[10px] uppercase text-ink-muted">{ABILITY_LABELS[SKILL_ABILITIES[skill]]}</span>
-                    <span className="w-8 text-right font-medium text-ink">
-                      {result.mod >= 0 ? "+" : ""}
-                      {result.mod}
-                    </span>
+                    <button
+                      type="button"
+                      title={`Lancer ${SKILL_LABELS_FR[skill]}`}
+                      onClick={() => rollSkill(entityId, skill, advantage)}
+                      className="flex flex-1 items-center gap-2 text-left hover:text-accent"
+                    >
+                      <span className="flex-1 text-ink">{SKILL_LABELS_FR[skill]}</span>
+                      <span className="text-[10px] uppercase text-ink-muted">{ABILITY_LABELS[SKILL_ABILITIES[skill]]}</span>
+                      <span className="w-8 text-right font-medium text-ink">
+                        {result.mod >= 0 ? "+" : ""}
+                        {result.mod}
+                      </span>
+                    </button>
                   </div>
                 );
               })}
@@ -685,7 +654,6 @@ export default function PlayableCharacterSheet({
               resources={resources}
               resourcesUsed={runtimeState?.resources ?? {}}
               onChangeResource={changeResource}
-              rollLog={rollLog}
             />
           )}
 

@@ -74,6 +74,12 @@
   --accent-hover: oklch(0.82 0.13 78);
   --accent-ink:   oklch(0.15 0.02 78);
   --danger:       oklch(0.62 0.16 25);
+  /* V2-M11 (volet de lancer de des) : verdict "reussite" d'un jet contre un
+     DD — meme L/C que --danger (deja verifie >= 7:1), teinte de
+     --pole-altruism plutot qu'une nouvelle valeur inventee. Definie une
+     seule fois ici, jamais redefinie par dim/soft/light/high-contrast, meme
+     convention que --danger juste au-dessus. */
+  --success:      oklch(0.62 0.16 140);
 
   --r-sm: 6px;
   --r-md: 10px;

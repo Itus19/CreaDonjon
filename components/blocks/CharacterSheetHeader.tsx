@@ -106,7 +106,17 @@ export function RuleSelect({
  * utilisateur, l'ancien libellé-dans-l'encadré donnait des hauteurs
  * variables selon que le libellé tenait sur une ou deux lignes.
  */
-export function StatBadge({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
+/** `onClick` (V2-M11) : seule l'Initiative s'en sert aujourd'hui — un jet declenche depuis le volet de lancer de des, jamais un second calcul ici. */
+export function StatBadge({ label, value, danger, onClick }: { label: string; value: string; danger?: boolean; onClick?: () => void }) {
+  const box = (
+    <div
+      className={`flex h-14 w-full items-center justify-center rounded-md border ${
+        danger ? "border-danger/60 bg-danger/10" : "border-edge bg-panel-raised"
+      } ${onClick ? "cursor-pointer hover:border-accent" : ""}`}
+    >
+      <span className={`text-base font-semibold ${danger ? "text-danger" : "text-ink"}`}>{value}</span>
+    </div>
+  );
   return (
     <div className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1">
       <span
@@ -116,13 +126,13 @@ export function StatBadge({ label, value, danger }: { label: string; value: stri
       >
         {label}
       </span>
-      <div
-        className={`flex h-14 w-full items-center justify-center rounded-md border ${
-          danger ? "border-danger/60 bg-danger/10" : "border-edge bg-panel-raised"
-        }`}
-      >
-        <span className={`text-base font-semibold ${danger ? "text-danger" : "text-ink"}`}>{value}</span>
-      </div>
+      {onClick ? (
+        <button type="button" onClick={onClick} title={`Lancer ${label}`} className="w-full">
+          {box}
+        </button>
+      ) : (
+        box
+      )}
     </div>
   );
 }
@@ -166,6 +176,7 @@ export default function CharacterSheetHeader({
   onLevelUp,
   onRest,
   onExportJson,
+  onRollInitiative,
   error,
 }: {
   worldSlug: string;
@@ -200,6 +211,8 @@ export default function CharacterSheetHeader({
   onLevelUp: () => void;
   onRest: (kind: "short" | "long") => void;
   onExportJson: () => void;
+  /** V2-M11 : jet d'initiative depuis ce badge — memes regles (fiche, permission, DD/secret) que les autres jets contextuels, jamais un second calcul cote client. */
+  onRollInitiative: () => void;
   error: string | null;
 }) {
   // Lignee (retour utilisateur : "il manque la sous-espece") — meme mecanisme
@@ -379,7 +392,11 @@ export default function CharacterSheetHeader({
             <span className="text-xl font-bold text-ink">{sheet.ac.value}</span>
           </div>
         </div>
-        <StatBadge label="Initiative" value={`${sheet.abilities.dex.mod >= 0 ? "+" : ""}${sheet.abilities.dex.mod}`} />
+        <StatBadge
+          label="Initiative"
+          value={`${sheet.abilities.dex.mod >= 0 ? "+" : ""}${sheet.abilities.dex.mod}`}
+          onClick={onRollInitiative}
+        />
         <StatBadge label="Vitesse" value={`${ftToM(sheet.speed.value)} m`} />
         <StatBadge label="Perception passive" value={String(10 + sheet.skills.perception.mod)} />
         <StatBadge label="Maîtrise" value={`+${sheet.proficiencyBonus}`} />

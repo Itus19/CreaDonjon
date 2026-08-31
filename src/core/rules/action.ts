@@ -11,11 +11,13 @@ import { parseFormula } from "../formula/parser";
  * avant ce ticket — verifie par grep avant d'ecrire quoi que ce soit.
  *
  * Perimetre volontairement etroit : jet d'attaque (d20 + modificateurs,
- * avantage/desavantage) et jet de degats (formule + modificateur, critique).
- * Un systeme d'"intentions" generique pour toute action imaginable serait
- * une abstraction pour un besoin qui n'existe pas encore — ces deux
- * fonctions couvrent exactement ce que V1-B5 affiche (attaques d'arme,
- * degats de sort).
+ * avantage/desavantage), jet de degats (formule + modificateur, critique),
+ * et jet de test/sauvegarde/initiative (V2-M11, volet de lancer de des —
+ * meme d20+modificateur qu'une attaque mais jamais de critique, RAW 5e
+ * 2024 ne prevoit pas de reussite/echec critique sur un simple test). Un
+ * systeme d'"intentions" generique pour toute action imaginable serait une
+ * abstraction pour un besoin qui n'existe pas encore — ces fonctions
+ * couvrent exactement ce que V1-B5/V2-M11 affichent.
  */
 
 export type AdvantageState = "normal" | "advantage" | "disadvantage";
@@ -65,6 +67,31 @@ export function resolveAttackRoll(input: AttackRollInput, rng: Rng): AttackRollR
     ast,
     expression: formatFormulaNode(ast),
   };
+}
+
+export interface CheckRollInput {
+  /** Somme deja faite des `sources` de `sheet.ts` (caracteristique + maitrise/expertise le cas echeant) — ce module ne connait rien de leur provenance. */
+  modifier: number;
+  advantage: AdvantageState;
+}
+
+export interface CheckRollResult {
+  total: number;
+  trace: TraceStep[];
+  ast: FormulaNode;
+  expression: string;
+}
+
+/**
+ * Test de caracteristique, de competence, sauvegarde ou initiative : meme
+ * d20+modificateur qu'une attaque (`resolveAttackRoll`), jamais de
+ * critique — distinct malgre la ressemblance plutot que de forcer l'appelant
+ * a ignorer `isCritical`/`isCriticalFail`, qui n'ont pas de sens ici.
+ */
+export function resolveCheckRoll(input: CheckRollInput, rng: Rng): CheckRollResult {
+  const ast = parseFormula(`${d20Notation(input.advantage)} + {mod}`);
+  const { value, trace } = evaluate(ast, { mod: input.modifier }, rng, "roll");
+  return { total: value, trace, ast, expression: formatFormulaNode(ast) };
 }
 
 export interface DamageRollInput {

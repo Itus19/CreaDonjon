@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveAttackRoll, resolveDamageRoll, weaponAttackAbilityMod } from "./action";
+import { resolveAttackRoll, resolveCheckRoll, resolveDamageRoll, weaponAttackAbilityMod } from "./action";
 
 // Meme convention que src/core/formula/evaluate.test.ts : un RNG factice a
 // sequence fixe. nextInt(20) renvoie une valeur 0-indexee, +1 donne la face
@@ -79,6 +79,39 @@ describe("resolveAttackRoll", () => {
     );
     expect(result.trace.length).toBeGreaterThan(0);
     expect(result.trace.some((step) => step.text.includes("1d20"))).toBe(true);
+  });
+});
+
+describe("resolveCheckRoll", () => {
+  it("d20 normal + modificateur deja somme (caracteristique + maitrise/expertise)", () => {
+    const rng = sequenceRng([10]); // naturel 11
+    const result = resolveCheckRoll({ modifier: 7, advantage: "normal" }, rng);
+    expect(result.total).toBe(18); // 11 + 7
+  });
+
+  it("ne porte jamais de critique — juste un total, contrairement a resolveAttackRoll", () => {
+    const rng = sequenceRng([19]); // naturel 20
+    const result = resolveCheckRoll({ modifier: 0, advantage: "normal" }, rng);
+    expect(result.total).toBe(20);
+    expect(result).not.toHaveProperty("isCritical");
+  });
+
+  it("avantage : garde le plus haut des deux d20", () => {
+    const rng = sequenceRng([5, 15]); // naturels 6 puis 16 -> garde 16
+    const result = resolveCheckRoll({ modifier: 2, advantage: "advantage" }, rng);
+    expect(result.total).toBe(18);
+  });
+
+  it("desavantage : garde le plus bas des deux d20", () => {
+    const rng = sequenceRng([15, 5]); // naturels 16 puis 6 -> garde 6
+    const result = resolveCheckRoll({ modifier: 2, advantage: "disadvantage" }, rng);
+    expect(result.total).toBe(8);
+  });
+
+  it("modificateur negatif (caracteristique defavorable, non maitrise)", () => {
+    const rng = sequenceRng([1]); // naturel 2
+    const result = resolveCheckRoll({ modifier: -1, advantage: "normal" }, rng);
+    expect(result.total).toBe(1);
   });
 });
 

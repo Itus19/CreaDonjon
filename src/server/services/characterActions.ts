@@ -99,6 +99,8 @@ function buildAsiChoiceFeatures(
 
 export interface CharacterActionContext {
   entityId: string;
+  /** V2-M11 (volet de lancer de des) : attribution du jet ("qui a lance") sans relire l'entite a chaque site d'appel. */
+  entityName: string;
   worldId: string;
   campaignId: string | null;
   characterData: CharacterBlockData;
@@ -236,6 +238,7 @@ export async function resolveCharacterActionContext(
 
   return {
     entityId,
+    entityName: entity.name,
     worldId: entity.world_id,
     campaignId,
     characterData,
@@ -306,6 +309,10 @@ async function recordRoll(
     context: roll.context as unknown as Json,
     result: roll.result,
     detail: roll.detail as Json,
+    // Boutons d'action de la fiche (attaque/degats) : toujours publics —
+    // le "jet cache" (V2-M11) n'existe que depuis le volet de lancer de
+    // des, jamais depuis ce chemin plus ancien.
+    visibilityLevel: "public",
     rolledBy: "player",
   });
 }
@@ -352,7 +359,14 @@ export async function rollWeaponAttack(
     ast: attack.ast,
     context: { mod: abilityMod + ctx.sheet.proficiencyBonus },
     result: attack.total,
-    detail: { trace: attack.trace, isCritical: attack.isCritical, isCriticalFail: attack.isCriticalFail, advantage: params.advantage },
+    detail: {
+      who: ctx.entityName,
+      what: `Attaque — ${itemLabel(item)}`,
+      trace: attack.trace,
+      isCritical: attack.isCritical,
+      isCriticalFail: attack.isCriticalFail,
+      advantage: params.advantage,
+    },
   });
 
   return { weaponLabel: itemLabel(item), attack, recorded: params.campaignId !== null };
@@ -387,7 +401,13 @@ export async function rollWeaponDamage(
     ast: damage.ast,
     context: { mod: abilityMod },
     result: damage.total,
-    detail: { trace: damage.trace, damageType: weapon.damageType, critical: params.critical },
+    detail: {
+      who: ctx.entityName,
+      what: `Degats — ${itemLabel(item)}`,
+      trace: damage.trace,
+      damageType: weapon.damageType,
+      critical: params.critical,
+    },
   });
 
   return { weaponLabel: itemLabel(item), damage, recorded: params.campaignId !== null };
@@ -421,7 +441,15 @@ export async function rollSpellAttack(
     ast: attack.ast,
     context: { mod: ctx.sheet.spellcasting.attackBonus },
     result: attack.total,
-    detail: { trace: attack.trace, isCritical: attack.isCritical, isCriticalFail: attack.isCriticalFail, advantage: params.advantage, spellKey: params.spellKey },
+    detail: {
+      who: ctx.entityName,
+      what: `Attaque de sort — ${params.spellKey}`,
+      trace: attack.trace,
+      isCritical: attack.isCritical,
+      isCriticalFail: attack.isCriticalFail,
+      advantage: params.advantage,
+      spellKey: params.spellKey,
+    },
   });
 
   return { attack, recorded: params.campaignId !== null };
@@ -487,7 +515,13 @@ export async function castSpell(
         ast: damage.ast,
         context: {},
         result: damage.total,
-        detail: { trace: damage.trace, spellKey: params.spellKey, slotLevel: params.slotLevel },
+        detail: {
+          who: ctx.entityName,
+          what: `Sort — ${params.spellKey}`,
+          trace: damage.trace,
+          spellKey: params.spellKey,
+          slotLevel: params.slotLevel,
+        },
       });
     }
   }
@@ -551,7 +585,7 @@ export async function takeShortRest(
       ast: roll.ast,
       context: { mod: spend * conMod },
       result: roll.total,
-      detail: { trace: roll.trace, hitDice: dieKey, spent: spend },
+      detail: { who: ctx.entityName, what: `Repos — de de vie (${dieKey})`, trace: roll.trace, hitDice: dieKey, spent: spend },
     });
   }
 

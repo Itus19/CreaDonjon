@@ -1,8 +1,48 @@
 import { z } from "zod";
 import { zCharacterBlockData } from "@/src/core/schemas/blocks/character";
 import { zSpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
+import { ABILITIES, SKILLS, type Ability, type Skill } from "@/src/core/rules/sheet";
 
 const campaignIdField = z.string().uuid().nullable();
+
+// V2-M11 (volet de lancer de des) : `dc` vide (pas de DD) -> null, jamais de
+// mention reussite/echec (retour utilisateur). `hidden` est l'intention du
+// client, toujours reclampee cote serveur a `isWorldAdmin` (checkRolls.ts).
+const abilityField = z.enum(ABILITIES as [Ability, ...Ability[]]);
+const skillField = z.enum(SKILLS as [Skill, ...Skill[]]);
+const advantageField = z.enum(["normal", "advantage", "disadvantage"]);
+const dcField = z.number().int().min(1).max(50).nullable();
+
+export const abilityCheckSchema = z.object({
+  campaignId: campaignIdField,
+  ability: abilityField,
+  advantage: advantageField,
+  dc: dcField,
+  hidden: z.boolean(),
+});
+
+export const skillCheckSchema = z.object({
+  campaignId: campaignIdField,
+  skill: skillField,
+  advantage: advantageField,
+  dc: dcField,
+  hidden: z.boolean(),
+});
+
+export const savingThrowSchema = z.object({
+  campaignId: campaignIdField,
+  ability: abilityField,
+  advantage: advantageField,
+  dc: dcField,
+  hidden: z.boolean(),
+});
+
+export const initiativeCheckSchema = z.object({
+  campaignId: campaignIdField,
+  advantage: advantageField,
+  dc: dcField,
+  hidden: z.boolean(),
+});
 
 export const weaponAttackSchema = z.object({
   campaignId: campaignIdField,

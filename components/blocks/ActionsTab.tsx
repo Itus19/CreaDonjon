@@ -6,7 +6,6 @@ import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasti
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { AdvantageState } from "@/src/core/rules/action";
-import type { TraceStep } from "@/src/core/formula/evaluate";
 import { evaluate } from "@/src/core/formula/evaluate";
 import { formatFormulaNode } from "@/src/core/formula/format";
 import { resolveScaledFormulaText } from "@/src/core/rules/scaling";
@@ -18,7 +17,6 @@ import { useRuleEntryBlocks, type RuleEntryBlockData } from "./useRuleEntryBlock
 import Dropdown from "@/components/shared/Dropdown";
 import type { WeaponData } from "@/src/core/rules/srdMapping";
 import { WEAPON_MASTERY_LABELS_FR } from "@/src/i18n/fr";
-import type { RollLogEntry } from "./PlayableCharacterSheet";
 
 function findBlock<T>(blocks: RuleEntryBlockData[] | undefined, blockType: string): T | null {
   const found = blocks?.find((b) => b.blockType === blockType);
@@ -142,8 +140,8 @@ function PreparedSpellCard({
   spellSaveDc: number;
   spellAbilityLabel: string;
   busy: boolean;
-  onCast: (spellKey: string, label: string, slotLevel: number) => void;
-  onCastAttack: (spellKey: string, label: string) => void;
+  onCast: (spellKey: string, slotLevel: number) => void;
+  onCastAttack: (spellKey: string) => void;
 }) {
   const { ref, label, level } = spell;
   const isCantrip = level === 0;
@@ -196,7 +194,7 @@ function PreparedSpellCard({
               resolvedFormula={attackResolved}
               detailFormula={attackDetail}
               busy={busy}
-              onClick={() => ref.kind === "rule" && onCastAttack(ref.key, label)}
+              onClick={() => ref.kind === "rule" && onCastAttack(ref.key)}
             />
           )}
           {!isCantrip && validSlotLevels.length === 0 && <span className="text-xs text-ink-muted">Aucun emplacement de ce niveau.</span>}
@@ -216,7 +214,7 @@ function PreparedSpellCard({
                 resolvedFormula={resolvedDamage ?? (isCantrip ? "Sort mineur" : `${available}/${spellSlots[String(castLevel)] ?? 0}`)}
                 detailFormula={resolvedDamage ? "au niveau choisi" : isCantrip ? "sans emplacement" : "emplacements"}
                 busy={busy || (!isCantrip && available === 0)}
-                onClick={() => ref.kind === "rule" && onCast(ref.key, label, castLevel)}
+                onClick={() => ref.kind === "rule" && onCast(ref.key, castLevel)}
               />
             </div>
           )}
@@ -260,7 +258,6 @@ export default function ActionsTab({
   resources,
   resourcesUsed,
   onChangeResource,
-  rollLog,
 }: {
   worldSlug: string;
   busy: boolean;
@@ -284,12 +281,11 @@ export default function ActionsTab({
   spellAttackBonus: number;
   spellSaveDc: number;
   spellAbilityLabel: string;
-  onCast: (spellKey: string, label: string, slotLevel: number) => void;
-  onCastAttack: (spellKey: string, label: string) => void;
+  onCast: (spellKey: string, slotLevel: number) => void;
+  onCastAttack: (spellKey: string) => void;
   resources: ResourcesBlockData | undefined;
   resourcesUsed: Record<string, number>;
   onChangeResource: (trackerId: string, delta: number) => void;
-  rollLog: RollLogEntry[];
 }) {
   const cantripSpells = preparedSpells.filter((s) => s.level === 0);
   const leveledSpells = preparedSpells.filter((s) => s.level > 0);
@@ -424,21 +420,6 @@ export default function ActionsTab({
               </div>
             );
           })}
-        </div>
-      )}
-
-      {rollLog.length > 0 && (
-        <div className="flex flex-col gap-1.5 rounded-md border border-edge/60 bg-panel-sunken p-2">
-          {rollLog.map((entry) => (
-            <div key={entry.id} className="text-xs">
-              <p className="text-ink">
-                <span className="font-semibold">{entry.label} : {entry.total}</span>
-                {entry.isCritical && <span className="ml-1 text-accent">critique !</span>}
-                {entry.isCriticalFail && <span className="ml-1 text-danger">échec critique</span>}
-              </p>
-              {entry.trace.length > 0 && <p className="text-ink-muted">{entry.trace.map((s: TraceStep) => s.text).join(" ; ")}</p>}
-            </div>
-          ))}
         </div>
       )}
     </div>

@@ -177,6 +177,7 @@ export default function PreviewStep({
         onLevelUp={noop}
         onRest={noop}
         onExportJson={noop}
+        onRollInitiative={noop}
         error={null}
       />
 
@@ -225,7 +226,6 @@ export default function PreviewStep({
           resources={undefined}
           resourcesUsed={{}}
           onChangeResource={noop}
-          rollLog={[]}
         />
       )}
 

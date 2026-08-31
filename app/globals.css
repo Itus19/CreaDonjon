@@ -18,6 +18,7 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-ink: var(--accent-ink);
   --color-danger: var(--danger);
+  --color-success: var(--success);
   --color-scrim: var(--scrim);
 
   --radius-sm: var(--r-sm);
@@ -62,6 +63,17 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--edge-strong);
+}
+
+/* Zone scrollable sans ascenseur visible (retour utilisateur, coquille
+   joueur : sommaire Wiki/Regles) — reste scrollable a la molette/au
+   toucher, seule l'apparence de la barre disparait. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /*

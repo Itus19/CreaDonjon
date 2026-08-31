@@ -1,5 +1,9 @@
 import type { Rng } from "./rng";
 
+/** Types de des standards (V2-M11, volet de lancer) — source unique pour le picker client et la validation serveur du jet libre, jamais duplique. */
+export const DIE_TYPES = ["d4", "d6", "d8", "d10", "d12", "d20", "d100"] as const;
+export type DieType = (typeof DIE_TYPES)[number];
+
 export interface DiceKeep {
   mode: "kh" | "kl";
   count: number;
