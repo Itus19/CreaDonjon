@@ -11,21 +11,29 @@ import SectionToggle from "./SectionToggle";
  * RulesSidebar/Sidebar) : campagnes, probabilites (V1-E5), rencontres
  * (V1-E3) et initiative (V1-E4) — tous remontes de la V2 sur demande
  * explicite de l'utilisateur (docs/SCHEMA.md §7, specs/outils-mj.md §8).
+ * Personnalisation/Regles actives/Publication (retour utilisateur, gomme
+ * le bouton ⚙ global) : ex-onglets du menu de reglages, chacun sa propre
+ * page ici plutot qu'un modal — meme profil que les autres entrees.
  * Tables aleatoires/bloc-notes restent en reserve. Les entrees reservees
- * restent visibles (pas de fonctionnalite cachee) mais desactivees, meme
- * convention que "Inviter un MJ" dans le menu de reglages.
+ * restent visibles (pas de fonctionnalite cachee) mais desactivees.
+ *
+ * Liste triee par ordre alphabetique (retour utilisateur) — jamais par
+ * ordre d'ajout : verifie avec `localeCompare(..., "fr")` plutot que suppose.
  */
 export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
   const t = useTranslations("mj");
   const tShell = useTranslations("shell");
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const isCampagnes = pathname === `/m/${worldSlug}/mj`;
-  const isProbabilites = pathname === `/m/${worldSlug}/mj/probabilites`;
-  const isRencontres = pathname === `/m/${worldSlug}/mj/rencontres`;
-  const isInitiative = pathname === `/m/${worldSlug}/mj/initiative`;
-  const isCreationPersonnage = pathname === `/m/${worldSlug}/mj/creation-personnage`;
   const isCalendrier = pathname === `/m/${worldSlug}/mj/calendrier`;
+  const isCampagnes = pathname === `/m/${worldSlug}/mj`;
+  const isCreationPersonnage = pathname === `/m/${worldSlug}/mj/creation-personnage`;
+  const isInitiative = pathname === `/m/${worldSlug}/mj/initiative`;
+  const isPersonnalisation = pathname === `/m/${worldSlug}/mj/personnalisation`;
+  const isProbabilites = pathname === `/m/${worldSlug}/mj/probabilites`;
+  const isPublication = pathname === `/m/${worldSlug}/mj/publication`;
+  const isReglesActives = pathname === `/m/${worldSlug}/mj/regles-actives`;
+  const isRencontres = pathname === `/m/${worldSlug}/mj/rencontres`;
 
   const reserved = [t("tablesAleatoires"), t("blocNotes")];
 
@@ -55,6 +63,16 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
       >
         <SectionToggle worldSlug={worldSlug} />
         <Link
+          href={`/m/${worldSlug}/mj/calendrier`}
+          onClick={() => setOpen(false)}
+          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
+            isCalendrier ? "bg-panel-raised text-accent" : "text-ink-soft"
+          }`}
+        >
+          {t("calendrier")}
+        </Link>
+
+        <Link
           href={`/m/${worldSlug}/mj`}
           onClick={() => setOpen(false)}
           className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
@@ -62,36 +80,6 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
           }`}
         >
           {t("campagnes")}
-        </Link>
-
-        <Link
-          href={`/m/${worldSlug}/mj/probabilites`}
-          onClick={() => setOpen(false)}
-          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-            isProbabilites ? "bg-panel-raised text-accent" : "text-ink-soft"
-          }`}
-        >
-          {t("probabilites")}
-        </Link>
-
-        <Link
-          href={`/m/${worldSlug}/mj/rencontres`}
-          onClick={() => setOpen(false)}
-          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-            isRencontres ? "bg-panel-raised text-accent" : "text-ink-soft"
-          }`}
-        >
-          {t("rencontres")}
-        </Link>
-
-        <Link
-          href={`/m/${worldSlug}/mj/initiative`}
-          onClick={() => setOpen(false)}
-          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-            isInitiative ? "bg-panel-raised text-accent" : "text-ink-soft"
-          }`}
-        >
-          {t("initiative")}
         </Link>
 
         <Link
@@ -105,13 +93,63 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
         </Link>
 
         <Link
-          href={`/m/${worldSlug}/mj/calendrier`}
+          href={`/m/${worldSlug}/mj/initiative`}
           onClick={() => setOpen(false)}
           className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-            isCalendrier ? "bg-panel-raised text-accent" : "text-ink-soft"
+            isInitiative ? "bg-panel-raised text-accent" : "text-ink-soft"
           }`}
         >
-          {t("calendrier")}
+          {t("initiative")}
+        </Link>
+
+        <Link
+          href={`/m/${worldSlug}/mj/personnalisation`}
+          onClick={() => setOpen(false)}
+          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
+            isPersonnalisation ? "bg-panel-raised text-accent" : "text-ink-soft"
+          }`}
+        >
+          {t("personnalisation")}
+        </Link>
+
+        <Link
+          href={`/m/${worldSlug}/mj/probabilites`}
+          onClick={() => setOpen(false)}
+          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
+            isProbabilites ? "bg-panel-raised text-accent" : "text-ink-soft"
+          }`}
+        >
+          {t("probabilites")}
+        </Link>
+
+        <Link
+          href={`/m/${worldSlug}/mj/publication`}
+          onClick={() => setOpen(false)}
+          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
+            isPublication ? "bg-panel-raised text-accent" : "text-ink-soft"
+          }`}
+        >
+          {t("publication")}
+        </Link>
+
+        <Link
+          href={`/m/${worldSlug}/mj/regles-actives`}
+          onClick={() => setOpen(false)}
+          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
+            isReglesActives ? "bg-panel-raised text-accent" : "text-ink-soft"
+          }`}
+        >
+          {t("reglesActives")}
+        </Link>
+
+        <Link
+          href={`/m/${worldSlug}/mj/rencontres`}
+          onClick={() => setOpen(false)}
+          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
+            isRencontres ? "bg-panel-raised text-accent" : "text-ink-soft"
+          }`}
+        >
+          {t("rencontres")}
         </Link>
 
         <div className="mt-3 flex flex-col gap-1 border-t border-edge/60 pt-3">

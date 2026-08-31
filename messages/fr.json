@@ -163,20 +163,14 @@
     "initiative": "Initiative",
     "creationPersonnage": "Création de personnage",
     "calendrier": "Calendrier",
+    "personnalisation": "Personnalisation",
+    "reglesActives": "Règles actives",
+    "publication": "Publication",
     "spikeSolo": "Spike solo (V2-S1)",
     "blocNotes": "Bloc-notes",
     "bientot": "Bientôt"
   },
   "settings": {
-    "ouvrir": "Réglages",
-    "titre": "Réglages",
-    "fermer": "Fermer",
-    "general": "Général",
-    "langue": {
-      "titre": "Langue",
-      "fr": "Français",
-      "en": "English"
-    },
     "theme": {
       "titre": "Thème",
       "dark": "Sombre",
@@ -192,19 +186,6 @@
       "email": "Email",
       "enregistrer": "Enregistrer",
       "enregistre": "Enregistré"
-    },
-    "collaboration": {
-      "titre": "Collaboration",
-      "mesCampagnes": "Mes campagnes",
-      "aucuneCampagneMj": "Vous n'êtes MJ d'aucune campagne.",
-      "inviterPlaceholder": "Courriel à inviter",
-      "inviter": "Inviter",
-      "roleGm": "MJ",
-      "rolePlayer": "Joueur",
-      "membres": "Membres",
-      "aucunMembre": "Aucun membre pour l'instant.",
-      "erreurInvitation": "Échec de l'invitation.",
-      "erreurChargement": "Impossible de charger vos campagnes."
     },
     "suppression": {
       "titre": "Zone dangereuse",

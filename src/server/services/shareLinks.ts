@@ -89,14 +89,27 @@ export async function listShareLinks(supabase: TypedClient, worldId: string): Pr
  * reserve a la table, un slug devinable (nom de campagne) y serait une
  * vraie regression de securite contrairement a ce cas, deja public.
  */
+/** Sentinelle attrapee par `createShareLinkAction` pour un message d'erreur specifique — un alias personnalise deja pris n'est jamais la meme situation qu'un formulaire invalide. */
+export class ShareLinkSlugTakenError extends Error {
+  constructor() {
+    super("slug-taken");
+  }
+}
+
 export async function createShareLink(
   supabase: TypedClient,
-  params: { worldId: string; createdBy: string; password?: string },
+  params: { worldId: string; createdBy: string; password?: string; customSlug?: string },
 ): Promise<{ token: string; link: ShareLinkRow }> {
   const token = generateShareToken();
   const campaignId = await resolveCampaignId(supabase, params.worldId);
   const campaign = campaignId ? await getCampaign(supabase, campaignId) : null;
-  const slug = campaign ? await generateUniqueShareSlug(supabase, campaign.name) : null;
+  let slug: string | null;
+  if (params.customSlug) {
+    if (await shareLinkSlugExists(supabase, params.customSlug)) throw new ShareLinkSlugTakenError();
+    slug = params.customSlug;
+  } else {
+    slug = campaign ? await generateUniqueShareSlug(supabase, campaign.name) : null;
+  }
   const link = await insertShareLink(supabase, {
     worldId: params.worldId,
     token,

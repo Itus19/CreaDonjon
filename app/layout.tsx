@@ -6,7 +6,6 @@ import { getLocale, getMessages } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/src/server/repos/account";
 import { resolveBackgroundSelection } from "@/src/server/services/backgroundImages";
-import SettingsMenu from "@/components/shell/SettingsMenu";
 import ViewAsBanner from "@/components/shell/ViewAsBanner";
 import { MusicPlaybackProvider } from "@/components/shell/MusicPlaybackContext";
 import "./globals.css";
@@ -95,18 +94,6 @@ export default async function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <MusicPlaybackProvider>
             {viewingAsAdminUid && user && <ViewAsBanner viewingAsEmail={profile?.display_name || user.email || ""} />}
-            {user && (
-              <SettingsMenu
-                currentMode={mode}
-                currentContrast={contrast ?? "off"}
-                currentLocale={locale}
-                email={user.email ?? ""}
-                displayName={profile?.display_name ?? ""}
-                currentBackgroundRef={background.ref}
-                currentBackgroundAvailableModes={background.availableModes}
-                currentBgBlur={bgBlur}
-              />
-            )}
             {children}
           </MusicPlaybackProvider>
         </NextIntlClientProvider>

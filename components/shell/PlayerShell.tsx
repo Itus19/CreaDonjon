@@ -31,9 +31,10 @@ interface Destination {
  * reste la simple barre d'onglets d'origine, un nom de monde et une radio
  * n'y ont pas leur place (memes contraintes qu'avant pour `Clock`, retire
  * de la coquille joueur — un outil de suivi de seance, plus proche du MJ).
- * Jamais de bouton Reglages ici (`SettingsMenu.tsx` se masque lui-meme sur
- * ces routes) : "les joueurs n'ont pas besoin d'avoir acces au menu de
- * reglages".
+ * Jamais de bouton Reglages ici : "les joueurs n'ont pas besoin d'avoir
+ * acces au menu de reglages" — de toute facon retire de l'application
+ * entiere (retour utilisateur, ses options ont rejoint la sidebar MJ et
+ * l'ecran d'accueil du compte).
  */
 export default function PlayerShell({
   worldSlug,

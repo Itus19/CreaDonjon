@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createShareLinkSchema, revokeShareLinkSchema } from "@/lib/shareLinks/schemas";
-import { createShareLink, revokeShareLink } from "@/src/server/services/shareLinks";
+import { createShareLink, revokeShareLink, ShareLinkSlugTakenError } from "@/src/server/services/shareLinks";
 
 export type CreateShareLinkState = { error: string } | { token: string; slug: string | null } | null;
 
@@ -19,6 +19,7 @@ export async function createShareLinkAction(
   const parsed = createShareLinkSchema.safeParse({
     worldId: formData.get("worldId"),
     password: formData.get("password"),
+    customSlug: formData.get("customSlug"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
@@ -30,11 +31,19 @@ export async function createShareLinkAction(
   } = await supabase.auth.getUser();
   if (!user) return { error: "Session expiree, reconnectez-vous." };
 
-  const { token, link } = await createShareLink(supabase, {
-    worldId: parsed.data.worldId,
-    createdBy: user.id,
-    password: parsed.data.password || undefined,
-  });
+  let created: Awaited<ReturnType<typeof createShareLink>>;
+  try {
+    created = await createShareLink(supabase, {
+      worldId: parsed.data.worldId,
+      createdBy: user.id,
+      password: parsed.data.password || undefined,
+      customSlug: parsed.data.customSlug || undefined,
+    });
+  } catch (err) {
+    if (err instanceof ShareLinkSlugTakenError) return { error: "Cet alias est déjà utilisé." };
+    throw err;
+  }
+  const { token, link } = created;
 
   const worldSlug = formData.get("worldSlug");
   if (typeof worldSlug === "string" && worldSlug !== "") {

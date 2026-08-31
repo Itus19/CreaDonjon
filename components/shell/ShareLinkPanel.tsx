@@ -44,9 +44,10 @@ function CopyButton({ url, copiedUrl, onCopy }: { url: string; copiedUrl: string
  * optionnel (V1-C4), lui, reste a usage unique : une fois saisi a la
  * creation, plus jamais lisible — seul `hasPassword` atteint ce composant.
  *
- * `onMutated` : ce panneau vit desormais dans le menu de reglages (rendu
- * global, hors contexte serveur de monde — SettingsMenu.tsx recupere
- * `links` par un fetch client, pas par revalidation de page comme avant).
+ * `onMutated` : ce panneau vit desormais dans la page MJ "Publication"
+ * (`PublicationPanel.tsx`, contexte serveur de monde reel) — `router.refresh()`
+ * y sert de callback, la meme fonction ayant servi un fetch client quand ce
+ * panneau vivait dans l'ancien menu de reglages global.
  * `links` reste derive de `initialLinks` a chaque rendu (jamais synchronise
  * par un effet, meme convention que le reste de la coquille) ; seule la
  * suppression optimiste d'un lien revoque vit dans un etat local, pose au
@@ -66,10 +67,25 @@ export default function ShareLinkPanel({
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const links = initialLinks.filter((l) => !removedIds.has(l.id));
   const [password, setPassword] = useState("");
+  const [customSlug, setCustomSlug] = useState("");
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  // `ShareLinkPanel` est desormais rendu directement par une vraie page
+  // serveur (`PublicationPanel.tsx`), plus derriere l'ancien modal de
+  // reglages qui ne le montait jamais avant l'ouverture cote client —
+  // `window` n'existe pas pendant le rendu serveur initial. `origin` reste
+  // vide le temps du premier rendu client (identique au rendu serveur,
+  // aucun avertissement d'hydratation), puis se remplit une fois monte.
+  const [origin, setOrigin] = useState("");
 
   const [state, formAction, pending] = useActionState(createShareLinkAction, initialState);
   const [revokedId, revokeAction] = useActionState<string | null, FormData>(revokeWrapper, null);
+
+  useEffect(() => {
+    // window n'existe pas au rendu serveur — lu une seule fois au montage,
+    // identique au rendu serveur avant cet effet (pas de scintillement).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     if (state && "token" in state) onMutated?.();
@@ -80,7 +96,7 @@ export default function ShareLinkPanel({
   }, [revokedId, onMutated]);
 
   function urlFor(identifier: string): string {
-    return `${window.location.origin}/partage/${identifier}`;
+    return `${origin}/partage/${identifier}`;
   }
 
   const freshUrl = state && "token" in state ? urlFor(state.slug ?? state.token) : null;
@@ -92,9 +108,22 @@ export default function ShareLinkPanel({
         Un lien anonyme n&apos;affiche que le contenu public de ce monde — jamais le contenu réservé au MJ.
       </p>
 
-      <form action={formAction} onSubmit={() => setPassword("")} className="flex flex-col gap-2">
+      <form action={formAction} onSubmit={() => { setPassword(""); setCustomSlug(""); }} className="flex flex-col gap-2">
         <input type="hidden" name="worldId" value={worldId} />
         <input type="hidden" name="worldSlug" value={worldSlug} />
+        <label className="flex flex-col gap-1 text-xs text-ink-muted">
+          Alias personnalisé (optionnel)
+          <span className="flex items-center gap-1 rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink focus-within:border-accent">
+            <span className="shrink-0 text-ink-muted">/partage/</span>
+            <input
+              name="customSlug"
+              value={customSlug}
+              onChange={(e) => setCustomSlug(e.target.value)}
+              placeholder="ma-campagne"
+              className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-ink-muted"
+            />
+          </span>
+        </label>
         <div className="flex items-center gap-2">
           <input
             type="password"
@@ -113,7 +142,7 @@ export default function ShareLinkPanel({
           </button>
         </div>
         <p className="text-[10px] text-ink-muted">
-          Avec un mot de passe, le contenu ne se charge qu&apos;après validation — jamais affiché puis masqué.
+          Laissé vide, l&apos;alias est déduit du nom de la campagne. Avec un mot de passe, le contenu ne se charge qu&apos;après validation — jamais affiché puis masqué.
         </p>
       </form>
 
