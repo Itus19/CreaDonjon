@@ -29,5 +29,9 @@ export default async function JoueurLayout({
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) redirect("/");
 
-  return <PlayerShell worldSlug={worldSlug}>{children}</PlayerShell>;
+  return (
+    <PlayerShell worldSlug={worldSlug} worldName={world.name}>
+      {children}
+    </PlayerShell>
+  );
 }

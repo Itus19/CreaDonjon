@@ -8,6 +8,9 @@ import { MonsterCard } from "@/components/rules/blockContentRenderer";
 import MissingBlocksBanner from "@/components/rules/MissingBlocksBanner";
 import RuleRefsPanel from "@/components/rules/RuleRefsPanel";
 
+/** Coquille joueur (retour utilisateur : "les blocs de données brutes SRD ne sont pas visibles par défaut" — puis, sur un `<details>` replie : "le titre... est toujours visible") — retires ENTIEREMENT pour un joueur (jamais juste replies, un `<summary>` reste visible par nature), toujours visibles pour le MJ. Tables techniques telles quelles, jamais mises en recit — le contenu narratif (description, traits, actions...) n'est jamais concerne. */
+const RAW_DATA_BLOCK_TYPES = new Set(["custom_table", "class_progression", "spellcasting_progression"]);
+
 /**
  * Contenu d'une fiche de regle, partage entre le rendu serveur de la
  * fenetre primaire (`regles/[cle]/page.tsx`) et la recuperation client
@@ -16,7 +19,16 @@ import RuleRefsPanel from "@/components/rules/RuleRefsPanel";
  * (`useTranslations`), la variante serveur de la page utilisant
  * `getTranslations` produit le meme resultat.
  */
-export default function RuleEntryView({ entry, worldSlug }: { entry: RuleEntryDetail; worldSlug: string }) {
+export default function RuleEntryView({
+  entry,
+  worldSlug,
+  playerRestricted,
+}: {
+  entry: RuleEntryDetail;
+  worldSlug: string;
+  /** Coquille joueur — voir `RAW_DATA_BLOCK_TYPES` ci-dessus. */
+  playerRestricted?: boolean;
+}) {
   const t = useTranslations("regles");
   const entryTypeLabels = t.raw("entryTypes") as Record<string, string>;
 
@@ -30,7 +42,7 @@ export default function RuleEntryView({ entry, worldSlug }: { entry: RuleEntryDe
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-[1fr_auto] gap-6">
+      <div className={playerRestricted ? "flex flex-col" : "grid grid-cols-[1fr_auto] gap-6"}>
         <div className="flex flex-col">
           <div className="flex items-start justify-between gap-3">
             <h1 className="entity-title">{entry.name}</h1>
@@ -54,16 +66,30 @@ export default function RuleEntryView({ entry, worldSlug }: { entry: RuleEntryDe
           )}
         </div>
 
-        <div className="flex aspect-[3/4] w-56 shrink-0 items-center justify-center rounded-2xl border border-edge bg-panel-sunken text-center text-xs text-ink-muted">
-          {t("illustration")}
-        </div>
+        {/* Coquille joueur (retour utilisateur) : "si il n'y en a pas, le
+            cadre du portrait vide ne s'affiche pas" — aucune fiche de regle
+            n'a de veritable illustration aujourd'hui (`RuleEntryDetail` ne
+            porte aucun champ image, contrairement au portrait d'entite,
+            meme mecanisme que `PublicPortrait.tsx` : jamais de cadre vide a
+            la place d'une image reelle). Le cadre reste visible cote MJ,
+            comme un rappel qu'aucune illustration n'existe encore. */}
+        {!playerRestricted && (
+          <div className="flex aspect-[3/4] w-56 shrink-0 items-center justify-center rounded-2xl border border-edge bg-panel-sunken text-center text-xs text-ink-muted">
+            {t("illustration")}
+          </div>
+        )}
       </div>
 
       <MissingBlocksBanner missingBlocks={entry.missingBlocks} />
 
       <div className="flex flex-col">
         {entry.blocks
-          .filter((block) => block.blockType !== "custom_table" && !mergedIds?.has(block.id))
+          .filter(
+            (block) =>
+              block.blockType !== "custom_table" &&
+              !mergedIds?.has(block.id) &&
+              !(playerRestricted && RAW_DATA_BLOCK_TYPES.has(block.blockType))
+          )
           .map((block) =>
             statBlockEntry && block.id === statBlockEntry.id ? (
               <div key={block.id} className="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
@@ -80,11 +106,17 @@ export default function RuleEntryView({ entry, worldSlug }: { entry: RuleEntryDe
             )
           )}
         <RuleRefsPanel worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} incomingRefs={entry.incomingRefs} />
-        {entry.blocks
-          .filter((block) => block.blockType === "custom_table")
-          .map((block) => (
-            <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} />
-          ))}
+        {/* `custom_table` (coquille joueur, retour utilisateur : "le titre
+            du bloc Données brutes SRD est toujours visible") — un `<details>`
+            replie garde son `<summary>` visible par nature, ce que le
+            retour ecarte explicitement : retire entierement le bloc pour
+            un joueur plutot que de le replier, jamais pour le MJ. */}
+        {!playerRestricted &&
+          entry.blocks
+            .filter((block) => block.blockType === "custom_table")
+            .map((block) => (
+              <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} />
+            ))}
       </div>
     </div>
   );

@@ -23,6 +23,7 @@ export default async function WorldLayout({
   // (retour utilisateur) — voir AppShell.
   const campaigns = await listCampaigns(supabase, world.id);
   const campaignName = campaigns[0]?.name ?? null;
+  const campaignId = campaigns[0]?.id ?? null;
 
   return (
     // Etat des fenetres flottantes (ADR-0011), partage par Monde et Regles
@@ -31,7 +32,7 @@ export default async function WorldLayout({
     // de naviguer, sans quoi changer de section la ferme).
     <Suspense fallback={null}>
       <DesktopWindowsProvider worldSlug={world.slug}>
-        <AppShell worldName={world.name} worldSlug={world.slug} campaignName={campaignName}>
+        <AppShell worldName={world.name} worldSlug={world.slug} campaignName={campaignName} campaignId={campaignId}>
           {children}
         </AppShell>
       </DesktopWindowsProvider>

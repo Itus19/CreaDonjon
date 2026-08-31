@@ -1,4 +1,6 @@
 import type { VisibleBlock } from "@/src/server/services/blocks";
+import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
+import AutoPlayMusicBlock from "./AutoPlayMusicBlock";
 
 /**
  * Rendu en lecture seule d'un bloc, pour la coquille joueur (V2-M7b) —
@@ -65,6 +67,16 @@ function renderContent(block: VisibleBlock) {
           <img src={data.url} alt={data.caption ?? ""} className="max-w-full rounded-md" />
           {data.caption && <figcaption className="mt-1 text-xs text-ink-muted">{data.caption}</figcaption>}
         </figure>
+      );
+    }
+    case "music": {
+      const track = (block.data as MusicBlockData).tracks[0];
+      if (!track) return null;
+      return (
+        <>
+          <p className="text-xs text-ink-muted">♪ {track.title ?? "Ambiance"}</p>
+          <AutoPlayMusicBlock blockId={block.id} trackId={track.id} trackUrl={track.url} />
+        </>
       );
     }
     default:

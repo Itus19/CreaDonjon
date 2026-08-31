@@ -419,6 +419,7 @@ export default function EditEntityForm({
                 }
           }
           restrictAddableTypes={playerRestricted ? ["text"] : undefined}
+          hideAiAssist={playerRestricted}
         />
       </div>
     </div>

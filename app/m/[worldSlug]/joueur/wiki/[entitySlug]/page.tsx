@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
@@ -44,24 +43,19 @@ export default async function JoueurWikiEntityPage({
     const data = await getEntityWindowData(supabase, worldSlug, entitySlug);
     if (!data) notFound();
     return (
-      <div className="flex flex-col gap-3">
-        <Link href={`/m/${worldSlug}/joueur/wiki`} className="text-xs text-ink-muted hover:text-ink">
-          ← Wiki
-        </Link>
-        <EditEntityForm
-          entity={data.entity}
-          worldSlug={data.worldSlug}
-          initialBlocks={data.blocks}
-          initialRelations={data.relations}
-          otherEntities={data.otherEntities}
-          worldCustomKinds={data.worldCustomKinds}
-          campaignId={data.campaignId}
-          initialIsPc={data.isPc}
-          campaignCharacterUserId={data.campaignCharacterUserId}
-          initialPortraitLayout={data.portraitLayout}
-          playerRestricted
-        />
-      </div>
+      <EditEntityForm
+        entity={data.entity}
+        worldSlug={data.worldSlug}
+        initialBlocks={data.blocks}
+        initialRelations={data.relations}
+        otherEntities={data.otherEntities}
+        worldCustomKinds={data.worldCustomKinds}
+        campaignId={data.campaignId}
+        initialIsPc={data.isPc}
+        campaignCharacterUserId={data.campaignCharacterUserId}
+        initialPortraitLayout={data.portraitLayout}
+        playerRestricted
+      />
     );
   }
 
@@ -69,9 +63,6 @@ export default async function JoueurWikiEntityPage({
 
   return (
     <div className="flex flex-col gap-3">
-      <Link href={`/m/${worldSlug}/joueur/wiki`} className="text-xs text-ink-muted hover:text-ink">
-        ← Wiki
-      </Link>
       <h2 className="text-lg font-semibold text-ink">{entity.name}</h2>
       {blocks.length === 0 ? (
         <p className="text-sm text-ink-muted">Rien de visible pour l&apos;instant.</p>

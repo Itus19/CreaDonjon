@@ -891,6 +891,7 @@ export type Database = {
           rolled_by: string
           seed_step: number | null
           session_id: string | null
+          visibility_level: string
         }
         Insert: {
           ast: Json
@@ -904,6 +905,7 @@ export type Database = {
           rolled_by: string
           seed_step?: number | null
           session_id?: string | null
+          visibility_level?: string
         }
         Update: {
           ast?: Json
@@ -917,6 +919,7 @@ export type Database = {
           rolled_by?: string
           seed_step?: number | null
           session_id?: string | null
+          visibility_level?: string
         }
         Relationships: [
           {
@@ -2118,6 +2121,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "world_members_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_radio_stations: {
+        Row: {
+          created_at: string
+          created_by: string
+          display_order: number
+          id: string
+          label: string
+          url: string
+          world_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          display_order?: number
+          id?: string
+          label: string
+          url: string
+          world_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          display_order?: number
+          id?: string
+          label?: string
+          url?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_radio_stations_world_id_fkey"
             columns: ["world_id"]
             isOneToOne: false
             referencedRelation: "worlds"

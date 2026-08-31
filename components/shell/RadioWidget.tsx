@@ -11,17 +11,6 @@ interface RadioStation {
   url: string;
 }
 
-const STORAGE_KEY = "creadonjon:radioStations";
-
-function loadStations(): RadioStation[] {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as RadioStation[]) : [];
-  } catch {
-    return [];
-  }
-}
-
 /** Icone minimaliste (ondes de diffusion) — jamais d'emoji dans la coquille, meme registre que les glyphes deja utilises ailleurs (⚙, ▾, ×). */
 function BroadcastIcon({ className }: { className?: string }) {
   return (
@@ -47,10 +36,11 @@ function BroadcastIcon({ className }: { className?: string }) {
  * Musique de fond (extension de V2-G3, sur demande explicite) : des
  * "stations" nommees par la personne elle-meme, jamais une categorie ou une
  * marque de franchise fournie par l'application (meme decision que le bloc
- * `music` d'une fiche — voir docs/BACKLOG_V2.md). Persistees en
- * `localStorage` : purement un confort de navigateur, comme `mode`/
- * `background` avant la lecture serveur — rien ici n'appelle une
- * synchronisation entre appareils.
+ * `music` d'une fiche — voir docs/BACKLOG_V2.md). Stations de monde, cote
+ * serveur (`world_radio_stations`, RLS) — retour utilisateur : "les stations
+ * radio sont celles que le MJ met en place pour ce monde et accessibles aux
+ * joueurs". Ajout/suppression reserves au MJ (`canManage`, calcule serveur
+ * via `isWorldAdmin`), lecture ouverte a tout membre.
  *
  * Rendu en ligne dans `AppShell.tsx` (a gauche de l'horloge), pas en bouton
  * flottant : un bouton `fixed` independant du fil d'en-tete finit tot ou
@@ -59,10 +49,18 @@ function BroadcastIcon({ className }: { className?: string }) {
  * portail (meme technique que `Dropdown.tsx`) pour ne jamais etre coupe
  * par un conteneur au scroll.
  */
-export default function RadioWidget() {
+interface PanelRect {
+  top?: number;
+  bottom?: number;
+  left?: number;
+  right?: number;
+}
+
+export default function RadioWidget({ worldSlug }: { worldSlug: string }) {
   const [open, setOpen] = useState(false);
-  const [rect, setRect] = useState<{ top: number; right: number } | null>(null);
+  const [rect, setRect] = useState<PanelRect | null>(null);
   const [stations, setStations] = useState<RadioStation[]>([]);
+  const [canManage, setCanManage] = useState(false);
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -71,12 +69,19 @@ export default function RadioWidget() {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // localStorage n'existe que cote client — lu une seule fois au montage,
-    // jamais pendant le rendu serveur (pas de scintillement attendu ici,
-    // contrairement a mode/background : ce panneau est ferme par defaut).
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStations(loadStations());
-  }, []);
+    let cancelled = false;
+    fetch(`/api/worlds/${worldSlug}/radio-stations`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { stations: RadioStation[]; canManage: boolean } | null) => {
+        if (cancelled || !data) return;
+        setStations(data.stations);
+        setCanManage(data.canManage);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [worldSlug]);
 
   useEffect(() => {
     if (!open) return;
@@ -96,20 +101,38 @@ export default function RadioWidget() {
     };
   }, [open]);
 
+  /**
+   * Ancrage adaptatif (retour utilisateur, coquille joueur : "la bulle de
+   * la radio est hors champ de vision") — le declencheur n'est plus
+   * toujours en haut a droite (en-tete `AppShell.tsx`) depuis qu'il vit
+   * aussi en bas de la sidebar joueur (`PlayerShell.tsx`) : ouvrir
+   * systematiquement vers le bas/la gauche du declencheur poussait le
+   * panneau hors de l'ecran une fois le bouton pres du bord bas/gauche.
+   * Choisit maintenant le cote (haut/bas, gauche/droite) qui laisse le
+   * plus de place, dans les deux sens.
+   */
   function toggleOpen() {
     if (!open && triggerRef.current) {
       const r = triggerRef.current.getBoundingClientRect();
-      setRect({ top: r.bottom + 6, right: window.innerWidth - r.right });
+      const PANEL_WIDTH = 288; // w-72
+      const PANEL_HEIGHT_ESTIMATE = 360; // contenu variable (stations + formulaire) : une estimation genereuse suffit, seul le cote compte ici
+      const next: PanelRect = {};
+      if (window.innerHeight - r.bottom >= PANEL_HEIGHT_ESTIMATE || window.innerHeight - r.bottom >= r.top) {
+        next.top = r.bottom + 6;
+      } else {
+        next.bottom = window.innerHeight - r.top + 6;
+      }
+      if (window.innerWidth - r.left >= PANEL_WIDTH) {
+        next.left = r.left;
+      } else {
+        next.right = window.innerWidth - r.right;
+      }
+      setRect(next);
     }
     setOpen((v) => !v);
   }
 
-  function persist(next: RadioStation[]) {
-    setStations(next);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }
-
-  function addStation() {
+  async function addStation() {
     const trimmedLabel = label.trim();
     const trimmedUrl = url.trim();
     if (!trimmedLabel || !trimmedUrl) return;
@@ -117,15 +140,27 @@ export default function RadioWidget() {
       setError("Lien non reconnu — seuls Spotify, SoundCloud et YouTube sont acceptés.");
       return;
     }
-    persist([...stations, { id: crypto.randomUUID(), label: trimmedLabel, url: trimmedUrl }]);
+    const res = await fetch(`/api/worlds/${worldSlug}/radio-stations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: trimmedLabel, url: trimmedUrl }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setError(body?.error ?? "Impossible d'ajouter cette station.");
+      return;
+    }
+    const station: RadioStation = await res.json();
+    setStations((prev) => [...prev, station]);
     setLabel("");
     setUrl("");
     setError(null);
   }
 
-  function removeStation(id: string) {
-    persist(stations.filter((s) => s.id !== id));
+  async function removeStation(id: string) {
+    setStations((prev) => prev.filter((s) => s.id !== id));
     if (currentKey === `radio:${id}`) stop();
+    await fetch(`/api/worlds/${worldSlug}/radio-stations/${id}`, { method: "DELETE" }).catch(() => {});
   }
 
   function toggleStation(station: RadioStation) {
@@ -159,8 +194,8 @@ export default function RadioWidget() {
             ref={panelRef}
             role="dialog"
             aria-label="Radio"
-            className="fixed z-[100] flex w-72 flex-col gap-3 rounded-lg border border-edge-strong bg-panel-raised p-4 shadow-2xl"
-            style={{ top: rect.top, right: rect.right }}
+            className="fixed z-[100] flex max-h-[calc(100vh-2rem)] w-72 flex-col gap-3 overflow-y-auto rounded-lg border border-edge-strong bg-panel-raised p-4 shadow-2xl"
+            style={{ top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right }}
           >
             <h2 className="text-sm font-semibold text-ink">Radio</h2>
 
@@ -184,45 +219,49 @@ export default function RadioWidget() {
                       <span className={`flex-1 truncate ${playing ? "text-accent" : "text-ink"}`}>
                         {station.label}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => removeStation(station.id)}
-                        className="text-xs text-danger hover:underline"
-                      >
-                        ×
-                      </button>
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={() => removeStation(station.id)}
+                          className="text-xs text-danger hover:underline"
+                        >
+                          ×
+                        </button>
+                      )}
                     </li>
                   );
                 })}
               </ul>
             )}
 
-            <div className="flex flex-col gap-1.5 border-t border-edge pt-3">
-              <input
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                placeholder="Nom de la station"
-                className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-              />
-              <input
-                value={url}
-                onChange={(e) => {
-                  setUrl(e.target.value);
-                  setError(null);
-                }}
-                placeholder="Lien Spotify, SoundCloud ou YouTube…"
-                className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-              />
-              <button
-                type="button"
-                onClick={addStation}
-                disabled={!label.trim() || !url.trim()}
-                className="self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel disabled:opacity-50"
-              >
-                + Ajouter
-              </button>
-              {error && <p className="text-xs text-danger">{error}</p>}
-            </div>
+            {canManage && (
+              <div className="flex flex-col gap-1.5 border-t border-edge pt-3">
+                <input
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  placeholder="Nom de la station"
+                  className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                />
+                <input
+                  value={url}
+                  onChange={(e) => {
+                    setUrl(e.target.value);
+                    setError(null);
+                  }}
+                  placeholder="Lien Spotify, SoundCloud ou YouTube…"
+                  className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={addStation}
+                  disabled={!label.trim() || !url.trim()}
+                  className="self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel disabled:opacity-50"
+                >
+                  + Ajouter
+                </button>
+                {error && <p className="text-xs text-danger">{error}</p>}
+              </div>
+            )}
           </div>,
           document.body
         )}

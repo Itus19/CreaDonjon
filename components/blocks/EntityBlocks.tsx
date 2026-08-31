@@ -107,6 +107,7 @@ function BlockDataEditor({
   relationsReloadSignal,
   characterData,
   onBlockRefreshed,
+  hideAiAssist,
 }: {
   block: BlockItem;
   onChange: (data: unknown) => void;
@@ -123,6 +124,8 @@ function BlockDataEditor({
   characterData: CharacterBlockData | undefined;
   /** Assistance IA du bloc `text` (V1-F3) : une proposition appliquee ecrit cote serveur, ce callback resynchronise l'etat local (donnee + version). */
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
+  /** Coquille joueur (retour utilisateur) : "enlever les outils d'assistance IA" — jamais pour le MJ. */
+  hideAiAssist?: boolean;
 }) {
   switch (block.blockType) {
     case "text":
@@ -133,6 +136,7 @@ function BlockDataEditor({
           entityId={block.entityId}
           blockId={block.id}
           onBlockRefreshed={onBlockRefreshed}
+          hideAssist={hideAiAssist}
         />
       );
     case "infobox":
@@ -301,6 +305,7 @@ export default function EntityBlocks({
   relationsReloadSignal,
   onRelationsChanged: onRelationsChangedFromParent,
   restrictAddableTypes,
+  hideAiAssist,
 }: {
   entityId: string;
   /** V2-H3 : necessaire pour "creer la carte «X»" depuis le bloc genealogie. */
@@ -313,6 +318,8 @@ export default function EntityBlocks({
   onLaunchWizard?: () => void;
   /** Coquille joueur (retour utilisateur, V2-M7b) : "je ne leur donnerais pas le droit d'ajouter d'autre bloc que ceux de texte, si les joueurs veulent ajouter des choses il faudra demander au MJ" — limite la barre "Ajouter un bloc" a ces types, `undefined` (MJ) laisse tout disponible. */
   restrictAddableTypes?: string[];
+  /** Coquille joueur (retour utilisateur) : "enlever les outils d'assistance IA" — masque le panneau Assistance IA des blocs `text`, jamais pour le MJ. */
+  hideAiAssist?: boolean;
   /** V2, retour utilisateur : compteur possede par le parent (EditEntityForm), partage avec RelationsChips — force genealogie/reseau a recharger quand une relation change ailleurs sur la page. Absent hors contexte de fiche complete (ex. fenetre isolee) : les deux blocs retombent alors sur leur seul rechargement interne. */
   relationsReloadSignal?: number;
   onRelationsChanged?: () => void;
@@ -684,6 +691,7 @@ export default function EntityBlocks({
               onUpdateSpellcasting={updateSpellcasting}
               onBlockRefreshed={handleBlockRefreshed}
               onBlur={handleBlockBlur(block.id)}
+              hideAiAssist={hideAiAssist}
             />
           ))}
         </SortableContext>
@@ -772,6 +780,7 @@ function SortableBlockCard({
   onUpdateSpellcasting,
   onBlockRefreshed,
   onBlur,
+  hideAiAssist,
 }: {
   block: BlockItem;
   index: number;
@@ -800,6 +809,7 @@ function SortableBlockCard({
   onUpdateSpellcasting: (data: SpellcastingBlockData) => void;
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
   onBlur: (e: React.FocusEvent<HTMLDivElement>) => void;
+  hideAiAssist?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
@@ -940,6 +950,7 @@ function SortableBlockCard({
             relationsReloadSignal={relationsReloadSignal}
             characterData={characterBlock?.data as CharacterBlockData | undefined}
             onBlockRefreshed={onBlockRefreshed}
+            hideAiAssist={hideAiAssist}
           />
         )
       )}

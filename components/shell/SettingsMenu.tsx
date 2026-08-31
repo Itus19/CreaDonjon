@@ -297,6 +297,11 @@ export default function SettingsMenu({
   // l'URL plutot que d'etre recu en props.
   const pathname = usePathname();
   const worldSlug = pathname.match(/^\/m\/([^/]+)/)?.[1] ?? null;
+  // Coquille joueur (retour utilisateur, V2-M7b suite) : "les joueurs n'ont
+  // pas besoin d'avoir acces au menu de reglages" — jamais de bouton
+  // flottant a cote de la sidebar joueur, qui porte deja tout le reste de
+  // la navigation. MJ/Monde/Regles inchanges.
+  const isJoueur = /^\/m\/[^/]+\/joueur(\/|$)/.test(pathname);
   const [shareData, setShareData] = useState<{
     worldId: string;
     links: ShareLinkSummary[];
@@ -369,6 +374,8 @@ export default function SettingsMenu({
     document.documentElement.style.setProperty("--bg-blur", `${bgBlur}px`);
     setCookie("bgBlur", String(bgBlur));
   }, [bgBlur]);
+
+  if (isJoueur) return null;
 
   return (
     <>

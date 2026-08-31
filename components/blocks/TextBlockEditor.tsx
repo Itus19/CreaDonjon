@@ -27,12 +27,15 @@ export default function TextBlockEditor({
   entityId,
   blockId,
   onBlockRefreshed,
+  hideAssist,
 }: {
   data: TextBlockData;
   onChange: (data: TextBlockData) => void;
   entityId: string;
   blockId: string;
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
+  /** Coquille joueur (retour utilisateur) : "enlever les outils d'assistance IA" — jamais retire pour le MJ, `undefined`/`false` partout ailleurs. */
+  hideAssist?: boolean;
 }) {
   const [showAssist, setShowAssist] = useState(false);
   const [instruction, setInstruction] = useState("");
@@ -113,6 +116,7 @@ export default function TextBlockEditor({
     <div className="flex flex-col gap-2">
       <RichTextEditor key={remountKey} segments={data.segments} onChange={(segments: Segment[]) => onChange({ __v: 1, segments })} />
 
+      {!hideAssist && (
       <div className="flex flex-col gap-1.5 rounded-md border border-edge/50 bg-panel-sunken p-2">
         <button
           type="button"
@@ -173,6 +177,7 @@ export default function TextBlockEditor({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
