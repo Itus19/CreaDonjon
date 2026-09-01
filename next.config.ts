@@ -20,6 +20,18 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**": ["./node_modules/@img/**/*"],
   },
+  experimental: {
+    // Next 16 impose par defaut une limite de 10 Mo sur les corps de
+    // requete passant par son proxy interne, appliquee AVANT notre propre
+    // controle de taille (MAX_UPLOAD_BYTES, src/server/services/storage.ts —
+    // 25 Mo, retour utilisateur : une carte reelle pese ~20 Mo) — une image
+    // dont le poids + l'enveloppe multipart depasse cette limite interne
+    // etait tronquee en amont, formData() ne voyait plus le champ "file" du
+    // tout ("Aucun fichier recu.", plutot que le message correct "Image
+    // trop lourde"). Relevee a 27 Mo pour laisser passer nos propres
+    // uploads jusqu'a leur plafond prevu, sans changer ce plafond lui-meme.
+    proxyClientMaxBodySize: "27mb",
+  },
 };
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");

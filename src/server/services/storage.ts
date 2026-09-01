@@ -22,7 +22,11 @@ type TypedClient = SupabaseClient<Database>;
  * (juste "membre du monde", voir la migration).
  */
 const BUCKET = "assets";
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+// 25 Mo (retour utilisateur : une carte reelle telechargee pese ~20 Mo) —
+// releve depuis 10 Mo initial (ADR 0017). Seul appelant aujourd'hui : les
+// cartes (Lot I) ; a revisiter si un futur appelant (ex. Phase F2, migration
+// des portraits) a besoin d'une borne differente, jamais avant.
+export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 /** Assez court pour qu'une URL orpheline (copiee, partagee) expire vite ; assez long pour qu'une page qui charge plusieurs images n'en perde pas une en route. */
 const SIGNED_URL_TTL_SECONDS = 300;
