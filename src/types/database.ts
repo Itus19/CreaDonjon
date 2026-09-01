@@ -453,6 +453,64 @@ export type Database = {
           },
         ]
       }
+      campaign_chat_messages: {
+        Row: {
+          body: string
+          campaign_id: string
+          created_at: string
+          id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          campaign_id: string
+          created_at?: string
+          id?: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_chat_messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_chat_reads: {
+        Row: {
+          campaign_id: string
+          last_read_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          last_read_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          last_read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_chat_reads_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_encounters: {
         Row: {
           band: string | null

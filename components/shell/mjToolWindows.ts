@@ -24,6 +24,7 @@ import type { ShareLinkSummary } from "@/src/server/services/shareLinks";
  * jamais cree par l'application depuis V2-G1).
  */
 export type MjToolWindowData =
+  | { tool: "chat"; campaignId: string | null }
   | {
       tool: "gestion-campagne";
       defaultRulesetId: string | null;

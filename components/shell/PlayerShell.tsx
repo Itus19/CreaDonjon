@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import RadioWidget from "./RadioWidget";
+import { useChatUnread } from "./useChatUnread";
 
 interface Destination {
   href: string;
@@ -18,11 +19,14 @@ interface Destination {
  * implementations : barre d'onglets en bas sous 768px (zone du pouce,
  * inspiration DnD Beyond), rail lateral au-dessus. Jamais `MondeShell`
  * (fenetres flottantes, paradigme desktop) ni `MjSidebar` (outils MJ) —
- * cinq destinations fixes, Personnage/Fiche/Notes/Wiki/Regles, jamais
+ * six destinations fixes, Personnage/Fiche/Notes/Wiki/Regles/Chat, jamais
  * l'onglet MJ. Personnage (V2-M7b suite, retour utilisateur 31 aout) :
  * ajoute par-dessus les quatre d'origine, premiere/racine de la coquille —
  * la fiche jouable seule, plus rapide d'acces pour jouer que le profil
- * complet (Fiche, deplace vers `/joueur/fiche`).
+ * complet (Fiche, deplace vers `/joueur/fiche`). Chat (V2-M12, retour
+ * utilisateur 1er sept.) : salon partage avec le MJ, pastille de messages
+ * non lus (`useChatUnread`, mont sur `AppShell` — partage avec `MjSidebar`
+ * cote MJ, un seul salon par campagne).
  *
  * En-tete/pied (retour utilisateur, suite) : "retirer cette barre en haut
  * et tout mettre sur la side bar" — `AppShell.tsx` ne rend plus son en-tete
@@ -48,6 +52,7 @@ export default function PlayerShell({
   const pathname = usePathname();
   const t = useTranslations("shell");
   const base = `/m/${worldSlug}/joueur`;
+  const { unreadCount } = useChatUnread();
 
   const destinations: Destination[] = [
     { href: base, label: "Personnage", icon: "user", match: (p) => p === base },
@@ -55,6 +60,7 @@ export default function PlayerShell({
     { href: `${base}/notes`, label: "Notes", icon: "notes", match: (p) => p.startsWith(`${base}/notes`) },
     { href: `${base}/wiki`, label: "Wiki", icon: "map", match: (p) => p.startsWith(`${base}/wiki`) },
     { href: `${base}/regles`, label: "Règles", icon: "books", match: (p) => p.startsWith(`${base}/regles`) },
+    { href: `${base}/chat`, label: "Chat", icon: "chat", match: (p) => p.startsWith(`${base}/chat`) },
   ];
 
   return (
@@ -86,15 +92,23 @@ export default function PlayerShell({
         <div className="flex flex-1 justify-around md:flex-col md:justify-start md:gap-1 md:overflow-y-auto md:p-2">
           {destinations.map((d) => {
             const active = d.match(pathname);
+            const badge = d.icon === "chat" ? unreadCount : 0;
             return (
               <Link
                 key={d.href}
                 href={d.href}
-                className={`flex flex-col items-center gap-1 rounded-md px-2 py-2 text-[11px] transition-colors md:py-3 ${
+                className={`relative flex flex-col items-center gap-1 rounded-md px-2 py-2 text-[11px] transition-colors md:py-3 ${
                   active ? "text-accent" : "text-ink-muted hover:text-ink"
                 }`}
               >
-                <Icon name={d.icon} />
+                <span className="relative">
+                  <Icon name={d.icon} />
+                  {badge > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 rounded-full bg-accent px-1 text-[9px] font-semibold leading-tight text-accent-ink">
+                      {badge}
+                    </span>
+                  )}
+                </span>
                 {d.label}
               </Link>
             );
@@ -156,6 +170,13 @@ function Icon({ name }: { name: string }) {
           <rect x="3" y="5" width="18" height="14" rx="2" />
           <circle cx="8.5" cy="11" r="2" />
           <path d="M5.5 16c.5-2 2-3 3-3s2.5 1 3 3M14 9.5h5M14 13h5" />
+        </svg>
+      );
+    case "chat":
+      return (
+        <svg {...common}>
+          <path d="M4 5h16v11H8l-4 4V5Z" />
+          <path d="M8 9h8M8 12.5h5" />
         </svg>
       );
     default:

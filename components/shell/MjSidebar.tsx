@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import SectionToggle from "./SectionToggle";
 import { useOpenMjToolLink } from "./useOpenMjToolLink";
 import { mjToolHref, type MjToolKey } from "./windowRefs";
+import { useChatUnread } from "./useChatUnread";
 
 /**
  * Barre laterale du Compagnon MJ (nouvel onglet, meme repli mobile que
@@ -33,12 +34,14 @@ function MjToolLink({
   toolKey,
   label,
   active,
+  badge,
   onNavigate,
 }: {
   worldSlug: string;
   toolKey: MjToolKey;
   label: string;
   active: boolean;
+  badge?: number;
   onNavigate: () => void;
 }) {
   const link = useOpenMjToolLink(worldSlug, toolKey);
@@ -49,11 +52,14 @@ function MjToolLink({
         link.onClick(e);
         onNavigate();
       }}
-      className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
+      className={`flex items-center justify-between rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
         active ? "bg-panel-raised text-accent" : "text-ink-soft"
       }`}
     >
       {label}
+      {!!badge && (
+        <span className="ml-2 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold leading-none text-accent-ink">{badge}</span>
+      )}
     </Link>
   );
 }
@@ -63,9 +69,11 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
   const tShell = useTranslations("shell");
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { unreadCount } = useChatUnread();
 
   const tools: { key: MjToolKey; label: string }[] = [
     { key: "calendrier", label: t("calendrier") },
+    { key: "chat", label: t("chat") },
     { key: "creation-personnage", label: t("creationPersonnage") },
     { key: "gestion-campagne", label: t("gestionCampagne") },
     { key: "initiative", label: t("initiative") },
@@ -111,6 +119,7 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
             toolKey={tool.key}
             label={tool.label}
             active={pathname === mjToolHref(worldSlug, tool.key)}
+            badge={tool.key === "chat" ? unreadCount : undefined}
             onNavigate={() => setOpen(false)}
           />
         ))}

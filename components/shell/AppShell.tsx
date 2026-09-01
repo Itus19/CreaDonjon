@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import Clock from "./Clock";
 import RadioWidget from "./RadioWidget";
 import DiceRollProvider from "./DiceRollPanel";
+import ChatUnreadProvider from "./useChatUnread";
 
 /**
  * Coquille commune aux trois sections (Monde/Règles/MJ) : uniquement
@@ -35,41 +36,43 @@ export default function AppShell({
   const isJoueur = pathname.startsWith(`/m/${worldSlug}/joueur`);
   return (
     <DiceRollProvider campaignId={campaignId} isGm={isMj}>
-      {/* `flex-1 min-h-0` plutot qu'une hauteur fixe (`h-dvh`) : ce conteneur
-          n'est pas toujours le seul enfant de `<body>` — le bandeau "voir comme"
-          (`ViewAsBanner`, app/layout.tsx) s'empile au-dessus quand il est
-          present, sur TOUTE route (pas seulement la coquille joueur). Une
-          hauteur fixe ignorait cet ajout et poussait la barre d'onglets
-          mobile de la coquille joueur hors de l'ecran (retour utilisateur,
-          constate en testant avec le compte Claude). */}
-      <div className="flex h-full min-h-0 flex-1 flex-col">
-        {/* Coquille joueur (retour utilisateur, V2-M7b suite) : "retirer
-            cette barre en haut et tout mettre sur la side bar" — la
-            coquille joueur (`PlayerShell.tsx`) porte desormais elle-meme le
-            nom du monde, la radio et "Mes mondes", jamais cet en-tete.
-            MJ/Monde/Regles inchanges. */}
-        {!isJoueur && (
-          <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-edge bg-panel px-4 pl-14 print:hidden">
-            <div className="flex min-w-0 items-baseline gap-2">
-              <Link href={`/m/${worldSlug}`} className="truncate font-chrome text-sm font-semibold text-ink">
-                {worldName}
-              </Link>
-              {isMj && campaignName && (
-                <span className="truncate text-sm text-ink-muted">· {campaignName}</span>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <RadioWidget worldSlug={worldSlug} />
-              <Clock />
-              <Link href="/" className="text-sm text-ink-muted hover:text-ink">
-                {t("mesMondes")}
-              </Link>
-            </div>
-          </header>
-        )}
+      <ChatUnreadProvider campaignId={campaignId}>
+        {/* `flex-1 min-h-0` plutot qu'une hauteur fixe (`h-dvh`) : ce conteneur
+            n'est pas toujours le seul enfant de `<body>` — le bandeau "voir comme"
+            (`ViewAsBanner`, app/layout.tsx) s'empile au-dessus quand il est
+            present, sur TOUTE route (pas seulement la coquille joueur). Une
+            hauteur fixe ignorait cet ajout et poussait la barre d'onglets
+            mobile de la coquille joueur hors de l'ecran (retour utilisateur,
+            constate en testant avec le compte Claude). */}
+        <div className="flex h-full min-h-0 flex-1 flex-col">
+          {/* Coquille joueur (retour utilisateur, V2-M7b suite) : "retirer
+              cette barre en haut et tout mettre sur la side bar" — la
+              coquille joueur (`PlayerShell.tsx`) porte desormais elle-meme le
+              nom du monde, la radio et "Mes mondes", jamais cet en-tete.
+              MJ/Monde/Regles inchanges. */}
+          {!isJoueur && (
+            <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-edge bg-panel px-4 pl-14 print:hidden">
+              <div className="flex min-w-0 items-baseline gap-2">
+                <Link href={`/m/${worldSlug}`} className="truncate font-chrome text-sm font-semibold text-ink">
+                  {worldName}
+                </Link>
+                {isMj && campaignName && (
+                  <span className="truncate text-sm text-ink-muted">· {campaignName}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <RadioWidget worldSlug={worldSlug} />
+                <Clock />
+                <Link href="/" className="text-sm text-ink-muted hover:text-ink">
+                  {t("mesMondes")}
+                </Link>
+              </div>
+            </header>
+          )}
 
-        <div className="flex flex-1 overflow-hidden">{children}</div>
-      </div>
+          <div className="flex flex-1 overflow-hidden">{children}</div>
+        </div>
+      </ChatUnreadProvider>
     </DiceRollProvider>
   );
 }

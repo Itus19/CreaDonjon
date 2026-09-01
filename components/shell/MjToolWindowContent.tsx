@@ -2,6 +2,7 @@
 
 import type { MjToolWindowData } from "./mjToolWindows";
 import CampaignsPanel from "./CampaignsPanel";
+import ChatPanel from "./ChatPanel";
 import GmJournalPanel from "./GmJournalPanel";
 import PartyProbabilityTable from "./PartyProbabilityTable";
 import EncounterBuilder from "./EncounterBuilder";
@@ -26,6 +27,14 @@ const NO_CAMPAIGN_MESSAGE = "Aucune campagne dans ce monde — créez-en une dan
  */
 export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: string; data: MjToolWindowData }) {
   switch (data.tool) {
+    case "chat":
+      return (
+        <div className="flex h-full flex-col gap-4">
+          <h1 className="block-title text-base">Chat</h1>
+          <ChatPanel campaignId={data.campaignId} />
+        </div>
+      );
+
     case "gestion-campagne":
       return (
         <CampaignsPanel

@@ -4,6 +4,7 @@ import type { MjToolWindowData } from "./mjToolWindows";
 
 /** Cles fixes des neuf outils MJ (retour utilisateur, V2-M7 suite : "les fenetres des outils MJ [...] comme celles des regles ou du wiki") — jamais dynamiques (contrairement a une entite/regle, tirees d'une table), donc une union litterale plutot qu'un `string` libre. */
 export const MJ_TOOL_KEYS = [
+  "chat",
   "gestion-campagne",
   "journal-historique",
   "probabilites",
@@ -18,6 +19,7 @@ export const MJ_TOOL_KEYS = [
 export type MjToolKey = (typeof MJ_TOOL_KEYS)[number];
 
 export const MJ_TOOL_LABELS: Record<MjToolKey, string> = {
+  chat: "Chat",
   "gestion-campagne": "Gestion de campagne",
   "journal-historique": "Journal d'historique",
   probabilites: "Probabilités",

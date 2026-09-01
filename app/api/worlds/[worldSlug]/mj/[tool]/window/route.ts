@@ -64,6 +64,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   let data: MjToolWindowData;
 
   switch (tool) {
+    case "chat": {
+      const campaigns = await listCampaigns(supabase, world.id);
+      data = { tool, campaignId: campaigns[0]?.id ?? null };
+      break;
+    }
+
     case "gestion-campagne": {
       const [entities, campaigns, defaultRulesetId, superadmin] = await Promise.all([
         listEntities(supabase, world.id, user?.id ?? null),
