@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import Dropdown from "@/components/shared/Dropdown";
 import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
 import { clearRuleEntryBlocksCache } from "@/components/blocks/useRuleEntryBlocks";
 
@@ -52,6 +53,9 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
   const [variantParentId, setVariantParentId] = useState("");
   const [personalReference, setPersonalReference] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SelectableRuleset | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<{ imported: number; errors: { name: string; message: string }[] } | null>(null);
 
   useEffect(() => {
     fetch(`/api/worlds/${worldSlug}/ruleset`)
@@ -122,6 +126,52 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
       return;
     }
     setOptions((prev) => prev.filter((o) => o.id !== deleteTarget.id));
+  }
+
+  /**
+   * Import JSON (retour utilisateur : "importer des règles via des fichiers
+   * JSON") — cible TOUJOURS `current` (la variante active) : c'est deja le
+   * seul ruleset que "Choisir" peut selectionner, jamais un second champ a
+   * remplir. Une entree invalide est ecartee cote serveur, jamais toute
+   * l'importation (`importerResultat`/`importerErreursTitre` affichent les
+   * deux a la fois).
+   */
+  async function importFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !current) return;
+    setImportError(null);
+    setImportResult(null);
+    setBusy(true);
+    setImporting(true);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch {
+      setBusy(false);
+      setImporting(false);
+      setImportError(t("importerErreurLecture"));
+      return;
+    }
+    const res = await fetch(`/api/rulesets/${current}/import`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(parsed),
+    });
+    setBusy(false);
+    setImporting(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setImportError(body?.error ?? t("importerErreurReseau"));
+      return;
+    }
+    const body = (await res.json()) as { imported: { name: string }[]; errors: { name: string; message: string }[] };
+    setImportResult({ imported: body.imported.length, errors: body.errors });
+    if (body.imported.length > 0) {
+      clearWorldRuleEntriesCache(worldSlug);
+      clearRuleEntryBlocksCache(worldSlug);
+      router.refresh();
+    }
   }
 
   const officials = options.filter((o) => o.is_official_base);
@@ -197,17 +247,12 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
             {t("creerVarianteTitre")}
           </span>
           <div className="flex flex-wrap items-center gap-2">
-            <select
+            <Dropdown
               value={variantParentId}
-              onChange={(e) => setVariantParentId(e.target.value)}
-              className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-            >
-              {officials.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
+              onChange={setVariantParentId}
+              options={officials.map((o) => ({ value: o.id, label: o.name }))}
+              aria-label={t("creerVarianteTitre")}
+            />
             <input
               value={variantName}
               onChange={(e) => setVariantName(e.target.value)}
@@ -222,17 +267,60 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
               {t("creer")}
             </button>
           </div>
-          <label className="flex items-start gap-2 text-xs text-ink-muted">
-            <input
-              type="checkbox"
-              checked={personalReference}
-              onChange={(e) => setPersonalReference(e.target.checked)}
-              className="mt-0.5"
-            />
-            {t("referencePersonnelleOption")}
-          </label>
+          <button
+            type="button"
+            onClick={() => setPersonalReference((v) => !v)}
+            className={`self-start rounded-md border border-edge px-2.5 py-1.5 text-left text-xs text-ink-muted transition-colors hover:bg-panel ${
+              personalReference ? "border-accent text-accent" : ""
+            }`}
+          >
+            {t("referencePersonnelleOption")} {personalReference ? "✓" : ""}
+          </button>
           {personalReference && <p className="text-xs text-danger">{t("referencePersonnelleAvertissement")}</p>}
         </form>
+      )}
+
+      {!loading && (
+        <div className="flex flex-col gap-2 border-t border-edge/60 pt-3">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{t("importerReglesTitre")}</span>
+          {(() => {
+            const currentRuleset = options.find((o) => o.id === current);
+            if (!currentRuleset || currentRuleset.is_official_base) {
+              return <p className="text-xs text-ink-muted">{t("importerReglesNeedsVariante")}</p>;
+            }
+            return (
+              <>
+                <p className="text-xs text-ink-muted">{t("importerReglesVariante", { name: currentRuleset.name })}</p>
+                <label
+                  className={`self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel ${
+                    busy ? "pointer-events-none opacity-50" : "cursor-pointer"
+                  }`}
+                >
+                  {importing ? t("importEnCours") : t("importerBouton")}
+                  <input type="file" accept="application/json,.json" onChange={importFile} disabled={busy} className="hidden" />
+                </label>
+              </>
+            );
+          })()}
+          {importError && <p className="text-xs text-danger">{importError}</p>}
+          {importResult && (
+            <div className="text-xs">
+              <p className="text-ink">{t("importerResultat", { count: importResult.imported })}</p>
+              {importResult.errors.length > 0 && (
+                <>
+                  <p className="mt-1 text-danger">{t("importerErreursTitre", { count: importResult.errors.length })}</p>
+                  <ul className="list-disc pl-4 text-ink-muted">
+                    {importResult.errors.map((e, i) => (
+                      <li key={i}>
+                        {e.name} — {e.message}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       <ConfirmDialog

@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import {
   dataSchemaForBlockType,
+  validateBlockData,
   zWeaponBlockData,
   type AddEntryPayload,
   type BackgroundBlockData,
@@ -1426,4 +1427,131 @@ export async function createHomebrewWeapon(
   });
 
   return { entryKey, rulesetId: rulesetIdAfterBlock };
+}
+
+/** Gabarit label/mise en page par defaut (retour utilisateur, import JSON) — meme table que `scripts/ingest-srd.ts`, pour qu'un fichier ecrit a la main n'ait pas a connaitre les six mises en page (specs/regles-blocs.md §4) juste pour un premier import. Toujours ecrasable par un `display` explicite dans le fichier. */
+const DEFAULT_BLOCK_DISPLAY: Record<BlockType, { label: string; layout: string }> = {
+  description: { label: "Description", layout: "prose" },
+  spell_casting: { label: "Incantation", layout: "key_values" },
+  effects: { label: "Effets", layout: "formula_list" },
+  scaling: { label: "Montée en puissance", layout: "progression_table" },
+  class_progression: { label: "Progression", layout: "progression_table" },
+  custom_table: { label: "Table", layout: "table" },
+  weapon: { label: "Arme", layout: "key_values" },
+  armor: { label: "Armure", layout: "key_values" },
+  item_properties: { label: "Propriétés", layout: "key_values" },
+  charges: { label: "Charges", layout: "key_values" },
+  stat_block: { label: "Caractéristiques", layout: "key_values" },
+  traits: { label: "Aptitudes spéciales", layout: "key_values" },
+  actions: { label: "Actions", layout: "key_values" },
+  legendary_actions: { label: "Actions légendaires", layout: "key_values" },
+  prerequisites: { label: "Prérequis", layout: "chips" },
+  class_basics: { label: "Bases de classe", layout: "key_values" },
+  spellcasting_progression: { label: "Incantation", layout: "key_values" },
+  subclass_slot: { label: "Sous-classe", layout: "key_values" },
+  background: { label: "Historique", layout: "key_values" },
+  condition_effects: { label: "Effets", layout: "key_values" },
+  subclass_features: { label: "Sous-classe", layout: "progression_table" },
+  species_traits: { label: "Traits", layout: "key_values" },
+  class_equipment: { label: "Équipement de départ", layout: "key_values" },
+};
+
+export interface ImportRulesetEntryInput {
+  entry_key?: string;
+  name: string;
+  entry_type: EntryType;
+  blocks: { block_type: BlockType; display?: { label?: string; layout?: string; collapsed?: boolean }; data: unknown }[];
+  note?: string;
+}
+
+export interface ImportRulesetEntriesResult {
+  imported: { entryKey: string; name: string }[];
+  errors: { entryKey: string | null; name: string; message: string }[];
+  rulesetId: string;
+}
+
+/**
+ * Import JSON de regles (retour utilisateur, "regles actives") — meme
+ * mecanisme que `createHomebrewWeapon` (deux surcharges par entree,
+ * `add_entry` puis `add_block` par bloc, via `upsert_ruleset_override` — le
+ * seul chemin d'ecriture pour une variante, la RPC refuse deja une cible
+ * officielle), generalise a n'importe quel `block_type`/`entry_type` plutot
+ * que fige sur `weapon`. Chaque entree est independante : une entree
+ * invalide (cle en collision, bloc qui echoue son schema Zod) est ecartee
+ * dans `errors`, jamais toute l'importation — un fichier de dix monstres
+ * dont un seul a une faute de frappe importe quand meme les neuf autres.
+ * `rulesetId` de sortie : suit le fork-sur-publication a travers TOUTE la
+ * boucle (meme piege documente dans `createHomebrewWeapon`), jamais
+ * `input.rulesetId` tel quel une fois la premiere ecriture faite.
+ */
+export async function importRulesetEntries(supabase: TypedClient, input: { rulesetId: string; entries: ImportRulesetEntryInput[] }): Promise<ImportRulesetEntriesResult> {
+  const imported: { entryKey: string; name: string }[] = [];
+  const errors: { entryKey: string | null; name: string; message: string }[] = [];
+
+  let currentRulesetId = input.rulesetId;
+  const existingKeys = new Set((await listEntriesInRulesetChain(supabase, currentRulesetId, "fr")).map((e) => e.key));
+
+  for (const entry of input.entries) {
+    try {
+      let entryKey = entry.entry_key?.trim();
+      if (entryKey) {
+        if (existingKeys.has(entryKey)) {
+          throw new Error(`La clé « ${entryKey} » existe déjà dans ce ruleset ou l'un de ses parents.`);
+        }
+      } else {
+        const baseSlug = slugify(entry.name);
+        entryKey = baseSlug;
+        for (let attempt = 1; existingKeys.has(entryKey); attempt++) {
+          entryKey = nextSlugCandidate(baseSlug, attempt);
+        }
+      }
+
+      // Valide TOUS les blocs avant d'ecrire quoi que ce soit pour cette
+      // entree — jamais une entree a moitie ecrite si son deuxieme bloc
+      // echoue son schema.
+      const validatedBlocks = entry.blocks.map((b) => ({
+        block_type: b.block_type,
+        display: { ...DEFAULT_BLOCK_DISPLAY[b.block_type], ...b.display },
+        data: validateBlockData(b.block_type, b.data),
+      }));
+
+      const addEntryPayload: AddEntryPayload = zAddEntryPayload.parse({ name: entry.name, entry_type: entry.entry_type });
+      currentRulesetId = await upsertRulesetOverride(supabase, {
+        rulesetId: currentRulesetId,
+        entryKey,
+        blockType: null,
+        action: "add_entry",
+        payload: addEntryPayload as unknown as Json,
+        patch: null,
+        note: entry.note ?? null,
+      });
+
+      for (const [index, block] of validatedBlocks.entries()) {
+        const blockPayload: ResolvableBlock = {
+          block_type: block.block_type,
+          display: block.display,
+          data: block.data,
+          display_order: (index + 1) * 100,
+        };
+        currentRulesetId = await upsertRulesetOverride(supabase, {
+          rulesetId: currentRulesetId,
+          entryKey,
+          blockType: block.block_type,
+          action: "add_block",
+          payload: blockPayload as unknown as Json,
+          patch: null,
+          note: entry.note ?? null,
+        });
+      }
+
+      existingKeys.add(entryKey);
+      imported.push({ entryKey, name: entry.name });
+    } catch (error) {
+      const message =
+        error instanceof z.ZodError ? (error.issues[0]?.message ?? "Donnée invalide.") : error instanceof Error ? error.message : "Erreur inconnue.";
+      errors.push({ entryKey: entry.entry_key ?? null, name: entry.name, message });
+    }
+  }
+
+  return { imported, errors, rulesetId: currentRulesetId };
 }
