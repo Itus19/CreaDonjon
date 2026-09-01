@@ -48,15 +48,16 @@ export default function MapBlockEditor({
   const thumbnailAssetId = data.mode === "own" ? data.thumbnailAssetId : null;
   const sourceBlockId = data.mode === "ref" ? data.sourceBlockId : null;
 
-  // L'aperçu replié n'affiche jamais que la vignette (`thumbnailAssetId`,
-  // jamais le plein format, pour ne pas charger une image de plusieurs Mo
-  // dans une simple ligne de bloc) — les dimensions doivent donc venir de
-  // CETTE image precise, jamais de `assetId` (le plein format, une
-  // resolution differente) : sinon `MapCanvas` etire la vignette reelle a
-  // la taille du plein format, tres visible pixelise (retour utilisateur).
-  const [trackedThumbnailAssetId, setTrackedThumbnailAssetId] = useState(thumbnailAssetId);
-  if (thumbnailAssetId !== trackedThumbnailAssetId) {
-    setTrackedThumbnailAssetId(thumbnailAssetId);
+  // L'aperçu replié affiche le plein format (retour utilisateur : "si on
+  // peut avoir plus net fait le" — la vignette, meme relevee a 1600px,
+  // restait un cran en dessous du plein format une fois etiree a la
+  // largeur d'un bloc) avec la vignette comme `placeholderUrl` pendant son
+  // chargement (meme fondu que la vue agrandie, `MapWorkspace.tsx`) — les
+  // dimensions doivent donc venir du plein format (`assetId`), pas de la
+  // vignette, meme raison que le bug precedent en sens inverse.
+  const [trackedAssetId, setTrackedAssetId] = useState(assetId);
+  if (assetId !== trackedAssetId) {
+    setTrackedAssetId(assetId);
     setAsset(null);
   }
   const [trackedSourceBlockId, setTrackedSourceBlockId] = useState(sourceBlockId);
@@ -67,9 +68,9 @@ export default function MapBlockEditor({
   }
 
   useEffect(() => {
-    if (!thumbnailAssetId) return;
+    if (!assetId) return;
     let cancelled = false;
-    fetch(`/api/assets/${thumbnailAssetId}/meta`)
+    fetch(`/api/assets/${assetId}/meta`)
       .then((res) => (res.ok ? res.json() : null))
       .then((body: AssetRow | null) => {
         if (!cancelled) setAsset(body);
@@ -80,7 +81,7 @@ export default function MapBlockEditor({
     return () => {
       cancelled = true;
     };
-  }, [thumbnailAssetId]);
+  }, [assetId]);
 
   useEffect(() => {
     if (!sourceBlockId) return;
@@ -99,9 +100,9 @@ export default function MapBlockEditor({
   }, [sourceBlockId]);
 
   useEffect(() => {
-    if (!refSource?.thumbnailAssetId) return;
+    if (!refSource?.assetId) return;
     let cancelled = false;
-    fetch(`/api/assets/${refSource.thumbnailAssetId}/meta`)
+    fetch(`/api/assets/${refSource.assetId}/meta`)
       .then((res) => (res.ok ? res.json() : null))
       .then((body: AssetRow | null) => {
         if (!cancelled) setRefAsset(body);
@@ -112,7 +113,7 @@ export default function MapBlockEditor({
     return () => {
       cancelled = true;
     };
-  }, [refSource?.thumbnailAssetId]);
+  }, [refSource?.assetId]);
 
   function pickCarte(option: CarteOption) {
     // Le cadrage precedent n'a de sens que pour l'image d'avant (coordonnees
@@ -146,7 +147,8 @@ export default function MapBlockEditor({
 
       {data.mode === "own" && assetId && thumbnailAssetId && asset && (
         <MapCanvas
-          imageUrl={`/api/assets/${thumbnailAssetId}`}
+          imageUrl={`/api/assets/${assetId}`}
+          placeholderUrl={`/api/assets/${thumbnailAssetId}`}
           imageWidth={asset.width ?? 1}
           imageHeight={asset.height ?? 1}
           initialView={data.defaultView}
@@ -162,7 +164,8 @@ export default function MapBlockEditor({
           <p className="text-sm italic text-ink-muted">Carte référencée non disponible pour l&apos;instant.</p>
         ) : refSource.assetId && refSource.thumbnailAssetId && refAsset ? (
           <MapCanvas
-            imageUrl={`/api/assets/${refSource.thumbnailAssetId}`}
+            imageUrl={`/api/assets/${refSource.assetId}`}
+            placeholderUrl={`/api/assets/${refSource.thumbnailAssetId}`}
             imageWidth={refAsset.width ?? 1}
             imageHeight={refAsset.height ?? 1}
             initialView={data.defaultView}
