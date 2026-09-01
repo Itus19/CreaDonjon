@@ -581,12 +581,13 @@ Une fois attaché : zone de texte pour le résumé (sauvegardée à la perte de 
 
 Découpé en phases pour rester traçable d'une session à l'autre — cocher au fur et à mesure, jamais tout d'un coup.
 
-**Phase A — Interface de stockage (`assets`), bloque tout le reste**
-- [ ] Bucket Supabase Storage créé par migration (`insert into storage.buckets`), jamais à la main dans le tableau de bord.
-- [ ] `src/server/services/storage.ts` : interface `uploadAsset`/`getAssetUrl`/`deleteAsset` (CLAUDE.md règle 16 bis — jamais un appel Storage direct depuis un composant ou une route).
-- [ ] Route d'upload (Zod, type MIME + taille bornés) qui écrit dans `assets` + le bucket.
-- [ ] Route de service (`/api/assets/[id]`) qui vérifie `visibility_level` côté serveur avant de streamer/rediriger — jamais un bucket public qui court-circuiterait la visibilité.
-- [ ] Vignette générée à l'upload (redimensionnement serveur), servie avant la pleine résolution.
+**Phase A — Interface de stockage (`assets`), bloque tout le reste — ✅ faite, commit `30ec9ff`**
+- [x] Bucket Supabase Storage créé par migration (`insert into storage.buckets`), jamais à la main dans le tableau de bord.
+- [x] `src/server/services/storage.ts` : interface `uploadAsset`/`getSignedAssetUrl`/`deleteAsset` (CLAUDE.md règle 16 bis — jamais un appel Storage direct depuis un composant ou une route).
+- [x] Route d'upload (`POST /api/worlds/[worldSlug]/assets`, type MIME + taille bornés) qui écrit dans `assets` + le bucket.
+- [x] Route de service (`GET /api/assets/[id]`, redirige vers une URL signée) qui vérifie `visibility_level` côté serveur avant — jamais un bucket public qui court-circuiterait la visibilité. `DELETE /api/assets/[id]` au passage.
+- [ ] Vignette générée à l'upload, servie avant la pleine résolution — `uploadAsset` accepte déjà `maxDimension` (redimensionnement serveur via `sharp`), mais la composition "vignette + plein format, deux assets" n'est câblée qu'en Phase B (c'est elle qui en a besoin).
+- Vérifié en direct : cycle upload → lecture → suppression complet, avec un vrai fichier dans le bucket.
 
 **Phase B — Bloc `map` propriétaire, image seule**
 - [ ] Schéma du bloc `map` (`src/core/schemas/blocks/map.ts`) : `mode: "own" | "ref"`, `assetId` (own), `sourceBlockId` (ref), `defaultView: {x, y, zoom}`.
