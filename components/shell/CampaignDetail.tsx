@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
+import InviteLinkPanel from "./InviteLinkPanel";
+import { useCachedGet } from "./useCachedGet";
 
 /** Meme convention que `InviteLinkPanel.tsx` (Administration) : le role stocke en base reste en anglais (identifiant technique, CLAUDE.md §11), jamais affiche tel quel. */
 const ROLE_LABELS: Record<string, string> = { gm: "MJ", player: "Joueur" };
@@ -50,7 +52,10 @@ export default function CampaignDetail({
   /** V2-M7 (Lot M) : revocation de fiche PJ et octrois d'edition reserves au MJ reel de ce monde — deja verifie cote serveur par la page appelante (`isWorldAdmin`), cette prop cache seulement des actions qui echoueraient toujours pour un simple joueur. */
   canManage: boolean;
 }) {
-  const [data, setData] = useState<CampaignDetailData | null>(null);
+  // `useCachedGet` (retour utilisateur : "elle a l'air de se recharger a
+  // chaque changement d'onglet") — evite le flash "Chargement..." quand ce
+  // composant remonte a chaque bascule de section (Monde/Regles/MJ).
+  const { data, reload } = useCachedGet<CampaignDetailData>(`campaignDetail:${campaignId}`, `/api/campaigns/${campaignId}`);
   const [email, setEmail] = useState("");
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [selectedEntityId, setSelectedEntityId] = useState("");
@@ -58,35 +63,6 @@ export default function CampaignDetail({
   const [grantEntityId, setGrantEntityId] = useState("");
   const [grantUserId, setGrantUserId] = useState("");
   const [grantError, setGrantError] = useState<string | null>(null);
-
-  function reload() {
-    fetch(`/api/campaigns/${campaignId}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then(
-        (
-          body: {
-            members: MemberRow[];
-            characters: CharacterRow[];
-            grants: GrantRow[];
-            rulesetContentOrigin: string | null;
-            displayNames: Record<string, string>;
-          } | null
-        ) => {
-          if (body) {
-            setData({
-              members: body.members,
-              characters: body.characters,
-              grants: body.grants,
-              rulesetContentOrigin: body.rulesetContentOrigin,
-              displayNames: body.displayNames,
-            });
-          }
-        }
-      )
-      .catch(() => {});
-  }
-
-  useEffect(reload, [campaignId]);
 
   async function invite(e: React.FormEvent) {
     e.preventDefault();
@@ -229,6 +205,14 @@ export default function CampaignDetail({
         </form>
         {inviteError && <p className="text-xs text-danger">{inviteError}</p>}
       </div>
+
+      {/* Liens d'invitation nominatifs, joueur ou MJ au choix (retour
+          utilisateur : "ajoute les boutons d'invitation dans une campagne
+          quand on clique sur la campagne concernee, avec les options
+          d'invitation en tant que joueur ou MJ") — `InviteLinkPanel`
+          existait deja (V2-M4) mais n'etait plus monte nulle part depuis le
+          retrait du menu de reglages global, qui etait son seul appelant. */}
+      <InviteLinkPanel campaignId={campaignId} />
 
       <div>
         <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Personnages attribués</span>

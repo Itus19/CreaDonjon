@@ -43,6 +43,9 @@ export interface CampaignInviteSummary {
   /** Recuperable a tout moment (retour utilisateur 30 aout, meme choix que share_links) — jamais `null` pour un lien cree apres la migration 20260830160001. */
   token: string | null;
   hasPassword: boolean;
+  /** Personnage PJ que `claimedByUserId` a choisi dans cette campagne, s'il y en a un (retour utilisateur : bouton "reinitialiser" dans la gestion des liens) — `null` pour un MJ ou un joueur qui n'a pas encore choisi. */
+  claimedEntityId: string | null;
+  claimedCharacterName: string | null;
 }
 
 function toSummary(row: CampaignInviteRow): CampaignInviteSummary {
@@ -57,6 +60,8 @@ function toSummary(row: CampaignInviteRow): CampaignInviteSummary {
     createdAt: row.created_at,
     token: row.token,
     hasPassword: row.password_hash !== null,
+    claimedEntityId: null,
+    claimedCharacterName: null,
   };
 }
 
@@ -90,9 +95,25 @@ export async function createCampaignInvite(
   return { invite: toSummary(invite), token };
 }
 
+/**
+ * Resout, pour un lien reclame, quel personnage PJ son titulaire a choisi
+ * dans CETTE campagne (retour utilisateur : bouton "reinitialiser" dans la
+ * gestion des liens) — un aller-retour par lien reclame (N+1 assume, meme
+ * convention que `listAllInvitesForAdmin` : quelques amis, pas des
+ * milliers de liens).
+ */
 export async function listCampaignInvites(supabase: TypedClient, campaignId: string): Promise<CampaignInviteSummary[]> {
   const rows = await listCampaignInvitesForCampaign(supabase, campaignId);
-  return rows.map(toSummary);
+  return Promise.all(
+    rows.map(async (row) => {
+      const summary = toSummary(row);
+      if (!row.claimed_by_user_id) return summary;
+      const entityId = await getClaimedCharacterEntityId(supabase, { campaignId, userId: row.claimed_by_user_id });
+      if (!entityId) return summary;
+      const entity = await getEntityById(supabase, entityId);
+      return { ...summary, claimedEntityId: entityId, claimedCharacterName: entity?.name ?? null };
+    })
+  );
 }
 
 export interface CampaignInviteAdminSummary extends CampaignInviteSummary {

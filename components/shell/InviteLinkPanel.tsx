@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import type { CampaignInviteSummary } from "@/src/server/services/campaignInvites";
+import { useCachedGet } from "./useCachedGet";
 
 const ROLE_LABELS: Record<string, string> = { gm: "MJ", player: "Joueur" };
 const ROLE_OPTIONS = [
@@ -44,11 +45,13 @@ function InviteRow({
   copiedUrl,
   onCopy,
   onRevoked,
+  onChanged,
 }: {
   invite: CampaignInviteSummary;
   copiedUrl: string | null;
   onCopy: (url: string) => void;
   onRevoked: (id: string) => void;
+  onChanged: () => void;
 }) {
   const [editingPassword, setEditingPassword] = useState(false);
   const [password, setPassword] = useState("");
@@ -56,6 +59,31 @@ function InviteRow({
   const [error, setError] = useState<string | null>(null);
   const [hasPassword, setHasPassword] = useState(invite.hasPassword);
   const url = invite.token ? `${window.location.origin}/rejoindre/${invite.token}` : null;
+
+  /**
+   * Reinitialise le choix de personnage (retour utilisateur : "je dois
+   * pouvoir, en tant que MJ, reinitialiser le choix d'un personnage PJ")
+   * — reutilise l'endpoint existant d'attribution de personnage
+   * (`CampaignDetail.tsx`, "Personnages attribues"), un `userId: null`
+   * revient exactement a une fiche jamais encore reclamee. `isPc: true`
+   * explicite : seul un personnage deja marque PJ atteint ce bouton.
+   */
+  async function resetCharacter() {
+    if (!invite.claimedEntityId || !invite.campaignId) return;
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/campaigns/${invite.campaignId}/characters`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entityId: invite.claimedEntityId, userId: null, isPc: true }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setError("Échec de la réinitialisation du personnage.");
+      return;
+    }
+    onChanged();
+  }
 
   async function savePassword() {
     setBusy(true);
@@ -99,7 +127,23 @@ function InviteRow({
           </button>
         </div>
       </div>
-      {invite.claimedName && <span className="text-[11px] text-ink-muted">Réclamé par {invite.claimedName}</span>}
+      {invite.claimedName && (
+        <span className="flex flex-wrap items-center gap-2 text-[11px] text-ink-muted">
+          Réclamé par {invite.claimedName}
+          {invite.claimedCharacterName && <> · joue {invite.claimedCharacterName}</>}
+          {invite.claimedEntityId && (
+            <button
+              type="button"
+              onClick={resetCharacter}
+              disabled={busy}
+              title="Libère ce personnage — un autre lien (ou celui-ci rouvert) pourra le réclamer à nouveau."
+              className="text-danger hover:underline disabled:opacity-50"
+            >
+              Réinitialiser le personnage
+            </button>
+          )}
+        </span>
+      )}
       {editingPassword && (
         <div className="flex items-center gap-2 rounded-md border border-edge bg-panel-sunken p-2">
           <input
@@ -131,22 +175,19 @@ function InviteRow({
  * premier passage de ce ticket.
  */
 export default function InviteLinkPanel({ campaignId }: { campaignId: string }) {
-  const [invites, setInvites] = useState<CampaignInviteSummary[] | null>(null);
+  // `useCachedGet` (retour utilisateur : "elle a l'air de se recharger a
+  // chaque changement d'onglet") — evite le flash "Chargement..." quand ce
+  // composant remonte a chaque bascule de section (Monde/Regles/MJ).
+  const { data, reload: load } = useCachedGet<{ invites: CampaignInviteSummary[] }>(
+    `invites:${campaignId}`,
+    `/api/campaigns/${campaignId}/invites`
+  );
+  const invites = data?.invites ?? null;
   const [role, setRole] = useState<"gm" | "player" | "">("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
-
-  function load() {
-    fetch(`/api/campaigns/${campaignId}/invites`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then((body: { invites: CampaignInviteSummary[] }) => setInvites(body.invites))
-      .catch(() => setInvites([]));
-  }
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule fois au montage, meme motif que CollaborationTab.tsx
-  useEffect(load, []);
 
   async function generate(e: React.FormEvent) {
     e.preventDefault();
@@ -166,8 +207,8 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
     load();
   }
 
-  function handleRevoked(id: string) {
-    setInvites((prev) => prev?.filter((i) => i.id !== id) ?? null);
+  function handleRevoked() {
+    load();
   }
 
   return (
@@ -202,7 +243,7 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
       {invites && invites.length > 0 && (
         <ul className="mt-1 flex flex-col gap-1.5 text-xs">
           {invites.map((invite) => (
-            <InviteRow key={invite.id} invite={invite} copiedUrl={copiedUrl} onCopy={setCopiedUrl} onRevoked={handleRevoked} />
+            <InviteRow key={invite.id} invite={invite} copiedUrl={copiedUrl} onCopy={setCopiedUrl} onRevoked={handleRevoked} onChanged={load} />
           ))}
         </ul>
       )}
