@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import MapCanvas from "@/components/entities/map/MapCanvas";
+import { useRouter } from "next/navigation";
+import MapCanvas, { type MapPinMarkerData } from "@/components/entities/map/MapCanvas";
 import type { MapBlockData } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
 import type { MapSourceInfo } from "@/src/server/services/mapSource";
+import type { VisibleMapPin } from "@/src/server/services/mapPins";
 
 // Meme hauteur que RelationsGraphCanvas/FamilyTreeCanvas (retour
 // utilisateur : "le bloc carte a une forme bizarre") — voir MapBlockEditor.tsx.
@@ -19,7 +21,19 @@ const COLLAPSED_HEIGHT = 420;
  * un fetch client sur le `sourceBlockId` brut, qui exigerait de re-decider
  * la visibilite ici, cote client.
  */
-export default function PublicMapBlock({ data, mapSource }: { data: MapBlockData; mapSource?: MapSourceInfo | null }) {
+export default function PublicMapBlock({
+  data,
+  mapSource,
+  mapPins,
+  hrefBase,
+}: {
+  data: MapBlockData;
+  mapSource?: MapSourceInfo | null;
+  /** Deja filtrees par visibilite cote serveur (Lot I, phase C) — jamais un fetch client, ce composant sert aussi bien un viewer anonyme qu'un joueur authentifie. */
+  mapPins?: VisibleMapPin[];
+  hrefBase: string;
+}) {
+  const router = useRouter();
   const assetId = data.mode === "own" ? data.assetId : mapSource?.assetId ?? null;
   const thumbnailAssetId = data.mode === "own" ? data.thumbnailAssetId : mapSource?.thumbnailAssetId ?? null;
   // Aperçu replié ET vue agrandie affichent tous les deux le plein format
@@ -53,6 +67,11 @@ export default function PublicMapBlock({ data, mapSource }: { data: MapBlockData
       cancelled = true;
     };
   }, [assetId]);
+
+  function handlePinClick(pin: MapPinMarkerData) {
+    const full = mapPins?.find((p) => p.id === pin.id);
+    if (full?.refEntity) router.push(`${hrefBase}/${full.refEntity.slug}`);
+  }
 
   if (data.mode === "ref" && !mapSource) {
     return <p className="text-sm italic text-ink-muted">Carte référencée non disponible pour l&apos;instant.</p>;
@@ -94,6 +113,8 @@ export default function PublicMapBlock({ data, mapSource }: { data: MapBlockData
                 imageHeight={asset.height ?? 1}
                 initialView={data.defaultView}
                 height="100%"
+                pins={mapPins?.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
+                onPinClick={handlePinClick}
               />
             </div>
           </div>

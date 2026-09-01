@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import MapCanvas from "./MapCanvas";
+import { useRouter } from "next/navigation";
+import MapCanvas, { type MapPinMarkerData } from "./MapCanvas";
 import type { MapView } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
 import type { MapSourceInfo } from "@/src/server/services/mapSource";
+import type { VisibleMapPin } from "@/src/server/services/mapPins";
 
 /**
  * Contenu d'un bloc `map` en mode "ref" (Lot I, phase F₁, ADR 0017
@@ -16,18 +18,22 @@ import type { MapSourceInfo } from "@/src/server/services/mapSource";
  * depuis un bloc que ce compte peut, lui, éditer.
  */
 export default function MapRefPanel({
+  worldSlug,
   sourceBlockId,
   defaultView,
   onSaveDefaultView,
   height = "100%",
 }: {
+  worldSlug: string;
   sourceBlockId: string;
   defaultView: MapView;
   onSaveDefaultView: (view: MapView) => void;
   height?: number | string;
 }) {
+  const router = useRouter();
   const [source, setSource] = useState<MapSourceInfo | null | undefined>(undefined);
   const [asset, setAsset] = useState<AssetRow | null>(null);
+  const [pins, setPins] = useState<VisibleMapPin[]>([]);
   const pendingViewRef = useRef<MapView | null>(null);
 
   // Ajuste pendant le rendu plutot que dans un effet (react.dev, "Adjusting
@@ -40,6 +46,7 @@ export default function MapRefPanel({
     setTrackedSourceBlockId(sourceBlockId);
     setSource(undefined);
     setAsset(null);
+    setPins([]);
   }
 
   useEffect(() => {
@@ -51,6 +58,21 @@ export default function MapRefPanel({
       })
       .catch(() => {
         if (!cancelled) setSource(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceBlockId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/blocks/${sourceBlockId}/pins`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((body: VisibleMapPin[]) => {
+        if (!cancelled) setPins(body);
+      })
+      .catch(() => {
+        if (!cancelled) setPins([]);
       });
     return () => {
       cancelled = true;
@@ -76,6 +98,12 @@ export default function MapRefPanel({
   function saveCurrentViewAsDefault() {
     if (!pendingViewRef.current) return;
     onSaveDefaultView(pendingViewRef.current);
+  }
+
+  /** Lecture seule (retour utilisateur : "clic sur une punaise liée navigue vers la fiche") — les punaises appartiennent au bloc SOURCE, jamais editables depuis une reference. */
+  function handlePinClick(pin: MapPinMarkerData) {
+    const full = pins.find((p) => p.id === pin.id);
+    if (full?.refEntity) router.push(`/m/${worldSlug}/f/${full.refEntity.slug}`);
   }
 
   if (source === undefined) {
@@ -107,6 +135,8 @@ export default function MapRefPanel({
             onViewChange={(v) => {
               pendingViewRef.current = v;
             }}
+            pins={pins.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
+            onPinClick={handlePinClick}
           />
         ) : (
           <p className="text-sm italic text-ink-muted">« {source.entityName} » n&apos;a pas encore d&apos;image.</p>

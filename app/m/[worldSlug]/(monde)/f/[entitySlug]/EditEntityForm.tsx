@@ -343,7 +343,7 @@ export default function EditEntityForm({
         {status === "error" && errorMessage && <p className="text-sm text-danger">{errorMessage}</p>}
         <div className="min-h-0 flex-1">
           {mapBlock ? (
-            <CarteMapPanel worldSlug={worldSlug} block={mapBlock} />
+            <CarteMapPanel worldSlug={worldSlug} block={mapBlock} otherEntities={otherEntities} />
           ) : (
             <p className="text-sm italic text-ink-muted">Chargement…</p>
           )}

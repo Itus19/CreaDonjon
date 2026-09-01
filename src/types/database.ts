@@ -1624,6 +1624,62 @@ export type Database = {
           },
         ]
       }
+      map_pins: {
+        Row: {
+          block_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string
+          layer_id: string | null
+          ref: Json | null
+          size: string
+          updated_at: string
+          visibility_level: string
+          visibility_scope_id: string | null
+          x: number
+          y: number
+        }
+        Insert: {
+          block_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string
+          layer_id?: string | null
+          ref?: Json | null
+          size?: string
+          updated_at?: string
+          visibility_level?: string
+          visibility_scope_id?: string | null
+          x: number
+          y: number
+        }
+        Update: {
+          block_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string
+          layer_id?: string | null
+          ref?: Json | null
+          size?: string
+          updated_at?: string
+          visibility_level?: string
+          visibility_scope_id?: string | null
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "map_pins_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personality_events: {
         Row: {
           created_at: string

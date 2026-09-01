@@ -292,6 +292,8 @@ function BlockDataEditor({
       return (
         <MapBlockEditor
           worldSlug={worldSlug}
+          blockId={block.id}
+          otherEntities={otherEntities}
           data={block.data as MapBlockData}
           onChange={(d) => onChange(d)}
           onSaveNow={onSaveNow ? (d) => onSaveNow(d) : undefined}

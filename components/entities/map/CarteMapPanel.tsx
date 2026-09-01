@@ -6,6 +6,7 @@ import Dropdown from "@/components/shared/Dropdown";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import type { BlockItem } from "@/components/blocks/EntityBlocks";
 import type { MapBlockData } from "@/src/core/schemas/blocks/map";
+import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 
 /**
  * Contenu du bloc `map` d'une fiche de type `carte` (Lot I, retour
@@ -14,7 +15,15 @@ import type { MapBlockData } from "@/src/core/schemas/blocks/map";
  * passer par `EntityBlocks.tsx` — cette vue ne montre jamais la liste de
  * blocs generique, seulement ce bloc unique en plein format.
  */
-export default function CarteMapPanel({ worldSlug, block }: { worldSlug: string; block: BlockItem }) {
+export default function CarteMapPanel({
+  worldSlug,
+  block,
+  otherEntities,
+}: {
+  worldSlug: string;
+  block: BlockItem;
+  otherEntities: OtherEntityOption[];
+}) {
   const [version, setVersion] = useState(block.version);
   const [data, setData] = useState(block.data as MapBlockData);
   const [visibilityLevel, setVisibilityLevel] = useState(block.visibilityLevel);
@@ -59,7 +68,7 @@ export default function CarteMapPanel({ worldSlug, block }: { worldSlug: string;
         />
       </div>
       <div className="min-h-0 flex-1">
-        <MapWorkspace worldSlug={worldSlug} data={data} onChange={(d) => patch({ data: d })} height="100%" />
+        <MapWorkspace worldSlug={worldSlug} blockId={block.id} otherEntities={otherEntities} data={data} onChange={(d) => patch({ data: d })} height="100%" />
       </div>
     </div>
   );

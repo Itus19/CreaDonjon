@@ -2,6 +2,8 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { MapView } from "@/src/core/schemas/blocks/map";
+import type { MapPinSize } from "@/src/core/schemas/mapPin";
+import MapPinMarker from "./MapPinMarker";
 
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 8;
@@ -10,6 +12,15 @@ const DRAG_THRESHOLD = 4;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+export interface MapPinMarkerData {
+  id: string;
+  x: number;
+  y: number;
+  label: string;
+  size: MapPinSize;
+  refEntityId?: string | null;
 }
 
 /**
@@ -31,6 +42,10 @@ export default function MapCanvas({
   height = 320,
   interactive = true,
   onViewChange,
+  pins,
+  onPinClick,
+  placingPin = false,
+  onPlacePin,
 }: {
   /** Plein format (retour utilisateur, "carte de 4000px, vignette d'abord") — jamais charge sans un `placeholderUrl` deja a l'ecran pour eviter un flash de vide pendant le chargement. */
   imageUrl: string;
@@ -43,6 +58,12 @@ export default function MapCanvas({
   /** Apercu dans la fiche (retour utilisateur, capture 1) : pas de pan/zoom, juste une vignette figee sur le cadrage par defaut. */
   interactive?: boolean;
   onViewChange?: (view: MapView) => void;
+  /** Punaises deja filtrees par visibilite (Lot I, phase C) — positionnees ici, jamais par l'appelant, seul ce composant connait la transformation ecran courante (pan/zoom). */
+  pins?: MapPinMarkerData[];
+  onPinClick?: (pin: MapPinMarkerData) => void;
+  /** Outil « point » actif (retour utilisateur : "un outil de point qui permet d'ajouter des points") — un clic sur le fond (jamais sur une punaise existante) pose une nouvelle punaise a cet endroit. */
+  placingPin?: boolean;
+  onPlacePin?: (x: number, y: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
@@ -140,17 +161,31 @@ export default function MapCanvas({
     setIsDragging(false);
   }
 
+  function handleCanvasClick(e: React.MouseEvent) {
+    // Un clic sur une punaise existante s'arrete avant d'atteindre ici
+    // (MapPinMarker : `stopPropagation`) — ce gestionnaire ne voit donc que
+    // les clics sur le fond de la carte.
+    if (!placingPin || !onPlacePin) return;
+    const container = containerRef.current;
+    if (!container || imageWidth === 0 || imageHeight === 0) return;
+    const rect = container.getBoundingClientRect();
+    const x = clamp((e.clientX - rect.left - view.x) / (imageWidth * view.scale), 0, 1);
+    const y = clamp((e.clientY - rect.top - view.y) / (imageHeight * view.scale), 0, 1);
+    onPlacePin(x, y);
+  }
+
   return (
     <div
       ref={containerRef}
       style={{ height }}
       className={`relative overflow-hidden rounded-md border border-edge/60 bg-panel-sunken ${
-        interactive ? (isDragging ? "cursor-grabbing" : "cursor-grab") : ""
+        placingPin ? "cursor-crosshair" : interactive ? (isDragging ? "cursor-grabbing" : "cursor-grab") : ""
       }`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={endDrag}
       onMouseLeave={endDrag}
+      onClick={handleCanvasClick}
       onClickCapture={(e) => {
         if (suppressClickRef.current) {
           e.preventDefault();
@@ -193,6 +228,17 @@ export default function MapCanvas({
           opacity: placeholderUrl ? (fullLoaded ? 1 : 0) : 1,
         }}
       />
+      {pins?.map((pin) => (
+        <MapPinMarker
+          key={pin.id}
+          label={pin.label}
+          size={pin.size}
+          refEntityId={pin.refEntityId}
+          left={view.x + pin.x * imageWidth * view.scale}
+          top={view.y + pin.y * imageHeight * view.scale}
+          onClick={() => onPinClick?.(pin)}
+        />
+      ))}
     </div>
   );
 }

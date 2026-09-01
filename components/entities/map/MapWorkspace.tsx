@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import MapCanvas from "./MapCanvas";
+import MapCanvas, { type MapPinMarkerData } from "./MapCanvas";
+import MapPinEditorPopup, { type MapPinDraft } from "./MapPinEditorPopup";
 import type { MapBlockData, MapView } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
+import type { VisibleMapPin } from "@/src/server/services/mapPins";
+import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 
 // Retour utilisateur, avec capture a l'appui : la vignette a 800px restait
 // visiblement floue une fois etiree a la largeur reelle d'un bloc de fiche
@@ -30,12 +33,18 @@ const FULL_MAX_DIMENSION = 4096;
  */
 export default function MapWorkspace({
   worldSlug,
+  blockId,
+  otherEntities,
   data,
   onChange,
   onSaveNow,
   height = "100%",
 }: {
   worldSlug: string;
+  /** Punaises (Lot I, phase C) : `map_pins` est cle par `block_id`, jamais fourni par `data` (le JSON du bloc n'en porte pas, voir ADR 0017 decision 1). */
+  blockId: string;
+  /** Selecteur "lien vers une fiche" d'une punaise — memes options que `RelationsChips.tsx`, jamais une recherche a part. */
+  otherEntities: OtherEntityOption[];
   data: Extract<MapBlockData, { mode: "own" }>;
   onChange: (data: MapBlockData) => void;
   /**
@@ -58,6 +67,22 @@ export default function MapWorkspace({
   const [asset, setAsset] = useState<AssetRow | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingViewRef = useRef<MapView | null>(null);
+
+  const [pins, setPins] = useState<VisibleMapPin[]>([]);
+  const [placingPin, setPlacingPin] = useState(false);
+  const [editingPin, setEditingPin] = useState<MapPinDraft | null>(null);
+
+  function reloadPins() {
+    fetch(`/api/blocks/${blockId}/pins`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((body: VisibleMapPin[]) => setPins(body))
+      .catch(() => setPins([]));
+  }
+
+  useEffect(() => {
+    reloadPins();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blockId]);
 
   const [trackedAssetId, setTrackedAssetId] = useState(data.assetId);
   if (data.assetId !== trackedAssetId) {
@@ -126,6 +151,50 @@ export default function MapWorkspace({
     onSaveNow?.(next);
   }
 
+  function handlePlacePin(x: number, y: number) {
+    setPlacingPin(false);
+    setEditingPin({ id: null, x, y, label: "", ref: null, size: "medium", visibilityLevel: "public", visibilityScopeId: null });
+  }
+
+  function handlePinClick(pin: MapPinMarkerData) {
+    const full = pins.find((p) => p.id === pin.id);
+    if (!full) return;
+    setEditingPin({
+      id: full.id,
+      x: full.x,
+      y: full.y,
+      label: full.label,
+      ref: full.ref,
+      size: full.size as MapPinDraft["size"],
+      visibilityLevel: full.visibilityLevel,
+      visibilityScopeId: full.visibilityScopeId,
+    });
+  }
+
+  async function savePinDraft(draft: MapPinDraft) {
+    setEditingPin(null);
+    const body = JSON.stringify({
+      x: draft.x,
+      y: draft.y,
+      label: draft.label,
+      ref: draft.ref,
+      size: draft.size,
+      visibility: { level: draft.visibilityLevel, scopeId: draft.visibilityScopeId },
+    });
+    if (draft.id) {
+      await fetch(`/api/map-pins/${draft.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body });
+    } else {
+      await fetch(`/api/blocks/${blockId}/pins`, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+    }
+    reloadPins();
+  }
+
+  async function deletePinDraft(id: string) {
+    setEditingPin(null);
+    await fetch(`/api/map-pins/${id}`, { method: "DELETE" });
+    reloadPins();
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
       <div className="flex shrink-0 items-center gap-2">
@@ -140,6 +209,17 @@ export default function MapWorkspace({
         {data.assetId && (
           <button type="button" onClick={saveCurrentViewAsDefault} className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised">
             Définir cette vue par défaut
+          </button>
+        )}
+        {data.assetId && (
+          <button
+            type="button"
+            onClick={() => setPlacingPin((v) => !v)}
+            className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+              placingPin ? "border-accent bg-accent text-accent-ink" : "border-edge text-ink hover:bg-panel-raised"
+            }`}
+          >
+            + Punaise
           </button>
         )}
         <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onFileChange} />
@@ -158,11 +238,25 @@ export default function MapWorkspace({
             onViewChange={(v) => {
               pendingViewRef.current = v;
             }}
+            pins={pins.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
+            onPinClick={handlePinClick}
+            placingPin={placingPin}
+            onPlacePin={handlePlacePin}
           />
         ) : (
           <p className="text-sm italic text-ink-muted">Aucune carte pour l&apos;instant — téléversez une image.</p>
         )}
       </div>
+
+      {editingPin && (
+        <MapPinEditorPopup
+          draft={editingPin}
+          otherEntities={otherEntities}
+          onSave={savePinDraft}
+          onDelete={editingPin.id ? () => deletePinDraft(editingPin.id!) : undefined}
+          onClose={() => setEditingPin(null)}
+        />
+      )}
     </div>
   );
 }

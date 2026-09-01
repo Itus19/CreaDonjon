@@ -14,6 +14,7 @@ import { zGenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
 import { getFamilyTree } from "@/src/server/services/genealogy";
 import { zMapBlockData } from "@/src/core/schemas/blocks/map";
 import { resolveMapSource } from "@/src/server/services/mapSource";
+import { listVisibleMapPins } from "@/src/server/services/mapPins";
 import { zQuestBlockData } from "@/src/core/schemas/blocks/quest";
 import { zTimelineBlockData } from "@/src/core/schemas/blocks/timeline";
 import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
@@ -244,17 +245,21 @@ export async function getPlayerEntityDetail(
     return { ...block, questRefs };
   });
 
-  // Carte referencee (Lot I, phase F₁) : meme resolution que
+  // Carte (Lot I, phases C et F₁) : meme resolution que
   // `getPublicEntityDetail`, avec le vrai viewer joueur plutot que
-  // l'anonyme — `resolveMapSource` revalide la visibilite du bloc SOURCE
-  // pour ce joueur precis avant de renvoyer son image.
+  // l'anonyme — voir son commentaire pour le detail own/ref.
   const blocksWithMapSource = await Promise.all(
     blocksWithQuestRefs.map(async (block) => {
       if (block.blockType !== "map") return block;
       const map = zMapBlockData.safeParse(block.data);
-      if (!map.success || map.data.mode !== "ref") return block;
+      if (!map.success) return block;
+      if (map.data.mode === "own") {
+        const mapPins = await listVisibleMapPins(supabase, block.id, viewer);
+        return { ...block, mapPins };
+      }
       const mapSource = await resolveMapSource(supabase, map.data.sourceBlockId, viewer);
-      return { ...block, mapSource };
+      const mapPins = mapSource ? await listVisibleMapPins(supabase, map.data.sourceBlockId, viewer) : [];
+      return { ...block, mapSource, mapPins };
     })
   );
 

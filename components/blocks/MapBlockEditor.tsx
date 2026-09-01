@@ -8,6 +8,7 @@ import CartePicker from "@/components/entities/map/CartePicker";
 import { DEFAULT_MAP_BLOCK_DATA, type MapBlockData, type MapView } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
 import type { MapSourceInfo, CarteOption } from "@/src/server/services/mapSource";
+import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 
 // Meme hauteur que RelationsGraphCanvas/FamilyTreeCanvas (retour
 // utilisateur : "le bloc carte a une forme bizarre" — il faisait 220px,
@@ -25,11 +26,16 @@ const COLLAPSED_HEIGHT = 420;
  */
 export default function MapBlockEditor({
   worldSlug,
+  blockId,
+  otherEntities,
   data,
   onChange,
   onSaveNow,
 }: {
   worldSlug: string;
+  /** Punaises (Lot I, phase C) : `map_pins` est cle par `block_id`, jamais fourni par `data`. */
+  blockId: string;
+  otherEntities: OtherEntityOption[];
   data: MapBlockData;
   onChange: (data: MapBlockData) => void;
   /** Persistance immediate (Lot I) — voir le commentaire dans `MapWorkspace.tsx`. */
@@ -195,9 +201,9 @@ export default function MapBlockEditor({
               </button>
             </div>
             {data.mode === "own" ? (
-              <MapWorkspace worldSlug={worldSlug} data={data} onChange={onChange} onSaveNow={onSaveNow} />
+              <MapWorkspace worldSlug={worldSlug} blockId={blockId} otherEntities={otherEntities} data={data} onChange={onChange} onSaveNow={onSaveNow} />
             ) : (
-              <MapRefPanel sourceBlockId={data.sourceBlockId} defaultView={data.defaultView} onSaveDefaultView={saveRefDefaultView} />
+              <MapRefPanel worldSlug={worldSlug} sourceBlockId={data.sourceBlockId} defaultView={data.defaultView} onSaveDefaultView={saveRefDefaultView} />
             )}
           </div>
         </div>
