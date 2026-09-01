@@ -53,6 +53,7 @@ export default function BookSkin({
   wikiBackground?: WikiBackground | null;
 }) {
   const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
   const { displayed } = useWikiBackground(wikiBackground);
   const filteredTree = filterEntityTree(tree, query);
   // Premiere visite (retour utilisateur) : seule la categorie PJ est
@@ -70,6 +71,27 @@ export default function BookSkin({
       data-mode={displayed?.mode}
       style={scopeStyle}
     >
+      {/* Sommaire replie par defaut sous md (retour utilisateur : "les
+          images de portrait ne s'affichent pas toujours sur smartphone" —
+          en realite le sommaire, fixe a 256px, ne se repliait jamais et
+          n'y laissait qu'un filet de ~100px pour tout le contenu, portrait
+          compris). Meme motif que `Sidebar.tsx`/`MjSidebar.tsx` (bouton
+          hamburger + scrim + panneau `fixed` qui glisse), sans le decalage
+          `top-14` de ceux-ci : BookSkin n'a pas d'en-tete au-dessus, ni sur
+          `/partage/[token]/**` ni sur `/m/[worldSlug]/apercu/**`. */}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Ouvrir le sommaire"
+        className="fixed left-3 top-3 z-40 rounded-md border border-edge bg-panel-raised p-2 text-sm text-ink shadow-md print:hidden md:hidden"
+      >
+        ☰
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-40 bg-scrim md:hidden" onClick={() => setOpen(false)} aria-hidden="true" />
+      )}
+
       {/* `overflow-y-auto` sur l'aside ET le main (retour utilisateur, la
           molette ne faisait rien) : `/m/[worldSlug]/apercu/**` est imbrique
           dans `AppShell.tsx`, qui borne la page a `h-screen` avec
@@ -77,8 +99,12 @@ export default function BookSkin({
           deja leur propre defilement de cette maniere) — sans sa propre
           zone de defilement, un contenu plus long que l'ecran restait
           simplement coupe, sans barre ni molette pour l'atteindre. */}
-      <aside className="w-64 shrink-0 overflow-y-auto px-6 pb-10 pt-16">
-        <Link href={hrefBase} className="mb-4 block font-chrome text-base font-semibold text-ink hover:text-accent">
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] shrink-0 overflow-y-auto bg-panel-sunken px-6 pb-10 pt-16 transition-transform print:hidden md:static md:z-auto md:w-64 md:translate-x-0 md:bg-transparent ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <Link href={hrefBase} onClick={() => setOpen(false)} className="mb-4 block font-chrome text-base font-semibold text-ink hover:text-accent">
           {title}
         </Link>
         <input
@@ -87,15 +113,17 @@ export default function BookSkin({
           placeholder="Rechercher…"
           className="mb-4 w-full rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
         />
-        <EntityTree
-          groups={filteredTree}
-          worldSlug={worldSlug}
-          hrefBase={hrefBase}
-          collapseStorageKey={`creadonjon:collapsed:wiki:${worldSlug}`}
-          defaultCollapsedKinds={defaultCollapsedKinds}
-        />
+        <div onClick={() => setOpen(false)}>
+          <EntityTree
+            groups={filteredTree}
+            worldSlug={worldSlug}
+            hrefBase={hrefBase}
+            collapseStorageKey={`creadonjon:collapsed:wiki:${worldSlug}`}
+            defaultCollapsedKinds={defaultCollapsedKinds}
+          />
+        </div>
       </aside>
-      <main className="min-w-0 flex-1 overflow-y-auto px-8 py-10">
+      <main className="min-w-0 flex-1 overflow-y-auto px-4 py-10 pt-16 md:px-8 md:pt-10">
         <div className="mx-auto max-w-[70ch]">{children}</div>
       </main>
     </div>
