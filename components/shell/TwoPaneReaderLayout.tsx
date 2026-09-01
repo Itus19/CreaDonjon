@@ -13,16 +13,26 @@ import { useState } from "react";
  * composant plutot que duplique deux fois (les deux `layout.tsx`
  * documentaient deja explicitement "meme disposition que...").
  */
-export default function TwoPaneReaderLayout({ sidebar, children }: { sidebar: React.ReactNode; children: React.ReactNode }) {
+export default function TwoPaneReaderLayout({
+  sidebar,
+  children,
+  side = "left",
+}: {
+  sidebar: React.ReactNode;
+  children: React.ReactNode;
+  /** Édition (V2-M13, retour utilisateur : "la liste à droite des fiches...") — même disposition que Wiki/Règles, sommaire à droite plutôt qu'à gauche. */
+  side?: "left" | "right";
+}) {
   const [open, setOpen] = useState(false);
+  const isRight = side === "right";
 
   return (
-    <div className="flex h-full min-h-0">
+    <div className={`flex h-full min-h-0 ${isRight ? "flex-row-reverse" : ""}`}>
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Ouvrir le sommaire"
-        className="fixed left-3 top-3 z-40 rounded-md border border-edge bg-panel-raised p-2 text-sm text-ink shadow-md print:hidden md:hidden"
+        className={`fixed top-3 z-40 rounded-md border border-edge bg-panel-raised p-2 text-sm text-ink shadow-md print:hidden md:hidden ${isRight ? "right-3" : "left-3"}`}
       >
         ☰
       </button>
@@ -31,13 +41,15 @@ export default function TwoPaneReaderLayout({ sidebar, children }: { sidebar: Re
 
       <aside
         onClick={() => setOpen(false)}
-        className={`no-scrollbar fixed inset-y-0 left-0 z-50 w-[280px] shrink-0 overflow-y-auto bg-panel-sunken px-4 pb-10 pt-16 transition-transform print:hidden md:static md:z-auto md:w-44 md:translate-x-0 md:bg-transparent md:px-0 md:pr-4 md:pt-0 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`no-scrollbar fixed inset-y-0 z-50 w-[280px] shrink-0 overflow-y-auto bg-panel-sunken px-4 pb-10 pt-16 transition-transform print:hidden md:static md:z-auto md:w-44 md:translate-x-0 md:bg-transparent md:px-0 md:pt-0 ${
+          isRight ? "right-0 md:pl-4" : "left-0 md:pr-4"
+        } ${open ? "translate-x-0" : isRight ? "translate-x-full" : "-translate-x-full"}`}
       >
         {sidebar}
       </aside>
-      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto pt-14 md:border-l md:border-edge/60 md:pl-6 md:pt-0">
+      <main
+        className={`min-h-0 min-w-0 flex-1 overflow-y-auto pt-14 md:pt-0 ${isRight ? "md:border-r md:border-edge/60 md:pr-6" : "md:border-l md:border-edge/60 md:pl-6"}`}
+      >
         <div className="mx-auto max-w-[70ch]">{children}</div>
       </main>
     </div>

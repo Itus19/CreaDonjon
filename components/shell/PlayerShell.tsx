@@ -56,7 +56,7 @@ export default function PlayerShell({
 
   const destinations: Destination[] = [
     { href: base, label: "Personnage", icon: "user", match: (p) => p === base },
-    { href: `${base}/fiche`, label: "Fiche", icon: "card", match: (p) => p.startsWith(`${base}/fiche`) },
+    { href: `${base}/fiche`, label: "Édition", icon: "card", match: (p) => p.startsWith(`${base}/fiche`) },
     { href: `${base}/notes`, label: "Notes", icon: "notes", match: (p) => p.startsWith(`${base}/notes`) },
     { href: `${base}/wiki`, label: "Wiki", icon: "map", match: (p) => p.startsWith(`${base}/wiki`) },
     { href: `${base}/regles`, label: "Règles", icon: "books", match: (p) => p.startsWith(`${base}/regles`) },

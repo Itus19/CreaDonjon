@@ -41,6 +41,17 @@ export async function listEntityGrantsForEntityIds(supabase: TypedClient, entity
   return data;
 }
 
+/** V2-M13 (retour utilisateur, coquille joueur : "la liste des fiches dont le joueur a l'accès d'édition") — pas de `world_id` sur `entity_grants` (juste `entity_id`/`user_id`), jointure via `entities` pour borner au monde, meme motif que `listPcEntityIdsForWorld`. */
+export async function listEntityGrantsForUser(supabase: TypedClient, params: { worldId: string; userId: string }): Promise<EntityGrantRow[]> {
+  const { data, error } = await supabase
+    .from("entity_grants")
+    .select("entity_id, user_id, granted_by, granted_at, entities!inner(world_id)")
+    .eq("user_id", params.userId)
+    .eq("entities.world_id", params.worldId);
+  if (error) throw new Error(error.message);
+  return data.map((row) => ({ entity_id: row.entity_id, user_id: row.user_id, granted_by: row.granted_by, granted_at: row.granted_at }));
+}
+
 export async function grantEntityAccess(
   supabase: TypedClient,
   params: { entityId: string; userId: string; grantedBy: string }

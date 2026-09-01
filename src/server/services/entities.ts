@@ -8,6 +8,7 @@ import {
   type EntitySummary,
   getEntityById,
   insertEntity,
+  listEntitiesByIds,
   listEntitiesForWorld,
   listEntitySlugsForWorld,
   maxEntityDisplayOrderForKind,
@@ -19,6 +20,8 @@ import {
 import { getWorldEntityKindOrder } from "@/src/server/repos/worlds";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
 import { insertBlock, listBlocksForEntity } from "@/src/server/repos/blocks";
+import { listEntityGrantsForUser } from "@/src/server/repos/entityGrants";
+import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { recordEntityRevision } from "@/src/server/services/entityHistory";
 import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerCharacters";
 import { canUserEditEntity } from "@/src/server/services/permissions";
@@ -40,6 +43,33 @@ function excludeOthersPrivateNotes(entities: EntitySummary[], userId: string | n
 export async function listEntities(supabase: TypedClient, worldId: string, userId: string | null): Promise<EntitySummary[]> {
   const entities = await listEntitiesForWorld(supabase, worldId);
   return excludeOthersPrivateNotes(entities, userId);
+}
+
+/**
+ * Fiches editables par un joueur dans ce monde (V2-M13, retour utilisateur :
+ * "la liste à droite des fiches dont le joueur a l'accès d'édition") : son
+ * propre personnage revendique (`campaign_characters`) + toute fiche de
+ * lore octroyee par le MJ (`entity_grants`) — les deux memes cas que
+ * `canEditEntity` (3 et 4), jamais un troisieme calcul divergent de qui a
+ * le droit d'editer quoi.
+ */
+export async function listPlayerEditableEntities(
+  supabase: TypedClient,
+  params: { worldId: string; campaignId: string | null; userId: string }
+): Promise<EntitySummary[]> {
+  const [claimedId, grants] = await Promise.all([
+    params.campaignId ? getClaimedCharacterEntityId(supabase, { campaignId: params.campaignId, userId: params.userId }) : Promise.resolve(null),
+    listEntityGrantsForUser(supabase, { worldId: params.worldId, userId: params.userId }),
+  ]);
+  // Personnage revendique en tete (retour utilisateur : la fiche la plus
+  // probable a rouvrir), puis les octrois — un `Set` deduplique sans
+  // perdre cet ordre d'insertion.
+  const ids = new Set<string>();
+  if (claimedId) ids.add(claimedId);
+  for (const g of grants) ids.add(g.entity_id);
+  if (ids.size === 0) return [];
+  const byId = new Map((await listEntitiesByIds(supabase, [...ids])).map((e) => [e.id, e]));
+  return [...ids].map((id) => byId.get(id)).filter((e): e is EntitySummary => e !== undefined);
 }
 
 /** Barre laterale (specs/coquille-et-design.md §4.3) : arborescence derivee, jamais saisie. */

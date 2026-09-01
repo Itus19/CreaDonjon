@@ -1,21 +1,18 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
-import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
-import { getEntityById } from "@/src/server/repos/entities";
-import { getEntityWindowData } from "@/src/server/services/entityWindow";
-import EditEntityForm from "../../(monde)/f/[entitySlug]/EditEntityForm";
+import { listPlayerEditableEntities } from "@/src/server/services/entities";
 
 /**
- * Onglet Fiche (V2-M7b, coquille joueur) — profil complet (identite, bio,
- * relations, tous les blocs) de son propre personnage, `EditEntityForm` tel
- * quel (`canEditEntity`, cas 3). Deplace de `/joueur` vers `/joueur/fiche`
- * (retour utilisateur, suite) : la racine de la coquille joueur devient
- * l'onglet Personnage (fiche jouable seule, `ParticipantCharacterSheet`),
- * plus rapide d'acces pour jouer — ce profil complet reste a une escale.
+ * Index de l'onglet Édition — redirige vers la premiere fiche editable
+ * (le personnage revendique en tete, cf. `listPlayerEditableEntities`),
+ * meme motif que l'index Wiki ("Choisissez une entité") mais avec un
+ * choix par defaut ici : ce joueur a rarement plus d'une poignee de
+ * fiches, autant ouvrir directement la plus probable plutot que de forcer
+ * un clic supplementaire a chaque visite.
  */
-export default async function JoueurFichePage({ params }: { params: Promise<{ worldSlug: string }> }) {
+export default async function JoueurFicheIndexPage({ params }: { params: Promise<{ worldSlug: string }> }) {
   const { worldSlug } = await params;
   const supabase = await createClient();
   const world = await getWorldBySlug(supabase, worldSlug);
@@ -26,32 +23,11 @@ export default async function JoueurFichePage({ params }: { params: Promise<{ wo
   if (!user) notFound();
 
   const campaigns = await listCampaigns(supabase, world.id);
-  const campaign = campaigns[0] ?? null;
-  const entityId = campaign ? await getClaimedCharacterEntityId(supabase, { campaignId: campaign.id, userId: user.id }) : null;
-  if (!entityId) {
-    return <p className="mx-auto max-w-[70ch] text-sm text-ink-muted">Aucun personnage réclamé pour l&apos;instant dans ce monde.</p>;
+  const campaignId = campaigns[0]?.id ?? null;
+  const entities = await listPlayerEditableEntities(supabase, { worldId: world.id, campaignId, userId: user.id });
+
+  if (entities.length === 0) {
+    return <p className="text-sm text-ink-muted">Aucune fiche éditable pour l&apos;instant dans ce monde.</p>;
   }
-  const entity = await getEntityById(supabase, entityId);
-  if (!entity) notFound();
-
-  const data = await getEntityWindowData(supabase, worldSlug, entity.slug);
-  if (!data) notFound();
-
-  return (
-    <div className="mx-auto max-w-[70ch]">
-      <EditEntityForm
-        entity={data.entity}
-        worldSlug={data.worldSlug}
-        initialBlocks={data.blocks}
-        initialRelations={data.relations}
-        otherEntities={data.otherEntities}
-        worldCustomKinds={data.worldCustomKinds}
-        campaignId={data.campaignId}
-        initialIsPc={data.isPc}
-        campaignCharacterUserId={data.campaignCharacterUserId}
-        initialPortraitLayout={data.portraitLayout}
-        playerRestricted
-      />
-    </div>
-  );
+  redirect(`/m/${worldSlug}/joueur/fiche/${entities[0].slug}`);
 }
