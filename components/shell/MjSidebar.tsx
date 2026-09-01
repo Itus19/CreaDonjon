@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import SectionToggle from "./SectionToggle";
+import { useOpenMjToolLink } from "./useOpenMjToolLink";
+import { mjToolHref, type MjToolKey } from "./windowRefs";
 
 /**
  * Barre laterale du Compagnon MJ (nouvel onglet, meme repli mobile que
@@ -19,21 +21,61 @@ import SectionToggle from "./SectionToggle";
  *
  * Liste triee par ordre alphabetique (retour utilisateur) — jamais par
  * ordre d'ajout : verifie avec `localeCompare(..., "fr")` plutot que suppose.
+ *
+ * Chaque outil s'ouvre desormais en fenetre flottante (retour utilisateur,
+ * V2-M7 suite : "les fenetres des outils MJ [...] comme celles des regles
+ * ou du wiki") — `useOpenMjToolLink` (meme motif que `useOpenEntityLink`/
+ * `useOpenRuleLink`) intercepte le clic normal, jamais un lien plein-page
+ * qui fermerait les autres fenetres deja ouvertes.
  */
+function MjToolLink({
+  worldSlug,
+  toolKey,
+  label,
+  active,
+  onNavigate,
+}: {
+  worldSlug: string;
+  toolKey: MjToolKey;
+  label: string;
+  active: boolean;
+  onNavigate: () => void;
+}) {
+  const link = useOpenMjToolLink(worldSlug, toolKey);
+  return (
+    <Link
+      href={link.href}
+      onClick={(e) => {
+        link.onClick(e);
+        onNavigate();
+      }}
+      className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
+        active ? "bg-panel-raised text-accent" : "text-ink-soft"
+      }`}
+    >
+      {label}
+    </Link>
+  );
+}
+
 export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
   const t = useTranslations("mj");
   const tShell = useTranslations("shell");
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const isCalendrier = pathname === `/m/${worldSlug}/mj/calendrier`;
-  const isCampagnes = pathname === `/m/${worldSlug}/mj`;
-  const isCreationPersonnage = pathname === `/m/${worldSlug}/mj/creation-personnage`;
-  const isInitiative = pathname === `/m/${worldSlug}/mj/initiative`;
-  const isPersonnalisation = pathname === `/m/${worldSlug}/mj/personnalisation`;
-  const isProbabilites = pathname === `/m/${worldSlug}/mj/probabilites`;
-  const isPublication = pathname === `/m/${worldSlug}/mj/publication`;
-  const isReglesActives = pathname === `/m/${worldSlug}/mj/regles-actives`;
-  const isRencontres = pathname === `/m/${worldSlug}/mj/rencontres`;
+
+  const tools: { key: MjToolKey; label: string }[] = [
+    { key: "calendrier", label: t("calendrier") },
+    { key: "creation-personnage", label: t("creationPersonnage") },
+    { key: "gestion-campagne", label: t("gestionCampagne") },
+    { key: "initiative", label: t("initiative") },
+    { key: "journal-historique", label: t("journalHistorique") },
+    { key: "personnalisation", label: t("personnalisation") },
+    { key: "probabilites", label: t("probabilites") },
+    { key: "publication", label: t("publication") },
+    { key: "regles-actives", label: t("reglesActives") },
+    { key: "rencontres", label: t("rencontres") },
+  ];
 
   const reserved = [t("tablesAleatoires"), t("blocNotes")];
 
@@ -62,108 +104,16 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
         }`}
       >
         <SectionToggle worldSlug={worldSlug} />
-        <Link
-          href={`/m/${worldSlug}/mj/calendrier`}
-          onClick={() => setOpen(false)}
-          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-            isCalendrier ? "bg-panel-raised text-accent" : "text-ink-soft"
-          }`}
-        >
-          {t("calendrier")}
-        </Link>
-
-        <Link
-          href={`/m/${worldSlug}/mj`}
-          onClick={() => setOpen(false)}
-          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-            isCampagnes ? "bg-panel-raised text-accent" : "text-ink-soft"
-          }`}
-        >
-          {t("campagnes")}
-        </Link>
-
-        <Link
-          href={`/m/${worldSlug}/mj/creation-personnage`}
-          onClick={() => setOpen(false)}
-          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-            isCreationPersonnage ? "bg-panel-raised text-accent" : "text-ink-soft"
-          }`}
-        >
-          {t("creationPersonnage")}
-        </Link>
-
-        <Link
-          href={`/m/${worldSlug}/mj/initiative`}
-          onClick={() => setOpen(false)}
-          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-            isInitiative ? "bg-panel-raised text-accent" : "text-ink-soft"
-          }`}
-        >
-          {t("initiative")}
-        </Link>
-
-        <Link
-          href={`/m/${worldSlug}/mj/personnalisation`}
-          onClick={() => setOpen(false)}
-          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-            isPersonnalisation ? "bg-panel-raised text-accent" : "text-ink-soft"
-          }`}
-        >
-          {t("personnalisation")}
-        </Link>
-
-        <Link
-          href={`/m/${worldSlug}/mj/probabilites`}
-          onClick={() => setOpen(false)}
-          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-            isProbabilites ? "bg-panel-raised text-accent" : "text-ink-soft"
-          }`}
-        >
-          {t("probabilites")}
-        </Link>
-
-        <Link
-          href={`/m/${worldSlug}/mj/publication`}
-          onClick={() => setOpen(false)}
-          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-            isPublication ? "bg-panel-raised text-accent" : "text-ink-soft"
-          }`}
-        >
-          {t("publication")}
-        </Link>
-
-        <Link
-          href={`/m/${worldSlug}/mj/regles-actives`}
-          onClick={() => setOpen(false)}
-          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-            isReglesActives ? "bg-panel-raised text-accent" : "text-ink-soft"
-          }`}
-        >
-          {t("reglesActives")}
-        </Link>
-
-        <Link
-          href={`/m/${worldSlug}/mj/rencontres`}
-          onClick={() => setOpen(false)}
-          className={`rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-            isRencontres ? "bg-panel-raised text-accent" : "text-ink-soft"
-          }`}
-        >
-          {t("rencontres")}
-        </Link>
-
-        <div className="mt-3 flex flex-col gap-1 border-t border-edge/60 pt-3">
-          {/* V2-S1 : ecran jetable de l'experience, garde comme trace — pas une fonctionnalite du produit, jamais scope au monde courant (fixture dediee, docs/adr/0009-viabilite-solo.md). */}
-          <a
-            href="/spike-solo"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded px-2 py-1.5 text-sm text-ink-muted transition-colors hover:bg-panel-raised hover:text-ink-soft"
-            title="Ecran d'experience V2-S1 — fixture dediee, sans rapport avec ce monde"
-          >
-            {t("spikeSolo")}
-          </a>
-        </div>
+        {tools.map((tool) => (
+          <MjToolLink
+            key={tool.key}
+            worldSlug={worldSlug}
+            toolKey={tool.key}
+            label={tool.label}
+            active={pathname === mjToolHref(worldSlug, tool.key)}
+            onNavigate={() => setOpen(false)}
+          />
+        ))}
 
         <div className="mt-3 flex flex-col gap-1 border-t border-edge/60 pt-3">
           {reserved.map((label) => (

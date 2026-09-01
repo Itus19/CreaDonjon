@@ -9,7 +9,9 @@ import { useDesktopWindowsState } from "./DesktopWindowsProvider";
 import { refId, windowContentLabel, type WindowRef } from "./windowRefs";
 import EditEntityForm from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/EditEntityForm";
 import RuleEntryView from "@/components/rules/RuleEntryView";
+import MjToolWindowContent from "./MjToolWindowContent";
 import type { EntityWindowData } from "@/src/server/services/entityWindow";
+import { isMjToolWindowData } from "./mjToolWindows";
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -18,11 +20,11 @@ function isEntityWindowData(data: unknown): data is EntityWindowData {
 }
 
 /**
- * Rendu des fenetres flottantes (ADR-0011) : mainte a la fois par Monde et
- * par Regles, chacun avec `children` = son propre contenu route (rendu
- * serveur pour la fenetre primaire). L'etat vient de
- * `DesktopWindowsProvider`, partage entre les deux sections — une fenetre
- * ouverte depuis l'une reste visible dans l'autre.
+ * Rendu des fenetres flottantes (ADR-0011) : monte a la fois par Monde, par
+ * Regles ET par MJ, chacun avec `children` = son propre contenu route
+ * (rendu serveur pour la fenetre primaire). L'etat vient de
+ * `DesktopWindowsProvider`, partage entre les trois sections — une fenetre
+ * ouverte depuis l'une reste visible dans les autres.
  */
 export default function WindowsDesktop({ worldSlug, children }: { worldSlug: string; children: React.ReactNode }) {
   const desktop = useDesktop();
@@ -96,7 +98,7 @@ export default function WindowsDesktop({ worldSlug, children }: { worldSlug: str
       {state.avecWindows
         .filter((w) => !w.isMinimized)
         .map(({ ref, geometry, isFocused, data }) => {
-          const { name, badge } = windowContentLabel(data, ref.key);
+          const { name, badge } = windowContentLabel(ref, data);
           return (
             <WindowFrame
               key={refId(ref)}
@@ -125,6 +127,8 @@ export default function WindowsDesktop({ worldSlug, children }: { worldSlug: str
                   campaignCharacterUserId={data.campaignCharacterUserId}
                   initialPortraitLayout={data.portraitLayout}
                 />
+              ) : isMjToolWindowData(data) ? (
+                <MjToolWindowContent worldSlug={worldSlug} data={data} />
               ) : (
                 <RuleEntryView entry={data} worldSlug={worldSlug} />
               )}

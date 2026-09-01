@@ -7,6 +7,7 @@ import { listCampaigns } from "@/src/server/services/campaigns";
 import { getPartySkillProbabilities } from "@/src/server/services/partyProbabilities";
 import type { Locale } from "@/src/i18n/request";
 import PartyProbabilityTable from "@/components/shell/PartyProbabilityTable";
+import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 
 /**
  * Page dediee du Compagnon MJ (V1-E5, specs/arbitrage-modifications.md §3.6) :
@@ -37,6 +38,7 @@ export default async function MjProbabilitiesPage({
 
   return (
     <div className="flex flex-col gap-4">
+      <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "probabilites" }} name="Probabilités" badge="" homeHref={`/m/${worldSlug}/mj/probabilites`} />
       <div>
         <h1 className="block-title text-base">Probabilités de réussite</h1>
         <p className="text-xs text-ink-muted">

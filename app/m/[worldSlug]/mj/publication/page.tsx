@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listShareLinks } from "@/src/server/services/shareLinks";
 import PublicationPanel from "@/components/shell/PublicationPanel";
+import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 
 /** Ancien onglet "Publication" du menu de réglages (retour utilisateur, gomme le bouton ⚙) — même donnees que `GET /api/worlds/[worldSlug]/share-links`, lues ici directement (contexte serveur de monde reel) plutot qu'un fetch client. */
 export default async function MjPublicationPage({ params }: { params: Promise<{ worldSlug: string }> }) {
@@ -14,11 +15,14 @@ export default async function MjPublicationPage({ params }: { params: Promise<{ 
   const links = await listShareLinks(supabase, world.id);
 
   return (
-    <PublicationPanel
-      worldId={world.id}
-      worldSlug={worldSlug}
-      initialLinks={links}
-      initialWikiWelcomeMessage={world.wiki_welcome_message ?? ""}
-    />
+    <>
+      <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "publication" }} name="Publication" badge="" homeHref={`/m/${worldSlug}/mj/publication`} />
+      <PublicationPanel
+        worldId={world.id}
+        worldSlug={worldSlug}
+        initialLinks={links}
+        initialWikiWelcomeMessage={world.wiki_welcome_message ?? ""}
+      />
+    </>
   );
 }

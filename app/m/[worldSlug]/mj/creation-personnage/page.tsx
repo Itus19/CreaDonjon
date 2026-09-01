@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
+import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 
 /**
  * Assistant de creation de personnage (V2-G1, sur demande explicite de
@@ -23,6 +24,7 @@ export default async function MjCreationPersonnagePage({
 
   return (
     <div className="flex flex-col gap-4">
+      <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "creation-personnage" }} name="Création de personnage" badge="" homeHref={`/m/${worldSlug}/mj/creation-personnage`} />
       <div>
         <h1 className="block-title text-base">Création de personnage</h1>
         <p className="text-xs text-ink-muted">

@@ -155,7 +155,8 @@
     }
   },
   "mj": {
-    "campagnes": "Campaigns",
+    "gestionCampagne": "Campaign management",
+    "journalHistorique": "History log",
     "probabilites": "Probabilities",
     "tablesAleatoires": "Random tables",
     "rencontres": "Encounters",

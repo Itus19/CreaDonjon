@@ -156,7 +156,8 @@
     }
   },
   "mj": {
-    "campagnes": "Campagnes",
+    "gestionCampagne": "Gestion de campagne",
+    "journalHistorique": "Journal d'historique",
     "probabilites": "Probabilités",
     "tablesAleatoires": "Tables aléatoires",
     "rencontres": "Rencontres",

@@ -14,6 +14,7 @@ import {
 import { listMonstersForRuleset } from "@/src/server/services/encounters";
 import type { Locale } from "@/src/i18n/request";
 import InitiativeTracker from "@/components/shell/InitiativeTracker";
+import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 
 /**
  * Suivi d'initiative (V1-E4, specs/outils-mj.md §5) : outil d'ecran MJ
@@ -69,6 +70,7 @@ export default async function MjInitiativePage({
 
   return (
     <div className="flex flex-col gap-4">
+      <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "initiative" }} name="Initiative" badge="" homeHref={`/m/${worldSlug}/mj/initiative`} />
       <div>
         <h1 className="block-title text-base">Initiative</h1>
         <p className="text-xs text-ink-muted">

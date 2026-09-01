@@ -7,9 +7,15 @@ import { listCampaigns } from "@/src/server/services/campaigns";
 import { isSuperadmin } from "@/src/server/services/account";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import CampaignsPanel from "@/components/shell/CampaignsPanel";
-import GmJournalPanel from "@/components/shell/GmJournalPanel";
+import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 
-export default async function MjCampagnesPage({
+/**
+ * Gestion de campagne (V2-M7 suite, retour utilisateur : "separe les deux
+ * outils Journal et Campagne") — permissions et attribution uniquement,
+ * le journal d'historique vit desormais dans son propre outil
+ * (`journal-historique/page.tsx`).
+ */
+export default async function MjGestionCampagnePage({
   params,
 }: {
   params: Promise<{ worldSlug: string }>;
@@ -33,13 +39,7 @@ export default async function MjCampagnesPage({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* V2-M7 (Lot M) : journal + octrois d'edition (dans CampaignsPanel ->
-          CampaignDetail) reserves au MJ reel de ce monde — un simple joueur
-          qui atteindrait cette page (RLS le permet, is_world_member seul,
-          lacune preexistante hors perimetre de ce ticket) ne voit ni l'un ni
-          l'autre. Verifie cote serveur ici ET dans chaque route API
-          concernee (isWorldAdmin), jamais seulement en cachant le composant. */}
-      {gm && <GmJournalPanel worldSlug={worldSlug} />}
+      <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "gestion-campagne" }} name="Gestion de campagne" badge="" homeHref={`/m/${worldSlug}/mj`} />
       <CampaignsPanel
         worldSlug={worldSlug}
         defaultRulesetId={defaultRulesetId}

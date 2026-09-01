@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useDesktop } from "./DesktopContext";
-import type { WindowRef } from "./windowRefs";
+import { refId, type WindowRef } from "./windowRefs";
 
 /**
  * Marqueur invisible : la fiche routee (entite ou regle, ADR-0011)
@@ -22,14 +22,13 @@ export default function RegisterPrimaryWindow({
   homeHref: string;
 }) {
   const desktop = useDesktop();
-  const refKind = windowRef.kind;
-  const refKey = windowRef.key;
+  const id = refId(windowRef);
 
   useEffect(() => {
-    desktop?.registerPrimary({ ref: { kind: refKind, key: refKey }, name, badge, homeHref });
+    desktop?.registerPrimary({ ref: windowRef, name, badge, homeHref });
     return () => desktop?.registerPrimary(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refKind, refKey, name, badge, homeHref]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `id` resume `windowRef` (kind+key) de facon stable
+  }, [id, name, badge, homeHref]);
 
   return null;
 }

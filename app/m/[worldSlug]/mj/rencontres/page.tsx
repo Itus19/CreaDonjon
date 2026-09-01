@@ -7,6 +7,7 @@ import { listCampaigns } from "@/src/server/services/campaigns";
 import { getEncounterBudgetTableForRuleset, listMonstersForRuleset, listSavedEncounters } from "@/src/server/services/encounters";
 import type { Locale } from "@/src/i18n/request";
 import EncounterBuilder from "@/components/shell/EncounterBuilder";
+import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 
 /**
  * Page dediee du Compagnon MJ (V1-E3, refonte) : "Générateur de
@@ -42,6 +43,7 @@ export default async function MjRencontresPage({
 
   return (
     <div className="flex flex-col gap-4">
+      <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "rencontres" }} name="Rencontres" badge="" homeHref={`/m/${worldSlug}/mj/rencontres`} />
       <div>
         <h1 className="block-title text-base">Générateur de rencontres</h1>
         <p className="text-xs text-ink-muted">

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCalendar, getWorldBySlug } from "@/src/server/services/worlds";
 import CalendarSettingsPanel from "@/components/shell/CalendarSettingsPanel";
+import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 
 export default async function MjCalendrierPage({
   params,
@@ -15,5 +16,10 @@ export default async function MjCalendrierPage({
 
   const calendar = await getCalendar(supabase, world.id);
 
-  return <CalendarSettingsPanel worldSlug={worldSlug} initialCalendar={calendar} />;
+  return (
+    <>
+      <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "calendrier" }} name="Calendrier" badge="" homeHref={`/m/${worldSlug}/mj/calendrier`} />
+      <CalendarSettingsPanel worldSlug={worldSlug} initialCalendar={calendar} />
+    </>
+  );
 }

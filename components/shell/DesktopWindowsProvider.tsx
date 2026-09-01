@@ -16,6 +16,7 @@ import {
 } from "./windowRefs";
 import type { EntityWindowData } from "@/src/server/services/entityWindow";
 import type { RuleEntryDetail } from "@/src/server/services/rules";
+import type { MjToolWindowData } from "./mjToolWindows";
 
 const DEFAULT_WIDTH = 860;
 const DEFAULT_HEIGHT = 760;
@@ -26,9 +27,9 @@ function defaultGeometry(index: number): WindowGeometry {
 }
 
 function windowDataUrl(worldSlug: string, ref: WindowRef): string {
-  return ref.kind === "entity"
-    ? `/api/worlds/${worldSlug}/entities/${ref.key}/window`
-    : `/api/worlds/${worldSlug}/regles/${ref.key}/window`;
+  if (ref.kind === "entity") return `/api/worlds/${worldSlug}/entities/${ref.key}/window`;
+  if (ref.kind === "rule") return `/api/worlds/${worldSlug}/regles/${ref.key}/window`;
+  return `/api/worlds/${worldSlug}/mj/${ref.key}/window`;
 }
 
 export interface AvecWindowEntry {
@@ -36,7 +37,7 @@ export interface AvecWindowEntry {
   geometry: WindowGeometry;
   isFocused: boolean;
   isMinimized: boolean;
-  data: EntityWindowData | RuleEntryDetail | undefined;
+  data: EntityWindowData | RuleEntryDetail | MjToolWindowData | undefined;
 }
 
 /** Un onglet reduit en bas de l'espace de travail (V2-K4). */
@@ -62,14 +63,15 @@ export interface DesktopWindowsState {
 }
 
 /**
- * Etat des fenetres flottantes (ADR-0011), partage par Monde et Regles :
- * monte une seule fois dans `app/m/[worldSlug]/layout.tsx`, au-dessus des
- * trois sections. Chaque section ne monte que le RENDU (`WindowsDesktop`),
- * jamais un second etat — changer de section ne ferme donc plus les
- * fenetres ouvertes. MJ ne consomme pas ce contexte : ses ecrans restent
- * plein cadre, sans fenetre.
+ * Etat des fenetres flottantes (ADR-0011), partage par Monde, Regles ET MJ
+ * (retour utilisateur, V2-M7 suite : "les fenetres des outils MJ [...]
+ * comme celles des regles ou du wiki") : monte une seule fois dans
+ * `app/m/[worldSlug]/layout.tsx`, au-dessus des trois sections. Chaque
+ * section ne monte que le RENDU (`WindowsDesktop`), jamais un second etat —
+ * changer de section ne ferme donc jamais les fenetres ouvertes, quel que
+ * soit leur type.
  *
- * `?avec=` melange desormais entites et entrees de regle (`windowRefs.ts`).
+ * `?avec=` melange desormais entites, entrees de regle et outils MJ (`windowRefs.ts`).
  * Position/taille/empilement restent un etat purement client — jamais dans
  * l'URL, pour ne pas polluer l'historique de navigation.
  *
@@ -99,7 +101,7 @@ export default function DesktopWindowsProvider({
 
   const [primary, setPrimary] = useState<PrimaryWindowInfo | null>(null);
   const [geometries, setGeometries] = useState<Record<string, WindowGeometry>>({});
-  const [avecData, setAvecData] = useState<Record<string, EntityWindowData | RuleEntryDetail>>({});
+  const [avecData, setAvecData] = useState<Record<string, EntityWindowData | RuleEntryDetail | MjToolWindowData>>({});
   const [focusedId, setFocusedId] = useState<string | null>(null);
   // Etat d'affichage purement local (V2-K4) — jamais dans `?avec=` ni dans
   // l'URL, meme logique que l'ordre d'empilement (docs/adr/0006).
@@ -113,6 +115,24 @@ export default function DesktopWindowsProvider({
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
+
+  // Resynchronise `avecParam` sur une VRAIE navigation (`router.push`, ex.
+  // `SectionToggle` repliant la primaire courante dans `avec` en changeant
+  // de section) — bug reel trouve en testant le repli MJ<->Monde<->Regles :
+  // `avecParam` ne suivait que son propre `history.replaceState` (ci-dessus
+  // et `updateAvecParam`) et le `popstate` manuel, jamais une navigation
+  // Next normale, qui ne declenche ni l'un ni l'autre. Sans cet effet, la
+  // fenetre primaire repliee dans `avec` par `hrefWithWindows` disparaissait
+  // purement et simplement au premier changement de section. `searchParams`
+  // (le hook Next, pas l'URL brute) ne change JAMAIS suite a un
+  // `history.replaceState` local — seulement sur une vraie navigation —
+  // donc cet effet ne rentre jamais en conflit avec les mises a jour
+  // locales d'`avecParam` ci-dessus.
+  useEffect(() => {
+    const fresh = searchParams.get("avec");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronise avec une source externe (l'URL via le routeur Next), exactement le cas documente comme legitime ; le garde `prev === fresh` empeche toute boucle
+    setAvecParam((prev) => (prev === fresh ? prev : fresh));
+  }, [searchParams]);
 
   const avecRefs = parseAvecParam(avecParam).filter((ref) => !primary || !refsEqual(ref, primary.ref));
   const avecRefsKey = avecRefs.map(refId).join(",");
@@ -150,7 +170,7 @@ export default function DesktopWindowsProvider({
       fetchedRef.current.add(id);
       fetch(windowDataUrl(worldSlug, ref))
         .then((res) => (res.ok ? res.json() : null))
-        .then((data: EntityWindowData | RuleEntryDetail | null) => {
+        .then((data: EntityWindowData | RuleEntryDetail | MjToolWindowData | null) => {
           if (data) setAvecData((prev) => ({ ...prev, [id]: data }));
         });
     });
@@ -238,7 +258,7 @@ export default function DesktopWindowsProvider({
     const isMinimized = Boolean(minimizedIds[id]);
     avecWindows.push({ ref, geometry, isFocused: focusedId === id, isMinimized, data: avecData[id] });
     if (isMinimized) {
-      const { name, badge } = windowContentLabel(avecData[id], ref.key);
+      const { name, badge } = windowContentLabel(ref, avecData[id]);
       minimizedTabs.push({ id, ref, name, badge });
     }
   }

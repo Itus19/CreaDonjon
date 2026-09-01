@@ -2,8 +2,17 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import MjSidebar from "@/components/shell/MjSidebar";
-import Panel from "@/components/shell/Panel";
+import WindowsDesktop from "@/components/shell/WindowsDesktop";
 
+/**
+ * Outils MJ en fenetres flottantes (retour utilisateur, V2-M7 suite : "les
+ * fenetres des outils MJ [...] comme celles des regles ou du wiki") — meme
+ * `WindowsDesktop` que Monde/Regles, memes fenetres visibles quelle que
+ * soit la section (`DesktopWindowsProvider`, partage au-dessus des trois
+ * dans `app/m/[worldSlug]/layout.tsx`). Le `<Panel>` plein cadre a disparu :
+ * `WindowsDesktop` le rend lui-meme quand aucune fenetre primaire n'est
+ * ouverte.
+ */
 export default async function MjLayout({
   children,
   params,
@@ -19,9 +28,7 @@ export default async function MjLayout({
   return (
     <>
       <MjSidebar worldSlug={worldSlug} />
-      <div className="flex-1 overflow-y-auto p-8">
-        <Panel>{children}</Panel>
-      </div>
+      <WindowsDesktop worldSlug={worldSlug}>{children}</WindowsDesktop>
     </>
   );
 }

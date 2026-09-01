@@ -50,7 +50,12 @@ export default function CampaignsPanel({
   const [name, setName] = useState("");
   const [mode, setMode] = useState<"campaign" | "solo">("campaign");
   const [error, setError] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Deplie par defaut (retour utilisateur : "les outils de gestion des
+  // permissions sont masques" a l'ouverture) — "un monde = une campagne"
+  // (V2-G1) rend le repli initial purement couteux : il n'y a jamais qu'une
+  // campagne a choisir parmi d'autres, le clic pour la reveler etait donc un
+  // pas superflu, jamais un vrai choix.
+  const [expandedId, setExpandedId] = useState<string | null>(initialCampaigns[0]?.id ?? null);
   const [pending, setPending] = useState(false);
   const modeOptions = canUseSoloMode
     ? [
