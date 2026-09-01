@@ -42,9 +42,13 @@ export async function uploadBlockImage(
     fit: "inside",
     withoutEnlargement: true,
   });
-  const [image, metadata, stats] = await Promise.all([
-    processed.clone().webp({ quality: 82 }).toBuffer(),
-    processed.clone().metadata(),
+  // `resolveWithObject: true` plutot que `metadata()` a part (meme bug que
+  // storage.ts, retour utilisateur) : `metadata()` lit les dimensions du
+  // fichier SOURCE, jamais celles apres le `resize()` encore en attente —
+  // `stats()`, lui, decode reellement les pixels et reflete donc deja le
+  // redimensionnement, pas touche ici.
+  const [{ data: image, info }, stats] = await Promise.all([
+    processed.clone().webp({ quality: 82 }).toBuffer({ resolveWithObject: true }),
     processed.clone().stats(),
   ]);
 
@@ -57,8 +61,8 @@ export async function uploadBlockImage(
     blockId: params.blockId,
     image,
     mimeType: "image/webp",
-    width: metadata.width ?? IMAGE_MAX_DIMENSION,
-    height: metadata.height ?? IMAGE_MAX_DIMENSION,
+    width: info.width ?? IMAGE_MAX_DIMENSION,
+    height: info.height ?? IMAGE_MAX_DIMENSION,
     hue,
     chroma,
     availableModes: availableModesFor(hue, chroma),

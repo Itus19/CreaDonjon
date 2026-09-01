@@ -40,17 +40,17 @@ export async function uploadEntityPortrait(
     fit: "inside",
     withoutEnlargement: true,
   });
-  const [image, metadata] = await Promise.all([
-    processed.clone().webp({ quality: 82 }).toBuffer(),
-    processed.clone().metadata(),
-  ]);
+  // `resolveWithObject: true` plutot que `metadata()` a part (meme bug que
+  // storage.ts, retour utilisateur) : `metadata()` lit les dimensions du
+  // fichier SOURCE, jamais celles apres le `resize()` encore en attente.
+  const { data: image, info } = await processed.webp({ quality: 82 }).toBuffer({ resolveWithObject: true });
 
   await upsertEntityPortrait(supabase, {
     entityId: params.entityId,
     image,
     mimeType: "image/webp",
-    width: metadata.width ?? PORTRAIT_MAX_DIMENSION,
-    height: metadata.height ?? PORTRAIT_MAX_DIMENSION,
+    width: info.width ?? PORTRAIT_MAX_DIMENSION,
+    height: info.height ?? PORTRAIT_MAX_DIMENSION,
   });
   return { ok: true };
 }

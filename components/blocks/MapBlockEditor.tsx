@@ -9,6 +9,12 @@ import { DEFAULT_MAP_BLOCK_DATA, type MapBlockData, type MapView } from "@/src/c
 import type { AssetRow } from "@/src/server/repos/assets";
 import type { MapSourceInfo, CarteOption } from "@/src/server/services/mapSource";
 
+// Meme hauteur que RelationsGraphCanvas/FamilyTreeCanvas (retour
+// utilisateur : "le bloc carte a une forme bizarre" — il faisait 220px,
+// nettement plus bas que ses voisins genealogie/reseau, sans raison liee au
+// contenu de ce bloc precis).
+const COLLAPSED_HEIGHT = 420;
+
 /**
  * Bloc `map`, mode "own" OU "ref" (Lot I, phase F₁ — ADR 0017 décision 1).
  * Aperçu figé (vignette) + un bouton "Agrandir" qui ouvre soit
@@ -31,7 +37,11 @@ export default function MapBlockEditor({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [asset, setAsset] = useState<AssetRow | null>(null);
-  const [refSource, setRefSource] = useState<MapSourceInfo | null>(null);
+  // `undefined` = pas encore resolu, distinct de `null` = confirme
+  // indisponible (retour utilisateur : un flash "Carte référencée non
+  // disponible" apparaissait a chaque chargement, le temps que la requete
+  // reponde — les deux etats etaient confondus sous `null`).
+  const [refSource, setRefSource] = useState<MapSourceInfo | null | undefined>(undefined);
   const [refAsset, setRefAsset] = useState<AssetRow | null>(null);
 
   const assetId = data.mode === "own" ? data.assetId : null;
@@ -46,7 +56,7 @@ export default function MapBlockEditor({
   const [trackedSourceBlockId, setTrackedSourceBlockId] = useState(sourceBlockId);
   if (sourceBlockId !== trackedSourceBlockId) {
     setTrackedSourceBlockId(sourceBlockId);
-    setRefSource(null);
+    setRefSource(undefined);
     setRefAsset(null);
   }
 
@@ -134,13 +144,15 @@ export default function MapBlockEditor({
           imageWidth={asset.width ?? 1}
           imageHeight={asset.height ?? 1}
           initialView={data.defaultView}
-          height={220}
+          height={COLLAPSED_HEIGHT}
           interactive={false}
         />
       )}
 
       {data.mode === "ref" &&
-        (refSource === null ? (
+        (refSource === undefined ? (
+          <p className="text-sm italic text-ink-muted">Chargement…</p>
+        ) : refSource === null ? (
           <p className="text-sm italic text-ink-muted">Carte référencée non disponible pour l&apos;instant.</p>
         ) : refSource.assetId && refSource.thumbnailAssetId && refAsset ? (
           <MapCanvas
@@ -148,7 +160,7 @@ export default function MapBlockEditor({
             imageWidth={refAsset.width ?? 1}
             imageHeight={refAsset.height ?? 1}
             initialView={data.defaultView}
-            height={220}
+            height={COLLAPSED_HEIGHT}
             interactive={false}
           />
         ) : (

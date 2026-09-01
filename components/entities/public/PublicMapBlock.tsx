@@ -6,6 +6,10 @@ import type { MapBlockData } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
 import type { MapSourceInfo } from "@/src/server/services/mapSource";
 
+// Meme hauteur que RelationsGraphCanvas/FamilyTreeCanvas (retour
+// utilisateur : "le bloc carte a une forme bizarre") — voir MapBlockEditor.tsx.
+const COLLAPSED_HEIGHT = 420;
+
 /**
  * Rendu public/joueur du bloc `map` (Lot I, phases B et F₁) — lecture
  * seule, meme composant `MapCanvas` que l'editeur MJ (`MapBlockEditor.tsx`),
@@ -65,7 +69,7 @@ export default function PublicMapBlock({ data, mapSource }: { data: MapBlockData
         imageWidth={asset.width ?? 1}
         imageHeight={asset.height ?? 1}
         initialView={data.defaultView}
-        height={220}
+        height={COLLAPSED_HEIGHT}
         interactive={false}
       />
       {expanded && (

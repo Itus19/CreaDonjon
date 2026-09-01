@@ -60,7 +60,15 @@ export async function uploadAsset(
   if (params.maxDimension) {
     processed = processed.resize(params.maxDimension, params.maxDimension, { fit: "inside", withoutEnlargement: true });
   }
-  const [image, metadata] = await Promise.all([processed.clone().webp({ quality: 85 }).toBuffer(), processed.clone().metadata()]);
+  // `resolveWithObject: true` plutot que `metadata()` a part (bug corrige,
+  // retour utilisateur : carte "completement pixelisee") : `sharp(...).metadata()`
+  // lit les dimensions du fichier SOURCE, jamais celles apres un `resize()`
+  // encore en attente dans le pipeline (resize n'est applique qu'au moment
+  // ou l'image est reellement traitee) — `assets.width`/`height` stockaient
+  // donc la resolution D'AVANT redimensionnement (ex. 5760px) alors que
+  // l'image reellement enregistree ne faisait que 800 ou 4096px, ce qui
+  // forçait le canevas a etirer l'image bien au-dela de sa vraie resolution.
+  const { data: image, info } = await processed.webp({ quality: 85 }).toBuffer({ resolveWithObject: true });
 
   const id = crypto.randomUUID();
   const storagePath = `${params.worldId}/${id}.webp`;
@@ -76,8 +84,8 @@ export async function uploadAsset(
     storagePath,
     mimeType: "image/webp",
     byteSize: image.byteLength,
-    width: metadata.width ?? null,
-    height: metadata.height ?? null,
+    width: info.width ?? null,
+    height: info.height ?? null,
     altText: params.altText,
     visibilityLevel: params.visibilityLevel,
     visibilityScopeId: params.visibilityScopeId,
