@@ -164,6 +164,7 @@
     }
   },
   "mj": {
+    "choisirOutil": "Choose a GM tool in the sidebar.",
     "gestionCampagne": "Campaign management",
     "journalHistorique": "History log",
     "probabilites": "Probabilities",

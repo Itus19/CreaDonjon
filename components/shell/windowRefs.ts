@@ -80,7 +80,11 @@ export function refsEqual(a: WindowRef, b: WindowRef): boolean {
 }
 
 export function mjToolHref(worldSlug: string, key: MjToolKey): string {
-  return key === "gestion-campagne" ? `/m/${worldSlug}/mj` : `/m/${worldSlug}/mj/${key}`;
+  // `/mj` (racine) est desormais l'accueil neutre de la section, jamais un
+  // outil precis (retour utilisateur : "les boutons rouges pour fermer les
+  // fenetres MJ ne fonctionnent pas" — "Gestion de campagne" vivait sur
+  // cette racine, donc fermer sa fenetre y renaviguait vers elle-meme).
+  return `/m/${worldSlug}/mj/${key}`;
 }
 
 export function windowHref(worldSlug: string, ref: WindowRef): string {
