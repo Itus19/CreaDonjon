@@ -71,3 +71,19 @@ export async function deleteAssetRow(supabase: TypedClient, id: string): Promise
   if (error) throw new Error(error.message);
   return data !== null;
 }
+
+/** `false` si l'asset n'existe pas ou est hors de portee (RLS `assets_update`, `app.is_world_member`) — jamais distingue, meme convention que le reste de ce fichier. */
+export async function updateAssetVisibility(
+  supabase: TypedClient,
+  id: string,
+  params: { visibilityLevel: string; visibilityScopeId: string | null }
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("assets")
+    .update({ visibility_level: params.visibilityLevel, visibility_scope_id: params.visibilityScopeId })
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data !== null;
+}

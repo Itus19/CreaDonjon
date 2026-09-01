@@ -59,7 +59,14 @@ export default function CarteMapPanel({ worldSlug, block }: { worldSlug: string;
         />
       </div>
       <div className="min-h-0 flex-1">
-        <MapWorkspace worldSlug={worldSlug} data={data} onChange={(d) => patch({ data: d })} height="100%" />
+        <MapWorkspace
+          worldSlug={worldSlug}
+          data={data}
+          visibilityLevel={visibilityLevel}
+          visibilityScopeId={block.visibilityScopeId}
+          onChange={(d) => patch({ data: d })}
+          height="100%"
+        />
       </div>
     </div>
   );

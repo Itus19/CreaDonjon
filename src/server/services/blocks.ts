@@ -21,6 +21,8 @@ import {
   updateBlockWithVersionCheck,
 } from "@/src/server/repos/blocks";
 import { getEntityById } from "@/src/server/repos/entities";
+import { updateAssetVisibility } from "@/src/server/repos/assets";
+import type { MapBlockData } from "@/src/core/schemas/blocks/map";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { recordEntityRevision } from "@/src/server/services/entityHistory";
 import { canUserEditEntityById } from "@/src/server/services/permissions";
@@ -108,6 +110,29 @@ async function clearOtherWikiBackgrounds(supabase: TypedClient, entityId: string
       visibilityLevel: row.visibility_level,
       visibilityScopeId: row.visibility_scope_id,
     });
+  }
+}
+
+/**
+ * Un bloc `map` mode "own" ecrit sa visibilite sur `blocks.visibility_level`,
+ * mais l'image qu'il porte vit dans une ligne `assets` distincte, filtree
+ * par sa PROPRE `visibility_level` a la lecture (RLS `assets_select`,
+ * migration 20260804150001) — jamais celle du bloc. Sans ce rappel, changer
+ * la visibilite du bloc apres coup (dropdown) laisse l'image lisible a son
+ * ancien niveau (CLAUDE.md regle 4 : resolution cote serveur, avant l'envoi).
+ * Ne s'applique qu'a `mode: "own"` — le mode "ref" ne porte pas d'asset,
+ * seule sa fiche `carte` source en porte un.
+ */
+async function syncMapAssetVisibility(
+  supabase: TypedClient,
+  data: Json,
+  visibilityLevel: string,
+  visibilityScopeId: string | null
+): Promise<void> {
+  const mapData = data as unknown as MapBlockData;
+  if (mapData.mode !== "own") return;
+  for (const assetId of [mapData.assetId, mapData.thumbnailAssetId]) {
+    if (assetId) await updateAssetVisibility(supabase, assetId, { visibilityLevel, visibilityScopeId });
   }
 }
 
@@ -202,6 +227,10 @@ export async function updateBlockContent(
 
   if (existing.block_type === "image" && (validatedData as { useAsWikiBackground?: boolean }).useAsWikiBackground) {
     await clearOtherWikiBackgrounds(supabase, existing.entity_id, params.id);
+  }
+
+  if (existing.block_type === "map") {
+    await syncMapAssetVisibility(supabase, row.data, params.visibilityLevel, params.visibilityScopeId);
   }
 
   return { ok: true, block: toVisibleBlock(row) };

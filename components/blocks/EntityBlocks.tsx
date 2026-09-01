@@ -293,6 +293,8 @@ function BlockDataEditor({
         <MapBlockEditor
           worldSlug={worldSlug}
           data={block.data as MapBlockData}
+          visibilityLevel={block.visibilityLevel}
+          visibilityScopeId={block.visibilityScopeId}
           onChange={(d) => onChange(d)}
           onSaveNow={onSaveNow ? (d) => onSaveNow(d) : undefined}
         />

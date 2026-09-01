@@ -27,6 +27,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const altText = formData?.get("altText");
   const requestedVisibility = formData?.get("visibilityLevel");
   const visibilityLevel = typeof requestedVisibility === "string" && VISIBILITY_LEVELS.has(requestedVisibility) ? requestedVisibility : "public";
+  const requestedScopeId = formData?.get("visibilityScopeId");
+  const visibilityScopeId = typeof requestedScopeId === "string" && requestedScopeId !== "" ? requestedScopeId : null;
   const requestedMaxDimension = formData?.get("maxDimension");
   const maxDimension = typeof requestedMaxDimension === "string" && Number.isFinite(Number(requestedMaxDimension)) ? Number(requestedMaxDimension) : undefined;
 
@@ -37,7 +39,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     mimeType: file.type,
     altText: typeof altText === "string" && altText.trim() !== "" ? altText : null,
     visibilityLevel,
-    visibilityScopeId: null,
+    visibilityScopeId,
     uploadedBy: user.id,
     maxDimension,
   });

@@ -20,11 +20,16 @@ import type { MapSourceInfo, CarteOption } from "@/src/server/services/mapSource
 export default function MapBlockEditor({
   worldSlug,
   data,
+  visibilityLevel,
+  visibilityScopeId,
   onChange,
   onSaveNow,
 }: {
   worldSlug: string;
   data: MapBlockData;
+  /** Visibilite du bloc — transmise a `MapWorkspace` pour que l'image televersee herite de la meme visibilite (voir le commentaire dans `MapWorkspace.tsx`). */
+  visibilityLevel: string;
+  visibilityScopeId: string | null;
   onChange: (data: MapBlockData) => void;
   /** Persistance immediate (Lot I) — voir le commentaire dans `MapWorkspace.tsx`. */
   onSaveNow?: (data: MapBlockData) => void;
@@ -174,7 +179,14 @@ export default function MapBlockEditor({
               </button>
             </div>
             {data.mode === "own" ? (
-              <MapWorkspace worldSlug={worldSlug} data={data} onChange={onChange} onSaveNow={onSaveNow} />
+              <MapWorkspace
+                worldSlug={worldSlug}
+                data={data}
+                visibilityLevel={visibilityLevel}
+                visibilityScopeId={visibilityScopeId}
+                onChange={onChange}
+                onSaveNow={onSaveNow}
+              />
             ) : (
               <MapRefPanel sourceBlockId={data.sourceBlockId} defaultView={data.defaultView} onSaveDefaultView={saveRefDefaultView} />
             )}

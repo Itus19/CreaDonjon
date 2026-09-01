@@ -24,12 +24,17 @@ const FULL_MAX_DIMENSION = 4096;
 export default function MapWorkspace({
   worldSlug,
   data,
+  visibilityLevel,
+  visibilityScopeId,
   onChange,
   onSaveNow,
   height = "100%",
 }: {
   worldSlug: string;
   data: Extract<MapBlockData, { mode: "own" }>;
+  /** Visibilite du bloc porteur (dropdown, deja cablee) — l'image televersee doit heriter de CETTE visibilite des l'upload, jamais rester "public" par defaut (RLS `assets_select` filtre sur la visibilite de l'ASSET, pas celle du bloc). */
+  visibilityLevel: string;
+  visibilityScopeId: string | null;
   onChange: (data: MapBlockData) => void;
   /**
    * Persistance immediate (Lot I) : quand ce composant est ouvert dans une
@@ -74,11 +79,12 @@ export default function MapWorkspace({
     };
   }, [data.assetId]);
 
-  async function uploadVariant(file: File, maxDimension: number, visibilityLevel: string): Promise<AssetRow> {
+  async function uploadVariant(file: File, maxDimension: number): Promise<AssetRow> {
     const formData = new FormData();
     formData.set("file", file);
     formData.set("maxDimension", String(maxDimension));
     formData.set("visibilityLevel", visibilityLevel);
+    if (visibilityScopeId) formData.set("visibilityScopeId", visibilityScopeId);
     const res = await fetch(`/api/worlds/${worldSlug}/assets`, { method: "POST", body: formData });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
@@ -92,8 +98,8 @@ export default function MapWorkspace({
     setError(null);
     try {
       const [full, thumbnail] = await Promise.all([
-        uploadVariant(file, FULL_MAX_DIMENSION, "public"),
-        uploadVariant(file, THUMBNAIL_MAX_DIMENSION, "public"),
+        uploadVariant(file, FULL_MAX_DIMENSION),
+        uploadVariant(file, THUMBNAIL_MAX_DIMENSION),
       ]);
       setAsset(full);
       const next: MapBlockData = { ...data, assetId: full.id, thumbnailAssetId: thumbnail.id };
