@@ -48,9 +48,15 @@ export default function MapBlockEditor({
   const thumbnailAssetId = data.mode === "own" ? data.thumbnailAssetId : null;
   const sourceBlockId = data.mode === "ref" ? data.sourceBlockId : null;
 
-  const [trackedAssetId, setTrackedAssetId] = useState(assetId);
-  if (assetId !== trackedAssetId) {
-    setTrackedAssetId(assetId);
+  // L'aperçu replié n'affiche jamais que la vignette (`thumbnailAssetId`,
+  // jamais le plein format, pour ne pas charger une image de plusieurs Mo
+  // dans une simple ligne de bloc) — les dimensions doivent donc venir de
+  // CETTE image precise, jamais de `assetId` (le plein format, une
+  // resolution differente) : sinon `MapCanvas` etire la vignette reelle a
+  // la taille du plein format, tres visible pixelise (retour utilisateur).
+  const [trackedThumbnailAssetId, setTrackedThumbnailAssetId] = useState(thumbnailAssetId);
+  if (thumbnailAssetId !== trackedThumbnailAssetId) {
+    setTrackedThumbnailAssetId(thumbnailAssetId);
     setAsset(null);
   }
   const [trackedSourceBlockId, setTrackedSourceBlockId] = useState(sourceBlockId);
@@ -61,9 +67,9 @@ export default function MapBlockEditor({
   }
 
   useEffect(() => {
-    if (!assetId) return;
+    if (!thumbnailAssetId) return;
     let cancelled = false;
-    fetch(`/api/assets/${assetId}/meta`)
+    fetch(`/api/assets/${thumbnailAssetId}/meta`)
       .then((res) => (res.ok ? res.json() : null))
       .then((body: AssetRow | null) => {
         if (!cancelled) setAsset(body);
@@ -74,7 +80,7 @@ export default function MapBlockEditor({
     return () => {
       cancelled = true;
     };
-  }, [assetId]);
+  }, [thumbnailAssetId]);
 
   useEffect(() => {
     if (!sourceBlockId) return;
@@ -93,9 +99,9 @@ export default function MapBlockEditor({
   }, [sourceBlockId]);
 
   useEffect(() => {
-    if (!refSource?.assetId) return;
+    if (!refSource?.thumbnailAssetId) return;
     let cancelled = false;
-    fetch(`/api/assets/${refSource.assetId}/meta`)
+    fetch(`/api/assets/${refSource.thumbnailAssetId}/meta`)
       .then((res) => (res.ok ? res.json() : null))
       .then((body: AssetRow | null) => {
         if (!cancelled) setRefAsset(body);
@@ -106,7 +112,7 @@ export default function MapBlockEditor({
     return () => {
       cancelled = true;
     };
-  }, [refSource?.assetId]);
+  }, [refSource?.thumbnailAssetId]);
 
   function pickCarte(option: CarteOption) {
     // Le cadrage precedent n'a de sens que pour l'image d'avant (coordonnees

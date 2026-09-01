@@ -23,6 +23,12 @@ export default function PublicMapBlock({ data, mapSource }: { data: MapBlockData
   const assetId = data.mode === "own" ? data.assetId : mapSource?.assetId ?? null;
   const thumbnailAssetId = data.mode === "own" ? data.thumbnailAssetId : mapSource?.thumbnailAssetId ?? null;
   const [asset, setAsset] = useState<AssetRow | null>(null);
+  // Aperçu replié : toujours la vignette (`thumbnailAssetId`), jamais le
+  // plein format — ses dimensions doivent donc venir de CETTE image, pas
+  // de `asset` (meta du plein format, une resolution differente), sinon
+  // `MapCanvas` etire la vignette reelle a la taille du plein format,
+  // visiblement pixelise (retour utilisateur).
+  const [thumbnailAsset, setThumbnailAsset] = useState<AssetRow | null>(null);
   const [expanded, setExpanded] = useState(false);
 
   // Ajuste pendant le rendu plutot que dans un effet (react.dev,
@@ -31,6 +37,11 @@ export default function PublicMapBlock({ data, mapSource }: { data: MapBlockData
   if (assetId !== trackedAssetId) {
     setTrackedAssetId(assetId);
     setAsset(null);
+  }
+  const [trackedThumbnailAssetId, setTrackedThumbnailAssetId] = useState(thumbnailAssetId);
+  if (thumbnailAssetId !== trackedThumbnailAssetId) {
+    setTrackedThumbnailAssetId(thumbnailAssetId);
+    setThumbnailAsset(null);
   }
 
   useEffect(() => {
@@ -49,13 +60,29 @@ export default function PublicMapBlock({ data, mapSource }: { data: MapBlockData
     };
   }, [assetId]);
 
+  useEffect(() => {
+    if (!thumbnailAssetId) return;
+    let cancelled = false;
+    fetch(`/api/assets/${thumbnailAssetId}/meta`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: AssetRow | null) => {
+        if (!cancelled) setThumbnailAsset(body);
+      })
+      .catch(() => {
+        if (!cancelled) setThumbnailAsset(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [thumbnailAssetId]);
+
   if (data.mode === "ref" && !mapSource) {
     return <p className="text-sm italic text-ink-muted">Carte référencée non disponible pour l&apos;instant.</p>;
   }
   if (!assetId || !thumbnailAssetId) {
     return <p className="text-sm italic text-ink-muted">Aucune carte pour l&apos;instant.</p>;
   }
-  if (!asset) {
+  if (!asset || !thumbnailAsset) {
     return <p className="text-sm text-ink-muted">Chargement…</p>;
   }
 
@@ -66,8 +93,8 @@ export default function PublicMapBlock({ data, mapSource }: { data: MapBlockData
       </button>
       <MapCanvas
         imageUrl={`/api/assets/${thumbnailAssetId}`}
-        imageWidth={asset.width ?? 1}
-        imageHeight={asset.height ?? 1}
+        imageWidth={thumbnailAsset.width ?? 1}
+        imageHeight={thumbnailAsset.height ?? 1}
         initialView={data.defaultView}
         height={COLLAPSED_HEIGHT}
         interactive={false}
