@@ -8,7 +8,9 @@ import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 import { relationLabel, type RelationType } from "@/src/core/relations/inverses";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
-import { type BlockRow, getBlockById, listBlocksForEntity } from "@/src/server/repos/blocks";
+import { type BlockRow, getBlockById, listBlocksByTypeForEntities, listBlocksForEntity } from "@/src/server/repos/blocks";
+import { zMapBlockData } from "@/src/core/schemas/blocks/map";
+import type { WorldMapSummary } from "@/src/server/services/maps";
 import { getBlockImage, type BlockImage } from "@/src/server/repos/blockImages";
 import { getBackgroundMetaForBlock } from "@/src/server/services/blockImages";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
@@ -164,6 +166,53 @@ export async function getPublicEntityTree(worldId: string): Promise<EntityTreeGr
   ]);
   const entities = allEntities.filter((e) => e.is_public);
   return buildEntityTree(withPlayerCharacterKinds(entities, playerCharacterIds), partOfEdges, kindOrder);
+}
+
+/**
+ * Vue "Cartes" du wiki public (Lot I, retour utilisateur : "un endroit où
+ * je puisse... voir la/les cartes en grand", MJ ou wiki public) — meme
+ * agregation que `getWorldMaps` (`services/maps.ts`) cote authentifie,
+ * mais filtre par `is_public` (entite) ET `filterBlocks` en viewer
+ * anonyme (bloc) : les deux memes portes que `getPublicEntityTree`.
+ */
+export async function getPublicWorldMaps(worldId: string): Promise<WorldMapSummary[]> {
+  const supabase = createShareLinkServiceClient();
+  const allEntities = await listEntitiesForWorld(supabase, worldId);
+  const entities = allEntities.filter((e) => e.is_public);
+  const entityById = new Map(entities.map((e) => [e.id, e]));
+  const blocks = await listBlocksByTypeForEntities(
+    supabase,
+    entities.map((e) => e.id),
+    "map"
+  );
+  const visible = filterBlocks(
+    blocks.map((b) => ({
+      ...b,
+      visibility: { level: b.visibility_level as VisibilityLevel, scopeId: b.visibility_scope_id, createdBy: b.created_by },
+    })),
+    { kind: "anonymous" }
+  );
+
+  const result: WorldMapSummary[] = [];
+  for (const block of visible) {
+    const entity = entityById.get(block.entity_id);
+    if (!entity) continue;
+    const parsed = zMapBlockData.safeParse(block.data);
+    if (!parsed.success) continue;
+    const display = block.display as { label?: unknown } | null;
+    result.push({
+      blockId: block.id,
+      version: block.version,
+      visibilityLevel: block.visibility_level,
+      visibilityScopeId: block.visibility_scope_id,
+      entityId: entity.id,
+      entityName: entity.name,
+      entitySlug: entity.slug,
+      label: typeof display?.label === "string" ? display.label : "Carte",
+      data: parsed.data,
+    });
+  }
+  return result;
 }
 
 /**

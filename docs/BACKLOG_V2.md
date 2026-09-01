@@ -597,6 +597,13 @@ Découpé en phases pour rester traçable d'une session à l'autre — cocher au
 - [x] Bouton "Définir cette vue par défaut" dans la vue agrandie (persiste le cadrage courant).
 - Vérifié en direct : ajout du bloc, téléversement, aperçu, agrandissement, zoom (ctrl+molette confirmé, molette seule non capturée), sauvegarde du cadrage par défaut — cycle complet avec une vraie image.
 
+**Phase B² — Vue « Cartes » agrégée (ajout, retour utilisateur : "un endroit où je puisse travailler et où [je] pourrais voir la/les cartes en grand... une catégorie 'Cartes' dans la sidebar... MJ ou Wiki public") — ✅ faite, commit à suivre**
+- [x] `src/server/services/maps.ts` (`getWorldMaps`) + `publicShare.ts` (`getPublicWorldMaps`) : liste de toutes les cartes du monde (blocs `map` en mode "own"), visibilité résolue côté serveur comme partout ailleurs.
+- [x] Entrée « Cartes » dans `Sidebar.tsx` (MJ) et dans `BookSkin.tsx` (public/prévisualisation), même emplacement que « Chronologie ».
+- [x] Pages dédiées : `/m/[worldSlug]/cartes` (MJ, éditable — réutilise `MapWorkspace`), `/m/[worldSlug]/apercu/cartes` et `/partage/[token]/cartes` (lecture seule, réutilisent `PublicWorldMapsView`/`MapCanvas`).
+- [x] `MapWorkspace.tsx` extrait de `MapBlockEditor.tsx` pour être partagé entre la vue agrandie en place (modale sur la fiche) et ces pages dédiées — pas une deuxième implémentation du téléversement.
+- [x] **Bug découvert en test live et corrigé** : la modale de `MapBlockEditor` est un descendant DOM du conteneur du bloc, donc la fermer (croix, clic sur la trame, navigation) ne déclenche jamais de manière fiable le blur du conteneur dont dépend la sauvegarde habituelle (`handleBlockBlur`) — un téléversement s'affichait à l'écran mais n'était jamais persisté. Corrigé en réutilisant le mécanisme de surcharge déjà en place pour la visibilité (`onSaveBlock` avec `data` en surcharge) : nouveau prop `onSaveNow` filé `EntityBlocks.tsx` → `BlockDataEditor` → `MapBlockEditor` → `MapWorkspace`, appelé immédiatement après `onChange` pour le téléversement et « Définir cette vue par défaut ». Vérifié en direct : téléversement dans la modale de la fiche, fermeture par clic sur la trame (jamais de blur), la carte apparaît bien sur `/m/[worldSlug]/cartes` ensuite.
+
 **Phase C — Punaises**
 - [ ] Table `map_pins` (`block_id`, `x`, `y`, `label` texte libre, `ref` `BlockReference` nullable, `size` small/medium/large, `layer_id` nullable, `visibility_level`/`visibility_scope_id`, RLS).
 - [ ] Outil « point » dans la barre d'outils de la carte : cliquer pose une punaise.

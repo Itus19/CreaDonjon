@@ -103,6 +103,7 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
 function BlockDataEditor({
   block,
   onChange,
+  onSaveNow,
   worldSlug,
   worldId,
   otherEntities,
@@ -114,6 +115,8 @@ function BlockDataEditor({
 }: {
   block: BlockItem;
   onChange: (data: unknown) => void;
+  /** Bloc `map` (Lot I) : upload/changement de vue par defaut doivent persister immediatement — la sauvegarde habituelle (perte de focus du conteneur du bloc) ne se declenche pas de maniere fiable depuis une fenetre modale imbriquee dans ce meme conteneur. Reutilise le mecanisme de surcharge deja en place pour la visibilite (`onSaveBlock` cote `SortableBlockCard`). */
+  onSaveNow?: (data: unknown) => void;
   worldSlug: string;
   /** V2-H3 : necessaire pour "creer la carte «X»" depuis le bloc genealogie sans faire remonter le monde entier. */
   worldId: string;
@@ -286,7 +289,14 @@ function BlockDataEditor({
         />
       );
     case "map":
-      return <MapBlockEditor worldSlug={worldSlug} data={block.data as MapBlockData} onChange={(d) => onChange(d)} />;
+      return (
+        <MapBlockEditor
+          worldSlug={worldSlug}
+          data={block.data as MapBlockData}
+          onChange={(d) => onChange(d)}
+          onSaveNow={onSaveNow ? (d) => onSaveNow(d) : undefined}
+        />
+      );
     default:
       return <p className="text-sm text-danger">Type de bloc inconnu : {block.blockType}</p>;
   }
@@ -948,6 +958,7 @@ function SortableBlockCard({
           <BlockDataEditor
             block={block}
             onChange={(data) => onPatchBlock(block.id, { data })}
+            onSaveNow={(data) => onSaveBlock(block.id, { data })}
             worldSlug={worldSlug}
             worldId={worldId}
             otherEntities={otherEntities}
