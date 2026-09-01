@@ -50,16 +50,26 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   } = await supabase.auth.getUser();
   const locale = (await getLocale()) as Locale;
 
+  // Reserve au MJ reel de ce monde (retour utilisateur : "je ne comprend
+  // pas pourquoi elle a un acces MJ" — meme bug que `mj/layout.tsx`, sur un
+  // AUTRE chemin d'acces : une fenetre `avec=outil:...` peut s'ouvrir depuis
+  // N'IMPORTE QUELLE section (Monde/Regles), jamais seulement `/mj/**` —
+  // le layout ne suffit donc pas seul, cette route doit se proteger
+  // elle-meme.
+  const gm = user ? await isWorldAdmin(supabase, { worldId: world.id, userId: user.id }) : false;
+  if (!gm) {
+    return NextResponse.json({ error: "Réservé au MJ de ce monde." }, { status: 403 });
+  }
+
   let data: MjToolWindowData;
 
   switch (tool) {
     case "gestion-campagne": {
-      const [entities, campaigns, defaultRulesetId, superadmin, gm] = await Promise.all([
+      const [entities, campaigns, defaultRulesetId, superadmin] = await Promise.all([
         listEntities(supabase, world.id, user?.id ?? null),
         listCampaigns(supabase, world.id),
         getWorldDefaultRulesetId(supabase, world.id),
         user ? isSuperadmin(supabase, user.id) : Promise.resolve(false),
-        user ? isWorldAdmin(supabase, { worldId: world.id, userId: user.id }) : Promise.resolve(false),
       ]);
       data = {
         tool,
@@ -68,14 +78,15 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         worldEntities: entities.filter((e) => e.entity_kind === "character").map((e) => ({ id: e.id, name: e.name })),
         grantableEntities: entities.map((e) => ({ id: e.id, name: e.name })),
         canUseSoloMode: superadmin,
-        canManage: gm,
+        // `gm` deja verifie true plus haut (403 sinon) — cette route entiere est reservee au MJ.
+        canManage: true,
       };
       break;
     }
 
     case "journal-historique": {
-      const gm = user ? await isWorldAdmin(supabase, { worldId: world.id, userId: user.id }) : false;
-      data = { tool, isGm: gm };
+      // Meme raison : `gm` deja verifie true plus haut.
+      data = { tool, isGm: true };
       break;
     }
 
