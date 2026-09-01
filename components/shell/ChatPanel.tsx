@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useChatUnread } from "./useChatUnread";
 import type { ChatMessageRow } from "@/src/server/repos/chatMessages";
@@ -11,24 +12,45 @@ interface ChatMember {
   role: string;
 }
 
+interface RelatedEntity {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 /**
- * Salon de campagne (V2-M12, retour utilisateur : "ajoute un outil de chat
- * avec le mj dans la liste des outils de joueur et de MJ") — meme composant
- * pour les deux cotes (outil MJ, destination joueur), un seul salon partage
- * par campagne. Se charge lui-meme (historique + Realtime), meme motif que
- * `DiceRollPanel`, mais jamais le meme flux : deux abonnements independants,
- * l'un ici pour la liste complete, l'autre dans `ChatUnreadProvider` pour la
- * pastille (celle-ci doit vivre meme quand ce panneau n'est pas monte).
+ * Fil MJ/joueur (V2-M12/M13, retour utilisateur : "ajoute un outil de chat
+ * avec le mj", puis "évidemment que pour le MJ il y a une fenêtre de chat
+ * par joueur") — meme composant pour les deux cotes. Cote joueur,
+ * `threadUserId` omis (le serveur retombe sur son propre fil, la seule
+ * chose qu'il a le droit de voir). Cote MJ, `threadUserId` designe le
+ * joueur dont le fil est ouvert (`ChatThreadsPanel`, le selecteur).
+ *
+ * Se charge lui-meme (historique + Realtime), meme motif que
+ * `DiceRollPanel`, mais jamais le meme flux : deux abonnements
+ * independants, l'un ici pour la liste complete, l'autre dans
+ * `ChatUnreadProvider` pour la pastille (celle-ci doit vivre meme quand ce
+ * panneau n'est pas monte).
  */
-export default function ChatPanel({ campaignId }: { campaignId: string | null }) {
+export default function ChatPanel({
+  worldSlug,
+  campaignId,
+  threadUserId,
+}: {
+  worldSlug: string;
+  campaignId: string | null;
+  threadUserId?: string;
+}) {
   const supabase = useMemo(() => createClient(), []);
   const { markRead } = useChatUnread();
   const [messages, setMessages] = useState<ChatMessageRow[] | "loading" | "error">("loading");
   const [members, setMembers] = useState<Map<string, ChatMember>>(new Map());
+  const [relatedEntities, setRelatedEntities] = useState<Map<string, RelatedEntity>>(new Map());
   const [userId, setUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const avecParam = threadUserId ? `avec=${threadUserId}` : "";
 
   useEffect(() => {
     if (!campaignId) return;
@@ -38,31 +60,36 @@ export default function ChatPanel({ campaignId }: { campaignId: string | null })
       if (!cancelled) setUserId(data.user?.id ?? null);
     });
 
-    fetch(`/api/campaigns/${campaignId}/chat/messages?limit=100`)
+    fetch(`/api/campaigns/${campaignId}/chat/messages?limit=100${avecParam ? `&${avecParam}` : ""}`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((body: { messages: ChatMessageRow[]; members: ChatMember[] } | null) => {
+      .then((body: { messages: ChatMessageRow[]; members: ChatMember[]; relatedEntities: RelatedEntity[]; threadUserId: string } | null) => {
         if (cancelled || !body) {
           if (!cancelled) setMessages("error");
           return;
         }
         setMessages([...body.messages].reverse());
         setMembers(new Map(body.members.map((m) => [m.userId, m])));
+        setRelatedEntities(new Map(body.relatedEntities.map((e) => [e.id, e])));
       })
       .catch(() => {
         if (!cancelled) setMessages("error");
       });
 
-    markRead();
+    markRead(threadUserId);
 
     const channel = supabase
-      .channel(`chat_panel:${campaignId}`)
+      .channel(`chat_panel:${campaignId}:${threadUserId ?? "self"}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "campaign_chat_messages", filter: `campaign_id=eq.${campaignId}` },
         (payload) => {
           const row = payload.new as ChatMessageRow;
+          // Filtre cote client (retour utilisateur, fils separes) : Realtime
+          // ne filtre que sur `campaign_id` (un seul critere de colonne
+          // possible), jamais le fil precis — meme motif que `ChatUnreadProvider`.
+          if (row.thread_user_id !== (threadUserId ?? userId)) return;
           setMessages((prev) => (Array.isArray(prev) ? [...prev, row] : [row]));
-          markRead();
+          markRead(threadUserId);
         }
       )
       .subscribe();
@@ -71,8 +98,8 @@ export default function ChatPanel({ campaignId }: { campaignId: string | null })
       cancelled = true;
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `markRead` change a chaque rendu (nouvelle closure sur `unreadCount`, cf. useChatUnread) : le reabonnement ne doit dependre que de `campaignId`.
-  }, [campaignId, supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `markRead` change a chaque rendu (nouvelle closure sur `unreadCount`, cf. useChatUnread) : le reabonnement ne doit dependre que de `campaignId`/`threadUserId`.
+  }, [campaignId, threadUserId, supabase]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
@@ -84,7 +111,7 @@ export default function ChatPanel({ campaignId }: { campaignId: string | null })
     setSending(true);
     setDraft("");
     try {
-      const res = await fetch(`/api/campaigns/${campaignId}/chat/messages`, {
+      const res = await fetch(`/api/campaigns/${campaignId}/chat/messages${avecParam ? `?${avecParam}` : ""}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body }),
@@ -111,6 +138,7 @@ export default function ChatPanel({ campaignId }: { campaignId: string | null })
           messages.map((m) => {
             const member = members.get(m.sender_id);
             const mine = m.sender_id === userId;
+            const relatedEntity = m.related_entity_id ? relatedEntities.get(m.related_entity_id) : null;
             return (
               <div key={m.id} className={`flex flex-col gap-0.5 rounded-md px-2 py-1.5 text-sm ${mine ? "self-end bg-accent/15 text-ink" : "bg-panel-raised text-ink"}`}>
                 <div className="flex items-baseline gap-2 text-xs text-ink-muted">
@@ -118,6 +146,14 @@ export default function ChatPanel({ campaignId }: { campaignId: string | null })
                   {member?.role === "gm" && <span className="uppercase tracking-wider">MJ</span>}
                   <span>{new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
                 </div>
+                {relatedEntity && (
+                  <Link
+                    href={`/m/${worldSlug}/f/${relatedEntity.slug}`}
+                    className="w-fit rounded-full border border-edge-strong bg-panel px-2 py-0.5 text-[10px] text-ink-muted hover:text-accent"
+                  >
+                    Depuis : {relatedEntity.name}
+                  </Link>
+                )}
                 <p className="whitespace-pre-wrap break-words">{m.body}</p>
               </div>
             );

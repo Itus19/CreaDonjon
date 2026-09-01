@@ -9,6 +9,7 @@ import EntityBlocks, { type BlockItem } from "@/components/blocks/EntityBlocks";
 import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
 import Dropdown from "@/components/shared/Dropdown";
 import EyeIcon from "@/components/shared/EyeIcon";
+import RequestEditButton from "@/components/entities/RequestEditButton";
 import { DEFAULT_ENTITY_NAME, ENTITY_KINDS } from "@/lib/entities/schemas";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import type { EntitySummary } from "@/src/server/repos/entities";
@@ -298,6 +299,7 @@ export default function EditEntityForm({
                 que les pastilles orange/rouge de la barre de fenetre au-dessus
                 (V1-C4, specs/arbitrage-modifications.md §3.1). */}
             <div className="flex shrink-0 items-center gap-2">
+              {playerRestricted && <RequestEditButton campaignId={campaignId} entityId={entity.id} />}
               <EntityHistoryPanel entityId={entity.id} />
               <button
                 type="button"

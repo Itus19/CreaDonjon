@@ -4,7 +4,7 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import ChatPanel from "@/components/shell/ChatPanel";
 
-/** Onglet Chat (V2-M12, retour utilisateur : "ajoute un outil de chat avec le mj dans la liste des outils de joueur") — salon partage par campagne, meme composant que cote MJ. */
+/** Onglet Chat (V2-M12/M13, retour utilisateur : "ajoute un outil de chat avec le mj dans la liste des outils de joueur") — fil du joueur avec le MJ, meme composant que cote MJ (`threadUserId` omis : le serveur retombe sur son propre fil). */
 export default async function JoueurChatPage({ params }: { params: Promise<{ worldSlug: string }> }) {
   const { worldSlug } = await params;
   const supabase = await createClient();
@@ -16,7 +16,7 @@ export default async function JoueurChatPage({ params }: { params: Promise<{ wor
 
   return (
     <div className="mx-auto flex h-full max-w-3xl flex-col">
-      <ChatPanel campaignId={campaignId} />
+      <ChatPanel worldSlug={worldSlug} campaignId={campaignId} />
     </div>
   );
 }

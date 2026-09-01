@@ -459,21 +459,27 @@ export type Database = {
           campaign_id: string
           created_at: string
           id: string
+          related_entity_id: string | null
           sender_id: string
+          thread_user_id: string
         }
         Insert: {
           body: string
           campaign_id: string
           created_at?: string
           id?: string
+          related_entity_id?: string | null
           sender_id: string
+          thread_user_id: string
         }
         Update: {
           body?: string
           campaign_id?: string
           created_at?: string
           id?: string
+          related_entity_id?: string | null
           sender_id?: string
+          thread_user_id?: string
         }
         Relationships: [
           {
@@ -483,22 +489,32 @@ export type Database = {
             referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "campaign_chat_messages_related_entity_id_fkey"
+            columns: ["related_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
         ]
       }
       campaign_chat_reads: {
         Row: {
           campaign_id: string
           last_read_at: string
+          thread_user_id: string
           user_id: string
         }
         Insert: {
           campaign_id: string
           last_read_at?: string
+          thread_user_id: string
           user_id: string
         }
         Update: {
           campaign_id?: string
           last_read_at?: string
+          thread_user_id?: string
           user_id?: string
         }
         Relationships: [

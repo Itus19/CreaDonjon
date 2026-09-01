@@ -36,7 +36,7 @@ export default function AppShell({
   const isJoueur = pathname.startsWith(`/m/${worldSlug}/joueur`);
   return (
     <DiceRollProvider campaignId={campaignId} isGm={isMj}>
-      <ChatUnreadProvider campaignId={campaignId}>
+      <ChatUnreadProvider campaignId={campaignId} isMj={isMj}>
         {/* `flex-1 min-h-0` plutot qu'une hauteur fixe (`h-dvh`) : ce conteneur
             n'est pas toujours le seul enfant de `<body>` — le bandeau "voir comme"
             (`ViewAsBanner`, app/layout.tsx) s'empile au-dessus quand il est

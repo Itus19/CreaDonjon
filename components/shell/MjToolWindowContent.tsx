@@ -2,7 +2,7 @@
 
 import type { MjToolWindowData } from "./mjToolWindows";
 import CampaignsPanel from "./CampaignsPanel";
-import ChatPanel from "./ChatPanel";
+import ChatThreadsPanel from "./ChatThreadsPanel";
 import GmJournalPanel from "./GmJournalPanel";
 import PartyProbabilityTable from "./PartyProbabilityTable";
 import EncounterBuilder from "./EncounterBuilder";
@@ -31,7 +31,7 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
       return (
         <div className="flex h-full flex-col gap-4">
           <h1 className="block-title text-base">Chat</h1>
-          <ChatPanel campaignId={data.campaignId} />
+          <ChatThreadsPanel worldSlug={worldSlug} campaignId={data.campaignId} />
         </div>
       );
 

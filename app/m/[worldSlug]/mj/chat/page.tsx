@@ -2,10 +2,10 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
-import ChatPanel from "@/components/shell/ChatPanel";
+import ChatThreadsPanel from "@/components/shell/ChatThreadsPanel";
 import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 
-/** Outil Chat (V2-M12, retour utilisateur : "ajoute un outil de chat avec le mj") — salon partage par campagne, cote MJ. `mj/layout.tsx` reserve deja toute la section au vrai MJ du monde. */
+/** Outil Chat (V2-M12/M13, retour utilisateur : "ajoute un outil de chat avec le mj", puis "une fenêtre de chat par joueur") — un fil par joueur de la campagne, cote MJ. `mj/layout.tsx` reserve deja toute la section au vrai MJ du monde. */
 export default async function MjChatPage({ params }: { params: Promise<{ worldSlug: string }> }) {
   const { worldSlug } = await params;
   const supabase = await createClient();
@@ -18,7 +18,7 @@ export default async function MjChatPage({ params }: { params: Promise<{ worldSl
   return (
     <div className="flex h-full flex-col gap-4">
       <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "chat" }} name="Chat" badge="" homeHref={`/m/${worldSlug}/mj/chat`} />
-      <ChatPanel campaignId={campaignId} />
+      <ChatThreadsPanel worldSlug={worldSlug} campaignId={campaignId} />
     </div>
   );
 }
