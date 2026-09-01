@@ -555,31 +555,81 @@ Une fois attaché : zone de texte pour le résumé (sauvegardée à la perte de 
 
 ## Lot I — Les cartes
 
-*Le plus gros morceau visuel de la V2, et le moins spécifié jusqu'ici.*
+*Le plus gros morceau visuel de la V2. Repris et affiné le 1er sept. avec des captures d'un outil de référence — voir ADR 0017 pour les trois décisions structurantes (bloc propriétaire/référent, visibilité d'élément ET de couche, activation de `assets`).*
 
-### Décisions de conception, à prendre avant d'écrire
+### Décisions de conception
 
-**Image d'abord, procédural jamais — ou beaucoup plus tard.** Le PDD évoque la génération procédurale (simplex-noise, Voronoï). C'est un projet en soi, et une carte téléversée couvre 95 % du besoin réel : la plupart des MJ ont déjà leur carte. Le procédural reste une idée future, pas un ticket.
+**Image d'abord, procédural jamais — ou beaucoup plus tard.** Le PDD évoque la génération procédurale (simplex-noise, Voronoï). C'est un projet en soi, et une carte téléversée couvre 95 % du besoin réel. Le procédural reste une idée future, pas un ticket.
 
-**Coordonnées normalisées, jamais des pixels.** Une punaise se stocke en 0–1 relatif à l'image. Des pixels casseraient à chaque redimensionnement, zoom ou remplacement d'image.
+**Coordonnées normalisées, jamais des pixels.** Punaise et sommets de polygone se stockent en 0–1 relatif à l'image.
 
-**Une punaise est une référence**, réutilisant la primitive `Reference` : elle pointe vers une entité, et hérite de sa visibilité.
+**Punaise et zone sont des références,** réutilisant `BlockReference` (`src/core/schemas/blocks/reference.ts`) — MAIS le nom affiché est un champ texte libre et indépendant du lien (retour utilisateur explicite) : nommer une punaise « Auberge du Cerf Bleu » sans la lier à aucune fiche reste un cas normal, pas une punaise à moitié remplie.
 
-**Cartes imbriquées via `part_of`.** Une punaise « Porte de Baldur » sur la carte du continent ouvre la carte de la ville. Aucun nouveau concept : c'est la hiérarchie des lieux, rendue visuellement.
+**N'importe quelle fiche peut porter un bloc `map`**, pas seulement `location` (retour utilisateur — révise le brouillon initial de ce ticket).
 
-**Le brouillard est une découverte, pas un calque de dessin.** Des régions nommées, révélées ou non par campagne — même modèle que `entity_discoveries`. Un brouillard dessiné à la main serait un second système à maintenir.
+**Bloc propriétaire OU référent** (ADR 0017, décision 1) — jamais un bloc qui duplique l'image/les punaises d'un autre.
 
-### V2-I1 — Carte et punaises · `L`
+**Visibilité d'un élément ET de sa couche** (ADR 0017, décision 2) — une couche a sa propre `visibility_level`, appliquée en plus de celle de chaque punaise/zone qu'elle contient, jamais à sa place.
+
+**`assets` (Storage) active maintenant**, pas `entity_portraits` (bytea) — ADR 0017, décision 3. `entity_portraits` migre vers la même interface dans un second temps séparé (phase F), une fois le nouveau chemin éprouvé sur les cartes.
+
+**Cartes imbriquées via un clic, pas un second mécanisme.** Une punaise liée à un lieu qui porte lui-même un bloc `map` navigue simplement vers sa fiche (comportement déjà standard d'une punaise liée) — la fiche affiche alors sa propre carte. Rien à construire en plus.
+
+**Le brouillard (V2-I2) est une découverte, pas un calque de dessin** — reporté après V2-I1, dépend des régions qui n'existent pas encore.
+
+### V2-I1 — Carte, punaises, zones, couches · `L`
+
+Découpé en phases pour rester traçable d'une session à l'autre — cocher au fur et à mesure, jamais tout d'un coup.
+
+**Phase A — Interface de stockage (`assets`), bloque tout le reste**
+- [ ] Bucket Supabase Storage créé par migration (`insert into storage.buckets`), jamais à la main dans le tableau de bord.
+- [ ] `src/server/services/storage.ts` : interface `uploadAsset`/`getAssetUrl`/`deleteAsset` (CLAUDE.md règle 16 bis — jamais un appel Storage direct depuis un composant ou une route).
+- [ ] Route d'upload (Zod, type MIME + taille bornés) qui écrit dans `assets` + le bucket.
+- [ ] Route de service (`/api/assets/[id]`) qui vérifie `visibility_level` côté serveur avant de streamer/rediriger — jamais un bucket public qui court-circuiterait la visibilité.
+- [ ] Vignette générée à l'upload (redimensionnement serveur), servie avant la pleine résolution.
+
+**Phase B — Bloc `map` propriétaire, image seule**
+- [ ] Schéma du bloc `map` (`src/core/schemas/blocks/map.ts`) : `mode: "own" | "ref"`, `assetId` (own), `sourceBlockId` (ref), `defaultView: {x, y, zoom}`.
+- [ ] Téléversement de l'image depuis l'éditeur, aperçu intégré dans la fiche (miniature + section "Carte" comme les captures).
+- [ ] Fenêtre flottante plein cadre (réutilise `WindowsDesktop`/le système de fenêtres existant) pour l'édition/la vue agrandie.
+- [ ] Zoom/pan : ctrl+molette + glisser, même composant/convention que `FamilyTreeCanvas`/`RelationsGraphCanvas`/`TimelineAxis` — jamais une molette seule qui capturerait le défilement de page.
+
+**Phase C — Punaises**
+- [ ] Table `map_pins` (`block_id`, `x`, `y`, `label` texte libre, `ref` `BlockReference` nullable, `size` small/medium/large, `layer_id` nullable, `visibility_level`/`visibility_scope_id`, RLS).
+- [ ] Outil « point » dans la barre d'outils de la carte : cliquer pose une punaise.
+- [ ] Popup punaise : nom libre, recherche/lien vers une fiche (indépendants — voir décision ci-dessus), taille, couche, suppression.
+- [ ] Icône = portrait de la fiche liée quand il y en a une, icône neutre sinon.
+- [ ] Clic sur une punaise liée navigue vers la fiche.
+
+**Phase D — Zones**
+- [ ] Table `map_regions` (`block_id`, `name`, `ref`, `shape` jsonb polygone normalisé, `color`, `layer_id`, `visibility_level`/`visibility_scope_id`, RLS).
+- [ ] Outil « zone » : polygone tracé point par point, sommets visibles pendant le tracé.
+- [ ] Popup zone : même nom/lien/couche/suppression que la punaise, plus un choix de couleur (remplissage + contour).
+
+**Phase E — Couches**
+- [ ] Table `map_layers` (`block_id`, `name`, `display_order`, `visibility_level`/`visibility_scope_id`, RLS).
+- [ ] Créer/nommer/réordonner des couches ; assigner une punaise/zone à une couche depuis sa popup.
+- [ ] Bascule afficher/masquer une couche entière côté MJ (confort d'édition — jamais un filtre de sécurité en soi, voir décision "visibilité ET" plus haut : la visibilité réelle passe par `visibility_level`, la bascule de couche est juste pratique pendant qu'on édite).
+- [ ] Filtrage serveur : un viewer ne reçoit un élément que si `canSee(élément)` ET `canSee(sa couche)`.
+
+**Phase F₁ — Mode référent (carte partagée, vue différente)**
+- [ ] Choisir "référencer une carte existante" depuis un nouveau bloc `map` : recherche d'un bloc `map` propriétaire, cadrage par défaut propre à CE bloc.
+- [ ] Rendu du mode référent : mêmes punaises/zones/couches que le bloc source, jamais une copie.
+
+**Phase F₂ — Migration de `entity_portraits` vers `assets` (séparée, en tout dernier)**
+- [ ] Upload de portrait réécrit pour passer par `storage.ts`.
+- [ ] Migration de données : bascule des portraits existants (bytea) vers le bucket + une ligne `assets`.
+- [ ] `entity_portraits` retirée une fois la bascule vérifiée sur toutes les fiches d'un monde de test.
+
+**Critères (V2-I1, valables sur l'ensemble des phases)**
+- [ ] Les punaises/sommets sont en coordonnées normalisées ; remplacer l'image par une version plus grande ne les décale pas.
+- [ ] Une punaise/zone `gm`, ou rattachée à une couche `gm`, est absente de la réponse pour un joueur — jamais masquée en CSS.
+- [ ] Une punaise vers un lieu portant lui-même une carte ouvre cette carte (clic standard, aucun mécanisme dédié).
+- [ ] Une carte de 4000 px s'affiche sans bloquer l'interface — vignette d'abord, pleine résolution ensuite.
+
+### V2-I2 — Brouillard par campagne · `M`
 
 ```sql
-create table map_regions (
-  id         uuid primary key default gen_random_uuid(),
-  entity_id  uuid not null references entities(id) on delete cascade,  -- le lieu portant la carte
-  name       text not null,
-  shape      jsonb not null,   -- polygone en coordonnées normalisées
-  created_at timestamptz not null default now()
-);
-
 create table map_region_reveals (
   campaign_id uuid not null references campaigns(id) on delete cascade,
   region_id   uuid not null references map_regions(id) on delete cascade,
@@ -588,18 +638,7 @@ create table map_region_reveals (
 );
 ```
 
-- Bloc `map` sur une entité `location` : un asset image, une liste de punaises.
-- Zoom et déplacement, sans dépendance lourde.
-
-**Critères**
-- [ ] Les punaises sont en coordonnées normalisées ; remplacer l'image par une version plus grande ne les décale pas.
-- [ ] Une punaise vers une entité `gm` est absente de la réponse pour un joueur.
-- [ ] Une punaise vers un lieu portant lui-même une carte ouvre cette carte.
-- [ ] Une carte de 4000 px s'affiche sans bloquer l'interface — vignette d'abord, pleine résolution ensuite.
-
-### V2-I2 — Brouillard par campagne · `M`
-
-- [ ] Le MJ trace des régions ; il les révèle en cours de partie.
+- [ ] Le MJ trace des régions (réutilise `map_regions` de V2-I1) ; il les révèle en cours de partie, par campagne.
 - [ ] Une région non révélée est **absente de la réponse serveur**, pas masquée en CSS.
 - [ ] Révéler écrit un `session_event`.
 
