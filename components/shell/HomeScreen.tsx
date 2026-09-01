@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { JournalEntry } from "@/src/server/services/activityJournal";
 import WorldCardActions from "@/app/WorldCardActions";
 import HomeProfilePanel from "./HomeProfilePanel";
+import DiceStatsPanel from "./DiceStatsPanel";
 
 export interface HomeWorldCard {
   id: string;
@@ -30,17 +31,25 @@ function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-/** Journal recent + bouton Rejoindre (retour utilisateur, colonne de droite) — le serveur adapte deja le detail au role (`/journal/mine`), rien a filtrer ici. */
+/**
+ * Journal recent (MJ) ou stats de jets (Joueur) + bouton Rejoindre (retour
+ * utilisateur, colonne de droite) — le serveur adapte deja le detail au role
+ * (`/journal/mine`), rien a filtrer ici. Cote joueur, retour utilisateur :
+ * "a la place d'avoir le journal... un petit ecran sur les stats de lance de
+ * des" — `DiceStatsPanel` remplace la liste, jamais un second onglet.
+ */
 function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUserId: string }) {
+  const isPlayer = world.myRole === "player";
   const [entries, setEntries] = useState<JournalEntry[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isPlayer) return;
     fetch(`/api/worlds/${world.slug}/journal/mine`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then((body: { entries: JournalEntry[] }) => setEntries(body.entries))
       .catch(() => setLoadError("Impossible de charger le journal."));
-  }, [world.slug]);
+  }, [world.slug, isPlayer]);
 
   const roleLabel = world.myRole === "player" ? "Joueur" : world.mode === "solo" ? "Solo" : "MJ";
   // V2-M7b (Lot M, coquille joueur) : un role Joueur mene desormais a la
@@ -70,28 +79,37 @@ function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUs
           actions MJ ci-dessous restent toujours visibles, jamais au fond
           d'une zone qui defile. */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Journal récent</span>
-        {loadError && <p className="mt-1 text-xs text-danger">{loadError}</p>}
-        {entries === null && !loadError && <p className="mt-1 text-xs text-ink-muted">…</p>}
-        {entries && entries.length === 0 && <p className="mt-1 text-xs text-ink-muted">Aucune activité pour l&apos;instant.</p>}
-        {entries && entries.length > 0 && (
-          <ul className="mt-1 flex flex-col gap-1.5 text-xs">
-            {entries.slice(0, 30).map((entry, i) => (
-              <li key={i} className="border-b border-edge/30 pb-1">
-                <span className={entry.source === "wiki" ? "text-accent" : "text-ink"}>
-                  {entry.source === "wiki" ? "wiki" : "jeu"}
-                </span>{" "}
-                <span className="text-ink-muted">
-                  {entry.label}
-                  {entry.entityName && <> — {entry.entityName}</>}
-                  {entry.blockLabel && <> ({entry.blockLabel})</>}
-                </span>
-                <div className="text-ink-muted">
-                  {entry.accountName} · {formatDateTime(entry.createdAt)}
-                </div>
-              </li>
-            ))}
-          </ul>
+        {isPlayer ? (
+          <>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Stats de jets</span>
+            <DiceStatsPanel campaignId={world.campaignId} />
+          </>
+        ) : (
+          <>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Journal récent</span>
+            {loadError && <p className="mt-1 text-xs text-danger">{loadError}</p>}
+            {entries === null && !loadError && <p className="mt-1 text-xs text-ink-muted">…</p>}
+            {entries && entries.length === 0 && <p className="mt-1 text-xs text-ink-muted">Aucune activité pour l&apos;instant.</p>}
+            {entries && entries.length > 0 && (
+              <ul className="mt-1 flex flex-col gap-1.5 text-xs">
+                {entries.slice(0, 30).map((entry, i) => (
+                  <li key={i} className="border-b border-edge/30 pb-1">
+                    <span className={entry.source === "wiki" ? "text-accent" : "text-ink"}>
+                      {entry.source === "wiki" ? "wiki" : "jeu"}
+                    </span>{" "}
+                    <span className="text-ink-muted">
+                      {entry.label}
+                      {entry.entityName && <> — {entry.entityName}</>}
+                      {entry.blockLabel && <> ({entry.blockLabel})</>}
+                    </span>
+                    <div className="text-ink-muted">
+                      {entry.accountName} · {formatDateTime(entry.createdAt)}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </div>
 

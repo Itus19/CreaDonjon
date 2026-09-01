@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { Ability, Skill } from "@/src/core/rules/sheet";
 import { DIE_TYPES, type DieType } from "@/src/core/dice/roll";
+import { extractDiceGroups, parseRollDetail, type DiceGroup, type RollChip } from "@/src/core/dice/parseRollDetail";
 import type { DiceRollRow } from "@/src/server/repos/diceRolls";
 
 /**
@@ -18,25 +19,6 @@ import type { DiceRollRow } from "@/src/server/repos/diceRolls";
  * 20260831091000) — la reponse HTTP du clic local sert seulement a un
  * retour immediat (`lastRoll`), jamais a construire l'historique.
  */
-
-interface RollChip {
-  label: string;
-  value: number;
-}
-
-interface RollDetail {
-  who?: string;
-  what?: string;
-  chips?: RollChip[];
-  dc?: number | null;
-  verdict?: "success" | "fail" | null;
-  trace?: { text: string; value: number }[];
-}
-
-interface DiceGroup {
-  faces: number;
-  rolls: number[];
-}
 
 interface DisplayRoll {
   id: string;
@@ -51,34 +33,8 @@ interface DisplayRoll {
   createdAt: string;
 }
 
-// Forme "N... (v1, v2) = total" (src/core/formula/evaluate.ts, diceLabel +
-// trace du cas "dice") — seul format jamais produit pour un pas de trace de
-// des, jamais reconstruit depuis l'AST : une regex sur ce format stable
-// suffit a retrouver les faces reellement lancees, sans reimplementer le
-// moteur de formules cote client.
-const DICE_TRACE_RE = /^(\d+)d(\d+)(?:kh\d+|kl\d+)?\s*\(([^)]*)\)\s*=\s*-?\d+$/;
-
-function extractDiceGroups(trace: { text: string; value: number }[] | undefined): DiceGroup[] {
-  if (!trace) return [];
-  const groups: DiceGroup[] = [];
-  for (const step of trace) {
-    const m = DICE_TRACE_RE.exec(step.text);
-    if (!m) continue;
-    const rolls = m[3]
-      .split(",")
-      .map((s) => Number(s.trim()))
-      .filter((n) => Number.isFinite(n));
-    if (rolls.length > 0) groups.push({ faces: Number(m[2]), rolls });
-  }
-  return groups;
-}
-
-function parseDetail(detail: unknown): RollDetail {
-  return detail && typeof detail === "object" ? (detail as RollDetail) : {};
-}
-
 function rollFromRow(row: DiceRollRow): DisplayRoll {
-  const detail = parseDetail(row.detail);
+  const detail = parseRollDetail(row.detail);
   return {
     id: row.id,
     who: detail.who ?? (row.rolled_by === "gm" ? "MJ" : "Joueur"),
