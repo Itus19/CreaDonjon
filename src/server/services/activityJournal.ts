@@ -12,8 +12,13 @@ import {
 import { listPcEntityIdsForWorld } from "@/src/server/repos/campaigns";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { listRevisionSnapshotsInRange } from "@/src/server/repos/entityRevisions";
+import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
+import { listRulesetEntryChipsByKeys } from "@/src/server/repos/rules";
+import { walkRulesetChain, entryNameFrom } from "@/src/server/services/rules";
 import { normalizeStoredSnapshot } from "@/src/server/services/entityHistory";
 import { diffEntitySnapshots } from "@/src/core/history/diff";
+import { zInventoryBlockData, type InventoryBlockData, type InventoryItem } from "@/src/core/schemas/blocks/inventory";
+import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -43,6 +48,129 @@ export interface JournalEntry {
   entityName: string | null;
   /** V2 (retour utilisateur) : quel bloc (ou quel champ de la fiche) a change, pour une entree "wiki" — `null` pour la toute premiere revision (rien a comparer) ou pour une entree "jeu" (le detail vit dans `label` via `payload.note`, voir ci-dessous). */
   blockLabel: string | null;
+  /** V2 (retour utilisateur : "si il y a des choses dans l'inventaire qui ont ete modifiees, ajout ou retrait, quel type et combien") — detail objet par objet pour un bloc `inventory` modifie, `null` sinon (aucun bloc inventaire touche, ou rien de plus precis a dire). */
+  blockDetail: string | null;
+}
+
+const CURRENCY_LABELS_FR: Record<keyof InventoryBlockData["currency"], string> = { pp: "pp", gp: "po", ep: "pe", sp: "pa", cp: "pc" };
+
+const EMPTY_INVENTORY: InventoryBlockData = { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } };
+
+function inventoryRefKey(ref: BlockReference): string {
+  return ref.kind === "rule" ? `rule:${ref.key}` : `entity:${ref.id}`;
+}
+
+/** Trois natures d'objet (specs/wiki-blocs.md §4.1) : reference de regle, reference d'entite, ou objet en ligne avec son propre `label` — jamais les trois en meme temps sur un item. */
+function inventoryItemRef(item: InventoryItem): BlockReference | null {
+  return (item as { ref?: BlockReference }).ref ?? null;
+}
+function inventoryItemInlineLabel(item: InventoryItem): string | null {
+  return (item as { label?: string }).label ?? null;
+}
+
+interface InventoryItemChange {
+  item: InventoryItem;
+  status: "added" | "removed" | "qty";
+  qtyBefore?: number;
+  qtyAfter?: number;
+}
+
+/** Objets ajoutes/retires/dont la quantite a change entre deux instantanes du meme bloc `inventory`, appaires par `id` — jamais par position (un reordonnancement pur ne doit rien produire ici). */
+function diffInventoryItems(before: InventoryBlockData, after: InventoryBlockData): InventoryItemChange[] {
+  const beforeById = new Map(before.items.map((i) => [i.id, i]));
+  const afterById = new Map(after.items.map((i) => [i.id, i]));
+  const changes: InventoryItemChange[] = [];
+  for (const item of before.items) {
+    if (!afterById.has(item.id)) changes.push({ item, status: "removed" });
+  }
+  for (const item of after.items) {
+    const prior = beforeById.get(item.id);
+    if (!prior) changes.push({ item, status: "added" });
+    else if (prior.qty !== item.qty) changes.push({ item, status: "qty", qtyBefore: prior.qty, qtyAfter: item.qty });
+  }
+  return changes;
+}
+
+function diffInventoryCurrency(
+  before: InventoryBlockData["currency"],
+  after: InventoryBlockData["currency"]
+): { denom: keyof InventoryBlockData["currency"]; before: number; after: number }[] {
+  const denoms = Object.keys(CURRENCY_LABELS_FR) as (keyof InventoryBlockData["currency"])[];
+  return denoms.filter((d) => before[d] !== after[d]).map((d) => ({ denom: d, before: before[d], after: after[d] }));
+}
+
+/**
+ * Noms affichables pour un lot de references d'objets d'inventaire — une
+ * regle passe par la chaine de ruleset (meme motif que `referenceChips.ts`,
+ * sans le lien/resume, inutiles ici), une entite par un lot direct. `null`
+ * `rulesetId` (monde sans ruleset par defaut, cas degenere) laisse toute
+ * reference de regle affichee par sa cle brute plutot que d'echouer.
+ */
+async function resolveInventoryRefNames(supabase: TypedClient, rulesetId: string | null, refs: BlockReference[]): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  const ruleKeys = [...new Set(refs.filter((r) => r.kind === "rule").map((r) => r.key))];
+  const entityIds = [...new Set(refs.filter((r) => r.kind === "entity").map((r) => r.id))];
+
+  if (ruleKeys.length > 0 && rulesetId) {
+    const chain = await walkRulesetChain(supabase, rulesetId);
+    const remaining = new Set(ruleKeys);
+    for (const link of chain) {
+      if (remaining.size === 0) break;
+      const rows = await listRulesetEntryChipsByKeys(supabase, link.rulesetId, [...remaining]);
+      for (const row of rows) {
+        result.set(`rule:${row.entry_key}`, entryNameFrom(row));
+        remaining.delete(row.entry_key);
+      }
+    }
+    for (const key of remaining) result.set(`rule:${key}`, key);
+  } else {
+    for (const key of ruleKeys) result.set(`rule:${key}`, key);
+  }
+
+  if (entityIds.length > 0) {
+    const entities = await listEntitiesByIds(supabase, entityIds);
+    const byId = new Map(entities.map((e) => [e.id, e]));
+    for (const id of entityIds) result.set(`entity:${id}`, byId.get(id)?.name ?? id);
+  }
+
+  return result;
+}
+
+function inventoryItemName(item: InventoryItem, names: Map<string, string>): string {
+  const ref = inventoryItemRef(item);
+  if (ref) return names.get(inventoryRefKey(ref)) ?? (ref.kind === "rule" ? ref.key : ref.id);
+  return inventoryItemInlineLabel(item) ?? "objet";
+}
+
+/** Ligne "+2 Potion de soins", "−1 Épée courte", "Torche : 3 → 5 (+2)", "po : 61 → 111 (+50)" — jamais de valeur avant/apres brute sans son delta signe, pour rester lisible d'un coup d'oeil dans le journal. */
+async function formatInventoryDetail(
+  supabase: TypedClient,
+  rulesetId: string | null,
+  before: InventoryBlockData,
+  after: InventoryBlockData
+): Promise<string | null> {
+  const itemChanges = diffInventoryItems(before, after);
+  const currencyChanges = diffInventoryCurrency(before.currency, after.currency);
+  if (itemChanges.length === 0 && currencyChanges.length === 0) return null;
+
+  const refs = itemChanges.map((c) => inventoryItemRef(c.item)).filter((r): r is BlockReference => r !== null);
+  const names = await resolveInventoryRefNames(supabase, rulesetId, refs);
+
+  const lines: string[] = [];
+  for (const change of itemChanges) {
+    const name = inventoryItemName(change.item, names);
+    if (change.status === "added") lines.push(`+${change.item.qty} ${name}`);
+    else if (change.status === "removed") lines.push(`−${change.item.qty} ${name}`);
+    else {
+      const delta = change.qtyAfter! - change.qtyBefore!;
+      lines.push(`${name} : ${change.qtyBefore} → ${change.qtyAfter} (${delta > 0 ? "+" : ""}${delta})`);
+    }
+  }
+  for (const change of currencyChanges) {
+    const delta = change.after - change.before;
+    lines.push(`${CURRENCY_LABELS_FR[change.denom]} : ${change.before} → ${change.after} (${delta > 0 ? "+" : ""}${delta})`);
+  }
+  return lines.join(", ");
 }
 
 /** Certains `session_events` (ex. `world_update`, quand une case a cocher touche un bloc de quete lie a une fiche) portent un `entity_id` de premier niveau dans leur payload — jamais interprete plus finement (`combat` imbrique le sien dans before/after, sans rapport avec une fiche du wiki). */
@@ -77,7 +205,11 @@ function extractEventNote(payload: unknown): string | null {
  * 8 PV" a l'interieur d'un bloc demanderait un differ propre a chaque type
  * de bloc — hors de portee de ce journal, a discuter comme un ticket a part.
  */
-async function computeBlockLabels(supabase: TypedClient, revisions: EntityRevisionJournalRow[]): Promise<Map<string, string>> {
+async function computeBlockLabels(
+  supabase: TypedClient,
+  worldId: string,
+  revisions: EntityRevisionJournalRow[]
+): Promise<{ labels: Map<string, string>; details: Map<string, string> }> {
   const byEntity = new Map<string, number[]>();
   for (const r of revisions) {
     const list = byEntity.get(r.entity_id) ?? [];
@@ -85,7 +217,14 @@ async function computeBlockLabels(supabase: TypedClient, revisions: EntityRevisi
     byEntity.set(r.entity_id, list);
   }
 
-  const result = new Map<string, string>();
+  const labels = new Map<string, string>();
+  const details = new Map<string, string>();
+  if (byEntity.size === 0) return { labels, details };
+
+  // Un seul ruleset par monde ("un monde = une campagne", V2-G1) — recupere
+  // une fois pour tout le lot, jamais par revision.
+  const rulesetId = await getWorldDefaultRulesetId(supabase, worldId);
+
   await Promise.all(
     [...byEntity.entries()].map(async ([entityId, numbers]) => {
       const min = Math.min(...numbers);
@@ -100,14 +239,27 @@ async function computeBlockLabels(supabase: TypedClient, revisions: EntityRevisi
         const diff = diffEntitySnapshots(prev, curr);
         const blockLabels = diff.blocks.map((b) => b.label || b.blockType);
         const fieldLabels = diff.entityChanges.map((c) => ENTITY_FIELD_LABELS_FR[c.field] ?? c.field);
-        const labels = [...blockLabels, ...fieldLabels];
-        if (labels.length > 0) {
-          result.set(`${entityId}:${n}`, [...new Set(labels)].join(", "));
+        const allLabels = [...blockLabels, ...fieldLabels];
+        if (allLabels.length > 0) {
+          labels.set(`${entityId}:${n}`, [...new Set(allLabels)].join(", "));
+        }
+
+        const inventoryDiffs = diff.blocks.filter((b) => b.blockType === "inventory" && b.status !== "removed");
+        for (const blockDiff of inventoryDiffs) {
+          const currBlock = curr.blocks.find((b) => b.id === blockDiff.id);
+          if (!currBlock) continue;
+          const afterParsed = zInventoryBlockData.safeParse(currBlock.data);
+          if (!afterParsed.success) continue;
+          const prevBlock = prev.blocks.find((b) => b.id === blockDiff.id);
+          const beforeParsed = prevBlock ? zInventoryBlockData.safeParse(prevBlock.data) : null;
+          const before = beforeParsed?.success ? beforeParsed.data : EMPTY_INVENTORY;
+          const detail = await formatInventoryDetail(supabase, rulesetId, before, afterParsed.data);
+          if (detail) details.set(`${entityId}:${n}`, detail);
         }
       }
     })
   );
-  return result;
+  return { labels, details };
 }
 
 /**
@@ -119,6 +271,7 @@ async function computeBlockLabels(supabase: TypedClient, revisions: EntityRevisi
  */
 async function mergeJournal(
   supabase: TypedClient,
+  worldId: string,
   revisions: EntityRevisionJournalRow[],
   events: SessionEventJournalRow[],
   allowedEventEntityIds: Set<string> | null
@@ -127,9 +280,9 @@ async function mergeJournal(
     ...revisions.map((r) => r.changed_by).filter((id): id is string => id !== null),
     ...events.map((e) => e.actor_user_id).filter((id): id is string => id !== null),
   ];
-  const [namesByAccount, blockLabels] = await Promise.all([
+  const [namesByAccount, blockInfo] = await Promise.all([
     getDisplayNamesForUsers(supabase, accountIds),
-    computeBlockLabels(supabase, revisions),
+    computeBlockLabels(supabase, worldId, revisions),
   ]);
   const nameFor = (id: string | null) => (id ? (namesByAccount.get(id) || "Compte sans nom") : "IA / système");
 
@@ -140,7 +293,8 @@ async function mergeJournal(
     createdAt: r.created_at,
     entitySlug: r.entity_slug,
     entityName: r.entity_name,
-    blockLabel: blockLabels.get(`${r.entity_id}:${r.revision_number}`) ?? null,
+    blockLabel: blockInfo.labels.get(`${r.entity_id}:${r.revision_number}`) ?? null,
+    blockDetail: blockInfo.details.get(`${r.entity_id}:${r.revision_number}`) ?? null,
   }));
 
   const eventEntityIds = events
@@ -165,6 +319,7 @@ async function mergeJournal(
       entitySlug: entity?.slug ?? null,
       entityName: entity?.name ?? null,
       blockLabel: null,
+      blockDetail: null,
     };
   });
 
@@ -184,7 +339,7 @@ export async function getMergedJournalForWorld(supabase: TypedClient, worldId: s
     listEntityRevisionsForWorld(supabase, worldId),
     listSessionEventsForWorld(supabase, worldId),
   ]);
-  return mergeJournal(supabase, revisions, events, null);
+  return mergeJournal(supabase, worldId, revisions, events, null);
 }
 
 /**
@@ -204,5 +359,5 @@ export async function getPlayerJournalForWorld(supabase: TypedClient, worldId: s
     listEntityRevisionsForEntities(supabase, pcEntityIds),
     listSessionEventsForWorld(supabase, worldId),
   ]);
-  return mergeJournal(supabase, revisions, events, new Set(pcEntityIds));
+  return mergeJournal(supabase, worldId, revisions, events, new Set(pcEntityIds));
 }
