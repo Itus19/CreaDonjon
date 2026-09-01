@@ -31,7 +31,14 @@ export const fileUploadSchema = z.object({
  * (lib/visibility/schemas.ts) et que `VisibilityLevel`
  * (src/core/visibility/types.ts). Recopiee ici plutot qu'importee parce
  * que la contrainte de `scopeId` qui accompagne l'autre schema n'a pas
- * cours ici — cette route pose toujours `visibilityScopeId: null`.
+ * cours ici.
+ *
+ * `visibilityScopeId` : un bloc `map` televerse son image AVEC la
+ * visibilite du bloc, portee comprise — sans quoi la RLS `assets_select`,
+ * qui filtre sur la visibilite de l'ASSET et jamais sur celle du bloc,
+ * laisserait une carte « MJ uniquement » lisible par
+ * `/api/assets/[id]`. Meme repli silencieux que `altText` : vide ou
+ * absent vaut `null`.
  *
  * `maxDimension` : borne, ce que l'ancien code ne faisait pas. `8192`
  * couvre largement les cartes reelles (~5760 px constate) ; en dessous de
@@ -50,6 +57,12 @@ export const assetUploadSchema = z.object({
   visibilityLevel: z
     .enum(["public", "players", "gm", "campaign", "user", "private"])
     .catch("public"),
+  visibilityScopeId: z
+    .string()
+    .trim()
+    .transform((v) => (v === "" ? null : v))
+    .nullable()
+    .catch(null),
   maxDimension: z.coerce.number().int().min(64).max(8192).optional().catch(undefined),
 });
 

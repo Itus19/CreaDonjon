@@ -23,7 +23,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!parsed?.success) {
     return NextResponse.json({ error: "Aucun fichier reçu." }, { status: 400 });
   }
-  const { file, altText, visibilityLevel, maxDimension } = parsed.data;
+  const { file, altText, visibilityLevel, visibilityScopeId, maxDimension } = parsed.data;
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const result = await uploadAsset(supabase, {
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     mimeType: file.type,
     altText,
     visibilityLevel,
-    visibilityScopeId: null,
+    visibilityScopeId,
     uploadedBy: user.id,
     maxDimension,
   });

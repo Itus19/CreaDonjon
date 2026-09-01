@@ -324,6 +324,8 @@ function BlockDataEditor({
           blockId={block.id}
           otherEntities={otherEntities}
           data={block.data as MapBlockData}
+          visibilityLevel={block.visibilityLevel}
+          visibilityScopeId={block.visibilityScopeId}
           onChange={(d) => onChange(d)}
         />
       );

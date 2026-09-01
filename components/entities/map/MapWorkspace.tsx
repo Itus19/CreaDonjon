@@ -42,6 +42,8 @@ export default function MapWorkspace({
   blockId,
   otherEntities,
   data,
+  visibilityLevel,
+  visibilityScopeId,
   onChange,
   height = "100%",
 }: {
@@ -51,6 +53,9 @@ export default function MapWorkspace({
   /** Selecteur "lien vers une fiche" d'une punaise — memes options que `RelationsChips.tsx`, jamais une recherche a part. */
   otherEntities: OtherEntityOption[];
   data: Extract<MapBlockData, { mode: "own" }>;
+  /** Visibilite du bloc porteur (dropdown, deja cablee) — l'image televersee doit heriter de CETTE visibilite des l'upload, jamais rester "public" par defaut (RLS `assets_select` filtre sur la visibilite de l'ASSET, pas celle du bloc). */
+  visibilityLevel: string;
+  visibilityScopeId: string | null;
   onChange: (data: MapBlockData) => void;
   height?: number | string;
 }) {
@@ -142,11 +147,12 @@ export default function MapWorkspace({
     };
   }, [data.assetId]);
 
-  async function uploadVariant(file: File, maxDimension: number, visibilityLevel: string): Promise<AssetRow> {
+  async function uploadVariant(file: File, maxDimension: number): Promise<AssetRow> {
     const formData = new FormData();
     formData.set("file", file);
     formData.set("maxDimension", String(maxDimension));
     formData.set("visibilityLevel", visibilityLevel);
+    if (visibilityScopeId) formData.set("visibilityScopeId", visibilityScopeId);
     const res = await fetch(`/api/worlds/${worldSlug}/assets`, { method: "POST", body: formData });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
@@ -160,8 +166,8 @@ export default function MapWorkspace({
     setError(null);
     try {
       const [full, thumbnail] = await Promise.all([
-        uploadVariant(file, FULL_MAX_DIMENSION, "public"),
-        uploadVariant(file, THUMBNAIL_MAX_DIMENSION, "public"),
+        uploadVariant(file, FULL_MAX_DIMENSION),
+        uploadVariant(file, THUMBNAIL_MAX_DIMENSION),
       ]);
       setAsset(full);
       const next: MapBlockData = { ...data, assetId: full.id, thumbnailAssetId: thumbnail.id };

@@ -32,6 +32,8 @@ export default function MapBlockEditor({
   blockId,
   otherEntities,
   data,
+  visibilityLevel,
+  visibilityScopeId,
   onChange,
 }: {
   worldSlug: string;
@@ -39,6 +41,9 @@ export default function MapBlockEditor({
   blockId: string;
   otherEntities: OtherEntityOption[];
   data: MapBlockData;
+  /** Visibilite du bloc — transmise a `MapWorkspace` pour que l'image televersee herite de la meme visibilite (voir le commentaire dans `MapWorkspace.tsx`). */
+  visibilityLevel: string;
+  visibilityScopeId: string | null;
   onChange: (data: MapBlockData) => void;
 }) {
   /** Persistance immediate (ADR 0023) — voir le commentaire dans `MapWorkspace.tsx`. */
@@ -264,7 +269,15 @@ export default function MapBlockEditor({
               </button>
             </div>
             {data.mode === "own" ? (
-              <MapWorkspace worldSlug={worldSlug} blockId={blockId} otherEntities={otherEntities} data={data} onChange={onChange} />
+              <MapWorkspace
+                worldSlug={worldSlug}
+                blockId={blockId}
+                otherEntities={otherEntities}
+                data={data}
+                visibilityLevel={visibilityLevel}
+                visibilityScopeId={visibilityScopeId}
+                onChange={onChange}
+              />
             ) : (
               <MapRefPanel worldSlug={worldSlug} sourceBlockId={data.sourceBlockId} defaultView={data.defaultView} onSaveDefaultView={saveRefDefaultView} />
             )}
