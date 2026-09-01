@@ -7,7 +7,6 @@
     "ouvrirArborescence": "Ouvrir l'arborescence",
     "nouvelleEntite": "+ Nouvelle entité",
   "chronologie": "Chronologie",
-    "cartes": "Cartes",
     "replier": "Replier",
     "deplier": "Déplier",
     "aucuneEntite": "Aucune entité pour l'instant.",
@@ -26,6 +25,7 @@
       "creature": "Créatures",
       "quest": "Quêtes",
       "event": "Événements",
+      "carte": "Cartes",
       "other": "Autre"
     },
     "kindLabelsSingular": {
@@ -36,6 +36,7 @@
       "creature": "Créature",
       "quest": "Quête",
       "event": "Événement",
+      "carte": "Carte",
       "other": "Autre"
     }
   },

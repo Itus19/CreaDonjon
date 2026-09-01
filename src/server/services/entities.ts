@@ -19,7 +19,9 @@ import {
 } from "@/src/server/repos/entities";
 import { getWorldEntityKindOrder } from "@/src/server/repos/worlds";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
-import { insertBlock, listBlocksForEntity } from "@/src/server/repos/blocks";
+import { insertBlock, listBlocksForEntity, maxDisplayOrder } from "@/src/server/repos/blocks";
+import { defaultBlockData, defaultBlockDisplay } from "@/src/core/schemas/blocks/registry";
+import type { Json } from "@/src/types/database";
 import { listEntityGrantsForUser } from "@/src/server/repos/entityGrants";
 import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { recordEntityRevision } from "@/src/server/services/entityHistory";
@@ -171,7 +173,36 @@ export async function updateEntity(
 
   await recordEntityRevision(supabase, { entity: updated, changeSource: "user", changedBy: params.changedBy });
 
+  if (updated.entity_kind === "carte") {
+    await ensureMapBlock(supabase, updated.id, params.changedBy);
+  }
+
   return { ok: true, entity: updated };
+}
+
+/**
+ * Fiche `carte` (Lot I, retour utilisateur) : jamais d'ecran "Ajouter un
+ * bloc" a chercher — des que le type passe a "carte", cette fiche montre
+ * directement le canevas plein format (`EditEntityForm.tsx`), qui suppose
+ * donc un bloc `map` deja present. Idempotent (verifie l'existant avant de
+ * creer) : appele a chaque sauvegarde tant que le type reste "carte", pas
+ * seulement a la transition.
+ */
+async function ensureMapBlock(supabase: TypedClient, entityId: string, createdBy: string): Promise<void> {
+  const blocks = await listBlocksForEntity(supabase, entityId);
+  if (blocks.some((b) => b.block_type === "map")) return;
+
+  const displayOrder = (await maxDisplayOrder(supabase, entityId)) + 1000;
+  await insertBlock(supabase, {
+    entityId,
+    blockType: "map",
+    display: defaultBlockDisplay("map", "Carte"),
+    data: defaultBlockData("map") as Json,
+    displayOrder,
+    visibilityLevel: "public",
+    visibilityScopeId: null,
+    createdBy,
+  });
 }
 
 /** Idempotent (voir softDeleteEntity) — un menu qui rappelle "Supprimer" deux fois de suite ne doit jamais lever d'erreur. */

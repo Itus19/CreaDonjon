@@ -44,7 +44,6 @@ export default function BookSkin({
   hrefBase,
   children,
   wikiBackground,
-  fullWidth,
 }: {
   title: string;
   worldSlug: string;
@@ -52,8 +51,6 @@ export default function BookSkin({
   hrefBase: string;
   children: React.ReactNode;
   wikiBackground?: WikiBackground | null;
-  /** Cartes (Lot I) : un canevas interactif a besoin de toute la largeur disponible, jamais la colonne de lecture a `max-w-[70ch]` — meme echappatoire que `PlayerShell.tsx` pour Wiki/Regles cote joueur. */
-  fullWidth?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -110,18 +107,6 @@ export default function BookSkin({
         <Link href={hrefBase} onClick={() => setOpen(false)} className="mb-4 block font-chrome text-base font-semibold text-ink hover:text-accent">
           {title}
         </Link>
-        {/* "Cartes" (Lot I, retour utilisateur : "un endroit où je puisse...
-            voir la/les cartes en grand", MJ ou wiki public) — meme
-            placement que "Chronologie" dans Sidebar.tsx (au-dessus de
-            l'arborescence), meme motif : une vue d'ensemble du monde,
-            jamais rattachee a une seule fiche. */}
-        <Link
-          href={`${hrefBase}/cartes`}
-          onClick={() => setOpen(false)}
-          className="mb-4 block rounded px-2 py-1.5 text-sm text-ink-soft transition-colors hover:bg-panel-raised hover:text-ink"
-        >
-          Cartes
-        </Link>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -139,7 +124,7 @@ export default function BookSkin({
         </div>
       </aside>
       <main className="min-w-0 flex-1 overflow-y-auto px-4 py-10 pt-16 md:px-8 md:pt-10">
-        {fullWidth ? children : <div className="mx-auto max-w-[70ch]">{children}</div>}
+        <div className="mx-auto max-w-[70ch]">{children}</div>
       </main>
     </div>
   );

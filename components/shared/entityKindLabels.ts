@@ -8,5 +8,6 @@ export const ENTITY_KIND_LABELS: Record<(typeof ENTITY_KINDS)[number], string> =
   creature: "Créature",
   quest: "Quête",
   event: "Événement",
+  carte: "Carte",
   other: "Autre",
 };

@@ -7,6 +7,7 @@ import EntityHistoryPanel from "@/components/entities/EntityHistoryPanel";
 import PortraitUpload from "@/components/entities/PortraitUpload";
 import EntityBlocks, { type BlockItem } from "@/components/blocks/EntityBlocks";
 import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
+import CarteMapPanel from "@/components/entities/map/CarteMapPanel";
 import Dropdown from "@/components/shared/Dropdown";
 import EyeIcon from "@/components/shared/EyeIcon";
 import RequestEditButton from "@/components/entities/RequestEditButton";
@@ -275,6 +276,81 @@ export default function EditEntityForm({
     { value: CUSTOM_KIND_OPTION, label: "+ Créer une catégorie…" },
   ];
   const kindDropdownValue = entityKind === "character" ? (isPc ? PJ_VALUE : PNJ_VALUE) : entityKind;
+
+  // Fiche `carte` (Lot I, retour utilisateur : "une catégorie 'Cartes'...
+  // une fiche fenêtre avec la carte en grand et les outils pour la
+  // modifier en bas") : ni chrome habituel (portrait, alias, relations,
+  // liste de blocs), ni bouton "Agrandir" a chercher — la carte EST le
+  // contenu de la fenetre. Le nom, le type et la visibilite du bloc
+  // restent accessibles (aucune autre porte d'entree dans l'appli pour
+  // les modifier : le titre de la fenetre, lui, n'est qu'un affichage).
+  // Le bloc `map` est cree automatiquement cote serveur des que le type
+  // passe a "carte" (`updateEntity`, `src/server/services/entities.ts`) —
+  // s'il manque encore ("Chargement…"), c'est cette creation server qui
+  // n'a pas encore ete refletee par un `router.refresh()`.
+  if (entityKind === "carte") {
+    const mapBlock = initialBlocks.find((b) => b.blockType === "map");
+    return (
+      <div className="flex h-full min-h-0 flex-col gap-2">
+        <div className="flex shrink-0 items-center gap-2">
+          <input
+            ref={titleInputRef}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => save()}
+            placeholder="Nouvelle carte"
+            className="entity-title flex-1 bg-transparent outline-none placeholder:text-ink-muted focus:border-b focus:border-accent"
+          />
+          <button
+            type="button"
+            onClick={toggleEntityPublic}
+            className="shrink-0 text-ink-muted hover:text-ink"
+            aria-label={isPublic ? "Masquer cette fiche au wiki public" : "Rendre cette fiche visible au wiki public"}
+            title={isPublic ? "Visible au wiki public — cliquer pour masquer" : "Masquée au wiki public — cliquer pour rendre visible"}
+          >
+            <EyeIcon open={isPublic} className="h-4 w-4" />
+          </button>
+          {customCategoryDraft !== null ? (
+            <input
+              autoFocus
+              value={customCategoryDraft}
+              onChange={(e) => setCustomCategoryDraft(e.target.value)}
+              onBlur={confirmCustomCategory}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  confirmCustomCategory();
+                } else if (e.key === "Escape") {
+                  setCustomCategoryDraft(null);
+                }
+              }}
+              placeholder="Nom de la catégorie"
+              maxLength={40}
+              className="w-40 shrink-0 rounded-md border border-accent bg-transparent px-2 py-1 text-sm text-ink outline-none"
+            />
+          ) : (
+            <Dropdown
+              value={kindDropdownValue}
+              options={kindOptions}
+              onChange={handleKindChange}
+              className="shrink-0 whitespace-nowrap bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+            />
+          )}
+        </div>
+        {status === "conflict" && (
+          <p className="text-sm text-danger">Cette fiche a été modifiée entre-temps. Rechargez la page avant de réessayer.</p>
+        )}
+        {status === "error" && errorMessage && <p className="text-sm text-danger">{errorMessage}</p>}
+        <div className="min-h-0 flex-1">
+          {mapBlock ? (
+            <CarteMapPanel worldSlug={worldSlug} block={mapBlock} />
+          ) : (
+            <p className="text-sm italic text-ink-muted">Chargement…</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">

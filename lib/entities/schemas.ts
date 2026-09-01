@@ -8,6 +8,7 @@ const ENTITY_KINDS = [
   "creature",
   "quest",
   "event",
+  "carte",
   "other",
 ] as const;
 

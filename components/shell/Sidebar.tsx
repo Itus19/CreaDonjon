@@ -58,13 +58,6 @@ export default function Sidebar({
           >
             {t("chronologie")}
           </Link>
-          <Link
-            href={`/m/${worldSlug}/cartes`}
-            onClick={() => setOpen(false)}
-            className="rounded px-2 py-1.5 text-sm text-ink-soft transition-colors hover:bg-panel-raised hover:text-ink"
-          >
-            {t("cartes")}
-          </Link>
           <div onClick={() => setOpen(false)}>
             <EntityTree
               groups={tree}

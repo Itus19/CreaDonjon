@@ -24,6 +24,7 @@
       "creature": "Creatures",
       "quest": "Quests",
       "event": "Events",
+      "carte": "Maps",
       "other": "Other"
     },
     "kindLabelsSingular": {
@@ -34,6 +35,7 @@
       "creature": "Creature",
       "quest": "Quest",
       "event": "Event",
+      "carte": "Map",
       "other": "Other"
     }
   },
