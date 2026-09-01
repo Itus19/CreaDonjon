@@ -28,7 +28,7 @@ export default async function MjJournalHistoriquePage({
   const gm = user ? await isWorldAdmin(supabase, { worldId: world.id, userId: user.id }) : false;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex h-full flex-col gap-4">
       <RegisterPrimaryWindow
         windowRef={{ kind: "mj", key: "journal-historique" }}
         name="Journal d'historique"

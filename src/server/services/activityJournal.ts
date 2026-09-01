@@ -13,7 +13,7 @@ import { listPcEntityIdsForWorld } from "@/src/server/repos/campaigns";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { listRevisionSnapshotsInRange } from "@/src/server/repos/entityRevisions";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
-import { listRulesetEntryChipsByKeys } from "@/src/server/repos/rules";
+import { listRulesetEntryChipsByKeys, listTranslationsForEntries } from "@/src/server/repos/rules";
 import { walkRulesetChain, entryNameFrom } from "@/src/server/services/rules";
 import { normalizeStoredSnapshot } from "@/src/server/services/entityHistory";
 import { diffEntitySnapshots } from "@/src/core/history/diff";
@@ -114,13 +114,26 @@ async function resolveInventoryRefNames(supabase: TypedClient, rulesetId: string
   if (ruleKeys.length > 0 && rulesetId) {
     const chain = await walkRulesetChain(supabase, rulesetId);
     const remaining = new Set(ruleKeys);
+    const found: { id: string; entry_key: string; source_raw: unknown }[] = [];
     for (const link of chain) {
       if (remaining.size === 0) break;
       const rows = await listRulesetEntryChipsByKeys(supabase, link.rulesetId, [...remaining]);
       for (const row of rows) {
-        result.set(`rule:${row.entry_key}`, entryNameFrom(row));
+        found.push(row);
         remaining.delete(row.entry_key);
       }
+    }
+    // Le nom brut d'une regle SRD est en anglais (`source_raw`) — retour
+    // utilisateur : "tout en francais par defaut" — resolu ici via la meme
+    // table de traductions que `RuleChip`/`resolveRuleChips`, jamais affiche
+    // tel quel des lors qu'une traduction francaise existe.
+    const translationByEntryId = new Map<string, string>();
+    if (found.length > 0) {
+      const translations = await listTranslationsForEntries(supabase, found.map((e) => e.id), "fr");
+      for (const t of translations) translationByEntryId.set(t.entry_id, t.name);
+    }
+    for (const row of found) {
+      result.set(`rule:${row.entry_key}`, translationByEntryId.get(row.id) ?? entryNameFrom(row));
     }
     for (const key of remaining) result.set(`rule:${key}`, key);
   } else {

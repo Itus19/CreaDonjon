@@ -20,12 +20,12 @@ export default function GmJournalPanel({ worldSlug }: { worldSlug: string }) {
   const entries = data?.entries ?? null;
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-edge bg-panel-sunken p-4">
+    <div className="flex h-full flex-col gap-2 rounded-2xl border border-edge bg-panel-sunken p-4">
       <h2 className="block-title text-base">Journal</h2>
       {entries === null && <p className="text-xs text-ink-muted">…</p>}
       {entries && entries.length === 0 && <p className="text-xs text-ink-muted">Aucune activité pour l&apos;instant.</p>}
       {entries && entries.length > 0 && (
-        <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto text-xs">
+        <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto text-xs">
           {entries.map((entry, i) => (
             <li key={i} className="flex flex-col gap-0.5 border-b border-edge/30 pb-1">
               <div className="flex items-center justify-between gap-2">
