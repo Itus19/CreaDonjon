@@ -202,16 +202,24 @@ export async function updateEntityWithVersionCheck(
   return data as EntitySummary | null;
 }
 
-/** Idempotent : supprimer une entite deja supprimee ne change rien (pas d'erreur), meme convention que revokeShareLink. */
+/**
+ * Idempotent : supprimer une entite deja supprimee ne change rien (pas d'erreur), meme convention que revokeShareLink.
+ *
+ * Pas de `.select()` ici : la policy `entities_select` exige `deleted_at is
+ * null`, donc la ligne qu'on vient de marquer supprimee echouerait la
+ * verification appliquee par Postgres au `RETURNING` d'un update sous RLS,
+ * ce qui leve "new row violates row-level security policy" au lieu de
+ * simplement renvoyer 0 ligne. `count: "exact"` donne le meme booleen via
+ * `Content-Range`, sans relire la ligne.
+ */
 export async function softDeleteEntity(supabase: TypedClient, id: string): Promise<{ deleted: boolean }> {
-  const { data, error } = await supabase
+  const { count, error } = await supabase
     .from("entities")
-    .update({ deleted_at: new Date().toISOString() })
+    .update({ deleted_at: new Date().toISOString() }, { count: "exact" })
     .eq("id", id)
-    .is("deleted_at", null)
-    .select("id");
+    .is("deleted_at", null);
   if (error) throw new Error(error.message);
-  return { deleted: data.length > 0 };
+  return { deleted: (count ?? 0) > 0 };
 }
 
 const FIXED_ENTITY_KINDS = ["character", "location", "faction", "item", "creature", "quest", "event", "other"];
