@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { listUnclaimedCharactersForToken, resolveInviteForJoin } from "@/src/server/services/campaignInvites";
 import { getOwnProfile } from "@/src/server/repos/account";
 import { hasVerifiedInvitePassword } from "./passwordActions";
@@ -44,9 +44,7 @@ export default async function JoinInvitePage({ params }: { params: Promise<{ tok
   // Retour utilisateur 30 aout ("Jeremy MJ dans un monde ET joueur dans un
   // autre") : ce nouveau role s'ajoutera au compte DEJA connecte, le cas
   // echeant — prevenir plutot que de le faire silencieusement.
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser();
+  const currentUser = await getAuthUser(supabase);
   const currentAccountName = currentUser ? (await getOwnProfile(supabase, currentUser.id))?.display_name || null : null;
 
   return (

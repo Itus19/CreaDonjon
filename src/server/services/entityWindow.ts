@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
+import { getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import {
   getEntityBySlug,
@@ -60,9 +61,7 @@ export async function getEntityWindowData(
   const entity = await getEntityBySlug(supabase, world.id, entitySlug);
   if (!entity) return null;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
   if (!user) return null;
 
   const [blocks, relations, allEntities, worldCustomKinds, campaigns, portraitLayout] = await Promise.all([

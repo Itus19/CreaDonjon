@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import PlayerShell from "@/components/shell/PlayerShell";
 
@@ -21,9 +21,7 @@ export default async function JoueurLayout({
 }) {
   const { worldSlug } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
   if (!user) redirect("/login");
 
   const world = await getWorldBySlug(supabase, worldSlug);

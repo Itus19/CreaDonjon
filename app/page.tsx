@@ -1,5 +1,5 @@
 import { getLocale } from "next-intl/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { listWorldCards } from "@/src/server/services/worlds";
 import { listSelectableRulesetsForCurrentUser } from "@/src/server/services/rules";
 import { isSuperadmin } from "@/src/server/services/account";
@@ -13,9 +13,7 @@ import HomeScreen from "@/components/shell/HomeScreen";
 
 export default async function Home() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
   const locale = (await getLocale()) as Locale;
   const [worlds, selectableRulesets, canUseSoloMode, profile] = await Promise.all([
     user ? listWorldCards(supabase, locale, user.id) : Promise.resolve([]),

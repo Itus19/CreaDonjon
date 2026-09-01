@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import { listPlayerEditableEntities } from "@/src/server/services/entities";
@@ -26,9 +26,7 @@ export default async function JoueurFicheLayout({
   const supabase = await createClient();
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
   if (!user) redirect("/login");
 
   const campaigns = await listCampaigns(supabase, world.id);

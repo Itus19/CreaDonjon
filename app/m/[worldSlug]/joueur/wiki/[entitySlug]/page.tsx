@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getEntityBySlug } from "@/src/server/repos/entities";
 import { canUserEditEntity } from "@/src/server/services/permissions";
@@ -29,9 +29,7 @@ export default async function JoueurWikiEntityPage({
   const supabase = await createClient();
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
   if (!user) notFound();
 
   const entity = await getEntityBySlug(supabase, world.id, entitySlug);

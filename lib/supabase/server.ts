@@ -41,3 +41,22 @@ export const createClient = cache(async function createClient() {
     },
   );
 });
+
+/**
+ * `React.cache()` (retour utilisateur : "l'application... recharge des
+ * choses déjà présentes", suite) — `supabase.auth.getUser()` revalide le
+ * jeton aupres du serveur d'authentification a CHAQUE appel (par design,
+ * plus sur que de faire confiance a la session locale) : un aller-retour
+ * reseau, jamais une simple lecture locale. Une meme requete empilait
+ * pourtant cet appel dans chaque layout/page de l'arborescence ET dans les
+ * services qu'ils appellent (`entityWindow.ts`, `rules.ts`...). Memoise ici
+ * pour la duree du rendu courant, meme motif et meme portee que
+ * `createClient` juste au-dessus — ne fonctionne que parce que `supabase`
+ * est desormais un objet stable par requete.
+ */
+export const getAuthUser = cache(async function getAuthUser(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
+});

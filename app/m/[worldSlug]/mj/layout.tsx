@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import MjSidebar from "@/components/shell/MjSidebar";
@@ -39,9 +39,7 @@ export default async function MjLayout({
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
   const gm = user ? await isWorldAdmin(supabase, { worldId: world.id, userId: user.id }) : false;
   if (!gm) {
     return (

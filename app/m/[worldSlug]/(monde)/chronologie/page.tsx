@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getWorldTimeline } from "@/src/server/services/timeline";
 import WorldTimelineView from "@/components/shell/WorldTimelineView";
@@ -21,9 +21,7 @@ export default async function ChronologiePage({
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
   if (!user) notFound();
 
   const { entries, calendar } = await getWorldTimeline(supabase, world.id, user.id);

@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getAuthUser } from "@/lib/supabase/server";
 import type { Database, Json } from "@/src/types/database";
 import {
   dataSchemaForBlockType,
@@ -1276,9 +1277,7 @@ export async function getRuleEntryPageData(
 
 /** `null` si personne n'est authentifie — l'appelant (route) traduit ça en 401 plutot que de renvoyer une liste vide trompeuse. */
 export async function listSelectableRulesetsForCurrentUser(supabase: TypedClient): Promise<SelectableRulesetRow[] | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
   if (!user) return null;
   return listSelectableRulesets(supabase, user.id);
 }

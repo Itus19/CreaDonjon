@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getEntityTree, listEntities } from "@/src/server/services/entities";
 import MondeShell from "@/components/shell/MondeShell";
@@ -15,9 +15,7 @@ export default async function MondeLayout({
   const supabase = await createClient();
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
 
   const [tree, entities] = await Promise.all([
     getEntityTree(supabase, world.id, user?.id ?? null),

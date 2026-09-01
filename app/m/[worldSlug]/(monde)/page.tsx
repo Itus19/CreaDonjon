@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listEntities } from "@/src/server/services/entities";
 import { listWorldPlayerCharacters } from "@/src/server/services/worldPlayerCharacters";
@@ -18,9 +18,7 @@ export default async function WorldHomePage({
   const supabase = await createClient();
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
 
   const locale = (await getLocale()) as Locale;
   const [entities, playerCharacters] = await Promise.all([

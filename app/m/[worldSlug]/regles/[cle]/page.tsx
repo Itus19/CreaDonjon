@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getRuleEntryPageData } from "@/src/server/services/rules";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { isPlayerOnlyInWorld } from "@/src/server/services/permissions";
@@ -22,9 +22,7 @@ export default async function RuleEntryPage({
   const entry = await getRuleEntryPageData(supabase, worldSlug, cle, locale);
   if (!entry) notFound();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
   if (user) {
     const world = await getWorldBySlug(supabase, worldSlug);
     if (world && (await isPlayerOnlyInWorld(supabase, { worldId: world.id, userId: user.id }))) {

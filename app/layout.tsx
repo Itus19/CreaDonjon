@@ -3,7 +3,7 @@ import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/src/server/repos/account";
 import { resolveBackgroundSelection } from "@/src/server/services/backgroundImages";
 import ViewAsBanner from "@/components/shell/ViewAsBanner";
@@ -52,9 +52,7 @@ export default async function RootLayout({
   // Le menu de reglages n'a de sens que pour un utilisateur connecte
   // (compte, suppression...) : absent sur /login, /signup, /partage/*.
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
   const profile = user ? await getOwnProfile(supabase, user.id) : null;
 
   // Fond d'ecran personnel (V2-G4 reformule) : meme technique que
