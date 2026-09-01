@@ -37,6 +37,7 @@ import RelationshipBlockEditor from "./RelationshipBlockEditor";
 import WorldviewBlockEditor from "./WorldviewBlockEditor";
 import RelationsGraphBlockEditor from "./RelationsGraphBlockEditor";
 import TimelineBlockEditor from "./TimelineBlockEditor";
+import MapBlockEditor from "./MapBlockEditor";
 import MonsterStatblockSheet from "./MonsterStatblockSheet";
 import PlayableCharacterSheet from "./PlayableCharacterSheet";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
@@ -60,6 +61,7 @@ import type { RelationshipBlockData } from "@/src/core/schemas/blocks/relationsh
 import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
 import type { RelationsGraphBlockData } from "@/src/core/schemas/blocks/relationsGraph";
 import type { TimelineBlockData } from "@/src/core/schemas/blocks/timeline";
+import type { MapBlockData } from "@/src/core/schemas/blocks/map";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 
 export interface BlockItem {
@@ -95,6 +97,7 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   worldview: "Convictions",
   relations_graph: "Réseau",
   timeline: "Chronologie",
+  map: "Carte",
 };
 
 function BlockDataEditor({
@@ -282,6 +285,8 @@ function BlockDataEditor({
           onBlockRefreshed={onBlockRefreshed}
         />
       );
+    case "map":
+      return <MapBlockEditor worldSlug={worldSlug} data={block.data as MapBlockData} onChange={(d) => onChange(d)} />;
     default:
       return <p className="text-sm text-danger">Type de bloc inconnu : {block.blockType}</p>;
   }

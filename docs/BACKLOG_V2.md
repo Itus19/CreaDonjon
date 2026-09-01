@@ -589,11 +589,13 @@ Découpé en phases pour rester traçable d'une session à l'autre — cocher au
 - [ ] Vignette générée à l'upload, servie avant la pleine résolution — `uploadAsset` accepte déjà `maxDimension` (redimensionnement serveur via `sharp`), mais la composition "vignette + plein format, deux assets" n'est câblée qu'en Phase B (c'est elle qui en a besoin).
 - Vérifié en direct : cycle upload → lecture → suppression complet, avec un vrai fichier dans le bucket.
 
-**Phase B — Bloc `map` propriétaire, image seule**
-- [ ] Schéma du bloc `map` (`src/core/schemas/blocks/map.ts`) : `mode: "own" | "ref"`, `assetId` (own), `sourceBlockId` (ref), `defaultView: {x, y, zoom}`.
-- [ ] Téléversement de l'image depuis l'éditeur, aperçu intégré dans la fiche (miniature + section "Carte" comme les captures).
-- [ ] Fenêtre flottante plein cadre (réutilise `WindowsDesktop`/le système de fenêtres existant) pour l'édition/la vue agrandie.
-- [ ] Zoom/pan : ctrl+molette + glisser, même composant/convention que `FamilyTreeCanvas`/`RelationsGraphCanvas`/`TimelineAxis` — jamais une molette seule qui capturerait le défilement de page.
+**Phase B — Bloc `map` propriétaire, image seule — ✅ faite, commit à suivre**
+- [x] Schéma du bloc `map` (`src/core/schemas/blocks/map.ts`) : `mode: "own" | "ref"`, `assetId`/`thumbnailAssetId` (own), `sourceBlockId` (ref, pas encore câblé côté UI), `defaultView: {x, y, zoom}`. Enregistré dans `registry.ts`/`envelope.ts` (type "map" au catalogue).
+- [x] Téléversement (deux variantes par image : vignette 800px + plein format plafonné 4096px), aperçu intégré dans la fiche (`MapBlockEditor.tsx`) et rendu public/joueur (`PublicMapBlock.tsx`, `PublicBlockView.tsx`).
+- [x] Vue agrandie : **écart au plan** — une superposition plein écran en page (modale), pas une vraie fenêtre flottante `WindowsDesktop`/`?avec=`. Choix délibéré pour ne pas étendre le système `WindowRef` (entité/règle/outil MJ) à un 4e type juste pour ce sous-bloc ; à revoir si on veut vraiment plusieurs cartes ouvertes côte à côte comme les captures de référence.
+- [x] Zoom/pan : ctrl+molette + glisser, `MapCanvas.tsx` — même convention que `FamilyTreeCanvas`/`RelationsGraphCanvas`/`TimelineAxis`.
+- [x] Bouton "Définir cette vue par défaut" dans la vue agrandie (persiste le cadrage courant).
+- Vérifié en direct : ajout du bloc, téléversement, aperçu, agrandissement, zoom (ctrl+molette confirmé, molette seule non capturée), sauvegarde du cadrage par défaut — cycle complet avec une vraie image.
 
 **Phase C — Punaises**
 - [ ] Table `map_pins` (`block_id`, `x`, `y`, `label` texte libre, `ref` `BlockReference` nullable, `size` small/medium/large, `layer_id` nullable, `visibility_level`/`visibility_scope_id`, RLS).

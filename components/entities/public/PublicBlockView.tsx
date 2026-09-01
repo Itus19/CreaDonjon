@@ -12,6 +12,7 @@ import { QUEST_STATE_LABELS_FR } from "@/src/i18n/fr";
 import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
 import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
 import type { TimelineBlockData } from "@/src/core/schemas/blocks/timeline";
+import type { MapBlockData } from "@/src/core/schemas/blocks/map";
 import SpoilerSpan from "./SpoilerSpan";
 import PublicGenealogyBlock from "./PublicGenealogyBlock";
 import PublicPersonalityBlock from "./PublicPersonalityBlock";
@@ -19,6 +20,7 @@ import PublicWorldviewBlock from "./PublicWorldviewBlock";
 import PublicRelationshipBlock from "./PublicRelationshipBlock";
 import PublicRelationsGraphBlock from "./PublicRelationsGraphBlock";
 import PublicTimelineBlock from "./PublicTimelineBlock";
+import PublicMapBlock from "./PublicMapBlock";
 
 const TAG_BY_BLOCK_TYPE: Record<Segment["blockType"], string> = {
   paragraph: "p",
@@ -261,6 +263,7 @@ export default function PublicBlockView({ block, hrefBase }: { block: PublicBloc
           hrefBase={hrefBase}
         />
       )}
+      {block.blockType === "map" && <PublicMapBlock data={block.data as unknown as MapBlockData} />}
     </div>
   );
 }

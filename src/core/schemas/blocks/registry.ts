@@ -20,6 +20,7 @@ import { zRelationshipBlockData } from "./relationship";
 import { zWorldviewBlockData } from "./worldview";
 import { zRelationsGraphBlockData } from "./relationsGraph";
 import { zTimelineBlockData } from "./timeline";
+import { zMapBlockData, DEFAULT_MAP_BLOCK_DATA } from "./map";
 import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
 
 /**
@@ -85,6 +86,11 @@ import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/ke
  * simplification actee avec l'utilisateur par rapport a la requete
  * `scope.query` par tags de la spec, remplacee par la vue generale du
  * monde qui agrege directement les entrees de tous les blocs `timeline`.
+ * Lot I : map — attachable a n'importe quelle entite (pas seulement
+ * `location`, retour utilisateur), propriétaire OU référent d'une image
+ * (ADR 0017). Punaises/zones/couches (phases C/D/E) vivent dans des tables
+ * dediees, jamais dans ce JSON — elles ont besoin de leur propre
+ * visibilite RLS, qu'un sous-champ ne peut pas porter.
  */
 export const BLOCK_TYPES = [
   "text",
@@ -107,6 +113,7 @@ export const BLOCK_TYPES = [
   "worldview",
   "relations_graph",
   "timeline",
+  "map",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -131,6 +138,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   worldview: "poles",
   relations_graph: "graph",
   timeline: "timeline",
+  map: "map",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -155,6 +163,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   worldview: zWorldviewBlockData,
   relations_graph: zRelationsGraphBlockData,
   timeline: zTimelineBlockData,
+  map: zMapBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -230,6 +239,7 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
   worldview: { __v: 1, poles: WORLDVIEW_POLE_KEYS.map((key) => ({ key, value: 0 })), priority: [] },
   relations_graph: { __v: 1, rootEntityId: null, degreesVisible: 1 },
   timeline: { __v: 1, entries: [], groupBy: "none" },
+  map: DEFAULT_MAP_BLOCK_DATA,
 };
 
 export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny {
