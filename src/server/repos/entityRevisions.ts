@@ -97,6 +97,17 @@ export async function listRevisionSnapshotsInRange(
   return data;
 }
 
+/** Tout l'historique d'une entite, dans l'ordre chronologique (V2-M12, stats d'economie de campagne) — contrairement a `listRevisionSnapshotsInRange`, jamais borne : chaque paire consecutive doit etre comparee, du tout premier instantane au plus recent. */
+export async function listAllRevisionSnapshots(supabase: TypedClient, entityId: string): Promise<{ revision_number: number; snapshot: Json }[]> {
+  const { data, error } = await supabase
+    .from("entity_revisions")
+    .select("revision_number, snapshot")
+    .eq("entity_id", entityId)
+    .order("revision_number", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function getEntityRevisionByNumber(
   supabase: TypedClient,
   entityId: string,

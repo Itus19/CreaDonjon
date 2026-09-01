@@ -14,7 +14,8 @@ export type CoinType = (typeof CURRENCY_ORDER)[number];
 /** Taux d'echange standard (SRD) : valeur d'une piece de chaque denomination en pieces de cuivre. */
 export const COIN_VALUE_CP: Record<CoinType, number> = { pp: 1000, gp: 100, ep: 50, sp: 10, cp: 1 };
 
-function totalValueCp(currency: Currency): number {
+/** Valeur totale en pieces de cuivre — seul denominateur commun pour comparer/additionner des portes-monnaies de repartitions differentes (V2-M12, stats de campagne). */
+export function totalValueCp(currency: Currency): number {
   return CURRENCY_ORDER.reduce((sum, c) => sum + currency[c] * COIN_VALUE_CP[c], 0);
 }
 
