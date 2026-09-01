@@ -5,7 +5,14 @@ import MapCanvas from "./MapCanvas";
 import type { MapBlockData, MapView } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
 
-const THUMBNAIL_MAX_DIMENSION = 800;
+// Retour utilisateur, avec capture a l'appui : la vignette a 800px restait
+// visiblement floue une fois etiree a la largeur reelle d'un bloc de fiche
+// (souvent 900-1400px CSS, plus encore sur un ecran haute densite) — la
+// bonne association vignette/dimensions (autre correctif) n'y change rien,
+// 800 reels px etires sur une largeur d'affichage plus grande restent flous
+// par nature. Alignee sur IMAGE_MAX_DIMENSION (blockImages.ts, meme
+// compromis poids/nettete pour un bloc `image` ordinaire).
+const THUMBNAIL_MAX_DIMENSION = 1600;
 const FULL_MAX_DIMENSION = 4096;
 
 /**
