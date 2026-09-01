@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
@@ -84,12 +85,22 @@ export async function getWorld(supabase: TypedClient, id: string): Promise<World
   return getWorldById(supabase, id);
 }
 
-export async function getWorldBySlug(
+/**
+ * `React.cache()` (retour utilisateur : "l'application... recharge des
+ * choses déjà présentes") — appelee independamment par presque chaque
+ * layout/page de l'arborescence d'un monde (`app/m/[worldSlug]/layout.tsx`,
+ * `joueur/layout.tsx`, `joueur/fiche/layout.tsx`, la page elle-meme...)
+ * pour le MEME `worldSlug` sur UNE seule requete. Fonctionne uniquement
+ * parce que `createClient()` (lib/supabase/server.ts) est lui-meme
+ * memoise : sans un `supabase` reference-stable, cette memoisation ne
+ * ferait jamais de hit.
+ */
+export const getWorldBySlug = cache(async function getWorldBySlug(
   supabase: TypedClient,
   slug: string
 ): Promise<WorldSummary | null> {
   return getWorldBySlugForCurrentUser(supabase, slug);
-}
+});
 
 /** Panneau de publication (V2-G2, extension) : `message` vide efface la personnalisation. */
 export async function updateWikiWelcomeMessage(

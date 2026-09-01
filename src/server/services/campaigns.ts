@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import {
@@ -48,10 +49,11 @@ function toSummary(row: CampaignRow): CampaignSummary {
   };
 }
 
-export async function listCampaigns(supabase: TypedClient, worldId: string): Promise<CampaignSummary[]> {
+/** `React.cache()` (retour utilisateur : "recharge des choses déjà présentes") — "un monde = une campagne" (V2-G1), appelee independamment par de nombreux layouts/pages pour LA campagne du meme monde sur une seule requete. */
+export const listCampaigns = cache(async function listCampaigns(supabase: TypedClient, worldId: string): Promise<CampaignSummary[]> {
   const rows = await listCampaignsForWorld(supabase, worldId);
   return rows.map(toSummary);
-}
+});
 
 /** "Un monde = une campagne" (migration 20260826100001) : au plus une ligne. Reutilise partout ou une fonctionnalite doit se rattacher a "la" campagne d'un monde sans que l'appelant en connaisse deja l'id (quests.ts, sessions.ts, psyche.ts). */
 export async function resolveCampaignId(supabase: TypedClient, worldId: string): Promise<string | null> {
