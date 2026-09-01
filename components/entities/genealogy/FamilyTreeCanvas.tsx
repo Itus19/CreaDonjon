@@ -40,9 +40,11 @@ function clamp(value: number, min: number, max: number): number {
  * trait fusionne) : bien plus simple a calculer et a etiqueter
  * individuellement au survol, visuellement quasi identique a la fusion.
  *
- * Navigation (retour utilisateur) : molette pour zoomer, centree sur le
- * curseur (le point du monde sous la souris reste sous la souris apres
- * zoom, comme Figma/Miro) ; clic-glisse pour deplacer. L'arbre s'ouvre
+ * Navigation (retour utilisateur) : ctrl+molette pour zoomer (une simple
+ * molette laisse la page defiler normalement — le bloc est souvent en
+ * plein milieu d'une fiche plus longue), centree sur le curseur (le point
+ * du monde sous la souris reste sous la souris apres zoom, comme
+ * Figma/Miro) ; clic-glisse pour deplacer. L'arbre s'ouvre
  * centre et ajuste a la fenetre (jamais zoome au-dela de 100% par
  * defaut, seulement dezoome si l'arbre est plus grand que la zone
  * visible) — recalcule quand le nombre de nœuds change (nouvelle
@@ -132,11 +134,15 @@ export default function FamilyTreeCanvas({
 
   // Molette non-passive (React attache onWheel en passif par defaut) :
   // sans ceci, preventDefault() n'empeche pas la page de defiler en plus
-  // du zoom du canevas.
+  // du zoom du canevas. Ctrl+molette seulement (retour utilisateur) : une
+  // simple molette laisse la page defiler normalement — sans ce garde, un
+  // bloc de genealogie en plein milieu d'une fiche capturait TOUT geste de
+  // molette au survol, rendant la page impossible a faire defiler par-dessus.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     function onWheel(e: WheelEvent) {
+      if (!e.ctrlKey) return;
       e.preventDefault();
       const rect = container!.getBoundingClientRect();
       const cursorX = e.clientX - rect.left;

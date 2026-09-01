@@ -169,11 +169,13 @@ export default function RelationsGraphCanvas({
 
   // Molette non-passive (React attache onWheel en passif par defaut) :
   // sans ceci, preventDefault() n'empeche pas la page de defiler en plus
-  // du zoom du canevas.
+  // du zoom du canevas. Ctrl+molette seulement (retour utilisateur) : une
+  // simple molette laisse la page defiler normalement.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     function onWheel(e: WheelEvent) {
+      if (!e.ctrlKey) return;
       e.preventDefault();
       const rect = container!.getBoundingClientRect();
       const cursorX = e.clientX - rect.left;

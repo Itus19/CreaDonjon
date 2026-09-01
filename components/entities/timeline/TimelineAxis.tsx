@@ -114,10 +114,13 @@ export default function TimelineAxis({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entriesSignature]);
 
+  // Ctrl+molette seulement (retour utilisateur) : une simple molette laisse
+  // la page defiler normalement au-dessus de l'axe.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     function onWheel(e: WheelEvent) {
+      if (!e.ctrlKey) return;
       e.preventDefault();
       const rect = container!.getBoundingClientRect();
       const cursorX = e.clientX - rect.left;
@@ -382,8 +385,8 @@ export default function TimelineAxis({
       </div>
       <p className="text-[10px] text-ink-muted">
         {readOnly
-          ? "Molette pour zoomer, glisser pour déplacer."
-          : "Cliquer sur l'axe ajoute un événement à cette date · glisser ajoute une période. Molette pour zoomer, glisser pour déplacer."}
+          ? "Ctrl+molette pour zoomer, glisser pour déplacer."
+          : "Cliquer sur l'axe ajoute un événement à cette date · glisser ajoute une période. Ctrl+molette pour zoomer, glisser pour déplacer."}
       </p>
     </div>
   );
