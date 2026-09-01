@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getEntityTree } from "@/src/server/services/entities";
 import PlayerWikiSidebar from "@/components/shell/PlayerWikiSidebar";
+import TwoPaneReaderLayout from "@/components/shell/TwoPaneReaderLayout";
 
 /**
  * Onglet Wiki (retour utilisateur 31 août) : "reprend exactement la
@@ -35,13 +36,6 @@ export default async function JoueurWikiLayout({
   const tree = (await getEntityTree(supabase, world.id, user?.id ?? null)).filter((g) => g.kind !== "notes");
 
   return (
-    <div className="flex h-full min-h-0">
-      <aside className="no-scrollbar min-h-0 w-44 shrink-0 overflow-y-auto pr-4">
-        <PlayerWikiSidebar worldSlug={worldSlug} tree={tree} />
-      </aside>
-      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto border-l border-edge/60 pl-6">
-        <div className="mx-auto max-w-[70ch]">{children}</div>
-      </main>
-    </div>
+    <TwoPaneReaderLayout sidebar={<PlayerWikiSidebar worldSlug={worldSlug} tree={tree} />}>{children}</TwoPaneReaderLayout>
   );
 }
