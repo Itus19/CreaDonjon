@@ -2,12 +2,10 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getEntityBySlug } from "@/src/server/repos/entities";
-import { listVisibleBlocks } from "@/src/server/services/blocks";
 import { canUserEditEntity } from "@/src/server/services/permissions";
 import { getEntityWindowData } from "@/src/server/services/entityWindow";
-import { getPortraitLayout } from "@/src/server/services/entityPortraits";
-import PlayerBlockView from "@/components/entities/player/PlayerBlockView";
-import PublicPortrait from "@/components/entities/public/PublicPortrait";
+import { getPlayerEntityDetail } from "@/src/server/services/playerEntityDetail";
+import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
 import EditEntityForm from "../../../(monde)/f/[entitySlug]/EditEntityForm";
 
 /**
@@ -61,27 +59,8 @@ export default async function JoueurWikiEntityPage({
     );
   }
 
-  const [blocks, portraitLayout] = await Promise.all([
-    listVisibleBlocks(supabase, world.id, entity.id, user.id),
-    getPortraitLayout(supabase, entity.id),
-  ]);
+  const detail = await getPlayerEntityDetail(supabase, { worldId: world.id, entitySlug, userId: user.id });
+  if (!detail) notFound();
 
-  return (
-    <div className="flex flex-col gap-3">
-      {/* `flow-root` : contient le flottement du portrait (retour
-          utilisateur, "controle general... cote joueur" — bug reel trouve en
-          testant : cette vue en lecture seule n'affichait jamais le
-          portrait, contrairement au wiki public/`EditEntityForm`, meme
-          fiche) sans qu'il ne deborde sur les blocs listes juste apres. */}
-      <div className="flow-root">
-        <PublicPortrait entityId={entity.id} layout={portraitLayout} />
-        <h2 className="text-lg font-semibold text-ink">{entity.name}</h2>
-      </div>
-      {blocks.length === 0 ? (
-        <p className="text-sm text-ink-muted">Rien de visible pour l&apos;instant.</p>
-      ) : (
-        blocks.map((block) => <PlayerBlockView key={block.id} block={block} />)
-      )}
-    </div>
-  );
+  return <PublicEntityBody {...detail} hrefBase={`/m/${worldSlug}/joueur/wiki`} />;
 }

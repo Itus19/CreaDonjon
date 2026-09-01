@@ -73,3 +73,24 @@ export async function isWorldAdmin(supabase: TypedClient, params: { worldId: str
     Object.values(viewer.campaignRoles).includes("gm")
   );
 }
+
+/**
+ * "Cette personne n'est QUE joueuse de ce monde" (retour utilisateur :
+ * "quand un joueur utilise les hyperliens... ils arrivent dans un ecran de
+ * MJ") — jamais proprietaire/editrice du monde, jamais MJ d'aucune
+ * campagne, mais membre d'au moins une en tant que joueuse. Sert a
+ * rediriger un lien qui pointait vers l'ecran MJ plein cadre
+ * (`(monde)/f/[entitySlug]`, `regles/[cle]`) vers son equivalent cote
+ * coquille joueur — la fiche/regle elle-meme reste deja correctement
+ * filtree par visibilite (`listVisibleBlocks`), ce garde ne fait que
+ * corriger le CHROME dans lequel elle s'affiche, jamais un second filtrage
+ * de donnees.
+ */
+export async function isPlayerOnlyInWorld(supabase: TypedClient, params: { worldId: string; userId: string }): Promise<boolean> {
+  const viewer = await buildViewerForWorld(supabase, params.worldId, params.userId);
+  if (viewer.kind === "anonymous") return false;
+  if (viewer.worldRole === "owner" || viewer.worldRole === "editor") return false;
+  const roles = Object.values(viewer.campaignRoles);
+  if (roles.includes("gm")) return false;
+  return roles.includes("player");
+}
