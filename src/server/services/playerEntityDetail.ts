@@ -12,6 +12,8 @@ import { getPortraitLayout } from "@/src/server/services/entityPortraits";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import { zGenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
 import { getFamilyTree } from "@/src/server/services/genealogy";
+import { zMapBlockData } from "@/src/core/schemas/blocks/map";
+import { resolveMapSource } from "@/src/server/services/mapSource";
 import { zQuestBlockData } from "@/src/core/schemas/blocks/quest";
 import { zTimelineBlockData } from "@/src/core/schemas/blocks/timeline";
 import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
@@ -242,5 +244,19 @@ export async function getPlayerEntityDetail(
     return { ...block, questRefs };
   });
 
-  return { entity, blocks: blocksWithQuestRefs, relations, portraitLayout };
+  // Carte referencee (Lot I, phase F₁) : meme resolution que
+  // `getPublicEntityDetail`, avec le vrai viewer joueur plutot que
+  // l'anonyme — `resolveMapSource` revalide la visibilite du bloc SOURCE
+  // pour ce joueur precis avant de renvoyer son image.
+  const blocksWithMapSource = await Promise.all(
+    blocksWithQuestRefs.map(async (block) => {
+      if (block.blockType !== "map") return block;
+      const map = zMapBlockData.safeParse(block.data);
+      if (!map.success || map.data.mode !== "ref") return block;
+      const mapSource = await resolveMapSource(supabase, map.data.sourceBlockId, viewer);
+      return { ...block, mapSource };
+    })
+  );
+
+  return { entity, blocks: blocksWithMapSource, relations, portraitLayout };
 }

@@ -4,16 +4,20 @@ import { useEffect, useState } from "react";
 import MapCanvas from "@/components/entities/map/MapCanvas";
 import type { MapBlockData } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
+import type { MapSourceInfo } from "@/src/server/services/mapSource";
 
 /**
- * Rendu public/joueur du bloc `map` (Lot I, phase B) — lecture seule,
- * meme composant `MapCanvas` que l'editeur MJ (`MapBlockEditor.tsx`),
- * juste sans les commandes de televersement. Le mode "ref" (phase F₁)
- * n'est pas encore gere ici.
+ * Rendu public/joueur du bloc `map` (Lot I, phases B et F₁) — lecture
+ * seule, meme composant `MapCanvas` que l'editeur MJ (`MapBlockEditor.tsx`),
+ * juste sans les commandes de televersement. Mode "ref" : l'image vient de
+ * `mapSource`, deja resolue et revalidee cote serveur pour CE viewer
+ * (`resolveMapSource`, `publicShare.ts`/`playerEntityDetail.ts`) — jamais
+ * un fetch client sur le `sourceBlockId` brut, qui exigerait de re-decider
+ * la visibilite ici, cote client.
  */
-export default function PublicMapBlock({ data }: { data: MapBlockData }) {
-  const assetId = data.mode === "own" ? data.assetId : null;
-  const thumbnailAssetId = data.mode === "own" ? data.thumbnailAssetId : null;
+export default function PublicMapBlock({ data, mapSource }: { data: MapBlockData; mapSource?: MapSourceInfo | null }) {
+  const assetId = data.mode === "own" ? data.assetId : mapSource?.assetId ?? null;
+  const thumbnailAssetId = data.mode === "own" ? data.thumbnailAssetId : mapSource?.thumbnailAssetId ?? null;
   const [asset, setAsset] = useState<AssetRow | null>(null);
   const [expanded, setExpanded] = useState(false);
 
@@ -41,7 +45,7 @@ export default function PublicMapBlock({ data }: { data: MapBlockData }) {
     };
   }, [assetId]);
 
-  if (data.mode !== "own") {
+  if (data.mode === "ref" && !mapSource) {
     return <p className="text-sm italic text-ink-muted">Carte référencée non disponible pour l&apos;instant.</p>;
   }
   if (!assetId || !thumbnailAssetId) {

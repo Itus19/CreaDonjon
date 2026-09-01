@@ -3,20 +3,19 @@
 import { useEffect, useState } from "react";
 import MapCanvas from "@/components/entities/map/MapCanvas";
 import MapWorkspace from "@/components/entities/map/MapWorkspace";
-import type { MapBlockData } from "@/src/core/schemas/blocks/map";
+import MapRefPanel from "@/components/entities/map/MapRefPanel";
+import CartePicker from "@/components/entities/map/CartePicker";
+import { DEFAULT_MAP_BLOCK_DATA, type MapBlockData, type MapView } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
+import type { MapSourceInfo, CarteOption } from "@/src/server/services/mapSource";
 
 /**
- * Bloc `map`, mode "own" (Lot I, phase B — ADR 0017). Le mode "ref"
- * (carte partagee, phase F₁) n'a pas encore d'affordance ici : ce
- * composant suppose `data.mode === "own"`, garde par l'appelant
- * (`EntityBlocks.tsx`).
- *
- * Juste l'apercu (vignette figee) + un bouton "Agrandir" qui ouvre
- * `MapWorkspace` (televersement, canevas interactif, cadrage par defaut)
- * en superposition plein ecran — meme composant que la vue "Cartes"
- * dediee (`/m/[worldSlug]/cartes`), jamais une deuxieme implementation du
- * televersement.
+ * Bloc `map`, mode "own" OU "ref" (Lot I, phase F₁ — ADR 0017 décision 1).
+ * Aperçu figé (vignette) + un bouton "Agrandir" qui ouvre soit
+ * `MapWorkspace` (téléversement, mode "own"), soit `MapRefPanel` (carte
+ * d'une fiche `carte` existante, mode "ref") en superposition plein écran.
+ * Un `CartePicker` reste toujours accessible dans la modale pour basculer
+ * d'un mode à l'autre — jamais un second écran de choix séparé.
  */
 export default function MapBlockEditor({
   worldSlug,
@@ -32,13 +31,23 @@ export default function MapBlockEditor({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [asset, setAsset] = useState<AssetRow | null>(null);
+  const [refSource, setRefSource] = useState<MapSourceInfo | null>(null);
+  const [refAsset, setRefAsset] = useState<AssetRow | null>(null);
+
   const assetId = data.mode === "own" ? data.assetId : null;
   const thumbnailAssetId = data.mode === "own" ? data.thumbnailAssetId : null;
+  const sourceBlockId = data.mode === "ref" ? data.sourceBlockId : null;
 
   const [trackedAssetId, setTrackedAssetId] = useState(assetId);
   if (assetId !== trackedAssetId) {
     setTrackedAssetId(assetId);
     setAsset(null);
+  }
+  const [trackedSourceBlockId, setTrackedSourceBlockId] = useState(sourceBlockId);
+  if (sourceBlockId !== trackedSourceBlockId) {
+    setTrackedSourceBlockId(sourceBlockId);
+    setRefSource(null);
+    setRefAsset(null);
   }
 
   useEffect(() => {
@@ -57,19 +66,69 @@ export default function MapBlockEditor({
     };
   }, [assetId]);
 
-  if (data.mode !== "own") {
-    return <p className="text-sm text-danger">Ce bloc référence une autre carte — édition non disponible ici pour l&apos;instant.</p>;
+  useEffect(() => {
+    if (!sourceBlockId) return;
+    let cancelled = false;
+    fetch(`/api/blocks/${sourceBlockId}/map-source`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: MapSourceInfo | null) => {
+        if (!cancelled) setRefSource(body);
+      })
+      .catch(() => {
+        if (!cancelled) setRefSource(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceBlockId]);
+
+  useEffect(() => {
+    if (!refSource?.assetId) return;
+    let cancelled = false;
+    fetch(`/api/assets/${refSource.assetId}/meta`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: AssetRow | null) => {
+        if (!cancelled) setRefAsset(body);
+      })
+      .catch(() => {
+        if (!cancelled) setRefAsset(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refSource?.assetId]);
+
+  function pickCarte(option: CarteOption) {
+    // Le cadrage precedent n'a de sens que pour l'image d'avant (coordonnees
+    // normalisees, mais un autre point d'interet) — repart d'un cadrage par
+    // defaut a chaque changement de carte referencee, jamais un cadrage
+    // herite qui viserait au hasard sur la nouvelle image.
+    const next: MapBlockData = { __v: 1, mode: "ref", sourceBlockId: option.blockId, defaultView: DEFAULT_MAP_BLOCK_DATA.defaultView };
+    onChange(next);
+    onSaveNow?.(next);
+  }
+
+  function useOwnImage() {
+    onChange(DEFAULT_MAP_BLOCK_DATA);
+    onSaveNow?.(DEFAULT_MAP_BLOCK_DATA);
+  }
+
+  function saveRefDefaultView(view: MapView) {
+    if (data.mode !== "ref") return;
+    const next: MapBlockData = { ...data, defaultView: view };
+    onChange(next);
+    onSaveNow?.(next);
   }
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <button type="button" onClick={() => setExpanded(true)} className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel">
-          {assetId ? "Agrandir / remplacer" : "+ Téléverser une carte"}
+          {data.mode === "ref" ? "Agrandir / changer" : assetId ? "Agrandir / remplacer" : "+ Téléverser une carte"}
         </button>
       </div>
 
-      {assetId && thumbnailAssetId && asset && (
+      {data.mode === "own" && assetId && thumbnailAssetId && asset && (
         <MapCanvas
           imageUrl={`/api/assets/${thumbnailAssetId}`}
           imageWidth={asset.width ?? 1}
@@ -80,16 +139,45 @@ export default function MapBlockEditor({
         />
       )}
 
+      {data.mode === "ref" &&
+        (refSource === null ? (
+          <p className="text-sm italic text-ink-muted">Carte référencée non disponible pour l&apos;instant.</p>
+        ) : refSource.assetId && refSource.thumbnailAssetId && refAsset ? (
+          <MapCanvas
+            imageUrl={`/api/assets/${refSource.thumbnailAssetId}`}
+            imageWidth={refAsset.width ?? 1}
+            imageHeight={refAsset.height ?? 1}
+            initialView={data.defaultView}
+            height={220}
+            interactive={false}
+          />
+        ) : (
+          <p className="text-sm italic text-ink-muted">Chargement…</p>
+        ))}
+
       {expanded && (
         <div className="fixed inset-0 z-50 flex flex-col bg-scrim p-6" onClick={() => setExpanded(false)}>
           <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-lg border border-edge-strong bg-panel p-3" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-ink">Carte</span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold text-ink">Carte</span>
+                <span className="text-xs text-ink-muted">— référencer :</span>
+                <CartePicker worldSlug={worldSlug} value={sourceBlockId} onPick={pickCarte} />
+                {data.mode === "ref" && (
+                  <button type="button" onClick={useOwnImage} className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised">
+                    Téléverser ma propre image à la place
+                  </button>
+                )}
+              </div>
               <button type="button" onClick={() => setExpanded(false)} className="rounded-full border border-edge px-2 py-1 text-xs text-ink-muted hover:text-ink">
                 ✕
               </button>
             </div>
-            <MapWorkspace worldSlug={worldSlug} data={data} onChange={onChange} onSaveNow={onSaveNow} />
+            {data.mode === "own" ? (
+              <MapWorkspace worldSlug={worldSlug} data={data} onChange={onChange} onSaveNow={onSaveNow} />
+            ) : (
+              <MapRefPanel sourceBlockId={data.sourceBlockId} defaultView={data.defaultView} onSaveDefaultView={saveRefDefaultView} />
+            )}
           </div>
         </div>
       )}

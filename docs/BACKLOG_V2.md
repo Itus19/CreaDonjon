@@ -628,9 +628,12 @@ Découpé en phases pour rester traçable d'une session à l'autre — cocher au
 - [ ] Bascule afficher/masquer une couche entière côté MJ (confort d'édition — jamais un filtre de sécurité en soi, voir décision "visibilité ET" plus haut : la visibilité réelle passe par `visibility_level`, la bascule de couche est juste pratique pendant qu'on édite).
 - [ ] Filtrage serveur : un viewer ne reçoit un élément que si `canSee(élément)` ET `canSee(sa couche)`.
 
-**Phase F₁ — Mode référent (carte partagée, vue différente)**
-- [ ] Choisir "référencer une carte existante" depuis un nouveau bloc `map` : recherche d'un bloc `map` propriétaire, cadrage par défaut propre à CE bloc.
-- [ ] Rendu du mode référent : mêmes punaises/zones/couches que le bloc source, jamais une copie.
+**Phase F₁ — Mode référent (carte partagée, vue différente) — ✅ faite, commit à suivre**
+- [x] `CartePicker.tsx` : liste les fiches `carte` du monde (`GET /api/worlds/[worldSlug]/cartes`, `listCarteOptions`) — choisir une carte bascule le bloc en `{mode:"ref", sourceBlockId, defaultView par défaut}`, un bouton "Téléverser ma propre image à la place" fait le chemin inverse. Cadrage remis à zéro à chaque changement de carte référencée (les coordonnées normalisées de l'ancien cadrage n'ont aucun sens sur une autre image).
+- [x] Résolution serveur (`src/server/services/mapSource.ts`, `resolveMapSource`) : un bloc "ref" ne transporte jamais son image, seulement `sourceBlockId` — la visibilité du bloc SOURCE est revérifiée pour le viewer courant à chaque affichage (`canSee`), jamais supposée acquise parce que le bloc référent lui-même est visible. Même fonction pour les trois contextes de rendu (éditeur MJ via `GET /api/blocks/[blockId]/map-source`, `getPlayerEntityDetail`, `getPublicEntityDetail`) — jamais réimplémentée par appelant, même discipline que `getFamilyTree`/`getRelationsGraph`.
+- [x] `MapRefPanel.tsx` (édition/MJ) et `PublicMapBlock.tsx` (lecture seule, mode "ref") : mêmes `MapCanvas`/`Définir cette vue par défaut` que le mode "own", juste sourcés depuis l'image résolue plutôt que le bloc lui-même.
+- [ ] **Reporté** : mêmes punaises/zones/couches que le bloc source (dépend des Phases C/D/E, pas encore construites) — la structure de résolution (`resolveMapSource`) est déjà prête à être étendue le moment venu.
+- Vérifié en direct : bloc `map` de Fine Lââm basculé en référence vers la fiche `carte` "Faerûn" (la vraie carte téléversée par l'utilisateur), cadrage personnalisé défini puis persistant après rechargement, retour en mode "own", et rendu correct sur l'aperçu public (`/apercu/[slug]`).
 
 **Phase F₂ — Migration de `entity_portraits` vers `assets` (séparée, en tout dernier)**
 - [ ] Upload de portrait réécrit pour passer par `storage.ts`.
