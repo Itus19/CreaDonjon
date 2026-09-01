@@ -32,9 +32,17 @@ export default function PublicTimelineBlock({
     }
   }
 
-  if (data.entries.length === 0) {
+  if (data.entries.length === 0 && !calendar.currentDate) {
     return <p className="text-sm italic text-ink-muted">Aucun événement visible pour l&apos;instant.</p>;
   }
 
-  return <TimelineAxis entries={data.entries} calendar={calendar} selectedEntryId={null} onSelectEntry={handleSelect} />;
+  return (
+    <TimelineAxis
+      entries={data.entries}
+      calendar={calendar}
+      selectedEntryId={null}
+      onSelectEntry={handleSelect}
+      todayDate={calendar.currentDate}
+    />
+  );
 }

@@ -47,6 +47,7 @@ export default function TimelineAxis({
   selectedEntryId,
   onSelectEntry,
   onCreateEntry,
+  todayDate,
 }: {
   entries: TimelineEntry[];
   calendar: CalendarConfigInput;
@@ -54,6 +55,8 @@ export default function TimelineAxis({
   onSelectEntry: (id: string) => void;
   /** Omis en lecture seule (wiki public, `PublicTimelineBlock`) : pan/zoom et clic sur une entree existante restent actifs, mais plus d'ajout par clic/glisse ni d'apercu "cliquer pour ajouter". */
   onCreateEntry?: (date: GameDate) => void;
+  /** "Jour actuel de la campagne" (V2-M13, retour utilisateur : "la date proposée centrale est l'actuelle date avec une mention 'Aujourd'hui'") — `null` tant que le MJ ne l'a jamais regle dans l'outil Calendrier. Toujours inclus dans le cadrage automatique (jamais hors champ), et seul point de centrage quand la chronologie est encore vide. */
+  todayDate?: GameDate | null;
 }) {
   const readOnly = !onCreateEntry;
   const [view, setView] = useState({ x: 0, pxPerYear: 8 });
@@ -74,11 +77,17 @@ export default function TimelineAxis({
     end: e.date.end ? yearPosition({ year: e.date.end.year, month: e.date.end.month, day: e.date.end.day }, calendar) : null,
   }));
 
-  const entriesSignature = entries.map((e) => `${e.id}:${e.date.year}:${e.date.month}:${e.date.day}`).join(",");
+  const todayYearPos = todayDate ? yearPosition(todayDate, calendar) : null;
 
-  // Cadre et centre sur les entrees existantes a l'ouverture et a chaque
-  // changement de date/nombre d'entrees — jamais a chaque re-rendu, ce qui
-  // effacerait un panoramique/zoom manuel en cours.
+  const entriesSignature =
+    entries.map((e) => `${e.id}:${e.date.year}:${e.date.month}:${e.date.day}`).join(",") +
+    `|today:${todayDate ? `${todayDate.year}:${todayDate.month}:${todayDate.day}` : ""}`;
+
+  // Cadre et centre sur les entrees existantes (et "aujourd'hui", retour
+  // utilisateur : "la date proposée centrale est l'actuelle date") a
+  // l'ouverture et a chaque changement de date/nombre d'entrees/jour actuel
+  // — jamais a chaque re-rendu, ce qui effacerait un panoramique/zoom manuel
+  // en cours.
   useLayoutEffect(() => {
     if (fittedForRef.current === entriesSignature) return;
     fittedForRef.current = entriesSignature;
@@ -86,11 +95,15 @@ export default function TimelineAxis({
     if (!container) return;
     const width = container.clientWidth;
     if (positions.length === 0) {
-      setView({ x: width / 2, pxPerYear: 8 });
+      setView({ x: todayYearPos !== null ? width / 2 - todayYearPos * 8 : width / 2, pxPerYear: 8 });
       return;
     }
     const starts = positions.map((p) => p.start);
     const ends = positions.map((p) => p.end ?? p.start);
+    if (todayYearPos !== null) {
+      starts.push(todayYearPos);
+      ends.push(todayYearPos);
+    }
     const minYear = Math.min(...starts, ...ends);
     const maxYear = Math.max(...starts, ...ends);
     const span = Math.max(maxYear - minYear, 1);
@@ -265,6 +278,15 @@ export default function TimelineAxis({
             <div className="mt-auto mb-1 h-2 border-l border-edge/60" />
           </div>
         ))}
+
+        {/* Jour actuel de la campagne (V2-M13, retour utilisateur : "la date proposée centrale est l'actuelle date avec une mention 'Aujourd'hui'") */}
+        {todayYearPos !== null && (
+          <div className="pointer-events-none absolute top-0 h-full border-l border-dashed border-accent" style={{ left: screenXFor(todayYearPos) }}>
+            <span className="absolute top-1 left-1.5 whitespace-nowrap rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-accent-ink">
+              Aujourd&apos;hui
+            </span>
+          </div>
+        )}
 
         {/* Previsualisation de creation (glisse en cours) */}
         {dragPreview && (

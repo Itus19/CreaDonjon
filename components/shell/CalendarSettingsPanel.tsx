@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import GameDateInput from "@/components/shared/GameDateInput";
+import { formatGameDate } from "@/src/core/calendar/formatDate";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
+import type { GameDate } from "@/src/core/calendar/types";
+
+/** Point de depart quand le MJ active "jour actuel" pour la premiere fois — an 0, jour 1, jamais suppose (aucune annee "naturelle" n'existe avant que le MJ en regle une). */
+function blankCurrentDate(): GameDate {
+  return { year: 0, month: 1, day: 1, precision: "day", end: null, label: null };
+}
 
 /**
  * Reglage du calendrier du monde (V2-H2, specs/wiki-blocs.md §3) : noms des
@@ -87,6 +95,40 @@ export default function CalendarSettingsPanel({
           Un seul calendrier par monde : noms des mois, jours par mois, jours par semaine, ères nommées. Utilisé par
           la chronologie et les dates de jeu du monde.
         </p>
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-lg border border-edge bg-panel-raised p-3">
+        <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
+          <input
+            type="checkbox"
+            checked={calendar.currentDate !== null}
+            onChange={(e) => {
+              setSaved(false);
+              setCalendar((c) => ({ ...c, currentDate: e.target.checked ? blankCurrentDate() : null }));
+            }}
+          />
+          Jour actuel de la campagne
+        </label>
+        <p className="text-xs text-ink-muted">
+          Propagé partout où une date de jeu est affichée (ex. la chronologie centre sa vue dessus et le marque
+          « Aujourd&apos;hui »).
+        </p>
+        {calendar.currentDate && (
+          <>
+            <GameDateInput
+              calendar={calendar}
+              value={calendar.currentDate}
+              onChange={(date) => {
+                setSaved(false);
+                setCalendar((c) => ({ ...c, currentDate: date }));
+              }}
+              hidePeriod
+            />
+            <span className="text-xs text-ink-muted">
+              Aujourd&apos;hui : <span className="font-semibold text-ink">{formatGameDate(calendar.currentDate, calendar)}</span>
+            </span>
+          </>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">

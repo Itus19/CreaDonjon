@@ -13,6 +13,7 @@ const CALENDAR: CalendarConfig = {
     { name: "l'Âge d'Or", startYear: 1000 },
     { name: "l'Âge des Cendres", startYear: 1200 },
   ],
+  currentDate: null,
 };
 
 function date(partial: Partial<GameDate>): GameDate {

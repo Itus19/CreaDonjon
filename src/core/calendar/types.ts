@@ -16,12 +16,6 @@ export type CalendarEra = {
   startYear: number;
 };
 
-export type CalendarConfig = {
-  months: CalendarMonth[];
-  daysPerWeek: number;
-  eras: CalendarEra[];
-};
-
 export const DATE_PRECISIONS = ["day", "month", "season", "year", "decade", "era"] as const;
 export type DatePrecision = (typeof DATE_PRECISIONS)[number];
 
@@ -39,4 +33,12 @@ export type GameDate = {
   precision: DatePrecision;
   end: { year: number; month: number | null; day: number | null } | null;
   label: string | null;
+};
+
+export type CalendarConfig = {
+  months: CalendarMonth[];
+  daysPerWeek: number;
+  eras: CalendarEra[];
+  /** Jour actuel de la campagne (retour utilisateur, V2-M13 : "renseigne automatiquement le jour ingame actuel") — `null` tant que le MJ ne l'a jamais regle. Un seul par monde, comme le reste du calendrier ("un monde = une campagne"). */
+  currentDate: GameDate | null;
 };

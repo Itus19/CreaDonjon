@@ -25,10 +25,13 @@ export default function GameDateInput({
   calendar,
   value,
   onChange,
+  hidePeriod,
 }: {
   calendar: CalendarConfigInput;
   value: GameDate;
   onChange: (date: GameDate) => void;
+  /** Omet la case "Période" (V2-M13, jour actuel de la campagne) : un instant precis n'a jamais de fin, contrairement a une entree de chronologie. */
+  hidePeriod?: boolean;
 }) {
   const monthOptions = calendar.months.map((m, i) => ({ value: String(i + 1), label: m.name }));
   const showMonth = value.precision === "day" || value.precision === "month";
@@ -76,23 +79,25 @@ export default function GameDateInput({
         )}
       </div>
 
-      <label className="flex items-center gap-1.5 text-xs text-ink-muted">
-        <input
-          type="checkbox"
-          checked={value.end !== null}
-          onChange={(e) => set({ end: e.target.checked ? { year: value.year, month: null, day: null } : null })}
-        />
-        Période (a une fin) — une guerre dure
-        {value.end && (
+      {!hidePeriod && (
+        <label className="flex items-center gap-1.5 text-xs text-ink-muted">
           <input
-            type="number"
-            value={value.end.year}
-            onChange={(e) => set({ end: { ...value.end!, year: Number(e.target.value) } })}
-            className="w-20 rounded border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none"
-            aria-label="Année de fin"
+            type="checkbox"
+            checked={value.end !== null}
+            onChange={(e) => set({ end: e.target.checked ? { year: value.year, month: null, day: null } : null })}
           />
-        )}
-      </label>
+          Période (a une fin) — une guerre dure
+          {value.end && (
+            <input
+              type="number"
+              value={value.end.year}
+              onChange={(e) => set({ end: { ...value.end!, year: Number(e.target.value) } })}
+              className="w-20 rounded border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none"
+              aria-label="Année de fin"
+            />
+          )}
+        </label>
+      )}
 
       <input
         value={value.label ?? ""}

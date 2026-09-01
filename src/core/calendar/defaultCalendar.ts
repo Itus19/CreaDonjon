@@ -11,4 +11,5 @@ export const DEFAULT_CALENDAR: CalendarConfig = {
   months: Array.from({ length: 12 }, (_, i) => ({ name: `Mois ${i + 1}`, days: 30 })),
   daysPerWeek: 7,
   eras: [],
+  currentDate: null,
 };

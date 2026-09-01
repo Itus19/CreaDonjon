@@ -140,6 +140,7 @@ export default function TimelineBlockEditor({
         selectedEntryId={selectedEntryId}
         onSelectEntry={selectEntry}
         onCreateEntry={createEntryAt}
+        todayDate={activeCalendar.currentDate}
       />
 
       <div className="flex flex-col gap-2">

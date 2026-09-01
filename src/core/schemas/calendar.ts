@@ -16,13 +16,6 @@ export const zCalendarEra = z.object({
   startYear: z.number().int(),
 });
 
-export const zCalendarConfig = z.object({
-  months: z.array(zCalendarMonth).min(1).max(24),
-  daysPerWeek: z.number().int().min(1).max(30),
-  eras: z.array(zCalendarEra).max(50).default([]),
-});
-export type CalendarConfigInput = z.infer<typeof zCalendarConfig>;
-
 const zGameDatePart = z.object({
   year: z.number().int(),
   month: z.number().int().min(1).max(24).nullable(),
@@ -42,3 +35,12 @@ export const zGameDate = zGameDatePart.extend({
   label: z.string().trim().min(1).nullable().default(null),
 });
 export type GameDateInput = z.infer<typeof zGameDate>;
+
+export const zCalendarConfig = z.object({
+  months: z.array(zCalendarMonth).min(1).max(24),
+  daysPerWeek: z.number().int().min(1).max(30),
+  eras: z.array(zCalendarEra).max(50).default([]),
+  /** Retour utilisateur (V2-M13) : "jour actuel de la campagne", regle depuis l'outil Calendrier MJ, propage a tout bloc qui affiche une date (ex. la chronologie propose "Aujourd'hui" comme date centrale). */
+  currentDate: zGameDate.nullable().default(null),
+});
+export type CalendarConfigInput = z.infer<typeof zCalendarConfig>;

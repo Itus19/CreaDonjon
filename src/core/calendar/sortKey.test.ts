@@ -8,6 +8,7 @@ const THIRTEEN_MONTHS: CalendarConfig = {
   months: Array.from({ length: 13 }, (_, i) => ({ name: `Mois ${i + 1}`, days: 28 })),
   daysPerWeek: 7,
   eras: [],
+  currentDate: null,
 };
 
 describe("computeSortKey", () => {
