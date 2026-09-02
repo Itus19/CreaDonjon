@@ -1096,10 +1096,12 @@ Notée telle quelle (retour utilisateur 30 août), pas un ticket : des statistiq
 S'appuie sur l'export/duplication déjà en place (session du 29 août) et sur `world_members` (`role: 'editor'`), préparé depuis la Phase 0 mais jamais branché. Un lien M4 avec `intended_role = 'gm'` et `world_id` renseigné (pas de `campaign_id`) ajoute l'ami en `world_members(role: 'editor')` sur cette copie précise, en plus de sa place normale de MJ sur sa propre campagne si `createCampaign` la crée pour lui. Un ami MJ garde par ailleurs le bouton « Créer un monde » (mode campagne uniquement — verrouillé par M2), sans lien avec cette collaboration.
 
 **Critères**
-- [ ] Dupliquer Valdoria trois fois donne trois mondes distincts, chacun avec son propre nom de campagne (M1) pour les distinguer.
+- [x] Dupliquer Valdoria (Faerûn) trois fois donne trois mondes distincts, chacun avec son propre nom de campagne (M1) pour les distinguer — fait à la main par l'utilisateur (2 septembre), qui a aussi créé et envoyé les liens d'invitation `gm` correspondants.
 - [ ] Un ami ajouté via un lien `gm` édite la copie visée, jamais les deux autres.
 - [ ] Un ami MJ peut créer ses propres mondes, jamais en mode solo.
 - [ ] Le journal superadmin (M6) distingue clairement quel compte a modifié quelle copie.
+
+**Statut (2 septembre)** : le mécanisme est en place côté code (`accountProvisioning.ts`, `claim.role === "gm"` + `invite.worldId` → upsert `world_members(role: 'editor')` scopé à cette seule copie, vérifié par lecture) et les liens sont envoyés — mais aucun ami n'a encore rejoint (« ils iront quand ils auront envie »). Les trois derniers critères touchent un vrai comportement multi-compte (frontière d'édition entre copies, journal superadmin) : à cocher seulement une fois qu'au moins un ami aura effectivement rejoint et modifié sa copie, jamais sur la seule lecture du code.
 
 ### V2-M10 — Alias court pour un lien de partage `public_only` · `S` — fait
 
