@@ -2576,6 +2576,10 @@ export type Database = {
         }
         Returns: string
       }
+      world_has_slug: {
+        Args: { p_slug: string; p_world_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

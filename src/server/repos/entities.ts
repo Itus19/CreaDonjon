@@ -90,19 +90,26 @@ export async function listEntitySlugsForWorld(supabase: TypedClient, worldId: st
   return data.map((row) => row.slug);
 }
 
+/**
+ * `public.world_has_slug` (RPC, row_security off) plutot qu'un `.from()`
+ * normal — bug reel trouve en testant le retablissement d'une fiche
+ * supprimee : `entities_select` masque les lignes `deleted_at is not
+ * null`, donc un `.from("entities")` classique ne voit jamais le slug
+ * d'une fiche supprimee comme "pris", alors que la contrainte d'unicite
+ * Postgres (`entities_world_id_slug_key`) ne filtre jamais par
+ * `deleted_at` — une fiche supprimee garde son slug pour toujours (ADR
+ * 0019, necessaire pour la retablir). `generateUniqueEntitySlug`
+ * proposait donc parfois un slug deja pris par une fiche supprimee,
+ * echouant en 500 brut a l'ecriture au lieu d'en proposer un autre.
+ */
 export async function worldHasSlug(
   supabase: TypedClient,
   worldId: string,
   slug: string
 ): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("entities")
-    .select("id")
-    .eq("world_id", worldId)
-    .eq("slug", slug)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("world_has_slug", { p_world_id: worldId, p_slug: slug });
   if (error) throw new Error(error.message);
-  return data !== null;
+  return data === true;
 }
 
 /** Rang de glisser-depose (V2-G9) pour une nouvelle fiche de ce type : en dessous de la derniere, jamais 0 (qui la ferait apparaitre en tete apres le premier reordonnancement du groupe). */
