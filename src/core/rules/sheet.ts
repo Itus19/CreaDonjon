@@ -88,6 +88,38 @@ export interface Source {
   value: number;
 }
 
+/** Un modificateur tel qu'une fiche de regle generique le declare (bloc `modifiers`, specs/regles-blocs.md) — cible/effet/valeur seulement, jamais source/etiquette/couche : ces trois-la dependent d'OU la fiche est accrochee sur un personnage, jamais de la fiche elle-meme. */
+export interface DeclaredModifier {
+  target: string;
+  op: ModifierOp;
+  value?: number;
+}
+
+/**
+ * Couche d'un modificateur declare par une aptitude generique
+ * (specs/wiki-liens-et-personnages.md §B4), selon la provenance de la
+ * feature qui le porte — meme prefixe de source que `extraFeatureKeys` dans
+ * `resolvedRuleset.ts`. Un don (accorde par un historique, une amelioration
+ * de caracteristique, ou tout futur mecanisme non encore prefixe) vit en
+ * couche 5 ("augmentations de caracteristique et dons") ; une aptitude de
+ * classe vit en couche 3. Espece/historique restent couche 2/4 mais ne
+ * passent pas par cette fonction : leurs modificateurs sont deja produits
+ * directement en couche 2/4 par `mapSpeciesModifiers`/`mapBackgroundModifiers`.
+ */
+export function layerForFeatureSource(source: string): Layer {
+  return source.startsWith("class:") ? 3 : 5;
+}
+
+/** Attache source/etiquette/couche a des modificateurs declares (bloc `modifiers` d'une fiche de regle) pour produire de vrais `Modifier[]` consommables par `characterSheet()`. */
+export function resolveDeclaredModifiers(
+  declared: readonly DeclaredModifier[],
+  source: string,
+  label: string,
+  layer: Layer
+): Modifier[] {
+  return declared.map((d) => ({ target: d.target, op: d.op, value: d.value, source, label, layer }));
+}
+
 // --- Prerequis (§B5) ------------------------------------------------------
 
 export interface Prerequisite {

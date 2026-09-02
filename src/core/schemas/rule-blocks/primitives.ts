@@ -85,12 +85,23 @@ export const zChoice = z.object({
 });
 export type Choice = z.infer<typeof zChoice>;
 
+/**
+ * Modificateur declare par une fiche de regle (bloc `modifiers`,
+ * specs/regles-blocs.md §3/§5) — miroir exact des huit operations que
+ * `characterSheet()` sait appliquer (`ModifierOp`, src/core/rules/sheet.ts),
+ * jamais un vocabulaire different a faire correspondre plus tard. Ni
+ * `source`, ni `label`, ni `layer` ici : ces trois-la dependent d'OU la
+ * fiche est accrochee sur un personnage (aptitude de classe, don accorde
+ * par un historique...), jamais de la fiche elle-meme — `resolveDeclaredModifiers`
+ * (src/core/rules/sheet.ts) les attache a la resolution. `value` est un
+ * simple nombre, jamais une formule : le moteur (`Modifier.value` dans
+ * sheet.ts) ne sait consommer que ca aujourd'hui, un `FormulaNode` accepte
+ * ici serait une promesse non tenue.
+ */
 export const zModifier = z.object({
   target: z.string(),
-  op: z.enum(["add", "sub", "set", "mul"]),
-  value: z.union([z.number(), zFormulaNode]),
-  layer: z.string().optional(),
-  stacking: z.string().optional(),
+  op: z.enum(["add", "set", "min", "max", "advantage", "disadvantage", "proficiency", "expertise"]),
+  value: z.number().optional(),
 });
 export type Modifier = z.infer<typeof zModifier>;
 

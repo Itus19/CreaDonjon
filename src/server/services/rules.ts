@@ -1453,6 +1453,7 @@ const DEFAULT_BLOCK_DISPLAY: Record<BlockType, { label: string; layout: string }
   subclass_features: { label: "Sous-classe", layout: "progression_table" },
   species_traits: { label: "Traits", layout: "key_values" },
   class_equipment: { label: "Équipement de départ", layout: "key_values" },
+  modifiers: { label: "Effets chiffrés", layout: "key_values" },
 };
 
 export interface ImportRulesetEntryInput {

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   averageHitDie,
   characterSheet,
+  layerForFeatureSource,
+  resolveDeclaredModifiers,
   resolveHpGain,
   type ActiveEffect,
   type CharacterBuild,
@@ -537,5 +539,61 @@ describe("characterSheet — encombrement (poids porte)", () => {
     expect(sheet.savingThrows.wis.rollState).toBe("normal");
     expect(sheet.skills.athletics.rollState).toBe("disadvantage");
     expect(sheet.skills.stealth.rollState).toBe("disadvantage");
+  });
+});
+
+describe("layerForFeatureSource / resolveDeclaredModifiers — generalisation des modificateurs de fiche (retour utilisateur, don 'Malchanceux')", () => {
+  it("une aptitude de classe (prefixe class:) vit en couche 3", () => {
+    expect(layerForFeatureSource("class:fighter")).toBe(3);
+  });
+
+  it("un don accorde par un historique (prefixe background:) vit en couche 5, comme une amelioration de caracteristique", () => {
+    expect(layerForFeatureSource("background:soldier")).toBe(5);
+  });
+
+  it("une source sans prefixe connu retombe en couche 5 (repli 'don') plutot que d'echouer", () => {
+    expect(layerForFeatureSource("asi:fighter.l4")).toBe(5);
+  });
+
+  it("resolveDeclaredModifiers attache source/etiquette/couche sans toucher cible/effet/valeur", () => {
+    const declared = [
+      { target: "ability.wis", op: "add" as const, value: 1 },
+      { target: "save.wis", op: "proficiency" as const },
+    ];
+    expect(resolveDeclaredModifiers(declared, "resilient", "Robuste", 5)).toEqual([
+      { target: "ability.wis", op: "add", value: 1, source: "resilient", label: "Robuste", layer: 5 },
+      { target: "save.wis", op: "proficiency", value: undefined, source: "resilient", label: "Robuste", layer: 5 },
+    ]);
+  });
+
+  it("un don maison avec des modificateurs declares change reellement la fiche derivee (+1 SAG, maitrise de sauvegarde SAG)", () => {
+    const build: CharacterBuild = {
+      species: "human",
+      classes: [{ key: "fighter", level: 1 }],
+      abilities: { assigned: { str: 12, dex: 12, con: 12, int: 10, wis: 10, cha: 10 } },
+      featureKeys: ["resilient_wis"],
+    };
+    const ruleset: ResolvedRuleset = {
+      classes: { fighter: FIGHTER },
+      features: {
+        resilient_wis: {
+          key: "resilient_wis",
+          label: "Robuste (Sagesse)",
+          source: "background:soldier",
+          modifiers: resolveDeclaredModifiers(
+            [
+              { target: "ability.wis", op: "add", value: 1 },
+              { target: "save.wis", op: "proficiency" },
+            ],
+            "resilient_wis",
+            "Robuste (Sagesse)",
+            layerForFeatureSource("background:soldier")
+          ),
+        },
+      },
+    };
+    const sheet = characterSheet(build, ruleset, [], []);
+    expect(sheet.abilities.wis.score).toBe(11);
+    expect(sheet.savingThrows.wis.proficient).toBe(true);
   });
 });

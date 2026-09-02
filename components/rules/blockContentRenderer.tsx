@@ -13,6 +13,7 @@ import type {
   DescriptionBlockData,
   EffectsBlockData,
   LegendaryActionsBlockData,
+  ModifiersBlockData,
   PrerequisitesBlockData,
   ScalingBlockData,
   SpellCastingBlockData,
@@ -33,12 +34,15 @@ import {
   ITEM_RARITY_LABELS_FR,
   LANGUAGE_LABELS_FR,
   MAGIC_SCHOOL_LABELS_FR,
+  MODIFIER_OP_LABELS_FR,
+  modifierTargetLabel,
   SENSE_LABELS_FR,
   SIZE_LABELS_FR,
   SKILL_LABELS_FR,
   SPEED_LABELS_FR,
 } from "@/src/i18n/fr";
 import type { Skill } from "@/src/core/rules/sheet";
+import { modifierOpNeedsValue } from "@/src/core/rules/modifierTargets";
 import type { LanguageKey } from "@/src/core/rules/srdMapping";
 import { ftToM, lbToKg } from "@/src/core/rules/encumbrance";
 import MonsterRollButton from "./MonsterRollButton";
@@ -960,6 +964,19 @@ function Prerequisites({ data }: { data: PrerequisitesBlockData }) {
   return <Chips items={data.items} />;
 }
 
+/** Effets chiffres generalises (bloc `modifiers`, retour utilisateur "un don maison qui affecte reellement la fiche") — une carte par modificateur, meme mise en page `key_values` que le reste du catalogue. */
+function Modifiers({ data }: { data: ModifiersBlockData }) {
+  const items = data.modifiers.map((m) => ({
+    label: modifierTargetLabel(m.target),
+    value: modifierOpNeedsValue(m.op) ? (
+      <span className="mech">{`${m.op === "set" ? "= " : m.value !== undefined && m.value >= 0 ? "+" : ""}${m.value ?? 0}`}</span>
+    ) : (
+      MODIFIER_OP_LABELS_FR[m.op]
+    ),
+  }));
+  return <KeyValues items={items} />;
+}
+
 /** `armor_proficiencies`/`weapon_proficiencies`/`tool_proficiencies` (`class_basics`, V1-D1) -> libelles FR (V1-D3b point 3). */
 function proficiencyLabel(value: string): string {
   return CLASS_PROFICIENCY_LABELS_FR[value] ?? value;
@@ -1326,5 +1343,6 @@ export function renderBlockData(
     );
   if (blockType === "condition_effects") return <ConditionEffects data={data as ConditionEffectsBlockData} />;
   if (blockType === "subclass_features") return <SubclassFeatures data={data as SubclassFeaturesBlockData} />;
+  if (blockType === "modifiers") return <Modifiers data={data as ModifiersBlockData} />;
   return null;
 }

@@ -3,11 +3,28 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import Dropdown from "@/components/shared/Dropdown";
+import { MODIFIER_OP_LABELS_FR, modifierTargetLabel } from "@/src/i18n/fr";
+import { MODIFIER_TARGET_OPTIONS, OPS_BY_TARGET_CATEGORY, modifierOpNeedsValue, modifierTargetOption } from "@/src/core/rules/modifierTargets";
+import type { ModifierOp } from "@/src/core/rules/sheet";
 
 interface SelectableRuleset {
   id: string;
   name: string;
   is_official_base: boolean;
+}
+
+interface ModifierDraft {
+  target: string;
+  op: ModifierOp;
+  value: string;
+}
+
+const TARGET_DROPDOWN_OPTIONS = MODIFIER_TARGET_OPTIONS.map((o) => ({ value: o.target, label: modifierTargetLabel(o.target) }));
+
+function defaultOpForTarget(target: string): ModifierOp {
+  const option = modifierTargetOption(target);
+  return option ? OPS_BY_TARGET_CATEGORY[option.category][0] : "add";
 }
 
 /**
@@ -20,16 +37,17 @@ interface SelectableRuleset {
  * `RuleEntryAutocomplete` pour son champ "don accorde", au lieu de creer
  * elle-meme une entree compagnon a la volee.
  *
- * Aucune mecanique chiffree ici : `feature` n'a aucun bloc requis
- * (`REQUIRED_BLOCKS`) et le moteur ne consomme aujourd'hui les dons que de
- * facon descriptive (verifie : meme "Vigilant"/Alert, importe du SRD, ne
- * porte aucun modificateur chiffre cote moteur — src/server/services/
- * resolvedRuleset.ts resout toute aptitude generique avec `modifiers: []`).
- * Donner un effet mecanique reel a un don, maison ou officiel, est un
- * chantier moteur a part (generaliser `Modifier[]` a une lecture de bloc
- * plutot qu'aux seuls mappers Espece/Historique codes en dur) — hors de
- * portee de ce formulaire, qui reste volontairement descriptif comme
- * l'import SRD lui-meme.
+ * "Effets chiffres" (optionnel) genere un bloc `modifiers`, lu par
+ * `resolvedRuleset.ts`/`characterSheet()` (retour utilisateur : "generalise
+ * les modificateurs d'abord" — le moteur ne se contentait avant que de
+ * texte descriptif pour tout don, meme officiel). Cibles fermees
+ * (`MODIFIER_TARGET_OPTIONS`) : seules celles reellement calculees par la
+ * fiche derivee sont proposees — pas d'"Initiative" par exemple, jamais
+ * suivie par `characterSheet()` aujourd'hui, qui serait une promesse non
+ * tenue. Un don dont l'effet ne rentre dans aucune de ces cibles (la
+ * plupart des dons reels — relances conditionnelles, avantages situationnels)
+ * reste purement descriptif, comme "Chanceux"/"Indomptable" du SRD
+ * aujourd'hui : `creerDonMaisonIntro` le dit explicitement.
  */
 export default function CreateHomebrewFeatureForm({ worldSlug }: { worldSlug: string }) {
   const t = useTranslations("regles");
@@ -41,6 +59,7 @@ export default function CreateHomebrewFeatureForm({ worldSlug }: { worldSlug: st
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [prerequisites, setPrerequisites] = useState<string[]>([]);
+  const [modifiers, setModifiers] = useState<ModifierDraft[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +86,27 @@ export default function CreateHomebrewFeatureForm({ worldSlug }: { worldSlug: st
     setPrerequisites((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function addModifier() {
+    const target = MODIFIER_TARGET_OPTIONS[0].target;
+    setModifiers((prev) => [...prev, { target, op: defaultOpForTarget(target), value: "1" }]);
+  }
+
+  function updateModifierTarget(index: number, target: string) {
+    setModifiers((prev) => prev.map((m, i) => (i === index ? { ...m, target, op: defaultOpForTarget(target) } : m)));
+  }
+
+  function updateModifierOp(index: number, op: ModifierOp) {
+    setModifiers((prev) => prev.map((m, i) => (i === index ? { ...m, op } : m)));
+  }
+
+  function updateModifierValue(index: number, value: string) {
+    setModifiers((prev) => prev.map((m, i) => (i === index ? { ...m, value } : m)));
+  }
+
+  function removeModifier(index: number) {
+    setModifiers((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentRuleset || !name.trim() || !description.trim()) return;
@@ -75,6 +115,11 @@ export default function CreateHomebrewFeatureForm({ worldSlug }: { worldSlug: st
     setError(null);
 
     const cleanPrerequisites = prerequisites.map((p) => p.trim()).filter((p) => p.length > 0);
+    const cleanModifiers = modifiers.map((m) => ({
+      target: m.target,
+      op: m.op,
+      ...(modifierOpNeedsValue(m.op) ? { value: Number(m.value) || 0 } : {}),
+    }));
 
     const res = await fetch(`/api/rulesets/${currentRuleset.id}/import`, {
       method: "POST",
@@ -96,6 +141,15 @@ export default function CreateHomebrewFeatureForm({ worldSlug }: { worldSlug: st
                       block_type: "prerequisites" as const,
                       display: { label: "Prérequis", layout: "chips" },
                       data: { items: cleanPrerequisites },
+                    },
+                  ]
+                : []),
+              ...(cleanModifiers.length > 0
+                ? [
+                    {
+                      block_type: "modifiers" as const,
+                      display: { label: "Effets chiffrés", layout: "key_values" },
+                      data: { modifiers: cleanModifiers },
                     },
                   ]
                 : []),
@@ -175,6 +229,53 @@ export default function CreateHomebrewFeatureForm({ worldSlug }: { worldSlug: st
           className="self-start rounded-full border border-edge px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-panel"
         >
           {t("ajouterPrerequis")}
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-md border border-edge/60 bg-panel-sunken p-3">
+        <span className="text-sm text-ink">{t("effetsChiffres")}</span>
+        <p className="text-xs text-ink-muted">{t("effetsChiffresAide")}</p>
+        {modifiers.map((modifier, index) => {
+          const needsValue = modifierOpNeedsValue(modifier.op);
+          const category = modifierTargetOption(modifier.target)?.category;
+          const opOptions = (category ? OPS_BY_TARGET_CATEGORY[category] : (["add"] as const)).map((op) => ({
+            value: op,
+            label: MODIFIER_OP_LABELS_FR[op],
+          }));
+          return (
+            <div key={index} className="flex flex-wrap items-center gap-1.5">
+              <Dropdown
+                value={modifier.target}
+                options={TARGET_DROPDOWN_OPTIONS}
+                onChange={(v) => updateModifierTarget(index, v)}
+                className="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+              />
+              <Dropdown
+                value={modifier.op}
+                options={opOptions}
+                onChange={(v) => updateModifierOp(index, v as ModifierOp)}
+                className="shrink-0 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+              />
+              {needsValue && (
+                <input
+                  type="number"
+                  value={modifier.value}
+                  onChange={(e) => updateModifierValue(index, e.target.value)}
+                  className="w-16 shrink-0 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                />
+              )}
+              <button type="button" onClick={() => removeModifier(index)} className="shrink-0 text-xs text-danger hover:underline">
+                {t("retirerOption")}
+              </button>
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          onClick={addModifier}
+          className="self-start rounded-full border border-edge px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-panel"
+        >
+          {t("ajouterEffetChiffre")}
         </button>
       </div>
 

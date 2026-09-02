@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
-import type { ResolvedClass, ResolvedFeature, ResolvedRuleset } from "@/src/core/rules/sheet";
+import { layerForFeatureSource, resolveDeclaredModifiers, type DeclaredModifier, type ResolvedClass, type ResolvedFeature, type ResolvedRuleset } from "@/src/core/rules/sheet";
 import {
   armorDataFromBlock,
   costFromQuantity,
@@ -427,20 +427,35 @@ export async function assembleResolvedRuleset(
     }
     const chipByKey = new Map(chips.map((c) => [c.entry_key, c]));
 
+    // Modificateurs generiques d'une aptitude/don (bloc `modifiers`, retour
+    // utilisateur : "un don maison qui affecte reellement la fiche") — un
+    // aller-retour par cle en parallele, meme cout deja accepte pour
+    // l'equipement (`fetchEquipmentBlocks`, appele de la meme facon). Passe
+    // par `resolveEntryBlocksInRuleset` (override-aware, jamais
+    // `listRulesetEntryChipsByKeys` ci-dessus qui ne lit QUE `ruleset_entries` —
+    // un don maison qui ne vit que dans `ruleset_overrides`, comme n'importe
+    // quelle fiche cree via `importRulesetEntries`, resout quand meme ici).
+    const declaredModifiersByKey = new Map(
+      await Promise.all(
+        featureKeys.map(async (fk): Promise<[string, DeclaredModifier[]]> => {
+          const resolved = await resolveEntryBlocksInRuleset(supabase, rulesetId, fk);
+          const data = resolved?.blocksByType.get("modifiers") as { modifiers: DeclaredModifier[] } | undefined;
+          return [fk, data?.modifiers ?? []];
+        })
+      )
+    );
+
     for (const fk of featureKeys) {
       const chip = chipByKey.get(fk);
+      const source = extraFeatureKeys.get(fk) ?? "class:inconnue";
+      const label = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : fk;
+      const modifiers = resolveDeclaredModifiers(declaredModifiersByKey.get(fk) ?? [], fk, label, layerForFeatureSource(source));
       features[fk] = chip
-        ? {
-            key: fk,
-            label: nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip),
-            source: extraFeatureKeys.get(fk) ?? "class:inconnue",
-            modifiers: [],
-            prerequisites: mapPrerequisites(chip.source_raw),
-          }
+        ? { key: fk, label, source, modifiers, prerequisites: mapPrerequisites(chip.source_raw) }
         : // Cle sans entree resolue (rare : feature non importee) — conservee
           // quand meme, label = cle brute, pour que build.featureKeys puisse
           // la referencer sans faire echouer characterSheet().
-          { key: fk, label: fk, source: extraFeatureKeys.get(fk) ?? "class:inconnue", modifiers: [] };
+          { key: fk, label, source, modifiers };
     }
 
     for (const p of proficiencies) {

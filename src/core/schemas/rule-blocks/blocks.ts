@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { zFormulaNode, zLocalized, zQuantity, zReference } from "./primitives";
+import { zFormulaNode, zLocalized, zModifier, zQuantity, zReference } from "./primitives";
 
 /**
  * Catalogue V1 des blocs de regles (specs/regles-blocs.md §5). Cinq blocs
@@ -40,6 +40,7 @@ export const BLOCK_TYPES = [
   "subclass_features",
   "species_traits",
   "class_equipment",
+  "modifiers",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -306,6 +307,21 @@ export type LegendaryActionsBlockData = z.infer<typeof zLegendaryActionsBlockDat
 export const zPrerequisitesBlockData = z.object({ items: z.array(z.string()) });
 export type PrerequisitesBlockData = z.infer<typeof zPrerequisitesBlockData>;
 
+// --- modifiers (layout: key_values) --------------------------------------
+// Generalisation du moteur de fiche derivee (retour utilisateur : "un don
+// maison qui affecte reellement la fiche, pas seulement du texte") — jusque
+// la, `resolvedRuleset.ts` ne lisait des `Modifier[]` que pour Espece/
+// Historique, codes en dur par mapper SRD (`mapSpeciesModifiers`/
+// `mapBackgroundModifiers`) ; toute aptitude generique (`entry_type:
+// "feature"`, dons compris, meme "Vigilant" du SRD) resolvait `modifiers:
+// []`. Ce bloc est le chemin generique : n'importe quelle fiche `feature`
+// peut desormais en porter un, lu par `resolvedRuleset.ts` et transforme en
+// vrais `Modifier[]` via `resolveDeclaredModifiers` (src/core/rules/sheet.ts),
+// qui attache source/etiquette/couche selon la provenance de la feature —
+// jamais stockes ici (`zModifier` ne porte que cible/effet/valeur).
+export const zModifiersBlockData = z.object({ modifiers: z.array(zModifier) });
+export type ModifiersBlockData = z.infer<typeof zModifiersBlockData>;
+
 // --- class_basics (layout: key_values, V1-D1) ---------------------------
 export const zClassBasicsBlockData = z.object({
   hit_die: z.number().int().positive(),
@@ -507,6 +523,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   subclass_features: zSubclassFeaturesBlockData,
   species_traits: zSpeciesTraitsBlockData,
   class_equipment: zClassEquipmentBlockData,
+  modifiers: zModifiersBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 /** Registre : le moteur demande le schema Zod d'un block_type et recoit une forme garantie. */

@@ -30,7 +30,8 @@
 // choix de redaction — un texte genere qui met "il" sur un personnage
 // `elle` est un bug de prompt IA, pas une fatalite (meme doc §3.9).
 
-import type { Skill } from "@/src/core/rules/sheet";
+import { ABILITY_LABELS, type ModifierOp, type Skill } from "@/src/core/rules/sheet";
+import { modifierTargetOption, type ModifierTargetCategory } from "@/src/core/rules/modifierTargets";
 import type { LanguageKey } from "@/src/core/rules/srdMapping";
 
 /** Libelles officiels des competences (traduction SRD, cf. data/srd/fr-source). */
@@ -54,6 +55,38 @@ export const SKILL_LABELS_FR: Record<Skill, string> = {
   stealth: "Discretion",
   survival: "Survie",
 };
+
+/** Etiquette de categorie de cible pour un modificateur declare (bloc `modifiers`, retour utilisateur "generalise les modificateurs") — la cible complete se compose avec `ABILITY_LABELS`/`SKILL_LABELS_FR` a l'affichage (ex. "Sauvegarde — Sagesse"), jamais dupliquee ici. */
+export const MODIFIER_TARGET_CATEGORY_LABELS_FR: Record<ModifierTargetCategory, string> = {
+  ac: "Classe d'armure",
+  speed: "Vitesse",
+  hp_max: "Points de vie maximum",
+  ability: "Caractéristique",
+  save: "Jet de sauvegarde",
+  skill: "Compétence",
+};
+
+/** Etiquette d'effet pour un modificateur declare — les quatre derniers sont des drapeaux (`modifierOpNeedsValue`), jamais suivis d'un montant. */
+export const MODIFIER_OP_LABELS_FR: Record<ModifierOp, string> = {
+  add: "Bonus (+)",
+  set: "Valeur fixe (=)",
+  min: "Minimum",
+  max: "Maximum",
+  advantage: "Avantage",
+  disadvantage: "Désavantage",
+  proficiency: "Maîtrise",
+  expertise: "Expertise",
+};
+
+/** Cible composee "Categorie — Caracteristique/Competence" (ex. "Sauvegarde — Sagesse") ; sans partie variable pour ac/speed/hp_max. Partagee par le rendu de fiche (`blockContentRenderer.tsx`) et le formulaire de creation de don (`CreateHomebrewFeatureForm.tsx`) — une seule composition, jamais deux libelles qui divergent pour la meme cle technique. */
+export function modifierTargetLabel(target: string): string {
+  const option = modifierTargetOption(target);
+  if (!option) return target;
+  const category = MODIFIER_TARGET_CATEGORY_LABELS_FR[option.category];
+  if (option.ability) return `${category} — ${ABILITY_LABELS[option.ability]}`;
+  if (option.skill) return `${category} — ${SKILL_LABELS_FR[option.skill]}`;
+  return category;
+}
 
 /** Libelles officiels des langues du SRD (V1-C7, cf. SRD_LANGUAGES). */
 export const LANGUAGE_LABELS_FR: Record<LanguageKey, string> = {
