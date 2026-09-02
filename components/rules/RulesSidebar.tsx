@@ -268,6 +268,13 @@ export default function RulesSidebar({ worldSlug }: { worldSlug: string }) {
             {t("creerArmeMaison")}
           </Link>
           <Link
+            href={`/m/${worldSlug}/regles/nouvel-historique`}
+            onClick={() => setOpen(false)}
+            className="block w-full rounded-full border border-edge px-4 py-2 text-center text-sm font-medium text-ink transition-colors hover:bg-panel-raised"
+          >
+            {t("creerHistoriqueMaison")}
+          </Link>
+          <Link
             href={`/m/${worldSlug}/regles/bac-a-sable`}
             onClick={() => setOpen(false)}
             className="block w-full rounded-full border border-edge px-4 py-2 text-center text-sm font-medium text-ink transition-colors hover:bg-panel-raised"
