@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ABILITIES, ABILITY_LABELS, SKILLS, type Ability, type Skill } from "@/src/core/rules/sheet";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
-import { slugify } from "@/src/core/slug/slug";
+import Dropdown from "@/components/shared/Dropdown";
+import Checkbox from "@/components/shared/Checkbox";
+import RuleEntryAutocomplete from "@/components/blocks/RuleEntryAutocomplete";
+import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 
 interface SelectableRuleset {
   id: string;
@@ -13,21 +16,19 @@ interface SelectableRuleset {
   is_official_base: boolean;
 }
 
+interface EquipmentItemDraft {
+  key: string;
+  quantity: number;
+}
+
 interface EquipmentOptionDraft {
   label: string;
-  itemsText: string;
+  items: EquipmentItemDraft[];
   gold: string;
 }
 
-/** "2 Dague" / "Dague x2" -> quantite 2, sinon 1. Toujours un libelle libre, jamais de `ref` vers une fiche existante. */
-function parseEquipmentLine(line: string): { label: string; quantity: number } {
-  const trimmed = line.trim();
-  const leading = trimmed.match(/^(\d+)\s*[x×]?\s+(.+)$/i);
-  if (leading) return { label: leading[2].trim(), quantity: Math.max(1, Number(leading[1])) };
-  const trailing = trimmed.match(/^(.+?)\s*[x×]\s*(\d+)$/i);
-  if (trailing) return { label: trailing[1].trim(), quantity: Math.max(1, Number(trailing[2])) };
-  return { label: trimmed, quantity: 1 };
-}
+const EQUIPMENT_ENTRY_TYPES = ["item", "weapon", "magic_item", "mount"] as const;
+const FEAT_ENTRY_TYPES = ["feature"] as const;
 
 function nextOptionLabel(count: number): string {
   return String.fromCharCode(65 + count);
@@ -35,11 +36,19 @@ function nextOptionLabel(count: number): string {
 
 /**
  * Contrairement a `CreateHomebrewWeaponForm.tsx`, aucune assistance IA ici : le contenu de manuel ne se saisit jamais automatiquement (CLAUDE.md).
- * `feat` exige une vraie `zReference` (pas de repli "libelle") donc on cree DEUX entrees via `importRulesetEntries` : une `feature` puis le `background` qui la reference par sa cle.
+ *
+ * Objets et don accorde passent par `RuleEntryAutocomplete` — une vraie
+ * fiche existante, jamais un texte recopie a la main (retour utilisateur :
+ * "il faudrait une connexion avec les regles d'objet... aille chercher la
+ * liste des dons existants"). Le don n'existe pas encore ? Il se cree
+ * d'abord via `CreateHomebrewFeatureForm.tsx` ("Ajouter une regle > Don /
+ * Aptitude") — ce formulaire ne cree plus lui-meme une entree compagnon a
+ * la volee comme sa premiere version.
  */
 export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug: string }) {
   const t = useTranslations("regles");
   const router = useRouter();
+  const worldEntries = useWorldRuleEntries(worldSlug);
 
   const [loading, setLoading] = useState(true);
   const [currentRuleset, setCurrentRuleset] = useState<SelectableRuleset | null>(null);
@@ -48,11 +57,10 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
   const [abilityScores, setAbilityScores] = useState<Ability[]>(["str", "dex", "con"]);
   const [skillProficiencies, setSkillProficiencies] = useState<Set<Skill>>(new Set());
   const [toolProficiency, setToolProficiency] = useState("");
-  const [featName, setFeatName] = useState("");
-  const [featDescription, setFeatDescription] = useState("");
+  const [featKey, setFeatKey] = useState("");
   const [equipmentOptions, setEquipmentOptions] = useState<EquipmentOptionDraft[]>([
-    { label: "A", itemsText: "", gold: "" },
-    { label: "B", itemsText: "", gold: "50" },
+    { label: "A", items: [{ key: "", quantity: 1 }], gold: "" },
+    { label: "B", items: [], gold: "50" },
   ]);
 
   const [submitting, setSubmitting] = useState(false);
@@ -67,6 +75,8 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
       .catch(() => setError(t("erreurChargementRulesets")))
       .finally(() => setLoading(false));
   }, [worldSlug, t]);
+
+  const featEntry = worldEntries.find((e) => e.entryType === "feature" && e.key === featKey);
 
   function setAbilityAt(index: number, value: Ability) {
     setAbilityScores((prev) => prev.map((a, i) => (i === index ? value : a)));
@@ -86,38 +96,58 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
   }
 
   function addOption() {
-    setEquipmentOptions((prev) => [...prev, { label: nextOptionLabel(prev.length), itemsText: "", gold: "" }]);
+    setEquipmentOptions((prev) => [...prev, { label: nextOptionLabel(prev.length), items: [], gold: "" }]);
   }
 
   function removeOption(index: number) {
     setEquipmentOptions((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function updateItem(optionIndex: number, itemIndex: number, updates: Partial<EquipmentItemDraft>) {
+    setEquipmentOptions((prev) =>
+      prev.map((o, i) =>
+        i !== optionIndex ? o : { ...o, items: o.items.map((it, j) => (j === itemIndex ? { ...it, ...updates } : it)) }
+      )
+    );
+  }
+
+  function addItem(optionIndex: number) {
+    setEquipmentOptions((prev) => prev.map((o, i) => (i === optionIndex ? { ...o, items: [...o.items, { key: "", quantity: 1 }] } : o)));
+  }
+
+  function removeItem(optionIndex: number, itemIndex: number) {
+    setEquipmentOptions((prev) =>
+      prev.map((o, i) => (i !== optionIndex ? o : { ...o, items: o.items.filter((_, j) => j !== itemIndex) }))
+    );
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentRuleset || !name.trim()) return;
-    if (!featName.trim()) {
-      setError(t("erreurNomDonRequis"));
+    if (!featEntry) {
+      setError(t("erreurDonInconnu"));
       return;
     }
 
     setSubmitting(true);
     setError(null);
 
-    const featEntryKey = `${slugify(name)}-feat`;
     const equipment_options = equipmentOptions.map((o) => ({
       label: o.label,
-      items: o.itemsText
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0)
-        .map(parseEquipmentLine),
+      items: o.items
+        .filter((it) => it.key.trim() !== "")
+        .map((it) => {
+          const matched = worldEntries.find((e) => EQUIPMENT_ENTRY_TYPES.includes(e.entryType as (typeof EQUIPMENT_ENTRY_TYPES)[number]) && e.key === it.key);
+          return matched
+            ? { ref: { kind: "rule", key: matched.key }, label: matched.name, quantity: it.quantity }
+            : { label: it.key.trim(), quantity: it.quantity };
+        }),
       gold: o.gold.trim() ? { value: Number(o.gold), unit: "gp" } : undefined,
     }));
 
     const backgroundData = {
       ability_scores: abilityScores,
-      feat: { kind: "rule", key: featEntryKey },
+      feat: { kind: "rule", key: featEntry.key },
       skill_proficiencies: [...skillProficiencies],
       tool_proficiency: toolProficiency.trim() || undefined,
       equipment_options,
@@ -128,18 +158,6 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         entries: [
-          {
-            entry_key: featEntryKey,
-            name: featName.trim(),
-            entry_type: "feature",
-            blocks: [
-              {
-                block_type: "description",
-                display: { label: "Description", layout: "prose" },
-                data: { segments: [{ text: featDescription.trim() }] },
-              },
-            ],
-          },
           {
             name: name.trim(),
             entry_type: "background",
@@ -161,8 +179,7 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
       setError(body.errors[0].message);
       return;
     }
-    const backgroundEntry = body.imported.find((e) => e.name === name.trim());
-    router.push(`/m/${worldSlug}/regles/${backgroundEntry?.entryKey ?? body.imported[0].entryKey}`);
+    router.push(`/m/${worldSlug}/regles/${body.imported[0].entryKey}`);
     router.refresh();
   }
 
@@ -192,30 +209,27 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
         {t("caracteristiques")}
         <div className="flex gap-2">
           {abilityScores.map((value, index) => (
-            <select
+            <Dropdown
               key={index}
               value={value}
-              onChange={(e) => setAbilityAt(index, e.target.value as Ability)}
-              className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-            >
-              {ABILITIES.map((a) => (
-                <option key={a} value={a}>
-                  {ABILITY_LABELS[a]}
-                </option>
-              ))}
-            </select>
+              options={ABILITIES.map((a) => ({ value: a, label: ABILITY_LABELS[a] }))}
+              onChange={(v) => setAbilityAt(index, v as Ability)}
+              className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+            />
           ))}
         </div>
       </div>
 
       <div className="flex flex-col gap-1 text-sm text-ink">
         {t("competencesMaitrisees")}
-        <div className="flex flex-wrap gap-x-3 gap-y-1">
+        <div className="flex flex-wrap gap-x-3 gap-y-1.5">
           {SKILLS.map((skill) => (
-            <label key={skill} className="flex items-center gap-1.5 text-xs text-ink">
-              <input type="checkbox" checked={skillProficiencies.has(skill)} onChange={() => toggleSkill(skill)} />
-              {SKILL_LABELS_FR[skill]}
-            </label>
+            <Checkbox
+              key={skill}
+              checked={skillProficiencies.has(skill)}
+              onChange={() => toggleSkill(skill)}
+              label={<span className="text-xs text-ink">{SKILL_LABELS_FR[skill]}</span>}
+            />
           ))}
         </div>
       </div>
@@ -229,53 +243,82 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
         />
       </label>
 
-      <div className="flex flex-col gap-2 rounded-md border border-edge/60 bg-panel-sunken p-3">
-        <label className="flex flex-col gap-1 text-sm text-ink">
-          {t("nomDuDon")}
-          <input
-            value={featName}
-            onChange={(e) => setFeatName(e.target.value)}
-            required
-            className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm text-ink">
-          {t("descriptionDuDon")}
-          <textarea
-            value={featDescription}
-            onChange={(e) => setFeatDescription(e.target.value)}
-            rows={3}
-            className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-          />
-        </label>
+      <div className="flex flex-col gap-1.5 rounded-md border border-edge/60 bg-panel-sunken p-3">
+        <span className="text-sm text-ink">{t("donAccorde")}</span>
+        <RuleEntryAutocomplete
+          worldSlug={worldSlug}
+          entryTypes={FEAT_ENTRY_TYPES}
+          value={featKey}
+          onChange={setFeatKey}
+          placeholder={t("rechercherUnDon")}
+        />
+        {featKey.trim() !== "" && !featEntry && <p className="text-xs text-danger">{t("erreurDonInconnu")}</p>}
+        <p className="text-xs text-ink-muted">
+          {t("donIntrouvableAide")}{" "}
+          <a href={`/m/${worldSlug}/regles/nouveau-don`} className="text-link-rule underline-offset-2 hover:underline">
+            {t("creerDonMaison")}
+          </a>
+        </p>
       </div>
 
       <div className="flex flex-col gap-2">
         <span className="text-sm text-ink">{t("equipementDeDepart")}</span>
-        {equipmentOptions.map((option, index) => (
-          <div key={index} className="flex flex-col gap-2 rounded-md border border-edge/60 bg-panel-sunken p-3">
+        {equipmentOptions.map((option, optionIndex) => (
+          <div key={optionIndex} className="flex flex-col gap-2 rounded-md border border-edge/60 bg-panel-sunken p-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-ink-muted">{t("optionEquipement", { letter: option.label })}</span>
               {equipmentOptions.length > 1 && (
-                <button type="button" onClick={() => removeOption(index)} className="text-xs text-danger hover:underline">
+                <button type="button" onClick={() => removeOption(optionIndex)} className="text-xs text-danger hover:underline">
                   {t("retirerOption")}
                 </button>
               )}
             </div>
-            <textarea
-              value={option.itemsText}
-              onChange={(e) => updateOption(index, { itemsText: e.target.value })}
-              placeholder={t("objetsUnParLigne")}
-              rows={3}
-              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-            />
+
+            <div className="flex flex-col gap-1.5">
+              {option.items.map((item, itemIndex) => (
+                <div key={itemIndex} className="flex items-center gap-1.5">
+                  <div className="flex-1">
+                    <RuleEntryAutocomplete
+                      worldSlug={worldSlug}
+                      entryTypes={EQUIPMENT_ENTRY_TYPES}
+                      value={item.key}
+                      onChange={(key) => updateItem(optionIndex, itemIndex, { key })}
+                      placeholder={t("rechercherUnObjet")}
+                      className="w-full rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                    />
+                  </div>
+                  <input
+                    type="number"
+                    min={1}
+                    value={item.quantity}
+                    onChange={(e) => updateItem(optionIndex, itemIndex, { quantity: Math.max(1, Number(e.target.value)) })}
+                    className="w-14 shrink-0 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeItem(optionIndex, itemIndex)}
+                    className="shrink-0 text-xs text-danger hover:underline"
+                  >
+                    {t("retirerOption")}
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => addItem(optionIndex)}
+                className="self-start text-xs text-ink-muted underline-offset-2 hover:text-ink hover:underline"
+              >
+                {t("ajouterObjet")}
+              </button>
+            </div>
+
             <label className="flex flex-col gap-1 text-xs text-ink-muted">
               {t("orDeDepart")}
               <input
                 type="number"
                 min={0}
                 value={option.gold}
-                onChange={(e) => updateOption(index, { gold: e.target.value })}
+                onChange={(e) => updateOption(optionIndex, { gold: e.target.value })}
                 className="w-24 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
               />
             </label>

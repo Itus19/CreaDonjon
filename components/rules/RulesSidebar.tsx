@@ -9,6 +9,7 @@ import { useOpenRuleLink } from "@/components/shell/useOpenRuleLink";
 import { useCollapsedGroups } from "@/components/shell/useCollapsedGroups";
 import SectionToggle from "@/components/shell/SectionToggle";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
+import AddRuleMenu from "@/components/rules/AddRuleMenu";
 
 function RuleEntryLink({
   entry,
@@ -260,20 +261,15 @@ export default function RulesSidebar({ worldSlug }: { worldSlug: string }) {
         </nav>
 
         <div className="flex flex-col gap-2 border-t border-edge pt-3">
-          <Link
-            href={`/m/${worldSlug}/regles/nouvelle-arme`}
-            onClick={() => setOpen(false)}
-            className="block w-full rounded-full bg-accent px-4 py-2 text-center text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
-          >
-            {t("creerArmeMaison")}
-          </Link>
-          <Link
-            href={`/m/${worldSlug}/regles/nouvel-historique`}
-            onClick={() => setOpen(false)}
-            className="block w-full rounded-full border border-edge px-4 py-2 text-center text-sm font-medium text-ink transition-colors hover:bg-panel-raised"
-          >
-            {t("creerHistoriqueMaison")}
-          </Link>
+          <AddRuleMenu
+            label={t("ajouterUneRegle")}
+            onNavigate={() => setOpen(false)}
+            items={[
+              { href: `/m/${worldSlug}/regles/nouvelle-arme`, label: t("creerArmeMaison") },
+              { href: `/m/${worldSlug}/regles/nouvel-historique`, label: t("creerHistoriqueMaison") },
+              { href: `/m/${worldSlug}/regles/nouveau-don`, label: t("creerDonMaison") },
+            ]}
+          />
           <Link
             href={`/m/${worldSlug}/regles/bac-a-sable`}
             onClick={() => setOpen(false)}
