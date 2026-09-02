@@ -317,6 +317,26 @@ Réalisé en réutilisant un seul mécanisme pour les deux : `MusicPlaybackProvi
 
 **Vérifié en navigateur** : création de la station « Fireren Radio » avec le lien playlist fourni, lecture lancée (iframe cachée confirmée par script avec `autoplay=1` dans l'URL), persistance de la lecture après une navigation interne (clic sur un lien, pas un rechargement complet) vers la fiche de Jean-Pascal. Ajout d'une piste nommée « Arrivée du méchant » dans le bloc `music` de cette fiche : lecture de la piste met bien la radio en pause (bouton radio repasse en `▶`, iframe repointée vers la piste du bloc), puis relancer la radio met bien la piste du bloc en pause — exclusion mutuelle confirmée dans les deux sens.
 
+### V2-G7 — Bonus de caractéristique de l'historique (+2/+1, règle 2024) · `M`
+
+**Retour utilisateur** (3 septembre) : trouvé en corrigeant le bug d'historique maison invisible à la création de personnage (V2-G1 suite). La règle officielle 2024 lie les caractéristiques au choix d'historique — chaque historique liste trois caractéristiques (`Backgrounds.*.ability_scores` côté SRD, `BackgroundBlockData.ability_scores` côté fiche dédiée, déjà stocké et affiché des deux côtés), et le joueur répartit **+2 sur l'une et +1 sur chacune des deux autres, ou +1 sur les trois**. `AbilityScoreStep.tsx` n'implémente aujourd'hui que les trois méthodes indépendantes de l'historique (tableau standard, achat de points, tirage) — le Manuel des Joueurs 2024 autorise cette méthode traditionnelle comme alternative légitime, ce n'est pas une règle cassée, seulement une règle manquante. Le champ `ability_scores` d'un historique (SRD ou maison) est donc aujourd'hui purement informatif, jamais mécanique.
+
+**Emplacement demandé explicitement : une nouvelle section, sous ce qui existe déjà sur l'étape Historique** (`BackgroundStep.tsx`) — jamais sur l'étape Caractéristiques, qui la précède dans l'ordre actuel du parcours (espèce, classe, **caractéristiques**, **historique**, équipement...). La section n'a de sens qu'une fois l'historique choisi (elle propose les trois caractéristiques qu'IL liste) ; comme `characterSheet()` est déjà recalculée en direct à chaque changement d'étape (`sheet` passé en prop, jamais mémoïsé sur l'étape courante), revenir voir l'étape Caractéristiques après ce choix y montrera déjà les valeurs à jour sans code supplémentaire à ce niveau-là.
+
+**Mécanique proposée** — cohérente avec l'empilement déjà en place (`specs/wiki-liens-et-personnages.md` §B4) :
+- Stockage du choix dans `character.choices` (même convention que les autres choix qualifiés par origine, §B2), ex. `background.ability_bonus: { mode: "2-1-1", plus2: "wis" } | { mode: "1-1-1" }`.
+- Résolu en modificateurs `add` **couche 4** (celle de l'historique, juste à côté des maîtrises de compétence qu'il accorde déjà) — jamais couche 5 (réservée aux dons et aux améliorations de caractéristique choisies plus tard), une distinction que la couche 4 existante permet déjà de représenter sans rien ajouter au modèle de couches.
+- Deux chemins de lecture à alimenter, les mêmes que ceux touchés par le correctif de chargen du même jour : le chemin SRD (`mapBackgroundModifiers`/`fields.ability_scores[].index`, `src/core/rules/srdMapping.ts`) et le chemin fiche dédiée (`backgroundModifiersFromBlock`/`data.ability_scores`, même fichier) — un historique maison doit pouvoir utiliser cette section exactement comme un historique officiel.
+- Validation serveur du choix (jamais fait confiance au client) : la ou les caractéristiques choisies doivent appartenir aux trois listées par l'historique, et le total doit correspondre à un des deux modes (+2/+1/+1 ou +1/+1/+1) — même esprit que la validation d'ASI déjà en place (`abilityScoreImprovement.ts`).
+
+**Critères**
+- [ ] Une fois un historique choisi, une section apparaît sous les boutons d'historique/l'équipement, proposant les trois caractéristiques qu'il liste.
+- [ ] Le joueur choisit entre "+2 une caractéristique, +1 les deux autres" et "+1 les trois" — jamais une répartition libre en dehors de ces deux modes.
+- [ ] Le choix est reflété immédiatement dans les caractéristiques dérivées affichées (retour à l'étape Caractéristiques y compris).
+- [ ] Fonctionne identiquement pour un historique officiel du SRD et un historique maison (créé via `CreateHomebrewBackgroundForm.tsx`).
+- [ ] Rejeté côté serveur si la caractéristique choisie n'appartient pas aux trois listées par l'historique, ou si le total ne correspond à aucun des deux modes valides.
+- [ ] Changer d'historique après ce choix réinitialise le choix (jamais un bonus qui survit à un historique différent).
+
 ---
 
 ## Lot H — Le monde vivant
@@ -1119,3 +1139,15 @@ Et un critère technique : **le verdict de S1 est écrit et la V3 est cadrée en
 **Ne parallélisez pas H, I et J** — non pour des dépendances techniques, il n'y en a pas, mais parce que trois chantiers ouverts finissent tous à 80 %.
 
 **Et si l'envie manque un jour, prenez le lot qui vous fait plaisir plutôt que le suivant dans la liste.** Le risque R9 — perte de motivation — reste le premier risque de ce projet, devant tous les risques techniques.
+
+---
+
+## 6. Prochaine proposition à rédiger — moteur de déclencheurs + contrat IA (mode Solo)
+
+Pas encore un ticket : d'abord un document de proposition à part (`.md`), à écrire avant tout code. Contexte, pour qui reprendra ce fil :
+
+La session du 3 septembre a généralisé le moteur de fiche dérivée pour les modificateurs **statiques** (`characterSheet()`/`resolvedRuleset.ts` — voir V2-G7 ci-dessus et le commit correspondant) : n'importe quelle aptitude ou don peut désormais porter des effets chiffrés (caractéristique, sauvegarde, compétence, CA, vitesse, PV) réellement appliqués. Mais le moteur ne sait toujours faire que de l'arithmétique et des dés (`src/core/formula/ast.ts`) — **aucun déclencheur** (« quand X, alors Y » — ex. un don « Malchanceux » qui force une relance sur un 20 naturel) n'existe, et `specs/regles-couche.md` §8 le listait déjà explicitement comme le sujet le plus dur du moteur, reporté après la V1. Toujours vrai aujourd'hui.
+
+C'est aussi le préalable au mode Solo/MJ assisté (`module-joueur-et-solo.md`, §4 ci-dessus) : `resolveAction` et le contrat outil ↔ IA décrits dans `specs/regles-couche.md` §4 (« chaque question que le moteur sait résoudre est une question que l'IA n'a pas à se poser ») ne sont encore que des interfaces à écrire, jamais implémentés.
+
+La proposition à rédiger doit couvrir au minimum : la forme d'un déclencheur (quels événements existent, où ils s'accrochent — un jet, une action, un repos...), comment il s'articule avec l'empilement de modificateurs déjà en place (§B4) sans le complexifier inutilement, le contrat d'outil pour l'IA du mode Solo (entrée/sortie de `resolveAction`, ce qui reste narratif vs mécanique), et une estimation honnête de ce qui est vraiment nécessaire pour S1 par rapport à ce qui peut attendre la V3.
