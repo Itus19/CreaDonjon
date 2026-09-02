@@ -6,6 +6,7 @@ import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import type { MapPinSize } from "@/src/core/schemas/mapPin";
 import type { MapElementRef } from "@/src/core/schemas/mapElementRef";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
+import type { VisibleMapLayer } from "@/src/server/services/mapLayers";
 
 export interface MapPinDraft {
   /** `null` = punaise pas encore creee (vient d'etre posee, en attente de son premier enregistrement). */
@@ -15,6 +16,7 @@ export interface MapPinDraft {
   label: string;
   ref: MapElementRef | null;
   size: MapPinSize;
+  layerId: string | null;
   visibilityLevel: string;
   visibilityScopeId: string | null;
 }
@@ -34,15 +36,19 @@ const NO_LINK = "__none__";
  * que `RelationsChips.tsx` (`otherEntities`, Dropdown trie par nom) — pas
  * de nouvelle recherche a construire pour ce meme besoin.
  */
+const NO_LAYER = "__none__";
+
 export default function MapPinEditorPopup({
   draft,
   otherEntities,
+  layers,
   onSave,
   onDelete,
   onClose,
 }: {
   draft: MapPinDraft;
   otherEntities: OtherEntityOption[];
+  layers: VisibleMapLayer[];
   onSave: (draft: MapPinDraft) => void;
   onDelete?: () => void;
   onClose: () => void;
@@ -50,6 +56,7 @@ export default function MapPinEditorPopup({
   const [label, setLabel] = useState(draft.label);
   const [refEntityId, setRefEntityId] = useState(draft.ref?.id ?? NO_LINK);
   const [size, setSize] = useState<MapPinSize>(draft.size);
+  const [layerId, setLayerId] = useState(draft.layerId ?? NO_LAYER);
   const [visibilityLevel, setVisibilityLevel] = useState(draft.visibilityLevel);
 
   function save() {
@@ -58,6 +65,7 @@ export default function MapPinEditorPopup({
       label: label.trim(),
       ref: refEntityId === NO_LINK ? null : { kind: "entity", id: refEntityId },
       size,
+      layerId: layerId === NO_LAYER ? null : layerId,
       visibilityLevel,
       visibilityScopeId: null,
     });
@@ -122,6 +130,19 @@ export default function MapPinEditorPopup({
             />
           </label>
         </div>
+
+        {layers.length > 0 && (
+          <label className="flex flex-col gap-1 text-xs text-ink-muted">
+            Couche
+            <Dropdown
+              value={layerId}
+              options={[{ value: NO_LAYER, label: "Aucune couche" }, ...layers.map((l) => ({ value: l.id, label: l.name || "(sans nom)" }))]}
+              onChange={setLayerId}
+              aria-label="Couche de la punaise"
+              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
+            />
+          </label>
+        )}
 
         <div className="mt-1 flex items-center justify-between gap-2">
           {draft.id && onDelete ? (

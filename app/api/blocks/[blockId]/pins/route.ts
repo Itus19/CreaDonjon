@@ -56,6 +56,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     label: parsed.data.label,
     ref: parsed.data.ref,
     size: parsed.data.size,
+    layerId: parsed.data.layerId,
     visibilityLevel: parsed.data.visibility.level,
     visibilityScopeId: parsed.data.visibility.scopeId,
     createdBy: user.id,

@@ -15,6 +15,7 @@ import {
 import { getBlockById } from "@/src/server/repos/blocks";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { canUserEditEntityById } from "@/src/server/services/permissions";
+import { layerAllows, resolveLayerVisibilityByBlock } from "@/src/server/services/mapLayers";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -28,6 +29,7 @@ export interface VisibleMapRegion {
   shape: MapRegionShape;
   fillColor: string;
   borderColor: string;
+  layerId: string | null;
   visibilityLevel: string;
   visibilityScopeId: string | null;
 }
@@ -50,10 +52,14 @@ function parseShape(shape: Json): MapRegionShape {
   return parsed.success ? parsed.data : [];
 }
 
-/** Zones visibles par CE viewer (Lot I, phase D) — meme discipline que `listVisibleMapPins`. */
+/**
+ * Zones visibles par CE viewer (Lot I, phases D et E) — meme discipline
+ * que `listVisibleMapPins`, y compris la regle "ET" de la couche assignee
+ * (ADR 0017 decision 2).
+ */
 export async function listVisibleMapRegions(supabase: TypedClient, blockId: string, viewer: Viewer): Promise<VisibleMapRegion[]> {
-  const rows = await listRegionsForBlock(supabase, blockId);
-  const visible = filterBlocks(rows.map(toVisibilityAware), viewer);
+  const [rows, layerVisibilityById] = await Promise.all([listRegionsForBlock(supabase, blockId), resolveLayerVisibilityByBlock(supabase, blockId)]);
+  const visible = filterBlocks(rows.map(toVisibilityAware), viewer).filter((row) => layerAllows(row.layer_id, layerVisibilityById, viewer));
 
   const entityIds = new Set<string>();
   for (const row of visible) {
@@ -75,6 +81,7 @@ export async function listVisibleMapRegions(supabase: TypedClient, blockId: stri
       shape: parseShape(row.shape),
       fillColor: row.fill_color,
       borderColor: row.border_color,
+      layerId: row.layer_id,
       visibilityLevel: row.visibility_level,
       visibilityScopeId: row.visibility_scope_id,
     };
@@ -92,6 +99,7 @@ export async function createMapRegion(
     shape: MapRegionShape;
     fillColor: string;
     borderColor: string;
+    layerId: string | null;
     visibilityLevel: string;
     visibilityScopeId: string | null;
     createdBy: string;
@@ -109,6 +117,7 @@ export async function createMapRegion(
     shape: params.shape as unknown as Json,
     fillColor: params.fillColor,
     borderColor: params.borderColor,
+    layerId: params.layerId,
     visibilityLevel: params.visibilityLevel,
     visibilityScopeId: params.visibilityScopeId,
     createdBy: params.createdBy,
@@ -126,6 +135,7 @@ export async function updateMapRegion(
     shape?: MapRegionShape;
     fillColor?: string;
     borderColor?: string;
+    layerId?: string | null;
     visibilityLevel?: string;
     visibilityScopeId?: string | null;
   }
@@ -144,6 +154,7 @@ export async function updateMapRegion(
     shape: params.shape === undefined ? undefined : (params.shape as unknown as Json),
     fillColor: params.fillColor,
     borderColor: params.borderColor,
+    layerId: params.layerId,
     visibilityLevel: params.visibilityLevel,
     visibilityScopeId: params.visibilityScopeId,
   });

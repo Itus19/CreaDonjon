@@ -14,6 +14,7 @@ import {
 import { getBlockById } from "@/src/server/repos/blocks";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { canUserEditEntityById } from "@/src/server/services/permissions";
+import { layerAllows, resolveLayerVisibilityByBlock } from "@/src/server/services/mapLayers";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -27,6 +28,7 @@ export interface VisibleMapPin {
   /** Resolu ici (jamais confie au client) : nom/slug de la fiche liee, seulement si elle existe encore et reste visible a CE viewer — un lien mort disparait plutot que de reveler l'existence d'une fiche cachee. */
   refEntity: { name: string; slug: string } | null;
   size: string;
+  layerId: string | null;
   visibilityLevel: string;
   visibilityScopeId: string | null;
 }
@@ -45,16 +47,18 @@ function parseRef(ref: Json | null): MapElementRef | null {
 }
 
 /**
- * Punaises visibles par CE viewer (Lot I, phase C) — meme filtrage que
- * `listVisibleBlocks` (src/server/services/blocks.ts), applique ici a
- * `map_pins`. Le lien d'une punaise vers une fiche est revalide
- * independamment (une punaise publique peut pointer vers une fiche masquee,
- * auquel cas seul `refEntity` disparait — la punaise elle-meme reste
- * visible avec son `label` libre).
+ * Punaises visibles par CE viewer (Lot I, phases C et E) — meme filtrage
+ * que `listVisibleBlocks` (src/server/services/blocks.ts), applique ici a
+ * `map_pins`, PUIS la regle "ET" de la couche assignee (ADR 0017 decision
+ * 2 : `layerAllows`) — une punaise publique posee sur une couche `gm`
+ * reste invisible a un joueur. Le lien d'une punaise vers une fiche est
+ * revalide independamment (une punaise publique peut pointer vers une
+ * fiche masquee, auquel cas seul `refEntity` disparait — la punaise
+ * elle-meme reste visible avec son `label` libre).
  */
 export async function listVisibleMapPins(supabase: TypedClient, blockId: string, viewer: Viewer): Promise<VisibleMapPin[]> {
-  const rows = await listPinsForBlock(supabase, blockId);
-  const visible = filterBlocks(rows.map(toVisibilityAware), viewer);
+  const [rows, layerVisibilityById] = await Promise.all([listPinsForBlock(supabase, blockId), resolveLayerVisibilityByBlock(supabase, blockId)]);
+  const visible = filterBlocks(rows.map(toVisibilityAware), viewer).filter((row) => layerAllows(row.layer_id, layerVisibilityById, viewer));
 
   const entityIds = new Set<string>();
   for (const row of visible) {
@@ -76,6 +80,7 @@ export async function listVisibleMapPins(supabase: TypedClient, blockId: string,
       ref,
       refEntity: entity ? { name: entity.name, slug: entity.slug } : null,
       size: row.size,
+      layerId: row.layer_id,
       visibilityLevel: row.visibility_level,
       visibilityScopeId: row.visibility_scope_id,
     };
@@ -93,6 +98,7 @@ export async function createMapPin(
     label: string;
     ref: MapElementRef | null;
     size: string;
+    layerId: string | null;
     visibilityLevel: string;
     visibilityScopeId: string | null;
     createdBy: string;
@@ -110,6 +116,7 @@ export async function createMapPin(
     label: params.label,
     ref: params.ref as unknown as Json,
     size: params.size,
+    layerId: params.layerId,
     visibilityLevel: params.visibilityLevel,
     visibilityScopeId: params.visibilityScopeId,
     createdBy: params.createdBy,
@@ -127,6 +134,7 @@ export async function updateMapPin(
     label?: string;
     ref?: MapElementRef | null;
     size?: string;
+    layerId?: string | null;
     visibilityLevel?: string;
     visibilityScopeId?: string | null;
   }
@@ -145,6 +153,7 @@ export async function updateMapPin(
     label: params.label,
     ref: params.ref === undefined ? undefined : (params.ref as unknown as Json),
     size: params.size,
+    layerId: params.layerId,
     visibilityLevel: params.visibilityLevel,
     visibilityScopeId: params.visibilityScopeId,
   });

@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import MapCanvas, { type MapPinMarkerData, type MapRegionShapeData } from "./MapCanvas";
 import MapPinEditorPopup, { type MapPinDraft } from "./MapPinEditorPopup";
 import MapRegionEditorPopup, { type MapRegionDraft } from "./MapRegionEditorPopup";
+import MapLayersPanel from "./MapLayersPanel";
 import type { MapBlockData, MapView } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
 import type { VisibleMapPin } from "@/src/server/services/mapPins";
 import type { VisibleMapRegion } from "@/src/server/services/mapRegions";
+import type { VisibleMapLayer } from "@/src/server/services/mapLayers";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 
 // Retour utilisateur, avec capture a l'appui : la vignette a 800px restait
@@ -79,6 +81,13 @@ export default function MapWorkspace({
   const [pendingRegionPoints, setPendingRegionPoints] = useState<{ x: number; y: number }[]>([]);
   const [editingRegion, setEditingRegion] = useState<MapRegionDraft | null>(null);
 
+  const [layers, setLayers] = useState<VisibleMapLayer[]>([]);
+  const [showLayersPanel, setShowLayersPanel] = useState(false);
+  // Bascule d'edition MJ, jamais persistee (retour utilisateur, "confort
+  // d'edition") — distincte de `visibilityLevel`, le vrai filtre de
+  // securite resolu cote serveur (ADR 0017 decision 2). Voir MapLayersPanel.tsx.
+  const [hiddenLayerIds, setHiddenLayerIds] = useState<Set<string>>(new Set());
+
   function reloadPins() {
     fetch(`/api/blocks/${blockId}/pins`)
       .then((res) => (res.ok ? res.json() : []))
@@ -93,9 +102,17 @@ export default function MapWorkspace({
       .catch(() => setRegions([]));
   }
 
+  function reloadLayers() {
+    fetch(`/api/blocks/${blockId}/layers`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((body: VisibleMapLayer[]) => setLayers(body))
+      .catch(() => setLayers([]));
+  }
+
   useEffect(() => {
     reloadPins();
     reloadRegions();
+    reloadLayers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blockId]);
 
@@ -180,7 +197,7 @@ export default function MapWorkspace({
 
   function handlePlacePin(x: number, y: number) {
     setPlacingPin(false);
-    setEditingPin({ id: null, x, y, label: "", ref: null, size: "medium", visibilityLevel: "public", visibilityScopeId: null });
+    setEditingPin({ id: null, x, y, label: "", ref: null, size: "medium", layerId: null, visibilityLevel: "public", visibilityScopeId: null });
   }
 
   function handlePinClick(pin: MapPinMarkerData) {
@@ -193,6 +210,7 @@ export default function MapWorkspace({
       label: full.label,
       ref: full.ref,
       size: full.size as MapPinDraft["size"],
+      layerId: full.layerId,
       visibilityLevel: full.visibilityLevel,
       visibilityScopeId: full.visibilityScopeId,
     });
@@ -206,6 +224,7 @@ export default function MapWorkspace({
       label: draft.label,
       ref: draft.ref,
       size: draft.size,
+      layerId: draft.layerId,
       visibility: { level: draft.visibilityLevel, scopeId: draft.visibilityScopeId },
     });
     if (draft.id) {
@@ -242,6 +261,7 @@ export default function MapWorkspace({
       ref: null,
       fillColor: "#3b82f6",
       borderColor: "#1d4ed8",
+      layerId: null,
       visibilityLevel: "public",
       visibilityScopeId: null,
     });
@@ -258,6 +278,7 @@ export default function MapWorkspace({
       ref: full.ref,
       fillColor: full.fillColor,
       borderColor: full.borderColor,
+      layerId: full.layerId,
       visibilityLevel: full.visibilityLevel,
       visibilityScopeId: full.visibilityScopeId,
     });
@@ -271,6 +292,7 @@ export default function MapWorkspace({
       shape: draft.shape,
       fillColor: draft.fillColor,
       borderColor: draft.borderColor,
+      layerId: draft.layerId,
       visibility: { level: draft.visibilityLevel, scopeId: draft.visibilityScopeId },
     });
     if (draft.id) {
@@ -284,6 +306,63 @@ export default function MapWorkspace({
   async function deleteRegionDraft(id: string) {
     setEditingRegion(null);
     await fetch(`/api/map-regions/${id}`, { method: "DELETE" });
+    reloadRegions();
+  }
+
+  function toggleLayerHidden(layerId: string) {
+    setHiddenLayerIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(layerId)) next.delete(layerId);
+      else next.add(layerId);
+      return next;
+    });
+  }
+
+  async function createLayer(name: string) {
+    await fetch(`/api/blocks/${blockId}/layers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, visibility: { level: "public", scopeId: null } }),
+    });
+    reloadLayers();
+  }
+
+  async function renameLayer(layerId: string, name: string) {
+    await fetch(`/api/map-layers/${layerId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+    reloadLayers();
+  }
+
+  async function changeLayerVisibility(layerId: string, level: string) {
+    await fetch(`/api/map-layers/${layerId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visibility: { level, scopeId: null } }),
+    });
+    reloadLayers();
+  }
+
+  async function moveLayer(layerId: string, direction: "up" | "down") {
+    const index = layers.findIndex((l) => l.id === layerId);
+    if (index === -1) return;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= layers.length) return;
+    const neighbour = layers[targetIndex];
+    const beyond = direction === "up" ? layers[targetIndex - 1] : layers[targetIndex + 1];
+    const displayOrder = beyond ? (neighbour.displayOrder + beyond.displayOrder) / 2 : neighbour.displayOrder + (direction === "up" ? -1000 : 1000);
+    await fetch(`/api/map-layers/${layerId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ displayOrder }) });
+    reloadLayers();
+  }
+
+  async function deleteLayer(layerId: string) {
+    await fetch(`/api/map-layers/${layerId}`, { method: "DELETE" });
+    setHiddenLayerIds((prev) => {
+      if (!prev.has(layerId)) return prev;
+      const next = new Set(prev);
+      next.delete(layerId);
+      return next;
+    });
+    reloadLayers();
+    reloadPins();
     reloadRegions();
   }
 
@@ -325,6 +404,15 @@ export default function MapWorkspace({
             + Zone
           </button>
         )}
+        {data.assetId && (
+          <button
+            type="button"
+            onClick={() => setShowLayersPanel(true)}
+            className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+          >
+            Couches
+          </button>
+        )}
         {drawingRegion && (
           <span className="text-xs text-ink-muted">Cliquez pour poser chaque sommet, recliquez sur le premier pour fermer la zone.</span>
         )}
@@ -344,11 +432,15 @@ export default function MapWorkspace({
             onViewChange={(v) => {
               pendingViewRef.current = v;
             }}
-            pins={pins.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
+            pins={pins
+              .filter((p) => !p.layerId || !hiddenLayerIds.has(p.layerId))
+              .map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
             onPinClick={handlePinClick}
             placingPin={placingPin}
             onPlacePin={handlePlacePin}
-            regions={regions.map((r) => ({ id: r.id, name: r.name, shape: r.shape, fillColor: r.fillColor, borderColor: r.borderColor }))}
+            regions={regions
+              .filter((r) => !r.layerId || !hiddenLayerIds.has(r.layerId))
+              .map((r) => ({ id: r.id, name: r.name, shape: r.shape, fillColor: r.fillColor, borderColor: r.borderColor }))}
             onRegionClick={handleRegionClick}
             drawingRegion={drawingRegion}
             pendingRegionPoints={pendingRegionPoints}
@@ -364,6 +456,7 @@ export default function MapWorkspace({
         <MapPinEditorPopup
           draft={editingPin}
           otherEntities={otherEntities}
+          layers={layers}
           onSave={savePinDraft}
           onDelete={editingPin.id ? () => deletePinDraft(editingPin.id!) : undefined}
           onClose={() => setEditingPin(null)}
@@ -374,9 +467,24 @@ export default function MapWorkspace({
         <MapRegionEditorPopup
           draft={editingRegion}
           otherEntities={otherEntities}
+          layers={layers}
           onSave={saveRegionDraft}
           onDelete={editingRegion.id ? () => deleteRegionDraft(editingRegion.id!) : undefined}
           onClose={() => setEditingRegion(null)}
+        />
+      )}
+
+      {showLayersPanel && (
+        <MapLayersPanel
+          layers={layers}
+          hiddenLayerIds={hiddenLayerIds}
+          onToggleHidden={toggleLayerHidden}
+          onCreate={createLayer}
+          onRename={renameLayer}
+          onChangeVisibility={changeLayerVisibility}
+          onMove={moveLayer}
+          onDelete={deleteLayer}
+          onClose={() => setShowLayersPanel(false)}
         />
       )}
     </div>

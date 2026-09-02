@@ -1624,6 +1624,50 @@ export type Database = {
           },
         ]
       }
+      map_layers: {
+        Row: {
+          block_id: string
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          name: string
+          updated_at: string
+          visibility_level: string
+          visibility_scope_id: string | null
+        }
+        Insert: {
+          block_id: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          name?: string
+          updated_at?: string
+          visibility_level?: string
+          visibility_scope_id?: string | null
+        }
+        Update: {
+          block_id?: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          name?: string
+          updated_at?: string
+          visibility_level?: string
+          visibility_scope_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "map_layers_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       map_pins: {
         Row: {
           block_id: string
@@ -1676,6 +1720,13 @@ export type Database = {
             columns: ["block_id"]
             isOneToOne: false
             referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "map_pins_layer_id_fkey"
+            columns: ["layer_id"]
+            isOneToOne: false
+            referencedRelation: "map_layers"
             referencedColumns: ["id"]
           },
         ]
@@ -1732,6 +1783,13 @@ export type Database = {
             columns: ["block_id"]
             isOneToOne: false
             referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "map_regions_layer_id_fkey"
+            columns: ["layer_id"]
+            isOneToOne: false
+            referencedRelation: "map_layers"
             referencedColumns: ["id"]
           },
         ]

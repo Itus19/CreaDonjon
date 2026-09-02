@@ -44,6 +44,7 @@ export async function insertRegion(
     shape: Json;
     fillColor: string;
     borderColor: string;
+    layerId: string | null;
     visibilityLevel: string;
     visibilityScopeId: string | null;
     createdBy: string;
@@ -58,6 +59,7 @@ export async function insertRegion(
       shape: params.shape,
       fill_color: params.fillColor,
       border_color: params.borderColor,
+      layer_id: params.layerId,
       visibility_level: params.visibilityLevel,
       visibility_scope_id: params.visibilityScopeId,
       created_by: params.createdBy,
@@ -77,6 +79,7 @@ export async function updateRegion(
     shape?: Json;
     fillColor?: string;
     borderColor?: string;
+    layerId?: string | null;
     visibilityLevel?: string;
     visibilityScopeId?: string | null;
   }
@@ -87,6 +90,7 @@ export async function updateRegion(
   if (params.shape !== undefined) patch.shape = params.shape;
   if (params.fillColor !== undefined) patch.fill_color = params.fillColor;
   if (params.borderColor !== undefined) patch.border_color = params.borderColor;
+  if (params.layerId !== undefined) patch.layer_id = params.layerId;
   if (params.visibilityLevel !== undefined) patch.visibility_level = params.visibilityLevel;
   if (params.visibilityScopeId !== undefined) patch.visibility_scope_id = params.visibilityScopeId;
 

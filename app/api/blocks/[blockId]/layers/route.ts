@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createMapRegionSchema } from "@/lib/mapRegions/schemas";
+import { createMapLayerSchema } from "@/lib/mapLayers/schemas";
 import { getEntityById } from "@/src/server/repos/entities";
 import { getBlockById } from "@/src/server/repos/blocks";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
-import { createMapRegion, listVisibleMapRegions } from "@/src/server/services/mapRegions";
+import { createMapLayer, listVisibleMapLayers } from "@/src/server/services/mapLayers";
 
-/** Zones d'un bloc `map` propriétaire (Lot I, phase D) — `blockId` est toujours le bloc SOURCE (jamais un bloc "ref", voir ADR 0017). */
+/** Couches d'un bloc `map` propriétaire (Lot I, phase E) — `blockId` est toujours le bloc SOURCE (jamais un bloc "ref", voir ADR 0017). */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ blockId: string }> }) {
   const { blockId } = await params;
 
@@ -28,15 +28,15 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   }
 
   const viewer = await buildViewerForWorld(supabase, entity.world_id, user.id);
-  const regions = await listVisibleMapRegions(supabase, blockId, viewer);
-  return NextResponse.json(regions, { status: 200 });
+  const layers = await listVisibleMapLayers(supabase, blockId, viewer);
+  return NextResponse.json(layers, { status: 200 });
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ blockId: string }> }) {
   const { blockId } = await params;
 
   const body = await request.json().catch(() => null);
-  const parsed = createMapRegionSchema.safeParse(body);
+  const parsed = createMapLayerSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Corps invalide." }, { status: 400 });
   }
@@ -49,14 +49,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
   }
 
-  const result = await createMapRegion(supabase, {
+  const result = await createMapLayer(supabase, {
     blockId,
     name: parsed.data.name,
-    ref: parsed.data.ref,
-    shape: parsed.data.shape,
-    fillColor: parsed.data.fillColor,
-    borderColor: parsed.data.borderColor,
-    layerId: parsed.data.layerId,
     visibilityLevel: parsed.data.visibility.level,
     visibilityScopeId: parsed.data.visibility.scopeId,
     createdBy: user.id,
@@ -69,5 +64,5 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Vous n'avez pas le droit de modifier cette carte." }, { status: 403 });
   }
 
-  return NextResponse.json(result.region, { status: 201 });
+  return NextResponse.json(result.layer, { status: 201 });
 }

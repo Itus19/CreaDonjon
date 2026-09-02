@@ -43,6 +43,7 @@ export async function insertPin(
     label: string;
     ref: Json | null;
     size: string;
+    layerId: string | null;
     visibilityLevel: string;
     visibilityScopeId: string | null;
     createdBy: string;
@@ -57,6 +58,7 @@ export async function insertPin(
       label: params.label,
       ref: params.ref,
       size: params.size,
+      layer_id: params.layerId,
       visibility_level: params.visibilityLevel,
       visibility_scope_id: params.visibilityScopeId,
       created_by: params.createdBy,
@@ -76,6 +78,7 @@ export async function updatePin(
     label?: string;
     ref?: Json | null;
     size?: string;
+    layerId?: string | null;
     visibilityLevel?: string;
     visibilityScopeId?: string | null;
   }
@@ -86,6 +89,7 @@ export async function updatePin(
   if (params.label !== undefined) patch.label = params.label;
   if (params.ref !== undefined) patch.ref = params.ref;
   if (params.size !== undefined) patch.size = params.size;
+  if (params.layerId !== undefined) patch.layer_id = params.layerId;
   if (params.visibilityLevel !== undefined) patch.visibility_level = params.visibilityLevel;
   if (params.visibilityScopeId !== undefined) patch.visibility_scope_id = params.visibilityScopeId;
 

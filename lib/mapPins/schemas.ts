@@ -14,6 +14,7 @@ export const createMapPinSchema = z.object({
   label: z.string().trim().max(200, "200 caracteres maximum.").default(""),
   ref: zMapElementRef.nullable().default(null),
   size: zMapPinSize.default("medium"),
+  layerId: z.string().nullable().default(null),
   visibility: zVisibilityInput,
 });
 
@@ -23,5 +24,6 @@ export const updateMapPinSchema = z.object({
   label: z.string().trim().max(200, "200 caracteres maximum.").optional(),
   ref: zMapElementRef.nullable().optional(),
   size: zMapPinSize.optional(),
+  layerId: z.string().nullable().optional(),
   visibility: zVisibilityInput.optional(),
 });

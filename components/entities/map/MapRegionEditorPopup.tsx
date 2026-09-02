@@ -5,6 +5,7 @@ import Dropdown from "@/components/shared/Dropdown";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import type { MapElementRef } from "@/src/core/schemas/mapElementRef";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
+import type { VisibleMapLayer } from "@/src/server/services/mapLayers";
 
 export interface MapRegionDraft {
   /** `null` = zone pas encore creee (polygone qui vient d'etre trace, en attente de son premier enregistrement). */
@@ -14,11 +15,13 @@ export interface MapRegionDraft {
   ref: MapElementRef | null;
   fillColor: string;
   borderColor: string;
+  layerId: string | null;
   visibilityLevel: string;
   visibilityScopeId: string | null;
 }
 
 const NO_LINK = "__none__";
+const NO_LAYER = "__none__";
 
 /**
  * Popup d'edition d'une zone (Lot I, phase D) — meme structure que
@@ -28,12 +31,14 @@ const NO_LINK = "__none__";
 export default function MapRegionEditorPopup({
   draft,
   otherEntities,
+  layers,
   onSave,
   onDelete,
   onClose,
 }: {
   draft: MapRegionDraft;
   otherEntities: OtherEntityOption[];
+  layers: VisibleMapLayer[];
   onSave: (draft: MapRegionDraft) => void;
   onDelete?: () => void;
   onClose: () => void;
@@ -42,6 +47,7 @@ export default function MapRegionEditorPopup({
   const [refEntityId, setRefEntityId] = useState(draft.ref?.id ?? NO_LINK);
   const [fillColor, setFillColor] = useState(draft.fillColor);
   const [borderColor, setBorderColor] = useState(draft.borderColor);
+  const [layerId, setLayerId] = useState(draft.layerId ?? NO_LAYER);
   const [visibilityLevel, setVisibilityLevel] = useState(draft.visibilityLevel);
 
   function save() {
@@ -51,6 +57,7 @@ export default function MapRegionEditorPopup({
       ref: refEntityId === NO_LINK ? null : { kind: "entity", id: refEntityId },
       fillColor,
       borderColor,
+      layerId: layerId === NO_LAYER ? null : layerId,
       visibilityLevel,
       visibilityScopeId: null,
     });
@@ -125,6 +132,19 @@ export default function MapRegionEditorPopup({
             />
           </label>
         </div>
+
+        {layers.length > 0 && (
+          <label className="flex flex-col gap-1 text-xs text-ink-muted">
+            Couche
+            <Dropdown
+              value={layerId}
+              options={[{ value: NO_LAYER, label: "Aucune couche" }, ...layers.map((l) => ({ value: l.id, label: l.name || "(sans nom)" }))]}
+              onChange={setLayerId}
+              aria-label="Couche de la zone"
+              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
+            />
+          </label>
+        )}
 
         <div className="mt-1 flex items-center justify-between gap-2">
           {draft.id && onDelete ? (

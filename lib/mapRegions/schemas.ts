@@ -13,6 +13,7 @@ export const createMapRegionSchema = z.object({
   shape: zMapRegionShape,
   fillColor: zMapRegionColor.default("#3b82f6"),
   borderColor: zMapRegionColor.default("#1d4ed8"),
+  layerId: z.string().nullable().default(null),
   visibility: zVisibilityInput,
 });
 
@@ -22,5 +23,6 @@ export const updateMapRegionSchema = z.object({
   shape: zMapRegionShape.optional(),
   fillColor: zMapRegionColor.optional(),
   borderColor: zMapRegionColor.optional(),
+  layerId: z.string().nullable().optional(),
   visibility: zVisibilityInput.optional(),
 });
