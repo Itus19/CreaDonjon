@@ -325,7 +325,9 @@ export default function MapWorkspace({
             + Zone
           </button>
         )}
-        {drawingRegion && <span className="text-xs text-ink-muted">Cliquez pour poser chaque sommet, double-cliquez pour terminer.</span>}
+        {drawingRegion && (
+          <span className="text-xs text-ink-muted">Cliquez pour poser chaque sommet, recliquez sur le premier pour fermer la zone.</span>
+        )}
         <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onFileChange} />
         {error && <p className="text-xs text-danger">{error}</p>}
       </div>

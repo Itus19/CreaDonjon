@@ -9,6 +9,8 @@ const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 8;
 /** En dessous de ce deplacement (px), un clic-relache reste un clic — pas un panoramique. */
 const DRAG_THRESHOLD = 4;
+/** Rayon (px ecran) dans lequel un clic sur le premier sommet ferme le polygone en cours (retour utilisateur : "relier le dernier point sur le premier ferme la zone"). */
+const CLOSE_REGION_HIT_RADIUS = 10;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -81,7 +83,7 @@ export default function MapCanvas({
   /** Zones deja filtrees par visibilite (Lot I, phase D) — memes conventions que `pins`. */
   regions?: MapRegionShapeData[];
   onRegionClick?: (region: MapRegionShapeData) => void;
-  /** Outil « zone » actif (retour utilisateur : "polygone trace point par point, sommets visibles pendant le trace") — un clic ajoute un sommet, un double-clic termine le polygone. */
+  /** Outil « zone » actif (retour utilisateur : "polygone trace point par point, sommets visibles pendant le trace") — un clic ajoute un sommet ; un clic pres du PREMIER sommet (des que 3 sont deja poses) ferme et termine le polygone. */
   drawingRegion?: boolean;
   /** Polygone en cours (etat du parent, pas de ce composant — le trace survit a un re-rendu du canevas). */
   pendingRegionPoints?: { x: number; y: number }[];
@@ -203,17 +205,30 @@ export default function MapCanvas({
       if (point) onPlacePin(point.x, point.y);
       return;
     }
-    // `e.detail === 2` = deuxieme clic d'un double-clic (compteur natif du
-    // navigateur) : laisse `onFinishRegion` (declenche par `onDoubleClick`)
-    // terminer le polygone plutot que d'y ajouter un sommet de plus ici.
-    if (drawingRegion && onAddRegionPoint && e.detail === 1) {
+    if (drawingRegion && onAddRegionPoint) {
+      const container = containerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      // Retour utilisateur : "revenir au premier point posé valide la
+      // fermeture" — au moins 3 sommets deja poses (sinon "fermer" sur le
+      // premier point degenererait en une ligne, jamais un polygone), et le
+      // clic doit tomber pres de l'ECRAN du premier sommet (pas de ses
+      // coordonnees normalisees, dont la distance n'a pas de sens visuel
+      // une fois zoomee).
+      if (onFinishRegion && pendingRegionPoints && pendingRegionPoints.length >= 3) {
+        const first = pendingRegionPoints[0];
+        const firstScreenX = view.x + first.x * imageWidth * view.scale;
+        const firstScreenY = view.y + first.y * imageHeight * view.scale;
+        if (Math.hypot(clickX - firstScreenX, clickY - firstScreenY) <= CLOSE_REGION_HIT_RADIUS) {
+          onFinishRegion();
+          return;
+        }
+      }
       const point = eventToNormalizedPoint(e);
       if (point) onAddRegionPoint(point.x, point.y);
     }
-  }
-
-  function handleCanvasDoubleClick() {
-    if (drawingRegion && onFinishRegion) onFinishRegion();
   }
 
   return (
@@ -228,7 +243,6 @@ export default function MapCanvas({
       onMouseUp={endDrag}
       onMouseLeave={endDrag}
       onClick={handleCanvasClick}
-      onDoubleClick={handleCanvasDoubleClick}
       onClickCapture={(e) => {
         if (suppressClickRef.current) {
           e.preventDefault();
@@ -302,8 +316,13 @@ export default function MapCanvas({
                   key={i}
                   cx={view.x + p.x * imageWidth * view.scale}
                   cy={view.y + p.y * imageHeight * view.scale}
-                  r={4}
-                  fill="var(--accent)"
+                  // Le premier sommet grossit des que la fermeture devient
+                  // possible (retour utilisateur) — indique visuellement ou
+                  // cliquer pour terminer le polygone.
+                  r={i === 0 && pendingRegionPoints.length >= 3 ? CLOSE_REGION_HIT_RADIUS : 4}
+                  fill={i === 0 && pendingRegionPoints.length >= 3 ? "none" : "var(--accent)"}
+                  stroke={i === 0 && pendingRegionPoints.length >= 3 ? "var(--accent)" : undefined}
+                  strokeWidth={i === 0 && pendingRegionPoints.length >= 3 ? 2 : undefined}
                 />
               ))}
             </>
