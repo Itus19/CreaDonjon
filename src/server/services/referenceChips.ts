@@ -9,7 +9,7 @@ import {
   type RulesetEntryChipRow,
 } from "@/src/server/repos/rules";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
-import { entryNameFrom, walkRulesetChain } from "./rules";
+import { entryNameFrom, resolveHomebrewEntryDisplay, walkRulesetChain } from "./rules";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -63,6 +63,28 @@ async function resolveRuleChips(
       found: true,
     });
   }
+
+  // Cle restante : aucune ligne `ruleset_entries` nulle part dans la chaine
+  // — le cas d'une fiche maison (`add_entry` sans base, V1-D4/V1-D8). Bug
+  // reel trouve en verifiant en direct : un chip pointant vers une fiche
+  // maison affichait sa cle technique brute au lieu de son nom, alors que
+  // la fiche elle-meme se resout correctement (voir
+  // `resolveHomebrewEntryDisplay`, meme mecanisme que le nom du don d'un
+  // historique).
+  for (const key of [...remaining]) {
+    const homebrew = await resolveHomebrewEntryDisplay(supabase, rulesetId, key);
+    if (!homebrew) continue;
+    remaining.delete(key);
+    result.set(key, {
+      kind: "rule",
+      key,
+      name: homebrew.name,
+      summary: null,
+      href: `/m/${worldSlug}/regles/${key}`,
+      found: true,
+    });
+  }
+
   for (const key of remaining) {
     result.set(key, {
       kind: "rule",

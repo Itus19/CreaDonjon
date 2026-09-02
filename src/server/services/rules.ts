@@ -292,10 +292,19 @@ async function resolveOutgoingRefs(
   const batched = await listRulesetEntriesByKeys(supabase, rulesetId, targetKeys);
   const byKey = new Map(batched.map((e) => [e.entry_key, e]));
 
+  // Cible sans ligne de base nulle part dans la chaine : fiche maison
+  // (`add_entry`, V1-D4) resolue a part, `RulesetEntryRow` n'a pas de forme
+  // pour elle (pas d'id ni de `source_raw`) — voir `resolveHomebrewEntryDisplay`.
+  const homebrewByKey = new Map<string, { name: string; entryType: EntryType }>();
   for (const key of targetKeys) {
     if (byKey.has(key)) continue;
     const found = await findEntryInRulesetChain(supabase, rulesetId, key);
-    if (found) byKey.set(key, found);
+    if (found) {
+      byKey.set(key, found);
+      continue;
+    }
+    const homebrew = await resolveHomebrewEntryDisplay(supabase, rulesetId, key);
+    if (homebrew) homebrewByKey.set(key, { name: homebrew.name, entryType: homebrew.entryType });
   }
 
   const translationByEntryId = new Map<string, string>();
@@ -325,11 +334,14 @@ async function resolveOutgoingRefs(
 
   return refs.map((ref) => {
     const target = byKey.get(ref.target_key);
+    const homebrewTarget = target ? undefined : homebrewByKey.get(ref.target_key);
     const levelMatch = ref.ref_kind === "grants" ? ref.path?.match(/rows\[(\d+)\]/) : null;
     return {
       key: ref.target_key,
-      name: target ? (translationByEntryId.get(target.id) ?? entryNameFrom(target)) : ref.target_key,
-      entryType: target ? (target.entry_type as EntryType) : null,
+      name: target
+        ? (translationByEntryId.get(target.id) ?? entryNameFrom(target))
+        : (homebrewTarget?.name ?? ref.target_key),
+      entryType: target ? (target.entry_type as EntryType) : (homebrewTarget?.entryType ?? null),
       refKind: ref.ref_kind,
       path: ref.path,
       level: levelMatch ? Number(levelMatch[1]) : undefined,
@@ -450,6 +462,53 @@ export type ResolvedItemPropertiesBlockData = Omit<ItemPropertiesBlockData, "con
 };
 
 /**
+ * Nom + type d'une entree qui n'existe QUE par une surcharge `add_entry`
+ * d'un ruleset de la chaine (V1-D4/V1-D8) — jamais de ligne
+ * `ruleset_entries`. Complement de `findEntryInRulesetChain`, qui ne
+ * regarde que la base : a appeler seulement apres son echec, jamais en
+ * remplacement (le cas courant reste une entree officielle ou heritee).
+ * Bug reel trouve en verifiant en direct : sans ceci, toute fiche maison
+ * CIBLEE par la reference d'une autre fiche maison (ex: le don d'un
+ * historique personnalise, tous deux crees par le meme import) affichait sa
+ * cle technique brute au lieu de son nom — `findEntryInRulesetChain` ne
+ * trouvait rien, faute de ligne de base, alors que la fiche de l'entree
+ * elle-meme se resout correctement via `getRuleEntryForWorld` (qui, lui,
+ * applique deja les surcharges). Reutilise `resolveEntryBlocksInRuleset`
+ * (deja override-aware) pour le type et le bloc description plutot que de
+ * dupliquer la boucle base+surcharges une troisieme fois ; seule la
+ * recherche du nom (porte par la charge utile `add_entry`, absente de ce
+ * que renvoie `resolveEntryBlocksInRuleset`) est refaite ici.
+ */
+export async function resolveHomebrewEntryDisplay(
+  supabase: TypedClient,
+  rulesetId: string,
+  entryKey: string
+): Promise<{ name: string; entryType: EntryType; description: string } | null> {
+  const resolved = await resolveEntryBlocksInRuleset(supabase, rulesetId, entryKey);
+  if (!resolved) return null;
+
+  const chain = await walkRulesetChain(supabase, rulesetId);
+  let name: string | null = null;
+  for (const link of chain) {
+    const rows = await listOverridesForRuleset(supabase, link.rulesetId, entryKey);
+    const addEntryRow = rows.find((r) => r.action === "add_entry");
+    if (addEntryRow) {
+      name = zAddEntryPayload.parse(addEntryRow.payload).name;
+      break;
+    }
+  }
+  // `resolved` non-null sans `add_entry` trouve signifierait une entree de
+  // base normale (pas homebrew) : ne devrait pas arriver, l'appelant ne
+  // passe ici qu'apres l'echec de `findEntryInRulesetChain`.
+  if (name === null) return null;
+
+  const descriptionData = resolved.blocksByType.get("description") as { segments?: { text: string }[] } | undefined;
+  const description = descriptionData?.segments?.map((s) => s.text).join("\n\n") ?? "";
+
+  return { name, entryType: resolved.entryType, description };
+}
+
+/**
  * Nom + description (deja traduite si `locale !== "en"`) d'une entree
  * quelconque de la chaine de ruleset. `null` seulement si la cle ne resout
  * dans aucun ruleset de la chaine (donnee source incoherente) — l'appelant
@@ -466,7 +525,7 @@ async function resolveEntryDetail(
   locale: Locale
 ): Promise<{ name: string; description: string } | null> {
   const featEntry = await findEntryInRulesetChain(supabase, rulesetId, entryKey);
-  if (!featEntry) return null;
+  if (!featEntry) return resolveHomebrewEntryDisplay(supabase, rulesetId, entryKey);
 
   const translation = locale !== "en" ? await getEntryTranslation(supabase, featEntry.id, locale) : null;
   const translatedBlocks = (translation?.blocks ?? {}) as Record<string, unknown>;
@@ -540,6 +599,16 @@ async function resolveEntryNames(
   for (const key of uniqueKeys) {
     const entry = byKey.get(key);
     if (entry) result.set(key, translationByEntryId.get(entry.id) ?? entryNameFrom(entry));
+  }
+
+  // Cles restantes : aucune ligne de base nulle part dans la chaine — le
+  // cas d'une fiche maison (`add_entry` sans base, V1-D4), voir
+  // `resolveHomebrewEntryDisplay`. Pas de traduction pour ces fiches, meme
+  // convention que `getRuleEntryForWorld.homebrewName`.
+  for (const key of uniqueKeys) {
+    if (result.has(key)) continue;
+    const homebrew = await resolveHomebrewEntryDisplay(supabase, rulesetId, key);
+    if (homebrew) result.set(key, homebrew.name);
   }
   return result;
 }
