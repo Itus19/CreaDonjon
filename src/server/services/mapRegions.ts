@@ -3,35 +3,36 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { filterBlocks, type VisibilityLevel, type Viewer } from "@/src/core/visibility";
 import { zMapElementRef, type MapElementRef } from "@/src/core/schemas/mapElementRef";
+import { zMapRegionShape, type MapRegionShape } from "@/src/core/schemas/mapRegion";
 import {
-  deletePin as repoDeletePin,
-  getPinById,
-  insertPin,
-  listPinsForBlock,
-  updatePin as repoUpdatePin,
-  type MapPinRow,
-} from "@/src/server/repos/mapPins";
+  deleteRegion as repoDeleteRegion,
+  getRegionById,
+  insertRegion,
+  listRegionsForBlock,
+  updateRegion as repoUpdateRegion,
+  type MapRegionRow,
+} from "@/src/server/repos/mapRegions";
 import { getBlockById } from "@/src/server/repos/blocks";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { canUserEditEntityById } from "@/src/server/services/permissions";
 
 type TypedClient = SupabaseClient<Database>;
 
-export interface VisibleMapPin {
+export interface VisibleMapRegion {
   id: string;
   blockId: string;
-  x: number;
-  y: number;
-  label: string;
+  name: string;
   ref: MapElementRef | null;
-  /** Resolu ici (jamais confie au client) : nom/slug de la fiche liee, seulement si elle existe encore et reste visible a CE viewer — un lien mort disparait plutot que de reveler l'existence d'une fiche cachee. */
+  /** Resolu ici (jamais confie au client), meme discipline que `VisibleMapPin.refEntity`. */
   refEntity: { name: string; slug: string } | null;
-  size: string;
+  shape: MapRegionShape;
+  fillColor: string;
+  borderColor: string;
   visibilityLevel: string;
   visibilityScopeId: string | null;
 }
 
-function toVisibilityAware(row: MapPinRow) {
+function toVisibilityAware(row: MapRegionRow) {
   return {
     ...row,
     visibility: { level: row.visibility_level as VisibilityLevel, scopeId: row.visibility_scope_id, createdBy: row.created_by },
@@ -44,16 +45,14 @@ function parseRef(ref: Json | null): MapElementRef | null {
   return parsed.success ? parsed.data : null;
 }
 
-/**
- * Punaises visibles par CE viewer (Lot I, phase C) — meme filtrage que
- * `listVisibleBlocks` (src/server/services/blocks.ts), applique ici a
- * `map_pins`. Le lien d'une punaise vers une fiche est revalide
- * independamment (une punaise publique peut pointer vers une fiche masquee,
- * auquel cas seul `refEntity` disparait — la punaise elle-meme reste
- * visible avec son `label` libre).
- */
-export async function listVisibleMapPins(supabase: TypedClient, blockId: string, viewer: Viewer): Promise<VisibleMapPin[]> {
-  const rows = await listPinsForBlock(supabase, blockId);
+function parseShape(shape: Json): MapRegionShape {
+  const parsed = zMapRegionShape.safeParse(shape);
+  return parsed.success ? parsed.data : [];
+}
+
+/** Zones visibles par CE viewer (Lot I, phase D) — meme discipline que `listVisibleMapPins`. */
+export async function listVisibleMapRegions(supabase: TypedClient, blockId: string, viewer: Viewer): Promise<VisibleMapRegion[]> {
+  const rows = await listRegionsForBlock(supabase, blockId);
   const visible = filterBlocks(rows.map(toVisibilityAware), viewer);
 
   const entityIds = new Set<string>();
@@ -70,96 +69,96 @@ export async function listVisibleMapPins(supabase: TypedClient, blockId: string,
     return {
       id: row.id,
       blockId: row.block_id,
-      x: row.x,
-      y: row.y,
-      label: row.label,
+      name: row.name,
       ref,
       refEntity: entity ? { name: entity.name, slug: entity.slug } : null,
-      size: row.size,
+      shape: parseShape(row.shape),
+      fillColor: row.fill_color,
+      borderColor: row.border_color,
       visibilityLevel: row.visibility_level,
       visibilityScopeId: row.visibility_scope_id,
     };
   });
 }
 
-export type MapPinMutationResult = { ok: true; pin: MapPinRow } | { ok: false; reason: "forbidden" | "not_found" };
+export type MapRegionMutationResult = { ok: true; region: MapRegionRow } | { ok: false; reason: "forbidden" | "not_found" };
 
-export async function createMapPin(
+export async function createMapRegion(
   supabase: TypedClient,
   params: {
     blockId: string;
-    x: number;
-    y: number;
-    label: string;
+    name: string;
     ref: MapElementRef | null;
-    size: string;
+    shape: MapRegionShape;
+    fillColor: string;
+    borderColor: string;
     visibilityLevel: string;
     visibilityScopeId: string | null;
     createdBy: string;
   }
-): Promise<MapPinMutationResult> {
+): Promise<MapRegionMutationResult> {
   const block = await getBlockById(supabase, params.blockId);
   if (!block) return { ok: false, reason: "not_found" };
   const allowed = await canUserEditEntityById(supabase, { entityId: block.entity_id, userId: params.createdBy });
   if (!allowed) return { ok: false, reason: "forbidden" };
 
-  const pin = await insertPin(supabase, {
+  const region = await insertRegion(supabase, {
     blockId: params.blockId,
-    x: params.x,
-    y: params.y,
-    label: params.label,
+    name: params.name,
     ref: params.ref as unknown as Json,
-    size: params.size,
+    shape: params.shape as unknown as Json,
+    fillColor: params.fillColor,
+    borderColor: params.borderColor,
     visibilityLevel: params.visibilityLevel,
     visibilityScopeId: params.visibilityScopeId,
     createdBy: params.createdBy,
   });
-  return { ok: true, pin };
+  return { ok: true, region };
 }
 
-export async function updateMapPin(
+export async function updateMapRegion(
   supabase: TypedClient,
   params: {
     id: string;
     userId: string;
-    x?: number;
-    y?: number;
-    label?: string;
+    name?: string;
     ref?: MapElementRef | null;
-    size?: string;
+    shape?: MapRegionShape;
+    fillColor?: string;
+    borderColor?: string;
     visibilityLevel?: string;
     visibilityScopeId?: string | null;
   }
-): Promise<MapPinMutationResult> {
-  const existing = await getPinById(supabase, params.id);
+): Promise<MapRegionMutationResult> {
+  const existing = await getRegionById(supabase, params.id);
   if (!existing) return { ok: false, reason: "not_found" };
   const block = await getBlockById(supabase, existing.block_id);
   if (!block) return { ok: false, reason: "not_found" };
   const allowed = await canUserEditEntityById(supabase, { entityId: block.entity_id, userId: params.userId });
   if (!allowed) return { ok: false, reason: "forbidden" };
 
-  const updated = await repoUpdatePin(supabase, {
+  const updated = await repoUpdateRegion(supabase, {
     id: params.id,
-    x: params.x,
-    y: params.y,
-    label: params.label,
+    name: params.name,
     ref: params.ref === undefined ? undefined : (params.ref as unknown as Json),
-    size: params.size,
+    shape: params.shape === undefined ? undefined : (params.shape as unknown as Json),
+    fillColor: params.fillColor,
+    borderColor: params.borderColor,
     visibilityLevel: params.visibilityLevel,
     visibilityScopeId: params.visibilityScopeId,
   });
   if (!updated) return { ok: false, reason: "not_found" };
-  return { ok: true, pin: updated };
+  return { ok: true, region: updated };
 }
 
-export async function deleteMapPin(supabase: TypedClient, params: { id: string; userId: string }): Promise<{ ok: true } | { ok: false; reason: "forbidden" | "not_found" }> {
-  const existing = await getPinById(supabase, params.id);
+export async function deleteMapRegion(supabase: TypedClient, params: { id: string; userId: string }): Promise<{ ok: true } | { ok: false; reason: "forbidden" | "not_found" }> {
+  const existing = await getRegionById(supabase, params.id);
   if (!existing) return { ok: false, reason: "not_found" };
   const block = await getBlockById(supabase, existing.block_id);
   if (!block) return { ok: false, reason: "not_found" };
   const allowed = await canUserEditEntityById(supabase, { entityId: block.entity_id, userId: params.userId });
   if (!allowed) return { ok: false, reason: "forbidden" };
 
-  const deleted = await repoDeletePin(supabase, params.id);
+  const deleted = await repoDeleteRegion(supabase, params.id);
   return deleted ? { ok: true } : { ok: false, reason: "not_found" };
 }

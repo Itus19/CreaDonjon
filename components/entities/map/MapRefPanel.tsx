@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import MapCanvas, { type MapPinMarkerData } from "./MapCanvas";
+import MapCanvas, { type MapPinMarkerData, type MapRegionShapeData } from "./MapCanvas";
 import type { MapView } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
 import type { MapSourceInfo } from "@/src/server/services/mapSource";
 import type { VisibleMapPin } from "@/src/server/services/mapPins";
+import type { VisibleMapRegion } from "@/src/server/services/mapRegions";
 
 /**
  * Contenu d'un bloc `map` en mode "ref" (Lot I, phase F₁, ADR 0017
@@ -34,6 +35,7 @@ export default function MapRefPanel({
   const [source, setSource] = useState<MapSourceInfo | null | undefined>(undefined);
   const [asset, setAsset] = useState<AssetRow | null>(null);
   const [pins, setPins] = useState<VisibleMapPin[]>([]);
+  const [regions, setRegions] = useState<VisibleMapRegion[]>([]);
   const pendingViewRef = useRef<MapView | null>(null);
 
   // Ajuste pendant le rendu plutot que dans un effet (react.dev, "Adjusting
@@ -47,6 +49,7 @@ export default function MapRefPanel({
     setSource(undefined);
     setAsset(null);
     setPins([]);
+    setRegions([]);
   }
 
   useEffect(() => {
@@ -80,6 +83,21 @@ export default function MapRefPanel({
   }, [sourceBlockId]);
 
   useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/blocks/${sourceBlockId}/regions`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((body: VisibleMapRegion[]) => {
+        if (!cancelled) setRegions(body);
+      })
+      .catch(() => {
+        if (!cancelled) setRegions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceBlockId]);
+
+  useEffect(() => {
     if (!source?.assetId) return;
     let cancelled = false;
     fetch(`/api/assets/${source.assetId}/meta`)
@@ -103,6 +121,12 @@ export default function MapRefPanel({
   /** Lecture seule (retour utilisateur : "clic sur une punaise liée navigue vers la fiche") — les punaises appartiennent au bloc SOURCE, jamais editables depuis une reference. */
   function handlePinClick(pin: MapPinMarkerData) {
     const full = pins.find((p) => p.id === pin.id);
+    if (full?.refEntity) router.push(`/m/${worldSlug}/f/${full.refEntity.slug}`);
+  }
+
+  /** Meme motif que `handlePinClick`, pour les zones. */
+  function handleRegionClick(region: MapRegionShapeData) {
+    const full = regions.find((r) => r.id === region.id);
     if (full?.refEntity) router.push(`/m/${worldSlug}/f/${full.refEntity.slug}`);
   }
 
@@ -137,6 +161,8 @@ export default function MapRefPanel({
             }}
             pins={pins.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
             onPinClick={handlePinClick}
+            regions={regions.map((r) => ({ id: r.id, name: r.name, shape: r.shape, fillColor: r.fillColor, borderColor: r.borderColor }))}
+            onRegionClick={handleRegionClick}
           />
         ) : (
           <p className="text-sm italic text-ink-muted">« {source.entityName} » n&apos;a pas encore d&apos;image.</p>

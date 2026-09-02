@@ -264,7 +264,13 @@ export default function PublicBlockView({ block, hrefBase }: { block: PublicBloc
         />
       )}
       {block.blockType === "map" && (
-        <PublicMapBlock data={block.data as unknown as MapBlockData} mapSource={block.mapSource} mapPins={block.mapPins} hrefBase={hrefBase} />
+        <PublicMapBlock
+          data={block.data as unknown as MapBlockData}
+          mapSource={block.mapSource}
+          mapPins={block.mapPins}
+          mapRegions={block.mapRegions}
+          hrefBase={hrefBase}
+        />
       )}
     </div>
   );

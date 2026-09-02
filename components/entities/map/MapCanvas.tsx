@@ -23,6 +23,14 @@ export interface MapPinMarkerData {
   refEntityId?: string | null;
 }
 
+export interface MapRegionShapeData {
+  id: string;
+  name: string;
+  shape: { x: number; y: number }[];
+  fillColor: string;
+  borderColor: string;
+}
+
 /**
  * Canevas de la carte (Lot I, phase B) — meme motif de pan/zoom que
  * `FamilyTreeCanvas`/`RelationsGraphCanvas`/`TimelineAxis` (ctrl+molette,
@@ -46,6 +54,12 @@ export default function MapCanvas({
   onPinClick,
   placingPin = false,
   onPlacePin,
+  regions,
+  onRegionClick,
+  drawingRegion = false,
+  pendingRegionPoints,
+  onAddRegionPoint,
+  onFinishRegion,
 }: {
   /** Plein format (retour utilisateur, "carte de 4000px, vignette d'abord") — jamais charge sans un `placeholderUrl` deja a l'ecran pour eviter un flash de vide pendant le chargement. */
   imageUrl: string;
@@ -64,6 +78,15 @@ export default function MapCanvas({
   /** Outil « point » actif (retour utilisateur : "un outil de point qui permet d'ajouter des points") — un clic sur le fond (jamais sur une punaise existante) pose une nouvelle punaise a cet endroit. */
   placingPin?: boolean;
   onPlacePin?: (x: number, y: number) => void;
+  /** Zones deja filtrees par visibilite (Lot I, phase D) — memes conventions que `pins`. */
+  regions?: MapRegionShapeData[];
+  onRegionClick?: (region: MapRegionShapeData) => void;
+  /** Outil « zone » actif (retour utilisateur : "polygone trace point par point, sommets visibles pendant le trace") — un clic ajoute un sommet, un double-clic termine le polygone. */
+  drawingRegion?: boolean;
+  /** Polygone en cours (etat du parent, pas de ce composant — le trace survit a un re-rendu du canevas). */
+  pendingRegionPoints?: { x: number; y: number }[];
+  onAddRegionPoint?: (x: number, y: number) => void;
+  onFinishRegion?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
@@ -161,17 +184,36 @@ export default function MapCanvas({
     setIsDragging(false);
   }
 
-  function handleCanvasClick(e: React.MouseEvent) {
-    // Un clic sur une punaise existante s'arrete avant d'atteindre ici
-    // (MapPinMarker : `stopPropagation`) — ce gestionnaire ne voit donc que
-    // les clics sur le fond de la carte.
-    if (!placingPin || !onPlacePin) return;
+  function eventToNormalizedPoint(e: React.MouseEvent): { x: number; y: number } | null {
     const container = containerRef.current;
-    if (!container || imageWidth === 0 || imageHeight === 0) return;
+    if (!container || imageWidth === 0 || imageHeight === 0) return null;
     const rect = container.getBoundingClientRect();
-    const x = clamp((e.clientX - rect.left - view.x) / (imageWidth * view.scale), 0, 1);
-    const y = clamp((e.clientY - rect.top - view.y) / (imageHeight * view.scale), 0, 1);
-    onPlacePin(x, y);
+    return {
+      x: clamp((e.clientX - rect.left - view.x) / (imageWidth * view.scale), 0, 1),
+      y: clamp((e.clientY - rect.top - view.y) / (imageHeight * view.scale), 0, 1),
+    };
+  }
+
+  function handleCanvasClick(e: React.MouseEvent) {
+    // Un clic sur une punaise/zone existante s'arrete avant d'atteindre ici
+    // (`stopPropagation`) — ce gestionnaire ne voit donc que les clics sur
+    // le fond de la carte.
+    if (placingPin && onPlacePin) {
+      const point = eventToNormalizedPoint(e);
+      if (point) onPlacePin(point.x, point.y);
+      return;
+    }
+    // `e.detail === 2` = deuxieme clic d'un double-clic (compteur natif du
+    // navigateur) : laisse `onFinishRegion` (declenche par `onDoubleClick`)
+    // terminer le polygone plutot que d'y ajouter un sommet de plus ici.
+    if (drawingRegion && onAddRegionPoint && e.detail === 1) {
+      const point = eventToNormalizedPoint(e);
+      if (point) onAddRegionPoint(point.x, point.y);
+    }
+  }
+
+  function handleCanvasDoubleClick() {
+    if (drawingRegion && onFinishRegion) onFinishRegion();
   }
 
   return (
@@ -179,13 +221,14 @@ export default function MapCanvas({
       ref={containerRef}
       style={{ height }}
       className={`relative overflow-hidden rounded-md border border-edge/60 bg-panel-sunken ${
-        placingPin ? "cursor-crosshair" : interactive ? (isDragging ? "cursor-grabbing" : "cursor-grab") : ""
+        placingPin || drawingRegion ? "cursor-crosshair" : interactive ? (isDragging ? "cursor-grabbing" : "cursor-grab") : ""
       }`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={endDrag}
       onMouseLeave={endDrag}
       onClick={handleCanvasClick}
+      onDoubleClick={handleCanvasDoubleClick}
       onClickCapture={(e) => {
         if (suppressClickRef.current) {
           e.preventDefault();
@@ -228,6 +271,45 @@ export default function MapCanvas({
           opacity: placeholderUrl ? (fullLoaded ? 1 : 0) : 1,
         }}
       />
+      {(regions && regions.length > 0) || (pendingRegionPoints && pendingRegionPoints.length > 0) ? (
+        <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
+          {regions?.map((region) => (
+            <polygon
+              key={region.id}
+              points={region.shape.map((p) => `${view.x + p.x * imageWidth * view.scale},${view.y + p.y * imageHeight * view.scale}`).join(" ")}
+              fill={region.fillColor}
+              fillOpacity={0.35}
+              stroke={region.borderColor}
+              strokeWidth={2}
+              className={onRegionClick ? "pointer-events-auto cursor-pointer" : undefined}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRegionClick?.(region);
+              }}
+            />
+          ))}
+          {pendingRegionPoints && pendingRegionPoints.length > 0 && (
+            <>
+              <polyline
+                points={pendingRegionPoints.map((p) => `${view.x + p.x * imageWidth * view.scale},${view.y + p.y * imageHeight * view.scale}`).join(" ")}
+                fill="none"
+                stroke="var(--accent)"
+                strokeWidth={2}
+                strokeDasharray="4 4"
+              />
+              {pendingRegionPoints.map((p, i) => (
+                <circle
+                  key={i}
+                  cx={view.x + p.x * imageWidth * view.scale}
+                  cy={view.y + p.y * imageHeight * view.scale}
+                  r={4}
+                  fill="var(--accent)"
+                />
+              ))}
+            </>
+          )}
+        </svg>
+      ) : null}
       {pins?.map((pin) => (
         <MapPinMarker
           key={pin.id}

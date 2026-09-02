@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { zMapPinRef, zMapPinSize } from "@/src/core/schemas/mapPin";
+import { zMapPinSize } from "@/src/core/schemas/mapPin";
+import { zMapElementRef } from "@/src/core/schemas/mapElementRef";
 import { zVisibilityInput } from "@/lib/visibility/schemas";
 
 /**
@@ -11,7 +12,7 @@ export const createMapPinSchema = z.object({
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
   label: z.string().trim().max(200, "200 caracteres maximum.").default(""),
-  ref: zMapPinRef.nullable().default(null),
+  ref: zMapElementRef.nullable().default(null),
   size: zMapPinSize.default("medium"),
   visibility: zVisibilityInput,
 });
@@ -20,7 +21,7 @@ export const updateMapPinSchema = z.object({
   x: z.number().min(0).max(1).optional(),
   y: z.number().min(0).max(1).optional(),
   label: z.string().trim().max(200, "200 caracteres maximum.").optional(),
-  ref: zMapPinRef.nullable().optional(),
+  ref: zMapElementRef.nullable().optional(),
   size: zMapPinSize.optional(),
   visibility: zVisibilityInput.optional(),
 });

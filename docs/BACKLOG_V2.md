@@ -620,10 +620,12 @@ Découpé en phases pour rester traçable d'une session à l'autre — cocher au
 - Portée volontairement bornée : les punaises n'apparaissent que dans les vues agrandies (`MapWorkspace`, `MapRefPanel`, la modale "Agrandir" de `PublicMapBlock`), jamais dans l'aperçu replié (juste l'image, comme avant) — cohérent avec la vignette qui reste un simple teaser.
 - Vérifié en direct : punaise posée sur la fiche `carte` "Faerûn", liée à "Fine Lââm", visible et persistante après rechargement en mode propriétaire ET en mode référence (bloc `map` de Fine Lââm), rendue côté aperçu public (`/apercu`) avec son icône (portrait).
 
-**Phase D — Zones**
-- [ ] Table `map_regions` (`block_id`, `name`, `ref`, `shape` jsonb polygone normalisé, `color`, `layer_id`, `visibility_level`/`visibility_scope_id`, RLS).
-- [ ] Outil « zone » : polygone tracé point par point, sommets visibles pendant le tracé.
-- [ ] Popup zone : même nom/lien/couche/suppression que la punaise, plus un choix de couleur (remplissage + contour).
+**Phase D — Zones — ✅ faite, commit à suivre**
+- [x] Table `map_regions` (`block_id`, `name`, `ref` jsonb `{kind:"entity", id}` — type partagé avec `map_pins`, renommé `MapElementRef`/`zMapElementRef` (`src/core/schemas/mapElementRef.ts`) au moment où un 2ᵉ consommateur en avait besoin —, `shape` jsonb (liste ordonnée de sommets normalisés 0-1), `fill_color`/`border_color` (deux colonnes texte `#RRGGBB` plutôt qu'un objet, retour utilisateur "remplissage + contour"), `layer_id` nullable sans FK pour l'instant (Phase E), `visibility_level`/`visibility_scope_id`, RLS — même discipline exacte que `map_pins` (migration 20260902090001_map_regions.sql, réutilise `app.block_entity_id` déjà créé).
+- [x] Outil « + Zone » dans `MapWorkspace.tsx` (own mode uniquement, mutuellement exclusif avec l'outil punaise) : clic ajoute un sommet (rendu en direct — sommets + trait pointillé), double-clic termine le polygone (distingué du clic normal via `MouseEvent.detail`, jamais de sommet fantôme ajouté par le second clic du double-clic) et ouvre son popup. Moins de 3 sommets : tracé abandonné en silence.
+- [x] Popup zone (`MapRegionEditorPopup.tsx`) : nom libre et lien indépendants (même sélecteur `otherEntities` que les punaises), couleurs de remplissage/contour (`<input type="color">`), visibilité, suppression. Couche différée à la Phase E.
+- [x] Rendu : polygone SVG superposé au canevas (`MapCanvas.tsx`, mêmes coordonnées écran que les punaises), jamais éditable depuis une référence — mêmes règles ADR 0017 decision 1 que les punaises (`listVisibleMapRegions`, résolution serveur unique, réutilisée par l'éditeur MJ, le wiki public et la fiche joueur). Clic sur une zone liée navigue vers la fiche en lecture seule, ouvre l'éditeur en mode propriétaire.
+- Vérifié en direct : zone tracée sur "Faerûn", liée à "Naivara Amakiir", couleurs et forme persistantes après rechargement, visible (couleurs correctes) sur le bloc référent de Fine Lââm.
 
 **Phase E — Couches**
 - [ ] Table `map_layers` (`block_id`, `name`, `display_order`, `visibility_level`/`visibility_scope_id`, RLS).

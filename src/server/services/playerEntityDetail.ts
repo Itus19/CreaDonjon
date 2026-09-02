@@ -15,6 +15,7 @@ import { getFamilyTree } from "@/src/server/services/genealogy";
 import { zMapBlockData } from "@/src/core/schemas/blocks/map";
 import { resolveMapSource } from "@/src/server/services/mapSource";
 import { listVisibleMapPins } from "@/src/server/services/mapPins";
+import { listVisibleMapRegions } from "@/src/server/services/mapRegions";
 import { zQuestBlockData } from "@/src/core/schemas/blocks/quest";
 import { zTimelineBlockData } from "@/src/core/schemas/blocks/timeline";
 import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
@@ -245,7 +246,7 @@ export async function getPlayerEntityDetail(
     return { ...block, questRefs };
   });
 
-  // Carte (Lot I, phases C et F₁) : meme resolution que
+  // Carte (Lot I, phases C, D et F₁) : meme resolution que
   // `getPublicEntityDetail`, avec le vrai viewer joueur plutot que
   // l'anonyme — voir son commentaire pour le detail own/ref.
   const blocksWithMapSource = await Promise.all(
@@ -254,12 +255,20 @@ export async function getPlayerEntityDetail(
       const map = zMapBlockData.safeParse(block.data);
       if (!map.success) return block;
       if (map.data.mode === "own") {
-        const mapPins = await listVisibleMapPins(supabase, block.id, viewer);
-        return { ...block, mapPins };
+        const [mapPins, mapRegions] = await Promise.all([
+          listVisibleMapPins(supabase, block.id, viewer),
+          listVisibleMapRegions(supabase, block.id, viewer),
+        ]);
+        return { ...block, mapPins, mapRegions };
       }
       const mapSource = await resolveMapSource(supabase, map.data.sourceBlockId, viewer);
-      const mapPins = mapSource ? await listVisibleMapPins(supabase, map.data.sourceBlockId, viewer) : [];
-      return { ...block, mapSource, mapPins };
+      const [mapPins, mapRegions] = mapSource
+        ? await Promise.all([
+            listVisibleMapPins(supabase, map.data.sourceBlockId, viewer),
+            listVisibleMapRegions(supabase, map.data.sourceBlockId, viewer),
+          ])
+        : [[], []];
+      return { ...block, mapSource, mapPins, mapRegions };
     })
   );
 

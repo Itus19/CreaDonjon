@@ -3,61 +3,54 @@
 import { useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
-import type { MapPinSize } from "@/src/core/schemas/mapPin";
 import type { MapElementRef } from "@/src/core/schemas/mapElementRef";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 
-export interface MapPinDraft {
-  /** `null` = punaise pas encore creee (vient d'etre posee, en attente de son premier enregistrement). */
+export interface MapRegionDraft {
+  /** `null` = zone pas encore creee (polygone qui vient d'etre trace, en attente de son premier enregistrement). */
   id: string | null;
-  x: number;
-  y: number;
-  label: string;
+  shape: { x: number; y: number }[];
+  name: string;
   ref: MapElementRef | null;
-  size: MapPinSize;
+  fillColor: string;
+  borderColor: string;
   visibilityLevel: string;
   visibilityScopeId: string | null;
 }
 
-const SIZE_OPTIONS: { value: MapPinSize; label: string }[] = [
-  { value: "small", label: "Petite" },
-  { value: "medium", label: "Moyenne" },
-  { value: "large", label: "Grande" },
-];
-
 const NO_LINK = "__none__";
 
 /**
- * Popup d'edition d'une punaise (Lot I, phase C) — nom libre et lien vers
- * une fiche existante sont INDEPENDANTS l'un de l'autre (retour utilisateur,
- * point 1) : changer l'un ne touche jamais l'autre. Meme selecteur de cible
- * que `RelationsChips.tsx` (`otherEntities`, Dropdown trie par nom) — pas
- * de nouvelle recherche a construire pour ce meme besoin.
+ * Popup d'edition d'une zone (Lot I, phase D) — meme structure que
+ * `MapPinEditorPopup.tsx` (nom/lien independants, meme selecteur de fiche),
+ * un choix de couleur remplissage + contour a la place de la taille.
  */
-export default function MapPinEditorPopup({
+export default function MapRegionEditorPopup({
   draft,
   otherEntities,
   onSave,
   onDelete,
   onClose,
 }: {
-  draft: MapPinDraft;
+  draft: MapRegionDraft;
   otherEntities: OtherEntityOption[];
-  onSave: (draft: MapPinDraft) => void;
+  onSave: (draft: MapRegionDraft) => void;
   onDelete?: () => void;
   onClose: () => void;
 }) {
-  const [label, setLabel] = useState(draft.label);
+  const [name, setName] = useState(draft.name);
   const [refEntityId, setRefEntityId] = useState(draft.ref?.id ?? NO_LINK);
-  const [size, setSize] = useState<MapPinSize>(draft.size);
+  const [fillColor, setFillColor] = useState(draft.fillColor);
+  const [borderColor, setBorderColor] = useState(draft.borderColor);
   const [visibilityLevel, setVisibilityLevel] = useState(draft.visibilityLevel);
 
   function save() {
     onSave({
       ...draft,
-      label: label.trim(),
+      name: name.trim(),
       ref: refEntityId === NO_LINK ? null : { kind: "entity", id: refEntityId },
-      size,
+      fillColor,
+      borderColor,
       visibilityLevel,
       visibilityScopeId: null,
     });
@@ -67,7 +60,7 @@ export default function MapPinEditorPopup({
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-scrim p-6" onClick={onClose}>
       <div className="flex w-full max-w-sm flex-col gap-3 rounded-lg border border-edge-strong bg-panel p-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-ink">{draft.id ? "Modifier la punaise" : "Nouvelle punaise"}</span>
+          <span className="text-sm font-semibold text-ink">{draft.id ? "Modifier la zone" : "Nouvelle zone"}</span>
           <button type="button" onClick={onClose} className="text-ink-muted hover:text-ink">
             ✕
           </button>
@@ -77,9 +70,9 @@ export default function MapPinEditorPopup({
           Nom
           <input
             autoFocus
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="Nom de la punaise"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nom de la zone"
             className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none focus:border-accent"
           />
         </label>
@@ -102,13 +95,23 @@ export default function MapPinEditorPopup({
 
         <div className="flex items-center gap-3">
           <label className="flex flex-1 flex-col gap-1 text-xs text-ink-muted">
-            Taille
-            <Dropdown
-              value={size}
-              options={SIZE_OPTIONS}
-              onChange={(v) => setSize(v as MapPinSize)}
-              aria-label="Taille de la punaise"
-              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
+            Remplissage
+            <input
+              type="color"
+              value={fillColor}
+              onChange={(e) => setFillColor(e.target.value)}
+              className="h-8 w-full cursor-pointer rounded-md border border-edge bg-transparent"
+              aria-label="Couleur de remplissage"
+            />
+          </label>
+          <label className="flex flex-1 flex-col gap-1 text-xs text-ink-muted">
+            Contour
+            <input
+              type="color"
+              value={borderColor}
+              onChange={(e) => setBorderColor(e.target.value)}
+              className="h-8 w-full cursor-pointer rounded-md border border-edge bg-transparent"
+              aria-label="Couleur du contour"
             />
           </label>
           <label className="flex flex-1 flex-col gap-1 text-xs text-ink-muted">
@@ -117,7 +120,7 @@ export default function MapPinEditorPopup({
               value={visibilityLevel}
               options={VISIBILITY_OPTIONS}
               onChange={setVisibilityLevel}
-              aria-label="Visibilité de la punaise"
+              aria-label="Visibilité de la zone"
               className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
             />
           </label>

@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import MapCanvas, { type MapPinMarkerData } from "@/components/entities/map/MapCanvas";
+import MapCanvas, { type MapPinMarkerData, type MapRegionShapeData } from "@/components/entities/map/MapCanvas";
 import type { MapBlockData } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
 import type { MapSourceInfo } from "@/src/server/services/mapSource";
 import type { VisibleMapPin } from "@/src/server/services/mapPins";
+import type { VisibleMapRegion } from "@/src/server/services/mapRegions";
 
 // Meme hauteur que RelationsGraphCanvas/FamilyTreeCanvas (retour
 // utilisateur : "le bloc carte a une forme bizarre") — voir MapBlockEditor.tsx.
@@ -25,12 +26,15 @@ export default function PublicMapBlock({
   data,
   mapSource,
   mapPins,
+  mapRegions,
   hrefBase,
 }: {
   data: MapBlockData;
   mapSource?: MapSourceInfo | null;
   /** Deja filtrees par visibilite cote serveur (Lot I, phase C) — jamais un fetch client, ce composant sert aussi bien un viewer anonyme qu'un joueur authentifie. */
   mapPins?: VisibleMapPin[];
+  /** Meme discipline que `mapPins` (Lot I, phase D). */
+  mapRegions?: VisibleMapRegion[];
   hrefBase: string;
 }) {
   const router = useRouter();
@@ -70,6 +74,11 @@ export default function PublicMapBlock({
 
   function handlePinClick(pin: MapPinMarkerData) {
     const full = mapPins?.find((p) => p.id === pin.id);
+    if (full?.refEntity) router.push(`${hrefBase}/${full.refEntity.slug}`);
+  }
+
+  function handleRegionClick(region: MapRegionShapeData) {
+    const full = mapRegions?.find((r) => r.id === region.id);
     if (full?.refEntity) router.push(`${hrefBase}/${full.refEntity.slug}`);
   }
 
@@ -115,6 +124,8 @@ export default function PublicMapBlock({
                 height="100%"
                 pins={mapPins?.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
                 onPinClick={handlePinClick}
+                regions={mapRegions?.map((r) => ({ id: r.id, name: r.name, shape: r.shape, fillColor: r.fillColor, borderColor: r.borderColor }))}
+                onRegionClick={handleRegionClick}
               />
             </div>
           </div>

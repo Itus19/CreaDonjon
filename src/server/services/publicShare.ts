@@ -23,6 +23,7 @@ import { getFamilyTree } from "@/src/server/services/genealogy";
 import { zMapBlockData } from "@/src/core/schemas/blocks/map";
 import { resolveMapSource, type MapSourceInfo } from "@/src/server/services/mapSource";
 import { listVisibleMapPins, type VisibleMapPin } from "@/src/server/services/mapPins";
+import { listVisibleMapRegions, type VisibleMapRegion } from "@/src/server/services/mapRegions";
 import type { FamilyTree } from "@/src/core/genealogy/buildFamilyTree";
 import { zQuestBlockData } from "@/src/core/schemas/blocks/quest";
 import { buildEntityTree, withPlayerCharacterKinds, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
@@ -261,6 +262,8 @@ export interface PublicBlock {
   mapSource?: MapSourceInfo | null;
   /** Blocs `map` seulement, own ET ref (Lot I, phase C) : punaises deja filtrees par visibilite pour CE viewer (`listVisibleMapPins`) — un bloc "ref" recoit les punaises du bloc SOURCE (ADR 0017 decision 1, "modifier une punaise sur le bloc proprietaire la modifie partout"). */
   mapPins?: VisibleMapPin[];
+  /** Blocs `map` seulement, own ET ref (Lot I, phase D) : memes regles que `mapPins`, pour les zones. */
+  mapRegions?: VisibleMapRegion[];
 }
 
 function filterTextBlockSegments(blockType: string, data: Json): Json {
@@ -536,25 +539,33 @@ export async function getPublicEntityDetail(
     return { ...block, questRefs };
   });
 
-  // Carte (Lot I, phases C et F₁) : un bloc "own" resout ses propres
-  // punaises (block.id) ; un bloc "ref" ne stocke qu'un `sourceBlockId`,
-  // jamais assez pour afficher image ET punaises — `resolveMapSource`
-  // revalide la visibilite du bloc SOURCE pour ce viewer anonyme avant de
-  // renvoyer quoi que ce soit, meme si le bloc "ref" lui-meme est deja
-  // public (ADR 0017 decision 1 : les punaises appartiennent au bloc
-  // proprietaire, jamais copiees).
+  // Carte (Lot I, phases C, D et F₁) : un bloc "own" resout ses propres
+  // punaises/zones (block.id) ; un bloc "ref" ne stocke qu'un
+  // `sourceBlockId`, jamais assez pour afficher image ET elements —
+  // `resolveMapSource` revalide la visibilite du bloc SOURCE pour ce
+  // viewer anonyme avant de renvoyer quoi que ce soit, meme si le bloc
+  // "ref" lui-meme est deja public (ADR 0017 decision 1 : punaises/zones
+  // appartiennent au bloc proprietaire, jamais copiees).
   const blocksWithMapSource = await Promise.all(
     blocksWithQuestRefs.map(async (block) => {
       if (block.blockType !== "map") return block;
       const map = zMapBlockData.safeParse(block.data);
       if (!map.success) return block;
       if (map.data.mode === "own") {
-        const mapPins = await listVisibleMapPins(supabase, block.id, { kind: "anonymous" });
-        return { ...block, mapPins };
+        const [mapPins, mapRegions] = await Promise.all([
+          listVisibleMapPins(supabase, block.id, { kind: "anonymous" }),
+          listVisibleMapRegions(supabase, block.id, { kind: "anonymous" }),
+        ]);
+        return { ...block, mapPins, mapRegions };
       }
       const mapSource = await resolveMapSource(supabase, map.data.sourceBlockId, { kind: "anonymous" });
-      const mapPins = mapSource ? await listVisibleMapPins(supabase, map.data.sourceBlockId, { kind: "anonymous" }) : [];
-      return { ...block, mapSource, mapPins };
+      const [mapPins, mapRegions] = mapSource
+        ? await Promise.all([
+            listVisibleMapPins(supabase, map.data.sourceBlockId, { kind: "anonymous" }),
+            listVisibleMapRegions(supabase, map.data.sourceBlockId, { kind: "anonymous" }),
+          ])
+        : [[], []];
+      return { ...block, mapSource, mapPins, mapRegions };
     })
   );
 

@@ -1680,6 +1680,62 @@ export type Database = {
           },
         ]
       }
+      map_regions: {
+        Row: {
+          block_id: string
+          border_color: string
+          created_at: string
+          created_by: string | null
+          fill_color: string
+          id: string
+          layer_id: string | null
+          name: string
+          ref: Json | null
+          shape: Json
+          updated_at: string
+          visibility_level: string
+          visibility_scope_id: string | null
+        }
+        Insert: {
+          block_id: string
+          border_color?: string
+          created_at?: string
+          created_by?: string | null
+          fill_color?: string
+          id?: string
+          layer_id?: string | null
+          name?: string
+          ref?: Json | null
+          shape: Json
+          updated_at?: string
+          visibility_level?: string
+          visibility_scope_id?: string | null
+        }
+        Update: {
+          block_id?: string
+          border_color?: string
+          created_at?: string
+          created_by?: string | null
+          fill_color?: string
+          id?: string
+          layer_id?: string | null
+          name?: string
+          ref?: Json | null
+          shape?: Json
+          updated_at?: string
+          visibility_level?: string
+          visibility_scope_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "map_regions_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personality_events: {
         Row: {
           created_at: string

@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import MapCanvas, { type MapPinMarkerData } from "./MapCanvas";
+import MapCanvas, { type MapPinMarkerData, type MapRegionShapeData } from "./MapCanvas";
 import MapPinEditorPopup, { type MapPinDraft } from "./MapPinEditorPopup";
+import MapRegionEditorPopup, { type MapRegionDraft } from "./MapRegionEditorPopup";
 import type { MapBlockData, MapView } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
 import type { VisibleMapPin } from "@/src/server/services/mapPins";
+import type { VisibleMapRegion } from "@/src/server/services/mapRegions";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 
 // Retour utilisateur, avec capture a l'appui : la vignette a 800px restait
@@ -72,6 +74,11 @@ export default function MapWorkspace({
   const [placingPin, setPlacingPin] = useState(false);
   const [editingPin, setEditingPin] = useState<MapPinDraft | null>(null);
 
+  const [regions, setRegions] = useState<VisibleMapRegion[]>([]);
+  const [drawingRegion, setDrawingRegion] = useState(false);
+  const [pendingRegionPoints, setPendingRegionPoints] = useState<{ x: number; y: number }[]>([]);
+  const [editingRegion, setEditingRegion] = useState<MapRegionDraft | null>(null);
+
   function reloadPins() {
     fetch(`/api/blocks/${blockId}/pins`)
       .then((res) => (res.ok ? res.json() : []))
@@ -79,8 +86,16 @@ export default function MapWorkspace({
       .catch(() => setPins([]));
   }
 
+  function reloadRegions() {
+    fetch(`/api/blocks/${blockId}/regions`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((body: VisibleMapRegion[]) => setRegions(body))
+      .catch(() => setRegions([]));
+  }
+
   useEffect(() => {
     reloadPins();
+    reloadRegions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blockId]);
 
@@ -151,6 +166,18 @@ export default function MapWorkspace({
     onSaveNow?.(next);
   }
 
+  function togglePlacingPin() {
+    setDrawingRegion(false);
+    setPendingRegionPoints([]);
+    setPlacingPin((v) => !v);
+  }
+
+  function toggleDrawingRegion() {
+    setPlacingPin(false);
+    setPendingRegionPoints([]);
+    setDrawingRegion((v) => !v);
+  }
+
   function handlePlacePin(x: number, y: number) {
     setPlacingPin(false);
     setEditingPin({ id: null, x, y, label: "", ref: null, size: "medium", visibilityLevel: "public", visibilityScopeId: null });
@@ -195,6 +222,71 @@ export default function MapWorkspace({
     reloadPins();
   }
 
+  function handleAddRegionPoint(x: number, y: number) {
+    setPendingRegionPoints((prev) => [...prev, { x, y }]);
+  }
+
+  function handleFinishRegion() {
+    setDrawingRegion(false);
+    // Un polygone a besoin d'au moins 3 sommets (retour utilisateur, "polygone
+    // trace point par point") — un trace plus court est abandonne en silence,
+    // jamais une zone degeneree enregistree.
+    if (pendingRegionPoints.length < 3) {
+      setPendingRegionPoints([]);
+      return;
+    }
+    setEditingRegion({
+      id: null,
+      shape: pendingRegionPoints,
+      name: "",
+      ref: null,
+      fillColor: "#3b82f6",
+      borderColor: "#1d4ed8",
+      visibilityLevel: "public",
+      visibilityScopeId: null,
+    });
+    setPendingRegionPoints([]);
+  }
+
+  function handleRegionClick(region: MapRegionShapeData) {
+    const full = regions.find((r) => r.id === region.id);
+    if (!full) return;
+    setEditingRegion({
+      id: full.id,
+      shape: full.shape,
+      name: full.name,
+      ref: full.ref,
+      fillColor: full.fillColor,
+      borderColor: full.borderColor,
+      visibilityLevel: full.visibilityLevel,
+      visibilityScopeId: full.visibilityScopeId,
+    });
+  }
+
+  async function saveRegionDraft(draft: MapRegionDraft) {
+    setEditingRegion(null);
+    const body = JSON.stringify({
+      name: draft.name,
+      ref: draft.ref,
+      shape: draft.shape,
+      fillColor: draft.fillColor,
+      borderColor: draft.borderColor,
+      visibility: { level: draft.visibilityLevel, scopeId: draft.visibilityScopeId },
+    });
+    if (draft.id) {
+      await fetch(`/api/map-regions/${draft.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body });
+    } else {
+      await fetch(`/api/blocks/${blockId}/regions`, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+    }
+    reloadRegions();
+  }
+
+  async function deleteRegionDraft(id: string) {
+    setEditingRegion(null);
+    await fetch(`/api/map-regions/${id}`, { method: "DELETE" });
+    reloadRegions();
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
       <div className="flex shrink-0 items-center gap-2">
@@ -214,7 +306,7 @@ export default function MapWorkspace({
         {data.assetId && (
           <button
             type="button"
-            onClick={() => setPlacingPin((v) => !v)}
+            onClick={togglePlacingPin}
             className={`rounded-full border px-3 py-1 text-xs transition-colors ${
               placingPin ? "border-accent bg-accent text-accent-ink" : "border-edge text-ink hover:bg-panel-raised"
             }`}
@@ -222,6 +314,18 @@ export default function MapWorkspace({
             + Punaise
           </button>
         )}
+        {data.assetId && (
+          <button
+            type="button"
+            onClick={toggleDrawingRegion}
+            className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+              drawingRegion ? "border-accent bg-accent text-accent-ink" : "border-edge text-ink hover:bg-panel-raised"
+            }`}
+          >
+            + Zone
+          </button>
+        )}
+        {drawingRegion && <span className="text-xs text-ink-muted">Cliquez pour poser chaque sommet, double-cliquez pour terminer.</span>}
         <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onFileChange} />
         {error && <p className="text-xs text-danger">{error}</p>}
       </div>
@@ -242,6 +346,12 @@ export default function MapWorkspace({
             onPinClick={handlePinClick}
             placingPin={placingPin}
             onPlacePin={handlePlacePin}
+            regions={regions.map((r) => ({ id: r.id, name: r.name, shape: r.shape, fillColor: r.fillColor, borderColor: r.borderColor }))}
+            onRegionClick={handleRegionClick}
+            drawingRegion={drawingRegion}
+            pendingRegionPoints={pendingRegionPoints}
+            onAddRegionPoint={handleAddRegionPoint}
+            onFinishRegion={handleFinishRegion}
           />
         ) : (
           <p className="text-sm italic text-ink-muted">Aucune carte pour l&apos;instant — téléversez une image.</p>
@@ -255,6 +365,16 @@ export default function MapWorkspace({
           onSave={savePinDraft}
           onDelete={editingPin.id ? () => deletePinDraft(editingPin.id!) : undefined}
           onClose={() => setEditingPin(null)}
+        />
+      )}
+
+      {editingRegion && (
+        <MapRegionEditorPopup
+          draft={editingRegion}
+          otherEntities={otherEntities}
+          onSave={saveRegionDraft}
+          onDelete={editingRegion.id ? () => deleteRegionDraft(editingRegion.id!) : undefined}
+          onClose={() => setEditingRegion(null)}
         />
       )}
     </div>
