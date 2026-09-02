@@ -25,6 +25,14 @@ Sans danger d'accorder `EXECUTE ... TO anon` sur `is_world_member`/`visibility_p
 
 Appliqué à `assets`/`storage.objects` (migrations `20260902110001`, `20260902130001`, `20260902130002`) — corrige au passage le bug préexistant sur les images de carte, découvert par ricochet en préparant les portraits, pas le sujet initial de ce travail.
 
+## Troisième couche, trouvée en testant le vrai lien `/partage/[token]` dans le navigateur (retour utilisateur explicite : « teste aussi le lien de partage public en vrai »)
+
+Les deux corrections ci-dessus rendaient la RLS correcte, vérifié avec un client Supabase direct (sans passer par l'application). Mais un vrai visiteur passe par les routes Next.js, pas par Supabase directement — et `lib/supabase/middleware.ts` redirige **toute** requête sans session vers `/login`, sauf une liste explicite de pages publiques (`/login`, `/signup`, `/auth/*`, `/partage/*`, `/rejoindre/*`). Cette liste ne couvrait pas `/api/assets/[id]` ni `/api/entities/[id]/portrait` — deux routes que le NAVIGATEUR appelle lui-même, séparément, en chargeant chaque `<img src="...">` d'une page `/partage/*` déjà chargée. Résultat concret, avant correction : la page `/partage/[token]/[entitySlug]` se chargeait (HTML correct, sur la liste), mais chaque image redirigeait silencieusement vers la page de connexion (une réponse HTML, jamais une image) — la garde RLS ci-dessus était donc correcte mais jamais atteinte, ce middleware bloquant tout avant elle.
+
+Corrigé en ajoutant `/api/assets/` (prefix) et `/^\/api\/entities\/[^/]+\/portrait$/` à la liste des pages publiques du middleware. Sans danger d'exempter tout `/api/*` de ce redirect-vers-HTML precis : une route API doit de toute façon renvoyer un JSON/statut, jamais une redirection HTML — chaque route sensible (POST/DELETE sur le portrait, par exemple) revérifie déjà elle-même l'authentification et renvoie un 401 JSON propre.
+
+**Leçon methodologique** : verifier une garantie de securite avec un client isolé (script, clé anonyme directe) prouve que LA COUCHE testée est correcte, jamais que le CHEMIN complet (middleware → route → RLS) l'est. La seule verification qui aurait attrapé cette 3e couche du premier coup est celle explicitement demandée ici : charger le vrai lien dans un vrai navigateur, sans session.
+
 ## Conséquences
 
 - Avant d'exposer une nouvelle table à un accès anonyme direct (hors `publicShare.ts`), vérifier — avec un vrai client `anon`, pas seulement une lecture du SQL — que chaque fonction citée par ses politiques SELECT est exécutable par ce rôle.

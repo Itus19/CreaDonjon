@@ -41,12 +41,27 @@ export async function updateSession(request: NextRequest) {
   // utiliser puisqu'il n'a justement pas encore de compte. Le flux entier
   // (V2-M4 a M7d) n'a donc jamais ete atteignable par un vrai visiteur
   // deconnecte avant cette correction.
+  // Une page /partage/* embarque des <img src="/api/assets/..."> et
+  // src="/api/entities/[id]/portrait" — des requetes SEPAREES que le
+  // navigateur emet lui-meme, sans jamais repasser par /partage/*. Trouve
+  // en testant ce lien pour de vrai avec un client sans session (retour
+  // utilisateur) : la page HTML se chargeait, mais chaque image redirigeait
+  // vers /login (texte/JSON, jamais une image) puisque /api/* n'etait pas
+  // sur cette liste — la garde RLS (assets_select, migration
+  // 20260902110001) etait donc correcte mais jamais atteinte, ce middleware
+  // bloquant tout avant. GET seul suffirait en theorie (POST/DELETE sur
+  // /api/entities/*/portrait exigent deja leur propre verification
+  // d'authentification, cote route) mais /api/* renvoie du JSON, jamais une
+  // page /login — rediriger un appel API vers du HTML est deja incorrect
+  // pour n'importe quelle methode, pas seulement GET.
   const isPublicPage =
     path === "/login" ||
     path === "/signup" ||
     path.startsWith("/auth/") ||
     path.startsWith("/partage/") ||
-    path.startsWith("/rejoindre/");
+    path.startsWith("/rejoindre/") ||
+    path.startsWith("/api/assets/") ||
+    /^\/api\/entities\/[^/]+\/portrait$/.test(path);
 
   if (!user && !isPublicPage) {
     const url = request.nextUrl.clone();
