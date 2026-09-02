@@ -5,6 +5,8 @@ import type { Locale } from "@/src/i18n/request";
 import { layerForFeatureSource, resolveDeclaredModifiers, type DeclaredModifier, type ResolvedClass, type ResolvedFeature, type ResolvedRuleset } from "@/src/core/rules/sheet";
 import {
   armorDataFromBlock,
+  backgroundFeatKeyFromBlock,
+  backgroundModifiersFromBlock,
   costFromQuantity,
   extractAsiGrantedLevels,
   extractBackgroundFeat,
@@ -34,7 +36,7 @@ import {
   type ProgressionRow,
   type WeaponData,
 } from "@/src/core/rules/srdMapping";
-import type { ArmorBlockData, ItemPropertiesBlockData, WeaponBlockData } from "@/src/core/schemas/rule-blocks";
+import type { ArmorBlockData, BackgroundBlockData, ItemPropertiesBlockData, WeaponBlockData } from "@/src/core/schemas/rule-blocks";
 import {
   listBlocksForRulesetEntries,
   listEntryTranslationsWithBlocks,
@@ -42,7 +44,6 @@ import {
   listRulesetEntriesByKeys,
   listRulesetEntryChipsByKeys,
   listTranslationsForEntries,
-  type RulesetEntryRow,
 } from "@/src/server/repos/rules";
 import { entryNameFrom, resolveEntryBlocksInRuleset, walkRulesetChain } from "./rules";
 import { WEAPON_ARMOR_PROFICIENCY_LABELS_FR } from "@/src/i18n/fr";
@@ -167,10 +168,11 @@ export interface AssembledRuleset {
 }
 
 interface BatchEntry {
-  entry: RulesetEntryRow;
   name: string;
   fields: Record<string, unknown>;
   progressionRows: ProgressionRow[];
+  /** Present uniquement pour une fiche maison resolue via le repli ci-dessous (bloc dedie `background`, jamais de `custom_table`). */
+  backgroundBlock?: BackgroundBlockData;
 }
 
 /**
@@ -180,12 +182,20 @@ interface BatchEntry {
  * un personnage a une seule classe prenait ~1.3s, chaque espece/historique/
  * classe/sort refaisant sa PROPRE remontee de chaine de rulesets (2-4
  * allers-retours chacune), jamais partagee entre elles ni avec les autres.
- * Meme simplification assumee que `fetchEntryFields` avant lui : PAS de
- * resolution de surcharge de variante — l'espece/l'historique/la classe/le
- * sort choisi par un joueur ne sont jamais des fiches maison (seul un OBJET
- * d'equipement peut l'etre, cf. `fetchEquipmentBlocks` plus bas, qui reste
- * override-aware, une remontee bien plus couteuse justifiee par ce besoin
- * reel).
+ *
+ * Repli override-aware pour les cles introuvables via cette premiere passe
+ * (retour utilisateur, "regarde le bug de creation de personnage" : un
+ * historique maison, cree via `CreateHomebrewBackgroundForm.tsx`, n'existe
+ * QUE dans `ruleset_overrides` — jamais de ligne `ruleset_entries`, donc
+ * jamais trouve par `listRulesetEntriesByKeys` ci-dessous). L'hypothese
+ * "l'espece/l'historique/la classe/le sort choisi par un joueur n'est
+ * jamais une fiche maison" documentee ici avant etait vraie a l'ecriture de
+ * cette fonction, plus depuis l'outil de creation d'historique — meme
+ * moteur de repli (`resolveEntryBlocksInRuleset`) que `fetchEquipmentBlocks`
+ * plus bas, deja override-aware pour ce meme besoin cote objets. Seul le
+ * bloc dedie `background` est lu ici (jamais de `custom_table` sur une
+ * fiche maison) : `species_traits` reste hors perimetre tant qu'aucun outil
+ * de creation d'espece maison n'existe.
  */
 async function fetchEntriesBatch(
   supabase: TypedClient,
@@ -231,12 +241,27 @@ async function fetchEntriesBatch(
         | undefined;
 
       result.set(entry.entry_key, {
-        entry,
         name: translation?.name ?? entryNameFrom(entry),
         fields: customTableData ? parseCustomTableFields(customTableData.rows) : {},
         progressionRows: progressionData?.rows ?? [],
       });
       remaining.delete(entry.entry_key);
+    }
+  }
+
+  if (remaining.size > 0) {
+    const fallbackResults = await Promise.all(
+      [...remaining].map(async (key) => [key, await resolveEntryBlocksInRuleset(supabase, rulesetId, key)] as const)
+    );
+    for (const [key, resolved] of fallbackResults) {
+      if (!resolved || !resolved.name) continue;
+      result.set(key, {
+        name: resolved.name,
+        fields: {},
+        progressionRows: [],
+        backgroundBlock: resolved.blocksByType.get("background") as BackgroundBlockData | undefined,
+      });
+      remaining.delete(key);
     }
   }
 
@@ -309,22 +334,39 @@ export async function assembleResolvedRuleset(
     if (found) {
       const label = found.name;
       const key = `background:${selection.background}`;
-      features[key] = { key, label, source: key, modifiers: mapBackgroundModifiers(found.fields, key, label) };
-      proficiencies.push(...mapProficiencies(found.fields).map((p) => ({ ...p, source: label })));
+      // Fiche maison (bloc dedie `background`, jamais de `custom_table`) :
+      // deux extracteurs distincts (`backgroundModifiersFromBlock`/
+      // `backgroundFeatKeyFromBlock`, src/core/rules/srdMapping.ts) plutot
+      // que les extracteurs SRD `fields`-derives ci-dessous, qui ne
+      // trouveraient jamais rien sur `found.fields` (vide pour une fiche
+      // maison). La maitrise d'outil (texte libre, pas de fiche a
+      // resoudre) s'ajoute directement en TraitGrant, meme cle que son
+      // libelle — rien d'autre a resoudre.
+      if (found.backgroundBlock) {
+        features[key] = { key, label, source: key, modifiers: backgroundModifiersFromBlock(found.backgroundBlock, key, label) };
+        const featKey = backgroundFeatKeyFromBlock(found.backgroundBlock);
+        if (featKey) extraFeatureKeys.set(featKey, key);
+        if (found.backgroundBlock.tool_proficiency) {
+          proficiencies.push({ key: found.backgroundBlock.tool_proficiency, name: found.backgroundBlock.tool_proficiency, source: label });
+        }
+      } else {
+        features[key] = { key, label, source: key, modifiers: mapBackgroundModifiers(found.fields, key, label) };
+        proficiencies.push(...mapProficiencies(found.fields).map((p) => ({ ...p, source: label })));
 
-      const languageChoice = extractLanguageChoice(found.fields);
-      if (languageChoice) {
-        remainingChoices.push({
-          id: `${key}.languages`,
-          label: `${label} — langues`,
-          count: languageChoice.count,
-          options: [...SRD_LANGUAGES],
-          kind: "language",
-        });
+        const languageChoice = extractLanguageChoice(found.fields);
+        if (languageChoice) {
+          remainingChoices.push({
+            id: `${key}.languages`,
+            label: `${label} — langues`,
+            count: languageChoice.count,
+            options: [...SRD_LANGUAGES],
+            kind: "language",
+          });
+        }
+
+        const featKey = extractBackgroundFeat(found.fields);
+        if (featKey) extraFeatureKeys.set(featKey, key);
       }
-
-      const featKey = extractBackgroundFeat(found.fields);
-      if (featKey) extraFeatureKeys.set(featKey, key);
     }
   }
 

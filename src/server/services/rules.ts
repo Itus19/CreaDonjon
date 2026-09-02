@@ -132,6 +132,18 @@ export interface ResolvedEntryBlocks {
   entryType: EntryType;
   /** Donnee de chaque bloc deja validee par son schema Zod, indexee par block_type — jamais la ligne brute. */
   blocksByType: Map<string, unknown>;
+  /**
+   * Nom de l'entree, JAMAIS traduit (contrairement a `getRuleEntryForWorld`,
+   * qui n'appelle pas cette fonction et gere sa propre traduction) : pour
+   * une fiche maison, `homebrewName` (charge utile `add_entry`, meme lecture
+   * que `getRuleEntryForWorld`) — jamais de traduction possible, une fiche
+   * maison n'en a par definition aucune. Pour une fiche officielle,
+   * `entryNameFrom(entry)` (le nom source, anglais ou francais selon le
+   * SRD importe) — les appelants mecaniques (`resolvedRuleset.ts`) qui ont
+   * besoin d'un nom traduit continuent de le faire eux-memes, comme avant.
+   * `null` si l'entree n'existe nulle part.
+   */
+  name: string | null;
 }
 
 /**
@@ -178,11 +190,13 @@ export async function resolveEntryBlocksInRuleset(
     : null;
 
   const overrides: OverrideInput[] = [];
+  let homebrewName: string | null = null;
   for (const link of [...chain].reverse()) {
     const rows = await listOverridesForRuleset(supabase, link.rulesetId, entryKey);
     for (const row of rows) {
       if (row.action === "add_entry") {
         const addEntry = zAddEntryPayload.parse(row.payload);
+        homebrewName = addEntry.name;
         overrides.push({
           block_type: null,
           action: "add_entry",
@@ -208,7 +222,7 @@ export async function resolveEntryBlocksInRuleset(
     blocksByType.set(block.block_type, dataSchemaForBlockType(block.block_type as BlockType).parse(block.data));
   }
 
-  return { entryType: resolved.entry_type as EntryType, blocksByType };
+  return { entryType: resolved.entry_type as EntryType, blocksByType, name: homebrewName ?? (entry ? entryNameFrom(entry) : null) };
 }
 
 export interface RuleEntryBlockView {
@@ -1105,6 +1119,26 @@ export async function listRuleEntryBlocksByKeys(
     for (const entry of entries) {
       result[entry.entry_key] = blocksByEntryId.get(entry.id) ?? [];
       remaining.delete(entry.entry_key);
+    }
+  }
+
+  // Repli override-aware pour les cles encore introuvables (V2-?, retour
+  // utilisateur : "l'historique/l'espece choisi par un joueur n'est jamais
+  // une fiche maison" — hypothese vraie a l'ecriture de la boucle
+  // ci-dessus, plus depuis l'outil de creation d'historique). `entries`
+  // ci-dessus ne lit QUE `ruleset_entries` (`listRulesetEntriesByKeys`) :
+  // une fiche qui n'existe que par un `add_entry` (aucune ligne officielle)
+  // n'y apparait jamais. `resolveEntryBlocksInRuleset` est le meme moteur
+  // que `getRuleEntryForWorld` (la page de la fiche elle-meme), donc
+  // resout ces cles correctement — juste jamais applique ici avant.
+  if (remaining.size > 0) {
+    const fallbackResults = await Promise.all(
+      [...remaining].map(async (key) => [key, await resolveEntryBlocksInRuleset(supabase, rulesetId, key)] as const)
+    );
+    for (const [key, resolved] of fallbackResults) {
+      if (!resolved) continue;
+      result[key] = [...resolved.blocksByType.entries()].map(([blockType, data]) => ({ blockType: blockType as BlockType, data }));
+      remaining.delete(key);
     }
   }
 

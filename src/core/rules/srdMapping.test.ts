@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   armorAcModifier,
   armorDataFromBlock,
+  backgroundFeatKeyFromBlock,
+  backgroundModifiersFromBlock,
   costFromQuantity,
   extractBackgroundFeat,
   extractFeatureKeysUpToLevel,
@@ -29,7 +31,7 @@ import {
   weaponDataFromBlock,
   weightFromQuantity,
 } from "./srdMapping";
-import type { ArmorBlockData, WeaponBlockData } from "../schemas/rule-blocks";
+import type { ArmorBlockData, BackgroundBlockData, WeaponBlockData } from "../schemas/rule-blocks";
 
 // Fixtures fideles a la forme reelle des donnees SRD deja importees
 // (verifie contre la base reelle avant d'ecrire ce fichier).
@@ -683,6 +685,30 @@ describe("extractBackgroundFeat", () => {
 
   it("retourne null si le champ est absent (historique SRD 2014, aucun champ equivalent)", () => {
     expect(extractBackgroundFeat(parseCustomTableFields(ACOLYTE_ROWS))).toBeNull();
+  });
+});
+
+describe("backgroundModifiersFromBlock / backgroundFeatKeyFromBlock (historique maison, bloc dedie)", () => {
+  const data: BackgroundBlockData = {
+    ability_scores: ["str", "dex", "con"],
+    feat: { kind: "rule", key: "robuste-maison" },
+    skill_proficiencies: ["athletics", "survival"],
+    equipment_options: [{ label: "A", items: [{ label: "Corde", quantity: 1 }] }],
+  };
+
+  it("traduit skill_proficiencies en modificateurs de maitrise, couche 4", () => {
+    expect(backgroundModifiersFromBlock(data, "background:test", "Historique de test")).toEqual([
+      { target: "skill.athletics", op: "proficiency", layer: 4, source: "background:test", label: "Historique de test" },
+      { target: "skill.survival", op: "proficiency", layer: 4, source: "background:test", label: "Historique de test" },
+    ]);
+  });
+
+  it("lit la cle du don accorde depuis feat.key", () => {
+    expect(backgroundFeatKeyFromBlock(data)).toBe("robuste-maison");
+  });
+
+  it("retourne null si feat ne reference pas une regle (kind different de 'rule')", () => {
+    expect(backgroundFeatKeyFromBlock({ ...data, feat: { kind: "entity", key: "x" } })).toBeNull();
   });
 });
 

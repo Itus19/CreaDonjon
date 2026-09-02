@@ -1,6 +1,6 @@
 import type { Ability, Modifier, Prerequisite } from "./sheet";
 import { formatFormulaNode } from "../formula/format";
-import type { ArmorBlockData, Quantity, WeaponBlockData } from "../schemas/rule-blocks";
+import type { ArmorBlockData, BackgroundBlockData, Quantity, WeaponBlockData } from "../schemas/rule-blocks";
 
 /**
  * Traduction des donnees SRD deja importees (ruleset_entries, V1-A1/A2)
@@ -222,6 +222,27 @@ export function mapBackgroundModifiers(fields: ParsedFields, source: string, lab
 export function extractBackgroundFeat(fields: ParsedFields): string | null {
   const feat = fields.feat as { index?: string } | undefined;
   return typeof feat?.index === "string" ? feat.index : null;
+}
+
+/**
+ * Memes deux faits (competences accordees, don accorde) qu'`extractBackgroundFeat`/
+ * `mapBackgroundModifiers` ci-dessus, mais lus depuis le bloc dedie
+ * `background` (`zBackgroundBlockData`) plutot que depuis `fields` derive
+ * d'un `custom_table` — chemin emprunte par une fiche maison (retour
+ * utilisateur, "généralise les modificateurs" suite : un historique cree
+ * via `CreateHomebrewBackgroundForm.tsx` n'a jamais de `custom_table`,
+ * seulement ce bloc dedie). Deux fonctions distinctes, jamais fusionnees
+ * avec les extracteurs SRD ci-dessus : les formes source n'ont rien en
+ * commun (index SRD bruts vs `Skill`/`Reference` deja types), les melanger
+ * romprait la garantie que chaque extracteur tolere l'absence d'un champ
+ * sans deviner.
+ */
+export function backgroundModifiersFromBlock(data: BackgroundBlockData, source: string, label: string): Modifier[] {
+  return data.skill_proficiencies.map((skill) => ({ target: `skill.${skill}`, op: "proficiency", layer: 4, source, label }));
+}
+
+export function backgroundFeatKeyFromBlock(data: BackgroundBlockData): string | null {
+  return data.feat.kind === "rule" ? data.feat.key : null;
 }
 
 /**
