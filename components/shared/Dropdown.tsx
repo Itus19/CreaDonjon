@@ -86,12 +86,14 @@ export default function Dropdown({
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
+        title={current?.label ?? value}
         className={
           className ??
           "rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
         }
       >
-        {current?.label ?? value} <span className="text-ink-muted">▾</span>
+        <span className="min-w-0 flex-1 truncate">{current?.label ?? value}</span>
+        <span className="shrink-0 text-ink-muted">▾</span>
       </button>
       {open &&
         rect &&

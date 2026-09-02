@@ -333,7 +333,7 @@ export default function EditEntityForm({
               value={kindDropdownValue}
               options={kindOptions}
               onChange={handleKindChange}
-              className="shrink-0 whitespace-nowrap bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+              className="inline-flex min-w-0 items-center gap-1 overflow-hidden bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
             />
           )}
         </div>
@@ -355,7 +355,7 @@ export default function EditEntityForm({
   return (
     <div className="flex flex-col gap-5">
       <div className="grid grid-cols-[1fr_auto] gap-6">
-        <div className="flex flex-col">
+        <div className="flex min-w-0 flex-col">
           <div className="flex items-start justify-between gap-3">
             <input
               ref={titleInputRef}
@@ -367,20 +367,29 @@ export default function EditEntityForm({
               // arrive directement ici — le focus automatique invite a
               // nommer la fiche tout de suite, sans action supplementaire.
               autoFocus={entity.name === DEFAULT_ENTITY_NAME}
-              className="entity-title flex-1 bg-transparent outline-none placeholder:text-ink-muted focus:border-b focus:border-accent"
+              className="entity-title min-w-0 flex-1 bg-transparent outline-none placeholder:text-ink-muted focus:border-b focus:border-accent"
             />
             {/* Aligne avec le titre, comme dans l'ancienne application : le
                 type de fiche se choisit en haut a droite, pas sous le titre.
                 L'historique (icone ronde) vit juste a cote, dans le meme coin
                 que les pastilles orange/rouge de la barre de fenetre au-dessus
-                (V1-C4, specs/arbitrage-modifications.md §3.1). */}
-            <div className="flex shrink-0 items-center gap-2">
-              {playerRestricted && <RequestEditButton campaignId={campaignId} entityId={entity.id} />}
+                (V1-C4, specs/arbitrage-modifications.md §3.1). Le portrait
+                (colonne "auto" a droite) garde toujours sa place : retour
+                utilisateur, une categorie au nom long ne doit jamais le
+                pousser ni faire apparaitre un ascenseur horizontal — c'est ce
+                groupe de boutons qui retrecit, la categorie se tronquant en
+                dernier recours (titre complet visible au survol). */}
+            <div className="flex min-w-0 items-center gap-2">
+              {playerRestricted && (
+                <span className="shrink-0">
+                  <RequestEditButton campaignId={campaignId} entityId={entity.id} />
+                </span>
+              )}
               <EntityHistoryPanel entityId={entity.id} />
               <button
                 type="button"
                 onClick={toggleEntityPublic}
-                className="text-ink-muted hover:text-ink"
+                className="shrink-0 text-ink-muted hover:text-ink"
                 aria-label={isPublic ? "Masquer cette fiche au wiki public" : "Rendre cette fiche visible au wiki public"}
                 title={isPublic ? "Visible au wiki public — cliquer pour masquer" : "Masquée au wiki public — cliquer pour rendre visible"}
               >
@@ -409,7 +418,7 @@ export default function EditEntityForm({
                   value={kindDropdownValue}
                   options={kindOptions}
                   onChange={handleKindChange}
-                  className="shrink-0 whitespace-nowrap bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+                  className="inline-flex min-w-0 items-center gap-1 overflow-hidden bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
                 />
               )}
             </div>
