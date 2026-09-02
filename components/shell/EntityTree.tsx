@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   DndContext,
@@ -18,6 +18,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { EntityTreeGroup, EntityTreeNode } from "@/src/core/entity-tree/build-tree";
 import { useOpenEntityLink } from "./useOpenEntityLink";
 import { useCollapsedGroups } from "./useCollapsedGroups";
+import { useDesktopWindowsState } from "./DesktopWindowsProvider";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
@@ -28,6 +29,7 @@ function NodeRow({
   currentSlug,
   hrefBase,
   editable,
+  onTreeChanged,
 }: {
   node: EntityTreeNode;
   worldSlug: string;
@@ -35,9 +37,11 @@ function NodeRow({
   currentSlug: string | null;
   hrefBase?: string;
   editable?: boolean;
+  /** Retour utilisateur : dupliquer/supprimer "mettait un temps vraiment long" — recharge SEULEMENT l'arborescence (jamais `router.refresh()`, meme motif que RelationsChips.tsx). */
+  onTreeChanged?: () => void;
 }) {
   const t = useTranslations("shell");
-  const router = useRouter();
+  const desktopWindows = useDesktopWindowsState();
   const [expanded, setExpanded] = useState(true);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const hasChildren = node.children.length > 0;
@@ -46,13 +50,19 @@ function NodeRow({
 
   async function duplicate() {
     await fetch(`/api/entities/${node.id}/duplicate`, { method: "POST" });
-    router.refresh();
+    onTreeChanged?.();
   }
 
   async function confirmDelete() {
     setConfirmingDelete(false);
     await fetch(`/api/entities/${node.id}`, { method: "DELETE" });
-    router.refresh();
+    // Retour utilisateur : supprimer la fiche actuellement ouverte amenait
+    // vers un 404 (`router.refresh()` relancait la page courante, devenue
+    // introuvable) — ferme plutot la fenetre si elle est ouverte (primaire
+    // ou secondaire `avec`). Sans effet si cette fiche n'est ouverte nulle
+    // part (`closeWindow` ne fait rien pour une reference absente).
+    desktopWindows?.closeWindow({ kind: "entity", key: node.slug });
+    onTreeChanged?.();
   }
 
   return (
@@ -96,7 +106,7 @@ function NodeRow({
       <ConfirmDialog
         open={confirmingDelete}
         title="Supprimer cette fiche ?"
-        message={`« ${node.name || "(sans nom)"} » sera retirée du monde. Cette action reste réversible en base, mais aucun écran ne permet de l'annuler pour l'instant.`}
+        message="Êtes-vous sûr de vouloir supprimer cette fiche ?"
         confirmLabel="Supprimer"
         danger
         onConfirm={confirmDelete}
@@ -113,6 +123,7 @@ function NodeRow({
               currentSlug={currentSlug}
               hrefBase={hrefBase}
               editable={editable}
+              onTreeChanged={onTreeChanged}
             />
           ))}
         </ul>
@@ -200,10 +211,26 @@ export default function EntityTree({
   defaultCollapsedKinds?: string[];
 }) {
   const t = useTranslations("shell");
-  const router = useRouter();
   const kindLabels = t.raw("kindLabels") as Record<string, string>;
   const { isCollapsed, toggle } = useCollapsedGroups(collapseStorageKey, defaultCollapsedKinds);
   const pathname = usePathname();
+
+  // Miroir local (retour utilisateur : dupliquer/supprimer une fiche ou
+  // reordonner les categories "mettait un temps vraiment long") — resynchronise
+  // "pendant le rendu" quand la prop change (vraie navigation), meme motif
+  // que RelationsChips.tsx.
+  const [prevGroups, setPrevGroups] = useState(groups);
+  const [localGroups, setLocalGroups] = useState(groups);
+  if (groups !== prevGroups) {
+    setPrevGroups(groups);
+    setLocalGroups(groups);
+  }
+
+  async function reloadTree() {
+    const res = await fetch(`/api/worlds/${worldSlug}/entity-tree`);
+    if (!res.ok) return;
+    setLocalGroups(await res.json());
+  }
   let currentSlug: string | null = null;
   if (hrefBase) {
     // Peau « livre » (/partage/:token/:slug ou /m/:worldSlug/apercu/:slug) :
@@ -233,25 +260,32 @@ export default function EntityTree({
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    const groupKinds = groups.map((g) => g.kind);
+    const groupKinds = localGroups.map((g) => g.kind);
     if (!groupKinds.includes(activeId) || !groupKinds.includes(overId)) return;
     const reordered = arrayMove(groupKinds, groupKinds.indexOf(activeId), groupKinds.indexOf(overId));
+    // Optimiste (retour utilisateur, "un temps vraiment long") : dnd-kit a
+    // deja anime le glissement, appliquer le nouvel ordre tout de suite
+    // evite un aller-retour serveur visible pour un geste qui se repete
+    // souvent d'affilee en reorganisant plusieurs categories. L'ecriture
+    // part en arriere-plan, jamais attendue.
+    const byKind = new Map(localGroups.map((g) => [g.kind, g]));
+    setLocalGroups(reordered.map((kind) => byKind.get(kind)!));
     void fetch(`/api/worlds/${worldSlug}/entity-kind-order`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ order: reordered }),
-    }).then(() => router.refresh());
+    });
   }
 
-  if (groups.length === 0) {
+  if (localGroups.length === 0) {
     return <p className="px-2 text-sm text-ink-muted">{t("aucuneEntite")}</p>;
   }
 
   return (
     <DndContext id={`entity-tree-${worldSlug}`} sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={groups.map((g) => g.kind)} strategy={verticalListSortingStrategy}>
+      <SortableContext items={localGroups.map((g) => g.kind)} strategy={verticalListSortingStrategy}>
         <nav aria-label={t("entitesDuMonde")} className="flex flex-col gap-3">
-          {groups.map((group) => {
+          {localGroups.map((group) => {
             // Retour utilisateur (wiki public) : naviguer vers une fiche
             // via un lien du contenu (genealogie, reseau, relations...) ne
             // doit jamais laisser la fiche active cachee dans une categorie
@@ -280,6 +314,7 @@ export default function EntityTree({
                         currentSlug={currentSlug}
                         hrefBase={hrefBase}
                         editable={editable}
+                        onTreeChanged={reloadTree}
                       />
                     ))}
                   </ul>
