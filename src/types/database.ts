@@ -2492,6 +2492,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      list_deleted_entities: {
+        Args: { p_world_id: string }
+        Returns: {
+          deleted_at: string
+          entity_kind: string
+          id: string
+          name: string
+          slug: string
+        }[]
+      }
       list_unclaimed_campaign_characters: {
         Args: { p_token: string }
         Returns: {
@@ -2532,6 +2542,7 @@ export type Database = {
           world_slug: string
         }[]
       }
+      restore_entity: { Args: { p_entity_id: string }; Returns: boolean }
       restore_entity_blocks: {
         Args: { p_blocks: Json; p_entity_id: string }
         Returns: undefined

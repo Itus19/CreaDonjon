@@ -230,6 +230,44 @@ export async function softDeleteEntity(supabase: TypedClient, id: string): Promi
   return { deleted: data === true };
 }
 
+export interface DeletedEntitySummary {
+  id: string;
+  name: string;
+  slug: string;
+  entityKind: string;
+  deletedAt: string;
+}
+
+/** Retour utilisateur (Journal d'historique, "rétablir une fiche supprimée") — `public.list_deleted_entities` (RPC, row_security off) : `entities_select` masque justement les lignes `deleted_at is not null`, un `.from("entities")` normal n'en verrait jamais aucune. Reserve au MJ du monde (verifie a l'interieur de la fonction, `app.is_world_admin`). */
+export async function listDeletedEntities(supabase: TypedClient, worldId: string): Promise<DeletedEntitySummary[]> {
+  const { data, error } = await supabase.rpc("list_deleted_entities", { p_world_id: worldId });
+  if (error) throw new Error(error.message);
+  return data.map((row) => ({ id: row.id, name: row.name, slug: row.slug, entityKind: row.entity_kind, deletedAt: row.deleted_at }));
+}
+
+/**
+ * Symetrique de `softDeleteEntity` — meme patron RPC, mais son "forbidden"
+ * interne (`app.can_edit_entity`) est ICI la vraie barriere (pas une
+ * defense en profondeur redondante) : contrairement a `deleteEntity`,
+ * impossible de pre-verifier via `getEntityById` avant coup, la fiche
+ * etant justement invisible sous RLS tant qu'elle reste supprimee.
+ * "slug_conflict" (Postgres 23505) : une autre fiche a repris le meme
+ * slug pendant que celle-ci etait supprimee — la contrainte d'unicite
+ * `entities(world_id, slug)` ne filtre jamais par `deleted_at`.
+ */
+export async function restoreEntity(
+  supabase: TypedClient,
+  id: string
+): Promise<{ ok: true; restored: boolean } | { ok: false; reason: "forbidden" | "slug_conflict" }> {
+  const { data, error } = await supabase.rpc("restore_entity", { p_entity_id: id });
+  if (error) {
+    if (error.code === "23505") return { ok: false, reason: "slug_conflict" };
+    if (error.code === "42501") return { ok: false, reason: "forbidden" };
+    throw new Error(error.message);
+  }
+  return { ok: true, restored: data === true };
+}
+
 const FIXED_ENTITY_KINDS = ["character", "location", "faction", "item", "creature", "quest", "event", "other"];
 
 /** Categories personnalisees deja utilisees dans ce monde (V2-G7) : pour qu'une deuxieme fiche puisse rejoindre la meme categorie plutot que d'en recreer une a chaque fois. */

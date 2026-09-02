@@ -3,6 +3,7 @@ import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import GmJournalPanel from "@/components/shell/GmJournalPanel";
+import DeletedEntitiesPanel from "@/components/shell/DeletedEntitiesPanel";
 import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 
 /**
@@ -33,7 +34,18 @@ export default async function MjJournalHistoriquePage({
         badge=""
         homeHref={`/m/${worldSlug}/mj/journal-historique`}
       />
-      {gm ? <GmJournalPanel worldSlug={worldSlug} /> : <p className="text-sm text-ink-muted">Réservé au MJ de ce monde.</p>}
+      {gm ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
+          <div className="min-h-0 flex-1">
+            <GmJournalPanel worldSlug={worldSlug} />
+          </div>
+          <div className="min-h-0 flex-1">
+            <DeletedEntitiesPanel worldSlug={worldSlug} />
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-ink-muted">Réservé au MJ de ce monde.</p>
+      )}
     </div>
   );
 }

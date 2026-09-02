@@ -4,14 +4,17 @@ import type { Database } from "@/src/types/database";
 import { nextNumericSlug } from "@/src/core/slug/slug";
 import { buildEntityTree, withPlayerCharacterKinds, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import {
+  type DeletedEntitySummary,
   type EntitySearchResult,
   type EntitySummary,
   getEntityById,
   insertEntity,
+  listDeletedEntities,
   listEntitiesByIds,
   listEntitiesForWorld,
   listEntitySlugsForWorld,
   maxEntityDisplayOrderForKind,
+  restoreEntity,
   searchEntitiesInWorld,
   softDeleteEntity,
   updateEntityWithVersionCheck,
@@ -219,6 +222,20 @@ export async function deleteEntity(
   });
   if (!allowed) return { deleted: false, error: "forbidden" };
   return softDeleteEntity(supabase, params.id);
+}
+
+/** Journal d'historique, "rétablir une fiche supprimée" — appelant deja verifie MJ de ce monde (meme garde que le reste du journal), simple passe-plat. */
+export async function listDeletedEntitiesForWorld(supabase: TypedClient, worldId: string): Promise<DeletedEntitySummary[]> {
+  return listDeletedEntities(supabase, worldId);
+}
+
+export async function restoreDeletedEntity(
+  supabase: TypedClient,
+  id: string
+): Promise<{ restored: boolean; error?: "forbidden" | "not_found" | "slug_conflict" }> {
+  const result = await restoreEntity(supabase, id);
+  if (!result.ok) return { restored: false, error: result.reason };
+  return { restored: result.restored, error: result.restored ? undefined : "not_found" };
 }
 
 /**
