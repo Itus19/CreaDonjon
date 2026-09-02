@@ -9,8 +9,9 @@ import TwoPaneReaderLayout from "@/components/shell/TwoPaneReaderLayout";
 /**
  * Onglet Édition (V2-M13, renomme depuis "Fiche" — retour utilisateur :
  * "remplace le terme 'Fiche' par 'Édition' dans le menu joueur") — meme
- * disposition a deux volets que Wiki/Regles (`TwoPaneReaderLayout`), mais
- * sommaire a DROITE (`side="right"`) et jamais l'arborescence complete du
+ * disposition a deux volets que Wiki/Regles (`TwoPaneReaderLayout`),
+ * sommaire a GAUCHE comme le Wiki (retour utilisateur, revient sur le
+ * `side="right"` initial de V2-M13) et jamais l'arborescence complete du
  * monde : uniquement les fiches que ce joueur peut editer (son personnage
  * revendique + les fiches de lore octroyees), pour naviguer entre elles
  * sans repasser par le Wiki general.
@@ -34,7 +35,7 @@ export default async function JoueurFicheLayout({
   const entities = await listPlayerEditableEntities(supabase, { worldId: world.id, campaignId, userId: user.id });
 
   return (
-    <TwoPaneReaderLayout side="right" sidebar={<PlayerEditableEntitiesSidebar worldSlug={worldSlug} entities={entities} />}>
+    <TwoPaneReaderLayout sidebar={<PlayerEditableEntitiesSidebar worldSlug={worldSlug} entities={entities} />}>
       {children}
     </TwoPaneReaderLayout>
   );

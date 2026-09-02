@@ -497,7 +497,11 @@ export default function EditEntityForm({
                   setWizardOpen(true);
                 }
           }
-          restrictAddableTypes={playerRestricted ? ["text"] : undefined}
+          restrictAddableTypes={
+            playerRestricted
+              ? ["timeline", "relations_graph", "relationship", "map", "genealogy", "text", "image", "music", "personality", "worldview"]
+              : undefined
+          }
           hideAiAssist={playerRestricted}
         />
       </div>

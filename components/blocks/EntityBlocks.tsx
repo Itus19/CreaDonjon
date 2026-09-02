@@ -332,7 +332,7 @@ export default function EntityBlocks({
   otherEntities: OtherEntityOption[];
   /** Assistant de creation (retour utilisateur, suite) — omis quand aucun parent ne le fournit (ex. contextes hors fiche de monde), le bouton reste alors absent plutot que sans effet. */
   onLaunchWizard?: () => void;
-  /** Coquille joueur (retour utilisateur, V2-M7b) : "je ne leur donnerais pas le droit d'ajouter d'autre bloc que ceux de texte, si les joueurs veulent ajouter des choses il faudra demander au MJ" — limite la barre "Ajouter un bloc" a ces types, `undefined` (MJ) laisse tout disponible. */
+  /** Coquille joueur (retour utilisateur, V2-M7b puis retour utilisateur ulterieur elargissant la liste) : limite la barre "Ajouter un bloc" a ces types, `undefined` (MJ) laisse tout disponible. */
   restrictAddableTypes?: string[];
   /** Coquille joueur (retour utilisateur) : "enlever les outils d'assistance IA" — masque le panneau Assistance IA des blocs `text`, jamais pour le MJ. */
   hideAiAssist?: boolean;
