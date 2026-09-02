@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import MapCanvas from "@/components/entities/map/MapCanvas";
+import MapCanvas, { type MapPinMarkerData } from "@/components/entities/map/MapCanvas";
 import MapWorkspace from "@/components/entities/map/MapWorkspace";
 import MapRefPanel from "@/components/entities/map/MapRefPanel";
 import CartePicker from "@/components/entities/map/CartePicker";
 import { DEFAULT_MAP_BLOCK_DATA, type MapBlockData, type MapView } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
 import type { MapSourceInfo, CarteOption } from "@/src/server/services/mapSource";
+import type { VisibleMapPin } from "@/src/server/services/mapPins";
+import type { VisibleMapRegion } from "@/src/server/services/mapRegions";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 
 // Meme hauteur que RelationsGraphCanvas/FamilyTreeCanvas (retour
@@ -121,6 +123,49 @@ export default function MapBlockEditor({
     };
   }, [refSource?.assetId]);
 
+  // Punaises/zones dans l'apercu replie aussi (retour utilisateur, "il
+  // manque la zone rouge dans le bloc map d'une fiche" — le comportement
+  // d'origine, vignette figee sans survol des elements, etait volontaire
+  // (phase C) mais s'est revele surprenant une fois en usage reel). Cle de
+  // lecture = bloc SOURCE (`blockId` en mode "own", `sourceBlockId` en mode
+  // "ref" — jamais `data`, qui ne porte ni punaises ni zones, ADR 0017
+  // decision 1). Redemande a chaque fermeture de la fenetre agrandie
+  // (`expanded` repasse a false) pour refleter un ajout/edit fait dedans,
+  // qui ne remonte jamais par `data`/`onChange`.
+  const overlaySourceId = data.mode === "own" ? blockId : sourceBlockId;
+  const [pins, setPins] = useState<VisibleMapPin[]>([]);
+  const [regions, setRegions] = useState<VisibleMapRegion[]>([]);
+  const [trackedOverlaySourceId, setTrackedOverlaySourceId] = useState(overlaySourceId);
+  if (overlaySourceId !== trackedOverlaySourceId) {
+    setTrackedOverlaySourceId(overlaySourceId);
+    setPins([]);
+    setRegions([]);
+  }
+
+  useEffect(() => {
+    if (!overlaySourceId) return;
+    let cancelled = false;
+    Promise.all([
+      fetch(`/api/blocks/${overlaySourceId}/pins`).then((res) => (res.ok ? res.json() : [])),
+      fetch(`/api/blocks/${overlaySourceId}/regions`).then((res) => (res.ok ? res.json() : [])),
+    ])
+      .then(([p, r]: [VisibleMapPin[], VisibleMapRegion[]]) => {
+        if (!cancelled) {
+          setPins(p);
+          setRegions(r);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPins([]);
+          setRegions([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [overlaySourceId, expanded]);
+
   function pickCarte(option: CarteOption) {
     // Le cadrage precedent n'a de sens que pour l'image d'avant (coordonnees
     // normalisees, mais un autre point d'interet) — repart d'un cadrage par
@@ -160,6 +205,15 @@ export default function MapBlockEditor({
           initialView={data.defaultView}
           height={COLLAPSED_HEIGHT}
           interactive={false}
+          pins={pins.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
+          regions={regions.map((r) => ({
+            id: r.id,
+            name: r.name,
+            shape: r.shape,
+            fillColor: r.fillColor,
+            borderColor: r.borderColor,
+            unrevealedFog: r.fogGated && !r.revealed,
+          }))}
         />
       )}
 
@@ -177,6 +231,15 @@ export default function MapBlockEditor({
             initialView={data.defaultView}
             height={COLLAPSED_HEIGHT}
             interactive={false}
+            pins={pins.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
+            regions={regions.map((r) => ({
+            id: r.id,
+            name: r.name,
+            shape: r.shape,
+            fillColor: r.fillColor,
+            borderColor: r.borderColor,
+            unrevealedFog: r.fogGated && !r.revealed,
+          }))}
           />
         ) : (
           <p className="text-sm italic text-ink-muted">Chargement…</p>

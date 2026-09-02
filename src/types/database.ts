@@ -1696,6 +1696,39 @@ export type Database = {
           },
         ]
       }
+      map_region_reveals: {
+        Row: {
+          campaign_id: string
+          region_id: string
+          revealed_at: string
+        }
+        Insert: {
+          campaign_id: string
+          region_id: string
+          revealed_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          region_id?: string
+          revealed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "map_region_reveals_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "map_region_reveals_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "map_regions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       map_regions: {
         Row: {
           block_id: string
@@ -1703,6 +1736,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           fill_color: string
+          fog_gated: boolean
           id: string
           layer_id: string | null
           name: string
@@ -1718,6 +1752,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           fill_color?: string
+          fog_gated?: boolean
           id?: string
           layer_id?: string | null
           name?: string
@@ -1733,6 +1768,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           fill_color?: string
+          fog_gated?: boolean
           id?: string
           layer_id?: string | null
           name?: string

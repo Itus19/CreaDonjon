@@ -4,6 +4,7 @@ import { createMapRegionSchema } from "@/lib/mapRegions/schemas";
 import { getEntityById } from "@/src/server/repos/entities";
 import { getBlockById } from "@/src/server/repos/blocks";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
+import { resolveCampaignId } from "@/src/server/services/campaigns";
 import { createMapRegion, listVisibleMapRegions } from "@/src/server/services/mapRegions";
 
 /** Zones d'un bloc `map` propriétaire (Lot I, phase D) — `blockId` est toujours le bloc SOURCE (jamais un bloc "ref", voir ADR 0017). */
@@ -27,8 +28,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json([], { status: 200 });
   }
 
-  const viewer = await buildViewerForWorld(supabase, entity.world_id, user.id);
-  const regions = await listVisibleMapRegions(supabase, blockId, viewer);
+  const [viewer, campaignId] = await Promise.all([
+    buildViewerForWorld(supabase, entity.world_id, user.id),
+    resolveCampaignId(supabase, entity.world_id),
+  ]);
+  const regions = await listVisibleMapRegions(supabase, blockId, viewer, campaignId);
   return NextResponse.json(regions, { status: 200 });
 }
 
@@ -57,6 +61,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     fillColor: parsed.data.fillColor,
     borderColor: parsed.data.borderColor,
     layerId: parsed.data.layerId,
+    fogGated: parsed.data.fogGated,
     visibilityLevel: parsed.data.visibility.level,
     visibilityScopeId: parsed.data.visibility.scopeId,
     createdBy: user.id,

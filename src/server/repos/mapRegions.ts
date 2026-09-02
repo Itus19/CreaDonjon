@@ -13,6 +13,7 @@ export interface MapRegionRow {
   fill_color: string;
   border_color: string;
   layer_id: string | null;
+  fog_gated: boolean;
   visibility_level: string;
   visibility_scope_id: string | null;
   created_by: string | null;
@@ -21,7 +22,7 @@ export interface MapRegionRow {
 }
 
 const MAP_REGION_COLUMNS =
-  "id, block_id, name, ref, shape, fill_color, border_color, layer_id, visibility_level, visibility_scope_id, created_by, created_at, updated_at";
+  "id, block_id, name, ref, shape, fill_color, border_color, layer_id, fog_gated, visibility_level, visibility_scope_id, created_by, created_at, updated_at";
 
 export async function listRegionsForBlock(supabase: TypedClient, blockId: string): Promise<MapRegionRow[]> {
   const { data, error } = await supabase.from("map_regions").select(MAP_REGION_COLUMNS).eq("block_id", blockId);
@@ -45,6 +46,7 @@ export async function insertRegion(
     fillColor: string;
     borderColor: string;
     layerId: string | null;
+    fogGated: boolean;
     visibilityLevel: string;
     visibilityScopeId: string | null;
     createdBy: string;
@@ -60,6 +62,7 @@ export async function insertRegion(
       fill_color: params.fillColor,
       border_color: params.borderColor,
       layer_id: params.layerId,
+      fog_gated: params.fogGated,
       visibility_level: params.visibilityLevel,
       visibility_scope_id: params.visibilityScopeId,
       created_by: params.createdBy,
@@ -80,6 +83,7 @@ export async function updateRegion(
     fillColor?: string;
     borderColor?: string;
     layerId?: string | null;
+    fogGated?: boolean;
     visibilityLevel?: string;
     visibilityScopeId?: string | null;
   }
@@ -91,6 +95,7 @@ export async function updateRegion(
   if (params.fillColor !== undefined) patch.fill_color = params.fillColor;
   if (params.borderColor !== undefined) patch.border_color = params.borderColor;
   if (params.layerId !== undefined) patch.layer_id = params.layerId;
+  if (params.fogGated !== undefined) patch.fog_gated = params.fogGated;
   if (params.visibilityLevel !== undefined) patch.visibility_level = params.visibilityLevel;
   if (params.visibilityScopeId !== undefined) patch.visibility_scope_id = params.visibilityScopeId;
 

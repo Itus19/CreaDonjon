@@ -31,6 +31,8 @@ export interface MapRegionShapeData {
   shape: { x: number; y: number }[];
   fillColor: string;
   borderColor: string;
+  /** V2-I2 (brouillard de guerre) — indicateur MJ seul (jamais fourni pour un viewer joueur/public, qui ne recoit deja plus la zone tant qu'elle n'est pas revelee) : contour en pointilles pour une zone `fogGated` pas encore revelee. */
+  unrevealedFog?: boolean;
 }
 
 /**
@@ -295,6 +297,7 @@ export default function MapCanvas({
               fillOpacity={0.35}
               stroke={region.borderColor}
               strokeWidth={2}
+              strokeDasharray={region.unrevealedFog ? "6 4" : undefined}
               className={onRegionClick ? "pointer-events-auto cursor-pointer" : undefined}
               onClick={(e) => {
                 e.stopPropagation();

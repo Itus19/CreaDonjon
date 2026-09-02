@@ -16,6 +16,10 @@ export interface MapRegionDraft {
   fillColor: string;
   borderColor: string;
   layerId: string | null;
+  /** V2-I2 (brouillard de guerre) — soumise au brouillard ou non. */
+  fogGated: boolean;
+  /** V2-I2 — revelee pour LA campagne courante (sans objet tant que `id` est `null`, une zone pas encore creee n'a rien a reveler). */
+  revealed: boolean;
   visibilityLevel: string;
   visibilityScopeId: string | null;
 }
@@ -34,6 +38,7 @@ export default function MapRegionEditorPopup({
   layers,
   onSave,
   onDelete,
+  onReveal,
   onClose,
 }: {
   draft: MapRegionDraft;
@@ -41,6 +46,8 @@ export default function MapRegionEditorPopup({
   layers: VisibleMapLayer[];
   onSave: (draft: MapRegionDraft) => void;
   onDelete?: () => void;
+  /** V2-I2 — absent tant que `draft.id` est `null` (rien a reveler avant le premier enregistrement). */
+  onReveal?: () => void;
   onClose: () => void;
 }) {
   const [name, setName] = useState(draft.name);
@@ -48,6 +55,7 @@ export default function MapRegionEditorPopup({
   const [fillColor, setFillColor] = useState(draft.fillColor);
   const [borderColor, setBorderColor] = useState(draft.borderColor);
   const [layerId, setLayerId] = useState(draft.layerId ?? NO_LAYER);
+  const [fogGated, setFogGated] = useState(draft.fogGated);
   const [visibilityLevel, setVisibilityLevel] = useState(draft.visibilityLevel);
 
   function save() {
@@ -58,6 +66,7 @@ export default function MapRegionEditorPopup({
       fillColor,
       borderColor,
       layerId: layerId === NO_LAYER ? null : layerId,
+      fogGated,
       visibilityLevel,
       visibilityScopeId: null,
     });
@@ -131,6 +140,33 @@ export default function MapRegionEditorPopup({
               className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
             />
           </label>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="flex items-center gap-2 text-xs text-ink">
+            <input type="checkbox" checked={fogGated} onChange={(e) => setFogGated(e.target.checked)} className="h-3.5 w-3.5" />
+            Soumise au brouillard (cachée aux joueurs tant qu&apos;elle n&apos;est pas révélée)
+          </label>
+          {draft.id && fogGated && (
+            <div className="flex items-center gap-2 pl-5 text-xs">
+              {draft.revealed ? (
+                <span className="text-ink-muted">Révélée aux joueurs.</span>
+              ) : (
+                <>
+                  <span className="text-ink-muted">Cachée aux joueurs.</span>
+                  {onReveal && (
+                    <button
+                      type="button"
+                      onClick={onReveal}
+                      className="rounded-full border border-accent px-2.5 py-0.5 text-accent transition-colors hover:bg-accent/10"
+                    >
+                      Révéler
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {layers.length > 0 && (

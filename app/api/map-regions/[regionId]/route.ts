@@ -29,6 +29,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     fillColor: parsed.data.fillColor,
     borderColor: parsed.data.borderColor,
     layerId: parsed.data.layerId,
+    fogGated: parsed.data.fogGated,
     visibilityLevel: parsed.data.visibility?.level,
     visibilityScopeId: parsed.data.visibility?.scopeId,
   });

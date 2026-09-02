@@ -161,7 +161,14 @@ export default function MapRefPanel({
             }}
             pins={pins.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
             onPinClick={handlePinClick}
-            regions={regions.map((r) => ({ id: r.id, name: r.name, shape: r.shape, fillColor: r.fillColor, borderColor: r.borderColor }))}
+            regions={regions.map((r) => ({
+              id: r.id,
+              name: r.name,
+              shape: r.shape,
+              fillColor: r.fillColor,
+              borderColor: r.borderColor,
+              unrevealedFog: r.fogGated && !r.revealed,
+            }))}
             onRegionClick={handleRegionClick}
           />
         ) : (

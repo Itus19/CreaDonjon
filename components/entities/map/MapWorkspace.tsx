@@ -262,6 +262,8 @@ export default function MapWorkspace({
       fillColor: "#3b82f6",
       borderColor: "#1d4ed8",
       layerId: null,
+      fogGated: false,
+      revealed: false,
       visibilityLevel: "public",
       visibilityScopeId: null,
     });
@@ -279,6 +281,8 @@ export default function MapWorkspace({
       fillColor: full.fillColor,
       borderColor: full.borderColor,
       layerId: full.layerId,
+      fogGated: full.fogGated,
+      revealed: full.revealed,
       visibilityLevel: full.visibilityLevel,
       visibilityScopeId: full.visibilityScopeId,
     });
@@ -293,6 +297,7 @@ export default function MapWorkspace({
       fillColor: draft.fillColor,
       borderColor: draft.borderColor,
       layerId: draft.layerId,
+      fogGated: draft.fogGated,
       visibility: { level: draft.visibilityLevel, scopeId: draft.visibilityScopeId },
     });
     if (draft.id) {
@@ -307,6 +312,13 @@ export default function MapWorkspace({
     setEditingRegion(null);
     await fetch(`/api/map-regions/${id}`, { method: "DELETE" });
     reloadRegions();
+  }
+
+  /** V2-I2 (brouillard de guerre) — reveler pour la campagne du monde courant, journalise un `session_event` cote serveur. */
+  async function revealRegion(id: string) {
+    await fetch(`/api/map-regions/${id}/reveal`, { method: "POST" });
+    reloadRegions();
+    setEditingRegion((prev) => (prev && prev.id === id ? { ...prev, revealed: true } : prev));
   }
 
   function toggleLayerHidden(layerId: string) {
@@ -440,7 +452,14 @@ export default function MapWorkspace({
             onPlacePin={handlePlacePin}
             regions={regions
               .filter((r) => !r.layerId || !hiddenLayerIds.has(r.layerId))
-              .map((r) => ({ id: r.id, name: r.name, shape: r.shape, fillColor: r.fillColor, borderColor: r.borderColor }))}
+              .map((r) => ({
+                id: r.id,
+                name: r.name,
+                shape: r.shape,
+                fillColor: r.fillColor,
+                borderColor: r.borderColor,
+                unrevealedFog: r.fogGated && !r.revealed,
+              }))}
             onRegionClick={handleRegionClick}
             drawingRegion={drawingRegion}
             pendingRegionPoints={pendingRegionPoints}
@@ -470,6 +489,7 @@ export default function MapWorkspace({
           layers={layers}
           onSave={saveRegionDraft}
           onDelete={editingRegion.id ? () => deleteRegionDraft(editingRegion.id!) : undefined}
+          onReveal={editingRegion.id ? () => revealRegion(editingRegion.id!) : undefined}
           onClose={() => setEditingRegion(null)}
         />
       )}

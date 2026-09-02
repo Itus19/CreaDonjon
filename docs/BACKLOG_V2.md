@@ -694,9 +694,23 @@ create table map_region_reveals (
 );
 ```
 
-- [ ] Le MJ trace des régions (réutilise `map_regions` de V2-I1) ; il les révèle en cours de partie, par campagne.
-- [ ] Une région non révélée est **absente de la réponse serveur**, pas masquée en CSS.
-- [ ] Révéler écrit un `session_event`.
+- [x] Le MJ trace des régions (réutilise `map_regions` de V2-I1) ; il les révèle en cours de partie, par campagne.
+- [x] Une région non révélée est **absente de la réponse serveur**, pas masquée en CSS.
+- [x] Révéler écrit un `session_event`.
+
+**Décision d'architecture prise avant le code** (retour utilisateur, 2 septembre) : le brouillard est **opt-in par zone**, jamais rétroactif sur toutes les zones existantes. Pris au pied de la lettre, le critère "absente tant que non révélée" aurait caché aux joueurs, sans avertissement, toutes les zones déjà tracées et publiques dans les mondes existants (la zone "Amn" sur Faerûn, trouvée en vérifiant le bug de zone ci-dessus, en est l'exemple qui a motivé la question). Une nouvelle colonne `map_regions.fog_gated` (`false` par défaut) distingue donc une zone normale (comportement inchangé) d'une zone "de découverte".
+
+**Fait** — Deux migrations : `20260902180001_map_regions_fog_gated.sql` (colonne `fog_gated`) et `20260902180002_map_region_reveals.sql` (table `map_region_reveals`, exactement le SQL ci-dessus, RLS lecture = tout membre du monde, écriture = `app.is_world_admin` seul, même garde que `entity_grants_write`). Types régénérés (`supabase gen types typescript --project-id fivakjqzqgfvfpaqvqex`).
+
+`listVisibleMapRegions` (`src/server/services/mapRegions.ts`) accepte désormais un `campaignId` optionnel : une zone `fog_gated` n'atteint un viewer non-MJ (`isAdminViewer`) que si `map_region_reveals` porte une ligne pour `(campaignId, regionId)` — le MJ voit toujours tout, brouillard ou pas, le brouillard cache aux joueurs seulement. `campaignId` se résout via `resolveCampaignId(worldId)` ("un monde = une campagne active", `campaigns_world_id_unique`) dans les cinq points d'entrée qui listent des zones : la route MJ (`GET /api/blocks/[blockId]/regions`), `publicShare.ts` et `playerEntityDetail.ts` (deux appels chacun, mode "own" et "ref").
+
+Nouveau service `src/server/services/mapRegionReveals.ts` (`revealMapRegion`) : geste de MJ (`canUserEditEntityById`, même garde que les autres mutations de zone), idempotent (`isRegionRevealed` vérifié avant d'insérer — recliquer sur une zone déjà révélée ne journalise pas un second événement), ouvre/réutilise la session courante de la campagne (`getOrOpenSessionForCampaign`, même motif que `quests.ts`) et écrit un `session_event` (`kind: "world_update"`, note "Zone révélée aux joueurs : <nom>"). Route `POST /api/map-regions/[regionId]/reveal`.
+
+UI dans `MapRegionEditorPopup.tsx` : case à cocher "Soumise au brouillard", puis (une fois la zone enregistrée) son statut — "Cachée aux joueurs." avec un bouton "Révéler", ou "Révélée aux joueurs." Indicateur visuel pour le MJ (`MapCanvas.tsx`, `strokeDasharray`) : contour en pointillés pour une zone `fogGated` pas encore révélée, partout où le MJ voit la carte (`MapWorkspace`, `MapRefPanel`, l'aperçu replié de `MapBlockEditor.tsx`) — jamais transmis à un viewer joueur/public, qui ne reçoit de toute façon jamais la zone tant qu'elle n'est pas révélée.
+
+**Vérifié en direct** (monde Faerûn/La Croisade des Ombres) : zone triangle tracée sur la carte "Faerûn" avec "Soumise au brouillard" coché → contour en pointillés côté MJ, absente du HTML de l'aperçu public anonyme (`document.body.innerHTML` ne contient pas son nom, pas juste masquée en CSS) → clic sur "Révéler" → contour plein côté MJ, apparaît immédiatement dans l'aperçu public, ET la ligne "Mise à jour du monde — Zone révélée aux joueurs : Zone test brouillard" apparaît en tête du Journal d'historique. Zone de test supprimée après vérification.
+
+`npm run typecheck && npm run lint && npm run test:core` (700 tests) passent ; suites d'intégration touchées (`resolvedRuleset`, `characterActions`, `publicShare`, `rules.homebrewReference`) passent en lot restreint — la suite `src/server` complète échoue par intermittence sous charge (connexions concurrentes vers la base de dev distante partagée), y compris sur des fichiers jamais touchés par ce ticket (`campaigns.integration.test.ts` échoue sur `world_has_slug`, `entities.ts`, du code que ce ticket ne touche pas) : environnemental, pas une régression de ce travail.
 
 ---
 

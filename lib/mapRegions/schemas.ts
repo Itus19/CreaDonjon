@@ -14,6 +14,8 @@ export const createMapRegionSchema = z.object({
   fillColor: zMapRegionColor.default("#3b82f6"),
   borderColor: zMapRegionColor.default("#1d4ed8"),
   layerId: z.string().nullable().default(null),
+  /** V2-I2 (brouillard de guerre) — faux par defaut : une zone reste visible comme avant ce ticket sauf choix contraire. */
+  fogGated: z.boolean().default(false),
   visibility: zVisibilityInput,
 });
 
@@ -24,5 +26,6 @@ export const updateMapRegionSchema = z.object({
   fillColor: zMapRegionColor.optional(),
   borderColor: zMapRegionColor.optional(),
   layerId: z.string().nullable().optional(),
+  fogGated: z.boolean().optional(),
   visibility: zVisibilityInput.optional(),
 });

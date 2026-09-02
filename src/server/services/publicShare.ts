@@ -15,6 +15,7 @@ import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import { type EntitySummary, getEntityById, getEntityBySlug, listEntitiesForWorld } from "@/src/server/repos/entities";
 import { listPartOfRelationsForWorld, listRelationsForEntity, type OtherEntityRef } from "@/src/server/repos/relations";
 import { listCampaignsForWorld } from "@/src/server/repos/campaigns";
+import { resolveCampaignId } from "@/src/server/services/campaigns";
 import { getWorldById, getWorldEntityKindOrder } from "@/src/server/repos/worlds";
 import { getPortraitLayout } from "@/src/server/services/entityPortraits";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
@@ -353,10 +354,11 @@ export async function getPublicEntityDetail(
   // cachee existe a cette adresse (meme discipline que resolveShareLink).
   if (!entity || !entity.is_public) return null;
 
-  const [rows, relationRows, portraitLayout] = await Promise.all([
+  const [rows, relationRows, portraitLayout, campaignId] = await Promise.all([
     listBlocksForEntity(supabase, entity.id),
     listRelationsForEntity(supabase, entity.id),
     getPortraitLayout(supabase, entity.id),
+    resolveCampaignId(supabase, worldId),
   ]);
   const visible = filterBlocks(rows.map(toVisibilityAware), { kind: "anonymous" });
   const blocks: PublicBlock[] = visible
@@ -554,7 +556,7 @@ export async function getPublicEntityDetail(
       if (map.data.mode === "own") {
         const [mapPins, mapRegions] = await Promise.all([
           listVisibleMapPins(supabase, block.id, { kind: "anonymous" }),
-          listVisibleMapRegions(supabase, block.id, { kind: "anonymous" }),
+          listVisibleMapRegions(supabase, block.id, { kind: "anonymous" }, campaignId),
         ]);
         return { ...block, mapPins, mapRegions };
       }
@@ -562,7 +564,7 @@ export async function getPublicEntityDetail(
       const [mapPins, mapRegions] = mapSource
         ? await Promise.all([
             listVisibleMapPins(supabase, map.data.sourceBlockId, { kind: "anonymous" }),
-            listVisibleMapRegions(supabase, map.data.sourceBlockId, { kind: "anonymous" }),
+            listVisibleMapRegions(supabase, map.data.sourceBlockId, { kind: "anonymous" }, campaignId),
           ])
         : [[], []];
       return { ...block, mapSource, mapPins, mapRegions };

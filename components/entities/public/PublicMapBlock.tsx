@@ -105,6 +105,8 @@ export default function PublicMapBlock({
         initialView={data.defaultView}
         height={COLLAPSED_HEIGHT}
         interactive={false}
+        pins={mapPins?.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
+        regions={mapRegions?.map((r) => ({ id: r.id, name: r.name, shape: r.shape, fillColor: r.fillColor, borderColor: r.borderColor }))}
       />
       {expanded && (
         <div className="fixed inset-0 z-50 flex flex-col bg-scrim p-6" onClick={() => setExpanded(false)}>

@@ -16,6 +16,7 @@ import { zMapBlockData } from "@/src/core/schemas/blocks/map";
 import { resolveMapSource } from "@/src/server/services/mapSource";
 import { listVisibleMapPins } from "@/src/server/services/mapPins";
 import { listVisibleMapRegions } from "@/src/server/services/mapRegions";
+import { resolveCampaignId } from "@/src/server/services/campaigns";
 import { zQuestBlockData } from "@/src/core/schemas/blocks/quest";
 import { zTimelineBlockData } from "@/src/core/schemas/blocks/timeline";
 import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
@@ -123,11 +124,12 @@ export async function getPlayerEntityDetail(
   const entity = await getEntityBySlug(supabase, worldId, entitySlug);
   if (!entity) return null;
 
-  const [rows, relations, portraitLayout, viewer] = await Promise.all([
+  const [rows, relations, portraitLayout, viewer, campaignId] = await Promise.all([
     listBlocksForEntity(supabase, entity.id),
     listPlayerRelations(supabase, worldId, entity.id, userId),
     getPortraitLayout(supabase, entity.id),
     buildViewerForWorld(supabase, worldId, userId),
+    resolveCampaignId(supabase, worldId),
   ]);
 
   const visible = filterBlocks(rows.map(toVisibilityAware), viewer);
@@ -257,7 +259,7 @@ export async function getPlayerEntityDetail(
       if (map.data.mode === "own") {
         const [mapPins, mapRegions] = await Promise.all([
           listVisibleMapPins(supabase, block.id, viewer),
-          listVisibleMapRegions(supabase, block.id, viewer),
+          listVisibleMapRegions(supabase, block.id, viewer, campaignId),
         ]);
         return { ...block, mapPins, mapRegions };
       }
@@ -265,7 +267,7 @@ export async function getPlayerEntityDetail(
       const [mapPins, mapRegions] = mapSource
         ? await Promise.all([
             listVisibleMapPins(supabase, map.data.sourceBlockId, viewer),
-            listVisibleMapRegions(supabase, map.data.sourceBlockId, viewer),
+            listVisibleMapRegions(supabase, map.data.sourceBlockId, viewer, campaignId),
           ])
         : [[], []];
       return { ...block, mapSource, mapPins, mapRegions };
