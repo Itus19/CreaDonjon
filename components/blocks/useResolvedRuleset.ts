@@ -44,6 +44,8 @@ export interface ResolvedRulesetView {
   spellLevels: Record<string, number | null>;
   /** Niveaux ou chaque classe accorde une amelioration de caracteristique, par cle de classe (V2-G1, montee de niveau accompagnee). */
   asiGrantedLevels: Record<string, number[]>;
+  /** Les trois caracteristiques de l'historique choisi (V2-G7, bonus +2/+1) — `null` si aucun historique choisi ou si sa fiche n'en porte aucune. */
+  backgroundAbilityScores: string[] | null;
 }
 
 export interface RulesetSelection {
@@ -65,6 +67,7 @@ const EMPTY: ResolvedRulesetView = {
   cost: {},
   spellLevels: {},
   asiGrantedLevels: {},
+  backgroundAbilityScores: null,
 };
 
 /**

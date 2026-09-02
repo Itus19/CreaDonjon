@@ -2,13 +2,23 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
-import { layerForFeatureSource, resolveDeclaredModifiers, type DeclaredModifier, type ResolvedClass, type ResolvedFeature, type ResolvedRuleset } from "@/src/core/rules/sheet";
+import {
+  ABILITIES,
+  layerForFeatureSource,
+  resolveDeclaredModifiers,
+  type Ability,
+  type DeclaredModifier,
+  type ResolvedClass,
+  type ResolvedFeature,
+  type ResolvedRuleset,
+} from "@/src/core/rules/sheet";
 import {
   armorDataFromBlock,
   backgroundFeatKeyFromBlock,
   backgroundModifiersFromBlock,
   costFromQuantity,
   extractAsiGrantedLevels,
+  extractBackgroundAbilityScores,
   extractBackgroundFeat,
   extractFeatureKeysUpToLevel,
   extractLanguageChoice,
@@ -47,6 +57,11 @@ import {
 } from "@/src/server/repos/rules";
 import { entryNameFrom, resolveEntryBlocksInRuleset, walkRulesetChain } from "./rules";
 import { WEAPON_ARMOR_PROFICIENCY_LABELS_FR } from "@/src/i18n/fr";
+import {
+  backgroundAbilityBonusModifiers,
+  isValidBackgroundAbilityBonusChoice,
+  parseBackgroundAbilityBonusChoice,
+} from "@/src/core/rules/backgroundAbilityBonus";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -54,6 +69,8 @@ export interface CreationSelection {
   species?: string;
   background?: string;
   classes: { key: string; level: number }[];
+  /** `character.choices` (V2-G7) — seul `"background.ability_bonus"` est lu ici aujourd'hui ; les autres cles (ASI, competences restantes) restent resolues ailleurs (`characterActions.ts`/`useCharacterSheetContext.ts`), jamais dupliquees ici. */
+  choices?: Record<string, unknown>;
 }
 
 export interface RemainingChoice {
@@ -165,6 +182,8 @@ export interface AssembledRuleset {
   languages: TraitGrant[];
   /** Niveaux ou chaque classe accorde une amelioration de caracteristique (V2-G1, montee de niveau accompagnee) — jamais code en dur, lu dans `progressionRows` (`extractAsiGrantedLevels`). */
   asiGrantedLevels: Record<string, number[]>;
+  /** Les trois caracteristiques de l'historique choisi (V2-G7, bonus +2/+1) — `null` si aucun historique choisi ou si sa fiche n'en porte aucune (ex. historique SRD 2014). Les DEUX chemins de lecture du bloc historique (SRD `fields`/fiche dediee) l'alimentent, meme source que le don accorde/les competences juste au-dessus. */
+  backgroundAbilityScores: Ability[] | null;
 }
 
 interface BatchEntry {
@@ -291,6 +310,7 @@ export async function assembleResolvedRuleset(
   const proficiencies: TraitGrant[] = [];
   const languages: TraitGrant[] = [];
   const asiGrantedLevels: Record<string, number[]> = {};
+  let backgroundAbilityScores: Ability[] | null = null;
 
   const topKeys = [
     ...(selection.species ? [selection.species] : []),
@@ -349,6 +369,9 @@ export async function assembleResolvedRuleset(
         if (found.backgroundBlock.tool_proficiency) {
           proficiencies.push({ key: found.backgroundBlock.tool_proficiency, name: found.backgroundBlock.tool_proficiency, source: label });
         }
+        // `ability_scores` n'est qu'un `string[]` au niveau du schema (zBackgroundBlockData) —
+        // filtre defensif plutot qu'un cast, meme discipline que `extractBackgroundAbilityScores` ci-dessous.
+        backgroundAbilityScores = found.backgroundBlock.ability_scores.filter((a): a is Ability => ABILITIES.includes(a as Ability));
       } else {
         features[key] = { key, label, source: key, modifiers: mapBackgroundModifiers(found.fields, key, label) };
         proficiencies.push(...mapProficiencies(found.fields).map((p) => ({ ...p, source: label })));
@@ -366,6 +389,20 @@ export async function assembleResolvedRuleset(
 
         const featKey = extractBackgroundFeat(found.fields);
         if (featKey) extraFeatureKeys.set(featKey, key);
+        backgroundAbilityScores = extractBackgroundAbilityScores(found.fields);
+      }
+
+      // Bonus +2/+1 ou +1/+1/+1 (V2-G7, PHB 2024 p.15) : choix du joueur
+      // (`character.choices["background.ability_bonus"]`), jamais devine —
+      // un choix absent ou invalide (caracteristique hors des trois de CET
+      // historique, total incorrect) ne contribue simplement aucun
+      // modificateur, meme philosophie permissive que `buildAsiChoiceFeatures`
+      // (characterActions.ts) pour un choix d'ASI malforme : jamais un rejet
+      // HTTP a la lecture, l'avantage illegitime n'atteint jamais la fiche
+      // calculee.
+      const abilityBonusChoice = parseBackgroundAbilityBonusChoice(selection.choices?.["background.ability_bonus"]);
+      if (abilityBonusChoice && isValidBackgroundAbilityBonusChoice(abilityBonusChoice, backgroundAbilityScores ?? [])) {
+        features[key].modifiers.push(...backgroundAbilityBonusModifiers(abilityBonusChoice, key, label));
       }
     }
   }
@@ -507,7 +544,7 @@ export async function assembleResolvedRuleset(
     }
   }
 
-  return { ruleset: { classes, features }, remainingChoices, proficiencies, languages, asiGrantedLevels };
+  return { ruleset: { classes, features }, remainingChoices, proficiencies, languages, asiGrantedLevels, backgroundAbilityScores };
 }
 
 interface EquipmentBlocks {

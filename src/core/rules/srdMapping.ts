@@ -225,6 +225,26 @@ export function extractBackgroundFeat(fields: ParsedFields): string | null {
 }
 
 /**
+ * Les trois caracteristiques liees a un historique SRD (V2-G7, bonus
+ * +2/+1 ou +1/+1/+1 — PHB 2024 p.15), lues depuis `fields.ability_scores`
+ * (meme forme que `feat` : liste de `{index, name}`, verifie contre
+ * `Backgrounds.soldier.ability_scores` de `data/srd/srd-2024.json`).
+ * Jamais plus ou moins de trois entrees valides : un tableau incomplet
+ * (ex. donnee SRD 2014 sans ce champ) retombe sur un tableau vide plutot
+ * que de deviner, `isValidBackgroundAbilityBonusChoice` refuse alors tout
+ * choix (aucune caracteristique permise).
+ */
+export function extractBackgroundAbilityScores(fields: ParsedFields): Ability[] {
+  const raw = fields.ability_scores;
+  if (!Array.isArray(raw)) return [];
+  const abilities: Ability[] = [];
+  for (const entry of raw as { index?: string }[]) {
+    if (isAbility(entry?.index)) abilities.push(entry.index);
+  }
+  return abilities;
+}
+
+/**
  * Memes deux faits (competences accordees, don accorde) qu'`extractBackgroundFeat`/
  * `mapBackgroundModifiers` ci-dessus, mais lus depuis le bloc dedie
  * `background` (`zBackgroundBlockData`) plutot que depuis `fields` derive

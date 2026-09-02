@@ -4,7 +4,12 @@ import { useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { BackgroundBlockData, BackgroundEquipmentOption, BlockType } from "@/src/core/schemas/rule-blocks";
-import type { Skill } from "@/src/core/rules/sheet";
+import type { Ability, DerivedSheet, Skill } from "@/src/core/rules/sheet";
+import {
+  isValidBackgroundAbilityBonusChoice,
+  parseBackgroundAbilityBonusChoice,
+  type BackgroundAbilityBonusChoice,
+} from "@/src/core/rules/backgroundAbilityBonus";
 import { CLASS_PROFICIENCY_LABELS_FR, SKILL_LABELS_FR } from "@/src/i18n/fr";
 import { renderBlockData, type EquipmentCardInteraction } from "@/components/rules/blockContentRenderer";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
@@ -21,6 +26,13 @@ const ABILITY_LABELS: Record<string, string> = { str: "FOR", dex: "DEX", con: "C
 function findBlock<T>(blocks: RuleEntryBlockData[] | undefined, blockType: string): T | null {
   const found = blocks?.find((b) => b.blockType === blockType);
   return found ? (found.data as T) : null;
+}
+
+function withoutAbilityBonusChoice(choices: CharacterBlockData["choices"]): CharacterBlockData["choices"] {
+  if (!(ABILITY_BONUS_CHOICE_KEY in choices)) return choices;
+  const rest = { ...choices };
+  delete rest[ABILITY_BONUS_CHOICE_KEY];
+  return rest;
 }
 
 interface BackgroundCardInfo {
@@ -50,6 +62,9 @@ function backgroundCardInfo(blocks: RuleEntryBlockData[] | undefined): Backgroun
 }
 
 const TAG_PREFIX = "background:";
+const ABILITY_BONUS_CHOICE_KEY = "background.ability_bonus";
+const ABILITY_BONUS_CAP = 20;
+const EMPTY_ABILITY_BONUS_CHOICE: BackgroundAbilityBonusChoice = { kind: "background_ability_bonus", increases: {} };
 
 /**
  * Etape 4 (specs/wiki-liens-et-personnages.md §B8) : boutons pour
@@ -69,6 +84,13 @@ const TAG_PREFIX = "background:";
  * remplace les boutons "Choisir A/B" separes) : `equipmentInteraction`
  * rend l'encadre de `Background()` (blockContentRenderer.tsx) cliquable,
  * jamais sur une fiche de regle en lecture seule.
+ *
+ * Bonus de caracteristique de l'historique (V2-G7, regle 2024 "+2/+1") :
+ * section a part, sous le contenu existant — jamais sur l'etape
+ * Caracteristiques, qui reste independante de l'historique choisi (les trois
+ * methodes d'attribution existantes ne lisent aucun historique). `sheet` et
+ * `backgroundAbilityScores` viennent tous deux de `useCharacterSheetContext`,
+ * meme source que le reste de l'apercu vivant.
  */
 export default function BackgroundStep({
   worldSlug,
@@ -78,6 +100,8 @@ export default function BackgroundStep({
   onUpdateInventory,
   choice,
   onChooseOption,
+  backgroundAbilityScores,
+  sheet,
 }: {
   worldSlug: string;
   character: CharacterBlockData;
@@ -86,6 +110,8 @@ export default function BackgroundStep({
   onUpdateInventory: (data: InventoryBlockData) => void;
   choice: BackgroundEquipmentChoice | null;
   onChooseOption: (choice: BackgroundEquipmentChoice | null) => void;
+  backgroundAbilityScores: Ability[] | null;
+  sheet: DerivedSheet;
 }) {
   const entries = useWorldRuleEntries(worldSlug).filter((e) => e.entryType === "background");
   const blocksByKey = useRuleEntryBlocks(
@@ -107,11 +133,20 @@ export default function BackgroundStep({
   // fonctionnalite.
   const [categorySelections, setCategorySelections] = useState<Record<string, string>>({});
 
+  // Mode du bonus de caracteristique ("+2/+1" ou "+1 x3") avant toute
+  // caracteristique cochee (V2-G7) — meme necessite que `pendingModeByKey`
+  // dans `AsiStep.tsx` : les deux modes partent du meme choix vide, rien ne
+  // les distingue tant qu'aucune caracteristique n'est cochee.
+  const [pendingAbilityMode, setPendingAbilityMode] = useState<"mixed" | "triple" | null>(null);
+
   function select(key: string) {
-    patchCharacter({ background: { kind: "rule", key } });
-    if (key !== currentKey) {
+    const switching = key !== currentKey;
+    const nextChoices = switching ? withoutAbilityBonusChoice(character.choices) : character.choices;
+    patchCharacter({ background: { kind: "rule", key }, choices: nextChoices });
+    if (switching) {
       onChooseOption(null);
       setCategorySelections({});
+      setPendingAbilityMode(null);
     }
   }
 
@@ -179,6 +214,53 @@ export default function BackgroundStep({
       }
     : undefined;
 
+  // Bonus de caracteristique de l'historique (V2-G7, regle 2024 "+2/+1") —
+  // meme motif que `AsiStep.tsx` : le mode ("mixed" = +2/+1, "triple" =
+  // +1 x3) se relit depuis les entrees du choix persiste des qu'au moins une
+  // caracteristique est cochee, sinon depuis `pendingAbilityMode`.
+  const abilityChoice = parseBackgroundAbilityBonusChoice(character.choices[ABILITY_BONUS_CHOICE_KEY]) ?? EMPTY_ABILITY_BONUS_CHOICE;
+  const abilityEntries = Object.entries(abilityChoice.increases) as [Ability, number][];
+  const abilityMode: "mixed" | "triple" | null =
+    abilityEntries.length === 3 ? "triple" : abilityEntries.length > 0 ? "mixed" : pendingAbilityMode;
+
+  function setAbilityChoice(next: BackgroundAbilityBonusChoice) {
+    patchCharacter({ choices: { ...character.choices, [ABILITY_BONUS_CHOICE_KEY]: next } });
+  }
+
+  function selectAbilityMode(mode: "mixed" | "triple") {
+    if (abilityMode === mode) return;
+    setPendingAbilityMode(mode);
+    if (mode === "triple" && backgroundAbilityScores) {
+      const increases = Object.fromEntries(backgroundAbilityScores.map((a) => [a, 1])) as Partial<Record<Ability, number>>;
+      setAbilityChoice({ kind: "background_ability_bonus", increases });
+    } else {
+      setAbilityChoice(EMPTY_ABILITY_BONUS_CHOICE);
+    }
+  }
+
+  function toggleAbility(ability: Ability) {
+    if (abilityMode !== "mixed") return;
+    const increases = { ...abilityChoice.increases };
+    if (increases[ability]) {
+      delete increases[ability];
+      setAbilityChoice({ kind: "background_ability_bonus", increases });
+      return;
+    }
+    if (Object.keys(increases).length >= 2) return;
+    const amount = Object.values(increases).includes(2) ? 1 : 2;
+    if (sheet.abilities[ability].score + amount > ABILITY_BONUS_CAP) return;
+    increases[ability] = amount;
+    setAbilityChoice({ kind: "background_ability_bonus", increases });
+  }
+
+  // Le mode "+1 x3" applique les trois caracteristiques d'un coup au clic
+  // (aucune selection individuelle a faire) : desactive si l'une des trois
+  // depasserait le plafond de 20, jamais un bonus partiel silencieux.
+  const tripleWouldExceedCap = (backgroundAbilityScores ?? []).some((a) => {
+    const baseScore = abilityMode === "triple" ? sheet.abilities[a].score - 1 : sheet.abilities[a].score;
+    return baseScore + 1 > ABILITY_BONUS_CAP;
+  });
+
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -218,6 +300,68 @@ export default function BackgroundStep({
                 )}
               </div>
             ))}
+        </div>
+      )}
+
+      {currentKey && backgroundAbilityScores && backgroundAbilityScores.length === 3 && (
+        <div className="flex flex-col gap-2 rounded-md border border-edge/60 p-3">
+          <p className="text-sm font-medium text-ink">Bonus de caractéristique de l&rsquo;historique</p>
+
+          <div className="flex gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => selectAbilityMode("mixed")}
+              className={`rounded-full border px-2.5 py-1 transition-colors ${
+                abilityMode === "mixed" ? "border-accent text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
+              }`}
+            >
+              +2 / +1
+            </button>
+            <button
+              type="button"
+              onClick={() => selectAbilityMode("triple")}
+              disabled={tripleWouldExceedCap && abilityMode !== "triple"}
+              title={tripleWouldExceedCap ? "Plafond de 20 atteint sur au moins une caractéristique" : undefined}
+              className={`rounded-full border px-2.5 py-1 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                abilityMode === "triple" ? "border-accent text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
+              }`}
+            >
+              +1 chacune (x3)
+            </button>
+          </div>
+
+          {abilityMode && (
+            <div className="flex flex-wrap gap-2">
+              {backgroundAbilityScores.map((ability) => {
+                const isChosen = Boolean(abilityChoice.increases[ability]);
+                const amount =
+                  abilityMode === "triple" ? 1 : isChosen ? (abilityChoice.increases[ability] as number) : Object.values(abilityChoice.increases).includes(2) ? 1 : 2;
+                const baseScore = isChosen ? sheet.abilities[ability].score - amount : sheet.abilities[ability].score;
+                const nextScore = baseScore + amount;
+                const wouldExceedCap = !isChosen && nextScore > ABILITY_BONUS_CAP;
+                const choiceFull = abilityMode === "mixed" && !isChosen && abilityEntries.length >= 2;
+                const disabled = abilityMode === "triple" || wouldExceedCap || choiceFull;
+                return (
+                  <button
+                    key={ability}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => toggleAbility(ability)}
+                    title={wouldExceedCap ? "Plafond de 20 atteint" : undefined}
+                    className={`rounded-full border px-2.5 py-1 text-xs transition-colors disabled:cursor-not-allowed ${
+                      abilityMode === "triple" ? "disabled:opacity-100" : "disabled:opacity-40"
+                    } ${isChosen ? "border-accent bg-accent/20 text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"}`}
+                  >
+                    {ABILITY_LABELS[ability] ?? ability.toUpperCase()} {baseScore} → {nextScore}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {abilityMode === "mixed" && !isValidBackgroundAbilityBonusChoice(abilityChoice, backgroundAbilityScores) && (
+            <p className="text-xs text-ink-muted">Choisissez une caractéristique pour +2, puis une autre pour +1.</p>
+          )}
         </div>
       )}
     </div>

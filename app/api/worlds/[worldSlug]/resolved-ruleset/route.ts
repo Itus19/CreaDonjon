@@ -40,6 +40,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         proficiencies: [],
         languages: [],
         asiGrantedLevels: {},
+        backgroundAbilityScores: null,
         equipment: {},
         weaponByKey: {},
         weight: {},

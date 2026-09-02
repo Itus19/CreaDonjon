@@ -5,6 +5,7 @@ import {
   backgroundFeatKeyFromBlock,
   backgroundModifiersFromBlock,
   costFromQuantity,
+  extractBackgroundAbilityScores,
   extractBackgroundFeat,
   extractFeatureKeysUpToLevel,
   extractAsiGrantedLevels,
@@ -685,6 +686,34 @@ describe("extractBackgroundFeat", () => {
 
   it("retourne null si le champ est absent (historique SRD 2014, aucun champ equivalent)", () => {
     expect(extractBackgroundFeat(parseCustomTableFields(ACOLYTE_ROWS))).toBeNull();
+  });
+});
+
+// Fixture fidele a Backgrounds.soldier.ability_scores de data/srd/srd-2024.json.
+describe("extractBackgroundAbilityScores", () => {
+  it("lit les trois caracteristiques d'un historique (Soldat -> FOR/DEX/CON, SRD 2024)", () => {
+    const fields = parseCustomTableFields([
+      {
+        field: "ability_scores",
+        value: JSON.stringify([
+          { index: "str", name: "STR" },
+          { index: "dex", name: "DEX" },
+          { index: "con", name: "CON" },
+        ]),
+      },
+    ]);
+    expect(extractBackgroundAbilityScores(fields)).toEqual(["str", "dex", "con"]);
+  });
+
+  it("retourne un tableau vide si le champ est absent (historique SRD 2014, aucun champ equivalent)", () => {
+    expect(extractBackgroundAbilityScores(parseCustomTableFields(ACOLYTE_ROWS))).toEqual([]);
+  });
+
+  it("ignore une entree dont l'index n'est pas une vraie caracteristique, sans faire echouer le reste", () => {
+    const fields = parseCustomTableFields([
+      { field: "ability_scores", value: JSON.stringify([{ index: "str" }, { index: "pas-une-carac" }, { index: "con" }]) },
+    ]);
+    expect(extractBackgroundAbilityScores(fields)).toEqual(["str", "con"]);
   });
 });
 

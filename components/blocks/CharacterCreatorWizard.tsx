@@ -171,6 +171,7 @@ export default function CharacterCreatorWizard({
     equippedWeapons,
     buildChips,
     skillChoices,
+    backgroundAbilityScores,
   } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
 
   // Points de vie (V2-G1, retour utilisateur) : un demarrage au-dela du
@@ -338,6 +339,8 @@ export default function CharacterCreatorWizard({
           onUpdateInventory={setInventory}
           choice={bgEquipmentChoice}
           onChooseOption={setBgEquipmentChoice}
+          backgroundAbilityScores={backgroundAbilityScores}
+          sheet={sheet}
         />
       )}
 

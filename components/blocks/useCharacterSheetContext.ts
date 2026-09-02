@@ -5,9 +5,14 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
-import { characterSheet, type CharacterBuild, type DerivedSheet, type EquippedItem, type ResolvedFeature } from "@/src/core/rules/sheet";
+import { characterSheet, type Ability, type CharacterBuild, type DerivedSheet, type EquippedItem, type ResolvedFeature } from "@/src/core/rules/sheet";
 import { armorAcModifier, mapChosenSkillModifiers, type ArmorData, type ItemCost, type WeaponData } from "@/src/core/rules/srdMapping";
 import { asiModifiers, parseAsiChoice } from "@/src/core/rules/abilityScoreImprovement";
+import {
+  backgroundAbilityBonusModifiers,
+  isValidBackgroundAbilityBonusChoice,
+  parseBackgroundAbilityBonusChoice,
+} from "@/src/core/rules/backgroundAbilityBonus";
 import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { useResolvedRuleset, type RemainingChoiceView, type TraitGrantView } from "./useResolvedRuleset";
 import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
@@ -54,6 +59,8 @@ export interface CharacterSheetContext {
   masteredWeaponKeys: Set<string>;
   /** Niveaux ou chaque classe accorde une amelioration de caracteristique, par cle de classe (V2-G1, montee de niveau accompagnee). */
   asiGrantedLevels: Record<string, number[]>;
+  /** Les trois caracteristiques de l'historique choisi (V2-G7, bonus +2/+1) — `null` si aucun historique choisi ou sans donnee de caracteristiques. */
+  backgroundAbilityScores: Ability[] | null;
 }
 
 /**
@@ -125,14 +132,26 @@ export function useCharacterSheetContext(
     [spellcasting]
   );
 
-  const { ruleset, remainingChoices, proficiencies, languages, equipment, weaponByKey, weight, cost, spellLevels, asiGrantedLevels } =
-    useResolvedRuleset(worldSlug, {
-      species: speciesKey,
-      background: backgroundKey,
-      classes: classSelections,
-      equipmentKeys,
-      spellKeys,
-    });
+  const {
+    ruleset,
+    remainingChoices,
+    proficiencies,
+    languages,
+    equipment,
+    weaponByKey,
+    weight,
+    cost,
+    spellLevels,
+    asiGrantedLevels,
+    backgroundAbilityScores: rawBackgroundAbilityScores,
+  } = useResolvedRuleset(worldSlug, {
+    species: speciesKey,
+    background: backgroundKey,
+    classes: classSelections,
+    equipmentKeys,
+    spellKeys,
+  });
+  const backgroundAbilityScores = (rawBackgroundAbilityScores as Ability[] | null) ?? null;
 
   const carriedWeight = useMemo(() => totalCarriedWeight(inventory?.items ?? [], weight), [inventory, weight]);
 
@@ -179,6 +198,26 @@ export function useCharacterSheetContext(
     const key = `choice:${choiceKey}`;
     const label = asiChoiceLabel(choiceKey, ruleset);
     choiceFeatures[key] = { key, label, source: `asi:${choiceKey}`, modifiers: asiModifiers(asi, `asi:${choiceKey}`, label) };
+    choiceFeatureKeys.push(key);
+  }
+
+  // Bonus de caracteristique de l'historique (V2-G7, regle 2024 "+2/+1") :
+  // meme motif que l'ASI ci-dessus (choix hors `remainingChoices`, cle fixe
+  // dans `character.choices`), mais recalcule ici plutot que par un aller-retour
+  // serveur — `backgroundAbilityScores` circule deja via `useResolvedRuleset`
+  // (il ne depend que de l'historique choisi), donc valider et appliquer le
+  // choix localement evite d'ajouter `choices` a la cle de cache de l'appel
+  // HTTP (qui redeclencherait un fetch a chaque choix non lie, ASI compris).
+  const backgroundAbilityChoice = parseBackgroundAbilityBonusChoice(character?.choices["background.ability_bonus"]);
+  if (backgroundAbilityChoice && isValidBackgroundAbilityBonusChoice(backgroundAbilityChoice, backgroundAbilityScores ?? [])) {
+    const key = "choice:background.ability_bonus";
+    const label = "Bonus de caractéristique de l'historique";
+    choiceFeatures[key] = {
+      key,
+      label,
+      source: "background.ability_bonus",
+      modifiers: backgroundAbilityBonusModifiers(backgroundAbilityChoice, "background.ability_bonus", label),
+    };
     choiceFeatureKeys.push(key);
   }
 
@@ -332,5 +371,6 @@ export function useCharacterSheetContext(
     weaponMasteryChips,
     masteredWeaponKeys,
     asiGrantedLevels,
+    backgroundAbilityScores,
   };
 }

@@ -161,7 +161,7 @@ export async function resolveCharacterActionContext(
   const assembled = await assembleResolvedRuleset(
     supabase,
     rulesetId,
-    { species: speciesKey, background: backgroundKey, classes: classSelections },
+    { species: speciesKey, background: backgroundKey, classes: classSelections, choices: characterData.choices },
     locale
   );
 
@@ -773,7 +773,7 @@ export async function applyLevelUp(
   const assembled = await assembleResolvedRuleset(
     supabase,
     ctx.rulesetId,
-    { species: speciesKey, background: backgroundKey, classes: classSelections },
+    { species: speciesKey, background: backgroundKey, classes: classSelections, choices: next.choices },
     params.locale
   );
 
