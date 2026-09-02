@@ -205,21 +205,29 @@ export async function updateEntityWithVersionCheck(
 /**
  * Idempotent : supprimer une entite deja supprimee ne change rien (pas d'erreur), meme convention que revokeShareLink.
  *
- * Pas de `.select()` ici : la policy `entities_select` exige `deleted_at is
- * null`, donc la ligne qu'on vient de marquer supprimee echouerait la
- * verification appliquee par Postgres au `RETURNING` d'un update sous RLS,
- * ce qui leve "new row violates row-level security policy" au lieu de
- * simplement renvoyer 0 ligne. `count: "exact"` donne le meme booleen via
- * `Content-Range`, sans relire la ligne.
+ * Passe par la fonction Postgres `app.soft_delete_entity` (RPC) plutot
+ * qu'un `.update()` direct — retour utilisateur, "certaines fiches" ne se
+ * supprimaient jamais (500 "new row violates row-level security policy").
+ * Cause reelle, trouvee en isolant chaque hypothese en direct : poser
+ * `deleted_at = now()` rend la ligne invisible pour `entities_select`
+ * (`deleted_at is null AND is_world_member(...)`) — Postgres exige,
+ * pour un UPDATE, que la ligne PROPOSEE satisfasse aussi la politique
+ * SELECT de la table, en plus de la politique UPDATE elle-meme (confirme
+ * en rendant `entities_update` totalement permissif sans que ca change
+ * quoi que ce soit, puis en desactivant entierement la RLS sur `entities`,
+ * ce qui la seule chose qui a resolu le probleme). Un conflit structurel :
+ * une politique SELECT qui masque les lignes supprimees entre TOUJOURS en
+ * conflit avec une suppression douce faite par un simple UPDATE, quelle
+ * que soit la politique UPDATE — jamais reparable en ajustant `.select()`
+ * ou `count` cote client, contrairement a ce qu'un premier correctif
+ * (a718877) avait suppose. `app.soft_delete_entity` contourne ce conflit
+ * via `set row_security = off`, en verifiant le droit d'edition
+ * explicitement a l'interieur (`app.can_edit_entity`, jamais relache).
  */
 export async function softDeleteEntity(supabase: TypedClient, id: string): Promise<{ deleted: boolean }> {
-  const { count, error } = await supabase
-    .from("entities")
-    .update({ deleted_at: new Date().toISOString() }, { count: "exact" })
-    .eq("id", id)
-    .is("deleted_at", null);
+  const { data, error } = await supabase.rpc("soft_delete_entity", { p_entity_id: id });
   if (error) throw new Error(error.message);
-  return { deleted: (count ?? 0) > 0 };
+  return { deleted: data === true };
 }
 
 const FIXED_ENTITY_KINDS = ["character", "location", "faction", "item", "creature", "quest", "event", "other"];
