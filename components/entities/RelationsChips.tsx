@@ -1,7 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import Dropdown from "@/components/shared/Dropdown";
@@ -43,6 +42,7 @@ export default function RelationsChips({
   relations,
   otherEntities,
   onRelationsChanged,
+  relationsReloadSignal,
 }: {
   entityId: string;
   worldSlug: string;
@@ -50,8 +50,9 @@ export default function RelationsChips({
   otherEntities: OtherEntityOption[];
   /** V2, retour utilisateur : signale aux blocs genealogie/reseau (qui chargent leur graphe a part) qu'une relation a change ici, pour qu'ils se rechargent aussi. */
   onRelationsChanged?: () => void;
+  /** Symetrique de `onRelationsChanged` : un bloc genealogie/reseau ajoute une relation depuis SA propre popup (`EntityBlocks.tsx`) — ce compteur, incremente ailleurs sur la page, dit a CE composant de recharger a son tour. Absent hors contexte de fiche complete (ex. fenetre isolee, meme convention que `EntityBlocks.tsx`). */
+  relationsReloadSignal?: number;
 }) {
-  const router = useRouter();
   const desktop = useDesktop();
   const [targetEntityId, setTargetEntityId] = useState(otherEntities[0]?.id ?? "");
   const [relationType, setRelationType] = useState<string>(RELATION_TYPES[0]);
@@ -81,9 +82,30 @@ export default function RelationsChips({
     groups.set(kind, list);
   }
 
+  /** Recharge SEULEMENT les relations de cette fiche (jamais `router.refresh()` — retour utilisateur, "un temps vraiment long" avant qu'un nouveau lien s'affiche : `router.refresh()` relance toute la page, `getEntityWindowData` y compris, pour une simple liste de puces). Meme motif que `relationsReloadSignal` deja utilise par les blocs genealogie/reseau. */
+  async function reloadRelations() {
+    const res = await fetch(`/api/entities/${entityId}/relations`);
+    if (!res.ok) return;
+    setLocalRelations(await res.json());
+  }
+
+  // Reagit a `relationsReloadSignal` (un bloc genealogie/reseau vient
+  // d'ajouter une relation depuis sa propre popup) — un vrai effet, jamais
+  // l'ajustement "pendant le rendu" utilise plus haut pour `relations` :
+  // ceci declenche un FETCH, pas un simple calcul derive. `initialSignal`
+  // ignore le tout premier rendu (les relations sont deja a jour via la
+  // prop `relations`), ne reagit qu'aux changements ulterieurs.
+  const initialSignal = useRef(relationsReloadSignal);
+  useEffect(() => {
+    if (relationsReloadSignal === undefined || relationsReloadSignal === initialSignal.current) return;
+    initialSignal.current = relationsReloadSignal;
+    void reloadRelations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relationsReloadSignal]);
+
   async function removeRelation(id: string) {
     await fetch(`/api/relations/${id}`, { method: "DELETE" });
-    router.refresh();
+    await reloadRelations();
     onRelationsChanged?.();
   }
 
@@ -123,7 +145,7 @@ export default function RelationsChips({
       setError(body?.error ?? "Impossible d'ajouter cette relation.");
       return;
     }
-    router.refresh();
+    await reloadRelations();
     onRelationsChanged?.();
   }
 

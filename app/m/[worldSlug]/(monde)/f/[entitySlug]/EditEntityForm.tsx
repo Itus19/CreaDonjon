@@ -465,6 +465,7 @@ export default function EditEntityForm({
               relations={initialRelations}
               otherEntities={otherEntities}
               onRelationsChanged={bumpRelationsReloadSignal}
+              relationsReloadSignal={relationsReloadSignal}
             />
           </div>
         </div>

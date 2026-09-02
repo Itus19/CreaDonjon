@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   DndContext,
   KeyboardSensor,
@@ -341,7 +340,6 @@ export default function EntityBlocks({
   relationsReloadSignal?: number;
   onRelationsChanged?: () => void;
 }) {
-  const router = useRouter();
   const [blocks, setBlocks] = useState<BlockItem[]>(initialBlocks);
   // Retour utilisateur : le pli/depli d'un bloc ne survivait pas a un
   // rechargement (Set en memoire) — meme mecanisme de persistance que le
@@ -688,7 +686,6 @@ export default function EntityBlocks({
               worldId={worldId}
               otherEntities={otherEntities}
               onRelationsChanged={() => {
-                router.refresh();
                 onRelationsChangedFromParent?.();
               }}
               relationsReloadSignal={relationsReloadSignal ?? 0}
