@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { filterBlocks, type Viewer, type VisibilityLevel } from "@/src/core/visibility";
+import { filterBlocks, isAdminViewer, type Viewer, type VisibilityLevel } from "@/src/core/visibility";
 import {
   buildRelationsGraph,
   type GraphEdgeInput,
@@ -11,6 +11,7 @@ import {
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { listAllRelationsForWorld } from "@/src/server/repos/relations";
 import { listEntitiesForWorld } from "@/src/server/repos/entities";
+import { listPlayerVisibleEntityIds } from "@/src/server/services/entities";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -52,17 +53,27 @@ export async function getRelationsGraphData(
     params.viewer
   );
 
-  // Fiche masquee (V2, retour utilisateur point 2), meme filtre et meme
-  // raison que getFamilyTree.ts : le visiteur anonyme perd les entites
-  // `is_public: false`, aretes touchant une entite masquee comprises —
-  // `buildRelationsGraph` (src/core) suppose que toute arete visible
-  // reference une entite presente dans la liste.
-  const entities = params.viewer.kind === "anonymous" ? allEntities.filter((e) => e.is_public) : allEntities;
+  // Fiche masquee, meme filtre et meme raison que getFamilyTree.ts (retour
+  // utilisateur, "des fiches masquees aux joueurs apparaissent quand
+  // meme") : le visiteur anonyme perd les entites `is_public: false`, un
+  // joueur authentifie (non admin) perd celles sans aucun bloc visible —
+  // aretes touchant une entite masquee comprises, `buildRelationsGraph`
+  // (src/core) suppose que toute arete visible reference une entite
+  // presente dans la liste.
+  const admin = isAdminViewer(params.viewer);
+  let entities = allEntities;
+  if (!admin) {
+    if (params.viewer.kind === "anonymous") {
+      entities = allEntities.filter((e) => e.is_public);
+    } else {
+      const visibleIds = await listPlayerVisibleEntityIds(supabase, params.worldId, allEntities.map((e) => e.id), params.viewer.userId);
+      entities = allEntities.filter((e) => visibleIds.has(e.id));
+    }
+  }
   const visibleEntityIds = new Set(entities.map((e) => e.id));
-  const edgesVisible =
-    params.viewer.kind === "anonymous"
-      ? visible.filter((r) => visibleEntityIds.has(r.source_entity_id) && visibleEntityIds.has(r.target_entity_id))
-      : visible;
+  const edgesVisible = admin
+    ? visible
+    : visible.filter((r) => visibleEntityIds.has(r.source_entity_id) && visibleEntityIds.has(r.target_entity_id));
 
   const edges: GraphEdgeInput[] = edgesVisible.map((r) => ({
     id: r.id,

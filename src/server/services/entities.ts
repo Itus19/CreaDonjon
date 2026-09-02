@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { nextNumericSlug } from "@/src/core/slug/slug";
 import { buildEntityTree, withPlayerCharacterKinds, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
+import { filterBlocks, type VisibilityLevel } from "@/src/core/visibility";
 import {
   type DeletedEntitySummary,
   type EntitySearchResult,
@@ -22,14 +23,15 @@ import {
 } from "@/src/server/repos/entities";
 import { getWorldEntityKindOrder } from "@/src/server/repos/worlds";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
-import { insertBlock, listBlocksForEntity, maxDisplayOrder } from "@/src/server/repos/blocks";
+import { insertBlock, listBlockVisibilityForEntities, listBlocksForEntity, maxDisplayOrder } from "@/src/server/repos/blocks";
 import { defaultBlockData, defaultBlockDisplay } from "@/src/core/schemas/blocks/registry";
 import type { Json } from "@/src/types/database";
 import { listEntityGrantsForUser } from "@/src/server/repos/entityGrants";
-import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
+import { getClaimedCharacterEntityId, listCampaignsForWorld } from "@/src/server/repos/campaigns";
 import { recordEntityRevision } from "@/src/server/services/entityHistory";
 import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerCharacters";
-import { canUserEditEntity } from "@/src/server/services/permissions";
+import { canUserEditEntity, isWorldAdmin } from "@/src/server/services/permissions";
+import { buildViewerForWorld } from "@/src/server/services/visibility";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -77,6 +79,44 @@ export async function listPlayerEditableEntities(
   return [...ids].map((id) => byId.get(id)).filter((e): e is EntitySummary => e !== undefined);
 }
 
+/**
+ * "Cette fiche a-t-elle au moins un bloc visible a ce viewer" (retour
+ * utilisateur : "certaines fiches qui sont normalement masquées pour les
+ * joueurs apparaissent quand même" — dans le sommaire du wiki joueur ET
+ * dans les listes "lien vers une fiche" de l'outil Édition) — une entite
+ * n'a pas de niveau de visibilite propre (seuls ses blocs en ont un),
+ * donc c'est la definition retenue de "fiche visible a un joueur" en
+ * l'absence d'un tel champ. Jamais applique au MJ (voir `isWorldAdmin`
+ * chez les deux appelants) : lui doit continuer a tout voir, y compris
+ * une fiche entierement vide de contenu visible.
+ *
+ * UNION avec `listPlayerEditableEntities` — bug reel trouve en testant en
+ * direct (via "Voir comme") : une fiche toute neuve octroyee par le MJ
+ * (`entity_grants`, ex. "A l'Ouest") mais encore VIDE de tout bloc
+ * disparaissait de "lien vers une fiche" alors qu'elle reste deja
+ * accessible en edition directe depuis le sommaire "Édition" — le joueur
+ * la connait forcement deja, la masquer ailleurs aurait ete incoherent et
+ * plus deroutant qu'une fiche simplement vide.
+ */
+export async function listPlayerVisibleEntityIds(supabase: TypedClient, worldId: string, entityIds: string[], userId: string): Promise<Set<string>> {
+  const [rows, viewer, campaigns] = await Promise.all([
+    listBlockVisibilityForEntities(supabase, entityIds),
+    buildViewerForWorld(supabase, worldId, userId),
+    listCampaignsForWorld(supabase, worldId),
+  ]);
+  const visible = filterBlocks(
+    rows.map((r) => ({
+      ...r,
+      visibility: { level: r.visibility_level as VisibilityLevel, scopeId: r.visibility_scope_id, createdBy: r.created_by },
+    })),
+    viewer
+  );
+  const ids = new Set(visible.map((r) => r.entity_id));
+  const editable = await listPlayerEditableEntities(supabase, { worldId, campaignId: campaigns[0]?.id ?? null, userId });
+  for (const e of editable) ids.add(e.id);
+  return ids;
+}
+
 /** Barre laterale (specs/coquille-et-design.md §4.3) : arborescence derivee, jamais saisie. */
 export async function getEntityTree(
   supabase: TypedClient,
@@ -89,7 +129,11 @@ export async function getEntityTree(
     listPlayerCharacterEntityIds(supabase, worldId),
     getWorldEntityKindOrder(supabase, worldId),
   ]);
-  const visibleEntities = excludeOthersPrivateNotes(entities, userId);
+  let visibleEntities = excludeOthersPrivateNotes(entities, userId);
+  if (userId && !(await isWorldAdmin(supabase, { worldId, userId }))) {
+    const visibleIds = await listPlayerVisibleEntityIds(supabase, worldId, visibleEntities.map((e) => e.id), userId);
+    visibleEntities = visibleEntities.filter((e) => visibleIds.has(e.id));
+  }
   return buildEntityTree(withPlayerCharacterKinds(visibleEntities, playerCharacterIds), partOfEdges, kindOrder);
 }
 
@@ -288,13 +332,27 @@ export async function duplicateEntity(
   return copy;
 }
 
-/** Une requete vide ne vaut pas la peine d'un aller-retour base (docs/BACKLOG.md V0-06). */
+/**
+ * Une requete vide ne vaut pas la peine d'un aller-retour base
+ * (docs/BACKLOG.md V0-06). `userId` optionnel (retour utilisateur : "des
+ * fiches masquees aux joueurs apparaissent quand meme" — meme filtre que
+ * `getEntityTree`/`getEntityWindowData`, ici pour le selecteur d'objets
+ * V1-B5 `ItemAutocomplete.tsx`, reutilise par les blocs Personnage/
+ * Inventaire deja presents sur une fiche meme quand le joueur ne peut pas
+ * en AJOUTER de nouveaux) : absent, comportement inchange (recherche
+ * MJ/monde entier) — un appelant qui connait deja le viewer restreint le
+ * filtre lui-meme.
+ */
 export async function searchEntities(
   supabase: TypedClient,
   worldId: string,
-  query: string
+  query: string,
+  userId?: string
 ): Promise<EntitySearchResult[]> {
   const trimmed = query.trim();
   if (trimmed === "") return [];
-  return searchEntitiesInWorld(supabase, worldId, trimmed);
+  const results = await searchEntitiesInWorld(supabase, worldId, trimmed);
+  if (!userId || (await isWorldAdmin(supabase, { worldId, userId }))) return results;
+  const visibleIds = await listPlayerVisibleEntityIds(supabase, worldId, results.map((r) => r.id), userId);
+  return results.filter((r) => visibleIds.has(r.id));
 }

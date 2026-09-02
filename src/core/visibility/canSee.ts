@@ -55,3 +55,21 @@ export function canSee(subject: VisibilitySubject, viewer: Viewer, ctx: Visibili
       return assertNever(subject.level);
   }
 }
+
+/**
+ * "Ce viewer voit-il tout, sans filtrage" (miroir pur de
+ * `src/server/services/permissions.ts`, `isWorldAdmin`/`app.is_world_admin`
+ * SQL — meme regle, troisieme copie deliberee : le noyau pur ne doit pas
+ * dependre d'un acces base, voir le commentaire de `isWorldAdmin`).
+ * Proprietaire/editeur du monde, ou MJ humain d'une campagne — jamais
+ * l'anonyme, jamais un simple joueur. Sert a decider si une liste
+ * d'ENTITES (pas de blocs/relations, qui ont deja leur propre
+ * `visibility_level`) doit etre restreinte a celles ayant au moins un
+ * bloc visible a ce viewer (`getFamilyTree`/`getRelationsGraph`/
+ * `listCarteOptions`) — jamais pour ce viewer-la.
+ */
+export function isAdminViewer(viewer: Viewer): boolean {
+  if (viewer.kind === "anonymous") return false;
+  if (viewer.worldRole && ADMIN_WORLD_ROLES.has(viewer.worldRole)) return true;
+  return Object.values(viewer.campaignRoles).includes("gm");
+}

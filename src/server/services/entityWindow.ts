@@ -14,6 +14,8 @@ import { listVisibleRelations, type VisibleRelation } from "@/src/server/service
 import { getCampaignCharacters, listCampaigns } from "@/src/server/services/campaigns";
 import { getPortraitLayout } from "@/src/server/services/entityPortraits";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
+import { isWorldAdmin } from "@/src/server/services/permissions";
+import { listPlayerVisibleEntityIds } from "@/src/server/services/entities";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -64,18 +66,27 @@ export async function getEntityWindowData(
   const user = await getAuthUser(supabase);
   if (!user) return null;
 
-  const [blocks, relations, allEntities, worldCustomKinds, campaigns, portraitLayout] = await Promise.all([
+  const [blocks, relations, allEntities, worldCustomKinds, campaigns, portraitLayout, admin] = await Promise.all([
     listVisibleBlocks(supabase, world.id, entity.id, user.id),
     listVisibleRelations(supabase, world.id, entity.id, user.id),
     listEntitiesForWorld(supabase, world.id),
     listCustomEntityKindsForWorld(supabase, world.id),
     listCampaigns(supabase, world.id),
     getPortraitLayout(supabase, entity.id),
+    isWorldAdmin(supabase, { worldId: world.id, userId: user.id }),
   ]);
 
-  const otherEntities = allEntities
-    .filter((e) => e.id !== entity.id)
-    .map((e) => ({ id: e.id, name: e.name, slug: e.slug, entity_kind: e.entity_kind }));
+  // Retour utilisateur : une fiche masquee aux joueurs (aucun bloc visible)
+  // apparaissait quand meme dans "lien vers une fiche"/le "+" du bloc
+  // genealogie — `otherEntities` ne filtrait jusqu'ici que par monde, jamais
+  // par visibilite. Jamais pour le MJ (`isWorldAdmin`) : lui doit continuer
+  // a lier n'importe quelle fiche, y compris une entierement vide.
+  let othersInWorld = allEntities.filter((e) => e.id !== entity.id);
+  if (!admin) {
+    const visibleIds = await listPlayerVisibleEntityIds(supabase, world.id, othersInWorld.map((e) => e.id), user.id);
+    othersInWorld = othersInWorld.filter((e) => visibleIds.has(e.id));
+  }
+  const otherEntities = othersInWorld.map((e) => ({ id: e.id, name: e.name, slug: e.slug, entity_kind: e.entity_kind }));
 
   // "Un monde = une campagne" (migration 20260826100001) : au plus une ligne.
   const campaign = campaigns[0] ?? null;

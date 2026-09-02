@@ -1,11 +1,12 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { filterBlocks, type Viewer, type VisibilityLevel } from "@/src/core/visibility";
+import { filterBlocks, isAdminViewer, type Viewer, type VisibilityLevel } from "@/src/core/visibility";
 import { buildFamilyTree, type FamilyEdgeInput, type FamilyTree } from "@/src/core/genealogy/buildFamilyTree";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { listFamilyRelationsForWorld } from "@/src/server/repos/relations";
 import { listEntitiesForWorld } from "@/src/server/repos/entities";
+import { listPlayerVisibleEntityIds } from "@/src/server/services/entities";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -45,20 +46,32 @@ export async function getFamilyTree(
     params.viewer
   );
 
-  // Fiche masquee (V2, retour utilisateur point 2) : seul le visiteur
-  // anonyme perd les entites `is_public: false` — le MJ authentifie voit
-  // toujours tout, meme comportement que le reste de l'editeur. Filtre
-  // aussi les aretes qui touchent une entite masquee (pas seulement la
-  // liste d'entites) : `buildFamilyTree` (src/core, `entityById.get(id) as
-  // FamilyEntityInput`) suppose que toute arete visible reference une
-  // entite presente dans la liste — la laisser passer sans l'entite
-  // ferait planter le rendu au lieu de simplement masquer le lien.
-  const entities = params.viewer.kind === "anonymous" ? allEntities.filter((e) => e.is_public) : allEntities;
+  // Fiche masquee : le visiteur anonyme perd les entites `is_public: false`
+  // (V2, retour utilisateur point 2) ; un viewer authentifie NON admin
+  // (joueur — retour utilisateur, "des fiches masquees aux joueurs
+  // apparaissent quand meme") perd celles sans aucun bloc qui lui soit
+  // visible, meme filtre et meme raison que `getEntityTree`/
+  // `getEntityWindowData`. Le MJ/editeur/gm de campagne (`isAdminViewer`)
+  // voit toujours tout. Filtre aussi les aretes qui touchent une entite
+  // masquee (pas seulement la liste d'entites) : `buildFamilyTree`
+  // (src/core, `entityById.get(id) as FamilyEntityInput`) suppose que toute
+  // arete visible reference une entite presente dans la liste — la laisser
+  // passer sans l'entite ferait planter le rendu au lieu de simplement
+  // masquer le lien.
+  const admin = isAdminViewer(params.viewer);
+  let entities = allEntities;
+  if (!admin) {
+    if (params.viewer.kind === "anonymous") {
+      entities = allEntities.filter((e) => e.is_public);
+    } else {
+      const visibleIds = await listPlayerVisibleEntityIds(supabase, params.worldId, allEntities.map((e) => e.id), params.viewer.userId);
+      entities = allEntities.filter((e) => visibleIds.has(e.id));
+    }
+  }
   const visibleEntityIds = new Set(entities.map((e) => e.id));
-  const edgesVisible =
-    params.viewer.kind === "anonymous"
-      ? visible.filter((r) => visibleEntityIds.has(r.source_entity_id) && visibleEntityIds.has(r.target_entity_id))
-      : visible;
+  const edgesVisible = admin
+    ? visible
+    : visible.filter((r) => visibleEntityIds.has(r.source_entity_id) && visibleEntityIds.has(r.target_entity_id));
 
   const edges: FamilyEdgeInput[] = edgesVisible.map((r) => ({
     id: r.id,

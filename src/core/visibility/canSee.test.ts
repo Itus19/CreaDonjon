@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canSee } from "./canSee";
+import { canSee, isAdminViewer } from "./canSee";
 import { VisibilityScopeError } from "./errors";
 import type { Viewer, VisibilitySubject } from "./types";
 
@@ -201,5 +201,28 @@ describe("canSee — refus de deviner", () => {
   it("un niveau de visibilite invalide (donnee corrompue) leve une erreur plutot que de retourner silencieusement", () => {
     const corrupted = { level: "unknown_level", scopeId: null, createdBy: null } as unknown as VisibilitySubject;
     expect(() => canSee(corrupted, worldOwner)).toThrow(/Niveau de visibilite non gere/);
+  });
+});
+
+describe("isAdminViewer", () => {
+  const worldEditor: Viewer = { kind: "user", userId: "user-editor", worldRole: "editor", campaignRoles: {} };
+
+  it("un visiteur anonyme n'est jamais admin", () => {
+    expect(isAdminViewer(anonymous)).toBe(false);
+  });
+  it("le proprietaire du monde est admin", () => {
+    expect(isAdminViewer(worldOwner)).toBe(true);
+  });
+  it("un editeur du monde est admin", () => {
+    expect(isAdminViewer(worldEditor)).toBe(true);
+  });
+  it("un MJ de campagne est admin", () => {
+    expect(isAdminViewer(gmOfCampaign)).toBe(true);
+  });
+  it("un joueur simple n'est jamais admin", () => {
+    expect(isAdminViewer(playerInCampaign)).toBe(false);
+  });
+  it("un utilisateur sans lien au monde n'est jamais admin", () => {
+    expect(isAdminViewer(noLink)).toBe(false);
   });
 });

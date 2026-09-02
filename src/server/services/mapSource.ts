@@ -1,10 +1,12 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { canSee, type VisibilityLevel, type Viewer } from "@/src/core/visibility";
+import { canSee, isAdminViewer, type VisibilityLevel, type Viewer } from "@/src/core/visibility";
 import { zMapBlockData } from "@/src/core/schemas/blocks/map";
 import { getBlockById, listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
 import { getEntityById, listEntitiesForWorld } from "@/src/server/repos/entities";
+import { listPlayerVisibleEntityIds } from "@/src/server/services/entities";
+import { buildViewerForWorld } from "@/src/server/services/visibility";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -65,14 +67,22 @@ export interface CarteOption {
 
 /**
  * Fiches `carte` du monde, pour le selecteur "referencer une carte
- * existante" (Lot I, phase F₁) — jamais filtre par visibilite : cette
- * liste ne sert qu'a choisir un `sourceBlockId` (editeur MJ uniquement,
- * les joueurs n'ont pas d'affordance pour ajouter un bloc `map`,
- * V2-M7b), `resolveMapSource` ci-dessus reste le seul filtre reel au
- * moment de l'affichage.
+ * existante" (Lot I, phase F₁). Filtre par visibilite pour un joueur non
+ * admin (retour utilisateur : "carte" fait desormais partie des blocs que
+ * les joueurs peuvent ajouter — meme filtre que `getFamilyTree`/
+ * `getRelationsGraph`, une carte sans aucun bloc visible au joueur
+ * n'apparait pas dans la liste). `resolveMapSource` ci-dessus reste le
+ * seul filtre reel au moment de l'AFFICHAGE d'une carte deja referencee ;
+ * celui-ci est necessaire en plus pour la liste de CHOIX elle-meme, qui
+ * revelerait sinon le nom d'une carte masquee.
  */
-export async function listCarteOptions(supabase: TypedClient, worldId: string): Promise<CarteOption[]> {
-  const entities = (await listEntitiesForWorld(supabase, worldId)).filter((e) => e.entity_kind === "carte");
+export async function listCarteOptions(supabase: TypedClient, worldId: string, userId: string): Promise<CarteOption[]> {
+  let entities = (await listEntitiesForWorld(supabase, worldId)).filter((e) => e.entity_kind === "carte");
+  const viewer = await buildViewerForWorld(supabase, worldId, userId);
+  if (!isAdminViewer(viewer)) {
+    const visibleIds = await listPlayerVisibleEntityIds(supabase, worldId, entities.map((e) => e.id), userId);
+    entities = entities.filter((e) => visibleIds.has(e.id));
+  }
   const blocks = await listBlocksByTypeForEntities(supabase, entities.map((e) => e.id), "map");
   const blockIdByEntity = new Map(blocks.map((b) => [b.entity_id, b.id]));
 

@@ -24,6 +24,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
   }
 
-  const results = await searchEntities(supabase, parsed.data.worldId, parsed.data.q);
+  const results = await searchEntities(supabase, parsed.data.worldId, parsed.data.q, user.id);
   return NextResponse.json(results, { status: 200 });
 }

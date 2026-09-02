@@ -48,6 +48,36 @@ export async function listBlocksByTypeForEntities(
   return data as BlockRow[];
 }
 
+export interface BlockVisibilityRow {
+  entity_id: string;
+  visibility_level: string;
+  visibility_scope_id: string | null;
+  created_by: string | null;
+}
+
+/**
+ * Retour utilisateur : des fiches censees etre invisibles a un joueur
+ * apparaissaient quand meme (liste "lien vers une fiche", sommaire du
+ * wiki joueur) — `otherEntities`/l'arborescence ne filtraient jusqu'ici
+ * QUE par appartenance au monde, jamais par visibilite (les entites
+ * elles-memes n'ont pas de niveau de visibilite propre, seuls leurs
+ * blocs en ont un). Une seule requete pour tout le monde (meme motif que
+ * `listBlocksByTypeForEntities` : l'appelant fournit deja les entites du
+ * monde, jamais une jointure sur `blocks` qui n'a pas de `world_id`) —
+ * l'appelant determine ensuite, par entite, si AU MOINS un bloc est
+ * visible a ce viewer (`canSee`), la definition retenue de "fiche
+ * visible a un joueur" en l'absence de visibilite propre a l'entite.
+ */
+export async function listBlockVisibilityForEntities(supabase: TypedClient, entityIds: string[]): Promise<BlockVisibilityRow[]> {
+  if (entityIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("blocks")
+    .select("entity_id, visibility_level, visibility_scope_id, created_by")
+    .in("entity_id", entityIds);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function getBlockById(supabase: TypedClient, id: string): Promise<BlockRow | null> {
   const { data, error } = await supabase
     .from("blocks")

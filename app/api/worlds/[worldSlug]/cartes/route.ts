@@ -19,6 +19,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Monde introuvable." }, { status: 404 });
   }
 
-  const options = await listCarteOptions(supabase, world.id);
+  const options = await listCarteOptions(supabase, world.id, user.id);
   return NextResponse.json(options, { status: 200 });
 }

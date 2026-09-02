@@ -27,6 +27,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Monde introuvable." }, { status: 404 });
   }
 
-  const results = await searchEntities(supabase, world.id, q);
+  const results = await searchEntities(supabase, world.id, q, user.id);
   return NextResponse.json(results, { status: 200 });
 }
