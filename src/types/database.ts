@@ -1186,20 +1186,26 @@ export type Database = {
       }
       entity_assets: {
         Row: {
+          align: string
           asset_id: string
           display_order: number
+          display_size_pct: number
           entity_id: string
           role: string
         }
         Insert: {
+          align?: string
           asset_id: string
           display_order?: number
+          display_size_pct?: number
           entity_id: string
           role: string
         }
         Update: {
+          align?: string
           asset_id?: string
           display_order?: number
+          display_size_pct?: number
           entity_id?: string
           role?: string
         }
@@ -1458,47 +1464,6 @@ export type Database = {
             columns: ["world_id"]
             isOneToOne: false
             referencedRelation: "worlds"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      entity_portraits: {
-        Row: {
-          align: string
-          created_at: string
-          display_size_pct: number
-          entity_id: string
-          height: number
-          image: string
-          mime_type: string
-          width: number
-        }
-        Insert: {
-          align?: string
-          created_at?: string
-          display_size_pct?: number
-          entity_id: string
-          height: number
-          image: string
-          mime_type: string
-          width: number
-        }
-        Update: {
-          align?: string
-          created_at?: string
-          display_size_pct?: number
-          entity_id?: string
-          height?: number
-          image?: string
-          mime_type?: string
-          width?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "entity_portraits_entity_id_fkey"
-            columns: ["entity_id"]
-            isOneToOne: true
-            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
         ]

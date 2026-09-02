@@ -1,0 +1,17 @@
+-- Suite immediate de 20260902130001 (meme cause, decouverte au test
+-- anonyme suivant : lire `entity_assets` echouait encore, cette fois sur
+-- "permission denied for function entity_world_id"). PostgreSQL evalue
+-- TOUTES les politiques permissives d'une table pour construire la
+-- requete, jamais seulement celle qui aurait fini par accorder l'acces --
+-- si UNE politique reference une fonction que le role appelant ne peut pas
+-- executer, toute la requete echoue, meme si une AUTRE politique (ici
+-- `entity_assets_select_portrait`, un simple test de colonne) aurait
+-- suffi. `entity_assets_select` (deja existante) appelle
+-- `app.entity_world_id`, jamais grantee a `anon`.
+--
+-- Meme raisonnement d'innocuite que 20260902130001 : `entity_world_id` ne
+-- fait que resoudre un `world_id` par jointure, aucune verification
+-- d'appartenance en elle-meme -- rendre la fonction appelable par `anon`
+-- ne permet rien de plus que ce que ses appelants (deja grantes ou pas)
+-- decident d'en faire.
+grant execute on function app.entity_world_id(uuid) to anon;

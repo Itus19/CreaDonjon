@@ -21,7 +21,8 @@
     "translate:rules": "tsx --env-file=.env.local scripts/translate-rules-fr.ts",
     "translate:rules-2024": "tsx --env-file=.env.local scripts/translate-rules-2024-fr.ts",
     "extract:monster-blocks": "tsx --env-file=.env.local scripts/extract-monster-blocks-fr.ts",
-    "extract:monster-statblocks-en": "tsx --env-file=.env.local scripts/extract-monster-statblocks-en.ts"
+    "extract:monster-statblocks-en": "tsx --env-file=.env.local scripts/extract-monster-statblocks-en.ts",
+    "migrate:entity-portraits": "tsx --env-file=.env.local scripts/migrate-entity-portraits.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

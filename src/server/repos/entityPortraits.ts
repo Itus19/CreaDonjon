@@ -4,45 +4,50 @@ import type { Database } from "@/src/types/database";
 
 type TypedClient = SupabaseClient<Database>;
 
-/** PostgREST renvoie/attend un `bytea` en hexadecimal prefixe `\x` (`bytea_output = hex`, meme convention que src/server/repos/backgroundImages.ts). */
-function bufferToBytea(buffer: Buffer): string {
-  return `\\x${buffer.toString("hex")}`;
-}
-function byteaToBuffer(value: string): Buffer {
-  return Buffer.from(value.replace(/^\\x/, ""), "hex");
-}
-
-export interface EntityPortrait {
-  image: Buffer;
-  mimeType: string;
-  width: number;
-  height: number;
-}
-
-/** Une seule ligne par entite (cle primaire) : un nouveau televersement remplace l'ancien de fait. */
-export async function upsertEntityPortrait(
-  supabase: TypedClient,
-  params: { entityId: string; image: Buffer; mimeType: string; width: number; height: number }
-): Promise<void> {
-  const { error } = await supabase.from("entity_portraits").upsert({
-    entity_id: params.entityId,
-    image: bufferToBytea(params.image),
-    mime_type: params.mimeType,
-    width: params.width,
-    height: params.height,
-  });
-  if (error) throw new Error(error.message);
-}
-
-export async function getEntityPortrait(supabase: TypedClient, entityId: string): Promise<EntityPortrait | null> {
+/** Un seul portrait par fiche (`entity_assets_one_portrait`, index unique partiel sur `role = 'portrait'`). */
+export async function getEntityPortraitAssetId(supabase: TypedClient, entityId: string): Promise<string | null> {
   const { data, error } = await supabase
-    .from("entity_portraits")
-    .select("image, mime_type, width, height")
+    .from("entity_assets")
+    .select("asset_id")
     .eq("entity_id", entityId)
+    .eq("role", "portrait")
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data) return null;
-  return { image: byteaToBuffer(data.image), mimeType: data.mime_type, width: data.width, height: data.height };
+  return data?.asset_id ?? null;
+}
+
+/**
+ * Remplace le pointeur portrait de cette fiche par `assetId` (supprime
+ * l'ancien puis insere le nouveau — jamais un UPDATE en place, l'`asset_id`
+ * change a chaque televersement). La mise en page (`display_size_pct`/
+ * `align`) est preservee si elle existait deja, sinon reprend les valeurs
+ * par defaut des colonnes.
+ */
+export async function setEntityPortraitAsset(supabase: TypedClient, entityId: string, assetId: string): Promise<void> {
+  const layout = await getEntityPortraitLayout(supabase, entityId);
+  const { error: deleteError } = await supabase.from("entity_assets").delete().eq("entity_id", entityId).eq("role", "portrait");
+  if (deleteError) throw new Error(deleteError.message);
+  const { error: insertError } = await supabase.from("entity_assets").insert({
+    entity_id: entityId,
+    asset_id: assetId,
+    role: "portrait",
+    display_size_pct: layout.displaySizePct,
+    align: layout.align,
+  });
+  if (insertError) throw new Error(insertError.message);
+}
+
+/** Retire le pointeur portrait de cette fiche, renvoie l'`asset_id` retire (`null` si aucun) pour que l'appelant nettoie l'asset sous-jacent. */
+export async function removeEntityPortraitAsset(supabase: TypedClient, entityId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("entity_assets")
+    .delete()
+    .eq("entity_id", entityId)
+    .eq("role", "portrait")
+    .select("asset_id")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.asset_id ?? null;
 }
 
 export interface EntityPortraitLayout {
@@ -52,12 +57,13 @@ export interface EntityPortraitLayout {
 
 const DEFAULT_PORTRAIT_LAYOUT: EntityPortraitLayout = { displaySizePct: 100, align: "right" };
 
-/** `null` de `entity_portraits` (pas encore de portrait) : l'appelant retombe sur les valeurs par defaut des colonnes, jamais une erreur. */
+/** Aucune ligne portrait pour cette fiche : l'appelant retombe sur les valeurs par defaut, jamais une erreur. */
 export async function getEntityPortraitLayout(supabase: TypedClient, entityId: string): Promise<EntityPortraitLayout> {
   const { data, error } = await supabase
-    .from("entity_portraits")
+    .from("entity_assets")
     .select("display_size_pct, align")
     .eq("entity_id", entityId)
+    .eq("role", "portrait")
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return DEFAULT_PORTRAIT_LAYOUT;
@@ -71,18 +77,9 @@ export async function updateEntityPortraitLayout(
   layout: EntityPortraitLayout
 ): Promise<void> {
   const { error } = await supabase
-    .from("entity_portraits")
+    .from("entity_assets")
     .update({ display_size_pct: layout.displaySizePct, align: layout.align })
-    .eq("entity_id", entityId);
+    .eq("entity_id", entityId)
+    .eq("role", "portrait");
   if (error) throw new Error(error.message);
-}
-
-/** `true` si une ligne a reellement ete supprimee (RLS renvoie sinon 0 ligne sans erreur). */
-export async function deleteEntityPortrait(supabase: TypedClient, entityId: string): Promise<boolean> {
-  const { error, count } = await supabase
-    .from("entity_portraits")
-    .delete({ count: "exact" })
-    .eq("entity_id", entityId);
-  if (error) throw new Error(error.message);
-  return (count ?? 0) > 0;
 }
