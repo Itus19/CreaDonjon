@@ -145,12 +145,35 @@ export async function listOverridesForRuleset(
 ): Promise<RulesetOverrideRow[]> {
   const { data, error } = await supabase
     .from("ruleset_overrides")
-    .select("block_type, action, payload, patch")
+    .select("block_type, action, payload, patch, created_at")
     .eq("ruleset_id", rulesetId)
     .eq("entry_key", entryKey)
     .order("created_at");
   if (error) throw new Error(error.message);
-  return data;
+  // `created_at` n'est PAS fiable pour ordonner deux `add_block` entre eux
+  // (retour utilisateur : l'ordre des blocs d'une fiche maison ne suivait
+  // pas l'ordre saisi — trouve en pratique sur une fiche recreee : le bloc
+  // `background` gardait le timestamp de sa toute PREMIERE ecriture malgre
+  // plusieurs recreations, l'upsert sur le meme index unique
+  // `(entry_key, block_type)` ne rafraichissant que payload/patch, jamais
+  // `created_at` — deux `add_block` distants dans le temps pouvaient donc se
+  // retrouver dans le mauvais ordre l'un par rapport a l'autre). Seul
+  // `display_order` (deja porte par le payload d'un `add_block`, ecrit par
+  // l'appelant a chaque import — l'ordre reellement voulu) fait foi entre
+  // deux `add_block` ; les autres actions (`add_entry`/`disable_entry`,
+  // `patch_block`/`replace_block`/`remove_block`) gardent l'ordre
+  // chronologique — leur position ne deplace jamais un bloc dans la liste
+  // finale, `applyOverrides` les applique en place sur le bloc deja present.
+  return [...data]
+    .sort((a, b) => {
+      if (a.action === "add_block" && b.action === "add_block") {
+        const orderA = (a.payload as { display_order?: number } | null)?.display_order ?? 0;
+        const orderB = (b.payload as { display_order?: number } | null)?.display_order ?? 0;
+        if (orderA !== orderB) return orderA - orderB;
+      }
+      return a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0;
+    })
+    .map(({ block_type, action, payload, patch }) => ({ block_type, action, payload, patch }));
 }
 
 export interface EntryLevelOverrideRow {

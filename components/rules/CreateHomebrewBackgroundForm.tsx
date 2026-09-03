@@ -8,6 +8,7 @@ import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import Dropdown from "@/components/shared/Dropdown";
 import Checkbox from "@/components/shared/Checkbox";
 import RuleEntryAutocomplete from "@/components/blocks/RuleEntryAutocomplete";
+import DescriptionTextarea from "@/components/rules/DescriptionTextarea";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 
 interface SelectableRuleset {
@@ -54,6 +55,7 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
   const [currentRuleset, setCurrentRuleset] = useState<SelectableRuleset | null>(null);
 
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [abilityScores, setAbilityScores] = useState<Ability[]>(["str", "dex", "con"]);
   const [skillProficiencies, setSkillProficiencies] = useState<Set<Skill>>(new Set());
   const [toolProficiency, setToolProficiency] = useState("");
@@ -161,7 +163,18 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
           {
             name: name.trim(),
             entry_type: "background",
-            blocks: [{ block_type: "background", display: { label: "Historique", layout: "key_values" }, data: backgroundData }],
+            blocks: [
+              ...(description.trim()
+                ? [
+                    {
+                      block_type: "description" as const,
+                      display: { label: "Description", layout: "prose" },
+                      data: { segments: [{ text: description.trim() }] },
+                    },
+                  ]
+                : []),
+              { block_type: "background", display: { label: "Historique", layout: "key_values" }, data: backgroundData },
+            ],
           },
         ],
       }),
@@ -190,7 +203,7 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex max-w-2xl flex-col gap-4">
       <h1 className="text-base font-semibold text-ink">{t("creerHistoriqueMaison")}</h1>
       <p className="text-xs text-ink-muted">{t("creerHistoriqueMaisonVariante", { name: currentRuleset.name })}</p>
       <p className="text-xs text-ink-muted">{t("creerHistoriqueMaisonIntro")}</p>
@@ -204,6 +217,11 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
           className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
         />
       </label>
+
+      <div className="flex flex-col gap-1 text-sm text-ink">
+        {t("descriptionDeLHistorique")}
+        <DescriptionTextarea value={description} onChange={setDescription} rows={3} />
+      </div>
 
       <div className="flex flex-col gap-1 text-sm text-ink">
         {t("caracteristiques")}
@@ -222,7 +240,7 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
 
       <div className="flex flex-col gap-1 text-sm text-ink">
         {t("competencesMaitrisees")}
-        <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 sm:grid-cols-3 md:grid-cols-4">
           {SKILLS.map((skill) => (
             <Checkbox
               key={skill}

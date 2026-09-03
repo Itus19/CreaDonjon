@@ -124,6 +124,7 @@
     "creerHistoriqueMaisonVariante": "Cet historique sera ajouté à ta variante « {name} ».",
     "creerHistoriqueMaisonIntro": "Recopie les valeurs depuis ta propre source (le contenu n'est jamais deviné ici) — trois caractéristiques différentes, les compétences maîtrisées, l'équipement de départ et le don accordé.",
     "nomDeLHistorique": "Nom de l'historique",
+    "descriptionDeLHistorique": "Description (optionnel — recopie le texte de ta source)",
     "caracteristiques": "Caractéristiques (trois différentes)",
     "competencesMaitrisees": "Compétences maîtrisées",
     "maitriseDOutil": "Maîtrise d'outil (optionnel)",

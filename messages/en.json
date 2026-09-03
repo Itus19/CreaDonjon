@@ -123,6 +123,7 @@
     "creerHistoriqueMaisonVariante": "This background will be added to your variant \"{name}\".",
     "creerHistoriqueMaisonIntro": "Copy the values from your own source (nothing here is guessed) — three different abilities, the skill proficiencies, the starting equipment, and the granted feat.",
     "nomDeLHistorique": "Background name",
+    "descriptionDeLHistorique": "Description (optional — copy the text from your own source)",
     "caracteristiques": "Abilities (three different)",
     "competencesMaitrisees": "Skill proficiencies",
     "maitriseDOutil": "Tool proficiency (optional)",
