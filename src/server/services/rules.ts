@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAuthUser } from "@/lib/supabase/server";
@@ -46,6 +47,7 @@ import {
   getOfficialBaseRulesetId,
   getRulesetById,
   getRulesetEntryByKey,
+  getRulesetEntryByKeyAcrossRulesets,
   insertRulesetVariant,
   listBlocksForRulesetEntry,
   listBlocksForRulesetEntries,
@@ -86,8 +88,19 @@ export interface RulesetChainLink {
  * cycle explicite (V1-A4, SCHEMA.md §9.4) : un ensemble visite, pas
  * seulement la borne de profondeur, pour distinguer une vraie boucle
  * (erreur) d'une chaine simplement longue (erreur differente).
+ *
+ * `React.cache()` (audit de performance, retour utilisateur) — meme motif
+ * que `getAuthUser`/`getWorldBySlug` (lib/supabase/server.ts, worlds.ts) :
+ * borne a UNE seule requete, ne fait un hit que parce que `supabase`
+ * (createClient(), deja memoise) est un objet reference-stable sur cette
+ * requete. Sans ceci, `resolveEntryBlocksInRuleset` — la fonction la plus
+ * reutilisee du moteur mecanique (equipement, dons, modificateurs, appelee
+ * une fois par cle pour chaque objet d'un inventaire) — re-marchait
+ * integralement la MEME chaine (autant de requetes sequentielles que de
+ * niveaux d'heritage) a chaque cle resolue, alors qu'elle est identique
+ * pour tout un calcul de fiche de personnage.
  */
-export async function walkRulesetChain(supabase: TypedClient, startRulesetId: string): Promise<RulesetChainLink[]> {
+export const walkRulesetChain = cache(async function walkRulesetChain(supabase: TypedClient, startRulesetId: string): Promise<RulesetChainLink[]> {
   const chain: RulesetChainLink[] = [];
   const visited = new Set<string>();
   let currentId: string | null = startRulesetId;
@@ -104,7 +117,7 @@ export async function walkRulesetChain(supabase: TypedClient, startRulesetId: st
   }
 
   return chain;
-}
+});
 
 /**
  * Un monde variante n'a d'entrees que pour ce qu'il surcharge (V1-A4) —
@@ -148,6 +161,31 @@ export interface ResolvedEntryBlocks {
 }
 
 /**
+ * Cherche une regle par cle a travers toute une chaine deja resolue, en une
+ * seule requete (audit de performance, retour utilisateur) — remplace un
+ * `getRulesetEntryByKey` appele niveau par niveau, sequentiellement,
+ * jusqu'a trouver une reponse. `chain` reste feuille -> racine : on garde
+ * la ligne du ruleset le PLUS specifique parmi celles renvoyees, exactement
+ * le comportement de l'ancienne boucle qui s'arretait au premier trouve.
+ * Partagee par `resolveEntryBlocksInRuleset` et `getRuleEntryForWorld`, les
+ * deux consommateurs de ce motif.
+ */
+async function entryFromChainByKey(supabase: TypedClient, chain: RulesetChainLink[], entryKey: string): Promise<RulesetEntryRow | null> {
+  const candidates = await getRulesetEntryByKeyAcrossRulesets(
+    supabase,
+    chain.map((link) => link.rulesetId),
+    entryKey
+  );
+  if (candidates.length === 0) return null;
+  const byRulesetId = new Map(candidates.map((c) => [c.ruleset_id, c]));
+  for (const link of chain) {
+    const found = byRulesetId.get(link.rulesetId);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
  * Resout une entree jusqu'a ses blocs valides : base (si elle existe dans
  * la chaine) + TOUTES les surcharges de la chaine, racine -> feuille
  * (V1-A4/V1-D4) — meme moteur (`applyOverrides`) que `getRuleEntryForWorld`,
@@ -167,12 +205,7 @@ export async function resolveEntryBlocksInRuleset(
   entryKey: string
 ): Promise<ResolvedEntryBlocks | null> {
   const chain = await walkRulesetChain(supabase, rulesetId);
-
-  let entry: RulesetEntryRow | null = null;
-  for (const link of chain) {
-    entry = await getRulesetEntryByKey(supabase, link.rulesetId, entryKey);
-    if (entry) break;
-  }
+  const entry = await entryFromChainByKey(supabase, chain, entryKey);
 
   const blockRows = entry ? await listBlocksForRulesetEntry(supabase, entry.id) : [];
   const baseEntry: ResolvableEntry | null = entry
@@ -634,12 +667,7 @@ export async function getRuleEntryForWorld(
   if (!rulesetId) return null;
 
   const chain = await walkRulesetChain(supabase, rulesetId);
-
-  let entry: RulesetEntryRow | null = null;
-  for (const link of chain) {
-    entry = await getRulesetEntryByKey(supabase, link.rulesetId, entryKey);
-    if (entry) break;
-  }
+  const entry = await entryFromChainByKey(supabase, chain, entryKey);
 
   // L'anglais est deja la langue source (source_raw.name) : aucune
   // recherche de traduction n'est necessaire pour cette locale. Une fiche

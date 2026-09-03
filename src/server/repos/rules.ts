@@ -287,6 +287,34 @@ export async function getRulesetEntryByKey(
 }
 
 /**
+ * Meme regle, cherchee en une seule requete a travers PLUSIEURS rulesets —
+ * pense pour une chaine d'heritage deja connue de l'appelant (audit de
+ * performance, retour utilisateur). Remplace un `getRulesetEntryByKey`
+ * appele une fois par niveau de chaine, sequentiellement, jusqu'a trouver
+ * une reponse (`getRuleEntryForWorld`/`resolveEntryBlocksInRuleset`) : sur
+ * une chaine base -> variante -> variante personnelle, chercher une regle
+ * officielle (la grande majorite du contenu) marchait jusqu'a 8 requetes en
+ * serie pour finir par trouver la reponse au niveau le plus ancestral.
+ * `rulesetIds` doit rester dans l'ordre feuille -> racine : l'appelant
+ * choisit la ligne du ruleset le plus specifique qui a une reponse parmi
+ * celles renvoyees, jamais cette fonction (elle ne connait pas cet ordre).
+ */
+export async function getRulesetEntryByKeyAcrossRulesets(
+  supabase: TypedClient,
+  rulesetIds: string[],
+  entryKey: string
+): Promise<RulesetEntryRow[]> {
+  if (rulesetIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("ruleset_entries")
+    .select("id, ruleset_id, entry_key, entry_type, source_attribution, source_raw")
+    .in("ruleset_id", rulesetIds)
+    .eq("entry_key", entryKey);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
  * Un lot de cles/ids en plusieurs requetes PARALLELES plutot que
  * sequentielles (V2-G1, retour utilisateur : "lenteur generale" — chaque
  * paire de lots attendait la precedente avant de lancer la suivante, un

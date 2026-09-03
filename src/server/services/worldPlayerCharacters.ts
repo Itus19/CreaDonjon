@@ -3,8 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
-import { getEntityById } from "@/src/server/repos/entities";
-import { listBlocksForEntity } from "@/src/server/repos/blocks";
+import { listEntitiesByIds } from "@/src/server/repos/entities";
+import { listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
 import { listCampaignCharacters } from "@/src/server/repos/campaigns";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import { assembleResolvedRuleset } from "@/src/server/services/resolvedRuleset";
@@ -27,6 +27,16 @@ export interface WorldPlayerCharacter {
  * campagnes d'un monde, pour la liste de l'ecran d'accueil (V1-C4). Chaque
  * personnage est resolu avec le ruleset de SA campagne (des campagnes
  * differentes du meme monde peuvent epingler des variantes differentes).
+ *
+ * Audit de performance (retour utilisateur) : la version precedente
+ * enchainait `getEntityById` + `listBlocksForEntity` + `assembleResolvedRuleset`
+ * en SERIE pour chaque PJ, sans meme un `Promise.all` — 4-6 PJ sur l'ecran
+ * d'accueil d'un monde faisaient facilement 20+ allers-retours sequentiels
+ * a chaque visite. Desormais : les entites et les blocs `character` de TOUS
+ * les PJ sont recuperes en deux requetes en lot (`listEntitiesByIds`,
+ * `listBlocksByTypeForEntities`), et seule la resolution de ruleset —
+ * differente par PJ (especes/classes) — reste un appel par personnage, mais
+ * en parallele plutot qu'en serie.
  */
 export async function listWorldPlayerCharacters(
   supabase: TypedClient,
@@ -34,20 +44,31 @@ export async function listWorldPlayerCharacters(
   locale: Locale
 ): Promise<WorldPlayerCharacter[]> {
   const campaigns = await listCampaigns(supabase, worldId);
-  const results: WorldPlayerCharacter[] = [];
+  const perCampaignCharacters = await Promise.all(
+    campaigns.map(async (campaign) => ({
+      campaign,
+      characters: (await listCampaignCharacters(supabase, campaign.id)).filter((row) => row.is_pc),
+    }))
+  );
+  const pcRows = perCampaignCharacters.flatMap(({ campaign, characters }) =>
+    characters.map((row) => ({ campaign, row }))
+  );
+  if (pcRows.length === 0) return [];
 
-  for (const campaign of campaigns) {
-    const characters = await listCampaignCharacters(supabase, campaign.id);
-    for (const row of characters) {
-      if (!row.is_pc) continue;
+  const entityIds = pcRows.map(({ row }) => row.entity_id);
+  const [entities, characterBlocks] = await Promise.all([
+    listEntitiesByIds(supabase, entityIds),
+    listBlocksByTypeForEntities(supabase, entityIds, "character"),
+  ]);
+  const entityById = new Map(entities.map((e) => [e.id, e]));
+  const characterDataByEntityId = new Map(characterBlocks.map((b) => [b.entity_id, b.data as CharacterBlockData]));
 
-      const entity = await getEntityById(supabase, row.entity_id);
-      if (!entity) continue;
+  const results = await Promise.all(
+    pcRows.map(async ({ campaign, row }): Promise<WorldPlayerCharacter | null> => {
+      const entity = entityById.get(row.entity_id);
+      if (!entity) return null;
 
-      const blocks = await listBlocksForEntity(supabase, row.entity_id);
-      const characterBlock = blocks.find((b) => b.block_type === "character");
-      const characterData = characterBlock?.data as CharacterBlockData | undefined;
-
+      const characterData = characterDataByEntityId.get(row.entity_id);
       let speciesLabel: string | null = null;
       let classesLabel: string | null = null;
       if (characterData) {
@@ -69,18 +90,18 @@ export async function listWorldPlayerCharacters(
             : null;
       }
 
-      results.push({
+      return {
         entityId: entity.id,
         entitySlug: entity.slug,
         entityName: entity.name,
         speciesLabel,
         classesLabel,
         claimedByUserId: row.user_id,
-      });
-    }
-  }
+      };
+    })
+  );
 
-  return results;
+  return results.filter((r): r is WorldPlayerCharacter => r !== null);
 }
 
 /**

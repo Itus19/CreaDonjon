@@ -1,0 +1,12 @@
+-- Audit de performance (retour utilisateur) — `combats.campaign_id`
+-- (20260818120001_combats.sql) n'a jamais porte d'index alors qu'elle sert
+-- de filtre a la fois aux requetes applicatives (`getActiveCombatForCampaign`,
+-- `listCombatsForCampaign`, src/server/repos/combats.ts) ET a la clause
+-- USING des deux policies RLS (`combats_select`/`combats_write`, via
+-- `app.campaign_world_id(campaign_id)`), evaluee sur chaque ligne. Postgres
+-- n'indexe jamais automatiquement une colonne de cle etrangere cote enfant
+-- (contrairement au cote parent, deja couvert par la PK de `campaigns`) —
+-- sans cet index, "y a-t-il un combat en cours ?" (chemin chaud : chaque
+-- chargement des outils de combat/session) force un scan complet d'une
+-- table qui grandit avec chaque encounter joue.
+create index combats_campaign_id_idx on combats (campaign_id);

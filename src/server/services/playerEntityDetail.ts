@@ -172,9 +172,9 @@ export async function getPlayerEntityDetail(
       const relationshipData = zRelationshipBlockData.parse(block.data);
       if (relationshipData.target?.kind !== "entity") return block;
       const [{ axes }, [targetEntity], relationshipEvents] = await Promise.all([
-        getCurrentAttitude(supabase, entity.id, relationshipData.target.id),
+        getCurrentAttitude(supabase, entity.world_id, entity.id, relationshipData.target.id),
         listEntitiesByIds(supabase, [relationshipData.target.id]),
-        getAttitudeEvents(supabase, entity.id, relationshipData.target.id, true),
+        getAttitudeEvents(supabase, entity.world_id, entity.id, relationshipData.target.id, true),
       ]);
       return {
         ...block,
