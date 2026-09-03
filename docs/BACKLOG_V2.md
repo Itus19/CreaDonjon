@@ -718,28 +718,30 @@ UI dans `MapRegionEditorPopup.tsx` : case à cocher "Soumise au brouillard", pui
 
 *Nécessite le lot F de la V1. Le contenu de ce lot dépend du verdict de S1.*
 
-### V2-J1 — Les emplacements en prose des générateurs · `M` — Phase 1 faite, en cours
+### V2-J1 — Les emplacements en prose des générateurs · `M` — Phase 1 faite
 
 Le lot E de la V1 a écrit les générateurs avec leurs emplacements de prose **laissés vides**. Ce ticket les remplit.
 
 **Retour utilisateur (3 septembre)** : captures d'écran de deux outils de référence en cours de route — l'utilisateur préfère un style "Maisons Closes" (Dauricha & Orkish Blade) où la génération est **découpée en sections nommées**, chacune tirable et rejouable indépendamment (panneau "Détails des tirages", relance d'un seul emplacement), plutôt qu'un bloc de fiche produisant un paragraphe unique. Pivot acté : le mécanisme vit désormais dans un **outil MJ autonome** ("Générateurs", sidebar MJ), jamais attaché à une fiche de wiki. Structure et mécanique reproduites (jamais le texte des outils de référence — droit d'auteur).
 
-**Phase 1 faite** (mécanisme + Taverne) :
+**Phase 1 entièrement faite** (mécanisme + Taverne complète — les trois sections, y compris l'emplacement `prose`) :
 - [x] `GeneratorResult` expose `die`/`rolled` par emplacement `table` — panneau "Détails des tirages".
 - [x] `POST /api/blocks/[blockId]/generate` accepte `onlySlotKey` : relance un seul emplacement, recompose le texte complet avec les autres valeurs (envoyées par le client, serveur toujours sans état).
 - [x] Entité cachée `generateur` "Générateurs de MJ" auto-provisionnée par monde (visibilité `gm`, jamais vue des joueurs) — une section = un bloc `generator`, retrouvé par sa clé technique (`GeneratorData.key`).
 - [x] Outil MJ "Générateurs" (sidebar, fenêtre flottante, page dédiée `/mj/generateurs`) — `GeneratorToolPanel.tsx` : un onglet par outil (registre `src/core/generators/tools.ts`), une carte par section (Tirer / Détails des tirages / relance individuelle / Copier).
-- [x] Sans fournisseur d'IA actif, le générateur fonctionne toujours : les emplacements de prose restent vides, le reste est complet (inchangé, déjà vérifié).
-- [x] Les noms à jeu de mots viennent de **tables écrites à la main**, jamais d'une génération libre — vérifié en direct sur Taverne (table `noms-tavernes`, 2 entrées d'exemple).
+- [x] Description de taverne (emplacement `prose`, sur "L'établissement") — câblée et vérifiée : sans fournisseur d'IA actif, l'emplacement reste vide et le texte de section se recompose proprement (jamais de `{description}` littéral), le reste du tirage (table) fonctionne à l'identique.
+- [x] Les trois sections Taverne sont câblées avec du contenu réel : "Nom de l'établissement" (table `noms-tavernes`), "L'établissement" (`ambiances-tavernes` + `patrons-tavernes` + description en prose), "La Chambre" (`mobilier-chambres` + `particularites-chambres`) — 2 entrées d'exemple par table, à l'utilisateur d'en écrire davantage.
+- [x] Les noms à jeu de mots viennent de **tables écrites à la main**, jamais d'une génération libre.
 - [x] Les 3 boutons preset ajoutés aux fiches avant le pivot ont été retirés (`EntityBlocks.tsx`) — plus aucun générateur prêt-à-l'emploi sur une fiche, le bloc `generator` générique y reste pour un usage ponctuel.
 
-**Pas encore fait** (phases suivantes, même moteur) :
-- [ ] Description de taverne, d'échoppe, de PNJ (emplacement `prose`) — le mécanisme existe (`resolveGeneratorProseSlots`), pas encore câblé dans les sections Taverne.
-- [ ] Sections "L'établissement" et "La Chambre" — stubs vides, contenu à écrire (même méthode que "Nom de l'établissement").
-- [ ] Outils Échoppe / PNJ / Noms — réutilisation directe du registre, aucun changement de moteur prévu.
+**Pas encore fait** (phases suivantes, même moteur, mécanisme inchangé) :
+- [ ] Outils Échoppe / PNJ / Noms — réutilisation directe du registre (`src/core/generators/tools.ts`) et de la même méthode de saisie, aucun changement de moteur prévu.
 - [ ] Prix à fourchette (boissons/repas), sourcing d'objets d'échoppe (règles/inventé/manuel) — hors périmètre de cette phase, à traiter une fois le mécanisme éprouvé en usage réel.
+- [ ] V2-J2 (promotion d'un résultat de générateur en fiche) reste un ticket séparé, pas commencé — voir sa propre entrée plus bas.
 
-**Vérifié en direct** (monde Faerûn/Campagne test) : ouverture de l'outil "Générateurs" depuis la sidebar MJ, tirage de "Nom de l'établissement" (d20 → 17 → *La Rose Écarlate*), relance individuelle du même emplacement (d20 → 20, puis → 6 → *L'Auberge du Cerf Bleu*, la range 1-7 change bien le résultat), texte de section recomposé à chaque relance, bouton Copier fonctionnel. `npm run typecheck && npm run lint && npm run test:core` passent ; nouveaux tests d'intégration (`die`/`rolled` exposés, `onlySlotKey`) passent.
+**Vérifié en direct** (monde Faerûn/Campagne test) : les trois sections tirées avec leur vrai contenu — "Nom de l'établissement" (d20 → 6/17/20 selon relance, *L'Auberge du Cerf Bleu*/*La Rose Écarlate*), "L'établissement" (ambiance d20 → 12 → *calme et feutrée...*, patron d20 → 11 → *une elfe taciturne...*, description vide proprement sans fournisseur IA), "La Chambre" (mobilier d20 → 2 → *un lit défoncé...*, particularité d20 → 19 → *un graffiti gratté...*) ; relance individuelle testée sur plusieurs emplacements (seul le jet relancé change, texte recomposé à chaque fois) ; bouton Copier fonctionnel. `npm run typecheck && npm run lint && npm run test:core` passent ; nouveaux tests d'intégration (`die`/`rolled` exposés, `onlySlotKey`) passent.
+
+**Bug repéré en passant, hors périmètre** : `RandomTableBlockEditor.tsx`, bouton « + Ajouter un résultat » — la nouvelle entrée hérite d'une plage de largeur nulle (`min = max = ancien_max + 1`) au lieu de s'étendre jusqu'au nombre de faces du dé, ce qui rend la table invalide (aucune entrée ne couvre les résultats intermédiaires) tant qu'on ne corrige pas la plage à la main. Rencontré et contourné à répétition en saisissant le contenu Taverne cette session — pas corrigé ici pour ne pas élargir ce ticket.
 
 ### V2-J2 — Création d'une fiche par générateur · `M`
 
