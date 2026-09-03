@@ -289,22 +289,34 @@ export default function MapCanvas({
       />
       {(regions && regions.length > 0) || (pendingRegionPoints && pendingRegionPoints.length > 0) ? (
         <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
-          {regions?.map((region) => (
-            <polygon
-              key={region.id}
-              points={region.shape.map((p) => `${view.x + p.x * imageWidth * view.scale},${view.y + p.y * imageHeight * view.scale}`).join(" ")}
-              fill={region.fillColor}
-              fillOpacity={0.35}
-              stroke={region.borderColor}
-              strokeWidth={2}
-              strokeDasharray={region.unrevealedFog ? "6 4" : undefined}
-              className={onRegionClick ? "pointer-events-auto cursor-pointer" : undefined}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRegionClick?.(region);
-              }}
-            />
-          ))}
+          {regions?.map((region) => {
+            // Un outil "punaise"/"zone" actif doit pouvoir agir a travers une
+            // zone deja tracee (retour utilisateur : impossible de poser une
+            // punaise a l'interieur d'une zone existante) — sans ce garde, le
+            // polygone interceptait tout clic avant qu'il n'atteigne
+            // `handleCanvasClick` sur le conteneur.
+            const regionInteractive = !!onRegionClick && !placingPin && !drawingRegion;
+            return (
+              <polygon
+                key={region.id}
+                points={region.shape.map((p) => `${view.x + p.x * imageWidth * view.scale},${view.y + p.y * imageHeight * view.scale}`).join(" ")}
+                fill={region.fillColor}
+                fillOpacity={0.35}
+                stroke={region.borderColor}
+                strokeWidth={2}
+                strokeDasharray={region.unrevealedFog ? "6 4" : undefined}
+                className={regionInteractive ? "pointer-events-auto cursor-pointer" : undefined}
+                onClick={
+                  regionInteractive
+                    ? (e) => {
+                        e.stopPropagation();
+                        onRegionClick?.(region);
+                      }
+                    : undefined
+                }
+              />
+            );
+          })}
           {pendingRegionPoints && pendingRegionPoints.length > 0 && (
             <>
               <polyline
