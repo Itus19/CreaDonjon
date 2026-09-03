@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createShareLinkSchema, revokeShareLinkSchema } from "@/lib/shareLinks/schemas";
-import { createShareLink, revokeShareLink, ShareLinkSlugTakenError } from "@/src/server/services/shareLinks";
+import { createShareLink, revokeShareLink, ShareLinkSlugTakenError, ShareLinkPersonalRulesetError } from "@/src/server/services/shareLinks";
 
 export type CreateShareLinkState = { error: string } | { token: string; slug: string | null } | null;
 
@@ -41,6 +41,12 @@ export async function createShareLinkAction(
     });
   } catch (err) {
     if (err instanceof ShareLinkSlugTakenError) return { error: "Cet alias est déjà utilisé." };
+    if (err instanceof ShareLinkPersonalRulesetError) {
+      return {
+        error:
+          "Ce monde utilise un ruleset de référence personnelle — il ne peut pas être partagé publiquement tant que ce ruleset reste actif.",
+      };
+    }
     throw err;
   }
   const { token, link } = created;

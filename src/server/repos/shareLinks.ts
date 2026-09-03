@@ -35,6 +35,13 @@ export async function listActiveShareLinksForWorld(
   return data as ShareLinkRow[];
 }
 
+/** Sentinelle attrapee par `createShareLinkAction` : le declencheur `share_links_forbid_personal_reference` (migration 20260817130001) refuse l'insertion (code Postgres `P0001`) quand le monde ou la campagne ciblee repose sur un ruleset `personal_reference` — un refus attendu, pas une panne. */
+export class ShareLinkPersonalRulesetError extends Error {
+  constructor() {
+    super("personal-ruleset");
+  }
+}
+
 export async function insertShareLink(
   supabase: TypedClient,
   params: {
@@ -60,7 +67,10 @@ export async function insertShareLink(
     })
     .select(SHARE_LINK_COLUMNS)
     .single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.code === "P0001") throw new ShareLinkPersonalRulesetError();
+    throw new Error(error.message);
+  }
   return data as ShareLinkRow;
 }
 
