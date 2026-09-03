@@ -9,7 +9,7 @@ import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 import { relationLabel, type RelationType } from "@/src/core/relations/inverses";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { type BlockRow, getBlockById, listBlocksForEntity } from "@/src/server/repos/blocks";
-import { getBlockImage, type BlockImage } from "@/src/server/repos/blockImages";
+import { getBlockImageAssetId } from "@/src/server/repos/blockImages";
 import { getBackgroundMetaForBlock } from "@/src/server/services/blockImages";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import { type EntitySummary, getEntityById, getEntityBySlug, listEntitiesForWorld } from "@/src/server/repos/entities";
@@ -575,14 +575,14 @@ export async function getPublicEntityDetail(
 }
 
 /**
- * Octets d'une image de bloc pour un visiteur anonyme (V2-G12) : contrairement
- * au portrait (public des qu'on voit le nom de la fiche), un bloc a sa
- * propre visibilite (peut etre `gm`) — jamais servi sans reappliquer le
- * meme `filterBlocks` que pour le reste du contenu du bloc. `null` aussi
- * bien si le bloc n'existe pas que s'il n'est pas visible : jamais de
- * distinction qui revelerait l'existence d'un bloc cache.
+ * Asset d'une image de bloc pour un visiteur anonyme (V2-G12, V2-L1) :
+ * contrairement au portrait (public des qu'on voit le nom de la fiche), un
+ * bloc a sa propre visibilite (peut etre `gm`) — jamais servi sans
+ * reappliquer le meme `filterBlocks` que pour le reste du contenu du bloc.
+ * `null` aussi bien si le bloc n'existe pas que s'il n'est pas visible :
+ * jamais de distinction qui revelerait l'existence d'un bloc cache.
  */
-export async function getPublicBlockImage(blockId: string): Promise<BlockImage | null> {
+export async function getPublicBlockImageAssetId(blockId: string): Promise<string | null> {
   const supabase = createShareLinkServiceClient();
   const block = await getBlockById(supabase, blockId);
   if (!block) return null;
@@ -590,5 +590,5 @@ export async function getPublicBlockImage(blockId: string): Promise<BlockImage |
   const visible = filterBlocks([toVisibilityAware(block)], { kind: "anonymous" });
   if (visible.length === 0) return null;
 
-  return getBlockImage(supabase, blockId);
+  return getBlockImageAssetId(supabase, blockId);
 }

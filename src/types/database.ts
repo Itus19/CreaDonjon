@@ -289,8 +289,8 @@ export type Database = {
       }
       background_images: {
         Row: {
+          asset_id: string
           available_modes: string[]
-          backdrop_image: string
           chroma: number
           created_at: string
           hue: number
@@ -299,8 +299,8 @@ export type Database = {
           thumb_data_url: string
         }
         Insert: {
+          asset_id: string
           available_modes: string[]
-          backdrop_image: string
           chroma: number
           created_at?: string
           hue: number
@@ -309,8 +309,8 @@ export type Database = {
           thumb_data_url: string
         }
         Update: {
+          asset_id?: string
           available_modes?: string[]
-          backdrop_image?: string
           chroma?: number
           created_at?: string
           hue?: number
@@ -318,43 +318,49 @@ export type Database = {
           owner_id?: string
           thumb_data_url?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "background_images_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       block_images: {
         Row: {
+          asset_id: string
           available_modes: string[] | null
           block_id: string
           chroma: number | null
           created_at: string
-          height: number
           hue: number | null
-          image: string
-          mime_type: string
-          width: number
         }
         Insert: {
+          asset_id: string
           available_modes?: string[] | null
           block_id: string
           chroma?: number | null
           created_at?: string
-          height: number
           hue?: number | null
-          image: string
-          mime_type: string
-          width: number
         }
         Update: {
+          asset_id?: string
           available_modes?: string[] | null
           block_id?: string
           chroma?: number | null
           created_at?: string
-          height?: number
           hue?: number | null
-          image?: string
-          mime_type?: string
-          width?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "block_images_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "block_images_block_id_fkey"
             columns: ["block_id"]

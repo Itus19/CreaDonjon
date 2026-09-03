@@ -116,6 +116,40 @@ export async function getWorldOwnerId(supabase: TypedClient, worldId: string): P
   return data?.owner_id ?? null;
 }
 
+/**
+ * N'IMPORTE quel monde accessible a ce compte (V2-L1) — un fond d'ecran est
+ * un reglage de COMPTE, jamais de monde (`background_images.owner_id`),
+ * mais `storage.ts#uploadAsset` exige un `worldId` pour son chemin de
+ * stockage (pure organisation du bucket, sans consequence sur la
+ * visibilite reelle de l'asset, deja garantie par `visibility_level: "user"`
+ * scope au compte). Priorite au monde possede (le plus ancien, stable dans
+ * le temps) ; a defaut, n'importe quel monde dont ce compte est membre —
+ * toujours resoluble en pratique, cet ecran de reglages vit sous
+ * `/m/[worldSlug]/...`.
+ */
+export async function getAnyWorldIdForUser(supabase: TypedClient, userId: string): Promise<string | null> {
+  const { data: owned, error: ownedError } = await supabase
+    .from("worlds")
+    .select("id")
+    .eq("owner_id", userId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (ownedError) throw new Error(ownedError.message);
+  if (owned) return owned.id;
+
+  const { data: member, error: memberError } = await supabase
+    .from("world_members")
+    .select("world_id")
+    .eq("user_id", userId)
+    .order("added_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (memberError) throw new Error(memberError.message);
+  return member?.world_id ?? null;
+}
+
 export async function ownerHasSlug(
   supabase: TypedClient,
   ownerId: string,

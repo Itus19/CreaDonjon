@@ -1,35 +1,77 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
+import { getAnyWorldIdForUser } from "@/src/server/repos/worlds";
 import { processBackgroundImage } from "@/src/server/backgroundImageProcessing";
 import { BUILTIN_BACKGROUNDS } from "@/src/core/theme/builtinBackgrounds";
 import {
   deleteBackgroundImage as deleteBackgroundImageRow,
-  getBackgroundImageBinary,
+  getBackgroundImageAssetId,
   getBackgroundImageById,
   insertBackgroundImage,
   listBackgroundImagesForCurrentUser,
   type BackgroundImageRow,
 } from "@/src/server/repos/backgroundImages";
+import { deleteAsset, getSignedAssetUrl, uploadAsset } from "@/src/server/services/storage";
 
 type TypedClient = SupabaseClient<Database>;
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 Mo — le plafond de 50 Mo de config.toml est un plafond de plateforme, pas une recommandation par image
 const ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const BACKDROP_MAX_DIMENSION = 1920; // meme borne que l'ancien pipeline (backgroundImageProcessing.ts)
 
 export type UploadBackgroundImageResult =
   | { ok: true; image: BackgroundImageRow }
   | { ok: false; reason: "too_large" | "unsupported_type" };
 
+export type UploadBackgroundImageErrorResult = { ok: false; reason: "too_large" | "unsupported_type" | "no_world" };
+
+/**
+ * Le fond d'ecran n'appartient a aucun monde (reglage personnel du compte,
+ * `owner_id`) — `uploadAsset` exige pourtant un `worldId` (les assets de
+ * carte/bloc en dependent pour leur chemin de stockage). Un pseudo-monde
+ * n'existant pas serait pire qu'un choix explicite : `getAnyWorldIdForUser`
+ * (n'importe quel monde accessible a ce compte) sert de regroupement de
+ * stockage, sans consequence sur la visibilite reelle de l'asset —
+ * `visibilityLevel: "user"` scope a `ownerId` est la SEULE garde qui compte
+ * ici, independamment du monde choisi pour le chemin.
+ */
 export async function uploadBackgroundImage(
   supabase: TypedClient,
   params: { ownerId: string; buffer: Buffer; mimeType: string }
-): Promise<UploadBackgroundImageResult> {
+): Promise<UploadBackgroundImageResult | UploadBackgroundImageErrorResult> {
   if (params.buffer.byteLength > MAX_UPLOAD_BYTES) return { ok: false, reason: "too_large" };
   if (!ALLOWED_MIME_TYPES.has(params.mimeType)) return { ok: false, reason: "unsupported_type" };
 
+  const worldId = await getAnyWorldIdForUser(supabase, params.ownerId);
+  if (!worldId) return { ok: false, reason: "no_world" };
+
+  // `processBackgroundImage` ne calcule plus que la miniature carree
+  // (fit:cover, jamais produite par `uploadAsset`, generique et "fit:inside"
+  // seulement) et la teinte/chroma — le backdrop plein format est televerse
+  // separement via l'interface de stockage commune, meme redondance mineure
+  // acceptee que pour `blockImages.ts`.
   const processed = await processBackgroundImage(params.buffer);
-  const image = await insertBackgroundImage(supabase, { ownerId: params.ownerId, ...processed });
+  const uploaded = await uploadAsset(supabase, {
+    worldId,
+    buffer: params.buffer,
+    mimeType: params.mimeType,
+    altText: null,
+    visibilityLevel: "user",
+    visibilityScopeId: params.ownerId,
+    uploadedBy: params.ownerId,
+    maxDimension: BACKDROP_MAX_DIMENSION,
+  });
+  if (!uploaded.ok) return uploaded;
+
+  const image = await insertBackgroundImage(supabase, {
+    ownerId: params.ownerId,
+    thumbDataUrl: processed.thumbDataUrl,
+    assetId: uploaded.asset.id,
+    hue: processed.hue,
+    chroma: processed.chroma,
+    availableModes: processed.availableModes,
+  });
   return { ok: true, image };
 }
 
@@ -37,18 +79,36 @@ export async function listOwnBackgroundImages(supabase: TypedClient): Promise<Ba
   return listBackgroundImagesForCurrentUser(supabase);
 }
 
-/** `false` si l'image n'existe pas ou appartient a un autre compte (RLS) — refus explicite plutot qu'un succes silencieux. */
+/** `false` si l'image n'existe pas ou appartient a un autre compte (RLS) — refus explicite plutot qu'un succes silencieux. Retire aussi l'asset (V2-L1), jamais un orphelin dans le bucket. */
 export async function deleteOwnBackgroundImage(supabase: TypedClient, id: string): Promise<boolean> {
-  return deleteBackgroundImageRow(supabase, id);
+  const assetId = await getBackgroundImageAssetId(supabase, id);
+  const deleted = await deleteBackgroundImageRow(supabase, id);
+  if (deleted && assetId) await deleteAsset(supabase, assetId);
+  return deleted;
 }
 
 export async function getBackgroundImageForOwner(supabase: TypedClient, id: string): Promise<BackgroundImageRow | null> {
   return getBackgroundImageById(supabase, id);
 }
 
-/** Octets de l'image de fond (jamais la miniature) — utilise uniquement par `GET /api/settings/background/[id]/image`. */
+/**
+ * Octets du backdrop plein format (V2-L1), utilise uniquement par
+ * `GET /api/settings/background/[id]/image` — celle-ci reste un flux direct
+ * (jamais une redirection vers l'URL signee, contrairement au portrait/aux
+ * images de bloc) : un fond de page se recharge a CHAQUE navigation
+ * (`app/layout.tsx`), une redirection vers une URL signee de 5 minutes
+ * casserait le cache navigateur `immutable` d'un an que cette route pose
+ * deja — l'aller-retour Storage a donc lieu ICI, cote serveur, une seule
+ * fois par acces, jamais a chaque chargement de page cote client.
+ */
 export async function getBackgroundImageBinaryForOwner(supabase: TypedClient, id: string): Promise<Buffer | null> {
-  return getBackgroundImageBinary(supabase, id);
+  const assetId = await getBackgroundImageAssetId(supabase, id);
+  if (!assetId) return null;
+  const url = await getSignedAssetUrl(supabase, assetId);
+  if (!url) return null;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  return Buffer.from(await res.arrayBuffer());
 }
 
 export interface ResolvedBackground {

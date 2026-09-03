@@ -21,9 +21,11 @@ import {
   updateBlockWithVersionCheck,
 } from "@/src/server/repos/blocks";
 import { getEntityById } from "@/src/server/repos/entities";
+import { getBlockImageAssetId } from "@/src/server/repos/blockImages";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { recordEntityRevision } from "@/src/server/services/entityHistory";
 import { canUserEditEntityById } from "@/src/server/services/permissions";
+import { deleteAsset } from "@/src/server/services/storage";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -231,7 +233,14 @@ export async function deleteBlock(
   const allowed = await canUserEditEntityById(supabase, { entityId: existing.entity_id, userId: changedBy });
   if (!allowed) return { ok: false, reason: "forbidden" };
 
+  // Bloc `image` (V2-L1) : `block_images` est cascade-supprimee avec le
+  // bloc (FK `on delete cascade`), mais son `asset_id` ne l'est jamais —
+  // l'asset (Storage) doit etre retire explicitement ici, sous peine d'un
+  // orphelin permanent dans le bucket a chaque suppression de bloc image.
+  const assetId = existing.block_type === "image" ? await getBlockImageAssetId(supabase, id) : null;
+
   await repoDeleteBlock(supabase, id);
+  if (assetId) await deleteAsset(supabase, assetId);
   await recordBlockRevision(supabase, existing.entity_id, changedBy);
   return { ok: true };
 }

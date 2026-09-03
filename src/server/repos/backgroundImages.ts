@@ -17,24 +17,16 @@ export interface BackgroundImageRow {
 
 const COLUMNS = "id, owner_id, thumb_data_url, hue, chroma, available_modes, created_at";
 
-/** PostgREST renvoie/attend un `bytea` en hexadecimal prefixe `\x` (`bytea_output = hex`, reglage par defaut de Postgres) — jamais du base64 ici, a la difference de `thumb_data_url` (une vraie data URL, pas un bytea). */
-function bufferToBytea(buffer: Buffer): string {
-  return `\\x${buffer.toString("hex")}`;
-}
-function byteaToBuffer(value: string): Buffer {
-  return Buffer.from(value.replace(/^\\x/, ""), "hex");
-}
-
 export async function insertBackgroundImage(
   supabase: TypedClient,
-  params: { ownerId: string; thumbDataUrl: string; backdropImage: Buffer; hue: number; chroma: number; availableModes: ThemeMode[] }
+  params: { ownerId: string; thumbDataUrl: string; assetId: string; hue: number; chroma: number; availableModes: ThemeMode[] }
 ): Promise<BackgroundImageRow> {
   const { data, error } = await supabase
     .from("background_images")
     .insert({
       owner_id: params.ownerId,
       thumb_data_url: params.thumbDataUrl,
-      backdrop_image: bufferToBytea(params.backdropImage),
+      asset_id: params.assetId,
       hue: params.hue,
       chroma: params.chroma,
       available_modes: params.availableModes,
@@ -60,17 +52,16 @@ export async function getBackgroundImageById(supabase: TypedClient, id: string):
 }
 
 /**
- * Octets de l'image de fond, jamais inclus dans `COLUMNS` (`list`/`getById`
- * ci-dessus) : bien plus lourd que le reste de la ligne, ne sert qu'a la
- * route qui la sert (`GET /api/settings/background/[id]/image`). `null` si
+ * Pointeur vers l'asset du backdrop plein format (V2-L1), jamais inclus
+ * dans `COLUMNS` (`list`/`getById` ci-dessus) : ne sert qu'a la route qui
+ * sert l'image (`GET /api/settings/background/[id]/image`). `null` si
  * absente ou appartenant a un autre compte (RLS) — meme convention que
  * `getBackgroundImageById`.
  */
-export async function getBackgroundImageBinary(supabase: TypedClient, id: string): Promise<Buffer | null> {
-  const { data, error } = await supabase.from("background_images").select("backdrop_image").eq("id", id).maybeSingle();
+export async function getBackgroundImageAssetId(supabase: TypedClient, id: string): Promise<string | null> {
+  const { data, error } = await supabase.from("background_images").select("asset_id").eq("id", id).maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data) return null;
-  return byteaToBuffer(data.backdrop_image);
+  return data?.asset_id ?? null;
 }
 
 /** `true` si une ligne a reellement ete supprimee — RLS renvoie sinon 0 ligne sans erreur (id inexistant ou appartenant a un autre compte), a distinguer d'un succes. */
