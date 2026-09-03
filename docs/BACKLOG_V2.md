@@ -34,7 +34,7 @@ Inspection faite le 2 septembre. Cinq points sur six sont acquis.
 ### Restent à confirmer par vous (invisibles depuis le dépôt)
 
 - [ ] **Couverture de traduction** par type d'entrée. Les scripts existent ; seul l'état de la base le dira.
-- [ ] `npm run test:coverage` sur `src/core/rules` et `src/core/visibility` : au-dessus de 90 % ?
+- [x] `npm run test:coverage` sur `src/core/rules` et `src/core/visibility` : au-dessus de 90 % ? **Oui** (3 septembre) — `rules` : 95,0 % lignes/93,9 % fonctions/87,2 % branches ; `visibility` : 100 % sur les quatre métriques.
 - [ ] La migration `restore_entity_blocks` suivant immédiatement `entity_blocks_full` : incident réglé ou correctif partiel ?
 
 ## 2. Principe de séquencement
@@ -1263,9 +1263,9 @@ Et un critère technique : **le verdict de S1 est écrit et la V3 est cadrée en
 
 ---
 
-## 6. Prochaine proposition à rédiger — moteur de déclencheurs + contrat IA (mode Solo)
+## 6. Proposition rédigée — moteur de déclencheurs + contrat IA (mode Solo)
 
-Pas encore un ticket : d'abord un document de proposition à part (`.md`), à écrire avant tout code. Contexte, pour qui reprendra ce fil :
+**Fait (3 septembre) : `specs/moteur-de-jeu.md`.** Toujours pas un ticket — la conception est arrêtée pour les déclencheurs/conditions et le rejet de Lua, mais l'économie d'action et l'état de scène restent à affiner en écrivant V3-A3/V3-A4. Les six tickets qui en découlent (V3-A1 à V3-A6) ne s'ouvrent qu'après le lot J/K/L/M actuel. Contexte, pour qui reprendra ce fil :
 
 La session du 3 septembre a généralisé le moteur de fiche dérivée pour les modificateurs **statiques** (`characterSheet()`/`resolvedRuleset.ts` — voir V2-G7 ci-dessus et le commit correspondant) : n'importe quelle aptitude ou don peut désormais porter des effets chiffrés (caractéristique, sauvegarde, compétence, CA, vitesse, PV) réellement appliqués. Mais le moteur ne sait toujours faire que de l'arithmétique et des dés (`src/core/formula/ast.ts`) — **aucun déclencheur** (« quand X, alors Y » — ex. un don « Malchanceux » qui force une relance sur un 20 naturel) n'existe, et `specs/regles-couche.md` §8 le listait déjà explicitement comme le sujet le plus dur du moteur, reporté après la V1. Toujours vrai aujourd'hui.
 
