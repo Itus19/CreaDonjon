@@ -10,6 +10,7 @@ import {
   listActiveShareLinksForWorld,
   revokeShareLink as repoRevokeShareLink,
   shareLinkSlugExists,
+  ShareLinkPersonalRulesetError,
 } from "@/src/server/repos/shareLinks";
 import { resolveCampaignId, getCampaign } from "@/src/server/services/campaigns";
 
@@ -95,6 +96,8 @@ export class ShareLinkSlugTakenError extends Error {
     super("slug-taken");
   }
 }
+
+export { ShareLinkPersonalRulesetError };
 
 export async function createShareLink(
   supabase: TypedClient,
