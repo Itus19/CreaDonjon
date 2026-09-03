@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { CURRENCY_LABELS_FR } from "@/src/i18n/fr";
 import type { WeaponProposal } from "@/src/core/ai/weaponProposal";
+import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
 
 interface SelectableRuleset {
   id: string;
@@ -41,7 +42,14 @@ function AiBadge({ shown, label }: { shown: boolean; label: string }) {
  * que le modele a rempli est signale comme tel") et le signalement
  * disparait des que l'utilisateur touche ce champ — rien de plus.
  */
-export default function CreateHomebrewWeaponForm({ worldSlug }: { worldSlug: string }) {
+export default function CreateHomebrewWeaponForm({
+  worldSlug,
+  onDone,
+}: {
+  worldSlug: string;
+  /** Ouvert en fenetre flottante (retour utilisateur, V2) : ferme la fenetre au lieu de naviguer vers la fiche creee — jamais fourni depuis la route en plein cadre, qui garde la navigation habituelle. */
+  onDone?: () => void;
+}) {
   const t = useTranslations("regles");
   const router = useRouter();
 
@@ -167,6 +175,11 @@ export default function CreateHomebrewWeaponForm({ worldSlug }: { worldSlug: str
     }
 
     const created = (await res.json()) as { entryKey: string };
+    clearWorldRuleEntriesCache(worldSlug);
+    if (onDone) {
+      onDone();
+      return;
+    }
     router.push(`/m/${worldSlug}/regles/${created.entryKey}`);
     router.refresh();
   }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Dropdown from "@/components/shared/Dropdown";
 import DescriptionTextarea from "@/components/rules/DescriptionTextarea";
+import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
 import { MODIFIER_OP_LABELS_FR, modifierTargetLabel } from "@/src/i18n/fr";
 import { MODIFIER_TARGET_OPTIONS, OPS_BY_TARGET_CATEGORY, modifierOpNeedsValue, modifierTargetOption } from "@/src/core/rules/modifierTargets";
 import type { ModifierOp } from "@/src/core/rules/sheet";
@@ -50,7 +51,14 @@ function defaultOpForTarget(target: string): ModifierOp {
  * reste purement descriptif, comme "Chanceux"/"Indomptable" du SRD
  * aujourd'hui : `creerDonMaisonIntro` le dit explicitement.
  */
-export default function CreateHomebrewFeatureForm({ worldSlug }: { worldSlug: string }) {
+export default function CreateHomebrewFeatureForm({
+  worldSlug,
+  onDone,
+}: {
+  worldSlug: string;
+  /** Ouvert en fenetre flottante (retour utilisateur, V2) : ferme la fenetre au lieu de naviguer vers la fiche creee — jamais fourni depuis la route en plein cadre, qui garde la navigation habituelle. */
+  onDone?: () => void;
+}) {
   const t = useTranslations("regles");
   const router = useRouter();
 
@@ -170,6 +178,11 @@ export default function CreateHomebrewFeatureForm({ worldSlug }: { worldSlug: st
     const body = (await res.json()) as { imported: { entryKey: string; name: string }[]; errors: { message: string }[] };
     if (body.errors.length > 0) {
       setError(body.errors[0].message);
+      return;
+    }
+    clearWorldRuleEntriesCache(worldSlug);
+    if (onDone) {
+      onDone();
       return;
     }
     router.push(`/m/${worldSlug}/regles/${body.imported[0].entryKey}`);

@@ -9,6 +9,8 @@ import Dropdown from "@/components/shared/Dropdown";
 import Checkbox from "@/components/shared/Checkbox";
 import RuleEntryAutocomplete from "@/components/blocks/RuleEntryAutocomplete";
 import DescriptionTextarea from "@/components/rules/DescriptionTextarea";
+import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
+import { useOpenRuleToolLink } from "@/components/shell/useOpenRuleToolLink";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 
 interface SelectableRuleset {
@@ -46,10 +48,18 @@ function nextOptionLabel(count: number): string {
  * Aptitude") — ce formulaire ne cree plus lui-meme une entree compagnon a
  * la volee comme sa premiere version.
  */
-export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug: string }) {
+export default function CreateHomebrewBackgroundForm({
+  worldSlug,
+  onDone,
+}: {
+  worldSlug: string;
+  /** Ouvert en fenetre flottante (retour utilisateur, V2) : ferme la fenetre au lieu de naviguer vers la fiche creee — jamais fourni depuis la route en plein cadre, qui garde la navigation habituelle. */
+  onDone?: () => void;
+}) {
   const t = useTranslations("regles");
   const router = useRouter();
   const worldEntries = useWorldRuleEntries(worldSlug);
+  const openDonLink = useOpenRuleToolLink(worldSlug, "nouveau-don");
 
   const [loading, setLoading] = useState(true);
   const [currentRuleset, setCurrentRuleset] = useState<SelectableRuleset | null>(null);
@@ -192,6 +202,11 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
       setError(body.errors[0].message);
       return;
     }
+    clearWorldRuleEntriesCache(worldSlug);
+    if (onDone) {
+      onDone();
+      return;
+    }
     router.push(`/m/${worldSlug}/regles/${body.imported[0].entryKey}`);
     router.refresh();
   }
@@ -273,7 +288,7 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
         {featKey.trim() !== "" && !featEntry && <p className="text-xs text-danger">{t("erreurDonInconnu")}</p>}
         <p className="text-xs text-ink-muted">
           {t("donIntrouvableAide")}{" "}
-          <a href={`/m/${worldSlug}/regles/nouveau-don`} className="text-link-rule underline-offset-2 hover:underline">
+          <a href={openDonLink.href} onClick={openDonLink.onClick} className="text-link-rule underline-offset-2 hover:underline">
             {t("creerDonMaison")}
           </a>
         </p>

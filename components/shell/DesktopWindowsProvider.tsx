@@ -165,6 +165,10 @@ export default function DesktopWindowsProvider({
   // Recupere les donnees de chaque fenetre `?avec=` pas encore chargee.
   useEffect(() => {
     avecRefs.forEach((ref) => {
+      // Un formulaire de creation de regle (`rule-tool`) n'a rien a lire en
+      // base — jamais de fetch pour ce type, `RuleToolWindowContent` se
+      // suffit du seul `worldSlug` deja connu.
+      if (ref.kind === "rule-tool") return;
       const id = refId(ref);
       if (fetchedRef.current.has(id)) return;
       fetchedRef.current.add(id);

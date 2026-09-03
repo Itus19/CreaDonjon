@@ -10,6 +10,7 @@ import { refId, windowContentLabel, type WindowRef } from "./windowRefs";
 import EditEntityForm from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/EditEntityForm";
 import RuleEntryView from "@/components/rules/RuleEntryView";
 import MjToolWindowContent from "./MjToolWindowContent";
+import RuleToolWindowContent from "./RuleToolWindowContent";
 import type { EntityWindowData } from "@/src/server/services/entityWindow";
 import { isMjToolWindowData } from "./mjToolWindows";
 
@@ -112,7 +113,14 @@ export default function WindowsDesktop({ worldSlug, children }: { worldSlug: str
               onMinimize={() => state.minimizeWindow(ref)}
               onUpdate={(updates) => state.updateGeometry(ref, updates)}
             >
-              {!data ? (
+              {ref.kind === "rule-tool" ? (
+                // Aucune donnee serveur a charger — un formulaire de
+                // creation se suffit a lui-meme (worldSlug deja connu),
+                // jamais bloque derriere le meme "Chargement..." que les
+                // fenetres entite/regle/outil MJ qui, elles, lisent une
+                // vraie ligne en base.
+                <RuleToolWindowContent worldSlug={worldSlug} toolKey={ref.key} />
+              ) : !data ? (
                 <p className="text-sm text-ink-muted">Chargement...</p>
               ) : isEntityWindowData(data) ? (
                 <EditEntityForm
