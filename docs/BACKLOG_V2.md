@@ -317,7 +317,7 @@ Réalisé en réutilisant un seul mécanisme pour les deux : `MusicPlaybackProvi
 
 **Vérifié en navigateur** : création de la station « Fireren Radio » avec le lien playlist fourni, lecture lancée (iframe cachée confirmée par script avec `autoplay=1` dans l'URL), persistance de la lecture après une navigation interne (clic sur un lien, pas un rechargement complet) vers la fiche de Jean-Pascal. Ajout d'une piste nommée « Arrivée du méchant » dans le bloc `music` de cette fiche : lecture de la piste met bien la radio en pause (bouton radio repasse en `▶`, iframe repointée vers la piste du bloc), puis relancer la radio met bien la piste du bloc en pause — exclusion mutuelle confirmée dans les deux sens.
 
-### V2-G7 — Bonus de caractéristique de l'historique (+2/+1, règle 2024) · `M`
+### V2-G7 — Bonus de caractéristique de l'historique (+2/+1, règle 2024) · `M` — fait
 
 **Retour utilisateur** (3 septembre) : trouvé en corrigeant le bug d'historique maison invisible à la création de personnage (V2-G1 suite). La règle officielle 2024 lie les caractéristiques au choix d'historique — chaque historique liste trois caractéristiques (`Backgrounds.*.ability_scores` côté SRD, `BackgroundBlockData.ability_scores` côté fiche dédiée, déjà stocké et affiché des deux côtés), et le joueur répartit **+2 sur l'une et +1 sur une autre parmi les trois (la troisième ne reçoit rien), ou +1 sur chacune des trois**. `AbilityScoreStep.tsx` n'implémente aujourd'hui que les trois méthodes indépendantes de l'historique (tableau standard, achat de points, tirage) — le Manuel des Joueurs 2024 autorise cette méthode traditionnelle comme alternative légitime, ce n'est pas une règle cassée, seulement une règle manquante. Le champ `ability_scores` d'un historique (SRD ou maison) est donc aujourd'hui purement informatif, jamais mécanique.
 
@@ -718,14 +718,28 @@ UI dans `MapRegionEditorPopup.tsx` : case à cocher "Soumise au brouillard", pui
 
 *Nécessite le lot F de la V1. Le contenu de ce lot dépend du verdict de S1.*
 
-### V2-J1 — Les emplacements en prose des générateurs · `M`
+### V2-J1 — Les emplacements en prose des générateurs · `M` — Phase 1 faite, en cours
 
 Le lot E de la V1 a écrit les générateurs avec leurs emplacements de prose **laissés vides**. Ce ticket les remplit.
 
-- [ ] Description de taverne, d'échoppe, de PNJ — les longueurs demandées dans vos notes.
-- [ ] La prose est **cohérente avec les valeurs déjà tirées**, jamais contradictoire.
-- [ ] Sans fournisseur d'IA actif, le générateur fonctionne toujours : les emplacements de prose restent vides, le reste est complet.
-- [ ] Les noms à jeu de mots viennent de **tables écrites à la main**, jamais d'une génération libre.
+**Retour utilisateur (3 septembre)** : captures d'écran de deux outils de référence en cours de route — l'utilisateur préfère un style "Maisons Closes" (Dauricha & Orkish Blade) où la génération est **découpée en sections nommées**, chacune tirable et rejouable indépendamment (panneau "Détails des tirages", relance d'un seul emplacement), plutôt qu'un bloc de fiche produisant un paragraphe unique. Pivot acté : le mécanisme vit désormais dans un **outil MJ autonome** ("Générateurs", sidebar MJ), jamais attaché à une fiche de wiki. Structure et mécanique reproduites (jamais le texte des outils de référence — droit d'auteur).
+
+**Phase 1 faite** (mécanisme + Taverne) :
+- [x] `GeneratorResult` expose `die`/`rolled` par emplacement `table` — panneau "Détails des tirages".
+- [x] `POST /api/blocks/[blockId]/generate` accepte `onlySlotKey` : relance un seul emplacement, recompose le texte complet avec les autres valeurs (envoyées par le client, serveur toujours sans état).
+- [x] Entité cachée `generateur` "Générateurs de MJ" auto-provisionnée par monde (visibilité `gm`, jamais vue des joueurs) — une section = un bloc `generator`, retrouvé par sa clé technique (`GeneratorData.key`).
+- [x] Outil MJ "Générateurs" (sidebar, fenêtre flottante, page dédiée `/mj/generateurs`) — `GeneratorToolPanel.tsx` : un onglet par outil (registre `src/core/generators/tools.ts`), une carte par section (Tirer / Détails des tirages / relance individuelle / Copier).
+- [x] Sans fournisseur d'IA actif, le générateur fonctionne toujours : les emplacements de prose restent vides, le reste est complet (inchangé, déjà vérifié).
+- [x] Les noms à jeu de mots viennent de **tables écrites à la main**, jamais d'une génération libre — vérifié en direct sur Taverne (table `noms-tavernes`, 2 entrées d'exemple).
+- [x] Les 3 boutons preset ajoutés aux fiches avant le pivot ont été retirés (`EntityBlocks.tsx`) — plus aucun générateur prêt-à-l'emploi sur une fiche, le bloc `generator` générique y reste pour un usage ponctuel.
+
+**Pas encore fait** (phases suivantes, même moteur) :
+- [ ] Description de taverne, d'échoppe, de PNJ (emplacement `prose`) — le mécanisme existe (`resolveGeneratorProseSlots`), pas encore câblé dans les sections Taverne.
+- [ ] Sections "L'établissement" et "La Chambre" — stubs vides, contenu à écrire (même méthode que "Nom de l'établissement").
+- [ ] Outils Échoppe / PNJ / Noms — réutilisation directe du registre, aucun changement de moteur prévu.
+- [ ] Prix à fourchette (boissons/repas), sourcing d'objets d'échoppe (règles/inventé/manuel) — hors périmètre de cette phase, à traiter une fois le mécanisme éprouvé en usage réel.
+
+**Vérifié en direct** (monde Faerûn/Campagne test) : ouverture de l'outil "Générateurs" depuis la sidebar MJ, tirage de "Nom de l'établissement" (d20 → 17 → *La Rose Écarlate*), relance individuelle du même emplacement (d20 → 20, puis → 6 → *L'Auberge du Cerf Bleu*, la range 1-7 change bien le résultat), texte de section recomposé à chaque relance, bouton Copier fonctionnel. `npm run typecheck && npm run lint && npm run test:core` passent ; nouveaux tests d'intégration (`die`/`rolled` exposés, `onlySlotKey`) passent.
 
 ### V2-J2 — Création d'une fiche par générateur · `M`
 
