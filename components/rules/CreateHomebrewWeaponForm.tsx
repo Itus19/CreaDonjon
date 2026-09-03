@@ -191,7 +191,7 @@ export default function CreateHomebrewWeaponForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex max-w-2xl flex-col gap-4">
       <h1 className="text-base font-semibold text-ink">{t("creerArmeMaison")}</h1>
       <p className="text-xs text-ink-muted">{t("creerArmeMaisonVariante", { name: currentRuleset.name })}</p>
 
