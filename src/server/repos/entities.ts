@@ -67,6 +67,19 @@ export async function findEntityByCreatorAndKind(
   return data as EntitySummary | null;
 }
 
+/** Singleton par monde pour un `entity_kind` donne (V2-J1 Phase 2, "Générateurs de MJ") — contrairement a `findEntityByCreatorAndKind`, jamais filtre par createur : un seul MJ reel par monde (Lot M), mais peu importe quel compte admin l'a creee la premiere fois. */
+export async function findEntityByKind(supabase: TypedClient, worldId: string, entityKind: string): Promise<EntitySummary | null> {
+  const { data, error } = await supabase
+    .from("entities")
+    .select(ENTITY_COLUMNS)
+    .eq("world_id", worldId)
+    .eq("entity_kind", entityKind)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as EntitySummary | null;
+}
+
 export async function getEntityBySlug(
   supabase: TypedClient,
   worldId: string,

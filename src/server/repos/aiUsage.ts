@@ -9,9 +9,12 @@ type TypedClient = SupabaseClient<Database>;
  * base, un ensemble ferme cote application. `assist_writing` ajoute par
  * V1-F3 : aucune des cinq valeurs d'origine ne correspondait a l'assistance
  * redactionnelle (texte narratif d'un bloc, distinct de `structure_rule`
- * qui produit une structure de regle).
+ * qui produit une structure de regle). `generator_prose` ajoute par V2-J1 :
+ * un emplacement `prose` de generateur compose (taverne/echoppe/PNJ...) —
+ * distinct de `generate_npc` (reserve au PNJ generateur complet a base de
+ * `rule_query`, specs/outils-mj.md §3, hors de ce ticket).
  */
-export type AiUsagePurpose = "solo_turn" | "generate_npc" | "structure_rule" | "embed" | "summarize" | "assist_writing";
+export type AiUsagePurpose = "solo_turn" | "generate_npc" | "structure_rule" | "embed" | "summarize" | "assist_writing" | "generator_prose";
 
 export interface AiUsageLogEntry {
   userId: string | null;

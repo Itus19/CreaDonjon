@@ -75,6 +75,7 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
     { key: "calendrier", label: t("calendrier") },
     { key: "chat", label: t("chat") },
     { key: "creation-personnage", label: t("creationPersonnage") },
+    { key: "generateurs", label: t("generateurs") },
     { key: "gestion-campagne", label: t("gestionCampagne") },
     { key: "initiative", label: t("initiative") },
     { key: "journal-historique", label: t("journalHistorique") },

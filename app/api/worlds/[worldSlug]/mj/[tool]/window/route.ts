@@ -4,7 +4,8 @@ import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
-import { listEntities } from "@/src/server/services/entities";
+import { listEntities, ensureGeneratorToolsEntity } from "@/src/server/services/entities";
+import { resolveGeneratorToolsForEntity } from "@/src/server/services/generators";
 import { listCampaigns, getCampaignCharacters } from "@/src/server/services/campaigns";
 import { isSuperadmin } from "@/src/server/services/account";
 import { isWorldAdmin } from "@/src/server/services/permissions";
@@ -57,7 +58,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   // le layout ne suffit donc pas seul, cette route doit se proteger
   // elle-meme.
   const gm = user ? await isWorldAdmin(supabase, { worldId: world.id, userId: user.id }) : false;
-  if (!gm) {
+  if (!gm || !user) {
     return NextResponse.json({ error: "Réservé au MJ de ce monde." }, { status: 403 });
   }
 
@@ -202,6 +203,13 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     case "publication": {
       const links = await listShareLinks(supabase, world.id);
       data = { tool, worldId: world.id, links, wikiWelcomeMessage: world.wiki_welcome_message ?? "" };
+      break;
+    }
+
+    case "generateurs": {
+      const entityId = await ensureGeneratorToolsEntity(supabase, world.id, user.id);
+      const tools = await resolveGeneratorToolsForEntity(supabase, entityId);
+      data = { tool, entityId, tools };
       break;
     }
   }

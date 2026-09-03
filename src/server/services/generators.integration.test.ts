@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SeededRng } from "@/src/core/dice/rng";
-import { drawFromGeneratorBlock } from "./generators";
+import { renderGeneratorTemplate } from "@/src/core/generators/render";
+import { drawTableSlotsFromGeneratorBlock } from "./generators";
 
 /**
  * V1-E2 : sans ce test, rien ne prouve que le tirage de generateur resout
@@ -103,14 +104,29 @@ describe.skipIf(!hasCreds)("tirage sur un bloc generator (integration, base reel
       "{prenom}, {metier}"
     );
 
-    const result = await drawFromGeneratorBlock(admin, generatorId, new SeededRng(1));
-    expect(result).toEqual({
-      text: "Aldric, tisserand",
-      slots: [
-        { key: "prenom", text: "Aldric", refs: [] },
-        { key: "metier", text: "tisserand", refs: [] },
+    const draw = await drawTableSlotsFromGeneratorBlock(admin, generatorId, new SeededRng(1));
+    expect(draw?.slots).toEqual([
+      { key: "prenom", text: "Aldric", refs: [], die: "d20", rolled: expect.any(Number) },
+      { key: "metier", text: "tisserand", refs: [], die: "d20", rolled: expect.any(Number) },
+    ]);
+    expect(draw?.proseSlots).toEqual([]);
+    expect(renderGeneratorTemplate(draw!.generator.template, draw!.slotTexts)).toBe("Aldric, tisserand");
+  });
+
+  it("onlySlotKey : ne tire que l'emplacement designe, jamais les autres", async () => {
+    await insertTableBlock("prenoms", [{ range: { min: 1, max: 20 }, weight: 20, text: "Aldric" }]);
+    await insertTableBlock("metiers", [{ range: { min: 1, max: 20 }, weight: 20, text: "tisserand" }]);
+    const generatorId = await insertGeneratorBlock(
+      [
+        { key: "prenom", table: "prenoms" },
+        { key: "metier", table: "metiers" },
       ],
-    });
+      "{prenom}, {metier}"
+    );
+
+    const draw = await drawTableSlotsFromGeneratorBlock(admin, generatorId, new SeededRng(1), { onlySlotKey: "metier" });
+    expect(draw?.slots).toEqual([{ key: "metier", text: "tisserand", refs: [], die: "d20", rolled: expect.any(Number) }]);
+    expect(draw?.slotTexts).toEqual({ metier: "tisserand" });
   });
 
   it("resout la cascade {table:cle} a l'interieur du texte tire pour un emplacement", async () => {
@@ -120,18 +136,34 @@ describe.skipIf(!hasCreds)("tirage sur un bloc generator (integration, base reel
     ]);
     const generatorId = await insertGeneratorBlock([{ key: "rumeur", table: "rumeurs_marche" }], "{rumeur}");
 
-    const result = await drawFromGeneratorBlock(admin, generatorId, new SeededRng(2));
-    expect(result?.text).toBe("Une cargaison de épices vient d'arriver.");
+    const draw = await drawTableSlotsFromGeneratorBlock(admin, generatorId, new SeededRng(2));
+    expect(renderGeneratorTemplate(draw!.generator.template, draw!.slotTexts)).toBe("Une cargaison de épices vient d'arriver.");
   });
 
   it("laisse l'emplacement tel quel dans le gabarit si sa table est introuvable", async () => {
     const generatorId = await insertGeneratorBlock([{ key: "inexistant", table: "table-absente" }], "Resultat : {inexistant}.");
 
-    const result = await drawFromGeneratorBlock(admin, generatorId, new SeededRng(3));
-    expect(result).toEqual({ text: "Resultat : {inexistant}.", slots: [] });
+    const draw = await drawTableSlotsFromGeneratorBlock(admin, generatorId, new SeededRng(3));
+    expect(draw?.slots).toEqual([]);
+    expect(renderGeneratorTemplate(draw!.generator.template, draw!.slotTexts)).toBe("Resultat : {inexistant}.");
+  });
+
+  it("collecte les emplacements prose a part, jamais tires comme une table", async () => {
+    await insertTableBlock("prenoms", [{ range: { min: 1, max: 20 }, weight: 20, text: "Aldric" }]);
+    const generatorId = await insertGeneratorBlock(
+      [
+        { key: "prenom", table: "prenoms" },
+        { key: "description", prose: "Decris ce marchand." },
+      ],
+      "{prenom} — {description}"
+    );
+
+    const draw = await drawTableSlotsFromGeneratorBlock(admin, generatorId, new SeededRng(5));
+    expect(draw?.slots).toEqual([{ key: "prenom", text: "Aldric", refs: [], die: "d20", rolled: expect.any(Number) }]);
+    expect(draw?.proseSlots).toEqual([{ key: "description", instruction: "Decris ce marchand." }]);
   });
 
   it("renvoie null pour un bloc introuvable", async () => {
-    expect(await drawFromGeneratorBlock(admin, "00000000-0000-0000-0000-000000000000", new SeededRng(4))).toBeNull();
+    expect(await drawTableSlotsFromGeneratorBlock(admin, "00000000-0000-0000-0000-000000000000", new SeededRng(4))).toBeNull();
   });
 });

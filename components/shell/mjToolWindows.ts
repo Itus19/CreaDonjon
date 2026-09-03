@@ -7,6 +7,7 @@ import type { CombatDetail } from "@/src/server/services/combats";
 import type { CombatRow } from "@/src/server/repos/combats";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import type { ShareLinkSummary } from "@/src/server/services/shareLinks";
+import type { GeneratorToolWindowData } from "@/src/server/services/generators";
 
 /**
  * Forme JSON d'une fenetre d'outil MJ (retour utilisateur, V2-M7 suite) —
@@ -59,7 +60,8 @@ export type MjToolWindowData =
   | { tool: "calendrier"; calendar: CalendarConfigInput }
   | { tool: "personnalisation"; mode: string; contrast: string; backgroundRef: string; backgroundAvailableModes: string[]; bgBlur: number }
   | { tool: "regles-actives" }
-  | { tool: "publication"; worldId: string; links: ShareLinkSummary[]; wikiWelcomeMessage: string };
+  | { tool: "publication"; worldId: string; links: ShareLinkSummary[]; wikiWelcomeMessage: string }
+  | { tool: "generateurs"; entityId: string; tools: GeneratorToolWindowData[] };
 
 export function isMjToolWindowData(data: unknown): data is MjToolWindowData {
   return !!data && typeof data === "object" && "tool" in data;

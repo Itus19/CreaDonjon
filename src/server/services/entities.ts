@@ -8,6 +8,7 @@ import {
   type DeletedEntitySummary,
   type EntitySearchResult,
   type EntitySummary,
+  findEntityByKind,
   getEntityById,
   insertEntity,
   listDeletedEntities,
@@ -21,6 +22,8 @@ import {
   updateEntityWithVersionCheck,
   worldHasSlug,
 } from "@/src/server/repos/entities";
+import { zGeneratorBlockData } from "@/src/core/schemas/blocks/generator";
+import { GENERATOR_TOOLS } from "@/src/core/generators/tools";
 import { getWorldEntityKindOrder } from "@/src/server/repos/worlds";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
 import { insertBlock, listBlockVisibilityForEntities, listBlocksForEntity, maxDisplayOrder } from "@/src/server/repos/blocks";
@@ -266,6 +269,67 @@ export async function deleteEntity(
   });
   if (!allowed) return { deleted: false, error: "forbidden" };
   return softDeleteEntity(supabase, params.id);
+}
+
+/**
+ * Entite "Générateurs de MJ" (V2-J1 Phase 2, entity_kind `generateur`) —
+ * une par monde, singleton auto-provisionne (meme motif que `ensureMapBlock`
+ * plus haut, a l'echelle de l'entite plutot que du bloc) : jamais creee par
+ * l'ecran "Nouvelle fiche", seulement a la premiere ouverture de l'outil MJ
+ * "Générateurs" (`GET /api/worlds/[worldSlug]/mj/generateurs/window`).
+ * Chaque section de `GENERATOR_TOOLS` (src/core/generators/tools.ts) devient
+ * un bloc `generator` marque de sa cle technique — un simple gabarit vide
+ * (`defaultBlockData("generator")`, le meme que tout bloc generator neuf)
+ * que l'auteur remplit ensuite lui-meme via l'editeur de bloc habituel
+ * (RandomTableBlockEditor/GeneratorBlockEditor deja existants, aucune
+ * nouvelle UI d'edition) : le CONTENU des tables (noms, ambiances...) est de
+ * la donnee, jamais ecrite en dur ici (CLAUDE.md, "Saisir des règles").
+ * Visibilite `gm` sur chaque bloc — jamais vue des joueurs, cf.
+ * `listPlayerVisibleEntityIds` qui masque deja toute entite sans bloc
+ * visible d'un joueur. Idempotent : n'ajoute que les sections manquantes.
+ */
+export async function ensureGeneratorToolsEntity(supabase: TypedClient, worldId: string, createdBy: string): Promise<string> {
+  const existing = await findEntityByKind(supabase, worldId, "generateur");
+  const entityId = existing
+    ? existing.id
+    : (
+        await createEntity(supabase, {
+          worldId,
+          createdBy,
+          name: "Générateurs de MJ",
+          entityKind: "generateur",
+          aliases: [],
+        })
+      ).id;
+
+  const blocks = await listBlocksForEntity(supabase, entityId);
+  const existingKeys = new Set(
+    blocks
+      .filter((b) => b.block_type === "generator")
+      .map((b) => zGeneratorBlockData.safeParse(b.data))
+      .filter((p) => p.success)
+      .map((p) => (p.success ? p.data.key : undefined))
+  );
+
+  let displayOrder = (await maxDisplayOrder(supabase, entityId)) + 1000;
+  for (const tool of GENERATOR_TOOLS) {
+    for (const section of tool.sections) {
+      if (existingKeys.has(section.key)) continue;
+      await insertBlock(supabase, {
+        entityId,
+        blockType: "generator",
+        display: defaultBlockDisplay("generator", section.label),
+        data: { ...(defaultBlockData("generator") as Record<string, unknown>), key: section.key } as Json,
+        displayOrder,
+        visibilityLevel: "gm",
+        visibilityScopeId: null,
+        createdBy,
+      });
+      displayOrder += 1000;
+    }
+  }
+
+  return entityId;
 }
 
 /** Journal d'historique, "rétablir une fiche supprimée" — appelant deja verifie MJ de ce monde (meme garde que le reste du journal), simple passe-plat. */

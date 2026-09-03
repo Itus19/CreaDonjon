@@ -10,6 +10,7 @@ import InitiativeTracker from "./InitiativeTracker";
 import CalendarSettingsPanel from "./CalendarSettingsPanel";
 import PersonnalisationPanel from "./PersonnalisationPanel";
 import PublicationPanel from "./PublicationPanel";
+import GeneratorToolPanel from "./GeneratorToolPanel";
 import RulesetSelector from "@/components/rules/RulesetSelector";
 import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
 
@@ -162,6 +163,19 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
           initialLinks={data.links}
           initialWikiWelcomeMessage={data.wikiWelcomeMessage}
         />
+      );
+
+    case "generateurs":
+      return (
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="block-title text-base">Générateurs</h1>
+            <p className="text-xs text-ink-muted">
+              Composez taverne, échoppe ou PNJ section par section — chaque emplacement se relance individuellement.
+            </p>
+          </div>
+          <GeneratorToolPanel tools={data.tools} />
+        </div>
       );
   }
 }

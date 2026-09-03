@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderGeneratorTemplate } from "./render";
+import { formatSlotValuesForPrompt, renderGeneratorTemplate } from "./render";
 
 describe("renderGeneratorTemplate", () => {
   it("remplace une cle connue par son texte", () => {
@@ -24,5 +24,21 @@ describe("renderGeneratorTemplate", () => {
 
   it("ignore une cle fournie qui n'apparait pas dans le gabarit", () => {
     expect(renderGeneratorTemplate("Bonjour.", { name: "Aria" })).toBe("Bonjour.");
+  });
+});
+
+describe("formatSlotValuesForPrompt", () => {
+  it("met en forme un seul emplacement", () => {
+    expect(formatSlotValuesForPrompt({ nom: "Auberge du Cerf Bleu" })).toBe("nom : Auberge du Cerf Bleu");
+  });
+
+  it("met en forme plusieurs emplacements, une ligne chacun, dans l'ordre fourni", () => {
+    expect(formatSlotValuesForPrompt({ nom: "Auberge du Cerf Bleu", ambiance: "chaleureuse et bondee" })).toBe(
+      "nom : Auberge du Cerf Bleu\nambiance : chaleureuse et bondee"
+    );
+  });
+
+  it("une liste vide produit une chaine vide, jamais une erreur", () => {
+    expect(formatSlotValuesForPrompt({})).toBe("");
   });
 });

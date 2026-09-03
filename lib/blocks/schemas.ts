@@ -4,6 +4,7 @@ import { zBlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zVisibilityInput } from "@/lib/visibility/schemas";
 import { zGameDate } from "@/src/core/schemas/calendar";
 import { PERSONALITY_POLE_KEYS, RELATIONSHIP_AXIS_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
+import { DEFAULT_PROSE_LENGTH } from "@/src/core/generators/types";
 
 export const createBlockSchema = z.object({
   entityId: z.guid(),
@@ -27,6 +28,26 @@ export const reorderBlockSchema = z.object({
 /** Tirage sur un bloc random_table (V1-E1) — un seul champ optionnel, jamais plus que le nombre d'entrees distinctes d'une table (verifie cote pur, src/core/tables/roll.ts). */
 export const drawTableSchema = z.object({
   count: z.number().int().min(1).max(20).default(1),
+});
+
+/**
+ * Tirage sur un bloc generator (V1-E2/V2-J1) — `proseLength` choisi par
+ * l'auteur au moment de generer (retour utilisateur explicite), jamais
+ * figee dans le bloc. Les trois valeurs sont ecrites en dur (miroir de
+ * `PROSE_LENGTH_PRESETS`) : `z.union` exige un tuple litteral, pas un
+ * tableau construit dynamiquement.
+ *
+ * `onlySlotKey`/`knownSlotTexts` (V2-J1 Phase 2, outil MJ decompose) :
+ * relance d'un seul emplacement plutot que tout le bloc — le serveur reste
+ * sans etat, c'est le client qui renvoie les valeurs deja tirees des
+ * AUTRES emplacements pour que la route les reutilise dans le gabarit
+ * recompose (et dans le prompt IA si le bloc contient un emplacement
+ * `prose`, cf. app/api/blocks/[blockId]/generate/route.ts).
+ */
+export const drawGeneratorSchema = z.object({
+  proseLength: z.union([z.literal(30), z.literal(100), z.literal(250)]).default(DEFAULT_PROSE_LENGTH),
+  onlySlotKey: z.string().min(1).max(100).nullable().default(null),
+  knownSlotTexts: z.record(z.string(), z.string()).default({}),
 });
 
 /** Assistance redactionnelle (V1-F3) — instruction libre envoyee au modele, jamais un identifiant : le bloc cible vient de la route, pas du corps. */
