@@ -43,6 +43,7 @@ import {
 import {
   deleteRuleset,
   getEntryTranslation,
+  getOfficialBaseRulesetId,
   getRulesetById,
   getRulesetEntryByKey,
   insertRulesetVariant,
@@ -1657,4 +1658,100 @@ export async function importRulesetEntries(supabase: TypedClient, input: { rules
   }
 
   return { imported, errors, rulesetId: currentRulesetId };
+}
+
+export interface RulesetExport {
+  name: string;
+  baseSystem: string;
+  entries: ImportRulesetEntryInput[];
+}
+
+/**
+ * Export d'un ruleset au format "notre format" (V2-J4,
+ * specs/arbitrage-modifications.md §1.2) — le vrai miroir de
+ * `importRulesetEntries` : meme forme exacte (`ImportRulesetEntryInput[]`),
+ * consommable telle quelle par `createRulesetFromImport` ci-dessous.
+ *
+ * Bug reel trouve en verifiant en direct : une premiere version lisait
+ * `listRulesetEntries` (table `ruleset_entries`) — vide pour une variante
+ * homebrew, qui n'y materialise jamais rien. Une fiche creee via
+ * `upsertRulesetOverride` (add_entry/add_block, meme chemin que
+ * `importRulesetEntries`/`createHomebrewWeapon`) vit UNIQUEMENT dans
+ * `ruleset_overrides`, resolue a la lecture — jamais copiee dans
+ * `ruleset_entries` (reserve au contenu officiel materialise par
+ * `scripts/ingest-srd.ts`). Reutilise donc `listEntryLevelOverridesForRuleset`
+ * (toutes les cles `add_entry` de CE niveau, meme fonction que la barre
+ * laterale) puis `applyOverrides` (le meme resolveur pur que
+ * `resolveEntryBlocksInRuleset`, scope a CE seul niveau — jamais la chaine
+ * heritee, un ruleset exporte ses propres entrees, jamais le SRD dont il
+ * herite).
+ */
+export async function exportRulesetEntries(supabase: TypedClient, rulesetId: string): Promise<RulesetExport | null> {
+  const ruleset = await getRulesetById(supabase, rulesetId);
+  if (!ruleset) return null;
+
+  const levelOverrides = await listEntryLevelOverridesForRuleset(supabase, rulesetId);
+  const entryKeys = [...new Set(levelOverrides.filter((o) => o.action === "add_entry").map((o) => o.entry_key))];
+
+  const entries: ImportRulesetEntryInput[] = [];
+  for (const entryKey of entryKeys) {
+    const rows = await listOverridesForRuleset(supabase, rulesetId, entryKey);
+    // `add_entry` porte {name, entry_type} (zAddEntryPayload) — `applyOverrides`
+    // attend un `ResolvableEntry` complet ({entry_key, entry_type, blocks: []})
+    // pour amorcer l'entree, meme reecriture que `resolveEntryBlocksInRuleset`
+    // ci-dessus. Les autres actions (add_block...) portent deja la forme attendue.
+    let name = entryKey;
+    const overrides: OverrideInput[] = rows.map((row) => {
+      if (row.action === "add_entry") {
+        const addEntry = zAddEntryPayload.parse(row.payload);
+        name = addEntry.name;
+        return {
+          block_type: null,
+          action: "add_entry",
+          payload: { entry_key: entryKey, entry_type: addEntry.entry_type, blocks: [] } satisfies ResolvableEntry,
+          patch: null,
+        };
+      }
+      return { block_type: row.block_type, action: row.action as OverrideInput["action"], payload: row.payload, patch: row.patch };
+    });
+    const resolved = applyOverrides(null, overrides);
+    if (!resolved || resolved.disabled) continue;
+
+    entries.push({
+      entry_key: entryKey,
+      name,
+      entry_type: resolved.entry_type as EntryType,
+      blocks: resolved.blocks.map((b) => ({
+        block_type: b.block_type as BlockType,
+        display: b.display as { label?: string; layout?: string; collapsed?: boolean },
+        data: b.data,
+      })),
+    });
+  }
+
+  return { name: ruleset.name, baseSystem: ruleset.base_system, entries };
+}
+
+/**
+ * Import "notre format" → NOUVEAU ruleset personnel (V2-J4), plutot que
+ * d'ajouter dans la variante deja active (`importRulesetEntries` seul,
+ * comportement existant, inchange). Cree la variante `personal_reference`
+ * (`createRulesetVariant`, memes verrous en base que toute autre —
+ * `content_origin` seul suffit, rien a re-ecrire ici) a partir du ruleset
+ * officiel correspondant a `baseSystem`, puis y importe les entrees par le
+ * MEME chemin que l'ajout dans une variante existante — un seul mecanisme
+ * d'ecriture, jamais un second.
+ */
+export async function createRulesetFromImport(
+  supabase: TypedClient,
+  input: { name: string; baseSystem: string; entries: ImportRulesetEntryInput[] }
+): Promise<{ ok: true; result: ImportRulesetEntriesResult } | { ok: false; reason: "unknown_base_system" | "forbidden" }> {
+  const parentRulesetId = await getOfficialBaseRulesetId(supabase, input.baseSystem);
+  if (!parentRulesetId) return { ok: false, reason: "unknown_base_system" };
+
+  const created = await createRulesetVariant(supabase, { name: input.name, parentRulesetId, personalReference: true });
+  if (!created) return { ok: false, reason: "forbidden" };
+
+  const result = await importRulesetEntries(supabase, { rulesetId: created.id, entries: input.entries });
+  return { ok: true, result };
 }

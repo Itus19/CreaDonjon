@@ -46,7 +46,7 @@ const zImportBlock = z.object({
   data: z.unknown(),
 });
 
-const zImportEntry = z.object({
+export const zImportEntry = z.object({
   // Autorise `_` (convention SRD, ex. "great_weapon_fighting") ET `-`
   // (convention `slugify()`, utilisee si absent) — jamais impose l'un ou
   // l'autre a un fichier ecrit a la main.
@@ -70,3 +70,18 @@ export const importRulesetEntriesSchema = z.object({
   entries: z.array(zImportEntry).min(1).max(200),
 });
 export type ImportRulesetEntriesInput = z.infer<typeof importRulesetEntriesSchema>;
+
+/**
+ * Import "notre format" → nouveau ruleset personnel (V2-J4) — meme forme
+ * `entries` que `importRulesetEntriesSchema` (c'est le vrai miroir de
+ * l'export, `GET /api/rulesets/[rulesetId]/export`), mais cree une variante
+ * `personal_reference` plutot que d'ajouter dans celle deja active.
+ * `baseSystem` doit correspondre a un ruleset officiel existant, verifie
+ * cote service (`getOfficialBaseRulesetId`), jamais ici.
+ */
+export const createRulesetFromImportSchema = z.object({
+  name: z.string().trim().min(1, "Le nom est requis.").max(120, "120 caractères maximum."),
+  baseSystem: z.string().trim().min(1, "Le système de base est requis."),
+  entries: z.array(zImportEntry).min(1).max(200),
+});
+export type CreateRulesetFromImportInput = z.infer<typeof createRulesetFromImportSchema>;

@@ -765,14 +765,67 @@ Le lot E de la V1 a écrit les générateurs avec leurs emplacements de prose **
 
 **Bug réel repéré en passant, hors périmètre** : la barre latérale d'un monde plante une clé React dupliquée (avertissement console) quand une entité porte le type fixe `generateur` ET qu'une autre porte une catégorie personnalisée nommée `generateur` (minuscule) — coïncidence de ce monde de test précisément, mais un vrai bug de génération de clé dans le regroupement par catégorie. Flagué comme tâche séparée, pas corrigé ici.
 
-### V2-J4 — Import de règles au format JSON · `M`
+### V2-J4 — Import de règles au format JSON · `M` — fait
 
 `arbitrage-modifications.md` §1.2.
 
-- [ ] Import à notre format documenté, miroir exact de l'export.
-- [ ] Assistant de correspondance pour un format tiers — l'utilisateur associe les champs, on n'écrit pas trente convertisseurs.
-- [ ] Un ruleset importé est marqué `personal_reference` par défaut, avec ses verrous.
-- [ ] **Aucune analyse automatique de PDF.** Position inchangée.
+**Contradiction trouvée en travaillant le ticket** : la spec affirmait que
+l'export existait déjà en miroir de l'import — faux, le seul export de
+ruleset existant (`worldExport.ts`, embarqué dans l'export de monde)
+produit une forme diff (`ruleset_overrides` bruts), pas la forme
+entrée/blocs que l'import accepte. Construit ici le vrai miroir qui
+manquait plutôt que de le supposer acquis.
+
+- [x] Import à notre format documenté, miroir exact de l'export — `GET
+  /api/rulesets/[rulesetId]/export` (nouveau, `exportRulesetEntries`) et
+  `POST /api/rulesets/import` (nouveau, `createRulesetFromImport`,
+  distinct de `POST /api/rulesets/[rulesetId]/import` déjà existant qui
+  continue d'ajouter dans la variante active, inchangé) échangent
+  exactement la même forme `{name, baseSystem, entries}`.
+- [x] Assistant de correspondance pour un format tiers —
+  `components/rules/RulesetImportMappingDialog.tsx` : l'utilisateur associe
+  un champ source au nom, un ou plusieurs champs à une description
+  concaténée, un seul type de règle pour tout le lot. Un seul bloc
+  `description` générique par entrée, jamais de blocs structurés devinés.
+  Fonction pure testée d'abord (`src/core/ruleset/thirdPartyMapping.ts`,
+  5 tests). Converge sur la même route serveur que l'import "notre
+  format" — jamais un second chemin d'écriture.
+- [x] Ruleset importé marqué `personal_reference` par défaut — réutilise
+  `createRulesetVariant(..., personalReference: true)` déjà existant ;
+  les verrous (triggers `forbid_share_personal_ruleset`/
+  `forbid_personal_reference_downgrade`) existaient déjà en base, aucun
+  code de restriction à écrire.
+- [x] Aucune analyse automatique de PDF — position inchangée, rien construit.
+
+**Vérifié en direct** : ajout d'une entrée homebrew réelle à une variante
+`personal_reference` existante, export → JSON avec l'entrée correcte,
+réimport via "Créer un nouveau ruleset personnel" → nouvelle variante
+`content_origin: personal_reference` avec l'entrée identique. Bascule du
+monde sur cette nouvelle variante puis tentative de créer un lien de
+partage public : refusée par le trigger existant (confirmé dans les logs
+serveur), preuve qu'il s'applique bien sans code neuf. Assistant de
+correspondance testé avec un faux fichier tiers (3 enregistrements, 1 sans
+titre) : 2 règles importées, le troisième correctement écarté. Rulesets et
+entrées de test supprimés après vérification — sauf une entrée homebrew
+d'exemple ("Dague de test V2-J4") laissée sur "Guide du MJ maison",
+aucune route de suppression d'entrée individuelle n'existe (seulement la
+suppression d'un ruleset entier), signalé au propriétaire plutôt que
+retiré en douce. `npm run typecheck && npm run lint && npm run test:core`
+passent (710 tests, dont les 5 nouveaux).
+
+**Bug réel repéré en vérifiant, corrigé avant de considérer le ticket
+fini** : la première version d'`exportRulesetEntries` lisait
+`listRulesetEntries` (table `ruleset_entries`) — toujours vide pour une
+variante homebrew, qui n'y matérialise jamais rien (réservé au contenu
+officiel ingéré par `scripts/ingest-srd.ts`). Le contenu d'une variante
+vit uniquement dans `ruleset_overrides`, résolu à la lecture — corrigé en
+réutilisant `listEntryLevelOverridesForRuleset`/`applyOverrides`, le même
+résolveur pur que `resolveEntryBlocksInRuleset`, scopé à ce seul niveau.
+
+**Repéré en passant, hors périmètre, flagué séparément** : l'échec du
+trigger de partage sur un ruleset `personal_reference` remonte comme un
+crash de page brut plutôt qu'un message inline dans le panneau
+Publication — un vrai gain d'UX, mais un ticket à part.
 
 ---
 
