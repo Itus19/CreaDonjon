@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
+import { ENTITY_KINDS } from "@/lib/entities/schemas";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -288,8 +289,6 @@ export async function restoreEntity(
   return { ok: true, restored: data === true };
 }
 
-const FIXED_ENTITY_KINDS = ["character", "location", "faction", "item", "creature", "quest", "event", "other"];
-
 /** Categories personnalisees deja utilisees dans ce monde (V2-G7) : pour qu'une deuxieme fiche puisse rejoindre la meme categorie plutot que d'en recreer une a chaque fois. */
 export async function listCustomEntityKindsForWorld(supabase: TypedClient, worldId: string): Promise<string[]> {
   const { data, error } = await supabase
@@ -297,7 +296,7 @@ export async function listCustomEntityKindsForWorld(supabase: TypedClient, world
     .select("entity_kind")
     .eq("world_id", worldId)
     .is("deleted_at", null)
-    .not("entity_kind", "in", `(${FIXED_ENTITY_KINDS.join(",")})`);
+    .not("entity_kind", "in", `(${ENTITY_KINDS.join(",")})`);
   if (error) throw new Error(error.message);
   return [...new Set(data.map((row) => row.entity_kind))].sort((a, b) => a.localeCompare(b));
 }
