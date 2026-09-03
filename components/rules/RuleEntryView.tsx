@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { RuleEntryDetail } from "@/src/server/services/rules";
 import type { ActionsBlockData, LegendaryActionsBlockData, StatBlockBlockData, TraitsBlockData } from "@/src/core/schemas/rule-blocks";
@@ -7,6 +9,7 @@ import RuleBlockRenderer from "@/components/rules/RuleBlockRenderer";
 import { MonsterCard } from "@/components/rules/blockContentRenderer";
 import MissingBlocksBanner from "@/components/rules/MissingBlocksBanner";
 import RuleRefsPanel from "@/components/rules/RuleRefsPanel";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 /** Coquille joueur (retour utilisateur : "les blocs de données brutes SRD ne sont pas visibles par défaut" — puis, sur un `<details>` replie : "le titre... est toujours visible") — retires ENTIEREMENT pour un joueur (jamais juste replies, un `<summary>` reste visible par nature), toujours visibles pour le MJ. Tables techniques telles quelles, jamais mises en recit — le contenu narratif (description, traits, actions...) n'est jamais concerne. */
 const RAW_DATA_BLOCK_TYPES = new Set(["custom_table", "class_progression", "spellcasting_progression"]);
@@ -30,7 +33,26 @@ export default function RuleEntryView({
   playerRestricted?: boolean;
 }) {
   const t = useTranslations("regles");
+  const router = useRouter();
   const entryTypeLabels = t.raw("entryTypes") as Record<string, string>;
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function handleDelete() {
+    setDeleting(true);
+    setDeleteError(null);
+    const res = await fetch(`/api/worlds/${worldSlug}/regles/${entry.entryKey}/disable`, { method: "POST" });
+    setDeleting(false);
+    setConfirmingDelete(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setDeleteError(body?.error ?? "Impossible de supprimer cette fiche.");
+      return;
+    }
+    router.push(`/m/${worldSlug}/regles`);
+    router.refresh();
+  }
 
   const statBlockEntry = entry.blocks.find((b) => b.blockType === "stat_block");
   const traitsEntry = entry.blocks.find((b) => b.blockType === "traits");
@@ -59,11 +81,22 @@ export default function RuleEntryView({
               <span className="whitespace-nowrap px-1 py-1 text-sm font-medium text-ink-muted">
                 {entryTypeLabels[entry.entryType] ?? entry.entryType}
               </span>
+              {!playerRestricted && entry.isHomebrew && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(true)}
+                  className="whitespace-nowrap text-xs text-danger hover:underline"
+                  title="Supprimer cette fiche maison"
+                >
+                  Supprimer
+                </button>
+              )}
             </div>
           </div>
           {entry.sourceAttribution && (
             <span className="mt-0.5 font-mech text-xs text-ink-muted">{entry.sourceAttribution}</span>
           )}
+          {deleteError && <p className="mt-0.5 text-xs text-danger">{deleteError}</p>}
         </div>
 
         {/* Coquille joueur (retour utilisateur) : "si il n'y en a pas, le
@@ -118,6 +151,17 @@ export default function RuleEntryView({
               <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} />
             ))}
       </div>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Supprimer cette fiche ?"
+        message={`« ${entry.name} » sera retirée de ce ruleset. Cette action ne peut pas être annulée depuis l'interface.`}
+        confirmLabel={deleting ? "Suppression…" : "Supprimer"}
+        cancelLabel="Annuler"
+        danger
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </div>
   );
 }

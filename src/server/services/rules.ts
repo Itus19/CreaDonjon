@@ -261,6 +261,8 @@ export interface RuleEntryDetail {
   modifiedBlockTypes: string[];
   /** V1-D5, specs/ruleset-personnel.md — badge "reference personnelle" : au moins une surcharge d'un ruleset personal_reference de la chaine touche reellement cette fiche. */
   personalReference: boolean;
+  /** Fiche maison (V1-D4, `add_entry` sans aucune ligne de base dans la chaine officielle) — n'existe QUE par surcharge, jamais materialisee dans `ruleset_entries`. Seule condition pour proposer "Supprimer cette fiche" : une fiche officielle ou heritee reste intouchable. */
+  isHomebrew: boolean;
 }
 
 function maxLevelForAxis(axis: ScalingBlockData["axis"]): number {
@@ -955,6 +957,7 @@ export async function getRuleEntryForWorld(
     incomingRefs,
     modifiedBlockTypes: resolved.modifiedBlockTypes,
     personalReference,
+    isHomebrew: entry === null,
   };
 }
 
@@ -1754,4 +1757,39 @@ export async function createRulesetFromImport(
 
   const result = await importRulesetEntries(supabase, { rulesetId: created.id, entries: input.entries });
   return { ok: true, result };
+}
+
+export type DisableRulesetEntryResult = "ok" | "not_found" | "official";
+
+/**
+ * "Supprimer cette fiche" pour une fiche maison (retour utilisateur,
+ * suite V2-J4) — reutilise `disable_entry`, deja lu partout
+ * (`applyOverrides`/`mergeHomebrewEntries`) mais jamais ecrit nulle part
+ * avant ce ticket. Meme cle de conflit que `add_entry`
+ * (`overrides_target_uniq` sur `(ruleset_id, entry_key, coalesce(block_type,''))`,
+ * SCHEMA.md §9.4) : pour une fiche entierement maison, cet upsert REMPLACE
+ * la ligne `add_entry` existante — plus aucune donnee pour la reconstruire,
+ * `applyOverrides` renvoie `null`, la fiche disparait reellement des
+ * listings. Jamais de suppression physique de ligne : coherent avec
+ * `ruleset_overrides` en journal append-only (SCHEMA.md §9.4), juste une
+ * nouvelle ligne qui rend l'ancienne sans effet.
+ */
+export async function disableRulesetEntry(
+  supabase: TypedClient,
+  params: { rulesetId: string; entryKey: string }
+): Promise<DisableRulesetEntryResult> {
+  const ruleset = await getRulesetById(supabase, params.rulesetId);
+  if (!ruleset) return "not_found";
+  if (ruleset.is_official_base) return "official";
+
+  await upsertRulesetOverride(supabase, {
+    rulesetId: params.rulesetId,
+    entryKey: params.entryKey,
+    blockType: null,
+    action: "disable_entry",
+    payload: {},
+    patch: null,
+    note: null,
+  });
+  return "ok";
 }
