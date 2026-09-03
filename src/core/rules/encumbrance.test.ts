@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeEncumbrance, encumbranceModifiers, ftToM, lbToKg, totalCarriedWeight } from "./encumbrance";
+import { computeEncumbrance, encumbranceModifiers, ftToM, kgToLb, lbToKg, mToFt, totalCarriedWeight } from "./encumbrance";
 import type { InventoryItem } from "../schemas/blocks/inventory";
 
 // Seuils verifies dans le texte de regle du SRD 2014 (data/srd/srd-2014.json,
@@ -86,6 +86,26 @@ describe("ftToM", () => {
 
   it("0 ft -> 0 m", () => {
     expect(ftToM(0)).toBe(0);
+  });
+});
+
+describe("kgToLb", () => {
+  it("inverse de lbToKg (creation d'arme maison, saisie en kg) : 95.3 kg -> ~210 lb", () => {
+    expect(kgToLb(95.3)).toBeCloseTo(210, 0);
+  });
+
+  it("0 kg -> 0 lb", () => {
+    expect(kgToLb(0)).toBe(0);
+  });
+});
+
+describe("mToFt", () => {
+  it("inverse de ftToM (portee d'arme maison, saisie en metres) : 24.4 m -> ~80 ft", () => {
+    expect(mToFt(24.4)).toBeCloseTo(80, 0);
+  });
+
+  it("0 m -> 0 ft", () => {
+    expect(mToFt(0)).toBe(0);
   });
 });
 

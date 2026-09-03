@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { CURRENCY_LABELS_FR } from "@/src/i18n/fr";
 import type { WeaponProposal } from "@/src/core/ai/weaponProposal";
-import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
+import { clearWorldRuleEntriesCache, useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 import DescriptionTextarea from "@/components/rules/DescriptionTextarea";
+import Checkbox from "@/components/shared/Checkbox";
+import Dropdown from "@/components/shared/Dropdown";
+import { kgToLb, lbToKg, mToFt } from "@/src/core/rules/encumbrance";
 
 interface SelectableRuleset {
   id: string;
@@ -53,6 +56,14 @@ export default function CreateHomebrewWeaponForm({
 }) {
   const t = useTranslations("regles");
   const router = useRouter();
+  const worldEntries = useWorldRuleEntries(worldSlug);
+  // Proprietes/bottes d'arme sont de vraies fiches (`entry_type: "feature"`,
+  // clés `weapon-property-*`/`weapon-mastery-*` — scripts/ingest-srd.ts),
+  // jamais un enum fige dans le code : la liste proposee ici reflete donc
+  // toujours exactement ce que porte le ruleset actif (2014 sans bottes,
+  // 2024 avec), retour utilisateur ("verifie... toutes les options possibles").
+  const weaponProperties = worldEntries.filter((e) => e.key.startsWith("weapon-property-"));
+  const weaponMasteries = worldEntries.filter((e) => e.key.startsWith("weapon-mastery-"));
 
   const [loading, setLoading] = useState(true);
   const [currentRuleset, setCurrentRuleset] = useState<SelectableRuleset | null>(null);
@@ -61,12 +72,16 @@ export default function CreateHomebrewWeaponForm({
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<"simple" | "martial">("simple");
   const [isRanged, setIsRanged] = useState(false);
+  const [rangeNormal, setRangeNormal] = useState("");
+  const [rangeLong, setRangeLong] = useState("");
   const [diceCount, setDiceCount] = useState(1);
   const [diceFaces, setDiceFaces] = useState<number>(6);
   const [damageType, setDamageType] = useState("");
   const [versatile, setVersatile] = useState(false);
   const [versatileDiceCount, setVersatileDiceCount] = useState(1);
   const [versatileDiceFaces, setVersatileDiceFaces] = useState<number>(8);
+  const [propertyKeys, setPropertyKeys] = useState<Set<string>>(new Set());
+  const [masteryKey, setMasteryKey] = useState("");
   const [weight, setWeight] = useState("");
   const [costQuantity, setCostQuantity] = useState("");
   const [costUnit, setCostUnit] = useState<(typeof CURRENCY_UNITS)[number]>("gp");
@@ -88,6 +103,15 @@ export default function CreateHomebrewWeaponForm({
       .catch(() => setError(t("erreurChargementRulesets")))
       .finally(() => setLoading(false));
   }, [worldSlug, t]);
+
+  function toggleProperty(key: string) {
+    setPropertyKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   function clearAiBadge(field: string) {
     setAiFilledFields((prev) => {
@@ -135,7 +159,7 @@ export default function CreateHomebrewWeaponForm({
       filled.add("versatile");
     }
     if (p.weight_lb !== undefined) {
-      setWeight(String(p.weight_lb));
+      setWeight(String(lbToKg(p.weight_lb)));
       filled.add("weight");
     }
     if (p.cost_quantity !== undefined) {
@@ -158,8 +182,16 @@ export default function CreateHomebrewWeaponForm({
       is_ranged: isRanged,
       damage: { dice: { op: "dice", count: diceCount, faces: diceFaces }, type: damageType.trim() || undefined },
       versatile_damage: versatile ? { op: "dice", count: versatileDiceCount, faces: versatileDiceFaces } : undefined,
-      properties: [],
-      weight: weight.trim() ? { value: Number(weight), unit: "lb" } : undefined,
+      properties: [...propertyKeys].map((key) => ({ kind: "rule" as const, key })),
+      mastery: masteryKey ? { kind: "rule" as const, key: masteryKey } : undefined,
+      range:
+        isRanged && rangeNormal.trim()
+          ? {
+              normal: { value: mToFt(Number(rangeNormal)), unit: "ft" },
+              long: rangeLong.trim() ? { value: mToFt(Number(rangeLong)), unit: "ft" } : undefined,
+            }
+          : undefined,
+      weight: weight.trim() ? { value: kgToLb(Number(weight)), unit: "lb" } : undefined,
       cost: costQuantity.trim() ? { value: Number(costQuantity), unit: costUnit } : undefined,
     };
 
@@ -257,19 +289,49 @@ export default function CreateHomebrewWeaponForm({
             <option value="martial">{t("armeDeGuerre")}</option>
           </select>
         </label>
-        <label className="flex items-end gap-2 pb-2 text-sm text-ink">
-          <input
-            type="checkbox"
+        <div className="flex items-end pb-2">
+          <Checkbox
             checked={isRanged}
-            onChange={(e) => {
-              setIsRanged(e.target.checked);
+            onChange={() => {
+              setIsRanged(!isRanged);
               clearAiBadge("is_ranged");
             }}
+            label={
+              <span className="flex items-center gap-1.5 text-sm text-ink">
+                {t("armeADistance")}
+                <AiBadge shown={aiFilledFields.has("is_ranged")} label={t("champRempliParIA")} />
+              </span>
+            }
           />
-          {t("armeADistance")}
-          <AiBadge shown={aiFilledFields.has("is_ranged")} label={t("champRempliParIA")} />
-        </label>
+        </div>
       </div>
+
+      {isRanged && (
+        <div className="flex gap-3">
+          <label className="flex flex-col gap-1 text-sm text-ink">
+            {t("porteeNormaleMetres")}
+            <input
+              type="number"
+              min={0}
+              step="0.5"
+              value={rangeNormal}
+              onChange={(e) => setRangeNormal(e.target.value)}
+              className="w-28 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-ink">
+            {t("porteeLongueMetres")}
+            <input
+              type="number"
+              min={0}
+              step="0.5"
+              value={rangeLong}
+              onChange={(e) => setRangeLong(e.target.value)}
+              className="w-28 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
+            />
+          </label>
+        </div>
+      )}
 
       <div className="flex gap-3">
         <label className="flex flex-col gap-1 text-sm text-ink">
@@ -326,18 +388,19 @@ export default function CreateHomebrewWeaponForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="flex items-center gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
-            checked={versatile}
-            onChange={(e) => {
-              setVersatile(e.target.checked);
-              clearAiBadge("versatile");
-            }}
-          />
-          {t("armePolyvalente")}
-          <AiBadge shown={aiFilledFields.has("versatile")} label={t("champRempliParIA")} />
-        </label>
+        <Checkbox
+          checked={versatile}
+          onChange={() => {
+            setVersatile(!versatile);
+            clearAiBadge("versatile");
+          }}
+          label={
+            <span className="flex items-center gap-1.5 text-sm text-ink">
+              {t("armePolyvalente")}
+              <AiBadge shown={aiFilledFields.has("versatile")} label={t("champRempliParIA")} />
+            </span>
+          }
+        />
         {versatile && (
           <div className="flex gap-3">
             <label className="flex flex-col gap-1 text-sm text-ink">
@@ -374,16 +437,44 @@ export default function CreateHomebrewWeaponForm({
         )}
       </div>
 
+      {weaponProperties.length > 0 && (
+        <div className="flex flex-col gap-1 text-sm text-ink">
+          {t("proprietesArme")}
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 sm:grid-cols-3">
+            {weaponProperties.map((property) => (
+              <Checkbox
+                key={property.key}
+                checked={propertyKeys.has(property.key)}
+                onChange={() => toggleProperty(property.key)}
+                label={<span className="text-xs text-ink">{property.name}</span>}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {weaponMasteries.length > 0 && (
+        <label className="flex flex-col gap-1 text-sm text-ink">
+          {t("botteArme")}
+          <Dropdown
+            value={masteryKey}
+            options={[{ value: "", label: t("aucuneBotte") }, ...weaponMasteries.map((m) => ({ value: m.key, label: m.name }))]}
+            onChange={setMasteryKey}
+            className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+          />
+        </label>
+      )}
+
       <div className="flex gap-3">
         <label className="flex flex-col gap-1 text-sm text-ink">
           <span className="flex items-center gap-1.5">
-            {t("poidsLivres")}
+            {t("poidsKg")}
             <AiBadge shown={aiFilledFields.has("weight")} label={t("champRempliParIA")} />
           </span>
           <input
             type="number"
             min={0}
-            step="0.5"
+            step="0.1"
             value={weight}
             onChange={(e) => {
               setWeight(e.target.value);

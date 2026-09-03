@@ -76,6 +76,18 @@ export function lbToKg(lb: number): number {
   return Math.round(lb * LB_TO_KG * 10) / 10;
 }
 
+/**
+ * Inverse de `lbToKg` — l'AUTEUR (formulaire de creation d'arme maison,
+ * V2, retour utilisateur : "le poids dans les armes maison est en livres,
+ * il faut que ce soit en kg") saisit un poids en kg, comme partout ailleurs
+ * dans l'interface ; la donnee stockee reste en livres (meme raison que
+ * `lbToKg` : unite native SRD, coherence avec `totalCarriedWeight` qui
+ * somme des poids d'armes SRD et maison sans jamais convertir).
+ */
+export function kgToLb(kg: number): number {
+  return Math.round((kg / LB_TO_KG) * 100) / 100;
+}
+
 const FT_TO_M = 0.3048;
 
 /**
@@ -87,6 +99,11 @@ const FT_TO_M = 0.3048;
  */
 export function ftToM(ft: number): number {
   return Math.round(ft * FT_TO_M * 10) / 10;
+}
+
+/** Inverse de `ftToM`, meme raison que `kgToLb` — saisie en metres (portee d'arme maison), stockage en pieds. */
+export function mToFt(m: number): number {
+  return Math.round((m / FT_TO_M) * 10) / 10;
 }
 
 /**
