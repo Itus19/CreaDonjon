@@ -54,6 +54,7 @@ export default function LevelClassesStep({
   equipmentChoices,
   onChooseEquipmentChoices,
   hideEquipment = false,
+  hideAddClass = false,
 }: {
   worldSlug: string;
   character: CharacterBlockData;
@@ -64,6 +65,8 @@ export default function LevelClassesStep({
   onChooseEquipmentChoices: (choices: (ClassEquipmentChoiceState | null)[]) => void;
   /** Montee de niveau (V2-G1) : la premiere classe a deja recu son equipement de depart il y a longtemps — jamais reproposer cette section, meme si la fiche de classe en porte un. */
   hideEquipment?: boolean;
+  /** Coquille joueur (retour utilisateur) : le multiclassage a la creation reste un choix de MJ/table, pas un bouton libre pour un premier personnage compose seul. */
+  hideAddClass?: boolean;
 }) {
   const entries = useWorldRuleEntries(worldSlug);
   const classEntries = entries.filter((e) => e.entryType === "class");
@@ -334,13 +337,15 @@ export default function LevelClassesStep({
         );
       })}
 
-      <button
-        type="button"
-        onClick={addSlot}
-        className="w-fit rounded-full border border-edge px-3 py-1.5 text-xs text-ink transition-colors hover:bg-panel-raised"
-      >
-        + Ajouter une classe
-      </button>
+      {!hideAddClass && (
+        <button
+          type="button"
+          onClick={addSlot}
+          className="w-fit rounded-full border border-edge px-3 py-1.5 text-xs text-ink transition-colors hover:bg-panel-raised"
+        >
+          + Ajouter une classe
+        </button>
+      )}
     </div>
   );
 }

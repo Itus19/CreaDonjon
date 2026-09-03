@@ -3,6 +3,7 @@ import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
+import { getEntityById } from "@/src/server/repos/entities";
 import ParticipantCharacterSheet from "@/components/shell/ParticipantCharacterSheet";
 
 /**
@@ -29,6 +30,13 @@ export default async function JoueurPersonnagePage({ params }: { params: Promise
     return <p className="mx-auto max-w-[70ch] text-sm text-ink-muted">Aucun personnage réclamé pour l&apos;instant dans ce monde.</p>;
   }
 
+  // Nom/version necessaires seulement pour amorcer l'assistant de creation
+  // (retour utilisateur : "si le PJ reclame n'a pas de fiche de personnage")
+  // — `ParticipantCharacterSheet` ne les connaissait pas jusqu'ici, il ne
+  // charge que les BLOCS de l'entite, jamais l'entite elle-meme.
+  const entity = await getEntityById(supabase, entityId);
+  if (!entity) notFound();
+
   return (
     // `max-w-5xl` (pas `70ch`, retour utilisateur : "les boutons des actions
     // soient sur une même ligne") — la fiche jouable est un tableau de bord
@@ -37,7 +45,13 @@ export default async function JoueurPersonnagePage({ params }: { params: Promise
     // une seule ligne, contrairement a `70ch` qui forcait la bascule mobile
     // (`md:flex-row`, PlayableCharacterSheet.tsx) meme sur grand ecran.
     <div className="mx-auto max-w-5xl">
-      <ParticipantCharacterSheet worldSlug={worldSlug} campaignId={campaign.id} entityId={entityId} />
+      <ParticipantCharacterSheet
+        worldSlug={worldSlug}
+        campaignId={campaign.id}
+        entityId={entityId}
+        entityName={entity.name}
+        entityVersion={entity.version}
+      />
     </div>
   );
 }

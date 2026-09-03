@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import PlayableCharacterSheet from "@/components/blocks/PlayableCharacterSheet";
+import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
 import type { BlockItem } from "@/components/blocks/EntityBlocks";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
@@ -27,14 +28,24 @@ export default function ParticipantCharacterSheet({
   worldSlug,
   campaignId,
   entityId,
+  entityName,
+  entityVersion,
 }: {
   worldSlug: string;
   campaignId: string;
   entityId: string;
+  /** Amorce l'assistant de creation (retour utilisateur : "si le PJ reclame n'a pas de fiche de personnage") — non lu tant qu'un bloc `character` existe deja. Absent depuis l'ecran Initiative (`InitiativeTracker.tsx`) : ouvrir l'assistant complet en pleine bagarre n'a pas de sens, le bouton reste alors absent, comportement inchange. */
+  entityName?: string;
+  entityVersion?: number;
 }) {
   const [blocks, setBlocks] = useState<BlockItem[] | "loading" | "error">("loading");
   const versionsRef = useRef<Record<string, number>>({});
   const saveChainsRef = useRef<Record<string, Promise<void>>>({});
+  // Meme mecanisme que le `wizardOpen` de `EditEntityForm.tsx` (fiche MJ) —
+  // ici amorce d'un PJ deja revendique mais sans bloc `character` encore
+  // compose, jamais une creation de nouvelle entite (celle-ci existe deja).
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [reloadSignal, setReloadSignal] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,7 +66,7 @@ export default function ParticipantCharacterSheet({
     return () => {
       cancelled = true;
     };
-  }, [entityId]);
+  }, [entityId, reloadSignal]);
 
   function patchBlock(id: string, data: unknown) {
     setBlocks((prev) => (Array.isArray(prev) ? prev.map((b) => (b.id === id ? { ...b, data } : b)) : prev));
@@ -125,7 +136,41 @@ export default function ParticipantCharacterSheet({
   if (blocks === "error") return <p className="pl-2 text-xs italic text-ink-muted">Fiche introuvable.</p>;
 
   const characterBlock = blocks.find((b) => b.blockType === "character");
-  if (!characterBlock) return <p className="pl-2 text-xs italic text-ink-muted">Aucune fiche de personnage pour cette entrée.</p>;
+
+  if (!characterBlock) {
+    if (wizardOpen && entityName !== undefined && entityVersion !== undefined) {
+      return (
+        <CharacterCreatorWizard
+          worldSlug={worldSlug}
+          playerRestricted
+          entityMode={{
+            entityId,
+            expectedVersion: entityVersion,
+            initialName: entityName,
+            onCancel: () => setWizardOpen(false),
+            onDone: () => {
+              setWizardOpen(false);
+              setReloadSignal((n) => n + 1);
+            },
+          }}
+        />
+      );
+    }
+    return (
+      <div className="flex flex-col items-start gap-2 pl-2">
+        <p className="text-xs italic text-ink-muted">Aucune fiche de personnage pour cette entrée.</p>
+        {entityName !== undefined && entityVersion !== undefined && (
+          <button
+            type="button"
+            onClick={() => setWizardOpen(true)}
+            className="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
+          >
+            Créer mon personnage
+          </button>
+        )}
+      </div>
+    );
+  }
 
   const inventoryBlock = blocks.find((b) => b.blockType === "inventory");
   const spellcastingBlock = blocks.find((b) => b.blockType === "spellcasting");
