@@ -10,5 +10,6 @@ export const ENTITY_KIND_LABELS: Record<(typeof ENTITY_KINDS)[number], string> =
   event: "Événement",
   carte: "Carte",
   generateur: "Générateur",
+  session_prep: "Préparation de séance",
   other: "Autre",
 };

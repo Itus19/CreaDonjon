@@ -10,6 +10,7 @@ const ENTITY_KINDS = [
   "event",
   "carte",
   "generateur",
+  "session_prep",
   "other",
 ] as const;
 

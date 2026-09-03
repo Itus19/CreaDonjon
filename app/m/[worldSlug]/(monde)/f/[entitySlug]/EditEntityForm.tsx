@@ -385,6 +385,16 @@ export default function EditEntityForm({
                   <RequestEditButton campaignId={campaignId} entityId={entity.id} />
                 </span>
               )}
+              {entity.entity_kind === "session_prep" && (
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="shrink-0 rounded-full border border-edge px-2.5 py-1 text-xs text-ink-muted transition-colors hover:bg-panel hover:text-ink"
+                  title="Imprimer cette fiche"
+                >
+                  Imprimer
+                </button>
+              )}
               <EntityHistoryPanel entityId={entity.id} />
               <button
                 type="button"

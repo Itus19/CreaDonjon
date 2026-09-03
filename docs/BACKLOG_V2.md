@@ -755,11 +755,15 @@ Le lot E de la V1 a écrit les générateurs avec leurs emplacements de prose **
 
 **Vérifié en direct** (monde Faerûn/Campagne test) : ajout d'une référence réelle sur l'entrée "un nain jovial…" de `patrons-tavernes` (liée à "Le Poignard des Trois Silences", via le même PATCH que l'éditeur enverrait — pas d'UI dédiée pour ça encore, cf. `RandomTableBlockEditor.tsx`) ; tirage des trois sections Taverne, relance individuelle jusqu'à obtenir cette entrée, clic "Créer la fiche" → nouvelle fiche "La Rose Écarlate" (type Lieu, publique), bloc "L'établissement" avec le texte tiré ET la référence cliquable vers "Le Poignard des Trois Silences", bloc "La Chambre" avec son texte — aucune ligne `relations` créée (confirmé par requête directe). Promotion de chronologie testée sur une entrée jetable (créée puis supprimée après vérification) : résultat identique à avant le refactor. `npm run typecheck && npm run lint && npm run test:core` passent ; nouveaux tests d'intégration `promotion.integration.test.ts` (entité+bloc créés, références embarquées, emplacement vide omis) passent.
 
-### V2-J3 — Assistant de préparation de séance · `M`
+### V2-J3 — Assistant de préparation de séance · `M` — fait
 
-- [ ] Une entité de type `session_prep` avec des blocs. **Pas un second système de documents.**
-- [ ] Boutons d'insertion de générateur dans l'éditeur.
-- [ ] Feuille de style d'impression.
+- [x] Entité de type `session_prep` avec des blocs — **aucun second système de documents** : ajout cosmétique à `ENTITY_KINDS` (`lib/entities/schemas.ts`, déjà du texte libre côté schéma) + un libellé (`entityKindLabels.ts`), rien d'autre — une fiche `session_prep` est une fiche normale avec des blocs `text` normaux.
+- [x] Bouton d'insertion de générateur dans l'éditeur — nouvelle section repliable "▸ Insérer un générateur" dans `TextBlockEditor.tsx` (même forme que "▸ Assistance IA" juste au-dessus, même mécanisme de remount ciblé pour afficher le résultat sans recharger la page — `RichTextEditor` est un éditeur Tiptap non contrôlé). Liste les sections de l'outil MJ "Générateurs" (`GET .../mj/generateurs/window`, déjà existant), tire (`POST /api/blocks/[blockId]/generate`, déjà existant) et ajoute le texte comme nouveau paragraphe (`PATCH /api/blocks/[blockId]`, déjà existant) — **aucune nouvelle route serveur**. Volontairement disponible sur TOUT bloc `text`, pas seulement les fiches `session_prep` (cohérent avec "vous avez déjà tout").
+- [x] Feuille de style d'impression — déjà écrite (`app/globals.css`, `@media print`, précédent `CharacterSheetHeader.tsx`). Seul ajout : un bouton "Imprimer" dans l'en-tête de fiche, visible uniquement quand `entity_kind === "session_prep"`, `onClick={() => window.print()}`.
+
+**Vérifié en direct** (monde Faerûn/Campagne test) : fiche `session_prep` créée, bloc Texte ajouté, "Insérer un générateur" → tirage de "Nom de l'établissement" → le paragraphe apparaît immédiatement sans rechargement, confirmé persistant après un vrai rechargement de page. Bouton "Imprimer" déclenche bien la boîte de dialogue d'impression native du navigateur (comportement bloquant confirmé — la seule preuve possible depuis l'automatisation, le contenu de la boîte de dialogue elle-même est hors DOM). Fiche de test supprimée après vérification. `npm run typecheck && npm run lint && npm run test:core` passent.
+
+**Bug réel repéré en passant, hors périmètre** : la barre latérale d'un monde plante une clé React dupliquée (avertissement console) quand une entité porte le type fixe `generateur` ET qu'une autre porte une catégorie personnalisée nommée `generateur` (minuscule) — coïncidence de ce monde de test précisément, mais un vrai bug de génération de clé dans le regroupement par catégorie. Flagué comme tâche séparée, pas corrigé ici.
 
 ### V2-J4 — Import de règles au format JSON · `M`
 

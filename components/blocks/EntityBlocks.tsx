@@ -140,6 +140,7 @@ function BlockDataEditor({
           onChange={(d) => onChange(d)}
           entityId={block.entityId}
           blockId={block.id}
+          worldSlug={worldSlug}
           onBlockRefreshed={onBlockRefreshed}
           hideAssist={hideAiAssist}
         />
