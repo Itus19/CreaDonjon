@@ -1469,6 +1469,7 @@ export async function deleteRulesetVariant(supabase: TypedClient, rulesetId: str
 const zCreateHomebrewWeaponInput = z.object({
   rulesetId: z.string().uuid(),
   name: z.string().min(1),
+  description: z.string().optional(),
   weapon: zWeaponBlockData,
   note: z.string().min(1).optional(),
 });
@@ -1513,6 +1514,32 @@ export async function createHomebrewWeapon(
     note: parsed.note ?? null,
   });
 
+  // "Reutilise l'id renvoye par le premier appel" (voir commentaire plus bas) :
+  // chaque add_block suivant doit viser le meme id, mis a jour a chaque etape.
+  let rulesetIdAfterBlocks = rulesetIdAfterEntry;
+
+  if (parsed.description?.trim()) {
+    const descriptionBlock: ResolvableBlock = {
+      block_type: "description",
+      display: { label: "Description", layout: "prose" },
+      data: { segments: [{ text: parsed.description.trim() }] },
+      // Avant le bloc `weapon` (display_order 150) — meme ordre de lecture
+      // que les historiques/dons maison (Description avant les valeurs
+      // mecaniques, voir listOverridesForRuleset : les add_block d'une meme
+      // entree se trient par display_order, pas par ordre d'ecriture).
+      display_order: 100,
+    };
+    rulesetIdAfterBlocks = await upsertRulesetOverride(supabase, {
+      rulesetId: rulesetIdAfterBlocks,
+      entryKey,
+      blockType: "description",
+      action: "add_block",
+      payload: descriptionBlock as unknown as Json,
+      patch: null,
+      note: parsed.note ?? null,
+    });
+  }
+
   const weaponBlock: ResolvableBlock = {
     block_type: "weapon",
     display: { label: "Arme", layout: "key_values" },
@@ -1523,7 +1550,7 @@ export async function createHomebrewWeapon(
     // Reutilise l'id renvoye par le premier appel, pas parsed.rulesetId :
     // si le ruleset etait deja publie, le premier appel a fork une v+1 —
     // ce second appel doit viser cette meme nouvelle version, pas l'originale figee.
-    rulesetId: rulesetIdAfterEntry,
+    rulesetId: rulesetIdAfterBlocks,
     entryKey,
     blockType: "weapon",
     action: "add_block",

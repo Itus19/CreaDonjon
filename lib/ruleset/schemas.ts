@@ -17,6 +17,7 @@ export const createRulesetVariantSchema = z.object({
 export const createHomebrewWeaponSchema = z.object({
   rulesetId: z.string().uuid(),
   name: z.string().min(1).max(120),
+  description: z.string().max(2000).optional(),
   weapon: zWeaponBlockData,
   note: z.string().min(1).max(500).optional(),
 });

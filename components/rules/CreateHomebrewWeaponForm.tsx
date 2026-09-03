@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { CURRENCY_LABELS_FR } from "@/src/i18n/fr";
 import type { WeaponProposal } from "@/src/core/ai/weaponProposal";
 import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
+import DescriptionTextarea from "@/components/rules/DescriptionTextarea";
 
 interface SelectableRuleset {
   id: string;
@@ -57,6 +58,7 @@ export default function CreateHomebrewWeaponForm({
   const [currentRuleset, setCurrentRuleset] = useState<SelectableRuleset | null>(null);
 
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [category, setCategory] = useState<"simple" | "martial">("simple");
   const [isRanged, setIsRanged] = useState(false);
   const [diceCount, setDiceCount] = useState(1);
@@ -69,7 +71,7 @@ export default function CreateHomebrewWeaponForm({
   const [costQuantity, setCostQuantity] = useState("");
   const [costUnit, setCostUnit] = useState<(typeof CURRENCY_UNITS)[number]>("gp");
 
-  const [description, setDescription] = useState("");
+  const [aiHint, setAiHint] = useState("");
   const [proposing, setProposing] = useState(false);
   const [proposeError, setProposeError] = useState<string | null>(null);
   const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
@@ -97,14 +99,14 @@ export default function CreateHomebrewWeaponForm({
   }
 
   async function handlePropose() {
-    if (!description.trim()) return;
+    if (!aiHint.trim()) return;
     setProposing(true);
     setProposeError(null);
 
     const res = await fetch(`/api/worlds/${worldSlug}/rules/weapons/propose`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description: description.trim() }),
+      body: JSON.stringify({ description: aiHint.trim() }),
     });
 
     setProposing(false);
@@ -164,7 +166,12 @@ export default function CreateHomebrewWeaponForm({
     const res = await fetch(`/api/worlds/${worldSlug}/rules/weapons`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rulesetId: currentRuleset.id, name: name.trim(), weapon }),
+      body: JSON.stringify({
+        rulesetId: currentRuleset.id,
+        name: name.trim(),
+        description: description.trim() || undefined,
+        weapon,
+      }),
     });
 
     setSubmitting(false);
@@ -195,28 +202,6 @@ export default function CreateHomebrewWeaponForm({
       <h1 className="text-base font-semibold text-ink">{t("creerArmeMaison")}</h1>
       <p className="text-xs text-ink-muted">{t("creerArmeMaisonVariante", { name: currentRuleset.name })}</p>
 
-      <div className="flex flex-col gap-2 rounded-md border border-edge/60 bg-panel-sunken p-3">
-        <label className="flex flex-col gap-1 text-sm text-ink">
-          {t("descriptionLibreArme")}
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder={t("descriptionLibreArmeExemple")}
-            rows={2}
-            className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-          />
-        </label>
-        <button
-          type="button"
-          onClick={handlePropose}
-          disabled={proposing || !description.trim()}
-          className="self-start rounded-full border border-edge px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-panel disabled:opacity-50"
-        >
-          {proposing ? t("propositionEnCours") : t("proposerAvecIA")}
-        </button>
-        {proposeError && <p className="text-xs text-danger">{proposeError}</p>}
-      </div>
-
       <label className="flex flex-col gap-1 text-sm text-ink">
         {t("nomDeLArme")}
         <input
@@ -226,6 +211,33 @@ export default function CreateHomebrewWeaponForm({
           className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
         />
       </label>
+
+      <div className="flex flex-col gap-1 text-sm text-ink">
+        {t("descriptionDeLArme")}
+        <DescriptionTextarea value={description} onChange={setDescription} rows={3} />
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-md border border-edge/60 bg-panel-sunken p-3">
+        <label className="flex flex-col gap-1 text-sm text-ink">
+          {t("descriptionLibreArme")}
+          <textarea
+            value={aiHint}
+            onChange={(e) => setAiHint(e.target.value)}
+            placeholder={t("descriptionLibreArmeExemple")}
+            rows={2}
+            className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={handlePropose}
+          disabled={proposing || !aiHint.trim()}
+          className="self-start rounded-full border border-edge px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-panel disabled:opacity-50"
+        >
+          {proposing ? t("propositionEnCours") : t("proposerAvecIA")}
+        </button>
+        {proposeError && <p className="text-xs text-danger">{proposeError}</p>}
+      </div>
 
       <div className="flex gap-3">
         <label className="flex flex-1 flex-col gap-1 text-sm text-ink">

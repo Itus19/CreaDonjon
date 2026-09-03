@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * Champ de description partage par les formulaires "regle maison"
- * (`CreateHomebrewFeatureForm.tsx`, `CreateHomebrewBackgroundForm.tsx`) —
- * retour utilisateur : "le même petit menu contextuel qu'on a fait pour la
- * mise en forme de texte dans les blocs de texte" (`RichTextEditor.tsx`,
- * `BubbleMenu` de Tiptap) plutot qu'un bouton fixe au-dessus du champ.
+ * (`CreateHomebrewFeatureForm.tsx`, `CreateHomebrewBackgroundForm.tsx`,
+ * `CreateHomebrewWeaponForm.tsx`) — retour utilisateur : "le même petit menu
+ * contextuel qu'on a fait pour la mise en forme de texte dans les blocs de
+ * texte" (`RichTextEditor.tsx`, `BubbleMenu` de Tiptap) plutot qu'un bouton
+ * fixe au-dessus du champ.
  *
  * Jamais le meme MOTEUR : le bloc `description` (`zDescriptionBlockData`,
  * rule-blocks/blocks.ts) reste une liste de chaines brutes, pas le modele
@@ -19,6 +21,17 @@ import { useEffect, useRef, useState } from "react";
  * ferme deja reconnu a l'affichage (`Prose.tsx`, `renderMarkdownBoldText` —
  * un paragraphe qui COMMENCE par `**Titre.**` devient un sous-titre en
  * gras, `\n` separe deux paragraphes).
+ *
+ * `createPortal` vers `document.body` (meme motif que `AddRuleMenu.tsx`) —
+ * pas cosmetique : ce champ vit typiquement dans une fenetre flottante
+ * (`WindowFrame.tsx`, `.window-frame` porte un `backdrop-blur`), et un
+ * `backdrop-filter` sur un ancetre cree un nouveau plan de reference pour
+ * tout descendant en `position: fixed` (regle CSS, pas un bug Tiptap) — nos
+ * coordonnees `clientX`/`clientY` (relatives a l'ecran) atterrissaient donc
+ * relatives a la fenetre, decalant la bulle loin de la selection reelle
+ * (retour utilisateur, bulle apparue pres du dock plutot que sur le texte).
+ * En sortant le noeud du sous-arbre DOM de la fenetre, `position: fixed`
+ * redevient bien relatif a la fenetre du navigateur.
  */
 export default function DescriptionTextarea({
   value,
@@ -102,26 +115,28 @@ export default function DescriptionTextarea({
         rows={rows}
         className="w-full rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
       />
-      {menuPos && (
-        <div
-          ref={menuRef}
-          className="fixed z-[1000] flex items-center gap-0.5 rounded-lg border border-edge-strong bg-panel-raised px-1.5 py-1 shadow-2xl"
-          style={{ left: menuPos.x, top: menuPos.y }}
-        >
-          <button
-            type="button"
-            // Empeche le textarea de perdre le focus/sa selection avant que
-            // le clic n'atteigne ce bouton (sinon plus rien a mettre en gras).
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={wrapSelectionBold}
-            aria-label="Gras"
-            title="Gras — sous-titre de paragraphe (ex. « Formation aux instruments. »)"
-            className="rounded px-2 py-1 text-xs font-bold text-ink transition-colors hover:bg-panel"
+      {menuPos &&
+        createPortal(
+          <div
+            ref={menuRef}
+            className="fixed z-[1000] flex items-center gap-0.5 rounded-lg border border-edge-strong bg-panel-raised px-1.5 py-1 shadow-2xl"
+            style={{ left: menuPos.x, top: menuPos.y }}
           >
-            G
-          </button>
-        </div>
-      )}
+            <button
+              type="button"
+              // Empeche le textarea de perdre le focus/sa selection avant que
+              // le clic n'atteigne ce bouton (sinon plus rien a mettre en gras).
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={wrapSelectionBold}
+              aria-label="Gras"
+              title="Gras — sous-titre de paragraphe (ex. « Formation aux instruments. »)"
+              className="rounded px-2 py-1 text-xs font-bold text-ink transition-colors hover:bg-panel"
+            >
+              G
+            </button>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
