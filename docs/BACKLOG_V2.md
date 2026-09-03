@@ -843,7 +843,7 @@ Fait — nouvelle vue transversale : `listGmCampaignsForUser` (`src/server/repos
 
 *Né du déploiement réel sur Vercel + Supabase (paliers gratuits), pas d'une fonctionnalité de wiki — voir `docs/adr/0012-hebergement-vercel-supabase-gratuit.md` pour le contexte complet de la décision.*
 
-### V2-L1 — Stockage des images hors de la base (Supabase Storage) · `M`
+### V2-L1 — Stockage des images hors de la base (Supabase Storage) · `M` — fait
 
 Aujourd'hui, `entity_portraits`, `block_images` et `background_images` stockent l'image directement dans une colonne `bytea` Postgres — un choix simple fait pendant la V2-G/H, jamais pensé pour tenir à l'échelle d'un compendium illustré. Ces octets comptent contre les **500 Mo de la base** du palier gratuit Supabase, jamais contre le **1 Go de stockage fichiers**, qui reste vide. L'ambition d'illustrer tout le compendium SRD 2024 (~800 entrées, 3-4 images chacune) sature la base bien avant de toucher au stockage si rien ne change.
 
@@ -855,7 +855,7 @@ Aujourd'hui, `entity_portraits`, `block_images` et `background_images` stockent 
 - [x] Les images déjà en place au moment de la migration sont copiées vers le bucket, pas seulement le code qui en écrit de nouvelles — deux scripts de bascule écrits et vérifiés en simulation (`migrate-block-images.ts`/`migrate-background-images.ts`), 0 ligne existante dans les deux tables au moment de ce ticket (rien à perdre, colonnes bytea retirées directement).
 - [x] Un bloc/portrait dont la visibilité n'est pas publique reste inaccessible par URL directe à un visiteur qui n'y a pas droit — vérifié en direct (bloc `image` passé en visibilité `gm`, absent de la réponse anonyme `/apercu`, jamais un raccourci CSS).
 - [x] Après migration, la taille de la base de données redescend nettement ; celle du bucket reflète le poids réel des images. Structurel plutôt que mesuré : les colonnes `bytea` n'existent plus, aucune image ne peut plus jamais grossir la base — la mesure elle-même n'a rien à montrer aujourd'hui (bases vides au moment du ticket).
-- [ ] Vérifié en conditions réelles (déploiement Vercel, pas seulement en local) : **non vérifié**, hors de portée de cette session (pas de déploiement Vercel accessible ici) — vérifié uniquement contre la vraie base de développement distante (Supabase hébergé, pas un Supabase local). À confirmer par l'utilisateur après un déploiement.
+- [x] Vérifié en conditions réelles (déploiement Vercel, pas seulement en local) : image de bloc téléversée et affichée sur `les-royaumes-oublies.vercel.app` (fiche Amn), passée en visibilité `gm`, confirmée absente à la fois de l'aperçu MJ simulant un visiteur anonyme ET du vrai lien de partage public (`/partage/leschroniquesdesroyaumesoublies/29`, aucune session, service-role) — jamais juste testé en local.
 
 **Fait** — `entity_portraits` était déjà entièrement migré ; ce ticket portait sur les deux tables restantes.
 
@@ -868,6 +868,8 @@ Deux migrations par table (colonne `asset_id` nullable d'abord, colonnes `bytea`
 **Bug trouvé et corrigé en cours de route, hors périmètre initial mais découlant directement de ce ticket** : `deleteBlock` (`src/server/services/blocks.ts`) supprimait un bloc `image` via la cascade FK de `block_images` (`on delete cascade`) — cette cascade ne retirait que la ligne pointeur, jamais l'asset Storage lui-même (avant ce ticket, les octets vivaient DANS `block_images`, la cascade suffisait). Corrigé : `deleteBlock` récupère l'`asset_id` avant suppression et appelle `deleteAsset` après, pour un bloc `image` uniquement — sans quoi chaque suppression de bloc image aurait laissé un fichier orphelin permanent dans le bucket. **Gap mineur signalé mais non corrigé** (hors périmètre, pré-existant) : `background_images.owner_id` a aussi `on delete cascade` vers `auth.users` — supprimer un compte invité (V2-M6) qui aurait téléversé un fond personnel orphelinerait son asset de la même façon ; rare et sans conséquence de sécurité, à corriger si ça arrive un jour.
 
 **Vérifié en direct** (monde Faerûn/La Croisade des Ombres, contre la vraie base de développement distante) : image de bloc synthétique téléversée (`POST /api/blocks/[id]/image`), affichée correctement après redirection vers l'URL signée (confirmé `type: "opaqueredirect"`) ; passée en visibilité `gm`, absente du HTML de l'aperçu public anonyme (`/apercu`, jamais juste masquée) ; fond d'écran synthétique téléversé, appliqué et affiché sur toute la page (miniature ET backdrop plein format), servi avec `Cache-Control: private, max-age=31536000, immutable` inchangé ; suppression des deux confirmée (asset et pointeur disparus, liste vide). Toutes les données de test nettoyées après vérification.
+
+**Revérifié sur le vrai déploiement Vercel** (`les-royaumes-oublies.vercel.app`, même base — retour utilisateur explicite après la première passe) : même cycle (téléversement, affichage, passage en `gm`) rejoué sur la fiche Amn en production, ET confirmé absent à la fois de l'aperçu MJ ET du vrai lien de partage public (`/partage/leschroniquesdesroyaumesoublies/29`, aucune session — la seule vérification de ce ticket qui exclut réellement toute authentification). Bloc de test supprimé, aucun résidu.
 
 `npm run typecheck && npm run lint && npm run test:core` (700 tests) passent ; `publicShare.integration.test.ts` passe.
 
