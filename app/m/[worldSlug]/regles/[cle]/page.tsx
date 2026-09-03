@@ -40,6 +40,7 @@ export default async function RuleEntryPage({
         name={entry.name}
         badge={entryTypeLabels[entry.entryType] ?? entry.entryType}
         homeHref={`/m/${worldSlug}/regles`}
+        data={entry}
       />
       <RuleEntryView entry={entry} worldSlug={worldSlug} />
       <Suspense fallback={null}>

@@ -139,9 +139,23 @@ export default function DesktopWindowsProvider({
   const activeRefs = primary ? [primary.ref, ...avecRefs] : avecRefs;
   const activeIdsKey = activeRefs.map(refId).join(",");
 
+  // Pre-alimente `avecData`/`fetchedRef` avec la donnee que la fiche
+  // primaire a deja rendue cote serveur (audit de performance, retour
+  // utilisateur) : sans ceci, une fenetre repliee en secondaire par un
+  // changement de section (Monde/Regles/MJ) n'avait jamais vu cette donnee
+  // (le rendu de la primaire passe par le RSC de la page, jamais par
+  // `avecData`) et se refetchait a vide en affichant "Chargement..." pour
+  // une fiche pourtant deja affichee l'instant d'avant.
   const registerPrimary = useCallback((info: PrimaryWindowInfo | null) => {
     setPrimary(info);
-    if (info) setFocusedId(refId(info.ref));
+    if (info) {
+      setFocusedId(refId(info.ref));
+      if (info.data !== undefined) {
+        const id = refId(info.ref);
+        fetchedRef.current.add(id);
+        setAvecData((prev) => (prev[id] === info.data ? prev : { ...prev, [id]: info.data! }));
+      }
+    }
   }, []);
 
   // Assigne une position par defaut a toute fenetre nouvellement visible,

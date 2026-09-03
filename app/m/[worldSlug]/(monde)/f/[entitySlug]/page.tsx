@@ -37,6 +37,7 @@ export default async function EntityPage({
         name={data.entity.name}
         badge={data.entity.entity_kind}
         homeHref={`/m/${worldSlug}`}
+        data={data}
       />
       <EditEntityForm
         entity={data.entity}
