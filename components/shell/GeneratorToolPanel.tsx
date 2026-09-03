@@ -1,13 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { GeneratorBlockData } from "@/src/core/schemas/blocks/generator";
 import { isProseSlot, PROSE_LENGTH_PRESETS, DEFAULT_PROSE_LENGTH, type ProseLength } from "@/src/core/generators/types";
 import type { GeneratorSlotResult, GeneratorToolWindowData } from "@/src/server/services/generators";
+import type { BlockReference } from "@/src/core/schemas/blocks/reference";
+import { useOpenEntityLink } from "./useOpenEntityLink";
 
 interface DrawResponse {
   text: string;
   slots: GeneratorSlotResult[];
+}
+
+/** Dernier resultat connu d'une section (V2-J2) — remonte au panneau parent pour que "Créer la fiche" puisse combiner toutes les sections actuellement tirees, sans redemander un tirage. */
+export interface SectionResult {
+  text: string;
+  refs: BlockReference[];
 }
 
 /**
@@ -21,7 +30,17 @@ interface DrawResponse {
  * etat, chaque relance individuelle lui renvoie les valeurs des AUTRES
  * emplacements pour qu'il recompose le texte complet.
  */
-function GeneratorSectionCard({ blockId, label, data }: { blockId: string; label: string; data: GeneratorBlockData }) {
+function GeneratorSectionCard({
+  blockId,
+  label,
+  data,
+  onResult,
+}: {
+  blockId: string;
+  label: string;
+  data: GeneratorBlockData;
+  onResult: (result: SectionResult) => void;
+}) {
   const [text, setText] = useState<string | null>(null);
   const [slotResults, setSlotResults] = useState<Record<string, GeneratorSlotResult>>({});
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -46,14 +65,21 @@ function GeneratorSectionCard({ blockId, label, data }: { blockId: string; label
     return (await res.json()) as DrawResponse;
   }
 
+  function reportResult(newText: string, newSlotResults: Record<string, GeneratorSlotResult>) {
+    const refs = Object.values(newSlotResults).flatMap((s) => s.refs);
+    onResult({ text: newText, refs });
+  }
+
   async function handleDrawAll() {
     setDrawing(true);
     setError(null);
     try {
       const result = await draw(null, {});
+      const nextSlotResults = Object.fromEntries(result.slots.map((s) => [s.key, s]));
       setText(result.text);
-      setSlotResults(Object.fromEntries(result.slots.map((s) => [s.key, s])));
+      setSlotResults(nextSlotResults);
       setDetailsOpen(true);
+      reportResult(result.text, nextSlotResults);
     } catch (e) {
       setError(e instanceof Error ? e.message : "La génération a échoué.");
     } finally {
@@ -67,12 +93,11 @@ function GeneratorSectionCard({ blockId, label, data }: { blockId: string; label
     try {
       const knownSlotTexts = Object.fromEntries(Object.entries(slotResults).map(([k, s]) => [k, s.text]));
       const result = await draw(slotKey, knownSlotTexts);
+      const nextSlotResults = { ...slotResults };
+      for (const s of result.slots) nextSlotResults[s.key] = s;
       setText(result.text);
-      setSlotResults((prev) => {
-        const next = { ...prev };
-        for (const s of result.slots) next[s.key] = s;
-        return next;
-      });
+      setSlotResults(nextSlotResults);
+      reportResult(result.text, nextSlotResults);
     } catch (e) {
       setError(e instanceof Error ? e.message : "La relance a échoué.");
     } finally {
@@ -173,18 +198,96 @@ function GeneratorSectionCard({ blockId, label, data }: { blockId: string; label
 }
 
 /**
+ * "Créer la fiche" (V2-J2) : combine les resultats actuellement affiches
+ * de toutes les sections DU MEME outil (remontes par `onResult`) et les
+ * promeut en une vraie entite via `POST .../mj/generateurs/[toolKey]/promote`
+ * — le mecanisme d'ecriture est generique (`promoteToEntity`,
+ * src/server/services/promotion.ts), cette carte ne fait qu'assembler ce
+ * que le client sait deja. Actif des que la section "nom" a un resultat ;
+ * masque entierement si l'outil actif n'est pas configure pour la
+ * promotion (`GeneratorToolWindowData.promote` absent).
+ */
+function PromoteToEntityBar({
+  worldSlug,
+  toolKey,
+  nameSectionKey,
+  results,
+}: {
+  worldSlug: string;
+  toolKey: string;
+  nameSectionKey: string;
+  results: Record<string, SectionResult>;
+}) {
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [created, setCreated] = useState<{ entitySlug: string } | null>(null);
+  const link = useOpenEntityLink(worldSlug, created?.entitySlug ?? "");
+
+  const ready = Boolean(results[nameSectionKey]?.text.trim());
+
+  async function handleCreate() {
+    setCreating(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/worlds/${worldSlug}/mj/generateurs/${toolKey}/promote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sections: results }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? "Impossible de créer la fiche.");
+        return;
+      }
+      setCreated({ entitySlug: body.entitySlug });
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t border-edge/60 pt-3">
+      <button
+        type="button"
+        onClick={handleCreate}
+        disabled={!ready || creating}
+        title={ready ? undefined : "Tirez d'abord le nom."}
+        className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
+      >
+        {creating ? "Création…" : "Créer la fiche"}
+      </button>
+      {created && (
+        <Link href={link.href} onClick={link.onClick} className="text-xs text-accent hover:underline">
+          Voir la fiche →
+        </Link>
+      )}
+      {error && <p className="text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
+
+/**
  * Outil MJ "Générateurs" (V2-J1 Phase 2) — un onglet par outil disponible
  * (`GENERATOR_TOOLS`, src/core/generators/tools.ts ; Phase 1 : Taverne
  * seule), une carte `GeneratorSectionCard` par section. Chaque section est
  * un bloc `generator` distinct sur l'entite "Générateurs de MJ" du monde
- * (auto-provisionnee, jamais creee par cet outil lui-meme).
+ * (auto-provisionnee, jamais creee par cet outil lui-meme). Les resultats
+ * de chaque section remontent ici (V2-J2) pour alimenter "Créer la fiche".
  */
-export default function GeneratorToolPanel({ tools }: { tools: GeneratorToolWindowData[] }) {
+export default function GeneratorToolPanel({ worldSlug, tools }: { worldSlug: string; tools: GeneratorToolWindowData[] }) {
   const [activeKey, setActiveKey] = useState(tools[0]?.key ?? null);
   const activeTool = tools.find((t) => t.key === activeKey) ?? null;
+  const [resultsByTool, setResultsByTool] = useState<Record<string, Record<string, SectionResult>>>({});
 
   if (tools.length === 0) {
     return <p className="text-sm italic text-ink-muted">Aucun outil de génération configuré pour l&apos;instant.</p>;
+  }
+
+  function reportSectionResult(toolKey: string, sectionKey: string, result: SectionResult) {
+    setResultsByTool((prev) => ({
+      ...prev,
+      [toolKey]: { ...prev[toolKey], [sectionKey]: result },
+    }));
   }
 
   return (
@@ -215,8 +318,22 @@ export default function GeneratorToolPanel({ tools }: { tools: GeneratorToolWind
             </p>
           ) : (
             activeTool.sections.map((section) => (
-              <GeneratorSectionCard key={section.blockId} blockId={section.blockId} label={section.label} data={section.data} />
+              <GeneratorSectionCard
+                key={section.blockId}
+                blockId={section.blockId}
+                label={section.label}
+                data={section.data}
+                onResult={(result) => reportSectionResult(activeTool.key, section.key, result)}
+              />
             ))
+          )}
+          {activeTool.promote && (
+            <PromoteToEntityBar
+              worldSlug={worldSlug}
+              toolKey={activeTool.key}
+              nameSectionKey={activeTool.promote.nameSectionKey}
+              results={resultsByTool[activeTool.key] ?? {}}
+            />
           )}
         </div>
       )}

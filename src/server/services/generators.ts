@@ -121,6 +121,8 @@ export interface GeneratorToolWindowData {
   key: string;
   label: string;
   sections: GeneratorToolSectionWindowData[];
+  /** Configuration de promotion du registre (V2-J2), passee telle quelle — absente = bouton "Créer la fiche" masque cote client. */
+  promote?: { nameSectionKey: string; entityKind: string };
 }
 
 /**
@@ -146,5 +148,6 @@ export async function resolveGeneratorToolsForEntity(supabase: TypedClient, enti
       const found = byKey.get(section.key);
       return found ? [{ key: section.key, label: section.label, blockId: found.blockId, data: found.data }] : [];
     }),
+    promote: tool.promote,
   }));
 }

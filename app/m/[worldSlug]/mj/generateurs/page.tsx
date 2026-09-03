@@ -36,7 +36,7 @@ export default async function MjGenerateursPage({ params }: { params: Promise<{ 
           Composez taverne, échoppe ou PNJ section par section — chaque emplacement se relance individuellement.
         </p>
       </div>
-      <GeneratorToolPanel tools={tools} />
+      <GeneratorToolPanel worldSlug={worldSlug} tools={tools} />
     </div>
   );
 }

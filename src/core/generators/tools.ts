@@ -19,10 +19,17 @@ export interface GeneratorToolSectionConfig {
   label: string;
 }
 
+/** Configuration de promotion (V2-J2) : quelle section fournit le NOM de la fiche creee par "Créer la fiche", et le type d'entite a lui donner — les autres sections deviennent chacune un bloc `text` (src/server/services/promotion.ts). Absent = outil pas encore promouvable. */
+export interface GeneratorToolPromoteConfig {
+  nameSectionKey: string;
+  entityKind: string;
+}
+
 export interface GeneratorToolConfig {
   key: string;
   label: string;
   sections: readonly GeneratorToolSectionConfig[];
+  promote?: GeneratorToolPromoteConfig;
 }
 
 export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
@@ -34,5 +41,6 @@ export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
       { key: "taverne-etablissement", label: "L'établissement" },
       { key: "taverne-chambre", label: "La Chambre" },
     ],
+    promote: { nameSectionKey: "taverne-nom", entityKind: "location" },
   },
 ];

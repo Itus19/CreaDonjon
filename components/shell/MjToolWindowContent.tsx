@@ -174,7 +174,7 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
               Composez taverne, échoppe ou PNJ section par section — chaque emplacement se relance individuellement.
             </p>
           </div>
-          <GeneratorToolPanel tools={data.tools} />
+          <GeneratorToolPanel worldSlug={worldSlug} tools={data.tools} />
         </div>
       );
   }
