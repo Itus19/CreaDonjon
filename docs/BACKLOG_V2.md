@@ -1505,6 +1505,32 @@ la validation en place.
       appel) : 15 tables du Menu sans doublon de prix, aucun bloc
       `generator` dupliqué sur l'entité (16 sections, 0 clé en double).
 
+### V2-J9bis — Accès direct aux tables depuis l'outil Générateurs · `S` — à faire
+
+Question de l'auteur après usage : le contenu des tables (plats, boissons,
+noms, objets…) est déjà éditable via l'éditeur de bloc standard d'une fiche
+de wiki (`RandomTableBlockEditor.tsx` — clé, dé, entrées avec plage et
+texte, ajout/suppression), rien à construire côté édition. Le manque est
+l'accès : l'entité "Générateurs de MJ" porte ~90 blocs (16 sections ×
+plusieurs tables chacune), il faut aujourd'hui naviguer sur sa fiche wiki
+et retrouver la bonne table au milieu de toutes les autres — aucun lien
+depuis le panneau MJ (`GeneratorToolPanel.tsx`) utilisé pendant la partie.
+
+Portée : un bouton "Éditer les tables" par section du panneau, ouvrant
+`RandomTableBlockEditor` (tel quel, aucune nouvelle abstraction) pour la ou
+les tables réellement utilisées par cette section — à déterminer en lisant
+le ticket : soit une modale légère dans le panneau, soit un lien direct
+vers le bloc sur la fiche wiki de l'entité. Choix fait en écrivant le
+ticket, pas ici.
+
+**Critères**
+- [ ] Depuis une section du panneau MJ Générateurs, un MJ peut ouvrir
+      l'édition de la ou des tables qu'elle utilise sans quitter l'outil ou
+      chercher le bloc à la main.
+- [ ] Réutilise `RandomTableBlockEditor` existant — pas de nouvel éditeur.
+- [ ] Vérifié en direct : ajout/suppression d'une entrée depuis ce nouvel
+      accès, puis un tirage confirme que le changement est pris en compte.
+
 ### V2-J10 — Objets en vente par type d'échoppe · `S` — à faire
 
 Réutilise V2-J7 (axe `type`) + V2-J9 (`count`) : la section "Un objet en
