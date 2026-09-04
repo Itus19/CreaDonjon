@@ -1669,22 +1669,41 @@ n'aurait été modifiable que par script, jamais depuis l'interface.
 - [x] `docs/BACKLOG_V2.md` tenu à jour au fur et à mesure (pas seulement à
       la fin) — demande explicite de l'auteur.
 
-### V2-J10 — Objets en vente par type d'échoppe · `S` — à faire
+### V2-J10 — Objets en vente par type d'échoppe · `S` — fait
 
 Réutilise V2-J7 (axe `type`) + V2-J9 (`count`) + **V2-J9quater** (filtre
 par palier, mode `"ceiling"`) : la section "Un objet en vente" d'Échoppe
-tire 3-5 objets de la table `objets-{type}` correspondant au type choisi,
-au lieu d'un seul aujourd'hui — CHAQUE objet tagué `tier` (rareté, même
-vocabulaire que le futur Butin/V2-J11) plutôt qu'une table par croisement
-type × richesse × zone (ne passerait pas à l'échelle, cf. V2-J9quater). La
-richesse/zone sélectionnée devient le plafond de rareté éligible.
+tire plusieurs objets de la table `objets-{type}` correspondant au type
+choisi, au lieu d'un seul auparavant — CHAQUE objet tagué `tier` plutôt
+qu'une table par croisement type × richesse × zone (ne passerait pas à
+l'échelle, cf. V2-J9quater). **Zéro changement de code** : le mécanisme
+V2-J9quater supportait déjà tout ce dont ce ticket avait besoin — que de
+la config (`slot.tier = { axis: "wealth", match: "ceiling" }`, `count: 4`)
+et du contenu.
+
+Palier retenu : **richesse** de la boutique elle-même (même axe que déjà
+affiché dans l'outil), pas la zone — une boutique modeste, même en
+capitale, ne stocke pas d'objets chers ; garde le principe "un fonctionnement
+qui marche partout pareil" (même axe que le Menu de Taverne) plutôt que de
+faire cohabiter deux dimensions de filtrage. La zone reste un axe
+d'ambiance narrative, inchangé.
+
+**Contenu** : les 9 tables `objets-{type}` existaient déjà (créées lors de
+V2-J7, 3 entrées chacune, sans prix ni palier) — complétées en place plutôt
+que recréées : chaque entrée existante reclassée avec un `tier` et un
+`price` plausibles, une entrée ajoutée par table pour couvrir les 3
+paliers avec 2 entrées chacun (6 entrées/table au total, densité
+provisoire — V2-J15 la portera à ~100).
 
 **Critères**
-- [ ] "Un objet en vente" tire plusieurs objets, cohérents avec le type
-      choisi ET la richesse/zone (jamais un objet rare dans un bourg
-      modeste).
-- [ ] Vérifié en direct sur au moins 2 types différents et 2 plafonds de
-      richesse différents.
+- [x] "Un objet en vente" tire plusieurs objets (jusqu'à 4, `unique_draws`),
+      cohérents avec le type choisi ET la richesse (jamais un objet
+      réputée sous un plafond modeste ou correcte).
+- [x] Vérifié en direct sur 2 types différents (Forgeron, Joaillier) et 2
+      plafonds de richesse (Modeste : seulement les 2 objets modestes
+      disponibles ; Correcte : mélange modeste+correcte, jamais réputée) —
+      plus Réputée testée sur Forgeron : mélange des 3 paliers, confirme
+      qu'un objet commun reste possible même au plafond le plus haut.
 
 ### V2-J11 — Générateur de Butin (nouvel outil) · `M` — à faire
 
