@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
+import { zStatblockBlockData, type StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import type { SegmentContentNode } from "@/src/core/schemas/entities/segments";
 import { createEntity } from "@/src/server/services/entities";
 import { createBlock, updateBlockContent } from "@/src/server/services/blocks";
@@ -51,6 +52,8 @@ export async function promoteToEntity(
     visibilityLevel: string;
     visibilityScopeId: string | null;
     blocks: PromotedBlockSpec[];
+    /** Bloc `statblock` optionnel (V2-J-PNJ) — creature du bestiaire deja convertie par `statblockFromMonsterBlocks` (src/core/rules/srdMapping.ts). */
+    statblock?: { label: string; data: StatblockBlockData } | null;
   }
 ): Promise<PromoteToEntityResult> {
   const entity = await createEntity(supabase, {
@@ -110,6 +113,29 @@ export async function promoteToEntity(
       expectedVersion: block.version,
       display: block.display,
       data: seeded,
+      visibilityLevel: block.visibilityLevel,
+      visibilityScopeId: block.visibilityScopeId,
+      changedBy: params.createdBy,
+    });
+    if (!saved.ok) return { ok: false, reason: "forbidden" };
+  }
+
+  if (params.statblock) {
+    const created = await createBlock(supabase, {
+      entityId: entity.id,
+      blockType: "statblock",
+      label: params.statblock.label,
+      visibilityLevel: params.visibilityLevel,
+      visibilityScopeId: params.visibilityScopeId,
+      createdBy: params.createdBy,
+    });
+    if (!created.ok) return { ok: false, reason: "forbidden" };
+    const block = created.block;
+    const saved = await updateBlockContent(supabase, {
+      id: block.id,
+      expectedVersion: block.version,
+      display: block.display,
+      data: zStatblockBlockData.parse(params.statblock.data),
       visibilityLevel: block.visibilityLevel,
       visibilityScopeId: block.visibilityScopeId,
       changedBy: params.createdBy,

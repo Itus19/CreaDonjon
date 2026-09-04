@@ -6,6 +6,7 @@ import type { GeneratorBlockData } from "@/src/core/schemas/blocks/generator";
 import { isProseSlot, PROSE_LENGTH_PRESETS, DEFAULT_PROSE_LENGTH, type ProseLength } from "@/src/core/generators/types";
 import type { GeneratorSlotResult, GeneratorToolWindowData } from "@/src/server/services/generators";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
+import RuleEntryAutocomplete from "@/components/blocks/RuleEntryAutocomplete";
 import { useOpenEntityLink } from "./useOpenEntityLink";
 
 interface DrawResponse {
@@ -211,16 +212,19 @@ function PromoteToEntityBar({
   worldSlug,
   toolKey,
   nameSectionKey,
+  withCreature,
   results,
 }: {
   worldSlug: string;
   toolKey: string;
   nameSectionKey: string;
+  withCreature?: boolean;
   results: Record<string, SectionResult>;
 }) {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ entitySlug: string } | null>(null);
+  const [creatureEntryKey, setCreatureEntryKey] = useState("");
   const link = useOpenEntityLink(worldSlug, created?.entitySlug ?? "");
 
   const ready = Boolean(results[nameSectionKey]?.text.trim());
@@ -232,7 +236,7 @@ function PromoteToEntityBar({
       const res = await fetch(`/api/worlds/${worldSlug}/mj/generateurs/${toolKey}/promote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sections: results }),
+        body: JSON.stringify({ sections: results, creatureEntryKey: creatureEntryKey.trim() || undefined }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -247,6 +251,16 @@ function PromoteToEntityBar({
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-t border-edge/60 pt-3">
+      {withCreature && (
+        <RuleEntryAutocomplete
+          worldSlug={worldSlug}
+          entryTypes={["monster"]}
+          value={creatureEntryKey}
+          onChange={setCreatureEntryKey}
+          placeholder="Créature du bestiaire (optionnel)"
+          className="w-64"
+        />
+      )}
       <button
         type="button"
         onClick={handleCreate}
@@ -332,6 +346,7 @@ export default function GeneratorToolPanel({ worldSlug, tools }: { worldSlug: st
               worldSlug={worldSlug}
               toolKey={activeTool.key}
               nameSectionKey={activeTool.promote.nameSectionKey}
+              withCreature={activeTool.promote.withCreature}
               results={resultsByTool[activeTool.key] ?? {}}
             />
           )}

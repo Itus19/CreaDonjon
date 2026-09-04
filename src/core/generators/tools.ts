@@ -19,10 +19,11 @@ export interface GeneratorToolSectionConfig {
   label: string;
 }
 
-/** Configuration de promotion (V2-J2) : quelle section fournit le NOM de la fiche creee par "Créer la fiche", et le type d'entite a lui donner — les autres sections deviennent chacune un bloc `text` (src/server/services/promotion.ts). Absent = outil pas encore promouvable. */
+/** Configuration de promotion (V2-J2) : quelle section fournit le NOM de la fiche creee par "Créer la fiche", et le type d'entite a lui donner — les autres sections deviennent chacune un bloc `text` (src/server/services/promotion.ts). Absent = outil pas encore promouvable. `withCreature` (V2-J-PNJ) affiche un selecteur de creature du bestiaire (`RuleEntryAutocomplete`) qui ajoute un bloc `statblock` a la fiche creee — jamais de creature inventee ou choisie au hasard. */
 export interface GeneratorToolPromoteConfig {
   nameSectionKey: string;
   entityKind: string;
+  withCreature?: boolean;
 }
 
 export interface GeneratorToolConfig {
@@ -42,5 +43,15 @@ export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
       { key: "taverne-chambre", label: "La Chambre" },
     ],
     promote: { nameSectionKey: "taverne-nom", entityKind: "location" },
+  },
+  {
+    key: "pnj",
+    label: "PNJ",
+    sections: [
+      { key: "pnj-nom", label: "Nom" },
+      { key: "pnj-apparence", label: "Apparence" },
+      { key: "pnj-histoire", label: "Histoire" },
+    ],
+    promote: { nameSectionKey: "pnj-nom", entityKind: "character", withCreature: true },
   },
 ];

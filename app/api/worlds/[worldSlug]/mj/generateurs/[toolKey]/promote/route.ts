@@ -7,8 +7,16 @@ import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { resolveBlockReferences } from "@/src/server/services/referenceChips";
 import { promoteToEntity, type PromotedBlockSpec } from "@/src/server/services/promotion";
+import { getRuleEntryForWorld } from "@/src/server/services/rules";
+import { statblockFromMonsterBlocks } from "@/src/core/rules/srdMapping";
 import { GENERATOR_TOOLS } from "@/src/core/generators/tools";
 import type { Locale } from "@/src/i18n/request";
+import type {
+  ActionsBlockData,
+  LegendaryActionsBlockData,
+  StatBlockBlockData,
+  TraitsBlockData,
+} from "@/src/core/schemas/rule-blocks";
 
 /**
  * "Créer la fiche" depuis l'outil MJ "Générateurs" (V2-J2) — promeut le
@@ -56,12 +64,31 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const bodySections = tool.sections.filter((s) => s.key !== tool.promote!.nameSectionKey);
   const allRefs = bodySections.flatMap((s) => parsed.data.sections[s.key]?.refs ?? []);
 
+  const locale = (await getLocale()) as Locale;
   let chipByKey = new Map<string, string>();
   if (allRefs.length > 0) {
     const rulesetId = await getWorldDefaultRulesetId(supabase, world.id);
-    const locale = (await getLocale()) as Locale;
     const chips = await resolveBlockReferences(supabase, world, rulesetId, locale, allRefs);
     chipByKey = new Map(chips.map((c) => [`${c.kind}:${c.key}`, c.name]));
+  }
+
+  let statblock: { label: string; data: ReturnType<typeof statblockFromMonsterBlocks> } | null = null;
+  if (tool.promote.withCreature && parsed.data.creatureEntryKey) {
+    const entry = await getRuleEntryForWorld(supabase, world.id, parsed.data.creatureEntryKey, locale);
+    const statBlockData = entry?.blocks.find((b) => b.blockType === "stat_block")?.data as StatBlockBlockData | undefined;
+    if (statBlockData) {
+      statblock = {
+        label: "Combat",
+        data: statblockFromMonsterBlocks({
+          statBlock: statBlockData,
+          traits: entry!.blocks.find((b) => b.blockType === "traits")?.data as TraitsBlockData | undefined,
+          actions: entry!.blocks.find((b) => b.blockType === "actions")?.data as ActionsBlockData | undefined,
+          legendaryActions: entry!.blocks.find((b) => b.blockType === "legendary_actions")?.data as
+            | LegendaryActionsBlockData
+            | undefined,
+        }),
+      };
+    }
   }
 
   const blocks: PromotedBlockSpec[] = bodySections.flatMap((section) => {
@@ -88,6 +115,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     visibilityLevel: "public",
     visibilityScopeId: null,
     blocks,
+    statblock,
   });
   if (!promoted.ok) {
     return NextResponse.json({ error: "Impossible de créer la fiche." }, { status: 403 });

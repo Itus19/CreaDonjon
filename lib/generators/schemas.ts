@@ -17,4 +17,6 @@ export const promoteGeneratorResultSchema = z.object({
       refs: z.array(zBlockReference).default([]),
     })
   ),
+  /** Cle d'entree de regle `monster` choisie a la main par le MJ (V2-J-PNJ) — jamais tiree au hasard, une CR mal choisie casserait l'equilibre. */
+  creatureEntryKey: z.string().optional(),
 });
