@@ -23,6 +23,8 @@ export interface OtherEntityOption {
   name: string;
   slug: string;
   entity_kind: string;
+  /** V2.1-1, détection automatique de liens (`RichTextEditor.tsx`) — absent dans les usages qui n'en ont pas besoin (le champ est optionnel, jamais fourni par tous les appelants). */
+  aliases?: string[];
 }
 
 /**

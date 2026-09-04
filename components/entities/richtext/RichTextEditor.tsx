@@ -16,6 +16,18 @@ import type { Segment } from "@/src/core/schemas/entities/segments";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import { useDesktop } from "@/components/shell/DesktopContext";
 import { windowHref, type WindowRef } from "@/components/shell/windowRefs";
+import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
+import { detectEntityReferences, type LinkableEntity } from "@/src/core/linker/detect";
+
+/** V2.1-1, détection automatique — une mention trouvée dans le texte, pas encore liée, en attente de confirmation (jamais appliquée seule, spec §A1 "Renommage"). */
+interface DetectedSuggestion {
+  segmentId: string;
+  start: number;
+  end: number;
+  matchedText: string;
+  targetName: string;
+  target: RefLinkTarget;
+}
 
 const BLOCK_TYPE_OPTIONS = [
   { value: "paragraph", label: "Paragraphe" },
@@ -84,8 +96,10 @@ export default function RichTextEditor({
   const [initialDoc] = useState<DocJSON>(() => segmentsToDoc(segments));
   const [, forceUpdate] = useState(0);
   const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<DetectedSuggestion[]>([]);
   const desktop = useDesktop();
   const router = useRouter();
+  const ruleEntries = useWorldRuleEntries(worldSlug ?? "");
 
   const editor = useEditor({
     extensions: [
@@ -257,6 +271,118 @@ export default function RichTextEditor({
     return otherEntities?.find((e) => e.id === id)?.slug ?? null;
   }
 
+  /**
+   * V2.1-1, détection automatique — passe le texte de chaque segment par
+   * `detectEntityReferences` (correspondance exacte de nom/alias, deja
+   * ecrite et testee) contre les fiches ET les entrees de regle du monde,
+   * puis propose les mentions trouvees comme SUGGESTIONS a confirmer —
+   * jamais une reecriture silencieuse (specs/wiki-liens-et-personnages.md
+   * §A1). Le texte compare inclut le `label` des `ref` deja poses (pour ne
+   * pas casser les decalages de caracteres des autres noeuds), filtres
+   * ensuite via `existingRanges` pour ne jamais re-suggerer un lien deja
+   * present. Un alias partage par plusieurs candidats (`ref.candidates.
+   * length > 1`) est ignore plutot que resolu au hasard — meme discipline
+   * que `detectEntityReferences` elle-meme.
+   */
+  function detectLinks() {
+    if (!otherEntities) return;
+    const candidates: LinkableEntity[] = [
+      ...otherEntities.map((e) => ({ id: `entity:${e.id}`, name: e.name, aliases: e.aliases ?? [] })),
+      ...ruleEntries.map((r) => ({ id: `rule:${r.key}`, name: r.name, aliases: [] as string[] })),
+    ];
+
+    const found: DetectedSuggestion[] = [];
+    for (const segment of segments) {
+      let text = "";
+      const existingRanges: { start: number; end: number }[] = [];
+      for (const node of segment.content) {
+        if (node.t === "text") {
+          text += node.v;
+        } else {
+          const start = text.length;
+          text += node.label;
+          existingRanges.push({ start, end: text.length });
+        }
+      }
+      if (text.trim().length === 0) continue;
+
+      for (const ref of detectEntityReferences(text, candidates)) {
+        if (ref.candidates.length !== 1) continue;
+        if (existingRanges.some((r) => ref.start < r.end && ref.end > r.start)) continue;
+        const [kindPrefix, ...rest] = ref.candidates[0].entityId.split(":");
+        const rawId = rest.join(":");
+        const target: RefLinkTarget =
+          kindPrefix === "entity" ? { kind: "entity", id: rawId, name: ref.candidates[0].term } : { kind: "rule", key: rawId, name: ref.candidates[0].term };
+        const targetName =
+          kindPrefix === "entity"
+            ? (otherEntities.find((e) => e.id === rawId)?.name ?? ref.candidates[0].term)
+            : (ruleEntries.find((r) => r.key === rawId)?.name ?? ref.candidates[0].term);
+        found.push({ segmentId: segment.id, start: ref.start, end: ref.end, matchedText: ref.matchedText, targetName, target });
+      }
+    }
+    setSuggestions(found);
+  }
+
+  /**
+   * Convertit un decalage de caracteres dans le TEXTE D'AFFICHAGE d'un
+   * segment (celui compare par `detectEntityReferences` : un noeud `ref`
+   * y compte pour la longueur de son `label`) en position ProseMirror
+   * reelle — un noeud `refMention` est atomique et n'occupe qu'UNE seule
+   * position, quelle que soit la longueur de son label, d'ou les deux
+   * compteurs distincts (`display`/`pm`) parcourus en parallele.
+   */
+  function segmentOffsetToPos(segmentId: string, charOffset: number): number | null {
+    let result: number | null = null;
+    editor!.state.doc.descendants((node, pos) => {
+      if (result !== null) return false;
+      if (node.attrs?.segmentId !== segmentId) return true;
+      let display = 0;
+      let pmOffset = 0;
+      node.forEach((child) => {
+        if (result !== null) return;
+        const isRef = child.type.name === "refMention";
+        const childDisplayLen = isRef ? ((child.attrs.label as string) ?? "").length : (child.text?.length ?? 0);
+        if (charOffset <= display + childDisplayLen) {
+          result = pos + 1 + pmOffset + (isRef ? (charOffset === display ? 0 : child.nodeSize) : charOffset - display);
+        }
+        display += childDisplayLen;
+        pmOffset += child.nodeSize;
+      });
+      if (result === null && charOffset === display) result = pos + 1 + pmOffset;
+      return false;
+    });
+    return result;
+  }
+
+  function applySuggestion(s: DetectedSuggestion) {
+    const from = segmentOffsetToPos(s.segmentId, s.start);
+    const to = segmentOffsetToPos(s.segmentId, s.end);
+    if (from === null || to === null) return;
+    const label = editor!.state.doc.textBetween(from, to);
+    editor!
+      .chain()
+      .focus()
+      .command(({ tr, state }) => {
+        tr.replaceRangeWith(
+          from,
+          to,
+          state.schema.nodes.refMention.create({
+            kind: s.target.kind,
+            id: s.target.kind === "entity" ? s.target.id : undefined,
+            key: s.target.kind === "rule" ? s.target.key : undefined,
+            label,
+          })
+        );
+        return true;
+      })
+      .run();
+    setSuggestions((prev) => prev.filter((x) => x !== s));
+  }
+
+  function dismissSuggestion(s: DetectedSuggestion) {
+    setSuggestions((prev) => prev.filter((x) => x !== s));
+  }
+
   return (
     <div className="flex flex-col gap-1">
       <BubbleMenu
@@ -396,6 +522,36 @@ export default function RichTextEditor({
         />
       </BubbleMenu>
       <EditorContent editor={editor} />
+      {worldSlug && otherEntities && (
+        <div className="flex flex-col gap-1.5">
+          <button
+            type="button"
+            onClick={detectLinks}
+            className="self-start text-xs font-medium text-ink-muted transition-colors hover:text-ink"
+          >
+            🔗 Détecter des liens
+          </button>
+          {suggestions.length > 0 && (
+            <ul className="flex flex-col gap-1 rounded-md border border-edge/60 bg-panel-sunken p-2">
+              {suggestions.map((s, i) => (
+                <li key={i} className="flex items-center justify-between gap-2 text-xs text-ink">
+                  <span>
+                    « {s.matchedText} » → {s.targetName}
+                  </span>
+                  <span className="flex shrink-0 gap-2">
+                    <button type="button" onClick={() => applySuggestion(s)} className="font-medium text-accent hover:underline">
+                      Lier
+                    </button>
+                    <button type="button" onClick={() => dismissSuggestion(s)} className="text-ink-muted hover:underline">
+                      Ignorer
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
