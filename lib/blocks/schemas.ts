@@ -50,6 +50,8 @@ export const drawGeneratorSchema = z.object({
   knownSlotTexts: z.record(z.string(), z.string()).default({}),
   /** Valeurs choisies pour les axes de variante de l'outil (V2-J7, ex. `{type: "forgeron"}`) — cle d'axe -> cle d'option, ou `RANDOM_VARIANT_VALUE` ("aleatoire"). Vide pour un generateur sans axe. */
   variant: z.record(z.string(), z.string()).default({}),
+  /** V2-J9quater, accord entre emplacements — meme motif que `knownSlotTexts` mais pour le `tier` de l'entree tiree (jamais son texte) : necessaire pour qu'une relance INDIVIDUELLE de l'emplacement "adjectif" seul retrouve le genre du "mot" deja tire, sans le retirer. */
+  knownSlotTiers: z.record(z.string(), z.string()).default({}),
 });
 
 /** Liste les tables d'une section de generateur pour la variante donnee (V2-J9bis) — meme forme de `variant` que `drawGeneratorSchema`, aucun autre champ necessaire pour une simple lecture. */

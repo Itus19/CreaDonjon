@@ -17,6 +17,8 @@ const zGeneratorTableSlotTier: z.ZodType<GeneratorTableSlotTier> = z.object({
   axis: z.string().min(1),
   match: z.enum(["exact", "ceiling"]),
   target: z.string().min(1).optional(),
+  /** V2-J9quater, accord entre emplacements (noms d'echoppe). */
+  fromSlot: z.boolean().optional(),
 });
 
 const zGeneratorTableSlot: z.ZodType<GeneratorTableSlot> = z.object({

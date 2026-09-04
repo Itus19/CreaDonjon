@@ -22,6 +22,8 @@ export interface ResolvedTableDraw {
   refs: BlockReference[];
   /** Prix de l'entree TIREE (retour utilisateur) — jamais celui d'une sous-table resolue en cascade, aucun cas d'usage actuel pour un prix qui traverserait une cascade. */
   price?: TableEntryPrice;
+  /** Palier de l'entree TIREE (V2-J9quater, accord entre emplacements) — meme discipline que `price`, jamais celui d'une sous-table de cascade. */
+  tier?: string;
 }
 
 /**
@@ -90,6 +92,7 @@ export async function resolveCascade(
     text: interpolateCascadeResults(draw.entry.text, resultsByKey),
     refs: draw.entry.refs ?? [],
     price: draw.entry.price,
+    tier: draw.entry.tier,
   };
 }
 

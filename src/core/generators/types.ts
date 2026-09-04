@@ -22,7 +22,16 @@
  * filtre qui decide lesquelles sont eligibles pour CE tirage precis.
  */
 export interface GeneratorTableSlotTier {
-  /** Cle de l'axe de variante de l'outil (ex. "wealth") dont la valeur resolue pilote le filtre. */
+  /**
+   * Cle de l'axe de variante de l'outil (ex. "wealth") dont la valeur
+   * resolue pilote le filtre — ou, si `fromSlot` est vrai, la CLE D'UN
+   * AUTRE EMPLACEMENT de ce meme generateur (ex. "mot") : le filtre
+   * utilise alors le `tier` REELLEMENT tire par cet emplacement, jamais
+   * une valeur choisie par le MJ. Cet autre emplacement doit apparaitre
+   * AVANT celui-ci dans `slots` (l'auteur du generateur ordonne, l'outil
+   * ne verifie pas) — meme discipline que `origine`/`tournant` deja
+   * chaines par gabarit sans verification moteur.
+   */
   axis: string;
   /**
    * `"exact"` : ne garde que les entrees dont `tier` correspond a `target`
@@ -31,10 +40,21 @@ export interface GeneratorTableSlotTier {
    * entree dont le palier est <= la valeur resolue de l'axe (un objet rare
    * n'apparait jamais dans un contexte modeste, mais un objet commun reste
    * toujours possible dans un contexte reputee) — `target` est alors ignore.
+   * `fromSlot` impose `"exact"` : un accord grammatical est binaire (le
+   * genre d'un adjectif correspond ou non a celui du nom), jamais un plafond.
    */
   match: "exact" | "ceiling";
-  /** Gabarit interpolable avec les memes cles que `GeneratorTableSlot.table` (ex. "{wealth}") — requis seulement pour `match: "exact"`. */
+  /** Gabarit interpolable avec les memes cles que `GeneratorTableSlot.table` (ex. "{wealth}") — requis seulement pour `match: "exact"` ET `fromSlot` absent (le mot-cle d'un `fromSlot` vient du tirage, jamais d'un gabarit). */
   target?: string;
+  /**
+   * Accord entre deux emplacements du meme generateur (retour utilisateur
+   * — noms d'echoppe "mot-theme + adjectif accorde", ex. "La Forge
+   * Ardente"/"Le Marteau Poli") plutot qu'un axe de variante choisi par le
+   * MJ. `axis` designe alors la CLE d'un emplacement precedent, pas un axe
+   * du registre de l'outil. Absent (ou faux) : comportement inchange,
+   * `axis` reste un axe de variante (V2-J9quater d'origine).
+   */
+  fromSlot?: boolean;
 }
 
 export interface GeneratorTableSlot {

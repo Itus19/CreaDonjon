@@ -22,7 +22,11 @@ import { serverRng } from "@/src/server/services/rng";
  * valeurs deja tirees des AUTRES emplacements, reutilisees ici pour
  * recomposer le gabarit complet ET pour le contexte d'un eventuel
  * emplacement `prose` (formatSlotValuesForPrompt voit alors le tableau
- * complet, pas seulement l'emplacement qui vient de changer).
+ * complet, pas seulement l'emplacement qui vient de changer). `knownSlotTiers`
+ * (V2-J9quater, accord entre emplacements) meme motif mais pour le
+ * `tier` de l'entree tiree — necessaire pour qu'une relance individuelle
+ * d'un emplacement `fromSlot` (ex. "adjectif") retrouve le genre de
+ * l'emplacement dont il depend (ex. "mot") sans le retirer lui aussi.
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ blockId: string }> }) {
   const { blockId } = await params;
@@ -44,6 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const draw = await drawTableSlotsFromGeneratorBlock(supabase, blockId, serverRng, {
     onlySlotKey: parsed.data.onlySlotKey ?? undefined,
     variant: parsed.data.variant,
+    knownSlotTiers: parsed.data.knownSlotTiers,
   });
   if (!draw) {
     return NextResponse.json({ error: "Generateur introuvable." }, { status: 404 });

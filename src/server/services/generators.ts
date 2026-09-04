@@ -33,6 +33,8 @@ export interface GeneratorSlotResult {
   rolled?: number;
   /** Prix STRUCTURE de l'entree tiree (retour utilisateur) — absent pour une table sans notion de prix ou un emplacement a tirage multiple (voir `items`). */
   price?: TableEntryPrice;
+  /** Palier de l'entree tiree (V2-J9quater, accord entre emplacements) — renvoye au client pour qu'une relance INDIVIDUELLE d'un AUTRE emplacement (`fromSlot`) puisse le renvoyer en `knownSlotTiers` sans redemander celui-ci. */
+  tier?: string;
   /** Resultats individuels d'un emplacement a tirage multiple (V2-J9, `count`), AVANT assemblage dans `text` — permet au client de les afficher en tableau (ex. Menu de taverne) plutot qu'en un seul bloc de texte. Absent pour un tirage simple. */
   items?: GeneratorSlotItem[];
 }
@@ -100,26 +102,42 @@ function resolveGeneratorVariant(
  * fonctionnement qui marche partout pareil" — retour utilisateur) AVANT le
  * tirage — la table peut porter tous les paliers confondus, ce filtre
  * decide lesquelles de ses entrees sont eligibles pour CE tirage. Retourne
- * `table` inchangee si l'emplacement n'a pas de filtre, ou si son axe est
- * introuvable sur l'outil (config incoherente, jamais un echec silencieux
- * de tout le tirage). `null` si le filtre ne laisse aucune entree eligible
- * — l'appelant traite ca comme "table introuvable" (le `{cle}` du gabarit
- * reste tel quel).
+ * `table` inchangee si l'emplacement n'a pas de filtre. `null` si le
+ * filtre ne laisse aucune entree eligible — l'appelant traite ca comme
+ * "table introuvable" (le `{cle}` du gabarit reste tel quel).
+ *
+ * `fromSlot` (accord entre emplacements, ex. noms d'echoppe "mot" +
+ * "adjectif") : `tierConfig.axis` designe alors la CLE d'un emplacement
+ * PRECEDENT de ce meme generateur plutot qu'un axe de variante —
+ * `resolvedSlotTiers` porte son palier REELLEMENT tire (ou fourni par le
+ * client via `knownSlotTiers` s'il n'a pas ete redessine cette passe, ex.
+ * relance individuelle du seul emplacement "adjectif"). Palier inconnu
+ * (emplacement pas encore resolu, ou sans notion de palier) : pas de
+ * filtrage plutot qu'un echec — mieux vaut un accord non garanti qu'un
+ * emplacement vide.
  */
 function applyTierFilter(
   table: RandomTableBlockData,
   tierConfig: GeneratorTableSlotTier | undefined,
   tool: GeneratorToolConfig | undefined,
-  variantKeys: Record<string, string>
+  variantKeys: Record<string, string>,
+  resolvedSlotTiers: Record<string, string | undefined>
 ): RandomTableBlockData | null {
   if (!tierConfig) return table;
-  const axis = tool?.variants?.find((a) => a.key === tierConfig.axis);
-  if (!axis) return table;
 
-  const eligible =
-    tierConfig.match === "exact"
-      ? entriesAtExactTier(renderGeneratorTemplate(tierConfig.target ?? "", variantKeys), table.entries)
-      : entriesUpToTier(axis, variantKeys[tierConfig.axis] ?? "", table.entries);
+  let eligible;
+  if (tierConfig.fromSlot) {
+    const target = resolvedSlotTiers[tierConfig.axis];
+    if (target === undefined) return table;
+    eligible = entriesAtExactTier(target, table.entries);
+  } else {
+    const axis = tool?.variants?.find((a) => a.key === tierConfig.axis);
+    if (!axis) return table;
+    eligible =
+      tierConfig.match === "exact"
+        ? entriesAtExactTier(renderGeneratorTemplate(tierConfig.target ?? "", variantKeys), table.entries)
+        : entriesUpToTier(axis, variantKeys[tierConfig.axis] ?? "", table.entries);
+  }
 
   if (eligible.length === 0) return null;
   return eligible.length === table.entries.length ? table : buildFilteredTable(table, eligible);
@@ -157,7 +175,12 @@ export async function drawTableSlotsFromGeneratorBlock(
   supabase: TypedClient,
   blockId: string,
   rng: Rng,
-  options?: { onlySlotKey?: string; variant?: Record<string, string> }
+  options?: {
+    onlySlotKey?: string;
+    variant?: Record<string, string>;
+    /** V2-J9quater, accord entre emplacements — palier deja connu d'un emplacement NON redessine cette passe (relance individuelle d'un autre emplacement), pour qu'un `fromSlot` retrouve son accord sans tout retirer. */
+    knownSlotTiers?: Record<string, string>;
+  }
 ): Promise<GeneratorTableDraw | null> {
   const block = await getBlockById(supabase, blockId);
   if (!block || block.block_type !== "generator") return null;
@@ -171,6 +194,11 @@ export async function drawTableSlotsFromGeneratorBlock(
   const slots: GeneratorSlotResult[] = [];
   const slotTexts: Record<string, string> = {};
   const proseSlots: PendingProseSlot[] = [];
+  // V2-J9quater, accord entre emplacements — seede avec ce que le client
+  // connait deja (emplacements pas redessines cette passe), complete au
+  // fil des tirages de CETTE passe (l'ordre de `generator.slots` fait foi :
+  // un emplacement `fromSlot` doit referencer un emplacement qui le precede).
+  const resolvedSlotTiers: Record<string, string | undefined> = { ...options?.knownSlotTiers };
 
   for (const slot of slotsToProcess) {
     if (isProseSlot(slot)) {
@@ -181,7 +209,7 @@ export async function drawTableSlotsFromGeneratorBlock(
     const tableKey = renderGeneratorTemplate(slot.table, variantKeys);
     const rawTable = await findTableBlockByKey(supabase, block.entity_id, tableKey);
     if (!rawTable || rawTable.entries.length === 0) continue;
-    const table = applyTierFilter(rawTable, slot.tier, tool, variantKeys);
+    const table = applyTierFilter(rawTable, slot.tier, tool, variantKeys, resolvedSlotTiers);
     if (!table) continue;
 
     if (slot.count && slot.count > 1) {
@@ -208,7 +236,8 @@ export async function drawTableSlotsFromGeneratorBlock(
 
     const draw = drawOnce(table, rng);
     const resolved = await resolveCascade(supabase, block.entity_id, draw, rng, new Set([table.key]), 1);
-    slots.push({ key: slot.key, text: resolved.text, refs: resolved.refs, price: resolved.price, die: table.die, rolled: draw.roll });
+    resolvedSlotTiers[slot.key] = resolved.tier;
+    slots.push({ key: slot.key, text: resolved.text, refs: resolved.refs, price: resolved.price, tier: resolved.tier, die: table.die, rolled: draw.roll });
     slotTexts[slot.key] = resolved.text;
   }
 
