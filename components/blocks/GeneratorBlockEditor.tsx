@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { GeneratorBlockData } from "@/src/core/schemas/blocks/generator";
-import { isProseSlot, PROSE_LENGTH_PRESETS, DEFAULT_PROSE_LENGTH, type ProseLength } from "@/src/core/generators/types";
+import { isProseSlot, isFragmentNameSlot, PROSE_LENGTH_PRESETS, DEFAULT_PROSE_LENGTH, type ProseLength } from "@/src/core/generators/types";
 
 interface GeneratedResult {
   text: string;
@@ -35,7 +35,7 @@ export default function GeneratorBlockEditor({
   function updateTableSlot(index: number, patch: { key?: string; table?: string }) {
     onChange({
       ...data,
-      slots: data.slots.map((s, i) => (i === index && !isProseSlot(s) ? { ...s, ...patch } : s)),
+      slots: data.slots.map((s, i) => (i === index && !isProseSlot(s) && !isFragmentNameSlot(s) ? { ...s, ...patch } : s)),
     });
   }
 
@@ -98,6 +98,16 @@ export default function GeneratorBlockEditor({
                 className="flex-1 rounded-md border border-edge bg-transparent px-1.5 py-0.5 text-xs text-ink outline-none"
               />
               <button type="button" onClick={() => removeSlot(index)} className="mt-1 text-xs text-danger hover:underline">
+                ×
+              </button>
+            </div>
+          ) : isFragmentNameSlot(slot) ? (
+            <div key={index} className="flex items-center gap-2 border-b border-edge/40 py-1.5 last:border-b-0">
+              <span className="rounded-full border border-edge/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-ink-muted">fragments</span>
+              <span className="flex-1 text-xs text-ink-muted">
+                {slot.key} — assemblage par fragments ({slot.fragments.starts} / {slot.fragments.mids ?? "—"} / {slot.fragments.ends}), non editable ici
+              </span>
+              <button type="button" onClick={() => removeSlot(index)} className="text-xs text-danger hover:underline">
                 ×
               </button>
             </div>

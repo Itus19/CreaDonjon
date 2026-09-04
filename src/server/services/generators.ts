@@ -4,8 +4,9 @@ import type { Database } from "@/src/types/database";
 import type { Rng } from "@/src/core/dice/rng";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { zGeneratorBlockData, type GeneratorBlockData } from "@/src/core/schemas/blocks/generator";
-import { isProseSlot, type GeneratorTableSlotTier } from "@/src/core/generators/types";
+import { isProseSlot, isFragmentNameSlot, type GeneratorTableSlotTier } from "@/src/core/generators/types";
 import { drawOnce, drawMultiple, buildFilteredTable } from "@/src/core/tables/roll";
+import { composeFragmentName } from "@/src/core/generators/nameFragments";
 import { getBlockById, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { findTableBlockByKey, resolveCascade } from "@/src/server/services/tables";
 import type { PendingProseSlot } from "@/src/server/ai/generatorProse";
@@ -17,6 +18,9 @@ import { toVisibleBlock, type VisibleBlock } from "@/src/server/services/blocks"
 import type { TableEntryPrice } from "@/src/core/tables/types";
 
 type TypedClient = SupabaseClient<Database>;
+
+/** Probabilite qu'un prenom compose par fragments (`GeneratorFragmentNameSlot`) inclue un fragment central plutot que rester debut+fin seuls (retour utilisateur — la majorite des prenoms n'en ont pas). */
+const FRAGMENT_MID_CHANCE_PERCENT = 40;
 
 /** Un resultat individuel d'emplacement a tirage multiple (V2-J9, `items`) — `price` structure (retour utilisateur) plutot qu'encode dans `text`. */
 export interface GeneratorSlotItem {
@@ -206,6 +210,41 @@ export async function drawTableSlotsFromGeneratorBlock(
       continue;
     }
 
+    if (isFragmentNameSlot(slot)) {
+      const startsKey = renderGeneratorTemplate(slot.fragments.starts, variantKeys);
+      const endsKey = renderGeneratorTemplate(slot.fragments.ends, variantKeys);
+      const rawStarts = await findTableBlockByKey(supabase, block.entity_id, startsKey);
+      const rawEnds = await findTableBlockByKey(supabase, block.entity_id, endsKey);
+      if (!rawStarts || rawStarts.entries.length === 0 || !rawEnds || rawEnds.entries.length === 0) continue;
+      const ends = applyTierFilter(rawEnds, slot.tier, tool, variantKeys, resolvedSlotTiers);
+      if (!ends) continue;
+
+      const startDraw = drawOnce(rawStarts, rng);
+      const startResolved = await resolveCascade(supabase, block.entity_id, startDraw, rng, new Set([rawStarts.key]), 1);
+
+      let midText: string | null = null;
+      const midRefs: BlockReference[] = [];
+      if (slot.fragments.mids && rng.nextInt(100) < FRAGMENT_MID_CHANCE_PERCENT) {
+        const midsKey = renderGeneratorTemplate(slot.fragments.mids, variantKeys);
+        const rawMids = await findTableBlockByKey(supabase, block.entity_id, midsKey);
+        if (rawMids && rawMids.entries.length > 0) {
+          const midDraw = drawOnce(rawMids, rng);
+          const midResolved = await resolveCascade(supabase, block.entity_id, midDraw, rng, new Set([rawMids.key]), 1);
+          midText = midResolved.text;
+          midRefs.push(...midResolved.refs);
+        }
+      }
+
+      const endDraw = drawOnce(ends, rng);
+      const endResolved = await resolveCascade(supabase, block.entity_id, endDraw, rng, new Set([ends.key]), 1);
+
+      const text = composeFragmentName(startResolved.text, midText, endResolved.text);
+      const refs = [...startResolved.refs, ...midRefs, ...endResolved.refs];
+      slots.push({ key: slot.key, text, refs });
+      slotTexts[slot.key] = text;
+      continue;
+    }
+
     const tableKey = renderGeneratorTemplate(slot.table, variantKeys);
     const rawTable = await findTableBlockByKey(supabase, block.entity_id, tableKey);
     if (!rawTable || rawTable.entries.length === 0) continue;
@@ -346,6 +385,12 @@ export async function listGeneratorSectionTables(
   const tableKeys = new Set<string>();
   for (const slot of generator.slots) {
     if (isProseSlot(slot)) continue;
+    if (isFragmentNameSlot(slot)) {
+      tableKeys.add(renderGeneratorTemplate(slot.fragments.starts, variantKeys));
+      if (slot.fragments.mids) tableKeys.add(renderGeneratorTemplate(slot.fragments.mids, variantKeys));
+      tableKeys.add(renderGeneratorTemplate(slot.fragments.ends, variantKeys));
+      continue;
+    }
     tableKeys.add(renderGeneratorTemplate(slot.table, variantKeys));
   }
 

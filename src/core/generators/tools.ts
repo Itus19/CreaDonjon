@@ -138,6 +138,23 @@ export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
       { key: "noms-nain", label: "Nain" },
       { key: "noms-halfelin", label: "Halfelin" },
     ],
+    // Retour utilisateur : les prenoms sont composes par fragments et
+    // doivent "sonner selon le genre" — un axe partage plutot qu'un
+    // selecteur par section, meme motif que Type/Richesse/Zone ailleurs.
+    // Neutre est une vraie troisieme option (ses propres fins de prenom),
+    // jamais un simple melange des deux autres.
+    variants: [
+      {
+        key: "genre",
+        label: "Genre",
+        allowRandom: true,
+        options: [
+          { key: "masculin", label: "Masculin" },
+          { key: "feminin", label: "Féminin" },
+          { key: "neutre", label: "Neutre" },
+        ],
+      },
+    ],
   },
   {
     key: "echoppe",

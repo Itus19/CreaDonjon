@@ -73,6 +73,29 @@ export interface GeneratorTableSlot {
   tier?: GeneratorTableSlotTier;
 }
 
+/**
+ * Emplacement compose par fragments (retour utilisateur — prenoms qui
+ * "sonnent selon la race et le genre", meme principe debut+fin observe sur
+ * dd2024.fr, mots et code originaux). `starts`/`ends` obligatoires,
+ * `mids` optionnelle : le tirage n'utilise un fragment central que dans
+ * une minorite de cas (`src/server/services/generators.ts`), la plupart
+ * des noms restent debut+fin. Les trois cles designent des blocs
+ * `random_table` de la MEME entite, memes conventions qu'un `table`
+ * ordinaire. Recollage prononcable via `joinNameFragments`
+ * (`src/core/generators/nameFragments.ts`), jamais une simple
+ * concatenation brute.
+ */
+export interface GeneratorFragmentNameSlot {
+  key: string;
+  fragments: {
+    starts: string;
+    mids?: string;
+    ends: string;
+  };
+  /** Filtre par palier applique SEULEMENT a la table `ends` (retour utilisateur, genre du prenom : masculin/feminin/neutre) — meme forme que `GeneratorTableSlotTier`, jamais `fromSlot` ici : le genre vient d'un axe de variante choisi par le MJ (V2-J7), pas du tirage d'un autre emplacement. */
+  tier?: GeneratorTableSlotTier;
+}
+
 export interface GeneratorProseSlot {
   key: string;
   /**
@@ -86,10 +109,14 @@ export interface GeneratorProseSlot {
   prose: string;
 }
 
-export type GeneratorSlot = GeneratorTableSlot | GeneratorProseSlot;
+export type GeneratorSlot = GeneratorTableSlot | GeneratorFragmentNameSlot | GeneratorProseSlot;
 
 export function isProseSlot(slot: GeneratorSlot): slot is GeneratorProseSlot {
   return "prose" in slot;
+}
+
+export function isFragmentNameSlot(slot: GeneratorSlot): slot is GeneratorFragmentNameSlot {
+  return "fragments" in slot;
 }
 
 export interface GeneratorData {
