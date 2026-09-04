@@ -1935,6 +1935,22 @@ groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
   testé au plafond Réputée — clamp correct (Simple=palier correcte,
   Moyen=Cher=palier réputée), boissons entièrement issues du palier
   réputée, prix cohérents.
+
+  **Correctif post-clôture** (suite du chantier Échoppe ci-dessous — même
+  question posée pour les noms de taverne, qui étaient l'exemple d'origine
+  de l'idée d'assemblage : « Le cerf écarlate »). La réserve exprimée plus
+  haut (« liste directe pour garantir l'accord... plutôt qu'une
+  combinatoire risquée ») ne tient plus : `fromSlot` résout exactement ce
+  risque. `noms-tavernes` (100 entrées figées) supprimée, remplacée par
+  `mots-tavernes` (30 noms d'enseigne — animaux et objets emblématiques,
+  genre en `tier`) + `adjectifs-tavernes` PARTAGÉE (50 concepts, 13
+  invariants + 37 aux deux formes, 87 entrées, registre couleurs/ambiances
+  distinct de celui des échoppes). `taverne-nom` recomposé en `mot` +
+  `adjectif`, mêmes deux emplacements que `echoppe-nom`. Zéro nouveau code
+  moteur (réutilise `fromSlot`/`knownSlotTiers` tel quel). Vérifié en
+  direct : accord correct dans les deux genres (« La Barrique Chaleureuse »,
+  « Le Renard Vert », « Le Renard Chaleureux »), relance individuelle de
+  l'emplacement `adjectif` seul préserve le genre de `mot` déjà tiré.
 - **V2-J15e — Échoppe** (20 tables : ambiance/marchands/apparence/
   histoire/objets ×9) · **fait** — noms de boutiques à 100 (liste
   directe). Le reste des tables de texte entre 32 et 56 entrées selon la
