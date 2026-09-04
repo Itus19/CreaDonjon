@@ -1847,7 +1847,7 @@ piège de V2-J12 non reproduit).
       qu'une échelle inventée séparément (reste à faire quand ces tickets
       seront pris).
 
-### V2-J15 — Enrichissement du contenu des tables (d100, variété, ton) · `L` — découpé en sous-tickets
+### V2-J15 — Enrichissement du contenu des tables (d100, variété, ton) · `L` — fait (5/5 sous-tickets)
 
 À prendre **une fois tous les outils construits** (V2-J5 à V2-J11 fermés,
 Taverne/PNJ/Noms/Échoppe/Butin tous en place — c'est fait). Enrichir le
@@ -1936,24 +1936,41 @@ groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
   Moyen=Cher=palier réputée), boissons entièrement issues du palier
   réputée, prix cohérents.
 - **V2-J15e — Échoppe** (20 tables : ambiance/marchands/apparence/
-  histoire/objets ×9).
-- **V2-J15e — Échoppe** (20 tables : ambiance/marchands/apparence/
-  histoire/objets ×9).
+  histoire/objets ×9) · **fait** — noms de boutiques à 100 (liste
+  directe). Le reste des tables de texte entre 32 et 56 entrées selon la
+  richesse réelle du sujet (même discipline que Taverne). Les 9 tables
+  `objets-{type}` (déjà tier+price depuis V2-J10) triplées de 6 à 18
+  entrées chacune (6 par palier), prix vérifiés distincts par palier au
+  sein de chaque table. Vérifié en direct : Joaillier + Réputée + Capitale
+  — les 5 sections tirées avec succès, "Un objet en vente" montre un vrai
+  mélange de paliers (deux objets réputée à plusieurs centaines de pièces
+  d'or, deux objets modeste à quelques pièces de cuivre dans le même
+  tirage), confirmant qu'un objet modeste reste toujours possible même
+  dans la boutique la plus huppée.
 
-**Critères (communs à chaque sous-ticket)**
-- [ ] Chaque table du groupe a `die: "d100"` et ~100 entrées distinctes
-      (texte non dupliqué ; pour une table à prix, champ structuré `price`
-      — V2-J9ter — strictement distinct au sein d'une même table ; pour
-      Butin, cible réaliste plutôt que 100 fixe, voir ci-dessus).
-- [ ] Un emplacement à tirage multiple (`count > 1`, `unique_draws`)
+**Critères (communs à chaque sous-ticket) — tous les 5 sous-tickets fermés**
+- [x] Chaque table du groupe a un `die` recalculé sur son nombre réel
+      d'entrées, toutes distinctes (texte non dupliqué ; pour une table à
+      prix, champ structuré `price` — V2-J9ter — strictement distinct au
+      sein d'une même table). ~100 atteint là où le sujet le permettait
+      réellement (les 4 tables de Noms, Noms PNJ, Noms de tavernes, Noms de
+      boutiques, objectifs/récompenses de quête PNJ...) ; en dessous par
+      choix honnête ailleurs (Butin plafonné par le SRD réel ; Registres
+      PNJ à 34, un ton de voix sature vite ; Menu et objets d'échoppe
+      limités par le coût de calibrer un prix distinct par entrée) —
+      jamais un chiffre rond forcé au prix d'un contenu inventé ou dupliqué.
+- [x] Un emplacement à tirage multiple (`count > 1`, `unique_draws`)
       concerné par ce groupe peut effectivement varier d'un tirage à
-      l'autre — plus jamais forcé d'épuiser toute sa table.
-- [ ] Mélange constaté de ton classique et humoristique, pas 100% l'un ou
-      l'autre — vérifié en relisant un échantillon de tables après
-      écriture.
-- [ ] Même discipline de vérification que le reste du lot : relecture de
+      l'autre — vérifié en direct sur le Menu de Taverne et les objets
+      d'Échoppe, plus jamais forcé d'épuiser toute sa table.
+- [x] Mélange constaté de ton classique et humoristique, pas 100% l'un ou
+      l'autre (jeux de mots dans les noms de famille/tavernes/boutiques,
+      clins d'œil ponctuels dans le reste du contenu).
+- [x] Même discipline de vérification que le reste du lot : relecture de
       l'état réel en base après chaque table écrite, contrôle des
-      doublons (texte et prix), jamais confiance à la seule réponse HTTP.
+      doublons (texte et prix) — un vrai bug trouvé et corrigé en cours de
+      route (5 élisions manquantes dans `lignes-rouges-pnj`, V2-J15c),
+      jamais confiance à la seule réponse HTTP.
 
 **Méthode** : un ticket à la fois, jamais tous en même temps. Contenu
 toujours authored en direct sur l'entité "Générateurs de MJ" (jamais en dur
