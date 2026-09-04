@@ -1962,22 +1962,31 @@ groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
   direct : 20 tirages consécutifs en Maison close, aucun nom hors-thème,
   mélange de noms génériques et typés confirmé.
 
-  **Densité augmentée** (retour utilisateur — 2-11 noms spécifiques par
-  type jugé trop maigre pour certains types comme Bazar/Forgeron) :
-  plutôt qu'écrire des dizaines de noms un par un, génération combinatoire
-  par type — un petit vocabulaire "thème" par type (~12-18 mots, genre
-  marqué, ex. Forge/f, Marteau/m, Enclume/f pour Forgeron) combiné à un
-  pool de 50 adjectifs PARTAGÉ entre les 9 types (chaque adjectif porte
-  ses deux formes, ex. Ardent/Ardente), avec accord de genre et élision de
-  l'article calculés à la génération (« La Forge Ardente », « Le Marteau
-  Poli », « L'Écu Discret »). Même technique que les tables de noms de
-  personnes (V2-J15a/c, prénom + nom de famille), appliquée ici au
-  vocabulaire commercial plutôt qu'à l'onomastique. 162 noms combinatoires
-  ajoutés (18 par type, dédupliqués contre les 100 existants), table
-  passée de 100 à 262 entrées — chaque type dispose maintenant de 62 à 71
-  noms éligibles (42 génériques + 20-29 spécifiques), contre 44-53 avant.
-  Vérifié en direct : 10 tirages en Bazar, mélange de noms génériques et
-  combinatoires, accord grammatical correct sur tout l'échantillon.
+  **Densité augmentée, puis remplacée par une composition en direct**
+  (retour utilisateur — 2-11 noms spécifiques par type jugé trop maigre
+  pour certains types comme Bazar/Forgeron). Premier essai : génération
+  combinatoire PRÉ-CALCULÉE, 162 noms figés ajoutés à la table partagée
+  (100 → 262 entrées). L'auteur a explicitement demandé mieux : de vraies
+  tables séparées, éditables indépendamment dans l'écran "Éditer les
+  tables", avec le droit qu'un même mot apparaisse dans deux tables
+  voisines (ex. Forgeron et Armurier partagent « Lame », « Masse »).
+
+  Nouvelle capacité moteur (`fromSlot`, `GeneratorTableSlotTier`,
+  `src/core/generators/types.ts`) : un emplacement peut filtrer sur le
+  `tier` RÉELLEMENT tiré par un emplacement précédent, au lieu d'un axe de
+  variante GM. `noms-echoppes` (262 entrées) supprimée, remplacée par 9
+  tables `mots-echoppes-{type}` (17-19 noms communs du métier, genre en
+  `tier`, ex. Forge/f, Marteau/m pour Forgeron — réutilise l'interpolation
+  `{type}` déjà existante depuis V2-J7, aucun nouveau code pour choisir la
+  table) + 1 table `adjectifs-echoppes` PARTAGÉE (50 concepts, 13
+  invariants + 37 aux deux formes, 87 entrées) filtrée en direct sur le
+  genre du nom déjà tiré (`fromSlot`). `echoppe-nom` recomposé en deux
+  emplacements (`mot` + `adjectif`) au lieu d'un seul texte figé. Vérifié
+  en direct : accord de genre correct sur plusieurs types (« La Fiole
+  Polie », « L'Enclume Audacieuse », « Le Fer Zélé »), et relance
+  INDIVIDUELLE du seul emplacement `adjectif` (nouveau round-trip
+  `knownSlotTiers`, symétrique à `knownSlotTexts`) préserve bien le genre
+  du nom déjà tiré sans le retirer.
 
 **Critères (communs à chaque sous-ticket) — tous les 5 sous-tickets fermés**
 - [x] Chaque table du groupe a un `die` recalculé sur son nombre réel
