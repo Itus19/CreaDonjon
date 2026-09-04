@@ -142,11 +142,22 @@ dans les étapes :
      Vérifié en direct sur `/apercu` : un lien de règle reste un span non
      cliquable (cohérent, pas de page publique), un lien d'entité devient
      un vrai `<a href>` qui navigue correctement.
-3. **Détection automatique à la sauvegarde** — à l'écriture d'un bloc de
-   texte, passer son contenu par `detectEntityReferences` (déjà écrite,
-   à étendre pour matcher aussi les `ruleset_entries` du monde) et proposer
-   les mentions trouvées comme suggestions à confirmer — jamais une
-   réécriture silencieuse (spec §A1).
+3. **Fait — Détection automatique** : bouton "🔗 Détecter des liens" sous
+   chaque bloc de texte — passe chaque segment par `detectEntityReferences`
+   (déjà écrite/testée) contre les fiches ET les entrées de règle du
+   monde (candidats combinés, kind encodé dans un préfixe d'id), exclut
+   les mentions déjà liées (chevauchement avec un nœud `ref` existant), et
+   propose chaque trouvaille comme suggestion à confirmer (Lier/Ignorer)
+   — jamais une réécriture silencieuse (spec §A1). Déclenché par un bouton
+   plutôt qu'automatiquement à chaque frappe/sauvegarde — plus prévisible,
+   moins coûteux. Nouvelle fonction `segmentOffsetToPos` (dans
+   `RichTextEditor.tsx`, dépend de l'instance Tiptap réelle donc hors de
+   `src/core`) convertit un décalage de caractères en position ProseMirror
+   réelle. `otherEntities` gagne un champ `aliases` optionnel
+   (`entityWindow.ts`) — seule donnée qui manquait pour détecter par alias
+   en plus du nom. Vérifié en direct : "Divination" détecté et lié au
+   milieu d'un texte dense ("Magicienne (Divination)Niveau : 5..."),
+   texte environnant intact après sauvegarde.
 4. **Extraction et persistance de `entity_mentions`** — nouvelle fonction
    pure `src/core/linker/mentions.ts` (prévue par la spec, jamais écrite) :
    à chaque écriture d'un bloc contenant du texte, recalcule et remplace
@@ -170,9 +181,9 @@ dans les étapes :
 - [x] Sélectionner du texte et cliquer "Lier à la Fiche" propose des
       fiches ET des règles, et pose un lien qui garde le texte
       sélectionné tel quel.
-- [ ] "Tieffeline" dans un paragraphe se détecte automatiquement et peut
-      se lier à la fiche de race correspondante (détection auto — étape 3,
-      pas encore faite ; la liaison MANUELLE fonctionne déjà, étape 1).
+- [x] "Tieffeline" dans un paragraphe se détecte automatiquement et peut
+      se lier à la fiche de race correspondante (bouton "Détecter des
+      liens", suggestion à confirmer — vérifié en direct avec "Divination").
 - [x] Un lien est cliquable et navigue vers la bonne fiche/règle, dans
       l'éditeur MJ ET sur le wiki public (entité partout ; règle sur le
       wiki joueur — pas sur le partage anonyme, aucune page de règle n'y
