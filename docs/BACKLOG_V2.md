@@ -1847,19 +1847,19 @@ piège de V2-J12 non reproduit).
       qu'une échelle inventée séparément (reste à faire quand ces tickets
       seront pris).
 
-### V2-J15 — Enrichissement du contenu des tables (d100, variété, ton) · `L` — à faire, dernier de la liste
+### V2-J15 — Enrichissement du contenu des tables (d100, variété, ton) · `L` — découpé en sous-tickets
 
 À prendre **une fois tous les outils construits** (V2-J5 à V2-J11 fermés,
-Taverne/PNJ/Noms/Échoppe/Butin tous en place) — enrichir le contenu plutôt
-que la mécanique. Chaque table `random_table` de l'entité "Générateurs de
-MJ" n'a aujourd'hui que 2 à 9 entrées (convention délibérée de ce lot :
-« 2-3 exemples, l'auteur complète plus tard », jamais pensée comme
-définitive). Deux symptômes concrets déjà observés en jouant avec l'outil
-cette session : (1) un tirage simple retombe souvent sur le même résultat
-qu'un tirage voisin (2 entrées seulement → 50% de chances de coïncidence) ;
-(2) un emplacement à tirage multiple avec `unique_draws` (ex. Boissons,
-`count: 4` sur une table de... 4 entrées) est en réalité forcé d'épuiser
-toute la table à chaque tirage — zéro variété d'une partie à l'autre.
+Taverne/PNJ/Noms/Échoppe/Butin tous en place — c'est fait). Enrichir le
+contenu plutôt que la mécanique. Chaque table `random_table` de l'entité
+"Générateurs de MJ" n'a aujourd'hui que 1 à 20 entrées (convention
+délibérée de ce lot : « 2-3 exemples, l'auteur complète plus tard », jamais
+pensée comme définitive). Deux symptômes concrets déjà observés en jouant
+avec l'outil cette session : (1) un tirage simple retombe souvent sur le
+même résultat qu'un tirage voisin (2-3 entrées seulement → coïncidence
+fréquente) ; (2) un emplacement à tirage multiple avec `unique_draws` (ex.
+Boissons, `count: 4`) est parfois forcé d'épuiser presque toute la table à
+chaque tirage — zéro variété d'une partie à l'autre.
 
 Absorbe V2-J5 (ci-dessus, abandonné) : porter chaque table à ~100 entrées
 distinctes met `die: "d100"` de toute façon, pas la peine de le faire deux
@@ -1871,23 +1871,39 @@ déjà en place plutôt qu'en remplacement systématique (une table de noms de
 tavernes 100% blagues devient lassante à la table de jeu ; un mélange
 garde la surprise). Choix au cas par cas en écrivant chaque table.
 
-**Portée et méthode** : un chantier de contenu pur, pas de moteur — mais
-trop volumineux pour un seul ticket exécuté d'un coup (une trentaine de
-tables à ce stade, ~100 entrées chacune). À découper en sous-tickets par
-outil au moment de le prendre (ex. V2-J15a Taverne, V2-J15b PNJ, V2-J15c
-Noms, V2-J15d Échoppe, V2-J15e Butin) plutôt qu'une session unique —
-décision à confirmer en le démarrant, même discipline que le reste de ce
-lot (un ticket à la fois).
+**Découpage** (inventaire réel au moment du découpage — 55 tables sur
+l'entité, réparties par outil) : trop volumineux pour un seul ticket
+exécuté d'un coup. Cinq sous-tickets par outil, pris un par un, jamais en
+parallèle. Ordre choisi par tractabilité plutôt que par ordre alphabétique
+des outils — les groupes les plus petits/bornés d'abord, les deux gros
+groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
 
-**Critères**
-- [ ] Chaque table `random_table` de "Générateurs de MJ" a `die: "d100"`
-      et ~100 entrées distinctes (texte non dupliqué ; pour une table à
-      prix, champ structuré `price` — V2-J9ter — strictement distinct au
-      sein d'une même table, discipline déjà établie sur le Menu de
-      Taverne).
-- [ ] Un emplacement à tirage multiple (`count > 1`, `unique_draws`) peut
-      effectivement varier d'un tirage à l'autre — plus jamais forcé
-      d'épuiser toute sa table.
+- **V2-J15a — Noms** (4 tables : `noms-humains`, `noms-elfes`,
+  `noms-nains`, `noms-halfelins`) — le plus petit groupe, le contenu le
+  plus simple à produire en volume (des noms, pas des paragraphes de
+  flaveur), bon premier chantier pour roder la méthode à cette échelle.
+- **V2-J15b — Butin** (1 table : `butin-objets-magiques`) — plafond RÉEL,
+  pas 100 : le SRD 2024 ne compte que ~247 objets magiques à rareté propre
+  au total (262 moins les rarétés composées, cf. V2-J11), et certains
+  paliers sont intrinsèquement minces (1 seul objet `Common`). Cible :
+  inclure une part significative des objets disponibles par palier plutôt
+  qu'un chiffre fixe — jamais inventer un objet magique non sourcé pour
+  atteindre un total artificiel.
+- **V2-J15c — PNJ** (12 tables : noms, apparence, historique, personnalité
+  ×5, quête ×2).
+- **V2-J15d — Taverne** (18 tables : ambiance/patrons/apparence/histoire/
+  chambre/menu).
+- **V2-J15e — Échoppe** (20 tables : ambiance/marchands/apparence/
+  histoire/objets ×9).
+
+**Critères (communs à chaque sous-ticket)**
+- [ ] Chaque table du groupe a `die: "d100"` et ~100 entrées distinctes
+      (texte non dupliqué ; pour une table à prix, champ structuré `price`
+      — V2-J9ter — strictement distinct au sein d'une même table ; pour
+      Butin, cible réaliste plutôt que 100 fixe, voir ci-dessus).
+- [ ] Un emplacement à tirage multiple (`count > 1`, `unique_draws`)
+      concerné par ce groupe peut effectivement varier d'un tirage à
+      l'autre — plus jamais forcé d'épuiser toute sa table.
 - [ ] Mélange constaté de ton classique et humoristique, pas 100% l'un ou
       l'autre — vérifié en relisant un échantillon de tables après
       écriture.
