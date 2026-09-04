@@ -1948,6 +1948,20 @@ groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
   tirage), confirmant qu'un objet modeste reste toujours possible même
   dans la boutique la plus huppée.
 
+  **Correctif post-clôture** (retour utilisateur après usage) : `noms-echoppes`
+  était une seule table PARTAGÉE par les 9 types, avec des noms clairement
+  typés (« L'Armurerie du Nord », « La Maison des Roses »...) pouvant
+  sortir pour n'importe quel type — un forgeron pouvait hériter d'un nom
+  de maison close. Pas de split en 9 tables séparées (aurait dupliqué les
+  noms génériques 9 fois) : réutilise le même mécanisme que le Menu
+  (`tier` + `match: "exact"`, cette fois sur l'axe `type` plutôt que
+  `wealth`) — 58 des 100 noms tagués avec leur type (2 à 11 selon le
+  type), les 42 autres laissés sans `tier` et donc toujours éligibles
+  quel que soit le type tiré. Zéro changement de code, seulement config
+  (`echoppe-nom.slots[0].tier`) + retag du contenu existant. Vérifié en
+  direct : 20 tirages consécutifs en Maison close, aucun nom hors-thème,
+  mélange de noms génériques et typés confirmé.
+
 **Critères (communs à chaque sous-ticket) — tous les 5 sous-tickets fermés**
 - [x] Chaque table du groupe a un `die` recalculé sur son nombre réel
       d'entrées, toutes distinctes (texte non dupliqué ; pour une table à
