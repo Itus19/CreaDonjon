@@ -140,7 +140,6 @@ function BlockDataEditor({
           onChange={(d) => onChange(d)}
           entityId={block.entityId}
           blockId={block.id}
-          worldSlug={worldSlug}
           onBlockRefreshed={onBlockRefreshed}
           hideAssist={hideAiAssist}
         />
@@ -733,7 +732,10 @@ export default function EntityBlocks({
             </button>
           )}
           {Object.entries(BLOCK_TYPE_LABELS)
-            .filter(([type]) => !restrictAddableTypes || restrictAddableTypes.includes(type))
+            // "generator" retire de "Ajouter un bloc" (retour utilisateur) : l'outil
+            // "Générateurs" vit desormais uniquement dans la sidebar MJ. Le libelle
+            // reste dans BLOCK_TYPE_LABELS pour les blocs generator deja existants.
+            .filter(([type]) => type !== "generator" && (!restrictAddableTypes || restrictAddableTypes.includes(type)))
             .map(([type, label]) => (
             <button
               key={type}

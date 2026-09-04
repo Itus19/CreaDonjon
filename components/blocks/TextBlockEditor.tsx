@@ -12,12 +12,6 @@ interface AiProposalItem {
   validationErrors: { reason?: string } | null;
 }
 
-interface GeneratorSectionOption {
-  toolLabel: string;
-  sectionLabel: string;
-  blockId: string;
-}
-
 /**
  * Assistance redactionnelle (V1-F3) : une instruction libre propose un
  * paragraphe via l'IA, jamais ecrit directement — chaque proposition passe
@@ -32,7 +26,6 @@ export default function TextBlockEditor({
   onChange,
   entityId,
   blockId,
-  worldSlug,
   onBlockRefreshed,
   hideAssist,
 }: {
@@ -40,10 +33,8 @@ export default function TextBlockEditor({
   onChange: (data: TextBlockData) => void;
   entityId: string;
   blockId: string;
-  /** V2-J3 : necessaire pour lister les sections de l'outil MJ "Générateurs" (`GET /api/worlds/[worldSlug]/mj/generateurs/window`) depuis "Insérer un générateur". */
-  worldSlug: string;
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
-  /** Coquille joueur (retour utilisateur) : "enlever les outils d'assistance IA" — jamais retire pour le MJ, `undefined`/`false` partout ailleurs. Couvre aussi "Insérer un générateur" (V2-J3) : meme esprit, outil d'auteur, sous-jacent gm-only de toute facon. */
+  /** Coquille joueur (retour utilisateur) : "enlever les outils d'assistance IA" — jamais retire pour le MJ, `undefined`/`false` partout ailleurs. */
   hideAssist?: boolean;
 }) {
   const [showAssist, setShowAssist] = useState(false);
@@ -52,10 +43,6 @@ export default function TextBlockEditor({
   const [proposeError, setProposeError] = useState<string | null>(null);
   const [proposals, setProposals] = useState<AiProposalItem[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [showGenerators, setShowGenerators] = useState(false);
-  const [generatorOptions, setGeneratorOptions] = useState<GeneratorSectionOption[] | null>(null);
-  const [insertingBlockId, setInsertingBlockId] = useState<string | null>(null);
-  const [insertError, setInsertError] = useState<string | null>(null);
   /**
    * `RichTextEditor` capture son contenu Tiptap une seule fois au montage
    * (`useState(() => segmentsToDoc(segments))`, volontaire : un editeur
@@ -75,86 +62,6 @@ export default function TextBlockEditor({
       .then((all: AiProposalItem[]) => setProposals(all.filter((p) => p.payload?.blockId === blockId)))
       .catch(() => {});
   }, [showAssist, entityId, blockId]);
-
-  useEffect(() => {
-    if (!showGenerators || generatorOptions !== null) return;
-    fetch(`/api/worlds/${worldSlug}/mj/generateurs/window`)
-      .then((res) => (res.ok ? res.json() : { tools: [] }))
-      .then((data: { tools: { label: string; sections: { label: string; blockId: string }[] }[] }) => {
-        setGeneratorOptions(
-          data.tools.flatMap((tool) =>
-            tool.sections.map((section) => ({ toolLabel: tool.label, sectionLabel: section.label, blockId: section.blockId }))
-          )
-        );
-      })
-      .catch(() => setGeneratorOptions([]));
-  }, [showGenerators, generatorOptions, worldSlug]);
-
-  /**
-   * "Insérer un générateur" (V2-J3, specs/arbitrage-modifications.md §3.7) :
-   * tire une section de l'outil MJ "Générateurs" (route deja existante,
-   * `POST /api/blocks/[blockId]/generate`) et l'ajoute comme nouveau
-   * paragraphe au bloc `text` courant — meme sequence "refetch frais +
-   * onBlockRefreshed + remount cible" que "Assistance IA" juste au-dessus
-   * (RichTextEditor est un editeur non controle, un simple `onChange` ne
-   * suffirait pas a le faire apparaitre sans recharger la page).
-   */
-  async function handleInsertGenerator(sectionBlockId: string) {
-    setInsertingBlockId(sectionBlockId);
-    setInsertError(null);
-    try {
-      const genRes = await fetch(`/api/blocks/${sectionBlockId}/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      if (!genRes.ok) {
-        setInsertError("La génération a échoué.");
-        return;
-      }
-      const { text } = (await genRes.json()) as { text: string };
-      if (!text.trim()) return;
-
-      const blocksRes = await fetch(`/api/entities/${entityId}/blocks`);
-      if (!blocksRes.ok) {
-        setInsertError("Impossible de relire le bloc.");
-        return;
-      }
-      const freshBlocks = (await blocksRes.json()) as Array<{ id: string; data: TextBlockData; version: number; display: unknown; visibilityLevel: string; visibilityScopeId: string | null }>;
-      const fresh = freshBlocks.find((b) => b.id === blockId);
-      if (!fresh) return;
-
-      const newSegments = [
-        ...fresh.data.segments,
-        {
-          id: crypto.randomUUID(),
-          blockType: "paragraph" as const,
-          visibility: { level: "public" as const, scopeId: null },
-          content: [{ t: "text" as const, v: text }],
-          align: "left" as const,
-        },
-      ];
-      const patchRes = await fetch(`/api/blocks/${blockId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          version: fresh.version,
-          display: fresh.display,
-          data: { __v: 1, segments: newSegments },
-          visibility: { level: fresh.visibilityLevel, scopeId: fresh.visibilityScopeId },
-        }),
-      });
-      if (!patchRes.ok) {
-        setInsertError("Impossible d'insérer le résultat.");
-        return;
-      }
-      const patched = (await patchRes.json()) as { id: string; data: unknown; version: number };
-      onBlockRefreshed(patched);
-      setRemountKey((k) => k + 1);
-    } finally {
-      setInsertingBlockId(null);
-    }
-  }
 
   async function handlePropose() {
     if (!instruction.trim()) return;
@@ -267,43 +174,6 @@ export default function TextBlockEditor({
                 Proposition rejetée{p.validationErrors?.reason === "budget_exceeded" ? " (limite de propositions par tour atteinte)" : ""}.
               </p>
             ))}
-          </div>
-        )}
-      </div>
-      )}
-
-      {!hideAssist && (
-      <div className="flex flex-col gap-1.5 rounded-md border border-edge/50 bg-panel-sunken p-2">
-        <button
-          type="button"
-          onClick={() => setShowGenerators((v) => !v)}
-          className="self-start text-xs font-medium text-ink-muted transition-colors hover:text-ink"
-        >
-          {showGenerators ? "▾" : "▸"} Insérer un générateur
-        </button>
-
-        {showGenerators && (
-          <div className="flex flex-col gap-1">
-            {generatorOptions === null && <p className="text-xs italic text-ink-muted">Chargement…</p>}
-            {generatorOptions?.length === 0 && (
-              <p className="text-xs italic text-ink-muted">Aucune section de générateur configurée pour l&apos;instant.</p>
-            )}
-            {generatorOptions?.map((option) => (
-              <div key={option.blockId} className="flex items-center justify-between gap-2 text-xs">
-                <span className="text-ink-muted">
-                  {option.toolLabel} › {option.sectionLabel}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleInsertGenerator(option.blockId)}
-                  disabled={insertingBlockId === option.blockId}
-                  className="shrink-0 rounded-full border border-edge px-2.5 py-1 text-ink transition-colors hover:bg-panel disabled:opacity-50"
-                >
-                  {insertingBlockId === option.blockId ? "Tirage…" : "Tirer et insérer"}
-                </button>
-              </div>
-            ))}
-            {insertError && <p className="text-xs text-danger">{insertError}</p>}
           </div>
         )}
       </div>
