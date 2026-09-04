@@ -2,6 +2,30 @@ import type { Rng } from "../dice/rng";
 import type { RandomTableData, TableEntry } from "./types";
 import { InvalidDieError, NoMatchingEntryError } from "./errors";
 
+/**
+ * Reconstruit une table a partir d'un SOUS-ENSEMBLE de ses entrees (ex.
+ * filtre par palier, `entriesUpToTier`/`entriesAtExactTier` de
+ * src/core/generators/variants.ts) — les plages d'origine ne couvrent plus
+ * le de sans trou une fois des entrees retirees, `drawOnce`/`drawMultiple`
+ * planteraient sur un jet tombant dans un trou. Replage les entrees
+ * fournies de facon CONTIGUE (1..somme des poids), die redimensionne en
+ * consequence, pour reutiliser `drawOnce`/`drawMultiple` tels quels plutot
+ * que dupliquer leur logique de tirage/unicite dans un second mecanisme
+ * pondere. `weight` reste le seul denominateur (le poids documentaire de
+ * chaque entree devient ici sa vraie etendue de plage).
+ */
+export function buildFilteredTable<T extends RandomTableData>(source: T, entries: readonly TableEntry[]): T {
+  let cursor = 1;
+  const reflowed: TableEntry[] = entries.map((entry) => {
+    const span = Math.max(1, Math.round(entry.weight));
+    const range = { min: cursor, max: cursor + span - 1 };
+    cursor += span;
+    return { ...entry, range };
+  });
+  const totalSpan = Math.max(1, cursor - 1);
+  return { ...source, die: `d${totalSpan}`, entries: reflowed };
+}
+
 /** "d20" -> 20, "d100" -> 100. Jamais un nombre de faces nu dans les donnees (specs/outils-mj.md §2.1). */
 export function parseDie(die: string): number {
   const match = /^d(\d+)$/.exec(die.trim());

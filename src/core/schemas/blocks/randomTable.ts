@@ -25,6 +25,7 @@ const zTableEntry: z.ZodType<TableEntry> = z.object({
   weight: z.number().positive(),
   text: z.string().min(1),
   price: zTableEntryPrice.optional(),
+  tier: z.string().min(1).optional(),
   refs: z.array(zBlockReference).optional(),
 });
 

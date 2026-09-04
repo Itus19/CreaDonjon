@@ -40,6 +40,17 @@ export interface TableEntry {
   text: string;
   /** Absent pour une table sans notion de prix (la plupart) — jamais infere depuis `text`. */
   price?: TableEntryPrice;
+  /**
+   * Palier de l'entree sur un axe de variante ordonne (retour utilisateur —
+   * "il faut une logique scenaristique de tirage" : une table d'objets
+   * d'echoppe ou de menu de taverne porte TOUS les paliers dans une seule
+   * table plutot qu'une table par palier). Valeur = la cle d'une option de
+   * l'axe designe par le slot qui tire cette table (`GeneratorTableSlot.tier`,
+   * src/core/generators/types.ts) — jamais une echelle inventee a part.
+   * Absent : l'entree est toujours eligible, quel que soit le palier
+   * demande (utile pour une table qui n'a pas encore ete graduee).
+   */
+  tier?: string;
   refs?: BlockReference[];
 }
 

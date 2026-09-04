@@ -1,4 +1,5 @@
 import type { Rng } from "../dice/rng";
+import type { TableEntry } from "../tables/types";
 
 /**
  * Axes de variante d'un outil de generateur (V2-J7, specs/outils-mj.md §3)
@@ -53,4 +54,34 @@ export function orderedNeighbors(axis: GeneratorVariantAxis, resolvedKey: string
   if (idx === -1) return { below: resolvedKey, above: resolvedKey };
   const clamp = (i: number) => axis.options[Math.max(0, Math.min(axis.options.length - 1, i))].key;
   return { below: clamp(idx - 1), above: clamp(idx + 1) };
+}
+
+/**
+ * Entrees eligibles pour un PLAFOND sur un axe ordonne (retour utilisateur —
+ * "logique scenaristique de tirage" : un objet d'echoppe rare ne doit
+ * jamais sortir d'un bourg modeste). Une entree sans `tier` reste toujours
+ * eligible (table pas encore graduee) ; une entree dont le `tier` ne
+ * correspond a aucune option connue de l'axe reste eligible aussi — mieux
+ * vaut la montrer que la faire disparaitre silencieusement pour une faute
+ * de frappe de contenu. Un `ceilingKey` inconnu de l'axe desactive tout
+ * filtrage (retourne toutes les entrees) plutot que d'en exclure toutes.
+ */
+export function entriesUpToTier(axis: GeneratorVariantAxis, ceilingKey: string, entries: readonly TableEntry[]): TableEntry[] {
+  const ceilingIdx = axis.options.findIndex((o) => o.key === ceilingKey);
+  if (ceilingIdx === -1) return [...entries];
+  return entries.filter((entry) => {
+    if (entry.tier === undefined) return true;
+    const idx = axis.options.findIndex((o) => o.key === entry.tier);
+    return idx === -1 || idx <= ceilingIdx;
+  });
+}
+
+/**
+ * Entrees d'un palier EXACT (retour utilisateur — le Menu de Taverne veut
+ * 3 points de prix distincts par categorie, pas "tout ce qui est a ce
+ * niveau ou en dessous"). Une entree sans `tier` reste toujours eligible,
+ * meme discipline que `entriesUpToTier`.
+ */
+export function entriesAtExactTier(tierKey: string, entries: readonly TableEntry[]): TableEntry[] {
+  return entries.filter((entry) => entry.tier === undefined || entry.tier === tierKey);
 }

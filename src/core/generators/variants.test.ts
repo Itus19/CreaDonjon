@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { SeededRng } from "../dice/rng";
-import { RANDOM_VARIANT_VALUE, resolveVariantValue, orderedNeighbors, type GeneratorVariantAxis } from "./variants";
+import {
+  RANDOM_VARIANT_VALUE,
+  resolveVariantValue,
+  orderedNeighbors,
+  entriesUpToTier,
+  entriesAtExactTier,
+  type GeneratorVariantAxis,
+} from "./variants";
+import type { TableEntry } from "../tables/types";
 
 const AXIS: GeneratorVariantAxis = {
   key: "type",
@@ -60,5 +68,62 @@ describe("orderedNeighbors", () => {
 
   it("une cle inconnue de l'axe se renvoie elle-meme des deux cotes, jamais une erreur", () => {
     expect(orderedNeighbors(WEALTH_AXIS, "inexistant")).toEqual({ below: "inexistant", above: "inexistant" });
+  });
+});
+
+const ENTRY = (text: string, tier?: string): TableEntry => ({
+  range: { min: 1, max: 1 },
+  weight: 1,
+  text,
+  tier,
+});
+
+const TIERED_ENTRIES: TableEntry[] = [
+  ENTRY("dague miteuse", "modeste"),
+  ENTRY("épée correcte", "correcte"),
+  ENTRY("épée de maître", "reputee"),
+  ENTRY("bâton universel", undefined), // toujours eligible, table pas encore graduee
+];
+
+describe("entriesUpToTier", () => {
+  it("un plafond du milieu garde son propre palier et tout ce qui est en dessous", () => {
+    expect(entriesUpToTier(WEALTH_AXIS, "correcte", TIERED_ENTRIES).map((e) => e.text)).toEqual([
+      "dague miteuse",
+      "épée correcte",
+      "bâton universel",
+    ]);
+  });
+
+  it("le premier palier exclut tout ce qui est au-dessus", () => {
+    expect(entriesUpToTier(WEALTH_AXIS, "modeste", TIERED_ENTRIES).map((e) => e.text)).toEqual([
+      "dague miteuse",
+      "bâton universel",
+    ]);
+  });
+
+  it("le dernier palier garde tout", () => {
+    expect(entriesUpToTier(WEALTH_AXIS, "reputee", TIERED_ENTRIES)).toHaveLength(4);
+  });
+
+  it("un plafond inconnu de l'axe desactive le filtrage plutot que d'exclure tout", () => {
+    expect(entriesUpToTier(WEALTH_AXIS, "inexistant", TIERED_ENTRIES)).toHaveLength(4);
+  });
+
+  it("une entree dont le palier est inconnu de l'axe reste eligible (faute de frappe de contenu, jamais masquee)", () => {
+    const entries = [ENTRY("objet mal etiquete", "typo")];
+    expect(entriesUpToTier(WEALTH_AXIS, "modeste", entries)).toHaveLength(1);
+  });
+});
+
+describe("entriesAtExactTier", () => {
+  it("ne garde que le palier demande, plus les entrees sans palier", () => {
+    expect(entriesAtExactTier("correcte", TIERED_ENTRIES).map((e) => e.text)).toEqual([
+      "épée correcte",
+      "bâton universel",
+    ]);
+  });
+
+  it("un palier sans aucune entree correspondante ne garde que les entrees sans palier", () => {
+    expect(entriesAtExactTier("inexistant", TIERED_ENTRIES).map((e) => e.text)).toEqual(["bâton universel"]);
   });
 });

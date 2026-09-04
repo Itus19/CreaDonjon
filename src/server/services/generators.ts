@@ -4,15 +4,15 @@ import type { Database } from "@/src/types/database";
 import type { Rng } from "@/src/core/dice/rng";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { zGeneratorBlockData, type GeneratorBlockData } from "@/src/core/schemas/blocks/generator";
-import { isProseSlot } from "@/src/core/generators/types";
-import { drawOnce, drawMultiple } from "@/src/core/tables/roll";
+import { isProseSlot, type GeneratorTableSlotTier } from "@/src/core/generators/types";
+import { drawOnce, drawMultiple, buildFilteredTable } from "@/src/core/tables/roll";
 import { getBlockById, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { findTableBlockByKey, resolveCascade } from "@/src/server/services/tables";
 import type { PendingProseSlot } from "@/src/server/ai/generatorProse";
 import { GENERATOR_TOOLS, toolForSectionKey, type GeneratorToolConfig } from "@/src/core/generators/tools";
-import { resolveVariantValue, orderedNeighbors } from "@/src/core/generators/variants";
+import { resolveVariantValue, orderedNeighbors, entriesUpToTier, entriesAtExactTier } from "@/src/core/generators/variants";
 import { renderGeneratorTemplate, joinMultiDrawTexts } from "@/src/core/generators/render";
-import { zRandomTableBlockData } from "@/src/core/schemas/blocks/randomTable";
+import { zRandomTableBlockData, type RandomTableBlockData } from "@/src/core/schemas/blocks/randomTable";
 import { toVisibleBlock, type VisibleBlock } from "@/src/server/services/blocks";
 import type { TableEntryPrice } from "@/src/core/tables/types";
 
@@ -96,6 +96,36 @@ function resolveGeneratorVariant(
 }
 
 /**
+ * Applique le filtre par palier d'un emplacement (V2-J9quater, "un
+ * fonctionnement qui marche partout pareil" — retour utilisateur) AVANT le
+ * tirage — la table peut porter tous les paliers confondus, ce filtre
+ * decide lesquelles de ses entrees sont eligibles pour CE tirage. Retourne
+ * `table` inchangee si l'emplacement n'a pas de filtre, ou si son axe est
+ * introuvable sur l'outil (config incoherente, jamais un echec silencieux
+ * de tout le tirage). `null` si le filtre ne laisse aucune entree eligible
+ * — l'appelant traite ca comme "table introuvable" (le `{cle}` du gabarit
+ * reste tel quel).
+ */
+function applyTierFilter(
+  table: RandomTableBlockData,
+  tierConfig: GeneratorTableSlotTier | undefined,
+  tool: GeneratorToolConfig | undefined,
+  variantKeys: Record<string, string>
+): RandomTableBlockData | null {
+  if (!tierConfig) return table;
+  const axis = tool?.variants?.find((a) => a.key === tierConfig.axis);
+  if (!axis) return table;
+
+  const eligible =
+    tierConfig.match === "exact"
+      ? entriesAtExactTier(renderGeneratorTemplate(tierConfig.target ?? "", variantKeys), table.entries)
+      : entriesUpToTier(axis, variantKeys[tierConfig.axis] ?? "", table.entries);
+
+  if (eligible.length === 0) return null;
+  return eligible.length === table.entries.length ? table : buildFilteredTable(table, eligible);
+}
+
+/**
  * Tire les emplacements `table` du bloc `generator` `blockId` (V1-E2/V2-J1,
  * specs/outils-mj.md §3) : un tirage par emplacement, sur une table
  * `random_table` de la MEME entite (meme discipline que la cascade de
@@ -149,8 +179,10 @@ export async function drawTableSlotsFromGeneratorBlock(
     }
 
     const tableKey = renderGeneratorTemplate(slot.table, variantKeys);
-    const table = await findTableBlockByKey(supabase, block.entity_id, tableKey);
-    if (!table || table.entries.length === 0) continue;
+    const rawTable = await findTableBlockByKey(supabase, block.entity_id, tableKey);
+    if (!rawTable || rawTable.entries.length === 0) continue;
+    const table = applyTierFilter(rawTable, slot.tier, tool, variantKeys);
+    if (!table) continue;
 
     if (slot.count && slot.count > 1) {
       // V2-J9 : plusieurs tirages sur la MEME table pour cet emplacement

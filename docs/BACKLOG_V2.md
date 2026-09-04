@@ -1577,6 +1577,74 @@ contient plus " — " dans son texte, aucune sans `price`.
 - [x] Vérifié en direct : tirage du Menu, édition d'un prix depuis la
       modale V2-J9bis, confirmés en base par relecture directe.
 
+### V2-J9quater — Tirage filtré par palier (mécanisme unifié) · `M` — en cours
+
+Retour utilisateur, discussion complète : une table "une par palier de
+richesse" (le Menu, patron de V2-J9) ne passe pas à l'échelle — une échoppe
+qui croise type × richesse × zone exigerait des dizaines de tables à la
+main, alors que V2-J15 vise ~100 entrées PAR table. Décision : un seul
+mécanisme de filtrage par palier, réutilisé partout (Taverne aujourd'hui,
+Échoppe/Butin quand leur tour viendra) — explicitement demandé par
+l'auteur ("j'aimerais un fonctionnement qui marche partout pareil").
+
+**Design retenu** (voir aussi V2-J9ter pour `price`, même esprit) :
+- `TableEntry.tier?: string` (`src/core/tables/types.ts`) — la clé d'une
+  option d'un axe de variante (ex. `wealth`), portée par l'entrée
+  elle-même. Une table n'a plus besoin d'être éclatée par palier : TOUTES
+  les entrées, tous paliers confondus, vivent dans une seule table.
+- `GeneratorTableSlot.tier?: { axis, match: "exact" | "ceiling", target?
+  }` (`src/core/generators/types.ts`) — un emplacement dit COMMENT filtrer
+  la table qu'il tire : `"exact"` ne garde que les entrées dont `tier`
+  correspond à une valeur cible interpolée (réutilise `{axe}` /
+  `{axe_below}` / `{axe_above}`, mécanisme V2-J9 inchangé — le Menu veut 3
+  points de prix distincts, pas une plage) ; `"ceiling"` garde toute entrée
+  dont le palier est ≤ la valeur résolue de l'axe (le cas Échoppe/Butin —
+  un objet rare n'apparaît jamais dans un bourg modeste, mais un objet
+  commun reste toujours possible dans une capitale réputée).
+- Deux nouvelles fonctions PURES, testées : `entriesUpToTier`/
+  `entriesAtExactTier` (`src/core/generators/variants.ts`, à côté de
+  `orderedNeighbors` qu'elles réutilisent conceptuellement) filtrent ;
+  `buildFilteredTable` (`src/core/tables/roll.ts`) replage le sous-ensemble
+  filtré de façon CONTIGUË (1..somme des poids) pour réutiliser
+  `drawOnce`/`drawMultiple` tels quels — délibérément PAS de second moteur
+  de tirage pondéré parallèle, juste une table synthétique passée au
+  moteur existant.
+- `src/server/services/generators.ts` applique le filtre entre la
+  résolution de la clé de table et le tirage lui-même ; un plafond/valeur
+  cible sans aucune entrée éligible laisse le `{cle}` du gabarit tel quel,
+  même discipline qu'une table introuvable.
+
+**Migration Taverne (ce ticket)** : les 15 tables du Menu (3 paliers ×
+5 catégories) fusionnées en 5 tables partagées (`entrees-tavernes`,
+`plats-tavernes`, `desserts-tavernes`, `boissons-alcool-tavernes`,
+`boissons-sans-alcool-tavernes`), chaque entrée taguée `tier`. Les slots
+`entree-simple`/`-moyen`/`-cher` etc. passent de "quelle table" à "quel
+palier exact dans LA table", même résultat perçu, un seul mécanisme
+derrière. Échoppe (V2-J10) et Butin (V2-J11) consommeront ce même
+mécanisme en mode `"ceiling"` quand leur tour viendra — pas construit ici,
+leur contenu n'existe pas encore.
+
+**Avancement** : moteur écrit et testé (commit à suivre) — `TableEntry.tier`,
+`GeneratorTableSlotTier`, `applyTierFilter` (src/server/services/
+generators.ts), 11 nouveaux tests core (739 au total, tous verts).
+Reste : migration du contenu Taverne + vérification live + nettoyage des
+15 anciennes tables.
+
+**Critères**
+- [x] `TableEntry.tier` + `GeneratorTableSlot.tier` validés par Zod (les
+      DEUX schémas à jour ensemble — piège déjà rencontré avec `count`,
+      V2-J9 : un champ optionnel absent du schéma se fait retirer en
+      silence sans que TypeScript le voie).
+- [x] `entriesUpToTier`/`entriesAtExactTier`/`buildFilteredTable` testés en
+      isolation (fonctions pures, aucun Supabase).
+- [ ] Le Menu de Taverne migré sur 5 tables partagées, comportement
+      identique vérifié en direct aux deux extrémités de richesse (Modeste
+      et Réputée, même vérification qu'en V2-J9).
+- [ ] Base revérifiée après migration : 0 des 15 anciennes tables
+      référencées nulle part, 0 bloc dupliqué.
+- [ ] `docs/BACKLOG_V2.md` tenu à jour au fur et à mesure (pas seulement à
+      la fin) — demande explicite de l'auteur.
+
 ### V2-J10 — Objets en vente par type d'échoppe · `S` — à faire
 
 Réutilise V2-J7 (axe `type`) + V2-J9 (`count`) : la section "Un objet en
