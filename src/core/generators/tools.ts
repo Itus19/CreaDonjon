@@ -73,6 +73,8 @@ export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
     sections: [
       { key: "taverne-nom", label: "Nom de l'établissement" },
       { key: "taverne-etablissement", label: "L'établissement" },
+      { key: "taverne-apparence", label: "Apparence" },
+      { key: "taverne-histoire", label: "Histoire" },
       { key: "taverne-chambre", label: "La Chambre" },
       { key: "taverne-menu", label: "Menu" },
     ],
@@ -143,6 +145,8 @@ export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
     sections: [
       { key: "echoppe-nom", label: "Nom de la boutique" },
       { key: "echoppe-boutique", label: "La boutique" },
+      { key: "echoppe-apparence", label: "Apparence" },
+      { key: "echoppe-histoire", label: "Histoire" },
       { key: "echoppe-objet", label: "Un objet en vente" },
     ],
     variants: [

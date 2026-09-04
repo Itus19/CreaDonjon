@@ -1314,7 +1314,7 @@ différent sur les mêmes 2-9 résultats. Absorbé par V2-J15 (ci-dessous, en
 fin de liste) : écrire ~100 VRAIES entrées par table met `die: "d100"` de
 toute façon, et fait le travail qui compte réellement.
 
-### V2-J6 — Blocs Apparence/Histoire pour Taverne et Échoppe · `S` — à faire
+### V2-J6 — Blocs Apparence/Histoire pour Taverne et Échoppe · `S` — fait
 
 Taverne et Échoppe gagnent chacun 2 sections supplémentaires ("Apparence",
 "Histoire"), mêmes clés/contenu que le pattern déjà en place pour PNJ —
@@ -1323,12 +1323,26 @@ tools.ts`) + du contenu de table. Pour un lieu, "Histoire" couvre le
 commerçant/tavernier, la place de l'établissement dans le quartier, ses
 relations avec le voisinage — pas une biographie de personnage.
 
+**Fait** : 4 nouvelles sections (`taverne-apparence`, `taverne-histoire`,
+`echoppe-apparence`, `echoppe-histoire`), auto-provisionnées par
+`ensureGeneratorToolsEntity` dès l'ajout au registre. Chacune 2 emplacements
+— "Apparence" : `exterieur` + `detail` (silhouette générale + un élément qui
+accroche l'œil, même patron que `pnj-apparence`) ; "Histoire" :
+`proprietaire` (comment le commerçant/tavernier en est venu à tenir ce lieu)
++ `quartier` (sa place et ses relations dans le voisinage) — conforme au
+critère "pas une biographie de personnage". 8 nouvelles tables (3 entrées
+chacune, convention habituelle du lot), aucune extension moteur.
+
 **Critères**
-- [ ] Taverne et Échoppe ont chacun une section "Apparence" et "Histoire",
+- [x] Taverne et Échoppe ont chacun une section "Apparence" et "Histoire",
       tirables et rejouables comme les autres.
-- [ ] "Créer la fiche" les inclut comme blocs `text` (mécanisme générique
-      déjà en place, aucun changement de `promotion.ts` attendu).
-- [ ] Vérifié en direct (tirage + création de fiche + nettoyage).
+- [x] "Créer la fiche" les inclut comme blocs `text` (mécanisme générique
+      déjà en place, aucun changement de `promotion.ts` attendu) — vérifié
+      en direct sur Échoppe : Apparence/Histoire apparaissent bien comme
+      blocs `text` sur la fiche créée.
+- [x] Vérifié en direct (tirage + création de fiche + nettoyage) — base
+      revérifiée après coup, aucun doublon (74 blocs, 8 nouvelles tables à
+      3 entrées chacune, 4 nouvelles sections à 1 exemplaire chacune).
 
 ### V2-J7 — Mécanisme des axes de variante + sélecteurs Échoppe · `M` — fait
 
