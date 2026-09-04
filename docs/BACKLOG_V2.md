@@ -1879,9 +1879,18 @@ des outils — les groupes les plus petits/bornés d'abord, les deux gros
 groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
 
 - **V2-J15a — Noms** (4 tables : `noms-humains`, `noms-elfes`,
-  `noms-nains`, `noms-halfelins`) — le plus petit groupe, le contenu le
-  plus simple à produire en volume (des noms, pas des paragraphes de
-  flaveur), bon premier chantier pour roder la méthode à cette échelle.
+  `noms-nains`, `noms-halfelins`) · **fait** — le plus petit groupe, le
+  contenu le plus simple à produire en volume (des noms, pas des
+  paragraphes de flaveur), bon premier chantier pour roder la méthode à
+  cette échelle. 100 noms distincts par culture (prénom + nom de famille,
+  `die: "d100"`), générés par combinaison de deux bassins (~30 prénoms ×
+  ~30 noms de famille par culture) avec dédoublonnage vérifié — mélange de
+  noms classiques et de quelques jeux de mots par bassin de noms de
+  famille (ex. "Roquefort", "Prêt-à-Boire" côté Humain ; "Six-Repas-par-
+  Jour", "Bontrou" côté Halfelin), jamais 100% l'un ou l'autre. Vérifié en
+  direct : tirage sur les 4 cultures, `d100` confirmé, aucun doublon
+  (relecture directe de l'état en base après écriture, 100/100 uniques sur
+  chaque table).
 - **V2-J15b — Butin** (1 table : `butin-objets-magiques`) — plafond RÉEL,
   pas 100 : le SRD 2024 ne compte que ~247 objets magiques à rareté propre
   au total (262 moins les rarétés composées, cf. V2-J11), et certains
