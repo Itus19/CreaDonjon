@@ -1905,7 +1905,21 @@ groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
   d'intelligence/peu commun, Armure d'écailles de dragon/très rare, dans
   un seul tirage).
 - **V2-J15c — PNJ** (12 tables : noms, apparence, historique, personnalité
-  ×5, quête ×2).
+  ×5, quête ×2) · **fait** — 8 tables à 100 (noms, silhouettes,
+  particularités, origines, tournants, aspirations, objectifs, récompenses),
+  3 réduites à un total honnête plutôt que forcées à 100 (lignes rouges 97,
+  limites 90, tics 90 — toutes trois amplement variées mais pas besoin de
+  chiffre rond artificiel), et `registres-pnj` volontairement laissée à 34 :
+  un registre de voix (« familier », « soutenu »...) sature bien avant 100,
+  au-delà ce ne serait que des synonymes du même trait, même logique que le
+  palier Commun de Butin (V2-J15b). `origines-pnj`/`tournants-pnj` et
+  `registres-pnj`/`tics-pnj` conçues pour s'enchaîner grammaticalement dans
+  leur gabarit respectif (`pnj-histoire`, `pnj-personnalite`) quelle que
+  soit la combinaison tirée — vérifié en composant plusieurs tirages
+  aléatoires, tous lisibles. **Bug trouvé et corrigé en cours de route** :
+  5 entrées de `lignes-rouges-pnj` avaient une élision manquante (« ne
+  abandonnera » au lieu de « n'abandonnera ») — détecté par une recherche
+  ciblée sur le motif `ne` + voyelle en base, corrigé, revérifié.
 - **V2-J15d — Taverne** (18 tables : ambiance/patrons/apparence/histoire/
   chambre/menu).
 - **V2-J15e — Échoppe** (20 tables : ambiance/marchands/apparence/
