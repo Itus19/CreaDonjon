@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { GeneratorBlockData } from "@/src/core/schemas/blocks/generator";
 import { isProseSlot, PROSE_LENGTH_PRESETS, DEFAULT_PROSE_LENGTH, type ProseLength } from "@/src/core/generators/types";
@@ -180,6 +181,16 @@ type TableBlock = Omit<VisibleBlock, "data"> & { data: RandomTableBlockData };
  * demonte la modale. Pas de gestion de conflit de version : un seul MJ
  * edite ce contenu a la fois, une erreur affiche juste un message plutot
  * que de reconcilier deux versions.
+ *
+ * `createPortal` vers `document.body` (retour utilisateur — la modale
+ * debordait en haut ET en bas) : le panneau MJ (`.window-frame`) a un
+ * `backdrop-filter: blur(...)` pour son effet de flou — une regle CSS peu
+ * connue veut qu'un `backdrop-filter` (comme un `transform`) cree un
+ * nouveau containing block pour tout descendant `position: fixed`. Sans
+ * portal, `fixed inset-0` restait piege dans les ~860×760px du panneau
+ * plutot que le vrai viewport, et `max-h-[85vh]` (calcule sur le VRAI
+ * viewport, toujours) depassait largement cet espace piege. Meme motif
+ * que `ConfirmDialog.tsx` (`z-[1100]`, `role="dialog"`).
  */
 function GeneratorTablesModal({
   blockId,
@@ -270,8 +281,14 @@ function GeneratorTablesModal({
     onClose();
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={handleClose}>
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[1100] flex items-center justify-center bg-scrim p-4"
+      onClick={handleClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Tables de cette section"
+    >
       <div
         className="flex max-h-[85vh] w-full max-w-2xl flex-col gap-3 overflow-y-auto rounded-md border border-edge bg-panel p-4"
         onClick={(e) => e.stopPropagation()}
@@ -295,7 +312,8 @@ function GeneratorTablesModal({
           </div>
         ))}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
