@@ -735,7 +735,15 @@ export default function EntityBlocks({
             // "generator" retire de "Ajouter un bloc" (retour utilisateur) : l'outil
             // "Générateurs" vit desormais uniquement dans la sidebar MJ. Le libelle
             // reste dans BLOCK_TYPE_LABELS pour les blocs generator deja existants.
-            .filter(([type]) => type !== "generator" && (!restrictAddableTypes || restrictAddableTypes.includes(type)))
+            // personality/worldview retires des qu'un exemplaire existe deja sur
+            // cette fiche (V2.1-5, un seul de chaque pour eviter les confusions —
+            // meme garde-fou en base, index blocks_personality_worldview_uniq).
+            .filter(
+              ([type]) =>
+                type !== "generator" &&
+                (!restrictAddableTypes || restrictAddableTypes.includes(type)) &&
+                !((type === "personality" || type === "worldview") && blocks.some((b) => b.blockType === type))
+            )
             .map(([type, label]) => (
             <button
               key={type}

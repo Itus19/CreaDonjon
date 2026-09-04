@@ -202,7 +202,7 @@ jeu) — un second mécanisme, sans rapport avec le premier.
 
 ---
 
-## V2.1-5 — Un seul bloc Personnalité/Convictions par fiche · `S`
+## V2.1-5 — Un seul bloc Personnalité/Convictions par fiche · `S` — fait
 
 ### Constat
 
@@ -233,8 +233,23 @@ est une contrainte en base, pas seulement une vérification applicative
 
 ### Critères
 
-- [ ] Impossible d'ajouter un second bloc Personnalité (ou Convictions) à
+- [x] Impossible d'ajouter un second bloc Personnalité (ou Convictions) à
       une fiche qui en a déjà un — en base comme à l'écran.
+
+**Fait.** Index unique partiel `blocks_personality_worldview_uniq` sur
+`(entity_id, block_type)` (migration `20260904220000`) — deux vrais
+doublons trouvés en base avant la migration (même entité "Candide
+Fausset" dans deux copies de monde, même course qu'un bug déjà vu sur les
+blocs générateurs : un bloc vierge en plus du bloc réel), le bloc vierge
+supprimé à la main dans chaque cas avant de poser la contrainte.
+`InsertBlockError` (nouveau, `src/server/repos/blocks.ts`) conserve le
+code Postgres pour que `createBlock` distingue cette violation précise
+(`reason: "duplicate_block_type"`, HTTP 409) d'une vraie erreur. Menu
+"Ajouter un bloc" (`EntityBlocks.tsx`) masque Personnalité/Convictions dès
+que la fiche en porte déjà un. Vérifié en direct sur "Candide Fausset"
+(fiche portant déjà les deux blocs) : absents du menu, et une tentative
+directe contre l'API renvoie bien 409 "Cette fiche a deja un bloc de ce
+type."
 
 ---
 

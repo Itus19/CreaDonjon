@@ -15,6 +15,7 @@ import {
   deleteBlock as repoDeleteBlock,
   getBlockById,
   insertBlock,
+  InsertBlockError,
   listBlocksForEntity,
   maxDisplayOrder,
   updateBlockDisplayOrder,
@@ -126,7 +127,10 @@ async function recordBlockRevision(
   await recordEntityRevision(supabase, { entity, changeSource, changedBy });
 }
 
-export type CreateBlockResult = { ok: true; block: VisibleBlock } | { ok: false; reason: "forbidden" };
+export type CreateBlockResult =
+  | { ok: true; block: VisibleBlock }
+  | { ok: false; reason: "forbidden" }
+  | { ok: false; reason: "duplicate_block_type" };
 
 export async function createBlock(
   supabase: TypedClient,
@@ -152,16 +156,28 @@ export async function createBlock(
   const data = defaultBlockData(params.blockType);
   const displayOrder = (await maxDisplayOrder(supabase, params.entityId)) + 1000;
 
-  const row = await insertBlock(supabase, {
-    entityId: params.entityId,
-    blockType: params.blockType,
-    display,
-    data: data as Json,
-    displayOrder,
-    visibilityLevel: params.visibilityLevel,
-    visibilityScopeId: params.visibilityScopeId,
-    createdBy: params.createdBy,
-  });
+  let row: BlockRow;
+  try {
+    row = await insertBlock(supabase, {
+      entityId: params.entityId,
+      blockType: params.blockType,
+      display,
+      data: data as Json,
+      displayOrder,
+      visibilityLevel: params.visibilityLevel,
+      visibilityScopeId: params.visibilityScopeId,
+      createdBy: params.createdBy,
+    });
+  } catch (error) {
+    // V2.1-5 : au plus un bloc personality/worldview par fiche (index unique
+    // blocks_personality_worldview_uniq, migration 20260904220000) — une
+    // violation de cette contrainte precise est un refus attendu, jamais
+    // une erreur 500 opaque.
+    if (error instanceof InsertBlockError && error.code === "23505") {
+      return { ok: false, reason: "duplicate_block_type" };
+    }
+    throw error;
+  }
   await recordBlockRevision(supabase, params.entityId, params.createdBy);
   return { ok: true, block: toVisibleBlock(row) };
 }
