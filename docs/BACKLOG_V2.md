@@ -1411,25 +1411,56 @@ supprimées, plus personne ne les référence.
       d'hôtel élégant..." + "un service impeccable, verres en cristal".
 - [x] Vérifié en direct.
 
-### V2-J9 — Tirage multiple par emplacement + Menu de Taverne · `M` — à faire
+### V2-J9 — Tirage multiple par emplacement + Menu de Taverne · `M` — fait
 
-`drawMultiple` existe déjà (`src/core/tables/roll.ts:65`, déjà utilisée par
-`src/server/services/tables.ts:108`) — jamais branchée côté générateur, qui
-appelle toujours `drawOnce`. `GeneratorTableSlot` gagne un `count?: number`
-optionnel ; `drawTableSlotsFromGeneratorBlock` l'utilise pour tirer
-plusieurs résultats (respecte `unique_draws` de la table), texte du slot =
-lignes jointes. Nouvelle section "Menu" sur Taverne (`plats`/`boissons`,
-`count: 5`), prix croissant écrit dans le texte de chaque entrée
-(convention déjà en place : "Bière brune locale — 4 pc"), éventuellement
-par palier de richesse (dépend de V2-J8).
+`drawMultiple` existait déjà (`src/core/tables/roll.ts:65`, déjà utilisée
+par `src/server/services/tables.ts:108`) — jamais branchée côté générateur,
+qui appelait toujours `drawOnce`. `GeneratorTableSlot` gagne un
+`count?: number` optionnel ; `drawTableSlotsFromGeneratorBlock` l'utilise
+pour tirer plusieurs résultats (respecte `unique_draws`), joints par la
+nouvelle fonction pure `joinMultiDrawTexts` (testée). Nouvelle section
+"Menu" sur Taverne, organisée comme un vrai menu de restaurant (retour
+utilisateur en cours de route) : `entrees`/`plats`/`desserts`/`boissons`,
+chacun sur la table `{catégorie}-tavernes-{wealth}` — palier de richesse
+de V2-J8 réutilisé directement, prix croissants selon le palier (ex.
+modeste : "Bouillie d'orge et de légumes — 1 pc" ; réputée : "Homard des
+mers froides — 5 pa"). Affichage dédié dans `GeneratorToolPanel.tsx` : deux
+colonnes ("Plats" à gauche, sous-catégorisé Entrées/Plats/Desserts ;
+"Boissons" à droite), chaque catégorie dans un vrai tableau à 2 colonnes
+(nom | prix, `SlotItemsTable`/`MenuCategory`) plutôt qu'un bloc de texte.
+
+**Bug trouvé et corrigé en cours de route** : `ensureGeneratorToolsEntity`
+(src/server/services/entities.ts) relit les clés de section existantes
+puis insère les manquantes — idempotent en apparence, mais deux appels
+presque simultanés (Next.js Fast Refresh + un onglet resté ouvert sur
+l'outil MJ, rechargé à chaque sauvegarde de fichier pendant cette session)
+peuvent lire le même état avant d'écrire. Incident réel : 130 blocs
+`generator` identiques (clé `taverne-menu`) créés le même jour — le
+diagnostic précédent dans ce fichier ("cause exacte non identifiée côté
+outil de navigation") était faux, la vraie cause est cette course
+applicative. Corrigé par un index unique en base
+(`blocks_generator_section_key_uniq`, migration `20260904150000`) plutôt
+que par une simple convention de code — `insertGeneratorSectionBlockIfMissing`
+(src/server/repos/blocks.ts) avale silencieusement la violation d'unicité
+d'un appel concurrent, qui n'est plus une erreur mais le comportement
+voulu. Un bug distinct a aussi été trouvé au passage : `zGeneratorTableSlot`
+(src/core/schemas/blocks/generator.ts) ne validait pas encore `count`, qui
+se faisait donc silencieusement retirer par Zod à l'écriture — TypeScript
+ne l'a pas signalé car `count` est optionnel des deux côtés (un champ
+optionnel absent reste assignable). Corrigé, et content réécrit une fois
+la validation en place.
 
 **Critères**
-- [ ] Un emplacement avec `count > 1` tire N résultats distincts (si
-      `unique_draws`) en un seul tirage de section.
-- [ ] Taverne a une section "Menu" avec 4-5 plats et 4-5 boissons, prix
-      croissants.
-- [ ] Test core sur le tirage multiple d'un emplacement (fonction pure).
-- [ ] Vérifié en direct.
+- [x] Un emplacement avec `count > 1` tire N résultats distincts (si
+      `unique_draws`) en un seul tirage de section — vérifié en direct,
+      5 plats + 5 boissons tirés en un seul appel.
+- [x] Taverne a une section "Menu" avec des plats et boissons, prix
+      croissants selon le palier de richesse.
+- [x] Test core sur le tirage multiple d'un emplacement (fonction pure) —
+      `joinMultiDrawTexts`, `src/core/generators/render.test.ts` (3 tests).
+- [x] Vérifié en direct : rôtis/desserts/boissons cohérents avec le palier
+      de richesse choisi (Modeste vs Réputée testés), relance individuelle
+      d'un seul emplacement (`entrees`) confirmée sans toucher les autres.
 
 ### V2-J10 — Objets en vente par type d'échoppe · `S` — à faire
 
@@ -1562,6 +1593,11 @@ piège de V2-J12 non reproduit).
 toujours authored en direct sur l'entité "Générateurs de MJ" (jamais en dur
 dans le code) — et **toujours revérifié en relisant l'état réel du bloc
 après écriture** (une écriture dupliquée avec un `data.key` correct mais un
-contenu resté par défaut s'est produite deux fois cette session, cause
-exacte non identifiée côté outil de navigation — ne jamais faire confiance
-à la seule réponse HTTP de l'écriture).
+contenu resté par défaut s'est produite plusieurs fois cette session — ne
+jamais faire confiance à la seule réponse HTTP de l'écriture). **Cause
+identifiée en V2-J9** : `ensureGeneratorToolsEntity` (src/server/services/
+entities.ts) n'était idempotent qu'en apparence — deux appels presque
+simultanés (Fast Refresh + un onglet resté ouvert sur l'outil) peuvent lire
+le même état avant d'écrire. Corrigé par un index unique en base
+(`blocks_generator_section_key_uniq`, migration `20260904150000`), pas
+seulement par convention applicative.

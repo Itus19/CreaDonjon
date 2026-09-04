@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatSlotValuesForPrompt, renderGeneratorTemplate } from "./render";
+import { formatSlotValuesForPrompt, joinMultiDrawTexts, renderGeneratorTemplate } from "./render";
 
 describe("renderGeneratorTemplate", () => {
   it("remplace une cle connue par son texte", () => {
@@ -40,5 +40,19 @@ describe("formatSlotValuesForPrompt", () => {
 
   it("une liste vide produit une chaine vide, jamais une erreur", () => {
     expect(formatSlotValuesForPrompt({})).toBe("");
+  });
+});
+
+describe("joinMultiDrawTexts", () => {
+  it("joint plusieurs textes, une ligne chacun, dans l'ordre fourni", () => {
+    expect(joinMultiDrawTexts(["Bière — 4 pc", "Ragoût — 1 pa"])).toBe("Bière — 4 pc\nRagoût — 1 pa");
+  });
+
+  it("un seul texte reste seul, sans saut de ligne parasite", () => {
+    expect(joinMultiDrawTexts(["Bière — 4 pc"])).toBe("Bière — 4 pc");
+  });
+
+  it("une liste vide produit une chaine vide", () => {
+    expect(joinMultiDrawTexts([])).toBe("");
   });
 });

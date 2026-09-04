@@ -24,6 +24,68 @@ export interface SectionResult {
 }
 
 /**
+ * Un emplacement a tirage multiple (V2-J9, `count` — ex. Menu de taverne)
+ * s'affiche en tableau plutot qu'en une ligne de texte — chaque entree
+ * suit la convention "Nom — Prix" deja etablie dans le contenu tire,
+ * separee ici seulement pour l'affichage (le texte assemble reste la
+ * seule donnee, rien n'est reparse au-dela de ce simple decoupage visuel).
+ */
+function SlotItemsTable({ items }: { items: string[] }) {
+  return (
+    <table className="w-full text-xs">
+      <tbody>
+        {items.map((item, i) => {
+          const [name, price] = item.split(" — ");
+          return (
+            <tr key={i} className="border-b border-edge/20 last:border-b-0">
+              <td className="py-0.5 pr-2 text-ink">{name}</td>
+              {price && <td className="whitespace-nowrap py-0.5 text-right text-ink-muted">{price}</td>}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+/** Une categorie du Menu de taverne (V2-J9, retour utilisateur) — libelle, tableau d'items et sa propre relance, reutilise 4 fois (entrees/plats/desserts/boissons) plutot que reecrit. */
+function MenuCategory({
+  label,
+  slotKey,
+  result,
+  onReroll,
+  reloading,
+}: {
+  label: string;
+  slotKey: string;
+  result: GeneratorSlotResult | undefined;
+  onReroll: (slotKey: string) => void;
+  reloading: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-ink-muted">{label}</span>
+        <button
+          type="button"
+          onClick={() => onReroll(slotKey)}
+          disabled={reloading}
+          className="rounded-full border border-edge px-2 py-0.5 text-xs text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
+          title={`Relancer ${label}`}
+        >
+          {reloading ? "…" : "↻"}
+        </button>
+      </div>
+      {result?.items && result.items.length > 0 ? (
+        <SlotItemsTable items={result.items} />
+      ) : (
+        <p className="text-xs text-ink">{result?.text || "—"}</p>
+      )}
+    </div>
+  );
+}
+
+/**
  * Une section d'un outil de generation (V2-J1 Phase 2, style "Maisons
  * Closes" demande par l'utilisateur) : un bouton "Tirer" genere TOUS les
  * emplacements du bloc `generator` de cette section ; une fois tire, un
@@ -177,32 +239,58 @@ function GeneratorSectionCard({
             {detailsOpen ? "▾" : "▸"} Détails des tirages
           </button>
 
-          {detailsOpen && (
-            <div className="flex flex-col gap-1 rounded-md border border-edge/40 p-2">
-              {data.slots.map((slot) => {
-                const result = slotResults[slot.key];
-                return (
-                  <div key={slot.key} className="flex items-center gap-2 border-b border-edge/30 py-1 text-xs last:border-b-0">
-                    <span className="w-32 shrink-0 text-ink-muted">{slot.key}</span>
-                    {result?.die && result.rolled !== undefined && (
-                      <span className="mech shrink-0 text-ink-muted">
-                        {result.die} → {result.rolled}
-                      </span>
-                    )}
-                    <span className="flex-1 text-ink">{result?.text || "—"}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRerollSlot(slot.key)}
-                      disabled={reloadingKey === slot.key}
-                      className="shrink-0 rounded-full border border-edge px-2 py-0.5 text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
-                      title="Relancer cet emplacement"
-                    >
-                      {reloadingKey === slot.key ? "…" : "↻"}
-                    </button>
-                  </div>
-                );
-              })}
+          {detailsOpen && data.key === "taverne-menu" ? (
+            // Layout dedie au Menu (retour utilisateur) : deux colonnes,
+            // "Plats" organise en Entrees/Plats/Desserts comme un vrai menu
+            // de restaurant, "Boissons" a part — les 4 emplacements restent
+            // les memes cles generiques (`entrees`/`plats`/`desserts`/
+            // `boissons`), seul l'AGENCEMENT diverge du rendu par defaut.
+            <div className="grid grid-cols-2 gap-4 rounded-md border border-edge/40 p-2">
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-semibold text-ink">Plats</span>
+                <MenuCategory label="Entrées" slotKey="entrees" result={slotResults.entrees} onReroll={handleRerollSlot} reloading={reloadingKey === "entrees"} />
+                <MenuCategory label="Plats" slotKey="plats" result={slotResults.plats} onReroll={handleRerollSlot} reloading={reloadingKey === "plats"} />
+                <MenuCategory label="Desserts" slotKey="desserts" result={slotResults.desserts} onReroll={handleRerollSlot} reloading={reloadingKey === "desserts"} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-semibold text-ink">Boissons</span>
+                <MenuCategory label="Boissons" slotKey="boissons" result={slotResults.boissons} onReroll={handleRerollSlot} reloading={reloadingKey === "boissons"} />
+              </div>
             </div>
+          ) : (
+            detailsOpen && (
+              <div className="flex flex-col gap-1 rounded-md border border-edge/40 p-2">
+                {data.slots.map((slot) => {
+                  const result = slotResults[slot.key];
+                  return (
+                    <div key={slot.key} className="flex items-start gap-2 border-b border-edge/30 py-1 text-xs last:border-b-0">
+                      <span className="w-32 shrink-0 pt-0.5 text-ink-muted">{slot.key}</span>
+                      {result?.die && result.rolled !== undefined && (
+                        <span className="mech shrink-0 pt-0.5 text-ink-muted">
+                          {result.die} → {result.rolled}
+                        </span>
+                      )}
+                      {result?.items && result.items.length > 0 ? (
+                        <div className="flex-1">
+                          <SlotItemsTable items={result.items} />
+                        </div>
+                      ) : (
+                        <span className="flex-1 pt-0.5 text-ink">{result?.text || "—"}</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRerollSlot(slot.key)}
+                        disabled={reloadingKey === slot.key}
+                        className="shrink-0 rounded-full border border-edge px-2 py-0.5 text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
+                        title="Relancer cet emplacement"
+                      >
+                        {reloadingKey === slot.key ? "…" : "↻"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )
           )}
         </div>
       )}

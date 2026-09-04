@@ -74,6 +74,7 @@ export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
       { key: "taverne-nom", label: "Nom de l'établissement" },
       { key: "taverne-etablissement", label: "L'établissement" },
       { key: "taverne-chambre", label: "La Chambre" },
+      { key: "taverne-menu", label: "Menu" },
     ],
     // Memes cles/libelles d'options que l'axe wealth/zone d'Échoppe (V2-J7)
     // — vocabulaire coherent entre les deux outils — mais declares separement :

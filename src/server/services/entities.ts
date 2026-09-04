@@ -26,7 +26,7 @@ import { zGeneratorBlockData } from "@/src/core/schemas/blocks/generator";
 import { GENERATOR_TOOLS } from "@/src/core/generators/tools";
 import { getWorldEntityKindOrder } from "@/src/server/repos/worlds";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
-import { insertBlock, listBlockVisibilityForEntities, listBlocksForEntity, maxDisplayOrder } from "@/src/server/repos/blocks";
+import { insertBlock, insertGeneratorSectionBlockIfMissing, listBlockVisibilityForEntities, listBlocksForEntity, maxDisplayOrder } from "@/src/server/repos/blocks";
 import { defaultBlockData, defaultBlockDisplay } from "@/src/core/schemas/blocks/registry";
 import type { Json } from "@/src/types/database";
 import { listEntityGrantsForUser } from "@/src/server/repos/entityGrants";
@@ -287,6 +287,10 @@ export async function deleteEntity(
  * Visibilite `gm` sur chaque bloc — jamais vue des joueurs, cf.
  * `listPlayerVisibleEntityIds` qui masque deja toute entite sans bloc
  * visible d'un joueur. Idempotent : n'ajoute que les sections manquantes.
+ * Deux appels presque simultanes (V2-J9, incident reel : 130 blocs
+ * dupliques pour la meme section) restent possibles cote lecture — l'index
+ * unique `blocks_generator_section_key_uniq` (migration 20260904150000)
+ * et `insertGeneratorSectionBlockIfMissing` sont le vrai garde-fou.
  */
 export async function ensureGeneratorToolsEntity(supabase: TypedClient, worldId: string, createdBy: string): Promise<string> {
   const existing = await findEntityByKind(supabase, worldId, "generateur");
@@ -315,9 +319,8 @@ export async function ensureGeneratorToolsEntity(supabase: TypedClient, worldId:
   for (const tool of GENERATOR_TOOLS) {
     for (const section of tool.sections) {
       if (existingKeys.has(section.key)) continue;
-      await insertBlock(supabase, {
+      await insertGeneratorSectionBlockIfMissing(supabase, {
         entityId,
-        blockType: "generator",
         display: defaultBlockDisplay("generator", section.label),
         data: { ...(defaultBlockData("generator") as Record<string, unknown>), key: section.key } as Json,
         displayOrder,

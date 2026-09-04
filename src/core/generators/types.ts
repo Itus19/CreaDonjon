@@ -18,6 +18,14 @@ export interface GeneratorTableSlot {
   key: string;
   /** Cle d'un bloc `random_table` porte par la meme entite (src/core/tables/types.ts RandomTableData.key). */
   table: string;
+  /**
+   * Nombre de resultats a tirer sur la MEME table pour cet emplacement
+   * (V2-J9, ex. un menu de taverne : 5 plats en un seul emplacement plutot
+   * que 5 emplacements identiques) — reutilise `drawMultiple` deja
+   * existant (src/core/tables/roll.ts), qui respecte deja `unique_draws`.
+   * Absent ou <= 1 : un seul tirage, comportement inchange.
+   */
+  count?: number;
 }
 
 export interface GeneratorProseSlot {

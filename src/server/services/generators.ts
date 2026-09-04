@@ -5,13 +5,13 @@ import type { Rng } from "@/src/core/dice/rng";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { zGeneratorBlockData, type GeneratorBlockData } from "@/src/core/schemas/blocks/generator";
 import { isProseSlot } from "@/src/core/generators/types";
-import { drawOnce } from "@/src/core/tables/roll";
+import { drawOnce, drawMultiple } from "@/src/core/tables/roll";
 import { getBlockById, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { findTableBlockByKey, resolveCascade } from "@/src/server/services/tables";
 import type { PendingProseSlot } from "@/src/server/ai/generatorProse";
 import { GENERATOR_TOOLS, toolForSectionKey, type GeneratorToolConfig } from "@/src/core/generators/tools";
 import { resolveVariantValue } from "@/src/core/generators/variants";
-import { renderGeneratorTemplate } from "@/src/core/generators/render";
+import { renderGeneratorTemplate, joinMultiDrawTexts } from "@/src/core/generators/render";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -22,6 +22,8 @@ export interface GeneratorSlotResult {
   /** Notation de de et resultat brut du tirage (V2-J1 Phase 2, outil MJ decompose) — presents seulement pour un emplacement `table` : c'est ce que le panneau "Détails des tirages" affiche a cote du texte resolu. */
   die?: string;
   rolled?: number;
+  /** Textes individuels d'un emplacement a tirage multiple (V2-J9, `count`), AVANT assemblage dans `text` — permet au client de les afficher en tableau (ex. Menu de taverne) plutot qu'en un seul bloc de texte. Absent pour un tirage simple. */
+  items?: string[];
 }
 
 export interface GeneratorResult {
@@ -110,6 +112,26 @@ export async function drawTableSlotsFromGeneratorBlock(
     const tableKey = renderGeneratorTemplate(slot.table, variantKeys);
     const table = await findTableBlockByKey(supabase, block.entity_id, tableKey);
     if (!table || table.entries.length === 0) continue;
+
+    if (slot.count && slot.count > 1) {
+      // V2-J9 : plusieurs tirages sur la MEME table pour cet emplacement
+      // (ex. un menu de taverne) — `drawMultiple` respecte deja
+      // `unique_draws`, aucun die/rolled unique a exposer pour un emplacement
+      // a plusieurs jets (le panneau "Détails des tirages" l'affiche alors
+      // sans cette colonne, deja gere par son rendu conditionnel).
+      const draws = drawMultiple(table, slot.count, rng);
+      const texts: string[] = [];
+      const refs: BlockReference[] = [];
+      for (const draw of draws) {
+        const resolved = await resolveCascade(supabase, block.entity_id, draw, rng, new Set([table.key]), 1);
+        texts.push(resolved.text);
+        refs.push(...resolved.refs);
+      }
+      const text = joinMultiDrawTexts(texts);
+      slots.push({ key: slot.key, text, refs, items: texts });
+      slotTexts[slot.key] = text;
+      continue;
+    }
 
     const draw = drawOnce(table, rng);
     const resolved = await resolveCascade(supabase, block.entity_id, draw, rng, new Set([table.key]), 1);

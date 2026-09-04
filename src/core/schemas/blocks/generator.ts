@@ -10,6 +10,8 @@ import type { GeneratorData, GeneratorProseSlot, GeneratorSlot, GeneratorTableSl
 const zGeneratorTableSlot: z.ZodType<GeneratorTableSlot> = z.object({
   key: z.string().min(1),
   table: z.string().min(1),
+  /** V2-J9 — meme borne que `drawTableSchema` (src/core/tables, tirage direct sur un bloc random_table). */
+  count: z.number().int().min(1).max(20).optional(),
 });
 
 const zGeneratorProseSlot: z.ZodType<GeneratorProseSlot> = z.object({

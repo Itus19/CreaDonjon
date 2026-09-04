@@ -132,6 +132,43 @@ export async function insertBlock(
   return data as BlockRow;
 }
 
+/**
+ * Insere un bloc `generator` de section, silencieux si un autre appel
+ * concurrent l'a deja cree entre-temps (V2-J9) — `ensureGeneratorToolsEntity`
+ * (src/server/services/entities.ts) relit les cles existantes puis boucle
+ * sur les sections manquantes ; deux appels presque simultanes peuvent lire
+ * le meme etat avant que l'un des deux n'ecrive, d'ou une vraie collision
+ * possible malgre l'idempotence apparente du code applicatif. L'index
+ * unique `blocks_generator_section_key_uniq` (migration
+ * 20260904150000) est le seul garde-fou fiable ; ce repo se contente de
+ * ne pas transformer sa violation (23505) en erreur — le bloc existe deja,
+ * c'est exactement le resultat voulu.
+ */
+export async function insertGeneratorSectionBlockIfMissing(
+  supabase: TypedClient,
+  params: {
+    entityId: string;
+    display: Json;
+    data: Json;
+    displayOrder: number;
+    visibilityLevel: string;
+    visibilityScopeId: string | null;
+    createdBy: string;
+  }
+): Promise<void> {
+  const { error } = await supabase.from("blocks").insert({
+    entity_id: params.entityId,
+    block_type: "generator",
+    display: params.display,
+    data: params.data,
+    display_order: params.displayOrder,
+    visibility_level: params.visibilityLevel,
+    visibility_scope_id: params.visibilityScopeId,
+    created_by: params.createdBy,
+  });
+  if (error && error.code !== "23505") throw new Error(error.message);
+}
+
 /** `null` en retour signifie version perimee (concurrence optimiste), pas une erreur. */
 export async function updateBlockWithVersionCheck(
   supabase: TypedClient,
