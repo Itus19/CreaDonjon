@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { GeneratorBlockData } from "@/src/core/schemas/blocks/generator";
 import { isProseSlot, PROSE_LENGTH_PRESETS, DEFAULT_PROSE_LENGTH, type ProseLength } from "@/src/core/generators/types";
+import { RANDOM_VARIANT_VALUE } from "@/src/core/generators/variants";
 import type { GeneratorSlotResult, GeneratorToolWindowData } from "@/src/server/services/generators";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import RuleEntryAutocomplete from "@/components/blocks/RuleEntryAutocomplete";
@@ -12,6 +13,7 @@ import { useOpenEntityLink } from "./useOpenEntityLink";
 interface DrawResponse {
   text: string;
   slots: GeneratorSlotResult[];
+  resolvedVariant: Record<string, string>;
 }
 
 /** Dernier resultat connu d'une section (V2-J2) — remonte au panneau parent pour que "Créer la fiche" puisse combiner toutes les sections actuellement tirees, sans redemander un tirage. `slots` (V2-J-PNJ) porte le texte de CHAQUE emplacement separement — necessaire aux sections promues en bloc structure (personality/quest), qui ne peuvent pas se contenter du texte de section deja assemble. */
@@ -36,12 +38,18 @@ function GeneratorSectionCard({
   blockId,
   label,
   data,
+  variant,
   onResult,
+  onResolvedVariant,
 }: {
   blockId: string;
   label: string;
   data: GeneratorBlockData;
+  /** Valeurs choisies pour les axes de variante de l'outil actif (V2-J7), renvoyees a chaque tirage — vide si l'outil n'en declare aucun. */
+  variant: Record<string, string>;
   onResult: (result: SectionResult) => void;
+  /** Remonte les valeurs REELLEMENT tirees (V2-J7) — un axe laisse sur "Aléatoire" se fige sur le resultat tant que le MJ ne le change pas a la main, plutot que de retirer un axe different a chaque relance individuelle. */
+  onResolvedVariant: (resolved: Record<string, string>) => void;
 }) {
   const [text, setText] = useState<string | null>(null);
   const [slotResults, setSlotResults] = useState<Record<string, GeneratorSlotResult>>({});
@@ -58,7 +66,7 @@ function GeneratorSectionCard({
     const res = await fetch(`/api/blocks/${blockId}/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ proseLength, onlySlotKey, knownSlotTexts }),
+      body: JSON.stringify({ proseLength, onlySlotKey, knownSlotTexts, variant }),
     });
     if (!res.ok) {
       const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -83,6 +91,7 @@ function GeneratorSectionCard({
       setSlotResults(nextSlotResults);
       setDetailsOpen(true);
       reportResult(result.text, nextSlotResults);
+      if (Object.keys(result.resolvedVariant).length > 0) onResolvedVariant(result.resolvedVariant);
     } catch (e) {
       setError(e instanceof Error ? e.message : "La génération a échoué.");
     } finally {
@@ -101,6 +110,7 @@ function GeneratorSectionCard({
       setText(result.text);
       setSlotResults(nextSlotResults);
       reportResult(result.text, nextSlotResults);
+      if (Object.keys(result.resolvedVariant).length > 0) onResolvedVariant(result.resolvedVariant);
     } catch (e) {
       setError(e instanceof Error ? e.message : "La relance a échoué.");
     } finally {
@@ -294,6 +304,7 @@ export default function GeneratorToolPanel({ worldSlug, tools }: { worldSlug: st
   const [activeKey, setActiveKey] = useState(tools[0]?.key ?? null);
   const activeTool = tools.find((t) => t.key === activeKey) ?? null;
   const [resultsByTool, setResultsByTool] = useState<Record<string, Record<string, SectionResult>>>({});
+  const [variantByTool, setVariantByTool] = useState<Record<string, Record<string, string>>>({});
 
   if (tools.length === 0) {
     return <p className="text-sm italic text-ink-muted">Aucun outil de génération configuré pour l&apos;instant.</p>;
@@ -304,6 +315,10 @@ export default function GeneratorToolPanel({ worldSlug, tools }: { worldSlug: st
       ...prev,
       [toolKey]: { ...prev[toolKey], [sectionKey]: result },
     }));
+  }
+
+  function updateVariant(toolKey: string, patch: Record<string, string>) {
+    setVariantByTool((prev) => ({ ...prev, [toolKey]: { ...prev[toolKey], ...patch } }));
   }
 
   return (
@@ -327,6 +342,27 @@ export default function GeneratorToolPanel({ worldSlug, tools }: { worldSlug: st
 
       {activeTool && (
         <div className="flex flex-col gap-3">
+          {activeTool.variants && activeTool.variants.length > 0 && (
+            <div className="flex flex-wrap gap-3 border-b border-edge/60 pb-3">
+              {activeTool.variants.map((axis) => (
+                <label key={axis.key} className="flex flex-col gap-0.5 text-xs text-ink-muted">
+                  {axis.label}
+                  <select
+                    value={variantByTool[activeTool.key]?.[axis.key] ?? axis.options[0]?.key ?? ""}
+                    onChange={(e) => updateVariant(activeTool.key, { [axis.key]: e.target.value })}
+                    className="rounded-md border border-edge bg-panel-sunken px-2 py-1 text-sm text-ink"
+                  >
+                    {axis.allowRandom && <option value={RANDOM_VARIANT_VALUE}>Aléatoire</option>}
+                    {axis.options.map((o) => (
+                      <option key={o.key} value={o.key}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+          )}
           {activeTool.sections.length === 0 ? (
             <p className="text-sm italic text-ink-muted">
               Aucune section configurée pour « {activeTool.label} » — ajoutez du contenu sur la fiche « Générateurs de
@@ -339,7 +375,9 @@ export default function GeneratorToolPanel({ worldSlug, tools }: { worldSlug: st
                 blockId={section.blockId}
                 label={section.label}
                 data={section.data}
+                variant={variantByTool[activeTool.key] ?? {}}
                 onResult={(result) => reportSectionResult(activeTool.key, section.key, result)}
+                onResolvedVariant={(resolved) => updateVariant(activeTool.key, resolved)}
               />
             ))
           )}

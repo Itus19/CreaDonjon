@@ -48,6 +48,8 @@ export const drawGeneratorSchema = z.object({
   proseLength: z.union([z.literal(30), z.literal(100), z.literal(250)]).default(DEFAULT_PROSE_LENGTH),
   onlySlotKey: z.string().min(1).max(100).nullable().default(null),
   knownSlotTexts: z.record(z.string(), z.string()).default({}),
+  /** Valeurs choisies pour les axes de variante de l'outil (V2-J7, ex. `{type: "forgeron"}`) — cle d'axe -> cle d'option, ou `RANDOM_VARIANT_VALUE` ("aleatoire"). Vide pour un generateur sans axe. */
+  variant: z.record(z.string(), z.string()).default({}),
 });
 
 /** Assistance redactionnelle (V1-F3) — instruction libre envoyee au modele, jamais un identifiant : le bloc cible vient de la route, pas du corps. */

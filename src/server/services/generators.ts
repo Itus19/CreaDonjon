@@ -9,7 +9,9 @@ import { drawOnce } from "@/src/core/tables/roll";
 import { getBlockById, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { findTableBlockByKey, resolveCascade } from "@/src/server/services/tables";
 import type { PendingProseSlot } from "@/src/server/ai/generatorProse";
-import { GENERATOR_TOOLS } from "@/src/core/generators/tools";
+import { GENERATOR_TOOLS, toolForSectionKey, type GeneratorToolConfig } from "@/src/core/generators/tools";
+import { resolveVariantValue } from "@/src/core/generators/variants";
+import { renderGeneratorTemplate } from "@/src/core/generators/render";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -25,6 +27,14 @@ export interface GeneratorSlotResult {
 export interface GeneratorResult {
   text: string;
   slots: GeneratorSlotResult[];
+  /** Cle d'option resolue par axe (V2-J7) — le client met a jour son etat local pour qu'un "aleatoire" reste fige sur la valeur tiree entre deux tirages/relances de la meme section, plutot que de retirer un axe different a chaque relance individuelle. */
+  resolvedVariant: Record<string, string>;
+}
+
+/** Valeur resolue d'un axe de variante (V2-J7) — `key` pour interpoler la CLE de table d'un emplacement (`"objets-{type}"`), `label` pour interpoler le GABARIT final (l'appelant les fusionne dans `allSlotTexts`). */
+export interface ResolvedVariantValue {
+  key: string;
+  label: string;
 }
 
 export interface GeneratorTableDraw {
@@ -33,6 +43,8 @@ export interface GeneratorTableDraw {
   slotTexts: Record<string, string>;
   /** Emplacements `prose` (V2-J1) en attente — jamais resolus ici, ce module ne connait aucun fournisseur IA (CLAUDE.md regle 12, "aucun appel d'IA hors de src/server/ai/"). */
   proseSlots: PendingProseSlot[];
+  /** Axes de variante de l'outil (V2-J7) resolus pour ce tirage — vide si la section n'appartient a aucun outil a variantes. */
+  resolvedVariant: Record<string, ResolvedVariantValue>;
 }
 
 /**
@@ -55,18 +67,35 @@ export interface GeneratorTableDraw {
  * alors ce resultat unique avec les valeurs deja connues des autres
  * emplacements (envoyees par le client, qui les conserve en etat React, le
  * serveur restant sans etat comme pour un tirage complet).
+ *
+ * `variant` (V2-J7) : valeurs choisies par le MJ pour les axes de l'outil
+ * auquel appartient cette section (`toolForSectionKey`) — resolues une
+ * fois ici (une valeur "aleatoire" tire une option reelle via `rng`), puis
+ * la cle de chaque option resolue interpole `{axe}` dans la CLE de table
+ * d'un emplacement AVANT sa recherche (`renderGeneratorTemplate`, meme
+ * remplaceur generique `{cle}` que pour un gabarit de section).
  */
 export async function drawTableSlotsFromGeneratorBlock(
   supabase: TypedClient,
   blockId: string,
   rng: Rng,
-  options?: { onlySlotKey?: string }
+  options?: { onlySlotKey?: string; variant?: Record<string, string> }
 ): Promise<GeneratorTableDraw | null> {
   const block = await getBlockById(supabase, blockId);
   if (!block || block.block_type !== "generator") return null;
 
   const generator = zGeneratorBlockData.parse(block.data);
   const slotsToProcess = options?.onlySlotKey ? generator.slots.filter((s) => s.key === options.onlySlotKey) : generator.slots;
+
+  const tool: GeneratorToolConfig | undefined = generator.key ? toolForSectionKey(generator.key) : undefined;
+  const resolvedVariant: Record<string, ResolvedVariantValue> = {};
+  for (const axis of tool?.variants ?? []) {
+    const chosen = options?.variant?.[axis.key] ?? axis.options[0]?.key ?? "";
+    const resolvedKey = resolveVariantValue(axis, chosen, rng);
+    const label = axis.options.find((o) => o.key === resolvedKey)?.label ?? resolvedKey;
+    resolvedVariant[axis.key] = { key: resolvedKey, label };
+  }
+  const variantKeys = Object.fromEntries(Object.entries(resolvedVariant).map(([k, v]) => [k, v.key]));
 
   const slots: GeneratorSlotResult[] = [];
   const slotTexts: Record<string, string> = {};
@@ -78,7 +107,8 @@ export async function drawTableSlotsFromGeneratorBlock(
       continue;
     }
 
-    const table = await findTableBlockByKey(supabase, block.entity_id, slot.table);
+    const tableKey = renderGeneratorTemplate(slot.table, variantKeys);
+    const table = await findTableBlockByKey(supabase, block.entity_id, tableKey);
     if (!table || table.entries.length === 0) continue;
 
     const draw = drawOnce(table, rng);
@@ -87,7 +117,7 @@ export async function drawTableSlotsFromGeneratorBlock(
     slotTexts[slot.key] = resolved.text;
   }
 
-  return { generator, slots, slotTexts, proseSlots };
+  return { generator, slots, slotTexts, proseSlots, resolvedVariant };
 }
 
 /**
@@ -121,6 +151,8 @@ export interface GeneratorToolWindowData {
   key: string;
   label: string;
   sections: GeneratorToolSectionWindowData[];
+  /** Axes de variante du registre (V2-J7), passes tels quels — absent = aucun selecteur affiche cote client. */
+  variants?: GeneratorToolConfig["variants"];
   /** Configuration de promotion du registre (V2-J2), passee telle quelle — absente = bouton "Créer la fiche" masque cote client. */
   promote?: {
     nameSectionKey: string;
@@ -155,6 +187,7 @@ export async function resolveGeneratorToolsForEntity(supabase: TypedClient, enti
       const found = byKey.get(section.key);
       return found ? [{ key: section.key, label: section.label, blockId: found.blockId, data: found.data }] : [];
     }),
+    variants: tool.variants,
     promote: tool.promote,
   }));
 }

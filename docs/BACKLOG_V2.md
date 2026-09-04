@@ -1335,7 +1335,7 @@ relations avec le voisinage — pas une biographie de personnage.
       déjà en place, aucun changement de `promotion.ts` attendu).
 - [ ] Vérifié en direct (tirage + création de fiche + nettoyage).
 
-### V2-J7 — Mécanisme des axes de variante + sélecteurs Échoppe · `M` — à faire
+### V2-J7 — Mécanisme des axes de variante + sélecteurs Échoppe · `M` — fait
 
 Nouvelle capacité moteur : `GeneratorToolConfig.variants` (axes nommés,
 options, `allowRandom`) — un emplacement `table` référence un axe dans sa
@@ -1354,16 +1354,38 @@ generators.ts` (interpolation + résolution "aléatoire"), `app/api/blocks/
 (un `<select>` par axe, au-dessus des sections, état par outil, envoyé à
 chaque tirage). Contenu Échoppe : table `objets-{type}` (une par type).
 
+**Fait** — mécanisme et contenu tous deux en place. Une précision par
+rapport au plan initial : la section "La boutique" avait un emplacement
+`specialite` tiré au hasard, devenu incohérent avec le type maintenant
+choisi à la main (ex. type "Forgeron" mais spécialité tirée "Bijoux").
+Retiré : le gabarit référence directement `{type}`, résolu vers le
+LIBELLE de l'option choisie (pas seulement sa clé) — `renderGeneratorTemplate`
+fusionne donc les axes dans `allSlotTexts` deux fois avec des valeurs
+différentes : la clé pour interpoler la CLE de table (`"objets-{type}"` →
+`"objets-forgeron"`, avant le tirage) et le libellé pour le gabarit final
+(`{type}` → "Forgeron", après). Un seul mécanisme (`GeneratorTableDraw.
+resolvedVariant: Record<axe, {key,label}>`), deux usages. Nouveau fichier
+pur `src/core/generators/variants.ts` (`resolveVariantValue`, testé) et
+`toolForSectionKey` dans `tools.ts` (retrouve l'outil d'une section pour
+lire ses axes, un bloc `generator` ne connaissant que sa propre cle).
+15 tables de contenu (`objets-{type}` ×9 dont `objets-maison-close`,
+`marchands-{wealth}` ×3, `ambiance-{zone}` ×3), les 4 tables plates
+devenues orphelines (`specialites-echoppes`, `marchands-echoppes`,
+`ambiances-echoppes`, `objets-en-vente-echoppes`) supprimées.
+
 **Critères**
-- [ ] Un axe déclaré sur un outil affiche un menu déroulant dans le
+- [x] Un axe déclaré sur un outil affiche un menu déroulant dans le
       panneau, au-dessus des sections.
-- [ ] Changer le type change réellement le contenu tiré pour "Objet en
-      vente" (table `objets-{type}` différente par sélection).
-- [ ] "Aléatoire" tire un type réel côté serveur et l'affiche.
-- [ ] "Maison close" est une option de type valide, avec sa propre table
-      (même minimalisme que les autres : 2-3 entrées).
-- [ ] `npm run test:core` couvre la résolution "aléatoire" (fonction pure).
-- [ ] Vérifié en direct.
+- [x] Changer le type change réellement le contenu tiré pour "Objet en
+      vente" (table `objets-{type}` différente par sélection) — vérifié en
+      direct Apothicaire → Forgeron → objet tiré change en conséquence.
+- [x] "Aléatoire" tire un type réel côté serveur et l'affiche (le menu se
+      corrige de lui-même sur la valeur tirée après un tirage).
+- [x] "Maison close" est une option de type valide, avec sa propre table.
+- [x] `npm run test:core` couvre la résolution "aléatoire"
+      (`src/core/generators/variants.test.ts`, 4 tests).
+- [x] Vérifié en direct : fiche "L'Antre du Marchand" créée avec
+      Bazar/Modeste/Bourg cohérents sur les 3 sections, puis nettoyée.
 
 ### V2-J8 — Sélecteurs richesse/zone sur Taverne · `S` — à faire
 

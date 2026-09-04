@@ -14,6 +14,8 @@
  * portera a terme les blocs de plusieurs outils.
  */
 
+import type { GeneratorVariantAxis } from "./variants";
+
 export interface GeneratorToolSectionConfig {
   key: string;
   label: string;
@@ -50,6 +52,17 @@ export interface GeneratorToolConfig {
   key: string;
   label: string;
   sections: readonly GeneratorToolSectionConfig[];
+  /**
+   * Axes de variante (V2-J7) — un `<select>` par axe, au-dessus des
+   * sections, partage par TOUTES les sections de l'outil (pas de
+   * granularite par section : "choisir le type... avant de generer LES
+   * elements", retour utilisateur). La cle d'un axe sert d'emplacement
+   * `{cle}` interpolable a la fois dans la CLE de table d'un emplacement
+   * (`"objets-{type}"`, resolue avant le tirage) et dans le gabarit final
+   * (resolue vers le LIBELLE de l'option choisie, cote route) — meme
+   * mecanisme `renderGeneratorTemplate` dans les deux cas.
+   */
+  variants?: readonly GeneratorVariantAxis[];
   promote?: GeneratorToolPromoteConfig;
 }
 
@@ -106,6 +119,53 @@ export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
       { key: "echoppe-boutique", label: "La boutique" },
       { key: "echoppe-objet", label: "Un objet en vente" },
     ],
+    variants: [
+      {
+        key: "type",
+        label: "Type",
+        allowRandom: true,
+        options: [
+          { key: "apothicaire", label: "Apothicaire" },
+          { key: "forgeron", label: "Forgeron" },
+          { key: "armurier", label: "Armurier" },
+          { key: "herboriste", label: "Herboriste" },
+          { key: "bazar", label: "Bazar" },
+          { key: "tailleur", label: "Tailleur" },
+          { key: "librairie", label: "Librairie" },
+          { key: "joaillier", label: "Joaillier" },
+          { key: "maison-close", label: "Maison close" },
+        ],
+      },
+      {
+        key: "wealth",
+        label: "Richesse",
+        allowRandom: true,
+        options: [
+          { key: "modeste", label: "Modeste" },
+          { key: "correcte", label: "Correcte" },
+          { key: "reputee", label: "Réputée" },
+        ],
+      },
+      {
+        key: "zone",
+        label: "Zone",
+        options: [
+          { key: "bourg", label: "Bourg" },
+          { key: "ville", label: "Ville" },
+          { key: "capitale", label: "Capitale" },
+        ],
+      },
+    ],
     promote: { nameSectionKey: "echoppe-nom", entityKind: "location" },
   },
 ];
+
+/**
+ * Retrouve l'outil auquel appartient une section, par sa cle (V2-J7) — un
+ * bloc `generator` ne connait que sa propre `GeneratorData.key`
+ * (ex. "echoppe-objet"), jamais son `toolKey` : c'est ce lookup qui fait le
+ * lien pour resoudre les axes de variante de l'outil au moment du tirage.
+ */
+export function toolForSectionKey(sectionKey: string): GeneratorToolConfig | undefined {
+  return GENERATOR_TOOLS.find((tool) => tool.sections.some((s) => s.key === sectionKey));
+}
