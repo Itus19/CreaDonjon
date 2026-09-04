@@ -57,6 +57,11 @@ export default function RandomTableBlockEditor({
     updateEntry(index, { price: { amount: entry.price?.amount ?? 0, coin } });
   }
 
+  /** Cle libre (V2-J9quater) — cette entree est editee sans connaitre l'axe qui s'y applique (ex. "wealth"), donc pas de liste deroulante ici : l'auteur tape la cle d'option exacte ("modeste", "rare"...). Vide -> `tier` retire, l'entree redevient eligible a tout palier. */
+  function updateEntryTier(index: number, raw: string) {
+    updateEntry(index, { tier: raw.trim() === "" ? undefined : raw.trim() });
+  }
+
   function removeEntry(index: number) {
     onChange({ ...data, entries: data.entries.filter((_, i) => i !== index) });
   }
@@ -173,6 +178,13 @@ export default function RandomTableBlockEditor({
                 ))}
               </select>
             </div>
+            <input
+              value={entry.tier ?? ""}
+              onChange={(e) => updateEntryTier(index, e.target.value)}
+              placeholder="Palier"
+              title="Palier sur un axe de variante (facultatif, ex. « modeste »)"
+              className="w-20 shrink-0 rounded-md border border-edge bg-transparent px-1.5 py-0.5 text-xs text-ink outline-none"
+            />
             <button type="button" onClick={() => removeEntry(index)} className="text-xs text-danger hover:underline">
               ×
             </button>

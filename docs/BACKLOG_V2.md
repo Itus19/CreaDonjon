@@ -1577,7 +1577,7 @@ contient plus " — " dans son texte, aucune sans `price`.
 - [x] Vérifié en direct : tirage du Menu, édition d'un prix depuis la
       modale V2-J9bis, confirmés en base par relecture directe.
 
-### V2-J9quater — Tirage filtré par palier (mécanisme unifié) · `M` — en cours
+### V2-J9quater — Tirage filtré par palier (mécanisme unifié) · `M` — fait
 
 Retour utilisateur, discussion complète : une table "une par palier de
 richesse" (le Menu, patron de V2-J9) ne passe pas à l'échelle — une échoppe
@@ -1624,11 +1624,14 @@ derrière. Échoppe (V2-J10) et Butin (V2-J11) consommeront ce même
 mécanisme en mode `"ceiling"` quand leur tour viendra — pas construit ici,
 leur contenu n'existe pas encore.
 
-**Avancement** : moteur écrit et testé (commit à suivre) — `TableEntry.tier`,
-`GeneratorTableSlotTier`, `applyTierFilter` (src/server/services/
-generators.ts), 11 nouveaux tests core (739 au total, tous verts).
-Reste : migration du contenu Taverne + vérification live + nettoyage des
-15 anciennes tables.
+**Migration effectuée** : plutôt que créer 5 blocs neufs et supprimer 15
+anciens, les 5 blocs `-modeste` de chaque catégorie ont été repurposés en
+place (clé renommée `entrees-tavernes` etc., entrées fusionnées avec
+`tier`), et les 10 blocs `-correcte`/`-reputee` devenus superflus
+supprimés — moins de churn de blocs que tout recréer. `RandomTableBlockEditor`
+gagne un champ "Palier" (texte libre, l'éditeur ne connaît pas quel axe
+s'applique à quelle table) à côté du prix — sans lui, le champ `tier`
+n'aurait été modifiable que par script, jamais depuis l'interface.
 
 **Critères**
 - [x] `TableEntry.tier` + `GeneratorTableSlot.tier` validés par Zod (les
@@ -1636,25 +1639,38 @@ Reste : migration du contenu Taverne + vérification live + nettoyage des
       V2-J9 : un champ optionnel absent du schéma se fait retirer en
       silence sans que TypeScript le voie).
 - [x] `entriesUpToTier`/`entriesAtExactTier`/`buildFilteredTable` testés en
-      isolation (fonctions pures, aucun Supabase).
-- [ ] Le Menu de Taverne migré sur 5 tables partagées, comportement
-      identique vérifié en direct aux deux extrémités de richesse (Modeste
-      et Réputée, même vérification qu'en V2-J9).
-- [ ] Base revérifiée après migration : 0 des 15 anciennes tables
-      référencées nulle part, 0 bloc dupliqué.
-- [ ] `docs/BACKLOG_V2.md` tenu à jour au fur et à mesure (pas seulement à
+      isolation (fonctions pures, aucun Supabase) — 11 nouveaux tests core
+      (739 au total).
+- [x] Le Menu de Taverne migré sur 5 tables partagées, comportement
+      identique vérifié en direct aux deux extrémités de richesse (Modeste :
+      Simple=Moyen=palier modeste, Cher=correcte ; Réputée : Simple=correcte,
+      Moyen=Cher=réputée — même clamp qu'en V2-J9, boissons filtrées sur le
+      seul palier actif, aucune fuite d'un autre palier).
+- [x] Base revérifiée après migration : 0 des 15 anciennes clés de table
+      référencées nulle part, 0 bloc dupliqué (46 blocs `random_table` au
+      total après migration).
+- [x] Champ "Palier" ajouté à `RandomTableBlockEditor` — vérifié en direct
+      via la modale V2-J9bis, valeurs modeste/correcte/reputee visibles et
+      éditables sur les 5 tables fusionnées.
+- [x] `docs/BACKLOG_V2.md` tenu à jour au fur et à mesure (pas seulement à
       la fin) — demande explicite de l'auteur.
 
 ### V2-J10 — Objets en vente par type d'échoppe · `S` — à faire
 
-Réutilise V2-J7 (axe `type`) + V2-J9 (`count`) : la section "Un objet en
-vente" d'Échoppe tire 3-5 objets de la table `objets-{type}` correspondant
-au type choisi, au lieu d'un seul aujourd'hui.
+Réutilise V2-J7 (axe `type`) + V2-J9 (`count`) + **V2-J9quater** (filtre
+par palier, mode `"ceiling"`) : la section "Un objet en vente" d'Échoppe
+tire 3-5 objets de la table `objets-{type}` correspondant au type choisi,
+au lieu d'un seul aujourd'hui — CHAQUE objet tagué `tier` (rareté, même
+vocabulaire que le futur Butin/V2-J11) plutôt qu'une table par croisement
+type × richesse × zone (ne passerait pas à l'échelle, cf. V2-J9quater). La
+richesse/zone sélectionnée devient le plafond de rareté éligible.
 
 **Critères**
 - [ ] "Un objet en vente" tire plusieurs objets, cohérents avec le type
-      choisi.
-- [ ] Vérifié en direct sur au moins 2 types différents.
+      choisi ET la richesse/zone (jamais un objet rare dans un bourg
+      modeste).
+- [ ] Vérifié en direct sur au moins 2 types différents et 2 plafonds de
+      richesse différents.
 
 ### V2-J11 — Générateur de Butin (nouvel outil) · `M` — à faire
 
