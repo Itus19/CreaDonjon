@@ -12,5 +12,11 @@ import { ENTRY_TYPES } from "./entry-types";
 export const zAddEntryPayload = z.object({
   name: z.string().min(1),
   entry_type: z.enum(ENTRY_TYPES),
+  // Cle de la classe parente (V2-J5, retour utilisateur : une sous-classe
+  // maison n'apparaissait jamais nichee sous sa classe dans la sidebar,
+  // contrairement a une sous-classe importee du SRD dont `source_raw.class`
+  // joue ce role — cf. `subclassParentClassKey`, src/server/services/rules.ts).
+  // Optionnel et sans effet hors `entry_type: "subclass"`/`"feature"`.
+  parent_class_key: z.string().optional(),
 });
 export type AddEntryPayload = z.infer<typeof zAddEntryPayload>;

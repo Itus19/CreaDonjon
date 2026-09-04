@@ -70,6 +70,12 @@ function abilityLabel(key: string): string {
   return ABILITY_ABBR_FR[key] ?? key.toUpperCase();
 }
 
+/** `EffectData.save.effect_on_success`/`ItemSaveData.effect_on_success` (V1-D1) — 3 valeurs vues sur le contenu importe (`none`/`half`/`other`), jamais traduites jusqu'ici : la fiche affichait le mot anglais brut. */
+const EFFECT_ON_SUCCESS_LABELS_FR: Record<string, string> = { none: "aucun effet", half: "moitie degats", other: "autre effet" };
+function effectOnSuccessLabel(value: string): string {
+  return EFFECT_ON_SUCCESS_LABELS_FR[value] ?? value;
+}
+
 /**
  * Poids (lb) et distances (ft) du SRD converties en unites metriques a
  * l'affichage (V1-D7, sur retour utilisateur : "il faudrait que les poids
@@ -249,7 +255,10 @@ function Effects({ data }: { data: EffectsBlockData }) {
     damageType: effect.damage_type ? damageTypeLabel(effect.damage_type) : undefined,
     formulaText: effect.formula ? formatFormulaNode(effect.formula) : undefined,
     save: effect.save
-      ? { ability: effect.save.ability, effectOnSuccess: effect.save.effect_on_success }
+      ? {
+          ability: abilityLabel(effect.save.ability),
+          effectOnSuccess: effect.save.effect_on_success ? effectOnSuccessLabel(effect.save.effect_on_success) : undefined,
+        }
       : undefined,
   }));
   return <FormulaList items={items} />;
@@ -544,7 +553,7 @@ function ItemProperties({ data, worldSlug }: { data: ResolvedItemPropertiesBlock
       ? [
           {
             label: "Jet de sauvegarde",
-            value: `${abilityLabel(data.save.ability)} DD ${data.save.dc}${data.save.effect_on_success ? ` (reussite : ${data.save.effect_on_success})` : ""}`,
+            value: `${abilityLabel(data.save.ability)} DD ${data.save.dc}${data.save.effect_on_success ? ` (reussite : ${effectOnSuccessLabel(data.save.effect_on_success)})` : ""}`,
           },
         ]
       : []),

@@ -1230,6 +1230,37 @@ Retour utilisateur (31 août) : un volet fermé par défaut en bas à droite de 
 
 ---
 
+## Lot N — Éditeur de règles : formulaires dédiés (sous-classe, sort)
+
+*Né d'une session (4 septembre) où l'Arnaqueur arcanique (sous-classe de Roublard, PHB 2024) et le sort Piqûre mentale ont été saisis directement en base plutôt que via « Ajouter une règle » — parce que ce menu ne propose aujourd'hui que trois formulaires (`app/m/[worldSlug]/(monde)/f/.../nouveau-don` et équivalents) : arme maison, historique personnalisé, don ou aptitude (V1-D4). Ni sous-classe ni sort. L'utilisateur doit pouvoir saisir ce genre de contenu lui-même, à la table, sans dépendre d'un script.*
+
+**Décision à prendre avant d'écrire du code** — les trois formulaires existants écrivent tous dans la variante *active* du monde (« Ce don sera ajouté à ta variante « DnD 2024 » »), sans jamais distinguer une règle maison d'une règle recopiée depuis un ouvrage. Cette session a justement créé une seconde couche pour ça (`content_origin: personal_reference`, dérivée de la base SRD, avec `parent_class_key` tout juste ajouté à `zAddEntryPayload`). Les deux nouveaux formulaires doivent-ils :
+- (a) rester simples et toujours cibler la variante active, laissant l'utilisateur créer/activer lui-même une variante `personal_reference` au préalable (cohérent avec l'existant, aucune UI neuve) ; ou
+- (b) proposer un choix explicite « règle maison / règle tirée d'un livre » qui bascule la cible entre la variante active et sa couche `personal_reference` (crée celle-ci à la volée si absente) ?
+Recommandation : (b) — c'est précisément le genre d'erreur qu'un utilisateur sans bagage technique commettra sans y penser (`specs/ruleset-personnel.md` §0 : « ce contenu finira un jour dans un lien public ou dans un dépôt Git, et ce sera irréversible » — la meilleure protection est de ne jamais lui laisser le choix implicite). Mais c'est un choix produit, pas seulement technique — à confirmer avant de coder.
+
+### V2-N1 — Créer une sous-classe · `M` — pas commencé
+
+Relevé sur les 12 sous-classes de la base SRD 5.2.1 (2024) : **trois blocs seulement, toujours les mêmes** — `description` (segments + `page_ref`), `subclass_features` (liste de `{name, level, description}`), et `custom_table` (l'artefact brut de l'import SRD, sans équivalent pour une fiche saisie à la main — jamais à reproduire dans le formulaire). Rien d'autre : ni `modifiers`, ni `spellcasting_progression`, ni aucun autre type de bloc n'apparaît sur une seule des 12.
+
+- [ ] Champs : nom, classe parente (menu déroulant des classes existantes dans la chaîne du ruleset — alimente le nouveau `parent_class_key`), description courte + `page_ref` (jamais un champ « texte long » qui inciterait à recopier la prose d'un livre — le formulaire du don a déjà ce garde-fou dans son texte d'aide, à reprendre mot pour mot), liste répétable d'aptitudes (nom, niveau, description).
+- [ ] Écrit deux surcharges par soumission comme `createHomebrewWeapon` : `add_entry` (`entry_type: "subclass"`, `parent_class_key`) puis `add_block` pour chaque bloc rempli. Un champ vide (ex. `page_ref`) ne produit jamais de bloc à moitié rempli — omis, pas envoyé en `null`.
+- [ ] Patch automatique du `subclass_slot` de la classe choisie (`options[]`, JSON Merge Patch — remplace tout le tableau, jamais un ajout partiel : lire l'existant avant d'écrire, même piège que celui rencontré cette session). Sans ça la sous-classe existe mais n'est jamais sélectionnable à la création de personnage.
+- [ ] Cas où la sous-classe a elle-même une progression de sorts propre (ex. Arnaqueur arcanique, Lame occulte) : `custom_table` libre en échappatoire, pas un bloc dédié — aucune des 12 sous-classes officielles n'en a besoin (leur incantation vient entièrement de la classe), donc pas de bloc typé à inventer pour ce seul cas tant qu'un deuxième cas concret ne le réclame pas (règle des trois).
+- [ ] Nichage sidebar vérifié : la sous-classe créée apparaît sous sa classe parente, pas dans un groupe à part.
+
+### V2-N2 — Créer un sort · `L` — pas commencé
+
+Relevé sur les 339 sorts de la base SRD 5.2.1 (2024) : `description` et `spell_casting` sur 339/339 (toujours présents), `effects`/`scaling` sur seulement 66/339 (~1 sort sur 5 — la plupart des sorts n'ont **aucun** effet chiffré structuré : buffs, utilitaires, mise en scène pure). Zéro sort avec plus d'un effet. 13 sorts avec un effet de type attaque (jet d'attaque, ex. Trait de feu) contre une majorité à jet de sauvegarde. 8 écoles fixes (déjà couvertes par `MAGIC_SCHOOL_LABELS_FR`). Composantes : combinaisons de V/S/M seulement, M pouvant porter un texte libre (`material`).
+
+- [ ] Champs `spell_casting` (toujours) : nom, niveau (0-9), école (menu déroulant des 8), temps d'incantation, portée, composantes (cases V/S/M, texte libre si M coché), durée, concentration (case), rituel (case).
+- [ ] Section « Effet chiffré » **optionnelle**, repliée par défaut, même ton que le formulaire de don (« uniquement pour les effets qui correspondent vraiment... ») : type d'effet (sauvegarde / jet d'attaque / aucun), caractéristique concernée, formule de dégâts, type de dégâts, effet en cas de réussite (aucun/moitié/autre).
+- [ ] Section « Montée en puissance » optionnelle, visible seulement si un effet chiffré est renseigné : table libre niveau de personnage → nouvelle formule (le bloc `scaling` existant, forme `table`, pas `rule` — irrégulière par nature à cette échelle, jamais un pas constant à deviner).
+- [ ] Classes autorisées : case à cocher par classe existante dans la chaîne du ruleset. Écrit un bloc `custom_table` (`field: "classes"`/`field: "level"`, même forme brute que l'import SRD) — **c'est aujourd'hui la seule donnée que lit `SpellSelectionStep.tsx` pour filtrer les sorts proposés à la création de personnage** (`parseSpellClasses`/`parseSpellLevel`, `src/core/rules/srdMapping.ts`), un simple champ structuré sur `spell_casting` ne suffirait pas sans aussi changer ce point de lecture. Signalé ici plutôt que découvert en vérifiant : si ce ticket promeut `classes`/`level` en champs typés du bloc `spell_casting` (plus propre, mais plus gros), `srdMapping.ts` doit changer en même temps, jamais laissé lire l'ancien format en silence.
+- [ ] Vérifié en direct : un sort créé pour une classe apparaît bien proposé à l'étape Sorts de l'assistant de création de personnage pour cette classe, à son niveau.
+
+---
+
 ## 3. Critère de fin de V2
 
 > Mener une séance complète avec votre table — préparation, PNJ cohérents, carte, combat, notes — sans ouvrir aucun autre outil.

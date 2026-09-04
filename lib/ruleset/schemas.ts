@@ -60,6 +60,9 @@ export const zImportEntry = z.object({
   entry_type: z.enum(ENTRY_TYPES),
   blocks: z.array(zImportBlock).min(1).max(20),
   note: z.string().min(1).max(500).optional(),
+  // Cle de la classe parente (sous-classe/aptitude maison) — nichage dans la
+  // sidebar des Regles, meme role que `source_raw.class` pour une entree SRD.
+  parent_class_key: z.string().min(1).max(80).optional(),
 });
 
 export const importRulesetEntriesSchema = z.object({

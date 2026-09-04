@@ -1038,7 +1038,12 @@ async function listEntriesInRulesetChain(
         disabledKeys.add(ov.entry_key);
       } else if (ov.action === "add_entry") {
         const payload = zAddEntryPayload.parse(ov.payload);
-        homebrewEntries.push({ key: ov.entry_key, entryType: payload.entry_type as EntryType, name: payload.name });
+        homebrewEntries.push({
+          key: ov.entry_key,
+          entryType: payload.entry_type as EntryType,
+          name: payload.name,
+          parentClassKey: payload.parent_class_key,
+        });
       }
     }
 
@@ -1566,6 +1571,8 @@ export interface ImportRulesetEntryInput {
   entry_type: EntryType;
   blocks: { block_type: BlockType; display?: { label?: string; layout?: string; collapsed?: boolean }; data: unknown }[];
   note?: string;
+  /** Cle de la classe parente, pour une sous-classe/aptitude maison (cf. `zAddEntryPayload.parent_class_key`). */
+  parent_class_key?: string;
 }
 
 export interface ImportRulesetEntriesResult {
@@ -1619,7 +1626,11 @@ export async function importRulesetEntries(supabase: TypedClient, input: { rules
         data: validateBlockData(b.block_type, b.data),
       }));
 
-      const addEntryPayload: AddEntryPayload = zAddEntryPayload.parse({ name: entry.name, entry_type: entry.entry_type });
+      const addEntryPayload: AddEntryPayload = zAddEntryPayload.parse({
+        name: entry.name,
+        entry_type: entry.entry_type,
+        parent_class_key: entry.parent_class_key,
+      });
       currentRulesetId = await upsertRulesetOverride(supabase, {
         rulesetId: currentRulesetId,
         entryKey,
