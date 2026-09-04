@@ -164,7 +164,11 @@ export async function listOverridesForRuleset(
   // `patch_block`/`replace_block`/`remove_block`) gardent l'ordre
   // chronologique — leur position ne deplace jamais un bloc dans la liste
   // finale, `applyOverrides` les applique en place sur le bloc deja present.
-  return [...data]
+  return sortOverrideRows(data);
+}
+
+function sortOverrideRows(rows: { block_type: string | null; action: string; payload: Json; patch: Json | null; created_at: string }[]): RulesetOverrideRow[] {
+  return [...rows]
     .sort((a, b) => {
       if (a.action === "add_block" && b.action === "add_block") {
         const orderA = (a.payload as { display_order?: number } | null)?.display_order ?? 0;
@@ -174,6 +178,39 @@ export async function listOverridesForRuleset(
       return a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0;
     })
     .map(({ block_type, action, payload, patch }) => ({ block_type, action, payload, patch }));
+}
+
+/**
+ * Meme regle, surcharges de PLUSIEURS rulesets en une seule requete (audit
+ * de performance) — remplace `listOverridesForRuleset` appele niveau par
+ * niveau sur toute une chaine deja connue (`resolveEntryBlocksInRuleset`,
+ * `getRuleEntryForWorld`, `resolveHomebrewEntryDisplay`) : un personnage
+ * resout une dizaine de cles en parallele, chacune remontant toute la
+ * chaine — jusqu'a 8 requetes sequentielles par cle rien que pour ça.
+ */
+export async function listOverridesAcrossRulesets(
+  supabase: TypedClient,
+  rulesetIds: string[],
+  entryKey: string
+): Promise<Map<string, RulesetOverrideRow[]>> {
+  const result = new Map<string, RulesetOverrideRow[]>();
+  if (rulesetIds.length === 0) return result;
+  const { data, error } = await supabase
+    .from("ruleset_overrides")
+    .select("ruleset_id, block_type, action, payload, patch, created_at")
+    .in("ruleset_id", rulesetIds)
+    .eq("entry_key", entryKey);
+  if (error) throw new Error(error.message);
+  const byRuleset = new Map<string, typeof data>();
+  for (const row of data) {
+    const list = byRuleset.get(row.ruleset_id) ?? [];
+    list.push(row);
+    byRuleset.set(row.ruleset_id, list);
+  }
+  for (const [rulesetId, rows] of byRuleset) {
+    result.set(rulesetId, sortOverrideRows(rows));
+  }
+  return result;
 }
 
 export interface EntryLevelOverrideRow {

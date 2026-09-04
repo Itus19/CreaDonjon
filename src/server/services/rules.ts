@@ -56,6 +56,7 @@ import {
   listIncomingRefsForKey,
   listOutgoingRefs,
   listOverridesForRuleset,
+  listOverridesAcrossRulesets,
   listRulesetEntries,
   listRulesetEntriesByKeys,
   listSelectableRulesets,
@@ -223,10 +224,11 @@ export async function resolveEntryBlocksInRuleset(
       }
     : null;
 
+  const overridesByRuleset = await listOverridesAcrossRulesets(supabase, chain.map((link) => link.rulesetId), entryKey);
   const overrides: OverrideInput[] = [];
   let homebrewName: string | null = null;
   for (const link of [...chain].reverse()) {
-    const rows = await listOverridesForRuleset(supabase, link.rulesetId, entryKey);
+    const rows = overridesByRuleset.get(link.rulesetId) ?? [];
     for (const row of rows) {
       if (row.action === "add_entry") {
         const addEntry = zAddEntryPayload.parse(row.payload);
@@ -524,9 +526,10 @@ export async function resolveHomebrewEntryDisplay(
   if (!resolved) return null;
 
   const chain = await walkRulesetChain(supabase, rulesetId);
+  const overridesByRuleset = await listOverridesAcrossRulesets(supabase, chain.map((link) => link.rulesetId), entryKey);
   let name: string | null = null;
   for (const link of chain) {
-    const rows = await listOverridesForRuleset(supabase, link.rulesetId, entryKey);
+    const rows = overridesByRuleset.get(link.rulesetId) ?? [];
     const addEntryRow = rows.find((r) => r.action === "add_entry");
     if (addEntryRow) {
       name = zAddEntryPayload.parse(addEntryRow.payload).name;
@@ -711,8 +714,9 @@ export async function getRuleEntryForWorld(
   // officielle qu'on regarde "a travers" une telle variante (une variante
   // personal_reference peut tres bien ne rien surcharger sur telle entree).
   let personalReference = false;
+  const overridesByRuleset = await listOverridesAcrossRulesets(supabase, chain.map((link) => link.rulesetId), entryKey);
   for (const link of [...chain].reverse()) {
-    const rows = await listOverridesForRuleset(supabase, link.rulesetId, entryKey);
+    const rows = overridesByRuleset.get(link.rulesetId) ?? [];
     if (rows.length > 0 && link.contentOrigin === "personal_reference") personalReference = true;
     for (const row of rows) {
       if (row.action === "add_entry") {
