@@ -14,8 +14,15 @@ import { resolveVariantValue, orderedNeighbors } from "@/src/core/generators/var
 import { renderGeneratorTemplate, joinMultiDrawTexts } from "@/src/core/generators/render";
 import { zRandomTableBlockData } from "@/src/core/schemas/blocks/randomTable";
 import { toVisibleBlock, type VisibleBlock } from "@/src/server/services/blocks";
+import type { TableEntryPrice } from "@/src/core/tables/types";
 
 type TypedClient = SupabaseClient<Database>;
+
+/** Un resultat individuel d'emplacement a tirage multiple (V2-J9, `items`) — `price` structure (retour utilisateur) plutot qu'encode dans `text`. */
+export interface GeneratorSlotItem {
+  text: string;
+  price?: TableEntryPrice;
+}
 
 export interface GeneratorSlotResult {
   key: string;
@@ -24,8 +31,10 @@ export interface GeneratorSlotResult {
   /** Notation de de et resultat brut du tirage (V2-J1 Phase 2, outil MJ decompose) — presents seulement pour un emplacement `table` : c'est ce que le panneau "Détails des tirages" affiche a cote du texte resolu. */
   die?: string;
   rolled?: number;
-  /** Textes individuels d'un emplacement a tirage multiple (V2-J9, `count`), AVANT assemblage dans `text` — permet au client de les afficher en tableau (ex. Menu de taverne) plutot qu'en un seul bloc de texte. Absent pour un tirage simple. */
-  items?: string[];
+  /** Prix STRUCTURE de l'entree tiree (retour utilisateur) — absent pour une table sans notion de prix ou un emplacement a tirage multiple (voir `items`). */
+  price?: TableEntryPrice;
+  /** Resultats individuels d'un emplacement a tirage multiple (V2-J9, `count`), AVANT assemblage dans `text` — permet au client de les afficher en tableau (ex. Menu de taverne) plutot qu'en un seul bloc de texte. Absent pour un tirage simple. */
+  items?: GeneratorSlotItem[];
 }
 
 export interface GeneratorResult {
@@ -151,21 +160,23 @@ export async function drawTableSlotsFromGeneratorBlock(
       // sans cette colonne, deja gere par son rendu conditionnel).
       const draws = drawMultiple(table, slot.count, rng);
       const texts: string[] = [];
+      const items: GeneratorSlotItem[] = [];
       const refs: BlockReference[] = [];
       for (const draw of draws) {
         const resolved = await resolveCascade(supabase, block.entity_id, draw, rng, new Set([table.key]), 1);
         texts.push(resolved.text);
+        items.push({ text: resolved.text, price: resolved.price });
         refs.push(...resolved.refs);
       }
       const text = joinMultiDrawTexts(texts);
-      slots.push({ key: slot.key, text, refs, items: texts });
+      slots.push({ key: slot.key, text, refs, items });
       slotTexts[slot.key] = text;
       continue;
     }
 
     const draw = drawOnce(table, rng);
     const resolved = await resolveCascade(supabase, block.entity_id, draw, rng, new Set([table.key]), 1);
-    slots.push({ key: slot.key, text: resolved.text, refs: resolved.refs, die: table.die, rolled: draw.roll });
+    slots.push({ key: slot.key, text: resolved.text, refs: resolved.refs, price: resolved.price, die: table.die, rolled: draw.roll });
     slotTexts[slot.key] = resolved.text;
   }
 

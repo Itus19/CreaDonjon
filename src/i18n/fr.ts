@@ -432,6 +432,13 @@ export const CURRENCY_LABELS_FR: Record<string, string> = {
   cp: "pc",
 };
 
+/** Affichage d'un `TableEntryPrice` (retour utilisateur, prix de table structure plutot qu'encode dans le texte) — "Gratuit" pour un montant nul plutot que "0 pc", sinon "{montant} {abreviation}". */
+export function formatTableEntryPrice(price: { amount: number; coin: string } | undefined): string | null {
+  if (!price) return null;
+  if (price.amount === 0) return "Gratuit";
+  return `${price.amount} ${CURRENCY_LABELS_FR[price.coin] ?? price.coin}`;
+}
+
 /**
  * Types de creature du bloc `stat_block` (V1-D3) — les 14 types fermes du
  * SRD, chacun verifie contre `data/srd/fr-source/srd-5.1-fr.txt` (ligne

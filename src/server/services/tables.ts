@@ -4,6 +4,7 @@ import type { Database } from "@/src/types/database";
 import type { Rng } from "@/src/core/dice/rng";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { zRandomTableBlockData, type RandomTableBlockData } from "@/src/core/schemas/blocks/randomTable";
+import type { TableEntryPrice } from "@/src/core/tables/types";
 import {
   drawMultiple,
   drawOnce,
@@ -19,6 +20,8 @@ type TypedClient = SupabaseClient<Database>;
 export interface ResolvedTableDraw {
   text: string;
   refs: BlockReference[];
+  /** Prix de l'entree TIREE (retour utilisateur) — jamais celui d'une sous-table resolue en cascade, aucun cas d'usage actuel pour un prix qui traverserait une cascade. */
+  price?: TableEntryPrice;
 }
 
 /**
@@ -86,6 +89,7 @@ export async function resolveCascade(
   return {
     text: interpolateCascadeResults(draw.entry.text, resultsByKey),
     refs: draw.entry.refs ?? [],
+    price: draw.entry.price,
   };
 }
 

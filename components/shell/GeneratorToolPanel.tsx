@@ -5,10 +5,11 @@ import Link from "next/link";
 import type { GeneratorBlockData } from "@/src/core/schemas/blocks/generator";
 import { isProseSlot, PROSE_LENGTH_PRESETS, DEFAULT_PROSE_LENGTH, type ProseLength } from "@/src/core/generators/types";
 import { RANDOM_VARIANT_VALUE } from "@/src/core/generators/variants";
-import type { GeneratorSlotResult, GeneratorToolWindowData } from "@/src/server/services/generators";
+import type { GeneratorSlotItem, GeneratorSlotResult, GeneratorToolWindowData } from "@/src/server/services/generators";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { VisibleBlock } from "@/src/server/services/blocks";
 import type { RandomTableBlockData } from "@/src/core/schemas/blocks/randomTable";
+import { formatTableEntryPrice } from "@/src/i18n/fr";
 import RandomTableBlockEditor from "@/components/blocks/RandomTableBlockEditor";
 import RuleEntryAutocomplete from "@/components/blocks/RuleEntryAutocomplete";
 import { useOpenEntityLink } from "./useOpenEntityLink";
@@ -28,13 +29,14 @@ export interface SectionResult {
 
 /**
  * Un emplacement a tirage multiple (V2-J9, `count`) s'affiche en tableau
- * plutot qu'en une ligne de texte — chaque entree suit la convention
- * "Nom — Prix" deja etablie dans le contenu tire, separee ici seulement
- * pour l'affichage. Colonnes a largeur fixe (`table-fixed` + `colgroup`) :
- * le prix reste aligne meme si un nom est plus court qu'un autre (retour
- * utilisateur), au lieu de laisser le nom pousser la colonne prix.
+ * plutot qu'en une ligne de texte — `price` est un champ structure de
+ * l'entree de table (retour utilisateur : plus encode dans `text`, ex.
+ * "Bière brune locale — 4 pc"), jamais reparse ici. Colonnes a largeur
+ * fixe (`table-fixed` + `colgroup`) : le prix reste aligne meme si un nom
+ * est plus court qu'un autre (retour utilisateur), au lieu de laisser le
+ * nom pousser la colonne prix.
  */
-function SlotItemsTable({ items }: { items: string[] }) {
+function SlotItemsTable({ items }: { items: GeneratorSlotItem[] }) {
   return (
     <table className="w-full table-fixed text-xs">
       <colgroup>
@@ -42,15 +44,12 @@ function SlotItemsTable({ items }: { items: string[] }) {
         <col className="w-16" />
       </colgroup>
       <tbody>
-        {items.map((item, i) => {
-          const [name, price] = item.split(" — ");
-          return (
-            <tr key={i} className="border-b border-edge/20 last:border-b-0">
-              <td className="truncate py-0.5 pr-2 text-ink">{name}</td>
-              <td className="whitespace-nowrap py-0.5 text-right text-ink-muted">{price ?? ""}</td>
-            </tr>
-          );
-        })}
+        {items.map((item, i) => (
+          <tr key={i} className="border-b border-edge/20 last:border-b-0">
+            <td className="truncate py-0.5 pr-2 text-ink">{item.text}</td>
+            <td className="whitespace-nowrap py-0.5 text-right text-ink-muted">{formatTableEntryPrice(item.price) ?? ""}</td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );
@@ -89,12 +88,11 @@ function MenuCategory({
         <tbody>
           {tiers.map(({ tierLabel, slotKey }) => {
             const result = slotResults[slotKey];
-            const [name, price] = (result?.text ?? "—").split(" — ");
             return (
               <tr key={slotKey} className="border-b border-edge/20 last:border-b-0">
                 <td className="py-0.5 pr-2 text-ink-muted">{tierLabel}</td>
-                <td className="truncate py-0.5 pr-2 text-ink">{name}</td>
-                <td className="whitespace-nowrap py-0.5 pr-1 text-right text-ink-muted">{price ?? ""}</td>
+                <td className="truncate py-0.5 pr-2 text-ink">{result?.text ?? "—"}</td>
+                <td className="whitespace-nowrap py-0.5 pr-1 text-right text-ink-muted">{formatTableEntryPrice(result?.price) ?? ""}</td>
                 <td className="py-0.5 text-right">
                   <button
                     type="button"
@@ -508,7 +506,12 @@ function GeneratorSectionCard({
                           <SlotItemsTable items={result.items} />
                         </div>
                       ) : (
-                        <span className="flex-1 pt-0.5 text-ink">{result?.text || "—"}</span>
+                        <span className="flex-1 pt-0.5 text-ink">
+                          {result?.text || "—"}
+                          {formatTableEntryPrice(result?.price) && (
+                            <span className="ml-2 text-ink-muted">{formatTableEntryPrice(result?.price)}</span>
+                          )}
+                        </span>
                       )}
                       <button
                         type="button"

@@ -1542,6 +1542,41 @@ seulement la reponse HTTP).
       nouvel accès (avec fermeture immédiate de la modale dans le second
       cas), confirmés en base par relecture directe.
 
+### V2-J9ter — Prix comme champ structuré d'une entrée de table · `S` — fait
+
+Retour utilisateur : le prix d'une entrée (Menu de Taverne) vivait encodé
+dans `text` (convention "Nom — Prix", ex. "Bière brune locale — 4 pc"),
+jamais une vraie donnée. Nouveau champ optionnel `TableEntry.price?:
+{ amount: number; coin: CoinType }` (`src/core/tables/types.ts`), reprenant
+le `CoinType` déjà utilisé par le porte-monnaie de l'inventaire
+(`src/core/rules/currency.ts`) plutôt qu'une notion de monnaie parallèle.
+Propagé tel quel à travers tout le pipeline de tirage — `ResolvedTableDraw`
+(`src/server/services/tables.ts`), `GeneratorSlotResult`/`GeneratorSlotItem`
+(`src/server/services/generators.ts`) — jusqu'au client, qui affiche
+`formatTableEntryPrice` (`src/i18n/fr.ts`, "Gratuit" pour un montant nul)
+plutôt que de reparser `text`.
+
+`RandomTableBlockEditor.tsx` gagne deux champs par entrée (montant + pièce)
+à côté du texte — un montant vide retire `price` entièrement plutôt que de
+forcer un prix à 0 sur une table qui n'en a pas.
+
+**Contenu migré** : les 15 tables du Menu de Taverne (entrées/plats/
+desserts × 3 paliers, boissons alcool/sans-alcool × 3 paliers) réécrites en
+direct sur l'entité "Générateurs de MJ" — `text` ne porte plus que le nom,
+`price` porte le montant structuré. Vérifié après coup : aucune entrée ne
+contient plus " — " dans son texte, aucune sans `price`.
+
+**Critères**
+- [x] `TableEntry.price` structuré, validé par Zod, jamais infere depuis
+      `text`.
+- [x] L'éditeur de table a des champs dédiés montant/pièce, pas de texte
+      libre pour le prix.
+- [x] Le panneau MJ Générateurs affiche le prix formaté sans reparser
+      `text` nulle part (plus aucun `.split(" — ")` dans le code).
+- [x] Les 15 tables du Menu de Taverne migrées et revérifiées en base.
+- [x] Vérifié en direct : tirage du Menu, édition d'un prix depuis la
+      modale V2-J9bis, confirmés en base par relecture directe.
+
 ### V2-J10 — Objets en vente par type d'échoppe · `S` — à faire
 
 Réutilise V2-J7 (axe `type`) + V2-J9 (`count`) : la section "Un objet en
@@ -1703,9 +1738,10 @@ lot (un ticket à la fois).
 
 **Critères**
 - [ ] Chaque table `random_table` de "Générateurs de MJ" a `die: "d100"`
-      et ~100 entrées distinctes (texte non dupliqué ; pour les tables au
-      format "Nom — Prix", prix strictement distincts au sein d'une même
-      table — discipline déjà établie sur le Menu de Taverne, V2-J9).
+      et ~100 entrées distinctes (texte non dupliqué ; pour une table à
+      prix, champ structuré `price` — V2-J9ter — strictement distinct au
+      sein d'une même table, discipline déjà établie sur le Menu de
+      Taverne).
 - [ ] Un emplacement à tirage multiple (`count > 1`, `unique_draws`) peut
       effectivement varier d'un tirage à l'autre — plus jamais forcé
       d'épuiser toute sa table.

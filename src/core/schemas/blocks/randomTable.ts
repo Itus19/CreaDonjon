@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { zBlockReference } from "./reference";
-import type { RandomTableData, TableEntry, TableEntryRange } from "../../tables/types";
+import { CURRENCY_ORDER } from "../../rules/currency";
+import type { RandomTableData, TableEntry, TableEntryPrice, TableEntryRange } from "../../tables/types";
 
 /**
  * Bloc `random_table` (layout: table, V1-E1, specs/outils-mj.md §2) — miroir
@@ -14,10 +15,16 @@ const zTableEntryRange: z.ZodType<TableEntryRange> = z.object({
   max: z.number().int(),
 });
 
+const zTableEntryPrice: z.ZodType<TableEntryPrice> = z.object({
+  amount: z.number().min(0),
+  coin: z.enum(CURRENCY_ORDER),
+});
+
 const zTableEntry: z.ZodType<TableEntry> = z.object({
   range: zTableEntryRange,
   weight: z.number().positive(),
   text: z.string().min(1),
+  price: zTableEntryPrice.optional(),
   refs: z.array(zBlockReference).optional(),
 });
 

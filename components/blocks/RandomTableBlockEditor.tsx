@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import type { RandomTableBlockData } from "@/src/core/schemas/blocks/randomTable";
-import type { TableEntry } from "@/src/core/tables/types";
+import type { TableEntry, TableEntryPrice } from "@/src/core/tables/types";
+import { CURRENCY_ORDER, type CoinType } from "@/src/core/rules/currency";
+import { CURRENCY_LABELS_FR, formatTableEntryPrice } from "@/src/i18n/fr";
 
 interface ResolvedDraw {
   text: string;
+  price?: TableEntryPrice;
 }
 
 /**
@@ -37,6 +40,21 @@ export default function RandomTableBlockEditor({
 
   function updateEntry(index: number, patch: Partial<TableEntry>) {
     onChange({ ...data, entries: data.entries.map((e, i) => (i === index ? { ...e, ...patch } : e)) });
+  }
+
+  /** Montant vide -> pas de prix du tout (`price` retire), plutot qu'un prix a 0 pc par defaut — la plupart des tables n'ont aucune notion de prix. */
+  function updateEntryAmount(index: number, entry: TableEntry, raw: string) {
+    if (raw.trim() === "") {
+      updateEntry(index, { price: undefined });
+      return;
+    }
+    const amount = Number(raw);
+    if (Number.isNaN(amount)) return;
+    updateEntry(index, { price: { amount, coin: entry.price?.coin ?? "cp" } });
+  }
+
+  function updateEntryCoin(index: number, entry: TableEntry, coin: CoinType) {
+    updateEntry(index, { price: { amount: entry.price?.amount ?? 0, coin } });
   }
 
   function removeEntry(index: number) {
@@ -131,6 +149,30 @@ export default function RandomTableBlockEditor({
               placeholder="Résultat…"
               className="flex-1 bg-transparent text-sm text-ink outline-none"
             />
+            <div className="flex shrink-0 items-center gap-1 text-xs text-ink-muted">
+              <input
+                type="number"
+                min={0}
+                value={entry.price?.amount ?? ""}
+                onChange={(e) => updateEntryAmount(index, entry, e.target.value)}
+                placeholder="Prix"
+                title="Prix (facultatif)"
+                className="w-14 rounded-md border border-edge bg-transparent px-1 py-0.5 text-center outline-none"
+              />
+              <select
+                value={entry.price?.coin ?? "cp"}
+                onChange={(e) => updateEntryCoin(index, entry, e.target.value as CoinType)}
+                disabled={entry.price === undefined}
+                title="Pièce"
+                className="rounded-md border border-edge bg-transparent px-1 py-0.5 outline-none disabled:opacity-40"
+              >
+                {CURRENCY_ORDER.map((coin) => (
+                  <option key={coin} value={coin}>
+                    {CURRENCY_LABELS_FR[coin]}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button type="button" onClick={() => removeEntry(index)} className="text-xs text-danger hover:underline">
               ×
             </button>
@@ -168,8 +210,9 @@ export default function RandomTableBlockEditor({
         {draws && (
           <ul className="flex flex-col gap-1 rounded-md border border-edge/60 bg-panel-sunken p-2 text-sm">
             {draws.map((d, i) => (
-              <li key={i} className="text-ink">
-                {d.text}
+              <li key={i} className="flex items-baseline justify-between gap-2 text-ink">
+                <span>{d.text}</span>
+                {formatTableEntryPrice(d.price) && <span className="text-ink-muted">{formatTableEntryPrice(d.price)}</span>}
               </li>
             ))}
           </ul>
