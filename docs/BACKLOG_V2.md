@@ -1306,18 +1306,13 @@ et un butin de repaire sont deux intentions différentes, même s'ils peuvent
 un jour piocher dans le même vivier. Contenu : table(s) écrites à la main à
 partir des 362 objets magiques SRD déjà importés, regroupés par rareté.
 
-### V2-J5 — Bascule des tables existantes de d20 à d100 · `S` — à faire
+### V2-J5 — Bascule des tables existantes de d20 à d100 · `S` — abandonné, fusionné dans V2-J15
 
-Toutes les tables `random_table` déjà écrites sur l'entité "Générateurs de
-MJ" (Taverne, PNJ, Noms, Échoppe — une vingtaine) passent de `d20` à `d100`,
-plages redistribuées proportionnellement. Pure donnée, aucun changement de
-moteur (`RandomTableData.die` est déjà une chaîne libre).
-
-**Critères**
-- [ ] Chaque table existante a `die: "d100"` et des plages qui couvrent
-      1-100 sans trou ni chevauchement.
-- [ ] Un tirage sur chacune reste fonctionnel (vérifié en direct, quelques
-      tables au hasard suffisent, pas toutes une par une).
+Redistribuer proportionnellement les plages d'une poignée d'entrées
+existantes vers 1-100 n'ajoute aucune variété réelle — juste un `die`
+différent sur les mêmes 2-9 résultats. Absorbé par V2-J15 (ci-dessous, en
+fin de liste) : écrire ~100 VRAIES entrées par table met `die: "d100"` de
+toute façon, et fait le travail qui compte réellement.
 
 ### V2-J6 — Blocs Apparence/Histoire pour Taverne et Échoppe · `S` — à faire
 
@@ -1673,6 +1668,53 @@ piège de V2-J12 non reproduit).
 - [ ] V2-J8/V2-J9, une fois écrits, citent ou réutilisent ces prix plutôt
       qu'une échelle inventée séparément (reste à faire quand ces tickets
       seront pris).
+
+### V2-J15 — Enrichissement du contenu des tables (d100, variété, ton) · `L` — à faire, dernier de la liste
+
+À prendre **une fois tous les outils construits** (V2-J5 à V2-J11 fermés,
+Taverne/PNJ/Noms/Échoppe/Butin tous en place) — enrichir le contenu plutôt
+que la mécanique. Chaque table `random_table` de l'entité "Générateurs de
+MJ" n'a aujourd'hui que 2 à 9 entrées (convention délibérée de ce lot :
+« 2-3 exemples, l'auteur complète plus tard », jamais pensée comme
+définitive). Deux symptômes concrets déjà observés en jouant avec l'outil
+cette session : (1) un tirage simple retombe souvent sur le même résultat
+qu'un tirage voisin (2 entrées seulement → 50% de chances de coïncidence) ;
+(2) un emplacement à tirage multiple avec `unique_draws` (ex. Boissons,
+`count: 4` sur une table de... 4 entrées) est en réalité forcé d'épuiser
+toute la table à chaque tirage — zéro variété d'une partie à l'autre.
+
+Absorbe V2-J5 (ci-dessus, abandonné) : porter chaque table à ~100 entrées
+distinctes met `die: "d100"` de toute façon, pas la peine de le faire deux
+fois.
+
+**Ton** : l'auteur encourage l'humour dans le contenu ajouté — jeux de
+mots, clins d'œil à la pop culture — mélangé au contenu plus classique
+déjà en place plutôt qu'en remplacement systématique (une table de noms de
+tavernes 100% blagues devient lassante à la table de jeu ; un mélange
+garde la surprise). Choix au cas par cas en écrivant chaque table.
+
+**Portée et méthode** : un chantier de contenu pur, pas de moteur — mais
+trop volumineux pour un seul ticket exécuté d'un coup (une trentaine de
+tables à ce stade, ~100 entrées chacune). À découper en sous-tickets par
+outil au moment de le prendre (ex. V2-J15a Taverne, V2-J15b PNJ, V2-J15c
+Noms, V2-J15d Échoppe, V2-J15e Butin) plutôt qu'une session unique —
+décision à confirmer en le démarrant, même discipline que le reste de ce
+lot (un ticket à la fois).
+
+**Critères**
+- [ ] Chaque table `random_table` de "Générateurs de MJ" a `die: "d100"`
+      et ~100 entrées distinctes (texte non dupliqué ; pour les tables au
+      format "Nom — Prix", prix strictement distincts au sein d'une même
+      table — discipline déjà établie sur le Menu de Taverne, V2-J9).
+- [ ] Un emplacement à tirage multiple (`count > 1`, `unique_draws`) peut
+      effectivement varier d'un tirage à l'autre — plus jamais forcé
+      d'épuiser toute sa table.
+- [ ] Mélange constaté de ton classique et humoristique, pas 100% l'un ou
+      l'autre — vérifié en relisant un échantillon de tables après
+      écriture.
+- [ ] Même discipline de vérification que le reste du lot : relecture de
+      l'état réel en base après chaque table écrite, contrôle des
+      doublons (texte et prix), jamais confiance à la seule réponse HTTP.
 
 **Méthode** : un ticket à la fois, jamais tous en même temps. Contenu
 toujours authored en direct sur l'entité "Générateurs de MJ" (jamais en dur
