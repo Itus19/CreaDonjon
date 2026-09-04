@@ -1387,18 +1387,29 @@ devenues orphelines (`specialites-echoppes`, `marchands-echoppes`,
 - [x] Vérifié en direct : fiche "L'Antre du Marchand" créée avec
       Bazar/Modeste/Bourg cohérents sur les 3 sections, puis nettoyée.
 
-### V2-J8 — Sélecteurs richesse/zone sur Taverne · `S` — à faire
+### V2-J8 — Sélecteurs richesse/zone sur Taverne · `S` — fait
 
 Réutilise le mécanisme de V2-J7 sans rien y ajouter côté moteur — juste les
 axes `wealth`/`zone` déclarés sur `taverne` dans le registre, plus le
-contenu de table qui en dépend (ambiance par zone au minimum). Les prix du
-palier `wealth` doivent rester cohérents avec la fiche "Train de vie"
-(V2-J14) — voir sa note de dépendance.
+contenu de table qui en dépend. Les prix du palier `wealth` doivent rester
+cohérents avec la fiche "Train de vie" (V2-J14) — pas encore de prix sur
+Taverne à ce stade (le Menu à prix croissants est V2-J9), rien à vérifier
+contre elle pour l'instant.
+
+**Fait** — `taverne-etablissement` : l'emplacement `ambiance` tire
+désormais `ambiance-taverne-{zone}` (3 tables, distinctes de celles
+d'Échoppe — contenu de decor de boutique vs ambiance de taverne, pas le
+même texte) et `patron` tire `patrons-taverne-{wealth}` (3 tables). Les
+deux anciennes tables plates (`ambiances-tavernes`, `patrons-tavernes`)
+supprimées, plus personne ne les référence.
 
 **Critères**
-- [ ] Taverne affiche les sélecteurs richesse et zone.
-- [ ] Au moins un emplacement de Taverne varie réellement selon chacun.
-- [ ] Vérifié en direct.
+- [x] Taverne affiche les sélecteurs richesse et zone.
+- [x] Au moins un emplacement de Taverne varie réellement selon chacun —
+      vérifié en direct : Modeste/Bourg → "une aubergiste bourrue..." +
+      "quelques tables de bois brut..." ; Réputée/Capitale → "un maître
+      d'hôtel élégant..." + "un service impeccable, verres en cristal".
+- [x] Vérifié en direct.
 
 ### V2-J9 — Tirage multiple par emplacement + Menu de Taverne · `M` — à faire
 

@@ -75,6 +75,31 @@ export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
       { key: "taverne-etablissement", label: "L'établissement" },
       { key: "taverne-chambre", label: "La Chambre" },
     ],
+    // Memes cles/libelles d'options que l'axe wealth/zone d'Échoppe (V2-J7)
+    // — vocabulaire coherent entre les deux outils — mais declares separement :
+    // deux outils seulement, pas encore de troisieme cas concret pour justifier
+    // un registre d'axes partages (CLAUDE.md, "regle des trois").
+    variants: [
+      {
+        key: "wealth",
+        label: "Richesse",
+        allowRandom: true,
+        options: [
+          { key: "modeste", label: "Modeste" },
+          { key: "correcte", label: "Correcte" },
+          { key: "reputee", label: "Réputée" },
+        ],
+      },
+      {
+        key: "zone",
+        label: "Zone",
+        options: [
+          { key: "bourg", label: "Bourg" },
+          { key: "ville", label: "Ville" },
+          { key: "capitale", label: "Capitale" },
+        ],
+      },
+    ],
     promote: { nameSectionKey: "taverne-nom", entityKind: "location" },
   },
   {
