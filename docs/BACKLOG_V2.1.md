@@ -92,7 +92,7 @@ dans les étapes :
 
 ### Étapes
 
-1. **Boutons manuels dans la barre de mise en forme** (`RichTextEditor.tsx`,
+1. **Fait** — **Boutons manuels dans la barre de mise en forme** (`RichTextEditor.tsx`,
    `BubbleMenu` existante) — *première étape, celle qui débloque tout le
    reste* :
    - Fait suivre `otherEntities`/`worldSlug` jusqu'à `RichTextEditor`
@@ -108,15 +108,29 @@ dans les étapes :
    - **"Délier"** (curseur/sélection sur un `ref` existant, remplace les
      deux boutons précédents) : reconvertit le nœud en texte brut à partir
      de son `label`.
-2. **Liens cliquables, partout** :
-   - Éditeur MJ : réutilise le motif déjà en place pour le spoiler
-     (`editorProps.handleClick` sur `[data-ref-mention]`) → lit
-     `data-kind`/`data-ref-id`/`data-ref-key` → `useDesktop()?.openRef(...)`
-     (résout l'id d'entité en slug via `otherEntities` déjà en main ;
-     `kind:"rule"` utilise directement sa `key`) ; repli en navigation
-     normale si `useDesktop()` est `null`.
-   - Wiki public/joueur (`PublicBlockView.tsx`) : remplace le `<span>`
-     mort par un vrai lien (`<Link>`) vers la fiche ou la règle.
+
+   Vérifié en direct (fiche "Mirella des Cent Étoiles") : "humaine" lié à
+   la fiche de règle Humain (Espèce, SRD 5.2.1), persistant après
+   rechargement ; "Créer comme Fiche" crée et lie une vraie entité ;
+   "Délier" restaure le texte brut. **Bug réel trouvé et corrigé en cours
+   de route** : `docToSegments` (`src/core/richtext/tiptapSync.ts`)
+   laissait passer `id`/`key` à `null` pour un `refMention` (l'attribut
+   Tiptap est toujours présent, même non utilisé) alors que `zRefNode` les
+   veut `optional()` (undefined), jamais `nullable()` — la sauvegarde d'un
+   lien échouait silencieusement en 400 à chaque pose. Testé
+   (`tiptapSync.test.ts`).
+2. **Fait (éditeur MJ), reste à faire (wiki public) — Liens cliquables,
+   partout** :
+   - Éditeur MJ : bouton "Ouvrir" quand la sélection est un `ref` existant
+     → `useDesktop()?.openRef(...)` (le système de fenêtres, déjà
+     construit, adresse une entité ET une règle de façon uniforme —
+     résout l'id d'entité en slug via `otherEntities` déjà en main,
+     `kind:"rule"` utilise directement sa `key`), repli en navigation
+     normale si `useDesktop()` est `null`. Vérifié en direct : "Ouvrir"
+     sur "humaine" affiche bien la fenêtre de la règle Humain.
+   - Wiki public/joueur (`PublicBlockView.tsx`) : le `<span>` de rendu
+     est toujours mort (aucun `href`, aucun clic) — reste à remplacer
+     par un vrai lien.
 3. **Détection automatique à la sauvegarde** — à l'écriture d'un bloc de
    texte, passer son contenu par `detectEntityReferences` (déjà écrite,
    à étendre pour matcher aussi les `ruleset_entries` du monde) et proposer
@@ -142,13 +156,14 @@ dans les étapes :
 
 ### Critères
 
-- [ ] Sélectionner du texte et cliquer "Lier à la Fiche" propose des
+- [x] Sélectionner du texte et cliquer "Lier à la Fiche" propose des
       fiches ET des règles, et pose un lien qui garde le texte
       sélectionné tel quel.
 - [ ] "Tieffeline" dans un paragraphe se détecte automatiquement et peut
-      se lier à la fiche de race correspondante.
+      se lier à la fiche de race correspondante (détection auto — étape 3,
+      pas encore faite ; la liaison MANUELLE fonctionne déjà, étape 1).
 - [ ] Un lien est cliquable et navigue vers la bonne fiche/règle, dans
-      l'éditeur MJ ET sur le wiki public.
+      l'éditeur MJ (fait) ET sur le wiki public (pas encore fait).
 - [ ] Une fiche affiche ce qui la mentionne ailleurs, correctement filtré
       par visibilité (un joueur ne voit jamais une mention issue d'un
       passage `gm`).
