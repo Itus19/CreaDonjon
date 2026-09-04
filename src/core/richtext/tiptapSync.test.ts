@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { docToSegments, segmentsToDoc, type DocJSON } from "./tiptapSync";
-import type { Segment } from "../schemas/entities/segments";
+import { zSegmentContentNode, type Segment } from "../schemas/entities/segments";
 
 describe("segmentsToDoc", () => {
   it("convertit un paragraphe simple", () => {
@@ -243,6 +243,28 @@ describe("docToSegments", () => {
     };
     const node = docToSegments(doc)[0].content[0];
     expect(node).toEqual({ t: "text", v: "x", marks: ["bold"] });
+  });
+
+  it("un refMention dont l'id/key non utilise vaut null (attribut Tiptap toujours present) produit un noeud ref valide pour le schema, jamais null", () => {
+    // Bug reel trouve en testant "Lier à la Fiche" (V2.1-1) : un refMention
+    // de kind "rule" porte quand meme un attribut `id` (a `null`, jamais
+    // absent), et zRefNode le veut `optional()` (undefined), pas
+    // `nullable()` — sans conversion, la sauvegarde du bloc echouait en 400
+    // a chaque lien pose.
+    const doc: DocJSON = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          attrs: { segmentId: "s1", visibilityLevel: "public", visibilityScopeId: null },
+          content: [{ type: "refMention", attrs: { kind: "rule", id: null, key: "human", label: "humaine" } }],
+        },
+      ],
+    };
+    const node = docToSegments(doc)[0].content[0];
+    expect(() => zSegmentContentNode.parse(node)).not.toThrow();
+    expect(node).toEqual({ t: "ref", kind: "rule", key: "human", label: "humaine" });
+    expect((node as { id?: string }).id).toBeUndefined();
   });
 
   it("un paragraphe sans contenu produit un segment avec un noeud texte vide", () => {

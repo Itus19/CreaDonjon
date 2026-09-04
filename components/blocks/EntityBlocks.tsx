@@ -142,6 +142,9 @@ function BlockDataEditor({
           blockId={block.id}
           onBlockRefreshed={onBlockRefreshed}
           hideAssist={hideAiAssist}
+          worldSlug={worldSlug}
+          worldId={worldId}
+          otherEntities={otherEntities}
         />
       );
     case "infobox":

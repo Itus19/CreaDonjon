@@ -1,15 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
+import { NodeSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import BubbleSelect from "./BubbleSelect";
+import RefLinkPopover, { type RefLinkTarget } from "./RefLinkPopover";
 import { SegmentParagraph, SegmentHeading, RefMention, Spoiler } from "./extensions";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import { docToSegments, segmentsToDoc, type DocJSON } from "@/src/core/richtext/tiptapSync";
 import type { Segment } from "@/src/core/schemas/entities/segments";
+import type { OtherEntityOption } from "@/components/entities/RelationsChips";
+import { useDesktop } from "@/components/shell/DesktopContext";
+import { windowHref, type WindowRef } from "@/components/shell/windowRefs";
 
 const BLOCK_TYPE_OPTIONS = [
   { value: "paragraph", label: "Paragraphe" },
@@ -62,13 +68,24 @@ export default function RichTextEditor({
   segments,
   onChange,
   onBlur,
+  worldSlug,
+  worldId,
+  otherEntities,
 }: {
   segments: Segment[];
   onChange: (segments: Segment[]) => void;
   onBlur?: () => void;
+  /** V2.1-1 : boutons Lier/Créer/Ouvrir masqués sans ces props (ex. description de règle, contexte hors fiche de monde) — même repli que `onLaunchWizard`. */
+  worldSlug?: string;
+  /** V2.1-1, "Créer comme Fiche" : `POST /api/entities` veut l'id du monde, pas son slug. */
+  worldId?: string;
+  otherEntities?: OtherEntityOption[];
 }) {
   const [initialDoc] = useState<DocJSON>(() => segmentsToDoc(segments));
   const [, forceUpdate] = useState(0);
+  const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
+  const desktop = useDesktop();
+  const router = useRouter();
 
   const editor = useEditor({
     extensions: [
@@ -161,12 +178,153 @@ export default function RichTextEditor({
       .run();
   }
 
+  /**
+   * V2.1-1 (retour utilisateur) : lie/delie une reference vers une fiche ou
+   * une entree de regle. Le noeud `refMention` est atomique (extensions.ts) —
+   * lier une selection la REMPLACE par un noeud dont le `label` reste le
+   * texte selectionne (jamais le nom de la cible : le label est ce que
+   * l'auteur a ecrit, specs/wiki-liens-et-personnages.md §A1). Delier fait
+   * l'inverse a partir de ce meme label, aucune perte d'information.
+   */
+  const selection = editor.state.selection;
+  const isRefSelected = selection instanceof NodeSelection && selection.node.type.name === "refMention";
+  const hasTextSelection = !selection.empty && !isRefSelected;
+
+  function linkSelectionTo(target: RefLinkTarget) {
+    const { from, to } = editor!.state.selection;
+    const label = editor!.state.doc.textBetween(from, to);
+    editor!
+      .chain()
+      .focus()
+      .command(({ tr, state }) => {
+        tr.replaceRangeWith(
+          from,
+          to,
+          state.schema.nodes.refMention.create({
+            kind: target.kind,
+            id: target.kind === "entity" ? target.id : null,
+            key: target.kind === "rule" ? target.key : null,
+            label,
+          })
+        );
+        return true;
+      })
+      .run();
+  }
+
+  async function createAndLinkSelection() {
+    if (!worldId) return;
+    const { from, to } = editor!.state.selection;
+    const label = editor!.state.doc.textBetween(from, to);
+    if (!label.trim()) return;
+    const res = await fetch("/api/entities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ worldId, name: label.trim(), entityKind: "other" }),
+    });
+    if (!res.ok) return;
+    const created = (await res.json()) as { id: string };
+    linkSelectionTo({ kind: "entity", id: created.id, name: label.trim() });
+  }
+
+  function unlinkRefMention() {
+    if (!isRefSelected) return;
+    const node = (selection as NodeSelection).node;
+    const label = node.attrs.label as string;
+    editor!
+      .chain()
+      .focus()
+      .command(({ tr, state }) => {
+        tr.replaceRangeWith(selection.from, selection.to, state.schema.text(label || " "));
+        return true;
+      })
+      .run();
+  }
+
+  function openRefMention() {
+    if (!isRefSelected || !worldSlug) return;
+    const node = (selection as NodeSelection).node;
+    const kind = (node.attrs.kind as string) === "rule" ? "rule" : "entity";
+    const key = kind === "rule" ? (node.attrs.key as string | null) : entitySlugById(node.attrs.id as string | null);
+    if (!key) return;
+    const ref: WindowRef = kind === "rule" ? { kind: "rule", key } : { kind: "entity", key };
+    if (desktop) desktop.openRef(ref);
+    else router.push(windowHref(worldSlug, ref));
+  }
+
+  function entitySlugById(id: string | null): string | null {
+    if (!id) return null;
+    return otherEntities?.find((e) => e.id === id)?.slug ?? null;
+  }
+
   return (
     <div className="flex flex-col gap-1">
       <BubbleMenu
         editor={editor}
         className="flex items-center gap-0.5 rounded-lg border border-edge-strong bg-panel-raised px-1.5 py-1 shadow-2xl"
       >
+        {worldSlug && otherEntities && isRefSelected && (
+          <>
+            <button
+              type="button"
+              onClick={openRefMention}
+              aria-label="Ouvrir la fiche liée"
+              title="Ouvrir la fiche liée"
+              className="rounded px-2 py-1 text-xs text-ink transition-colors hover:bg-panel"
+            >
+              Ouvrir
+            </button>
+            <button
+              type="button"
+              onClick={unlinkRefMention}
+              aria-label="Délier"
+              title="Délier"
+              className="rounded px-2 py-1 text-xs text-ink transition-colors hover:bg-panel"
+            >
+              Délier
+            </button>
+            <span className="mx-0.5 h-4 w-px bg-edge" />
+          </>
+        )}
+        {worldSlug && otherEntities && hasTextSelection && (
+          <>
+            <span className="relative">
+              <button
+                type="button"
+                onClick={() => setLinkPopoverOpen((v) => !v)}
+                aria-label="Lier à la fiche"
+                title="Lier à la fiche"
+                aria-expanded={linkPopoverOpen}
+                className={`rounded px-2 py-1 text-xs transition-colors hover:bg-panel ${linkPopoverOpen ? "bg-panel text-accent" : "text-ink"}`}
+              >
+                Lier à la Fiche
+              </button>
+              {linkPopoverOpen && (
+                <RefLinkPopover
+                  worldSlug={worldSlug}
+                  otherEntities={otherEntities}
+                  onSelect={(target) => {
+                    linkSelectionTo(target);
+                    setLinkPopoverOpen(false);
+                  }}
+                  onClose={() => setLinkPopoverOpen(false)}
+                />
+              )}
+            </span>
+            {worldId && (
+              <button
+                type="button"
+                onClick={createAndLinkSelection}
+                aria-label="Créer comme fiche"
+                title="Créer une nouvelle fiche à partir de la sélection"
+                className="rounded px-2 py-1 text-xs text-ink transition-colors hover:bg-panel"
+              >
+                Créer comme Fiche
+              </button>
+            )}
+            <span className="mx-0.5 h-4 w-px bg-edge" />
+          </>
+        )}
         <BubbleSelect value={currentBlockType} options={BLOCK_TYPE_OPTIONS} onChange={setBlockType} aria-label="Type de texte" />
         <span className="mx-0.5 h-4 w-px bg-edge" />
         {ALIGN_OPTIONS.map((opt) => (
