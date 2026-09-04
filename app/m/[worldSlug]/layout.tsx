@@ -5,6 +5,7 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import AppShell from "@/components/shell/AppShell";
 import DesktopWindowsProvider from "@/components/shell/DesktopWindowsProvider";
+import AvecWindowsLayer from "@/components/shell/AvecWindowsLayer";
 
 export default async function WorldLayout({
   children,
@@ -32,7 +33,13 @@ export default async function WorldLayout({
     // de naviguer, sans quoi changer de section la ferme).
     <Suspense fallback={null}>
       <DesktopWindowsProvider worldSlug={world.slug}>
-        <AppShell worldName={world.name} worldSlug={world.slug} campaignName={campaignName} campaignId={campaignId}>
+        <AppShell
+          worldName={world.name}
+          worldSlug={world.slug}
+          campaignName={campaignName}
+          campaignId={campaignId}
+          overlay={<AvecWindowsLayer worldSlug={world.slug} />}
+        >
           {children}
         </AppShell>
       </DesktopWindowsProvider>

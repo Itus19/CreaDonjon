@@ -6,28 +6,20 @@ import WindowFrame from "./WindowFrame";
 import Panel from "./Panel";
 import { useDesktop } from "./DesktopContext";
 import { useDesktopWindowsState } from "./DesktopWindowsProvider";
-import { refId, windowContentLabel, type WindowRef } from "./windowRefs";
-import EditEntityForm from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/EditEntityForm";
-import RuleEntryView from "@/components/rules/RuleEntryView";
-import MjToolWindowContent from "./MjToolWindowContent";
-import RuleToolWindowContent from "./RuleToolWindowContent";
-import type { EntityWindowData } from "@/src/server/services/entityWindow";
-import { isMjToolWindowData } from "./mjToolWindows";
+import { refId, type WindowRef } from "./windowRefs";
 
 const MOBILE_BREAKPOINT = 768;
 
-function isEntityWindowData(data: unknown): data is EntityWindowData {
-  return !!data && typeof data === "object" && "entity" in data;
-}
-
 /**
- * Rendu des fenetres flottantes (ADR-0011) : monte a la fois par Monde, par
+ * Rendu de la fenetre PRIMAIRE (ADR-0011) : monte a la fois par Monde, par
  * Regles ET par MJ, chacun avec `children` = son propre contenu route
- * (rendu serveur pour la fenetre primaire). L'etat vient de
- * `DesktopWindowsProvider`, partage entre les trois sections — une fenetre
- * ouverte depuis l'une reste visible dans les autres.
+ * (rendu serveur pour la fenetre primaire) — reste par section, contrairement
+ * aux fenetres SECONDAIRES (`avec`, `AvecWindowsLayer.tsx`, montees une
+ * seule fois au-dessus des trois sections depuis V2, audit de performance :
+ * `{children}` differe par route, la fenetre primaire ne peut pas etre
+ * partagee de la meme facon).
  */
-export default function WindowsDesktop({ worldSlug, children }: { worldSlug: string; children: React.ReactNode }) {
+export default function WindowsDesktop({ children }: { children: React.ReactNode }) {
   const desktop = useDesktop();
   const state = useDesktopWindowsState();
   const desktopRef = useRef<HTMLDivElement>(null);
@@ -35,8 +27,7 @@ export default function WindowsDesktop({ worldSlug, children }: { worldSlug: str
   // Sous-titre de fenetre (retour utilisateur : "certaines choses sont en
   // anglais") — `badge` vient directement de `entity_kind`/`entryType`
   // (identifiants techniques anglais, CLAUDE.md §11), jamais affiches tels
-  // quels. Distinct de `kindLabels` (pluriel, en-tetes de categorie de la
-  // barre laterale) : un sous-titre de fenetre porte sur UNE fiche.
+  // quels.
   const tShell = useTranslations("shell");
   const tRegles = useTranslations("regles");
   const entityKindLabels = tShell.raw("kindLabelsSingular") as Record<string, string>;
@@ -66,7 +57,19 @@ export default function WindowsDesktop({ worldSlug, children }: { worldSlug: str
   }
 
   return (
-    <div ref={desktopRef} className="relative flex-1 overflow-hidden">
+    <div
+      ref={desktopRef}
+      className="relative flex-1 overflow-hidden"
+      // `AvecWindowsLayer.tsx` vit desormais dans une AUTRE pile
+      // d'empilement (son propre conteneur `position: fixed`) — le z-index
+      // 20/30 de `WindowFrame` ne se compare plus qu'A L'INTERIEUR de
+      // chaque pile, jamais entre les deux (retour utilisateur : la fenetre
+      // primaire, meme "focus" (z-index 30 la-dedans), restait cachee sous
+      // les secondaires). Ce conteneur porte donc lui-meme un z-index,
+      // compare cette fois au niveau racine contre celui d'`AvecWindowsLayer` —
+      // le plus haut des deux gagne selon qui a reellement le focus.
+      style={{ zIndex: state.isPrimaryFocused ? 50 : 10 }}
+    >
       {!state.primary && (
         <div className="h-full overflow-y-auto p-8">
           <Panel>{children}</Panel>
@@ -94,73 +97,6 @@ export default function WindowsDesktop({ worldSlug, children }: { worldSlug: str
             {children}
           </WindowFrame>
         )
-      )}
-
-      {state.avecWindows
-        .filter((w) => !w.isMinimized)
-        .map(({ ref, geometry, isFocused, data }) => {
-          const { name, badge } = windowContentLabel(ref, data);
-          return (
-            <WindowFrame
-              key={refId(ref)}
-              win={geometry}
-              isFocused={isFocused}
-              containerRef={desktopRef}
-              title={name}
-              subtitle={translateBadge(ref.kind, badge)}
-              onFocus={() => state.focusWindow(refId(ref))}
-              onClose={() => state.closeWindow(ref)}
-              onMinimize={() => state.minimizeWindow(ref)}
-              onUpdate={(updates) => state.updateGeometry(ref, updates)}
-            >
-              {ref.kind === "rule-tool" ? (
-                // Aucune donnee serveur a charger — un formulaire de
-                // creation se suffit a lui-meme (worldSlug deja connu),
-                // jamais bloque derriere le meme "Chargement..." que les
-                // fenetres entite/regle/outil MJ qui, elles, lisent une
-                // vraie ligne en base.
-                <RuleToolWindowContent worldSlug={worldSlug} toolKey={ref.key} />
-              ) : !data ? (
-                <p className="text-sm text-ink-muted">Chargement...</p>
-              ) : isEntityWindowData(data) ? (
-                <EditEntityForm
-                  entity={data.entity}
-                  worldSlug={data.worldSlug}
-                  initialBlocks={data.blocks}
-                  initialRelations={data.relations}
-                  otherEntities={data.otherEntities}
-                  worldCustomKinds={data.worldCustomKinds}
-                  campaignId={data.campaignId}
-                  initialIsPc={data.isPc}
-                  campaignCharacterUserId={data.campaignCharacterUserId}
-                  initialPortraitLayout={data.portraitLayout}
-                />
-              ) : isMjToolWindowData(data) ? (
-                <MjToolWindowContent worldSlug={worldSlug} data={data} />
-              ) : (
-                <RuleEntryView entry={data} worldSlug={worldSlug} />
-              )}
-            </WindowFrame>
-          );
-        })}
-
-      {state.minimizedTabs.length > 0 && (
-        <div className="absolute inset-x-0 bottom-0 z-40 flex flex-wrap items-center gap-2 border-t border-edge bg-panel-sunken/95 p-2 backdrop-blur-[var(--blur)]">
-          {state.minimizedTabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => state.restoreWindow(tab.ref)}
-              title="Restaurer"
-              className="flex items-center gap-1.5 rounded-md border border-edge bg-panel-raised px-3 py-1.5 text-xs text-ink-soft transition-colors hover:border-accent/40 hover:text-ink"
-            >
-              <span className="max-w-[160px] truncate">{tab.name}</span>
-              {tab.badge && (
-                <span className="shrink-0 text-[10px] text-ink-muted">{translateBadge(tab.ref.kind, tab.badge)}</span>
-              )}
-            </button>
-          ))}
-        </div>
       )}
     </div>
   );
