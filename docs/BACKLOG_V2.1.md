@@ -119,8 +119,7 @@ dans les étapes :
    veut `optional()` (undefined), jamais `nullable()` — la sauvegarde d'un
    lien échouait silencieusement en 400 à chaque pose. Testé
    (`tiptapSync.test.ts`).
-2. **Fait (éditeur MJ), reste à faire (wiki public) — Liens cliquables,
-   partout** :
+2. **Fait — Liens cliquables, partout** :
    - Éditeur MJ : bouton "Ouvrir" quand la sélection est un `ref` existant
      → `useDesktop()?.openRef(...)` (le système de fenêtres, déjà
      construit, adresse une entité ET une règle de façon uniforme —
@@ -128,9 +127,21 @@ dans les étapes :
      `kind:"rule"` utilise directement sa `key`), repli en navigation
      normale si `useDesktop()` est `null`. Vérifié en direct : "Ouvrir"
      sur "humaine" affiche bien la fenêtre de la règle Humain.
-   - Wiki public/joueur (`PublicBlockView.tsx`) : le `<span>` de rendu
-     est toujours mort (aucun `href`, aucun clic) — reste à remplacer
-     par un vrai lien.
+   - Wiki public/joueur (`PublicBlockView.tsx`) : le `<span>` mort
+     remplacé par un vrai `<Link>`. Une cible "entity" se résout via
+     `textRefs` (nouveau, même motif que `questRefs`/`timelineRefs` —
+     filtré `is_public` sur le partage anonyme, pas sur le wiki joueur).
+     Une cible "rule" construit son lien directement depuis sa clé (aucune
+     résolution serveur nécessaire) **seulement si `ruleHrefBase` est
+     fourni** — décision de périmètre assumée : uniquement le wiki joueur
+     (`/joueur/regles` existe), jamais le partage anonyme (`/partage`,
+     `/apercu`), qui n'a aucune page de règle pour un visiteur non
+     authentifié — construire cette page publique serait un chantier
+     séparé, pas fait ici sans demande explicite. Nouvelle fonction pure
+     `collectRefTargetIds` (`src/core/linker/refTargets.ts`, testée).
+     Vérifié en direct sur `/apercu` : un lien de règle reste un span non
+     cliquable (cohérent, pas de page publique), un lien d'entité devient
+     un vrai `<a href>` qui navigue correctement.
 3. **Détection automatique à la sauvegarde** — à l'écriture d'un bloc de
    texte, passer son contenu par `detectEntityReferences` (déjà écrite,
    à étendre pour matcher aussi les `ruleset_entries` du monde) et proposer
@@ -162,8 +173,10 @@ dans les étapes :
 - [ ] "Tieffeline" dans un paragraphe se détecte automatiquement et peut
       se lier à la fiche de race correspondante (détection auto — étape 3,
       pas encore faite ; la liaison MANUELLE fonctionne déjà, étape 1).
-- [ ] Un lien est cliquable et navigue vers la bonne fiche/règle, dans
-      l'éditeur MJ (fait) ET sur le wiki public (pas encore fait).
+- [x] Un lien est cliquable et navigue vers la bonne fiche/règle, dans
+      l'éditeur MJ ET sur le wiki public (entité partout ; règle sur le
+      wiki joueur — pas sur le partage anonyme, aucune page de règle n'y
+      existe, décision de périmètre assumée).
 - [ ] Une fiche affiche ce qui la mentionne ailleurs, correctement filtré
       par visibilité (un joueur ne voit jamais une mention issue d'un
       passage `gm`).
