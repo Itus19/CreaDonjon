@@ -1486,7 +1486,7 @@ utilisée pour les deux entrées en un seul appel cohérent.
       un seul endroit (vérifié en direct sur les deux fiches après
       correction de la surcharge de traduction, voir V2-J12).
 
-### V2-J14 — Nouvelle fiche "Train de vie" · `M` — à faire
+### V2-J14 — Nouvelle fiche "Train de vie" · `M` — fait
 
 Contenu déjà présent en texte brut dans le dépôt
 (`data/srd/fr-source/srd-5.2.1-fr.txt`, lignes ~9881-9995 — pages 107-108
@@ -1507,12 +1507,23 @@ fiche sert donc de référence de prix pour écrire le contenu de V2-J8/V2-J9
 **dépendance de contenu, pas de code** : V2-J8/J9 peuvent démarrer avant,
 mais leurs PRIX doivent être vérifiés contre cette fiche une fois écrite.
 
+**Fait** — `scripts/write-lifestyle-expenses-2024.ts` (committé, `--write`
+pour appliquer, même RPC `app.import_srd_entries` que V2-J12/J13). Entrée
+`entry_key: "lifestyle-expenses"`, nom "Train de vie". Un bloc description
+(les 7 paliers) + 3 blocs `custom_table` ("Repas, boisson et hébergement",
+"Employés", "Services d'incantation"). Contenu vérifié mot pour mot contre
+`data/srd/fr-source/srd-5.2.1-fr.txt` lignes 9906-9995 en l'écrivant, puis
+revérifié directement en base après écriture (aucune surcharge de
+traduction parasite cette fois — `ruleset_entry_translations.blocks` vide,
+piège de V2-J12 non reproduit).
+
 **Critères**
-- [ ] Nouvelle fiche "Train de vie" dans le ruleset officiel 2024, les 4
+- [x] Nouvelle fiche "Train de vie" dans le ruleset officiel 2024, les 4
       tables/sections du SRD présentes et lisibles.
-- [ ] Les prix qu'elle porte sont ceux du SRD 2024 officiel, pas inventés.
+- [x] Les prix qu'elle porte sont ceux du SRD 2024 officiel, pas inventés.
 - [ ] V2-J8/V2-J9, une fois écrits, citent ou réutilisent ces prix plutôt
-      qu'une échelle inventée séparément.
+      qu'une échelle inventée séparément (reste à faire quand ces tickets
+      seront pris).
 
 **Méthode** : un ticket à la fois, jamais tous en même temps. Contenu
 toujours authored en direct sur l'entité "Générateurs de MJ" (jamais en dur
