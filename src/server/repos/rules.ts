@@ -213,6 +213,40 @@ export async function listOverridesAcrossRulesets(
   return result;
 }
 
+/**
+ * Meme regle, PLUSIEURS cles a la fois (audit de performance) — remplace
+ * `listOverridesAcrossRulesets` appele une fois par cle
+ * (`fetchEquipmentBlocks`, un objet d'inventaire a la fois).
+ */
+export async function listOverridesAcrossRulesetsForKeys(
+  supabase: TypedClient,
+  rulesetIds: string[],
+  entryKeys: string[]
+): Promise<Map<string, Map<string, RulesetOverrideRow[]>>> {
+  const result = new Map<string, Map<string, RulesetOverrideRow[]>>();
+  if (rulesetIds.length === 0 || entryKeys.length === 0) return result;
+  const { data, error } = await supabase
+    .from("ruleset_overrides")
+    .select("ruleset_id, entry_key, block_type, action, payload, patch, created_at")
+    .in("ruleset_id", rulesetIds)
+    .in("entry_key", entryKeys);
+  if (error) throw new Error(error.message);
+  const byKeyThenRuleset = new Map<string, Map<string, typeof data>>();
+  for (const row of data) {
+    const byRuleset = byKeyThenRuleset.get(row.entry_key) ?? new Map<string, typeof data>();
+    const list = byRuleset.get(row.ruleset_id) ?? [];
+    list.push(row);
+    byRuleset.set(row.ruleset_id, list);
+    byKeyThenRuleset.set(row.entry_key, byRuleset);
+  }
+  for (const [entryKey, byRuleset] of byKeyThenRuleset) {
+    const sorted = new Map<string, RulesetOverrideRow[]>();
+    for (const [rulesetId, rows] of byRuleset) sorted.set(rulesetId, sortOverrideRows(rows));
+    result.set(entryKey, sorted);
+  }
+  return result;
+}
+
 export interface EntryLevelOverrideRow {
   entry_key: string;
   action: string;
@@ -347,6 +381,27 @@ export async function getRulesetEntryByKeyAcrossRulesets(
     .select("id, ruleset_id, entry_key, entry_type, source_attribution, source_raw")
     .in("ruleset_id", rulesetIds)
     .eq("entry_key", entryKey);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * Meme regle, PLUSIEURS cles a la fois a travers toute une chaine (audit de
+ * performance) — remplace `getRulesetEntryByKeyAcrossRulesets` appele une
+ * fois par cle (`fetchEquipmentBlocks`, un aller-retour par objet
+ * d'inventaire, en parallele mais quand meme un aller-retour chacun).
+ */
+export async function getRulesetEntriesByKeysAcrossRulesets(
+  supabase: TypedClient,
+  rulesetIds: string[],
+  entryKeys: string[]
+): Promise<RulesetEntryRow[]> {
+  if (rulesetIds.length === 0 || entryKeys.length === 0) return [];
+  const { data, error } = await supabase
+    .from("ruleset_entries")
+    .select("id, ruleset_id, entry_key, entry_type, source_attribution, source_raw")
+    .in("ruleset_id", rulesetIds)
+    .in("entry_key", entryKeys);
   if (error) throw new Error(error.message);
   return data;
 }

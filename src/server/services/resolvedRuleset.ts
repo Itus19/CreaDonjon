@@ -55,7 +55,7 @@ import {
   listRulesetEntryChipsByKeys,
   listTranslationsForEntries,
 } from "@/src/server/repos/rules";
-import { entryNameFrom, resolveEntryBlocksInRuleset, walkRulesetChain } from "./rules";
+import { entryNameFrom, resolveEntryBlocksInRuleset, resolveEntryBlocksInRulesetBatch, walkRulesetChain } from "./rules";
 import { WEAPON_ARMOR_PROFICIENCY_LABELS_FR } from "@/src/i18n/fr";
 import {
   backgroundAbilityBonusModifiers,
@@ -507,21 +507,19 @@ export async function assembleResolvedRuleset(
     const chipByKey = new Map(chips.map((c) => [c.entry_key, c]));
 
     // Modificateurs generiques d'une aptitude/don (bloc `modifiers`, retour
-    // utilisateur : "un don maison qui affecte reellement la fiche") — un
-    // aller-retour par cle en parallele, meme cout deja accepte pour
-    // l'equipement (`fetchEquipmentBlocks`, appele de la meme facon). Passe
-    // par `resolveEntryBlocksInRuleset` (override-aware, jamais
-    // `listRulesetEntryChipsByKeys` ci-dessus qui ne lit QUE `ruleset_entries` —
-    // un don maison qui ne vit que dans `ruleset_overrides`, comme n'importe
-    // quelle fiche cree via `importRulesetEntries`, resout quand meme ici).
+    // utilisateur : "un don maison qui affecte reellement la fiche") — toutes
+    // les cles EN UNE PASSE (audit de performance ulterieur ; `resolveEntryBlocksInRulesetBatch`,
+    // meme raison que l'equipement plus bas). Passe par ce moteur
+    // (override-aware, jamais `listRulesetEntryChipsByKeys` ci-dessus qui ne
+    // lit QUE `ruleset_entries` — un don maison qui ne vit que dans
+    // `ruleset_overrides`, comme n'importe quelle fiche cree via
+    // `importRulesetEntries`, resout quand meme ici).
+    const resolvedFeatureBlocks = await resolveEntryBlocksInRulesetBatch(supabase, rulesetId, featureKeys);
     const declaredModifiersByKey = new Map(
-      await Promise.all(
-        featureKeys.map(async (fk): Promise<[string, DeclaredModifier[]]> => {
-          const resolved = await resolveEntryBlocksInRuleset(supabase, rulesetId, fk);
-          const data = resolved?.blocksByType.get("modifiers") as { modifiers: DeclaredModifier[] } | undefined;
-          return [fk, data?.modifiers ?? []];
-        })
-      )
+      featureKeys.map((fk): [string, DeclaredModifier[]] => {
+        const data = resolvedFeatureBlocks.get(fk)?.blocksByType.get("modifiers") as { modifiers: DeclaredModifier[] } | undefined;
+        return [fk, data?.modifiers ?? []];
+      })
     );
 
     for (const fk of featureKeys) {
@@ -565,10 +563,8 @@ interface EquipmentBlocks {
  * le repli pour tout contenu qui n'en a pas (une fiche maison n'en ecrit
  * aucun, V1-D4 : `createHomebrewWeapon` ne pose qu'un bloc `weapon`).
  */
-async function fetchEquipmentBlocks(supabase: TypedClient, rulesetId: string, key: string): Promise<EquipmentBlocks | null> {
-  const resolved = await resolveEntryBlocksInRuleset(supabase, rulesetId, key);
+function equipmentBlocksFromResolved(resolved: Awaited<ReturnType<typeof resolveEntryBlocksInRuleset>>): EquipmentBlocks | null {
   if (!resolved) return null;
-
   const customTable = resolved.blocksByType.get("custom_table") as { rows: CustomTableRow[] } | undefined;
   return {
     fields: customTable ? parseCustomTableFields(customTable.rows) : {},
@@ -578,16 +574,23 @@ async function fetchEquipmentBlocks(supabase: TypedClient, rulesetId: string, ke
   };
 }
 
+async function fetchEquipmentBlocks(supabase: TypedClient, rulesetId: string, key: string): Promise<EquipmentBlocks | null> {
+  return equipmentBlocksFromResolved(await resolveEntryBlocksInRuleset(supabase, rulesetId, key));
+}
+
 /**
  * Armure/arme/poids/cout d'un lot d'objets d'equipement EN UNE PASSE (V2-G1
- * suite, retour utilisateur : "lenteur generale" persistante) — appeler
+ * suite ; batch inter-cles, audit de performance ulterieur, retour
+ * utilisateur : "lenteur generale" persistante) — appeler
  * `resolveEquipmentArmorData`/`resolveEquipmentWeaponData`/
  * `resolveEquipmentWeight`/`resolveEquipmentCost` separement sur le MEME lot
  * de cles (ce que faisaient l'API et `characterActions.ts`) refaisait
  * `fetchEquipmentBlocks` — chain-walk + surcharges incluses, le plus couteux
- * des deux repartiteurs ci-dessus — 3 ou 4 fois pour chaque objet. Ici, une
- * seule fois par objet, les objets entre eux en parallele (`Promise.all`,
- * aucun ne depend d'un autre).
+ * des deux repartiteurs ci-dessus — 3 ou 4 fois pour chaque objet.
+ * `resolveEntryBlocksInRulesetBatch` va plus loin : meme pour un seul appel
+ * `fetchEquipmentBlocks` par objet, chaque objet payait son propre
+ * aller-retour entree/blocs/surcharges — desormais 3 requetes pour TOUT le
+ * lot, quelle que soit sa taille.
  */
 export async function resolveEquipmentData(
   supabase: TypedClient,
@@ -604,17 +607,17 @@ export async function resolveEquipmentData(
   const weight: Record<string, number | null> = {};
   const cost: Record<string, ItemCost | null> = {};
 
-  await Promise.all(
-    keys.map(async (key) => {
-      const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
-      armor[key] = found ? (found.armor ? armorDataFromBlock(found.armor) : parseArmorData(found.fields)) : null;
-      weapon[key] = found ? (found.weapon ? weaponDataFromBlock(found.weapon) : parseWeaponData(found.fields)) : null;
-      const dedicatedWeight = found?.weapon?.weight ?? found?.armor?.weight ?? found?.itemProperties?.weight;
-      weight[key] = found ? (dedicatedWeight !== undefined ? weightFromQuantity(dedicatedWeight) : parseItemWeight(found.fields)) : null;
-      const dedicatedCost = found?.weapon?.cost ?? found?.armor?.cost ?? found?.itemProperties?.cost;
-      cost[key] = found ? (dedicatedCost !== undefined ? costFromQuantity(dedicatedCost) : parseItemCost(found.fields)) : null;
-    })
-  );
+  const resolvedByKey = await resolveEntryBlocksInRulesetBatch(supabase, rulesetId, keys);
+  for (const key of keys) {
+    const found = equipmentBlocksFromResolved(resolvedByKey.get(key) ?? null);
+
+    armor[key] = found ? (found.armor ? armorDataFromBlock(found.armor) : parseArmorData(found.fields)) : null;
+    weapon[key] = found ? (found.weapon ? weaponDataFromBlock(found.weapon) : parseWeaponData(found.fields)) : null;
+    const dedicatedWeight = found?.weapon?.weight ?? found?.armor?.weight ?? found?.itemProperties?.weight;
+    weight[key] = found ? (dedicatedWeight !== undefined ? weightFromQuantity(dedicatedWeight) : parseItemWeight(found.fields)) : null;
+    const dedicatedCost = found?.weapon?.cost ?? found?.armor?.cost ?? found?.itemProperties?.cost;
+    cost[key] = found ? (dedicatedCost !== undefined ? costFromQuantity(dedicatedCost) : parseItemCost(found.fields)) : null;
+  }
 
   return { armor, weapon, weight, cost };
 }

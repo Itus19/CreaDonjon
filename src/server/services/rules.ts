@@ -48,6 +48,7 @@ import {
   getRulesetById,
   getRulesetEntryByKey,
   getRulesetEntryByKeyAcrossRulesets,
+  getRulesetEntriesByKeysAcrossRulesets,
   insertRulesetVariant,
   listBlocksForRulesetEntry,
   listBlocksForRulesetEntries,
@@ -57,6 +58,7 @@ import {
   listOutgoingRefs,
   listOverridesForRuleset,
   listOverridesAcrossRulesets,
+  listOverridesAcrossRulesetsForKeys,
   listRulesetEntries,
   listRulesetEntriesByKeys,
   listSelectableRulesets,
@@ -65,6 +67,7 @@ import {
   type DeleteRulesetOutcome,
   type SelectableRulesetRow,
   type RulesetEntryRow,
+  type RulesetOverrideRow,
 } from "@/src/server/repos/rules";
 import { getWorldDefaultRulesetId, setWorldDefaultRuleset } from "@/src/server/repos/worlds";
 import { listCampaignsForWorld, updateCampaignRuleset } from "@/src/server/repos/campaigns";
@@ -200,15 +203,21 @@ async function entryFromChainByKey(supabase: TypedClient, chain: RulesetChainLin
  * n'existe nulle part dans la chaine (ni base, ni `add_entry`) ou si une
  * surcharge l'a desactivee.
  */
-export async function resolveEntryBlocksInRuleset(
-  supabase: TypedClient,
-  rulesetId: string,
-  entryKey: string
-): Promise<ResolvedEntryBlocks | null> {
-  const chain = await walkRulesetChain(supabase, rulesetId);
-  const entry = await entryFromChainByKey(supabase, chain, entryKey);
-
-  const blockRows = entry ? await listBlocksForRulesetEntry(supabase, entry.id) : [];
+/**
+ * Coeur partage entre `resolveEntryBlocksInRuleset` (une cle) et
+ * `resolveEntryBlocksInRulesetBatch` (plusieurs) — assemble une entree deja
+ * trouvee + ses blocs + ses surcharges (deja groupees par ruleset) en
+ * `ResolvedEntryBlocks`. Aucun acces base ici : les deux appelants font
+ * leur propre fetch (single ou batch), ce coeur ne fait que la resolution
+ * en memoire (`applyOverrides`).
+ */
+function resolveOneEntryBlocks(
+  chain: RulesetChainLink[],
+  entryKey: string,
+  entry: RulesetEntryRow | undefined,
+  blockRows: { block_type: string; display: Json; data: Json; display_order: number }[],
+  overridesByRuleset: Map<string, RulesetOverrideRow[]>
+): ResolvedEntryBlocks | null {
   const baseEntry: ResolvableEntry | null = entry
     ? {
         entry_key: entry.entry_key,
@@ -224,7 +233,6 @@ export async function resolveEntryBlocksInRuleset(
       }
     : null;
 
-  const overridesByRuleset = await listOverridesAcrossRulesets(supabase, chain.map((link) => link.rulesetId), entryKey);
   const overrides: OverrideInput[] = [];
   let homebrewName: string | null = null;
   for (const link of [...chain].reverse()) {
@@ -259,6 +267,72 @@ export async function resolveEntryBlocksInRuleset(
   }
 
   return { entryType: resolved.entry_type as EntryType, blocksByType, name: homebrewName ?? (entry ? entryNameFrom(entry) : null) };
+}
+
+export async function resolveEntryBlocksInRuleset(
+  supabase: TypedClient,
+  rulesetId: string,
+  entryKey: string
+): Promise<ResolvedEntryBlocks | null> {
+  const chain = await walkRulesetChain(supabase, rulesetId);
+  const entry = await entryFromChainByKey(supabase, chain, entryKey);
+  const blockRows = entry ? await listBlocksForRulesetEntry(supabase, entry.id) : [];
+  const overridesByRuleset = await listOverridesAcrossRulesets(supabase, chain.map((link) => link.rulesetId), entryKey);
+  return resolveOneEntryBlocks(chain, entryKey, entry ?? undefined, blockRows, overridesByRuleset);
+}
+
+/**
+ * Meme resolution, PLUSIEURS cles a la fois en 3 requetes au lieu de 3×N
+ * (audit de performance, retour utilisateur : "reference-chips/resolved-ruleset
+ * lent") — `fetchEquipmentBlocks` (resolvedRuleset.ts) appelait
+ * `resolveEntryBlocksInRuleset` une fois par objet d'inventaire, en
+ * parallele (`Promise.all`) mais chacun payait quand meme son propre
+ * aller-retour d'entree/blocs/surcharges.
+ */
+export async function resolveEntryBlocksInRulesetBatch(
+  supabase: TypedClient,
+  rulesetId: string,
+  entryKeys: readonly string[]
+): Promise<Map<string, ResolvedEntryBlocks>> {
+  const result = new Map<string, ResolvedEntryBlocks>();
+  const keys = [...new Set(entryKeys)];
+  if (keys.length === 0) return result;
+
+  const chain = await walkRulesetChain(supabase, rulesetId);
+  const rulesetIds = chain.map((link) => link.rulesetId);
+
+  const [entries, overridesByKey] = await Promise.all([
+    getRulesetEntriesByKeysAcrossRulesets(supabase, rulesetIds, keys),
+    listOverridesAcrossRulesetsForKeys(supabase, rulesetIds, keys),
+  ]);
+
+  // Une entree par cle : celle du ruleset le plus specifique (chain est
+  // feuille -> racine) parmi celles trouvees pour cette cle.
+  const entryByKey = new Map<string, RulesetEntryRow>();
+  for (const link of chain) {
+    for (const row of entries) {
+      if (row.ruleset_id === link.rulesetId && !entryByKey.has(row.entry_key)) entryByKey.set(row.entry_key, row);
+    }
+  }
+
+  const entryIds = [...entryByKey.values()].map((e) => e.id);
+  const allBlockRows = await listBlocksForRulesetEntries(supabase, entryIds);
+  const blockRowsByEntryId = new Map<string, typeof allBlockRows>();
+  for (const row of allBlockRows) {
+    const list = blockRowsByEntryId.get(row.entry_id) ?? [];
+    list.push(row);
+    blockRowsByEntryId.set(row.entry_id, list);
+  }
+
+  for (const key of keys) {
+    const entry = entryByKey.get(key);
+    const blockRows = entry ? (blockRowsByEntryId.get(entry.id) ?? []) : [];
+    const overridesByRuleset = overridesByKey.get(key) ?? new Map<string, RulesetOverrideRow[]>();
+    const resolved = resolveOneEntryBlocks(chain, key, entry, blockRows, overridesByRuleset);
+    if (resolved) result.set(key, resolved);
+  }
+
+  return result;
 }
 
 export interface RuleEntryBlockView {
