@@ -1891,6 +1891,29 @@ groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
   direct : tirage sur les 4 cultures, `d100` confirmé, aucun doublon
   (relecture directe de l'état en base après écriture, 100/100 uniques sur
   chaque table).
+
+  **Correctif post-clôture** (retour utilisateur, après avoir vu comment
+  dd2024.fr compose ses prénoms — algorithme réimplémenté indépendamment,
+  aucun mot importé, cf. commit du moteur) : les 100 noms par culture
+  étaient PRÉ-CALCULÉS (combinaison figée de deux bassins), pas composés en
+  direct — même limite que l'ancien `noms-echoppes`. Remplacé par un
+  nouveau type d'emplacement de générateur, `GeneratorFragmentNameSlot`
+  (début + parfois un milieu (40%) + fin, recollés par une règle
+  d'euphonie qui évite les chocs de voyelles/consonnes,
+  `src/core/generators/nameFragments.ts`, testé). La fin du prénom porte le
+  genre (`tier`), filtrée par un nouvel axe de variante "Genre"
+  (Masculin/Féminin/**Neutre**, ce dernier avec ses propres fins de prénom
+  — jamais un simple mélange des deux autres, retour utilisateur explicite).
+  4 × 3 tables de fragments (débuts/milieux/fins, ~16/8/33 entrées chacune)
+  + 4 tables de noms de famille (30 chacune, **réutilisant** les noms de
+  famille déjà écrits à la main dans les anciennes tables plutôt que d'en
+  réinventer — extraits et dédupliqués). Vérifié en direct sur les 4
+  cultures et les 3 genres : sonorité cohérente par culture (« Thibous
+  Prudhomme » humain masculin, « Nolan Boisjoli » humain neutre, « Miryr
+  Feuillage-Éternel » elfe, « Gunnorek Poing-de-Granit » nain, « Jososs
+  Douxmatelas » halfelin), relance individuelle du seul emplacement
+  "prenom" fonctionnelle, "Éditer les tables" liste bien les 4 tables de
+  chaque section.
 - **V2-J15b — Butin** (1 table : `butin-objets-magiques`) · **fait** —
   111 objets sur les ~245 à rareté propre du SRD 2024 (Commun 1/1 — tout
   ce qui existe ; Peu commun 31/73 ; Rare 34/86 ; Très rare 25/53 ;
