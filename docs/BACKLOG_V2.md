@@ -1962,6 +1962,23 @@ groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
   direct : 20 tirages consécutifs en Maison close, aucun nom hors-thème,
   mélange de noms génériques et typés confirmé.
 
+  **Densité augmentée** (retour utilisateur — 2-11 noms spécifiques par
+  type jugé trop maigre pour certains types comme Bazar/Forgeron) :
+  plutôt qu'écrire des dizaines de noms un par un, génération combinatoire
+  par type — un petit vocabulaire "thème" par type (~12-18 mots, genre
+  marqué, ex. Forge/f, Marteau/m, Enclume/f pour Forgeron) combiné à un
+  pool de 50 adjectifs PARTAGÉ entre les 9 types (chaque adjectif porte
+  ses deux formes, ex. Ardent/Ardente), avec accord de genre et élision de
+  l'article calculés à la génération (« La Forge Ardente », « Le Marteau
+  Poli », « L'Écu Discret »). Même technique que les tables de noms de
+  personnes (V2-J15a/c, prénom + nom de famille), appliquée ici au
+  vocabulaire commercial plutôt qu'à l'onomastique. 162 noms combinatoires
+  ajoutés (18 par type, dédupliqués contre les 100 existants), table
+  passée de 100 à 262 entrées — chaque type dispose maintenant de 62 à 71
+  noms éligibles (42 génériques + 20-29 spécifiques), contre 44-53 avant.
+  Vérifié en direct : 10 tirages en Bazar, mélange de noms génériques et
+  combinatoires, accord grammatical correct sur tout l'échantillon.
+
 **Critères (communs à chaque sous-ticket) — tous les 5 sous-tickets fermés**
 - [x] Chaque table du groupe a un `die` recalculé sur son nombre réel
       d'entrées, toutes distinctes (texte non dupliqué ; pour une table à
