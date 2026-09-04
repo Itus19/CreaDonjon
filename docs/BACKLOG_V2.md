@@ -1418,16 +1418,24 @@ par `src/server/services/tables.ts:108`) — jamais branchée côté générateu
 qui appelait toujours `drawOnce`. `GeneratorTableSlot` gagne un
 `count?: number` optionnel ; `drawTableSlotsFromGeneratorBlock` l'utilise
 pour tirer plusieurs résultats (respecte `unique_draws`), joints par la
-nouvelle fonction pure `joinMultiDrawTexts` (testée). Nouvelle section
-"Menu" sur Taverne, organisée comme un vrai menu de restaurant (retour
-utilisateur en cours de route) : `entrees`/`plats`/`desserts`/`boissons`,
-chacun sur la table `{catégorie}-tavernes-{wealth}` — palier de richesse
-de V2-J8 réutilisé directement, prix croissants selon le palier (ex.
-modeste : "Bouillie d'orge et de légumes — 1 pc" ; réputée : "Homard des
-mers froides — 5 pa"). Affichage dédié dans `GeneratorToolPanel.tsx` : deux
-colonnes ("Plats" à gauche, sous-catégorisé Entrées/Plats/Desserts ;
-"Boissons" à droite), chaque catégorie dans un vrai tableau à 2 colonnes
-(nom | prix, `SlotItemsTable`/`MenuCategory`) plutôt qu'un bloc de texte.
+nouvelle fonction pure `joinMultiDrawTexts` (testée) — mécanisme disponible
+pour un futur emplacement à tirage multiple, même si le Menu final (voir
+ci-dessous) ne s'en sert plus lui-même.
+
+Nouvelle section "Menu" sur Taverne, deux itérations avec l'utilisateur en
+cours de route. Design final : quatre catégories (Entrées/Plats/Desserts/
+Boissons), chacune avec **3 emplacements simple/moyen/cher** — un par
+palier de richesse déjà construit en V2-J8 (`entree-simple` →
+`entrees-tavernes-modeste`, `entree-cher` → `entrees-tavernes-reputee`,
+etc.) — plutôt qu'un seul palier choisi par le sélecteur Richesse : une
+vraie taverne propose un choix de prix, pas un prix unique. Zéro nouveau
+contenu de table (les 3 paliers × 4 catégories existaient déjà). Affichage
+dédié dans `GeneratorToolPanel.tsx` : deux colonnes ("Plats" à gauche,
+sous-catégorisé Entrées/Plats/Desserts ; "Boissons" à droite), chaque
+catégorie en tableau à colonnes FIXES (`table-fixed` + `colgroup` — retour
+utilisateur : le prix doit rester aligné même si un nom de plat est plus
+court), une ligne par palier, relance indépendante par ligne
+(`MenuCategory`/`SlotItemsTable`).
 
 **Bug trouvé et corrigé en cours de route** : `ensureGeneratorToolsEntity`
 (src/server/services/entities.ts) relit les clés de section existantes

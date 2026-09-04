@@ -24,22 +24,27 @@ export interface SectionResult {
 }
 
 /**
- * Un emplacement a tirage multiple (V2-J9, `count` — ex. Menu de taverne)
- * s'affiche en tableau plutot qu'en une ligne de texte — chaque entree
- * suit la convention "Nom — Prix" deja etablie dans le contenu tire,
- * separee ici seulement pour l'affichage (le texte assemble reste la
- * seule donnee, rien n'est reparse au-dela de ce simple decoupage visuel).
+ * Un emplacement a tirage multiple (V2-J9, `count`) s'affiche en tableau
+ * plutot qu'en une ligne de texte — chaque entree suit la convention
+ * "Nom — Prix" deja etablie dans le contenu tire, separee ici seulement
+ * pour l'affichage. Colonnes a largeur fixe (`table-fixed` + `colgroup`) :
+ * le prix reste aligne meme si un nom est plus court qu'un autre (retour
+ * utilisateur), au lieu de laisser le nom pousser la colonne prix.
  */
 function SlotItemsTable({ items }: { items: string[] }) {
   return (
-    <table className="w-full text-xs">
+    <table className="w-full table-fixed text-xs">
+      <colgroup>
+        <col />
+        <col className="w-16" />
+      </colgroup>
       <tbody>
         {items.map((item, i) => {
           const [name, price] = item.split(" — ");
           return (
             <tr key={i} className="border-b border-edge/20 last:border-b-0">
-              <td className="py-0.5 pr-2 text-ink">{name}</td>
-              {price && <td className="whitespace-nowrap py-0.5 text-right text-ink-muted">{price}</td>}
+              <td className="truncate py-0.5 pr-2 text-ink">{name}</td>
+              <td className="whitespace-nowrap py-0.5 text-right text-ink-muted">{price ?? ""}</td>
             </tr>
           );
         })}
@@ -48,41 +53,74 @@ function SlotItemsTable({ items }: { items: string[] }) {
   );
 }
 
-/** Une categorie du Menu de taverne (V2-J9, retour utilisateur) — libelle, tableau d'items et sa propre relance, reutilise 4 fois (entrees/plats/desserts/boissons) plutot que reecrit. */
+/**
+ * Une categorie du Menu de taverne (V2-J9, retour utilisateur) — un plat
+ * par palier de prix (simple/moyen/cher, un emplacement chacun sur la
+ * table du palier correspondant), chacun independamment relancable.
+ * Colonnes a largeur fixe (palier/prix/relance) pour un alignement
+ * constant quel que soit le nom du plat.
+ */
 function MenuCategory({
   label,
-  slotKey,
-  result,
+  tiers,
+  slotResults,
   onReroll,
-  reloading,
+  reloadingKey,
 }: {
   label: string;
-  slotKey: string;
-  result: GeneratorSlotResult | undefined;
+  tiers: { tierLabel: string; slotKey: string }[];
+  slotResults: Record<string, GeneratorSlotResult>;
   onReroll: (slotKey: string) => void;
-  reloading: boolean;
+  reloadingKey: string | null;
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-ink-muted">{label}</span>
-        <button
-          type="button"
-          onClick={() => onReroll(slotKey)}
-          disabled={reloading}
-          className="rounded-full border border-edge px-2 py-0.5 text-xs text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
-          title={`Relancer ${label}`}
-        >
-          {reloading ? "…" : "↻"}
-        </button>
-      </div>
-      {result?.items && result.items.length > 0 ? (
-        <SlotItemsTable items={result.items} />
-      ) : (
-        <p className="text-xs text-ink">{result?.text || "—"}</p>
-      )}
+      <span className="text-xs font-semibold text-ink">{label}</span>
+      <table className="w-full table-fixed text-xs">
+        <colgroup>
+          <col className="w-14" />
+          <col />
+          <col className="w-14" />
+          <col className="w-6" />
+        </colgroup>
+        <tbody>
+          {tiers.map(({ tierLabel, slotKey }) => {
+            const result = slotResults[slotKey];
+            const [name, price] = (result?.text ?? "—").split(" — ");
+            return (
+              <tr key={slotKey} className="border-b border-edge/20 last:border-b-0">
+                <td className="py-0.5 pr-2 text-ink-muted">{tierLabel}</td>
+                <td className="truncate py-0.5 pr-2 text-ink">{name}</td>
+                <td className="whitespace-nowrap py-0.5 pr-1 text-right text-ink-muted">{price ?? ""}</td>
+                <td className="py-0.5 text-right">
+                  <button
+                    type="button"
+                    onClick={() => onReroll(slotKey)}
+                    disabled={reloadingKey === slotKey}
+                    className="rounded-full border border-edge px-1.5 py-0.5 text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
+                    title={`Relancer (${tierLabel})`}
+                  >
+                    {reloadingKey === slotKey ? "…" : "↻"}
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
+}
+
+/** Les 3 emplacements simple/moyen/cher d'une categorie du Menu de taverne (V2-J9) — mêmes 3 libellés partout, seul le prefixe de cle change. */
+const MENU_PRICE_TIERS = [
+  { tierLabel: "Simple", suffix: "simple" },
+  { tierLabel: "Moyen", suffix: "moyen" },
+  { tierLabel: "Cher", suffix: "cher" },
+] as const;
+
+function menuCategoryTiers(prefix: string): { tierLabel: string; slotKey: string }[] {
+  return MENU_PRICE_TIERS.map((t) => ({ tierLabel: t.tierLabel, slotKey: `${prefix}-${t.suffix}` }));
 }
 
 /**
@@ -242,19 +280,19 @@ function GeneratorSectionCard({
           {detailsOpen && data.key === "taverne-menu" ? (
             // Layout dedie au Menu (retour utilisateur) : deux colonnes,
             // "Plats" organise en Entrees/Plats/Desserts comme un vrai menu
-            // de restaurant, "Boissons" a part — les 4 emplacements restent
-            // les memes cles generiques (`entrees`/`plats`/`desserts`/
-            // `boissons`), seul l'AGENCEMENT diverge du rendu par defaut.
+            // de restaurant, "Boissons" a part — chaque categorie porte 3
+            // emplacements simple/moyen/cher (un par palier de richesse deja
+            // construit en V2-J8, ex. `entree-simple` -> `entrees-tavernes-modeste`).
             <div className="grid grid-cols-2 gap-4 rounded-md border border-edge/40 p-2">
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 <span className="text-xs font-semibold text-ink">Plats</span>
-                <MenuCategory label="Entrées" slotKey="entrees" result={slotResults.entrees} onReroll={handleRerollSlot} reloading={reloadingKey === "entrees"} />
-                <MenuCategory label="Plats" slotKey="plats" result={slotResults.plats} onReroll={handleRerollSlot} reloading={reloadingKey === "plats"} />
-                <MenuCategory label="Desserts" slotKey="desserts" result={slotResults.desserts} onReroll={handleRerollSlot} reloading={reloadingKey === "desserts"} />
+                <MenuCategory label="Entrées" tiers={menuCategoryTiers("entree")} slotResults={slotResults} onReroll={handleRerollSlot} reloadingKey={reloadingKey} />
+                <MenuCategory label="Plats" tiers={menuCategoryTiers("plat")} slotResults={slotResults} onReroll={handleRerollSlot} reloadingKey={reloadingKey} />
+                <MenuCategory label="Desserts" tiers={menuCategoryTiers("dessert")} slotResults={slotResults} onReroll={handleRerollSlot} reloadingKey={reloadingKey} />
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 <span className="text-xs font-semibold text-ink">Boissons</span>
-                <MenuCategory label="Boissons" slotKey="boissons" result={slotResults.boissons} onReroll={handleRerollSlot} reloading={reloadingKey === "boissons"} />
+                <MenuCategory label="Boissons" tiers={menuCategoryTiers("boisson")} slotResults={slotResults} onReroll={handleRerollSlot} reloadingKey={reloadingKey} />
               </div>
             </div>
           ) : (
