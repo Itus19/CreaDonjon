@@ -60,5 +60,11 @@ export default async function JoueurWikiEntityPage({
   const detail = await getPlayerEntityDetail(supabase, { worldId: world.id, entitySlug, userId: user.id });
   if (!detail) notFound();
 
-  return <PublicEntityBody {...detail} hrefBase={`/m/${worldSlug}/joueur/wiki`} />;
+  return (
+    <PublicEntityBody
+      {...detail}
+      hrefBase={`/m/${worldSlug}/joueur/wiki`}
+      ruleHrefBase={`/m/${worldSlug}/joueur/regles`}
+    />
+  );
 }

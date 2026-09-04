@@ -25,12 +25,15 @@ export default function PublicEntityBody({
   relations,
   portraitLayout,
   hrefBase,
+  ruleHrefBase,
 }: {
   entity: EntitySummary;
   blocks: PublicBlock[];
   relations: PublicRelation[];
   portraitLayout: EntityPortraitLayout;
   hrefBase: string;
+  /** V2.1-1 : voir `PublicBlockView` — absent sur le partage anonyme. */
+  ruleHrefBase?: string;
 }) {
   const [firstBlock, ...afterFirst] = blocks;
   const firstBlockWraps = firstBlock?.blockType === "text";
@@ -53,16 +56,18 @@ export default function PublicEntityBody({
           <p className="mt-1 text-xs text-ink-muted">Alias : {entity.aliases.join(", ")}</p>
         )}
         <PublicRelations relations={relations} hrefBase={hrefBase} />
-        {firstBlockWraps && <PublicBlockView block={firstBlock} hrefBase={hrefBase} />}
+        {firstBlockWraps && <PublicBlockView block={firstBlock} hrefBase={hrefBase} ruleHrefBase={ruleHrefBase} />}
       </div>
 
       {blocks.length === 0 && <p className="mt-4 text-sm text-ink-muted">Aucun contenu public pour cette fiche.</p>}
-      {restBlocks.length > 0 && <div className="mt-4 flex flex-col">{renderWrappedBlocks(restBlocks, hrefBase)}</div>}
+      {restBlocks.length > 0 && (
+        <div className="mt-4 flex flex-col">{renderWrappedBlocks(restBlocks, hrefBase, ruleHrefBase)}</div>
+      )}
     </>
   );
 }
 
-function renderWrappedBlocks(blocks: PublicBlock[], hrefBase: string) {
+function renderWrappedBlocks(blocks: PublicBlock[], hrefBase: string, ruleHrefBase: string | undefined) {
   const nodes: React.ReactNode[] = [];
   let i = 0;
   while (i < blocks.length) {
@@ -72,13 +77,13 @@ function renderWrappedBlocks(blocks: PublicBlock[], hrefBase: string) {
     if (isWrappingImage) {
       nodes.push(
         <div key={block.id} className="flow-root">
-          <PublicBlockView block={block} hrefBase={hrefBase} />
-          {next && <PublicBlockView block={next} hrefBase={hrefBase} />}
+          <PublicBlockView block={block} hrefBase={hrefBase} ruleHrefBase={ruleHrefBase} />
+          {next && <PublicBlockView block={next} hrefBase={hrefBase} ruleHrefBase={ruleHrefBase} />}
         </div>
       );
       i += next ? 2 : 1;
     } else {
-      nodes.push(<PublicBlockView key={block.id} block={block} hrefBase={hrefBase} />);
+      nodes.push(<PublicBlockView key={block.id} block={block} hrefBase={hrefBase} ruleHrefBase={ruleHrefBase} />);
       i += 1;
     }
   }
