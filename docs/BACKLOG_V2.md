@@ -1921,7 +1921,22 @@ groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
   abandonnera » au lieu de « n'abandonnera ») — détecté par une recherche
   ciblée sur le motif `ne` + voyelle en base, corrigé, revérifié.
 - **V2-J15d — Taverne** (18 tables : ambiance/patrons/apparence/histoire/
-  chambre/menu).
+  chambre/menu) · **fait** — 3 tables portées à 100 (noms de tavernes,
+  liste directe pour garantir l'accord des articles français plutôt qu'une
+  combinatoire risquée) ; le reste à un total honnête entre 48 et 88 selon
+  la table (ambiance ×3, patrons ×3, apparence/histoire/chambre ×2 chacune).
+  Les 5 tables du Menu (déjà fusionnées avec `tier`+`price` depuis
+  V2-J9quater) portées de 6-15 à 24-30 entrées chacune, densité plus faible
+  que les tables de texte pur — chaque plat exige un nom ET un prix
+  cohérent et distinct au sein de son palier, plus coûteux à produire en
+  volume qu'une phrase de flaveur. Prix vérifiés distincts par palier au
+  sein de chaque table (contrôle en base après écriture, aucun doublon).
+  Vérifié en direct : les 6 sections de Taverne tirées avec succès, Menu
+  testé au plafond Réputée — clamp correct (Simple=palier correcte,
+  Moyen=Cher=palier réputée), boissons entièrement issues du palier
+  réputée, prix cohérents.
+- **V2-J15e — Échoppe** (20 tables : ambiance/marchands/apparence/
+  histoire/objets ×9).
 - **V2-J15e — Échoppe** (20 tables : ambiance/marchands/apparence/
   histoire/objets ×9).
 
