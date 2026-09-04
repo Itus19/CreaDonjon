@@ -52,6 +52,11 @@ export const drawGeneratorSchema = z.object({
   variant: z.record(z.string(), z.string()).default({}),
 });
 
+/** Liste les tables d'une section de generateur pour la variante donnee (V2-J9bis) — meme forme de `variant` que `drawGeneratorSchema`, aucun autre champ necessaire pour une simple lecture. */
+export const listGeneratorTablesSchema = z.object({
+  variant: z.record(z.string(), z.string()).default({}),
+});
+
 /** Assistance redactionnelle (V1-F3) — instruction libre envoyee au modele, jamais un identifiant : le bloc cible vient de la route, pas du corps. */
 export const writingAssistSchema = z.object({
   instruction: z.string().trim().min(1).max(500),

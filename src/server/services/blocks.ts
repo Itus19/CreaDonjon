@@ -41,7 +41,8 @@ export interface VisibleBlock {
   visibilityScopeId: string | null;
 }
 
-function toVisibleBlock(row: BlockRow): VisibleBlock {
+/** Exportee pour reutilisation par `generators.ts` (V2-J9bis) : le panneau MJ Generateurs a besoin de la forme complete d'un bloc (version/visibilite comprises) pour editer une table en place, pas seulement ses donnees. */
+export function toVisibleBlock(row: BlockRow): VisibleBlock {
   return {
     id: row.id,
     entityId: row.entity_id,

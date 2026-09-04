@@ -12,6 +12,8 @@ import type { PendingProseSlot } from "@/src/server/ai/generatorProse";
 import { GENERATOR_TOOLS, toolForSectionKey, type GeneratorToolConfig } from "@/src/core/generators/tools";
 import { resolveVariantValue, orderedNeighbors } from "@/src/core/generators/variants";
 import { renderGeneratorTemplate, joinMultiDrawTexts } from "@/src/core/generators/render";
+import { zRandomTableBlockData } from "@/src/core/schemas/blocks/randomTable";
+import { toVisibleBlock, type VisibleBlock } from "@/src/server/services/blocks";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -47,6 +49,41 @@ export interface GeneratorTableDraw {
   proseSlots: PendingProseSlot[];
   /** Axes de variante de l'outil (V2-J7) resolus pour ce tirage — vide si la section n'appartient a aucun outil a variantes. */
   resolvedVariant: Record<string, ResolvedVariantValue>;
+}
+
+/**
+ * Resout les axes de variante d'un outil (V2-J7) pour un tirage donne —
+ * partagee entre `drawTableSlotsFromGeneratorBlock` (tirage reel) et
+ * `listGeneratorSectionTables` (V2-J9bis, juste lister les tables sans
+ * tirer) : les deux ont besoin exactement du meme calcul de cle resolue +
+ * voisins de richesse, jamais divergent. `RANDOM_VARIANT_VALUE` tire une
+ * option reelle via `rng` meme ici — lister les tables d'une section dont
+ * l'axe est laisse sur "Aleatoire" doit montrer une table concrete, pas un
+ * gabarit non resolu.
+ */
+function resolveGeneratorVariant(
+  tool: GeneratorToolConfig | undefined,
+  variant: Record<string, string>,
+  rng: Rng
+): { resolvedVariant: Record<string, ResolvedVariantValue>; variantKeys: Record<string, string> } {
+  const resolvedVariant: Record<string, ResolvedVariantValue> = {};
+  const variantKeys: Record<string, string> = {};
+  for (const axis of tool?.variants ?? []) {
+    const chosen = variant[axis.key] ?? axis.options[0]?.key ?? "";
+    const resolvedKey = resolveVariantValue(axis, chosen, rng);
+    const label = axis.options.find((o) => o.key === resolvedKey)?.label ?? resolvedKey;
+    resolvedVariant[axis.key] = { key: resolvedKey, label };
+    variantKeys[axis.key] = resolvedKey;
+    // V2-J9, retour utilisateur : une fenetre de 3 positions autour de la
+    // valeur choisie ("Menu" de taverne — le prix ne doit jamais sauter du
+    // miserable au luxe pour une seule taverne), disponible pour tout
+    // emplacement qui en a besoin via `{axe_below}`/`{axe_above}` dans sa
+    // cle de table — l'emplacement au centre continue a utiliser `{axe}`.
+    const { below, above } = orderedNeighbors(axis, resolvedKey);
+    variantKeys[`${axis.key}_below`] = below;
+    variantKeys[`${axis.key}_above`] = above;
+  }
+  return { resolvedVariant, variantKeys };
 }
 
 /**
@@ -90,23 +127,7 @@ export async function drawTableSlotsFromGeneratorBlock(
   const slotsToProcess = options?.onlySlotKey ? generator.slots.filter((s) => s.key === options.onlySlotKey) : generator.slots;
 
   const tool: GeneratorToolConfig | undefined = generator.key ? toolForSectionKey(generator.key) : undefined;
-  const resolvedVariant: Record<string, ResolvedVariantValue> = {};
-  const variantKeys: Record<string, string> = {};
-  for (const axis of tool?.variants ?? []) {
-    const chosen = options?.variant?.[axis.key] ?? axis.options[0]?.key ?? "";
-    const resolvedKey = resolveVariantValue(axis, chosen, rng);
-    const label = axis.options.find((o) => o.key === resolvedKey)?.label ?? resolvedKey;
-    resolvedVariant[axis.key] = { key: resolvedKey, label };
-    variantKeys[axis.key] = resolvedKey;
-    // V2-J9, retour utilisateur : une fenetre de 3 positions autour de la
-    // valeur choisie ("Menu" de taverne — le prix ne doit jamais sauter du
-    // miserable au luxe pour une seule taverne), disponible pour tout
-    // emplacement qui en a besoin via `{axe_below}`/`{axe_above}` dans sa
-    // cle de table — l'emplacement au centre continue a utiliser `{axe}`.
-    const { below, above } = orderedNeighbors(axis, resolvedKey);
-    variantKeys[`${axis.key}_below`] = below;
-    variantKeys[`${axis.key}_above`] = above;
-  }
+  const { resolvedVariant, variantKeys } = resolveGeneratorVariant(tool, options?.variant ?? {}, rng);
 
   const slots: GeneratorSlotResult[] = [];
   const slotTexts: Record<string, string> = {};
@@ -221,4 +242,50 @@ export async function resolveGeneratorToolsForEntity(supabase: TypedClient, enti
     variants: tool.variants,
     promote: tool.promote,
   }));
+}
+
+/**
+ * Liste les blocs `random_table` REELLEMENT utilises par une section de
+ * generateur pour la variante donnee (V2-J9bis) — le panneau MJ
+ * Generateurs n'a aujourd'hui aucun lien vers les tables qu'il tire, il
+ * faut naviguer la fiche wiki "Générateurs de MJ" a la main parmi ~90
+ * blocs pour en editer une. Reutilise `resolveGeneratorVariant` (meme
+ * calcul de cle resolue + voisins de richesse que le tirage reel) pour que
+ * "les tables de cette section" corresponde exactement a ce qu'un tirage
+ * tirerait avec les memes selecteurs, jamais une liste devinee a part.
+ * `null` si le bloc n'existe pas ou n'est pas un generateur — un emplacement
+ * dont la table est introuvable est simplement absent du resultat, meme
+ * discipline que le tirage lui-meme (`{cle}` reste tel quel plutot que
+ * d'echouer tout l'appel).
+ */
+export async function listGeneratorSectionTables(
+  supabase: TypedClient,
+  blockId: string,
+  rng: Rng,
+  variant?: Record<string, string>
+): Promise<VisibleBlock[] | null> {
+  const block = await getBlockById(supabase, blockId);
+  if (!block || block.block_type !== "generator") return null;
+
+  const generator = zGeneratorBlockData.parse(block.data);
+  const tool: GeneratorToolConfig | undefined = generator.key ? toolForSectionKey(generator.key) : undefined;
+  const { variantKeys } = resolveGeneratorVariant(tool, variant ?? {}, rng);
+
+  const tableKeys = new Set<string>();
+  for (const slot of generator.slots) {
+    if (isProseSlot(slot)) continue;
+    tableKeys.add(renderGeneratorTemplate(slot.table, variantKeys));
+  }
+
+  const entityBlocks = await listBlocksForEntity(supabase, block.entity_id);
+  const tables: VisibleBlock[] = [];
+  for (const key of tableKeys) {
+    const row = entityBlocks.find((b) => {
+      if (b.block_type !== "random_table") return false;
+      const parsed = zRandomTableBlockData.safeParse(b.data);
+      return parsed.success && parsed.data.key === key;
+    });
+    if (row) tables.push(toVisibleBlock(row));
+  }
+  return tables;
 }

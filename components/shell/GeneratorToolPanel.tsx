@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import type { GeneratorBlockData } from "@/src/core/schemas/blocks/generator";
 import { isProseSlot, PROSE_LENGTH_PRESETS, DEFAULT_PROSE_LENGTH, type ProseLength } from "@/src/core/generators/types";
 import { RANDOM_VARIANT_VALUE } from "@/src/core/generators/variants";
 import type { GeneratorSlotResult, GeneratorToolWindowData } from "@/src/server/services/generators";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
+import type { VisibleBlock } from "@/src/server/services/blocks";
+import type { RandomTableBlockData } from "@/src/core/schemas/blocks/randomTable";
+import RandomTableBlockEditor from "@/components/blocks/RandomTableBlockEditor";
 import RuleEntryAutocomplete from "@/components/blocks/RuleEntryAutocomplete";
 import { useOpenEntityLink } from "./useOpenEntityLink";
 
@@ -161,6 +164,143 @@ function MenuMultiSlot({
   );
 }
 
+type TableBlock = Omit<VisibleBlock, "data"> & { data: RandomTableBlockData };
+
+/**
+ * Modale "Éditer les tables" (V2-J9bis, retour utilisateur — pouvoir
+ * ajouter/enlever un plat sans chercher le bloc a la main parmi ~90 sur la
+ * fiche "Générateurs de MJ") : liste les tables REELLEMENT tirees par cette
+ * section pour la variante actuellement selectionnee (`/api/blocks/[id]/tables`,
+ * meme calcul de cle resolue que le tirage lui-meme), un
+ * `RandomTableBlockEditor` par table — l'editeur standard de tout bloc
+ * `random_table` d'une fiche de wiki, rien de nouveau cote edition.
+ * Sauvegarde par debounce (800ms apres la derniere frappe, `tablesRef`
+ * pour eviter la fermeture perimee classique d'un debounce adosse a du
+ * `useState`) — un `onBlur` seul (essaye d'abord) rate le cas "supprimer
+ * une ligne puis fermer la modale aussitot" : retirer le bouton `×` focus
+ * ne fait pas toujours sortir le focus du conteneur avant que React
+ * demonte la modale. Pas de gestion de conflit de version : un seul MJ
+ * edite ce contenu a la fois, une erreur affiche juste un message plutot
+ * que de reconcilier deux versions.
+ */
+function GeneratorTablesModal({
+  blockId,
+  variant,
+  onClose,
+}: {
+  blockId: string;
+  variant: Record<string, string>;
+  onClose: () => void;
+}) {
+  const [tables, setTables] = useState<TableBlock[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  // Fige la variante a l'ouverture (initialiseur paresseux, jamais recalcule) :
+  // le parent recree son objet `variant` a chaque tirage d'une section
+  // soeur du meme outil (onResolvedVariant) — sans ce gel, l'effet de
+  // chargement ci-dessous se redeclencherait a chaque tirage ailleurs dans
+  // le panneau et ecraserait une edition en cours dans cette modale.
+  const [snapshotVariant] = useState(variant);
+  const tablesRef = useRef<TableBlock[] | null>(null);
+  const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => {
+    tablesRef.current = tables;
+  }, [tables]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/blocks/${blockId}/tables`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variant: snapshotVariant }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error ?? "Impossible de charger les tables.");
+        }
+        return (await res.json()) as { tables: TableBlock[] };
+      })
+      .then((body) => {
+        if (!cancelled) setTables(body.tables);
+      })
+      .catch((e) => {
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : "Impossible de charger les tables.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [blockId, snapshotVariant]);
+
+  async function saveTable(id: string) {
+    const table = tablesRef.current?.find((t) => t.id === id);
+    if (!table) return;
+    const res = await fetch(`/api/blocks/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        version: table.version,
+        display: table.display,
+        data: table.data,
+        visibility: { level: table.visibilityLevel, scopeId: table.visibilityScopeId },
+      }),
+    });
+    if (!res.ok) {
+      setSaveError(`Échec de la sauvegarde de « ${table.data.key} » — rechargez avant de réessayer.`);
+      return;
+    }
+    setSaveError(null);
+    const updated = (await res.json()) as { version: number };
+    setTables((prev) => prev?.map((t) => (t.id === id ? { ...t, version: updated.version } : t)) ?? prev);
+  }
+
+  function updateTableData(id: string, data: RandomTableBlockData) {
+    setTables((prev) => prev?.map((t) => (t.id === id ? { ...t, data } : t)) ?? prev);
+    clearTimeout(saveTimers.current[id]);
+    saveTimers.current[id] = setTimeout(() => void saveTable(id), 800);
+  }
+
+  function handleClose() {
+    // Sauvegarde immediate de toute frappe encore en attente de debounce
+    // (ex. supprimer une ligne puis fermer aussitot) plutot que de la
+    // perdre silencieusement en demontant la modale.
+    for (const id of Object.keys(saveTimers.current)) {
+      clearTimeout(saveTimers.current[id]);
+      void saveTable(id);
+    }
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={handleClose}>
+      <div
+        className="flex max-h-[85vh] w-full max-w-2xl flex-col gap-3 overflow-y-auto rounded-md border border-edge bg-panel p-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold text-ink">Tables de cette section</span>
+          <button type="button" onClick={handleClose} className="text-xs text-ink-muted hover:underline">
+            Fermer
+          </button>
+        </div>
+        {loadError && <p className="text-xs text-danger">{loadError}</p>}
+        {saveError && <p className="text-xs text-danger">{saveError}</p>}
+        {!tables && !loadError && <p className="text-xs italic text-ink-muted">Chargement…</p>}
+        {tables && tables.length === 0 && (
+          <p className="text-xs italic text-ink-muted">Aucune table trouvée pour cette section avec la sélection actuelle.</p>
+        )}
+        {tables?.map((table) => (
+          <div key={table.id} className="rounded-md border border-edge/60 p-2">
+            <p className="mb-2 text-xs font-semibold text-ink-muted">{table.data.key}</p>
+            <RandomTableBlockEditor blockId={table.id} data={table.data} onChange={(d) => updateTableData(table.id, d)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Une section d'un outil de generation (V2-J1 Phase 2, style "Maisons
  * Closes" demande par l'utilisateur) : un bouton "Tirer" genere TOUS les
@@ -197,6 +337,7 @@ function GeneratorSectionCard({
   const [reloadingKey, setReloadingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [tablesModalOpen, setTablesModalOpen] = useState(false);
 
   const hasProseSlot = data.slots.some(isProseSlot);
 
@@ -286,6 +427,14 @@ function GeneratorSectionCard({
           )}
           <button
             type="button"
+            onClick={() => setTablesModalOpen(true)}
+            title="Voir et modifier les tables tirées par cette section"
+            className="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted transition-colors hover:bg-panel-raised"
+          >
+            Éditer les tables
+          </button>
+          <button
+            type="button"
             onClick={handleDrawAll}
             disabled={drawing}
             className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
@@ -294,6 +443,10 @@ function GeneratorSectionCard({
           </button>
         </div>
       </div>
+
+      {tablesModalOpen && (
+        <GeneratorTablesModal blockId={blockId} variant={variant} onClose={() => setTablesModalOpen(false)} />
+      )}
 
       {error && <p className="text-xs text-danger">{error}</p>}
 
