@@ -124,6 +124,44 @@ function menuCategoryTiers(prefix: string): { tierLabel: string; slotKey: string
 }
 
 /**
+ * Un groupe a tirage multiple du Menu de taverne (V2-J9, retour
+ * utilisateur — Boissons : 4 avec alcool + 5 sans alcool plutot que 3
+ * paliers de prix comme les plats) — libelle, tableau d'items (deja triable
+ * par prix a l'ecriture des tables) et sa propre relance.
+ */
+function MenuMultiSlot({
+  label,
+  slotKey,
+  result,
+  onReroll,
+  reloadingKey,
+}: {
+  label: string;
+  slotKey: string;
+  result: GeneratorSlotResult | undefined;
+  onReroll: (slotKey: string) => void;
+  reloadingKey: string | null;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-ink-muted">{label}</span>
+        <button
+          type="button"
+          onClick={() => onReroll(slotKey)}
+          disabled={reloadingKey === slotKey}
+          className="rounded-full border border-edge px-2 py-0.5 text-xs text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
+          title={`Relancer ${label}`}
+        >
+          {reloadingKey === slotKey ? "…" : "↻"}
+        </button>
+      </div>
+      <SlotItemsTable items={result?.items ?? []} />
+    </div>
+  );
+}
+
+/**
  * Une section d'un outil de generation (V2-J1 Phase 2, style "Maisons
  * Closes" demande par l'utilisateur) : un bouton "Tirer" genere TOUS les
  * emplacements du bloc `generator` de cette section ; une fois tire, un
@@ -279,10 +317,13 @@ function GeneratorSectionCard({
 
           {detailsOpen && data.key === "taverne-menu" ? (
             // Layout dedie au Menu (retour utilisateur) : deux colonnes,
-            // "Plats" organise en Entrees/Plats/Desserts comme un vrai menu
-            // de restaurant, "Boissons" a part — chaque categorie porte 3
-            // emplacements simple/moyen/cher (un par palier de richesse deja
-            // construit en V2-J8, ex. `entree-simple` -> `entrees-tavernes-modeste`).
+            // "Plats" organise en Entrees/Plats/Desserts en 3 emplacements
+            // simple/moyen/cher chacun (une FENETRE de richesse autour du
+            // palier choisi, `{wealth_below}`/`{wealth}`/`{wealth_above}` —
+            // une taverne modeste ne monte jamais jusqu'au luxe, une réputée
+            // ne descend jamais au misérable). "Boissons" a part : 4 avec
+            // alcool + 5 sans alcool (retour utilisateur), chaque groupe
+            // tire d'un coup via `count` (V2-J9) sur le palier choisi.
             <div className="grid grid-cols-2 gap-4 rounded-md border border-edge/40 p-2">
               <div className="flex flex-col gap-3">
                 <span className="text-xs font-semibold text-ink">Plats</span>
@@ -292,7 +333,8 @@ function GeneratorSectionCard({
               </div>
               <div className="flex flex-col gap-3">
                 <span className="text-xs font-semibold text-ink">Boissons</span>
-                <MenuCategory label="Boissons" tiers={menuCategoryTiers("boisson")} slotResults={slotResults} onReroll={handleRerollSlot} reloadingKey={reloadingKey} />
+                <MenuMultiSlot label="Avec alcool" slotKey="boisson-alcool" result={slotResults["boisson-alcool"]} onReroll={handleRerollSlot} reloadingKey={reloadingKey} />
+                <MenuMultiSlot label="Sans alcool" slotKey="boisson-sans-alcool" result={slotResults["boisson-sans-alcool"]} onReroll={handleRerollSlot} reloadingKey={reloadingKey} />
               </div>
             </div>
           ) : (

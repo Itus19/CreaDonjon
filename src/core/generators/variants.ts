@@ -36,3 +36,21 @@ export function resolveVariantValue(axis: GeneratorVariantAxis, chosen: string, 
   if (chosen !== RANDOM_VARIANT_VALUE || axis.options.length === 0) return chosen;
   return axis.options[rng.nextInt(axis.options.length)].key;
 }
+
+/**
+ * Voisins ordonnes d'une option resolue sur son axe (V2-J9, retour
+ * utilisateur) — la gamme de prix d'un Menu de taverne doit se DEPLACER
+ * avec la richesse choisie plutot que rester fixee aux 3 memes tables
+ * (une taverne modeste ne doit jamais proposer de plat de luxe, une
+ * réputée jamais de plat miserable). `below`/`above` restent bornes aux
+ * extremites de la liste d'options — une taverne déjà "réputée" n'a rien
+ * au-dessus, son "cher" reste donc au meme niveau que son "moyen".
+ * Fonction pure, l'axe fournit deja l'ordre (`options`, tel que declare
+ * dans le registre) — aucun ordre alphabetique ou numerique devine.
+ */
+export function orderedNeighbors(axis: GeneratorVariantAxis, resolvedKey: string): { below: string; above: string } {
+  const idx = axis.options.findIndex((o) => o.key === resolvedKey);
+  if (idx === -1) return { below: resolvedKey, above: resolvedKey };
+  const clamp = (i: number) => axis.options[Math.max(0, Math.min(axis.options.length - 1, i))].key;
+  return { below: clamp(idx - 1), above: clamp(idx + 1) };
+}

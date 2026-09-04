@@ -1422,20 +1422,44 @@ nouvelle fonction pure `joinMultiDrawTexts` (testée) — mécanisme disponible
 pour un futur emplacement à tirage multiple, même si le Menu final (voir
 ci-dessous) ne s'en sert plus lui-même.
 
-Nouvelle section "Menu" sur Taverne, deux itérations avec l'utilisateur en
+Nouvelle section "Menu" sur Taverne, trois itérations avec l'utilisateur en
 cours de route. Design final : quatre catégories (Entrées/Plats/Desserts/
-Boissons), chacune avec **3 emplacements simple/moyen/cher** — un par
-palier de richesse déjà construit en V2-J8 (`entree-simple` →
-`entrees-tavernes-modeste`, `entree-cher` → `entrees-tavernes-reputee`,
-etc.) — plutôt qu'un seul palier choisi par le sélecteur Richesse : une
-vraie taverne propose un choix de prix, pas un prix unique. Zéro nouveau
-contenu de table (les 3 paliers × 4 catégories existaient déjà). Affichage
-dédié dans `GeneratorToolPanel.tsx` : deux colonnes ("Plats" à gauche,
-sous-catégorisé Entrées/Plats/Desserts ; "Boissons" à droite), chaque
-catégorie en tableau à colonnes FIXES (`table-fixed` + `colgroup` — retour
-utilisateur : le prix doit rester aligné même si un nom de plat est plus
-court), une ligne par palier, relance indépendante par ligne
-(`MenuCategory`/`SlotItemsTable`).
+Boissons), chacune avec **3 emplacements simple/moyen/cher** — mais PAS
+figés sur les 3 mêmes tables modeste/correcte/réputée quel que soit le
+palier choisi (défaut initial signalé par l'utilisateur : une taverne
+modeste tirerait un plat de luxe, une réputée un plat miséreux). Le prix
+suit désormais la richesse SÉLECTIONNÉE via une fenêtre glissante de 3
+positions : nouvelle fonction pure `orderedNeighbors`
+(`src/core/generators/variants.ts`) qui retourne les voisins ordonnés
+(`below`/`above`, bornés aux extrémités de l'axe) d'une option résolue.
+`drawTableSlotsFromGeneratorBlock` calcule `{axe}_below`/`{axe}_above` pour
+chaque axe résolu, en plus du `{axe}` déjà interpolé — un emplacement
+"Simple" référence `entrees-tavernes-{wealth_below}`, "Cher"
+`entrees-tavernes-{wealth_above}`. Une taverne Modeste (première position)
+a `wealth_below == wealth`, donc Simple et Moyen tirent sur la même table
+(pas de palier en dessous) ; symétriquement pour Réputée côté Cher. Vérifié
+en direct aux deux extrémités.
+
+Boissons restructurées en deux groupes à tirage multiple plutôt qu'une
+liste plate : `boisson-alcool` (`count: 4`) et `boisson-sans-alcool`
+(`count: 5`), chacun sur sa propre table par palier
+(`boissons-alcool-tavernes-{wealth}` / `boissons-sans-alcool-tavernes-{wealth}`,
+6 tables au total, remplaçant les 3 anciennes tables `boissons-tavernes-*`
+qui mélangeaient alcool et sans-alcool). Chaque table a des prix
+STRICTEMENT distincts et croissants — un défaut trouvé deux fois en cours
+de route (d'abord 2× "4 pc" dans l'ancienne liste plate, puis une nouvelle
+vague de doublons dans les tables entrées/plats/desserts/boissons
+fraîchement écrites, ex. 3× "1 pa" dans `plats-tavernes-modeste`) : toutes
+les tables du Menu ont été revues avec des prix uniques par table, pas
+seulement "une fourchette" approximative.
+
+Affichage dédié dans `GeneratorToolPanel.tsx` : deux colonnes ("Plats" à
+gauche, sous-catégorisé Entrées/Plats/Desserts en tableau
+`MenuCategory`/`SlotItemsTable` à colonnes FIXES `table-fixed` + `colgroup` —
+retour utilisateur : le prix doit rester aligné même si un nom de plat est
+plus court — une ligne par palier, relance indépendante par ligne ;
+"Boissons" à droite, nouveau composant `MenuMultiSlot` par groupe
+alcool/sans-alcool, une relance par groupe entier vu le tirage multiple).
 
 **Bug trouvé et corrigé en cours de route** : `ensureGeneratorToolsEntity`
 (src/server/services/entities.ts) relit les clés de section existantes
@@ -1461,14 +1485,25 @@ la validation en place.
 **Critères**
 - [x] Un emplacement avec `count > 1` tire N résultats distincts (si
       `unique_draws`) en un seul tirage de section — vérifié en direct,
-      5 plats + 5 boissons tirés en un seul appel.
+      4 boissons avec alcool + 5 sans alcool tirées chacune en un appel.
 - [x] Taverne a une section "Menu" avec des plats et boissons, prix
-      croissants selon le palier de richesse.
+      strictement croissants et distincts au sein de chaque table.
+- [x] La gamme de prix d'un palier (Simple/Moyen/Cher) se déplace avec la
+      richesse sélectionnée plutôt que de rester fixée aux 3 mêmes tables —
+      `orderedNeighbors`, testé (4 tests,
+      `src/core/generators/variants.test.ts`) et vérifié en direct aux deux
+      extrémités : Modeste (Simple=Moyen=palier modeste, Cher=palier
+      correcte) et Réputée (Simple=palier correcte, Moyen=Cher=palier
+      réputée) — jamais de plat de luxe pour une taverne modeste, jamais de
+      plat miséreux pour une réputée.
 - [x] Test core sur le tirage multiple d'un emplacement (fonction pure) —
       `joinMultiDrawTexts`, `src/core/generators/render.test.ts` (3 tests).
 - [x] Vérifié en direct : rôtis/desserts/boissons cohérents avec le palier
       de richesse choisi (Modeste vs Réputée testés), relance individuelle
       d'un seul emplacement (`entrees`) confirmée sans toucher les autres.
+- [x] Base revérifiée après coup (pas seulement la réponse HTTP du dernier
+      appel) : 15 tables du Menu sans doublon de prix, aucun bloc
+      `generator` dupliqué sur l'entité (16 sections, 0 clé en double).
 
 ### V2-J10 — Objets en vente par type d'échoppe · `S` — à faire
 

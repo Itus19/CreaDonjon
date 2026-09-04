@@ -10,7 +10,7 @@ import { getBlockById, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { findTableBlockByKey, resolveCascade } from "@/src/server/services/tables";
 import type { PendingProseSlot } from "@/src/server/ai/generatorProse";
 import { GENERATOR_TOOLS, toolForSectionKey, type GeneratorToolConfig } from "@/src/core/generators/tools";
-import { resolveVariantValue } from "@/src/core/generators/variants";
+import { resolveVariantValue, orderedNeighbors } from "@/src/core/generators/variants";
 import { renderGeneratorTemplate, joinMultiDrawTexts } from "@/src/core/generators/render";
 
 type TypedClient = SupabaseClient<Database>;
@@ -91,13 +91,22 @@ export async function drawTableSlotsFromGeneratorBlock(
 
   const tool: GeneratorToolConfig | undefined = generator.key ? toolForSectionKey(generator.key) : undefined;
   const resolvedVariant: Record<string, ResolvedVariantValue> = {};
+  const variantKeys: Record<string, string> = {};
   for (const axis of tool?.variants ?? []) {
     const chosen = options?.variant?.[axis.key] ?? axis.options[0]?.key ?? "";
     const resolvedKey = resolveVariantValue(axis, chosen, rng);
     const label = axis.options.find((o) => o.key === resolvedKey)?.label ?? resolvedKey;
     resolvedVariant[axis.key] = { key: resolvedKey, label };
+    variantKeys[axis.key] = resolvedKey;
+    // V2-J9, retour utilisateur : une fenetre de 3 positions autour de la
+    // valeur choisie ("Menu" de taverne — le prix ne doit jamais sauter du
+    // miserable au luxe pour une seule taverne), disponible pour tout
+    // emplacement qui en a besoin via `{axe_below}`/`{axe_above}` dans sa
+    // cle de table — l'emplacement au centre continue a utiliser `{axe}`.
+    const { below, above } = orderedNeighbors(axis, resolvedKey);
+    variantKeys[`${axis.key}_below`] = below;
+    variantKeys[`${axis.key}_above`] = above;
   }
-  const variantKeys = Object.fromEntries(Object.entries(resolvedVariant).map(([k, v]) => [k, v.key]));
 
   const slots: GeneratorSlotResult[] = [];
   const slotTexts: Record<string, string> = {};
