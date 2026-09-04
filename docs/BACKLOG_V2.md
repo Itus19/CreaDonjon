@@ -1705,20 +1705,46 @@ provisoire — V2-J15 la portera à ~100).
       plus Réputée testée sur Forgeron : mélange des 3 paliers, confirme
       qu'un objet commun reste possible même au plafond le plus haut.
 
-### V2-J11 — Générateur de Butin (nouvel outil) · `M` — à faire
+### V2-J11 — Générateur de Butin (nouvel outil) · `M` — fait
 
 Nouvel outil "Butin" dans le registre, séparé d'Échoppe (décision ci-dessus
-— intentions de génération différentes). Table(s) construites à la main à
-partir des 362 objets magiques du SRD déjà importés (`data/srd/*.json`),
-regroupés par rareté (`Magic-Items[].rarity.name`) plutôt qu'une table de
-trésor DMG recopiée (non-OGL, cf. recherche externe ci-dessus).
+— intentions de génération différentes, pas de `promote` : un butin n'est
+pas une entité, juste une liste à copier dans les notes de séance, même
+discipline que "Noms"). Table construite à la main à partir des objets
+magiques du SRD 2024 déjà importés (262 dans `data/srd/srd-2024.json`, pas
+362 — le chiffre du SRD 2014, corrigé ici), regroupés par rareté
+(`Magic-Items[].rarity.name`) plutôt qu'une table de trésor DMG recopiée
+(non-OGL, cf. recherche externe ci-dessus). **Zéro changement de code** :
+même mécanisme V2-J9quater que V2-J10, un seul axe "Rareté" (Commun/Peu
+commun/Rare/Très rare/Légendaire — le vocabulaire officiel D&D, pas une
+échelle inventée) en mode `"ceiling"`.
+
+**Contenu** : 17 objets magiques réels choisis dans les 5 paliers propres
+du SRD (`rarity.name` exactement "Common"/"Uncommon"/"Rare"/"Very
+Rare"/"Legendary" — les entrées à rareté composée type "Uncommon (+1),
+Rare (+2)..." exclues, pas assez propres pour un `tier` simple). Palier
+Commun volontairement mince (1 seule entrée, "Potion d'escalade") : le SRD
+2024 n'a qu'UN SEUL objet de rareté Commun — inventer des entrées
+supplémentaires aurait menti sur la source. Chaque entrée porte une
+référence (`TableEntry.refs`, `{kind:"rule", key: entry.index}`) vers sa
+vraie fiche de règle SRD — vérifié directement en base (requête
+service-role) que les 17 `entry_key` existent bien en `entry_type:
+"magic_item"`, pas une supposition. Pas de `price` : les grilles de valeur
+gp-par-rareté du DMG ne sont pas OGL (même recherche que ci-dessus), rien
+à copier comme substitut sans le vérifier — décision volontaire, pas un
+oubli.
 
 **Critères**
-- [ ] Nouvel onglet "Butin" dans l'outil MJ Générateurs.
-- [ ] Au moins une table de butin fonctionnelle, organisée par rareté.
-- [ ] Contenu tiré des objets magiques SRD déjà en base, jamais d'une
-      source tierce non vérifiée.
-- [ ] Vérifié en direct.
+- [x] Nouvel onglet "Butin" dans l'outil MJ Générateurs.
+- [x] Au moins une table de butin fonctionnelle, organisée par rareté.
+- [x] Contenu tiré des objets magiques SRD déjà en base, jamais d'une
+      source tierce non vérifiée — chaque entrée référence sa fiche réelle,
+      existence confirmée en base.
+- [x] Vérifié en direct : plafond Commun (1 seul objet possible, "Potion
+      d'escalade") et plafond Légendaire (mélange de plusieurs paliers en
+      un seul tirage — Boule de cristal/très rare, Cape du bonimenteur/rare,
+      Boule de cristal de vraie vision/légendaire — confirme qu'un objet
+      commun reste possible même au plafond le plus haut).
 
 ### V2-J12 — Remise en forme de la fiche "Pièces de monnaie" · `S` — fait
 

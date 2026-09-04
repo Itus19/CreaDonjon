@@ -188,6 +188,31 @@ export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
     ],
     promote: { nameSectionKey: "echoppe-nom", entityKind: "location" },
   },
+  {
+    key: "butin",
+    label: "Butin",
+    // Pas de `promote` : un butin n'est pas une entite (contrairement a
+    // Taverne/Échoppe/PNJ) — une liste d'objets a copier dans les notes de
+    // seance, meme discipline que "Noms" (aucune fiche a en tirer).
+    sections: [{ key: "butin-objets", label: "Objets magiques" }],
+    variants: [
+      {
+        key: "rarity",
+        label: "Rareté",
+        allowRandom: true,
+        // Vocabulaire de rarete officiel D&D (Magic-Items[].rarity.name du
+        // SRD deja importe), pas une echelle inventee a part — meme axe que
+        // `TableEntry.tier` des entrees de la table de butin (V2-J9quater).
+        options: [
+          { key: "commun", label: "Commun" },
+          { key: "peu-commun", label: "Peu commun" },
+          { key: "rare", label: "Rare" },
+          { key: "tres-rare", label: "Très rare" },
+          { key: "legendaire", label: "Légendaire" },
+        ],
+      },
+    ],
+  },
 ];
 
 /**
