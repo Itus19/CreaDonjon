@@ -14,10 +14,11 @@ interface DrawResponse {
   slots: GeneratorSlotResult[];
 }
 
-/** Dernier resultat connu d'une section (V2-J2) — remonte au panneau parent pour que "Créer la fiche" puisse combiner toutes les sections actuellement tirees, sans redemander un tirage. */
+/** Dernier resultat connu d'une section (V2-J2) — remonte au panneau parent pour que "Créer la fiche" puisse combiner toutes les sections actuellement tirees, sans redemander un tirage. `slots` (V2-J-PNJ) porte le texte de CHAQUE emplacement separement — necessaire aux sections promues en bloc structure (personality/quest), qui ne peuvent pas se contenter du texte de section deja assemble. */
 export interface SectionResult {
   text: string;
   refs: BlockReference[];
+  slots: Record<string, string>;
 }
 
 /**
@@ -68,7 +69,8 @@ function GeneratorSectionCard({
 
   function reportResult(newText: string, newSlotResults: Record<string, GeneratorSlotResult>) {
     const refs = Object.values(newSlotResults).flatMap((s) => s.refs);
-    onResult({ text: newText, refs });
+    const slots = Object.fromEntries(Object.entries(newSlotResults).map(([key, s]) => [key, s.text]));
+    onResult({ text: newText, refs, slots });
   }
 
   async function handleDrawAll() {

@@ -19,11 +19,31 @@ export interface GeneratorToolSectionConfig {
   label: string;
 }
 
-/** Configuration de promotion (V2-J2) : quelle section fournit le NOM de la fiche creee par "Créer la fiche", et le type d'entite a lui donner — les autres sections deviennent chacune un bloc `text` (src/server/services/promotion.ts). Absent = outil pas encore promouvable. `withCreature` (V2-J-PNJ) affiche un selecteur de creature du bestiaire (`RuleEntryAutocomplete`) qui ajoute un bloc `statblock` a la fiche creee — jamais de creature inventee ou choisie au hasard. */
+/**
+ * Configuration de promotion (V2-J2) : quelle section fournit le NOM de la
+ * fiche creee par "Créer la fiche", et le type d'entite a lui donner — les
+ * autres sections deviennent chacune un bloc `text` (src/server/services/
+ * promotion.ts), sauf celles nommees explicitement ci-dessous qui
+ * deviennent un bloc structure. Absent = outil pas encore promouvable.
+ *
+ * `withCreature` (V2-J-PNJ) affiche un selecteur de creature du bestiaire
+ * (`RuleEntryAutocomplete`) qui ajoute un bloc `statblock` — jamais de
+ * creature inventee ou choisie au hasard.
+ *
+ * `personalitySectionKey`/`questSectionKey` : la section produit un bloc
+ * `personality`/`quest` a partir de ses emplacements de table individuels
+ * (jamais du texte assemble) — voir la construction cote route de
+ * promotion. `withWorldview` ajoute un bloc `worldview` genere sans section
+ * dediee : ce bloc n'est que des poles numeriques (specs/psyche-pnj.md §2),
+ * rien a prevoir/relancer a l'ecran pour l'auteur du PNJ.
+ */
 export interface GeneratorToolPromoteConfig {
   nameSectionKey: string;
   entityKind: string;
   withCreature?: boolean;
+  personalitySectionKey?: string;
+  withWorldview?: boolean;
+  questSectionKey?: string;
 }
 
 export interface GeneratorToolConfig {
@@ -51,7 +71,16 @@ export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
       { key: "pnj-nom", label: "Nom" },
       { key: "pnj-apparence", label: "Apparence" },
       { key: "pnj-histoire", label: "Histoire" },
+      { key: "pnj-personnalite", label: "Personnalité" },
+      { key: "pnj-quete", label: "Quête" },
     ],
-    promote: { nameSectionKey: "pnj-nom", entityKind: "character", withCreature: true },
+    promote: {
+      nameSectionKey: "pnj-nom",
+      entityKind: "character",
+      withCreature: true,
+      personalitySectionKey: "pnj-personnalite",
+      withWorldview: true,
+      questSectionKey: "pnj-quete",
+    },
   },
 ];

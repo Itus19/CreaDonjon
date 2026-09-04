@@ -122,7 +122,14 @@ export interface GeneratorToolWindowData {
   label: string;
   sections: GeneratorToolSectionWindowData[];
   /** Configuration de promotion du registre (V2-J2), passee telle quelle — absente = bouton "Créer la fiche" masque cote client. */
-  promote?: { nameSectionKey: string; entityKind: string; withCreature?: boolean };
+  promote?: {
+    nameSectionKey: string;
+    entityKind: string;
+    withCreature?: boolean;
+    personalitySectionKey?: string;
+    withWorldview?: boolean;
+    questSectionKey?: string;
+  };
 }
 
 /**

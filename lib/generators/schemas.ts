@@ -15,6 +15,8 @@ export const promoteGeneratorResultSchema = z.object({
     z.object({
       text: z.string(),
       refs: z.array(zBlockReference).default([]),
+      /** Texte tire par emplacement (cle du `GeneratorSlot`) — necessaire aux sections promues en bloc structure (personality/quest), qui ont besoin de CHAQUE valeur separement plutot que du texte de section assemble. */
+      slots: z.record(z.string(), z.string()).default({}),
     })
   ),
   /** Cle d'entree de regle `monster` choisie a la main par le MJ (V2-J-PNJ) — jamais tiree au hasard, une CR mal choisie casserait l'equilibre. */

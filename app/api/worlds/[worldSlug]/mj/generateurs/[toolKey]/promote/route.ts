@@ -10,6 +10,12 @@ import { promoteToEntity, type PromotedBlockSpec } from "@/src/server/services/p
 import { getRuleEntryForWorld } from "@/src/server/services/rules";
 import { statblockFromMonsterBlocks } from "@/src/core/rules/srdMapping";
 import { GENERATOR_TOOLS } from "@/src/core/generators/tools";
+import { randomPoles, priorityFromPoles } from "@/src/core/psyche/random";
+import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
+import { serverRng } from "@/src/server/services/rng";
+import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
+import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
+import type { QuestBlockData } from "@/src/core/schemas/blocks/quest";
 import type { Locale } from "@/src/i18n/request";
 import type {
   ActionsBlockData,
@@ -61,7 +67,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Tirez d'abord le nom avant de créer la fiche." }, { status: 400 });
   }
 
-  const bodySections = tool.sections.filter((s) => s.key !== tool.promote!.nameSectionKey);
+  const structuredSectionKeys = new Set(
+    [tool.promote.nameSectionKey, tool.promote.personalitySectionKey, tool.promote.questSectionKey].filter(
+      (k): k is string => Boolean(k)
+    )
+  );
+  const bodySections = tool.sections.filter((s) => !structuredSectionKeys.has(s.key));
   const allRefs = bodySections.flatMap((s) => parsed.data.sections[s.key]?.refs ?? []);
 
   const locale = (await getLocale()) as Locale;
@@ -91,6 +102,54 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
   }
 
+  let personality: { label: string; poleDeltas: Record<string, number>; rest: Omit<PersonalityBlockData, "__v" | "poles"> } | null = null;
+  if (tool.promote.personalitySectionKey) {
+    const slots = parsed.data.sections[tool.promote.personalitySectionKey]?.slots ?? {};
+    const poles = randomPoles(PERSONALITY_POLE_KEYS, serverRng);
+    personality = {
+      label: "Personnalité",
+      poleDeltas: Object.fromEntries(poles.map((p) => [p.key, p.value])),
+      rest: {
+        priority: priorityFromPoles(poles),
+        aspirations: slots.aspiration
+          ? [{ id: crypto.randomUUID(), text: slots.aspiration, horizon: "arc", intensity: 2, visibility: { level: "public", scopeId: null } }]
+          : [],
+        lines: slots["ligne-rouge"] ? [slots["ligne-rouge"]] : [],
+        limits: slots.limite ? [slots.limite] : [],
+        baseline: { trust: 0, affinity: 0, respect: 0, fear: 0 },
+        speech: { register: slots.registre ?? "", tics: slots.tic ? [slots.tic] : [] },
+      },
+    };
+  }
+
+  let worldview: { label: string; poleDeltas: Record<string, number>; rest: Omit<WorldviewBlockData, "__v" | "poles"> } | null = null;
+  if (tool.promote.withWorldview) {
+    const poles = randomPoles(WORLDVIEW_POLE_KEYS, serverRng);
+    worldview = {
+      label: "Convictions",
+      poleDeltas: Object.fromEntries(poles.map((p) => [p.key, p.value])),
+      rest: { priority: priorityFromPoles(poles) },
+    };
+  }
+
+  let quest: { label: string; data: QuestBlockData } | null = null;
+  if (tool.promote.questSectionKey) {
+    const slots = parsed.data.sections[tool.promote.questSectionKey]?.slots ?? {};
+    if (slots.objectif) {
+      quest = {
+        label: "Quête",
+        data: {
+          __v: 1,
+          state: "not_started",
+          giver: null,
+          objectives: [{ id: crypto.randomUUID(), text: slots.objectif, done: false }],
+          rewards: slots.recompense ? [{ id: crypto.randomUUID(), text: slots.recompense }] : [],
+          prerequisites: [],
+        },
+      };
+    }
+  }
+
   const blocks: PromotedBlockSpec[] = bodySections.flatMap((section) => {
     const result = parsed.data.sections[section.key];
     if (!result || (result.text.trim() === "" && result.refs.length === 0)) return [];
@@ -116,6 +175,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     visibilityScopeId: null,
     blocks,
     statblock,
+    personality,
+    worldview,
+    quest,
   });
   if (!promoted.ok) {
     return NextResponse.json({ error: "Impossible de créer la fiche." }, { status: 403 });
