@@ -83,4 +83,29 @@ export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
       questSectionKey: "pnj-quete",
     },
   },
+  {
+    key: "noms",
+    label: "Noms",
+    // Pas de `promote` : un nom seul n'a pas vocation a devenir une fiche
+    // (contrairement a Taverne/PNJ/Échoppe) — juste une inspiration a copier.
+    // Une section par culture plutot qu'un selecteur "Aléatoire" : choisir
+    // une section AU HASARD parmi celles-ci produit exactement le meme
+    // resultat, sans construire un second mecanisme de tirage.
+    sections: [
+      { key: "noms-humain", label: "Humain" },
+      { key: "noms-elfe", label: "Elfe" },
+      { key: "noms-nain", label: "Nain" },
+      { key: "noms-halfelin", label: "Halfelin" },
+    ],
+  },
+  {
+    key: "echoppe",
+    label: "Échoppe",
+    sections: [
+      { key: "echoppe-nom", label: "Nom de la boutique" },
+      { key: "echoppe-boutique", label: "La boutique" },
+      { key: "echoppe-objet", label: "Un objet en vente" },
+    ],
+    promote: { nameSectionKey: "echoppe-nom", entityKind: "location" },
+  },
 ];
