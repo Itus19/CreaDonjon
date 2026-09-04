@@ -1272,3 +1272,243 @@ La session du 3 septembre a généralisé le moteur de fiche dérivée pour les 
 C'est aussi le préalable au mode Solo/MJ assisté (`module-joueur-et-solo.md`, §4 ci-dessus) : `resolveAction` et le contrat outil ↔ IA décrits dans `specs/regles-couche.md` §4 (« chaque question que le moteur sait résoudre est une question que l'IA n'a pas à se poser ») ne sont encore que des interfaces à écrire, jamais implémentés.
 
 La proposition à rédiger doit couvrir au minimum : la forme d'un déclencheur (quels événements existent, où ils s'accrochent — un jet, une action, un repos...), comment il s'articule avec l'empilement de modificateurs déjà en place (§B4) sans le complexifier inutilement, le contrat d'outil pour l'IA du mode Solo (entrée/sortie de `resolveAction`, ce qui reste narratif vs mécanique), et une estimation honnête de ce qui est vraiment nécessaire pour S1 par rapport à ce qui peut attendre la V3.
+
+---
+
+## 7. Correctifs — Générateurs de MJ (suite du Lot J)
+
+L'outil "Générateurs de MJ" (Taverne/PNJ/Noms/Échoppe, V2-J1/J2) est vérifié
+en direct et fonctionnel, mais un usage réel remonte 6 ajustements plus une
+question ouverte (générateur de butin). Deux d'entre eux ne sont pas de
+simples retouches de contenu : un **sélecteur de variante** (type/richesse/
+zone, choisi AVANT de générer, qui change quelle table un emplacement tire)
+et un **tirage multiple par emplacement** (menu de plats/boissons) sont de
+vraies capacités moteur nouvelles. Le reste est du contenu ou une extension
+quasi gratuite. Détail de conception dans le plan approuvé de la session du
+4 septembre (repris ci-dessous, résumé).
+
+**Recherche externe faite (retour utilisateur : "vérifie s'il existe des
+bases de tables communautaires ouvertes")** : les tables de trésor/butin du
+DMG (Magic Item Table A-I, trésor individuel/de repaire) **ne sont pas dans
+le SRD/OGL** — confirmé (open5e, blogofholding). Notre SRD déjà importé
+(`data/srd/*.json`, CC-BY-4.0, `NOTICE.md`) contient 362 objets magiques
+individuels (`Magic-Items`) mais aucune table de tirage toute faite. Des
+corpus communautaires existent (ex. `swordandsource/random-tables`, licence
+CC0) mais en anglais, non structurés pour notre schéma, et de la même
+taille que ce qu'on écrit déjà à la main — aucun gain à construire un
+pipeline d'import. **Décision : pas d'import automatisé**, contenu toujours
+écrit à la main (2-3 exemples, l'auteur complète), sauf le générateur de
+butin qui réutilise légitimement les 362 objets magiques déjà chez nous.
+
+**Décision sur le générateur de butin** : oui, à construire, mais comme
+outil séparé ("Butin"), jamais câblé en dur sur Échoppe — un objet à vendre
+et un butin de repaire sont deux intentions différentes, même s'ils peuvent
+un jour piocher dans le même vivier. Contenu : table(s) écrites à la main à
+partir des 362 objets magiques SRD déjà importés, regroupés par rareté.
+
+### V2-J5 — Bascule des tables existantes de d20 à d100 · `S` — à faire
+
+Toutes les tables `random_table` déjà écrites sur l'entité "Générateurs de
+MJ" (Taverne, PNJ, Noms, Échoppe — une vingtaine) passent de `d20` à `d100`,
+plages redistribuées proportionnellement. Pure donnée, aucun changement de
+moteur (`RandomTableData.die` est déjà une chaîne libre).
+
+**Critères**
+- [ ] Chaque table existante a `die: "d100"` et des plages qui couvrent
+      1-100 sans trou ni chevauchement.
+- [ ] Un tirage sur chacune reste fonctionnel (vérifié en direct, quelques
+      tables au hasard suffisent, pas toutes une par une).
+
+### V2-J6 — Blocs Apparence/Histoire pour Taverne et Échoppe · `S` — à faire
+
+Taverne et Échoppe gagnent chacun 2 sections supplémentaires ("Apparence",
+"Histoire"), mêmes clés/contenu que le pattern déjà en place pour PNJ —
+aucune extension moteur, juste un ajout au registre (`src/core/generators/
+tools.ts`) + du contenu de table. Pour un lieu, "Histoire" couvre le
+commerçant/tavernier, la place de l'établissement dans le quartier, ses
+relations avec le voisinage — pas une biographie de personnage.
+
+**Critères**
+- [ ] Taverne et Échoppe ont chacun une section "Apparence" et "Histoire",
+      tirables et rejouables comme les autres.
+- [ ] "Créer la fiche" les inclut comme blocs `text` (mécanisme générique
+      déjà en place, aucun changement de `promotion.ts` attendu).
+- [ ] Vérifié en direct (tirage + création de fiche + nettoyage).
+
+### V2-J7 — Mécanisme des axes de variante + sélecteurs Échoppe · `M` — à faire
+
+Nouvelle capacité moteur : `GeneratorToolConfig.variants` (axes nommés,
+options, `allowRandom`) — un emplacement `table` référence un axe dans sa
+clé (`"objets-{type}"`), résolu côté serveur via `renderGeneratorTemplate`
+(réutilisée telle quelle, déjà un remplaçeur générique `{cle}`→valeur)
+avant la recherche de table. Une valeur `"aleatoire"` est résolue en une
+option concrète par `serverRng`, renvoyée au client (`resolvedVariant`)
+pour que le MJ voie ce qui a été tiré.
+
+Fichiers : `src/core/generators/tools.ts` (type + axes Échoppe : type,
+richesse, zone — liste incluant Apothicaire/Forgeron/Armurier/Herboriste/
+Bazar/Tailleur/Librairie/Joaillier/**Maison close**), `lib/blocks/
+schemas.ts` (`drawGeneratorSchema.variant`), `src/server/services/
+generators.ts` (interpolation + résolution "aléatoire"), `app/api/blocks/
+[blockId]/generate/route.ts`, `components/shell/GeneratorToolPanel.tsx`
+(un `<select>` par axe, au-dessus des sections, état par outil, envoyé à
+chaque tirage). Contenu Échoppe : table `objets-{type}` (une par type).
+
+**Critères**
+- [ ] Un axe déclaré sur un outil affiche un menu déroulant dans le
+      panneau, au-dessus des sections.
+- [ ] Changer le type change réellement le contenu tiré pour "Objet en
+      vente" (table `objets-{type}` différente par sélection).
+- [ ] "Aléatoire" tire un type réel côté serveur et l'affiche.
+- [ ] "Maison close" est une option de type valide, avec sa propre table
+      (même minimalisme que les autres : 2-3 entrées).
+- [ ] `npm run test:core` couvre la résolution "aléatoire" (fonction pure).
+- [ ] Vérifié en direct.
+
+### V2-J8 — Sélecteurs richesse/zone sur Taverne · `S` — à faire
+
+Réutilise le mécanisme de V2-J7 sans rien y ajouter côté moteur — juste les
+axes `wealth`/`zone` déclarés sur `taverne` dans le registre, plus le
+contenu de table qui en dépend (ambiance par zone au minimum). Les prix du
+palier `wealth` doivent rester cohérents avec la fiche "Train de vie"
+(V2-J14) — voir sa note de dépendance.
+
+**Critères**
+- [ ] Taverne affiche les sélecteurs richesse et zone.
+- [ ] Au moins un emplacement de Taverne varie réellement selon chacun.
+- [ ] Vérifié en direct.
+
+### V2-J9 — Tirage multiple par emplacement + Menu de Taverne · `M` — à faire
+
+`drawMultiple` existe déjà (`src/core/tables/roll.ts:65`, déjà utilisée par
+`src/server/services/tables.ts:108`) — jamais branchée côté générateur, qui
+appelle toujours `drawOnce`. `GeneratorTableSlot` gagne un `count?: number`
+optionnel ; `drawTableSlotsFromGeneratorBlock` l'utilise pour tirer
+plusieurs résultats (respecte `unique_draws` de la table), texte du slot =
+lignes jointes. Nouvelle section "Menu" sur Taverne (`plats`/`boissons`,
+`count: 5`), prix croissant écrit dans le texte de chaque entrée
+(convention déjà en place : "Bière brune locale — 4 pc"), éventuellement
+par palier de richesse (dépend de V2-J8).
+
+**Critères**
+- [ ] Un emplacement avec `count > 1` tire N résultats distincts (si
+      `unique_draws`) en un seul tirage de section.
+- [ ] Taverne a une section "Menu" avec 4-5 plats et 4-5 boissons, prix
+      croissants.
+- [ ] Test core sur le tirage multiple d'un emplacement (fonction pure).
+- [ ] Vérifié en direct.
+
+### V2-J10 — Objets en vente par type d'échoppe · `S` — à faire
+
+Réutilise V2-J7 (axe `type`) + V2-J9 (`count`) : la section "Un objet en
+vente" d'Échoppe tire 3-5 objets de la table `objets-{type}` correspondant
+au type choisi, au lieu d'un seul aujourd'hui.
+
+**Critères**
+- [ ] "Un objet en vente" tire plusieurs objets, cohérents avec le type
+      choisi.
+- [ ] Vérifié en direct sur au moins 2 types différents.
+
+### V2-J11 — Générateur de Butin (nouvel outil) · `M` — à faire
+
+Nouvel outil "Butin" dans le registre, séparé d'Échoppe (décision ci-dessus
+— intentions de génération différentes). Table(s) construites à la main à
+partir des 362 objets magiques du SRD déjà importés (`data/srd/*.json`),
+regroupés par rareté (`Magic-Items[].rarity.name`) plutôt qu'une table de
+trésor DMG recopiée (non-OGL, cf. recherche externe ci-dessus).
+
+**Critères**
+- [ ] Nouvel onglet "Butin" dans l'outil MJ Générateurs.
+- [ ] Au moins une table de butin fonctionnelle, organisée par rareté.
+- [ ] Contenu tiré des objets magiques SRD déjà en base, jamais d'une
+      source tierce non vérifiée.
+- [ ] Vérifié en direct.
+
+### V2-J12 — Remise en forme de la fiche "Pièces de monnaie" · `S` — fait
+
+La fiche officielle "Pièces de monnaie" (`standard-exchange-rates`, ruleset
+officiel de base **2024 uniquement** — le 2014 n'est plus la cible d'aucun
+nouveau travail de contenu, retour utilisateur) mélangeait le taux de
+conversion des pièces (pc/pa/pe/po/pp) avec « Écuries et fourrage », une
+règle sans rapport. En vérifiant le contenu réel (elle ne portait PAS
+revente/objets magiques/gemmes/troc — souvenir approximatif), une vraie
+règle officielle manquante a été trouvée juste à côté dans le SRD :
+« Vente d'équipement » (page 95, jamais importée). Recentrée sur le seul
+taux de conversion, remis en forme dans un vrai tableau croisé
+pc/pa/pe/po/pp (`custom_table`) plutôt que la phrase de prose d'origine.
+
+**Fait** — `scripts/write-commerce-2024.ts` (committé, `--write` pour
+appliquer). Passe par `app.import_srd_entries` (même RPC que
+`scripts/ingest-srd.ts`, seul chemin autorisé à modifier une entrée d'un
+ruleset officiel — le trigger `entry_blocks_forbid_official_write` bloque
+tout le reste). **Piège trouvé en vérifiant en direct** : une entrée peut
+porter une surcharge de traduction par locale
+(`ruleset_entry_translations.blocks`, SCHEMA.md §9.2) qui masque le bloc de
+base à l'affichage — ici, une ancienne traduction française de la
+description masquait totalement la correction du bloc de base tant qu'elle
+n'était pas vidée elle aussi. Un simple redémarrage du serveur ne suffit
+pas à révéler ce genre de décalage : seule une relecture directe en base
+(`ruleset_entry_blocks` ET `ruleset_entry_translations`) l'a mis en évidence.
+
+**Critères**
+- [x] La fiche "Pièces de monnaie" ne contient plus que le taux de
+      conversion, affiché en tableau lisible.
+- [x] Aucune donnée perdue : "Écuries et fourrage" vérifiée présente dans
+      "Commerce" (V2-J13) avant que la correction ne parte en base.
+
+### V2-J13 — Nouvelle fiche "Commerce" · `S` — fait
+
+Reçoit "Écuries et fourrage" (sorti de "Pièces de monnaie") et « Vente
+d'équipement » (revente — texte officiel du SRD 2024, page 95, jamais
+importé jusqu'ici, vérifié mot pour mot dans
+`data/srd/fr-source/srd-5.2.1-fr.txt` lignes 8738-8743). Même ruleset
+officiel de base 2024, nouvelle entrée `entry_key: "commerce"`,
+`entry_type: "rule"`.
+
+**Fait** — même script que V2-J12 (`scripts/write-commerce-2024.ts`) : une
+entrée officielle brand-new s'insère par simple `insert` (jamais bloqué par
+le trigger, qui ne verrouille que `update`/`delete`), mais la même RPC est
+utilisée pour les deux entrées en un seul appel cohérent.
+
+**Critères**
+- [x] Nouvelle fiche "Commerce" dans le ruleset officiel 2024, contenu
+      complet et lisible.
+- [x] "Pièces de monnaie" ne la référence pas en double — le contenu vit à
+      un seul endroit (vérifié en direct sur les deux fiches après
+      correction de la surcharge de traduction, voir V2-J12).
+
+### V2-J14 — Nouvelle fiche "Train de vie" · `M` — à faire
+
+Contenu déjà présent en texte brut dans le dépôt
+(`data/srd/fr-source/srd-5.2.1-fr.txt`, lignes ~9881-9995 — pages 107-108
+du SRD 2024 officiel) : les 7 paliers de train de vie (mendiant → aristocratique),
+la table "Repas, boisson et hébergement", la table "Employés", la table
+"Services d'incantation". Jamais importé jusqu'ici (absent du JSON source
+structuré, confirmé — seulement dans le texte PDF extrait). Nouvelle entrée
+`entry_type: "rule"` du ruleset officiel 2024, blocs `custom_table` pour
+chaque table + texte pour les paliers.
+
+**Pourquoi ce ticket compte pour le générateur (V2-J8)** : les paliers de
+richesse du générateur Taverne/Échoppe (Aléatoire/Modeste/Correcte/Réputée)
+doivent rester cohérents avec les vrais paliers de train de vie du jeu
+(mendiant/misérable/pauvre/modeste/confortable/riche/aristocratique) plutôt
+que d'inventer une échelle parallèle sans rapport avec les règles. Cette
+fiche sert donc de référence de prix pour écrire le contenu de V2-J8/V2-J9
+(Menu de taverne à prix croissants, objets en vente par richesse) —
+**dépendance de contenu, pas de code** : V2-J8/J9 peuvent démarrer avant,
+mais leurs PRIX doivent être vérifiés contre cette fiche une fois écrite.
+
+**Critères**
+- [ ] Nouvelle fiche "Train de vie" dans le ruleset officiel 2024, les 4
+      tables/sections du SRD présentes et lisibles.
+- [ ] Les prix qu'elle porte sont ceux du SRD 2024 officiel, pas inventés.
+- [ ] V2-J8/V2-J9, une fois écrits, citent ou réutilisent ces prix plutôt
+      qu'une échelle inventée séparément.
+
+**Méthode** : un ticket à la fois, jamais tous en même temps. Contenu
+toujours authored en direct sur l'entité "Générateurs de MJ" (jamais en dur
+dans le code) — et **toujours revérifié en relisant l'état réel du bloc
+après écriture** (une écriture dupliquée avec un `data.key` correct mais un
+contenu resté par défaut s'est produite deux fois cette session, cause
+exacte non identifiée côté outil de navigation — ne jamais faire confiance
+à la seule réponse HTTP de l'écriture).
