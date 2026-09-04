@@ -1458,12 +1458,21 @@ pas à révéler ce genre de décalage : seule une relecture directe en base
 
 ### V2-J13 — Nouvelle fiche "Commerce" · `S` — fait
 
-Reçoit "Écuries et fourrage" (sorti de "Pièces de monnaie") et « Vente
-d'équipement » (revente — texte officiel du SRD 2024, page 95, jamais
-importé jusqu'ici, vérifié mot pour mot dans
-`data/srd/fr-source/srd-5.2.1-fr.txt` lignes 8738-8743). Même ruleset
-officiel de base 2024, nouvelle entrée `entry_key: "commerce"`,
-`entry_type: "rule"`.
+Reçoit "Écuries et fourrage" (sorti de "Pièces de monnaie") et un bloc
+"Revente" en 4 sous-parties (Armes/armures/équipement, Objets magiques,
+Gemmes/bijoux/objets d'art, Troc). Même ruleset officiel de base 2024,
+nouvelle entrée `entry_key: "commerce"`, `entry_type: "rule"`.
+
+**Ajustement (4 septembre, retour utilisateur avec capture)** : le premier
+jet ne portait que le paragraphe condensé "Vente d'équipement" du SRD 2024
+(page 95). L'utilisateur a montré une version plus détaillée en 4
+sous-parties — vérifiée : c'est le texte du **SRD 2014**
+(`srd-5.1-fr.txt`, lignes 5398-5436, "Revente du trésor"), jamais présente
+dans notre app avant ce ticket (confirmé par lecture directe en base avant/
+après l'édition). Le 2024 condense la même règle sans jamais mentionner le
+troc. Décision utilisateur : garder le découpage 2014 (plus clair à table),
+reformulé — pas recopié — puisque la mécanique est identique entre les
+deux éditions ici (seule la prose diffère).
 
 **Fait** — même script que V2-J12 (`scripts/write-commerce-2024.ts`) : une
 entrée officielle brand-new s'insère par simple `insert` (jamais bloqué par

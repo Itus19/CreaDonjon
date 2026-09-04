@@ -2,11 +2,19 @@
 // "Pièces de monnaie" (`standard-exchange-rates`, SRD 5.2.1) sur le seul
 // taux de conversion — mis en forme dans un vrai tableau plutôt qu'une
 // phrase de prose — et deplace ce qui n'y a pas sa place (« Écuries et
-// fourrage ») vers une nouvelle fiche "Commerce", qui recoit aussi
-// « Vente d'équipement » (revente), un paragraphe officiel du SRD jamais
-// importé jusqu'ici (verifie mot pour mot dans
-// data/srd/fr-source/srd-5.2.1-fr.txt, page 95, juste avant "Pièces de
-// monnaie" — lignes 8738-8743).
+// fourrage ») vers une nouvelle fiche "Commerce".
+//
+// Le paragraphe de revente du SRD 2024 ("Vente d'équipement", page 95,
+// lignes 8738-8743 de data/srd/fr-source/srd-5.2.1-fr.txt) condense en
+// 3 phrases ce que le SRD 2014 detaillait en 4 sous-parties ("Revente du
+// tresor", srd-5.1-fr.txt lignes 5398-5436 : Armes/armures, Objets
+// magiques, Gemmes/bijoux/objets d'art, Troc) — la mecanique est identique
+// (revente a moitie prix, gemmes/objets d'art gardent leur pleine valeur),
+// le 2024 est juste plus laconique et omet meme le troc. Retour utilisateur
+// (4 septembre) : preferer la clarte du decoupage 2014 plutot que le
+// paragraphe compresse, tout en restant sur les REGLES 2024 (aucune regle
+// mecanique differente entre les deux versions ici, seulement la prose) —
+// texte ci-dessous reformule, pas recopie du 2014.
 //
 // Utilise `app.import_srd_entries` (meme fonction que scripts/ingest-srd.ts,
 // seul endroit autorise a contourner le verrou d'immutabilite officielle,
@@ -122,7 +130,7 @@ async function main() {
           data: {
             segments: [
               {
-                text: "**Vente d’équipement.** L’équipement est vendu à la moitié de son prix d’achat. Les biens commerciaux et objets de valeur, pierres précieuses et autres objets d’art, conservent quant à eux toute leur valeur sur le marché. La section « Objets magiques » propose des prix pour les objets magiques.\n**Écuries et fourrage.** Une place d’écurie coûte 5 pa par jour ; 5 kg de fourrage coûtent 5 pc par jour.",
+                text: "**Revente.** Les occasions ne manquent pas de trouver des trésors, de l’équipement, des armes, des armures et plus encore lors de vos aventures. Vous pouvez généralement les revendre en retournant dans un village ou une ville, à condition d’y trouver des acheteurs ou des marchands intéressés.\n**Armes, armures et autre équipement.** En règle générale, les armes, armures et autres pièces d’équipement en bon état se revendent à la moitié de leur prix d’achat. Les armes et armures utilisées par des monstres sont rarement en assez bon état pour être vendues.\n**Objets magiques.** Vendre des objets magiques est problématique. Trouver un acheteur pour une potion ou un parchemin reste assez facile, mais les autres objets ne sont accessibles qu’aux nobles les plus riches — en dehors de quelques objets magiques courants, vous ne trouverez normalement personne pour acheter un objet magique ou un sort. La magie a une valeur bien supérieure à l’or et doit être traitée comme telle.\n**Gemmes, bijoux et objets d’art.** Ces objets conservent leur pleine valeur sur le marché : vous pouvez les échanger contre des pièces ou les utiliser directement comme monnaie dans une transaction. Pour un trésor d’une valeur exceptionnelle, le MJ peut exiger que vous trouviez un acheteur dans une grande ville.\n**Troc.** Dans les régions reculées, le troc est souvent la base du commerce. Comme pour les gemmes et les objets d’art, les biens échangés (barres de fer, sacs de sel, bétail, etc.) conservent leur pleine valeur sur le marché et peuvent servir de monnaie.\n**Écuries et fourrage.** Une place d’écurie coûte 5 pa par jour ; 5 kg de fourrage coûtent 5 pc par jour.",
               },
             ],
           },
@@ -134,7 +142,7 @@ async function main() {
 
   console.log(`${WRITE ? "[ecrit]" : "[a ecrire]"} standard-exchange-rates : description recentree + tableau "Taux de conversion" ajoute.`);
   console.log(`${WRITE ? "[ecrit]" : "[a ecrire]"} standard-exchange-rates : surcharge de traduction "description" videe (sinon elle masque la correction).`);
-  console.log(`${WRITE ? "[ecrit]" : "[a ecrire]"} commerce (entree upsertee) : "Vente d'équipement" + "Écuries et fourrage".`);
+  console.log(`${WRITE ? "[ecrit]" : "[a ecrire]"} commerce (entree upsertee) : Revente (4 sous-parties) + "Écuries et fourrage".`);
 
   if (!WRITE) {
     console.log("\n(mode dry-run, relancer avec --write pour ecrire en base)");
