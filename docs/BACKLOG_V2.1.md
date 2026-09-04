@@ -25,57 +25,137 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 
 Le mécanisme est **conçu en détail** dans `specs/wiki-liens-et-personnages.md`
 §A1 (encodage des liens) et §A2 (mentions et rétroliens), et **à moitié
-construit** :
+construit** — recherche approfondie faite avant d'écrire les étapes
+ci-dessous, plutôt que de deviner :
 
-- Le nœud `ref` existe dans le schéma des segments (`src/core/schemas/
-  entities/segments.ts`) et se rend dans l'éditeur riche comme un jeton non
-  éditable (`RefMention`, `components/entities/richtext/extensions.ts`).
-- La détection automatique de mentions dans un texte existe, **pure et
-  testée** (`src/core/linker/detect.ts`, `detectEntityReferences`) — mais
-  n'est appelée **nulle part** dans le reste du code. Le commentaire du
-  code le dit lui-même : *"branchement différé"*.
-- La table `entity_mentions` (rétroliens) existe en base depuis Phase 0 —
-  mais rien ne l'alimente ni ne la lit. Aucun panneau "mentionné dans"
-  n'existe.
+- Le nœud `ref` existe dans le schéma des segments (`zRefNode`,
+  `src/core/schemas/entities/segments.ts`) avec exactement la forme dont ce
+  ticket a besoin : `{ kind: "entity"|"rule"|"asset", id?, key?, label }`.
+  `kind:"rule"` cible par **clé** (survit à la surcharge d'une variante) ;
+  `entity`/`asset` ciblent par **identifiant**.
+- Il se rend déjà dans l'éditeur (`RefMention`,
+  `components/entities/richtext/extensions.ts`) et **round-trip
+  intégralement** avec `tiptapSync.ts` (`docToSegments`/`segmentsToDoc`) —
+  la couche données est prête, rien à changer là.
+- Mais **aucune UI n'insère ce nœud** : ni bouton, ni raccourci. Et son
+  rendu (`PublicBlockView.tsx`) est un `<span>` **mort** — aucun `href`,
+  aucun clic, dans aucun des trois contextes (éditeur MJ, wiki joueur, wiki
+  public).
+- `detectEntityReferences` (`src/core/linker/detect.ts`) — détection
+  automatique par nom/alias, pure et testée — n'est appelée **nulle part**.
+  Le code le dit lui-même : *"branchement différé"*.
+- La table `entity_mentions` (rétroliens) existe en base depuis Phase 0,
+  jamais alimentée ni lue.
+- **Le système de fenêtres sait déjà adresser une fiche ET une entrée de
+  règle de façon uniforme** (`components/shell/windowRefs.ts`,
+  `WindowRef = {kind:"entity"|"rule", key}`) — `useDesktop().openRef(ref)`
+  ouvre la bonne fenêtre par-dessus l'actuelle. C'est la pièce qui manquait
+  pour rendre un lien réellement cliquable côté MJ : elle existe déjà,
+  construite pour un usage voisin (ouvrir une fiche liée depuis une
+  relation).
+- La recherche d'entité (`otherEntities`, `components/entities/
+  RelationsChips.tsx` — `{id, name, slug, entity_kind}`) et la recherche de
+  règle (`useWorldRuleEntries`/`RuleEntryAutocomplete` — toutes les
+  `ruleset_entries` du monde, tous types confondus) existent déjà et sont
+  **déjà déroulées jusqu'à `TextBlockEditor`** via `EntityBlocks.tsx`
+  (`otherEntities`, `worldSlug`, `worldId` tous présents à cet endroit) —
+  juste pas encore transmises à `RichTextEditor`.
+- Créer une fiche à la volée sans quitter la page existe déjà aussi :
+  `POST /api/entities` (`{worldId, name, entityKind}` → `{id, slug, ...}`),
+  déjà utilisé par le bloc généalogie pour "créer la fiche «X»" — le geste
+  "Créer comme Fiche" est le même bouton, un contexte différent.
 
-Résultat concret pour l'utilisateur : poser un lien entre deux fiches
-aujourd'hui n'a pratiquement pas d'interface dédiée, et il n'existe aucun
-moyen de voir depuis une fiche ce qui la mentionne ailleurs.
+Précisions de l'auteur (retour utilisateur, 4 septembre) prises en compte
+dans les étapes :
+
+- Les liens ciblent aussi bien des **fiches** que des **entrées de règle**
+  (ex. "Tieffeline" détecté dans le texte doit lier la fiche de race
+  correspondante).
+- Ajout/retrait manuel via des boutons dans la barre de mise en forme :
+  **"Créer comme Fiche"**, **"Lier à la Fiche"**, **"Délier"** — la
+  sélection de texte devient le `label` du lien, jamais remplacée par un
+  texte différent (cohérent avec la spec, §A1 "Renommage" : le label est
+  ce que l'auteur a écrit).
+- **"Créer comme Fiche" crée directement en type "Autre"**, pas de
+  dialogue de choix de type — cohérent avec le reste de l'appli (aucun
+  autre tunnel de création de ce genre) ; le type se change ensuite depuis
+  la fiche.
+- La détection automatique reste fondée sur les vrais noms/alias des
+  fiches et des règles (ce que `detectEntityReferences` fait déjà) — pas
+  une IA qui devine, un matching exact comme aujourd'hui.
+- Les liens doivent être visibles et **cliquables** dans les fiches MJ,
+  dans les blocs, et sur le wiki public.
+- **"Précédent"/"Suivant"** = navigation façon navigateur web (retour sur
+  le chemin parcouru, ex. sorts → Boule de feu → une autre fiche de règle
+  → retour), **pas** un classement thématique/alphabétique — un simple
+  historique de consultation dans le wiki.
 
 ### Étapes
 
-1. **Insertion assistée dans l'éditeur** — taper un déclencheur (ex. `@`)
-   dans `RichTextEditor` ouvre une recherche d'entité (autocomplete) qui
-   insère un nœud `ref` au bon endroit. C'est le geste manquant le plus
-   direct ; sans lui, rien d'autre n'a de valeur immédiate.
-2. **Détection automatique à la sauvegarde** — à l'enregistrement d'un bloc
-   de texte, passer son contenu par `detectEntityReferences` (déjà écrite)
-   contre les entités du monde, et proposer les mentions trouvées comme
-   suggestions à confirmer — **jamais une réécriture silencieuse du
-   texte** (la spec l'interdit explicitement, §A1 "Renommage").
-3. **Extraction et persistance de `entity_mentions`** — nouvelle fonction
+1. **Boutons manuels dans la barre de mise en forme** (`RichTextEditor.tsx`,
+   `BubbleMenu` existante) — *première étape, celle qui débloque tout le
+   reste* :
+   - Fait suivre `otherEntities`/`worldSlug` jusqu'à `RichTextEditor`
+     (`TextBlockEditor` → `RichTextEditor`), même chemin que pour les
+     autres blocs déjà connectés (généalogie, relation...).
+   - **"Lier à la Fiche"** (sélection non vide) : popover de recherche
+     combinant `otherEntities` (fiches) et `useWorldRuleEntries` (règles,
+     tous types) — choisir un résultat remplace la sélection par un nœud
+     `ref` dont le `label` reste le texte sélectionné.
+   - **"Créer comme Fiche"** (sélection non vide) : `POST /api/entities`
+     avec `entityKind:"other"` et le texte sélectionné comme nom, puis lie
+     immédiatement.
+   - **"Délier"** (curseur/sélection sur un `ref` existant, remplace les
+     deux boutons précédents) : reconvertit le nœud en texte brut à partir
+     de son `label`.
+2. **Liens cliquables, partout** :
+   - Éditeur MJ : réutilise le motif déjà en place pour le spoiler
+     (`editorProps.handleClick` sur `[data-ref-mention]`) → lit
+     `data-kind`/`data-ref-id`/`data-ref-key` → `useDesktop()?.openRef(...)`
+     (résout l'id d'entité en slug via `otherEntities` déjà en main ;
+     `kind:"rule"` utilise directement sa `key`) ; repli en navigation
+     normale si `useDesktop()` est `null`.
+   - Wiki public/joueur (`PublicBlockView.tsx`) : remplace le `<span>`
+     mort par un vrai lien (`<Link>`) vers la fiche ou la règle.
+3. **Détection automatique à la sauvegarde** — à l'écriture d'un bloc de
+   texte, passer son contenu par `detectEntityReferences` (déjà écrite,
+   à étendre pour matcher aussi les `ruleset_entries` du monde) et proposer
+   les mentions trouvées comme suggestions à confirmer — jamais une
+   réécriture silencieuse (spec §A1).
+4. **Extraction et persistance de `entity_mentions`** — nouvelle fonction
    pure `src/core/linker/mentions.ts` (prévue par la spec, jamais écrite) :
    à chaque écriture d'un bloc contenant du texte, recalcule et remplace
    toutes les lignes de mentions issues de cette source (§A2).
-4. **Panneau "Mentionné dans"** sur la fiche — lit `entity_mentions` où
+5. **Panneau "Mentionné dans"** sur la fiche — lit `entity_mentions` où
    `target_entity_id` = cette fiche, résolu et **filtré par visibilité
-   côté serveur** : une mention hérite de la visibilité du segment
-   d'origine (le piège explicitement nommé par la spec, §A2 — même classe
-   de bug que le filtrage du RAG).
-5. **Liens brisés** — supprimer une fiche liée ne doit jamais faire
-   disparaître silencieusement le lien : le nœud `ref` reste, se résout
-   sur rien, s'affiche comme lien cassé. Une simple liste de maintenance
-   suffit pour cette première passe, pas un écran dédié.
+   côté serveur** (le piège explicitement nommé par la spec, §A2 — même
+   classe de bug que le filtrage du RAG).
+6. **Liens brisés** — supprimer une fiche liée laisse le nœud `ref` en
+   place, résolu sur rien, affiché comme lien cassé — jamais retiré
+   silencieusement.
+7. **Précédent/Suivant façon navigateur** — deux boutons dans le chrome du
+   wiki (`router.back()`/`router.forward()`, `next/navigation`) : chaque
+   ouverture de fiche/règle via le wiki pousse déjà une entrée d'historique
+   (routage Next.js normal), rien à construire côté données — uniquement
+   l'affichage des deux boutons et leur état (désactivés en bout
+   d'historique).
 
 ### Critères
 
-- [ ] Insérer un lien vers une fiche existante se fait en tapant dans le
-      texte, pas seulement via un sélecteur externe.
+- [ ] Sélectionner du texte et cliquer "Lier à la Fiche" propose des
+      fiches ET des règles, et pose un lien qui garde le texte
+      sélectionné tel quel.
+- [ ] "Tieffeline" dans un paragraphe se détecte automatiquement et peut
+      se lier à la fiche de race correspondante.
+- [ ] Un lien est cliquable et navigue vers la bonne fiche/règle, dans
+      l'éditeur MJ ET sur le wiki public.
 - [ ] Une fiche affiche ce qui la mentionne ailleurs, correctement filtré
       par visibilité (un joueur ne voit jamais une mention issue d'un
       passage `gm`).
 - [ ] Supprimer une fiche liée laisse un lien cassé visible, jamais un
       texte qui redevient silencieusement du texte brut.
+- [ ] Précédent/Suivant fonctionnent dans le wiki comme les boutons d'un
+      navigateur.
 
 ---
 
