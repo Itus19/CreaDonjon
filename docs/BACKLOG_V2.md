@@ -1891,13 +1891,19 @@ groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
   direct : tirage sur les 4 cultures, `d100` confirmé, aucun doublon
   (relecture directe de l'état en base après écriture, 100/100 uniques sur
   chaque table).
-- **V2-J15b — Butin** (1 table : `butin-objets-magiques`) — plafond RÉEL,
-  pas 100 : le SRD 2024 ne compte que ~247 objets magiques à rareté propre
-  au total (262 moins les rarétés composées, cf. V2-J11), et certains
-  paliers sont intrinsèquement minces (1 seul objet `Common`). Cible :
-  inclure une part significative des objets disponibles par palier plutôt
-  qu'un chiffre fixe — jamais inventer un objet magique non sourcé pour
-  atteindre un total artificiel.
+- **V2-J15b — Butin** (1 table : `butin-objets-magiques`) · **fait** —
+  111 objets sur les ~245 à rareté propre du SRD 2024 (Commun 1/1 — tout
+  ce qui existe ; Peu commun 31/73 ; Rare 34/86 ; Très rare 25/53 ;
+  Légendaire 20/32), plutôt qu'un chiffre fixe comme discuté ci-dessus.
+  Chaque entrée référence sa vraie fiche de règle (`TableEntry.refs`,
+  `{kind:"rule", key: <index SRD>}`) — existence des 111 `entry_key`
+  vérifiée directement en base (requête service-role) avant écriture, pas
+  après coup. Toujours pas de `price` (grilles gp-par-rareté du DMG non
+  OGL, décision confirmée en V2-J11). Vérifié en direct : plafond Commun
+  (le seul objet possible), plafond Légendaire (mélange de plusieurs
+  paliers sur les 111 entrées — Bouteille à efreet/très rare, Bandeau
+  d'intelligence/peu commun, Armure d'écailles de dragon/très rare, dans
+  un seul tirage).
 - **V2-J15c — PNJ** (12 tables : noms, apparence, historique, personnalité
   ×5, quête ×2).
 - **V2-J15d — Taverne** (18 tables : ambiance/patrons/apparence/histoire/
