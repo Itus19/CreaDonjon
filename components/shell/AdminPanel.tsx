@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import type { CampaignInviteAdminSummary } from "@/src/server/services/campaignInvites";
 
 const ROLE_LABELS: Record<string, string> = { gm: "MJ", player: "Joueur" };
@@ -43,6 +44,8 @@ function InviteAdminRow({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [freshUrl, setFreshUrl] = useState<string | null>(null);
+  /** Suppression d'un compte invite : `ConfirmDialog` est asynchrone, contrairement a `window.confirm` qu'il remplace ici. */
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const url = freshUrl ?? (invite.token ? `${window.location.origin}/rejoindre/${invite.token}` : null);
 
   async function savePassword() {
@@ -84,8 +87,8 @@ function InviteAdminRow({
   }
 
   async function deleteAccount() {
+    setConfirmingDelete(false);
     if (!invite.claimedByUserId) return;
-    if (!window.confirm(`Supprimer définitivement le compte de ${invite.claimedName ?? "cet ami"} ?`)) return;
     setBusy(true);
     setError(null);
     const res = await fetch(`/api/admin/accounts/${invite.claimedByUserId}`, { method: "DELETE" });
@@ -172,7 +175,7 @@ function InviteAdminRow({
           {invite.claimedByUserId && (
             <button
               type="button"
-              onClick={deleteAccount}
+              onClick={() => setConfirmingDelete(true)}
               disabled={busy}
               className="shrink-0 rounded-md border border-danger px-2 py-1 text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
             >
@@ -204,6 +207,16 @@ function InviteAdminRow({
         </div>
       )}
       {error && <p className="text-[11px] text-danger">{error}</p>}
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Supprimer ce compte ?"
+        message={`Le compte de ${invite.claimedName ?? "cet ami"} est définitivement supprimé, ainsi que son accès à la campagne. Les fiches qu'il a créées sont conservées.`}
+        confirmLabel="Supprimer le compte"
+        danger
+        onConfirm={deleteAccount}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </li>
   );
 }

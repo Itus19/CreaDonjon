@@ -5,6 +5,7 @@ import MapCanvas, { type MapPinMarkerData, type MapRegionShapeData } from "./Map
 import MapPinEditorPopup, { type MapPinDraft } from "./MapPinEditorPopup";
 import MapRegionEditorPopup, { type MapRegionDraft } from "./MapRegionEditorPopup";
 import MapLayersPanel from "./MapLayersPanel";
+import { DEFAULT_MAP_REGION_BORDER, DEFAULT_MAP_REGION_FILL } from "@/src/core/schemas/mapRegion";
 import type { MapBlockData, MapView } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
 import type { VisibleMapPin } from "@/src/server/services/mapPins";
@@ -259,8 +260,8 @@ export default function MapWorkspace({
       shape: pendingRegionPoints,
       name: "",
       ref: null,
-      fillColor: "#3b82f6",
-      borderColor: "#1d4ed8",
+      fillColor: DEFAULT_MAP_REGION_FILL,
+      borderColor: DEFAULT_MAP_REGION_BORDER,
       layerId: null,
       fogGated: false,
       revealed: false,

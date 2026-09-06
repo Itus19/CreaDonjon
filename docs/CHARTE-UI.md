@@ -107,6 +107,8 @@ transition-colors hover:opacity-90 disabled:opacity-50
 
 `text-accent-ink`, **jamais `text-white`** : le jeton s'inverse avec le mode, le blanc non.
 
+C'est la seule recette de cette section qui soit une **forme normalisée** plutôt qu'un motif compté : le couple `bg-danger` + `text-accent-ink` vient de `ConfirmDialog.tsx`, les quatre boutons destructeurs du dépôt s'en écartent encore par leur rembourrage (`px-3 py-1.5`, `px-4 py-1.5`) et deux d'entre eux sont en `rounded-md`. Aligner les nouveaux sur la forme ci-dessus ; ne pas rouvrir les anciens pour ça seul.
+
 Pour une suppression discrète dans une liste, un lien suffit : `text-xs text-danger hover:underline`. Dans les deux cas, la confirmation passe par `ConfirmDialog`, jamais par `window.confirm`.
 
 ### Champ de saisie
@@ -142,16 +144,18 @@ Si l'apparence par défaut ne convient pas, **c'est le composant qu'on corrige**
 ### Panneau, carte
 
 ```
-rounded-lg border border-edge bg-panel p-4
+rounded-lg border border-edge bg-panel p-6
 ```
 
-Menu, modale ou tout ce qui flotte au-dessus : `border-edge-strong bg-panel-raised shadow-2xl`.
+`p-6` est le rembourrage réel des panneaux du dépôt (11 occurrences ; aucune en `p-4`). Menu, modale ou tout ce qui flotte au-dessus : `border-edge-strong bg-panel-raised shadow-2xl`.
 
 ### Puce, étiquette
 
 ```
-rounded-full border border-edge px-2 py-0.5 text-xs text-ink-muted
+rounded-full border border-edge px-3 py-1 text-xs text-ink
 ```
+
+C'est le motif le plus répandu du dépôt, toutes catégories confondues — **51 occurrences**. Il est identique au bouton secondaire ci-dessus, et c'est normal : une puce cliquable *est* un petit bouton. En version discrète, remplacer `text-ink` par `text-ink-muted`.
 
 ### État vide
 
@@ -186,6 +190,8 @@ Seul écart réel : **`rounded` nu, 36 usages**, tous sur des champs de saisie �
 ---
 
 ## 5. Ce qu'un écran doit avoir
+
+> **Cette section est prescriptive, pas descriptive** — contrairement aux §2 à §4, qui sont extraits du code. Aujourd'hui l'application compte **zéro `error.tsx`**, **zéro `loading.tsx`**, un seul usage d'`EmptyState`, et environ cent `fetch` sur cent trente qui ne testent pas `res.ok`. C'est l'écart le plus large entre cette charte et le dépôt, et c'est F‑01 à F‑05 du [rapport d'audit](./audit/2026-09-06-frontend-ux.md). À appliquer aux nouveaux écrans ; le rattrapage de l'existant est un chantier à part.
 
 Quatre états, pas un. Un écran qui n'a que le cas nominal n'est pas fini.
 

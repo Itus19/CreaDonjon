@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import Stepper from "@/components/shared/Stepper";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { MonsterCard } from "@/components/rules/blockContentRenderer";
 import ParticipantCharacterSheet from "./ParticipantCharacterSheet";
 import type { CombatDetail, ParticipantCharacteristics } from "@/src/server/services/combats";
@@ -71,6 +72,8 @@ export default function InitiativeTracker({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  /** Suppression d'un combat enregistre : `ConfirmDialog` est asynchrone, il faut donc retenir la cible entre le clic et la confirmation (meme motif que `pendingDeleteId` dans EntityBlocks.tsx). */
+  const [pendingDeleteCombatId, setPendingDeleteCombatId] = useState<string | null>(null);
   const [addMode, setAddMode] = useState<AddParticipantMode>("statblock");
   const [monsterSearch, setMonsterSearch] = useState("");
   const [customLabel, setCustomLabel] = useState("");
@@ -135,8 +138,10 @@ export default function InitiativeTracker({
     }
   }
 
-  async function deleteCombatEntry(combatId: string) {
-    if (!window.confirm("Supprimer définitivement ce combat ? Cette action est irréversible.")) return;
+  async function confirmDeleteCombat() {
+    const combatId = pendingDeleteCombatId;
+    setPendingDeleteCombatId(null);
+    if (!combatId) return;
     await fetch(`/api/campaigns/${campaignId}/combats/${combatId}`, { method: "DELETE" });
     setCombatsList((prev) => prev.filter((c) => c.id !== combatId));
     if (combat?.id === combatId) {
@@ -391,7 +396,16 @@ export default function InitiativeTracker({
         <p className="text-xs italic text-ink-muted">
           Ou composez une rencontre dans l&apos;onglet Rencontres et cliquez « Lancer le combat ».
         </p>
-        <SavedCombatsList combats={combatsList} activeCombatId={null} onSelect={loadCombat} onDelete={deleteCombatEntry} />
+        <SavedCombatsList combats={combatsList} activeCombatId={null} onSelect={loadCombat} onDelete={setPendingDeleteCombatId} />
+        <ConfirmDialog
+          open={pendingDeleteCombatId !== null}
+          title="Supprimer ce combat ?"
+          message="Le combat et ses participants sont définitivement retirés. Cette action est irréversible."
+          confirmLabel="Supprimer"
+          danger
+          onConfirm={confirmDeleteCombat}
+          onCancel={() => setPendingDeleteCombatId(null)}
+        />
       </div>
     );
   }
@@ -732,7 +746,17 @@ export default function InitiativeTracker({
         })}
       </div>
 
-      <SavedCombatsList combats={combatsList} activeCombatId={combat.id} onSelect={loadCombat} onDelete={deleteCombatEntry} />
+      <SavedCombatsList combats={combatsList} activeCombatId={combat.id} onSelect={loadCombat} onDelete={setPendingDeleteCombatId} />
+
+      <ConfirmDialog
+        open={pendingDeleteCombatId !== null}
+        title="Supprimer ce combat ?"
+        message="Le combat et ses participants sont définitivement retirés. Cette action est irréversible."
+        confirmLabel="Supprimer"
+        danger
+        onConfirm={confirmDeleteCombat}
+        onCancel={() => setPendingDeleteCombatId(null)}
+      />
     </div>
   );
 }

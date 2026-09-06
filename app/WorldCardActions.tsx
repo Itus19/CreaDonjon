@@ -10,6 +10,7 @@ import {
   type RenameCampaignState,
   type RenameWorldState,
 } from "@/app/actions";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 /**
  * Renommage (V2, retour utilisateur, ecran d'accueil) : "etes-vous sur ?"
@@ -234,6 +235,23 @@ export default function WorldCardActions({
   const router = useRouter();
   const [pending, setPending] = useState<"export" | "duplicate" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Export deja recu du serveur, en attente d'un accord sur ses
+   * avertissements (`ConfirmDialog` remplace `window.confirm`, asynchrone
+   * la ou l'ancien etait bloquant) : les donnees sont conservees telles
+   * quelles pour ne pas refaire l'aller-retour a la confirmation.
+   */
+  const [pendingExport, setPendingExport] = useState<{ data: unknown; warnings: string[]; suggestedFilename: string } | null>(null);
+
+  function downloadExport(payload: { data: unknown; suggestedFilename: string }) {
+    const blob = new Blob([JSON.stringify(payload.data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = payload.suggestedFilename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function handleExport(e: React.MouseEvent) {
     e.preventDefault();
@@ -246,17 +264,12 @@ export default function WorldCardActions({
       setError(body?.error ?? "Échec de l'export.");
       return;
     }
-    const { data, warnings, suggestedFilename } = await res.json();
-    if (warnings.length > 0 && !window.confirm(`${warnings.join("\n")}\n\nContinuer le téléchargement ?`)) {
+    const payload = (await res.json()) as { data: unknown; warnings: string[]; suggestedFilename: string };
+    if (payload.warnings.length > 0) {
+      setPendingExport(payload);
       return;
     }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = suggestedFilename;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadExport(payload);
   }
 
   async function handleDuplicate(e: React.MouseEvent) {
@@ -300,6 +313,19 @@ export default function WorldCardActions({
         {isOwner && <DeleteWorldSection worldId={worldId} worldName={worldName} />}
         {error && <p className="text-[11px] text-danger">{error}</p>}
       </div>
+
+      <ConfirmDialog
+        open={pendingExport !== null}
+        title="Exporter ce monde ?"
+        message={`${pendingExport?.warnings.join(" ") ?? ""} Continuer le téléchargement ?`}
+        confirmLabel="Télécharger"
+        onConfirm={() => {
+          const payload = pendingExport;
+          setPendingExport(null);
+          if (payload) downloadExport(payload);
+        }}
+        onCancel={() => setPendingExport(null)}
+      />
     </div>
   );
 }
