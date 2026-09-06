@@ -194,7 +194,7 @@ function DeleteWorldSection({ worldId, worldName }: { worldId: string; worldName
         <button
           type="submit"
           disabled={pending || confirmation !== worldName}
-          className="rounded-md bg-danger px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-danger/90 disabled:opacity-40"
+          className="rounded-md bg-danger px-3 py-1.5 text-sm font-medium text-accent-ink transition-colors hover:bg-danger/90 disabled:opacity-40"
         >
           {pending ? "Suppression..." : "Confirmer"}
         </button>

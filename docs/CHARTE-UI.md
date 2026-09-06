@@ -14,11 +14,11 @@ Trois causes, toutes mécaniques. Les connaître évite de chercher au mauvais e
 
 **a. `color-scheme` n'était pas déclaré — corrigé le 6 septembre.** Sans lui, le navigateur rend en clair tout ce qu'il dessine lui-même, quelles que soient les classes appliquées : le menu déroulant d'un `<select>`, les `<option>`, le sélecteur de date, les barres de défilement, le remplissage automatique de mot de passe. Aucune classe Tailwind ne peut corriger ça — c'est le navigateur qui peint, pas la feuille de style. `tokens.css` le déclare désormais par mode (`dark` pour dark/dim, `light` pour soft/light, `dark` pour le contraste élevé quel que soit le mode).
 
-**b. Un composant partagé dont le `className` *remplaçait* le style au lieu de s'y ajouter — corrigé le 6 septembre.** `Dropdown.tsx` s'écrivait `className ?? "…style par défaut…"` : un appelant qui passait `className="w-full"` pour régler une largeur perdait **tout** le style et récupérait un `<button>` nu, c'est-à-dire gris-blanc natif. Sur ses 67 appels, huit variantes du même style coexistaient, chacune recopiée à la main.
+**b. Un composant partagé dont le `className` *remplaçait* le style au lieu de s'y ajouter — corrigé le 6 septembre.** `Dropdown.tsx` s'écrivait `className ?? "…style par défaut…"` : un appelant qui passait `className="w-full"` pour régler une largeur perdait **tout** le style — bordure, fond, rembourrage, couleur — et se retrouvait avec un déclencheur sans cadre, impossible à distinguer du texte autour. Sur ses 67 appels, huit variantes du même style coexistaient, chacune recopiée à la main.
 
-**c. Il n'existe pas de composant `Button`.** Les quelque 700 boutons du dépôt sont stylés un par un. Un oubli de `border border-edge` ou de `text-ink` donne un bouton natif.
+**c. Un jeton de surface employé comme couleur de texte — corrigé le 6 septembre.** Cinq boutons à fond coloré portaient `text-panel` ou `text-white` au lieu de `text-accent-ink`. Voir la règle du §2.
 
-(a) et (b) sont corrigés. **Reste (c)** — voir §7.
+**Ce qui n'est PAS une cause, contrairement à ce que ce fichier affirmait d'abord :** un `<button>` sans classe de couleur n'est pas gris-blanc natif. Le reset de Tailwind v4 pose `background-color: transparent` et `color: inherit` sur `button`, `input`, `select` et `textarea` — vérifié dans la feuille compilée. Un bouton sans style est donc transparent et hérite la couleur de son parent, jamais le rendu natif du navigateur. **La seule cause réelle du blanc était (a).**
 
 ---
 
@@ -55,6 +55,17 @@ text-red-*  bg-blue-*  text-green-*   (toute couleur de la palette Tailwind)
 ```
 
 Une couleur qui manque s'ajoute à `tokens.css`, dans **les quatre modes plus le mode contraste élevé**, jamais en dur dans un composant.
+
+### La règle qui se rate le plus souvent : le texte sur un fond coloré
+
+Sur `bg-accent` ou `bg-danger`, la couleur du texte est **`text-accent-ink`**. Toujours.
+
+C'est le seul jeton conçu pour être posé sur un fond coloré : il vaut `oklch(0.15 …)` en mode sombre et `oklch(0.98 …)` en mode clair, donc il s'inverse avec le fond. Deux erreurs se ressemblent et donnent toutes deux un résultat acceptable *dans un seul mode* :
+
+- **`text-white`** — ne s'inverse jamais. Passable sur `danger` en mode sombre, délavé en mode clair.
+- **`text-panel`** — c'est une couleur de **surface**, et elle porte un canal alpha (0,82 à 0,88 selon le mode). Employée comme couleur de texte, elle donne un texte semi-transparent sur un fond plein.
+
+Les deux ont été trouvées et corrigées le 6 septembre (5 boutons). L'inverse — `bg-ink` avec `text-panel` — reste légitime : c'est une pastille volontairement inversée, pas un bouton (`DiceRollPanel.tsx:590`).
 
 ---
 
@@ -236,23 +247,46 @@ Un défaut du style de base a été corrigé au passage : il n'avait pas `inline
 
 Reste à faire, au fil des écrans qu'on rouvre : convertir les `triggerClassName` en props fermées (taille, forme) et les supprimer.
 
-### c. Écrire un composant `Button` — à faire
+### c. Les boutons hors charte — **corrigés le 6 septembre**
 
-`components/shared/Button.tsx`, avec des variantes fermées — `primary` · `secondary` · `ghost` · `danger`, et deux tailles. C'est ce qui rend la charte mécanique plutôt que déclarative : on ne peut plus oublier une classe si on ne l'écrit plus.
+Recensement des **370 `<button>`** du dépôt, par analyse des balises. Le résultat justifie de ne rien avoir refondu :
 
-À faire comme `Checkbox` et `Tabs` l'ont été : le composant d'abord, la conversion au fil des écrans qu'on rouvre, jamais une refonte de 700 boutons en une fois.
+| Contrôle | Hors charte |
+|---|---|
+| Couleur de la palette Tailwind au lieu d'un jeton | **2** |
+| Fond coloré sans couleur de texte adaptée | **3** |
+| `disabled` sans état visible | **2** |
+| Tout le reste | **conforme** |
 
-### d. Deux violations à corriger au passage — à faire
+Soit **7 boutons sur 370**. Les corrections :
 
-- `text-white` sur fond `danger` — `DeleteAccountSection.tsx:44` et `WorldCardActions.tsx:197`. Doit être `text-accent-ink`.
-- Deux couleurs hexadécimales — `MapWorkspace.tsx:262-263`, couleur par défaut d'une zone de carte. C'est de la donnée plus que du style, mais la valeur devrait venir d'un jeton.
+- `text-white` → `text-accent-ink` sur `bg-danger` — `DeleteAccountSection.tsx`, `WorldCardActions.tsx`.
+- `text-panel` → `text-accent-ink` sur `bg-accent`/`bg-danger` — `InitiativeTracker.tsx` (×2), `EncounterBuilder.tsx`. Voir la règle du §2 : `--panel` porte un alpha, ce n'est pas une couleur de texte.
+- `disabled:opacity-50` ajouté aux deux flèches « tour précédent / suivant » — `InitiativeTracker.tsx`. Elles étaient désactivées pendant un chargement sans que rien ne le montre : on cliquait, rien ne se passait.
+
+Une douzaine d'autres boutons à `bg-accent`/`bg-danger` ont été examinés et laissés tels quels — pastilles de fenêtre de 11 px, cases à cocher de 4 px, barres de chronologie de 6 px (aucun texte), et fonds à 10 % d'opacité (`bg-accent/10`) sur lesquels la couleur héritée est lisible.
+
+### d. Écrire un composant `Button` — à faire, sans urgence
+
+`components/shared/Button.tsx`, variantes fermées — `primary` · `secondary` · `ghost` · `danger`, deux tailles. C'est ce qui rendrait la charte mécanique plutôt que déclarative : on n'oublie pas une classe qu'on n'écrit plus.
+
+**Mais le recensement du §7c montre que ce n'est pas urgent** : 363 boutons sur 370 sont déjà conformes. Le gain n'est pas de réparer l'existant, il est d'empêcher la dérive future. À faire comme `Checkbox` et `Tabs` l'ont été — le composant d'abord, la conversion au fil des écrans qu'on rouvre, jamais une refonte en une passe.
+
+### e. Deux couleurs hexadécimales — à faire
+
+`MapWorkspace.tsx:262-263`, couleur par défaut d'une zone de carte. C'est de la donnée plus que du style, mais la valeur devrait venir d'un jeton.
 
 ---
 
 ## 8. Pourquoi cette charte existe
 
-Le dépôt est déjà très propre : sur ~36 000 lignes d'interface, **deux** `text-white` et **deux** couleurs hexadécimales. Les jetons sont respectés presque partout, et les motifs de boutons sont remarquablement homogènes.
+Le dépôt est déjà très propre, et le recensement l'a confirmé plutôt que l'inverse : **363 boutons conformes sur 370**, deux couleurs hexadécimales sur ~36 000 lignes d'interface, les jetons respectés presque partout.
 
-Le problème n'est donc pas l'indiscipline : c'est que la règle n'était écrite nulle part, et qu'un style recopié à la main dans 700 endroits dérive fatalement — un `py-1` devenu `py-1.5`, un `hover:bg-panel` devenu `hover:bg-panel-raised`, une classe oubliée qui laisse un bouton nu.
+Le problème n'était donc pas l'indiscipline, et il n'appelait pas une refonte. C'était deux choses, l'une invisible et l'autre silencieuse :
 
-Ce fichier rend la règle lisible. Le §7 la rendrait mécanique — et c'est ce qui marche vraiment, comme l'ont montré la règle ESLint sur `src/core` et celle sur le client `service_role`.
+- une propriété manquante (`color-scheme`) qui échappait à toute relecture de code, parce qu'elle ne se voit dans aucun composant ;
+- un style recopié à la main qui dérive lentement — un `py-1` devenu `py-1.5`, un jeton de surface employé comme couleur de texte.
+
+D'où la méthode suivie ici, et qui vaut pour la suite : **mesurer avant de refondre.** Le recensement des 370 boutons a pris dix minutes et a ramené le chantier de « 700 boutons à convertir » à « 7 boutons à corriger ».
+
+Ce fichier rend la règle lisible. Le §7d la rendrait mécanique — et c'est ce qui marche vraiment, comme l'ont montré la règle ESLint sur `src/core` et celle sur le client `service_role`.

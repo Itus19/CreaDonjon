@@ -448,7 +448,7 @@ export default function InitiativeTracker({
               type="button"
               onClick={beginCombat}
               disabled={busy || participants.length === 0}
-              className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-panel transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               ▶ Go
             </button>
@@ -457,7 +457,7 @@ export default function InitiativeTracker({
               type="button"
               onClick={endCombat}
               disabled={busy}
-              className="rounded-full bg-danger px-4 py-1.5 text-xs font-medium text-panel transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="rounded-full bg-danger px-4 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               ■ Stop
             </button>
@@ -469,14 +469,14 @@ export default function InitiativeTracker({
 
       {running && (
         <div className="flex items-center justify-between rounded-md border border-edge/60 bg-panel-sunken px-4 py-2">
-          <button type="button" onClick={() => moveTurn("previous")} disabled={busy} className="text-ink-muted hover:text-ink">
+          <button type="button" onClick={() => moveTurn("previous")} disabled={busy} className="text-ink-muted transition-opacity hover:text-ink disabled:opacity-50">
             ◁
           </button>
           <div className="text-center">
             <div className="text-[10px] uppercase tracking-wider text-ink-muted">Tour actuel</div>
             <div className="text-sm font-medium text-accent">{activeParticipant?.label ?? "—"}</div>
           </div>
-          <button type="button" onClick={() => moveTurn("next")} disabled={busy} className="text-ink-muted hover:text-ink">
+          <button type="button" onClick={() => moveTurn("next")} disabled={busy} className="text-ink-muted transition-opacity hover:text-ink disabled:opacity-50">
             ▷
           </button>
         </div>
