@@ -64,7 +64,7 @@ export default function CarteMapPanel({
           options={VISIBILITY_OPTIONS}
           onChange={(v) => patch({ visibilityLevel: v })}
           aria-label="Visibilité de la carte"
-          className="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink transition-colors hover:bg-panel"
+          triggerClassName="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink transition-colors hover:bg-panel"
         />
       </div>
       <div className="min-h-0 flex-1">

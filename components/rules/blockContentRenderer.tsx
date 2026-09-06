@@ -1141,7 +1141,7 @@ function BackgroundEquipmentCard({
                   options={dropdownOptions}
                   onChange={(key) => categoryChoice.onSelectKey(option.label, i, key)}
                   aria-label={item.resolved_label}
-                  className="rounded-md border border-edge px-2 py-0.5 text-sm text-ink outline-none transition-colors hover:bg-panel"
+                  triggerClassName="rounded-md border border-edge px-2 py-0.5 text-sm text-ink outline-none transition-colors hover:bg-panel"
                 />
               </div>
             );

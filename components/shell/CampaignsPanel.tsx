@@ -127,7 +127,7 @@ export default function CampaignsPanel({
               onChange={(v) => setMode(v as "campaign" | "solo")}
               options={modeOptions}
               aria-label="Mode de jeu"
-              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+              triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
             />
             <button
               type="submit"
@@ -159,7 +159,7 @@ export default function CampaignsPanel({
                   options={modeOptions}
                   disabled={pending}
                   aria-label="Mode de jeu"
-                  className="rounded-full border border-edge bg-transparent px-2 py-0.5 text-xs text-ink-muted outline-none transition-colors hover:bg-panel-raised disabled:opacity-50"
+                  triggerClassName="rounded-full border border-edge bg-transparent px-2 py-0.5 text-xs text-ink-muted outline-none transition-colors hover:bg-panel-raised disabled:opacity-50"
                 />
               </div>
               {expandedId === c.id && (

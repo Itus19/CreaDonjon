@@ -880,7 +880,7 @@ function SortableBlockCard({
               onSaveBlock(block.id, { visibilityLevel: v });
             }}
             aria-label="Visibilité du bloc"
-            className="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink transition-colors hover:bg-panel"
+            triggerClassName="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink transition-colors hover:bg-panel"
           />
           <button
             type="button"

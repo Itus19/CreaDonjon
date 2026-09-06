@@ -14,11 +14,11 @@ Trois causes, toutes mécaniques. Les connaître évite de chercher au mauvais e
 
 **a. `color-scheme` n'était pas déclaré — corrigé le 6 septembre.** Sans lui, le navigateur rend en clair tout ce qu'il dessine lui-même, quelles que soient les classes appliquées : le menu déroulant d'un `<select>`, les `<option>`, le sélecteur de date, les barres de défilement, le remplissage automatique de mot de passe. Aucune classe Tailwind ne peut corriger ça — c'est le navigateur qui peint, pas la feuille de style. `tokens.css` le déclare désormais par mode (`dark` pour dark/dim, `light` pour soft/light, `dark` pour le contraste élevé quel que soit le mode).
 
-**b. Un composant partagé dont le `className` *remplace* le style au lieu de s'y ajouter.** `Dropdown.tsx` s'écrit `className ?? "…style par défaut…"` : un appelant qui passe `className="w-full"` pour régler une largeur perd **tout** le style et récupère un `<button>` nu, c'est-à-dire gris-blanc natif. Sur ses 67 appels, huit variantes du même style coexistent, chacune recopiée à la main.
+**b. Un composant partagé dont le `className` *remplaçait* le style au lieu de s'y ajouter — corrigé le 6 septembre.** `Dropdown.tsx` s'écrivait `className ?? "…style par défaut…"` : un appelant qui passait `className="w-full"` pour régler une largeur perdait **tout** le style et récupérait un `<button>` nu, c'est-à-dire gris-blanc natif. Sur ses 67 appels, huit variantes du même style coexistaient, chacune recopiée à la main.
 
 **c. Il n'existe pas de composant `Button`.** Les quelque 700 boutons du dépôt sont stylés un par un. Un oubli de `border border-edge` ou de `text-ink` donne un bouton natif.
 
-(a) est corrigé. **La charte traite (b) et (c)** — voir §7 pour leur état.
+(a) et (b) sont corrigés. **Reste (c)** — voir §7.
 
 ---
 
@@ -114,7 +114,11 @@ rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outlin
 <Dropdown value={v} options={opts} onChange={setV} aria-label="Type de fiche" />
 ```
 
-**Ne passez `className` que pour la mise en page** — largeur, marge, `flex-1`, `shrink-0`. Dès qu'on y met une couleur, une bordure ou un rayon, on remplace le style du composant et on obtient un bouton nu. Si l'apparence par défaut ne convient pas, c'est le composant qu'il faut corriger, pas l'appel.
+**`className` ne sert qu'à la mise en page** — largeur, marge, `flex-1`, `shrink-0`. Il **s'ajoute** au style du composant, il ne le remplace jamais : un appel qui ne passe qu'une largeur garde donc bordure, fond et couleur de texte. N'y mettez ni couleur, ni bordure, ni rayon — ils entreraient en conflit avec le style de base, et c'est l'ordre des utilitaires dans la feuille générée qui trancherait, pas celui écrit dans l'attribut.
+
+Si l'apparence par défaut ne convient pas, **c'est le composant qu'on corrige** — en lui ajoutant une prop fermée (une taille, une forme) — jamais l'appel.
+
+`triggerClassName` existe encore et remplace tout le style : c'est le comportement hérité, porté par 32 appels antérieurs à cette charte. **Ne pas en écrire de nouveau.**
 
 ### Case à cocher
 
@@ -213,9 +217,24 @@ Les deux dernières règles gagnent sur les modes par l'ordre du document, à sp
 
 Effet de bord assumé et voulu : les barres de défilement, les sélecteurs de date et le remplissage automatique changent d'aspect partout.
 
-### b. Rendre le style de `Dropdown` non écrasable — à faire
+### b. Rendre le style de `Dropdown` non écrasable — **fait le 6 septembre**
 
-Aujourd'hui `className ?? "…"`. Il faudrait fusionner (style de base **puis** `className`), et n'accepter en `className` que de la mise en page. Les 67 appels peuvent rester tels quels le temps de la transition : leurs classes de style deviennent redondantes, pas nuisibles.
+Le composant portait `className ?? "…style…"` : passer une simple largeur effaçait tout le style et donnait un bouton nu.
+
+Deux props distinctes désormais, plutôt qu'une seule dont le rôle se devine :
+
+| Prop | Effet |
+|---|---|
+| `className` | **s'ajoute** au style de base — mise en page uniquement |
+| `triggerClassName` | **remplace** tout le style — hérité, à ne plus écrire |
+
+Le choix de deux noms explicites plutôt qu'une heuristique (« si `className` contient une couleur, alors… ») est délibéré : une règle qui se devine surprend, et le projet préfère les frontières visibles. `triggerClassName` rend la dette lisible, et il ne s'écrit pas par accident.
+
+**Conversion faite, à l'apparence strictement inchangée** : les 32 appels qui composaient déjà leur propre style ont été renommés en `triggerClassName` tels quels — un renommage mécanique, pas un remappage vers de nouvelles valeurs. Les 35 autres appels prennent le style de base comme avant.
+
+Un défaut du style de base a été corrigé au passage : il n'avait pas `inline-flex`, alors que le libellé porte `flex-1 truncate` et le chevron `shrink-0` — trois classes sans le moindre effet dans un `<button>` resté en `inline-block`. Le troncage d'un libellé long ne fonctionnait donc pas pour les appels sans style propre.
+
+Reste à faire, au fil des écrans qu'on rouvre : convertir les `triggerClassName` en props fermées (taille, forme) et les supprimer.
 
 ### c. Écrire un composant `Button` — à faire
 

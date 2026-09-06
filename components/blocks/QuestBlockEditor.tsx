@@ -24,7 +24,7 @@ function entityRefDropdown(
       value={value}
       options={[{ value: NO_ENTITY, label: "— aucune entité —" }, ...otherEntities.map((e) => ({ value: e.id, label: e.name }))]}
       onChange={(v) => onChange(v === NO_ENTITY ? null : { kind: "entity", id: v })}
-      className="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink-muted outline-none transition-colors hover:bg-panel-raised"
+      triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink-muted outline-none transition-colors hover:bg-panel-raised"
       aria-label="Entité liée"
     />
   );

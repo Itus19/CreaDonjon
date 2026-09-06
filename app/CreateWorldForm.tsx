@@ -56,7 +56,7 @@ export default function CreateWorldForm({
         onChange={setRulesetId}
         options={[{ value: "", label: "Ruleset…" }, ...officialRulesets.map((r) => ({ value: r.id, label: r.name }))]}
         aria-label="Ruleset"
-        className="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+        triggerClassName="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
       />
       <input type="hidden" name="mode" value={mode} />
       <Dropdown
@@ -64,7 +64,7 @@ export default function CreateWorldForm({
         onChange={(v) => setMode(v as "campaign" | "solo")}
         options={modeOptions}
         aria-label="Mode de jeu"
-        className="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+        triggerClassName="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
       />
       <button
         type="submit"

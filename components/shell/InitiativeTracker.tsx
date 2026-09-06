@@ -415,7 +415,7 @@ export default function InitiativeTracker({
           onChange={(status) => patchCombat({ status })}
           options={STATUS_OPTIONS}
           aria-label="Statut du combat"
-          className="rounded-full border border-edge px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted outline-none transition-colors hover:bg-panel-raised"
+          triggerClassName="rounded-full border border-edge px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted outline-none transition-colors hover:bg-panel-raised"
         />
         {running && <span className="text-[10px] uppercase tracking-wider text-ink-muted">· Round {combat.round}</span>}
         <div className="ml-auto flex items-center gap-2">

@@ -333,7 +333,7 @@ export default function EditEntityForm({
               value={kindDropdownValue}
               options={kindOptions}
               onChange={handleKindChange}
-              className="inline-flex min-w-0 items-center gap-1 overflow-hidden bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+              triggerClassName="inline-flex min-w-0 items-center gap-1 overflow-hidden bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
             />
           )}
         </div>
@@ -428,7 +428,7 @@ export default function EditEntityForm({
                   value={kindDropdownValue}
                   options={kindOptions}
                   onChange={handleKindChange}
-                  className="inline-flex min-w-0 items-center gap-1 overflow-hidden bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+                  triggerClassName="inline-flex min-w-0 items-center gap-1 overflow-hidden bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
                 />
               )}
             </div>

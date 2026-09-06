@@ -103,7 +103,7 @@ export default function MapPinEditorPopup({
               ]}
               onChange={setRefEntityId}
               aria-label="Fiche liée"
-              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
+              triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
             />
           </label>
         )}
@@ -116,7 +116,7 @@ export default function MapPinEditorPopup({
               options={SIZE_OPTIONS}
               onChange={(v) => setSize(v as MapPinSize)}
               aria-label="Taille de la punaise"
-              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
+              triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
             />
           </label>
           <label className="flex flex-1 flex-col gap-1 text-xs text-ink-muted">
@@ -126,7 +126,7 @@ export default function MapPinEditorPopup({
               options={VISIBILITY_OPTIONS}
               onChange={setVisibilityLevel}
               aria-label="Visibilité de la punaise"
-              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
+              triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
             />
           </label>
         </div>
@@ -139,7 +139,7 @@ export default function MapPinEditorPopup({
               options={[{ value: NO_LAYER, label: "Aucune couche" }, ...layers.map((l) => ({ value: l.id, label: l.name || "(sans nom)" }))]}
               onChange={setLayerId}
               aria-label="Couche de la punaise"
-              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
+              triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
             />
           </label>
         )}

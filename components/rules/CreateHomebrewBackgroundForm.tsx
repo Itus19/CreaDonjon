@@ -247,7 +247,7 @@ export default function CreateHomebrewBackgroundForm({
               value={value}
               options={ABILITIES.map((a) => ({ value: a, label: ABILITY_LABELS[a] }))}
               onChange={(v) => setAbilityAt(index, v as Ability)}
-              className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+              triggerClassName="flex-1 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
             />
           ))}
         </div>

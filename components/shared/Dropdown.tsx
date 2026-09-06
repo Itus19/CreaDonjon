@@ -9,6 +9,21 @@ export interface DropdownOption {
 }
 
 /**
+ * Style du declencheur (docs/CHARTE-UI.md §3, "Liste deroulante") —
+ * TOUJOURS applique, jamais remplace par `className`. C'est ce qui garantit
+ * qu'un appel ne peut plus produire un bouton nu, c'est-a-dire gris-blanc
+ * natif (retour utilisateur : "les boutons-listes toujours blancs").
+ *
+ * `inline-flex items-center` corrige un vrai defaut du style d'origine, qui
+ * n'en avait pas : le libelle porte `flex-1 truncate` et le chevron
+ * `shrink-0`, deux classes sans aucun effet dans un `<button>` reste en
+ * `inline-block` par defaut. Le troncage d'un libelle long ne fonctionnait
+ * donc pas pour les appels qui ne passaient pas leur propre style.
+ */
+const TRIGGER_CLASS =
+  "inline-flex items-center gap-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50";
+
+/**
  * Remplace `<select>` (V0-06b) : memes jetons que le reste de la coquille,
  * un menu en portail pour ne jamais etre coupe par un conteneur au scroll
  * (reprend le pattern de l'ancienne application, `master`,
@@ -19,13 +34,33 @@ export default function Dropdown({
   options,
   onChange,
   className,
+  triggerClassName,
   disabled,
   "aria-label": ariaLabel,
 }: {
   value: string;
   options: DropdownOption[];
   onChange: (value: string) => void;
+  /**
+   * MISE EN PAGE uniquement — largeur, `flex-1`, `shrink-0`, marges.
+   * S'AJOUTE a `TRIGGER_CLASS`, ne le remplace jamais : un appel qui ne
+   * passe qu'une largeur garde donc bordure, fond et couleur de texte.
+   * Ne pas y mettre de couleur, de bordure ni de rayon — ils entreraient
+   * en conflit avec le style de base, et c'est l'ordre des utilitaires
+   * dans la feuille generee qui trancherait, pas celui ecrit ici.
+   */
   className?: string;
+  /**
+   * HERITE — remplace ENTIEREMENT le style du declencheur, y compris
+   * bordure, fond et couleur. C'etait le comportement de `className` avant
+   * (V2, correctif de charte) : les appels qui composaient deja leur propre
+   * style ont ete renommes ici tels quels, a l'apparence strictement
+   * inchangee. Ne pas en ecrire de nouveau — le besoin d'une variante se
+   * traite en ajoutant une prop fermee a ce composant (une taille, une
+   * forme), jamais en redonnant a chaque appelant la charge de tout
+   * redecrire.
+   */
+  triggerClassName?: string;
   disabled?: boolean;
   "aria-label"?: string;
 }) {
@@ -87,10 +122,7 @@ export default function Dropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         title={current?.label ?? value}
-        className={
-          className ??
-          "rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
-        }
+        className={triggerClassName ?? `${TRIGGER_CLASS}${className ? ` ${className}` : ""}`}
       >
         <span className="min-w-0 flex-1 truncate">{current?.label ?? value}</span>
         <span className="shrink-0 text-ink-muted">▾</span>

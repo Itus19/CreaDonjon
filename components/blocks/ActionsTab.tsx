@@ -206,7 +206,7 @@ function PreparedSpellCard({
                   options={validSlotLevels.map((l) => ({ value: String(l), label: `Niv. ${l}` }))}
                   onChange={(v) => setSelectedLevel(Number(v))}
                   aria-label={`Emplacement pour ${label}`}
-                  className="rounded-md border border-edge px-2 py-0.5 text-xs text-ink outline-none transition-colors hover:bg-panel"
+                  triggerClassName="rounded-md border border-edge px-2 py-0.5 text-xs text-ink outline-none transition-colors hover:bg-panel"
                 />
               )}
               <ActionButton
