@@ -12,13 +12,13 @@ Court volontairement. Une charte de 800 lignes est une charte qu'on cesse de lir
 
 Trois causes, toutes mécaniques. Les connaître évite de chercher au mauvais endroit.
 
-**a. `color-scheme` n'est pas déclaré.** Sans lui, le navigateur rend en clair tout ce qu'il dessine lui-même, quelles que soient les classes appliquées : le menu déroulant d'un `<select>`, les `<option>`, le sélecteur de date, les barres de défilement, le remplissage automatique de mot de passe. Aucune classe Tailwind ne peut corriger ça — c'est le navigateur qui peint, pas la feuille de style.
+**a. `color-scheme` n'était pas déclaré — corrigé le 6 septembre.** Sans lui, le navigateur rend en clair tout ce qu'il dessine lui-même, quelles que soient les classes appliquées : le menu déroulant d'un `<select>`, les `<option>`, le sélecteur de date, les barres de défilement, le remplissage automatique de mot de passe. Aucune classe Tailwind ne peut corriger ça — c'est le navigateur qui peint, pas la feuille de style. `tokens.css` le déclare désormais par mode (`dark` pour dark/dim, `light` pour soft/light, `dark` pour le contraste élevé quel que soit le mode).
 
 **b. Un composant partagé dont le `className` *remplace* le style au lieu de s'y ajouter.** `Dropdown.tsx` s'écrit `className ?? "…style par défaut…"` : un appelant qui passe `className="w-full"` pour régler une largeur perd **tout** le style et récupère un `<button>` nu, c'est-à-dire gris-blanc natif. Sur ses 67 appels, huit variantes du même style coexistent, chacune recopiée à la main.
 
 **c. Il n'existe pas de composant `Button`.** Les quelque 700 boutons du dépôt sont stylés un par un. Un oubli de `border border-edge` ou de `text-ink` donne un bouton natif.
 
-**La charte traite (b) et (c). Elle ne peut rien contre (a)** — voir §7.
+(a) est corrigé. **La charte traite (b) et (c)** — voir §7 pour leur état.
 
 ---
 
@@ -195,32 +195,35 @@ Quatre états, pas un. Un écran qui n'a que le cas nominal n'est pas fini.
 
 ---
 
-## 7. Ce qui n'est pas encore fait, et qui doit l'être
+## 7. L'état des correctifs structurels
 
-Trois correctifs structurels, tous constatés en écrivant ce fichier. **Aucun n'a été appliqué** — chacun change l'apparence existante, ce qui demande un accord explicite (`CLAUDE.md`, « le code fait foi »).
+### a. Déclarer `color-scheme` — **fait le 6 septembre**
 
-### a. Déclarer `color-scheme` — une ligne, la cause racine
+La cause racine. `src/styles/tokens.css` déclare désormais `color-scheme` dans chaque bloc de mode, au plus près de la palette qu'il accompagne :
 
-Sans ça, les menus de `<select>`, les sélecteurs de date, les barres de défilement et le remplissage automatique restent clairs quel que soit le mode. Dans `tokens.css`, à côté des modes :
+| Mode | Valeur |
+|---|---|
+| `dark`, `dim` (et `:root` sans attribut) | `dark` |
+| `soft`, `light` | `light` |
+| `[data-contrast="high"]` et `prefers-contrast: more` | `dark` — la palette de contraste élevé est sombre quel que soit le mode choisi |
 
-```css
-:root, :root[data-mode="dark"], :root[data-mode="dim"] { color-scheme: dark; }
-:root[data-mode="soft"], :root[data-mode="light"]      { color-scheme: light; }
-```
+Déclaré aussi sur `.wiki-bg-scope[data-mode=…]`, qui peut porter un mode différent de la racine (fond de page wiki, V2-G13) : ses contrôles suivent alors sa propre palette, pas celle de l'application autour.
 
-Effet de bord assumé : les barres de défilement et les contrôles natifs restants changent d'aspect partout. C'est le but.
+Les deux dernières règles gagnent sur les modes par l'ordre du document, à spécificité égale — vérifié dans le CSS compilé, pas seulement raisonné.
 
-### b. Rendre le style de `Dropdown` non écrasable
+Effet de bord assumé et voulu : les barres de défilement, les sélecteurs de date et le remplissage automatique changent d'aspect partout.
+
+### b. Rendre le style de `Dropdown` non écrasable — à faire
 
 Aujourd'hui `className ?? "…"`. Il faudrait fusionner (style de base **puis** `className`), et n'accepter en `className` que de la mise en page. Les 67 appels peuvent rester tels quels le temps de la transition : leurs classes de style deviennent redondantes, pas nuisibles.
 
-### c. Écrire un composant `Button`
+### c. Écrire un composant `Button` — à faire
 
 `components/shared/Button.tsx`, avec des variantes fermées — `primary` · `secondary` · `ghost` · `danger`, et deux tailles. C'est ce qui rend la charte mécanique plutôt que déclarative : on ne peut plus oublier une classe si on ne l'écrit plus.
 
 À faire comme `Checkbox` et `Tabs` l'ont été : le composant d'abord, la conversion au fil des écrans qu'on rouvre, jamais une refonte de 700 boutons en une fois.
 
-### d. Deux violations à corriger au passage
+### d. Deux violations à corriger au passage — à faire
 
 - `text-white` sur fond `danger` — `DeleteAccountSection.tsx:44` et `WorldCardActions.tsx:197`. Doit être `text-accent-ink`.
 - Deux couleurs hexadécimales — `MapWorkspace.tsx:262-263`, couleur par défaut d'une zone de carte. C'est de la donnée plus que du style, mais la valeur devrait venir d'un jeton.
