@@ -277,17 +277,19 @@ export default function CreateHomebrewWeaponForm({
             {t("categorieDArme")}
             <AiBadge shown={aiFilledFields.has("category")} label={t("champRempliParIA")} />
           </span>
-          <select
+          <Dropdown
             value={category}
-            onChange={(e) => {
-              setCategory(e.target.value as "simple" | "martial");
+            onChange={(v) => {
+              setCategory(v as "simple" | "martial");
               clearAiBadge("category");
             }}
-            className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-          >
-            <option value="simple">{t("armeSimple")}</option>
-            <option value="martial">{t("armeDeGuerre")}</option>
-          </select>
+            size="md"
+            aria-label={t("categorieDArme")}
+            options={[
+              { value: "simple", label: t("armeSimple") },
+              { value: "martial", label: t("armeDeGuerre") },
+            ]}
+          />
         </label>
         <div className="flex items-end pb-2">
           <Checkbox
@@ -355,20 +357,17 @@ export default function CreateHomebrewWeaponForm({
             {t("degatsFaces")}
             <AiBadge shown={aiFilledFields.has("diceFaces")} label={t("champRempliParIA")} />
           </span>
-          <select
-            value={diceFaces}
-            onChange={(e) => {
-              setDiceFaces(Number(e.target.value));
+          <Dropdown
+            value={String(diceFaces)}
+            onChange={(v) => {
+              setDiceFaces(Number(v));
               clearAiBadge("diceFaces");
             }}
-            className="w-20 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-          >
-            {DICE_FACES.map((f) => (
-              <option key={f} value={f}>
-                d{f}
-              </option>
-            ))}
-          </select>
+            size="md"
+            className="w-20"
+            aria-label={t("degatsFaces")}
+            options={DICE_FACES.map((f) => ({ value: String(f), label: `d${f}` }))}
+          />
         </label>
         <label className="flex flex-1 flex-col gap-1 text-sm text-ink">
           <span className="flex items-center gap-1.5">
@@ -418,20 +417,17 @@ export default function CreateHomebrewWeaponForm({
             </label>
             <label className="flex flex-col gap-1 text-sm text-ink">
               {t("degatsVersatileFaces")}
-              <select
-                value={versatileDiceFaces}
-                onChange={(e) => {
-                  setVersatileDiceFaces(Number(e.target.value));
+              <Dropdown
+                value={String(versatileDiceFaces)}
+                onChange={(v) => {
+                  setVersatileDiceFaces(Number(v));
                   clearAiBadge("versatile");
                 }}
-                className="w-20 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-              >
-                {DICE_FACES.map((f) => (
-                  <option key={f} value={f}>
-                    d{f}
-                  </option>
-                ))}
-              </select>
+                size="md"
+                className="w-20"
+                aria-label={t("degatsVersatileFaces")}
+                options={DICE_FACES.map((f) => ({ value: String(f), label: `d${f}` }))}
+              />
             </label>
           </div>
         )}
@@ -499,20 +495,16 @@ export default function CreateHomebrewWeaponForm({
               }}
               className="w-20 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
             />
-            <select
+            <Dropdown
               value={costUnit}
-              onChange={(e) => {
-                setCostUnit(e.target.value as (typeof CURRENCY_UNITS)[number]);
+              onChange={(v) => {
+                setCostUnit(v as (typeof CURRENCY_UNITS)[number]);
                 clearAiBadge("cost");
               }}
-              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-            >
-              {CURRENCY_UNITS.map((u) => (
-                <option key={u} value={u}>
-                  {CURRENCY_LABELS_FR[u]}
-                </option>
-              ))}
-            </select>
+              size="md"
+              aria-label={t("cout")}
+              options={CURRENCY_UNITS.map((u) => ({ value: u, label: CURRENCY_LABELS_FR[u] }))}
+            />
           </div>
         </label>
       </div>

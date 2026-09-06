@@ -13,6 +13,7 @@ import { itemLabel, itemRef } from "./inventoryItem";
 import ItemAutocomplete from "./ItemAutocomplete";
 import Stepper from "@/components/shared/Stepper";
 import { ARMOR_CATEGORY_LABELS_FR, CURRENCY_LABELS_FR, WEAPON_PROPERTY_LABELS_FR } from "@/src/i18n/fr";
+import Dropdown from "@/components/shared/Dropdown";
 
 /**
  * Bouton d'action a trois lignes (V1-C12, sur retour utilisateur) : verbe
@@ -598,21 +599,15 @@ export default function InventoryPanel({
             ))}
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <select
+            <Dropdown
               value={coinType}
-              onChange={(e) => {
-                setCoinType(e.target.value as CoinType);
+              onChange={(v) => {
+                setCoinType(v as CoinType);
                 setCoinError(false);
               }}
-              title="Type de pièce"
-              className="rounded-md border border-edge bg-transparent py-1 pl-1 pr-0 text-xs text-ink outline-none"
-            >
-              {CURRENCY_ORDER.map((coin) => (
-                <option key={coin} value={coin}>
-                  {CURRENCY_LABELS_FR[coin]}
-                </option>
-              ))}
-            </select>
+              aria-label="Type de pièce"
+              options={CURRENCY_ORDER.map((coin) => ({ value: coin, label: CURRENCY_LABELS_FR[coin] }))}
+            />
             <Stepper onIncrement={() => applyCoinDelta(1)} onDecrement={() => applyCoinDelta(-1)} incrementLabel="Ajouter" decrementLabel="Retirer" className="w-12">
               <input
                 type="number"

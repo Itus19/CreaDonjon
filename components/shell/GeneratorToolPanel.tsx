@@ -14,6 +14,7 @@ import { formatTableEntryPrice } from "@/src/i18n/fr";
 import RandomTableBlockEditor from "@/components/blocks/RandomTableBlockEditor";
 import RuleEntryAutocomplete from "@/components/blocks/RuleEntryAutocomplete";
 import { useOpenEntityLink } from "./useOpenEntityLink";
+import Dropdown from "@/components/shared/Dropdown";
 
 interface DrawResponse {
   text: string;
@@ -689,18 +690,16 @@ export default function GeneratorToolPanel({ worldSlug, tools }: { worldSlug: st
               {activeTool.variants.map((axis) => (
                 <label key={axis.key} className="flex flex-col gap-0.5 text-xs text-ink-muted">
                   {axis.label}
-                  <select
+                  <Dropdown
                     value={variantByTool[activeTool.key]?.[axis.key] ?? axis.options[0]?.key ?? ""}
-                    onChange={(e) => updateVariant(activeTool.key, { [axis.key]: e.target.value })}
-                    className="rounded-md border border-edge bg-panel-sunken px-2 py-1 text-sm text-ink"
-                  >
-                    {axis.allowRandom && <option value={RANDOM_VARIANT_VALUE}>Aléatoire</option>}
-                    {axis.options.map((o) => (
-                      <option key={o.key} value={o.key}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => updateVariant(activeTool.key, { [axis.key]: v })}
+                    size="md"
+                    aria-label={axis.label}
+                    options={[
+                      ...(axis.allowRandom ? [{ value: RANDOM_VARIANT_VALUE, label: "Aléatoire" }] : []),
+                      ...axis.options.map((o) => ({ value: o.key, label: o.label })),
+                    ]}
+                  />
                 </label>
               ))}
             </div>

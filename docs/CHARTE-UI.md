@@ -127,6 +127,8 @@ rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outlin
 <Dropdown value={v} options={opts} onChange={setV} aria-label="Type de fiche" />
 ```
 
+Deux props règlent l'apparence, et elles suffisent : `size` (`sm` par défaut pour une barre d'outils dense, `md` pour un champ de formulaire). Un `<label>` qui l'enveloppe ne lui donne **pas** de nom accessible — c'est un `<button>`, pas un contrôle de formulaire : `aria-label` est donc obligatoire dès qu'il n'y a pas de libellé lisible dans le déclencheur lui-même.
+
 **`className` ne sert qu'à la mise en page** — largeur, marge, `flex-1`, `shrink-0`. Il **s'ajoute** au style du composant, il ne le remplace jamais : un appel qui ne passe qu'une largeur garde donc bordure, fond et couleur de texte. N'y mettez ni couleur, ni bordure, ni rayon — ils entreraient en conflit avec le style de base, et c'est l'ordre des utilitaires dans la feuille générée qui trancherait, pas celui écrit dans l'attribut.
 
 Si l'apparence par défaut ne convient pas, **c'est le composant qu'on corrige** — en lui ajoutant une prop fermée (une taille, une forme) — jamais l'appel.
@@ -283,25 +285,28 @@ Une douzaine d'autres boutons à `bg-accent`/`bg-danger` ont été examinés et 
 
 **Mais le recensement du §7c montre que ce n'est pas urgent** : 363 boutons sur 370 sont déjà conformes. Le gain n'est pas de réparer l'existant, il est d'empêcher la dérive future. À faire comme `Checkbox` et `Tabs` l'ont été — le composant d'abord, la conversion au fil des écrans qu'on rouvre, jamais une refonte en une passe.
 
-### e. Les contrôles natifs qui subsistent — à faire
+### e. Les contrôles natifs — **convertis le 6 septembre**
 
-Recensé le 6 septembre. Ces trois-là contredisent une règle explicite du §3, et aucun n'était listé avant ce contrôle.
+Recensés, puis tous convertis sauf ceux de `/spike-solo` (écran jetable du spike V2‑S1, `docs/adr/0009`, hors périmètre assumé).
 
-| Contrôle natif | Nombre | Où |
+| Contrôle natif | Converti | Restant |
 |---|---|---|
-| `<select>` | **8** (+2 dans `/spike-solo`, écran jetable, hors périmètre) | `CreateHomebrewWeaponForm` (4), `GeneratorToolPanel`, `FormulaSandbox`, `RandomTableBlockEditor`, `InventoryPanel` |
-| `<input type="checkbox">` | **12** | `GameDateInput`, `CalendarSettingsPanel`, `RandomTableBlockEditor`, `QuestBlockEditor`, `SpellcastingBlockEditor`, `ImageBlockEditor`, `EntityHistoryPanel`, `MapRegionEditorPopup`, les trois tables de psyché |
-| `window.confirm` | **3** | `InitiativeTracker:139`, `AdminPanel:88`, `WorldCardActions:250` |
+| `<select>` → `Dropdown` | **8** | 2, dans `/spike-solo` |
+| `<input type="checkbox">` → `Checkbox` | **11** | 1, dans `/spike-solo` |
+| `window.confirm` → `ConfirmDialog` | **3** | 0 |
 
-**Depuis le correctif `color-scheme`, aucun n'est plus blanc** — le navigateur les peint désormais dans la teinte du mode. Ils restent hors charte pour le reste : ni le rayon, ni la couleur d'accent du projet (une case cochée sort dans l'accent du système, pas dans l'ambre de `--accent`), et le menu d'un `<select>` ne peut pas s'ouvrir en portail, donc il se fait couper par un conteneur défilant.
+Depuis le correctif `color-scheme`, aucun n'était plus blanc — mais une case cochée sortait dans l'accent du **système** au lieu de l'ambre de `--accent`, et le menu d'un `<select>` ne peut pas s'ouvrir en portail, donc un conteneur défilant le coupe.
 
-Les trois `window.confirm` sont les plus gênants des trois lots, parce qu'ils gardent les gestes les plus destructeurs — supprimer un combat, supprimer le compte d'un ami, lancer un export volumineux — derrière la boîte du navigateur, qu'on valide sans lire. `ConfirmDialog` existe et prend déjà une variante `danger`.
+Deux composants partagés ont gagné ce qui leur manquait pour absorber ces cas, plutôt que de laisser les appels redécrire un style :
 
-Aucun n'est urgent. À convertir au fil des écrans qu'on rouvre.
+- **`Dropdown` a une prop `size`** (`sm` par défaut, `md` pour un champ de formulaire). C'est exactement ce que le §3 prescrit : quand l'apparence par défaut ne convient pas, on corrige le composant, jamais l'appel.
+- **`Checkbox` accepte `aria-label`.** Deux cases n'ont pas de libellé visible — un objectif de quête, la sélection d'une révision — et `role="checkbox"` sans nom accessible ne dit rien à un lecteur d'écran.
 
-### f. Deux couleurs hexadécimales — à faire
+### f. Deux couleurs hexadécimales — **traité le 6 septembre**
 
-`MapWorkspace.tsx:262-263`, couleur par défaut d'une zone de carte. C'est de la donnée plus que du style, mais la valeur devrait venir d'un jeton.
+Couleur par défaut d'une zone de carte. **La charte les qualifiait de violation, à tort** : `zMapRegionColor` impose `#RRGGBB` pour le stockage en base et le rendu SVG — c'est une *donnée*, pas un style, et le §2 vise le style. Un jeton CSS n'y aurait aucun sens : il changerait rétroactivement la couleur de zones déjà enregistrées, et le sélecteur de couleur ne saurait pas quoi afficher.
+
+Le vrai défaut était une **duplication** — la même valeur écrite à deux endroits sans lien entre eux, le schéma de création et le composant de tracé. Nommée une seule fois dans `src/core/schemas/mapRegion.ts`, à côté du format qu'elle respecte.
 
 ### g. Les tailles sous `text-xs` — dette de fond, pas un chantier
 

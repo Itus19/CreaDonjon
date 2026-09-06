@@ -20,8 +20,20 @@ export interface DropdownOption {
  * `inline-block` par defaut. Le troncage d'un libelle long ne fonctionnait
  * donc pas pour les appels qui ne passaient pas leur propre style.
  */
-const TRIGGER_CLASS =
-  "inline-flex items-center gap-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50";
+const TRIGGER_BASE =
+  "inline-flex items-center gap-1 rounded-md border border-edge bg-transparent text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50";
+
+/**
+ * Deux tailles, fermees — la prop que docs/CHARTE-UI.md §3 prescrit
+ * lorsque l'apparence par defaut ne convient pas ("c'est le composant
+ * qu'on corrige, jamais l'appel"). `md` est le gabarit des champs de
+ * formulaire du depot (`px-2 py-1.5 text-sm`, cf. la recette "Champ de
+ * saisie"), `sm` celui des barres d'outils denses.
+ */
+const TRIGGER_SIZE = {
+  sm: "px-2 py-1 text-xs",
+  md: "px-2 py-1.5 text-sm",
+} as const;
 
 /**
  * Remplace `<select>` (V0-06b) : memes jetons que le reste de la coquille,
@@ -35,6 +47,7 @@ export default function Dropdown({
   onChange,
   className,
   triggerClassName,
+  size = "sm",
   disabled,
   "aria-label": ariaLabel,
 }: {
@@ -43,7 +56,7 @@ export default function Dropdown({
   onChange: (value: string) => void;
   /**
    * MISE EN PAGE uniquement — largeur, `flex-1`, `shrink-0`, marges.
-   * S'AJOUTE a `TRIGGER_CLASS`, ne le remplace jamais : un appel qui ne
+   * S'AJOUTE a `TRIGGER_BASE`, ne le remplace jamais : un appel qui ne
    * passe qu'une largeur garde donc bordure, fond et couleur de texte.
    * Ne pas y mettre de couleur, de bordure ni de rayon — ils entreraient
    * en conflit avec le style de base, et c'est l'ordre des utilitaires
@@ -61,6 +74,8 @@ export default function Dropdown({
    * redecrire.
    */
   triggerClassName?: string;
+  /** `sm` (defaut) pour une barre d'outils dense, `md` pour un champ de formulaire. */
+  size?: keyof typeof TRIGGER_SIZE;
   disabled?: boolean;
   "aria-label"?: string;
 }) {
@@ -122,7 +137,7 @@ export default function Dropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         title={current?.label ?? value}
-        className={triggerClassName ?? `${TRIGGER_CLASS}${className ? ` ${className}` : ""}`}
+        className={triggerClassName ?? `${TRIGGER_BASE} ${TRIGGER_SIZE[size]}${className ? ` ${className}` : ""}`}
       >
         <span className="min-w-0 flex-1 truncate">{current?.label ?? value}</span>
         <span className="shrink-0 text-ink-muted">▾</span>
