@@ -92,7 +92,7 @@ C'est développé plus loin dans la partie II (« Toute action mérite un accus�
 
 ### F‑06 · `EmptyState` existe mais n'est presque pas utilisé — **Faible · Dette**
 
-`components/shell/EmptyState.tsx` porte en commentaire la bonne idée : *« un écran vide est une invitation à agir, pas un message d'erreur »*. Il est utilisé dans **2 fichiers** sur 179.
+`components/shell/EmptyState.tsx` porte en commentaire la bonne idée : *« un écran vide est une invitation à agir, pas un message d'erreur »*. Il est utilisé par **un seul écran** (`app/m/[worldSlug]/(monde)/page.tsx`), sur 179 composants.
 
 Ailleurs, le vide est traité par une ligne de texte grise : `EntityBlocks.tsx:715` — *« Aucun bloc. Utilisez la barre ci-dessous pour en ajouter. »* en `text-xs italic text-ink-muted`, c'est-à-dire dans le style le moins visible du système. Le premier écran qu'une personne voit en créant un monde est un écran vide ; c'est le moment où elle a le plus besoin d'être guidée, et c'est celui où l'application en dit le moins.
 
@@ -392,7 +392,7 @@ Une remarque pour équilibrer : tout n'est pas à changer, et certaines choses s
 | F‑16 | Moyen | Dette | Chargement en cascade dans 40 composants |
 | F‑18 | Moyen | Dette | Trois mécanismes de libellés concurrents |
 | F‑20 | Moyen | Dette | Sauvegarde implicite sans indication visible |
-| F‑06 | Faible | Dette | `EmptyState` utilisé 2 fois sur 179 composants |
+| F‑06 | Faible | Dette | `EmptyState` utilisé par un seul écran sur 179 composants |
 | F‑07 | Faible | Défaut | 3 `confirm()` natifs sur des actions destructives |
 | F‑13 | Faible | Dette | Onglets non sémantiques |
 | F‑17 | Faible | Défaut | Cache client non cloisonné par compte (`viewAs`) |

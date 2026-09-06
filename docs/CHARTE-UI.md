@@ -157,17 +157,22 @@ rounded-full border border-edge px-2 py-0.5 text-xs text-ink-muted
 
 **Toujours `components/shell/EmptyState.tsx`.** Un écran vide est une invitation à agir, avec un bouton — pas une ligne de texte gris en italique.
 
+Le composant existe et **un seul écran l'utilise** (`(monde)/page.tsx`). Partout ailleurs le vide est traité par une phrase en `text-xs italic text-ink-muted`, c'est-à-dire dans le style le moins visible du système, au moment précis où l'on a le plus besoin d'être guidé.
+
 ---
 
 ## 4. Rayons, densité, mouvement
 
-| Élément | Rayon |
-|---|---|
-| Bouton, puce, onglet | `rounded-full` |
-| Champ, menu, petit panneau | `rounded-md` |
-| Carte, modale | `rounded-lg` |
+| Élément | Rayon | Usages |
+|---|---|---|
+| Bouton, puce, onglet | `rounded-full` | 285 |
+| Champ, menu, petit panneau | `rounded-md` | 302 |
+| Carte, modale | `rounded-lg` | 39 |
+| Grande surface : canevas, portrait, encart d'état vide | `rounded-xl` / `rounded-2xl` | 16 |
 
-Ne pas utiliser `rounded` nu ni `rounded-sm`/`rounded-xl` : trois rayons suffisent, et ils viennent des jetons `--r-sm`/`--r-md`/`--r-lg`.
+Les trois premiers viennent des jetons `--r-sm`/`--r-md`/`--r-lg`. Le quatrième est délibéré et couvre les grandes surfaces — un canevas de généalogie, un portrait, un encart en pointillés : un rayon de 10 px sur un bloc de 400 px se lit comme un angle droit. **Ne pas « corriger » ces seize-là vers `rounded-lg`.**
+
+Seul écart réel : **`rounded` nu, 36 usages**, tous sur des champs de saisie — c'est-à-dire exactement l'usage de `rounded-md`, avec un rayon un peu plus petit. Une variante involontaire, à faire converger au fil des écrans qu'on rouvre, jamais en une passe.
 
 **Taille de texte** — `text-sm` (14 px) est le défaut de l'interface, `text-xs` (12 px) pour ce qui est dense et secondaire, `text-base` (16 px) pour ce qui se lit vraiment (contenu de bloc, narration).
 **Rien en dessous de `text-xs`.** Les `text-[10px]` et `text-[9px]` présents dans le dépôt sont de la dette, pas un exemple à suivre — ne pas en ajouter.
@@ -272,9 +277,29 @@ Une douzaine d'autres boutons à `bg-accent`/`bg-danger` ont été examinés et 
 
 **Mais le recensement du §7c montre que ce n'est pas urgent** : 363 boutons sur 370 sont déjà conformes. Le gain n'est pas de réparer l'existant, il est d'empêcher la dérive future. À faire comme `Checkbox` et `Tabs` l'ont été — le composant d'abord, la conversion au fil des écrans qu'on rouvre, jamais une refonte en une passe.
 
-### e. Deux couleurs hexadécimales — à faire
+### e. Les contrôles natifs qui subsistent — à faire
+
+Recensé le 6 septembre. Ces trois-là contredisent une règle explicite du §3, et aucun n'était listé avant ce contrôle.
+
+| Contrôle natif | Nombre | Où |
+|---|---|---|
+| `<select>` | **8** (+2 dans `/spike-solo`, écran jetable, hors périmètre) | `CreateHomebrewWeaponForm` (4), `GeneratorToolPanel`, `FormulaSandbox`, `RandomTableBlockEditor`, `InventoryPanel` |
+| `<input type="checkbox">` | **12** | `GameDateInput`, `CalendarSettingsPanel`, `RandomTableBlockEditor`, `QuestBlockEditor`, `SpellcastingBlockEditor`, `ImageBlockEditor`, `EntityHistoryPanel`, `MapRegionEditorPopup`, les trois tables de psyché |
+| `window.confirm` | **3** | `InitiativeTracker:139`, `AdminPanel:88`, `WorldCardActions:250` |
+
+**Depuis le correctif `color-scheme`, aucun n'est plus blanc** — le navigateur les peint désormais dans la teinte du mode. Ils restent hors charte pour le reste : ni le rayon, ni la couleur d'accent du projet (une case cochée sort dans l'accent du système, pas dans l'ambre de `--accent`), et le menu d'un `<select>` ne peut pas s'ouvrir en portail, donc il se fait couper par un conteneur défilant.
+
+Les trois `window.confirm` sont les plus gênants des trois lots, parce qu'ils gardent les gestes les plus destructeurs — supprimer un combat, supprimer le compte d'un ami, lancer un export volumineux — derrière la boîte du navigateur, qu'on valide sans lire. `ConfirmDialog` existe et prend déjà une variante `danger`.
+
+Aucun n'est urgent. À convertir au fil des écrans qu'on rouvre.
+
+### f. Deux couleurs hexadécimales — à faire
 
 `MapWorkspace.tsx:262-263`, couleur par défaut d'une zone de carte. C'est de la donnée plus que du style, mais la valeur devrait venir d'un jeton.
+
+### g. Les tailles sous `text-xs` — dette de fond, pas un chantier
+
+**209 occurrences** : `text-[10px]` (170), `text-[9px]` (22), `text-[11px]` (17). C'est F‑11 du rapport d'audit, et la réponse y est développée : figer une échelle et l'appliquer aux nouveaux écrans, convertir les anciens quand on les rouvre. Surtout pas une passe globale.
 
 ---
 
