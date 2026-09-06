@@ -5,6 +5,7 @@ import type { RandomTableBlockData } from "@/src/core/schemas/blocks/randomTable
 import type { TableEntry, TableEntryPrice } from "@/src/core/tables/types";
 import { CURRENCY_ORDER, type CoinType } from "@/src/core/rules/currency";
 import { CURRENCY_LABELS_FR, formatTableEntryPrice } from "@/src/i18n/fr";
+import Checkbox from "@/components/shared/Checkbox";
 
 interface ResolvedDraw {
   text: string;
@@ -114,14 +115,12 @@ export default function RandomTableBlockEditor({
             className="w-16 rounded-md border border-edge bg-transparent px-1.5 py-0.5 text-xs text-ink outline-none"
           />
         </label>
-        <label className="flex items-center gap-1 text-xs text-ink-muted">
-          <input
-            type="checkbox"
-            checked={data.unique_draws}
-            onChange={(e) => onChange({ ...data, unique_draws: e.target.checked })}
-          />
-          Sans répétition
-        </label>
+        <Checkbox
+          checked={data.unique_draws}
+          onChange={() => onChange({ ...data, unique_draws: !data.unique_draws })}
+          label="Sans répétition"
+          className="text-xs text-ink-muted"
+        />
         <input
           value={data.attribution ?? ""}
           onChange={(e) => onChange({ ...data, attribution: e.target.value || undefined })}

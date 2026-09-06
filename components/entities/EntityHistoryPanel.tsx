@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import Checkbox from "@/components/shared/Checkbox";
 
 interface RevisionSummary {
   id: string;
@@ -168,8 +169,7 @@ export default function EntityHistoryPanel({ entityId }: { entityId: string }) {
                     key={revision.id}
                     className="flex items-center gap-2 rounded-md border border-edge px-2.5 py-1.5 text-xs"
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selected.includes(revision.revision_number)}
                       onChange={() => toggleSelected(revision.revision_number)}
                       aria-label={`Sélectionner la révision ${revision.revision_number}`}

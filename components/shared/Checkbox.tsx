@@ -16,12 +16,15 @@ export default function Checkbox({
   label,
   disabled,
   className,
+  "aria-label": ariaLabel,
 }: {
   checked: boolean;
   onChange: () => void;
   label?: React.ReactNode;
   disabled?: boolean;
   className?: string;
+  /** Nom accessible quand la case n'a pas de `label` visible — sans lui, `role="checkbox"` reste anonyme pour un lecteur d'ecran. */
+  "aria-label"?: string;
 }) {
   function toggle() {
     if (!disabled) onChange();
@@ -35,6 +38,7 @@ export default function Checkbox({
         role="checkbox"
         aria-checked={checked}
         aria-disabled={disabled}
+        aria-label={ariaLabel}
         tabIndex={disabled ? -1 : 0}
         onClick={toggle}
         onKeyDown={(e) => {

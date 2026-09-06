@@ -5,6 +5,7 @@ import GameDateInput from "@/components/shared/GameDateInput";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import type { GameDate } from "@/src/core/calendar/types";
+import Checkbox from "@/components/shared/Checkbox";
 
 /** Point de depart quand le MJ active "jour actuel" pour la premiere fois — an 0, jour 1, jamais suppose (aucune annee "naturelle" n'existe avant que le MJ en regle une). */
 function blankCurrentDate(): GameDate {
@@ -98,17 +99,15 @@ export default function CalendarSettingsPanel({
       </div>
 
       <div className="flex flex-col gap-2 rounded-lg border border-edge bg-panel-raised p-3">
-        <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
-          <input
-            type="checkbox"
-            checked={calendar.currentDate !== null}
-            onChange={(e) => {
-              setSaved(false);
-              setCalendar((c) => ({ ...c, currentDate: e.target.checked ? blankCurrentDate() : null }));
-            }}
-          />
-          Jour actuel de la campagne
-        </label>
+        <Checkbox
+          checked={calendar.currentDate !== null}
+          onChange={() => {
+            setSaved(false);
+            setCalendar((c) => ({ ...c, currentDate: c.currentDate === null ? blankCurrentDate() : null }));
+          }}
+          label="Jour actuel de la campagne"
+          className="gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted"
+        />
         <p className="text-xs text-ink-muted">
           Propagé partout où une date de jeu est affichée (ex. la chronologie centre sa vue dessus et le marque
           « Aujourd&apos;hui »).
