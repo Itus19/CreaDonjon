@@ -25,7 +25,7 @@ const PORTRAIT_MAX_DIMENSION = 640;
 
 export type UploadEntityPortraitResult =
   | { ok: true }
-  | { ok: false; reason: "too_large" | "unsupported_type" | "not_found" };
+  | { ok: false; reason: "too_large" | "unsupported_type" | "invalid_image" | "not_found" };
 
 /**
  * Passe par l'interface de stockage commune (`storage.ts`, ADR 0017

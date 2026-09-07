@@ -57,6 +57,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const messages = {
       too_large: "Image trop lourde (5 Mo maximum).",
       unsupported_type: "Format non pris en charge (PNG, JPEG ou WebP uniquement).",
+invalid_image: "Ce fichier n'est pas une image lisible (PNG, JPEG ou WebP).",
     };
     return NextResponse.json({ error: messages[result.reason] }, { status: 400 });
   }

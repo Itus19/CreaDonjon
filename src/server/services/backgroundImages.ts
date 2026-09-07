@@ -22,9 +22,9 @@ const BACKDROP_MAX_DIMENSION = 1920; // meme borne que l'ancien pipeline (backgr
 
 export type UploadBackgroundImageResult =
   | { ok: true; image: BackgroundImageRow }
-  | { ok: false; reason: "too_large" | "unsupported_type" };
+  | { ok: false; reason: "too_large" | "unsupported_type" | "invalid_image" };
 
-export type UploadBackgroundImageErrorResult = { ok: false; reason: "too_large" | "unsupported_type" | "no_world" };
+export type UploadBackgroundImageErrorResult = { ok: false; reason: "too_large" | "unsupported_type" | "invalid_image" | "no_world" };
 
 /**
  * Le fond d'ecran n'appartient a aucun monde (reglage personnel du compte,
@@ -51,7 +51,14 @@ export async function uploadBackgroundImage(
   // seulement) et la teinte/chroma — le backdrop plein format est televerse
   // separement via l'interface de stockage commune, meme redondance mineure
   // acceptee que pour `blockImages.ts`.
-  const processed = await processBackgroundImage(params.buffer);
+  // Meme motif que `blockImages` : ce traitement precede `uploadAsset`, sa
+  // garde ne peut donc pas etre deleguee (audit B-11).
+  let processed;
+  try {
+    processed = await processBackgroundImage(params.buffer);
+  } catch {
+    return { ok: false, reason: "invalid_image" };
+  }
   const uploaded = await uploadAsset(supabase, {
     worldId,
     buffer: params.buffer,
