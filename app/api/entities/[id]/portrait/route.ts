@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getPortraitAssetId, removeEntityPortrait, uploadEntityPortrait } from "@/src/server/services/entityPortraits";
-import { getSignedAssetUrl } from "@/src/server/services/storage";
+import { getSignedAssetUrl, SIGNED_URL_CACHE_HEADER } from "@/src/server/services/storage";
 
 /**
  * Portrait d'une fiche (Phase F2, Lot I) — un `asset` (Storage) plutot que
@@ -29,7 +29,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Portrait introuvable." }, { status: 404 });
   }
 
-  return NextResponse.redirect(url);
+  return NextResponse.redirect(url, { headers: { "Cache-Control": SIGNED_URL_CACHE_HEADER } });
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

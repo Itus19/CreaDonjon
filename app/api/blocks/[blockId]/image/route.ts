@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getImageAssetIdForBlockAsUser, removeBlockImage, uploadBlockImage } from "@/src/server/services/blockImages";
 import { getPublicBlockImageAssetId } from "@/src/server/services/publicShare";
-import { getSignedAssetUrl } from "@/src/server/services/storage";
+import { getSignedAssetUrl, SIGNED_URL_CACHE_HEADER } from "@/src/server/services/storage";
 
 /**
  * Image d'un bloc `image` (V2-G12, V2-L1) : servie a la fois par la fiche
@@ -32,7 +32,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Image introuvable." }, { status: 404 });
   }
 
-  return NextResponse.redirect(url);
+  return NextResponse.redirect(url, { headers: { "Cache-Control": SIGNED_URL_CACHE_HEADER } });
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ blockId: string }> }) {

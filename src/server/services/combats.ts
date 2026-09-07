@@ -306,18 +306,37 @@ export async function rollParticipantInitiative(
   return updateCombatParticipant(supabase, participant.id, { initiative: rollInitiative(dexMod, params.rng) });
 }
 
-/** "Lancer toutes les initiatives" — un seul appel serveur, un jet independant par participant (specs/outils-mj.md §5.4). */
+/**
+ * "Lancer toutes les initiatives" — un seul appel serveur, un jet
+ * independant par participant (specs/outils-mj.md §5.4).
+ *
+ * Trois vagues, jamais 2N (audit P-04). L'ancienne boucle enchainait deux
+ * requetes PAR participant, en serie : vingt allers-retours en file pour
+ * dix combattants, au moment precis ou le rythme de la table compte le
+ * plus.
+ *
+ * L'ordre des trois etapes n'est pas interchangeable, et c'est le point
+ * delicat : les modificateurs de Dexterite sont des LECTURES pures, donc
+ * parallelisables ; les jets consomment `params.rng` et restent donc
+ * SEQUENTIELS, dans l'ordre des participants — paralleliser cette
+ * etape-la changerait l'ordre de consommation du generateur, et donc les
+ * resultats a graine fixee, ce dont dependent les tests. C'est du calcul
+ * pur, sans reseau : instantane. Les ecritures repartent en parallele.
+ */
 export async function rollAllInitiatives(
   supabase: TypedClient,
   params: { combatId: string; campaignId: string; locale: Locale; rng: Rng }
 ): Promise<CombatParticipantRow[]> {
   const participants = await listCombatParticipants(supabase, params.combatId);
-  const updated: CombatParticipantRow[] = [];
-  for (const participant of participants) {
-    const dexMod = await dexModifierForParticipant(supabase, participant, params.campaignId, params.locale);
-    updated.push(await updateCombatParticipant(supabase, participant.id, { initiative: rollInitiative(dexMod, params.rng) }));
-  }
-  return updated;
+
+  const dexMods = await Promise.all(
+    participants.map((p) => dexModifierForParticipant(supabase, p, params.campaignId, params.locale))
+  );
+  const initiatives = participants.map((_, i) => rollInitiative(dexMods[i], params.rng));
+
+  return Promise.all(
+    participants.map((p, i) => updateCombatParticipant(supabase, p.id, { initiative: initiatives[i] }))
+  );
 }
 
 const COMBAT_STATUS_LABELS_FR: Record<string, string> = { draft: "Pas engagé", running: "Commencé", ended: "Terminé" };

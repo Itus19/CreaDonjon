@@ -31,6 +31,26 @@ const ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 /** Assez court pour qu'une URL orpheline (copiee, partagee) expire vite ; assez long pour qu'une page qui charge plusieurs images n'en perde pas une en route. */
 const SIGNED_URL_TTL_SECONDS = 300;
 
+/**
+ * Duree de mise en cache de la REDIRECTION vers une URL signee (audit
+ * P-03). Une 307 sans `Cache-Control` n'est pas conservee par le
+ * navigateur : les trois allers-retours qui la precedent (authentification
+ * dans le middleware, lecture de la ligne `assets`, signature Storage)
+ * etaient donc refaits a CHAQUE affichage de CHAQUE image, y compris au
+ * simple retour sur une fiche deja vue.
+ *
+ * Volontairement inferieure a `SIGNED_URL_TTL_SECONDS` : le navigateur ne
+ * doit jamais reutiliser une redirection vers une URL deja expiree. La
+ * marge de 60 s couvre le temps entre la reception de la reponse et son
+ * usage reel.
+ *
+ * `private` : un cache partage (proxy, CDN) ne doit jamais conserver
+ * cette reponse — elle est le resultat d'une verification de droits faite
+ * pour UN visiteur precis.
+ */
+export const SIGNED_URL_CACHE_SECONDS = SIGNED_URL_TTL_SECONDS - 60;
+export const SIGNED_URL_CACHE_HEADER = `private, max-age=${SIGNED_URL_CACHE_SECONDS}`;
+
 export type UploadAssetResult = { ok: true; asset: AssetRow } | { ok: false; reason: "too_large" | "unsupported_type" };
 
 /**

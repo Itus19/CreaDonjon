@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
-import { deleteAsset, getSignedAssetUrl } from "@/src/server/services/storage";
+import { deleteAsset, getSignedAssetUrl, SIGNED_URL_CACHE_HEADER } from "@/src/server/services/storage";
 
 /**
  * Sert un asset (Lot I, ADR 0017) — redirige vers une URL signee de courte
@@ -21,7 +21,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Asset introuvable." }, { status: 404 });
   }
 
-  return NextResponse.redirect(url);
+  return NextResponse.redirect(url, { headers: { "Cache-Control": SIGNED_URL_CACHE_HEADER } });
 }
 
 /** Suppression (Lot I) — retire la ligne ET le fichier du bucket (`deleteAsset`, jamais l'un sans l'autre). RLS `assets_delete` (membre du monde) reste la garde reelle, verifiee ici uniquement via `getAuthUser` pour distinguer "non authentifie" de "hors de portee". */

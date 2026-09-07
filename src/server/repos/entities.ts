@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 
@@ -24,7 +25,20 @@ export interface EntitySummary {
 const ENTITY_COLUMNS =
   "id, world_id, slug, name, entity_kind, aliases, version, display_order, created_at, updated_at, is_public, created_by";
 
-export async function listEntitiesForWorld(
+/**
+ * `React.cache()` (audit P-01) — la requete la plus lourde du chemin le
+ * plus emprunte, demandee DEUX fois par navigation dans la section Monde :
+ * `getEntityTree` et `listEntities` l'appellent tous les deux, avec les
+ * memes arguments, dans le meme `Promise.all` du layout. La liste complete
+ * des entites du monde etait donc transferee et deserialisee deux fois.
+ *
+ * Meme motif et meme portee que `getWorldBySlug`/`listCampaigns` : memoise
+ * pour la duree d'UN rendu, jamais entre deux requetes ni entre deux
+ * utilisateurs. Ne fonctionne que parce que `supabase` est un objet stable
+ * par requete (`createClient` est lui-meme memoise, lib/supabase/server.ts)
+ * — `cache()` compare ses arguments par identite.
+ */
+export const listEntitiesForWorld = cache(async function listEntitiesForWorld(
   supabase: TypedClient,
   worldId: string
 ): Promise<EntitySummary[]> {
@@ -36,7 +50,7 @@ export async function listEntitiesForWorld(
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data as EntitySummary[];
-}
+});
 
 /** Plusieurs entites par id, en un seul aller-retour (resolution de references de bloc, V1-B2). Silencieusement absentes du resultat si supprimees ou hors du monde attendu — au caller de filtrer par world_id. */
 export async function listEntitiesByIds(supabase: TypedClient, ids: string[]): Promise<EntitySummary[]> {
