@@ -116,7 +116,7 @@ Ce n'est pas seulement une question de conformité. Une région `aria-live="poli
 
 Le minimum utile : une région polie unique dans `AppShell`, alimentée par le même mécanisme que les notifications de F‑05 — un seul point, réutilisé partout, plutôt qu'un attribut ajouté au cas par cas.
 
-### F‑09 · Les modales ne piègent pas le focus — **Élevé · Défaut**
+### F‑09 · Les modales ne piègent pas le focus — **Élevé · Défaut — corrigé le 7 septembre**
 
 `components/shared/ConfirmDialog.tsx`, qui sert de modèle aux autres, illustre les cinq manques :
 
@@ -129,6 +129,12 @@ Le minimum utile : une région polie unique dans `AppShell`, alimentée par le m
 Le point 2 mérite d'être souligné même pour un usage à la souris : `Échap` pour annuler est un réflexe universel. Une modale qui ne réagit pas à `Échap` donne une impression de logiciel bricolé, indépendamment de toute considération d'accessibilité.
 
 **Recommandation particulière :** l'élément `<dialog>` natif fait les points 1, 2 et 4 sans une ligne de JavaScript (`showModal()`, `::backdrop`, `close`). Il est pris en charge partout depuis 2022. `createPortal` vers `document.body` — ce que fait le code actuel — est exactement ce que `<dialog>` remplace. Ce serait moins de code, pas plus.
+
+**Corrigé le 7 septembre**, mais *pas* par `<dialog>` : `components/shared/useModalKeyboard.ts` — `Échap`, focus initial, restauration du focus au retour, et piège de focus sur `Tab`/`Shift+Tab`. Appliqué à `ConfirmDialog` et `GeneratorToolPanel`, les deux qui n'avaient rien.
+
+Pourquoi pas `<dialog>` : il change le positionnement et remplace le voile par `::backdrop` — c'est un changement d'**apparence**, et l'apparence ne pouvait pas être relue au moment de la correction. Le hook ne touche qu'au comportement : à l'écran, rien ne bouge. Migrer vers `<dialog>` reste la bonne cible le jour où quelqu'un peut regarder.
+
+`CommandPalette` porte déjà sa propre version des trois comportements et n'a pas été touchée. Sur `GeneratorToolPanel`, `Échap` passe par `handleClose` et non par `onClose` : la fermeture vide d'abord les sauvegardes de table en attente, et les perdre au clavier aurait été pire que de ne pas répondre à `Échap`.
 
 ### F‑10 · Les fenêtres flottantes ne sont ni accessibles ni tactiles — **Moyen · Dette**
 
@@ -172,11 +178,11 @@ Le seuil WCAG 2.5.8 (niveau AA) est de 24 × 24 px. Le seuil confortable, celui 
 
 Le remède ne demande pas d'agrandir visuellement les boutons : une zone cliquable étendue (remplissage transparent, ou `::before` étendu) conserve la densité visuelle tout en donnant une cible confortable. C'est ce que font les barres d'icônes bien faites.
 
-### F‑13 · Les onglets ne sont pas sémantiques — **Faible · Dette**
+### F‑13 · Les onglets ne sont pas sémantiques — **Faible · Dette — corrigé le 7 septembre**
 
 Un seul `role="tablist"` et un seul `role="tab"` dans tout le projet, alors que le motif d'onglets est partout (fiche de personnage jouable, `ActionsTab`, `Tabs.tsx` partagé, sections de la coquille). Les autres sont des `<button>` sans rôle : les flèches gauche/droite ne circulent pas entre les onglets, et un lecteur d'écran n'annonce ni « onglet 2 sur 5 », ni lequel est actif.
 
-`Tabs.tsx` étant déjà un composant partagé, la correction est centralisée : les rôles, `aria-selected`, et la navigation aux flèches s'ajoutent une fois et bénéficient à tous les appels.
+`Tabs.tsx` étant déjà un composant partagé, la correction est centralisée — **faite le 7 septembre**. Les rôles et `aria-selected` y étaient déjà ; ce qui manquait était la navigation : flèches gauche/droite (circulaires), `Home`/`Fin`, et le **roving tabindex** — un seul onglet dans l'ordre de tabulation, au lieu de six à traverser un par un avant d'atteindre le contenu. Aucun changement visuel.
 
 ---
 
@@ -214,13 +220,15 @@ Chaque étape est séquentielle, et rien ne commence avant la fin de la précéd
 
 C'est le corollaire direct de F‑14 : quand tout est composant client, toute donnée doit être cherchée depuis le client. Les deux se traitent ensemble, et pas en une fois — page par page, en commençant par celles qu'on ouvre le plus souvent (la fiche d'entité, l'accueil du monde).
 
-### F‑17 · Le cache de `useCachedGet` survit au changement de compte — **Faible · Défaut**
+### F‑17 · Le cache de `useCachedGet` survit au changement de compte — **Faible · Défaut — corrigé le 7 septembre, après rectification du diagnostic**
 
 Le `Map` de `useCachedGet` vit au niveau du module, indexé uniquement par une clé applicative. Il n'est jamais vidé.
 
-Avec la fonction « voir comme » (`viewAs`, ADR 0016), qui remplace réellement la session par celle d'un autre compte, le cache peint donc les données du compte *précédent* au premier rendu du panneau, avant que la requête fraîche ne les remplace. C'est fugace, mais c'est visuellement une fuite de données entre comptes — précisément dans la fonctionnalité où le superadmin vérifie ce qu'un joueur voit.
+**Le diagnostic initial visait le mauvais chemin, et c'est corrigé ici.** `viewAs` change de session par `window.location.href` — une navigation *complète*, qui recharge le module et repart donc d'un cache vide. Il n'y avait rien à corriger de ce côté.
 
-Correction : inclure l'identifiant de l'utilisateur dans la clé de cache, ou vider le cache au retour de `viewAs`.
+Le chemin réel est **déconnexion puis reconnexion**. `login` et `logout` utilisent `redirect()` depuis une server action, c'est-à-dire une navigation *douce* : le module n'est pas rechargé, et le `Map` survit. Deux comptes qui se succèdent dans le même onglet le partagent donc, et le second voit fugacement les données du premier avant que la requête fraîche ne les remplace. Les quatre panneaux concernés sont tous des panneaux MJ — invitations, journal, membres, fiches supprimées.
+
+**Corrigé le 7 septembre** : `clearCachedGet()` exporté par le hook, appelé au montage de la page de connexion — le point de passage obligé entre deux comptes.
 
 ---
 
@@ -381,7 +389,7 @@ Une remarque pour équilibrer : tout n'est pas à changer, et certaines choses s
 | F‑02 | Élevé | Dette | Aucun `loading.tsx`, 2 `<Suspense>` |
 | F‑03 | Élevé | Défaut | `useCachedGet` : échec réseau indistinguable d'un chargement |
 | F‑08 | Élevé | Défaut | Zéro `aria-live` : rien n'est annoncé |
-| F‑09 | Élevé | Défaut | Modales sans piège de focus, sans `Échap`, sans restauration |
+| F‑09 | Élevé | ~~Défaut~~ | Modales sans piège de focus — **corrigé le 7 septembre** |
 | F‑14 | Élevé | Dette | 159/179 composants clients, zéro découpage dynamique |
 | F‑04 | Moyen | Défaut | ~100 `fetch` sans vérification de `res.ok` |
 | F‑05 | Moyen | Dette | Aucun retour d'action global |
@@ -394,6 +402,6 @@ Une remarque pour équilibrer : tout n'est pas à changer, et certaines choses s
 | F‑20 | Moyen | Dette | Sauvegarde implicite sans indication visible |
 | F‑06 | Faible | Dette | `EmptyState` utilisé par un seul écran sur 179 composants |
 | F‑07 | Faible | Défaut | 3 `confirm()` natifs sur des actions destructives |
-| F‑13 | Faible | Dette | Onglets non sémantiques |
-| F‑17 | Faible | Défaut | Cache client non cloisonné par compte (`viewAs`) |
+| F‑13 | Faible | ~~Dette~~ | Onglets sans navigation clavier — **corrigé le 7 septembre** |
+| F‑17 | Faible | ~~Défaut~~ | Cache client non cloisonné — **corrigé le 7 septembre** (chemin réel : login/logout) |
 | F‑19 | Faible | Défaut | Un seul titre de page pour 44 pages |

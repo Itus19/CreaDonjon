@@ -11,6 +11,25 @@ import { useEffect, useState } from "react";
 const cache = new Map<string, unknown>();
 
 /**
+ * Vide le cache (audit F-17). Ce cache vit au niveau du MODULE : il survit
+ * a toute navigation douce, y compris `redirect()` depuis une server
+ * action — ce qu'utilisent `login` et `logout`. Deux comptes qui se
+ * succedent dans le meme onglet partagent donc le meme `Map`, et le second
+ * verrait fugacement les donnees du premier avant que la requete fraiche
+ * ne les remplace. Les quatre panneaux concernes sont tous des panneaux MJ
+ * (invitations, journal, membres, fiches supprimees).
+ *
+ * Appele depuis la page de connexion : c'est le point de passage oblige
+ * entre deux comptes. `viewAs` n'en a pas besoin — il change de session par
+ * `window.location.href`, donc une navigation complete qui recharge le
+ * module et repart d'un cache vide (verifie avant d'ecrire ceci ; le
+ * rapport d'audit visait d'abord ce chemin-la, a tort).
+ */
+export function clearCachedGet() {
+  cache.clear();
+}
+
+/**
  * Bug reel (retour utilisateur, V2-M7 suite : "elle a l'air de se
  * recharger a chaque changement d'onglet") : `WindowsDesktop` est monte une
  * fois PAR SECTION (Monde/Regles/MJ, ADR-0011), jamais une seule fois pour

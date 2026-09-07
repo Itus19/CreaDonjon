@@ -1,15 +1,24 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { login, type ActionState } from "./actions";
+import { clearCachedGet } from "@/components/shell/useCachedGet";
 
 const initialState: ActionState = null;
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, initialState);
   const searchParams = useSearchParams();
+
+  // Point de passage oblige entre deux comptes (audit F-17) : le cache de
+  // `useCachedGet` vit au niveau du module et survit aux navigations
+  // douces, donc a `logout`/`login`. Le vider ici garantit qu'un compte ne
+  // voit jamais, meme fugacement, les donnees du precedent.
+  useEffect(() => {
+    clearCachedGet();
+  }, []);
   const linkError = searchParams.get("error") === "lien-invalide";
 
   return (

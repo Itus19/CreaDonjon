@@ -1,6 +1,8 @@
 "use client";
 
+import { useRef } from "react";
 import { createPortal } from "react-dom";
+import { useModalKeyboard } from "./useModalKeyboard";
 
 /**
  * Remplace `window.confirm` (V1-C4, bug de suppression de bloc) : la boite
@@ -30,6 +32,12 @@ export default function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Avant tout `return` conditionnel : un hook ne peut pas etre appele
+  // derriere une condition. `open` est passe au hook, qui ne fait rien
+  // quand la boite est fermee.
+  useModalKeyboard({ open, onClose: onCancel, panelRef });
+
   if (!open) return null;
 
   return createPortal(
@@ -41,8 +49,10 @@ export default function ConfirmDialog({
       aria-label={title}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-lg border border-edge-strong bg-panel-raised p-4 shadow-2xl"
+        className="w-full max-w-sm rounded-lg border border-edge-strong bg-panel-raised p-4 shadow-2xl outline-none"
       >
         <h2 className="text-sm font-semibold text-ink">{title}</h2>
         <p className="mt-1.5 text-sm text-ink-muted">{message}</p>
