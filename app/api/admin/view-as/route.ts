@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { startViewAs } from "@/src/server/services/viewAs";
+import { viewAsSchema } from "@/lib/auth/schemas";
 
 const REASON_STATUS = { not_superadmin: 403, not_found: 404, not_an_invited_account: 400 } as const;
 const REASON_MESSAGE = {
@@ -18,10 +19,11 @@ const REASON_MESSAGE = {
  */
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
-  const targetUserId = body?.targetUserId;
-  if (typeof targetUserId !== "string" || targetUserId === "") {
+  const parsed = viewAsSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json({ error: "targetUserId requis." }, { status: 400 });
   }
+  const { targetUserId } = parsed.data;
 
   const supabase = await createClient();
   const {

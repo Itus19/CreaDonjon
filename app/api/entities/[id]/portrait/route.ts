@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getPortraitAssetId, removeEntityPortrait, uploadEntityPortrait } from "@/src/server/services/entityPortraits";
 import { getSignedAssetUrl, SIGNED_URL_CACHE_HEADER } from "@/src/server/services/storage";
+import { fileUploadSchema, formDataToObject } from "@/lib/uploads/schemas";
 
 /**
  * Portrait d'une fiche (Phase F2, Lot I) — un `asset` (Storage) plutot que
@@ -43,10 +44,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const formData = await request.formData().catch(() => null);
-  const file = formData?.get("file");
-  if (!file || !(file instanceof File)) {
+  const parsed = formData ? fileUploadSchema.safeParse(formDataToObject(formData)) : null;
+  if (!parsed?.success) {
     return NextResponse.json({ error: "Aucun fichier reçu." }, { status: 400 });
   }
+  const { file } = parsed.data;
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const result = await uploadEntityPortrait(supabase, { entityId: id, buffer, mimeType: file.type, uploadedBy: user.id });

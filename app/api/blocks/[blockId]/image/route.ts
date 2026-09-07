@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getImageAssetIdForBlockAsUser, removeBlockImage, uploadBlockImage } from "@/src/server/services/blockImages";
 import { getPublicBlockImageAssetId } from "@/src/server/services/publicShare";
 import { getSignedAssetUrl, SIGNED_URL_CACHE_HEADER } from "@/src/server/services/storage";
+import { fileUploadSchema, formDataToObject } from "@/lib/uploads/schemas";
 
 /**
  * Image d'un bloc `image` (V2-G12, V2-L1) : servie a la fois par la fiche
@@ -46,10 +47,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const formData = await request.formData().catch(() => null);
-  const file = formData?.get("file");
-  if (!file || !(file instanceof File)) {
+  const parsed = formData ? fileUploadSchema.safeParse(formDataToObject(formData)) : null;
+  if (!parsed?.success) {
     return NextResponse.json({ error: "Aucun fichier reçu." }, { status: 400 });
   }
+  const { file } = parsed.data;
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const result = await uploadBlockImage(supabase, { blockId, buffer, mimeType: file.type, uploadedBy: user.id });

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { listOwnBackgroundImages, uploadBackgroundImage } from "@/src/server/services/backgroundImages";
+import { fileUploadSchema, formDataToObject } from "@/lib/uploads/schemas";
 
 /**
  * Bibliotheque personnelle de fonds d'ecran (V2-G4 reformule) : GET liste
@@ -31,10 +32,11 @@ export async function POST(request: NextRequest) {
   }
 
   const formData = await request.formData().catch(() => null);
-  const file = formData?.get("file");
-  if (!file || !(file instanceof File)) {
+  const parsed = formData ? fileUploadSchema.safeParse(formDataToObject(formData)) : null;
+  if (!parsed?.success) {
     return NextResponse.json({ error: "Aucun fichier reçu." }, { status: 400 });
   }
+  const { file } = parsed.data;
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const result = await uploadBackgroundImage(supabase, { ownerId: user.id, buffer, mimeType: file.type });
