@@ -286,46 +286,60 @@ La ligne de partage, valable ticket par ticket (`docs/analyse-projet-simulation.
 
 Ce qui marche déjà et sur quoi ce lot s'appuie : le cloisonnement entre rulesets est garanti par l'architecture depuis la Phase 0 ; l'import/export JSON existe (V2-J4) ; et le générateur de rencontres montre la voie — son budget de difficulté est **lu dans l'entrée `encounter-budget` du ruleset**, jamais codé.
 
+**Ce que ce lot ne donne pas, et qu'il vaut mieux savoir maintenant :** même tout le vocabulaire déclaré, l'application reste un **moteur d20**. `resolveAction` a la forme d'un jet contre une valeur cible, avec avantage, désavantage et bonus de maîtrise. Un système à réserve de dés, à comptage de succès ou en 2d6 + compétence ne rentrerait pas en déclarant du vocabulaire — c'est le paradigme de résolution qui diffère, pas les noms. Ce lot rend le vocabulaire échangeable, pas le paradigme.
+
 ### V3-Q1 — ADR : où passe la frontière code / donnée · `S`
 
-**Le seul ticket réellement bloquant de tout ce backlog.**
+**Toujours le préalable du lot**, mais son objet a changé : *jusqu'où* est tranché (partout où c'est du vocabulaire), il reste à écrire *comment*.
 
-`CLAUDE.md` règle 18 promet qu'une variante est un ruleset de plus. C'est vrai pour tout ce qui est saisi comme fiche — ce ne l'est pas pour le vocabulaire enfoui dans le moteur. Relevé dans le dépôt :
+Relevé dans le dépôt, par coût croissant :
 
-| En dur | Où |
+| Ce qui est en dur | Où |
 |---|---|
-| Les 6 caractéristiques | `type Ability` — **32 fichiers y touchent** |
-| Les 18 compétences et leur caractéristique | `SKILL_ABILITIES`, `src/core/rules/sheet.ts` |
-| La formule de modificateur `(score − 10) / 2` | `sheet.ts` — alors que l'AST saurait l'évaluer |
-| Taux de change et dénominations | `COIN_VALUE_CP`, `src/core/rules/currency.ts` |
-| Capacité de charge et paliers | `src/core/rules/encumbrance.ts` |
+| Taux de change et cinq dénominations figées | `COIN_VALUE_CP`, `CURRENCY_ORDER`, le `zCurrency` de l'inventaire |
+| Capacité de charge et paliers | `CAPACITY_MULTIPLIER = 15`, seuils ×5 et ×10 |
+| `(score − 10) / 2`, `2 + ⌊(niv − 1)/4⌋`, `8 + maîtrise + mod`, `⌊faces/2⌋ + 1` | quatre fonctions pures de `sheet.ts` |
+| Les 18 compétences et leur caractéristique | `SKILL_ABILITIES` |
+| Les 6 caractéristiques | `type Ability` — **32 fichiers** |
 
 **Critères**
 - [ ] Un ADR dans `docs/adr/` : contexte, options, décision, conséquences.
-- [ ] Il tranche **jusqu'où** va la déclaration par le ruleset, et ce qui reste en dur parce que générique.
-- [ ] Il acte que la formule de modificateur devient une formule AST déclarée, pas une constante.
+- [ ] Il tranche **où vit la déclaration** d'un ruleset — entrée de ruleset dédiée, colonne, ou bloc typé. Le précédent plaide pour l'entrée : c'est déjà ainsi que `encounter-budget` est déclaré, et ça vient gratuitement avec la surcharge, l'héritage et l'export JSON.
+- [ ] Il acte que les quatre formules deviennent des formules AST déclarées, évaluées par le parser existant — aucun interpréteur nouveau.
+- [ ] Il nomme ce qui reste en dur **parce que générique**, pour que la question ne se repose pas : dés, AST, empilement de modificateurs, déclencheurs, entités et visibilité, moteur de tirage, worldgen.
 
-### V3-Q2 — Caractéristiques et compétences déclarées par le ruleset · `L`
+### V3-Q2 — Le moteur cesse de nommer les choses · `L`
 
-Le plus gros ticket du backlog. **La version raisonnable** : le ruleset déclare la liste, le moteur la traite comme opaque. Les rulesets SRD déclarent les six habituelles — donc rien ne change pour les mondes existants et **aucune migration de données n'est nécessaire** : les six clés restent valides, elles cessent d'être les seules possibles.
+**Un seul ticket, quatre phases** (décision du 8 septembre : on va au bout plutôt que de scinder). Les phases se cochent au fur et à mesure, jamais d'un coup — même méthode que V2-I1, et pour la même raison : un `L` de 32 fichiers sans jalons est un ticket qui meurt à 80 %.
 
-**Critères**
-- [ ] Un ruleset déclare ses caractéristiques, ses compétences, et quelle caractéristique gouverne chacune.
-- [ ] La formule de modificateur est déclarée en AST et évaluée par le parser existant — aucun interpréteur nouveau.
-- [ ] Les mondes existants ne bougent pas : mêmes valeurs, mêmes fiches, aucune migration.
-- [ ] « Tableau standard / achat de points / tirage » deviennent de la donnée de ruleset — ils supposent aujourd'hui six valeurs.
+L'ordre n'est pas arbitraire : chaque phase valide le mécanisme de déclaration de la suivante, de la moins chère à la plus chère.
+
+**Phase A — Monnaie et encombrement**
+Deux constantes isolées, donc le banc d'essai du mécanisme choisi en V3-Q1 pour un coût minime. Cas d'essai : 1 po = 100 pa = 10 000 pb à trois dénominations, capacité = FOR × 2,5 kg avec paliers 100 % / 120 %.
+- [ ] Un ruleset déclare ses dénominations et leurs taux ; le porte-monnaie et la conversion automatique suivent.
+- [ ] Un ruleset déclare sa capacité de charge et ses paliers.
+- [ ] Le `zCurrency` à cinq clés figées cède la place à une carte dénomination → quantité.
+
+**Phase B — Les formules de résolution**
+- [ ] Modificateur de caractéristique, bonus de maîtrise, DD de sauvegarde et dé de vie moyen sont déclarés en AST par le ruleset.
+- [ ] Le parser existant les évalue ; aucun code d'évaluation nouveau.
 - [ ] Les cas dorés de `characterSheet()` passent inchangés.
 
-### V3-Q3 — Monnaie et encombrement en donnée de ruleset · `M`
+**Phase C — Les compétences**
+`SKILL_ABILITIES` est une table qui associe une compétence à une caractéristique — elle peut devenir déclarable pendant que les caractéristiques restent fermées, chaque compétence désignant celle qui la gouverne.
+- [ ] Un ruleset déclare ses compétences et leur caractéristique gouvernante.
+- [ ] La fiche, les jets et l'assistant de création suivent, sans liste recopiée nulle part.
+- [ ] Un ruleset sans compétence produit une fiche sans section compétences, jamais les 18 de D&D.
 
-Applique V3-Q1 à deux constantes précises. Le cas d'essai : 1 po = 100 pa = 10 000 pb à trois dénominations, capacité = FOR × 2,5 kg avec paliers 100 % / 120 %.
+**Phase D — Les caractéristiques**
+Le gros morceau, sur un mécanisme éprouvé trois fois. `type Ability` cesse d'être une union TypeScript : c'est une chaîne validée à l'exécution contre la déclaration du ruleset — une garantie à la compilation troquée contre une validation Zod aux frontières.
+- [ ] Un ruleset déclare ses caractéristiques ; les SRD déclarent les six habituelles.
+- [ ] **Aucune migration de données** : les six clés restent valides, elles cessent d'être les seules.
+- [ ] « Tableau standard / achat de points / tirage » deviennent de la donnée — ils supposent aujourd'hui six valeurs.
+- [ ] Les pastilles de la fiche jouable deviennent une boucle sur la déclaration.
+- [ ] Les mondes existants ne bougent pas : mêmes valeurs, mêmes fiches.
 
-**Critères**
-- [ ] Un ruleset définit ses dénominations et leurs taux ; le porte-monnaie et la conversion automatique suivent.
-- [ ] Un ruleset définit sa capacité de charge et ses paliers.
-- [ ] Le SRD garde exactement son comportement actuel.
-
-### V3-Q4 — `rule_query` : un emplacement interroge le ruleset · `M`
+### V3-Q3 — `rule_query` : un emplacement interroge le ruleset · `M`
 
 Spécifié dans `outils-mj.md` §3 — *« une variante maison qui ajoute une espèce l'obtient dans le générateur sans qu'on touche au générateur »* — et **jamais implémenté** : `src/core/generators/types.ts` le note comme écart assumé.
 
@@ -336,7 +350,7 @@ C'est le passage que trois consommateurs emprunteront : les générateurs, le cr
 - [ ] Changer de ruleset change le tirage, sans toucher au générateur.
 - [ ] Un ruleset sans entrée du type demandé produit un emplacement vide, jamais une valeur de repli inventée.
 
-### V3-Q5 — Générateurs et tables attachables à un ruleset · `M`
+### V3-Q4 — Générateurs et tables attachables à un ruleset · `M`
 
 Aujourd'hui le contenu des générateurs vit sur une entité `generateur` du **monde** (`ensureGeneratorToolsEntity`). Basculer le ruleset ne change donc rien à Taverne, PNJ, Noms, Échoppe, Butin.
 
@@ -347,7 +361,7 @@ Aujourd'hui le contenu des générateurs vit sur une entité `generateur` du **m
 - [ ] Les générateurs existants, attachés au monde, continuent de fonctionner sans reprise.
 - [ ] Un ruleset exporté en JSON embarque ses tables ; réimporté, il les retrouve.
 
-### V3-Q6 — Le test du ruleset vide · `S`
+### V3-Q5 — Le test du ruleset vide · `S`
 
 Le garde-fou du lot, et sa vraie preuve. Comme la règle ESLint qui protège `src/core`, pas une intention.
 
@@ -356,7 +370,7 @@ Le garde-fou du lot, et sa vraie preuve. Comme la règle ESLint qui protège `sr
 - [ ] Aucun outil ne propose de valeur D&D : pas d'« elfe » dans un générateur, pas d'« Acrobaties » sur une fiche, pas de pièce d'or.
 - [ ] Chaque fuite trouvée devient un correctif, jamais une exception dans le test.
 
-### V3-Q7 — Objets : qualité, niveau, identification · `M`
+### V3-Q6 — Objets : qualité, niveau, identification · `M`
 
 **Critères**
 - [ ] Le **vocabulaire** (qualités, échelle de niveau d'objet, table de risque, paliers d'identification) vit dans le ruleset.
@@ -511,7 +525,7 @@ Un fait connu d'une faction devient connu d'une autre, fidèlement ou déformé.
 
 **Tranché le 8 septembre : en périmètre.** Le worldgen est un préalable du jeu solo — sans monde préexistant, il n'y a rien à découvrir. Il n'ouvre pas dans la V3, mais il cesse d'être une « idée future ».
 
-Il est **générique** au sens de la ligne de partage du lot Q : géographie, climat, factions, histoire et populations ne dépendent d'aucun système de règles, donc ils vivent dans le code. En revanche **ce dont il peuple le monde** — quelles espèces, quels monstres, quelles ressources — est du vocabulaire de ruleset, et passe par `rule_query` (V3-Q4). C'est son troisième consommateur.
+Il est **générique** au sens de la ligne de partage du lot Q : géographie, climat, factions, histoire et populations ne dépendent d'aucun système de règles, donc ils vivent dans le code. En revanche **ce dont il peuple le monde** — quelles espèces, quels monstres, quelles ressources — est du vocabulaire de ruleset, et passe par `rule_query` (V3-Q3). C'est son troisième consommateur.
 
 **Tranché : ce sera un monde amorcé.** Deux choses portaient ce nom, et leur écart est d'un ordre de grandeur (`docs/analyse-projet-simulation.md` §4.1) — un **monde amorcé** (une région, quelques factions avec leurs intérêts, deux ou trois siècles d'histoire, des populations) et une **simulation géologique** (proto-planète, tectonique, 231 matériaux, 10 000 ans tick par tick, une année de travail à elle seule).
 
@@ -553,6 +567,7 @@ Et un critère technique : **`entity_discoveries`, `entity_mentions` et `entity_
 | Worldgen : monde amorcé ou simulation géologique ? | **le monde amorcé.** Une région, quelques factions, deux ou trois siècles d'histoire. Il suffit à jouer et ne ferme pas la porte à davantage |
 | Les réglages de contenu : par monde ou par compte ? | **par monde**, avec un défaut restrictif |
 | Les jauges des PNJ absents évoluent-elles en arrière-plan ? | **non, refus maintenu.** Les pôles ne bougent que sur événement explicite (`specs/psyche-pnj.md` §1) |
+| Jusqu'où le moteur cesse-t-il de nommer les choses ? | **jusqu'au bout du vocabulaire**, caractéristiques comprises — en un ticket à quatre phases (V3-Q2), pas en deux temps. Le mécanisme reste en dur |
 
 ### Encore ouvertes
 
@@ -560,7 +575,7 @@ Aucune n'est urgente ; toutes changent le résultat si on y répond après coup.
 
 | Question | Recommandation | Bloque |
 |---|---|---|
-| Quelles constantes du moteur deviennent de la donnée ? | monnaie et encombrement, puis on observe | **V3-Q2 à Q4** |
+| **Où vit la déclaration d'un ruleset ?** | une entrée de ruleset dédiée, comme `encounter-budget` — elle hérite gratuitement de la surcharge et de l'export. À prouver en phase A | **V3-Q2** |
 | La surcharge de ruleset sait-elle *retirer* une règle ? | à vérifier avant de commencer V3-Q3 | V3-Q3 |
 | Pourcentages ou bandes nommées ? | les bandes ; un curseur sans chiffre si le besoin persiste | V3-N4 |
 | « Système implicite » ou fiche qui montre sa trace ? | un réglage d'affichage, pas une doctrine | V3-R4 |

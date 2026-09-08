@@ -108,6 +108,14 @@ Deux conséquences à assumer : « tableau standard / achat de points / tirage �
 
 C'est la règle des trois appliquée : on ne construit pas un système de statistiques universel, on arrête de coder la liste en dur.
 
+**Tranché le 8 septembre : on va au bout, en un ticket à quatre phases** (monnaie et encombrement, puis les formules, puis les compétences, puis les caractéristiques). Scinder en deux tickets aurait repoussé une capacité voulue de toute façon ; les phases répondent au seul vrai risque, celui du `L` qui meurt à 80 %.
+
+### 3.5 Ce que cette bascule ne donne pas
+
+Même tout le vocabulaire déclaré, l'application reste un **moteur d20**. `resolveAction` a la forme d'un jet contre une valeur cible, avec avantage, désavantage et bonus de maîtrise. Un système à réserve de dés, à comptage de succès ou en 2d6 + compétence ne rentrerait pas en déclarant du vocabulaire : c'est le **paradigme de résolution** qui diffère, pas les noms.
+
+Ce n'est pas un problème — le ruleset personnel visé et JDRSim sont tous deux des systèmes d20. Mais autant l'écrire, pour que « on peut charger n'importe quel ruleset » ne devienne pas une promesse qu'on croit avoir tenue.
+
 ---
 
 ## 4. C — Le worldgen
