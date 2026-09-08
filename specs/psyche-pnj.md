@@ -326,9 +326,16 @@ Le groupe de joueurs est une entité de type `faction`, créée avec la campagne
 
 ## 8. Ce qui reste ouvert
 
+> **Relecture du 8 septembre 2026.** L'analyse du prompt d'origine du jeu solo
+> (`docs/analyse-prompt-origine.md`) tranche la première question ci-dessous et
+> propose trois ajouts à ces blocs — un champ « ce qui le frappe », les
+> orientations relationnelle/romantique/sexuelle, et un amorçage d'attitude à la
+> première rencontre. Rien n'est construit ; voir l'analyse §6.2 à §6.4 avant
+> d'ouvrir un ticket sur ce document.
+
 | Question | Recommandation |
 |---|---|
-| Les pôles sont-ils configurables par monde ? | oui, mêmes que les pôles de `worldview` — un univers de cour ajoutera « loyauté ↔ ambition » |
+| ~~Les pôles sont-ils configurables par monde ?~~ | **tranché (8 septembre) : oui.** Mêmes que les pôles de `worldview` — un univers de cour ajoutera « loyauté ↔ ambition », et c'est aussi par là que passent « amour ↔ haine » et la loyauté d'une recrue plutôt que par un huitième axe codé en dur |
 | Une relation implique-t-elle la réciproque ? | non : dirigée, jamais symétrique. A peut se méfier de B qui l'adore, et c'est le cas le plus intéressant |
 | Combien de relations avant que la fiche devienne illisible ? | replier au-delà de 5, trier par `interest_indifference` décroissant |
 | Faut-il un tableau de bord des relations du monde ? | V3, quand il y aura de la matière — un graphe des attitudes est spectaculaire et inutile sur dix PNJ |

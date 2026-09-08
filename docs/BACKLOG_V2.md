@@ -1250,6 +1250,7 @@ Et un critère technique : **le verdict de S1 est écrit et la V3 est cadrée en
 | Édition élargie par les joueurs | **avancé en V2, voir Lot M** — `canEditEntity`/`entity_grants` (V2-M3) |
 | Passage à l'application locale | `cible-locale-et-ia.md` §6 — la question « local seul ou local d'abord » reste ouverte |
 | Génération procédurale de cartes | idée future, jamais un ticket tant que le reste n'est pas solide |
+| Reprise du prompt d'origine du jeu solo | `docs/analyse-prompt-origine.md` — tri complet du prompt antérieur au projet, neuf décisions prises le 8 septembre. Contient les seuls éléments V3 encore non spécifiés : réglages de récit, monde autonome, verrou de rang, dés physiques |
 
 ---
 

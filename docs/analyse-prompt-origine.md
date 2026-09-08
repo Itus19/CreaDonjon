@@ -31,6 +31,7 @@ Les points ci-dessous ont été soumis à l'auteur et tranchés. Ce document les
 | Les orientations des PNJ | **trois champs distincts**, pas un seul. *Corrige la v0.1* — §6.4 |
 | La première impression | **retenue** : elle donne la teinte de base, plafonnée, journalisée — §6.2 |
 | Le générateur de quêtes | **retenu** — §6.7 |
+| Où vivent les orientations | dans **`personality`**, jamais dans `worldview` — §6.4 |
 
 ---
 
@@ -425,11 +426,26 @@ Le prompt demande que chaque PNJ significatif reçoive, à sa création, une ori
 
 Plus un champ pour le **rapport à l'intimité et à la nudité** : à l'aise, pudique, tabou culturel, curieux, réprimé.
 
-Trois précautions, dans le prolongement de celle déjà prise pour l'axe `attraction_repulsion` (`specs/psyche-pnj.md` §3) :
+#### Tranché : dans `personality`, jamais dans `worldview`
 
-- **liste suggérée, saisie libre.** Un enum fermé finira toujours par manquer un cas, et c'est un outil personnel ;
-- **visibilité `gm` par défaut**, et l'ensemble désactivable au niveau du monde ;
-- **valable aussi pour le personnage joueur** — Néphaël en a un, et c'est ce qui rend son éveil jouable plutôt que décoratif.
+La question se pose parce que les deux blocs décrivent « qui est cette personne ». La ligne de partage posée par `specs/psyche-pnj.md` §2 la tranche sans hésitation :
+
+> Une guilde a des convictions ; elle n'a pas de tempérament.
+
+`worldview` est attachable à une **faction** — c'est même sa raison d'être, puisque c'est ce qui permet de comparer un PNJ à son ordre et d'en faire tomber une tension. Une faction n'a pas d'orientation. Mettre l'intimité dans `worldview`, ce serait la rendre attachable à une guilde, et casser la seule chose que ce bloc sait faire de plus que l'autre.
+
+Reste `personality`, et trois arguments positifs plutôt qu'un défaut :
+
+1. **Il porte déjà de l'intime sensible.** `aspirations` contient « retrouver qui a brûlé sa maison » en visibilité `gm`, `lines` et `limits` disent ce qu'on ne fera jamais. Un sous-objet de plus n'ouvre aucune porte qui ne le soit pas.
+2. **La visibilité par élément y est déjà précédente.** Les aspirations portent chacune la leur ; les orientations et le rapport à l'intimité feront pareil, plutôt qu'une visibilité de bloc unique qui obligerait à tout cacher ou tout montrer.
+3. **Un bloc séparé serait lui-même une divulgation.** Un encart « Intimité » sur une fiche dit quelque chose *par sa seule présence*, même vide, et même quand on l'a désactivé au niveau du monde. Un sous-objet absent d'un bloc existant ne dit rien.
+
+#### Les précautions, dont une qui n'est pas négociable
+
+- **Liste suggérée, saisie libre.** Un enum fermé finira toujours par manquer un cas, et c'est un outil personnel.
+- **Visibilité `gm` par défaut**, par élément, et **le même interrupteur de monde que l'axe `attraction_repulsion`** (`specs/psyche-pnj.md` §3) — un seul réglage « contenu intime », pas deux qui finiront par diverger.
+- **Valable aussi pour le personnage joueur** — Néphaël en a un, et c'est ce qui rend son éveil jouable plutôt que décoratif.
+- **La résolution est serveur, jamais un masquage d'affichage.** Un champ « caché » envoyé au client puis masqué en CSS est une fuite, pas une visibilité — c'est exactement la faute que la règle absolue 6 interdit pour la marque `spoiler`, et l'orientation d'un PNJ est précisément le genre de champ sur lequel on serait tenté de la commettre.
 
 Les « contradictions internes » n'ont pas besoin de champ : deux pôles opposés avec `priority` qui tranche produisent exactement ça, et c'est déjà en place.
 
