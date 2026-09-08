@@ -108,10 +108,11 @@ Aucun code attendu dans le cas général : de la vérification.
 - [ ] Le bloc généalogie se resynchronise quand une relation est ajoutée depuis l'en-tête de la même page (limite connue de V2-H3).
 - [ ] Le glisser-déposer des blocs essayé à la main (jamais vérifié en direct, l'environnement de test ne simule pas les évènements de `dnd-kit`).
 - [ ] Le filtrage de chronologie : construit, ou le critère V2-H2 reformulé pour dire ce qui a vraiment été livré.
+- [ ] Les trois critères multi-comptes de V2-M8, cochés quand un ami aura réellement rejoint et modifié sa copie — jamais sur la seule lecture du code. **Bloqué par des humains, pas par du code** : ce ticket n'attend pas après eux pour être fini.
 
 ### V3-N4 — Les bandes nommées à l'écran · `M`
 
-`specs/psyche-pnj.md` §1.5 est formel : **le nombre ne sort jamais du moteur.** Aujourd'hui les bandes des sept axes de relation sont définies (`bands.ts`) mais l'écran montre la valeur exacte, et les bandes de `personality` ne sont pas définies du tout.
+`specs/psyche-pnj.md` §1.5 est formel : **le nombre ne sort jamais du moteur.** Aujourd'hui les bandes des sept axes de relation sont définies (`src/core/psyche/bands.ts`) mais l'écran montre la valeur exacte, et les bandes de `personality` ne sont pas définies du tout.
 
 **Critères**
 - [ ] Le radar et les curseurs affichent la bande nommée ; la valeur exacte reste au survol et à la saisie fine du MJ.
@@ -129,12 +130,13 @@ Chacune tient en quelques lignes ; groupées parce qu'aucune ne mérite une sess
 - [ ] Le `\n` isolé au milieu d'une phrase dans les traductions françaises quantifié puis corrigé (repéré sur « Initié à la magie », probablement pas isolé).
 - [ ] Supprimer un compte invité ayant téléversé un fond ne laisse pas son asset orphelin dans le bucket (`background_images.owner_id`, cascade signalée en V2-L1).
 - [ ] Les deux points du point de contrôle V2 tranchés : couverture de traduction par type d'entrée, et le statut de la migration `restore_entity_blocks`.
+- [ ] Un emplacement de générateur peut porter sa propre visibilité — `GeneratorSlot` n'en a pas, donc le secret d'un PNJ généré naît en `public` alors que `specs/outils-mj.md` §3 le veut en `gm` (signalé en V2-J2, jamais implémenté). Si ça dépasse la ligne, ça devient un ticket à part.
 
 ### V3-N6 — Reliquats de l'audit de performance · `M`
 
 L'audit des 3 et 4 septembre (commits `b4ee26c`, `8217479`, `dcfdbe0`, `c320be1`) a livré neuf corrections mesurées en direct. Il a laissé deux choses derrière lui, toutes deux vérifiées encore ouvertes le 8 septembre.
 
-**L'index qui n'a peut-être jamais été posé.** `20260903210039_combats_campaign_id_index.sql` a été écrit mais **pas appliqué** — le CLI Supabase n'était pas disponible dans l'environnement de cette session-là. `combats.campaign_id` sert de filtre aux requêtes applicatives **et** à la clause `USING` des deux politiques RLS, évaluée ligne par ligne : sans index, « y a-t-il un combat en cours ? » force un scan complet d'une table qui grandit à chaque rencontre jouée. Une migration plus récente existe depuis (`20260904150000`), donc l'index est peut-être passé entre-temps — **à vérifier en base avant de conclure**, jamais à supposer.
+**L'index qui n'a peut-être jamais été posé.** `supabase/migrations/20260903210039_combats_campaign_id_index.sql` a été écrit mais **pas appliqué** — le CLI Supabase n'était pas disponible dans l'environnement de cette session-là. `combats.campaign_id` sert de filtre aux requêtes applicatives **et** à la clause `USING` des deux politiques RLS, évaluée ligne par ligne : sans index, « y a-t-il un combat en cours ? » force un scan complet d'une table qui grandit à chaque rencontre jouée. Une migration plus récente existe depuis (`20260904150000`), donc l'index est peut-être passé entre-temps — **à vérifier en base avant de conclure**, jamais à supposer.
 
 **Le re-fetch par fenêtre.** Constat noté au moment de corriger le remontage des fenêtres, et jamais traité : *« les endpoints reference-chips/resolved-ruleset/sheet sont lents en eux-mêmes (0,5-3 s chacun) et se re-fetchent par fenêtre à l'ouverture — coût séparé, pas cette régression de remount. À creuser une autre fois. »* Vérifié : `useReferenceChips` et `useResolvedRuleset` déclenchent leur requête depuis un `useEffect` par instance de composant, sans cache partagé. Deux fenêtres ouvertes sur des fiches du même monde repaient donc deux fois la même résolution. `c320be1` a ramené `resolved-ruleset` de ~2,9 s à ~1 s, ce qui atténue le symptôme sans toucher la cause.
 
@@ -148,11 +150,11 @@ L'audit des 3 et 4 septembre (commits `b4ee26c`, `8217479`, `dcfdbe0`, `c320be1`
 
 # Lot O — Récit, psyché, quêtes
 
-La vague 1 de `docs/analyse-prompt-origine.md`. Sept tickets courts, indépendants entre eux et du reste du backlog. C'est le lot à prendre quand l'envie de gros chantier manque.
+La vague 1 de `docs/analyse-prompt-origine.md`, plus un critère de V2-H1 jamais construit. Huit tickets courts, indépendants entre eux et du reste du backlog. C'est le lot à prendre quand l'envie de gros chantier manque.
 
 ### V3-O1 — Onglet « Récit » dans les Réglages · `M`
 
-`worlds.narration_profile jsonb`, sur le modèle exact de `worlds.calendar` et de `CalendarSettingsPanel.tsx`. Curseurs nommés (registre, rythme, longueur, humour, mortalité, crudité), plus deux zones libres : les influences et des consignes en clair. Détail en `analyse-prompt-origine.md` §4.
+`worlds.narration_profile jsonb`, sur le modèle exact de `worlds.calendar` et de `components/shell/CalendarSettingsPanel.tsx`. Curseurs nommés (registre, rythme, longueur, humour, mortalité, crudité), plus deux zones libres : les influences et des consignes en clair. Détail en `docs/analyse-prompt-origine.md` §4.
 
 **Critères**
 - [ ] Le profil vit sur le monde, se règle depuis les Réglages, et n'est jamais un bloc de wiki.
@@ -180,7 +182,7 @@ Tranché dans `specs/psyche-pnj.md` §8. Débloque « amour ↔ haine » (le seu
 
 ### V3-O4 — « Ce qui le frappe » · `S`
 
-Champ `striking` sur `personality`, et usage enfin fait de `entity_discoveries.detail_level` pour moduler la description. Voir `analyse-prompt-origine.md` §6.3.
+Champ `striking` sur `personality`, et usage enfin fait de `entity_discoveries.detail_level` pour moduler la description. Voir `docs/analyse-prompt-origine.md` §6.3.
 
 **Critères**
 - [ ] Une liste de phrases, chacune avec sa visibilité, sur le bloc `personality`.
@@ -189,7 +191,7 @@ Champ `striking` sur `personality`, et usage enfin fait de `entity_discoveries.d
 
 ### V3-O5 — Orientations et rapport à l'intimité · `S`
 
-Trois champs distincts (relationnelle, romantique, sexuelle) plus le rapport à l'intimité, **dans `personality`, jamais dans `worldview`** — une faction a des convictions, pas une orientation. Voir `analyse-prompt-origine.md` §6.4.
+Trois champs distincts (relationnelle, romantique, sexuelle) plus le rapport à l'intimité, **dans `personality`, jamais dans `worldview`** — une faction a des convictions, pas une orientation. Voir `docs/analyse-prompt-origine.md` §6.4.
 
 **Critères**
 - [ ] Liste suggérée, saisie libre — jamais un enum fermé.
@@ -211,6 +213,17 @@ Du contenu, pas du code : les générateurs composés et le tirage filtré par p
 - [ ] Emplacements : commanditaire et sa motivation (visibilité `gm`), objectif, lieu, complication, récompense, délai.
 - [ ] La récompense suit le rang tiré, par palier — jamais une table plate.
 - [ ] « Créer la fiche » produit une entité avec son bloc `quest` prérempli (mécanisme de promotion existant, V2-J2).
+
+### V3-O8 — Tension entre un PNJ et sa faction · `S`
+
+Critère de V2-H1 resté décoché : la comparaison automatique entre les convictions d'un PNJ et celles de sa faction, avec signalement des divergences fortes. C'est le « D6 » de `specs/wiki-blocs.md`, et il est presque gratuit — `worldview` est déjà attachable à une faction, les deux jeux de pôles sont déjà comparables.
+
+Il n'a pas été construit faute de cas concret : il faut un monde où un PNJ **et** sa faction portent tous deux un `worldview`. À vérifier en base avant d'ouvrir le ticket — sans ce cas, il n'y a rien à regarder.
+
+**Critères**
+- [ ] Une divergence forte sur un pôle prioritaire est signalée sur la fiche, en une phrase lisible — jamais un écart chiffré brut.
+- [ ] Le signalement respecte la visibilité des deux blocs comparés.
+- [ ] Aucun signalement quand l'un des deux `worldview` est absent — jamais une comparaison contre un défaut inventé.
 
 ---
 
@@ -266,7 +279,7 @@ Applique V3-Q1. La variante du prompt : 1 po = 100 pa = 10 000 pb, trois dénomi
 
 ### V3-Q3 — Le ruleset mana · `L`
 
-Remplace les emplacements de sorts. Détail et pièges en `analyse-prompt-origine.md` §5.2.
+Remplace les emplacements de sorts. Détail et pièges en `docs/analyse-prompt-origine.md` §5.2.
 
 **À vérifier avant de s'engager :** le mécanisme de surcharge sait ajouter et modifier une règle — **sait-il en retirer une ?** Le mana suppose de désactiver la progression d'incantation officielle. Si la réponse est non, ce ticket commence par là.
 
