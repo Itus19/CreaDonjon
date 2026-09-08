@@ -1,4 +1,4 @@
-# Conception du ruleset personnel (JDRSim)
+# Conception du ruleset personnel
 
 **Version :** 0.1 — 8 septembre 2026
 **Statut :** document de travail, à remplir à deux. Rien ici n'est un ticket.
