@@ -19,7 +19,7 @@ Ce document répond à une seule question : **qu'est-ce qui existe déjà ?** Il
 | Phase 0 et V0 | **terminée** | `docs/BACKLOG.md` |
 | V1 | **terminée** | `docs/BACKLOG_V1.md` |
 | V2 | **en cours, presque close** — voir ci-dessous | `docs/BACKLOG_V2.md` |
-| V3 | **pas commencée.** Spike S1 fait, verdict rendu : repli sur le MJ assisté | `docs/adr/0009-viabilite-solo.md` |
+| V3 | **ouverte, aucun ticket commencé.** Spike S1 fait, verdict rendu : repli sur le MJ assisté (`docs/adr/0009-viabilite-solo.md`) | `docs/BACKLOG_V3.md` |
 
 ### Ce qui reste avant de fermer la V2
 

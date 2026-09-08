@@ -25,7 +25,7 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 | Fichier | Contenu | Quand le lire |
 |---|---|---|
 | `docs/SCHEMA.md` | Schéma de données, SQL, RLS, formules | Avant toute migration ou requête |
-| `docs/BACKLOG_V2.md` | Tickets en cours | Au début de chaque tâche |
+| `docs/BACKLOG_V3.md` | Tickets en cours | Au début de chaque tâche |
 | `docs/PDD.md` | Source de vérité fonctionnelle | Avant toute décision produit |
 | `docs/adr/` | Décisions d'architecture et leurs raisons | Avant de « corriger » quelque chose qui semble étrange |
 | `specs/regles-couche.md` | Fiches de règles, renvois, surcharge, contrat moteur/IA | Tickets règles |

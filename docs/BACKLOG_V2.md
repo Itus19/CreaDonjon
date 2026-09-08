@@ -1242,15 +1242,9 @@ Et un critère technique : **le verdict de S1 est écrit et la V3 est cadrée en
 
 ## 4. Ce qui reste pour la V3
 
-| Contenu | Note |
-|---|---|
-| Compagnon joueur | **avancé en V2, voir Lot M** — `module-joueur-et-solo.md` partie A |
-| Mode solo ou MJ assisté | forme déterminée par S1 |
-| RAG sur le wiki | `SCHEMA.md` §17 — la dimension d'embedding doit être figée avant la première indexation |
-| Édition élargie par les joueurs | **avancé en V2, voir Lot M** — `canEditEntity`/`entity_grants` (V2-M3) |
-| Passage à l'application locale | `cible-locale-et-ia.md` §6 — la question « local seul ou local d'abord » reste ouverte |
-| Génération procédurale de cartes | idée future, jamais un ticket tant que le reste n'est pas solide |
-| Reprise du prompt d'origine du jeu solo | `docs/analyse-prompt-origine.md` — tri complet du prompt antérieur au projet, neuf décisions prises le 8 septembre. Contient les seuls éléments V3 encore non spécifiés : réglages de récit, monde autonome, verrou de rang, dés physiques |
+**→ `docs/BACKLOG_V3.md`, ouvert le 8 septembre 2026.** Tout ce qui figurait ici y est repris sous forme de tickets, avec quatre sources de plus : les six tickets du moteur (`specs/moteur-de-jeu.md` §8), le tri du prompt d'origine (`docs/analyse-prompt-origine.md`), les critères en suspens des lots V1/V2, et deux trous relevés par l'audit du 8 septembre — la détection de liens jamais branchée et les révisions mécaniques que rien n'écrit.
+
+Ne plus rien ajouter ici : ce document est clos sur son propre périmètre.
 
 ---
 

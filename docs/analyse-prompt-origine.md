@@ -1,5 +1,7 @@
 # Analyse — le prompt d'origine du JDR solo
 
+> **Depuis le 8 septembre, les décisions de ce document vivent comme tickets dans `docs/BACKLOG_V3.md`** (lots N, O, Q, S). Ce document reste la référence du **pourquoi** d'une décision — jamais de ce qu'il faut faire ensuite.
+
 **Version :** 0.2 — 8 septembre 2026
 **Statut :** analyse. Les points marqués « tranché » l'ont été en relecture avec l'auteur (§0.1) ; le reste est regroupé au §12. Aucun ticket ouvert par ce document.
 **Source :** le prompt personnel écrit avant le projet, celui qui a servi à jouer en solo avec un modèle unique et dont l'oubli a motivé CreaDonjon. Neuf blocs : identité et style du MJ, lois du monde, mécaniques, PNJ et relations, guildes et quêtes, propriétés et gouvernance, protocole de réponse, module univers, module personnage, plus un module de contenu explicite.
