@@ -131,6 +131,7 @@ Chacune tient en quelques lignes ; groupées parce qu'aucune ne mérite une sess
 - [ ] Le `\n` isolé au milieu d'une phrase dans les traductions françaises quantifié puis corrigé (repéré sur « Initié à la magie », probablement pas isolé).
 - [ ] Supprimer un compte invité ayant téléversé un fond ne laisse pas son asset orphelin dans le bucket (`background_images.owner_id`, cascade signalée en V2-L1).
 - [ ] Les deux points du point de contrôle V2 tranchés : couverture de traduction par type d'entrée, et le statut de la migration `restore_entity_blocks`.
+- [ ] **`npm ci` échoue : le lockfile est désynchronisé de `package.json`** (`Missing: @swc/helpers@0.5.23 from lock file`, constaté le 8 septembre en travaillant V3-N7). Un clone frais — ou une CI — ne peut pas installer. `npm install` le répare en écrivant un nouveau lockfile ; le faire est un commit à part, jamais un effet de bord d'un autre ticket.
 - [ ] Un emplacement de générateur peut porter sa propre visibilité — `GeneratorSlot` n'en a pas, donc le secret d'un PNJ généré naît en `public` alors que `specs/outils-mj.md` §3 le veut en `gm` (signalé en V2-J2, jamais implémenté). Si ça dépasse la ligne, ça devient un ticket à part.
 
 ### V3-N6 — Reliquats de l'audit de performance · `M`
@@ -149,7 +150,18 @@ L'audit des 3 et 4 septembre (commits `b4ee26c`, `8217479`, `dcfdbe0`, `c320be1`
 
 ### V3-N7 — Redécouper les règles du SRD en fiches indépendantes · `L`
 
-Une fiche de règle du SRD porte souvent plusieurs règles. `between-adventures` en contient **six** — train de vie, fabrication, exercer un métier, récupération, recherche, entraînement — en 5 901 caractères. `traps` en fait 17 487, `using-each-ability` 15 993 ; la médiane des 33 sections est à 5 351.
+Une fiche de règle du SRD porte souvent plusieurs règles. `between-adventures` en contient deux au niveau 3 — train de vie, activités de temps libre — dont la seconde porte cinq activités au niveau 4 (fabrication, exercer un métier, récupération, recherche, entraînement), le tout en 5 901 caractères. `traps` fait 17 487 caractères, `using-each-ability` 15 993 ; la médiane des 33 sections est à 5 351.
+
+**Relevé sur les 33 sections du SRD (8 septembre), et il interdit une heuristique unique :**
+
+| Motif | Sections | Conséquence |
+|---|---|---|
+| Aucun titre de niveau 3 | **9** — Harmonisation, Couverture, Jets de sauvegarde, Bonus de maîtrise, Avantage et désavantage… | **ne se découpent pas** : ce sont déjà des règles uniques |
+| Niveau 3 « propres » | `actions-in-combat` : 10 actions, aucun niveau 4 | découpage direct au niveau 3 |
+| Niveau 3 conteneurs | `traps` → « Sample Traps » + 12 pièges au niveau 4 ; `poisons` idem | la chose vers laquelle on pointe est au niveau 4, pas 3 |
+| Trois titres de niveau 2 | `the-planes-of-existence` | anomalie : plusieurs chapitres dans une même section |
+
+Un découpage automatique se tromperait sur un tiers des cas. **Le niveau de coupe est donc une décision par chapitre, portée en donnée** — la fonction de découpage l'applique, elle ne le devine jamais.
 
 **Ce n'est pas un problème pour le moteur** : il résout par clé et lit des blocs typés, jamais du texte. C'en est un pour quatre autres usages :
 
@@ -169,6 +181,15 @@ Une fiche de règle du SRD porte souvent plusieurs règles. `between-adventures`
 **Le motif d'affichage existe déjà, deux fois.** `RulesSidebar.tsx` niche les **sous-classes sous leur classe** (V1-D7, sur retour utilisateur : *« je dois pouvoir trouver Évocateur sous Magicien »*) et les **sous-espèces sous leur espèce**. Chaque enfant reste une fiche à part entière, simplement affichée en retrait. `Entre deux aventures ▸ Train de vie` serait le troisième cas du même motif.
 
 Le repli quand le parent sort du filtre est déjà conçu, et c'est exactement le cas d'usage visé : une recherche sur « train de vie » ne fait pas correspondre le chapitre, la règle apparaît donc seule dans un groupe normal — *« plutôt que de la faire disparaître silencieusement »*.
+
+**Ordre réel d'exécution — le noyau pur d'abord.** Les phases A à C demandent la base pour être vérifiées en direct. Le morceau qui *décide* — où couper, quelle clé — est une fonction pure, testable exhaustivement contre les 33 sections réelles sans base ni réseau. Il a donc été écrit en premier : il informe la phase A plutôt que l'inverse.
+
+**Phase 0 — le noyau de découpage — ✅ faite**
+- [x] `src/core/ruleset/splitRuleSection.ts` : `splitRuleSection(markdown, {parentKey, depth})` rend un chapitre et ses filles, `outlineRuleSection` rend le sommaire des titres — ce qu'un humain regarde pour choisir la profondeur d'un chapitre.
+- [x] **La profondeur n'est jamais devinée**, elle est fournie par l'appelant. Le relevé ci-dessus l'interdit.
+- [x] Le découpage se fait par **tranches contiguës de la chaîne d'origine**, jamais en recomposant des lignes : « ni perte ni doublon » est vrai par construction, et vérifié sur les 33 sections × 5 profondeurs.
+- [x] Clés dérivées et préfixées par le chapitre ; un titre répété reçoit un suffixe plutôt que d'écraser le précédent — mêmes `slugify`/`nextSlugCandidate` que les slugs de monde, aucun second utilitaire.
+- [x] 15 tests, écrits avant le code. Cas dorés : les neuf sections sans titre de niveau 3 restent intactes, `actions-in-combat` se coupe en ses dix actions, et les clés produites sur tout le SRD sont uniques.
 
 **Phase A — le mécanisme**
 
