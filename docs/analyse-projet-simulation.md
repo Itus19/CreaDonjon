@@ -127,7 +127,9 @@ Mais **ce dont il peuple le monde est du vocabulaire de ruleset** : quelles esp�
 | **Monde amorcé** | une région, quelques factions avec leurs intérêts, deux ou trois siècles d'histoire, des populations | suffit largement à jouer en solo ; à portée après la V3 |
 | **Simulation géologique** | proto-planète, tectonique, hydrologie, 231 matériaux, 10 000 ans tick par tick | le projet du document ; une année de travail à lui seul |
 
-**Non tranché.** Tant que ça ne l'est pas, « le worldgen » restera un mot qui veut dire deux choses selon le jour.
+**Tranché le 8 septembre : le monde amorcé.** Il suffit à jouer et ne ferme aucune porte — on peut lui ajouter de la profondeur plus tard, alors que commencer par la géologie mettrait une année de travail avant la première partie jouable.
+
+Conséquence directe : les 231 matériaux, les objets calculés depuis un matériau et le `tick_history` ne sont pas nécessaires. Ils restent hors périmètre avec les sorts composables (§5).
 
 ### 4.2 Une conséquence immédiate, même sans rien construire
 

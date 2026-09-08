@@ -162,6 +162,7 @@ La vague 1 de `docs/analyse-prompt-origine.md`, plus un critère de V2-H1 jamais
 - [ ] `agency: "strict"` est une **validation**, pas une consigne : une proposition de tour faisant agir le personnage joueur est rejetée par le code.
 - [ ] Le profil entre dans le contexte du modèle par le même chemin que le reste, borné par l'audience (règle absolue 11).
 - [ ] Un monde sans profil réglé se comporte comme aujourd'hui, sans valeur inventée.
+- [ ] **Les réglages de contenu sont par monde** (tranché le 8 septembre), avec un défaut restrictif. Les limites absolues n'en font pas partie : elles vivent côté serveur et ne dépendent d'aucun monde (`docs/analyse-prompt-origine.md` §9.1).
 
 ### V3-O2 — Verrou de partage d'un monde à contenu tiers · `S`
 
@@ -480,6 +481,8 @@ Fonction pure : `personality.baseline` (déjà là) + attitude de la faction env
 
 Une horloge portée par une faction : un objectif, des crans, ce qui se produit quand elle se remplit, ce qui la fait avancer. **Elle n'avance que sur événement** — jamais de tâche de fond, pour la raison déjà posée en `specs/psyche-pnj.md` §1.
 
+**Confirmé le 8 septembre** : les jauges des PNJ absents ne dérivent pas en arrière-plan. Une horloge n'est donc pas une exception à cette règle — elle avance sur événement, comme tout le reste.
+
 **Critères**
 - [ ] Déclaratif, posé sur le vocabulaire d'événements du lot P, sans mécanisme nouveau.
 - [ ] Une horloge ne coûte rien quand personne ne la regarde.
@@ -510,7 +513,11 @@ Un fait connu d'une faction devient connu d'une autre, fidèlement ou déformé.
 
 Il est **générique** au sens de la ligne de partage du lot Q : géographie, climat, factions, histoire et populations ne dépendent d'aucun système de règles, donc ils vivent dans le code. En revanche **ce dont il peuple le monde** — quelles espèces, quels monstres, quelles ressources — est du vocabulaire de ruleset, et passe par `rule_query` (V3-Q4). C'est son troisième consommateur.
 
-**Deux choses portent ce nom, et leur écart est d'un ordre de grandeur** (`docs/analyse-projet-simulation.md` §4.1) : un **monde amorcé** (une région, quelques factions, deux ou trois siècles d'histoire — suffit à jouer, à portée après la V3) et une **simulation géologique** (proto-planète, tectonique, 231 matériaux, 10 000 ans tick par tick — une année de travail). **Non tranché** ; c'est au §12.
+**Tranché : ce sera un monde amorcé.** Deux choses portaient ce nom, et leur écart est d'un ordre de grandeur (`docs/analyse-projet-simulation.md` §4.1) — un **monde amorcé** (une région, quelques factions avec leurs intérêts, deux ou trois siècles d'histoire, des populations) et une **simulation géologique** (proto-planète, tectonique, 231 matériaux, 10 000 ans tick par tick, une année de travail à elle seule).
+
+Le monde amorcé suffit à jouer en solo, et il ne ferme aucune porte : on peut lui ajouter de la profondeur plus tard. L'inverse n'est pas vrai — commencer par la géologie mettrait une année de travail avant la première partie jouable, sur un projet dont le premier risque documenté est la perte de motivation.
+
+**Ce que cette décision emporte avec elle :** les matériaux physiques, les objets calculés depuis un matériau et le `tick_history` (1 tick = 1 an) ne sont pas nécessaires au monde amorcé. Ils restent hors périmètre, avec les sorts composables, en attendant l'ADR sur la clé stable.
 
 **Une conséquence dès aujourd'hui, sans rien construire :** le worldgen crée des entités par milliers, là où le wiki suppose des fiches écrites à la main. Rien de ce qu'on construit d'ici là ne doit supposer le contraire — ni l'arborescence, ni la recherche, ni le fil d'activité.
 
@@ -539,6 +546,16 @@ Et un critère technique : **`entity_discoveries`, `entity_mentions` et `entity_
 
 ## Questions à trancher
 
+### Tranchées le 8 septembre
+
+| Question | Décision |
+|---|---|
+| Worldgen : monde amorcé ou simulation géologique ? | **le monde amorcé.** Une région, quelques factions, deux ou trois siècles d'histoire. Il suffit à jouer et ne ferme pas la porte à davantage |
+| Les réglages de contenu : par monde ou par compte ? | **par monde**, avec un défaut restrictif |
+| Les jauges des PNJ absents évoluent-elles en arrière-plan ? | **non, refus maintenu.** Les pôles ne bougent que sur événement explicite (`specs/psyche-pnj.md` §1) |
+
+### Encore ouvertes
+
 Aucune n'est urgente ; toutes changent le résultat si on y répond après coup. Le détail et le raisonnement sont en `docs/analyse-prompt-origine.md` §12.
 
 | Question | Recommandation | Bloque |
@@ -546,12 +563,9 @@ Aucune n'est urgente ; toutes changent le résultat si on y répond après coup.
 | Quelles constantes du moteur deviennent de la donnée ? | monnaie et encombrement, puis on observe | **V3-Q2 à Q4** |
 | La surcharge de ruleset sait-elle *retirer* une règle ? | à vérifier avant de commencer V3-Q3 | V3-Q3 |
 | Pourcentages ou bandes nommées ? | les bandes ; un curseur sans chiffre si le besoin persiste | V3-N4 |
-| Les jauges des PNJ absents évoluent-elles en arrière-plan ? | maintenir le refus — choix de jeu, pas d'architecture | V3-S2 |
 | « Système implicite » ou fiche qui montre sa trace ? | un réglage d'affichage, pas une doctrine | V3-R4 |
-| Réglages de contenu : par monde ou par compte ? | par monde, plafonné au compte, défaut restrictif | V3-O1 |
 | Propriétés et gouvernance : « jamais » ou « un jour » ? | si « un jour », la jauge de loyauté devient un préalable | V3-O3 |
 | Passage à l'application locale | `specs/cible-locale-et-ia.md` §6 — « local seul » ou « local d'abord » reste ouvert | — |
-| **Worldgen : monde amorcé ou simulation géologique ?** | le monde amorcé d'abord — il suffit à jouer, et il ne ferme pas la porte à l'autre | le lot worldgen |
 | Une entrée composée peut-elle avoir une clé stable ? | composer **puis figer**, avec une clé dérivée des composants — mais c'est un ADR | matériaux et sorts composables |
 
 ---
@@ -562,7 +576,8 @@ Pour que la question ne se repose pas à chaque session :
 
 - **Gouvernance politique** (villages, territoires, effets en cascade) — cohérent, désirable, très loin.
 - **Simulation économique** des valeurs marchandes — les paliers des générateurs couvrent 90 % de l'effet.
-- **Dérive de fond** des attitudes hors événement — refusée en connaissance de cause.
+- **Dérive de fond** des attitudes hors événement — refusée en connaissance de cause, **confirmé le 8 septembre**.
+- **Simulation géologique** (proto-planète, tectonique, hydrologie, `tick_history`, 231 matériaux) — le worldgen retenu est un monde amorcé, qui n'en a pas besoin.
 - **Grille tactique** — trois zones abstraites suffisent ; on y revient seulement si ça manque vraiment.
 - **Objets calculés à la volée depuis un matériau** — incompatible avec `entry_key`, dont dépendent la surcharge, la traduction et les révisions. Rouvrir seulement si l'ADR sur la clé stable aboutit (§12).
 - **Sorts composables** (intention × vecteur × élément) — même cause, même ADR.
