@@ -147,6 +147,35 @@ L'audit des 3 et 4 septembre (commits `b4ee26c`, `8217479`, `dcfdbe0`, `c320be1`
 - [ ] Aucune régression fonctionnelle : une fiche ouverte seule affiche exactement les mêmes pastilles et la même fiche dérivée qu'avant.
 - [ ] Si le cache retenu est côté client, il s'invalide quand la donnée sous-jacente change — un ruleset modifié ne doit pas laisser une fenêtre sur une résolution périmée.
 
+### V3-N7 — Redécouper les règles du SRD en fiches indépendantes · `L`
+
+Une fiche de règle du SRD porte souvent plusieurs règles. `between-adventures` en contient **six** — train de vie, fabrication, exercer un métier, récupération, recherche, entraînement — en 5 901 caractères. `traps` en fait 17 487, `using-each-ability` 15 993 ; la médiane des 33 sections est à 5 351.
+
+**Ce n'est pas un problème pour le moteur** : il résout par clé et lit des blocs typés, jamais du texte. C'en est un pour quatre autres usages :
+
+| | |
+|---|---|
+| **La lecture humaine** | la recherche du compendium filtre sur le **nom seul** (`RulesSidebar.tsx:161`). Chercher « train de vie » ne renvoie rien aujourd'hui — la fiche s'appelle « Entre deux aventures » |
+| **La surcharge** | `ruleset_overrides` travaille par entrée : changer le seul coût du train de vie oblige à surcharger les six règles ensemble |
+| **Le RAG** | un chunk par entrée : une question sur un piège précis rapatrie 17 000 caractères |
+| **Les renvois** | on ne peut pointer que vers le chapitre, jamais vers la règle |
+
+**Le moment est le bon, et il ne le restera pas.** La prose française des entrées `Règle` n'est pas encore écrite (`BACKLOG_V1` : *« seul Sort a une extraction de prose à ce jour »*). Découper avant de l'écrire coûte une passe de données ; découper après obligerait à redécouper à la main un travail de traduction long et pénible.
+
+**La règle de granularité** : une entrée par chose vers laquelle on veut pouvoir **pointer, surcharger ou renvoyer**. Pas une entrée par phrase — « Train de vie » la mérite, « Entre deux aventures » est un chapeau de chapitre.
+
+**Phase A — le mécanisme**
+- [ ] Une fiche de règle peut déclarer son chapitre parent, par `ruleset_entry_refs` — l'ordre de lecture du livre survit au découpage. Deux cents fiches orphelines seraient pires que le regroupement actuel.
+- [ ] Le compendium affiche la hiérarchie chapitre → règle, et la recherche trouve la règle par son propre nom.
+
+**Phase B — un chapitre pilote**
+- [ ] `between-adventures` découpé en six fiches rattachées à leur chapeau, vérifié en direct dans le compendium.
+- [ ] Les noms français déjà écrits suivent leur règle, aucun n'est perdu.
+
+**Phase C — le reste**
+- [ ] Les 32 autres sections passées au même traitement, chapitre par chapitre.
+- [ ] **Piège connu à ne pas rejouer** : une ré-ingestion retire les fiches absentes du JSON source — c'est ainsi que `encounter-budget` avait disparu (V2-G1). Le découpage se fait donc sur les données en place, jamais par une ré-ingestion naïve.
+
 ---
 
 # Lot O — Récit, psyché, quêtes
@@ -370,7 +399,20 @@ Le garde-fou du lot, et sa vraie preuve. Comme la règle ESLint qui protège `sr
 - [ ] Aucun outil ne propose de valeur D&D : pas d'« elfe » dans un générateur, pas d'« Acrobaties » sur une fiche, pas de pièce d'or.
 - [ ] Chaque fuite trouvée devient un correctif, jamais une exception dans le test.
 
-### V3-Q6 — Objets : qualité, niveau, identification · `M`
+### V3-Q6 — Mécanique structurée pour les entrées `rule` · `M`
+
+`REQUIRED_BLOCKS` couvre `spell`, `class`, `weapon`, `armor`, `item`, `monster`, `background`, `condition`, `subclass`, `species`, `magic_item`, `mount` — **jamais `rule`**. Une règle est donc de la prose pure : la table des coûts de train de vie (misérable 0, pauvre 2 pa, modeste 1 po…) n'est structurée nulle part.
+
+Quand le moteur solo devra prélever le coût quotidien, appliquer un repos, résoudre un déplacement ou déclencher un piège, il n'aura rien à lire. **C'est un préalable du lot R**, et il vaut pour toute cette famille de règles.
+
+Le regroupement traité en V3-N7 n'est pas le vrai problème : six règles dans une fiche, chacune portant son bloc typé, seraient parfaitement utilisables ; six fiches de prose pure ne le seraient pas davantage qu'une.
+
+**Critères**
+- [ ] `rule` a des blocs requis, ou une règle explicite disant pourquoi elle n'en a pas.
+- [ ] Le train de vie, le repos et le voyage portent leur mécanique en données — barème lisible par le moteur, pas seulement par un humain.
+- [ ] Une entrée `rule` sans bloc mécanique reste valide mais signalée, comme les autres types (on avertit, on n'interdit pas).
+
+### V3-Q7 — Objets : qualité, niveau, identification · `M`
 
 **Critères**
 - [ ] Le **vocabulaire** (qualités, échelle de niveau d'objet, table de risque, paliers d'identification) vit dans le ruleset.
@@ -445,6 +487,7 @@ Deux canaux dans une seule saisie : hors-jeu (réponse méta, l'horloge ne bouge
 
 **Critères**
 - [ ] Un chunk = un segment, un bloc ou une entrée de règle. Aucun découpage aveugle.
+- [ ] **Une entrée trop grosse est découpée par section, pas indexée d'un bloc.** Une règle de 17 000 caractères (`traps`) produirait sinon un chunk qui rapatrie tout le chapitre pour une question sur un seul piège. Le découpage suit les titres de la prose, jamais un compte de tokens.
 - [ ] La visibilité est **héritée de la source** : un RAG qui ignore les permissions est un moteur de fuite.
 - [ ] Recherche hybride, lexical et vectoriel fusionnés — le vectoriel seul rate les noms propres.
 - [ ] Aucun appel d'embedding dans une transaction d'écriture ; `content_hash` pour ne jamais refacturer un texte inchangé.
@@ -541,7 +584,7 @@ Le monde amorcé suffit à jouer en solo, et il ne ferme aucune porte : on peut 
 
 Ce travail avance par petites touches et ne se ferme pas. Il n'entre dans aucun lot et ne bloque rien.
 
-- Extraction de prose SRD étendue à Règle et Aptitude (seul Sort en a une aujourd'hui).
+- Extraction de prose SRD étendue à Règle et Aptitude (seul Sort en a une aujourd'hui). **À faire après V3-N7**, jamais avant : écrire la prose française d'un chapitre qu'on va découper obligerait à la redécouper à la main.
 - Les ~471 fiches Objet : la structure est posée, le contenu non.
 - Traduction française des noms de classes et sous-classes (38 sur 428 au dernier point).
 - Le monde et le personnage du prompt d'origine, saisis dans `data/personnel/` puis dans l'app — **après V3-O2**, jamais avant.
