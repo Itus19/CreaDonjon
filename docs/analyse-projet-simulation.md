@@ -170,6 +170,7 @@ Il existe probablement une sortie — **composer puis figer** une entrée avec u
 | Worldgen | `ROADMAP.md` et une entrée V4 du backlog |
 | Clé stable d'une entrée composée | un ADR, préalable aux matériaux et aux sorts composables |
 | Les 8 races, 12 archétypes, 10 origines, le système de mana | **rien dans le backlog** — ce sont les données que l'auteur écrira dans son JSON une fois le lot Q livré. Le jeu d'essai, pas le travail |
+| Les trous et contradictions du système lui-même | `docs/conception-ruleset-jdrsim.md` — plan de travail de conception, ni backlog ni contenu |
 
 ---
 

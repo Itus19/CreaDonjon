@@ -545,6 +545,7 @@ Ce travail avance par petites touches et ne se ferme pas. Il n'entre dans aucun 
 - Les ~471 fiches Objet : la structure est posée, le contenu non.
 - Traduction française des noms de classes et sous-classes (38 sur 428 au dernier point).
 - Le monde et le personnage du prompt d'origine, saisis dans `data/personnel/` puis dans l'app — **après V3-O2**, jamais avant.
+- Le ruleset personnel : sa conception se travaille dans `docs/conception-ruleset-jdrsim.md` (trous, contradictions, décisions), son contenu vit dans `data/personnel/`. Ce que le lot Q rend exprimable y est indiqué phase par phase.
 
 ---
 
