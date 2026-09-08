@@ -24,6 +24,7 @@ Il rassemble cinq sources qui vivaient jusqu'ici dans cinq endroits différents.
 | `specs/moteur-de-jeu.md` §8 | six tickets déjà nommés et dimensionnés | P |
 | `docs/analyse-prompt-origine.md` §11 | le tri du prompt d'origine, trois vagues | O, Q, S |
 | Audit du 8 septembre (`ROADMAP.md`) | deux trous que personne n'avait notés | N |
+| Audit de performance des 3-4 septembre | deux reliquats explicitement remis à plus tard | N |
 | Reliquats des lots V1 et V2 | critères en suspens, bugs signalés non corrigés | N |
 | `docs/BACKLOG_V2.md` §4 | ce qui était étiqueté « reste pour la V3 » | P, R |
 
@@ -126,6 +127,20 @@ Chacune tient en quelques lignes ; groupées parce qu'aucune ne mérite une sess
 - [ ] Le `\n` isolé au milieu d'une phrase dans les traductions françaises quantifié puis corrigé (repéré sur « Initié à la magie », probablement pas isolé).
 - [ ] Supprimer un compte invité ayant téléversé un fond ne laisse pas son asset orphelin dans le bucket (`background_images.owner_id`, cascade signalée en V2-L1).
 - [ ] Les deux points du point de contrôle V2 tranchés : couverture de traduction par type d'entrée, et le statut de la migration `restore_entity_blocks`.
+
+### V3-N6 — Reliquats de l'audit de performance · `M`
+
+L'audit des 3 et 4 septembre (commits `b4ee26c`, `8217479`, `dcfdbe0`, `c320be1`) a livré neuf corrections mesurées en direct. Il a laissé deux choses derrière lui, toutes deux vérifiées encore ouvertes le 8 septembre.
+
+**L'index qui n'a peut-être jamais été posé.** `20260903210039_combats_campaign_id_index.sql` a été écrit mais **pas appliqué** — le CLI Supabase n'était pas disponible dans l'environnement de cette session-là. `combats.campaign_id` sert de filtre aux requêtes applicatives **et** à la clause `USING` des deux politiques RLS, évaluée ligne par ligne : sans index, « y a-t-il un combat en cours ? » force un scan complet d'une table qui grandit à chaque rencontre jouée. Une migration plus récente existe depuis (`20260904150000`), donc l'index est peut-être passé entre-temps — **à vérifier en base avant de conclure**, jamais à supposer.
+
+**Le re-fetch par fenêtre.** Constat noté au moment de corriger le remontage des fenêtres, et jamais traité : *« les endpoints reference-chips/resolved-ruleset/sheet sont lents en eux-mêmes (0,5-3 s chacun) et se re-fetchent par fenêtre à l'ouverture — coût séparé, pas cette régression de remount. À creuser une autre fois. »* Vérifié : `useReferenceChips` et `useResolvedRuleset` déclenchent leur requête depuis un `useEffect` par instance de composant, sans cache partagé. Deux fenêtres ouvertes sur des fiches du même monde repaient donc deux fois la même résolution. `c320be1` a ramené `resolved-ruleset` de ~2,9 s à ~1 s, ce qui atténue le symptôme sans toucher la cause.
+
+**Critères**
+- [ ] L'index sur `combats.campaign_id` est présent en base — constaté par requête, pas déduit du fichier de migration.
+- [ ] Deux fenêtres ouvertes sur des fiches du même monde ne résolvent qu'une fois les mêmes références — mesuré au compteur de requêtes, pas à l'œil.
+- [ ] Aucune régression fonctionnelle : une fiche ouverte seule affiche exactement les mêmes pastilles et la même fiche dérivée qu'avant.
+- [ ] Si le cache retenu est côté client, il s'invalide quand la donnée sous-jacente change — un ruleset modifié ne doit pas laisser une fenêtre sur une résolution périmée.
 
 ---
 
