@@ -12,6 +12,12 @@ Ce document répond à une seule question : **qu'est-ce qui existe déjà ?** Il
 
 ---
 
+## La phase où l'on est
+
+> **On en est à la partie wiki.** Le moteur de règles et les outils de MJ sont livrés ; le jeu solo et le worldgen viennent après.
+
+C'est la réponse à la moitié des questions de priorité : si un arbitrage oppose « mieux tenir le wiki » à « préparer le solo », c'est le wiki qui gagne, jusqu'à ce que cette ligne change.
+
 ## En un coup d'œil
 
 | Version | État | Où |
@@ -71,6 +77,7 @@ Tous les lots (G, H, I, J, K, L, M) sont livrés. Ne restent que trois choses, d
 - [x] Compendium : catégories, recherche, fiche de détail
 - [x] Fiche jouable : actions, repos, inventaire, magie, traits, dés de vie, bourse — V1-C
 - [x] Assistant de création de personnage et montée de niveau accompagnée (ASI, jets de dé de vie, maîtrise d'armes) — V2-G1
+- [~] **Le ruleset ne fait pas encore autorité partout.** Le créateur de personnage, la fiche et le générateur de rencontres lisent bien le ruleset actif ; les générateurs de MJ, les 18 compétences, les 6 caractéristiques, la formule de modificateur, la monnaie et l'encombrement sont encore en dur — `BACKLOG_V3.md` lot Q
 - [ ] **Déclencheurs** « quand X, alors Y » — conception arrêtée (`specs/moteur-de-jeu.md` §4), six tickets V3-A1 à V3-A6 déjà dimensionnés
 - [ ] Économie d'action et état de scène — V3-A3, V3-A4
 
@@ -118,9 +125,8 @@ Volontairement, et dans cet ordre de vraisemblance :
 
 - [ ] Mode solo ou MJ assisté, sous la forme retenue par l'ADR 0009 — V3
 - [ ] Monde autonome : factions qui évoluent hors champ, quêtes qui expirent — `docs/analyse-prompt-origine.md` §7
+- [ ] **Worldgen** — génération d'un monde, de son histoire et de ses peuples. **En périmètre, après la V3** : c'est un préalable du jeu solo, plus une idée future. Reste à trancher s'il s'agit d'un monde amorcé ou d'une simulation géologique (`docs/analyse-projet-simulation.md` §4)
 - [ ] Passage à l'application locale — `specs/cible-locale-et-ia.md` §6, « local seul » ou « local d'abord » reste ouvert
-- [ ] Génération procédurale de cartes
-- [ ] Simulation procédurale du monde
 
 ---
 

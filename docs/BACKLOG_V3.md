@@ -25,6 +25,7 @@ Il rassemble cinq sources qui vivaient jusqu'ici dans cinq endroits différents.
 |---|---|---|
 | `specs/moteur-de-jeu.md` §8 | six tickets déjà nommés et dimensionnés | P |
 | `docs/analyse-prompt-origine.md` §11 | le tri du prompt d'origine, trois vagues | O, Q, S |
+| `docs/analyse-projet-simulation.md` | le tri du proto JDRSim : outils génériques, expressivité du ruleset, worldgen | O, Q, R |
 | Audit du 8 septembre (`ROADMAP.md`) | deux trous que personne n'avait notés | N |
 | Audit de performance des 3-4 septembre | deux reliquats explicitement remis à plus tard | N |
 | Reliquats des lots V1 et V2 | critères en suspens, bugs signalés non corrigés | N |
@@ -214,7 +215,27 @@ Du contenu, pas du code : les générateurs composés et le tirage filtré par p
 - [ ] La récompense suit le rang tiré, par palier — jamais une table plate.
 - [ ] « Créer la fiche » produit une entité avec son bloc `quest` prérempli (mécanisme de promotion existant, V2-J2).
 
-### V3-O8 — Tension entre un PNJ et sa faction · `S`
+### V3-O8 — Fiabilité des sources dans le wiki · `M`
+
+`entity_discoveries` dit **que** le joueur sait quelque chose. Elle ne dit rien de **à quel point c'est vrai**. Sans ça, un wiki solo affiche une rumeur de taverne avec la même autorité qu'un fait observé — et c'est ce qui tue la tension d'un jeu où l'on enquête.
+
+Quatre niveaux repris du proto (`docs/analyse-projet-simulation.md` §2.1) : observé, rapporté par un PNJ de confiance, rumeur, document écrit.
+
+**Critères**
+- [ ] Une découverte porte sa source ; l'affichage la montre sans jamais donner un pourcentage de vérité.
+- [ ] La même entité peut être connue par deux sources de fiabilité différente, sans écraser l'une par l'autre.
+- [ ] Une information fausse reste affichable telle quelle — le wiki n'est pas la vérité du monde, c'est ce que le personnage croit savoir.
+
+### V3-O9 — Langue inconnue rendue illisible · `S`
+
+Un PNJ qui parle une langue que le personnage ignore produit du charabia, pas une traduction. Générique, et c'est un cas de résolution serveur : le texte réel ne doit jamais partir vers le client (règle absolue 5).
+
+**Critères**
+- [ ] Le brouillage est fait côté serveur ; la réponse HTTP ne contient jamais le texte clair.
+- [ ] Le charabia est déterministe pour une même phrase et une même langue — relire la scène donne le même texte.
+- [ ] Apprendre la langue rend les phrases passées lisibles à la relecture.
+
+### V3-O10 — Tension entre un PNJ et sa faction · `S`
 
 Critère de V2-H1 resté décoché : la comparaison automatique entre les convictions d'un PNJ et celles de sa faction, avec signalement des divergences fortes. C'est le « D6 » de `specs/wiki-blocs.md`, et il est presque gratuit — `worldview` est déjà attachable à une faction, les deux jeux de pôles sont déjà comparables.
 
@@ -252,50 +273,94 @@ Critères d'acceptation détaillés en `specs/moteur-de-jeu.md` §9. Les trois q
 
 ---
 
-# Lot Q — Ruleset personnel
+# Lot Q — Le ruleset fait autorité
 
-Les règles maison du prompt d'origine. Indépendant du lot P, mais **son premier ticket bloque les trois autres.**
+**Reformulé le 8 septembre.** Ce lot ne consiste pas à saisir un système de règles : il consiste à faire en sorte que **le ruleset chargé décide de ce que proposent tous les outils**. Les 8 races, les 12 archétypes et le système de mana du proto n'y figurent donc pas — ce sont les données que l'auteur écrira dans son JSON une fois ce lot livré. Le jeu d'essai, pas le travail.
 
-### V3-Q1 — ADR : quelles constantes du moteur deviennent de la donnée · `S`
+Le critère qui commande le lot :
+
+> **Basculer le ruleset actif d'un monde change ce que proposent tous les outils — création de personnage, générateurs, rencontres, fiche — sans qu'aucune valeur ne subsiste de l'ancien.**
+
+La ligne de partage, valable ticket par ticket (`docs/analyse-projet-simulation.md` §1) : **le mécanisme est générique et vit dans le code, le vocabulaire appartient au ruleset et vit dans les données.**
+
+Ce qui marche déjà et sur quoi ce lot s'appuie : le cloisonnement entre rulesets est garanti par l'architecture depuis la Phase 0 ; l'import/export JSON existe (V2-J4) ; et le générateur de rencontres montre la voie — son budget de difficulté est **lu dans l'entrée `encounter-budget` du ruleset**, jamais codé.
+
+### V3-Q1 — ADR : où passe la frontière code / donnée · `S`
 
 **Le seul ticket réellement bloquant de tout ce backlog.**
 
-`CLAUDE.md` règle 18 promet qu'une variante est un ruleset de plus. C'est vrai pour tout ce qui est saisi comme fiche — ce ne l'est pas pour les constantes du moteur. Vérifié : `COIN_VALUE_CP` (`src/core/rules/currency.ts`), les dénominations pp/po/pe/pa/pc (enum Zod de `inventory`), et les multiplicateurs d'encombrement (`src/core/rules/encumbrance.ts`) sont tous en dur.
+`CLAUDE.md` règle 18 promet qu'une variante est un ruleset de plus. C'est vrai pour tout ce qui est saisi comme fiche — ce ne l'est pas pour le vocabulaire enfoui dans le moteur. Relevé dans le dépôt :
 
-Deux cas concrets existent (monnaie, encombrement), un troisième s'annonce (échelle de rang). La règle des trois est atteinte.
+| En dur | Où |
+|---|---|
+| Les 6 caractéristiques | `type Ability` — **32 fichiers y touchent** |
+| Les 18 compétences et leur caractéristique | `SKILL_ABILITIES`, `src/core/rules/sheet.ts` |
+| La formule de modificateur `(score − 10) / 2` | `sheet.ts` — alors que l'AST saurait l'évaluer |
+| Taux de change et dénominations | `COIN_VALUE_CP`, `src/core/rules/currency.ts` |
+| Capacité de charge et paliers | `src/core/rules/encumbrance.ts` |
 
 **Critères**
-- [ ] Un ADR dans `docs/adr/` : contexte, options, décision, conséquences. Dix lignes suffisent.
-- [ ] Il dit **où** vit cette donnée et **quelles** constantes migrent — pas « toutes », pas « on verra ».
+- [ ] Un ADR dans `docs/adr/` : contexte, options, décision, conséquences.
+- [ ] Il tranche **jusqu'où** va la déclaration par le ruleset, et ce qui reste en dur parce que générique.
+- [ ] Il acte que la formule de modificateur devient une formule AST déclarée, pas une constante.
 
-### V3-Q2 — Monnaie et encombrement en donnée de ruleset · `M`
+### V3-Q2 — Caractéristiques et compétences déclarées par le ruleset · `L`
 
-Applique V3-Q1. La variante du prompt : 1 po = 100 pa = 10 000 pb, trois dénominations ; capacité = FOR × 2,5 kg, paliers 100 % et 120 %.
+Le plus gros ticket du backlog. **La version raisonnable** : le ruleset déclare la liste, le moteur la traite comme opaque. Les rulesets SRD déclarent les six habituelles — donc rien ne change pour les mondes existants et **aucune migration de données n'est nécessaire** : les six clés restent valides, elles cessent d'être les seules possibles.
+
+**Critères**
+- [ ] Un ruleset déclare ses caractéristiques, ses compétences, et quelle caractéristique gouverne chacune.
+- [ ] La formule de modificateur est déclarée en AST et évaluée par le parser existant — aucun interpréteur nouveau.
+- [ ] Les mondes existants ne bougent pas : mêmes valeurs, mêmes fiches, aucune migration.
+- [ ] « Tableau standard / achat de points / tirage » deviennent de la donnée de ruleset — ils supposent aujourd'hui six valeurs.
+- [ ] Les cas dorés de `characterSheet()` passent inchangés.
+
+### V3-Q3 — Monnaie et encombrement en donnée de ruleset · `M`
+
+Applique V3-Q1 à deux constantes précises. Le cas d'essai : 1 po = 100 pa = 10 000 pb à trois dénominations, capacité = FOR × 2,5 kg avec paliers 100 % / 120 %.
 
 **Critères**
 - [ ] Un ruleset définit ses dénominations et leurs taux ; le porte-monnaie et la conversion automatique suivent.
 - [ ] Un ruleset définit sa capacité de charge et ses paliers.
-- [ ] Le SRD garde exactement son comportement actuel — aucune régression sur les cas dorés existants.
+- [ ] Le SRD garde exactement son comportement actuel.
 
-### V3-Q3 — Le ruleset mana · `L`
+### V3-Q4 — `rule_query` : un emplacement interroge le ruleset · `M`
 
-Remplace les emplacements de sorts. Détail et pièges en `docs/analyse-prompt-origine.md` §5.2.
+Spécifié dans `outils-mj.md` §3 — *« une variante maison qui ajoute une espèce l'obtient dans le générateur sans qu'on touche au générateur »* — et **jamais implémenté** : `src/core/generators/types.ts` le note comme écart assumé.
 
-**À vérifier avant de s'engager :** le mécanisme de surcharge sait ajouter et modifier une règle — **sait-il en retirer une ?** Le mana suppose de désactiver la progression d'incantation officielle. Si la réponse est non, ce ticket commence par là.
-
-**Critères**
-- [ ] Réserve de PM comme ressource, avec **fraction** de recharge (50 % au repos court) — aujourd'hui `recharge` est un enum qui ne sait dire que « entièrement ».
-- [ ] Coût en PM par sort, deux classes de cantrips, sorts théorisés visibles sur la fiche.
-- [ ] Évolution d'un sort : coût réduit **ou** effet amplifié, exclusifs — primitive `Choice` existante.
-- [ ] Un personnage utilise les emplacements **ou** le mana, jamais les deux.
-- [ ] Le ruleset a `parent_ruleset_id` vers une base officielle, jamais modifiée (règle absolue 18).
-
-### V3-Q4 — Objets : qualité, niveau, identification · `M`
+C'est le passage que trois consommateurs emprunteront : les générateurs, le créateur de personnage, et plus tard le worldgen. Par la règle des trois, il mérite d'être construit proprement une fois.
 
 **Critères**
-- [ ] Le **vocabulaire** (six qualités, échelle d'iLvl, table de risque, paliers d'identification) vit dans le ruleset.
+- [ ] Un emplacement de générateur peut tirer parmi les entrées du ruleset actif d'un type donné.
+- [ ] Changer de ruleset change le tirage, sans toucher au générateur.
+- [ ] Un ruleset sans entrée du type demandé produit un emplacement vide, jamais une valeur de repli inventée.
+
+### V3-Q5 — Générateurs et tables attachables à un ruleset · `M`
+
+Aujourd'hui le contenu des générateurs vit sur une entité `generateur` du **monde** (`ensureGeneratorToolsEntity`). Basculer le ruleset ne change donc rien à Taverne, PNJ, Noms, Échoppe, Butin.
+
+**Ce n'est pas un revirement** : `outils-mj.md` §2.2 prévoit depuis le début les **deux** emplacements — une table de monde (« Rumeurs de Valdoria ») et une table de ruleset (« Noms elfiques »). Seul le second n'a jamais été construit. À écrire dans le ticket, sinon quelqu'un « corrigera » un jour ce qu'il prendra pour une incohérence.
+
+**Critères**
+- [ ] Une table ou un générateur peut vivre dans un ruleset **ou** sur une entité de monde, avec le même schéma et le même moteur de tirage.
+- [ ] Les générateurs existants, attachés au monde, continuent de fonctionner sans reprise.
+- [ ] Un ruleset exporté en JSON embarque ses tables ; réimporté, il les retrouve.
+
+### V3-Q6 — Le test du ruleset vide · `S`
+
+Le garde-fou du lot, et sa vraie preuve. Comme la règle ESLint qui protège `src/core`, pas une intention.
+
+**Critères**
+- [ ] Un ruleset minimal factice est rendu actif sur un monde d'essai.
+- [ ] Aucun outil ne propose de valeur D&D : pas d'« elfe » dans un générateur, pas d'« Acrobaties » sur une fiche, pas de pièce d'or.
+- [ ] Chaque fuite trouvée devient un correctif, jamais une exception dans le test.
+
+### V3-Q7 — Objets : qualité, niveau, identification · `M`
+
+**Critères**
+- [ ] Le **vocabulaire** (qualités, échelle de niveau d'objet, table de risque, paliers d'identification) vit dans le ruleset.
 - [ ] L'**instance** (`item_level`, `quality`, `identified`) vit sur le bloc `inventory`.
-- [ ] Le tirage d'effet aléatoire d'un objet non identifié est fait par le serveur, journalisé.
+- [ ] Le tirage d'effet d'un objet non identifié est fait par le serveur, journalisé.
 - [ ] Aucune simulation de valeur marchande : le prix vient des paliers des générateurs.
 
 ---
@@ -378,6 +443,24 @@ Largement avancé par le lot M de la V2 (`canEditEntity`, invitations, coquille 
 - [ ] Un combat fonctionne avec zéro joueur connecté.
 - [ ] Les PV adverses ont trois niveaux de visibilité, réglables en cours de combat.
 
+### V3-R9 — Ellipse temporelle comme mécanisme · `M`
+
+« Je passe un mois à m'entraîner à ce sort. » Le moteur avance l'horloge, applique les gains, et le modèle raconte le passage du temps — jamais l'inverse.
+
+**Critères**
+- [ ] L'ellipse est déclarée par le joueur, jamais décidée par le modèle (garantie déjà acquise par l'horloge du moteur, à ne pas perdre).
+- [ ] Les gains sont calculés par le moteur à partir de la durée déclarée, pas résolus action par action.
+- [ ] Une ellipse est un événement de session comme un autre : rejouable, annulable.
+
+### V3-R10 — LOD narratif · `M`
+
+Le proto le formule bien : une harde de 3 000 cerfs reste un agrégat statistique tant que le joueur est loin, devient des individus partiellement définis à proximité, puis des personnages complets au contact. C'est une réponse générique au coût du contexte, pas une fonctionnalité de simulation.
+
+**Critères**
+- [ ] Le niveau de détail d'une entité dans le contexte dépend de sa distance à la scène, jamais d'un réglage manuel.
+- [ ] Passer d'un agrégat à des individus est un fait journalisé, pas une transformation silencieuse.
+- [ ] Le budget de contexte d'un tour reste tenu (moins de 600 tokens, V3-A1).
+
 ---
 
 # Lot S — Le monde vivant
@@ -421,6 +504,18 @@ Un fait connu d'une faction devient connu d'une autre, fidèlement ou déformé.
 
 ---
 
+# Après la V3 — le worldgen
+
+**Tranché le 8 septembre : en périmètre.** Le worldgen est un préalable du jeu solo — sans monde préexistant, il n'y a rien à découvrir. Il n'ouvre pas dans la V3, mais il cesse d'être une « idée future ».
+
+Il est **générique** au sens de la ligne de partage du lot Q : géographie, climat, factions, histoire et populations ne dépendent d'aucun système de règles, donc ils vivent dans le code. En revanche **ce dont il peuple le monde** — quelles espèces, quels monstres, quelles ressources — est du vocabulaire de ruleset, et passe par `rule_query` (V3-Q4). C'est son troisième consommateur.
+
+**Deux choses portent ce nom, et leur écart est d'un ordre de grandeur** (`docs/analyse-projet-simulation.md` §4.1) : un **monde amorcé** (une région, quelques factions, deux ou trois siècles d'histoire — suffit à jouer, à portée après la V3) et une **simulation géologique** (proto-planète, tectonique, 231 matériaux, 10 000 ans tick par tick — une année de travail). **Non tranché** ; c'est au §12.
+
+**Une conséquence dès aujourd'hui, sans rien construire :** le worldgen crée des entités par milliers, là où le wiki suppose des fiches écrites à la main. Rien de ce qu'on construit d'ici là ne doit supposer le contraire — ni l'arborescence, ni la recherche, ni le fil d'activité.
+
+---
+
 # Contenu — permanent, jamais un lot
 
 Ce travail avance par petites touches et ne se ferme pas. Il n'entre dans aucun lot et ne bloque rien.
@@ -456,6 +551,8 @@ Aucune n'est urgente ; toutes changent le résultat si on y répond après coup.
 | Réglages de contenu : par monde ou par compte ? | par monde, plafonné au compte, défaut restrictif | V3-O1 |
 | Propriétés et gouvernance : « jamais » ou « un jour » ? | si « un jour », la jauge de loyauté devient un préalable | V3-O3 |
 | Passage à l'application locale | `specs/cible-locale-et-ia.md` §6 — « local seul » ou « local d'abord » reste ouvert | — |
+| **Worldgen : monde amorcé ou simulation géologique ?** | le monde amorcé d'abord — il suffit à jouer, et il ne ferme pas la porte à l'autre | le lot worldgen |
+| Une entrée composée peut-elle avoir une clé stable ? | composer **puis figer**, avec une clé dérivée des composants — mais c'est un ADR | matériaux et sorts composables |
 
 ---
 
@@ -467,7 +564,10 @@ Pour que la question ne se repose pas à chaque session :
 - **Simulation économique** des valeurs marchandes — les paliers des générateurs couvrent 90 % de l'effet.
 - **Dérive de fond** des attitudes hors événement — refusée en connaissance de cause.
 - **Grille tactique** — trois zones abstraites suffisent ; on y revient seulement si ça manque vraiment.
-- **Génération procédurale de cartes** — idée future, jamais un ticket tant que le reste n'est pas solide.
+- **Objets calculés à la volée depuis un matériau** — incompatible avec `entry_key`, dont dépendent la surcharge, la traduction et les révisions. Rouvrir seulement si l'ADR sur la clé stable aboutit (§12).
+- **Sorts composables** (intention × vecteur × élément) — même cause, même ADR.
+
+*La génération procédurale de cartes a quitté cette liste : elle relève du worldgen, désormais en périmètre.*
 
 ---
 
