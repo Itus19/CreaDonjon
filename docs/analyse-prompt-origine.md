@@ -1,7 +1,7 @@
 # Analyse — le prompt d'origine du JDR solo
 
-**Version :** 0.1 — 8 septembre 2026
-**Statut :** analyse. Aucune décision engagée, aucun ticket ouvert par ce document.
+**Version :** 0.2 — 8 septembre 2026
+**Statut :** analyse. Les points marqués « tranché » l'ont été en relecture avec l'auteur (§0.1) ; le reste est regroupé au §12. Aucun ticket ouvert par ce document.
 **Source :** le prompt personnel écrit avant le projet, celui qui a servi à jouer en solo avec un modèle unique et dont l'oubli a motivé CreaDonjon. Neuf blocs : identité et style du MJ, lois du monde, mécaniques, PNJ et relations, guildes et quêtes, propriétés et gouvernance, protocole de réponse, module univers, module personnage, plus un module de contenu explicite.
 
 > **Le texte source n'est pas versionné.** Il contient du contenu personnel, une œuvre tierce (Frieren) et des directives de contenu adulte. Sa place est `data/personnel/prompt-origine.md`, ignoré par Git — même règle que le contenu de règles saisi depuis un ouvrage possédé (`specs/ruleset-personnel.md` §3). Ce document-ci ne cite le prompt que par extraits courts, à titre d'analyse.
@@ -15,6 +15,22 @@ Le prompt d'origine est le cahier des charges le plus honnête du projet : il di
 1. **Vérifier la thèse du projet.** Une bonne partie du prompt n'existait que pour compenser l'amnésie du modèle. Si l'architecture est juste, ces morceaux doivent disparaître sans rien perdre.
 2. **Récupérer ce qui est du vrai contenu.** Des règles maison, un ton de récit, un univers, un personnage. Rien de tout cela n'a de raison d'être perdu.
 3. **Repérer les manques réels.** Ce que le prompt demandait, que CreaDonjon ne sait pas encore exprimer — et distinguer, parmi ces manques, ceux qui coûtent une heure de ceux qui coûtent un lot entier.
+
+### 0.1 Décisions prises en relecture (8 septembre)
+
+Les points ci-dessous ont été soumis à l'auteur et tranchés. Ce document les intègre plutôt que de les laisser en question ouverte — deux d'entre eux corrigent une recommandation de la version 0.1.
+
+| Point | Décision |
+|---|---|
+| Le ton du récit : bloc ou menu ? | **un menu** dans les Réglages, adossé à une colonne `worlds.narration_profile`. *Corrige la v0.1* — §4.1 |
+| S'inspirer d'une œuvre préexistante | **retenu**, un champ nom + note. Le risque réel n'est pas le coût en contexte — §4.3 |
+| Les quatre jauges de relation | `relationship` en couvre trois ; la quatrième passe par des **pôles configurables par monde** — §6.1 |
+| « Ce qui frappe le personnage » | **retenu**, champ `striking` sur `personality` — §6.3 |
+| Le bloc `quest` | **creusé en trois temps**, dont deux n'attendent pas la V3 — §6.7 |
+| Qualité et iLvl des objets | **le vocabulaire au ruleset, l'instance à l'inventaire** — §5.3 |
+| Les orientations des PNJ | **trois champs distincts**, pas un seul. *Corrige la v0.1* — §6.4 |
+| La première impression | **retenue** : elle donne la teinte de base, plafonnée, journalisée — §6.2 |
+| Le générateur de quêtes | **retenu** — §6.7 |
 
 ---
 
@@ -52,7 +68,7 @@ Huit destinations. Chaque élément du prompt tombe dans exactement une.
 | **A** | Déjà couvert | rien à faire, sinon vérifier le recouvrement |
 | **B** | Ruleset personnel | règles maison chiffrées : PM, encombrement, monnaie, objets |
 | **C** | Blocs, existants ou nouveaux | structures d'information durables |
-| **D** | Profil de narration | ton, style, rythme, registre — **le seul concept vraiment nouveau** |
+| **D** | Profil de narration | ton, style, rythme, registre — **le seul concept vraiment nouveau**. Un menu, pas un bloc (§4.1) |
 | **E** | Moteur | monde autonome, scène, déclencheurs |
 | **F** | Contrat IA | ce que le modèle reçoit, ce qu'il rend, ce qu'il ne décide pas |
 | **G** | Réglages et politique de contenu | thèmes, limites, partage |
@@ -208,37 +224,62 @@ Tout le bloc 1, la moitié du bloc 1b et la structure du bloc 5 décrivent **une
 
 Aujourd'hui, la seule consigne de style du dépôt est une chaîne codée en dur dans `src/server/ai/spikeSolo.ts`. C'était juste pour un spike ; ce n'est pas tenable pour un monde qu'on joue.
 
-**Proposition : un bloc `narration_profile`**, attaché à un monde ou à une campagne, dans l'enveloppe commune des blocs.
+### 4.1 Tranché : un menu, pas un bloc
+
+La version 0.1 de ce document proposait un bloc `narration_profile`. **C'était une erreur d'ergonomie.** Le ton du récit n'est pas une fiche de wiki : on ne le consulte pas, on le règle une fois puis on l'oublie.
+
+Le précédent exact existe déjà dans le dépôt — **le calendrier** : une colonne `worlds.calendar jsonb`, un panneau `components/shell/CalendarSettingsPanel.tsx`, un onglet dans les Réglages. Le récit prend la même forme.
+
+| Quoi | Où |
+|---|---|
+| La donnée | `worlds.narration_profile jsonb`, exactement comme `worlds.calendar` |
+| L'écran | un onglet « Récit » dans les Réglages — V2-K5 les a déjà mis à onglets, V2-K6 y a déjà déplacé le ruleset actif |
+| La lecture | assemblée dans le contexte du tour, bornée par l'audience de la sortie (règle absolue 11) |
+
+**Ce qu'on perd en passant du bloc à la colonne, et qu'il faut assumer : l'historique.** Un bloc est versionné par `entity_revisions` ; une colonne de monde ne l'est pas. On ne pourra pas relire « le 12 mars, j'ai adouci le registre ». Jugé sans importance pour un réglage qu'on touche trois fois par an — et si la trace devient utile un jour, un `session_event` à chaque changement coûte trois lignes.
+
+### 4.2 Ce que contient le menu
+
+Deux familles, et la distinction compte : les valeurs fermées produisent une consigne stable, reproductible et traduisible ; le texte libre produit du ton.
+
+**Des curseurs nommés** — registre (lumineux ↔ sombre), rythme (nerveux ↔ contemplatif), longueur de réponse, humour (absent ↔ présent), mortalité (indulgente ↔ implacable), crudité.
+
+**Deux zones libres** — les influences (§4.3) et des consignes en clair.
 
 ```json
 {
-  "block_type": "narration_profile",
-  "display": { "label": "Ton du récit", "layout": "key_values" },
-  "data": {
-    "register": "sombre_realiste",
-    "influences": [
-      { "name": "Frieren", "note": "mélancolie, silences, ellipses, la magie comme langue" },
-      { "name": "Tensura", "note": "monde-organisme, progression savourée" }
-    ],
-    "length": { "min_words": 200, "max_words": 400 },
-    "person": "second_singular",
-    "tense": "present",
-    "humor": "organic",
-    "pacing": "variable",
-    "agency": "strict",
-    "options_per_turn": 3
-  }
+  "register": 3,
+  "pacing": 4,
+  "length": { "min_words": 200, "max_words": 400 },
+  "humor": 2,
+  "lethality": 5,
+  "person": "second_singular",
+  "tense": "present",
+  "agency": "strict",
+  "options_per_turn": 3,
+  "influences": [
+    { "name": "Frieren", "note": "mélancolie, temps long, la magie comme une langue" }
+  ],
+  "free_notes": "Les silences comptent autant que les scènes."
 }
 ```
 
-Quatre raisons d'en faire un bloc plutôt qu'un champ de réglage :
+**`agency` n'est pas un curseur : c'est une validation.** « Tu ne prends jamais le contrôle du personnage joueur » était la consigne la plus violée du prompt d'origine, parce qu'une consigne ne contraint rien. Ici, une proposition de tour qui fait agir le personnage joueur peut être **rejetée par le code**, exactement comme un identifiant inventé l'est déjà. C'est le seul champ du menu qui doit descendre dans la validation plutôt que dans le prompt.
 
-1. **C'est de la donnée d'univers.** Deux mondes du même auteur n'ont pas le même ton ; le profil suit le monde, comme le calendrier.
-2. **Il est versionné.** Changer le ton d'une campagne en cours est un fait consultable, pas une modification silencieuse.
-3. **Il entre dans le contexte du modèle par le même chemin que le reste**, avec le même bornage par l'audience (règle absolue 11).
-4. **Il coûte presque rien** : l'enveloppe, les six mises en page et l'éditeur de blocs existent déjà.
+`options_per_turn` mérite la même remarque : les trois options « Que fais-tu ? » du bloc 5 sont un **champ de la sortie structurée**, pas une consigne de mise en page. Le nombre se règle ici ; la forme est garantie par le schéma.
 
-Le champ `agency: "strict"` mérite mention : ce n'est pas seulement une consigne de style. Il peut devenir une **validation** — une proposition de tour qui fait agir le personnage joueur est rejetée, comme un identifiant inventé l'est déjà.
+### 4.3 Tranché : s'inspirer d'une œuvre préexistante — le risque n'est pas celui qu'on croit
+
+La crainte naturelle est le coût en contexte. Elle est infondée : nommer une œuvre coûte une poignée de tokens. Ce qui surcharge un modèle, c'est qu'on lui déverse du lore, pas qu'on le nomme.
+
+Les deux vrais risques sont ailleurs :
+
+1. **Un petit modèle local connaît mal l'œuvre citée** et comblera les trous avec assurance — du faux canon énoncé sur le ton du vrai.
+2. **L'inspiration entre en concurrence avec le wiki.** Le modèle préfère ce qu'il croit se rappeler à ce que la fiche dit. C'est exactement la panne que ce projet existe pour corriger.
+
+Le garde-fou est déjà structurel : les **références fermées**. Le modèle ne peut citer que des identifiants fournis dans le contexte du tour. Une invention à la sauce d'une œuvre tierce peut colorer une phrase ; elle ne peut pas devenir une entité du monde sans passer la validation.
+
+**Décision : le champ existe, sous la forme d'un nom et d'une note.** Avec une recommandation d'usage : décrire la sensation plutôt que nommer l'œuvre. « Mélancolie, temps long, la magie comme une langue » marche sur n'importe quel modèle ; « Frieren » ne marche que sur ceux qui l'ont vue. C'est vérifiable en dix tours — cinq avec le nom seul, cinq avec la seule note.
 
 ---
 
@@ -283,9 +324,16 @@ Ce qui accroche, et qu'il faut savoir avant de commencer :
 
 Le dernier point est le vrai : ce n'est pas une variante additive, c'est une **substitution**. Le mécanisme de surcharge (`ruleset_overrides`) sait ajouter et modifier ; il faut vérifier qu'il sait retirer.
 
-### 5.3 Les objets
+### 5.3 Les objets — tranché : le vocabulaire au ruleset, l'instance à l'inventaire
 
-iLvl, six qualités, identification obligatoire, risque d'effet aléatoire par qualité : cohérent, et presque entièrement de la donnée. Trois champs sur `inventory` (`item_level`, `quality`, `identified`) et une table de risque dans le ruleset.
+iLvl, six qualités, identification obligatoire, risque d'effet aléatoire par qualité : cohérent, et presque entièrement de la donnée. La distinction à ne pas rater, sous peine de se coincer à l'implémentation :
+
+| Quoi | Où |
+|---|---|
+| La liste des six qualités, l'échelle d'iLvl, la table de risque par qualité, les paliers de temps d'identification | **le ruleset** — c'est du vocabulaire de règles |
+| « Cette dague-ci est Ancienne, iLvl 3, non identifiée » | **le bloc `inventory`** — c'est un fait sur un objet possédé |
+
+Le ruleset définit ce que « Ancien » veut dire ; l'inventaire dit quels objets le sont. Les deux sont nécessaires, et **seul le premier est du contenu de ruleset** — c'est la moitié qu'on oublie en croyant que « tout va dans le ruleset ».
 
 La **valeur marchande dynamique** est l'exception : le prompt la voulait simulée. Recommandation de ne pas la simuler. Les générateurs savent déjà tirer un prix filtré par palier de richesse et de zone (V2-J9quater, V2-J10) — un prix qui varie selon la boutique et la région, sans aucune simulation économique de fond. C'est 90 % de l'effet voulu pour 0 % du travail.
 
@@ -312,6 +360,8 @@ L'amour n'est ni l'amitié poussée à l'extrême ni l'attirance : c'est l'axe q
 
 C'est aussi ce qui rend possible la jauge de loyauté du bloc 4b sans rien inventer.
 
+**Confirmé en relecture :** le bloc `relationship` couvre bien le besoin, et la configuration par monde est la voie retenue plutôt qu'un huitième axe ajouté à la liste fermée.
+
 ### 6.2 La réputation est déjà là, sans qu'on l'ait remarqué
 
 Le prompt décrit longuement un système de réputation : elle voyage, elle pré-oriente les PNJ, elle se croise entre factions rivales.
@@ -324,38 +374,62 @@ Trois faits du schéma actuel se rejoignent :
 
 Donc *« votre réputation auprès de la Guilde des Marchands »* est déjà exprimable : c'est l'attitude de la faction « Guilde des Marchands » envers la faction « le groupe ». Aucun concept nouveau, aucune table nouvelle.
 
-Ce qui manque vraiment se réduit à deux choses :
+Ce qui manque vraiment se réduit à deux choses. **La propagation** — un fait connu d'une faction devient connu d'une autre, fidèlement ou déformé : c'est un mécanisme, et il attend les horloges du §7. Et **le pré-remplissage à la première rencontre**, retenu ci-dessous.
 
-- **La propagation.** Un fait connu d'une faction devient connu d'une autre, fidèlement ou déformé. C'est un mécanisme, pas une donnée.
-- **Le pré-remplissage à la première rencontre.** Un PNJ non encore rencontré hérite d'un mélange de sa `personality.baseline`, de l'attitude de sa faction envers le groupe, et du rang. Fonction pure, testable, une demi-journée.
+#### Tranché : la première impression donne la teinte de base
 
-Le second seul apporte déjà l'essentiel de l'effet ressenti.
+Au premier contact, une fonction pure calcule l'attitude de départ à partir de quatre entrées :
 
-### 6.3 Ce qui est « inhabituel » pour ce personnage
+1. la `baseline` du PNJ — **ce champ existe déjà** sur le bloc `personality` (`trust`, `affinity`, `respect`, `fear`) ;
+2. l'attitude de sa faction envers le groupe, c'est-à-dire la réputation ci-dessus ;
+3. le rang de l'aventurier, s'il en a un ;
+4. les circonstances de la rencontre.
 
-La règle du bloc 1b est excellente et je ne l'ai vue formulée nulle part ailleurs : *le niveau de détail d'une description est proportionnel à la familiarité, sauf pour ce qui est inhabituel, qui est toujours décrit pleinement.*
+Plafonnée, comme le prompt le demandait : **±50 sur l'échelle −100/+100**, sauf réputation vraiment établie et connue du PNJ avant la rencontre.
+
+Le point qui rend ça tenable : **c'est un amorçage unique, pas une simulation.** Il s'écrit comme un `attitude_event` d'origine `system`, donc il apparaît dans l'historique (« première rencontre : réservé — la Guilde vous tient en piètre estime »), il se rejoue à l'identique, et il se corrige d'un curseur. C'est l'effet que le prompt cherchait — un PNJ qui a déjà un avis avant d'ouvrir la bouche — sans rien faire tourner en arrière-plan.
+
+### 6.3 « Ce qui le frappe » — ce qui est inhabituel pour ce personnage
+
+La règle du bloc 1b est excellente et je ne l'ai vue formulée nulle part ailleurs : *le niveau de détail d'une description est proportionnel à la familiarité, sauf pour ce qui est inhabituel pour le personnage, qui reçoit toujours une description complète.*
 
 La moitié existe déjà : `entity_discoveries.detail_level` distingue `mentioned` / `known` / `detailed` — exactement la familiarité. Il n'est simplement jamais utilisé pour moduler ce que le modèle reçoit.
 
-L'autre moitié est un champ à ajouter, probablement à `personality` :
+L'autre moitié n'a **nulle part où vivre** aujourd'hui. Les six lignes écrites pour Néphaël — la nudité, la proximité chargée de tension, les coutumes étrangères à son village, les objets magiques inconnus, les architectures hors de son expérience, les manifestations de puissance magique exceptionnelle — ne se rangent dans aucun champ existant.
+
+D'où un champ sur `personality`, clé technique `striking`, libellé **« Ce qui le frappe »** :
 
 ```json
-"salience": [
-  { "text": "nudité, sienne ou d'autrui", "visibility": { "level": "gm" } },
-  { "text": "architectures hors de son expérience" },
-  { "text": "manifestations de puissance magique exceptionnelle" }
+"striking": [
+  { "text": "la nudité, la sienne ou celle d'autrui", "visibility": { "level": "gm" } },
+  { "text": "les architectures hors de son expérience passée" },
+  { "text": "les manifestations de puissance magique exceptionnelle" }
 ]
 ```
 
-Coût : un champ optionnel et une ligne de contexte. Effet : les descriptions cessent d'être uniformément riches, ce qui est la première chose qui trahit une narration automatique.
+Coût : un champ optionnel et une ligne de contexte. Effet : une auberge ordinaire tient en deux phrases et un mur de cristal en dix, sans qu'on ait rien à demander. Sans lui, tout est décrit avec la même richesse — et c'est la première chose qui trahit une narration automatique.
 
-### 6.4 La vie intérieure des PNJ
+### 6.4 La vie intérieure des PNJ — tranché : trois orientations distinctes
 
 Le prompt demande que chaque PNJ significatif reçoive, à sa création, une orientation, un rapport à l'intimité, des désirs et des contradictions — jamais annoncés, révélés par le comportement.
 
 `personality` porte déjà `aspirations`, `lines`, `limits`, `speech`. Manquent l'orientation et le rapport à l'intimité.
 
-Recommandation, avec la même précaution que celle déjà prise pour l'axe `attraction_repulsion` (`specs/psyche-pnj.md` §3) : champs optionnels, visibilité `gm` par défaut, **désactivables au niveau du monde**. Certaines tables n'en voudront pas, et c'est une raison suffisante.
+**Une seule « orientation » ne suffit pas** — la version 0.1 se trompait sur ce point. Quelqu'un peut être hétéroromantique et bisexuel, ou aromantique et polyamoureux. Trois champs, pas un :
+
+| Champ | Exemples |
+|---|---|
+| orientation **relationnelle** | monogame, polyamoureux, libertin, célibataire par choix |
+| orientation **romantique** | hétéro-, homo-, bi-, pan-, aro- |
+| orientation **sexuelle** | hétéro-, homo-, bi-, pan-, asexuel |
+
+Plus un champ pour le **rapport à l'intimité et à la nudité** : à l'aise, pudique, tabou culturel, curieux, réprimé.
+
+Trois précautions, dans le prolongement de celle déjà prise pour l'axe `attraction_repulsion` (`specs/psyche-pnj.md` §3) :
+
+- **liste suggérée, saisie libre.** Un enum fermé finira toujours par manquer un cas, et c'est un outil personnel ;
+- **visibilité `gm` par défaut**, et l'ensemble désactivable au niveau du monde ;
+- **valable aussi pour le personnage joueur** — Néphaël en a un, et c'est ce qui rend son éveil jouable plutôt que décoratif.
 
 Les « contradictions internes » n'ont pas besoin de champ : deux pôles opposés avec `priority` qui tranche produisent exactement ça, et c'est déjà en place.
 
@@ -373,11 +447,21 @@ Deux canaux dans une seule saisie. Hors-jeu : réponse méta, aucune écriture d
 
 C'est peu de travail et ça résout un vrai problème du jeu solo : poser une question sur une règle sans faire avancer l'histoire. Aujourd'hui, rien ne distingue les deux.
 
-### 6.7 Rang et quêtes
+### 6.7 Rang et quêtes — tranché : en trois temps
 
-Trois champs sur le bloc `quest` (rang requis, temporalité, délai) et un bloc de rang dont l'échelle vit dans le ruleset.
+Le bloc `quest` existe depuis V2-H4, mais à l'état d'ébauche. Le creuser d'un coup serait une erreur : les trois morceaux n'ont pas les mêmes dépendances.
 
-Le générateur de quêtes est le meilleur rapport du lot : le barème de récompense par rang et les cinq modificateurs du prompt sont exactement la forme que les générateurs savent déjà tirer, avec le filtrage par palier construit en V2-J9quater. Presque aucun code — du contenu.
+| Temps | Contenu | Dépend de |
+|---|---|---|
+| **Maintenant, `S`** | trois champs sur `quest` : rang requis, temporalité, délai | rien |
+| **Maintenant, contenu** | le générateur de quêtes | rien — le mécanisme existe |
+| **V3** | verrou d'acceptation par rang, joueur commanditaire, quêtes qui expirent ou que d'autres accomplissent | l'horloge et l'état de scène du moteur |
+
+**Le générateur de quêtes est le meilleur rapport de toute l'analyse, parce que c'est du contenu et non du code.** Les générateurs composés, les emplacements et le tirage filtré par palier existent déjà (V2-J9quater — celui qui fait qu'une échoppe réputée sort des objets chers). Le barème de récompense par rang du prompt *est* un axe de palier. Emplacements : commanditaire et sa motivation (en visibilité `gm`), objectif, lieu, complication, récompense, délai. Et le mécanisme de promotion existe : « générer » puis « créer la fiche » produit une entité avec son bloc `quest` prérempli.
+
+**À savoir avant d'ouvrir le sujet :** V2-H4 a laissé un critère décoché — *« les quêtes actives entrent dans le contexte déterministe de la V3 »*. La fonction `listActiveQuestsForWorld` existe déjà, filtrée par visibilité, et **rien ne l'appelle**. Le crochet est posé, il attend son moteur.
+
+Pour l'échelle de rang elle-même, voir §12 : elle tient dans un `custom_table` avant de mériter un bloc à elle.
 
 ---
 
@@ -455,27 +539,28 @@ Cinq passages du prompt contredisent une règle du projet. Aucun n'est un obstac
 
 Trois vagues. La première est du confort réel pour peu de travail ; la troisième est un projet.
 
-**Vague 1 — petits, indépendants, à fort rendement**
+**Vague 1 — petits, indépendants, tranchés**
 
-1. Bloc `narration_profile` (§4). C'est le seul concept manquant, et il est peu coûteux.
-2. Pôles de relation configurables par monde (§6.1) — débloque « amour ↔ haine » et la loyauté d'une seule pierre.
-3. Champ `salience` sur `personality` (§6.3), et utilisation de `detail_level` dans le contexte.
-4. Trois champs sur le bloc `quest` : rang, temporalité, délai (§6.7).
-5. Verrou de partage d'un monde à contenu tiers (§9.2) — avant la saisie du monde Frieren.
+1. Onglet « Récit » dans les Réglages et colonne `worlds.narration_profile`, champ d'inspirations compris (§4).
+2. Verrou de partage d'un monde à contenu tiers (§9.2) — **avant** la saisie du monde Frieren, pas après.
+3. Pôles de relation configurables par monde (§6.1) — débloque « amour ↔ haine » et la loyauté d'une seule pierre.
+4. Champ `striking` sur `personality` (§6.3), et usage de `detail_level` dans le contexte.
+5. Trois champs sur le bloc `quest` : rang, temporalité, délai (§6.7).
+6. Les trois orientations et le rapport à l'intimité (§6.4).
 
-**Vague 2 — le ruleset personnel**
+**Vague 2 — contenu, puis ruleset personnel**
 
-6. Un ADR sur les constantes du moteur qui deviennent de la donnée (§5.1). **Préalable**, pas une conséquence.
-7. Le ruleset mana : réserve, coût, théorisés, évolution, apprentissage (§5.2).
-8. Objets : iLvl, qualité, identification (§5.3).
-9. Générateur de quêtes avec barème par rang (§6.7), en contenu.
+7. Générateur de quêtes (§6.7) — du contenu, pas du code. À faire avant le reste de la vague : c'est le plus rentable et le moins risqué.
+8. Un ADR sur les constantes du moteur qui deviennent de la donnée (§5.1). **Préalable** aux deux points suivants, pas une conséquence.
+9. Le ruleset mana : réserve, coût, sorts théorisés, évolution, apprentissage (§5.2) — avec la fraction de recharge, sans laquelle « 50 % au repos court » ne s'écrit pas.
+10. Objets : vocabulaire de qualité au ruleset, `item_level`/`quality`/`identified` sur l'inventaire (§5.3).
 
 **Vague 3 — après les déclencheurs**
 
-10. Mode « dés physiques » (§6.5) et canaux « GM : » / « RP : » (§6.6) — ils touchent le tour de jeu, donc après V3-A.
-11. Pré-remplissage des attitudes à la première rencontre, réputation par attitudes de faction (§6.2).
-12. Horloges de faction et de propriété (§7).
-13. Bloc de rang (§6.7).
+11. Pré-remplissage des attitudes à la première rencontre (§6.2).
+12. Mode « dés physiques » (§6.5) et canaux « GM : » / « RP : » (§6.6) — ils touchent le tour de jeu, donc après V3-A.
+13. Verrou de rang, joueur commanditaire, quêtes qui expirent (§6.7).
+14. Horloges de faction et de propriété (§7), et la propagation de réputation qui en dépend.
 
 **Jamais, ou pas avant longtemps :** la gouvernance politique du bloc 4b, la simulation économique des valeurs marchandes, la dérive de fond des jauges de PNJ absents.
 
@@ -483,16 +568,20 @@ Trois vagues. La première est du confort réel pour peu de travail ; la troisi�
 
 ## 12. Questions à trancher
 
-Aucune n'est urgente ; toutes changent le résultat si on y répond après coup.
+Ce qui a été réglé en relecture est au §0.1. Restent celles-ci — aucune n'est urgente, toutes changent le résultat si on y répond après coup.
 
 | Question | Ma recommandation |
 |---|---|
-| Le profil de narration vit-il sur le monde ou sur la campagne ? | le monde, avec surcharge possible par campagne — même motif que le ruleset |
-| Quelles constantes du moteur deviennent de la donnée ? | monnaie et encombrement d'abord, puis on s'arrête et on observe |
-| Le mana remplace-t-il les emplacements ou coexiste-t-il ? | il remplace, dans un ruleset dédié. La coexistence sur une même fiche est un piège |
+| **Quelles constantes du moteur deviennent de la donnée ?** | monnaie et encombrement d'abord, puis on s'arrête et on observe. **Seule question réellement bloquante** : tout le ruleset personnel en dépend |
+| Le mana remplace-t-il les emplacements ou coexiste-t-il ? | il remplace, dans un ruleset dédié. À vérifier avant de s'engager : le mécanisme de surcharge sait-il **retirer** une règle, ou seulement en ajouter et en modifier ? |
+| Pourcentages ou bandes nommées pour les attitudes ? | garder les bandes (§8) ; un curseur sans chiffre si le besoin de « voir bouger » persiste à l'usage |
+| Les jauges des PNJ absents évoluent-elles en arrière-plan ? | maintenir le refus de `psyche-pnj.md` §1 — mais c'est un choix de jeu, pas d'architecture, et seul l'auteur sait si le monde lui a paru mort sans ça |
+| « Système implicite » ou fiche qui montre sa trace ? | un réglage d'affichage, pas une doctrine. S'il faut vraiment jouer à l'aveugle, cela change la conception de l'écran solo, pas seulement une case |
+| Le rang : `custom_table` ou vrai bloc ? | `custom_table` d'abord ; vrai bloc à la troisième insuffisance |
 | Le rang est-il une donnée de ruleset ou de campagne ? | l'échelle et les paliers dans le ruleset ; le rang atteint dans l'état de campagne |
-| Les réglages de contenu sont-ils par monde ou par compte ? | par monde, avec un plafond au niveau du compte |
-| Faut-il une nouvelle valeur de `entry_type` pour les guildes et les rangs ? | non — une guilde est une entité `faction`, et l'échelle de rang tient dans un `custom_table`. Revoir à la troisième insuffisance |
+| Les réglages de contenu : par monde ou par compte ? | par monde, plafonné au compte, défaut restrictif (§9.1) |
+| Le monde autonome : suite naturelle de la V3, ou « un jour » ? | à décider maintenant — cela change ce qu'on écrit dans le backlog dès aujourd'hui |
+| Propriétés et gouvernance : « jamais » ou « un jour » ? | si « un jour », la jauge de loyauté (vague 1, point 3) devient un préalable à ne pas rater |
 | Le mode « dés physiques » se règle-t-il par campagne ou par tour ? | par campagne, avec dérogation ponctuelle |
 
 ---
