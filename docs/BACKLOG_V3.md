@@ -164,9 +164,22 @@ Une fiche de règle du SRD porte souvent plusieurs règles. `between-adventures`
 
 **La règle de granularité** : une entrée par chose vers laquelle on veut pouvoir **pointer, surcharger ou renvoyer**. Pas une entrée par phrase — « Train de vie » la mérite, « Entre deux aventures » est un chapeau de chapitre.
 
+**Le chapitre ne disparaît pas.** Il survit comme fiche, garde sa prose d'introduction (« Entre deux plongées en donjon, les aventuriers ont besoin de repos… ») et devient un sommaire. On peut toujours lire le chapitre en entier ; on peut en plus chercher « Train de vie » et tomber sur la règle seule. Sans ça, on remplacerait un problème de granularité par un problème de navigation — pire pour l'humain, qui est justement la personne qu'on sert ici.
+
+**Le motif d'affichage existe déjà, deux fois.** `RulesSidebar.tsx` niche les **sous-classes sous leur classe** (V1-D7, sur retour utilisateur : *« je dois pouvoir trouver Évocateur sous Magicien »*) et les **sous-espèces sous leur espèce**. Chaque enfant reste une fiche à part entière, simplement affichée en retrait. `Entre deux aventures ▸ Train de vie` serait le troisième cas du même motif.
+
+Le repli quand le parent sort du filtre est déjà conçu, et c'est exactement le cas d'usage visé : une recherche sur « train de vie » ne fait pas correspondre le chapitre, la règle apparaît donc seule dans un groupe normal — *« plutôt que de la faire disparaître silencieusement »*.
+
 **Phase A — le mécanisme**
-- [ ] Une fiche de règle peut déclarer son chapitre parent, par `ruleset_entry_refs` — l'ordre de lecture du livre survit au découpage. Deux cents fiches orphelines seraient pires que le regroupement actuel.
+
+Trois cas de parenté au lieu de deux : **la règle des trois s'applique**, on généralise plutôt que de coder un troisième mécanisme ad hoc. `parentClassKey` et `parentSpeciesKey` sont des champs d'affichage portés par `RuleEntrySummary`, **dérivés du `source_raw` du SRD à la lecture** ; ils n'ont que deux consommateurs (la barre latérale et l'étape Espèce du créateur), et le lien mécanique — quelle sous-classe a un personnage — vit dans le bloc `character`, pas là. Les remplacer ne perd donc rien.
+
+Une différence à traiter : une parenté dérivée du SRD n'existe pas pour un découpage qu'on décide nous-mêmes. `ruleset_entry_refs` modélise déjà exactement ça avec `origin` — `derived` pour ce qui se déduit de la source, `declared` pour ce qu'on pose.
+
+- [ ] Une fiche de règle déclare son chapitre parent par `ruleset_entry_refs`, `ref_kind: 'part_of'`, `origin: 'declared'` — le renvoi existe depuis la Phase 0 et n'a jamais servi.
+- [ ] `parentClassKey` et `parentSpeciesKey` passent sur le même mécanisme ; une seule logique de nichage et de repli dans la barre latérale, au lieu de trois.
 - [ ] Le compendium affiche la hiérarchie chapitre → règle, et la recherche trouve la règle par son propre nom.
+- [ ] Un parent absent du filtre ne fait pas disparaître son enfant — même repli que pour les sous-classes aujourd'hui.
 
 **Phase B — un chapitre pilote**
 - [ ] `between-adventures` découpé en six fiches rattachées à leur chapeau, vérifié en direct dans le compendium.
