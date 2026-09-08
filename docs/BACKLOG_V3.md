@@ -13,6 +13,8 @@ Un ticket = une session. On en donne **un seul à la fois**, on vérifie les cri
 
 **Règle de blocage :** un ticket dont les critères ne passent pas n'est pas terminé. On ne passe pas au suivant « en revenant dessus plus tard ».
 
+**Où atterrit ce qu'un ticket laisse derrière lui** (`CLAUDE.md`, méthode de travail). Le récit d'un ticket livré peut mentionner un bug hors périmètre, une migration non appliquée, un « à creuser une autre fois ». Ce n'est pas suffisant : ce genre de constat doit aussi devenir **une case à cocher de V3-N5** s'il tient en une ligne, ou **un ticket à part** sinon. Un constat qui ne vit que dans un message de commit ou au milieu d'un paragraphe est invisible dès la session suivante — c'est exactement ainsi que V3-N6 a failli ne jamais exister.
+
 ---
 
 ## 1. D'où vient ce backlog

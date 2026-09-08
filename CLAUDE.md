@@ -131,6 +131,8 @@ Une fiche créée ainsi appartient à un ruleset `personal_reference`, jamais à
 
 **Avant de dire qu'une tâche est terminée :** `npm run typecheck && npm run lint && npm run test` passent. Sinon la tâche n'est pas terminée.
 
+**Ce qu'un ticket laisse derrière lui s'écrit dans le backlog, pas seulement dans le commit.** Un « à creuser une autre fois », un bug trouvé hors périmètre, une migration écrite mais non appliquée, un critère qu'on n'a pas repassé : une ligne dans le backlog courant **en plus** du message de commit. Un constat qui ne vit que dans l'historique Git est invisible dès la session suivante — deux l'ont été pendant cinq jours, retrouvés par hasard.
+
 **Commits :** petits, en français, à l'impératif. `feat: ajoute la table des déclencheurs`, `fix: corrige la récursion RLS sur campaign_members`.
 
 ## Quand t'arrêter et demander
