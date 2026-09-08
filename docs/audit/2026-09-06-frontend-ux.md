@@ -96,9 +96,21 @@ C'est développé plus loin dans la partie II (« Toute action mérite un accus�
 
 Ailleurs, le vide est traité par une ligne de texte grise : `EntityBlocks.tsx:715` — *« Aucun bloc. Utilisez la barre ci-dessous pour en ajouter. »* en `text-xs italic text-ink-muted`, c'est-à-dire dans le style le moins visible du système. Le premier écran qu'une personne voit en créant un monde est un écran vide ; c'est le moment où elle a le plus besoin d'être guidée, et c'est celui où l'application en dit le moins.
 
-### F‑07 · Trois `confirm()` natifs subsistent, sur des actions destructives — **Faible · Défaut**
+### F‑07 · Trois `confirm()` natifs subsistent, sur des actions destructives — **Faible · Défaut — corrigé le 7 septembre**
 
-`ConfirmDialog.tsx` a été écrit précisément pour les remplacer, avec la bonne justification en commentaire (la boîte native est facile à manquer, sans cohérence visuelle, variable selon le navigateur). Trois appels natifs restent — et ce sont précisément les plus destructifs : suppression définitive d'un combat (`InitiativeTracker.tsx:139`), suppression définitive du compte d'un ami (`AdminPanel.tsx:88`), export volumineux (`WorldCardActions.tsx:250`). Remplacement mécanique par `ConfirmDialog`, qui prend déjà une variante `danger`.
+`ConfirmDialog.tsx` a été écrit précisément pour les remplacer, avec la bonne justification en commentaire (la boîte native est facile à manquer, sans cohérence visuelle, variable selon le navigateur). Trois appels natifs restaient — et c'étaient précisément les plus destructifs : suppression définitive d'un combat, suppression définitive du compte d'un ami, export volumineux.
+
+---
+
+**Corrigé le 7 septembre**, et « remplacement mécanique » était optimiste : `window.confirm` est **bloquant** là où `ConfirmDialog` est asynchrone. Les trois ont demandé de retenir la cible entre le clic et la confirmation — le motif de `pendingDeleteId` déjà en place dans `EntityBlocks.tsx`.
+
+| Route | Ce qu'il a fallu en plus |
+|---|---|
+| `InitiativeTracker` | Le composant a **deux points de rendu** (avec et sans combat actif) : la modale est posée dans les deux |
+| `AdminPanel` | Le bouton ouvre la modale ; c'est `onConfirm` qui supprime |
+| `WorldCardActions` | Le `confirm` était **au milieu** d'un flux asynchrone, après réception des données du serveur. L'export déjà reçu est conservé dans l'état plutôt que de refaire l'aller-retour à la confirmation |
+
+Les avertissements d'export, joints par des retours à la ligne pour la boîte native, sont désormais un paragraphe : `ConfirmDialog` rend son message dans un `<p>`, où ces retours ne s'afficheraient pas.
 
 ---
 
@@ -401,7 +413,7 @@ Une remarque pour équilibrer : tout n'est pas à changer, et certaines choses s
 | F‑18 | Moyen | Dette | Trois mécanismes de libellés concurrents |
 | F‑20 | Moyen | Dette | Sauvegarde implicite sans indication visible |
 | F‑06 | Faible | Dette | `EmptyState` utilisé par un seul écran sur 179 composants |
-| F‑07 | Faible | Défaut | 3 `confirm()` natifs sur des actions destructives |
+| F‑07 | Faible | ~~Défaut~~ | 3 `confirm()` natifs — **corrigé le 7 septembre** |
 | F‑13 | Faible | ~~Dette~~ | Onglets sans navigation clavier — **corrigé le 7 septembre** |
 | F‑17 | Faible | ~~Défaut~~ | Cache client non cloisonné — **corrigé le 7 septembre** (chemin réel : login/logout) |
 | F‑19 | Faible | Défaut | Un seul titre de page pour 44 pages |
