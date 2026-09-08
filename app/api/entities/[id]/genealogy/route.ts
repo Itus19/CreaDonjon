@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getEntityById } from "@/src/server/repos/entities";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { getFamilyTree } from "@/src/server/services/genealogy";
+import { genealogyQuerySchema, searchParamsToObject } from "@/lib/queryParams/schemas";
 
 /**
  * Arbre genealogique derive (V2-H3) — meme patron que `/sheet` : les
@@ -12,9 +13,12 @@ import { getFamilyTree } from "@/src/server/services/genealogy";
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: entityId } = await params;
-  const rootEntityId = request.nextUrl.searchParams.get("rootEntityId") || entityId;
-  const depthUp = Number(request.nextUrl.searchParams.get("depthUp") ?? "2");
-  const depthDown = Number(request.nextUrl.searchParams.get("depthDown") ?? "2");
+  const parsedQuery = genealogyQuerySchema.safeParse(searchParamsToObject(request.nextUrl.searchParams));
+  if (!parsedQuery.success) {
+    return NextResponse.json({ error: parsedQuery.error.issues[0]?.message ?? "Parametres invalides." }, { status: 400 });
+  }
+  const { depthUp, depthDown } = parsedQuery.data;
+  const rootEntityId = parsedQuery.data.rootEntityId ?? entityId;
 
   const supabase = await createClient();
   const {
@@ -33,8 +37,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const tree = await getFamilyTree(supabase, {
     worldId: entity.world_id,
     rootEntityId,
-    depthUp: Number.isFinite(depthUp) ? depthUp : 2,
-    depthDown: Number.isFinite(depthDown) ? depthDown : 2,
+    depthUp,
+    depthDown,
     viewer,
   });
 

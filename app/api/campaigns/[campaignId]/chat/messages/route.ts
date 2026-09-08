@@ -6,9 +6,7 @@ import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { insertChatMessage, listChatMessagesForThread } from "@/src/server/repos/chatMessages";
 import { resolveThreadUserId } from "@/src/server/services/chat";
-
-const HISTORY_LIMIT_DEFAULT = 50;
-const HISTORY_LIMIT_MAX = 200;
+import { chatMessagesQuerySchema, chatReadQuerySchema, searchParamsToObject } from "@/lib/queryParams/schemas";
 
 /**
  * Fil MJ/joueur (V2-M13, "un fenetre de chat par joueur") — un joueur ne
@@ -20,8 +18,11 @@ const HISTORY_LIMIT_MAX = 200;
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await params;
-  const requested = Number(request.nextUrl.searchParams.get("limit") ?? HISTORY_LIMIT_DEFAULT);
-  const limit = Number.isFinite(requested) ? Math.min(Math.max(Math.trunc(requested), 1), HISTORY_LIMIT_MAX) : HISTORY_LIMIT_DEFAULT;
+  const parsedQuery = chatMessagesQuerySchema.safeParse(searchParamsToObject(request.nextUrl.searchParams));
+  if (!parsedQuery.success) {
+    return NextResponse.json({ error: parsedQuery.error.issues[0]?.message ?? "Parametres invalides." }, { status: 400 });
+  }
+  const { limit, avec } = parsedQuery.data;
 
   const supabase = await createClient();
   const {
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     worldId: campaign.world_id,
     campaignId,
     callerId: user.id,
-    requestedThreadUserId: request.nextUrl.searchParams.get("avec"),
+    requestedThreadUserId: avec ?? null,
   });
   if (!threadUserId) {
     return NextResponse.json({ error: "Fil introuvable." }, { status: 404 });
@@ -66,6 +67,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await params;
 
+  const parsedQuery = chatReadQuerySchema.safeParse(searchParamsToObject(request.nextUrl.searchParams));
+  if (!parsedQuery.success) {
+    return NextResponse.json({ error: parsedQuery.error.issues[0]?.message ?? "Parametres invalides." }, { status: 400 });
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = chatMessageInputSchema.safeParse(body);
   if (!parsed.success) {
@@ -89,7 +95,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     worldId: campaign.world_id,
     campaignId,
     callerId: user.id,
-    requestedThreadUserId: request.nextUrl.searchParams.get("avec"),
+    requestedThreadUserId: parsedQuery.data.avec ?? null,
   });
   if (!threadUserId) {
     return NextResponse.json({ error: "Fil introuvable." }, { status: 404 });

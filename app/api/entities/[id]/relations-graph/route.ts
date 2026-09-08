@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { getEntityById } from "@/src/server/repos/entities";
 import { getRelationsGraph } from "@/src/server/services/relationsGraph";
+import { relationsGraphQuerySchema, searchParamsToObject } from "@/lib/queryParams/schemas";
 
 /**
  * Graphe de relations derive (V2-H1 phase 5) — meme patron que
@@ -12,8 +13,12 @@ import { getRelationsGraph } from "@/src/server/services/relationsGraph";
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: entityId } = await params;
-  const rootEntityId = request.nextUrl.searchParams.get("rootEntityId") || entityId;
-  const maxDegree = Number(request.nextUrl.searchParams.get("maxDegree") ?? "1");
+  const parsedQuery = relationsGraphQuerySchema.safeParse(searchParamsToObject(request.nextUrl.searchParams));
+  if (!parsedQuery.success) {
+    return NextResponse.json({ error: parsedQuery.error.issues[0]?.message ?? "Parametres invalides." }, { status: 400 });
+  }
+  const { maxDegree } = parsedQuery.data;
+  const rootEntityId = parsedQuery.data.rootEntityId ?? entityId;
 
   const supabase = await createClient();
   const {
@@ -32,7 +37,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const graph = await getRelationsGraph(supabase, {
     worldId: entity.world_id,
     rootEntityId,
-    maxDegree: Number.isFinite(maxDegree) ? maxDegree : 1,
+    maxDegree,
     viewer,
   });
 

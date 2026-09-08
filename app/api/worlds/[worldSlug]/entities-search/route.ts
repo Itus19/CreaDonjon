@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { searchEntities } from "@/src/server/services/entities";
 import { getWorldBySlug } from "@/src/server/services/worlds";
+import { entitiesSearchQuerySchema, searchParamsToObject } from "@/lib/queryParams/schemas";
 
 /**
  * Recherche d'entites par nom, exposee par slug de monde (V1-B5, selecteur
@@ -12,7 +13,11 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ worldSlug: string }> }) {
   const { worldSlug } = await params;
-  const q = request.nextUrl.searchParams.get("q") ?? "";
+  const parsedQuery = entitiesSearchQuerySchema.safeParse(searchParamsToObject(request.nextUrl.searchParams));
+  if (!parsedQuery.success) {
+    return NextResponse.json({ error: parsedQuery.error.issues[0]?.message ?? "Parametres invalides." }, { status: 400 });
+  }
+  const { q } = parsedQuery.data;
 
   const supabase = await createClient();
   const {

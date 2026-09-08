@@ -2,14 +2,15 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getEntityById } from "@/src/server/repos/entities";
 import { compareRevisionsForViewer } from "@/src/server/services/entityHistory";
+import { revisionsCompareQuerySchema, searchParamsToObject } from "@/lib/queryParams/schemas";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: entityId } = await params;
-  const from = Number(request.nextUrl.searchParams.get("from"));
-  const to = Number(request.nextUrl.searchParams.get("to"));
-  if (!Number.isInteger(from) || !Number.isInteger(to)) {
-    return NextResponse.json({ error: "Parametres from/to invalides." }, { status: 400 });
+  const parsedQuery = revisionsCompareQuerySchema.safeParse(searchParamsToObject(request.nextUrl.searchParams));
+  if (!parsedQuery.success) {
+    return NextResponse.json({ error: parsedQuery.error.issues[0]?.message ?? "Parametres invalides." }, { status: 400 });
   }
+  const { from, to } = parsedQuery.data;
 
   const supabase = await createClient();
   const {

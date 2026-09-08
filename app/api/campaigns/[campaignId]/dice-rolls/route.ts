@@ -5,15 +5,16 @@ import { getClaimedCharacterName, rollFreeformCheck } from "@/src/server/service
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { getCampaignById } from "@/src/server/repos/campaigns";
 import { listDiceRollsForCampaign } from "@/src/server/repos/diceRolls";
-
-const HISTORY_LIMIT_DEFAULT = 50;
-const HISTORY_LIMIT_MAX = 200;
+import { diceRollsQuerySchema, searchParamsToObject } from "@/lib/queryParams/schemas";
 
 /** Onglet Historique du volet (V2-M11) — RLS `dice_rolls_select` filtre deja les jets `gm` pour un simple joueur, jamais un second filtre ici. */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await params;
-  const requested = Number(request.nextUrl.searchParams.get("limit") ?? HISTORY_LIMIT_DEFAULT);
-  const limit = Number.isFinite(requested) ? Math.min(Math.max(Math.trunc(requested), 1), HISTORY_LIMIT_MAX) : HISTORY_LIMIT_DEFAULT;
+  const parsedQuery = diceRollsQuerySchema.safeParse(searchParamsToObject(request.nextUrl.searchParams));
+  if (!parsedQuery.success) {
+    return NextResponse.json({ error: parsedQuery.error.issues[0]?.message ?? "Parametres invalides." }, { status: 400 });
+  }
+  const { limit } = parsedQuery.data;
 
   const supabase = await createClient();
   const rolls = await listDiceRollsForCampaign(supabase, { campaignId, limit });

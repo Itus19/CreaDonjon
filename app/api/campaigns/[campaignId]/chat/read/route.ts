@@ -3,10 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { getCampaignById } from "@/src/server/repos/campaigns";
 import { markChatRead } from "@/src/server/repos/chatMessages";
 import { resolveThreadUserId } from "@/src/server/services/chat";
+import { chatReadQuerySchema, searchParamsToObject } from "@/lib/queryParams/schemas";
 
 /** Marque un fil lu maintenant (V2-M13, pastille) — appele a l'ouverture du panneau de chat, remet le compteur de CE fil a zero cote client. */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await params;
+
+  const parsedQuery = chatReadQuerySchema.safeParse(searchParamsToObject(request.nextUrl.searchParams));
+  if (!parsedQuery.success) {
+    return NextResponse.json({ error: parsedQuery.error.issues[0]?.message ?? "Parametres invalides." }, { status: 400 });
+  }
 
   const supabase = await createClient();
   const {
@@ -25,7 +31,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     worldId: campaign.world_id,
     campaignId,
     callerId: user.id,
-    requestedThreadUserId: request.nextUrl.searchParams.get("avec"),
+    requestedThreadUserId: parsedQuery.data.avec ?? null,
   });
   if (!threadUserId) {
     return NextResponse.json({ error: "Fil introuvable." }, { status: 404 });

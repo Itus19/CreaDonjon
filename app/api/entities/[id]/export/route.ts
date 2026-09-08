@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { listVisibleBlocks } from "@/src/server/services/blocks";
 import { getEntityById } from "@/src/server/repos/entities";
 import { getEntityRuntimeState } from "@/src/server/services/runtimeState";
+import { entityCampaignQuerySchema, searchParamsToObject } from "@/lib/queryParams/schemas";
 
 const EXPORTED_BLOCK_TYPES = new Set(["character", "inventory", "spellcasting", "resources"]);
 
@@ -15,7 +16,11 @@ const EXPORTED_BLOCK_TYPES = new Set(["character", "inventory", "spellcasting", 
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: entityId } = await params;
-  const campaignId = request.nextUrl.searchParams.get("campaignId");
+  const parsedQuery = entityCampaignQuerySchema.safeParse(searchParamsToObject(request.nextUrl.searchParams));
+  if (!parsedQuery.success) {
+    return NextResponse.json({ error: parsedQuery.error.issues[0]?.message ?? "Parametres invalides." }, { status: 400 });
+  }
+  const campaignId = parsedQuery.data.campaignId ?? null;
 
   const supabase = await createClient();
   const {
