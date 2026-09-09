@@ -202,6 +202,12 @@ Une différence à traiter : une parenté dérivée du SRD n'existe pas pour un 
 - [ ] Le compendium affiche la hiérarchie chapitre → règle, et la recherche trouve la règle par son propre nom.
 - [ ] Un parent absent du filtre ne fait pas disparaître son enfant — même repli que pour les sous-classes aujourd'hui.
 
+**Phase A bis — le relevé de décision — ✅ faite**
+- [x] `docs/decoupage-regles-srd.md` : les 33 sections classées, généré par la fonction testée sur les données réelles — 9 restent entières, 24 se découpent en 93 fiches au niveau 3, 17 demandent une décision et 1 est à trancher.
+- [x] Il vaut pour le 5.2.1 : `srd-2024.json` ne porte aucune section de règle, l'import construit le ruleset 2024 comme « base 2014 plus surcharges » (`mergeWithBaseFile`).
+- [ ] **À relire par l'auteur** : pour chacun des 17 chapitres de la catégorie C, ses sous-titres sont-ils des détails de leur règle ou des règles à part entière ?
+- [ ] Trancher la longueur des clés de seconde passe : chaîne complète (`between-adventures-downtime-activities-crafting`) ou parent direct.
+
 **Phase B — un chapitre pilote**
 - [ ] `between-adventures` découpé en six fiches rattachées à leur chapeau, vérifié en direct dans le compendium.
 - [ ] Les noms français déjà écrits suivent leur règle, aucun n'est perdu.
