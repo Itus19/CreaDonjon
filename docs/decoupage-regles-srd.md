@@ -1,6 +1,6 @@
 # Relevé de découpage des règles du SRD
 
-**Version :** 0.1 — 9 septembre 2026
+**Version :** 0.2 — 9 septembre 2026
 **Ticket :** V3-N7 (`docs/BACKLOG_V3.md`)
 **Statut :** document de travail. Il sert à décider, puis il devient obsolète.
 
@@ -23,7 +23,8 @@ donc exactement celles relevées ici.
 | Sections | 33, pour ~190 000 caractères |
 | Restent entières | **9** |
 | Se découpent | **24**, pour **93 fiches** au niveau 3 |
-| Demandent une décision | **17** (catégorie C) plus **1** cas à trancher (catégorie D) |
+| Demandaient une décision | **17** (catégorie C) — **tranchée**, voir §3 — plus **1** cas à trancher (catégorie D) |
+| Total après la décision | **93** fiches au niveau 3, **106** au niveau 4, **4** au niveau 5 |
 
 ## 1. Comment le lire
 
@@ -36,14 +37,9 @@ Quatre catégories, de la plus sûre à la moins sûre :
 | **C** | des titres de niveau 3 qui portent des sous-titres | **une décision par chapitre** |
 | **D** | plusieurs titres de niveau 2 dans la même section | à regarder au cas par cas |
 
-**La seule question de la catégorie C**, et c'est celle qui demande ton jugement :
-
-> Les sous-titres d'une règle sont-ils des **détails de cette règle** — ils restent dedans — ou des
-> **règles à part entière** — une seconde passe les sort en fiches ?
-
-Le relevé montre les deux possibilités pour chaque chapitre concerné. Il ne tranche pas, et il ne
-doit pas : « Sample Traps » qui porte douze pièges n'est pas la même chose que « Damage Rolls »
-qui porte trois précisions.
+**La question de la catégorie C a été tranchée le 9 septembre** — voir §3. Les sous-titres sont
+des règles filles, rattachées à leur règle mère par `part_of`. Les tableaux de la catégorie C se
+lisent donc comme un état de la première passe, pas comme une question ouverte.
 
 ## 2. Ce que ce relevé ne décide pas
 
@@ -52,13 +48,56 @@ officiel français est dans `data/srd/fr-source/srd-5.2.1-fr.txt`. C'est la suit
 découpage, et c'est aussi pourquoi le moment est le bon — la prose française des règles n'est pas
 encore écrite, donc rien n'est à refaire.
 
-**La longueur des clés.** Une fiche de seconde passe hérite aujourd'hui de toute la chaîne :
-`between-adventures-downtime-activities-crafting`. Faut-il porter le chemin entier ou seulement le
-parent direct (`downtime-activities-crafting`) ? À trancher en phase A — la première forme garantit
-l'unicité sans y penser, la seconde se lit mieux.
+**La longueur des clés.** Une fiche de seconde passe hérite de toute la chaîne :
+`between-adventures-downtime-activities-crafting`. La forme courte (`downtime-activities-crafting`)
+se lit mieux mais ne garantit plus rien : « Attack Rolls and Damage » existe sous Force *et* sous
+Dextérité, « Spellcasting Ability » sous Intelligence, Sagesse et Charisme, « Difficult Terrain »
+sous deux chapitres différents. La chaîne complète est unique par construction — c'est déjà ce que
+fait `splitRuleSection`, et une clé n'est jamais lue par un humain : c'est le **nom** qui s'affiche
+et qui se cherche. **Proposition retenue par défaut : la chaîne complète**, à confirmer en phase A.
 
 **Rien en base.** Ce document est une lecture des fichiers source. Aucune écriture, aucune
 migration — c'est le travail des phases A à C, qui demandent une session avec Supabase.
+
+## 3. La décision de la catégorie C — prise le 9 septembre
+
+> « Il y a donc une règle mère avec des règles filles. Il faudrait donc des fiches à part mais en
+> `part_of` de ma règle mère. »
+
+**Un sous-titre est une règle fille, pas un détail.** Il devient une fiche à part entière,
+rattachée à sa mère par `ruleset_entry_refs`, `ref_kind: 'part_of'`, `origin: 'declared'` — le même
+mécanisme qu'entre une règle et son chapitre. Le découpage est donc **récursif** : chapitre → règle
+→ règle fille, et la parenté est la même à chaque étage.
+
+C'est cohérent avec ce que la phase A construit déjà : `part_of` ne connaît pas la profondeur, et
+la barre latérale niche une sous-classe sous sa classe sans savoir combien d'étages existent.
+
+**Ce que ça donne, recompté sur les données réelles** (les chiffres de la catégorie C ci-dessous ne
+montraient que les sous-titres au nombre de trois ou plus ; ceux-ci comptent tout) :
+
+| Étage | Fiches |
+|---|---:|
+| Chapitres (niveau 2) | 33 |
+| Règles (niveau 3) | 93 |
+| Règles filles (niveau 4) | 106 |
+| Petites-filles (niveau 5) | 4 |
+
+**Six motifs où la récursion produit une fiche qui n'est pas une règle.** Ce sont des conteneurs ou des
+tableaux, pas des choses vers lesquelles on veut pointer. La règle de granularité de V3-N7 — *une
+entrée par chose vers laquelle on veut pouvoir pointer, surcharger ou renvoyer* — les écarte, mais
+elle demande un œil, chapitre par chapitre, au moment de la phase C :
+
+| Fiche produite | Ce que c'est réellement |
+|---|---|
+| `fantasy-historical-pantheons-*-{celtic,greek,egyptian,norse}-deities` | un tableau de divinités, un par panthéon — le panthéon est la règle, la table est son contenu |
+| `movement-speed-travel-pace` (niveau 5) | le tableau « Travel Pace » sous la règle du même nom, qui se dédoublerait |
+| `traps-traps-in-play-trap-effects-*` (niveau 5) | deux tableaux de valeurs (DD de sauvegarde, sévérité des dégâts) |
+| `using-each-ability-strength-lifting-and-carrying-variant-encumbrance` (niveau 5) | une variante optionnelle — c'est bien une règle, mais elle ne s'applique que si la table l'adopte ; à traiter comme les autres « Variant » du SRD, pas comme une règle de base |
+| `ability-checks-skills-{strength,dexterity,…}` | le regroupement des compétences par caractéristique, pas six règles |
+| `objects-statistics-for-objects-object-{armor-class,hit-points}` | à regarder : deux valeurs d'une même règle, ou deux règles |
+
+Aucun de ces cas ne remet en cause la décision : ils disent seulement que le découpage récursif
+propose, et qu'un humain valide chapitre par chapitre. C'est exactement ce que la phase C prévoit.
 
 ---
 

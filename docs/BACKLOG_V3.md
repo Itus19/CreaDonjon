@@ -198,22 +198,26 @@ Trois cas de parenté au lieu de deux : **la règle des trois s'applique**, on g
 Une différence à traiter : une parenté dérivée du SRD n'existe pas pour un découpage qu'on décide nous-mêmes. `ruleset_entry_refs` modélise déjà exactement ça avec `origin` — `derived` pour ce qui se déduit de la source, `declared` pour ce qu'on pose.
 
 - [ ] Une fiche de règle déclare son chapitre parent par `ruleset_entry_refs`, `ref_kind: 'part_of'`, `origin: 'declared'` — le renvoi existe depuis la Phase 0 et n'a jamais servi.
+- [ ] **`part_of` ne connaît pas la profondeur.** Une règle fille se rattache à sa règle mère par le même renvoi qu'une règle à son chapitre : rien à ajouter pour le troisième étage, seul l'affichage doit savoir nicher récursivement.
 - [ ] `parentClassKey` et `parentSpeciesKey` passent sur le même mécanisme ; une seule logique de nichage et de repli dans la barre latérale, au lieu de trois.
 - [ ] Le compendium affiche la hiérarchie chapitre → règle, et la recherche trouve la règle par son propre nom.
 - [ ] Un parent absent du filtre ne fait pas disparaître son enfant — même repli que pour les sous-classes aujourd'hui.
 
 **Phase A bis — le relevé de décision — ✅ faite**
-- [x] `docs/decoupage-regles-srd.md` : les 33 sections classées, généré par la fonction testée sur les données réelles — 9 restent entières, 24 se découpent en 93 fiches au niveau 3, 17 demandent une décision et 1 est à trancher.
+- [x] `docs/decoupage-regles-srd.md` : les 33 sections classées, généré par la fonction testée sur les données réelles — 9 restent entières, 24 se découpent en 93 fiches au niveau 3, 17 demandaient une décision (tranchée ci-dessous) et 1 reste à trancher.
 - [x] Il vaut pour le 5.2.1 : `srd-2024.json` ne porte aucune section de règle, l'import construit le ruleset 2024 comme « base 2014 plus surcharges » (`mergeWithBaseFile`).
-- [ ] **À relire par l'auteur** : pour chacun des 17 chapitres de la catégorie C, ses sous-titres sont-ils des détails de leur règle ou des règles à part entière ?
-- [ ] Trancher la longueur des clés de seconde passe : chaîne complète (`between-adventures-downtime-activities-crafting`) ou parent direct.
+- [x] **Tranché le 9 septembre — un sous-titre est une règle fille, pas un détail.** Il devient une fiche à part entière, `part_of` sa règle mère, exactement comme une règle est `part_of` son chapitre. **Le découpage est donc récursif** : chapitre → règle → règle fille, même parenté à chaque étage. Recompté sur les données réelles : **33 chapitres, 93 règles, 106 règles filles, 4 petites-filles** (`docs/decoupage-regles-srd.md` §3).
+- [x] Six motifs relevés où la récursion produit une fiche qui n'est pas une règle — des tableaux ou des conteneurs (les quatre tables de divinités, « Travel Pace », les deux tables d'effets de pièges, le regroupement des compétences par caractéristique). La règle de granularité les écarte ; c'est un œil humain en phase C, pas une exception au principe.
+- [ ] Trancher la longueur des clés de seconde passe. **Proposition : la chaîne complète** (`between-adventures-downtime-activities-crafting`). La forme courte se lit mieux mais perd l'unicité : « Attack Rolls and Damage » existe sous Force *et* sous Dextérité, « Spellcasting Ability » sous trois caractéristiques, « Difficult Terrain » sous deux chapitres. Une clé n'est jamais lue par un humain — c'est le nom qui s'affiche et qui se cherche.
 
 **Phase B — un chapitre pilote**
-- [ ] `between-adventures` découpé en six fiches rattachées à leur chapeau, vérifié en direct dans le compendium.
+- [ ] `between-adventures` découpé sur ses deux étages — deux règles (Train de vie, Activités de temps libre) et les cinq activités rattachées à la seconde, soit sept fiches sous le chapeau — vérifié en direct dans le compendium.
 - [ ] Les noms français déjà écrits suivent leur règle, aucun n'est perdu.
 
 **Phase C — le reste**
 - [ ] Les 32 autres sections passées au même traitement, chapitre par chapitre.
+- [ ] **Le découpage propose, l'humain valide.** Les six motifs relevés en phase A bis se tranchent ici : une fiche qui n'est qu'un tableau ou un conteneur ne devient pas une entrée, elle reste dans sa règle mère.
+- [ ] `the-planes-of-existence` (catégorie D, trois titres de niveau 2 dans une même section) reste à arbitrer : un chapitre par titre, ou un chapitre unique.
 - [ ] **Piège connu à ne pas rejouer** : une ré-ingestion retire les fiches absentes du JSON source — c'est ainsi que `encounter-budget` avait disparu (V2-G1). Le découpage se fait donc sur les données en place, jamais par une ré-ingestion naïve.
 
 ---
