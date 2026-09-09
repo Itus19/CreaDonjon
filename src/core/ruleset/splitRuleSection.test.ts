@@ -87,6 +87,19 @@ describe("splitRuleSection", () => {
     expect(children.map((c) => c.title)).toEqual(["Vide", "Plein"]);
   });
 
+  it("ne fait jamais du titre de la section une fille d'elle-meme", () => {
+    // `the-planes-of-existence` porte trois titres de niveau 2 : le sien,
+    // puis deux regles filles. Sans cette garantie, le chapitre se
+    // retrouverait enfant de lui-meme et sa prose d'introduction avec.
+    const source = "## Les plans\n\nIntro.\n\n## Le plan Materiel\n\nA.\n\n## Au-dela\n\nB.\n";
+    const { chapterProse, children } = splitRuleSection(source, {
+      parentKey: "the-planes-of-existence",
+      depth: 2,
+    });
+    expect(chapterProse).toBe("## Les plans\n\nIntro.\n\n");
+    expect(children.map((c) => c.title)).toEqual(["Le plan Materiel", "Au-dela"]);
+  });
+
   it("rejette une profondeur hors des niveaux markdown", () => {
     expect(() => splitRuleSection(CHAPITRE, { parentKey: "x", depth: 1 })).toThrow(/profondeur/i);
     expect(() => splitRuleSection(CHAPITRE, { parentKey: "x", depth: 7 })).toThrow(/profondeur/i);
@@ -143,6 +156,23 @@ describe("cas dores — les 33 sections reelles du SRD", () => {
     expect(children.length).toBe(10);
     expect(children[0].title).toBe("Attack");
     expect(children.map((c) => c.key)).toContain("actions-in-combat-dash");
+  });
+
+  it("decoupe `the-planes-of-existence` au niveau 2, en deux regles filles", () => {
+    const section = sections.find((s) => s.index === "the-planes-of-existence")!;
+    const { chapterProse, children } = splitRuleSection(section.desc, {
+      parentKey: section.index,
+      depth: 2,
+    });
+    expect(chapterProse).toContain("## The Planes of Existence");
+    expect(children.map((c) => c.title)).toEqual(["The Material Plane", "Beyond the Material"]);
+  });
+
+  it("ne decoupe aucune autre section au niveau 2 : leur seul titre de ce niveau est le leur", () => {
+    const decoupees = sections.filter(
+      (s) => splitRuleSection(s.desc, { parentKey: s.index, depth: 2 }).children.length > 0
+    );
+    expect(decoupees.map((s) => s.index)).toEqual(["the-planes-of-existence"]);
   });
 
   it("produit des cles uniques sur l'ensemble du SRD", () => {

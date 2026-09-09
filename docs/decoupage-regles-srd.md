@@ -1,6 +1,6 @@
 # Relevé de découpage des règles du SRD
 
-**Version :** 0.2 — 9 septembre 2026
+**Version :** 0.3 — 9 septembre 2026
 **Ticket :** V3-N7 (`docs/BACKLOG_V3.md`)
 **Statut :** document de travail. Il sert à décider, puis il devient obsolète.
 
@@ -23,8 +23,8 @@ donc exactement celles relevées ici.
 | Sections | 33, pour ~190 000 caractères |
 | Restent entières | **9** |
 | Se découpent | **24**, pour **93 fiches** au niveau 3 |
-| Demandaient une décision | **17** (catégorie C) — **tranchée**, voir §3 — plus **1** cas à trancher (catégorie D) |
-| Total après la décision | **93** fiches au niveau 3, **106** au niveau 4, **4** au niveau 5 |
+| Demandaient une décision | **17** (catégorie C) et **1** cas à part (catégorie D) — **tous tranchés**, voir §3 et §4 |
+| Total après les décisions | **93** fiches au niveau 3, **106** au niveau 4, **4** au niveau 5 |
 
 ## 1. Comment le lire
 
@@ -35,7 +35,7 @@ Quatre catégories, de la plus sûre à la moins sûre :
 | **A** | aucun titre de niveau 3 — c'est déjà une règle unique | rien |
 | **B** | des titres de niveau 3, aucun sous-titre | découper, rien à décider |
 | **C** | des titres de niveau 3 qui portent des sous-titres | **une décision par chapitre** |
-| **D** | plusieurs titres de niveau 2 dans la même section | à regarder au cas par cas |
+| **D** | plusieurs titres de niveau 2 dans la même section | **tranché**, voir §4 |
 
 **La question de la catégorie C a été tranchée le 9 septembre** — voir §3. Les sous-titres sont
 des règles filles, rattachées à leur règle mère par `part_of`. Les tableaux de la catégorie C se
@@ -48,13 +48,13 @@ officiel français est dans `data/srd/fr-source/srd-5.2.1-fr.txt`. C'est la suit
 découpage, et c'est aussi pourquoi le moment est le bon — la prose française des règles n'est pas
 encore écrite, donc rien n'est à refaire.
 
-**La longueur des clés.** Une fiche de seconde passe hérite de toute la chaîne :
+**La longueur des clés — tranché le 9 septembre : la chaîne complète.** Une fiche de seconde passe hérite de toute la chaîne :
 `between-adventures-downtime-activities-crafting`. La forme courte (`downtime-activities-crafting`)
 se lit mieux mais ne garantit plus rien : « Attack Rolls and Damage » existe sous Force *et* sous
 Dextérité, « Spellcasting Ability » sous Intelligence, Sagesse et Charisme, « Difficult Terrain »
 sous deux chapitres différents. La chaîne complète est unique par construction — c'est déjà ce que
 fait `splitRuleSection`, et une clé n'est jamais lue par un humain : c'est le **nom** qui s'affiche
-et qui se cherche. **Proposition retenue par défaut : la chaîne complète**, à confirmer en phase A.
+et qui se cherche.
 
 **Rien en base.** Ce document est une lecture des fichiers source. Aucune écriture, aucune
 migration — c'est le travail des phases A à C, qui demandent une session avec Supabase.
@@ -99,6 +99,47 @@ elle demande un œil, chapitre par chapitre, au moment de la phase C :
 Aucun de ces cas ne remet en cause la décision : ils disent seulement que le découpage récursif
 propose, et qu'un humain valide chapitre par chapitre. C'est exactement ce que la phase C prévoit.
 
+## 4. La catégorie D — `the-planes-of-existence`, tranchée le 9 septembre
+
+**Même traitement que la catégorie C : une règle mère, des règles filles.** Ce qui change n'est
+pas le principe, c'est le niveau où on coupe — et c'est précisément ce que `splitRuleSection`
+attend de l'appelant.
+
+**Un détail de lecture qui compte : il n'y a aucun titre de niveau 1.** Les 33 sections commencent
+toutes par leur propre `##` — c'est vérifié, aucune exception. Le titre de niveau 2 posé au tout
+début **est** la règle mère. Ce qui fait l'anomalie de cette section, ce sont ses deux titres de
+niveau 2 **supplémentaires**, qui jouent ailleurs le rôle d'un `###`. Le niveau des filles est donc
+2 ici, 3 partout ailleurs.
+
+Le noyau a reçu la garantie correspondante : **le titre posé à l'index 0 n'est jamais une coupe.**
+Sans elle, le chapitre deviendrait l'enfant de lui-même et emporterait ses 811 caractères
+d'introduction. Deux tests dorés la tiennent : cette section se coupe en deux filles au niveau 2,
+et aucune des 32 autres ne se coupe à ce niveau.
+
+**L'arbre obtenu :**
+
+```
+the-planes-of-existence                                    chapeau, 811 car.
+├── …-the-material-plane                                   814
+└── …-beyond-the-material                                  chapeau, 7 881 car.
+    ├── …-planar-travel                                    1 773
+    ├── …-transitive-planes                                1 475
+    ├── …-inner-planes                                     1 137
+    └── …-outer-planes                                     3 219
+        ├── …-outer-planes-outer-planes                    631
+        └── …-outer-planes-demiplanes                      801
+```
+
+**Deux défauts de la source, à corriger à la main en phase C** — le découpage les révèle, il ne
+peut pas les réparer :
+
+1. `#### Outer Planes` est niché **sous** `### Outer Planes` : un titre en double, dont le texte ne
+   fait que poursuivre celui du dessus (Plans Supérieurs, Plans Inférieurs). Ce n'est pas une règle
+   fille, c'est une coupure de mise en page. À refondre dans sa mère.
+2. `#### Demiplanes` est niché sous « Outer Planes », alors qu'un demi-plan **n'est pas** un plan
+   extérieur : c'est une catégorie sœur du Matériel, des Transitifs, des Intérieurs et des
+   Extérieurs. Sa place est au même rang qu'eux, sous « Beyond the Material ».
+
 ---
 
 ## En un coup d'œil
@@ -110,7 +151,7 @@ propose, et qu'un humain valide chapitre par chapitre. C'est exactement ce que l
 | `casting-a-spell` | 13319 | ##×1 ###×10 ####×15 | coupe, sous-titres à examiner | 10 |
 | `fantasy-historical-pantheons` | 12543 | ##×1 ###×4 ####×4 | coupe, sous-titres à examiner | 4 |
 | `damage-and-healing` | 10746 | ##×1 ###×7 ####×7 | coupe, sous-titres à examiner | 7 |
-| `the-planes-of-existence` | 9506 | ##×3 ###×4 ####×2 | **à trancher** | — |
+| `the-planes-of-existence` | 9506 | ##×3 ###×4 ####×2 | coupe au niveau **2** (§4) | 2 |
 | `madness` | 9215 | ##×1 ###×3 ####×3 | coupe, sous-titres à examiner | 3 |
 | `making-an-attack` | 8719 | ##×1 ###×4 ####×9 | coupe, sous-titres à examiner | 4 |
 | `ability-checks` | 8454 | ##×1 ###×5 ####×7 | coupe, sous-titres à examiner | 5 |
@@ -492,11 +533,16 @@ Coupe au niveau 3 → 3 fiches.
 `madness-madness-effects-short-term-madness` · `madness-madness-effects-long-term-madness` · `madness-madness-effects-indefinite-madness`
 
 
-## D. À trancher
+## D. Le cas à part — tranché
 
-Plusieurs titres de niveau 2 dans une même section : la structure ne dit pas d'elle-même où est le chapitre.
+Une seule section porte plusieurs titres de niveau 2. La décision est en §4.
 
 ### `the-planes-of-existence` — The Planes of Existence
 
-9506 caractères, aucun titre de niveau 3.
+9 506 caractères. Coupe au niveau **2** → 2 fiches, puis récursivement.
+
+| Titre | Clé | Taille | Sous-titres |
+|---|---|---:|---:|
+| The Material Plane | `the-planes-of-existence-the-material-plane` | 814 | — |
+| Beyond the Material | `the-planes-of-existence-beyond-the-material` | 7881 | 4 |
 

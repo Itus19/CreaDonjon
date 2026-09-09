@@ -15,7 +15,8 @@ import { nextSlugCandidate, slugify } from "../slug/slug";
  * `traps` et `poisons` ont un niveau 3 qui n'est qu'un conteneur (« Sample
  * Traps ») dont les vraies fiches sont au niveau 4. Une heuristique se
  * tromperait sur un tiers des cas ; la profondeur est donc une donnee que
- * l'appelant fournit, chapitre par chapitre.
+ * l'appelant fournit, chapitre par chapitre. `the-planes-of-existence` en
+ * est la preuve : ses regles filles sont au niveau 2, pas 3.
  */
 
 /** Niveaux de titre markdown reconnus : `##` a `######`. `#` est le titre du document, jamais une regle. */
@@ -78,6 +79,13 @@ export function splitRuleSection(
 
   const cuts: { index: number; title: string }[] = [];
   for (const match of markdown.matchAll(HEADING)) {
+    // Le titre pose a l'index 0 est celui de la section elle-meme : les 33
+    // sections du SRD commencent toutes par le leur. Il n'est jamais une
+    // coupe, sinon un chapitre deviendrait l'enfant de lui-meme et sa prose
+    // d'introduction partirait avec lui. Le cas se presente reellement pour
+    // `the-planes-of-existence`, seule section a porter des titres de
+    // niveau 2 qui sont des regles filles.
+    if (match.index === 0) continue;
     if (match[1].length === depth) {
       cuts.push({ index: match.index, title: match[2].trim() });
     }

@@ -159,7 +159,7 @@ Une fiche de règle du SRD porte souvent plusieurs règles. `between-adventures`
 | Aucun titre de niveau 3 | **9** — Harmonisation, Couverture, Jets de sauvegarde, Bonus de maîtrise, Avantage et désavantage… | **ne se découpent pas** : ce sont déjà des règles uniques |
 | Niveau 3 « propres » | `actions-in-combat` : 10 actions, aucun niveau 4 | découpage direct au niveau 3 |
 | Niveau 3 conteneurs | `traps` → « Sample Traps » + 12 pièges au niveau 4 ; `poisons` idem | la chose vers laquelle on pointe est au niveau 4, pas 3 |
-| Trois titres de niveau 2 | `the-planes-of-existence` | anomalie : plusieurs chapitres dans une même section |
+| Trois titres de niveau 2 | `the-planes-of-existence` | ses règles filles sont au niveau 2, pas 3 — tranché le 9 septembre |
 
 Un découpage automatique se tromperait sur un tiers des cas. **Le niveau de coupe est donc une décision par chapitre, portée en donnée** — la fonction de découpage l'applique, elle ne le devine jamais.
 
@@ -189,7 +189,8 @@ Le repli quand le parent sort du filtre est déjà conçu, et c'est exactement l
 - [x] **La profondeur n'est jamais devinée**, elle est fournie par l'appelant. Le relevé ci-dessus l'interdit.
 - [x] Le découpage se fait par **tranches contiguës de la chaîne d'origine**, jamais en recomposant des lignes : « ni perte ni doublon » est vrai par construction, et vérifié sur les 33 sections × 5 profondeurs.
 - [x] Clés dérivées et préfixées par le chapitre ; un titre répété reçoit un suffixe plutôt que d'écraser le précédent — mêmes `slugify`/`nextSlugCandidate` que les slugs de monde, aucun second utilitaire.
-- [x] 15 tests, écrits avant le code. Cas dorés : les neuf sections sans titre de niveau 3 restent intactes, `actions-in-combat` se coupe en ses dix actions, et les clés produites sur tout le SRD sont uniques.
+- [x] 19 tests, écrits avant le code. Cas dorés : les neuf sections sans titre de niveau 3 restent intactes, `actions-in-combat` se coupe en ses dix actions, et les clés produites sur tout le SRD sont uniques.
+- [x] **Le titre posé à l'index 0 n'est jamais une coupe** (ajouté le 9 septembre avec la décision sur les plans d'existence) : sans ça, un chapitre à plusieurs titres de niveau 2 deviendrait l'enfant de lui-même et emporterait sa prose d'introduction. Deux tests dorés : `the-planes-of-existence` se coupe en deux filles au niveau 2, et aucune des 32 autres sections ne se coupe à ce niveau.
 
 **Phase A — le mécanisme**
 
@@ -204,11 +205,12 @@ Une différence à traiter : une parenté dérivée du SRD n'existe pas pour un 
 - [ ] Un parent absent du filtre ne fait pas disparaître son enfant — même repli que pour les sous-classes aujourd'hui.
 
 **Phase A bis — le relevé de décision — ✅ faite**
-- [x] `docs/decoupage-regles-srd.md` : les 33 sections classées, généré par la fonction testée sur les données réelles — 9 restent entières, 24 se découpent en 93 fiches au niveau 3, 17 demandaient une décision (tranchée ci-dessous) et 1 reste à trancher.
+- [x] `docs/decoupage-regles-srd.md` : les 33 sections classées, généré par la fonction testée sur les données réelles — 9 restent entières, 24 se découpent en 93 fiches au niveau 3, 17 demandaient une décision et 1 était à part ; les deux sont tranchées ci-dessous.
 - [x] Il vaut pour le 5.2.1 : `srd-2024.json` ne porte aucune section de règle, l'import construit le ruleset 2024 comme « base 2014 plus surcharges » (`mergeWithBaseFile`).
 - [x] **Tranché le 9 septembre — un sous-titre est une règle fille, pas un détail.** Il devient une fiche à part entière, `part_of` sa règle mère, exactement comme une règle est `part_of` son chapitre. **Le découpage est donc récursif** : chapitre → règle → règle fille, même parenté à chaque étage. Recompté sur les données réelles : **33 chapitres, 93 règles, 106 règles filles, 4 petites-filles** (`docs/decoupage-regles-srd.md` §3).
 - [x] Six motifs relevés où la récursion produit une fiche qui n'est pas une règle — des tableaux ou des conteneurs (les quatre tables de divinités, « Travel Pace », les deux tables d'effets de pièges, le regroupement des compétences par caractéristique). La règle de granularité les écarte ; c'est un œil humain en phase C, pas une exception au principe.
-- [ ] Trancher la longueur des clés de seconde passe. **Proposition : la chaîne complète** (`between-adventures-downtime-activities-crafting`). La forme courte se lit mieux mais perd l'unicité : « Attack Rolls and Damage » existe sous Force *et* sous Dextérité, « Spellcasting Ability » sous trois caractéristiques, « Difficult Terrain » sous deux chapitres. Une clé n'est jamais lue par un humain — c'est le nom qui s'affiche et qui se cherche.
+- [x] **Tranché le 9 septembre — les clés portent la chaîne complète** (`between-adventures-downtime-activities-crafting`). La forme courte se lit mieux mais perd l'unicité : « Attack Rolls and Damage » existe sous Force *et* sous Dextérité, « Spellcasting Ability » sous trois caractéristiques, « Difficult Terrain » sous deux chapitres. Une clé n'est jamais lue par un humain — c'est le nom qui s'affiche et qui se cherche.
+- [x] **Tranché le 9 septembre — `the-planes-of-existence` (catégorie D) suit exactement la même règle** : une mère, des filles. Seul le niveau de coupe change — 2 au lieu de 3 — et c'est justement ce que la fonction attend de l'appelant. **Il n'y a aucun titre de niveau 1 dans le SRD** : les 33 sections commencent toutes par leur propre `##`, donc le titre du début *est* la mère ; l'anomalie tient aux deux `##` **supplémentaires**, qui jouent ailleurs le rôle d'un `###`. Arbre complet en `docs/decoupage-regles-srd.md` §4.
 
 **Phase B — un chapitre pilote**
 - [ ] `between-adventures` découpé sur ses deux étages — deux règles (Train de vie, Activités de temps libre) et les cinq activités rattachées à la seconde, soit sept fiches sous le chapeau — vérifié en direct dans le compendium.
@@ -217,7 +219,7 @@ Une différence à traiter : une parenté dérivée du SRD n'existe pas pour un 
 **Phase C — le reste**
 - [ ] Les 32 autres sections passées au même traitement, chapitre par chapitre.
 - [ ] **Le découpage propose, l'humain valide.** Les six motifs relevés en phase A bis se tranchent ici : une fiche qui n'est qu'un tableau ou un conteneur ne devient pas une entrée, elle reste dans sa règle mère.
-- [ ] `the-planes-of-existence` (catégorie D, trois titres de niveau 2 dans une même section) reste à arbitrer : un chapitre par titre, ou un chapitre unique.
+- [ ] `the-planes-of-existence` : deux défauts de la source à corriger à la main, que le découpage révèle sans pouvoir les réparer. `#### Outer Planes` est niché sous `### Outer Planes` — un titre en double dont le texte poursuit celui du dessus, à refondre dans sa mère. `#### Demiplanes` est niché sous « Outer Planes » alors qu'un demi-plan n'est pas un plan extérieur : sa place est au même rang que les Transitifs et les Intérieurs.
 - [ ] **Piège connu à ne pas rejouer** : une ré-ingestion retire les fiches absentes du JSON source — c'est ainsi que `encounter-budget` avait disparu (V2-G1). Le découpage se fait donc sur les données en place, jamais par une ré-ingestion naïve.
 
 ---
