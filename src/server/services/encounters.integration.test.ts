@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getEncounterBudgetTable, getEncounterBudgetTableForRuleset, listMonstersForRuleset } from "./encounters";
 
@@ -18,9 +18,24 @@ const hasCreds = Boolean(SUPABASE_URL && SERVICE_ROLE_KEY);
 const RULESET_5_1 = "41ebff94-aabc-4f5c-b437-28f2f7a195ee";
 const RULESET_5_2_1 = "110d20e9-dd80-4752-a57e-a957601b4eae";
 
+/**
+ * Construit le client seulement quand un test va reellement s'executer.
+ * `describe.skipIf` saute les tests mais evalue quand meme le CORPS de la
+ * suite : construire le client la, avec `SERVICE_ROLE_KEY ?? ""`, faisait
+ * lever `supabaseKey is required` a la collecte — donc `npm run test`
+ * rouge sur toute machine sans .env.local, alors que les 27 autres
+ * fichiers d'integration se sautent proprement parce qu'ils construisent
+ * leur client dans `beforeAll` (voir tables.integration.test.ts). Meme
+ * motif ici, factorise pour les trois suites.
+ */
+function creerAdmin(): SupabaseClient {
+  return createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+}
+
 describe.skipIf(!hasCreds)("getEncounterBudgetTable (integration, base reelle)", () => {
-  const admin: SupabaseClient = createSupabaseClient(SUPABASE_URL ?? "", SERVICE_ROLE_KEY ?? "", {
-    auth: { persistSession: false },
+  let admin: SupabaseClient;
+  beforeAll(() => {
+    admin = creerAdmin();
   });
 
   it("lit la table complete pour le SRD 5.2.1, valeurs conformes au texte officiel", async () => {
@@ -38,8 +53,9 @@ describe.skipIf(!hasCreds)("getEncounterBudgetTable (integration, base reelle)",
 });
 
 describe.skipIf(!hasCreds)("getEncounterBudgetTableForRuleset (integration, base reelle)", () => {
-  const admin: SupabaseClient = createSupabaseClient(SUPABASE_URL ?? "", SERVICE_ROLE_KEY ?? "", {
-    auth: { persistSession: false },
+  let admin: SupabaseClient;
+  beforeAll(() => {
+    admin = creerAdmin();
   });
 
   it("le SRD 5.2.1 n'a pas besoin de repli : ses propres lignes, isFallback a false", async () => {
@@ -56,8 +72,9 @@ describe.skipIf(!hasCreds)("getEncounterBudgetTableForRuleset (integration, base
 });
 
 describe.skipIf(!hasCreds)("listMonstersForRuleset (integration, base reelle)", () => {
-  const admin: SupabaseClient = createSupabaseClient(SUPABASE_URL ?? "", SERVICE_ROLE_KEY ?? "", {
-    auth: { persistSession: false },
+  let admin: SupabaseClient;
+  beforeAll(() => {
+    admin = creerAdmin();
   });
 
   it("retrouve le gobelin-guerrier du SRD 5.2.1 avec ses PX et son FP", async () => {
