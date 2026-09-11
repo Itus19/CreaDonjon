@@ -600,7 +600,23 @@ export default function PlayableCharacterSheet({
         </aside>
 
         <div className="min-w-0 flex-1">
-          <div className="flex gap-1 border-b border-edge/60 text-xs">
+          {/*
+            Onglets en intercalaire de classeur (retour joueur : "les onglets
+            ne sont pas tres visibles" — un souligne de 2 px etait le seul
+            signal, et rien ne rattachait l'onglet a sa page).
+
+            La ligne du haut n'est PAS une bordure continue qu'on repeindrait
+            sous l'onglet actif : elle est composee par le bord bas de chaque
+            onglet INACTIF et du remplissage souple. L'onglet actif n'a pas de
+            bord bas — c'est la l'ouverture du classeur. Aucun chevauchement ni
+            decalage negatif, donc rien a corriger la ou `--panel-raised` est
+            translucide : l'onglet actif et la page composent leur alpha sur le
+            meme fond, cote a cote, jamais l'un sur l'autre.
+
+            Les coins hauts arrondis suffisent a separer deux onglets inactifs
+            jointifs — une marge entre eux trouerait la ligne du haut.
+          */}
+          <div className="flex items-end overflow-x-auto text-xs">
             {(["actions", "inventaire", "magie", "traits", "maitrise"] as Tab[])
               .filter((t) => (t !== "magie" || spellcasting) && (t !== "maitrise" || weaponMasteryChoices.length > 0))
               .map((t) => (
@@ -608,94 +624,100 @@ export default function PlayableCharacterSheet({
                   key={t}
                   type="button"
                   onClick={() => setTab(t)}
-                  className={`rounded-t-md px-3 py-1.5 transition-colors ${
-                    tab === t ? "border-b-2 border-accent text-ink" : "text-ink-muted hover:text-ink"
+                  className={`shrink-0 rounded-t-lg border-2 px-3.5 transition-colors ${
+                    tab === t
+                      ? "border-edge-strong border-b-transparent bg-panel-raised pb-2 pt-2.5 font-medium text-ink shadow-[inset_0_3px_0_0_var(--accent)]"
+                      : "border-transparent border-b-edge-strong bg-panel-sunken py-2 text-ink-muted hover:text-ink"
                   }`}
                 >
                   {TAB_LABELS[t]}
                 </button>
               ))}
+            {/* Prolonge la ligne du haut jusqu'au bord droit de la page. */}
+            <span aria-hidden="true" className="min-w-4 flex-1 self-stretch border-b-2 border-edge-strong" />
           </div>
 
-          {tab === "maitrise" && (
-            <WeaponMasteryTab
-              choices={weaponMasteryChoices}
-              chips={weaponMasteryChips}
-              characterChoices={character.choices}
-              onChangeChoices={(choices) => patchCharacter({ choices })}
-            />
-          )}
+          <div className="rounded-b-lg border-2 border-t-0 border-edge-strong bg-panel-raised px-3 pb-3">
+            {tab === "maitrise" && (
+              <WeaponMasteryTab
+                choices={weaponMasteryChoices}
+                chips={weaponMasteryChips}
+                characterChoices={character.choices}
+                onChangeChoices={(choices) => patchCharacter({ choices })}
+              />
+            )}
 
-          {tab === "actions" && (
-            <ActionsTab
-              worldSlug={worldSlug}
-              busy={busy}
-              advantage={advantage}
-              setAdvantage={setAdvantage}
-              equippedWeapons={equippedWeapons}
-              itemChips={itemChips}
-              weaponByKey={weaponByKey}
-              masteredWeaponKeys={masteredWeaponKeys}
-              strMod={sheet.abilities.str.mod}
-              dexMod={sheet.abilities.dex.mod}
-              proficiencyBonus={sheet.proficiencyBonus}
-              isMonk={isMonk}
-              onAttack={attack}
-              onDamage={damage}
-              spellcasting={spellcasting}
-              preparedSpells={preparedSpells}
-              spellSlots={sheet.spellcasting?.slots ?? {}}
-              spellSlotsUsed={runtimeState?.spell_slots_used ?? {}}
-              spellAttackBonus={sheet.spellcasting?.attackBonus ?? 0}
-              spellSaveDc={sheet.spellcasting?.saveDc ?? 0}
-              spellAbilityLabel={sheet.spellcasting ? ABILITY_LABELS[sheet.spellcasting.ability] : ""}
-              onCast={cast}
-              onCastAttack={castSpellAttack}
-              resources={resources}
-              resourcesUsed={runtimeState?.resources ?? {}}
-              onChangeResource={changeResource}
-            />
-          )}
+            {tab === "actions" && (
+              <ActionsTab
+                worldSlug={worldSlug}
+                busy={busy}
+                advantage={advantage}
+                setAdvantage={setAdvantage}
+                equippedWeapons={equippedWeapons}
+                itemChips={itemChips}
+                weaponByKey={weaponByKey}
+                masteredWeaponKeys={masteredWeaponKeys}
+                strMod={sheet.abilities.str.mod}
+                dexMod={sheet.abilities.dex.mod}
+                proficiencyBonus={sheet.proficiencyBonus}
+                isMonk={isMonk}
+                onAttack={attack}
+                onDamage={damage}
+                spellcasting={spellcasting}
+                preparedSpells={preparedSpells}
+                spellSlots={sheet.spellcasting?.slots ?? {}}
+                spellSlotsUsed={runtimeState?.spell_slots_used ?? {}}
+                spellAttackBonus={sheet.spellcasting?.attackBonus ?? 0}
+                spellSaveDc={sheet.spellcasting?.saveDc ?? 0}
+                spellAbilityLabel={sheet.spellcasting ? ABILITY_LABELS[sheet.spellcasting.ability] : ""}
+                onCast={cast}
+                onCastAttack={castSpellAttack}
+                resources={resources}
+                resourcesUsed={runtimeState?.resources ?? {}}
+                onChangeResource={changeResource}
+              />
+            )}
 
-          {tab === "magie" && spellcasting && (
-            <MagicTab
-              worldSlug={worldSlug}
-              sortedKnownSpells={sortedKnownSpells}
-              spellChips={spellChips}
-              spellcasting={spellcasting}
-              onTogglePrepared={togglePrepared}
-            />
-          )}
+            {tab === "magie" && spellcasting && (
+              <MagicTab
+                worldSlug={worldSlug}
+                sortedKnownSpells={sortedKnownSpells}
+                spellChips={spellChips}
+                spellcasting={spellcasting}
+                onTogglePrepared={togglePrepared}
+              />
+            )}
 
-          {tab === "inventaire" && (
-            <InventoryTab
-              worldSlug={worldSlug}
-              inventory={inventory}
-              onUpdateInventory={onUpdateInventory}
-              strMod={sheet.abilities.str.mod}
-              dexMod={sheet.abilities.dex.mod}
-              proficiencyBonus={sheet.proficiencyBonus}
-              isMonk={isMonk}
-              weaponByKey={weaponByKey}
-              equipment={equipment}
-              weight={weight}
-              cost={cost}
-              encumbrance={sheet.encumbrance}
-            />
-          )}
+            {tab === "inventaire" && (
+              <InventoryTab
+                worldSlug={worldSlug}
+                inventory={inventory}
+                onUpdateInventory={onUpdateInventory}
+                strMod={sheet.abilities.str.mod}
+                dexMod={sheet.abilities.dex.mod}
+                proficiencyBonus={sheet.proficiencyBonus}
+                isMonk={isMonk}
+                weaponByKey={weaponByKey}
+                equipment={equipment}
+                weight={weight}
+                cost={cost}
+                encumbrance={sheet.encumbrance}
+              />
+            )}
 
-          {tab === "traits" && (
-            <TraitsTab
-              traits={traits}
-              traitChips={traitChips}
-              traitSourceLabel={traitSourceLabel}
-              proficiencies={proficiencies}
-              languageChoices={languageChoices}
-              character={character}
-              patchCharacter={patchCharacter}
-              allLanguages={allLanguages}
-            />
-          )}
+            {tab === "traits" && (
+              <TraitsTab
+                traits={traits}
+                traitChips={traitChips}
+                traitSourceLabel={traitSourceLabel}
+                proficiencies={proficiencies}
+                languageChoices={languageChoices}
+                character={character}
+                patchCharacter={patchCharacter}
+                allLanguages={allLanguages}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
