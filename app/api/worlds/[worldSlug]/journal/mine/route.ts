@@ -20,7 +20,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const world = await getWorldBySlug(supabase, worldSlug);
@@ -30,12 +30,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const viewer = await buildViewerForWorld(supabase, world.id, user.id);
   if (viewer.kind === "anonymous") {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
   const isAdmin = viewer.worldRole === "owner" || viewer.worldRole === "editor" || Object.values(viewer.campaignRoles).includes("gm");
   const isMember = isAdmin || viewer.worldRole !== null || Object.keys(viewer.campaignRoles).length > 0;
   if (!isMember) {
-    return NextResponse.json({ error: "Vous n'etes pas membre de ce monde." }, { status: 403 });
+    return NextResponse.json({ error: "Vous n'êtes pas membre de ce monde." }, { status: 403 });
   }
 
   const entries = isAdmin ? await getMergedJournalForWorld(supabase, world.id) : await getPlayerJournalForWorld(supabase, world.id);

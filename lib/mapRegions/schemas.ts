@@ -8,7 +8,7 @@ import { zVisibilityInput } from "@/lib/visibility/schemas";
  * utilisateur, point 1), meme discipline que map_pins.
  */
 export const createMapRegionSchema = z.object({
-  name: z.string().trim().max(200, "200 caracteres maximum.").default(""),
+  name: z.string().trim().max(200, "200 caractères maximum.").default(""),
   ref: zMapElementRef.nullable().default(null),
   shape: zMapRegionShape,
   fillColor: zMapRegionColor.default("#3b82f6"),
@@ -20,7 +20,7 @@ export const createMapRegionSchema = z.object({
 });
 
 export const updateMapRegionSchema = z.object({
-  name: z.string().trim().max(200, "200 caracteres maximum.").optional(),
+  name: z.string().trim().max(200, "200 caractères maximum.").optional(),
   ref: zMapElementRef.nullable().optional(),
   shape: zMapRegionShape.optional(),
   fillColor: zMapRegionColor.optional(),

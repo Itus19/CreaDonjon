@@ -66,7 +66,7 @@ async function generateUniqueShareSlug(supabase: TypedClient, campaignName: stri
       return candidate;
     }
   }
-  throw new Error("Impossible de generer un alias unique pour ce lien.");
+  throw new Error("Impossible de générer un alias unique pour ce lien.");
 }
 
 export async function listShareLinks(supabase: TypedClient, worldId: string): Promise<ShareLinkSummary[]> {

@@ -10,7 +10,7 @@ import { zCalendarConfig } from "@/src/core/schemas/calendar";
  * seule celle-ci existe).
  */
 export const createWorldSchema = z.object({
-  name: z.string().trim().min(1, "Le nom est requis.").max(100, "100 caracteres maximum."),
+  name: z.string().trim().min(1, "Le nom est requis.").max(100, "100 caractères maximum."),
   rulesetId: z.string().uuid("Choisissez un ruleset."),
   mode: z.enum(["campaign", "solo"]),
 });
@@ -27,7 +27,7 @@ export const updateCalendarSchema = zCalendarConfig;
 /** Renommage (V2, retour utilisateur, ecran d'accueil) : jamais le slug — voir `updateWorldName` (repo). */
 export const renameWorldSchema = z.object({
   worldId: z.guid(),
-  name: z.string().trim().min(1, "Le nom est requis.").max(100, "100 caracteres maximum."),
+  name: z.string().trim().min(1, "Le nom est requis.").max(100, "100 caractères maximum."),
 });
 
 /**

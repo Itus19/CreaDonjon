@@ -9,7 +9,7 @@ import { DEFAULT_PROSE_LENGTH } from "@/src/core/generators/types";
 export const createBlockSchema = z.object({
   entityId: z.guid(),
   blockType: z.enum(BLOCK_TYPES),
-  label: z.string().trim().min(1, "Le titre est requis.").max(100, "100 caracteres maximum."),
+  label: z.string().trim().min(1, "Le titre est requis.").max(100, "100 caractères maximum."),
   visibility: zVisibilityInput,
 });
 
@@ -84,9 +84,9 @@ export const addPersonalityEventSchema = z.object({
   // jamais six a la fois, donc cle libre + verification manuelle.
   deltas: z
     .record(z.string(), z.number().int().min(-100).max(100))
-    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un pole doit etre touche." })
+    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un pôle doit être touché." })
     .refine((d) => Object.keys(d).every((k) => (PERSONALITY_POLE_KEYS as readonly string[]).includes(k)), {
-      message: "Pole inconnu.",
+      message: "Pôle inconnu.",
     }),
   occurredAtIngame: zGameDate.nullable().default(null),
 });
@@ -97,7 +97,7 @@ export const addAttitudeEventSchema = z.object({
   summary: z.string().trim().min(1).max(500),
   deltas: z
     .record(z.string(), z.number().int().min(-100).max(100))
-    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un axe doit etre touche." })
+    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un axe doit être touché." })
     .refine((d) => Object.keys(d).every((k) => (RELATIONSHIP_AXIS_KEYS as readonly string[]).includes(k)), {
       message: "Axe inconnu.",
     }),
@@ -110,9 +110,9 @@ export const addWorldviewEventSchema = z.object({
   summary: z.string().trim().min(1).max(500),
   deltas: z
     .record(z.string(), z.number().int().min(-100).max(100))
-    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un pole doit etre touche." })
+    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un pôle doit être touché." })
     .refine((d) => Object.keys(d).every((k) => (WORLDVIEW_POLE_KEYS as readonly string[]).includes(k)), {
-      message: "Pole inconnu.",
+      message: "Pôle inconnu.",
     }),
   occurredAtIngame: zGameDate.nullable().default(null),
 });

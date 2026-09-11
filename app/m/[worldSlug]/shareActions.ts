@@ -29,7 +29,7 @@ export async function createShareLinkAction(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Session expiree, reconnectez-vous." };
+  if (!user) return { error: "Session expirée, reconnectez-vous." };
 
   let created: Awaited<ReturnType<typeof createShareLink>>;
   try {

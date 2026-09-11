@@ -38,7 +38,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const world = await getWorldBySlug(supabase, worldSlug);
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const admin = await isWorldAdmin(supabase, { worldId: world.id, userId: user.id });
   if (!admin) {
-    return NextResponse.json({ error: "Reserve au MJ." }, { status: 403 });
+    return NextResponse.json({ error: "Réservé au MJ." }, { status: 403 });
   }
 
   const station = await insertRadioStation(supabase, {

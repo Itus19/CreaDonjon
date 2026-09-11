@@ -30,13 +30,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const locale = (await getLocale()) as Locale;
   const ctx = await resolveCharacterActionContext(supabase, entityId, campaignId, locale);
   if (!ctx) {
-    return NextResponse.json({ error: "Fiche de personnage introuvable ou sans ruleset resolvable." }, { status: 404 });
+    return NextResponse.json({ error: "Fiche de personnage introuvable ou sans ruleset résolvable." }, { status: 404 });
   }
 
   const runtimeState = await getOrInitializeRuntimeState(supabase, ctx);

@@ -15,7 +15,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const outcome = await rejectAiProposal(supabase, { proposalId, userId: user.id });

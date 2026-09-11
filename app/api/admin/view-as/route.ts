@@ -4,9 +4,9 @@ import { startViewAs } from "@/src/server/services/viewAs";
 
 const REASON_STATUS = { not_superadmin: 403, not_found: 404, not_an_invited_account: 400 } as const;
 const REASON_MESSAGE = {
-  not_superadmin: "Reserve au superadmin.",
+  not_superadmin: "Réservé au superadmin.",
   not_found: "Compte introuvable.",
-  not_an_invited_account: "Ce compte n'a pas ete cree par un lien d'invitation.",
+  not_an_invited_account: "Ce compte n'a pas été créé par un lien d'invitation.",
 } as const;
 
 /**
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const result = await startViewAs(supabase, { callerId: user.id, targetUserId });

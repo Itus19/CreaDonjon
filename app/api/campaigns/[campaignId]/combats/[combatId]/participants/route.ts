@@ -20,7 +20,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   if (parsed.data.sourceKind === "entity") {
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       isAlly: parsed.data.isAlly,
     });
     if (!participant) {
-      return NextResponse.json({ error: "Entite introuvable ou sans fiche de personnage." }, { status: 404 });
+      return NextResponse.json({ error: "Entité introuvable ou sans fiche de personnage." }, { status: 404 });
     }
     return NextResponse.json(participant, { status: 201 });
   }

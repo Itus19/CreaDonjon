@@ -6,7 +6,7 @@ import { applyLevelUp, type ApplyLevelUpError } from "@/src/server/services/char
 import type { Locale } from "@/src/i18n/request";
 
 const ERROR_MESSAGES: Record<ApplyLevelUpError, string> = {
-  not_found: "Fiche de personnage introuvable ou sans ruleset resolvable.",
+  not_found: "Fiche de personnage introuvable ou sans ruleset résolvable.",
   conflict: "Cette fiche a été modifiée entre-temps. Rechargez la page avant de réessayer.",
   invalid_level_change: "Les niveaux ne peuvent que monter, jamais descendre.",
   invalid_asi: "Choix d'amélioration de caractéristique invalide.",
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const locale = (await getLocale()) as Locale;

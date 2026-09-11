@@ -27,7 +27,7 @@ export async function createCharacterFromWizardAction(
 ): Promise<{ error: string } | void> {
   const parsed = createCharacterFromWizardSchema.safeParse(input);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Donnees invalides." };
+    return { error: parsed.error.issues[0]?.message ?? "Données invalides." };
   }
 
   const supabase = await createClient();
@@ -35,7 +35,7 @@ export async function createCharacterFromWizardAction(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { error: "Non authentifie." };
+    return { error: "Non authentifié." };
   }
 
   const entity = await createCharacterFromWizard(supabase, {

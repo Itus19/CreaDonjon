@@ -38,7 +38,7 @@ export async function createWorldAction(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { error: "Session expiree, reconnectez-vous." };
+    return { error: "Session expirée, reconnectez-vous." };
   }
 
   // V2-M2 (Lot M) : le mode solo est reserve au superadmin — verifie ici,
@@ -77,7 +77,7 @@ export async function renameWorldAction(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Session expiree, reconnectez-vous." };
+  if (!user) return { error: "Session expirée, reconnectez-vous." };
 
   const { updated, error } = await renameWorld(supabase, {
     worldId: parsed.data.worldId,
@@ -115,7 +115,7 @@ export async function renameCampaignAction(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Session expiree, reconnectez-vous." };
+  if (!user) return { error: "Session expirée, reconnectez-vous." };
 
   const { updated, error } = await renameCampaign(supabase, {
     campaignId: parsed.data.campaignId,
@@ -158,7 +158,7 @@ export async function deleteWorldAction(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Session expiree, reconnectez-vous." };
+  if (!user) return { error: "Session expirée, reconnectez-vous." };
 
   const { deleted, error } = await deleteWorldWithConfirmation(supabase, {
     worldId: parsed.data.worldId,

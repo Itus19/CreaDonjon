@@ -9,7 +9,7 @@ type TypedClient = SupabaseClient<Database>;
 
 export class AiRateLimitError extends Error {
   constructor(public readonly retryAfterMs: number) {
-    super("Limite d'appels IA atteinte, reessayez plus tard.");
+    super("Limite d'appels IA atteinte, réessayez plus tard.");
     this.name = "AiRateLimitError";
   }
 }

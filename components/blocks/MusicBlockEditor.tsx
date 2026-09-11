@@ -37,7 +37,7 @@ export default function MusicBlockEditor({
     const url = urlInput.trim();
     if (!url) return;
     if (!detectProvider(url)) {
-      setError("Lien non reconnu — seuls Spotify, SoundCloud et YouTube sont acceptes.");
+      setError("Lien non reconnu — seuls Spotify, SoundCloud et YouTube sont acceptés.");
       return;
     }
     onChange({ ...data, tracks: [...tracks, { id: crypto.randomUUID(), url }] });

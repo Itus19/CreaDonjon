@@ -53,7 +53,7 @@ export default function InfoboxBlockEditor({
         </div>
       ))}
       {data.entries.length === 0 && (
-        <p className="text-sm text-ink-muted">Aucune entree pour l&apos;instant.</p>
+        <p className="text-sm text-ink-muted">Aucune entrée pour l&apos;instant.</p>
       )}
       <button
         type="button"

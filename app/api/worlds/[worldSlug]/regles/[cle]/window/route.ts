@@ -14,7 +14,7 @@ export async function GET(
   const locale = (await getLocale()) as Locale;
   const entry = await getRuleEntryPageData(supabase, worldSlug, cle, locale);
   if (!entry) {
-    return NextResponse.json({ error: "Fiche de regle introuvable." }, { status: 404 });
+    return NextResponse.json({ error: "Fiche de règle introuvable." }, { status: 404 });
   }
   return NextResponse.json(entry, { status: 200 });
 }

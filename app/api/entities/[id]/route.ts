@@ -20,7 +20,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const result = await updateEntity(supabase, {
@@ -35,13 +35,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (!result.ok) {
     if (result.reason === "not_found") {
-      return NextResponse.json({ error: "Entite introuvable." }, { status: 404 });
+      return NextResponse.json({ error: "Entité introuvable." }, { status: 404 });
     }
     if (result.reason === "forbidden") {
       return NextResponse.json({ error: "Vous n'avez pas le droit de modifier cette fiche." }, { status: 403 });
     }
     return NextResponse.json(
-      { error: "Cette fiche a ete modifiee entre-temps. Rechargez avant de reessayer." },
+      { error: "Cette fiche a été modifiée entre-temps. Rechargez avant de réessayer." },
       { status: 409 }
     );
   }
@@ -58,7 +58,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const { deleted, error } = await deleteEntity(supabase, { id, userId: user.id });
@@ -66,7 +66,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     if (error === "forbidden") {
       return NextResponse.json({ error: "Vous n'avez pas le droit de supprimer cette fiche." }, { status: 403 });
     }
-    return NextResponse.json({ error: "Entite introuvable." }, { status: 404 });
+    return NextResponse.json({ error: "Entité introuvable." }, { status: 404 });
   }
 
   return NextResponse.json({ ok: true }, { status: 200 });

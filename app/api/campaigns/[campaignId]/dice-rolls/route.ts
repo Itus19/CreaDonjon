@@ -35,7 +35,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const campaign = await getCampaignById(supabase, campaignId);
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   });
 
   if (!result.ok) {
-    return NextResponse.json({ error: "Choisissez au moins un de." }, { status: 400 });
+    return NextResponse.json({ error: "Choisissez au moins un dé." }, { status: 400 });
   }
   return NextResponse.json(result.roll, { status: 200 });
 }

@@ -47,7 +47,7 @@ export async function exportWorld(supabase: TypedClient, worldId: string): Promi
   const world = await getWorldForExport(supabase, worldId);
   if (!world) throw new Error("Monde introuvable.");
   if (!world.defaultRulesetId) {
-    throw new Error("Ce monde n'a pas de ruleset actif — impossible a exporter.");
+    throw new Error("Ce monde n'a pas de ruleset actif — impossible à exporter.");
   }
 
   const rulesetInfo = await getRulesetInfoForExport(supabase, world.defaultRulesetId);
@@ -59,7 +59,7 @@ export async function exportWorld(supabase: TypedClient, worldId: string): Promi
   if (rulesetInfo.isOfficialBase) {
     ruleset = { kind: "official", baseSystem: rulesetInfo.baseSystem as "dnd_srd_51" | "dnd_srd_52" | "custom" };
   } else if (rulesetInfo.contentOrigin === "personal_reference") {
-    warnings.push("Ce monde utilise un ruleset personnel : son contenu n'est pas inclus, il faudra le ressaisir apres import.");
+    warnings.push("Ce monde utilise un ruleset personnel : son contenu n'est pas inclus, il faudra le ressaisir après import.");
     ruleset = {
       kind: "personal_omitted",
       name: rulesetInfo.name,
@@ -188,7 +188,7 @@ export async function importWorld(supabase: TypedClient, params: ImportWorldPara
     mode: params.mode,
   });
   if (campaign === "world_already_has_campaign") {
-    throw new Error("Le monde importe possede deja une campagne : incoherence interne.");
+    throw new Error("Le monde importé possède déjà une campagne : incohérence interne.");
   }
 
   const idMap = new Map<string, string>();
@@ -224,7 +224,7 @@ export async function importWorld(supabase: TypedClient, params: ImportWorldPara
     const sourceEntityId = idMap.get(r.sourceRef);
     const targetEntityId = idMap.get(r.targetRef);
     if (!sourceEntityId || !targetEntityId) {
-      throw new Error("Relation reference une entite inconnue : fichier corrompu.");
+      throw new Error("Relation référence une entité inconnue : fichier corrompu.");
     }
     return {
       worldId: insertedWorld.id,
@@ -261,7 +261,7 @@ export async function importWorld(supabase: TypedClient, params: ImportWorldPara
   }
 
   const world = await getWorldById(supabase, insertedWorld.id);
-  if (!world) throw new Error("Monde importe introuvable juste apres sa creation : incoherence interne.");
+  if (!world) throw new Error("Monde importé introuvable juste après sa création : incohérence interne.");
 
   return { world, campaign };
 }

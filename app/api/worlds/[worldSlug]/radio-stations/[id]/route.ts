@@ -10,7 +10,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const deleted = await deleteRadioStation(supabase, id);

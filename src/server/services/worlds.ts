@@ -192,7 +192,7 @@ export async function generateUniqueSlug(
       return candidate;
     }
   }
-  throw new Error("Impossible de generer un slug unique.");
+  throw new Error("Impossible de générer un slug unique.");
 }
 
 export async function createWorld(
@@ -230,7 +230,7 @@ export async function createWorldWithCampaign(
   // si cette branche est atteinte, c'est un bug ailleurs (cle generee deux
   // fois ?), jamais un cas a avaler silencieusement.
   if (campaign === "world_already_has_campaign") {
-    throw new Error("Le monde vient d'etre cree mais possede deja une campagne : incoherence interne.");
+    throw new Error("Le monde vient d'être créé mais possède déjà une campagne : incohérence interne.");
   }
   return { world, campaign };
 }

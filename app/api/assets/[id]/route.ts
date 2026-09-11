@@ -30,7 +30,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   const supabase = await createClient();
   const user = await getAuthUser(supabase);
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const deleted = await deleteAsset(supabase, id);

@@ -39,7 +39,7 @@ export const createBlankEntitySchema = z.object({
 // suffit, aucun changement de schema necessaire.
 export const updateEntitySchema = z.object({
   version: z.number().int().positive(),
-  name: z.string().trim().max(200, "200 caracteres maximum."),
+  name: z.string().trim().max(200, "200 caractères maximum."),
   entityKind: z.string().trim().min(1, "Choisissez un type.").max(40, "40 caractères maximum."),
   aliases: z.array(z.string()).default([]),
   isPublic: z.boolean(),
@@ -74,7 +74,7 @@ export const DEFAULT_ENTITY_NAME = "Nouvelle entité";
 // entite" a renommer ensuite.
 export const createEntityWithNameSchema = z.object({
   worldId: z.guid(),
-  name: z.string().trim().min(1, "Un nom est requis.").max(200, "200 caracteres maximum."),
+  name: z.string().trim().min(1, "Un nom est requis.").max(200, "200 caractères maximum."),
   entityKind: z.string().trim().min(1).max(40).default("character"),
 });
 

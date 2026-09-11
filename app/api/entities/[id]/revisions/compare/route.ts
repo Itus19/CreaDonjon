@@ -16,17 +16,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const entity = await getEntityById(supabase, entityId);
   if (!entity) {
-    return NextResponse.json({ error: "Entite introuvable." }, { status: 404 });
+    return NextResponse.json({ error: "Entité introuvable." }, { status: 404 });
   }
 
   const diff = await compareRevisionsForViewer(supabase, entity.world_id, entityId, from, to, user.id);
   if (!diff) {
-    return NextResponse.json({ error: "Revision introuvable." }, { status: 404 });
+    return NextResponse.json({ error: "Révision introuvable." }, { status: 404 });
   }
 
   return NextResponse.json(diff, { status: 200 });

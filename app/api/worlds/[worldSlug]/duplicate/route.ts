@@ -13,7 +13,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const world = await getWorldBySlug(supabase, worldSlug);
@@ -22,13 +22,13 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   }
   const ownerId = await getWorldOwnerId(supabase, world.id);
   if (ownerId !== user.id) {
-    return NextResponse.json({ error: "Seul le proprietaire du monde peut le dupliquer." }, { status: 403 });
+    return NextResponse.json({ error: "Seul le propriétaire du monde peut le dupliquer." }, { status: 403 });
   }
 
   try {
     const result = await duplicateWorld(supabase, { worldId: world.id, ownerId: user.id });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Echec de la duplication." }, { status: 400 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Échec de la duplication." }, { status: 400 });
   }
 }
