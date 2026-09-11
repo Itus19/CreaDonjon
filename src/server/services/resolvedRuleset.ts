@@ -43,6 +43,7 @@ import {
   type ArmorData,
   type CustomTableRow,
   type ItemCost,
+  type LanguageKey,
   type ProgressionRow,
   type WeaponData,
 } from "@/src/core/rules/srdMapping";
@@ -56,7 +57,7 @@ import {
   listTranslationsForEntries,
 } from "@/src/server/repos/rules";
 import { entryNameFrom, resolveEntryBlocksInRuleset, resolveEntryBlocksInRulesetBatch, walkRulesetChain } from "./rules";
-import { WEAPON_ARMOR_PROFICIENCY_LABELS_FR } from "@/src/i18n/fr";
+import { LANGUAGE_LABELS_FR, WEAPON_ARMOR_PROFICIENCY_LABELS_FR } from "@/src/i18n/fr";
 import {
   backgroundAbilityBonusModifiers,
   isValidBackgroundAbilityBonusChoice,
@@ -540,6 +541,16 @@ export async function assembleResolvedRuleset(
       const resolved = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : undefined;
       p.name = resolved ?? (locale !== "en" ? WEAPON_ARMOR_PROFICIENCY_LABELS_FR[p.key] : undefined) ?? p.name;
     }
+  }
+
+  // Langues : `extractLanguages` ne connait que le nom brut du SRD ("Common",
+  // "Dwarvish"), affiche tel quel dans l'onglet Traits alors que les boutons
+  // de choix juste au-dessus, eux, sont en francais (`LANGUAGE_LABELS_FR`).
+  // Meme lexique statique, meme motif que les maitrises ci-dessus : une
+  // langue du SRD n'a pas de fiche de regle propre d'ou tirer un nom traduit
+  // (`Languages` est exclue de l'import, scripts/ingest-srd.ts).
+  if (locale !== "en") {
+    for (const l of languages) l.name = LANGUAGE_LABELS_FR[l.key as LanguageKey] ?? l.name;
   }
 
   return { ruleset: { classes, features }, remainingChoices, proficiencies, languages, asiGrantedLevels, backgroundAbilityScores };
