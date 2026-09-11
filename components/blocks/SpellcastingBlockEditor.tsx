@@ -63,7 +63,7 @@ export default function SpellcastingBlockEditor({
               value={source.ability}
               options={ABILITIES.map((a) => ({ value: a, label: a.toUpperCase() }))}
               onChange={(v) => updateSource(index, { ability: v as (typeof ABILITIES)[number] })}
-              aria-label="Caracteristique d'incantation"
+              aria-label="Caractéristique d'incantation"
             />
             <button type="button" onClick={() => removeSource(index)} className="text-xs text-danger hover:underline">
               ×
@@ -99,7 +99,7 @@ export default function SpellcastingBlockEditor({
                 checked={k.ref.kind === "rule" && data.prepared.includes(k.ref.key)}
                 onChange={() => k.ref.kind === "rule" && togglePrepared(k.ref.key)}
               />
-              Prepare
+              Préparé
             </label>
             <button type="button" onClick={() => removeKnown(index)} className="text-xs text-danger hover:underline">
               ×
