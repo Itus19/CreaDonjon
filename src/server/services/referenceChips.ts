@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
-import { chipSummaryFromDescription } from "@/src/core/rules/chipSummary";
+import { chipSummaryFromDescription, chipSummaryFromText } from "@/src/core/rules/chipSummary";
 import {
   listEntryTranslationsWithBlocks,
   listRulesetEntryChipsByKeys,
@@ -92,7 +92,13 @@ async function resolveRuleChips(
       kind: "rule",
       key,
       name: homebrew.name,
-      summary: null,
+      // Retour utilisateur : une aptitude ajoutee apres coup s'affichait sans
+      // description dans l'onglet Traits, la ou une aptitude du SRD en a une.
+      // `resolveHomebrewEntryDisplay` charge pourtant deja son bloc
+      // `description` — il n'etait tout simplement pas reporte ici. Une fiche
+      // maison n'a ni traduction ni `ai_digest` : sa propre prose est la seule
+      // source possible, et c'est la bonne.
+      summary: chipSummaryFromText(homebrew.description),
       href: `/m/${worldSlug}/regles/${key}`,
       found: true,
     });

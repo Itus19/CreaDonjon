@@ -526,13 +526,23 @@ export async function assembleResolvedRuleset(
     for (const fk of featureKeys) {
       const chip = chipByKey.get(fk);
       const source = extraFeatureKeys.get(fk) ?? "class:inconnue";
-      const label = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : fk;
+      // Sans chip : une aptitude ajoutee apres coup (`add_entry`, elle ne vit
+      // que dans `ruleset_overrides`, jamais dans `ruleset_entries` que lit
+      // `listRulesetEntryChipsByKeys`). Son nom est deja porte par
+      // `resolvedFeatureBlocks`, resolu juste au-dessus pour ses modificateurs
+      // — le prendre la evite de retomber sur la cle technique brute dans la
+      // colonne source de l'onglet Traits et dans les libelles de
+      // modificateurs, et ne coute aucune requete de plus.
+      const label = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : (resolvedFeatureBlocks.get(fk)?.name ?? fk);
       const modifiers = resolveDeclaredModifiers(declaredModifiersByKey.get(fk) ?? [], fk, label, layerForFeatureSource(source));
       features[fk] = chip
         ? { key: fk, label, source, modifiers, prerequisites: mapPrerequisites(chip.source_raw) }
-        : // Cle sans entree resolue (rare : feature non importee) — conservee
-          // quand meme, label = cle brute, pour que build.featureKeys puisse
-          // la referencer sans faire echouer characterSheet().
+        : // Aucune ligne `ruleset_entries` : fiche maison (label resolu
+          // ci-dessus) ou, plus rarement, aptitude jamais importee (label =
+          // cle brute). Conservee dans les deux cas pour que
+          // build.featureKeys puisse la referencer sans faire echouer
+          // characterSheet(). Pas de prerequis : ils se lisent sur
+          // `source_raw`, que seule une entree importee possede.
           { key: fk, label, source, modifiers };
     }
 

@@ -23,6 +23,12 @@ interface DescriptionLike {
   segments?: unknown;
 }
 
+/** Espaces normalises : la prose est stockee avec ses retours a la ligne d'origine, illisibles sur une ligne de resume. */
+function normalize(text: string): string | null {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
 function firstSegmentText(data: unknown): string | null {
   if (typeof data !== "object" || data === null) return null;
   const segments = (data as DescriptionLike).segments;
@@ -32,10 +38,8 @@ function firstSegmentText(data: unknown): string | null {
     if (typeof segment !== "object" || segment === null) continue;
     const text = (segment as { text?: unknown }).text;
     if (typeof text !== "string") continue;
-    // Espaces normalises : la prose du SRD est stockee avec ses retours a la
-    // ligne d'origine, illisibles sur une ligne de resume.
-    const normalized = text.replace(/\s+/g, " ").trim();
-    if (normalized.length > 0) return normalized;
+    const normalized = normalize(text);
+    if (normalized !== null) return normalized;
   }
   return null;
 }
@@ -47,7 +51,23 @@ function firstSegmentText(data: unknown): string | null {
  * blanc.
  */
 export function chipSummaryFromDescription(data: unknown): string | null {
-  const text = firstSegmentText(data);
+  return truncate(firstSegmentText(data));
+}
+
+/**
+ * Meme resume, depuis une description deja aplatie en une chaine (segments
+ * joints par une ligne vide) — la forme que rend `resolveHomebrewEntryDisplay`
+ * pour une fiche maison, qui n'a ni traduction ni `ai_digest` d'ou tirer un
+ * resume. Sans ca, une aptitude ajoutee apres coup s'affiche sans description
+ * alors qu'une aptitude du SRD en a une.
+ */
+export function chipSummaryFromText(text: string | undefined | null): string | null {
+  if (typeof text !== "string") return null;
+  const [firstParagraph] = text.split(/\n\s*\n/);
+  return truncate(normalize(firstParagraph ?? ""));
+}
+
+function truncate(text: string | null): string | null {
   if (text === null) return null;
   if (text.length <= CHIP_SUMMARY_MAX_LENGTH) return text;
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { chipSummaryFromDescription, CHIP_SUMMARY_MAX_LENGTH } from "./chipSummary";
+import { chipSummaryFromDescription, chipSummaryFromText, CHIP_SUMMARY_MAX_LENGTH } from "./chipSummary";
 
 describe("chipSummaryFromDescription", () => {
   it("prend le premier segment non vide", () => {
@@ -37,5 +37,25 @@ describe("chipSummaryFromDescription", () => {
     expect(chipSummaryFromDescription({ segments: [{ text: "   " }] })).toBeNull();
     expect(chipSummaryFromDescription({ level: 3, school: "Evocation" })).toBeNull();
     expect(chipSummaryFromDescription("Vision dans le noir.")).toBeNull();
+  });
+});
+
+describe("chipSummaryFromText", () => {
+  it("prend le premier paragraphe d'une description deja aplatie", () => {
+    const text = "Vous savez jouer d'un instrument.\n\nVous pouvez aussi inspirer vos compagnons.";
+    expect(chipSummaryFromText(text)).toBe("Vous savez jouer d'un instrument.");
+  });
+
+  it("applique la meme troncature que depuis un bloc description", () => {
+    const long = "Aptitude ".repeat(60);
+    expect(chipSummaryFromText(long)).toBe(chipSummaryFromDescription({ segments: [{ text: long }] }));
+  });
+
+  // Une fiche maison sans bloc `description` rend une chaine vide
+  // (`resolveHomebrewEntryDisplay`), pas `undefined` : le repli doit tenir.
+  it("rend null sur un texte vide ou absent", () => {
+    expect(chipSummaryFromText("")).toBeNull();
+    expect(chipSummaryFromText("   \n\n  ")).toBeNull();
+    expect(chipSummaryFromText(undefined)).toBeNull();
   });
 });
