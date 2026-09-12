@@ -656,6 +656,42 @@ Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de b
 
 ---
 
+### V3-R7 — Deux boucles qui rechargent les règles une par une · `M`
+
+*Ouvert le 12 septembre, à partir de `pg_stat_statements` — pas de l'audit, qui ne l'avait pas vu.*
+
+**Le chiffre.** `ruleset_entries` en lecture unitaire : **39 871 appels** pour une requête qui renvoie **une seule ligne**, plus trois variantes de la même table dans le même relevé. À elles quatre, elles représentent l'essentiel du temps base mesuré.
+
+**Ce que ce chiffre n'est pas.** La moyenne relevée (445 ms) ne dit **pas** que la requête est mal écrite : `unique (ruleset_id, entry_key)` fournit exactement l'index qu'elle utilise, c'est une recherche directe. Cette moyenne reflète très probablement la **contention** sur une instance `t4g.nano` saturée par le volume de requêtes d'avant `V3-R5`. Ce ticket ne porte donc pas sur la latence d'une requête, mais sur leur **nombre**.
+
+**La cause, trouvée en lisant le code.** `src/server/services/rules.ts`, deux endroits :
+
+- `resolveOutgoingRefs` (≈ ligne 413)
+- `resolveEntryNames` (≈ ligne 701)
+
+Les deux suivent le même motif : une requête groupée par `listRulesetEntriesByKeys`, **puis une boucle séquentielle** sur les clés absentes, appelant `findEntryInRulesetChain` pour chacune.
+
+Or `listRulesetEntriesByKeys` n'interroge **qu'un seul ruleset** — jamais la chaîne parente. Donc pour un monde dont le ruleset est une variante (le cas prévu par le modèle : `parent_ruleset_id`, règle absolue n° 18), **toutes** les clés qui vivent dans le SRD officiel manquent au premier tir et tombent dans la boucle. Et `findEntryInRulesetChain` fait **deux requêtes par niveau de chaîne**, en série : `getRulesetEntryByKey` puis `getRulesetById`.
+
+Une fiche de personnage citant trente sorts et dons, sur un monde à ruleset dérivé, c'est donc trente clés × deux requêtes × le nombre de niveaux — là où une seule requête suffirait.
+
+**Le correctif est déjà écrit, à côté.** `getRulesetEntriesByKeysAcrossRulesets` (`src/server/repos/rules.ts`) fait exactement ça : **toutes les clés × toute la chaîne, en une requête**. Son propre commentaire dit qu'elle a été ajoutée pendant l'audit pour supprimer ce motif dans `fetchEquipmentBlocks`. Ces deux consommateurs-ci n'ont simplement jamais été convertis.
+
+C'est le même enseignement que `P‑01` : *la primitive existait, il manquait de vérifier qui d'autre en avait besoin.*
+
+- [ ] `resolveOutgoingRefs` et `resolveEntryNames` résolvent leurs clés par `getRulesetEntriesByKeysAcrossRulesets`, sur la chaîne déjà résolue (`walkRulesetChain`, mémoïsée) plutôt que sur le seul ruleset du monde.
+- [ ] La boucle de repli ne subsiste que pour les fiches **maison** (`resolveHomebrewEntryDisplay`), qui ne vivent pas dans `ruleset_entries` — c'est le seul cas qu'un tir groupé ne peut pas couvrir.
+- [ ] **Le résultat ne change pas, y compris l'ordre de priorité de la chaîne** : la ligne retenue reste celle du ruleset le plus spécifique, exactement comme la boucle qui s'arrêtait au premier trouvé. `entryFromChainByKey` montre déjà comment le faire (parcours de `chain` feuille → racine sur les candidats renvoyés) — reprendre cette logique, pas en inventer une autre.
+- [ ] Un test couvre le cas qui casse tout le reste : une clé présente **uniquement dans le ruleset parent**, et une clé **surchargée** dans l'enfant. C'est là que l'ordre compte.
+- [ ] `findEntryInRulesetChain` reste pour ses appelants unitaires légitimes (`characterActions.ts` résout **un** sort) — ce ticket ne la supprime pas.
+- [ ] **Mesure avant/après**, sur `pg_stat_statements` remis à zéro : le nombre d'appels à la lecture unitaire doit s'effondrer. C'est le critère, pas le temps moyen — qui dépend surtout de la charge de l'instance.
+
+**Pourquoi `M` et pas `S` :** la résolution de règles est le cœur du projet, et l'ordre de priorité de la chaîne est ce qui fait qu'une variante surcharge correctement une base officielle. Le correctif est mécanique ; sa vérification ne l'est pas.
+
+**À ne pas faire dans ce ticket.** Ne pas toucher aux politiques RLS de `ruleset_entries` : rien dans la mesure ne les désigne, et l'audit est formel — ces politiques sont la barrière de sécurité, on ne les réécrit pas sur une intuition (`P‑07`).
+
+---
+
 ### Ordre de traitement
 
 | Ordre | Ticket | Pourquoi là |
@@ -666,6 +702,7 @@ Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de b
 | ~~3~~ | ~~**V3-R3**~~ | **Fait le 12 septembre — plus gros fragment 871 → 439 Ko, et deux fiches ne pèsent plus pareil selon leurs blocs** |
 | ~~1~~ | ~~**V3-R4a**~~ | **Fait le 12 septembre — 2 456 Ko → 619 Ko. Mais le temps de chargement n'a pas bougé : le poids n'était plus le facteur limitant** |
 | ~~5~~ | ~~**V3-R4b**~~ | **Fait le 12 septembre — mais le diagnostic de l'audit était faux : voir ADR 0021** |
+| **7** | **V3-R7** | **Ouvert le 12 septembre depuis `pg_stat_statements` : 39 871 lectures unitaires de règles, causées par deux boucles séquentielles. La primitive groupée existe déjà** |
 | ~~6~~ | ~~**V3-R5**~~ | **Fait le 12 septembre — 45 → 9 préchargements, et le chargement passe de 5 285 à 3 304 ms. Le ticket le plus rentable du lot, à l'inverse de ce qui était prévu** |
 
 **Ce que la mesure du 12 septembre a changé dans cet ordre.** `V3-R0` a été faite, et elle a retourné les priorités : le JS ne pèse que 263 Ko quand une seule image en pèse 2 071. `V3-R4a` passe donc devant tout, et `V3-R3` (découper les éditeurs de blocs) perd beaucoup de son urgence — il reste juste, mais il se dispute des dizaines de Ko là où `R4a` en gagne deux mille.
