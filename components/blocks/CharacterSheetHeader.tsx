@@ -6,6 +6,7 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { DerivedSheet } from "@/src/core/rules/sheet";
 import { ftToM } from "@/src/core/rules/encumbrance";
+import { squaresFromMeters } from "@/src/core/rules/gridSquares";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
 import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
@@ -107,14 +108,28 @@ export function RuleSelect({
  * variables selon que le libellé tenait sur une ou deux lignes.
  */
 /** `onClick` (V2-M11) : seule l'Initiative s'en sert aujourd'hui — un jet declenche depuis le volet de lancer de des, jamais un second calcul ici. */
-export function StatBadge({ label, value, danger, onClick }: { label: string; value: string; danger?: boolean; onClick?: () => void }) {
+export function StatBadge({
+  label,
+  value,
+  sub,
+  danger,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  /** Seconde ligne, plus discrete, sous la valeur : une meme mesure dans une autre unite (la vitesse en cases de plateau), jamais une donnee sans rapport. */
+  sub?: string;
+  danger?: boolean;
+  onClick?: () => void;
+}) {
   const box = (
     <div
-      className={`flex h-14 w-full items-center justify-center rounded-md border ${
+      className={`flex h-14 w-full flex-col items-center justify-center rounded-md border ${
         danger ? "border-danger/60 bg-danger/10" : "border-edge bg-panel-raised"
       } ${onClick ? "cursor-pointer hover:border-accent" : ""}`}
     >
-      <span className={`text-base font-semibold ${danger ? "text-danger" : "text-ink"}`}>{value}</span>
+      <span className={`text-base font-semibold leading-tight ${danger ? "text-danger" : "text-ink"}`}>{value}</span>
+      {sub && <span className="text-[10px] leading-tight text-ink-muted">{sub}</span>}
     </div>
   );
   return (
@@ -236,6 +251,13 @@ export default function CharacterSheetHeader({
   );
   const baseSpeciesChips = useReferenceChips(worldSlug, baseSpeciesRefs);
   const baseSpeciesChip = baseSpeciesKey ? baseSpeciesChips.get(refIdentity({ kind: "rule", key: baseSpeciesKey })) : undefined;
+
+  // Cases comptees depuis les METRES affiches, pas depuis les pieds d'origine :
+  // les deux lignes de la case Vitesse doivent pouvoir se verifier l'une par
+  // l'autre. `ftToM` arrondit au dixieme (30 pieds -> 9,1 m), et le compte
+  // reste celui du SRD pour chaque vitesse standard — verifie par test.
+  const speedMeters = ftToM(sheet.speed.value);
+  const speedSquares = squaresFromMeters(speedMeters);
 
   return (
     <>
@@ -397,7 +419,14 @@ export default function CharacterSheetHeader({
           value={`${sheet.abilities.dex.mod >= 0 ? "+" : ""}${sheet.abilities.dex.mod}`}
           onClick={onRollInitiative}
         />
-        <StatBadge label="Vitesse" value={`${ftToM(sheet.speed.value)} m`} />
+        {/* Vitesse en cases du plateau sous les metres (retour utilisateur) :
+            la meme mesure dans l'unite reellement utilisee a la table, arrondie
+            a la case inferieure — on ne franchit pas une case a moitie. */}
+        <StatBadge
+          label="Vitesse"
+          value={`${speedMeters} m`}
+          sub={`${speedSquares} case${speedSquares > 1 ? "s" : ""}`}
+        />
         <StatBadge label="Perception passive" value={String(10 + sheet.skills.perception.mod)} />
         <StatBadge label="Maîtrise" value={`+${sheet.proficiencyBonus}`} />
         <StatBadge label="Dés de vie" value={sheet.hitPoints.hitDice} />
