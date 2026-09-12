@@ -1,4 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["dub1"]
+  "_commentaire_regions": "V3-R6 — cdg1 (Paris) et non dub1 (Dublin) : le projet Supabase est a Paris. Les fonctions et la base doivent etre dans la MEME region, parce que chaque rendu de page enchaine plusieurs vagues de requetes et que chacune paie la latence en entier. Dublin->Paris ajoutait un aller-retour international a chaque vague. Si la region de la base change un jour, cette ligne doit changer avec elle.",
+  "regions": ["cdg1"]
 }
