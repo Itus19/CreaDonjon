@@ -649,10 +649,23 @@ Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de b
 
 **Le coût des fonctions RLS** (`P‑07`). Dix minutes dans Reports → Query Performance (`pg_stat_statements`).
 
-- [ ] Noter les dix requêtes les plus coûteuses et les dix plus fréquentes.
-- [ ] Trancher `P‑07` **avec ces chiffres en main**. L'audit insiste, et il a raison : ces politiques sont la barrière de sécurité du projet, « les réécrire sur une intuition serait le meilleur moyen d'y introduire un trou ».
-- [ ] Si la mesure confirme un coût, la piste la moins risquée est déjà écrite dans l'audit : supprimer la double lecture de `entities` dans `blocks_select`, sans restructurer la logique de visibilité.
-- [ ] `P‑08` (listes sans borne) ne se rouvre **que** si ces chiffres le désignent.
+- [x] **Relevé fait, deux fois.** Le premier (cumulé depuis des mois) était inexploitable : 11 767 `INSERT INTO users` et 11 634 `DELETE FROM users` — du développement, pas de l'usage. Le second, après `pg_stat_statements_reset()` et quelques minutes d'usage normal sur une instance au repos, est net.
+- [x] **`P‑07` est confirmé, et il est plus étroit que l'audit ne le craignait.** Ce n'est pas « la RLS coûte par ligne » en général :
+
+  | Table | Moyenne | Lignes rendues |
+  |---|---|---|
+  | `ruleset_entries` | **421 ms** | 1 |
+  | `ruleset_entry_translations` | **262 ms** | 1 |
+  | `campaign_members` | 10,2 ms | 1 |
+  | `worlds` | 9,3 ms | 1 |
+  | `entity_revisions` | 6,7 ms | 1 |
+
+  Les autres politiques RLS répondent en 10 ms. **Le coût est isolé aux tables de règles**, dont les deux politiques passent par `app.can_read_ruleset`.
+
+- [x] **Cause trouvée, et ce n'est pas la logique de visibilité :** `can_read_ruleset` cherche le ruleset dans `campaigns` et `worlds` par une colonne de clé étrangère, et **ni `campaigns.ruleset_id` ni `worlds.default_ruleset_id` n'a jamais porté d'index** — Postgres n'en crée jamais côté enfant. Chaque évaluation faisait deux balayages complets. Et comme un prédicat RLS est évalué **avant** les filtres de l'utilisateur, le coût se paie par ligne *parcourue* : une lecture qui ne rend qu'un sort traverse quand même le SRD en appelant la fonction à chaque entrée.
+- [x] Migration écrite : `supabase/migrations/20260912203000_ruleset_lookup_indexes.sql`. **Elle n'ajoute que deux index** — aucune politique, aucune fonction, aucune donnée touchée. La barrière de sécurité reste identique, elle devient praticable. C'est la moins risquée des deux pistes que l'audit envisageait ; l'autre (restructurer la logique de visibilité) reste écartée.
+- [ ] **À appliquer par l'auteur** (`supabase db push`), puis remesurer avec le même protocole. Attendu : `ruleset_entries` rejoint l'ordre de grandeur des autres tables. Si ce n'est pas le cas, ne pas insister sur les index — refaire un `EXPLAIN ANALYZE` et rouvrir.
+- [ ] `P‑08` (listes sans borne) ne se rouvre **que** si une mesure le désigne. Rien ici ne le fait.
 
 ---
 
