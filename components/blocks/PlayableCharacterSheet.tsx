@@ -18,7 +18,7 @@ import ActionsTab, { type PreparedSpellView } from "./ActionsTab";
 import MagicTab, { type KnownSpellView } from "./MagicTab";
 import InventoryTab from "./InventoryTab";
 import TraitsTab from "./TraitsTab";
-import WeaponMasteryTab from "./WeaponMasteryTab";
+import MasteriesTab from "./MasteriesTab";
 import { toggleChoice } from "./characterChoiceUtils";
 import LevelUpWizard from "./LevelUpWizard";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
@@ -35,15 +35,15 @@ export const ABILITY_LABELS: Record<Ability, string> = {
 /** Compétences triées par libellé FR (V1-C4 suite) — même ordre que la référence visuelle fournie par l'utilisateur. Exportée pour `RemainingChoicesStep.tsx` (assistant de création, V2-G1) — même esthétique, jamais un deuxième tri recalculé. */
 export const SORTED_SKILLS = [...SKILLS].sort((a, b) => SKILL_LABELS_FR[a].localeCompare(SKILL_LABELS_FR[b]));
 
-type Tab = "actions" | "magie" | "inventaire" | "traits" | "maitrise";
+export type Tab = "actions" | "magie" | "inventaire" | "traits" | "maitrise";
 
-/** Libelles d'onglet (retour utilisateur, V2-G1) : "maitrise" seule ne suffit pas comme les autres onglets a un seul mot, la classe `capitalize` (par mot) l'aurait rendu "Maîtrise D'armes". */
-const TAB_LABELS: Record<Tab, string> = {
+/** Libelles d'onglet (retour utilisateur, V2-G1) : ecrits ici, jamais deduits de la cle par une classe `capitalize` (par mot), qui rendait "Maitrise D'armes" — sans accent et mal coupe. Exporte pour l'apercu de l'assistant de creation (`PreviewStep`), qui affichait justement ses onglets par `capitalize` sur la cle brute. */
+export const TAB_LABELS: Record<Tab, string> = {
   actions: "Actions",
   magie: "Magie",
   inventaire: "Inventaire",
   traits: "Traits",
-  maitrise: "Maîtrise d'armes",
+  maitrise: "Maîtrises",
 };
 
 interface SheetApiResponse {
@@ -618,7 +618,10 @@ export default function PlayableCharacterSheet({
           */}
           <div className="flex items-end overflow-x-auto text-xs">
             {(["actions", "inventaire", "magie", "traits", "maitrise"] as Tab[])
-              .filter((t) => (t !== "magie" || spellcasting) && (t !== "maitrise" || weaponMasteryChoices.length > 0))
+              // Plus de condition sur "maitrise" : l'onglet ne portait que les
+              // bottes d'arme et disparaissait sans elles ; il porte maintenant
+              // les maitrises et les langues, que tout personnage possede.
+              .filter((t) => t !== "magie" || spellcasting)
               .map((t) => (
                 <button
                   key={t}
@@ -639,11 +642,14 @@ export default function PlayableCharacterSheet({
 
           <div className="rounded-b-lg border-2 border-t-0 border-edge-strong bg-panel-raised px-3 pb-3">
             {tab === "maitrise" && (
-              <WeaponMasteryTab
-                choices={weaponMasteryChoices}
-                chips={weaponMasteryChips}
-                characterChoices={character.choices}
-                onChangeChoices={(choices) => patchCharacter({ choices })}
+              <MasteriesTab
+                proficiencies={proficiencies}
+                masteryChoices={weaponMasteryChoices}
+                masteryChips={weaponMasteryChips}
+                languageChoices={languageChoices}
+                allLanguages={allLanguages}
+                character={character}
+                patchCharacter={patchCharacter}
               />
             )}
 
@@ -706,16 +712,7 @@ export default function PlayableCharacterSheet({
             )}
 
             {tab === "traits" && (
-              <TraitsTab
-                traits={traits}
-                traitChips={traitChips}
-                traitSourceLabel={traitSourceLabel}
-                proficiencies={proficiencies}
-                languageChoices={languageChoices}
-                character={character}
-                patchCharacter={patchCharacter}
-                allLanguages={allLanguages}
-              />
+              <TraitsTab traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />
             )}
           </div>
         </div>
