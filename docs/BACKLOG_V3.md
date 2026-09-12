@@ -634,15 +634,18 @@ L'audit le dit lui-même : **pas en une fois.** Page par page, en commençant pa
 
 ---
 
-### V3-R6 — Les deux chiffres que seul l'auteur peut lire · `S` — *audit `P‑05`, `P‑07`*
+### V3-R6 — Les deux chiffres que seul l'auteur peut lire · `S` — *audit `P‑05`, `P‑07`* — **`P‑05` refermé le 12 septembre**
 
 Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de bord.
 
 **La région** (`P‑05`). `vercel.json` fixe `"regions": ["dub1"]` (Dublin) ; la région du projet Supabase n'apparaît nulle part dans le dépôt. Si les deux diffèrent, **chacune des 9 vagues de rendu paie un aller-retour transatlantique** — et aucune optimisation de code ne rattrapera ça. L'audit est net : « changer une ligne de `vercel.json` produirait plus de gain que tous les autres points de cette section réunis ». C'est doublement vrai sur téléphone, où la latence est déjà dégradée avant même d'atteindre Vercel.
 
-- [ ] Lire la région du projet Supabase et la confronter à `dub1`.
-- [ ] Si elles diffèrent : corriger `vercel.json`, puis **mesurer avant/après** — c'est le seul moyen de savoir ce que ça valait.
-- [ ] Si elles concordent : l'écrire dans ce ticket et refermer `P‑05` définitivement, pour ne pas y revenir dans six mois.
+- [x] **Région lue : la base est en West EU (Ireland), `eu-west-1`.** Or la région Vercel `dub1` **est** `eu-west-1` : les fonctions et la base sont déjà dans le même centre de données. **`P‑05` se referme — il n'y avait rien à corriger.** Le réglage était bon depuis le début.
+- [x] La raison est écrite dans `vercel.json` lui-même, pas seulement ici : c'est le fichier qu'on ouvre quand on se pose la question.
+
+> **Un piège, rencontré pour de vrai, et qui vaut d'être écrit.** Le réglage « Function Region » du tableau de bord Vercel est **écrasé par `vercel.json`** dès que ce fichier déclare `regions` — le tableau de bord l'affiche d'ailleurs comme *« Overridden »*. Le changer dans l'interface ne produit donc aucun effet tant que le fichier dit autre chose. Le fichier fait foi.
+>
+> **Et une erreur commise en traitant ce ticket, gardée ici plutôt qu'effacée.** `cdg1` a été pris pour la région Supabase alors que c'est un code de région **Vercel** ; `vercel.json` est passé à `cdg1` (Paris) avant que le tableau de bord Supabase ne montre `eu-west-1` (Dublin). Cela **éloignait** les fonctions de la base au lieu de les rapprocher — l'inverse exact du but de `P‑05`. Corrigé en revenant à `dub1`. La leçon est celle que l'audit répète partout : **lire le chiffre à la source avant d'agir dessus**, y compris quand quelqu'un vous le donne de mémoire.
 
 **Le coût des fonctions RLS** (`P‑07`). Dix minutes dans Reports → Query Performance (`pg_stat_statements`).
 
@@ -658,7 +661,7 @@ Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de b
 | Ordre | Ticket | Pourquoi là |
 |---|---|---|
 | 1 | **V3-R0** | Sans mesure, tout le reste est un pari |
-| 1 bis | **V3-R6** | En parallèle — ne dépend d'aucun code, et peut rendre les autres secondaires |
+| ~~1 bis~~ | **V3-R6** | **`P‑05` refermé le 12 septembre : la base et les fonctions étaient déjà dans le même centre de données.** Reste `P‑07` — dix minutes dans `pg_stat_statements`, chez l'auteur |
 | ~~2~~ | ~~**V3-R2** puis **V3-R1**~~ | **Faits le 12 septembre** — le layout de monde perd 68 % de son graphe d'imports et les trois bibliothèques lourdes |
 | ~~3~~ | ~~**V3-R3**~~ | **Fait le 12 septembre — plus gros fragment 871 → 439 Ko, et deux fiches ne pèsent plus pareil selon leurs blocs** |
 | ~~1~~ | ~~**V3-R4a**~~ | **Fait le 12 septembre — 2 456 Ko → 619 Ko. Mais le temps de chargement n'a pas bougé : le poids n'était plus le facteur limitant** |
