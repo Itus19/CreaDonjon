@@ -579,7 +579,7 @@ C'est la leçon la plus utile de ce lot, et elle mérite d'être écrite ici plu
 
 Cela ne retire rien à ce ticket : 1,8 Mo en moins, c'est de la donnée mobile épargnée à chaque ami qui découvre l'application, et un budget qui ne se dégradera plus. Mais **la suite du lot est côté serveur, pas côté client** — `V3-R6` d'abord.
 
-#### R4b — Les images d'entité et les cartes · `M`
+#### R4b — Les images d'entité et les cartes · `M` — **fait le 12 septembre, sur une base différente de celle du ticket**
 
 Un seul `next/image` dans tout le projet, contre **11 balises `<img>` brutes**, chacune avec son `eslint-disable`. Aucune section `images` dans `next.config.ts`.
 
@@ -587,11 +587,16 @@ Le chiffre qui rend ce ticket urgent est déjà dans le dépôt : le commentaire
 
 La justification écrite dans le code (« images dynamiques dont Next ne connaît pas l'URL à la compilation ») est exacte mais incomplète : `next/image` accepte une URL dynamique dès que le domaine est déclaré.
 
-- [ ] `next.config.ts` déclare le domaine servi par `/api/assets/[id]` et `/api/entities/[id]/portrait`.
-- [ ] Les 11 `<img>` passent à `next/image` avec `width`/`height` (ou `fill`) et un `sizes` juste ; les `eslint-disable` disparaissent avec elles.
-- [ ] Une carte affichée en vignette ne transfère **pas** sa pleine résolution.
-- [ ] Plus aucun saut de mise en page à l'arrivée d'une image.
-- [ ] L'en-tête `Cache-Control` posé le 7 septembre (`P‑03a`, `SIGNED_URL_CACHE_HEADER`) continue de s'appliquer — vérifié, pas supposé.
+> **Le diagnostic de l'audit était faux sur la cause, et ce ticket a été refait sur cette base.** `F‑15` concluait qu'il « manque la déclaration du domaine dans `next.config.ts` ». En réalité, `next/image` est **structurellement inutilisable** sur ces images : leur autorisation est résolue **par visiteur** (cookies de session → RLS `assets_select`), et l'optimiseur de Next récupère la source côté serveur, sans ces cookies. Toutes les images casseraient — et lui ouvrir un accès plus large mettrait en cache **par URL** un résultat vérifié pour un seul visiteur, ce qu'interdit la règle absolue n° 5. Écrit dans **`docs/adr/0021`**, pour que le prochain audit ne repose pas la question.
+
+- [x] **Décision d'architecture écrite** : `docs/adr/0021-pas-de-next-image-sur-les-images-d-entite.md`. Les `<img>` et leurs `eslint-disable` restent, désormais justifiés par un ADR plutôt que par une note de ligne.
+- [x] **Le redimensionnement et le format moderne existaient déjà**, faits au bon endroit : `uploadAsset` ré-encode tout en **WebP qualité 85** et redimensionne selon `maxDimension`. L'optimisation n'était pas absente, elle était faite une fois au téléversement plutôt qu'à chaque requête — ce qui est mieux.
+- [x] **Le saut de mise en page n'existait quasiment pas.** Vérifié image par image : **7 des 10** `<img>` réservaient déjà leur place (`h-full w-full` dans un parent dimensionné, `aspect-[3/4]` avec largeur explicite, ou `width`/`height` calculés depuis `/api/assets/[id]/meta`). L'affirmation générale de l'audit ne s'appliquait pas à elles.
+- [x] **Chargement différé ajouté** là où il est juste — six images qui peuvent être hors écran : les deux blocs `image` (vue publique, vue joueur), les portraits de l'arbre généalogique, ceux du réseau de relations, ceux des punaises de carte, et l'aperçu de l'éditeur. Une fiche à dix illustrations, un arbre à trente nœuds ou une carte à vingt punaises ne déclenchent plus autant de requêtes d'un coup. **Pas** appliqué au portrait de tête, au canevas de carte ni à l'aperçu de téléversement : ils sont l'objet de la page, les différer serait une régression.
+- [x] **Pleine résolution partout, conformément à la décision de l'auteur du 12 septembre.** `MapCanvas` fait déjà mieux que ce que le ticket imaginait : une image d'attente puis la pleine résolution en fondu (`placeholderUrl` → `imageUrl`, `fullLoaded`). Rien à changer.
+- [x] `SIGNED_URL_CACHE_HEADER` (`P‑03a`) toujours appliqué — vérifié dans le code des routes, pas supposé.
+
+**Ce qui reste, et qui demande une décision, pas du code.** Les trois `<img>` qui sautent encore sont les blocs `image`. Leur `url` peut être une **adresse externe collée** autant qu'un asset téléversé, et `zImageBlockData` ne stocke aucune dimension : impossible de réserver l'espace sans connaître le rapport de l'image. Le corriger demande d'ajouter des dimensions au schéma du bloc — un changement de forme de donnée. `CLAUDE.md` dit de s'arrêter et de demander dans ce cas : **c'est fait, la question est posée.**
 
 **Un point à trancher, pas à coder d'office :** `MapCanvas` est le seul endroit où la pleine résolution est parfois légitime (on zoome dans une carte). Décider — et écrire la décision — si la carte reçoit un traitement à part. C'est le seul endroit du lot où « rien ne change pour l'utilisateur » peut entrer en tension avec le gain.
 
@@ -642,7 +647,7 @@ Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de b
 | ~~2~~ | ~~**V3-R2** puis **V3-R1**~~ | **Faits le 12 septembre** — le layout de monde perd 68 % de son graphe d'imports et les trois bibliothèques lourdes |
 | ~~3~~ | ~~**V3-R3**~~ | **Fait le 12 septembre — plus gros fragment 871 → 439 Ko, et deux fiches ne pèsent plus pareil selon leurs blocs** |
 | ~~1~~ | ~~**V3-R4a**~~ | **Fait le 12 septembre — 2 456 Ko → 619 Ko. Mais le temps de chargement n'a pas bougé : le poids n'était plus le facteur limitant** |
-| 5 | **V3-R4b** | Images d'entité et cartes : ~20 Mo par carte |
+| ~~5~~ | ~~**V3-R4b**~~ | **Fait le 12 septembre — mais le diagnostic de l'audit était faux : voir ADR 0021** |
 | 6 | **V3-R5** | Le plus long, le moins rentable au Ko |
 
 **Ce que la mesure du 12 septembre a changé dans cet ordre.** `V3-R0` a été faite, et elle a retourné les priorités : le JS ne pèse que 263 Ko quand une seule image en pèse 2 071. `V3-R4a` passe donc devant tout, et `V3-R3` (découper les éditeurs de blocs) perd beaucoup de son urgence — il reste juste, mais il se dispute des dizaines de Ko là où `R4a` en gagne deux mille.

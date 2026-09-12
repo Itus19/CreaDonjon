@@ -106,6 +106,8 @@ export default function ImageBlockEditor({
           <img
             src={data.url}
             alt={data.caption}
+            loading="lazy"
+            decoding="async"
             className="max-h-60 w-auto shrink-0 self-start rounded-md object-cover"
           />
           <div className="flex flex-1 flex-col gap-3 text-xs">

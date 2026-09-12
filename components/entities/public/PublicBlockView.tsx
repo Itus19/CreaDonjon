@@ -113,7 +113,7 @@ export function PublicImageBlock({ data }: { data: ImageBlockData }) {
       style={{ width: `${widthPx}px`, maxWidth: "100%" }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={data.url} alt={data.caption} className="w-full rounded-md object-cover" />
+      <img src={data.url} alt={data.caption} loading="lazy" decoding="async" className="w-full rounded-md object-cover" />
       {data.caption && <figcaption className="text-xs italic text-ink-muted">{data.caption}</figcaption>}
     </figure>
   );

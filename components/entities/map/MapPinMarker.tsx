@@ -60,6 +60,8 @@ export default function MapPinMarker({
               ref={checkAlreadyLoaded}
               src={`/api/entities/${refEntityId}/portrait`}
               alt=""
+              loading="lazy"
+              decoding="async"
               onLoad={() => setStatus("loaded")}
               onError={() => setStatus("error")}
               className={`h-full w-full object-cover ${status === "loaded" ? "" : "hidden"}`}
