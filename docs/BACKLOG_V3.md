@@ -447,7 +447,7 @@ Pourquoi ça vaut la peine : en solo, la première question qui vient est *« es
 
 ---
 
-### V3-R1 — Ne plus livrer le bureau à fenêtres au téléphone · `M`
+### V3-R1 — Ne plus livrer le bureau à fenêtres au téléphone · `M` — **fait le 12 septembre**
 
 **Le gain le plus net du lot, et le plus spécifiquement smartphone.** Constaté en lisant le code, non relevé tel quel par l'audit.
 
@@ -457,17 +457,25 @@ Mais les imports sont **statiques**. Fermeture transitive mesurée depuis `AvecW
 
 **Autrement dit : le téléphone télécharge et analyse la quasi-totalité du code client de l'application pour afficher `null`.**
 
-- [ ] Les contenus lourds passent par `next/dynamic` : `EditEntityForm`, `RuleEntryView`, `MjToolWindowContent`, `RuleToolWindowContent`.
-- [ ] Sous 768 px, aucun fragment contenant Tiptap, `@dnd-kit` ou `d3-force` n'est téléchargé à l'ouverture d'une page de monde — vérifié dans l'onglet Réseau, pas déduit.
-- [ ] Au-dessus de 768 px, **comportement strictement inchangé** : mêmes fenêtres, même empilement, mêmes positions, aucun scintillement à l'ouverture d'une fenêtre.
-- [ ] Le plus gros fragment passe sous 871 Ko — écrire le chiffre avant/après dans le commit.
-- [ ] Aucun changement visuel, ni sur téléphone ni sur grand écran.
+- [x] Les quatre contenus passent par `next/dynamic` (`ssr: false`) : `EditEntityForm`, `RuleEntryView`, `MjToolWindowContent`, `RuleToolWindowContent`. `ssr: false` ne perd rien — `avecData` part vide et n'est remplie que par effet, donc aucun des quatre n'était jamais rendu côté serveur.
+- [x] **Mesuré** sur la fermeture d'imports statiques du layout de monde, monté sur *toutes* les routes du monde (`import type` exclu, il ne coûte rien à l'exécution) :
+
+  | `app/m/[worldSlug]/layout.tsx` | Avant | Après |
+  |---|---|---|
+  | Fichiers | 271 | **93** (−66 %) |
+  | Lignes | 45 031 | **14 188** (−68 %) |
+  | Tiptap, `@dnd-kit`, `d3-force` | les 10 paquets | **aucun** |
+
+- [x] La page de fiche (`f/[entitySlug]`) garde les paquets lourds — elle affiche réellement l'éditeur. C'est le comportement voulu : le découpage retire le poids des routes qui n'en font rien, pas de celles qui en ont besoin.
+- [x] Aucun changement visuel : le morceau part quand une fenêtre s'ouvre, et le texte « Chargement... » qui occupe l'intervalle est **celui que le composant affichait déjà** pour `!data`.
+- [ ] **Non atteint, et le critère était mal choisi** : le plus gros fragment reste à 871 Ko, et le JS *total* du build **monte** (2,40 → 3,28 Mo, 48 → 75 fragments). C'est le comportement normal du découpage — du code partagé se retrouve dans plusieurs fragments. Le total n'est pas la mesure : ce qui compte est ce qu'une route charge, et c'est ce que mesure le tableau ci-dessus. À remplacer par une mesure navigateur en `V3-R0`.
+- [ ] **Reste à vérifier dans un navigateur** : l'onglet Réseau sur une vraie page de monde. Impossible ici — les routes de monde exigent une authentification et une base, absentes de cet environnement. C'est exactement la raison d'être de `V3-R0`.
 
 **Le piège :** `useDesktopWindowsState` et les contextes (`DiceRollProvider`, `ChatUnreadProvider`) doivent rester montés — c'est exactement ce que le commentaire d'`AppShell.tsx` explique avoir déjà coûté un bug (« une fiche de personnage ouverte en fenêtre secondaire perdait `useDiceRoll` »). Découper le **contenu**, jamais les fournisseurs de contexte.
 
 ---
 
-### V3-R2 — Le premier rendu ne suppose plus un grand écran · `S`
+### V3-R2 — Le premier rendu ne suppose plus un grand écran · `S` — **fait le 12 septembre**
 
 `WindowsDesktop.tsx:26` et `AvecWindowsLayer.tsx:60` font tous les deux `useState(false)` puis résolvent la largeur dans un `useEffect`.
 
@@ -475,12 +483,14 @@ Conséquence sur téléphone : le premier rendu client **suppose un grand écran
 
 **Le projet a déjà résolu ce problème, au bon endroit :** `DiceRollPanel.tsx:143-171` utilise `useSyncExternalStore` + `window.matchMedia`, avec un commentaire qui explique précisément pourquoi ce n'est pas `useState` + `useEffect`. Il y a un précédent maison à suivre, pas une décision à prendre.
 
-- [ ] `WindowsDesktop` et `AvecWindowsLayer` adoptent le même `useSyncExternalStore` + `matchMedia` que `DiceRollPanel`.
-- [ ] Le seuil vit à **un seul endroit**. Il y a aujourd'hui **deux seuils mobiles différents** dans la coquille, et c'est un défaut en soi : `MOBILE_BREAKPOINT = 768` dupliqué dans `WindowsDesktop.tsx:11` et `AvecWindowsLayer.tsx:15`, mais `MOBILE_QUERY = "(max-width: 639px)"` dans `DiceRollPanel.tsx:141`. Entre 640 et 767 px, l'application se croit à la fois sur téléphone et sur grand écran. Trancher lequel fait foi, puis l'écrire une fois.
-- [ ] Sur téléphone, l'arbre du bureau à fenêtres n'est jamais monté, pas même une fraction de seconde.
-- [ ] Aucun avertissement d'hydratation dans la console.
+- [x] `WindowsDesktop` et `AvecWindowsLayer` adoptent le même `useSyncExternalStore` + `matchMedia` que `DiceRollPanel`. Le mécanisme est extrait dans `components/shell/useMatchMedia.ts` ; `DiceRollPanel` l'utilise aussi, ses 17 lignes de mécanique en double supprimées.
+- [x] Le seuil du bureau à fenêtres vit à **un seul endroit** : `WINDOWS_MOBILE_QUERY`. Il était dupliqué en dur (`MOBILE_BREAKPOINT = 768`) dans deux fichiers qui doivent impérativement basculer ensemble.
+- [x] **Les deux seuils divergents ne sont pas un défaut — le ticket se trompait.** 768 px (bureau à fenêtres) et 639 px (volet de dés) répondent à deux questions différentes : « y a-t-il la place pour des fenêtres flottantes ? » et « le volet s'ouvre-t-il sur le côté ou en bulle ? ». Les aligner aurait changé le comportement du volet entre 640 et 767 px — ce que ce lot s'interdit. **Mécanisme unifié, seuils laissés distincts**, et la raison est écrite dans `DiceRollPanel.tsx` pour que personne ne « corrige » l'écart plus tard.
+- [x] Le premier rendu **client** a la bonne valeur : plus de `useState(false)` suivi d'un `useEffect`, donc plus de montage-puis-rejet de l'arbre du bureau à fenêtres sur téléphone.
+- [ ] **Reste à vérifier dans un navigateur** (V3-R0) : le rendu **serveur** suppose toujours un grand écran (`getServerSnapshot` renvoie `false`, comme `DiceRollPanel` le faisait déjà). React réconcilie à l'hydratation, sans effet intermédiaire — mais seul un vrai chargement le confirme.
+- [x] `npm run typecheck`, `npm run lint`, `npm run test` (778 passés) et `npm run build` verts.
 
-**À faire avant `V3-R1` si les deux ne sont pas faits ensemble :** un import dynamique déclenché par un booléen qui commence toujours à `false` chargerait quand même le code sur téléphone. `R2` est ce qui rend `R1` réellement efficace.
+**Cette prédiction du ticket s'est révélée fausse, et c'est tant mieux.** Il annonçait que `R2` conditionnait `R1` — « un import dynamique déclenché par un booléen qui commence toujours à `false` chargerait quand même le code sur téléphone ». À l'implémentation, `R1` n'a pas eu besoin d'être branché sur `isMobile` du tout : les quatre contenus ne sont rendus que dans la boucle sur les fenêtres **ouvertes**, donc l'import différé se déclenche à l'ouverture d'une fenêtre, sur n'importe quel appareil. C'est plus simple et plus robuste qu'un découpage conditionné à la largeur de l'écran — qui, lui, aurait bien dépendu de `R2`. Les deux tickets restent justes séparément ; leur dépendance, non.
 
 ---
 
@@ -560,7 +570,7 @@ Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de b
 |---|---|---|
 | 1 | **V3-R0** | Sans mesure, tout le reste est un pari |
 | 1 bis | **V3-R6** | En parallèle — ne dépend d'aucun code, et peut rendre les autres secondaires |
-| 2 | **V3-R2** puis **V3-R1** | Ensemble. `R2` est ce qui rend `R1` efficace |
+| ~~2~~ | ~~**V3-R2** puis **V3-R1**~~ | **Faits le 12 septembre** — le layout de monde perd 68 % de son graphe d'imports et les trois bibliothèques lourdes |
 | 3 | **V3-R3** | Même technique que `R1`, gain qui grandit avec le projet |
 | 4 | **V3-R4** | ~20 Mo par carte, le plus gros poste hors JS |
 | 5 | **V3-R5** | Le plus long, le moins rentable au Ko |

@@ -1,8 +1,9 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { useMatchMedia } from "./useMatchMedia";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { Ability, Skill } from "@/src/core/rules/sheet";
 import { DIE_TYPES, type DieType } from "@/src/core/dice/roll";
@@ -138,23 +139,16 @@ export function useDiceRoll(): DiceRollContextValue {
 }
 
 const HISTORY_LIMIT = 50;
+/**
+ * Seuil PROPRE au volet de des (`sm` de Tailwind), deliberement different
+ * du seuil du bureau a fenetres (`WINDOWS_MOBILE_QUERY`, 768 px) : les deux
+ * repondent a deux questions differentes — "y a-t-il la place pour des
+ * fenetres flottantes ?" ici "le volet s'ouvre-t-il sur le cote ou en
+ * bulle ?". V3-R2 a unifie le MECANISME (`useMatchMedia`), pas les seuils :
+ * les aligner aurait change le comportement du volet entre 640 et 767 px,
+ * ce que ce lot s'interdit.
+ */
 const MOBILE_QUERY = "(max-width: 639px)";
-
-// `useSyncExternalStore` (pas useState+useEffect) : `window.matchMedia` est
-// un etat externe au rendu React, c'est exactement ce que ce hook est fait
-// pour synchroniser — evite d'appeler un setState directement dans un effet
-// (react-hooks/set-state-in-effect).
-function subscribeMobile(callback: () => void): () => void {
-  const mql = window.matchMedia(MOBILE_QUERY);
-  mql.addEventListener("change", callback);
-  return () => mql.removeEventListener("change", callback);
-}
-function getMobileSnapshot(): boolean {
-  return window.matchMedia(MOBILE_QUERY).matches;
-}
-function getMobileServerSnapshot(): boolean {
-  return false;
-}
 
 export default function DiceRollProvider({
   campaignId,
@@ -168,7 +162,7 @@ export default function DiceRollProvider({
   const supabase = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"lancer" | "historique">("lancer");
-  const isMobile = useSyncExternalStore(subscribeMobile, getMobileSnapshot, getMobileServerSnapshot);
+  const isMobile = useMatchMedia(MOBILE_QUERY);
   const [rolls, setRolls] = useState<DisplayRoll[]>([]);
   const [lastRoll, setLastRoll] = useState<DisplayRoll | null>(null);
   const [toast, setToast] = useState<DisplayRoll | null>(null);

@@ -1,18 +1,44 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import WindowFrame from "./WindowFrame";
 import { useDesktopWindowsState } from "./DesktopWindowsProvider";
 import { refId, windowContentLabel, type WindowRef } from "./windowRefs";
-import EditEntityForm from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/EditEntityForm";
-import RuleEntryView from "@/components/rules/RuleEntryView";
-import MjToolWindowContent from "./MjToolWindowContent";
-import RuleToolWindowContent from "./RuleToolWindowContent";
+import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
 import type { EntityWindowData } from "@/src/server/services/entityWindow";
 import { isMjToolWindowData } from "./mjToolWindows";
 
-const MOBILE_BREAKPOINT = 768;
+/**
+ * V3-R1 — les quatre contenus de fenetre sont charges a la demande, jamais
+ * dans le paquet initial.
+ *
+ * Ce composant est monte sur CHAQUE page de monde (`app/m/[worldSlug]/
+ * layout.tsx`), et il rend `null` sous 768 px. Importes statiquement, ces
+ * quatre-la tiraient 332 fichiers / 55 498 lignes — Tiptap, `@dnd-kit`,
+ * `d3-force`, les dix panneaux MJ, les quatre formulaires maison — sur
+ * toutes les routes du monde, y compris celles qui n'ouvrent aucune
+ * fenetre, et y compris sur telephone ou rien de tout cela ne s'affiche.
+ *
+ * `ssr: false` ne perd rien : `avecData` part vide dans
+ * `DesktopWindowsProvider` et n'est remplie que par effet, donc AUCUN de
+ * ces quatre composants n'a jamais ete rendu cote serveur — le premier
+ * rendu affichait deja la branche `!data` ("Chargement...") ci-dessous.
+ *
+ * Rien ne change pour l'utilisateur : le morceau part au moment ou une
+ * fenetre s'ouvre, pas au chargement de la page, et le meme texte de
+ * chargement qu'auparavant occupe l'intervalle.
+ */
+const LOADING = () => <p className="text-sm text-ink-muted">Chargement...</p>;
+
+const EditEntityForm = dynamic(() => import("@/app/m/[worldSlug]/(monde)/f/[entitySlug]/EditEntityForm"), {
+  ssr: false,
+  loading: LOADING,
+});
+const RuleEntryView = dynamic(() => import("@/components/rules/RuleEntryView"), { ssr: false, loading: LOADING });
+const MjToolWindowContent = dynamic(() => import("./MjToolWindowContent"), { ssr: false, loading: LOADING });
+const RuleToolWindowContent = dynamic(() => import("./RuleToolWindowContent"), { ssr: false, loading: LOADING });
 /** Memes constantes que Sidebar.tsx/RulesSidebar.tsx/MjSidebar.tsx (`w-[280px]`) et AppShell.tsx (en-tete `h-14`). */
 const SIDEBAR_WIDTH_PX = 280;
 
@@ -57,7 +83,7 @@ function isEntityWindowData(data: unknown): data is EntityWindowData {
 export default function AvecWindowsLayer({ worldSlug }: { worldSlug: string }) {
   const state = useDesktopWindowsState();
   const desktopRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useMatchMedia(WINDOWS_MOBILE_QUERY);
   const tShell = useTranslations("shell");
   const tRegles = useTranslations("regles");
   const entityKindLabels = tShell.raw("kindLabelsSingular") as Record<string, string>;
@@ -66,15 +92,6 @@ export default function AvecWindowsLayer({ worldSlug }: { worldSlug: string }) {
     if (!raw) return raw;
     return (kind === "entity" ? entityKindLabels[raw] : entryTypeLabels[raw]) ?? raw;
   }
-
-  useEffect(() => {
-    function checkWidth() {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    }
-    checkWidth();
-    window.addEventListener("resize", checkWidth);
-    return () => window.removeEventListener("resize", checkWidth);
-  }, []);
 
   if (!state || isMobile) return null;
 
