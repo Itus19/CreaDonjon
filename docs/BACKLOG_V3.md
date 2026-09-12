@@ -434,14 +434,26 @@ Pourquoi ça vaut la peine : en solo, la première question qui vient est *« es
 
 ---
 
-### V3-R0 — Poser la mesure et le budget · `S`
+### V3-R0 — Poser la mesure et le budget · `S` — **mesuré le 12 septembre**
 
 **Avant tout le reste, et c'est la règle du projet** (`campaigns.ts:215` : « à mesurer avant d'optimiser »). `P‑06` a posé un chronomètre **serveur** (`PERF_LOG=1`). Rien ne mesure le **client**, qui est justement là où le téléphone souffre.
 
-- [ ] Ouvrir l'application **une fois sur un vrai téléphone en 4G** — la fiche d'entité, le chemin le plus emprunté. L'audit le dit : « ça donne une idée bien plus juste que n'importe quelle mesure ».
-- [ ] Noter trois chiffres : JS réellement transféré, temps jusqu'au premier pixel, temps jusqu'à ce que la page réponde au doigt.
-- [ ] Écrire un **budget de JS initial** pour les routes joueur (`/m/[worldSlug]/joueur/**`) — un plafond en Ko, pas une intention.
-- [ ] Ce budget devient le critère de recette de `V3-R1`, `V3-R3` et `V3-R4` : un ticket n'est fini que si le build reste sous le plafond.
+- [x] **Mesure faite sur le déploiement réel** (`les-royaumes-oublies.vercel.app`, monde de test `faerun-copie-3`), Chromium en viewport 390 × 844, 4G bridée à 9 Mb/s / 70 ms de latence.
+
+  | Accueil du monde, visite froide | Octets |
+  |---|---|
+  | **Total** | **2 456 Ko** |
+  | dont **une seule image de fond** | **2 071 Ko — 84 %** |
+  | dont scripts | 263 Ko |
+  | dont polices | 83 Ko |
+  | dont feuilles de style + document | 28 Ko |
+
+- [x] **Le JS n'est pas le problème.** 246 à 300 Ko selon la route, après `V3-R1`. Tout le découpage restant (`V3-R3`) se dispute au mieux quelques dizaines de Ko, pendant qu'une image en pèse 2 000.
+- [x] **La seconde visite ne transfère que 3 Ko** — le cache navigateur fait son travail. Le coût de 2,4 Mo frappe la **première** visite : exactement celle d'un ami à qui on envoie le lien.
+- [x] **Et pourtant cette seconde visite prend encore 4,4 s** pour 3 Ko. Le temps n'est donc pas dans les octets : il est côté serveur.
+- [ ] Écrire un **budget** en deux plafonds (JS initial *et* octets totaux) pour les routes joueur. Le budget en JS seul, tel que ce ticket le proposait, aurait déclaré l'application saine à 2,4 Mo par page.
+
+**Réserve de méthode, à ne pas oublier en relisant ces chiffres :** les temps sont mesurés depuis un conteneur qui sort par un proxy, pas depuis un téléphone en France. Les **octets** sont exacts ; les **durées** portent une latence qui n'est pas celle de l'auteur. Un vrai téléphone reste la mesure de référence — mais il ne changera pas le rapport 84 / 11 entre l'image et le JS.
 
 **Sans ce ticket, les cinq suivants sont des paris.** Avec lui, ce sont des mesures.
 
@@ -469,7 +481,8 @@ Mais les imports sont **statiques**. Fermeture transitive mesurée depuis `AvecW
 - [x] La page de fiche (`f/[entitySlug]`) garde les paquets lourds — elle affiche réellement l'éditeur. C'est le comportement voulu : le découpage retire le poids des routes qui n'en font rien, pas de celles qui en ont besoin.
 - [x] Aucun changement visuel : le morceau part quand une fenêtre s'ouvre, et le texte « Chargement... » qui occupe l'intervalle est **celui que le composant affichait déjà** pour `!data`.
 - [ ] **Non atteint, et le critère était mal choisi** : le plus gros fragment reste à 871 Ko, et le JS *total* du build **monte** (2,40 → 3,28 Mo, 48 → 75 fragments). C'est le comportement normal du découpage — du code partagé se retrouve dans plusieurs fragments. Le total n'est pas la mesure : ce qui compte est ce qu'une route charge, et c'est ce que mesure le tableau ci-dessus. À remplacer par une mesure navigateur en `V3-R0`.
-- [ ] **Reste à vérifier dans un navigateur** : l'onglet Réseau sur une vraie page de monde. Impossible ici — les routes de monde exigent une authentification et une base, absentes de cet environnement. C'est exactement la raison d'être de `V3-R0`.
+- [x] **Vérifié dans un navigateur le 12 septembre**, sur le déploiement réel, en viewport téléphone : ni Tiptap ni `d3-force` ne sont téléchargés sur `/m/<monde>/regles` ni sur `/m/<monde>/mj/initiative`. Avant ce ticket, le layout de monde les imposait à *toutes* les routes du monde — leur absence est la preuve que le découpage fonctionne en production. L'accueil du monde charge encore `@dnd-kit`, et c'est correct : sa barre latérale réordonne l'arbre des entités.
+- [x] Rendu mobile vérifié par capture : panneau simple, pas de fenêtre flottante, volet de dés en place. Rien de cassé.
 
 **Le piège :** `useDesktopWindowsState` et les contextes (`DiceRollProvider`, `ChatUnreadProvider`) doivent rester montés — c'est exactement ce que le commentaire d'`AppShell.tsx` explique avoir déjà coûté un bug (« une fiche de personnage ouverte en fenêtre secondaire perdait `useDiceRoll` »). Découper le **contenu**, jamais les fournisseurs de contexte.
 
@@ -510,7 +523,24 @@ L'audit souligne le point qui compte le plus : **le coût augmente à chaque nou
 
 ---
 
-### V3-R4 — Les images à la taille du téléphone · `M` — *audit `F‑15`*
+### V3-R4 — Les images à la taille du téléphone · `M` — *audit `F‑15`* — **devenu le ticket n° 1 du lot**
+
+> **Réécrit le 12 septembre, après la mesure de `V3-R0`.** Ce ticket visait les images d'entité et les cartes. La mesure sur le déploiement réel a montré que le poste dominant est ailleurs, et qu'il est bien plus gros : **l'image de fond de l'application, 2 071 Ko à elle seule, 84 % du poids d'une page.** Le reste du ticket est inchangé et reste valable, mais il passe après.
+
+#### R4a — Le fond de l'application pèse 2 Mo · `S`
+
+`public/backgrounds/Artwork_C.png` : **2 120 673 octets pour une image de 1456 × 763**. Huit autres fonds l'accompagnent, entre 1,4 et 2,3 Mo — **~17 Mo dans `public/`**. Ils sont servis bruts, et l'en-tête de Vercel pour `public/` est `cache-control: public, max-age=0, must-revalidate` : chaque navigation redemande l'image, ne serait-ce que pour s'entendre répondre 304 — un aller-retour avant de peindre, sur un réseau où l'aller-retour est cher.
+
+**Attention : la pleine qualité est un choix délibéré, pas un oubli.** `builtinBackgrounds.ts` le dit : *« servi directement depuis public/backgrounds/ — jamais retraité, pleine qualité (retour utilisateur : la miniature seule pixelisait le fond quand le flou baisse) »*. Ce ticket **ne remet pas ce choix en cause**. Il observe seulement que la décision était « ne pas utiliser la vignette comme fond », et non « expédier 2 Mo de PNG » : à 1456 × 763, un AVIF ou un WebP de qualité visuellement équivalente pèse 150 à 400 Ko. La contrainte de l'auteur est tenue, le poids divisé par cinq à dix.
+
+- [ ] Convertir les neuf fonds en AVIF (repli WebP), **à dimensions inchangées**, et comparer côte à côte flou au minimum — c'est le cas qui avait motivé le choix d'origine. Si la qualité ne tient pas, ne pas livrer et l'écrire.
+- [ ] Servir un cache immuable : ces fichiers ne changent jamais, `max-age=31536000, immutable` via `headers()` de `next.config.ts`. Supprime l'aller-retour de revalidation à chaque navigation.
+- [ ] Servir une taille adaptée à l'écran : un fond de 1456 px de large sur un téléphone de 390 px transfère quatre fois les pixels nécessaires.
+- [ ] **Mesurer avant/après** avec le même protocole que `V3-R0`, sur le même monde de test.
+
+**Pourquoi c'est le meilleur rapport effort/gain de tout le lot :** une page passerait de ~2 456 Ko à ~600 Ko sans toucher à une ligne de logique, ni changer quoi que ce soit à ce que voit l'utilisateur. C'est quatre fois le gain de `V3-R1` et `V3-R3` réunis, pour une fraction du travail.
+
+#### R4b — Les images d'entité et les cartes · `M`
 
 Un seul `next/image` dans tout le projet, contre **11 balises `<img>` brutes**, chacune avec son `eslint-disable`. Aucune section `images` dans `next.config.ts`.
 
@@ -572,10 +602,13 @@ Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de b
 | 1 bis | **V3-R6** | En parallèle — ne dépend d'aucun code, et peut rendre les autres secondaires |
 | ~~2~~ | ~~**V3-R2** puis **V3-R1**~~ | **Faits le 12 septembre** — le layout de monde perd 68 % de son graphe d'imports et les trois bibliothèques lourdes |
 | 3 | **V3-R3** | Même technique que `R1`, gain qui grandit avec le projet |
-| 4 | **V3-R4** | ~20 Mo par carte, le plus gros poste hors JS |
-| 5 | **V3-R5** | Le plus long, le moins rentable au Ko |
+| **1** | **V3-R4a** | **Réordonné le 12 septembre après mesure : 2 071 Ko sur 2 456, pour une image. Le meilleur rapport effort/gain du lot, et de loin** |
+| 5 | **V3-R4b** | Images d'entité et cartes : ~20 Mo par carte |
+| 6 | **V3-R5** | Le plus long, le moins rentable au Ko |
 
-**`V3-R0` et `V3-R6` d'abord, et ils prennent une soirée à deux.** Il est parfaitement possible que `R6` révèle que la région est mal réglée — auquel cas tout le reste du lot devient secondaire, et il vaut mieux le savoir avant d'avoir découpé trente composants.
+**Ce que la mesure du 12 septembre a changé dans cet ordre.** `V3-R0` a été faite, et elle a retourné les priorités : le JS ne pèse que 263 Ko quand une seule image en pèse 2 071. `V3-R4a` passe donc devant tout, et `V3-R3` (découper les éditeurs de blocs) perd beaucoup de son urgence — il reste juste, mais il se dispute des dizaines de Ko là où `R4a` en gagne deux mille.
+
+**`V3-R6` reste à faire et monte en valeur.** Mesure complémentaire du 12 septembre : une seconde visite ne transfère que **3 Ko** et prend pourtant **4,4 s**. Le temps restant n'est pas dans les octets, il est côté serveur — les 9 vagues de rendu de l'audit. Le TTFB mesuré confirme : ~0,3 s sur `/login`, **0,6 à 2,9 s** sur les routes de monde. Une fois `R4a` fait, c'est là que sera tout le temps restant, et `P‑05` (la région) est la première chose à aller regarder.
 
 ---
 
