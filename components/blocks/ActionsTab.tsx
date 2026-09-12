@@ -189,7 +189,7 @@ function PreparedSpellCard({
           )}
         </div>
       </div>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-2">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-2">
         {hasAttack && (
           <ActionButton
             label="Attaquer"

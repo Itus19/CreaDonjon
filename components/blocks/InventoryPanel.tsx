@@ -34,7 +34,7 @@ import InfoTags, { type InfoTagItem } from "@/components/shared/InfoTags";
  *
  * Le bouton prend toute la largeur qu'on lui donne et ne decide pas de sa
  * propre grille : ce sont les conteneurs (carte d'arme, carte de sort) qui
- * posent `repeat(auto-fit, minmax(11rem, 1fr))`, seule mise en page qui reste
+ * posent `repeat(auto-fit, minmax(15rem, 1fr))`, seule mise en page qui reste
  * reguliere du telephone au grand ecran la ou l'ancien `flex-wrap` sur une
  * largeur minimale fixe laissait des rangees en escalier. Exporte (retour
  * utilisateur, sorts a lancer "meme esthetique que les objets equipes") :
@@ -71,7 +71,7 @@ export function ActionButton({
         <DieIcon sides={sides} className={`h-7 w-7 shrink-0 ${primary ? "text-accent" : "text-ink-muted"}`} />
       )}
       <span className="flex min-w-0 flex-col">
-        <span className="text-xs font-semibold leading-tight">{label}</span>
+        <span className="truncate text-xs font-semibold leading-tight">{label}</span>
         {/* `.mech` (globals.css) impose son propre `font-size: 0.9em`, hors de
             tout `@layer` Tailwind — il l'emporte toujours sur une classe
             `text-[Npx]` combinee sur le meme element, peu importe l'ordre
@@ -282,24 +282,22 @@ export function ItemCard({
           }`}
         >
           {/*
-           * Deux mises en page distinctes (V1-C14, sur retour utilisateur) —
-           * plus une simple option d'affichage, une vraie difference de role :
-           * l'onglet Inventaire gere l'objet (pas de des a jeter d'ici, juste
-           * du texte informatif) ; l'onglet Actions ne fait que l'utiliser
-           * (boutons, pas de prose). `collapsible` distingue deja les deux
-           * contextes a chaque site d'appel, reutilise ici tel quel plutot que
-           * d'ajouter une prop redondante.
+           * Un seul empilement, dans les deux onglets : nom, caracteristiques,
+           * puis boutons sur toute la largeur.
            *
-           * Cote Actions : titre/tags a gauche, boutons a droite, top aligne
-           * ("gagner de la place", demande explicite) — `items-start` sur le
-           * conteneur horizontal suffit, les deux colonnes partent du meme
-           * bord superieur sans calcul de hauteur a la main. `contents` sur le
-           * wrapper interne cote Inventaire : evite une boite superflue pour
-           * que titre/tags gardent leur empilement vertical d'origine, pleine
-           * largeur, inchange.
+           * L'onglet Actions rangeait avant le titre et les tags a gauche, les
+           * boutons en colonne a droite ("gagner de la place", V1-C14). Cet
+           * arbitrage valait pour les anciens boutons, compacts et empiles sur
+           * trois lignes. Avec les boutons en pastille il etranglait les deux
+           * colonnes a la fois, sur telephone : le nom de l'arme tombait a
+           * "Epee ...", le detail du jet a "1d2...", et le verbe chevauchait la
+           * valeur. Constate sur un vrai telephone, pas suppose.
+           *
+           * `contents` sur le wrapper interne : evite une boite superflue, pour
+           * que titre et tags restent des enfants directs de la colonne.
            */}
-          <div className={collapsible ? "flex flex-col gap-1.5" : "flex items-start justify-between gap-3"}>
-            <div className={collapsible ? "contents" : "flex min-w-0 flex-col gap-1.5"}>
+          <div className="flex flex-col gap-1.5">
+            <div className="contents">
               {/* Poids/valeur/quantite a largeur fixe et texte aligne a
                   droite (V1-C15, sur retour utilisateur) : la meme largeur
                   pour chaque colonne d'un objet a l'autre les aligne entre
@@ -358,7 +356,7 @@ export function ItemCard({
 
             {/* Onglet Actions : boutons, jamais de texte — c'est le seul endroit ou on jette reellement les des. */}
             {!collapsible && weapon && (onAttack || onDamage) && (
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-2">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-2">
                 {onAttack && (
                   <ActionButton label="Attaquer" resolvedFormula={attackResolved} detailFormula={attackDetail} busy={busy} primary onClick={onAttack} />
                 )}
