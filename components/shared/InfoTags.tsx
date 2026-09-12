@@ -5,7 +5,7 @@ import { useState } from "react";
 export interface InfoTagItem {
   key: string;
   label: string;
-  /** `null` = aucune fiche resolue : la pastille reste affichee, mais inerte — jamais un bouton qui n'ouvrirait rien. */
+  /** Texte ENTIER de la regle, jamais un resume tronque. Les sauts de ligne entre paragraphes sont conserves a l'affichage (`whitespace-pre-line`). `null` = aucune fiche resolue : la pastille reste affichee, mais inerte — jamais un bouton qui n'ouvrirait rien. */
   description: string | null;
   /** `accent` : une botte d'arme, qui depend du personnage, pas de l'objet. Meme forme que les autres, seule la teinte differe. */
   tone?: "default" | "accent";
@@ -69,7 +69,7 @@ export default function InfoTags({ items }: { items: InfoTagItem[] }) {
         })}
       </div>
       {open && (
-        <p className="text-xs leading-relaxed text-ink-muted">
+        <p className="whitespace-pre-line text-xs leading-relaxed text-ink-muted">
           <span className="font-semibold text-ink">{open.label}</span> — {open.description}
         </p>
       )}

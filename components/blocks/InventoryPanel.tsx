@@ -16,6 +16,7 @@ import { ARMOR_CATEGORY_LABELS_FR, CURRENCY_LABELS_FR, WEAPON_MASTERY_LABELS_FR,
 import { dieSidesFromFormula } from "@/src/core/dice/dieSides";
 import DieIcon from "@/components/shared/DieIcon";
 import InfoTags, { type InfoTagItem } from "@/components/shared/InfoTags";
+import { useRuleEntryBlocks } from "./useRuleEntryBlocks";
 
 /**
  * Bouton d'action en pastille (V1-C12, puis refonte sur retour utilisateur :
@@ -204,8 +205,23 @@ export function ItemCard({
     ...(masteryRefKey ? [{ kind: "rule" as const, key: masteryRefKey }] : []),
   ]);
 
-  /** Resume de la fiche de regle d'une caracteristique, pour son explication a la demande (`InfoTags`). */
+  // Explication d'une caracteristique : le bloc `description` ENTIER de sa
+  // fiche de regle, pas le resume du chip (retour utilisateur : "il faudrait
+  // qu'il y ait tout le texte d'explication" — le resume est plafonne a 240
+  // caracteres, soit environ cinq lignes sur telephone, et ce plafond doit
+  // rester, c'est lui qui tient les resumes courts sous chaque trait de
+  // l'onglet Traits). Meme hook que les sorts de l'onglet Actions : la
+  // traduction est deja appliquee bloc par bloc cote serveur.
+  const tagBlocks = useRuleEntryBlocks(
+    worldSlug,
+    [...propertyRefs.map((p) => weaponPropertyRefKey(p.key)), ...(masteryRefKey ? [masteryRefKey] : [])]
+  );
+
+  /** Explication complete d'une caracteristique. Repli sur le resume du chip pour une fiche sans bloc `description` — jamais rien du tout quand un texte existe quelque part. */
   function tagDescription(refKey: string): string | null {
+    const data = tagBlocks[refKey]?.find((b) => b.blockType === "description")?.data as { segments?: { text: string }[] } | undefined;
+    const full = data?.segments?.map((s) => s.text).join("\n\n").trim();
+    if (full) return full;
     const chip = propertyChips.get(refIdentity({ kind: "rule", key: refKey }));
     return chip?.found && chip.summary ? stripDigestPrefix(chip.summary) : null;
   }
@@ -393,10 +409,9 @@ export function ItemCard({
           {collapsible && showDetails && propertyRefs.length > 0 && (
             <div className="flex flex-col gap-0.5">
               {propertyRefs.map((p) => {
-                const propChip = propertyChips.get(refIdentity({ kind: "rule", key: weaponPropertyRefKey(p.key) }));
-                const description = propChip?.found && propChip.summary ? stripDigestPrefix(propChip.summary) : null;
+                const description = tagDescription(weaponPropertyRefKey(p.key));
                 return description ? (
-                  <p key={p.key} className="text-xs leading-relaxed text-ink-muted">
+                  <p key={p.key} className="whitespace-pre-line text-xs leading-relaxed text-ink-muted">
                     <span className="font-semibold text-ink">{p.label}</span> — {description}
                   </p>
                 ) : null;
