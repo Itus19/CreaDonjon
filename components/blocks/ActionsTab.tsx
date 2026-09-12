@@ -16,7 +16,6 @@ import { refIdentity, type ResolvedChipView } from "./useReferenceChips";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "./useRuleEntryBlocks";
 import Dropdown from "@/components/shared/Dropdown";
 import type { WeaponData } from "@/src/core/rules/srdMapping";
-import { WEAPON_MASTERY_LABELS_FR } from "@/src/i18n/fr";
 
 function findBlock<T>(blocks: RuleEntryBlockData[] | undefined, blockType: string): T | null {
   const found = blocks?.find((b) => b.blockType === blockType);
@@ -173,52 +172,55 @@ function PreparedSpellCard({
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-edge/60 bg-panel-raised px-2.5 py-2.5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <span className="truncate text-sm font-semibold text-ink">{label}</span>
-          <div className="flex flex-wrap gap-1">
+      {/* Nom et badges sur toute la largeur, boutons dessous — et non plus le
+          nom a gauche, une colonne de boutons a droite : sur telephone, cette
+          colonne de droite ecrasait le nom du sort. Meme disposition que la
+          carte d'arme (`ItemCard`), qui empile deja de cette facon. */}
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <span className="truncate text-sm font-semibold text-ink">{label}</span>
+        <div className="flex flex-wrap gap-1">
+          <span className="w-fit rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">
+            {isCantrip ? "Sort mineur" : `Niv. ${level}`}
+          </span>
+          {hasSave && effect?.save && (
             <span className="w-fit rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">
-              {isCantrip ? "Sort mineur" : `Niv. ${level}`}
+              DD {spellSaveDc} ({(effect.save.ability ?? "").toUpperCase()})
             </span>
-            {hasSave && effect?.save && (
-              <span className="w-fit rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">
-                DD {spellSaveDc} ({(effect.save.ability ?? "").toUpperCase()})
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-start justify-end gap-2">
-          {hasAttack && (
-            <ActionButton
-              label="Attaquer"
-              resolvedFormula={attackResolved}
-              detailFormula={attackDetail}
-              busy={busy}
-              onClick={() => ref.kind === "rule" && onCastAttack(ref.key)}
-            />
           )}
-          {!isCantrip && validSlotLevels.length === 0 && <span className="text-xs text-ink-muted">Aucun emplacement de ce niveau.</span>}
-          {(isCantrip || validSlotLevels.length > 0) && (
-            <div className="flex flex-col items-end gap-1">
-              {!isCantrip && (
-                <Dropdown
-                  value={String(selectedLevel)}
-                  options={validSlotLevels.map((l) => ({ value: String(l), label: `Niv. ${l}` }))}
-                  onChange={(v) => setSelectedLevel(Number(v))}
-                  aria-label={`Emplacement pour ${label}`}
-                  className="rounded-md border border-edge px-2 py-0.5 text-xs text-ink outline-none transition-colors hover:bg-panel"
-                />
-              )}
-              <ActionButton
-                label={resolvedDamage ? "Dégâts" : "Lancer"}
-                resolvedFormula={resolvedDamage ?? (isCantrip ? "Sort mineur" : `${available}/${spellSlots[String(castLevel)] ?? 0}`)}
-                detailFormula={resolvedDamage ? "au niveau choisi" : isCantrip ? "sans emplacement" : "emplacements"}
-                busy={busy || (!isCantrip && available === 0)}
-                onClick={() => ref.kind === "rule" && onCast(ref.key, castLevel)}
+        </div>
+      </div>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-2">
+        {hasAttack && (
+          <ActionButton
+            label="Attaquer"
+            resolvedFormula={attackResolved}
+            detailFormula={attackDetail}
+            busy={busy}
+            primary
+            onClick={() => ref.kind === "rule" && onCastAttack(ref.key)}
+          />
+        )}
+        {!isCantrip && validSlotLevels.length === 0 && <span className="text-xs text-ink-muted">Aucun emplacement de ce niveau.</span>}
+        {(isCantrip || validSlotLevels.length > 0) && (
+          <div className="flex flex-col gap-1">
+            {!isCantrip && (
+              <Dropdown
+                value={String(selectedLevel)}
+                options={validSlotLevels.map((l) => ({ value: String(l), label: `Niv. ${l}` }))}
+                onChange={(v) => setSelectedLevel(Number(v))}
+                aria-label={`Emplacement pour ${label}`}
+                className="w-fit rounded-md border border-edge px-2 py-0.5 text-xs text-ink outline-none transition-colors hover:bg-panel"
               />
-            </div>
-          )}
-        </div>
+            )}
+            <ActionButton
+              label={resolvedDamage ? "Dégâts" : "Lancer"}
+              resolvedFormula={resolvedDamage ?? (isCantrip ? "Sort mineur" : `${available}/${spellSlots[String(castLevel)] ?? 0}`)}
+              detailFormula={resolvedDamage ? "au niveau choisi" : isCantrip ? "sans emplacement" : "emplacements"}
+              busy={busy || (!isCantrip && available === 0)}
+              onClick={() => ref.kind === "rule" && onCast(ref.key, castLevel)}
+            />
+          </div>
+        )}
       </div>
       {preview && <p className="text-xs leading-relaxed text-ink-muted">{preview}</p>}
     </div>
@@ -315,18 +317,14 @@ export default function ActionsTab({
         // Botte disponible (V2-G1, retour utilisateur) : purement informatif —
         // annonce que la botte de cette arme est debloquee tant qu'elle reste
         // maitrisee, mais son EFFET (jet, poussee, chute...) reste a resoudre
-        // a la main, comme le reste des regles non encore simulees.
-        const masteryLabel =
-          ref?.kind === "rule" && weapon?.masteryKey && masteredWeaponKeys.has(ref.key)
-            ? (WEAPON_MASTERY_LABELS_FR[weapon.masteryKey] ?? weapon.masteryKey)
-            : null;
+        // a la main, comme le reste des regles non encore simulees. L'arbitrage
+        // reste ici : seul cet onglet connait les choix de maitrise du
+        // personnage ; `ItemCard` ne sait qu'afficher la pastille et son
+        // explication, au meme titre que les proprietes de l'arme.
+        const masteryKey =
+          ref?.kind === "rule" && weapon?.masteryKey && masteredWeaponKeys.has(ref.key) ? weapon.masteryKey : null;
         return (
           <div key={item.id} className="flex flex-col gap-1">
-            {masteryLabel && (
-              <span className="w-fit rounded-full border border-accent px-2 py-0.5 text-[10px] text-accent">
-                Botte disponible : {masteryLabel}
-              </span>
-            )}
             <ItemCard
               worldSlug={worldSlug}
               item={item}
@@ -339,6 +337,7 @@ export default function ActionsTab({
               dexMod={dexMod}
               proficiencyBonus={proficiencyBonus}
               isMonk={isMonk}
+              masteryKey={masteryKey}
               showAttackInfo={true}
               collapsible={false}
               busy={busy}

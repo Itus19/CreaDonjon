@@ -12,15 +12,31 @@ import { useReferenceChips, refIdentity, type ResolvedChipView } from "./useRefe
 import { itemLabel, itemRef } from "./inventoryItem";
 import ItemAutocomplete from "./ItemAutocomplete";
 import Stepper from "@/components/shared/Stepper";
-import { ARMOR_CATEGORY_LABELS_FR, CURRENCY_LABELS_FR, WEAPON_PROPERTY_LABELS_FR } from "@/src/i18n/fr";
+import { ARMOR_CATEGORY_LABELS_FR, CURRENCY_LABELS_FR, WEAPON_MASTERY_LABELS_FR, WEAPON_PROPERTY_LABELS_FR } from "@/src/i18n/fr";
+import { dieSidesFromFormula } from "@/src/core/dice/dieSides";
+import DieIcon from "@/components/shared/DieIcon";
+import InfoTags, { type InfoTagItem } from "@/components/shared/InfoTags";
 
 /**
- * Bouton d'action a trois lignes (V1-C12, sur retour utilisateur) : verbe
- * (« Attaquer »), formule resolue en nombres (« 1d20+2+2 »), puis le detail
- * symbolique en police plus petite (« 1d20+DEX+maîtrise ») — tout dans le
- * bouton, plus rien en dehors. Les deux formules sont deja calculees par
- * l'appelant (memes valeurs que celles reellement envoyees au serveur au
- * clic, jamais une seconde regle qui pourrait diverger). Exporte (retour
+ * Bouton d'action en pastille (V1-C12, puis refonte sur retour utilisateur :
+ * "les boutons pour lancer les des ne me satisfont pas") : la silhouette du de
+ * reellement lance a gauche, le verbe (« Attaquer ») et le detail symbolique
+ * (« 1d20+DEX+maîtrise ») au milieu, la formule resolue en nombres
+ * (« 1d20+7 ») a droite. Les trois informations d'avant sont toutes la — c'est
+ * leur hierarchie qui change : elles etaient empilees en 10/14/10 px, ou le
+ * detail pesait autant que le verbe et ou la formule ne ressortait pas.
+ *
+ * Les deux formules sont deja calculees par l'appelant (memes valeurs que
+ * celles reellement envoyees au serveur au clic, jamais une seconde regle qui
+ * pourrait diverger). Le de se lit de la formule resolue : un bouton dont le
+ * libelle n'est pas une formule (« Sort mineur », « 2/3 ») n'a pas d'icone
+ * plutot qu'une icone fausse.
+ *
+ * Le bouton prend toute la largeur qu'on lui donne et ne decide pas de sa
+ * propre grille : ce sont les conteneurs (carte d'arme, carte de sort) qui
+ * posent `repeat(auto-fit, minmax(11rem, 1fr))`, seule mise en page qui reste
+ * reguliere du telephone au grand ecran la ou l'ancien `flex-wrap` sur une
+ * largeur minimale fixe laissait des rangees en escalier. Exporte (retour
  * utilisateur, sorts a lancer "meme esthetique que les objets equipes") :
  * reutilise tel quel par `ActionsTab.tsx` pour les boutons de sort, jamais
  * une deuxieme version qui pourrait diverger visuellement.
@@ -30,34 +46,45 @@ export function ActionButton({
   resolvedFormula,
   detailFormula,
   busy,
+  primary,
   onClick,
 }: {
   label: string;
   resolvedFormula: string;
   detailFormula: string;
   busy: boolean;
+  /** Action principale de la carte (le jet d'attaque) : teintee pour se reperer dans une liste d'armes. Les autres restent neutres. */
+  primary?: boolean;
   onClick: () => void;
 }) {
+  const sides = dieSidesFromFormula(resolvedFormula);
   return (
     <button
       type="button"
       disabled={busy}
       onClick={onClick}
-      className="flex min-w-[6.5rem] flex-col items-center gap-0.5 rounded-md border border-edge px-3 py-1.5 text-ink hover:bg-panel disabled:opacity-50"
+      className={`flex min-h-11 w-full items-center gap-2 rounded-full border py-1.5 pl-2 pr-3 text-left text-ink transition-colors disabled:opacity-50 ${
+        primary ? "border-accent bg-accent/10 hover:bg-accent/20" : "border-edge hover:bg-panel"
+      }`}
     >
-      {/* `.mech` (globals.css) impose son propre `font-size: 0.9em`, hors de
-          tout `@layer` Tailwind — il l'emporte toujours sur une classe
-          `text-[Npx]` combinee sur le meme element, peu importe l'ordre
-          ecrit ici (regle CSS Cascade Layers : le non-layer bat tout layer).
-          Seul un style en ligne (priorite maximale, avant `!important`) peut
-          fixer une taille exacte a cote de `mech` — d'ou son usage ici,
-          jamais une classe Tailwind seule. */}
-      <span className="text-[10px] font-medium">{label}</span>
-      <span className="mech" style={{ fontSize: "0.875rem" }}>
-        {resolvedFormula}
+      {sides !== null && (
+        <DieIcon sides={sides} className={`h-7 w-7 shrink-0 ${primary ? "text-accent" : "text-ink-muted"}`} />
+      )}
+      <span className="flex min-w-0 flex-col">
+        <span className="text-xs font-semibold leading-tight">{label}</span>
+        {/* `.mech` (globals.css) impose son propre `font-size: 0.9em`, hors de
+            tout `@layer` Tailwind — il l'emporte toujours sur une classe
+            `text-[Npx]` combinee sur le meme element, peu importe l'ordre
+            ecrit ici (regle CSS Cascade Layers : le non-layer bat tout layer).
+            Seul un style en ligne (priorite maximale, avant `!important`) peut
+            fixer une taille exacte a cote de `mech` — d'ou son usage ici,
+            jamais une classe Tailwind seule. */}
+        <span className="mech truncate text-ink-muted" style={{ fontSize: "0.625rem" }}>
+          {detailFormula}
+        </span>
       </span>
-      <span className="mech text-ink-muted" style={{ fontSize: "0.625rem" }}>
-        {detailFormula}
+      <span className="mech ml-auto shrink-0 pl-1" style={{ fontSize: "1rem" }}>
+        {resolvedFormula}
       </span>
     </button>
   );
@@ -106,6 +133,7 @@ export function ItemCard({
   dexMod,
   proficiencyBonus,
   isMonk,
+  masteryKey,
   /** Lignes Attaquer/Degats (V1-C18) : ne se calculent que si l'entite a une vraie fiche de personnage a cote (FOR/DEX/maitrise reels) — un bloc d'inventaire seul sur une entite sans personnage (boutique, coffre) n'a rien de reel a partir de quoi les deviner ; `strMod`/`dexMod`/`proficiencyBonus` valent alors 0 par convention et ne doivent jamais s'afficher comme si c'etait un vrai calcul. */
   showAttackInfo,
   collapsible,
@@ -128,6 +156,8 @@ export function ItemCard({
   proficiencyBonus: number;
   /** Masque la propriete "monk" (V1-C12 suite, sur retour utilisateur) : pertinente seulement pour un personnage qui a des niveaux de Moine, contrairement aux autres proprietes d'arme qui restent des faits sur l'objet lui-meme. */
   isMonk: boolean;
+  /** Botte d'arme debloquee sur CETTE arme (retour utilisateur : "au meme endroit et dans le meme style que les autres caracteristiques"). `null` quand l'arme n'est pas maitrisee par le personnage, ou hors fiche de personnage : c'est une propriete du couple personnage+arme, pas de l'objet — d'ou l'arbitrage laisse a l'appelant, qui seul connait les choix de maitrise. */
+  masteryKey?: string | null;
   showAttackInfo: boolean;
   /** Repliable (V1-C13, onglet Inventaire seulement) : l'onglet Actions garde ses boutons toujours visibles, c'est son seul role. Replie par defaut — les descriptions/boutons restent a un clic, pas caches definitivement. */
   collapsible: boolean;
@@ -165,10 +195,35 @@ export function ItemCard({
   // Tableau recree a chaque rendu, sans useMemo : `useReferenceChips` deduplique
   // deja en interne sur la cle jointe des refs (`dedupeKey`), pas sur
   // l'identite du tableau — un useMemo ici n'aurait rien evite de reel.
-  const propertyChips = useReferenceChips(
-    worldSlug,
-    propertyRefs.map((p) => ({ kind: "rule" as const, key: weaponPropertyRefKey(p.key) }))
-  );
+  // La botte d'arme suit exactement le meme chemin que les proprietes : meme
+  // prefixe anti-collision a l'import (`weapon-mastery-`, cf. `stripReferencePrefix`,
+  // srdMapping.ts), donc meme resolution de fiche et meme resume.
+  const masteryRefKey = masteryKey ? `weapon-mastery-${masteryKey}` : null;
+  const propertyChips = useReferenceChips(worldSlug, [
+    ...propertyRefs.map((p) => ({ kind: "rule" as const, key: weaponPropertyRefKey(p.key) })),
+    ...(masteryRefKey ? [{ kind: "rule" as const, key: masteryRefKey }] : []),
+  ]);
+
+  /** Resume de la fiche de regle d'une caracteristique, pour son explication a la demande (`InfoTags`). */
+  function tagDescription(refKey: string): string | null {
+    const chip = propertyChips.get(refIdentity({ kind: "rule", key: refKey }));
+    return chip?.found && chip.summary ? stripDigestPrefix(chip.summary) : null;
+  }
+
+  const tagItems: InfoTagItem[] = [
+    ...propertyRefs.map((p) => ({ key: p.key, label: p.label, description: tagDescription(weaponPropertyRefKey(p.key)) })),
+    ...(masteryKey && masteryRefKey
+      ? [
+          {
+            key: `mastery-${masteryKey}`,
+            label: `Botte : ${WEAPON_MASTERY_LABELS_FR[masteryKey] ?? masteryKey}`,
+            description: tagDescription(masteryRefKey),
+            tone: "accent" as const,
+          },
+        ]
+      : []),
+    ...(armorLabel ? [{ key: "armor-category", label: armorLabel, description: null }] : []),
+  ];
 
   // Meme regle que le serveur (`weaponAttackAbilityMod`, resolveAction.ts) —
   // le libelle affiche ici doit refleter la meme caracteristique que celle
@@ -298,27 +353,14 @@ export function ItemCard({
                 )}
               </div>
 
-              {propertyRefs.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {propertyRefs.map((p) => (
-                    <span key={p.key} className="rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">
-                      {p.label}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {armorLabel && (
-                <div className="flex flex-wrap gap-1">
-                  <span className="rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">{armorLabel}</span>
-                </div>
-              )}
+              <InfoTags items={tagItems} />
             </div>
 
             {/* Onglet Actions : boutons, jamais de texte — c'est le seul endroit ou on jette reellement les des. */}
             {!collapsible && weapon && (onAttack || onDamage) && (
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-2">
                 {onAttack && (
-                  <ActionButton label="Attaquer" resolvedFormula={attackResolved} detailFormula={attackDetail} busy={busy} onClick={onAttack} />
+                  <ActionButton label="Attaquer" resolvedFormula={attackResolved} detailFormula={attackDetail} busy={busy} primary onClick={onAttack} />
                 )}
                 {onAttack && weapon.properties.includes("thrown") && (
                   <ActionButton label="Lancer" resolvedFormula={attackResolved} detailFormula={attackDetail} busy={busy} onClick={onAttack} />
