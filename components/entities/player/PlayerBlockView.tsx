@@ -64,7 +64,7 @@ function renderContent(block: VisibleBlock) {
       return (
         <figure>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={data.url} alt={data.caption ?? ""} className="max-w-full rounded-md" />
+          <img src={data.url} alt={data.caption ?? ""} loading="lazy" decoding="async" className="max-w-full rounded-md" />
           {data.caption && <figcaption className="mt-1 text-xs text-ink-muted">{data.caption}</figcaption>}
         </figure>
       );

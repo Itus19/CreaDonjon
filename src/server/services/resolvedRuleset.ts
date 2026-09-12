@@ -43,6 +43,7 @@ import {
   type ArmorData,
   type CustomTableRow,
   type ItemCost,
+  type LanguageKey,
   type ProgressionRow,
   type WeaponData,
 } from "@/src/core/rules/srdMapping";
@@ -55,8 +56,8 @@ import {
   listRulesetEntryChipsByKeys,
   listTranslationsForEntries,
 } from "@/src/server/repos/rules";
-import { entryNameFrom, resolveEntryBlocksInRuleset, walkRulesetChain } from "./rules";
-import { WEAPON_ARMOR_PROFICIENCY_LABELS_FR } from "@/src/i18n/fr";
+import { entryNameFrom, resolveEntryBlocksInRuleset, resolveEntryBlocksInRulesetBatch, walkRulesetChain } from "./rules";
+import { LANGUAGE_LABELS_FR, WEAPON_ARMOR_PROFICIENCY_LABELS_FR } from "@/src/i18n/fr";
 import {
   backgroundAbilityBonusModifiers,
   isValidBackgroundAbilityBonusChoice,
@@ -507,33 +508,41 @@ export async function assembleResolvedRuleset(
     const chipByKey = new Map(chips.map((c) => [c.entry_key, c]));
 
     // Modificateurs generiques d'une aptitude/don (bloc `modifiers`, retour
-    // utilisateur : "un don maison qui affecte reellement la fiche") — un
-    // aller-retour par cle en parallele, meme cout deja accepte pour
-    // l'equipement (`fetchEquipmentBlocks`, appele de la meme facon). Passe
-    // par `resolveEntryBlocksInRuleset` (override-aware, jamais
-    // `listRulesetEntryChipsByKeys` ci-dessus qui ne lit QUE `ruleset_entries` —
-    // un don maison qui ne vit que dans `ruleset_overrides`, comme n'importe
-    // quelle fiche cree via `importRulesetEntries`, resout quand meme ici).
+    // utilisateur : "un don maison qui affecte reellement la fiche") — toutes
+    // les cles EN UNE PASSE (audit de performance ulterieur ; `resolveEntryBlocksInRulesetBatch`,
+    // meme raison que l'equipement plus bas). Passe par ce moteur
+    // (override-aware, jamais `listRulesetEntryChipsByKeys` ci-dessus qui ne
+    // lit QUE `ruleset_entries` — un don maison qui ne vit que dans
+    // `ruleset_overrides`, comme n'importe quelle fiche cree via
+    // `importRulesetEntries`, resout quand meme ici).
+    const resolvedFeatureBlocks = await resolveEntryBlocksInRulesetBatch(supabase, rulesetId, featureKeys);
     const declaredModifiersByKey = new Map(
-      await Promise.all(
-        featureKeys.map(async (fk): Promise<[string, DeclaredModifier[]]> => {
-          const resolved = await resolveEntryBlocksInRuleset(supabase, rulesetId, fk);
-          const data = resolved?.blocksByType.get("modifiers") as { modifiers: DeclaredModifier[] } | undefined;
-          return [fk, data?.modifiers ?? []];
-        })
-      )
+      featureKeys.map((fk): [string, DeclaredModifier[]] => {
+        const data = resolvedFeatureBlocks.get(fk)?.blocksByType.get("modifiers") as { modifiers: DeclaredModifier[] } | undefined;
+        return [fk, data?.modifiers ?? []];
+      })
     );
 
     for (const fk of featureKeys) {
       const chip = chipByKey.get(fk);
       const source = extraFeatureKeys.get(fk) ?? "class:inconnue";
-      const label = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : fk;
+      // Sans chip : une aptitude ajoutee apres coup (`add_entry`, elle ne vit
+      // que dans `ruleset_overrides`, jamais dans `ruleset_entries` que lit
+      // `listRulesetEntryChipsByKeys`). Son nom est deja porte par
+      // `resolvedFeatureBlocks`, resolu juste au-dessus pour ses modificateurs
+      // — le prendre la evite de retomber sur la cle technique brute dans la
+      // colonne source de l'onglet Traits et dans les libelles de
+      // modificateurs, et ne coute aucune requete de plus.
+      const label = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : (resolvedFeatureBlocks.get(fk)?.name ?? fk);
       const modifiers = resolveDeclaredModifiers(declaredModifiersByKey.get(fk) ?? [], fk, label, layerForFeatureSource(source));
       features[fk] = chip
         ? { key: fk, label, source, modifiers, prerequisites: mapPrerequisites(chip.source_raw) }
-        : // Cle sans entree resolue (rare : feature non importee) — conservee
-          // quand meme, label = cle brute, pour que build.featureKeys puisse
-          // la referencer sans faire echouer characterSheet().
+        : // Aucune ligne `ruleset_entries` : fiche maison (label resolu
+          // ci-dessus) ou, plus rarement, aptitude jamais importee (label =
+          // cle brute). Conservee dans les deux cas pour que
+          // build.featureKeys puisse la referencer sans faire echouer
+          // characterSheet(). Pas de prerequis : ils se lisent sur
+          // `source_raw`, que seule une entree importee possede.
           { key: fk, label, source, modifiers };
     }
 
@@ -542,6 +551,16 @@ export async function assembleResolvedRuleset(
       const resolved = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : undefined;
       p.name = resolved ?? (locale !== "en" ? WEAPON_ARMOR_PROFICIENCY_LABELS_FR[p.key] : undefined) ?? p.name;
     }
+  }
+
+  // Langues : `extractLanguages` ne connait que le nom brut du SRD ("Common",
+  // "Dwarvish"), affiche tel quel dans l'onglet Traits alors que les boutons
+  // de choix juste au-dessus, eux, sont en francais (`LANGUAGE_LABELS_FR`).
+  // Meme lexique statique, meme motif que les maitrises ci-dessus : une
+  // langue du SRD n'a pas de fiche de regle propre d'ou tirer un nom traduit
+  // (`Languages` est exclue de l'import, scripts/ingest-srd.ts).
+  if (locale !== "en") {
+    for (const l of languages) l.name = LANGUAGE_LABELS_FR[l.key as LanguageKey] ?? l.name;
   }
 
   return { ruleset: { classes, features }, remainingChoices, proficiencies, languages, asiGrantedLevels, backgroundAbilityScores };
@@ -565,10 +584,8 @@ interface EquipmentBlocks {
  * le repli pour tout contenu qui n'en a pas (une fiche maison n'en ecrit
  * aucun, V1-D4 : `createHomebrewWeapon` ne pose qu'un bloc `weapon`).
  */
-async function fetchEquipmentBlocks(supabase: TypedClient, rulesetId: string, key: string): Promise<EquipmentBlocks | null> {
-  const resolved = await resolveEntryBlocksInRuleset(supabase, rulesetId, key);
+function equipmentBlocksFromResolved(resolved: Awaited<ReturnType<typeof resolveEntryBlocksInRuleset>>): EquipmentBlocks | null {
   if (!resolved) return null;
-
   const customTable = resolved.blocksByType.get("custom_table") as { rows: CustomTableRow[] } | undefined;
   return {
     fields: customTable ? parseCustomTableFields(customTable.rows) : {},
@@ -578,16 +595,23 @@ async function fetchEquipmentBlocks(supabase: TypedClient, rulesetId: string, ke
   };
 }
 
+async function fetchEquipmentBlocks(supabase: TypedClient, rulesetId: string, key: string): Promise<EquipmentBlocks | null> {
+  return equipmentBlocksFromResolved(await resolveEntryBlocksInRuleset(supabase, rulesetId, key));
+}
+
 /**
  * Armure/arme/poids/cout d'un lot d'objets d'equipement EN UNE PASSE (V2-G1
- * suite, retour utilisateur : "lenteur generale" persistante) — appeler
+ * suite ; batch inter-cles, audit de performance ulterieur, retour
+ * utilisateur : "lenteur generale" persistante) — appeler
  * `resolveEquipmentArmorData`/`resolveEquipmentWeaponData`/
  * `resolveEquipmentWeight`/`resolveEquipmentCost` separement sur le MEME lot
  * de cles (ce que faisaient l'API et `characterActions.ts`) refaisait
  * `fetchEquipmentBlocks` — chain-walk + surcharges incluses, le plus couteux
- * des deux repartiteurs ci-dessus — 3 ou 4 fois pour chaque objet. Ici, une
- * seule fois par objet, les objets entre eux en parallele (`Promise.all`,
- * aucun ne depend d'un autre).
+ * des deux repartiteurs ci-dessus — 3 ou 4 fois pour chaque objet.
+ * `resolveEntryBlocksInRulesetBatch` va plus loin : meme pour un seul appel
+ * `fetchEquipmentBlocks` par objet, chaque objet payait son propre
+ * aller-retour entree/blocs/surcharges — desormais 3 requetes pour TOUT le
+ * lot, quelle que soit sa taille.
  */
 export async function resolveEquipmentData(
   supabase: TypedClient,
@@ -604,17 +628,17 @@ export async function resolveEquipmentData(
   const weight: Record<string, number | null> = {};
   const cost: Record<string, ItemCost | null> = {};
 
-  await Promise.all(
-    keys.map(async (key) => {
-      const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
-      armor[key] = found ? (found.armor ? armorDataFromBlock(found.armor) : parseArmorData(found.fields)) : null;
-      weapon[key] = found ? (found.weapon ? weaponDataFromBlock(found.weapon) : parseWeaponData(found.fields)) : null;
-      const dedicatedWeight = found?.weapon?.weight ?? found?.armor?.weight ?? found?.itemProperties?.weight;
-      weight[key] = found ? (dedicatedWeight !== undefined ? weightFromQuantity(dedicatedWeight) : parseItemWeight(found.fields)) : null;
-      const dedicatedCost = found?.weapon?.cost ?? found?.armor?.cost ?? found?.itemProperties?.cost;
-      cost[key] = found ? (dedicatedCost !== undefined ? costFromQuantity(dedicatedCost) : parseItemCost(found.fields)) : null;
-    })
-  );
+  const resolvedByKey = await resolveEntryBlocksInRulesetBatch(supabase, rulesetId, keys);
+  for (const key of keys) {
+    const found = equipmentBlocksFromResolved(resolvedByKey.get(key) ?? null);
+
+    armor[key] = found ? (found.armor ? armorDataFromBlock(found.armor) : parseArmorData(found.fields)) : null;
+    weapon[key] = found ? (found.weapon ? weaponDataFromBlock(found.weapon) : parseWeaponData(found.fields)) : null;
+    const dedicatedWeight = found?.weapon?.weight ?? found?.armor?.weight ?? found?.itemProperties?.weight;
+    weight[key] = found ? (dedicatedWeight !== undefined ? weightFromQuantity(dedicatedWeight) : parseItemWeight(found.fields)) : null;
+    const dedicatedCost = found?.weapon?.cost ?? found?.armor?.cost ?? found?.itemProperties?.cost;
+    cost[key] = found ? (dedicatedCost !== undefined ? costFromQuantity(dedicatedCost) : parseItemCost(found.fields)) : null;
+  }
 
   return { armor, weapon, weight, cost };
 }

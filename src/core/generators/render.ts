@@ -25,3 +25,14 @@ export function formatSlotValuesForPrompt(slotTexts: Readonly<Record<string, str
     .map(([key, text]) => `${key} : ${text}`)
     .join("\n");
 }
+
+/**
+ * Assemble les textes de plusieurs tirages sur le MEME emplacement (V2-J9,
+ * `GeneratorTableSlot.count` — ex. un menu de taverne : 5 plats tires en un
+ * seul emplacement) en une seule valeur de slot, une ligne par resultat —
+ * c'est ce qui apparait dans le gabarit compose ET dans le panneau
+ * "Détails des tirages".
+ */
+export function joinMultiDrawTexts(texts: readonly string[]): string {
+  return texts.join("\n");
+}

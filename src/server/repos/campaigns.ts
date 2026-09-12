@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 
@@ -18,7 +19,18 @@ export interface CampaignRow {
 
 const CAMPAIGN_COLUMNS = "id, world_id, name, ruleset_id, gm_user_id, mode, party_entity_id, created_at, updated_at";
 
-export async function listCampaignsForWorld(supabase: TypedClient, worldId: string): Promise<CampaignRow[]> {
+/**
+ * `React.cache()` (audit P-01, meme motif que `listEntitiesForWorld`) —
+ * appele DEUX fois par rendu authentifie : par `listCampaigns` (service,
+ * lui-meme memoise, depuis le layout du monde) et par
+ * `listPlayerVisibleEntityIds` (depuis `getEntityTree`, layout de section).
+ * Memoiser le service ne suffisait donc pas : le second chemin refaisait
+ * la requete. Portee bornee au rendu courant, comme les autres.
+ */
+export const listCampaignsForWorld = cache(async function listCampaignsForWorld(
+  supabase: TypedClient,
+  worldId: string
+): Promise<CampaignRow[]> {
   const { data, error } = await supabase
     .from("campaigns")
     .select(CAMPAIGN_COLUMNS)
@@ -27,7 +39,7 @@ export async function listCampaignsForWorld(supabase: TypedClient, worldId: stri
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data;
-}
+});
 
 export async function getCampaignById(supabase: TypedClient, id: string): Promise<CampaignRow | null> {
   const { data, error } = await supabase

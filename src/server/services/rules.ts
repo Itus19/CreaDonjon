@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAuthUser } from "@/lib/supabase/server";
@@ -46,6 +47,8 @@ import {
   getOfficialBaseRulesetId,
   getRulesetById,
   getRulesetEntryByKey,
+  getRulesetEntryByKeyAcrossRulesets,
+  getRulesetEntriesByKeysAcrossRulesets,
   insertRulesetVariant,
   listBlocksForRulesetEntry,
   listBlocksForRulesetEntries,
@@ -54,6 +57,8 @@ import {
   listIncomingRefsForKey,
   listOutgoingRefs,
   listOverridesForRuleset,
+  listOverridesAcrossRulesets,
+  listOverridesAcrossRulesetsForKeys,
   listRulesetEntries,
   listRulesetEntriesByKeys,
   listSelectableRulesets,
@@ -62,6 +67,7 @@ import {
   type DeleteRulesetOutcome,
   type SelectableRulesetRow,
   type RulesetEntryRow,
+  type RulesetOverrideRow,
 } from "@/src/server/repos/rules";
 import { getWorldDefaultRulesetId, setWorldDefaultRuleset } from "@/src/server/repos/worlds";
 import { listCampaignsForWorld, updateCampaignRuleset } from "@/src/server/repos/campaigns";
@@ -86,8 +92,19 @@ export interface RulesetChainLink {
  * cycle explicite (V1-A4, SCHEMA.md §9.4) : un ensemble visite, pas
  * seulement la borne de profondeur, pour distinguer une vraie boucle
  * (erreur) d'une chaine simplement longue (erreur differente).
+ *
+ * `React.cache()` (audit de performance, retour utilisateur) — meme motif
+ * que `getAuthUser`/`getWorldBySlug` (lib/supabase/server.ts, worlds.ts) :
+ * borne a UNE seule requete, ne fait un hit que parce que `supabase`
+ * (createClient(), deja memoise) est un objet reference-stable sur cette
+ * requete. Sans ceci, `resolveEntryBlocksInRuleset` — la fonction la plus
+ * reutilisee du moteur mecanique (equipement, dons, modificateurs, appelee
+ * une fois par cle pour chaque objet d'un inventaire) — re-marchait
+ * integralement la MEME chaine (autant de requetes sequentielles que de
+ * niveaux d'heritage) a chaque cle resolue, alors qu'elle est identique
+ * pour tout un calcul de fiche de personnage.
  */
-export async function walkRulesetChain(supabase: TypedClient, startRulesetId: string): Promise<RulesetChainLink[]> {
+export const walkRulesetChain = cache(async function walkRulesetChain(supabase: TypedClient, startRulesetId: string): Promise<RulesetChainLink[]> {
   const chain: RulesetChainLink[] = [];
   const visited = new Set<string>();
   let currentId: string | null = startRulesetId;
@@ -104,7 +121,7 @@ export async function walkRulesetChain(supabase: TypedClient, startRulesetId: st
   }
 
   return chain;
-}
+});
 
 /**
  * Un monde variante n'a d'entrees que pour ce qu'il surcharge (V1-A4) —
@@ -148,6 +165,31 @@ export interface ResolvedEntryBlocks {
 }
 
 /**
+ * Cherche une regle par cle a travers toute une chaine deja resolue, en une
+ * seule requete (audit de performance, retour utilisateur) — remplace un
+ * `getRulesetEntryByKey` appele niveau par niveau, sequentiellement,
+ * jusqu'a trouver une reponse. `chain` reste feuille -> racine : on garde
+ * la ligne du ruleset le PLUS specifique parmi celles renvoyees, exactement
+ * le comportement de l'ancienne boucle qui s'arretait au premier trouve.
+ * Partagee par `resolveEntryBlocksInRuleset` et `getRuleEntryForWorld`, les
+ * deux consommateurs de ce motif.
+ */
+async function entryFromChainByKey(supabase: TypedClient, chain: RulesetChainLink[], entryKey: string): Promise<RulesetEntryRow | null> {
+  const candidates = await getRulesetEntryByKeyAcrossRulesets(
+    supabase,
+    chain.map((link) => link.rulesetId),
+    entryKey
+  );
+  if (candidates.length === 0) return null;
+  const byRulesetId = new Map(candidates.map((c) => [c.ruleset_id, c]));
+  for (const link of chain) {
+    const found = byRulesetId.get(link.rulesetId);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
  * Resout une entree jusqu'a ses blocs valides : base (si elle existe dans
  * la chaine) + TOUTES les surcharges de la chaine, racine -> feuille
  * (V1-A4/V1-D4) — meme moteur (`applyOverrides`) que `getRuleEntryForWorld`,
@@ -161,20 +203,21 @@ export interface ResolvedEntryBlocks {
  * n'existe nulle part dans la chaine (ni base, ni `add_entry`) ou si une
  * surcharge l'a desactivee.
  */
-export async function resolveEntryBlocksInRuleset(
-  supabase: TypedClient,
-  rulesetId: string,
-  entryKey: string
-): Promise<ResolvedEntryBlocks | null> {
-  const chain = await walkRulesetChain(supabase, rulesetId);
-
-  let entry: RulesetEntryRow | null = null;
-  for (const link of chain) {
-    entry = await getRulesetEntryByKey(supabase, link.rulesetId, entryKey);
-    if (entry) break;
-  }
-
-  const blockRows = entry ? await listBlocksForRulesetEntry(supabase, entry.id) : [];
+/**
+ * Coeur partage entre `resolveEntryBlocksInRuleset` (une cle) et
+ * `resolveEntryBlocksInRulesetBatch` (plusieurs) — assemble une entree deja
+ * trouvee + ses blocs + ses surcharges (deja groupees par ruleset) en
+ * `ResolvedEntryBlocks`. Aucun acces base ici : les deux appelants font
+ * leur propre fetch (single ou batch), ce coeur ne fait que la resolution
+ * en memoire (`applyOverrides`).
+ */
+function resolveOneEntryBlocks(
+  chain: RulesetChainLink[],
+  entryKey: string,
+  entry: RulesetEntryRow | undefined,
+  blockRows: { block_type: string; display: Json; data: Json; display_order: number }[],
+  overridesByRuleset: Map<string, RulesetOverrideRow[]>
+): ResolvedEntryBlocks | null {
   const baseEntry: ResolvableEntry | null = entry
     ? {
         entry_key: entry.entry_key,
@@ -193,7 +236,7 @@ export async function resolveEntryBlocksInRuleset(
   const overrides: OverrideInput[] = [];
   let homebrewName: string | null = null;
   for (const link of [...chain].reverse()) {
-    const rows = await listOverridesForRuleset(supabase, link.rulesetId, entryKey);
+    const rows = overridesByRuleset.get(link.rulesetId) ?? [];
     for (const row of rows) {
       if (row.action === "add_entry") {
         const addEntry = zAddEntryPayload.parse(row.payload);
@@ -224,6 +267,72 @@ export async function resolveEntryBlocksInRuleset(
   }
 
   return { entryType: resolved.entry_type as EntryType, blocksByType, name: homebrewName ?? (entry ? entryNameFrom(entry) : null) };
+}
+
+export async function resolveEntryBlocksInRuleset(
+  supabase: TypedClient,
+  rulesetId: string,
+  entryKey: string
+): Promise<ResolvedEntryBlocks | null> {
+  const chain = await walkRulesetChain(supabase, rulesetId);
+  const entry = await entryFromChainByKey(supabase, chain, entryKey);
+  const blockRows = entry ? await listBlocksForRulesetEntry(supabase, entry.id) : [];
+  const overridesByRuleset = await listOverridesAcrossRulesets(supabase, chain.map((link) => link.rulesetId), entryKey);
+  return resolveOneEntryBlocks(chain, entryKey, entry ?? undefined, blockRows, overridesByRuleset);
+}
+
+/**
+ * Meme resolution, PLUSIEURS cles a la fois en 3 requetes au lieu de 3×N
+ * (audit de performance, retour utilisateur : "reference-chips/resolved-ruleset
+ * lent") — `fetchEquipmentBlocks` (resolvedRuleset.ts) appelait
+ * `resolveEntryBlocksInRuleset` une fois par objet d'inventaire, en
+ * parallele (`Promise.all`) mais chacun payait quand meme son propre
+ * aller-retour d'entree/blocs/surcharges.
+ */
+export async function resolveEntryBlocksInRulesetBatch(
+  supabase: TypedClient,
+  rulesetId: string,
+  entryKeys: readonly string[]
+): Promise<Map<string, ResolvedEntryBlocks>> {
+  const result = new Map<string, ResolvedEntryBlocks>();
+  const keys = [...new Set(entryKeys)];
+  if (keys.length === 0) return result;
+
+  const chain = await walkRulesetChain(supabase, rulesetId);
+  const rulesetIds = chain.map((link) => link.rulesetId);
+
+  const [entries, overridesByKey] = await Promise.all([
+    getRulesetEntriesByKeysAcrossRulesets(supabase, rulesetIds, keys),
+    listOverridesAcrossRulesetsForKeys(supabase, rulesetIds, keys),
+  ]);
+
+  // Une entree par cle : celle du ruleset le plus specifique (chain est
+  // feuille -> racine) parmi celles trouvees pour cette cle.
+  const entryByKey = new Map<string, RulesetEntryRow>();
+  for (const link of chain) {
+    for (const row of entries) {
+      if (row.ruleset_id === link.rulesetId && !entryByKey.has(row.entry_key)) entryByKey.set(row.entry_key, row);
+    }
+  }
+
+  const entryIds = [...entryByKey.values()].map((e) => e.id);
+  const allBlockRows = await listBlocksForRulesetEntries(supabase, entryIds);
+  const blockRowsByEntryId = new Map<string, typeof allBlockRows>();
+  for (const row of allBlockRows) {
+    const list = blockRowsByEntryId.get(row.entry_id) ?? [];
+    list.push(row);
+    blockRowsByEntryId.set(row.entry_id, list);
+  }
+
+  for (const key of keys) {
+    const entry = entryByKey.get(key);
+    const blockRows = entry ? (blockRowsByEntryId.get(entry.id) ?? []) : [];
+    const overridesByRuleset = overridesByKey.get(key) ?? new Map<string, RulesetOverrideRow[]>();
+    const resolved = resolveOneEntryBlocks(chain, key, entry, blockRows, overridesByRuleset);
+    if (resolved) result.set(key, resolved);
+  }
+
+  return result;
 }
 
 export interface RuleEntryBlockView {
@@ -261,6 +370,8 @@ export interface RuleEntryDetail {
   modifiedBlockTypes: string[];
   /** V1-D5, specs/ruleset-personnel.md — badge "reference personnelle" : au moins une surcharge d'un ruleset personal_reference de la chaine touche reellement cette fiche. */
   personalReference: boolean;
+  /** Fiche maison (V1-D4, `add_entry` sans aucune ligne de base dans la chaine officielle) — n'existe QUE par surcharge, jamais materialisee dans `ruleset_entries`. Seule condition pour proposer "Supprimer cette fiche" : une fiche officielle ou heritee reste intouchable. */
+  isHomebrew: boolean;
 }
 
 function maxLevelForAxis(axis: ScalingBlockData["axis"]): number {
@@ -489,9 +600,10 @@ export async function resolveHomebrewEntryDisplay(
   if (!resolved) return null;
 
   const chain = await walkRulesetChain(supabase, rulesetId);
+  const overridesByRuleset = await listOverridesAcrossRulesets(supabase, chain.map((link) => link.rulesetId), entryKey);
   let name: string | null = null;
   for (const link of chain) {
-    const rows = await listOverridesForRuleset(supabase, link.rulesetId, entryKey);
+    const rows = overridesByRuleset.get(link.rulesetId) ?? [];
     const addEntryRow = rows.find((r) => r.action === "add_entry");
     if (addEntryRow) {
       name = zAddEntryPayload.parse(addEntryRow.payload).name;
@@ -632,12 +744,7 @@ export async function getRuleEntryForWorld(
   if (!rulesetId) return null;
 
   const chain = await walkRulesetChain(supabase, rulesetId);
-
-  let entry: RulesetEntryRow | null = null;
-  for (const link of chain) {
-    entry = await getRulesetEntryByKey(supabase, link.rulesetId, entryKey);
-    if (entry) break;
-  }
+  const entry = await entryFromChainByKey(supabase, chain, entryKey);
 
   // L'anglais est deja la langue source (source_raw.name) : aucune
   // recherche de traduction n'est necessaire pour cette locale. Une fiche
@@ -681,8 +788,9 @@ export async function getRuleEntryForWorld(
   // officielle qu'on regarde "a travers" une telle variante (une variante
   // personal_reference peut tres bien ne rien surcharger sur telle entree).
   let personalReference = false;
+  const overridesByRuleset = await listOverridesAcrossRulesets(supabase, chain.map((link) => link.rulesetId), entryKey);
   for (const link of [...chain].reverse()) {
-    const rows = await listOverridesForRuleset(supabase, link.rulesetId, entryKey);
+    const rows = overridesByRuleset.get(link.rulesetId) ?? [];
     if (rows.length > 0 && link.contentOrigin === "personal_reference") personalReference = true;
     for (const row of rows) {
       if (row.action === "add_entry") {
@@ -955,6 +1063,7 @@ export async function getRuleEntryForWorld(
     incomingRefs,
     modifiedBlockTypes: resolved.modifiedBlockTypes,
     personalReference,
+    isHomebrew: entry === null,
   };
 }
 
@@ -1471,6 +1580,7 @@ export async function deleteRulesetVariant(supabase: TypedClient, rulesetId: str
 const zCreateHomebrewWeaponInput = z.object({
   rulesetId: z.string().uuid(),
   name: z.string().min(1),
+  description: z.string().optional(),
   weapon: zWeaponBlockData,
   note: z.string().min(1).optional(),
 });
@@ -1515,6 +1625,32 @@ export async function createHomebrewWeapon(
     note: parsed.note ?? null,
   });
 
+  // "Reutilise l'id renvoye par le premier appel" (voir commentaire plus bas) :
+  // chaque add_block suivant doit viser le meme id, mis a jour a chaque etape.
+  let rulesetIdAfterBlocks = rulesetIdAfterEntry;
+
+  if (parsed.description?.trim()) {
+    const descriptionBlock: ResolvableBlock = {
+      block_type: "description",
+      display: { label: "Description", layout: "prose" },
+      data: { segments: [{ text: parsed.description.trim() }] },
+      // Avant le bloc `weapon` (display_order 150) — meme ordre de lecture
+      // que les historiques/dons maison (Description avant les valeurs
+      // mecaniques, voir listOverridesForRuleset : les add_block d'une meme
+      // entree se trient par display_order, pas par ordre d'ecriture).
+      display_order: 100,
+    };
+    rulesetIdAfterBlocks = await upsertRulesetOverride(supabase, {
+      rulesetId: rulesetIdAfterBlocks,
+      entryKey,
+      blockType: "description",
+      action: "add_block",
+      payload: descriptionBlock as unknown as Json,
+      patch: null,
+      note: parsed.note ?? null,
+    });
+  }
+
   const weaponBlock: ResolvableBlock = {
     block_type: "weapon",
     display: { label: "Arme", layout: "key_values" },
@@ -1525,7 +1661,7 @@ export async function createHomebrewWeapon(
     // Reutilise l'id renvoye par le premier appel, pas parsed.rulesetId :
     // si le ruleset etait deja publie, le premier appel a fork une v+1 —
     // ce second appel doit viser cette meme nouvelle version, pas l'originale figee.
-    rulesetId: rulesetIdAfterEntry,
+    rulesetId: rulesetIdAfterBlocks,
     entryKey,
     blockType: "weapon",
     action: "add_block",
@@ -1765,4 +1901,39 @@ export async function createRulesetFromImport(
 
   const result = await importRulesetEntries(supabase, { rulesetId: created.id, entries: input.entries });
   return { ok: true, result };
+}
+
+export type DisableRulesetEntryResult = "ok" | "not_found" | "official";
+
+/**
+ * "Supprimer cette fiche" pour une fiche maison (retour utilisateur,
+ * suite V2-J4) — reutilise `disable_entry`, deja lu partout
+ * (`applyOverrides`/`mergeHomebrewEntries`) mais jamais ecrit nulle part
+ * avant ce ticket. Meme cle de conflit que `add_entry`
+ * (`overrides_target_uniq` sur `(ruleset_id, entry_key, coalesce(block_type,''))`,
+ * SCHEMA.md §9.4) : pour une fiche entierement maison, cet upsert REMPLACE
+ * la ligne `add_entry` existante — plus aucune donnee pour la reconstruire,
+ * `applyOverrides` renvoie `null`, la fiche disparait reellement des
+ * listings. Jamais de suppression physique de ligne : coherent avec
+ * `ruleset_overrides` en journal append-only (SCHEMA.md §9.4), juste une
+ * nouvelle ligne qui rend l'ancienne sans effet.
+ */
+export async function disableRulesetEntry(
+  supabase: TypedClient,
+  params: { rulesetId: string; entryKey: string }
+): Promise<DisableRulesetEntryResult> {
+  const ruleset = await getRulesetById(supabase, params.rulesetId);
+  if (!ruleset) return "not_found";
+  if (ruleset.is_official_base) return "official";
+
+  await upsertRulesetOverride(supabase, {
+    rulesetId: params.rulesetId,
+    entryKey: params.entryKey,
+    blockType: null,
+    action: "disable_entry",
+    payload: {},
+    patch: null,
+    note: null,
+  });
+  return "ok";
 }

@@ -40,7 +40,7 @@ export async function updateDisplayNameAction(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Session expiree, reconnectez-vous." };
+  if (!user) return { error: "Session expirée, reconnectez-vous." };
 
   await updateOwnProfile(supabase, user.id, { displayName: parsed.data.displayName });
   revalidatePath("/", "layout");
@@ -71,10 +71,10 @@ export async function updateOwnPasswordAction(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Session expiree, reconnectez-vous." };
+  if (!user) return { error: "Session expirée, reconnectez-vous." };
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
-  if (error) return { error: "Impossible de mettre a jour le mot de passe." };
+  if (error) return { error: "Impossible de mettre à jour le mot de passe." };
 
   return { ok: true };
 }

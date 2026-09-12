@@ -188,7 +188,7 @@ export default function FamilyTreeCanvas({
   }
 
   if (tree.nodes.length === 0) {
-    return <p className="text-sm text-ink-muted">Aucune parente visible pour l&apos;instant.</p>;
+    return <p className="text-sm text-ink-muted">Aucune parenté visible pour l&apos;instant.</p>;
   }
 
   // Survol d'un portrait : lui + ses voisins directs restent nets, le

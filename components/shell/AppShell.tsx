@@ -21,6 +21,7 @@ export default function AppShell({
   campaignName,
   campaignId,
   children,
+  overlay,
 }: {
   worldName: string;
   worldSlug: string;
@@ -29,6 +30,17 @@ export default function AppShell({
   /** V2-M11 (volet de lancer de des) : meme regle "un monde = une campagne" que `campaignName` — `null` avant la creation de la premiere campagne. */
   campaignId: string | null;
   children: React.ReactNode;
+  /**
+   * Emplacement pour un contenu monte une seule fois, HORS du flux flex de
+   * `{children}` mais toujours a l'interieur de `DiceRollProvider`/
+   * `ChatUnreadProvider` (audit de performance, retour utilisateur) —
+   * `AvecWindowsLayer.tsx` (fenetres secondaires, partagees entre les trois
+   * sections) en a besoin : montee comme simple sœur d'`AppShell` dans
+   * `app/m/[worldSlug]/layout.tsx`, une fiche de personnage ouverte en
+   * fenetre secondaire perdait `useDiceRoll`/`useChatUnread` ("doit etre
+   * appele sous DiceRollProvider") faute d'etre sous ces contextes.
+   */
+  overlay?: React.ReactNode;
 }) {
   const t = useTranslations("shell");
   const pathname = usePathname();
@@ -72,6 +84,7 @@ export default function AppShell({
 
           <div className="flex flex-1 overflow-hidden">{children}</div>
         </div>
+        {overlay}
       </ChatUnreadProvider>
     </DiceRollProvider>
   );

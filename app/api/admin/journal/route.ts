@@ -2,13 +2,15 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isSuperadmin } from "@/src/server/services/account";
 import { getMergedJournalForWorld } from "@/src/server/services/activityJournal";
+import { journalQuerySchema, searchParamsToObject } from "@/lib/queryParams/schemas";
 
 /** V2-M6 (Lot M) — journal fusionné (révisions de fiches + événements de jeu) pour UN monde, tous comptes confondus. */
 export async function GET(request: NextRequest) {
-  const worldId = request.nextUrl.searchParams.get("worldId");
-  if (!worldId) {
-    return NextResponse.json({ error: "worldId requis." }, { status: 400 });
+  const parsed = journalQuerySchema.safeParse(searchParamsToObject(request.nextUrl.searchParams));
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Parametres invalides." }, { status: 400 });
   }
+  const { worldId } = parsed.data;
 
   const supabase = await createClient();
   const {

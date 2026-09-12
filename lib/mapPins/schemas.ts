@@ -11,7 +11,7 @@ import { zVisibilityInput } from "@/lib/visibility/schemas";
 export const createMapPinSchema = z.object({
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
-  label: z.string().trim().max(200, "200 caracteres maximum.").default(""),
+  label: z.string().trim().max(200, "200 caractères maximum.").default(""),
   ref: zMapElementRef.nullable().default(null),
   size: zMapPinSize.default("medium"),
   layerId: z.string().nullable().default(null),
@@ -21,7 +21,7 @@ export const createMapPinSchema = z.object({
 export const updateMapPinSchema = z.object({
   x: z.number().min(0).max(1).optional(),
   y: z.number().min(0).max(1).optional(),
-  label: z.string().trim().max(200, "200 caracteres maximum.").optional(),
+  label: z.string().trim().max(200, "200 caractères maximum.").optional(),
   ref: zMapElementRef.nullable().optional(),
   size: zMapPinSize.optional(),
   layerId: z.string().nullable().optional(),

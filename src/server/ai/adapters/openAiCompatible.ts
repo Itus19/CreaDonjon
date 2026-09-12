@@ -123,7 +123,7 @@ export function getOpenAiCompatibleProviderFromEnv(): OpenAiCompatibleProvider {
   const baseUrl = process.env.AI_LOCAL_BASE_URL;
   const model = process.env.AI_LOCAL_MODEL;
   if (!baseUrl || !model) {
-    throw new Error("AI_LOCAL_BASE_URL et AI_LOCAL_MODEL doivent etre definis (.env.local) pour utiliser l'editeur de regle assiste.");
+    throw new Error("AI_LOCAL_BASE_URL et AI_LOCAL_MODEL doivent être définis (.env.local) pour utiliser l'éditeur de règle assisté.");
   }
   return new OpenAiCompatibleProvider({ baseUrl, model });
 }

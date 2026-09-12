@@ -145,12 +145,106 @@ export async function listOverridesForRuleset(
 ): Promise<RulesetOverrideRow[]> {
   const { data, error } = await supabase
     .from("ruleset_overrides")
-    .select("block_type, action, payload, patch")
+    .select("block_type, action, payload, patch, created_at")
     .eq("ruleset_id", rulesetId)
     .eq("entry_key", entryKey)
     .order("created_at");
   if (error) throw new Error(error.message);
-  return data;
+  // `created_at` n'est PAS fiable pour ordonner deux `add_block` entre eux
+  // (retour utilisateur : l'ordre des blocs d'une fiche maison ne suivait
+  // pas l'ordre saisi — trouve en pratique sur une fiche recreee : le bloc
+  // `background` gardait le timestamp de sa toute PREMIERE ecriture malgre
+  // plusieurs recreations, l'upsert sur le meme index unique
+  // `(entry_key, block_type)` ne rafraichissant que payload/patch, jamais
+  // `created_at` — deux `add_block` distants dans le temps pouvaient donc se
+  // retrouver dans le mauvais ordre l'un par rapport a l'autre). Seul
+  // `display_order` (deja porte par le payload d'un `add_block`, ecrit par
+  // l'appelant a chaque import — l'ordre reellement voulu) fait foi entre
+  // deux `add_block` ; les autres actions (`add_entry`/`disable_entry`,
+  // `patch_block`/`replace_block`/`remove_block`) gardent l'ordre
+  // chronologique — leur position ne deplace jamais un bloc dans la liste
+  // finale, `applyOverrides` les applique en place sur le bloc deja present.
+  return sortOverrideRows(data);
+}
+
+function sortOverrideRows(rows: { block_type: string | null; action: string; payload: Json; patch: Json | null; created_at: string }[]): RulesetOverrideRow[] {
+  return [...rows]
+    .sort((a, b) => {
+      if (a.action === "add_block" && b.action === "add_block") {
+        const orderA = (a.payload as { display_order?: number } | null)?.display_order ?? 0;
+        const orderB = (b.payload as { display_order?: number } | null)?.display_order ?? 0;
+        if (orderA !== orderB) return orderA - orderB;
+      }
+      return a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0;
+    })
+    .map(({ block_type, action, payload, patch }) => ({ block_type, action, payload, patch }));
+}
+
+/**
+ * Meme regle, surcharges de PLUSIEURS rulesets en une seule requete (audit
+ * de performance) — remplace `listOverridesForRuleset` appele niveau par
+ * niveau sur toute une chaine deja connue (`resolveEntryBlocksInRuleset`,
+ * `getRuleEntryForWorld`, `resolveHomebrewEntryDisplay`) : un personnage
+ * resout une dizaine de cles en parallele, chacune remontant toute la
+ * chaine — jusqu'a 8 requetes sequentielles par cle rien que pour ça.
+ */
+export async function listOverridesAcrossRulesets(
+  supabase: TypedClient,
+  rulesetIds: string[],
+  entryKey: string
+): Promise<Map<string, RulesetOverrideRow[]>> {
+  const result = new Map<string, RulesetOverrideRow[]>();
+  if (rulesetIds.length === 0) return result;
+  const { data, error } = await supabase
+    .from("ruleset_overrides")
+    .select("ruleset_id, block_type, action, payload, patch, created_at")
+    .in("ruleset_id", rulesetIds)
+    .eq("entry_key", entryKey);
+  if (error) throw new Error(error.message);
+  const byRuleset = new Map<string, typeof data>();
+  for (const row of data) {
+    const list = byRuleset.get(row.ruleset_id) ?? [];
+    list.push(row);
+    byRuleset.set(row.ruleset_id, list);
+  }
+  for (const [rulesetId, rows] of byRuleset) {
+    result.set(rulesetId, sortOverrideRows(rows));
+  }
+  return result;
+}
+
+/**
+ * Meme regle, PLUSIEURS cles a la fois (audit de performance) — remplace
+ * `listOverridesAcrossRulesets` appele une fois par cle
+ * (`fetchEquipmentBlocks`, un objet d'inventaire a la fois).
+ */
+export async function listOverridesAcrossRulesetsForKeys(
+  supabase: TypedClient,
+  rulesetIds: string[],
+  entryKeys: string[]
+): Promise<Map<string, Map<string, RulesetOverrideRow[]>>> {
+  const result = new Map<string, Map<string, RulesetOverrideRow[]>>();
+  if (rulesetIds.length === 0 || entryKeys.length === 0) return result;
+  const { data, error } = await supabase
+    .from("ruleset_overrides")
+    .select("ruleset_id, entry_key, block_type, action, payload, patch, created_at")
+    .in("ruleset_id", rulesetIds)
+    .in("entry_key", entryKeys);
+  if (error) throw new Error(error.message);
+  const byKeyThenRuleset = new Map<string, Map<string, typeof data>>();
+  for (const row of data) {
+    const byRuleset = byKeyThenRuleset.get(row.entry_key) ?? new Map<string, typeof data>();
+    const list = byRuleset.get(row.ruleset_id) ?? [];
+    list.push(row);
+    byRuleset.set(row.ruleset_id, list);
+    byKeyThenRuleset.set(row.entry_key, byRuleset);
+  }
+  for (const [entryKey, byRuleset] of byKeyThenRuleset) {
+    const sorted = new Map<string, RulesetOverrideRow[]>();
+    for (const [rulesetId, rows] of byRuleset) sorted.set(rulesetId, sortOverrideRows(rows));
+    result.set(entryKey, sorted);
+  }
+  return result;
 }
 
 export interface EntryLevelOverrideRow {
@@ -259,6 +353,55 @@ export async function getRulesetEntryByKey(
     .eq("ruleset_id", rulesetId)
     .eq("entry_key", entryKey)
     .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * Meme regle, cherchee en une seule requete a travers PLUSIEURS rulesets —
+ * pense pour une chaine d'heritage deja connue de l'appelant (audit de
+ * performance, retour utilisateur). Remplace un `getRulesetEntryByKey`
+ * appele une fois par niveau de chaine, sequentiellement, jusqu'a trouver
+ * une reponse (`getRuleEntryForWorld`/`resolveEntryBlocksInRuleset`) : sur
+ * une chaine base -> variante -> variante personnelle, chercher une regle
+ * officielle (la grande majorite du contenu) marchait jusqu'a 8 requetes en
+ * serie pour finir par trouver la reponse au niveau le plus ancestral.
+ * `rulesetIds` doit rester dans l'ordre feuille -> racine : l'appelant
+ * choisit la ligne du ruleset le plus specifique qui a une reponse parmi
+ * celles renvoyees, jamais cette fonction (elle ne connait pas cet ordre).
+ */
+export async function getRulesetEntryByKeyAcrossRulesets(
+  supabase: TypedClient,
+  rulesetIds: string[],
+  entryKey: string
+): Promise<RulesetEntryRow[]> {
+  if (rulesetIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("ruleset_entries")
+    .select("id, ruleset_id, entry_key, entry_type, source_attribution, source_raw")
+    .in("ruleset_id", rulesetIds)
+    .eq("entry_key", entryKey);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * Meme regle, PLUSIEURS cles a la fois a travers toute une chaine (audit de
+ * performance) — remplace `getRulesetEntryByKeyAcrossRulesets` appele une
+ * fois par cle (`fetchEquipmentBlocks`, un aller-retour par objet
+ * d'inventaire, en parallele mais quand meme un aller-retour chacun).
+ */
+export async function getRulesetEntriesByKeysAcrossRulesets(
+  supabase: TypedClient,
+  rulesetIds: string[],
+  entryKeys: string[]
+): Promise<RulesetEntryRow[]> {
+  if (rulesetIds.length === 0 || entryKeys.length === 0) return [];
+  const { data, error } = await supabase
+    .from("ruleset_entries")
+    .select("id, ruleset_id, entry_key, entry_type, source_attribution, source_raw")
+    .in("ruleset_id", rulesetIds)
+    .in("entry_key", entryKeys);
   if (error) throw new Error(error.message);
   return data;
 }

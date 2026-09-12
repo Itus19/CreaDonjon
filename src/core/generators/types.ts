@@ -14,10 +14,43 @@
  * tirage (tous les emplacements `table`) fonctionne a l'identique.
  */
 
+/**
+ * Filtre par palier applique a la table d'un emplacement AVANT le tirage
+ * (V2-J9quater, "un fonctionnement qui marche partout pareil" — retour
+ * utilisateur). La table elle-meme porte TOUTES les entrees, tous paliers
+ * confondus (`TableEntry.tier`, src/core/tables/types.ts) ; c'est ce
+ * filtre qui decide lesquelles sont eligibles pour CE tirage precis.
+ */
+export interface GeneratorTableSlotTier {
+  /** Cle de l'axe de variante de l'outil (ex. "wealth") dont la valeur resolue pilote le filtre. */
+  axis: string;
+  /**
+   * `"exact"` : ne garde que les entrees dont `tier` correspond a `target`
+   * une fois interpole (ex. "{wealth_below}" — le Menu de Taverne veut 3
+   * points de prix distincts, pas une plage). `"ceiling"` : garde toute
+   * entree dont le palier est <= la valeur resolue de l'axe (un objet rare
+   * n'apparait jamais dans un contexte modeste, mais un objet commun reste
+   * toujours possible dans un contexte reputee) — `target` est alors ignore.
+   */
+  match: "exact" | "ceiling";
+  /** Gabarit interpolable avec les memes cles que `GeneratorTableSlot.table` (ex. "{wealth}") — requis seulement pour `match: "exact"`. */
+  target?: string;
+}
+
 export interface GeneratorTableSlot {
   key: string;
   /** Cle d'un bloc `random_table` porte par la meme entite (src/core/tables/types.ts RandomTableData.key). */
   table: string;
+  /**
+   * Nombre de resultats a tirer sur la MEME table pour cet emplacement
+   * (V2-J9, ex. un menu de taverne : 5 plats en un seul emplacement plutot
+   * que 5 emplacements identiques) — reutilise `drawMultiple` deja
+   * existant (src/core/tables/roll.ts), qui respecte deja `unique_draws`.
+   * Absent ou <= 1 : un seul tirage, comportement inchange.
+   */
+  count?: number;
+  /** Filtre par palier (V2-J9quater) — absent : toutes les entrees de la table restent eligibles, comportement inchange. */
+  tier?: GeneratorTableSlotTier;
 }
 
 export interface GeneratorProseSlot {

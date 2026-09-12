@@ -97,7 +97,7 @@ export default function ImportWorldForm({ canUseSoloMode }: { canUseSoloMode: bo
             onChange={(v) => setMode(v as "campaign" | "solo")}
             options={modeOptions}
             aria-label="Mode de jeu"
-            className="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+            triggerClassName="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
           />
           <button
             type="button"

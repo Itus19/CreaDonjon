@@ -53,13 +53,21 @@ export default async function RootLayout({
   // (compte, suppression...) : absent sur /login, /signup, /partage/*.
   const supabase = await createClient();
   const user = await getAuthUser(supabase);
-  const profile = user ? await getOwnProfile(supabase, user.id) : null;
 
   // Fond d'ecran personnel (V2-G4 reformule) : meme technique que
   // data-mode/data-contrast ci-dessus (cookie lu et applique cote serveur,
   // avant le premier rendu) — aucun scintillement au chargement.
   const backgroundRef = cookieStore.get("background")?.value;
-  const background = await resolveBackgroundSelection(supabase, backgroundRef);
+
+  // Les deux partent ENSEMBLE (audit P-02) : le profil depend de `user`, le
+  // fond ne depend que d'un cookie — rien ne les enchaine. Une vague de
+  // moins sur CHAQUE page de l'application, celle-ci etant le layout
+  // racine. (`resolveBackgroundSelection` ne fait meme aucune requete pour
+  // un fond fourni par l'application : elle repond depuis une constante.)
+  const [profile, background] = await Promise.all([
+    user ? getOwnProfile(supabase, user.id) : Promise.resolve(null),
+    resolveBackgroundSelection(supabase, backgroundRef),
+  ]);
 
   // Flou du fond, reglable (retour utilisateur) : --bg-blur est distinct de
   // --blur (flou verre depoli des fenetres/panneaux, app/globals.css) —

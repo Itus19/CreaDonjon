@@ -35,18 +35,41 @@ export const MJ_TOOL_LABELS: Record<MjToolKey, string> = {
 };
 
 /**
+ * Cles fixes des formulaires de creation de regle maison (retour
+ * utilisateur : "que cette fenetre de creation d'historique, de don ou de
+ * n'importe quelle regle soit une fenetre mobile comme les autres fiches" —
+ * pouvoir ouvrir "creer un don" par-dessus "creer un historique" sans perdre
+ * son brouillon) — meme motif ferme que `MJ_TOOL_KEYS` : ces formulaires ne
+ * sont pas tires d'une table, une union litterale suffit.
+ */
+export const RULE_TOOL_KEYS = ["nouvel-historique", "nouveau-don", "nouvelle-arme", "bac-a-sable"] as const;
+export type RuleToolKey = (typeof RULE_TOOL_KEYS)[number];
+
+export const RULE_TOOL_LABELS: Record<RuleToolKey, string> = {
+  "nouvel-historique": "Créer un historique personnalisé",
+  "nouveau-don": "Créer un don ou une aptitude",
+  "nouvelle-arme": "Créer une arme maison",
+  "bac-a-sable": "Bac à sable de formule",
+};
+
+/**
  * Adressage d'une fenetre ouverte (ADR-0011) : `?avec=` melange desormais
  * des entites de monde, des entrees de regle et des outils MJ. Prefixe
  * explicite (`entite:`/`regle:`/`outil:`) plutot que deviner le type en
  * cherchant la cle dans plusieurs tables — plus rapide, jamais ambigu si un
  * slug existe des deux cotes.
  */
-export type WindowRef = { kind: "entity"; key: string } | { kind: "rule"; key: string } | { kind: "mj"; key: MjToolKey };
+export type WindowRef =
+  | { kind: "entity"; key: string }
+  | { kind: "rule"; key: string }
+  | { kind: "mj"; key: MjToolKey }
+  | { kind: "rule-tool"; key: RuleToolKey };
 
 const PREFIX: Record<WindowRef["kind"], string> = {
   entity: "entite",
   rule: "regle",
   mj: "outil",
+  "rule-tool": "outil-regle",
 };
 
 export function refId(ref: WindowRef): string {
@@ -62,6 +85,9 @@ export function parseRefId(id: string): WindowRef | null {
   if (prefix === PREFIX.entity) return { kind: "entity", key };
   if (prefix === PREFIX.rule) return { kind: "rule", key };
   if (prefix === PREFIX.mj && (MJ_TOOL_KEYS as readonly string[]).includes(key)) return { kind: "mj", key: key as MjToolKey };
+  if (prefix === PREFIX["rule-tool"] && (RULE_TOOL_KEYS as readonly string[]).includes(key)) {
+    return { kind: "rule-tool", key: key as RuleToolKey };
+  }
   return null;
 }
 
@@ -94,12 +120,13 @@ export function mjToolHref(worldSlug: string, key: MjToolKey): string {
 export function windowHref(worldSlug: string, ref: WindowRef): string {
   if (ref.kind === "entity") return `/m/${worldSlug}/f/${ref.key}`;
   if (ref.kind === "rule") return `/m/${worldSlug}/regles/${ref.key}`;
+  if (ref.kind === "rule-tool") return `/m/${worldSlug}/regles/${ref.key}`;
   return mjToolHref(worldSlug, ref.key);
 }
 
 export function sectionHomeHref(worldSlug: string, kind: WindowRef["kind"]): string {
   if (kind === "entity") return `/m/${worldSlug}`;
-  if (kind === "rule") return `/m/${worldSlug}/regles`;
+  if (kind === "rule" || kind === "rule-tool") return `/m/${worldSlug}/regles`;
   return `/m/${worldSlug}/mj`;
 }
 
@@ -109,6 +136,7 @@ export function windowContentLabel(
   data: EntityWindowData | RuleEntryDetail | MjToolWindowData | undefined
 ): { name: string; badge: string | null } {
   if (ref.kind === "mj") return { name: MJ_TOOL_LABELS[ref.key], badge: null };
+  if (ref.kind === "rule-tool") return { name: RULE_TOOL_LABELS[ref.key], badge: null };
   if (!data || !("entity" in data || "entryType" in data)) return { name: ref.key, badge: null };
   if ("entity" in data) return { name: data.entity.name, badge: data.entity.entity_kind };
   return { name: data.name, badge: data.entryType };

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
+import Checkbox from "@/components/shared/Checkbox";
 
 const WRAP_MODE_OPTIONS: { value: ImageBlockData["wrapMode"]; label: string; title: string }[] = [
   { value: "intercalate", label: "Intercaler", title: "L'image reste un bloc à part entière, pleine largeur" },
@@ -105,6 +106,8 @@ export default function ImageBlockEditor({
           <img
             src={data.url}
             alt={data.caption}
+            loading="lazy"
+            decoding="async"
             className="max-h-60 w-auto shrink-0 self-start rounded-md object-cover"
           />
           <div className="flex flex-1 flex-col gap-3 text-xs">
@@ -172,14 +175,11 @@ export default function ImageBlockEditor({
                 de la meme entite (reflete au prochain rechargement). */}
             <div className="flex flex-col gap-1">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Fond de page</span>
-              <label className="flex items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  checked={data.useAsWikiBackground}
-                  onChange={(e) => onChange({ ...data, useAsWikiBackground: e.target.checked })}
-                />
-                Définir comme fond du wiki de cette fiche
-              </label>
+              <Checkbox
+                checked={data.useAsWikiBackground}
+                onChange={() => onChange({ ...data, useAsWikiBackground: !data.useAsWikiBackground })}
+                label="Définir comme fond du wiki de cette fiche"
+              />
             </div>
             {data.useAsWikiBackground && (
               <>

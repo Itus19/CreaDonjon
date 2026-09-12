@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import type { RandomTableBlockData } from "@/src/core/schemas/blocks/randomTable";
-import type { TableEntry } from "@/src/core/tables/types";
+import type { TableEntry, TableEntryPrice } from "@/src/core/tables/types";
+import { CURRENCY_ORDER, type CoinType } from "@/src/core/rules/currency";
+import { CURRENCY_LABELS_FR, formatTableEntryPrice } from "@/src/i18n/fr";
+import Checkbox from "@/components/shared/Checkbox";
+import Dropdown from "@/components/shared/Dropdown";
 
 interface ResolvedDraw {
   text: string;
+  price?: TableEntryPrice;
 }
 
 /**
@@ -37,6 +42,26 @@ export default function RandomTableBlockEditor({
 
   function updateEntry(index: number, patch: Partial<TableEntry>) {
     onChange({ ...data, entries: data.entries.map((e, i) => (i === index ? { ...e, ...patch } : e)) });
+  }
+
+  /** Montant vide -> pas de prix du tout (`price` retire), plutot qu'un prix a 0 pc par defaut — la plupart des tables n'ont aucune notion de prix. */
+  function updateEntryAmount(index: number, entry: TableEntry, raw: string) {
+    if (raw.trim() === "") {
+      updateEntry(index, { price: undefined });
+      return;
+    }
+    const amount = Number(raw);
+    if (Number.isNaN(amount)) return;
+    updateEntry(index, { price: { amount, coin: entry.price?.coin ?? "cp" } });
+  }
+
+  function updateEntryCoin(index: number, entry: TableEntry, coin: CoinType) {
+    updateEntry(index, { price: { amount: entry.price?.amount ?? 0, coin } });
+  }
+
+  /** Cle libre (V2-J9quater) — cette entree est editee sans connaitre l'axe qui s'y applique (ex. "wealth"), donc pas de liste deroulante ici : l'auteur tape la cle d'option exacte ("modeste", "rare"...). Vide -> `tier` retire, l'entree redevient eligible a tout palier. */
+  function updateEntryTier(index: number, raw: string) {
+    updateEntry(index, { tier: raw.trim() === "" ? undefined : raw.trim() });
   }
 
   function removeEntry(index: number) {
@@ -91,14 +116,12 @@ export default function RandomTableBlockEditor({
             className="w-16 rounded-md border border-edge bg-transparent px-1.5 py-0.5 text-xs text-ink outline-none"
           />
         </label>
-        <label className="flex items-center gap-1 text-xs text-ink-muted">
-          <input
-            type="checkbox"
-            checked={data.unique_draws}
-            onChange={(e) => onChange({ ...data, unique_draws: e.target.checked })}
-          />
-          Sans répétition
-        </label>
+        <Checkbox
+          checked={data.unique_draws}
+          onChange={() => onChange({ ...data, unique_draws: !data.unique_draws })}
+          label="Sans répétition"
+          className="text-xs text-ink-muted"
+        />
         <input
           value={data.attribution ?? ""}
           onChange={(e) => onChange({ ...data, attribution: e.target.value || undefined })}
@@ -130,6 +153,31 @@ export default function RandomTableBlockEditor({
               onChange={(e) => updateEntry(index, { text: e.target.value })}
               placeholder="Résultat…"
               className="flex-1 bg-transparent text-sm text-ink outline-none"
+            />
+            <div className="flex shrink-0 items-center gap-1 text-xs text-ink-muted">
+              <input
+                type="number"
+                min={0}
+                value={entry.price?.amount ?? ""}
+                onChange={(e) => updateEntryAmount(index, entry, e.target.value)}
+                placeholder="Prix"
+                title="Prix (facultatif)"
+                className="w-14 rounded-md border border-edge bg-transparent px-1 py-0.5 text-center outline-none"
+              />
+              <Dropdown
+                value={entry.price?.coin ?? "cp"}
+                onChange={(v) => updateEntryCoin(index, entry, v as CoinType)}
+                disabled={entry.price === undefined}
+                aria-label="Pièce"
+                options={CURRENCY_ORDER.map((coin) => ({ value: coin, label: CURRENCY_LABELS_FR[coin] }))}
+              />
+            </div>
+            <input
+              value={entry.tier ?? ""}
+              onChange={(e) => updateEntryTier(index, e.target.value)}
+              placeholder="Palier"
+              title="Palier sur un axe de variante (facultatif, ex. « modeste »)"
+              className="w-20 shrink-0 rounded-md border border-edge bg-transparent px-1.5 py-0.5 text-xs text-ink outline-none"
             />
             <button type="button" onClick={() => removeEntry(index)} className="text-xs text-danger hover:underline">
               ×
@@ -168,8 +216,9 @@ export default function RandomTableBlockEditor({
         {draws && (
           <ul className="flex flex-col gap-1 rounded-md border border-edge/60 bg-panel-sunken p-2 text-sm">
             {draws.map((d, i) => (
-              <li key={i} className="text-ink">
-                {d.text}
+              <li key={i} className="flex items-baseline justify-between gap-2 text-ink">
+                <span>{d.text}</span>
+                {formatTableEntryPrice(d.price) && <span className="text-ink-muted">{formatTableEntryPrice(d.price)}</span>}
               </li>
             ))}
           </ul>

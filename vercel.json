@@ -1,4 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "_commentaire_regions": "V3-R6 (audit P-05) — dub1, et il faut que ca le reste. La base Supabase du projet est en West EU (Ireland), eu-west-1 : la region Vercel dub1 EST eu-west-1, les fonctions et la base sont donc deja dans le meme centre de donnees. Verifie le 12 septembre dans le tableau de bord Supabase. P-05 est referme : il n'y avait rien a corriger. Ne pas passer a cdg1 (Paris) en croyant se rapprocher : cela ajouterait un aller-retour Paris<->Dublin a CHACUNE des vagues de rendu. Si la base est un jour migree, cette ligne doit suivre la nouvelle region.",
   "regions": ["dub1"]
 }

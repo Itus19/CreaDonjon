@@ -27,7 +27,7 @@ export async function PATCH(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const result = await reorderBlock(supabase, {
@@ -42,10 +42,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Bloc introuvable." }, { status: 404 });
     }
     if (result.reason === "forbidden") {
-      return NextResponse.json({ error: "Vous n'avez pas le droit de reorganiser ce bloc." }, { status: 403 });
+      return NextResponse.json({ error: "Vous n'avez pas le droit de réorganiser ce bloc." }, { status: 403 });
     }
     return NextResponse.json(
-      { error: "Ce bloc a ete modifie entre-temps. Rechargez avant de reessayer." },
+      { error: "Ce bloc a été modifié entre-temps. Rechargez avant de réessayer." },
       { status: 409 }
     );
   }

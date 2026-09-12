@@ -20,7 +20,11 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    // `lib/` ajoute a `src/` (B-06) : les schemas Zod partages y vivent, et
+    // jusqu'ici aucun test place a cote d'eux n'aurait ete execute — un
+    // test invisible est pire qu'un test absent. `test:core` reste borne a
+    // `src/core` par son argument de ligne de commande, inchange.
+    include: ["src/**/*.test.ts", "lib/**/*.test.ts"],
     setupFiles: ["./vitest.setup.ts"],
     coverage: {
       provider: "v8",

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
 import { useOpenRuleLink } from "@/components/shell/useOpenRuleLink";
+import { useOpenRuleToolLink } from "@/components/shell/useOpenRuleToolLink";
 import { useCollapsedGroups } from "@/components/shell/useCollapsedGroups";
 import SectionToggle from "@/components/shell/SectionToggle";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
@@ -146,6 +147,15 @@ export default function RulesSidebar({ worldSlug }: { worldSlug: string }) {
   const match = pathname.match(/\/regles\/([^/]+)/);
   const currentKey = match ? decodeURIComponent(match[1]) : null;
 
+  // Fenetres flottantes de creation de regle (retour utilisateur, V2 —
+  // "comme les autres fiches") : memes hooks `useOpenXLink` que les entrees
+  // de regle/outils MJ, jamais une simple navigation qui fermerait le
+  // brouillon en cours d'une autre fenetre deja ouverte.
+  const openNouvelleArme = useOpenRuleToolLink(worldSlug, "nouvelle-arme");
+  const openNouvelHistorique = useOpenRuleToolLink(worldSlug, "nouvel-historique");
+  const openNouveauDon = useOpenRuleToolLink(worldSlug, "nouveau-don");
+  const openBacASable = useOpenRuleToolLink(worldSlug, "bac-a-sable");
+
   const { groups, subclassesByParent, subspeciesByParent, classNameByKey } = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = q === "" ? entries : entries.filter((e) => e.name.toLowerCase().includes(q));
@@ -230,7 +240,7 @@ export default function RulesSidebar({ worldSlug }: { worldSlug: string }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 top-14 z-50 flex w-[280px] shrink-0 flex-col gap-3 border-r border-edge bg-panel-sunken p-4 transition-transform md:static md:top-0 md:z-auto md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 top-14 z-50 flex w-[280px] shrink-0 flex-col gap-3 border-r border-edge bg-panel-sunken p-4 transition-transform md:static md:top-0 md:z-auto md:h-screen md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -265,14 +275,17 @@ export default function RulesSidebar({ worldSlug }: { worldSlug: string }) {
             label={t("ajouterUneRegle")}
             onNavigate={() => setOpen(false)}
             items={[
-              { href: `/m/${worldSlug}/regles/nouvelle-arme`, label: t("creerArmeMaison") },
-              { href: `/m/${worldSlug}/regles/nouvel-historique`, label: t("creerHistoriqueMaison") },
-              { href: `/m/${worldSlug}/regles/nouveau-don`, label: t("creerDonMaison") },
+              { href: openNouvelleArme.href, label: t("creerArmeMaison"), onClick: openNouvelleArme.onClick },
+              { href: openNouvelHistorique.href, label: t("creerHistoriqueMaison"), onClick: openNouvelHistorique.onClick },
+              { href: openNouveauDon.href, label: t("creerDonMaison"), onClick: openNouveauDon.onClick },
             ]}
           />
           <Link
-            href={`/m/${worldSlug}/regles/bac-a-sable`}
-            onClick={() => setOpen(false)}
+            href={openBacASable.href}
+            onClick={(e) => {
+              openBacASable.onClick(e);
+              setOpen(false);
+            }}
             className="block w-full rounded-full border border-edge px-4 py-2 text-center text-sm font-medium text-ink transition-colors hover:bg-panel-raised"
           >
             {t("bacASable")}

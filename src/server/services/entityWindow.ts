@@ -16,6 +16,7 @@ import { getPortraitLayout } from "@/src/server/services/entityPortraits";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { listPlayerVisibleEntityIds } from "@/src/server/services/entities";
+import { timed } from "@/src/server/perf";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -51,30 +52,42 @@ export interface EntityWindowData {
  * `null` si le monde, la fiche ou l'utilisateur sont introuvables —
  * chaque appelant traduit ça dans son propre format (404 Next.js pour la
  * page, reponse JSON 404 pour la route API).
+ *
+ * `getAuthUser` en parallele du lookup de monde (audit de performance,
+ * retour utilisateur) : elle ne depend ni de `worldSlug` ni de `entity`
+ * (juste de la session), mais revalide aupres du serveur d'authentification
+ * a CHAQUE appel (`supabase.auth.getUser()`, jamais une simple lecture
+ * locale — voir le commentaire sur `getAuthUser`, lib/supabase/server.ts) :
+ * un vrai aller-retour reseau, attendu ici en SERIE apres deux autres,
+ * alors que rien ne l'y oblige. Chemin le plus emprunte de toute l'appli
+ * (chaque ouverture de fiche) : economiser un aller-retour ici compte.
  */
 export async function getEntityWindowData(
   supabase: TypedClient,
   worldSlug: string,
   entitySlug: string
 ): Promise<EntityWindowData | null> {
-  const world = await getWorldBySlug(supabase, worldSlug);
-  if (!world) return null;
+  const [world, user] = await timed("entityWindow/monde+session", () =>
+    Promise.all([getWorldBySlug(supabase, worldSlug), getAuthUser(supabase)])
+  );
+  if (!world || !user) return null;
 
-  const entity = await getEntityBySlug(supabase, world.id, entitySlug);
+  const entity = await timed("entityWindow/fiche", () => getEntityBySlug(supabase, world.id, entitySlug));
   if (!entity) return null;
 
-  const user = await getAuthUser(supabase);
-  if (!user) return null;
-
-  const [blocks, relations, allEntities, worldCustomKinds, campaigns, portraitLayout, admin] = await Promise.all([
-    listVisibleBlocks(supabase, world.id, entity.id, user.id),
-    listVisibleRelations(supabase, world.id, entity.id, user.id),
-    listEntitiesForWorld(supabase, world.id),
-    listCustomEntityKindsForWorld(supabase, world.id),
-    listCampaigns(supabase, world.id),
-    getPortraitLayout(supabase, entity.id),
-    isWorldAdmin(supabase, { worldId: world.id, userId: user.id }),
-  ]);
+  const [blocks, relations, allEntities, worldCustomKinds, campaigns, portraitLayout, admin] = await timed(
+    "entityWindow/contenu (7 requetes en parallele)",
+    () =>
+      Promise.all([
+        listVisibleBlocks(supabase, world.id, entity.id, user.id),
+        listVisibleRelations(supabase, world.id, entity.id, user.id),
+        listEntitiesForWorld(supabase, world.id),
+        listCustomEntityKindsForWorld(supabase, world.id),
+        listCampaigns(supabase, world.id),
+        getPortraitLayout(supabase, entity.id),
+        isWorldAdmin(supabase, { worldId: world.id, userId: user.id }),
+      ])
+  );
 
   // Retour utilisateur : une fiche masquee aux joueurs (aucun bloc visible)
   // apparaissait quand meme dans "lien vers une fiche"/le "+" du bloc

@@ -19,7 +19,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const locale = (await getLocale()) as Locale;
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   });
 
   if ("error" in result) {
-    return NextResponse.json({ error: "Fiche de personnage introuvable ou sans ruleset resolvable." }, { status: 404 });
+    return NextResponse.json({ error: "Fiche de personnage introuvable ou sans ruleset résolvable." }, { status: 404 });
   }
   return NextResponse.json(result, { status: 200 });
 }

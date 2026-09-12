@@ -47,6 +47,8 @@ export default function RelationsGraphNodeCard({
             ref={checkAlreadyLoaded}
             src={`/api/entities/${id}/portrait`}
             alt=""
+            loading="lazy"
+            decoding="async"
             onLoad={() => setStatus("loaded")}
             onError={() => setStatus("error")}
             className={`h-full w-full object-cover ${status === "loaded" ? "" : "hidden"}`}

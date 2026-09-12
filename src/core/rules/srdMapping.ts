@@ -1,6 +1,16 @@
 import type { Ability, Modifier, Prerequisite } from "./sheet";
 import { formatFormulaNode } from "../formula/format";
-import type { ArmorBlockData, BackgroundBlockData, Quantity, WeaponBlockData } from "../schemas/rule-blocks";
+import type {
+  ActionsBlockData,
+  ArmorBlockData,
+  BackgroundBlockData,
+  LegendaryActionsBlockData,
+  Quantity,
+  StatBlockBlockData,
+  TraitsBlockData,
+  WeaponBlockData,
+} from "../schemas/rule-blocks";
+import type { StatblockBlockData } from "../schemas/blocks/statblock";
 
 /**
  * Traduction des donnees SRD deja importees (ruleset_entries, V1-A1/A2)
@@ -585,4 +595,48 @@ export function extractLanguages(fields: ParsedFields): LanguageEntry[] {
   return (raw as { index?: string; name?: string }[])
     .filter((l): l is { index: string; name?: string } => typeof l.index === "string")
     .map((l) => ({ key: l.index, name: l.name ?? l.index }));
+}
+
+/**
+ * Blocs de regle d'un monstre (`stat_block`/`traits`/`actions`/
+ * `legendary_actions`, meme lecture que `getParticipantCharacteristics`,
+ * src/server/services/combats.ts) vers le bloc de FICHE `statblock`
+ * (src/core/schemas/blocks/statblock.ts) — reutilise une creature deja
+ * balancee du bestiaire pour un PNJ genere plutot que d'en inventer une
+ * (retour utilisateur, generateur de PNJ). `attack_bonus`/`damage` d'une
+ * action ne sont jamais reportes : `zStatblockEntry` n'a que `{name, text}`
+ * par conception ("les valeurs sont plates, saisies directement", voir son
+ * propre commentaire) — cette fiche n'est pas destinee a porter des jets
+ * automatises comme une fiche de regle SRD.
+ */
+export function statblockFromMonsterBlocks(params: {
+  statBlock: StatBlockBlockData;
+  traits?: TraitsBlockData;
+  actions?: ActionsBlockData;
+  legendaryActions?: LegendaryActionsBlockData;
+}): StatblockBlockData {
+  const { statBlock, traits, actions, legendaryActions } = params;
+  return {
+    __v: 1,
+    size: statBlock.size,
+    creature_type: statBlock.creature_type,
+    alignment: statBlock.alignment,
+    ac: { value: statBlock.armor_class },
+    hp: { value: statBlock.hit_points, hit_dice: statBlock.hit_dice },
+    speed: Object.entries(statBlock.speed)
+      .map(([kind, value]) => (kind === "walk" ? value : `${kind} ${value}`))
+      .join(", "),
+    abilities: statBlock.abilities,
+    saving_throws: statBlock.saving_throws
+      ? (Object.fromEntries(statBlock.saving_throws.map((s) => [s.ability, s.bonus])) as Partial<Record<Ability, number>>)
+      : undefined,
+    skills: statBlock.skills ? Object.fromEntries(statBlock.skills.map((s) => [s.name, s.bonus])) : undefined,
+    senses: statBlock.senses ? Object.entries(statBlock.senses).map(([k, v]) => `${k} ${v}`).join(", ") : undefined,
+    languages: statBlock.languages,
+    challenge_rating: statBlock.challenge_rating !== undefined ? String(statBlock.challenge_rating) : undefined,
+    traits: (traits?.traits ?? []).map((t) => ({ name: t.name, text: t.description })),
+    actions: (actions?.actions ?? []).map((a) => ({ name: a.name, text: a.description })),
+    reactions: [],
+    legendary_actions: (legendaryActions?.actions ?? []).map((a) => ({ name: a.name, text: a.description })),
+  };
 }

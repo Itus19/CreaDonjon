@@ -38,12 +38,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  const draw = await drawTableSlotsFromGeneratorBlock(supabase, blockId, serverRng, { onlySlotKey: parsed.data.onlySlotKey ?? undefined });
+  const draw = await drawTableSlotsFromGeneratorBlock(supabase, blockId, serverRng, {
+    onlySlotKey: parsed.data.onlySlotKey ?? undefined,
+    variant: parsed.data.variant,
+  });
   if (!draw) {
-    return NextResponse.json({ error: "Generateur introuvable." }, { status: 404 });
+    return NextResponse.json({ error: "Générateur introuvable." }, { status: 404 });
   }
 
   const knownSlotTexts = parsed.data.knownSlotTexts;
@@ -68,17 +71,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         );
       } catch (error) {
         if (error instanceof AiRateLimitError) {
-          return NextResponse.json({ error: "Trop de generations demandees, reessaie dans quelques minutes." }, { status: 429 });
+          return NextResponse.json({ error: "Trop de générations demandées, réessaie dans quelques minutes." }, { status: 429 });
         }
         throw error;
       }
     }
   }
 
-  const allSlotTexts = { ...knownSlotTexts, ...draw.slotTexts, ...proseTexts };
+  const variantLabels = Object.fromEntries(Object.entries(draw.resolvedVariant).map(([axisKey, v]) => [axisKey, v.label]));
+  const allSlotTexts = { ...knownSlotTexts, ...draw.slotTexts, ...proseTexts, ...variantLabels };
   const result: GeneratorResult = {
     text: renderGeneratorTemplate(draw.generator.template, allSlotTexts),
     slots: [...draw.slots, ...draw.proseSlots.map((s) => ({ key: s.key, text: proseTexts[s.key] ?? "", refs: [] }))],
+    resolvedVariant: Object.fromEntries(Object.entries(draw.resolvedVariant).map(([axisKey, v]) => [axisKey, v.key])),
   };
   return NextResponse.json(result, { status: 200 });
 }

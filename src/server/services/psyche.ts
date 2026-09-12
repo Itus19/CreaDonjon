@@ -196,14 +196,24 @@ export interface AttitudeAxes {
  * (docs/adr/0013-tables-psyche-pnj.md). `campaignId: null` = monde sans
  * campagne active, `axes: {}` alors (jamais d'erreur, meme motif que
  * `entity_runtime_state` "hors partie").
+ *
+ * `worldId` fourni par l'appelant, jamais redevine ici (audit de
+ * performance, retour utilisateur) : cette fonction ne s'appelait
+ * jusqu'ici QUE depuis une fiche deja chargee (`playerEntityDetail.ts`,
+ * `publicShare.ts`), qui connait deja `entity.world_id` — refaire
+ * `getEntityById(sourceEntityId)` ici pour lire un seul champ deja en main
+ * cote appelant, repete pour CHAQUE bloc `relationship` d'une fiche, etait
+ * une requete pure perte. Les deux routes API qui n'ont que des ids d'URL
+ * (`app/api/entities/[id]/attitudes/**`) font desormais ce lookup une fois,
+ * elles-memes, avant d'appeler cette fonction — jamais deux fois pour rien.
  */
 export async function getCurrentAttitude(
   supabase: TypedClient,
+  worldId: string,
   sourceEntityId: string,
   targetEntityId: string
 ): Promise<AttitudeAxes> {
-  const entity = await getEntityById(supabase, sourceEntityId);
-  const campaignId = entity ? await resolveCampaignId(supabase, entity.world_id) : null;
+  const campaignId = await resolveCampaignId(supabase, worldId);
   if (!campaignId) return { axes: {}, campaignId: null };
 
   const row = await getAttitude(supabase, { campaignId, sourceEntityId, targetEntityId });
@@ -271,15 +281,20 @@ export async function addAttitudeEvent(
   return { ok: true, axes: nextAxes, event };
 }
 
-/** `onlyPublic` (V2, retour utilisateur point 5) : meme raison que `listPoleEvents` — filtre AVANT de retenir les 20 dernieres, jamais apres. */
+/**
+ * `onlyPublic` (V2, retour utilisateur point 5) : meme raison que
+ * `listPoleEvents` — filtre AVANT de retenir les 20 dernieres, jamais
+ * apres. `worldId` fourni par l'appelant : meme raison qu'exposee sur
+ * `getCurrentAttitude` juste au-dessus.
+ */
 export async function getAttitudeEvents(
   supabase: TypedClient,
+  worldId: string,
   sourceEntityId: string,
   targetEntityId: string,
   onlyPublic = false
 ): Promise<AttitudeEventRow[]> {
-  const entity = await getEntityById(supabase, sourceEntityId);
-  const campaignId = entity ? await resolveCampaignId(supabase, entity.world_id) : null;
+  const campaignId = await resolveCampaignId(supabase, worldId);
   if (!campaignId) return [];
   const events = await listAttitudeEvents(supabase, { campaignId, sourceEntityId, targetEntityId }, 50);
   return events.filter((event) => !onlyPublic || event.is_public).slice(0, 20);

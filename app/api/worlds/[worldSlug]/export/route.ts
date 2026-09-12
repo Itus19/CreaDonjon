@@ -13,7 +13,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const world = await getWorldBySlug(supabase, worldSlug);
@@ -22,7 +22,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   }
   const ownerId = await getWorldOwnerId(supabase, world.id);
   if (ownerId !== user.id) {
-    return NextResponse.json({ error: "Seul le proprietaire du monde peut l'exporter." }, { status: 403 });
+    return NextResponse.json({ error: "Seul le propriétaire du monde peut l'exporter." }, { status: 403 });
   }
 
   try {
@@ -32,6 +32,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     // personnel omis) AVANT de declencher l'enregistrement du fichier.
     return NextResponse.json({ ...result, suggestedFilename: `${world.slug}.creadonjon.json` }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Echec de l'export." }, { status: 400 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Échec de l'export." }, { status: 400 });
   }
 }

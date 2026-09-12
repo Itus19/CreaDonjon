@@ -37,16 +37,42 @@ supabase gen types typescript --local > src/types/database.ts
 | `CLAUDE.md` | Regles absolues du projet (securite, IA, base de donnees, architecture) |
 | `docs/PDD.md` | Source de verite fonctionnelle |
 | `docs/SCHEMA.md` | Schema de donnees, SQL, RLS, formules |
-| `docs/BACKLOG.md` | Tickets Phase 0 et V0, avec criteres d'acceptation (termine, valeur historique) |
-| `docs/BACKLOG_V1.md` | Tickets V1, avec criteres d'acceptation (en cours) |
+| `docs/CHARTE-UI.md` | Charte d'interface **normative**, extraite du code — a lire avant tout code d'interface |
+| `docs/BACKLOG.md` | Tickets Phase 0 et V0 (termine, valeur historique) |
+| `docs/BACKLOG_V1.md` | Tickets V1, le compagnon jouable |
+| `docs/BACKLOG_V2.md` | Tickets V2 — l'essentiel de ce qui existe aujourd'hui |
+| `docs/BACKLOG_V3.md` | Tickets V3, le mode solo (aucun commence) |
+| `docs/audit/` | Rapports d'audit du 2026-09-06 : backend, interface, synthese |
 | `ROADMAP.md` | Etat d'avancement par module (tableau de bord, pas une liste de tickets) |
 | `docs/adr/` | Decisions d'architecture et leurs raisons |
-| `docs/specs/` | Specifications detaillees (regles, wiki, personnages) |
+| `specs/` | Specifications detaillees (regles, wiki, personnages, moteur de jeu) |
 | `src/core/**` | Noyau pur : formules, des, visibilite. Aucun import de `next`, `react` ou `@supabase/*` (verifie par ESLint) |
 | `src/server/services/**` | Logique metier |
 | `src/server/repos/**` | Seul endroit du code qui interroge Supabase |
+| `lib/**` | Les schemas Zod partages entre client et serveur, et les fabriques de client Supabase. Rien d'autre — voir ci-dessous |
 | `src/i18n/fr.ts` | Libelles francais de l'interface (les identifiants techniques restent en anglais) |
 | `supabase/migrations/` | Migrations SQL, appliquees et jamais modifiees une fois en place |
+
+### `lib/` ou `src/` ?
+
+La question se pose parce que sept dossiers portent le meme nom des deux
+cotes (`formula`, `visibility`, `relations`, `ruleset`, `generators`,
+`shareLinks`, `campaignInvites`). La regle, constatee sur les 32 fichiers
+de `lib/` :
+
+- **`lib/<domaine>/schemas.ts`** — le schema Zod d'une entree de route ou de
+  server action. Il est importe des deux cotes : par la route qui valide, et
+  par le formulaire client qui envoie. C'est sa seule raison d'etre a la
+  racine plutot que dans `src/`.
+- **`lib/supabase/*`** — les cinq fabriques de client : navigateur, serveur,
+  middleware, et les deux clients service-role confines
+  (`service.ts` pour le partage public, `serviceAccountProvisioning.ts` pour
+  les comptes invites, chacun avec sa portee etroite et sa regle ESLint).
+  Aucun de ces fichiers ne contient de requete : elles vivent toutes dans
+  `src/server/repos/**`.
+- **Tout le reste va dans `src/`.** Une regle metier, un calcul, une formule :
+  `src/core/**` si c'est pur, `src/server/services/**` sinon. Un fichier de
+  `lib/` qui se met a decider quelque chose est au mauvais endroit.
 
 ## Architecture en une phrase
 

@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { zMapElementRef } from "@/src/core/schemas/mapElementRef";
-import { zMapRegionColor, zMapRegionShape } from "@/src/core/schemas/mapRegion";
+import {
+  DEFAULT_MAP_REGION_BORDER,
+  DEFAULT_MAP_REGION_FILL,
+  zMapRegionColor,
+  zMapRegionShape,
+} from "@/src/core/schemas/mapRegion";
 import { zVisibilityInput } from "@/lib/visibility/schemas";
 
 /**
@@ -8,11 +13,11 @@ import { zVisibilityInput } from "@/lib/visibility/schemas";
  * utilisateur, point 1), meme discipline que map_pins.
  */
 export const createMapRegionSchema = z.object({
-  name: z.string().trim().max(200, "200 caracteres maximum.").default(""),
+  name: z.string().trim().max(200, "200 caractères maximum.").default(""),
   ref: zMapElementRef.nullable().default(null),
   shape: zMapRegionShape,
-  fillColor: zMapRegionColor.default("#3b82f6"),
-  borderColor: zMapRegionColor.default("#1d4ed8"),
+  fillColor: zMapRegionColor.default(DEFAULT_MAP_REGION_FILL),
+  borderColor: zMapRegionColor.default(DEFAULT_MAP_REGION_BORDER),
   layerId: z.string().nullable().default(null),
   /** V2-I2 (brouillard de guerre) — faux par defaut : une zone reste visible comme avant ce ticket sauf choix contraire. */
   fogGated: z.boolean().default(false),
@@ -20,7 +25,7 @@ export const createMapRegionSchema = z.object({
 });
 
 export const updateMapRegionSchema = z.object({
-  name: z.string().trim().max(200, "200 caracteres maximum.").optional(),
+  name: z.string().trim().max(200, "200 caractères maximum.").optional(),
   ref: zMapElementRef.nullable().optional(),
   shape: zMapRegionShape.optional(),
   fillColor: zMapRegionColor.optional(),

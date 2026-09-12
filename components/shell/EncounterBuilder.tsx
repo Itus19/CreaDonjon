@@ -306,7 +306,7 @@ export default function EncounterBuilder({
               type="button"
               onClick={handleLaunchCombat}
               disabled={launching || participants.length === 0}
-              className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-panel transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {launching ? "Lancement…" : "Lancer le combat"}
             </button>

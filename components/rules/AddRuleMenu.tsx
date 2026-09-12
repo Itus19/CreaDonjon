@@ -7,6 +7,8 @@ import Link from "next/link";
 export interface AddRuleMenuItem {
   href: string;
   label: string;
+  /** Ouvre en fenetre flottante plutot que de naviguer (retour utilisateur, V2 — `useOpenRuleToolLink`) : optionnel, un item sans `onClick` navigue normalement. */
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 /**
@@ -77,7 +79,8 @@ export default function AddRuleMenu({ label, items, onNavigate }: { label: strin
                 key={item.href}
                 href={item.href}
                 role="menuitem"
-                onClick={() => {
+                onClick={(e) => {
+                  item.onClick?.(e);
                   setOpen(false);
                   onNavigate?.();
                 }}

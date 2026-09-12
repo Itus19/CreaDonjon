@@ -11,7 +11,7 @@ import { zSpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
  */
 export const createCharacterFromWizardSchema = z.object({
   worldId: z.guid(),
-  name: z.string().trim().min(1, "Le nom est requis.").max(200, "200 caracteres maximum."),
+  name: z.string().trim().min(1, "Le nom est requis.").max(200, "200 caractères maximum."),
   character: zCharacterBlockData,
   inventory: zInventoryBlockData.optional(),
   spellcasting: zSpellcastingBlockData.optional(),
@@ -26,7 +26,7 @@ export const createCharacterFromWizardSchema = z.object({
 export const overwriteCharacterFromWizardSchema = z.object({
   entityId: z.guid(),
   expectedVersion: z.number().int().nonnegative(),
-  name: z.string().trim().min(1, "Le nom est requis.").max(200, "200 caracteres maximum."),
+  name: z.string().trim().min(1, "Le nom est requis.").max(200, "200 caractères maximum."),
   character: zCharacterBlockData,
   inventory: zInventoryBlockData.optional(),
   spellcasting: zSpellcastingBlockData.optional(),

@@ -9,7 +9,7 @@ import { DEFAULT_PROSE_LENGTH } from "@/src/core/generators/types";
 export const createBlockSchema = z.object({
   entityId: z.guid(),
   blockType: z.enum(BLOCK_TYPES),
-  label: z.string().trim().min(1, "Le titre est requis.").max(100, "100 caracteres maximum."),
+  label: z.string().trim().min(1, "Le titre est requis.").max(100, "100 caractères maximum."),
   visibility: zVisibilityInput,
 });
 
@@ -48,6 +48,13 @@ export const drawGeneratorSchema = z.object({
   proseLength: z.union([z.literal(30), z.literal(100), z.literal(250)]).default(DEFAULT_PROSE_LENGTH),
   onlySlotKey: z.string().min(1).max(100).nullable().default(null),
   knownSlotTexts: z.record(z.string(), z.string()).default({}),
+  /** Valeurs choisies pour les axes de variante de l'outil (V2-J7, ex. `{type: "forgeron"}`) — cle d'axe -> cle d'option, ou `RANDOM_VARIANT_VALUE` ("aleatoire"). Vide pour un generateur sans axe. */
+  variant: z.record(z.string(), z.string()).default({}),
+});
+
+/** Liste les tables d'une section de generateur pour la variante donnee (V2-J9bis) — meme forme de `variant` que `drawGeneratorSchema`, aucun autre champ necessaire pour une simple lecture. */
+export const listGeneratorTablesSchema = z.object({
+  variant: z.record(z.string(), z.string()).default({}),
 });
 
 /** Assistance redactionnelle (V1-F3) — instruction libre envoyee au modele, jamais un identifiant : le bloc cible vient de la route, pas du corps. */
@@ -77,9 +84,9 @@ export const addPersonalityEventSchema = z.object({
   // jamais six a la fois, donc cle libre + verification manuelle.
   deltas: z
     .record(z.string(), z.number().int().min(-100).max(100))
-    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un pole doit etre touche." })
+    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un pôle doit être touché." })
     .refine((d) => Object.keys(d).every((k) => (PERSONALITY_POLE_KEYS as readonly string[]).includes(k)), {
-      message: "Pole inconnu.",
+      message: "Pôle inconnu.",
     }),
   occurredAtIngame: zGameDate.nullable().default(null),
 });
@@ -90,7 +97,7 @@ export const addAttitudeEventSchema = z.object({
   summary: z.string().trim().min(1).max(500),
   deltas: z
     .record(z.string(), z.number().int().min(-100).max(100))
-    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un axe doit etre touche." })
+    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un axe doit être touché." })
     .refine((d) => Object.keys(d).every((k) => (RELATIONSHIP_AXIS_KEYS as readonly string[]).includes(k)), {
       message: "Axe inconnu.",
     }),
@@ -103,9 +110,9 @@ export const addWorldviewEventSchema = z.object({
   summary: z.string().trim().min(1).max(500),
   deltas: z
     .record(z.string(), z.number().int().min(-100).max(100))
-    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un pole doit etre touche." })
+    .refine((d) => Object.keys(d).length > 0, { message: "Au moins un pôle doit être touché." })
     .refine((d) => Object.keys(d).every((k) => (WORLDVIEW_POLE_KEYS as readonly string[]).includes(k)), {
-      message: "Pole inconnu.",
+      message: "Pôle inconnu.",
     }),
   occurredAtIngame: zGameDate.nullable().default(null),
 });

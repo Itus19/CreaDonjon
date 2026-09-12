@@ -1,24 +1,59 @@
 import type { ReactNode } from "react";
 
 /**
- * "**Titre.**" -> gras reel, `\n` -> nouveau paragraphe (V1-D7, sur retour
- * utilisateur) : motif constant du texte SRD (dons, traits/actions de
- * monstre, incantation de classe, et la prose generale des descriptions
- * elle-meme). Point de rendu unique, partage par ce composant (bloc
- * `description`, ex. la fiche d'un don vue directement) et par
- * `blockContentRenderer.tsx` (traits/actions/incantation, ex. la meme
- * description de don reprise dans le bloc `background` d'un historique) —
- * une seule correction future a faire, jamais deux implementations qui
- * pourraient diverger. Jamais un parseur markdown complet (CLAUDE.md,
- * aucun interpreteur generaliste pour du texte qui n'en a pas besoin) : un
- * seul motif reconnu, celui que le SRD utilise reellement ici.
+ * Quatre marques INLINE reconnues, chacune avec sa propre paire de
+ * delimiteurs distincte (retour utilisateur : "les mêmes options que la
+ * mise en forme de texte dans les blocs de texte" — DescriptionTextarea.tsx
+ * propose desormais Gras/Italique/Souligne/Barre, pas seulement le gras).
+ * Toujours un ENSEMBLE FERME de quatre motifs, jamais un parseur markdown
+ * complet (CLAUDE.md, aucun interpreteur generaliste pour du texte qui n'en
+ * a pas besoin) : ni imbrication de marques, ni echappement, une seule passe
+ * de gauche a droite. L'ordre des alternatives compte (`**` doit etre tente
+ * avant `*` pour qu'un gras ne soit jamais lu comme deux italiques emboites).
+ * Souligne emprunte `__x__` (aucun symbole markdown standard pour ca) :
+ * jamais ambigu ici puisque `_` seul n'a aucun sens dans cette grammaire.
+ */
+const INLINE_MARK_RE = /\*\*([^*]+)\*\*|~~([^~]+)~~|__([^_]+)__|\*([^*]+)\*/g;
+
+function renderInline(text: string, keyPrefix: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+  let index = 0;
+  INLINE_MARK_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = INLINE_MARK_RE.exec(text))) {
+    if (match.index > lastIndex) nodes.push(text.slice(lastIndex, match.index));
+    const [, bold, strike, underline, italic] = match;
+    const key = `${keyPrefix}-m${index++}`;
+    if (bold !== undefined) nodes.push(<strong key={key}>{bold}</strong>);
+    else if (strike !== undefined) nodes.push(<s key={key}>{strike}</s>);
+    else if (underline !== undefined) nodes.push(<u key={key}>{underline}</u>);
+    else nodes.push(<em key={key}>{italic}</em>);
+    lastIndex = INLINE_MARK_RE.lastIndex;
+  }
+  if (lastIndex < text.length) nodes.push(text.slice(lastIndex));
+  return nodes;
+}
+
+/**
+ * "**Titre.**" en debut de paragraphe -> sous-titre sur sa propre ligne,
+ * `\n` -> nouveau paragraphe (V1-D7, sur retour utilisateur) : motif
+ * constant du texte SRD (dons, traits/actions de monstre, incantation de
+ * classe, et la prose generale des descriptions elle-meme) — inchange.
+ * Point de rendu unique, partage par ce composant (bloc `description`, ex.
+ * la fiche d'un don vue directement) et par `blockContentRenderer.tsx`
+ * (traits/actions/incantation, ex. la meme description de don reprise dans
+ * le bloc `background` d'un historique) — une seule correction future a
+ * faire, jamais deux implementations qui pourraient diverger.
  *
  * Titre sur sa propre ligne (V1-D7, sur retour utilisateur — "**Titre.**
  * texte..." restait sur une seule ligne, hierarchie peu lisible pour un
  * paragraphe a plusieurs sous-points) : quand un paragraphe COMMENCE par
- * "**...**" (toujours le cas dans ce motif SRD — jamais un gras en milieu
- * de phrase), le titre devient sa propre ligne et le texte qui suit sa
- * propre ligne en dessous, plutot que les deux cote a cote.
+ * "**...**", le titre devient sa propre ligne et le texte qui suit sa
+ * propre ligne en dessous, plutot que les deux cote a cote. Le reste du
+ * texte (titre inclus) passe par `renderInline` : les trois autres marques
+ * (et un gras qui ne serait pas en tete de paragraphe) restent actives
+ * partout ailleurs dans le texte.
  */
 export function renderMarkdownBoldText(text: string, keyPrefix: string): ReactNode[] {
   return text.split("\n").flatMap((paragraph, i) => {
@@ -29,10 +64,10 @@ export function renderMarkdownBoldText(text: string, keyPrefix: string): ReactNo
         <p key={`${keyPrefix}-${i}-title`}>
           <strong>{title}</strong>
         </p>,
-        ...(rest ? [<p key={`${keyPrefix}-${i}-body`}>{rest}</p>] : []),
+        ...(rest ? [<p key={`${keyPrefix}-${i}-body`}>{renderInline(rest, `${keyPrefix}-${i}-body`)}</p>] : []),
       ];
     }
-    return [<p key={`${keyPrefix}-${i}`}>{paragraph}</p>];
+    return [<p key={`${keyPrefix}-${i}`}>{renderInline(paragraph, `${keyPrefix}-${i}`)}</p>];
   });
 }
 

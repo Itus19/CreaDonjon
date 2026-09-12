@@ -1,0 +1,41 @@
+-- V3-R6 / audit P-07 — les deux index qui manquaient a `app.can_read_ruleset`.
+--
+-- Mesure qui a designe ce point, `pg_stat_statements` remis a zero puis
+-- quelques minutes d'usage normal sur une instance au repos :
+--
+--   ruleset_entries              55 appels, 421 ms de moyenne, 1 ligne rendue
+--   ruleset_entry_translations   32 appels, 262 ms de moyenne, 1 ligne rendue
+--   campaign_members             15 appels,  10 ms
+--   worlds                       15 appels,   9 ms
+--   entity_revisions             29 appels,   7 ms
+--
+-- Ce n'etait donc pas la charge (l'instance ne faisait rien), et ce n'est pas
+-- la RLS en general : les autres policies repondent en 10 ms. Le cout est
+-- isole aux tables de regles, dont les deux policies passent par
+-- `app.can_read_ruleset`.
+--
+-- Pourquoi cette fonction coute. Son corps cherche le ruleset dans DEUX
+-- tables par une colonne de cle etrangere :
+--
+--   exists (select 1 from campaigns c where c.ruleset_id = r.id and ...)
+--   exists (select 1 from worlds    w where w.default_ruleset_id = r.id and ...)
+--
+-- Ni `campaigns.ruleset_id` ni `worlds.default_ruleset_id` n'ont jamais porte
+-- d'index : Postgres n'en cree jamais automatiquement cote enfant d'une cle
+-- etrangere (meme constat que `combats_campaign_id_idx`,
+-- 20260903210039). Chaque evaluation faisait donc deux scans complets, plus
+-- un `app.is_world_member` par ligne trouvee.
+--
+-- Et cela se paie par ligne PARCOURUE, pas par ligne rendue : un predicat
+-- RLS est une barriere de securite, evaluee AVANT les filtres de
+-- l'utilisateur. Une lecture qui ne rend qu'une fiche de sort traverse quand
+-- meme les entrees du SRD en appelant la fonction a chacune — d'ou 421 ms
+-- pour une ligne.
+--
+-- Cette migration N'AJOUTE QUE DES INDEX. Aucune policy, aucune fonction,
+-- aucune donnee n'est touchee : la barriere de securite reste exactement la
+-- meme, elle devient seulement praticable. C'est deliberement la correction
+-- la moins risquee des deux que l'audit envisageait pour P-07 — l'autre,
+-- restructurer la logique de visibilite, reste ecartee.
+create index campaigns_ruleset_id_idx on campaigns (ruleset_id);
+create index worlds_default_ruleset_id_idx on worlds (default_ruleset_id);

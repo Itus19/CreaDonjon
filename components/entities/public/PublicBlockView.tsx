@@ -1,4 +1,5 @@
 import { createElement } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import type { Segment, SegmentContentNode } from "@/src/core/schemas/entities/segments";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
@@ -18,9 +19,24 @@ import PublicGenealogyBlock from "./PublicGenealogyBlock";
 import PublicPersonalityBlock from "./PublicPersonalityBlock";
 import PublicWorldviewBlock from "./PublicWorldviewBlock";
 import PublicRelationshipBlock from "./PublicRelationshipBlock";
-import PublicRelationsGraphBlock from "./PublicRelationsGraphBlock";
 import PublicTimelineBlock from "./PublicTimelineBlock";
 import PublicMapBlock from "./PublicMapBlock";
+
+/**
+ * V3-R3 (suite) — seul bloc public charge a la demande.
+ *
+ * Ce fichier est un composant SERVEUR qui importe des composants clients :
+ * leur JS entre donc dans le paquet de la route, qu'ils soient rendus ou
+ * non. Mesure : des sept vues publiques, six pesent moins de 1 800 lignes
+ * et rien de tiers ; `PublicRelationsGraphBlock` tire `d3-force` a lui
+ * seul. Il etait donc telecharge par toute page wiki JOUEUR — les routes
+ * qu'on ouvre sur un telephone — meme sans aucun bloc "reseau".
+ *
+ * Les six autres restent en import statique : les decouper couterait un
+ * aller-retour de chargement pour quelques centaines de lignes. On ne
+ * decoupe que ce qui pese.
+ */
+const PublicRelationsGraphBlock = dynamic(() => import("./PublicRelationsGraphBlock"));
 
 const TAG_BY_BLOCK_TYPE: Record<Segment["blockType"], string> = {
   paragraph: "p",
@@ -97,7 +113,7 @@ export function PublicImageBlock({ data }: { data: ImageBlockData }) {
       style={{ width: `${widthPx}px`, maxWidth: "100%" }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={data.url} alt={data.caption} className="w-full rounded-md object-cover" />
+      <img src={data.url} alt={data.caption} loading="lazy" decoding="async" className="w-full rounded-md object-cover" />
       {data.caption && <figcaption className="text-xs italic text-ink-muted">{data.caption}</figcaption>}
     </figure>
   );

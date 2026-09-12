@@ -27,7 +27,7 @@ export default async function ReglesLayout({
   return (
     <>
       <RulesSidebar worldSlug={worldSlug} />
-      <WindowsDesktop worldSlug={worldSlug}>{children}</WindowsDesktop>
+      <WindowsDesktop>{children}</WindowsDesktop>
     </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   DndContext,
   KeyboardSensor,
@@ -18,27 +19,51 @@ import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
-import TextBlockEditor from "./TextBlockEditor";
-import InfoboxBlockEditor from "./InfoboxBlockEditor";
-import ImageBlockEditor from "./ImageBlockEditor";
-import CustomTableBlockEditor from "./CustomTableBlockEditor";
-import RandomTableBlockEditor from "./RandomTableBlockEditor";
-import GeneratorBlockEditor from "./GeneratorBlockEditor";
-import InventoryBlockEditor from "./InventoryBlockEditor";
-import SpellcastingBlockEditor from "./SpellcastingBlockEditor";
-import ResourcesBlockEditor from "./ResourcesBlockEditor";
-import MusicBlockEditor from "./MusicBlockEditor";
-import GenealogyBlockEditor from "./GenealogyBlockEditor";
-import QuestBlockEditor from "./QuestBlockEditor";
-import SessionLogBlockEditor from "./SessionLogBlockEditor";
-import PersonalityBlockEditor from "./PersonalityBlockEditor";
-import RelationshipBlockEditor from "./RelationshipBlockEditor";
-import WorldviewBlockEditor from "./WorldviewBlockEditor";
-import RelationsGraphBlockEditor from "./RelationsGraphBlockEditor";
-import TimelineBlockEditor from "./TimelineBlockEditor";
-import MapBlockEditor from "./MapBlockEditor";
-import MonsterStatblockSheet from "./MonsterStatblockSheet";
-import PlayableCharacterSheet from "./PlayableCharacterSheet";
+/**
+ * V3-R3 — les 21 vues de bloc sont chargees a la demande, jamais dans le
+ * paquet initial.
+ *
+ * Importees statiquement, elles tiraient 272 fichiers / 44 048 lignes sur
+ * TOUTE fiche ouverte : Tiptap (bloc texte), `d3-force` (reseau de
+ * relations), le canevas de carte, la fiche de creature, l'assistant de
+ * personnage. Une fiche ne contenant qu'un bloc texte payait le canevas de
+ * carte et le moteur de graphe.
+ *
+ * Le gain grandit avec le projet, et c'est ce qui rend ce decoupage durable :
+ * le 22e type de bloc ne s'ajoutera plus au paquet initial comme les 21
+ * precedents.
+ *
+ * PAS de `ssr: false`, contrairement a `AvecWindowsLayer.tsx` : ces vues
+ * SONT rendues cote serveur et doivent le rester. Le balisage arrive donc
+ * complet dans le HTML, la mise en page est juste des le premier pixel, et
+ * seul le JS d'hydratation est differe — c'est ce qui evite le saut de mise
+ * en page qu'un etat de chargement aurait cause. Un bloc replie
+ * (`isCollapsed`) ne rend rien, donc ne telecharge rien non plus.
+ *
+ * `switch` de `BlockDataEditor` inchange : tout le decoupage tient dans ces
+ * declarations, un seul endroit a tenir a jour.
+ */
+const TextBlockEditor = dynamic(() => import("./TextBlockEditor"));
+const InfoboxBlockEditor = dynamic(() => import("./InfoboxBlockEditor"));
+const ImageBlockEditor = dynamic(() => import("./ImageBlockEditor"));
+const CustomTableBlockEditor = dynamic(() => import("./CustomTableBlockEditor"));
+const RandomTableBlockEditor = dynamic(() => import("./RandomTableBlockEditor"));
+const GeneratorBlockEditor = dynamic(() => import("./GeneratorBlockEditor"));
+const InventoryBlockEditor = dynamic(() => import("./InventoryBlockEditor"));
+const SpellcastingBlockEditor = dynamic(() => import("./SpellcastingBlockEditor"));
+const ResourcesBlockEditor = dynamic(() => import("./ResourcesBlockEditor"));
+const MusicBlockEditor = dynamic(() => import("./MusicBlockEditor"));
+const GenealogyBlockEditor = dynamic(() => import("./GenealogyBlockEditor"));
+const QuestBlockEditor = dynamic(() => import("./QuestBlockEditor"));
+const SessionLogBlockEditor = dynamic(() => import("./SessionLogBlockEditor"));
+const PersonalityBlockEditor = dynamic(() => import("./PersonalityBlockEditor"));
+const RelationshipBlockEditor = dynamic(() => import("./RelationshipBlockEditor"));
+const WorldviewBlockEditor = dynamic(() => import("./WorldviewBlockEditor"));
+const RelationsGraphBlockEditor = dynamic(() => import("./RelationsGraphBlockEditor"));
+const TimelineBlockEditor = dynamic(() => import("./TimelineBlockEditor"));
+const MapBlockEditor = dynamic(() => import("./MapBlockEditor"));
+const MonsterStatblockSheet = dynamic(() => import("./MonsterStatblockSheet"));
+const PlayableCharacterSheet = dynamic(() => import("./PlayableCharacterSheet"));
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
@@ -140,7 +165,6 @@ function BlockDataEditor({
           onChange={(d) => onChange(d)}
           entityId={block.entityId}
           blockId={block.id}
-          worldSlug={worldSlug}
           onBlockRefreshed={onBlockRefreshed}
           hideAssist={hideAiAssist}
         />
@@ -733,7 +757,10 @@ export default function EntityBlocks({
             </button>
           )}
           {Object.entries(BLOCK_TYPE_LABELS)
-            .filter(([type]) => !restrictAddableTypes || restrictAddableTypes.includes(type))
+            // "generator" retire de "Ajouter un bloc" (retour utilisateur) : l'outil
+            // "Générateurs" vit desormais uniquement dans la sidebar MJ. Le libelle
+            // reste dans BLOCK_TYPE_LABELS pour les blocs generator deja existants.
+            .filter(([type]) => type !== "generator" && (!restrictAddableTypes || restrictAddableTypes.includes(type)))
             .map(([type, label]) => (
             <button
               key={type}
@@ -878,7 +905,7 @@ function SortableBlockCard({
               onSaveBlock(block.id, { visibilityLevel: v });
             }}
             aria-label="Visibilité du bloc"
-            className="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink transition-colors hover:bg-panel"
+            triggerClassName="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink transition-colors hover:bg-panel"
           />
           <button
             type="button"

@@ -17,7 +17,7 @@ const REASON_MESSAGE = {
 export async function POST(request: NextRequest) {
   const adminUserId = request.cookies.get("view_as_admin_uid")?.value;
   if (!adminUserId) {
-    return NextResponse.json({ error: "Aucune session admin a restaurer." }, { status: 400 });
+    return NextResponse.json({ error: "Aucune session admin à restaurer." }, { status: 400 });
   }
 
   const result = await returnFromViewAs(adminUserId);

@@ -438,9 +438,9 @@ export async function getPublicEntityDetail(
       const relationshipData = zRelationshipBlockData.parse(block.data);
       if (relationshipData.target?.kind !== "entity") return block;
       const [{ axes }, targetEntity, relationshipEvents] = await Promise.all([
-        getCurrentAttitude(supabase, entity.id, relationshipData.target.id),
+        getCurrentAttitude(supabase, entity.world_id, entity.id, relationshipData.target.id),
         getEntityById(supabase, relationshipData.target.id),
-        getAttitudeEvents(supabase, entity.id, relationshipData.target.id, true),
+        getAttitudeEvents(supabase, entity.world_id, entity.id, relationshipData.target.id, true),
       ]);
       // Fiche masquee (V2, retour utilisateur point 2) : meme motif que
       // `toPublicRelations`, jamais le nom d'une cible cachee dans la

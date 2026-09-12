@@ -60,7 +60,7 @@ export default function CartePicker({
         if (found) onPick(found);
       }}
       aria-label="Choisir une carte à référencer"
-      className="rounded-full border border-edge bg-panel-raised px-3 py-1 text-xs text-ink transition-colors hover:bg-panel"
+      triggerClassName="rounded-full border border-edge bg-panel-raised px-3 py-1 text-xs text-ink transition-colors hover:bg-panel"
     />
   );
 }

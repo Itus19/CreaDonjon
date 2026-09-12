@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SeededRng } from "../dice/rng";
 import type { Rng } from "../dice/rng";
 import {
+  buildFilteredTable,
   drawMultiple,
   drawOnce,
   extractCascadeKeys,
@@ -153,5 +154,51 @@ describe("TableEntry avec refs", () => {
     const table: RandomTableData = { key: "rumeurs", die: "d20", unique_draws: false, entries: [entry] };
     const draw = drawOnce(table, fixedRng([0]));
     expect(draw.entry.refs).toEqual([{ kind: "entity", id: "ent_moulin" }]);
+  });
+});
+
+describe("buildFilteredTable", () => {
+  const SOURCE: RandomTableData = {
+    key: "objets-forgeron",
+    die: "d20",
+    unique_draws: true,
+    entries: [
+      { range: { min: 1, max: 10 }, weight: 10, text: "une dague" },
+      { range: { min: 11, max: 15 }, weight: 5, text: "une épée courte" },
+      { range: { min: 16, max: 20 }, weight: 5, text: "une épée de maître" },
+    ],
+  };
+
+  it("replage un sous-ensemble d'entrées de façon contiguë, sans trou", () => {
+    const filtered = buildFilteredTable(SOURCE, [SOURCE.entries[0], SOURCE.entries[2]]);
+    expect(filtered.entries.map((e) => e.range)).toEqual([
+      { min: 1, max: 10 },
+      { min: 11, max: 15 },
+    ]);
+    expect(filtered.die).toBe("d15");
+  });
+
+  it("conserve les autres champs de la table (key, unique_draws)", () => {
+    const filtered = buildFilteredTable(SOURCE, [SOURCE.entries[1]]);
+    expect(filtered.key).toBe("objets-forgeron");
+    expect(filtered.unique_draws).toBe(true);
+  });
+
+  it("le resultat reste directement tirable par drawOnce (reutilise le moteur existant, pas un second tirage pondéré)", () => {
+    const filtered = buildFilteredTable(SOURCE, [SOURCE.entries[0], SOURCE.entries[2]]);
+    const draw = drawOnce(filtered, fixedRng([12])); // roll = 13, dans la 2e entree replagee
+    expect(draw.entry.text).toBe("une épée de maître");
+  });
+
+  it("un poids fractionnaire est arrondi a une plage d'au moins 1", () => {
+    const source: RandomTableData = {
+      key: "x",
+      die: "d20",
+      unique_draws: false,
+      entries: [{ range: { min: 1, max: 1 }, weight: 0.4, text: "rare" }],
+    };
+    const filtered = buildFilteredTable(source, source.entries);
+    expect(filtered.entries[0].range).toEqual({ min: 1, max: 1 });
+    expect(filtered.die).toBe("d1");
   });
 });

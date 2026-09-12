@@ -104,11 +104,14 @@ export default function CharacterCreatorWizard({
   worldSlug,
   worldId,
   entityMode,
+  playerRestricted,
 }: {
   worldSlug: string;
   /** Requis seulement hors `entityMode` (creation d'une nouvelle entite). */
   worldId?: string;
   entityMode?: CharacterWizardEntityMode;
+  /** Coquille joueur (retour utilisateur) : masque le multiclassage ("+ Ajouter une classe") a l'etape Classe — un joueur qui compose sa toute premiere fiche depuis l'onglet Personnage n'a pas a en decider seul. `undefined`/`false` en contexte MJ, rien ne change. */
+  playerRestricted?: boolean;
 }) {
   const [rawStep, setStep] = useState(0);
   const [name, setName] = useState(entityMode?.initialName ?? "");
@@ -313,6 +316,7 @@ export default function CharacterCreatorWizard({
           onUpdateInventory={setInventory}
           equipmentChoices={classEquipmentChoices}
           onChooseEquipmentChoices={setClassEquipmentChoices}
+          hideAddClass={playerRestricted}
         />
       )}
 
@@ -340,7 +344,6 @@ export default function CharacterCreatorWizard({
           choice={bgEquipmentChoice}
           onChooseOption={setBgEquipmentChoice}
           backgroundAbilityScores={backgroundAbilityScores}
-          sheet={sheet}
         />
       )}
 

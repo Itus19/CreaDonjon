@@ -19,21 +19,42 @@ const cache = new Map<string, RuleEntrySummary[]>();
 // MEME promesse plutot que d'en lancer une seconde.
 const inFlight = new Map<string, Promise<RuleEntrySummary[] | null>>();
 
+// Ecouteurs d'invalidation (fenetres flottantes de creation de regle, V2 —
+// retour utilisateur : "revenir a la creation d'historique" doit retrouver
+// le don qu'on vient de creer dans une autre fenetre, sans recharger toute
+// la page) : `clearWorldRuleEntriesCache` videait deja le cache, mais aucun
+// composant DEJA MONTE n'etait notifie pour relancer son fetch — seul un
+// prochain MONTAGE en beneficiait. Pub/sub minimal, contenu a ce module.
+const listeners = new Set<(worldSlug: string) => void>();
+
 /**
  * A appeler des que le ruleset actif d'un monde change (V1-C5,
- * `RulesetSelector.tsx`) — bug reel trouve en verifiant l'assistant de
- * creation de personnage : `router.refresh()` revalide les composants
- * serveur (la liste de regles de `/regles`), mais jamais ce cache
- * module-level cote client, qui continuait de servir la liste de l'ancien
- * ruleset tant que la page n'etait pas rechargee entierement.
+ * `RulesetSelector.tsx`) ou qu'une regle maison est creee depuis une fenetre
+ * flottante (V2) — bug reel trouve en verifiant l'assistant de creation de
+ * personnage : `router.refresh()` revalide les composants serveur (la liste
+ * de regles de `/regles`), mais jamais ce cache module-level cote client,
+ * qui continuait de servir la liste de l'ancien ruleset tant que la page
+ * n'etait pas rechargee entierement.
  */
 export function clearWorldRuleEntriesCache(worldSlug: string): void {
   cache.delete(worldSlug);
+  listeners.forEach((notify) => notify(worldSlug));
 }
 
 /** Charge une fois la liste complete des regles du monde, reutilisee par tous les champs d'autocompletion de la page (V1-B2). */
 export function useWorldRuleEntries(worldSlug: string): RuleEntrySummary[] {
   const [entries, setEntries] = useState<RuleEntrySummary[]>(() => cache.get(worldSlug) ?? []);
+  const [reloadTick, setReloadTick] = useState(0);
+
+  useEffect(() => {
+    function onInvalidate(invalidatedSlug: string) {
+      if (invalidatedSlug === worldSlug) setReloadTick((tick) => tick + 1);
+    }
+    listeners.add(onInvalidate);
+    return () => {
+      listeners.delete(onInvalidate);
+    };
+  }, [worldSlug]);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,7 +87,7 @@ export function useWorldRuleEntries(worldSlug: string): RuleEntrySummary[] {
     return () => {
       cancelled = true;
     };
-  }, [worldSlug]);
+  }, [worldSlug, reloadTick]);
 
   return entries;
 }

@@ -41,7 +41,7 @@ export default function DeleteAccountSection() {
         <button
           type="submit"
           disabled={pending || confirmation !== t("confirmationMot")}
-          className="rounded-md bg-danger px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-danger/90 disabled:opacity-40"
+          className="rounded-md bg-danger px-3 py-1.5 text-sm font-medium text-accent-ink transition-colors hover:bg-danger/90 disabled:opacity-40"
         >
           {pending ? t("enCours") : t("confirmer")}
         </button>

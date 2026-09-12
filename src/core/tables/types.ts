@@ -1,4 +1,5 @@
 import type { BlockReference } from "../schemas/blocks/reference";
+import type { CoinType } from "../rules/currency";
 
 /**
  * Formes pures du moteur de tables aleatoires (specs/outils-mj.md §2, V1-E1).
@@ -10,6 +11,19 @@ import type { BlockReference } from "../schemas/blocks/reference";
 export interface TableEntryRange {
   min: number;
   max: number;
+}
+
+/**
+ * Prix d'une entree de table (retour utilisateur, V2-J9bis suite — un menu
+ * de taverne encodait son prix DANS `text`, "Bière brune locale — 4 pc",
+ * jamais reexploitable). Meme `CoinType` que le porte-monnaie de
+ * l'inventaire (`src/core/rules/currency.ts`) — un prix de table et un prix
+ * d'objet d'inventaire sont la meme notion, pas deux representations
+ * paralleles.
+ */
+export interface TableEntryPrice {
+  amount: number;
+  coin: CoinType;
 }
 
 export interface TableEntry {
@@ -24,6 +38,19 @@ export interface TableEntry {
    */
   weight: number;
   text: string;
+  /** Absent pour une table sans notion de prix (la plupart) — jamais infere depuis `text`. */
+  price?: TableEntryPrice;
+  /**
+   * Palier de l'entree sur un axe de variante ordonne (retour utilisateur —
+   * "il faut une logique scenaristique de tirage" : une table d'objets
+   * d'echoppe ou de menu de taverne porte TOUS les paliers dans une seule
+   * table plutot qu'une table par palier). Valeur = la cle d'une option de
+   * l'axe designe par le slot qui tire cette table (`GeneratorTableSlot.tier`,
+   * src/core/generators/types.ts) — jamais une echelle inventee a part.
+   * Absent : l'entree est toujours eligible, quel que soit le palier
+   * demande (utile pour une table qui n'a pas encore ete graduee).
+   */
+  tier?: string;
   refs?: BlockReference[];
 }
 

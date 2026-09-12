@@ -35,7 +35,9 @@ export interface ProcessedBackground {
  * l'identique pour un televersement personnel et pour le calcul unique des
  * miniatures des images fournies par l'application
  * (`scripts/compute-builtin-backgrounds.ts` — leur fond, lui, reste servi
- * directement depuis `public/backgrounds/`, jamais retraite).
+ * directement depuis `public/backgrounds/`, jamais retraite AU CHARGEMENT :
+ * depuis V3-R4a ces neuf fichiers sont des WebP convertis une fois hors
+ * ligne, a resolution inchangee, ce qui ne change rien a ce module).
  */
 export async function processBackgroundImage(buffer: Buffer): Promise<ProcessedBackground> {
   // Import dynamique : voir la meme remarque dans entityPortraits.ts —

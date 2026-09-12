@@ -25,7 +25,7 @@ const ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 // case de cote.
 const IMAGE_MAX_DIMENSION = 1600;
 
-export type UploadBlockImageResult = { ok: true } | { ok: false; reason: "too_large" | "unsupported_type" | "not_found" };
+export type UploadBlockImageResult = { ok: true } | { ok: false; reason: "too_large" | "unsupported_type" | "invalid_image" | "not_found" };
 
 /**
  * Passe par l'interface de stockage commune (V2-L1, meme motif que
@@ -57,11 +57,20 @@ export async function uploadBlockImage(
   // pour les octets stockes — meme redondance mineure acceptee que pour
   // `background_images` (voir son commentaire), le pipeline de stockage
   // reste generique et ignore tout ce qui est theme/couleur.
+  // Ce sharp-ci s'execute AVANT `uploadAsset` : sa propre garde
+  // `invalid_image` ne servirait a rien si un fichier illisible faisait
+  // deja echouer le calcul de couleur dominante ici (audit B-11).
   const { default: sharp } = await import("sharp");
-  const stats = await sharp(params.buffer)
-    .resize(IMAGE_MAX_DIMENSION, IMAGE_MAX_DIMENSION, { fit: "inside", withoutEnlargement: true })
-    .stats();
-  const { hue, chroma } = deriveHueChroma(stats.dominant);
+  let hue: number;
+  let chroma: number;
+  try {
+    const stats = await sharp(params.buffer)
+      .resize(IMAGE_MAX_DIMENSION, IMAGE_MAX_DIMENSION, { fit: "inside", withoutEnlargement: true })
+      .stats();
+    ({ hue, chroma } = deriveHueChroma(stats.dominant));
+  } catch {
+    return { ok: false, reason: "invalid_image" };
+  }
 
   const uploaded = await uploadAsset(supabase, {
     worldId: entity.world_id,

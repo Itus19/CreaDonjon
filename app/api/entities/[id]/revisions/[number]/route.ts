@@ -10,7 +10,7 @@ export async function GET(
   const { id: entityId, number } = await params;
   const revisionNumber = Number(number);
   if (!Number.isInteger(revisionNumber)) {
-    return NextResponse.json({ error: "Numero de revision invalide." }, { status: 400 });
+    return NextResponse.json({ error: "Numéro de révision invalide." }, { status: 400 });
   }
 
   const supabase = await createClient();
@@ -18,17 +18,17 @@ export async function GET(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const entity = await getEntityById(supabase, entityId);
   if (!entity) {
-    return NextResponse.json({ error: "Entite introuvable." }, { status: 404 });
+    return NextResponse.json({ error: "Entité introuvable." }, { status: 404 });
   }
 
   const revision = await getRevisionForViewer(supabase, entity.world_id, entityId, revisionNumber, user.id);
   if (!revision) {
-    return NextResponse.json({ error: "Revision introuvable." }, { status: 404 });
+    return NextResponse.json({ error: "Révision introuvable." }, { status: 404 });
   }
 
   return NextResponse.json(revision, { status: 200 });

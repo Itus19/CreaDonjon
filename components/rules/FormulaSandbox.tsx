@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { EvalMode, TraceStep } from "@/src/core/formula";
+import Dropdown from "@/components/shared/Dropdown";
 
 interface ContextRow {
   id: number;
@@ -127,16 +128,18 @@ export default function FormulaSandbox() {
 
       <label className="flex flex-col gap-1 text-sm text-ink">
         {t("modeEvaluation")}
-        <select
+        <Dropdown
           value={mode}
-          onChange={(e) => setMode(e.target.value as EvalMode)}
-          className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-        >
-          <option value="roll">{t("modeJet")}</option>
-          <option value="average">{t("modeMoyenne")}</option>
-          <option value="min">{t("modeMinimum")}</option>
-          <option value="max">{t("modeMaximum")}</option>
-        </select>
+          onChange={(v) => setMode(v as EvalMode)}
+          size="md"
+          aria-label={t("mode")}
+          options={[
+            { value: "roll", label: t("modeJet") },
+            { value: "average", label: t("modeMoyenne") },
+            { value: "min", label: t("modeMinimum") },
+            { value: "max", label: t("modeMaximum") },
+          ]}
+        />
       </label>
 
       {error && <p className="text-sm text-danger">{error}</p>}

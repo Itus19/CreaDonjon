@@ -6,6 +6,7 @@ import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasti
 import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import ReferenceChipDisplay from "./ReferenceChipDisplay";
 import RuleEntryAutocomplete from "./RuleEntryAutocomplete";
+import Checkbox from "@/components/shared/Checkbox";
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 const SPELL_TYPES = ["spell"] as const;
@@ -63,7 +64,7 @@ export default function SpellcastingBlockEditor({
               value={source.ability}
               options={ABILITIES.map((a) => ({ value: a, label: a.toUpperCase() }))}
               onChange={(v) => updateSource(index, { ability: v as (typeof ABILITIES)[number] })}
-              aria-label="Caracteristique d'incantation"
+              aria-label="Caractéristique d'incantation"
             />
             <button type="button" onClick={() => removeSource(index)} className="text-xs text-danger hover:underline">
               ×
@@ -93,14 +94,12 @@ export default function SpellcastingBlockEditor({
               />
             </div>
             <ReferenceChipDisplay reference={k.ref} chip={chips.get(refIdentity(k.ref))} />
-            <label className="flex items-center gap-1 text-xs text-ink-muted">
-              <input
-                type="checkbox"
-                checked={k.ref.kind === "rule" && data.prepared.includes(k.ref.key)}
-                onChange={() => k.ref.kind === "rule" && togglePrepared(k.ref.key)}
-              />
-              Prepare
-            </label>
+            <Checkbox
+              checked={k.ref.kind === "rule" && data.prepared.includes(k.ref.key)}
+              onChange={() => k.ref.kind === "rule" && togglePrepared(k.ref.key)}
+              label="Préparé"
+              className="gap-1 text-xs text-ink-muted"
+            />
             <button type="button" onClick={() => removeKnown(index)} className="text-xs text-danger hover:underline">
               ×
             </button>

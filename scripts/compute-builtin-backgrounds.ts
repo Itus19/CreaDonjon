@@ -31,7 +31,7 @@ async function main() {
   console.log("  slug: string;");
   console.log("  label: string;");
   console.log("  thumbDataUrl: string;");
-  console.log("  /** Fond servi directement depuis public/backgrounds/ — jamais retraite, pleine qualite. */");
+  console.log("  /** Fond servi directement depuis public/backgrounds/ (WebP depuis V3-R4a), pleine resolution. */");
   console.log("  backdropUrl: string;");
   console.log("  hue: number;");
   console.log("  chroma: number;");

@@ -13,12 +13,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const entity = await getEntityById(supabase, entityId);
   if (!entity) {
-    return NextResponse.json({ error: "Entite introuvable." }, { status: 404 });
+    return NextResponse.json({ error: "Entité introuvable." }, { status: 404 });
   }
 
   const blocks = await listVisibleBlocks(supabase, entity.world_id, entityId, user.id);
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     );
   }
   if (parsed.data.entityId !== entityId) {
-    return NextResponse.json({ error: "entityId incoherent avec l'URL." }, { status: 400 });
+    return NextResponse.json({ error: "entityId incohérent avec l'URL." }, { status: 400 });
   }
 
   const supabase = await createClient();
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const result = await createBlock(supabase, {
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     createdBy: user.id,
   });
   if (!result.ok) {
-    return NextResponse.json({ error: "Vous n'avez pas le droit d'ajouter un bloc a cette fiche." }, { status: 403 });
+    return NextResponse.json({ error: "Vous n'avez pas le droit d'ajouter un bloc à cette fiche." }, { status: 403 });
   }
 
   return NextResponse.json(result.block, { status: 201 });

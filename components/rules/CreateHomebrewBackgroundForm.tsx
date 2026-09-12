@@ -8,6 +8,9 @@ import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import Dropdown from "@/components/shared/Dropdown";
 import Checkbox from "@/components/shared/Checkbox";
 import RuleEntryAutocomplete from "@/components/blocks/RuleEntryAutocomplete";
+import DescriptionTextarea from "@/components/rules/DescriptionTextarea";
+import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
+import { useOpenRuleToolLink } from "@/components/shell/useOpenRuleToolLink";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 
 interface SelectableRuleset {
@@ -45,15 +48,24 @@ function nextOptionLabel(count: number): string {
  * Aptitude") — ce formulaire ne cree plus lui-meme une entree compagnon a
  * la volee comme sa premiere version.
  */
-export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug: string }) {
+export default function CreateHomebrewBackgroundForm({
+  worldSlug,
+  onDone,
+}: {
+  worldSlug: string;
+  /** Ouvert en fenetre flottante (retour utilisateur, V2) : ferme la fenetre au lieu de naviguer vers la fiche creee — jamais fourni depuis la route en plein cadre, qui garde la navigation habituelle. */
+  onDone?: () => void;
+}) {
   const t = useTranslations("regles");
   const router = useRouter();
   const worldEntries = useWorldRuleEntries(worldSlug);
+  const openDonLink = useOpenRuleToolLink(worldSlug, "nouveau-don");
 
   const [loading, setLoading] = useState(true);
   const [currentRuleset, setCurrentRuleset] = useState<SelectableRuleset | null>(null);
 
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [abilityScores, setAbilityScores] = useState<Ability[]>(["str", "dex", "con"]);
   const [skillProficiencies, setSkillProficiencies] = useState<Set<Skill>>(new Set());
   const [toolProficiency, setToolProficiency] = useState("");
@@ -161,7 +173,18 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
           {
             name: name.trim(),
             entry_type: "background",
-            blocks: [{ block_type: "background", display: { label: "Historique", layout: "key_values" }, data: backgroundData }],
+            blocks: [
+              ...(description.trim()
+                ? [
+                    {
+                      block_type: "description" as const,
+                      display: { label: "Description", layout: "prose" },
+                      data: { segments: [{ text: description.trim() }] },
+                    },
+                  ]
+                : []),
+              { block_type: "background", display: { label: "Historique", layout: "key_values" }, data: backgroundData },
+            ],
           },
         ],
       }),
@@ -179,6 +202,11 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
       setError(body.errors[0].message);
       return;
     }
+    clearWorldRuleEntriesCache(worldSlug);
+    if (onDone) {
+      onDone();
+      return;
+    }
     router.push(`/m/${worldSlug}/regles/${body.imported[0].entryKey}`);
     router.refresh();
   }
@@ -190,7 +218,7 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex max-w-2xl flex-col gap-4">
       <h1 className="text-base font-semibold text-ink">{t("creerHistoriqueMaison")}</h1>
       <p className="text-xs text-ink-muted">{t("creerHistoriqueMaisonVariante", { name: currentRuleset.name })}</p>
       <p className="text-xs text-ink-muted">{t("creerHistoriqueMaisonIntro")}</p>
@@ -206,6 +234,11 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
       </label>
 
       <div className="flex flex-col gap-1 text-sm text-ink">
+        {t("descriptionDeLHistorique")}
+        <DescriptionTextarea value={description} onChange={setDescription} rows={3} />
+      </div>
+
+      <div className="flex flex-col gap-1 text-sm text-ink">
         {t("caracteristiques")}
         <div className="flex gap-2">
           {abilityScores.map((value, index) => (
@@ -214,7 +247,7 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
               value={value}
               options={ABILITIES.map((a) => ({ value: a, label: ABILITY_LABELS[a] }))}
               onChange={(v) => setAbilityAt(index, v as Ability)}
-              className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+              triggerClassName="flex-1 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
             />
           ))}
         </div>
@@ -222,7 +255,7 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
 
       <div className="flex flex-col gap-1 text-sm text-ink">
         {t("competencesMaitrisees")}
-        <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 sm:grid-cols-3 md:grid-cols-4">
           {SKILLS.map((skill) => (
             <Checkbox
               key={skill}
@@ -255,7 +288,7 @@ export default function CreateHomebrewBackgroundForm({ worldSlug }: { worldSlug:
         {featKey.trim() !== "" && !featEntry && <p className="text-xs text-danger">{t("erreurDonInconnu")}</p>}
         <p className="text-xs text-ink-muted">
           {t("donIntrouvableAide")}{" "}
-          <a href={`/m/${worldSlug}/regles/nouveau-don`} className="text-link-rule underline-offset-2 hover:underline">
+          <a href={openDonLink.href} onClick={openDonLink.onClick} className="text-link-rule underline-offset-2 hover:underline">
             {t("creerDonMaison")}
           </a>
         </p>

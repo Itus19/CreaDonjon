@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Dropdown from "@/components/shared/Dropdown";
+import DescriptionTextarea from "@/components/rules/DescriptionTextarea";
+import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
 import { MODIFIER_OP_LABELS_FR, modifierTargetLabel } from "@/src/i18n/fr";
 import { MODIFIER_TARGET_OPTIONS, OPS_BY_TARGET_CATEGORY, modifierOpNeedsValue, modifierTargetOption } from "@/src/core/rules/modifierTargets";
 import type { ModifierOp } from "@/src/core/rules/sheet";
@@ -49,7 +51,14 @@ function defaultOpForTarget(target: string): ModifierOp {
  * reste purement descriptif, comme "Chanceux"/"Indomptable" du SRD
  * aujourd'hui : `creerDonMaisonIntro` le dit explicitement.
  */
-export default function CreateHomebrewFeatureForm({ worldSlug }: { worldSlug: string }) {
+export default function CreateHomebrewFeatureForm({
+  worldSlug,
+  onDone,
+}: {
+  worldSlug: string;
+  /** Ouvert en fenetre flottante (retour utilisateur, V2) : ferme la fenetre au lieu de naviguer vers la fiche creee — jamais fourni depuis la route en plein cadre, qui garde la navigation habituelle. */
+  onDone?: () => void;
+}) {
   const t = useTranslations("regles");
   const router = useRouter();
 
@@ -171,6 +180,11 @@ export default function CreateHomebrewFeatureForm({ worldSlug }: { worldSlug: st
       setError(body.errors[0].message);
       return;
     }
+    clearWorldRuleEntriesCache(worldSlug);
+    if (onDone) {
+      onDone();
+      return;
+    }
     router.push(`/m/${worldSlug}/regles/${body.imported[0].entryKey}`);
     router.refresh();
   }
@@ -182,7 +196,7 @@ export default function CreateHomebrewFeatureForm({ worldSlug }: { worldSlug: st
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex max-w-2xl flex-col gap-4">
       <h1 className="text-base font-semibold text-ink">{t("creerDonMaison")}</h1>
       <p className="text-xs text-ink-muted">{t("creerDonMaisonVariante", { name: currentRuleset.name })}</p>
       <p className="text-xs text-ink-muted">{t("creerDonMaisonIntro")}</p>
@@ -197,16 +211,10 @@ export default function CreateHomebrewFeatureForm({ worldSlug }: { worldSlug: st
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm text-ink">
+      <div className="flex flex-col gap-1 text-sm text-ink">
         {t("descriptionDuDon")}
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-          rows={4}
-          className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-        />
-      </label>
+        <DescriptionTextarea value={description} onChange={setDescription} required rows={4} />
+      </div>
 
       <div className="flex flex-col gap-2">
         <span className="text-sm text-ink">{t("prerequis")}</span>
@@ -248,13 +256,13 @@ export default function CreateHomebrewFeatureForm({ worldSlug }: { worldSlug: st
                 value={modifier.target}
                 options={TARGET_DROPDOWN_OPTIONS}
                 onChange={(v) => updateModifierTarget(index, v)}
-                className="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+                triggerClassName="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
               />
               <Dropdown
                 value={modifier.op}
                 options={opOptions}
                 onChange={(v) => updateModifierOp(index, v as ModifierOp)}
-                className="shrink-0 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+                triggerClassName="shrink-0 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
               />
               {needsValue && (
                 <input

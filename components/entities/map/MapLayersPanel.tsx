@@ -75,7 +75,7 @@ export default function MapLayersPanel({
                 options={VISIBILITY_OPTIONS}
                 onChange={(v) => onChangeVisibility(layer.id, v)}
                 aria-label="Visibilité de la couche"
-                className="shrink-0 rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink transition-colors hover:bg-panel"
+                triggerClassName="shrink-0 rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink transition-colors hover:bg-panel"
               />
               <button
                 type="button"

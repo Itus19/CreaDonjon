@@ -6,7 +6,7 @@ import { rollWeaponDamage } from "@/src/server/services/characterActions";
 import type { Locale } from "@/src/i18n/request";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  not_found: "Fiche de personnage introuvable ou sans ruleset resolvable.",
+  not_found: "Fiche de personnage introuvable ou sans ruleset résolvable.",
   item_not_found: "Objet introuvable dans l'inventaire.",
   not_a_weapon: "Cet objet n'est pas une arme.",
 };
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const locale = (await getLocale()) as Locale;
