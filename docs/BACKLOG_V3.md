@@ -602,7 +602,7 @@ La justification écrite dans le code (« images dynamiques dont Next ne connaî
 
 ---
 
-### V3-R5 — Supprimer les cascades de chargement · `L` — *audit `F‑16`*
+### V3-R5 — Supprimer les cascades de chargement · `L` — *audit `F‑16`* — **fait le 12 septembre — et c'est lui qui a fait bouger le temps**
 
 **38 composants** font un `fetch` dans un `useEffect`. Le déroulement est toujours le même : le serveur rend la page → le navigateur télécharge le JS → React monte → l'effet part → la requête voyage → le contenu apparaît. Quatre allers-retours là où un seul suffirait.
 
@@ -610,10 +610,25 @@ Sur un téléphone en 4G, chaque étape coûte bien plus que sur la machine de d
 
 L'audit le dit lui-même : **pas en une fois.** Page par page, en commençant par les plus ouvertes.
 
-- [ ] La fiche d'entité et l'accueil du monde n'ont plus aucun `fetch` dans un `useEffect` pour leur **contenu principal** : les données descendent en props depuis le composant serveur.
-- [ ] `useCachedGet` reste légitime pour les panneaux ouverts à la demande — ce ticket ne le supprime pas.
-- [ ] Mesure avant/après avec `PERF_LOG=1`, écrite dans le commit.
-- [ ] Les corrections de `F‑03` (échec réseau distinct du chargement) ne sont pas défaites au passage.
+> **La cascade n'était pas celle que `F‑16` décrivait.** L'audit comptait 38 composants faisant un `fetch` dans un `useEffect` et en concluait au chargement en cascade. Mesuré sur le déploiement réel : une fiche n'en déclenche que **trois** (radio, messages non lus, jets de dés), tous des widgets de coquille, aucun contenu principal. `F‑16` comptait des composants, pas ce qui s'exécute — les 35 autres sont des panneaux ouverts à la demande.
+>
+> **La vraie cascade était le préchargement de Next.** Ouvrir une page de monde déclenchait **45 à 49 requêtes `_rsc`** pour 23 routes distinctes. Ces routes sont dynamiques : *chaque préchargement est un rendu serveur complet, avec ses requêtes en base*. Ouvrir une page en déclenchait quarante-cinq. C'est ce qui expliquait qu'une seconde visite transfère 2 Ko et prenne quand même 4,4 s.
+
+- [x] **Cause trouvée, et elle rendait le préchargement absurde :** `<Link>` précharge par défaut tout lien entrant dans le champ de vision, et `EntityTree` en pose un par entité. Or **un clic normal sur une entité ne navigue pas** — `useOpenEntityLink` fait `preventDefault()` et ouvre une fenêtre (ADR‑0006). Le `href` n'existe que pour le ctrl-clic, qui ouvre un onglet neuf et n'utilise donc pas ce cache. On préchargeait 27 routes vers lesquelles on ne va jamais.
+- [x] `prefetch={false}` sur `EntityTree`, **partagé par les trois barres latérales** (monde, joueur, peau « livre ») — un seul endroit.
+- [x] **Mesuré avant/après sur le déploiement réel** (la mesure `PERF_LOG` que le ticket prévoyait est restée inutile : le navigateur donne directement le bon chiffre) :
+
+  | | Avant | Après |
+  |---|---|---|
+  | Préchargements, accueil du monde | 45 | **9** |
+  | Préchargements, fiche d'entité | 49 | **14** |
+  | Routes distinctes préchargées | 23 | **5** |
+
+- [x] **Et le temps a enfin bougé.** Visite froide en 4G bridée, médiane sur 5 mesures : **3 304 ms** (2 818 – 3 417) contre **5 285 ms** avant le lot. Seconde visite : 4 731 → **2 464 ms**.
+- [x] Le contenu principal de la fiche était **déjà** rendu côté serveur — le critère d'origine était donc satisfait avant ce ticket, ce que seule la mesure pouvait dire.
+- [x] `useCachedGet` intact, et les corrections de `F‑03` avec lui : rien n'a été touché de ce côté.
+
+> **Observation laissée ouverte.** La coquille joueur précharge encore ses 8 routes (15 requêtes) — les six onglets de sa barre du bas. Contrairement à l'arbre d'entités, ce sont de **vraies destinations** entre lesquelles un joueur bascule sans cesse, donc le préchargement s'y défend. À rouvrir seulement si une mesure sur un vrai téléphone le désigne.
 
 **Ne pas ouvrir ce ticket avant que `V3-R1` et `V3-R3` soient faits.** C'est le plus long du lot et le moins rentable au Ko ; les deux premiers rendent une partie de son gain sans toucher à la forme des pages.
 
@@ -648,7 +663,7 @@ Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de b
 | ~~3~~ | ~~**V3-R3**~~ | **Fait le 12 septembre — plus gros fragment 871 → 439 Ko, et deux fiches ne pèsent plus pareil selon leurs blocs** |
 | ~~1~~ | ~~**V3-R4a**~~ | **Fait le 12 septembre — 2 456 Ko → 619 Ko. Mais le temps de chargement n'a pas bougé : le poids n'était plus le facteur limitant** |
 | ~~5~~ | ~~**V3-R4b**~~ | **Fait le 12 septembre — mais le diagnostic de l'audit était faux : voir ADR 0021** |
-| 6 | **V3-R5** | Le plus long, le moins rentable au Ko |
+| ~~6~~ | ~~**V3-R5**~~ | **Fait le 12 septembre — 45 → 9 préchargements, et le chargement passe de 5 285 à 3 304 ms. Le ticket le plus rentable du lot, à l'inverse de ce qui était prévu** |
 
 **Ce que la mesure du 12 septembre a changé dans cet ordre.** `V3-R0` a été faite, et elle a retourné les priorités : le JS ne pèse que 263 Ko quand une seule image en pèse 2 071. `V3-R4a` passe donc devant tout, et `V3-R3` (découper les éditeurs de blocs) perd beaucoup de son urgence — il reste juste, mais il se dispute des dizaines de Ko là où `R4a` en gagne deux mille.
 
