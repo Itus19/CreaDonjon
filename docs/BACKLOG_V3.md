@@ -527,18 +527,42 @@ L'audit souligne le point qui compte le plus : **le coût augmente à chaque nou
 
 > **Réécrit le 12 septembre, après la mesure de `V3-R0`.** Ce ticket visait les images d'entité et les cartes. La mesure sur le déploiement réel a montré que le poste dominant est ailleurs, et qu'il est bien plus gros : **l'image de fond de l'application, 2 071 Ko à elle seule, 84 % du poids d'une page.** Le reste du ticket est inchangé et reste valable, mais il passe après.
 
-#### R4a — Le fond de l'application pèse 2 Mo · `S`
+#### R4a — Le fond de l'application pèse 2 Mo · `S` — **fait le 12 septembre**
 
 `public/backgrounds/Artwork_C.png` : **2 120 673 octets pour une image de 1456 × 763**. Huit autres fonds l'accompagnent, entre 1,4 et 2,3 Mo — **~17 Mo dans `public/`**. Ils sont servis bruts, et l'en-tête de Vercel pour `public/` est `cache-control: public, max-age=0, must-revalidate` : chaque navigation redemande l'image, ne serait-ce que pour s'entendre répondre 304 — un aller-retour avant de peindre, sur un réseau où l'aller-retour est cher.
 
 **Attention : la pleine qualité est un choix délibéré, pas un oubli.** `builtinBackgrounds.ts` le dit : *« servi directement depuis public/backgrounds/ — jamais retraité, pleine qualité (retour utilisateur : la miniature seule pixelisait le fond quand le flou baisse) »*. Ce ticket **ne remet pas ce choix en cause**. Il observe seulement que la décision était « ne pas utiliser la vignette comme fond », et non « expédier 2 Mo de PNG » : à 1456 × 763, un AVIF ou un WebP de qualité visuellement équivalente pèse 150 à 400 Ko. La contrainte de l'auteur est tenue, le poids divisé par cinq à dix.
 
-- [ ] Convertir les neuf fonds en AVIF (repli WebP), **à dimensions inchangées**, et comparer côte à côte flou au minimum — c'est le cas qui avait motivé le choix d'origine. Si la qualité ne tient pas, ne pas livrer et l'écrire.
-- [ ] Servir un cache immuable : ces fichiers ne changent jamais, `max-age=31536000, immutable` via `headers()` de `next.config.ts`. Supprime l'aller-retour de revalidation à chaque navigation.
-- [ ] Servir une taille adaptée à l'écran : un fond de 1456 px de large sur un téléphone de 390 px transfère quatre fois les pixels nécessaires.
-- [ ] **Mesurer avant/après** avec le même protocole que `V3-R0`, sur le même monde de test.
+- [x] Les neuf fonds convertis **en WebP** (et non AVIF — voir plus bas), qualité 90, **dimensions inchangées**, alpha retiré car intégralement opaque (255/255, vérifié).
 
-**Pourquoi c'est le meilleur rapport effort/gain de tout le lot :** une page passerait de ~2 456 Ko à ~600 Ko sans toucher à une ligne de logique, ni changer quoi que ce soit à ce que voit l'utilisateur. C'est quatre fois le gain de `V3-R1` et `V3-R3` réunis, pour une fraction du travail.
+  | | Avant | Après |
+  |---|---|---|
+  | `Artwork_C` (le fond par défaut) | 2 071 Ko | **236 Ko** |
+  | Les neuf fonds | 16,42 Mo | **1,93 Mo** (×8,5) |
+
+- [x] **La contrainte de qualité est tenue, pas contournée.** Écart au PNG d'origine mesuré à **2,4 de RMSE**, et vérifié à l'œil sur un recadrage 1:1 **sans aucun flou** puis sur le rendu réel avec `--bg-blur: 0` et le voile retiré : traits fins, dégradés et points lumineux intacts, aucun artefact. Le choix d'origine portait sur « ne pas utiliser la vignette comme fond », jamais sur le format de fichier.
+- [x] Cache-Control posé sur `/backgrounds/` via `headers()`.
+- [x] **Mesuré avant/après** sur le déploiement réel, même protocole que `V3-R0` :
+
+  | Accueil du monde, visite froide | Avant | Après |
+  |---|---|---|
+  | **Total** | 2 456 Ko | **619 Ko** (×4) |
+  | dont images | 2 071 Ko | **236 Ko** |
+  | dont scripts | 263 Ko | 263 Ko |
+
+- [ ] **Pas fait : la taille adaptée à l'écran.** Un fond de 1456 px sur un téléphone de 390 px transfère encore plus de pixels que nécessaire. Écarté ici parce que servir plusieurs tailles depuis une `background-image` CSS demande soit `image-set()`, soit des requêtes média — de la complexité pour ~150 Ko, quand `R4a` vient d'en gagner 1 835. À rouvrir seulement si une mesure le désigne.
+
+**Deux écarts au ticket, assumés et expliqués :**
+
+**WebP plutôt qu'AVIF.** L'AVIF descendait à 101 Ko contre 236 — 135 Ko de mieux. Mais le fond est une `background-image` CSS injectée via `--bg-image` depuis trois endroits distincts ; un repli AVIF → WebP y demande `image-set()` avec `type()`, que Safari ne comprend qu'à partir de 17, et dont l'échec n'est pas gracieux : la déclaration entière est invalidée, donc **plus de fond du tout**. WebP est compris partout depuis 2020, tient dans une seule URL, et capture déjà 93 % du gain disponible. Le format n'est pas le sujet une fois qu'on est passé de 2 071 à 236 Ko.
+
+**`immutable` écarté.** Le ticket demandait `max-age=31536000, immutable`. Ces fichiers ne portent pas d'empreinte dans leur nom : remplacer une illustration en gardant son nom figerait l'ancienne version **un an** chez tous les visiteurs déjà venus, sans recours. Posé à la place : `max-age=2592000, stale-while-revalidate=31536000` — 30 jours de fraîcheur couvrent largement une partie ou une campagne, donc l'aller-retour de revalidation disparaît tout autant, et la revalidation en arrière-plan sert l'ancienne image immédiatement tout en allant chercher la nouvelle. Même gain, sans le mode d'échec.
+
+**Le gain annoncé était juste — et le constat qui l'accompagne l'est moins.** La page est bien passée de 2 456 à 619 Ko, comme prévu. Mais **le temps de chargement, lui, n'a pas bougé** : 5 336 ms contre 5 285 ms avant, sur la même 4G bridée. Quatre fois moins d'octets, le même temps.
+
+C'est la leçon la plus utile de ce lot, et elle mérite d'être écrite ici plutôt que découverte deux fois : **sur ce produit, le poids n'est plus le facteur limitant.** Une seconde visite transfère 2 Ko et prend encore 4,7 s. Tout le temps restant est dans les allers-retours serveur — les 9 vagues de rendu de l'audit. `V3-R1`, `V3-R3` et `V3-R4` réunis ne le réduiront jamais.
+
+Cela ne retire rien à ce ticket : 1,8 Mo en moins, c'est de la donnée mobile épargnée à chaque ami qui découvre l'application, et un budget qui ne se dégradera plus. Mais **la suite du lot est côté serveur, pas côté client** — `V3-R6` d'abord.
 
 #### R4b — Les images d'entité et les cartes · `M`
 
@@ -602,7 +626,7 @@ Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de b
 | 1 bis | **V3-R6** | En parallèle — ne dépend d'aucun code, et peut rendre les autres secondaires |
 | ~~2~~ | ~~**V3-R2** puis **V3-R1**~~ | **Faits le 12 septembre** — le layout de monde perd 68 % de son graphe d'imports et les trois bibliothèques lourdes |
 | 3 | **V3-R3** | Même technique que `R1`, gain qui grandit avec le projet |
-| **1** | **V3-R4a** | **Réordonné le 12 septembre après mesure : 2 071 Ko sur 2 456, pour une image. Le meilleur rapport effort/gain du lot, et de loin** |
+| ~~1~~ | ~~**V3-R4a**~~ | **Fait le 12 septembre — 2 456 Ko → 619 Ko. Mais le temps de chargement n'a pas bougé : le poids n'était plus le facteur limitant** |
 | 5 | **V3-R4b** | Images d'entité et cartes : ~20 Mo par carte |
 | 6 | **V3-R5** | Le plus long, le moins rentable au Ko |
 
