@@ -507,7 +507,7 @@ Conséquence sur téléphone : le premier rendu client **suppose un grand écran
 
 ---
 
-### V3-R3 — Découper les éditeurs de blocs · `M` — *audit `F‑14`*
+### V3-R3 — Découper les éditeurs de blocs · `M` — *audit `F‑14`* — **fait le 12 septembre**
 
 `components/blocks/EntityBlocks.tsx` : 977 lignes, 54 imports, **les 19 éditeurs `*BlockEditor` plus `PlayableCharacterSheet` importés statiquement** (lignes 21‑41 ; l'audit annonçait 21 éditeurs, le décompte exact est de 19 + 1). Fermeture transitive mesurée : **272 fichiers, 44 048 lignes**.
 
@@ -515,11 +515,26 @@ Ouvrir une fiche qui ne contient qu'un bloc texte télécharge le canevas de car
 
 L'audit souligne le point qui compte le plus : **le coût augmente à chaque nouveau type de bloc.** « Le vingt-deuxième s'ajoutera au paquet initial comme les vingt et un précédents. » — le décompte diffère, le mécanisme est le bon. C'est une des rares optimisations dont le gain grandit avec le projet.
 
-- [ ] `BlockDataEditor` (`EntityBlocks.tsx:102`) résout l'éditeur par `next/dynamic` — **un seul endroit**, la table de correspondance.
-- [ ] Une fiche ne contenant qu'un bloc texte ne télécharge ni `d3-force`, ni le canevas de carte, ni la fiche de créature.
-- [ ] Chaque éditeur a un état de chargement **à hauteur réservée** : la page ne saute pas quand le morceau arrive.
-- [ ] Ajouter un type de bloc de plus n'augmente pas le paquet initial — vérifié par un build avant/après.
-- [ ] Aucun changement de comportement d'édition : même verrouillage optimiste, même visibilité par bloc.
+- [x] Les 21 vues (19 éditeurs, la fiche de créature, la fiche jouable) passent par `next/dynamic`. Le `switch` de `BlockDataEditor` est **inchangé** : tout le découpage tient dans les déclarations d'import — un seul endroit à tenir à jour, comme demandé.
+- [x] **Vérifié en production, en viewport téléphone.** Deux fiches du même monde ne pèsent plus pareil, ce qui était impossible avant :
+
+  | Route | JS | Bibliothèques lourdes chargées |
+  |---|---|---|
+  | `/f/11` (a des blocs texte) | 542 Ko | Tiptap — **légitime, elle l'affiche** |
+  | `/f/2` (carte, sans bloc texte) | 401 Ko | **aucune** |
+  | `/joueur/wiki` | 263 Ko | **aucune** |
+
+  `d3-force` a disparu de **toutes** les routes de fiche. Avant, `EntityBlocks` l'imposait à chacune.
+
+- [x] Plus gros fragment du build : **871 Ko → 439 Ko**. Le critère que `V3-R1` avait dû écarter comme mal choisi se trouve atteint ici, pour la bonne raison.
+- [x] Comportement d'édition intact, vérifié sur le déploiement : l'éditeur ProseMirror se monte, la zone est bien `contenteditable`, aucune erreur JS en console. (Le seul 404 observé est `/api/entities/<id>/portrait` pour une entité sans portrait — comportement préexistant, sans rapport.)
+- [x] Ajouter un type de bloc de plus n'augmentera plus le paquet initial : c'est la propriété structurelle que ce ticket visait, et elle est acquise.
+
+> **Note — l'état de chargement à hauteur réservée n'a pas lieu d'être, et c'est mieux ainsi.** Le ticket demandait un placeholder par éditeur pour éviter le saut de mise en page. En n'utilisant **pas** `ssr: false` (contrairement à `V3-R1`), ces vues restent rendues côté serveur : le balisage arrive complet dans le HTML, la mise en page est juste dès le premier pixel, et seul le JS d'hydratation est différé. Un placeholder aurait *créé* le saut qu'il était censé éviter. Un bloc replié (`isCollapsed`) ne rend rien, donc ne télécharge rien non plus.
+
+**Un second chemin, trouvé en vérifiant plutôt qu'en supposant.** Après le découpage d'`EntityBlocks`, `d3-force` restait sur la route **wiki joueur**. Cause : `PublicBlockView.tsx` est un composant **serveur** qui importe des composants clients — leur JS entre donc dans le paquet de la route même sans être rendu. Des sept vues publiques, six pèsent moins de 1 800 lignes et rien de tiers ; seule `PublicRelationsGraphBlock` tire `d3-force`. Elle seule est passée en `dynamic` ; **les six autres restent en import statique**, parce que les découper coûterait un aller-retour pour quelques centaines de lignes. On ne découpe que ce qui pèse.
+
+> **Observation hors périmètre, à traiter ailleurs.** La page de partage public (`/partage/<jeton>/<fiche>`) embarque `@dnd-kit` par la chaîne `BookSkin.tsx` → `EntityTree.tsx`, alors qu'un visiteur anonyme ne peut rien réordonner. Pas touché ici : ce ticket porte sur les vues de bloc, et `EntityTree` est la barre latérale. À ouvrir comme ticket propre si une mesure le désigne.
 
 ---
 
@@ -625,7 +640,7 @@ Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de b
 | 1 | **V3-R0** | Sans mesure, tout le reste est un pari |
 | 1 bis | **V3-R6** | En parallèle — ne dépend d'aucun code, et peut rendre les autres secondaires |
 | ~~2~~ | ~~**V3-R2** puis **V3-R1**~~ | **Faits le 12 septembre** — le layout de monde perd 68 % de son graphe d'imports et les trois bibliothèques lourdes |
-| 3 | **V3-R3** | Même technique que `R1`, gain qui grandit avec le projet |
+| ~~3~~ | ~~**V3-R3**~~ | **Fait le 12 septembre — plus gros fragment 871 → 439 Ko, et deux fiches ne pèsent plus pareil selon leurs blocs** |
 | ~~1~~ | ~~**V3-R4a**~~ | **Fait le 12 septembre — 2 456 Ko → 619 Ko. Mais le temps de chargement n'a pas bougé : le poids n'était plus le facteur limitant** |
 | 5 | **V3-R4b** | Images d'entité et cartes : ~20 Mo par carte |
 | 6 | **V3-R5** | Le plus long, le moins rentable au Ko |
