@@ -18,7 +18,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const world = await getWorldBySlug(supabase, worldSlug);
@@ -26,7 +26,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Monde introuvable." }, { status: 404 });
   }
   if (!(await isWorldAdmin(supabase, { worldId: world.id, userId: user.id }))) {
-    return NextResponse.json({ error: "Reserve au MJ de ce monde." }, { status: 403 });
+    return NextResponse.json({ error: "Réservé au MJ de ce monde." }, { status: 403 });
   }
 
   const entries = await getMergedJournalForWorld(supabase, world.id);

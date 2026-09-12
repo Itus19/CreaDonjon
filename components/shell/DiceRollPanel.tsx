@@ -369,7 +369,7 @@ export default function DiceRollProvider({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Ouvrir le volet de lancer de des"
+        aria-label="Ouvrir le volet de lancer de dés"
         className={`fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full border border-edge-strong bg-panel-raised text-accent shadow-lg transition-all duration-200 ${
           open ? "pointer-events-none scale-50 opacity-0" : "scale-100 opacity-100"
         }`}

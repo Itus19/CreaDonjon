@@ -229,14 +229,14 @@ function cellValue(value: unknown): string {
 function SpellCasting({ data }: { data: SpellCastingBlockData }) {
   const items = [
     { label: "Niveau", value: data.level === 0 ? "Tour de magie" : String(data.level) },
-    { label: "Ecole", value: MAGIC_SCHOOL_LABELS_FR[data.school] ?? data.school },
+    { label: "École", value: MAGIC_SCHOOL_LABELS_FR[data.school] ?? data.school },
     { label: "Temps d'incantation", value: data.casting_time },
-    { label: "Portee", value: data.range },
+    { label: "Portée", value: data.range },
     {
       label: "Composantes",
       value: data.material ? `${data.components.join(", ")} (${data.material})` : data.components.join(", "),
     },
-    { label: "Duree", value: data.concentration ? `${data.duration} (concentration)` : data.duration },
+    { label: "Durée", value: data.concentration ? `${data.duration} (concentration)` : data.duration },
     { label: "Rituel", value: data.ritual ? "Oui" : "Non" },
   ];
   return <KeyValues items={items} />;
@@ -409,9 +409,9 @@ function ResolvedRefDetail({ worldSlug, refItem }: { worldSlug: string; refItem:
 
 function Weapon({ data, worldSlug }: { data: ResolvedWeaponBlockData; worldSlug: string }) {
   const items = [
-    { label: "Categorie", value: data.category === "martial" ? "Martiale" : "Simple" },
+    { label: "Catégorie", value: data.category === "martial" ? "Martiale" : "Simple" },
     {
-      label: "Degats",
+      label: "Dégâts",
       value: (
         <span className="mech">
           {formatFormulaNode(data.damage.dice)}
@@ -420,9 +420,9 @@ function Weapon({ data, worldSlug }: { data: ResolvedWeaponBlockData; worldSlug:
       ),
     },
     ...(data.versatile_damage
-      ? [{ label: "Degats (2 mains)", value: <span className="mech">{formatFormulaNode(data.versatile_damage)}</span> }]
+      ? [{ label: "Dégâts (2 mains)", value: <span className="mech">{formatFormulaNode(data.versatile_damage)}</span> }]
       : []),
-    ...(data.range ? [{ label: "Portee", value: [quantityText(data.range.normal), quantityText(data.range.long)].filter(Boolean).join(" / ") }] : []),
+    ...(data.range ? [{ label: "Portée", value: [quantityText(data.range.normal), quantityText(data.range.long)].filter(Boolean).join(" / ") }] : []),
     ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
     ...(data.cost ? [{ label: "Valeur", value: costText(data.cost) as string }] : []),
   ];
@@ -430,7 +430,7 @@ function Weapon({ data, worldSlug }: { data: ResolvedWeaponBlockData; worldSlug:
     ...(data.properties.length > 0
       ? [
           {
-            label: "Proprietes",
+            label: "Propriétés",
             fullWidth: true,
             value: (
               <div className="flex flex-col gap-3">
@@ -479,7 +479,7 @@ function SpeciesTraits({ data, worldSlug }: { data: ResolvedSpeciesTraitsBlockDa
     ...(data.creature_type ? [{ label: "Type", value: CREATURE_TYPE_LABELS_FR[data.creature_type] ?? data.creature_type }] : []),
     ...(data.sizes && data.sizes.length > 0 ? [{ label: "Taille", value: speciesSizeText(data.sizes) }] : []),
     ...(data.speed ? [{ label: "Vitesse", value: quantityText(data.speed) as string }] : []),
-    ...(data.lifespan ? [{ label: "Esperance de vie", value: data.lifespan }] : []),
+    ...(data.lifespan ? [{ label: "Espérance de vie", value: data.lifespan }] : []),
   ];
   return (
     <div className="flex flex-col gap-5">
@@ -496,15 +496,15 @@ function SpeciesTraits({ data, worldSlug }: { data: ResolvedSpeciesTraitsBlockDa
 function Armor({ data }: { data: ArmorBlockData }) {
   const categoryLabel = ARMOR_CATEGORY_LABELS_FR[data.category.charAt(0).toUpperCase() + data.category.slice(1)] ?? data.category;
   const items = [
-    { label: "Categorie", value: categoryLabel },
+    { label: "Catégorie", value: categoryLabel },
     { label: "CA de base", value: String(data.base_ac) },
     {
-      label: "Bonus de Dexterite",
+      label: "Bonus de Dextérité",
       value: data.dex_bonus ? (data.max_dex_bonus !== undefined ? `Oui (plafond +${data.max_dex_bonus})` : "Oui") : "Non",
     },
     ...(data.strength_minimum ? [{ label: "Force minimum", value: String(data.strength_minimum) }] : []),
     ...(data.stealth_disadvantage !== undefined
-      ? [{ label: "Discretion", value: data.stealth_disadvantage ? "Desavantage" : "Aucun desavantage" }]
+      ? [{ label: "Discrétion", value: data.stealth_disadvantage ? "Désavantage" : "Aucun désavantage" }]
       : []),
     ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
     ...(data.cost ? [{ label: "Valeur", value: costText(data.cost) as string }] : []),
@@ -520,17 +520,17 @@ function Armor({ data }: { data: ArmorBlockData }) {
  */
 function ItemProperties({ data, worldSlug }: { data: ResolvedItemPropertiesBlockData; worldSlug: string }) {
   const items = [
-    ...(data.category ? [{ label: "Categorie", value: data.category }] : []),
+    ...(data.category ? [{ label: "Catégorie", value: data.category }] : []),
     ...(data.weight ? [{ label: "Poids", value: quantityText(data.weight) as string }] : []),
     ...(data.cost ? [{ label: "Valeur", value: costText(data.cost) as string }] : []),
-    ...(data.capacity ? [{ label: "Capacite de charge", value: data.capacity }] : []),
-    ...(data.rarity ? [{ label: "Rarete", value: ITEM_RARITY_LABELS_FR[data.rarity] ?? data.rarity }] : []),
+    ...(data.capacity ? [{ label: "Capacité de charge", value: data.capacity }] : []),
+    ...(data.rarity ? [{ label: "Rareté", value: ITEM_RARITY_LABELS_FR[data.rarity] ?? data.rarity }] : []),
     ...(data.requires_attunement !== undefined ? [{ label: "Harmonisation", value: data.requires_attunement ? "Requise" : "Non requise" }] : []),
     ...(data.attunement_restriction ? [{ label: "Restriction d'harmonisation", value: data.attunement_restriction }] : []),
     ...(data.damage
       ? [
           {
-            label: "Degats",
+            label: "Dégâts",
             value: (
               <span className="mech">
                 {formatFormulaNode(data.damage.formula)}
@@ -579,8 +579,8 @@ function ItemProperties({ data, worldSlug }: { data: ResolvedItemPropertiesBlock
 function Charges({ data }: { data: ChargesBlockData }) {
   const items = [
     { label: "Charges max", value: String(data.max) },
-    ...(data.regain ? [{ label: "Regeneration", value: data.regain }] : []),
-    ...(data.depleted_effect ? [{ label: "Si epuise", value: data.depleted_effect }] : []),
+    ...(data.regain ? [{ label: "Régénération", value: data.regain }] : []),
+    ...(data.depleted_effect ? [{ label: "Si épuisé", value: data.depleted_effect }] : []),
   ];
   return <KeyValues items={items} />;
 }
@@ -984,11 +984,11 @@ function proficiencyLabel(value: string): string {
 
 function ClassBasics({ data }: { data: ClassBasicsBlockData }) {
   const items = [
-    { label: "De de vie", value: `1d${data.hit_die}` },
+    { label: "Dé de vie", value: `1d${data.hit_die}` },
     { label: "Sauvegardes", value: data.saving_throw_proficiencies.map(abilityLabel).join(", ") },
-    ...(data.armor_proficiencies?.length ? [{ label: "Maitrises d'armure", value: data.armor_proficiencies.map(proficiencyLabel).join(", ") }] : []),
-    ...(data.weapon_proficiencies?.length ? [{ label: "Maitrises d'arme", value: data.weapon_proficiencies.map(proficiencyLabel).join(", ") }] : []),
-    ...(data.tool_proficiencies?.length ? [{ label: "Maitrises d'outil", value: data.tool_proficiencies.map(proficiencyLabel).join(", ") }] : []),
+    ...(data.armor_proficiencies?.length ? [{ label: "Maîtrises d'armure", value: data.armor_proficiencies.map(proficiencyLabel).join(", ") }] : []),
+    ...(data.weapon_proficiencies?.length ? [{ label: "Maîtrises d'arme", value: data.weapon_proficiencies.map(proficiencyLabel).join(", ") }] : []),
+    ...(data.tool_proficiencies?.length ? [{ label: "Maîtrises d'outil", value: data.tool_proficiencies.map(proficiencyLabel).join(", ") }] : []),
   ];
   return <KeyValues items={items} />;
 }
@@ -1008,8 +1008,8 @@ function SpellcastingProgression({ data }: { data: SpellcastingProgressionBlockD
     <div className="flex flex-col gap-5">
       <KeyValues
         items={[
-          { label: "Caracteristique d'incantation", value: abilityLabel(data.ability) },
-          { label: "Debute au niveau", value: String(data.starts_at_level) },
+          { label: "Caractéristique d'incantation", value: abilityLabel(data.ability) },
+          { label: "Débute au niveau", value: String(data.starts_at_level) },
         ]}
       />
       <div className="flex flex-col">
@@ -1200,9 +1200,9 @@ function Background({
   equipmentInteraction?: EquipmentCardInteraction;
 }) {
   const statItems = [
-    { label: "Valeurs de caracteristique", value: data.ability_scores.map(abilityLabel).join(", ") },
-    ...(data.tool_proficiency ? [{ label: "Maitrise d'outil", value: proficiencyLabel(data.tool_proficiency) }] : []),
-    { label: "Maitrises de competence", value: data.skill_proficiencies.map(skillLabel).join(", ") },
+    { label: "Valeurs de caractéristique", value: data.ability_scores.map(abilityLabel).join(", ") },
+    ...(data.tool_proficiency ? [{ label: "Maîtrise d'outil", value: proficiencyLabel(data.tool_proficiency) }] : []),
+    { label: "Maîtrises de compétence", value: data.skill_proficiencies.map(skillLabel).join(", ") },
   ];
   return (
     <div className="flex flex-col gap-5">
@@ -1222,7 +1222,7 @@ function Background({
         {data.feat_description && <div className="text-sm text-ink-muted">{renderMarkdownBoldText(data.feat_description, "feat")}</div>}
       </div>
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-bold uppercase tracking-wide text-ink">Equipement de depart</span>
+        <span className="text-xs font-bold uppercase tracking-wide text-ink">Équipement de départ</span>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {data.equipment_options.map((opt, i) => (
             <BackgroundEquipmentCard key={i} option={opt} worldSlug={worldSlug} interaction={equipmentInteraction} />

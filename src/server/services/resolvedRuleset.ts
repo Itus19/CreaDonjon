@@ -43,6 +43,7 @@ import {
   type ArmorData,
   type CustomTableRow,
   type ItemCost,
+  type LanguageKey,
   type ProgressionRow,
   type WeaponData,
 } from "@/src/core/rules/srdMapping";
@@ -56,7 +57,7 @@ import {
   listTranslationsForEntries,
 } from "@/src/server/repos/rules";
 import { entryNameFrom, resolveEntryBlocksInRuleset, resolveEntryBlocksInRulesetBatch, walkRulesetChain } from "./rules";
-import { WEAPON_ARMOR_PROFICIENCY_LABELS_FR } from "@/src/i18n/fr";
+import { LANGUAGE_LABELS_FR, WEAPON_ARMOR_PROFICIENCY_LABELS_FR } from "@/src/i18n/fr";
 import {
   backgroundAbilityBonusModifiers,
   isValidBackgroundAbilityBonusChoice,
@@ -525,13 +526,23 @@ export async function assembleResolvedRuleset(
     for (const fk of featureKeys) {
       const chip = chipByKey.get(fk);
       const source = extraFeatureKeys.get(fk) ?? "class:inconnue";
-      const label = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : fk;
+      // Sans chip : une aptitude ajoutee apres coup (`add_entry`, elle ne vit
+      // que dans `ruleset_overrides`, jamais dans `ruleset_entries` que lit
+      // `listRulesetEntryChipsByKeys`). Son nom est deja porte par
+      // `resolvedFeatureBlocks`, resolu juste au-dessus pour ses modificateurs
+      // — le prendre la evite de retomber sur la cle technique brute dans la
+      // colonne source de l'onglet Traits et dans les libelles de
+      // modificateurs, et ne coute aucune requete de plus.
+      const label = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : (resolvedFeatureBlocks.get(fk)?.name ?? fk);
       const modifiers = resolveDeclaredModifiers(declaredModifiersByKey.get(fk) ?? [], fk, label, layerForFeatureSource(source));
       features[fk] = chip
         ? { key: fk, label, source, modifiers, prerequisites: mapPrerequisites(chip.source_raw) }
-        : // Cle sans entree resolue (rare : feature non importee) — conservee
-          // quand meme, label = cle brute, pour que build.featureKeys puisse
-          // la referencer sans faire echouer characterSheet().
+        : // Aucune ligne `ruleset_entries` : fiche maison (label resolu
+          // ci-dessus) ou, plus rarement, aptitude jamais importee (label =
+          // cle brute). Conservee dans les deux cas pour que
+          // build.featureKeys puisse la referencer sans faire echouer
+          // characterSheet(). Pas de prerequis : ils se lisent sur
+          // `source_raw`, que seule une entree importee possede.
           { key: fk, label, source, modifiers };
     }
 
@@ -540,6 +551,16 @@ export async function assembleResolvedRuleset(
       const resolved = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : undefined;
       p.name = resolved ?? (locale !== "en" ? WEAPON_ARMOR_PROFICIENCY_LABELS_FR[p.key] : undefined) ?? p.name;
     }
+  }
+
+  // Langues : `extractLanguages` ne connait que le nom brut du SRD ("Common",
+  // "Dwarvish"), affiche tel quel dans l'onglet Traits alors que les boutons
+  // de choix juste au-dessus, eux, sont en francais (`LANGUAGE_LABELS_FR`).
+  // Meme lexique statique, meme motif que les maitrises ci-dessus : une
+  // langue du SRD n'a pas de fiche de regle propre d'ou tirer un nom traduit
+  // (`Languages` est exclue de l'import, scripts/ingest-srd.ts).
+  if (locale !== "en") {
+    for (const l of languages) l.name = LANGUAGE_LABELS_FR[l.key as LanguageKey] ?? l.name;
   }
 
   return { ruleset: { classes, features }, remainingChoices, proficiencies, languages, asiGrantedLevels, backgroundAbilityScores };

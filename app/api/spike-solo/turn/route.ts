@@ -26,14 +26,14 @@ export async function POST(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   let provider;
   try {
     provider = getOpenAiCompatibleProviderFromEnv();
   } catch {
-    return NextResponse.json({ error: "Aucun fournisseur IA local configure." }, { status: 503 });
+    return NextResponse.json({ error: "Aucun fournisseur IA local configuré." }, { status: 503 });
   }
 
   try {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(outcome, { status: 200 });
   } catch (error) {
     if (error instanceof AiRateLimitError) {
-      return NextResponse.json({ error: "Trop d'appels, reessaie dans quelques minutes." }, { status: 429 });
+      return NextResponse.json({ error: "Trop d'appels, réessaie dans quelques minutes." }, { status: 429 });
     }
     throw error;
   }

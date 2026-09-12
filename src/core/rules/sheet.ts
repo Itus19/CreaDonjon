@@ -25,7 +25,7 @@ export const ABILITIES: readonly Ability[] = ["str", "dex", "con", "int", "wis",
 /** V2-M11 (Lot M) : exporte pour construire les libelles de jet ("Test de Force", "Sauvegarde de Sagesse") sans dupliquer cette table ailleurs — meme convention que les `sources` ci-dessous, qui l'utilisent deja. */
 export const ABILITY_LABELS: Record<Ability, string> = {
   str: "Force",
-  dex: "Dexterite",
+  dex: "Dextérité",
   con: "Constitution",
   int: "Intelligence",
   wis: "Sagesse",

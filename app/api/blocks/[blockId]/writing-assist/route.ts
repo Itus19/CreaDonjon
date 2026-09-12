@@ -30,7 +30,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const block = await getBlockById(supabase, blockId);
@@ -39,14 +39,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   const entity = await getEntityById(supabase, block.entity_id);
   if (!entity) {
-    return NextResponse.json({ error: "Entite introuvable." }, { status: 404 });
+    return NextResponse.json({ error: "Entité introuvable." }, { status: 404 });
   }
 
   let provider;
   try {
     provider = getOpenAiCompatibleProviderFromEnv();
   } catch {
-    return NextResponse.json({ error: "Aucun fournisseur IA local configure." }, { status: 503 });
+    return NextResponse.json({ error: "Aucun fournisseur IA local configuré." }, { status: 503 });
   }
 
   try {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json(proposals, { status: 200 });
   } catch (error) {
     if (error instanceof AiRateLimitError) {
-      return NextResponse.json({ error: "Trop de propositions demandees, reessaie dans quelques minutes." }, { status: 429 });
+      return NextResponse.json({ error: "Trop de propositions demandées, réessaie dans quelques minutes." }, { status: 429 });
     }
     throw error;
   }

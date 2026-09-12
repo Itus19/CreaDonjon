@@ -70,7 +70,7 @@ export async function joinInviteAction(_prevState: JoinInviteState, formData: Fo
     }
     userId = verified.user.id;
   }
-  if (!userId) throw new Error("Session introuvable apres reclamation (invariant interne).");
+  if (!userId) throw new Error("Session introuvable après réclamation (invariant interne).");
 
   redirect(await resolveDestinationForInvitedUser(supabase, resolved.invite, userId));
 }

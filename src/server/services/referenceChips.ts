@@ -3,9 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
+import { chipSummaryFromDescription, chipSummaryFromText } from "@/src/core/rules/chipSummary";
 import {
+  listEntryTranslationsWithBlocks,
   listRulesetEntryChipsByKeys,
-  listTranslationsForEntries,
   type RulesetEntryChipRow,
 } from "@/src/server/repos/rules";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
@@ -48,9 +49,21 @@ async function resolveRuleChips(
   }
 
   const translationByEntryId = new Map<string, string>();
+  // Resume traduit : `ai_digest` est genere a l'import depuis la source
+  // anglaise, il reste donc anglais meme sous une fiche entierement traduite
+  // (bug visible dans l'onglet Traits de la fiche jouable). La prose FR vit
+  // dans `translations.blocks.description`, exactement la ou
+  // `listRuleEntriesForWorld` va deja la chercher — on en tire le resume, et
+  // on ne retombe sur `ai_digest` que faute de traduction.
+  const summaryByEntryId = new Map<string, string>();
   if (locale !== "en" && found.length > 0) {
-    const translations = await listTranslationsForEntries(supabase, found.map((e) => e.id), locale);
-    for (const t of translations) translationByEntryId.set(t.entry_id, t.name);
+    const translations = await listEntryTranslationsWithBlocks(supabase, found.map((e) => e.id), locale);
+    for (const t of translations) {
+      translationByEntryId.set(t.entry_id, t.name);
+      const blocks = (t.blocks ?? {}) as Record<string, unknown>;
+      const summary = chipSummaryFromDescription(blocks.description);
+      if (summary !== null) summaryByEntryId.set(t.entry_id, summary);
+    }
   }
 
   for (const row of found) {
@@ -58,7 +71,7 @@ async function resolveRuleChips(
       kind: "rule",
       key: row.entry_key,
       name: translationByEntryId.get(row.id) ?? entryNameFrom(row),
-      summary: row.ai_digest,
+      summary: summaryByEntryId.get(row.id) ?? row.ai_digest,
       href: `/m/${worldSlug}/regles/${row.entry_key}`,
       found: true,
     });
@@ -79,7 +92,13 @@ async function resolveRuleChips(
       kind: "rule",
       key,
       name: homebrew.name,
-      summary: null,
+      // Retour utilisateur : une aptitude ajoutee apres coup s'affichait sans
+      // description dans l'onglet Traits, la ou une aptitude du SRD en a une.
+      // `resolveHomebrewEntryDisplay` charge pourtant deja son bloc
+      // `description` — il n'etait tout simplement pas reporte ici. Une fiche
+      // maison n'a ni traduction ni `ai_digest` : sa propre prose est la seule
+      // source possible, et c'est la bonne.
+      summary: chipSummaryFromText(homebrew.description),
       href: `/m/${worldSlug}/regles/${key}`,
       found: true,
     });

@@ -23,12 +23,12 @@ export async function updatePassword(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { error: "Session expiree, refaites une demande de reinitialisation." };
+    return { error: "Session expirée, refaites une demande de réinitialisation." };
   }
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) {
-    return { error: "Impossible de mettre a jour le mot de passe." };
+    return { error: "Impossible de mettre à jour le mot de passe." };
   }
 
   redirect("/");

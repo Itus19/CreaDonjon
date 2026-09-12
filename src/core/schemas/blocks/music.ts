@@ -22,7 +22,7 @@ const zMusicTrack = z.object({
     .string()
     .url()
     .refine((u) => detectProvider(u) !== null, {
-      message: "Lien non reconnu — seuls Spotify, SoundCloud et YouTube sont acceptes.",
+      message: "Lien non reconnu — seuls Spotify, SoundCloud et YouTube sont acceptés.",
     }),
   title: z.string().max(200).optional(),
 });

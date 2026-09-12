@@ -5,7 +5,7 @@ import { revokeEntityEditAccess } from "@/src/server/services/entityGrants";
 const REASON_STATUS = { not_found: 404, forbidden: 403 } as const;
 const REASON_MESSAGE = {
   not_found: "Fiche introuvable.",
-  forbidden: "Reserve au MJ de ce monde.",
+  forbidden: "Réservé au MJ de ce monde.",
 } as const;
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string; userId: string }> }) {
@@ -16,7 +16,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const result = await revokeEntityEditAccess(supabase, { entityId, granteeUserId, callerId: user.id });
