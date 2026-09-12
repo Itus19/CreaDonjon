@@ -69,11 +69,14 @@ Lot C    le monde qui s'écrit         générateurs, esquisses, wiki, découver
 Lot D    l'interface solo             les trois colonnes
 Lot E    la mémoire                   résumés, RAG, continuité entre séances
 Lot F    la partie qui dure           reprise, sauvegarde, bascule vers une campagne
+Lot R    la rapidité, et le téléphone  hors séquence — les restes de l'audit, à tout moment
 ```
 
 **A avant B avant C** — ce sont de vraies dépendances, pas une préférence : la boucle a besoin de l'état de scène, et l'écriture du monde a besoin de la boucle.
 
 **D peut commencer en parallèle de C.** L'écran se construit contre des données factices sans rien attendre ; c'est même souhaitable, parce que voir l'écran change la conception du reste.
+
+**Le lot R est hors de cette séquence.** Il ne construit pas le solo : il reprend les constats de rapidité de l'audit restés ouverts, centrés sur le téléphone. Il n'a aucune dépendance vers les autres lots et aucun autre lot ne l'attend. Ses deux premiers tickets (`V3-R0`, `V3-R6`) tiennent en une soirée et devraient être faits tôt, parce qu'ils disent si le reste vaut la peine.
 
 **E et F attendent une vraie partie jouée.** Concevoir la mémoire longue avant d'avoir joué trois séances, c'est deviner.
 
@@ -411,6 +414,158 @@ Pourquoi ça vaut la peine : en solo, la première question qui vient est *« es
 
 - [ ] Une campagne `solo` devient une campagne ordinaire sans migration de données.
 - [ ] Le monde écrit en solo est un monde comme un autre : les fiches, découvertes et relations créées en jouant restent valables avec des amis autour de la table.
+
+# Lot R — La rapidité, et le téléphone
+
+*Ce lot ne construit pas le mode solo. Il reprend les constats de rapidité de [l'audit du 6 septembre](./audit/2026-09-06-synthese.md) restés ouverts, et les ordonne autour d'une question précise : **que se passe-t-il quand un ami ouvre l'application sur un téléphone en 4G ?** Il est parqué ici parce que la V3 est le backlog courant, pas parce qu'il dépend du solo. Il peut avancer à tout moment, en parallèle de n'importe quel autre lot.*
+
+**Où en est-on.** La partie serveur est faite : `P‑01` à `P‑04` et `P‑06` ont été corrigés les 7 et 8 septembre, et l'audit conclut que « les gros leviers habituels — colonnes, index, parallélisme, mémoïsation — sont déjà tirés ». **Ce qui reste pour le téléphone est presque entièrement côté client**, dans le rapport frontend (`F‑14`, `F‑15`, `F‑16`), plus deux chiffres que seul l'auteur peut aller lire (`P‑05`, `P‑07`).
+
+**Mesure de référence, prise le 12 septembre** (`npm run build`, à `claude/gifted-volta-fcw05f`) :
+
+| | Mesuré |
+|---|---|
+| JS client total | **2,4 Mo** bruts, ~700 Ko gzip, 48 fragments |
+| Plus gros fragment | **871 Ko** à lui seul |
+| `next/dynamic` + `React.lazy` | **0** dans tout le dépôt |
+| `"use client"` | 161 composants sur 181 |
+
+**La contrainte de l'audit est reconduite sur tout le lot : rien ne change pour la personne qui utilise l'application.** Même écran, mêmes fonctions, plus vite. Pas de pagination, pas de fonctionnalité retirée, pas de contenu qui apparaît par morceaux.
+
+---
+
+### V3-R0 — Poser la mesure et le budget · `S`
+
+**Avant tout le reste, et c'est la règle du projet** (`campaigns.ts:215` : « à mesurer avant d'optimiser »). `P‑06` a posé un chronomètre **serveur** (`PERF_LOG=1`). Rien ne mesure le **client**, qui est justement là où le téléphone souffre.
+
+- [ ] Ouvrir l'application **une fois sur un vrai téléphone en 4G** — la fiche d'entité, le chemin le plus emprunté. L'audit le dit : « ça donne une idée bien plus juste que n'importe quelle mesure ».
+- [ ] Noter trois chiffres : JS réellement transféré, temps jusqu'au premier pixel, temps jusqu'à ce que la page réponde au doigt.
+- [ ] Écrire un **budget de JS initial** pour les routes joueur (`/m/[worldSlug]/joueur/**`) — un plafond en Ko, pas une intention.
+- [ ] Ce budget devient le critère de recette de `V3-R1`, `V3-R3` et `V3-R4` : un ticket n'est fini que si le build reste sous le plafond.
+
+**Sans ce ticket, les cinq suivants sont des paris.** Avec lui, ce sont des mesures.
+
+---
+
+### V3-R1 — Ne plus livrer le bureau à fenêtres au téléphone · `M`
+
+**Le gain le plus net du lot, et le plus spécifiquement smartphone.** Constaté en lisant le code, non relevé tel quel par l'audit.
+
+`AvecWindowsLayer` est monté sur **chaque page de monde** (`app/m/[worldSlug]/layout.tsx:41`). Sous 768 px, il fait `return null` (`AvecWindowsLayer.tsx:79`) — et `WindowsDesktop` se replie sur un simple `Panel` (`WindowsDesktop.tsx:51`). C'est le bon choix produit, déjà tranché : l'audit rappelle qu'« une fenêtre flottante sur 390 px de large est une page en moins bien ».
+
+Mais les imports sont **statiques**. Fermeture transitive mesurée depuis `AvecWindowsLayer.tsx` : **332 fichiers, 55 498 lignes**, dont Tiptap, `@dnd-kit`, `d3-force`, les dix panneaux MJ, les quatre formulaires maison et l'éditeur de fiche complet.
+
+**Autrement dit : le téléphone télécharge et analyse la quasi-totalité du code client de l'application pour afficher `null`.**
+
+- [ ] Les contenus lourds passent par `next/dynamic` : `EditEntityForm`, `RuleEntryView`, `MjToolWindowContent`, `RuleToolWindowContent`.
+- [ ] Sous 768 px, aucun fragment contenant Tiptap, `@dnd-kit` ou `d3-force` n'est téléchargé à l'ouverture d'une page de monde — vérifié dans l'onglet Réseau, pas déduit.
+- [ ] Au-dessus de 768 px, **comportement strictement inchangé** : mêmes fenêtres, même empilement, mêmes positions, aucun scintillement à l'ouverture d'une fenêtre.
+- [ ] Le plus gros fragment passe sous 871 Ko — écrire le chiffre avant/après dans le commit.
+- [ ] Aucun changement visuel, ni sur téléphone ni sur grand écran.
+
+**Le piège :** `useDesktopWindowsState` et les contextes (`DiceRollProvider`, `ChatUnreadProvider`) doivent rester montés — c'est exactement ce que le commentaire d'`AppShell.tsx` explique avoir déjà coûté un bug (« une fiche de personnage ouverte en fenêtre secondaire perdait `useDiceRoll` »). Découper le **contenu**, jamais les fournisseurs de contexte.
+
+---
+
+### V3-R2 — Le premier rendu ne suppose plus un grand écran · `S`
+
+`WindowsDesktop.tsx:26` et `AvecWindowsLayer.tsx:60` font tous les deux `useState(false)` puis résolvent la largeur dans un `useEffect`.
+
+Conséquence sur téléphone : le premier rendu client **suppose un grand écran**, monte l'arbre du bureau à fenêtres, puis le jette quand l'effet s'exécute. Du travail intégralement perdu, sur l'appareil le plus lent, au moment le plus coûteux — plus un décalage de mise en page.
+
+**Le projet a déjà résolu ce problème, au bon endroit :** `DiceRollPanel.tsx:143-171` utilise `useSyncExternalStore` + `window.matchMedia`, avec un commentaire qui explique précisément pourquoi ce n'est pas `useState` + `useEffect`. Il y a un précédent maison à suivre, pas une décision à prendre.
+
+- [ ] `WindowsDesktop` et `AvecWindowsLayer` adoptent le même `useSyncExternalStore` + `matchMedia` que `DiceRollPanel`.
+- [ ] Le seuil vit à **un seul endroit**. Il y a aujourd'hui **deux seuils mobiles différents** dans la coquille, et c'est un défaut en soi : `MOBILE_BREAKPOINT = 768` dupliqué dans `WindowsDesktop.tsx:11` et `AvecWindowsLayer.tsx:15`, mais `MOBILE_QUERY = "(max-width: 639px)"` dans `DiceRollPanel.tsx:141`. Entre 640 et 767 px, l'application se croit à la fois sur téléphone et sur grand écran. Trancher lequel fait foi, puis l'écrire une fois.
+- [ ] Sur téléphone, l'arbre du bureau à fenêtres n'est jamais monté, pas même une fraction de seconde.
+- [ ] Aucun avertissement d'hydratation dans la console.
+
+**À faire avant `V3-R1` si les deux ne sont pas faits ensemble :** un import dynamique déclenché par un booléen qui commence toujours à `false` chargerait quand même le code sur téléphone. `R2` est ce qui rend `R1` réellement efficace.
+
+---
+
+### V3-R3 — Découper les éditeurs de blocs · `M` — *audit `F‑14`*
+
+`components/blocks/EntityBlocks.tsx` : 977 lignes, 54 imports, **les 19 éditeurs `*BlockEditor` plus `PlayableCharacterSheet` importés statiquement** (lignes 21‑41 ; l'audit annonçait 21 éditeurs, le décompte exact est de 19 + 1). Fermeture transitive mesurée : **272 fichiers, 44 048 lignes**.
+
+Ouvrir une fiche qui ne contient qu'un bloc texte télécharge le canevas de carte, le moteur de graphe `d3-force`, la fiche de créature et l'assistant de création de personnage.
+
+L'audit souligne le point qui compte le plus : **le coût augmente à chaque nouveau type de bloc.** « Le vingt-deuxième s'ajoutera au paquet initial comme les vingt et un précédents. » — le décompte diffère, le mécanisme est le bon. C'est une des rares optimisations dont le gain grandit avec le projet.
+
+- [ ] `BlockDataEditor` (`EntityBlocks.tsx:102`) résout l'éditeur par `next/dynamic` — **un seul endroit**, la table de correspondance.
+- [ ] Une fiche ne contenant qu'un bloc texte ne télécharge ni `d3-force`, ni le canevas de carte, ni la fiche de créature.
+- [ ] Chaque éditeur a un état de chargement **à hauteur réservée** : la page ne saute pas quand le morceau arrive.
+- [ ] Ajouter un type de bloc de plus n'augmente pas le paquet initial — vérifié par un build avant/après.
+- [ ] Aucun changement de comportement d'édition : même verrouillage optimiste, même visibilité par bloc.
+
+---
+
+### V3-R4 — Les images à la taille du téléphone · `M` — *audit `F‑15`*
+
+Un seul `next/image` dans tout le projet, contre **11 balises `<img>` brutes**, chacune avec son `eslint-disable`. Aucune section `images` dans `next.config.ts`.
+
+Le chiffre qui rend ce ticket urgent est déjà dans le dépôt : le commentaire de `next.config.ts` note qu'**une carte réelle pèse ~20 Mo** (plafond de téléversement à 25 Mo). Sans redimensionnement, ces 20 Mo partent en pleine résolution vers le téléphone — pour être affichés sur 390 px de large.
+
+La justification écrite dans le code (« images dynamiques dont Next ne connaît pas l'URL à la compilation ») est exacte mais incomplète : `next/image` accepte une URL dynamique dès que le domaine est déclaré.
+
+- [ ] `next.config.ts` déclare le domaine servi par `/api/assets/[id]` et `/api/entities/[id]/portrait`.
+- [ ] Les 11 `<img>` passent à `next/image` avec `width`/`height` (ou `fill`) et un `sizes` juste ; les `eslint-disable` disparaissent avec elles.
+- [ ] Une carte affichée en vignette ne transfère **pas** sa pleine résolution.
+- [ ] Plus aucun saut de mise en page à l'arrivée d'une image.
+- [ ] L'en-tête `Cache-Control` posé le 7 septembre (`P‑03a`, `SIGNED_URL_CACHE_HEADER`) continue de s'appliquer — vérifié, pas supposé.
+
+**Un point à trancher, pas à coder d'office :** `MapCanvas` est le seul endroit où la pleine résolution est parfois légitime (on zoome dans une carte). Décider — et écrire la décision — si la carte reçoit un traitement à part. C'est le seul endroit du lot où « rien ne change pour l'utilisateur » peut entrer en tension avec le gain.
+
+---
+
+### V3-R5 — Supprimer les cascades de chargement · `L` — *audit `F‑16`*
+
+**38 composants** font un `fetch` dans un `useEffect`. Le déroulement est toujours le même : le serveur rend la page → le navigateur télécharge le JS → React monte → l'effet part → la requête voyage → le contenu apparaît. Quatre allers-retours là où un seul suffirait.
+
+Sur un téléphone en 4G, chaque étape coûte bien plus que sur la machine de développement — c'est le constat qui se dégrade le plus vite quand on quitte le bureau.
+
+L'audit le dit lui-même : **pas en une fois.** Page par page, en commençant par les plus ouvertes.
+
+- [ ] La fiche d'entité et l'accueil du monde n'ont plus aucun `fetch` dans un `useEffect` pour leur **contenu principal** : les données descendent en props depuis le composant serveur.
+- [ ] `useCachedGet` reste légitime pour les panneaux ouverts à la demande — ce ticket ne le supprime pas.
+- [ ] Mesure avant/après avec `PERF_LOG=1`, écrite dans le commit.
+- [ ] Les corrections de `F‑03` (échec réseau distinct du chargement) ne sont pas défaites au passage.
+
+**Ne pas ouvrir ce ticket avant que `V3-R1` et `V3-R3` soient faits.** C'est le plus long du lot et le moins rentable au Ko ; les deux premiers rendent une partie de son gain sans toucher à la forme des pages.
+
+---
+
+### V3-R6 — Les deux chiffres que seul l'auteur peut lire · `S` — *audit `P‑05`, `P‑07`*
+
+Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de bord.
+
+**La région** (`P‑05`). `vercel.json` fixe `"regions": ["dub1"]` (Dublin) ; la région du projet Supabase n'apparaît nulle part dans le dépôt. Si les deux diffèrent, **chacune des 9 vagues de rendu paie un aller-retour transatlantique** — et aucune optimisation de code ne rattrapera ça. L'audit est net : « changer une ligne de `vercel.json` produirait plus de gain que tous les autres points de cette section réunis ». C'est doublement vrai sur téléphone, où la latence est déjà dégradée avant même d'atteindre Vercel.
+
+- [ ] Lire la région du projet Supabase et la confronter à `dub1`.
+- [ ] Si elles diffèrent : corriger `vercel.json`, puis **mesurer avant/après** — c'est le seul moyen de savoir ce que ça valait.
+- [ ] Si elles concordent : l'écrire dans ce ticket et refermer `P‑05` définitivement, pour ne pas y revenir dans six mois.
+
+**Le coût des fonctions RLS** (`P‑07`). Dix minutes dans Reports → Query Performance (`pg_stat_statements`).
+
+- [ ] Noter les dix requêtes les plus coûteuses et les dix plus fréquentes.
+- [ ] Trancher `P‑07` **avec ces chiffres en main**. L'audit insiste, et il a raison : ces politiques sont la barrière de sécurité du projet, « les réécrire sur une intuition serait le meilleur moyen d'y introduire un trou ».
+- [ ] Si la mesure confirme un coût, la piste la moins risquée est déjà écrite dans l'audit : supprimer la double lecture de `entities` dans `blocks_select`, sans restructurer la logique de visibilité.
+- [ ] `P‑08` (listes sans borne) ne se rouvre **que** si ces chiffres le désignent.
+
+---
+
+### Ordre de traitement
+
+| Ordre | Ticket | Pourquoi là |
+|---|---|---|
+| 1 | **V3-R0** | Sans mesure, tout le reste est un pari |
+| 1 bis | **V3-R6** | En parallèle — ne dépend d'aucun code, et peut rendre les autres secondaires |
+| 2 | **V3-R2** puis **V3-R1** | Ensemble. `R2` est ce qui rend `R1` efficace |
+| 3 | **V3-R3** | Même technique que `R1`, gain qui grandit avec le projet |
+| 4 | **V3-R4** | ~20 Mo par carte, le plus gros poste hors JS |
+| 5 | **V3-R5** | Le plus long, le moins rentable au Ko |
+
+**`V3-R0` et `V3-R6` d'abord, et ils prennent une soirée à deux.** Il est parfaitement possible que `R6` révèle que la région est mal réglée — auquel cas tout le reste du lot devient secondaire, et il vaut mieux le savoir avant d'avoir découpé trente composants.
 
 ---
 
