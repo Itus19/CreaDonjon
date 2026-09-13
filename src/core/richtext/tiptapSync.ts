@@ -26,7 +26,8 @@ export interface InlineNodeJSON {
   type: string;
   text?: string;
   marks?: { type: string }[];
-  attrs?: { kind?: string; id?: string; key?: string; label?: string };
+  /** `id`/`key` : `null` possible (attribut Tiptap toujours present pour `refMention`, meme quand non utilise — voir `RefMention.addAttributes`, extensions.ts), jamais transmis tel quel a `SegmentContentNode` (optional, pas nullable). */
+  attrs?: { kind?: string; id?: string | null; key?: string | null; label?: string };
 }
 
 export interface BlockNodeJSON {
@@ -93,11 +94,18 @@ export function docToSegments(doc: DocJSON): Segment[] {
           return marks.length > 0 ? { t: "text", v: inline.text, marks } : { t: "text", v: inline.text };
         }
         if (inline.type === "refMention" && inline.attrs) {
+          // `RefMention` (extensions.ts) defaut id/key a `null` (attribut
+          // Tiptap toujours present) mais `zRefNode` les veut `optional()`,
+          // jamais `nullable()` (id/key absent = undefined, pas null) — sans
+          // cette conversion, le noeud NON utilise (id pour une regle, key
+          // pour une entite) envoie `null` et fait echouer la validation Zod
+          // a la sauvegarde (404/400 silencieux, bug reel trouve en testant
+          // "Lier à la Fiche", V2.1-1).
           return {
             t: "ref",
             kind: (inline.attrs.kind as "entity" | "rule" | "asset" | undefined) ?? "entity",
-            id: inline.attrs.id,
-            key: inline.attrs.key,
+            id: inline.attrs.id ?? undefined,
+            key: inline.attrs.key ?? undefined,
             label: inline.attrs.label ?? "",
           };
         }

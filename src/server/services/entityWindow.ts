@@ -25,7 +25,7 @@ export interface EntityWindowData {
   worldSlug: string;
   blocks: VisibleBlock[];
   relations: VisibleRelation[];
-  otherEntities: { id: string; name: string; slug: string; entity_kind: string }[];
+  otherEntities: { id: string; name: string; slug: string; entity_kind: string; aliases: string[] }[];
   /** Categories personnalisees deja utilisees dans ce monde (V2-G7) — pour le selecteur de type. */
   worldCustomKinds: string[];
   /**
@@ -99,7 +99,7 @@ export async function getEntityWindowData(
     const visibleIds = await listPlayerVisibleEntityIds(supabase, world.id, othersInWorld.map((e) => e.id), user.id);
     othersInWorld = othersInWorld.filter((e) => visibleIds.has(e.id));
   }
-  const otherEntities = othersInWorld.map((e) => ({ id: e.id, name: e.name, slug: e.slug, entity_kind: e.entity_kind }));
+  const otherEntities = othersInWorld.map((e) => ({ id: e.id, name: e.name, slug: e.slug, entity_kind: e.entity_kind, aliases: e.aliases }));
 
   // "Un monde = une campagne" (migration 20260826100001) : au plus une ligne.
   const campaign = campaigns[0] ?? null;

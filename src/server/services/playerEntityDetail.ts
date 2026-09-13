@@ -5,6 +5,7 @@ import { filterBlocks, filterSegments, type VisibilityLevel } from "@/src/core/v
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
+import { collectRefTargetIds } from "@/src/core/linker/refTargets";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { type BlockRow, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { getEntityBySlug } from "@/src/server/repos/entities";
@@ -216,11 +217,23 @@ export async function getPlayerEntityDetail(
 
   const hasQuestBlock = blocksWithTimelineCalendar.some((b) => b.blockType === "quest");
   const hasTimelineBlockRefs = blocksWithTimelineCalendar.some((b) => b.blockType === "timeline");
+  const hasTextBlock = blocksWithTimelineCalendar.some((b) => b.blockType === "text");
   const entityLookup =
-    hasQuestBlock || hasTimelineBlockRefs
+    hasQuestBlock || hasTimelineBlockRefs || hasTextBlock
       ? new Map((await listEntitiesForWorld(supabase, worldId)).map((e) => [e.id, { name: e.name, slug: e.slug }]))
       : null;
   const blocksWithQuestRefs = blocksWithTimelineCalendar.map((block) => {
+    if (block.blockType === "text" && entityLookup) {
+      const text = zTextBlockData.safeParse(block.data);
+      if (!text.success) return block;
+      const { entityIds } = collectRefTargetIds(text.data.segments);
+      const textRefs: Record<string, { name: string; slug: string }> = {};
+      for (const id of entityIds) {
+        const found = entityLookup.get(id);
+        if (found) textRefs[id] = found;
+      }
+      return { ...block, textRefs };
+    }
     if (block.blockType === "timeline" && entityLookup) {
       const timeline = zTimelineBlockData.safeParse(block.data);
       if (!timeline.success) return block;

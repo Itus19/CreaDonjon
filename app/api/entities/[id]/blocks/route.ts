@@ -57,6 +57,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     createdBy: user.id,
   });
   if (!result.ok) {
+    if (result.reason === "duplicate_block_type") {
+      return NextResponse.json({ error: "Cette fiche a déjà un bloc de ce type." }, { status: 409 });
+    }
     return NextResponse.json({ error: "Vous n'avez pas le droit d'ajouter un bloc à cette fiche." }, { status: 403 });
   }
 

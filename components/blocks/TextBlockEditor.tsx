@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import RichTextEditor from "@/components/entities/richtext/RichTextEditor";
 import type { Segment } from "@/src/core/schemas/entities/segments";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
+import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 
 interface AiProposalItem {
   id: string;
@@ -28,6 +29,9 @@ export default function TextBlockEditor({
   blockId,
   onBlockRefreshed,
   hideAssist,
+  worldSlug,
+  worldId,
+  otherEntities,
 }: {
   data: TextBlockData;
   onChange: (data: TextBlockData) => void;
@@ -36,6 +40,10 @@ export default function TextBlockEditor({
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
   /** Coquille joueur (retour utilisateur) : "enlever les outils d'assistance IA" — jamais retire pour le MJ, `undefined`/`false` partout ailleurs. */
   hideAssist?: boolean;
+  /** V2.1-1 : boutons Lier/Créer/Ouvrir une fiche, transmis à `RichTextEditor` — absents (contexte hors fiche de monde) masquent simplement ces boutons. */
+  worldSlug?: string;
+  worldId?: string;
+  otherEntities?: OtherEntityOption[];
 }) {
   const [showAssist, setShowAssist] = useState(false);
   const [instruction, setInstruction] = useState("");
@@ -114,7 +122,14 @@ export default function TextBlockEditor({
 
   return (
     <div className="flex flex-col gap-2">
-      <RichTextEditor key={remountKey} segments={data.segments} onChange={(segments: Segment[]) => onChange({ __v: 1, segments })} />
+      <RichTextEditor
+        key={remountKey}
+        segments={data.segments}
+        onChange={(segments: Segment[]) => onChange({ __v: 1, segments })}
+        worldSlug={worldSlug}
+        worldId={worldId}
+        otherEntities={otherEntities}
+      />
 
       {!hideAssist && (
       <div className="flex flex-col gap-1.5 rounded-md border border-edge/50 bg-panel-sunken p-2">

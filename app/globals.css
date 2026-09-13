@@ -258,6 +258,14 @@ body {
   cursor: default;
 }
 
+/* Lien brise (V2.1-1, specs/wiki-liens-et-personnages.md §A1) : la fiche
+   ciblee n'existe plus ou n'est pas visible a ce lecteur — jamais retire
+   silencieusement, juste distingue d'un lien qui fonctionne. */
+.rich-ref-broken {
+  color: var(--danger);
+  text-decoration-style: dashed;
+}
+
 /*
  * Hierarchie de titres, reprise de l'ancienne application (master) :
  * titre de fiche (.entity-title) > titre de bloc (.block-title).

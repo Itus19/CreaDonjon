@@ -15,6 +15,7 @@ import {
   deleteBlock as repoDeleteBlock,
   getBlockById,
   insertBlock,
+  InsertBlockError,
   listBlocksForEntity,
   maxDisplayOrder,
   updateBlockDisplayOrder,
@@ -22,10 +23,13 @@ import {
 } from "@/src/server/repos/blocks";
 import { getEntityById } from "@/src/server/repos/entities";
 import { getBlockImageAssetId } from "@/src/server/repos/blockImages";
+import { deleteMentionsForSource, replaceMentionsForSource } from "@/src/server/repos/entityMentions";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { recordEntityRevision } from "@/src/server/services/entityHistory";
 import { canUserEditEntityById } from "@/src/server/services/permissions";
 import { deleteAsset } from "@/src/server/services/storage";
+import { extractMentionsFromSegments } from "@/src/core/linker/mentions";
+import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -126,7 +130,10 @@ async function recordBlockRevision(
   await recordEntityRevision(supabase, { entity, changeSource, changedBy });
 }
 
-export type CreateBlockResult = { ok: true; block: VisibleBlock } | { ok: false; reason: "forbidden" };
+export type CreateBlockResult =
+  | { ok: true; block: VisibleBlock }
+  | { ok: false; reason: "forbidden" }
+  | { ok: false; reason: "duplicate_block_type" };
 
 export async function createBlock(
   supabase: TypedClient,
@@ -152,16 +159,28 @@ export async function createBlock(
   const data = defaultBlockData(params.blockType);
   const displayOrder = (await maxDisplayOrder(supabase, params.entityId)) + 1000;
 
-  const row = await insertBlock(supabase, {
-    entityId: params.entityId,
-    blockType: params.blockType,
-    display,
-    data: data as Json,
-    displayOrder,
-    visibilityLevel: params.visibilityLevel,
-    visibilityScopeId: params.visibilityScopeId,
-    createdBy: params.createdBy,
-  });
+  let row: BlockRow;
+  try {
+    row = await insertBlock(supabase, {
+      entityId: params.entityId,
+      blockType: params.blockType,
+      display,
+      data: data as Json,
+      displayOrder,
+      visibilityLevel: params.visibilityLevel,
+      visibilityScopeId: params.visibilityScopeId,
+      createdBy: params.createdBy,
+    });
+  } catch (error) {
+    // V2.1-5 : au plus un bloc personality/worldview par fiche (index unique
+    // blocks_personality_worldview_uniq, migration 20260904220000) — une
+    // violation de cette contrainte precise est un refus attendu, jamais
+    // une erreur 500 opaque.
+    if (error instanceof InsertBlockError && error.code === "23505") {
+      return { ok: false, reason: "duplicate_block_type" };
+    }
+    throw error;
+  }
   await recordBlockRevision(supabase, params.entityId, params.createdBy);
   return { ok: true, block: toVisibleBlock(row) };
 }
@@ -207,6 +226,23 @@ export async function updateBlockContent(
     await clearOtherWikiBackgrounds(supabase, existing.entity_id, params.id);
   }
 
+  // V2.1-1, rétroliens (specs/wiki-liens-et-personnages.md §A2) : recalcule
+  // TOUJOURS les mentions de ce bloc a chaque sauvegarde, jamais seulement
+  // quand un ref est ajoute — un lien retire du texte doit aussi retirer sa
+  // mention.
+  if (existing.block_type === "text") {
+    const entity = await getEntityById(supabase, existing.entity_id);
+    if (entity) {
+      const text = zTextBlockData.parse(validatedData);
+      await replaceMentionsForSource(supabase, {
+        worldId: entity.world_id,
+        sourceEntityId: existing.entity_id,
+        sourcePath: `block.${params.id}`,
+        mentions: extractMentionsFromSegments(text.segments),
+      });
+    }
+  }
+
   return { ok: true, block: toVisibleBlock(row) };
 }
 
@@ -242,6 +278,11 @@ export async function deleteBlock(
 
   await repoDeleteBlock(supabase, id);
   if (assetId) await deleteAsset(supabase, assetId);
+  // V2.1-1 : un bloc de texte supprime ne doit pas laisser ses mentions
+  // (retroliens) fantomes en base — meme discipline que l'asset ci-dessus.
+  if (existing.block_type === "text") {
+    await deleteMentionsForSource(supabase, { sourceEntityId: existing.entity_id, sourcePath: `block.${id}` });
+  }
   await recordBlockRevision(supabase, existing.entity_id, changedBy);
   return { ok: true };
 }

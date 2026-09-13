@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ReaderHistoryNav from "./ReaderHistoryNav";
 
 /**
  * Disposition a deux volets (sommaire a gauche + fiche a `max-w-[70ch]`)
@@ -46,7 +47,10 @@ export default function TwoPaneReaderLayout({
         {sidebar}
       </aside>
       <main className="min-h-0 min-w-0 flex-1 overflow-y-auto pt-14 md:border-l md:border-edge/60 md:pl-6 md:pt-0">
-        <div className="mx-auto max-w-[70ch]">{children}</div>
+        <div className="mx-auto max-w-[70ch]">
+          <ReaderHistoryNav />
+          {children}
+        </div>
       </main>
     </div>
   );

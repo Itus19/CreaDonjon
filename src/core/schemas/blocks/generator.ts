@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type {
   GeneratorData,
+  GeneratorFragmentNameSlot,
   GeneratorProseSlot,
   GeneratorSlot,
   GeneratorTableSlot,
@@ -17,6 +18,8 @@ const zGeneratorTableSlotTier: z.ZodType<GeneratorTableSlotTier> = z.object({
   axis: z.string().min(1),
   match: z.enum(["exact", "ceiling"]),
   target: z.string().min(1).optional(),
+  /** V2-J9quater, accord entre emplacements (noms d'echoppe). */
+  fromSlot: z.boolean().optional(),
 });
 
 const zGeneratorTableSlot: z.ZodType<GeneratorTableSlot> = z.object({
@@ -33,7 +36,18 @@ const zGeneratorProseSlot: z.ZodType<GeneratorProseSlot> = z.object({
   prose: z.string().min(1),
 });
 
-const zGeneratorSlot: z.ZodType<GeneratorSlot> = z.union([zGeneratorTableSlot, zGeneratorProseSlot]);
+/** Assemblage de prenoms par fragments (retour utilisateur, `src/core/generators/nameFragments.ts`). */
+const zGeneratorFragmentNameSlot: z.ZodType<GeneratorFragmentNameSlot> = z.object({
+  key: z.string().min(1),
+  fragments: z.object({
+    starts: z.string().min(1),
+    mids: z.string().min(1).optional(),
+    ends: z.string().min(1),
+  }),
+  tier: zGeneratorTableSlotTier.optional(),
+});
+
+const zGeneratorSlot: z.ZodType<GeneratorSlot> = z.union([zGeneratorTableSlot, zGeneratorFragmentNameSlot, zGeneratorProseSlot]);
 
 export const zGeneratorBlockData: z.ZodType<GeneratorData & { __v: 1 }> = z.object({
   __v: z.literal(1),

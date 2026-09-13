@@ -1922,6 +1922,29 @@ groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
   direct : tirage sur les 4 cultures, `d100` confirmé, aucun doublon
   (relecture directe de l'état en base après écriture, 100/100 uniques sur
   chaque table).
+
+  **Correctif post-clôture** (retour utilisateur, après avoir vu comment
+  dd2024.fr compose ses prénoms — algorithme réimplémenté indépendamment,
+  aucun mot importé, cf. commit du moteur) : les 100 noms par culture
+  étaient PRÉ-CALCULÉS (combinaison figée de deux bassins), pas composés en
+  direct — même limite que l'ancien `noms-echoppes`. Remplacé par un
+  nouveau type d'emplacement de générateur, `GeneratorFragmentNameSlot`
+  (début + parfois un milieu (40%) + fin, recollés par une règle
+  d'euphonie qui évite les chocs de voyelles/consonnes,
+  `src/core/generators/nameFragments.ts`, testé). La fin du prénom porte le
+  genre (`tier`), filtrée par un nouvel axe de variante "Genre"
+  (Masculin/Féminin/**Neutre**, ce dernier avec ses propres fins de prénom
+  — jamais un simple mélange des deux autres, retour utilisateur explicite).
+  4 × 3 tables de fragments (débuts/milieux/fins, ~16/8/33 entrées chacune)
+  + 4 tables de noms de famille (30 chacune, **réutilisant** les noms de
+  famille déjà écrits à la main dans les anciennes tables plutôt que d'en
+  réinventer — extraits et dédupliqués). Vérifié en direct sur les 4
+  cultures et les 3 genres : sonorité cohérente par culture (« Thibous
+  Prudhomme » humain masculin, « Nolan Boisjoli » humain neutre, « Miryr
+  Feuillage-Éternel » elfe, « Gunnorek Poing-de-Granit » nain, « Jososs
+  Douxmatelas » halfelin), relance individuelle du seul emplacement
+  "prenom" fonctionnelle, "Éditer les tables" liste bien les 4 tables de
+  chaque section.
 - **V2-J15b — Butin** (1 table : `butin-objets-magiques`) · **fait** —
   111 objets sur les ~245 à rareté propre du SRD 2024 (Commun 1/1 — tout
   ce qui existe ; Peu commun 31/73 ; Rare 34/86 ; Très rare 25/53 ;
@@ -1966,6 +1989,22 @@ groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
   testé au plafond Réputée — clamp correct (Simple=palier correcte,
   Moyen=Cher=palier réputée), boissons entièrement issues du palier
   réputée, prix cohérents.
+
+  **Correctif post-clôture** (suite du chantier Échoppe ci-dessous — même
+  question posée pour les noms de taverne, qui étaient l'exemple d'origine
+  de l'idée d'assemblage : « Le cerf écarlate »). La réserve exprimée plus
+  haut (« liste directe pour garantir l'accord... plutôt qu'une
+  combinatoire risquée ») ne tient plus : `fromSlot` résout exactement ce
+  risque. `noms-tavernes` (100 entrées figées) supprimée, remplacée par
+  `mots-tavernes` (30 noms d'enseigne — animaux et objets emblématiques,
+  genre en `tier`) + `adjectifs-tavernes` PARTAGÉE (50 concepts, 13
+  invariants + 37 aux deux formes, 87 entrées, registre couleurs/ambiances
+  distinct de celui des échoppes). `taverne-nom` recomposé en `mot` +
+  `adjectif`, mêmes deux emplacements que `echoppe-nom`. Zéro nouveau code
+  moteur (réutilise `fromSlot`/`knownSlotTiers` tel quel). Vérifié en
+  direct : accord correct dans les deux genres (« La Barrique Chaleureuse »,
+  « Le Renard Vert », « Le Renard Chaleureux »), relance individuelle de
+  l'emplacement `adjectif` seul préserve le genre de `mot` déjà tiré.
 - **V2-J15e — Échoppe** (20 tables : ambiance/marchands/apparence/
   histoire/objets ×9) · **fait** — noms de boutiques à 100 (liste
   directe). Le reste des tables de texte entre 32 et 56 entrées selon la
@@ -1993,22 +2032,31 @@ groupes (Taverne, Échoppe — une vingtaine de tables chacun) en dernier.
   direct : 20 tirages consécutifs en Maison close, aucun nom hors-thème,
   mélange de noms génériques et typés confirmé.
 
-  **Densité augmentée** (retour utilisateur — 2-11 noms spécifiques par
-  type jugé trop maigre pour certains types comme Bazar/Forgeron) :
-  plutôt qu'écrire des dizaines de noms un par un, génération combinatoire
-  par type — un petit vocabulaire "thème" par type (~12-18 mots, genre
-  marqué, ex. Forge/f, Marteau/m, Enclume/f pour Forgeron) combiné à un
-  pool de 50 adjectifs PARTAGÉ entre les 9 types (chaque adjectif porte
-  ses deux formes, ex. Ardent/Ardente), avec accord de genre et élision de
-  l'article calculés à la génération (« La Forge Ardente », « Le Marteau
-  Poli », « L'Écu Discret »). Même technique que les tables de noms de
-  personnes (V2-J15a/c, prénom + nom de famille), appliquée ici au
-  vocabulaire commercial plutôt qu'à l'onomastique. 162 noms combinatoires
-  ajoutés (18 par type, dédupliqués contre les 100 existants), table
-  passée de 100 à 262 entrées — chaque type dispose maintenant de 62 à 71
-  noms éligibles (42 génériques + 20-29 spécifiques), contre 44-53 avant.
-  Vérifié en direct : 10 tirages en Bazar, mélange de noms génériques et
-  combinatoires, accord grammatical correct sur tout l'échantillon.
+  **Densité augmentée, puis remplacée par une composition en direct**
+  (retour utilisateur — 2-11 noms spécifiques par type jugé trop maigre
+  pour certains types comme Bazar/Forgeron). Premier essai : génération
+  combinatoire PRÉ-CALCULÉE, 162 noms figés ajoutés à la table partagée
+  (100 → 262 entrées). L'auteur a explicitement demandé mieux : de vraies
+  tables séparées, éditables indépendamment dans l'écran "Éditer les
+  tables", avec le droit qu'un même mot apparaisse dans deux tables
+  voisines (ex. Forgeron et Armurier partagent « Lame », « Masse »).
+
+  Nouvelle capacité moteur (`fromSlot`, `GeneratorTableSlotTier`,
+  `src/core/generators/types.ts`) : un emplacement peut filtrer sur le
+  `tier` RÉELLEMENT tiré par un emplacement précédent, au lieu d'un axe de
+  variante GM. `noms-echoppes` (262 entrées) supprimée, remplacée par 9
+  tables `mots-echoppes-{type}` (17-19 noms communs du métier, genre en
+  `tier`, ex. Forge/f, Marteau/m pour Forgeron — réutilise l'interpolation
+  `{type}` déjà existante depuis V2-J7, aucun nouveau code pour choisir la
+  table) + 1 table `adjectifs-echoppes` PARTAGÉE (50 concepts, 13
+  invariants + 37 aux deux formes, 87 entrées) filtrée en direct sur le
+  genre du nom déjà tiré (`fromSlot`). `echoppe-nom` recomposé en deux
+  emplacements (`mot` + `adjectif`) au lieu d'un seul texte figé. Vérifié
+  en direct : accord de genre correct sur plusieurs types (« La Fiole
+  Polie », « L'Enclume Audacieuse », « Le Fer Zélé »), et relance
+  INDIVIDUELLE du seul emplacement `adjectif` (nouveau round-trip
+  `knownSlotTiers`, symétrique à `knownSlotTexts`) préserve bien le genre
+  du nom déjà tiré sans le retirer.
 
 **Critères (communs à chaque sous-ticket) — tous les 5 sous-tickets fermés**
 - [x] Chaque table du groupe a un `die` recalculé sur son nombre réel

@@ -101,6 +101,17 @@ export async function maxDisplayOrder(supabase: TypedClient, entityId: string): 
   return data?.display_order ?? 0;
 }
 
+/** Erreur d'insertion qui conserve le code Postgres (ex. "23505", violation de contrainte unique) — les appelants qui n'en ont pas besoin la traitent comme une `Error` ordinaire, ceux qui veulent distinguer une violation de contrainte (`createBlock`, V2.1-5) lisent `code`. */
+export class InsertBlockError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string | undefined
+  ) {
+    super(message);
+    this.name = "InsertBlockError";
+  }
+}
+
 export async function insertBlock(
   supabase: TypedClient,
   params: {
@@ -128,7 +139,7 @@ export async function insertBlock(
     })
     .select(BLOCK_COLUMNS)
     .single();
-  if (error) throw new Error(error.message);
+  if (error) throw new InsertBlockError(error.message, error.code);
   return data as BlockRow;
 }
 

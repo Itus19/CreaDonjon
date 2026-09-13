@@ -6,6 +6,7 @@ import { filterBlocks, filterSegments, type VisibilityLevel } from "@/src/core/v
 import { verifySharePassword } from "@/src/core/shareLinks/password";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
+import { collectRefTargetIds } from "@/src/core/linker/refTargets";
 import { relationLabel, type RelationType } from "@/src/core/relations/inverses";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { type BlockRow, getBlockById, listBlocksForEntity } from "@/src/server/repos/blocks";
@@ -259,6 +260,8 @@ export interface PublicBlock {
   timelineCalendar?: CalendarConfigInput;
   /** Blocs `timeline` seulement : nom/slug des entites promues referencees par une entree (`entry.ref`) — meme motif que `questRefs`, la donnee du bloc ne porte que des id. */
   timelineRefs?: Record<string, { name: string; slug: string }>;
+  /** Blocs `text` seulement (V2.1-1, liens automatiques) : nom/slug des entites referencees par un noeud `ref` de kind "entity" — meme motif que `questRefs`/`timelineRefs`. Les refs de kind "rule" n'ont besoin d'aucune resolution serveur (le lien se construit directement depuis la cle deja portee par le noeud). */
+  textRefs?: Record<string, { name: string; slug: string }>;
   /** Blocs `map` en mode "ref" seulement (Lot I, phase F₁) : image resolue du bloc source pour CE viewer — jamais le `sourceBlockId` brut envoye tel quel, sa visibilite propre doit etre revalidee ici (`resolveMapSource`). `null` si le bloc source n'existe pas/n'est plus visible. */
   mapSource?: MapSourceInfo | null;
   /** Blocs `map` seulement, own ET ref (Lot I, phase C) : punaises deja filtrees par visibilite pour CE viewer (`listVisibleMapPins`) — un bloc "ref" recoit les punaises du bloc SOURCE (ADR 0017 decision 1, "modifier une punaise sur le bloc proprietaire la modifie partout"). */
@@ -505,8 +508,9 @@ export async function getPublicEntityDetail(
   // `toPublicRelations` — jamais de nom ni de lien mort qui la revele.
   const hasQuestBlock = blocksWithTimelineCalendar.some((b) => b.blockType === "quest");
   const hasTimelineBlockRefs = blocksWithTimelineCalendar.some((b) => b.blockType === "timeline");
+  const hasTextBlock = blocksWithTimelineCalendar.some((b) => b.blockType === "text");
   const entityLookup =
-    hasQuestBlock || hasTimelineBlockRefs
+    hasQuestBlock || hasTimelineBlockRefs || hasTextBlock
       ? new Map(
           (await listEntitiesForWorld(supabase, worldId))
             .filter((e) => e.is_public)
@@ -514,6 +518,17 @@ export async function getPublicEntityDetail(
         )
       : null;
   const blocksWithQuestRefs = blocksWithTimelineCalendar.map((block) => {
+    if (block.blockType === "text" && entityLookup) {
+      const text = zTextBlockData.safeParse(block.data);
+      if (!text.success) return block;
+      const { entityIds } = collectRefTargetIds(text.data.segments);
+      const textRefs: Record<string, { name: string; slug: string }> = {};
+      for (const id of entityIds) {
+        const found = entityLookup.get(id);
+        if (found) textRefs[id] = found;
+      }
+      return { ...block, textRefs };
+    }
     if (block.blockType === "timeline" && entityLookup) {
       const timeline = zTimelineBlockData.safeParse(block.data);
       if (!timeline.success) return block;

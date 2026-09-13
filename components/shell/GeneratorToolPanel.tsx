@@ -368,11 +368,11 @@ function GeneratorSectionCard({
 
   const hasProseSlot = data.slots.some(isProseSlot);
 
-  async function draw(onlySlotKey: string | null, knownSlotTexts: Record<string, string>) {
+  async function draw(onlySlotKey: string | null, knownSlotTexts: Record<string, string>, knownSlotTiers: Record<string, string>) {
     const res = await fetch(`/api/blocks/${blockId}/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ proseLength, onlySlotKey, knownSlotTexts, variant }),
+      body: JSON.stringify({ proseLength, onlySlotKey, knownSlotTexts, knownSlotTiers, variant }),
     });
     if (!res.ok) {
       const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -391,7 +391,7 @@ function GeneratorSectionCard({
     setDrawing(true);
     setError(null);
     try {
-      const result = await draw(null, {});
+      const result = await draw(null, {}, {});
       const nextSlotResults = Object.fromEntries(result.slots.map((s) => [s.key, s]));
       setText(result.text);
       setSlotResults(nextSlotResults);
@@ -410,7 +410,12 @@ function GeneratorSectionCard({
     setError(null);
     try {
       const knownSlotTexts = Object.fromEntries(Object.entries(slotResults).map(([k, s]) => [k, s.text]));
-      const result = await draw(slotKey, knownSlotTexts);
+      const knownSlotTiers = Object.fromEntries(
+        Object.entries(slotResults)
+          .filter(([, s]) => s.tier !== undefined)
+          .map(([k, s]) => [k, s.tier as string])
+      );
+      const result = await draw(slotKey, knownSlotTexts, knownSlotTiers);
       const nextSlotResults = { ...slotResults };
       for (const s of result.slots) nextSlotResults[s.key] = s;
       setText(result.text);

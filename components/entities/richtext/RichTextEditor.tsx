@@ -1,15 +1,33 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
+import { NodeSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import BubbleSelect from "./BubbleSelect";
+import RefLinkPopover, { type RefLinkTarget } from "./RefLinkPopover";
 import { SegmentParagraph, SegmentHeading, RefMention, Spoiler } from "./extensions";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import { docToSegments, segmentsToDoc, type DocJSON } from "@/src/core/richtext/tiptapSync";
 import type { Segment } from "@/src/core/schemas/entities/segments";
+import type { OtherEntityOption } from "@/components/entities/RelationsChips";
+import { useDesktop } from "@/components/shell/DesktopContext";
+import { windowHref, type WindowRef } from "@/components/shell/windowRefs";
+import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
+import { detectEntityReferences, type LinkableEntity } from "@/src/core/linker/detect";
+
+/** V2.1-1, détection automatique — une mention trouvée dans le texte, pas encore liée, en attente de confirmation (jamais appliquée seule, spec §A1 "Renommage"). */
+interface DetectedSuggestion {
+  segmentId: string;
+  start: number;
+  end: number;
+  matchedText: string;
+  targetName: string;
+  target: RefLinkTarget;
+}
 
 const BLOCK_TYPE_OPTIONS = [
   { value: "paragraph", label: "Paragraphe" },
@@ -47,6 +65,24 @@ function AlignIcon({ value }: { value: string }) {
   );
 }
 
+/** Icone "maillon de chaine" minimaliste (retour utilisateur : pas d'emoji sur le bouton "Détecter des liens") — meme convention que `EyeIcon`/`DieIcon` (components/shared) : trait fin, `currentColor`, pas de police d'icones. */
+function LinkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+      <path
+        d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /**
  * Remplace `SegmentsEditor.tsx` (V0-06f) : une seule zone de texte
  * editable, plus de bouton « + Ajouter un segment ». Les segments existent
@@ -62,13 +98,26 @@ export default function RichTextEditor({
   segments,
   onChange,
   onBlur,
+  worldSlug,
+  worldId,
+  otherEntities,
 }: {
   segments: Segment[];
   onChange: (segments: Segment[]) => void;
   onBlur?: () => void;
+  /** V2.1-1 : boutons Lier/Créer/Ouvrir masqués sans ces props (ex. description de règle, contexte hors fiche de monde) — même repli que `onLaunchWizard`. */
+  worldSlug?: string;
+  /** V2.1-1, "Créer comme Fiche" : `POST /api/entities` veut l'id du monde, pas son slug. */
+  worldId?: string;
+  otherEntities?: OtherEntityOption[];
 }) {
   const [initialDoc] = useState<DocJSON>(() => segmentsToDoc(segments));
   const [, forceUpdate] = useState(0);
+  const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<DetectedSuggestion[]>([]);
+  const desktop = useDesktop();
+  const router = useRouter();
+  const ruleEntries = useWorldRuleEntries(worldSlug ?? "");
 
   const editor = useEditor({
     extensions: [
@@ -161,12 +210,276 @@ export default function RichTextEditor({
       .run();
   }
 
+  /**
+   * V2.1-1 (retour utilisateur) : lie/delie une reference vers une fiche ou
+   * une entree de regle. Le noeud `refMention` est atomique (extensions.ts) —
+   * lier une selection la REMPLACE par un noeud dont le `label` reste le
+   * texte selectionne (jamais le nom de la cible : le label est ce que
+   * l'auteur a ecrit, specs/wiki-liens-et-personnages.md §A1). Delier fait
+   * l'inverse a partir de ce meme label, aucune perte d'information.
+   */
+  const selection = editor.state.selection;
+  const isRefSelected = selection instanceof NodeSelection && selection.node.type.name === "refMention";
+  const hasTextSelection = !selection.empty && !isRefSelected;
+  /** V2.1-1, liens brises (specs/wiki-liens-et-personnages.md §A1) : une fiche liee peut avoir ete supprimee entre-temps — jamais verifie pour les regles (leur cle reste valide tant que la regle existe, hors perimetre de ce controle rapide). */
+  const selectedRefBroken =
+    isRefSelected &&
+    (selection as NodeSelection).node.attrs.kind === "entity" &&
+    !entitySlugById((selection as NodeSelection).node.attrs.id as string | null);
+
+  function linkSelectionTo(target: RefLinkTarget) {
+    const { from, to } = editor!.state.selection;
+    const label = editor!.state.doc.textBetween(from, to);
+    editor!
+      .chain()
+      .focus()
+      .command(({ tr, state }) => {
+        tr.replaceRangeWith(
+          from,
+          to,
+          state.schema.nodes.refMention.create({
+            kind: target.kind,
+            id: target.kind === "entity" ? target.id : null,
+            key: target.kind === "rule" ? target.key : null,
+            label,
+          })
+        );
+        return true;
+      })
+      .run();
+  }
+
+  async function createAndLinkSelection() {
+    if (!worldId) return;
+    const { from, to } = editor!.state.selection;
+    const label = editor!.state.doc.textBetween(from, to);
+    if (!label.trim()) return;
+    const res = await fetch("/api/entities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ worldId, name: label.trim(), entityKind: "other" }),
+    });
+    if (!res.ok) return;
+    const created = (await res.json()) as { id: string };
+    linkSelectionTo({ kind: "entity", id: created.id, name: label.trim() });
+  }
+
+  function unlinkRefMention() {
+    if (!isRefSelected) return;
+    const node = (selection as NodeSelection).node;
+    const label = node.attrs.label as string;
+    editor!
+      .chain()
+      .focus()
+      .command(({ tr, state }) => {
+        tr.replaceRangeWith(selection.from, selection.to, state.schema.text(label || " "));
+        return true;
+      })
+      .run();
+  }
+
+  function openRefMention() {
+    if (!isRefSelected || !worldSlug) return;
+    const node = (selection as NodeSelection).node;
+    const kind = (node.attrs.kind as string) === "rule" ? "rule" : "entity";
+    const key = kind === "rule" ? (node.attrs.key as string | null) : entitySlugById(node.attrs.id as string | null);
+    if (!key) return;
+    const ref: WindowRef = kind === "rule" ? { kind: "rule", key } : { kind: "entity", key };
+    if (desktop) desktop.openRef(ref);
+    else router.push(windowHref(worldSlug, ref));
+  }
+
+  function entitySlugById(id: string | null): string | null {
+    if (!id) return null;
+    return otherEntities?.find((e) => e.id === id)?.slug ?? null;
+  }
+
+  /**
+   * V2.1-1, détection automatique — passe le texte de chaque segment par
+   * `detectEntityReferences` (correspondance exacte de nom/alias, deja
+   * ecrite et testee) contre les fiches ET les entrees de regle du monde,
+   * puis propose les mentions trouvees comme SUGGESTIONS a confirmer —
+   * jamais une reecriture silencieuse (specs/wiki-liens-et-personnages.md
+   * §A1). Le texte compare inclut le `label` des `ref` deja poses (pour ne
+   * pas casser les decalages de caracteres des autres noeuds), filtres
+   * ensuite via `existingRanges` pour ne jamais re-suggerer un lien deja
+   * present. Un alias partage par plusieurs candidats (`ref.candidates.
+   * length > 1`) est ignore plutot que resolu au hasard — meme discipline
+   * que `detectEntityReferences` elle-meme.
+   */
+  function detectLinks() {
+    if (!otherEntities) return;
+    const candidates: LinkableEntity[] = [
+      ...otherEntities.map((e) => ({ id: `entity:${e.id}`, name: e.name, aliases: e.aliases ?? [] })),
+      ...ruleEntries.map((r) => ({ id: `rule:${r.key}`, name: r.name, aliases: [] as string[] })),
+    ];
+
+    const found: DetectedSuggestion[] = [];
+    for (const segment of segments) {
+      let text = "";
+      const existingRanges: { start: number; end: number }[] = [];
+      for (const node of segment.content) {
+        if (node.t === "text") {
+          text += node.v;
+        } else {
+          const start = text.length;
+          text += node.label;
+          existingRanges.push({ start, end: text.length });
+        }
+      }
+      if (text.trim().length === 0) continue;
+
+      for (const ref of detectEntityReferences(text, candidates)) {
+        if (ref.candidates.length !== 1) continue;
+        if (existingRanges.some((r) => ref.start < r.end && ref.end > r.start)) continue;
+        const [kindPrefix, ...rest] = ref.candidates[0].entityId.split(":");
+        const rawId = rest.join(":");
+        const target: RefLinkTarget =
+          kindPrefix === "entity" ? { kind: "entity", id: rawId, name: ref.candidates[0].term } : { kind: "rule", key: rawId, name: ref.candidates[0].term };
+        const targetName =
+          kindPrefix === "entity"
+            ? (otherEntities.find((e) => e.id === rawId)?.name ?? ref.candidates[0].term)
+            : (ruleEntries.find((r) => r.key === rawId)?.name ?? ref.candidates[0].term);
+        found.push({ segmentId: segment.id, start: ref.start, end: ref.end, matchedText: ref.matchedText, targetName, target });
+      }
+    }
+    setSuggestions(found);
+  }
+
+  /**
+   * Convertit un decalage de caracteres dans le TEXTE D'AFFICHAGE d'un
+   * segment (celui compare par `detectEntityReferences` : un noeud `ref`
+   * y compte pour la longueur de son `label`) en position ProseMirror
+   * reelle — un noeud `refMention` est atomique et n'occupe qu'UNE seule
+   * position, quelle que soit la longueur de son label, d'ou les deux
+   * compteurs distincts (`display`/`pm`) parcourus en parallele.
+   */
+  function segmentOffsetToPos(segmentId: string, charOffset: number): number | null {
+    let result: number | null = null;
+    editor!.state.doc.descendants((node, pos) => {
+      if (result !== null) return false;
+      if (node.attrs?.segmentId !== segmentId) return true;
+      let display = 0;
+      let pmOffset = 0;
+      node.forEach((child) => {
+        if (result !== null) return;
+        const isRef = child.type.name === "refMention";
+        const childDisplayLen = isRef ? ((child.attrs.label as string) ?? "").length : (child.text?.length ?? 0);
+        if (charOffset <= display + childDisplayLen) {
+          result = pos + 1 + pmOffset + (isRef ? (charOffset === display ? 0 : child.nodeSize) : charOffset - display);
+        }
+        display += childDisplayLen;
+        pmOffset += child.nodeSize;
+      });
+      if (result === null && charOffset === display) result = pos + 1 + pmOffset;
+      return false;
+    });
+    return result;
+  }
+
+  function applySuggestion(s: DetectedSuggestion) {
+    const from = segmentOffsetToPos(s.segmentId, s.start);
+    const to = segmentOffsetToPos(s.segmentId, s.end);
+    if (from === null || to === null) return;
+    const label = editor!.state.doc.textBetween(from, to);
+    editor!
+      .chain()
+      .focus()
+      .command(({ tr, state }) => {
+        tr.replaceRangeWith(
+          from,
+          to,
+          state.schema.nodes.refMention.create({
+            kind: s.target.kind,
+            id: s.target.kind === "entity" ? s.target.id : undefined,
+            key: s.target.kind === "rule" ? s.target.key : undefined,
+            label,
+          })
+        );
+        return true;
+      })
+      .run();
+    setSuggestions((prev) => prev.filter((x) => x !== s));
+  }
+
+  function dismissSuggestion(s: DetectedSuggestion) {
+    setSuggestions((prev) => prev.filter((x) => x !== s));
+  }
+
   return (
     <div className="flex flex-col gap-1">
       <BubbleMenu
         editor={editor}
         className="flex items-center gap-0.5 rounded-lg border border-edge-strong bg-panel-raised px-1.5 py-1 shadow-2xl"
       >
+        {worldSlug && otherEntities && isRefSelected && (
+          <>
+            {selectedRefBroken ? (
+              <span className="rounded px-2 py-1 text-xs text-danger" title="La fiche liée n'existe plus">
+                Lien brisé
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={openRefMention}
+                aria-label="Ouvrir la fiche liée"
+                title="Ouvrir la fiche liée"
+                className="rounded px-2 py-1 text-xs text-ink transition-colors hover:bg-panel"
+              >
+                Ouvrir
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={unlinkRefMention}
+              aria-label="Délier"
+              title="Délier"
+              className="rounded px-2 py-1 text-xs text-ink transition-colors hover:bg-panel"
+            >
+              Délier
+            </button>
+            <span className="mx-0.5 h-4 w-px bg-edge" />
+          </>
+        )}
+        {worldSlug && otherEntities && hasTextSelection && (
+          <>
+            <span className="relative">
+              <button
+                type="button"
+                onClick={() => setLinkPopoverOpen((v) => !v)}
+                aria-label="Lier à la fiche"
+                title="Lier à la fiche"
+                aria-expanded={linkPopoverOpen}
+                className={`rounded px-2 py-1 text-xs transition-colors hover:bg-panel ${linkPopoverOpen ? "bg-panel text-accent" : "text-ink"}`}
+              >
+                Lier à la Fiche
+              </button>
+              {linkPopoverOpen && (
+                <RefLinkPopover
+                  worldSlug={worldSlug}
+                  otherEntities={otherEntities}
+                  onSelect={(target) => {
+                    linkSelectionTo(target);
+                    setLinkPopoverOpen(false);
+                  }}
+                  onClose={() => setLinkPopoverOpen(false)}
+                />
+              )}
+            </span>
+            {worldId && (
+              <button
+                type="button"
+                onClick={createAndLinkSelection}
+                aria-label="Créer comme fiche"
+                title="Créer une nouvelle fiche à partir de la sélection"
+                className="rounded px-2 py-1 text-xs text-ink transition-colors hover:bg-panel"
+              >
+                Créer comme Fiche
+              </button>
+            )}
+            <span className="mx-0.5 h-4 w-px bg-edge" />
+          </>
+        )}
         <BubbleSelect value={currentBlockType} options={BLOCK_TYPE_OPTIONS} onChange={setBlockType} aria-label="Type de texte" />
         <span className="mx-0.5 h-4 w-px bg-edge" />
         {ALIGN_OPTIONS.map((opt) => (
@@ -238,6 +551,37 @@ export default function RichTextEditor({
         />
       </BubbleMenu>
       <EditorContent editor={editor} />
+      {worldSlug && otherEntities && (
+        <div className="flex flex-col gap-1.5">
+          <button
+            type="button"
+            onClick={detectLinks}
+            className="inline-flex items-center gap-1.5 self-start text-xs font-medium text-ink-muted transition-colors hover:text-ink"
+          >
+            <LinkIcon />
+            Détecter des liens
+          </button>
+          {suggestions.length > 0 && (
+            <ul className="flex flex-col gap-1 rounded-md border border-edge/60 bg-panel-sunken p-2">
+              {suggestions.map((s, i) => (
+                <li key={i} className="flex items-center justify-between gap-2 text-xs text-ink">
+                  <span>
+                    « {s.matchedText} » → {s.targetName}
+                  </span>
+                  <span className="flex shrink-0 gap-2">
+                    <button type="button" onClick={() => applySuggestion(s)} className="font-medium text-accent hover:underline">
+                      Lier
+                    </button>
+                    <button type="button" onClick={() => dismissSuggestion(s)} className="text-ink-muted hover:underline">
+                      Ignorer
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }

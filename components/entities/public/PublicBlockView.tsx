@@ -46,8 +46,48 @@ const TAG_BY_BLOCK_TYPE: Record<Segment["blockType"], string> = {
   h4: "h4",
 };
 
-function renderNode(node: SegmentContentNode, key: number) {
+/**
+ * V2.1-1 : un noeud `ref` de kind "entity" se resout via `textRefs` (nom/slug
+ * deja calcules cote serveur, filtres par visibilite — meme motif que
+ * `questRefLink` plus bas) ; "rule" construit son lien directement depuis sa
+ * `key` (aucune resolution serveur necessaire) MAIS seulement si
+ * `ruleHrefBase` est fourni — absent sur le partage anonyme (`/partage`,
+ * `/apercu`), aucune page de regle n'y existe pour un visiteur non
+ * authentifie. Cible introuvable/non fournie : lien brise, jamais retire
+ * silencieusement (specs/wiki-liens-et-personnages.md §A1).
+ */
+function renderNode(
+  node: SegmentContentNode,
+  key: number,
+  textRefs: Record<string, { name: string; slug: string }> | undefined,
+  hrefBase: string,
+  ruleHrefBase: string | undefined
+) {
   if (node.t === "ref") {
+    if (node.kind === "entity" && node.id) {
+      const found = textRefs?.[node.id];
+      if (found) {
+        return (
+          <Link key={key} href={`${hrefBase}/${found.slug}`} className="rich-ref-mention">
+            {node.label}
+          </Link>
+        );
+      }
+      // Fiche supprimee, ou masquee a CE viewer — lien brise visible plutot
+      // que retire silencieusement (specs/wiki-liens-et-personnages.md §A1).
+      return (
+        <span key={key} className="rich-ref-mention rich-ref-broken" title="Fiche introuvable ou non visible">
+          {node.label}
+        </span>
+      );
+    }
+    if (node.kind === "rule" && node.key && ruleHrefBase) {
+      return (
+        <Link key={key} href={`${ruleHrefBase}/${node.key}`} className="rich-ref-mention">
+          {node.label}
+        </Link>
+      );
+    }
     return (
       <span key={key} className="rich-ref-mention">
         {node.label}
@@ -64,7 +104,17 @@ function renderNode(node: SegmentContentNode, key: number) {
   return <span key={key}>{content}</span>;
 }
 
-function PublicTextBlock({ data }: { data: TextBlockData }) {
+function PublicTextBlock({
+  data,
+  textRefs,
+  hrefBase,
+  ruleHrefBase,
+}: {
+  data: TextBlockData;
+  textRefs: Record<string, { name: string; slug: string }> | undefined;
+  hrefBase: string;
+  ruleHrefBase: string | undefined;
+}) {
   return (
     <div className="rich-text-content">
       {data.segments.map((segment) => {
@@ -72,7 +122,7 @@ function PublicTextBlock({ data }: { data: TextBlockData }) {
         return createElement(
           tag,
           { key: segment.id, "data-align": segment.align },
-          segment.content.map((node, i) => renderNode(node, i)),
+          segment.content.map((node, i) => renderNode(node, i, textRefs, hrefBase, ruleHrefBase)),
         );
       })}
     </div>
@@ -218,7 +268,16 @@ function PublicQuestBlock({
  * appel d'ecriture possible. Garantit qu'un visiteur anonyme ne peut
  * jamais declencher une mutation, meme par accident.
  */
-export default function PublicBlockView({ block, hrefBase }: { block: PublicBlock; hrefBase: string }) {
+export default function PublicBlockView({
+  block,
+  hrefBase,
+  ruleHrefBase,
+}: {
+  block: PublicBlock;
+  hrefBase: string;
+  /** V2.1-1 : base des liens vers une fiche de regle (ex. `/m/[worldSlug]/joueur/regles`) — absent sur le partage anonyme (`/partage`, `/apercu`), aucune page de regle n'y existe pour un visiteur non authentifie. */
+  ruleHrefBase?: string;
+}) {
   // Retour utilisateur (V2-G13) : une image active comme fond de page est
   // deja rendue par WikiBackgroundProvider (position fixed, plein ecran) —
   // la rendre en plus a sa place dans le corps de la fiche la dupliquerait
@@ -233,7 +292,14 @@ export default function PublicBlockView({ block, hrefBase }: { block: PublicBloc
           jamais affiche pour ce type, contrairement a l'editeur ou il
           reste utile pour s'y retrouver parmi plusieurs blocs. */}
       {block.blockType !== "image" && <h3 className="block-title mb-2">{block.display.label}</h3>}
-      {block.blockType === "text" && <PublicTextBlock data={block.data as unknown as TextBlockData} />}
+      {block.blockType === "text" && (
+        <PublicTextBlock
+          data={block.data as unknown as TextBlockData}
+          textRefs={block.textRefs}
+          hrefBase={hrefBase}
+          ruleHrefBase={ruleHrefBase}
+        />
+      )}
       {block.blockType === "infobox" && <PublicInfoboxBlock data={block.data as unknown as InfoboxBlockData} />}
       {block.blockType === "image" && <PublicImageBlock data={block.data as unknown as ImageBlockData} />}
       {block.blockType === "genealogy" && block.genealogyTree && (
