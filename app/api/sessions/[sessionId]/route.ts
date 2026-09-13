@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionSummary, setSessionSummary } from "@/src/server/services/sessions";
 
-/** Session (dates, resume) pour le bloc `session_log` (V2-H4). */
+/** Session (dates, resume) — resume utilise par le futur Livre de seance (V2.1-3, `sessions.summary`). */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
   const supabase = await createClient();

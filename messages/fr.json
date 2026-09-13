@@ -216,7 +216,6 @@
     "gestionCampagne": "Gestion de campagne",
     "journalHistorique": "Journal d'historique",
     "probabilites": "Probabilités",
-    "tablesAleatoires": "Tables aléatoires",
     "rencontres": "Rencontres",
     "initiative": "Initiative",
     "creationPersonnage": "Création de personnage",
@@ -225,8 +224,7 @@
     "reglesActives": "Règles actives",
     "publication": "Publication",
     "spikeSolo": "Spike solo (V2-S1)",
-    "blocNotes": "Bloc-notes",
-    "bientot": "Bientôt"
+    "blocNotes": "Bloc-notes"
   },
   "settings": {
     "theme": {

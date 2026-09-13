@@ -55,7 +55,6 @@ const ResourcesBlockEditor = dynamic(() => import("./ResourcesBlockEditor"));
 const MusicBlockEditor = dynamic(() => import("./MusicBlockEditor"));
 const GenealogyBlockEditor = dynamic(() => import("./GenealogyBlockEditor"));
 const QuestBlockEditor = dynamic(() => import("./QuestBlockEditor"));
-const SessionLogBlockEditor = dynamic(() => import("./SessionLogBlockEditor"));
 const PersonalityBlockEditor = dynamic(() => import("./PersonalityBlockEditor"));
 const RelationshipBlockEditor = dynamic(() => import("./RelationshipBlockEditor"));
 const WorldviewBlockEditor = dynamic(() => import("./WorldviewBlockEditor"));
@@ -79,7 +78,6 @@ import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
 import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import type { GenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
 import type { QuestBlockData } from "@/src/core/schemas/blocks/quest";
-import type { SessionLogBlockData } from "@/src/core/schemas/blocks/sessionLog";
 import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
 import type { RelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
 import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
@@ -115,7 +113,6 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   music: "Musique",
   genealogy: "Généalogie",
   quest: "Quête",
-  session_log: "Journal de séance",
   personality: "Personnalité",
   relationship: "Relation",
   worldview: "Convictions",
@@ -246,15 +243,6 @@ function BlockDataEditor({
           data={block.data as QuestBlockData}
           otherEntities={otherEntities}
           onChange={(d) => onChange(d)}
-          onBlockRefreshed={onBlockRefreshed}
-        />
-      );
-    case "session_log":
-      return (
-        <SessionLogBlockEditor
-          blockId={block.id}
-          version={block.version}
-          data={block.data as SessionLogBlockData}
           onBlockRefreshed={onBlockRefreshed}
         />
       );

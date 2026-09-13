@@ -1,13 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
-import { getOrCreatePlayerNotes } from "@/src/server/services/playerNotes";
+import { getOrCreateNotebook } from "@/src/server/services/notebook";
 
 /**
- * Fiche de notes privee de l'appelant, pour ce monde (V2-M7b, coquille
- * joueur) — cree au premier passage si absente. Reserve a un compte
- * authentifie (n'importe lequel : MJ comme joueur peuvent avoir leurs
- * propres notes), jamais partage entre comptes.
+ * Cahier de notes privé de l'appelant, pour ce monde (V2.1-2, remplace
+ * l'ancien textarea V2-M7b) — créé au premier passage si absent. Réservé à
+ * un compte authentifié (n'importe lequel : MJ comme joueuse ont leur
+ * propre cahier), jamais partagé entre comptes.
  */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ worldSlug: string }> }) {
   const { worldSlug } = await params;
@@ -24,6 +24,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Monde introuvable." }, { status: 404 });
   }
 
-  const notes = await getOrCreatePlayerNotes(supabase, { worldId: world.id, userId: user.id });
-  return NextResponse.json(notes, { status: 200 });
+  const notebook = await getOrCreateNotebook(supabase, { worldId: world.id, userId: user.id });
+  return NextResponse.json(notebook, { status: 200 });
 }

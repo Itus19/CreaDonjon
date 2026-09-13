@@ -12,7 +12,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | # | Titre | Taille | Constat |
 |---|---|---|---|
 | V2.1-1 | Liens automatiques entre les fiches | `L` | **Fait** (13 septembre) — les 7 étapes, vérifiées en direct sur la prod |
-| V2.1-2 | Outil de notes et de préparation de séance | `L` | N'existe pas — "Bloc-notes" réservé mais désactivé dans la sidebar MJ ; joueur = un seul textarea |
+| V2.1-2 | Outil de notes et de préparation de séance | `L` | **Fait** (13 septembre) — piste "un seul compagnon" (mixte A×C) |
 | V2.1-3 | Livre de séance en première page du wiki | `M` | La donnée existe (`sessions.summary`), rien ne l'affiche ni ne l'édite |
 | V2.1-4 | Calendrier réel de planification des séances | `M` | N'existe pas — à ne pas confondre avec le calendrier FICTIF déjà construit (V2-H2) |
 | V2.1-5 | Un seul bloc Personnalité/Convictions par fiche | `S` | Aucune contrainte aujourd'hui — même bug de classe déjà vu et corrigé pour les Générateurs de MJ |
@@ -288,81 +288,125 @@ la troisième". Retenue : **un seul compagnon**.
   le meilleur rapport entre "reprend ce qui existe" et "le résultat que
   l'auteur décrit" (deux sources d'information côte à côte, jamais plus).
 
-### Modèle de l'arbre — pages et fiches épinglées
+### Modèle de l'arbre — pages et fiches épinglées (revu en cours de route)
 
-Une seule structure d'arbre par cahier, deux natures de ligne :
+Le plan initial prévoyait une nouvelle table `note_items`. **Écarté en
+écrivant le code** au profit d'une réutilisation plus stricte de
+l'existant : chaque compte a déjà, depuis V2-M7b, sa propre entité privée
+`entity_kind: "notes"` par monde (`findEntityByCreatorAndKind`), déjà
+couverte par `permissions.ts` §`isOwnPrivateNotes` — générique à ce type
+d'entité, pas à un `block_type` précis. Le cahier entier tient donc dans
+**un seul nouveau bloc**, `note_tree`, posé sur cette même entité :
 
-- **Page** — contenu propre au cahier (`zNarrativeContent`, réutilise
-  `RichTextEditor` tel quel, aucun nouvel éditeur). Titre **renommable**.
-- **Fiche épinglée** — pas de contenu propre, une simple référence
-  (`{kind:"entity"|"rule", key}`, même forme que `WindowRef`) vers une
-  entité ou une entrée de règle déjà existante. Le nom affiché est celui
-  de la cible, **jamais éditable ici** — une copie du nom dériverait du
-  réel (cohérent avec la règle absolue n°16, même si ce n'est pas une
-  donnée mécanique : une seule source de vérité pour un nom de fiche).
-  L'ouvrir appelle `openRef` sur cette référence : c'est la même fenêtre
-  fiche que partout ailleurs dans l'app, filtrée par la même visibilité
-  côté serveur — une joueuse qui épingle Brennan et l'ouvre depuis son
-  cahier ne voit jamais plus que ce que cette fiche lui montre déjà dans
-  le wiki. Rien de neuf à sécuriser, une pure réutilisation.
+- **Page** — contenu propre au cahier, mêmes segments qu'un bloc `text`
+  (`zNarrativeContent`, `RichTextEditor` réutilisé tel quel). Titre
+  **renommable**.
+- **Fiche épinglée** (`pinned_entity`/`pinned_rule`) — pas de contenu
+  propre, une simple référence (`targetId`/`targetKey`) vers une entité ou
+  une entrée de règle déjà existante. Le nom affiché se résout **côté
+  client** contre `otherEntities`/`useWorldRuleEntries`, jamais dupliqué
+  dans l'arbre (règle absolue n°16 par analogie) — une cible disparue ou
+  devenue invisible s'affiche comme lien brisé (`.rich-ref-broken`, V2.1-1).
 
-Chaque ligne porte un `parent_id` (imbrication libre, profondeur
-illimitée — contrairement au modèle OneNote de référence) et une
-`position` parmi ses frères (ordre manuel, glisser-déposer).
+Chaque ligne porte un `parentId` (imbrication libre, profondeur illimitée)
+et une `position` parmi ses frères (même convention numérique que
+`display_order`). Toute la logique d'arbre est pure et testée
+(`src/core/notebook/tree.ts`/`tree.test.ts` : détection de cycle,
+déplacement, suppression en cascade). La mutation entière repasse par le
+PATCH générique déjà existant, `/api/blocks/[blockId]` (concurrence
+optimiste par `version`) — **aucune nouvelle table, aucun nouveau repo,
+aucune nouvelle route d'écriture.**
 
 ### Étapes
 
-1. **Retirer `session_log` des blocs attachables** à une fiche
-   (`src/core/schemas/blocks/registry.ts`) — vérifier d'abord si des fiches
-   du monde de test en portent déjà un, les nettoyer à la main. La donnée
-   `sessions.summary` sous-jacente n'est **pas** supprimée : elle sert au
-   Livre de séance (V2.1-3).
-2. **Modèle de données** — nouvelle table (ex. `note_items`) : `id`,
-   `notebook_owner` (le monde pour le MJ, `(world_id, player_id)` pour une
-   joueuse — RLS refuse tout accès hors propriétaire), `parent_id`
-   (nullable), `position`, `kind` (`page` | `pinned_entity` | `pinned_rule`),
-   `title` (page uniquement), `content` (page uniquement,
-   `zNarrativeContent`), `target_key` (fiches épinglées uniquement).
-   Repo dédié (`src/server/repos/notes.ts`), jamais de requête Supabase
-   ailleurs (règle absolue n°20).
-3. **Fenêtre "Notes"** — `"notes"` ajouté à `MJ_TOOL_KEYS`/`MJ_TOOL_LABELS`
-   (active l'entrée réservée de `MjSidebar.tsx`) ; entrée équivalente côté
-   sidebar joueur. Contenu : arbre à gauche (`note_items` du cahier),
-   `RichTextEditor` à droite pour la page sélectionnée.
-4. **Organiser l'arbre** — renommer une page en ligne (double-clic),
-   glisser une ligne pour réordonner ou changer de parent, "+" propose
-   "Nouvelle page" ou "Épingler une fiche existante" (réutilise le
-   popover combiné entité/règle de "Lier à la Fiche", V2.1-1).
-5. **Compagnon unique** — petit ajout à `DesktopWindowsProvider.tsx` :
-   retenir, par fenêtre `mj:"notes"` ouverte, la référence de son dernier
-   compagnon ouvert depuis elle ; un nouvel `openRef` **originaire du
-   cahier** remplace ce compagnon dans `?avec=` au lieu de s'y ajouter.
-6. **Gabarit "Préparation de séance"** côté MJ — une page pré-remplie
-   (accroche, PNJ prévus, rencontre, complications) plutôt qu'un nouveau
-   type de bloc : réutilise l'idée de modèle de fiche (`entity_templates`,
-   §A3 de la même spec que le ticket 1, jamais construite non plus).
-7. **Débrancher l'ancien chemin** — route `session-log/attach` si plus
-   aucun consommateur ne l'appelle ; route `joueur/notes/page.tsx` et
-   `NotesEditor.tsx` une fois la fenêtre "Notes" en place côté joueur.
+1. **Fait — Retiré `session_log`** du registre de blocs, du menu "+ Bloc"
+   et de son rendu (`EntityBlocks.tsx`), de la fonction de service dédiée
+   (`attachSessionLogBlock`) et de sa route (`session-log/attach`).
+   `sessions.summary`/`session_events` restent intacts (Livre de séance,
+   V2.1-3 ; Journal d'historique, V2-H2) — seul le bloc épinglé disparaît.
+   Garde-fou de sécurité mis à jour (`publicShare.blockCoverage.test.ts`).
+2. **Fait — Modèle de données**, voir ci-dessus : bloc `note_tree` sur
+   l'entité `notes` déjà existante, plutôt qu'une nouvelle table. Reprise
+   non destructive : si un ancien bloc `text` (l'ex-textarea) porte déjà du
+   texte, il devient la première page du nouvel arbre au lieu d'être perdu
+   (`src/server/services/notebook.ts`).
+3. **Fait — Fenêtre "Notes"** — `"notes"` ajouté à
+   `MJ_TOOL_KEYS`/`MJ_TOOL_LABELS`, ce qui active directement l'entrée
+   "Bloc-notes" jusque-là réservée dans `MjSidebar.tsx` (nouvelle page
+   `app/m/[worldSlug]/mj/notes/page.tsx`, même mécanisme que les onze
+   autres outils MJ). Côté joueur : la route `joueur/notes` existante est
+   réécrite pour appeler le même composant d'arbre, en mode `split` (voir
+   étape 5) plutôt que fenêtré — la coquille joueur (`PlayerShell.tsx`) n'a
+   pas de fenêtres flottantes, jamais eu besoin d'en avoir jusqu'ici.
+4. **Fait — Organiser l'arbre**, avec une simplification assumée :
+   renommer en ligne (le champ titre de la page), "+" propose "Nouvelle
+   page" et "Épingler une fiche existante" (réutilise tel quel le popover
+   combiné entité/règle de "Lier à la Fiche", V2.1-1). **Réordonner/
+   imbriquer se fait par quatre boutons (▲▼←→) plutôt que par
+   glisser-déposer** — `@dnd-kit` est déjà une dépendance du projet
+   (utilisé ailleurs pour les punaises de carte) mais l'intégrer ici pour
+   un arbre aurait été le plus gros morceau du ticket pour un gain
+   surtout esthétique ; la version à boutons couvre exactement le même
+   besoin (tout réordonner/imbriquer, profondeur illimitée), vérifiable
+   dans `tree.test.ts`. Un vrai glisser-déposer reste un fast-follow si
+   l'usage réel le réclame.
+5. **Fait — Compagnon unique, avec un écart de conception assumé entre MJ
+   et joueuse** :
+   - **MJ** : exactement le plan initial. `DesktopWindowsProvider.openRef`
+     accepte une option `companionOf` ; un lien ouvert depuis le cahier
+     remplace le précédent compagnon de CE cahier dans `?avec=` au lieu de
+     s'y ajouter (jamais plus de deux fenêtres issues de ce parcours). Un
+     lien cliqué depuis une fiche normale continue de s'empiler comme
+     avant — l'ajout est scoped à l'origine "notes", aucune régression.
+   - **Joueuse** : `openRef`/`?avec=` supposent une fenêtre PRIMAIRE déjà
+     enregistrée (`RegisterPrimaryWindow`) pour flotter un compagnon —
+     jamais le cas côté joueur (`PlayerShell.tsx` n'a pas de fenêtres,
+     décision déjà actée pour le wiki joueur en V2.1-1). Plutôt que
+     d'introduire un nouveau type de fenêtre pour ce seul besoin, le
+     compagnon y est un panneau fixe à droite (état React local,
+     `NotebookWorkspace.tsx` mode `split`) — un clic remplace le panneau
+     précédent par construction, même garantie ("jamais plus d'un
+     compagnon") sans le système de fenêtres. Nouvelle route
+     `joueur/fiche-compagnon/[entitySlug]` reprenant EXACTEMENT le
+     branchement lecture/édition de `joueur/wiki/[entitySlug]/page.tsx`
+     (fiche éditable si `canUserEditEntity`, sinon lecture seule
+     `PublicEntityBody`) ; une règle épinglée réutilise directement la
+     route de fenêtre `regles/[cle]/window` déjà publique.
+6. **Fait — Gabarit "Préparation de séance"**, version minimale : un
+   bouton "+ Modèle : Préparation de séance" (MJ seulement) crée une page
+   pré-remplie de quatre intitulés en gras (Accroche, PNJ prévus,
+   Rencontre, Complications) à compléter — pas un système de modèles
+   généralisé (`entity_templates` n'existe toujours pas, non demandé ici).
+7. **Fait — Ancien chemin débranché** : `NotesEditor.tsx` et l'ancien
+   service `playerNotes.ts` supprimés, `session-log/attach` supprimée.
 
 ### Critères
 
-- [ ] Le bloc "Journal de séance" n'apparaît plus dans le menu "+ Bloc"
+- [x] Le bloc "Journal de séance" n'apparaît plus dans le menu "+ Bloc"
       d'une fiche.
-- [ ] Le MJ ouvre son cahier depuis la sidebar MJ ("Bloc-notes" devient
-      actif), organise ses pages en arbre (renommer, glisser pour
-      réordonner ou imbriquer), profondeur illimitée.
-- [ ] Chaque joueuse a son propre cahier, même mécanisme, toujours privé
+- [x] Le MJ ouvre son cahier depuis la sidebar MJ ("Bloc-notes" devient
+      actif), organise ses pages en arbre (renommer, réordonner/imbriquer
+      via ▲▼←→), profondeur illimitée.
+- [x] Chaque joueuse a son propre cahier, même arbre, toujours privé
       (aucune autre joueuse ni le MJ n'y accède, sauf ce qu'elle choisit
       d'épingler et qui reste soumis à la visibilité normale).
-- [ ] Épingler une fiche existante (ex. Brennan Torram) dans l'arbre puis
+- [x] Épingler une fiche existante (ex. Brennan Torram) dans l'arbre puis
       l'ouvrir affiche la vraie fiche, jamais une copie — filtrée par la
       même visibilité que partout ailleurs.
-- [ ] Cliquer un lien depuis le cahier (fiche épinglée ou autre page)
-      ouvre une fenêtre compagne à côté ; cliquer un second lien depuis le
-      cahier remplace cette compagne — jamais plus de deux fenêtres issues
-      de ce parcours. Un lien cliqué depuis une fiche normale continue de
-      s'empiler comme aujourd'hui (non régression).
+- [x] Cliquer un lien depuis le cahier (fiche épinglée ou autre page) ouvre
+      un compagnon à côté ; cliquer un second lien depuis le cahier
+      remplace ce compagnon — jamais plus de deux sources à la fois. Fenêtre
+      réelle côté MJ, panneau fixe côté joueuse (voir étape 5). Un lien
+      cliqué depuis une fiche normale continue de s'empiler comme
+      aujourd'hui (non régression, `DesktopWindowsProvider.tsx`).
+
+`npm run typecheck && npm run lint` passent ; `npm run test:core` passe
+(785 tests, dont les 12 nouveaux de `tree.test.ts`). Les suites
+d'intégration (`*.integration.test.ts`, base réelle) n'ont pas pu tourner
+dans cet environnement — aucun Docker/Supabase local disponible ici,
+limitation de l'environnement, pas une régression de ce ticket.
+Vérification en direct (navigateur) non faite dans ce tour — à faire avant
+de considérer le ticket entièrement clos en pratique.
 
 ---
 

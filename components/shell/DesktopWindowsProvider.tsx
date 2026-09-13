@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import type { WindowGeometry } from "./WindowFrame";
-import { DesktopContext, type PrimaryWindowInfo } from "./DesktopContext";
+import { DesktopContext, type PrimaryWindowInfo, type OpenRefOptions } from "./DesktopContext";
 import {
   parseAvecParam,
   refId,
@@ -107,6 +107,11 @@ export default function DesktopWindowsProvider({
   // l'URL, meme logique que l'ordre d'empilement (docs/adr/0006).
   const [minimizedIds, setMinimizedIds] = useState<Record<string, boolean>>({});
   const [avecParam, setAvecParam] = useState<string | null>(() => searchParams.get("avec"));
+  // Compagnon courant par origine (V2.1-2, piste "un seul compagnon") :
+  // `refId(companionOf)` -> `refId` de la fenetre secondaire ouverte depuis
+  // cette origine. Purement local (comme `minimizedIds`) — jamais dans
+  // l'URL, une origine sans compagnon n'a simplement pas d'entree ici.
+  const companionsRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
     function onPopState() {
@@ -209,7 +214,7 @@ export default function DesktopWindowsProvider({
   }
 
   const openRef = useCallback(
-    (ref: WindowRef) => {
+    (ref: WindowRef, options?: OpenRefOptions) => {
       if (!primary) {
         // Aucune fenetre primaire, mais d'autres fenetres peuvent deja
         // etre ouvertes (`?avec=`, ex. depuis l'accueil d'une section) —
@@ -224,7 +229,14 @@ export default function DesktopWindowsProvider({
         setFocusedId(refId(ref));
         return;
       }
-      updateAvecParam([...avecRefs, ref]);
+      const originId = options?.companionOf ? refId(options.companionOf) : null;
+      const previousCompanionId = originId ? companionsRef.current[originId] : undefined;
+      const withoutPreviousCompanion =
+        previousCompanionId && previousCompanionId !== refId(ref)
+          ? avecRefs.filter((r) => refId(r) !== previousCompanionId)
+          : avecRefs;
+      if (originId) companionsRef.current[originId] = refId(ref);
+      updateAvecParam([...withoutPreviousCompanion, ref]);
       setFocusedId(refId(ref));
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps

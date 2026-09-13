@@ -11,6 +11,7 @@ import CalendarSettingsPanel from "./CalendarSettingsPanel";
 import PersonnalisationPanel from "./PersonnalisationPanel";
 import PublicationPanel from "./PublicationPanel";
 import GeneratorToolPanel from "./GeneratorToolPanel";
+import NotebookWorkspace from "./notebook/NotebookWorkspace";
 import RulesetSelector from "@/components/rules/RulesetSelector";
 import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
 
@@ -175,6 +176,16 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
             </p>
           </div>
           <GeneratorToolPanel worldSlug={worldSlug} tools={data.tools} />
+        </div>
+      );
+
+    case "notes":
+      return (
+        <div className="flex h-full flex-col gap-4">
+          <h1 className="block-title text-base">Bloc-notes</h1>
+          <div className="min-h-0 flex-1">
+            <NotebookWorkspace worldSlug={worldSlug} initial={data} mode="window" selfRef={{ kind: "mj", key: "notes" }} sessionPrepTemplate />
+          </div>
         </div>
       );
   }

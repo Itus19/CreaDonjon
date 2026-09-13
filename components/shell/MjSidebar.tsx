@@ -17,8 +17,10 @@ import { useChatUnread } from "./useChatUnread";
  * Personnalisation/Regles actives/Publication (retour utilisateur, gomme
  * le bouton ⚙ global) : ex-onglets du menu de reglages, chacun sa propre
  * page ici plutot qu'un modal — meme profil que les autres entrees.
- * Tables aleatoires/bloc-notes restent en reserve. Les entrees reservees
- * restent visibles (pas de fonctionnalite cachee) mais desactivees.
+ * V2.1-2 : bloc-notes quitte la reserve et devient un outil actif (cahier
+ * de notes MJ, `app/m/[worldSlug]/mj/notes/page.tsx`) ; "Tables aleatoires"
+ * retire de la reserve (retour utilisateur, aucun besoin concret identifie
+ * pour l'instant — a reproposer le jour d'un cas reel).
  *
  * Liste triee par ordre alphabetique (retour utilisateur) — jamais par
  * ordre d'ajout : verifie avec `localeCompare(..., "fr")` plutot que suppose.
@@ -72,6 +74,7 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
   const { unreadCount } = useChatUnread();
 
   const tools: { key: MjToolKey; label: string }[] = [
+    { key: "notes", label: t("blocNotes") },
     { key: "calendrier", label: t("calendrier") },
     { key: "chat", label: t("chat") },
     { key: "creation-personnage", label: t("creationPersonnage") },
@@ -85,8 +88,6 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
     { key: "regles-actives", label: t("reglesActives") },
     { key: "rencontres", label: t("rencontres") },
   ];
-
-  const reserved = [t("tablesAleatoires"), t("blocNotes")];
 
   return (
     <>
@@ -124,19 +125,6 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
             onNavigate={() => setOpen(false)}
           />
         ))}
-
-        <div className="mt-3 flex flex-col gap-1 border-t border-edge/60 pt-3">
-          {reserved.map((label) => (
-            <span
-              key={label}
-              className="flex items-center justify-between rounded px-2 py-1.5 text-sm text-ink-muted opacity-60"
-              title={t("bientot")}
-            >
-              {label}
-              <span className="text-[10px] uppercase tracking-wider">{t("bientot")}</span>
-            </span>
-          ))}
-        </div>
       </aside>
     </>
   );

@@ -123,10 +123,11 @@ export default function PlayerShell({
         </div>
       </nav>
       {/* Chaque page choisit sa propre largeur (retour utilisateur, suite) :
-          Personnage/Fiche/Notes se centrent (confort de lecture du wiki
-          public, `BookSkin.tsx`), Wiki/Regles gerent eux-memes leur propre
-          disposition a deux volets (sommaire etroit + fiche centrale) et
-          ont donc besoin de toute la largeur disponible ici. */}
+          Personnage/Fiche se centrent (confort de lecture du wiki public,
+          `BookSkin.tsx`), Wiki/Regles/Notes gerent eux-memes leur propre
+          disposition (respectivement sommaire etroit + fiche centrale, et
+          arbre + page + compagnon pour le cahier, V2.1-2) et ont donc
+          besoin de toute la largeur disponible ici. */}
       <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">{children}</div>
     </div>
   );

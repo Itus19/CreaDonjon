@@ -276,7 +276,7 @@ create index blocks_type_idx   on blocks (block_type);
 
 **`display_order` est un `numeric`.** Insérer entre le 3ᵉ et le 4ᵉ s'écrit `3.5` — une seule ligne modifiée. Avec des entiers, il faut réécrire toute la liste à chaque déplacement.
 
-**Types de blocs.** V0 : `description`, `infobox`, `gallery`, `custom_table`. V1 : `character`, `inventory`, `spellcasting`, `resources`, `statblock`, `timeline`, `relationships`. V2 : `genealogy`, `random_table`, `quest`, `loot`, `map_pins`, `quote`, `session_log`. Le générateur de rencontres (V1-E3) n'est **pas** un bloc de wiki : refonte en outil MJ autonome (table `campaign_encounters`), décision explicite de l'utilisateur — voir `docs/BACKLOG_V1.md` §V1-E3.
+**Types de blocs.** V0 : `description`, `infobox`, `gallery`, `custom_table`. V1 : `character`, `inventory`, `spellcasting`, `resources`, `statblock`, `timeline`, `relationships`. V2 : `genealogy`, `random_table`, `quest`, `loot`, `map_pins`, `quote`. V2.1 : `note_tree` (V2.1-2, cahier de notes — remplace `session_log`, jamais attachable via "+ Bloc"). Le générateur de rencontres (V1-E3) n'est **pas** un bloc de wiki : refonte en outil MJ autonome (table `campaign_encounters`), décision explicite de l'utilisateur — voir `docs/BACKLOG_V1.md` §V1-E3.
 
 Chaque type a un schéma Zod dans `src/core/schemas/blocks/<type>.ts` et une version stockée dans `data.__v`. Catalogue et spécification détaillée dans `Spec_Blocs_de_Wiki_v0_1.md`.
 
