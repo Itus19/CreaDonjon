@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import { SeededRng } from "@/src/core/dice/rng";
 import { drawFromTableBlock } from "./tables";
 import { TableCascadeCycleError } from "@/src/core/tables/errors";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1-E1 : sans ce test, rien ne prouve que le tirage en cascade resout
@@ -27,11 +28,7 @@ describe.skipIf(!hasCreds)("tirage sur random_table, cascade et cycles (integrat
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const email = `integration-test-tables-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data: userData, error: userError } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (userError || !userData.user) throw new Error(userError?.message ?? "creation utilisateur echouee");
-    userId = userData.user.id;
+    userId = (await getReusableTestAccount(admin, "owner")).id;
 
     const { data: world, error: worldError } = await admin
       .from("worlds")
@@ -54,7 +51,6 @@ describe.skipIf(!hasCreds)("tirage sur random_table, cascade et cycles (integrat
     if (userId) {
       await admin.from("entities").delete().eq("created_by", userId);
       await admin.from("worlds").delete().eq("owner_id", userId);
-      await admin.auth.admin.deleteUser(userId);
     }
   });
 

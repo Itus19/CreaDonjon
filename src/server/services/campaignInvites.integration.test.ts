@@ -9,6 +9,7 @@ import {
   setInvitePassword,
   verifyInvitePassword,
 } from "./campaignInvites";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V2-M4 (Lot M) : verifie contre une vraie base le mecanisme le plus
@@ -38,14 +39,9 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const email = `integration-test-invites-owner-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data: userData, error: userError } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (userError || !userData.user) throw new Error(userError?.message ?? "creation proprietaire echouee");
-    ownerId = userData.user.id;
-    ownerClient = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
-    const { error: signInError } = await ownerClient.auth.signInWithPassword({ email, password });
-    if (signInError) throw new Error(signInError.message);
+    const owner = await getReusableTestAccount(admin, "owner");
+    ownerId = owner.id;
+    ownerClient = owner.client;
 
     const { data: world, error: worldError } = await admin
       .from("worlds")
@@ -91,7 +87,11 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
 
   afterAll(async () => {
     if (worldId) await admin.from("worlds").delete().eq("id", worldId);
-    for (const id of [ownerId, ...createdInvitedUserIds]) if (id) await admin.auth.admin.deleteUser(id);
+    // ownerId n'est jamais supprime : compte du pool reutilisable
+    // (reusableTestAccounts.ts), pas un compte jetable de ce fichier. Seuls
+    // les comptes crees par le flux d'invitation LUI-MEME (le sujet reel de
+    // ce test) sont jetables.
+    for (const id of createdInvitedUserIds) if (id) await admin.auth.admin.deleteUser(id);
   });
 
   it("un jeton invalide ne resout a rien", async () => {
@@ -241,18 +241,7 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
     expect(byClaimant.allowed).toBe(true);
 
     // Un tiers sans lien avec cette invitation ne le peut pas.
-    const outsiderEmail = `integration-test-invites-outsider-${Date.now()}@creadonjon.local`;
-    const outsiderPassword = `integration-test-${Date.now()}`;
-    const { data: outsiderUser, error: outsiderError } = await admin.auth.admin.createUser({
-      email: outsiderEmail,
-      password: outsiderPassword,
-      email_confirm: true,
-    });
-    if (outsiderError || !outsiderUser.user) throw new Error("creation tiers echouee");
-    createdInvitedUserIds.push(outsiderUser.user.id);
-    const outsiderClient = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
-    const { error: outsiderSignInError } = await outsiderClient.auth.signInWithPassword({ email: outsiderEmail, password: outsiderPassword });
-    if (outsiderSignInError) throw new Error(outsiderSignInError.message);
+    const { client: outsiderClient } = await getReusableTestAccount(admin, "outsider");
 
     const byOutsider = await setInvitePassword(outsiderClient, { inviteId: invite.id, password: "vole-par-un-tiers" });
     expect(byOutsider.allowed).toBe(false);

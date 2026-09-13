@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createHomebrewWeapon } from "./rules";
 import { resolveEquipmentArmorData, resolveEquipmentCost, resolveEquipmentWeaponData, resolveEquipmentWeight } from "./resolvedRuleset";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1-D4 : sans ce test, rien ne prouve qu'une fiche maison (surcharge
@@ -30,15 +31,9 @@ describe.skipIf(!hasCreds)("arme maison : ecriture + resolution mecanique (integ
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const email = `integration-test-homebrew-weapon-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data: userData, error: userError } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (userError || !userData.user) throw new Error(userError?.message ?? "creation utilisateur echouee");
-    userId = userData.user.id;
-
-    userClient = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
-    const { error: signInError } = await userClient.auth.signInWithPassword({ email, password });
-    if (signInError) throw new Error(signInError.message);
+    const account = await getReusableTestAccount(admin, "owner");
+    userId = account.id;
+    userClient = account.client;
 
     const { data: official, error: officialError } = await admin
       .from("rulesets")
@@ -67,7 +62,6 @@ describe.skipIf(!hasCreds)("arme maison : ecriture + resolution mecanique (integ
   afterAll(async () => {
     if (userId) {
       await admin.from("rulesets").delete().eq("created_by", userId);
-      await admin.auth.admin.deleteUser(userId);
     }
   });
 

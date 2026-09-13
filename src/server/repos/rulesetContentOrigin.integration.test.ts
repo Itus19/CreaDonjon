@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1-D5 : sans ce test, rien ne prouve que les garde-fous de
@@ -32,11 +33,7 @@ describe.skipIf(!hasCreds)("content_origin et garde-fous de reference personnell
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const email = `integration-test-content-origin-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data: userData, error: userError } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (userError || !userData.user) throw new Error(userError?.message ?? "creation utilisateur echouee");
-    userId = userData.user.id;
+    userId = (await getReusableTestAccount(admin, "owner")).id;
 
     const { data: official, error: officialError } = await admin
       .from("rulesets")
@@ -109,7 +106,6 @@ describe.skipIf(!hasCreds)("content_origin et garde-fous de reference personnell
       await admin.from("entities").delete().eq("created_by", userId);
       await admin.from("worlds").delete().eq("owner_id", userId);
       await admin.from("rulesets").delete().eq("created_by", userId);
-      await admin.auth.admin.deleteUser(userId);
     }
   });
 

@@ -9,6 +9,7 @@ import {
   rollWeaponDamage,
   takeLongRest,
 } from "./characterActions";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1-B5 : verifie contre la base reelle que l'orchestration cablee dans
@@ -38,13 +39,7 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const { data: user, error: userError } = await admin.auth.admin.createUser({
-      email: `integration-test-actions-${Date.now()}@creadonjon.local`,
-      password: `integration-test-${Date.now()}`,
-      email_confirm: true,
-    });
-    if (userError || !user.user) throw new Error(userError?.message ?? "creation utilisateur echouee");
-    ownerId = user.user.id;
+    ownerId = (await getReusableTestAccount(admin, "owner")).id;
 
     const { data: world, error: worldError } = await admin
       .from("worlds")
@@ -121,7 +116,6 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
 
   afterAll(async () => {
     if (worldId) await admin.from("worlds").delete().eq("id", worldId);
-    if (ownerId) await admin.auth.admin.deleteUser(ownerId);
   });
 
   it("assemble une fiche derivee reelle et resout le cimeterre depuis le SRD", async () => {

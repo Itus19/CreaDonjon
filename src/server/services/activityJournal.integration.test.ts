@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getMergedJournalForWorld, getPlayerJournalForWorld } from "./activityJournal";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * Retour utilisateur (ecran d'accueil 3 colonnes) : `getPlayerJournalForWorld`
@@ -23,13 +24,7 @@ describe.skipIf(!hasCreds)("journal cote joueur restreint aux fiches PJ (integra
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const { data: owner, error: ownerError } = await admin.auth.admin.createUser({
-      email: `integration-test-journal-owner-${Date.now()}@creadonjon.local`,
-      password: `integration-test-${Date.now()}`,
-      email_confirm: true,
-    });
-    if (ownerError || !owner.user) throw new Error(ownerError?.message ?? "creation proprietaire echouee");
-    ownerId = owner.user.id;
+    ownerId = (await getReusableTestAccount(admin, "owner")).id;
 
     const { data: world, error: worldError } = await admin
       .from("worlds")
@@ -112,7 +107,6 @@ describe.skipIf(!hasCreds)("journal cote joueur restreint aux fiches PJ (integra
 
   afterAll(async () => {
     if (worldId) await admin.from("worlds").delete().eq("id", worldId);
-    if (ownerId) await admin.auth.admin.deleteUser(ownerId);
   });
 
   it("getPlayerJournalForWorld ne montre que la revision de la fiche PJ, jamais celle du PNJ secret", async () => {

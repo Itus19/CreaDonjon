@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { canEditEntity } from "../../core/permissions/canEditEntity";
 import type { Viewer } from "../../core/visibility/types";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V2-M3 (Lot M) : compare, pour chaque profil, le verdict de la table de
@@ -29,33 +30,22 @@ describe.skipIf(!hasCreds)("resserrement de la RLS d'ecriture (integration, base
   const userIds: Record<string, string> = {};
   const clients: Record<string, SupabaseClient> = {};
 
-  async function createProfile(key: string): Promise<{ id: string; client: SupabaseClient }> {
-    const email = `integration-test-edit-${key}-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (error || !data.user) throw new Error(error?.message ?? `creation ${key} echouee`);
-    const client = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
-    const { error: signInError } = await client.auth.signInWithPassword({ email, password });
-    if (signInError) throw new Error(signInError.message);
-    return { id: data.user.id, client };
-  }
-
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    // Six profils : proprietaire, editeur du monde (`world_members`), MJ
+    // Sept profils : proprietaire, editeur du monde (`world_members`), MJ
     // d'une campagne SANS role de monde separe (flux d'invitation par
     // email existant), un joueur qui revendique l'entite cible comme son
     // PJ, un joueur avec un `entity_grants` explicite sur elle, un simple
     // joueur sans lien avec elle, et un tiers hors du monde.
     const [owner, worldEditor, campaignGm, ownCharacterPlayer, grantedPlayer, plainPlayer, outsider] = await Promise.all([
-      createProfile("owner"),
-      createProfile("world-editor"),
-      createProfile("campaign-gm"),
-      createProfile("own-character-player"),
-      createProfile("granted-player"),
-      createProfile("plain-player"),
-      createProfile("outsider"),
+      getReusableTestAccount(admin, "owner"),
+      getReusableTestAccount(admin, "editor"),
+      getReusableTestAccount(admin, "gm"),
+      getReusableTestAccount(admin, "player"),
+      getReusableTestAccount(admin, "playerB"),
+      getReusableTestAccount(admin, "playerC"),
+      getReusableTestAccount(admin, "outsider"),
     ]);
     userIds.owner = owner.id;
     clients.owner = owner.client;
@@ -130,7 +120,6 @@ describe.skipIf(!hasCreds)("resserrement de la RLS d'ecriture (integration, base
 
   afterAll(async () => {
     if (worldId) await admin.from("worlds").delete().eq("id", worldId);
-    for (const id of Object.values(userIds)) await admin.auth.admin.deleteUser(id);
   });
 
   function viewerFor(profile: string): Viewer {

@@ -25,6 +25,20 @@ export default defineConfig({
     // test invisible est pire qu'un test absent. `test:core` reste borne a
     // `src/core` par son argument de ligne de commande, inchange.
     include: ["src/**/*.test.ts", "lib/**/*.test.ts"],
+    // Fichiers de test SERIALISES, jamais en parallele (retour utilisateur,
+    // apres depassement du quota Supabase MAU/Egress) : depuis que les
+    // tests d'integration partagent un petit pool de comptes reutilisables
+    // (src/server/testUtils/reusableTestAccounts.ts) plutot qu'un compte
+    // jetable par fichier, deux fichiers executes EN MEME TEMPS sur le meme
+    // compte se marchent dessus — le nettoyage "tous les mondes de ce
+    // proprietaire" d'un fichier qui termine peut supprimer le monde qu'un
+    // AUTRE fichier, encore en cours, est en train d'utiliser (constate en
+    // pratique : `share_links_world_id_fkey` viole en plein test). Un seul
+    // fichier actif a la fois l'evite completement, sans retoucher le
+    // nettoyage de chaque fichier. Cout accepte : la suite d'integration
+    // (deja lente, vrais appels reseau) perd son parallelisme interne —
+    // `test:core` (src/core, pur, ~1s) n'en souffre pas a cette echelle.
+    fileParallelism: false,
     setupFiles: ["./vitest.setup.ts"],
     coverage: {
       provider: "v8",

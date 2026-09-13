@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getRuleEntryForWorld } from "./rules";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1-D5 : sans ce test, rien ne prouve que le badge "reference personnelle"
@@ -30,15 +31,9 @@ describe.skipIf(!hasCreds)("badge reference personnelle : entree touchee vs entr
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const email = `integration-test-personal-badge-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data: userData, error: userError } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (userError || !userData.user) throw new Error(userError?.message ?? "creation utilisateur echouee");
-    userId = userData.user.id;
-
-    userClient = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
-    const { error: signInError } = await userClient.auth.signInWithPassword({ email, password });
-    if (signInError) throw new Error(signInError.message);
+    const account = await getReusableTestAccount(admin, "owner");
+    userId = account.id;
+    userClient = account.client;
 
     const { data: official, error: officialError } = await admin
       .from("rulesets")
@@ -88,7 +83,6 @@ describe.skipIf(!hasCreds)("badge reference personnelle : entree touchee vs entr
     if (userId) {
       await admin.from("worlds").delete().eq("owner_id", userId);
       await admin.from("rulesets").delete().eq("created_by", userId);
-      await admin.auth.admin.deleteUser(userId);
     }
   });
 

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { isWorldAdmin } from "./permissions";
 import { grantEntityEditAccess, listGrantsForEntity, revokeEntityEditAccess } from "./entityGrants";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V2-M7 (Lot M) : `isWorldAdmin` (miroir SQL de `app.is_world_admin`) et les
@@ -25,26 +26,15 @@ describe.skipIf(!hasCreds)("isWorldAdmin et entity_grants (integration, base ree
   const userIds: Record<string, string> = {};
   const clients: Record<string, SupabaseClient> = {};
 
-  async function createProfile(key: string): Promise<{ id: string; client: SupabaseClient }> {
-    const email = `integration-test-grants-${key}-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (error || !data.user) throw new Error(error?.message ?? `creation ${key} echouee`);
-    const client = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
-    const { error: signInError } = await client.auth.signInWithPassword({ email, password });
-    if (signInError) throw new Error(signInError.message);
-    return { id: data.user.id, client };
-  }
-
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
     const [owner, worldEditor, campaignGm, plainPlayer, outsider] = await Promise.all([
-      createProfile("owner"),
-      createProfile("world-editor"),
-      createProfile("campaign-gm"),
-      createProfile("plain-player"),
-      createProfile("outsider"),
+      getReusableTestAccount(admin, "owner"),
+      getReusableTestAccount(admin, "editor"),
+      getReusableTestAccount(admin, "gm"),
+      getReusableTestAccount(admin, "player"),
+      getReusableTestAccount(admin, "outsider"),
     ]);
     userIds.owner = owner.id;
     clients.owner = owner.client;
@@ -103,7 +93,6 @@ describe.skipIf(!hasCreds)("isWorldAdmin et entity_grants (integration, base ree
 
   afterAll(async () => {
     if (worldId) await admin.from("worlds").delete().eq("id", worldId);
-    for (const id of Object.values(userIds)) await admin.auth.admin.deleteUser(id);
   });
 
   it("isWorldAdmin : proprietaire, editeur et MJ de campagne sont admin ; un simple joueur et un tiers ne le sont pas", async () => {

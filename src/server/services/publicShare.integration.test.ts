@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { generateShareToken, hashShareToken } from "../../core/shareLinks/token";
 import { resolveShareLink, getPublicEntityDetail } from "./publicShare";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1 D-01 : sans ce test, une modification future de getPublicEntityDetail
@@ -44,14 +45,7 @@ describe.skipIf(!hasCreds)("publicShare (integration, base reelle)", () => {
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const email = `integration-test-${Date.now()}@creadonjon.local`;
-    const { data: userData, error: userError } = await admin.auth.admin.createUser({
-      email,
-      password: `integration-test-${Date.now()}`,
-      email_confirm: true,
-    });
-    if (userError || !userData.user) throw new Error(userError?.message ?? "creation utilisateur echouee");
-    userId = userData.user.id;
+    userId = (await getReusableTestAccount(admin, "owner")).id;
 
     const { data: world, error: worldError } = await admin
       .from("worlds")
@@ -116,7 +110,6 @@ describe.skipIf(!hasCreds)("publicShare (integration, base reelle)", () => {
     // world_id est en cascade sur entities/blocks/share_links (SCHEMA.md
     // §5-§7, §18) : supprimer le monde suffit a tout nettoyer.
     if (worldId) await admin.from("worlds").delete().eq("id", worldId);
-    if (userId) await admin.auth.admin.deleteUser(userId);
   });
 
   it("le contenu d'un bloc gm est absent de la reponse brute", async () => {

@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1-A4 : sans ce test, rien ne prouve que les rulesets officiels restent
@@ -23,26 +24,12 @@ describe.skipIf(!hasCreds)("surcharge et versioning de ruleset (integration, bas
   let officialRulesetId: string;
   let variantRulesetId: string;
 
-  async function signedInClient(email: string, password: string): Promise<SupabaseClient> {
-    const client = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
-    const { error } = await client.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message);
-    return client;
-  }
-
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const email = `integration-test-versioning-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data: userData, error: userError } = await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    });
-    if (userError || !userData.user) throw new Error(userError?.message ?? "creation utilisateur echouee");
-    userId = userData.user.id;
-    userClient = await signedInClient(email, password);
+    const account = await getReusableTestAccount(admin, "owner");
+    userId = account.id;
+    userClient = account.client;
 
     const { data: official, error: officialError } = await admin
       .from("rulesets")
@@ -73,7 +60,6 @@ describe.skipIf(!hasCreds)("surcharge et versioning de ruleset (integration, bas
     // supprimer par cle etrangere suffit, pas besoin de suivre lineage_id.
     if (userId) {
       await admin.from("rulesets").delete().eq("created_by", userId);
-      await admin.auth.admin.deleteUser(userId);
     }
   });
 
@@ -111,15 +97,7 @@ describe.skipIf(!hasCreds)("surcharge et versioning de ruleset (integration, bas
   });
 
   it("upsert_ruleset_override refuse la surcharge d'un ruleset qui n'appartient pas a l'appelant", async () => {
-    const email2 = `integration-test-other-${Date.now()}@creadonjon.local`;
-    const password2 = `integration-test-${Date.now()}`;
-    const { data: userData2, error: userError2 } = await admin.auth.admin.createUser({
-      email: email2,
-      password: password2,
-      email_confirm: true,
-    });
-    if (userError2 || !userData2.user) throw new Error(userError2?.message ?? "creation second utilisateur echouee");
-    const otherClient = await signedInClient(email2, password2);
+    const { client: otherClient } = await getReusableTestAccount(admin, "outsider");
 
     const { error } = await otherClient.rpc("upsert_ruleset_override", {
       p_ruleset_id: variantRulesetId,
@@ -131,8 +109,6 @@ describe.skipIf(!hasCreds)("surcharge et versioning de ruleset (integration, bas
       p_note: "tentative d'un tiers",
     });
     expect(error).not.toBeNull();
-
-    await admin.auth.admin.deleteUser(userData2.user.id);
   });
 
   it("editer un ruleset non publie modifie la meme ligne, pas de nouvelle version", async () => {

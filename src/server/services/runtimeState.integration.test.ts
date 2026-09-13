@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "./runtimeState";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1-B3 : sans ce test, rien ne prouve contre une vraie base que (a) le
@@ -32,14 +33,7 @@ describe.skipIf(!hasCreds)("etat de jeu (integration, base reelle)", () => {
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const email = `integration-test-runtime-${Date.now()}@creadonjon.local`;
-    const { data: userData, error: userError } = await admin.auth.admin.createUser({
-      email,
-      password: `integration-test-${Date.now()}`,
-      email_confirm: true,
-    });
-    if (userError || !userData.user) throw new Error(userError?.message ?? "creation utilisateur echouee");
-    userId = userData.user.id;
+    userId = (await getReusableTestAccount(admin, "owner")).id;
 
     const { data: world, error: worldError } = await admin
       .from("worlds")
@@ -110,7 +104,6 @@ describe.skipIf(!hasCreds)("etat de jeu (integration, base reelle)", () => {
     // entity_runtime_state (SCHEMA.md §11-§12) : supprimer le monde suffit.
     if (worldId) await admin.from("worlds").delete().eq("id", worldId);
     if (worldBId) await admin.from("worlds").delete().eq("id", worldBId);
-    if (userId) await admin.auth.admin.deleteUser(userId);
   });
 
   it("le meme personnage a un etat distinct dans deux campagnes, et hors partie", async () => {

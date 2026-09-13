@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { listWorldCardsForCurrentUser } from "./worlds";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V2-M5 (Lot M, écran d'accueil unifié, retour utilisateur 30 août) :
@@ -28,31 +29,13 @@ describe.skipIf(!hasCreds)("listWorldCardsForCurrentUser — role par monde (int
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const ownerEmail = `integration-test-worldcards-owner-${Date.now()}@creadonjon.local`;
-    const ownerPassword = `integration-test-${Date.now()}`;
-    const { data: ownerUser, error: ownerError } = await admin.auth.admin.createUser({
-      email: ownerEmail,
-      password: ownerPassword,
-      email_confirm: true,
-    });
-    if (ownerError || !ownerUser.user) throw new Error(ownerError?.message ?? "creation proprietaire echouee");
-    ownerId = ownerUser.user.id;
-    ownerClient = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
-    const { error: ownerSignInError } = await ownerClient.auth.signInWithPassword({ email: ownerEmail, password: ownerPassword });
-    if (ownerSignInError) throw new Error(ownerSignInError.message);
+    const owner = await getReusableTestAccount(admin, "owner");
+    ownerId = owner.id;
+    ownerClient = owner.client;
 
-    const jeremyEmail = `integration-test-worldcards-jeremy-${Date.now()}@creadonjon.local`;
-    const jeremyPassword = `integration-test-${Date.now()}`;
-    const { data: jeremyUser, error: jeremyError } = await admin.auth.admin.createUser({
-      email: jeremyEmail,
-      password: jeremyPassword,
-      email_confirm: true,
-    });
-    if (jeremyError || !jeremyUser.user) throw new Error(jeremyError?.message ?? "creation jeremy echouee");
-    jeremyId = jeremyUser.user.id;
-    jeremyClient = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
-    const { error: signInError } = await jeremyClient.auth.signInWithPassword({ email: jeremyEmail, password: jeremyPassword });
-    if (signInError) throw new Error(signInError.message);
+    const jeremy = await getReusableTestAccount(admin, "player");
+    jeremyId = jeremy.id;
+    jeremyClient = jeremy.client;
 
     const { data: official, error: officialError } = await admin
       .from("rulesets")
@@ -125,7 +108,6 @@ describe.skipIf(!hasCreds)("listWorldCardsForCurrentUser — role par monde (int
   afterAll(async () => {
     if (worldAId) await admin.from("worlds").delete().eq("id", worldAId);
     if (worldBId) await admin.from("worlds").delete().eq("id", worldBId);
-    for (const id of [ownerId, jeremyId]) if (id) await admin.auth.admin.deleteUser(id);
   });
 
   it("un meme compte voit 'joueur' avec son personnage sur un monde, et 'gm' sans personnage sur un autre", async () => {

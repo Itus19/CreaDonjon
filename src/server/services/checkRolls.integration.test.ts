@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { rollAbilityCheck, rollFreeformCheck, rollInitiativeCheck, rollSavingThrow, rollSkillCheck } from "./checkRolls";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V2-M11 (Lot M, volet de lancer de des) : verifie contre la base reelle que
@@ -31,24 +32,13 @@ describe.skipIf(!hasCreds)("checkRolls (integration, base reelle)", () => {
   const userIds: Record<string, string> = {};
   const clients: Record<string, SupabaseClient> = {};
 
-  async function createProfile(key: string): Promise<{ id: string; client: SupabaseClient }> {
-    const email = `integration-test-rolls-${key}-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (error || !data.user) throw new Error(error?.message ?? `creation ${key} echouee`);
-    const client = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
-    const { error: signInError } = await client.auth.signInWithPassword({ email, password });
-    if (signInError) throw new Error(signInError.message);
-    return { id: data.user.id, client };
-  }
-
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
     const [gm, ownCharacterPlayer, plainPlayer] = await Promise.all([
-      createProfile("gm"),
-      createProfile("own-character-player"),
-      createProfile("plain-player"),
+      getReusableTestAccount(admin, "gm"),
+      getReusableTestAccount(admin, "player"),
+      getReusableTestAccount(admin, "playerB"),
     ]);
     userIds.gm = gm.id;
     clients.gm = gm.client;
@@ -136,7 +126,6 @@ describe.skipIf(!hasCreds)("checkRolls (integration, base reelle)", () => {
 
   afterAll(async () => {
     if (worldId) await admin.from("worlds").delete().eq("id", worldId);
-    for (const id of Object.values(userIds)) await admin.auth.admin.deleteUser(id);
   });
 
   it("test de caracteristique : modificateur reel de la fiche (Force +3), aucun DD -> pas de verdict", async () => {

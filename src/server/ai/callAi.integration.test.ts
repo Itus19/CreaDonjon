@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { AiRateLimitError, runAiCompletion, runAiEmbedding } from "./callAi";
 import type { AiProvider, CompletionResult } from "./provider";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1-F1 : sans ce test, rien ne prouve que le point de passage oblige
@@ -37,26 +38,17 @@ describe.skipIf(!hasCreds)("runAiCompletion / runAiEmbedding (integration, base 
   let userId: string;
   let rateLimitUserId: string;
 
-  async function createTestUser(label: string): Promise<string> {
-    const email = `integration-test-callai-${label}-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (error || !data.user) throw new Error(error?.message ?? "creation utilisateur echouee");
-    return data.user.id;
-  }
-
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
-    userId = await createTestUser("main");
-    // Utilisateur dedie au test de limite de debit : les autres tests de ce fichier ecrivent deja plusieurs lignes pour `userId`, ce qui fausserait le compte glissant.
-    rateLimitUserId = await createTestUser("ratelimit");
+    userId = (await getReusableTestAccount(admin, "owner")).id;
+    // Compte dedie au test de limite de debit : les autres tests de ce fichier ecrivent deja plusieurs lignes pour `userId`, ce qui fausserait le compte glissant.
+    rateLimitUserId = (await getReusableTestAccount(admin, "outsider")).id;
   });
 
   afterAll(async () => {
     for (const id of [userId, rateLimitUserId]) {
       if (!id) continue;
       await admin.from("ai_usage_log").delete().eq("user_id", id);
-      await admin.auth.admin.deleteUser(id);
     }
   });
 

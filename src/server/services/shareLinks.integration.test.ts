@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createShareLink } from "./shareLinks";
 import { resolveShareLink } from "./publicShare";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V2-M10 (Lot M, retour utilisateur : "personnaliser l'url de partage...
@@ -25,14 +26,7 @@ describe.skipIf(!hasCreds)("createShareLink : slug court (integration, base reel
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const email = `integration-test-share-slug-${Date.now()}@creadonjon.local`;
-    const { data: user, error: userError } = await admin.auth.admin.createUser({
-      email,
-      password: `integration-test-${Date.now()}`,
-      email_confirm: true,
-    });
-    if (userError || !user.user) throw new Error(userError?.message ?? "creation utilisateur echouee");
-    userId = user.user.id;
+    userId = (await getReusableTestAccount(admin, "owner")).id;
 
     const { data: world, error: worldError } = await admin
       .from("worlds")
@@ -58,7 +52,6 @@ describe.skipIf(!hasCreds)("createShareLink : slug court (integration, base reel
 
   afterAll(async () => {
     if (worldId) await admin.from("worlds").delete().eq("id", worldId);
-    if (userId) await admin.auth.admin.deleteUser(userId);
   });
 
   it("derive le slug du nom de campagne (accents, ponctuation, espaces normalises)", async () => {

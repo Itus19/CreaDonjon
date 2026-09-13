@@ -8,6 +8,7 @@ import {
   inviteCampaignMember,
   type CampaignSummary,
 } from "./campaigns";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /** Un monde = une campagne (migration 20260826100001) : chaque test qui cree une campagne a desormais besoin de son PROPRE monde, jamais un `worldId` partage entre plusieurs `it()`. */
 function assertCampaign(result: CampaignSummary | "world_already_has_campaign"): asserts result is CampaignSummary {
@@ -45,13 +46,6 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
   let rulesetId: string;
   const createdWorldIds: string[] = [];
 
-  async function signedInClient(email: string, password: string): Promise<SupabaseClient> {
-    const client = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
-    const { error } = await client.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message);
-    return client;
-  }
-
   /** Un monde = une campagne (migration 20260826100001) : un monde frais par test qui cree une campagne, jamais partage. */
   async function createTestWorld(): Promise<string> {
     const { data: world, error: worldError } = await admin
@@ -67,25 +61,13 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const gmEmail = `integration-test-campaign-gm-${Date.now()}@creadonjon.local`;
-    const gmPassword = `integration-test-${Date.now()}`;
-    const { data: gmData, error: gmError } = await admin.auth.admin.createUser({
-      email: gmEmail,
-      password: gmPassword,
-      email_confirm: true,
-    });
-    if (gmError || !gmData.user) throw new Error(gmError?.message ?? "creation MJ echouee");
-    gmUserId = gmData.user.id;
-    gmClient = await signedInClient(gmEmail, gmPassword);
+    const gm = await getReusableTestAccount(admin, "gm");
+    gmUserId = gm.id;
+    gmClient = gm.client;
 
-    playerEmail = `integration-test-campaign-player-${Date.now()}@creadonjon.local`;
-    const { data: playerData, error: playerError } = await admin.auth.admin.createUser({
-      email: playerEmail,
-      password: `integration-test-${Date.now()}`,
-      email_confirm: true,
-    });
-    if (playerError || !playerData.user) throw new Error(playerError?.message ?? "creation joueur echouee");
-    playerUserId = playerData.user.id;
+    const player = await getReusableTestAccount(admin, "player");
+    playerUserId = player.id;
+    playerEmail = player.email;
 
     const { data: official, error: officialError } = await admin
       .from("rulesets")
@@ -99,8 +81,6 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
 
   afterAll(async () => {
     for (const worldId of createdWorldIds) await admin.from("worlds").delete().eq("id", worldId);
-    if (gmUserId) await admin.auth.admin.deleteUser(gmUserId);
-    if (playerUserId) await admin.auth.admin.deleteUser(playerUserId);
   });
 
   it("cree la faction avant la campagne, et le createur devient MJ (mode campaign)", async () => {

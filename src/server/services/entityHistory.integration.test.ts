@@ -9,6 +9,7 @@ import {
   listRevisions,
   restoreRevision,
 } from "./entityHistory";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1-C3 : verifie, contre une vraie base, la propriete la plus subtile de
@@ -40,21 +41,10 @@ describe.skipIf(!hasCreds)("historique du wiki (integration, base reelle)", () =
   let worldId: string;
   let entityId: string;
 
-  async function createProfile(key: string): Promise<{ id: string; client: SupabaseClient }> {
-    const email = `integration-test-hist-${key}-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (error || !data.user) throw new Error(error?.message ?? `creation ${key} echouee`);
-    const client = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
-    const { error: signInError } = await client.auth.signInWithPassword({ email, password });
-    if (signInError) throw new Error(signInError.message);
-    return { id: data.user.id, client };
-  }
-
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const [owner, player] = await Promise.all([createProfile("owner"), createProfile("player")]);
+    const [owner, player] = await Promise.all([getReusableTestAccount(admin, "owner"), getReusableTestAccount(admin, "player")]);
     ownerId = owner.id;
     ownerClient = owner.client;
     playerId = player.id;
@@ -98,7 +88,6 @@ describe.skipIf(!hasCreds)("historique du wiki (integration, base reelle)", () =
 
   afterAll(async () => {
     if (worldId) await admin.from("worlds").delete().eq("id", worldId);
-    for (const id of [ownerId, playerId]) if (id) await admin.auth.admin.deleteUser(id);
   });
 
   it("un bloc gm reste dans l'instantane meme quand un joueur declenche l'ecriture, et reste filtre a la lecture", async () => {

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { proposeTextForBlock } from "./writingAssist";
 import type { AiProvider, CompletionResult } from "./provider";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1-F3 : sans ce test, rien ne prouve que chaque appel d'outil devient une
@@ -48,11 +49,7 @@ describe.skipIf(!hasCreds)("proposeTextForBlock (integration, base reelle)", () 
 
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
-    const email = `integration-test-writingassist-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data: userData, error: userError } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (userError || !userData.user) throw new Error(userError?.message ?? "creation utilisateur echouee");
-    userId = userData.user.id;
+    userId = (await getReusableTestAccount(admin, "owner")).id;
 
     const { data: world, error: worldError } = await admin
       .from("worlds")
@@ -77,7 +74,6 @@ describe.skipIf(!hasCreds)("proposeTextForBlock (integration, base reelle)", () 
       await admin.from("entities").delete().eq("created_by", userId);
       await admin.from("worlds").delete().eq("owner_id", userId);
       await admin.from("ai_usage_log").delete().eq("user_id", userId);
-      await admin.auth.admin.deleteUser(userId);
     }
   });
 

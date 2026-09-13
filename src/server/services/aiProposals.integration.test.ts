@@ -4,6 +4,7 @@ import { applyAiProposal, rejectAiProposal } from "./aiProposals";
 import { createBlock } from "./blocks";
 import { insertAiProposal } from "@/src/server/repos/aiProposals";
 import { listRevisions } from "./entityHistory";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1-F3 : sans ce test, rien ne prouve que "Accepter" ecrit reellement le
@@ -25,11 +26,7 @@ describe.skipIf(!hasCreds)("applyAiProposal / rejectAiProposal (integration, bas
 
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
-    const email = `integration-test-aiproposals-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data: userData, error: userError } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (userError || !userData.user) throw new Error(userError?.message ?? "creation utilisateur echouee");
-    userId = userData.user.id;
+    userId = (await getReusableTestAccount(admin, "owner")).id;
 
     const { data: world, error: worldError } = await admin
       .from("worlds")
@@ -64,7 +61,6 @@ describe.skipIf(!hasCreds)("applyAiProposal / rejectAiProposal (integration, bas
       await admin.from("ai_proposals").delete().eq("target_entity_id", entityId);
       await admin.from("entities").delete().eq("created_by", userId);
       await admin.from("worlds").delete().eq("owner_id", userId);
-      await admin.auth.admin.deleteUser(userId);
     }
   });
 

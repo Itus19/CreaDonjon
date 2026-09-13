@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import { SeededRng } from "@/src/core/dice/rng";
 import { renderGeneratorTemplate } from "@/src/core/generators/render";
 import { drawTableSlotsFromGeneratorBlock } from "./generators";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1-E2 : sans ce test, rien ne prouve que le tirage de generateur resout
@@ -24,11 +25,7 @@ describe.skipIf(!hasCreds)("tirage sur un bloc generator (integration, base reel
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
-    const email = `integration-test-generators-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data: userData, error: userError } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (userError || !userData.user) throw new Error(userError?.message ?? "creation utilisateur echouee");
-    userId = userData.user.id;
+    userId = (await getReusableTestAccount(admin, "owner")).id;
 
     const { data: world, error: worldError } = await admin
       .from("worlds")
@@ -51,7 +48,6 @@ describe.skipIf(!hasCreds)("tirage sur un bloc generator (integration, base reel
     if (userId) {
       await admin.from("entities").delete().eq("created_by", userId);
       await admin.from("worlds").delete().eq("owner_id", userId);
-      await admin.auth.admin.deleteUser(userId);
     }
   });
 

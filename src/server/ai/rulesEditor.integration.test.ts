@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { proposeWeaponFromDescription } from "./rulesEditor";
 import type { AiProvider, CompletionResult } from "./provider";
+import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
  * V1-F2 : sans ce test, rien ne prouve que la nouvelle tentative sur echec
@@ -48,17 +49,12 @@ describe.skipIf(!hasCreds)("proposeWeaponFromDescription (integration, base reel
 
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
-    const email = `integration-test-ruleseditor-${Date.now()}@creadonjon.local`;
-    const password = `integration-test-${Date.now()}`;
-    const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (error || !data.user) throw new Error(error?.message ?? "creation utilisateur echouee");
-    userId = data.user.id;
+    userId = (await getReusableTestAccount(admin, "owner")).id;
   });
 
   afterAll(async () => {
     if (userId) {
       await admin.from("ai_usage_log").delete().eq("user_id", userId);
-      await admin.auth.admin.deleteUser(userId);
     }
   });
 
