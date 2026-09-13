@@ -21,6 +21,7 @@ import { zWorldviewBlockData } from "./worldview";
 import { zRelationsGraphBlockData } from "./relationsGraph";
 import { zTimelineBlockData } from "./timeline";
 import { zMapBlockData, DEFAULT_MAP_BLOCK_DATA } from "./map";
+import { zSessionJournalMetaBlockData } from "./sessionJournalMeta";
 import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
 
 /**
@@ -95,6 +96,11 @@ import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/ke
  * (ADR 0017). Punaises/zones/couches (phases C/D/E) vivent dans des tables
  * dediees, jamais dans ce JSON — elles ont besoin de leur propre
  * visibilite RLS, qu'un sous-champ ne peut pas porter.
+ * V2.1-3 (suite) : session_journal_meta — les quatre champs fixes d'une
+ * entree du Livre de sessions (date ingame, autrice, date IRL de
+ * redaction, seance reelle). Jamais dans "+ Ajouter un bloc"
+ * (EntityBlocks.tsx l'exclut explicitement), pose une seule fois par
+ * `submitJournalEntry`.
  */
 export const BLOCK_TYPES = [
   "text",
@@ -118,6 +124,7 @@ export const BLOCK_TYPES = [
   "relations_graph",
   "timeline",
   "map",
+  "session_journal_meta",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -143,6 +150,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   relations_graph: "graph",
   timeline: "timeline",
   map: "map",
+  session_journal_meta: "key_values",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -168,6 +176,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   relations_graph: zRelationsGraphBlockData,
   timeline: zTimelineBlockData,
   map: zMapBlockData,
+  session_journal_meta: zSessionJournalMetaBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -244,6 +253,13 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
   relations_graph: { __v: 1, rootEntityId: null, degreesVisible: 1 },
   timeline: { __v: 1, entries: [], groupBy: "none" },
   map: DEFAULT_MAP_BLOCK_DATA,
+  session_journal_meta: {
+    __v: 1,
+    ingameDate: { year: 0, month: 1, day: 1, precision: "day", end: null, label: null },
+    writtenBy: null,
+    writtenAt: null,
+    realSession: null,
+  },
 };
 
 export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny {

@@ -510,6 +510,7 @@ export default function EditEntityForm({
           worldId={entity.world_id}
           initialBlocks={initialBlocks}
           worldSlug={worldSlug}
+          campaignId={campaignId}
           otherEntities={otherEntities}
           relationsReloadSignal={relationsReloadSignal}
           onRelationsChanged={bumpRelationsReloadSignal}
