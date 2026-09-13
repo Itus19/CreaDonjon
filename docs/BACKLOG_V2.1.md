@@ -405,8 +405,17 @@ aucune nouvelle route d'écriture.**
 d'intégration (`*.integration.test.ts`, base réelle) n'ont pas pu tourner
 dans cet environnement — aucun Docker/Supabase local disponible ici,
 limitation de l'environnement, pas une régression de ce ticket.
-Vérification en direct (navigateur) non faite dans ce tour — à faire avant
-de considérer le ticket entièrement clos en pratique.
+
+Vérifié en direct sur la prod (monde "Faerûn (copie)") : "Bloc-notes"
+premier de la sidebar MJ (ordre alphabétique), "Tables aléatoires"
+disparue ; création de page, renommage et sauvegarde (`PATCH
+/api/blocks/[id]`) ; épingler Brennan Torram puis Mirella depuis le même
+cahier ouvre une vraie fenêtre compagne côté MJ, la seconde remplaçant
+la première (`?avec=` passe de `entite:8` à `entite:3`, jamais les deux) ;
+côté joueuse (`/joueur/notes`), même arbre isolé (compte différent, vide
+au départ) et même épinglage, ouvert cette fois dans le panneau fixe de
+droite plutôt qu'une fenêtre. Fiches de test nettoyées des deux cahiers
+après vérification.
 
 ---
 
