@@ -234,15 +234,81 @@ dans les étapes :
 
 - Le bloc `session_log` (V2-H4) épinglé sur une fiche n'est **pas voulu ici**
   — décision produit de l'auteur, pas un bug.
-- "Bloc-notes" est déjà réservé dans la sidebar MJ (`MjSidebar.tsx`) mais
-  **désactivé, jamais construit**.
+- "Bloc-notes" est déjà réservé dans la sidebar MJ (`MjSidebar.tsx`,
+  `reserved`) mais **désactivé, jamais construit** — l'entrée existe déjà,
+  elle attend juste d'être branchée.
 - Côté joueur, "notes" (V2-M7b) est un unique textarea privé par monde
-  (`NotesEditor.tsx`) — aucune organisation, pas de pages, pas de
-  sections.
+  (`components/entities/player/NotesEditor.tsx`, route
+  `app/m/[worldSlug]/joueur/notes/page.tsx`) — aucune organisation, pas de
+  pages, pas de sections.
+- Le système de fenêtres flottantes (`DesktopWindowsProvider.tsx`,
+  `useDesktop()`/`openRef` — celui qui ouvre déjà une fiche liée, V2.1-1)
+  gère un adressage `WindowRef` à plat (`entity` | `rule` | `mj` |
+  `rule-tool`, `windowRefs.ts`) et empile librement toute fenêtre ouverte
+  par `openRef` dans `?avec=` — jamais de notion de "fenêtre liée à une
+  autre", jamais de limite au nombre de fenêtres secondaires.
 
-L'auteur demande une organisation à la OneNote : des cahiers/sections
-contenant des pages, pour le MJ (préparation de séance) **et** pour
-chaque joueuse (ses propres notes), pas un outil MJ-only.
+Retour utilisateur (13 septembre, après plusieurs esquisses comparées) :
+l'auteur veut une organisation à la OneNote (sections/pages, mais en
+**arbre**, pas la seule profondeur 1 niveau du modèle de référence), pour
+le MJ **et** pour chaque joueuse, capable d'accueillir aussi bien des
+pages écrites que des **raccourcis vers des fiches déjà existantes** (ex.
+retrouver Brennan Torram dans son propre cahier), le tout dans le système
+de fenêtres déjà construit plutôt qu'une route plein écran séparée.
+
+### Disposition retenue — piste "un seul compagnon"
+
+Quatre pistes esquissées et comparées avec l'auteur avant d'écrire ce
+ticket (trois colonnes façon OneNote, arbre unifié, fenêtre du bureau,
+aperçu à épingler), puis trois pistes mixtes une fois le choix resserré
+sur "les trois colonnes de la première, dans le mécanisme de fenêtres de
+la troisième". Retenue : **un seul compagnon**.
+
+- Le cahier s'ouvre comme une fenêtre du bureau existant — pas une route
+  plein écran neuve. `"notes"` rejoint `MJ_TOOL_KEYS`/`MJ_TOOL_LABELS`
+  (`windowRefs.ts`), ce qui active directement l'entrée "Bloc-notes" déjà
+  réservée dans `MjSidebar.tsx` ; côté joueur, une entrée équivalente
+  remplace la route `joueur/notes` actuelle. Une seule fenêtre "Notes" à
+  la fois par cahier (MJ ou joueuse), comme toute fenêtre `mj` aujourd'hui.
+- À l'intérieur : les trois colonnes de l'esquisse OneNote (arbre de
+  pages à gauche, page ouverte à droite) — détaillé ci-dessous.
+- Cliquer un lien **depuis cette fenêtre** (fiche épinglée ou lien vers
+  une autre page du cahier, V2.1-1) appelle `openRef` comme partout
+  ailleurs, mais avec une règle nouvelle et **scoped à cette seule
+  origine** : la fenêtre secondaire ouverte depuis le cahier remplace la
+  précédente fenêtre compagne du même cahier au lieu de s'empiler dans
+  `?avec=`. Jamais plus de deux fenêtres issues de ce parcours (le cahier
+  + son compagnon). Un lien cliqué depuis une fiche normale continue de
+  s'empiler exactement comme aujourd'hui — aucune régression sur le
+  système existant, l'ajout est localisé à l'origine "notes" dans
+  `DesktopWindowsProvider.tsx`.
+- Choisie plutôt que "division interne à la fenêtre" (répliquerait un
+  moteur de split entier, alors que celui des fenêtres existe déjà) et
+  "empilage libre" (encombre le bureau dès le deuxième lien cliqué) :
+  le meilleur rapport entre "reprend ce qui existe" et "le résultat que
+  l'auteur décrit" (deux sources d'information côte à côte, jamais plus).
+
+### Modèle de l'arbre — pages et fiches épinglées
+
+Une seule structure d'arbre par cahier, deux natures de ligne :
+
+- **Page** — contenu propre au cahier (`zNarrativeContent`, réutilise
+  `RichTextEditor` tel quel, aucun nouvel éditeur). Titre **renommable**.
+- **Fiche épinglée** — pas de contenu propre, une simple référence
+  (`{kind:"entity"|"rule", key}`, même forme que `WindowRef`) vers une
+  entité ou une entrée de règle déjà existante. Le nom affiché est celui
+  de la cible, **jamais éditable ici** — une copie du nom dériverait du
+  réel (cohérent avec la règle absolue n°16, même si ce n'est pas une
+  donnée mécanique : une seule source de vérité pour un nom de fiche).
+  L'ouvrir appelle `openRef` sur cette référence : c'est la même fenêtre
+  fiche que partout ailleurs dans l'app, filtrée par la même visibilité
+  côté serveur — une joueuse qui épingle Brennan et l'ouvre depuis son
+  cahier ne voit jamais plus que ce que cette fiche lui montre déjà dans
+  le wiki. Rien de neuf à sécuriser, une pure réutilisation.
+
+Chaque ligne porte un `parent_id` (imbrication libre, profondeur
+illimitée — contrairement au modèle OneNote de référence) et une
+`position` parmi ses frères (ordre manuel, glisser-déposer).
 
 ### Étapes
 
@@ -251,31 +317,52 @@ chaque joueuse (ses propres notes), pas un outil MJ-only.
    du monde de test en portent déjà un, les nettoyer à la main. La donnée
    `sessions.summary` sous-jacente n'est **pas** supprimée : elle sert au
    Livre de séance (V2.1-3).
-2. **Modèle de données "sections + pages"** — réutilise l'éditeur de texte
-   riche déjà existant (`RichTextEditor`/`zNarrativeContent`) pour le
-   contenu d'une page, pas un nouvel éditeur. Nouvelle table légère (ex.
-   `note_sections`, `note_pages`) plutôt qu'un bloc par page : les notes ne
-   sont pas attachées à une fiche d'entité, elles vivent à côté (un cahier
-   par monde pour le MJ, un cahier privé par joueuse et par monde).
-3. **Interface à deux colonnes** (sections à gauche, page ouverte à
-   droite) — remplace `NotesEditor.tsx`. MJ et joueuses partagent le même
-   composant, seule la source de données change.
-4. **Gabarit "Préparation de séance"** côté MJ — une page pré-remplie
+2. **Modèle de données** — nouvelle table (ex. `note_items`) : `id`,
+   `notebook_owner` (le monde pour le MJ, `(world_id, player_id)` pour une
+   joueuse — RLS refuse tout accès hors propriétaire), `parent_id`
+   (nullable), `position`, `kind` (`page` | `pinned_entity` | `pinned_rule`),
+   `title` (page uniquement), `content` (page uniquement,
+   `zNarrativeContent`), `target_key` (fiches épinglées uniquement).
+   Repo dédié (`src/server/repos/notes.ts`), jamais de requête Supabase
+   ailleurs (règle absolue n°20).
+3. **Fenêtre "Notes"** — `"notes"` ajouté à `MJ_TOOL_KEYS`/`MJ_TOOL_LABELS`
+   (active l'entrée réservée de `MjSidebar.tsx`) ; entrée équivalente côté
+   sidebar joueur. Contenu : arbre à gauche (`note_items` du cahier),
+   `RichTextEditor` à droite pour la page sélectionnée.
+4. **Organiser l'arbre** — renommer une page en ligne (double-clic),
+   glisser une ligne pour réordonner ou changer de parent, "+" propose
+   "Nouvelle page" ou "Épingler une fiche existante" (réutilise le
+   popover combiné entité/règle de "Lier à la Fiche", V2.1-1).
+5. **Compagnon unique** — petit ajout à `DesktopWindowsProvider.tsx` :
+   retenir, par fenêtre `mj:"notes"` ouverte, la référence de son dernier
+   compagnon ouvert depuis elle ; un nouvel `openRef` **originaire du
+   cahier** remplace ce compagnon dans `?avec=` au lieu de s'y ajouter.
+6. **Gabarit "Préparation de séance"** côté MJ — une page pré-remplie
    (accroche, PNJ prévus, rencontre, complications) plutôt qu'un nouveau
    type de bloc : réutilise l'idée de modèle de fiche (`entity_templates`,
    §A3 de la même spec que le ticket 1, jamais construite non plus).
-5. **Débrancher la route `session-log/attach`** une fois le bloc retiré du
-   catalogue, si plus aucun consommateur ne l'appelle.
+7. **Débrancher l'ancien chemin** — route `session-log/attach` si plus
+   aucun consommateur ne l'appelle ; route `joueur/notes/page.tsx` et
+   `NotesEditor.tsx` une fois la fenêtre "Notes" en place côté joueur.
 
 ### Critères
 
 - [ ] Le bloc "Journal de séance" n'apparaît plus dans le menu "+ Bloc"
       d'une fiche.
-- [ ] Le MJ organise ses notes en plusieurs sections/pages, pas un seul
-      champ.
-- [ ] Chaque joueuse a son propre espace de notes multi-pages, toujours
-      privé (aucun autre joueur ni le MJ ne les voit, sauf mention
-      contraire explicite plus tard).
+- [ ] Le MJ ouvre son cahier depuis la sidebar MJ ("Bloc-notes" devient
+      actif), organise ses pages en arbre (renommer, glisser pour
+      réordonner ou imbriquer), profondeur illimitée.
+- [ ] Chaque joueuse a son propre cahier, même mécanisme, toujours privé
+      (aucune autre joueuse ni le MJ n'y accède, sauf ce qu'elle choisit
+      d'épingler et qui reste soumis à la visibilité normale).
+- [ ] Épingler une fiche existante (ex. Brennan Torram) dans l'arbre puis
+      l'ouvrir affiche la vraie fiche, jamais une copie — filtrée par la
+      même visibilité que partout ailleurs.
+- [ ] Cliquer un lien depuis le cahier (fiche épinglée ou autre page)
+      ouvre une fenêtre compagne à côté ; cliquer un second lien depuis le
+      cahier remplace cette compagne — jamais plus de deux fenêtres issues
+      de ce parcours. Un lien cliqué depuis une fiche normale continue de
+      s'empiler comme aujourd'hui (non régression).
 
 ---
 
