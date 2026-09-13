@@ -65,6 +65,24 @@ function AlignIcon({ value }: { value: string }) {
   );
 }
 
+/** Icone "maillon de chaine" minimaliste (retour utilisateur : pas d'emoji sur le bouton "Détecter des liens") — meme convention que `EyeIcon`/`DieIcon` (components/shared) : trait fin, `currentColor`, pas de police d'icones. */
+function LinkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+      <path
+        d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /**
  * Remplace `SegmentsEditor.tsx` (V0-06f) : une seule zone de texte
  * editable, plus de bouton « + Ajouter un segment ». Les segments existent
@@ -538,9 +556,10 @@ export default function RichTextEditor({
           <button
             type="button"
             onClick={detectLinks}
-            className="self-start text-xs font-medium text-ink-muted transition-colors hover:text-ink"
+            className="inline-flex items-center gap-1.5 self-start text-xs font-medium text-ink-muted transition-colors hover:text-ink"
           >
-            🔗 Détecter des liens
+            <LinkIcon />
+            Détecter des liens
           </button>
           {suggestions.length > 0 && (
             <ul className="flex flex-col gap-1 rounded-md border border-edge/60 bg-panel-sunken p-2">
