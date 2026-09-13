@@ -190,6 +190,49 @@ async function entryFromChainByKey(supabase: TypedClient, chain: RulesetChainLin
 }
 
 /**
+ * Version "plusieurs cles" de `entryFromChainByKey` ci-dessus (V3-R7, audit
+ * de performance) : une seule requete pour tout le lot, plutot qu'une
+ * remontee sequentielle de chaine par cle absente du ruleset courant
+ * (`findEntryInRulesetChain` appele en boucle — la cause de 39 871 lectures
+ * unitaires mesurees par `pg_stat_statements` dans `resolveOutgoingRefs` et
+ * `resolveEntryNames`). Meme priorite exactement : `chain` reste
+ * feuille -> racine, on garde par cle la premiere trouvee dans cet ordre —
+ * c'est ce qui fait qu'une variante surcharge correctement une base
+ * officielle (regle absolue n° 18).
+ */
+export async function entriesFromChainByKeys(
+  supabase: TypedClient,
+  chain: RulesetChainLink[],
+  entryKeys: readonly string[]
+): Promise<Map<string, RulesetEntryRow>> {
+  const result = new Map<string, RulesetEntryRow>();
+  if (entryKeys.length === 0) return result;
+
+  const candidates = await getRulesetEntriesByKeysAcrossRulesets(
+    supabase,
+    chain.map((link) => link.rulesetId),
+    [...entryKeys]
+  );
+  const byKeyThenRuleset = new Map<string, Map<string, RulesetEntryRow>>();
+  for (const candidate of candidates) {
+    const byRulesetId = byKeyThenRuleset.get(candidate.entry_key) ?? new Map<string, RulesetEntryRow>();
+    byRulesetId.set(candidate.ruleset_id, candidate);
+    byKeyThenRuleset.set(candidate.entry_key, byRulesetId);
+  }
+
+  for (const [entryKey, byRulesetId] of byKeyThenRuleset) {
+    for (const link of chain) {
+      const found = byRulesetId.get(link.rulesetId);
+      if (found) {
+        result.set(entryKey, found);
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+/**
  * Resout une entree jusqu'a ses blocs valides : base (si elle existe dans
  * la chaine) + TOUTES les surcharges de la chaine, racine -> feuille
  * (V1-A4/V1-D4) — meme moteur (`applyOverrides`) que `getRuleEntryForWorld`,
@@ -386,10 +429,11 @@ export function entryNameFrom(entry: { entry_key: string; source_raw: unknown })
 
 /**
  * Renvois sortants d'une fiche, prets a afficher (V1-A3). Les cles cibles
- * sont resolues en un seul lot dans le ruleset courant — le cas normal tant
- * que les surcharges (V1-A4) n'existent pas — puis, pour les cles absentes
- * du lot, une par une via la remontee de chaine (rare : cible d'un ruleset
- * parent, ou renvoi non resolu si elle n'existe nulle part).
+ * sont resolues en un seul lot a travers TOUTE la chaine (V3-R7, audit de
+ * performance — `entriesFromChainByKeys` remplace ici une remontee
+ * sequentielle par cle absente, mesuree a 39 871 lectures unitaires) ; seules
+ * les cles qui restent introuvables (rare : fiche maison, ou renvoi non
+ * resolu) passent encore par une resolution une par une.
  */
 async function resolveOutgoingRefs(
   supabase: TypedClient,
@@ -401,20 +445,17 @@ async function resolveOutgoingRefs(
   if (refs.length === 0) return [];
 
   const targetKeys = [...new Set(refs.map((r) => r.target_key))];
-  const batched = await listRulesetEntriesByKeys(supabase, rulesetId, targetKeys);
-  const byKey = new Map(batched.map((e) => [e.entry_key, e]));
+  const chain = await walkRulesetChain(supabase, rulesetId);
+  const byKey = await entriesFromChainByKeys(supabase, chain, targetKeys);
 
   // Cible sans ligne de base nulle part dans la chaine : fiche maison
   // (`add_entry`, V1-D4) resolue a part, `RulesetEntryRow` n'a pas de forme
   // pour elle (pas d'id ni de `source_raw`) — voir `resolveHomebrewEntryDisplay`.
+  // Reste sequentiel : ces fiches n'ont par definition aucune ligne dans
+  // `ruleset_entries`, un tir groupe ne peut donc pas les couvrir.
   const homebrewByKey = new Map<string, { name: string; entryType: EntryType }>();
   for (const key of targetKeys) {
     if (byKey.has(key)) continue;
-    const found = await findEntryInRulesetChain(supabase, rulesetId, key);
-    if (found) {
-      byKey.set(key, found);
-      continue;
-    }
     const homebrew = await resolveHomebrewEntryDisplay(supabase, rulesetId, key);
     if (homebrew) homebrewByKey.set(key, { name: homebrew.name, entryType: homebrew.entryType });
   }
@@ -678,9 +719,9 @@ async function resolveEntryDetails(
 }
 
 /**
- * Nom (deja traduit si `locale !== "en"`) de chaque cle donnee, resolue
- * dans le ruleset ou sa chaine — meme lot batche + repli chaine que
- * `resolveOutgoingRefs`, extrait ici pour etre reutilise par
+ * Nom (deja traduit si `locale !== "en"`) de chaque cle donnee, resolue a
+ * travers TOUTE la chaine en un seul lot (V3-R7, audit de performance —
+ * meme motif que `resolveOutgoingRefs`), extrait ici pour etre reutilise par
  * `background.equipment_options[].items[].ref` (V1-D7) sans dupliquer la
  * logique. Une cle absente du resultat n'a pas de fiche resoluble ;
  * l'appelant retombe alors sur le libelle fige ecrit a l'import.
@@ -694,13 +735,8 @@ async function resolveEntryNames(
   const uniqueKeys = [...new Set(keys)];
   if (uniqueKeys.length === 0) return new Map();
 
-  const batched = await listRulesetEntriesByKeys(supabase, rulesetId, uniqueKeys);
-  const byKey = new Map(batched.map((e) => [e.entry_key, e]));
-  for (const key of uniqueKeys) {
-    if (byKey.has(key)) continue;
-    const found = await findEntryInRulesetChain(supabase, rulesetId, key);
-    if (found) byKey.set(key, found);
-  }
+  const chain = await walkRulesetChain(supabase, rulesetId);
+  const byKey = await entriesFromChainByKeys(supabase, chain, uniqueKeys);
 
   const translationByEntryId = new Map<string, string>();
   if (locale !== "en" && byKey.size > 0) {

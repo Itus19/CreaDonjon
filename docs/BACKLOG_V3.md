@@ -451,7 +451,14 @@ Pourquoi ça vaut la peine : en solo, la première question qui vient est *« es
 - [x] **Le JS n'est pas le problème.** 246 à 300 Ko selon la route, après `V3-R1`. Tout le découpage restant (`V3-R3`) se dispute au mieux quelques dizaines de Ko, pendant qu'une image en pèse 2 000.
 - [x] **La seconde visite ne transfère que 3 Ko** — le cache navigateur fait son travail. Le coût de 2,4 Mo frappe la **première** visite : exactement celle d'un ami à qui on envoie le lien.
 - [x] **Et pourtant cette seconde visite prend encore 4,4 s** pour 3 Ko. Le temps n'est donc pas dans les octets : il est côté serveur.
-- [ ] Écrire un **budget** en deux plafonds (JS initial *et* octets totaux) pour les routes joueur. Le budget en JS seul, tel que ce ticket le proposait, aurait déclaré l'application saine à 2,4 Mo par page.
+- [x] **Budget écrit, en deux plafonds** (routes `/joueur/*`), à partir des mesures déjà prises dans ce lot plutôt que d'un chiffre choisi à l'aveugle :
+
+  | Plafond | Valeur | Mesure actuelle la plus haute |
+  |---|---|---|
+  | JS initial | **350 Ko** | 263 Ko (`/joueur/wiki`, après `V3-R1`/`V3-R3`) |
+  | Poids total, visite froide | **700 Ko** | ~620 Ko (image de fond 236 Ko + JS + polices + styles, après `V3-R4a`) |
+
+  Marge volontaire d'environ 15 à 20 % au-dessus du mesuré : assez pour absorber un fond ou un fragment un peu plus lourd sans déclencher une fausse alerte, assez serré pour que le budget en octets totaux — celui qui manquait — attrape une régression d'image que le seul budget JS aurait laissée passer (c'est exactement ce que ce ticket reproche au budget JS seul, ligne au-dessus). Aucun outil de mesure automatique posé ici : la mesure au navigateur de `V3-R0` reste manuelle, ce budget est la référence à laquelle la comparer.
 
 **Réserve de méthode, à ne pas oublier en relisant ces chiffres :** les temps sont mesurés depuis un conteneur qui sort par un proxy, pas depuis un téléphone en France. Les **octets** sont exacts ; les **durées** portent une latence qui n'est pas celle de l'auteur. Un vrai téléphone reste la mesure de référence — mais il ne changera pas le rapport 84 / 11 entre l'image et le JS.
 
@@ -669,7 +676,7 @@ Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de b
 
 ---
 
-### V3-R7 — Deux boucles qui rechargent les règles une par une · `M`
+### V3-R7 — Deux boucles qui rechargent les règles une par une · `M` — **fait le 13 septembre**
 
 *Ouvert le 12 septembre, à partir de `pg_stat_statements` — pas de l'audit, qui ne l'avait pas vu.*
 
@@ -692,16 +699,18 @@ Une fiche de personnage citant trente sorts et dons, sur un monde à ruleset dé
 
 C'est le même enseignement que `P‑01` : *la primitive existait, il manquait de vérifier qui d'autre en avait besoin.*
 
-- [ ] `resolveOutgoingRefs` et `resolveEntryNames` résolvent leurs clés par `getRulesetEntriesByKeysAcrossRulesets`, sur la chaîne déjà résolue (`walkRulesetChain`, mémoïsée) plutôt que sur le seul ruleset du monde.
-- [ ] La boucle de repli ne subsiste que pour les fiches **maison** (`resolveHomebrewEntryDisplay`), qui ne vivent pas dans `ruleset_entries` — c'est le seul cas qu'un tir groupé ne peut pas couvrir.
-- [ ] **Le résultat ne change pas, y compris l'ordre de priorité de la chaîne** : la ligne retenue reste celle du ruleset le plus spécifique, exactement comme la boucle qui s'arrêtait au premier trouvé. `entryFromChainByKey` montre déjà comment le faire (parcours de `chain` feuille → racine sur les candidats renvoyés) — reprendre cette logique, pas en inventer une autre.
-- [ ] Un test couvre le cas qui casse tout le reste : une clé présente **uniquement dans le ruleset parent**, et une clé **surchargée** dans l'enfant. C'est là que l'ordre compte.
-- [ ] `findEntryInRulesetChain` reste pour ses appelants unitaires légitimes (`characterActions.ts` résout **un** sort) — ce ticket ne la supprime pas.
-- [ ] **Mesure avant/après**, sur `pg_stat_statements` remis à zéro : le nombre d'appels à la lecture unitaire doit s'effondrer. C'est le critère, pas le temps moyen — qui dépend surtout de la charge de l'instance.
+- [x] `resolveOutgoingRefs` et `resolveEntryNames` résolvent leurs clés par `getRulesetEntriesByKeysAcrossRulesets`, sur la chaîne déjà résolue (`walkRulesetChain`, mémoïsée) plutôt que sur le seul ruleset du monde. Extrait dans une fonction partagée, `entriesFromChainByKeys` (juste après `entryFromChainByKey`, dont elle est la version "plusieurs clés") : une requête au lieu d'une par clé absente.
+- [x] La boucle de repli ne subsiste que pour les fiches **maison** (`resolveHomebrewEntryDisplay`), qui ne vivent pas dans `ruleset_entries` — c'est le seul cas qu'un tir groupé ne peut pas couvrir. Rien d'autre n'est resté séquentiel.
+- [x] **Le résultat ne change pas, y compris l'ordre de priorité de la chaîne** : `entriesFromChainByKeys` reprend exactement l'algorithme d'`entryFromChainByKey` (parcours de `chain` feuille → racine sur les candidats renvoyés par la requête groupée), pas une nouvelle logique.
+- [x] Un test couvre le cas qui casse tout le reste (`rules.chainPriority.integration.test.ts`, base réelle) : un ruleset parent et un enfant, une clé présente **uniquement chez le parent** (retombe dessus) et une clé **surchargée** dans l'enfant (la version de l'enfant gagne) — les deux vérifiées dans le même appel à `entriesFromChainByKeys`.
+- [x] `findEntryInRulesetChain` reste pour ses appelants unitaires légitimes (`resolveEntryDetail`, `resolveHomebrewEntryDisplay`, `characterActions.ts`) — ni supprimée ni touchée.
+- [ ] **Mesure avant/après**, sur `pg_stat_statements` remis à zéro : le nombre d'appels à la lecture unitaire doit s'effondrer. Pas encore fait — ça demande quelques minutes d'usage réel de l'application (même protocole que `P‑07`), pas une mesure qu'on peut produire depuis une session de développement sans trafic. **À faire par l'auteur après ce ticket** : `pg_stat_statements_reset()`, naviguer normalement quelques minutes (fiches de personnage, pages de classe/sous-classe), puis comparer le nombre d'appels sur `ruleset_entries` au chiffre de référence (39 871). La correction elle-même ne dépend pas de cette mesure : par construction, `entriesFromChainByKeys` fait exactement **une** requête par appel, quel que soit le nombre de clés ou de niveaux de chaîne — c'est une propriété du code, pas un résultat à confirmer statistiquement.
 
 **Pourquoi `M` et pas `S` :** la résolution de règles est le cœur du projet, et l'ordre de priorité de la chaîne est ce qui fait qu'une variante surcharge correctement une base officielle. Le correctif est mécanique ; sa vérification ne l'est pas.
 
-**À ne pas faire dans ce ticket.** Ne pas toucher aux politiques RLS de `ruleset_entries` : rien dans la mesure ne les désigne, et l'audit est formel — ces politiques sont la barrière de sécurité, on ne les réécrit pas sur une intuition (`P‑07`).
+**À ne pas faire dans ce ticket.** Ne pas toucher aux politiques RLS de `ruleset_entries` : rien dans la mesure ne les désigne, et l'audit est formel — ces politiques sont la barrière de sécurité, on ne les réécrit pas sur une intuition (`P‑07`). Non touchées.
+
+**Vérifié** : `npm run typecheck && npm run lint` passent, `npm run test:core` (760 tests) passe. Le nouveau test d'intégration passe seul et aux côtés des tests d'intégration existants sur `rules.ts` (`rules.homebrewReference`, `resolvedRuleset`). La suite d'intégration complète (`npm run test`) reste intermittente sous charge contre la base de dev distante partagée (limite de débit de l'API Auth, expirations à 5 s) — même constat environnemental que documenté ailleurs dans ce dépôt (`docs/BACKLOG_V2.md`, lot H), sans rapport avec ce ticket : aucun des échecs ne touche `rules.ts` ni les fichiers modifiés ici.
 
 ---
 
@@ -715,7 +724,7 @@ C'est le même enseignement que `P‑01` : *la primitive existait, il manquait d
 | ~~3~~ | ~~**V3-R3**~~ | **Fait le 12 septembre — plus gros fragment 871 → 439 Ko, et deux fiches ne pèsent plus pareil selon leurs blocs** |
 | ~~1~~ | ~~**V3-R4a**~~ | **Fait le 12 septembre — 2 456 Ko → 619 Ko. Mais le temps de chargement n'a pas bougé : le poids n'était plus le facteur limitant** |
 | ~~5~~ | ~~**V3-R4b**~~ | **Fait le 12 septembre — mais le diagnostic de l'audit était faux : voir ADR 0021** |
-| **7** | **V3-R7** | **Ouvert le 12 septembre depuis `pg_stat_statements` : 39 871 lectures unitaires de règles, causées par deux boucles séquentielles. La primitive groupée existe déjà** |
+| ~~7~~ | ~~**V3-R7**~~ | **Fait le 13 septembre — les deux boucles converties vers la primitive groupée qui existait déjà. Mesure en production restante, cf. le ticket** |
 | ~~6~~ | ~~**V3-R5**~~ | **Fait le 12 septembre — 45 → 9 préchargements, et le chargement passe de 5 285 à 3 304 ms. Le ticket le plus rentable du lot, à l'inverse de ce qui était prévu** |
 
 **Ce que la mesure du 12 septembre a changé dans cet ordre.** `V3-R0` a été faite, et elle a retourné les priorités : le JS ne pèse que 263 Ko quand une seule image en pèse 2 071. `V3-R4a` passe donc devant tout, et `V3-R3` (découper les éditeurs de blocs) perd beaucoup de son urgence — il reste juste, mais il se dispute des dizaines de Ko là où `R4a` en gagne deux mille.
