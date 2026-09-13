@@ -126,14 +126,21 @@ export async function getEntityTree(
   worldId: string,
   userId: string | null
 ): Promise<EntityTreeGroup[]> {
-  const [entities, partOfEdges, playerCharacterIds, kindOrder] = await Promise.all([
+  // `isWorldAdmin` rejoint la PREMIERE vague (audit P-02) : elle ne depend
+  // d'aucune des autres, et l'attendre a part coutait un aller-retour
+  // complet — pour tout le monde, admin comme joueur. Elle ne part que
+  // pour un visiteur identifie ; sinon la question ne se pose pas.
+  const [entities, partOfEdges, playerCharacterIds, kindOrder, admin] = await Promise.all([
     listEntitiesForWorld(supabase, worldId),
     listPartOfRelationsForWorld(supabase, worldId),
     listPlayerCharacterEntityIds(supabase, worldId),
     getWorldEntityKindOrder(supabase, worldId),
+    userId ? isWorldAdmin(supabase, { worldId, userId }) : Promise.resolve(false),
   ]);
   let visibleEntities = excludeOthersPrivateNotes(entities, userId);
-  if (userId && !(await isWorldAdmin(supabase, { worldId, userId }))) {
+  // Reste en seconde vague, et ne peut pas en sortir : la liste d'ids a
+  // filtrer n'existe qu'apres `excludeOthersPrivateNotes` ci-dessus.
+  if (userId && !admin) {
     const visibleIds = await listPlayerVisibleEntityIds(supabase, worldId, visibleEntities.map((e) => e.id), userId);
     visibleEntities = visibleEntities.filter((e) => visibleIds.has(e.id));
   }

@@ -221,7 +221,7 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
           options={ROLE_OPTIONS}
           onChange={(v) => setRole(v as "gm" | "player" | "")}
           aria-label="Rôle du lien"
-          className="shrink-0 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+          triggerClassName="shrink-0 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
         />
         <input
           type="password"

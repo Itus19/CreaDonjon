@@ -86,6 +86,25 @@ function NodeRow({
         <Link
           href={link.href}
           onClick={link.onClick}
+          /* V3-R5 — jamais de prechargement sur l'arbre.
+           *
+           * Next precharge par defaut tout `<Link>` entrant dans le champ de
+           * vision. Ces routes sont dynamiques : chaque prechargement est un
+           * RENDU SERVEUR complet, avec ses requetes en base. Mesure sur le
+           * deploiement reel, monde de 27 fiches : ouvrir une page declenchait
+           * 45 a 49 prechargements pour 23 routes distinctes — la cause reelle
+           * du temps de chargement, tres loin devant le poids du paquet.
+           *
+           * Et ils ne servaient a rien : un clic normal sur une entite NE
+           * NAVIGUE PAS (`useOpenEntityLink` fait `preventDefault()` et ouvre
+           * une fenetre, ADR-0006). Le `href` n'existe que pour le ctrl-clic,
+           * qui ouvre un onglet neuf et n'utilise donc pas ce cache. On
+           * prechargeait 27 routes vers lesquelles on ne va jamais.
+           *
+           * Reste juste la ou le clic navigue vraiment (peau « livre »,
+           * coquille joueur) : une navigation a froid coute une requete,
+           * contre vingt-sept prechargees pour en servir au plus une. */
+          prefetch={false}
           className={`flex-1 truncate rounded px-2 py-1 text-sm transition-colors hover:bg-panel-raised ${
             isActive ? "bg-panel-raised text-accent" : "text-ink-soft"
           }`}

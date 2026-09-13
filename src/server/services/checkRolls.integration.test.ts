@@ -203,7 +203,7 @@ describe.skipIf(!hasCreds)("checkRolls (integration, base reelle)", () => {
       locale: "fr",
     });
     if (!init.ok) throw new Error(`echec inattendu : ${init.reason}`);
-    expect(init.roll.chips).toEqual([{ label: "Dexterite", value: 0 }]);
+    expect(init.roll.chips).toEqual([{ label: "Dextérité", value: 0 }]);
   });
 
   it("hors campagne (campaignId null) : jet non enregistre dans dice_rolls", async () => {

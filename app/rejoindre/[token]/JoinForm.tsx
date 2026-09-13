@@ -88,7 +88,7 @@ export default function JoinForm({
                     { value: "", label: "Choisis…" },
                     ...characters.map((c) => ({ value: c.entityId, label: c.entityName })),
                   ]}
-                  className="rounded-md border border-edge bg-panel px-3 py-2 text-left text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+                  triggerClassName="rounded-md border border-edge bg-panel px-3 py-2 text-left text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
                 />
               )}
             </div>

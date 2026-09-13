@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useModalKeyboard } from "@/components/shared/useModalKeyboard";
 import Link from "next/link";
 import type { GeneratorBlockData } from "@/src/core/schemas/blocks/generator";
 import { isProseSlot, PROSE_LENGTH_PRESETS, DEFAULT_PROSE_LENGTH, type ProseLength } from "@/src/core/generators/types";
@@ -14,6 +15,7 @@ import { formatTableEntryPrice } from "@/src/i18n/fr";
 import RandomTableBlockEditor from "@/components/blocks/RandomTableBlockEditor";
 import RuleEntryAutocomplete from "@/components/blocks/RuleEntryAutocomplete";
 import { useOpenEntityLink } from "./useOpenEntityLink";
+import Dropdown from "@/components/shared/Dropdown";
 
 interface DrawResponse {
   text: string;
@@ -270,6 +272,13 @@ function GeneratorTablesModal({
     saveTimers.current[id] = setTimeout(() => void saveTable(id), 800);
   }
 
+  // Montee conditionnellement par le parent : quand elle est rendue, elle
+  // est ouverte. Echap passe par `handleClose`, jamais par `onClose` : la
+  // fermeture vide d'abord les sauvegardes de table en attente, les perdre
+  // au clavier serait pire que de ne pas repondre a Echap du tout.
+  const panelRef = useRef<HTMLDivElement>(null);
+  useModalKeyboard({ open: true, onClose: () => handleClose(), panelRef });
+
   function handleClose() {
     // Sauvegarde immediate de toute frappe encore en attente de debounce
     // (ex. supprimer une ligne puis fermer aussitot) plutot que de la
@@ -290,7 +299,9 @@ function GeneratorTablesModal({
       aria-label="Tables de cette section"
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-2xl flex-col gap-3 overflow-y-auto rounded-md border border-edge bg-panel p-4"
+        ref={panelRef}
+        tabIndex={-1}
+        className="flex max-h-[85vh] w-full max-w-2xl flex-col gap-3 overflow-y-auto rounded-md border border-edge bg-panel p-4 outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -694,18 +705,16 @@ export default function GeneratorToolPanel({ worldSlug, tools }: { worldSlug: st
               {activeTool.variants.map((axis) => (
                 <label key={axis.key} className="flex flex-col gap-0.5 text-xs text-ink-muted">
                   {axis.label}
-                  <select
+                  <Dropdown
                     value={variantByTool[activeTool.key]?.[axis.key] ?? axis.options[0]?.key ?? ""}
-                    onChange={(e) => updateVariant(activeTool.key, { [axis.key]: e.target.value })}
-                    className="rounded-md border border-edge bg-panel-sunken px-2 py-1 text-sm text-ink"
-                  >
-                    {axis.allowRandom && <option value={RANDOM_VARIANT_VALUE}>Aléatoire</option>}
-                    {axis.options.map((o) => (
-                      <option key={o.key} value={o.key}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => updateVariant(activeTool.key, { [axis.key]: v })}
+                    size="md"
+                    aria-label={axis.label}
+                    options={[
+                      ...(axis.allowRandom ? [{ value: RANDOM_VARIANT_VALUE, label: "Aléatoire" }] : []),
+                      ...axis.options.map((o) => ({ value: o.key, label: o.label })),
+                    ]}
+                  />
                 </label>
               ))}
             </div>

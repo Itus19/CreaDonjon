@@ -4,6 +4,7 @@ import Dropdown from "@/components/shared/Dropdown";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import { DATE_PRECISIONS, type DatePrecision, type GameDate } from "@/src/core/calendar/types";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
+import Checkbox from "@/components/shared/Checkbox";
 
 const PRECISION_LABELS_FR: Record<DatePrecision, string> = {
   day: "Jour",
@@ -80,13 +81,12 @@ export default function GameDateInput({
       </div>
 
       {!hidePeriod && (
-        <label className="flex items-center gap-1.5 text-xs text-ink-muted">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-1.5 text-xs text-ink-muted">
+          <Checkbox
             checked={value.end !== null}
-            onChange={(e) => set({ end: e.target.checked ? { year: value.year, month: null, day: null } : null })}
+            onChange={() => set({ end: value.end !== null ? null : { year: value.year, month: null, day: null } })}
+            label="Période (a une fin) — une guerre dure"
           />
-          Période (a une fin) — une guerre dure
           {value.end && (
             <input
               type="number"
@@ -96,7 +96,7 @@ export default function GameDateInput({
               aria-label="Année de fin"
             />
           )}
-        </label>
+        </div>
       )}
 
       <input

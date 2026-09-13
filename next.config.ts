@@ -20,6 +20,31 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**": ["./node_modules/@img/**/*"],
   },
+  /**
+   * V3-R4a — les fonds fournis avec l'application sont servis depuis
+   * `public/`, auquel Next applique par defaut
+   * `cache-control: public, max-age=0, must-revalidate` : mesure sur le
+   * deploiement reel, chaque navigation redemandait l'image ne serait-ce que
+   * pour s'entendre repondre 304. Un aller-retour avant de pouvoir peindre,
+   * sur le reseau ou l'aller-retour coute le plus cher.
+   *
+   * `immutable` n'est deliberement PAS utilise, contrairement a ce que le
+   * ticket proposait : ces fichiers ne portent pas d'empreinte dans leur nom,
+   * donc remplacer une illustration en gardant son nom laisserait les
+   * visiteurs deja venus sur l'ancienne version pendant un an, sans recours.
+   * 30 jours de fraicheur couvrent largement une partie ou une campagne
+   * (l'aller-retour disparait), et `stale-while-revalidate` sert ensuite
+   * l'ancienne image immediatement tout en allant chercher la nouvelle en
+   * fond — on gagne le meme temps sans le mode d'echec.
+   */
+  async headers() {
+    return [
+      {
+        source: "/backgrounds/:file*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=31536000" }],
+      },
+    ];
+  },
   experimental: {
     // Next 16 impose par defaut une limite de 10 Mo sur les corps de
     // requete passant par son proxy interne, appliquee AVANT notre propre

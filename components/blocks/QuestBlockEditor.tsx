@@ -6,6 +6,7 @@ import { QUEST_STATE_LABELS_FR } from "@/src/i18n/fr";
 import { QUEST_STATES, type QuestBlockData, type QuestNote, type QuestObjective } from "@/src/core/schemas/blocks/quest";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
+import Checkbox from "@/components/shared/Checkbox";
 
 const NO_ENTITY = "";
 
@@ -24,7 +25,7 @@ function entityRefDropdown(
       value={value}
       options={[{ value: NO_ENTITY, label: "— aucune entité —" }, ...otherEntities.map((e) => ({ value: e.id, label: e.name }))]}
       onChange={(v) => onChange(v === NO_ENTITY ? null : { kind: "entity", id: v })}
-      className="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink-muted outline-none transition-colors hover:bg-panel-raised"
+      triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink-muted outline-none transition-colors hover:bg-panel-raised"
       aria-label="Entité liée"
     />
   );
@@ -133,12 +134,11 @@ export default function QuestBlockEditor({
         <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Objectifs</span>
         {data.objectives.map((objective) => (
           <div key={objective.id} className="flex items-center gap-2">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={objective.done}
               disabled={pendingObjectiveId === objective.id}
               onChange={() => toggleObjective(objective)}
-              className="h-4 w-4 accent-accent"
+              aria-label={objective.done ? "Marquer comme non atteint" : "Marquer comme atteint"}
             />
             <input
               value={objective.text}

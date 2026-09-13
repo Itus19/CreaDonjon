@@ -6,6 +6,7 @@ import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import type { MapElementRef } from "@/src/core/schemas/mapElementRef";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import type { VisibleMapLayer } from "@/src/server/services/mapLayers";
+import Checkbox from "@/components/shared/Checkbox";
 
 export interface MapRegionDraft {
   /** `null` = zone pas encore creee (polygone qui vient d'etre trace, en attente de son premier enregistrement). */
@@ -104,7 +105,7 @@ export default function MapRegionEditorPopup({
               ]}
               onChange={setRefEntityId}
               aria-label="Fiche liée"
-              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
+              triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
             />
           </label>
         )}
@@ -137,16 +138,18 @@ export default function MapRegionEditorPopup({
               options={VISIBILITY_OPTIONS}
               onChange={setVisibilityLevel}
               aria-label="Visibilité de la zone"
-              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
+              triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
             />
           </label>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="flex items-center gap-2 text-xs text-ink">
-            <input type="checkbox" checked={fogGated} onChange={(e) => setFogGated(e.target.checked)} className="h-3.5 w-3.5" />
-            Soumise au brouillard (cachée aux joueurs tant qu&apos;elle n&apos;est pas révélée)
-          </label>
+          <Checkbox
+            checked={fogGated}
+            onChange={() => setFogGated(!fogGated)}
+            label="Soumise au brouillard (cachée aux joueurs tant qu'elle n'est pas révélée)"
+            className="gap-2 text-xs text-ink"
+          />
           {draft.id && fogGated && (
             <div className="flex items-center gap-2 pl-5 text-xs">
               {draft.revealed ? (
@@ -177,7 +180,7 @@ export default function MapRegionEditorPopup({
               options={[{ value: NO_LAYER, label: "Aucune couche" }, ...layers.map((l) => ({ value: l.id, label: l.name || "(sans nom)" }))]}
               onChange={setLayerId}
               aria-label="Couche de la zone"
-              className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
+              triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"
             />
           </label>
         )}

@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { useTranslations } from "next-intl";
 import WindowFrame from "./WindowFrame";
 import Panel from "./Panel";
 import { useDesktop } from "./DesktopContext";
 import { useDesktopWindowsState } from "./DesktopWindowsProvider";
 import { refId, type WindowRef } from "./windowRefs";
-
-const MOBILE_BREAKPOINT = 768;
+import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
 
 /**
  * Rendu de la fenetre PRIMAIRE (ADR-0011) : monte a la fois par Monde, par
@@ -23,7 +22,7 @@ export default function WindowsDesktop({ children }: { children: React.ReactNode
   const desktop = useDesktop();
   const state = useDesktopWindowsState();
   const desktopRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useMatchMedia(WINDOWS_MOBILE_QUERY);
   // Sous-titre de fenetre (retour utilisateur : "certaines choses sont en
   // anglais") — `badge` vient directement de `entity_kind`/`entryType`
   // (identifiants techniques anglais, CLAUDE.md §11), jamais affiches tels
@@ -36,15 +35,6 @@ export default function WindowsDesktop({ children }: { children: React.ReactNode
     if (!raw) return raw;
     return (kind === "entity" ? entityKindLabels[raw] : entryTypeLabels[raw]) ?? raw;
   }
-
-  useEffect(() => {
-    function checkWidth() {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    }
-    checkWidth();
-    window.addEventListener("resize", checkWidth);
-    return () => window.removeEventListener("resize", checkWidth);
-  }, []);
 
   if (!desktop || !state) return <>{children}</>;
 

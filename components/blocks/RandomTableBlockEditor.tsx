@@ -5,6 +5,8 @@ import type { RandomTableBlockData } from "@/src/core/schemas/blocks/randomTable
 import type { TableEntry, TableEntryPrice } from "@/src/core/tables/types";
 import { CURRENCY_ORDER, type CoinType } from "@/src/core/rules/currency";
 import { CURRENCY_LABELS_FR, formatTableEntryPrice } from "@/src/i18n/fr";
+import Checkbox from "@/components/shared/Checkbox";
+import Dropdown from "@/components/shared/Dropdown";
 
 interface ResolvedDraw {
   text: string;
@@ -114,14 +116,12 @@ export default function RandomTableBlockEditor({
             className="w-16 rounded-md border border-edge bg-transparent px-1.5 py-0.5 text-xs text-ink outline-none"
           />
         </label>
-        <label className="flex items-center gap-1 text-xs text-ink-muted">
-          <input
-            type="checkbox"
-            checked={data.unique_draws}
-            onChange={(e) => onChange({ ...data, unique_draws: e.target.checked })}
-          />
-          Sans répétition
-        </label>
+        <Checkbox
+          checked={data.unique_draws}
+          onChange={() => onChange({ ...data, unique_draws: !data.unique_draws })}
+          label="Sans répétition"
+          className="text-xs text-ink-muted"
+        />
         <input
           value={data.attribution ?? ""}
           onChange={(e) => onChange({ ...data, attribution: e.target.value || undefined })}
@@ -164,19 +164,13 @@ export default function RandomTableBlockEditor({
                 title="Prix (facultatif)"
                 className="w-14 rounded-md border border-edge bg-transparent px-1 py-0.5 text-center outline-none"
               />
-              <select
+              <Dropdown
                 value={entry.price?.coin ?? "cp"}
-                onChange={(e) => updateEntryCoin(index, entry, e.target.value as CoinType)}
+                onChange={(v) => updateEntryCoin(index, entry, v as CoinType)}
                 disabled={entry.price === undefined}
-                title="Pièce"
-                className="rounded-md border border-edge bg-transparent px-1 py-0.5 outline-none disabled:opacity-40"
-              >
-                {CURRENCY_ORDER.map((coin) => (
-                  <option key={coin} value={coin}>
-                    {CURRENCY_LABELS_FR[coin]}
-                  </option>
-                ))}
-              </select>
+                aria-label="Pièce"
+                options={CURRENCY_ORDER.map((coin) => ({ value: coin, label: CURRENCY_LABELS_FR[coin] }))}
+              />
             </div>
             <input
               value={entry.tier ?? ""}

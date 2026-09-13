@@ -42,7 +42,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const draw = await drawTableSlotsFromGeneratorBlock(supabase, blockId, serverRng, {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     knownSlotTiers: parsed.data.knownSlotTiers,
   });
   if (!draw) {
-    return NextResponse.json({ error: "Generateur introuvable." }, { status: 404 });
+    return NextResponse.json({ error: "Générateur introuvable." }, { status: 404 });
   }
 
   const knownSlotTexts = parsed.data.knownSlotTexts;
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         );
       } catch (error) {
         if (error instanceof AiRateLimitError) {
-          return NextResponse.json({ error: "Trop de generations demandees, reessaie dans quelques minutes." }, { status: 429 });
+          return NextResponse.json({ error: "Trop de générations demandées, réessaie dans quelques minutes." }, { status: 429 });
         }
         throw error;
       }

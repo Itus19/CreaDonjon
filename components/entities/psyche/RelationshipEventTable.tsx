@@ -8,6 +8,7 @@ import { formatGameDate } from "@/src/core/calendar/formatDate";
 import { useWorldCalendar } from "@/components/shared/useWorldCalendar";
 import type { GameDate } from "@/src/core/calendar/types";
 import { RELATIONSHIP_AXIS_KEYS, type RelationshipAxisKey } from "@/src/core/psyche/keys";
+import Checkbox from "@/components/shared/Checkbox";
 
 const BLANK_DATE: GameDate = { year: 0, month: null, day: null, precision: "year", end: null, label: null };
 
@@ -185,10 +186,12 @@ export default function RelationshipEventTable({
             className="min-w-[240px] flex-1 bg-transparent text-sm text-ink outline-none"
           />
         </div>
-        <label className="flex items-center gap-1.5 text-xs text-ink-muted">
-          <input type="checkbox" checked={hasIngameDate} onChange={(e) => setHasIngameDate(e.target.checked)} />
-          Date ingame connue
-        </label>
+        <Checkbox
+          checked={hasIngameDate}
+          onChange={() => setHasIngameDate(!hasIngameDate)}
+          label="Date ingame connue"
+          className="text-xs text-ink-muted"
+        />
         {hasIngameDate && (
           <GameDateInput calendar={activeCalendar} value={occurredAtIngame} onChange={setOccurredAtIngame} />
         )}

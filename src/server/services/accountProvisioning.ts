@@ -87,7 +87,7 @@ export async function provisionInviteSession(params: {
       // la course une fraction de seconde plus tot.
       return { ok: false, reason: "invite_already_claimed" };
     }
-    if (!created.user) throw new Error("creation de compte echouee");
+    if (!created.user) throw new Error("création de compte échouée");
     userId = created.user.id;
     mintedFreshAccount = true;
   }

@@ -256,13 +256,13 @@ export default function CreateHomebrewFeatureForm({
                 value={modifier.target}
                 options={TARGET_DROPDOWN_OPTIONS}
                 onChange={(v) => updateModifierTarget(index, v)}
-                className="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+                triggerClassName="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
               />
               <Dropdown
                 value={modifier.op}
                 options={opOptions}
                 onChange={(v) => updateModifierOp(index, v as ModifierOp)}
-                className="shrink-0 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+                triggerClassName="shrink-0 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
               />
               {needsValue && (
                 <input

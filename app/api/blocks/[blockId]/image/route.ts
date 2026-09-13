@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getImageAssetIdForBlockAsUser, removeBlockImage, uploadBlockImage } from "@/src/server/services/blockImages";
 import { getPublicBlockImageAssetId } from "@/src/server/services/publicShare";
-import { getSignedAssetUrl } from "@/src/server/services/storage";
+import { getSignedAssetUrl, SIGNED_URL_CACHE_HEADER } from "@/src/server/services/storage";
+import { fileUploadSchema, formDataToObject } from "@/lib/uploads/schemas";
 
 /**
  * Image d'un bloc `image` (V2-G12, V2-L1) : servie a la fois par la fiche
@@ -32,7 +33,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Image introuvable." }, { status: 404 });
   }
 
-  return NextResponse.redirect(url);
+  return NextResponse.redirect(url, { headers: { "Cache-Control": SIGNED_URL_CACHE_HEADER } });
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ blockId: string }> }) {
@@ -42,14 +43,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const formData = await request.formData().catch(() => null);
-  const file = formData?.get("file");
-  if (!file || !(file instanceof File)) {
+  const parsed = formData ? fileUploadSchema.safeParse(formDataToObject(formData)) : null;
+  if (!parsed?.success) {
     return NextResponse.json({ error: "Aucun fichier reçu." }, { status: 400 });
   }
+  const { file } = parsed.data;
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const result = await uploadBlockImage(supabase, { blockId, buffer, mimeType: file.type, uploadedBy: user.id });
@@ -60,6 +62,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const messages = {
       too_large: "Image trop lourde (5 Mo maximum).",
       unsupported_type: "Format non pris en charge (PNG, JPEG ou WebP uniquement).",
+invalid_image: "Ce fichier n'est pas une image lisible (PNG, JPEG ou WebP).",
     };
     return NextResponse.json({ error: messages[result.reason] }, { status: 400 });
   }
@@ -74,7 +77,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   await removeBlockImage(supabase, blockId);

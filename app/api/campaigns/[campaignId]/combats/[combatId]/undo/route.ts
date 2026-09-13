@@ -10,12 +10,12 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const undone = await undoLastCombatAction(supabase, combatId, user.id);
   if (!undone) {
-    return NextResponse.json({ error: "Rien a annuler." }, { status: 400 });
+    return NextResponse.json({ error: "Rien à annuler." }, { status: 400 });
   }
   return NextResponse.json({ ok: true }, { status: 200 });
 }

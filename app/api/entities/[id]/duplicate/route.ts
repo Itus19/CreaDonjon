@@ -10,12 +10,12 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const copy = await duplicateEntity(supabase, { id, duplicatedBy: user.id });
   if (!copy) {
-    return NextResponse.json({ error: "Entite introuvable." }, { status: 404 });
+    return NextResponse.json({ error: "Entité introuvable." }, { status: 404 });
   }
 
   return NextResponse.json(copy, { status: 201 });

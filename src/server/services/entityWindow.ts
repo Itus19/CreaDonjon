@@ -16,6 +16,7 @@ import { getPortraitLayout } from "@/src/server/services/entityPortraits";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { listPlayerVisibleEntityIds } from "@/src/server/services/entities";
+import { timed } from "@/src/server/perf";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -66,21 +67,27 @@ export async function getEntityWindowData(
   worldSlug: string,
   entitySlug: string
 ): Promise<EntityWindowData | null> {
-  const [world, user] = await Promise.all([getWorldBySlug(supabase, worldSlug), getAuthUser(supabase)]);
+  const [world, user] = await timed("entityWindow/monde+session", () =>
+    Promise.all([getWorldBySlug(supabase, worldSlug), getAuthUser(supabase)])
+  );
   if (!world || !user) return null;
 
-  const entity = await getEntityBySlug(supabase, world.id, entitySlug);
+  const entity = await timed("entityWindow/fiche", () => getEntityBySlug(supabase, world.id, entitySlug));
   if (!entity) return null;
 
-  const [blocks, relations, allEntities, worldCustomKinds, campaigns, portraitLayout, admin] = await Promise.all([
-    listVisibleBlocks(supabase, world.id, entity.id, user.id),
-    listVisibleRelations(supabase, world.id, entity.id, user.id),
-    listEntitiesForWorld(supabase, world.id),
-    listCustomEntityKindsForWorld(supabase, world.id),
-    listCampaigns(supabase, world.id),
-    getPortraitLayout(supabase, entity.id),
-    isWorldAdmin(supabase, { worldId: world.id, userId: user.id }),
-  ]);
+  const [blocks, relations, allEntities, worldCustomKinds, campaigns, portraitLayout, admin] = await timed(
+    "entityWindow/contenu (7 requetes en parallele)",
+    () =>
+      Promise.all([
+        listVisibleBlocks(supabase, world.id, entity.id, user.id),
+        listVisibleRelations(supabase, world.id, entity.id, user.id),
+        listEntitiesForWorld(supabase, world.id),
+        listCustomEntityKindsForWorld(supabase, world.id),
+        listCampaigns(supabase, world.id),
+        getPortraitLayout(supabase, entity.id),
+        isWorldAdmin(supabase, { worldId: world.id, userId: user.id }),
+      ])
+  );
 
   // Retour utilisateur : une fiche masquee aux joueurs (aucun bloc visible)
   // apparaissait quand meme dans "lien vers une fiche"/le "+" du bloc

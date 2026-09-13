@@ -28,14 +28,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   let provider;
   try {
     provider = getOpenAiCompatibleProviderFromEnv();
   } catch {
-    return NextResponse.json({ error: "Aucun fournisseur IA local configure." }, { status: 503 });
+    return NextResponse.json({ error: "Aucun fournisseur IA local configuré." }, { status: 503 });
   }
 
   try {
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // attendu est intercepte, tout le reste remonte (500 generique de Next),
     // jamais un catch qui avale silencieusement une erreur inattendue.
     if (error instanceof AiRateLimitError) {
-      return NextResponse.json({ error: "Trop de propositions demandees, reessaie dans quelques minutes." }, { status: 429 });
+      return NextResponse.json({ error: "Trop de propositions demandées, réessaie dans quelques minutes." }, { status: 429 });
     }
     throw error;
   }

@@ -2,8 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { uploadAsset } from "@/src/server/services/storage";
-
-const VISIBILITY_LEVELS = new Set(["public", "players", "gm", "campaign", "user", "private"]);
+import { assetUploadSchema, formDataToObject } from "@/lib/uploads/schemas";
 
 /** Televersement d'un asset (Lot I, ADR 0017) — RLS `assets_bucket_insert`/`assets_insert` restreignent deja aux membres du monde ; la visibilite demandee reste celle que RLS `assets_write`... (assets_insert) laisse poser, jamais un second controle ici. */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ worldSlug: string }> }) {
@@ -11,7 +10,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const supabase = await createClient();
   const user = await getAuthUser(supabase);
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const world = await getWorldBySlug(supabase, worldSlug);
@@ -20,22 +19,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const formData = await request.formData().catch(() => null);
-  const file = formData?.get("file");
-  if (!file || !(file instanceof File)) {
+  const parsed = formData ? assetUploadSchema.safeParse(formDataToObject(formData)) : null;
+  if (!parsed?.success) {
     return NextResponse.json({ error: "Aucun fichier reçu." }, { status: 400 });
   }
-  const altText = formData?.get("altText");
-  const requestedVisibility = formData?.get("visibilityLevel");
-  const visibilityLevel = typeof requestedVisibility === "string" && VISIBILITY_LEVELS.has(requestedVisibility) ? requestedVisibility : "public";
-  const requestedMaxDimension = formData?.get("maxDimension");
-  const maxDimension = typeof requestedMaxDimension === "string" && Number.isFinite(Number(requestedMaxDimension)) ? Number(requestedMaxDimension) : undefined;
+  const { file, altText, visibilityLevel, maxDimension } = parsed.data;
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const result = await uploadAsset(supabase, {
     worldId: world.id,
     buffer,
     mimeType: file.type,
-    altText: typeof altText === "string" && altText.trim() !== "" ? altText : null,
+    altText,
     visibilityLevel,
     visibilityScopeId: null,
     uploadedBy: user.id,
@@ -45,6 +40,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const messages = {
       too_large: "Image trop lourde (25 Mo maximum).",
       unsupported_type: "Format non pris en charge (PNG, JPEG ou WebP uniquement).",
+invalid_image: "Ce fichier n'est pas une image lisible (PNG, JPEG ou WebP).",
     };
     return NextResponse.json({ error: messages[result.reason] }, { status: 400 });
   }

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Non authentifie." }, { status: 401 });
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   const result = await attachSessionLogBlock(supabase, {
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Ce monde n'a pas de campagne active." }, { status: 400 });
     }
     return NextResponse.json(
-      { error: "Ce bloc a ete modifie entre-temps. Rechargez avant de reessayer." },
+      { error: "Ce bloc a été modifié entre-temps. Rechargez avant de réessayer." },
       { status: 409 }
     );
   }

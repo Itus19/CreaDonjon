@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import Stepper from "@/components/shared/Stepper";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { MonsterCard } from "@/components/rules/blockContentRenderer";
 import ParticipantCharacterSheet from "./ParticipantCharacterSheet";
 import type { CombatDetail, ParticipantCharacteristics } from "@/src/server/services/combats";
@@ -71,6 +72,8 @@ export default function InitiativeTracker({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  /** Suppression d'un combat enregistre : `ConfirmDialog` est asynchrone, il faut donc retenir la cible entre le clic et la confirmation (meme motif que `pendingDeleteId` dans EntityBlocks.tsx). */
+  const [pendingDeleteCombatId, setPendingDeleteCombatId] = useState<string | null>(null);
   const [addMode, setAddMode] = useState<AddParticipantMode>("statblock");
   const [monsterSearch, setMonsterSearch] = useState("");
   const [customLabel, setCustomLabel] = useState("");
@@ -135,8 +138,10 @@ export default function InitiativeTracker({
     }
   }
 
-  async function deleteCombatEntry(combatId: string) {
-    if (!window.confirm("Supprimer définitivement ce combat ? Cette action est irréversible.")) return;
+  async function confirmDeleteCombat() {
+    const combatId = pendingDeleteCombatId;
+    setPendingDeleteCombatId(null);
+    if (!combatId) return;
     await fetch(`/api/campaigns/${campaignId}/combats/${combatId}`, { method: "DELETE" });
     setCombatsList((prev) => prev.filter((c) => c.id !== combatId));
     if (combat?.id === combatId) {
@@ -391,7 +396,16 @@ export default function InitiativeTracker({
         <p className="text-xs italic text-ink-muted">
           Ou composez une rencontre dans l&apos;onglet Rencontres et cliquez « Lancer le combat ».
         </p>
-        <SavedCombatsList combats={combatsList} activeCombatId={null} onSelect={loadCombat} onDelete={deleteCombatEntry} />
+        <SavedCombatsList combats={combatsList} activeCombatId={null} onSelect={loadCombat} onDelete={setPendingDeleteCombatId} />
+        <ConfirmDialog
+          open={pendingDeleteCombatId !== null}
+          title="Supprimer ce combat ?"
+          message="Le combat et ses participants sont définitivement retirés. Cette action est irréversible."
+          confirmLabel="Supprimer"
+          danger
+          onConfirm={confirmDeleteCombat}
+          onCancel={() => setPendingDeleteCombatId(null)}
+        />
       </div>
     );
   }
@@ -415,7 +429,7 @@ export default function InitiativeTracker({
           onChange={(status) => patchCombat({ status })}
           options={STATUS_OPTIONS}
           aria-label="Statut du combat"
-          className="rounded-full border border-edge px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted outline-none transition-colors hover:bg-panel-raised"
+          triggerClassName="rounded-full border border-edge px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted outline-none transition-colors hover:bg-panel-raised"
         />
         {running && <span className="text-[10px] uppercase tracking-wider text-ink-muted">· Round {combat.round}</span>}
         <div className="ml-auto flex items-center gap-2">
@@ -448,7 +462,7 @@ export default function InitiativeTracker({
               type="button"
               onClick={beginCombat}
               disabled={busy || participants.length === 0}
-              className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-panel transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               ▶ Go
             </button>
@@ -457,7 +471,7 @@ export default function InitiativeTracker({
               type="button"
               onClick={endCombat}
               disabled={busy}
-              className="rounded-full bg-danger px-4 py-1.5 text-xs font-medium text-panel transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="rounded-full bg-danger px-4 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               ■ Stop
             </button>
@@ -469,14 +483,14 @@ export default function InitiativeTracker({
 
       {running && (
         <div className="flex items-center justify-between rounded-md border border-edge/60 bg-panel-sunken px-4 py-2">
-          <button type="button" onClick={() => moveTurn("previous")} disabled={busy} className="text-ink-muted hover:text-ink">
+          <button type="button" onClick={() => moveTurn("previous")} disabled={busy} className="text-ink-muted transition-opacity hover:text-ink disabled:opacity-50">
             ◁
           </button>
           <div className="text-center">
             <div className="text-[10px] uppercase tracking-wider text-ink-muted">Tour actuel</div>
             <div className="text-sm font-medium text-accent">{activeParticipant?.label ?? "—"}</div>
           </div>
-          <button type="button" onClick={() => moveTurn("next")} disabled={busy} className="text-ink-muted hover:text-ink">
+          <button type="button" onClick={() => moveTurn("next")} disabled={busy} className="text-ink-muted transition-opacity hover:text-ink disabled:opacity-50">
             ▷
           </button>
         </div>
@@ -732,7 +746,17 @@ export default function InitiativeTracker({
         })}
       </div>
 
-      <SavedCombatsList combats={combatsList} activeCombatId={combat.id} onSelect={loadCombat} onDelete={deleteCombatEntry} />
+      <SavedCombatsList combats={combatsList} activeCombatId={combat.id} onSelect={loadCombat} onDelete={setPendingDeleteCombatId} />
+
+      <ConfirmDialog
+        open={pendingDeleteCombatId !== null}
+        title="Supprimer ce combat ?"
+        message="Le combat et ses participants sont définitivement retirés. Cette action est irréversible."
+        confirmLabel="Supprimer"
+        danger
+        onConfirm={confirmDeleteCombat}
+        onCancel={() => setPendingDeleteCombatId(null)}
+      />
     </div>
   );
 }

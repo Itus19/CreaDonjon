@@ -16,8 +16,8 @@ import { ABILITY_LABELS } from "../PlayableCharacterSheet";
 import MagicTab, { type KnownSpellView } from "../MagicTab";
 import InventoryTab from "../InventoryTab";
 import TraitsTab from "../TraitsTab";
-
-type PreviewTab = "actions" | "magie" | "inventaire" | "traits";
+import MasteriesTab from "../MasteriesTab";
+import { TAB_LABELS, type Tab } from "../PlayableCharacterSheet";
 
 function noop() {}
 
@@ -87,7 +87,7 @@ export default function PreviewStep({
   isMonk: boolean;
   buildChips: Map<string, ResolvedChipView>;
 }) {
-  const [tab, setTab] = useState<PreviewTab>("actions");
+  const [tab, setTab] = useState<Tab>("actions");
   const [advantage, setAdvantage] = useState<AdvantageState>("normal");
 
   function updateClass(index: number, patch: Partial<CharacterBlockData["classes"][number]>) {
@@ -182,18 +182,19 @@ export default function PreviewStep({
       />
 
       <div className="flex gap-1 border-b border-edge/60 text-xs">
-        {(["actions", "inventaire", "magie", "traits"] as PreviewTab[])
+        {(["actions", "inventaire", "magie", "traits", "maitrise"] as Tab[])
           .filter((t) => t !== "magie" || spellcasting.known.length > 0)
           .map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`rounded-t-md px-3 py-1.5 capitalize transition-colors ${
+            className={`rounded-t-md px-3 py-1.5 transition-colors ${
               tab === t ? "border-b-2 border-accent text-ink" : "text-ink-muted hover:text-ink"
             }`}
           >
-            {t}
+            {/* Libelles de la fiche jouable, jamais la cle brute passee a `capitalize` : elle rendait "Maitrise D'armes", sans accent et coupee a chaque mot. */}
+            {TAB_LABELS[t]}
           </button>
         ))}
       </div>
@@ -256,16 +257,21 @@ export default function PreviewStep({
         />
       )}
 
-      {tab === "traits" && (
-        <TraitsTab
-          traits={traits}
-          traitChips={traitChips}
-          traitSourceLabel={traitSourceLabel}
+      {tab === "traits" && <TraitsTab traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />}
+
+      {/* Les bottes d'arme se choisissent a leur propre etape (`RemainingChoicesStep`),
+          pas ici : `masteryChoices` vide, la section disparait et l'onglet ne garde
+          que les maitrises et les langues — exactement ce que l'onglet Traits
+          montrait avant qu'elles ne demenagent. */}
+      {tab === "maitrise" && (
+        <MasteriesTab
           proficiencies={proficiencies}
+          masteryChoices={[]}
+          masteryChips={new Map()}
           languageChoices={languageChoices}
+          allLanguages={allLanguages}
           character={character}
           patchCharacter={patchCharacter}
-          allLanguages={allLanguages}
         />
       )}
     </div>

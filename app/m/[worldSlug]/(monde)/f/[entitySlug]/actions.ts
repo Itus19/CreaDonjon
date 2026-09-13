@@ -29,7 +29,7 @@ export async function overwriteCharacterFromWizardAction(
 ): Promise<{ error: string } | { ok: true; name: string; version: number }> {
   const parsed = overwriteCharacterFromWizardSchema.safeParse(input);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Donnees invalides." };
+    return { error: parsed.error.issues[0]?.message ?? "Données invalides." };
   }
 
   const supabase = await createClient();
@@ -37,7 +37,7 @@ export async function overwriteCharacterFromWizardAction(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { error: "Non authentifie." };
+    return { error: "Non authentifié." };
   }
 
   const result = await overwriteCharacterFromWizard(supabase, {

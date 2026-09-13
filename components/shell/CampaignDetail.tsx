@@ -246,14 +246,14 @@ export default function CampaignDetail({
             onChange={setSelectedEntityId}
             options={entityOptions}
             aria-label="Personnage"
-            className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
+            triggerClassName="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
           />
           <Dropdown
             value={selectedUserId}
             onChange={setSelectedUserId}
             options={memberOptions}
             aria-label="Joueur"
-            className="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
+            triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
           />
           <button
             type="button"
@@ -302,14 +302,14 @@ export default function CampaignDetail({
             onChange={setGrantEntityId}
             options={grantEntityOptions}
             aria-label="Fiche"
-            className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
+            triggerClassName="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
           />
           <Dropdown
             value={grantUserId}
             onChange={setGrantUserId}
             options={grantMemberOptions}
             aria-label="Joueur"
-            className="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
+            triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
           />
           <button
             type="button"
