@@ -94,7 +94,10 @@ export async function getEntityWindowData(
   // genealogie — `otherEntities` ne filtrait jusqu'ici que par monde, jamais
   // par visibilite. Jamais pour le MJ (`isWorldAdmin`) : lui doit continuer
   // a lier n'importe quelle fiche, y compris une entierement vide.
-  let othersInWorld = allEntities.filter((e) => e.id !== entity.id);
+  // `entity_kind !== "notes"` (meme motif que `listPinnableEntities`,
+  // notebook.ts) : le cahier de notes prive d'un compte est une entite
+  // systeme, jamais une cible de relation valide.
+  let othersInWorld = allEntities.filter((e) => e.id !== entity.id && e.entity_kind !== "notes");
   if (!admin) {
     const visibleIds = await listPlayerVisibleEntityIds(supabase, world.id, othersInWorld.map((e) => e.id), user.id);
     othersInWorld = othersInWorld.filter((e) => visibleIds.has(e.id));
