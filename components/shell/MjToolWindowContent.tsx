@@ -13,6 +13,7 @@ import PublicationPanel from "./PublicationPanel";
 import GeneratorToolPanel from "./GeneratorToolPanel";
 import NotebookWorkspace from "./notebook/NotebookWorkspace";
 import SchedulingMjPanel from "./scheduling/SchedulingMjPanel";
+import SessionJournalMjPanel from "./sessionJournal/SessionJournalMjPanel";
 import RulesetSelector from "@/components/rules/RulesetSelector";
 import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
 
@@ -195,6 +196,18 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
         <div className="flex flex-col gap-4">
           <h1 className="block-title text-base">Calendrier réel</h1>
           {data.campaignId ? <SchedulingMjPanel campaignId={data.campaignId} /> : <p className="text-sm italic text-ink-muted">Ce monde n&apos;a pas encore de campagne.</p>}
+        </div>
+      );
+
+    case "livre-de-sessions":
+      return (
+        <div className="flex flex-col gap-4">
+          <h1 className="block-title text-base">Livre de sessions</h1>
+          {data.campaignId ? (
+            <SessionJournalMjPanel campaignId={data.campaignId} initialCalendar={data.calendar} />
+          ) : (
+            <p className="text-sm italic text-ink-muted">Ce monde n&apos;a pas encore de campagne.</p>
+          )}
         </div>
       );
   }

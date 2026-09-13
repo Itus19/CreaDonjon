@@ -2331,6 +2331,57 @@ export type Database = {
           },
         ]
       }
+      session_journal_entries: {
+        Row: {
+          assigned_to: string
+          campaign_id: string
+          created_at: string
+          created_by: string
+          entity_id: string | null
+          id: string
+          ingame_date: Json
+          status: string
+          written_at: string | null
+        }
+        Insert: {
+          assigned_to: string
+          campaign_id: string
+          created_at?: string
+          created_by: string
+          entity_id?: string | null
+          id?: string
+          ingame_date: Json
+          status?: string
+          written_at?: string | null
+        }
+        Update: {
+          assigned_to?: string
+          campaign_id?: string
+          created_at?: string
+          created_by?: string
+          entity_id?: string | null
+          id?: string
+          ingame_date?: Json
+          status?: string
+          written_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_journal_entries_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_journal_entries_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           campaign_id: string

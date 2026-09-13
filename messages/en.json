@@ -15,6 +15,7 @@
     "rechercher": "Search",
     "paletteDeCommandes": "Command palette",
     "kindLabels": {
+      "session_journal": "Session journal",
       "character": "Characters",
       "pj": "PCs",
       "pnj": "NPCs",
@@ -224,7 +225,8 @@
     "publication": "Publishing",
     "spikeSolo": "Solo spike (V2-S1)",
     "blocNotes": "Notes",
-    "calendrierReel": "Real calendar"
+    "calendrierReel": "Real calendar",
+    "livreDeSessions": "Session journal"
   },
   "settings": {
     "theme": {

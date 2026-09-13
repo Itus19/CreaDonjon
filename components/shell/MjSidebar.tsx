@@ -83,6 +83,7 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
     { key: "gestion-campagne", label: t("gestionCampagne") },
     { key: "initiative", label: t("initiative") },
     { key: "journal-historique", label: t("journalHistorique") },
+    { key: "livre-de-sessions", label: t("livreDeSessions") },
     { key: "personnalisation", label: t("personnalisation") },
     { key: "probabilites", label: t("probabilites") },
     { key: "publication", label: t("publication") },

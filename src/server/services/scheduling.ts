@@ -39,8 +39,8 @@ export interface RankedDay extends DayCandidate {
   roster: RosterEntry[];
 }
 
-/** (compte → nom du PJ) pour une campagne — même identité que partout ailleurs dans l'app (`campaign_characters` → entité), jamais le nom de compte. */
-async function resolvePlayerNames(supabase: TypedClient, campaignId: string): Promise<Map<string, string>> {
+/** (compte → nom du PJ) pour une campagne — même identité que partout ailleurs dans l'app (`campaign_characters` → entité), jamais le nom de compte. Exportée : réutilisée telle quelle par le Livre de sessions (V2.1-3, même besoin exact de roster). */
+export async function resolvePlayerNames(supabase: TypedClient, campaignId: string): Promise<Map<string, string>> {
   const characters = await listCampaignCharacters(supabase, campaignId);
   const pcs = characters.filter((c) => c.is_pc && c.user_id !== null);
   const entities = await listEntitiesByIds(supabase, pcs.map((c) => c.entity_id));

@@ -13,6 +13,8 @@ export interface CanEditEntityContext {
   isGranted: boolean;
   /** Vrai si cette entite est de type `notes` ET a ete creee par ce viewer (`entities.created_by`) — V2-M7b, coquille joueur : une fiche de notes privee, jamais visible d'un autre compte (voir `getEntityTree`). */
   isOwnPrivateNotes: boolean;
+  /** Vrai si cette entite est de type `session_journal` ET a ete creee par ce viewer — V2.1-3 : l'autrice d'une entree du Livre de sessions garde le droit de la corriger ensuite, meme motif que `isOwnPrivateNotes`. */
+  isOwnJournalEntry: boolean;
 }
 
 /**
@@ -35,6 +37,10 @@ export interface CanEditEntityContext {
  *    ouvert a tout membre du monde) laisserait un joueur creer sa fiche de
  *    notes mais jamais y toucher ensuite : aucun des quatre cas ci-dessus
  *    ne couvre "je l'ai creee moi-meme".
+ * 6. C'est SA PROPRE entree du Livre de sessions (`entity_kind =
+ *    'session_journal'`, `created_by = auth.uid()`) — meme raison que le
+ *    cas 5 : l'entite n'existe qu'une fois que l'autrice assignee commence
+ *    a ecrire, aucun des cas 1-4 ne la couvre ensuite.
  *
  * Un visiteur anonyme n'ecrit jamais rien.
  */
@@ -42,5 +48,5 @@ export function canEditEntity(viewer: Viewer, ctx: CanEditEntityContext): boolea
   if (viewer.kind === "anonymous") return false;
   if (viewer.worldRole && EDITOR_WORLD_ROLES.has(viewer.worldRole)) return true;
   if (Object.values(viewer.campaignRoles).includes("gm")) return true;
-  return ctx.isOwnCharacter || ctx.isGranted || ctx.isOwnPrivateNotes;
+  return ctx.isOwnCharacter || ctx.isGranted || ctx.isOwnPrivateNotes || ctx.isOwnJournalEntry;
 }

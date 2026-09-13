@@ -4,6 +4,7 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getEntityTree } from "@/src/server/services/entities";
 import PlayerWikiSidebar from "@/components/shell/PlayerWikiSidebar";
 import TwoPaneReaderLayout from "@/components/shell/TwoPaneReaderLayout";
+import SessionJournalBanner from "@/components/shell/sessionJournal/SessionJournalBanner";
 
 /**
  * Onglet Wiki (retour utilisateur 31 août) : "reprend exactement la
@@ -34,6 +35,9 @@ export default async function JoueurWikiLayout({
   const tree = (await getEntityTree(supabase, world.id, user?.id ?? null)).filter((g) => g.kind !== "notes");
 
   return (
-    <TwoPaneReaderLayout sidebar={<PlayerWikiSidebar worldSlug={worldSlug} tree={tree} />}>{children}</TwoPaneReaderLayout>
+    <TwoPaneReaderLayout sidebar={<PlayerWikiSidebar worldSlug={worldSlug} tree={tree} />}>
+      <SessionJournalBanner worldSlug={worldSlug} />
+      {children}
+    </TwoPaneReaderLayout>
   );
 }

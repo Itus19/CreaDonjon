@@ -33,7 +33,8 @@ export async function canUserEditEntity(
     getEntityById(supabase, params.entityId),
   ]);
   const isOwnPrivateNotes = entity?.entity_kind === "notes" && entity.created_by === params.userId;
-  return canEditEntity(viewer, { isOwnCharacter, isGranted, isOwnPrivateNotes });
+  const isOwnJournalEntry = entity?.entity_kind === "session_journal" && entity.created_by === params.userId;
+  return canEditEntity(viewer, { isOwnCharacter, isGranted, isOwnPrivateNotes, isOwnJournalEntry });
 }
 
 /**

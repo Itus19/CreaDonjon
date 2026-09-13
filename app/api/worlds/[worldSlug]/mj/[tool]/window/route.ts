@@ -225,6 +225,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       data = { tool, campaignId };
       break;
     }
+
+    case "livre-de-sessions": {
+      const [campaignId, calendar] = await Promise.all([resolveCampaignId(supabase, world.id), getCalendar(supabase, world.id)]);
+      data = { tool, campaignId, calendar };
+      break;
+    }
   }
 
   return NextResponse.json(data, { status: 200 });

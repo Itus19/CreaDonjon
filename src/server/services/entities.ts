@@ -35,6 +35,7 @@ import { recordEntityRevision } from "@/src/server/services/entityHistory";
 import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerCharacters";
 import { canUserEditEntity, isWorldAdmin } from "@/src/server/services/permissions";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
+import { getSessionJournalTreeGroup } from "@/src/server/services/sessionJournal";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -48,6 +49,19 @@ type TypedClient = SupabaseClient<Database>;
  */
 function excludeOthersPrivateNotes(entities: EntitySummary[], userId: string | null): EntitySummary[] {
   return entities.filter((e) => e.entity_kind !== "notes" || e.created_by === userId);
+}
+
+/**
+ * V2.1-3 : les fiches `session_journal` (Livre de sessions) ne rejoignent
+ * jamais le groupe alphabetique generique du sommaire — elles ont leur
+ * propre groupe EPINGLE en tete, trie par date IRL de redaction plutot que
+ * par nom (`getSessionJournalTreeGroup`, prepend juste apres cet appel).
+ * Contrairement a `notes`, cette exclusion n'est PAS conditionnee au
+ * createur : une entree redigee par n'importe qui doit disparaitre du
+ * groupe generique pour tout le monde.
+ */
+function excludeSessionJournalEntries(entities: EntitySummary[]): EntitySummary[] {
+  return entities.filter((e) => e.entity_kind !== "session_journal");
 }
 
 export async function listEntities(supabase: TypedClient, worldId: string, userId: string | null): Promise<EntitySummary[]> {
@@ -137,14 +151,16 @@ export async function getEntityTree(
     getWorldEntityKindOrder(supabase, worldId),
     userId ? isWorldAdmin(supabase, { worldId, userId }) : Promise.resolve(false),
   ]);
-  let visibleEntities = excludeOthersPrivateNotes(entities, userId);
+  let visibleEntities = excludeSessionJournalEntries(excludeOthersPrivateNotes(entities, userId));
   // Reste en seconde vague, et ne peut pas en sortir : la liste d'ids a
   // filtrer n'existe qu'apres `excludeOthersPrivateNotes` ci-dessus.
   if (userId && !admin) {
     const visibleIds = await listPlayerVisibleEntityIds(supabase, worldId, visibleEntities.map((e) => e.id), userId);
     visibleEntities = visibleEntities.filter((e) => visibleIds.has(e.id));
   }
-  return buildEntityTree(withPlayerCharacterKinds(visibleEntities, playerCharacterIds), partOfEdges, kindOrder);
+  const tree = buildEntityTree(withPlayerCharacterKinds(visibleEntities, playerCharacterIds), partOfEdges, kindOrder);
+  const journalGroup = await getSessionJournalTreeGroup(supabase, worldId);
+  return journalGroup ? [journalGroup, ...tree] : tree;
 }
 
 /**

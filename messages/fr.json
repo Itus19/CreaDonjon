@@ -16,6 +16,7 @@
     "rechercher": "Rechercher",
     "paletteDeCommandes": "Palette de commandes",
     "kindLabels": {
+      "session_journal": "Livre de sessions",
       "character": "Personnages",
       "pj": "PJ",
       "pnj": "PNJ",
@@ -225,7 +226,8 @@
     "publication": "Publication",
     "spikeSolo": "Spike solo (V2-S1)",
     "blocNotes": "Bloc-notes",
-    "calendrierReel": "Calendrier réel"
+    "calendrierReel": "Calendrier réel",
+    "livreDeSessions": "Livre de sessions"
   },
   "settings": {
     "theme": {

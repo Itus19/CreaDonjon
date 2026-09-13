@@ -19,6 +19,7 @@ import { listPartOfRelationsForWorld, listRelationsForEntity, type OtherEntityRe
 import { listCampaignsForWorld } from "@/src/server/repos/campaigns";
 import { resolveCampaignId } from "@/src/server/services/campaigns";
 import { getWorldById, getWorldEntityKindOrder } from "@/src/server/repos/worlds";
+import { getSessionJournalTreeGroup, getLatestSessionJournalSlug } from "@/src/server/services/sessionJournal";
 import { getPortraitLayout } from "@/src/server/services/entityPortraits";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import { zGenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
@@ -163,14 +164,25 @@ export async function listPublicEntities(worldId: string): Promise<EntitySummary
  */
 export async function getPublicEntityTree(worldId: string): Promise<EntityTreeGroup[]> {
   const supabase = createShareLinkServiceClient();
-  const [allEntities, partOfEdges, playerCharacterIds, kindOrder] = await Promise.all([
+  const [allEntities, partOfEdges, playerCharacterIds, kindOrder, journalGroup] = await Promise.all([
     listEntitiesForWorld(supabase, worldId),
     listPartOfRelationsForWorld(supabase, worldId),
     listPlayerCharacterEntityIds(supabase, worldId),
     getWorldEntityKindOrder(supabase, worldId),
+    getSessionJournalTreeGroup(supabase, worldId, { publicOnly: true }),
   ]);
-  const entities = allEntities.filter((e) => e.is_public);
-  return buildEntityTree(withPlayerCharacterKinds(entities, playerCharacterIds), partOfEdges, kindOrder);
+  // `session_journal` exclu du groupe alphabetique generique, meme motif
+  // que `getEntityTree` (entities.ts) : son groupe epingle (ci-dessus) le
+  // remplace, jamais un doublon.
+  const entities = allEntities.filter((e) => e.is_public && e.entity_kind !== "session_journal");
+  const tree = buildEntityTree(withPlayerCharacterKinds(entities, playerCharacterIds), partOfEdges, kindOrder);
+  return journalGroup ? [journalGroup, ...tree] : tree;
+}
+
+/** Slug de l'entree du Livre de sessions la plus recente, publique uniquement (retour utilisateur : la page d'accueil du wiki public s'ouvre dessus) — `null` tant qu'aucune entree publique n'existe. */
+export async function getLatestPublicSessionJournalSlug(worldId: string): Promise<string | null> {
+  const supabase = createShareLinkServiceClient();
+  return getLatestSessionJournalSlug(supabase, worldId, { publicOnly: true });
 }
 
 /**

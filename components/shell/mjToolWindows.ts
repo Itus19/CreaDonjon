@@ -64,7 +64,8 @@ export type MjToolWindowData =
   | { tool: "publication"; worldId: string; links: ShareLinkSummary[]; wikiWelcomeMessage: string }
   | { tool: "generateurs"; entityId: string; tools: GeneratorToolWindowData[] }
   | ({ tool: "notes" } & NotebookData)
-  | { tool: "calendrier-reel"; campaignId: string | null };
+  | { tool: "calendrier-reel"; campaignId: string | null }
+  | { tool: "livre-de-sessions"; campaignId: string | null; calendar: CalendarConfigInput };
 
 export function isMjToolWindowData(data: unknown): data is MjToolWindowData {
   return !!data && typeof data === "object" && "tool" in data;
