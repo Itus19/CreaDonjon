@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { minutesToTime, type SessionCategory } from "@/src/core/scheduling/overlap";
+import { minutesToTime, timeToMinutes, type SessionCategory } from "@/src/core/scheduling/overlap";
 
 const MONTH_LABELS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -37,9 +37,15 @@ const CATEGORY_STYLE: Record<SessionCategory, string> = {
 };
 const CATEGORY_LABEL: Record<SessionCategory, string> = { full: "session complète", short: "session raccourcie", none: "aucun créneau commun" };
 
+// `month` est ici 1-indexe (janvier = 1, comme `view.month` partout dans ce
+// composant) — contrairement a l'aide homonyme de `AvailabilityCalendar.tsx`
+// (0-indexe comme `Date.getMonth()`). Convertit en interne pour l'arithmetique
+// puis reconvertit avant de renvoyer, pour que `view.month` reste 1-indexe
+// d'un appel a l'autre (bug corrige : les deux boutons melangeaient les deux
+// conventions, "suivant" restait bloque sur le meme mois).
 function addMonths(year: number, month: number, delta: number) {
-  const total = year * 12 + month + delta;
-  return { year: Math.floor(total / 12), month: ((total % 12) + 12) % 12 };
+  const total = year * 12 + (month - 1) + delta;
+  return { year: Math.floor(total / 12), month: (((total % 12) + 12) % 12) + 1 };
 }
 function formatDateLabel(dateStr: string): string {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
@@ -55,8 +61,10 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
   const [past, setPast] = useState<RealSession[]>([]);
   const [manualDate, setManualDate] = useState("");
   const [manualTime, setManualTime] = useState("19:00");
-  const [manualDuration, setManualDuration] = useState(300);
+  const [manualEndTime, setManualEndTime] = useState("23:00");
   const [durationDraft, setDurationDraft] = useState(300);
+
+  const manualDuration = timeToMinutes(manualEndTime) - timeToMinutes(manualTime);
 
   function loadRecap() {
     fetch(`/api/campaigns/${campaignId}/scheduling/recap?year=${view.year}&month=${view.month}`)
@@ -92,7 +100,7 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
   }
 
   function confirmManual() {
-    if (!manualDate) return;
+    if (!manualDate || manualDuration <= 0) return;
     fetch(`/api/campaigns/${campaignId}/scheduling/sessions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -137,13 +145,13 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <button type="button" onClick={() => setView((v) => addMonths(v.year, v.month - 1, -1))} className="rounded px-2 py-1 text-sm text-ink-muted hover:bg-panel-raised">
+          <button type="button" onClick={() => setView((v) => addMonths(v.year, v.month, -1))} className="rounded px-2 py-1 text-sm text-ink-muted hover:bg-panel-raised">
             ‹
           </button>
           <span className="text-sm font-medium text-ink">
             {MONTH_LABELS[view.month - 1]} {view.year}
           </span>
-          <button type="button" onClick={() => setView((v) => addMonths(v.year, v.month - 1, 1))} className="rounded px-2 py-1 text-sm text-ink-muted hover:bg-panel-raised">
+          <button type="button" onClick={() => setView((v) => addMonths(v.year, v.month, 1))} className="rounded px-2 py-1 text-sm text-ink-muted hover:bg-panel-raised">
             ›
           </button>
         </div>
@@ -190,16 +198,12 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <input type="date" value={manualDate} onChange={(e) => setManualDate(e.target.value)} className="rounded border border-edge bg-transparent px-2 py-1 text-ink outline-none" />
           <input type="time" value={manualTime} onChange={(e) => setManualTime(e.target.value)} className="rounded border border-edge bg-transparent px-2 py-1 text-ink outline-none" />
-          <input
-            type="number"
-            min={30}
-            step={30}
-            value={manualDuration}
-            onChange={(e) => setManualDuration(Number(e.target.value))}
-            className="w-20 rounded border border-edge bg-transparent px-2 py-1 text-ink outline-none"
-          />
-          <span className="text-ink-muted">min</span>
-          <button type="button" onClick={confirmManual} disabled={!manualDate} className="rounded-full bg-accent px-3 py-1 font-medium text-accent-ink hover:bg-accent-hover disabled:opacity-50">
+          <span className="text-ink-muted">à</span>
+          <input type="time" value={manualEndTime} onChange={(e) => setManualEndTime(e.target.value)} className="rounded border border-edge bg-transparent px-2 py-1 text-ink outline-none" />
+          <span className="text-ink-muted">
+            {manualDuration > 0 ? `(${Math.round((manualDuration / 60) * 10) / 10}h)` : "(heure de fin avant le début)"}
+          </span>
+          <button type="button" onClick={confirmManual} disabled={!manualDate || manualDuration <= 0} className="rounded-full bg-accent px-3 py-1 font-medium text-accent-ink hover:bg-accent-hover disabled:opacity-50">
             Confirmer cette date
           </button>
         </div>
