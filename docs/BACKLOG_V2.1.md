@@ -534,6 +534,63 @@ réussie depuis le compte MJ → passage en public et apparition sur
 `visibility: players`, comme pour toute autre fiche). Compte et monde de
 test nettoyés après vérification.
 
+**Retour utilisateur (13 septembre), ajustements après usage :**
+- **Relations retirées** de la fiche — pas utile pour ce type de fiche
+  (`EditEntityForm.tsx`/`PublicEntityBody.tsx`, filtre sur
+  `entity_kind !== "session_journal"`).
+- **Le MJ peut s'auto-assigner un devoir** — `listJournalRoster`
+  (`src/server/services/sessionJournal.ts`) inclut désormais tout MJ de la
+  campagne (libellé fixe "MJ", jamais résolu par personnage puisque le MJ
+  n'a normalement pas de PJ), en plus des joueuses.
+
+**Retour utilisateur, refonte complète du bloc "Séance"** (deux captures
+d'écran comparées avant/après par l'auteur) — le bloc `infobox` générique
+de la version initiale ne suffisait plus :
+
+- **Nouveau type de bloc dédié `session_journal_meta`**
+  (`src/core/schemas/blocks/sessionJournalMeta.ts`) remplace l'`infobox` :
+  quatre champs **fixes**, ni renommables ni supprimables (contrairement à
+  un infobox normal) — Date ingame, Rédigé par, Rédigé le, Session du.
+  Jamais dans le menu "+ Ajouter un bloc" (même exclusion que "generator"),
+  posé une seule fois par `submitJournalEntry`.
+- **Date ingame** — listes déroulantes (jour/mois/année) via le
+  `GameDateInput` déjà partagé par le reste de l'app, plutôt qu'un texte
+  libre formaté une fois.
+- **Rédigé par** — liste déroulante reprenant `listJournalRoster` (joueuses
+  + MJ), pré-remplie avec l'autrice réelle à la création.
+- **Rédigé le** — posé automatiquement à la soumission (date IRL), **modifiable
+  seulement par le MJ** ensuite (`isGm`, dérivé de `hideAiAssist`) : permet
+  au MJ de voir quand une entrée a vraiment été écrite sans que l'autrice
+  puisse elle-même avancer/reculer cette date.
+- **Session du** (nouveau champ) — liste déroulante des séances réelles de
+  la campagne (`real_sessions`, V2.1-4) : quelle séance jouée ce résumé
+  couvre. C'est cette date, avec la date ingame, qui apparaît sur le wiki
+  public — jamais "Rédigé par"/"Rédigé le" à eux seuls.
+- **Présentation "livre" du wiki public** — le bloc Séance devient un pied
+  de page discret (une seule ligne, en petit, sans titre de bloc) tout en
+  bas de la fiche, plutôt qu'un bloc normal en haut ; lettrine sur le
+  premier paragraphe du récit et séparateurs ornementaux entre les
+  parties (titres H2/H3) — promis puis oublié à la livraison initiale,
+  corrigé ici. Badge de type de fiche ("session_journal") masqué en haut à
+  droite sur cette même vue.
+- **Jour de la semaine calculé automatiquement** — nouveau réglage
+  `weekdayEpoch` sur le calendrier du monde ("quel jour de semaine tombe
+  le 1er jour de l'an 0", `src/core/calendar/weekday.ts`, testé) : affiché
+  partout où une date ingame s'édite (`GameDateInput`, pas seulement le
+  Livre de sessions) et sur "Rédigé le" (jour de semaine grégorien
+  standard, éditeur et pied de page public).
+- **Migration des entrées existantes** — `scripts/migrate-session-journal-meta.ts`
+  (simulation par défaut, `--write` pour écrire) bascule toute entrée déjà
+  rédigée avant cette refonte vers le nouveau format, à partir des
+  données réelles de `session_journal_entries` (jamais un re-parsing du
+  texte affiché de l'ancien infobox). Exécutée en production le 13
+  septembre (1 entrée concernée, "Prologue").
+
+`npm run typecheck && npm run lint && npm run test:core` passent après
+chacun de ces ajustements. Vérifié en direct de bout en bout sur un monde
+jetable (auto-assignation MJ, rédaction, remplissage des 4 champs, rendu
+public avec lettrine/séparateurs/pied de page) puis nettoyé.
+
 ---
 
 ## V2.1-4 — Calendrier réel de planification des séances · `L` — fait
