@@ -256,37 +256,46 @@ pages écrites que des **raccourcis vers des fiches déjà existantes** (ex.
 retrouver Brennan Torram dans son propre cahier), le tout dans le système
 de fenêtres déjà construit plutôt qu'une route plein écran séparée.
 
-### Disposition retenue — piste "un seul compagnon"
+### Disposition retenue — deux panneaux indépendants, partagés
 
 Quatre pistes esquissées et comparées avec l'auteur avant d'écrire ce
 ticket (trois colonnes façon OneNote, arbre unifié, fenêtre du bureau,
 aperçu à épingler), puis trois pistes mixtes une fois le choix resserré
 sur "les trois colonnes de la première, dans le mécanisme de fenêtres de
-la troisième". Retenue : **un seul compagnon**.
+la troisième". Retenue au départ : **un seul compagnon**, ouvert dans une
+vraie fenêtre du bureau côté MJ (`openRef`/`companionOf`) et dans un
+panneau fixe côté joueuse. **Revue deux fois le jour même, sur retour
+utilisateur après usage réel** — voir l'étape 5 pour l'implémentation
+initiale, remplacée par la disposition finale ci-dessous :
 
-- Le cahier s'ouvre comme une fenêtre du bureau existant — pas une route
-  plein écran neuve. `"notes"` rejoint `MJ_TOOL_KEYS`/`MJ_TOOL_LABELS`
-  (`windowRefs.ts`), ce qui active directement l'entrée "Bloc-notes" déjà
-  réservée dans `MjSidebar.tsx` ; côté joueur, une entrée équivalente
-  remplace la route `joueur/notes` actuelle. Une seule fenêtre "Notes" à
-  la fois par cahier (MJ ou joueuse), comme toute fenêtre `mj` aujourd'hui.
-- À l'intérieur : les trois colonnes de l'esquisse OneNote (arbre de
-  pages à gauche, page ouverte à droite) — détaillé ci-dessous.
-- Cliquer un lien **depuis cette fenêtre** (fiche épinglée ou lien vers
-  une autre page du cahier, V2.1-1) appelle `openRef` comme partout
-  ailleurs, mais avec une règle nouvelle et **scoped à cette seule
-  origine** : la fenêtre secondaire ouverte depuis le cahier remplace la
-  précédente fenêtre compagne du même cahier au lieu de s'empiler dans
-  `?avec=`. Jamais plus de deux fenêtres issues de ce parcours (le cahier
-  + son compagnon). Un lien cliqué depuis une fiche normale continue de
-  s'empiler exactement comme aujourd'hui — aucune régression sur le
-  système existant, l'ajout est localisé à l'origine "notes" dans
-  `DesktopWindowsProvider.tsx`.
-- Choisie plutôt que "division interne à la fenêtre" (répliquerait un
-  moteur de split entier, alors que celui des fenêtres existe déjà) et
-  "empilage libre" (encombre le bureau dès le deuxième lien cliqué) :
-  le meilleur rapport entre "reprend ce qui existe" et "le résultat que
-  l'auteur décrit" (deux sources d'information côte à côte, jamais plus).
+- **Même disposition pour le MJ et pour une joueuse** : "le visuel du MJ
+  n'était pas aussi satisfaisant que celui du joueur" — la fenêtre
+  flottante séparée pour le compagnon MJ est abandonnée au profit de la
+  disposition déjà construite côté joueur, copiée telle quelle. L'outil
+  "Bloc-notes" reste une fenêtre du bureau (comme les onze autres outils
+  MJ), mais son compagnon vit désormais À L'INTÉRIEUR de cette fenêtre,
+  jamais dans une seconde. Le mécanisme `companionOf`/`openRef` ajouté à
+  `DesktopWindowsProvider.tsx` pour la version initiale est retiré,
+  redevenu mort une fois cette unification faite.
+- **Deux panneaux, pas "page + compagnon" figé** : le second panneau
+  accepte soit une fiche/règle épinglée, soit une AUTRE page du même
+  cahier ("pouvoir ouvrir deux pages de ses propres notes") — un bouton
+  "⇒ Ouvrir dans le second panneau" apparaît sur chaque ligne de page.
+  Chaque panneau se ferme indépendamment par son propre bouton ; le
+  survivant reprend alors toute la largeur ("fermer la fenêtre centrale
+  et garder celle de droite qui prendrait toute la page").
+- **Partage réellement à parts égales** ("la division doit être vraiment
+  à la moitié") : les deux panneaux sont `flex-1`/`flex-1`, jamais une
+  largeur fixe/plafonnée comme dans la toute première version (`min(40%,
+  420px)`).
+- **Fenêtre MJ maximisée par défaut** : cause réelle du premier retour
+  "visuel moins satisfaisant" — chaque outil MJ s'ouvre dans une fenêtre
+  flottante fixe de 860×760px (`DesktopWindowsProvider.ts`,
+  `defaultGeometry`), largement suffisante pour les onze autres outils
+  mais trop étroite pour deux panneaux côte à côte. Cas isolé sur
+  `"notes"` (`isMaximized: true` à l'ouverture) plutôt qu'un changement du
+  défaut global, qui aurait été une régression non sollicitée pour les
+  autres outils.
 
 ### Modèle de l'arbre — pages et fiches épinglées (revu en cours de route)
 
@@ -350,28 +359,29 @@ aucune nouvelle route d'écriture.**
    besoin (tout réordonner/imbriquer, profondeur illimitée), vérifiable
    dans `tree.test.ts`. Un vrai glisser-déposer reste un fast-follow si
    l'usage réel le réclame.
-5. **Fait — Compagnon unique, avec un écart de conception assumé entre MJ
-   et joueuse** :
-   - **MJ** : exactement le plan initial. `DesktopWindowsProvider.openRef`
-     accepte une option `companionOf` ; un lien ouvert depuis le cahier
-     remplace le précédent compagnon de CE cahier dans `?avec=` au lieu de
-     s'y ajouter (jamais plus de deux fenêtres issues de ce parcours). Un
-     lien cliqué depuis une fiche normale continue de s'empiler comme
-     avant — l'ajout est scoped à l'origine "notes", aucune régression.
-   - **Joueuse** : `openRef`/`?avec=` supposent une fenêtre PRIMAIRE déjà
-     enregistrée (`RegisterPrimaryWindow`) pour flotter un compagnon —
-     jamais le cas côté joueur (`PlayerShell.tsx` n'a pas de fenêtres,
-     décision déjà actée pour le wiki joueur en V2.1-1). Plutôt que
-     d'introduire un nouveau type de fenêtre pour ce seul besoin, le
-     compagnon y est un panneau fixe à droite (état React local,
-     `NotebookWorkspace.tsx` mode `split`) — un clic remplace le panneau
-     précédent par construction, même garantie ("jamais plus d'un
-     compagnon") sans le système de fenêtres. Nouvelle route
-     `joueur/fiche-compagnon/[entitySlug]` reprenant EXACTEMENT le
-     branchement lecture/édition de `joueur/wiki/[entitySlug]/page.tsx`
-     (fiche éditable si `canUserEditEntity`, sinon lecture seule
-     `PublicEntityBody`) ; une règle épinglée réutilise directement la
-     route de fenêtre `regles/[cle]/window` déjà publique.
+5. **Fait, puis remplacé le jour même — Compagnon unique** :
+   - **Version initiale** (écart de conception MJ/joueuse) : côté MJ,
+     `DesktopWindowsProvider.openRef` acceptait une option `companionOf` —
+     un lien ouvert depuis le cahier remplaçait le précédent compagnon de
+     CE cahier dans `?avec=` au lieu de s'y ajouter. Côté joueuse,
+     `openRef`/`?avec=` supposent une fenêtre PRIMAIRE déjà enregistrée
+     pour flotter un compagnon — jamais le cas côté joueur
+     (`PlayerShell.tsx` n'a pas de fenêtres) — le compagnon y était donc
+     déjà un panneau fixe (état React local), pas une fenêtre.
+   - **Retour utilisateur, même jour** : voir "Disposition retenue"
+     ci-dessus — le panneau fixe côté joueuse devient la disposition
+     UNIQUE (MJ compris), `companionOf`/`openRef` est retiré. La route
+     `joueur/fiche-compagnon/[entitySlug]` (renommée
+     `fiche-compagnon/[entitySlug]`, plus de segment `joueur`) reprend
+     EXACTEMENT le branchement lecture/édition de
+     `joueur/wiki/[entitySlug]/page.tsx` (fiche éditable si
+     `canUserEditEntity`, sinon lecture seule `PublicEntityBody`) ; une
+     règle épinglée réutilise directement la route de fenêtre
+     `regles/[cle]/window` déjà publique. `playerRestricted` (assistance
+     IA, bouton "Demande de modif au MJ"...) devient une simple
+     préférence d'affichage tranchée par la page appelante (`isGm`),
+     jamais une question de sécurité — déjà entièrement tranchée côté
+     serveur par `canUserEditEntity`.
 6. **Fait — Gabarit "Préparation de séance"**, version minimale : un
    bouton "+ Modèle : Préparation de séance" (MJ seulement) crée une page
    pré-remplie de quatre intitulés en gras (Accroche, PNJ prévus,
@@ -393,12 +403,16 @@ aucune nouvelle route d'écriture.**
 - [x] Épingler une fiche existante (ex. Brennan Torram) dans l'arbre puis
       l'ouvrir affiche la vraie fiche, jamais une copie — filtrée par la
       même visibilité que partout ailleurs.
-- [x] Cliquer un lien depuis le cahier (fiche épinglée ou autre page) ouvre
-      un compagnon à côté ; cliquer un second lien depuis le cahier
-      remplace ce compagnon — jamais plus de deux sources à la fois. Fenêtre
-      réelle côté MJ, panneau fixe côté joueuse (voir étape 5). Un lien
-      cliqué depuis une fiche normale continue de s'empiler comme
-      aujourd'hui (non régression, `DesktopWindowsProvider.tsx`).
+- [x] Cliquer un lien depuis le cahier (fiche épinglée ou autre page du
+      cahier) ouvre un second panneau à côté, à parts égales avec le
+      premier ; en cliquer un autre remplace ce second panneau — jamais
+      plus de deux sources à la fois. Même disposition MJ et joueuse.
+- [x] Chaque panneau se ferme indépendamment (bouton dédié) ; le panneau
+      restant reprend alors toute la largeur.
+- [x] Ouvrir deux pages de son propre cahier côte à côte, pas seulement
+      une page et une fiche épinglée.
+- [x] La fenêtre "Bloc-notes" côté MJ s'ouvre maximisée par défaut — les
+      onze autres outils MJ gardent leur taille de fenêtre habituelle.
 
 `npm run typecheck && npm run lint` passent ; `npm run test:core` passe
 (785 tests, dont les 12 nouveaux de `tree.test.ts`). Les suites
@@ -406,16 +420,17 @@ d'intégration (`*.integration.test.ts`, base réelle) n'ont pas pu tourner
 dans cet environnement — aucun Docker/Supabase local disponible ici,
 limitation de l'environnement, pas une régression de ce ticket.
 
-Vérifié en direct sur la prod (monde "Faerûn (copie)") : "Bloc-notes"
-premier de la sidebar MJ (ordre alphabétique), "Tables aléatoires"
-disparue ; création de page, renommage et sauvegarde (`PATCH
-/api/blocks/[id]`) ; épingler Brennan Torram puis Mirella depuis le même
-cahier ouvre une vraie fenêtre compagne côté MJ, la seconde remplaçant
-la première (`?avec=` passe de `entite:8` à `entite:3`, jamais les deux) ;
-côté joueuse (`/joueur/notes`), même arbre isolé (compte différent, vide
-au départ) et même épinglage, ouvert cette fois dans le panneau fixe de
-droite plutôt qu'une fenêtre. Fiches de test nettoyées des deux cahiers
-après vérification.
+Vérifié en direct sur la prod (monde "Faerûn (copie)"), en plusieurs
+passes le même jour au fil des retours utilisateur : "Bloc-notes" premier
+de la sidebar MJ (ordre alphabétique), "Tables aléatoires" disparue ;
+création/renommage/sauvegarde de page ; épingler puis ouvrir une fiche
+remplace bien le compagnon précédent (d'abord vérifié via `?avec=` en
+fenêtre séparée, puis via le panneau unifié après le retour utilisateur) ;
+côté joueuse, même arbre isolé par compte, même épinglage ; panneaux à
+parts égales, fermeture indépendante de chacun (le survivant reprend
+toute la largeur), ouverture de deux pages du même cahier côte à côte, et
+fenêtre MJ maximisée à l'ouverture. Fiches de test nettoyées des cahiers
+après chaque vérification.
 
 ---
 
