@@ -85,7 +85,7 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
 
   it("cree la faction avant la campagne, et le createur devient MJ (mode campaign)", async () => {
     const worldId = await createTestWorld();
-    const campaign = await createCampaign(admin, {
+    const campaign = await createCampaign(gmClient, {
       worldId,
       createdBy: gmUserId,
       name: "La Croisade des Ombres",
@@ -108,7 +108,7 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
 
   it("le createur devient simple joueur en mode solo (l'IA est MJ)", async () => {
     const worldId = await createTestWorld();
-    const campaign = await createCampaign(admin, {
+    const campaign = await createCampaign(gmClient, {
       worldId,
       createdBy: gmUserId,
       name: "Aventure en solo",
@@ -124,7 +124,7 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
 
   it("invite un joueur par email existant, signale l'absence de compte sinon", async () => {
     const worldId = await createTestWorld();
-    const campaign = await createCampaign(admin, {
+    const campaign = await createCampaign(gmClient, {
       worldId,
       createdBy: gmUserId,
       name: "Campagne a inviter",
@@ -149,7 +149,7 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
 
   it("attribue un personnage a un membre de la campagne", async () => {
     const worldId = await createTestWorld();
-    const campaign = await createCampaign(admin, {
+    const campaign = await createCampaign(gmClient, {
       worldId,
       createdBy: gmUserId,
       name: "Campagne avec personnage",
