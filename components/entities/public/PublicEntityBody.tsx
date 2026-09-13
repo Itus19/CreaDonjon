@@ -56,7 +56,7 @@ export default function PublicEntityBody({
         {entity.aliases.length > 0 && (
           <p className="mt-1 text-xs text-ink-muted">Alias : {entity.aliases.join(", ")}</p>
         )}
-        <PublicRelations relations={relations} hrefBase={hrefBase} />
+        {entity.entity_kind !== "session_journal" && <PublicRelations relations={relations} hrefBase={hrefBase} />}
         <MentionedIn entityId={entity.id} hrefBase={hrefBase} />
         {firstBlockWraps && <PublicBlockView block={firstBlock} hrefBase={hrefBase} ruleHrefBase={ruleHrefBase} />}
       </div>

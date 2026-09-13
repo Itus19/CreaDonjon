@@ -228,7 +228,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
     case "livre-de-sessions": {
       const [campaignId, calendar] = await Promise.all([resolveCampaignId(supabase, world.id), getCalendar(supabase, world.id)]);
-      data = { tool, campaignId, calendar };
+      data = { tool, campaignId, calendar, currentUserId: user.id };
       break;
     }
   }

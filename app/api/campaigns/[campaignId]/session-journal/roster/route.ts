@@ -13,6 +13,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  const roster = await listJournalRoster(supabase, campaignId);
+  const roster = await listJournalRoster(supabase, campaignId, user.id);
   return NextResponse.json({ roster }, { status: 200 });
 }

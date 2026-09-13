@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import Dropdown from "@/components/shared/Dropdown";
 import GameDateInput from "@/components/shared/GameDateInput";
+import { useModalKeyboard } from "@/components/shared/useModalKeyboard";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import type { GameDate } from "@/src/core/calendar/types";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
@@ -28,15 +31,34 @@ function blankDate(calendar: CalendarConfigInput): GameDate {
 /**
  * Panneau MJ "Livre de sessions" (V2.1-3, retour utilisateur : "pouvoir
  * donner le devoir à un joueur") — assigne une entrée à une joueuse pour
- * une date ingame donnée ; la fiche elle-même (titre, blocs) n'est jamais
- * écrite ici, seulement par l'autrice assignée (édition normale d'une
- * fiche, `submitJournalEntry`).
+ * une date ingame donnée ; la fiche elle-même (titre, blocs) n'est
+ * normalement écrite que par l'autrice assignée (édition normale d'une
+ * fiche, `submitJournalEntry`) — SAUF quand le MJ se l'attribue à
+ * lui-même (retour utilisateur), auquel cas il rédige directement ici
+ * avant de rejoindre l'édition normale de la fiche créée.
  */
-export default function SessionJournalMjPanel({ campaignId, initialCalendar }: { campaignId: string; initialCalendar: CalendarConfigInput }) {
+export default function SessionJournalMjPanel({
+  campaignId,
+  worldSlug,
+  currentUserId,
+  initialCalendar,
+}: {
+  campaignId: string;
+  worldSlug: string;
+  currentUserId: string;
+  initialCalendar: CalendarConfigInput;
+}) {
+  const router = useRouter();
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [ingameDate, setIngameDate] = useState<GameDate>(() => blankDate(initialCalendar));
   const [assignedTo, setAssignedTo] = useState("");
+  const [writing, setWriting] = useState<Assignment | null>(null);
+  const [title, setTitle] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useModalKeyboard({ open: writing !== null, onClose: () => setWriting(null), panelRef });
 
   function loadRoster() {
     fetch(`/api/campaigns/${campaignId}/session-journal/roster`)
@@ -74,6 +96,35 @@ export default function SessionJournalMjPanel({ campaignId, initialCalendar }: {
     fetch(`/api/campaigns/${campaignId}/session-journal/assignments/${id}`, { method: "DELETE" }).then(() => loadAssignments());
   }
 
+  function openWriting(a: Assignment) {
+    setWriting(a);
+    setTitle("");
+    setError(null);
+  }
+
+  function submitWriting() {
+    if (!writing) return;
+    if (title.trim() === "") {
+      setError("Un titre est requis.");
+      return;
+    }
+    setSubmitting(true);
+    fetch(`/api/worlds/${worldSlug}/session-journal/submit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assignmentId: writing.id, title }),
+    })
+      .then((res) => (res.ok ? res.json() : res.json().then((b) => Promise.reject(new Error(b.error)))))
+      .then((body: { slug: string }) => {
+        setWriting(null);
+        router.push(`/m/${worldSlug}/f/${body.slug}`);
+      })
+      .catch((err: Error) => {
+        setError(err.message || "Impossible de créer l'entrée.");
+        setSubmitting(false);
+      });
+  }
+
   const nameByUser = new Map(roster.map((r) => [r.userId, r.name]));
   const pending = assignments.filter((a) => a.status === "pending");
   const written = assignments.filter((a) => a.status === "written");
@@ -105,9 +156,16 @@ export default function SessionJournalMjPanel({ campaignId, initialCalendar }: {
               <span>
                 {formatGameDate(a.ingame_date, initialCalendar)} — {nameByUser.get(a.assigned_to) ?? "?"}
               </span>
-              <button type="button" onClick={() => cancel(a.id)} className="text-danger hover:underline">
-                Annuler
-              </button>
+              <span className="flex items-center gap-2">
+                {a.assigned_to === currentUserId && (
+                  <button type="button" onClick={() => openWriting(a)} className="rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-medium text-accent-ink hover:bg-accent-hover">
+                    Commencer à écrire
+                  </button>
+                )}
+                <button type="button" onClick={() => cancel(a.id)} className="text-danger hover:underline">
+                  Annuler
+                </button>
+              </span>
             </div>
           ))}
         </div>
@@ -124,6 +182,40 @@ export default function SessionJournalMjPanel({ campaignId, initialCalendar }: {
           ))}
         </div>
       </div>
+
+      {writing &&
+        createPortal(
+          <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-scrim" onClick={() => setWriting(null)} role="dialog" aria-modal="true" aria-label="Rédiger l'entrée">
+            <div ref={panelRef} tabIndex={-1} onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-lg border border-edge-strong bg-panel-raised p-4 shadow-2xl outline-none">
+              <h2 className="mb-2 text-sm font-semibold text-ink">Titre de l&apos;entrée</h2>
+              <input
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setError(null);
+                }}
+                placeholder="Ce que le Grelot Fêlé a vu passer"
+                className="w-full rounded border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
+                autoFocus
+              />
+              {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}
+              <div className="mt-3 flex justify-end gap-2">
+                <button type="button" onClick={() => setWriting(null)} className="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted hover:bg-panel">
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={submitWriting}
+                  disabled={submitting}
+                  className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink hover:bg-accent-hover disabled:opacity-50"
+                >
+                  Créer et rédiger
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug, getCalendar } from "@/src/server/services/worlds";
 import { resolveCampaignId } from "@/src/server/services/campaigns";
 import SessionJournalMjPanel from "@/components/shell/sessionJournal/SessionJournalMjPanel";
@@ -15,6 +15,8 @@ export default async function MjLivreDeSessionsPage({ params }: { params: Promis
   const supabase = await createClient();
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
+  const user = await getAuthUser(supabase);
+  if (!user) notFound();
 
   const [campaignId, calendar] = await Promise.all([resolveCampaignId(supabase, world.id), getCalendar(supabase, world.id)]);
 
@@ -26,7 +28,7 @@ export default async function MjLivreDeSessionsPage({ params }: { params: Promis
         <p className="text-xs text-ink-muted">Assignez le récit d&apos;une séance à une joueuse — elle rédige, vous pouvez toujours corriger ensuite.</p>
       </div>
       {campaignId ? (
-        <SessionJournalMjPanel campaignId={campaignId} initialCalendar={calendar} />
+        <SessionJournalMjPanel campaignId={campaignId} worldSlug={worldSlug} currentUserId={user.id} initialCalendar={calendar} />
       ) : (
         <p className="text-sm italic text-ink-muted">Ce monde n&apos;a pas encore de campagne.</p>
       )}

@@ -204,7 +204,7 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
         <div className="flex flex-col gap-4">
           <h1 className="block-title text-base">Livre de sessions</h1>
           {data.campaignId ? (
-            <SessionJournalMjPanel campaignId={data.campaignId} initialCalendar={data.calendar} />
+            <SessionJournalMjPanel campaignId={data.campaignId} worldSlug={worldSlug} currentUserId={data.currentUserId} initialCalendar={data.calendar} />
           ) : (
             <p className="text-sm italic text-ink-muted">Ce monde n&apos;a pas encore de campagne.</p>
           )}

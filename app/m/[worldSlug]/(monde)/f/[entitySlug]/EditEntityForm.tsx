@@ -475,19 +475,21 @@ export default function EditEntityForm({
             />
           </div>
 
-          <div className="mt-4 flex flex-col gap-1.5 border-t border-edge/60 pt-2.5 text-xs">
-            <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-              Relations :
-            </span>
-            <RelationsChips
-              entityId={entity.id}
-              worldSlug={worldSlug}
-              relations={initialRelations}
-              otherEntities={otherEntities}
-              onRelationsChanged={bumpRelationsReloadSignal}
-              relationsReloadSignal={relationsReloadSignal}
-            />
-          </div>
+          {entityKind !== "session_journal" && (
+            <div className="mt-4 flex flex-col gap-1.5 border-t border-edge/60 pt-2.5 text-xs">
+              <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+                Relations :
+              </span>
+              <RelationsChips
+                entityId={entity.id}
+                worldSlug={worldSlug}
+                relations={initialRelations}
+                otherEntities={otherEntities}
+                onRelationsChanged={bumpRelationsReloadSignal}
+                relationsReloadSignal={relationsReloadSignal}
+              />
+            </div>
+          )}
 
           <MentionedIn entityId={entity.id} worldSlug={worldSlug} />
         </div>

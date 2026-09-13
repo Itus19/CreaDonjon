@@ -36,10 +36,19 @@ export interface JournalRosterEntry {
   name: string | null;
 }
 
-/** Joueuses assignables (retour utilisateur : "pouvoir donner le devoir à un joueur") — toute la roster, y compris sans PC encore, le MJ choisit avant que la fiche existe. */
-export async function listJournalRoster(supabase: TypedClient, campaignId: string): Promise<JournalRosterEntry[]> {
+/**
+ * Joueuses assignables (retour utilisateur : "pouvoir donner le devoir à un
+ * joueur") — toute la roster, y compris sans PC encore, le MJ choisit avant
+ * que la fiche existe. `viewerUserId` (retour utilisateur : "je dois pouvoir
+ * me l'attribuer à moi-même (MJ)") ajoute le MJ lui-même à la liste — il n'a
+ * normalement aucun PJ dans `campaign_characters`, d'où le libellé fixe
+ * plutôt qu'une résolution par personnage comme pour les joueuses.
+ */
+export async function listJournalRoster(supabase: TypedClient, campaignId: string, viewerUserId?: string): Promise<JournalRosterEntry[]> {
   const [members, namesByUser] = await Promise.all([listCampaignMembers(supabase, campaignId), resolvePlayerNames(supabase, campaignId)]);
-  return members.filter((m) => m.role === "player").map((m) => ({ userId: m.user_id, name: namesByUser.get(m.user_id) ?? null }));
+  const roster = members.filter((m) => m.role === "player").map((m) => ({ userId: m.user_id, name: namesByUser.get(m.user_id) ?? null }));
+  const viewerIsGm = viewerUserId && members.some((m) => m.user_id === viewerUserId && m.role === "gm");
+  return viewerIsGm ? [{ userId: viewerUserId, name: "Moi (MJ)" }, ...roster] : roster;
 }
 
 export async function assignJournalEntry(
@@ -89,10 +98,17 @@ export async function submitJournalEntry(
   supabase: TypedClient,
   params: { assignment: SessionJournalEntryRow; worldId: string; userId: string; title: string }
 ): Promise<{ slug: string }> {
-  const [calendar, namesByUser] = await Promise.all([
+  const [calendar, namesByUser, members] = await Promise.all([
     getCalendar(supabase, params.worldId),
     resolvePlayerNames(supabase, params.assignment.campaign_id),
+    listCampaignMembers(supabase, params.assignment.campaign_id),
   ]);
+  // Retour utilisateur : "je dois pouvoir me l'attribuer à moi-même (MJ)" —
+  // le MJ n'a normalement pas de PJ dans cette campagne, donc jamais de nom
+  // via `resolvePlayerNames` ; "Le MJ" plutôt qu'un "?" qui lirait comme un
+  // bug une fois la fiche publiée.
+  const authorName =
+    namesByUser.get(params.userId) ?? (members.some((m) => m.user_id === params.userId && m.role === "gm") ? "Le MJ" : "?");
   const entity = await createEntity(supabase, {
     worldId: params.worldId,
     createdBy: params.userId,
@@ -110,7 +126,7 @@ export async function submitJournalEntry(
       __v: 1,
       entries: [
         { label: "Date ingame", value: formatGameDate(params.assignment.ingame_date, calendar) },
-        { label: "Rédigé par", value: namesByUser.get(params.userId) ?? "?" },
+        { label: "Rédigé par", value: authorName },
         { label: "Rédigé le", value: writtenAtLabel },
       ],
     }),
