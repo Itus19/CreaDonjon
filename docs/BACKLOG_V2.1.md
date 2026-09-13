@@ -159,6 +159,26 @@ dans les étapes :
    en plus du nom. Vérifié en direct : "Divination" détecté et lié au
    milieu d'un texte dense ("Magicienne (Divination)Niveau : 5..."),
    texte environnant intact après sauvegarde.
+
+   **Retour utilisateur (13 septembre), deux ajustements après usage :**
+   - **DA du bouton** alignée sur le motif "Assistance IA" existant
+     (`TextBlockEditor.tsx`) plutôt qu'une icône seule : encadré
+     `rounded-md border border-edge/50 bg-panel-sunken p-2`, disclosure
+     `▾`/`▸` au lieu d'une icône SVG ou d'un emoji. La détection se
+     déclenche directement dans le gestionnaire `onClick` de l'ouverture du
+     panneau, pas dans un `useEffect` — `react-hooks/set-state-in-effect`
+     interdit un `setState` synchrone dans un effet (le motif "Assistance
+     IA" y échappe car son `setState` suit un `.then()` asynchrone).
+   - **Détection insensible au genre grammatical** — "humaine" ne se
+     détectait pas contre la règle "Humain" (correspondance exacte
+     uniquement, retour utilisateur). Corrigé par une liste fermée de
+     formes féminines (`src/core/linker/speciesGender.ts`,
+     `SPECIES_FEMININE_FORMS` : Humain/Tieffelin/Halfelin/Nain) ajoutées
+     comme alias des règles d'espèce lors de la détection — pas une règle
+     grammaticale générale, qui risquerait des faux positifs ("Orc" →
+     "orque" écarté : le mot désigne aussi le cétacé). Vérifié en direct
+     sur "Mirella" : "humaine" apparaît désormais comme suggestion liée à
+     la règle Humain.
 4. **Fait — Extraction et persistance de `entity_mentions`** — fonction
    pure `extractMentionsFromSegments` (`src/core/linker/mentions.ts`,
    testée) : hérite la visibilité du SEGMENT d'origine, jamais une valeur
