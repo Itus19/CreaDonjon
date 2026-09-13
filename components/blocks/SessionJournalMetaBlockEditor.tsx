@@ -22,7 +22,7 @@ function formatSessionOption(s: RealSessionRow): string {
 }
 
 function formatWrittenAt(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  return new Date(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
 /**
@@ -112,12 +112,19 @@ export default function SessionJournalMetaBlockEditor({
       {row(
         "Rédigé le",
         isGm ? (
-          <input
-            type="date"
-            value={data.writtenAt ? data.writtenAt.slice(0, 10) : ""}
-            onChange={(e) => onChange({ ...data, writtenAt: e.target.value ? new Date(`${e.target.value}T00:00:00`).toISOString() : null })}
-            className="rounded border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={data.writtenAt ? data.writtenAt.slice(0, 10) : ""}
+              onChange={(e) => onChange({ ...data, writtenAt: e.target.value ? new Date(`${e.target.value}T00:00:00`).toISOString() : null })}
+              className="rounded border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+            />
+            {data.writtenAt && (
+              <span className="text-xs capitalize text-ink-muted">
+                {new Date(data.writtenAt).toLocaleDateString("fr-FR", { weekday: "long" })}
+              </span>
+            )}
+          </div>
         ) : (
           <span className="text-sm text-ink">{data.writtenAt ? formatWrittenAt(data.writtenAt) : "—"}</span>
         )

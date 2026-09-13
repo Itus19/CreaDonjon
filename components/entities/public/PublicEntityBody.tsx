@@ -5,6 +5,7 @@ import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import type { SessionJournalMetaBlockData } from "@/src/core/schemas/blocks/sessionJournalMeta";
 import type { PublicBlock, PublicRelation } from "@/src/server/services/publicShare";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
+import { weekdayNameForDate } from "@/src/core/calendar/weekday";
 import PublicBlockView from "./PublicBlockView";
 import PublicPortrait from "./PublicPortrait";
 import PublicRelations from "./PublicRelations";
@@ -91,12 +92,13 @@ export default function PublicEntityBody({
 function SessionJournalFooter({ block }: { block: PublicBlock }) {
   const data = block.data as unknown as SessionJournalMetaBlockData;
   const calendar = block.timelineCalendar;
+  const ingameWeekday = calendar ? weekdayNameForDate(data.ingameDate, calendar) : null;
   const parts = [
-    calendar ? `Date ingame : ${formatGameDate(data.ingameDate, calendar)}` : null,
+    calendar ? `Date ingame : ${ingameWeekday ? `${ingameWeekday} ` : ""}${formatGameDate(data.ingameDate, calendar)}` : null,
     data.realSession ? `Session du ${data.realSession.label}` : null,
     data.writtenBy ? `Rédigé par ${data.writtenBy.name}` : null,
     data.writtenAt
-      ? `Rédigé le ${new Date(data.writtenAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
+      ? `Rédigé le ${new Date(data.writtenAt).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`
       : null,
   ].filter((p): p is string => p !== null);
   if (parts.length === 0) return null;
