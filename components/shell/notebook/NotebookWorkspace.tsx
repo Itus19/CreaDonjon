@@ -5,12 +5,10 @@ import RichTextEditor from "@/components/entities/richtext/RichTextEditor";
 import RefLinkPopover, { type RefLinkTarget } from "@/components/entities/richtext/RefLinkPopover";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
-import { useDesktop } from "@/components/shell/DesktopContext";
-import type { WindowRef } from "@/components/shell/windowRefs";
 import type { NotebookData } from "@/src/server/services/notebook";
 import type { NoteTreeItem } from "@/src/core/schemas/blocks/noteTree";
 import { moveItem, nextSiblingPosition, removeItemAndDescendants, renamePage } from "@/src/core/notebook/tree";
-import PlayerFicheCompanion, { type CompanionTarget } from "./PlayerFicheCompanion";
+import FicheCompanion, { type CompanionTarget } from "./FicheCompanion";
 
 const SAVE_DEBOUNCE_MS = 1000;
 
@@ -36,26 +34,23 @@ function siblingsOf(items: NoteTreeItem[], parentId: string | null): NoteTreeIte
 
 /**
  * Cahier de notes (V2.1-2, piste "un seul compagnon") — arbre de pages et de
- * fiches épinglées à gauche, page sélectionnée à droite. Deux modes :
- * `window` (MJ, une vraie fenêtre du bureau existant — un lien ouvre son
- * compagnon via `openRef`/`companionOf`) et `split` (joueuse, la coquille
- * joueur n'a pas de fenêtres flottantes — un lien ouvre son compagnon dans
- * un panneau fixe à droite, `PlayerFicheCompanion`). Les deux partagent
- * exactement la même logique d'arbre ; seule la façon d'ouvrir un
- * compagnon diffère.
+ * fiches épinglées à gauche, page sélectionnée à droite, compagnon dans un
+ * panneau fixe à droite. Même disposition pour le MJ et pour une joueuse
+ * (retour utilisateur : copier celle de la coquille joueur côté MJ plutôt
+ * que la fenêtre flottante séparée utilisée au premier passage) — l'outil
+ * "Bloc-notes" reste une fenêtre du bureau côté MJ, mais son compagnon
+ * s'ouvre désormais À L'INTÉRIEUR de cette fenêtre, jamais dans une seconde.
  */
 export default function NotebookWorkspace({
   worldSlug,
   initial,
-  mode,
-  selfRef,
+  isGm,
   sessionPrepTemplate,
 }: {
   worldSlug: string;
   initial: NotebookData;
-  mode: "window" | "split";
-  /** Requis en mode `window` : origine passée à `openRef` pour le compagnon unique. */
-  selfRef?: WindowRef;
+  /** Affiché depuis la fenêtre MJ : lève les restrictions d'affichage du compagnon (assistance IA, etc.) et propose le modèle "Préparation de séance". */
+  isGm?: boolean;
   /** MJ seulement : propose un modèle "Préparation de séance" en plus de "Nouvelle page". */
   sessionPrepTemplate?: boolean;
 }) {
@@ -68,7 +63,6 @@ export default function NotebookWorkspace({
   const versionRef = useRef(initial.version);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ruleEntries = useWorldRuleEntries(worldSlug);
-  const desktop = useDesktop();
 
   function persist(next: NoteTreeItem[]) {
     setItems(next);
@@ -159,12 +153,7 @@ export default function NotebookWorkspace({
   }
 
   function openCompanion(target: CompanionTarget) {
-    if (mode === "split") {
-      setCompanion(target);
-      return;
-    }
-    const ref: WindowRef = target.kind === "entity" ? { kind: "entity", key: target.slug } : { kind: "rule", key: target.key };
-    desktop?.openRef(ref, selfRef ? { companionOf: selfRef } : undefined);
+    setCompanion(target);
   }
 
   function renderRow(item: NoteTreeItem, depth: number) {
@@ -280,12 +269,14 @@ export default function NotebookWorkspace({
         )}
       </div>
 
-      {mode === "split" && companion && (
+      {companion && (
         <div className="w-[min(40%,420px)] shrink-0 border-l border-edge/60">
-          <PlayerFicheCompanion
+          <FicheCompanion
             key={companion.kind === "entity" ? `entity:${companion.slug}` : `rule:${companion.key}`}
             worldSlug={worldSlug}
             target={companion}
+            isGm={isGm}
+            onClose={() => setCompanion(null)}
           />
         </div>
       )}

@@ -7,13 +7,18 @@ import { getEntityWindowData } from "@/src/server/services/entityWindow";
 import { getPlayerEntityDetail } from "@/src/server/services/playerEntityDetail";
 
 /**
- * Donnee d'une fiche ouverte en "compagnon" depuis le cahier de notes cote
- * joueur (V2.1-2, piste "un seul compagnon" — pas de fenetre flottante ici,
- * la coquille joueur n'en a pas, voir `NotebookWorkspace.tsx`). Reprend
- * EXACTEMENT le meme branchement que `joueur/wiki/[entitySlug]/page.tsx` :
- * une fiche editable par ce joueur (son PJ, une fiche de lore accordee)
+ * Donnee d'une fiche ouverte en "compagnon" depuis le cahier de notes
+ * (V2.1-2, piste "un seul compagnon" — un panneau fixe a cote du cahier,
+ * MJ comme joueuse, voir `NotebookWorkspace.tsx`/`FicheCompanion.tsx`).
+ * Reprend EXACTEMENT le meme branchement que
+ * `joueur/wiki/[entitySlug]/page.tsx` : une fiche editable par ce compte
+ * (le MJ sur tout, un joueur sur son PJ ou une fiche de lore accordee)
  * s'ouvre en edition, toute autre fiche visible s'ouvre en lecture seule —
- * jamais l'inverse, jamais un fallback plus permissif.
+ * jamais l'inverse, jamais un fallback plus permissif. `playerRestricted`
+ * (masquer l'assistance IA, le bouton "Demande de modif au MJ"...) est une
+ * simple preference d'affichage tranchee cote client par la page appelante
+ * (MJ ou joueur), jamais une question de securite : celle-ci est deja
+ * entierement tranchee ici par `canUserEditEntity`.
  */
 export async function GET(
   _request: NextRequest,

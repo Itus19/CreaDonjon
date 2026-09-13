@@ -29,21 +29,9 @@ export interface PrimaryWindowInfo {
   data?: EntityWindowData | RuleEntryDetail;
 }
 
-export interface OpenRefOptions {
-  /**
-   * V2.1-2 (piste "un seul compagnon") : quand fourni, la fenetre ouverte
-   * remplace le precedent compagnon ouvert depuis CETTE MEME origine plutot
-   * que de s'empiler dans `?avec=` — jamais plus de deux fenetres issues de
-   * ce parcours (l'origine + son compagnon). Sans cette option, `openRef`
-   * empile librement comme avant (aucune regression pour les liens ouverts
-   * depuis une fiche normale).
-   */
-  companionOf?: WindowRef;
-}
-
 export interface DesktopContextValue {
   /** Ouvre une reference (entite ou regle) : fenetre supplementaire si une fiche est deja la fenetre primaire, sinon navigation normale. */
-  openRef: (ref: WindowRef, options?: OpenRefOptions) => void;
+  openRef: (ref: WindowRef) => void;
   /** Marqueur pose par la fiche actuellement routee (ADR-0011) — jamais appele pour une fenetre secondaire. */
   registerPrimary: (info: PrimaryWindowInfo | null) => void;
 }

@@ -7,10 +7,12 @@ import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 
 /**
  * Outil MJ "Bloc-notes" (V2.1-2) — même mécanisme de fenêtre que les autres
- * outils MJ (`RegisterPrimaryWindow`), piste "un seul compagnon" : un lien
- * cliqué depuis le cahier ouvre son compagnon dans une vraie fenêtre du
- * bureau existant, qui remplace le précédent compagnon de CE cahier au lieu
- * de s'empiler (`DesktopWindowsProvider.openRef`, `companionOf`).
+ * outils MJ pour l'outil lui-même (`RegisterPrimaryWindow`), mais son
+ * compagnon (fiche épinglée ouverte depuis le cahier) s'affiche dans un
+ * panneau fixe À L'INTÉRIEUR de cette fenêtre (`NotebookWorkspace`,
+ * `isGm`) plutôt que dans une seconde fenêtre flottante — retour
+ * utilisateur : même disposition que côté joueur (`joueur/notes/page.tsx`),
+ * jamais deux comportements différents pour le même outil.
  */
 export default async function MjNotesPage({ params }: { params: Promise<{ worldSlug: string }> }) {
   const { worldSlug } = await params;
@@ -33,7 +35,7 @@ export default async function MjNotesPage({ params }: { params: Promise<{ worldS
         <p className="text-xs text-ink-muted">Vos notes, organisées en pages et sous-pages — privées, jamais visibles des joueuses.</p>
       </div>
       <div className="min-h-0 flex-1">
-        <NotebookWorkspace worldSlug={worldSlug} initial={notebook} mode="window" selfRef={{ kind: "mj", key: "notes" }} sessionPrepTemplate />
+        <NotebookWorkspace worldSlug={worldSlug} initial={notebook} isGm sessionPrepTemplate />
       </div>
     </div>
   );

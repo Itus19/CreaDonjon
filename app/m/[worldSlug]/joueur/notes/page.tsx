@@ -6,9 +6,8 @@ import NotebookWorkspace from "@/components/shell/notebook/NotebookWorkspace";
 
 /**
  * Cahier de notes joueuse (V2.1-2, remplace l'ancien textarea unique
- * V2-M7b) — mode `split` : la coquille joueur (`PlayerShell.tsx`) n'a pas
- * de fenêtres flottantes, un lien ouvre donc son compagnon dans un panneau
- * fixe à droite plutôt que dans une fenêtre du bureau (réservé au MJ).
+ * V2-M7b) — un lien ouvre son compagnon dans un panneau fixe à droite,
+ * même disposition que côté MJ (`mj/notes/page.tsx`).
  */
 export default async function JoueurNotesPage({ params }: { params: Promise<{ worldSlug: string }> }) {
   const { worldSlug } = await params;
@@ -27,7 +26,7 @@ export default async function JoueurNotesPage({ params }: { params: Promise<{ wo
     <div className="flex h-full min-h-[480px] flex-col gap-2">
       <p className="text-xs text-ink-muted">Privées — ni le MJ ni les autres joueurs ne les voient, sauf ce que vous épinglez et qui reste soumis à sa visibilité normale.</p>
       <div className="min-h-0 flex-1">
-        <NotebookWorkspace worldSlug={worldSlug} initial={notebook} mode="split" />
+        <NotebookWorkspace worldSlug={worldSlug} initial={notebook} />
       </div>
     </div>
   );

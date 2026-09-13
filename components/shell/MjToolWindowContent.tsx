@@ -184,7 +184,7 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
         <div className="flex h-full flex-col gap-4">
           <h1 className="block-title text-base">Bloc-notes</h1>
           <div className="min-h-0 flex-1">
-            <NotebookWorkspace worldSlug={worldSlug} initial={data} mode="window" selfRef={{ kind: "mj", key: "notes" }} sessionPrepTemplate />
+            <NotebookWorkspace worldSlug={worldSlug} initial={data} isGm sessionPrepTemplate />
           </div>
         </div>
       );
