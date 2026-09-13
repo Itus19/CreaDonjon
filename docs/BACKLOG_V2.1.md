@@ -11,7 +11,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 
 | # | Titre | Taille | Constat |
 |---|---|---|---|
-| V2.1-1 | Liens automatiques entre les fiches | `L` | Conçu (`specs/wiki-liens-et-personnages.md` §A1/A2) et à moitié construit, jamais branché bout en bout |
+| V2.1-1 | Liens automatiques entre les fiches | `L` | **Fait** (13 septembre) — les 7 étapes, vérifiées en direct sur la prod |
 | V2.1-2 | Outil de notes et de préparation de séance | `L` | N'existe pas — "Bloc-notes" réservé mais désactivé dans la sidebar MJ ; joueur = un seul textarea |
 | V2.1-3 | Livre de séance en première page du wiki | `M` | La donnée existe (`sessions.summary`), rien ne l'affiche ni ne l'édite |
 | V2.1-4 | Calendrier réel de planification des séances | `M` | N'existe pas — à ne pas confondre avec le calendrier FICTIF déjà construit (V2-H2) |
@@ -19,7 +19,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 
 ---
 
-## V2.1-1 — Liens automatiques entre les fiches · `L`
+## V2.1-1 — Liens automatiques entre les fiches · `L` — fait
 
 ### Constat
 
@@ -142,8 +142,9 @@ dans les étapes :
      Vérifié en direct sur `/apercu` : un lien de règle reste un span non
      cliquable (cohérent, pas de page publique), un lien d'entité devient
      un vrai `<a href>` qui navigue correctement.
-3. **Fait — Détection automatique** : bouton "🔗 Détecter des liens" sous
-   chaque bloc de texte — passe chaque segment par `detectEntityReferences`
+3. **Fait — Détection automatique** : bouton "Détecter des liens" (icône
+   SVG minimaliste, même convention que `EyeIcon`/`DieIcon` — pas
+   d'emoji, retour utilisateur) sous chaque bloc de texte — passe chaque segment par `detectEntityReferences`
    (déjà écrite/testée) contre les fiches ET les entrées de règle du
    monde (candidats combinés, kind encodé dans un préfixe d'id), exclut
    les mentions déjà liées (chevauchement avec un nœud `ref` existant), et
@@ -158,24 +159,32 @@ dans les étapes :
    en plus du nom. Vérifié en direct : "Divination" détecté et lié au
    milieu d'un texte dense ("Magicienne (Divination)Niveau : 5..."),
    texte environnant intact après sauvegarde.
-4. **Extraction et persistance de `entity_mentions`** — nouvelle fonction
-   pure `src/core/linker/mentions.ts` (prévue par la spec, jamais écrite) :
-   à chaque écriture d'un bloc contenant du texte, recalcule et remplace
-   toutes les lignes de mentions issues de cette source (§A2).
-5. **Panneau "Mentionné dans"** sur la fiche — lit `entity_mentions` où
-   `target_entity_id` = cette fiche, résolu et **filtré par visibilité
-   côté serveur** (le piège explicitement nommé par la spec, §A2 — même
-   classe de bug que le filtrage du RAG).
-6. **Liens brisés** — supprimer une fiche liée laisse le nœud `ref` en
-   place, résolu sur rien, affiché comme lien cassé — jamais retiré
-   silencieusement.
-7. **Précédent/Suivant façon navigateur** — deux boutons dans le chrome du
-   wiki (`router.back()`/`router.forward()`, `next/navigation`) : chaque
-   ouverture de fiche/règle via le wiki pousse déjà une entrée d'historique
-   (routage Next.js normal), rien à construire côté données — uniquement
-   l'affichage des deux boutons et leur état (désactivés en bout
-   d'historique).
-
+4. **Fait — Extraction et persistance de `entity_mentions`** — fonction
+   pure `extractMentionsFromSegments` (`src/core/linker/mentions.ts`,
+   testée) : hérite la visibilité du SEGMENT d'origine, jamais une valeur
+   par défaut (le piège nommé par la spec, §A2). `updateBlockContent`
+   recalcule et **remplace** toutes les mentions du bloc à chaque
+   sauvegarde (jamais un ajout incrémental) ; `deleteBlock` les retire
+   sans ligne fantôme.
+5. **Fait — Panneau "Mentionné dans"** — `listMentionedInEntities`
+   s'appuie sur la RLS déjà en place sur `entity_mentions`
+   (`entity_mentions_select`, filtre déjà par visibilité pour l'appelant)
+   plutôt que de dupliquer ce filtrage côté service. Nouveau composant
+   `MentionedIn`, branché sur la fiche MJ ET le wiki public/joueur.
+   Vérifié en direct sur la prod : lier "Mirella" → "Brennan Torram" fait
+   apparaître "Mentionné dans : Mirella Des Cent Étoiles" sur la fiche de
+   Brennan, lien cliquable, y compris côté joueur.
+6. **Fait — Liens brisés** — une cible entité introuvable/masquée reste
+   affichée (`.rich-ref-broken`, pointillé rouge) plutôt que retirée
+   silencieusement ; dans l'éditeur MJ, le bouton "Ouvrir" devient
+   "Lien brisé" quand la fiche liée n'existe plus.
+7. **Fait — Précédent/Suivant façon navigateur** — `ReaderHistoryNav`
+   (pile de navigation propre au composant : l'API History native
+   n'expose ni position ni longueur exploitables pour désactiver un
+   bouton en bout de pile), branché une seule fois dans
+   `TwoPaneReaderLayout` (déjà partagé par les onglets Wiki/Règles/
+   Édition côté joueur). Vérifié en direct : Mirella → Brennan (clic sur
+   un lien) → Précédent revient à Mirella → Suivant revient à Brennan.
 ### Critères
 
 - [x] Sélectionner du texte et cliquer "Lier à la Fiche" propose des
@@ -188,13 +197,14 @@ dans les étapes :
       l'éditeur MJ ET sur le wiki public (entité partout ; règle sur le
       wiki joueur — pas sur le partage anonyme, aucune page de règle n'y
       existe, décision de périmètre assumée).
-- [ ] Une fiche affiche ce qui la mentionne ailleurs, correctement filtré
-      par visibilité (un joueur ne voit jamais une mention issue d'un
-      passage `gm`).
-- [ ] Supprimer une fiche liée laisse un lien cassé visible, jamais un
-      texte qui redevient silencieusement du texte brut.
-- [ ] Précédent/Suivant fonctionnent dans le wiki comme les boutons d'un
-      navigateur.
+- [x] Une fiche affiche ce qui la mentionne ailleurs, correctement filtré
+      par visibilité (RLS `entity_mentions_select`, un joueur ne voit
+      jamais une mention issue d'un passage `gm`).
+- [x] Supprimer une fiche liée laisse un lien cassé visible (pointillé
+      rouge), jamais un texte qui redevient silencieusement du texte brut.
+- [x] Précédent/Suivant fonctionnent dans le wiki comme les boutons d'un
+      navigateur — vérifié en direct (Mirella → Brennan → Précédent →
+      Suivant).
 
 ---
 
