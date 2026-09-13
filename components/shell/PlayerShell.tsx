@@ -90,7 +90,7 @@ export default function PlayerShell({
           {worldName}
         </Link>
 
-        <div className="flex flex-1 justify-around md:flex-col md:justify-start md:gap-1 md:overflow-y-auto md:p-2">
+        <div className="flex flex-1 justify-around md:flex-col md:items-center md:justify-start md:gap-1 md:overflow-y-auto md:p-2">
           {destinations.map((d) => {
             const active = d.match(pathname);
             const badge = d.icon === "chat" ? unreadCount : 0;
@@ -114,10 +114,9 @@ export default function PlayerShell({
               </Link>
             );
           })}
-        </div>
-
-        <div className="hidden shrink-0 md:flex">
-          <NextSessionBadge worldSlug={worldSlug} />
+          <div className="hidden md:block">
+            <NextSessionBadge worldSlug={worldSlug} />
+          </div>
         </div>
 
         <div className="hidden shrink-0 flex-col items-center gap-2 border-t border-edge p-3 md:flex">
