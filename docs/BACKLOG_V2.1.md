@@ -432,6 +432,24 @@ toute la largeur), ouverture de deux pages du même cahier côte à côte, et
 fenêtre MJ maximisée à l'ouverture. Fiches de test nettoyées des cahiers
 après chaque vérification.
 
+**Retour utilisateur (13 septembre), régression trouvée après coup :**
+tout compte ouvrant "Notes" pour la toute première fois (aucun bloc
+`note_tree` encore créé) tombait sur l'écran d'erreur générique de
+production, quel que soit son rôle (MJ, joueuse, "voir comme") — jamais
+reproductible en test puisque les comptes de test avaient déjà un cahier
+créé avant coup. Cause réelle, retrouvée via les logs runtime Vercel
+(`npx vercel logs`, la seule façon de voir le message non redacté d'une
+erreur de rendu Server Component en production) : une migration du 2
+septembre (`20260902150001`/`150002`, correctif d'un tout autre bug de
+suppression douce) avait réécrit `app.can_edit_entity` sur une base
+tronquée et fait disparaître par mégarde son 5e cas ("c'est ma propre
+fiche de notes", ajouté trois jours plus tôt) — la policy RLS
+`blocks_insert` refusait donc la création du tout premier bloc du
+cahier. Restauré par une nouvelle migration
+(`20260913150000_restore_can_edit_entity_own_notes.sql`), confirmé par
+le test d'intégration existant qui couvrait déjà ce cas
+(`canEditEntityRls.integration.test.ts`).
+
 ---
 
 ## V2.1-3 — Livre de séance en première page du wiki · `M`
@@ -580,6 +598,18 @@ session — samedi 26 septembre 2026", annulation et effacement testés.
 Jours de la semaine du calendrier ingame vérifiés (décade par défaut,
 renommage testé sans être enregistré pour ne pas modifier les données
 réelles du monde).
+
+**Retour utilisateur (13 septembre), deux ajustements après usage :**
+- **Réglage manuel en heure de fin plutôt qu'en minutes** — cohérent avec
+  le calendrier de disponibilités du joueur, qui demande déjà une plage
+  horaire plutôt qu'une durée ; la durée se calcule seule
+  (`timeToMinutes`, déjà utilisé côté disponibilités).
+- **Navigation mensuelle MJ corrigée** — le bouton "suivant" restait
+  bloqué sur le même mois (et "précédent" sautait un mois sur deux) :
+  `addMonths()` dans `SchedulingMjPanel.tsx` mélangeait un mois d'entrée
+  0-indexé (convention `Date.getMonth()`, utilisée par l'aide homonyme du
+  calendrier joueur) avec `view.month`, 1-indexé partout ailleurs dans ce
+  composant. Corrigé en gardant une seule convention de bout en bout.
 
 ---
 
