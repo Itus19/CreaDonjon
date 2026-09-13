@@ -87,6 +87,19 @@ describe.skipIf(!hasCreds)("promotion generique en entite (integration, base ree
   });
 
   it("embarque les references comme un second paragraphe de noeuds ref, jamais une ligne relations", async () => {
+    const targetResult = await promoteToEntity(userClient, {
+      worldId,
+      createdBy: userId,
+      name: "Le Poignard des Trois Silences",
+      entityKind: "item",
+      visibilityLevel: "public",
+      visibilityScopeId: null,
+      blocks: [{ label: "L'objet", text: "Une lame ancienne." }],
+    });
+    expect(targetResult.ok).toBe(true);
+    if (!targetResult.ok) return;
+    const targetEntityId = targetResult.entity.id;
+
     const result = await promoteToEntity(userClient, {
       worldId,
       createdBy: userId,
@@ -98,7 +111,7 @@ describe.skipIf(!hasCreds)("promotion generique en entite (integration, base ree
         {
           label: "L'établissement",
           text: "Le patron affiche fièrement son trophée.",
-          refNodes: [{ kind: "entity", id: "11111111-1111-1111-1111-111111111111", label: "Le Poignard des Trois Silences" }],
+          refNodes: [{ kind: "entity", id: targetEntityId, label: "Le Poignard des Trois Silences" }],
         },
       ],
     });
@@ -111,7 +124,7 @@ describe.skipIf(!hasCreds)("promotion generique en entite (integration, base ree
     expect(segments).toHaveLength(2);
     expect(segments[1].content).toEqual([
       { t: "text", v: "Références : " },
-      { t: "ref", kind: "entity", id: "11111111-1111-1111-1111-111111111111", key: undefined, label: "Le Poignard des Trois Silences" },
+      { t: "ref", kind: "entity", id: targetEntityId, key: undefined, label: "Le Poignard des Trois Silences" },
     ]);
 
     const { data: relations } = await admin
