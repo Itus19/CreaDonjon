@@ -13,7 +13,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 |---|---|---|---|
 | V2.1-1 | Liens automatiques entre les fiches | `L` | **Fait** (13 septembre) — les 7 étapes, vérifiées en direct sur la prod |
 | V2.1-2 | Outil de notes et de préparation de séance | `L` | **Fait** (13 septembre) — piste "un seul compagnon" (mixte A×C) |
-| V2.1-3 | Livre de séance en première page du wiki | `M` | La donnée existe (`sessions.summary`), rien ne l'affiche ni ne l'édite |
+| V2.1-3 | Livre de sessions | `M` → `L` | **Fait** (13 septembre) — pivoté vers une vraie fiche par entrée plutôt que `sessions.summary`, sur retour utilisateur explicite |
 | V2.1-4 | Calendrier réel de planification des séances | `L` | **Fait** (13 septembre) — piste D (disponibilités libres), variante F (classement) |
 | V2.1-5 | Un seul bloc Personnalité/Convictions par fiche | `S` | Aucune contrainte aujourd'hui — même bug de classe déjà vu et corrigé pour les Générateurs de MJ |
 
@@ -452,42 +452,87 @@ le test d'intégration existant qui couvrait déjà ce cas
 
 ---
 
-## V2.1-3 — Livre de séance en première page du wiki · `M`
+## V2.1-3 — Livre de sessions · `M` → `L` — fait
 
-### Constat
+### Constat initial, et pivot
 
-`sessions.summary` existe déjà (un résumé texte par séance, "réinjecté
-dans le contexte IA" selon `docs/SCHEMA.md` §12) — mais rien ne l'affiche
-ni ne permet de l'éditer aujourd'hui. La page d'accueil du wiki joueur
-(`app/m/[worldSlug]/joueur/wiki/page.tsx`) n'est qu'une invite ("Choisissez
-une entité dans le sommaire"). Le "Journal d'historique" existant (V2-H2)
-trace des **événements structurés** (`session_events`) — pas des résumés
-narratifs rédigés à la main : les deux ne se remplacent pas.
+`sessions.summary` existe (un résumé texte par séance) mais rien ne
+l'affiche ni ne permet de l'éditer. Le plan d'origine ci-dessus prévoyait
+d'étendre cette table (`summary_author_id`, un écran de liste dédié).
+**Abandonné en discutant la présentation avec l'auteur** : retour
+utilisateur explicite — "sa présentation dans la sidebar est la même que
+les autres fiches et en arborescence... il y a les titres des entrées".
+`sessions` n'a ni titre garanti, ni auteur, ni visibilité par bloc, ni la
+moindre présentation en fiche — tout aurait été à écrire de zéro pour
+obtenir ce rendu, alors qu'une vraie fiche (`entities` + blocs) l'offre
+gratuitement. Décision : chaque entrée du Livre de sessions est une
+fiche normale d'un nouveau genre dédié, `entity_kind = "session_journal"`
+— jamais un écran séparé.
 
-### Étapes
+### Modèle retenu
 
-1. **Écran "Livre de séance"** — liste chronologique des séances d'une
-   campagne, chacune avec un titre et son résumé (texte riche). Devient le
-   contenu par défaut de la page d'accueil du wiki joueur (remplace
-   l'invite actuelle) et de l'aperçu public équivalent.
-2. **Assignation d'autrice** — nouveau champ (ex.
-   `sessions.summary_author_id`) : le MJ désigne, par séance, quelle
-   joueuse est chargée de rédiger le résumé.
-3. **Flux d'écriture côté joueuse** — la joueuse désignée voit un bouton
-   "Rédiger le résumé de cette séance" dans son propre espace ; les
-   autres lisent seulement. Une fois soumis, visible à toute la table
-   (`visibility: players`).
-4. **Coexistence avec le Journal d'historique** — le résumé rédigé reste
-   un texte libre, sans obligation de citer les `session_events` : l'un
-   est mécanique/dérivé, l'autre narratif/choisi — même distinction déjà
-   actée entre `relations` et `entity_mentions` (V2.1-1, §A2).
+- **Devoir avant fiche** — nouvelle table `session_journal_entries`
+  (`campaign_id`, `ingame_date` en JSON `GameDate`, `assigned_to`,
+  `status: pending|written`, `entity_id` nullable, `written_at`). Le MJ y
+  assigne un devoir (date ingame + joueuse) ; l'entité n'existe pas
+  encore à ce stade — elle n'est créée que lorsque l'autrice commence
+  réellement à écrire, pour que `entities.created_by` soit véritablement
+  elle, jamais le MJ qui a assigné (évite un champ "auteur" redondant).
+- **Correction MJ, gratuite** — `canEditEntity` autorise déjà tout MJ de
+  campagne à modifier n'importe quelle fiche (cas 2). Il manquait
+  seulement le droit pour l'autrice de continuer à modifier SA propre
+  entrée ensuite : 6e cas ajouté (`entity_kind = "session_journal" AND
+  created_by = auth.uid()`), même motif exact que le 5e cas des notes —
+  et même régression déjà rencontrée et corrigée ce jour (voir V2.1-2
+  ci-dessus) rendue impossible ici par un test d'intégration dédié
+  (`canEditEntityRls.integration.test.ts`) qui compare le miroir SQL au
+  miroir TypeScript sur ce cas précis.
+- **Blocs** — au moment où l'autrice commence à écrire : un bloc
+  `infobox` ("Date ingame" / "Rédigé par" / "Rédigé le", formaté une
+  fois à la création) puis un bloc `text` vide. Aucun nouveau type de
+  bloc — l'autrice ajoute ensuite Image, Musique, ou tout autre bloc déjà
+  disponible via le même menu "+ Ajouter un bloc" que n'importe quelle
+  fiche.
+- **Sommaire** — `session_journal` exclu du regroupement alphabétique
+  générique (`getEntityTree`/`getPublicEntityTree`) puis un groupe
+  épinglé "Livre de sessions" reconstruit à la main et préposé en tête,
+  entrées triées par `written_at` décroissant (jamais par nom). Même
+  fonction pour le wiki joueur, l'aperçu et le partage public — filtrée à
+  `entities.is_public` pour ces deux derniers, exactement comme toute
+  autre fiche.
+- **Page d'accueil du wiki** — les trois pages d'index
+  (`joueur/wiki`, `apercu`, `partage/[token]`) redirigent vers l'entrée
+  la plus récente quand il y en a une, au lieu de l'invite générique.
+- **Devoir côté joueuse** — pas de signal dans l'arborescence elle-même
+  (non demandé ce tour-ci) : une bannière en haut du wiki joueur
+  ("Devoir : rédiger le récit du {date ingame}" → "Commencer à écrire"),
+  qui ouvre un simple champ de titre puis redirige vers l'édition
+  normale de la fiche fraîchement créée.
 
 ### Critères
 
-- [ ] La première page du wiki liste les séances passées avec leur résumé.
-- [ ] Le MJ désigne une autrice par séance.
-- [ ] Seule l'autrice désignée (ou le MJ) peut modifier ce résumé précis —
-      jamais les résumés des autres séances.
+- [x] Le Livre de sessions apparaît en premier dans le sommaire du wiki
+      (joueur, aperçu, partage), présentation identique aux autres
+      groupes de fiches.
+- [x] Les entrées sont triées par date IRL de rédaction décroissante.
+- [x] La page d'accueil du wiki s'ouvre sur l'entrée la plus récente.
+- [x] Le MJ assigne le devoir à une joueuse pour une date ingame donnée.
+- [x] L'autrice rédige avec les blocs habituels (texte, image...) ; le MJ
+      peut toujours corriger ensuite.
+- [x] La fiche affiche qui l'a écrite et quand (ingame et IRL).
+
+`npm run typecheck && npm run lint && npm run test:core` passent (800
+tests). `canEditEntityRls.integration.test.ts` (base réelle) passe avec
+son nouveau cas. Vérifié en direct de bout en bout sur un monde de test :
+devoir assigné par le MJ (calendrier révolutionnaire par défaut, via
+`GameDateInput`) → bannière côté joueuse → fiche créée avec l'infobox
+correctement rempli ("Rédigé par Camille des Bois", le nom du PJ, jamais
+le compte) → apparition immédiate en tête du sommaire joueur ET MJ →
+redirection de la page d'accueil du wiki vers cette entrée → correction
+réussie depuis le compte MJ → passage en public et apparition sur
+`/apercu` (contenu des blocs toujours masqué tant qu'ils restent
+`visibility: players`, comme pour toute autre fiche). Compte et monde de
+test nettoyés après vérification.
 
 ---
 
@@ -664,10 +709,10 @@ type."
 
 ---
 
-## Ordre suggéré
+## Ordre suivi
 
-Aucune dépendance technique dure entre ces cinq tickets. Suggestion, pas
-une contrainte : **V2.1-5** d'abord (le plus petit, corrige un vrai bug
-latent), puis **V2.1-1** (les liens conditionnent la qualité de tout le
-reste du wiki), puis **V2.1-2/V2.1-3** (peuvent se faire dans l'ordre qui
-motive le plus), et **V2.1-4** en dernier (le plus indépendant du reste).
+Aucune dépendance technique dure entre ces cinq tickets. Fait dans l'ordre
+V2.1-1, V2.1-2, V2.1-4, V2.1-5, puis V2.1-3 en dernier (le seul dont le
+plan initial a changé en cours de route, une fois la présentation en
+sommaire tranchée avec l'auteur). **Les cinq tickets de ce backlog sont
+clos.**
