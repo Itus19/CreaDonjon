@@ -7,6 +7,8 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 import type { NotebookData } from "@/src/server/services/notebook";
 import type { NoteTreeItem } from "@/src/core/schemas/blocks/noteTree";
+import type { Segment } from "@/src/core/schemas/entities/segments";
+import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import { moveItem, nextSiblingPosition, removeItemAndDescendants, renamePage } from "@/src/core/notebook/tree";
 import FicheCompanion, { type CompanionTarget } from "./FicheCompanion";
 
@@ -33,13 +35,71 @@ function siblingsOf(items: NoteTreeItem[], parentId: string | null): NoteTreeIte
 }
 
 /**
- * Cahier de notes (V2.1-2, piste "un seul compagnon") — arbre de pages et de
- * fiches épinglées à gauche, page sélectionnée à droite, compagnon dans un
- * panneau fixe à droite. Même disposition pour le MJ et pour une joueuse
- * (retour utilisateur : copier celle de la coquille joueur côté MJ plutôt
- * que la fenêtre flottante séparée utilisée au premier passage) — l'outil
- * "Bloc-notes" reste une fenêtre du bureau côté MJ, mais son compagnon
- * s'ouvre désormais À L'INTÉRIEUR de cette fenêtre, jamais dans une seconde.
+ * Un panneau de page (titre + éditeur) — composant à part plutôt qu'une
+ * simple fonction appelée pendant le rendu : `react-hooks/refs` refuse
+ * qu'une fermeture créée à l'intérieur d'une fonction invoquée pendant le
+ * rendu capture `rename`/`onChangeContent` (qui lisent `versionRef`/
+ * `saveTimeoutRef` au moment de l'appel) — un vrai composant, où ces
+ * fonctions arrivent en props, ne déclenche pas cette règle.
+ */
+function NotePagePane({
+  page,
+  worldSlug,
+  worldId,
+  otherEntities,
+  onRename,
+  onChangeContent,
+  onClose,
+}: {
+  page: Extract<NoteTreeItem, { kind: "page" }>;
+  worldSlug: string;
+  worldId: string;
+  otherEntities: OtherEntityOption[];
+  onRename: (id: string, title: string) => void;
+  onChangeContent: (id: string, segments: Segment[]) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="flex h-full min-w-0 flex-col">
+      <div className="flex shrink-0 items-center gap-2 border-b border-edge/60 pb-1">
+        <input
+          value={page.title}
+          onChange={(e) => onRename(page.id, e.target.value)}
+          placeholder="Titre de la page"
+          className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-ink outline-none"
+        />
+        <button type="button" onClick={onClose} title="Fermer" aria-label="Fermer" className="shrink-0 rounded px-1.5 py-0.5 text-sm text-ink-muted hover:bg-panel-raised hover:text-ink">
+          ×
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto pt-2">
+        <RichTextEditor
+          segments={page.content}
+          onChange={(segments) => onChangeContent(page.id, segments)}
+          worldSlug={worldSlug}
+          worldId={worldId}
+          otherEntities={otherEntities}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Contenu du second panneau — une fiche/règle épinglée (comme avant) ou une autre page du même cahier (retour utilisateur : "ouvrir deux pages de ses propres notes"). */
+type SecondaryContent = { kind: "companion"; target: CompanionTarget } | { kind: "page"; pageId: string };
+
+function companionKey(target: CompanionTarget): string {
+  return target.kind === "entity" ? `entity:${target.slug}` : `rule:${target.key}`;
+}
+
+/**
+ * Cahier de notes (V2.1-2, piste "un seul compagnon") — arbre à gauche, deux
+ * panneaux de contenu à droite, partagés à parts égales (retour
+ * utilisateur : "vraiment à la moitié"). Le panneau principal montre
+ * toujours une page du cahier ; le second montre soit une fiche/règle
+ * épinglée, soit une AUTRE page du même cahier — chacun se ferme
+ * indépendamment (le survivant reprend alors toute la largeur). Même
+ * disposition pour le MJ et pour une joueuse.
  */
 export default function NotebookWorkspace({
   worldSlug,
@@ -55,10 +115,10 @@ export default function NotebookWorkspace({
   sessionPrepTemplate?: boolean;
 }) {
   const [items, setItems] = useState<NoteTreeItem[]>(initial.items);
-  const [selectedId, setSelectedId] = useState<string | null>(() => siblingsOf(initial.items, null).find((i) => i.kind === "page")?.id ?? null);
+  const [primaryPageId, setPrimaryPageId] = useState<string | null>(() => siblingsOf(initial.items, null).find((i) => i.kind === "page")?.id ?? null);
+  const [secondary, setSecondary] = useState<SecondaryContent | null>(null);
   const [pinPopoverOpen, setPinPopoverOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [companion, setCompanion] = useState<CompanionTarget | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const versionRef = useRef(initial.version);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -99,7 +159,7 @@ export default function NotebookWorkspace({
       content: content ?? [],
     };
     persist([...items, page]);
-    setSelectedId(id);
+    setPrimaryPageId(id);
   }
 
   function addPin(target: RefLinkTarget) {
@@ -143,17 +203,15 @@ export default function NotebookWorkspace({
   }
 
   function remove(id: string) {
-    persist(removeItemAndDescendants(items, id));
-    if (selectedId === id) setSelectedId(null);
+    const next = removeItemAndDescendants(items, id);
+    persist(next);
+    if (primaryPageId && !next.some((i) => i.id === primaryPageId)) setPrimaryPageId(null);
+    if (secondary?.kind === "page" && !next.some((i) => i.id === secondary.pageId)) setSecondary(null);
     setPendingDeleteId(null);
   }
 
   function rename(id: string, title: string) {
     persist(renamePage(items, id, title));
-  }
-
-  function openCompanion(target: CompanionTarget) {
-    setCompanion(target);
   }
 
   function renderRow(item: NoteTreeItem, depth: number) {
@@ -166,22 +224,47 @@ export default function NotebookWorkspace({
           ? (initial.otherEntities.find((e) => e.id === item.targetId)?.name ?? null)
           : (ruleEntries.find((r) => r.key === item.targetKey)?.name ?? null);
     const broken = !isPage && label === null;
+    const isOpen =
+      (isPage && (primaryPageId === item.id || (secondary?.kind === "page" && secondary.pageId === item.id))) ||
+      (!isPage &&
+        secondary?.kind === "companion" &&
+        ((item.kind === "pinned_entity" && secondary.target.kind === "entity" && initial.otherEntities.find((e) => e.id === item.targetId)?.slug === secondary.target.slug) ||
+          (item.kind === "pinned_rule" && secondary.target.kind === "rule" && item.targetKey === secondary.target.key)));
 
     return (
       <div key={item.id}>
         <div
-          className={`group flex items-center gap-1 rounded px-1.5 py-1 text-xs ${selectedId === item.id ? "bg-panel-raised text-ink" : "text-ink-soft hover:bg-panel-raised/60"}`}
+          className={`group flex items-center gap-1 rounded px-1.5 py-1 text-xs ${isOpen ? "bg-panel-raised text-ink" : "text-ink-soft hover:bg-panel-raised/60"}`}
           style={{ paddingLeft: 6 + depth * 14 }}
         >
           <button
             type="button"
-            onClick={() => (isPage ? setSelectedId(item.id) : broken ? undefined : openCompanion(item.kind === "pinned_entity" ? { kind: "entity", slug: initial.otherEntities.find((e) => e.id === item.targetId)!.slug } : { kind: "rule", key: item.targetKey }))}
+            onClick={() =>
+              isPage
+                ? setPrimaryPageId(item.id)
+                : broken
+                  ? undefined
+                  : setSecondary({
+                      kind: "companion",
+                      target: item.kind === "pinned_entity" ? { kind: "entity", slug: initial.otherEntities.find((e) => e.id === item.targetId)!.slug } : { kind: "rule", key: item.targetKey },
+                    })
+            }
             className={`flex-1 truncate text-left ${!isPage ? "rounded bg-accent/10 px-1 text-accent" : ""} ${broken ? "rich-ref-broken bg-transparent px-0 text-danger" : ""}`}
             title={broken ? "Lien brisé" : undefined}
           >
             {isPage ? item.title || "(sans titre)" : (label ?? "Lien brisé")}
           </button>
           <span className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
+            {isPage && (
+              <button
+                type="button"
+                onClick={() => setSecondary({ kind: "page", pageId: item.id })}
+                title="Ouvrir dans le second panneau"
+                className="px-1 text-ink-muted hover:text-ink"
+              >
+                ⇒
+              </button>
+            )}
             <button type="button" onClick={() => move(item.id, -1)} title="Monter" className="px-1 text-ink-muted hover:text-ink">
               ▲
             </button>
@@ -204,8 +287,12 @@ export default function NotebookWorkspace({
     );
   }
 
-  const selected = items.find((i) => i.id === selectedId);
-  const selectedPage = selected?.kind === "page" ? selected : null;
+  function changePageContent(id: string, segments: Segment[]) {
+    persist(items.map((i) => (i.id === id ? { ...i, content: segments } : i)));
+  }
+
+  const primaryPage = items.find((i) => i.id === primaryPageId);
+  const secondaryPage = secondary?.kind === "page" ? items.find((i) => i.id === secondary.pageId) : undefined;
 
   return (
     <div className="flex h-full min-h-0 gap-3">
@@ -247,39 +334,49 @@ export default function NotebookWorkspace({
         </div>
       </div>
 
-      <div className="min-w-0 flex-1 overflow-y-auto">
-        {selectedPage ? (
-          <div className="flex flex-col gap-2">
-            <input
-              value={selectedPage.title}
-              onChange={(e) => rename(selectedPage.id, e.target.value)}
-              placeholder="Titre de la page"
-              className="w-full border-b border-edge bg-transparent pb-1 text-sm font-semibold text-ink outline-none"
-            />
-            <RichTextEditor
-              segments={selectedPage.content}
-              onChange={(segments) => persist(items.map((i) => (i.id === selectedPage.id ? { ...i, content: segments } : i)))}
+      <div className="flex min-w-0 flex-1 gap-3">
+        {primaryPage?.kind === "page" ? (
+          <div className="min-w-0 flex-1">
+            <NotePagePane
+              page={primaryPage}
               worldSlug={worldSlug}
               worldId={initial.worldId}
               otherEntities={initial.otherEntities}
+              onRename={rename}
+              onChangeContent={changePageContent}
+              onClose={() => setPrimaryPageId(null)}
             />
           </div>
         ) : (
-          <p className="p-4 text-sm italic text-ink-muted">Sélectionnez ou créez une page.</p>
+          !secondary && <p className="min-w-0 flex-1 p-4 text-sm italic text-ink-muted">Sélectionnez ou créez une page.</p>
+        )}
+
+        {secondary && (
+          <div className={`min-w-0 flex-1 ${primaryPage?.kind === "page" ? "border-l border-edge/60 pl-3" : ""}`}>
+            {secondary.kind === "page" ? (
+              secondaryPage?.kind === "page" ? (
+                <NotePagePane
+                  page={secondaryPage}
+                  worldSlug={worldSlug}
+                  worldId={initial.worldId}
+                  otherEntities={initial.otherEntities}
+                  onRename={rename}
+                  onChangeContent={changePageContent}
+                  onClose={() => setSecondary(null)}
+                />
+              ) : null
+            ) : (
+              <FicheCompanion
+                key={companionKey(secondary.target)}
+                worldSlug={worldSlug}
+                target={secondary.target}
+                isGm={isGm}
+                onClose={() => setSecondary(null)}
+              />
+            )}
+          </div>
         )}
       </div>
-
-      {companion && (
-        <div className="w-[min(40%,420px)] shrink-0 border-l border-edge/60">
-          <FicheCompanion
-            key={companion.kind === "entity" ? `entity:${companion.slug}` : `rule:${companion.key}`}
-            worldSlug={worldSlug}
-            target={companion}
-            isGm={isGm}
-            onClose={() => setCompanion(null)}
-          />
-        </div>
-      )}
 
       <ConfirmDialog
         open={pendingDeleteId !== null}
