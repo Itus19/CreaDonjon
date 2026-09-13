@@ -18,6 +18,7 @@ import { useDesktop } from "@/components/shell/DesktopContext";
 import { windowHref, type WindowRef } from "@/components/shell/windowRefs";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 import { detectEntityReferences, type LinkableEntity } from "@/src/core/linker/detect";
+import { SPECIES_FEMININE_FORMS } from "@/src/core/linker/speciesGender";
 
 /** V2.1-1, détection automatique — une mention trouvée dans le texte, pas encore liée, en attente de confirmation (jamais appliquée seule, spec §A1 "Renommage"). */
 interface DetectedSuggestion {
@@ -295,7 +296,11 @@ export default function RichTextEditor({
     if (!otherEntities) return;
     const candidates: LinkableEntity[] = [
       ...otherEntities.map((e) => ({ id: `entity:${e.id}`, name: e.name, aliases: e.aliases ?? [] })),
-      ...ruleEntries.map((r) => ({ id: `rule:${r.key}`, name: r.name, aliases: [] as string[] })),
+      ...ruleEntries.map((r) => ({
+        id: `rule:${r.key}`,
+        name: r.name,
+        aliases: SPECIES_FEMININE_FORMS[r.key] ? [SPECIES_FEMININE_FORMS[r.key]] : [],
+      })),
     ];
 
     const found: DetectedSuggestion[] = [];
