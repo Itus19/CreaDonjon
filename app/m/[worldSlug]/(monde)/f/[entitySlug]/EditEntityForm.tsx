@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import RelationsChips, { type OtherEntityOption, type RelationChip } from "@/components/entities/RelationsChips";
+import MentionedIn from "@/components/entities/MentionedIn";
 import EntityHistoryPanel from "@/components/entities/EntityHistoryPanel";
 import PortraitUpload from "@/components/entities/PortraitUpload";
 import EntityBlocks, { type BlockItem } from "@/components/blocks/EntityBlocks";
@@ -487,6 +488,8 @@ export default function EditEntityForm({
               relationsReloadSignal={relationsReloadSignal}
             />
           </div>
+
+          <MentionedIn entityId={entity.id} worldSlug={worldSlug} />
         </div>
 
         <PortraitUpload entityId={entity.id} initialLayout={initialPortraitLayout} />

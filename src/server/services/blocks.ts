@@ -23,10 +23,13 @@ import {
 } from "@/src/server/repos/blocks";
 import { getEntityById } from "@/src/server/repos/entities";
 import { getBlockImageAssetId } from "@/src/server/repos/blockImages";
+import { deleteMentionsForSource, replaceMentionsForSource } from "@/src/server/repos/entityMentions";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { recordEntityRevision } from "@/src/server/services/entityHistory";
 import { canUserEditEntityById } from "@/src/server/services/permissions";
 import { deleteAsset } from "@/src/server/services/storage";
+import { extractMentionsFromSegments } from "@/src/core/linker/mentions";
+import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -223,6 +226,23 @@ export async function updateBlockContent(
     await clearOtherWikiBackgrounds(supabase, existing.entity_id, params.id);
   }
 
+  // V2.1-1, rétroliens (specs/wiki-liens-et-personnages.md §A2) : recalcule
+  // TOUJOURS les mentions de ce bloc a chaque sauvegarde, jamais seulement
+  // quand un ref est ajoute — un lien retire du texte doit aussi retirer sa
+  // mention.
+  if (existing.block_type === "text") {
+    const entity = await getEntityById(supabase, existing.entity_id);
+    if (entity) {
+      const text = zTextBlockData.parse(validatedData);
+      await replaceMentionsForSource(supabase, {
+        worldId: entity.world_id,
+        sourceEntityId: existing.entity_id,
+        sourcePath: `block.${params.id}`,
+        mentions: extractMentionsFromSegments(text.segments),
+      });
+    }
+  }
+
   return { ok: true, block: toVisibleBlock(row) };
 }
 
@@ -258,6 +278,11 @@ export async function deleteBlock(
 
   await repoDeleteBlock(supabase, id);
   if (assetId) await deleteAsset(supabase, assetId);
+  // V2.1-1 : un bloc de texte supprime ne doit pas laisser ses mentions
+  // (retroliens) fantomes en base — meme discipline que l'asset ci-dessus.
+  if (existing.block_type === "text") {
+    await deleteMentionsForSource(supabase, { sourceEntityId: existing.entity_id, sourcePath: `block.${id}` });
+  }
   await recordBlockRevision(supabase, existing.entity_id, changedBy);
   return { ok: true };
 }

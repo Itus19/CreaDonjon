@@ -6,6 +6,7 @@ import type { PublicBlock, PublicRelation } from "@/src/server/services/publicSh
 import PublicBlockView from "./PublicBlockView";
 import PublicPortrait from "./PublicPortrait";
 import PublicRelations from "./PublicRelations";
+import MentionedIn from "@/components/entities/MentionedIn";
 
 /**
  * Corps d'une fiche sur le wiki public (V2-G11/V2-G12) — partage par
@@ -56,6 +57,7 @@ export default function PublicEntityBody({
           <p className="mt-1 text-xs text-ink-muted">Alias : {entity.aliases.join(", ")}</p>
         )}
         <PublicRelations relations={relations} hrefBase={hrefBase} />
+        <MentionedIn entityId={entity.id} hrefBase={hrefBase} />
         {firstBlockWraps && <PublicBlockView block={firstBlock} hrefBase={hrefBase} ruleHrefBase={ruleHrefBase} />}
       </div>
 
