@@ -1,5 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
+
+const CHUNK_ERROR_RELOAD_KEY = "creadonjon:chunk-error-reloaded";
+
+function isChunkLoadError(error: Error): boolean {
+  return error.name === "ChunkLoadError" || /Loading (chunk|CSS chunk) [\w-]+ failed/.test(error.message);
+}
+
 /**
  * Aucune page d'erreur n'existait dans le projet — toute exception non
  * rattrapee (rendu d'un composant serveur, erreur cote client) retombait
@@ -16,6 +24,13 @@
  * `<html>/<body>`.
  */
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    if (!isChunkLoadError(error)) return;
+    if (sessionStorage.getItem(CHUNK_ERROR_RELOAD_KEY)) return;
+    sessionStorage.setItem(CHUNK_ERROR_RELOAD_KEY, "1");
+    window.location.reload();
+  }, [error]);
+
   return (
     <html lang="fr">
       <body style={{ margin: 0, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#14181B", color: "#EFEAE0", fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
