@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import GameDateInput from "@/components/shared/GameDateInput";
+import Dropdown from "@/components/shared/Dropdown";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
+import { weekdayNameForDate } from "@/src/core/calendar/weekday";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import type { GameDate } from "@/src/core/calendar/types";
 import Checkbox from "@/components/shared/Checkbox";
@@ -80,6 +82,11 @@ export default function CalendarSettingsPanel({
     });
   }
 
+  function updateWeekdayEpoch(index: number) {
+    setSaved(false);
+    setCalendar((c) => ({ ...c, weekdayEpoch: index }));
+  }
+
   function updateEra(index: number, patch: Partial<{ name: string; startYear: number }>) {
     setSaved(false);
     setCalendar((c) => ({ ...c, eras: c.eras.map((e, i) => (i === index ? { ...e, ...patch } : e)) }));
@@ -92,6 +99,8 @@ export default function CalendarSettingsPanel({
     setSaved(false);
     setCalendar((c) => ({ ...c, eras: c.eras.filter((_, i) => i !== index) }));
   }
+
+  const currentWeekdayName = calendar.currentDate ? weekdayNameForDate(calendar.currentDate, calendar) : null;
 
   async function save() {
     setPending(true);
@@ -147,7 +156,11 @@ export default function CalendarSettingsPanel({
               hidePeriod
             />
             <span className="text-xs text-ink-muted">
-              Aujourd&apos;hui : <span className="font-semibold text-ink">{formatGameDate(calendar.currentDate, calendar)}</span>
+              Aujourd&apos;hui :{" "}
+              <span className="font-semibold text-ink">
+                {currentWeekdayName ? `${currentWeekdayName}, ` : ""}
+                {formatGameDate(calendar.currentDate, calendar)}
+              </span>
             </span>
           </>
         )}
@@ -202,6 +215,20 @@ export default function CalendarSettingsPanel({
         >
           + Ajouter un jour
         </button>
+
+        <div className="mt-1 flex items-center gap-2">
+          <span className="text-xs text-ink-muted">Jour de la semaine du 1er jour de l&apos;an 0 :</span>
+          <Dropdown
+            value={String(calendar.weekdayEpoch % calendar.weekdays.length)}
+            options={calendar.weekdays.map((w, i) => ({ value: String(i), label: w.name }))}
+            onChange={(v) => updateWeekdayEpoch(Number(v))}
+            aria-label="Jour de la semaine du 1er jour de l'an 0"
+          />
+        </div>
+        <p className="text-xs text-ink-muted">
+          Point de référence utilisé pour calculer le jour de la semaine de n&apos;importe quelle date (ex. le
+          « Aujourd&apos;hui » ci-dessus).
+        </p>
       </div>
 
       <div className="flex flex-col gap-2">

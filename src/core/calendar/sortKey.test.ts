@@ -9,6 +9,7 @@ const THIRTEEN_MONTHS: CalendarConfig = {
   weekdays: [],
   eras: [],
   currentDate: null,
+  weekdayEpoch: 0,
 };
 
 describe("computeSortKey", () => {

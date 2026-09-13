@@ -14,6 +14,7 @@ const CALENDAR: CalendarConfig = {
     { name: "l'Âge des Cendres", startYear: 1200 },
   ],
   currentDate: null,
+  weekdayEpoch: 0,
 };
 
 function date(partial: Partial<GameDate>): GameDate {

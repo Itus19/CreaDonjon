@@ -20,4 +20,6 @@ export const DEFAULT_CALENDAR: CalendarConfig = {
   weekdays: DEFAULT_WEEKDAY_NAMES.map((name) => ({ name })),
   eras: [],
   currentDate: null,
+  // Retour utilisateur : "le 1er Vendémiaire de l'an 0 était un Primidi" — 0 est l'indice de "Primidi" dans DEFAULT_WEEKDAY_NAMES.
+  weekdayEpoch: 0,
 };

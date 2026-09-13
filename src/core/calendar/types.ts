@@ -46,4 +46,6 @@ export type CalendarConfig = {
   eras: CalendarEra[];
   /** Jour actuel de la campagne (retour utilisateur, V2-M13 : "renseigne automatiquement le jour ingame actuel") — `null` tant que le MJ ne l'a jamais regle. Un seul par monde, comme le reste du calendrier ("un monde = une campagne"). */
   currentDate: GameDate | null;
+  /** Indice (dans `weekdays`) du jour de la semaine du 1er jour du 1er mois de l'an 0 (retour utilisateur, V2.1-3 suite) — point de reference qui permet de calculer le jour de la semaine de N'IMPORTE QUELLE date, plutot que de le saisir a la main pour chaque date. Reglable (pas fige a "Primidi") : un monde qui renomme ses jours de semaine peut vouloir un decalage different. Defaut 0 (le premier jour de `weekdays`). */
+  weekdayEpoch: number;
 };
