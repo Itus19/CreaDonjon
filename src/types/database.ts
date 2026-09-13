@@ -726,6 +726,7 @@ export type Database = {
           party_entity_id: string | null
           rng_seed: string
           ruleset_id: string
+          target_session_minutes: number
           updated_at: string
           world_id: string
         }
@@ -739,6 +740,7 @@ export type Database = {
           party_entity_id?: string | null
           rng_seed?: string
           ruleset_id: string
+          target_session_minutes?: number
           updated_at?: string
           world_id: string
         }
@@ -752,6 +754,7 @@ export type Database = {
           party_entity_id?: string | null
           rng_seed?: string
           ruleset_id?: string
+          target_session_minutes?: number
           updated_at?: string
           world_id?: string
         }
@@ -1879,6 +1882,82 @@ export type Database = {
         }
         Relationships: []
       }
+      real_session_availabilities: {
+        Row: {
+          campaign_id: string
+          date: string
+          ends_at: string
+          starts_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          date: string
+          ends_at: string
+          starts_at: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          date?: string
+          ends_at?: string
+          starts_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "real_session_availabilities_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      real_sessions: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          created_by: string
+          duration_minutes: number
+          id: string
+          scheduled_date: string
+          source: string
+          starts_at: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          created_by: string
+          duration_minutes: number
+          id?: string
+          scheduled_date: string
+          source: string
+          starts_at: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string
+          duration_minutes?: number
+          id?: string
+          scheduled_date?: string
+          source?: string
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "real_sessions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       relations: {
         Row: {
           created_at: string
@@ -2248,6 +2327,57 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_journal_entries: {
+        Row: {
+          assigned_to: string
+          campaign_id: string
+          created_at: string
+          created_by: string
+          entity_id: string | null
+          id: string
+          ingame_date: Json
+          status: string
+          written_at: string | null
+        }
+        Insert: {
+          assigned_to: string
+          campaign_id: string
+          created_at?: string
+          created_by: string
+          entity_id?: string | null
+          id?: string
+          ingame_date: Json
+          status?: string
+          written_at?: string | null
+        }
+        Update: {
+          assigned_to?: string
+          campaign_id?: string
+          created_at?: string
+          created_by?: string
+          entity_id?: string | null
+          id?: string
+          ingame_date?: Json
+          status?: string
+          written_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_journal_entries_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_journal_entries_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
         ]

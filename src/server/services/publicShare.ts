@@ -6,6 +6,7 @@ import { filterBlocks, filterSegments, type VisibilityLevel } from "@/src/core/v
 import { verifySharePassword } from "@/src/core/shareLinks/password";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
+import { zNoteTreeBlockData } from "@/src/core/schemas/blocks/noteTree";
 import { collectRefTargetIds } from "@/src/core/linker/refTargets";
 import { relationLabel, type RelationType } from "@/src/core/relations/inverses";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
@@ -18,6 +19,7 @@ import { listPartOfRelationsForWorld, listRelationsForEntity, type OtherEntityRe
 import { listCampaignsForWorld } from "@/src/server/repos/campaigns";
 import { resolveCampaignId } from "@/src/server/services/campaigns";
 import { getWorldById, getWorldEntityKindOrder } from "@/src/server/repos/worlds";
+import { getSessionJournalTreeGroup, getLatestSessionJournalSlug } from "@/src/server/services/sessionJournal";
 import { getPortraitLayout } from "@/src/server/services/entityPortraits";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import { zGenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
@@ -162,14 +164,25 @@ export async function listPublicEntities(worldId: string): Promise<EntitySummary
  */
 export async function getPublicEntityTree(worldId: string): Promise<EntityTreeGroup[]> {
   const supabase = createShareLinkServiceClient();
-  const [allEntities, partOfEdges, playerCharacterIds, kindOrder] = await Promise.all([
+  const [allEntities, partOfEdges, playerCharacterIds, kindOrder, journalGroup] = await Promise.all([
     listEntitiesForWorld(supabase, worldId),
     listPartOfRelationsForWorld(supabase, worldId),
     listPlayerCharacterEntityIds(supabase, worldId),
     getWorldEntityKindOrder(supabase, worldId),
+    getSessionJournalTreeGroup(supabase, worldId, { publicOnly: true }),
   ]);
-  const entities = allEntities.filter((e) => e.is_public);
-  return buildEntityTree(withPlayerCharacterKinds(entities, playerCharacterIds), partOfEdges, kindOrder);
+  // `session_journal` exclu du groupe alphabetique generique, meme motif
+  // que `getEntityTree` (entities.ts) : son groupe epingle (ci-dessus) le
+  // remplace, jamais un doublon.
+  const entities = allEntities.filter((e) => e.is_public && e.entity_kind !== "session_journal");
+  const tree = buildEntityTree(withPlayerCharacterKinds(entities, playerCharacterIds), partOfEdges, kindOrder);
+  return journalGroup ? [journalGroup, ...tree] : tree;
+}
+
+/** Slug de l'entree du Livre de sessions la plus recente, publique uniquement (retour utilisateur : la page d'accueil du wiki public s'ouvre dessus) — `null` tant qu'aucune entree publique n'existe. */
+export async function getLatestPublicSessionJournalSlug(worldId: string): Promise<string | null> {
+  const supabase = createShareLinkServiceClient();
+  return getLatestSessionJournalSlug(supabase, worldId, { publicOnly: true });
 }
 
 /**
@@ -289,6 +302,32 @@ function filterTextBlockSegments(blockType: string, data: Json): Json {
   return { ...parsed.data, segments } as unknown as Json;
 }
 
+/**
+ * Meme motif que `filterTextBlockSegments`, pour le bloc `note_tree`
+ * (V2.1-2) : chaque page de l'arbre porte ses propres segments, comme un
+ * bloc `text`. En pratique inatteignable (l'entite qui le porte,
+ * `entity_kind: "notes"`, est exclue de toute liste publique — voir
+ * `listPublishableEntities` ci-dessous) : filtre quand meme ici, defense en
+ * profondeur plutot que de faire reposer toute la garantie sur un seul
+ * point d'exclusion, exactement l'avertissement porte par
+ * `publicShare.blockCoverage.test.ts`.
+ */
+function filterNoteTreeSegments(blockType: string, data: Json): Json {
+  if (blockType !== "note_tree") return data;
+  const parsed = zNoteTreeBlockData.safeParse(data);
+  if (!parsed.success) return data;
+  const items = parsed.data.items.map((item) => {
+    if (item.kind !== "page") return item;
+    const aware = item.content.map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
+    const content = filterSegments(aware, { kind: "anonymous" }).map(({ visibility, ...rest }) => ({
+      ...rest,
+      visibility: { level: visibility.level, scopeId: visibility.scopeId },
+    }));
+    return { ...item, content };
+  });
+  return { ...parsed.data, items } as unknown as Json;
+}
+
 /** Meme motif que `filterTextBlockSegments` : la visibilite du bloc `timeline` ne suffit pas, chaque entree porte la sienne (specs/wiki-blocs.md §3) — jamais une entree `gm` qui fuit parce que le bloc lui-meme est public. */
 function filterTimelineEntries(blockType: string, data: Json): Json {
   if (blockType !== "timeline") return data;
@@ -374,7 +413,7 @@ export async function getPublicEntityDetail(
       // ne suffit pas, chaque segment est filtre a son tour avant de
       // jamais quitter le serveur. Meme principe pour les entrees d'un
       // bloc `timeline` (V2-H2).
-      data: filterTimelineEntries(row.block_type, filterTextBlockSegments(row.block_type, row.data)),
+      data: filterTimelineEntries(row.block_type, filterNoteTreeSegments(row.block_type, filterTextBlockSegments(row.block_type, row.data))),
       displayOrder: row.display_order,
     }))
     .sort((a, b) => a.displayOrder - b.displayOrder);
@@ -487,7 +526,8 @@ export async function getPublicEntityDetail(
       b.blockType === "timeline" ||
       (b.blockType === "personality" && (b.personalityEvents?.length ?? 0) > 0) ||
       (b.blockType === "worldview" && (b.personalityEvents?.length ?? 0) > 0) ||
-      (b.blockType === "relationship" && (b.relationshipEvents?.length ?? 0) > 0)
+      (b.blockType === "relationship" && (b.relationshipEvents?.length ?? 0) > 0) ||
+      b.blockType === "session_journal_meta"
   );
   const timelineCalendar = hasDateFormattingBlock ? await getCalendar(supabase, worldId) : null;
   const blocksWithTimelineCalendar = blocksWithRelationsGraph.map((block) =>
@@ -495,7 +535,8 @@ export async function getPublicEntityDetail(
     (block.blockType === "timeline" ||
       block.blockType === "personality" ||
       block.blockType === "worldview" ||
-      block.blockType === "relationship")
+      block.blockType === "relationship" ||
+      block.blockType === "session_journal_meta")
       ? { ...block, timelineCalendar }
       : block
   );

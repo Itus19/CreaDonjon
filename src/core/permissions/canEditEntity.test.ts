@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { canEditEntity, type CanEditEntityContext } from "./canEditEntity";
 import type { Viewer } from "@/src/core/visibility/types";
 
-const NEITHER: CanEditEntityContext = { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false };
-const OWN_CHARACTER: CanEditEntityContext = { isOwnCharacter: true, isGranted: false, isOwnPrivateNotes: false };
-const GRANTED: CanEditEntityContext = { isOwnCharacter: false, isGranted: true, isOwnPrivateNotes: false };
-const OWN_NOTES: CanEditEntityContext = { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: true };
+const NEITHER: CanEditEntityContext = { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false, isOwnJournalEntry: false };
+const OWN_CHARACTER: CanEditEntityContext = { isOwnCharacter: true, isGranted: false, isOwnPrivateNotes: false, isOwnJournalEntry: false };
+const GRANTED: CanEditEntityContext = { isOwnCharacter: false, isGranted: true, isOwnPrivateNotes: false, isOwnJournalEntry: false };
+const OWN_NOTES: CanEditEntityContext = { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: true, isOwnJournalEntry: false };
+const OWN_JOURNAL_ENTRY: CanEditEntityContext = { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false, isOwnJournalEntry: true };
 
 function viewer(partial: Partial<Extract<Viewer, { kind: "user" }>> = {}): Viewer {
   return { kind: "user", userId: "u1", worldRole: null, campaignRoles: {}, ...partial };
@@ -50,5 +51,10 @@ describe("canEditEntity — table de verite (V2-M3, Lot M)", () => {
 
   it("un visiteur anonyme n'ecrit pas non plus une fiche de notes marquee sienne (cas impossible en pratique, mais la regle reste absolue)", () => {
     expect(canEditEntity({ kind: "anonymous" }, OWN_NOTES)).toBe(false);
+  });
+
+  it("un utilisateur sans aucun role peut corriger sa propre entree du Livre de sessions (V2.1-3)", () => {
+    expect(canEditEntity(viewer(), OWN_JOURNAL_ENTRY)).toBe(true);
+    expect(canEditEntity({ kind: "anonymous" }, OWN_JOURNAL_ENTRY)).toBe(false);
   });
 });

@@ -154,7 +154,7 @@ describe.skipIf(!hasCreds)("resserrement de la RLS d'ecriture (integration, base
   ] as const;
 
   function ctxFor(profile: string) {
-    return { isOwnCharacter: profile === "ownCharacterPlayer", isGranted: profile === "grantedPlayer", isOwnPrivateNotes: false };
+    return { isOwnCharacter: profile === "ownCharacterPlayer", isGranted: profile === "grantedPlayer", isOwnPrivateNotes: false, isOwnJournalEntry: false };
   }
 
   async function canRenameEntity(client: SupabaseClient, name: string): Promise<boolean> {
@@ -230,8 +230,8 @@ describe.skipIf(!hasCreds)("resserrement de la RLS d'ecriture (integration, base
       .single();
     if (insertError) throw new Error(insertError.message);
 
-    expect(canEditEntity(viewerFor("plainPlayer"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: true })).toBe(true);
-    expect(canEditEntity(viewerFor("outsider"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false })).toBe(false);
+    expect(canEditEntity(viewerFor("plainPlayer"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: true, isOwnJournalEntry: false })).toBe(true);
+    expect(canEditEntity(viewerFor("outsider"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false, isOwnJournalEntry: false })).toBe(false);
 
     const byCreator = await clients.plainPlayer.from("entities").update({ name: "Mes notes (modifiees)" }).eq("id", notesEntity.id).select("id");
     if (byCreator.error) throw new Error(byCreator.error.message);
@@ -242,5 +242,31 @@ describe.skipIf(!hasCreds)("resserrement de la RLS d'ecriture (integration, base
     expect(byOtherMember.data?.length ?? 0).toBe(0);
 
     await admin.from("entities").delete().eq("id", notesEntity.id);
+  });
+
+  it("entity_kind 'session_journal' : son autrice peut la corriger, un autre membre du monde ne peut pas (6e cas de canEditEntity, V2.1-3)", async () => {
+    const { data: journalEntity, error: insertError } = await clients.plainPlayer
+      .from("entities")
+      .insert({ world_id: worldId, slug: "journal-plainplayer-test", name: "Ce que la taverne a vu", entity_kind: "session_journal", created_by: userIds.plainPlayer })
+      .select("id")
+      .single();
+    if (insertError) throw new Error(insertError.message);
+
+    expect(canEditEntity(viewerFor("plainPlayer"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false, isOwnJournalEntry: true })).toBe(true);
+    expect(canEditEntity(viewerFor("outsider"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false, isOwnJournalEntry: false })).toBe(false);
+
+    const byAuthor = await clients.plainPlayer.from("entities").update({ name: "Ce que la taverne a vu (corrige)" }).eq("id", journalEntity.id).select("id");
+    if (byAuthor.error) throw new Error(byAuthor.error.message);
+    expect(byAuthor.data?.length ?? 0).toBe(1);
+
+    const byOtherMember = await clients.grantedPlayer.from("entities").update({ name: "Vole" }).eq("id", journalEntity.id).select("id");
+    if (byOtherMember.error) throw new Error(byOtherMember.error.message);
+    expect(byOtherMember.data?.length ?? 0).toBe(0);
+
+    const byGm = await clients.campaignGm.from("entities").update({ name: "Corrige par le MJ" }).eq("id", journalEntity.id).select("id");
+    if (byGm.error) throw new Error(byGm.error.message);
+    expect(byGm.data?.length ?? 0).toBe(1);
+
+    await admin.from("entities").delete().eq("id", journalEntity.id);
   });
 });

@@ -21,7 +21,6 @@ export const zBlockDisplay = z.object({
     "music",
     "graph",
     "quest",
-    "session_log",
     "poles",
     "timeline",
     "map",

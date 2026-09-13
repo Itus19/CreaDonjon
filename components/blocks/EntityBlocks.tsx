@@ -55,7 +55,6 @@ const ResourcesBlockEditor = dynamic(() => import("./ResourcesBlockEditor"));
 const MusicBlockEditor = dynamic(() => import("./MusicBlockEditor"));
 const GenealogyBlockEditor = dynamic(() => import("./GenealogyBlockEditor"));
 const QuestBlockEditor = dynamic(() => import("./QuestBlockEditor"));
-const SessionLogBlockEditor = dynamic(() => import("./SessionLogBlockEditor"));
 const PersonalityBlockEditor = dynamic(() => import("./PersonalityBlockEditor"));
 const RelationshipBlockEditor = dynamic(() => import("./RelationshipBlockEditor"));
 const WorldviewBlockEditor = dynamic(() => import("./WorldviewBlockEditor"));
@@ -64,6 +63,7 @@ const TimelineBlockEditor = dynamic(() => import("./TimelineBlockEditor"));
 const MapBlockEditor = dynamic(() => import("./MapBlockEditor"));
 const MonsterStatblockSheet = dynamic(() => import("./MonsterStatblockSheet"));
 const PlayableCharacterSheet = dynamic(() => import("./PlayableCharacterSheet"));
+const SessionJournalMetaBlockEditor = dynamic(() => import("./SessionJournalMetaBlockEditor"));
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
@@ -79,13 +79,13 @@ import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
 import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import type { GenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
 import type { QuestBlockData } from "@/src/core/schemas/blocks/quest";
-import type { SessionLogBlockData } from "@/src/core/schemas/blocks/sessionLog";
 import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
 import type { RelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
 import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
 import type { RelationsGraphBlockData } from "@/src/core/schemas/blocks/relationsGraph";
 import type { TimelineBlockData } from "@/src/core/schemas/blocks/timeline";
 import type { MapBlockData } from "@/src/core/schemas/blocks/map";
+import type { SessionJournalMetaBlockData } from "@/src/core/schemas/blocks/sessionJournalMeta";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 
 export interface BlockItem {
@@ -115,13 +115,13 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   music: "Musique",
   genealogy: "Généalogie",
   quest: "Quête",
-  session_log: "Journal de séance",
   personality: "Personnalité",
   relationship: "Relation",
   worldview: "Convictions",
   relations_graph: "Réseau",
   timeline: "Chronologie",
   map: "Carte",
+  session_journal_meta: "Séance",
 };
 
 function BlockDataEditor({
@@ -130,6 +130,7 @@ function BlockDataEditor({
   onSaveNow,
   worldSlug,
   worldId,
+  campaignId,
   otherEntities,
   onRelationsChanged,
   relationsReloadSignal,
@@ -144,6 +145,8 @@ function BlockDataEditor({
   worldSlug: string;
   /** V2-H3 : necessaire pour "creer la carte «X»" depuis le bloc genealogie sans faire remonter le monde entier. */
   worldId: string;
+  /** V2.1-3 (suite) : necessaire au bloc `session_journal_meta` (roster des autrices possibles, liste des seances reelles) — `null` hors contexte de campagne. */
+  campaignId: string | null;
   /** V2-H3 : meme liste que RelationsChips.tsx, reutilisee pour la recherche du "+" du bloc genealogie. */
   otherEntities: OtherEntityOption[];
   /** V2-H3 : rafraichit la section "Relations" en tete de fiche apres un ajout depuis le bloc genealogie. */
@@ -249,15 +252,6 @@ function BlockDataEditor({
           onBlockRefreshed={onBlockRefreshed}
         />
       );
-    case "session_log":
-      return (
-        <SessionLogBlockEditor
-          blockId={block.id}
-          version={block.version}
-          data={block.data as SessionLogBlockData}
-          onBlockRefreshed={onBlockRefreshed}
-        />
-      );
     case "personality":
       return (
         <PersonalityBlockEditor
@@ -326,6 +320,16 @@ function BlockDataEditor({
           onSaveNow={onSaveNow ? (d) => onSaveNow(d) : undefined}
         />
       );
+    case "session_journal_meta":
+      return (
+        <SessionJournalMetaBlockEditor
+          data={block.data as SessionJournalMetaBlockData}
+          onChange={(d) => onChange(d)}
+          worldSlug={worldSlug}
+          campaignId={campaignId}
+          isGm={!hideAiAssist}
+        />
+      );
     default:
       return <p className="text-sm text-danger">Type de bloc inconnu : {block.blockType}</p>;
   }
@@ -342,6 +346,7 @@ function BlockDataEditor({
 export default function EntityBlocks({
   entityId,
   worldId,
+  campaignId,
   initialBlocks,
   worldSlug,
   otherEntities,
@@ -354,6 +359,8 @@ export default function EntityBlocks({
   entityId: string;
   /** V2-H3 : necessaire pour "creer la carte «X»" depuis le bloc genealogie. */
   worldId: string;
+  /** V2.1-3 (suite) : necessaire au bloc `session_journal_meta` — `null`/omis pour toute fiche hors contexte de campagne (le seul cas ou ce bloc peut exister est le Livre de sessions, toujours dans une campagne). */
+  campaignId?: string | null;
   initialBlocks: BlockItem[];
   worldSlug: string;
   /** V2-H3 : meme liste que RelationsChips.tsx, reutilisee par le bloc genealogie. */
@@ -712,6 +719,7 @@ export default function EntityBlocks({
               hasSaveError={saveErrorIds.has(block.id)}
               worldSlug={worldSlug}
               worldId={worldId}
+              campaignId={campaignId ?? null}
               otherEntities={otherEntities}
               onRelationsChanged={() => {
                 onRelationsChangedFromParent?.();
@@ -763,12 +771,16 @@ export default function EntityBlocks({
             // "generator" retire de "Ajouter un bloc" (retour utilisateur) : l'outil
             // "Générateurs" vit desormais uniquement dans la sidebar MJ. Le libelle
             // reste dans BLOCK_TYPE_LABELS pour les blocs generator deja existants.
+            // "session_journal_meta" (V2.1-3 suite) : jamais ajoutable a la main,
+            // pose une seule fois par submitJournalEntry — meme motif, le libelle
+            // reste dans BLOCK_TYPE_LABELS pour l'affichage du badge/placeholder.
             // personality/worldview retires des qu'un exemplaire existe deja sur
             // cette fiche (V2.1-5, un seul de chaque pour eviter les confusions —
             // meme garde-fou en base, index blocks_personality_worldview_uniq).
             .filter(
               ([type]) =>
                 type !== "generator" &&
+                type !== "session_journal_meta" &&
                 (!restrictAddableTypes || restrictAddableTypes.includes(type)) &&
                 !((type === "personality" || type === "worldview") && blocks.some((b) => b.blockType === type))
             )
@@ -814,6 +826,7 @@ function SortableBlockCard({
   hasSaveError,
   worldSlug,
   worldId,
+  campaignId,
   otherEntities,
   onRelationsChanged,
   relationsReloadSignal,
@@ -843,6 +856,7 @@ function SortableBlockCard({
   hasSaveError: boolean;
   worldSlug: string;
   worldId: string;
+  campaignId: string | null;
   otherEntities: OtherEntityOption[];
   onRelationsChanged: () => void;
   relationsReloadSignal: number;
@@ -999,6 +1013,7 @@ function SortableBlockCard({
             onSaveNow={(data) => onSaveBlock(block.id, { data })}
             worldSlug={worldSlug}
             worldId={worldId}
+            campaignId={campaignId}
             otherEntities={otherEntities}
             onRelationsChanged={onRelationsChanged}
             relationsReloadSignal={relationsReloadSignal}

@@ -8,12 +8,13 @@ const CALENDAR: CalendarConfig = {
     { name: "février", days: 28 },
     { name: "mars", days: 31 },
   ],
-  daysPerWeek: 7,
+  weekdays: [],
   eras: [
     { name: "l'Âge d'Or", startYear: 1000 },
     { name: "l'Âge des Cendres", startYear: 1200 },
   ],
   currentDate: null,
+  weekdayEpoch: 0,
 };
 
 function date(partial: Partial<GameDate>): GameDate {

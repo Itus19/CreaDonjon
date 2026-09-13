@@ -18,6 +18,7 @@ import { useDesktop } from "@/components/shell/DesktopContext";
 import { windowHref, type WindowRef } from "@/components/shell/windowRefs";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 import { detectEntityReferences, type LinkableEntity } from "@/src/core/linker/detect";
+import { SPECIES_FEMININE_FORMS } from "@/src/core/linker/speciesGender";
 
 /** V2.1-1, détection automatique — une mention trouvée dans le texte, pas encore liée, en attente de confirmation (jamais appliquée seule, spec §A1 "Renommage"). */
 interface DetectedSuggestion {
@@ -65,24 +66,6 @@ function AlignIcon({ value }: { value: string }) {
   );
 }
 
-/** Icone "maillon de chaine" minimaliste (retour utilisateur : pas d'emoji sur le bouton "Détecter des liens") — meme convention que `EyeIcon`/`DieIcon` (components/shared) : trait fin, `currentColor`, pas de police d'icones. */
-function LinkIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
-      <path
-        d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 /**
  * Remplace `SegmentsEditor.tsx` (V0-06f) : une seule zone de texte
  * editable, plus de bouton « + Ajouter un segment ». Les segments existent
@@ -114,7 +97,9 @@ export default function RichTextEditor({
   const [initialDoc] = useState<DocJSON>(() => segmentsToDoc(segments));
   const [, forceUpdate] = useState(0);
   const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
+  const [showDetect, setShowDetect] = useState(false);
   const [suggestions, setSuggestions] = useState<DetectedSuggestion[]>([]);
+  const [hasDetected, setHasDetected] = useState(false);
   const desktop = useDesktop();
   const router = useRouter();
   const ruleEntries = useWorldRuleEntries(worldSlug ?? "");
@@ -311,7 +296,11 @@ export default function RichTextEditor({
     if (!otherEntities) return;
     const candidates: LinkableEntity[] = [
       ...otherEntities.map((e) => ({ id: `entity:${e.id}`, name: e.name, aliases: e.aliases ?? [] })),
-      ...ruleEntries.map((r) => ({ id: `rule:${r.key}`, name: r.name, aliases: [] as string[] })),
+      ...ruleEntries.map((r) => ({
+        id: `rule:${r.key}`,
+        name: r.name,
+        aliases: SPECIES_FEMININE_FORMS[r.key] ? [SPECIES_FEMININE_FORMS[r.key]] : [],
+      })),
     ];
 
     const found: DetectedSuggestion[] = [];
@@ -344,6 +333,7 @@ export default function RichTextEditor({
       }
     }
     setSuggestions(found);
+    setHasDetected(true);
   }
 
   /**
@@ -552,33 +542,45 @@ export default function RichTextEditor({
       </BubbleMenu>
       <EditorContent editor={editor} />
       {worldSlug && otherEntities && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 rounded-md border border-edge/50 bg-panel-sunken p-2">
           <button
             type="button"
-            onClick={detectLinks}
-            className="inline-flex items-center gap-1.5 self-start text-xs font-medium text-ink-muted transition-colors hover:text-ink"
+            onClick={() => {
+              const next = !showDetect;
+              setShowDetect(next);
+              if (next) detectLinks();
+            }}
+            className="self-start text-xs font-medium text-ink-muted transition-colors hover:text-ink"
           >
-            <LinkIcon />
-            Détecter des liens
+            {showDetect ? "▾" : "▸"} Détecter des liens
           </button>
-          {suggestions.length > 0 && (
-            <ul className="flex flex-col gap-1 rounded-md border border-edge/60 bg-panel-sunken p-2">
-              {suggestions.map((s, i) => (
-                <li key={i} className="flex items-center justify-between gap-2 text-xs text-ink">
-                  <span>
-                    « {s.matchedText} » → {s.targetName}
-                  </span>
-                  <span className="flex shrink-0 gap-2">
-                    <button type="button" onClick={() => applySuggestion(s)} className="font-medium text-accent hover:underline">
-                      Lier
-                    </button>
-                    <button type="button" onClick={() => dismissSuggestion(s)} className="text-ink-muted hover:underline">
-                      Ignorer
-                    </button>
-                  </span>
-                </li>
-              ))}
-            </ul>
+          {showDetect && (
+            <div className="flex flex-col gap-1.5">
+              {suggestions.length > 0 ? (
+                <ul className="flex flex-col gap-1.5">
+                  {suggestions.map((s, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center justify-between gap-2 rounded-md border border-accent/30 bg-accent/5 p-2 text-xs text-ink"
+                    >
+                      <span>
+                        « {s.matchedText} » → {s.targetName}
+                      </span>
+                      <span className="flex shrink-0 gap-2">
+                        <button type="button" onClick={() => applySuggestion(s)} className="font-medium text-accent hover:underline">
+                          Lier
+                        </button>
+                        <button type="button" onClick={() => dismissSuggestion(s)} className="text-ink-muted hover:underline">
+                          Ignorer
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                hasDetected && <p className="text-xs italic text-ink-muted">Aucune mention détectée.</p>
+              )}
+            </div>
           )}
         </div>
       )}

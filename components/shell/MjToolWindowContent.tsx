@@ -11,6 +11,9 @@ import CalendarSettingsPanel from "./CalendarSettingsPanel";
 import PersonnalisationPanel from "./PersonnalisationPanel";
 import PublicationPanel from "./PublicationPanel";
 import GeneratorToolPanel from "./GeneratorToolPanel";
+import NotebookWorkspace from "./notebook/NotebookWorkspace";
+import SchedulingMjPanel from "./scheduling/SchedulingMjPanel";
+import SessionJournalMjPanel from "./sessionJournal/SessionJournalMjPanel";
 import RulesetSelector from "@/components/rules/RulesetSelector";
 import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
 
@@ -175,6 +178,36 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
             </p>
           </div>
           <GeneratorToolPanel worldSlug={worldSlug} tools={data.tools} />
+        </div>
+      );
+
+    case "notes":
+      return (
+        <div className="flex h-full flex-col gap-4">
+          <h1 className="block-title text-base">Bloc-notes</h1>
+          <div className="min-h-0 flex-1">
+            <NotebookWorkspace worldSlug={worldSlug} initial={data} isGm sessionPrepTemplate />
+          </div>
+        </div>
+      );
+
+    case "calendrier-reel":
+      return (
+        <div className="flex flex-col gap-4">
+          <h1 className="block-title text-base">Calendrier réel</h1>
+          {data.campaignId ? <SchedulingMjPanel campaignId={data.campaignId} /> : <p className="text-sm italic text-ink-muted">Ce monde n&apos;a pas encore de campagne.</p>}
+        </div>
+      );
+
+    case "livre-de-sessions":
+      return (
+        <div className="flex flex-col gap-4">
+          <h1 className="block-title text-base">Livre de sessions</h1>
+          {data.campaignId ? (
+            <SessionJournalMjPanel campaignId={data.campaignId} worldSlug={worldSlug} currentUserId={data.currentUserId} initialCalendar={data.calendar} />
+          ) : (
+            <p className="text-sm italic text-ink-muted">Ce monde n&apos;a pas encore de campagne.</p>
+          )}
         </div>
       );
   }

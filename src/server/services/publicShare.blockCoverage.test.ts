@@ -34,7 +34,13 @@ import { BLOCK_TYPES, type BlockType } from "@/src/core/schemas/blocks/registry"
  * C'est la categorie la plus dangereuse : l'oubli n'est pas visible a
  * l'ecran, la donnee est simplement PRESENTE dans le JSON envoye.
  */
-const NEEDS_INNER_FILTERING: readonly BlockType[] = ["text", "timeline"];
+// "note_tree" (V2.1-2) partage la meme forme de risque que "text" : chaque
+// page de l'arbre porte ses propres segments avec leur propre visibilite.
+// Inatteignable en pratique via ce chemin (l'entite qui le porte,
+// `entity_kind: "notes"`, n'est jamais rendue publique — aucune UI ne le
+// permet), mais classe ici par prudence plutot qu'exempte sur la base d'une
+// hypothese non verifiee par ce test.
+const NEEDS_INNER_FILTERING: readonly BlockType[] = ["text", "timeline", "note_tree"];
 
 /**
  * Categorie 2 — enrichi par une resolution cote serveur.
@@ -79,7 +85,11 @@ const SELF_CONTAINED: readonly BlockType[] = [
   "random_table",
   "generator",
   "music",
-  "session_log",
+  // session_journal_meta (V2.1-3 suite) : instantane pose une seule fois par
+  // submitJournalEntry (id + libelle deja resolus, ex. { userId, name }) —
+  // aucun champ n'est une reference a revalider, la visibilite du bloc
+  // entier suffit deja.
+  "session_journal_meta",
 ];
 
 const PUBLIC_SHARE_SOURCE = readFileSync(

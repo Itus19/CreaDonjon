@@ -6,7 +6,7 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { listEntities, ensureGeneratorToolsEntity } from "@/src/server/services/entities";
 import { resolveGeneratorToolsForEntity } from "@/src/server/services/generators";
-import { listCampaigns, getCampaignCharacters } from "@/src/server/services/campaigns";
+import { listCampaigns, getCampaignCharacters, resolveCampaignId } from "@/src/server/services/campaigns";
 import { isSuperadmin } from "@/src/server/services/account";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { getPartySkillProbabilities } from "@/src/server/services/partyProbabilities";
@@ -16,6 +16,7 @@ import { getEntityById } from "@/src/server/repos/entities";
 import { getCalendar } from "@/src/server/services/worlds";
 import { resolveBackgroundSelection } from "@/src/server/services/backgroundImages";
 import { listShareLinks } from "@/src/server/services/shareLinks";
+import { getOrCreateNotebook } from "@/src/server/services/notebook";
 import type { Locale } from "@/src/i18n/request";
 import type { MjToolWindowData } from "@/components/shell/mjToolWindows";
 import { MJ_TOOL_KEYS, type MjToolKey } from "@/components/shell/windowRefs";
@@ -210,6 +211,24 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       const entityId = await ensureGeneratorToolsEntity(supabase, world.id, user.id);
       const tools = await resolveGeneratorToolsForEntity(supabase, entityId);
       data = { tool, entityId, tools };
+      break;
+    }
+
+    case "notes": {
+      const notebook = await getOrCreateNotebook(supabase, { worldId: world.id, userId: user.id });
+      data = { tool, ...notebook };
+      break;
+    }
+
+    case "calendrier-reel": {
+      const campaignId = await resolveCampaignId(supabase, world.id);
+      data = { tool, campaignId };
+      break;
+    }
+
+    case "livre-de-sessions": {
+      const [campaignId, calendar] = await Promise.all([resolveCampaignId(supabase, world.id), getCalendar(supabase, world.id)]);
+      data = { tool, campaignId, calendar, currentUserId: user.id };
       break;
     }
   }

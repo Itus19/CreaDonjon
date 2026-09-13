@@ -4,6 +4,7 @@ import { zTextBlockData } from "./text";
 import { zInfoboxBlockData } from "./infobox";
 import { zImageBlockData } from "./image";
 import { zCustomTableBlockData } from "./customTable";
+import { zNoteTreeBlockData } from "./noteTree";
 import { zCharacterBlockData } from "./character";
 import { zInventoryBlockData } from "./inventory";
 import { zSpellcastingBlockData } from "./spellcasting";
@@ -14,13 +15,13 @@ import { zGeneratorBlockData } from "./generator";
 import { zMusicBlockData } from "./music";
 import { zGenealogyBlockData } from "./genealogy";
 import { zQuestBlockData } from "./quest";
-import { zSessionLogBlockData } from "./sessionLog";
 import { zPersonalityBlockData } from "./personality";
 import { zRelationshipBlockData } from "./relationship";
 import { zWorldviewBlockData } from "./worldview";
 import { zRelationsGraphBlockData } from "./relationsGraph";
 import { zTimelineBlockData } from "./timeline";
 import { zMapBlockData, DEFAULT_MAP_BLOCK_DATA } from "./map";
+import { zSessionJournalMetaBlockData } from "./sessionJournalMeta";
 import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
 
 /**
@@ -54,10 +55,14 @@ import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/ke
  * (`app/api/blocks/[blockId]/quest-objective`), qui ecrit aussi un
  * `session_event` (kind `world_update`, meme convention que
  * `runtimeState.ts`) si une session de campagne est ouverte pour le monde.
- * V2-H4 : session_log — vue epinglee sur UNE session (`sessionId`), jamais
- * une copie de son resume : `sessions.summary` reste la seule source de
- * verite (docs/SCHEMA.md §12), ce bloc ne fait que la montrer/l'editer a
- * cote de son fil de `session_events`.
+ * V2.1-2 : note_tree — cahier de notes MJ/joueuse (arbre de pages et de
+ * fiches epinglees), un seul bloc par entite `notes` (`src/server/services/
+ * notebook.ts`) — jamais attachable via "+ Bloc" sur une fiche de wiki
+ * normale (`EntityBlocks.tsx` ne le liste pas), cree directement par cette
+ * entite systeme comme `text` l'etait pour l'ancien textarea de notes.
+ * `session_log` retire au meme ticket (retour utilisateur : l'outil de
+ * notes remplace ce besoin) — `sessions.summary` reste la seule source de
+ * verite pour le Livre de seance (V2.1-3), inchangee par ce retrait.
  * V2-H1 : personality — temperament d'une entite, portee entite (pas
  * campagne, docs/adr/0013-tables-psyche-pnj.md). Les valeurs de `poles`
  * changent uniquement via `POST /api/blocks/[id]/personality-event`
@@ -91,6 +96,11 @@ import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/ke
  * (ADR 0017). Punaises/zones/couches (phases C/D/E) vivent dans des tables
  * dediees, jamais dans ce JSON — elles ont besoin de leur propre
  * visibilite RLS, qu'un sous-champ ne peut pas porter.
+ * V2.1-3 (suite) : session_journal_meta — les quatre champs fixes d'une
+ * entree du Livre de sessions (date ingame, autrice, date IRL de
+ * redaction, seance reelle). Jamais dans "+ Ajouter un bloc"
+ * (EntityBlocks.tsx l'exclut explicitement), pose une seule fois par
+ * `submitJournalEntry`.
  */
 export const BLOCK_TYPES = [
   "text",
@@ -107,13 +117,14 @@ export const BLOCK_TYPES = [
   "music",
   "genealogy",
   "quest",
-  "session_log",
+  "note_tree",
   "personality",
   "relationship",
   "worldview",
   "relations_graph",
   "timeline",
   "map",
+  "session_journal_meta",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -132,13 +143,14 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   music: "music",
   genealogy: "graph",
   quest: "quest",
-  session_log: "session_log",
+  note_tree: "prose",
   personality: "poles",
   relationship: "poles",
   worldview: "poles",
   relations_graph: "graph",
   timeline: "timeline",
   map: "map",
+  session_journal_meta: "key_values",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -157,13 +169,14 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   music: zMusicBlockData,
   genealogy: zGenealogyBlockData,
   quest: zQuestBlockData,
-  session_log: zSessionLogBlockData,
+  note_tree: zNoteTreeBlockData,
   personality: zPersonalityBlockData,
   relationship: zRelationshipBlockData,
   worldview: zWorldviewBlockData,
   relations_graph: zRelationsGraphBlockData,
   timeline: zTimelineBlockData,
   map: zMapBlockData,
+  session_journal_meta: zSessionJournalMetaBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -224,7 +237,7 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
   music: { __v: 1, tracks: [] },
   genealogy: { __v: 1, rootEntityId: null, depthUp: 2, depthDown: 2 },
   quest: { __v: 1, state: "not_started", giver: null, objectives: [], rewards: [], prerequisites: [] },
-  session_log: { __v: 1, sessionId: null },
+  note_tree: { __v: 1, items: [] },
   personality: {
     __v: 1,
     poles: PERSONALITY_POLE_KEYS.map((key) => ({ key, value: 0 })),
@@ -240,6 +253,13 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
   relations_graph: { __v: 1, rootEntityId: null, degreesVisible: 1 },
   timeline: { __v: 1, entries: [], groupBy: "none" },
   map: DEFAULT_MAP_BLOCK_DATA,
+  session_journal_meta: {
+    __v: 1,
+    ingameDate: { year: 0, month: 1, day: 1, precision: "day", end: null, label: null },
+    writtenBy: null,
+    writtenAt: null,
+    realSession: null,
+  },
 };
 
 export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny {

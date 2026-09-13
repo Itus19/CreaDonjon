@@ -11,6 +11,10 @@ export const zCalendarMonth = z.object({
   days: z.number().int().min(1).max(60),
 });
 
+export const zCalendarWeekday = z.object({
+  name: z.string().trim().min(1),
+});
+
 export const zCalendarEra = z.object({
   name: z.string().trim().min(1),
   startYear: z.number().int(),
@@ -38,9 +42,11 @@ export type GameDateInput = z.infer<typeof zGameDate>;
 
 export const zCalendarConfig = z.object({
   months: z.array(zCalendarMonth).min(1).max(24),
-  daysPerWeek: z.number().int().min(1).max(30),
+  weekdays: z.array(zCalendarWeekday).min(1).max(30),
   eras: z.array(zCalendarEra).max(50).default([]),
   /** Retour utilisateur (V2-M13) : "jour actuel de la campagne", regle depuis l'outil Calendrier MJ, propage a tout bloc qui affiche une date (ex. la chronologie propose "Aujourd'hui" comme date centrale). */
   currentDate: zGameDate.nullable().default(null),
+  /** Voir `CalendarConfig.weekdayEpoch` (src/core/calendar/types.ts) — indice du jour de semaine du 1er jour de l'an 0. `.default(0)` : les calendriers deja enregistres sans ce champ retombent sur "le premier jour de la liste", jamais une erreur de validation. */
+  weekdayEpoch: z.number().int().min(0).default(0),
 });
 export type CalendarConfigInput = z.infer<typeof zCalendarConfig>;

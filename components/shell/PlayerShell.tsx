@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import RadioWidget from "./RadioWidget";
 import { useChatUnread } from "./useChatUnread";
+import NextSessionBadge from "./scheduling/NextSessionBadge";
 
 interface Destination {
   href: string;
@@ -89,7 +90,14 @@ export default function PlayerShell({
           {worldName}
         </Link>
 
-        <div className="flex flex-1 justify-around md:flex-col md:justify-start md:gap-1 md:overflow-y-auto md:p-2">
+        {/* Retour utilisateur : "pas d'ascenseur ... plutot une adaptation de
+            la taille des boutons" — remplace `overflow-y-auto` par un
+            dimensionnement fluide (icone/marges/texte en `clamp(.., vh, ..)`)
+            qui retrecit avec la hauteur disponible plutot que de deborder.
+            `md:min-h-0` : necessaire pour qu'un enfant `flex-1` accepte de
+            descendre sous sa taille de contenu (sinon il l'impose au parent
+            malgre `flex-1`, memes causes que le commentaire `h-dvh` plus haut). */}
+        <div className="flex flex-1 justify-around md:min-h-0 md:flex-col md:items-center md:justify-start md:gap-[clamp(0px,0.8vh,4px)] md:p-2">
           {destinations.map((d) => {
             const active = d.match(pathname);
             const badge = d.icon === "chat" ? unreadCount : 0;
@@ -97,11 +105,11 @@ export default function PlayerShell({
               <Link
                 key={d.href}
                 href={d.href}
-                className={`relative flex flex-col items-center gap-1 rounded-md px-2 py-2 text-[11px] transition-colors md:py-3 ${
+                className={`relative flex flex-col items-center gap-[clamp(0px,0.5vh,4px)] rounded-md px-2 py-2 text-[11px] transition-colors md:py-[clamp(2px,1.1vh,12px)] md:text-[clamp(8px,1.3vh,11px)] ${
                   active ? "text-accent" : "text-ink-muted hover:text-ink"
                 }`}
               >
-                <span className="relative">
+                <span className="relative block h-5 w-5 shrink-0 md:h-[clamp(14px,2.6vh,20px)] md:w-[clamp(14px,2.6vh,20px)]">
                   <Icon name={d.icon} />
                   {badge > 0 && (
                     <span className="absolute -right-1.5 -top-1.5 rounded-full bg-accent px-1 text-[9px] font-semibold leading-tight text-accent-ink">
@@ -113,6 +121,9 @@ export default function PlayerShell({
               </Link>
             );
           })}
+          <div className="hidden md:block">
+            <NextSessionBadge worldSlug={worldSlug} />
+          </div>
         </div>
 
         <div className="hidden shrink-0 flex-col items-center gap-2 border-t border-edge p-3 md:flex">
@@ -123,18 +134,25 @@ export default function PlayerShell({
         </div>
       </nav>
       {/* Chaque page choisit sa propre largeur (retour utilisateur, suite) :
-          Personnage/Fiche/Notes se centrent (confort de lecture du wiki
-          public, `BookSkin.tsx`), Wiki/Regles gerent eux-memes leur propre
-          disposition a deux volets (sommaire etroit + fiche centrale) et
-          ont donc besoin de toute la largeur disponible ici. */}
+          Personnage/Fiche se centrent (confort de lecture du wiki public,
+          `BookSkin.tsx`), Wiki/Regles/Notes gerent eux-memes leur propre
+          disposition (respectivement sommaire etroit + fiche centrale, et
+          arbre + page + compagnon pour le cahier, V2.1-2) et ont donc
+          besoin de toute la largeur disponible ici. */}
       <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">{children}</div>
     </div>
   );
 }
 
-/** Icones minimales en SVG (pas de dependance a une police d'icones cote app) — cinq suffisent, jamais un jeu d'icones complet pour cette coquille. */
+/**
+ * Icones minimales en SVG (pas de dependance a une police d'icones cote app)
+ * — cinq suffisent, jamais un jeu d'icones complet pour cette coquille.
+ * `width`/`height` a 100% (jamais un nombre de pixels fixe) : la taille
+ * reelle vient du conteneur `clamp(...)` pose par l'appelant
+ * (`PlayerShell.tsx`), pour retrecir avec la hauteur d'ecran disponible.
+ */
 function Icon({ name }: { name: string }) {
-  const common = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8 } as const;
+  const common = { width: "100%", height: "100%", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8 } as const;
   switch (name) {
     case "user":
       return (

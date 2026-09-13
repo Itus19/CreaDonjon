@@ -205,12 +205,17 @@ export async function getPlayerEntityDetail(
       b.blockType === "timeline" ||
       (b.blockType === "personality" && (b.personalityEvents?.length ?? 0) > 0) ||
       (b.blockType === "worldview" && (b.personalityEvents?.length ?? 0) > 0) ||
-      (b.blockType === "relationship" && (b.relationshipEvents?.length ?? 0) > 0)
+      (b.blockType === "relationship" && (b.relationshipEvents?.length ?? 0) > 0) ||
+      b.blockType === "session_journal_meta"
   );
   const timelineCalendar = hasDateFormattingBlock ? await getCalendar(supabase, worldId) : null;
   const blocksWithTimelineCalendar = blocksWithRelationsGraph.map((block) =>
     timelineCalendar &&
-    (block.blockType === "timeline" || block.blockType === "personality" || block.blockType === "worldview" || block.blockType === "relationship")
+    (block.blockType === "timeline" ||
+      block.blockType === "personality" ||
+      block.blockType === "worldview" ||
+      block.blockType === "relationship" ||
+      block.blockType === "session_journal_meta")
       ? { ...block, timelineCalendar }
       : block
   );

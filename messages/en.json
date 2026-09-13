@@ -15,6 +15,7 @@
     "rechercher": "Search",
     "paletteDeCommandes": "Command palette",
     "kindLabels": {
+      "session_journal": "Session journal",
       "character": "Characters",
       "pj": "PCs",
       "pnj": "NPCs",
@@ -215,17 +216,17 @@
     "gestionCampagne": "Campaign management",
     "journalHistorique": "History log",
     "probabilites": "Probabilities",
-    "tablesAleatoires": "Random tables",
     "rencontres": "Encounters",
     "initiative": "Initiative",
     "creationPersonnage": "Character creation",
-    "calendrier": "Calendar",
+    "calendrier": "In-game calendar",
     "personnalisation": "Personalization",
     "reglesActives": "Active rules",
     "publication": "Publishing",
     "spikeSolo": "Solo spike (V2-S1)",
     "blocNotes": "Notes",
-    "bientot": "Coming soon"
+    "calendrierReel": "Real calendar",
+    "livreDeSessions": "Session journal"
   },
   "settings": {
     "theme": {

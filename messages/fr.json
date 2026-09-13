@@ -16,6 +16,7 @@
     "rechercher": "Rechercher",
     "paletteDeCommandes": "Palette de commandes",
     "kindLabels": {
+      "session_journal": "Livre de sessions",
       "character": "Personnages",
       "pj": "PJ",
       "pnj": "PNJ",
@@ -216,17 +217,17 @@
     "gestionCampagne": "Gestion de campagne",
     "journalHistorique": "Journal d'historique",
     "probabilites": "Probabilités",
-    "tablesAleatoires": "Tables aléatoires",
     "rencontres": "Rencontres",
     "initiative": "Initiative",
     "creationPersonnage": "Création de personnage",
-    "calendrier": "Calendrier",
+    "calendrier": "Calendrier ingame",
     "personnalisation": "Personnalisation",
     "reglesActives": "Règles actives",
     "publication": "Publication",
     "spikeSolo": "Spike solo (V2-S1)",
     "blocNotes": "Bloc-notes",
-    "bientot": "Bientôt"
+    "calendrierReel": "Calendrier réel",
+    "livreDeSessions": "Livre de sessions"
   },
   "settings": {
     "theme": {

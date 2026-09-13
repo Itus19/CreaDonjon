@@ -4,6 +4,7 @@ import Dropdown from "@/components/shared/Dropdown";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import { DATE_PRECISIONS, type DatePrecision, type GameDate } from "@/src/core/calendar/types";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
+import { weekdayNameForDate } from "@/src/core/calendar/weekday";
 import Checkbox from "@/components/shared/Checkbox";
 
 const PRECISION_LABELS_FR: Record<DatePrecision, string> = {
@@ -38,6 +39,7 @@ export default function GameDateInput({
   const showMonth = value.precision === "day" || value.precision === "month";
   const showDay = value.precision === "day";
   const maxDay = calendar.months[(value.month ?? 1) - 1]?.days ?? 31;
+  const weekdayName = weekdayNameForDate(value, calendar);
 
   function set(patch: Partial<GameDate>) {
     onChange({ ...value, ...patch });
@@ -106,7 +108,10 @@ export default function GameDateInput({
         className="rounded border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none"
       />
 
-      <span className="text-[10px] text-ink-muted">Affiché : {formatGameDate(value, calendar)}</span>
+      <span className="text-[10px] text-ink-muted">
+        Affiché : {weekdayName ? `${weekdayName}, ` : ""}
+        {formatGameDate(value, calendar)}
+      </span>
     </div>
   );
 }

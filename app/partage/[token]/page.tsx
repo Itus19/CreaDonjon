@@ -1,9 +1,10 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   resolveShareLink,
   getPublicEntityTree,
   getPublicCampaignName,
   getPublicWikiWelcomeMessage,
+  getLatestPublicSessionJournalSlug,
 } from "@/src/server/services/publicShare";
 import { hasVerifiedSharePassword } from "./passwordActions";
 import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
@@ -28,6 +29,9 @@ export default async function ShareLinkWorldPage({
   if (resolved.passwordHash && !(await hasVerifiedSharePassword(token))) {
     return <SharePasswordGate token={token} worldName={resolved.worldName} />;
   }
+
+  const latestSlug = await getLatestPublicSessionJournalSlug(resolved.worldId);
+  if (latestSlug) redirect(`/partage/${token}/${latestSlug}`);
 
   const [tree, campaignName, welcomeMessage] = await Promise.all([
     getPublicEntityTree(resolved.worldId),

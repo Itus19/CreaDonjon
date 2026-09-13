@@ -1,8 +1,8 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
-import { getPublicEntityTree } from "@/src/server/services/publicShare";
+import { getPublicEntityTree, getLatestPublicSessionJournalSlug } from "@/src/server/services/publicShare";
 import BookSkin from "@/components/entities/public/BookSkin";
 
 /**
@@ -17,6 +17,9 @@ export default async function ApercuWorldPage({ params }: { params: Promise<{ wo
   const supabase = await createClient();
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
+
+  const latestSlug = await getLatestPublicSessionJournalSlug(world.id);
+  if (latestSlug) redirect(`/m/${world.slug}/apercu/${latestSlug}`);
 
   const [tree, campaigns] = await Promise.all([getPublicEntityTree(world.id), listCampaigns(supabase, world.id)]);
   const title = campaigns[0]?.name ?? world.name;
