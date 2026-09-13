@@ -14,7 +14,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-1 | Liens automatiques entre les fiches | `L` | **Fait** (13 septembre) — les 7 étapes, vérifiées en direct sur la prod |
 | V2.1-2 | Outil de notes et de préparation de séance | `L` | **Fait** (13 septembre) — piste "un seul compagnon" (mixte A×C) |
 | V2.1-3 | Livre de séance en première page du wiki | `M` | La donnée existe (`sessions.summary`), rien ne l'affiche ni ne l'édite |
-| V2.1-4 | Calendrier réel de planification des séances | `M` | N'existe pas — à ne pas confondre avec le calendrier FICTIF déjà construit (V2-H2) |
+| V2.1-4 | Calendrier réel de planification des séances | `L` | **Fait** (13 septembre) — piste D (disponibilités libres), variante F (classement) |
 | V2.1-5 | Un seul bloc Personnalité/Convictions par fiche | `S` | Aucune contrainte aujourd'hui — même bug de classe déjà vu et corrigé pour les Générateurs de MJ |
 
 ---
@@ -473,36 +473,113 @@ narratifs rédigés à la main : les deux ne se remplacent pas.
 
 ---
 
-## V2.1-4 — Calendrier réel de planification des séances · `M`
+## V2.1-4 — Calendrier réel de planification des séances · `L` — fait
 
 ### Constat
 
-Rien n'existe pour planifier une **date réelle** de séance. À ne pas
+Rien n'existait pour planifier une **date réelle** de séance. À ne pas
 confondre avec le "Calendrier" déjà présent dans les outils MJ (V2-H2),
-qui gère exclusivement les dates **fictives** du monde (calendrier de
-jeu) — un second mécanisme, sans rapport avec le premier.
+qui gère exclusivement les dates **fictives** du monde — renommé
+**"Calendrier ingame"** au moment de ce ticket pour que la distinction
+soit visible dans la sidebar elle-même, pas seulement dans la tête de
+l'auteur. Le nouvel outil s'appelle **"Calendrier réel"**.
+
+### Disposition retenue — piste D (disponibilités libres), variante F
+
+Quatre pistes esquissées pour le mécanisme de proposition de date (A —
+créneaux + vote, B — une date à la fois, C — Doodle complet, D —
+disponibilités libres façon agenda partagé), puis quatre variantes une
+fois D retenue pour la lecture côté MJ (E — calendrier + compteur, F —
+classement des meilleurs jours, G — calendrier + tableau, H — un mois à
+la fois guidé). **F retenue**, avec trois raffinements du même jour :
+
+- **Chaque joueuse marque librement ses disponibilités sur un an** — un
+  calendrier mensuel navigable (`AvailabilityCalendar.tsx`), jamais une
+  liste de créneaux proposés par le MJ à deviner à l'avance.
+- **Une plage horaire par jour, pas juste une case cochée** (retour
+  utilisateur : "c'est les matchs jour+plage horaire+durée qui doivent se
+  mettre en avant"). Le MJ voit, jour par jour, l'intersection réelle des
+  horaires ("session complète" si elle couvre la durée visée, "session
+  raccourcie (Xh)" avec l'horaire réel sinon, ex. un décalage d'1h entre
+  deux joueuses) — calculé et testé en pur
+  (`src/core/scheduling/overlap.ts`, 13 tests : intersection de plages,
+  classification, classement par catégorie puis effectif puis durée).
+- **Durée de session visée réglable par table**, jamais figée à 5h
+  (`campaigns.target_session_minutes`).
+- **Aucune limite au nombre de séances confirmées par mois** (retour
+  utilisateur : "je dois pouvoir mettre deux sessions dans le même mois")
+  — confirmer un jour ne touche à aucun autre.
+- **Réglage manuel** : le MJ pose une date/heure directement dans le même
+  outil, sans dépendre du classement de disponibilités.
+
+### Modèle de données — table dédiée, jamais `sessions`
+
+Deux nouvelles tables (`real_session_availabilities`,
+`real_sessions`) plutôt qu'une extension de `sessions` (jeu réellement
+joué, rouverte automatiquement par `getOrOpenSessionForCampaign` dès
+qu'une action de jeu a lieu) : une séance planifiée dans le futur avec
+cette table serait à tort prise pour "la session en cours" si quelqu'un
+joue avant la date prévue. Le futur Livre de séance (V2.1-3) décidera
+comment rapprocher les deux quand il sera écrit — l'historique des
+parties jouées vit pour l'instant dans "Calendrier réel" lui-même
+(réservoir déjà prêt à être consulté).
 
 ### Étapes
 
-1. **Donnée** — une date/heure réelle, un titre optionnel, un statut
-   (prévue/confirmée/annulée), par campagne (nouvelle table légère ou
-   extension de `sessions`).
-2. **Écran calendrier côté MJ** — poser/modifier/annuler la prochaine
-   séance. Une simple liste des prochaines dates suffit pour cette
-   première version ; un vrai calendrier mensuel visuel seulement si le
-   besoin s'en fait sentir après usage réel.
-3. **Encart "Prochaine séance"** réutilisable (date + décompte), posé aux
-   endroits demandés — accueil MJ, accueil joueur, et le Livre de séance
-   (V2.1-3) une fois construit.
-4. **Hors périmètre pour cette première passe** : notifications/rappels
-   (email, push) — le projet n'a aucune infrastructure de ce type
-   aujourd'hui, à ne pas construire sans besoin confirmé.
+1. **Fait — Modèle de données** : `real_session_availabilities` (une
+   plage par campagne/joueuse/jour, écriture réservée à soi-même),
+   `real_sessions` (une ligne par séance confirmée, écriture réservée au
+   MJ), `campaigns.target_session_minutes` — RLS sur le même motif que
+   `combats` (lecture ouverte à tout membre du monde, rien de sensible
+   entre coéquipières).
+2. **Fait — "Calendrier ingame" renommé**, distinct de "Calendrier réel"
+   dans la sidebar MJ (ordre alphabétique inchangé).
+3. **Fait — Jours de la semaine renommables**, en passant (retour
+   utilisateur), même motif que les mois déjà éditables : `daysPerWeek`
+   (un simple compte, jamais utilisé pour un calcul réel) remplacé par
+   `weekdays: {name}[]`. Calendrier par défaut : la décade du calendrier
+   républicain français (Primidi…Décadi, dix jours) plutôt que la semaine
+   grégorienne.
+4. **Fait — Calendrier de disponibilités côté joueuse** — mensuel,
+   navigable sur 12 mois, une plage horaire par jour, bande des mois déjà
+   remplis pour naviguer sans tout revisiter.
+5. **Fait — Classement MJ** — jours du mois triés (complet > raccourci >
+   aucun chevauchement, puis effectif, puis durée), roster déplié au clic
+   (qui a répondu quoi, identifié par son PJ comme partout ailleurs dans
+   l'app — jamais un nom de compte), bouton "Confirmer".
+6. **Fait — Réglage manuel, séances à venir (annulables), historique.**
+7. **Fait — Bannière verticale côté joueuse** : "Prochaine session —
+   {jour} {date}" une fois confirmée, sinon un bouton "Renseigner mes
+   disponibilités" qui ouvre directement le calendrier de saisie.
+
+Portée volontairement pas couverte, non demandée : notifications/rappels
+(email, push) — aucune infrastructure de ce type dans le projet
+aujourd'hui.
 
 ### Critères
 
-- [ ] Le MJ pose une date de prochaine séance.
-- [ ] Elle s'affiche correctement côté joueur.
-- [ ] La modifier ou l'annuler se répercute partout où elle est affichée.
+- [x] Le MJ pose une date de prochaine séance, depuis le classement de
+      disponibilités ou manuellement.
+- [x] Elle s'affiche correctement côté joueuse (bannière verticale), et
+      une fois sa date passée la suivante prend sa place naturellement.
+- [x] L'annuler la retire partout où elle est affichée.
+- [x] Une joueuse renseigne ses disponibilités (jour + plage horaire) sur
+      un an à l'avance.
+- [x] Le MJ voit, par jour et par mois, le nombre de personnes dispo et le
+      chevauchement horaire réel — "session complète" ou "raccourcie" avec
+      l'horaire exact.
+- [x] Deux séances peuvent être confirmées dans le même mois.
+- [x] Historique des parties jouées consultable dans le même outil.
+
+`npm run typecheck && npm run lint` passent ; `npm run test:core` passe
+(798 tests, dont les 13 nouveaux de `overlap.test.ts`). Vérifié en direct
+sur la prod : classement affichant correctement "session raccourcie (4h)"
+pour une seule joueuse disponible 19h–23h contre une cible de 5h,
+confirmation créant la séance, bannière joueuse affichant "Prochaine
+session — samedi 26 septembre 2026", annulation et effacement testés.
+Jours de la semaine du calendrier ingame vérifiés (décade par défaut,
+renommage testé sans être enregistré pour ne pas modifier les données
+réelles du monde).
 
 ---
 
