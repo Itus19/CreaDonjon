@@ -57,6 +57,29 @@ export default function CalendarSettingsPanel({
     });
   }
 
+  function updateWeekday(index: number, name: string) {
+    setSaved(false);
+    setCalendar((c) => ({ ...c, weekdays: c.weekdays.map((w, i) => (i === index ? { name } : w)) }));
+  }
+  function addWeekday() {
+    setSaved(false);
+    setCalendar((c) => ({ ...c, weekdays: [...c.weekdays, { name: `Jour ${c.weekdays.length + 1}` }] }));
+  }
+  function removeWeekday(index: number) {
+    setSaved(false);
+    setCalendar((c) => ({ ...c, weekdays: c.weekdays.filter((_, i) => i !== index) }));
+  }
+  function moveWeekday(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= calendar.weekdays.length) return;
+    setSaved(false);
+    setCalendar((c) => {
+      const weekdays = [...c.weekdays];
+      [weekdays[index], weekdays[target]] = [weekdays[target], weekdays[index]];
+      return { ...c, weekdays };
+    });
+  }
+
   function updateEra(index: number, patch: Partial<{ name: string; startYear: number }>) {
     setSaved(false);
     setCalendar((c) => ({ ...c, eras: c.eras.map((e, i) => (i === index ? { ...e, ...patch } : e)) }));
@@ -91,10 +114,10 @@ export default function CalendarSettingsPanel({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-lg font-semibold text-ink">Calendrier</h2>
+        <h2 className="text-lg font-semibold text-ink">Calendrier ingame</h2>
         <p className="text-sm text-ink-muted">
-          Un seul calendrier par monde : noms des mois, jours par mois, jours par semaine, ères nommées. Utilisé par
-          la chronologie et les dates de jeu du monde.
+          Un seul calendrier par monde : noms des mois, jours par mois, noms des jours de la semaine, ères nommées.
+          Utilisé par la chronologie et les dates de jeu du monde.
         </p>
       </div>
 
@@ -131,18 +154,54 @@ export default function CalendarSettingsPanel({
       </div>
 
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Jours par semaine</span>
-        <input
-          type="number"
-          min={1}
-          max={30}
-          value={calendar.daysPerWeek}
-          onChange={(e) => {
-            setSaved(false);
-            setCalendar((c) => ({ ...c, daysPerWeek: Number(e.target.value) }));
-          }}
-          className="w-24 rounded border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-        />
+        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+          Jours de la semaine (dans l&apos;ordre)
+        </span>
+        <div className="flex flex-col gap-1.5">
+          {calendar.weekdays.map((weekday, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                value={weekday.name}
+                onChange={(e) => updateWeekday(i, e.target.value)}
+                placeholder="Nom du jour"
+                className="min-w-[140px] flex-1 rounded border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => moveWeekday(i, -1)}
+                disabled={i === 0}
+                className="text-xs text-ink-muted hover:text-ink disabled:opacity-30"
+                aria-label="Monter"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                onClick={() => moveWeekday(i, 1)}
+                disabled={i === calendar.weekdays.length - 1}
+                className="text-xs text-ink-muted hover:text-ink disabled:opacity-30"
+                aria-label="Descendre"
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                onClick={() => removeWeekday(i)}
+                disabled={calendar.weekdays.length <= 1}
+                className="text-xs text-danger hover:underline disabled:opacity-30"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={addWeekday}
+          className="self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+        >
+          + Ajouter un jour
+        </button>
       </div>
 
       <div className="flex flex-col gap-2">

@@ -6,7 +6,7 @@ import type { CalendarConfig } from "./types";
 /** Ticket V2-H2, critere explicite : "Le tri et le filtrage fonctionnent avec un calendrier a treize mois de vingt-huit jours." */
 const THIRTEEN_MONTHS: CalendarConfig = {
   months: Array.from({ length: 13 }, (_, i) => ({ name: `Mois ${i + 1}`, days: 28 })),
-  daysPerWeek: 7,
+  weekdays: [],
   eras: [],
   currentDate: null,
 };

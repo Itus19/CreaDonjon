@@ -18,7 +18,7 @@ export default async function MjCalendrierPage({
 
   return (
     <>
-      <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "calendrier" }} name="Calendrier" badge="" homeHref={`/m/${worldSlug}/mj/calendrier`} />
+      <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "calendrier" }} name="Calendrier ingame" badge="" homeHref={`/m/${worldSlug}/mj/calendrier`} />
       <CalendarSettingsPanel worldSlug={worldSlug} initialCalendar={calendar} />
     </>
   );

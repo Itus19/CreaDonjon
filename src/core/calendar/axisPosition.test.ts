@@ -5,7 +5,7 @@ import type { CalendarConfig } from "./types";
 
 const THIRTEEN_MONTHS: CalendarConfig = {
   months: Array.from({ length: 13 }, (_, i) => ({ name: `Mois ${i + 1}`, days: 28 })),
-  daysPerWeek: 7,
+  weekdays: [],
   eras: [],
   currentDate: null,
 };

@@ -10,6 +10,11 @@ export type CalendarMonth = {
   days: number;
 };
 
+/** Un jour de la semaine nomme (V2.1-4, retour utilisateur : "renommer les jours de la semaine comme pour les mois") — le nombre de jours par semaine EST la longueur de ce tableau, remplace l'ancien `daysPerWeek` (un simple compte, jamais utilise pour un calcul reel). */
+export type CalendarWeekday = {
+  name: string;
+};
+
 /** Une ere nommee commence a `startYear` (inclus) et dure jusqu'a la suivante (annees croissantes) — sert au regroupement `group_by: "era"` et a l'affichage en precision `era`. */
 export type CalendarEra = {
   name: string;
@@ -37,7 +42,7 @@ export type GameDate = {
 
 export type CalendarConfig = {
   months: CalendarMonth[];
-  daysPerWeek: number;
+  weekdays: CalendarWeekday[];
   eras: CalendarEra[];
   /** Jour actuel de la campagne (retour utilisateur, V2-M13 : "renseigne automatiquement le jour ingame actuel") — `null` tant que le MJ ne l'a jamais regle. Un seul par monde, comme le reste du calendrier ("un monde = une campagne"). */
   currentDate: GameDate | null;
