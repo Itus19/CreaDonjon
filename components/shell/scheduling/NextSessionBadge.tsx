@@ -41,7 +41,7 @@ export default function NextSessionBadge({ worldSlug }: { worldSlug: string }) {
     <>
       {data.session ? (
         <span
-          className="border-t border-edge py-2 font-mono text-[10px] text-accent"
+          className="border-t border-edge py-2 font-mono text-[clamp(7px,1.15vh,10px)] text-accent"
           style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
         >
           Prochaine session — {formatSessionDate(data.session.scheduled_date)}
@@ -50,7 +50,7 @@ export default function NextSessionBadge({ worldSlug }: { worldSlug: string }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-md bg-accent px-1 py-2 font-mono text-[10px] text-accent-ink hover:bg-accent-hover"
+          className="rounded-md bg-accent px-1 py-2 font-mono text-[clamp(7px,1.15vh,10px)] text-accent-ink hover:bg-accent-hover"
           style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
         >
           Renseigner mes disponibilités
