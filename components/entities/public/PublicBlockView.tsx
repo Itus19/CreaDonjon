@@ -73,6 +73,13 @@ function renderNode(
           </Link>
         );
       }
+      // Fiche supprimee, ou masquee a CE viewer — lien brise visible plutot
+      // que retire silencieusement (specs/wiki-liens-et-personnages.md §A1).
+      return (
+        <span key={key} className="rich-ref-mention rich-ref-broken" title="Fiche introuvable ou non visible">
+          {node.label}
+        </span>
+      );
     }
     if (node.kind === "rule" && node.key && ruleHrefBase) {
       return (

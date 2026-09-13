@@ -203,6 +203,11 @@ export default function RichTextEditor({
   const selection = editor.state.selection;
   const isRefSelected = selection instanceof NodeSelection && selection.node.type.name === "refMention";
   const hasTextSelection = !selection.empty && !isRefSelected;
+  /** V2.1-1, liens brises (specs/wiki-liens-et-personnages.md §A1) : une fiche liee peut avoir ete supprimee entre-temps — jamais verifie pour les regles (leur cle reste valide tant que la regle existe, hors perimetre de ce controle rapide). */
+  const selectedRefBroken =
+    isRefSelected &&
+    (selection as NodeSelection).node.attrs.kind === "entity" &&
+    !entitySlugById((selection as NodeSelection).node.attrs.id as string | null);
 
   function linkSelectionTo(target: RefLinkTarget) {
     const { from, to } = editor!.state.selection;
@@ -391,15 +396,21 @@ export default function RichTextEditor({
       >
         {worldSlug && otherEntities && isRefSelected && (
           <>
-            <button
-              type="button"
-              onClick={openRefMention}
-              aria-label="Ouvrir la fiche liée"
-              title="Ouvrir la fiche liée"
-              className="rounded px-2 py-1 text-xs text-ink transition-colors hover:bg-panel"
-            >
-              Ouvrir
-            </button>
+            {selectedRefBroken ? (
+              <span className="rounded px-2 py-1 text-xs text-danger" title="La fiche liée n'existe plus">
+                Lien brisé
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={openRefMention}
+                aria-label="Ouvrir la fiche liée"
+                title="Ouvrir la fiche liée"
+                className="rounded px-2 py-1 text-xs text-ink transition-colors hover:bg-panel"
+              >
+                Ouvrir
+              </button>
+            )}
             <button
               type="button"
               onClick={unlinkRefMention}
