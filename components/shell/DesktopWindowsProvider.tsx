@@ -21,7 +21,19 @@ import type { MjToolWindowData } from "./mjToolWindows";
 const DEFAULT_WIDTH = 860;
 const DEFAULT_HEIGHT = 760;
 
-function defaultGeometry(index: number): WindowGeometry {
+/**
+ * Le cahier de notes (V2.1-2 suite, retour utilisateur : "le visuel [...]
+ * n'est [...] pas [...] satisfaisant" en comparaison de la coquille joueur,
+ * qui a toute la largeur du viewport) s'ouvre maximisee par defaut — ses
+ * deux panneaux cote a cote ont besoin de plus que du 860px par defaut.
+ * Cas isole plutot qu'un changement du defaut global : les onze autres
+ * outils MJ n'ont jamais demande plus de place, changer leur taille par
+ * defaut serait une regression non sollicitee pour eux.
+ */
+function defaultGeometry(index: number, ref: WindowRef): WindowGeometry {
+  if (ref.kind === "mj" && ref.key === "notes") {
+    return { x: 0, y: 0, width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, isMaximized: true };
+  }
   const offset = (index % 6) * 28;
   return { x: 40 + offset, y: 24 + offset, width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, isMaximized: false };
 }
@@ -169,7 +181,7 @@ export default function DesktopWindowsProvider({
       setGeometries((prev) => {
         const next = { ...prev };
         missing.forEach((ref, index) => {
-          next[refId(ref)] = defaultGeometry(Object.keys(prev).length + index);
+          next[refId(ref)] = defaultGeometry(Object.keys(prev).length + index, ref);
         });
         return next;
       });
