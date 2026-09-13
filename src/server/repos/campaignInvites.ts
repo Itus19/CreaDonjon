@@ -95,15 +95,27 @@ export async function resetCampaignInviteToken(
 }
 
 /** V2-M4 (suite) : « mon lien », pour l'ecran de l'ami invite lui-meme — jamais la liste d'un autre (`campaign_invites_select_own`, RLS). */
+/**
+ * Corrige un bug reel (retour utilisateur : 500 "JSON object requested,
+ * multiple (or no) rows returned" sur `/api/my-invite`, systematique pour
+ * tout compte ayant reclame plus d'un lien) : `.maybeSingle()` accepte zero
+ * ligne mais rejette toujours PLUSIEURS lignes — or rien n'empeche un
+ * compte de rejoindre plusieurs campagnes par invitation (deja observe en
+ * test). Le PLUS ANCIEN lien reclame (`created_at` croissant) est celui qui
+ * a provisionne ce compte (`docs/adr/0015-provisioning-comptes-invites.md`)
+ * — c'est celui-la que cet ecran en libre-service doit gerer, jamais une
+ * erreur pour les liens suivants.
+ */
 export async function getOwnCampaignInvite(supabase: TypedClient, userId: string): Promise<CampaignInviteRow | null> {
   const { data, error } = await supabase
     .from("campaign_invites")
     .select(CAMPAIGN_INVITE_COLUMNS)
     .eq("claimed_by_user_id", userId)
     .is("revoked_at", null)
-    .maybeSingle();
+    .order("created_at", { ascending: true })
+    .limit(1);
   if (error) throw new Error(error.message);
-  return data;
+  return data[0] ?? null;
 }
 
 export async function revokeCampaignInvite(supabase: TypedClient, id: string): Promise<{ updated: boolean }> {
