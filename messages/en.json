@@ -223,7 +223,8 @@
     "reglesActives": "Active rules",
     "publication": "Publishing",
     "spikeSolo": "Solo spike (V2-S1)",
-    "blocNotes": "Notes"
+    "blocNotes": "Notes",
+    "calendrierReel": "Real calendar"
   },
   "settings": {
     "theme": {

@@ -76,6 +76,7 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
   const tools: { key: MjToolKey; label: string }[] = [
     { key: "notes", label: t("blocNotes") },
     { key: "calendrier", label: t("calendrier") },
+    { key: "calendrier-reel", label: t("calendrierReel") },
     { key: "chat", label: t("chat") },
     { key: "creation-personnage", label: t("creationPersonnage") },
     { key: "generateurs", label: t("generateurs") },

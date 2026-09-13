@@ -12,6 +12,7 @@ import PersonnalisationPanel from "./PersonnalisationPanel";
 import PublicationPanel from "./PublicationPanel";
 import GeneratorToolPanel from "./GeneratorToolPanel";
 import NotebookWorkspace from "./notebook/NotebookWorkspace";
+import SchedulingMjPanel from "./scheduling/SchedulingMjPanel";
 import RulesetSelector from "@/components/rules/RulesetSelector";
 import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
 
@@ -186,6 +187,14 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
           <div className="min-h-0 flex-1">
             <NotebookWorkspace worldSlug={worldSlug} initial={data} isGm sessionPrepTemplate />
           </div>
+        </div>
+      );
+
+    case "calendrier-reel":
+      return (
+        <div className="flex flex-col gap-4">
+          <h1 className="block-title text-base">Calendrier réel</h1>
+          {data.campaignId ? <SchedulingMjPanel campaignId={data.campaignId} /> : <p className="text-sm italic text-ink-muted">Ce monde n&apos;a pas encore de campagne.</p>}
         </div>
       );
   }

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import RadioWidget from "./RadioWidget";
 import { useChatUnread } from "./useChatUnread";
+import NextSessionBadge from "./scheduling/NextSessionBadge";
 
 interface Destination {
   href: string;
@@ -113,6 +114,10 @@ export default function PlayerShell({
               </Link>
             );
           })}
+        </div>
+
+        <div className="hidden shrink-0 md:flex">
+          <NextSessionBadge worldSlug={worldSlug} />
         </div>
 
         <div className="hidden shrink-0 flex-col items-center gap-2 border-t border-edge p-3 md:flex">

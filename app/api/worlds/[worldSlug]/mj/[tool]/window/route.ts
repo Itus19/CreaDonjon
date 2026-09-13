@@ -6,7 +6,7 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { listEntities, ensureGeneratorToolsEntity } from "@/src/server/services/entities";
 import { resolveGeneratorToolsForEntity } from "@/src/server/services/generators";
-import { listCampaigns, getCampaignCharacters } from "@/src/server/services/campaigns";
+import { listCampaigns, getCampaignCharacters, resolveCampaignId } from "@/src/server/services/campaigns";
 import { isSuperadmin } from "@/src/server/services/account";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { getPartySkillProbabilities } from "@/src/server/services/partyProbabilities";
@@ -217,6 +217,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     case "notes": {
       const notebook = await getOrCreateNotebook(supabase, { worldId: world.id, userId: user.id });
       data = { tool, ...notebook };
+      break;
+    }
+
+    case "calendrier-reel": {
+      const campaignId = await resolveCampaignId(supabase, world.id);
+      data = { tool, campaignId };
       break;
     }
   }
