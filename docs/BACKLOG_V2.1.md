@@ -18,6 +18,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-4 | Calendrier réel de planification des séances | `L` | **Fait** (13 septembre) — piste D (disponibilités libres), variante F (classement) |
 | V2.1-5 | Un seul bloc Personnalité/Convictions par fiche | `S` | Aucune contrainte aujourd'hui — même bug de classe déjà vu et corrigé pour les Générateurs de MJ |
 | V2.1-6 | Bloc musique : ambiance sonore sur le wiki public | `L` | **En cours** (14 septembre) — le bloc `music` n'existe que dans l'éditeur, il n'affiche qu'un cadre vide sur les pages de lecture. Deux lots : bloc invisible + bouton discret + lecture à la visite, puis lecteur YouTube piloté (fondu, enchaînement, bornes) |
+| V2.1-7 | Une modification qui ne s'enregistre pas, et des contrôles anonymes | `M` | **Fait** (14 septembre) — né de V2.1-6 : une case cochée se perdait en silence, deux fois en un jour. Troisième occurrence du même défaut, donc traité à la cause (ADR 0023). Corrige au passage le nom accessible des cases et des listes |
 
 ---
 
@@ -981,6 +982,18 @@ Le geste étant capturé avant les gestionnaires de la page, un premier clic
 porté sur le bouton lui-même appelle `play` deux fois avec la même clé — ce qui
 ne relance rien, la source étant identique.
 
+#### Noté au passage, hors périmètre — `npm run lint` cassé par un worktree
+
+`npm run lint` échouait dès qu'une session d'agent laissait un worktree sous
+`.claude/worktrees/`. Git ignore ce chemin (`.git/info/exclude`), mais ESLint
+parcourt le disque, pas l'index : il vérifiait le projet une fois de plus par
+worktree ouvert. Le symptôme était trompeur — une violation du confinement du
+client service-role — alors que le fichier fautif était le fichier confiné
+lui-même, que la règle reconnaît par son chemin et que le préfixe de worktree
+rendait méconnaissable. Corrigé par `.claude/worktrees/**` dans le
+`globalIgnores` (et non `.claude/**` : un script ou une config JS ailleurs sous
+`.claude/` doit rester vérifié).
+
 #### Noté au passage, hors périmètre — un test d'intégration fragile
 
 `homebrewWeapon.integration.test.ts` a échoué une fois sur « Test timed out in
@@ -1078,11 +1091,12 @@ ticket, pas ici.
       piste YouTube, les deux curseurs de fondu en bas du bloc.
 - [ ] La lecture en boucle rejoue le bloc arrivé au bout — **implémentée et
       couverte par 8 tests unitaires** (`nextTrack.test.ts`), toujours pas
-      constatée en navigateur. L'auteur a coché la case, mais la donnée servie
-      à la page dit encore `"loop":false` : l'éditeur enregistre un bloc **à la
-      perte du focus** (`handleBlockBlur`, `EntityBlocks.tsx`), et cocher puis
-      quitter la page sans cliquer ailleurs dans la fiche perd la
-      modification. Voir la note de fragilité ci-dessous.
+      constatée à l'oreille. Le blocage d'origine est levé : la case ne
+      s'enregistrait pas, ce que V2.1-7 a corrigé, et `loop: true` est
+      désormais bien en base (vérifié après rechargement). Reste à écouter un
+      bloc arriver au bout et repartir — la piste la plus rapide est celle
+      déjà en place sur le Prologue : une borne `Fin` courte sur la dernière
+      piste évite d'attendre la fin du morceau.
 - [x] **En passant d'une fiche à une autre, les deux musiques se
       chevauchent.** Mesuré du Prologue vers « Brennan Torram » :
 
@@ -1126,15 +1140,17 @@ lui-même.
 Aucune de ces trois erreurs n'était détectable sans navigateur : `typecheck`,
 `lint` et 870 tests passaient à chaque fois.
 
-#### Fragilité notée au passage — l'enregistrement à la perte du focus
+#### Fragilité trouvée au passage — l'enregistrement à la perte du focus
 
 Un bloc s'enregistre quand le focus le quitte (`handleBlockBlur`,
 `EntityBlocks.tsx`). Pour un champ de texte, on en sort naturellement ; pour
 une **case à cocher**, le geste naturel est de cocher puis de partir — et la
 modification est perdue sans le moindre signe. Le piège a mordu deux fois sur
 ce seul ticket, l'assistant puis l'auteur, à chaque fois sur une case du bloc
-musique. Ce n'est pas propre à ce bloc et ça déborde de ce ticket : à traiter
-à part.
+musique.
+
+Ce n'est pas propre à ce bloc et ça débordait de ce ticket : **traité à part,
+en V2.1-7**.
 
 #### Un plantage trouvé en navigateur, invisible autrement
 
@@ -1153,6 +1169,161 @@ Rien dans les types ni dans les tests ne pouvait attraper ça : `typecheck`,
 
 ---
 
+## V2.1-7 — Une modification qui ne s'enregistre pas, et des contrôles anonymes · `M` — fait
+
+### Constat
+
+Né de V2.1-6, et de deux pertes de données à quelques heures d'intervalle : une
+case à cocher du bloc musique cochée, la page quittée, la modification perdue
+**sans le moindre signe** — une fois par l'assistant, une fois par l'auteur.
+Dans les deux cas la case paraissait cochée à l'écran alors que la donnée
+servie au wiki public disait encore `false`.
+
+Un bloc ne s'enregistre qu'à la perte du focus (`handleBlockBlur`,
+`EntityBlocks.tsx`). Cette règle épouse bien la saisie de texte — on sort d'un
+champ pour aller ailleurs — et mal tout le reste : avec une case à cocher ou
+une liste déroulante, le geste naturel est d'agir **puis de partir**.
+
+**Ce défaut avait déjà mordu deux fois avant**, chaque fois corrigé sur place :
+
+1. **Bloc carte** (Lot I) — un téléversement « visible à l'écran, jamais
+   persisté ». Corrigé par une prop `onSaveNow` passée de main en main.
+2. **Listes déroulantes** — le menu vit dans un portail hors de la carte du
+   bloc, donc cliquer une option faisait sortir le focus *avant* la sélection,
+   et le blur enregistrait l'état précédent. Corrigé par un `onMouseDown`
+   préventif qui, en gardant le focus dans le bloc, a figé l'autre moitié du
+   problème.
+
+Avec la case du bloc musique, cela fait trois. La règle des trois dit qu'il est
+temps de traiter la cause au lieu du symptôme.
+
+**Découverte pendant le correctif**, et de la même famille : les cases à cocher
+n'avaient **aucun nom accessible**. Un `<label>` ne nomme que les contrôles
+natifs, et `Checkbox` est un `<span role="checkbox">` — l'envelopper n'a jamais
+suffi. Les listes déroulantes, elles, avaient un nom, mais c'était **la valeur
+choisie** : un lecteur d'écran annonçait « Public, bouton » sans jamais dire de
+quoi « Public » est la réponse.
+
+### Mesure de l'étendue, avant de choisir
+
+- **19 éditeurs de bloc**, dont **11** portent des contrôles non textuels et
+  **10** passent par le chemin fautif (seul le pointage d'un objectif de quête
+  y échappe, il a sa propre route).
+- **79 utilisations de `Dropdown`**, dont **13** sans `aria-label` — alors que
+  la charte le prescrivait depuis la V2. Mon propre relevé n'en avait trouvé
+  que 11 : les deux derniers ont été débusqués par le compilateur, ce qui est
+  exactement l'argument pour une garantie de type plutôt qu'un audit.
+
+Fait déterminant pour le choix de mécanisme : `Checkbox` et `Dropdown` sont des
+widgets ARIA maison — la charte les impose pour ne pas dépendre des contrôles
+natifs — et n'émettent donc **aucun événement `change`** qu'un conteneur
+pourrait écouter. La solution élégante était morte d'avance.
+
+### Décision
+
+`docs/adr/0023-enregistrement-des-blocs.md`, écrit avant le code : **un
+contrôle discret enregistre son bloc immédiatement, le texte garde le blur.**
+
+Un contexte minuscule (`components/shared/EditCommitContext.tsx`) porte le
+signal ; `Checkbox` et `Dropdown` le réclament, `EntityBlocks` le fournit par
+carte. **Aucun des dix éditeurs concernés n'est touché**, et hors d'un bloc le
+contexte vaut `null` — les deux composants se comportent partout ailleurs
+exactement comme avant.
+
+Options pesées puis écartées, détaillées dans l'ADR : un enregistrement différé
+sur toute modification (multiplierait les écritures pendant la frappe, alors
+que le projet a déjà touché ses quotas Supabase), un simple avertissement au
+départ de la page, un bouton « Enregistrer » par bloc.
+
+### Étapes
+
+1. **Le mécanisme d'engagement** — contexte + les deux composants partagés +
+   le fournisseur dans `EntityBlocks`. `saveBlock` fusionne les demandes d'un
+   même tour, pour qu'un éditeur qui enregistre déjà explicitement (fiche de
+   personnage, bloc carte via `onSaveNow`) n'écrive pas deux fois.
+2. **L'indicateur d'enregistrement** — l'écriture était entièrement muette, et
+   c'est ce silence qui a laissé passer trois pertes. En **deux temps** :
+   « Enregistrement… » dès le départ de la requête, « Enregistré » à son
+   arrivée, effacé sur échec. Le premier jet n'affichait qu'« Enregistré » au
+   retour — une à deux secondes après le geste, trop tard pour rassurer.
+3. **Nom accessible des cases** — le libellé visible est rendu dans un élément
+   porteur d'un identifiant, réclamé par `aria-labelledby`. Le type impose
+   qu'une case soit nommée : libellé visible **ou** `aria-label`.
+4. **Nom accessible des listes** — `aria-label` devient obligatoire par le
+   type. Les 13 appels manquants sont nommés par ce qu'ils **choisissent**,
+   jamais par ce qu'ils affichent. `RuleSelect` réclame ce nom à ses cinq
+   appelants au lieu d'en inventer un.
+5. **Revue des 65 libellés préexistants** — voir ci-dessous.
+6. **Charte** (`docs/CHARTE-UI.md` §3) — elle prescrivait la règle, elle dit
+   désormais que le type l'impose, et pourquoi le piège se voit mal.
+
+### Ce que la revue des libellés a trouvé
+
+Je cherchais des noms qui décrivent la valeur au lieu du rôle. Il n'y en avait
+qu'un. Le vrai défaut, **huit sélecteurs**, était ailleurs : un nom **statique
+dans une liste répétée**. Chaque aspiration annonçait « Horizon », chaque
+couche de carte « Visibilité de la couche », le commanditaire de quête comme
+chacun de ses objectifs « Entité liée ». Six boutons homonymes d'affilée, sans
+moyen de savoir lequel appartient à quelle ligne : le nom existait, il ne
+servait à rien.
+
+Chacun porte désormais ce qui identifie sa ligne — le texte saisi quand il
+existe, son rang à défaut. La case à cocher de chaque objectif de quête
+souffrait du même travers, trouvée à deux lignes de là.
+
+Trois autres au passage : `"Recuperation"` était le seul libellé du dépôt sans
+accents ; le choix d'un membre de catégorie s'annonçait par son propre contenu,
+identique à la valeur affichée tant que rien n'est choisi ; et `CampaignDetail`
+avait quatre sélecteurs nommés « Personnage », « Fiche » et « Joueur » **deux
+fois** sur la même page.
+
+### Critères
+
+- [x] Cocher une case enregistre le bloc **immédiatement** — vérifié en
+      navigateur : exactement **une** requête `PATCH`, tout de suite, et la
+      valeur survit à un rechargement immédiat, le scénario qui la perdait.
+- [x] Un éditeur qui enregistre déjà explicitement n'écrit pas deux fois.
+- [x] L'indicateur apparaît **dès le geste** : « Enregistrement… » à 262 ms,
+      « Enregistré » à 2 257 ms sur la même écriture, puis effacé après 2 s.
+- [x] **Sur échec, aucune réussite n'est annoncée** — éprouvé sur un `500`
+      forcé : aucun « Enregistré », seul le bandeau d'erreur, à 401 ms.
+- [x] Les cases ont un nom accessible — `aria-labelledby` résout les trois
+      cases de la fiche de test vers leur libellé visible.
+- [x] Une case sans nom **ne compile plus** — éprouvé sur un fichier témoin
+      (`TS2322`), témoin supprimé. Un type qui n'interdit rien ne vaut rien.
+- [x] Les 79 listes déroulantes sont nommées, et les noms répétés dans une
+      liste sont distincts ligne à ligne.
+- [x] Rien n'a cassé — vérifié en navigateur après coup : la fiche se charge,
+      les listes s'ouvrent et se ferment, la mise en page du libellé de case
+      est inchangée (conteneur `flex items-center`, 24 px, un seul élément
+      flex sans style).
+- [x] `npm run typecheck && npm run lint` passent ; 870 tests hors intégration.
+
+### Une erreur de diagnostic, consignée
+
+Pendant la vérification finale, les fiches ont renvoyé **404**. J'ai testé le
+commit d'avant, il répondait 200, et j'en ai conclu — à tort, et je l'ai
+annoncé — que ces modifications avaient cassé quelque chose.
+
+La bissection des quatre commits a montré que tous fonctionnent. Les 404
+venaient du **démarrage à froid de Turbopack** : les premières requêtes
+tombaient pendant la compilation de la route, et l'ancien commit répondait 200
+simplement parce que le serveur avait eu le temps de chauffer.
+
+C'est la troisième fois de la journée qu'une corrélation mène à une fausse
+cause (voir aussi le `removeChild` et le double `play` de V2.1-6). La leçon est
+la même : mesurer avant d'annoncer, et bissecter plutôt que de raisonner.
+
+### Reste ouvert
+
+`onSaveNow` (bloc carte) fait désormais double emploi : c'est la même idée,
+trouvée plus tôt pour un seul bloc et câblée en prop. Les deux devraient
+converger vers le contexte — remplacement mécanique, noté plutôt qu'entrepris
+au passage. Tant qu'il vit, il ne fait courir aucun risque : les deux chemins
+aboutissent au même `saveBlock`, sérialisé.
+
+---
+
 ## Ordre suivi
 
 Aucune dépendance technique dure entre ces cinq tickets. Fait dans l'ordre
@@ -1165,3 +1336,10 @@ V2.1-6 est arrivé après coup, sans dépendance sur les précédents. Ses deux
 lots, eux, sont ordonnés : le lot 2 refond le lecteur partagé que le lot 1
 utilise tel quel. Avancement tenu à jour dans les cases à cocher de chaque
 lot, au fur et à mesure — pas à la fin.
+
+V2.1-7 n'était pas prévu : il est né d'un défaut rencontré **en faisant**
+V2.1-6, sur lequel il a fallu s'arrêter parce qu'il bloquait la vérification
+du ticket en cours (une case cochée qui ne s'enregistrait pas). Les deux
+restent liés dans les deux sens : la note de fragilité de V2.1-6 renvoie ici,
+et le critère de lecture en boucle de V2.1-6 n'a pu repartir qu'une fois
+V2.1-7 livré.
