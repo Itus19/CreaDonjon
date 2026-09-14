@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
 import { PROVIDER_LABELS, detectProvider } from "@/src/core/music/embedUrl";
 import { useMusicPlayback } from "@/components/shell/MusicPlaybackContext";
+import Checkbox from "@/components/shared/Checkbox";
 
 /**
  * Bloc `music` (V2-G3, etendu sur demande explicite) : une "station" est ce
@@ -17,6 +18,10 @@ import { useMusicPlayback } from "@/components/shell/MusicPlaybackContext";
  * `MusicPlaybackProvider` (un seul a la fois pour toute l'app), qui met
  * donc en pause la radio d'arriere-plan si une piste de ce bloc est lancee,
  * et inversement — exactement le comportement demande.
+ *
+ * V2.1-6 : ce bloc ne s'affiche plus du tout sur les pages de lecture (voir
+ * `PublicMusicToggle`), mais garde ici son affichage complet — une fiche
+ * qu'on modifie n'est pas une fiche qu'on visite pour son ambiance.
  */
 export default function MusicBlockEditor({
   data,
@@ -120,6 +125,15 @@ export default function MusicBlockEditor({
         </button>
       </div>
       {error && <p className="text-xs text-danger">{error}</p>}
+
+      {/* V2.1-6 : le bloc etant invisible sur les pages de lecture, ce
+          reglage est le seul endroit ou le comportement a la visite se
+          decide. Decoche par defaut — voir `music.ts`. */}
+      <Checkbox
+        checked={data.autoplayOnVisit === true}
+        onChange={() => onChange({ ...data, autoplayOnVisit: !data.autoplayOnVisit })}
+        label={<span className="text-xs text-ink-soft">Lancer la première piste à la visite de la fiche</span>}
+      />
     </div>
   );
 }

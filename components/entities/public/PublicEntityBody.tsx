@@ -3,12 +3,14 @@ import type { EntitySummary } from "@/src/server/repos/entities";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import type { SessionJournalMetaBlockData } from "@/src/core/schemas/blocks/sessionJournalMeta";
+import { planMusicAttachments } from "@/src/core/music/blockAttachment";
 import type { PublicBlock, PublicRelation } from "@/src/server/services/publicShare";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
 import { weekdayNameForDate } from "@/src/core/calendar/weekday";
 import PublicBlockView from "./PublicBlockView";
 import PublicPortrait from "./PublicPortrait";
 import PublicRelations from "./PublicRelations";
+import PublicMusicToggle from "./PublicMusicToggle";
 import MentionedIn from "@/components/entities/MentionedIn";
 
 /**
@@ -43,8 +45,15 @@ export default function PublicEntityBody({
   // recit : jamais dans le fil normal des blocs, toujours extrait pour
   // finir en pied de page (retour utilisateur, voir SessionJournalFooter).
   const metaBlock = blocks.find((b) => b.blockType === "session_journal_meta");
-  const contentBlocks = blocks.filter((b) => b.blockType !== "session_journal_meta");
   const isJournalEntry = entity.entity_kind === "session_journal";
+
+  // V2.1-6 : les blocs `music` sortent eux aussi du fil, pour une autre
+  // raison — ils ne s'affichent plus nulle part, seul un bouton subsiste, a
+  // cote du nom de la fiche (choix de l'auteur : un endroit, toujours le
+  // meme, quel que soit l'endroit ou le bloc a ete range).
+  const { contentBlocks, attachments: musicAttachments } = planMusicAttachments(
+    blocks.filter((b) => b.blockType !== "session_journal_meta")
+  );
 
   const [firstBlock, ...afterFirst] = contentBlocks;
   const firstBlockWraps = firstBlock?.blockType === "text";
@@ -58,7 +67,22 @@ export default function PublicEntityBody({
       <div className="flow-root">
         <PublicPortrait entityId={entity.id} layout={portraitLayout} />
         <div className="flex items-start justify-between gap-3">
-          <h1 className="entity-title flex-1">{entity.name || "(sans nom)"}</h1>
+          <h1 className="entity-title">{entity.name || "(sans nom)"}</h1>
+          {/* V2.1-6 : un bouton par bloc musique de la fiche, toujours ici —
+              c'est le seul reste visible de ces blocs. `flex-1` reprend le
+              role que tenait le `<h1>` : pousser le type de fiche a droite. */}
+          <div className="flex flex-1 flex-wrap items-center gap-2 pt-1.5">
+            {musicAttachments.map((attachment) => (
+              <PublicMusicToggle
+                key={attachment.blockId}
+                blockId={attachment.blockId}
+                trackId={attachment.trackId}
+                trackUrl={attachment.trackUrl}
+                label={attachment.label || "cette musique"}
+                autoplay={attachment.autoplay}
+              />
+            ))}
+          </div>
           {!isJournalEntry && (
             <span className="shrink-0 whitespace-nowrap text-sm font-medium text-ink-muted">
               {ENTITY_KIND_LABELS[entity.entity_kind as keyof typeof ENTITY_KIND_LABELS] ?? entity.entity_kind}

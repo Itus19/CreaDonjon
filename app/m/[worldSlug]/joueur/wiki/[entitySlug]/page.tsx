@@ -10,7 +10,8 @@ import EditEntityForm from "../../../(monde)/f/[entitySlug]/EditEntityForm";
 
 /**
  * Fiche du Wiki (V2-M7b, coquille joueur) — lecture seule PAR DEFAUT
- * (`listVisibleBlocks` + `PlayerBlockView`, jamais d'affordance d'edition),
+ * (`getPlayerEntityDetail` + `PublicEntityBody`, le meme corps de fiche que
+ * l'apercu MJ et le partage anonyme, jamais d'affordance d'edition),
  * SAUF si `canEditEntity` autorise ce viewer sur CETTE fiche precise
  * (retour utilisateur : "le joueur a toujours le droit d'edition sur sa
  * propre fiche" — deja vrai via canEditEntity cas 3 — "et sur une fiche de

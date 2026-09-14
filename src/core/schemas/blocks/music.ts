@@ -32,6 +32,15 @@ export const zMusicBlockData = z
   .object({
     __v: z.literal(1),
     tracks: z.array(zMusicTrack).max(50),
+    /**
+     * V2.1-6 : sur les pages de lecture, le bloc ne s'affiche plus du tout —
+     * il pose seulement un bouton discret a cote du nom de la fiche. Ce
+     * drapeau decide si, en plus, la premiere piste demarre d'elle-meme a
+     * l'arrivee sur la fiche. `false` par defaut, et pour les blocs deja en
+     * base (champ absent) : un wiki qui se met a jouer du son sans qu'on
+     * l'ait demande est une mauvaise surprise, c'est un choix qu'on coche.
+     */
+    autoplayOnVisit: z.boolean().default(false),
   })
   .strict();
 export type MusicBlockData = z.infer<typeof zMusicBlockData>;

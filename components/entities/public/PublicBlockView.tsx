@@ -285,6 +285,13 @@ export default function PublicBlockView({
   if (block.blockType === "image" && (block.data as unknown as ImageBlockData).useAsWikiBackground) {
     return null;
   }
+  // V2.1-6 : un bloc `music` ne s'affiche plus du tout ici — ni contenu, ni
+  // titre, ni cadre. Il ne sert qu'a poser une ambiance sonore, et son seul
+  // reste visible est un bouton que `PublicEntityBody` pose a cote du nom de
+  // la fiche, quel que soit l'endroit ou le bloc a ete range.
+  if (block.blockType === "music") {
+    return null;
+  }
   return (
     <div className="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
       {/* Retour utilisateur : le titre du bloc (souvent juste "Image") est

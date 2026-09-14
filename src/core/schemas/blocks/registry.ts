@@ -234,7 +234,7 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
     reactions: [],
     legendary_actions: [],
   },
-  music: { __v: 1, tracks: [] },
+  music: { __v: 1, tracks: [], autoplayOnVisit: false },
   genealogy: { __v: 1, rootEntityId: null, depthUp: 2, depthDown: 2 },
   quest: { __v: 1, state: "not_started", giver: null, objectives: [], rewards: [], prerequisites: [] },
   note_tree: { __v: 1, items: [] },
