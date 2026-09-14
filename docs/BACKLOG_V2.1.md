@@ -17,7 +17,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-3 | Livre de sessions | `M` → `L` | **Fait** (13 septembre) — pivoté vers une vraie fiche par entrée plutôt que `sessions.summary`, sur retour utilisateur explicite |
 | V2.1-4 | Calendrier réel de planification des séances | `L` | **Fait** (13 septembre) — piste D (disponibilités libres), variante F (classement) |
 | V2.1-5 | Un seul bloc Personnalité/Convictions par fiche | `S` | Aucune contrainte aujourd'hui — même bug de classe déjà vu et corrigé pour les Générateurs de MJ |
-| V2.1-6 | Bloc musique : ambiance sonore sur le wiki public | `L` | **En cours** (14 septembre) — le bloc `music` n'existe que dans l'éditeur, il n'affiche qu'un cadre vide sur les pages de lecture. Deux lots : bloc invisible + bouton discret + lecture à la visite, puis lecteur YouTube piloté (fondu, enchaînement, bornes) |
+| V2.1-6 | Bloc musique : ambiance sonore sur le wiki public | `L` | **Presque clos** (14 septembre) — les deux lots sont livrés et vérifiés ; il ne reste qu'un critère, celui des liens Spotify/SoundCloud, qui doivent continuer de fonctionner sans fondu ni bornes et que l'éditeur doit le dire |
 | V2.1-7 | Une modification qui ne s'enregistre pas, et des contrôles anonymes | `M` | **Fait** (14 septembre) — né de V2.1-6 : une case cochée se perdait en silence, deux fois en un jour. Troisième occurrence du même défaut, donc traité à la cause (ADR 0023). Corrige au passage le nom accessible des cases et des listes |
 | V2.1-8 | `onSaveNow` rejoint le contexte d'enregistrement | `S` | **Fait** (14 septembre) — la traîne consignée en fin de V2.1-7 : le bloc carte gardait le correctif ponctuel d'avant l'ADR 0023. Remplacement mécanique, comportement mesuré identique avant/après |
 | V2.1-9 | Un test d'intégration à la marge trop mince | `S` | **Fait** (14 septembre, avant d'être écrit) — `homebrewWeapon.integration.test.ts` échouait par intermittence sur le délai de 5 s de Vitest. Corrigé dans la foulée de V2.1-6 sans qu'aucun ticket ne le porte ; consigné ici après coup |
@@ -933,7 +933,24 @@ d'origine. Le lot 2 est une refonte du lecteur partagé.
       hauteur du titre, et bascule bien en ⏸ pendant la lecture.
 - [x] Case cochée : la première piste démarre en arrivant sur la fiche — sous
       la réserve d'activation ci-dessous, constatée puis corrigée en direct.
-- [ ] Case décochée : rien ne démarre à la visite, le bouton fonctionne.
+- [x] **Case décochée : rien ne démarre à la visite, et le bouton
+      fonctionne** — mesuré sur une page de partage ouverte à froid, bloc
+      `autoplayOnVisit` décoché :
+
+      | Moment | iframes | Bouton | `hasBeenActive` |
+      |---|---|---|---|
+      | Arrivée à froid | 0 | Lancer « Musique » | `false` |
+      | Après un clic sur un paragraphe | **0** | Lancer « Musique » | **`true`** |
+      | Après un clic sur le bouton | 1 | Mettre en pause « Musique » | `true` |
+
+      **C'est la ligne du milieu qui compte.** Le lot 1 arme la lecture à la
+      visite sur le tout premier geste du visiteur, faute de quoi elle ne
+      partirait jamais sur un lien ouvert à froid. Il fallait donc vérifier que
+      cet armement **ne se déclenche pas** quand la case est décochée : le
+      geste neutre a bien fait passer `navigator.userActivation.hasBeenActive`
+      à `true` — l'écouteur a eu sa chance — et rien n'a démarré. Sans cette
+      étape, le critère se serait contenté d'observer une page inerte, ce qui
+      n'aurait rien prouvé.
 - [x] Lancer une piste de bloc met toujours la radio d'arrière-plan en pause,
       et inversement (acquis de V2-G3, à ne pas casser) — vérifié sur la fiche
       de Fine Lââm ; voir le critère jumeau du lot 2, une seule mesure couvre
@@ -1097,14 +1114,38 @@ annoncé un chantier déjà fait, et aucun ticket ne le portait jusqu'ici.
       13 ms d'écart. Conforme à la réserve annoncée (précision à la seconde).
 - [x] Les réglages apparaissent bien dans l'éditeur : Début/Fin sous chaque
       piste YouTube, les deux curseurs de fondu en bas du bloc.
-- [ ] La lecture en boucle rejoue le bloc arrivé au bout — **implémentée et
-      couverte par 8 tests unitaires** (`nextTrack.test.ts`), toujours pas
-      constatée à l'oreille. Le blocage d'origine est levé : la case ne
-      s'enregistrait pas, ce que V2.1-7 a corrigé, et `loop: true` est
-      désormais bien en base (vérifié après rechargement). Reste à écouter un
-      bloc arriver au bout et repartir — la piste la plus rapide est celle
-      déjà en place sur le Prologue : une borne `Fin` courte sur la dernière
-      piste évite d'attendre la fin du morceau.
+- [x] **La lecture en boucle rejoue le bloc arrivé au bout** — constatée
+      enfin, et dans les deux formes, avec des bornes `Fin` à 6 s pour ne pas
+      attendre la fin des morceaux. Les identifiants de vidéo sont lus dans les
+      messages du lecteur, donc c'est bien la piste qui change, pas seulement
+      un compteur.
+
+      **Bloc à deux pistes — deux tours complets, sans intervention :**
+
+      | Instant | Piste |
+      |---|---|
+      | 4,7 s | 1 (`JSk0BUDfAQ4`) |
+      | 13,6 s | 2 (`QgtiY-77j-k`) |
+      | **22,1 s** | **1 — le bloc repart du début** |
+      | 29,4 s | 2 |
+      | **37,6 s** | **1 — deuxième tour** |
+
+      **Bloc à une seule piste — le cas que le ticket signalait comme piégeux**
+      (voir l'étape 5 bis : un bloc d'une seule piste revient au MÊME index,
+      donc sans numéro de passage dans la clé React, rien ne serait remonté et
+      la piste ne repartirait jamais). Trois redémarrages observés, toujours la
+      même vidéo, toujours une seule iframe :
+
+      | Instant | `currentTime` |
+      |---|---|
+      | 35,6 s | 6 s → **0** |
+      | 43,2 s | 6 s → **0** |
+      | 51,0 s | 6 s → **0** |
+
+      Le cas à deux pistes seul n'aurait pas suffi : en passant de 2 à 1,
+      l'index change, donc la clé React change de toute façon et le `lap`
+      n'est jamais mis à l'épreuve. C'est le bloc d'une seule piste — « le cas
+      le plus courant d'une ambiance » — qui l'exerce vraiment.
 - [x] **En passant d'une fiche à une autre, les deux musiques se
       chevauchent.** Mesuré du Prologue vers « Brennan Torram » :
 
@@ -1149,6 +1190,25 @@ annoncé un chantier déjà fait, et aucun ticket ne le portait jusqu'ici.
       C'est attendu — le lecteur partagé est monté une seule fois dans
       `app/layout.tsx` et ne connaît ni le monde ni la campagne — mais ça ne se
       raconte pas, ça se refait.
+
+#### Comment ces deux derniers critères ont été éprouvés
+
+Les deux — case décochée, lecture en boucle — demandaient une **page de
+lecture** et des réglages qu'aucune fiche existante ne portait. Ils ont donc
+été montés dans un monde de test (« Test boucle V2.1-6 », supprimé une fois
+les mesures prises) : une fiche publiée, un lien de partage, et deux blocs
+`music` — l'un à deux pistes, l'autre à une seule — tous deux en boucle, avec
+des bornes `Fin` à 6 s pour que le tour se referme en quelques secondes plutôt
+qu'en quatre minutes.
+
+Rien de tout cela ne pouvait se faire dans ClaudeLand ni dans Les Chroniques :
+le compte de vérification y est joueur, et surtout ces réglages auraient
+modifié le contenu de l'auteur.
+
+**Une borne `Fin` courte est l'outil qui rend ce critère testable.** Sans
+elle, vérifier une boucle demande d'écouter un morceau entier ; avec elle, deux
+tours complets tiennent dans quarante secondes. À réutiliser telle quelle la
+prochaine fois.
 
 #### Ce qui a tenu ce critère ouvert si longtemps
 
