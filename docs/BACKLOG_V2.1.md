@@ -19,6 +19,8 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-5 | Un seul bloc Personnalité/Convictions par fiche | `S` | Aucune contrainte aujourd'hui — même bug de classe déjà vu et corrigé pour les Générateurs de MJ |
 | V2.1-6 | Bloc musique : ambiance sonore sur le wiki public | `L` | **En cours** (14 septembre) — le bloc `music` n'existe que dans l'éditeur, il n'affiche qu'un cadre vide sur les pages de lecture. Deux lots : bloc invisible + bouton discret + lecture à la visite, puis lecteur YouTube piloté (fondu, enchaînement, bornes) |
 | V2.1-7 | Une modification qui ne s'enregistre pas, et des contrôles anonymes | `M` | **Fait** (14 septembre) — né de V2.1-6 : une case cochée se perdait en silence, deux fois en un jour. Troisième occurrence du même défaut, donc traité à la cause (ADR 0023). Corrige au passage le nom accessible des cases et des listes |
+| V2.1-8 | `onSaveNow` rejoint le contexte d'enregistrement | `S` | **Fait** (14 septembre) — la traîne consignée en fin de V2.1-7 : le bloc carte gardait le correctif ponctuel d'avant l'ADR 0023. Remplacement mécanique, comportement mesuré identique avant/après |
+| V2.1-9 | Un test d'intégration à la marge trop mince | `S` | **Fait** (14 septembre, avant d'être écrit) — `homebrewWeapon.integration.test.ts` échouait par intermittence sur le délai de 5 s de Vitest. Corrigé dans la foulée de V2.1-6 sans qu'aucun ticket ne le porte ; consigné ici après coup |
 
 ---
 
@@ -1001,9 +1003,12 @@ rendait méconnaissable. Corrigé par `.claude/worktrees/**` dans le
 branche sans les modifications de ce ticket. Son corps prend 3 à 4,2 s contre
 un délai d'attente de 5 s : il tape le vrai Supabase, et la moindre gigue
 réseau le fait basculer. Ce n'est pas un test cassé, c'est un test dont la
-marge est trop mince — il rendra la suite complète capricieuse tant qu'on ne
-lui donnera pas un délai adapté à un appel réseau. À traiter dans son propre
-ticket, pas ici.
+marge est trop mince.
+
+**Traité à part le jour même, en V2.1-9** — et en réalité **avant** que cette
+note ne soit écrite : le commit `261ec55` (10 h 20) sépare les tests
+d'intégration en un projet Vitest à part, cette note date de 10 h 29. Elle a
+annoncé un chantier déjà fait, et aucun ticket ne le portait jusqu'ici.
 
 ---
 
@@ -1314,13 +1319,182 @@ C'est la troisième fois de la journée qu'une corrélation mène à une fausse
 cause (voir aussi le `removeChild` et le double `play` de V2.1-6). La leçon est
 la même : mesurer avant d'annoncer, et bissecter plutôt que de raisonner.
 
-### Reste ouvert
+### Une traîne, depuis refermée
 
-`onSaveNow` (bloc carte) fait désormais double emploi : c'est la même idée,
-trouvée plus tôt pour un seul bloc et câblée en prop. Les deux devraient
-converger vers le contexte — remplacement mécanique, noté plutôt qu'entrepris
-au passage. Tant qu'il vit, il ne fait courir aucun risque : les deux chemins
-aboutissent au même `saveBlock`, sérialisé.
+`onSaveNow` (bloc carte) faisait désormais double emploi : la même idée,
+trouvée plus tôt pour un seul bloc et câblée en prop. Noté ici plutôt
+qu'entrepris au passage, puis traité pour lui-même en **V2.1-8**.
+
+---
+
+## V2.1-8 — `onSaveNow` rejoint le contexte d'enregistrement · `S` — fait
+
+### Constat
+
+L'ADR 0023 a donné à tout l'éditeur un canal unique pour « cette valeur est
+engagée » : un contexte minuscule (`EditCommitContext`) que `EntityBlocks`
+fournit par carte et que `Checkbox` et `Dropdown` réclament. Il a été écrit
+parce que le même défaut avait mordu trois fois — et **la première de ces trois
+fois, c'était le bloc carte**, corrigé sur place par une prop `onSaveNow`
+passée de main en main sur quatre niveaux : `EntityBlocks` → `BlockDataEditor`
+→ `MapBlockEditor` → `MapWorkspace`.
+
+Une fois l'ADR livré, cette prop est le dernier endroit qui résout au cas par
+cas un problème désormais résolu pour tout le monde. Deux mécanismes pour une
+seule idée, dont l'un se traîne dans la signature de trois composants qui n'ont
+rien à faire de la persistance.
+
+Ce n'était pas un risque : les deux chemins aboutissent au même `saveBlock`,
+sérialisé par bloc. C'était une redondance — et une redondance dans un
+mécanisme dont le silence a déjà coûté trois bugs mérite d'être retirée pendant
+qu'on s'en souvient, pas dans six mois.
+
+### Ce que le remplacement change, exactement
+
+`onSaveNow(next)` appelait `onSaveBlock(block.id, { data: next })` : la donnée
+en surcharge, parce qu'à l'époque rien ne garantissait que l'état React ait
+re-rendu. `commit()` appelle `onSaveBlock(block.id)` tout court.
+
+**C'est équivalent, et pour une raison précise** : les trois appelants font
+`onChange(next)` immédiatement avant, et `onChange` remonte jusqu'à
+`patchBlock`, qui écrit dans `blocksRef` — le miroir **synchrone** de l'état,
+mis à jour dans le même appel que `setBlocks`. `doSaveBlock` lit ce ref, jamais
+`blocks`. La donnée neuve est donc déjà en place quand la requête part.
+
+Un seul effet de bord, et il va dans le bon sens : sans surcharge, la demande
+passe maintenant par la fusion du même tour (ADR 0023) — deux gestes dans le
+même tour ne produisent plus qu'une requête au lieu de deux.
+
+### Étapes
+
+1. `MapWorkspace.tsx` — `useEditCommit()` en tête du composant, `onSaveNow`
+   retiré des props ; `upload` et `saveCurrentViewAsDefault` appellent
+   `commit?.()`.
+2. `MapBlockEditor.tsx` — même chose ; `pickCarte`, `useOwnImage` et
+   `saveRefDefaultView` appellent `commit?.()`, et le `MapWorkspace` de la
+   modale n'a plus de prop à relayer.
+3. `EntityBlocks.tsx` — `onSaveNow` disparaît de `BlockDataEditor` (props,
+   documentation, cas `map`) et du rendu de `SortableBlockCard`. Le commentaire
+   de fusion de `saveBlock` ne cite plus le bloc carte comme second cas.
+
+`CarteMapPanel.tsx` (vue « Cartes » dédiée) n'est pas touché et n'a rien à
+faire : il n'a jamais fourni `onSaveNow`, il ne fournit pas non plus de
+contexte, donc `useEditCommit()` y vaut `null` — exactement le comportement
+d'avant, où `onChange` persiste lui-même. C'est la propriété qui rendait ce
+contexte utilisable partout, elle sert ici une deuxième fois.
+
+### Critères
+
+- [x] Plus une seule occurrence de `onSaveNow` dans le dépôt.
+- [x] **Téléverser une carte depuis la modale persiste** — vérifié en
+      navigateur sur un monde de test créé pour l'occasion. L'image a été
+      posée dans le champ de fichier **par script**, donc sans le moindre
+      changement de focus : c'est précisément le cas que la prop protégeait, et
+      il n'y a aucun blur pour couvrir l'erreur. Résultat : **exactement un
+      `PATCH`**, en `200`. Après rechargement complet, le bouton du bloc
+      affiche « Agrandir / remplacer » et non « + Téléverser une carte » — ce
+      libellé dépend de l'`assetId` persisté.
+- [x] **« Définir cette vue par défaut » persiste** — carte déplacée à la
+      souris, bouton cliqué, puis rechargement complet : la modale rouvre sur
+      la vue déplacée, pas sur la vue centrée.
+- [x] **Le nombre de requêtes est inchangé** — même protocole exécuté deux
+      fois, sur le code d'avant (mis de côté par `git stash`) puis sur le code
+      d'après, en comptant les `PATCH` par instrumentation de `fetch` :
+
+      | Code | Requêtes | Instants |
+      |---|---|---|
+      | Avant (`onSaveNow`) | 2 | 26 571 ms · 31 735 ms |
+      | Après (`commit`) | 2 | 26 153 ms · 31 189 ms |
+
+      Deux, et non une : la première ne vient pas du bouton mais du blur du
+      conteneur au moment où l'on saisit la carte à la souris — le focus quitte
+      alors le bouton qui a ouvert la modale. Comportement **antérieur à ce
+      ticket, identique des deux côtés** : mesuré, pas déduit.
+- [x] `npm run typecheck`, `npm run lint`, et la suite complète : 992 tests,
+      115 fichiers, tests d'intégration compris.
+
+### Non exercé, et dit comme tel
+
+Les trois appels de `MapBlockEditor` (`pickCarte`, `useOwnImage`,
+`saveRefDefaultView`) n'ont pas été déclenchés en navigateur : ils demandent
+une fiche de type « Carte » déjà présente dans le monde, que le monde de test
+n'avait pas. Ils appellent le même `commit` du même composant, dans le même
+sous-arbre, que les deux chemins vérifiés — mais ce sont trois chemins de
+moins, et la leçon du 14 septembre est justement qu'un raisonnement juste ne
+vaut pas une mesure.
+
+### Le monde de test, et ce qu'il en reste
+
+Le compte ouvert dans le navigateur est un compte joueur, sans droit
+d'édition sur les mondes existants : la vérification a demandé de créer un
+monde à part (« Test carte V2.1-8 »), supprimé une fois les mesures prises.
+Rien n'a été touché dans ClaudeLand ni dans Les Chroniques des Royaumes
+Oubliés.
+
+---
+
+## V2.1-9 — Un test d'intégration à la marge trop mince · `S` — fait
+
+### Constat
+
+`homebrewWeapon.integration.test.ts` échouait par intermittence sur « Test
+timed out in 5000ms », puis repassait plusieurs fois de suite — et échouait
+aussi bien sur `master` que sur une branche de travail. Son corps prend 3 à
+4,2 s (mesuré ; jusqu'à 5,91 s une fois) contre le délai par défaut de Vitest,
+5 000 ms. Il tape le vrai Supabase : la moindre gigue réseau le fait basculer.
+
+Ce n'était donc pas une régression, ni un test cassé. C'était un test dont la
+marge est trop mince — et tant qu'elle l'est, `npm run test` reste capricieux,
+ce qui est bien pire qu'un test lent : une suite qui échoue au hasard finit par
+ne plus être lue.
+
+### Décision
+
+Vitest n'offre pas de délai d'attente par glob **à l'intérieur** d'un projet.
+La séparation en projets est le mécanisme prévu pour ça, et c'est celle qui a
+été retenue : un projet `unit` (tout `src/` et `lib/` sauf
+`*.integration.test.ts`) qui garde le filet serré de 5 s — là où un
+dépassement signale une boucle infinie, pas une latence — et un projet
+`integration` à **30 s**, `testTimeout` et `hookTimeout`, soit environ sept
+fois le pire temps mesuré.
+
+Volontairement large : ce qu'on veut détecter ici, c'est un test **réellement
+bloqué**, pas une requête un peu lente. Le coût d'un délai large est nul tant
+que les tests passent, et borné quand l'un d'eux bloque, les fichiers étant
+déjà sérialisés (`fileParallelism: false`, hérité de la bascule vers un pool de
+comptes de test réutilisables).
+
+Un piège noté sur place, parce qu'il ne se devine pas à la lecture :
+`extends: true` **concatène** les tableaux hérités au lieu de les remplacer.
+Déclarer `include` à la racine ramènerait donc tous les fichiers dans le projet
+`integration` — et leur donnerait précisément le délai large qu'on veut leur
+refuser. `include` est déclaré par projet, jamais à la racine.
+
+### Fait avant d'être écrit
+
+Ce ticket consigne un travail déjà livré : commit `261ec55`, « separe les
+tests unitaires des tests d integration dans Vitest », le 14 septembre à
+10 h 20 — soit **neuf minutes avant** la note de V2.1-6 qui annonçait le
+chantier comme restant à faire. Rien ne le portait : ni backlog V2.1, ni V2,
+ni V3. Il n'existait que dans son message de commit et dans les commentaires
+de `vitest.config.ts`.
+
+C'est la même omission que celle réparée pour V2.1-7, et elle mérite d'être
+dite une fois de plus : **un travail qui ne vit que dans un message de commit
+est un travail qu'on refera.** Ici, la trace périmée avait même commencé à
+mentir — elle a fait annoncer ce point comme ouvert lors d'une relecture du
+backlog.
+
+### Critères
+
+- [x] Les tests d'intégration disposent de 30 s (`testTimeout` et
+      `hookTimeout`), les tests purs gardent 5 s.
+- [x] `npm run test:core` reste borné à `src/core` par son argument de ligne de
+      commande, inchangé.
+- [x] La suite complète passe : 992 tests, 115 fichiers, 1 sauté, 157,9 s —
+      tests d'intégration inclus, `.env.local` présent.
+- [x] La note périmée de V2.1-6 ne dit plus « à traiter dans son propre
+      ticket » : elle renvoie ici, avec l'ordre réel des faits.
 
 ---
 
@@ -1343,3 +1517,18 @@ du ticket en cours (une case cochée qui ne s'enregistrait pas). Les deux
 restent liés dans les deux sens : la note de fragilité de V2.1-6 renvoie ici,
 et le critère de lecture en boucle de V2.1-6 n'a pu repartir qu'une fois
 V2.1-7 livré.
+
+V2.1-8 et V2.1-9 sont deux traînes du même jour, ouvertes ensemble une fois le
+backlog relu de bout en bout. Elles ne se ressemblent que par leur origine :
+chacune était consignée quelque part — l'une en fin de V2.1-7, l'autre dans une
+note de V2.1-6 — sans qu'aucun ticket ne la porte.
+
+Elles se sont révélées de nature opposée, et c'est l'enseignement de la
+relecture. **V2.1-8 restait entièrement à faire** : le remplacement mécanique
+annoncé par l'ADR 0023. **V2.1-9 était fait depuis le matin même**, et sa trace
+périmée disait le contraire — au point de faire annoncer à tort un point
+comme ouvert.
+
+D'où la règle qui vaut pour la suite : une note « à traiter à part » n'est pas
+un ticket, et c'est au moment où on l'écrit qu'il faut l'ouvrir. Une note ne
+sait pas se corriger quand le travail est fait ; un ticket, si.
