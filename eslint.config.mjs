@@ -14,6 +14,15 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Rapport genere par `npm run test:coverage`, jamais suivi par Git.
     "coverage/**",
+    // Worktrees Git poses par les sessions d'agent (`.git/info/exclude` les
+    // cache deja a Git, mais ESLint parcourt le disque, pas l'index) : ce
+    // sont des COPIES du depot, avec leur propre `eslint.config.mjs`. Sans
+    // cette ligne, `npm run lint` verifie le projet une fois par worktree
+    // ouvert — et une regle de chemin comme le confinement du client
+    // service-role (`src/server/services/accountProvisioning.ts`) ne
+    // reconnait plus le fichier confine sous son prefixe de worktree, donc
+    // echoue sur du code pourtant conforme.
+    ".claude/worktrees/**",
   ]),
   // src/core est un noyau pur (CLAUDE.md, regle absolue 14) : aucun import
   // de framework ni de reseau. Verifie mecaniquement, pas seulement par
