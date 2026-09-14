@@ -1,7 +1,8 @@
 # Backlog V2.1 — Correctifs pour la table de jeu
 
 Cinq demandes de l'auteur (4 septembre 2026), au service direct de sa table
-(joueuses + MJ) plutôt que du reste du plan V2/V3. Chaque ticket suit la
+(joueuses + MJ) plutôt que du reste du plan V2/V3 — plus une sixième arrivée
+le 13 septembre, une fois les cinq premières closes. Chaque ticket suit la
 méthode habituelle : **un ticket à la fois**, plan court avant le code,
 contenu authored en direct quand il y en a, `npm run typecheck && npm run
 lint && npm run test` avant de clore, commit dédié.
@@ -16,6 +17,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-3 | Livre de sessions | `M` → `L` | **Fait** (13 septembre) — pivoté vers une vraie fiche par entrée plutôt que `sessions.summary`, sur retour utilisateur explicite |
 | V2.1-4 | Calendrier réel de planification des séances | `L` | **Fait** (13 septembre) — piste D (disponibilités libres), variante F (classement) |
 | V2.1-5 | Un seul bloc Personnalité/Convictions par fiche | `S` | Aucune contrainte aujourd'hui — même bug de classe déjà vu et corrigé pour les Générateurs de MJ |
+| V2.1-6 | Bloc musique : ambiance sonore sur le wiki public | `L` | **En cours** (14 septembre) — le bloc `music` n'existe que dans l'éditeur, il n'affiche qu'un cadre vide sur les pages de lecture. Deux lots : bloc invisible + bouton discret + lecture à la visite, puis lecteur YouTube piloté (fondu, enchaînement, bornes) |
 
 ---
 
@@ -766,10 +768,274 @@ type."
 
 ---
 
+## V2.1-6 — Bloc musique : ambiance sonore sur le wiki public · `L`
+
+### Constat
+
+Le bloc `music` (V2-G3) n'existe aujourd'hui **que dans l'éditeur**. Sur les
+trois pages de lecture, `PublicBlockView.tsx` ne connaît pas ce type : il
+affiche le `<h3>` du titre du bloc et rien d'autre — un cadre vide portant le
+mot « Musique », exactement ce que `docs/BACKLOG_V2.md` avait déjà noté au
+passage en V2-G11 sans le traiter.
+
+Demande de l'auteur (13 septembre 2026), en deux temps :
+
+1. Sur le wiki public, le bloc musique ne doit **rien afficher**. Il sert
+   uniquement à lancer la musique à la visite de la fiche, et à poser un
+   bouton lecture/pause discret — d'abord « à côté du titre du bloc
+   précédent », revu en cours de route (voir « Revirement » plus bas) pour
+   vivre à côté du nom de la fiche.
+2. Une option **dans** le bloc décide si la musique démarre d'elle-même à la
+   visite, ou si elle attend le bouton.
+
+Puis, en cours de discussion : des réglages de **fondu** entrant et sortant,
+« à l'image du bloc image pour les images de fond » (`fadeMs`,
+`src/core/schemas/blocks/image.ts`), et — une fois l'API YouTube admise — des
+**bornes début/fin** par piste.
+
+**Découverte faite en lisant le code avant d'écrire ce ticket** :
+`components/entities/player/PlayerBlockView.tsx` et son
+`AutoPlayMusicBlock.tsx` implémentaient déjà une lecture automatique à la
+visite… mais plus personne ne les rendait. La seule trace de `PlayerBlockView`
+dans le dépôt était un commentaire périmé en tête de
+`app/m/[worldSlug]/joueur/wiki/[entitySlug]/page.tsx` : cette page est passée à
+`PublicEntityBody` sans que les deux fichiers soient retirés. Du code mort,
+supprimé au lot 1 — sa logique de démarrage étant reprise, correctement
+branchée cette fois.
+
+### Arbitrages tranchés avec l'auteur
+
+| Question | Décision |
+|---|---|
+| Où s'applique le nouveau rendu | **Les trois pages de lecture** : wiki joueur (`/m/[worldSlug]/joueur/wiki`), aperçu MJ (`/m/[worldSlug]/apercu`), partage anonyme (`/partage/[token]`) — toutes passent par `PublicEntityBody` |
+| Où se pose le bouton | **Toujours à côté du `<h1>` du nom de la fiche** — voir « Revirement » ci-dessous |
+| Enchaînement des pistes | **Enchaîner quand c'est possible** — donc uniquement les pistes YouTube, via l'API ; les autres fournisseurs s'arrêtent après la première |
+| Portée du fondu | **YouTube seulement** |
+| Transition entre deux fiches portant chacune une musique | **Croisé** : l'ancienne descend pendant que la nouvelle monte |
+
+#### Revirement — le bouton quitte le bloc précédent pour le titre de la fiche
+
+La demande d'origine plaçait le bouton « à côté du titre du bloc précédent ».
+Implémenté ainsi d'abord, puis repris sur retour de l'auteur, une fois le code
+sous les yeux : « c'est plus simple et cohérent » de l'accrocher toujours au
+nom de la fiche.
+
+C'est aussi ce qui coûte le moins. La première approche demandait de choisir
+une ancre, donc de traiter trois cas limites — bloc musique en tête de fiche,
+bloc précédent de type `image` (dont le titre n'est jamais affiché sur ces
+pages), bloc précédent sans libellé — et obligeait `PublicBlockView` à
+accepter des enfants à côté de son `<h3>`. Avec le titre de la fiche, il ne
+reste rien de tout cela : `PublicBlockView` ne gagne que son `return null`
+pour `music`, et le plan se réduit à « un bouton par bloc musique, lequel
+démarre à la visite ».
+
+### Ce que l'API YouTube change, et ce qu'elle ne change pas
+
+Le fondu a été demandé par analogie avec `fadeMs` du bloc image. L'analogie ne
+tient pas : le fondu d'une image de fond est une transition CSS sur **notre**
+élément, gratuite ; le son vit dans une iframe d'un autre domaine, dont on ne
+peut pas toucher le volume. C'est le choix d'architecture explicite de V2-G3 —
+« une iframe bête qu'on démonte / remonte, sans dépendre d'un SDK par
+plateforme » (`components/shell/MusicPlaybackContext.tsx`) — qui rend le fondu
+impossible en l'état.
+
+Y renoncer suppose de charger l'**IFrame Player API de YouTube**
+(`https://www.youtube.com/iframe_api`, script tiers, aucune dépendance npm
+ajoutée). Elle donne trois choses d'un coup : `setVolume` (fondu),
+`onStateChange` → `ENDED` (enchaînement), `loadVideoById({ videoId,
+startSeconds, endSeconds })` (bornes par piste).
+
+| Fournisseur | Fondu | Enchaînement | Bornes début/fin |
+|---|---|---|---|
+| YouTube | oui | oui | oui |
+| SoundCloud | possible (`setVolume` existe) — **hors périmètre**, l'auteur a choisi YouTube seulement | non | non |
+| Spotify | **non** — son API d'embed n'expose pas le volume | non | non |
+
+Deux réserves à ne pas oublier : `endSeconds` est approximatif à la seconde
+près (ce n'est pas un point de montage exact), et sur `/partage` le script
+sera chargé chez un visiteur anonyme — signalé à l'auteur, qui a maintenu
+« les trois pages de lecture ».
+
+Un bloc mélangeant les fournisseurs reste donc **inégal par construction**.
+L'éditeur doit le dire à côté du lien concerné, plutôt que d'afficher des
+réglages sans effet.
+
+### Découpage
+
+Deux lots, dans cet ordre. Le lot 1 se tient entièrement sur l'iframe
+actuelle : il est testable immédiatement, et il livre les deux demandes
+d'origine. Le lot 2 est une refonte du lecteur partagé.
+
+---
+
+### Lot 1 — Bloc invisible, bouton discret, lecture à la visite
+
+#### Étapes
+
+1. **Schéma** — `src/core/schemas/blocks/music.ts` : ajouter
+   `autoplayOnVisit: z.boolean().default(false)`. Champ optionnel avec défaut :
+   les blocs déjà en base restent valides sans migration de données. **Défaut
+   à `false`** — un wiki qui se met à jouer du son sans qu'on l'ait demandé est
+   une mauvaise surprise ; l'auteur coche quand il le veut. `registry.ts` le
+   pose aussi dans la donnée par défaut d'un bloc neuf : elle est insérée
+   telle quelle en base, sans passer par Zod, donc le défaut du schéma seul ne
+   suffisait pas.
+2. **Rendu public** — `PublicBlockView.tsx` : `music` renvoie `null`, y compris
+   son titre (même traitement qu'une image cochée « fond de page », déjà en
+   place au même endroit). Plus aucun cadre vide.
+3. **Bouton au titre de la fiche** — le plan (quels boutons, lequel démarre à
+   la visite) est calculé par `planMusicAttachments`, une fonction pure de
+   `src/core/music/blockAttachment.ts`, **testée d'abord** : c'est la seule
+   partie qui demande un raisonnement, et elle s'éprouve en millisecondes là
+   où elle exigerait un wiki publié et un navigateur si elle restait dans un
+   composant serveur. `PublicEntityBody.tsx` extrait les blocs `music` du fil
+   normal (comme il le fait déjà pour `session_journal_meta`) et rend un
+   bouton par bloc à côté du `<h1>`. Le bouton est un composant client, seul
+   élément interactif ajouté à une page par ailleurs servie en rendu serveur.
+4. **Lecture à la visite** — quand `autoplayOnVisit` est coché, la première
+   piste démarre au montage via `useMusicPlayback().play()`. Reprend la logique
+   de l'ancien `AutoPlayMusicBlock.tsx`. Si plusieurs blocs de la même fiche
+   sont cochés, **le premier dans l'ordre de la fiche gagne** — le lecteur
+   partagé n'a qu'une source à la fois, laisser deux blocs se disputer le
+   lecteur donnerait un résultat dépendant de l'ordre de montage.
+5. **Éditeur** — `MusicBlockEditor.tsx` : case à cocher « Lancer la première
+   piste à la visite de la fiche » (`components/shared/Checkbox.tsx`, jamais la
+   case native). L'éditeur garde par ailleurs son affichage actuel (liste de
+   pistes, bouton par piste) : on ne masque le bloc que sur les pages de
+   lecture, une fiche qu'on modifie n'est pas une fiche qu'on visite pour son
+   ambiance.
+6. **Nettoyage** — supprimer `components/entities/player/PlayerBlockView.tsx`
+   et `AutoPlayMusicBlock.tsx` (code mort, voir Constat), et corriger le
+   commentaire périmé de `app/m/[worldSlug]/joueur/wiki/[entitySlug]/page.tsx`.
+
+#### Critères
+
+- [x] La case « Lancer à la visite » existe dans l'éditeur, décochée par
+      défaut, et **persiste** : vérifiée en navigateur sur la fiche « Fine
+      Lââm » du monde ClaudeLand, avec le lien YouTube fourni par l'auteur —
+      cochée, sortie du bloc (l'éditeur enregistre à la perte du focus,
+      `EntityBlocks.tsx`), rechargement, `aria-checked="true"` et nom de piste
+      conservés. C'est l'aller-retour Zod du nouveau champ qui était en
+      question, il est bon.
+- [x] Le plan d'affichage est couvert par 11 tests unitaires
+      (`src/core/music/blockAttachment.test.ts`) : extraction des blocs du fil,
+      un bouton par bloc, position du bloc sans effet sur le résultat, bloc
+      sans piste ignoré, première piste seule retenue, premier bloc coché
+      gagnant, champ absent traité comme un refus.
+- [ ] Un bloc musique n'affiche plus rien du tout sur les trois pages de
+      lecture — ni cadre, ni titre.
+- [ ] Un bouton ▶/⏸ discret apparaît à côté du nom de la fiche, et bascule bien
+      en ⏸ pendant la lecture.
+- [ ] Case décochée : rien ne démarre à la visite, le bouton fonctionne. Case
+      cochée : la première piste démarre en arrivant sur la fiche.
+- [ ] Lancer une piste de bloc met toujours la radio d'arrière-plan en pause,
+      et inversement (acquis de V2-G3, à ne pas casser).
+- [x] `npm run typecheck` et `npm run lint` passent ; `test:core` (818 tests,
+      81 fichiers) et la suite hors intégration (836 tests, 84 fichiers)
+      passent.
+
+#### Ce qui bloque les quatre critères restants
+
+Ils demandent tous de voir une fiche rendue par `PublicEntityBody` **et**
+portant un bloc musique. Le lien d'invitation fourni ouvre un compte **joueur**
+de ce monde, pas MJ : il ne peut éditer que sa propre fiche (Fine Lââm), sur
+laquelle la route de wiki rend donc l'éditeur et jamais le corps public ; et
+`/mj/publication`, seul endroit d'où `entities.is_public` se règle, répond
+« Réservé au MJ de ce monde ».
+
+Deux issues, au choix de l'auteur : publier Fine Lââm depuis son propre compte
+MJ (`/apercu/4` rendra alors le corps public), ou élever le compte de test au
+rôle MJ sur ce monde.
+
+#### Limite connue, à vérifier en navigateur
+
+Chrome refuse la lecture automatique avec son tant qu'aucun clic n'a eu lieu
+dans le document. En arrivant sur la fiche **par un lien interne** du wiki
+(navigation client, même document), l'activation utilisateur est déjà acquise
+et la lecture part ; en ouvrant l'URL directement dans un onglet neuf, elle
+sera vraisemblablement refusée. C'est une politique de navigateur, pas un
+défaut d'implémentation — et c'est aussi ce qui fait du bouton discret le
+filet de sécurité de l'option, jamais un simple confort. À constater des deux
+façons avant de clore le lot.
+
+#### Noté au passage, hors périmètre — un test d'intégration fragile
+
+`homebrewWeapon.integration.test.ts` a échoué une fois sur « Test timed out in
+5000ms », puis est repassé trois fois de suite, et il passe aussi sur la
+branche sans les modifications de ce ticket. Son corps prend 3 à 4,2 s contre
+un délai d'attente de 5 s : il tape le vrai Supabase, et la moindre gigue
+réseau le fait basculer. Ce n'est pas un test cassé, c'est un test dont la
+marge est trop mince — il rendra la suite complète capricieuse tant qu'on ne
+lui donnera pas un délai adapté à un appel réseau. À traiter dans son propre
+ticket, pas ici.
+
+---
+
+### Lot 2 — Lecteur YouTube piloté : fondu, enchaînement, bornes
+
+#### Étapes
+
+1. **ADR** — `docs/adr/NNNN-lecteur-youtube-pilote.md` : V2-G3 avait
+   explicitement écarté les SDK par plateforme ; on y revient pour le fondu, en
+   connaissance de cause et pour YouTube seulement. Contexte, options (iframe
+   bête / API YouTube / API par fournisseur), décision, conséquences (script
+   tiers sur le wiki public y compris anonyme, comportement inégal selon le
+   fournisseur du lien). À écrire **avant** le code : c'est le renversement
+   d'une décision déjà consignée.
+2. **Noyau pur d'abord, tests en tête** — `src/core/music/` :
+   - calcul de la rampe de volume (durée, pas, position → volume 0-100),
+     fonction pure, aucune dépendance au navigateur ;
+   - `toEmbedUrl` étendu aux bornes `start`/`end` pour le repli iframe ;
+   - bornes validées l'une contre l'autre (`endSeconds > startSeconds`).
+3. **Schéma** — `music.ts` : `fadeInMs` / `fadeOutMs` au niveau du bloc (mêmes
+   bornes que le bloc image, 0-3000, à confirmer à l'usage) ; `startSeconds` /
+   `endSeconds` optionnels **par piste**.
+4. **Refonte du lecteur partagé** — `MusicPlaybackContext.tsx` : lecteur
+   YouTube piloté par l'API quand la piste est YouTube, repli sur l'iframe
+   actuelle sinon. La règle « une seule iframe » devient « une seule source
+   **active** » : pendant un fondu croisé, deux lecteurs coexistent le temps de
+   la transition, l'ancien étant démonté une fois son volume à zéro. Le script
+   YouTube n'est chargé qu'à la première piste YouTube effectivement jouée,
+   jamais au chargement de la page.
+5. **Enchaînement** — sur `ENDED`, passer à la piste suivante du bloc, dans
+   l'ordre. S'arrêter en fin de liste (pas de boucle — à demander à l'auteur si
+   le besoin apparaît, pas avant). `planMusicAttachments` ne retient
+   aujourd'hui que la première piste : c'est là que la liste complète devra
+   remonter.
+6. **Éditeur** — réglages de fondu au niveau du bloc, champs début/fin par
+   piste, et mention explicite à côté d'une piste Spotify/SoundCloud que ces
+   réglages ne s'y appliquent pas.
+7. **Radio d'arrière-plan** — les durées de fondu sont portées par la source
+   qu'on lance, pas par le lecteur : la radio (`RadioWidget.tsx`) n'en fournit
+   aucune et garde donc exactement son comportement actuel. Aucune modification
+   de son côté.
+
+#### Critères
+
+- [ ] Deux pistes YouTube dans un bloc s'enchaînent dans l'ordre, sans
+      intervention.
+- [ ] Bornes début/fin respectées sur une piste YouTube (à la seconde près, cf.
+      réserve ci-dessus).
+- [ ] Fondu entrant et sortant audibles ; en passant d'une fiche à une autre
+      portant chacune sa musique, les deux se chevauchent.
+- [ ] Une piste Spotify ou SoundCloud continue de fonctionner — sans fondu,
+      sans enchaînement, sans bornes — et l'éditeur le dit.
+- [ ] Le script YouTube n'est pas chargé sur une fiche sans bloc musique
+      YouTube (vérifié dans l'onglet réseau).
+- [ ] Exclusion mutuelle avec la radio toujours vraie dans les deux sens.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+
+---
+
 ## Ordre suivi
 
 Aucune dépendance technique dure entre ces cinq tickets. Fait dans l'ordre
 V2.1-1, V2.1-2, V2.1-4, V2.1-5, puis V2.1-3 en dernier (le seul dont le
 plan initial a changé en cours de route, une fois la présentation en
-sommaire tranchée avec l'auteur). **Les cinq tickets de ce backlog sont
-clos.**
+sommaire tranchée avec l'auteur). **Les cinq tickets d'origine de ce backlog
+sont clos.**
+
+V2.1-6 est arrivé après coup, sans dépendance sur les précédents. Ses deux
+lots, eux, sont ordonnés : le lot 2 refond le lecteur partagé que le lot 1
+utilise tel quel. Avancement tenu à jour dans les cases à cocher de chaque
+lot, au fur et à mesure — pas à la fin.
