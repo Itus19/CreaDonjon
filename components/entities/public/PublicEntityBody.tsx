@@ -67,11 +67,14 @@ export default function PublicEntityBody({
       <div className="flow-root">
         <PublicPortrait entityId={entity.id} layout={portraitLayout} />
         <div className="flex items-start justify-between gap-3">
-          <h1 className="entity-title">{entity.name || "(sans nom)"}</h1>
           {/* V2.1-6 : un bouton par bloc musique de la fiche, toujours ici —
-              c'est le seul reste visible de ces blocs. `flex-1` reprend le
-              role que tenait le `<h1>` : pousser le type de fiche a droite. */}
-          <div className="flex flex-1 flex-wrap items-center gap-2 pt-1.5">
+              c'est le seul reste visible de ces blocs. Titre et boutons dans
+              un meme conteneur `items-center` : c'est lui qui centre les
+              boutons sur la hauteur du titre (retour utilisateur), et qui
+              reprend le `flex-1` que portait le `<h1>` pour pousser le type
+              de fiche a droite. */}
+          <div className="flex flex-1 flex-wrap items-center gap-3">
+            <h1 className="entity-title">{entity.name || "(sans nom)"}</h1>
             {musicAttachments.map((attachment) => (
               <PublicMusicToggle
                 key={attachment.blockId}

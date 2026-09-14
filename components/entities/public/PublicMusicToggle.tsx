@@ -41,7 +41,18 @@ export default function PublicMusicToggle({
   const playing = currentKey === key;
 
   useEffect(() => {
-    if (autoplay) play(key, trackUrl);
+    if (!autoplay) return;
+    // Le navigateur refuse le son tant que la page n'a pas ete touchee, et
+    // il le refuse SANS RIEN DIRE — l'iframe se monte, aucun son n'en sort.
+    // Demander quand meme la lecture faisait donc mentir le bouton : le
+    // lecteur partage enregistrait la source, le bouton passait en ⏸, et il
+    // fallait deux clics (un pour defaire cet etat, un pour lancer vraiment).
+    // `hasBeenActive` est la seule facon de savoir a l'avance si la demande
+    // aboutira. Faux sur un lien de partage ouvert a froid, vrai des qu'on
+    // navigue dans le wiki (meme document) — donc la lecture a la visite
+    // fonctionne la ou elle le peut, et le bouton dit la verite partout.
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+    play(key, trackUrl);
     // Une seule fois par bloc visite : ne pas reagir a `playing`, sinon une
     // mise en pause manuelle relancerait aussitot la piste.
   }, [autoplay, key, trackUrl, play]);
