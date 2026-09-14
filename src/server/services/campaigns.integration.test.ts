@@ -39,6 +39,21 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
   // `inviteCampaignMember` doivent donc passer par un client connecte,
   // exactement comme le fera l'application reelle (session cookie, jamais
   // service_role), pas par `admin`.
+  //
+  // `createCampaign` est dans le meme cas, pour une raison differente et
+  // moins visible : il cree sa faction par `createEntity`, dont
+  // `generateUniqueEntitySlug` appelle la RPC `world_has_slug` (migration
+  // 20260902170001). Cette RPC s'ouvre sur `app.is_world_member(p_world_id)`,
+  // qui s'appuie sur `auth.uid()` — nul pour un client service_role. La
+  // fonction s'execute donc bien, mais sa garde echoue et leve `forbidden`
+  // (le symptome n'est PAS un refus de droit d'execution : le corps a
+  // tourne). `gmClient` la satisfait sans privilege particulier, puisque
+  // `createTestWorld` pose deja `owner_id: gmUserId` et que
+  // `is_world_member` reconnait le proprietaire du monde.
+  //
+  // `admin` reste l'outil des VERIFICATIONS d'apres-coup (lectures
+  // `entities`/`relations`, `getCampaignMembers`) : elles doivent voir la
+  // base hors RLS, c'est precisement ce qu'on veut y controler.
   let gmClient: SupabaseClient;
   let gmUserId: string;
   let playerUserId: string;
