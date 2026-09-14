@@ -79,10 +79,11 @@ export default function PublicEntityBody({
               <PublicMusicToggle
                 key={attachment.blockId}
                 blockId={attachment.blockId}
-                trackId={attachment.trackId}
-                trackUrl={attachment.trackUrl}
+                tracks={attachment.tracks}
                 label={attachment.label || "cette musique"}
                 autoplay={attachment.autoplay}
+                fadeInMs={attachment.fadeInMs}
+                fadeOutMs={attachment.fadeOutMs}
               />
             ))}
           </div>

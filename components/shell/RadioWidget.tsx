@@ -166,7 +166,10 @@ export default function RadioWidget({ worldSlug }: { worldSlug: string }) {
   function toggleStation(station: RadioStation) {
     const key = `radio:${station.id}`;
     if (currentKey === key) stop();
-    else play(key, station.url);
+    // V2.1-6 lot 2 : aucun fondu fourni, donc la radio garde exactement le
+    // comportement qu'elle a toujours eu (ADR 0022) — les durees sont portees
+    // par la source qu'on lance, jamais par le lecteur.
+    else play({ key, tracks: [{ id: station.id, url: station.url }] });
   }
 
   const isPlaying = currentKey?.startsWith("radio:") ?? false;

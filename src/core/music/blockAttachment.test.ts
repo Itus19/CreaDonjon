@@ -7,7 +7,13 @@ function bloc(id: string, blockType: string, label = id): MusicAttachmentBlock {
 
 function musique(
   id: string,
-  options: { tracks?: { id: string; url: string; title?: string }[]; autoplayOnVisit?: boolean; label?: string } = {}
+  options: {
+    tracks?: { id: string; url: string; title?: string }[];
+    autoplayOnVisit?: boolean;
+    label?: string;
+    fadeInMs?: number;
+    fadeOutMs?: number;
+  } = {}
 ): MusicAttachmentBlock {
   return {
     id,
@@ -17,6 +23,8 @@ function musique(
       __v: 1,
       tracks: options.tracks ?? [{ id: `${id}-p1`, url: "https://youtu.be/j940HnlMM8k" }],
       autoplayOnVisit: options.autoplayOnVisit ?? false,
+      fadeInMs: options.fadeInMs ?? 1500,
+      fadeOutMs: options.fadeOutMs ?? 1500,
     },
   };
 }
@@ -48,7 +56,7 @@ describe("planMusicAttachments (V2.1-6)", () => {
     expect(attachments).toEqual([]);
   });
 
-  it("ne retient que la premiere piste du bloc (lot 1 : pas d'enchainement)", () => {
+  it("remonte toutes les pistes du bloc, dans l'ordre — c'est ce que le lecteur enchaine (lot 2)", () => {
     const { attachments } = planMusicAttachments([
       bloc("a", "text"),
       musique("m1", {
@@ -59,8 +67,35 @@ describe("planMusicAttachments (V2.1-6)", () => {
       }),
     ]);
     expect(attachments).toHaveLength(1);
-    expect(attachments[0].trackId).toBe("p1");
-    expect(attachments[0].trackUrl).toBe("https://youtu.be/aaa");
+    expect(attachments[0].tracks.map((t) => t.id)).toEqual(["p1", "p2"]);
+  });
+
+  it("reporte les fondus du bloc", () => {
+    const { attachments } = planMusicAttachments([bloc("a", "text"), musique("m1", { fadeInMs: 400, fadeOutMs: 2500 })]);
+    expect(attachments[0].fadeInMs).toBe(400);
+    expect(attachments[0].fadeOutMs).toBe(2500);
+  });
+
+  it("donne aux blocs anterieurs au lot 2 les memes fondus qu'a un bloc neuf, jamais un fondu eteint", () => {
+    const ancien: MusicAttachmentBlock = {
+      id: "m1",
+      blockType: "music",
+      display: { label: "Station" },
+      data: { __v: 1, tracks: [{ id: "p1", url: "https://youtu.be/aaa" }] },
+    };
+    const { attachments } = planMusicAttachments([ancien]);
+    expect(attachments[0].fadeInMs).toBe(1500);
+    expect(attachments[0].fadeOutMs).toBe(1500);
+  });
+
+  it("borne un fondu aberrant plutot que de le transmettre au lecteur", () => {
+    const { attachments } = planMusicAttachments([
+      musique("m1", { fadeInMs: 99999, fadeOutMs: -30 }),
+      musique("m2", { fadeInMs: Number.NaN }),
+    ]);
+    expect(attachments[0].fadeInMs).toBe(5000);
+    expect(attachments[0].fadeOutMs).toBe(0);
+    expect(attachments[1].fadeInMs).toBe(1500);
   });
 
   it("un seul bloc demarre a la visite : le premier dans l'ordre de la fiche", () => {

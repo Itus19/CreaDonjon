@@ -46,7 +46,10 @@ export function detectProvider(url: string): MusicProvider | null {
  * afficherait sa vignette figee en attente d'un second clic a l'interieur
  * du lecteur, invisible ici puisque l'iframe est masquee.
  */
-export function toEmbedUrl(url: string, options?: { autoplay?: boolean }): string | null {
+export function toEmbedUrl(
+  url: string,
+  options?: { autoplay?: boolean; startSeconds?: number; endSeconds?: number }
+): string | null {
   const provider = detectProvider(url);
   if (!provider) return null;
   const parsed = new URL(url);
@@ -59,16 +62,21 @@ export function toEmbedUrl(url: string, options?: { autoplay?: boolean }): strin
       return `https://open.spotify.com/embed/${match[1]}/${match[2]}${autoplay ? "?autoplay=1" : ""}`;
     }
     case "youtube": {
-      let videoId: string | null = null;
-      if (parsed.hostname === "youtu.be") {
-        videoId = parsed.pathname.slice(1) || null;
-      } else {
-        videoId = parsed.searchParams.get("v");
-      }
+      const videoId = youtubeVideoId(url);
       const listId = parsed.searchParams.get("list");
       const params = new URLSearchParams();
       if (listId) params.set("list", listId);
       if (autoplay) params.set("autoplay", "1");
+      // Bornes (V2.1-6, lot 2) : seulement pour le repli iframe — le lecteur
+      // pilote, lui, les passe a `loadVideoById`. On ne pose que ce qui a un
+      // sens : une borne negative, ou une fin avant le debut, donnerait un
+      // lecteur bloque a l'arret sans le moindre message.
+      const start = options?.startSeconds;
+      const end = options?.endSeconds;
+      const validStart = typeof start === "number" && start > 0 ? Math.floor(start) : null;
+      const validEnd = typeof end === "number" && end > 0 && (validStart === null || end > validStart) ? Math.floor(end) : null;
+      if (validStart !== null) params.set("start", String(validStart));
+      if (validEnd !== null) params.set("end", String(validEnd));
       const query = params.toString();
       if (videoId) return `https://www.youtube.com/embed/${videoId}${query ? `?${query}` : ""}`;
       if (listId) return `https://www.youtube.com/embed/videoseries?${query}`;
@@ -77,6 +85,23 @@ export function toEmbedUrl(url: string, options?: { autoplay?: boolean }): strin
     case "soundcloud":
       return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=${autoplay}`;
   }
+}
+
+/**
+ * Identifiant de video YouTube, ou `null` — y compris pour un autre
+ * fournisseur (V2.1-6, lot 2, docs/adr/0022-lecteur-youtube-pilote.md).
+ *
+ * C'est ce `null` qui decide du repli : une piste qui rend un identifiant
+ * passe par le lecteur pilote (fondu, enchainement, bornes) ; toute autre
+ * garde l'iframe cachee d'origine, sans rien de tout cela. Meme validation de
+ * domaine que le reste du fichier — un hôte mystifie ne rend jamais
+ * d'identifiant, meme si son chemin en a la forme.
+ */
+export function youtubeVideoId(url: string): string | null {
+  if (detectProvider(url) !== "youtube") return null;
+  const parsed = new URL(url);
+  const id = parsed.hostname === "youtu.be" ? parsed.pathname.slice(1) : parsed.searchParams.get("v");
+  return id || null;
 }
 
 export const PROVIDER_LABELS: Record<MusicProvider, string> = {

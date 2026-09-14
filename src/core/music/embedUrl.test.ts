@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectProvider, toEmbedUrl } from "./embedUrl";
+import { detectProvider, toEmbedUrl, youtubeVideoId } from "./embedUrl";
 
 describe("detectProvider", () => {
   it("reconnait les trois fournisseurs autorises", () => {
@@ -73,5 +73,74 @@ describe("toEmbedUrl", () => {
     expect(
       toEmbedUrl("https://www.youtube.com/watch?v=XuMqqaq0unM&list=RDXuMqqaq0unM&start_radio=1", { autoplay: true })
     ).toBe("https://www.youtube.com/embed/XuMqqaq0unM?list=RDXuMqqaq0unM&autoplay=1");
+  });
+});
+
+describe("youtubeVideoId (V2.1-6, lot 2)", () => {
+  it("extrait l'identifiant des deux formes de lien YouTube", () => {
+    expect(youtubeVideoId("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+    expect(youtubeVideoId("https://youtu.be/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+    expect(youtubeVideoId("https://music.youtube.com/watch?v=dQw4w9WgXcQ&list=RD123")).toBe("dQw4w9WgXcQ");
+  });
+
+  it("ignore les parametres de suivi colles au lien partage", () => {
+    expect(youtubeVideoId("https://youtu.be/j940HnlMM8k?si=BbyYnFYZnA6Weaos")).toBe("j940HnlMM8k");
+  });
+
+  it("renvoie null pour un autre fournisseur — c'est ce qui decide du repli sur l'iframe bete", () => {
+    expect(youtubeVideoId("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC")).toBeNull();
+    expect(youtubeVideoId("https://soundcloud.com/artiste/titre")).toBeNull();
+  });
+
+  it("renvoie null pour un hôte mystifie ou une URL malformee", () => {
+    expect(youtubeVideoId("https://youtu.be.evil.com/dQw4w9WgXcQ")).toBeNull();
+    expect(youtubeVideoId("pas une url")).toBeNull();
+  });
+
+  it("renvoie null pour une page YouTube sans video (liste seule)", () => {
+    expect(youtubeVideoId("https://www.youtube.com/playlist?list=PL123")).toBeNull();
+  });
+});
+
+describe("toEmbedUrl : bornes debut/fin (V2.1-6, lot 2)", () => {
+  it("pose start et end sur un lien YouTube", () => {
+    expect(toEmbedUrl("https://youtu.be/dQw4w9WgXcQ", { startSeconds: 80, endSeconds: 220 })).toBe(
+      "https://www.youtube.com/embed/dQw4w9WgXcQ?start=80&end=220"
+    );
+  });
+
+  it("accepte une borne sans l'autre", () => {
+    expect(toEmbedUrl("https://youtu.be/dQw4w9WgXcQ", { startSeconds: 80 })).toBe(
+      "https://www.youtube.com/embed/dQw4w9WgXcQ?start=80"
+    );
+    expect(toEmbedUrl("https://youtu.be/dQw4w9WgXcQ", { endSeconds: 220 })).toBe(
+      "https://www.youtube.com/embed/dQw4w9WgXcQ?end=220"
+    );
+  });
+
+  it("se combine avec autoplay et avec une liste", () => {
+    expect(
+      toEmbedUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL123", { autoplay: true, startSeconds: 5 })
+    ).toBe("https://www.youtube.com/embed/dQw4w9WgXcQ?list=PL123&autoplay=1&start=5");
+  });
+
+  it("ignore les bornes sur Spotify et SoundCloud — aucun des deux ne sait les honorer", () => {
+    expect(toEmbedUrl("https://open.spotify.com/track/abc123", { startSeconds: 80, endSeconds: 220 })).toBe(
+      "https://open.spotify.com/embed/track/abc123"
+    );
+    expect(toEmbedUrl("https://soundcloud.com/artiste/titre", { startSeconds: 80 })).toBe(
+      "https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fartiste%2Ftitre&auto_play=false"
+    );
+  });
+
+  it("ignore une borne absurde plutot que de la transmettre", () => {
+    // Une fin avant le debut, ou un nombre negatif, donnerait un lecteur
+    // bloque a l'arret sans le moindre message : on ne pose que ce qui a un sens.
+    expect(toEmbedUrl("https://youtu.be/dQw4w9WgXcQ", { startSeconds: 200, endSeconds: 100 })).toBe(
+      "https://www.youtube.com/embed/dQw4w9WgXcQ?start=200"
+    );
+    expect(toEmbedUrl("https://youtu.be/dQw4w9WgXcQ", { startSeconds: -5 })).toBe(
+      "https://www.youtube.com/embed/dQw4w9WgXcQ"
+    );
   });
 });

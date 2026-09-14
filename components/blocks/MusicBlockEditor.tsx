@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
-import { PROVIDER_LABELS, detectProvider } from "@/src/core/music/embedUrl";
+import { PROVIDER_LABELS, detectProvider, youtubeVideoId } from "@/src/core/music/embedUrl";
 import { useMusicPlayback } from "@/components/shell/MusicPlaybackContext";
 import Checkbox from "@/components/shared/Checkbox";
 
@@ -56,6 +56,18 @@ export default function MusicBlockEditor({
     onChange({ ...data, tracks: tracks.filter((_, i) => i !== index) });
   }
 
+  /**
+   * Une borne vide (champ efface) retire le champ plutot que d'y poser 0 :
+   * `startSeconds: 0` et « pas de borne » se ressemblent a l'oeil mais pas
+   * dans la donnee, et le schema veut `optional()`, jamais `null`.
+   */
+  function setBorne(index: number, champ: "startSeconds" | "endSeconds", value: number | undefined) {
+    onChange({
+      ...data,
+      tracks: tracks.map((t, i) => (i === index ? { ...t, [champ]: value } : t)),
+    });
+  }
+
   function renameTrack(index: number, title: string) {
     onChange({
       ...data,
@@ -63,10 +75,14 @@ export default function MusicBlockEditor({
     });
   }
 
-  function toggleTrack(trackId: string, url: string) {
-    const key = `block:${blockId}:${trackId}`;
+  function toggleTrack(index: number) {
+    const track = tracks[index];
+    const key = `block:${blockId}:${track.id}`;
     if (currentKey === key) stop();
-    else play(key, url);
+    // Une seule piste, sans fondu : dans l'editeur on ecoute ce qu'on est en
+    // train de regler, on ne joue pas l'ambiance de la fiche. L'enchainement
+    // et les fondus appartiennent aux pages de lecture (`PublicMusicToggle`).
+    else play({ key, tracks: [track] });
   }
 
   return (
@@ -79,26 +95,57 @@ export default function MusicBlockEditor({
             const key = `block:${blockId}:${track.id}`;
             const playing = currentKey === key;
             const provider = detectProvider(track.url);
+            const pilotable = youtubeVideoId(track.url) !== null;
             return (
-              <li key={track.id} className="flex items-center gap-2 text-sm">
-                <button
-                  type="button"
-                  onClick={() => toggleTrack(track.id, track.url)}
-                  aria-label={playing ? "Mettre en pause" : "Lecture"}
-                  className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover"
-                >
-                  {playing ? "⏸" : "▶"}
-                </button>
-                <input
-                  value={track.title ?? ""}
-                  onChange={(e) => renameTrack(index, e.target.value)}
-                  placeholder="Nom de la piste (ex. Arrivée du méchant)"
-                  className={`flex-1 truncate rounded-md border border-edge bg-transparent px-2 py-1 text-sm outline-none ${playing ? "text-accent" : "text-ink"}`}
-                />
-                {provider && <span className="shrink-0 text-xs text-ink-muted">{PROVIDER_LABELS[provider]}</span>}
-                <button type="button" onClick={() => removeTrack(index)} className="shrink-0 text-xs text-danger hover:underline">
-                  ×
-                </button>
+              <li key={track.id} className="flex flex-col gap-1">
+                <div className="flex items-center gap-2 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => toggleTrack(index)}
+                    aria-label={playing ? "Mettre en pause" : "Lecture"}
+                    className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+                  >
+                    {playing ? "⏸" : "▶"}
+                  </button>
+                  <input
+                    value={track.title ?? ""}
+                    onChange={(e) => renameTrack(index, e.target.value)}
+                    placeholder="Nom de la piste (ex. Arrivée du méchant)"
+                    className={`flex-1 truncate rounded-md border border-edge bg-transparent px-2 py-1 text-sm outline-none ${playing ? "text-accent" : "text-ink"}`}
+                  />
+                  {provider && <span className="shrink-0 text-xs text-ink-muted">{PROVIDER_LABELS[provider]}</span>}
+                  <button type="button" onClick={() => removeTrack(index)} className="shrink-0 text-xs text-danger hover:underline">
+                    ×
+                  </button>
+                </div>
+                {/* V2.1-6 lot 2 : bornes YouTube seulement (ADR 0022). Le dire
+                    a cote du lien concerne plutot qu'afficher deux champs qui
+                    ne feraient rien. */}
+                {pilotable ? (
+                  <div className="flex items-center gap-2 pl-11 text-xs text-ink-muted">
+                    <label className="flex items-center gap-1">
+                      Début
+                      <BorneInput
+                        value={track.startSeconds}
+                        onChange={(v) => setBorne(index, "startSeconds", v)}
+                        ariaLabel="Début de la piste, en secondes"
+                      />
+                    </label>
+                    <label className="flex items-center gap-1">
+                      Fin
+                      <BorneInput
+                        value={track.endSeconds}
+                        onChange={(v) => setBorne(index, "endSeconds", v)}
+                        ariaLabel="Fin de la piste, en secondes"
+                      />
+                    </label>
+                    <span>secondes — vide = piste entière</span>
+                  </div>
+                ) : (
+                  <p className="pl-11 text-xs text-ink-muted">
+                    Fondu, enchaînement et bornes début/fin ne s&apos;appliquent qu&apos;aux liens YouTube.
+                  </p>
+                )}
               </li>
             );
           })}
@@ -126,14 +173,85 @@ export default function MusicBlockEditor({
       </div>
       {error && <p className="text-xs text-danger">{error}</p>}
 
-      {/* V2.1-6 : le bloc etant invisible sur les pages de lecture, ce
-          reglage est le seul endroit ou le comportement a la visite se
-          decide. Decoche par defaut — voir `music.ts`. */}
+      {/* V2.1-6 : le bloc etant invisible sur les pages de lecture, ces
+          reglages sont le seul endroit ou son comportement se decide. */}
       <Checkbox
         checked={data.autoplayOnVisit === true}
         onChange={() => onChange({ ...data, autoplayOnVisit: !data.autoplayOnVisit })}
-        label={<span className="text-xs text-ink-soft">Lancer la première piste à la visite de la fiche</span>}
+        label={<span className="text-xs text-ink-soft">Lancer la musique à la visite de la fiche</span>}
       />
+
+      <div className="flex flex-wrap items-center gap-4 text-xs text-ink-muted">
+        <FonduInput
+          libelle="Fondu entrant"
+          value={data.fadeInMs ?? 1500}
+          onChange={(v) => onChange({ ...data, fadeInMs: v })}
+        />
+        <FonduInput
+          libelle="Fondu sortant"
+          value={data.fadeOutMs ?? 1500}
+          onChange={(v) => onChange({ ...data, fadeOutMs: v })}
+        />
+      </div>
     </div>
+  );
+}
+
+/** Champ de secondes d'une borne de piste — vide plutôt que 0 quand la borne n'existe pas. */
+function BorneInput({
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  value: number | undefined;
+  onChange: (value: number | undefined) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <input
+      type="number"
+      min={0}
+      inputMode="numeric"
+      aria-label={ariaLabel}
+      value={value ?? ""}
+      onChange={(e) => {
+        const brut = e.target.value.trim();
+        if (brut === "") return onChange(undefined);
+        const n = Number.parseInt(brut, 10);
+        onChange(Number.isFinite(n) && n >= 0 ? n : undefined);
+      }}
+      className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none"
+    />
+  );
+}
+
+/**
+ * Curseur de fondu. Même plage que le schéma (0-5000 ms) : au-delà on
+ * n'entend plus un fondu mais un long silence. `0` désactive.
+ */
+function FonduInput({
+  libelle,
+  value,
+  onChange,
+}: {
+  libelle: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2">
+      <span className="shrink-0">{libelle}</span>
+      <input
+        type="range"
+        min={0}
+        max={5000}
+        step={100}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-28 accent-accent"
+        aria-label={`${libelle}, en millisecondes`}
+      />
+      <span className="w-12 shrink-0 tabular-nums">{value === 0 ? "aucun" : `${(value / 1000).toFixed(1)} s`}</span>
+    </label>
   );
 }

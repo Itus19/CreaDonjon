@@ -1,4 +1,4 @@
-import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
+import type { MusicBlockData, MusicTrack } from "@/src/core/schemas/blocks/music";
 
 /**
  * V2.1-6 — sur les pages de lecture, un bloc `music` ne s'affiche plus : il
@@ -12,11 +12,12 @@ import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
  * precedent sans libelle. Un endroit, toujours le meme, quel que soit
  * l'endroit ou le bloc a ete range dans la fiche.
  *
- * Ce fichier ne calcule que le PLAN (quels boutons, lequel demarre a la
- * visite) ; le rendu appartient a `PublicEntityBody` et `PublicMusicToggle`.
- * La partie qui merite d'etre ici est l'arbitrage de la lecture automatique :
- * elle s'eprouve en millisecondes, alors qu'elle demanderait un wiki publie
- * et un navigateur si elle restait dans un composant serveur.
+ * Ce fichier ne calcule que le PLAN (quelles pistes, quels fondus, lequel
+ * demarre a la visite) ; le rendu appartient a `PublicEntityBody` et
+ * `PublicMusicToggle`. La partie qui merite d'etre ici est l'arbitrage de la
+ * lecture automatique : elle s'eprouve en millisecondes, alors qu'elle
+ * demanderait un wiki publie et un navigateur si elle restait dans un
+ * composant serveur.
  */
 
 /** Forme minimale d'un bloc pour ce calcul — `PublicBlock` (serveur) la satisfait, sans que le noyau ait a en dependre. */
@@ -29,11 +30,27 @@ export interface MusicAttachmentBlock {
 
 export interface MusicAttachment {
   blockId: string;
-  trackId: string;
-  trackUrl: string;
+  /** Toutes les pistes du bloc, dans l'ordre : le lecteur pilote les enchaine (lot 2), le repli iframe ne joue que la premiere. */
+  tracks: MusicTrack[];
   /** `display.label` du bloc musique, c'est-a-dire le nom de la station. */
   label: string;
   autoplay: boolean;
+  fadeInMs: number;
+  fadeOutMs: number;
+}
+
+/**
+ * Defauts appliques quand le champ manque — c'est-a-dire pour les blocs poses
+ * avant le lot 2, que rien n'a revalides depuis. Ils reprennent ceux du
+ * schema : un bloc ancien se comporte comme un bloc neuf, jamais comme un
+ * bloc au fondu eteint.
+ */
+const FADE_IN_PAR_DEFAUT = 1500;
+const FADE_OUT_PAR_DEFAUT = 1500;
+
+function borneFondu(valeur: number | undefined, defaut: number): number {
+  if (typeof valeur !== "number" || !Number.isFinite(valeur)) return defaut;
+  return Math.min(5000, Math.max(0, Math.round(valeur)));
 }
 
 export function planMusicAttachments<T extends MusicAttachmentBlock>(
@@ -50,25 +67,27 @@ export function planMusicAttachments<T extends MusicAttachmentBlock>(
     }
 
     const data = block.data as Partial<MusicBlockData>;
-    const track = data.tracks?.[0];
+    const tracks = data.tracks ?? [];
     // Un bloc vide n'a rien a lancer : aucun bouton, et il ne consomme pas
     // le droit de demarrer a la visite — sinon un bloc oublie en haut de
     // fiche empecherait silencieusement le bloc suivant de jouer.
-    if (!track) continue;
+    if (tracks.length === 0) continue;
 
-    // Le lecteur partage n'a qu'une source a la fois : si plusieurs blocs de
-    // la fiche demandent la lecture a la visite, le premier dans l'ordre de
-    // la fiche gagne. Laisser les composants se la disputer donnerait un
-    // resultat dependant de l'ordre de montage, c'est-a-dire imprevisible.
+    // Le lecteur partage n'a qu'une source active a la fois : si plusieurs
+    // blocs de la fiche demandent la lecture a la visite, le premier dans
+    // l'ordre de la fiche gagne. Laisser les composants se la disputer
+    // donnerait un resultat dependant de l'ordre de montage, c'est-a-dire
+    // imprevisible.
     const autoplay = !autoplayTaken && data.autoplayOnVisit === true;
     if (autoplay) autoplayTaken = true;
 
     attachments.push({
       blockId: block.id,
-      trackId: track.id,
-      trackUrl: track.url,
+      tracks,
       label: block.display.label,
       autoplay,
+      fadeInMs: borneFondu(data.fadeInMs, FADE_IN_PAR_DEFAUT),
+      fadeOutMs: borneFondu(data.fadeOutMs, FADE_OUT_PAR_DEFAUT),
     });
   }
 
