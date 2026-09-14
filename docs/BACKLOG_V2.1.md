@@ -1076,12 +1076,25 @@ ticket, pas ici.
       13 ms d'écart. Conforme à la réserve annoncée (précision à la seconde).
 - [x] Les réglages apparaissent bien dans l'éditeur : Début/Fin sous chaque
       piste YouTube, les deux curseurs de fondu en bas du bloc.
-- [ ] La lecture en boucle rejoue le bloc arrivé au bout — **implémenté et
-      couvert par 8 tests unitaires** (`nextTrack.test.ts`), pas encore
-      constaté en navigateur : il suffit de cocher « Lire en boucle » sur le
-      bloc du Prologue, dont la première piste s'arrête déjà à 10 s.
-- [ ] En passant d'une fiche à une autre portant chacune sa musique, les deux
-      se chevauchent — demande deux fiches publiées portant chacune un bloc.
+- [ ] La lecture en boucle rejoue le bloc arrivé au bout — **implémentée et
+      couverte par 8 tests unitaires** (`nextTrack.test.ts`), toujours pas
+      constatée en navigateur. L'auteur a coché la case, mais la donnée servie
+      à la page dit encore `"loop":false` : l'éditeur enregistre un bloc **à la
+      perte du focus** (`handleBlockBlur`, `EntityBlocks.tsx`), et cocher puis
+      quitter la page sans cliquer ailleurs dans la fiche perd la
+      modification. Voir la note de fragilité ci-dessous.
+- [x] **En passant d'une fiche à une autre, les deux musiques se
+      chevauchent.** Mesuré du Prologue vers « Brennan Torram » :
+
+      | Temps | État |
+      |---|---|
+      | 3,6 s | 1 iframe, fiche 37 |
+      | 14,6 s | navigation → **2 iframes simultanées** |
+      | 16,1 s | retour à 1 iframe |
+
+      Les deux identifiants de vidéo alternent dans le flux de messages pendant
+      ce créneau — les deux lecteurs vivent bien en même temps — et il s'écoule
+      exactement **1,5 s** entre les deux bascules, le `fadeOutMs` configuré.
 - [ ] Une piste Spotify ou SoundCloud continue de fonctionner — sans fondu,
       sans enchaînement, sans bornes — et l'éditeur le dit.
 - [ ] Exclusion mutuelle avec la radio toujours vraie dans les deux sens.
@@ -1090,6 +1103,38 @@ ticket, pas ici.
       Une station suffirait à lever ce dernier point. Indice indirect en
       attendant : sur toutes les mesures ci-dessus, jamais plus d'une iframe
       n'a coexisté hors fondu — l'invariant « une seule source active » tient.
+
+#### Le premier clic sur le bouton s'annulait lui-même
+
+Trouvé en production, et invisible aux tests comme aux types : quand le tout
+premier geste du visiteur était un clic sur le bouton, **rien ne partait**.
+
+`pointerdown` et `click` sont deux événements distincts, et React a le temps de
+rafraîchir entre les deux. L'écouteur qui arme la lecture au premier geste
+lançait donc la musique sur `pointerdown` ; à l'arrivée du `click`, le
+`onClick` du bouton voyait une lecture en cours et appelait `stop()`. Le
+premier clic armait et mettait en pause dans la foulée.
+
+Le diagnostic a demandé deux passes, et la première était incomplète : j'ai
+d'abord cru à deux appels concurrents de `play`, corrigés par un garde
+d'idempotence dans `MusicPlaybackProvider` (demander la source déjà active ne
+relance rien) et par un `fondre` qui prévient l'appelant même sans lecteur —
+deux gardes justes en soi, gardés. Mais la vraie cause était le `stop()`.
+L'écouteur se contente désormais de se désarmer quand le geste vient du bouton
+lui-même.
+
+Aucune de ces trois erreurs n'était détectable sans navigateur : `typecheck`,
+`lint` et 870 tests passaient à chaque fois.
+
+#### Fragilité notée au passage — l'enregistrement à la perte du focus
+
+Un bloc s'enregistre quand le focus le quitte (`handleBlockBlur`,
+`EntityBlocks.tsx`). Pour un champ de texte, on en sort naturellement ; pour
+une **case à cocher**, le geste naturel est de cocher puis de partir — et la
+modification est perdue sans le moindre signe. Le piège a mordu deux fois sur
+ce seul ticket, l'assistant puis l'auteur, à chaque fois sur une case du bloc
+musique. Ce n'est pas propre à ce bloc et ça déborde de ce ticket : à traiter
+à part.
 
 #### Un plantage trouvé en navigateur, invisible autrement
 
