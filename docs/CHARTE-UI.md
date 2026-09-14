@@ -127,7 +127,13 @@ rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outlin
 <Dropdown value={v} options={opts} onChange={setV} aria-label="Type de fiche" />
 ```
 
-Deux props règlent l'apparence, et elles suffisent : `size` (`sm` par défaut pour une barre d'outils dense, `md` pour un champ de formulaire). Un `<label>` qui l'enveloppe ne lui donne **pas** de nom accessible — c'est un `<button>`, pas un contrôle de formulaire : `aria-label` est donc obligatoire dès qu'il n'y a pas de libellé lisible dans le déclencheur lui-même.
+Deux props règlent l'apparence, et elles suffisent : `size` (`sm` par défaut pour une barre d'outils dense, `md` pour un champ de formulaire).
+
+**`aria-label` est obligatoire, et le type l'impose désormais** (14 septembre) — la règle était écrite ici depuis la V2 et treize appels l'avaient oubliée en silence. Le piège se voit mal : le déclencheur affiche déjà la valeur courante, donc il *a* un nom accessible et rien ne semble manquer. Sauf que ce nom **est la valeur** — un lecteur d'écran annonce « Public, bouton » sans jamais dire de quoi « Public » est la réponse. Le libellé doit donc dire ce que la liste choisit (« Visibilité du bloc », « Espèce »), jamais ce qu'elle affiche.
+
+Et un libellé visible posé à côté dans un `<label>` ne suffit pas : un `<label>` ne nomme que les contrôles natifs, et c'est un `<button>`.
+
+**`Checkbox` suit la même règle** : elle exige un `label` visible **ou** un `aria-label`, au choix mais pas ni l'un ni l'autre. Son libellé visible, lui, la nomme bien — mais seulement depuis qu'il est associé par `aria-labelledby` (même 14 septembre) ; l'envelopper dans un `<label>` n'avait jamais suffi, pour la même raison.
 
 **`className` ne sert qu'à la mise en page** — largeur, marge, `flex-1`, `shrink-0`. Il **s'ajoute** au style du composant, il ne le remplace jamais : un appel qui ne passe qu'une largeur garde donc bordure, fond et couleur de texte. N'y mettez ni couleur, ni bordure, ni rayon — ils entreraient en conflit avec le style de base, et c'est l'ordre des utilitaires dans la feuille générée qui trancherait, pas celui écrit dans l'attribut.
 

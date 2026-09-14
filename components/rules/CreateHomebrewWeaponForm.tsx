@@ -456,6 +456,7 @@ export default function CreateHomebrewWeaponForm({
             value={masteryKey}
             options={[{ value: "", label: t("aucuneBotte") }, ...weaponMasteries.map((m) => ({ value: m.key, label: m.name }))]}
             onChange={setMasteryKey}
+            aria-label={t("botteArme")}
             triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
           />
         </label>

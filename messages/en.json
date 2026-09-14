@@ -160,6 +160,8 @@
     "effetsChiffres": "Numeric effects (optional)",
     "effetsChiffresAide": "Only for effects that truly match one of these targets — everything else about the feat belongs in the text above.",
     "ajouterEffetChiffre": "+ Add a numeric effect",
+    "cibleDuModificateur": "Modifier target",
+    "operationDuModificateur": "Modifier operation",
     "creerDon": "Create feat",
     "erreurCreationDon": "Could not create this feat — try again.",
     "bacASable": "Formula sandbox",

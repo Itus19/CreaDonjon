@@ -78,7 +78,19 @@ export default function Dropdown({
   /** `sm` (defaut) pour une barre d'outils dense, `md` pour un champ de formulaire. */
   size?: keyof typeof TRIGGER_SIZE;
   disabled?: boolean;
-  "aria-label"?: string;
+  /**
+   * Ce que cette liste choisit — « Visibilite du bloc », « Espece »… —, jamais
+   * la valeur choisie. OBLIGATOIRE, et c'est un piege qui se voit mal : le
+   * declencheur affiche deja la valeur courante, donc il a un nom accessible,
+   * et rien ne semble manquer. Sauf que ce nom EST la valeur : un lecteur
+   * d'ecran annonce « Public, bouton » sans jamais dire de quoi « Public » est
+   * la reponse. La charte le prescrivait deja (docs/CHARTE-UI.md §3) ; le type
+   * l'impose desormais, onze appels l'ayant oublie en silence.
+   *
+   * Un libelle visible pose a cote dans un `<label>` ne suffit pas : un
+   * `<label>` ne nomme que les controles natifs, et ceci est un `<button>`.
+   */
+  "aria-label": string;
 }) {
   const [open, setOpen] = useState(false);
   const commit = useEditCommit();

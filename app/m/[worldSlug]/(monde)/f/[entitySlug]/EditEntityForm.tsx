@@ -334,6 +334,7 @@ export default function EditEntityForm({
               value={kindDropdownValue}
               options={kindOptions}
               onChange={handleKindChange}
+              aria-label="Type de fiche"
               triggerClassName="inline-flex min-w-0 items-center gap-1 overflow-hidden bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
             />
           )}
@@ -429,6 +430,7 @@ export default function EditEntityForm({
                   value={kindDropdownValue}
                   options={kindOptions}
                   onChange={handleKindChange}
+                  aria-label="Type de fiche"
                   triggerClassName="inline-flex min-w-0 items-center gap-1 overflow-hidden bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
                 />
               )}

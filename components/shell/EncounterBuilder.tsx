@@ -170,15 +170,33 @@ export default function EncounterBuilder({
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-edge/60 bg-panel-sunken p-3">
         <label className="flex items-center gap-1.5 text-xs text-ink-muted">
           PJ
-          <Dropdown value={String(partySize)} options={PARTY_SIZE_OPTIONS} onChange={(v) => setPartySize(Number(v))} />
+          {/* Le libelle visible vit dans un `<label>`, qui ne nomme que les
+              controles natifs : sans `aria-label`, un lecteur d'ecran
+              n'annoncerait que la valeur choisie. */}
+          <Dropdown
+            value={String(partySize)}
+            options={PARTY_SIZE_OPTIONS}
+            onChange={(v) => setPartySize(Number(v))}
+            aria-label="Nombre de personnages joueurs"
+          />
         </label>
         <label className="flex items-center gap-1.5 text-xs text-ink-muted">
           Niveau
-          <Dropdown value={String(partyLevel)} options={PARTY_LEVEL_OPTIONS} onChange={(v) => setPartyLevel(Number(v))} />
+          <Dropdown
+            value={String(partyLevel)}
+            options={PARTY_LEVEL_OPTIONS}
+            onChange={(v) => setPartyLevel(Number(v))}
+            aria-label="Niveau du groupe"
+          />
         </label>
         <label className="flex items-center gap-1.5 text-xs text-ink-muted">
           Difficulté
-          <Dropdown value={band} options={BAND_OPTIONS} onChange={(v) => setBand(v as EncounterBudgetBand)} />
+          <Dropdown
+            value={band}
+            options={BAND_OPTIONS}
+            onChange={(v) => setBand(v as EncounterBudgetBand)}
+            aria-label="Difficulté de la rencontre"
+          />
         </label>
         <button
           type="button"

@@ -161,6 +161,8 @@
     "effetsChiffres": "Effets chiffrés (optionnel)",
     "effetsChiffresAide": "Uniquement pour les effets qui correspondent vraiment à l'une de ces cibles — le reste du don se décrit dans le texte ci-dessus.",
     "ajouterEffetChiffre": "+ Ajouter un effet chiffré",
+    "cibleDuModificateur": "Cible du modificateur",
+    "operationDuModificateur": "Opération du modificateur",
     "creerDon": "Créer le don",
     "erreurCreationDon": "Impossible de créer ce don — réessayez.",
     "bacASable": "Bac à sable de formule",

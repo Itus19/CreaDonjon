@@ -61,12 +61,19 @@ export function RuleSelect({
   emptyLabel,
   chip,
   filterFn,
+  "aria-label": ariaLabel,
 }: {
   worldSlug: string;
   entryTypes: readonly string[];
   value: string;
   onChange: (key: string) => void;
   emptyLabel: string;
+  /**
+   * Ce que cette liste choisit — « Espèce », « Classe »… Obligatoire : le
+   * declencheur n'affiche que la VALEUR courante, donc sans ce nom un lecteur
+   * d'ecran annonce « Humain, bouton » sans jamais dire de quoi il s'agit.
+   */
+  "aria-label": string;
   chip: ResolvedChipView | undefined;
   /** Filtre additionnel (V1-C4 suite) — ex. restreindre les sous-classes à celles de la classe choisie sur la même ligne. */
   filterFn?: (entry: RuleEntrySummary) => boolean;
@@ -83,7 +90,7 @@ export function RuleSelect({
 
   return (
     <div className="flex items-center gap-1">
-      <Dropdown value={value} options={options} onChange={onChange} />
+      <Dropdown value={value} options={options} onChange={onChange} aria-label={ariaLabel} />
       {chip?.found && (
         <Link
           href={chip.href}
@@ -271,6 +278,7 @@ export default function CharacterSheetHeader({
               value={baseSpeciesKey}
               onChange={(key) => patchCharacter({ species: ruleRef(key) })}
               emptyLabel="Aucune espèce"
+              aria-label="Espèce"
               chip={baseSpeciesChip}
               filterFn={(entry) => !entry.parentSpeciesKey}
             />
@@ -285,6 +293,7 @@ export default function CharacterSheetHeader({
                 patchCharacter({ species: key.trim() ? { kind: "rule", key: key.trim() } : ruleRef(baseSpeciesKey) })
               }
               emptyLabel="Aucune lignée"
+              aria-label="Lignée"
               chip={lineageSelected && character.species ? buildChips.get(refIdentity(character.species)) : undefined}
               filterFn={(entry) => (baseSpeciesKey ? entry.parentSpeciesKey === baseSpeciesKey : false)}
             />
@@ -297,6 +306,7 @@ export default function CharacterSheetHeader({
               value={character.background?.kind === "rule" ? character.background.key : ""}
               onChange={(key) => patchCharacter({ background: ruleRef(key) })}
               emptyLabel="Aucun historique"
+              aria-label="Historique"
               chip={character.background ? buildChips.get(refIdentity(character.background)) : undefined}
             />
           </label>
@@ -346,6 +356,7 @@ export default function CharacterSheetHeader({
                       value={classKey}
                       onChange={(key) => updateClass(index, { class: { kind: "rule", key }, subclass: null })}
                       emptyLabel="Aucune classe"
+                      aria-label="Classe"
                       chip={buildChips.get(refIdentity(c.class))}
                     />
                     <input
@@ -362,6 +373,7 @@ export default function CharacterSheetHeader({
                       value={c.subclass?.kind === "rule" ? c.subclass.key : ""}
                       onChange={(key) => updateClass(index, { subclass: ruleRef(key) })}
                       emptyLabel="Aucune sous-classe"
+                      aria-label="Sous-classe"
                       chip={c.subclass ? buildChips.get(refIdentity(c.subclass)) : undefined}
                       filterFn={(entry) => (classKey ? entry.parentClassKey === classKey : false)}
                     />

@@ -501,6 +501,7 @@ export default function InitiativeTracker({
           <Dropdown
             value={addMode}
             onChange={(v) => setAddMode(v as AddParticipantMode)}
+            aria-label="Type de participant à ajouter"
             options={[
               { value: "entity", label: "Personnage joueur" },
               { value: "statblock", label: "Monstre du ruleset" },
@@ -511,6 +512,7 @@ export default function InitiativeTracker({
             <Dropdown
               value={selectedPcId}
               onChange={setSelectedPcId}
+              aria-label="Personnage joueur à ajouter"
               options={pcOptions.map((p) => ({ value: p.id, label: p.name }))}
             />
           )}
@@ -725,6 +727,7 @@ export default function InitiativeTracker({
                 <Dropdown
                   value=""
                   onChange={(c) => c && toggleCondition(p, c)}
+                  aria-label={`Ajouter une condition à ${p.label}`}
                   options={[{ value: "", label: "+ Condition" }, ...conditions.map((c) => ({ value: c, label: c }))]}
                 />
               </div>
