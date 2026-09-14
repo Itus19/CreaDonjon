@@ -128,7 +128,6 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
 function BlockDataEditor({
   block,
   onChange,
-  onSaveNow,
   worldSlug,
   worldId,
   campaignId,
@@ -141,8 +140,6 @@ function BlockDataEditor({
 }: {
   block: BlockItem;
   onChange: (data: unknown) => void;
-  /** Bloc `map` (Lot I) : upload/changement de vue par defaut doivent persister immediatement — la sauvegarde habituelle (perte de focus du conteneur du bloc) ne se declenche pas de maniere fiable depuis une fenetre modale imbriquee dans ce meme conteneur. Reutilise le mecanisme de surcharge deja en place pour la visibilite (`onSaveBlock` cote `SortableBlockCard`). */
-  onSaveNow?: (data: unknown) => void;
   worldSlug: string;
   /** V2-H3 : necessaire pour "creer la carte «X»" depuis le bloc genealogie sans faire remonter le monde entier. */
   worldId: string;
@@ -318,7 +315,6 @@ function BlockDataEditor({
           otherEntities={otherEntities}
           data={block.data as MapBlockData}
           onChange={(d) => onChange(d)}
-          onSaveNow={onSaveNow ? (d) => onSaveNow(d) : undefined}
         />
       );
     case "session_journal_meta":
@@ -582,7 +578,7 @@ export default function EntityBlocks({
   ) {
     // ADR 0023 — deux demandes dans le MEME tour ne produisent qu'une
     // requete. Le cas : un editeur qui enregistre deja explicitement (fiche de
-    // personnage, bloc carte via `onSaveNow`) contient un controle qui engage
+    // personnage) contient un controle qui engage
     // desormais sa valeur de lui-meme ; sans cette fusion, un seul geste
     // ecrirait deux fois. Une demande porteuse de surcharges n'est jamais
     // fusionnee — elle transporte une donnee que la suivante ignorerait —,
@@ -1105,7 +1101,6 @@ function SortableBlockCard({
           <BlockDataEditor
             block={block}
             onChange={(data) => onPatchBlock(block.id, { data })}
-            onSaveNow={(data) => onSaveBlock(block.id, { data })}
             worldSlug={worldSlug}
             worldId={worldId}
             campaignId={campaignId}

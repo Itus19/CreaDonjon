@@ -12,6 +12,7 @@ import type { VisibleMapPin } from "@/src/server/services/mapPins";
 import type { VisibleMapRegion } from "@/src/server/services/mapRegions";
 import type { VisibleMapLayer } from "@/src/server/services/mapLayers";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
+import { useEditCommit } from "@/components/shared/EditCommitContext";
 
 // Retour utilisateur, avec capture a l'appui : la vignette a 800px restait
 // visiblement floue une fois etiree a la largeur reelle d'un bloc de fiche
@@ -42,7 +43,6 @@ export default function MapWorkspace({
   otherEntities,
   data,
   onChange,
-  onSaveNow,
   height = "100%",
 }: {
   worldSlug: string;
@@ -52,21 +52,24 @@ export default function MapWorkspace({
   otherEntities: OtherEntityOption[];
   data: Extract<MapBlockData, { mode: "own" }>;
   onChange: (data: MapBlockData) => void;
+  height?: number | string;
+}) {
   /**
-   * Persistance immediate (Lot I) : quand ce composant est ouvert dans une
+   * Persistance immediate (ADR 0023) : quand ce composant est ouvert dans une
    * fenetre modale imbriquee dans le conteneur du bloc (`MapBlockEditor.tsx`),
    * aucun clic a l'interieur ne declenche la sauvegarde habituelle au blur
    * du conteneur — bug decouvert en test live (upload visible a l'ecran,
    * jamais persiste). `onChange` reste responsable de l'etat local en
-   * memoire ; quand fourni, `onSaveNow` persiste en plus, tout de suite,
-   * avec la donnee qu'on vient de calculer (meme motif que le dropdown de
-   * visibilite : `onPatchBlock` puis `onSaveBlock` avec la donnee en
-   * surcharge, jamais lue depuis un etat qui n'a pas encore re-rendu).
-   * Absent (vue "Cartes" dediee) : `onChange` persiste deja lui-meme.
+   * memoire ; `commit` persiste en plus, tout de suite.
+   *
+   * Il n'a pas besoin de recevoir la donnee : `onChange` met a jour
+   * `blocksRef` (le miroir synchrone d'`EntityBlocks.tsx`) dans le meme tour,
+   * donc le `commit` qui suit lit deja la valeur neuve.
+   *
+   * `null` hors d'un conteneur qui sait enregistrer — vue "Cartes" dediee
+   * (`CarteMapPanel.tsx`), ou `onChange` persiste deja lui-meme.
    */
-  onSaveNow?: (data: MapBlockData) => void;
-  height?: number | string;
-}) {
+  const commit = useEditCommit();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [asset, setAsset] = useState<AssetRow | null>(null);
@@ -163,7 +166,7 @@ export default function MapWorkspace({
       setAsset(full);
       const next: MapBlockData = { ...data, assetId: full.id, thumbnailAssetId: thumbnail.id };
       onChange(next);
-      onSaveNow?.(next);
+      commit?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Échec du téléversement.");
     } finally {
@@ -181,7 +184,7 @@ export default function MapWorkspace({
     if (!pendingViewRef.current) return;
     const next: MapBlockData = { ...data, defaultView: pendingViewRef.current };
     onChange(next);
-    onSaveNow?.(next);
+    commit?.();
   }
 
   function togglePlacingPin() {

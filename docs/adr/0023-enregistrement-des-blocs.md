@@ -136,12 +136,14 @@ n'apparaît jamais — seul le bandeau d'erreur, à 401 ms.
 - Le texte reste la seule chose qu'on puisse encore perdre en quittant la page
   au milieu d'une phrase. C'est le comportement d'avant, inchangé, et il est
   cohérent : une phrase en cours n'est pas une valeur engagée.
-- **`onSaveNow` reste en place pour le bloc carte**, et fait double emploi en
-  principe : c'est la même idée, trouvée plus tôt pour un seul bloc et câblée
-  en prop. Les deux devraient converger vers le contexte, mais c'est un
-  remplacement mécanique qui n'appartient pas à ce correctif — le noter plutôt
-  que l'entreprendre au passage. Tant qu'il vit, il ne fait courir aucun
-  risque : les deux chemins aboutissent au même `saveBlock`, sérialisé.
+- **`onSaveNow` (bloc carte) a été retiré depuis, au profit de ce contexte**
+  (ticket V2.1-8, le jour même). C'était la même idée, trouvée plus tôt pour un
+  seul bloc et câblée en prop sur quatre niveaux ; ce correctif-ci l'a laissée
+  vivre, le remplacement étant mécanique et étranger à son périmètre. Les cinq
+  appels du bloc carte passent maintenant par `commit`, et le nombre de
+  requêtes a été mesuré identique avant et après — la surcharge `data` que la
+  prop transportait était déjà couverte par `blocksRef`, le miroir synchrone
+  que `doSaveBlock` lit de toute façon.
 - `Checkbox` et `Dropdown` gagnent une dépendance à un contexte. Elle est
   optionnelle par construction, et c'est ce qui permet de ne pas modifier les
   éditeurs — mais elle rend leur comportement dépendant de leur environnement,

@@ -11,6 +11,7 @@ import type { MapSourceInfo, CarteOption } from "@/src/server/services/mapSource
 import type { VisibleMapPin } from "@/src/server/services/mapPins";
 import type { VisibleMapRegion } from "@/src/server/services/mapRegions";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
+import { useEditCommit } from "@/components/shared/EditCommitContext";
 
 // Meme hauteur que RelationsGraphCanvas/FamilyTreeCanvas (retour
 // utilisateur : "le bloc carte a une forme bizarre" — il faisait 220px,
@@ -32,7 +33,6 @@ export default function MapBlockEditor({
   otherEntities,
   data,
   onChange,
-  onSaveNow,
 }: {
   worldSlug: string;
   /** Punaises (Lot I, phase C) : `map_pins` est cle par `block_id`, jamais fourni par `data`. */
@@ -40,9 +40,9 @@ export default function MapBlockEditor({
   otherEntities: OtherEntityOption[];
   data: MapBlockData;
   onChange: (data: MapBlockData) => void;
-  /** Persistance immediate (Lot I) — voir le commentaire dans `MapWorkspace.tsx`. */
-  onSaveNow?: (data: MapBlockData) => void;
 }) {
+  /** Persistance immediate (ADR 0023) — voir le commentaire dans `MapWorkspace.tsx`. */
+  const commit = useEditCommit();
   const [expanded, setExpanded] = useState(false);
   const [asset, setAsset] = useState<AssetRow | null>(null);
   // `undefined` = pas encore resolu, distinct de `null` = confirme
@@ -173,19 +173,19 @@ export default function MapBlockEditor({
     // herite qui viserait au hasard sur la nouvelle image.
     const next: MapBlockData = { __v: 1, mode: "ref", sourceBlockId: option.blockId, defaultView: DEFAULT_MAP_BLOCK_DATA.defaultView };
     onChange(next);
-    onSaveNow?.(next);
+    commit?.();
   }
 
   function useOwnImage() {
     onChange(DEFAULT_MAP_BLOCK_DATA);
-    onSaveNow?.(DEFAULT_MAP_BLOCK_DATA);
+    commit?.();
   }
 
   function saveRefDefaultView(view: MapView) {
     if (data.mode !== "ref") return;
     const next: MapBlockData = { ...data, defaultView: view };
     onChange(next);
-    onSaveNow?.(next);
+    commit?.();
   }
 
   return (
@@ -264,7 +264,7 @@ export default function MapBlockEditor({
               </button>
             </div>
             {data.mode === "own" ? (
-              <MapWorkspace worldSlug={worldSlug} blockId={blockId} otherEntities={otherEntities} data={data} onChange={onChange} onSaveNow={onSaveNow} />
+              <MapWorkspace worldSlug={worldSlug} blockId={blockId} otherEntities={otherEntities} data={data} onChange={onChange} />
             ) : (
               <MapRefPanel worldSlug={worldSlug} sourceBlockId={data.sourceBlockId} defaultView={data.defaultView} onSaveDefaultView={saveRefDefaultView} />
             )}
