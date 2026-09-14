@@ -57,7 +57,17 @@ export function toEmbedUrl(
 
   switch (provider) {
     case "spotify": {
-      const match = parsed.pathname.match(/^\/(track|playlist|album|artist|episode|show)\/([a-zA-Z0-9]+)/);
+      // Le prefixe de langue est pose par Spotify lui-meme : son bouton
+      // "Copier le lien" rend `/intl-fr/track/...` des que l'interface n'est
+      // pas en anglais — donc systematiquement, pour ce projet. Sans lui, le
+      // lien etait accepte a l'ajout (`detectProvider` ne regarde que l'hote)
+      // puis ne jouait rien, en silence, faute d'URL d'integration.
+      //
+      // Tolere ce prefixe, pas un joker : un segment arbitraire doit rester
+      // non traduisible plutot que de laisser deviner un identifiant.
+      const match = parsed.pathname.match(
+        /^(?:\/intl-[a-z]{2}(?:-[a-z]{2})?)?\/(track|playlist|album|artist|episode|show)\/([a-zA-Z0-9]+)/
+      );
       if (!match) return null;
       return `https://open.spotify.com/embed/${match[1]}/${match[2]}${autoplay ? "?autoplay=1" : ""}`;
     }

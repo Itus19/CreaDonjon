@@ -33,6 +33,32 @@ describe("toEmbedUrl", () => {
     );
   });
 
+  it("traduit un lien Spotify localise — le prefixe de langue que Spotify pose lui-meme", () => {
+    // Le bouton "Copier le lien" de Spotify rend un chemin prefixe par la
+    // langue de l'interface (V2.1-6, trouve sur un vrai lien fourni par
+    // l'auteur : `/intl-fr/track/...`). Sans ce cas, la piste s'ajoutait —
+    // `detectProvider` ne regarde que l'hote — puis ne jouait rien, en
+    // silence : le bouton passait en pause et aucune iframe n'etait montee.
+    expect(toEmbedUrl("https://open.spotify.com/intl-fr/track/5aFkncSW2aZuYByqKC0Gse")).toBe(
+      "https://open.spotify.com/embed/track/5aFkncSW2aZuYByqKC0Gse"
+    );
+    expect(toEmbedUrl("https://open.spotify.com/intl-pt-br/album/1DFixLWuPkv3KT3TnV35m3")).toBe(
+      "https://open.spotify.com/embed/album/1DFixLWuPkv3KT3TnV35m3"
+    );
+    // Le parametre `si` de partage ne change rien : seul le chemin compte.
+    expect(toEmbedUrl("https://open.spotify.com/intl-fr/track/5aFkncSW2aZuYByqKC0Gse?si=5100c65291354591")).toBe(
+      "https://open.spotify.com/embed/track/5aFkncSW2aZuYByqKC0Gse"
+    );
+  });
+
+  it("n'accepte pas n'importe quel segment avant le type de ressource", () => {
+    // Le prefixe tolere est celui de Spotify, pas un joker : un chemin
+    // arbitraire reste non traduisible plutot que de faire deviner un
+    // identifiant au hasard.
+    expect(toEmbedUrl("https://open.spotify.com/nimporte/track/abc123")).toBeNull();
+    expect(toEmbedUrl("https://open.spotify.com/intl-francais/track/abc123")).toBeNull();
+  });
+
   it("traduit un lien YouTube (video, avec ou sans liste)", () => {
     expect(toEmbedUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe(
       "https://www.youtube.com/embed/dQw4w9WgXcQ"

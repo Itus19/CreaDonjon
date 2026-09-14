@@ -17,7 +17,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-3 | Livre de sessions | `M` → `L` | **Fait** (13 septembre) — pivoté vers une vraie fiche par entrée plutôt que `sessions.summary`, sur retour utilisateur explicite |
 | V2.1-4 | Calendrier réel de planification des séances | `L` | **Fait** (13 septembre) — piste D (disponibilités libres), variante F (classement) |
 | V2.1-5 | Un seul bloc Personnalité/Convictions par fiche | `S` | Aucune contrainte aujourd'hui — même bug de classe déjà vu et corrigé pour les Générateurs de MJ |
-| V2.1-6 | Bloc musique : ambiance sonore sur le wiki public | `L` | **Presque clos** (14 septembre) — les deux lots sont livrés et vérifiés ; il ne reste qu'un critère, celui des liens Spotify/SoundCloud, qui doivent continuer de fonctionner sans fondu ni bornes et que l'éditeur doit le dire |
+| V2.1-6 | Bloc musique : ambiance sonore sur le wiki public | `L` | **Fait** (14 septembre) — les deux lots livrés, tous les critères vérifiés en navigateur. Le dernier a trouvé un bug : Spotify localise ses liens de partage (`/intl-fr/track/…`), que le résolveur refusait en silence |
 | V2.1-7 | Une modification qui ne s'enregistre pas, et des contrôles anonymes | `M` | **Fait** (14 septembre) — né de V2.1-6 : une case cochée se perdait en silence, deux fois en un jour. Troisième occurrence du même défaut, donc traité à la cause (ADR 0023). Corrige au passage le nom accessible des cases et des listes |
 | V2.1-8 | `onSaveNow` rejoint le contexte d'enregistrement | `S` | **Fait** (14 septembre) — la traîne consignée en fin de V2.1-7 : le bloc carte gardait le correctif ponctuel d'avant l'ADR 0023. Remplacement mécanique, comportement mesuré identique avant/après |
 | V2.1-9 | Un test d'intégration à la marge trop mince | `S` | **Fait** (14 septembre, avant d'être écrit) — `homebrewWeapon.integration.test.ts` échouait par intermittence sur le délai de 5 s de Vitest. Corrigé dans la foulée de V2.1-6 sans qu'aucun ticket ne le porte ; consigné ici après coup |
@@ -1158,8 +1158,27 @@ annoncé un chantier déjà fait, et aucun ticket ne le portait jusqu'ici.
       Les deux identifiants de vidéo alternent dans le flux de messages pendant
       ce créneau — les deux lecteurs vivent bien en même temps — et il s'écoule
       exactement **1,5 s** entre les deux bascules, le `fadeOutMs` configuré.
-- [ ] Une piste Spotify ou SoundCloud continue de fonctionner — sans fondu,
-      sans enchaînement, sans bornes — et l'éditeur le dit.
+- [x] **Une piste Spotify continue de fonctionner — et l'éditeur le dit.**
+      Vérifié sur un vrai lien fourni par l'auteur, et **ce critère a trouvé un
+      bug** : voir ci-dessous. Une fois corrigé, la piste monte bien son
+      iframe, `https://open.spotify.com/embed/track/5aFkncSW2aZuYByqKC0Gse?autoplay=1`,
+      et le bouton passe en « Mettre en pause ».
+
+      La preuve la plus nette de la distinction tient dans **un seul bloc
+      portant les deux fournisseurs** : la piste Spotify n'affiche aucun champ
+      Début/Fin et porte la phrase « Fondu, enchaînement et bornes début/fin ne
+      s'appliquent qu'aux liens YouTube » ; la piste YouTube juste en dessous a
+      ses deux champs. Des réglages absents valent mieux que des réglages sans
+      effet.
+
+      **Ce que je n'ai pas mesuré, et pourquoi** : l'absence de fondu et
+      d'enchaînement. Le geste qui semblait les départager — arrêter la piste
+      et chronométrer — ne départage rien : mesuré à 28 ms pour Spotify comme
+      pour YouTube, parce qu'un arrêt explicite n'est jamais fondu. Les deux
+      propriétés tiennent par construction (`VoixIframe` n'a aucun accès au
+      volume et n'émet jamais de fin de piste, que seul le lecteur piloté
+      produit), mais c'est une lecture du code, pas une mesure — dit ici plutôt
+      que maquillé en constat.
 - [x] **Exclusion mutuelle avec la radio, vraie dans les deux sens** —
       mesurée le 14 septembre **sur la fiche de Fine Lââm**, dans ClaudeLand,
       contre la station « Station test » que l'auteur a posée (le blocage
@@ -1190,6 +1209,35 @@ annoncé un chantier déjà fait, et aucun ticket ne le portait jusqu'ici.
       C'est attendu — le lecteur partagé est monté une seule fois dans
       `app/layout.tsx` et ne connaît ni le monde ni la campagne — mais ça ne se
       raconte pas, ça se refait.
+
+#### Le bug que ce dernier critère a trouvé — Spotify localise ses liens
+
+Le lien fourni par l'auteur était `https://open.spotify.com/intl-fr/track/…`.
+**Ce préfixe n'est pas une curiosité : Spotify le pose lui-même**, depuis son
+propre bouton « Copier le lien », dès que l'interface n'est pas en anglais —
+donc systématiquement, pour ce projet.
+
+`toEmbedUrl` ancrait sa reconnaissance en début de chemin
+(`/^\/(track|playlist|…)/`). Le segment de langue faisait échouer la
+correspondance, et la fonction renvoyait `null`.
+
+**Le symptôme était le pire possible : le silence.** `detectProvider` ne
+regarde que l'hôte, donc le lien passait la validation à l'ajout ; la piste
+s'inscrivait dans le bloc, le bouton basculait en pause au clic — et aucune
+iframe n'était montée. Exactement le « bouton menteur » que ce ticket avait
+déjà combattu au lot 1, sous un autre visage.
+
+**Corrigé dans le noyau pur, tests d'abord** : un préfixe `intl-xx` (ou
+`intl-xx-yy`) optionnel devant le type de ressource. Toléré comme préfixe
+précis, jamais comme joker — `/nimporte/track/abc` et `/intl-francais/track/abc`
+restent refusés, et un test le fixe. C'est le même principe que le refus de
+`open.spotify.com.evil.com` déjà en place : on élargit ce que Spotify produit
+vraiment, pas ce qui ressemble de loin à un lien Spotify.
+
+Ni les types ni les 994 tests d'alors ne pouvaient attraper ça : la seule
+forme d'URL Spotify éprouvée était la forme anglaise. **Un lien réel de
+l'auteur a suffi** — et c'est le troisième défaut de ce ticket que seul un
+usage réel a révélé.
 
 #### Comment ces deux derniers critères ont été éprouvés
 
@@ -1640,6 +1688,12 @@ du ticket en cours (une case cochée qui ne s'enregistrait pas). Les deux
 restent liés dans les deux sens : la note de fragilité de V2.1-6 renvoie ici,
 et le critère de lecture en boucle de V2.1-6 n'a pu repartir qu'une fois
 V2.1-7 livré.
+
+**Les neuf tickets de ce backlog sont clos.** V2.1-6, le dernier ouvert, a
+tenu trois jours à lui seul et a rendu quatre défauts que ni les types ni les
+tests ne pouvaient voir : le bouton qui mentait, le premier clic qui
+s'annulait, le `removeChild` au démontage, et le lien Spotify localisé refusé
+en silence. Tous les quatre demandaient un navigateur et un usage réel.
 
 V2.1-8 et V2.1-9 sont deux traînes du même jour, ouvertes ensemble une fois le
 backlog relu de bout en bout. Elles ne se ressemblent que par leur origine :
