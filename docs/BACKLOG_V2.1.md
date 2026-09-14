@@ -970,12 +970,16 @@ Vérifié en local sur la même page de partage, les trois états :
 | Un seul clic | montée, `autoplay=1` | ⏸ |
 | Retour par navigation interne | montée d'elle-même | ⏸ |
 
-**Reste ouvert, à trancher avec l'auteur** : sur un lien de partage ouvert à
-froid — le cas principal de `/partage` — la lecture à la visite ne se
-déclenchera jamais, par construction. On pourrait l'armer sur le tout premier
-geste du visiteur (un clic ou une touche n'importe où dans la page). Ce serait
-plus fidèle à l'intention, mais une musique qui démarre sur un clic sans
-rapport peut surprendre. Non fait tant que ce n'est pas demandé.
+**Suite, sur décision de l'auteur** : sur un lien de partage ouvert à froid —
+le cas principal de `/partage` — la lecture à la visite ne se déclencherait
+jamais, par construction du navigateur. Elle est donc **armée sur le tout
+premier geste du visiteur** (un `pointerdown` ou un `keydown` n'importe où dans
+la page, en phase de capture). Vérifié : un clic sur un simple paragraphe
+charge l'API et lance la musique.
+
+Le geste étant capturé avant les gestionnaires de la page, un premier clic
+porté sur le bouton lui-même appelle `play` deux fois avec la même clé — ce qui
+ne relance rien, la source étant identique.
 
 #### Noté au passage, hors périmètre — un test d'intégration fragile
 
@@ -1031,18 +1035,49 @@ ticket, pas ici.
 
 #### Critères
 
+- [x] **Fondu entrant et sortant réellement appliqués**, mesurés sur
+      `/partage/leschroniquesdesroyaumesoublies/37` en écoutant les messages du
+      lecteur : montée `0 → 4 → 7 → 21 → 24 …`, descente
+      `100 → 96 → 93 → … → 3 → 0` en 31 paliers, soit exactement `fadeVolumeAt`
+      battu toutes les 50 ms sur 1500 ms, puis la voix se retire d'elle-même.
+- [x] **Le script YouTube n'est pas chargé tant que rien ne joue.** Sur un
+      chargement à froid : aucun `<script src="…/iframe_api">`, `window.YT`
+      indéfini, aucune iframe. Il n'apparaît qu'au premier geste.
+- [x] **Lecture réelle vérifiée**, pas seulement une iframe montée : le
+      `currentTime` du lecteur avance (21,4 s → 25,9 s en 5 s d'observation).
+- [x] `npm run typecheck` et `npm run lint` passent ; 860 tests hors
+      intégration (85 fichiers), dont 24 nouveaux sur `fade.ts`,
+      `youtubeVideoId` et les bornes.
 - [ ] Deux pistes YouTube dans un bloc s'enchaînent dans l'ordre, sans
-      intervention.
-- [ ] Bornes début/fin respectées sur une piste YouTube (à la seconde près, cf.
-      réserve ci-dessus).
-- [ ] Fondu entrant et sortant audibles ; en passant d'une fiche à une autre
-      portant chacune sa musique, les deux se chevauchent.
+      intervention — **implémenté mais pas encore constaté** : il faut un bloc
+      à deux pistes sur une fiche publiée, or le compte de test ne peut pas en
+      créer (voir « Ce qui bloque » du lot 1). Le plus rapide : ajouter une
+      seconde piste au bloc du Prologue, et une borne `fin` courte à la
+      première pour ne pas attendre la fin du morceau.
+- [ ] Bornes début/fin respectées sur une piste YouTube — même situation :
+      la traduction d'URL est testée unitairement, le passage à
+      `loadVideoById` ne l'est pas encore en navigateur.
+- [ ] En passant d'une fiche à une autre portant chacune sa musique, les deux
+      se chevauchent — demande deux fiches publiées portant chacune un bloc.
 - [ ] Une piste Spotify ou SoundCloud continue de fonctionner — sans fondu,
       sans enchaînement, sans bornes — et l'éditeur le dit.
-- [ ] Le script YouTube n'est pas chargé sur une fiche sans bloc musique
-      YouTube (vérifié dans l'onglet réseau).
-- [ ] Exclusion mutuelle avec la radio toujours vraie dans les deux sens.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+- [ ] Exclusion mutuelle avec la radio toujours vraie dans les deux sens
+      (la radio n'existe pas sur le partage anonyme).
+
+#### Un plantage trouvé en navigateur, invisible autrement
+
+`YT.Player(element)` **remplace** l'élément qu'on lui confie par son iframe.
+Lui donner un nœud rendu par React faisait tomber la page entière au
+démontage de la voix — `NotFoundError: Failed to execute 'removeChild'` —
+c'est-à-dire précisément à la fin du fondu sortant : React croyait encore
+gérer un nœud que YouTube avait fait disparaître.
+
+Correctif : le composant ne rend qu'un conteneur vide et lui greffe à la main
+un enfant, que React ne suit pas ; c'est cet enfant que YouTube remplace.
+Retirer un conteneur dont React ignore le contenu ne pose aucun problème.
+
+Rien dans les types ni dans les tests ne pouvait attraper ça : `typecheck`,
+`lint` et 860 tests passaient avec le bug en place.
 
 ---
 
