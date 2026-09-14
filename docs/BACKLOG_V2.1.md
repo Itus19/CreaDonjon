@@ -935,12 +935,11 @@ d'origine. Le lot 2 est une refonte du lecteur partagé.
       la réserve d'activation ci-dessous, constatée puis corrigée en direct.
 - [ ] Case décochée : rien ne démarre à la visite, le bouton fonctionne.
 - [x] Lancer une piste de bloc met toujours la radio d'arrière-plan en pause,
-      et inversement (acquis de V2-G3, à ne pas casser) — vérifié, voir le
-      critère jumeau du lot 2 : une seule mesure couvre les deux, le lecteur
-      partagé étant le même. À noter pour la suite : **ce point ne se teste pas
-      sur `/partage`**, où il n'y a pas de radio du tout — il n'y vit donc pas
-      d'exclusion à vérifier, et l'attente d'un lien de partage était une
-      impasse.
+      et inversement (acquis de V2-G3, à ne pas casser) — vérifié sur la fiche
+      de Fine Lââm ; voir le critère jumeau du lot 2, une seule mesure couvre
+      les deux puisque le lecteur partagé est le même. À noter pour la suite :
+      **ce point ne se teste pas sur `/partage`**, où il n'y a pas de radio du
+      tout — attendre un lien de partage était une impasse.
 - [x] `npm run typecheck` et `npm run lint` passent ; `test:core` (818 tests,
       81 fichiers) et la suite hors intégration (836 tests, 84 fichiers)
       passent.
@@ -1121,32 +1120,41 @@ annoncé un chantier déjà fait, et aucun ticket ne le portait jusqu'ici.
 - [ ] Une piste Spotify ou SoundCloud continue de fonctionner — sans fondu,
       sans enchaînement, sans bornes — et l'éditeur le dit.
 - [x] **Exclusion mutuelle avec la radio, vraie dans les deux sens** —
-      mesurée le 14 septembre, une station ayant enfin été posée (voir
-      ci-dessous). Les deux bascules, avec l'état des deux boutons et le compte
-      d'iframes à chaque étape :
+      mesurée le 14 septembre **sur la fiche de Fine Lââm**, dans ClaudeLand,
+      contre la station « Station test » que l'auteur a posée (le blocage
+      d'origine : voir ci-dessous). Les deux bascules, avec l'état des deux
+      boutons, le compte d'iframes, et le temps de lecture observé :
 
-      | Geste | Bouton du bloc | Bouton de la station | iframes |
-      |---|---|---|---|
-      | Piste du bloc lancée | Mettre en pause | Lecture | 1 |
-      | Station lancée par-dessus | **Lecture** | **Mettre en pause** | 1 |
-      | Piste du bloc relancée | **Mettre en pause** | **Lecture** | 1 |
+      | Geste | Bouton du bloc | Bouton de la station | iframes | `currentTime` |
+      |---|---|---|---|---|
+      | Piste du bloc lancée | Mettre en pause | Lecture | 1 | 7,8 → 13,4 s (bloc) |
+      | Station lancée par-dessus | **Lecture** | **Mettre en pause** | 1 | 5,1 → 10,8 s (radio) |
+      | Piste du bloc relancée | **Mettre en pause** | **Lecture** | 1 | 8,5 → 14,2 s (bloc) |
 
-      Toujours **exactement une** iframe, et jamais la même : l'iframe en place
-      avant chaque bascule a été marquée, puis retrouvée **retirée du
-      document** après — ce n'est pas un lecteur qu'on repointe, c'est l'ancien
-      qu'on démonte. L'invariant « une seule source active » est donc constaté
-      de bout en bout, et non plus déduit.
+      Trois choses tiennent ensemble, et il fallait les trois :
 
-      **Et les deux jouent réellement**, ce que le compte d'iframes ne dit pas :
-      le `currentTime` du lecteur avance dans les deux cas — 17,8 s → 18,6 s
-      pour la piste du bloc, 5,0 s → 10,7 s pour la station, lus dans les
-      messages du lecteur.
+      1. **Les deux boutons basculent**, chacun dans le bon sens, à chaque fois.
+      2. **Il reste exactement une iframe, et jamais la même** : celle en place
+         avant chaque bascule a été marquée, puis retrouvée **retirée du
+         document** après. Ce n'est pas un lecteur qu'on repointe, c'est
+         l'ancien qu'on démonte — l'invariant « une seule source active » est
+         constaté, plus déduit.
+      3. **Les deux jouent réellement**, ce que ni le bouton ni le compte
+         d'iframes ne prouvent : le `currentTime` du lecteur avance dans les
+         trois états, lu dans les messages du lecteur. Une iframe montée mais
+         muette aurait passé les deux premiers points.
 
-#### Pourquoi la station n'a pas pu être posée dans ClaudeLand
+      La même mesure avait d'abord été faite dans un monde de test jetable,
+      faute de station disponible ; elle a donné exactement le même résultat.
+      C'est attendu — le lecteur partagé est monté une seule fois dans
+      `app/layout.tsx` et ne connaît ni le monde ni la campagne — mais ça ne se
+      raconte pas, ça se refait.
 
-Le blocage annoncé — « la radio de ce monde ne contient aucune station » — n'a
-pas été levé dans ClaudeLand, et c'est une contrainte d'autorisation, pas un
-oubli.
+#### Ce qui a tenu ce critère ouvert si longtemps
+
+Le blocage annoncé — « la radio de ce monde ne contient aucune station » — ne
+pouvait pas être levé par l'assistant seul. C'est une contrainte
+d'autorisation, pas un oubli.
 
 **Une station de radio n'est plus une préférence de navigateur.** La note de
 V2-G3 (`docs/BACKLOG_V2.md`) décrit encore des stations en `localStorage` ;
@@ -1158,19 +1166,25 @@ par `isWorldAdmin`, et la route `POST` refuse tout le reste.
 
 Le compte connecté dans le navigateur de vérification est un compte **joueur**
 de ClaudeLand — `GET /api/worlds/faerun-copie-3/radio-stations` répond
-`canManage: false`. Poser une station dans ClaudeLand demande donc le compte
-MJ de l'auteur, en une seule manipulation : bouton Radio de la coquille, nom,
-lien, « + Ajouter ».
+`canManage: false`. Poser une station y demandait donc le compte MJ de
+l'auteur, ce qu'il a fait ; la lecture, elle, est ouverte à tout membre, donc
+le compte joueur a pu lancer la station sans rien changer d'autre.
 
-**Ce qui était vérifiable sans ce compte l'a été** : l'invariant lui-même, dans
-un monde de test créé pour l'occasion (« Test radio V2.1-6 », MJ le compte du
-navigateur, supprimé après les mesures), avec la station demandée par l'auteur
-— une playlist YouTube — et un bloc `music` portant la même vidéo. Le lecteur
-partagé, lui, est monté une fois dans `app/layout.tsx` : il ne connaît ni le
-monde ni la campagne, donc l'exclusion mesurée là vaut partout.
+**Deux fausses pistes écartées en chemin**, parce qu'elles se représenteront :
 
-Rien n'a été écrit dans ClaudeLand ni dans Les Chroniques des Royaumes
-Oubliés.
+- **Le partage anonyme.** Le critère du lot 1 attendait d'être reproduit sur
+  `/partage`. Il ne peut pas l'être : il n'y a pas de radio du tout sur une
+  page de partage, donc aucune exclusion à y vérifier.
+- **Un lien d'invitation ne confère pas le rôle qu'on croit.** L'auteur a
+  d'abord transmis un lien `/rejoindre/<token>` en pensant y attacher un accès
+  MJ. Ce jeton était l'invitation **joueur déjà réclamée** par le compte du
+  navigateur : la page court-circuite vers `/entrer`, rétablit la même session,
+  et `canManage` reste `false`. Le rôle d'un lien se choisit à sa création
+  (`InviteLinkPanel`, liste « Rôle du lien » : Au choix / Joueur / MJ), jamais
+  à sa réclamation.
+
+Rien n'a été écrit dans ClaudeLand par l'assistant : la station y a été posée
+par l'auteur, depuis son propre compte.
 
 #### Le premier clic sur le bouton s'annulait lui-même
 
