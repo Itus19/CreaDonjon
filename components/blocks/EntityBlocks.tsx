@@ -387,30 +387,51 @@ export default function EntityBlocks({
   const [saveErrorIds, setSaveErrorIds] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   /**
-   * ADR 0023 — blocs dont l'ecriture vient d'aboutir, pour un « Enregistre »
-   * fugace. L'enregistrement etait jusqu'ici entierement muet : c'est ce
-   * silence qui a laisse passer trois pertes de donnee sans que personne ne
-   * s'en apercoive avant de relire la base. Rendre l'ecriture visible fait
-   * qu'un prochain defaut de la meme famille se verra sur le coup.
+   * ADR 0023 — ou en est l'ecriture de chaque bloc. L'enregistrement etait
+   * jusqu'ici entierement muet : c'est ce silence qui a laisse passer trois
+   * pertes de donnee sans que personne ne s'en apercoive avant de relire la
+   * base. Rendre l'ecriture visible fait qu'un prochain defaut de la meme
+   * famille se verra sur le coup.
+   *
+   * DEUX etats, pas un. Le premier jet n'affichait « Enregistre » qu'au
+   * RETOUR de la requete — soit environ une seconde apres le geste, le temps
+   * de l'aller-retour reseau : trop tard pour rassurer. Les annoncer d'un
+   * coup au depart mentirait en cas d'echec, alors on dit simplement la
+   * verite du moment : « Enregistrement… » des le depart, « Enregistre » a
+   * l'arrivee. En cas d'echec l'etat est efface, et ce sont les bandeaux de
+   * conflit/erreur qui parlent — jamais une reussite annoncee a tort.
    */
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [saveStateById, setSaveStateById] = useState<Record<string, "pending" | "saved">>({});
   const savedTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   useEffect(() => {
     const timers = savedTimers.current;
     return () => Object.values(timers).forEach(clearTimeout);
   }, []);
-  function flashSaved(id: string) {
-    setSavedIds((prev) => new Set(prev).add(id));
+  function setSaveState(id: string, state: "pending" | "saved" | null) {
+    // Un enregistrement qui repart annule l'effacement du precedent : sinon
+    // le « Enregistre » d'avant s'effacerait au milieu du nouveau.
     clearTimeout(savedTimers.current[id]);
-    savedTimers.current[id] = setTimeout(() => {
-      setSavedIds((prev) => {
-        if (!prev.has(id)) return prev;
-        const next = new Set(prev);
-        next.delete(id);
+    delete savedTimers.current[id];
+    setSaveStateById((prev) => {
+      if (state === null) {
+        if (!(id in prev)) return prev;
+        const next = { ...prev };
+        delete next[id];
         return next;
-      });
-      delete savedTimers.current[id];
-    }, 2000);
+      }
+      return { ...prev, [id]: state };
+    });
+    if (state === "saved") {
+      savedTimers.current[id] = setTimeout(() => {
+        delete savedTimers.current[id];
+        setSaveStateById((prev) => {
+          if (prev[id] !== "saved") return prev;
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }, 2000);
+    }
   }
   const versionsRef = useRef<Record<string, number>>(
     Object.fromEntries(initialBlocks.map((b) => [b.id, b.version])),
@@ -588,6 +609,10 @@ export default function EntityBlocks({
     const block = blocksRef.current.find((b) => b.id === id);
     if (!block) return;
 
+    // Des le depart, pas au retour : c'est le geste qu'on accuse, pas le
+    // reseau. Voir `saveStateById`.
+    setSaveState(id, "pending");
+
     const res = await fetch(`/api/blocks/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -608,10 +633,15 @@ export default function EntityBlocks({
     });
 
     if (res.status === 409) {
+      // L'indicateur s'efface : le bandeau de conflit dit ce qu'il faut, et
+      // laisser « Enregistrement… » tourner indefiniment serait un mensonge
+      // de plus.
+      setSaveState(id, null);
       setConflictedIds((prev) => new Set(prev).add(id));
       return;
     }
     if (!res.ok) {
+      setSaveState(id, null);
       setSaveErrorIds((prev) => new Set(prev).add(id));
       return;
     }
@@ -631,7 +661,7 @@ export default function EntityBlocks({
       next.delete(id);
       return next;
     });
-    flashSaved(id);
+    setSaveState(id, "saved");
   }
 
   function handleBlockBlur(id: string) {
@@ -762,7 +792,7 @@ export default function EntityBlocks({
               isCollapsed={isCollapsed(block.id)}
               hasConflict={conflictedIds.has(block.id)}
               hasSaveError={saveErrorIds.has(block.id)}
-              justSaved={savedIds.has(block.id)}
+              saveState={saveStateById[block.id] ?? null}
               worldSlug={worldSlug}
               worldId={worldId}
               campaignId={campaignId ?? null}
@@ -870,7 +900,7 @@ function SortableBlockCard({
   isCollapsed,
   hasConflict,
   hasSaveError,
-  justSaved,
+  saveState,
   worldSlug,
   worldId,
   campaignId,
@@ -901,8 +931,8 @@ function SortableBlockCard({
   isCollapsed: boolean;
   hasConflict: boolean;
   hasSaveError: boolean;
-  /** ADR 0023 : vrai pendant les deux secondes qui suivent une ecriture reussie. */
-  justSaved: boolean;
+  /** ADR 0023 : « pending » pendant la requete, « saved » les deux secondes qui suivent sa reussite, `null` le reste du temps. */
+  saveState: "pending" | "saved" | null;
   worldSlug: string;
   worldId: string;
   campaignId: string | null;
@@ -976,9 +1006,9 @@ function SortableBlockCard({
           {/* ADR 0023 : l'ecriture etait entierement muette. `role="status"`
               plutot qu'un simple texte — l'annonce polie vaut aussi pour qui
               n'a pas l'oeil sur ce coin de l'ecran. */}
-          {justSaved && (
+          {saveState && (
             <span role="status" className="shrink-0 text-xs text-ink-muted">
-              Enregistré
+              {saveState === "pending" ? "Enregistrement…" : "Enregistré"}
             </span>
           )}
           <Dropdown

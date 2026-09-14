@@ -107,10 +107,23 @@ Appeler `saveBlock` plus souvent est sûr : il est déjà sérialisé par bloc
 La seule dépense est le nombre de requêtes — ici exactement **une de plus par
 clic sur un contrôle discret**, et aucune pendant la frappe.
 
-**Complément : un indicateur d'enregistrement.** Un « Enregistré » discret et
-fugace après chaque écriture réussie. Le défaut a coûté cher parce qu'il était
-muet ; rendre l'écriture visible fait qu'un prochain de la même famille se
-verra sur le coup, au lieu de se découvrir après coup dans la donnée servie.
+**Complément : un indicateur d'enregistrement, en deux temps.** Le défaut a
+coûté cher parce qu'il était muet ; rendre l'écriture visible fait qu'un
+prochain de la même famille se verra sur le coup, au lieu de se découvrir après
+coup dans la donnée servie.
+
+Le premier jet n'affichait « Enregistré » qu'au **retour** de la requête —
+mesuré à une à deux secondes après le geste, le temps de l'aller-retour vers un
+Supabase distant. Trop tard pour rassurer : c'est précisément l'instant du
+geste qu'il faut accuser. Tout annoncer au départ mentirait en cas d'échec, on
+dit donc la vérité du moment : **« Enregistrement… » dès le départ de la
+requête, « Enregistré » à son arrivée**, et l'indicateur s'efface si l'écriture
+échoue — ce sont alors les bandeaux de conflit et d'erreur qui parlent, jamais
+une réussite annoncée à tort.
+
+Mesuré en navigateur : « Enregistrement… » à 262 ms, « Enregistré » à 2 257 ms
+sur la même écriture. Et sur un échec simulé (500 forcé), aucun « Enregistré »
+n'apparaît jamais — seul le bandeau d'erreur, à 401 ms.
 
 ## Conséquences
 
