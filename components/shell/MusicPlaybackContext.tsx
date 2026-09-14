@@ -79,7 +79,17 @@ export function MusicPlaybackProvider({ children }: { children: React.ReactNode 
     (source: MusicSource) => {
       if (source.tracks.length === 0) return;
       const instanceId = prochainId.current++;
-      setVoices((prev) => [...eteindreActive(prev), { instanceId, source, trackIndex: 0, lap: 0, fadingOut: false }]);
+      setVoices((prev) => {
+        // Demander ce qui joue deja ne relance rien. Sans ce garde, deux
+        // appels rapproches sur la MEME source (le bouton public arme la
+        // lecture sur le premier geste, et ce geste peut etre un clic sur ce
+        // bouton, qui appelle `play` a son tour) creaient deux voix : la
+        // premiere passait en extinction alors que son lecteur n'existait pas
+        // encore, restait montee en fantome, et la lecture partait de travers.
+        const active = prev.find((v) => !v.fadingOut);
+        if (active && active.source.key === source.key) return prev;
+        return [...eteindreActive(prev), { instanceId, source, trackIndex: 0, lap: 0, fadingOut: false }];
+      });
     },
     [eteindreActive]
   );

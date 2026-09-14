@@ -56,9 +56,12 @@ export default function PublicMusicToggle({
     // Page pas encore touchee (lien de partage ouvert a froid, le cas
     // principal de `/partage`) : on arme la lecture sur le tout premier geste
     // du visiteur, quel qu'il soit — c'est ce geste qui lui donne le droit au
-    // son. `capture` pour passer avant les gestionnaires de la page, y compris
-    // celui de ce bouton : si le premier geste EST un clic sur lui, les deux
-    // appellent `play` avec la meme cle, ce qui ne relance rien.
+    // son. `capture` pour passer avant les gestionnaires de la page. Si le
+    // premier geste EST un clic sur ce bouton, les deux appellent `play` avec
+    // la meme cle : c'est `MusicPlaybackProvider` qui rend le second appel
+    // inoffensif (demander ce qui joue deja ne relance rien). Ce garde n'a pas
+    // toujours existe — sans lui, les deux appels creaient deux voix
+    // concurrentes et la lecture partait de travers, constate en production.
     const start = () => {
       document.removeEventListener("pointerdown", start, true);
       document.removeEventListener("keydown", start, true);

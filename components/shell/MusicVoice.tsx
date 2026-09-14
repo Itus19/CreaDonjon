@@ -68,7 +68,14 @@ function VoixYouTube({ url, startSeconds, endSeconds, fadeInMs, fadingOut, fadeO
   function fondre(de: number, vers: number, dureeMs: number, fini?: () => void) {
     arreterRampe();
     const lu = lecteur.current;
-    if (!lu) return;
+    if (!lu) {
+      // Pas encore de lecteur (script en cours de chargement) : il n'y a rien
+      // a fondre, mais il faut quand meme prevenir l'appelant. Sans ce
+      // `fini()`, une voix mise en extinction avant que son lecteur existe
+      // n'aurait jamais signale sa fin et serait restee montee pour toujours.
+      fini?.();
+      return;
+    }
     lu.setVolume(fadeVolumeAt(0, dureeMs, de, vers));
     if (dureeMs <= 0) {
       fini?.();
