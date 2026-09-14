@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
   DndContext,
@@ -19,6 +19,7 @@ import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
+import { EditCommitProvider } from "@/components/shared/EditCommitContext";
 /**
  * V3-R3 — les 21 vues de bloc sont chargees a la demande, jamais dans le
  * paquet initial.
@@ -385,10 +386,38 @@ export default function EntityBlocks({
   /** Distinct de `conflictedIds` (409, "rechargez") : un 400/500 signifie que la donnee elle-meme est rejetee (ex. `label` vide sur un objet d'inventaire) — se recharger ne change rien tant que la donnee n'est pas corrigee. Avant ce complement, `doSaveBlock` avalait ces echecs sans rien afficher : le bouton semblait "ne rien faire". */
   const [saveErrorIds, setSaveErrorIds] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  /**
+   * ADR 0023 — blocs dont l'ecriture vient d'aboutir, pour un « Enregistre »
+   * fugace. L'enregistrement etait jusqu'ici entierement muet : c'est ce
+   * silence qui a laisse passer trois pertes de donnee sans que personne ne
+   * s'en apercoive avant de relire la base. Rendre l'ecriture visible fait
+   * qu'un prochain defaut de la meme famille se verra sur le coup.
+   */
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const savedTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  useEffect(() => {
+    const timers = savedTimers.current;
+    return () => Object.values(timers).forEach(clearTimeout);
+  }, []);
+  function flashSaved(id: string) {
+    setSavedIds((prev) => new Set(prev).add(id));
+    clearTimeout(savedTimers.current[id]);
+    savedTimers.current[id] = setTimeout(() => {
+      setSavedIds((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      delete savedTimers.current[id];
+    }, 2000);
+  }
   const versionsRef = useRef<Record<string, number>>(
     Object.fromEntries(initialBlocks.map((b) => [b.id, b.version])),
   );
   const saveChainsRef = useRef<Record<string, Promise<void>>>({});
+  /** ADR 0023 : blocs dont un enregistrement a deja ete demande dans le tour en cours — voir `saveBlock`. */
+  const savePendingRef = useRef<Record<string, boolean>>({});
   /**
    * Miroir synchrone de `blocks`, mis a jour dans le meme appel que
    * `setBlocks` (jamais via un effet — un effet ne se declenche qu'apres
@@ -530,6 +559,21 @@ export default function EntityBlocks({
     id: string,
     overrides?: { visibilityLevel?: string; visibilityScopeId?: string | null; data?: unknown },
   ) {
+    // ADR 0023 — deux demandes dans le MEME tour ne produisent qu'une
+    // requete. Le cas : un editeur qui enregistre deja explicitement (fiche de
+    // personnage, bloc carte via `onSaveNow`) contient un controle qui engage
+    // desormais sa valeur de lui-meme ; sans cette fusion, un seul geste
+    // ecrirait deux fois. Une demande porteuse de surcharges n'est jamais
+    // fusionnee — elle transporte une donnee que la suivante ignorerait —,
+    // mais elle pose le drapeau, donc c'est bien la plus complete des deux qui
+    // part. Les autres peuvent l'etre sans risque : `doSaveBlock` lit de toute
+    // facon la donnee la plus fraiche dans `blocksRef`.
+    if (!overrides && savePendingRef.current[id]) return saveChainsRef.current[id] ?? Promise.resolve();
+    savePendingRef.current[id] = true;
+    queueMicrotask(() => {
+      delete savePendingRef.current[id];
+    });
+
     const run = () => doSaveBlock(id, overrides);
     const previous = saveChainsRef.current[id] ?? Promise.resolve();
     const next = previous.then(run, run);
@@ -587,6 +631,7 @@ export default function EntityBlocks({
       next.delete(id);
       return next;
     });
+    flashSaved(id);
   }
 
   function handleBlockBlur(id: string) {
@@ -717,6 +762,7 @@ export default function EntityBlocks({
               isCollapsed={isCollapsed(block.id)}
               hasConflict={conflictedIds.has(block.id)}
               hasSaveError={saveErrorIds.has(block.id)}
+              justSaved={savedIds.has(block.id)}
               worldSlug={worldSlug}
               worldId={worldId}
               campaignId={campaignId ?? null}
@@ -824,6 +870,7 @@ function SortableBlockCard({
   isCollapsed,
   hasConflict,
   hasSaveError,
+  justSaved,
   worldSlug,
   worldId,
   campaignId,
@@ -854,6 +901,8 @@ function SortableBlockCard({
   isCollapsed: boolean;
   hasConflict: boolean;
   hasSaveError: boolean;
+  /** ADR 0023 : vrai pendant les deux secondes qui suivent une ecriture reussie. */
+  justSaved: boolean;
   worldSlug: string;
   worldId: string;
   campaignId: string | null;
@@ -880,6 +929,8 @@ function SortableBlockCard({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
+  /** ADR 0023 — « cette valeur est engagee, enregistre CE bloc ». Lu par `Checkbox` et `Dropdown` via `useEditCommit()`, sans qu'aucun editeur ait a le transmettre. */
+  const commit = useCallback(() => onSaveBlock(block.id), [onSaveBlock, block.id]);
 
   return (
     <div
@@ -922,6 +973,14 @@ function SortableBlockCard({
           <span className="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink-muted">
             {BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}
           </span>
+          {/* ADR 0023 : l'ecriture etait entierement muette. `role="status"`
+              plutot qu'un simple texte — l'annonce polie vaut aussi pour qui
+              n'a pas l'oeil sur ce coin de l'ecran. */}
+          {justSaved && (
+            <span role="status" className="shrink-0 text-xs text-ink-muted">
+              Enregistré
+            </span>
+          )}
           <Dropdown
             value={block.visibilityLevel}
             options={VISIBILITY_OPTIONS}
@@ -985,6 +1044,12 @@ function SortableBlockCard({
           une modification dans l'une declenche patchBlock/saveBlock
           sur ce bloc, l'autre vue se re-rend avec la donnee a jour au
           prochain rendu — synchronise sans mecanisme dedie. */}
+      {/* ADR 0023 : un controle discret (case, liste deroulante) enregistre ce
+          bloc des qu'il engage sa valeur. Le fournisseur n'entoure que le CORPS
+          de l'editeur, jamais l'en-tete : la liste de visibilite, elle,
+          enregistre deja explicitement juste au-dessus, et le contexte lui
+          ferait envoyer une seconde requete pour rien. */}
+      <EditCommitProvider commit={commit}>
       {block.blockType === "character" ? (
         !isCollapsed && (
           <PlayableCharacterSheet
@@ -1023,6 +1088,7 @@ function SortableBlockCard({
           />
         )
       )}
+      </EditCommitProvider>
     </div>
   );
 }

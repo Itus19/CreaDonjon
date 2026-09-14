@@ -1,5 +1,7 @@
 "use client";
 
+import { useEditCommit } from "./EditCommitContext";
+
 /**
  * Case a cocher aux jetons de la charte (retour utilisateur : la case
  * native du navigateur ne suit ni les couleurs ni les rayons du systeme
@@ -9,6 +11,14 @@
  * outils qui listent les controles de formulaire par role, alors que ce
  * pattern (deja utilise par `Dropdown.tsx` pour son bouton declencheur)
  * garde le clavier et le lecteur d'ecran fonctionnels sans ce compromis.
+ *
+ * Ce choix a un revers : n'etant pas un `<input>`, cette case n'emet aucun
+ * evenement `change` natif qu'un conteneur pourrait ecouter pour savoir qu'une
+ * valeur vient d'etre engagee. Elle le dit donc elle-meme, via
+ * `useEditCommit()` (ADR 0023) — sans quoi une case cochee dans un bloc de
+ * fiche se perdait en silence si la personne quittait la page sans que le
+ * focus ait quitte le bloc. Le contexte vaut `null` partout ailleurs : ce
+ * composant s'y comporte exactement comme avant.
  */
 export default function Checkbox({
   checked,
@@ -26,8 +36,14 @@ export default function Checkbox({
   /** Nom accessible quand la case n'a pas de `label` visible — sans lui, `role="checkbox"` reste anonyme pour un lecteur d'ecran. */
   "aria-label"?: string;
 }) {
+  const commit = useEditCommit();
+
   function toggle() {
-    if (!disabled) onChange();
+    if (disabled) return;
+    onChange();
+    // Apres `onChange`, jamais avant : c'est lui qui pose la valeur neuve dans
+    // le miroir synchrone du conteneur, que l'enregistrement va lire.
+    commit?.();
   }
 
   return (

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useEditCommit } from "./EditCommitContext";
 
 export interface DropdownOption {
   value: string;
@@ -80,6 +81,7 @@ export default function Dropdown({
   "aria-label"?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const commit = useEditCommit();
   const [rect, setRect] = useState<{ left: number; width: number; top?: number; bottom?: number } | null>(
     null
   );
@@ -122,6 +124,11 @@ export default function Dropdown({
   function select(v: string) {
     onChange(v);
     setOpen(false);
+    // Choisir une option est un engagement (ADR 0023) : ce composant remplace
+    // un `<select>` mais n'emet aucun `change` natif, il doit donc le dire
+    // lui-meme. Apres `onChange`, jamais avant — c'est lui qui pose la valeur
+    // neuve dans le miroir synchrone que l'enregistrement va lire.
+    commit?.();
   }
 
   const current = options.find((o) => o.value === value);
