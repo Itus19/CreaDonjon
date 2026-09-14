@@ -922,41 +922,60 @@ d'origine. Le lot 2 est une refonte du lecteur partagé.
       un bouton par bloc, position du bloc sans effet sur le résultat, bloc
       sans piste ignoré, première piste seule retenue, premier bloc coché
       gagnant, champ absent traité comme un refus.
-- [ ] Un bloc musique n'affiche plus rien du tout sur les trois pages de
-      lecture — ni cadre, ni titre.
-- [ ] Un bouton ▶/⏸ discret apparaît à côté du nom de la fiche, et bascule bien
-      en ⏸ pendant la lecture.
-- [ ] Case décochée : rien ne démarre à la visite, le bouton fonctionne. Case
-      cochée : la première piste démarre en arrivant sur la fiche.
+- [x] Un bloc musique n'affiche plus rien du tout — ni cadre, ni titre.
+      Constaté sur `/partage/leschroniquesdesroyaumesoublies/37` (entrée
+      « Prologue » du Livre de sessions) : un seul `h3.block-title` sur la
+      page, aucun cadre « Musique ».
+- [x] Un bouton ▶/⏸ discret apparaît à côté du nom de la fiche, centré sur la
+      hauteur du titre, et bascule bien en ⏸ pendant la lecture.
+- [x] Case cochée : la première piste démarre en arrivant sur la fiche — sous
+      la réserve d'activation ci-dessous, constatée puis corrigée en direct.
+- [ ] Case décochée : rien ne démarre à la visite, le bouton fonctionne.
 - [ ] Lancer une piste de bloc met toujours la radio d'arrière-plan en pause,
-      et inversement (acquis de V2-G3, à ne pas casser).
+      et inversement (acquis de V2-G3, à ne pas casser) — pas encore reproduit,
+      la radio n'existe pas sur le partage anonyme.
 - [x] `npm run typecheck` et `npm run lint` passent ; `test:core` (818 tests,
       81 fichiers) et la suite hors intégration (836 tests, 84 fichiers)
       passent.
 
-#### Ce qui bloque les quatre critères restants
+#### Le bouton mentait — constaté en production, corrigé
 
-Ils demandent tous de voir une fiche rendue par `PublicEntityBody` **et**
-portant un bloc musique. Le lien d'invitation fourni ouvre un compte **joueur**
-de ce monde, pas MJ : il ne peut éditer que sa propre fiche (Fine Lââm), sur
-laquelle la route de wiki rend donc l'éditeur et jamais le corps public ; et
-`/mj/publication`, seul endroit d'où `entities.is_public` se règle, répond
-« Réservé au MJ de ce monde ».
+Première vraie utilisation, sur l'entrée « Prologue » publiée : la musique ne
+démarrait pas à la visite, **mais le bouton s'affichait quand même en ⏸**, et
+il fallait **deux clics** pour lancer le son.
 
-Deux issues, au choix de l'auteur : publier Fine Lââm depuis son propre compte
-MJ (`/apercu/4` rendra alors le corps public), ou élever le compte de test au
-rôle MJ sur ce monde.
+Mesuré sur la page : l'iframe était bien montée
+(`…/embed/j940HnlMM8k?…&autoplay=1`), le bouton annonçait « Mettre en pause »,
+et `navigator.userActivation.hasBeenActive` valait `false`. Le navigateur
+avait donc refusé le son **en silence** — l'iframe existe, rien n'en sort.
 
-#### Limite connue, à vérifier en navigateur
+La cause est dans l'enchaînement, pas dans le lecteur : `PublicMusicToggle`
+demandait la lecture sans condition, le lecteur partagé enregistrait la source,
+`currentKey` correspondait, le bouton passait en ⏸. Le premier clic était donc
+interprété en « pause » (il ne faisait que défaire cet état), et seul le second
+lançait vraiment — cette fois avec un geste utilisateur.
 
-Chrome refuse la lecture automatique avec son tant qu'aucun clic n'a eu lieu
-dans le document. En arrivant sur la fiche **par un lien interne** du wiki
-(navigation client, même document), l'activation utilisateur est déjà acquise
-et la lecture part ; en ouvrant l'URL directement dans un onglet neuf, elle
-sera vraisemblablement refusée. C'est une politique de navigateur, pas un
-défaut d'implémentation — et c'est aussi ce qui fait du bouton discret le
-filet de sécurité de l'option, jamais un simple confort. À constater des deux
-façons avant de clore le lot.
+Correctif : ne demander la lecture automatique que si
+`navigator.userActivation.hasBeenActive` est vrai. C'est la seule façon de
+savoir **à l'avance** si la demande aboutira. Faux sur un lien de partage
+ouvert à froid, vrai dès qu'on navigue dans le wiki (même document) : la
+lecture à la visite fonctionne donc là où elle le peut, et le bouton dit la
+vérité partout.
+
+Vérifié en local sur la même page de partage, les trois états :
+
+| Scénario | iframe | Bouton |
+|---|---|---|
+| Lien ouvert à froid | aucune | ▶ « Lancer » |
+| Un seul clic | montée, `autoplay=1` | ⏸ |
+| Retour par navigation interne | montée d'elle-même | ⏸ |
+
+**Reste ouvert, à trancher avec l'auteur** : sur un lien de partage ouvert à
+froid — le cas principal de `/partage` — la lecture à la visite ne se
+déclenchera jamais, par construction. On pourrait l'armer sur le tout premier
+geste du visiteur (un clic ou une touche n'importe où dans la page). Ce serait
+plus fidèle à l'intention, mais une musique qui démarre sur un clic sans
+rapport peut surprendre. Non fait tant que ce n'est pas demandé.
 
 #### Noté au passage, hors périmètre — un test d'intégration fragile
 
