@@ -245,14 +245,14 @@ export default function CampaignDetail({
             value={selectedEntityId}
             onChange={setSelectedEntityId}
             options={entityOptions}
-            aria-label="Personnage"
+            aria-label="Personnage à attribuer"
             triggerClassName="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
           />
           <Dropdown
             value={selectedUserId}
             onChange={setSelectedUserId}
             options={memberOptions}
-            aria-label="Joueur"
+            aria-label="Joueur à qui attribuer le personnage"
             triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
           />
           <button
@@ -301,14 +301,14 @@ export default function CampaignDetail({
             value={grantEntityId}
             onChange={setGrantEntityId}
             options={grantEntityOptions}
-            aria-label="Fiche"
+            aria-label="Fiche à confier en édition"
             triggerClassName="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
           />
           <Dropdown
             value={grantUserId}
             onChange={setGrantUserId}
             options={grantMemberOptions}
-            aria-label="Joueur"
+            aria-label="Joueur à qui confier la fiche"
             triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
           />
           <button

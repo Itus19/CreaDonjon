@@ -168,7 +168,7 @@ export default function RandomTableBlockEditor({
                 value={entry.price?.coin ?? "cp"}
                 onChange={(v) => updateEntryCoin(index, entry, v as CoinType)}
                 disabled={entry.price === undefined}
-                aria-label="Pièce"
+                aria-label={`Monnaie du prix, ligne ${index + 1}`}
                 options={CURRENCY_ORDER.map((coin) => ({ value: coin, label: CURRENCY_LABELS_FR[coin] }))}
               />
             </div>

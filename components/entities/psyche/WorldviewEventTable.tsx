@@ -194,13 +194,13 @@ export default function WorldviewEventTable({
         {hasIngameDate && (
           <GameDateInput calendar={activeCalendar} value={occurredAtIngame} onChange={setOccurredAtIngame} />
         )}
-        {rows.map((row) => (
+        {rows.map((row, index) => (
           <div key={row.id} className="flex items-center gap-2">
             <Dropdown
               value={row.key}
               options={WORLDVIEW_POLE_KEYS.map((k) => ({ value: k, label: POLE_LABELS_FR[k] }))}
               onChange={(v) => updateRow(row.id, { key: v as WorldviewPoleKey })}
-              aria-label="Pôle touché"
+              aria-label={`Pôle touché, ligne ${index + 1}`}
             />
             <input
               type="number"

@@ -67,7 +67,7 @@ export default function ResourcesBlockEditor({
             value={tracker.recharge}
             options={RECHARGE_OPTIONS}
             onChange={(v) => updateTracker(index, { recharge: v as Tracker["recharge"] })}
-            aria-label="Recuperation"
+            aria-label="Récupération de la ressource"
           />
           <button type="button" onClick={() => removeTracker(index)} className="text-xs text-danger hover:underline">
             ×

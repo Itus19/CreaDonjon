@@ -212,7 +212,7 @@ export default function PersonalityBlockEditor({
               value={aspiration.horizon}
               options={HORIZON_OPTIONS}
               onChange={(v) => updateAspiration(aspiration.id, { horizon: v as Aspiration["horizon"] })}
-              aria-label="Horizon"
+              aria-label={`Horizon de « ${aspiration.text || "cette aspiration"} »`}
             />
             <Dropdown
               value={aspiration.visibility.level}
@@ -220,7 +220,7 @@ export default function PersonalityBlockEditor({
               onChange={(v) =>
                 updateAspiration(aspiration.id, { visibility: { level: v as Aspiration["visibility"]["level"], scopeId: null } })
               }
-              aria-label="Visibilité de l'aspiration"
+              aria-label={`Visibilité de « ${aspiration.text || "cette aspiration"} »`}
             />
             <button
               type="button"

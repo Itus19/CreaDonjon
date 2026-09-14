@@ -164,7 +164,7 @@ export default function TimelineBlockEditor({
                     value={entry.kind}
                     options={TIMELINE_ENTRY_KINDS.map((k) => ({ value: k, label: KIND_LABELS_FR[k] }))}
                     onChange={(v) => updateEntry(entry.id, { kind: v as TimelineEntryKind })}
-                    aria-label="Genre de l'événement"
+                    aria-label={`Genre de « ${entry.title || "cet événement"} »`}
                   />
                   <span className="font-mono text-xs text-ink-muted">{formatGameDate(entry.date, activeCalendar)}</span>
                 </div>
@@ -175,7 +175,7 @@ export default function TimelineBlockEditor({
                     onChange={(v) =>
                       updateEntry(entry.id, { visibility: { level: v as TimelineEntry["visibility"]["level"], scopeId: null } })
                     }
-                    aria-label="Visibilité de l'événement"
+                    aria-label={`Visibilité de « ${entry.title || "cet événement"} »`}
                   />
                   <button type="button" onClick={() => removeEntry(entry.id)} className="text-xs text-danger hover:underline">
                     Supprimer

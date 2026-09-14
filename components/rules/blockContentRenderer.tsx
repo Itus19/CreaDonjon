@@ -1149,7 +1149,12 @@ function BackgroundEquipmentCard({
                   value={categoryChoice.selectedKey(option.label, i)}
                   options={dropdownOptions}
                   onChange={(key) => categoryChoice.onSelectKey(option.label, i, key)}
-                  aria-label={item.resolved_label}
+                  // « Choisir : » prefixe le nom de la categorie, sinon le nom
+                  // accessible serait identique a la valeur affichee tant que
+                  // rien n'est choisi (l'option vide porte ce meme libelle) —
+                  // un bouton qui s'annonce par son propre contenu n'apprend
+                  // rien sur ce qu'il fait.
+                  aria-label={`Choisir : ${item.resolved_label}`}
                   triggerClassName="rounded-md border border-edge px-2 py-0.5 text-sm text-ink outline-none transition-colors hover:bg-panel"
                 />
               </div>

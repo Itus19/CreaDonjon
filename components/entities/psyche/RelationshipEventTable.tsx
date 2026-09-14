@@ -195,13 +195,13 @@ export default function RelationshipEventTable({
         {hasIngameDate && (
           <GameDateInput calendar={activeCalendar} value={occurredAtIngame} onChange={setOccurredAtIngame} />
         )}
-        {rows.map((row) => (
+        {rows.map((row, index) => (
           <div key={row.id} className="flex items-center gap-2">
             <Dropdown
               value={row.key}
               options={RELATIONSHIP_AXIS_KEYS.map((k) => ({ value: k, label: AXIS_LABELS_FR[k] }))}
               onChange={(v) => updateRow(row.id, { key: v as RelationshipAxisKey })}
-              aria-label="Axe touché"
+              aria-label={`Axe touché, ligne ${index + 1}`}
             />
             <input
               type="number"

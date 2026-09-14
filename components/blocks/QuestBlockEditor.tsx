@@ -17,7 +17,15 @@ function newId(): string {
 function entityRefDropdown(
   ref: BlockReference | null | undefined,
   otherEntities: OtherEntityOption[],
-  onChange: (ref: BlockReference | null) => void
+  onChange: (ref: BlockReference | null) => void,
+  /**
+   * Ce a quoi CETTE liste rattache une fiche. Obligatoire, et distinct a
+   * chaque appel : ce meme selecteur sert au commanditaire, a chaque objectif
+   * et a chaque recompense/prerequis. Un « Entite liee » partout donnait
+   * autant de boutons homonymes qu'il y a de lignes, impossibles a distinguer
+   * autrement qu'a l'oeil.
+   */
+  ariaLabel: string
 ) {
   const value = ref?.kind === "entity" ? ref.id : NO_ENTITY;
   return (
@@ -26,7 +34,7 @@ function entityRefDropdown(
       options={[{ value: NO_ENTITY, label: "— aucune entité —" }, ...otherEntities.map((e) => ({ value: e.id, label: e.name }))]}
       onChange={(v) => onChange(v === NO_ENTITY ? null : { kind: "entity", id: v })}
       triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink-muted outline-none transition-colors hover:bg-panel-raised"
-      aria-label="Entité liée"
+      aria-label={ariaLabel}
     />
   );
 }
@@ -91,7 +99,7 @@ export default function QuestBlockEditor({
     return (
       <div className="flex flex-col gap-1.5">
         <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</span>
-        {items.map((note) => (
+        {items.map((note, index) => (
           <div key={note.id} className="flex items-center gap-2">
             <input
               value={note.text}
@@ -99,7 +107,15 @@ export default function QuestBlockEditor({
               placeholder="…"
               className="flex-1 bg-transparent text-sm text-ink outline-none"
             />
-            {entityRefDropdown(note.ref, otherEntities, (ref) => update(note.id, { ref: ref ?? undefined }))}
+            {entityRefDropdown(
+              note.ref,
+              otherEntities,
+              (ref) => update(note.id, { ref: ref ?? undefined }),
+              // Le texte de la ligne quand il existe : c'est ce qui distingue
+              // vraiment deux selecteurs d'une meme liste. Le rang ne sert que
+              // de repli, pour une ligne encore vide.
+              `Fiche liée à « ${note.text || `${label} ${index + 1}`} »`
+            )}
             <button type="button" onClick={() => remove(note.id)} className="text-xs text-danger hover:underline">
               ×
             </button>
@@ -127,18 +143,20 @@ export default function QuestBlockEditor({
           aria-label="État de la quête"
         />
         <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Commanditaire</span>
-        {entityRefDropdown(data.giver, otherEntities, (ref) => onChange({ ...data, giver: ref }))}
+        {entityRefDropdown(data.giver, otherEntities, (ref) => onChange({ ...data, giver: ref }), "Fiche du commanditaire")}
       </div>
 
       <div className="flex flex-col gap-1.5">
         <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Objectifs</span>
-        {data.objectives.map((objective) => (
+        {data.objectives.map((objective, index) => (
           <div key={objective.id} className="flex items-center gap-2">
             <Checkbox
               checked={objective.done}
               disabled={pendingObjectiveId === objective.id}
               onChange={() => toggleObjective(objective)}
-              aria-label={objective.done ? "Marquer comme non atteint" : "Marquer comme atteint"}
+              aria-label={`${objective.done ? "Marquer comme non atteint" : "Marquer comme atteint"} : ${
+                objective.text || `objectif ${index + 1}`
+              }`}
             />
             <input
               value={objective.text}
@@ -146,7 +164,12 @@ export default function QuestBlockEditor({
               placeholder="…"
               className={`flex-1 bg-transparent text-sm outline-none ${objective.done ? "text-ink-muted line-through" : "text-ink"}`}
             />
-            {entityRefDropdown(objective.ref, otherEntities, (ref) => updateObjective(objective.id, { ref: ref ?? undefined }))}
+            {entityRefDropdown(
+              objective.ref,
+              otherEntities,
+              (ref) => updateObjective(objective.id, { ref: ref ?? undefined }),
+              `Fiche liée à l'objectif « ${objective.text || index + 1} »`
+            )}
             <button
               type="button"
               onClick={() => removeObjective(objective.id)}
