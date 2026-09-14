@@ -13,6 +13,7 @@ function musique(
     label?: string;
     fadeInMs?: number;
     fadeOutMs?: number;
+    loop?: boolean;
   } = {}
 ): MusicAttachmentBlock {
   return {
@@ -25,6 +26,7 @@ function musique(
       autoplayOnVisit: options.autoplayOnVisit ?? false,
       fadeInMs: options.fadeInMs ?? 1500,
       fadeOutMs: options.fadeOutMs ?? 1500,
+      loop: options.loop ?? false,
     },
   };
 }
@@ -86,6 +88,22 @@ describe("planMusicAttachments (V2.1-6)", () => {
     const { attachments } = planMusicAttachments([ancien]);
     expect(attachments[0].fadeInMs).toBe(1500);
     expect(attachments[0].fadeOutMs).toBe(1500);
+  });
+
+  it("reporte la boucle du bloc", () => {
+    const { attachments } = planMusicAttachments([musique("m1", { loop: true }), musique("m2")]);
+    expect(attachments.map((a) => a.loop)).toEqual([true, false]);
+  });
+
+  it("ne fait pas boucler les blocs anterieurs a l'option — ils s'arretaient, ils s'arretent", () => {
+    const ancien: MusicAttachmentBlock = {
+      id: "m1",
+      blockType: "music",
+      display: { label: "Station" },
+      data: { __v: 1, tracks: [{ id: "p1", url: "https://youtu.be/aaa" }] },
+    };
+    const { attachments } = planMusicAttachments([ancien]);
+    expect(attachments[0].loop).toBe(false);
   });
 
   it("borne un fondu aberrant plutot que de le transmettre au lecteur", () => {

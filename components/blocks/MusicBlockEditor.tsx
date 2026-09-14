@@ -180,6 +180,15 @@ export default function MusicBlockEditor({
         onChange={() => onChange({ ...data, autoplayOnVisit: !data.autoplayOnVisit })}
         label={<span className="text-xs text-ink-soft">Lancer la musique à la visite de la fiche</span>}
       />
+      <Checkbox
+        checked={data.loop === true}
+        onChange={() => onChange({ ...data, loop: !data.loop })}
+        label={
+          <span className="text-xs text-ink-soft">
+            Lire en boucle <span className="text-ink-muted">(liens YouTube uniquement)</span>
+          </span>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-4 text-xs text-ink-muted">
         <FonduInput

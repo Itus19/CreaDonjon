@@ -22,6 +22,7 @@ export default function PublicMusicToggle({
   autoplay,
   fadeInMs,
   fadeOutMs,
+  loop,
 }: {
   blockId: string;
   /** Toutes les pistes du bloc, dans l'ordre — le lecteur piloté les enchaîne (lot 2). */
@@ -31,6 +32,7 @@ export default function PublicMusicToggle({
   autoplay: boolean;
   fadeInMs: number;
   fadeOutMs: number;
+  loop: boolean;
 }) {
   const { currentKey, play, stop } = useMusicPlayback();
   const key = `block:${blockId}`;
@@ -38,7 +40,7 @@ export default function PublicMusicToggle({
 
   useEffect(() => {
     if (!autoplay) return;
-    const lancer = () => play({ key, tracks, fadeInMs, fadeOutMs });
+    const lancer = () => play({ key, tracks, fadeInMs, fadeOutMs, loop });
 
     // Le navigateur refuse le son tant que la page n'a pas ete touchee, et il
     // le refuse SANS RIEN DIRE — l'iframe se monte, aucun son n'en sort.
@@ -76,7 +78,7 @@ export default function PublicMusicToggle({
   return (
     <button
       type="button"
-      onClick={() => (playing ? stop() : play({ key, tracks, fadeInMs, fadeOutMs }))}
+      onClick={() => (playing ? stop() : play({ key, tracks, fadeInMs, fadeOutMs, loop }))}
       aria-label={playing ? `Mettre en pause « ${label} »` : `Lancer « ${label} »`}
       className="shrink-0 rounded-full border border-accent px-2.5 py-1 text-xs leading-none text-accent transition-colors hover:bg-accent/10"
     >

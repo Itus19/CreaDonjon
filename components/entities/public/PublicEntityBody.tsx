@@ -84,6 +84,7 @@ export default function PublicEntityBody({
                 autoplay={attachment.autoplay}
                 fadeInMs={attachment.fadeInMs}
                 fadeOutMs={attachment.fadeOutMs}
+                loop={attachment.loop}
               />
             ))}
           </div>

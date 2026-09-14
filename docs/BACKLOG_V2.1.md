@@ -1021,10 +1021,23 @@ ticket, pas ici.
    YouTube n'est chargé qu'à la première piste YouTube effectivement jouée,
    jamais au chargement de la page.
 5. **Enchaînement** — sur `ENDED`, passer à la piste suivante du bloc, dans
-   l'ordre. S'arrêter en fin de liste (pas de boucle — à demander à l'auteur si
-   le besoin apparaît, pas avant). `planMusicAttachments` ne retient
-   aujourd'hui que la première piste : c'est là que la liste complète devra
-   remonter.
+   l'ordre. S'arrêter en fin de liste — **le besoin de la boucle est apparu
+   ensuite**, voir ci-dessous.
+5 bis. **Lecture en boucle** (demandée après coup) — case à cocher dans le
+   bloc : arrivé au bout de la liste, on repart de la première piste, y
+   compris quand le bloc n'en a qu'une, le cas le plus courant d'une ambiance.
+   Décochée par défaut : les blocs déjà posés s'arrêtaient en fin de liste, ils
+   continuent de s'arrêter. La décision sort du fournisseur de contexte pour
+   devenir `nextTrackIndex` (`src/core/music/nextTrack.ts`), fonction pure et
+   testée — elle a assez de cas limites (piste unique, liste vide, index devenu
+   hors liste parce qu'on a retiré une piste en cours de lecture) pour mériter
+   d'être éprouvée sans navigateur.
+
+   **Un piège à ne pas rouvrir** : la voix est identifiée par une clé React. Un
+   bloc d'une seule piste en boucle revient au même index — sans numéro de
+   passage (`lap`) dans la clé, React ne remonterait rien et la piste ne
+   repartirait jamais. C'est le `lap` qui force la reconstruction, et qui rend
+   au passage son fondu entrant à chaque tour.
 6. **Éditeur** — réglages de fondu au niveau du bloc, champs début/fin par
    piste, et mention explicite à côté d'une piste Spotify/SoundCloud que ces
    réglages ne s'y appliquent pas.
@@ -1063,6 +1076,10 @@ ticket, pas ici.
       13 ms d'écart. Conforme à la réserve annoncée (précision à la seconde).
 - [x] Les réglages apparaissent bien dans l'éditeur : Début/Fin sous chaque
       piste YouTube, les deux curseurs de fondu en bas du bloc.
+- [ ] La lecture en boucle rejoue le bloc arrivé au bout — **implémenté et
+      couvert par 8 tests unitaires** (`nextTrack.test.ts`), pas encore
+      constaté en navigateur : il suffit de cocher « Lire en boucle » sur le
+      bloc du Prologue, dont la première piste s'arrête déjà à 10 s.
 - [ ] En passant d'une fiche à une autre portant chacune sa musique, les deux
       se chevauchent — demande deux fiches publiées portant chacune un bloc.
 - [ ] Une piste Spotify ou SoundCloud continue de fonctionner — sans fondu,

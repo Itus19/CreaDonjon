@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useRef, useState } from "react";
 import type { MusicTrack } from "@/src/core/schemas/blocks/music";
+import { nextTrackIndex } from "@/src/core/music/nextTrack";
 import MusicVoice from "./MusicVoice";
 
 /** Ce qu'on demande a jouer : une liste ordonnee de pistes, et les fondus qui l'encadrent. */
@@ -12,6 +13,8 @@ export interface MusicSource {
   /** Absents pour la radio : elle garde le comportement sans fondu qu'elle a toujours eu. */
   fadeInMs?: number;
   fadeOutMs?: number;
+  /** Arrive au bout de la liste, repartir de la premiere piste. Absent = s'arreter. */
+  loop?: boolean;
 }
 
 interface MusicPlaybackContextValue {
@@ -29,6 +32,13 @@ interface Voix {
   instanceId: number;
   source: MusicSource;
   trackIndex: number;
+  /**
+   * Numero de passage, incremente a chaque changement de piste. Il entre dans
+   * la cle React de la voix : sans lui, un bloc d'UNE seule piste en boucle
+   * reviendrait au meme index, la cle ne changerait pas, React ne remonterait
+   * rien — et la piste ne repartirait jamais.
+   */
+  lap: number;
   fadingOut: boolean;
 }
 
@@ -69,7 +79,7 @@ export function MusicPlaybackProvider({ children }: { children: React.ReactNode 
     (source: MusicSource) => {
       if (source.tracks.length === 0) return;
       const instanceId = prochainId.current++;
-      setVoices((prev) => [...eteindreActive(prev), { instanceId, source, trackIndex: 0, fadingOut: false }]);
+      setVoices((prev) => [...eteindreActive(prev), { instanceId, source, trackIndex: 0, lap: 0, fadingOut: false }]);
     },
     [eteindreActive]
   );
@@ -81,17 +91,17 @@ export function MusicPlaybackProvider({ children }: { children: React.ReactNode 
   }, []);
 
   /**
-   * Fin naturelle d'une piste : on enchaine sur la suivante du meme bloc, dans
-   * l'ordre. En fin de liste on s'arrete (pas de boucle — a demander si le
-   * besoin apparait, pas avant). Une voix deja en extinction n'enchaine
-   * jamais : elle est en train de laisser la place.
+   * Fin naturelle d'une piste : `nextTrackIndex` (noyau pur, teste) decide de
+   * la suivante — l'ordre de la liste, puis retour au debut si le bloc boucle,
+   * sinon silence. Une voix deja en extinction n'enchaine jamais : elle est en
+   * train de laisser la place.
    */
   const pisteTerminee = useCallback((instanceId: number) => {
     setVoices((prev) =>
       prev.flatMap((v) => {
         if (v.instanceId !== instanceId || v.fadingOut) return [v];
-        const suivant = v.trackIndex + 1;
-        return suivant < v.source.tracks.length ? [{ ...v, trackIndex: suivant }] : [];
+        const suivant = nextTrackIndex(v.trackIndex, v.source.tracks.length, v.source.loop === true);
+        return suivant === null ? [] : [{ ...v, trackIndex: suivant, lap: v.lap + 1 }];
       })
     );
   }, []);
@@ -106,9 +116,11 @@ export function MusicPlaybackProvider({ children }: { children: React.ReactNode 
         if (!track) return null;
         return (
           <MusicVoice
-            // La piste fait partie de la cle : passer a la suivante reconstruit
-            // la voix, ce qui lui redonne son fondu entrant.
-            key={`${voix.instanceId}:${track.id}`}
+            // Le numero de passage fait partie de la cle : changer de piste
+            // reconstruit la voix, ce qui lui redonne son fondu entrant — et
+            // une piste unique en boucle repart, alors que son index seul
+            // n'aurait pas bouge.
+            key={`${voix.instanceId}:${voix.lap}:${track.id}`}
             url={track.url}
             startSeconds={track.startSeconds}
             endSeconds={track.endSeconds}

@@ -67,6 +67,18 @@ export const zMusicBlockData = z
      */
     fadeInMs: z.number().int().min(0).max(5000).default(1500),
     fadeOutMs: z.number().int().min(0).max(5000).default(1500),
+    /**
+     * Lecture en boucle (V2.1-6, lot 2, demande apres coup) : arrive au bout
+     * de la liste, le bloc repart de sa premiere piste — y compris quand il
+     * n'en a qu'une, le cas le plus courant d'une ambiance. `false` par
+     * defaut : le lot 2 s'arretait en fin de liste, on ne change pas
+     * silencieusement le comportement des blocs deja poses.
+     *
+     * **YouTube seulement**, comme le fondu et les bornes : reconnaitre la fin
+     * d'une piste demande l'API (ADR 0022), et une iframe de repli ne la
+     * signale jamais.
+     */
+    loop: z.boolean().default(false),
   })
   .strict();
 export type MusicBlockData = z.infer<typeof zMusicBlockData>;

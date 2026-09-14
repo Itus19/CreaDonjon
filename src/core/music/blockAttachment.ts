@@ -37,6 +37,8 @@ export interface MusicAttachment {
   autoplay: boolean;
   fadeInMs: number;
   fadeOutMs: number;
+  /** Arrive au bout de la liste, le bloc repart de sa premiere piste. */
+  loop: boolean;
 }
 
 /**
@@ -88,6 +90,9 @@ export function planMusicAttachments<T extends MusicAttachmentBlock>(
       autoplay,
       fadeInMs: borneFondu(data.fadeInMs, FADE_IN_PAR_DEFAUT),
       fadeOutMs: borneFondu(data.fadeOutMs, FADE_OUT_PAR_DEFAUT),
+      // Absent pour les blocs anterieurs a la boucle : ils s'arretaient en fin
+      // de liste, ils continuent de s'arreter.
+      loop: data.loop === true,
     });
   }
 
