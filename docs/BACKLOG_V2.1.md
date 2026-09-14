@@ -1048,21 +1048,31 @@ ticket, pas ici.
 - [x] `npm run typecheck` et `npm run lint` passent ; 860 tests hors
       intégration (85 fichiers), dont 24 nouveaux sur `fade.ts`,
       `youtubeVideoId` et les bornes.
-- [ ] Deux pistes YouTube dans un bloc s'enchaînent dans l'ordre, sans
-      intervention — **implémenté mais pas encore constaté** : il faut un bloc
-      à deux pistes sur une fiche publiée, or le compte de test ne peut pas en
-      créer (voir « Ce qui bloque » du lot 1). Le plus rapide : ajouter une
-      seconde piste au bloc du Prologue, et une borne `fin` courte à la
-      première pour ne pas attendre la fin du morceau.
-- [ ] Bornes début/fin respectées sur une piste YouTube — même situation :
-      la traduction d'URL est testée unitairement, le passage à
-      `loadVideoById` ne l'est pas encore en navigateur.
+- [x] **Deux pistes YouTube s'enchaînent dans l'ordre, sans intervention.**
+      Mesuré en production sur le Prologue, l'auteur ayant ajouté une seconde
+      piste et une borne `Fin` à 10 s :
+
+      | Piste | Temps joué |
+      |---|---|
+      | `j940HnlMM8k` (borne Fin à 10 s) | 0 → **10,013 s**, puis arrêt |
+      | `QgtiY-77j-k` | reprend à 0 et continue |
+
+      Une seule iframe tout du long, et la piste enchaînée monte en fondu
+      (`0 → 7 → 10 → 20 → 34`).
+- [x] **Bornes début/fin respectées** — 10,013 s pour une borne à 10 s, soit
+      13 ms d'écart. Conforme à la réserve annoncée (précision à la seconde).
+- [x] Les réglages apparaissent bien dans l'éditeur : Début/Fin sous chaque
+      piste YouTube, les deux curseurs de fondu en bas du bloc.
 - [ ] En passant d'une fiche à une autre portant chacune sa musique, les deux
       se chevauchent — demande deux fiches publiées portant chacune un bloc.
 - [ ] Une piste Spotify ou SoundCloud continue de fonctionner — sans fondu,
       sans enchaînement, sans bornes — et l'éditeur le dit.
-- [ ] Exclusion mutuelle avec la radio toujours vraie dans les deux sens
-      (la radio n'existe pas sur le partage anonyme).
+- [ ] Exclusion mutuelle avec la radio toujours vraie dans les deux sens.
+      Tentée en production sur la fiche de Fine Lââm : la radio de ce monde ne
+      contient **aucune station**, il n'y a donc rien à lancer contre le bloc.
+      Une station suffirait à lever ce dernier point. Indice indirect en
+      attendant : sur toutes les mesures ci-dessus, jamais plus d'une iframe
+      n'a coexisté hors fondu — l'invariant « une seule source active » tient.
 
 #### Un plantage trouvé en navigateur, invisible autrement
 
