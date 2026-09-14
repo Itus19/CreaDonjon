@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { MusicTrack } from "@/src/core/schemas/blocks/music";
 import { useMusicPlayback } from "@/components/shell/MusicPlaybackContext";
 
@@ -35,6 +35,7 @@ export default function PublicMusicToggle({
   loop: boolean;
 }) {
   const { currentKey, play, stop } = useMusicPlayback();
+  const bouton = useRef<HTMLButtonElement | null>(null);
   const key = `block:${blockId}`;
   const playing = currentKey === key;
 
@@ -56,15 +57,20 @@ export default function PublicMusicToggle({
     // Page pas encore touchee (lien de partage ouvert a froid, le cas
     // principal de `/partage`) : on arme la lecture sur le tout premier geste
     // du visiteur, quel qu'il soit — c'est ce geste qui lui donne le droit au
-    // son. `capture` pour passer avant les gestionnaires de la page. Si le
-    // premier geste EST un clic sur ce bouton, les deux appellent `play` avec
-    // la meme cle : c'est `MusicPlaybackProvider` qui rend le second appel
-    // inoffensif (demander ce qui joue deja ne relance rien). Ce garde n'a pas
-    // toujours existe — sans lui, les deux appels creaient deux voix
-    // concurrentes et la lecture partait de travers, constate en production.
-    const start = () => {
+    // son. `capture` pour passer avant les gestionnaires de la page.
+    //
+    // MAIS jamais quand ce geste est un clic sur CE bouton : `pointerdown` et
+    // `click` sont deux evenements distincts, et React a le temps de
+    // rafraichir entre les deux. Lancer ici ferait donc voir au `onClick` une
+    // lecture deja en cours, et il appellerait `stop()` — le premier clic
+    // armait et mettait en pause dans la foulee, si bien que rien ne jouait
+    // (constate en production). Dans ce cas on se contente de desarmer : le
+    // bouton fait son travail tout seul, avec le bon etat.
+    const start = (event: Event) => {
       document.removeEventListener("pointerdown", start, true);
       document.removeEventListener("keydown", start, true);
+      const cible = event.target;
+      if (bouton.current && cible instanceof Node && bouton.current.contains(cible)) return;
       lancer();
     };
     document.addEventListener("pointerdown", start, true);
@@ -80,6 +86,7 @@ export default function PublicMusicToggle({
 
   return (
     <button
+      ref={bouton}
       type="button"
       onClick={() => (playing ? stop() : play({ key, tracks, fadeInMs, fadeOutMs, loop }))}
       aria-label={playing ? `Mettre en pause « ${label} »` : `Lancer « ${label} »`}
