@@ -934,9 +934,13 @@ d'origine. Le lot 2 est une refonte du lecteur partagé.
 - [x] Case cochée : la première piste démarre en arrivant sur la fiche — sous
       la réserve d'activation ci-dessous, constatée puis corrigée en direct.
 - [ ] Case décochée : rien ne démarre à la visite, le bouton fonctionne.
-- [ ] Lancer une piste de bloc met toujours la radio d'arrière-plan en pause,
-      et inversement (acquis de V2-G3, à ne pas casser) — pas encore reproduit,
-      la radio n'existe pas sur le partage anonyme.
+- [x] Lancer une piste de bloc met toujours la radio d'arrière-plan en pause,
+      et inversement (acquis de V2-G3, à ne pas casser) — vérifié, voir le
+      critère jumeau du lot 2 : une seule mesure couvre les deux, le lecteur
+      partagé étant le même. À noter pour la suite : **ce point ne se teste pas
+      sur `/partage`**, où il n'y a pas de radio du tout — il n'y vit donc pas
+      d'exclusion à vérifier, et l'attente d'un lien de partage était une
+      impasse.
 - [x] `npm run typecheck` et `npm run lint` passent ; `test:core` (818 tests,
       81 fichiers) et la suite hors intégration (836 tests, 84 fichiers)
       passent.
@@ -1116,12 +1120,57 @@ annoncé un chantier déjà fait, et aucun ticket ne le portait jusqu'ici.
       exactement **1,5 s** entre les deux bascules, le `fadeOutMs` configuré.
 - [ ] Une piste Spotify ou SoundCloud continue de fonctionner — sans fondu,
       sans enchaînement, sans bornes — et l'éditeur le dit.
-- [ ] Exclusion mutuelle avec la radio toujours vraie dans les deux sens.
-      Tentée en production sur la fiche de Fine Lââm : la radio de ce monde ne
-      contient **aucune station**, il n'y a donc rien à lancer contre le bloc.
-      Une station suffirait à lever ce dernier point. Indice indirect en
-      attendant : sur toutes les mesures ci-dessus, jamais plus d'une iframe
-      n'a coexisté hors fondu — l'invariant « une seule source active » tient.
+- [x] **Exclusion mutuelle avec la radio, vraie dans les deux sens** —
+      mesurée le 14 septembre, une station ayant enfin été posée (voir
+      ci-dessous). Les deux bascules, avec l'état des deux boutons et le compte
+      d'iframes à chaque étape :
+
+      | Geste | Bouton du bloc | Bouton de la station | iframes |
+      |---|---|---|---|
+      | Piste du bloc lancée | Mettre en pause | Lecture | 1 |
+      | Station lancée par-dessus | **Lecture** | **Mettre en pause** | 1 |
+      | Piste du bloc relancée | **Mettre en pause** | **Lecture** | 1 |
+
+      Toujours **exactement une** iframe, et jamais la même : l'iframe en place
+      avant chaque bascule a été marquée, puis retrouvée **retirée du
+      document** après — ce n'est pas un lecteur qu'on repointe, c'est l'ancien
+      qu'on démonte. L'invariant « une seule source active » est donc constaté
+      de bout en bout, et non plus déduit.
+
+      **Et les deux jouent réellement**, ce que le compte d'iframes ne dit pas :
+      le `currentTime` du lecteur avance dans les deux cas — 17,8 s → 18,6 s
+      pour la piste du bloc, 5,0 s → 10,7 s pour la station, lus dans les
+      messages du lecteur.
+
+#### Pourquoi la station n'a pas pu être posée dans ClaudeLand
+
+Le blocage annoncé — « la radio de ce monde ne contient aucune station » — n'a
+pas été levé dans ClaudeLand, et c'est une contrainte d'autorisation, pas un
+oubli.
+
+**Une station de radio n'est plus une préférence de navigateur.** La note de
+V2-G3 (`docs/BACKLOG_V2.md`) décrit encore des stations en `localStorage` ;
+elles ont depuis migré côté serveur — table `world_radio_stations`, sous RLS,
+**stations du monde** sur retour explicite de l'auteur (« les stations radio
+sont celles que le MJ met en place pour ce monde et accessibles aux joueurs »).
+Ajout et suppression sont réservés au MJ : `canManage`, calculé côté serveur
+par `isWorldAdmin`, et la route `POST` refuse tout le reste.
+
+Le compte connecté dans le navigateur de vérification est un compte **joueur**
+de ClaudeLand — `GET /api/worlds/faerun-copie-3/radio-stations` répond
+`canManage: false`. Poser une station dans ClaudeLand demande donc le compte
+MJ de l'auteur, en une seule manipulation : bouton Radio de la coquille, nom,
+lien, « + Ajouter ».
+
+**Ce qui était vérifiable sans ce compte l'a été** : l'invariant lui-même, dans
+un monde de test créé pour l'occasion (« Test radio V2.1-6 », MJ le compte du
+navigateur, supprimé après les mesures), avec la station demandée par l'auteur
+— une playlist YouTube — et un bloc `music` portant la même vidéo. Le lecteur
+partagé, lui, est monté une fois dans `app/layout.tsx` : il ne connaît ni le
+monde ni la campagne, donc l'exclusion mesurée là vaut partout.
+
+Rien n'a été écrit dans ClaudeLand ni dans Les Chroniques des Royaumes
+Oubliés.
 
 #### Le premier clic sur le bouton s'annulait lui-même
 
