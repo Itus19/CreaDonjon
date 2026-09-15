@@ -24,6 +24,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-9 | Un test d'intégration à la marge trop mince | `S` | **Fait** (14 septembre, avant d'être écrit) — `homebrewWeapon.integration.test.ts` échouait par intermittence sur le délai de 5 s de Vitest. Corrigé dans la foulée de V2.1-6 sans qu'aucun ticket ne le porte ; consigné ici après coup |
 | V2.1-10 | Deux traînes du dépassement de quota Vercel | `S` + `M` | **Ouvert** (15 septembre) — nés de l'instruction du quota Vercel dépassé (`849bd4e`), tous deux hors du correctif lui-même : `npm ci` refuse de tourner sur un lock désynchronisé, et 759 Mo de binaires `sharp` sont encore recopiés dans 75 fonctions qui ne l'appellent jamais |
 | V2.1-11 | Bloc image : ancrage explicite, fond de page à trois états, parallaxe | `L` | **Fait** (15 septembre) — trois lots. L'ancrage devient explicite et l'image entre DANS son bloc hôte, ce qui fait tomber ensemble la bordure orpheline et le décalage au-dessus du titre. Interface esquissée et manipulée avant d'écrire une ligne : la séance a déplacé le modèle de données |
+| V2.1-12 | Le fond de page ne s'applique pas dans la coquille joueur | `S` ou `M` | **Ouvert** (15 septembre) — né de V2.1-11 : `WikiBackgroundProvider` n'est monté que sur `/partage` et `/apercu`, donc « seulement en fond » fait disparaître l'image sans rien peindre sur la route que les joueuses utilisent. Pas une régression : le report est écrit dans `playerEntityDetail.ts` depuis l'origine |
 
 ---
 
@@ -2066,6 +2067,76 @@ seul, ancrage explicite en milieu de bloc, ancrage en fin de bloc).
 
 ---
 
+## V2.1-12 — Le fond de page ne s'applique pas dans la coquille joueur · `S` ou `M` — ouvert
+
+### Constat
+
+Le fond de page wiki (V2-G13) n'est peint que sur deux routes. `WikiBackgroundProvider`
+est monté dans `app/m/[worldSlug]/apercu/layout.tsx` et
+`app/partage/[token]/layout.tsx`, nulle part ailleurs. La route wiki **joueur**
+(`app/m/[worldSlug]/joueur/wiki/[entitySlug]/page.tsx`) rend `PublicEntityBody`
+directement, sans `BookSkin` ni fournisseur.
+
+Ce n'est pas un oubli : `src/server/services/playerEntityDetail.ts` le dit en
+toutes lettres — « `wikiBackground` omis : la coquille joueur n'a pas (encore)
+de fond de page animé ». Le « encore » est le sujet de ce ticket.
+
+Conséquence sur la route que les joueuses utilisent réellement :
+
+- une image en **« seulement en fond »** disparaît complètement — retirée du
+  corps de la fiche, et aucun fond peint à la place ;
+- une image en **« en fond, en plus de la fiche »** s'affiche dans le texte,
+  mais sans fond.
+
+**Ce n'est pas une régression de V2.1-11.** Avant le lot 2, une image cochée
+« fond de page » disparaissait déjà de cette route, par le même chemin. Mais
+V2.1-11 rend le trou plus facile à rencontrer : les trois états font du fond
+un choix explicite, posé dans une liste, et ce choix ne produit rien là où on
+le pose.
+
+### Deux pistes, et elles ne coûtent pas pareil
+
+**Piste A — monter le fond dans la coquille joueur.** `M`. Trois morceaux :
+`getPlayerEntityDetail` doit calculer `wikiBackground` comme le fait déjà
+`getPublicEntityDetail` (`publicShare.ts`, même bloc de résolution, même
+filtrage par visibilité) ; `app/m/[worldSlug]/joueur/wiki/layout.tsx` doit
+envelopper ses enfants dans `WikiBackgroundProvider` — il persiste déjà d'une
+fiche à l'autre, c'est exactement la propriété que le fondu exige ; et la page
+doit enregistrer le fond courant, comme `BookSkin.tsx` le fait avec
+`useWikiBackground`. C'est le comportement que l'auteur attendait en cochant
+la case.
+
+**Piste B — assumer la limite et la dire.** `S`. Le fond reste réservé aux
+vues de partage, et l'éditeur l'annonce : une ligne sous la liste « Fond de
+page », visible dès que le mode n'est pas « aucun ». Presque gratuit, et
+honnête — mais laisse une option qui ne fait rien sur la route principale.
+
+**À trancher avec l'auteur avant d'écrire quoi que ce soit.** Les deux sont
+défendables : A si le fond de page est une fonctionnalité de lecture pour la
+table, B s'il ne sert qu'aux pages partagées à l'extérieur.
+
+### Critères (piste A)
+
+- [ ] `getPlayerEntityDetail` renvoie `wikiBackground`, résolu par la même
+      règle que la version publique — un bloc réservé au MJ ne peut jamais
+      imposer un fond à un viewer qui ne le voit pas.
+- [ ] Le fond persiste d'une fiche à l'autre dans l'onglet Wiki joueur, et
+      s'estompe en quittant, sans couper net (c'est la raison d'être du
+      fournisseur, V2-G13 suite).
+- [ ] Les trois états de `backgroundMode` se comportent sur cette route comme
+      sur `/apercu`, vérifié en navigateur.
+- [ ] La note de `playerEntityDetail.ts` ne dit plus « pas (encore) » : elle
+      décrit ce qui est.
+
+### Critères (piste B)
+
+- [ ] L'éditeur annonce la limite dès qu'un mode de fond est choisi, sans
+      attendre que l'auteur constate que rien ne se passe.
+- [ ] La note de `playerEntityDetail.ts` devient une décision assumée plutôt
+      qu'un report.
+
+---
+
 ## Ordre suivi
 
 Aucune dépendance technique dure entre ces cinq tickets. Fait dans l'ordre
@@ -2147,3 +2218,18 @@ l'usage plutôt que d'une relecture : les valeurs d'énumération du lot 1
 largeur (défaut latent de `Dropdown`, invisible tant qu'aucun appel n'imposait
 de largeur), et `npm` absent du PATH qui empêchait le serveur de dev de
 démarrer.
+
+**V2.1-12 est né de V2.1-11 une fois celui-ci poussé**, en répondant à la
+question « reste-t-il quelque chose à faire ? » — pas en relisant le code. Il
+ne corrige aucune régression : le report qu'il porte est écrit dans
+`playerEntityDetail.ts` depuis l'origine (« pas (encore) de fond de page
+animé »). Ce que V2.1-11 a changé, c'est la probabilité de le rencontrer : un
+réglage qui était une case à cocher discrète est devenu un choix explicite
+entre trois états, et deux de ces trois états ne produisent rien sur la route
+que les joueuses utilisent.
+
+D'où une deuxième règle, jumelle de celle sur les notes : **rendre un réglage
+plus visible rend visibles les endroits où il ne s'applique pas.** Le trou
+existait, personne ne tombait dessus.
+
+Deux tickets restent donc ouverts : V2.1-10 (quota Vercel) et V2.1-12.
