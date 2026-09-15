@@ -1818,17 +1818,44 @@ d'importer.**
       d'upload — `blocks/[blockId]/image`, `entities/[id]/portrait`,
       `settings/background`, `worlds/[worldSlug]/assets` — à 38 Mo chacune. Les
       **206 autres portent 0 Mo**.
-- [ ] Les quatre routes d'upload tracent toujours
-      `@img/sharp-libvips-linux-x64/lib/libvips-cpp.so` — **non vérifiable
-      depuis cette machine** : un build Windows trace `@img/sharp-win32-x64`,
-      jamais le paquet linux. Ce qui EST vérifié, c'est le mécanisme —
-      `outputFileTracingIncludes` englobe `./node_modules/@img/**/*`, donc les
-      quatre routes reçoivent l'arbre `@img` complet de la plateforme de build,
-      quel qu'il soit. Le nom du fichier change, pas la règle.
+- [x] Les quatre routes d'upload tracent toujours le binaire natif de la
+      plateforme de build. **Non observable depuis cette machine** — un build
+      Windows trace `@img/sharp-win32-x64`, jamais le paquet linux — mais la
+      chaîne se ferme par lecture, maillon par maillon :
+      1. `sharp@0.34.5` déclare `@img/sharp-libvips-linux-x64` et
+         `@img/sharp-linux-x64` en **`optionalDependencies`** ;
+      2. le lock les enregistre avec `os: ["linux"]`, `cpu: ["x64"]`,
+         `optional: true` — donc `npm ci` les installe sur un hôte linux/x64,
+         et ne les installe pas ici ;
+      3. `outputFileTracingIncludes` englobe `./node_modules/@img/**/*`, sans
+         filtre de plateforme : ce que npm a posé, le traceur le prend.
+      Le nom du fichier change avec la plateforme, la règle non. Il reste un
+      maillon non observé : le `.nft.json` du build Vercel lui-même.
 - [ ] Un envoi d'image réel passe sur le déploiement : portrait d'entité,
       image de bloc, image de fond, asset de monde. Les quatre, une fois
       chacune : c'est le seul contrôle qui distingue vraiment un binaire
-      présent d'un binaire absent. **À faire après déploiement.**
+      présent d'un binaire absent. **Ne peut être fait que par l'auteur** —
+      voir la passation ci-dessous.
+
+### Passation — les deux points qui demandent Vercel
+
+Consignés ici plutôt que laissés dans une conversation : ni les journaux de
+build ni un envoi réel ne sont atteignables depuis la session de travail (pas
+de jeton Vercel, pas de `.vercel`, aucune variable d'environnement — vérifié,
+pas supposé).
+
+**1. Les quatre envois, une fois chacun**, sur le déploiement : portrait
+d'entité, image de bloc, image de fond personnel, asset de monde (une carte).
+C'est le seul contrôle qui distingue un binaire présent d'un binaire absent.
+En cas d'échec, le symptôme est précis et reconnaissable : **`ERR_DLOPEN_FAILED`
+en production seulement**, jamais en local — et il ne toucherait QUE ces quatre
+routes, le reste du site étant indemne par construction.
+
+**2. Les journaux de build** (volet A4) : `npm ci` ou `npm install` ? La
+réponse n'a plus de conséquence pratique — les deux passent depuis que la peer
+optionnelle n'est plus bloquante — mais elle dirait si le volet A a jamais été
+un incident réel ou seulement un risque dormant. À lire une fois, si l'occasion
+se présente.
 - [x] Poids total tracé : **638 Mo** sur ce build local. À ne pas comparer
       directement aux 1 564 Mo du 15 septembre, mesurés sur un build Linux
       avec d'autres binaires — le chiffre qui se compare sans réserve est le
