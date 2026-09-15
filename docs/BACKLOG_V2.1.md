@@ -25,6 +25,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-10 | Deux traînes du dépassement de quota Vercel | `S` + `M` | **Fait** (15 septembre) — volet A **caduc, mesuré** : `npm ci` passe, npm 11.17 ne traite plus la peer optionnelle comme bloquante. Volet B : **quatre** chaînes vers `sharp` et non deux, les deux autres trouvées en vérifiant avant de coder. Mesuré : 79 fonctions portaient le binaire, il en reste 4 — les quatre routes qui téléversent |
 | V2.1-11 | Bloc image : ancrage explicite, fond de page à trois états, parallaxe | `L` | **Fait** (15 septembre) — trois lots. L'ancrage devient explicite et l'image entre DANS son bloc hôte, ce qui fait tomber ensemble la bordure orpheline et le décalage au-dessus du titre. Interface esquissée et manipulée avant d'écrire une ligne : la séance a déplacé le modèle de données |
 | V2.1-12 | Une seule peau de wiki, dans les layouts | `L` | **Fait** (15 septembre) — l'onglet Wiki joueur réimplémentait `BookSkin` et la copie n'avait pas emporté le fond de page. La coquille remonte dans les `layout.tsx` (par monde), l'enregistrement du fond reste dans la page (par fiche) : le sommaire cesse de se reconstruire, sur `/apercu` comme chez le joueur. `/partage` garde la sienne dans sa page, sa garde par mot de passe devant précéder tout chargement |
+| V2.1-13 | Centrer le couple sommaire + texte du wiki | `S` | **Fait** (15 septembre) — le vide entre sommaire et texte tombe de ~300 px à 32 px sur un écran de 1920, et cesse de dépendre de la fenêtre : il était un reste, il devient une marge. Une borne exprimée dans les unités du contenu, écrite une seule fois pour les trois routes — premier encaissement de la fusion de V2.1-12 |
 
 ---
 
@@ -2249,6 +2250,85 @@ monde réel, par le chemin réel.
 
 ---
 
+## V2.1-13 — Centrer le couple sommaire + texte du wiki · `S` — fait
+
+### Constat
+
+Sur un grand écran, le sommaire est collé au bord gauche pendant que le texte
+flotte au milieu : environ **300 px de vide** entre les deux sur un écran de
+1920. Le trajet de l'œil est long, et les deux colonnes cessent de se lire
+comme un ensemble — l'auteur l'a décrit comme « le sommaire appartient à une
+autre page que le texte ».
+
+Ce vide n'est pas une marge choisie, c'est un **reste**. `BookSkin` pose le
+sommaire à gauche, puis centre le texte (`mx-auto max-w-[70ch]`) dans tout
+l'espace restant. La largeur du vide dépend donc de la fenêtre :
+
+| Fenêtre | Vide à gauche du texte |
+|---|---|
+| ~1920 px | ~300 px |
+| 1280 px | ~100 px |
+| < 1000 px | 0 |
+
+### Décision
+
+Borner la largeur du **couple** (sommaire + colonne de lecture) et centrer
+l'ensemble, plutôt que centrer le texte seul dans ce qui reste. Le sommaire
+reste alors collé au texte à toutes les largeurs, et le vide se répartit des
+deux côtés.
+
+Une largeur maximale, pas une règle conditionnelle : quand l'écran devient trop
+étroit, elle cesse simplement de mordre et la disposition retombe d'elle-même
+sur celle d'aujourd'hui. Aucun cas particulier à écrire, rien à tester sous un
+seuil.
+
+La borne est exprimée en **unités du contenu** plutôt qu'en pixels devinés :
+`16rem` (le sommaire, `md:w-64`) `+ 70ch` (la colonne de prose) `+ 4rem` (le
+rembourrage que `main` pose déjà). Elle suit donc la police si elle change, au
+lieu de se périmer.
+
+### Ce qui rend ce ticket petit
+
+V2.1-12 vient de réunir les trois routes sur `BookSkin` : `/partage`,
+`/m/[worldSlug]/apercu` et l'onglet Wiki joueur. La règle ne s'écrit donc
+qu'**une fois** et vaut pour les trois — c'était précisément le bénéfice
+annoncé de la fusion, et c'est son premier encaissement.
+
+Ce ticket aurait dû être ouvert en même temps que V2.1-12 : les deux ont été
+proposés ensemble, et seul le premier a été retenu au moment de passer au code.
+L'auteur a dû constater lui-même, capture à l'appui, que sa disposition n'avait
+pas bougé.
+
+### Critères
+
+- [x] Sur un écran de 1920, le vide entre sommaire et texte tombe de **~300 px
+      à 32 px** — exactement le `md:px-8` que `main` posait déjà. Mesuré.
+- [x] Le vide restant se répartit également : couple de **1063 px**, marges de
+      429 px de chaque côté sur `/apercu`, 426/432 sur `/partage` (l'écart de
+      6 px est la barre de défilement). Sur l'onglet joueur, 469/389 — le
+      couple est centré dans la zone de contenu, **après** le rail de 80 px,
+      qui est de la chrome et non du contenu. C'est la disposition de
+      l'esquisse validée.
+- [x] Sous le seuil, aucune régression : à 1000 px le couple fait 994 px, le
+      sommaire est collé au bord, marge nulle — la disposition est exactement
+      celle d'avant. La borne cesse de mordre d'elle-même.
+- [x] Le tiroir sous `md` n'est pas affecté : l'`aside` y est `fixed`, donc
+      hors du flux du conteneur ajouté.
+- [x] Vérifié sur les trois routes, à 1000, 1280 et 1920 px.
+- [x] `npm run typecheck && npm run lint && npm run test` passent.
+
+### Mesures
+
+| Fenêtre | Couple | Marge gauche | Marge droite | Vide sommaire↔texte |
+|---|---|---|---|---|
+| 1920 px | 1063 px | 426 | 432 | 32 px |
+| 1280 px | 1063 px | 106 | 112 | 32 px |
+| 1000 px | 994 px | 0 | 0 | 32 px |
+
+Le couple garde la même largeur tant que la borne mord, et le vide entre les
+deux colonnes ne bouge plus du tout — c'était tout le sujet : il était un
+reste, il devient une marge.
+
 ## Ordre suivi
 
 Aucune dépendance technique dure entre ces cinq tickets. Fait dans l'ordre
@@ -2358,7 +2438,8 @@ proposition revient une troisième fois, ce n'est plus la proposition qu'il faut
 réexaminer, c'est la réponse.** L'insistance de l'auteur pointait un fait que
 le code portait depuis le début.
 
-**V2.1-10 clôt ce backlog**, le 15 septembre comme les trois précédents. Il a
+**V2.1-10 était le dernier ticket ouvert**, le 15 septembre comme les trois
+précédents. Il a
 rendu deux enseignements de nature opposée, et c'est ce qui le rend utile à
 relire.
 
@@ -2379,3 +2460,19 @@ existe.
 
 Le chiffre qui se compare sans réserve : **79 fonctions portaient le binaire de
 `sharp`, il en reste 4** — exactement les quatre routes qui téléversent.
+
+**V2.1-13 clôt ce backlog**, et il n'aurait pas dû exister séparément : il a
+été proposé en même temps que V2.1-12, dans la même réponse, et seul le premier
+a été retenu au moment de passer au code. L'auteur a dû constater lui-même,
+capture à l'appui, que la disposition de son wiki n'avait pas bougé.
+
+D'où la dernière règle de ce backlog, et c'est une règle sur la conduite du
+travail plutôt que sur le code : **quand deux travaux sont proposés ensemble et
+qu'un seul est retenu, l'autre s'ouvre tout de suite ou il disparaît.** C'est
+exactement ce que disait déjà la leçon de V2.1-8/V2.1-9 sur les notes — une
+intention qui ne devient pas un ticket ne survit pas à la séance. Elle s'est
+vérifiée une fois de plus, sur mon propre fait.
+
+En contrepartie, V2.1-13 a tenu en une règle de conteneur au lieu de trois,
+parce que V2.1-12 venait de réunir les trois routes sur une seule peau. La
+fusion a rendu ce qu'elle promettait dès le ticket suivant.

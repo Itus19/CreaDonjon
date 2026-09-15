@@ -85,6 +85,22 @@ export default function BookSkin({
       data-mode={displayed?.mode}
       style={scopeStyle}
     >
+      {/* V2.1-13 — le COUPLE sommaire + texte est borne et centre, plutot que
+          le texte seul centre dans ce qui reste apres le sommaire. Avant, le
+          vide n'etait pas une marge choisie mais un reste : ~300px entre les
+          deux colonnes sur un ecran de 1920, ~100px sur un portable, zero en
+          dessous. Le sommaire se lisait comme appartenant a une autre page.
+
+          Borne exprimee dans les unites du CONTENU, jamais en pixels devines :
+          `16rem` est la largeur du sommaire (`md:w-64` ci-dessous), `70ch`
+          celle de la colonne de prose (`max-w-[70ch]` plus bas), `4rem` le
+          rembourrage que `main` pose deja (`md:px-8`, des deux cotes). Elle
+          suit donc la police si elle change, au lieu de se perimer.
+
+          Une largeur MAXIMALE, pas une regle conditionnelle : sous le seuil,
+          elle cesse simplement de mordre et la disposition redevient celle
+          d'avant. Rien a tester en dessous, aucun cas particulier a ecrire. */}
+      <div className="mx-auto flex h-full w-full min-w-0 max-w-[calc(16rem+70ch+4rem)]">
       {/* Sommaire replie par defaut sous md (retour utilisateur : "les
           images de portrait ne s'affichent pas toujours sur smartphone" —
           en realite le sommaire, fixe a 256px, ne se repliait jamais et
@@ -143,6 +159,7 @@ export default function BookSkin({
           {children}
         </div>
       </main>
+      </div>
     </div>
   );
 }
