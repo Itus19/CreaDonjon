@@ -2358,6 +2358,192 @@ Le couple garde la même largeur tant que la borne mord, et le vide entre les
 deux colonnes ne bouge plus du tout — c'était tout le sujet : il était un
 reste, il devient une marge.
 
+---
+
+## V2.1-14 — Lettrine et traits de séparation dans le bloc texte · `M` — fait
+
+Ce backlog se déclarait clos à V2.1-13 (voir « Ordre suivi » plus bas, dont la
+phrase a dû être corrigée). Il rouvre le lendemain, sur une demande de l'auteur
+qui porte précisément sur le ticket V2.1-3 : il voulait « revoir
+l'articulation » du bloc texte et du Livre de sessions.
+
+### Constat
+
+La lettrine et les filets ornementaux existaient déjà — mais en dur dans
+`app/globals.css`, sous un sélecteur `.journal-entry …` que
+`PublicEntityBody.tsx` ne posait que pour `entity_kind === "session_journal"`.
+
+Une **mise en forme était devenue la propriété d'un genre de fiche**. Un récit
+de bataille sur une fiche `event` ne pouvait pas avoir de lettrine ; une entrée
+de journal purement factuelle en avait une sans l'avoir demandée. C'est
+l'inversion que ce ticket corrige.
+
+### Décision
+
+Deux options, **à deux niveaux différents** — c'est le point de conception du
+ticket, et il a été tranché avec l'auteur avant d'écrire une ligne :
+
+- **La lettrine est une propriété du bloc.** Un seul paragraphe est concerné,
+  toujours le premier, et le choix vaut pour le bloc entier → `dropCap` dans
+  `zTextBlockData`, une case à cocher dans `TextBlockEditor`. Pas dans la bulle
+  de mise en forme, qui ne porte que ce qui s'applique à une sélection.
+- **Le trait est un élément qu'on écrit.** « Mettre un trait » se fait à un
+  endroit choisi → un nouveau `SEGMENT_BLOCK_TYPES` `divider`, inséré depuis un
+  bouton de l'éditeur. Il porte donc sa **propre visibilité** comme tout
+  segment : un trait qui sépare deux parties dont une est masquée disparaît
+  avec elle, ce qu'une option de bloc n'aurait jamais su faire.
+
+**Écarté :** garder le décor automatique des titres H2/H3 (le comportement
+actuel) en le passant derrière une seconde case. Avec un trait posé à la main
+il fait doublon, et il surprend — il apparaît sans qu'on l'ait demandé.
+
+Le bouton d'insertion vit **hors de la bulle** de mise en forme : la bulle ne
+s'ouvre que sur une sélection, or un trait s'insère précisément là où il n'y a
+rien à sélectionner, sur une ligne vide entre deux parties.
+
+### Ce que le genre `session_journal` perd, et ce qu'il garde
+
+L'auteur voulait que « journal de session ne soit plus qu'une catégorie de
+fiche ». Six choses étaient accrochées à ce genre ; **une seule** était
+remplacée par les nouvelles options. La liste a été posée avant de décider :
+
+| Accroché au genre | Sort |
+|---|---|
+| Lettrine + filets (CSS `.journal-entry`) | **Retiré** — remplacé par les options du bloc |
+| Badge de type masqué, relations masquées | **Retiré** — purement cosmétique |
+| Bloc `session_journal_meta` hors du fil, en pied de page | **Retiré** — devient un bloc normal, ajoutable via « + Bloc » sur n'importe quelle fiche, rendu dans le fil avec son titre |
+| Table `session_journal_entries` (le devoir, la bannière, le roster) | **Gardé** — c'est un flux de travail, pas de la présentation |
+| Groupe épinglé « Livre de sessions » en tête du sommaire, tri par `written_at` | **Gardé** — c'est de la navigation |
+| 6ᵉ cas de `app.can_edit_entity` (l'autrice corrige son entrée) | **Gardé** — c'est un droit, et le retirer demanderait une migration |
+
+Décision explicite : démonter le devoir aurait été un **autre ticket**, avec
+son propre coût. On ne retire pas une table et une règle RLS avant d'avoir
+vérifié à l'usage que le remplacement rend bien.
+
+### Deux défauts trouvés en chemin
+
+- **Le trait existait déjà, et se perdait en silence.** `StarterKit` était
+  configuré sans désactiver `horizontalRule` : taper `---` créait bel et bien un
+  trait dans l'éditeur, que `docToSegments` transformait en paragraphe vide à
+  l'enregistrement. Le bouton et le type `divider` referment ce trou.
+- **Une proposition d'IA acceptée aurait effacé la lettrine.**
+  `aiProposals.ts` reconstruisait l'objet du bloc (`{ __v: 1, segments: … }`)
+  au lieu de l'étendre. Le champ neuf y serait retombé à `false` à chaque
+  acceptation. Passé en `{ ...currentData, segments: … }`.
+
+### Pas de migration
+
+`dropCap` est optionnel, à défaut `false` : tout le contenu antérieur reste
+valide tel quel, d'où un `__v` inchangé. Le seul test qui a dû bouger est
+celui qui vérifiait l'égalité stricte du texte validé — il affirme désormais
+que le défaut est posé, ce qui est justement la garantie recherchée.
+
+### Dépendance ajoutée
+
+`@tiptap/extension-horizontal-rule` (3.29.2, MIT) passe de dépendance
+transitive à dépendance directe — elle était déjà installée par
+`@tiptap/starter-kit`, donc **zéro octet ajouté** ; c'est l'import qui devient
+honnête. Même précédent exact que `extension-paragraph` et
+`extension-heading`, déjà déclarées pour la même raison : on étend le nœud
+pour lui greffer les attributs de segment.
+
+### Critères
+
+- [x] Une case « Lettrine sur le premier paragraphe » sur tout bloc texte, de
+      n'importe quelle fiche.
+- [x] La lettrine s'affiche dans l'éditeur comme en lecture (même sélecteur
+      CSS, même élément).
+- [x] Un bouton insère un trait de séparation à l'endroit du curseur.
+- [x] Un trait porte sa propre visibilité et disparaît avec la partie qu'il
+      sépare.
+- [x] Plus aucune branche `session_journal` dans le rendu du wiki public.
+- [x] Le bloc Séance s'ajoute via « + Bloc » et se rend dans le fil.
+- [x] Le devoir, le groupe du sommaire et le droit de l'autrice sont intacts.
+- [x] Vérifié en navigateur par l'auteur sur son wiki réel (15 septembre).
+
+---
+
+## V2.1-15 — Le droit de l'autrice d'une entrée devient un octroi retirable · `M` — fait
+
+### Constat
+
+Né de V2.1-14, sur une remarque de l'auteur en relisant ce qu'on avait gardé :
+« il faudrait que je puisse enlever la permission d'édition du journal depuis
+l'outil de gestion de campagne aussi. Je crois que ça n'est pas encore le cas. »
+
+Ce n'était pas le cas. Le droit de l'autrice était le **6ᵉ cas en dur** de
+`app.can_edit_entity` (migration 20260913160000) : `entity_kind =
+'session_journal' AND created_by = auth.uid()`. L'outil de gestion de campagne
+possède pourtant depuis V2-M9 une section « Octrois d'édition » qui liste
+`entity_grants` avec un bouton « Retirer » — le droit de l'autrice n'y
+figurait pas, et ne figurait nulle part.
+
+Une joueuse qui quitte la table, un texte qu'on veut figer après relecture :
+rien ne permettait de fermer la porte.
+
+### Décision
+
+Le raisonnement complet et la règle générale qui en sort sont dans
+**`docs/adr/0024-droits-implicites-vs-octrois-explicites.md`**. En résumé : le
+droit devient une vraie ligne `entity_grants`, posée à la création de l'entrée,
+donc couverte par le 4ᵉ cas — et le bouton « Retirer » existant fonctionne sur
+elle comme sur n'importe quel autre octroi.
+
+`entity_grants_write` n'est pas assouplie pour autant. L'insertion passe par
+`public.claim_journal_entry_grant`, `security definer`, étroite par
+construction : aucun `user_id` en paramètre, une seule ligne, pour l'appelante
+elle-même, sur une fiche qu'elle vient de créer, et seulement si un devoir **en
+attente** lui est réellement assigné. `granted_by` est le MJ qui a assigné —
+ce qui s'est littéralement passé, et ce qui rend la ligne lisible dans la liste.
+
+**Le cas 5 (notes) reste**, et la différence est le critère même de l'ADR : une
+fiche de notes privée n'est visible d'aucun autre compte, donc aucun MJ n'a
+d'octroi à lui accorder ni à lui reprendre.
+
+### Ce qu'il fallait ne pas rater
+
+- **L'ordre dans `submitJournalEntry`.** `blocks_insert` appelle
+  `app.can_edit_entity` : l'octroi doit être posé **entre** la création de la
+  fiche et celle des deux blocs. Posé après, l'autrice aurait créé sa fiche puis
+  échoué à y écrire une seule ligne.
+- **Les entrées déjà rédigées.** La migration les reprend (`insert … select …
+  on conflict do nothing`) : sans cela, leurs autrices perdaient leur droit à
+  l'instant de l'application.
+- **Le schéma de la fonction.** `public` et non `app` — PostgREST n'expose que
+  `public`, et c'est le service qui l'appelle par `supabase.rpc()`. Même motif
+  exact que `public.soft_delete_entity` (migration 20260902150011), déjà
+  documenté à l'époque après un PGRST202 en direct.
+
+### Le test devient plus exigeant
+
+`canEditEntityRls.integration.test.ts` vérifiait le verdict de départ (« son
+autrice peut la corriger »). Il vérifie maintenant le **cycle entier** sur la
+base réelle : sans octroi l'autrice ne peut rien, avec l'octroi elle peut,
+après le retrait elle ne peut plus — le geste exact que déclenche le bouton de
+l'outil de gestion de campagne. Le miroir pur (`canEditEntity.test.ts`) garde
+de son côté la porte fermée : « avoir créé une fiche ne donne aucun droit par
+lui-même ».
+
+### Critères
+
+- [x] Le droit de l'autrice apparaît dans « Octrois d'édition ».
+- [x] Le bouton « Retirer » lui reprend réellement l'édition (fiche ET blocs).
+- [x] Une autrice qui commence à écrire peut poser ses blocs sans rien de plus.
+- [x] Les entrées déjà rédigées gardent leur autrice éditrice.
+- [x] `entity_grants_write` reste réservée au MJ ; rien d'autre ne s'est ouvert.
+- [x] Migration appliquée sur la base distante (15 septembre, par l'auteur).
+- [x] Vérifié en navigateur par l'auteur sur son wiki réel (15 septembre).
+
+`npm run typecheck && npm run lint && npm run test` passent (1 044 tests, 119
+fichiers — les tests d'intégration inclus). Avant l'application de la
+migration, `canEditEntityRls.integration.test.ts` échouait sur son premier
+pas : « sans octroi, l'autrice ne peut rien » alors qu'elle pouvait encore.
+Cet échec était la mesure exacte de l'écart entre le code et la base, et il
+est tombé à la seconde où la migration est passée — c'est la meilleure preuve
+que ce test vaut quelque chose.
+
+---
+
 ## Ordre suivi
 
 Aucune dépendance technique dure entre ces cinq tickets. Fait dans l'ordre
@@ -2490,7 +2676,7 @@ existe.
 Le chiffre qui se compare sans réserve : **79 fonctions portaient le binaire de
 `sharp`, il en reste 4** — exactement les quatre routes qui téléversent.
 
-**V2.1-13 clôt ce backlog**, et il n'aurait pas dû exister séparément : il a
+**V2.1-13 devait clore ce backlog**, et il n'aurait pas dû exister séparément : il a
 été proposé en même temps que V2.1-12, dans la même réponse, et seul le premier
 a été retenu au moment de passer au code. L'auteur a dû constater lui-même,
 capture à l'appui, que la disposition de son wiki n'avait pas bougé.
@@ -2506,183 +2692,36 @@ En contrepartie, V2.1-13 a tenu en une règle de conteneur au lieu de trois,
 parce que V2.1-12 venait de réunir les trois routes sur une seule peau. La
 fusion a rendu ce qu'elle promettait dès le ticket suivant.
 
----
+## Ce que les deux derniers tickets ont appris
 
-## V2.1-14 — Lettrine et traits de séparation dans le bloc texte · `M` — fait
+**Un backlog ne se clôt pas parce qu'un ticket le dit.** V2.1-13 se terminait
+sur « V2.1-13 clôt ce backlog ». Le lendemain, l'auteur demandait à revoir
+l'articulation du bloc texte et du Livre de sessions, et deux tickets de plus
+sont nés. La phrase ci-dessus a été corrigée plutôt que retirée : elle disait
+quelque chose de vrai au moment où elle a été écrite.
 
-Ce backlog était déclaré clos à la ligne précédente. Il rouvre le lendemain,
-sur une demande de l'auteur qui porte précisément sur le ticket V2.1-3 : il
-voulait « revoir l'articulation » du bloc texte et du Livre de sessions.
+**V2.1-15 est sorti de ce que V2.1-14 avait décidé de NE PAS faire.** V2.1-14
+porte un tableau des six choses accrochées au genre `session_journal`, avec pour
+chacune « retiré » ou « gardé ». C'est en relisant la colonne « gardé » que
+l'auteur a vu ce que personne n'avait formulé : le droit de l'autrice y
+figurait comme intact, sans que quiconque se demande s'il était *reprenable*.
+Écrire ce qu'on ne fait pas, et pourquoi, est ce qui a rendu le trou visible —
+une liste de ce qu'on fait ne l'aurait jamais montré.
 
-### Constat
+**Deux défauts dormaient dans le bloc texte, trouvés en le lisant, pas en le
+testant.** Taper `---` créait un trait que l'enregistrement transformait en
+paragraphe vide, en silence, depuis toujours. Et une proposition d'IA acceptée
+reconstruisait l'objet du bloc, ce qui aurait effacé la lettrine à chaque fois.
+Aucun test ne pouvait les voir : le premier parce que rien n'avait jamais
+exercé ce chemin, le second parce que le champ qu'il efface venait d'être créé.
+Les deux sont apparus en lisant le code autour de ce qu'on ajoutait.
 
-La lettrine et les filets ornementaux existaient déjà — mais en dur dans
-`app/globals.css`, sous un sélecteur `.journal-entry …` que
-`PublicEntityBody.tsx` ne posait que pour `entity_kind === "session_journal"`.
+**Un test d'intégration rouge a servi d'instrument de mesure.** V2.1-15 a passé
+un moment avec `canEditEntityRls.integration.test.ts` en échec, et c'était la
+bonne situation : le code disait « l'autrice n'écrit que par un octroi », la
+base distante disait encore le contraire, et le test chiffrait exactement
+l'écart entre les deux. Il est passé au vert à la seconde où la migration a été
+appliquée. Un test qui échoue pour la raison qu'on attend vaut mieux qu'un
+ticket annoncé fini avec une migration en attente.
 
-Une **mise en forme était devenue la propriété d'un genre de fiche**. Un récit
-de bataille sur une fiche `event` ne pouvait pas avoir de lettrine ; une entrée
-de journal purement factuelle en avait une sans l'avoir demandée. C'est
-l'inversion que ce ticket corrige.
-
-### Décision
-
-Deux options, **à deux niveaux différents** — c'est le point de conception du
-ticket, et il a été tranché avec l'auteur avant d'écrire une ligne :
-
-- **La lettrine est une propriété du bloc.** Un seul paragraphe est concerné,
-  toujours le premier, et le choix vaut pour le bloc entier → `dropCap` dans
-  `zTextBlockData`, une case à cocher dans `TextBlockEditor`. Pas dans la bulle
-  de mise en forme, qui ne porte que ce qui s'applique à une sélection.
-- **Le trait est un élément qu'on écrit.** « Mettre un trait » se fait à un
-  endroit choisi → un nouveau `SEGMENT_BLOCK_TYPES` `divider`, inséré depuis un
-  bouton de l'éditeur. Il porte donc sa **propre visibilité** comme tout
-  segment : un trait qui sépare deux parties dont une est masquée disparaît
-  avec elle, ce qu'une option de bloc n'aurait jamais su faire.
-
-**Écarté :** garder le décor automatique des titres H2/H3 (le comportement
-actuel) en le passant derrière une seconde case. Avec un trait posé à la main
-il fait doublon, et il surprend — il apparaît sans qu'on l'ait demandé.
-
-Le bouton d'insertion vit **hors de la bulle** de mise en forme : la bulle ne
-s'ouvre que sur une sélection, or un trait s'insère précisément là où il n'y a
-rien à sélectionner, sur une ligne vide entre deux parties.
-
-### Ce que le genre `session_journal` perd, et ce qu'il garde
-
-L'auteur voulait que « journal de session ne soit plus qu'une catégorie de
-fiche ». Six choses étaient accrochées à ce genre ; **une seule** était
-remplacée par les nouvelles options. La liste a été posée avant de décider :
-
-| Accroché au genre | Sort |
-|---|---|
-| Lettrine + filets (CSS `.journal-entry`) | **Retiré** — remplacé par les options du bloc |
-| Badge de type masqué, relations masquées | **Retiré** — purement cosmétique |
-| Bloc `session_journal_meta` hors du fil, en pied de page | **Retiré** — devient un bloc normal, ajoutable via « + Bloc » sur n'importe quelle fiche, rendu dans le fil avec son titre |
-| Table `session_journal_entries` (le devoir, la bannière, le roster) | **Gardé** — c'est un flux de travail, pas de la présentation |
-| Groupe épinglé « Livre de sessions » en tête du sommaire, tri par `written_at` | **Gardé** — c'est de la navigation |
-| 6ᵉ cas de `app.can_edit_entity` (l'autrice corrige son entrée) | **Gardé** — c'est un droit, et le retirer demanderait une migration |
-
-Décision explicite : démonter le devoir aurait été un **autre ticket**, avec
-son propre coût. On ne retire pas une table et une règle RLS avant d'avoir
-vérifié à l'usage que le remplacement rend bien.
-
-### Deux défauts trouvés en chemin
-
-- **Le trait existait déjà, et se perdait en silence.** `StarterKit` était
-  configuré sans désactiver `horizontalRule` : taper `---` créait bel et bien un
-  trait dans l'éditeur, que `docToSegments` transformait en paragraphe vide à
-  l'enregistrement. Le bouton et le type `divider` referment ce trou.
-- **Une proposition d'IA acceptée aurait effacé la lettrine.**
-  `aiProposals.ts` reconstruisait l'objet du bloc (`{ __v: 1, segments: … }`)
-  au lieu de l'étendre. Le champ neuf y serait retombé à `false` à chaque
-  acceptation. Passé en `{ ...currentData, segments: … }`.
-
-### Pas de migration
-
-`dropCap` est optionnel, à défaut `false` : tout le contenu antérieur reste
-valide tel quel, d'où un `__v` inchangé. Le seul test qui a dû bouger est
-celui qui vérifiait l'égalité stricte du texte validé — il affirme désormais
-que le défaut est posé, ce qui est justement la garantie recherchée.
-
-### Dépendance ajoutée
-
-`@tiptap/extension-horizontal-rule` (3.29.2, MIT) passe de dépendance
-transitive à dépendance directe — elle était déjà installée par
-`@tiptap/starter-kit`, donc **zéro octet ajouté** ; c'est l'import qui devient
-honnête. Même précédent exact que `extension-paragraph` et
-`extension-heading`, déjà déclarées pour la même raison : on étend le nœud
-pour lui greffer les attributs de segment.
-
-### Critères
-
-- [x] Une case « Lettrine sur le premier paragraphe » sur tout bloc texte, de
-      n'importe quelle fiche.
-- [x] La lettrine s'affiche dans l'éditeur comme en lecture (même sélecteur
-      CSS, même élément).
-- [x] Un bouton insère un trait de séparation à l'endroit du curseur.
-- [x] Un trait porte sa propre visibilité et disparaît avec la partie qu'il
-      sépare.
-- [x] Plus aucune branche `session_journal` dans le rendu du wiki public.
-- [x] Le bloc Séance s'ajoute via « + Bloc » et se rend dans le fil.
-- [x] Le devoir, le groupe du sommaire et le droit de l'autrice sont intacts.
-
----
-
-## V2.1-15 — Le droit de l'autrice d'une entrée devient un octroi retirable · `M` — fait
-
-### Constat
-
-Né de V2.1-14, sur une remarque de l'auteur en relisant ce qu'on avait gardé :
-« il faudrait que je puisse enlever la permission d'édition du journal depuis
-l'outil de gestion de campagne aussi. Je crois que ça n'est pas encore le cas. »
-
-Ce n'était pas le cas. Le droit de l'autrice était le **6ᵉ cas en dur** de
-`app.can_edit_entity` (migration 20260913160000) : `entity_kind =
-'session_journal' AND created_by = auth.uid()`. L'outil de gestion de campagne
-possède pourtant depuis V2-M9 une section « Octrois d'édition » qui liste
-`entity_grants` avec un bouton « Retirer » — le droit de l'autrice n'y
-figurait pas, et ne figurait nulle part.
-
-Une joueuse qui quitte la table, un texte qu'on veut figer après relecture :
-rien ne permettait de fermer la porte.
-
-### Décision
-
-Le raisonnement complet et la règle générale qui en sort sont dans
-**`docs/adr/0024-droits-implicites-vs-octrois-explicites.md`**. En résumé : le
-droit devient une vraie ligne `entity_grants`, posée à la création de l'entrée,
-donc couverte par le 4ᵉ cas — et le bouton « Retirer » existant fonctionne sur
-elle comme sur n'importe quel autre octroi.
-
-`entity_grants_write` n'est pas assouplie pour autant. L'insertion passe par
-`public.claim_journal_entry_grant`, `security definer`, étroite par
-construction : aucun `user_id` en paramètre, une seule ligne, pour l'appelante
-elle-même, sur une fiche qu'elle vient de créer, et seulement si un devoir **en
-attente** lui est réellement assigné. `granted_by` est le MJ qui a assigné —
-ce qui s'est littéralement passé, et ce qui rend la ligne lisible dans la liste.
-
-**Le cas 5 (notes) reste**, et la différence est le critère même de l'ADR : une
-fiche de notes privée n'est visible d'aucun autre compte, donc aucun MJ n'a
-d'octroi à lui accorder ni à lui reprendre.
-
-### Ce qu'il fallait ne pas rater
-
-- **L'ordre dans `submitJournalEntry`.** `blocks_insert` appelle
-  `app.can_edit_entity` : l'octroi doit être posé **entre** la création de la
-  fiche et celle des deux blocs. Posé après, l'autrice aurait créé sa fiche puis
-  échoué à y écrire une seule ligne.
-- **Les entrées déjà rédigées.** La migration les reprend (`insert … select …
-  on conflict do nothing`) : sans cela, leurs autrices perdaient leur droit à
-  l'instant de l'application.
-- **Le schéma de la fonction.** `public` et non `app` — PostgREST n'expose que
-  `public`, et c'est le service qui l'appelle par `supabase.rpc()`. Même motif
-  exact que `public.soft_delete_entity` (migration 20260902150011), déjà
-  documenté à l'époque après un PGRST202 en direct.
-
-### Le test devient plus exigeant
-
-`canEditEntityRls.integration.test.ts` vérifiait le verdict de départ (« son
-autrice peut la corriger »). Il vérifie maintenant le **cycle entier** sur la
-base réelle : sans octroi l'autrice ne peut rien, avec l'octroi elle peut,
-après le retrait elle ne peut plus — le geste exact que déclenche le bouton de
-l'outil de gestion de campagne. Le miroir pur (`canEditEntity.test.ts`) garde
-de son côté la porte fermée : « avoir créé une fiche ne donne aucun droit par
-lui-même ».
-
-### Critères
-
-- [x] Le droit de l'autrice apparaît dans « Octrois d'édition ».
-- [x] Le bouton « Retirer » lui reprend réellement l'édition (fiche ET blocs).
-- [x] Une autrice qui commence à écrire peut poser ses blocs sans rien de plus.
-- [x] Les entrées déjà rédigées gardent leur autrice éditrice.
-- [x] `entity_grants_write` reste réservée au MJ ; rien d'autre ne s'est ouvert.
-- [x] Migration appliquée sur la base distante (15 septembre, par l'auteur).
-
-`npm run typecheck && npm run lint && npm run test` passent (1 044 tests, 119
-fichiers — les tests d'intégration inclus). Avant l'application de la
-migration, `canEditEntityRls.integration.test.ts` échouait sur son premier
-pas : « sans octroi, l'autrice ne peut rien » alors qu'elle pouvait encore.
-Cet échec était la mesure exacte de l'écart entre le code et la base, et il
-est tombé à la seconde où la migration est passée — c'est la meilleure preuve
-que ce test vaut quelque chose.
+**Les quinze tickets de ce backlog sont clos.**
