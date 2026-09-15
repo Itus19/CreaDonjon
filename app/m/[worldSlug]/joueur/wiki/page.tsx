@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getLatestSessionJournalSlug } from "@/src/server/services/sessionJournal";
+import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
 
 /**
  * Index de l'onglet Wiki (retour utilisateur, suite) — le sommaire vit
@@ -23,5 +24,12 @@ export default async function JoueurWikiIndexPage({ params }: { params: Promise<
   const latestSlug = await getLatestSessionJournalSlug(supabase, world.id);
   if (latestSlug) redirect(`/m/${worldSlug}/joueur/wiki/${latestSlug}`);
 
-  return <p className="text-sm text-ink-muted">Choisissez une entité dans le sommaire.</p>;
+  return (
+    <>
+      {/* V2.1-12 : enregistre un fond NUL — sans cet appel, revenir de la fiche
+          au sommaire laisserait le fond de la fiche precedente affiche. */}
+      <WikiBackgroundRegistrar background={null} />
+      <p className="text-sm text-ink-muted">Choisissez une entité dans le sommaire.</p>
+    </>
+  );
 }

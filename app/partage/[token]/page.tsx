@@ -9,6 +9,7 @@ import {
 import { hasVerifiedSharePassword } from "./passwordActions";
 import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
 import BookSkin from "@/components/entities/public/BookSkin";
+import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
 
 export default async function ShareLinkWorldPage({
   params,
@@ -42,6 +43,7 @@ export default async function ShareLinkWorldPage({
 
   return (
     <BookSkin title={title} worldSlug={resolved.worldSlug} tree={tree} hrefBase={`/partage/${token}`}>
+      <WikiBackgroundRegistrar background={null} />
       <h1 className="entity-title whitespace-pre-line">
         {welcomeMessage || `Bienvenue dans la campagne — ${title} ! L'aventure commence ici !`}
       </h1>

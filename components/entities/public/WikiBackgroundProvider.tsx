@@ -90,20 +90,36 @@ export default function WikiBackgroundProvider({ children }: { children: React.R
 }
 
 /**
- * Enregistre le fond de LA PAGE COURANTE aupres du `WikiBackgroundProvider`
- * ancetre (dans le `layout.tsx` du segment), et renvoie l'etat actuellement
- * affiche pour que `BookSkin.tsx` applique `--h`/`--c`/`data-mode` sur son
- * propre conteneur — jamais un div supplementaire ici, qui casserait le
- * flex/hauteur de la mise en page.
+ * LIRE le fond actuellement affiche, sans rien enregistrer (V2.1-12).
+ *
+ * C'est ce dont la coquille (`BookSkin`) a besoin : appliquer `--h`/`--c`/
+ * `data-mode` sur son propre conteneur — jamais un div supplementaire ici, qui
+ * casserait le flex/hauteur de la mise en page.
+ *
+ * Separe de l'enregistrement parce que les deux ne suivent pas la meme chose :
+ * la coquille est par MONDE et vit desormais dans le `layout.tsx`, le fond est
+ * par FICHE et ne peut etre declare que par la page.
+ */
+export function useWikiBackgroundDisplay(): { displayed: WikiBackground | null; visible: boolean } {
+  const ctx = useContext(WikiBackgroundContext);
+  return { displayed: ctx?.displayed ?? null, visible: ctx?.visible ?? false };
+}
+
+/**
+ * ENREGISTRER le fond de LA PAGE COURANTE aupres du `WikiBackgroundProvider`
+ * ancetre. N'affiche rien : la div de fond est portee par le fournisseur, dans
+ * le layout du segment — le seul endroit qui persiste entre deux fiches, donc
+ * le seul qui puisse animer une sortie.
+ *
+ * Une page de sommaire (sans fiche selectionnee) doit le rendre avec
+ * `background={null}` : sans cet appel, le fond de la fiche precedente
+ * resterait affiche en revenant au sommaire.
  *
  * Jamais de nettoyage au demontage : la page suivante enregistre deja sa
- * propre valeur a son montage, avant que celle-ci ne demonte — nettoyer
- * ici ecraserait cette nouvelle valeur par du vide.
+ * propre valeur a son montage, avant que celle-ci ne demonte — nettoyer ici
+ * ecraserait cette nouvelle valeur par du vide.
  */
-export function useWikiBackground(background: WikiBackground | null | undefined): {
-  displayed: WikiBackground | null;
-  visible: boolean;
-} {
+export function WikiBackgroundRegistrar({ background }: { background: WikiBackground | null | undefined }) {
   const ctx = useContext(WikiBackgroundContext);
   const normalized = background ?? null;
 
@@ -112,5 +128,5 @@ export function useWikiBackground(background: WikiBackground | null | undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx, normalized?.imageUrl, normalized?.hue, normalized?.chroma, normalized?.blurPx, normalized?.fadeMs, normalized?.mode]);
 
-  return { displayed: ctx?.displayed ?? null, visible: ctx?.visible ?? false };
+  return null;
 }

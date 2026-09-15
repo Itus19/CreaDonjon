@@ -24,7 +24,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-9 | Un test d'intégration à la marge trop mince | `S` | **Fait** (14 septembre, avant d'être écrit) — `homebrewWeapon.integration.test.ts` échouait par intermittence sur le délai de 5 s de Vitest. Corrigé dans la foulée de V2.1-6 sans qu'aucun ticket ne le porte ; consigné ici après coup |
 | V2.1-10 | Deux traînes du dépassement de quota Vercel | `S` + `M` | **Ouvert** (15 septembre) — nés de l'instruction du quota Vercel dépassé (`849bd4e`), tous deux hors du correctif lui-même : `npm ci` refuse de tourner sur un lock désynchronisé, et 759 Mo de binaires `sharp` sont encore recopiés dans 75 fonctions qui ne l'appellent jamais |
 | V2.1-11 | Bloc image : ancrage explicite, fond de page à trois états, parallaxe | `L` | **Fait** (15 septembre) — trois lots. L'ancrage devient explicite et l'image entre DANS son bloc hôte, ce qui fait tomber ensemble la bordure orpheline et le décalage au-dessus du titre. Interface esquissée et manipulée avant d'écrire une ligne : la séance a déplacé le modèle de données |
-| V2.1-12 | Une seule peau de wiki, dans les layouts | `L` | **Ouvert** (15 septembre) — né de V2.1-11 : le wiki joueur réimplémente `BookSkin`, et la copie n'a pas emporté le fond de page. La coquille remonte dans les `layout.tsx` (par monde), l'enregistrement du fond reste dans la page (par fiche) — les trois routes y gagnent |
+| V2.1-12 | Une seule peau de wiki, dans les layouts | `L` | **Fait** (15 septembre) — l'onglet Wiki joueur réimplémentait `BookSkin` et la copie n'avait pas emporté le fond de page. La coquille remonte dans les `layout.tsx` (par monde), l'enregistrement du fond reste dans la page (par fiche) : le sommaire cesse de se reconstruire, sur `/apercu` comme chez le joueur. `/partage` garde la sienne dans sa page, sa garde par mot de passe devant précéder tout chargement |
 
 ---
 
@@ -2067,7 +2067,7 @@ seul, ancrage explicite en milieu de bloc, ancrage en fin de bloc).
 
 ---
 
-## V2.1-12 — Une seule peau de wiki, dans les layouts · `L` — ouvert
+## V2.1-12 — Une seule peau de wiki, dans les layouts · `L` — fait
 
 ### Constat
 
@@ -2155,18 +2155,53 @@ question, et elle ne bloque rien ici.
 
 ### Critères
 
-- [ ] Les trois routes rendent la même coquille, montée dans leur layout.
-- [ ] Le sommaire ne se reconstruit plus en changeant de fiche : ni
-      scintillement du repli, ni recherche vidée, ni défilement perdu — vérifié
-      sur `/apercu` ET sur l'onglet joueur.
-- [ ] Les trois états du fond de page se comportent dans la vue joueur comme
-      sur `/apercu`, vérifié en navigateur.
-- [ ] Revenir de la fiche au sommaire efface le fond, sur les trois routes.
-- [ ] `getPlayerEntityDetail` n'utilise toujours pas `service_role`, et la note
-      « pas (encore) de fond de page animé » disparaît.
-- [ ] La bannière de séance s'affiche au même endroit qu'avant.
-- [ ] Aucun composant de mise en page laissé sans appelant.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+- [x] Les trois routes rendent la même coquille. **Deux sur trois la montent
+      dans leur layout** ; `/partage` la garde dans sa page — voir la réserve
+      ci-dessous, c'est une limite assumée, pas un oubli.
+- [x] Le sommaire ne se reconstruit plus en changeant de fiche, **mesuré** : un
+      attribut posé sur le nœud `<aside>` avant de cliquer une autre fiche s'y
+      retrouve après. Même nœud DOM, donc aucun remontage — et donc ni
+      scintillement du repli, ni recherche vidée, ni défilement perdu.
+- [x] Les trois états du fond se comportent dans la vue joueur comme sur
+      `/apercu` : « seulement en fond » peint le fond et retire l'image du
+      corps ; « en plus » fait les deux à la fois ; sans bloc de fond, aucun
+      `.wiki-bg-backdrop`.
+- [x] Passer à une fiche sans fond retire le fond précédent.
+- [x] `getPlayerEntityDetail` n'utilise toujours pas `service_role`, et la note
+      « pas (encore) de fond de page animé » a disparu.
+- [x] La bannière de séance occupe la même position qu'avant — au-dessus du
+      contenu, dans la colonne `max-w-[70ch]`. Vérifié par la structure et non
+      de visu : elle ne s'affiche que pour une personne à qui une rédaction est
+      assignée, ce que la session de travail n'est pas.
+- [x] `PlayerWikiSidebar` supprimé, plus aucun appelant. `TwoPaneReaderLayout`
+      conservé : les onglets Fiche et Règles s'en servent toujours.
+- [x] `npm run typecheck && npm run lint && npm run test` passent (1034 tests).
+
+### Réserve : `/partage` garde sa coquille dans la page
+
+Hisser `BookSkin` dans `app/partage/[token]/layout.tsx` obligerait ce layout à
+charger le sommaire **avant** la garde par mot de passe de la page — or celle-ci
+est explicite : « jamais de contenu récupéré avant validation, jamais "chargé
+puis masqué" ». Faire décider le layout supposerait d'y dupliquer la
+vérification, c'est-à-dire d'écrire la même règle de sécurité à deux endroits.
+
+`/partage` conserve donc son sommaire reconstruit à chaque fiche. Ce n'est pas
+une régression — c'est ce qu'elle faisait déjà — mais c'est la route qui ne
+profite pas de la correction, et c'est délibéré.
+
+### Vérifié en navigateur
+
+L'onglet Wiki joueur et `/apercu` (index et fiche) rendent la coquille montée
+par leur layout, sommaire à 256 px, colonne de lecture à 743 px dans une
+fenêtre de 1400.
+
+`/partage` a été ouvert par un **vrai lien de partage** de `valdoria`, qui
+redirige vers « Des outils, des tartes et une disparition » — la fiche même
+qui a déclenché V2.1-11. Elle a permis de fermer au passage le dernier critère
+de ce ticket-là, jamais constaté jusqu'ici : **zéro `div.border-b` sans
+contenu**, et l'image de l'ancien `wrapMode` a bien `.rich-text-content` pour
+parent, flottante à droite. Le correctif tient sur la fiche d'origine, dans le
+monde réel, par le chemin réel.
 
 ---
 

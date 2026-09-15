@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import { getPublicEntityTree, getLatestPublicSessionJournalSlug } from "@/src/server/services/publicShare";
-import BookSkin from "@/components/entities/public/BookSkin";
+import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
 
 /**
  * Prévisualisation authentifiée (V2-G2) : ce que verrait un lien de partage
@@ -11,6 +11,11 @@ import BookSkin from "@/components/entities/public/BookSkin";
  * par `getWorldBySlug` (RLS), pas par un jeton. Mêmes fonctions que
  * `/partage/[token]/**` (`src/server/services/publicShare.ts`), même peau
  * (`BookSkin`) — seule la source du `worldId` change.
+ *
+ * V2.1-12 : la peau est montée par `layout.tsx`, cette page ne rend plus que
+ * le contenu de la colonne de lecture. Elle enregistre en revanche un fond
+ * **nul** : sans cet appel, revenir de la fiche au sommaire laisserait le fond
+ * de la fiche précédente affiché.
  */
 export default async function ApercuWorldPage({ params }: { params: Promise<{ worldSlug: string }> }) {
   const { worldSlug } = await params;
@@ -25,7 +30,8 @@ export default async function ApercuWorldPage({ params }: { params: Promise<{ wo
   const title = campaigns[0]?.name ?? world.name;
 
   return (
-    <BookSkin title={title} worldSlug={world.slug} tree={tree} hrefBase={`/m/${world.slug}/apercu`}>
+    <>
+      <WikiBackgroundRegistrar background={null} />
       <p className="font-mech text-xs text-ink-muted">Prévisualisation — vue d&apos;un visiteur anonyme</p>
       <h1 className="entity-title mt-1">{title}</h1>
       {tree.length === 0 ? (
@@ -33,6 +39,6 @@ export default async function ApercuWorldPage({ params }: { params: Promise<{ wo
       ) : (
         <p className="mt-4 text-sm text-ink-muted">Choisissez une entité dans le sommaire.</p>
       )}
-    </BookSkin>
+    </>
   );
 }

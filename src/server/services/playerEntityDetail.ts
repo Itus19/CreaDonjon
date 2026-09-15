@@ -10,6 +10,9 @@ import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { type BlockRow, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { getEntityBySlug } from "@/src/server/repos/entities";
 import { getPortraitLayout } from "@/src/server/services/entityPortraits";
+import { getBackgroundMetaForBlock } from "@/src/server/services/blockImages";
+import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
+import type { WikiBackground } from "@/src/server/services/publicShare";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import { zGenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
 import { getFamilyTree } from "@/src/server/services/genealogy";
@@ -114,13 +117,24 @@ async function listPlayerRelations(supabase: TypedClient, worldId: string, entit
  * `personalityEvents`/`relationshipEvents` restent `onlyPublic: true` comme
  * la version publique — le modele de visibilite des souvenirs eux-memes
  * (potentiellement "players", pas seulement "public"/prive) resterait a
- * generaliser separement, hors de portee ici. `wikiBackground` omis : la
- * coquille joueur n'a pas (encore) de fond de page anime.
+ * generaliser separement, hors de portee ici.
+ *
+ * V2.1-12 : `wikiBackground` est desormais resolu ici aussi — la coquille
+ * joueur monte la meme peau que l'apercu (`BookSkin`) et porte donc le meme
+ * fond de page. La resolution est copiee de `getPublicEntityDetail`, garde
+ * comprise : le bloc de fond est cherche parmi les blocs DEJA filtres, jamais
+ * parmi les blocs bruts.
  */
 export async function getPlayerEntityDetail(
   supabase: TypedClient,
   params: { worldId: string; entitySlug: string; userId: string }
-): Promise<{ entity: EntitySummary; blocks: PublicBlock[]; relations: PublicRelation[]; portraitLayout: EntityPortraitLayout } | null> {
+): Promise<{
+  entity: EntitySummary;
+  blocks: PublicBlock[];
+  relations: PublicRelation[];
+  portraitLayout: EntityPortraitLayout;
+  wikiBackground: WikiBackground | null;
+} | null> {
   const { worldId, entitySlug, userId } = params;
   const entity = await getEntityBySlug(supabase, worldId, entitySlug);
   if (!entity) return null;
@@ -292,5 +306,28 @@ export async function getPlayerEntityDetail(
     })
   );
 
-  return { entity, blocks: blocksWithMapSource, relations, portraitLayout };
+  // V2.1-12 : meme resolution que `getPublicEntityDetail`, y compris sa garde
+  // — le bloc de fond n'est cherche que parmi les blocs DEJA filtres par
+  // visibilite, donc un bloc reserve au MJ ne peut jamais imposer un fond a
+  // une joueuse qui ne le voit pas.
+  const backgroundBlock = blocksWithMapSource.find(
+    (b) => b.blockType === "image" && (b.data as unknown as ImageBlockData).useAsWikiBackground
+  );
+  let wikiBackground: WikiBackground | null = null;
+  if (backgroundBlock) {
+    const meta = await getBackgroundMetaForBlock(supabase, backgroundBlock.id);
+    if (meta) {
+      const data = backgroundBlock.data as unknown as ImageBlockData;
+      wikiBackground = {
+        imageUrl: data.url,
+        blurPx: data.backgroundBlurPx,
+        fadeMs: data.fadeMs,
+        hue: meta.hue,
+        chroma: meta.chroma,
+        mode: meta.availableModes[0] ?? "dark",
+      };
+    }
+  }
+
+  return { entity, blocks: blocksWithMapSource, relations, portraitLayout, wikiBackground };
 }

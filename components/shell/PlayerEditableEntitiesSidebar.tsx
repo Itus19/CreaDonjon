@@ -10,7 +10,7 @@ import type { EntitySummary } from "@/src/server/repos/entities";
  * entre elles... dans la même esthétique que le wiki") — liste plate
  * (jamais l'arborescence complète de `EntityTree`, hors de propos ici : ce
  * sommaire ne montre QUE les quelques fiches editables par ce joueur, pas
- * tout le monde), meme style de ligne que `EntityTree`/`PlayerWikiSidebar`.
+ * tout le monde), meme style de ligne que `EntityTree`.
  */
 export default function PlayerEditableEntitiesSidebar({ worldSlug, entities }: { worldSlug: string; entities: EntitySummary[] }) {
   const pathname = usePathname();

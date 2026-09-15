@@ -9,6 +9,7 @@ import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
 import { hasVerifiedSharePassword } from "../passwordActions";
 import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
 import BookSkin from "@/components/entities/public/BookSkin";
+import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
 
 export default async function ShareLinkEntityPage({
   params,
@@ -37,13 +38,13 @@ export default async function ShareLinkEntityPage({
   const title = campaignName ?? resolved.worldName;
 
   return (
-    <BookSkin
-      title={title}
-      worldSlug={resolved.worldSlug}
-      tree={tree}
-      hrefBase={`/partage/${token}`}
-      wikiBackground={detail.wikiBackground}
-    >
+    // V2.1-12 : seule route ou `BookSkin` reste montee par la PAGE. La hisser
+    // dans le layout obligerait celui-ci a charger le sommaire avant la garde
+    // par mot de passe ci-dessus — or « jamais de contenu recupere avant
+    // validation, jamais "charge puis masque" ». La coquille s'y reconstruit
+    // donc encore a chaque fiche, contrairement a /apercu et a l'onglet joueur.
+    <BookSkin title={title} worldSlug={resolved.worldSlug} tree={tree} hrefBase={`/partage/${token}`}>
+      <WikiBackgroundRegistrar background={detail.wikiBackground} />
       <PublicEntityBody {...detail} hrefBase={`/partage/${token}`} />
     </BookSkin>
   );

@@ -4,8 +4,7 @@ import { useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { filterEntityTree, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import EntityTree from "@/components/shell/EntityTree";
-import type { WikiBackground } from "@/src/server/services/publicShare";
-import { useWikiBackground } from "./WikiBackgroundProvider";
+import { useWikiBackgroundDisplay } from "./WikiBackgroundProvider";
 
 /** Proprietes CSS personnalisees (`--h`, `--c`, etc.) : React ne les type pas nativement, meme convention que app/layout.tsx pour `--bg-image`. */
 type CustomProperties = CSSProperties & Record<`--${string}`, string | number>;
@@ -27,15 +26,21 @@ type CustomProperties = CSSProperties & Record<`--${string}`, string | number>;
  * `CommandPalette` (recherche serveur, creation, fenetres flottantes),
  * jamais reutilise ici pour cette raison.
  *
- * `wikiBackground` (V2-G13) : fond de PAGE, jamais d'application — le
- * scope `.wiki-bg-scope` (src/styles/tokens.css) recoit `--h`/`--c`/
- * `data-mode` en plus des jetons deja definis pour `:root`, sans jamais
- * toucher `<html>`. La div de fond elle-meme (fondu d'entree ET de
- * sortie) est portee par `WikiBackgroundProvider` dans le `layout.tsx` du
- * segment — le seul endroit qui persiste entre deux fiches, necessaire
- * pour animer une sortie (retour utilisateur). Ce composant se contente
- * d'enregistrer son propre fond (`useWikiBackground`) et d'appliquer les
- * jetons de couleur actuellement affiches sur son propre conteneur.
+ * Fond de page (V2-G13) : fond de PAGE, jamais d'application — le scope
+ * `.wiki-bg-scope` (src/styles/tokens.css) recoit `--h`/`--c`/`data-mode` en
+ * plus des jetons deja definis pour `:root`, sans jamais toucher `<html>`. La
+ * div de fond elle-meme (fondu d'entree ET de sortie) est portee par
+ * `WikiBackgroundProvider`. Ce composant se contente d'APPLIQUER les jetons du
+ * fond actuellement affiche sur son propre conteneur ; c'est la page qui
+ * DECLARE le sien, via `WikiBackgroundRegistrar`.
+ *
+ * V2.1-12 : monte dans le `layout.tsx` de chaque route, plus dans les pages.
+ * La coquille est par MONDE — l'y laisser dans la page la reconstruisait a
+ * chaque fiche, ce qui vidait la recherche, perdait le defilement du sommaire
+ * et faisait scintiller son repli (lu depuis `localStorage` dans un effet,
+ * donc apres le premier rendu). Le fond, lui, est par FICHE et reste declare
+ * par la page. Troisieme appelant ajoute au meme moment : l'onglet Wiki de la
+ * coquille joueur, qui reimplementait cette meme disposition sans le fond.
  */
 export default function BookSkin({
   title,
@@ -43,18 +48,27 @@ export default function BookSkin({
   tree,
   hrefBase,
   children,
-  wikiBackground,
+  banner,
 }: {
   title: string;
   worldSlug: string;
   tree: EntityTreeGroup[];
   hrefBase: string;
   children: React.ReactNode;
-  wikiBackground?: WikiBackground | null;
+  /**
+   * V2.1-12 : bandeau pose au-dessus du contenu, dans la colonne de lecture —
+   * la bannière de séance de la coquille joueur, qui n'avait nulle part où
+   * aller une fois `TwoPaneReaderLayout` retiré. Rendu par le layout, donc
+   * monté une seule fois pour toutes les fiches du monde, comme le sommaire.
+   */
+  banner?: React.ReactNode;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const { displayed } = useWikiBackground(wikiBackground);
+  // V2.1-12 : ce composant LIT le fond, il ne l'enregistre plus. Il vit
+  // desormais dans le `layout.tsx` (il est par monde), alors que le fond est
+  // par fiche — seule la page peut le declarer, via `WikiBackgroundRegistrar`.
+  const { displayed } = useWikiBackgroundDisplay();
   const filteredTree = filterEntityTree(tree, query);
   // Premiere visite (retour utilisateur) : seule la categorie PJ est
   // depliee — calcule depuis `tree` (jamais `filteredTree`, qui varie a
@@ -124,7 +138,10 @@ export default function BookSkin({
         </div>
       </aside>
       <main className="min-w-0 flex-1 overflow-y-auto px-4 py-10 pt-16 md:px-8 md:pt-10">
-        <div className="mx-auto max-w-[70ch]">{children}</div>
+        <div className="mx-auto max-w-[70ch]">
+          {banner}
+          {children}
+        </div>
       </main>
     </div>
   );

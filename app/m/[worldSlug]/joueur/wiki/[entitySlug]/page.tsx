@@ -6,6 +6,7 @@ import { canUserEditEntity } from "@/src/server/services/permissions";
 import { getEntityWindowData } from "@/src/server/services/entityWindow";
 import { getPlayerEntityDetail } from "@/src/server/services/playerEntityDetail";
 import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
+import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
 import EditEntityForm from "../../../(monde)/f/[entitySlug]/EditEntityForm";
 
 /**
@@ -62,10 +63,15 @@ export default async function JoueurWikiEntityPage({
   if (!detail) notFound();
 
   return (
-    <PublicEntityBody
-      {...detail}
-      hrefBase={`/m/${worldSlug}/joueur/wiki`}
-      ruleHrefBase={`/m/${worldSlug}/joueur/regles`}
-    />
+    <>
+      {/* V2.1-12 : la peau vient du layout ; cette page declare le fond de
+          CETTE fiche, la seule chose qui change d'une fiche a l'autre. */}
+      <WikiBackgroundRegistrar background={detail.wikiBackground} />
+      <PublicEntityBody
+        {...detail}
+        hrefBase={`/m/${worldSlug}/joueur/wiki`}
+        ruleHrefBase={`/m/${worldSlug}/joueur/regles`}
+      />
+    </>
   );
 }
