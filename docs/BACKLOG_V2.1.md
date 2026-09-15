@@ -2300,4 +2300,18 @@ D'où une deuxième règle, jumelle de celle sur les notes : **rendre un réglag
 plus visible rend visibles les endroits où il ne s'applique pas.** Le trou
 existait, personne ne tombait dessus.
 
-Deux tickets restent donc ouverts : V2.1-10 (quota Vercel) et V2.1-12.
+V2.1-12 a été ouvert puis clos le même jour. Il n'était pas prévu : il est né
+d'une question de l'auteur — « pourquoi ne pas juste afficher le wiki public
+dans l'onglet joueur ? » — répétée trois fois parce que les deux premières
+réponses portaient à côté. Elles défendaient le chemin de DONNÉES (quel service
+lit la base, avec quelle visibilité, avec quel client) quand la question
+portait sur la PRÉSENTATION. C'est en allant vérifier le code pour argumenter
+une troisième fois que le vrai défaut est apparu : le layout joueur
+réimplémentait `BookSkin`, et le disait lui-même en commentaire.
+
+D'où une règle de plus, et elle vaut pour les deux côtés : **quand une
+proposition revient une troisième fois, ce n'est plus la proposition qu'il faut
+réexaminer, c'est la réponse.** L'insistance de l'auteur pointait un fait que
+le code portait depuis le début.
+
+**V2.1-10 (quota Vercel) est le dernier ticket ouvert de ce backlog.**
