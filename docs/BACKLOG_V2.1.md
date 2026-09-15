@@ -24,7 +24,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-9 | Un test d'intégration à la marge trop mince | `S` | **Fait** (14 septembre, avant d'être écrit) — `homebrewWeapon.integration.test.ts` échouait par intermittence sur le délai de 5 s de Vitest. Corrigé dans la foulée de V2.1-6 sans qu'aucun ticket ne le porte ; consigné ici après coup |
 | V2.1-10 | Deux traînes du dépassement de quota Vercel | `S` + `M` | **Ouvert** (15 septembre) — nés de l'instruction du quota Vercel dépassé (`849bd4e`), tous deux hors du correctif lui-même : `npm ci` refuse de tourner sur un lock désynchronisé, et 759 Mo de binaires `sharp` sont encore recopiés dans 75 fonctions qui ne l'appellent jamais |
 | V2.1-11 | Bloc image : ancrage explicite, fond de page à trois états, parallaxe | `L` | **Fait** (15 septembre) — trois lots. L'ancrage devient explicite et l'image entre DANS son bloc hôte, ce qui fait tomber ensemble la bordure orpheline et le décalage au-dessus du titre. Interface esquissée et manipulée avant d'écrire une ligne : la séance a déplacé le modèle de données |
-| V2.1-12 | Le fond de page ne s'applique pas dans la coquille joueur | `S` ou `M` | **Ouvert** (15 septembre) — né de V2.1-11 : `WikiBackgroundProvider` n'est monté que sur `/partage` et `/apercu`, donc « seulement en fond » fait disparaître l'image sans rien peindre sur la route que les joueuses utilisent. Pas une régression : le report est écrit dans `playerEntityDetail.ts` depuis l'origine |
+| V2.1-12 | Une seule peau de wiki, dans les layouts | `L` | **Ouvert** (15 septembre) — né de V2.1-11 : le wiki joueur réimplémente `BookSkin`, et la copie n'a pas emporté le fond de page. La coquille remonte dans les `layout.tsx` (par monde), l'enregistrement du fond reste dans la page (par fiche) — les trois routes y gagnent |
 
 ---
 
@@ -2067,73 +2067,106 @@ seul, ancrage explicite en milieu de bloc, ancrage en fin de bloc).
 
 ---
 
-## V2.1-12 — Le fond de page ne s'applique pas dans la coquille joueur · `S` ou `M` — ouvert
+## V2.1-12 — Une seule peau de wiki, dans les layouts · `L` — ouvert
 
 ### Constat
 
-Le fond de page wiki (V2-G13) n'est peint que sur deux routes. `WikiBackgroundProvider`
-est monté dans `app/m/[worldSlug]/apercu/layout.tsx` et
-`app/partage/[token]/layout.tsx`, nulle part ailleurs. La route wiki **joueur**
-(`app/m/[worldSlug]/joueur/wiki/[entitySlug]/page.tsx`) rend `PublicEntityBody`
-directement, sans `BookSkin` ni fournisseur.
+Il existe **deux implémentations de la même page de wiki**, et elles ont déjà
+divergé.
 
-Ce n'est pas un oubli : `src/server/services/playerEntityDetail.ts` le dit en
-toutes lettres — « `wikiBackground` omis : la coquille joueur n'a pas (encore)
-de fond de page animé ». Le « encore » est le sujet de ce ticket.
+`BookSkin.tsx` (sommaire à gauche, colonne de lecture à `max-w-[70ch]` à
+droite) sert `/partage/[token]/**` et `/m/[worldSlug]/apercu/**`. L'onglet Wiki
+de la coquille joueur fait la même chose avec `TwoPaneReaderLayout` +
+`PlayerWikiSidebar` — et le dit lui-même en commentaire : « reprend exactement
+la présentation du wiki public […] même disposition que `BookSkin.tsx` ».
 
-Conséquence sur la route que les joueuses utilisent réellement :
+La divergence est visible : **le fond de page wiki (V2-G13) n'existe que du
+côté `BookSkin`**. `WikiBackgroundProvider` n'est monté que dans les layouts de
+`/partage` et `/apercu`, et `getPlayerEntityDetail` omet `wikiBackground` —
+« la coquille joueur n'a pas (encore) de fond de page animé », dit le fichier.
+Conséquence sur la route que la table utilise : une image en « seulement en
+fond » disparaît du corps de la fiche **sans qu'aucun fond ne soit peint à la
+place**. Elle n'est nulle part.
 
-- une image en **« seulement en fond »** disparaît complètement — retirée du
-  corps de la fiche, et aucun fond peint à la place ;
-- une image en **« en fond, en plus de la fiche »** s'affiche dans le texte,
-  mais sans fond.
+Ce n'est pas une régression de V2.1-11 : le report est écrit depuis l'origine.
+Ce que V2.1-11 a changé, c'est la probabilité de tomber dessus — un réglage
+discret est devenu un choix explicite entre trois états, et deux de ces trois
+ne produisent rien là où on les pose.
 
-**Ce n'est pas une régression de V2.1-11.** Avant le lot 2, une image cochée
-« fond de page » disparaissait déjà de cette route, par le même chemin. Mais
-V2.1-11 rend le trou plus facile à rencontrer : les trois états font du fond
-un choix explicite, posé dans une liste, et ce choix ne produit rien là où on
-le pose.
+### Ce qui empêche la fusion naïve
 
-### Deux pistes, et elles ne coûtent pas pareil
+`BookSkin` est rendu **dans les pages** (4 appels : les index et les fiches de
+`/partage` et `/apercu`), alors que le sommaire joueur vit **dans le layout**.
+Ce n'est pas un hasard : « `layout.tsx` (pas juste une page) : le sommaire
+reste monté d'une fiche à l'autre, jamais reconstruit ».
 
-**Piste A — monter le fond dans la coquille joueur.** `M`. Trois morceaux :
-`getPlayerEntityDetail` doit calculer `wikiBackground` comme le fait déjà
-`getPublicEntityDetail` (`publicShare.ts`, même bloc de résolution, même
-filtrage par visibilité) ; `app/m/[worldSlug]/joueur/wiki/layout.tsx` doit
-envelopper ses enfants dans `WikiBackgroundProvider` — il persiste déjà d'une
-fiche à l'autre, c'est exactement la propriété que le fondu exige ; et la page
-doit enregistrer le fond courant, comme `BookSkin.tsx` le fait avec
-`useWikiBackground`. C'est le comportement que l'auteur attendait en cochant
-la case.
+Mesuré avant de trancher : le repli des groupes est mémorisé en `localStorage`
+et survit donc à un remontage, mais trois choses n'y survivent pas — la
+recherche tapée, la position de défilement, et **un scintillement d'une image**
+(le hook lit `localStorage` dans un effet, après le premier rendu, comme son
+propre commentaire l'indique). Brancher la vue joueur sur `BookSkin`-dans-la-
+page lui offrirait donc ce scintillement à chaque fiche, sur la route où l'on
+enchaîne le plus les fiches.
 
-**Piste B — assumer la limite et la dire.** `S`. Le fond reste réservé aux
-vues de partage, et l'éditeur l'annonce : une ligne sous la liste « Fond de
-page », visible dès que le mode n'est pas « aucun ». Presque gratuit, et
-honnête — mais laisse une option qui ne fait rien sur la route principale.
+### Décision
 
-**À trancher avec l'auteur avant d'écrire quoi que ce soit.** Les deux sont
-défendables : A si le fond de page est une fonctionnalité de lecture pour la
-table, B s'il ne sert qu'aux pages partagées à l'extérieur.
+**Recomposer `BookSkin` en deux morceaux**, selon ce que chacun suit :
 
-### Critères (piste A)
+- la **coquille** (sommaire + colonne de lecture) est par MONDE → elle monte
+  dans les `layout.tsx`, où elle cesse de se reconstruire ;
+- l'**enregistrement du fond** est par FICHE → il reste dans la page, sous la
+  forme d'un composant client minuscule qui n'affiche rien.
 
-- [ ] `getPlayerEntityDetail` renvoie `wikiBackground`, résolu par la même
-      règle que la version publique — un bloc réservé au MJ ne peut jamais
-      imposer un fond à un viewer qui ne le voit pas.
-- [ ] Le fond persiste d'une fiche à l'autre dans l'onglet Wiki joueur, et
-      s'estompe en quittant, sans couper net (c'est la raison d'être du
-      fournisseur, V2-G13 suite).
-- [ ] Les trois états de `backgroundMode` se comportent sur cette route comme
+Les trois routes y gagnent, pas seulement la vue joueur : `/partage` et
+`/apercu` perdent le même scintillement, qu'elles subissent aujourd'hui.
+
+Deux points tranchés avec l'auteur avant d'écrire :
+
+- **Sommaire à 256 px partout** (`md:w-64`, la valeur de `BookSkin`). La vue
+  joueur abandonne ses 176 px : un seul gabarit, et aucune prop à ajouter au
+  composant.
+- **`BookSkin` gagne une fente** au-dessus du contenu, pour
+  `SessionJournalBanner` — qui vit aujourd'hui dans le layout joueur et n'a
+  nulle part où aller autrement.
+
+### Étapes
+
+1. `WikiBackgroundProvider` : séparer lire et enregistrer. Un hook de lecture
+   seule pour la coquille (qui applique `--h`/`--c`/`data-mode`), et un
+   composant `WikiBackgroundRegistrar` que la page rend pour déclarer SON fond.
+2. `BookSkin` : ne prend plus `wikiBackground`, lit le fond affiché ; gagne la
+   fente `banner`.
+3. Les quatre pages de `/partage` et `/apercu` : rendent le registrar au lieu
+   de `BookSkin`. **Les pages d'index doivent enregistrer `null`** — sans ça, le
+   fond de la fiche précédente resterait affiché en revenant au sommaire.
+4. Les layouts de `/partage` et `/apercu` : montent `BookSkin` (titre et arbre
+   sont par monde, ils y ont leur place).
+5. `getPlayerEntityDetail` renvoie `wikiBackground`, résolu par la même règle
+   que la version publique — **client RLS, jamais `service_role`** : ce fichier
+   n'est pas `publicShare.ts`, la règle absolue n° 2 reste intacte.
+6. Le layout joueur : `WikiBackgroundProvider` + `BookSkin` avec la bannière
+   dans la fente, à la place de `TwoPaneReaderLayout` + `PlayerWikiSidebar`.
+7. Retirer `TwoPaneReaderLayout`/`PlayerWikiSidebar` s'ils n'ont plus d'autre
+   appelant — jamais les laisser en double mort.
+
+La branche d'édition de la page joueur ne bouge pas. Une fiche éditable
+continue d'afficher son formulaire dans la colonne de lecture : c'est une autre
+question, et elle ne bloque rien ici.
+
+### Critères
+
+- [ ] Les trois routes rendent la même coquille, montée dans leur layout.
+- [ ] Le sommaire ne se reconstruit plus en changeant de fiche : ni
+      scintillement du repli, ni recherche vidée, ni défilement perdu — vérifié
+      sur `/apercu` ET sur l'onglet joueur.
+- [ ] Les trois états du fond de page se comportent dans la vue joueur comme
       sur `/apercu`, vérifié en navigateur.
-- [ ] La note de `playerEntityDetail.ts` ne dit plus « pas (encore) » : elle
-      décrit ce qui est.
-
-### Critères (piste B)
-
-- [ ] L'éditeur annonce la limite dès qu'un mode de fond est choisi, sans
-      attendre que l'auteur constate que rien ne se passe.
-- [ ] La note de `playerEntityDetail.ts` devient une décision assumée plutôt
-      qu'un report.
+- [ ] Revenir de la fiche au sommaire efface le fond, sur les trois routes.
+- [ ] `getPlayerEntityDetail` n'utilise toujours pas `service_role`, et la note
+      « pas (encore) de fond de page animé » disparaît.
+- [ ] La bannière de séance s'affiche au même endroit qu'avant.
+- [ ] Aucun composant de mise en page laissé sans appelant.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
 
 ---
 
