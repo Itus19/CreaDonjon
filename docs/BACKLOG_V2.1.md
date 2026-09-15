@@ -23,7 +23,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-8 | `onSaveNow` rejoint le contexte d'enregistrement | `S` | **Fait** (14 septembre) — la traîne consignée en fin de V2.1-7 : le bloc carte gardait le correctif ponctuel d'avant l'ADR 0023. Remplacement mécanique, comportement mesuré identique avant/après |
 | V2.1-9 | Un test d'intégration à la marge trop mince | `S` | **Fait** (14 septembre, avant d'être écrit) — `homebrewWeapon.integration.test.ts` échouait par intermittence sur le délai de 5 s de Vitest. Corrigé dans la foulée de V2.1-6 sans qu'aucun ticket ne le porte ; consigné ici après coup |
 | V2.1-10 | Deux traînes du dépassement de quota Vercel | `S` + `M` | **Ouvert** (15 septembre) — nés de l'instruction du quota Vercel dépassé (`849bd4e`), tous deux hors du correctif lui-même : `npm ci` refuse de tourner sur un lock désynchronisé, et 759 Mo de binaires `sharp` sont encore recopiés dans 75 fonctions qui ne l'appellent jamais |
-| V2.1-11 | Bloc image : ancrage explicite, fond de page à trois états, parallaxe | `L` | **Ouvert** (14 septembre) — le mode « retour à la ligne » laisse l'image bloc frère de sa cible : bordure orpheline et image qui démarre au-dessus du titre. Esquisse d'interface validée avec l'auteur avant d'écrire la moindre ligne |
+| V2.1-11 | Bloc image : ancrage explicite, fond de page à trois états, parallaxe | `L` | **Fait** (15 septembre) — trois lots. L'ancrage devient explicite et l'image entre DANS son bloc hôte, ce qui fait tomber ensemble la bordure orpheline et le décalage au-dessus du titre. Interface esquissée et manipulée avant d'écrire une ligne : la séance a déplacé le modèle de données |
 
 ---
 
@@ -1794,7 +1794,10 @@ Les 14,67 Go déjà consommés ne se libèrent pas tout seuls : le quota compte
 les déploiements **conservés**, pas seulement le dernier. La suppression des
 anciens déploiements se fait dans l'interface Vercel, à la main, et ne peut
 pas être portée par un ticket de ce dépôt.
-## V2.1-11 — Bloc image : ancrage explicite, fond de page à trois états, parallaxe · `L` — ouvert
+
+---
+
+## V2.1-11 — Bloc image : ancrage explicite, fond de page à trois états, parallaxe · `L` — fait
 
 ### Constat
 
@@ -2111,16 +2114,36 @@ de commit comme l'avaient été V2.1-8 et V2.1-9. Aucun des deux n'était urgent
 — c'est justement là que la note aurait été tentante, et qu'elle se serait
 périmée.
 
-**V2.1-11 est ouvert** (14 septembre). Il n'est la traîne de rien : il vient
-d'un défaut d'affichage constaté en lisant
-une entrée du Journal de session, et il emporte avec lui deux demandes
-d'interface arrivées dans la même conversation (fond de page à trois états,
-parallaxe). Ses trois lots sont ordonnés — le lot 1 refond la structure que
-les lots 2 et 3 décorent — mais seul le premier est indispensable au
-correctif d'origine.
+**V2.1-11 est fait** (ouvert le 14 septembre, fini le 15) — mais il ne clôt
+pas le backlog : V2.1-10 reste ouvert. Il n'est la traîne de rien : il vient
+d'un défaut d'affichage constaté en lisant une entrée du Journal de session,
+et il emporte deux demandes d'interface arrivées dans la même conversation.
+Ses trois lots étaient ordonnés — le lot 1 refond la structure que les lots 2
+et 3 décorent — et seul le premier était indispensable au correctif d'origine.
 
-Ce ticket inaugure aussi une habitude : l'interface a été **esquissée et
-manipulée avant** d'écrire la moindre ligne, et cette séance a déplacé le
-modèle de données (le curseur en pourcentage envisagé au départ était
-impossible à tenir en CSS). Une esquisse coûte moins cher qu'un lot à
-défaire.
+Les deux tickets se sont ouverts le même jour sans se voir, chacun dans son
+fil, et tous deux ont d'abord porté le numéro 10. Celui-ci a été renuméroté
+**après coup, au moment de rejoindre `master`** — d'où des messages de commit
+qui le citent encore comme V2.1-10. La leçon n'est pas d'éviter le numéro en
+double : c'est de le réserver au moment où le ticket s'écrit, pas au moment
+où il se pousse.
+
+Ce ticket inaugure une habitude : l'interface a été **esquissée et manipulée
+avant** d'écrire la moindre ligne. Trois esquisses successives, et la séance a
+déplacé le modèle de données — le curseur en pourcentage envisagé au départ
+était impossible à tenir en CSS, et le dernier cran « à la fin du bloc » a
+imposé un champ (`anchor.position`) que le premier jet n'avait pas. Une
+esquisse coûte moins cher qu'un lot à défaire.
+
+Elle a aussi montré sa limite. L'auteur a dû signaler que le champ de légende
+manquait : les esquisses ne dessinaient que la colonne de réglages, et ce
+champ vit en dehors. Rien n'avait été retiré du code, mais **une esquisse
+partielle se lit comme une esquisse complète** — ce qu'elle ne montre pas, on
+le croit disparu.
+
+Trois corrections n'étaient au programme d'aucun lot, et chacune est venue de
+l'usage plutôt que d'une relecture : les valeurs d'énumération du lot 1
+écrites en français, le libellé centré d'une liste déroulante en pleine
+largeur (défaut latent de `Dropdown`, invisible tant qu'aucun appel n'imposait
+de largeur), et `npm` absent du PATH qui empêchait le serveur de dev de
+démarrer.
