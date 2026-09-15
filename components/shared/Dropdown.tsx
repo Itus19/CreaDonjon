@@ -21,8 +21,18 @@ export interface DropdownOption {
  * `inline-block` par defaut. Le troncage d'un libelle long ne fonctionnait
  * donc pas pour les appels qui ne passaient pas leur propre style.
  */
+/**
+ * `text-left` (V2.1-10) : un `<button>` centre son texte par defaut, et le
+ * declencheur en heritait. Invisible tant que la liste fait la largeur de son
+ * libelle — le libelle porte `flex-1`, donc il remplit le bouton et le
+ * centrage ne se voit pas. Des qu'un appel impose une largeur (`w-full`, un
+ * champ de formulaire), la valeur se retrouvait centree, seule de toute la
+ * colonne. Correction du COMPOSANT et non de l'appel, comme le prescrit
+ * docs/CHARTE-UI.md §3 : ce n'est pas une variante, c'est la meme forme pour
+ * tous, simplement juste aux deux largeurs.
+ */
 const TRIGGER_BASE =
-  "inline-flex items-center gap-1 rounded-md border border-edge bg-transparent text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50";
+  "inline-flex items-center gap-1 rounded-md border border-edge bg-transparent text-left text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50";
 
 /**
  * Deux tailles, fermees — la prop que docs/CHARTE-UI.md §3 prescrit
