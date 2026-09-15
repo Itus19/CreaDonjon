@@ -2,7 +2,8 @@
 
 Cinq demandes de l'auteur (4 septembre 2026), au service direct de sa table
 (joueuses + MJ) plutôt que du reste du plan V2/V3 — plus une sixième arrivée
-le 13 septembre, une fois les cinq premières closes. Chaque ticket suit la
+le 13 septembre, une fois les cinq premières closes — puis quatre traînes
+ouvertes en relisant le backlog et en instruisant des incidents. Chaque ticket suit la
 méthode habituelle : **un ticket à la fois**, plan court avant le code,
 contenu authored en direct quand il y en a, `npm run typecheck && npm run
 lint && npm run test` avant de clore, commit dédié.
@@ -21,6 +22,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-7 | Une modification qui ne s'enregistre pas, et des contrôles anonymes | `M` | **Fait** (14 septembre) — né de V2.1-6 : une case cochée se perdait en silence, deux fois en un jour. Troisième occurrence du même défaut, donc traité à la cause (ADR 0023). Corrige au passage le nom accessible des cases et des listes |
 | V2.1-8 | `onSaveNow` rejoint le contexte d'enregistrement | `S` | **Fait** (14 septembre) — la traîne consignée en fin de V2.1-7 : le bloc carte gardait le correctif ponctuel d'avant l'ADR 0023. Remplacement mécanique, comportement mesuré identique avant/après |
 | V2.1-9 | Un test d'intégration à la marge trop mince | `S` | **Fait** (14 septembre, avant d'être écrit) — `homebrewWeapon.integration.test.ts` échouait par intermittence sur le délai de 5 s de Vitest. Corrigé dans la foulée de V2.1-6 sans qu'aucun ticket ne le porte ; consigné ici après coup |
+| V2.1-10 | Deux traînes du dépassement de quota Vercel | `S` + `M` | **Ouvert** (15 septembre) — nés de l'instruction du quota Vercel dépassé (`849bd4e`), tous deux hors du correctif lui-même : `npm ci` refuse de tourner sur un lock désynchronisé, et 759 Mo de binaires `sharp` sont encore recopiés dans 75 fonctions qui ne l'appellent jamais |
 
 ---
 
@@ -1669,6 +1671,131 @@ backlog.
 
 ---
 
+## V2.1-10 — Deux traînes du dépassement de quota Vercel · `S` + `M`
+
+### Constat
+
+Vercel a refusé de déployer le 15 septembre : « Exceeded free resources —
+Functions Storage 14,67 GB / 10 GB ». La cause était une seule ligne de
+`next.config.ts` : `outputFileTracingIncludes` valait `"/**"`, donc les 78 Mo
+de binaires natifs de `@img` (deux copies de `libvips`, la nôtre et celle que
+Next embarque pour son optimiseur d'images, plus une version WebAssembly)
+étaient recopiés dans **chacune des 208 fonctions** du déploiement. Environ
+16 Go par déploiement, sur un quota de 10 Go cumulé. Corrigé par le commit
+`849bd4e`, qui limite l'inclusion aux quatre routes atteignant réellement un
+`await import("sharp")` : 16 773 Mo de fichiers tracés avant, 1 564 Mo après.
+
+Ce ticket porte les deux points relevés **en instruisant** ce dépassement, et
+laissés de côté parce qu'ils sortaient du correctif. Ni l'un ni l'autre ne
+bloque quoi que ce soit aujourd'hui ; c'est précisément pourquoi ils méritent
+un ticket plutôt qu'une note — une note ne sait pas se corriger quand le
+travail est fait (leçon de V2.1-9, payée deux fois).
+
+### Volet A — `package-lock.json` désynchronisé, `npm ci` refuse de tourner · `S`
+
+```
+npm error `npm ci` can only install packages when your package.json and
+npm error package-lock.json or npm-shrinkwrap.json are in sync.
+npm error Missing: @swc/helpers@0.5.23 from lock file
+```
+
+La chaîne, vérifiée paquet par paquet : `next-intl@4.13.4` tire
+`@swc/core@1.15.47`, qui déclare une **peerDependency optionnelle**
+`@swc/helpers: ">=0.5.17"`. Le projet a `@swc/helpers@0.5.15` — dépendance
+directe de `next@16.2.12` — qui ne satisfait pas cette plage. npm veut donc
+installer une copie imbriquée en 0.5.23, et cette entrée est absente du
+lock. Le lock remonte au 13 septembre (`dc44e16`) et enregistre
+`@swc/core@1.15.47` sans mention de la peer.
+
+Ce n'est donc pas un lock corrompu, ni une manipulation ratée : c'est un lock
+écrit avant que cette contrainte n'existe dans l'arbre.
+
+Ce que ça coûte : **toute installation reproductible échoue.** `npm install`
+passe et régénère le lock, `npm ci` non — or `npm ci` est ce qu'exécute une
+plateforme de déploiement quand elle trouve un lock. Pourquoi les
+déploiements Vercel passent malgré tout n'a pas été établi ici, faute
+d'accès aux journaux de build : à regarder avant de conclure, plutôt qu'à
+supposer.
+
+### Volet B — 759 Mo de `sharp` encore recopiés dans des fonctions qui ne s'en servent pas · `M`
+
+Après `849bd4e`, il reste 1 564 Mo de fichiers tracés par déploiement. Les
+quatre routes d'upload en pèsent 324 : c'est leur métier, elles exécutent
+vraiment `sharp`. Le reste se répartit ainsi (mesuré sur le build du
+15 septembre, en sommant les fichiers listés par les `.nft.json`) :
+
+| | fonctions | poids | dont `sharp` et `@img` |
+|---|---|---|---|
+| hors upload, sans trace de `sharp` | 129 | — | 0 |
+| hors upload, portant `sharp` pour rien | 75 | 1 240 Mo | **759 Mo** |
+
+Ces 75 fonctions n'appellent jamais `sharp` : l'`await import("sharp")` est
+dans une branche qu'elles n'atteignent pas. Mais le traceur de fichiers de
+Next travaille sur le graphe d'**imports**, pas sur les chemins d'exécution —
+il suffit qu'un module du graphe mentionne `sharp` pour que le binaire suive.
+
+Deux chaînes distinctes, et c'est le point qui décide du travail :
+
+1. `app/layout.tsx` importe `resolveBackgroundSelection` depuis
+   `src/server/services/backgroundImages.ts` — un fichier qui contient aussi
+   `uploadBackgroundImage` → `processBackgroundImage` → `import("sharp")`.
+   Comme c'est le layout racine, cette chaîne atteint **les 47 pages**.
+2. `src/server/services/blocks.ts` importe `deleteAsset` depuis
+   `src/server/services/storage.ts` — un fichier qui contient aussi
+   `uploadAsset`, et le même `import("sharp")`. Cette chaîne atteint **27
+   routes d'API**.
+
+**Traiter une seule des deux ne gagne rien** : chaque fonction concernée doit
+perdre ses deux chaînes pour que le binaire cesse d'être copié. C'est ce qui
+fait la taille `M` plutôt que `S`.
+
+La forme retenue est la même dans les deux cas : sortir la lecture du fichier
+qui porte l'écriture, pour que lire un fond ou supprimer un asset n'oblige
+plus à embarquer le pipeline de traitement d'image. Pas une abstraction — une
+séparation, au sens de la règle des trois : c'est le deuxième cas concret du
+même défaut, et les deux sont devant nous.
+
+### Étapes
+
+- [ ] A1. `npm install`, puis vérifier que `npm ci` passe sur le lock produit.
+- [ ] A2. `npm run build` sur une installation issue de `npm ci`, pour
+      s'assurer que la résolution des peers n'a rien déplacé d'autre.
+- [ ] A3. Commit dédié, `package-lock.json` seul.
+- [ ] A4. Lire les journaux de build Vercel : `npm ci` ou `npm install` ?
+      Consigner la réponse ici — elle décide si ce volet était un risque
+      dormant ou un incident déjà en cours.
+- [ ] B1. Séparer lecture et traitement dans `backgroundImages.ts`, de sorte
+      que `app/layout.tsx` n'atteigne plus `processBackgroundImage`.
+- [ ] B2. Même séparation dans `storage.ts`, de sorte que `blocks.ts`
+      n'atteigne plus `uploadAsset`.
+- [ ] B3. Remesurer en sommant les `.nft.json`, et reporter le chiffre ici.
+
+### Critères
+
+- [ ] `npm ci` installe le projet sans erreur, sur un `node_modules` vide.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent après A,
+      tests d'intégration inclus (`.env.local` présent, Supabase local démarré).
+- [ ] Aucune fonction hors upload ne trace `sharp` ni `@img` : les 75 passent
+      à 0, vérifié en lisant les `.nft.json` du build.
+- [ ] Les quatre routes d'upload tracent toujours
+      `@img/sharp-libvips-linux-x64/lib/libvips-cpp.so` — sans quoi elles
+      échouent avec `ERR_DLOPEN_FAILED`, **en production seulement**, jamais
+      en local.
+- [ ] Un envoi d'image réel passe sur le déploiement : portrait d'entité,
+      image de bloc, image de fond, asset de monde. Les quatre, une fois
+      chacune : c'est le seul contrôle qui distingue vraiment un binaire
+      présent d'un binaire absent.
+- [ ] Le poids total tracé par déploiement est reporté ici, mesuré et non estimé.
+
+### Ce que ce ticket n'inclut pas
+
+Les 14,67 Go déjà consommés ne se libèrent pas tout seuls : le quota compte
+les déploiements **conservés**, pas seulement le dernier. La suppression des
+anciens déploiements se fait dans l'interface Vercel, à la main, et ne peut
+pas être portée par un ticket de ce dépôt.
+
+---
+
 ## Ordre suivi
 
 Aucune dépendance technique dure entre ces cinq tickets. Fait dans l'ordre
@@ -1689,7 +1816,7 @@ restent liés dans les deux sens : la note de fragilité de V2.1-6 renvoie ici,
 et le critère de lecture en boucle de V2.1-6 n'a pu repartir qu'une fois
 V2.1-7 livré.
 
-**Les neuf tickets de ce backlog sont clos.** V2.1-6, le dernier ouvert, a
+**Les neuf premiers tickets de ce backlog sont clos.** V2.1-6, le dernier ouvert, a
 tenu trois jours à lui seul et a rendu quatre défauts que ni les types ni les
 tests ne pouvaient voir : le bouton qui mentait, le premier clic qui
 s'annulait, le `removeChild` au démontage, et le lien Spotify localisé refusé
@@ -1709,3 +1836,10 @@ comme ouvert.
 D'où la règle qui vaut pour la suite : une note « à traiter à part » n'est pas
 un ticket, et c'est au moment où on l'écrit qu'il faut l'ouvrir. Une note ne
 sait pas se corriger quand le travail est fait ; un ticket, si.
+
+V2.1-10 est la première application de cette règle : les deux points qu'il
+porte ont été **écrits comme ticket le jour même où ils ont été vus**, pendant
+l'instruction du quota Vercel dépassé, au lieu d'être laissés en note de bas
+de commit comme l'avaient été V2.1-8 et V2.1-9. Aucun des deux n'était urgent
+— c'est justement là que la note aurait été tentante, et qu'elle se serait
+périmée.
