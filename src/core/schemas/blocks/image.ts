@@ -51,7 +51,7 @@ export const zImageBlockData = z.object({
   url: z.string().default(""),
   caption: z.string().default(""),
   wrapMode: z.enum(["intercalate", "wrap"]).default("intercalate"),
-  placement: z.enum(["flux", "ancree"]).default("flux"),
+  placement: z.enum(["flow", "anchored"]).default("flow"),
   anchor: z
     .object({
       blockId: z.string().min(1),
@@ -67,10 +67,18 @@ export const zImageBlockData = z.object({
     })
     .nullable()
     .default(null),
-  anchorFlow: z.enum(["contourne", "coupe"]).default("contourne"),
+  anchorFlow: z.enum(["float", "break"]).default("float"),
   align: z.enum(["left", "right", "center"]).default("center"),
   sizePct: z.number().int().min(50).max(200).default(100),
   useAsWikiBackground: z.boolean().default(false),
+  /**
+   * V2.1-10 lot 2 : n'a de sens qu'avec `useAsWikiBackground`. Le couple
+   * forme les trois etats du fond de page — voir `src/core/images/
+   * backgroundMode.ts`, qui est le seul endroit ou on les traduit. Defaut
+   * `false` : un bloc pose avant ce lot garde son comportement exclusif
+   * (image retiree du corps de la fiche), sans migration.
+   */
+  alsoShowInFlow: z.boolean().default(false),
   backgroundBlurPx: z.number().int().min(0).max(40).default(20),
   fadeMs: z.number().int().min(0).max(3000).default(600),
 });

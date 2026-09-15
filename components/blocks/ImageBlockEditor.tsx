@@ -3,8 +3,14 @@
 import { useRef, useState } from "react";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import type { Segment } from "@/src/core/schemas/entities/segments";
-import Checkbox from "@/components/shared/Checkbox";
 import Dropdown from "@/components/shared/Dropdown";
+import { backgroundModeOf, withBackgroundMode, type ImageBackgroundMode } from "@/src/core/images/backgroundMode";
+
+const BACKGROUND_OPTIONS: { value: ImageBackgroundMode; label: string }[] = [
+  { value: "none", label: "Pas de fond de page" },
+  { value: "also", label: "En fond, en plus de la fiche" },
+  { value: "only", label: "Seulement en fond — retirée du texte" },
+];
 
 /** Forme minimale d'un bloc frere pour cet editeur — `BlockItem` (EntityBlocks) la satisfait. */
 export interface ImageAnchorSibling {
@@ -125,13 +131,14 @@ export default function ImageBlockEditor({
   // Seul un bloc `text` peut heberger une image : c'est le seul type qui
   // porte des segments, et l'ancrage vise un segment.
   const hotes = siblings.filter((b) => b.blockType === "text" && b.id !== blockId);
-  const ancre = data.placement === "ancree" ? data.anchor : null;
+  const ancre = data.placement === "anchored" ? data.anchor : null;
   const hote = ancre ? hotes.find((b) => b.id === ancre.blockId) : undefined;
   const ancree = Boolean(ancre && hote);
-  const contourne = ancree && data.anchorFlow !== "coupe";
+  const contourne = ancree && data.anchorFlow !== "break";
+  const fond = backgroundModeOf(data);
 
   const emplacementOptions = [
-    { value: "flux", label: "Bloc autonome — dans le fil de la fiche" },
+    { value: "flow", label: "Bloc autonome — dans le fil de la fiche" },
     ...hotes.map((b) => ({ value: b.id, label: `Dans « ${b.display.label} »` })),
     // Cible perdue : jamais retiree en silence de la liste. Le rendu, lui,
     // replie deja l'image dans le fil (`planImageAnchors`).
@@ -142,18 +149,18 @@ export default function ImageBlockEditor({
   const cran = cranActuel(stops, ancre);
 
   function choisirEmplacement(value: string) {
-    if (value === "flux") {
-      onChange({ ...data, placement: "flux", anchor: null });
+    if (value === "flow") {
+      onChange({ ...data, placement: "flow", anchor: null });
       return;
     }
     onChange({
       ...data,
-      placement: "ancree",
+      placement: "anchored",
       anchor: { blockId: value, segmentId: null, position: "before" },
       // Une image qui contourne ne peut pas etre centree (un flottement
       // centre n'existe pas en CSS) : on retombe a gauche plutot que de
       // garder une valeur que le rendu ignorerait en silence.
-      align: data.anchorFlow !== "coupe" && data.align === "center" ? "left" : data.align,
+      align: data.anchorFlow !== "break" && data.align === "center" ? "left" : data.align,
     });
   }
 
@@ -164,8 +171,8 @@ export default function ImageBlockEditor({
   }
 
   function choisirComportement(value: string) {
-    const flow = value === "coupe" ? "coupe" : "contourne";
-    onChange({ ...data, anchorFlow: flow, align: flow === "contourne" && data.align === "center" ? "left" : data.align });
+    const flow = value === "break" ? "break" : "float";
+    onChange({ ...data, anchorFlow: flow, align: flow === "float" && data.align === "center" ? "left" : data.align });
   }
 
   const alignOptions = contourne
@@ -220,10 +227,34 @@ export default function ImageBlockEditor({
             className="max-h-32 w-auto shrink-0 self-start rounded-md object-cover"
           />
           <div className="flex flex-1 flex-col gap-3 text-xs">
+            {/* Le fond de page vient EN PREMIER : c'est la seule question qui
+                peut annuler toutes les autres. La poser en dernier ferait
+                remplir six reglages avant d'apprendre qu'ils ne s'appliquent
+                pas (decision d'interface V2.1-10, esquisse validee). */}
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Fond de page</span>
+              <Dropdown
+                value={fond}
+                options={BACKGROUND_OPTIONS}
+                onChange={(value) => onChange({ ...data, ...withBackgroundMode(value as ImageBackgroundMode) })}
+                size="md"
+                className="w-full"
+                aria-label="Rôle de l'image comme fond de la page wiki"
+              />
+              {fond === "only" && (
+                <span className="italic text-ink-muted">
+                  L&apos;image ne paraît que derrière la page. Son emplacement dans la fiche est conservé, mais ne
+                  s&apos;applique pas tant que ce mode est actif.
+                </span>
+              )}
+            </div>
+
+            {fond !== "only" && (
+              <>
             <div className="flex flex-col gap-1">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Emplacement</span>
               <Dropdown
-                value={ancre ? ancre.blockId : "flux"}
+                value={ancre ? ancre.blockId : "flow"}
                 options={emplacementOptions}
                 onChange={choisirEmplacement}
                 size="md"
@@ -256,10 +287,10 @@ export default function ImageBlockEditor({
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Comportement du texte</span>
                   <Dropdown
-                    value={data.anchorFlow === "coupe" ? "coupe" : "contourne"}
+                    value={data.anchorFlow === "break" ? "break" : "float"}
                     options={[
-                      { value: "contourne", label: "Le texte contourne" },
-                      { value: "coupe", label: "L'image coupe le texte" },
+                      { value: "float", label: "Le texte contourne" },
+                      { value: "break", label: "L'image coupe le texte" },
                     ]}
                     onChange={choisirComportement}
                     size="md"
@@ -308,20 +339,16 @@ export default function ImageBlockEditor({
                 sizePct={data.sizePct}
               />
             )}
+              </>
+            )}
 
-            {/* Fond de page (V2-G13) : un seul bloc actif a la fois par
-                fiche, applique cote serveur (src/server/services/blocks.ts) :
-                cocher celui-ci decoche silencieusement tout autre bloc image
-                de la meme entite (reflete au prochain rechargement). */}
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Fond de page</span>
-              <Checkbox
-                checked={data.useAsWikiBackground}
-                onChange={() => onChange({ ...data, useAsWikiBackground: !data.useAsWikiBackground })}
-                label="Définir comme fond du wiki de cette fiche"
-              />
-            </div>
-            {data.useAsWikiBackground && (
+            {/* Flou et fondu n'existent que pour le fond lui-meme — ils ne
+                touchent jamais l'exemplaire rendu dans le corps de la fiche.
+                Un seul bloc peut etre fond a la fois par fiche, applique cote
+                serveur (src/server/services/blocks.ts) : choisir celui-ci
+                retire silencieusement ce role a tout autre bloc image de la
+                meme entite (reflete au prochain rechargement). */}
+            {fond !== "none" && (
               <>
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Flou du fond</span>

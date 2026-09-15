@@ -21,10 +21,10 @@ function image(id: string, data: Record<string, unknown> = {}): AnchorableBlock 
 function ancree(
   blockId: string,
   segmentId: string | null,
-  flow = "contourne",
+  flow = "float",
   position: "before" | "after" = "before"
 ): Record<string, unknown> {
-  return { placement: "ancree", anchor: { blockId, segmentId, position }, anchorFlow: flow };
+  return { placement: "anchored", anchor: { blockId, segmentId, position }, anchorFlow: flow };
 }
 
 const ids = (blocks: AnchorableBlock[]) => blocks.map((b) => b.id);
@@ -51,12 +51,12 @@ describe("planImageAnchors", () => {
     expect(plan.anchors.t1).toHaveLength(1);
     expect(plan.anchors.t1[0].block.id).toBe("i1");
     expect(plan.anchors.t1[0].segmentId).toBe("s2");
-    expect(plan.anchors.t1[0].flow).toBe("contourne");
+    expect(plan.anchors.t1[0].flow).toBe("float");
   });
 
-  it("reprend `anchorFlow: coupe` tel quel", () => {
-    const blocks = [texte("t1", ["s1"]), image("i1", ancree("t1", "s1", "coupe"))];
-    expect(planImageAnchors(blocks).anchors.t1[0].flow).toBe("coupe");
+  it("reprend `anchorFlow: break` tel quel", () => {
+    const blocks = [texte("t1", ["s1"]), image("i1", ancree("t1", "s1", "break"))];
+    expect(planImageAnchors(blocks).anchors.t1[0].flow).toBe("break");
   });
 
   it("ancre en tete du bloc quand `segmentId` est null", () => {
@@ -67,7 +67,7 @@ describe("planImageAnchors", () => {
   // Dernier cran du curseur, « a la fin du bloc » : aucune position ne suit le
   // dernier segment sans ce cote.
   it("pose l'image apres le segment vise quand `position` vaut after", () => {
-    const blocks = [texte("t1", ["s1", "s2"]), image("i1", ancree("t1", "s2", "coupe", "after"))];
+    const blocks = [texte("t1", ["s1", "s2"]), image("i1", ancree("t1", "s2", "break", "after"))];
     const anchor = planImageAnchors(blocks).anchors.t1[0];
     expect(anchor.segmentId).toBe("s2");
     expect(anchor.position).toBe("after");
@@ -81,7 +81,7 @@ describe("planImageAnchors", () => {
   // Le cote n'a plus de sens sans segment : en tete du bloc, il n'y a pas
   // d'« apres ».
   it("oublie le cote quand le segment vise a disparu", () => {
-    const blocks = [texte("t1", ["s1"]), image("i1", ancree("t1", "disparu", "coupe", "after"))];
+    const blocks = [texte("t1", ["s1"]), image("i1", ancree("t1", "disparu", "break", "after"))];
     const anchor = planImageAnchors(blocks).anchors.t1[0];
     expect(anchor.segmentId).toBeNull();
     expect(anchor.position).toBe("before");
@@ -97,7 +97,7 @@ describe("planImageAnchors", () => {
       expect(ids(plan.contentBlocks)).toEqual(["t1"]);
       expect(plan.anchors.t1[0].block.id).toBe("i1");
       expect(plan.anchors.t1[0].segmentId).toBeNull();
-      expect(plan.anchors.t1[0].flow).toBe("contourne");
+      expect(plan.anchors.t1[0].flow).toBe("float");
     });
 
     it("laisse un ancien `intercalate` dans le fil", () => {
@@ -148,8 +148,8 @@ describe("planImageAnchors", () => {
       expect(ids(planImageAnchors(blocks).contentBlocks)).toEqual(["i1"]);
     });
 
-    it("repli en flux quand `placement` vaut ancree mais que `anchor` est absent", () => {
-      const blocks = [texte("t1", ["s1"]), image("i1", { placement: "ancree", anchor: null })];
+    it("repli en flux quand `placement` vaut anchored mais que `anchor` est absent", () => {
+      const blocks = [texte("t1", ["s1"]), image("i1", { placement: "anchored", anchor: null })];
       expect(ids(planImageAnchors(blocks).contentBlocks)).toEqual(["t1", "i1"]);
     });
 

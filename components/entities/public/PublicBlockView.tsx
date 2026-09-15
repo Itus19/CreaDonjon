@@ -2,6 +2,7 @@ import { createElement, Fragment, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import type { AnchoredImage, AnchorFlow } from "@/src/core/images/blockAnchor";
+import { showsInPage } from "@/src/core/images/backgroundMode";
 import type { Segment, SegmentContentNode } from "@/src/core/schemas/entities/segments";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
@@ -163,14 +164,23 @@ function PublicTextBlock({
  * lui qui laissait une bordure orpheline et faisait demarrer l'image au-dessus
  * du titre de sa cible (V2.1-10).
  *
- * Meme garde que `PublicBlockView` plus bas : une image active comme fond de
- * page est deja peinte par `WikiBackgroundProvider`, la rendre ici la
- * dupliquerait.
+ * Les images en « seulement en fond » ont deja ete ecartees par
+ * `visiblesDansLaPage` ci-dessous — inutile de les filtrer une seconde fois
+ * ici.
  */
 function renderAnchoredImage(anchored: AnchoredImage<PublicBlock>) {
   const data = anchored.block.data as unknown as ImageBlockData;
-  if (data.useAsWikiBackground) return null;
   return <PublicImageBlock key={anchored.block.id} data={data} flow={anchored.flow} />;
+}
+
+/**
+ * V2.1-10 lot 2 : une image ancree en « seulement en fond » ne se rend pas
+ * dans le corps de la fiche. On l'ecarte AVANT tout le reste, pour que le
+ * bloc hote ne recoive pas non plus le `flow-root` d'un flottement qui
+ * n'existera jamais.
+ */
+function visiblesDansLaPage(images: AnchoredImage<PublicBlock>[]): AnchoredImage<PublicBlock>[] {
+  return images.filter((image) => showsInPage(image.block.data as unknown as ImageBlockData));
 }
 
 function PublicInfoboxBlock({ data }: { data: InfoboxBlockData }) {
@@ -191,8 +201,8 @@ const BASE_IMAGE_WIDTH_PX = 480;
 
 /**
  * `flow` absent = image en mode flux : un bloc a part entiere, pleine
- * largeur de la colonne, jamais flottante. `"contourne"` la fait flotter et
- * le texte du bloc hote s'ecoule autour ; `"coupe"` la pose entre deux
+ * largeur de la colonne, jamais flottante. `"float"` la fait flotter et
+ * le texte du bloc hote s'ecoule autour ; `"break"` la pose entre deux
  * segments, sur toute la largeur.
  *
  * La largeur passe par une propriete personnalisee plutot que par
@@ -206,7 +216,7 @@ export function PublicImageBlock({ data, flow }: { data: ImageBlockData; flow?: 
   // illisible : le flottement est abandonne et l'image reprend toute la
   // largeur (retour utilisateur V2.1-10).
   const floating =
-    flow === "contourne"
+    flow === "float"
       ? `mb-3 max-sm:float-none max-sm:mx-0 max-sm:w-full ${data.align === "left" ? "float-left mr-4 max-sm:mr-0" : "float-right ml-4 max-sm:ml-0"}`
       : data.align === "left"
         ? "items-start"
@@ -215,7 +225,7 @@ export function PublicImageBlock({ data, flow }: { data: ImageBlockData; flow?: 
           : "items-center mx-auto";
   return (
     <figure
-      className={`flex w-[var(--img-w)] max-w-full flex-col gap-1.5 ${floating} ${flow === "coupe" ? "my-3" : ""}`}
+      className={`flex w-[var(--img-w)] max-w-full flex-col gap-1.5 ${floating} ${flow === "break" ? "my-3" : ""}`}
       style={{ "--img-w": `${widthPx}px` } as CSSProperties & Record<`--${string}`, string>}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -337,11 +347,16 @@ export default function PublicBlockView({
   /** V2.1-10 : images ancrees DANS ce bloc (`planImageAnchors`), a inserer entre ses segments — jamais a cote de lui. */
   anchoredImages?: AnchoredImage<PublicBlock>[];
 }) {
+  const imagesVisibles = visiblesDansLaPage(anchoredImages);
   // Retour utilisateur (V2-G13) : une image active comme fond de page est
   // deja rendue par WikiBackgroundProvider (position fixed, plein ecran) —
   // la rendre en plus a sa place dans le corps de la fiche la dupliquerait
-  // ("en fond" ET "au fond de la page"). Elle ne s'affiche plus qu'en fond.
-  if (block.blockType === "image" && (block.data as unknown as ImageBlockData).useAsWikiBackground) {
+  // ("en fond" ET "au fond de la page").
+  //
+  // V2.1-10 lot 2 : cette duplication est desormais un CHOIX. Seul le mode
+  // « seulement en fond » retire l'image d'ici ; « en plus de la fiche » la
+  // laisse aux deux endroits, ce que l'auteur voulait.
+  if (block.blockType === "image" && !showsInPage(block.data as unknown as ImageBlockData)) {
     return null;
   }
   // V2.1-6 : un bloc `music` ne s'affiche plus du tout ici — ni contenu, ni
@@ -357,7 +372,7 @@ export default function PublicBlockView({
     // texte ne deborde pas sur le bloc suivant. Pose sans condition, il
     // changerait la fusion des marges de TOUS les blocs.
     <div
-      className={`border-b border-edge/60 py-4 first:pt-0 last:border-b-0 ${anchoredImages.length > 0 ? "flow-root" : ""}`}
+      className={`border-b border-edge/60 py-4 first:pt-0 last:border-b-0 ${imagesVisibles.length > 0 ? "flow-root" : ""}`}
     >
       {/* Retour utilisateur : le titre du bloc (souvent juste "Image") est
           redondant avec l'image/la legende elle-meme sur le wiki public —
@@ -370,7 +385,7 @@ export default function PublicBlockView({
           textRefs={block.textRefs}
           hrefBase={hrefBase}
           ruleHrefBase={ruleHrefBase}
-          anchoredImages={anchoredImages}
+          anchoredImages={imagesVisibles}
         />
       )}
       {block.blockType === "infobox" && <PublicInfoboxBlock data={block.data as unknown as InfoboxBlockData} />}

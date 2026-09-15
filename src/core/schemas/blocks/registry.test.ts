@@ -29,12 +29,15 @@ describe("registry des blocs de wiki", () => {
       // V2.1-10 : un bloc pose avant l'ancrage explicite reste dans le fil de
       // la fiche. `wrapMode` survit sans etre reecrit — c'est `planImageAnchors`
       // qui le traduit au rendu, jamais une migration.
-      placement: "flux",
+      placement: "flow",
       anchor: null,
-      anchorFlow: "contourne",
+      anchorFlow: "float",
       align: "center",
       sizePct: 100,
       useAsWikiBackground: false,
+      // V2.1-10 lot 2 : defaut `false`, donc un bloc coche « fond de page »
+      // avant ce lot reste retire du corps de la fiche, comme avant.
+      alsoShowInFlow: false,
       backgroundBlurPx: 20,
       fadeMs: 600,
     });
@@ -45,15 +48,15 @@ describe("registry des blocs de wiki", () => {
       __v: 1,
       url: "https://example.com/bram.png",
       caption: "Bram à la forge",
-      placement: "ancree",
+      placement: "anchored",
       anchor: { blockId: "b-1", segmentId: "s-2" },
-      anchorFlow: "coupe",
+      anchorFlow: "break",
     };
     expect(validateBlockData("image", data)).toMatchObject({
       caption: "Bram à la forge",
-      placement: "ancree",
+      placement: "anchored",
       anchor: { blockId: "b-1", segmentId: "s-2", position: "before" },
-      anchorFlow: "coupe",
+      anchorFlow: "break",
     });
   });
 

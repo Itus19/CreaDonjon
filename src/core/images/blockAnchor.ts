@@ -29,7 +29,7 @@ export interface AnchorableBlock {
 }
 
 /** « Le texte contourne » (flottement) ou « l'image coupe le texte » (pleine largeur, entre deux segments). */
-export type AnchorFlow = "contourne" | "coupe";
+export type AnchorFlow = "float" | "break";
 
 export interface AnchoredImage<T extends AnchorableBlock> {
   block: T;
@@ -76,7 +76,7 @@ function resolveAnchor<T extends AnchorableBlock>(
 ): { hostId: string; segmentId: string | null; position: "before" | "after"; flow: AnchorFlow } | null {
   const data = block.data as Partial<ImageBlockData> | null;
 
-  if (data?.placement === "ancree" && data.anchor) {
+  if (data?.placement === "anchored" && data.anchor) {
     const hostId = data.anchor.blockId;
     // Une image ancree a elle-meme se rendrait a l'interieur d'elle-meme.
     if (hostId === block.id) return null;
@@ -92,7 +92,7 @@ function resolveAnchor<T extends AnchorableBlock>(
       hostId,
       segmentId,
       position: segmentId !== null && data.anchor.position === "after" ? "after" : "before",
-      flow: data.anchorFlow === "coupe" ? "coupe" : "contourne",
+      flow: data.anchorFlow === "break" ? "break" : "float",
     };
   }
 
@@ -107,7 +107,7 @@ function resolveAnchor<T extends AnchorableBlock>(
     // Sans bloc suivant, ou suivi d'un bloc sans segments (une quete, une
     // carte), il n'y a rien dans quoi inserer : le repli est le flux.
     if (!next || !hostSegments.has(next.id)) return null;
-    return { hostId: next.id, segmentId: null, position: "before", flow: "contourne" };
+    return { hostId: next.id, segmentId: null, position: "before", flow: "float" };
   }
 
   return null;

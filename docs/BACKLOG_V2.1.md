@@ -1894,6 +1894,15 @@ alsoShowInFlow: z.boolean().default(false),   // n'a de sens qu'avec useAsWikiBa
 parallaxPct: z.number().int().min(0).max(40).default(0),   // 0 = aucun effet
 ```
 
+**Valeurs d'énumération corrigées en anglais au début du lot 2.** Le lot 1 les
+avait écrites en français (`flux`/`ancree`, `contourne`/`coupe`), ce que
+`CLAUDE.md` interdit : les identifiants techniques restent en anglais, et la
+règle cite explicitement les **valeurs de colonnes** — ces chaînes vivent dans
+une colonne JSONB, à côté d'un `wrapMode` qui dit déjà `intercalate`/`wrap`.
+Elles deviennent `flow`/`anchored` et `float`/`break`. Corrigé avant qu'aucune
+donnée réelle ne les porte : les seuls blocs qui les avaient étaient les blocs
+de contrôle du lot 1, déjà supprimés.
+
 **`anchor.position` ajouté en cours de lot 1** (`"before" | "after"`, défaut
 `"before"`). L'esquisse validée par l'auteur portait un dernier cran « à la
 fin du bloc », et un ancrage « avant tel segment » ne sait pas l'exprimer :
@@ -1944,13 +1953,37 @@ exactement le comportement actuel.
 
 ### Lot 2 — fond de page à trois états
 
-- [ ] Pastilles `Non` · `En plus de la fiche` · `Seulement en fond`,
-      calculées depuis le couple `useAsWikiBackground` × `alsoShowInFlow`.
-- [ ] `PublicBlockView` ne renvoie `null` que pour « seulement en fond ».
-- [ ] « En plus » : l'image s'affiche à son emplacement ancré ou autonome
-      **et** en fond — le flou et le fondu du fond ne touchent jamais
-      l'exemplaire du corps de page.
-- [ ] La règle d'unicité du fond par fiche reste intacte et non contournée.
+- [x] Liste `Pas de fond de page` · `En fond, en plus de la fiche` ·
+      `Seulement en fond`, calculée depuis le couple `useAsWikiBackground` ×
+      `alsoShowInFlow`. Le ticket disait « pastilles » : écrit avant la
+      décision d'interface qui a fait de tout choix discret une liste.
+- [x] La traduction couple ↔ trois états vit dans `src/core/images/
+      backgroundMode.ts`, **testée** (9 cas) : le rendu et l'éditeur lisent
+      la même règle plutôt que de la réécrire chacun de leur côté. La
+      quatrième combinaison (`alsoShowInFlow` sans fond) est absorbée, jamais
+      laissée produire un état fantôme.
+- [x] `PublicBlockView` ne renvoie `null` que pour « seulement en fond ».
+- [x] « En plus » : l'image s'affiche à son emplacement ancré ou autonome
+      **et** en fond — le flou et le fondu restent des réglages du fond seul.
+- [x] La règle d'unicité du fond par fiche reste intacte : `alsoShowInFlow`
+      s'ajoute à côté de `useAsWikiBackground` au lieu de le remplacer, donc
+      `clearOtherWikiBackgrounds` n'est pas touché.
+- [x] La liste vient **en premier** dans la colonne de réglages : c'est la
+      seule question qui peut annuler toutes les autres. « Seulement en
+      fond » masque la section emplacement et dit pourquoi, plutôt que de
+      laisser six réglages sans effet.
+
+**Vérifié en navigateur** sur un bloc de contrôle, les trois états à la
+suite : « pas de fond » → image présente et flottante à gauche dans
+`.rich-text-content` ; « en plus » → image présente (ce que l'ancien code
+refusait) ; « seulement en fond » → image absente du corps, et zéro bordure
+orpheline.
+
+**Non vérifié de mes yeux** : la peinture du fond elle-même.
+`WikiBackgroundProvider` n'est monté que dans les layouts de `/partage/**` et
+`/m/[worldSlug]/apercu/**` — jamais sur la route wiki joueur, la seule
+accessible à la session de travail. Ce chemin n'est pas modifié par ce lot :
+il ne lit que `useAsWikiBackground`, inchangé.
 
 ### Lot 3 — parallaxe
 
