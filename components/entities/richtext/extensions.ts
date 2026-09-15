@@ -1,6 +1,7 @@
 import { Mark, Node, mergeAttributes } from "@tiptap/core";
 import Paragraph from "@tiptap/extension-paragraph";
 import Heading from "@tiptap/extension-heading";
+import HorizontalRule from "@tiptap/extension-horizontal-rule";
 
 /**
  * Chaque bloc Tiptap (paragraphe ou titre) porte l'identite et la
@@ -52,6 +53,23 @@ export const SegmentHeading = Heading.configure({ levels: [1, 2, 3, 4] }).extend
       ...this.parent?.(),
       ...segmentAttributes,
     };
+  },
+});
+
+/**
+ * Trait de separation (V2.1-14) : le noeud de StarterKit, augmente des memes
+ * attributs de segment que les paragraphes et les titres. Sans cette
+ * extension, un trait insere n'aurait ni identite ni visibilite propres et
+ * `docToSegments` le perdrait a la sauvegarde — ce qui etait deja le cas
+ * jusqu'ici pour un trait cree par la regle de saisie `---` de StarterKit
+ * (silencieusement transforme en paragraphe vide).
+ *
+ * `align` n'a pas de sens visuel sur un trait mais reste dans le lot commun :
+ * un attribut de moins ferait diverger la forme des noeuds pour rien.
+ */
+export const SegmentHorizontalRule = HorizontalRule.extend({
+  addAttributes() {
+    return segmentAttributes;
   },
 });
 

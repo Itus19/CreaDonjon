@@ -36,6 +36,10 @@ const APERCU_LONGUEUR = 46;
  * encore une fonction partagee.
  */
 function apercuSegment(segment: Segment): string {
+  // Un `divider` (V2.1-14) n'a pas de contenu par construction : sans ce cas,
+  // il apparaitrait ici comme « (segment vide) », ce qui designe normalement
+  // une erreur de saisie.
+  if (segment.blockType === "divider") return "trait de séparation";
   const texte = segment.content.map((node) => (node.t === "text" ? node.v : node.label)).join("").trim();
   if (texte.length === 0) return "(segment vide)";
   return texte.length > APERCU_LONGUEUR ? `${texte.slice(0, APERCU_LONGUEUR)}…` : texte;

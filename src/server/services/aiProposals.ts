@@ -47,7 +47,10 @@ export async function applyAiProposal(
     content: [{ t: "text", v: payload.text }],
     align: "left",
   };
-  const nextData: TextBlockData = { __v: 1, segments: [...currentData.segments, newSegment] };
+  // `...currentData` plutot qu'un objet reconstruit : une proposition ajoute
+  // un paragraphe, elle ne doit rien reinitialiser d'autre du bloc (la
+  // lettrine, V2.1-14, y aurait ete perdue a chaque acceptation).
+  const nextData: TextBlockData = { ...currentData, segments: [...currentData.segments, newSegment] };
 
   const result = await updateBlockContent(supabase, {
     id: block.id,

@@ -180,7 +180,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
-  text: { __v: 1, segments: [] },
+  text: { __v: 1, segments: [], dropCap: false },
   infobox: { __v: 1, entries: [] },
   image: {
     __v: 1,

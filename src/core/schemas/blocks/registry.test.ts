@@ -110,6 +110,8 @@ describe("registry des blocs de wiki", () => {
         },
       ],
     };
-    expect(validateBlockData("text", data)).toEqual(data);
+    // V2.1-14 : `dropCap` absent des donnees anterieures, pose a `false`
+    // par le schema — c'est precisement ce qui evite une migration.
+    expect(validateBlockData("text", data)).toEqual({ ...data, dropCap: false });
   });
 });

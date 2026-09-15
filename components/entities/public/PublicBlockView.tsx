@@ -16,6 +16,9 @@ import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality
 import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
 import type { TimelineBlockData } from "@/src/core/schemas/blocks/timeline";
 import type { MapBlockData } from "@/src/core/schemas/blocks/map";
+import type { SessionJournalMetaBlockData } from "@/src/core/schemas/blocks/sessionJournalMeta";
+import { formatGameDate } from "@/src/core/calendar/formatDate";
+import { weekdayNameForDate } from "@/src/core/calendar/weekday";
 import SpoilerSpan from "./SpoilerSpan";
 import PublicGenealogyBlock from "./PublicGenealogyBlock";
 import PublicPersonalityBlock from "./PublicPersonalityBlock";
@@ -60,6 +63,9 @@ const TAG_BY_BLOCK_TYPE: Record<Segment["blockType"], string> = {
   h2: "h2",
   h3: "h3",
   h4: "h4",
+  // V2.1-14 : jamais rendu par `createElement` avec des enfants — `hr` est un
+  // element vide, React refuse qu'on lui en passe (voir PublicTextBlock).
+  divider: "hr",
 };
 
 /**
@@ -124,7 +130,7 @@ function renderNode(
  * V2.1-11 : les images ancrees a CE bloc s'inserent entre ses segments, pas
  * a cote du bloc. `segmentId: null` remonte en tete, avant le premier
  * segment. L'insertion passe par un `Fragment` sans balise, pour que
- * `.journal-entry .rich-text-content > p:first-of-type` (la lettrine,
+ * `.rich-text-content[data-dropcap] > p:first-of-type` (la lettrine,
  * app/globals.css) continue de viser le bon paragraphe.
  */
 function PublicTextBlock({
@@ -150,16 +156,21 @@ function PublicTextBlock({
   }
 
   return (
-    <div className="rich-text-content">
+    // V2.1-14 : la lettrine se pose sur ce conteneur (voir globals.css), le
+    // meme element que porte l'editeur — un seul selecteur CSS pour les deux.
+    <div className="rich-text-content" data-dropcap={data.dropCap ? "true" : undefined}>
       {atHead.map(renderAnchoredImage)}
       {data.segments.map((segment) => {
         const tag = TAG_BY_BLOCK_TYPE[segment.blockType] ?? "p";
         const slot = around.get(segment.id);
-        const rendered = createElement(
-          tag,
-          { "data-align": segment.align },
-          segment.content.map((node, i) => renderNode(node, i, textRefs, hrefBase, ruleHrefBase)),
-        );
+        const rendered =
+          segment.blockType === "divider"
+            ? createElement(tag, { "data-align": segment.align })
+            : createElement(
+                tag,
+                { "data-align": segment.align },
+                segment.content.map((node, i) => renderNode(node, i, textRefs, hrefBase, ruleHrefBase)),
+              );
         if (!slot) return <Fragment key={segment.id}>{rendered}</Fragment>;
         return (
           <Fragment key={segment.id}>
@@ -204,6 +215,42 @@ function PublicInfoboxBlock({ data }: { data: InfoboxBlockData }) {
         <div key={i} className="contents">
           <dt className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{entry.label}</dt>
           <dd>{entry.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * Bloc `session_journal_meta` (V2.1-14) : rendu dans le fil comme tout autre
+ * bloc, avec son titre. Il etait jusqu'ici extrait par `PublicEntityBody` pour
+ * finir en pied de page discret, reserve aux fiches `session_journal` —
+ * present partout ou on l'ajoute, il ne peut plus avoir de place a part.
+ *
+ * Les libelles restent fixes (c'est tout l'interet de ce bloc face a un
+ * `infobox`) ; une ligne absente n'est simplement pas affichee.
+ */
+function PublicSessionJournalMetaBlock({ data, calendar }: { data: SessionJournalMetaBlockData; calendar: PublicBlock["timelineCalendar"] }) {
+  const ingameWeekday = calendar ? weekdayNameForDate(data.ingameDate, calendar) : null;
+  const rows: Array<[string, string]> = [];
+  if (calendar) {
+    rows.push(["Date ingame", `${ingameWeekday ? `${ingameWeekday} ` : ""}${formatGameDate(data.ingameDate, calendar)}`]);
+  }
+  if (data.realSession) rows.push(["Session du", data.realSession.label]);
+  if (data.writtenBy) rows.push(["Rédigé par", data.writtenBy.name]);
+  if (data.writtenAt) {
+    rows.push([
+      "Rédigé le",
+      new Date(data.writtenAt).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+    ]);
+  }
+  if (rows.length === 0) return null;
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+      {rows.map(([label, value]) => (
+        <div key={label} className="contents">
+          <dt className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{label}</dt>
+          <dd>{value}</dd>
         </div>
       ))}
     </dl>
@@ -410,6 +457,12 @@ export default function PublicBlockView({
         />
       )}
       {block.blockType === "infobox" && <PublicInfoboxBlock data={block.data as unknown as InfoboxBlockData} />}
+      {block.blockType === "session_journal_meta" && (
+        <PublicSessionJournalMetaBlock
+          data={block.data as unknown as SessionJournalMetaBlockData}
+          calendar={block.timelineCalendar}
+        />
+      )}
       {block.blockType === "image" && <PublicImageBlock data={block.data as unknown as ImageBlockData} />}
       {block.blockType === "genealogy" && block.genealogyTree && (
         <PublicGenealogyBlock tree={block.genealogyTree} hrefBase={hrefBase} />

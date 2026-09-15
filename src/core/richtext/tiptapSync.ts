@@ -74,7 +74,11 @@ export function docToSegments(doc: DocJSON): Segment[] {
 
   return doc.content.map((node): Segment => {
     const blockType: SegmentBlockType =
-      node.type === "heading" && node.attrs?.level ? (BLOCK_TYPE_BY_HEADING_LEVEL[node.attrs.level] ?? "paragraph") : "paragraph";
+      node.type === "horizontalRule"
+        ? "divider"
+        : node.type === "heading" && node.attrs?.level
+          ? (BLOCK_TYPE_BY_HEADING_LEVEL[node.attrs.level] ?? "paragraph")
+          : "paragraph";
 
     let id = node.attrs?.segmentId;
     if (!id || seenIds.has(id)) id = freshSegmentId();
@@ -117,7 +121,10 @@ export function docToSegments(doc: DocJSON): Segment[] {
       id,
       blockType,
       visibility: { level, scopeId },
-      content: content.length > 0 ? content : [{ t: "text", v: "" }],
+      // Un paragraphe vide garde un noeud texte vide (l'editeur en cree
+      // legitimement en cours de frappe) ; un `divider` n'en veut aucun — le
+      // schema refuse l'un comme l'autre dans le sens inverse.
+      content: blockType === "divider" ? [] : content.length > 0 ? content : [{ t: "text", v: "" }],
       align,
     };
   });
@@ -127,6 +134,16 @@ export function segmentsToDoc(segments: Segment[]): DocJSON {
   return {
     type: "doc",
     content: segments.map((segment): BlockNodeJSON => {
+      const attrs = {
+        segmentId: segment.id,
+        visibilityLevel: segment.visibility.level,
+        visibilityScopeId: segment.visibility.scopeId,
+        align: segment.align,
+      };
+      // Le trait est un noeud vide : jamais de cle `content`, meme a [] —
+      // ProseMirror refuse un contenu sur un noeud atomique.
+      if (segment.blockType === "divider") return { type: "horizontalRule", attrs };
+
       const level = HEADING_LEVEL_BY_BLOCK_TYPE[segment.blockType];
       const content = segment.content
         .map((node): InlineNodeJSON | null => {
@@ -144,13 +161,7 @@ export function segmentsToDoc(segments: Segment[]): DocJSON {
 
       return {
         type: level ? "heading" : "paragraph",
-        attrs: {
-          ...(level ? { level } : {}),
-          segmentId: segment.id,
-          visibilityLevel: segment.visibility.level,
-          visibilityScopeId: segment.visibility.scopeId,
-          align: segment.align,
-        },
+        attrs: { ...(level ? { level } : {}), ...attrs },
         content,
       };
     }),

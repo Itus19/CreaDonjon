@@ -48,7 +48,12 @@ const zRefNode = z
 export const zSegmentContentNode = z.union([zTextNode, zRefNode]);
 export type SegmentContentNode = z.infer<typeof zSegmentContentNode>;
 
-export const SEGMENT_BLOCK_TYPES = ["paragraph", "h1", "h2", "h3", "h4"] as const;
+// `divider` (V2.1-14) : un trait de separation pose a un endroit choisi du
+// recit. C'est un segment a part entiere, pas une marque ni une option de
+// bloc — il porte donc sa propre visibilite comme tout segment, et un trait
+// qui separe deux parties dont une est masquee disparait avec elle. Seul
+// type de segment dont le contenu est vide (voir zSegment ci-dessous).
+export const SEGMENT_BLOCK_TYPES = ["paragraph", "h1", "h2", "h3", "h4", "divider"] as const;
 export type SegmentBlockType = (typeof SEGMENT_BLOCK_TYPES)[number];
 
 // Alignement (V2-G14, retour utilisateur — bulle de mise en forme) :
@@ -69,13 +74,20 @@ export const zSegmentVisibility = z
   );
 export type SegmentVisibility = z.infer<typeof zSegmentVisibility>;
 
-export const zSegment = z.object({
-  id: z.string().min(1),
-  blockType: z.enum(SEGMENT_BLOCK_TYPES),
-  visibility: zSegmentVisibility,
-  content: z.array(zSegmentContentNode).min(1),
-  align: z.enum(SEGMENT_ALIGNS).default("left"),
-});
+export const zSegment = z
+  .object({
+    id: z.string().min(1),
+    blockType: z.enum(SEGMENT_BLOCK_TYPES),
+    visibility: zSegmentVisibility,
+    content: z.array(zSegmentContentNode),
+    align: z.enum(SEGMENT_ALIGNS).default("left"),
+  })
+  // Le contenu vide est reserve au `divider`, et lui est impose : un trait ne
+  // se redige pas, et un paragraphe vide reste une erreur de saisie a
+  // refuser (regle inchangee depuis V0-06f).
+  .refine((segment) => (segment.blockType === "divider" ? segment.content.length === 0 : segment.content.length > 0), {
+    message: "Seul un segment divider a un contenu vide, et il n'en accepte pas d'autre.",
+  });
 export type Segment = z.infer<typeof zSegment>;
 
 export const zNarrativeContent = z.array(zSegment);

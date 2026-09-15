@@ -25,6 +25,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-10 | Deux traînes du dépassement de quota Vercel | `S` + `M` | **Fait** (15 septembre) — volet A **caduc, mesuré** : `npm ci` passe, npm 11.17 ne traite plus la peer optionnelle comme bloquante. Volet B : **quatre** chaînes vers `sharp` et non deux, les deux autres trouvées en vérifiant avant de coder. Mesuré : 79 fonctions portaient le binaire, il en reste 4 — les quatre routes qui téléversent |
 | V2.1-11 | Bloc image : ancrage explicite, fond de page à trois états, parallaxe | `L` | **Fait** (15 septembre) — trois lots. L'ancrage devient explicite et l'image entre DANS son bloc hôte, ce qui fait tomber ensemble la bordure orpheline et le décalage au-dessus du titre. Interface esquissée et manipulée avant d'écrire une ligne : la séance a déplacé le modèle de données |
 | V2.1-12 | Une seule peau de wiki, dans les layouts | `L` | **Fait** (15 septembre) — l'onglet Wiki joueur réimplémentait `BookSkin` et la copie n'avait pas emporté le fond de page. La coquille remonte dans les `layout.tsx` (par monde), l'enregistrement du fond reste dans la page (par fiche) : le sommaire cesse de se reconstruire, sur `/apercu` comme chez le joueur. `/partage` garde la sienne dans sa page, sa garde par mot de passe devant précéder tout chargement |
+| V2.1-14 | Lettrine et traits de séparation dans le bloc texte | `M` | **Fait** (15 septembre) — la présentation « livre » cesse d'être réservée aux fiches `session_journal` : elle devient deux options du bloc texte, disponibles partout. Le Livre de sessions redevient une catégorie de fiche du point de vue de la présentation, sans que son devoir ni son tri ne bougent |
 | V2.1-13 | Centrer le couple sommaire + texte du wiki | `S` | **Fait** (15 septembre) — le vide entre sommaire et texte tombe de ~300 px à 32 px sur un écran de 1920, et cesse de dépendre de la fenêtre : il était un reste, il devient une marge. Une borne exprimée dans les unités du contenu, écrite une seule fois pour les trois routes — premier encaissement de la fusion de V2.1-12 |
 
 ---
@@ -2503,3 +2504,104 @@ vérifiée une fois de plus, sur mon propre fait.
 En contrepartie, V2.1-13 a tenu en une règle de conteneur au lieu de trois,
 parce que V2.1-12 venait de réunir les trois routes sur une seule peau. La
 fusion a rendu ce qu'elle promettait dès le ticket suivant.
+
+---
+
+## V2.1-14 — Lettrine et traits de séparation dans le bloc texte · `M` — fait
+
+Ce backlog était déclaré clos à la ligne précédente. Il rouvre le lendemain,
+sur une demande de l'auteur qui porte précisément sur le ticket V2.1-3 : il
+voulait « revoir l'articulation » du bloc texte et du Livre de sessions.
+
+### Constat
+
+La lettrine et les filets ornementaux existaient déjà — mais en dur dans
+`app/globals.css`, sous un sélecteur `.journal-entry …` que
+`PublicEntityBody.tsx` ne posait que pour `entity_kind === "session_journal"`.
+
+Une **mise en forme était devenue la propriété d'un genre de fiche**. Un récit
+de bataille sur une fiche `event` ne pouvait pas avoir de lettrine ; une entrée
+de journal purement factuelle en avait une sans l'avoir demandée. C'est
+l'inversion que ce ticket corrige.
+
+### Décision
+
+Deux options, **à deux niveaux différents** — c'est le point de conception du
+ticket, et il a été tranché avec l'auteur avant d'écrire une ligne :
+
+- **La lettrine est une propriété du bloc.** Un seul paragraphe est concerné,
+  toujours le premier, et le choix vaut pour le bloc entier → `dropCap` dans
+  `zTextBlockData`, une case à cocher dans `TextBlockEditor`. Pas dans la bulle
+  de mise en forme, qui ne porte que ce qui s'applique à une sélection.
+- **Le trait est un élément qu'on écrit.** « Mettre un trait » se fait à un
+  endroit choisi → un nouveau `SEGMENT_BLOCK_TYPES` `divider`, inséré depuis un
+  bouton de l'éditeur. Il porte donc sa **propre visibilité** comme tout
+  segment : un trait qui sépare deux parties dont une est masquée disparaît
+  avec elle, ce qu'une option de bloc n'aurait jamais su faire.
+
+**Écarté :** garder le décor automatique des titres H2/H3 (le comportement
+actuel) en le passant derrière une seconde case. Avec un trait posé à la main
+il fait doublon, et il surprend — il apparaît sans qu'on l'ait demandé.
+
+Le bouton d'insertion vit **hors de la bulle** de mise en forme : la bulle ne
+s'ouvre que sur une sélection, or un trait s'insère précisément là où il n'y a
+rien à sélectionner, sur une ligne vide entre deux parties.
+
+### Ce que le genre `session_journal` perd, et ce qu'il garde
+
+L'auteur voulait que « journal de session ne soit plus qu'une catégorie de
+fiche ». Six choses étaient accrochées à ce genre ; **une seule** était
+remplacée par les nouvelles options. La liste a été posée avant de décider :
+
+| Accroché au genre | Sort |
+|---|---|
+| Lettrine + filets (CSS `.journal-entry`) | **Retiré** — remplacé par les options du bloc |
+| Badge de type masqué, relations masquées | **Retiré** — purement cosmétique |
+| Bloc `session_journal_meta` hors du fil, en pied de page | **Retiré** — devient un bloc normal, ajoutable via « + Bloc » sur n'importe quelle fiche, rendu dans le fil avec son titre |
+| Table `session_journal_entries` (le devoir, la bannière, le roster) | **Gardé** — c'est un flux de travail, pas de la présentation |
+| Groupe épinglé « Livre de sessions » en tête du sommaire, tri par `written_at` | **Gardé** — c'est de la navigation |
+| 6ᵉ cas de `app.can_edit_entity` (l'autrice corrige son entrée) | **Gardé** — c'est un droit, et le retirer demanderait une migration |
+
+Décision explicite : démonter le devoir aurait été un **autre ticket**, avec
+son propre coût. On ne retire pas une table et une règle RLS avant d'avoir
+vérifié à l'usage que le remplacement rend bien.
+
+### Deux défauts trouvés en chemin
+
+- **Le trait existait déjà, et se perdait en silence.** `StarterKit` était
+  configuré sans désactiver `horizontalRule` : taper `---` créait bel et bien un
+  trait dans l'éditeur, que `docToSegments` transformait en paragraphe vide à
+  l'enregistrement. Le bouton et le type `divider` referment ce trou.
+- **Une proposition d'IA acceptée aurait effacé la lettrine.**
+  `aiProposals.ts` reconstruisait l'objet du bloc (`{ __v: 1, segments: … }`)
+  au lieu de l'étendre. Le champ neuf y serait retombé à `false` à chaque
+  acceptation. Passé en `{ ...currentData, segments: … }`.
+
+### Pas de migration
+
+`dropCap` est optionnel, à défaut `false` : tout le contenu antérieur reste
+valide tel quel, d'où un `__v` inchangé. Le seul test qui a dû bouger est
+celui qui vérifiait l'égalité stricte du texte validé — il affirme désormais
+que le défaut est posé, ce qui est justement la garantie recherchée.
+
+### Dépendance ajoutée
+
+`@tiptap/extension-horizontal-rule` (3.29.2, MIT) passe de dépendance
+transitive à dépendance directe — elle était déjà installée par
+`@tiptap/starter-kit`, donc **zéro octet ajouté** ; c'est l'import qui devient
+honnête. Même précédent exact que `extension-paragraph` et
+`extension-heading`, déjà déclarées pour la même raison : on étend le nœud
+pour lui greffer les attributs de segment.
+
+### Critères
+
+- [x] Une case « Lettrine sur le premier paragraphe » sur tout bloc texte, de
+      n'importe quelle fiche.
+- [x] La lettrine s'affiche dans l'éditeur comme en lecture (même sélecteur
+      CSS, même élément).
+- [x] Un bouton insère un trait de séparation à l'endroit du curseur.
+- [x] Un trait porte sa propre visibilité et disparaît avec la partie qu'il
+      sépare.
+- [x] Plus aucune branche `session_journal` dans le rendu du wiki public.
+- [x] Le bloc Séance s'ajoute via « + Bloc » et se rend dans le fil.
+- [x] Le devoir, le groupe du sommaire et le droit de l'autrice sont intacts.

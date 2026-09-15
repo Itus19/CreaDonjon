@@ -305,13 +305,18 @@ body {
   color: var(--ink);
 }
 
-/* Presentation "livre" du Journal de session publie (V2.1-3 suite, retour
-   utilisateur — promise puis jamais livree) : lettrine sur le premier
-   paragraphe du recit, separateurs ornementaux entre les parties (titres
-   H2/H3 du texte). Classe posee uniquement par PublicEntityBody.tsx pour
-   une fiche `entity_kind: "session_journal"` — jamais sur le reste du
-   wiki public. */
-.journal-entry .rich-text-content > p:first-of-type::first-letter {
+/* Lettrine (V2.1-14) : option du bloc texte, cochee dans TextBlockEditor et
+   portee par l'attribut `data-dropcap` du conteneur — le meme element en
+   lecture (PublicBlockView) et en redaction (le DOM de Tiptap), d'ou un seul
+   selecteur. Remplace la presentation reservee aux fiches
+   `entity_kind: "session_journal"` (`.journal-entry`, V2.1-3) : une lettrine
+   est de la mise en forme, disponible sur n'importe quelle fiche.
+
+   `p:first-of-type` et non `:first-child` : une image ancree en tete de bloc
+   (V2.1-11) ou un titre ne doivent pas priver le premier paragraphe de sa
+   lettrine. Si ce paragraphe est masque par la visibilite, il est absent du
+   HTML envoye et la lettrine tombe naturellement sur le suivant. */
+.rich-text-content[data-dropcap="true"] > p:first-of-type::first-letter {
   float: left;
   font-family: var(--font-display);
   font-size: 3.4em;
@@ -321,35 +326,16 @@ body {
   padding-top: 0.03em;
   color: var(--ink);
 }
-.journal-entry .rich-text-content h2,
-.journal-entry .rich-text-content h3 {
-  display: flex;
-  align-items: center;
-  gap: 0.75em;
-  text-align: center;
-  margin-top: 1.4em;
-}
-.journal-entry .rich-text-content h2::before,
-.journal-entry .rich-text-content h2::after,
-.journal-entry .rich-text-content h3::before,
-.journal-entry .rich-text-content h3::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--edge);
-}
 
-/* Pied de page du bloc `session_journal_meta` (retour utilisateur : "les
-   champs viennent tout au fond de la page, en petit, sur la meme ligne
-   horizontale et sans le titre du bloc" — voir SessionJournalFooter dans
-   PublicEntityBody.tsx). */
-.journal-entry-meta {
-  margin-top: 2.5em;
-  padding-top: 0.75em;
+/* Trait de separation (V2.1-14) : un vrai segment `divider`, insere la ou
+   l'auteur le veut — remplace les filets automatiques que l'ancienne
+   presentation "livre" ajoutait de part et d'autre de chaque titre H2/H3
+   sans qu'on les demande. */
+.rich-text-content hr {
+  width: 40%;
+  margin: 1.6em auto;
+  border: 0;
   border-top: 1px solid var(--edge);
-  font-size: 11px;
-  color: var(--ink-muted);
-  white-space: normal;
 }
 
 /* Valeurs mecaniques (formules, cles techniques) : toujours en mono, pour

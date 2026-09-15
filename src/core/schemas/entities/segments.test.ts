@@ -127,6 +127,39 @@ describe("zSegment", () => {
     expect(zSegment.parse(segment).align).toBe("left");
   });
 
+  it("accepte un segment divider sans contenu", () => {
+    const segment = {
+      id: "s11",
+      blockType: "divider" as const,
+      visibility: { level: "public", scopeId: null },
+      content: [],
+      align: "left" as const,
+    };
+    expect(zSegment.parse(segment)).toEqual(segment);
+  });
+
+  it("refuse un divider porteur de contenu (un trait ne se redige pas)", () => {
+    expect(() =>
+      zSegment.parse({
+        id: "s12",
+        blockType: "divider",
+        visibility: { level: "public", scopeId: null },
+        content: [{ t: "text", v: "x" }],
+      })
+    ).toThrow();
+  });
+
+  it("garde sa visibilite propre sur un divider (un trait masque disparait avec sa partie)", () => {
+    const segment = {
+      id: "s13",
+      blockType: "divider" as const,
+      visibility: { level: "gm", scopeId: null },
+      content: [],
+      align: "left" as const,
+    };
+    expect(zSegment.parse(segment).visibility.level).toBe("gm");
+  });
+
   it("refuse un alignement inconnu", () => {
     expect(() =>
       zSegment.parse({

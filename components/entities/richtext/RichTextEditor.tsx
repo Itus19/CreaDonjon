@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
@@ -9,7 +9,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import BubbleSelect from "./BubbleSelect";
 import RefLinkPopover, { type RefLinkTarget } from "./RefLinkPopover";
-import { SegmentParagraph, SegmentHeading, RefMention, Spoiler } from "./extensions";
+import { SegmentParagraph, SegmentHeading, SegmentHorizontalRule, RefMention, Spoiler } from "./extensions";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import { docToSegments, segmentsToDoc, type DocJSON } from "@/src/core/richtext/tiptapSync";
 import type { Segment } from "@/src/core/schemas/entities/segments";
@@ -84,10 +84,13 @@ export default function RichTextEditor({
   worldSlug,
   worldId,
   otherEntities,
+  dropCap = false,
 }: {
   segments: Segment[];
   onChange: (segments: Segment[]) => void;
   onBlur?: () => void;
+  /** V2.1-14 : lettrine du bloc `text` (`TextBlockEditor`) — affichee ici telle qu'elle le sera en lecture, sinon la case a cocher n'a aucun effet visible pendant la redaction. */
+  dropCap?: boolean;
   /** V2.1-1 : boutons Lier/Créer/Ouvrir masqués sans ces props (ex. description de règle, contexte hors fiche de monde) — même repli que `onLaunchWizard`. */
   worldSlug?: string;
   /** V2.1-1, "Créer comme Fiche" : `POST /api/entities` veut l'id du monde, pas son slug. */
@@ -106,9 +109,12 @@ export default function RichTextEditor({
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ paragraph: false, heading: false }),
+      // `horizontalRule: false` : remplace par notre version porteuse des
+      // attributs de segment (extensions.ts), comme paragraph et heading.
+      StarterKit.configure({ paragraph: false, heading: false, horizontalRule: false }),
       SegmentParagraph,
       SegmentHeading,
+      SegmentHorizontalRule,
       RefMention,
       Underline,
       Spoiler,
@@ -135,6 +141,15 @@ export default function RichTextEditor({
     onSelectionUpdate: () => forceUpdate((n) => n + 1),
     onBlur: () => onBlur?.(),
   });
+
+  // Meme technique que le devoilement d'un spoiler ci-dessus : on mute
+  // l'attribut du conteneur plutot que de reconstruire `editorProps`, qui
+  // remplacerait en bloc les autres options de la vue (dont handleClick).
+  useEffect(() => {
+    if (!editor) return;
+    if (dropCap) editor.view.dom.setAttribute("data-dropcap", "true");
+    else editor.view.dom.removeAttribute("data-dropcap");
+  }, [editor, dropCap]);
 
   if (!editor) return null;
 
@@ -540,6 +555,17 @@ export default function RichTextEditor({
           aria-label="Visibilité du passage"
         />
       </BubbleMenu>
+      {/* Hors de la bulle a dessein : la bulle ne s'ouvre que sur une
+          selection, alors qu'un trait s'insere precisement la ou il n'y a
+          rien a selectionner (une ligne vide entre deux parties). */}
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().setHorizontalRule().run()}
+        title="Insérer un trait de séparation à l'endroit du curseur"
+        className="self-start text-xs font-medium text-ink-muted transition-colors hover:text-ink"
+      >
+        — Insérer un trait
+      </button>
       <EditorContent editor={editor} />
       {worldSlug && otherEntities && (
         <div className="flex flex-col gap-1.5 rounded-md border border-edge/50 bg-panel-sunken p-2">

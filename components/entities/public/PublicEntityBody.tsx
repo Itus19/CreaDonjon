@@ -1,12 +1,9 @@
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import type { EntitySummary } from "@/src/server/repos/entities";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
-import type { SessionJournalMetaBlockData } from "@/src/core/schemas/blocks/sessionJournalMeta";
 import { planMusicAttachments } from "@/src/core/music/blockAttachment";
 import { planImageAnchors } from "@/src/core/images/blockAnchor";
 import type { PublicBlock, PublicRelation } from "@/src/server/services/publicShare";
-import { formatGameDate } from "@/src/core/calendar/formatDate";
-import { weekdayNameForDate } from "@/src/core/calendar/weekday";
 import PublicBlockView from "./PublicBlockView";
 import PublicPortrait from "./PublicPortrait";
 import PublicRelations from "./PublicRelations";
@@ -42,19 +39,17 @@ export default function PublicEntityBody({
   /** V2.1-1 : voir `PublicBlockView` — absent sur le partage anonyme. */
   ruleHrefBase?: string;
 }) {
-  // Le bloc `session_journal_meta` (V2.1-3 suite) ne fait pas partie du
-  // recit : jamais dans le fil normal des blocs, toujours extrait pour
-  // finir en pied de page (retour utilisateur, voir SessionJournalFooter).
-  const metaBlock = blocks.find((b) => b.blockType === "session_journal_meta");
-  const isJournalEntry = entity.entity_kind === "session_journal";
+  // V2.1-14 : plus aucune branche propre a `session_journal` ici. Le bloc
+  // Seance revient dans le fil comme tout autre bloc (il est desormais
+  // ajoutable sur n'importe quelle fiche), et la presentation "livre"
+  // (lettrine, traits) est devenue une option du bloc texte, disponible
+  // partout — une mise en forme n'est pas la propriete d'un genre de fiche.
 
   // V2.1-6 : les blocs `music` sortent eux aussi du fil, pour une autre
   // raison — ils ne s'affichent plus nulle part, seul un bouton subsiste, a
   // cote du nom de la fiche (choix de l'auteur : un endroit, toujours le
   // meme, quel que soit l'endroit ou le bloc a ete range).
-  const { contentBlocks: afterMusic, attachments: musicAttachments } = planMusicAttachments(
-    blocks.filter((b) => b.blockType !== "session_journal_meta")
-  );
+  const { contentBlocks: afterMusic, attachments: musicAttachments } = planMusicAttachments(blocks);
 
   // V2.1-11 : apres la musique, jamais avant — une image ancree a un bloc
   // musique viserait une cible qui n'existe plus dans le fil, et doit donc
@@ -66,7 +61,7 @@ export default function PublicEntityBody({
   const restBlocks = firstBlockWraps ? afterFirst : contentBlocks;
 
   return (
-    <div className={isJournalEntry ? "journal-entry" : undefined}>
+    <div>
       {/* `flow-root` : contient le flottement du portrait a l'interieur de
           ce seul conteneur, sans affecter les blocs suivants ni depasser
           si le texte encadre est court. */}
@@ -94,16 +89,14 @@ export default function PublicEntityBody({
               />
             ))}
           </div>
-          {!isJournalEntry && (
-            <span className="shrink-0 whitespace-nowrap text-sm font-medium text-ink-muted">
-              {ENTITY_KIND_LABELS[entity.entity_kind as keyof typeof ENTITY_KIND_LABELS] ?? entity.entity_kind}
-            </span>
-          )}
+          <span className="shrink-0 whitespace-nowrap text-sm font-medium text-ink-muted">
+            {ENTITY_KIND_LABELS[entity.entity_kind as keyof typeof ENTITY_KIND_LABELS] ?? entity.entity_kind}
+          </span>
         </div>
         {entity.aliases.length > 0 && (
           <p className="mt-1 text-xs text-ink-muted">Alias : {entity.aliases.join(", ")}</p>
         )}
-        {!isJournalEntry && <PublicRelations relations={relations} hrefBase={hrefBase} />}
+        <PublicRelations relations={relations} hrefBase={hrefBase} />
         <MentionedIn entityId={entity.id} hrefBase={hrefBase} />
         {firstBlockWraps && (
           <PublicBlockView
@@ -129,31 +122,6 @@ export default function PublicEntityBody({
           ))}
         </div>
       )}
-      {metaBlock && <SessionJournalFooter block={metaBlock} />}
     </div>
   );
 }
-
-/**
- * Pied de page du Journal de session (retour utilisateur V2.1-3 suite) :
- * les 4 champs fixes du bloc `session_journal_meta`, tout au fond de la
- * page, en petit, sur une seule ligne, sans le titre du bloc — jamais
- * rendu par `PublicBlockView` (qui affiche un titre + un bloc a part
- * entiere), un pied de page n'est ni l'un ni l'autre.
- */
-function SessionJournalFooter({ block }: { block: PublicBlock }) {
-  const data = block.data as unknown as SessionJournalMetaBlockData;
-  const calendar = block.timelineCalendar;
-  const ingameWeekday = calendar ? weekdayNameForDate(data.ingameDate, calendar) : null;
-  const parts = [
-    calendar ? `Date ingame : ${ingameWeekday ? `${ingameWeekday} ` : ""}${formatGameDate(data.ingameDate, calendar)}` : null,
-    data.realSession ? `Session du ${data.realSession.label}` : null,
-    data.writtenBy ? `Rédigé par ${data.writtenBy.name}` : null,
-    data.writtenAt
-      ? `Rédigé le ${new Date(data.writtenAt).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`
-      : null,
-  ].filter((p): p is string => p !== null);
-  if (parts.length === 0) return null;
-  return <p className="journal-entry-meta">{parts.join(" · ")}</p>;
-}
-

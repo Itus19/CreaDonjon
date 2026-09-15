@@ -38,6 +38,27 @@ describe("segmentsToDoc", () => {
     expect(segmentsToDoc(segments).content[0].attrs?.align).toBe("center");
   });
 
+  it("convertit un divider en horizontalRule, sans contenu", () => {
+    const segments: Segment[] = [
+      {
+        id: "s1",
+        blockType: "divider",
+        visibility: { level: "gm", scopeId: null },
+        content: [],
+        align: "left",
+      },
+    ];
+    expect(segmentsToDoc(segments)).toEqual({
+      type: "doc",
+      content: [
+        {
+          type: "horizontalRule",
+          attrs: { segmentId: "s1", visibilityLevel: "gm", visibilityScopeId: null, align: "left" },
+        },
+      ],
+    });
+  });
+
   it("convertit un titre h2 avec le niveau attendu", () => {
     const segments: Segment[] = [
       {
@@ -278,5 +299,50 @@ describe("docToSegments", () => {
       ],
     };
     expect(docToSegments(doc)[0].content).toEqual([{ t: "text", v: "" }]);
+  });
+});
+
+describe("docToSegments, trait de separation", () => {
+  it("reconstruit un divider a partir d'un horizontalRule", () => {
+    const doc: DocJSON = {
+      type: "doc",
+      content: [
+        {
+          type: "horizontalRule",
+          attrs: { segmentId: "s1", visibilityLevel: "players", visibilityScopeId: null, align: "left" },
+        },
+      ],
+    };
+    expect(docToSegments(doc)).toEqual([
+      {
+        id: "s1",
+        blockType: "divider",
+        visibility: { level: "players", scopeId: null },
+        content: [],
+        align: "left",
+      },
+    ]);
+  });
+
+  it("ne glisse jamais un noeud texte vide dans un divider (contrairement a un paragraphe vide)", () => {
+    const doc: DocJSON = {
+      type: "doc",
+      content: [
+        { type: "horizontalRule", attrs: { segmentId: "s1" } },
+        { type: "paragraph", attrs: { segmentId: "s2" } },
+      ],
+    };
+    const [divider, paragraph] = docToSegments(doc);
+    expect(divider.content).toEqual([]);
+    expect(paragraph.content).toEqual([{ t: "text", v: "" }]);
+  });
+
+  it("survit a l'aller-retour segments -> doc -> segments", () => {
+    const segments: Segment[] = [
+      { id: "s1", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Avant." }], align: "left" },
+      { id: "s2", blockType: "divider", visibility: { level: "public", scopeId: null }, content: [], align: "left" },
+      { id: "s3", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Apres." }], align: "left" },
+    ];
+    expect(docToSegments(segmentsToDoc(segments))).toEqual(segments);
   });
 });

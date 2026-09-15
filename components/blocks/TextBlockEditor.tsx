@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import RichTextEditor from "@/components/entities/richtext/RichTextEditor";
+import Checkbox from "@/components/shared/Checkbox";
 import type { Segment } from "@/src/core/schemas/entities/segments";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
@@ -122,13 +123,22 @@ export default function TextBlockEditor({
 
   return (
     <div className="flex flex-col gap-2">
+      {/* V2.1-14 : la lettrine est une propriete du bloc, pas d'un passage —
+          d'ou sa place ici plutot que dans la bulle de mise en forme, qui ne
+          porte que ce qui s'applique a une selection. */}
+      <Checkbox
+        checked={data.dropCap}
+        onChange={() => onChange({ ...data, dropCap: !data.dropCap })}
+        label="Lettrine sur le premier paragraphe"
+      />
       <RichTextEditor
         key={remountKey}
         segments={data.segments}
-        onChange={(segments: Segment[]) => onChange({ __v: 1, segments })}
+        onChange={(segments: Segment[]) => onChange({ ...data, segments })}
         worldSlug={worldSlug}
         worldId={worldId}
         otherEntities={otherEntities}
+        dropCap={data.dropCap}
       />
 
       {!hideAssist && (

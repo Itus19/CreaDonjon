@@ -854,16 +854,16 @@ export default function EntityBlocks({
             // "generator" retire de "Ajouter un bloc" (retour utilisateur) : l'outil
             // "Générateurs" vit desormais uniquement dans la sidebar MJ. Le libelle
             // reste dans BLOCK_TYPE_LABELS pour les blocs generator deja existants.
-            // "session_journal_meta" (V2.1-3 suite) : jamais ajoutable a la main,
-            // pose une seule fois par submitJournalEntry — meme motif, le libelle
-            // reste dans BLOCK_TYPE_LABELS pour l'affichage du badge/placeholder.
+            // "session_journal_meta" redevient ajoutable a la main (V2.1-14) :
+            // il reste pose automatiquement par submitJournalEntry, mais rien ne
+            // justifie plus de le reserver au Livre de sessions — c'est un bloc
+            // de wiki comme un autre, avec quatre libelles fixes.
             // personality/worldview retires des qu'un exemplaire existe deja sur
             // cette fiche (V2.1-5, un seul de chaque pour eviter les confusions —
             // meme garde-fou en base, index blocks_personality_worldview_uniq).
             .filter(
               ([type]) =>
                 type !== "generator" &&
-                type !== "session_journal_meta" &&
                 (!restrictAddableTypes || restrictAddableTypes.includes(type)) &&
                 !((type === "personality" || type === "worldview") && blocks.some((b) => b.blockType === type))
             )
