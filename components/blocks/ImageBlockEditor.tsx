@@ -312,22 +312,48 @@ export default function ImageBlockEditor({
               </div>
             </div>
 
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Taille de l&apos;image</span>
-              <label className="flex items-center gap-1.5">
-                <span className="shrink-0 text-ink-soft">{data.sizePct}%</span>
-                <input
-                  type="range"
-                  min={50}
-                  max={200}
-                  step={5}
-                  value={data.sizePct}
-                  onChange={(e) => onChange({ ...data, sizePct: Number(e.target.value) })}
-                  aria-label="Taille de l'image dans le wiki"
-                  className="w-full max-w-48"
-                />
-              </label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Taille</span>
+                <label className="flex items-center gap-1.5">
+                  <span className="w-9 shrink-0 text-ink-soft">{data.sizePct}%</span>
+                  <input
+                    type="range"
+                    min={50}
+                    max={200}
+                    step={5}
+                    value={data.sizePct}
+                    onChange={(e) => onChange({ ...data, sizePct: Number(e.target.value) })}
+                    aria-label="Taille de l'image dans le wiki"
+                    className="w-full"
+                  />
+                </label>
+              </div>
+              {/* Pas de case a cocher a cote : `0` eteint l'effet, donc le
+                  curseur EST l'interrupteur. Un controle au lieu de deux, et
+                  l'etat se lit d'un coup d'oeil au lieu de se deduire. */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Parallaxe</span>
+                <label className="flex items-center gap-1.5">
+                  <span className="w-9 shrink-0 text-ink-soft">{data.parallaxPct}%</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={40}
+                    step={5}
+                    value={data.parallaxPct}
+                    onChange={(e) => onChange({ ...data, parallaxPct: Number(e.target.value) })}
+                    aria-label="Intensité de la parallaxe au défilement"
+                    className="w-full"
+                  />
+                </label>
+              </div>
             </div>
+            <span className="italic text-ink-muted">
+              {data.parallaxPct === 0
+                ? "Parallaxe à 0 % — aucun effet. Le curseur est l’interrupteur."
+                : "L’image sera rognée dans un cadre de hauteur fixe, pour pouvoir y glisser au défilement."}
+            </span>
 
             {ancree && hote && (
               <AnchorPreview

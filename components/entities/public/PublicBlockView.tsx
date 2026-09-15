@@ -40,6 +40,20 @@ import PublicMapBlock from "./PublicMapBlock";
  */
 const PublicRelationsGraphBlock = dynamic(() => import("./PublicRelationsGraphBlock"));
 
+/**
+ * V2.1-10 lot 3 — deuxieme vue chargee a la demande, pour une autre raison
+ * que la premiere. `PublicRelationsGraphBlock` est decoupe parce qu'il PESE
+ * (d3-force) ; celui-ci est leger, et le regle ci-dessus ("on ne decoupe que
+ * ce qui pese") conclurait a l'import statique.
+ *
+ * Sauf qu'ici le poids n'est pas le sujet : c'est le seul composant CLIENT
+ * de tout le rendu d'image, et le ticket promet qu'une page sans parallaxe
+ * ne telecharge rien de plus qu'avant. Importe statiquement, son JS entrerait
+ * dans le paquet de TOUTE page wiki, y compris celles qui n'ont aucune image.
+ * La promesse deviendrait fausse.
+ */
+const ParallaxImage = dynamic(() => import("./ParallaxImage"));
+
 const TAG_BY_BLOCK_TYPE: Record<Segment["blockType"], string> = {
   paragraph: "p",
   h1: "h1",
@@ -228,8 +242,15 @@ export function PublicImageBlock({ data, flow }: { data: ImageBlockData; flow?: 
       className={`flex w-[var(--img-w)] max-w-full flex-col gap-1.5 ${floating} ${flow === "break" ? "my-3" : ""}`}
       style={{ "--img-w": `${widthPx}px` } as CSSProperties & Record<`--${string}`, string>}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={data.url} alt={data.caption} loading="lazy" decoding="async" className="w-full rounded-md object-cover" />
+      {/* V2.1-10 lot 3 : seule une intensite > 0 monte le composant client.
+          Une page dont aucune image n'est en parallaxe ne telecharge donc
+          rien de plus qu'avant — le curseur est son propre interrupteur. */}
+      {data.parallaxPct > 0 ? (
+        <ParallaxImage src={data.url} alt={data.caption} intensityPct={data.parallaxPct} />
+      ) : (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={data.url} alt={data.caption} loading="lazy" decoding="async" className="w-full rounded-md object-cover" />
+      )}
       {data.caption && <figcaption className="text-xs italic text-ink-muted">{data.caption}</figcaption>}
     </figure>
   );

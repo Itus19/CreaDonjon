@@ -68,6 +68,18 @@ export const zImageBlockData = z.object({
     .nullable()
     .default(null),
   anchorFlow: z.enum(["float", "break"]).default("float"),
+  /**
+   * V2.1-10 lot 3 : intensite de la parallaxe au defilement, en pourcentage
+   * de la hauteur du cadre. **`0` eteint l'effet** — le curseur est son propre
+   * interrupteur, il n'y a pas de case a cocher a cote. C'est aussi ce qui
+   * permet a une image sans parallaxe de rester rendue cote serveur, sans un
+   * octet de JS (`components/entities/public/ParallaxImage.tsx`).
+   *
+   * Une image en parallaxe est necessairement ROGNEE : l'effet suppose un
+   * cadre de hauteur fixe et une image plus grande qui glisse dedans. A
+   * reserver aux illustrations d'ambiance, jamais a une carte ou un plan.
+   */
+  parallaxPct: z.number().int().min(0).max(40).default(0),
   align: z.enum(["left", "right", "center"]).default("center"),
   sizePct: z.number().int().min(50).max(200).default(100),
   useAsWikiBackground: z.boolean().default(false),

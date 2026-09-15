@@ -38,6 +38,9 @@ describe("registry des blocs de wiki", () => {
       // V2.1-10 lot 2 : defaut `false`, donc un bloc coche « fond de page »
       // avant ce lot reste retire du corps de la fiche, comme avant.
       alsoShowInFlow: false,
+      // V2.1-10 lot 3 : `0` = aucune parallaxe, donc aucun composant client
+      // monte. Un bloc pose avant ce lot reste rendu entierement cote serveur.
+      parallaxPct: 0,
       backgroundBlurPx: 20,
       fadeMs: 600,
     });

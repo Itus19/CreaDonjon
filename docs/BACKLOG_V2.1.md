@@ -1987,14 +1987,39 @@ il ne lit que `useAsWikiBackground`, inchangé.
 
 ### Lot 3 — parallaxe
 
-- [ ] Curseur d'intensité `0–40 %`, **sans case à cocher séparée** : `0`
+- [x] Curseur d'intensité `0–40 %`, **sans case à cocher séparée** : `0`
       éteint l'effet. Un contrôle au lieu de deux, et l'état se lit d'un
-      coup d'œil.
-- [ ] `prefers-reduced-motion: reduce` neutralise l'effet, sans condition.
-- [ ] Seules les images d'intensité `> 0` deviennent un composant client :
-      les autres restent rendues côté serveur, sans un octet de JS.
-- [ ] Un seul écouteur de défilement mutualisé, piloté par
-      `requestAnimationFrame` — jamais un écouteur par image.
+      coup d'œil. Apparié avec `Taille`, et une ligne dit ce qui va arriver
+      (« aucun effet » à 0, l'avertissement de rognage au-dessus).
+- [x] Le calcul vit dans `src/core/images/parallax.ts`, **testé** (11 cas) :
+      il est faux de trois façons différentes s'il est écrit à la main dans
+      un composant — borne oubliée (l'image sort de son cadre sur une fiche
+      longue), division par zéro (fenêtre de hauteur nulle au premier
+      rendu), décalage fractionnaire (le texte voisin vibre). Trois défauts
+      qui demanderaient un navigateur et un long défilement pour se montrer.
+- [x] `prefers-reduced-motion: reduce` neutralise l'effet **deux fois** : le
+      composant ne s'abonne même pas, et une règle CSS annule la
+      transformation — sinon un décalage posé avant que la préférence ne
+      change resterait figé.
+- [x] Seules les images d'intensité `> 0` deviennent un composant client. Il
+      est chargé par `dynamic()`, contrairement à ce que conclurait la règle
+      du fichier (« on ne découpe que ce qui pèse ») : ici le poids n'est pas
+      le sujet, c'est le seul composant client de tout le rendu d'image, et
+      un import statique ferait entrer son JS dans le paquet de **toute**
+      page wiki, y compris celles sans aucune image.
+- [x] Un seul écouteur de défilement mutualisé, piloté par
+      `requestAnimationFrame` — jamais un écouteur par image. `capture: true`
+      est indispensable : `scroll` ne remonte pas depuis un élément qui
+      défile, et la coquille fait défiler un conteneur interne, pas `window`.
+
+**Vérifié en navigateur.** Cadre 480 × 320 (3:2), image calculée à 416 px —
+soit exactement 320 + 96, la course de 30 % : l'image est plus haute que son
+cadre du montant dont elle glissera, donc aucun vide ne peut apparaître. Le
+décalage suit le défilement au pixel près : cadre à 558 px du haut → −27 px ;
+après 283 px de défilement, cadre à 275 px → −49 px, les deux conformes à la
+formule. La règle `prefers-reduced-motion` est bien présente dans la feuille
+chargée ; la préférence elle-même n'a pas pu être simulée dans cet
+environnement.
 
 **À confirmer avant d'écrire le lot 3** (conséquence de conception, pas
 détail d'implémentation) : une image en parallaxe est **nécessairement

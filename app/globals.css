@@ -120,6 +120,27 @@ body {
  * fondu dont la duree est reglable par bloc (`fadeMs`), jamais une valeur
  * fixe ici.
  */
+/*
+ * Parallaxe d'une image de bloc (V2.1-10 lot 3, components/entities/public/
+ * ParallaxImage.tsx). Le cadre a une hauteur definie — c'est ce qui permet a
+ * l'image, plus haute que lui, d'y glisser sans jamais laisser de vide. En
+ * contrepartie l'image est rognee : compromis assume, la parallaxe est pour
+ * une illustration d'ambiance, pas pour une carte.
+ */
+.parallax-frame {
+  aspect-ratio: 3 / 2;
+}
+/*
+ * Filet de securite : le composant ne s'abonne deja pas au defilement quand
+ * le mouvement reduit est demande, mais une transformation posee AVANT que la
+ * preference ne change resterait figee. Ici elle est annulee sans condition.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .parallax-image {
+    transform: none !important;
+  }
+}
+
 .wiki-bg-backdrop {
   position: fixed;
   inset: 0;
