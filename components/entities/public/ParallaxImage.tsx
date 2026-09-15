@@ -4,7 +4,7 @@ import { useEffect, useRef, type CSSProperties } from "react";
 import { parallaxProgress, parallaxShiftPx, parallaxTravelPx } from "@/src/core/images/parallax";
 
 /**
- * V2.1-10 lot 3 — la seule image de bloc qui embarque du JS.
+ * V2.1-11 lot 3 — la seule image de bloc qui embarque du JS.
  *
  * `PublicImageBlock` ne monte ce composant que pour une intensite > 0 : une
  * page dont aucune image n'est en parallaxe reste servie sans un octet de JS

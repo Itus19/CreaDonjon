@@ -1,5 +1,5 @@
 /**
- * V2.1-10 lot 3 — parallaxe d'une image de bloc au defilement.
+ * V2.1-11 lot 3 — parallaxe d'une image de bloc au defilement.
  *
  * Le calcul vit ici parce qu'il est faux de trois facons differentes si on
  * l'ecrit a la main dans un composant : borne oubliee (l'image sort de son

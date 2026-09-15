@@ -7,7 +7,7 @@ describe("backgroundModeOf", () => {
     expect(backgroundModeOf({ useAsWikiBackground: false })).toBe("none");
   });
 
-  // Les blocs poses avant V2.1-10 ne portent pas `alsoShowInFlow` : cocher
+  // Les blocs poses avant V2.1-11 ne portent pas `alsoShowInFlow` : cocher
   // « fond de page » les retirait entierement du corps de la fiche. Ils
   // doivent continuer de se comporter exactement ainsi.
   it("dit « seulement en fond » pour un bloc anterieur au lot 2", () => {

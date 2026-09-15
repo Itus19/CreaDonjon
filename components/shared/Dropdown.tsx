@@ -22,7 +22,7 @@ export interface DropdownOption {
  * donc pas pour les appels qui ne passaient pas leur propre style.
  */
 /**
- * `text-left` (V2.1-10) : un `<button>` centre son texte par defaut, et le
+ * `text-left` (V2.1-11) : un `<button>` centre son texte par defaut, et le
  * declencheur en heritait. Invisible tant que la liste fait la largeur de son
  * libelle — le libelle porte `flex-1`, donc il remplit le bouton et le
  * centrage ne se voit pas. Des qu'un appel impose une largeur (`w-full`, un

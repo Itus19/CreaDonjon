@@ -78,7 +78,7 @@ function cranActuel(stops: PositionStop[], anchor: ImageBlockData["anchor"]): nu
  * l'entité. Le collage d'une URL externe reste possible (`data.url` ne
  * distingue jamais externe/téléversé, même champ dans les deux cas).
  *
- * V2.1-10 : l'emplacement de l'image est désormais **explicite** — une liste
+ * V2.1-11 : l'emplacement de l'image est désormais **explicite** — une liste
  * des blocs de la fiche, et un curseur à crans pour la position dans le bloc
  * choisi. Les pastilles `Intercaler`/`Retour à la ligne` disparaissent : elles
  * confondaient *où est l'image* et *comment le texte réagit*, ce qui faisait
@@ -95,7 +95,7 @@ export default function ImageBlockEditor({
   blockId: string;
   data: ImageBlockData;
   onChange: (data: ImageBlockData) => void;
-  /** V2.1-10 : tous les blocs de la fiche, pour proposer les hôtes possibles. */
+  /** V2.1-11 : tous les blocs de la fiche, pour proposer les hôtes possibles. */
   siblings: ImageAnchorSibling[];
 }) {
   const [uploading, setUploading] = useState(false);
@@ -230,7 +230,7 @@ export default function ImageBlockEditor({
             {/* Le fond de page vient EN PREMIER : c'est la seule question qui
                 peut annuler toutes les autres. La poser en dernier ferait
                 remplir six reglages avant d'apprendre qu'ils ne s'appliquent
-                pas (decision d'interface V2.1-10, esquisse validee). */}
+                pas (decision d'interface V2.1-11, esquisse validee). */}
             <div className="flex flex-col gap-1">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Fond de page</span>
               <Dropdown
@@ -425,7 +425,7 @@ export default function ImageBlockEditor({
 }
 
 /**
- * Mini-carte d'apercu (decision d'interface V2.1-10, « on le fait
+ * Mini-carte d'apercu (decision d'interface V2.1-11, « on le fait
  * maintenant ») : les segments du bloc hote en barres, l'image a son cran.
  * Elle supprime la seule incertitude qui restait — ou l'image tombe — sans
  * quitter l'editeur ni publier la fiche.

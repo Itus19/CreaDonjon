@@ -1,5 +1,5 @@
 /**
- * V2.1-10 lot 2 — le fond de page a trois etats, pas deux.
+ * V2.1-11 lot 2 — le fond de page a trois etats, pas deux.
  *
  * Jusqu'ici `useAsWikiBackground` etait EXCLUSIF : cocher la case retirait
  * l'image du corps de la fiche (`PublicBlockView` renvoyait `null`), et rien

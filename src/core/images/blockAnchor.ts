@@ -1,7 +1,7 @@
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 
 /**
- * V2.1-10 — un bloc `image` ancre sort du fil des blocs et va s'inserer DANS
+ * V2.1-11 — un bloc `image` ancre sort du fil des blocs et va s'inserer DANS
  * un autre bloc, avant l'un de ses segments.
  *
  * Meme motif que `planMusicAttachments` (src/core/music/blockAttachment.ts) :
@@ -66,7 +66,7 @@ function segmentIdsOf(block: AnchorableBlock): string[] | null {
  * Cible retenue pour une image, ou `null` pour « reste dans le fil ».
  *
  * L'ancrage explicite prime toujours sur l'ancien `wrapMode` : un bloc
- * modifie depuis V2.1-10 ne doit jamais retomber sur la cible implicite.
+ * modifie depuis V2.1-11 ne doit jamais retomber sur la cible implicite.
  */
 function resolveAnchor<T extends AnchorableBlock>(
   block: T,
@@ -96,7 +96,7 @@ function resolveAnchor<T extends AnchorableBlock>(
     };
   }
 
-  // Blocs anterieurs a V2.1-10 : `wrapMode: "wrap"` faisait flotter l'image et
+  // Blocs anterieurs a V2.1-11 : `wrapMode: "wrap"` faisait flotter l'image et
   // laissait le bloc SUIVANT s'ecouler autour. Meme resultat visible, mais
   // l'image entre desormais dans le bloc — ce qui supprime la bordure
   // orpheline et le decalage au-dessus du titre. Aucune ecriture en base : la

@@ -26,7 +26,7 @@ describe("registry des blocs de wiki", () => {
     expect(validateBlockData("image", data)).toEqual({
       ...data,
       wrapMode: "intercalate",
-      // V2.1-10 : un bloc pose avant l'ancrage explicite reste dans le fil de
+      // V2.1-11 : un bloc pose avant l'ancrage explicite reste dans le fil de
       // la fiche. `wrapMode` survit sans etre reecrit — c'est `planImageAnchors`
       // qui le traduit au rendu, jamais une migration.
       placement: "flow",
@@ -35,10 +35,10 @@ describe("registry des blocs de wiki", () => {
       align: "center",
       sizePct: 100,
       useAsWikiBackground: false,
-      // V2.1-10 lot 2 : defaut `false`, donc un bloc coche « fond de page »
+      // V2.1-11 lot 2 : defaut `false`, donc un bloc coche « fond de page »
       // avant ce lot reste retire du corps de la fiche, comme avant.
       alsoShowInFlow: false,
-      // V2.1-10 lot 3 : `0` = aucune parallaxe, donc aucun composant client
+      // V2.1-11 lot 3 : `0` = aucune parallaxe, donc aucun composant client
       // monte. Un bloc pose avant ce lot reste rendu entierement cote serveur.
       parallaxPct: 0,
       backgroundBlurPx: 20,

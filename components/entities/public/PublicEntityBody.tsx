@@ -21,7 +21,7 @@ import MentionedIn from "@/components/entities/MentionedIn";
  * Deux mecanismes de contournement de texte independants :
  * - le portrait flotte, le premier bloc (s'il s'agit de texte) s'ecoule
  *   autour, apres les alias/relations ;
- * - une image ancree (V2.1-10) entre DANS son bloc hote, avant le segment
+ * - une image ancree (V2.1-11) entre DANS son bloc hote, avant le segment
  *   vise — elle n'est plus un bloc frere pose juste avant sa cible. C'est
  *   ce qui supprime la bordure orpheline et le decalage au-dessus du titre
  *   que produisait l'ancien "retour a la ligne".
@@ -56,7 +56,7 @@ export default function PublicEntityBody({
     blocks.filter((b) => b.blockType !== "session_journal_meta")
   );
 
-  // V2.1-10 : apres la musique, jamais avant — une image ancree a un bloc
+  // V2.1-11 : apres la musique, jamais avant — une image ancree a un bloc
   // musique viserait une cible qui n'existe plus dans le fil, et doit donc
   // retomber dans le flux comme n'importe quelle cible perdue.
   const { contentBlocks, anchors } = planImageAnchors(afterMusic);

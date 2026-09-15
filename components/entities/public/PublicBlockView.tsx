@@ -41,7 +41,7 @@ import PublicMapBlock from "./PublicMapBlock";
 const PublicRelationsGraphBlock = dynamic(() => import("./PublicRelationsGraphBlock"));
 
 /**
- * V2.1-10 lot 3 — deuxieme vue chargee a la demande, pour une autre raison
+ * V2.1-11 lot 3 — deuxieme vue chargee a la demande, pour une autre raison
  * que la premiere. `PublicRelationsGraphBlock` est decoupe parce qu'il PESE
  * (d3-force) ; celui-ci est leger, et le regle ci-dessus ("on ne decoupe que
  * ce qui pese") conclurait a l'import statique.
@@ -121,7 +121,7 @@ function renderNode(
 }
 
 /**
- * V2.1-10 : les images ancrees a CE bloc s'inserent entre ses segments, pas
+ * V2.1-11 : les images ancrees a CE bloc s'inserent entre ses segments, pas
  * a cote du bloc. `segmentId: null` remonte en tete, avant le premier
  * segment. L'insertion passe par un `Fragment` sans balise, pour que
  * `.journal-entry .rich-text-content > p:first-of-type` (la lettrine,
@@ -176,7 +176,7 @@ function PublicTextBlock({
 /**
  * Une image ancree se rend SANS l'habillage de bloc (`border-b py-4`) : c'est
  * lui qui laissait une bordure orpheline et faisait demarrer l'image au-dessus
- * du titre de sa cible (V2.1-10).
+ * du titre de sa cible (V2.1-11).
  *
  * Les images en « seulement en fond » ont deja ete ecartees par
  * `visiblesDansLaPage` ci-dessous — inutile de les filtrer une seconde fois
@@ -188,7 +188,7 @@ function renderAnchoredImage(anchored: AnchoredImage<PublicBlock>) {
 }
 
 /**
- * V2.1-10 lot 2 : une image ancree en « seulement en fond » ne se rend pas
+ * V2.1-11 lot 2 : une image ancree en « seulement en fond » ne se rend pas
  * dans le corps de la fiche. On l'ecarte AVANT tout le reste, pour que le
  * bloc hote ne recoive pas non plus le `flow-root` d'un flottement qui
  * n'existera jamais.
@@ -228,7 +228,7 @@ export function PublicImageBlock({ data, flow }: { data: ImageBlockData; flow?: 
   const widthPx = (BASE_IMAGE_WIDTH_PX * data.sizePct) / 100;
   // Sous 640px, une colonne de texte a cote d'une image de 480px est
   // illisible : le flottement est abandonne et l'image reprend toute la
-  // largeur (retour utilisateur V2.1-10).
+  // largeur (retour utilisateur V2.1-11).
   const floating =
     flow === "float"
       ? `mb-3 max-sm:float-none max-sm:mx-0 max-sm:w-full ${data.align === "left" ? "float-left mr-4 max-sm:mr-0" : "float-right ml-4 max-sm:ml-0"}`
@@ -242,7 +242,7 @@ export function PublicImageBlock({ data, flow }: { data: ImageBlockData; flow?: 
       className={`flex w-[var(--img-w)] max-w-full flex-col gap-1.5 ${floating} ${flow === "break" ? "my-3" : ""}`}
       style={{ "--img-w": `${widthPx}px` } as CSSProperties & Record<`--${string}`, string>}
     >
-      {/* V2.1-10 lot 3 : seule une intensite > 0 monte le composant client.
+      {/* V2.1-11 lot 3 : seule une intensite > 0 monte le composant client.
           Une page dont aucune image n'est en parallaxe ne telecharge donc
           rien de plus qu'avant — le curseur est son propre interrupteur. */}
       {data.parallaxPct > 0 ? (
@@ -365,7 +365,7 @@ export default function PublicBlockView({
   hrefBase: string;
   /** V2.1-1 : base des liens vers une fiche de regle (ex. `/m/[worldSlug]/joueur/regles`) — absent sur le partage anonyme (`/partage`, `/apercu`), aucune page de regle n'y existe pour un visiteur non authentifie. */
   ruleHrefBase?: string;
-  /** V2.1-10 : images ancrees DANS ce bloc (`planImageAnchors`), a inserer entre ses segments — jamais a cote de lui. */
+  /** V2.1-11 : images ancrees DANS ce bloc (`planImageAnchors`), a inserer entre ses segments — jamais a cote de lui. */
   anchoredImages?: AnchoredImage<PublicBlock>[];
 }) {
   const imagesVisibles = visiblesDansLaPage(anchoredImages);
@@ -374,7 +374,7 @@ export default function PublicBlockView({
   // la rendre en plus a sa place dans le corps de la fiche la dupliquerait
   // ("en fond" ET "au fond de la page").
   //
-  // V2.1-10 lot 2 : cette duplication est desormais un CHOIX. Seul le mode
+  // V2.1-11 lot 2 : cette duplication est desormais un CHOIX. Seul le mode
   // « seulement en fond » retire l'image d'ici ; « en plus de la fiche » la
   // laisse aux deux endroits, ce que l'auteur voulait.
   if (block.blockType === "image" && !showsInPage(block.data as unknown as ImageBlockData)) {

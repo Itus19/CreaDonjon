@@ -30,7 +30,7 @@ import { z } from "zod";
  * quand `useAsWikiBackground` est coche.
  */
 /**
- * Ancrage explicite (V2.1-10) : `wrapMode` ne disait QUE le comportement du
+ * Ancrage explicite (V2.1-11) : `wrapMode` ne disait QUE le comportement du
  * texte, et la cible etait implicite — « le bloc suivant ». Trois defauts :
  * l'image restait bloc frere de sa cible (bordure orpheline, image demarrant
  * au-dessus du titre), reordonner les blocs changeait la cible en silence, et
@@ -69,7 +69,7 @@ export const zImageBlockData = z.object({
     .default(null),
   anchorFlow: z.enum(["float", "break"]).default("float"),
   /**
-   * V2.1-10 lot 3 : intensite de la parallaxe au defilement, en pourcentage
+   * V2.1-11 lot 3 : intensite de la parallaxe au defilement, en pourcentage
    * de la hauteur du cadre. **`0` eteint l'effet** — le curseur est son propre
    * interrupteur, il n'y a pas de case a cocher a cote. C'est aussi ce qui
    * permet a une image sans parallaxe de rester rendue cote serveur, sans un
@@ -84,7 +84,7 @@ export const zImageBlockData = z.object({
   sizePct: z.number().int().min(50).max(200).default(100),
   useAsWikiBackground: z.boolean().default(false),
   /**
-   * V2.1-10 lot 2 : n'a de sens qu'avec `useAsWikiBackground`. Le couple
+   * V2.1-11 lot 2 : n'a de sens qu'avec `useAsWikiBackground`. Le couple
    * forme les trois etats du fond de page — voir `src/core/images/
    * backgroundMode.ts`, qui est le seul endroit ou on les traduit. Defaut
    * `false` : un bloc pose avant ce lot garde son comportement exclusif

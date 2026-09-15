@@ -158,7 +158,7 @@ function BlockDataEditor({
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
   /** Coquille joueur (retour utilisateur) : "enlever les outils d'assistance IA" — jamais pour le MJ. */
   hideAiAssist?: boolean;
-  /** V2.1-10 : tous les blocs de la fiche, dans l'ordre d'affichage — le bloc `image` y choisit son hôte d'ancrage. */
+  /** V2.1-11 : tous les blocs de la fiche, dans l'ordre d'affichage — le bloc `image` y choisit son hôte d'ancrage. */
   siblings: BlockItem[];
 }) {
   switch (block.blockType) {
@@ -964,7 +964,7 @@ function SortableBlockCard({
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
   onBlur: (e: React.FocusEvent<HTMLDivElement>) => void;
   hideAiAssist?: boolean;
-  /** V2.1-10 : tous les blocs de la fiche, dans l'ordre d'affichage — transmis au bloc `image`, qui y choisit son hôte d'ancrage. */
+  /** V2.1-11 : tous les blocs de la fiche, dans l'ordre d'affichage — transmis au bloc `image`, qui y choisit son hôte d'ancrage. */
   siblings: BlockItem[];
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });

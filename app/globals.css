@@ -121,7 +121,7 @@ body {
  * fixe ici.
  */
 /*
- * Parallaxe d'une image de bloc (V2.1-10 lot 3, components/entities/public/
+ * Parallaxe d'une image de bloc (V2.1-11 lot 3, components/entities/public/
  * ParallaxImage.tsx). Le cadre a une hauteur definie — c'est ce qui permet a
  * l'image, plus haute que lui, d'y glisser sans jamais laisser de vide. En
  * contrepartie l'image est rognee : compromis assume, la parallaxe est pour
