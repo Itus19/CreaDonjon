@@ -2,11 +2,10 @@ import { describe, expect, it } from "vitest";
 import { canEditEntity, type CanEditEntityContext } from "./canEditEntity";
 import type { Viewer } from "@/src/core/visibility/types";
 
-const NEITHER: CanEditEntityContext = { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false, isOwnJournalEntry: false };
-const OWN_CHARACTER: CanEditEntityContext = { isOwnCharacter: true, isGranted: false, isOwnPrivateNotes: false, isOwnJournalEntry: false };
-const GRANTED: CanEditEntityContext = { isOwnCharacter: false, isGranted: true, isOwnPrivateNotes: false, isOwnJournalEntry: false };
-const OWN_NOTES: CanEditEntityContext = { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: true, isOwnJournalEntry: false };
-const OWN_JOURNAL_ENTRY: CanEditEntityContext = { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false, isOwnJournalEntry: true };
+const NEITHER: CanEditEntityContext = { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false };
+const OWN_CHARACTER: CanEditEntityContext = { isOwnCharacter: true, isGranted: false, isOwnPrivateNotes: false };
+const GRANTED: CanEditEntityContext = { isOwnCharacter: false, isGranted: true, isOwnPrivateNotes: false };
+const OWN_NOTES: CanEditEntityContext = { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: true };
 
 function viewer(partial: Partial<Extract<Viewer, { kind: "user" }>> = {}): Viewer {
   return { kind: "user", userId: "u1", worldRole: null, campaignRoles: {}, ...partial };
@@ -53,8 +52,13 @@ describe("canEditEntity — table de verite (V2-M3, Lot M)", () => {
     expect(canEditEntity({ kind: "anonymous" }, OWN_NOTES)).toBe(false);
   });
 
-  it("un utilisateur sans aucun role peut corriger sa propre entree du Livre de sessions (V2.1-3)", () => {
-    expect(canEditEntity(viewer(), OWN_JOURNAL_ENTRY)).toBe(true);
-    expect(canEditEntity({ kind: "anonymous" }, OWN_JOURNAL_ENTRY)).toBe(false);
+  // V2.1-15 : l'autrice d'une entree du Livre de sessions n'a plus AUCUN
+  // droit implicite ici — elle passe par un vrai `entity_grants`, donc par
+  // `GRANTED`. Ce test garde la porte fermee : si un cas propre au journal
+  // revenait un jour dans cette fonction, le MJ perdrait a nouveau la
+  // possibilite de retirer l'octroi depuis l'outil de gestion de campagne.
+  it("avoir cree une fiche ne donne aucun droit par lui-meme (le Livre de sessions passe par un octroi, V2.1-15)", () => {
+    expect(canEditEntity(viewer(), NEITHER)).toBe(false);
+    expect(canEditEntity(viewer(), GRANTED)).toBe(true);
   });
 });

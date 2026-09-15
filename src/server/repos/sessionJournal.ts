@@ -117,3 +117,27 @@ export async function listWrittenEntriesForWorld(supabase: TypedClient, worldId:
       ingameDate: row.ingame_date as unknown as GameDate,
     }));
 }
+
+/**
+ * Pose l'octroi d'edition de l'autrice sur l'entree qu'elle vient de creer
+ * (V2.1-15, migration 20260915190000). RPC plutot qu'un `insert` direct :
+ * `entity_grants_write` reste reservee au MJ, et cette fonction
+ * `security definer` est la seule exception — etroite, elle ne sait poser
+ * qu'une ligne pour l'appelante elle-meme, sur un devoir qui lui est
+ * reellement assigne.
+ *
+ * `false` (plutot qu'une erreur) quand les conditions ne sont pas reunies :
+ * l'appelant decide quoi en faire, et c'est `submitJournalEntry` qui sait
+ * que cela doit interrompre la redaction.
+ */
+export async function claimJournalEntryGrant(
+  supabase: TypedClient,
+  params: { assignmentId: string; entityId: string }
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("claim_journal_entry_grant", {
+    p_assignment_id: params.assignmentId,
+    p_entity_id: params.entityId,
+  });
+  if (error) throw new Error(error.message);
+  return data === true;
+}

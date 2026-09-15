@@ -154,7 +154,7 @@ describe.skipIf(!hasCreds)("resserrement de la RLS d'ecriture (integration, base
   ] as const;
 
   function ctxFor(profile: string) {
-    return { isOwnCharacter: profile === "ownCharacterPlayer", isGranted: profile === "grantedPlayer", isOwnPrivateNotes: false, isOwnJournalEntry: false };
+    return { isOwnCharacter: profile === "ownCharacterPlayer", isGranted: profile === "grantedPlayer", isOwnPrivateNotes: false };
   }
 
   async function canRenameEntity(client: SupabaseClient, name: string): Promise<boolean> {
@@ -230,8 +230,8 @@ describe.skipIf(!hasCreds)("resserrement de la RLS d'ecriture (integration, base
       .single();
     if (insertError) throw new Error(insertError.message);
 
-    expect(canEditEntity(viewerFor("plainPlayer"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: true, isOwnJournalEntry: false })).toBe(true);
-    expect(canEditEntity(viewerFor("outsider"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false, isOwnJournalEntry: false })).toBe(false);
+    expect(canEditEntity(viewerFor("plainPlayer"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: true })).toBe(true);
+    expect(canEditEntity(viewerFor("outsider"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false })).toBe(false);
 
     const byCreator = await clients.plainPlayer.from("entities").update({ name: "Mes notes (modifiees)" }).eq("id", notesEntity.id).select("id");
     if (byCreator.error) throw new Error(byCreator.error.message);
@@ -244,21 +244,45 @@ describe.skipIf(!hasCreds)("resserrement de la RLS d'ecriture (integration, base
     await admin.from("entities").delete().eq("id", notesEntity.id);
   });
 
-  it("entity_kind 'session_journal' : son autrice peut la corriger, un autre membre du monde ne peut pas (6e cas de canEditEntity, V2.1-3)", async () => {
+  // V2.1-15 : ce test portait sur le 6e cas de `canEditEntity` (« c'est mon
+  // entree du Livre de sessions »). Ce cas n'existe plus : l'autrice passe
+  // par un vrai `entity_grants`, et c'est precisement ce qui rend le bouton
+  // « Retirer » de l'outil de gestion de campagne operant sur elle. Le test
+  // verifie donc maintenant le cycle complet — sans octroi, avec, puis apres
+  // retrait — plutot que le seul verdict de depart.
+  it("entity_kind 'session_journal' : l'autrice n'ecrit que par un octroi, que le MJ peut lui reprendre (V2.1-15)", async () => {
     const { data: journalEntity, error: insertError } = await clients.plainPlayer
       .from("entities")
       .insert({ world_id: worldId, slug: "journal-plainplayer-test", name: "Ce que la taverne a vu", entity_kind: "session_journal", created_by: userIds.plainPlayer })
       .select("id")
       .single();
     if (insertError) throw new Error(insertError.message);
+    if (!journalEntity) throw new Error("entree de journal non creee");
+    const journalEntityId = journalEntity.id;
 
-    expect(canEditEntity(viewerFor("plainPlayer"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false, isOwnJournalEntry: true })).toBe(true);
-    expect(canEditEntity(viewerFor("outsider"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false, isOwnJournalEntry: false })).toBe(false);
+    async function renameByAuthor(name: string): Promise<number> {
+      const res = await clients.plainPlayer.from("entities").update({ name }).eq("id", journalEntityId).select("id");
+      if (res.error) throw new Error(res.error.message);
+      return res.data?.length ?? 0;
+    }
 
-    const byAuthor = await clients.plainPlayer.from("entities").update({ name: "Ce que la taverne a vu (corrige)" }).eq("id", journalEntity.id).select("id");
-    if (byAuthor.error) throw new Error(byAuthor.error.message);
-    expect(byAuthor.data?.length ?? 0).toBe(1);
+    // Avoir cree la fiche ne suffit plus, des deux cotes du miroir.
+    expect(canEditEntity(viewerFor("plainPlayer"), { isOwnCharacter: false, isGranted: false, isOwnPrivateNotes: false })).toBe(false);
+    expect(await renameByAuthor("Sans octroi")).toBe(0);
 
+    const { error: grantError } = await admin
+      .from("entity_grants")
+      .insert({ entity_id: journalEntity.id, user_id: userIds.plainPlayer, granted_by: userIds.campaignGm });
+    if (grantError) throw new Error(grantError.message);
+
+    expect(canEditEntity(viewerFor("plainPlayer"), { isOwnCharacter: false, isGranted: true, isOwnPrivateNotes: false })).toBe(true);
+    expect(await renameByAuthor("Ce que la taverne a vu (corrige)")).toBe(1);
+
+    // Le geste que l'outil de gestion de campagne declenche ("Retirer").
+    await admin.from("entity_grants").delete().eq("entity_id", journalEntity.id).eq("user_id", userIds.plainPlayer);
+    expect(await renameByAuthor("Apres retrait")).toBe(0);
+
+    // Un autre membre du monde n'a jamais rien pu, le MJ toujours tout.
     const byOtherMember = await clients.grantedPlayer.from("entities").update({ name: "Vole" }).eq("id", journalEntity.id).select("id");
     if (byOtherMember.error) throw new Error(byOtherMember.error.message);
     expect(byOtherMember.data?.length ?? 0).toBe(0);

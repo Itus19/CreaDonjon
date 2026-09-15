@@ -33,8 +33,10 @@ export async function canUserEditEntity(
     getEntityById(supabase, params.entityId),
   ]);
   const isOwnPrivateNotes = entity?.entity_kind === "notes" && entity.created_by === params.userId;
-  const isOwnJournalEntry = entity?.entity_kind === "session_journal" && entity.created_by === params.userId;
-  return canEditEntity(viewer, { isOwnCharacter, isGranted, isOwnPrivateNotes, isOwnJournalEntry });
+  // Plus de cas propre au Livre de sessions (V2.1-15) : l'autrice porte
+  // desormais un vrai `entity_grants`, donc `isGranted` la couvre — et le MJ
+  // peut le lui reprendre, ce qu'un test en dur ici ne permettait pas.
+  return canEditEntity(viewer, { isOwnCharacter, isGranted, isOwnPrivateNotes });
 }
 
 /**

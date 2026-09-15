@@ -9,6 +9,7 @@ import {
   listAssignmentsForCampaign,
   listPendingAssignmentsForUser,
   listWrittenEntriesForWorld,
+  claimJournalEntryGrant,
   type SessionJournalEntryRow,
   type WrittenJournalEntry,
 } from "@/src/server/repos/sessionJournal";
@@ -113,6 +114,13 @@ export async function submitJournalEntry(
     entityKind: SESSION_JOURNAL_KIND,
     aliases: [],
   });
+
+  // V2.1-15 : AVANT les blocs, jamais apres — `blocks_insert` appelle
+  // `app.can_edit_entity`, qui ne connait plus de cas propre au Livre de
+  // sessions. Sans cet octroi, l'autrice creerait sa fiche puis echouerait a
+  // y poser une seule ligne.
+  const granted = await claimJournalEntryGrant(supabase, { assignmentId: params.assignment.id, entityId: entity.id });
+  if (!granted) throw new Error("L'octroi d'edition n'a pas pu etre pose sur cette entree.");
 
   await insertBlock(supabase, {
     entityId: entity.id,

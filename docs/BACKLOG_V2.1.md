@@ -25,6 +25,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-10 | Deux traînes du dépassement de quota Vercel | `S` + `M` | **Fait** (15 septembre) — volet A **caduc, mesuré** : `npm ci` passe, npm 11.17 ne traite plus la peer optionnelle comme bloquante. Volet B : **quatre** chaînes vers `sharp` et non deux, les deux autres trouvées en vérifiant avant de coder. Mesuré : 79 fonctions portaient le binaire, il en reste 4 — les quatre routes qui téléversent |
 | V2.1-11 | Bloc image : ancrage explicite, fond de page à trois états, parallaxe | `L` | **Fait** (15 septembre) — trois lots. L'ancrage devient explicite et l'image entre DANS son bloc hôte, ce qui fait tomber ensemble la bordure orpheline et le décalage au-dessus du titre. Interface esquissée et manipulée avant d'écrire une ligne : la séance a déplacé le modèle de données |
 | V2.1-12 | Une seule peau de wiki, dans les layouts | `L` | **Fait** (15 septembre) — l'onglet Wiki joueur réimplémentait `BookSkin` et la copie n'avait pas emporté le fond de page. La coquille remonte dans les `layout.tsx` (par monde), l'enregistrement du fond reste dans la page (par fiche) : le sommaire cesse de se reconstruire, sur `/apercu` comme chez le joueur. `/partage` garde la sienne dans sa page, sa garde par mot de passe devant précéder tout chargement |
+| V2.1-15 | Le droit de l'autrice d'une entrée devient un octroi retirable | `M` | **Fait** (15 septembre) — né de V2.1-14 : le MJ ne pouvait pas reprendre l'édition d'une entrée du Livre de sessions, ce droit étant le 6ᵉ cas en dur de `can_edit_entity`. Il devient une vraie ligne `entity_grants`, donc visible et retirable depuis « Octrois d'édition » (ADR 0024) |
 | V2.1-14 | Lettrine et traits de séparation dans le bloc texte | `M` | **Fait** (15 septembre) — la présentation « livre » cesse d'être réservée aux fiches `session_journal` : elle devient deux options du bloc texte, disponibles partout. Le Livre de sessions redevient une catégorie de fiche du point de vue de la présentation, sans que son devoir ni son tri ne bougent |
 | V2.1-13 | Centrer le couple sommaire + texte du wiki | `S` | **Fait** (15 septembre) — le vide entre sommaire et texte tombe de ~300 px à 32 px sur un écran de 1920, et cesse de dépendre de la fenêtre : il était un reste, il devient une marge. Une borne exprimée dans les unités du contenu, écrite une seule fois pour les trois routes — premier encaissement de la fusion de V2.1-12 |
 
@@ -2605,3 +2606,83 @@ pour lui greffer les attributs de segment.
 - [x] Plus aucune branche `session_journal` dans le rendu du wiki public.
 - [x] Le bloc Séance s'ajoute via « + Bloc » et se rend dans le fil.
 - [x] Le devoir, le groupe du sommaire et le droit de l'autrice sont intacts.
+
+---
+
+## V2.1-15 — Le droit de l'autrice d'une entrée devient un octroi retirable · `M` — fait
+
+### Constat
+
+Né de V2.1-14, sur une remarque de l'auteur en relisant ce qu'on avait gardé :
+« il faudrait que je puisse enlever la permission d'édition du journal depuis
+l'outil de gestion de campagne aussi. Je crois que ça n'est pas encore le cas. »
+
+Ce n'était pas le cas. Le droit de l'autrice était le **6ᵉ cas en dur** de
+`app.can_edit_entity` (migration 20260913160000) : `entity_kind =
+'session_journal' AND created_by = auth.uid()`. L'outil de gestion de campagne
+possède pourtant depuis V2-M9 une section « Octrois d'édition » qui liste
+`entity_grants` avec un bouton « Retirer » — le droit de l'autrice n'y
+figurait pas, et ne figurait nulle part.
+
+Une joueuse qui quitte la table, un texte qu'on veut figer après relecture :
+rien ne permettait de fermer la porte.
+
+### Décision
+
+Le raisonnement complet et la règle générale qui en sort sont dans
+**`docs/adr/0024-droits-implicites-vs-octrois-explicites.md`**. En résumé : le
+droit devient une vraie ligne `entity_grants`, posée à la création de l'entrée,
+donc couverte par le 4ᵉ cas — et le bouton « Retirer » existant fonctionne sur
+elle comme sur n'importe quel autre octroi.
+
+`entity_grants_write` n'est pas assouplie pour autant. L'insertion passe par
+`public.claim_journal_entry_grant`, `security definer`, étroite par
+construction : aucun `user_id` en paramètre, une seule ligne, pour l'appelante
+elle-même, sur une fiche qu'elle vient de créer, et seulement si un devoir **en
+attente** lui est réellement assigné. `granted_by` est le MJ qui a assigné —
+ce qui s'est littéralement passé, et ce qui rend la ligne lisible dans la liste.
+
+**Le cas 5 (notes) reste**, et la différence est le critère même de l'ADR : une
+fiche de notes privée n'est visible d'aucun autre compte, donc aucun MJ n'a
+d'octroi à lui accorder ni à lui reprendre.
+
+### Ce qu'il fallait ne pas rater
+
+- **L'ordre dans `submitJournalEntry`.** `blocks_insert` appelle
+  `app.can_edit_entity` : l'octroi doit être posé **entre** la création de la
+  fiche et celle des deux blocs. Posé après, l'autrice aurait créé sa fiche puis
+  échoué à y écrire une seule ligne.
+- **Les entrées déjà rédigées.** La migration les reprend (`insert … select …
+  on conflict do nothing`) : sans cela, leurs autrices perdaient leur droit à
+  l'instant de l'application.
+- **Le schéma de la fonction.** `public` et non `app` — PostgREST n'expose que
+  `public`, et c'est le service qui l'appelle par `supabase.rpc()`. Même motif
+  exact que `public.soft_delete_entity` (migration 20260902150011), déjà
+  documenté à l'époque après un PGRST202 en direct.
+
+### Le test devient plus exigeant
+
+`canEditEntityRls.integration.test.ts` vérifiait le verdict de départ (« son
+autrice peut la corriger »). Il vérifie maintenant le **cycle entier** sur la
+base réelle : sans octroi l'autrice ne peut rien, avec l'octroi elle peut,
+après le retrait elle ne peut plus — le geste exact que déclenche le bouton de
+l'outil de gestion de campagne. Le miroir pur (`canEditEntity.test.ts`) garde
+de son côté la porte fermée : « avoir créé une fiche ne donne aucun droit par
+lui-même ».
+
+### Critères
+
+- [x] Le droit de l'autrice apparaît dans « Octrois d'édition ».
+- [x] Le bouton « Retirer » lui reprend réellement l'édition (fiche ET blocs).
+- [x] Une autrice qui commence à écrire peut poser ses blocs sans rien de plus.
+- [x] Les entrées déjà rédigées gardent leur autrice éditrice.
+- [x] `entity_grants_write` reste réservée au MJ ; rien d'autre ne s'est ouvert.
+- [x] Migration appliquée sur la base distante (15 septembre, par l'auteur).
+
+`npm run typecheck && npm run lint && npm run test` passent (1 044 tests, 119
+fichiers — les tests d'intégration inclus). Avant l'application de la
+migration, `canEditEntityRls.integration.test.ts` échouait sur son premier
+pas : « sans octroi, l'autrice ne peut rien » alors qu'elle pouvait encore.
+Cet échec était la mesure exacte de l'écart entre le code et la base, et il
+est tombé à la seconde où la migration est passée — c'est la meilleure preuve
+que ce test vaut quelque chose.

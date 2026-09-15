@@ -13,8 +13,6 @@ export interface CanEditEntityContext {
   isGranted: boolean;
   /** Vrai si cette entite est de type `notes` ET a ete creee par ce viewer (`entities.created_by`) — V2-M7b, coquille joueur : une fiche de notes privee, jamais visible d'un autre compte (voir `getEntityTree`). */
   isOwnPrivateNotes: boolean;
-  /** Vrai si cette entite est de type `session_journal` ET a ete creee par ce viewer — V2.1-3 : l'autrice d'une entree du Livre de sessions garde le droit de la corriger ensuite, meme motif que `isOwnPrivateNotes`. */
-  isOwnJournalEntry: boolean;
 }
 
 /**
@@ -37,10 +35,18 @@ export interface CanEditEntityContext {
  *    ouvert a tout membre du monde) laisserait un joueur creer sa fiche de
  *    notes mais jamais y toucher ensuite : aucun des quatre cas ci-dessus
  *    ne couvre "je l'ai creee moi-meme".
- * 6. C'est SA PROPRE entree du Livre de sessions (`entity_kind =
- *    'session_journal'`, `created_by = auth.uid()`) — meme raison que le
- *    cas 5 : l'entite n'existe qu'une fois que l'autrice assignee commence
- *    a ecrire, aucun des cas 1-4 ne la couvre ensuite.
+ *
+ * Il y a eu un 6e cas (V2.1-3) : sa propre entree du Livre de sessions.
+ * Retire en V2.1-15 — un droit en dur ici est un droit que le MJ ne peut
+ * pas reprendre, et il n'apparaissait nulle part dans « Octrois d'edition ».
+ * L'autrice recoit desormais une vraie ligne `entity_grants` a la creation
+ * de son entree (`app.claim_journal_entry_grant`), donc le cas 4 la couvre
+ * — et le bouton « Retirer » de l'outil de gestion de campagne fonctionne
+ * sur elle comme sur n'importe quel autre octroi.
+ *
+ * Le cas 5 (notes) ne pouvait pas suivre le meme chemin : une fiche de
+ * notes privee n'est visible d'aucun autre compte, donc aucun MJ n'a
+ * d'octroi a lui accorder ni a lui reprendre.
  *
  * Un visiteur anonyme n'ecrit jamais rien.
  */
@@ -48,5 +54,5 @@ export function canEditEntity(viewer: Viewer, ctx: CanEditEntityContext): boolea
   if (viewer.kind === "anonymous") return false;
   if (viewer.worldRole && EDITOR_WORLD_ROLES.has(viewer.worldRole)) return true;
   if (Object.values(viewer.campaignRoles).includes("gm")) return true;
-  return ctx.isOwnCharacter || ctx.isGranted || ctx.isOwnPrivateNotes || ctx.isOwnJournalEntry;
+  return ctx.isOwnCharacter || ctx.isGranted || ctx.isOwnPrivateNotes;
 }

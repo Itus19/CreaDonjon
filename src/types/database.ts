@@ -2602,6 +2602,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_journal_entry_grant: { Args: { p_assignment_id: string; p_entity_id: string }; Returns: boolean }
       delete_own_account: { Args: never; Returns: undefined }
       entity_blocks_full: {
         Args: { p_entity_id: string }
