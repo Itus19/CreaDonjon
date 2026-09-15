@@ -17,8 +17,34 @@ const nextConfig: NextConfig = {
   // qu'il peut analyser statiquement. Sans cette inclusion manuelle, le
   // dossier @img/sharp-libvips-linux-x64 (qui contient libvips-cpp.so)
   // n'est simplement pas copie dans la fonction deployee.
+  //
+  // Cette inclusion est limitee aux quatre routes qui executent reellement
+  // `sharp`. Elle valait auparavant `"/**"`, donc pour les 208 fonctions du
+  // deploiement : 78 Mo de binaires natifs recopies dans chacune, ~16 Go de
+  // stockage de fonctions par deploiement. C'est ce qui a fait depasser le
+  // quota Vercel ("Functions Storage 14,67 GB / 10 GB") — la taille du code
+  // n'y est pour rien. Mesure sur un build reel : 16,8 Go de fichiers traces
+  // avant, 1,6 Go apres.
+  //
+  // Ces quatre routes sont les seules a atteindre un `await import("sharp")`
+  // a l'execution (uploadAsset, uploadBlockImage, uploadEntityPortrait,
+  // uploadBackgroundImage). Ailleurs le module est bien dans le graphe
+  // d'imports — `app/layout.tsx` finit par tirer `backgroundImages` — mais
+  // l'import dynamique ne se declenche jamais, donc le binaire n'a aucune
+  // raison d'etre copie.
+  //
+  // Le joker `*` remplace le segment dynamique : ecrire la clef
+  // `/api/blocks/[blockId]/image/route` ne marche PAS (les crochets sont lus
+  // comme une classe de caracteres de glob, pas comme un segment Next) et
+  // echoue silencieusement — verifie en lisant les `.nft.json` du build.
+  //
+  // Si un nouveau chemin d'upload apparait, il doit etre ajoute ici, sinon il
+  // echouera en production avec ERR_DLOPEN_FAILED (et jamais en local).
   outputFileTracingIncludes: {
-    "/**": ["./node_modules/@img/**/*"],
+    "/api/worlds/*/assets/route": ["./node_modules/@img/**/*"],
+    "/api/blocks/*/image/route": ["./node_modules/@img/**/*"],
+    "/api/entities/*/portrait/route": ["./node_modules/@img/**/*"],
+    "/api/settings/background/route": ["./node_modules/@img/**/*"],
   },
   /**
    * V3-R4a — les fonds fournis avec l'application sont servis depuis
