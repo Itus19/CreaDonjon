@@ -26,11 +26,34 @@ describe("registry des blocs de wiki", () => {
     expect(validateBlockData("image", data)).toEqual({
       ...data,
       wrapMode: "intercalate",
+      // V2.1-10 : un bloc pose avant l'ancrage explicite reste dans le fil de
+      // la fiche. `wrapMode` survit sans etre reecrit — c'est `planImageAnchors`
+      // qui le traduit au rendu, jamais une migration.
+      placement: "flux",
+      anchor: null,
+      anchorFlow: "contourne",
       align: "center",
       sizePct: 100,
       useAsWikiBackground: false,
       backgroundBlurPx: 20,
       fadeMs: 600,
+    });
+  });
+
+  it("valide une image ancree dans un bloc texte (cote par defaut : avant le segment)", () => {
+    const data = {
+      __v: 1,
+      url: "https://example.com/bram.png",
+      caption: "Bram à la forge",
+      placement: "ancree",
+      anchor: { blockId: "b-1", segmentId: "s-2" },
+      anchorFlow: "coupe",
+    };
+    expect(validateBlockData("image", data)).toMatchObject({
+      caption: "Bram à la forge",
+      placement: "ancree",
+      anchor: { blockId: "b-1", segmentId: "s-2", position: "before" },
+      anchorFlow: "coupe",
     });
   });
 

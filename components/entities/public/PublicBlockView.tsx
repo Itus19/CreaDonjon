@@ -1,6 +1,7 @@
-import { createElement } from "react";
+import { createElement, Fragment, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import type { AnchoredImage, AnchorFlow } from "@/src/core/images/blockAnchor";
 import type { Segment, SegmentContentNode } from "@/src/core/schemas/entities/segments";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
@@ -104,29 +105,72 @@ function renderNode(
   return <span key={key}>{content}</span>;
 }
 
+/**
+ * V2.1-10 : les images ancrees a CE bloc s'inserent entre ses segments, pas
+ * a cote du bloc. `segmentId: null` remonte en tete, avant le premier
+ * segment. L'insertion passe par un `Fragment` sans balise, pour que
+ * `.journal-entry .rich-text-content > p:first-of-type` (la lettrine,
+ * app/globals.css) continue de viser le bon paragraphe.
+ */
 function PublicTextBlock({
   data,
   textRefs,
   hrefBase,
   ruleHrefBase,
+  anchoredImages,
 }: {
   data: TextBlockData;
   textRefs: Record<string, { name: string; slug: string }> | undefined;
   hrefBase: string;
   ruleHrefBase: string | undefined;
+  anchoredImages: AnchoredImage<PublicBlock>[];
 }) {
+  const atHead = anchoredImages.filter((image) => image.segmentId === null);
+  const around = new Map<string, { before: AnchoredImage<PublicBlock>[]; after: AnchoredImage<PublicBlock>[] }>();
+  for (const image of anchoredImages) {
+    if (image.segmentId === null) continue;
+    const slot = around.get(image.segmentId) ?? { before: [], after: [] };
+    slot[image.position].push(image);
+    around.set(image.segmentId, slot);
+  }
+
   return (
     <div className="rich-text-content">
+      {atHead.map(renderAnchoredImage)}
       {data.segments.map((segment) => {
         const tag = TAG_BY_BLOCK_TYPE[segment.blockType] ?? "p";
-        return createElement(
+        const slot = around.get(segment.id);
+        const rendered = createElement(
           tag,
-          { key: segment.id, "data-align": segment.align },
+          { "data-align": segment.align },
           segment.content.map((node, i) => renderNode(node, i, textRefs, hrefBase, ruleHrefBase)),
+        );
+        if (!slot) return <Fragment key={segment.id}>{rendered}</Fragment>;
+        return (
+          <Fragment key={segment.id}>
+            {slot.before.map(renderAnchoredImage)}
+            {rendered}
+            {slot.after.map(renderAnchoredImage)}
+          </Fragment>
         );
       })}
     </div>
   );
+}
+
+/**
+ * Une image ancree se rend SANS l'habillage de bloc (`border-b py-4`) : c'est
+ * lui qui laissait une bordure orpheline et faisait demarrer l'image au-dessus
+ * du titre de sa cible (V2.1-10).
+ *
+ * Meme garde que `PublicBlockView` plus bas : une image active comme fond de
+ * page est deja peinte par `WikiBackgroundProvider`, la rendre ici la
+ * dupliquerait.
+ */
+function renderAnchoredImage(anchored: AnchoredImage<PublicBlock>) {
+  const data = anchored.block.data as unknown as ImageBlockData;
+  if (data.useAsWikiBackground) return null;
+  return <PublicImageBlock key={anchored.block.id} data={data} flow={anchored.flow} />;
 }
 
 function PublicInfoboxBlock({ data }: { data: InfoboxBlockData }) {
@@ -145,22 +189,34 @@ function PublicInfoboxBlock({ data }: { data: InfoboxBlockData }) {
 /** Largeur de reference a 100% (V2-G12) — meme mecanique que le portrait (`PortraitUpload.tsx`/`PublicPortrait.tsx`), une autre reference car une image de bloc peut occuper toute la colonne de prose (`max-w-[70ch]`), pas juste une case de cote. */
 const BASE_IMAGE_WIDTH_PX = 480;
 
-export function PublicImageBlock({ data }: { data: ImageBlockData }) {
+/**
+ * `flow` absent = image en mode flux : un bloc a part entiere, pleine
+ * largeur de la colonne, jamais flottante. `"contourne"` la fait flotter et
+ * le texte du bloc hote s'ecoule autour ; `"coupe"` la pose entre deux
+ * segments, sur toute la largeur.
+ *
+ * La largeur passe par une propriete personnalisee plutot que par
+ * `style={{ width }}` : un style en ligne l'emporterait sur les classes, et
+ * le repli mobile (`max-sm:`) ne pourrait pas la reprendre.
+ */
+export function PublicImageBlock({ data, flow }: { data: ImageBlockData; flow?: AnchorFlow }) {
   if (!data.url) return null;
   const widthPx = (BASE_IMAGE_WIDTH_PX * data.sizePct) / 100;
-  const wrapping = data.wrapMode === "wrap";
+  // Sous 640px, une colonne de texte a cote d'une image de 480px est
+  // illisible : le flottement est abandonne et l'image reprend toute la
+  // largeur (retour utilisateur V2.1-10).
+  const floating =
+    flow === "contourne"
+      ? `mb-3 max-sm:float-none max-sm:mx-0 max-sm:w-full ${data.align === "left" ? "float-left mr-4 max-sm:mr-0" : "float-right ml-4 max-sm:ml-0"}`
+      : data.align === "left"
+        ? "items-start"
+        : data.align === "right"
+          ? "items-end ml-auto"
+          : "items-center mx-auto";
   return (
     <figure
-      className={`flex flex-col gap-1.5 ${
-        wrapping
-          ? `${data.align === "left" ? "float-left mr-4" : "float-right ml-4"} mb-3`
-          : data.align === "left"
-            ? "items-start"
-            : data.align === "right"
-              ? "items-end ml-auto"
-              : "items-center mx-auto"
-      }`}
-      style={{ width: `${widthPx}px`, maxWidth: "100%" }}
+      className={`flex w-[var(--img-w)] max-w-full flex-col gap-1.5 ${floating} ${flow === "coupe" ? "my-3" : ""}`}
+      style={{ "--img-w": `${widthPx}px` } as CSSProperties & Record<`--${string}`, string>}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={data.url} alt={data.caption} loading="lazy" decoding="async" className="w-full rounded-md object-cover" />
@@ -272,11 +328,14 @@ export default function PublicBlockView({
   block,
   hrefBase,
   ruleHrefBase,
+  anchoredImages = [],
 }: {
   block: PublicBlock;
   hrefBase: string;
   /** V2.1-1 : base des liens vers une fiche de regle (ex. `/m/[worldSlug]/joueur/regles`) — absent sur le partage anonyme (`/partage`, `/apercu`), aucune page de regle n'y existe pour un visiteur non authentifie. */
   ruleHrefBase?: string;
+  /** V2.1-10 : images ancrees DANS ce bloc (`planImageAnchors`), a inserer entre ses segments — jamais a cote de lui. */
+  anchoredImages?: AnchoredImage<PublicBlock>[];
 }) {
   // Retour utilisateur (V2-G13) : une image active comme fond de page est
   // deja rendue par WikiBackgroundProvider (position fixed, plein ecran) —
@@ -293,7 +352,13 @@ export default function PublicBlockView({
     return null;
   }
   return (
-    <div className="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
+    // `flow-root` seulement quand ce bloc heberge une image : il contient le
+    // flottement a l'interieur du bloc, pour qu'une image plus haute que son
+    // texte ne deborde pas sur le bloc suivant. Pose sans condition, il
+    // changerait la fusion des marges de TOUS les blocs.
+    <div
+      className={`border-b border-edge/60 py-4 first:pt-0 last:border-b-0 ${anchoredImages.length > 0 ? "flow-root" : ""}`}
+    >
       {/* Retour utilisateur : le titre du bloc (souvent juste "Image") est
           redondant avec l'image/la legende elle-meme sur le wiki public —
           jamais affiche pour ce type, contrairement a l'editeur ou il
@@ -305,6 +370,7 @@ export default function PublicBlockView({
           textRefs={block.textRefs}
           hrefBase={hrefBase}
           ruleHrefBase={ruleHrefBase}
+          anchoredImages={anchoredImages}
         />
       )}
       {block.blockType === "infobox" && <PublicInfoboxBlock data={block.data as unknown as InfoboxBlockData} />}

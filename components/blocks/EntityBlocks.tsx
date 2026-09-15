@@ -137,6 +137,7 @@ function BlockDataEditor({
   characterData,
   onBlockRefreshed,
   hideAiAssist,
+  siblings,
 }: {
   block: BlockItem;
   onChange: (data: unknown) => void;
@@ -157,6 +158,8 @@ function BlockDataEditor({
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
   /** Coquille joueur (retour utilisateur) : "enlever les outils d'assistance IA" — jamais pour le MJ. */
   hideAiAssist?: boolean;
+  /** V2.1-10 : tous les blocs de la fiche, dans l'ordre d'affichage — le bloc `image` y choisit son hôte d'ancrage. */
+  siblings: BlockItem[];
 }) {
   switch (block.blockType) {
     case "text":
@@ -178,7 +181,14 @@ function BlockDataEditor({
         <InfoboxBlockEditor data={block.data as InfoboxBlockData} onChange={(d) => onChange(d)} />
       );
     case "image":
-      return <ImageBlockEditor blockId={block.id} data={block.data as ImageBlockData} onChange={(d) => onChange(d)} />;
+      return (
+        <ImageBlockEditor
+          blockId={block.id}
+          data={block.data as ImageBlockData}
+          onChange={(d) => onChange(d)}
+          siblings={siblings}
+        />
+      );
     case "custom_table":
       return (
         <CustomTableBlockEditor
@@ -814,6 +824,7 @@ export default function EntityBlocks({
               onBlockRefreshed={handleBlockRefreshed}
               onBlur={handleBlockBlur(block.id)}
               hideAiAssist={hideAiAssist}
+              siblings={sortedBlocks}
             />
           ))}
         </SortableContext>
@@ -920,6 +931,7 @@ function SortableBlockCard({
   onBlockRefreshed,
   onBlur,
   hideAiAssist,
+  siblings,
 }: {
   block: BlockItem;
   index: number;
@@ -952,6 +964,8 @@ function SortableBlockCard({
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
   onBlur: (e: React.FocusEvent<HTMLDivElement>) => void;
   hideAiAssist?: boolean;
+  /** V2.1-10 : tous les blocs de la fiche, dans l'ordre d'affichage — transmis au bloc `image`, qui y choisit son hôte d'ancrage. */
+  siblings: BlockItem[];
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
@@ -1110,6 +1124,7 @@ function SortableBlockCard({
             characterData={characterBlock?.data as CharacterBlockData | undefined}
             onBlockRefreshed={onBlockRefreshed}
             hideAiAssist={hideAiAssist}
+            siblings={siblings}
           />
         )
       )}

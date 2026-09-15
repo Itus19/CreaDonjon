@@ -1,9 +1,9 @@
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import type { EntitySummary } from "@/src/server/repos/entities";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
-import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import type { SessionJournalMetaBlockData } from "@/src/core/schemas/blocks/sessionJournalMeta";
 import { planMusicAttachments } from "@/src/core/music/blockAttachment";
+import { planImageAnchors } from "@/src/core/images/blockAnchor";
 import type { PublicBlock, PublicRelation } from "@/src/server/services/publicShare";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
 import { weekdayNameForDate } from "@/src/core/calendar/weekday";
@@ -18,12 +18,13 @@ import MentionedIn from "@/components/entities/MentionedIn";
  * `/partage/[token]/[entitySlug]` et `/m/[worldSlug]/apercu/[entitySlug]`,
  * qui ne different que par le bandeau de previsualisation ajoute autour.
  *
- * Deux mecanismes de contournement de texte independants, jamais en
- * cascade sur plus d'un bloc (retour utilisateur) :
+ * Deux mecanismes de contournement de texte independants :
  * - le portrait flotte, le premier bloc (s'il s'agit de texte) s'ecoule
  *   autour, apres les alias/relations ;
- * - un bloc `image` en "retour a la ligne" flotte, SEUL le bloc qui le
- *   suit immediatement s'ecoule autour — jamais les blocs suivants.
+ * - une image ancree (V2.1-10) entre DANS son bloc hote, avant le segment
+ *   vise — elle n'est plus un bloc frere pose juste avant sa cible. C'est
+ *   ce qui supprime la bordure orpheline et le decalage au-dessus du titre
+ *   que produisait l'ancien "retour a la ligne".
  */
 export default function PublicEntityBody({
   entity,
@@ -51,9 +52,14 @@ export default function PublicEntityBody({
   // raison — ils ne s'affichent plus nulle part, seul un bouton subsiste, a
   // cote du nom de la fiche (choix de l'auteur : un endroit, toujours le
   // meme, quel que soit l'endroit ou le bloc a ete range).
-  const { contentBlocks, attachments: musicAttachments } = planMusicAttachments(
+  const { contentBlocks: afterMusic, attachments: musicAttachments } = planMusicAttachments(
     blocks.filter((b) => b.blockType !== "session_journal_meta")
   );
+
+  // V2.1-10 : apres la musique, jamais avant — une image ancree a un bloc
+  // musique viserait une cible qui n'existe plus dans le fil, et doit donc
+  // retomber dans le flux comme n'importe quelle cible perdue.
+  const { contentBlocks, anchors } = planImageAnchors(afterMusic);
 
   const [firstBlock, ...afterFirst] = contentBlocks;
   const firstBlockWraps = firstBlock?.blockType === "text";
@@ -99,12 +105,29 @@ export default function PublicEntityBody({
         )}
         {!isJournalEntry && <PublicRelations relations={relations} hrefBase={hrefBase} />}
         <MentionedIn entityId={entity.id} hrefBase={hrefBase} />
-        {firstBlockWraps && <PublicBlockView block={firstBlock} hrefBase={hrefBase} ruleHrefBase={ruleHrefBase} />}
+        {firstBlockWraps && (
+          <PublicBlockView
+            block={firstBlock}
+            hrefBase={hrefBase}
+            ruleHrefBase={ruleHrefBase}
+            anchoredImages={anchors[firstBlock.id]}
+          />
+        )}
       </div>
 
       {contentBlocks.length === 0 && <p className="mt-4 text-sm text-ink-muted">Aucun contenu public pour cette fiche.</p>}
       {restBlocks.length > 0 && (
-        <div className="mt-4 flex flex-col">{renderWrappedBlocks(restBlocks, hrefBase, ruleHrefBase)}</div>
+        <div className="mt-4 flex flex-col">
+          {restBlocks.map((block) => (
+            <PublicBlockView
+              key={block.id}
+              block={block}
+              hrefBase={hrefBase}
+              ruleHrefBase={ruleHrefBase}
+              anchoredImages={anchors[block.id]}
+            />
+          ))}
+        </div>
       )}
       {metaBlock && <SessionJournalFooter block={metaBlock} />}
     </div>
@@ -134,25 +157,3 @@ function SessionJournalFooter({ block }: { block: PublicBlock }) {
   return <p className="journal-entry-meta">{parts.join(" · ")}</p>;
 }
 
-function renderWrappedBlocks(blocks: PublicBlock[], hrefBase: string, ruleHrefBase: string | undefined) {
-  const nodes: React.ReactNode[] = [];
-  let i = 0;
-  while (i < blocks.length) {
-    const block = blocks[i];
-    const isWrappingImage = block.blockType === "image" && (block.data as unknown as ImageBlockData).wrapMode === "wrap";
-    const next = blocks[i + 1];
-    if (isWrappingImage) {
-      nodes.push(
-        <div key={block.id} className="flow-root">
-          <PublicBlockView block={block} hrefBase={hrefBase} ruleHrefBase={ruleHrefBase} />
-          {next && <PublicBlockView block={next} hrefBase={hrefBase} ruleHrefBase={ruleHrefBase} />}
-        </div>
-      );
-      i += next ? 2 : 1;
-    } else {
-      nodes.push(<PublicBlockView key={block.id} block={block} hrefBase={hrefBase} ruleHrefBase={ruleHrefBase} />);
-      i += 1;
-    }
-  }
-  return nodes;
-}

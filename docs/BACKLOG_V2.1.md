@@ -23,6 +23,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-8 | `onSaveNow` rejoint le contexte d'enregistrement | `S` | **Fait** (14 septembre) — la traîne consignée en fin de V2.1-7 : le bloc carte gardait le correctif ponctuel d'avant l'ADR 0023. Remplacement mécanique, comportement mesuré identique avant/après |
 | V2.1-9 | Un test d'intégration à la marge trop mince | `S` | **Fait** (14 septembre, avant d'être écrit) — `homebrewWeapon.integration.test.ts` échouait par intermittence sur le délai de 5 s de Vitest. Corrigé dans la foulée de V2.1-6 sans qu'aucun ticket ne le porte ; consigné ici après coup |
 | V2.1-10 | Deux traînes du dépassement de quota Vercel | `S` + `M` | **Ouvert** (15 septembre) — nés de l'instruction du quota Vercel dépassé (`849bd4e`), tous deux hors du correctif lui-même : `npm ci` refuse de tourner sur un lock désynchronisé, et 759 Mo de binaires `sharp` sont encore recopiés dans 75 fonctions qui ne l'appellent jamais |
+| V2.1-11 | Bloc image : ancrage explicite, fond de page à trois états, parallaxe | `L` | **Ouvert** (14 septembre) — le mode « retour à la ligne » laisse l'image bloc frère de sa cible : bordure orpheline et image qui démarre au-dessus du titre. Esquisse d'interface validée avec l'auteur avant d'écrire la moindre ligne |
 
 ---
 
@@ -1793,6 +1794,214 @@ Les 14,67 Go déjà consommés ne se libèrent pas tout seuls : le quota compte
 les déploiements **conservés**, pas seulement le dernier. La suppression des
 anciens déploiements se fait dans l'interface Vercel, à la main, et ne peut
 pas être portée par un ticket de ce dépôt.
+## V2.1-11 — Bloc image : ancrage explicite, fond de page à trois états, parallaxe · `L` — ouvert
+
+### Constat
+
+Le mode « retour à la ligne » du bloc image (V2-G12) n'insère jamais l'image
+dans le bloc qu'elle doit accompagner : il la laisse **bloc frère**, juste
+avant sa cible, et compte sur le flottement CSS pour que le texte suivant
+l'enrobe (`renderWrappedBlocks`, `components/entities/public/PublicEntityBody.tsx`).
+
+Deux défauts en découlent, visibles sur une entrée du Journal de session :
+
+- **Une ligne de séparation orpheline.** Le bloc image passe par le même
+  habillage que tous les autres (`PublicBlockView`, `border-b border-edge/60
+  py-4`). La `<figure>` flottant, elle sort de ce conteneur : il reste une
+  `div` **vide** de 32 px avec sa bordure basse. Un trait qui ne sépare rien.
+- **L'image démarre au-dessus du titre.** Le point d'ancrage du flottement
+  est le début de cette div vide, donc ~32 px avant le bloc texte — avant
+  son titre. Structurellement, l'image ne *peut pas* commencer au niveau du
+  titre : elle est placée avant lui dans le flux.
+
+Un troisième défaut, moins visible mais plus grave à l'usage : la cible est
+**implicite** (« le bloc suivant »). Réordonner les blocs change en silence
+quel texte enrobe l'image.
+
+Enfin, `useAsWikiBackground` est aujourd'hui **exclusif** : une image cochée
+comme fond de page disparaît entièrement du corps de la fiche
+(`PublicBlockView` renvoie `null`). L'auteur veut les trois combinaisons.
+
+### Décisions prises avec l'auteur (14 septembre)
+
+Esquisse d'interface construite et manipulée avant d'écrire du code. Quatre
+points tranchés :
+
+1. **Ancrage explicite, pas de détection positionnelle.** Une liste
+   déroulante des blocs de la fiche remplace « le bloc suivant ».
+2. **Position par crans discrets, jamais en pourcentage.** Un flottement CSS
+   s'accroche au point du flux où il est inséré : « placer à 40 % de la
+   hauteur » n'existe pas. L'unité honnête est le **segment** — qui porte
+   déjà un `id` stable (`zSegment`, `src/core/schemas/entities/segments.ts`).
+   Un curseur à N+1 crans, dont l'étiquette cite le texte réel du segment
+   (« avant "Elle ne comprend pas…" »), plutôt qu'un numéro à compter.
+3. **Trois comportements, pas deux.** Bloc autonome / ancrée avec texte qui
+   contourne / ancrée en coupant le texte sur toute la largeur. Le troisième
+   est un vrai besoin exprimé, pas une généralisation spéculative.
+4. **Mini-carte d'aperçu dans l'éditeur**, faite dès ce ticket et non après :
+   c'est elle qui supprime l'incertitude sur le point de chute de l'image.
+
+L'interface sépare enfin deux questions que les pastilles actuelles
+`Intercaler`/`Retour à la ligne` confondent : *où est l'image* et *comment le
+texte réagit*. C'est la cause de la surprise à l'usage — on choisit un
+comportement de texte et on obtient un déplacement.
+
+Les contrôles se ferment en cascade : bloc autonome éteint position et
+comportement ; texte qui contourne retire `Centre` de l'alignement au lieu de
+l'accepter puis de le réécrire en silence (`ImageBlockEditor.tsx` le fait
+aujourd'hui) ; fond de page seul éteint toute la section emplacement.
+
+### Interface retenue
+
+Trois esquisses manipulées successivement avec l'auteur, la dernière portant
+sur le seul dessin des déclencheurs de liste.
+
+**Règle de forme : choix discret = liste, valeur continue = curseur.** Les
+pastilles `Intercaler`/`Retour à la ligne` disparaissent donc entièrement,
+y compris pour l'alignement et le fond de page — une pastille restante
+serait l'exception qui fait réfléchir.
+
+**Toutes les listes passent par `components/shared/Dropdown.tsx`**, dans son
+apparence actuelle (bordure fine, `bg-transparent`, `size="md"`). La première
+esquisse utilisait des `<select>` natifs, ce que `docs/CHARTE-UI.md` §3
+interdit explicitement — le menu d'un `<select>` est peint par le navigateur
+et ne suivra jamais les jetons. Trois variantes ont été proposées (champ en
+creux, rangée de réglage, valeur seule en ambre) ; **l'auteur retient
+l'existant**. Conséquence utile : `Dropdown` n'est pas touché, donc ce ticket
+ne modifie aucun composant partagé.
+
+**Disposition, cinq rangées** au lieu de sept — `Fond de page` seul en haut
+(c'est le portier de la cascade, l'apparier avec un contrôle qu'il éteint
+donnerait une rangée à moitié grisée), puis `Emplacement`, puis `Position`,
+puis les paires `Comportement` + `Alignement` et `Taille` + `Parallaxe`.
+Chaque paire réunit deux contrôles de même niveau de cascade et de même
+nature.
+
+### Modèle de données
+
+Champs **additifs** sur `zImageBlockData` (`src/core/schemas/blocks/image.ts`),
+`__v` inchangé à `1` : aucune migration de données, aucun bloc existant
+invalidé.
+
+```ts
+placement: z.enum(["flux", "ancree"]).default("flux"),
+anchor: z.object({
+  blockId: z.string(),
+  segmentId: z.string().nullable(),   // null = en tete du bloc
+}).nullable().default(null),
+anchorFlow: z.enum(["contourne", "coupe"]).default("contourne"),
+alsoShowInFlow: z.boolean().default(false),   // n'a de sens qu'avec useAsWikiBackground
+parallaxPct: z.number().int().min(0).max(40).default(0),   // 0 = aucun effet
+```
+
+**`anchor.position` ajouté en cours de lot 1** (`"before" | "after"`, défaut
+`"before"`). L'esquisse validée par l'auteur portait un dernier cran « à la
+fin du bloc », et un ancrage « avant tel segment » ne sait pas l'exprimer :
+aucune position ne suit le dernier segment. Un bloc autonome posé juste après
+n'est pas équivalent — il porte son propre cadre de bloc. Le champ ne sert
+qu'à ce cran ; il est oublié quand le segment visé disparaît, puisque « en
+tête » n'a pas d'« après ».
+
+`wrapMode` n'apparaît plus dans l'interface mais **reste lu** : une fonction
+pure `planImageAnchors(blocks)` traduit l'ancien `wrapMode: "wrap"` en
+« ancrée au premier segment du bloc suivant, texte qui contourne ». Les
+fiches existantes gardent leur rendu, et le reste du code ne connaît qu'un
+seul chemin. La traduction du legacy vit à un seul endroit, testé.
+
+`useAsWikiBackground` est inchangé, y compris sa règle serveur d'unicité par
+fiche (`clearOtherWikiBackgrounds`, `src/server/services/blocks.ts`). Le
+troisième état vient de `alsoShowInFlow`, dont le défaut `false` reproduit
+exactement le comportement actuel.
+
+### Lot 1 — ancrage explicite
+
+- [x] `planImageAnchors(blocks)` dans `src/core/images/` — **tests d'abord**,
+      sur le modèle de `planMusicAttachments` (`src/core/music/blockAttachment.ts`),
+      qui résout déjà « ce bloc sort du fil et va s'accrocher ailleurs ».
+      Couvre : traduction du legacy `wrapMode`, bloc cible supprimé, segment
+      cible supprimé, plusieurs images sur un même bloc, image ancrée à
+      elle-même (refusée).
+- [x] Repli explicite, jamais de disparition silencieuse : bloc cible
+      introuvable → l'image retombe en mode flux, à sa place dans la fiche ;
+      segment introuvable → ancrage en tête du bloc.
+- [x] `PublicEntityBody` ne rend plus l'image ancrée comme bloc frère : elle
+      est injectée **dans** le `<div>` du bloc hôte, avant le segment visé.
+      Supprime la bordure orpheline et le décalage au-dessus du titre.
+- [x] Le conteneur du bloc hôte passe en `flow-root`, sinon une image plus
+      haute que le texte déborde sur le bloc suivant.
+- [x] `ImageBlockEditor` reçoit la liste des blocs frères (`EntityBlocks` les
+      a déjà en état) : liste déroulante + curseur à crans + pastilles de
+      comportement, en cascade.
+- [x] Mini-carte d'aperçu dans l'éditeur : segments du bloc cible en
+      miniature, image au cran choisi, côté et largeur respectés.
+- [x] Sous 640 px, une image qui contourne passe en pleine largeur sans
+      flottement — une colonne de texte à côté de 480 px est illisible.
+- [x] La légende reste éditable et s'affiche sous l'image dans les trois
+      modes. Signalée par l'auteur en cours de lot : les esquisses ne
+      dessinaient que la colonne de réglages, et son champ vit en dehors —
+      pleine largeur en bas de l'éditeur, comme le champ d'URL en haut.
+      Rien n'avait été retiré, mais l'esquisse le laissait croire.
+
+### Lot 2 — fond de page à trois états
+
+- [ ] Pastilles `Non` · `En plus de la fiche` · `Seulement en fond`,
+      calculées depuis le couple `useAsWikiBackground` × `alsoShowInFlow`.
+- [ ] `PublicBlockView` ne renvoie `null` que pour « seulement en fond ».
+- [ ] « En plus » : l'image s'affiche à son emplacement ancré ou autonome
+      **et** en fond — le flou et le fondu du fond ne touchent jamais
+      l'exemplaire du corps de page.
+- [ ] La règle d'unicité du fond par fiche reste intacte et non contournée.
+
+### Lot 3 — parallaxe
+
+- [ ] Curseur d'intensité `0–40 %`, **sans case à cocher séparée** : `0`
+      éteint l'effet. Un contrôle au lieu de deux, et l'état se lit d'un
+      coup d'œil.
+- [ ] `prefers-reduced-motion: reduce` neutralise l'effet, sans condition.
+- [ ] Seules les images d'intensité `> 0` deviennent un composant client :
+      les autres restent rendues côté serveur, sans un octet de JS.
+- [ ] Un seul écouteur de défilement mutualisé, piloté par
+      `requestAnimationFrame` — jamais un écouteur par image.
+
+**À confirmer avant d'écrire le lot 3** (conséquence de conception, pas
+détail d'implémentation) : une image en parallaxe est **nécessairement
+rognée**. L'effet suppose un cadre de hauteur fixe (`overflow: hidden`) et
+une image plus grande que lui, qui glisse dedans — c'est déjà la mécanique du
+fond de page (`transform: scale(1.08)`, `app/globals.css`). Sans ce cadre,
+l'image dérive par rapport au texte et chevauche ses voisins. Conséquence :
+la parallaxe convient à une illustration d'ambiance, jamais à une carte ni à
+un plan, où l'on veut voir l'image entière.
+
+Le **fond de page n'est pas concerné** par ce curseur : il est déjà en
+`position: fixed`, c'est-à-dire déjà la forme maximale de l'effet — il ne
+défile pas du tout. Y ajouter un réglage d'intensité ne ferait que le rendre
+*moins* parallaxe. À rouvrir seulement si l'auteur veut précisément ça.
+
+### Critères
+
+Vérifiés en navigateur le 14 septembre, sur trois blocs de contrôle créés
+puis supprimés dans « Faerûn (copie) ». **Pas sur l'entrée de journal
+d'origine** : elle vit dans le monde `valdoria`, et la session ouverte dans
+le navigateur de travail est un compte invité qui n'y a pas accès. Les trois
+cas rejouent la configuration d'origine à l'identique (ancien `wrapMode`
+seul, ancrage explicite en milieu de bloc, ancrage en fin de bloc).
+
+- [x] Plus aucune ligne de séparation sans contenu au-dessus d'une image qui
+      contourne. Mesuré dans le DOM, pas à l'œil : aucun `div.border-b` sans
+      contenu sur la page, là où l'ancien rendu en produisait un par image.
+- [x] Une image ancrée démarre au niveau du segment choisi, jamais avant le
+      titre de son bloc hôte. Les deux `<figure>` ont `.rich-text-content`
+      pour parent — elles sont donc DANS le bloc, plus à côté de lui.
+- [x] Réordonner les blocs d'une fiche ne change plus quel texte enrobe
+      l'image : la cible est un identifiant, plus une position. Couvert par
+      les tests du noyau, pas par un déplacement en navigateur.
+- [x] Les blocs image existants (`wrapMode` seul, sans `anchor`) rendent
+      exactement comme avant, sans écriture en base — cas de contrôle A.
+- [x] La légende s'affiche sous l'image dans les trois modes.
+- [x] Sous 640 px, les deux images flottantes passent en `float: none` et
+      reprennent toute la largeur.
+- [x] `npm run typecheck && npm run lint && npm run test` passent (1017 tests,
+      116 fichiers).
 
 ---
 
@@ -1843,3 +2052,17 @@ l'instruction du quota Vercel dépassé, au lieu d'être laissés en note de bas
 de commit comme l'avaient été V2.1-8 et V2.1-9. Aucun des deux n'était urgent
 — c'est justement là que la note aurait été tentante, et qu'elle se serait
 périmée.
+
+**V2.1-11 est ouvert** (14 septembre). Il n'est la traîne de rien : il vient
+d'un défaut d'affichage constaté en lisant
+une entrée du Journal de session, et il emporte avec lui deux demandes
+d'interface arrivées dans la même conversation (fond de page à trois états,
+parallaxe). Ses trois lots sont ordonnés — le lot 1 refond la structure que
+les lots 2 et 3 décorent — mais seul le premier est indispensable au
+correctif d'origine.
+
+Ce ticket inaugure aussi une habitude : l'interface a été **esquissée et
+manipulée avant** d'écrire la moindre ligne, et cette séance a déplacé le
+modèle de données (le curseur en pourcentage envisagé au départ était
+impossible à tenir en CSS). Une esquisse coûte moins cher qu'un lot à
+défaire.

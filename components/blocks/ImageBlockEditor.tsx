@@ -2,12 +2,68 @@
 
 import { useRef, useState } from "react";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
+import type { Segment } from "@/src/core/schemas/entities/segments";
 import Checkbox from "@/components/shared/Checkbox";
+import Dropdown from "@/components/shared/Dropdown";
 
-const WRAP_MODE_OPTIONS: { value: ImageBlockData["wrapMode"]; label: string; title: string }[] = [
-  { value: "intercalate", label: "Intercaler", title: "L'image reste un bloc à part entière, pleine largeur" },
-  { value: "wrap", label: "Retour à la ligne", title: "Le texte du bloc suivant contourne l'image" },
-];
+/** Forme minimale d'un bloc frere pour cet editeur — `BlockItem` (EntityBlocks) la satisfait. */
+export interface ImageAnchorSibling {
+  id: string;
+  blockType: string;
+  display: { label: string };
+  data: unknown;
+}
+
+/** Un cran du curseur de position : ce qu'il ecrit, et ce qu'il affiche. */
+interface PositionStop {
+  segmentId: string | null;
+  position: "before" | "after";
+  label: string;
+}
+
+const APERCU_LONGUEUR = 46;
+
+/**
+ * Premiers mots d'un segment, pour nommer un cran du curseur. Deuxieme
+ * occurrence de cet aplatissement dans le depot (la premiere est
+ * `src/server/services/spikeSolo.ts`) — pas encore la troisieme, donc pas
+ * encore une fonction partagee.
+ */
+function apercuSegment(segment: Segment): string {
+  const texte = segment.content.map((node) => (node.t === "text" ? node.v : node.label)).join("").trim();
+  if (texte.length === 0) return "(segment vide)";
+  return texte.length > APERCU_LONGUEUR ? `${texte.slice(0, APERCU_LONGUEUR)}…` : texte;
+}
+
+function segmentsDe(block: ImageAnchorSibling | undefined): Segment[] {
+  const segments = (block?.data as { segments?: unknown } | null)?.segments;
+  return Array.isArray(segments) ? (segments as Segment[]) : [];
+}
+
+/**
+ * N segments donnent N+1 crans : un avant chaque segment, plus « a la fin ».
+ * Le premier cran ecrit `segmentId: null` plutot que l'id du premier segment
+ * — meme position, mais elle survit a la suppression de ce segment.
+ */
+function cransDe(segments: Segment[]): PositionStop[] {
+  const stops: PositionStop[] = [{ segmentId: null, position: "before", label: "en tête du bloc" }];
+  segments.forEach((segment, i) => {
+    if (i > 0) stops.push({ segmentId: segment.id, position: "before", label: `avant « ${apercuSegment(segment)} »` });
+  });
+  const dernier = segments[segments.length - 1];
+  if (dernier) stops.push({ segmentId: dernier.id, position: "after", label: "à la fin du bloc" });
+  return stops;
+}
+
+function cranActuel(stops: PositionStop[], anchor: ImageBlockData["anchor"]): number {
+  if (!anchor || anchor.segmentId === null) return 0;
+  const exact = stops.findIndex((s) => s.segmentId === anchor.segmentId && s.position === anchor.position);
+  if (exact !== -1) return exact;
+  // Cote inattendu (ecrit par une version anterieure, ou segment devenu le
+  // dernier) : on retombe sur le meme segment, du cote « avant ».
+  const memeSegment = stops.findIndex((s) => s.segmentId === anchor.segmentId);
+  return memeSegment === -1 ? 0 : memeSegment;
+}
 
 /**
  * Téléversement (V2-G12) : même patron que le portrait
@@ -15,15 +71,26 @@ const WRAP_MODE_OPTIONS: { value: ImageBlockData["wrapMode"]; label: string; tit
  * peut avoir plusieurs blocs image, contrairement au portrait unique de
  * l'entité. Le collage d'une URL externe reste possible (`data.url` ne
  * distingue jamais externe/téléversé, même champ dans les deux cas).
+ *
+ * V2.1-10 : l'emplacement de l'image est désormais **explicite** — une liste
+ * des blocs de la fiche, et un curseur à crans pour la position dans le bloc
+ * choisi. Les pastilles `Intercaler`/`Retour à la ligne` disparaissent : elles
+ * confondaient *où est l'image* et *comment le texte réagit*, ce qui faisait
+ * qu'on choisissait un comportement de texte et qu'on obtenait un
+ * déplacement. Règle de forme retenue avec l'auteur : **choix discret =
+ * liste, valeur continue = curseur.**
  */
 export default function ImageBlockEditor({
   blockId,
   data,
   onChange,
+  siblings,
 }: {
   blockId: string;
   data: ImageBlockData;
   onChange: (data: ImageBlockData) => void;
+  /** V2.1-10 : tous les blocs de la fiche, pour proposer les hôtes possibles. */
+  siblings: ImageAnchorSibling[];
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,20 +122,62 @@ export default function ImageBlockEditor({
     if (file) upload(file);
   }
 
-  // "wrap" ne propose que gauche/droite (un flottement centre n'existe pas
-  // en CSS) ; "intercalate" propose les trois, l'image restant dans son
-  // propre bloc pleine largeur.
-  const alignOptions: { value: ImageBlockData["align"]; label: string }[] =
-    data.wrapMode === "wrap"
-      ? [
-          { value: "left", label: "Gauche" },
-          { value: "right", label: "Droite" },
-        ]
-      : [
-          { value: "left", label: "Gauche" },
-          { value: "center", label: "Centre" },
-          { value: "right", label: "Droite" },
-        ];
+  // Seul un bloc `text` peut heberger une image : c'est le seul type qui
+  // porte des segments, et l'ancrage vise un segment.
+  const hotes = siblings.filter((b) => b.blockType === "text" && b.id !== blockId);
+  const ancre = data.placement === "ancree" ? data.anchor : null;
+  const hote = ancre ? hotes.find((b) => b.id === ancre.blockId) : undefined;
+  const ancree = Boolean(ancre && hote);
+  const contourne = ancree && data.anchorFlow !== "coupe";
+
+  const emplacementOptions = [
+    { value: "flux", label: "Bloc autonome — dans le fil de la fiche" },
+    ...hotes.map((b) => ({ value: b.id, label: `Dans « ${b.display.label} »` })),
+    // Cible perdue : jamais retiree en silence de la liste. Le rendu, lui,
+    // replie deja l'image dans le fil (`planImageAnchors`).
+    ...(ancre && !hote ? [{ value: ancre.blockId, label: "Bloc supprimé — l'image revient dans le fil" }] : []),
+  ];
+
+  const stops = cransDe(segmentsDe(hote));
+  const cran = cranActuel(stops, ancre);
+
+  function choisirEmplacement(value: string) {
+    if (value === "flux") {
+      onChange({ ...data, placement: "flux", anchor: null });
+      return;
+    }
+    onChange({
+      ...data,
+      placement: "ancree",
+      anchor: { blockId: value, segmentId: null, position: "before" },
+      // Une image qui contourne ne peut pas etre centree (un flottement
+      // centre n'existe pas en CSS) : on retombe a gauche plutot que de
+      // garder une valeur que le rendu ignorerait en silence.
+      align: data.anchorFlow !== "coupe" && data.align === "center" ? "left" : data.align,
+    });
+  }
+
+  function choisirCran(index: number) {
+    if (!ancre) return;
+    const stop = stops[index] ?? stops[0];
+    onChange({ ...data, anchor: { ...ancre, segmentId: stop.segmentId, position: stop.position } });
+  }
+
+  function choisirComportement(value: string) {
+    const flow = value === "coupe" ? "coupe" : "contourne";
+    onChange({ ...data, anchorFlow: flow, align: flow === "contourne" && data.align === "center" ? "left" : data.align });
+  }
+
+  const alignOptions = contourne
+    ? [
+        { value: "left", label: "Gauche" },
+        { value: "right", label: "Droite" },
+      ]
+    : [
+        { value: "left", label: "Gauche" },
+        { value: "center", label: "Centre" },
+        { value: "right", label: "Droite" },
+      ];
 
   return (
     <div className="flex flex-col gap-2">
@@ -108,51 +217,70 @@ export default function ImageBlockEditor({
             alt={data.caption}
             loading="lazy"
             decoding="async"
-            className="max-h-60 w-auto shrink-0 self-start rounded-md object-cover"
+            className="max-h-32 w-auto shrink-0 self-start rounded-md object-cover"
           />
           <div className="flex flex-1 flex-col gap-3 text-xs">
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Comportement du texte</span>
-              <div className="flex gap-1">
-                {WRAP_MODE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    title={opt.title}
-                    onClick={() => {
-                      // "wrap" ne connait pas "center" : on retombe sur "left"
-                      // si c'etait la valeur choisie en "intercalate".
-                      const nextAlign = opt.value === "wrap" && data.align === "center" ? "left" : data.align;
-                      onChange({ ...data, wrapMode: opt.value, align: nextAlign });
-                    }}
-                    aria-pressed={data.wrapMode === opt.value}
-                    className={`rounded-full border px-2 py-0.5 transition-colors ${
-                      data.wrapMode === opt.value ? "border-accent text-accent" : "border-edge text-ink-soft hover:text-ink"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Emplacement</span>
+              <Dropdown
+                value={ancre ? ancre.blockId : "flux"}
+                options={emplacementOptions}
+                onChange={choisirEmplacement}
+                size="md"
+                className="w-full"
+                aria-label="Emplacement de l'image dans la fiche"
+              />
+            </div>
+
+            {ancree && (
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Position dans le bloc</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={Math.max(0, stops.length - 1)}
+                  step={1}
+                  value={cran}
+                  onChange={(e) => choisirCran(Number(e.target.value))}
+                  aria-label="Position de l'image dans le bloc"
+                  className="w-full max-w-64"
+                />
+                {/* Le cran cite le texte reel du segment : personne n'a a
+                    compter les paragraphes pour savoir ou l'image tombera. */}
+                <span className="italic text-ink-muted">{stops[cran]?.label ?? "en tête du bloc"}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              {ancree && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Comportement du texte</span>
+                  <Dropdown
+                    value={data.anchorFlow === "coupe" ? "coupe" : "contourne"}
+                    options={[
+                      { value: "contourne", label: "Le texte contourne" },
+                      { value: "coupe", label: "L'image coupe le texte" },
+                    ]}
+                    onChange={choisirComportement}
+                    size="md"
+                    className="w-full"
+                    aria-label="Comportement du texte autour de l'image"
+                  />
+                </div>
+              )}
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Alignement</span>
+                <Dropdown
+                  value={data.align}
+                  options={alignOptions}
+                  onChange={(value) => onChange({ ...data, align: value as ImageBlockData["align"] })}
+                  size="md"
+                  className="w-full"
+                  aria-label="Alignement de l'image"
+                />
               </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Alignement</span>
-              <div className="flex gap-1">
-                {alignOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => onChange({ ...data, align: opt.value })}
-                    aria-pressed={data.align === opt.value}
-                    className={`rounded-full border px-2 py-0.5 transition-colors ${
-                      data.align === opt.value ? "border-accent text-accent" : "border-edge text-ink-soft hover:text-ink"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+
             <div className="flex flex-col gap-1">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Taille de l&apos;image</span>
               <label className="flex items-center gap-1.5">
@@ -169,6 +297,18 @@ export default function ImageBlockEditor({
                 />
               </label>
             </div>
+
+            {ancree && hote && (
+              <AnchorPreview
+                segments={segmentsDe(hote)}
+                label={hote.display.label}
+                stop={stops[cran] ?? stops[0]}
+                contourne={contourne}
+                align={data.align}
+                sizePct={data.sizePct}
+              />
+            )}
+
             {/* Fond de page (V2-G13) : un seul bloc actif a la fois par
                 fiche, applique cote serveur (src/server/services/blocks.ts) :
                 cocher celui-ci decoche silencieusement tout autre bloc image
@@ -227,6 +367,71 @@ export default function ImageBlockEditor({
         placeholder="Légende (optionnelle)"
         className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm italic placeholder:not-italic placeholder:text-ink-muted"
       />
+    </div>
+  );
+}
+
+/**
+ * Mini-carte d'apercu (decision d'interface V2.1-10, « on le fait
+ * maintenant ») : les segments du bloc hote en barres, l'image a son cran.
+ * Elle supprime la seule incertitude qui restait — ou l'image tombe — sans
+ * quitter l'editeur ni publier la fiche.
+ *
+ * Volontairement schematique : afficher le vrai texte en miniature le
+ * rendrait illisible et ferait croire a un apercu fidele, qu'il n'est pas
+ * (ni la police, ni la largeur de colonne, ni les marques ne sont celles du
+ * wiki).
+ */
+function AnchorPreview({
+  segments,
+  label,
+  stop,
+  contourne,
+  align,
+  sizePct,
+}: {
+  segments: Segment[];
+  label: string;
+  stop: PositionStop;
+  contourne: boolean;
+  align: ImageBlockData["align"];
+  sizePct: number;
+}) {
+  const largeur = `${Math.min(92, Math.round((38 * sizePct) / 100))}%`;
+  const vignette = (
+    <div
+      key="vignette"
+      className={`h-6 rounded-sm bg-accent ${
+        contourne
+          ? align === "left"
+            ? "float-left mr-2 mb-1"
+            : "float-right ml-2 mb-1"
+          : align === "left"
+            ? "my-1"
+            : align === "right"
+              ? "my-1 ml-auto"
+              : "mx-auto my-1"
+      }`}
+      style={{ width: largeur }}
+    />
+  );
+
+  const lignes: React.ReactNode[] = [];
+  if (stop.segmentId === null) lignes.push(vignette);
+  segments.forEach((segment, i) => {
+    if (stop.segmentId === segment.id && stop.position === "before") lignes.push(vignette);
+    lignes.push(
+      <div key={segment.id} className="my-1 h-1.5 rounded-full bg-edge" style={{ width: `${[100, 94, 86, 72][i % 4]}%` }} />
+    );
+    if (stop.segmentId === segment.id && stop.position === "after") lignes.push(vignette);
+  });
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Aperçu dans « {label} »</span>
+      <div className="rounded-md bg-panel-sunken p-2">
+        <div className="flow-root">{lignes}</div>
+      </div>
     </div>
   );
 }
