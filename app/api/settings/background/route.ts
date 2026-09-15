@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { listOwnBackgroundImages, uploadBackgroundImage } from "@/src/server/services/backgroundImages";
+import { listOwnBackgroundImages } from "@/src/server/services/backgroundImages";
+import { uploadBackgroundImage } from "@/src/server/services/backgroundImageUpload";
 import { fileUploadSchema, formDataToObject } from "@/lib/uploads/schemas";
 
 /**

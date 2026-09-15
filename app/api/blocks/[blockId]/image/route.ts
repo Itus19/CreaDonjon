@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getImageAssetIdForBlockAsUser, removeBlockImage, uploadBlockImage } from "@/src/server/services/blockImages";
+import { getImageAssetIdForBlockAsUser, removeBlockImage } from "@/src/server/services/blockImages";
+import { uploadBlockImage } from "@/src/server/services/blockImageUpload";
 import { getPublicBlockImageAssetId } from "@/src/server/services/publicShare";
 import { getSignedAssetUrl, SIGNED_URL_CACHE_HEADER } from "@/src/server/services/storage";
 import { fileUploadSchema, formDataToObject } from "@/lib/uploads/schemas";

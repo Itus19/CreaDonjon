@@ -22,7 +22,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-7 | Une modification qui ne s'enregistre pas, et des contrôles anonymes | `M` | **Fait** (14 septembre) — né de V2.1-6 : une case cochée se perdait en silence, deux fois en un jour. Troisième occurrence du même défaut, donc traité à la cause (ADR 0023). Corrige au passage le nom accessible des cases et des listes |
 | V2.1-8 | `onSaveNow` rejoint le contexte d'enregistrement | `S` | **Fait** (14 septembre) — la traîne consignée en fin de V2.1-7 : le bloc carte gardait le correctif ponctuel d'avant l'ADR 0023. Remplacement mécanique, comportement mesuré identique avant/après |
 | V2.1-9 | Un test d'intégration à la marge trop mince | `S` | **Fait** (14 septembre, avant d'être écrit) — `homebrewWeapon.integration.test.ts` échouait par intermittence sur le délai de 5 s de Vitest. Corrigé dans la foulée de V2.1-6 sans qu'aucun ticket ne le porte ; consigné ici après coup |
-| V2.1-10 | Deux traînes du dépassement de quota Vercel | `S` + `M` | **Ouvert** (15 septembre) — nés de l'instruction du quota Vercel dépassé (`849bd4e`), tous deux hors du correctif lui-même : `npm ci` refuse de tourner sur un lock désynchronisé, et 759 Mo de binaires `sharp` sont encore recopiés dans 75 fonctions qui ne l'appellent jamais |
+| V2.1-10 | Deux traînes du dépassement de quota Vercel | `S` + `M` | **Fait** (15 septembre) — volet A **caduc, mesuré** : `npm ci` passe, npm 11.17 ne traite plus la peer optionnelle comme bloquante. Volet B : **quatre** chaînes vers `sharp` et non deux, les deux autres trouvées en vérifiant avant de coder. Mesuré : 79 fonctions portaient le binaire, il en reste 4 — les quatre routes qui téléversent |
 | V2.1-11 | Bloc image : ancrage explicite, fond de page à trois états, parallaxe | `L` | **Fait** (15 septembre) — trois lots. L'ancrage devient explicite et l'image entre DANS son bloc hôte, ce qui fait tomber ensemble la bordure orpheline et le décalage au-dessus du titre. Interface esquissée et manipulée avant d'écrire une ligne : la séance a déplacé le modèle de données |
 | V2.1-12 | Une seule peau de wiki, dans les layouts | `L` | **Fait** (15 septembre) — l'onglet Wiki joueur réimplémentait `BookSkin` et la copie n'avait pas emporté le fond de page. La coquille remonte dans les `layout.tsx` (par monde), l'enregistrement du fond reste dans la page (par fiche) : le sommaire cesse de se reconstruire, sur `/apercu` comme chez le joueur. `/partage` garde la sienne dans sa page, sa garde par mot de passe devant précéder tout chargement |
 
@@ -1673,7 +1673,7 @@ backlog.
 
 ---
 
-## V2.1-10 — Deux traînes du dépassement de quota Vercel · `S` + `M`
+## V2.1-10 — Deux traînes du dépassement de quota Vercel · `S` + `M` — fait
 
 ### Constat
 
@@ -1759,35 +1759,79 @@ même défaut, et les deux sont devant nous.
 
 ### Étapes
 
-- [ ] A1. `npm install`, puis vérifier que `npm ci` passe sur le lock produit.
-- [ ] A2. `npm run build` sur une installation issue de `npm ci`, pour
-      s'assurer que la résolution des peers n'a rien déplacé d'autre.
-- [ ] A3. Commit dédié, `package-lock.json` seul.
-- [ ] A4. Lire les journaux de build Vercel : `npm ci` ou `npm install` ?
-      Consigner la réponse ici — elle décide si ce volet était un risque
-      dormant ou un incident déjà en cours.
-- [ ] B1. Séparer lecture et traitement dans `backgroundImages.ts`, de sorte
-      que `app/layout.tsx` n'atteigne plus `processBackgroundImage`.
-- [ ] B2. Même séparation dans `storage.ts`, de sorte que `blocks.ts`
-      n'atteigne plus `uploadAsset`.
-- [ ] B3. Remesurer en sommant les `.nft.json`, et reporter le chiffre ici.
+- [x] A1. `npm install` : **le lock n'a pas bougé d'un octet.** Avec npm
+      11.17.0, la peer `@swc/helpers >=0.5.17` étant déclarée **optionnelle**
+      par `@swc/core`, npm ne crée aucune copie imbriquée et considère l'arbre
+      satisfaisable. `npm ls @swc/helpers` signale toujours
+      `invalid: ">=0.5.17"`, mais c'est un diagnostic, pas un blocage.
+- [x] A2. **`npm ci` passe** (code 0), sur un `node_modules` réellement
+      supprimé puis réinstallé depuis le lock, sans modifier le lock.
+- [x] A3. Sans objet : aucun fichier à commiter, le lock est inchangé.
+- [ ] A4. Journaux de build Vercel : pas d'accès depuis cette session.
+
+**Volet A est caduc, et c'est une mesure, pas une supposition.** L'erreur citée
+plus haut ne se reproduit plus. Elle a été observée avec une autre version de
+npm — la seule explication compatible avec le fait que ni le lock ni le
+`package.json` n'ont changé depuis. La leçon vaut d'être gardée : **un message
+d'erreur d'outillage date autant qu'il décrit.** Celui-ci a survécu à sa cause
+pendant deux jours, le temps d'être consigné dans un ticket.
+
+Reste ouvert, et seulement ça : savoir si Vercel exécute `npm ci` ou
+`npm install`. Sans accès aux journaux, ça ne se déduit pas — et ça ne bloque
+plus rien maintenant que les deux passent.
+- [x] B1. `backgroundImages.ts` → `backgroundImageUpload.ts`.
+- [x] B2. `storage.ts` → `assetUpload.ts`.
+- [x] **B1 bis. `entityPortraits.ts` → `entityPortraitUpload.ts`.**
+- [x] **B2 bis. `blockImages.ts` → `blockImageUpload.ts`.**
+- [x] B3. Remesuré en sommant les `.nft.json` — chiffres ci-dessous.
+
+**Deux chaînes de plus que prévu.** L'analyse initiale en nommait deux ; elles
+sont bien réelles, mais elles ne suffisaient pas. En vérifiant — avant de coder
+— que les traiter suffirait, deux autres fichiers sont apparus, porteurs du
+même défaut :
+
+- `entityPortraits.ts` mêlait `uploadEntityPortrait` et `getPortraitLayout`,
+  or ce dernier est importé par `publicShare.ts`, `playerEntityDetail.ts` et
+  `entityWindow.ts` — c'est-à-dire par **toute page de wiki** ;
+- `blockImages.ts` mêlait `uploadBlockImage` et `getBackgroundMetaForBlock`,
+  même portée, et ce fichier atteint `sharp` **deux fois** (couleur dominante,
+  puis `uploadAsset`).
+
+C'est le ticket lui-même qui rendait cette vérification obligatoire : il posait
+que « traiter une seule des deux ne gagne rien », chaque fonction devant perdre
+**toutes** ses chaînes. Avec quatre, en traiter deux n'aurait rien gagné non
+plus — et la mesure finale l'aurait dit, après coup.
+
+Règle qui en sort, écrite en tête de chaque fichier créé : **un fichier qui
+touche `sharp` ne doit rien exporter qu'un chemin de lecture ait besoin
+d'importer.**
 
 ### Critères
 
-- [ ] `npm ci` installe le projet sans erreur, sur un `node_modules` vide.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent après A,
-      tests d'intégration inclus (`.env.local` présent, Supabase local démarré).
-- [ ] Aucune fonction hors upload ne trace `sharp` ni `@img` : les 75 passent
-      à 0, vérifié en lisant les `.nft.json` du build.
+- [x] `npm ci` installe le projet sans erreur, sur un `node_modules` réellement
+      supprimé.
+- [x] `npm run typecheck && npm run lint && npm run test` passent.
+- [x] **Aucune fonction hors upload ne trace `sharp` ni `@img` : les 75 passent
+      à 0.** Mesuré en sommant les `.nft.json` du build : sur **210 fonctions
+      tracées**, exactement **4** portent `@img`, et ce sont les quatre routes
+      d'upload — `blocks/[blockId]/image`, `entities/[id]/portrait`,
+      `settings/background`, `worlds/[worldSlug]/assets` — à 38 Mo chacune. Les
+      **206 autres portent 0 Mo**.
 - [ ] Les quatre routes d'upload tracent toujours
-      `@img/sharp-libvips-linux-x64/lib/libvips-cpp.so` — sans quoi elles
-      échouent avec `ERR_DLOPEN_FAILED`, **en production seulement**, jamais
-      en local.
+      `@img/sharp-libvips-linux-x64/lib/libvips-cpp.so` — **non vérifiable
+      depuis cette machine** : un build Windows trace `@img/sharp-win32-x64`,
+      jamais le paquet linux. Ce qui EST vérifié, c'est le mécanisme —
+      `outputFileTracingIncludes` englobe `./node_modules/@img/**/*`, donc les
+      quatre routes reçoivent l'arbre `@img` complet de la plateforme de build,
+      quel qu'il soit. Le nom du fichier change, pas la règle.
 - [ ] Un envoi d'image réel passe sur le déploiement : portrait d'entité,
       image de bloc, image de fond, asset de monde. Les quatre, une fois
       chacune : c'est le seul contrôle qui distingue vraiment un binaire
-      présent d'un binaire absent.
-- [ ] Le poids total tracé par déploiement est reporté ici, mesuré et non estimé.
+      présent d'un binaire absent. **À faire après déploiement.**
+- [x] Poids total tracé : **638 Mo** sur ce build local. À ne pas comparer
+      directement aux 1 564 Mo du 15 septembre, mesurés sur un build Linux
+      avec d'autres binaires — le chiffre qui se compare sans réserve est le
+      nombre de fonctions portant `sharp` : **79 avant, 4 après.**
 
 ### Ce que ce ticket n'inclut pas
 
@@ -2314,4 +2358,24 @@ proposition revient une troisième fois, ce n'est plus la proposition qu'il faut
 réexaminer, c'est la réponse.** L'insistance de l'auteur pointait un fait que
 le code portait depuis le début.
 
-**V2.1-10 (quota Vercel) est le dernier ticket ouvert de ce backlog.**
+**V2.1-10 clôt ce backlog**, le 15 septembre comme les trois précédents. Il a
+rendu deux enseignements de nature opposée, et c'est ce qui le rend utile à
+relire.
+
+**Un volet s'était périmé tout seul.** Le volet A décrivait une erreur `npm ci`
+reproduite et citée mot pour mot. Elle ne se reproduit plus : ni le lock ni le
+`package.json` n'ont changé, mais npm a cessé de traiter une peer *optionnelle*
+non satisfaite comme bloquante. **Un message d'erreur d'outillage date autant
+qu'il décrit** — celui-ci a survécu deux jours à sa cause, le temps d'être
+consigné. Le réflexe qui a payé : rejouer la mesure avant d'écrire la
+correction, plutôt que de faire confiance au ticket.
+
+**L'autre volet était plus grand que son analyse.** Il nommait deux chaînes
+vers `sharp` ; il y en avait quatre. Les deux manquantes ont été trouvées en
+vérifiant que traiter les deux connues suffirait — vérification que le ticket
+rendait obligatoire en posant lui-même que « traiter une seule des deux ne
+gagne rien ». Une analyse écrite à chaud borne ce qu'elle a regardé, pas ce qui
+existe.
+
+Le chiffre qui se compare sans réserve : **79 fonctions portaient le binaire de
+`sharp`, il en reste 4** — exactement les quatre routes qui téléversent.

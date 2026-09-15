@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getPortraitAssetId, removeEntityPortrait, uploadEntityPortrait } from "@/src/server/services/entityPortraits";
+import { getPortraitAssetId, removeEntityPortrait } from "@/src/server/services/entityPortraits";
+import { uploadEntityPortrait } from "@/src/server/services/entityPortraitUpload";
 import { getSignedAssetUrl, SIGNED_URL_CACHE_HEADER } from "@/src/server/services/storage";
 import { fileUploadSchema, formDataToObject } from "@/lib/uploads/schemas";
 

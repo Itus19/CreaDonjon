@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
-import { uploadAsset } from "@/src/server/services/storage";
+import { uploadAsset } from "@/src/server/services/assetUpload";
 import { assetUploadSchema, formDataToObject } from "@/lib/uploads/schemas";
 
 /** Televersement d'un asset (Lot I, ADR 0017) — RLS `assets_bucket_insert`/`assets_insert` restreignent deja aux membres du monde ; la visibilite demandee reste celle que RLS `assets_write`... (assets_insert) laisse poser, jamais un second controle ici. */
