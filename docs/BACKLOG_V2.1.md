@@ -2645,10 +2645,9 @@ possible. Fait dans l'autre sens, la correction se réécrirait deux fois.
 
 ### Critères
 
-- [x] Monde et Règles ne font plus défiler le document : `scrollY` reste à 0
-      après un `scrollTo(0, 500)`, sommaire de ClaudeLand déplié. Mesuré à
-      1280x800 et 1280x520. **MJ non mesuré** — le compte de test fourni est
-      joueur, la section MJ lui est refusée avant même la coquille.
+- [x] Les trois sections ne font plus défiler le document : `scrollY` reste à
+      0 après un `scrollTo(0, 500)`, sommaire de ClaudeLand déplié. Mesuré à
+      1280x800 et 1280x520, Monde, Règles et MJ.
 - [x] L'ascenseur est dans la barre latérale (cadre 675, contenu 1060) et
       dans la colonne de lecture joueur (cadre 752, contenu 6335) ; jamais
       sur la page.
@@ -2678,9 +2677,9 @@ possible. Fait dans l'autre sens, la correction se réécrirait deux fois.
 - [x] `docs/adr/0025-le-defilement-appartient-aux-fenetres.md` écrit : pourquoi
       la borne vit à la racine et non par section, et ce que coûtait le
       contournement précédent.
-- [ ] **Reste à vérifier sur une session de MJ** : la section MJ qui ne défile
-      plus, et la zone défilante ajoutée à `MjSidebar` — toutes deux
-      inatteignables avec un compte joueur.
+- [x] La liste des outils MJ défile dans la barre latérale au lieu d'allonger
+      la page : à 1280x520, cadre de 398 pour 536 de contenu, `scrollTop`
+      atteint 138. Elle n'avait aucune zone défilante avant ce lot.
 
 ### Méthode
 
@@ -2720,6 +2719,18 @@ Fiche ouverte, écran ramené à 1280x520 :
 Une fiche réduite, enfin : la barre occupe 756-800 et les deux zones de
 travail passent de 744 à 700. Elles s'arrêtent donc au-dessus d'elle, y
 compris une fenêtre maximisée, qui fait 100 % de sa zone.
+
+---
+
+Section MJ, écran de 1280x520, fenêtre « Gestion de campagne » ouverte —
+la copie exacte de la capture d'origine :
+
+| | Valeur |
+|---|---|
+| Défilement de la page | 0 |
+| Barre latérale | 464 px (520 − 56) |
+| Liste des dix-sept outils | cadre 398, contenu 536, défile de 138 dans la barre |
+| Fiche ouverte | de 80 à 520 — elle s'arrête au bas de l'écran |
 
 ---
 
