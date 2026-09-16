@@ -30,6 +30,8 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-13 | Centrer le couple sommaire + texte du wiki | `S` | **Fait** (15 septembre) — le vide entre sommaire et texte tombe de ~300 px à 32 px sur un écran de 1920, et cesse de dépendre de la fenêtre : il était un reste, il devient une marge. Une borne exprimée dans les unités du contenu, écrite une seule fois pour les trois routes — premier encaissement de la fusion de V2.1-12 |
 | V2.1-16 | Le défilement appartient aux fenêtres, et l'en-tête disparaît | `M` | **Fait** (16 septembre) — deux gênes signalées avec captures, une seule cause : `<body>` n'avait pas de hauteur définie, donc chaque coquille bornait la sienne dans son coin. Mesuré avant/après : la page défilait de 56 px, la hauteur exacte de l'en-tête — lequel a disparu au lot 2, rendant ces 56 px aux fiches |
 | V2.1-17 | Deux retouches de rendu au Livre de sessions | `S` | **Fait** (16 septembre) — les deux vues par l'auteur, captures à l'appui : le bloc Séance n'alignait pas ses libellés sur ses valeurs, et un trait posé en tête de bloc tombait entre le titre et le texte, en doublon du filet automatique que chaque bloc porte depuis V2-G11. L'alignement a ensuite été corrigé sur `PublicInfoboxBlock`, l'original d'où le défaut venait |
+| V2.1-18 | Aperçu des fiches au survol d'un lien | `L` | **Ouvert** (16 septembre) — quatre lots, le premier autonome. Né d'un lien de règle qui ne mène nulle part sur `/partage` tout en portant la couleur et le souligné d'un vrai lien : trois mentions inertes sur vingt, mesurées sur la page en production. Trois variantes esquissées avec l'auteur avant tout code, la carte flottante retenue pour les entités comme pour les règles. La fluidité est une exigence du ticket, pas une optimisation d'après-coup : elle a une section, des cibles chiffrées, et elle a mis au jour un coût plus ancien, parti en V2.1-19 |
+| V2.1-19 | La mémoïsation n'atteignait pas le wiki public | `M` | **Ouvert** (16 septembre) — né de la section Fluidité de V2.1-18. `React.cache()` ne prend que si le client Supabase est stable par requête ; `createShareLinkServiceClient` est une fabrique nue, et chaque fonction de `publicShare.ts` construit la sienne. Tout le gain de l'audit P-01 était donc inerte sur `/partage`, et seulement là. Second volet : la coquille y est encore rendue par la page, donc le sommaire se reconstruit à chaque fiche |
 
 ---
 
@@ -2838,6 +2840,328 @@ coup). Mesuré plutôt que jugé à l'œil :
 
 ---
 
+## V2.1-18 — Aperçu des fiches au survol d'un lien · `L`
+
+### Constat
+
+Deux défauts d'un seul tenant, signalés par l'auteur le 16 septembre depuis
+son monde en production (`/partage/leschroniquesdesroyaumesoublies/37`).
+
+**Un lien de règle ne mène nulle part, et ne le dit pas.** `renderNode`
+(`PublicBlockView.tsx`) ne rend un nœud `ref` de kind `"rule"` comme lien que
+si `ruleHrefBase` lui est fourni. Cette prop n'existe qu'aux deux endroits
+authentifiés qui ont une page de règle à offrir (`joueur/wiki/[entitySlug]/page.tsx`,
+`FicheCompanion.tsx`) ; sur `/partage` et `/apercu` elle est absente —
+délibérément, aucune page de règle n'existe pour un visiteur anonyme. Le nœud
+retombe alors sur un `<span>`.
+
+Mesuré sur la page réelle : des vingt premières mentions du Prologue,
+dix-sept sont des `<a>` et trois des `<span>` (« nain », « halfeline » deux
+fois). Le défaut n'est pas le repli, c'est **sa classe** : le `<span>` porte
+quand même `.rich-ref-mention`, donc la couleur `--link-entity` et le souligné
+pointillé d'un vrai lien (`app/globals.css:274`). Rien ne distingue à l'œil
+« Brennan », cliquable, de « nain », inerte. Le visiteur clique dans le vide.
+
+**Et rien ne se lit sans quitter la page.** Même quand le lien fonctionne,
+vérifier qui est Brennan coûte une navigation puis un retour. Sur un Livre de
+sessions dont un paragraphe cite cinq fiches, la lecture se paie en
+allers-retours. C'est la demande d'origine de l'auteur : un aperçu sur place.
+
+### Décision
+
+**Une carte flottante au survol, la même forme pour les entités et pour les
+règles.** Trois variantes ont été esquissées et manipulées avant d'écrire une
+ligne (habitude prise en V2.1-11) : carte flottante, bulle mécanique dense,
+volet latéral épinglé. L'auteur a retenu la première pour tout. Le volet
+épinglé reste une bonne idée et n'est pas ce ticket.
+
+La carte porte quatre choses : une vignette, le nom, la catégorie, un extrait.
+
+**La catégorie est le libellé de la fiche, pris aux tables existantes** —
+`ENTITY_KIND_LABELS` (`character` → « Personnage ») et `regles.entryTypes` de
+`messages/fr.json` (`species` → « Espèce »). Jamais un libellé réécrit pour
+l'occasion : la première esquisse affichait « Personnage non-joueur » sous
+Brennan, qui n'existe nulle part dans le projet, et l'auteur l'a relevé. Une
+esquisse qui invente un libellé fait croire qu'il existe.
+
+**Pour une entité, l'extrait est le premier paragraphe visible.** Pour une
+règle, c'est le bloc `description` **seul** — jamais une valeur mécanique, ni
+CA, ni dé, ni table de progression. Le bloc est taillé pour ça : `segments:
+[{ text }]`, du texte simple sans lien ni visibilité propre
+(`src/core/schemas/rule-blocks/blocks.ts:52`). Décision de l'auteur, et elle a
+deux effets qui vont dans le même sens — le wiki public reste orienté lore, et
+aucune donnée de règle ne franchit la frontière du partage anonyme.
+
+**Note de licence, consignée sans trancher à la place de l'auteur.** Interrogé
+sur la provenance de cette prose, l'auteur indique qu'elle vient d'aidedd.org,
+« prose de fan et libre ». Vérification faite : le pied de page du site dit
+« contenu de fan non officiel autorisé dans le cadre de la Politique des
+contenus de fans […] Certaines parties des matériaux utilisés sont la
+propriété de Wizards of the Coast ». Le site ne se déclare donc pas
+réutilisable — toléré n'est pas libre, et une traduction est elle-même une
+œuvre. Ce que l'auteur décrit, en revanche, ne pose pas ce problème : une
+description réécrite pour son univers est la sienne. Le seul cas exposé serait
+le report mot pour mot, que `page_ref` existe déjà pour éviter
+(`specs/ruleset-personnel.md` §1). Outil personnel, liens non listés, décision
+prise en connaissance de cause : écrit ici pour que personne ne la « corrige »
+plus tard sans savoir qu'elle a été examinée.
+
+**Sans prose, pas de lien.** Une fiche de règle dont le bloc `description` ne
+porte que `page_ref` — le cas prévu pour `personal_reference` — n'a rien à
+montrer à un visiteur. Son lien redevient du texte ordinaire plutôt que
+d'ouvrir une carte vide. Ce choix règle du même coup le lien mort du constat,
+et donne dans le texte un signal visible de ce qu'il reste à rédiger.
+
+**La vignette n'apparaît que si le portrait existe.** Rien de nouveau à
+transporter : le portrait est public dès qu'on voit le nom de la fiche
+(`publicShare.ts:635`), il se sert par `/api/entities/[id]/portrait`, et
+`textRefs` est déjà indexé **par identifiant** — la clé est l'id. Même repli
+que `PublicPortrait` sur un 404. Aucune fiche de règle n'a d'illustration
+(`RuleEntryView.tsx` le dit), la carte s'y resserre donc sur le nom et la
+prose.
+
+**Ce que ça coûte au serveur, et qui n'existait pas.** Aujourd'hui un lien de
+règle ne demande aucune résolution : le lien se construit depuis la clé portée
+par le nœud, et `publicShare.ts:276` l'écrit noir sur blanc. Ce commentaire
+devient faux et se corrige avec le lot 2. L'extrait, lui, oblige à lire le
+premier bloc texte de **chaque fiche citée** — une douzaine sur le Prologue.
+En une requête groupée, jamais une par lien.
+
+**La visibilité se résout avant l'envoi, comme partout.** L'extrait passe par
+`filterTextBlockSegments`, comme le corps de la fiche : il ne peut donc jamais
+venir d'un segment masqué. Ce n'est que la règle absolue n°5 — mais un extrait
+est un chemin de lecture **de plus** vers la même donnée, et c'est exactement
+le genre d'ajout par lequel une fuite entre.
+
+### Fluidité
+
+Demande explicite de l'auteur, formulée avant le code : que l'aperçu soit
+instantané et que le wiki devienne fluide. Traitée ici plutôt qu'en
+optimisation d'après-coup — la moitié des décisions ci-dessous ne serait plus
+rattrapable une fois le lot 3 écrit.
+
+**Rien ne part sur le réseau au survol.** C'est la raison pour laquelle le lot
+2 résout côté serveur au lieu d'exposer une route d'aperçu : la carte se peint
+avec ce qui est déjà dans le HTML de la page, en une image. Une route aurait
+été plus simple à écrire et aurait mis 80 à 200 ms entre l'intention et la
+carte — soit exactement la latence qu'on cherche à supprimer.
+
+**La catégorie est gratuite.** `listEntitiesForWorld` sélectionne déjà
+`entity_kind` (`ENTITY_COLUMNS`, `repos/entities.ts`) ; la construction
+d'`entityLookup` le jette au passage (`publicShare.ts:556`). Il suffit de ne
+plus le jeter : aucune requête, aucune colonne de plus.
+
+**L'extrait est le seul vrai coût, et il se borne côté serveur.** Une requête
+groupée sur les blocs `text` des seules fiches citées, lancée *dans* le
+`Promise.all` existant et non après lui. La coupe à ~240 caractères se fait
+**sur le serveur** : envoyer le paragraphe entier pour le tronquer en CSS
+ferait grossir le HTML avec la longueur des fiches citées, et laisserait
+partir du texte que personne ne lira — deux fois tort.
+
+**Un seul nœud de carte pour toute la page, pas un par lien.** Le Prologue
+porte plus de vingt mentions ; vingt composants avec chacun leur minuteur et
+leurs écouteurs seraient du gaspillage pur. Délégation d'événements sur le
+conteneur de texte, une seule instance en portail. Positionnée par
+`transform`, mesurée une fois à l'ouverture — jamais `left`/`top` animés, qui
+repassent par la mise en page à chaque image.
+
+**Le délai d'intention sert deux fois.** Les ~250 ms qui précèdent l'ouverture
+de la carte sont aussi le meilleur signal disponible que le lecteur va
+peut-être cliquer : le même minuteur déclenche `router.prefetch(href)`. Au
+moment du clic, la fiche est déjà chaude. Dédoublonné, et attaché à
+l'intention plutôt qu'au `mouseenter` — balayer un paragraphe du curseur ne
+précharge rien. C'est le seul endroit où préchargement et aperçu veulent
+exactement la même information, et il serait dommage de les écrire deux fois.
+
+**La vignette ne doit pas faire sauter la carte.** `/api/entities/[id]/portrait`
+répond par une redirection vers une URL signée : deux allers-retours au
+premier survol. Sa boîte est donc réservée en dur (rapport 3/4, comme
+`PublicPortrait`), l'image apparaît dedans quand elle arrive. Pas de carte qui
+grandit sous le curseur, et le repli sur 404 reste celui qui existe déjà.
+
+**Ce que ce ticket ne fera pas, et qui pèse plus lourd que lui.** En mesurant
+ce qui précède, un coût plus ancien est apparu — il n'appartient pas à ce
+ticket, mais il est écrit ici parce que c'est en cherchant la fluidité qu'on
+l'a trouvé :
+
+`/partage/[token]/[entitySlug]` rend `BookSkin` depuis la **page** et non
+depuis le layout, seule des trois routes de wiki dans ce cas (V2.1-12 a hissé
+les deux autres ; la garde par mot de passe l'a interdit ici). Chaque
+navigation refait donc `getPublicEntityTree` — cinq requêtes — pour
+reconstruire un sommaire identique. Et `listEntitiesForWorld(worldId)` part
+deux fois par fiche, une fois pour l'arbre (`publicShare.ts:168`), une fois
+pour `entityLookup` (`publicShare.ts:556`).
+
+Ce second point a d'abord été noté ici comme un simple doublon d'appel. Il ne
+l'est pas : la fonction **est** mémoïsée par `React.cache()`, et la
+mémoïsation est défaite par l'identité du client Supabase. Le vrai défaut est
+plus large que le symptôme qui l'a fait voir, et il est parti en **V2.1-19**
+avec le hissage de la coquille. Rien de tout cela n'appartient au présent
+ticket — mais c'est en cherchant la fluidité de l'aperçu qu'on l'a trouvé, et
+c'est la raison pour laquelle ces lignes restent ici.
+
+### Lots
+
+Ordonnés, et le premier est autonome.
+
+**Lot 1 — le lien mort.** Un `ref` de kind `"rule"` sans destination cesse de
+porter `.rich-ref-mention`. Corrige le défaut d'aujourd'hui même si les trois
+autres lots ne se font jamais.
+
+**Lot 2 — résolution serveur.** `textRefs` enrichi (catégorie + extrait),
+nouvelle table `ruleRefs` (nom, type d'entrée, extrait de `description`),
+requête groupée dans le `Promise.all` existant, coupe de l'extrait côté
+serveur, et le commentaire de `publicShare.ts:276` réécrit puisqu'il ne dira
+plus vrai.
+
+**Lot 3 — la carte.** Une seule instance en portail pour toute la page,
+délégation d'événements, délai d'intention ≈ 250 ms, survol de la carte
+elle-même qui la maintient ouverte, position par `transform`, vignette à boîte
+réservée. Le même minuteur d'intention déclenche `router.prefetch`. Le clic
+navigue comme aujourd'hui : l'aperçu ne remplace jamais la fiche. Le clavier
+ouvre la carte au focus et `Échap` la ferme.
+
+**Lot 4 — tactile.** Sous `(pointer: coarse)` il n'y a pas de survol : le tap
+sur un lien de règle ouvre une feuille basse, le tap sur une entité navigue
+comme aujourd'hui.
+
+### Critères
+
+- [ ] Un lien de règle sans destination ni prose ne se distingue plus du texte
+      ordinaire — ni couleur de lien, ni souligné pointillé.
+- [ ] Survoler un lien d'entité ouvre une carte portant son portrait (s'il
+      existe), son nom, sa catégorie et son premier paragraphe visible.
+- [ ] La catégorie affichée est exactement celle de la fiche (« Personnage »,
+      « Lieu », « Espèce », « Monstre »…), jamais un libellé inventé.
+- [ ] Survoler un lien de règle ouvre une carte portant son nom, son type et
+      sa description — et **aucune** valeur mécanique.
+- [ ] Vérifié par lecture du HTML envoyé, pas à l'œil : aucun extrait ne
+      provient d'un segment que la visibilité masque à ce visiteur.
+- [ ] Une page citant une douzaine de fiches ne déclenche pas une requête par
+      lien.
+- [ ] Sur un pointeur grossier, le tap ouvre une feuille basse au lieu de ne
+      rien faire.
+- [ ] Le clavier ouvre la carte au focus, `Échap` la ferme.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+
+Et, la fluidité étant la demande et non un bonus, **mesurée plutôt que jugée à
+l'œil** — chiffres à relever avant/après sur le Prologue, la page la plus
+chargée en mentions :
+
+| Mesure | Cible |
+|---|---|
+| Survol → carte peinte | aucune requête réseau, une seule image |
+| Requêtes serveur ajoutées par fiche (lot 2) | 1, dans le `Promise.all` existant |
+| Poids HTML ajouté sur le Prologue | à relever ; extrait coupé à ~240 caractères côté serveur |
+| Nœuds de carte dans le DOM | 1, quel que soit le nombre de mentions |
+| Décalage de mise en page à l'ouverture | 0 — portail, hors du flux du paragraphe |
+| Saut de la carte à l'arrivée du portrait | 0 — boîte réservée |
+| Clic après survol appuyé | fiche préchargée, pas de nouvel aller-retour |
+
+---
+
+## V2.1-19 — La mémoïsation n'atteignait pas le wiki public · `M`
+
+### Constat
+
+Trouvé en instruisant la fluidité de V2.1-18, pas en relisant le code. Deux
+causes indépendantes, l'une invisible et l'autre visible, qui font toutes deux
+payer une navigation entre deux fiches de `/partage` plus cher qu'elle ne
+devrait.
+
+**Le cache existe, il est payé, et il ne prend pas sur cette route.**
+`listEntitiesForWorld` est enveloppé dans `React.cache()` depuis l'audit P-01
+(`repos/entities.ts:42`), précisément parce qu'il partait deux fois par
+navigation. Son commentaire pose lui-même la condition : *« Ne fonctionne que
+parce que `supabase` est un objet stable par requête (`createClient` est
+lui-même mémoïsé) — `cache()` compare ses arguments par identité. »*
+
+Cette condition est vraie côté authentifié : `createClient`
+(`lib/supabase/server.ts:19`) est mémoïsé. Elle est fausse côté partage :
+`createShareLinkServiceClient` (`lib/supabase/service.ts`) est une fabrique
+nue, et **chaque fonction de `publicShare.ts` construit la sienne** en
+première ligne — `getPublicEntityTree` (`:166`), `getPublicEntityDetail`
+(`:392`), `listPublicEntities` (`:145`). Un rendu de
+`/partage/[token]/[entitySlug]` en appelle trois, donc trois objets
+différents, donc trois clés de cache différentes.
+
+Conséquence : **toute** mémoïsation de dépôt est inerte sur `/partage`, et
+seulement là. `listEntitiesForWorld` y repart pour de vrai à chaque appel —
+la liste complète des entités du monde, transférée et désérialisée deux fois
+par fiche. `listCampaignsForWorld`, `walkRulesetChain` et les lectures de
+visibilité sont dans le même cas. Le gain de P-01 n'a jamais atteint la seule
+route que des visiteurs ouvrent vraiment.
+
+**Et la coquille se reconstruit à chaque fiche.** `/partage` est la seule des
+trois routes de wiki à rendre `BookSkin` depuis sa **page** plutôt que depuis
+son layout — V2.1-12 a hissé `/apercu` et l'onglet joueur, et a laissé
+celle-ci, sa garde par mot de passe devant précéder tout chargement. Chaque
+navigation refait donc `getPublicEntityTree`, soit cinq requêtes, pour
+reconstruire un sommaire identique.
+
+Les symptômes sont déjà écrits, dans le commentaire de `apercu/layout.tsx` où
+V2.1-12 les a consignés en les corrigeant ailleurs : la recherche du sommaire
+se vide, son défilement repart de zéro, son repli scintille (lu depuis
+`localStorage` dans un effet, après le premier rendu). Les trois sont encore
+vivants sur `/partage` aujourd'hui. Ce n'est donc pas un ticket de chiffres :
+c'est ce que voit une joueuse qui clique sur trois fiches de suite.
+
+### Décision
+
+Deux volets, indépendants. Le premier tient en deux lignes et rend le plus.
+
+**Volet A — le client de partage rejoint la mémoïsation.**
+`createShareLinkServiceClient` passe sous `React.cache()`, comme son
+homologue authentifié. Toutes les mémoïsations de dépôt reprennent alors
+effet sur `/partage`, sans qu'aucune d'elles ne soit touchée.
+
+Deux points à réaffirmer dans le commentaire, parce qu'il s'agit du client
+service-role : `cache()` de React est **borné au rendu courant**, jamais
+partagé entre deux requêtes ni entre deux visiteurs — c'est déjà ce que
+disent `lib/supabase/server.ts` et `repos/entities.ts`, et ça vaut d'être
+répété là où la RLS est contournée. Et le client est sans état
+(`persistSession: false`), donc le réemployer dans un même rendu ne
+transporte rien d'un appel à l'autre. La règle ESLint qui confine le client
+à `publicShare.ts` n'est pas concernée : la fabrique ne bouge pas de
+`lib/supabase/service.ts` et garde son unique importateur.
+
+**Volet B — la coquille rejoint le layout**, sur le modèle exact
+d'`apercu/layout.tsx`.
+
+Avec une correction à la raison écrite dans la page, qui n'est pas fausse mais
+incomplète. Déplacer la garde dans le layout ne suffirait **pas** à empêcher la
+page de charger : en rendu serveur React, layout et page s'exécutent
+concurremment, et un layout qui ne rend pas ses `children` n'annule pas le
+travail que la page a déjà lancé. La garde doit donc rester dans la page —
+elle y reste — et le layout pose **la sienne** avant de charger l'arbre.
+
+Ce qui rendait cette duplication coûteuse est précisément ce que le volet A
+supprime : `resolveShareLink` passe sous `cache()` à son tour, et
+`hasVerifiedSharePassword` ne lit qu'un cookie. Les deux gardes ne coûtent
+alors qu'une seule requête pour l'ensemble du rendu. **Le volet A n'est pas
+seulement un gain : c'est ce qui rend le volet B écrivable sans le payer.**
+
+D'où l'ordre : A d'abord, mesuré seul, puis B.
+
+### Critères
+
+- [ ] `createShareLinkServiceClient` est mémoïsé par rendu, et son commentaire
+      dit pourquoi et jusqu'où.
+- [ ] Sur un rendu de `/partage/[token]/[entitySlug]`, `listEntitiesForWorld`
+      ne part qu'une fois — vérifié par instrumentation, pas déduit.
+- [ ] `BookSkin` est rendu par `app/partage/[token]/layout.tsx`, la page ne
+      rendant plus que le corps de la fiche.
+- [ ] La garde par mot de passe reste dans la page **et** précède le
+      chargement de l'arbre dans le layout. Aucun contenu, aucun sommaire, ne
+      quitte le serveur avant vérification — revérifié depuis un navigateur
+      vraiment déconnecté, jamais depuis `/apercu`.
+- [ ] Naviguer entre deux fiches conserve la recherche du sommaire, son
+      défilement et son repli.
+- [ ] Requêtes par navigation relevées avant et après, sur le même monde.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+
+---
+
 ## Ordre suivi
 
 Aucune dépendance technique dure entre ces cinq tickets. Fait dans l'ordre
@@ -3024,3 +3348,12 @@ moment où elle a été écrite, et la règle de V2.1-14 se vérifie une fois de
 — un backlog ne se clôt pas parce qu'un ticket le dit. Celui-ci naît de deux
 gênes d'affichage dont ni les types ni les tests ne pouvaient rien dire, et sa
 vraie cause est plus vieille que les deux symptômes qui l'ont rendue visible.
+
+**Troisième fois, et ce n'est plus une surprise.** V2.1-18 s'ouvre le
+16 septembre, après V2.1-17 qui devait lui aussi être le dernier. La règle de
+V2.1-14 n'a plus besoin d'être vérifiée : ce backlog est celui des demandes qui
+naissent de l'usage, et l'usage ne s'arrête pas. Celui-ci tient d'ailleurs des
+deux familles à la fois — une demande d'interface de l'auteur (l'aperçu au
+survol) qui, en allant lire le code pour y répondre, a découvert un défaut que
+personne ne cherchait : un lien qui se déguise en lien. **On ne trouve pas ce
+défaut-là en relisant le code, on le trouve en répondant à autre chose.**
