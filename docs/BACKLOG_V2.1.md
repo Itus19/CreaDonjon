@@ -34,6 +34,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-19 | La mémoïsation n'atteignait pas le wiki public | `M` | **Fait** (16 septembre) — né de la section Fluidité de V2.1-18. `React.cache()` ne prend que si le client Supabase est stable par requête ; `createShareLinkServiceClient` est une fabrique nue, et chaque fonction de `publicShare.ts` construit la sienne. Tout le gain de l'audit P-01 était donc inerte sur `/partage`, et seulement là. Second volet : la coquille passe dans le layout, `/partage` était la dernière des trois routes de wiki à la reconstruire à chaque fiche. Mesure : 2 constructions de sommaire pour deux navigations avant, 0 après, et la recherche du sommaire survit désormais à la navigation |
 | V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Tous les lots faits** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : le temps de rendu est le nombre de vagues de requêtes multiplié par la latence, et 41 % sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt, retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme. Deux défauts empilés, plus une fuite refermée. **Lot 2.1** : les jetons de teinte passent dans le HTML, sur les trois routes, éditeur compris. **Lot 3** : deux vagues qui n'attendaient que leur tour dans l'ordre d'écriture — le Prologue passe de 873 à 678 ms. **Lot 5** : la chaine de rulesets cesse d attendre les cles de regle — le Prologue passe de 731 a 434 ms, soit -41 % depuis le lot 0. **Lot 4** : l auteur payait 66 ms de plus que ses joueuses a chaque clic, le middleware sort desormais avant de construire le client sur /partage — ecart ramene a -1 ms. **Lot 6** : l A/B tranche — squelette a 18 ms sur une cible prechargee contre 20 ms sur une cible qui ne l est pas, et une navigation coute exactement son rendu serveur. Le prechargement est coupe partout, 18 requetes par page ouverte tombent a 0 |
 | V2.1-21 | Le contraste élevé se perd sur une fiche illustrée | `S` | **Fait** (16 septembre) — trouvé en instruisant le lot 2.1 de V2.1-20, pas en le cherchant. `.wiki-bg-scope[data-mode="…"]` redéclare la palette **sur lui-même**, et une déclaration locale l'emporte sur une valeur héritée : ce n'est pas une affaire de spécificité, les deux règles ne visent même pas le même élément. Sur toute fiche portant un fond de page wiki, le contraste élevé était donc écrasé — le lecteur le perdait exactement là où il en a le plus besoin. Mesuré avant correction : fond à 17 % de clarté au lieu de 1,6 %, texte à 95 % au lieu de blanc pur. Corrigé par un garde `:root:not([data-contrast="high"])` sur les quatre portées ; l'auteur a choisi de garder l'image, qui reste affichée mais que le `--scrim` de ce mode voile à 92 % |
+| V2.1-22 | Le panneau « Mentionné dans » quitte l'application | `S` | **Fait** (16 septembre) — demande directe de l'auteur : « je n'en ai pas besoin ». Le chemin entier part, pas seulement l'affichage : sans lecteur, recalculer les mentions à chaque enregistrement d'un bloc texte ne servait plus personne. La table `entity_mentions` est supprimée, avec son accord. Les liens DANS le texte, qui portent le même nom dans la spec, ne sont pas touchés |
 
 ---
 
@@ -4822,6 +4823,85 @@ observable est qu'elle transparaît à 8 %.
 
 ---
 
+## V2.1-22 — Le panneau « Mentionné dans » quitte l'application · `S` — fait
+
+### Constat
+
+Demande de l'auteur, sans détour : « il y a une partie intitulée "mentionné
+dans", j'aimerais simplement la supprimer. Je n'en ai pas besoin. Purement et
+simplement enlever ça de l'application. C'est la partie Relations qui restera
+et qui fera office de mettre certains liens en évidence. »
+
+Rien à instruire : les rétroliens (V2.1-1, `specs/wiki-liens-et-personnages.md`
+§A2) répondaient à la question « qui me mentionne ? ». Les relations répondent
+à « à qui suis-je lié, et comment ? », et c'est la seule des deux qui sert à
+cette table.
+
+Recherche faite avant de couper, parce que le mot « mention » désigne deux
+choses différentes dans ce dépôt :
+
+| Ce qui s'appelle « mention » | Ce que c'est | Sort |
+|---|---|---|
+| Le nœud `ref` dans un segment (§A1) | un lien écrit dans le texte, cliquable, avec sa détection et son aperçu au survol | **gardé, intact** |
+| La table `entity_mentions` (§A2) | le graphe dérivé qui permet le sens INVERSE | retiré |
+
+Les deux sont nés du même ticket, et seul le second est visé.
+
+### Décision
+
+**Retirer le chemin entier, pas seulement l'affichage.** La table n'avait qu'un
+lecteur et qu'un écrivain. Garder l'écriture aurait laissé un `DELETE` suivi
+d'un `INSERT` à chaque enregistrement d'un bloc de texte, pour personne.
+
+Partent donc ensemble : `components/entities/MentionedIn.tsx`, la route
+`/api/entities/[id]/mentions`, `src/server/services/linker.ts`,
+`src/server/repos/entityMentions.ts`, `src/core/linker/mentions.ts` et son
+test, les deux points de rendu (éditeur MJ et corps de lecture), et les deux
+appels dans `services/blocks.ts`.
+
+La table elle-même est supprimée par `20260916200000_drop_entity_mentions.sql`,
+après accord explicite de l'auteur — une suppression de table ne se décide pas
+sans lui. Perte assumée et dite : ces lignes étaient intégralement dérivables
+du contenu des blocs, un recalcul les reconstruirait.
+
+`docs/SCHEMA.md` et la spec portent chacun un encadré disant ce qui a été
+retiré et pourquoi, plutôt que de continuer à décrire un panneau disparu.
+
+### Critères
+
+- [x] Le panneau a disparu des deux surfaces où il vivait : la fiche dans
+      l'éditeur MJ et la fiche dans le wiki. Vérifié en navigateur.
+- [x] Les **relations** sont intactes sur les deux — factions et liens de
+      parenté toujours en évidence.
+- [x] La route `/api/entities/[id]/mentions` répond 404.
+- [x] Les deux chemins modifiés de `services/blocks.ts` sont exercés pour de
+      vrai, par un bloc de contrôle créé puis retiré : enregistrement d'un
+      bloc texte (`PATCH` 200) et suppression d'un bloc (`DELETE` 204).
+- [x] Les liens dans le texte ne sont pas touchés.
+- [x] La migration est appliquée, puis la suite complète relancée contre la
+      base : `npm run typecheck && npm run lint && npm run test` passent
+      (1075 tests).
+
+### Ce que ce ticket a appris
+
+**Une redirection `>` vide le fichier avant de savoir si la commande marche.**
+J'avais donné à l'auteur `supabase gen types … > src/types/database.ts` pour
+régénérer les types après la migration. La commande a échoué — dépôt non lié,
+CLI non connectée — et le shell avait déjà tronqué le fichier : 2890 lignes
+perdues, retrouvées dans Git. La forme sûre passe par un fichier intermédiaire
+(`> /tmp/db.ts && mv /tmp/db.ts …`), et c'est celle qu'il faut donner.
+
+**Le coupable évident ne l'était pas.** Juste après l'application de la
+migration, toutes les fiches ont commencé à répondre 404 en local. La table
+venait d'être supprimée : elle était le suspect naturel. La production, qui
+tourne sur la MÊME base, affichait pourtant les fiches sans broncher — ce qui
+innocentait la base en une mesure. Le vrai coupable était la compilation
+incrémentale du serveur de dev, restée accrochée à six fichiers supprimés sous
+elle. **Quand un changement de base et un changement de code arrivent le même
+jour, l'environnement qui n'a reçu que l'un des deux tranche entre eux.**
+
+---
+
 ## Ordre suivi
 
 Aucune dépendance technique dure entre ces cinq tickets. Fait dans l'ordre
@@ -5017,3 +5097,10 @@ deux familles à la fois — une demande d'interface de l'auteur (l'aperçu au
 survol) qui, en allant lire le code pour y répondre, a découvert un défaut que
 personne ne cherchait : un lien qui se déguise en lien. **On ne trouve pas ce
 défaut-là en relisant le code, on le trouve en répondant à autre chose.**
+
+**Vingt-deux tickets, et celui-ci n'ajoute rien.** V2.1-22 ne corrige aucun
+défaut et n'apporte aucune fonctionnalité : il en retire une, sur une phrase de
+l'auteur. C'est le seul de ce backlog dont le résultat se mesure en lignes
+disparues — six fichiers, une table, deux encadrés de documentation à la place
+de ce qu'ils décrivaient. Un backlog qui ne sait qu'ajouter finit par décrire
+une application que personne n'utilise en entier.
