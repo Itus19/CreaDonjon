@@ -33,7 +33,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-18 | Aperçu des fiches au survol d'un lien | `L` | **Ouvert** (16 septembre) — quatre lots, le premier autonome. Né d'un lien de règle qui ne mène nulle part sur `/partage` tout en portant la couleur et le souligné d'un vrai lien : trois mentions inertes sur vingt, mesurées sur la page en production. Trois variantes esquissées avec l'auteur avant tout code, la carte flottante retenue pour les entités comme pour les règles. La fluidité est une exigence du ticket, pas une optimisation d'après-coup : elle a une section, des cibles chiffrées, et elle a mis au jour un coût plus ancien, parti en V2.1-19 |
 | V2.1-19 | La mémoïsation n'atteignait pas le wiki public | `M` | **Fait** (16 septembre) — né de la section Fluidité de V2.1-18. `React.cache()` ne prend que si le client Supabase est stable par requête ; `createShareLinkServiceClient` est une fabrique nue, et chaque fonction de `publicShare.ts` construit la sienne. Tout le gain de l'audit P-01 était donc inerte sur `/partage`, et seulement là. Second volet : la coquille passe dans le layout, `/partage` était la dernière des trois routes de wiki à la reconstruire à chaque fiche. Mesure : 2 constructions de sommaire pour deux navigations avant, 0 après, et la recherche du sommaire survit désormais à la navigation |
 | V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Tous les lots faits** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : le temps de rendu est le nombre de vagues de requêtes multiplié par la latence, et 41 % sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt, retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme. Deux défauts empilés, plus une fuite refermée. **Lot 2.1** : les jetons de teinte passent dans le HTML, sur les trois routes, éditeur compris. **Lot 3** : deux vagues qui n'attendaient que leur tour dans l'ordre d'écriture — le Prologue passe de 873 à 678 ms. **Lot 5** : la chaine de rulesets cesse d attendre les cles de regle — le Prologue passe de 731 a 434 ms, soit -41 % depuis le lot 0. **Lot 4** : l auteur payait 66 ms de plus que ses joueuses a chaque clic, le middleware sort desormais avant de construire le client sur /partage — ecart ramene a -1 ms. **Lot 6** : l A/B tranche — squelette a 18 ms sur une cible prechargee contre 20 ms sur une cible qui ne l est pas, et une navigation coute exactement son rendu serveur. Le prechargement est coupe partout, 18 requetes par page ouverte tombent a 0 |
-| V2.1-21 | Le contraste élevé se perd sur une fiche illustrée | `S` | **Ouvert** (16 septembre) — trouvé en instruisant le lot 2.1 de V2.1-20, pas en le cherchant. `.wiki-bg-scope[data-mode="…"]` est un descendant de `:root[data-contrast="high"]`, donc plus spécifique : sur toute fiche portant un fond de page wiki, le contraste élevé est écrasé et la palette colorée revient. Le lecteur le perd exactement là où il en a le plus besoin, sur les pages dont le fond est une photographie floutée. Porte aussi une question qui n'est pas technique : faut-il masquer l'image elle-même sous ce mode |
+| V2.1-21 | Le contraste élevé se perd sur une fiche illustrée | `S` | **Fait** (16 septembre) — trouvé en instruisant le lot 2.1 de V2.1-20, pas en le cherchant. `.wiki-bg-scope[data-mode="…"]` redéclare la palette **sur lui-même**, et une déclaration locale l'emporte sur une valeur héritée : ce n'est pas une affaire de spécificité, les deux règles ne visent même pas le même élément. Sur toute fiche portant un fond de page wiki, le contraste élevé était donc écrasé — le lecteur le perdait exactement là où il en a le plus besoin. Mesuré avant correction : fond à 17 % de clarté au lieu de 1,6 %, texte à 95 % au lieu de blanc pur. Corrigé par un garde `:root:not([data-contrast="high"])` sur les quatre portées ; l'auteur a choisi de garder l'image, qui reste affichée mais que le `--scrim` de ce mode voile à 92 % |
 
 ---
 
@@ -4701,10 +4701,11 @@ différentes, et les deux déclarations se rencontrent sur le wiki :
   la racine.
 - `.wiki-bg-scope[data-mode="…"]` redéclare cette même palette à partir des
   `--h`/`--c` de la fiche courante, pour que le wiki prenne la teinte de son
-  image de fond (V2-G13). C'est un **descendant** de la racine, donc plus
-  spécifique.
+  image de fond (V2-G13). C'est un `<div>` **à l'intérieur** de la page, et il
+  redéclare la palette sur lui-même.
 
-Le second gagne. **Sur toute fiche portant un fond de page wiki, le contraste
+Le second gagne — mais pas pour la raison qu'on croit, voir « Le mécanisme,
+corrigé » plus bas. **Sur toute fiche portant un fond de page wiki, le contraste
 élevé est écrasé et la palette colorée revient**, sur les trois routes de wiki.
 
 Un lecteur qui a activé le contraste élevé le perd donc précisément là où il en
@@ -4722,45 +4723,85 @@ C'est la même leçon que V2.1-18 : on ne trouve pas ce défaut-là en relisant 
 code, on le trouve en répondant à autre chose. Il ne relève pas de la
 performance et n'a rien à faire dans V2.1-20 — d'où ce ticket.
 
-### Piste, à vérifier avant d'y croire
+### Le mécanisme, corrigé
 
-Garder les blocs de portée derrière la racine :
-`:root:not([data-contrast="high"]) .wiki-bg-scope[data-mode="…"]`.
+**Ce ticket disait « descendant, donc plus spécifique ». C'est faux**, et la
+nuance décide du correctif.
 
-Ce qui rend la chose plausible : sous contraste élevé, `:root` pose des valeurs
-**littérales** (`oklch(0.12 0 0)`), sans `var(--h)`. Les `--h`/`--c` que
-`BookSkin` applique en style **inline** — et qu'aucun sélecteur ne peut
-neutraliser, la spécificité ne s'appliquant pas à eux — deviennent donc inertes
-d'eux-mêmes : plus personne ne les lit. Le garde devrait suffire, sans toucher
-au composant.
+La spécificité départage deux règles qui visent le **même** élément. Ici elles
+visent des éléments différents : `:root[data-contrast="high"]` vise `<html>`,
+`.wiki-bg-scope` vise un `<div>` à l'intérieur de la page. Il n'y a donc pas de
+duel à départager.
 
-À vérifier plutôt qu'à supposer : `color-scheme` est déclaré dans les deux
-blocs, et c'est exactement le genre de propriété dont V2.1 a déjà appris qu'elle
-ne suit aucune règle de jeton (tokens.css:21).
+Ce qui joue est l'**héritage**. Une variable CSS descend d'ancêtre en
+descendant, mais dès qu'un élément la redéclare **sur lui-même**, c'est sa
+valeur qui vaut pour lui et tout son sous-arbre. Une déclaration locale
+l'emporte toujours sur une valeur héritée, quelle que soit la spécificité de
+cette dernière. Le wiki ne gagnait pas un duel : il reposait simplement la
+variable plus bas dans l'arbre, et le contraste élevé n'avait aucun moyen de
+s'y opposer.
 
-### La question qui va avec, et qui n'est pas technique
+### Chiffré avant de corriger
 
-Faut-il aller plus loin et **masquer l'image de fond elle-même** sous contraste
-élevé ? Poser du texte sur une photographie floutée est le contraire de ce que
-ce mode cherche, même avec une palette neutre par-dessus. Le garde ci-dessus
-rend la palette correcte et laisse l'image ; la masquer serait plus cohérent et
-plus brutal.
+Contraste élevé actif, sur une fiche illustrée :
 
-C'est un choix de l'auteur, pas une évidence technique — à trancher avant
-d'écrire, parce que les deux correctifs ne se ressemblent pas.
+| | ce que la racine demande | ce que la portée imposait |
+|---|---|---|
+| `--bg` | clarté **1,6 %** | clarté **17 %** |
+| `--ink` | blanc pur (100 %) | 95 % |
+
+Fond plus clair, texte moins blanc, teinte de retour : les trois réduisent
+l'écart que ce mode existe pour maximiser.
+
+### Le correctif
+
+`:root:not([data-contrast="high"])` devant chacune des quatre portées de wiki
+(`dark`, `dim`, `soft`, `light`). Sous contraste élevé la portée ne déclare plus
+rien, donc elle hérite — et hériter est exactement ce qu'on voulait.
+
+Les jetons `--h`/`--c` que `BookSkin` pose en style **inline** ne sont pas
+neutralisés (rien ne neutralise un style inline) : ils deviennent simplement
+inertes, puisque la racine pose alors des valeurs littérales qui ne les lisent
+jamais. C'est ce qui permet de ne pas toucher au composant.
+
+### Vérifié
+
+Sous contraste élevé, la portée rend désormais **exactement les mêmes valeurs
+que la racine** (`lab(1.5609% 0 0)` et `lab(100% 0 0)`), et ce dans les
+**quatre** modes — chacun retombe sur la palette neutre.
+
+Sans contraste élevé, rien n'a bougé : la portée garde la teinte de sa fiche
+(`--h: 90`) là où la racine porte celle de l'application (`--h: 249`). V2-G13
+est intact.
+
+### L'image de fond : choix de l'auteur, et ce qu'il donne vraiment
+
+Décision retenue : **garder l'image, ne corriger que la palette**. Aucune ligne
+ne touche `.wiki-bg-backdrop`.
+
+Constaté en vérifiant : l'image reste bien chargée et affichée, mais le voile
+`.wiki-bg-backdrop::after` peint `var(--scrim)`, qui passe de **70 %** à **92 %
+d'opacité** sous contraste élevé. En pratique l'illustration se lit donc à
+peine — non pas à cause de ce ticket, mais parce que la palette de ce mode le
+prévoyait déjà ; le garde n'a fait que la laisser s'appliquer à la portée du
+wiki.
+
+Écrit ici plutôt que corrigé : rendre l'image réellement visible sous contraste
+élevé demanderait d'affaiblir `--scrim` dans ce mode, c'est-à-dire de travailler
+contre lui. La décision « garder l'image » est respectée à la lettre ; son effet
+observable est qu'elle transparaît à 8 %.
 
 ### Critères
 
-- [ ] Sur une fiche portant un fond, contraste élevé activé : la palette reste
-      celle du contraste élevé, vérifiée en navigateur sur les trois routes de
-      wiki.
-- [ ] Sur la même fiche, contraste élevé désactivé : la teinte du fond
-      s'applique comme avant — le correctif ne doit rien retirer au cas normal.
-- [ ] Les quatre modes (`dark`, `dim`, `soft`, `light`) revérifiés avec et sans
+- [x] Sur une fiche portant un fond, contraste élevé activé : la palette reste
+      celle du contraste élevé — vérifié dans les quatre modes.
+- [x] Sur la même fiche, contraste élevé désactivé : la teinte du fond
+      s'applique comme avant.
+- [x] Les quatre modes (`dark`, `dim`, `soft`, `light`) revérifiés avec et sans
       contraste élevé.
-- [ ] La question de l'image de fond est tranchée et écrite ici, quelle que
-      soit la réponse.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+- [x] La question de l'image de fond est tranchée et écrite ici : gardée, et
+      voilée à 92 % par le `--scrim` du mode.
+- [x] `npm run typecheck && npm run lint && npm run test` passent.
 
 ---
 

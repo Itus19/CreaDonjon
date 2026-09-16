@@ -14,9 +14,40 @@
  * passe par ces variables (V0-03b, critere d'acceptation).
  */
 
+/*
+ * `:root:not([data-contrast="high"])` devant chacune des quatre portees de
+ * wiki ci-dessous (V2.1-21) — sans ce garde, le mode contraste eleve etait
+ * perdu sur toute fiche portant un fond de page.
+ *
+ * Le mecanisme n'est PAS une histoire de specificite, et c'est ce qui rend le
+ * defaut facile a mal diagnostiquer : la specificite departage deux regles qui
+ * visent le MEME element, or celles-ci visent des elements differents —
+ * `:root[data-contrast="high"]` vise `<html>`, `.wiki-bg-scope` vise un `<div>`
+ * a l'interieur de la page. Ce qui joue est l'HERITAGE : une variable descend
+ * d'ancetre en descendant, mais des qu'un element la redeclare sur lui-meme,
+ * c'est sa valeur qui vaut pour lui et tout son sous-arbre. Une declaration
+ * locale l'emporte toujours sur une valeur heritee, quelle que soit la
+ * specificite de celle-ci. Le wiki ne gagnait donc pas un duel : il reposait
+ * la variable plus bas, et le contraste eleve n'avait aucun moyen de s'y
+ * opposer.
+ *
+ * Mesure avant correction, contraste eleve actif sur une fiche illustree : la
+ * racine demandait un fond a 1,6 % de clarte et un texte blanc pur, la portee
+ * imposait un fond a 17 % et un texte a 95 %. Fond plus clair, texte moins
+ * blanc, teinte de retour — les trois reduisent l'ecart que ce mode existe
+ * pour maximiser.
+ *
+ * Les jetons `--h`/`--c` que `BookSkin` pose en style INLINE ne sont pas
+ * neutralises par ce garde (rien ne neutralise un style inline) : ils
+ * deviennent simplement inertes, puisque sous contraste eleve la racine pose
+ * des valeurs litterales qui ne les lisent jamais.
+ *
+ * L'IMAGE de fond, elle, reste affichee (choix de l'auteur) : ce garde ne
+ * touche que la palette. Voir `.wiki-bg-backdrop` dans `app/globals.css`.
+ */
 :root,
 :root[data-mode="dark"],
-.wiki-bg-scope[data-mode="dark"] {
+:root:not([data-contrast="high"]) .wiki-bg-scope[data-mode="dark"] {
   /*
    * `color-scheme` est la SEULE chose qui pilote ce que le navigateur peint
    * lui-meme : le menu deroulant d'un <select> et ses <option>, le
@@ -105,7 +136,7 @@
 }
 
 :root[data-mode="dim"],
-.wiki-bg-scope[data-mode="dim"] {
+:root:not([data-contrast="high"]) .wiki-bg-scope[data-mode="dim"] {
   color-scheme: dark;
 
   --bg:           oklch(0.24 var(--c) var(--h));
@@ -152,7 +183,7 @@
    sur fond clair (soft/light), meme teinte (ambre, H=78), pour rester
    visible contre un fond qui s'inverse. */
 :root[data-mode="soft"],
-.wiki-bg-scope[data-mode="soft"] {
+:root:not([data-contrast="high"]) .wiki-bg-scope[data-mode="soft"] {
   color-scheme: light;
 
   --bg:           oklch(0.74 var(--c) var(--h));
@@ -200,7 +231,7 @@
 }
 
 :root[data-mode="light"],
-.wiki-bg-scope[data-mode="light"] {
+:root:not([data-contrast="high"]) .wiki-bg-scope[data-mode="light"] {
   color-scheme: light;
 
   --bg:           oklch(0.95 var(--c) var(--h));
