@@ -15,6 +15,7 @@ import { type BlockRow, getBlockById, listBlocksForEntity } from "@/src/server/r
 import {
   resolveEntityRefExcerpts,
   resolveRuleRefPreviews,
+  warmRuleChain,
   type EntityRefPreview,
   type RuleRefPreview,
 } from "@/src/server/services/refPreview";
@@ -557,6 +558,27 @@ export async function getPublicEntityDetail(
   | null
 > {
   const supabase = createShareLinkServiceClient();
+
+  // V2.1-20 lot 5 — demarre AVANT tout le reste, et ce n'est pas un detail de
+  // style : `warmRuleChain` est lui-meme une chaine de lectures sequentielles
+  // (le monde, puis un maillon de ruleset par niveau). Place dans le
+  // `Promise.all` plus bas, il ne partait qu'apres la resolution de la fiche
+  // et ses trois allers-retours s'ajoutaient au chemin critique — mesure : une
+  // fiche sans la moindre regle citee passait de 233 a 351 ms. Lance ici, il
+  // court en parallele de la fiche et de ses blocs, et se termine avant qu'on
+  // en ait besoin.
+  //
+  // Lance, mais JAMAIS attendu ici, et c'est le point : seule une fiche qui
+  // cite une regle le reclamera (`resolveRuleRefPreviews`, qui redemande la
+  // meme promesse memoisee). L'attendre dans le `Promise.all` plus bas faisait
+  // patienter toutes les autres derriere un travail dont elles n'ont que faire
+  // — mesure : 233 ms a 288 ms sur une fiche sans la moindre regle.
+  //
+  // Le `catch` ne masque aucune erreur utile : il empeche un rejet sans
+  // destinataire quand personne ne reclame la chaine. Celle ou celui qui
+  // l'attend vraiment recoit l'erreur par la promesse memoisee, intacte.
+  warmRuleChain(supabase, worldId).catch(() => {});
+
   // Fiche masquee (V2, retour utilisateur point 2) : meme reponse que
   // "n'existe pas", jamais de distinction qui revelerait qu'une fiche
   // cachee existe a cette adresse (meme discipline que resolveShareLink).

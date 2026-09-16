@@ -12,6 +12,7 @@ import { type BlockRow, listBlocksForEntity } from "@/src/server/repos/blocks";
 import {
   resolveEntityRefExcerpts,
   resolveRuleRefPreviews,
+  warmRuleChain,
   type EntityRefPreview,
   type RuleRefPreview,
 } from "@/src/server/services/refPreview";
@@ -258,6 +259,12 @@ export async function getPlayerEntityDetail(
     viewerFor(supabase, worldId, userId),
     resolveCampaignId(supabase, worldId),
     getPlayerWikiBackground(supabase, worldId, entitySlug, userId),
+    // V2.1-20 lot 5 — voir `publicShare.ts` : la chaine de rulesets ne depend
+    // que du monde, elle n'a aucune raison d'attendre que les cles de regle
+    // soient collectees trois vagues plus loin. Rechauffee ici, elle est deja
+    // resolue quand `resolveRuleRefPreviews` la redemande. Le resultat n'est
+    // pas nomme : c'est la memoisation qui le transporte.
+    warmRuleChain(supabase, worldId),
   ]);
 
   const blocksWithGenealogy = await Promise.all(

@@ -32,7 +32,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-17 | Deux retouches de rendu au Livre de sessions | `S` | **Fait** (16 septembre) — les deux vues par l'auteur, captures à l'appui : le bloc Séance n'alignait pas ses libellés sur ses valeurs, et un trait posé en tête de bloc tombait entre le titre et le texte, en doublon du filet automatique que chaque bloc porte depuis V2-G11. L'alignement a ensuite été corrigé sur `PublicInfoboxBlock`, l'original d'où le défaut venait |
 | V2.1-18 | Aperçu des fiches au survol d'un lien | `L` | **Ouvert** (16 septembre) — quatre lots, le premier autonome. Né d'un lien de règle qui ne mène nulle part sur `/partage` tout en portant la couleur et le souligné d'un vrai lien : trois mentions inertes sur vingt, mesurées sur la page en production. Trois variantes esquissées avec l'auteur avant tout code, la carte flottante retenue pour les entités comme pour les règles. La fluidité est une exigence du ticket, pas une optimisation d'après-coup : elle a une section, des cibles chiffrées, et elle a mis au jour un coût plus ancien, parti en V2.1-19 |
 | V2.1-19 | La mémoïsation n'atteignait pas le wiki public | `M` | **Fait** (16 septembre) — né de la section Fluidité de V2.1-18. `React.cache()` ne prend que si le client Supabase est stable par requête ; `createShareLinkServiceClient` est une fabrique nue, et chaque fonction de `publicShare.ts` construit la sienne. Tout le gain de l'audit P-01 était donc inerte sur `/partage`, et seulement là. Second volet : la coquille passe dans le layout, `/partage` était la dernière des trois routes de wiki à la reconstruire à chaque fiche. Mesure : 2 constructions de sommaire pour deux navigations avant, 0 après, et la recherche du sommaire survit désormais à la navigation |
-| V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Lots 0, 1, 2, 2.1 et 3 faits** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : le temps de rendu est le nombre de vagues de requêtes multiplié par la latence, et 41 % sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt, retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme. Deux défauts empilés, plus une fuite refermée. **Lot 2.1** : les jetons de teinte passent dans le HTML, sur les trois routes, éditeur compris. **Lot 3** : deux vagues qui n'attendaient que leur tour dans l'ordre d'écriture — le Prologue passe de 873 à 678 ms. Restent les lots 4, 5 et 6 |
+| V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Lots 0, 1, 2, 2.1, 3 et 5 faits** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : le temps de rendu est le nombre de vagues de requêtes multiplié par la latence, et 41 % sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt, retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme. Deux défauts empilés, plus une fuite refermée. **Lot 2.1** : les jetons de teinte passent dans le HTML, sur les trois routes, éditeur compris. **Lot 3** : deux vagues qui n'attendaient que leur tour dans l'ordre d'écriture — le Prologue passe de 873 à 678 ms. **Lot 5** : la chaine de rulesets cesse d attendre les cles de regle — le Prologue passe de 731 a 434 ms, soit -41 % depuis le lot 0. Restent les lots 4 et 6 |
 | V2.1-21 | Le contraste élevé se perd sur une fiche illustrée | `S` | **Ouvert** (16 septembre) — trouvé en instruisant le lot 2.1 de V2.1-20, pas en le cherchant. `.wiki-bg-scope[data-mode="…"]` est un descendant de `:root[data-contrast="high"]`, donc plus spécifique : sur toute fiche portant un fond de page wiki, le contraste élevé est écrasé et la palette colorée revient. Le lecteur le perd exactement là où il en a le plus besoin, sur les pages dont le fond est une photographie floutée. Porte aussi une question qui n'est pas technique : faut-il masquer l'image elle-même sous ce mode |
 
 ---
@@ -4362,6 +4362,91 @@ bulles doivent être prêtes avant le premier survol. Les deux gardent donc leur
 intérêt. Mais l'ordre compte : le lot 5 décide d'abord **où** ce travail
 s'exécute, l'aplatissement décide ensuite **combien** il coûte. Faire le second
 avant le premier reviendrait à optimiser un code qu'on s'apprête à déplacer.
+
+### Lot 5 — le piège n'était pas là où ce ticket l'avait placé
+
+Ce lot devait **différer** les bulles. En lisant précisément ce qui décide de
+l'apparence d'un lien (`PublicBlockView.tsx`, `renderNode`), la répartition
+s'est révélée différente de celle qu'on avait écrite :
+
+- un lien d'**entité** dépend de `textRefs[id]`, dont la présence vient de
+  `entityLookup` — résolu tôt depuis le lot 3. **L'extrait, lui, ne décide de
+  rien** : il se diffère sans le moindre effet visible ;
+- un lien de **règle** sur `/partage` et `/apercu` (où `ruleHrefBase` est
+  absent) dépend de `ruleRefs[key]` — présent, c'est un bouton de survol ;
+  absent, du texte ordinaire. **La présence EST l'apparence**, et « cette règle
+  a-t-elle de la prose ? » ne se sait qu'au bout de toute la résolution.
+
+Et surtout : les extraits d'entité **partagent leur vague** avec le début de la
+chaîne de règles. Les différer seuls n'aurait gagné aucune vague. Tout le poids
+est dans les règles, et les règles ne se diffèrent pas sans arbitrer une
+question d'apparence.
+
+D'où l'ordre inversé par rapport à ce que le lot 3 annonçait : **aplatir
+d'abord**, puisque ça ne demande aucun arbitrage, et poser la question du
+différé avec les chiffres d'après en main.
+
+#### Trois gestes
+
+1. **La chaîne de rulesets est réchauffée dès la première ligne.** Elle ne
+   dépend que du monde, jamais des blocs, et attendait pourtant que les clés de
+   règle soient collectées — trois vagues plus loin.
+2. **Lancée sans être attendue.** Premier essai : dans le `Promise.all`. Toutes
+   les fiches patientaient alors derrière une chaîne de trois lectures
+   séquentielles dont la plupart n'ont que faire — 233 → 351 ms sur une fiche
+   sans règle. Seule une fiche qui cite une règle la réclame.
+3. **Une requête pour toute la chaîne** au lieu d'une par maillon.
+
+#### Ce que le code portait déjà, et qu'il ne fallait pas réécrire
+
+Le troisième geste a d'abord été écrit deux fois : une fonction de dépôt neuve
+et une reconstitution maison de la priorité de chaîne. **`entriesFromChainByKeys`
+existait déjà** (V3-R7, née du même genre d'audit : 39 871 lectures unitaires
+mesurées par `pg_stat_statements`), fait exactement ça, et est gardée par
+`rules.chainPriority.integration.test.ts`.
+
+Trouvé en vérifiant que ce test couvrait bien le nouveau code — il ne le
+couvrait pas, il couvrait la fonction que je venais de dupliquer. Les deux
+ajouts ont été supprimés ; `repos/rules.ts` est revenu à l'identique.
+
+Une seconde implémentation de la priorité de chaîne aurait fini par diverger
+sur le seul point où elle ne doit pas : c'est elle qui fait qu'une variante
+surcharge correctement une base officielle (règle absolue n° 18).
+
+#### Mesure
+
+| | lot 0 | lot 3 | **lot 5** |
+|---|---|---|---|
+| Prologue, navigation (2 règles citées) | 731 ms | 678 ms | **434 ms** |
+| Prologue, chargement complet | — | 731 ms | **437 ms** |
+| Clan Oorvarsh (aucune règle) | 215 ms | 233 ms | 235 ms |
+| Fiche `/13` (aucune règle) | 229 ms | 251 ms | 221 ms |
+
+**−41 % sur la fiche qui cite des règles, rien de perdu ailleurs.** Et c'est la
+fiche qui compte : le Livre de sessions est la page d'arrivée d'un lien de
+partage.
+
+Vérifié à l'écran : les quatre bulles de règle (`dwarf`, `halfling` ×3), les 16
+liens d'entité, le fond, la teinte de la fiche et la date ingame « 19 Brumaire
+1421 » — tout ce que les vagues déplacées nourrissent.
+
+#### Ce qui reste, et c'est maintenant une question d'apparence
+
+Le différé n'a pas été fait, et la question qu'il pose n'a pas changé de nature
+— elle s'est seulement clarifiée. Pour qu'une bulle de règle se charge après la
+page, il faut accepter que son lien **se peigne avant qu'on sache s'il en a
+une** :
+
+1. **texte ordinaire d'abord, bouton ensuite** — réintroduit visuellement, à
+   l'envers, ce que V2.1-18 lot 1 a corrigé ;
+2. **bouton d'abord, texte ordinaire ensuite** si la règle n'a pas de prose —
+   l'inverse, et une carte promise qui n'arrive pas ;
+3. **bouton toujours**, la carte disant ce qu'elle trouve — supprime le
+   scintillement en supprimant la dépendance, mais renonce à la décision « sans
+   prose, pas de lien » de V2.1-18.
+
+Aucune n'est neutre, et **434 ms rendent la question moins pressante qu'à
+41 %**. À rouvrir seulement si l'auteur juge que ça vaut encore le coup.
 
 ### Ce que ce ticket ne fera pas, et pourquoi c'est déjà tranché
 

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { filterBlocks, filterSegments, type Viewer } from "@/src/core/visibility";
@@ -10,10 +11,8 @@ import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import {
   listBlocksForRulesetEntries,
   listEntryTranslationsWithBlocks,
-  listRulesetEntryChipsByKeys,
-  type RulesetEntryChipRow,
 } from "@/src/server/repos/rules";
-import { entryNameFrom, resolveHomebrewEntryDisplay, walkRulesetChain } from "@/src/server/services/rules";
+import { entriesFromChainByKeys, entryNameFrom, resolveHomebrewEntryDisplay, walkRulesetChain, type RulesetChainLink } from "@/src/server/services/rules";
 import type { Locale } from "@/src/i18n/request";
 
 type TypedClient = SupabaseClient<Database>;
@@ -121,6 +120,39 @@ function filterSegmentsOf(data: Json, viewer: Viewer): Json {
   return { ...parsed.data, segments } as unknown as Json;
 }
 
+interface ChaineDeRegles {
+  rulesetId: string;
+  chain: RulesetChainLink[];
+}
+
+/**
+ * Le ruleset par defaut du monde et sa chaine, memoises (V2.1-20 lot 5).
+ *
+ * Exporte pour une raison precise : `getPublicEntityDetail` l'appelle dans sa
+ * PREMIERE vague, alors qu'il ne sait pas encore si la fiche cite la moindre
+ * regle. Ces deux lectures ne dependent que du monde, jamais des blocs — les
+ * laisser attendre la collecte des cles les mettait trois vagues plus loin sur
+ * le chemin critique. Quand `resolveRuleRefPreviews` les redemande, elles sont
+ * deja resolues et ne coutent rien.
+ *
+ * Memoise ICI plutot que sur `getWorldDefaultRulesetId` (repos/worlds.ts) :
+ * ce depot est appele depuis des chemins d'ecriture (`characterActions`,
+ * `rules.ts`, qui posent aussi `setWorldDefaultRuleset`), ou une valeur figee
+ * par un appel anterieur serait un bug. `walkRulesetChain`, lui, est deja
+ * memoise chez lui.
+ *
+ * `null` si le monde n'a pas de ruleset par defaut — aucune regle a resoudre,
+ * et l'appelant n'a rien a faire de plus.
+ */
+export const warmRuleChain = cache(async function warmRuleChain(
+  supabase: TypedClient,
+  worldId: string
+): Promise<ChaineDeRegles | null> {
+  const rulesetId = await getWorldDefaultRulesetId(supabase, worldId);
+  if (!rulesetId) return null;
+  return { rulesetId, chain: await walkRulesetChain(supabase, rulesetId) };
+});
+
 /**
  * Nom, type et prose de chaque regle citee — meme remontee de chaine que
  * `resolveRuleChips` (`referenceChips.ts`), dont ce resolveur est le jumeau
@@ -148,20 +180,30 @@ export async function resolveRuleRefPreviews(
   const refs: Record<string, RuleRefPreview> = {};
   if (keys.length === 0) return refs;
 
-  const rulesetId = await getWorldDefaultRulesetId(supabase, worldId);
-  if (!rulesetId) return refs;
+  const chainState = await warmRuleChain(supabase, worldId);
+  if (!chainState) return refs;
+  const { rulesetId, chain } = chainState;
 
-  const chain = await walkRulesetChain(supabase, rulesetId);
-  const remaining = new Set(keys);
-  const found: RulesetEntryChipRow[] = [];
-  for (const link of chain) {
-    if (remaining.size === 0) break;
-    const rows = await listRulesetEntryChipsByKeys(supabase, link.rulesetId, [...remaining]);
-    for (const row of rows) {
-      found.push(row);
-      remaining.delete(row.entry_key);
-    }
-  }
+  // V2.1-20 lot 5 — UNE requete pour toute la chaine, au lieu d'une par maillon
+  // attendant la precedente : sur la chaine de deux maillons mesuree au lot 0,
+  // deux vagues sequentielles la ou une suffit, et ca grandit avec la
+  // profondeur.
+  //
+  // `entriesFromChainByKeys` existait deja (V3-R7, meme motif : un audit de
+  // performance avait mesure 39 871 lectures unitaires ailleurs). Elle porte la
+  // meme priorite de chaine — feuille vers racine, la premiere trouvee gagne,
+  // ce qui fait qu'une variante surcharge correctement une base officielle
+  // (regle absolue n° 18) — et elle est deja gardee par
+  // `rules.chainPriority.integration.test.ts`. Une seconde implementation de la
+  // meme regle de priorite aurait fini par diverger sur le seul point ou elle
+  // ne doit pas.
+  //
+  // Son `RulesetEntryRow` n'a pas `ai_digest`, contrairement au type "chip".
+  // Aucune importance ici : ce resolveur refuse deliberement ce repli (voir
+  // le point 2 ci-dessus).
+  const parCle = await entriesFromChainByKeys(supabase, chain, keys);
+  const found = [...parCle.values()];
+  const remaining = new Set(keys.filter((k) => !parCle.has(k)));
 
   if (found.length > 0) {
     const entryIds = found.map((e) => e.id);
