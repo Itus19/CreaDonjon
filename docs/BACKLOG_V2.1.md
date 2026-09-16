@@ -3143,12 +3143,36 @@ seulement un gain : c'est ce qui rend le volet B écrivable sans le payer.**
 
 D'où l'ordre : A d'abord, mesuré seul, puis B.
 
-### Critères
+### Vérification — volet A
 
-- [ ] `createShareLinkServiceClient` est mémoïsé par rendu, et son commentaire
+Compteur temporaire posé **dans** le corps mémoïsé de `listEntitiesForWorld`
+(donc silencieux quand le cache répond), sur la fiche Prologue du monde
+`leschroniquesdesroyaumesoublies`, puis retiré.
+
+Première tentative faussée, et la cause vaut d'être notée : mesurer **depuis le
+navigateur** compte aussi les fiches que Next rend pour préparer les liens du
+sommaire — une navigation produisait huit appels, dont six n'appartenaient pas
+à la page mesurée. Reprise en requêtes uniques (`curl`), sans navigateur. Un
+second écart, de 4, n'était que la recompilation à chaud qui suit le
+changement de fichier : toute mesure prise dans les secondes qui suivent une
+édition mesure le compilateur, pas le code.
+
+| Mesure (une requête sur la même fiche) | Avant | Après |
+|---|---|---|
+| Exécutions réelles de `listEntitiesForWorld` | 2 | **1** |
+| Confirmation sur 3 requêtes consécutives | — | 3 appels, soit 1 par rendu |
+
+- [x] `createShareLinkServiceClient` est mémoïsé par rendu, et son commentaire
       dit pourquoi et jusqu'où.
-- [ ] Sur un rendu de `/partage/[token]/[entitySlug]`, `listEntitiesForWorld`
+- [x] Sur un rendu de `/partage/[token]/[entitySlug]`, `listEntitiesForWorld`
       ne part qu'une fois — vérifié par instrumentation, pas déduit.
+- [x] Rendu inchangé, vérifié en navigateur sur une entrée du Livre de
+      sessions et sur une fiche de personnage (titre, blocs, portrait,
+      sommaire). Le seul 404 de la console est celui d'une fiche sans
+      portrait, repli documenté dans `PublicPortrait.tsx` et antérieur.
+
+### Critères restants — volet B
+
 - [ ] `BookSkin` est rendu par `app/partage/[token]/layout.tsx`, la page ne
       rendant plus que le corps de la fiche.
 - [ ] La garde par mot de passe reste dans la page **et** précède le
