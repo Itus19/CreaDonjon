@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { generateShareToken, hashShareToken } from "../../core/shareLinks/token";
-import { resolveShareLink, getPublicEntityDetail } from "./publicShare";
+import { resolveShareLink, getPublicEntityDetail, getPublicBlockImageAssetId } from "./publicShare";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
@@ -32,6 +32,18 @@ describe.skipIf(!hasCreds)("publicShare (integration, base reelle)", () => {
   const SECRET_BLOCK_MARKER = "SECRET_BLOC_MJ_INTEGRATION";
   const SECRET_SEGMENT_MARKER = "SECRET_SEGMENT_MJ_INTEGRATION";
   const PUBLIC_MARKER = "Phrase publique d'integration";
+
+  /**
+   * V2.1-20 lot 2 : trois blocs `image` portant chacun un asset, pour couvrir
+   * les trois cas de `getPublicBlockImageAssetId`. Ils existent en base mais
+   * aucun fichier n'est televerse dans le stockage — inutile, cette fonction
+   * decide de servir ou non AVANT de signer quoi que ce soit, et c'est
+   * exactement la decision qu'on veut voir echouer si elle regresse.
+   */
+  let imageBlockPublicId = "";
+  let imageBlockGmId = "";
+  let imageBlockOnHiddenEntityId = "";
+  let assetId = "";
 
   async function insertTestShareLink(): Promise<string> {
     const token = generateShareToken();
@@ -104,6 +116,87 @@ describe.skipIf(!hasCreds)("publicShare (integration, base reelle)", () => {
       },
     ]);
     if (blocksError) throw new Error(blocksError.message);
+
+    // --- V2.1-20 lot 2 : la route d'image de bloc devient atteignable par un
+    // visiteur anonyme (le middleware la redirigeait vers /login). Trois cas,
+    // et le premier est le temoin : sans lui, les deux refus pourraient passer
+    // parce que la fonction refuse TOUT.
+    const { data: hiddenEntity, error: hiddenError } = await admin
+      .from("entities")
+      .insert({
+        world_id: worldId,
+        slug: "fiche-masquee",
+        name: "Fiche masquee",
+        entity_kind: "other",
+        created_by: userId,
+        is_public: false,
+      })
+      .select("id")
+      .single();
+    if (hiddenError || !hiddenEntity) throw new Error(hiddenError?.message ?? "creation fiche masquee echouee");
+
+    const { data: asset, error: assetError } = await admin
+      .from("assets")
+      .insert({
+        world_id: worldId,
+        storage_path: `${worldId}/integration-${Date.now()}.webp`,
+        mime_type: "image/webp",
+        byte_size: 1234,
+        width: 16,
+        height: 16,
+        visibility_level: "players",
+        uploaded_by: userId,
+      })
+      .select("id")
+      .single();
+    if (assetError || !asset) throw new Error(assetError?.message ?? "creation asset echouee");
+    assetId = asset.id;
+
+    const { data: imageBlocks, error: imageBlocksError } = await admin
+      .from("blocks")
+      .insert([
+        {
+          entity_id: entityId,
+          block_type: "image",
+          display: { label: "Image publique", layout: "image" },
+          visibility_level: "public",
+          display_order: 300,
+          created_by: userId,
+          data: { __v: 1, url: "", useAsWikiBackground: true },
+        },
+        {
+          entity_id: entityId,
+          block_type: "image",
+          display: { label: "Image MJ", layout: "image" },
+          visibility_level: "gm",
+          display_order: 400,
+          created_by: userId,
+          data: { __v: 1, url: "" },
+        },
+        {
+          entity_id: hiddenEntity.id,
+          block_type: "image",
+          display: { label: "Image publique sur fiche masquee", layout: "image" },
+          visibility_level: "public",
+          display_order: 100,
+          created_by: userId,
+          data: { __v: 1, url: "" },
+        },
+      ])
+      .select("id, entity_id, visibility_level, display_order");
+    if (imageBlocksError || !imageBlocks) throw new Error(imageBlocksError?.message ?? "creation blocs image echouee");
+
+    imageBlockPublicId = imageBlocks.find((b) => b.entity_id === entityId && b.display_order === 300)!.id;
+    imageBlockGmId = imageBlocks.find((b) => b.entity_id === entityId && b.display_order === 400)!.id;
+    imageBlockOnHiddenEntityId = imageBlocks.find((b) => b.entity_id === hiddenEntity.id)!.id;
+
+    const { error: linkError } = await admin.from("block_images").insert(
+      [imageBlockPublicId, imageBlockGmId, imageBlockOnHiddenEntityId].map((blockId) => ({
+        block_id: blockId,
+        asset_id: assetId,
+      }))
+    );
+    if (linkError) throw new Error(linkError.message);
   });
 
   afterAll(async () => {
@@ -148,6 +241,29 @@ describe.skipIf(!hasCreds)("publicShare (integration, base reelle)", () => {
 
     expect(await resolveShareLink(token)).toBeNull();
     expect(await resolveShareLink("un-jeton-qui-n-a-jamais-existe")).toBeNull();
+  });
+
+  /**
+   * V2.1-20 lot 2. Ces trois tests gardent une route qui, jusqu'a ce lot,
+   * n'etait atteignable par personne : le middleware redirigeait
+   * `/api/blocks/[id]/image` vers /login avant qu'elle ne s'execute. Deux
+   * defauts se cachaient derriere — l'image de fond ne s'affichait jamais pour
+   * un visiteur anonyme, ET la seule garde qui restait une fois le middleware
+   * corrige ne regardait que la visibilite du bloc, pas celle de la fiche.
+   *
+   * Le premier test est le temoin : sans lui, les deux refus passeraient aussi
+   * bien si la fonction refusait tout.
+   */
+  it("l'image d'un bloc public sur une fiche publique est bien servie", async () => {
+    expect(await getPublicBlockImageAssetId(imageBlockPublicId)).toBe(assetId);
+  });
+
+  it("l'image d'un bloc gm n'est jamais servie a un visiteur anonyme", async () => {
+    expect(await getPublicBlockImageAssetId(imageBlockGmId)).toBeNull();
+  });
+
+  it("l'image d'un bloc public pose sur une fiche MASQUEE n'est jamais servie", async () => {
+    expect(await getPublicBlockImageAssetId(imageBlockOnHiddenEntityId)).toBeNull();
   });
 
   it("un jeton valide resout bien le monde attendu", async () => {

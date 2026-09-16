@@ -61,7 +61,22 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/partage/") ||
     path.startsWith("/rejoindre/") ||
     path.startsWith("/api/assets/") ||
-    /^\/api\/entities\/[^/]+\/portrait$/.test(path);
+    /^\/api\/entities\/[^/]+\/portrait$/.test(path) ||
+    // Troisieme occurrence du meme defaut, trouvee en mesurant le fond de page
+    // (V2.1-20 lot 2) : `/api/blocks/[id]/image` (V2-G12, V2-L1) sert les
+    // images de BLOC — celles du corps des fiches, et l'image de fond du wiki.
+    // Elle n'etait pas sur cette liste, donc pour un visiteur ANONYME chaque
+    // image d'une page /partage repondait 307 vers /login. Le fond de page ne
+    // s'affichait jamais, les images de bloc non plus ; seul l'auteur, qui est
+    // connecte quand il verifie son propre lien, voyait la page complete.
+    //
+    // La route sait deja se defendre toute seule, exactement comme le portrait
+    // ci-dessus : sans session, elle passe par `getPublicBlockImageSignedUrl`,
+    // qui reapplique `filterBlocks` avec `{ kind: "anonymous" }` avant de
+    // resoudre le moindre asset (publicShare.ts). Un bloc `gm` reste donc
+    // invisible ici — la garde n'a jamais ete le middleware, elle est dans la
+    // route, et le middleware l'empechait simplement d'etre atteinte.
+    /^\/api\/blocks\/[^/]+\/image$/.test(path);
 
   if (!user && !isPublicPage) {
     const url = request.nextUrl.clone();

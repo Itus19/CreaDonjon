@@ -20,6 +20,7 @@ import {
 } from "@/src/server/services/refPreview";
 import type { Locale } from "@/src/i18n/request";
 import { getBlockImageAssetId } from "@/src/server/repos/blockImages";
+import { getSignedAssetUrl } from "@/src/server/services/storage";
 import { getBackgroundMetaForBlock } from "@/src/server/services/blockImages";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import { type EntitySummary, getEntityById, getEntityBySlug, listEntitiesForWorld } from "@/src/server/repos/entities";
@@ -747,8 +748,52 @@ export async function getPublicBlockImageAssetId(blockId: string): Promise<strin
   const block = await getBlockById(supabase, blockId);
   if (!block) return null;
 
+  // La FICHE entiere peut etre masquee (V2, retour utilisateur point 2 :
+  // `is_public` bascule la fiche entiere), et `filterBlocks` ne regarde que la
+  // visibilite du BLOC — il ne peut pas voir cela. `getPublicEntityDetail`
+  // pose deja ce test avant de rendre quoi que ce soit ; il manquait ici.
+  //
+  // Sans consequence tant que le middleware redirigeait cette route vers
+  // /login (V2.1-20 lot 2) : personne ne pouvait l'atteindre. Maintenant
+  // qu'elle est atteignable, l'image d'un bloc public pose sur une fiche
+  // MASQUEE se servirait a qui connait l'identifiant du bloc. Ajoute ici avec
+  // le correctif, jamais apres.
+  const entity = await getEntityById(supabase, block.entity_id);
+  if (!entity || !entity.is_public) return null;
+
   const visible = filterBlocks([toVisibilityAware(block)], { kind: "anonymous" });
   if (visible.length === 0) return null;
 
   return getBlockImageAssetId(supabase, blockId);
+}
+
+/**
+ * Le meme, signe. Separe de la resolution ci-dessus pour une raison de test :
+ * la DECISION de servir ou non se verifie sans qu'aucun fichier n'existe dans
+ * le stockage, ce qui est exactement ce qu'un test de fuite doit pouvoir faire
+ * (`publicShare.integration.test.ts`).
+ */
+export async function getPublicBlockImageSignedUrl(blockId: string): Promise<string | null> {
+  const assetId = await getPublicBlockImageAssetId(blockId);
+  if (!assetId) return null;
+
+  // La SIGNATURE passe par le meme client service-role, et c'est le coeur du
+  // correctif (V2.1-20 lot 2). La route resolvait bien l'id de l'asset ici,
+  // puis signait avec le client de la REQUETE — anonyme sur `/partage`. Or la
+  // RLS `assets_select` (migration 20260902110001) ne laisse l'anon lire une
+  // ligne `assets` que si elle est `visibility_level = 'public'`, et une image
+  // de bloc est televersee en `players` (blockImageUpload.ts). La lecture
+  // echouait donc toujours, et la route repondait 404 a tout visiteur anonyme.
+  //
+  // Jamais vu jusqu'ici parce qu'un second defaut le cachait : le middleware
+  // redirigeait cette route vers /login avant meme de l'atteindre. Les deux
+  // sont tombes ensemble.
+  //
+  // Ce n'est pas un contournement de la visibilite : la garde de cette image
+  // est la visibilite de la FICHE puis celle du BLOC, toutes deux revalidees
+  // par `getPublicBlockImageAssetId` ci-dessus avec un viewer anonyme. Le
+  // `visibility_level` de l'asset ne decrit pas qui a le droit de voir l'image
+  // d'un bloc public — c'est le bloc qui le dit, comme partout ailleurs dans
+  // ce fichier.
+  return getSignedAssetUrl(createShareLinkServiceClient(), assetId);
 }

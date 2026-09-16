@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getImageAssetIdForBlockAsUser, removeBlockImage } from "@/src/server/services/blockImages";
 import { uploadBlockImage } from "@/src/server/services/blockImageUpload";
-import { getPublicBlockImageAssetId } from "@/src/server/services/publicShare";
+import { getPublicBlockImageSignedUrl } from "@/src/server/services/publicShare";
 import { getSignedAssetUrl, SIGNED_URL_CACHE_HEADER } from "@/src/server/services/storage";
 import { fileUploadSchema, formDataToObject } from "@/lib/uploads/schemas";
 
@@ -23,9 +23,23 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     data: { user },
   } = await supabase.auth.getUser();
 
-  const assetId = user
-    ? await getImageAssetIdForBlockAsUser(supabase, blockId, user.id)
-    : await getPublicBlockImageAssetId(blockId);
+  // Les deux chemins se separent plus tot qu'avant (V2.1-20 lot 2) : le
+  // visiteur anonyme resout ET signe cote `publicShare`, jamais avec le client
+  // de cette requete. La RLS `assets_select` ne laisse l'anon lire une ligne
+  // `assets` que si elle est `public`, et une image de bloc est televersee en
+  // `players` — signer ici renvoyait donc 404 a tout visiteur de `/partage`,
+  // apres avoir pourtant correctement verifie la visibilite du bloc. Defaut
+  // jamais atteint tant que le middleware redirigeait cette route vers /login
+  // (corrige dans le meme lot, lib/supabase/middleware.ts).
+  if (!user) {
+    const publicUrl = await getPublicBlockImageSignedUrl(blockId);
+    if (!publicUrl) {
+      return NextResponse.json({ error: "Image introuvable." }, { status: 404 });
+    }
+    return NextResponse.redirect(publicUrl, { headers: { "Cache-Control": SIGNED_URL_CACHE_HEADER } });
+  }
+
+  const assetId = await getImageAssetIdForBlockAsUser(supabase, blockId, user.id);
   if (!assetId) {
     return NextResponse.json({ error: "Image introuvable." }, { status: 404 });
   }
