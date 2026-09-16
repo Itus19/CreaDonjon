@@ -35,7 +35,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Tous les lots faits** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : le temps de rendu est le nombre de vagues de requêtes multiplié par la latence, et 41 % sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt, retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme. Deux défauts empilés, plus une fuite refermée. **Lot 2.1** : les jetons de teinte passent dans le HTML, sur les trois routes, éditeur compris. **Lot 3** : deux vagues qui n'attendaient que leur tour dans l'ordre d'écriture — le Prologue passe de 873 à 678 ms. **Lot 5** : la chaine de rulesets cesse d attendre les cles de regle — le Prologue passe de 731 a 434 ms, soit -41 % depuis le lot 0. **Lot 4** : l auteur payait 66 ms de plus que ses joueuses a chaque clic, le middleware sort desormais avant de construire le client sur /partage — ecart ramene a -1 ms. **Lot 6** : l A/B tranche — squelette a 18 ms sur une cible prechargee contre 20 ms sur une cible qui ne l est pas, et une navigation coute exactement son rendu serveur. Le prechargement est coupe partout, 18 requetes par page ouverte tombent a 0 |
 | V2.1-21 | Le contraste élevé se perd sur une fiche illustrée | `S` | **Fait** (16 septembre) — trouvé en instruisant le lot 2.1 de V2.1-20, pas en le cherchant. `.wiki-bg-scope[data-mode="…"]` redéclare la palette **sur lui-même**, et une déclaration locale l'emporte sur une valeur héritée : ce n'est pas une affaire de spécificité, les deux règles ne visent même pas le même élément. Sur toute fiche portant un fond de page wiki, le contraste élevé était donc écrasé — le lecteur le perdait exactement là où il en a le plus besoin. Mesuré avant correction : fond à 17 % de clarté au lieu de 1,6 %, texte à 95 % au lieu de blanc pur. Corrigé par un garde `:root:not([data-contrast="high"])` sur les quatre portées ; l'auteur a choisi de garder l'image, qui reste affichée mais que le `--scrim` de ce mode voile à 92 % |
 | V2.1-22 | Le panneau « Mentionné dans » quitte l'application | `S` | **Fait** (16 septembre) — demande directe de l'auteur : « je n'en ai pas besoin ». Le chemin entier part, pas seulement l'affichage : sans lecteur, recalculer les mentions à chaque enregistrement d'un bloc texte ne servait plus personne. La table `entity_mentions` est supprimée, avec son accord. Les liens DANS le texte, qui portent le même nom dans la spec, ne sont pas touchés |
-| V2.1-23 | Les petits contrôles à un rapport de pixels fractionnaire | `M` | **Ouvert** (16 septembre) — le liseré d'un bouton et le petit texte coloré paraissent abîmés sur l'écran 4K de l'auteur, pas sur son portable. Mesuré : `dpr=1.5`, gamut sRGB — c'est Windows à 150 %, et un trait d'1 px y vaut 1,5 pixel physique qu'aucune valeur CSS ne peut faire tomber juste. Ce n'est pas une régression de V2.1-20/21, vérifié dans le diff. Ce qu'on peut changer n'est pas le rendu du trait mais le fait que nos petits contrôles **dépendent** d'un trait pour exister — un aplat de surface se rend proprement à n'importe quel rapport. Trois candidats, et l'auteur est le seul à pouvoir les départager : une page de comparaison passe avant toute modification |
+| V2.1-23 | Les petits contrôles à un rapport de pixels fractionnaire | `M` | **Ouvert** (16 septembre) — le liseré d'un bouton et le petit texte coloré paraissent abîmés sur l'écran 4K de l'auteur, pas sur son portable. Mesuré : `dpr=1.5`, gamut sRGB — c'est Windows à 150 %, et un trait d'1 px y vaut 1,5 pixel physique qu'aucune valeur CSS ne peut faire tomber juste. Ce n'est pas une régression de V2.1-20/21, vérifié dans le diff. Ce qu'on peut changer n'est pas le rendu du trait mais le fait que nos petits contrôles **dépendent** d'un trait pour exister — un aplat de surface se rend proprement à n'importe quel rapport. Trois candidats, et l'auteur est le seul à pouvoir les départager : une page de comparaison passe avant toute modification. **Clos sans remède** le 16 septembre : la recette a été écrite, appliquée, puis annulée, et la mesure de clôture a montré pourquoi « convertir d'un coup » n'existait pas — 159 sites écrits de **93 façons distinctes**, dont 60 uniques. Le ticket ne laisse aucune ligne de code, mais quatre mesures et un chemin (`Button.tsx`, charte §7d) si le sujet revient |
 | V2.1-24 | L'accueil passe au rail de sections, le détail au classeur | `L` | **Ouvert** (16 septembre) — demande de l'auteur sur capture : « revoir la disposition de cette page et l'organisation des boutons ». Compté avant de dessiner : **52 contrôles simultanés** pour la seule Administration, dont les boutons se replient faute de place dans un tiers d'écran, et une troisième colonne vide au chargement. Cinq esquisses regardées ensemble, puis trois — le **rail de sections** l'emporte, parce qu'il « rappelle le menu des joueurs » dont il emprunte l'esthétique, et le détail du monde passe aux **intercalaires de classeur** de la fiche de personnage. Rien de neuf à dessiner : `PlayerShell`, les onglets de `PlayableCharacterSheet` et `ActionsMenu` existent tous les trois. Le lot 0 était un arbitrage qui n'appartenait qu'à l'auteur — la charte interdit une deuxième présentation d'onglets, le dépôt en a déjà deux, et toutes deux se défendent : **tranché le jour même**, `BinderTabs` est extrait et l'ADR 0026 assume les deux présentations |
 
 ---
@@ -4904,7 +4904,7 @@ jour, l'environnement qui n'a reçu que l'un des deux tranche entre eux.**
 
 ---
 
-## V2.1-23 — Les petits contrôles à un rapport de pixels fractionnaire · `M`
+## V2.1-23 — Les petits contrôles à un rapport de pixels fractionnaire · `M` — clos sans remède
 
 ### Constat
 
@@ -5049,6 +5049,16 @@ le défaut de l'interface, `text-xs` pour ce qui est dense et secondaire » (§4
 Un libellé d'action n'est pas une métadonnée. Le 12 px sur les boutons était
 hors charte avant que la question ne se pose.
 
+> **Faux, corrigé à la clôture.** Le §3 prescrit explicitement
+> `rounded-full border border-edge px-3 py-1 **text-xs** text-ink` pour le
+> bouton secondaire compact, et réserve `text-sm` à sa « version confortable
+> (formulaire, page pleine) ». Un bouton secondaire *est* « dense et
+> secondaire » au sens du §4 : les deux paragraphes ne se contredisent pas,
+> c'est ma lecture qui les opposait. Le 12 px sur ces boutons était donc
+> **conforme**, et cet argument n'aurait pas dû peser dans la décision
+> d'annuler. Les deux autres — l'état à moitié converti, et la préférence
+> mesurée de l'auteur pour le 14 px — tiennent seuls.
+
 **Ce qui a emporté la décision.** L'état livré était le pire des trois : un seul
 panneau converti, 214 autres contrôles inchangés. Ni l'ancienne cohérence, ni la
 nouvelle. Il fallait choisir un bout — poursuivre écran par écran, ou revenir —
@@ -5076,9 +5086,39 @@ coûteraient le même travail à refaire :
 Et un contournement qui marche, pour qui bute dessus : zoom du navigateur à
 133 % sur un système à 150 %, ce qui ramène le rapport à 2.
 
-Le ticket reste **ouvert** plutôt que clos : le constat tient, le remède n'a pas
-été adopté. Le rouvrir demandera de reprendre la décision par le bon bout —
-convertir toute l'application d'un coup, ou pas du tout.
+### Clos le 16 septembre — ce que la mesure de clôture a trouvé
+
+Repris par le bon bout, comme ce ticket le demandait : « convertir toute
+l'application d'un coup, ou pas du tout ». Compté avant de trancher, plutôt que
+d'estimer :
+
+| Ce qui a été compté | |
+|---|---|
+| `<button>` dans `app/` + `components/` | **426** (370 au recensement du 6 septembre) |
+| Occurrences de la famille visée (`border border-edge` + `text-xs`) | **159** |
+| **Recettes distinctes** pour cette même famille | **93** |
+| Recettes écrites **une seule fois** | **60** |
+| Occurrences sous le plancher `text-xs` (`text-[10px]`/`[11px]`/`[9px]`) | **227** |
+
+**« D'un coup » n'existe pas.** Le même bouton secondaire est écrit de 93
+façons différentes, dont 60 uniques : il n'y a aucune chaîne à chercher-
+remplacer, il y a 159 décisions à prendre à la main. La condition que ce ticket
+posait à sa propre réouverture était donc hors de portée sous la forme où il
+l'avait écrite.
+
+**Et les deux documents se contredisaient sur la méthode.** Ce ticket concluait
+« d'un coup, ou pas du tout » ; le §7d de la charte dit l'inverse, mot pour
+mot : « le composant d'abord, la conversion au fil des écrans qu'on rouvre,
+**jamais une refonte en une passe** ». Ils se réconcilient sur un point, et il
+mérite d'être gardé pour qui rouvrira le sujet : ce que l'auteur a refusé, c'est
+un état **visuellement** à moitié converti. Une conversion à apparence
+strictement inchangée n'a pas d'état intermédiaire laid — et c'est seulement une
+fois tout passé par un seul fichier que la recette peut basculer d'un coup.
+
+**Décision de l'auteur : clore.** Le constat tient, les mesures sont gardées, le
+contournement marche, et le remède coûterait 159 conversions manuelles pour un
+défaut qui n'apparaît que sur un écran. Le chemin reste écrit ci-dessus si le
+sujet revient : `Button.tsx` (charte §7d) d'abord, la bascule ensuite.
 
 ### Critères
 
@@ -5086,13 +5126,20 @@ convertir toute l'application d'un coup, ou pas du tout.
 - [x] L'auteur a tranché : surface neutre à libellé accentué, et 14 px plutôt que 13 — cette dernière taille n'existait pas dans l'échelle, la page la proposait à tort.
 - [ ] La recette retenue est écrite dans `CHARTE-UI.md` §3, avec la raison — **écrite puis annulée**, voir ci-dessus :
       un rapport fractionnaire n'est pas une lubie d'un poste, c'est le réglage
-      par défaut de Windows sur beaucoup de 4K.
+      par défaut de Windows sur beaucoup de 4K. **Abandonné à la clôture.**
 - [ ] Les contrôles existants sont convertis — **non**, et c'est ce qui a fait
       revenir l'auteur en arrière : un seul panneau converti sur 215 valait moins
-      que l'ancienne cohérence.
+      que l'ancienne cohérence. **Abandonné à la clôture** : 159 sites, 93
+      recettes distinctes, aucune conversion mécanique possible.
 - [ ] Vérifié sur les deux écrans de l'auteur : le correctif ne doit rien abîmer
-      à 1× ni à 2×.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+      à 1× ni à 2× — **sans objet**, il n'y a pas de correctif.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent — **sans
+      objet**, ce ticket se termine sans une ligne de code.
+
+**Clos sans remède.** Les deux premiers critères sont tenus, les quatre autres
+sont abandonnés en connaissance de cause. Ce que ce ticket laisse n'est pas un
+correctif mais quatre mesures et une méthode, ce qui était le meilleur résultat
+atteignable ici.
 
 ---
 
