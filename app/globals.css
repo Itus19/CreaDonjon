@@ -330,12 +330,23 @@ body {
 /* Trait de separation (V2.1-14) : un vrai segment `divider`, insere la ou
    l'auteur le veut — remplace les filets automatiques que l'ancienne
    presentation "livre" ajoutait de part et d'autre de chaque titre H2/H3
-   sans qu'on les demande. */
-.rich-text-content hr {
+   sans qu'on les demande.
+
+   `.block-lead-rule` (V2.1-17) est le meme trait, mais pose en tete d'un
+   bloc : il se rend au-dessus du TITRE du bloc plutot que dans le fil du
+   texte (PublicBlockView), et le bloc precedent eteint son propre filet
+   automatique pour ne pas doubler celui-ci. Ses marges different donc : le
+   bloc porte deja `py-4` au-dessus, il ne reste qu'a ouvrir sous le trait. */
+.rich-text-content hr,
+.block-lead-rule {
   width: 40%;
   margin: 1.6em auto;
   border: 0;
   border-top: 1px solid var(--edge);
+}
+.block-lead-rule {
+  margin-top: 0;
+  margin-bottom: 1.4em;
 }
 
 /* Valeurs mecaniques (formules, cles techniques) : toujours en mono, pour

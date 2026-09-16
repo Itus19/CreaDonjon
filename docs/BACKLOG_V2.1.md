@@ -29,6 +29,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-14 | Lettrine et traits de séparation dans le bloc texte | `M` | **Fait** (15 septembre) — la présentation « livre » cesse d'être réservée aux fiches `session_journal` : elle devient deux options du bloc texte, disponibles partout. Le Livre de sessions redevient une catégorie de fiche du point de vue de la présentation, sans que son devoir ni son tri ne bougent |
 | V2.1-13 | Centrer le couple sommaire + texte du wiki | `S` | **Fait** (15 septembre) — le vide entre sommaire et texte tombe de ~300 px à 32 px sur un écran de 1920, et cesse de dépendre de la fenêtre : il était un reste, il devient une marge. Une borne exprimée dans les unités du contenu, écrite une seule fois pour les trois routes — premier encaissement de la fusion de V2.1-12 |
 | V2.1-16 | Le défilement appartient aux fenêtres, et l'en-tête disparaît | `M` | **Fait** (16 septembre) — deux gênes signalées avec captures, une seule cause : `<body>` n'avait pas de hauteur définie, donc chaque coquille bornait la sienne dans son coin. Mesuré avant/après : la page défilait de 56 px, la hauteur exacte de l'en-tête — lequel a disparu au lot 2, rendant ces 56 px aux fiches |
+| V2.1-17 | Deux retouches de rendu au Livre de sessions | `S` | **Fait** (16 septembre) — les deux vues par l'auteur, captures à l'appui : le bloc Séance n'alignait pas ses libellés sur ses valeurs, et un trait posé en tête de bloc tombait entre le titre et le texte, en doublon du filet automatique que chaque bloc porte depuis V2-G11 |
 
 ---
 
@@ -2761,6 +2762,75 @@ personne, et aucune relecture de code ne le dit.
 
 ---
 
+---
+
+## V2.1-17 — Deux retouches de rendu au Livre de sessions · `S` — fait
+
+### Constat
+
+Deux défauts vus par l'auteur en lisant sa propre entrée, captures à l'appui,
+le lendemain de V2.1-14. Ni les types ni les tests ne pouvaient en dire quoi
+que ce soit : les deux sont des questions de pixels.
+
+**Le bloc Séance n'alignait rien.** Ses libellés (10 px) et ses valeurs (14 px)
+vivent dans une grille laissée en `align-items: stretch`, l'alignement par défaut.
+Chacun se pose donc en haut de SA cellule ; comme les deux tailles n'ont pas la
+même hauteur de ligne, leurs lignes de base divergent. Le défaut vient du
+balisage de `PublicInfoboxBlock`, dont ce bloc est copié, et dormait donc là
+depuis longtemps — il n'est devenu voyant qu'en V2.1-14, quand le bloc a quitté
+le pied de page discret pour entrer dans le fil avec des valeurs longues.
+
+**Un trait posé en tête de bloc tombait au mauvais endroit.** Il se rendait
+entre le titre du bloc et le texte que ce titre annonce — alors qu'un
+séparateur sépare deux parties, il ne s'insère pas entre une partie et son nom.
+Et il s'ajoutait au filet automatique que **chaque** bloc porte depuis V2-G11
+(`border-b border-edge/60`) : deux traits à la même jonction, l'un choisi et
+l'autre subi. L'auteur avait vu juste en soupçonnant un reste codé en dur.
+
+### Décision
+
+**Ligne de base** pour le bloc Séance (`items-baseline`) — le seul alignement qui
+tienne entre deux textes de tailles différentes. Corrigé sur ce bloc seul :
+`PublicInfoboxBlock` porte le même balisage et le même défaut, mais le toucher
+changerait l'apparence de fiches que personne n'a signalées.
+
+**Un trait en PREMIER segment d'un bloc texte remonte au-dessus du titre**
+(`hasLeadRule`), et le bloc précédent éteint son propre filet : le trait choisi
+**remplace** le filet subi au lieu de s'y ajouter. Un trait au milieu du texte,
+lui, ne bouge pas — seule la position de tête change de sens.
+
+Le calcul vit dans `PublicEntityBody` et non dans `PublicBlockView` : il faut voir le
+bloc SUIVANT pour savoir si le filet courant doit s'éteindre, et un bloc ne se
+voit pas lui-même. Un sélecteur CSS `:has(+ …)` aurait suffi entre blocs frères,
+mais le premier bloc est rendu ailleurs dans le DOM (dans le `flow-root` du
+portrait) et aucun sélecteur ne les relie — d'où une vraie prop plutôt qu'une
+règle implicite qui aurait marché partout sauf à un endroit.
+
+### Vérification
+
+En navigateur, sur des blocs de contrôle posés dans `faerun-copie-3` puis
+supprimés (fiche repassée en `is_public = false`, état d'origine revérifié après
+coup). Mesuré plutôt que jugé à l'œil :
+
+| Mesure | Valeur |
+|---|---|
+| Écart de ligne de base libellé/valeur | 1,2 px (descendantes) — les bases coïncident |
+| Trait de tête rendu avant le titre | oui |
+| Filet du bloc précédent | `0px` |
+| Trait au milieu du texte | resté en place |
+| Largeur du trait | 279 px sur 698 (40 %), centré |
+| À 375 px | aucun débordement, Séance toujours sur deux colonnes |
+
+### Critères
+
+- [x] Les libellés du bloc Séance sont sur la ligne de base de leurs valeurs.
+- [x] Un trait en tête de bloc se rend au-dessus du titre du bloc.
+- [x] Il remplace le filet automatique au lieu de s'y ajouter.
+- [x] Un trait au milieu d'un texte reste où il a été posé.
+- [x] `npm run typecheck && npm run lint && npm run test` passent (1 044 tests).
+
+---
+
 ## Ordre suivi
 
 Aucune dépendance technique dure entre ces cinq tickets. Fait dans l'ordre
@@ -2941,7 +3011,7 @@ l'écart entre les deux. Il est passé au vert à la seconde où la migration a 
 appliquée. Un test qui échoue pour la raison qu'on attend vaut mieux qu'un
 ticket annoncé fini avec une migration en attente.
 
-**Les seize tickets de ce backlog sont clos.** V2.1-16 a été ouvert le
+**Les dix-sept tickets de ce backlog sont clos.** V2.1-16 a été ouvert le
 15 septembre, après cette phrase et pour la deuxième fois : elle disait vrai au
 moment où elle a été écrite, et la règle de V2.1-14 se vérifie une fois de plus
 — un backlog ne se clôt pas parce qu'un ticket le dit. Celui-ci naît de deux

@@ -4,7 +4,7 @@ import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import { planMusicAttachments } from "@/src/core/music/blockAttachment";
 import { planImageAnchors } from "@/src/core/images/blockAnchor";
 import type { PublicBlock, PublicRelation } from "@/src/server/services/publicShare";
-import PublicBlockView from "./PublicBlockView";
+import PublicBlockView, { hasLeadRule } from "./PublicBlockView";
 import PublicPortrait from "./PublicPortrait";
 import PublicRelations from "./PublicRelations";
 import PublicMusicToggle from "./PublicMusicToggle";
@@ -104,6 +104,7 @@ export default function PublicEntityBody({
             hrefBase={hrefBase}
             ruleHrefBase={ruleHrefBase}
             anchoredImages={anchors[firstBlock.id]}
+            suppressBottomRule={hasLeadRule(restBlocks[0])}
           />
         )}
       </div>
@@ -111,13 +112,21 @@ export default function PublicEntityBody({
       {contentBlocks.length === 0 && <p className="mt-4 text-sm text-ink-muted">Aucun contenu public pour cette fiche.</p>}
       {restBlocks.length > 0 && (
         <div className="mt-4 flex flex-col">
-          {restBlocks.map((block) => (
+          {/* V2.1-17 : `suppressBottomRule` se decide en regardant le bloc
+              SUIVANT — un trait pose en tete de celui-la remplace le filet
+              automatique de cette jonction au lieu de s'y ajouter. Calcule
+              ici et pas dans `PublicBlockView`, qui ne voit qu'un bloc a la
+              fois ; le premier bloc (rendu plus haut, dans le `flow-root` du
+              portrait) recoit le meme traitement, car il n'est pas frere de
+              ceux-ci dans le DOM et aucun selecteur CSS ne les relierait. */}
+          {restBlocks.map((block, i) => (
             <PublicBlockView
               key={block.id}
               block={block}
               hrefBase={hrefBase}
               ruleHrefBase={ruleHrefBase}
               anchoredImages={anchors[block.id]}
+              suppressBottomRule={hasLeadRule(restBlocks[i + 1])}
             />
           ))}
         </div>

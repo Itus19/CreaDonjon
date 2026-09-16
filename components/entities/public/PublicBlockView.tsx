@@ -127,6 +127,26 @@ function renderNode(
 }
 
 /**
+ * Un bloc texte dont le PREMIER segment est un trait (V2.1-17, retour
+ * utilisateur) : le trait ne se rend pas dans le fil du texte, il remonte
+ * au-dessus du TITRE du bloc — c'est la que separer a un sens, entre deux
+ * parties de la fiche, pas entre un titre et le texte qu'il annonce.
+ *
+ * Utilise aussi par `PublicEntityBody` pour eteindre le filet automatique du
+ * bloc PRECEDENT (`border-b`, pose sur chaque bloc depuis V2-G11) : sans cela
+ * le trait choisi s'ajouterait au filet impose au lieu de le remplacer, et on
+ * verrait deux traits a la meme jonction.
+ */
+export function hasLeadRule(block: PublicBlock | undefined): boolean {
+  if (!block || block.blockType !== "text") return false;
+  return segmentsLeadWithRule(block.data as unknown as TextBlockData);
+}
+
+function segmentsLeadWithRule(data: TextBlockData): boolean {
+  return data.segments[0]?.blockType === "divider";
+}
+
+/**
  * V2.1-11 : les images ancrees a CE bloc s'inserent entre ses segments, pas
  * a cote du bloc. `segmentId: null` remonte en tete, avant le premier
  * segment. L'insertion passe par un `Fragment` sans balise, pour que
@@ -160,7 +180,7 @@ function PublicTextBlock({
     // meme element que porte l'editeur — un seul selecteur CSS pour les deux.
     <div className="rich-text-content" data-dropcap={data.dropCap ? "true" : undefined}>
       {atHead.map(renderAnchoredImage)}
-      {data.segments.map((segment) => {
+      {(segmentsLeadWithRule(data) ? data.segments.slice(1) : data.segments).map((segment) => {
         const tag = TAG_BY_BLOCK_TYPE[segment.blockType] ?? "p";
         const slot = around.get(segment.id);
         const rendered =
@@ -246,7 +266,13 @@ function PublicSessionJournalMetaBlock({ data, calendar }: { data: SessionJourna
   }
   if (rows.length === 0) return null;
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+    // `items-baseline` (V2.1-17, retour utilisateur capture a l'appui) : le
+    // libelle (10px) et la valeur (14px) n'ont pas la meme hauteur de ligne.
+    // L'alignement par defaut d'une grille (`stretch`) pose chacun en haut de
+    // SA cellule, donc leurs lignes de base divergent d'autant plus que
+    // l'ecart de taille est grand. La ligne de base est le seul alignement
+    // qui tienne entre deux textes de tailles differentes.
+    <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 text-sm">
       {rows.map(([label, value]) => (
         <div key={label} className="contents">
           <dt className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{label}</dt>
@@ -407,6 +433,7 @@ export default function PublicBlockView({
   hrefBase,
   ruleHrefBase,
   anchoredImages = [],
+  suppressBottomRule = false,
 }: {
   block: PublicBlock;
   hrefBase: string;
@@ -414,6 +441,8 @@ export default function PublicBlockView({
   ruleHrefBase?: string;
   /** V2.1-11 : images ancrees DANS ce bloc (`planImageAnchors`), a inserer entre ses segments — jamais a cote de lui. */
   anchoredImages?: AnchoredImage<PublicBlock>[];
+  /** V2.1-17 : le bloc SUIVANT ouvre sur un trait choisi, qui remplace le filet automatique de cette jonction au lieu de s'y ajouter (`hasLeadRule`, calcule par `PublicEntityBody` qui seul voit la suite). */
+  suppressBottomRule?: boolean;
 }) {
   const imagesVisibles = visiblesDansLaPage(anchoredImages);
   // Retour utilisateur (V2-G13) : une image active comme fond de page est
@@ -434,14 +463,19 @@ export default function PublicBlockView({
   if (block.blockType === "music") {
     return null;
   }
+  const leadRule = hasLeadRule(block);
   return (
     // `flow-root` seulement quand ce bloc heberge une image : il contient le
     // flottement a l'interieur du bloc, pour qu'une image plus haute que son
     // texte ne deborde pas sur le bloc suivant. Pose sans condition, il
     // changerait la fusion des marges de TOUS les blocs.
     <div
-      className={`border-b border-edge/60 py-4 first:pt-0 last:border-b-0 ${imagesVisibles.length > 0 ? "flow-root" : ""}`}
+      className={`border-b border-edge/60 py-4 first:pt-0 last:border-b-0 ${suppressBottomRule ? "!border-b-0" : ""} ${imagesVisibles.length > 0 ? "flow-root" : ""}`}
     >
+      {/* V2.1-17 : un trait pose en tete d'un bloc texte se rend ICI, avant
+          le titre — jamais entre le titre et le texte qu'il annonce (retour
+          utilisateur). `PublicTextBlock` saute donc son premier segment. */}
+      {leadRule && <hr className="block-lead-rule" />}
       {/* Retour utilisateur : le titre du bloc (souvent juste "Image") est
           redondant avec l'image/la legende elle-meme sur le wiki public —
           jamais affiche pour ce type, contrairement a l'editeur ou il
