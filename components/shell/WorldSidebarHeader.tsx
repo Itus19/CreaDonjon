@@ -28,7 +28,12 @@ export default function WorldSidebarHeader({
 }) {
   const t = useTranslations("shell");
   return (
-    <div className="flex items-center gap-2">
+    // Le bouton sort du flux (retour utilisateur) pour que le nom du monde
+    // soit centre sur la barre laterale ENTIERE, et non sur ce qui reste a
+    // droite du bouton — un `flex-1 text-center` l'aurait decale de la
+    // moitie du bouton. Le rembourrage symetrique `px-10` reserve sa place
+    // des deux cotes : 30px de bouton, puis 10px de garde avant le texte.
+    <div className="relative">
       {/* Remplace le lien texte "Mes mondes" de l'en-tete (retour
           utilisateur : "juste un bouton avec un symbole de sortie"). Le
           libelle survit en infobulle et en nom accessible — un glyphe seul
@@ -37,7 +42,7 @@ export default function WorldSidebarHeader({
         href="/"
         title={t("mesMondes")}
         aria-label={t("mesMondes")}
-        className="shrink-0 rounded-full border border-edge p-1.5 text-ink-muted transition-colors hover:bg-panel-raised hover:text-ink"
+        className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full border border-edge p-1.5 text-ink-muted transition-colors hover:bg-panel-raised hover:text-ink"
       >
         <svg
           viewBox="0 0 24 24"
@@ -55,7 +60,7 @@ export default function WorldSidebarHeader({
         </svg>
       </Link>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 px-10 text-center">
         <Link
           href={`/m/${worldSlug}`}
           className="block truncate font-chrome text-sm font-semibold text-ink transition-colors hover:text-accent"

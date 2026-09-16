@@ -126,7 +126,14 @@ export default function MjSidebar({
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <WorldSidebarHeader worldSlug={worldSlug} worldName={worldName} campaignName={campaignName} />
+        {/* Les 6px de rembourrage haut d'un lien d'outil (`py-1.5`), rendus
+            ici a la main : sans eux, l'ecart VU sous le nom du monde (4px,
+            le `gap-1` seul) etait la moitie de celui vu sous la bascule
+            (4px + ces 6px). Meme espace des deux cotes de la bascule, comme
+            demande — mesure en navigateur, pas devine. */}
+        <div className="pb-1.5">
+          <WorldSidebarHeader worldSlug={worldSlug} worldName={worldName} campaignName={campaignName} />
+        </div>
         <SectionToggle worldSlug={worldSlug} />
         {/* V2.1-16 — la liste des outils defile dans son propre cadre. Elle
             n'avait aucune zone defilante : les dix-sept outils tenaient par
