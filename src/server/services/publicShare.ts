@@ -563,7 +563,7 @@ export async function getPublicEntityDetail(
   const entity = await getPublicEntityBySlug(worldId, entitySlug);
   if (!entity) return null;
 
-  const [blocks, relationRows, portraitLayout, campaignId, wikiBackground] = await Promise.all([
+  const [blocks, relationRows, portraitLayout, campaignId, wikiBackground, calendrierDuMonde, entitesDuMonde] = await Promise.all([
     getPublicVisibleBlocks(worldId, entitySlug),
     listRelationsForEntity(supabase, entity.id),
     getPortraitLayout(supabase, entity.id),
@@ -575,6 +575,25 @@ export async function getPublicEntityDetail(
     // qu'apres la liste des blocs, comme avant : `getPublicVisibleBlocks`
     // etant memoise lui aussi, les deux chemins partagent la meme lecture.
     getPublicWikiBackground(worldId, entitySlug),
+    // V2.1-20 lot 3 — ces deux-la ne dependent que de `worldId`, connu des la
+    // premiere ligne de cette fonction. Elles etaient pourtant demandees
+    // beaucoup plus bas, chacune derriere un `if`, donc chacune dans sa propre
+    // vague : le releve du lot 0 les a chronometrees a 65 et 93 ms sur le
+    // chemin critique d'une fiche qui en compte onze. Elles n'attendaient rien
+    // — seulement leur tour dans l'ordre d'ecriture du fichier.
+    //
+    // Demandees inconditionnellement alors qu'elles ne servent qu'a certains
+    // types de bloc : c'est le marche accepte. Une requete parfois inutile,
+    // mais gratuite en temps puisqu'elle voyage avec les autres, contre deux
+    // allers-retours garantis sur le chemin critique. `listEntitiesForWorld`
+    // est en plus memoise (repos/entities.ts) : au chargement complet d'une
+    // page, le layout l'a deja demandee et celle-ci ne coute rien du tout.
+    //
+    // Les gardes ne bougent pas : c'est toujours la presence des blocs
+    // concernes qui decide si le resultat est UTILISE, plus bas. Aucune donnee
+    // nouvelle ne part vers le client.
+    getCalendar(supabase, worldId),
+    listEntitiesForWorld(supabase, worldId),
   ]);
 
   // Genealogie (V2-H3) : meme calcul que l'editeur (getFamilyTree,
@@ -666,7 +685,9 @@ export async function getPublicEntityDetail(
       (b.blockType === "relationship" && (b.relationshipEvents?.length ?? 0) > 0) ||
       b.blockType === "session_journal_meta"
   );
-  const timelineCalendar = hasDateFormattingBlock ? await getCalendar(supabase, worldId) : null;
+  // Deja resolu (V2.1-20 lot 3) : plus aucune attente ici, seulement le choix
+  // de s'en servir ou non.
+  const timelineCalendar = hasDateFormattingBlock ? calendrierDuMonde : null;
   const blocksWithTimelineCalendar = blocksWithRelationsGraph.map((block) =>
     timelineCalendar &&
     (block.blockType === "timeline" ||
@@ -690,7 +711,8 @@ export async function getPublicEntityDetail(
   const entityLookup =
     hasQuestBlock || hasTimelineBlockRefs || hasTextBlock
       ? new Map(
-          (await listEntitiesForWorld(supabase, worldId))
+          // Deja resolue (V2.1-20 lot 3), comme le calendrier ci-dessus.
+          entitesDuMonde
             .filter((e) => e.is_public)
             .map((e) => [e.id, { name: e.name, slug: e.slug, kind: e.entity_kind }])
         )

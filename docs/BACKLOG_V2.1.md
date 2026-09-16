@@ -32,7 +32,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-17 | Deux retouches de rendu au Livre de sessions | `S` | **Fait** (16 septembre) — les deux vues par l'auteur, captures à l'appui : le bloc Séance n'alignait pas ses libellés sur ses valeurs, et un trait posé en tête de bloc tombait entre le titre et le texte, en doublon du filet automatique que chaque bloc porte depuis V2-G11. L'alignement a ensuite été corrigé sur `PublicInfoboxBlock`, l'original d'où le défaut venait |
 | V2.1-18 | Aperçu des fiches au survol d'un lien | `L` | **Ouvert** (16 septembre) — quatre lots, le premier autonome. Né d'un lien de règle qui ne mène nulle part sur `/partage` tout en portant la couleur et le souligné d'un vrai lien : trois mentions inertes sur vingt, mesurées sur la page en production. Trois variantes esquissées avec l'auteur avant tout code, la carte flottante retenue pour les entités comme pour les règles. La fluidité est une exigence du ticket, pas une optimisation d'après-coup : elle a une section, des cibles chiffrées, et elle a mis au jour un coût plus ancien, parti en V2.1-19 |
 | V2.1-19 | La mémoïsation n'atteignait pas le wiki public | `M` | **Fait** (16 septembre) — né de la section Fluidité de V2.1-18. `React.cache()` ne prend que si le client Supabase est stable par requête ; `createShareLinkServiceClient` est une fabrique nue, et chaque fonction de `publicShare.ts` construit la sienne. Tout le gain de l'audit P-01 était donc inerte sur `/partage`, et seulement là. Second volet : la coquille passe dans le layout, `/partage` était la dernière des trois routes de wiki à la reconstruire à chaque fiche. Mesure : 2 constructions de sommaire pour deux navigations avant, 0 après, et la recherche du sommaire survit désormais à la navigation |
-| V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Lots 0, 1 et 2 faits, 2.1 ouvert** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : une fiche ordinaire coûte 215 ms, celle qui porte un fond et cite deux règles en coûte 731 — 41 % du temps sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt (F-01 de l'audit d'interface), retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme, donc ni fond ni image de bloc sur `/partage`. Invisible parce que l'auteur teste son lien en étant connecté. Deux défauts empilés, plus une fuite refermée au passage. **Lot 2.1** reprend ce que le lot 2 a laissé : les jetons de teinte dans le HTML, quatre voies instruites, la première retenue — et il impose sa condition au lot 4 |
+| V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Lots 0, 1, 2, 2.1 et 3 faits** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : le temps de rendu est le nombre de vagues de requêtes multiplié par la latence, et 41 % sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt, retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme. Deux défauts empilés, plus une fuite refermée. **Lot 2.1** : les jetons de teinte passent dans le HTML, sur les trois routes, éditeur compris. **Lot 3** : deux vagues qui n'attendaient que leur tour dans l'ordre d'écriture — le Prologue passe de 873 à 678 ms. Restent les lots 4, 5 et 6 |
 | V2.1-21 | Le contraste élevé se perd sur une fiche illustrée | `S` | **Ouvert** (16 septembre) — trouvé en instruisant le lot 2.1 de V2.1-20, pas en le cherchant. `.wiki-bg-scope[data-mode="…"]` est un descendant de `:root[data-contrast="high"]`, donc plus spécifique : sur toute fiche portant un fond de page wiki, le contraste élevé est écrasé et la palette colorée revient. Le lecteur le perd exactement là où il en a le plus besoin, sur les pages dont le fond est une photographie floutée. Porte aussi une question qui n'est pas technique : faut-il masquer l'image elle-même sous ce mode |
 
 ---
@@ -4242,6 +4242,84 @@ qu'une fois qu'on a cherché où chaque fournisseur est monté.
       une session, sur un bloc de contrôle temporaire depuis supprimé.
 - [x] La description du lot 4 porte sa reformulation.
 - [x] `npm run typecheck && npm run lint && npm run test` passent.
+
+### Lot 3 — livré
+
+`getCalendar` et `listEntitiesForWorld` rejoignent le `Promise.all` du début de
+`getPublicEntityDetail`. Elles ne dépendaient que de `worldId`, connu dès la
+première ligne ; elles étaient séquentielles par ordre d'écriture, chacune
+derrière son `if`, donc chacune dans sa propre vague.
+
+Les gardes n'ont pas bougé : c'est toujours la présence des blocs concernés qui
+décide si le résultat est **utilisé**. Seule la demande a été avancée. Aucune
+donnée nouvelle ne part vers le client.
+
+#### Mesure
+
+| | lot 0/1 | lot 2.1 | **lot 3** |
+|---|---|---|---|
+| Prologue, navigation client | 731 ms | 873 ms | **678 ms** |
+| Prologue, chargement complet | — | 807 ms | **731 ms** |
+| Clan Oorvarsh, navigation | 215 ms | 237 ms | 233 ms |
+| Fiche `/13`, navigation | 229 ms | 247 ms | 251 ms |
+
+**−195 ms sur le Prologue**, soit les deux vagues attendues au tarif mesuré, et
+le voilà repassé sous sa valeur du lot 0. Les fiches sans bloc `timeline`,
+`quest` ni `text` ne bougent pas : la « requête parfois inutile » que ce lot
+accepte de payer **ne se mesure pas**, exactement le marché annoncé.
+
+Vagues recomptées : **11 → 9** sur le Prologue, **4 → 3** sur Clan Oorvarsh.
+
+#### La sonde du lot 0 n'est plus fidèle, et c'est nous qui l'avons cassée
+
+Relevé en la relançant : elle annonce des totaux en hausse et des requêtes en
+plus, alors que le chronomètre HTTP dit l'inverse. La raison est dans ce que le
+lot 2.1 a construit — `React.cache()` ne prend pas hors d'un rendu React, et
+`getPublicEntityBySlug`, `getPublicVisibleBlocks` et `getPublicWikiBackground`
+sont désormais mémoïsés. La sonde les exécute donc tous plusieurs fois.
+
+Elle était fidèle au lot 0 (rien n'était mémoïsé sur ce chemin, vérifié à
+l'époque) et elle ne l'est plus. **Le comptage de vagues qu'elle donne reste
+valable** — la structure séquentielle ne dépend pas de la mémoïsation — mais
+ses nombres de requêtes et ses totaux sont désormais une borne haute. Les
+chiffres du tableau ci-dessus viennent tous du chronomètre HTTP contre un build
+de production.
+
+À retenir pour les lots suivants : un instrument se re-valide après chaque
+changement qu'il est censé mesurer.
+
+#### Vérifié à l'écran
+
+Les deux lectures déplacées nourrissent du contenu visible, donc le contrôle
+porte sur ce contenu et pas sur le fait que la page s'affiche :
+
+- `entityLookup` — **16 liens d'entité** résolus dans le corps du Prologue
+  (`Faerûn → 26`, `Terk → 18`, `Fine → 2`, `Candide → 22`…) ;
+- `getCalendar` — **« 19 Brumaire 1421 »**, une date en calendrier de monde. Si
+  le calendrier n'arrivait plus, elle retomberait sur le calendrier par défaut
+  et ce libellé disparaîtrait.
+
+#### Ce que ce lot ne fait pas : le point H
+
+Il reste, et il est le plus gros. Les vagues 5 à 9 du relevé ci-dessus sont
+toutes la résolution des règles citées : `getWorldDefaultRulesetId`, puis la
+remontée de chaîne **un maillon par vague**, puis l'interrogation des entrées
+**un maillon par vague** encore, puis blocs et traductions.
+
+Deux corrections différentes s'offrent, et elles ne s'excluent pas :
+
+1. **l'aplatir** — la remontée de chaîne est séquentielle par nature, mais la
+   boucle `listRulesetEntryChipsByKeys` ne l'est pas : elle pourrait être une
+   seule requête `ruleset_id=in.(…)`, à condition de reproduire côté code la
+   priorité de chaîne que l'ordre des requêtes assure aujourd'hui (il existe un
+   test pour ça, `rules.chainPriority.integration.test.ts`) ;
+2. **la différer** — c'est le lot 5, et c'est la demande de l'auteur.
+
+Différer ne rend pas le travail gratuit : le serveur le fait toujours, et les
+bulles doivent être prêtes avant le premier survol. Les deux gardent donc leur
+intérêt. Mais l'ordre compte : le lot 5 décide d'abord **où** ce travail
+s'exécute, l'aplatissement décide ensuite **combien** il coûte. Faire le second
+avant le premier reviendrait à optimiser un code qu'on s'apprête à déplacer.
 
 ### Ce que ce ticket ne fera pas, et pourquoi c'est déjà tranché
 
