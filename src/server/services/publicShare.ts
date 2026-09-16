@@ -11,6 +11,13 @@ import { collectRefTargetIds } from "@/src/core/linker/refTargets";
 import { relationLabel, type RelationType } from "@/src/core/relations/inverses";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { type BlockRow, getBlockById, listBlocksForEntity } from "@/src/server/repos/blocks";
+import {
+  resolveEntityRefExcerpts,
+  resolveRuleRefPreviews,
+  type EntityRefPreview,
+  type RuleRefPreview,
+} from "@/src/server/services/refPreview";
+import type { Locale } from "@/src/i18n/request";
 import { getBlockImageAssetId } from "@/src/server/repos/blockImages";
 import { getBackgroundMetaForBlock } from "@/src/server/services/blockImages";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
@@ -273,8 +280,35 @@ export interface PublicBlock {
   timelineCalendar?: CalendarConfigInput;
   /** Blocs `timeline` seulement : nom/slug des entites promues referencees par une entree (`entry.ref`) — meme motif que `questRefs`, la donnee du bloc ne porte que des id. */
   timelineRefs?: Record<string, { name: string; slug: string }>;
-  /** Blocs `text` seulement (V2.1-1, liens automatiques) : nom/slug des entites referencees par un noeud `ref` de kind "entity" — meme motif que `questRefs`/`timelineRefs`. Les refs de kind "rule" n'ont besoin d'aucune resolution serveur (le lien se construit directement depuis la cle deja portee par le noeud). */
-  textRefs?: Record<string, { name: string; slug: string }>;
+  /**
+   * Blocs `text` seulement (V2.1-1, liens automatiques) : cibles des noeuds
+   * `ref` de kind "entity", indexees par identifiant — meme motif que
+   * `questRefs`/`timelineRefs`.
+   *
+   * V2.1-18 lot 2 : porte desormais de quoi peindre la carte d'apercu au
+   * survol, sans aucun aller-retour depuis le navigateur. `kind` est le
+   * `entity_kind` brut, jamais un libelle — la traduction vit dans
+   * `ENTITY_KIND_LABELS` cote affichage. `excerpt` est `null` quand la
+   * fiche n'a aucun paragraphe visible A CE VISITEUR : le lien reste un
+   * lien (sa destination existe), la carte se resserre sur le nom.
+   */
+  textRefs?: Record<string, EntityRefPreview>;
+  /**
+   * Blocs `text` seulement (V2.1-18 lot 2) : cibles des noeuds `ref` de kind
+   * "rule", indexees par cle.
+   *
+   * Le commentaire precedent affirmait ici qu'une ref de regle ne demandait
+   * aucune resolution serveur — vrai tant que son rendu se bornait a un lien
+   * construit depuis la cle. Il ne l'est plus : une carte montre un nom, un
+   * type et une prose, dont rien n'est porte par le noeud.
+   *
+   * Une cle ABSENTE de cette table est la decision "sans prose, pas de
+   * lien" (V2.1-18) : fiche introuvable, ou description vide/reduite a une
+   * reference de page (`page_ref`, le cas d'un ruleset
+   * `personal_reference`). L'affichage n'a alors rien a montrer et rend du
+   * texte ordinaire.
+   */
+  ruleRefs?: Record<string, RuleRefPreview>;
   /** Blocs `map` en mode "ref" seulement (Lot I, phase F₁) : image resolue du bloc source pour CE viewer — jamais le `sourceBlockId` brut envoye tel quel, sa visibilite propre doit etre revalidee ici (`resolveMapSource`). `null` si le bloc source n'existe pas/n'est plus visible. */
   mapSource?: MapSourceInfo | null;
   /** Blocs `map` seulement, own ET ref (Lot I, phase C) : punaises deja filtrees par visibilite pour CE viewer (`listVisibleMapPins`) — un bloc "ref" recoit les punaises du bloc SOURCE (ADR 0017 decision 1, "modifier une punaise sur le bloc proprietaire la modifie partout"). */
@@ -379,6 +413,8 @@ export interface WikiBackground {
 export async function getPublicEntityDetail(
   worldId: string,
   entitySlug: string,
+  /** V2.1-18 lot 2 : sert uniquement a choisir la traduction d'une fiche de REGLE citee (`resolveRuleRefPreviews`). Fourni par l'appelant, jamais lu ici par `getLocale()` — meme convention que `services/rules.ts`. */
+  locale: Locale = "fr",
 ): Promise<
   {
     entity: EntitySummary;
@@ -555,20 +591,52 @@ export async function getPublicEntityDetail(
       ? new Map(
           (await listEntitiesForWorld(supabase, worldId))
             .filter((e) => e.is_public)
-            .map((e) => [e.id, { name: e.name, slug: e.slug }])
+            .map((e) => [e.id, { name: e.name, slug: e.slug, kind: e.entity_kind }])
         )
       : null;
+
+  // V2.1-18 lot 2 — les cibles de TOUS les blocs `text` de la fiche sont
+  // rassemblees ici, puis resolues en deux lots, avant la boucle de rendu.
+  // Le faire bloc par bloc reviendrait a une requete par bloc, et une
+  // entree de Livre de sessions en compte plusieurs.
+  const referencedEntityIds = new Set<string>();
+  const referencedRuleKeys = new Set<string>();
+  if (hasTextBlock && entityLookup) {
+    for (const block of blocksWithTimelineCalendar) {
+      if (block.blockType !== "text") continue;
+      const text = zTextBlockData.safeParse(block.data);
+      if (!text.success) continue;
+      const { entityIds, ruleKeys } = collectRefTargetIds(text.data.segments);
+      // Une cible non resolvable (fiche masquee ou supprimee) n'est jamais
+      // demandee : son lien se rendra brise, il n'a pas d'extrait a porter.
+      for (const id of entityIds) if (entityLookup.has(id)) referencedEntityIds.add(id);
+      for (const key of ruleKeys) referencedRuleKeys.add(key);
+    }
+  }
+  const [entityExcerpts, ruleRefsByKey] = await Promise.all([
+    resolveEntityRefExcerpts(supabase, [...referencedEntityIds], { kind: "anonymous" }),
+    resolveRuleRefPreviews(supabase, worldId, [...referencedRuleKeys], locale),
+  ]);
+
   const blocksWithQuestRefs = blocksWithTimelineCalendar.map((block) => {
     if (block.blockType === "text" && entityLookup) {
       const text = zTextBlockData.safeParse(block.data);
       if (!text.success) return block;
-      const { entityIds } = collectRefTargetIds(text.data.segments);
-      const textRefs: Record<string, { name: string; slug: string }> = {};
+      const { entityIds, ruleKeys } = collectRefTargetIds(text.data.segments);
+      const textRefs: Record<string, EntityRefPreview> = {};
       for (const id of entityIds) {
         const found = entityLookup.get(id);
-        if (found) textRefs[id] = found;
+        if (found) textRefs[id] = { ...found, excerpt: entityExcerpts.get(id) ?? null };
       }
-      return { ...block, textRefs };
+      // Seulement les cles de CE bloc : deux blocs `text` d'une meme fiche
+      // ne citent pas les memes regles, et transporter la table entiere sous
+      // chacun la ferait grossir avec le nombre de blocs.
+      const ruleRefs: Record<string, RuleRefPreview> = {};
+      for (const key of ruleKeys) {
+        const found = ruleRefsByKey[key];
+        if (found) ruleRefs[key] = found;
+      }
+      return { ...block, textRefs, ruleRefs };
     }
     if (block.blockType === "timeline" && entityLookup) {
       const timeline = zTimelineBlockData.safeParse(block.data);

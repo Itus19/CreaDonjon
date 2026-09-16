@@ -9,6 +9,8 @@ import PublicPortrait from "./PublicPortrait";
 import PublicRelations from "./PublicRelations";
 import PublicMusicToggle from "./PublicMusicToggle";
 import MentionedIn from "@/components/entities/MentionedIn";
+import RefPreviewLayer from "./RefPreviewLayer";
+import type { EntityRefPreview, RuleRefPreview } from "@/src/server/services/refPreview";
 
 /**
  * Corps d'une fiche sur le wiki public (V2-G11/V2-G12) — partage par
@@ -59,6 +61,17 @@ export default function PublicEntityBody({
   const [firstBlock, ...afterFirst] = contentBlocks;
   const firstBlockWraps = firstBlock?.blockType === "text";
   const restBlocks = firstBlockWraps ? afterFirst : contentBlocks;
+
+  // V2.1-18 lot 3 : les tables de tous les blocs `text` fusionnees UNE fois,
+  // pour l'unique carte de la page. Les doublons se recouvrent sans
+  // dommage — deux blocs qui citent la meme fiche portent la meme entree.
+  const entityRefs: Record<string, EntityRefPreview> = {};
+  const ruleRefs: Record<string, RuleRefPreview> = {};
+  for (const block of blocks) {
+    Object.assign(entityRefs, block.textRefs ?? {});
+    Object.assign(ruleRefs, block.ruleRefs ?? {});
+  }
+  const hasRefs = Object.keys(entityRefs).length > 0 || Object.keys(ruleRefs).length > 0;
 
   return (
     <div>
@@ -130,6 +143,16 @@ export default function PublicEntityBody({
             />
           ))}
         </div>
+      )}
+      {/* V2.1-18 lot 3 : une seule instance, montee seulement si la fiche
+          cite quelque chose — une fiche sans lien ne telecharge rien de
+          plus qu'avant. */}
+      {hasRefs && (
+        <RefPreviewLayer
+          entityRefs={entityRefs}
+          ruleRefs={ruleRefs}
+          hrefBase={hrefBase}
+        />
       )}
     </div>
   );

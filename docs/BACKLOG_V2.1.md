@@ -2965,13 +2965,35 @@ conteneur de texte, une seule instance en portail. Positionnée par
 `transform`, mesurée une fois à l'ouverture — jamais `left`/`top` animés, qui
 repassent par la mise en page à chaque image.
 
-**Le délai d'intention sert deux fois.** Les ~250 ms qui précèdent l'ouverture
-de la carte sont aussi le meilleur signal disponible que le lecteur va
-peut-être cliquer : le même minuteur déclenche `router.prefetch(href)`. Au
-moment du clic, la fiche est déjà chaude. Dédoublonné, et attaché à
-l'intention plutôt qu'au `mouseenter` — balayer un paragraphe du curseur ne
-précharge rien. C'est le seul endroit où préchargement et aperçu veulent
-exactement la même information, et il serait dommage de les écrire deux fois.
+**~~Le délai d'intention sert deux fois.~~ Écrit avant la mesure, et la mesure
+l'a démenti.** L'idée : les 250 ms qui précèdent l'ouverture de la carte sont
+le meilleur signal disponible qu'un lecteur va cliquer, donc le même minuteur
+déclenche `router.prefetch(href)` et la fiche est chaude au clic.
+
+Elle ne paie rien sur cette route, et le mesurer a demandé une construction de
+production — Next **désactive le préchargement en développement**, ce que dit
+sa propre source (`client/components/links.js` : *« Prefetching on viewport is
+disabled in development »*). Trois constats, dans cet ordre :
+
+1. `<Link>` seul ne prépare rien ici : cible laissée 2 s dans le viewport,
+   **zéro** requête. `/partage/[token]/[entitySlug]` est entièrement dynamique
+   et n'a pas de `loading.tsx`, donc le préchargement « auto » n'a aucune
+   frontière à préparer. Le survol était bien le seul déclencheur.
+2. Mais la charge préchargée n'est jamais réutilisée : le survol produisait
+   deux requêtes, **et le clic en faisait une troisième**. C'est
+   `staleTimes.dynamic`, qui vaut 0 par défaut — une route dynamique
+   préchargée est écartée aussitôt.
+3. Chronométré : **448 ms à froid contre 428 ms après un survol appuyé**, soit
+   l'écart de mesure.
+
+Donc deux rendus serveur par lien survolé, pour rien — l'inverse exact de la
+fluidité recherchée. Retiré, avec la mesure écrite dans le composant pour que
+personne ne le remette sans refaire le calcul. À rouvrir seulement si
+`staleTimes` change, ce qui est une décision de portée applicative et pas de
+composant.
+
+C'était la plus jolie idée de ce ticket. Elle n'a pas survécu à un
+chronomètre, et la garder aurait coûté à chaque lecteur.
 
 **La vignette ne doit pas faire sauter la carte.** `/api/entities/[id]/portrait`
 répond par une redirection vers une URL signée : deux allers-retours au
@@ -3014,10 +3036,9 @@ requête groupée dans le `Promise.all` existant, coupe de l'extrait côté
 serveur, et le commentaire de `publicShare.ts:276` réécrit puisqu'il ne dira
 plus vrai.
 
-**Lot 3 — la carte.** Une seule instance en portail pour toute la page,
-délégation d'événements, délai d'intention ≈ 250 ms, survol de la carte
-elle-même qui la maintient ouverte, position par `transform`, vignette à boîte
-réservée. Le même minuteur d'intention déclenche `router.prefetch`. Le clic
+**Lot 3 — la carte.** Une seule instance pour toute la page, délégation
+d'événements, délai d'intention ≈ 250 ms, survol de la carte elle-même qui la
+maintient ouverte, position par `transform`, vignette à boîte réservée. Le clic
 navigue comme aujourd'hui : l'aperçu ne remplace jamais la fiche. Le clavier
 ouvre la carte au focus et `Échap` la ferme.
 
@@ -3025,24 +3046,88 @@ ouvre la carte au focus et `Échap` la ferme.
 sur un lien de règle ouvre une feuille basse, le tap sur une entité navigue
 comme aujourd'hui.
 
+### Ce que le code portait déjà, et qu'il ne fallait pas réécrire
+
+Trois pièces trouvées en cherchant où brancher le lot 2, chacune évitant du
+code neuf :
+
+**`chipSummaryFromDescription`** (`src/core/rules/chipSummary.ts`) fait déjà
+exactement l'extrait de règle décrit ici : premier segment non vide de la
+description, espaces normalisés, coupe à 240 caractères sur une frontière de
+mot, `null` quand il n'y a rien. Écrit pour les chips de l'onglet Traits, pur
+et testé. Le module d'extrait d'ENTITÉ (`src/core/richtext/excerpt.ts`, neuf)
+lui emprunte sa constante plutôt que d'en recopier la valeur — ce que les deux
+ont en commun tient dans un nombre, ce qui les sépare est la forme de
+l'entrée.
+
+**`resolveRuleChips`** (`referenceChips.ts`) portait déjà la remontée de
+chaîne de rulesets, la traduction et le repli sur une fiche maison. Le
+résolveur du lot 2 en est le jumeau, à deux différences près, écrites dans son
+commentaire : pas de `href` (route authentifiée), et **pas de repli sur
+`ai_digest`** — ce résumé est généré à l'import depuis la source anglaise et
+reste anglais sous une fiche traduite. Sur un wiki français, faute de prose on
+ne rend rien : c'est la décision « sans prose, pas de lien ».
+
+**`listBlocksByTypeForEntities`** (`repos/blocks.ts`) était déjà la requête
+groupée nécessaire aux extraits d'entité. Aucun dépôt à écrire.
+
+En revanche, une duplication a été évitée de justesse : `playerEntityDetail.ts`
+construit ses `textRefs` comme `publicShare.ts`, et les deux recopient déjà
+leurs filtres de visibilité l'un de l'autre. Une troisième copie aurait fini
+par diverger sur le seul point où elle ne doit jamais diverger — d'où
+`src/server/services/refPreview.ts`, partagé, avec le `viewer` en paramètre.
+Le wiki joueur reçoit donc la même carte, filtrée pour SON lecteur.
+
+### Vérification
+
+En navigateur sur `/partage/leschroniquesdesroyaumesoublies/37` (le Prologue,
+la page la plus chargée en mentions du monde de l'auteur).
+
+| Mesure | Avant | Après |
+|---|---|---|
+| Mentions inertes portant le style d'un lien | 3 sur 20 | **0** |
+| Nœuds de carte dans le DOM, deux survols successifs | — | **1** |
+| Hauteur du document à l'ouverture d'une carte | — | inchangée |
+| Écart carte/lien, à trois positions de défilement | — | 8 px, constant |
+| Poids HTML de la page | 68 359 o | 76 387 o (**+7,8 Ko**) |
+| Requêtes serveur ajoutées par fiche | — | 1, dans le `Promise.all` existant |
+
+Contenu vérifié sur les deux formes : « Nain / ESPÈCE / Peuple des montagnes
+et des forges… » pour une règle, sans pied (aucune page à ouvrir sur
+`/partage`) ; « Brennan Torram / PERSONNAGE / … / Ouvrir la fiche → » pour une
+entité, vignette comprise. Les deux libellés viennent des tables du projet —
+`ENTITY_KIND_LABELS` et `regles.entryTypes` — jamais réécrits.
+
+**Une correction d'apparence, trouvée à l'écran et pas dans le code.** La
+carte était lisible « à travers » : `--panel-raised` porte un alpha de 0,90,
+comme tout panneau flottant du projet. Sur un menu posé sur une surface vide
+personne ne le remarque ; sur une carte posée en plein paragraphe, le texte
+dessous traverse. Corrigé par un flou d'arrière-plan et non par une couleur —
+la charte interdit d'inventer un jeton, un flou n'en est pas un.
+
 ### Critères
 
-- [ ] Un lien de règle sans destination ni prose ne se distingue plus du texte
+- [x] Un lien de règle sans destination ni prose ne se distingue plus du texte
       ordinaire — ni couleur de lien, ni souligné pointillé.
-- [ ] Survoler un lien d'entité ouvre une carte portant son portrait (s'il
+- [x] Survoler un lien d'entité ouvre une carte portant son portrait (s'il
       existe), son nom, sa catégorie et son premier paragraphe visible.
-- [ ] La catégorie affichée est exactement celle de la fiche (« Personnage »,
+- [x] La catégorie affichée est exactement celle de la fiche (« Personnage »,
       « Lieu », « Espèce », « Monstre »…), jamais un libellé inventé.
-- [ ] Survoler un lien de règle ouvre une carte portant son nom, son type et
+- [x] Survoler un lien de règle ouvre une carte portant son nom, son type et
       sa description — et **aucune** valeur mécanique.
-- [ ] Vérifié par lecture du HTML envoyé, pas à l'œil : aucun extrait ne
-      provient d'un segment que la visibilité masque à ce visiteur.
-- [ ] Une page citant une douzaine de fiches ne déclenche pas une requête par
+- [x] Vérifié deux fois : par lecture du HTML envoyé (chaque extrait se
+      retrouve mot pour mot dans le corps public de sa propre fiche), et par
+      trois tests purs qui composent `filterSegments` et `excerptFromSegments`
+      — un paragraphe MJ placé en PREMIER ne sort jamais pour un anonyme.
+      La preuve négative est un test permanent, pas un constat d'écran.
+- [x] Une page citant une douzaine de fiches ne déclenche pas une requête par
       lien.
-- [ ] Sur un pointeur grossier, le tap ouvre une feuille basse au lieu de ne
-      rien faire.
-- [ ] Le clavier ouvre la carte au focus, `Échap` la ferme.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+- [x] Sur un pointeur grossier, le tap ouvre une feuille basse au lieu de ne
+      rien faire — et le survol, lui, n'ouvre plus rien.
+- [x] Le clavier ouvre la carte au focus, `Échap` la ferme.
+- [x] `npm run typecheck && npm run lint && npm run test` passent (1 058 tests,
+      soit les 1 044 d'avant plus 14 nouveaux sur l'extrait). `npm run build`
+      aussi, deux fois — la mesure du préchargement l'exigeait.
 
 Et, la fluidité étant la demande et non un bonus, **mesurée plutôt que jugée à
 l'œil** — chiffres à relever avant/après sur le Prologue, la page la plus
@@ -3056,7 +3141,7 @@ chargée en mentions :
 | Nœuds de carte dans le DOM | 1, quel que soit le nombre de mentions |
 | Décalage de mise en page à l'ouverture | 0 — portail, hors du flux du paragraphe |
 | Saut de la carte à l'arrivée du portrait | 0 — boîte réservée |
-| Clic après survol appuyé | fiche préchargée, pas de nouvel aller-retour |
+| Clic après survol appuyé | ~~fiche préchargée~~ — **abandonné, mesuré sans effet** (448 ms à froid / 428 ms après survol ; voir Fluidité) |
 
 ---
 

@@ -11,6 +11,7 @@ import type { CustomTableBlockData } from "@/src/core/schemas/blocks/customTable
 import type { QuestBlockData, QuestNote, QuestObjective } from "@/src/core/schemas/blocks/quest";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { PublicBlock } from "@/src/server/services/publicShare";
+import type { EntityRefPreview, RuleRefPreview } from "@/src/server/services/refPreview";
 import { QUEST_STATE_LABELS_FR } from "@/src/i18n/fr";
 import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
 import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
@@ -75,22 +76,34 @@ const TAG_BY_BLOCK_TYPE: Record<Segment["blockType"], string> = {
  * `key` (aucune resolution serveur necessaire) MAIS seulement si
  * `ruleHrefBase` est fourni — absent sur le partage anonyme (`/partage`,
  * `/apercu`), aucune page de regle n'y existe pour un visiteur non
- * authentifie. Cible introuvable/non fournie : lien brise, jamais retire
+ * authentifie. Cible introuvable : lien brise, jamais retire
  * silencieusement (specs/wiki-liens-et-personnages.md §A1).
+ *
+ * V2.1-18 lot 1 : "introuvable" et "sans destination" cessent d'etre
+ * confondus. Une cible qui ne se resout pas pour ce lecteur reste marquee
+ * (`.rich-ref-broken`) ; une reference qui ne mene nulle part sur cette
+ * route rend du texte ordinaire. Voir le repli en bas de cette fonction.
  */
 function renderNode(
   node: SegmentContentNode,
   key: number,
-  textRefs: Record<string, { name: string; slug: string }> | undefined,
+  textRefs: Record<string, EntityRefPreview> | undefined,
   hrefBase: string,
-  ruleHrefBase: string | undefined
+  ruleHrefBase: string | undefined,
+  ruleRefs: Record<string, RuleRefPreview> | undefined
 ) {
   if (node.t === "ref") {
     if (node.kind === "entity" && node.id) {
       const found = textRefs?.[node.id];
       if (found) {
         return (
-          <Link key={key} href={`${hrefBase}/${found.slug}`} className="rich-ref-mention">
+          // V2.1-18 lot 3 : `data-ref-*` seulement, jamais la donnee de la
+          // carte elle-meme. Le texte d'une fiche cite souvent la meme dix
+          // fois (« Terk » trois fois dans un seul paragraphe) — recopier
+          // 240 caracteres d'extrait sous chaque occurrence ferait grossir
+          // le HTML avec le nombre de MENTIONS au lieu du nombre de FICHES.
+          // La table part une seule fois, portee par `RefPreviewLayer`.
+          <Link key={key} href={`${hrefBase}/${found.slug}`} className="rich-ref-mention" data-ref-kind="entity" data-ref-id={node.id}>
             {node.label}
           </Link>
         );
@@ -103,18 +116,41 @@ function renderNode(
         </span>
       );
     }
-    if (node.kind === "rule" && node.key && ruleHrefBase) {
-      return (
-        <Link key={key} href={`${ruleHrefBase}/${node.key}`} className="rich-ref-mention">
-          {node.label}
-        </Link>
-      );
+    if (node.kind === "rule" && node.key) {
+      // Une page de regle existe (wiki joueur) : lien normal, plus la carte.
+      if (ruleHrefBase) {
+        return (
+          <Link key={key} href={`${ruleHrefBase}/${node.key}`} className="rich-ref-mention" data-ref-kind="rule" data-ref-key={node.key}>
+            {node.label}
+          </Link>
+        );
+      }
+      // V2.1-18 : aucune page de regle ici (`/partage`, `/apercu`) — mais si
+      // la fiche a de la prose, la CARTE est la destination. Pas un lien,
+      // donc pas un `<a>` : un bouton de survol qui n'emmene nulle part.
+      // `cursor: help` le dit avant le clic, ce qui est precisement ce qui
+      // manquait au lien mort corrige au lot 1.
+      if (ruleRefs?.[node.key]) {
+        return (
+          <span key={key} className="rich-ref-mention rich-ref-preview" data-ref-kind="rule" data-ref-key={node.key} tabIndex={0} role="button">
+            {node.label}
+          </span>
+        );
+      }
     }
-    return (
-      <span key={key} className="rich-ref-mention">
-        {node.label}
-      </span>
-    );
+    // V2.1-18 lot 1 — repli SANS destination : une regle sur `/partage` (pas
+    // de `ruleHrefBase`), un ref sans cle, un `asset`. Il portait
+    // `.rich-ref-mention`, donc la couleur `--link-entity` et le souligne
+    // pointille d'un vrai lien (app/globals.css) : rien ne distinguait a
+    // l'oeil un mot cliquable d'un mot inerte, et le visiteur cliquait dans
+    // le vide. Mesure sur la prod : 3 mentions sur 20 dans ce cas.
+    //
+    // A ne pas confondre avec `.rich-ref-broken` juste au-dessus, qui reste
+    // marque : la, une cible EXISTE dans le texte mais ne se resout pas pour
+    // ce lecteur, et la specification demande de le montrer
+    // (wiki-liens-et-personnages.md §A1). Ici il n'y a rien a montrer — pas
+    // une cible manquante, une destination qui n'existe nulle part.
+    return <span key={key}>{node.label}</span>;
   }
   const marks = node.marks ?? [];
   let content: React.ReactNode = node.v;
@@ -158,12 +194,14 @@ function PublicTextBlock({
   textRefs,
   hrefBase,
   ruleHrefBase,
+  ruleRefs,
   anchoredImages,
 }: {
   data: TextBlockData;
-  textRefs: Record<string, { name: string; slug: string }> | undefined;
+  textRefs: Record<string, EntityRefPreview> | undefined;
   hrefBase: string;
   ruleHrefBase: string | undefined;
+  ruleRefs: Record<string, RuleRefPreview> | undefined;
   anchoredImages: AnchoredImage<PublicBlock>[];
 }) {
   const atHead = anchoredImages.filter((image) => image.segmentId === null);
@@ -189,7 +227,7 @@ function PublicTextBlock({
             : createElement(
                 tag,
                 { "data-align": segment.align },
-                segment.content.map((node, i) => renderNode(node, i, textRefs, hrefBase, ruleHrefBase)),
+                segment.content.map((node, i) => renderNode(node, i, textRefs, hrefBase, ruleHrefBase, ruleRefs)),
               );
         if (!slot) return <Fragment key={segment.id}>{rendered}</Fragment>;
         return (
@@ -493,6 +531,7 @@ export default function PublicBlockView({
           textRefs={block.textRefs}
           hrefBase={hrefBase}
           ruleHrefBase={ruleHrefBase}
+          ruleRefs={block.ruleRefs}
           anchoredImages={imagesVisibles}
         />
       )}

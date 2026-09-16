@@ -287,6 +287,19 @@ body {
   text-decoration-style: dashed;
 }
 
+/* Mention de REGLE sans page a ouvrir (V2.1-18) : la carte d'apercu est sa
+   destination entiere. Elle se signale donc comme consultable et non comme
+   navigable — c'est exactement la distinction qui manquait au lien mort
+   corrige au lot 1, ou un `<span>` inerte portait la couleur d'un `<a>`. */
+.rich-ref-preview {
+  cursor: help;
+}
+.rich-ref-preview:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
 /*
  * Hierarchie de titres, reprise de l'ancienne application (master) :
  * titre de fiche (.entity-title) > titre de bloc (.block-title).

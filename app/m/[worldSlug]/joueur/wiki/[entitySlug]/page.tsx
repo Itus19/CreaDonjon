@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getEntityBySlug } from "@/src/server/repos/entities";
 import { canUserEditEntity } from "@/src/server/services/permissions";
 import { getEntityWindowData } from "@/src/server/services/entityWindow";
 import { getPlayerEntityDetail } from "@/src/server/services/playerEntityDetail";
+import type { Locale } from "@/src/i18n/request";
 import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
 import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
 import EditEntityForm from "../../../(monde)/f/[entitySlug]/EditEntityForm";
@@ -59,7 +61,7 @@ export default async function JoueurWikiEntityPage({
     );
   }
 
-  const detail = await getPlayerEntityDetail(supabase, { worldId: world.id, entitySlug, userId: user.id });
+  const detail = await getPlayerEntityDetail(supabase, { worldId: world.id, entitySlug, userId: user.id, locale: (await getLocale()) as Locale });
   if (!detail) notFound();
 
   return (

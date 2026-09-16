@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import {
   resolveShareLink,
   getPublicEntityDetail,
@@ -9,6 +10,7 @@ import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
 import { hasVerifiedSharePassword } from "../passwordActions";
 import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
 import BookSkin from "@/components/entities/public/BookSkin";
+import type { Locale } from "@/src/i18n/request";
 import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
 
 export default async function ShareLinkEntityPage({
@@ -29,7 +31,7 @@ export default async function ShareLinkEntityPage({
   }
 
   const [detail, tree, campaignName] = await Promise.all([
-    getPublicEntityDetail(resolved.worldId, entitySlug),
+    getPublicEntityDetail(resolved.worldId, entitySlug, (await getLocale()) as Locale),
     getPublicEntityTree(resolved.worldId),
     getPublicCampaignName(resolved.worldId),
   ]);

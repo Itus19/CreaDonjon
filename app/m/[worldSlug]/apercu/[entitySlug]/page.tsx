@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getPublicEntityDetail } from "@/src/server/services/publicShare";
+import type { Locale } from "@/src/i18n/request";
 import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
 import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
 
@@ -22,7 +24,7 @@ export default async function ApercuEntityPage({
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
 
-  const detail = await getPublicEntityDetail(world.id, entitySlug);
+  const detail = await getPublicEntityDetail(world.id, entitySlug, (await getLocale()) as Locale);
   if (!detail) notFound();
 
   return (

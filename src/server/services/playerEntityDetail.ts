@@ -8,6 +8,13 @@ import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 import { collectRefTargetIds } from "@/src/core/linker/refTargets";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { type BlockRow, listBlocksForEntity } from "@/src/server/repos/blocks";
+import {
+  resolveEntityRefExcerpts,
+  resolveRuleRefPreviews,
+  type EntityRefPreview,
+  type RuleRefPreview,
+} from "@/src/server/services/refPreview";
+import type { Locale } from "@/src/i18n/request";
 import { getEntityBySlug } from "@/src/server/repos/entities";
 import { getPortraitLayout } from "@/src/server/services/entityPortraits";
 import { getBackgroundMetaForBlock } from "@/src/server/services/blockImages";
@@ -127,7 +134,8 @@ async function listPlayerRelations(supabase: TypedClient, worldId: string, entit
  */
 export async function getPlayerEntityDetail(
   supabase: TypedClient,
-  params: { worldId: string; entitySlug: string; userId: string }
+  /** `locale` (V2.1-18 lot 2) : sert uniquement a choisir la traduction d'une fiche de REGLE citee, comme pour `getPublicEntityDetail`. */
+  params: { worldId: string; entitySlug: string; userId: string; locale?: Locale }
 ): Promise<{
   entity: EntitySummary;
   blocks: PublicBlock[];
@@ -135,7 +143,7 @@ export async function getPlayerEntityDetail(
   portraitLayout: EntityPortraitLayout;
   wikiBackground: WikiBackground | null;
 } | null> {
-  const { worldId, entitySlug, userId } = params;
+  const { worldId, entitySlug, userId, locale = "fr" } = params;
   const entity = await getEntityBySlug(supabase, worldId, entitySlug);
   if (!entity) return null;
 
@@ -239,19 +247,47 @@ export async function getPlayerEntityDetail(
   const hasTextBlock = blocksWithTimelineCalendar.some((b) => b.blockType === "text");
   const entityLookup =
     hasQuestBlock || hasTimelineBlockRefs || hasTextBlock
-      ? new Map((await listEntitiesForWorld(supabase, worldId)).map((e) => [e.id, { name: e.name, slug: e.slug }]))
+      ? new Map(
+          (await listEntitiesForWorld(supabase, worldId)).map((e) => [e.id, { name: e.name, slug: e.slug, kind: e.entity_kind }])
+        )
       : null;
+
+  // V2.1-18 lot 2 — meme resolution que `getPublicEntityDetail`, avec le vrai
+  // viewer joueur plutot que l'anonyme : l'extrait d'une fiche citee suit
+  // exactement les memes regles de visibilite que son corps.
+  const referencedEntityIds = new Set<string>();
+  const referencedRuleKeys = new Set<string>();
+  if (hasTextBlock && entityLookup) {
+    for (const block of blocksWithTimelineCalendar) {
+      if (block.blockType !== "text") continue;
+      const text = zTextBlockData.safeParse(block.data);
+      if (!text.success) continue;
+      const { entityIds, ruleKeys } = collectRefTargetIds(text.data.segments);
+      for (const id of entityIds) if (entityLookup.has(id)) referencedEntityIds.add(id);
+      for (const key of ruleKeys) referencedRuleKeys.add(key);
+    }
+  }
+  const [entityExcerpts, ruleRefsByKey] = await Promise.all([
+    resolveEntityRefExcerpts(supabase, [...referencedEntityIds], viewer),
+    resolveRuleRefPreviews(supabase, worldId, [...referencedRuleKeys], locale),
+  ]);
+
   const blocksWithQuestRefs = blocksWithTimelineCalendar.map((block) => {
     if (block.blockType === "text" && entityLookup) {
       const text = zTextBlockData.safeParse(block.data);
       if (!text.success) return block;
-      const { entityIds } = collectRefTargetIds(text.data.segments);
-      const textRefs: Record<string, { name: string; slug: string }> = {};
+      const { entityIds, ruleKeys } = collectRefTargetIds(text.data.segments);
+      const textRefs: Record<string, EntityRefPreview> = {};
       for (const id of entityIds) {
         const found = entityLookup.get(id);
-        if (found) textRefs[id] = found;
+        if (found) textRefs[id] = { ...found, excerpt: entityExcerpts.get(id) ?? null };
       }
-      return { ...block, textRefs };
+      const ruleRefs: Record<string, RuleRefPreview> = {};
+      for (const key of ruleKeys) {
+        const found = ruleRefsByKey[key];
+        if (found) ruleRefs[key] = found;
+      }
+      return { ...block, textRefs, ruleRefs };
     }
     if (block.blockType === "timeline" && entityLookup) {
       const timeline = zTimelineBlockData.safeParse(block.data);
