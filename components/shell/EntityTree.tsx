@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -21,6 +21,33 @@ import { useCollapsedGroups } from "./useCollapsedGroups";
 import { useDesktopWindowsState } from "./DesktopWindowsProvider";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+
+/**
+ * Le nom de la fiche, plus l'état d'attente de SON lien (V2.1-20 lot 1).
+ *
+ * `useLinkStatus` ne se lit que depuis un descendant du `<Link>` — d'où ce
+ * composant plutôt qu'un `pending` calculé dans `NodeRow`, qui est le parent.
+ *
+ * Mesuré avant de l'écrire (V2.1-20 lot 0) : entre le clic et l'arrivée il se
+ * passe de 215 à 731 ms selon la fiche, pendant lesquelles RIEN ne bougeait —
+ * ni la page, ni le lien cliqué.
+ *
+ * Le signal ne peut pas être le fond : `hover:bg-panel-raised` le pose déjà,
+ * donc cliquer une ligne survolée ne changerait rien à l'écran, précisément
+ * dans le cas le plus courant. Il porte donc sur la COULEUR du texte —
+ * `text-accent`, celle de la ligne active, puisque c'est ce que cette ligne est
+ * sur le point de devenir — et sur le pouls, qui distingue « on y va » de « on
+ * y est ». Aucun nœud ajouté, aucune largeur modifiée : la ligne ne bouge pas.
+ *
+ * Inoffensif dans la coquille d'édition, où ce même arbre est monté sans
+ * `hrefBase` : le clic y ouvre une fenêtre et appelle `preventDefault()`
+ * (ADR-0006), donc aucune navigation ne démarre et `pending` y reste faux.
+ * Rien à conditionner, et son apparence ne change pas.
+ */
+function NomDuLien({ nom }: { nom: string }) {
+  const { pending } = useLinkStatus();
+  return <span className={pending ? "animate-pulse text-accent" : undefined}>{nom}</span>;
+}
 
 function NodeRow({
   node,
@@ -109,7 +136,7 @@ function NodeRow({
             isActive ? "bg-panel-raised text-accent" : "text-ink-soft"
           }`}
         >
-          {node.name}
+          <NomDuLien nom={node.name} />
         </Link>
         {editable && (
           <ActionsMenu
