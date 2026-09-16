@@ -3113,16 +3113,43 @@ carte, qui n'existe pas avant qu'elle soit rendue. Le placement quitte donc
 la peinture**, ce qui est précisément la différence avec `useEffect` : avec ce
 dernier, la carte sauterait d'un endroit à l'autre sous les yeux du lecteur.
 
-**2. Le survol était coupé sur les machines tactiles**, découvert en testant le
-correctif précédent — le poste de vérification se déclare `pointer: coarse`
-avec dix points tactiles, et plus aucune carte ne s'ouvrait au survol. La
-requête du lot 4 était la mauvaise : `pointer: coarse` décrit le pointeur
-**principal**, et il est vrai sur un portable à écran tactile *y compris quand
-une souris est branchée*. Remplacée par `any-hover: hover`, qui pose la vraie
-question : un des dispositifs de cet appareil sait-il survoler ? Dans la
-foulée, le clic sur une règle ouvre désormais sa carte partout et plus
-seulement au tactile — c'est sa seule destination, et un mot souligné sur
-lequel on clique doit faire quelque chose.
+**2. Le survol était coupé sur les machines tactiles.** Trois versions ont été
+nécessaires, et les deux premières ont échoué de la même façon : elles
+demandaient à l'appareil ce qu'il *est* au lieu de regarder ce que la personne
+*fait*.
+
+- **`pointer: coarse`** (lot 4). Décrit le pointeur **principal** : vrai sur
+  toute machine à écran tactile, souris branchée ou non. Découvert en testant
+  le correctif précédent, le poste de vérification se déclarant tactile.
+- **`any-hover: hover`** (première correction). Devait couvrir le cas « une
+  souris existe quelque part ». **Démentie par l'auteur sur sa Surface Pro** :
+  la requête répond `false` alors qu'une souris est bien là — avec un écran
+  tactile présent, Chrome/Edge sous Windows n'énumèrent pas toujours la
+  souris. Déployée, vérifiée dans le JS de production, et toujours aucune
+  carte au survol.
+- **`PointerEvent.pointerType`** (version retenue). L'événement dit lui-même
+  s'il vient d'une souris, d'un stylet ou d'un doigt. Plus aucune prédiction :
+  `pointerover` avec `pointerType` `mouse` ou `pen` ouvre la carte, `touch`
+  est ignoré (un navigateur tactile émet un `pointerover` synthétique juste
+  avant le clic, qui ferait clignoter la carte au moment où la navigation
+  part). Le tap est servi par le gestionnaire de clic, à sa place.
+
+**La règle à retenir** — et c'est la vraie leçon de ce ticket : *une requête
+média décrit ce qu'un appareil déclare, pas ce que la personne est en train de
+faire.* Pour une interaction, interroger l'événement ; la requête média ne
+sert plus qu'à choisir une mise en page, et elle porte désormais sur la
+largeur (`max-width: 767px`), ce qui est bien une question de largeur.
+
+Deux corrections dans la foulée : le clic sur une règle ouvre sa carte partout
+et plus seulement au tactile — c'est sa seule destination — et le clavier
+ouvre la carte au focus sans condition.
+
+**Ce que ces trois versions ont coûté, et pourquoi.** Aucune n'aurait été
+trouvée par une mesure : la première est passée parce que le poste de
+développement n'émulait pas encore le tactile, la deuxième parce qu'il
+l'émulait *trop* (`any-hover` y vaut `false`, comme sur une vraie tablette,
+mais pas comme sur une Surface Pro avec souris). **Seul du matériel réel entre
+les mains de son utilisateur a tranché**, deux fois de suite.
 
 **Une correction d'apparence, trouvée à l'écran et pas dans le code.** La
 carte était lisible « à travers » : `--panel-raised` porte un alpha de 0,90,
@@ -3148,8 +3175,10 @@ la charte interdit d'inventer un jeton, un flou n'en est pas un.
       La preuve négative est un test permanent, pas un constat d'écran.
 - [x] Une page citant une douzaine de fiches ne déclenche pas une requête par
       lien.
-- [x] Sur un pointeur grossier, le tap ouvre une feuille basse au lieu de ne
-      rien faire — et le survol, lui, n'ouvre plus rien.
+- [x] Sur un écran étroit, le tap ouvre une feuille basse au lieu de ne rien
+      faire. Le survol au DOIGT n'ouvre rien (pas de carte qui clignote
+      pendant la navigation) ; à la souris et au stylet, il ouvre — y compris
+      sur une machine qui se déclare tactile.
 - [x] Le clavier ouvre la carte au focus, `Échap` la ferme.
 - [x] **Ajouté après coup, sur retour de l'auteur (capture) :** une carte n'est
       jamais coupée par un bord de la fenêtre — 20 mentions testées deux fois,

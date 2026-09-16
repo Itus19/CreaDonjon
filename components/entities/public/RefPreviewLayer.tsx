@@ -77,22 +77,30 @@ export default function RefPreviewLayer({
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   /**
-   * V2.1-18 lot 4 — un appareil sans survol n'ouvrirait jamais rien : une
-   * regle n'est meme pas un lien (cf. `PublicBlockView`). La carte y devient
-   * une feuille basse, ouverte au tap.
+   * V2.1-18 lot 4 — presentation seulement : feuille basse sur un ecran
+   * etroit, carte flottante ailleurs.
    *
-   * `any-hover` et non `pointer: coarse`, corrige apres coup : `pointer:
-   * coarse` decrit le pointeur PRINCIPAL, et il est vrai sur un portable a
-   * ecran tactile — y compris quand une souris est branchee. La premiere
-   * version coupait donc le survol sur ces machines, ce qu'un poste de
-   * developpement en emulation tactile a rendu visible. `any-hover: hover`
-   * pose la vraie question : un des dispositifs de cet appareil sait-il
-   * survoler ?
+   * Question de LARGEUR, jamais de type de pointeur, et ce n'est pas le
+   * premier choix (deux corrections sur le meme point, toutes deux venues
+   * d'un appareil reel) :
+   *
+   * - `pointer: coarse` d'abord. Faux : il decrit le pointeur PRINCIPAL, et
+   *   vaut vrai sur toute machine a ecran tactile, souris branchee ou non.
+   * - `any-hover: hover` ensuite. Faux aussi, constate sur la Surface Pro de
+   *   l'auteur : avec un ecran tactile present, Chrome/Edge sous Windows
+   *   n'enumerent pas toujours la souris, et la requete repond `false` alors
+   *   qu'une souris est bien la. Plus aucune carte ne s'ouvrait au survol.
+   *
+   * La lecon est generale : **une requete media decrit ce qu'un appareil
+   * declare, pas ce que la personne est en train de faire.** Le survol ne se
+   * predit donc plus du tout — il se constate, par le `pointerType` de
+   * l'evenement (voir `onPointerOver`). Ici on ne decide plus que d'une mise
+   * en page.
    *
    * Lu dans un effet et non au rendu : `matchMedia` n'existe pas au rendu
    * serveur, et la valeur doit etre la meme des deux cotes a l'hydratation.
    */
-  const [coarse, setCoarse] = useState(false);
+  const [narrow, setNarrow] = useState(false);
   const [portraitOk, setPortraitOk] = useState(true);
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -167,7 +175,7 @@ export default function RefPreviewLayer({
    * deux cotes.
    */
   useLayoutEffect(() => {
-    if (!target || !anchor || coarse) return;
+    if (!target || !anchor || narrow) return;
     const card = cardRef.current;
     if (!card) return;
 
@@ -186,11 +194,12 @@ export default function RefPreviewLayer({
         : Math.max(GAP, hauteurFenetre - hauteur - GAP);
 
     setPos({ x, y: yFenetre + anchor.scrollY });
-  }, [target, anchor, coarse]);
+  }, [target, anchor, narrow]);
 
   useEffect(() => {
-    const mq = window.matchMedia("(any-hover: hover)");
-    const sync = () => setCoarse(!mq.matches);
+    // 768 px : le seuil « telephone » du reste de la coquille.
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setNarrow(mq.matches);
     sync();
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
@@ -202,16 +211,28 @@ export default function RefPreviewLayer({
       return el instanceof HTMLElement ? el : null;
     }
 
-    function onOver(e: MouseEvent) {
-      if (coarse) return;
+    /**
+     * `pointerover` et non `mouseover`, et surtout `pointerType` plutot
+     * qu'une requete media : l'evenement dit lui-meme s'il vient d'une
+     * souris, d'un stylet ou d'un doigt. Un survol se CONSTATE, il ne se
+     * predit pas — c'est la seule facon d'etre juste sur une machine qui a
+     * les deux, quoi qu'elle declare par ailleurs (Surface Pro, retour de
+     * l'auteur).
+     *
+     * Le doigt est ignore ici : un navigateur tactile emet un `pointerover`
+     * synthetique juste avant le clic, qui ouvrirait la carte au moment ou
+     * la navigation part. Le tap est servi par `onClick`, a sa place.
+     */
+    function onPointerOver(e: PointerEvent) {
+      if (e.pointerType === "touch") return;
       const el = refFrom(e);
       if (!el) return;
       clearTimers();
       openTimer.current = setTimeout(() => open(el), INTENT_MS);
     }
 
-    function onOut(e: MouseEvent) {
-      if (coarse || !refFrom(e)) return;
+    function onPointerOut(e: PointerEvent) {
+      if (e.pointerType === "touch" || !refFrom(e)) return;
       close();
     }
 
@@ -231,7 +252,6 @@ export default function RefPreviewLayer({
     }
 
     function onFocus(e: FocusEvent) {
-      if (coarse) return;
       const el = refFrom(e);
       if (el) open(el);
     }
@@ -243,22 +263,22 @@ export default function RefPreviewLayer({
       }
     }
 
-    document.addEventListener("mouseover", onOver);
-    document.addEventListener("mouseout", onOut);
+    document.addEventListener("pointerover", onPointerOver);
+    document.addEventListener("pointerout", onPointerOut);
     document.addEventListener("click", onClick);
     document.addEventListener("focusin", onFocus);
     document.addEventListener("focusout", close);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("mouseover", onOver);
-      document.removeEventListener("mouseout", onOut);
+      document.removeEventListener("pointerover", onPointerOver);
+      document.removeEventListener("pointerout", onPointerOut);
       document.removeEventListener("click", onClick);
       document.removeEventListener("focusin", onFocus);
       document.removeEventListener("focusout", close);
       document.removeEventListener("keydown", onKey);
       clearTimers();
     };
-  }, [open, close, clearTimers, coarse]);
+  }, [open, close, clearTimers]);
 
   if (!target) return null;
 
@@ -269,12 +289,12 @@ export default function RefPreviewLayer({
       // Hors du flux du paragraphe : ouvrir une carte ne doit RIEN deplacer
       // dans le texte qu'on est en train de lire.
       className={
-        coarse
+        narrow
           ? "fixed inset-x-0 bottom-0 z-40 rounded-t-2xl border-t border-edge-strong bg-panel-raised p-4 shadow-2xl backdrop-blur-md"
           : "absolute z-40 rounded-xl border border-edge-strong bg-panel-raised p-3 shadow-2xl backdrop-blur-md"
       }
       style={
-        coarse
+        narrow
           ? undefined
           : {
               left: 0,
@@ -288,10 +308,10 @@ export default function RefPreviewLayer({
               visibility: pos ? "visible" : "hidden",
             }
       }
-      onMouseEnter={coarse ? undefined : clearTimers}
-      onMouseLeave={coarse ? undefined : close}
+      onMouseEnter={narrow ? undefined : clearTimers}
+      onMouseLeave={narrow ? undefined : close}
     >
-      {coarse && (
+      {narrow && (
         <button
           type="button"
           onClick={() => setTarget(null)}
