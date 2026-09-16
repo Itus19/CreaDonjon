@@ -1,8 +1,10 @@
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
-import { getPublicEntityTree } from "@/src/server/services/publicShare";
+import { getPublicEntityTree, getPublicWikiBackground } from "@/src/server/services/publicShare";
+import { EN_TETE_CHEMIN, entitySlugFromPathname } from "@/lib/wikiPath";
 import WikiBackgroundProvider from "@/components/entities/public/WikiBackgroundProvider";
 import BookSkin from "@/components/entities/public/BookSkin";
 
@@ -32,11 +34,20 @@ export default async function ApercuLayout({
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
 
-  const [tree, campaigns] = await Promise.all([getPublicEntityTree(world.id), listCampaigns(supabase, world.id)]);
+  // V2.1-20 lot 2.1 — voir `app/partage/[token]/layout.tsx` : même mécanisme,
+  // même service. `/apercu` et `/partage` ne diffèrent que par la façon dont
+  // le monde est résolu ; le fond, lui, vient du même `getPublicWikiBackground`.
+  const entitySlug = entitySlugFromPathname((await headers()).get(EN_TETE_CHEMIN), `/m/${worldSlug}/apercu`);
+
+  const [tree, campaigns, initialBackground] = await Promise.all([
+    getPublicEntityTree(world.id),
+    listCampaigns(supabase, world.id),
+    entitySlug ? getPublicWikiBackground(world.id, entitySlug) : Promise.resolve(null),
+  ]);
   const title = campaigns[0]?.name ?? world.name;
 
   return (
-    <WikiBackgroundProvider>
+    <WikiBackgroundProvider initialBackground={initialBackground}>
       <BookSkin title={title} worldSlug={world.slug} tree={tree} hrefBase={`/m/${world.slug}/apercu`}>
         {children}
       </BookSkin>

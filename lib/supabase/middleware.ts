@@ -1,8 +1,26 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { EN_TETE_CHEMIN } from "@/lib/wikiPath";
+
+/**
+ * `NextResponse.next()` en recopiant le chemin dans un en-tete de requete
+ * (V2.1-20 lot 2.1) : c'est ce qui permet a un `layout.tsx` de savoir quelle
+ * fiche est rendue sous lui, ce que Next n'expose pas autrement. Voir
+ * `lib/wikiPath.ts` pour la raison complete.
+ *
+ * Les en-tetes sont clones ICI, au moment de construire la reponse, jamais une
+ * fois pour toutes en haut de `updateSession` : entre les deux, Supabase peut
+ * avoir repose des cookies sur `request`, et un clone pris trop tot les
+ * perdrait en route.
+ */
+function suivantAvecChemin(request: NextRequest): NextResponse {
+  const headers = new Headers(request.headers);
+  headers.set(EN_TETE_CHEMIN, request.nextUrl.pathname);
+  return NextResponse.next({ request: { headers } });
+}
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  let supabaseResponse = suivantAvecChemin(request);
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,7 +34,7 @@ export async function updateSession(request: NextRequest) {
           for (const { name, value } of cookiesToSet) {
             request.cookies.set(name, value);
           }
-          supabaseResponse = NextResponse.next({ request });
+          supabaseResponse = suivantAvecChemin(request);
           for (const { name, value, options } of cookiesToSet) {
             supabaseResponse.cookies.set(name, value, options);
           }

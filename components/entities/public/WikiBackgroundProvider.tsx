@@ -32,9 +32,32 @@ const WikiBackgroundContext = createContext<WikiBackgroundContextValue | null>(n
  * Jamais un fondu croise direct entre deux images : plus simple, et ca
  * correspond au comportement demande.
  */
-export default function WikiBackgroundProvider({ children }: { children: React.ReactNode }) {
-  const [displayed, setDisplayed] = useState<WikiBackground | null>(null);
-  const [visible, setVisible] = useState(false);
+export default function WikiBackgroundProvider({
+  children,
+  initialBackground,
+}: {
+  children: React.ReactNode;
+  /**
+   * Le fond de la fiche rendue au PREMIER chargement, resolu cote serveur par
+   * le `layout.tsx` (V2.1-20 lot 2.1). Sans lui, cet etat partait de `null` :
+   * le HTML ne portait ni la div de fond ni les jetons de teinte, et toute la
+   * colonne se repeignait apres l'hydratation — mesure du lot 0, la requete de
+   * l'image ne partait que 327 ms apres que la page soit lisible.
+   *
+   * `visible` demarre a `true` quand il est fourni, et c'est voulu : un fondu
+   * d'entree sur un fond deja present dans le HTML rejouerait exactement
+   * l'attente qu'on vient de supprimer. Les fondus de V2-G13 restent entiers
+   * entre deux fiches — ils sont l'affaire de `register`, pas du premier rendu.
+   *
+   * `WikiBackgroundRegistrar` enregistre malgre tout la meme valeur a son
+   * montage ; `register` la reconnait inchangee et ne declenche aucune
+   * transition. La page reste donc la seule a DECLARER le fond, le layout ne
+   * fait que l'avoir deja sous la main.
+   */
+  initialBackground?: WikiBackground | null;
+}) {
+  const [displayed, setDisplayed] = useState<WikiBackground | null>(initialBackground ?? null);
+  const [visible, setVisible] = useState(Boolean(initialBackground));
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const register = useCallback((next: WikiBackground | null) => {

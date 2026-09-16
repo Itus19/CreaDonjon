@@ -447,6 +447,100 @@ export interface WikiBackground {
   mode: string;
 }
 
+/**
+ * Les trois fonctions qui suivent existent pour une seule raison (V2.1-20
+ * lot 2.1) : le `layout.tsx` et la `page.tsx` ont desormais besoin du MEME
+ * fond, et doivent le payer une fois.
+ *
+ * Mesure du lot 0 : resoudre un fond coute trois vagues (fiche → blocs →
+ * meta). Le layout en fait deja deux pour son sommaire ; lui en ajouter trois
+ * en ferait le chemin critique sur une fiche ordinaire, qui n'en coute que
+ * quatre. Les partager annule ce surcout — `cache()` memoise la promesse, donc
+ * layout et page qui partent en parallele attendent le meme appel.
+ *
+ * Memoise ICI, au niveau du service, et jamais sur `listBlocksForEntity`
+ * (`repos/blocks.ts`) : ce depot a dix appelants dans des chemins d'ECRITURE
+ * (characterActions, characterCreator, generators, notebook, duplication
+ * d'entite). `React.cache()` etant borne a la requete, une action serveur qui
+ * insere un bloc puis relit la liste recevrait la version d'avant l'ecriture.
+ * On s'installerait un bug pour en eviter un autre. Ces trois-ci ne sont
+ * atteignables que depuis le chemin de LECTURE publique, ou rien n'ecrit.
+ */
+const getPublicEntityBySlug = cache(async function getPublicEntityBySlug(
+  worldId: string,
+  entitySlug: string
+): Promise<EntitySummary | null> {
+  const supabase = createShareLinkServiceClient();
+  const entity = await getEntityBySlug(supabase, worldId, entitySlug);
+  // `null` aussi bien pour "n'existe pas" que pour "masquee" : la distinction
+  // ne doit jamais remonter, et la faire ici evite que chaque appelant ait a
+  // se souvenir de la faire.
+  if (!entity || !entity.is_public) return null;
+  return entity;
+});
+
+/** Les blocs d'une fiche publique, deja filtres par visibilite — bloc puis segment, jamais l'un sans l'autre. */
+const getPublicVisibleBlocks = cache(async function getPublicVisibleBlocks(
+  worldId: string,
+  entitySlug: string
+): Promise<PublicBlock[]> {
+  const entity = await getPublicEntityBySlug(worldId, entitySlug);
+  if (!entity) return [];
+
+  const supabase = createShareLinkServiceClient();
+  const rows = await listBlocksForEntity(supabase, entity.id);
+  return filterBlocks(rows.map(toVisibilityAware), { kind: "anonymous" })
+    .map((row) => ({
+      id: row.id,
+      blockType: row.block_type,
+      display: row.display as unknown as BlockDisplay,
+      // Un bloc `text` peut lui-meme etre public tout en contenant un
+      // segment gm (SCHEMA.md §7.1, exemple Bram) : la visibilite du bloc
+      // ne suffit pas, chaque segment est filtre a son tour avant de
+      // jamais quitter le serveur. Meme principe pour les entrees d'un
+      // bloc `timeline` (V2-H2).
+      data: filterTimelineEntries(row.block_type, filterNoteTreeSegments(row.block_type, filterTextBlockSegments(row.block_type, row.data))),
+      displayOrder: row.display_order,
+    }))
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+});
+
+/**
+ * Le fond de page wiki d'une fiche, seul — sans le reste de la fiche.
+ *
+ * C'est ce que le `layout.tsx` appelle pour poser `--h`/`--c`/`data-mode` et la
+ * div de fond DANS LE HTML, au lieu de les laisser apparaitre apres
+ * l'hydratation (V2.1-20 lot 2.1). Il tire la fiche courante de l'en-tete pose
+ * par le middleware — voir `lib/wikiPath.ts`.
+ *
+ * Le bloc de fond n'est cherche que parmi les blocs DEJA filtres par
+ * visibilite : un bloc reserve au MJ ne peut donc jamais imposer un fond a un
+ * visiteur qui ne le voit pas, et une fiche masquee n'en a pas du tout.
+ */
+export const getPublicWikiBackground = cache(async function getPublicWikiBackground(
+  worldId: string,
+  entitySlug: string
+): Promise<WikiBackground | null> {
+  const blocks = await getPublicVisibleBlocks(worldId, entitySlug);
+  const backgroundBlock = blocks.find(
+    (b) => b.blockType === "image" && (b.data as unknown as ImageBlockData).useAsWikiBackground
+  );
+  if (!backgroundBlock) return null;
+
+  const meta = await getBackgroundMetaForBlock(createShareLinkServiceClient(), backgroundBlock.id);
+  if (!meta) return null;
+
+  const data = backgroundBlock.data as unknown as ImageBlockData;
+  return {
+    imageUrl: data.url,
+    blurPx: data.backgroundBlurPx,
+    fadeMs: data.fadeMs,
+    hue: meta.hue,
+    chroma: meta.chroma,
+    mode: meta.availableModes[0] ?? "dark",
+  };
+});
+
 export async function getPublicEntityDetail(
   worldId: string,
   entitySlug: string,
@@ -463,55 +557,25 @@ export async function getPublicEntityDetail(
   | null
 > {
   const supabase = createShareLinkServiceClient();
-  const entity = await getEntityBySlug(supabase, worldId, entitySlug);
   // Fiche masquee (V2, retour utilisateur point 2) : meme reponse que
   // "n'existe pas", jamais de distinction qui revelerait qu'une fiche
   // cachee existe a cette adresse (meme discipline que resolveShareLink).
-  if (!entity || !entity.is_public) return null;
+  const entity = await getPublicEntityBySlug(worldId, entitySlug);
+  if (!entity) return null;
 
-  const [rows, relationRows, portraitLayout, campaignId] = await Promise.all([
-    listBlocksForEntity(supabase, entity.id),
+  const [blocks, relationRows, portraitLayout, campaignId, wikiBackground] = await Promise.all([
+    getPublicVisibleBlocks(worldId, entitySlug),
     listRelationsForEntity(supabase, entity.id),
     getPortraitLayout(supabase, entity.id),
     resolveCampaignId(supabase, worldId),
+    // Memoise, et c'est tout l'interet (V2.1-20 lot 2.1) : le `layout.tsx` a
+    // demande le meme fond pour rendre la coquille cote serveur, et
+    // `cache()` memoise la PROMESSE — les deux attendent le meme appel, pas
+    // deux appels identiques. Demande ici EN MEME TEMPS que le reste plutot
+    // qu'apres la liste des blocs, comme avant : `getPublicVisibleBlocks`
+    // etant memoise lui aussi, les deux chemins partagent la meme lecture.
+    getPublicWikiBackground(worldId, entitySlug),
   ]);
-  const visible = filterBlocks(rows.map(toVisibilityAware), { kind: "anonymous" });
-  const blocks: PublicBlock[] = visible
-    .map((row) => ({
-      id: row.id,
-      blockType: row.block_type,
-      display: row.display as unknown as BlockDisplay,
-      // Un bloc `text` peut lui-meme etre public tout en contenant un
-      // segment gm (SCHEMA.md §7.1, exemple Bram) : la visibilite du bloc
-      // ne suffit pas, chaque segment est filtre a son tour avant de
-      // jamais quitter le serveur. Meme principe pour les entrees d'un
-      // bloc `timeline` (V2-H2).
-      data: filterTimelineEntries(row.block_type, filterNoteTreeSegments(row.block_type, filterTextBlockSegments(row.block_type, row.data))),
-      displayOrder: row.display_order,
-    }))
-    .sort((a, b) => a.displayOrder - b.displayOrder);
-
-  // Le bloc de fond n'est cherche que parmi les blocs DEJA filtres par
-  // visibilite (`blocks`, ci-dessus) : un bloc reserve au MJ ne peut donc
-  // jamais imposer un fond a un visiteur qui ne le voit pas.
-  const backgroundBlock = blocks.find(
-    (b) => b.blockType === "image" && (b.data as unknown as ImageBlockData).useAsWikiBackground
-  );
-  let wikiBackground: WikiBackground | null = null;
-  if (backgroundBlock) {
-    const meta = await getBackgroundMetaForBlock(supabase, backgroundBlock.id);
-    if (meta) {
-      const data = backgroundBlock.data as unknown as ImageBlockData;
-      wikiBackground = {
-        imageUrl: data.url,
-        blurPx: data.backgroundBlurPx,
-        fadeMs: data.fadeMs,
-        hue: meta.hue,
-        chroma: meta.chroma,
-        mode: meta.availableModes[0] ?? "dark",
-      };
-    }
-  }
 
   // Genealogie (V2-H3) : meme calcul que l'editeur (getFamilyTree,
   // src/server/services/genealogy.ts), juste avec un viewer anonyme — un

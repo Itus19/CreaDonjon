@@ -1,9 +1,12 @@
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import {
   resolveShareLink,
   getPublicEntityTree,
   getPublicCampaignName,
+  getPublicWikiBackground,
 } from "@/src/server/services/publicShare";
+import { EN_TETE_CHEMIN, entitySlugFromPathname } from "@/lib/wikiPath";
 import { hasVerifiedSharePassword } from "./passwordActions";
 import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
 import BookSkin from "@/components/entities/public/BookSkin";
@@ -51,13 +54,24 @@ export default async function ShareLinkLayout({
     return <SharePasswordGate token={token} worldName={resolved.worldName} />;
   }
 
-  const [tree, campaignName] = await Promise.all([
+  // V2.1-20 lot 2.1 : la fiche rendue sous ce layout, tiree de l'en-tete pose
+  // par le middleware (`lib/wikiPath.ts`) — Next ne donne pas au layout les
+  // parametres de son segment enfant, et le fond est par FICHE alors que la
+  // coquille qui porte ses jetons est par MONDE. `null` sur la page de
+  // sommaire, et `getPublicWikiBackground` rend alors `null` sans requete.
+  const entitySlug = entitySlugFromPathname((await headers()).get(EN_TETE_CHEMIN), `/partage/${token}`);
+
+  const [tree, campaignName, initialBackground] = await Promise.all([
     getPublicEntityTree(resolved.worldId),
     getPublicCampaignName(resolved.worldId),
+    // Memoise : la page demande le meme fond dans ce meme rendu, les deux
+    // attendent une seule resolution. Sans ce partage, ces trois vagues
+    // feraient du layout le chemin critique d'une fiche ordinaire.
+    entitySlug ? getPublicWikiBackground(resolved.worldId, entitySlug) : Promise.resolve(null),
   ]);
 
   return (
-    <WikiBackgroundProvider>
+    <WikiBackgroundProvider initialBackground={initialBackground}>
       <BookSkin
         title={campaignName ?? resolved.worldName}
         worldSlug={resolved.worldSlug}

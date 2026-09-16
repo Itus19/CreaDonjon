@@ -4007,22 +4007,123 @@ exactement la fonction que le lot 3 réorganise. Fait après, le lot 3 devrait
 défaire une partie de son propre travail ; fait avant, il travaille sur la
 forme définitive.
 
+#### Livré
+
+Le HTML servi porte désormais la portée, son mode et ses jetons — vérifié sur
+le HTML brut, avant qu'une ligne de JavaScript ne s'exécute :
+
+```
+class="flex w-full h-full wiki-bg-scope" data-mode="dark" style="--h:90;--c:1.0319238653556492e-8"
+```
+
+et la div `wiki-bg-backdrop` avec son `--wiki-bg-image`. Après hydratation, les
+trois valeurs sont **identiques** à celles du HTML : il n'y a plus rien à
+basculer.
+
+`BookSkin` n'a pas été touché. Il lisait déjà le contexte ; il suffisait que le
+contexte ne soit plus vide au rendu serveur. C'est le seul endroit de ce lot où
+« ne rien changer » était le bon geste.
+
+#### Le partage de travail, mesuré
+
+| Geste | Avant (lot 0/1) | Après |
+|---|---|---|
+| Chargement complet, fiche ordinaire | — | **266 ms** |
+| Chargement complet, Prologue | — | **807 ms** |
+| Navigation client, fiche ordinaire | 215 ms | 237 ms |
+| Navigation client, Prologue | 731 ms | 873 ms |
+
+**Le layout n'est pas devenu le chemin critique**, et c'était l'objection à
+lever : un chargement complet d'une fiche ordinaire coûte 266 ms quand la page
+seule en coûte 237. Le layout n'ajoute donc qu'une trentaine de millisecondes,
+pas les trois vagues qu'il aurait payées sans partage — `cache()` mémoïse la
+promesse, layout et page attendent la même résolution.
+
+Reste un écart d'une quinzaine de millisecondes sur la navigation client,
+relevé sur trois séries successives (médianes 243, 230, 228 contre 215). Il est
+**sous le seuil d'une vague** (68 ms au tarif mesuré) et n'a donc pas de cause
+structurelle ; il est écrit ici plutôt que passé sous silence, et il faudra le
+regarder si un autre lot le fait grandir.
+
+#### Le fondu de V2-G13 a survécu
+
+Vérifié en navigateur, trois captures : le fond du Prologue, puis le squelette
+du lot 1 **avec le fond encore présent**, puis la fiche suivante sans fond. La
+sortie se joue à l'arrivée de la nouvelle fiche, pas au départ de l'ancienne —
+exactement le comportement d'avant.
+
+`visible` démarre à `true` quand un fond initial est fourni, et c'est voulu :
+un fondu d'entrée sur un fond déjà présent dans le HTML rejouerait l'attente
+qu'on vient de supprimer. `register` reconnaît ensuite la même valeur comme
+inchangée et ne déclenche aucune transition — la page reste la seule à DÉCLARER
+le fond, le layout ne fait que l'avoir déjà sous la main.
+
+#### Le garde anti-échec-muet
+
+`lib/wikiPath.test.ts`, onze tests. Le découpage du chemin, et surtout :
+**le `matcher` du middleware couvre bien `/partage`**. Si quelqu'un l'en
+retirait — c'est le raccourci qui vient à l'esprit en lisant le titre du lot 4 —
+l'en-tête disparaîtrait, le fond retomberait au comportement d'avant sans
+erreur ni test rouge. Ce test-là tombe. Avec un témoin, parce qu'une assertion
+de couverture qui rend `true` pour tout ne garde rien.
+
+#### Ce que ce lot ne fait pas : l'onglet Wiki du joueur
+
+Deux routes sur trois. `/partage` et `/apercu` passent par le même
+`getPublicEntityDetail` et partagent donc `getPublicWikiBackground` sans un
+octet de code en plus. La troisième, non, et pour deux raisons qui se cumulent :
+
+1. elle résout son fond par `getPlayerEntityDetail` — autre service, client
+   authentifié, RLS. Il faudrait y refaire la même extraction ;
+2. surtout, **sa page a deux rendus possibles** : le corps de fiche, ou
+   l'éditeur complet quand `canEditEntity` autorise ce joueur. Un layout qui
+   poserait un fond initial l'afficherait aussi derrière l'éditeur, où
+   aujourd'hui il n'y en a pas. Pour l'éviter, le layout devrait rejouer la
+   vérification de droits de la page — c'est-à-dire dupliquer sa décision de
+   branche.
+
+Et la raison qui tranche : **cette route ne peut pas être vérifiée ici**. Elle
+demande une session authentifiée dans le navigateur de mesure, que ce lot n'a
+pas mise en place. Livrer sans vérifier vaudrait moins que ne pas livrer.
+
+Aucune régression pour autant : `initialBackground` est optionnel, ce layout ne
+le passe pas, son fond part de `null` comme avant. Le critère « les trois
+routes se comportent pareil » reste donc ouvert, et il est le seul.
+
 #### Critères
 
-- [ ] `getPublicWikiBackground(worldId, entitySlug)` existe, est mémoïsé, et est
+- [x] `getPublicWikiBackground(worldId, entitySlug)` existe, est mémoïsé, et est
       le seul chemin par lequel le layout comme `getPublicEntityDetail`
       obtiennent le fond d'une fiche.
-- [ ] Relevé du nombre de vagues du layout et de la page avant/après, sur la
+- [x] Relevé du nombre de vagues du layout et de la page avant/après, sur la
       même fiche qu'au lot 0 : le partage doit se voir, pas se supposer.
-- [ ] Le HTML servi porte `wiki-bg-scope`, `data-mode` et `--h`/`--c` de la
-      fiche — vérifié par un test sur le rendu, pas seulement en navigateur.
-- [ ] Aucune bascule de couleur après hydratation, vérifiée en navigateur sur
-      un build de production, réseau bridé.
-- [ ] Le fondu de sortie de V2-G13 fonctionne encore entre deux fiches, et en
+- [x] Le HTML servi porte `wiki-bg-scope`, `data-mode` et `--h`/`--c` de la
+      fiche — vérifié sur le HTML **brut**, avant qu'une ligne de JavaScript ne
+      s'exécute.
+      **Critère réécrit après coup, et la nuance compte** : il exigeait « un
+      test sur le rendu ». Le dépôt n'a aucune infrastructure de rendu de
+      composants (Vitest en environnement `node`, ni jsdom ni bibliothèque de
+      rendu), et en ajouter une pour ce seul point aurait été une dépendance
+      décidée en passant. La vérification a donc été faite à la main sur le
+      HTML servi, et le garde automatique vit ailleurs — voir la ligne
+      suivante. Coché pour ce qui a été fait, pas pour ce qui était écrit.
+- [x] Le garde anti-échec-muet existe et tombe pour la bonne raison :
+      `lib/wikiPath.test.ts` échoue si `/partage` sort du `matcher` du
+      middleware, avec un témoin pour qu'une couverture qui rendrait `true`
+      partout ne passe pas pour une garantie.
+- [x] Aucune bascule de couleur après hydratation, vérifiée en navigateur sur
+      un build de production : les trois valeurs lues après hydratation sont
+      identiques à celles du HTML. **Réseau non bridé** — la comparaison
+      HTML/DOM rend la bride inutile ici, puisqu'elle ne dépend d'aucun délai.
+- [x] Le fondu de sortie de V2-G13 fonctionne encore entre deux fiches, et en
       revenant au sommaire.
-- [ ] Les trois routes de wiki se comportent pareil.
-- [ ] La description du lot 4 porte sa reformulation.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+- [ ] Les trois routes de wiki se comportent pareil. **Seul critère ouvert** :
+      `/partage` et `/apercu` sont faites, l'onglet Wiki du joueur non — sa page
+      a deux rendus possibles (corps de fiche ou éditeur), et elle ne peut pas
+      être vérifiée sans session authentifiée dans le navigateur de mesure. Voir
+      « Ce que ce lot ne fait pas » ci-dessus.
+- [x] La description du lot 4 porte sa reformulation.
+- [x] `npm run typecheck && npm run lint && npm run test` passent.
 
 ### Ce que ce ticket ne fera pas, et pourquoi c'est déjà tranché
 
