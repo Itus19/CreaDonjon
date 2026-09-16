@@ -36,6 +36,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-21 | Le contraste élevé se perd sur une fiche illustrée | `S` | **Fait** (16 septembre) — trouvé en instruisant le lot 2.1 de V2.1-20, pas en le cherchant. `.wiki-bg-scope[data-mode="…"]` redéclare la palette **sur lui-même**, et une déclaration locale l'emporte sur une valeur héritée : ce n'est pas une affaire de spécificité, les deux règles ne visent même pas le même élément. Sur toute fiche portant un fond de page wiki, le contraste élevé était donc écrasé — le lecteur le perdait exactement là où il en a le plus besoin. Mesuré avant correction : fond à 17 % de clarté au lieu de 1,6 %, texte à 95 % au lieu de blanc pur. Corrigé par un garde `:root:not([data-contrast="high"])` sur les quatre portées ; l'auteur a choisi de garder l'image, qui reste affichée mais que le `--scrim` de ce mode voile à 92 % |
 | V2.1-22 | Le panneau « Mentionné dans » quitte l'application | `S` | **Fait** (16 septembre) — demande directe de l'auteur : « je n'en ai pas besoin ». Le chemin entier part, pas seulement l'affichage : sans lecteur, recalculer les mentions à chaque enregistrement d'un bloc texte ne servait plus personne. La table `entity_mentions` est supprimée, avec son accord. Les liens DANS le texte, qui portent le même nom dans la spec, ne sont pas touchés |
 | V2.1-23 | Les petits contrôles à un rapport de pixels fractionnaire | `M` | **Ouvert** (16 septembre) — le liseré d'un bouton et le petit texte coloré paraissent abîmés sur l'écran 4K de l'auteur, pas sur son portable. Mesuré : `dpr=1.5`, gamut sRGB — c'est Windows à 150 %, et un trait d'1 px y vaut 1,5 pixel physique qu'aucune valeur CSS ne peut faire tomber juste. Ce n'est pas une régression de V2.1-20/21, vérifié dans le diff. Ce qu'on peut changer n'est pas le rendu du trait mais le fait que nos petits contrôles **dépendent** d'un trait pour exister — un aplat de surface se rend proprement à n'importe quel rapport. Trois candidats, et l'auteur est le seul à pouvoir les départager : une page de comparaison passe avant toute modification |
+| V2.1-24 | L'accueil passe au rail de sections, le détail au classeur | `L` | **Ouvert** (16 septembre) — demande de l'auteur sur capture : « revoir la disposition de cette page et l'organisation des boutons ». Compté avant de dessiner : **52 contrôles simultanés** pour la seule Administration, dont les boutons se replient faute de place dans un tiers d'écran, et une troisième colonne vide au chargement. Cinq esquisses regardées ensemble, puis trois — le **rail de sections** l'emporte, parce qu'il « rappelle le menu des joueurs » dont il emprunte l'esthétique, et le détail du monde passe aux **intercalaires de classeur** de la fiche de personnage. Rien de neuf à dessiner : `PlayerShell`, les onglets de `PlayableCharacterSheet` et `ActionsMenu` existent tous les trois. Le lot 0 était un arbitrage qui n'appartenait qu'à l'auteur — la charte interdit une deuxième présentation d'onglets, le dépôt en a déjà deux, et toutes deux se défendent : **tranché le jour même**, `BinderTabs` est extrait et l'ADR 0026 assume les deux présentations |
 
 ---
 
@@ -5091,6 +5092,208 @@ convertir toute l'application d'un coup, ou pas du tout.
       que l'ancienne cohérence.
 - [ ] Vérifié sur les deux écrans de l'auteur : le correctif ne doit rien abîmer
       à 1× ni à 2×.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+
+---
+
+## V2.1-24 — L'accueil passe au rail de sections, le détail au classeur · `L`
+
+### Constat
+
+Demande de l'auteur (16 septembre), capture à l'appui : « j'aimerais revoir la
+disposition de cette page et l'organisation des boutons ». L'écran visé est
+`app/page.tsx` → `components/shell/HomeScreen.tsx`, la grille à trois colonnes
+posée par V2-M7c.
+
+Compté sur la capture plutôt que ressenti — la méthode du §8 de
+`CHARTE-UI.md`, « mesurer avant de refondre » :
+
+| Ce qui est à l'écran | Nombre |
+|---|---|
+| Lignes d'invitation dans Administration | 9 |
+| Boutons sur une ligne réclamée (`Voir comme`, `Copier`, `Mot de passe`, `Réinitialiser`, `Révoquer`, `Supprimer le compte`) | 6 |
+| Boutons sur une ligne non réclamée | 4 |
+| **Contrôles simultanés pour la seule Administration** | **52** |
+
+Quatre défauts, tous de disposition — **aucun de couleur** : les jetons sont
+respectés partout dans `AdminPanel.tsx`, vérifié en le lisant. Ce ticket ne
+corrige donc rien de ce que la charte surveille déjà.
+
+- **La colonne 1 porte deux sujets sans rapport** — « mon compte » et
+  « l'administration de tous les mondes » — et le second écrase le premier.
+  `HomeProfilePanel` occupe le quart supérieur, `AdminPanel` tout le reste.
+- **Les boutons d'une ligne repassent à la ligne.** `InviteAdminRow` pose un
+  `flex-wrap` dans un tiers d'écran : `Voir comme` est tantôt collé au libellé,
+  tantôt seul sur sa ligne. Plus aucun alignement vertical d'une ligne à
+  l'autre, donc plus aucune lecture en colonne.
+- **Aucune hiérarchie.** `Copier`, `Réinitialiser`, `Révoquer` et `Supprimer le
+  compte` portent le même dessin — `rounded-md border px-2 py-1 text-xs` — à la
+  couleur de bordure près. Deux d'entre eux sont destructeurs.
+- **La troisième colonne est vide au chargement.** Un tiers de l'écran pour
+  « Sélectionnez un monde pour voir son détail. », c'est-à-dire une phrase en
+  gris là où le §5 de la charte prescrit `EmptyState`.
+
+### Trois arbitrages antérieurs, à ne pas rouvrir
+
+Écrits en commentaire dans le code, tous issus de retours de l'auteur. Ils
+excluent les réponses les plus évidentes, et c'est pour cela qu'ils sont ici
+plutôt que découverts en cours de route :
+
+| Arbitrage | Où | Ce qu'il exclut |
+|---|---|---|
+| L'Administration vit dans une colonne, **jamais en bandeau pleine largeur** | `HomeScreen.tsx`, V2-M6 | « mettre l'admin en dessous » |
+| **Tout tient sur un écran**, chaque colonne défile pour son compte | `HomeScreen.tsx`, V2-M7c | une page qui s'allonge |
+| La vue transversale des liens **redeviendra nécessaire** avec V2-M8 : un monde appartenant entièrement à un ami, absent de la liste personnelle | `AdminPanel.tsx` | dissoudre l'Administration dans les mondes |
+
+### Cinq esquisses, puis trois, puis une
+
+Cinq dispositions dessinées et regardées avec l'auteur avant tout code — même
+discipline que V2.1-11 et V2.1-18, où la séance d'esquisses a déplacé le
+ticket : compte déporté hors de l'accueil · rail de sections · maître-détail à
+onglets · panneau contextuel portant le tableau d'administration · galerie de
+cartes à tiroir.
+
+**Le rail de sections est retenu**, pour une raison que l'auteur a formulée
+lui-même : il « rappelle le menu des joueurs », à qui on peut donc emprunter
+l'esthétique. Trois variantes ont suivi :
+
+| Variante | Ce qu'elle proposait | Sort |
+|---|---|---|
+| **B1** | Rail à trois destinations (Mondes · Compte · Admin) ; section Mondes = liste + détail à onglets | **Retenue** |
+| B2 | Le rail porte les mondes eux-mêmes, un monde à l'écran, comme la coquille joueur | Écartée |
+| B3 | Deux destinations, « Tous les accès » en tête de la liste des mondes | Écartée |
+
+Les deux refus tiennent à des faits du dépôt, pas à un goût :
+
+- **B2** — le rail joueur tient six destinations **fixes** grâce à un
+  dimensionnement en `clamp(…vh…)`, et l'auteur y avait refusé un ascenseur
+  (« pas d'ascenseur… plutôt une adaptation de la taille des boutons »). Le
+  nombre de mondes, lui, n'est pas borné : six aujourd'hui. Un rail qui
+  rétrécit jusqu'à l'illisible, ou qui défile contre cette décision.
+- **B3** — « Tous les accès » en tête de la liste des mondes ne tient que
+  pendant que tous les mondes sont ceux de l'auteur. V2-M8 (troisième
+  arbitrage ci-dessus) casse l'hypothèse : un monde absent de la liste n'a
+  aucune ligne dans laquelle se ranger.
+
+### Ce qu'on emprunte, et à quoi exactement
+
+Rien de neuf à dessiner. Les trois pièces existent, et deux d'entre elles sont
+nées d'un retour de l'auteur.
+
+**Le rail** — `components/shell/PlayerShell.tsx`. Vocabulaire : 80 px
+(`md:w-20`), `bg-panel`, filet à droite ; le nom en haut, détaché par un
+`border-b` ; une destination = icône + libellé empilés, `text-accent` si
+active et `text-ink-muted` sinon, **sans pastille de fond** ; un pied séparé
+par un `border-t` pour ce qui n'est pas une destination. Et surtout : il est
+responsive **dans un seul composant** — rail latéral au-dessus de 768 px,
+barre d'onglets en bas en dessous (`flex-col-reverse md:flex-row`, zone du
+pouce). L'accueil hérite du comportement téléphone sans qu'on écrive une
+ligne pour lui.
+
+**Les intercalaires de classeur** — `PlayableCharacterSheet.tsx:620`, nés du
+retour « les onglets ne sont pas très visibles ». Le mécanisme est subtil, et
+c'est précisément ce qui interdit de le recopier : la ligne horizontale du
+haut n'est pas une bordure continue qu'on repeindrait sous l'onglet actif,
+elle est **composée par le bord bas de chaque onglet inactif** ; l'onglet actif
+n'en a pas — c'est là l'ouverture du classeur. S'y ajoutent un liseré d'accent
+de 3 px posé en `inset` et un `<span>` de remplissage qui prolonge la ligne
+jusqu'au bord droit.
+
+**Le menu de ligne** — `components/shared/ActionsMenu.tsx` existe déjà :
+déclencheur « ⋮ », panneau en portail, fermeture au clic extérieur et à
+`Échap`, ouverture vers le haut quand la place manque en bas, et une marque
+`danger` par entrée. Trois usages aujourd'hui (`EntityBlocks`, `EntityTree`,
+`CharacterSheetHeader`). Rien à écrire.
+
+### La décision qui bloquait — tranchée le 16 septembre
+
+`CHARTE-UI.md` §3 dit : « **Toujours `components/shared/Tabs.tsx`. Ne pas
+dessiner une deuxième présentation d'onglets.** » Or il y en a déjà deux dans
+le dépôt, et les deux se défendent :
+
+- `Tabs.tsx` — segments égaux dans un conteneur arrondi : un **filtre à
+  l'intérieur** d'un panneau ;
+- les intercalaires de la fiche — un **classeur qui est la page**.
+
+Ce ticket a besoin de la seconde. Trois issues, et l'auteur tranche :
+
+1. **Extraire `components/shared/BinderTabs.tsx`** de la fiche, à apparence
+   strictement inchangée pour elle, plus un ADR de dix lignes qui assume deux
+   présentations et dit laquelle quand.
+2. **L'ADR d'abord**, le code ensuite.
+3. **Recopier le motif une fois ici**, et extraire au troisième usage — la
+   règle des trois appliquée à la lettre.
+
+Recommandation : **1**. Vingt-cinq lignes de bordures qui se composent entre
+elles ne survivent pas à une copie, et c'est mot pour mot la dérive décrite au
+§8 de la charte (« un style recopié à la main qui dérive lentement »). La règle
+des trois vise les abstractions spéculatives, pas un motif visuel déjà arbitré
+par un retour utilisateur.
+
+**L'auteur a tranché pour l'issue 1** : `BinderTabs` est extrait, et l'ADR 0026
+assume deux présentations d'onglets en disant laquelle quand. Le §3 de
+`CHARTE-UI.md` est donc à corriger dans le même geste — sa phrase « ne pas
+dessiner une deuxième présentation d'onglets » ne décrit plus la règle, et une
+charte qui ment sur un point est une charte qu'on cesse de croire sur les
+autres.
+
+### Lots
+
+**Lot 0 — l'ADR 0026, et la correction du §3 de la charte.** L'arbitrage est
+pris (ci-dessus) ; reste à l'écrire. Bloquant : aucun code avant.
+
+**Lot 1 — `BinderTabs` extrait de la fiche.** Apparence strictement inchangée
+pour elle. C'est le lot qui a le plus de chances d'abîmer quelque chose et le
+moins de chances de se voir.
+
+**Lot 2 — `HomeShell` : le rail et ses trois destinations.** Mondes garde la
+liste et le détail actuels tels quels, Compte reçoit `HomeProfilePanel`, Admin
+reçoit `AdminPanel`. **Aucun changement de contenu à ce lot** : on ne déplace
+que le contenant. La barre du haut de `app/page.tsx` (titre, e-mail,
+déconnexion) disparaît au profit du haut et du pied du rail, comme
+`AppShell.tsx` a cessé de rendre le sien pour la coquille joueur.
+
+**Lot 3 — le détail du monde au classeur.** Onglets Journal (le `fetch`
+existant de `WorldDetail`), Joueurs, Accès, Réglages (`WorldCardActions`).
+« Rejoindre » reste hors du classeur, toujours visible.
+
+**Lot 4 — l'Administration en tableau.** Colonnes alignées (Monde · Campagne ·
+Rôle · Réclamé par · État) et `ActionsMenu` à la place des six boutons :
+`Copier`, `Voir comme` et `Mot de passe` en tête, `Réinitialiser`, `Révoquer`
+et `Supprimer le compte` marqués `danger`.
+
+Le lot 2 passe avant les lots 3 et 4 volontairement : si le rail seul suffit à
+l'auteur, les deux derniers peuvent attendre.
+
+### Ce que ce ticket ne fait pas
+
+- Il ne touche ni à `MondeShell`, ni à `MjSidebar`, ni à `PlayerShell` — le
+  seul écran visé est l'accueil. `PlayerShell` est lu, jamais modifié.
+- Il ne change aucune route serveur, aucun schéma, aucune requête, aucune
+  politique RLS. Purement de la disposition.
+- Il ne convertit pas les contrôles à la recette de V2.1-23, qui reste ouverte
+  et non adoptée.
+- Il ne supprime pas la liste transversale des liens d'invitation : V2-M8 en
+  aura besoin.
+
+### Critères
+
+- [ ] L'accueil a un rail à trois destinations qui reprend le vocabulaire de
+      `PlayerShell` : icône + libellé empilés, `text-accent` sur l'active, pas
+      de pastille de fond, nom en haut et pied détachés par un filet.
+- [ ] Sous 768 px, l'accueil affiche une barre d'onglets en bas, comme la
+      coquille joueur. Vérifié à 375 px, comme la charte l'exige.
+- [ ] La fiche de personnage est **visuellement inchangée** après l'extraction
+      de `BinderTabs` — les cinq onglets vérifiés en navigateur, pas seulement
+      compilés.
+- [ ] Aucune ligne d'Administration ne replie ses boutons : une ligne reste une
+      ligne, à 1280 px comme à 1920.
+- [ ] `Révoquer` et `Supprimer le compte` sont dans le menu, marqués `danger`,
+      et passent toujours par `ConfirmDialog`.
+- [ ] « Sélectionnez un monde » devient un `EmptyState`.
+- [ ] Les quatre modes (`dark`, `dim`, `soft`, `light`) et le contraste élevé
+      sont testés sur les trois destinations.
+- [ ] Navigable au clavier : `Tab` atteint tout, `Échap` ferme le menu.
 - [ ] `npm run typecheck && npm run lint && npm run test` passent.
 
 ---
