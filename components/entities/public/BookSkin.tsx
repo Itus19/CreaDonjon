@@ -106,9 +106,10 @@ export default function BookSkin({
           en realite le sommaire, fixe a 256px, ne se repliait jamais et
           n'y laissait qu'un filet de ~100px pour tout le contenu, portrait
           compris). Meme motif que `Sidebar.tsx`/`MjSidebar.tsx` (bouton
-          hamburger + scrim + panneau `fixed` qui glisse), sans le decalage
-          `top-14` de ceux-ci : BookSkin n'a pas d'en-tete au-dessus, ni sur
-          `/partage/[token]/**` ni sur `/m/[worldSlug]/apercu/**`. */}
+          hamburger + scrim + panneau `fixed` qui glisse). Ces deux-la
+          portaient un decalage `top-14` pour l'en-tete de la coquille ; il a
+          disparu avec elle (V2.1-16), et les trois tiroirs partent desormais
+          du meme haut d'ecran — celui que BookSkin a toujours eu. */}
       <button
         type="button"
         onClick={() => setOpen(true)}

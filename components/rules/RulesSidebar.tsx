@@ -9,6 +9,7 @@ import { useOpenRuleLink } from "@/components/shell/useOpenRuleLink";
 import { useOpenRuleToolLink } from "@/components/shell/useOpenRuleToolLink";
 import { useCollapsedGroups } from "@/components/shell/useCollapsedGroups";
 import SectionToggle from "@/components/shell/SectionToggle";
+import WorldSidebarHeader from "@/components/shell/WorldSidebarHeader";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 import AddRuleMenu from "@/components/rules/AddRuleMenu";
 
@@ -137,7 +138,7 @@ function RuleTypeGroup({
  * quelques milliers d'entrees filtrees en memoire suffisent, meme ordre de
  * grandeur que la liste d'entites d'un monde deja geree ainsi.
  */
-export default function RulesSidebar({ worldSlug }: { worldSlug: string }) {
+export default function RulesSidebar({ worldSlug, worldName }: { worldSlug: string; worldName: string }) {
   const entries = useWorldRuleEntries(worldSlug);
   const t = useTranslations("regles");
   const [open, setOpen] = useState(false);
@@ -226,7 +227,8 @@ export default function RulesSidebar({ worldSlug }: { worldSlug: string }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t("ouvrirListe")}
-        className="fixed left-3 top-[68px] z-40 rounded-md border border-edge bg-panel-raised p-2 text-sm text-ink shadow-md md:hidden"
+        // V2.1-16 : plus d'en-tete au-dessus, donc plus de decalage de 68px.
+        className="fixed left-3 top-3 z-40 rounded-md border border-edge bg-panel-raised p-2 text-sm text-ink shadow-md md:hidden"
       >
         ☰
       </button>
@@ -242,10 +244,11 @@ export default function RulesSidebar({ worldSlug }: { worldSlug: string }) {
       <aside
         // V2.1-16 — `md:h-screen` retire, meme raison que `Sidebar.tsx` : la
         // hauteur vient de la rangee bornee par `AppShell`, pas du viewport.
-        className={`fixed inset-y-0 left-0 top-14 z-50 flex w-[280px] shrink-0 flex-col gap-3 border-r border-edge bg-panel-sunken p-4 transition-transform md:static md:top-0 md:z-auto md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] shrink-0 flex-col gap-3 border-r border-edge bg-panel-sunken p-4 transition-transform md:static md:z-auto md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
+        <WorldSidebarHeader worldSlug={worldSlug} worldName={worldName} />
         <SectionToggle worldSlug={worldSlug} />
         <input
           value={query}

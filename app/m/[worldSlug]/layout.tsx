@@ -20,10 +20,11 @@ export default async function WorldLayout({
   if (!world) notFound();
 
   // "Un monde = une campagne" (migration 20260826100001) : au plus une
-  // ligne non supprimee, affichee a cote du nom du monde sur l'ecran MJ
-  // (retour utilisateur) — voir AppShell.
+  // ligne non supprimee. Depuis V2.1-16, seul l'identifiant sert ici (volet
+  // de des, messages non lus) — le NOM de la campagne est affiche par la
+  // barre laterale MJ, qui le relit elle-meme (`listCampaigns` est memoise
+  // par requete, donc sans second aller-retour).
   const campaigns = await listCampaigns(supabase, world.id);
-  const campaignName = campaigns[0]?.name ?? null;
   const campaignId = campaigns[0]?.id ?? null;
 
   return (
@@ -34,9 +35,7 @@ export default async function WorldLayout({
     <Suspense fallback={null}>
       <DesktopWindowsProvider worldSlug={world.slug}>
         <AppShell
-          worldName={world.name}
           worldSlug={world.slug}
-          campaignName={campaignName}
           campaignId={campaignId}
           overlay={<AvecWindowsLayer worldSlug={world.slug} />}
         >

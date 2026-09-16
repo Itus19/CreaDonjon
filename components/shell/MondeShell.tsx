@@ -13,20 +13,22 @@ import WindowsDesktop from "./WindowsDesktop";
 export default function MondeShell({
   worldId,
   worldSlug,
+  worldName,
   tree,
   entities,
   children,
 }: {
   worldId: string;
   worldSlug: string;
+  worldName: string;
   tree: EntityTreeGroup[];
   entities: PaletteEntity[];
   children: React.ReactNode;
 }) {
   return (
     <>
-      <Sidebar worldId={worldId} worldSlug={worldSlug} tree={tree} entities={entities} />
-      <WindowsDesktop>{children}</WindowsDesktop>
+      <Sidebar worldId={worldId} worldSlug={worldSlug} worldName={worldName} tree={tree} entities={entities} />
+      <WindowsDesktop worldSlug={worldSlug}>{children}</WindowsDesktop>
     </>
   );
 }

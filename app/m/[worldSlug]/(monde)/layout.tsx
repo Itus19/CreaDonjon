@@ -26,6 +26,7 @@ export default async function MondeLayout({
     <MondeShell
       worldId={world.id}
       worldSlug={world.slug}
+      worldName={world.name}
       tree={tree}
       entities={entities.map((e) => ({ id: e.id, name: e.name, slug: e.slug, entity_kind: e.entity_kind }))}
     >

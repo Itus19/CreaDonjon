@@ -8,16 +8,19 @@ import type { PaletteEntity } from "./CommandPalette";
 import CommandPalette from "./CommandPalette";
 import EntityTree from "./EntityTree";
 import SectionToggle from "./SectionToggle";
+import WorldSidebarHeader from "./WorldSidebarHeader";
 import { createBlankEntityAction } from "@/app/m/[worldSlug]/actions";
 
 export default function Sidebar({
   worldId,
   worldSlug,
+  worldName,
   tree,
   entities,
 }: {
   worldId: string;
   worldSlug: string;
+  worldName: string;
   tree: EntityTreeGroup[];
   entities: PaletteEntity[];
 }) {
@@ -30,7 +33,8 @@ export default function Sidebar({
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t("ouvrirArborescence")}
-        className="fixed left-3 top-[68px] z-40 rounded-md border border-edge bg-panel-raised p-2 text-sm text-ink shadow-md print:hidden md:hidden"
+        // V2.1-16 : plus d'en-tete au-dessus, donc plus de decalage de 68px.
+        className="fixed left-3 top-3 z-40 rounded-md border border-edge bg-panel-raised p-2 text-sm text-ink shadow-md print:hidden md:hidden"
       >
         ☰
       </button>
@@ -50,11 +54,12 @@ export default function Sidebar({
         // ancree a l'ecran, ne suivait pas). En `md:static`, cet `aside` est
         // un item flex qui s'etire deja a la hauteur de sa rangee — laquelle
         // est bornee par `AppShell`. La demander en plus la surcontraignait.
-        className={`fixed inset-y-0 left-0 top-14 z-50 flex w-[280px] shrink-0 flex-col border-r border-edge bg-panel-sunken transition-transform print:hidden md:static md:top-0 md:z-auto md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] shrink-0 flex-col border-r border-edge bg-panel-sunken transition-transform print:hidden md:static md:z-auto md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+          <WorldSidebarHeader worldSlug={worldSlug} worldName={worldName} />
           <SectionToggle worldSlug={worldSlug} />
           <CommandPalette worldId={worldId} worldSlug={worldSlug} entities={entities} />
           <Link

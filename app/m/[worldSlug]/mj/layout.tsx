@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { isWorldAdmin } from "@/src/server/services/permissions";
+import { listCampaigns } from "@/src/server/services/campaigns";
 import MjSidebar from "@/components/shell/MjSidebar";
 import WindowsDesktop from "@/components/shell/WindowsDesktop";
 
@@ -41,6 +42,11 @@ export default async function MjLayout({
 
   const user = await getAuthUser(supabase);
   const gm = user ? await isWorldAdmin(supabase, { worldId: world.id, userId: user.id }) : false;
+  // V2.1-16 : le nom de la campagne s'affichait dans l'en-tete, sur cet
+  // ecran seulement ; il vit desormais sous le nom du monde, en tete de la
+  // barre laterale MJ. `listCampaigns` est memoise par requete (le layout du
+  // monde l'appelle deja pour l'identifiant) — aucun aller-retour de plus.
+  const campaignName = gm ? (await listCampaigns(supabase, world.id))[0]?.name ?? null : null;
   if (!gm) {
     return (
       <div className="flex-1 p-8">
@@ -51,8 +57,8 @@ export default async function MjLayout({
 
   return (
     <>
-      <MjSidebar worldSlug={worldSlug} />
-      <WindowsDesktop>{children}</WindowsDesktop>
+      <MjSidebar worldSlug={worldSlug} worldName={world.name} campaignName={campaignName} />
+      <WindowsDesktop worldSlug={worldSlug}>{children}</WindowsDesktop>
     </>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import SectionToggle from "./SectionToggle";
+import WorldSidebarHeader from "./WorldSidebarHeader";
 import { useOpenMjToolLink } from "./useOpenMjToolLink";
 import { mjToolHref, type MjToolKey } from "./windowRefs";
 import { useChatUnread } from "./useChatUnread";
@@ -66,7 +67,16 @@ function MjToolLink({
   );
 }
 
-export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
+export default function MjSidebar({
+  worldSlug,
+  worldName,
+  campaignName,
+}: {
+  worldSlug: string;
+  worldName: string;
+  /** Seule section a l'afficher, comme le faisait l'en-tete avant V2.1-16 — `null` si le monde n'a pas encore de campagne. */
+  campaignName: string | null;
+}) {
   const t = useTranslations("mj");
   const tShell = useTranslations("shell");
   const [open, setOpen] = useState(false);
@@ -97,7 +107,8 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label={tShell("ouvrirArborescence")}
-        className="fixed left-3 top-[68px] z-40 rounded-md border border-edge bg-panel-raised p-2 text-sm text-ink shadow-md md:hidden"
+        // V2.1-16 : plus d'en-tete au-dessus, donc plus de decalage de 68px.
+        className="fixed left-3 top-3 z-40 rounded-md border border-edge bg-panel-raised p-2 text-sm text-ink shadow-md md:hidden"
       >
         ☰
       </button>
@@ -111,10 +122,11 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 top-14 z-50 flex w-[280px] shrink-0 flex-col gap-1 border-r border-edge bg-panel-sunken p-4 transition-transform md:static md:top-0 md:z-auto md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] shrink-0 flex-col gap-1 border-r border-edge bg-panel-sunken p-4 transition-transform md:static md:z-auto md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
+        <WorldSidebarHeader worldSlug={worldSlug} worldName={worldName} campaignName={campaignName} />
         <SectionToggle worldSlug={worldSlug} />
         {/* V2.1-16 — la liste des outils defile dans son propre cadre. Elle
             n'avait aucune zone defilante : les dix-sept outils tenaient par

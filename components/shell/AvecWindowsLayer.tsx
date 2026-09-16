@@ -39,7 +39,7 @@ const EditEntityForm = dynamic(() => import("@/app/m/[worldSlug]/(monde)/f/[enti
 const RuleEntryView = dynamic(() => import("@/components/rules/RuleEntryView"), { ssr: false, loading: LOADING });
 const MjToolWindowContent = dynamic(() => import("./MjToolWindowContent"), { ssr: false, loading: LOADING });
 const RuleToolWindowContent = dynamic(() => import("./RuleToolWindowContent"), { ssr: false, loading: LOADING });
-/** Memes constantes que Sidebar.tsx/RulesSidebar.tsx/MjSidebar.tsx (`w-[280px]`) et AppShell.tsx (en-tete `h-14`). */
+/** Meme constante que Sidebar.tsx/RulesSidebar.tsx/MjSidebar.tsx (`w-[280px]`). Depuis V2.1-16 il n'y a plus d'en-tete a compenser en hauteur. */
 const SIDEBAR_WIDTH_PX = 280;
 
 function isEntityWindowData(data: unknown): data is EntityWindowData {
@@ -73,8 +73,9 @@ function isEntityWindowData(data: unknown): data is EntityWindowData {
  * sidebar, plutot que la solution plus simple qui l'aurait autorise) : ce
  * composant ne peut plus vivre a cote de la barre laterale (qui, elle,
  * reste par section) dans le MEME conteneur flex — `left-[280px]`
- * reproduit la largeur qu'occupait la sidebar dans ce flex, `top-14`
- * l'en-tete. `pointer-events-none` sur le conteneur (rien a cliquer entre
+ * reproduit la largeur qu'occupait la sidebar dans ce flex. Le decalage
+ * vertical `top-14` a disparu avec l'en-tete (V2.1-16) : la zone de travail
+ * part desormais du haut de l'ecran. `pointer-events-none` sur le conteneur (rien a cliquer entre
  * les fenetres, l'espace vide doit laisser passer les clics vers la
  * fenetre primaire dessous) ; chaque fenetre repasse en `pointer-events-auto`.
  * Jamais rendu sur mobile (meme garde que `WindowsDesktop.tsx` — aucune
@@ -102,7 +103,7 @@ export default function AvecWindowsLayer({ worldSlug }: { worldSlug: string }) {
 
   return (
     <div
-      className="pointer-events-none fixed top-14 right-0 bottom-0"
+      className="pointer-events-none fixed inset-y-0 right-0"
       // Meme raisonnement que le z-index dynamique de `WindowsDesktop.tsx`
       // (voir son commentaire) : ce conteneur et le sien sont deux piles
       // d'empilement distinctes (l'un `position: fixed`, l'autre non) —

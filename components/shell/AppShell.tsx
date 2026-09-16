@@ -1,33 +1,30 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
-import Clock from "./Clock";
-import RadioWidget from "./RadioWidget";
 import DiceRollProvider from "./DiceRollPanel";
 import ChatUnreadProvider from "./useChatUnread";
 
 /**
- * Coquille commune aux trois sections (Monde/Règles/MJ) : uniquement
- * l'en-tete (specs/coquille-et-design.md §3, revu V2-K2). Le bandeau
- * Monde/Règles/MJ (`SectionToggle`) ne vit plus ici — chaque section le
- * rend elle-meme, en haut de sa propre barre laterale, au-dessus de son
- * champ de recherche.
+ * Coquille commune aux trois sections (Monde/Règles/MJ). Elle n'a plus
+ * d'en-tete depuis V2.1-16 (retour utilisateur : "je n'utilise pas trop la
+ * barre d'en-tete") : le nom du monde et la sortie vivent en tete de chaque
+ * barre laterale (`WorldSidebarHeader`), comme sur le wiki public et dans
+ * la coquille joueur, et la radio et l'heure dans une pastille posee DANS
+ * la zone de travail (`ChromePill`, rendue par `WindowsDesktop` — voir son
+ * commentaire pour la raison). Le bandeau Monde/Règles/MJ (`SectionToggle`)
+ * etait parti dans les barres laterales des V2-K2.
+ *
+ * Ce qui reste ici : les deux contextes (des, messages non lus) et la borne
+ * de hauteur de la coquille.
  */
 export default function AppShell({
-  worldName,
   worldSlug,
-  campaignName,
   campaignId,
   children,
   overlay,
 }: {
-  worldName: string;
   worldSlug: string;
-  /** Affiché a cote du nom du monde, ecran MJ seulement (retour utilisateur) — `null` si le monde n'a pas encore de campagne. */
-  campaignName: string | null;
-  /** V2-M11 (volet de lancer de des) : meme regle "un monde = une campagne" que `campaignName` — `null` avant la creation de la premiere campagne. */
+  /** V2-M11 (volet de lancer de des) : "un monde = une campagne" — `null` avant la creation de la premiere campagne. */
   campaignId: string | null;
   children: React.ReactNode;
   /**
@@ -42,10 +39,8 @@ export default function AppShell({
    */
   overlay?: React.ReactNode;
 }) {
-  const t = useTranslations("shell");
   const pathname = usePathname();
   const isMj = pathname.startsWith(`/m/${worldSlug}/mj`);
-  const isJoueur = pathname.startsWith(`/m/${worldSlug}/joueur`);
   return (
     <DiceRollProvider campaignId={campaignId} isGm={isMj}>
       <ChatUnreadProvider campaignId={campaignId} isMj={isMj}>
@@ -65,33 +60,9 @@ export default function AppShell({
             defilement appartient donc aux barres laterales et aux fenetres,
             jamais au document (ADR 0025). */}
         <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-          {/* Coquille joueur (retour utilisateur, V2-M7b suite) : "retirer
-              cette barre en haut et tout mettre sur la side bar" — la
-              coquille joueur (`PlayerShell.tsx`) porte desormais elle-meme le
-              nom du monde, la radio et "Mes mondes", jamais cet en-tete.
-              MJ/Monde/Regles inchanges. */}
-          {!isJoueur && (
-            <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-edge bg-panel px-4 pl-14 print:hidden">
-              <div className="flex min-w-0 items-baseline gap-2">
-                <Link href={`/m/${worldSlug}`} className="truncate font-chrome text-sm font-semibold text-ink">
-                  {worldName}
-                </Link>
-                {isMj && campaignName && (
-                  <span className="truncate text-sm text-ink-muted">· {campaignName}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                <RadioWidget worldSlug={worldSlug} />
-                <Clock />
-                <Link href="/" className="text-sm text-ink-muted hover:text-ink">
-                  {t("mesMondes")}
-                </Link>
-              </div>
-            </header>
-          )}
-
           <div className="flex flex-1 overflow-hidden">{children}</div>
         </div>
+
         {overlay}
       </ChatUnreadProvider>
     </DiceRollProvider>

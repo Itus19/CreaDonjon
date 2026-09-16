@@ -28,7 +28,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-15 | Le droit de l'autrice d'une entrée devient un octroi retirable | `M` | **Fait** (15 septembre) — né de V2.1-14 : le MJ ne pouvait pas reprendre l'édition d'une entrée du Livre de sessions, ce droit étant le 6ᵉ cas en dur de `can_edit_entity`. Il devient une vraie ligne `entity_grants`, donc visible et retirable depuis « Octrois d'édition » (ADR 0024) |
 | V2.1-14 | Lettrine et traits de séparation dans le bloc texte | `M` | **Fait** (15 septembre) — la présentation « livre » cesse d'être réservée aux fiches `session_journal` : elle devient deux options du bloc texte, disponibles partout. Le Livre de sessions redevient une catégorie de fiche du point de vue de la présentation, sans que son devoir ni son tri ne bougent |
 | V2.1-13 | Centrer le couple sommaire + texte du wiki | `S` | **Fait** (15 septembre) — le vide entre sommaire et texte tombe de ~300 px à 32 px sur un écran de 1920, et cesse de dépendre de la fenêtre : il était un reste, il devient une marge. Une borne exprimée dans les unités du contenu, écrite une seule fois pour les trois routes — premier encaissement de la fusion de V2.1-12 |
-| V2.1-16 | Le défilement appartient aux fenêtres, et l'en-tête disparaît | `M` | **Ouvert** (15 septembre) — deux gênes signalées avec captures, une seule cause : `<body>` n'a pas de hauteur définie, donc chaque coquille borne la sienne dans son coin. Emporte la suppression de l'en-tête, demandée en regardant les esquisses |
+| V2.1-16 | Le défilement appartient aux fenêtres, et l'en-tête disparaît | `M` | **Fait** (16 septembre) — deux gênes signalées avec captures, une seule cause : `<body>` n'avait pas de hauteur définie, donc chaque coquille bornait la sienne dans son coin. Mesuré avant/après : la page défilait de 56 px, la hauteur exacte de l'en-tête — lequel a disparu au lot 2, rendant ces 56 px aux fiches |
 
 ---
 
@@ -2545,7 +2545,7 @@ que ce test vaut quelque chose.
 
 ---
 
-## V2.1-16 — Le défilement appartient aux fenêtres, et l'en-tête disparaît · `M` — ouvert
+## V2.1-16 — Le défilement appartient aux fenêtres, et l'en-tête disparaît · `M` — fait
 
 ### Constat
 
@@ -2661,12 +2661,19 @@ possible. Fait dans l'autre sens, la correction se réécrirait deux fois.
 - [x] Réduire une fiche raccourcit les DEUX zones de travail, de 744 à 700 :
       la barre occupe 756-800, les zones s'arrêtent à 756. Une fenêtre
       maximisée faisant 100 % de sa zone, elle s'arrête donc au-dessus.
-- [ ] Plus aucun `top-14` ni `top-[68px]` dans la coquille — `grep` à l'appui.
-- [ ] Sortie et nom du monde en tête des trois barres latérales ; le nom de la
-      campagne reste lisible sur l'écran MJ.
-- [ ] Pastille radio + heure en haut à droite, recouverte par une fenêtre
-      maximisée.
-- [ ] Bouton de dés inchangé en bas à droite.
+- [x] Plus aucun `top-14` ni `top-[68px]` dans la coquille — `grep` ne rend
+      plus que deux commentaires qui racontent leur disparition. Les fiches
+      ont récupéré les 56 px : la zone de travail passe de 744 à 800.
+- [x] Sortie et nom du monde en tête des trois barres latérales, par un seul
+      composant (`WorldSidebarHeader`) ; « Faerûn (copie) » sous « ClaudeLand »
+      sur l'écran MJ, nulle part ailleurs. Bouton de sortie de 30x30, nom
+      accessible « Mes mondes ».
+- [x] Pastille radio + heure en haut à droite, recouverte par une fiche
+      maximisée (`elementFromPoint` rend la barre de titre) et cliquable
+      sinon : son panneau s'ouvre entier dans l'écran. Il a fallu la poser
+      DANS la zone de travail pour cela — voir le constat ci-dessous.
+- [x] Bouton de dés inchangé en bas à droite : aucun fichier du volet de dés
+      n'est touché par le lot.
 - [x] Une page hors coquille défile toujours : sonde de 2000 px posée dans
       l'application réelle, document porté à 2000 px, contenu non écrasé.
       **`/partage` lui-même non ouvert** — aucun lien de partage sous la main.
@@ -2731,6 +2738,26 @@ la copie exacte de la capture d'origine :
 | Barre latérale | 464 px (520 − 56) |
 | Liste des dix-sept outils | cadre 398, contenu 536, défile de 138 dans la barre |
 | Fiche ouverte | de 80 à 520 — elle s'arrête au bas de l'écran |
+
+---
+
+### Ce que le lot 2 a appris
+
+**« Sous les fenêtres » ne s'obtient pas depuis l'extérieur.** La pastille a
+d'abord été posée à côté de la zone de travail, avec un `z-index` plus bas que
+les deux couches de fenêtres. Elle s'affichait au bon endroit, avec la bonne
+apparence — et elle était morte : `elementFromPoint` rendait le fond de la zone
+de travail, jamais le bouton. Le conteneur de cette zone porte un `z-index`,
+donc il forme une pile d'empilement : « sous les fenêtres » y voulait dire
+« sous toute la zone », fond compris.
+
+La pastille vit donc DANS la zone de travail, entre son fond et ses fenêtres
+(`z-10` contre `z-20`/`z-30`). C'est la seule position qui tienne les deux
+moitiés de la demande à la fois.
+
+Le défaut ne se voyait sur aucune capture : le rendu était exact. Il a fallu
+cliquer. Un élément qui s'affiche correctement peut n'être atteignable par
+personne, et aucune relecture de code ne le dit.
 
 ---
 
@@ -2914,7 +2941,7 @@ l'écart entre les deux. Il est passé au vert à la seconde où la migration a 
 appliquée. Un test qui échoue pour la raison qu'on attend vaut mieux qu'un
 ticket annoncé fini avec une migration en attente.
 
-**Les quinze premiers tickets de ce backlog sont clos.** V2.1-16 est ouvert le
+**Les seize tickets de ce backlog sont clos.** V2.1-16 a été ouvert le
 15 septembre, après cette phrase et pour la deuxième fois : elle disait vrai au
 moment où elle a été écrite, et la règle de V2.1-14 se vérifie une fois de plus
 — un backlog ne se clôt pas parce qu'un ticket le dit. Celui-ci naît de deux
