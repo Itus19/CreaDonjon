@@ -4090,6 +4090,68 @@ Aucune régression pour autant : `initialBackground` est optionnel, ce layout ne
 le passe pas, son fond part de `null` comme avant. Le critère « les trois
 routes se comportent pareil » reste donc ouvert, et il est le seul.
 
+#### Ce qu'une session de test a appris (16 septembre)
+
+L'auteur a fourni un lien d'invitation, ce qui a permis d'atteindre pour la
+première fois les deux routes authentifiées sur le build local. Le flux
+`/rejoindre` n'utilise ni email ni mot de passe — le jeton est la clé, et
+`/entrer` rétablit la session par `verifyOtp` — et l'invitation était déjà
+réclamée : rien n'a été créé ni consommé.
+
+**Le squelette du lot 1 fonctionne aussi sur l'onglet Wiki du joueur**, y
+compris dans le cas le plus contraint : cette route est imbriquée dans
+`AppShell`, qui borne la hauteur de la coquille (V2.1-16). C'était la seule
+différence structurelle avec `/partage` ; `/apercu` partage exactement la même
+imbrication, et son découpage de chemin est couvert par `lib/wikiPath.test.ts`.
+Aucune fiche publique dans le monde de test, donc pas de clic à y faire — noté
+plutôt que coché.
+
+**Un piège de mesure, deux fois rencontré et qui vaut d'être écrit** : dans un
+onglet non peint, `requestAnimationFrame` ne s'exécute pas. Une frontière de
+chargement reste alors indéfiniment sur son squelette, et le fond de page
+n'est jamais demandé. Les deux ont d'abord été pris pour des défauts. Toute
+vérification en navigateur de ce ticket doit forcer une peinture (une capture
+suffit) avant de conclure quoi que ce soit.
+
+#### Une incohérence trouvée en regardant l'éditeur
+
+La branche éditable de `app/m/[worldSlug]/joueur/wiki/[entitySlug]/page.tsx`
+rend `EditEntityForm` **sans** `WikiBackgroundRegistrar`. Vu à l'écran avec la
+session : l'éditeur s'affiche dans la colonne de lecture de `BookSkin`, sommaire
+compris.
+
+Conséquence, lue dans le code et non mesurée (le monde de test n'a aucun fond) :
+`register` n'étant jamais appelé sur cette branche, `displayed` garde sa valeur.
+Une navigation client depuis une fiche AVEC fond vers une fiche éditable
+**conserve le fond de la fiche précédente**, alors qu'un chargement à froid de
+la même fiche éditable n'en a aucun. Les deux chemins ne donnent pas le même
+écran.
+
+Ce n'est pas une régression de ce ticket — c'est vrai depuis V2-M7b. Mais c'est
+exactement la zone que le lot 2.1 devait traiter, et ça change la question.
+
+#### La question qui reste, et elle n'est pas technique
+
+Poser un fond initial depuis le layout de cette route demande de savoir si la
+page rendra le corps de fiche ou l'éditeur — donc d'appeler `canUserEditEntity`
+dans le layout. C'est faisable sans surcoût (`createClient` est mémoïsé, il
+suffit d'une enveloppe à arguments primitifs pour que `cache()` morde), mais ça
+fait rejouer au layout la décision de branche de la page.
+
+Avant d'écrire ça, il faut trancher ce qu'on veut voir :
+
+1. **L'éditeur n'a pas de fond** (comportement d'un chargement à froid
+   aujourd'hui) — le layout doit alors connaître `canEditEntity`, et la branche
+   éditable doit en plus enregistrer `null` pour corriger l'incohérence
+   ci-dessus ;
+2. **L'éditeur a le fond de sa fiche**, comme la lecture — le layout n'a rien à
+   savoir, une ligne suffit, et l'incohérence disparaît d'elle-même. Mais on
+   pose une photographie floutée derrière des champs de saisie.
+
+La 2 est plus simple et plus cohérente ; la 1 respecte ce que l'écran fait
+aujourd'hui. **C'est un choix d'auteur, pas une évidence technique**, et il
+décide à lui seul de la taille du travail restant.
+
 #### Critères
 
 - [x] `getPublicWikiBackground(worldId, entitySlug)` existe, est mémoïsé, et est
