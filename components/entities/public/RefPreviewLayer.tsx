@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import type { EntityRefPreview, RuleRefPreview } from "@/src/server/services/refPreview";
@@ -139,8 +140,11 @@ export default function RefPreviewLayer({
             category: ruleEntryTypeLabels[found.entryType] ?? found.entryType,
             excerpt: found.excerpt,
             // Une fiche de regle n'a jamais d'illustration, et sur `/partage`
-            // elle n'a pas non plus de page : ni vignette, ni pied.
-            href: (el as HTMLAnchorElement).href || undefined,
+            // elle n'a pas non plus de page : ni vignette, ni pied. Quand une
+            // page existe (wiki joueur), le lien est celui que porte le
+            // `<a>` — lu par `getAttribute` et non par `.href`, qui rendrait
+            // l'URL absolue et ferait perdre la navigation client a `Link`.
+            href: el.getAttribute("href") ?? undefined,
           };
         }
       }
@@ -341,7 +345,25 @@ export default function RefPreviewLayer({
         </div>
       </div>
       {target.excerpt && <p className="mt-2 text-xs leading-relaxed text-ink">{target.excerpt}</p>}
-      {target.href && <span className="mt-2 block text-xs text-link-entity">Ouvrir la fiche →</span>}
+      {/* Un vrai lien, corrige sur retour de l'auteur : ce pied etait un
+          `<span>` inerte portant la couleur `--link-entity`. C'est trait pour
+          trait le defaut que le lot 1 de ce meme ticket corrigeait dans le
+          texte — un mot qui a l'air cliquable et ne l'est pas — reintroduit
+          ici par la carte censee le reparer. `onClick` ferme avant de
+          naviguer : sans cela, la carte resterait montee pendant la
+          transition et se retrouverait posee sur la fiche d'arrivee. */}
+      {target.href && (
+        <Link
+          href={target.href}
+          onClick={() => {
+            clearTimers();
+            setTarget(null);
+          }}
+          className="mt-2 block text-xs text-link-entity hover:underline"
+        >
+          Ouvrir la fiche →
+        </Link>
+      )}
     </div>
   );
 }

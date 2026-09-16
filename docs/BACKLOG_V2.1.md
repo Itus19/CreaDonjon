@@ -3100,8 +3100,20 @@ et des forges… » pour une règle, sans pied (aucune page à ouvrir sur
 entité, vignette comprise. Les deux libellés viennent des tables du projet —
 `ENTITY_KIND_LABELS` et `regles.entryTypes` — jamais réécrits.
 
-**Deux défauts vus par l'auteur à l'usage, corrigés ensuite.** Aucun des deux
+**Trois défauts vus par l'auteur à l'usage, corrigés ensuite.** Aucun des trois
 ne se voyait dans les mesures — il fallait ouvrir le wiki et survoler.
+
+**0. Le pied « Ouvrir la fiche → » ne menait nulle part.** Un `<span>` portant
+`--link-entity`, jamais un `<a>`. C'est-à-dire, trait pour trait, **le défaut
+que le lot 1 de ce ticket corrige dans le texte** — un mot qui a la couleur et
+l'allure d'un lien sans en être un — réintroduit par la carte écrite pour le
+réparer. Le ticket décrivait ce pied depuis les esquisses ; personne, moi
+compris, n'a vérifié qu'il était cliquable, parce qu'il *avait l'air* de
+l'être sur toutes les captures.
+
+La leçon vaut d'être notée à côté de celle du pointeur : **une vérification
+qui regarde un rendu ne teste que l'apparence.** Les quarante ouvertures de
+carte mesurées plus haut n'ont jamais cliqué sur quoi que ce soit.
 
 **1. La carte était coupée par le bas de l'écran** (capture à l'appui). La
 position horizontale était bornée, la verticale non : la carte se posait
@@ -3186,6 +3198,11 @@ la charte interdit d'inventer un jeton, un flou n'en est pas un.
       jamais coupée par un bord de la fenêtre — 20 mentions testées deux fois,
       lien poussé en bas puis en haut de fenêtre, **0 débordement** sur 40
       ouvertures.
+- [x] **Ajouté après coup, sur retour de l'auteur :** le pied « Ouvrir la
+      fiche → » ouvre réellement la fiche. Il était un `<span>` inerte —
+      exactement le défaut que le lot 1 corrige dans le texte, réintroduit par
+      la carte censée le réparer. Vérifié par un clic réel : navigation vers
+      la bonne fiche en 720 ms, carte refermée.
 - [x] `npm run typecheck && npm run lint && npm run test` passent (1 058 tests,
       soit les 1 044 d'avant plus 14 nouveaux sur l'extrait). `npm run build`
       aussi, deux fois — la mesure du préchargement l'exigeait.
