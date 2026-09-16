@@ -19,7 +19,47 @@ function suivantAvecChemin(request: NextRequest): NextResponse {
   return NextResponse.next({ request: { headers } });
 }
 
+/**
+ * Un lien de partage se resout par son JETON, jamais par une session (V0-07) —
+ * `resolveShareLink` n'a jamais regarde qui lit. La session n'y sert donc a
+ * rien, et `auth.getUser()` y coute un aller-retour complet.
+ *
+ * Chiffre avant d'y toucher (V2.1-20 lot 4), depuis le meme client, requetes
+ * entrelacees : 229 ms sans cookie de session contre 295 ms avec. +66 ms, une
+ * vague entiere, et les deux distributions ne se recouvrent pas.
+ *
+ * Qui paie : personne parmi les lectrices, qui sont anonymes et n'ont aucun
+ * cookie a presenter — sans cookie, `getUser()` ne part meme pas sur le
+ * reseau. Seul l'AUTEUR, connecte quand il verifie son propre lien, payait ces
+ * 66 ms a chaque clic. C'est exactement la situation dans laquelle il a
+ * signale « un long moment entre le clic et l'arrivee ».
+ *
+ * CE QU'ON PERD, et c'est un arbitrage assume, pas un oubli : `getUser()` fait
+ * DEUX choses ici. La garde `/login` (inutile sur une route publique) et le
+ * rafraichissement du cookie de session — celui-la, on y renonce. Une session
+ * ne se rafraichit plus tant qu'on reste sur un lien de partage ; passer plus
+ * d'une heure a lire son propre wiki sans toucher au reste de l'application
+ * deconnecte ailleurs. Il n'existe pas de troisieme voie : `getSession()` ne
+ * valide ni ne rafraichit, et un rafraichissement en arriere-plan ne pourrait
+ * pas reposer ses cookies sur la reponse.
+ */
+function estUnLienDePartage(path: string): boolean {
+  return path.startsWith("/partage/");
+}
+
 export async function updateSession(request: NextRequest) {
+  // Sortie AVANT la construction du client, et c'est ce qui rend l'economie
+  // reelle : construire le client ne coute rien, c'est `getUser()` qui part sur
+  // le reseau, et il n'y a aucune raison d'arriver jusqu'a lui ici.
+  //
+  // Le middleware continue de s'executer sur `/partage/*` — il DOIT, c'est lui
+  // qui pose l'en-tete de chemin dont le layout tire la fiche courante depuis
+  // le lot 2.1. Retirer cette route du `matcher` casserait le fond de page en
+  // silence ; `lib/wikiPath.test.ts` tombe si quelqu'un le fait.
+  if (estUnLienDePartage(request.nextUrl.pathname)) {
+    return suivantAvecChemin(request);
+  }
+
   let supabaseResponse = suivantAvecChemin(request);
 
   const supabase = createServerClient(
@@ -76,6 +116,10 @@ export async function updateSession(request: NextRequest) {
     path === "/login" ||
     path === "/signup" ||
     path.startsWith("/auth/") ||
+    // Redondant depuis le lot 4 — `/partage/*` sort plus haut, avant meme que
+    // ce test ne soit atteint. Gardee volontairement : elle dit ce que cette
+    // route EST, et si le court-circuit disparaissait un jour, son retrait
+    // silencieux derriere lui renverrait les visiteurs vers /login.
     path.startsWith("/partage/") ||
     path.startsWith("/rejoindre/") ||
     path.startsWith("/api/assets/") ||

@@ -32,7 +32,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-17 | Deux retouches de rendu au Livre de sessions | `S` | **Fait** (16 septembre) — les deux vues par l'auteur, captures à l'appui : le bloc Séance n'alignait pas ses libellés sur ses valeurs, et un trait posé en tête de bloc tombait entre le titre et le texte, en doublon du filet automatique que chaque bloc porte depuis V2-G11. L'alignement a ensuite été corrigé sur `PublicInfoboxBlock`, l'original d'où le défaut venait |
 | V2.1-18 | Aperçu des fiches au survol d'un lien | `L` | **Ouvert** (16 septembre) — quatre lots, le premier autonome. Né d'un lien de règle qui ne mène nulle part sur `/partage` tout en portant la couleur et le souligné d'un vrai lien : trois mentions inertes sur vingt, mesurées sur la page en production. Trois variantes esquissées avec l'auteur avant tout code, la carte flottante retenue pour les entités comme pour les règles. La fluidité est une exigence du ticket, pas une optimisation d'après-coup : elle a une section, des cibles chiffrées, et elle a mis au jour un coût plus ancien, parti en V2.1-19 |
 | V2.1-19 | La mémoïsation n'atteignait pas le wiki public | `M` | **Fait** (16 septembre) — né de la section Fluidité de V2.1-18. `React.cache()` ne prend que si le client Supabase est stable par requête ; `createShareLinkServiceClient` est une fabrique nue, et chaque fonction de `publicShare.ts` construit la sienne. Tout le gain de l'audit P-01 était donc inerte sur `/partage`, et seulement là. Second volet : la coquille passe dans le layout, `/partage` était la dernière des trois routes de wiki à la reconstruire à chaque fiche. Mesure : 2 constructions de sommaire pour deux navigations avant, 0 après, et la recherche du sommaire survit désormais à la navigation |
-| V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Lots 0, 1, 2, 2.1, 3 et 5 faits** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : le temps de rendu est le nombre de vagues de requêtes multiplié par la latence, et 41 % sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt, retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme. Deux défauts empilés, plus une fuite refermée. **Lot 2.1** : les jetons de teinte passent dans le HTML, sur les trois routes, éditeur compris. **Lot 3** : deux vagues qui n'attendaient que leur tour dans l'ordre d'écriture — le Prologue passe de 873 à 678 ms. **Lot 5** : la chaine de rulesets cesse d attendre les cles de regle — le Prologue passe de 731 a 434 ms, soit -41 % depuis le lot 0. Restent les lots 4 et 6 |
+| V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Lots 0 a 5 faits** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : le temps de rendu est le nombre de vagues de requêtes multiplié par la latence, et 41 % sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt, retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme. Deux défauts empilés, plus une fuite refermée. **Lot 2.1** : les jetons de teinte passent dans le HTML, sur les trois routes, éditeur compris. **Lot 3** : deux vagues qui n'attendaient que leur tour dans l'ordre d'écriture — le Prologue passe de 873 à 678 ms. **Lot 5** : la chaine de rulesets cesse d attendre les cles de regle — le Prologue passe de 731 a 434 ms, soit -41 % depuis le lot 0. **Lot 4** : l auteur payait 66 ms de plus que ses joueuses a chaque clic, le middleware sort desormais avant de construire le client sur /partage — ecart ramene a -1 ms. Reste le lot 6 |
 | V2.1-21 | Le contraste élevé se perd sur une fiche illustrée | `S` | **Ouvert** (16 septembre) — trouvé en instruisant le lot 2.1 de V2.1-20, pas en le cherchant. `.wiki-bg-scope[data-mode="…"]` est un descendant de `:root[data-contrast="high"]`, donc plus spécifique : sur toute fiche portant un fond de page wiki, le contraste élevé est écrasé et la palette colorée revient. Le lecteur le perd exactement là où il en a le plus besoin, sur les pages dont le fond est une photographie floutée. Porte aussi une question qui n'est pas technique : faut-il masquer l'image elle-même sous ce mode |
 
 ---
@@ -3711,6 +3711,62 @@ tout le monde. Et sa question n'est plus « comment » mais « est-ce qu'on
 échange 66 ms de confort de vérification contre une session qui ne se
 rafraîchit plus sur `/partage` » — un arbitrage d'auteur, pas une optimisation
 évidente.
+
+**Livré.** Arbitrage tranché par l'auteur en connaissance de la contrepartie.
+
+`updateSession` sort **avant de construire le client Supabase** quand le chemin
+commence par `/partage/`. Construire le client ne coûte rien ; c'est
+`getUser()` qui part sur le réseau, et il n'y a aucune raison d'arriver
+jusqu'à lui sur une route dont le jeton fait foi.
+
+Le middleware, lui, **continue de s'exécuter** — il le doit, c'est lui qui pose
+l'en-tête de chemin dont le fond de page dépend depuis le lot 2.1. La
+reformulation écrite plus haut n'était donc pas une précaution de style : elle
+est ce qui rend ce lot compatible avec le précédent.
+
+| Même URL, même client | Avant | **Après** |
+|---|---|---|
+| sans cookie de session (une joueuse) | 229 ms | 228 ms |
+| avec cookie de session (l'auteur) | 295 ms | **227 ms** |
+| écart | +66 ms | **−1 ms** |
+
+L'auteur paie désormais exactement ce que paie une lectrice.
+
+#### Ce que ça garde
+
+`lib/supabase/middleware.test.ts`, six tests, `@supabase/ssr` simulé — ce
+fichier ne parle à aucune base. Ce qu'il observe, c'est si le middleware
+**cherche** à construire un client.
+
+Les deux défauts que ce lot pouvait créer sont muets, d'où deux familles
+d'assertions :
+
+- sur `/partage`, aucun client n'est construit — y compris **avec** un cookie de
+  session, qui est précisément le cas qui coûtait 66 ms. Vérifié que ces deux
+  tests tombent quand on retire le court-circuit ;
+- ailleurs, le client est toujours construit : route authentifiée, image de
+  bloc (que `/partage` embarque pourtant, mais dont le chemin n'est pas
+  `/partage/*` et dont la route a besoin de savoir qui lit), et un chemin qui
+  commence par les mêmes lettres sans être un lien de partage.
+
+`path.startsWith("/partage/")` reste aussi dans `isPublicPage`, devenu
+redondant. Gardé volontairement : cette ligne dit ce que la route EST, et si le
+court-circuit disparaissait un jour, son retrait silencieux derrière lui
+renverrait les visiteurs vers `/login`.
+
+#### Vérifié que le lot 2.1 n'a pas été cassé au passage
+
+C'était le risque réel de ce lot, et il ne se serait pas vu tout seul : le HTML
+servi de la fiche porte toujours `wiki-bg-scope`, `data-mode` et
+`--h:90;--c:1.03e-8`, et la div de fond avec. Une session ouverte reste valable
+sur les routes authentifiées (200, aucune redirection vers `/login`).
+
+#### Ce qu'on a accepté de perdre
+
+Une session ne se rafraîchit plus tant qu'on reste sur un lien de partage.
+Passer plus d'une heure à lire son propre wiki sans toucher au reste de
+l'application déconnecte ailleurs. Écrit dans le code, au-dessus de
+`estUnLienDePartage`, pour que personne n'ait à redécouvrir pourquoi.
 
 **Lot 5 — les bulles se chargent pendant la lecture.** Voir la section dédiée
 ci-dessous : c'est une question de l'auteur, elle a une bonne réponse, et elle
