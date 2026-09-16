@@ -147,7 +147,16 @@ Si l'apparence par défaut ne convient pas, **c'est le composant qu'on corrige**
 
 ### Onglets
 
-**Toujours `components/shared/Tabs.tsx`** — segments égaux dans un conteneur arrondi. Ne pas dessiner une deuxième présentation d'onglets.
+**Deux présentations, et elles se choisissent sur ce qu'elles font** — jamais sur le goût de qui écrit l'écran. C'est [ADR 0026](./adr/0026-deux-presentations-d-onglets.md) ; cette ligne disait auparavant « toujours `Tabs.tsx` », alors que ce composant n'a **aucun importateur** depuis que les Réglages ont quitté l'application, et que la seule présentation d'onglets en service était celle qu'elle interdisait.
+
+| Présentation | Quand | Composant |
+|---|---|---|
+| **Bascule segmentée** | l'onglet est un **filtre à l'intérieur** d'un panneau, d'une barre, d'une carte — deux à quatre entrées courtes, le contenu reste le même | `components/shared/Tabs.tsx` |
+| **Intercalaires de classeur** | les onglets **sont** la page — panneau pleine largeur, un contenu propre par onglet, et l'actif s'ouvre visiblement sur lui | `components/shared/BinderTabs.tsx` |
+
+Dans les deux cas, le contrat ARIA est le même et il n'est pas optionnel : `role="tablist"`, `aria-selected`, **un seul** onglet dans l'ordre de tabulation, flèches/`Home`/`End` pour circuler. `Tabs.tsx` l'implémente ; `BinderTabs` le lui emprunte.
+
+**Ne pas dessiner une troisième présentation.** `SectionToggle.tsx` n'en est pas une : ce sont des `<Link>` de navigation qui empruntent le dessin de la bascule.
 
 ### Panneau, carte
 
