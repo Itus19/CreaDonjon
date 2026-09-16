@@ -4972,6 +4972,50 @@ sous 30 % effectifs. Le bouton « Copier » n'est pas concerné (il utilise
 `border-accent`, opaque), mais la grande majorité des contrôles de
 l'application l'est.
 
+### Deux hypothèses écartées, et pourquoi elles valent d'être écrites
+
+Elles sont séduisantes, elles reviendront à qui rouvrira ce ticket, et la
+mesure les a tuées toutes les deux.
+
+**« C'est le gamut de l'écran. »** Toute la palette est en OKLCH ; sur un écran
+P3, `oklch(0.76 0.13 78)` se rend plus saturé qu'en sRGB, ce qui pourrait
+expliquer un texte coloré qui bave. Mesuré : `p3=false`, `rec2020=false`,
+`hdr=false`. L'écran est sRGB ordinaire. Écartée.
+
+**« C'est le `backdrop-filter` des fenêtres. »** Celle-là tenait debout
+longtemps. Sur Windows, un calque de composition avec transparence désactive
+ClearType, et le texte y bascule du lissage sous-pixel au lissage gris —
+jambages plus maigres, bords plus ternes. Le panneau d'invitation est justement
+passé dans une fenêtre flottante le 1ᵉʳ septembre (`3374023`), ce qui aurait
+expliqué le « d'un coup » de l'auteur : le contenu n'avait pas changé, son
+conteneur oui.
+
+Test décisif, fait par l'auteur : couper le `backdrop-filter` de tous les
+éléments qui en portent un, et regarder le texte au moment du basculement.
+**Le flou disparaît, le texte ne bouge pas.**
+
+L'explication tient en une phrase, et elle rend la première hypothèse inutile :
+**à un rapport de pixels fractionnaire, Chrome n'utilise pas le lissage
+sous-pixel du tout.** Celui-ci exige un alignement exact sur les pixels
+physiques, qui n'existe pas à 1,5. Le texte était déjà en lissage gris avec ou
+sans flou ; le calque n'y ajoutait rien.
+
+**Conséquence** : il n'y a rien à couper, et pas de ticket sur la matière des
+fenêtres — sa prémisse est morte. Les seuls leviers sont ceux de ce ticket :
+une surface plutôt qu'un trait d'un pixel, 14 px plutôt que 12, graisse 500
+plutôt que 400. Ce ne sont pas des compensations faute de mieux : à lissage
+gris, un trait plus épais et un glyphe plus grand sont littéralement la seule
+chose qui aide.
+
+**Et une troisième, écartée par l'auteur lui-même.** Il a remarqué en cours de
+route qu'il ne voyait le défaut que depuis qu'il branche son portable sur le 4K,
+et a soupçonné une résolution mal réglée — un 4K piloté en 1920×1080 que le
+moniteur étire. Vérifié : `screen.width × devicePixelRatio` rend bien
+`3840×2160`. Résolution native, l'installation est saine. Ce que cette remarque
+a apporté n'est pas une cause mais une DATE : elle explique pourquoi le défaut
+paraît soudain alors qu'il est aussi vieux que le rapport de pixels de cet
+écran.
+
 ### Méthode : l'auteur juge, personne d'autre ne peut
 
 Le défaut n'existe qu'à 1,5, et aucune machine de l'équipe de développement
@@ -4985,9 +5029,9 @@ veut dire « faire regarder par le seul œil qui voit le problème ».
 
 ### Critères
 
-- [ ] Une page de comparaison existe et affiche le `devicePixelRatio` réel.
-- [ ] L'auteur a tranché entre les trois candidats, sur son écran 4K à 150 %.
-- [ ] La recette retenue est écrite dans `CHARTE-UI.md` §3, avec la raison —
+- [x] Une page de comparaison existe et affiche le `devicePixelRatio` réel.
+- [x] L'auteur a tranché : surface neutre à libellé accentué, et 14 px plutôt que 13 — cette dernière taille n'existait pas dans l'échelle, la page la proposait à tort.
+- [x] La recette retenue est écrite dans `CHARTE-UI.md` §3, avec la raison —
       un rapport fractionnaire n'est pas une lubie d'un poste, c'est le réglage
       par défaut de Windows sur beaucoup de 4K.
 - [ ] Les contrôles existants sont convertis, ou un périmètre explicite est
