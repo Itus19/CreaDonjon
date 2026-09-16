@@ -31,7 +31,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-16 | Le défilement appartient aux fenêtres, et l'en-tête disparaît | `M` | **Fait** (16 septembre) — deux gênes signalées avec captures, une seule cause : `<body>` n'avait pas de hauteur définie, donc chaque coquille bornait la sienne dans son coin. Mesuré avant/après : la page défilait de 56 px, la hauteur exacte de l'en-tête — lequel a disparu au lot 2, rendant ces 56 px aux fiches |
 | V2.1-17 | Deux retouches de rendu au Livre de sessions | `S` | **Fait** (16 septembre) — les deux vues par l'auteur, captures à l'appui : le bloc Séance n'alignait pas ses libellés sur ses valeurs, et un trait posé en tête de bloc tombait entre le titre et le texte, en doublon du filet automatique que chaque bloc porte depuis V2-G11. L'alignement a ensuite été corrigé sur `PublicInfoboxBlock`, l'original d'où le défaut venait |
 | V2.1-18 | Aperçu des fiches au survol d'un lien | `L` | **Ouvert** (16 septembre) — quatre lots, le premier autonome. Né d'un lien de règle qui ne mène nulle part sur `/partage` tout en portant la couleur et le souligné d'un vrai lien : trois mentions inertes sur vingt, mesurées sur la page en production. Trois variantes esquissées avec l'auteur avant tout code, la carte flottante retenue pour les entités comme pour les règles. La fluidité est une exigence du ticket, pas une optimisation d'après-coup : elle a une section, des cibles chiffrées, et elle a mis au jour un coût plus ancien, parti en V2.1-19 |
-| V2.1-19 | La mémoïsation n'atteignait pas le wiki public | `M` | **Ouvert** (16 septembre) — né de la section Fluidité de V2.1-18. `React.cache()` ne prend que si le client Supabase est stable par requête ; `createShareLinkServiceClient` est une fabrique nue, et chaque fonction de `publicShare.ts` construit la sienne. Tout le gain de l'audit P-01 était donc inerte sur `/partage`, et seulement là. Second volet : la coquille y est encore rendue par la page, donc le sommaire se reconstruit à chaque fiche |
+| V2.1-19 | La mémoïsation n'atteignait pas le wiki public | `M` | **Fait** (16 septembre) — né de la section Fluidité de V2.1-18. `React.cache()` ne prend que si le client Supabase est stable par requête ; `createShareLinkServiceClient` est une fabrique nue, et chaque fonction de `publicShare.ts` construit la sienne. Tout le gain de l'audit P-01 était donc inerte sur `/partage`, et seulement là. Second volet : la coquille passe dans le layout, `/partage` était la dernière des trois routes de wiki à la reconstruire à chaque fiche. Mesure : 2 constructions de sommaire pour deux navigations avant, 0 après, et la recherche du sommaire survit désormais à la navigation |
 
 ---
 
@@ -3145,7 +3145,7 @@ chargée en mentions :
 
 ---
 
-## V2.1-19 — La mémoïsation n'atteignait pas le wiki public · `M`
+## V2.1-19 — La mémoïsation n'atteignait pas le wiki public · `M` — fait
 
 ### Constat
 
@@ -3256,18 +3256,45 @@ changement de fichier : toute mesure prise dans les secondes qui suivent une
       sommaire). Le seul 404 de la console est celui d'une fiche sans
       portrait, repli documenté dans `PublicPortrait.tsx` et antérieur.
 
-### Critères restants — volet B
+### Vérification — volet B
 
-- [ ] `BookSkin` est rendu par `app/partage/[token]/layout.tsx`, la page ne
+Même compteur que pour le volet A, posé cette fois dans la construction de
+l'arbre, sur le même monde et les deux mêmes navigations de fiche à fiche
+(Prologue → Candide Fausset → Fine Lââm).
+
+| Mesure | Avant | Après |
+|---|---|---|
+| Constructions du sommaire, deux navigations | 2 | **0** |
+| Recherche du sommaire après navigation | vidée | **conservée** (« Cand », filtrage inclus) |
+
+**Un correctif né d'une phrase écrite trop vite.** Le premier jet du
+commentaire de `page.tsx` affirmait que `getPublicEntityTree` était déjà
+mémoïsé par les dépôts qu'il appelle. Vérification faite avant de le
+commiter : **quatre de ses cinq requêtes ne l'étaient pas**
+(`listPartOfRelationsForWorld`, `listPlayerCharacterEntityIds`,
+`getWorldEntityKindOrder`, `getSessionJournalTreeGroup`). L'arbre est donc
+mémoïsé au niveau de l'arbre, et pas de ses morceaux. Une affirmation de
+commentaire se vérifie comme une mesure.
+
+**La garde, exercée pour de vrai.** Le lien de l'auteur n'a pas de mot de
+passe : le cas a été forcé localement (`password_hash` imposé dans
+`resolveShareLinkUncached`), avec un compteur sur le chargement de l'arbre ET
+sur celui de la fiche. Sur deux requêtes, **zéro** de l'un comme de l'autre —
+la porte s'affiche, rien d'autre ne part. C'est la justification concrète de
+la double garde : sans celle de la page, le layout aurait beau refuser de
+rendre ses `children`, la fiche aurait déjà été chargée.
+
+### Critères
+
+- [x] `BookSkin` est rendu par `app/partage/[token]/layout.tsx`, la page ne
       rendant plus que le corps de la fiche.
-- [ ] La garde par mot de passe reste dans la page **et** précède le
+- [x] La garde par mot de passe reste dans la page **et** précède le
       chargement de l'arbre dans le layout. Aucun contenu, aucun sommaire, ne
-      quitte le serveur avant vérification — revérifié depuis un navigateur
-      vraiment déconnecté, jamais depuis `/apercu`.
-- [ ] Naviguer entre deux fiches conserve la recherche du sommaire, son
+      quitte le serveur avant vérification — mesuré, cas forcé, compteur à 0.
+- [x] Naviguer entre deux fiches conserve la recherche du sommaire, son
       défilement et son repli.
-- [ ] Requêtes par navigation relevées avant et après, sur le même monde.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+- [x] Requêtes par navigation relevées avant et après, sur le même monde.
+- [x] `npm run typecheck && npm run lint && npm run test` passent.
 
 ---
 

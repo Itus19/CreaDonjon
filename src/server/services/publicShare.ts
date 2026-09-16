@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { createShareLinkServiceClient } from "@/lib/supabase/service";
@@ -88,7 +89,7 @@ export interface ResolvedShareLink {
  * "jamais existe" que "expire"/"revoque" — jamais de distinction cote
  * appelant (docs/BACKLOG.md V0-07, ne pas reveler qu'un lien a existe).
  */
-export async function resolveShareLink(token: string): Promise<ResolvedShareLink | null> {
+async function resolveShareLinkUncached(token: string): Promise<ResolvedShareLink | null> {
   const supabase = createAnonClient();
   const { data, error } = await supabase.rpc("resolve_share_link", { p_token: token });
   if (error) throw new Error(error.message);
@@ -104,6 +105,21 @@ export async function resolveShareLink(token: string): Promise<ResolvedShareLink
   };
 }
 
+/**
+ * `React.cache()` (V2.1-19 volet B) — la garde par mot de passe est posee a
+ * DEUX endroits sur `/partage` : le layout (avant de charger le sommaire) et
+ * la page (avant de charger la fiche). Ce n'est pas une precaution
+ * superflue : en rendu serveur React, layout et page s'executent
+ * concurremment, et un layout qui ne rend pas ses `children` n'annule pas le
+ * travail que la page a deja lance. La garde doit donc exister aux deux
+ * endroits — et la memoisation est ce qui la rend gratuite : une seule
+ * resolution reelle pour tout le rendu.
+ *
+ * Bornee au rendu courant, jamais partagee entre deux requetes ni entre deux
+ * visiteurs.
+ */
+export const resolveShareLink = cache(resolveShareLinkUncached);
+
 /** Au-dela, le mot de passe ne protege plus rien (specs/arbitrage-modifications.md §3.2, "sinon le mot de passe ne protege rien") — le lien reste utilisable via son jeton, mais plus de nouvelle tentative de mot de passe. */
 const MAX_PASSWORD_ATTEMPTS = 10;
 
@@ -116,9 +132,15 @@ export type SharePasswordResult = "ok" | "wrong" | "locked" | "not_required";
  * ecriture a `share_links`). Ne fait jamais confiance a un `resolved` deja
  * en main : re-resout le jeton pour lire le compteur de tentatives a jour,
  * au cas ou plusieurs essais arrivent en parallele.
+ *
+ * D'ou l'appel a la variante NON memoisee (V2.1-19 volet B) : `cache()` sert
+ * a ne pas relire deux fois la meme chose dans un rendu, exactement ce que
+ * cette fonction refuse. Une action de mot de passe s'execute dans la meme
+ * requete que le rendu qui suit ; passer par la version memoisee ferait lire
+ * ici un compteur de tentatives fige par un appel anterieur.
  */
 export async function verifyShareLinkPassword(token: string, password: string): Promise<SharePasswordResult> {
-  const resolved = await resolveShareLink(token);
+  const resolved = await resolveShareLinkUncached(token);
   if (!resolved) return "wrong";
   if (!resolved.passwordHash) return "not_required";
   if (resolved.passwordAttempts >= MAX_PASSWORD_ATTEMPTS) return "locked";
@@ -169,7 +191,7 @@ export async function listPublicEntities(worldId: string): Promise<EntitySummary
  * masque redevient simplement une racine plutot que de disparaitre ou de
  * planter.
  */
-export async function getPublicEntityTree(worldId: string): Promise<EntityTreeGroup[]> {
+async function getPublicEntityTreeUncached(worldId: string): Promise<EntityTreeGroup[]> {
   const supabase = createShareLinkServiceClient();
   const [allEntities, partOfEdges, playerCharacterIds, kindOrder, journalGroup] = await Promise.all([
     listEntitiesForWorld(supabase, worldId),
@@ -185,6 +207,20 @@ export async function getPublicEntityTree(worldId: string): Promise<EntityTreeGr
   const tree = buildEntityTree(withPlayerCharacterKinds(entities, playerCharacterIds), partOfEdges, kindOrder);
   return journalGroup ? [journalGroup, ...tree] : tree;
 }
+
+/**
+ * `React.cache()` (V2.1-19 volet B) — memoise au niveau de l'ARBRE et non
+ * de ses dependances : sur ses cinq requetes, une seule
+ * (`listEntitiesForWorld`) etait deja memoisee. Les quatre autres
+ * repartaient donc pour de vrai a chaque appel, et la page d'accueil du
+ * lien de partage demande l'arbre juste apres le layout — pour decider
+ * d'une phrase, pas pour construire une coquille.
+ *
+ * Verifie avant d'ecrire cette ligne plutot que suppose : la premiere
+ * redaction du commentaire de `page.tsx` affirmait que les depots sous-
+ * jacents s'en chargeaient deja. C'etait faux pour quatre sur cinq.
+ */
+export const getPublicEntityTree = cache(getPublicEntityTreeUncached);
 
 /** Slug de l'entree du Livre de sessions la plus recente, publique uniquement (retour utilisateur : la page d'accueil du wiki public s'ouvre dessus) — `null` tant qu'aucune entree publique n'existe. */
 export async function getLatestPublicSessionJournalSlug(worldId: string): Promise<string | null> {
