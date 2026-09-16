@@ -32,6 +32,8 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-17 | Deux retouches de rendu au Livre de sessions | `S` | **Fait** (16 septembre) — les deux vues par l'auteur, captures à l'appui : le bloc Séance n'alignait pas ses libellés sur ses valeurs, et un trait posé en tête de bloc tombait entre le titre et le texte, en doublon du filet automatique que chaque bloc porte depuis V2-G11. L'alignement a ensuite été corrigé sur `PublicInfoboxBlock`, l'original d'où le défaut venait |
 | V2.1-18 | Aperçu des fiches au survol d'un lien | `L` | **Ouvert** (16 septembre) — quatre lots, le premier autonome. Né d'un lien de règle qui ne mène nulle part sur `/partage` tout en portant la couleur et le souligné d'un vrai lien : trois mentions inertes sur vingt, mesurées sur la page en production. Trois variantes esquissées avec l'auteur avant tout code, la carte flottante retenue pour les entités comme pour les règles. La fluidité est une exigence du ticket, pas une optimisation d'après-coup : elle a une section, des cibles chiffrées, et elle a mis au jour un coût plus ancien, parti en V2.1-19 |
 | V2.1-19 | La mémoïsation n'atteignait pas le wiki public | `M` | **Fait** (16 septembre) — né de la section Fluidité de V2.1-18. `React.cache()` ne prend que si le client Supabase est stable par requête ; `createShareLinkServiceClient` est une fabrique nue, et chaque fonction de `publicShare.ts` construit la sienne. Tout le gain de l'audit P-01 était donc inerte sur `/partage`, et seulement là. Second volet : la coquille passe dans le layout, `/partage` était la dernière des trois routes de wiki à la reconstruire à chaque fiche. Mesure : 2 constructions de sommaire pour deux navigations avant, 0 après, et la recherche du sommaire survit désormais à la navigation |
+| V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Lots 0, 1 et 2 faits, 2.1 ouvert** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : une fiche ordinaire coûte 215 ms, celle qui porte un fond et cite deux règles en coûte 731 — 41 % du temps sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt (F-01 de l'audit d'interface), retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme, donc ni fond ni image de bloc sur `/partage`. Invisible parce que l'auteur teste son lien en étant connecté. Deux défauts empilés, plus une fuite refermée au passage. **Lot 2.1** reprend ce que le lot 2 a laissé : les jetons de teinte dans le HTML, quatre voies instruites, la première retenue — et il impose sa condition au lot 4 |
+| V2.1-21 | Le contraste élevé se perd sur une fiche illustrée | `S` | **Ouvert** (16 septembre) — trouvé en instruisant le lot 2.1 de V2.1-20, pas en le cherchant. `.wiki-bg-scope[data-mode="…"]` est un descendant de `:root[data-contrast="high"]`, donc plus spécifique : sur toute fiche portant un fond de page wiki, le contraste élevé est écrasé et la palette colorée revient. Le lecteur le perd exactement là où il en a le plus besoin, sur les pages dont le fond est une photographie floutée. Porte aussi une question qui n'est pas technique : faut-il masquer l'image elle-même sous ce mode |
 
 ---
 
@@ -3354,6 +3356,857 @@ rendre ses `children`, la fiche aurait déjà été chargée.
       défilement et son repli.
 - [x] Requêtes par navigation relevées avant et après, sur le même monde.
 - [x] `npm run typecheck && npm run lint && npm run test` passent.
+
+---
+
+## V2.1-20 — La navigation du wiki public, de bout en bout · `L`
+
+### Constat
+
+Demande de l'auteur (16 septembre), formulée depuis l'usage et non depuis le
+code : « le chargement d'une page s'effectue bizarrement lorsque le fond est
+paramétré autrement que celui par défaut », et « il y a un long moment entre un
+clic dans le menu du wiki et l'arrivée sur la page ».
+
+Les deux phrases décrivent deux choses différentes, et c'est le premier acquis
+de ce ticket. La seconde est une attente : quelque chose met du temps. La
+première est une **séquence** : ce n'est pas que le fond soit lent, c'est qu'il
+arrive après la page, et que son arrivée repeint tout. Un fond par défaut ne
+produit pas ce symptôme parce qu'il n'arrive jamais après — il est déjà là.
+
+V2.1-19 a retiré le coût le plus gros de cette route (le sommaire reconstruit à
+chaque fiche, et toute la mémoïsation de dépôt rendue inerte par l'identité du
+client Supabase). Ce qui reste n'est pas un défaut unique qu'on corrige : c'est
+une file d'attente d'une dizaine d'étapes dont aucune n'est scandaleuse prise
+seule. D'où la taille `L`, et d'où la section « Mesure d'abord » : la moitié de
+ce qui suit ne vaut d'être écrite que si le chronomètre la confirme.
+
+### Ce que la lecture du code a trouvé, avant toute mesure
+
+Lecture du chemin complet d'une navigation `/partage/[token]/[entitySlug]` — et
+de son jumeau `/m/[worldSlug]/apercu/**`, qui partage la même peau et le même
+service. Rien ci-dessous n'est chronométré ; c'est l'objet du lot 0.
+
+| # | Constat | Fichier | Effet supposé |
+|---|---|---|---|
+| A | Aucun `loading.tsx` dans tout `app/`, aucun `useLinkStatus`, aucun état d'attente | — | Le clic ne produit **aucun signal** : l'ancienne fiche reste immobile jusqu'à la réponse du serveur. Seul point de cette liste qui n'est pas de la performance mais de la perception |
+| B | Le fond n'est déclaré que par un `useEffect`, donc après l'hydratation | `WikiBackgroundProvider.tsx:120` | Le navigateur ne découvre l'URL de l'image qu'après le bundle JS ; et `--h`/`--c`/`data-mode` changent à ce moment-là, donc **toute la page bascule de couleur** une fois déjà peinte |
+| C | L'image de fond part vers `/api/blocks/[id]/image` : fonction serveur, lecture, re-filtrage de visibilité, signature, puis **307** vers Storage | `app/api/blocks/[blockId]/image/route.ts:19` | Deux allers-retours avant le premier octet d'image, après tout ce qui précède |
+| D | Le flou est appliqué à l'exécution, en plein écran, sur une image jusqu'à 1600 px | `app/globals.css:152`, `blockImageUpload.ts:29` | Coût de peinture à l'instant exact où la page vient d'apparaître |
+| E | `getPublicEntityDetail` enchaîne au moins **sept vagues séquentielles** de requêtes | `publicShare.ts:449` | Détail ci-dessous |
+| F | Deux de ces vagues — `getCalendar` et `listEntitiesForWorld` — ne dépendent que de `worldId`, connu dès la première | `publicShare.ts:604`, `publicShare.ts:628` | Elles sont séquentielles par ordre d'écriture, pas par dépendance |
+| G | `listEntitiesForWorld` est bien mémoïsé, mais le layout ne rejoue pas lors d'une navigation client : la mémoïsation de V2.1-19 ne joue qu'au **premier** chargement | `repos/entities.ts:42` | Le gain mesuré en V2.1-19 ne couvre pas le geste dont l'auteur se plaint |
+| H | `resolveRuleRefPreviews` est lui-même une chaîne séquentielle : ruleset par défaut, remontée de chaîne, puis **une requête par maillon** en boucle, puis **une requête par clé maison restante** en boucle | `refPreview.ts:142` | Sur un monde à ruleset personnel hérité, peut à lui seul ajouter plusieurs allers-retours — sur le chemin critique de toute fiche qui cite une règle |
+| I | Le middleware appelle `auth.getUser()` sur `/partage/*`, y compris sur les requêtes RSC d'un clic | `lib/supabase/middleware.ts:30` | Sans effet pour un visiteur anonyme (pas de cookie, pas d'appel réseau) — mais **l'auteur qui teste son propre lien est connecté**, donc c'est exactement la situation où la lenteur est constatée |
+| J | `app/layout.tsx` refait un `getAuthUser()` juste après le middleware, plus le profil et le fond d'écran de l'application | `app/layout.tsx:55` | Inutile sur une page publique. Premier chargement seulement : le layout racine ne rejoue pas au clic |
+| K | `/partage/[token]` charge sommaire et nom de campagne **puis** redirige vers le dernier Livre de sessions | `app/partage/[token]/page.tsx:41` | L'entrée dans un lien de partage rend le layout deux fois |
+| L | `<img>` de portrait sans `width`/`height` | `PublicPortrait.tsx:37` | Décalage de mise en page pendant le chargement, qui se lit comme de la lenteur |
+| M | Le paquet client de la route pèse **227 ko non compressés** (mesuré sur le build présent dans `.next` : modules client de la route et leurs entrées) | — | Raisonnable. `dnd-kit` y entre inutilement via `EntityTree` alors que `editable` est faux sur le wiki public, mais **ce n'est pas là qu'est le problème** — même conclusion que V3-R5 |
+
+Le détail du point E, en **vagues** (un `Promise.all` = une vague), pour une
+fiche ordinaire avec du texte et un fond :
+
+| Vague | Appel | Dépend réellement de |
+|---|---|---|
+| 1 | `resolve_share_link` (RPC) | le jeton |
+| 2 | `getEntityBySlug` | `worldId` |
+| 3 | blocs + relations + portrait + campagne | `entity.id` |
+| 4 | `getBackgroundMetaForBlock` | la liste des blocs |
+| 5 | `getCalendar` | **`worldId` seul** |
+| 6 | `listEntitiesForWorld` | **`worldId` seul** |
+| 7 | extraits d'entités + aperçus de règles | les blocs `text` |
+
+### Mesure d'abord
+
+Demande explicite de l'auteur, et bonne demande : deux causes très différentes
+produisent la même phrase. Si le rendu prend 800 ms, il faut le raccourcir ; si
+le rendu prend 300 ms et que rien ne bouge à l'écran pendant ce temps, il faut
+un `loading.tsx` et le reste ne se verra pas. Les remèdes n'ont rien à voir, et
+la liste ci-dessus en propose autant des deux côtés.
+
+Trois choses à chiffrer, dans cet ordre :
+
+1. **Combien d'allers-retours Supabase par navigation, et lequel coûte.**
+   Compté au plus près : une enveloppe temporaire autour de `fetch` pendant un
+   rendu de `getPublicEntityDetail`, sur un vrai monde et un vrai jeton. C'est
+   ce qui départage les points E, F et H — H reste une hypothèse tant qu'on n'a
+   pas vu la longueur réelle de la chaîne de rulesets du monde mesuré.
+2. **Le temps jusqu'au premier octet de la réponse RSC d'un clic**, en
+   production. V2.1-18 a déjà relevé **448 ms à froid** sur cette route ; c'est
+   le point de départ, et il date d'avant V2.1-19.
+3. **La chronologie du fond** : instant où le HTML est peint, instant où la
+   requête d'image part, instant où le fond apparaît. C'est la mesure qui
+   valide ou tue le point B, le seul symptôme que l'auteur décrit précisément.
+
+Sans ces trois chiffres, l'ordre des lots ci-dessous est une conjecture.
+
+### Lot 0 — relevé 1 : les allers-retours d'une navigation
+
+Fait le 16 septembre, sur **Faerûn (`valdoria`)**, 33 fiches publiques, chaîne
+de rulesets à deux maillons (`DnD 2024` → `SRD 5.2.1 (2024)`). Sonde
+temporaire : une enveloppe autour de `fetch` pendant un appel réel de
+`getPublicEntityTree` puis de `getPublicEntityDetail`, contre la vraie base.
+Supprimée après la mesure — aucune trace laissée dans le dépôt.
+
+| Geste mesuré | Allers-retours | **Vagues** | Total |
+|---|---|---|---|
+| Layout : `resolveShareLink` + `getPublicEntityTree` | 7 | 2 | 248 ms |
+| Fiche « Prologue » — 4 blocs, avec fond | **18** | **11** | **940 ms** |
+| Fiche « Clan Oorvarsh » — 1 bloc, sans fond | 8 | 4 | 318 ms |
+
+Chaque aller-retour coûte entre 51 et 111 ms, médiane ≈ 68 ms. **Le temps de
+rendu est le nombre de vagues multiplié par la latence**, et rien d'autre :
+11 × 68 ≈ 750 ms des 940 mesurées. L'hypothèse du point E est donc confirmée,
+et elle est la seule qui compte — les dix autres constats ne pèsent qu'à
+travers elle.
+
+**Deux précautions de lecture, toutes deux vérifiées.**
+
+*Les millisecondes sont celles du poste de l'auteur, pas celles de Vercel.* La
+latence vers Supabase y est plus élevée qu'entre `dub1` et la base. Le chiffre
+portable est le **nombre de vagues** ; l'ancre de production reste les 448 ms
+de premier octet relevées en V2.1-18, cohérentes avec 11 vagues à ~30 ms.
+
+*`React.cache()` est inerte hors d'un rendu React* — vérifié explicitement :
+deux appels successifs à `createShareLinkServiceClient()` rendent deux objets
+différents dans la sonde, donc deux `listEntitiesForWorld` identiques font deux
+requêtes. **Cela ne fausse pourtant pas ce relevé**, et c'est le second
+résultat de la mesure : aucune des 18 requêtes du Prologue n'aurait été
+déduplíquée en production lors d'une navigation client, parce que
+`repos/worlds.ts` ne porte **aucune** mémoïsation et que `listEntitiesForWorld`
+n'est appelé qu'une fois dans ce chemin. Le relevé est fidèle au geste dont
+l'auteur se plaint. Il ne l'est pas pour un premier chargement complet, où le
+layout aurait déjà chargé la liste des entités.
+
+#### Où passent les 940 ms du Prologue
+
+| Vagues | Ce qui s'y passe | Coût | Part |
+|---|---|---|---|
+| 1 → 4 | jeton, fiche, blocs/relations/portrait/campagne, méta du fond | ~300 ms | 32 % |
+| **5** | `getCalendar` — **ne dépend que de `worldId`** | 65 ms | 7 % |
+| **6** | `listEntitiesForWorld` — **ne dépend que de `worldId`** | 93 ms | 10 % |
+| **7 → 11** | **résolution des règles citées** (deux clés : `dwarf`, `halfling`) | **~390 ms** | **41 %** |
+
+**Le point H était l'hypothèse la plus incertaine du ticket. C'est la plus
+grosse.** Cinq vagues séquentielles pour deux clés de règle :
+`getWorldDefaultRulesetId`, puis la remontée de chaîne **un maillon par vague**
+(`walkRulesetChain`), puis l'interrogation des entrées **un maillon par vague**
+(`listRulesetEntryChipsByKeys` en boucle), puis blocs et traductions. Deux
+maillons produisent quatre vagues là où deux suffiraient : la remontée de
+chaîne est séquentielle par nature, l'interrogation des entrées ne l'est pas —
+c'est une boucle qui pourrait être une requête `ruleset_id=in.(…)`.
+
+**Quarante et un pour cent du temps de chargement d'une fiche sert à préparer
+des bulles que personne n'a encore survolées.** La question de l'auteur sur le
+chargement différé n'était donc pas un détail de confort : c'est le premier
+poste de dépense de la page.
+
+#### Trouvé en mesurant, pas en lisant
+
+**La même ligne `worlds` est lue plusieurs fois, dans des vagues différentes.**
+Quatre fonctions de `repos/worlds.ts` lisent chacune la ligne du monde avec un
+`select` différent — `getWorldById`, `getWorldEntityKindOrder`,
+`getWorldCalendar` (vague 5), `getWorldDefaultRulesetId` (vague 7) — et
+**aucune n'est mémoïsée**. Sur le Prologue, deux d'entre elles partent, à deux
+moments séparés par 150 ms. V2.1-19 avait rendu la mémoïsation de dépôt
+effective sur `/partage` ; il reste à la poser là où elle manque.
+
+### Lot 0 — relevé 2 : le fond de page
+
+L'image de fond du Prologue, telle qu'elle est réellement servie :
+
+| | |
+|---|---|
+| Format | WebP, 1600 × 900 |
+| Poids | **356 ko** |
+| Flou demandé | 10 px |
+| Fondu | 600 ms |
+| Chemin | `/api/blocks/…/image?v=1` → fonction serveur → **307** → URL signée Storage |
+
+Le flou vaut 10 px : à cette intensité, l'image n'a besoin ni de ses 1600 px ni
+de ses 356 ko. Une version réduite et **déjà floutée** produirait la même
+apparence pour quelques kilo-octets, et supprimerait en plus le coût de
+peinture du `filter: blur()` plein écran. Le lot 2 reste donc entier, et sa
+partie la moins chère à écrire est aussi la plus rentable.
+
+
+### Lot 0 — relevé 3 : en navigateur, sur un vrai build de production
+
+`next build` puis `next start` — jamais `next dev`, pour la raison établie en
+V2.1-18 : Next **désactive le préchargement en développement**, et c'est
+précisément ce qu'il fallait observer. Une configuration `creadonjon-prod` a
+été ajoutée à `.claude/launch.json` pour que ce relevé soit rejouable.
+
+Serveur local, base distante : les millisecondes restent celles du poste de
+l'auteur, pas celles de Vercel.
+
+#### Ce que coûte une fiche, médiane sur cinq appels à chaud
+
+| Fiche | Réponse RSC |
+|---|---|
+| **« Prologue »** — fond + deux règles citées | **731 ms** |
+| « Clan Oorvarsh » — un bloc | 215 ms |
+| Fiche moyenne (`/13`) | 229 ms |
+| Racine du lien de partage | 203 ms |
+
+**Une fiche ordinaire coûte 215 ms ; celle qui porte un fond et cite deux
+règles en coûte 731.** Le facteur est de 3,4, et il tient entièrement aux
+vagues 5 à 11 du relevé 1. Ce n'est donc pas « le wiki qui est lent » : ce sont
+deux fonctionnalités précises qui coûtent trois fois le prix de la page.
+
+#### Chronologie du fond de page
+
+| Instant | Événement |
+|---|---|
+| 936 ms | HTML entièrement reçu — la page est lisible |
+| 993 ms | dernier module JS reçu |
+| **1263 ms** | **la requête de l'image de fond part enfin** |
+| 1402 ms | image reçue (après la redirection 307) |
+| ~2000 ms | fin du fondu de 600 ms |
+
+**Le fond commence à être demandé 327 ms après que la page soit lisible, et
+finit d'apparaître une seconde plus tard.** Le point B est confirmé, et le
+symptôme décrit par l'auteur est exactement cette séquence : la page s'affiche,
+puis quelque chose arrive par-dessus et la repeint. Avec un fond par défaut, il
+n'y a rien à attendre — d'où la différence qu'il constate.
+
+À noter, trouvé en mesurant : le `<div>` de fond n'est monté qu'après un
+`requestAnimationFrame`, qui **ne s'exécute pas dans un onglet caché**. Une
+fiche ouverte dans un onglet d'arrière-plan n'a donc simplement pas de fond
+tant qu'on n'y revient pas. Sans conséquence visible (personne ne regarde un
+onglet caché), mais c'est la preuve que le fond dépend du cycle de rendu du
+navigateur et non du document.
+
+#### Ce que la mesure a démenti : le préchargement existe, et il ne sert à rien
+
+**Charger UNE fiche déclenche 21 requêtes de préchargement `?_rsc=`** — huit
+fiches et la racine du lien, **chacune demandée deux fois**.
+
+C'est l'inverse de ce que la lecture du code laissait croire. `V3-R5` a bien
+coupé le préchargement, mais **seulement sur `EntityTree`**. Les liens du
+**corps** de la fiche n'ont jamais été couverts : `PublicBlockView.tsx:106`
+(mention d'entité), `:123` (mention de règle), `:414` (référence de quête) et
+`MentionedIn.tsx:53` (« mentionné dans ») rendent tous un `<Link>` **sans
+`prefetch={false}`**, donc au réglage par défaut. La seconde volée s'explique
+par `MentionedIn`, qui va chercher sa liste côté client
+(`/api/entities/<id>/mentions`, 1126 → 1197 ms) et fait entrer de nouveaux
+liens dans le champ de vision une fois la page déjà chargée.
+
+Mesuré séparément, un préchargement rend **21 octets en 15 à 59 ms**, contre
+25 ko en 220 ms pour la vraie navigation. Autrement dit : **Next ne prépare
+rien.** Sans `loading.tsx`, il n'a aucune frontière à préparer — même constat
+que V2.1-18, atteint cette fois par l'autre bout. Vingt et une requêtes, vingt
+et une exécutions de middleware, 441 octets utiles.
+
+Deux conséquences pour les lots :
+
+1. Ces 21 requêtes sont **gratuites pour le lecteur** (elles ne bloquent rien)
+   mais **pas pour Vercel** : ce sont 21 invocations de fonction par page
+   ouverte. C'est le même gaspillage que V3-R5 a corrigé sur le sommaire,
+   resté entier sur le corps.
+2. Elles deviennent **utiles** dès que le lot 1 existe : avec un `loading.tsx`,
+   un préchargement rapporte le squelette de la route au lieu de 21 octets, et
+   la navigation part d'un état déjà peint. Le lot 1 ne se contente donc pas de
+   masquer l'attente — il rend au préchargement le travail qu'on lui demandait
+   déjà sans le savoir. **À vérifier une fois le lot 1 écrit**, pas à supposer :
+   c'est exactement le genre d'affirmation que V2.1-18 a vu s'effondrer sous un
+   chronomètre.
+
+### Décision — lots ordonnés
+
+**Lot 0 — mesurer.** Les trois relevés ci-dessus, écrits dans ce ticket avant
+le premier correctif. Aucun code livré, aucune enveloppe de mesure conservée.
+
+**Lot 1 — le clic répond tout de suite.** Un `loading.tsx` par route de wiki :
+la coquille et le sommaire restent (ils vivent dans le layout depuis V2.1-12 et
+V2.1-19), seule la colonne de lecture passe en squelette. Et le lien cliqué
+prend son état actif immédiatement, via `useLinkStatus` (React 19.2, présent).
+Ne raccourcit pas une milliseconde de rendu : supprime la sensation de blocage,
+qui est la plainte réelle. **Autonome, et le meilleur rapport gain/risque du
+ticket.**
+
+**Lot 2 — le fond cesse d'arriver après la page.** Trois changements qui vont
+ensemble :
+
+- le fond est déclaré **côté serveur** (le HTML porte l'URL et les jetons de
+  teinte), plus par un effet après hydratation. Supprime du même coup le
+  basculement de couleur de la page déjà peinte ;
+- une version **pré-floutée et réduite** est produite à l'envoi, comme la
+  teinte dominante l'est déjà (`blockImageUpload.ts` appelle déjà `sharp`) : le
+  flou est fixe, l'image est floutée de toute façon, donc la stocker floutée
+  supprime à la fois le poids et le coût de peinture ;
+- la redirection signée est gardée en cache plus longtemps pour ce cas — 240 s
+  (`storage.ts:53`) est court pour une image de fond qui ne change jamais.
+
+Le fondu de sortie de V2-G13 doit survivre : il est la raison d'être du
+fournisseur, et rendre le fond côté serveur ne doit pas le reprendre.
+
+**Lot 2.1 — le fond passe côté serveur.** Né du lot 2, qui a livré le chemin de
+livraison et le préchargement mais laissé les jetons de teinte au client. Section
+dédiée plus bas : quatre voies instruites, la première retenue par l'auteur (le
+middleware pose la fiche courante en en-tête, le layout la lit). **Avant le lot
+3** — il extrait `getPublicWikiBackground` de `getPublicEntityDetail`, qui est
+la fonction que le lot 3 réorganise. Il pose aussi une condition sur le lot 4.
+
+**Lot 3 — aplatir les vagues.** Points F et G : lancer `getCalendar` et
+`listEntitiesForWorld` dès que `worldId` est connu, quitte à faire parfois une
+requête pour rien. Deux vagues en moins sur le chemin critique, correctif local
+à `publicShare.ts`. Le point H ne se traite qu'en fonction de ce que le lot 0
+montre.
+
+**Lot 4 — `/partage/*` sort du mur d'authentification.** Point I. Le jeton fait
+foi sur cette route, la session n'y sert à rien. Attention : `updateSession`
+fait deux choses, le rafraîchissement du cookie et la garde `/login`. Seule la
+seconde est inutile ici, et la première n'a aucune raison de partir sur le
+réseau pour un visiteur qui n'a pas de session. À écrire comme un
+court-circuit avant l'appel, jamais comme un trou dans la garde.
+
+**Reformulé par le lot 2.1, et ce n'est plus une nuance de rédaction.** Le
+middleware **continue de s'exécuter** sur `/partage/*` ; ce qu'on supprime est
+l'appel réseau `auth.getUser()`, jamais le passage. Depuis le lot 2.1, c'est ce
+middleware qui pose l'en-tête dont le layout tire la fiche courante : retirer
+`/partage` du `matcher` — le raccourci qui vient naturellement à l'esprit en
+lisant le titre de ce lot — ferait retomber le fond au comportement d'avant,
+sans erreur et sans test rouge. Le critère de rendu serveur du lot 2.1 est
+précisément là pour que ce raccourci se fasse voir.
+
+**Lot 5 — les bulles se chargent pendant la lecture.** Voir la section dédiée
+ci-dessous : c'est une question de l'auteur, elle a une bonne réponse, et elle
+a un piège.
+
+**Lot 6 — les 21 préchargements du corps, une fois le lot 1 posé.** Né du
+relevé 3, et volontairement placé APRÈS le lot 1 parce que sa bonne réponse en
+dépend. Deux issues, et la mesure tranchera :
+
+- si un `loading.tsx` rend le préchargement utile (le squelette arrive avant le
+  clic), les liens du corps restent au réglage par défaut et le ticket n'a rien
+  à écrire ;
+- s'il reste creux, les quatre endroits concernés (`PublicBlockView.tsx:106`,
+  `:123`, `:414`, `MentionedIn.tsx:53`) prennent `prefetch={false}` comme
+  `EntityTree` en V3-R5, et le commentaire de V3-R5 est complété pour dire ce
+  qu'il ne couvrait pas.
+
+Dans les deux cas, le nombre de requêtes par page ouverte est recompté.
+
+Les points J, K, L et M sont consignés et **non retenus** : J et K ne touchent
+que le premier chargement, L est un défaut d'affichage sans coût réseau, M est
+mesuré et n'est pas le problème. Écrits ici pour qu'on n'ait pas à les
+retrouver.
+
+### Lot 1 — livré
+
+Trois `loading.tsx` (un par segment `[entitySlug]` des trois routes de wiki),
+un squelette commun `components/entities/public/WikiFicheSkeleton.tsx`, et
+l'état d'attente du lien cliqué dans `EntityTree`.
+
+Ce sont les **premiers `loading.tsx` de l'application**. `CHARTE-UI.md` §5 les
+comptait à zéro et en faisait le F-01 du rapport d'audit ; le rattrapage de
+l'existant reste un chantier à part, mais la règle des quatre états s'applique
+désormais à l'écran le plus visité du dépôt.
+
+**Ce que le squelette esquisse, et ce qu'il n'esquisse pas.** Le titre (à la
+hauteur exacte d'`.entity-title`, 36 px — vérifié en place), l'étiquette de
+genre poussée à droite, puis des lignes de prose de largeurs irrégulières. Pas
+de portrait : seules certaines fiches en ont un, et en promettre un qui
+disparaît ensuite déplacerait tout le texte au moment de l'arrivée. On
+n'esquisse que ce que TOUTE fiche possède.
+
+**Le signal du lien cliqué ne pouvait pas être le fond.** `hover:bg-panel-raised`
+le pose déjà : cliquer une ligne survolée n'aurait donc rien changé à l'écran,
+précisément dans le cas le plus courant. Il porte sur la couleur du texte
+(`text-accent`, celle de la ligne active — ce que cette ligne est sur le point
+de devenir) et sur le pouls. Aucun nœud ajouté, aucune largeur modifiée : la
+ligne ne bouge pas. `useLinkStatus` se lit depuis un descendant du `<Link>`,
+d'où le petit composant `NomDuLien` plutôt qu'un calcul dans `NodeRow`.
+
+Inoffensif dans la coquille d'édition, où le même arbre est monté sans
+`hrefBase` : le clic y ouvre une fenêtre et appelle `preventDefault()`
+(ADR-0006), donc aucune navigation ne démarre et `pending` y reste faux. Rien à
+conditionner.
+
+#### Vérification
+
+Sur un build de production (`creadonjon-prod`), monde Faerûn, mêmes fiches
+qu'au lot 0.
+
+| | |
+|---|---|
+| Squelette visible après le clic | **43 ms** et **52 ms** (deux mesures) |
+| Durée d'affichage avant la fiche | 594 ms |
+| Coût serveur, Prologue | 750 ms (lot 0 : 731) |
+| Coût serveur, Clan Oorvarsh | 216 ms (lot 0 : 215) |
+| Coût serveur, fiche `/13` | 215 ms (lot 0 : 229) |
+
+**Le lot 1 ne coûte rien au serveur** — les trois écarts sont dans le bruit de
+mesure. C'était attendu : une frontière de chargement ne rend que du balisage
+statique.
+
+Les deux mesures de 43 et 52 ms ont été prises sur des liens du **sommaire**,
+qui portent `prefetch={false}` depuis V3-R5 et ne sont donc jamais préchargés.
+Le point qui suit en dépend.
+
+Les quatre modes vérifiés en place (`dark`, `dim`, `soft`, `light`) : la
+hiérarchie titre/prose reste lisible dans les quatre, et les barres suivent la
+teinte du fond de la fiche courante, pas celle de l'application — elles héritent
+de `.wiki-bg-scope` comme tout le reste de la colonne. Le sommaire, lui, ne
+bouge pas : il vit dans le `layout.tsx` depuis V2.1-12/19, et c'est cette
+propriété qui rend ce lot possible.
+
+Mesuré sur `/partage` seulement. `/apercu` et l'onglet Wiki joueur rendent le
+même composant depuis la même structure de layout, mais les chronométrer
+demanderait une session authentifiée dans le navigateur de mesure — non fait,
+et écrit ici plutôt que supposé.
+
+#### Ce que le lot 1 a changé au préchargement, et ce qu'il n'a pas changé
+
+Le relevé 3 avançait une prédiction : « le lot 1 rend au préchargement le
+travail qu'on lui demandait déjà sans le savoir ». **Elle n'est vraie qu'à
+moitié, et la moitié fausse est celle qui comptait.**
+
+| | Avant le lot 1 | Après |
+|---|---|---|
+| Requêtes `?_rsc=` par page ouverte | 21 | 18 |
+| Charge rapportée | 21 octets chacune | 0,2 à 1,3 ko, 13,3 ko au total |
+| Durée médiane | ~35 ms | 64 ms |
+
+Next prépare donc bien quelque chose maintenant — la frontière de chargement,
+là où il ne rapportait rien. Mais **ce quelque chose n'accélère rien de
+mesurable** : le squelette apparaît en 43 ms sur un lien de sommaire qui n'est
+jamais préchargé, et `staleTimes.dynamic` valant toujours 0, la partie dynamique
+d'une route préchargée reste écartée aussitôt (V2.1-18). Les 18 requêtes coûtent
+désormais deux fois plus cher qu'avant pour le même bénéfice : aucun.
+
+Le **lot 6** penche donc vers la coupure. L'A/B décisif — temps jusqu'au
+squelette sur une cible préchargée contre une cible qui ne l'est pas — reste à
+faire au moment de l'écrire ; c'est exactement le genre d'affirmation que
+V2.1-18 a vu s'effondrer sous un chronomètre, et celle-ci vient déjà d'être
+corrigée une fois.
+
+### Lot 2 — le chemin du fond était coupé, pas lent
+
+**Ce lot devait rendre le fond plus rapide. En mesurant son chemin de bout en
+bout, on a trouvé qu'il n'arrivait jamais.**
+
+`/api/blocks/[blockId]/image` — la route qui sert les images de bloc, et donc
+l'image de fond du wiki — répondait **307 vers `/login`** à toute requête sans
+session. Sur une page `/partage`, un visiteur anonyme n'avait donc ni fond de
+page, ni aucune image dans le corps des fiches. Le lecteur ne voyait pas une
+page lente : il voyait une page amputée.
+
+Personne ne l'avait vu parce que **l'auteur est connecté quand il vérifie son
+propre lien**. C'est exactement ce que dit son retour, relu après coup : « le
+chargement s'effectue bizarrement lorsque le fond est paramétré autrement que
+celui par défaut ». Il décrivait la lenteur qu'il voyait, lui ; ses joueuses,
+elles, ne voyaient rien du tout.
+
+#### Deux défauts empilés, le second caché par le premier
+
+**1. Le middleware.** `/api/blocks/[id]/image` n'était pas sur la liste des
+chemins publics de `lib/supabase/middleware.ts`. C'est la **troisième
+occurrence du même défaut** : le commentaire de ce fichier raconte déjà les
+deux précédentes (`/api/assets/`, puis `/api/entities/[id]/portrait`), trouvées
+chacune en testant un lien de partage avec un vrai client sans session. La
+route ajoutée ensuite par V2-G12/V2-L1 n'a pas été ajoutée à la liste, et rien
+ne pouvait le signaler — aucun test n'exerçait ce chemin, et la page HTML, elle,
+se chargeait très bien.
+
+**2. La signature.** Le middleware corrigé, la route répondait **404**. Elle
+résolvait correctement l'identifiant de l'asset avec le client service-role
+(`getPublicBlockImageAssetId`, qui revalide `filterBlocks` avec un viewer
+anonyme), puis signait l'URL avec le client de la **requête** — anonyme. Or la
+RLS `assets_select` (migration `20260902110001`) ne laisse l'anonyme lire une
+ligne `assets` que si elle porte `visibility_level = 'public'`, et une image de
+bloc est téléversée en `players` (`blockImageUpload.ts`). La lecture échouait
+donc systématiquement.
+
+Ce second défaut était **inatteignable** tant que le premier existait. Les deux
+sont tombés ensemble, et c'est la seule raison pour laquelle le premier n'a pas
+été livré seul en croyant la chose réglée.
+
+#### Une fuite refermée en même temps
+
+Rendre cette route atteignable, c'est rendre atteignable ce qu'elle décide. Or
+elle ne regardait que la visibilité du **bloc** — jamais celle de la **fiche**.
+`is_public` bascule la fiche entière (V2), et `getPublicEntityDetail` pose bien
+ce test avant de rendre quoi que ce soit ; il manquait ici. L'image d'un bloc
+public posé sur une fiche **masquée** se serait donc servie à qui connaît
+l'identifiant du bloc.
+
+Sans conséquence jusqu'à aujourd'hui, puisque personne ne pouvait atteindre la
+route. Ajouté dans le même lot, jamais après.
+
+#### Ce qui garde tout cela, maintenant
+
+Trois tests dans `publicShare.integration.test.ts` — le fichier qui existe
+précisément pour ça (V1 D-01 : « le filtrage applicatif est la seule barrière
+une fois le jeton résolu »). Un témoin et deux refus :
+
+- l'image d'un bloc public sur une fiche publique **est** servie ;
+- l'image d'un bloc `gm` ne l'est jamais ;
+- l'image d'un bloc public posé sur une fiche **masquée** ne l'est jamais.
+
+Le témoin n'est pas décoratif : sans lui, les deux refus passeraient aussi bien
+si la fonction refusait tout.
+
+**Vérifié que ces tests peuvent tomber.** La garde `is_public` retirée à la
+main, le troisième échoue avec le bon message (`expected 'debe7464-…' to be
+null`) — il rendait bien l'asset d'une fiche masquée. Un test de fuite qu'on
+n'a pas vu échouer ne garde rien.
+
+`getPublicBlockImageAssetId` (la décision) est séparé de
+`getPublicBlockImageSignedUrl` (la signature) pour cette raison seule : la
+décision se vérifie sans qu'aucun fichier n'existe dans le stockage.
+
+#### Le préchargement de l'image, lui, était bien le sujet prévu
+
+`WikiBackgroundPreload` — composant **serveur**, c'est tout son intérêt. Le fond
+reste déclaré par `WikiBackgroundRegistrar`, qui est client et ne peut agir
+qu'après l'hydratation ; le navigateur ne découvrait donc l'URL de l'image
+qu'à ce moment-là. Un `<link rel="preload">` posé dans le HTML la lui annonce
+dès le `<head>`.
+
+| | Lot 0 | Après |
+|---|---|---|
+| La requête de l'image part | **327 ms après** la fin du HTML | **11 ms avant** |
+
+Rien d'autre ne change : la div, le fondu d'entrée et le fondu de sortie de
+V2-G13 restent entièrement au fournisseur. Le téléchargement commence plus tôt,
+voilà tout. Pas de `fetchPriority: "high"` : à cet instant le navigateur
+télécharge encore le JS de la page, et passer devant lui retarderait
+l'hydratation pour gagner sur une image d'ambiance.
+
+#### Ce que ce lot ne fait pas, et pourquoi
+
+Deux des trois changements annoncés ne sont **pas** livrés. Ils ne sont pas
+oubliés : chacun engage une décision qui dépasse le lot.
+
+**La version pré-floutée et réduite.** L'image mesurée fait 1600 × 900 et
+356 ko pour un flou de 10 px — elle n'a besoin ni de l'un ni de l'autre. Mais
+la produire demande un second asset par fond, un champ pour le désigner (dans
+la donnée du bloc `image` plutôt qu'une migration), une variante sur la route
+d'image, et un repli pour les fonds déjà téléversés. C'est un lot à soi seul, et
+son gain est maintenant moindre qu'avant : le préchargement absorbe déjà
+l'essentiel de l'attente.
+
+**Les jetons de teinte dans le HTML.** C'est la partie « supprime le
+basculement de couleur de la page déjà peinte », et elle bute sur une contrainte
+d'architecture : `--h`/`--c`/`data-mode` sont appliqués par `BookSkin`, qui vit
+dans le `layout.tsx` — et un layout ne connaît pas le segment enfant rendu sous
+lui. Le fond, lui, est par FICHE. Trois voies, toutes structurantes :
+
+1. le middleware pose un en-tête `x-pathname`, le layout en tire l'`entitySlug`
+   et charge le fond lui-même — au prix d'une à deux requêtes de plus sur le
+   chargement initial ;
+2. une route parallèle (`@fond/[entitySlug]`) donne au layout un emplacement
+   qui, lui, connaît le segment — idiomatique, mais elle ne peut poser un
+   attribut sur un ancêtre, donc `data-mode` resterait client ;
+3. ne rien faire : le basculement porte sur la teinte et la chroma, et reste
+   discret tant que le mode ne change pas (il ne change que pour une image
+   assez claire pour que le mode sombre ne tienne plus).
+
+**Aucune n'est évidente, et le choix engage le reste** (CLAUDE.md, « deux
+implémentations raisonnables »). À trancher avec l'auteur, avec un ADR si la
+voie 1 ou 2 est retenue.
+
+**Le cache de la redirection signée** n'a pas été touché non plus : l'allonger
+revient à allonger la durée de vie d'une URL signée (`SIGNED_URL_TTL_SECONDS`),
+donc la fenêtre pendant laquelle une URL copiée reste utilisable. C'est un
+paramètre de sécurité, pas un réglage de performance — il se change délibérément
+ou pas du tout.
+
+### Lot 2.1 — le fond passe côté serveur
+
+Ce que le lot 2 n'a pas fait, et qui restait ouvert : les jetons de teinte dans
+le HTML, donc la fin du basculement de couleur d'une page déjà peinte. Sorti en
+lot propre parce qu'il n'est pas une finition du lot 2 — il déplace une
+responsabilité d'un côté à l'autre de la frontière serveur/client.
+
+#### Le problème, une fois mesuré
+
+`BookSkin` applique `--h`/`--c`/`data-mode` sur son conteneur, et il les tient
+du contexte, que `WikiBackgroundRegistrar` alimente dans un `useEffect`. Or
+`BookSkin` vit dans le `layout.tsx` (V2.1-12/19) et **un layout ne connaît pas
+le segment enfant rendu sous lui**, alors que le fond est par FICHE. Rien dans
+le rendu serveur ne peut donc porter ces jetons : ils n'apparaissent qu'après
+l'hydratation, et toute la colonne se repeint à ce moment-là.
+
+Mesuré sur le Prologue : racine à `--h: 249, --c: 0.037`, portée du wiki à
+`--h: 90, --c: ≈0` — **les deux en mode sombre**. Le basculement porte donc sur
+la teinte et la saturation d'un fond sombre. L'exception est `mode`, qui vaut
+`availableModes[0]` (liste ordonnée sombre→tamisé→doux→clair) : une image assez
+claire pour que le sombre ne tienne plus sélectionne `light`, et la colonne
+entière bascule alors du sombre au clair après l'hydratation.
+
+#### Quatre voies instruites, une retenue
+
+| | Corrige la teinte | Corrige `data-mode` | Coût | Nouveau mécanisme |
+|---|---|---|---|---|
+| **1. en-tête `x-pathname`** | oui | oui | 3 vagues, annulables | oui |
+| 2. route parallèle `@fond` | non | non | idem | non |
+| 3. ne rien faire | non | non | zéro | non |
+| 4. portée toujours posée + `<style>` | oui | non | zéro | non |
+
+**Voie 2 écartée** : un emplacement parallèle rend À L'INTÉRIEUR du layout, il
+ne peut donc poser ni attribut ni style sur `BookSkin`, qui est son ancêtre. Il
+pourrait émettre un `<style>` pour `--h`/`--c`, mais `--bg`, `--panel`… sont
+résolus sur `:root` et ne se recalculent que dans le bloc
+`.wiki-bg-scope[data-mode="…"]` — il faudrait recopier toute la palette de
+`tokens.css`. Elle sert l'image tôt, et l'image est déjà réglée par le lot 2.
+
+**Voie 4 écartée pour l'instant**, et pour une raison qui vaut d'être notée :
+elle ferait matcher `.wiki-bg-scope[data-mode="…"]` sur TOUTES les fiches. Or ce
+sélecteur écrase `:root[data-contrast="high"]` (tokens.css:255), qui repose la
+palette en valeurs neutres. Le mode contraste élevé est donc déjà perdu sur
+toute fiche portant un fond — défaut réel, trouvé en instruisant ce lot, qui ne
+relève pas de la performance et part dans son propre ticket. La voie 4
+étendrait ce défaut de « les fiches illustrées » à « tout le wiki ». Elle ne
+redeviendra envisageable qu'une fois le garde posé.
+
+**Voie 1 retenue par l'auteur.** C'est la seule qui règle la teinte ET le mode :
+le layout connaît la fiche, donc la classe, l'attribut, les jetons et la div de
+fond partent dans le HTML.
+
+#### Les deux objections, et ce qui les lève
+
+**« Le layout deviendrait le chemin critique. »** Charger le fond coûte trois
+vagues (`getEntityBySlug` → `listBlocksForEntity` → `getBackgroundMetaForBlock`).
+Le layout en fait deux aujourd'hui (248 ms, relevé 1) ; à cinq, il dépasserait
+une fiche ordinaire, qui n'en coûte que quatre.
+
+La parade n'est PAS de mémoïser `listBlocksForEntity` : ce dépôt a dix appelants
+dans des chemins d'ÉCRITURE (`characterActions`, `characterCreator`,
+`generators`, `notebook`, `entities.duplicate`), et `React.cache` étant borné à
+la requête, une action serveur qui insère un bloc puis relit la liste recevrait
+la version d'avant l'écriture. On s'installerait un bug pour en éviter un autre.
+
+La parade est une fonction de SERVICE mémoïsée, confinée au chemin de lecture
+publique — `getPublicWikiBackground(worldId, entitySlug)` — appelée par le
+layout ET par `getPublicEntityDetail`. Lecture seule, jamais dans un chemin
+d'écriture, donc `cache()` y est sans danger. Et comme `cache()` mémoïse la
+PROMESSE, le layout et la page qui partent en parallèle attendent le même
+appel : le surcoût est nul, pas « faible ».
+
+**« Le mode d'échec est muet. »** C'était l'objection décisive : le lot 4 veut
+sortir `/partage/*` du middleware, et sans l'en-tête le fond retombe au
+comportement d'aujourd'hui, sans erreur et sans test rouge. Deux réponses, et il
+faut les deux :
+
+1. le lot 4 est reformulé (voir sa description) : le middleware continue de
+   s'exécuter, seul l'appel réseau disparaît ;
+2. un test lit le HTML **rendu** et vérifie que la portée y porte bien les
+   jetons de la fiche. C'est ce test qui transforme le raccourci muet en échec
+   visible — la discipline seule ne l'aurait pas fait, la règle de V2.1-15 le
+   dit déjà : un test qui échoue pour la raison qu'on attend vaut mieux qu'une
+   intention.
+
+#### Pourquoi AVANT le lot 3
+
+Pas parce que les deux touchent le même fichier : parce que l'extraction de
+`getPublicWikiBackground` **découpe `getPublicEntityDetail`**, qui est
+exactement la fonction que le lot 3 réorganise. Fait après, le lot 3 devrait
+défaire une partie de son propre travail ; fait avant, il travaille sur la
+forme définitive.
+
+#### Critères
+
+- [ ] `getPublicWikiBackground(worldId, entitySlug)` existe, est mémoïsé, et est
+      le seul chemin par lequel le layout comme `getPublicEntityDetail`
+      obtiennent le fond d'une fiche.
+- [ ] Relevé du nombre de vagues du layout et de la page avant/après, sur la
+      même fiche qu'au lot 0 : le partage doit se voir, pas se supposer.
+- [ ] Le HTML servi porte `wiki-bg-scope`, `data-mode` et `--h`/`--c` de la
+      fiche — vérifié par un test sur le rendu, pas seulement en navigateur.
+- [ ] Aucune bascule de couleur après hydratation, vérifiée en navigateur sur
+      un build de production, réseau bridé.
+- [ ] Le fondu de sortie de V2-G13 fonctionne encore entre deux fiches, et en
+      revenant au sommaire.
+- [ ] Les trois routes de wiki se comportent pareil.
+- [ ] La description du lot 4 porte sa reformulation.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+
+### Ce que ce ticket ne fera pas, et pourquoi c'est déjà tranché
+
+**Il ne remettra pas le préchargement sur le sommaire.** `EntityTree.tsx:99`
+pose `prefetch={false}` sur tous les liens, et le commentaire V3-R5 se termine
+pourtant par « Reste juste là où le clic navigue vraiment (peau « livre »,
+coquille joueur) » — la phrase se lit comme si le préchargement y était
+maintenu. Il ne l'est pas : le drapeau est inconditionnel, et dans `BookSkin` le
+clic navigue vraiment (`useOpenEntityLink.ts:20` ne fait pas de
+`preventDefault()` quand `hrefBase` est fourni). La phrase parle du **coût**
+d'une navigation à froid, pas d'un préchargement conservé ; elle mérite d'être
+reformulée au passage du lot 1, parce qu'elle s'est laissé lire de travers une
+fois.
+
+Ce paragraphe a été écrit **avant** le relevé 3, et celui-ci l'a corrigé sur un
+point : le préchargement n'est coupé que sur le sommaire. Les liens du corps
+préchargent, eux, et le font 21 fois par page. Voir le lot 6 — la conclusion
+ci-dessous ne change pas pour autant, elle porte sur le sommaire.
+
+L'idée de précharger au survol plutôt qu'à l'entrée dans le champ de vision est
+séduisante et **elle a déjà été mesurée, en V2.1-18** : 448 ms à froid contre
+428 ms après un survol appuyé, soit l'écart de mesure — parce que
+`staleTimes.dynamic` vaut 0 par défaut et qu'une route dynamique préchargée est
+écartée aussitôt. Le survol produisait deux rendus serveur, et le clic en
+faisait un troisième.
+
+Donc : le levier n'est pas le préchargement, c'est `staleTimes`. Et c'est une
+décision de **portée applicative** — garder une réponse dynamique en cache côté
+client, c'est accepter qu'une fiche modifiée par le MJ reste affichée telle
+qu'elle était pendant la durée choisie. Ça ne se décide pas dans un composant,
+et ça demande un ADR si l'auteur veut l'ouvrir. La seule chose que ce ticket
+fait dans cette direction est indirecte : un `loading.tsx` (lot 1) donne au
+préchargement une frontière à préparer, ce qui lui manquait.
+
+### La question de l'auteur : charger les bulles après la page
+
+> « lors du chargement initial, uniquement le chargement de la page globale, et
+> une fois la page globale visible pour l'utilisateur, le chargement des bulles
+> — ainsi on profite du temps de lecture de l'utilisateur pour y mettre un
+> chargement caché. »
+
+**Oui, et c'est la bonne idée.** Aujourd'hui `getPublicEntityDetail` résout, à
+chaque rendu, l'extrait du premier paragraphe de **toutes** les entités citées
+et la prose de **toutes** les règles citées (vague 7) — pour des cartes que le
+lecteur ne verra que s'il survole, peut-être jamais. Sur une entrée de Livre de
+sessions qui cite une douzaine de fiches, c'est un coût fixe payé par tout le
+monde pour un usage occasionnel.
+
+**La forme compte, et ce n'est pas une route.** Deux mécanismes répondent à la
+demande :
+
+- **`<Suspense>` et diffusion RSC** : la page est rendue et peinte sans les
+  extraits ; le serveur garde la réponse ouverte et pousse les extraits quand
+  ils sont prêts ; React les raccorde. Même requête, aucun aller-retour de
+  plus, aucune route nouvelle, aucun `fetch` côté client. Le lecteur voit la
+  page à T, les bulles sont prêtes peu après sans qu'il se passe rien à
+  l'écran. C'est exactement le « chargement caché pendant le temps de lecture »
+  demandé.
+- **Une route appelée après la peinture** : un aller-retour HTTP de plus, du
+  code client à écrire, et les données qui arrivent plus tard. Elle n'a qu'un
+  avantage — la réponse de navigation se ferme plus tôt — et cet avantage ne
+  sert à rien ici.
+
+Donc `<Suspense>`. À noter que ceci ne contredit pas la règle de V2.1-18
+(« rien ne part sur le réseau au survol ») : elle est **tenue plus fort**,
+puisque la donnée est en mémoire avant le premier survol, sans que le survol
+déclenche jamais quoi que ce soit.
+
+**Le piège, et il est réel.** Les deux familles de liens ne se comportent pas
+pareil :
+
+- un lien d'**entité** est un lien quoi qu'il arrive : son `href` existe, son
+  apparence ne dépend pas de l'extrait. Son extrait se diffère sans aucun effet
+  visible ;
+- un lien de **règle** n'est un lien **que s'il a de la prose** — c'est la
+  décision du lot 1 de V2.1-18, prise pour corriger un lien qui se déguisait en
+  lien. Or « a-t-il de la prose ? » est justement ce que
+  `resolveRuleRefPreviews` va chercher. Différer cette résolution en bloc, c'est
+  différer la décision d'apparence : le lien se peindrait dans un état puis
+  changerait. On aurait rendu la page plus rapide en réintroduisant exactement
+  le défaut que V2.1-18 a été ouvert pour corriger.
+
+Trois issues possibles, à départager **avec le lot 0 en main** et pas avant :
+différer les seuls extraits d'entités ; ou couper la résolution de règle en
+deux (l'existence, qui reste sur le chemin critique, et l'extrait, qui part en
+`<Suspense>`) ; ou constater que la chaîne de rulesets du monde mesuré est
+courte, que le point H ne coûte rien, et qu'il n'y a rien à différer de ce côté.
+
+### Critères
+
+- [x] Lot 0 : nombre d'allers-retours par navigation, temps jusqu'au premier
+      octet, chronologie du fond — les trois relevés écrits dans ce ticket,
+      avec le monde et la fiche sur lesquels ils ont été pris.
+- [x] Un clic dans le sommaire produit un retour visible en moins de 100 ms,
+      sur les trois routes de wiki.
+- [ ] Le fond d'une fiche est présent dans le HTML initial : aucune bascule de
+      couleur de la page après hydratation, vérifiée en navigateur, réseau
+      bridé.
+- [ ] Le fondu de sortie de V2-G13 fonctionne encore entre deux fiches, et en
+      revenant au sommaire.
+- [ ] Le nombre d'allers-retours par navigation est relevé après, sur le même
+      monde et la même fiche qu'au lot 0.
+- [x] Un visiteur anonyme et un auteur connecté ouvrent le même lien de partage
+      et voient la même chose — le lot 4 ne doit rien changer d'autre que le
+      coût.
+- [ ] Les cartes d'aperçu s'ouvrent toujours sans requête au survol, et un lien
+      de règle ne change jamais d'apparence après le premier rendu.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+
+---
+
+## V2.1-21 — Le contraste élevé se perd sur une fiche illustrée · `S`
+
+### Constat
+
+`src/styles/tokens.css` déclare la palette deux fois, pour deux raisons
+différentes, et les deux déclarations se rencontrent sur le wiki :
+
+- `:root[data-contrast="high"]` (tokens.css:255) repose **toute** la palette en
+  valeurs neutres littérales — `--c: 0`, `--bg: oklch(0.12 0 0)`, etc. — quel
+  que soit le mode choisi. C'est le mode contraste élevé, et il est déclaré sur
+  la racine.
+- `.wiki-bg-scope[data-mode="…"]` redéclare cette même palette à partir des
+  `--h`/`--c` de la fiche courante, pour que le wiki prenne la teinte de son
+  image de fond (V2-G13). C'est un **descendant** de la racine, donc plus
+  spécifique.
+
+Le second gagne. **Sur toute fiche portant un fond de page wiki, le contraste
+élevé est écrasé et la palette colorée revient**, sur les trois routes de wiki.
+
+Un lecteur qui a activé le contraste élevé le perd donc précisément là où il en
+a le plus besoin : sur les pages dont le fond est une photographie floutée.
+
+### Comment il a été trouvé
+
+En instruisant V2.1-20 lot 2.1, pas en le cherchant. Une des voies envisagées
+consistait à poser `.wiki-bg-scope` sur **toutes** les fiches plutôt que sur les
+seules fiches illustrées ; en vérifiant ce que ce sélecteur écrase, le défaut
+est apparu — et il existe déjà aujourd'hui, sans qu'aucune des quatre voies ne
+soit implémentée.
+
+C'est la même leçon que V2.1-18 : on ne trouve pas ce défaut-là en relisant le
+code, on le trouve en répondant à autre chose. Il ne relève pas de la
+performance et n'a rien à faire dans V2.1-20 — d'où ce ticket.
+
+### Piste, à vérifier avant d'y croire
+
+Garder les blocs de portée derrière la racine :
+`:root:not([data-contrast="high"]) .wiki-bg-scope[data-mode="…"]`.
+
+Ce qui rend la chose plausible : sous contraste élevé, `:root` pose des valeurs
+**littérales** (`oklch(0.12 0 0)`), sans `var(--h)`. Les `--h`/`--c` que
+`BookSkin` applique en style **inline** — et qu'aucun sélecteur ne peut
+neutraliser, la spécificité ne s'appliquant pas à eux — deviennent donc inertes
+d'eux-mêmes : plus personne ne les lit. Le garde devrait suffire, sans toucher
+au composant.
+
+À vérifier plutôt qu'à supposer : `color-scheme` est déclaré dans les deux
+blocs, et c'est exactement le genre de propriété dont V2.1 a déjà appris qu'elle
+ne suit aucune règle de jeton (tokens.css:21).
+
+### La question qui va avec, et qui n'est pas technique
+
+Faut-il aller plus loin et **masquer l'image de fond elle-même** sous contraste
+élevé ? Poser du texte sur une photographie floutée est le contraire de ce que
+ce mode cherche, même avec une palette neutre par-dessus. Le garde ci-dessus
+rend la palette correcte et laisse l'image ; la masquer serait plus cohérent et
+plus brutal.
+
+C'est un choix de l'auteur, pas une évidence technique — à trancher avant
+d'écrire, parce que les deux correctifs ne se ressemblent pas.
+
+### Critères
+
+- [ ] Sur une fiche portant un fond, contraste élevé activé : la palette reste
+      celle du contraste élevé, vérifiée en navigateur sur les trois routes de
+      wiki.
+- [ ] Sur la même fiche, contraste élevé désactivé : la teinte du fond
+      s'applique comme avant — le correctif ne doit rien retirer au cas normal.
+- [ ] Les quatre modes (`dark`, `dim`, `soft`, `light`) revérifiés avec et sans
+      contraste élevé.
+- [ ] La question de l'image de fond est tranchée et écrite ici, quelle que
+      soit la réponse.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
 
 ---
 
