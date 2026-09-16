@@ -135,8 +135,9 @@ function NodeRow({
            * V2.1-20 lot 6 — cette phrase s'est laissee lire comme si le
            * prechargement etait maintenu quelque part. Il ne l'est nulle part,
            * et surtout : ce commentaire ne couvrait que le SOMMAIRE. Les liens
-           * du corps d'une fiche (`PublicBlockView`, `MentionedIn`, le titre de
-           * `BookSkin`) n'avaient jamais recu ce drapeau et declenchaient 18
+           * du corps d'une fiche (`PublicBlockView`, le panneau de retroliens
+           * retire depuis, le titre de `BookSkin`) n'avaient jamais recu ce
+           * drapeau et declenchaient 18
            * requetes par page ouverte. Mesure A/B faite a ce moment-la : un
            * squelette apparait en 18 ms sur une cible prechargee contre 20 ms
            * sur une cible qui ne l'a jamais ete, et une navigation coute

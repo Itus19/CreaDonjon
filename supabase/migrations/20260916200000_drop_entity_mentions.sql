@@ -1,0 +1,33 @@
+-- Retrait de la table des retroliens (`entity_mentions`), a la demande de
+-- l'auteur : « il y a une partie intitulee "mentionne dans", j'aimerais
+-- simplement la supprimer. Je n'en ai pas besoin. » Ce sont les RELATIONS
+-- qui portent desormais seules la mise en evidence des liens entre fiches.
+--
+-- Cette table n'avait qu'un seul lecteur — le panneau « Mentionne dans » — et
+-- un seul ecrivain : le recalcul des mentions a chaque enregistrement d'un
+-- bloc de texte. Les deux sont supprimes du code dans le meme lot
+-- (`MentionedIn.tsx`, la route `/api/entities/[id]/mentions`,
+-- `services/linker.ts`, `repos/entityMentions.ts`, `core/linker/mentions.ts`,
+-- et les appels dans `services/blocks.ts`). Ce qui restait ici etait une
+-- table morte, alimentee par personne et lue par personne.
+--
+-- Ce que cette migration ne touche PAS, et c'est deliberé : les liens dans le
+-- texte eux-memes (noeud `ref` des segments, specs/wiki-liens-et-personnages.md
+-- §A1) ne vivent pas dans cette table mais dans le contenu des blocs. Ils
+-- restent entierement fonctionnels — detection, bouton « Lier a la Fiche »,
+-- rendu cliquable, apercu au survol. Seul le sens INVERSE (qui me mentionne ?)
+-- disparait.
+--
+-- Perte de donnees assumee : les lignes de cette table sont integralement
+-- derivables du contenu des blocs. Si le sujet revenait un jour, un simple
+-- recalcul les reconstruirait — c'est precisement ce que faisait
+-- `replaceMentionsForSource` a chaque ecriture.
+--
+-- `drop table` emporte avec lui les trois index (`mentions_target_idx`,
+-- `mentions_source_idx`, `mentions_rule_idx`) et les quatre politiques RLS
+-- (`entity_mentions_select` de 20260804150001, puis `_insert`/`_update`/
+-- `_delete` de 20260804150003). Aucune autre table ne la reference : les
+-- cles etrangeres partent d'elle vers `worlds` et `entities`, jamais
+-- l'inverse. Rien d'autre a nettoyer.
+
+drop table if exists entity_mentions;

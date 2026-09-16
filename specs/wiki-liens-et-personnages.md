@@ -79,6 +79,17 @@ Cibles possibles d'un `ref` : `entity` (par identifiant), `rule` (par clé, pour
 
 ## A2. Mentions et rétroliens
 
+> **Retiré de l'application le 16 septembre 2026, à la demande de l'auteur :**
+> « je n'en ai pas besoin ». Le panneau « Mentionné dans », sa route, son
+> service, son dépôt et l'alimentation de la table ont tous été supprimés —
+> sans lecteur, recalculer les mentions à chaque enregistrement de bloc ne
+> servait plus personne. Ce sont les **relations** (§A3) qui portent seules la
+> mise en évidence des liens entre fiches. Les liens dans le texte (nœud
+> `ref`, §A1) ne sont pas concernés et restent en place.
+>
+> La section ci-dessous est conservée telle quelle : elle documente pourquoi
+> la colonne de visibilité existait, ce qui reste vrai si le sujet revient.
+
 Les règles ont reçu `ruleset_entry_refs`. Le wiki mérite le même traitement, et pour la même raison : un graphe maintenu à la main diverge.
 
 ```sql

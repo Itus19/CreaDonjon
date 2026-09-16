@@ -8,7 +8,6 @@ import PublicBlockView, { hasLeadRule } from "./PublicBlockView";
 import PublicPortrait from "./PublicPortrait";
 import PublicRelations from "./PublicRelations";
 import PublicMusicToggle from "./PublicMusicToggle";
-import MentionedIn from "@/components/entities/MentionedIn";
 import RefPreviewLayer from "./RefPreviewLayer";
 import type { EntityRefPreview, RuleRefPreview } from "@/src/server/services/refPreview";
 
@@ -110,7 +109,6 @@ export default function PublicEntityBody({
           <p className="mt-1 text-xs text-ink-muted">Alias : {entity.aliases.join(", ")}</p>
         )}
         <PublicRelations relations={relations} hrefBase={hrefBase} />
-        <MentionedIn entityId={entity.id} hrefBase={hrefBase} />
         {firstBlockWraps && (
           <PublicBlockView
             block={firstBlock}
@@ -151,7 +149,7 @@ export default function PublicEntityBody({
         <RefPreviewLayer
           entityRefs={entityRefs}
           ruleRefs={ruleRefs}
-          hrefBase={hrefBase}
+          hrefBase={hrefBase}
         />
       )}
     </div>

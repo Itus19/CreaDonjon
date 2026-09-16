@@ -125,7 +125,7 @@ Traité en premier parce que six tables en dépendent.
 ### 4.1 Le modèle
 
 ```sql
--- Fragment réutilisé dans blocks, relations, assets, chunks, entity_mentions
+-- Fragment réutilisé dans blocks, relations, assets, chunks
 visibility_level    text not null default 'public'
   check (visibility_level in ('public','players','gm','campaign','user','private')),
 visibility_scope_id uuid,
@@ -280,29 +280,17 @@ create index blocks_type_idx   on blocks (block_type);
 
 Chaque type a un schéma Zod dans `src/core/schemas/blocks/<type>.ts` et une version stockée dans `data.__v`. Catalogue et spécification détaillée dans `Spec_Blocs_de_Wiki_v0_1.md`.
 
-### 7.1 Mentions, modèles, images attachées
+### 7.1 Modèles, images attachées
+
+> **`entity_mentions` a été supprimée le 16 septembre 2026**
+> (`20260916200000_drop_entity_mentions.sql`), à la demande de l'auteur : le
+> panneau « Mentionné dans » ne lui servait pas. La table n'avait qu'un lecteur
+> et qu'un écrivain, tous deux retirés du code dans le même lot. Ce sont les
+> **relations** qui portent seules la mise en évidence des liens entre fiches.
+> Les liens dans le texte (nœud `ref`) ne sont pas concernés : ils vivent dans
+> le contenu des blocs, pas ici.
 
 ```sql
--- Rétroliens dérivés du contenu. Recalculés à chaque écriture, jamais saisis.
-create table entity_mentions (
-  id               uuid primary key default gen_random_uuid(),
-  world_id         uuid not null references worlds(id) on delete cascade,
-  source_entity_id uuid not null references entities(id) on delete cascade,
-  source_path      text not null,      -- 'narrative.s1' | 'block.<uuid>.description'
-  target_kind      text not null check (target_kind in ('entity','rule','asset')),
-  target_entity_id uuid references entities(id) on delete set null,
-  target_rule_key  text,
-  origin           text not null check (origin in ('link','alias_detected')),
-  visibility_level text not null default 'public'
-    check (visibility_level in ('public','players','gm','campaign','user','private')),
-  visibility_scope_id uuid,
-  created_at       timestamptz not null default now()
-);
-
-create index mentions_target_idx on entity_mentions (target_entity_id);
-create index mentions_source_idx on entity_mentions (source_entity_id);
-create index mentions_rule_idx   on entity_mentions (target_rule_key);
-
 create table entity_templates (
   id          uuid primary key default gen_random_uuid(),
   world_id    uuid references worlds(id) on delete cascade,  -- null = modèle fourni
@@ -1087,7 +1075,6 @@ auth.users
          ├── entity_templates                           │
          ├── entities ──┬── blocks                      │
          │              ├── relations                   │
-         │              ├── entity_mentions             │
          │              ├── entity_revisions            │
          │              ├── entity_assets               │
          │              └── entity_mechanical_revisions │
@@ -1120,7 +1107,7 @@ rulesets ── ruleset_entries ─┬── ruleset_entry_blocks
 |---|---|---|
 | 001 | `extensions.sql` | extensions, schéma `app`, `touch_updated_at` |
 | 002 | `accounts.sql` | `profiles` + trigger, `worlds` (dont `calendar`), `world_members` |
-| 003 | `entities.sql` | `entities`, `blocks`, `relations`, `entity_mentions`, `entity_templates`, index, triggers, anti-cycle `part_of`, `app.entity_path` |
+| 003 | `entities.sql` | `entities`, `blocks`, `relations`, `entity_mentions` (supprimée depuis — voir `20260916200000`), `entity_templates`, index, triggers, anti-cycle `part_of`, `app.entity_path` |
 | 004 | `rules.sql` | `rulesets`, `ruleset_entries`, `ruleset_entry_blocks`, traductions, `ruleset_entry_refs`, `ruleset_overrides`, verrou officiel, FK `worlds.default_ruleset_id` |
 | 005 | `campaigns.sql` | `campaigns`, membres, personnages, snapshots |
 | 006 | `mechanical.sql` | `entity_mechanical_revisions`, FK circulaire différée |
