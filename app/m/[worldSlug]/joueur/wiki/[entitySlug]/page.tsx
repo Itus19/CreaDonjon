@@ -9,6 +9,7 @@ import { getPlayerEntityDetail } from "@/src/server/services/playerEntityDetail"
 import type { Locale } from "@/src/i18n/request";
 import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
 import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
+import WikiBackgroundPreload from "@/components/entities/public/WikiBackgroundPreload";
 import EditEntityForm from "../../../(monde)/f/[entitySlug]/EditEntityForm";
 
 /**
@@ -68,6 +69,7 @@ export default async function JoueurWikiEntityPage({
     <>
       {/* V2.1-12 : la peau vient du layout ; cette page declare le fond de
           CETTE fiche, la seule chose qui change d'une fiche a l'autre. */}
+      <WikiBackgroundPreload background={detail.wikiBackground} />
       <WikiBackgroundRegistrar background={detail.wikiBackground} />
       <PublicEntityBody
         {...detail}

@@ -6,6 +6,7 @@ import { hasVerifiedSharePassword } from "../passwordActions";
 import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
 import type { Locale } from "@/src/i18n/request";
 import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
+import WikiBackgroundPreload from "@/components/entities/public/WikiBackgroundPreload";
 
 export default async function ShareLinkEntityPage({
   params,
@@ -39,6 +40,7 @@ export default async function ShareLinkEntityPage({
       {/* V2.1-19 : la coquille vient du layout, comme sur /apercu et l'onglet
           joueur depuis V2.1-12. Cette page ne declare plus que le fond de
           CETTE fiche — la seule chose qui change d'une fiche a l'autre. */}
+      <WikiBackgroundPreload background={detail.wikiBackground} />
       <WikiBackgroundRegistrar background={detail.wikiBackground} />
       <PublicEntityBody {...detail} hrefBase={`/partage/${token}`} />
     </>

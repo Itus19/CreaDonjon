@@ -6,6 +6,7 @@ import { getPublicEntityDetail } from "@/src/server/services/publicShare";
 import type { Locale } from "@/src/i18n/request";
 import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
 import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
+import WikiBackgroundPreload from "@/components/entities/public/WikiBackgroundPreload";
 
 /**
  * Voir `app/m/[worldSlug]/apercu/page.tsx` — même principe, une fiche précise.
@@ -29,6 +30,7 @@ export default async function ApercuEntityPage({
 
   return (
     <>
+      <WikiBackgroundPreload background={detail.wikiBackground} />
       <WikiBackgroundRegistrar background={detail.wikiBackground} />
       <p className="mb-1 font-mech text-xs text-ink-muted">Prévisualisation — vue d&apos;un visiteur anonyme</p>
       <PublicEntityBody {...detail} hrefBase={`/m/${world.slug}/apercu`} />
