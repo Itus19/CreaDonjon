@@ -307,9 +307,15 @@ export default function RelationsGraphCanvas({
             const isRoot = node.degree === 0;
             const size = isRoot ? ROOT_ICON_SIZE : ICON_SIZE;
             return (
+              /* `prefetch={false}` (V2.1-20 lot 6) : voir `PublicBlockView` —
+                 une route dynamique prechargee n'est jamais reutilisee
+                 (`staleTimes.dynamic` vaut 0). Ici le gaspillage serait pire
+                 qu'ailleurs : un reseau de relations affiche des dizaines de
+                 nœuds d'un coup, donc autant de prechargements simultanes. */
               <Link
                 key={node.id}
                 href={`${hrefBase}/${node.slug}`}
+                prefetch={false}
                 onClick={(e) => openEntity(node, e)}
                 className="absolute -translate-x-1/2 -translate-y-1/2"
                 style={{ left: node.x, top: node.y, opacity: dimmed ? 0.3 : 1 }}

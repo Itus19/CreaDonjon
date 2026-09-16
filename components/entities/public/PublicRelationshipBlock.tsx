@@ -54,7 +54,8 @@ export default function PublicRelationshipBlock({
       {target && (
         <p className="text-xs text-ink-muted">
           Envers{" "}
-          <Link href={`${hrefBase}/${target.slug}`} className="rich-ref-mention">
+          {/* `prefetch={false}` (V2.1-20 lot 6) : voir `PublicBlockView` — une route dynamique prechargee n'est jamais reutilisee (`staleTimes.dynamic` vaut 0), le prechargement ne rapporte que du travail serveur. */}
+          <Link href={`${hrefBase}/${target.slug}`} prefetch={false} className="rich-ref-mention">
             {target.name}
           </Link>
         </p>

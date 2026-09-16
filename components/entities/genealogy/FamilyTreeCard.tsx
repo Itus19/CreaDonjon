@@ -36,7 +36,8 @@ export default function FamilyTreeCard({ node, href }: { node: { id: string; nam
   }, []);
 
   return (
-    <Link href={href} className="relative block h-full w-full">
+    /* `prefetch={false}` (V2.1-20 lot 6) : voir `PublicBlockView` — une route dynamique prechargee n est jamais reutilisee (`staleTimes.dynamic` vaut 0), le prechargement ne rapporte que du travail serveur. */
+          <Link href={href} prefetch={false} className="relative block h-full w-full">
       <div className="h-full w-full overflow-hidden rounded-xl border border-edge bg-panel-raised transition-colors hover:border-edge-strong">
         {status !== "loaded" && (
           <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-ink-muted">

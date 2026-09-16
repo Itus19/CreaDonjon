@@ -21,7 +21,8 @@ export default function PublicRelations({
       {relations.map((relation) => (
         <li key={relation.id}>
           {relation.label}{" "}
-          <Link href={`${hrefBase}/${relation.other.slug}`} className="text-ink-soft hover:text-accent hover:underline">
+          {/* `prefetch={false}` (V2.1-20 lot 6) : voir `PublicBlockView` — une route dynamique prechargee n'est jamais reutilisee (`staleTimes.dynamic` vaut 0), le prechargement ne rapporte que du travail serveur. */}
+          <Link href={`${hrefBase}/${relation.other.slug}`} prefetch={false} className="text-ink-soft hover:text-accent hover:underline">
             {relation.other.name}
           </Link>
         </li>

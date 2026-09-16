@@ -135,7 +135,11 @@ export default function BookSkin({
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <Link href={hrefBase} onClick={() => setOpen(false)} className="mb-4 block font-chrome text-base font-semibold text-ink hover:text-accent">
+        {/* `prefetch={false}` (V2.1-20 lot 6) : le dernier des dix-huit. Sur
+            `/partage`, cette racine REDIRIGE de surcroit vers la derniere
+            entree du Livre de sessions — precharger une redirection est du
+            travail serveur dont il ne reste rien. */}
+        <Link href={hrefBase} prefetch={false} onClick={() => setOpen(false)} className="mb-4 block font-chrome text-base font-semibold text-ink hover:text-accent">
           {title}
         </Link>
         <input

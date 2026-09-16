@@ -128,9 +128,20 @@ function NodeRow({
            * qui ouvre un onglet neuf et n'utilise donc pas ce cache. On
            * prechargeait 27 routes vers lesquelles on ne va jamais.
            *
-           * Reste juste la ou le clic navigue vraiment (peau « livre »,
-           * coquille joueur) : une navigation a froid coute une requete,
-           * contre vingt-sept prechargees pour en servir au plus une. */
+           * Reste juste le COUT d'une navigation a froid la ou le clic navigue
+           * vraiment (peau « livre », coquille joueur) : une requete, contre
+           * vingt-sept prechargees pour en servir au plus une.
+           *
+           * V2.1-20 lot 6 — cette phrase s'est laissee lire comme si le
+           * prechargement etait maintenu quelque part. Il ne l'est nulle part,
+           * et surtout : ce commentaire ne couvrait que le SOMMAIRE. Les liens
+           * du corps d'une fiche (`PublicBlockView`, `MentionedIn`, le titre de
+           * `BookSkin`) n'avaient jamais recu ce drapeau et declenchaient 18
+           * requetes par page ouverte. Mesure A/B faite a ce moment-la : un
+           * squelette apparait en 18 ms sur une cible prechargee contre 20 ms
+           * sur une cible qui ne l'a jamais ete, et une navigation coute
+           * exactement son rendu serveur. Le prechargement n'apportait rien
+           * nulle part, il est coupe partout. */
           prefetch={false}
           className={`flex-1 truncate rounded px-2 py-1 text-sm transition-colors hover:bg-panel-raised ${
             isActive ? "bg-panel-raised text-accent" : "text-ink-soft"

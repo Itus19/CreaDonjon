@@ -50,9 +50,16 @@ export default function MentionedIn({
       <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Mentionné dans :</span>
       <div className="flex flex-wrap gap-1.5">
         {entries.map((e) => (
+          /* `prefetch={false}` (V2.1-20 lot 6) : meme raison que les mentions
+             du texte (`PublicBlockView.tsx`), avec une aggravation propre a ce
+             composant — sa liste arrive par un `fetch` APRES l'hydratation, si
+             bien que ses liens entraient dans le champ de vision une fois la
+             page deja chargee et declenchaient une SECONDE volee de
+             prechargements, distincte de la premiere. */
           <Link
             key={e.id}
             href={`${base}/${e.slug}`}
+            prefetch={false}
             className="rounded-full border border-edge px-2.5 py-1 text-ink transition-colors hover:bg-panel-raised"
           >
             {e.name}

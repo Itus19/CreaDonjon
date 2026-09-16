@@ -32,7 +32,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-17 | Deux retouches de rendu au Livre de sessions | `S` | **Fait** (16 septembre) — les deux vues par l'auteur, captures à l'appui : le bloc Séance n'alignait pas ses libellés sur ses valeurs, et un trait posé en tête de bloc tombait entre le titre et le texte, en doublon du filet automatique que chaque bloc porte depuis V2-G11. L'alignement a ensuite été corrigé sur `PublicInfoboxBlock`, l'original d'où le défaut venait |
 | V2.1-18 | Aperçu des fiches au survol d'un lien | `L` | **Ouvert** (16 septembre) — quatre lots, le premier autonome. Né d'un lien de règle qui ne mène nulle part sur `/partage` tout en portant la couleur et le souligné d'un vrai lien : trois mentions inertes sur vingt, mesurées sur la page en production. Trois variantes esquissées avec l'auteur avant tout code, la carte flottante retenue pour les entités comme pour les règles. La fluidité est une exigence du ticket, pas une optimisation d'après-coup : elle a une section, des cibles chiffrées, et elle a mis au jour un coût plus ancien, parti en V2.1-19 |
 | V2.1-19 | La mémoïsation n'atteignait pas le wiki public | `M` | **Fait** (16 septembre) — né de la section Fluidité de V2.1-18. `React.cache()` ne prend que si le client Supabase est stable par requête ; `createShareLinkServiceClient` est une fabrique nue, et chaque fonction de `publicShare.ts` construit la sienne. Tout le gain de l'audit P-01 était donc inerte sur `/partage`, et seulement là. Second volet : la coquille passe dans le layout, `/partage` était la dernière des trois routes de wiki à la reconstruire à chaque fiche. Mesure : 2 constructions de sommaire pour deux navigations avant, 0 après, et la recherche du sommaire survit désormais à la navigation |
-| V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Lots 0 a 5 faits** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : le temps de rendu est le nombre de vagues de requêtes multiplié par la latence, et 41 % sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt, retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme. Deux défauts empilés, plus une fuite refermée. **Lot 2.1** : les jetons de teinte passent dans le HTML, sur les trois routes, éditeur compris. **Lot 3** : deux vagues qui n'attendaient que leur tour dans l'ordre d'écriture — le Prologue passe de 873 à 678 ms. **Lot 5** : la chaine de rulesets cesse d attendre les cles de regle — le Prologue passe de 731 a 434 ms, soit -41 % depuis le lot 0. **Lot 4** : l auteur payait 66 ms de plus que ses joueuses a chaque clic, le middleware sort desormais avant de construire le client sur /partage — ecart ramene a -1 ms. Reste le lot 6 |
+| V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Tous les lots faits** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : le temps de rendu est le nombre de vagues de requêtes multiplié par la latence, et 41 % sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt, retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme. Deux défauts empilés, plus une fuite refermée. **Lot 2.1** : les jetons de teinte passent dans le HTML, sur les trois routes, éditeur compris. **Lot 3** : deux vagues qui n'attendaient que leur tour dans l'ordre d'écriture — le Prologue passe de 873 à 678 ms. **Lot 5** : la chaine de rulesets cesse d attendre les cles de regle — le Prologue passe de 731 a 434 ms, soit -41 % depuis le lot 0. **Lot 4** : l auteur payait 66 ms de plus que ses joueuses a chaque clic, le middleware sort desormais avant de construire le client sur /partage — ecart ramene a -1 ms. **Lot 6** : l A/B tranche — squelette a 18 ms sur une cible prechargee contre 20 ms sur une cible qui ne l est pas, et une navigation coute exactement son rendu serveur. Le prechargement est coupe partout, 18 requetes par page ouverte tombent a 0 |
 | V2.1-21 | Le contraste élevé se perd sur une fiche illustrée | `S` | **Ouvert** (16 septembre) — trouvé en instruisant le lot 2.1 de V2.1-20, pas en le cherchant. `.wiki-bg-scope[data-mode="…"]` est un descendant de `:root[data-contrast="high"]`, donc plus spécifique : sur toute fiche portant un fond de page wiki, le contraste élevé est écrasé et la palette colorée revient. Le lecteur le perd exactement là où il en a le plus besoin, sur les pages dont le fond est une photographie floutée. Porte aussi une question qui n'est pas technique : faut-il masquer l'image elle-même sous ce mode |
 
 ---
@@ -3785,6 +3785,80 @@ dépend. Deux issues, et la mesure tranchera :
   qu'il ne couvrait pas.
 
 Dans les deux cas, le nombre de requêtes par page ouverte est recompté.
+
+**Livré.** L'A/B que ce lot attendait a tranché : le préchargement ne rapporte
+rien, il est coupé partout.
+
+#### L'A/B, sur la même page et le même build
+
+| Cible | Squelette après le clic |
+|---|---|
+| `/22`, **préchargée** (lien du corps) | 18 ms |
+| `/38`, **jamais préchargée** (lien du sommaire) | 20 ms |
+
+Deux millisecondes. Next rend la frontière de chargement sans avoir besoin du
+paquet préchargé — c'est le routeur client qui sait qu'il y a un `loading.tsx`,
+pas le serveur.
+
+Et le contenu ne va pas mieux : sur `/38`, non préchargée, le clic arrive au
+contenu en 443 ms pour un rendu serveur brut mesuré à 452 ms. **Une navigation
+coûte exactement son temps serveur.** `staleTimes.dynamic` valant 0, la partie
+dynamique d'une route préchargée est écartée aussitôt — déjà mesuré en V2.1-18,
+confirmé ici par l'autre bout.
+
+#### La prédiction du relevé 3 était fausse, et c'est la deuxième fois
+
+Le relevé 3 avançait que le lot 1 « rendrait au préchargement le travail qu'on
+lui demandait ». Le lot 1 avait déjà corrigé cette phrase à moitié : Next
+préparait bien quelque chose, mais sans accélérer quoi que ce soit. L'A/B la
+corrige entièrement. **Rien de ce que le préchargement rapportait n'était
+réutilisé.**
+
+#### Ce que V3-R5 ne couvrait pas
+
+Sept endroits, pas quatre — les trois derniers trouvés en recomptant après coup,
+parce que le Prologue n'a ni relations ni réseau et les cachait :
+
+`PublicBlockView` (mention d'entité, lien de règle, référence de quête),
+`MentionedIn`, le titre de `BookSkin`, `PublicRelations`,
+`PublicRelationshipBlock`, `FamilyTreeCard`, `RelationsGraphCanvas`.
+
+Le commentaire de V3-R5 dans `EntityTree` est complété : il ne parlait que du
+sommaire, et se laissait lire comme s'il couvrait tout.
+
+`MentionedIn` méritait sa propre note : sa liste arrive par un `fetch` **après**
+l'hydratation, si bien que ses liens entraient dans le champ de vision une fois
+la page déjà chargée et déclenchaient une **seconde** volée, distincte de la
+première.
+
+#### Recompte
+
+| | Avant | **Après** |
+|---|---|---|
+| Requêtes `?_rsc=` à l'ouverture du Prologue | 18 | **0** |
+| Sur une fiche de PJ (relations, réseau) | 9 de plus | **0** |
+
+Onglet visible, neuf liens dans le champ de vision, aucun clic émis :
+l'`IntersectionObserver` de Next les a bien vus et n'a rien déclenché.
+
+#### Un piège de mesure, corrigé en route
+
+Un premier recompte annonçait « 6 préchargements restants » après six
+navigations. C'étaient **les six navigations elles-mêmes** : Next demande la
+charge RSC d'une navigation client avec `?_rsc=` dans l'URL, exactement comme un
+préchargement. Le filtre attrapait les deux.
+
+Ils se distinguent à la taille — 0,2 à 1,3 ko pour un préchargement, 8 à 12 ko
+pour une navigation — mais le compte propre se prend **sans cliquer**. C'est le
+troisième instrument de ce ticket à se révéler faux après coup, et le troisième
+à ne l'avoir été que sur un détail de méthode.
+
+#### Ce qui reste vrai
+
+Le temps jusqu'au squelette reste sous le critère du lot 1 : médiane 34 ms sur
+six navigations enchaînées (24–43 ms), contre les 100 ms exigés. Rien n'a été
+perdu en coupant.
+
 
 Les points J, K, L et M sont consignés et **non retenus** : J et K ne touchent
 que le premier chargement, L est un défaut d'affichage sans coût réseau, M est

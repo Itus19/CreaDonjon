@@ -103,7 +103,32 @@ function renderNode(
           // 240 caracteres d'extrait sous chaque occurrence ferait grossir
           // le HTML avec le nombre de MENTIONS au lieu du nombre de FICHES.
           // La table part une seule fois, portee par `RefPreviewLayer`.
-          <Link key={key} href={`${hrefBase}/${found.slug}`} className="rich-ref-mention" data-ref-kind="entity" data-ref-id={node.id}>
+          /* V2.1-20 lot 6 — `prefetch={false}`, comme le sommaire depuis V3-R5.
+           *
+           * Ce drapeau manquait ICI, et V3-R5 ne pouvait pas le savoir : il
+           * avait coupe le prechargement sur `EntityTree`, pas sur les liens du
+           * CORPS. Mesure : ouvrir une seule fiche declenchait 18 requetes
+           * `?_rsc=` — les mentions du texte, plus « Mentionne dans », plus le
+           * titre du sommaire.
+           *
+           * Et elles ne servaient a rien, verifie par A/B sur la meme page :
+           * le squelette apparait en 18 ms sur une cible prechargee contre
+           * 20 ms sur une cible qui ne l'a jamais ete — Next rend la frontiere
+           * de chargement sans avoir besoin du paquet precharge. Quant au
+           * contenu, une navigation coute exactement son rendu serveur (443 ms
+           * de clic pour 452 ms de serveur sur une fiche non prechargee) :
+           * `staleTimes.dynamic` valant 0, la partie dynamique d'une route
+           * prechargee est ecartee aussitot (deja mesure en V2.1-18).
+           *
+           * Dix-huit invocations de fonction par page ouverte, pour rien. */
+          <Link
+            key={key}
+            href={`${hrefBase}/${found.slug}`}
+            prefetch={false}
+            className="rich-ref-mention"
+            data-ref-kind="entity"
+            data-ref-id={node.id}
+          >
             {node.label}
           </Link>
         );
@@ -120,7 +145,15 @@ function renderNode(
       // Une page de regle existe (wiki joueur) : lien normal, plus la carte.
       if (ruleHrefBase) {
         return (
-          <Link key={key} href={`${ruleHrefBase}/${node.key}`} className="rich-ref-mention" data-ref-kind="rule" data-ref-key={node.key}>
+          /* `prefetch={false}` : meme raison qu'au lien d'entite ci-dessus (V2.1-20 lot 6). */
+          <Link
+            key={key}
+            href={`${ruleHrefBase}/${node.key}`}
+            prefetch={false}
+            className="rich-ref-mention"
+            data-ref-kind="rule"
+            data-ref-key={node.key}
+          >
             {node.label}
           </Link>
         );
@@ -411,7 +444,8 @@ function questRefLink(
   const found = questRefs?.[ref.id];
   if (!found) return null;
   return (
-    <Link href={`${hrefBase}/${found.slug}`} className="rich-ref-mention">
+    /* `prefetch={false}` : meme raison qu'au lien d'entite (V2.1-20 lot 6). */
+    <Link href={`${hrefBase}/${found.slug}`} prefetch={false} className="rich-ref-mention">
       {found.name}
     </Link>
   );
