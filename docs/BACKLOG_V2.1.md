@@ -3670,6 +3670,48 @@ lisant le titre de ce lot — ferait retomber le fond au comportement d'avant,
 sans erreur et sans test rouge. Le critère de rendu serveur du lot 2.1 est
 précisément là pour que ce raccourci se fasse voir.
 
+**Chiffré, enfin** (16 septembre, après le lot 3). Le point I était écrit sans
+mesure : « sans effet pour un visiteur anonyme, mais l'auteur qui teste son
+propre lien est connecté ». Les deux moitiés sont maintenant vérifiées, depuis
+le même client, sur la même fiche, requêtes entrelacées pour qu'une dérive
+machine touche les deux séries pareil :
+
+| Même URL, même client | Médiane sur 9 |
+|---|---|
+| sans cookie de session (une joueuse) | **229 ms** |
+| avec cookie de session (l'auteur) | **295 ms** |
+
+**+66 ms**, soit exactement un aller-retour au tarif mesuré, et les deux
+distributions ne se recouvrent pas (221–258 contre 276–314). L'hypothèse était
+juste dans les deux sens : `auth.getUser()` ne part sur le réseau que s'il y a
+un cookie, et il coûte une vague entière quand il part.
+
+**Ce que ça dit de la valeur du lot.** Le public d'un lien de partage est
+anonyme : les joueuses ne paient rien, et ce lot ne leur rendra rien. Il ne
+profite qu'à **l'auteur qui vérifie son propre lien** — 295 → 229 ms, soit 22 %
+sur une fiche ordinaire. Ce n'est pas rien : c'est précisément sa situation
+quand il a signalé « un long moment entre le clic et l'arrivée ». Mais ce n'est
+pas la fluidité du wiki pour ses lectrices.
+
+**Et une contrepartie, trouvée en instruisant le lot.** Le commentaire de
+`updateSession` le dit déjà : « Touching auth.getUser() here is what actually
+refreshes the session cookie on every request; without it, tokens silently
+expire mid-session. » Cet appel fait donc DEUX choses, et seule la garde
+`/login` est inutile sur `/partage` — le rafraîchissement, lui, ne l'est pas.
+Le sauter là revient à accepter qu'une session ne se rafraîchisse pas tant
+qu'on reste sur un lien de partage. Un auteur qui y passerait plus d'une heure
+sans toucher au reste de l'application se retrouverait déconnecté ailleurs.
+
+Il n'y a pas de troisième voie : `getSession()` ne valide rien et ne
+rafraîchit pas, et un rafraîchissement en arrière-plan ne pourrait pas reposer
+ses cookies sur la réponse.
+
+**Conséquence sur l'ordre** : ce lot passe derrière le lot 5, qui vaut 41 % pour
+tout le monde. Et sa question n'est plus « comment » mais « est-ce qu'on
+échange 66 ms de confort de vérification contre une session qui ne se
+rafraîchit plus sur `/partage` » — un arbitrage d'auteur, pas une optimisation
+évidente.
+
 **Lot 5 — les bulles se chargent pendant la lecture.** Voir la section dédiée
 ci-dessous : c'est une question de l'auteur, elle a une bonne réponse, et elle
 a un piège.
