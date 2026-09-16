@@ -65,23 +65,16 @@ export default function PlayerShell({
   ];
 
   return (
-    // `h-dvh` (retour utilisateur : "la sidebar prenne toute la hauteur" /
-    // "sans que la partie centrale scroll avec [le sommaire]") — deux bugs
-    // lies a la meme cause, resolus ensemble par une unite de viewport
-    // plutot qu'un pourcentage :
-    // 1) `height: 100%` sur un item flexbox n'est pas une taille "auto" pour
-    //    l'algorithme flex — ca desactive le `stretch` par defaut (qui, lui,
-    //    remplit vraiment le parent) et retombe sur la resolution de
-    //    pourcentage classique (rail tronque a mi-hauteur).
-    // 2) `<body>` (app/layout.tsx) est volontairement `min-h-full`, pas
-    //    `h-full` — necessaire pour que les pages qui defilent normalement
-    //    (accueil, connexion...) restent scrollables. Sans un point d'ancrage
-    //    absolu quelque part, un enfant qui demande "100% de mon parent" hier
-    //    aussi haut que le contenu de CE enfant : ce conteneur grandissait
-    //    pour tout faire tenir plutot que de laisser `aside`/`main`
-    //    defiler chacun dans leur propre espace borne. `h-dvh` fixe une
-    //    hauteur reelle (le viewport), immunisee aux deux problemes.
-    <div className="flex h-dvh min-h-0 w-full flex-col-reverse md:flex-row">
+    // V2.1-16 — `h-full` a la place du `h-dvh` d'avant. Ce `h-dvh` etait un
+    // contournement, et il le disait : `<body>` etant `min-h-full`, aucun
+    // ancetre n'avait de hauteur a resoudre, et ce conteneur grandissait avec
+    // son contenu au lieu de laisser `aside`/`main` defiler chacun dans son
+    // cadre. La cause est corrigee a la racine (`<body>` en `h-full`), donc
+    // le contournement peut partir — et il le DOIT : une unite de viewport
+    // ignore le bandeau "voir comme", qu'un pourcentage soustrait tout seul.
+    // Les deux retours d'origine restent tenus ("la sidebar prend toute la
+    // hauteur", "la partie centrale ne defile pas avec le sommaire").
+    <div className="flex h-full min-h-0 w-full flex-col-reverse md:flex-row">
       <nav className="flex shrink-0 justify-around border-t border-edge bg-panel md:w-20 md:flex-col md:justify-start md:border-t-0 md:border-r print:hidden">
         <Link
           href={`${base}/accueil`}
@@ -96,7 +89,7 @@ export default function PlayerShell({
             qui retrecit avec la hauteur disponible plutot que de deborder.
             `md:min-h-0` : necessaire pour qu'un enfant `flex-1` accepte de
             descendre sous sa taille de contenu (sinon il l'impose au parent
-            malgre `flex-1`, memes causes que le commentaire `h-dvh` plus haut). */}
+            malgre `flex-1`, memes causes que le commentaire de hauteur plus haut). */}
         <div className="flex flex-1 justify-around md:min-h-0 md:flex-col md:items-center md:justify-start md:gap-[clamp(0px,0.8vh,4px)] md:p-2">
           {destinations.map((d) => {
             const active = d.match(pathname);

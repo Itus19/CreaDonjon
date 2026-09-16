@@ -109,6 +109,16 @@ export default function WindowFrame({
               top: win.y,
               width: win.width,
               height: win.height,
+              // V2.1-16 — une fiche ne peut plus sortir de sa zone de travail
+              // (retour utilisateur : "la fenetre a beau etre tout en haut de
+              // l'ecran, elle deborde en bas"). La borne se DEDUIT de la
+              // position, elle ne se memorise pas : aucun etat a recalculer,
+              // aucun ecouteur de redimensionnement, et elle vaut meme pendant
+              // qu'on tire le bord du navigateur. Choix de l'auteur, esquisses
+              // a l'appui : une fiche trop grande se comprime, elle ne se
+              // deplace jamais toute seule — on la retrouve ou on l'a posee.
+              maxWidth: `calc(100% - ${win.x}px)`,
+              maxHeight: `calc(100% - ${win.y}px)`,
               zIndex: isFocused ? 30 : 20,
             }
       }

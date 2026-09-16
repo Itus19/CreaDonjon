@@ -44,7 +44,13 @@ export default function Sidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 top-14 z-50 flex w-[280px] shrink-0 flex-col border-r border-edge bg-panel-sunken transition-transform print:hidden md:static md:top-0 md:z-auto md:h-screen md:translate-x-0 ${
+        // V2.1-16 — plus de `md:h-screen` : 100vh pose SOUS un en-tete de
+        // 56px faisait mesurer a la page 56px de plus que l'ecran, et c'est
+        // ce debordement que l'auteur faisait defiler (la fenetre de fiche,
+        // ancree a l'ecran, ne suivait pas). En `md:static`, cet `aside` est
+        // un item flex qui s'etire deja a la hauteur de sa rangee — laquelle
+        // est bornee par `AppShell`. La demander en plus la surcontraignait.
+        className={`fixed inset-y-0 left-0 top-14 z-50 flex w-[280px] shrink-0 flex-col border-r border-edge bg-panel-sunken transition-transform print:hidden md:static md:top-0 md:z-auto md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >

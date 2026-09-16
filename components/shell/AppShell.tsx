@@ -55,8 +55,16 @@ export default function AppShell({
             present, sur TOUTE route (pas seulement la coquille joueur). Une
             hauteur fixe ignorait cet ajout et poussait la barre d'onglets
             mobile de la coquille joueur hors de l'ecran (retour utilisateur,
-            constate en testant avec le compte Claude). */}
-        <div className="flex h-full min-h-0 flex-1 flex-col">
+            constate en testant avec le compte Claude). Le bandeau est
+            soustrait tout seul, sans constante a tenir a jour.
+
+            V2.1-16 — `min-h-0` + `overflow-hidden` : c'est LA borne de la
+            coquille de monde. `<body>` ayant desormais une hauteur definie
+            (app/layout.tsx), `flex-1` donne ici exactement la place restante,
+            et `overflow-hidden` interdit a quoi que ce soit d'en sortir. Le
+            defilement appartient donc aux barres laterales et aux fenetres,
+            jamais au document (ADR 0025). */}
+        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
           {/* Coquille joueur (retour utilisateur, V2-M7b suite) : "retirer
               cette barre en haut et tout mettre sur la side bar" — la
               coquille joueur (`PlayerShell.tsx`) porte desormais elle-meme le

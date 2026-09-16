@@ -402,6 +402,10 @@ body {
     width: 100% !important;
     height: auto !important;
     max-height: none !important;
+    /* V2.1-16 : la fenetre porte aussi un `max-width` deduit de sa position
+       (`WindowFrame.tsx`) — sans ceci, une fiche posee a droite s'imprimerait
+       dans une colonne etroite au lieu de la pleine largeur. */
+    max-width: none !important;
     box-shadow: none !important;
     border: none !important;
     backdrop-filter: none !important;

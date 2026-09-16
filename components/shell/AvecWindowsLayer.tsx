@@ -4,7 +4,7 @@ import { useRef } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import WindowFrame from "./WindowFrame";
-import { useDesktopWindowsState } from "./DesktopWindowsProvider";
+import { MINIMIZED_BAR_HEIGHT_PX, useDesktopWindowsState } from "./DesktopWindowsProvider";
 import { refId, windowContentLabel, type WindowRef } from "./windowRefs";
 import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
 import type { EntityWindowData } from "@/src/server/services/entityWindow";
@@ -95,9 +95,13 @@ export default function AvecWindowsLayer({ worldSlug }: { worldSlug: string }) {
 
   if (!state || isMobile) return null;
 
+  // Meme reserve que la zone primaire (`WindowsDesktop.tsx`) : la barre des
+  // fiches reduites ci-dessous raccourcit la zone de travail au lieu de se
+  // poser par-dessus (V2.1-16).
+  const reserve = state.minimizedTabs.length > 0 ? MINIMIZED_BAR_HEIGHT_PX : 0;
+
   return (
     <div
-      ref={desktopRef}
       className="pointer-events-none fixed top-14 right-0 bottom-0"
       // Meme raisonnement que le z-index dynamique de `WindowsDesktop.tsx`
       // (voir son commentaire) : ce conteneur et le sien sont deux piles
@@ -106,6 +110,11 @@ export default function AvecWindowsLayer({ worldSlug }: { worldSlug: string }) {
       // primaire, meme quand celle-ci avait le focus.
       style={{ left: SIDEBAR_WIDTH_PX, zIndex: state.isPrimaryFocused ? 10 : 50 }}
     >
+      {/* Conteneur interne = la zone de travail reellement disponible, celle
+          que les fenetres prennent pour reference (bornes du glisser et
+          `max-height` deduit). La barre des onglets reduits reste, elle,
+          collee au bas de la couche. */}
+      <div ref={desktopRef} className="absolute inset-x-0 top-0" style={{ bottom: reserve }}>
       {state.avecWindows
         .filter((w) => !w.isMinimized)
         .map(({ ref, geometry, isFocused, data }) => {
@@ -149,16 +158,24 @@ export default function AvecWindowsLayer({ worldSlug }: { worldSlug: string }) {
             </div>
           );
         })}
+      </div>
 
       {state.minimizedTabs.length > 0 && (
-        <div className="pointer-events-auto absolute inset-x-0 bottom-0 flex flex-wrap items-center gap-2 border-t border-edge bg-panel-sunken/95 p-2 backdrop-blur-[var(--blur)]">
+        // Hauteur constante (`MINIMIZED_BAR_HEIGHT_PX`) et rangee unique qui
+        // defile en largeur, au lieu du retour a la ligne d'avant : c'est ce
+        // qui permet aux deux zones de travail de reserver sa place sans
+        // avoir a la mesurer (V2.1-16).
+        <div
+          className="pointer-events-auto absolute inset-x-0 bottom-0 flex items-center gap-2 overflow-x-auto border-t border-edge bg-panel-sunken/95 px-2 backdrop-blur-[var(--blur)]"
+          style={{ height: MINIMIZED_BAR_HEIGHT_PX }}
+        >
           {state.minimizedTabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => state.restoreWindow(tab.ref)}
               title="Restaurer"
-              className="flex items-center gap-1.5 rounded-md border border-edge bg-panel-raised px-3 py-1.5 text-xs text-ink-soft transition-colors hover:border-accent/40 hover:text-ink"
+              className="flex shrink-0 items-center gap-1.5 rounded-md border border-edge bg-panel-raised px-3 py-1.5 text-xs text-ink-soft transition-colors hover:border-accent/40 hover:text-ink"
             >
               <span className="max-w-[160px] truncate">{tab.name}</span>
               {tab.badge && (

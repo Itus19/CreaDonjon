@@ -28,6 +28,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-15 | Le droit de l'autrice d'une entrée devient un octroi retirable | `M` | **Fait** (15 septembre) — né de V2.1-14 : le MJ ne pouvait pas reprendre l'édition d'une entrée du Livre de sessions, ce droit étant le 6ᵉ cas en dur de `can_edit_entity`. Il devient une vraie ligne `entity_grants`, donc visible et retirable depuis « Octrois d'édition » (ADR 0024) |
 | V2.1-14 | Lettrine et traits de séparation dans le bloc texte | `M` | **Fait** (15 septembre) — la présentation « livre » cesse d'être réservée aux fiches `session_journal` : elle devient deux options du bloc texte, disponibles partout. Le Livre de sessions redevient une catégorie de fiche du point de vue de la présentation, sans que son devoir ni son tri ne bougent |
 | V2.1-13 | Centrer le couple sommaire + texte du wiki | `S` | **Fait** (15 septembre) — le vide entre sommaire et texte tombe de ~300 px à 32 px sur un écran de 1920, et cesse de dépendre de la fenêtre : il était un reste, il devient une marge. Une borne exprimée dans les unités du contenu, écrite une seule fois pour les trois routes — premier encaissement de la fusion de V2.1-12 |
+| V2.1-16 | Le défilement appartient aux fenêtres, et l'en-tête disparaît | `M` | **Ouvert** (15 septembre) — deux gênes signalées avec captures, une seule cause : `<body>` n'a pas de hauteur définie, donc chaque coquille borne la sienne dans son coin. Emporte la suppression de l'en-tête, demandée en regardant les esquisses |
 
 ---
 
@@ -2544,6 +2545,184 @@ que ce test vaut quelque chose.
 
 ---
 
+## V2.1-16 — Le défilement appartient aux fenêtres, et l'en-tête disparaît · `M` — ouvert
+
+### Constat
+
+Deux gênes signalées le 15 septembre, captures à l'appui, sur l'écran MJ et
+sur l'écran Monde :
+
+1. Une fiche ouverte « a beau être tout en haut de l'écran, elle déborde en
+   bas » — le bas est inatteignable.
+2. En faisant défiler avec une fiche ouverte, « la fenêtre reste stable alors
+   que le reste de la page défile ».
+
+Ce sont **deux symptômes de la même cause**. Recherche faite avant d'écrire ce
+ticket :
+
+| Ce qu'on voit | Cause | Où |
+|---|---|---|
+| La page défile d'exactement 56 px, l'en-tête s'en va | Une barre latérale en `md:h-screen` (100vh) posée **sous** un en-tête `h-14` : la page mesure 56 px de plus que l'écran | `components/shell/Sidebar.tsx:47`, `components/rules/RulesSidebar.tsx:243` |
+| La fenêtre ne suit pas le défilement | La couche des fenêtres secondaires est `fixed`, donc ancrée à l'écran et non au document — choix correct en soi, mais le document n'était pas censé défiler | `components/shell/AvecWindowsLayer.tsx:130` |
+| Le bas d'une fiche est hors de portée | `DEFAULT_HEIGHT = 760` en dur, jamais confronté à la place réelle (~660 px sur l'écran de l'auteur), et aucun plafond à l'affichage | `components/shell/DesktopWindowsProvider.tsx:22`, `components/shell/WindowFrame.tsx:104` |
+
+**La cause de fond est plus ancienne que ces trois lignes.** `<body>` est
+`min-h-full` et non `h-full` (`app/layout.tsx:99`) : il n'a
+donc **pas de hauteur définie**, et tout `h-full` en dessous se résout en
+`auto`. Chaque coquille a contourné le problème dans son coin plutôt qu'à la
+racine — `PlayerShell.tsx:68` l'explique en douze lignes de commentaire avant
+de poser un `h-dvh`, et `BookSkin.tsx:126` décrit une borne « `h-screen` avec
+`overflow-hidden` » d'`AppShell` qui **n'existe pas**. Un contournement par
+section signifie que le symptôme revient à chaque section nouvelle.
+
+L'auteur, en regardant les esquisses, a ajouté une demande : il n'utilise pas
+la barre d'en-tête, et voudrait la supprimer au profit de la disposition du
+wiki public. Les deux sujets se tiennent — l'en-tête est précisément le 56 px
+que la barre latérale ignore.
+
+### Mesure faite avant d'écrire
+
+Le point le plus risqué du plan était de passer `<body>` en hauteur définie
+sans casser le défilement des pages publiques. Mesuré en navigateur, viewport
+de 1200×800, bandeau de 40 px :
+
+| Cas | Hauteur défilable du document | Hauteur de la zone |
+|---|---|---|
+| Enfant ordinaire (pages hors `/m`) | 2040 px — la page défile | 2000 px, non écrasée |
+| Enfant en `min-height: 0` (la coquille) | 800 px — le document ne défile plus | 760 px = 800 − le bandeau |
+
+La taille minimale automatique d'un item flex protège les pages qui doivent
+défiler ; `min-height: 0` est ce qui borne celles qui ne doivent pas. Le
+bandeau « voir comme » est soustrait tout seul, sans constante à écrire —
+c'est ce qui avait fait rejeter `h-dvh` en son temps.
+
+### Décision — deux lots ordonnés
+
+**Lot 1 — le document est borné à l'écran.**
+
+- `<body>` passe en hauteur définie ; la coquille de monde devient
+  `overflow-hidden`.
+- `md:h-screen` disparaît des deux barres latérales qui le portent.
+- `MjSidebar` reçoit la zone défilante qui lui manque (17 outils, aucun
+  `overflow-y-auto` aujourd'hui).
+- `WindowFrame` plafonne sa hauteur à son conteneur par une règle CSS
+  (`max-height` dérivé de sa position), pas par un état à recalculer :
+  redimensionner le navigateur reborne les fiches ouvertes sans rien stocker.
+- La hauteur par défaut d'une fenêtre se dérive de la place disponible au lieu
+  de la constante 760.
+- La barre des fiches réduites **réserve sa hauteur** au lieu de se poser
+  par-dessus : la zone de travail se raccourcit tant qu'une fiche est réduite,
+  comme le Dock. Une fenêtre maximisée s'arrête au-dessus d'elle.
+- `PlayerShell` : le `h-dvh` de contournement redevient inutile. **Vérifier,
+  pas supposer** — c'est le seul endroit où le retrait peut régresser.
+
+**Lot 2 — l'en-tête disparaît (esquisse A, validée par l'auteur).**
+
+- Un bouton de sortie (icône) suivi du nom du monde cliquable, en tête des
+  trois barres latérales, comme `BookSkin` le fait déjà pour le wiki public.
+  Le nom de la campagne le suit en seconde ligne sur l'écran MJ.
+- Une pastille arrondie en haut à droite porte la radio et l'heure. Elle passe
+  **sous** les fenêtres : une fiche maximisée la recouvre, choix explicite de
+  l'auteur.
+- Le bouton de dés ne bouge pas : en bas à droite, inchangé.
+- Tombent avec l'en-tête : son `h-14`, le `top-14` de la couche des fenêtres
+  secondaires, les `top-14` et `top-[68px]` des trois barres latérales. Les
+  fiches récupèrent 56 px de hauteur.
+
+L'ordre compte : le lot 1 corrige le défaut, le lot 2 retire ce qui le rendait
+possible. Fait dans l'autre sens, la correction se réécrirait deux fois.
+
+### Ce que ce ticket ne fait pas
+
+- **Repositionner** une fiche quand l'écran rétrécit. Tranché avec l'auteur,
+  esquisses à l'appui (15 septembre) : **elle se comprime, elle ne bouge pas**.
+  Une fiche reste là où on l'a posée ; seule sa hauteur cède. C'est une règle
+  CSS dérivée de sa position, donc rien à mémoriser, rien à recalculer, et
+  elle vaut même pendant qu'on tire le bord du navigateur. Le prix accepté :
+  sur un écran très réduit, une fiche posée bas devient un bandeau étroit.
+  Déplacer la fiche demandait de réécrire sa géométrie à chaque
+  redimensionnement sans jamais la rendre à sa place d'origine.
+
+### Critères
+
+- [x] Monde et Règles ne font plus défiler le document : `scrollY` reste à 0
+      après un `scrollTo(0, 500)`, sommaire de ClaudeLand déplié. Mesuré à
+      1280x800 et 1280x520. **MJ non mesuré** — le compte de test fourni est
+      joueur, la section MJ lui est refusée avant même la coquille.
+- [x] L'ascenseur est dans la barre latérale (cadre 675, contenu 1060) et
+      dans la colonne de lecture joueur (cadre 752, contenu 6335) ; jamais
+      sur la page.
+- [x] Une fiche tient entièrement dans sa zone de travail, bas compris. Sur
+      un écran de 520 px — bien plus dur que celui de l'auteur — la zone fait
+      464 px et la fiche s'arrête exactement à 520 : débordement nul.
+- [x] Une fiche se comprime au lieu de se déplacer : hauteur demandée 760,
+      hauteur utilisée 440 sur un écran de 520, position inchangée (24 px du
+      haut). La borne étant une règle CSS, elle vaut à chaque passe de mise en
+      page — mesuré à deux tailles d'écran.
+- [x] Réduire une fiche raccourcit les DEUX zones de travail, de 744 à 700 :
+      la barre occupe 756-800, les zones s'arrêtent à 756. Une fenêtre
+      maximisée faisant 100 % de sa zone, elle s'arrête donc au-dessus.
+- [ ] Plus aucun `top-14` ni `top-[68px]` dans la coquille — `grep` à l'appui.
+- [ ] Sortie et nom du monde en tête des trois barres latérales ; le nom de la
+      campagne reste lisible sur l'écran MJ.
+- [ ] Pastille radio + heure en haut à droite, recouverte par une fenêtre
+      maximisée.
+- [ ] Bouton de dés inchangé en bas à droite.
+- [x] Une page hors coquille défile toujours : sonde de 2000 px posée dans
+      l'application réelle, document porté à 2000 px, contenu non écrasé.
+      **`/partage` lui-même non ouvert** — aucun lien de partage sous la main.
+- [x] La coquille joueur ne régresse pas, `h-dvh` retiré : le rail fait toute
+      la hauteur (800), la colonne de lecture défile dans son cadre, la page
+      ne défile pas.
+- [x] `npm run typecheck && npm run lint && npm run test` passent — 1044 tests.
+- [x] `docs/adr/0025-le-defilement-appartient-aux-fenetres.md` écrit : pourquoi
+      la borne vit à la racine et non par section, et ce que coûtait le
+      contournement précédent.
+- [ ] **Reste à vérifier sur une session de MJ** : la section MJ qui ne défile
+      plus, et la zone défilante ajoutée à `MjSidebar` — toutes deux
+      inatteignables avec un compte joueur.
+
+### Méthode
+
+Interface esquissée avant d'écrire une ligne, comme V2.1-11 : trois esquisses
+de l'état actuel et de la cible, puis quatre dispositions de coquille sans
+en-tête. C'est l'esquisse qui a fait apparaître la demande de supprimer
+l'en-tête — elle n'était dans aucun constat de départ.
+
+---
+
+### Mesures du lot 1
+
+Écran de 1280x800, section Monde, sommaire de ClaudeLand déplié.
+
+| | Avant | Après |
+|---|---|---|
+| Hauteur de `<body>` | 856 px | 800 px |
+| `scrollY` après un `scrollTo(0, 500)` | **56 px** | **0** |
+| Barre latérale | 800 px, posée sous 56 px d'en-tête | 744 px, du bas de l'en-tête au bas de l'écran |
+| Sommaire | pousse la page | défile dans son cadre : 675 pour 1060 de contenu |
+
+Les 56 px de l'avant ne sont pas une coïncidence : c'est la hauteur exacte de
+l'en-tête, celle dont un `100vh` posé dessous dépasse. C'est ce défilement-là
+que l'auteur faisait, et sous lequel la fenêtre — ancrée à l'écran — ne
+bougeait pas.
+
+Fiche ouverte, écran ramené à 1280x520 :
+
+| | Valeur |
+|---|---|
+| Zone de travail | 464 px (520 − 56) |
+| Hauteur demandée par la fiche | 760 px |
+| Hauteur utilisée | 440 px |
+| Débordement sous l'écran | 0 |
+| Position | inchangée, 24 px du haut |
+
+Une fiche réduite, enfin : la barre occupe 756-800 et les deux zones de
+travail passent de 744 à 700. Elles s'arrêtent donc au-dessus d'elle, y
+compris une fenêtre maximisée, qui fait 100 % de sa zone.
+
+---
+
 ## Ordre suivi
 
 Aucune dépendance technique dure entre ces cinq tickets. Fait dans l'ordre
@@ -2724,4 +2903,9 @@ l'écart entre les deux. Il est passé au vert à la seconde où la migration a 
 appliquée. Un test qui échoue pour la raison qu'on attend vaut mieux qu'un
 ticket annoncé fini avec une migration en attente.
 
-**Les quinze tickets de ce backlog sont clos.**
+**Les quinze premiers tickets de ce backlog sont clos.** V2.1-16 est ouvert le
+15 septembre, après cette phrase et pour la deuxième fois : elle disait vrai au
+moment où elle a été écrite, et la règle de V2.1-14 se vérifie une fois de plus
+— un backlog ne se clôt pas parce qu'un ticket le dit. Celui-ci naît de deux
+gênes d'affichage dont ni les types ni les tests ne pouvaient rien dire, et sa
+vraie cause est plus vieille que les deux symptômes qui l'ont rendue visible.

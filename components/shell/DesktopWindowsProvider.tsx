@@ -19,7 +19,39 @@ import type { RuleEntryDetail } from "@/src/server/services/rules";
 import type { MjToolWindowData } from "./mjToolWindows";
 
 const DEFAULT_WIDTH = 860;
-const DEFAULT_HEIGHT = 760;
+const MAX_DEFAULT_HEIGHT = 760;
+
+/**
+ * Hauteur de la barre des fiches reduites (V2.1-16). Les deux zones de
+ * travail — la primaire (`WindowsDesktop.tsx`) et celle des secondaires
+ * (`AvecWindowsLayer.tsx`) — la reservent quand au moins une fiche est
+ * reduite, pour qu'une fenetre maximisee s'arrete AU-DESSUS plutot que
+ * dessous. Une constante, donc une rangee unique qui defile en largeur
+ * plutot qu'un retour a la ligne : une barre de hauteur variable obligerait
+ * les deux zones a la mesurer pour se borner.
+ */
+export const MINIMIZED_BAR_HEIGHT_PX = 44;
+
+/**
+ * V2.1-16 — la hauteur par defaut d'une fiche se derive de la place
+ * disponible au lieu d'etre la constante 760, qui depassait de ~100px sur
+ * l'ecran de l'auteur. 140 = l'en-tete (56) + le decalage d'ouverture (24) +
+ * une marge basse.
+ *
+ * La GARANTIE de ne pas deborder n'est PAS ici : c'est la regle CSS de
+ * `WindowFrame`. Mesure faite en navigateur, et elle corrige ce que ce
+ * commentaire affirmait d'abord : une fiche deja presente dans `?avec=` au
+ * chargement garde bel et bien la valeur calculee cote serveur (760 observe
+ * sur un ecran de 520). Elle tient quand meme — le plafond CSS la ramene a
+ * 440 — mais la derivation ci-dessous ne sert que les fiches ouvertes en
+ * cours de session, celles qu'on ouvre d'un clic. La borne CSS couvre les
+ * deux cas ; ceci evite seulement d'ouvrir une fiche systematiquement
+ * plafonnee.
+ */
+function defaultHeight(): number {
+  if (typeof window === "undefined") return MAX_DEFAULT_HEIGHT;
+  return Math.max(320, Math.min(MAX_DEFAULT_HEIGHT, window.innerHeight - 140));
+}
 
 /**
  * Le cahier de notes (V2.1-2 suite, retour utilisateur : "le visuel [...]
@@ -32,10 +64,10 @@ const DEFAULT_HEIGHT = 760;
  */
 function defaultGeometry(index: number, ref: WindowRef): WindowGeometry {
   if (ref.kind === "mj" && ref.key === "notes") {
-    return { x: 0, y: 0, width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, isMaximized: true };
+    return { x: 0, y: 0, width: DEFAULT_WIDTH, height: defaultHeight(), isMaximized: true };
   }
   const offset = (index % 6) * 28;
-  return { x: 40 + offset, y: 24 + offset, width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, isMaximized: false };
+  return { x: 40 + offset, y: 24 + offset, width: DEFAULT_WIDTH, height: defaultHeight(), isMaximized: false };
 }
 
 function windowDataUrl(worldSlug: string, ref: WindowRef): string {

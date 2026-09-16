@@ -116,17 +116,25 @@ export default function MjSidebar({ worldSlug }: { worldSlug: string }) {
         }`}
       >
         <SectionToggle worldSlug={worldSlug} />
-        {tools.map((tool) => (
-          <MjToolLink
-            key={tool.key}
-            worldSlug={worldSlug}
-            toolKey={tool.key}
-            label={tool.label}
-            active={pathname === mjToolHref(worldSlug, tool.key)}
-            badge={tool.key === "chat" ? unreadCount : undefined}
-            onNavigate={() => setOpen(false)}
-          />
-        ))}
+        {/* V2.1-16 — la liste des outils defile dans son propre cadre. Elle
+            n'avait aucune zone defilante : les dix-sept outils tenaient par
+            chance sur l'ecran de l'auteur, et allongeaient la page partout
+            ailleurs. `min-h-0` est ce qui autorise cet enfant a descendre
+            sous la taille de son contenu — sans lui, `flex-1` ne borne rien
+            et l'imposerait a son parent. */}
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+          {tools.map((tool) => (
+            <MjToolLink
+              key={tool.key}
+              worldSlug={worldSlug}
+              toolKey={tool.key}
+              label={tool.label}
+              active={pathname === mjToolHref(worldSlug, tool.key)}
+              badge={tool.key === "chat" ? unreadCount : undefined}
+              onNavigate={() => setOpen(false)}
+            />
+          ))}
+        </div>
       </aside>
     </>
   );

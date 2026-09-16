@@ -91,7 +91,20 @@ export default async function RootLayout({
       style={{ ["--h" as string]: background.hue, ["--c" as string]: background.chroma, ["--bg-blur" as string]: `${bgBlur}px` }}
       className={`${geistSans.variable} ${outfit.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      {/* V2.1-16 — hauteur DEFINIE (`h-full`), pas seulement minimale. Un
+          `min-h-full` ne donne aucune hauteur a resoudre : tout `h-full` en
+          dessous retombait sur `auto`, et chaque coquille bornait la sienne
+          dans son coin (le `h-dvh` de `PlayerShell`, le `md:h-screen` des
+          barres laterales) — d'ou une page qui depassait l'ecran de la
+          hauteur exacte de l'en-tete.
+
+          Les pages qui doivent defiler ne perdent rien : la taille minimale
+          automatique d'un item flex les empeche d'etre ecrasees, et leur
+          debordement remonte au viewport. Mesure avant d'ecrire cette ligne,
+          viewport de 1200x800 : contenu de 2000px -> document de 2040px,
+          la page defile. Seul un enfant en `min-h-0` (la coquille de monde,
+          `AppShell`) se laisse borner. */}
+      <body className="h-full flex flex-col">
         <div
           className="app-backdrop"
           style={{ ["--bg-image" as string]: `url("${background.backdropUrl}")` }}

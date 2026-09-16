@@ -124,10 +124,10 @@ export default function BookSkin({
 
       {/* `overflow-y-auto` sur l'aside ET le main (retour utilisateur, la
           molette ne faisait rien) : `/m/[worldSlug]/apercu/**` est imbrique
-          dans `AppShell.tsx`, qui borne la page a `h-screen` avec
-          `overflow-hidden` (les fenetres flottantes de l'editeur gerent
-          deja leur propre defilement de cette maniere) — sans sa propre
-          zone de defilement, un contenu plus long que l'ecran restait
+          dans `AppShell.tsx`, qui borne la coquille a la hauteur de l'ecran
+          (`min-h-0` + `overflow-hidden`, V2.1-16 — la description precedente
+          parlait d'un `h-screen` qui n'a jamais existe la) : sans sa propre
+          zone de defilement, un contenu plus long que l'ecran resterait
           simplement coupe, sans barre ni molette pour l'atteindre. */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-[280px] shrink-0 overflow-y-auto bg-panel-sunken px-6 pb-10 pt-16 transition-transform print:hidden md:static md:z-auto md:w-64 md:translate-x-0 md:bg-transparent ${

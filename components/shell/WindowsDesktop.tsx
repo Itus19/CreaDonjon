@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import WindowFrame from "./WindowFrame";
 import Panel from "./Panel";
 import { useDesktop } from "./DesktopContext";
-import { useDesktopWindowsState } from "./DesktopWindowsProvider";
+import { MINIMIZED_BAR_HEIGHT_PX, useDesktopWindowsState } from "./DesktopWindowsProvider";
 import { refId, type WindowRef } from "./windowRefs";
 import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
 
@@ -46,9 +46,15 @@ export default function WindowsDesktop({ children }: { children: React.ReactNode
     );
   }
 
+  // V2.1-16 — la barre des fiches reduites (`AvecWindowsLayer.tsx`) est posee
+  // en bas de l'ecran : la zone de travail se raccourcit d'autant tant qu'une
+  // fiche y est rangee, pour qu'une fenetre maximisee s'arrete au-dessus
+  // plutot que d'avoir son bas recouvert. Meme reserve des deux cotes — c'est
+  // la meme barre qui surplombe les deux zones.
+  const reserve = state.minimizedTabs.length > 0 ? MINIMIZED_BAR_HEIGHT_PX : 0;
+
   return (
     <div
-      ref={desktopRef}
       className="relative flex-1 overflow-hidden"
       // `AvecWindowsLayer.tsx` vit desormais dans une AUTRE pile
       // d'empilement (son propre conteneur `position: fixed`) — le z-index
@@ -60,34 +66,42 @@ export default function WindowsDesktop({ children }: { children: React.ReactNode
       // le plus haut des deux gagne selon qui a reellement le focus.
       style={{ zIndex: state.isPrimaryFocused ? 50 : 10 }}
     >
-      {!state.primary && (
-        <div className="h-full overflow-y-auto p-8">
-          <Panel>{children}</Panel>
-        </div>
-      )}
+      {/* Ce conteneur interne EST la zone de travail : c'est lui que la
+          fenetre prend pour reference (`position: absolute`, donc bloc
+          conteneur de ses enfants absolus), pour son `max-height` deduit
+          comme pour les bornes du glisser. Un simple rembourrage sur le
+          parent n'aurait rien borne du tout — une boite absolue se resout
+          contre la boite de REMBOURRAGE de son ancetre, rembourrage inclus. */}
+      <div ref={desktopRef} className="absolute inset-x-0 top-0" style={{ bottom: reserve }}>
+        {!state.primary && (
+          <div className="h-full overflow-y-auto p-8">
+            <Panel>{children}</Panel>
+          </div>
+        )}
 
-      {state.primary && state.primaryGeometry && (
-        state.isPrimaryMinimized ? (
-          // La fiche primaire reste montee (masquee, pas retiree) : c'est
-          // elle qui porte `RegisterPrimaryWindow` — la demonter perdrait
-          // l'enregistrement et l'onglet reduit avec (V2-K4).
-          <div className="hidden">{children}</div>
-        ) : (
-          <WindowFrame
-            win={state.primaryGeometry}
-            isFocused={state.isPrimaryFocused}
-            containerRef={desktopRef}
-            title={state.primary.name}
-            subtitle={translateBadge(state.primary.ref.kind, state.primary.badge)}
-            onFocus={() => state.focusWindow(refId(state.primary!.ref))}
-            onClose={() => state.closeWindow(state.primary!.ref)}
-            onMinimize={() => state.minimizeWindow(state.primary!.ref)}
-            onUpdate={(updates) => state.updateGeometry(state.primary!.ref, updates)}
-          >
-            {children}
-          </WindowFrame>
-        )
-      )}
+        {state.primary && state.primaryGeometry && (
+          state.isPrimaryMinimized ? (
+            // La fiche primaire reste montee (masquee, pas retiree) : c'est
+            // elle qui porte `RegisterPrimaryWindow` — la demonter perdrait
+            // l'enregistrement et l'onglet reduit avec (V2-K4).
+            <div className="hidden">{children}</div>
+          ) : (
+            <WindowFrame
+              win={state.primaryGeometry}
+              isFocused={state.isPrimaryFocused}
+              containerRef={desktopRef}
+              title={state.primary.name}
+              subtitle={translateBadge(state.primary.ref.kind, state.primary.badge)}
+              onFocus={() => state.focusWindow(refId(state.primary!.ref))}
+              onClose={() => state.closeWindow(state.primary!.ref)}
+              onMinimize={() => state.minimizeWindow(state.primary!.ref)}
+              onUpdate={(updates) => state.updateGeometry(state.primary!.ref, updates)}
+            >
+              {children}
+            </WindowFrame>
+          )
+        )}
+      </div>
     </div>
   );
 }
