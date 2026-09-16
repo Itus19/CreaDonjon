@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { filterBlocks, filterSegments, type VisibilityLevel } from "@/src/core/visibility";
@@ -101,6 +102,99 @@ async function listPlayerRelations(supabase: TypedClient, worldId: string, entit
 }
 
 /**
+ * Les trois mémoïsations qui suivent sont le jumeau exact de celles de
+ * `publicShare.ts` (V2.1-20 lot 2.1), et pour la même raison : le
+ * `layout.tsx` de l'onglet Wiki a besoin du MÊME fond que la page, et doit le
+ * payer une fois. `createClient` (lib/supabase/server.ts) est mémoïsé, donc le
+ * client est stable sur toute la requête et `cache()` mord — ce qui ne serait
+ * pas vrai avec une fabrique nue (la leçon de V2.1-19).
+ *
+ * Arguments primitifs uniquement : `cache()` compare par identité, et un objet
+ * `params` construit à chaque appel rendrait la mémoïsation inerte sans que
+ * rien ne le signale.
+ *
+ * Mémoïsé ICI, au niveau du service, jamais sur `listBlocksForEntity` ni sur
+ * `buildViewerForWorld` : ces dépôts sont appelés depuis des chemins
+ * d'ÉCRITURE, où une valeur figée par un appel antérieur serait un bug.
+ */
+const viewerFor = cache(function viewerFor(supabase: TypedClient, worldId: string, userId: string) {
+  return buildViewerForWorld(supabase, worldId, userId);
+});
+
+const entityFor = cache(function entityFor(supabase: TypedClient, worldId: string, entitySlug: string) {
+  return getEntityBySlug(supabase, worldId, entitySlug);
+});
+
+/** Les blocs d'une fiche, filtrés pour CE viewer — bloc puis segment, comme partout ailleurs. */
+const getPlayerVisibleBlocks = cache(async function getPlayerVisibleBlocks(
+  supabase: TypedClient,
+  worldId: string,
+  entitySlug: string,
+  userId: string
+): Promise<PublicBlock[]> {
+  const entity = await entityFor(supabase, worldId, entitySlug);
+  if (!entity) return [];
+
+  const [rows, viewer] = await Promise.all([
+    listBlocksForEntity(supabase, entity.id),
+    viewerFor(supabase, worldId, userId),
+  ]);
+
+  return filterBlocks(rows.map(toVisibilityAware), viewer)
+    .map((row) => ({
+      id: row.id,
+      blockType: row.block_type,
+      display: row.display as unknown as BlockDisplay,
+      data: filterTimelineEntriesForViewer(row.block_type, filterTextBlockSegmentsForViewer(row.block_type, row.data, viewer), viewer),
+      displayOrder: row.display_order,
+    }))
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+});
+
+/**
+ * Le fond de page wiki d'une fiche pour CE viewer, seul — sans le reste de la
+ * fiche (V2.1-20 lot 2.1).
+ *
+ * Appelé par le `layout.tsx` de l'onglet Wiki pour poser les jetons de teinte
+ * et la div de fond DANS LE HTML, et par la page dans SES DEUX branches : la
+ * lecture comme l'éditeur. C'est la décision de l'auteur — une fiche éditable
+ * porte le fond de sa fiche, comme en lecture. Elle referme du même coup une
+ * incohérence plus ancienne que ce ticket : la branche éditable n'enregistrait
+ * aucun fond, donc une navigation client depuis une fiche illustrée y
+ * conservait le fond de la fiche PRÉCÉDENTE, alors qu'un chargement à froid
+ * n'en avait aucun.
+ *
+ * Même garde que partout : le bloc de fond n'est cherché que parmi les blocs
+ * déjà filtrés, donc un bloc réservé au MJ ne peut jamais imposer un fond à
+ * une joueuse qui ne le voit pas.
+ */
+export const getPlayerWikiBackground = cache(async function getPlayerWikiBackground(
+  supabase: TypedClient,
+  worldId: string,
+  entitySlug: string,
+  userId: string
+): Promise<WikiBackground | null> {
+  const blocks = await getPlayerVisibleBlocks(supabase, worldId, entitySlug, userId);
+  const backgroundBlock = blocks.find(
+    (b) => b.blockType === "image" && (b.data as unknown as ImageBlockData).useAsWikiBackground
+  );
+  if (!backgroundBlock) return null;
+
+  const meta = await getBackgroundMetaForBlock(supabase, backgroundBlock.id);
+  if (!meta) return null;
+
+  const data = backgroundBlock.data as unknown as ImageBlockData;
+  return {
+    imageUrl: data.url,
+    blurPx: data.backgroundBlurPx,
+    fadeMs: data.fadeMs,
+    hue: meta.hue,
+    chroma: meta.chroma,
+    mode: meta.availableModes[0] ?? "dark",
+  };
+});
+
+/**
  * Fiche + blocs pour l'onglet Wiki de la coquille joueur (retour
  * utilisateur : "leur bouton de wiki [doit] permettre de visualiser le wiki
  * public mais... avec [leur] sidebar d'outil") — meme structure et memes
@@ -126,11 +220,17 @@ async function listPlayerRelations(supabase: TypedClient, worldId: string, entit
  * (potentiellement "players", pas seulement "public"/prive) resterait a
  * generaliser separement, hors de portee ici.
  *
- * V2.1-12 : `wikiBackground` est desormais resolu ici aussi — la coquille
+ * V2.1-12 : `wikiBackground` est resolu pour cette route aussi — la coquille
  * joueur monte la meme peau que l'apercu (`BookSkin`) et porte donc le meme
- * fond de page. La resolution est copiee de `getPublicEntityDetail`, garde
- * comprise : le bloc de fond est cherche parmi les blocs DEJA filtres, jamais
- * parmi les blocs bruts.
+ * fond de page.
+ *
+ * V2.1-20 lot 2.1 : cette resolution ne vit plus ICI mais dans
+ * `getPlayerWikiBackground` ci-dessus, parce que le `layout.tsx` en a besoin
+ * lui aussi — pour poser les jetons de teinte dans le HTML plutot que de les
+ * laisser apparaitre apres l'hydratation. Les deux passent par la meme
+ * fonction memoisee : une seule lecture pour la page et la coquille. La garde
+ * n'a pas bouge — le bloc de fond est cherche parmi les blocs DEJA filtres,
+ * jamais parmi les blocs bruts.
  */
 export async function getPlayerEntityDetail(
   supabase: TypedClient,
@@ -144,27 +244,21 @@ export async function getPlayerEntityDetail(
   wikiBackground: WikiBackground | null;
 } | null> {
   const { worldId, entitySlug, userId, locale = "fr" } = params;
-  const entity = await getEntityBySlug(supabase, worldId, entitySlug);
+  const entity = await entityFor(supabase, worldId, entitySlug);
   if (!entity) return null;
 
-  const [rows, relations, portraitLayout, viewer, campaignId] = await Promise.all([
-    listBlocksForEntity(supabase, entity.id),
+  // Les blocs et le fond passent par les mêmes fonctions mémoïsées que le
+  // `layout.tsx` (V2.1-20 lot 2.1) : une seule lecture pour les deux, et
+  // `cache()` mémoïse la promesse, donc celui qui arrive second attend le
+  // même appel plutôt que d'en lancer un identique.
+  const [blocks, relations, portraitLayout, viewer, campaignId, wikiBackground] = await Promise.all([
+    getPlayerVisibleBlocks(supabase, worldId, entitySlug, userId),
     listPlayerRelations(supabase, worldId, entity.id, userId),
     getPortraitLayout(supabase, entity.id),
-    buildViewerForWorld(supabase, worldId, userId),
+    viewerFor(supabase, worldId, userId),
     resolveCampaignId(supabase, worldId),
+    getPlayerWikiBackground(supabase, worldId, entitySlug, userId),
   ]);
-
-  const visible = filterBlocks(rows.map(toVisibilityAware), viewer);
-  const blocks: PublicBlock[] = visible
-    .map((row) => ({
-      id: row.id,
-      blockType: row.block_type,
-      display: row.display as unknown as BlockDisplay,
-      data: filterTimelineEntriesForViewer(row.block_type, filterTextBlockSegmentsForViewer(row.block_type, row.data, viewer), viewer),
-      displayOrder: row.display_order,
-    }))
-    .sort((a, b) => a.displayOrder - b.displayOrder);
 
   const blocksWithGenealogy = await Promise.all(
     blocks.map(async (block) => {
@@ -342,28 +436,6 @@ export async function getPlayerEntityDetail(
     })
   );
 
-  // V2.1-12 : meme resolution que `getPublicEntityDetail`, y compris sa garde
-  // — le bloc de fond n'est cherche que parmi les blocs DEJA filtres par
-  // visibilite, donc un bloc reserve au MJ ne peut jamais imposer un fond a
-  // une joueuse qui ne le voit pas.
-  const backgroundBlock = blocksWithMapSource.find(
-    (b) => b.blockType === "image" && (b.data as unknown as ImageBlockData).useAsWikiBackground
-  );
-  let wikiBackground: WikiBackground | null = null;
-  if (backgroundBlock) {
-    const meta = await getBackgroundMetaForBlock(supabase, backgroundBlock.id);
-    if (meta) {
-      const data = backgroundBlock.data as unknown as ImageBlockData;
-      wikiBackground = {
-        imageUrl: data.url,
-        blurPx: data.backgroundBlurPx,
-        fadeMs: data.fadeMs,
-        hue: meta.hue,
-        chroma: meta.chroma,
-        mode: meta.availableModes[0] ?? "dark",
-      };
-    }
-  }
 
   return { entity, blocks: blocksWithMapSource, relations, portraitLayout, wikiBackground };
 }

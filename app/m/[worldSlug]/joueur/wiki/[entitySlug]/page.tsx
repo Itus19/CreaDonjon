@@ -5,7 +5,7 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getEntityBySlug } from "@/src/server/repos/entities";
 import { canUserEditEntity } from "@/src/server/services/permissions";
 import { getEntityWindowData } from "@/src/server/services/entityWindow";
-import { getPlayerEntityDetail } from "@/src/server/services/playerEntityDetail";
+import { getPlayerEntityDetail, getPlayerWikiBackground } from "@/src/server/services/playerEntityDetail";
 import type { Locale } from "@/src/i18n/request";
 import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
 import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
@@ -45,20 +45,34 @@ export default async function JoueurWikiEntityPage({
   if (canEdit) {
     const data = await getEntityWindowData(supabase, worldSlug, entitySlug);
     if (!data) notFound();
+    // V2.1-20 lot 2.1 — décision de l'auteur : une fiche éditable porte le fond
+    // de sa fiche, comme en lecture. Cette branche n'enregistrait rien du tout,
+    // ce qui produisait deux écrans différents pour la même fiche : à froid,
+    // aucun fond ; en navigation client depuis une fiche illustrée, le fond de
+    // la fiche PRÉCÉDENTE, que plus personne ne remplaçait. Enregistrer ici
+    // referme l'écart dans les deux sens.
+    //
+    // `getPlayerWikiBackground` est mémoïsé et déjà demandé par le `layout.tsx`
+    // dans ce même rendu : cet appel n'ajoute aucune requête.
+    const background = await getPlayerWikiBackground(supabase, world.id, entitySlug, user.id);
     return (
-      <EditEntityForm
-        entity={data.entity}
-        worldSlug={data.worldSlug}
-        initialBlocks={data.blocks}
-        initialRelations={data.relations}
-        otherEntities={data.otherEntities}
-        worldCustomKinds={data.worldCustomKinds}
-        campaignId={data.campaignId}
-        initialIsPc={data.isPc}
-        campaignCharacterUserId={data.campaignCharacterUserId}
-        initialPortraitLayout={data.portraitLayout}
-        playerRestricted
-      />
+      <>
+        <WikiBackgroundPreload background={background} />
+        <WikiBackgroundRegistrar background={background} />
+        <EditEntityForm
+          entity={data.entity}
+          worldSlug={data.worldSlug}
+          initialBlocks={data.blocks}
+          initialRelations={data.relations}
+          otherEntities={data.otherEntities}
+          worldCustomKinds={data.worldCustomKinds}
+          campaignId={data.campaignId}
+          initialIsPc={data.isPc}
+          campaignCharacterUserId={data.campaignCharacterUserId}
+          initialPortraitLayout={data.portraitLayout}
+          playerRestricted
+        />
+      </>
     );
   }
 

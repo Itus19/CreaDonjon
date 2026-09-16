@@ -4152,6 +4152,64 @@ La 2 est plus simple et plus cohérente ; la 1 respecte ce que l'écran fait
 aujourd'hui. **C'est un choix d'auteur, pas une évidence technique**, et il
 décide à lui seul de la taille du travail restant.
 
+#### La troisième route, et la décision qui la débloque
+
+**Décision de l'auteur : une fiche éditable porte le fond de sa fiche, comme en
+lecture.** C'est la voie 2 des deux proposées — le layout n'a pas à savoir ce
+que la page rendra, et l'incohérence décrite plus haut disparaît d'elle-même
+plutôt que d'être contournée.
+
+`getPlayerWikiBackground` est le jumeau exact de `getPublicWikiBackground` :
+même extraction, mêmes mémoïsations à arguments primitifs (`viewerFor`,
+`entityFor`, `getPlayerVisibleBlocks`), même partage entre le `layout.tsx` et la
+page. Le client authentifié vient de `createClient`, déjà mémoïsé — sans quoi
+`cache()` serait inerte, la leçon de V2.1-19.
+
+La branche éditable rend désormais `WikiBackgroundPreload` et
+`WikiBackgroundRegistrar` comme la branche de lecture. Elle n'enregistrait rien
+du tout : à froid la fiche n'avait aucun fond, en navigation client depuis une
+fiche illustrée elle gardait celui de la fiche PRÉCÉDENTE. Les deux écarts se
+referment d'un coup.
+
+#### Vérifié à l'écran, avec une session
+
+Un bloc de contrôle temporaire posé dans le monde de test (teinte 30, orange —
+impossible à confondre avec les 152 par défaut ou les 90/249 de Faerûn),
+supprimé juste après ; le monde est revenu à zéro bloc image, vérifié.
+
+Sur la fiche éditable, HTML servi :
+
+```
+class="flex w-full h-full wiki-bg-scope" data-mode="dark" style="--h:30;--c:0.05"
+```
+
+et la div de fond avec. Après hydratation : `--h: 30`, `--c: 0.05`,
+`data-mode: dark`, backdrop monté à l'opacité 1, et la page rend bien
+**l'éditeur**. Les valeurs de contrôle traversent donc tout le chemin, layout
+compris, sur la branche qui n'avait jamais rien porté.
+
+**Le critère « les trois routes de wiki se comportent pareil » est tenu.**
+
+#### Les fenêtres flottantes ne participent pas, et c'est vérifié
+
+Question de l'auteur : quand plusieurs fiches sont ouvertes avec des fonds
+différents, laquelle gagne ?
+
+Elle ne se pose pas. `WikiBackgroundProvider` n'est monté que par les trois
+layouts de wiki ; ni `app/m/[worldSlug]/layout.tsx`, ni `mj/layout.tsx`, ni la
+fiche d'édition ne le montent. **Dans la coquille MJ à fenêtres, il n'y a aucun
+fond de wiki** — le seul fond visible y est celui de l'application, qui est un
+réglage personnel sans rapport avec les fiches.
+
+Et là où les deux coexistent (`/apercu` est bien à l'intérieur de la coquille à
+fenêtres), `WikiBackgroundRegistrar` n'est rendu que par les `page.tsx` des
+routes de wiki — jamais par une fenêtre, qui rend `EditEntityForm`. La règle est
+donc : **le fond suit la fiche de l'URL**, jamais une fenêtre. Une fenêtre est
+une surcouche, elle n'a pas voix au chapitre.
+
+Écrit ici parce que la question reviendra, et que la réponse n'est évidente
+qu'une fois qu'on a cherché où chaque fournisseur est monté.
+
 #### Critères
 
 - [x] `getPublicWikiBackground(worldId, entitySlug)` existe, est mémoïsé, et est
@@ -4179,11 +4237,9 @@ décide à lui seul de la taille du travail restant.
       HTML/DOM rend la bride inutile ici, puisqu'elle ne dépend d'aucun délai.
 - [x] Le fondu de sortie de V2-G13 fonctionne encore entre deux fiches, et en
       revenant au sommaire.
-- [ ] Les trois routes de wiki se comportent pareil. **Seul critère ouvert** :
-      `/partage` et `/apercu` sont faites, l'onglet Wiki du joueur non — sa page
-      a deux rendus possibles (corps de fiche ou éditeur), et elle ne peut pas
-      être vérifiée sans session authentifiée dans le navigateur de mesure. Voir
-      « Ce que ce lot ne fait pas » ci-dessus.
+- [x] Les trois routes de wiki se comportent pareil — `/partage`, `/apercu` et
+      l'onglet Wiki du joueur, branche éditeur comprise. Vérifié à l'écran avec
+      une session, sur un bloc de contrôle temporaire depuis supprimé.
 - [x] La description du lot 4 porte sa reformulation.
 - [x] `npm run typecheck && npm run lint && npm run test` passent.
 

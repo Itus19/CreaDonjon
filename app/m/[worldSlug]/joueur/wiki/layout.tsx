@@ -1,8 +1,11 @@
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getEntityTree } from "@/src/server/services/entities";
 import { listCampaigns } from "@/src/server/services/campaigns";
+import { getPlayerWikiBackground } from "@/src/server/services/playerEntityDetail";
+import { EN_TETE_CHEMIN, entitySlugFromPathname } from "@/lib/wikiPath";
 import WikiBackgroundProvider from "@/components/entities/public/WikiBackgroundProvider";
 import BookSkin from "@/components/entities/public/BookSkin";
 import SessionJournalBanner from "@/components/shell/sessionJournal/SessionJournalBanner";
@@ -40,14 +43,22 @@ export default async function JoueurWikiLayout({
   if (!world) notFound();
   const user = await getAuthUser(supabase);
 
-  const [tree, campaigns] = await Promise.all([
+  // V2.1-20 lot 2.1 — voir `app/partage/[token]/layout.tsx` : même mécanisme,
+  // service différent (client authentifié, RLS, jamais `service_role`). Sans
+  // `user`, pas de fond : cette route exige une session de toute façon.
+  const entitySlug = entitySlugFromPathname((await headers()).get(EN_TETE_CHEMIN), `/m/${worldSlug}/joueur/wiki`);
+
+  const [tree, campaigns, initialBackground] = await Promise.all([
     getEntityTree(supabase, world.id, user?.id ?? null).then((groups) => groups.filter((g) => g.kind !== "notes")),
     listCampaigns(supabase, world.id),
+    entitySlug && user
+      ? getPlayerWikiBackground(supabase, world.id, entitySlug, user.id)
+      : Promise.resolve(null),
   ]);
   const title = campaigns[0]?.name ?? world.name;
 
   return (
-    <WikiBackgroundProvider>
+    <WikiBackgroundProvider initialBackground={initialBackground}>
       <BookSkin
         title={title}
         worldSlug={worldSlug}
