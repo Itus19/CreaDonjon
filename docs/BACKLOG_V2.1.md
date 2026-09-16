@@ -3098,6 +3098,32 @@ et des forges… » pour une règle, sans pied (aucune page à ouvrir sur
 entité, vignette comprise. Les deux libellés viennent des tables du projet —
 `ENTITY_KIND_LABELS` et `regles.entryTypes` — jamais réécrits.
 
+**Deux défauts vus par l'auteur à l'usage, corrigés ensuite.** Aucun des deux
+ne se voyait dans les mesures — il fallait ouvrir le wiki et survoler.
+
+**1. La carte était coupée par le bas de l'écran** (capture à l'appui). La
+position horizontale était bornée, la verticale non : la carte se posait
+toujours sous le lien, quitte à sortir de la fenêtre. Corrigé en trois cas —
+dessous si elle y tient, **au-dessus sinon**, calée dans la fenêtre en dernier
+recours.
+
+Le point qui a demandé de restructurer : ce choix dépend de la HAUTEUR de la
+carte, qui n'existe pas avant qu'elle soit rendue. Le placement quitte donc
+`open()` pour un `useLayoutEffect` — qui s'exécute après le rendu mais **avant
+la peinture**, ce qui est précisément la différence avec `useEffect` : avec ce
+dernier, la carte sauterait d'un endroit à l'autre sous les yeux du lecteur.
+
+**2. Le survol était coupé sur les machines tactiles**, découvert en testant le
+correctif précédent — le poste de vérification se déclare `pointer: coarse`
+avec dix points tactiles, et plus aucune carte ne s'ouvrait au survol. La
+requête du lot 4 était la mauvaise : `pointer: coarse` décrit le pointeur
+**principal**, et il est vrai sur un portable à écran tactile *y compris quand
+une souris est branchée*. Remplacée par `any-hover: hover`, qui pose la vraie
+question : un des dispositifs de cet appareil sait-il survoler ? Dans la
+foulée, le clic sur une règle ouvre désormais sa carte partout et plus
+seulement au tactile — c'est sa seule destination, et un mot souligné sur
+lequel on clique doit faire quelque chose.
+
 **Une correction d'apparence, trouvée à l'écran et pas dans le code.** La
 carte était lisible « à travers » : `--panel-raised` porte un alpha de 0,90,
 comme tout panneau flottant du projet. Sur un menu posé sur une surface vide
@@ -3125,6 +3151,10 @@ la charte interdit d'inventer un jeton, un flou n'en est pas un.
 - [x] Sur un pointeur grossier, le tap ouvre une feuille basse au lieu de ne
       rien faire — et le survol, lui, n'ouvre plus rien.
 - [x] Le clavier ouvre la carte au focus, `Échap` la ferme.
+- [x] **Ajouté après coup, sur retour de l'auteur (capture) :** une carte n'est
+      jamais coupée par un bord de la fenêtre — 20 mentions testées deux fois,
+      lien poussé en bas puis en haut de fenêtre, **0 débordement** sur 40
+      ouvertures.
 - [x] `npm run typecheck && npm run lint && npm run test` passent (1 058 tests,
       soit les 1 044 d'avant plus 14 nouveaux sur l'extrait). `npm run build`
       aussi, deux fois — la mesure du préchargement l'exigeait.

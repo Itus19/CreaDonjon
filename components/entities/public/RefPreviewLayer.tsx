@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import type { EntityRefPreview, RuleRefPreview } from "@/src/server/services/refPreview";
@@ -20,6 +20,15 @@ interface Target {
   /** Entite seulement : sert la vignette. Absent pour une regle, qui n'a jamais d'illustration. */
   entityId?: string;
   href?: string;
+}
+
+/** Le lien survole, fige a l'ouverture : bords en coordonnees de fenetre, plus le defilement qu'il faudra rajouter pour repasser en coordonnees de document. */
+interface Anchor {
+  left: number;
+  top: number;
+  bottom: number;
+  scrollX: number;
+  scrollY: number;
 }
 
 /**
@@ -64,13 +73,24 @@ export default function RefPreviewLayer({
   const ruleEntryTypeLabels = t.raw("entryTypes") as Record<string, string>;
   const [target, setTarget] = useState<Target | null>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  /** Position du lien au moment de l'ouverture, en coordonnees de FENETRE — le calcul de placement raisonne sur ce qui est visible, pas sur le document. */
+  const [anchor, setAnchor] = useState<Anchor | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   /**
-   * V2.1-18 lot 4 — un pointeur grossier n'a PAS de survol : sans ceci, une
-   * regle sur telephone n'ouvrirait jamais rien (elle n'est meme pas un
-   * lien, cf. `PublicBlockView`). La carte y devient une feuille basse,
-   * ouverte au tap. Lu dans un effet et non au rendu : `matchMedia`
-   * n'existe pas au rendu serveur, et la valeur doit etre la meme des deux
-   * cotes a l'hydratation.
+   * V2.1-18 lot 4 — un appareil sans survol n'ouvrirait jamais rien : une
+   * regle n'est meme pas un lien (cf. `PublicBlockView`). La carte y devient
+   * une feuille basse, ouverte au tap.
+   *
+   * `any-hover` et non `pointer: coarse`, corrige apres coup : `pointer:
+   * coarse` decrit le pointeur PRINCIPAL, et il est vrai sur un portable a
+   * ecran tactile — y compris quand une souris est branchee. La premiere
+   * version coupait donc le survol sur ces machines, ce qu'un poste de
+   * developpement en emulation tactile a rendu visible. `any-hover: hover`
+   * pose la vraie question : un des dispositifs de cet appareil sait-il
+   * survoler ?
+   *
+   * Lu dans un effet et non au rendu : `matchMedia` n'existe pas au rendu
+   * serveur, et la valeur doit etre la meme des deux cotes a l'hydratation.
    */
   const [coarse, setCoarse] = useState(false);
   const [portraitOk, setPortraitOk] = useState(true);
@@ -118,22 +138,59 @@ export default function RefPreviewLayer({
       }
       if (!next) return;
 
-      // Mesure UNE fois, a l'ouverture. Les coordonnees sont celles du
-      // document (defilement inclus) : la carte est posee en `absolute` dans
-      // le flux, jamais en `fixed`, pour qu'elle suive son paragraphe si la
-      // page defile sous elle.
+      // Mesure UNE fois, a l'ouverture. Le placement vertical, lui, ne peut
+      // pas se decider ici : il depend de la HAUTEUR de la carte, qui n'existe
+      // pas avant qu'elle soit rendue. D'ou l'ancre gardee telle quelle et le
+      // calcul reporte dans un `useLayoutEffect` — voir plus bas.
       const rect = el.getBoundingClientRect();
-      const x = Math.max(GAP, Math.min(rect.left + window.scrollX, document.documentElement.clientWidth - CARD_WIDTH - GAP));
-      setPos({ x, y: rect.bottom + window.scrollY + GAP });
+      setAnchor({ left: rect.left, top: rect.top, bottom: rect.bottom, scrollX: window.scrollX, scrollY: window.scrollY });
+      setPos(null);
       setPortraitOk(true);
       setTarget(next);
     },
     [entityRefs, ruleRefs, hrefBase, ruleEntryTypeLabels]
   );
 
+  /**
+   * Placement, une fois la carte rendue donc mesurable (retour utilisateur,
+   * capture a l'appui : une carte ouverte sur un lien proche du bas de
+   * l'ecran etait coupee par le bord, illisible).
+   *
+   * `useLayoutEffect` et non `useEffect` : il s'execute apres le rendu mais
+   * AVANT que le navigateur peigne. La carte ne se voit donc jamais a sa
+   * position provisoire — avec `useEffect` elle sauterait d'un endroit a
+   * l'autre sous les yeux du lecteur.
+   *
+   * Trois cas, dans l'ordre : sous le lien si elle y tient, au-dessus
+   * sinon, et en dernier recours calee dans la fenetre — ce dernier cas ne
+   * sert que si le lien occupe une fenetre trop courte pour la carte des
+   * deux cotes.
+   */
+  useLayoutEffect(() => {
+    if (!target || !anchor || coarse) return;
+    const card = cardRef.current;
+    if (!card) return;
+
+    const hauteur = card.offsetHeight;
+    const largeurFenetre = document.documentElement.clientWidth;
+    const hauteurFenetre = window.innerHeight;
+
+    const x = Math.max(GAP, Math.min(anchor.left, largeurFenetre - CARD_WIDTH - GAP)) + anchor.scrollX;
+
+    const tientDessous = anchor.bottom + GAP + hauteur <= hauteurFenetre - GAP;
+    const tientDessus = anchor.top - GAP - hauteur >= GAP;
+    const yFenetre = tientDessous
+      ? anchor.bottom + GAP
+      : tientDessus
+        ? anchor.top - GAP - hauteur
+        : Math.max(GAP, hauteurFenetre - hauteur - GAP);
+
+    setPos({ x, y: yFenetre + anchor.scrollY });
+  }, [target, anchor, coarse]);
+
   useEffect(() => {
-    const mq = window.matchMedia("(pointer: coarse)");
-    const sync = () => setCoarse(mq.matches);
+    const mq = window.matchMedia("(any-hover: hover)");
+    const sync = () => setCoarse(!mq.matches);
     sync();
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
@@ -159,16 +216,17 @@ export default function RefPreviewLayer({
     }
 
     /**
-     * Tactile : le tap sur une REGLE ouvre la feuille (elle n'a pas d'autre
-     * destination) ; le tap sur une ENTITE navigue comme aujourd'hui, sans
-     * rien intercepter — un lecteur qui touche un nom de personnage veut sa
-     * fiche, pas un resume.
+     * Le clic sur une REGLE ouvre la carte, partout et pas seulement au
+     * tactile : elle n'a pas d'autre destination, et un lecteur qui clique
+     * un mot souligne attend qu'il se passe quelque chose. Le clic sur une
+     * ENTITE n'est jamais intercepte — un lecteur qui touche un nom de
+     * personnage veut sa fiche, pas un resume.
      */
     function onClick(e: MouseEvent) {
-      if (!coarse) return;
       const el = refFrom(e);
       if (!el || el.dataset.refKind !== "rule") return;
       e.preventDefault();
+      clearTimers();
       open(el);
     }
 
@@ -203,10 +261,10 @@ export default function RefPreviewLayer({
   }, [open, close, clearTimers, coarse]);
 
   if (!target) return null;
-  if (!coarse && !pos) return null;
 
   return (
     <div
+      ref={cardRef}
       role="tooltip"
       // Hors du flux du paragraphe : ouvrir une carte ne doit RIEN deplacer
       // dans le texte qu'on est en train de lire.
@@ -218,7 +276,17 @@ export default function RefPreviewLayer({
       style={
         coarse
           ? undefined
-          : { left: 0, top: 0, width: CARD_WIDTH, transform: `translate3d(${pos!.x}px, ${pos!.y}px, 0)` }
+          : {
+              left: 0,
+              top: 0,
+              width: CARD_WIDTH,
+              transform: `translate3d(${pos?.x ?? 0}px, ${pos?.y ?? 0}px, 0)`,
+              // La carte doit EXISTER pour etre mesuree, et ne jamais se voir
+              // avant d'etre placee. `useLayoutEffect` pose `pos` avant la
+              // premiere peinture, donc cet etat n'atteint pas l'ecran — il
+              // couvre le cas ou la mesure echouerait.
+              visibility: pos ? "visible" : "hidden",
+            }
       }
       onMouseEnter={coarse ? undefined : clearTimers}
       onMouseLeave={coarse ? undefined : close}
