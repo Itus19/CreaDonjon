@@ -29,7 +29,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-14 | Lettrine et traits de séparation dans le bloc texte | `M` | **Fait** (15 septembre) — la présentation « livre » cesse d'être réservée aux fiches `session_journal` : elle devient deux options du bloc texte, disponibles partout. Le Livre de sessions redevient une catégorie de fiche du point de vue de la présentation, sans que son devoir ni son tri ne bougent |
 | V2.1-13 | Centrer le couple sommaire + texte du wiki | `S` | **Fait** (15 septembre) — le vide entre sommaire et texte tombe de ~300 px à 32 px sur un écran de 1920, et cesse de dépendre de la fenêtre : il était un reste, il devient une marge. Une borne exprimée dans les unités du contenu, écrite une seule fois pour les trois routes — premier encaissement de la fusion de V2.1-12 |
 | V2.1-16 | Le défilement appartient aux fenêtres, et l'en-tête disparaît | `M` | **Fait** (16 septembre) — deux gênes signalées avec captures, une seule cause : `<body>` n'avait pas de hauteur définie, donc chaque coquille bornait la sienne dans son coin. Mesuré avant/après : la page défilait de 56 px, la hauteur exacte de l'en-tête — lequel a disparu au lot 2, rendant ces 56 px aux fiches |
-| V2.1-17 | Deux retouches de rendu au Livre de sessions | `S` | **Fait** (16 septembre) — les deux vues par l'auteur, captures à l'appui : le bloc Séance n'alignait pas ses libellés sur ses valeurs, et un trait posé en tête de bloc tombait entre le titre et le texte, en doublon du filet automatique que chaque bloc porte depuis V2-G11 |
+| V2.1-17 | Deux retouches de rendu au Livre de sessions | `S` | **Fait** (16 septembre) — les deux vues par l'auteur, captures à l'appui : le bloc Séance n'alignait pas ses libellés sur ses valeurs, et un trait posé en tête de bloc tombait entre le titre et le texte, en doublon du filet automatique que chaque bloc porte depuis V2-G11. L'alignement a ensuite été corrigé sur `PublicInfoboxBlock`, l'original d'où le défaut venait |
 
 ---
 
@@ -2790,9 +2790,14 @@ l'autre subi. L'auteur avait vu juste en soupçonnant un reste codé en dur.
 ### Décision
 
 **Ligne de base** pour le bloc Séance (`items-baseline`) — le seul alignement qui
-tienne entre deux textes de tailles différentes. Corrigé sur ce bloc seul :
-`PublicInfoboxBlock` porte le même balisage et le même défaut, mais le toucher
-changerait l'apparence de fiches que personne n'a signalées.
+tienne entre deux textes de tailles différentes.
+
+Corrigé d'abord sur ce bloc seul, puis **sur `PublicInfoboxBlock` aussi**, à la
+demande de l'auteur dans la foulée : c'est l'original dont le bloc Séance était
+copié, il portait donc le même défaut sur toutes les autres fiches du wiki
+depuis V0. Le bloc Séance n'a rien cassé, il a rendu voyant ce qui était déjà
+là — le genre de correction qu'on ne fait que parce qu'un cas particulier a
+attiré l'œil sur le cas général.
 
 **Un trait en PREMIER segment d'un bloc texte remonte au-dessus du titre**
 (`hasLeadRule`), et le bloc précédent éteint son propre filet : le trait choisi
@@ -2815,6 +2820,7 @@ coup). Mesuré plutôt que jugé à l'œil :
 | Mesure | Valeur |
 |---|---|
 | Écart de ligne de base libellé/valeur | 1,2 px (descendantes) — les bases coïncident |
+| Idem sur `PublicInfoboxBlock`, valeur sur deux lignes | 1,2 px — le libellé suit la PREMIÈRE ligne |
 | Trait de tête rendu avant le titre | oui |
 | Filet du bloc précédent | `0px` |
 | Trait au milieu du texte | resté en place |
@@ -2824,6 +2830,7 @@ coup). Mesuré plutôt que jugé à l'œil :
 ### Critères
 
 - [x] Les libellés du bloc Séance sont sur la ligne de base de leurs valeurs.
+- [x] Ceux de l'infobox aussi, y compris quand la valeur passe à la ligne.
 - [x] Un trait en tête de bloc se rend au-dessus du titre du bloc.
 - [x] Il remplace le filet automatique au lieu de s'y ajouter.
 - [x] Un trait au milieu d'un texte reste où il a été posé.

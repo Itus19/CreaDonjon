@@ -230,7 +230,13 @@ function visiblesDansLaPage(images: AnchoredImage<PublicBlock>[]): AnchoredImage
 
 function PublicInfoboxBlock({ data }: { data: InfoboxBlockData }) {
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+    // `items-baseline` : meme correction qu'au bloc Seance ci-dessous (V2.1-17),
+    // appliquee a l'original dont il etait copie. Le defaut dormait ici depuis
+    // V0 — un libelle de 10px et une valeur de 14px alignes en `stretch` se
+    // posent chacun en haut de SA cellule, donc leurs lignes de base
+    // divergent. Corrige sur demande de l'auteur apres l'avoir vu sur le bloc
+    // Seance, qui n'a fait que rendre voyant ce qui etait deja la.
+    <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 text-sm">
       {data.entries.map((entry, i) => (
         <div key={i} className="contents">
           <dt className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{entry.label}</dt>
