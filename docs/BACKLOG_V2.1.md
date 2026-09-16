@@ -30,7 +30,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-13 | Centrer le couple sommaire + texte du wiki | `S` | **Fait** (15 septembre) — le vide entre sommaire et texte tombe de ~300 px à 32 px sur un écran de 1920, et cesse de dépendre de la fenêtre : il était un reste, il devient une marge. Une borne exprimée dans les unités du contenu, écrite une seule fois pour les trois routes — premier encaissement de la fusion de V2.1-12 |
 | V2.1-16 | Le défilement appartient aux fenêtres, et l'en-tête disparaît | `M` | **Fait** (16 septembre) — deux gênes signalées avec captures, une seule cause : `<body>` n'avait pas de hauteur définie, donc chaque coquille bornait la sienne dans son coin. Mesuré avant/après : la page défilait de 56 px, la hauteur exacte de l'en-tête — lequel a disparu au lot 2, rendant ces 56 px aux fiches |
 | V2.1-17 | Deux retouches de rendu au Livre de sessions | `S` | **Fait** (16 septembre) — les deux vues par l'auteur, captures à l'appui : le bloc Séance n'alignait pas ses libellés sur ses valeurs, et un trait posé en tête de bloc tombait entre le titre et le texte, en doublon du filet automatique que chaque bloc porte depuis V2-G11. L'alignement a ensuite été corrigé sur `PublicInfoboxBlock`, l'original d'où le défaut venait |
-| V2.1-18 | Aperçu des fiches au survol d'un lien | `L` | **Ouvert** (16 septembre) — quatre lots, le premier autonome. Né d'un lien de règle qui ne mène nulle part sur `/partage` tout en portant la couleur et le souligné d'un vrai lien : trois mentions inertes sur vingt, mesurées sur la page en production. Trois variantes esquissées avec l'auteur avant tout code, la carte flottante retenue pour les entités comme pour les règles. La fluidité est une exigence du ticket, pas une optimisation d'après-coup : elle a une section, des cibles chiffrées, et elle a mis au jour un coût plus ancien, parti en V2.1-19 |
+| V2.1-18 | Aperçu des fiches au survol d'un lien | `L` | **Fait** (16 septembre) — les quatre lots livrés, les onze critères cochés, dont les deux ajoutés après coup sur retour de l'auteur (la carte coupée par un bord, et le pied « Ouvrir la fiche » qui était un `<span>` inerte). Statut corrigé le 16 septembre : la ligne disait encore « Ouvert » alors que le ticket était clos plus bas. Une seule case du tableau de fluidité reste *à relever* — le poids HTML ajouté sur le Prologue — et c'est une mesure jamais prise, pas un travail jamais fait. Le premier lot était autonome. Né d'un lien de règle qui ne mène nulle part sur `/partage` tout en portant la couleur et le souligné d'un vrai lien : trois mentions inertes sur vingt, mesurées sur la page en production. Trois variantes esquissées avec l'auteur avant tout code, la carte flottante retenue pour les entités comme pour les règles. La fluidité est une exigence du ticket, pas une optimisation d'après-coup : elle a une section, des cibles chiffrées, et elle a mis au jour un coût plus ancien, parti en V2.1-19 |
 | V2.1-19 | La mémoïsation n'atteignait pas le wiki public | `M` | **Fait** (16 septembre) — né de la section Fluidité de V2.1-18. `React.cache()` ne prend que si le client Supabase est stable par requête ; `createShareLinkServiceClient` est une fabrique nue, et chaque fonction de `publicShare.ts` construit la sienne. Tout le gain de l'audit P-01 était donc inerte sur `/partage`, et seulement là. Second volet : la coquille passe dans le layout, `/partage` était la dernière des trois routes de wiki à la reconstruire à chaque fiche. Mesure : 2 constructions de sommaire pour deux navigations avant, 0 après, et la recherche du sommaire survit désormais à la navigation |
 | V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Tous les lots faits** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : le temps de rendu est le nombre de vagues de requêtes multiplié par la latence, et 41 % sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt, retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme. Deux défauts empilés, plus une fuite refermée. **Lot 2.1** : les jetons de teinte passent dans le HTML, sur les trois routes, éditeur compris. **Lot 3** : deux vagues qui n'attendaient que leur tour dans l'ordre d'écriture — le Prologue passe de 873 à 678 ms. **Lot 5** : la chaine de rulesets cesse d attendre les cles de regle — le Prologue passe de 731 a 434 ms, soit -41 % depuis le lot 0. **Lot 4** : l auteur payait 66 ms de plus que ses joueuses a chaque clic, le middleware sort desormais avant de construire le client sur /partage — ecart ramene a -1 ms. **Lot 6** : l A/B tranche — squelette a 18 ms sur une cible prechargee contre 20 ms sur une cible qui ne l est pas, et une navigation coute exactement son rendu serveur. Le prechargement est coupe partout, 18 requetes par page ouverte tombent a 0 |
 | V2.1-21 | Le contraste élevé se perd sur une fiche illustrée | `S` | **Fait** (16 septembre) — trouvé en instruisant le lot 2.1 de V2.1-20, pas en le cherchant. `.wiki-bg-scope[data-mode="…"]` redéclare la palette **sur lui-même**, et une déclaration locale l'emporte sur une valeur héritée : ce n'est pas une affaire de spécificité, les deux règles ne visent même pas le même élément. Sur toute fiche portant un fond de page wiki, le contraste élevé était donc écrasé — le lecteur le perdait exactement là où il en a le plus besoin. Mesuré avant correction : fond à 17 % de clarté au lieu de 1,6 %, texte à 95 % au lieu de blanc pur. Corrigé par un garde `:root:not([data-contrast="high"])` sur les quatre portées ; l'auteur a choisi de garder l'image, qui reste affichée mais que le `--scrim` de ce mode voile à 92 % |
@@ -2845,7 +2845,7 @@ coup). Mesuré plutôt que jugé à l'œil :
 
 ---
 
-## V2.1-18 — Aperçu des fiches au survol d'un lien · `L`
+## V2.1-18 — Aperçu des fiches au survol d'un lien · `L` — fait
 
 ### Constat
 
@@ -5286,8 +5286,21 @@ autres.
 
 ### Lots
 
-**Lot 0 — l'ADR 0026, et la correction du §3 de la charte.** L'arbitrage est
-pris (ci-dessus) ; reste à l'écrire. Bloquant : aucun code avant.
+**Lot 0 — l'ADR 0026, et la correction du §3 de la charte.** — **fait.**
+L'arbitrage étant pris, restait à l'écrire. Le comptage fait à ce moment-là a
+renversé la règle qu'on croyait contourner : **`components/shared/Tabs.tsx`
+n'a aucun importateur.** Né avec V2-K5 (« Réglages à onglets »), il est resté
+orphelin quand l'écran de réglages a quitté l'application. `SectionToggle`
+partage son dessin mais ce sont des `<Link>` de navigation, pas des onglets.
+**La seule présentation d'onglets en service dans le dépôt est donc celle que
+la charte interdisait** — et elle est née d'un retour de l'auteur sur le défaut
+de la première. La charte ne contournait rien : elle désignait du code mort.
+
+Un gain non prévu, relevé en écrivant l'ADR : les intercalaires de la fiche
+sont des `<button>` nus, sans `role="tablist"` ni navigation aux flèches, alors
+que `Tabs.tsx` porte tout le contrat ARIA correct. L'extraction le lui emprunte,
+donc **la fiche jouable gagne le clavier au passage**. Ce n'était pas le but de
+ce ticket ; c'est un critère du lot 1, pour que ça ne se perde pas.
 
 **Lot 1 — `BinderTabs` extrait de la fiche.** Apparence strictement inchangée
 pour elle. C'est le lot qui a le plus de chances d'abîmer quelque chose et le
@@ -5333,6 +5346,10 @@ l'auteur, les deux derniers peuvent attendre.
 - [ ] La fiche de personnage est **visuellement inchangée** après l'extraction
       de `BinderTabs` — les cinq onglets vérifiés en navigateur, pas seulement
       compilés.
+- [ ] `BinderTabs` porte le contrat ARIA que les intercalaires n'avaient pas :
+      `role="tablist"`, `aria-selected`, un seul onglet dans l'ordre de
+      tabulation, flèches/`Home`/`End`. La fiche jouable devient navigable au
+      clavier, ce qu'elle n'était pas (ADR 0026).
 - [ ] Aucune ligne d'Administration ne replie ses boutons : une ligne reste une
       ligne, à 1280 px comme à 1920.
 - [ ] `Révoquer` et `Supprimer le compte` sont dans le menu, marqués `danger`,
