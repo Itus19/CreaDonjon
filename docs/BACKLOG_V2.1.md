@@ -35,6 +35,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Tous les lots faits** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : le temps de rendu est le nombre de vagues de requêtes multiplié par la latence, et 41 % sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt, retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme. Deux défauts empilés, plus une fuite refermée. **Lot 2.1** : les jetons de teinte passent dans le HTML, sur les trois routes, éditeur compris. **Lot 3** : deux vagues qui n'attendaient que leur tour dans l'ordre d'écriture — le Prologue passe de 873 à 678 ms. **Lot 5** : la chaine de rulesets cesse d attendre les cles de regle — le Prologue passe de 731 a 434 ms, soit -41 % depuis le lot 0. **Lot 4** : l auteur payait 66 ms de plus que ses joueuses a chaque clic, le middleware sort desormais avant de construire le client sur /partage — ecart ramene a -1 ms. **Lot 6** : l A/B tranche — squelette a 18 ms sur une cible prechargee contre 20 ms sur une cible qui ne l est pas, et une navigation coute exactement son rendu serveur. Le prechargement est coupe partout, 18 requetes par page ouverte tombent a 0 |
 | V2.1-21 | Le contraste élevé se perd sur une fiche illustrée | `S` | **Fait** (16 septembre) — trouvé en instruisant le lot 2.1 de V2.1-20, pas en le cherchant. `.wiki-bg-scope[data-mode="…"]` redéclare la palette **sur lui-même**, et une déclaration locale l'emporte sur une valeur héritée : ce n'est pas une affaire de spécificité, les deux règles ne visent même pas le même élément. Sur toute fiche portant un fond de page wiki, le contraste élevé était donc écrasé — le lecteur le perdait exactement là où il en a le plus besoin. Mesuré avant correction : fond à 17 % de clarté au lieu de 1,6 %, texte à 95 % au lieu de blanc pur. Corrigé par un garde `:root:not([data-contrast="high"])` sur les quatre portées ; l'auteur a choisi de garder l'image, qui reste affichée mais que le `--scrim` de ce mode voile à 92 % |
 | V2.1-22 | Le panneau « Mentionné dans » quitte l'application | `S` | **Fait** (16 septembre) — demande directe de l'auteur : « je n'en ai pas besoin ». Le chemin entier part, pas seulement l'affichage : sans lecteur, recalculer les mentions à chaque enregistrement d'un bloc texte ne servait plus personne. La table `entity_mentions` est supprimée, avec son accord. Les liens DANS le texte, qui portent le même nom dans la spec, ne sont pas touchés |
+| V2.1-23 | Les petits contrôles à un rapport de pixels fractionnaire | `M` | **Ouvert** (16 septembre) — le liseré d'un bouton et le petit texte coloré paraissent abîmés sur l'écran 4K de l'auteur, pas sur son portable. Mesuré : `dpr=1.5`, gamut sRGB — c'est Windows à 150 %, et un trait d'1 px y vaut 1,5 pixel physique qu'aucune valeur CSS ne peut faire tomber juste. Ce n'est pas une régression de V2.1-20/21, vérifié dans le diff. Ce qu'on peut changer n'est pas le rendu du trait mais le fait que nos petits contrôles **dépendent** d'un trait pour exister — un aplat de surface se rend proprement à n'importe quel rapport. Trois candidats, et l'auteur est le seul à pouvoir les départager : une page de comparaison passe avant toute modification |
 
 ---
 
@@ -4899,6 +4900,101 @@ innocentait la base en une mesure. Le vrai coupable était la compilation
 incrémentale du serveur de dev, restée accrochée à six fichiers supprimés sous
 elle. **Quand un changement de base et un changement de code arrivent le même
 jour, l'environnement qui n'a reçu que l'un des deux tranche entre eux.**
+
+---
+
+## V2.1-23 — Les petits contrôles à un rapport de pixels fractionnaire · `M`
+
+### Constat
+
+Retour de l'auteur (16 septembre), capture à l'appui : sur son écran 4K, le
+liseré du bouton « Copier » et le petit texte coloré (`Révoquer`, `Copier`)
+paraissent abîmés. Sur son portable, non.
+
+Mesuré avant toute hypothèse, dans la console de l'écran concerné :
+
+```
+dpr=1.5 · p3=false · rec2020=false · hdr=false
+```
+
+Ce n'est donc **pas** une affaire de gamut — l'écran est sRGB ordinaire. C'est
+Windows à 150 %, soit un `devicePixelRatio` de 1,5.
+
+**Ce n'est pas non plus une régression.** Le soupçon initial visait V2.1-20/21 ;
+vérifié dans le diff : `tokens.css` n'y contient que les quatre gardes préfixés
+`.wiki-bg-scope`, les déclarations `:root` sont intactes au caractère près, et
+aucun fichier du panneau concerné n'a été touché. Un changement de code ne se
+manifesterait d'ailleurs pas sur un écran et pas sur l'autre.
+
+### Ce qui se passe, et ce qu'on ne pourra pas corriger
+
+À 1,5, un pixel CSS vaut un pixel et demi physique. Un trait d'**1 px** ne peut
+donc pas tomber juste : le navigateur l'étale sur deux rangées à intensités
+inégales. Aucune valeur CSS ne change cela — ce n'est pas notre rendu, c'est le
+rastériseur.
+
+Deux choses l'aggravent chez nous :
+
+- une couleur **saturée** sur fond très sombre rend l'étalement plus visible
+  qu'un gris ;
+- un rayon (`rounded-md`, `rounded-full`) ajoute la courbure, dont l'épaisseur
+  apparente varie le long de l'arc.
+
+Idem pour le texte : `text-xs` (12 px) en graisse 400, coloré, a des jambages
+fins que le lissage à 1,5 délave. **On ne rendra pas un lissage de 1,5 identique
+à celui de 2.** Le dire d'emblée évite de promettre ce qu'aucun correctif ne
+tiendra.
+
+Contournement immédiat et efficace, vérifié par l'auteur : `devicePixelRatio`
+vaut l'échelle du système multipliée par le zoom du navigateur. À 150 % de
+Windows, un zoom de 133 % donne un rapport de 2 et tout redevient net. Mais
+demander un réglage de navigateur à ses joueuses n'est pas une réponse — d'où
+ce ticket.
+
+### La piste, et elle est de niveau charte
+
+**Un aplat de surface se rend proprement à n'importe quel rapport, un trait
+d'un pixel non.** La question n'est donc pas « comment rendre le liseré net »
+mais « pourquoi nos petits contrôles dépendent-ils d'un liseré pour exister ».
+
+Trois candidats à départager, tous compatibles avec `CHARTE-UI.md` :
+
+1. **Surface plutôt que contour** — fond `accent/10` ou `panel-raised`, sans
+   bordure. Le contrôle existe par sa surface ; plus rien à rastériser finement.
+2. **Surface ET contour** — le liseré reste, mais il n'est plus ce qui rend le
+   bouton lisible. Son étalement devient un détail plutôt qu'une gêne.
+3. **Contour, mais graisse 500 sur le libellé** — le changement le plus léger,
+   qui ne traite que le texte. La charte autorise déjà deux graisses (400, 500).
+
+Ces trois-là valent aussi pour `--edge`, déclaré à **55 % d'opacité** : un trait
+d'un pixel déjà à moitié transparent, étalé sur 1,5 pixel, descend par endroits
+sous 30 % effectifs. Le bouton « Copier » n'est pas concerné (il utilise
+`border-accent`, opaque), mais la grande majorité des contrôles de
+l'application l'est.
+
+### Méthode : l'auteur juge, personne d'autre ne peut
+
+Le défaut n'existe qu'à 1,5, et aucune machine de l'équipe de développement
+n'est à 1,5. Une page de comparaison est donc produite AVANT tout changement
+d'application : les recettes candidates côte à côte, avec le `devicePixelRatio`
+affiché en tête pour confirmer qu'on regarde bien le bon cas.
+
+Aucune ligne de `CHARTE-UI.md` ni de composant ne bouge avant ce verdict. C'est
+la même discipline que le lot 0 de V2.1-20 : mesurer d'abord, et ici « mesurer »
+veut dire « faire regarder par le seul œil qui voit le problème ».
+
+### Critères
+
+- [ ] Une page de comparaison existe et affiche le `devicePixelRatio` réel.
+- [ ] L'auteur a tranché entre les trois candidats, sur son écran 4K à 150 %.
+- [ ] La recette retenue est écrite dans `CHARTE-UI.md` §3, avec la raison —
+      un rapport fractionnaire n'est pas une lubie d'un poste, c'est le réglage
+      par défaut de Windows sur beaucoup de 4K.
+- [ ] Les contrôles existants sont convertis, ou un périmètre explicite est
+      écrit si la conversion est progressive.
+- [ ] Vérifié sur les deux écrans de l'auteur : le correctif ne doit rien abîmer
+      à 1× ni à 2×.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
 
 ---
 
