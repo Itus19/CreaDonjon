@@ -26,7 +26,7 @@ function CopyButton({ url, copiedUrl, onCopy }: { url: string; copiedUrl: string
     <button
       type="button"
       onClick={() => navigator.clipboard.writeText(url).then(() => onCopy(url))}
-      className="shrink-0 rounded-md bg-panel-raised px-2 py-1 text-sm font-medium text-accent transition-colors hover:bg-panel"
+      className="shrink-0 rounded-md border border-accent px-2 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
     >
       {copied ? "Copié ✓" : "Copier"}
     </button>
@@ -119,16 +119,16 @@ function InviteRow({
         </span>
         <div className="flex items-center gap-2">
           {url && <CopyButton url={url} copiedUrl={copiedUrl} onCopy={onCopy} />}
-          <button type="button" onClick={() => setEditingPassword((v) => !v)} className="text-sm font-medium text-ink-muted transition-colors hover:text-ink">
+          <button type="button" onClick={() => setEditingPassword((v) => !v)} className="text-ink-muted hover:text-ink">
             Mot de passe
           </button>
-          <button type="button" onClick={revoke} disabled={busy} className="text-sm font-medium text-danger hover:underline disabled:opacity-50">
+          <button type="button" onClick={revoke} disabled={busy} className="text-danger hover:underline disabled:opacity-50">
             Révoquer
           </button>
         </div>
       </div>
       {invite.claimedName && (
-        <span className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+        <span className="flex flex-wrap items-center gap-2 text-[11px] text-ink-muted">
           Réclamé par {invite.claimedName}
           {invite.claimedCharacterName && <> · joue {invite.claimedCharacterName}</>}
           {invite.claimedEntityId && (
@@ -137,7 +137,7 @@ function InviteRow({
               onClick={resetCharacter}
               disabled={busy}
               title="Libère ce personnage — un autre lien (ou celui-ci rouvert) pourra le réclamer à nouveau."
-              className="text-sm font-medium text-danger hover:underline disabled:opacity-50"
+              className="text-danger hover:underline disabled:opacity-50"
             >
               Réinitialiser le personnage
             </button>
@@ -157,13 +157,13 @@ function InviteRow({
             type="button"
             onClick={savePassword}
             disabled={busy}
-            className="shrink-0 rounded-md bg-panel-raised px-2 py-1 text-sm font-medium text-ink transition-colors hover:bg-panel disabled:opacity-50"
+            className="shrink-0 rounded-md border border-edge px-2 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
           >
             Enregistrer
           </button>
         </div>
       )}
-      {error && <p className="text-xs text-danger">{error}</p>}
+      {error && <p className="text-[11px] text-danger">{error}</p>}
     </li>
   );
 }
@@ -233,7 +233,7 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
         <button
           type="submit"
           disabled={busy}
-          className="shrink-0 rounded-md bg-panel-raised px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-panel disabled:opacity-50"
+          className="shrink-0 rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
         >
           {busy ? "Génération..." : "Générer un lien"}
         </button>

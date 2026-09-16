@@ -5027,15 +5027,68 @@ Aucune ligne de `CHARTE-UI.md` ni de composant ne bouge avant ce verdict. C'est
 la même discipline que le lot 0 de V2.1-20 : mesurer d'abord, et ici « mesurer »
 veut dire « faire regarder par le seul œil qui voit le problème ».
 
+### Écrit, appliqué, puis annulé — décision de l'auteur
+
+La recette a été posée dans `CHARTE-UI.md` §3 et appliquée à `InviteLinkPanel`
+(commit `dc77fba`), puis **entièrement annulée** (`git revert`) à la demande de
+l'auteur, une fois l'hypothèse du `backdrop-filter` tombée.
+
+La question qu'il a posée était la bonne : « faut-il remettre les boutons à
+12 px comme avant ? » Trois éléments de réponse ont été mis sur la table, et
+c'est lui qui a tranché.
+
+**Ce que l'hypothèse morte n'invalidait pas.** Elle portait sur le MÉCANISME —
+pourquoi le texte est en lissage gris. Le symptôme, lui, reste mesuré : à 1,5,
+Chrome n'utilise pas le lissage sous-pixel, et l'auteur avait comparé 12, 13 et
+14 px sur son propre écran avant de préférer le 14. Cette préférence-là ne
+dépendait d'aucune explication.
+
+**Ce que la charte disait déjà**, indépendamment de tout écran : « `text-sm` est
+le défaut de l'interface, `text-xs` pour ce qui est dense et secondaire » (§4).
+Un libellé d'action n'est pas une métadonnée. Le 12 px sur les boutons était
+hors charte avant que la question ne se pose.
+
+**Ce qui a emporté la décision.** L'état livré était le pire des trois : un seul
+panneau converti, 214 autres contrôles inchangés. Ni l'ancienne cohérence, ni la
+nouvelle. Il fallait choisir un bout — poursuivre écran par écran, ou revenir —
+et l'auteur a choisi de revenir.
+
+**Revert intégral, y compris les deux `text-[11px]`** qui étaient passés à
+`text-xs` au passage. Ils violent pourtant le plancher que la charte pose au §4
+(« Rien en dessous de `text-xs` »), et ce défaut est antérieur à tout ce
+ticket. Les garder dans le revert plutôt que les sauver est délibéré : un
+correctif de plancher n'a rien à faire dans l'annulation d'une expérience de
+design, il mérite son propre geste si l'auteur le veut.
+
+### Ce que ce ticket laisse derrière lui
+
+Aucun code. Mais trois mesures qui valent d'être gardées, parce qu'elles
+coûteraient le même travail à refaire :
+
+- l'écran est en `dpr=1.5`, sRGB, résolution native — ce n'est ni le gamut ni
+  un réglage d'affichage ;
+- le `backdrop-filter` des fenêtres n'y est pour rien, testé en le coupant ;
+- à un rapport fractionnaire, Chrome n'utilise pas le lissage sous-pixel, quel
+  que soit le calque. Il n'y a rien à couper, et pas de ticket à ouvrir sur la
+  matière des fenêtres.
+
+Et un contournement qui marche, pour qui bute dessus : zoom du navigateur à
+133 % sur un système à 150 %, ce qui ramène le rapport à 2.
+
+Le ticket reste **ouvert** plutôt que clos : le constat tient, le remède n'a pas
+été adopté. Le rouvrir demandera de reprendre la décision par le bon bout —
+convertir toute l'application d'un coup, ou pas du tout.
+
 ### Critères
 
 - [x] Une page de comparaison existe et affiche le `devicePixelRatio` réel.
 - [x] L'auteur a tranché : surface neutre à libellé accentué, et 14 px plutôt que 13 — cette dernière taille n'existait pas dans l'échelle, la page la proposait à tort.
-- [x] La recette retenue est écrite dans `CHARTE-UI.md` §3, avec la raison —
+- [ ] La recette retenue est écrite dans `CHARTE-UI.md` §3, avec la raison — **écrite puis annulée**, voir ci-dessus :
       un rapport fractionnaire n'est pas une lubie d'un poste, c'est le réglage
       par défaut de Windows sur beaucoup de 4K.
-- [ ] Les contrôles existants sont convertis, ou un périmètre explicite est
-      écrit si la conversion est progressive.
+- [ ] Les contrôles existants sont convertis — **non**, et c'est ce qui a fait
+      revenir l'auteur en arrière : un seul panneau converti sur 215 valait moins
+      que l'ancienne cohérence.
 - [ ] Vérifié sur les deux écrans de l'auteur : le correctif ne doit rien abîmer
       à 1× ni à 2×.
 - [ ] `npm run typecheck && npm run lint && npm run test` passent.

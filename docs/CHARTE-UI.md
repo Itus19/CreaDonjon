@@ -80,28 +80,28 @@ rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink
 transition-colors hover:bg-accent-hover disabled:opacity-50
 ```
 
-Version compacte (barre d'outils, en-tête de panneau) : `px-3 py-1`. La taille du libellé, elle, ne descend pas — voir « Pourquoi les contrôles ont une surface » plus bas.
+Version compacte (barre d'outils, en-tête de panneau) : `px-3 py-1 text-xs`.
 
 ### Bouton secondaire — le cas courant
 
 ```
-rounded-full bg-panel-raised px-3 py-1 text-sm font-medium text-ink
-transition-colors hover:bg-panel disabled:opacity-50
+rounded-full border border-edge px-3 py-1 text-xs text-ink
+transition-colors hover:bg-panel-raised disabled:opacity-50
 ```
 
-Version confortable (formulaire, page pleine) : `px-4 py-2`.
+Version confortable (formulaire, page pleine) : `px-4 py-2 text-sm`.
 
 ### Bouton fantôme accent — action secondaire mais visible
 
 ```
-rounded-full bg-panel-raised px-3 py-1 text-sm font-medium text-accent
-transition-colors hover:bg-panel disabled:opacity-50
+rounded-full border border-accent px-3 py-1 text-xs text-accent
+transition-colors hover:bg-accent/10 disabled:opacity-50
 ```
 
 ### Bouton destructeur
 
 ```
-rounded-full bg-danger px-3 py-1 text-sm font-medium text-accent-ink
+rounded-full bg-danger px-3 py-1 text-xs font-medium text-accent-ink
 transition-colors hover:opacity-90 disabled:opacity-50
 ```
 
@@ -109,41 +109,7 @@ transition-colors hover:opacity-90 disabled:opacity-50
 
 C'est la seule recette de cette section qui soit une **forme normalisée** plutôt qu'un motif compté : le couple `bg-danger` + `text-accent-ink` vient de `ConfirmDialog.tsx`, les quatre boutons destructeurs du dépôt s'en écartent encore par leur rembourrage (`px-3 py-1.5`, `px-4 py-1.5`) et deux d'entre eux sont en `rounded-md`. Aligner les nouveaux sur la forme ci-dessus ; ne pas rouvrir les anciens pour ça seul.
 
-Pour une suppression discrète dans une liste, un lien suffit : `text-sm font-medium text-danger hover:underline`. Dans les deux cas, la confirmation passe par `ConfirmDialog`, jamais par `window.confirm`.
-
-### Pourquoi les contrôles ont une surface, et leur libellé 14 px
-
-Ajouté en V2.1-23, sur un défaut visible uniquement à un **rapport de pixels
-fractionnaire** — Windows à 150 %, soit un `devicePixelRatio` de 1,5, qui est le
-réglage par défaut de beaucoup d'écrans 4K.
-
-À 1,5, un pixel CSS vaut un pixel et demi physique. Un trait d'**1 px** ne peut
-donc pas tomber juste : le navigateur l'étale sur deux rangées à intensités
-inégales. Aucune valeur CSS ne corrige cela — ce n'est pas notre rendu, c'est le
-rastériseur. Une couleur saturée sur fond sombre et un rayon de bordure ne font
-qu'accentuer ce qu'on voit.
-
-D'où la règle, qui n'est pas une préférence esthétique :
-
-> **Un contrôle ne doit jamais dépendre d'un trait d'un pixel pour exister.**
-> Un aplat de surface se rend proprement à n'importe quel rapport de pixels.
-
-Le liseré peut rester — il n'est simplement plus ce qui rend le bouton lisible.
-
-Et le libellé passe à `text-sm` en graisse 500. Ce n'est pas un cran nouveau :
-c'est le **défaut** déclaré au §4 (« `text-sm` est le défaut de l'interface,
-`text-xs` pour ce qui est dense et secondaire »). Un libellé d'action n'est pas
-une métadonnée, il n'aurait jamais dû être en 12 px.
-
-**Ce que cette règle ne couvre pas** : les métadonnées restent en `text-xs`.
-« créé le 2 septembre 2026 », « Réclamé par Tamara » — c'est bien du dense et du
-secondaire, et les agrandir gonflerait toutes les listes sans rien régler. Un
-libellé d'action à 14 px à côté d'une métadonnée à 12 px n'est pas une
-incohérence, c'est la hiérarchie que le §4 décrit.
-
-Vérifié par l'auteur sur son écran à 1,5, recettes comparées côte à côte. Le
-contournement qui marche — zoom du navigateur à 133 %, qui ramène le rapport à
-2 — n'en est pas un : on ne demande pas un réglage de navigateur à ses joueuses.
+Pour une suppression discrète dans une liste, un lien suffit : `text-xs text-danger hover:underline`. Dans les deux cas, la confirmation passe par `ConfirmDialog`, jamais par `window.confirm`.
 
 ### Champ de saisie
 
