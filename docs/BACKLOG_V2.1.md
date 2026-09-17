@@ -37,6 +37,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-22 | Le panneau « Mentionné dans » quitte l'application | `S` | **Fait** (16 septembre) — demande directe de l'auteur : « je n'en ai pas besoin ». Le chemin entier part, pas seulement l'affichage : sans lecteur, recalculer les mentions à chaque enregistrement d'un bloc texte ne servait plus personne. La table `entity_mentions` est supprimée, avec son accord. Les liens DANS le texte, qui portent le même nom dans la spec, ne sont pas touchés |
 | V2.1-23 | Les petits contrôles à un rapport de pixels fractionnaire | `M` | **Ouvert** (16 septembre) — le liseré d'un bouton et le petit texte coloré paraissent abîmés sur l'écran 4K de l'auteur, pas sur son portable. Mesuré : `dpr=1.5`, gamut sRGB — c'est Windows à 150 %, et un trait d'1 px y vaut 1,5 pixel physique qu'aucune valeur CSS ne peut faire tomber juste. Ce n'est pas une régression de V2.1-20/21, vérifié dans le diff. Ce qu'on peut changer n'est pas le rendu du trait mais le fait que nos petits contrôles **dépendent** d'un trait pour exister — un aplat de surface se rend proprement à n'importe quel rapport. Trois candidats, et l'auteur est le seul à pouvoir les départager : une page de comparaison passe avant toute modification. **Clos sans remède** le 16 septembre : la recette a été écrite, appliquée, puis annulée, et la mesure de clôture a montré pourquoi « convertir d'un coup » n'existait pas — 159 sites écrits de **93 façons distinctes**, dont 60 uniques. Le ticket ne laisse aucune ligne de code, mais quatre mesures et un chemin (`Button.tsx`, charte §7d) si le sujet revient |
 | V2.1-24 | L'accueil passe au rail de sections, le détail au classeur | `L` | **Les cinq lots livrés** (17 septembre), un seul critère restant : l'Administration en tableau n'a pas été vue en navigateur, faute d'un compte superadmin côté test. Ouvert le 16 septembre — demande de l'auteur sur capture : « revoir la disposition de cette page et l'organisation des boutons ». Compté avant de dessiner : **52 contrôles simultanés** pour la seule Administration, dont les boutons se replient faute de place dans un tiers d'écran, et une troisième colonne vide au chargement. Cinq esquisses regardées ensemble, puis trois — le **rail de sections** l'emporte, parce qu'il « rappelle le menu des joueurs » dont il emprunte l'esthétique, et le détail du monde passe aux **intercalaires de classeur** de la fiche de personnage. Rien de neuf à dessiner : `PlayerShell`, les onglets de `PlayableCharacterSheet` et `ActionsMenu` existent tous les trois. Le lot 0 était un arbitrage qui n'appartenait qu'à l'auteur — la charte interdit une deuxième présentation d'onglets, le dépôt en a déjà deux, et toutes deux se défendent : **tranché le jour même**, `BinderTabs` est extrait et l'ADR 0026 assume les deux présentations |
+| V2.1-25 | L'onglet Accès : une liste calme, et « Révoquer » qui tient sa promesse | `M` | **Ouvert** (17 septembre) — né d'une demande de présentation, qui a découvert autre chose en instruisant une remarque de l'auteur (« il reste des traces » après une révocation). **Ce n'était pas son erreur** : `revokeCampaignInvite` pose `revoked_at` et rien d'autre, donc le jeton meurt mais `campaign_members` et `campaign_characters.user_id` survivent — et `app.is_world_member` comptant les membres de campagne, **le monde reste ouvert à la personne révoquée**. Quatre besoins pour deux opérations et demie ; « retirer vraiment l'accès » n'existait qu'en supprimant le compte. L'auteur a tranché : révoquer retirera l'accès, par une fonction Postgres atomique — trois écritures sur trois tables pour une opération de sécurité ne se font pas à la file. Côté écran, quatre esquisses regardées ensemble, la liste calme retenue avec la séparation des liens en attente |
 
 ---
 
@@ -5472,6 +5473,167 @@ l'auteur, les deux derniers peuvent attendre.
       sont testés sur les trois destinations.
 - [ ] Navigable au clavier : `Tab` atteint tout, `Échap` ferme le menu.
 - [ ] `npm run typecheck && npm run lint && npm run test` passent.
+
+---
+
+## V2.1-25 — L'onglet Accès : une liste calme, et « Révoquer » qui tient sa promesse · `M`
+
+### Constat — la présentation
+
+Demande de l'auteur (17 septembre), capture à l'appui : « je ne suis pas
+satisfait de la présentation et l'organisation des boutons/options ». L'écran
+visé est `components/shell/InviteLinkPanel.tsx`, rendu dans l'onglet Accès
+ouvert par V2.1-24 (lot 3).
+
+Six défauts, tous lisibles sur la capture :
+
+- **Quatre poids visuels pour quatre actions de même rang.** `Copier` est une
+  pastille bordée accent (`border-accent rounded-md px-2 py-1`), `Mot de passe`
+  du texte nu sans bordure ni rembourrage, `Révoquer` du texte `text-danger`,
+  et `Réinitialiser le personnage` du texte `text-danger` **sur la ligne du
+  dessous**. Rien ne dit lequel compte.
+- **« Réinitialiser le personnage » n'a pas d'abscisse stable.** Il est collé à
+  la fin d'une phrase de longueur variable (« Réclamé par Tamara · joue Naivara
+  Amakiir »), donc il se déplace à chaque ligne — quatre positions différentes
+  sur quatre lignes. C'est le défaut qui a motivé le tableau de l'Administration
+  en V2.1-24, sous une autre forme.
+- **Deux actions destructrices sans confirmation.** `revoke()` et
+  `resetCharacter()` partent au premier clic. Le §3 de `CHARTE-UI.md` impose
+  `ConfirmDialog`, et `AdminPanel` le fait déjà pour la suppression de compte.
+- **Cibles de clic sous le minimum.** `Mot de passe` et `Révoquer` sont des
+  `<button>` sans rembourrage : hauts comme leur texte. La charte demande 24 px.
+- **`text-[11px]`** sur la ligne « Réclamé par » — sous le plancher `text-xs`
+  du §4.
+- **La hiérarchie est inversée.** Le rôle et la date sont en `text-xs`, le nom
+  de la personne et son personnage en `text-[11px]`. Or ce qu'on cherche dans
+  cette liste, c'est qui est à la table.
+
+### Constat — « Révoquer » ne fait pas ce que son nom promet
+
+Signalé par l'auteur dans la même demande : « j'avais révoqué un ancien lien
+qu'avait utilisé Tamara mais j'ai l'impression qu'il reste des traces ». Ce
+n'était pas une erreur de sa part.
+
+Chaîne remontée ligne à ligne. `revokeCampaignInvite`
+(`src/server/repos/campaignInvites.ts`) pose **`revoked_at` et rien d'autre** :
+une colonne, une table. Effet réel : `app.resolve_campaign_invite` filtre
+`revoked_at is null`, donc le jeton n'ouvre plus de session. C'est tout.
+
+Ce que la révocation ne touche pas, et ce sont les « traces » :
+
+| Ce qui survit | Conséquence |
+|---|---|
+| `campaign_characters.user_id` | Le personnage reste marqué « joué par » cette personne |
+| `campaign_members` | Elle reste membre — et `app.is_world_member` compte les membres de campagne (migration `20260804150002`), donc **le monde lui reste ouvert** |
+| `claimed_by_user_id` / `claimed_name` | La ligne survit, simplement masquée par le filtre de `listCampaignInvitesForCampaign` |
+
+**Révoquer ne retire donc pas l'accès.** La session déjà ouverte continue de
+fonctionner jusqu'à expiration. Un compte invité n'ayant pas de mot de passe par
+défaut, la personne finit par rester dehors — mais par épuisement de sa session,
+pas par la révocation.
+
+Et ce que l'auteur attendait — « le lien redevient accessible comme la première
+fois » — n'existe nulle part : rien ne remet `claimed_by_user_id` à `null` en
+gardant le lien vivant. « Réinitialiser » (Administration) forge un nouveau
+jeton mais garde la réclamation.
+
+Quatre besoins, deux opérations et demie :
+
+| Besoin | Aujourd'hui |
+|---|---|
+| Fermer la porte | `Révoquer` |
+| Rendre le lien réutilisable par quelqu'un d'autre | **n'existe pas** |
+| Libérer le personnage | `Réinitialiser le personnage`, mais laisse l'adhésion |
+| Retirer vraiment l'accès à une personne | **n'existe qu'en supprimant son compte**, superadmin seulement |
+
+### Décision
+
+**Présentation : la liste calme (esquisse C) avec la séparation de D.** Quatre
+esquisses regardées avec l'auteur ; il a retenu C plus l'option de séparer les
+liens en attente.
+
+- Deux sections : **« À la table »** (liens réclamés — une personne, son
+  personnage) et **« Liens en attente »** (jamais ouverts). Ce sont deux objets
+  différents, rendus identiques aujourd'hui.
+- Hiérarchie inversée : le nom de la personne en premier, le lien en second.
+- Les actions vivent **à abscisse fixe**, à droite : `Copier` visible, le reste
+  dans un `ActionsMenu` — le composant existe, V2.1-24 lot 4 l'emploie déjà.
+- `Copier` descend dans le menu pour un lien **déjà réclamé** : recopier le lien
+  de quelqu'un qui est entré il y a dix jours n'avance sur rien. Il reste
+  l'action principale pour un lien en attente, où c'est la seule qui compte.
+- Le titre « Liens d'invitation (sans email) » devient **« Accès à la
+  campagne »** : l'actuel décrit l'implémentation, et fait doublon avec le nom
+  de l'onglet qui le surmonte.
+- `EmptyState` pour la liste vide (§5), et les deux défauts de charte corrigés
+  au passage : cibles à 24 px, rien sous `text-xs`.
+
+**Comportement : « Révoquer » retire vraiment l'accès.** Décision de l'auteur,
+prise sur les quatre options ci-dessus. L'opération devient :
+
+1. `campaign_characters.user_id = null` pour cette personne dans cette campagne
+   — le personnage redevient libre ;
+2. suppression de la ligne `campaign_members` ;
+3. `revoked_at` posé sur le lien.
+
+Le **compte survit** — c'est la différence avec « Supprimer le compte », qui
+reste superadmin. Et la confirmation passe par `ConfirmDialog`, qui **nomme ce
+qui va être retiré** (la personne, son personnage), jamais un « Êtes-vous
+sûr ? » nu.
+
+### Une fonction Postgres, et pourquoi
+
+Les deux tables autorisent déjà l'écriture au MJ (`campaign_members_write` et
+`campaign_characters_write` passent par `app.is_world_admin`) : aucun besoin de
+service-role, aucune politique à changer.
+
+Mais ce sont **trois écritures sur trois tables pour une opération de
+sécurité**, et un état à moitié appliqué laisserait quelqu'un avec un accès
+qu'il ne devrait plus avoir. Elles vivent donc dans une fonction Postgres,
+`app.revoke_campaign_invite_access`, appelée en un aller-retour — atomique par
+construction, plutôt que trois requêtes dont la deuxième peut échouer.
+
+Migration à appliquer à la main par l'auteur (dépôt non lié), selon le rythme
+habituel : écrire, faire appliquer, relancer la suite, puis commiter.
+
+### Lots
+
+**Lot 1 — la révocation qui retire l'accès.** Migration + fonction, service et
+repo, `ConfirmDialog` nommant ce qui part. Se tient seul et corrige le défaut le
+plus grave même si le lot 2 n'est jamais fait.
+
+**Lot 2 — la présentation.** Les deux sections, la hiérarchie inversée, les
+actions à abscisse fixe, `ActionsMenu`, `EmptyState`, le titre.
+
+### Ce que ce ticket ne fait pas
+
+- Il ne crée pas l'opération manquante « rendre le lien réutilisable » : elle
+  n'a pas été demandée, et rien ne dit qu'elle servira une fois que révoquer
+  fera son travail.
+- Il ne touche pas à `AdminPanel`, dont la liste transversale a déjà reçu son
+  tableau en V2.1-24 (lot 4). Sa propre `revoke()` reste inchangée par ce
+  ticket — **traîne assumée et dite** : les deux devront converger.
+- Il ne touche pas au partage public (`ShareLinkPanel`), dont ce panneau
+  s'inspire mais qui n'a ni personnage ni adhésion.
+
+### Critères
+
+- [ ] Révoquer un lien réclamé libère le personnage, retire l'adhésion et tue
+      le jeton — les trois vérifiés en base, pas seulement à l'écran.
+- [ ] Après révocation, la personne ne voit plus le monde. Vérifié pour de vrai
+      avec un compte invité, pas déduit.
+- [ ] Son compte existe toujours, et les fiches qu'elle a créées aussi.
+- [ ] La confirmation nomme la personne et son personnage.
+- [ ] Une révocation interrompue ne laisse pas d'état intermédiaire — la
+      fonction est atomique.
+- [ ] Les liens réclamés et les liens en attente sont dans deux sections
+      distinctes, et chaque section dit son compte.
+- [ ] Toutes les actions d'une ligne sont à la même abscisse, quelle que soit la
+      longueur du nom.
+- [ ] Aucune cible de clic sous 24 px, rien sous `text-xs`, `EmptyState` sur la
+      liste vide.
+- [ ] Les quatre modes et le contraste élevé testés ; lisible à 375 px.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent, la suite
+      relancée **après** application de la migration.
 
 ---
 
