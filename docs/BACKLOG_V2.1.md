@@ -5302,9 +5302,22 @@ que `Tabs.tsx` porte tout le contrat ARIA correct. L'extraction le lui emprunte,
 donc **la fiche jouable gagne le clavier au passage**. Ce n'était pas le but de
 ce ticket ; c'est un critère du lot 1, pour que ça ne se perde pas.
 
-**Lot 1 — `BinderTabs` extrait de la fiche.** Apparence strictement inchangée
-pour elle. C'est le lot qui a le plus de chances d'abîmer quelque chose et le
-moins de chances de se voir.
+**Lot 1 — `BinderTabs` extrait de la fiche.** — **fait.** Apparence strictement
+inchangée pour elle, vérifié mécaniquement (les quatre chaînes de classes et le
+préfixe de bouton identiques au caractère près à ceux de `HEAD`) puis en
+navigateur sur les quatre onglets de Fine Lââm — Magie étant absent à bon droit,
+elle est Roublarde. Le clavier est arrivé avec : `→`, `Fin` et le bouclage
+vérifiés en direct.
+
+**Une troisième copie trouvée en chemin, et convertie.**
+`characterCreatorSteps/PreviewStep.tsx` rendait les **mêmes cinq onglets**, avec
+les mêmes libellés importés de `PlayableCharacterSheet`, dans une troisième
+présentation : `rounded-t-md` + souligné de 2 px. C'est-à-dire exactement la
+présentation dont le joueur s'était plaint, et qui a fait naître le classeur —
+l'aperçu n'avait jamais suivi. La règle des trois était donc satisfaite pour de
+vrai, et non par entorse comme l'ADR le supposait. Converti au classeur : c'est
+un **changement d'apparence assumé**, contrairement au reste du lot, et il
+demandait donc un panneau qui n'existait pas là-bas.
 
 **Lot 2 — `HomeShell` : le rail et ses trois destinations.** Mondes garde la
 liste et le détail actuels tels quels, Compte reçoit `HomeProfilePanel`, Admin

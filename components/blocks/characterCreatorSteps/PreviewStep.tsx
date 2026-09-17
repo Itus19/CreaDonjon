@@ -18,6 +18,7 @@ import InventoryTab from "../InventoryTab";
 import TraitsTab from "../TraitsTab";
 import MasteriesTab from "../MasteriesTab";
 import { TAB_LABELS, type Tab } from "../PlayableCharacterSheet";
+import BinderTabs from "@/components/shared/BinderTabs";
 
 function noop() {}
 
@@ -181,99 +182,107 @@ export default function PreviewStep({
         error={null}
       />
 
-      <div className="flex gap-1 border-b border-edge/60 text-xs">
-        {(["actions", "inventaire", "magie", "traits", "maitrise"] as Tab[])
-          .filter((t) => t !== "magie" || spellcasting.known.length > 0)
-          .map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTab(t)}
-            className={`rounded-t-md px-3 py-1.5 transition-colors ${
-              tab === t ? "border-b-2 border-accent text-ink" : "text-ink-muted hover:text-ink"
-            }`}
-          >
-            {/* Libelles de la fiche jouable, jamais la cle brute passee a `capitalize` : elle rendait "Maitrise D'armes", sans accent et coupee a chaque mot. */}
-            {TAB_LABELS[t]}
-          </button>
-        ))}
+      {/*
+        Intercalaires de classeur (ADR 0026), comme la fiche jouable dont cet
+        apercu montre les onglets. Ils etaient restes au souligne de 2 px —
+        c'est-a-dire a la presentation dont un joueur s'etait plaint ("les
+        onglets ne sont pas tres visibles") et qui a fait naitre le classeur
+        dans `PlayableCharacterSheet`. Cet apercu n'avait jamais suivi.
+
+        La paire onglets + panneau vit dans son propre conteneur : le parent
+        est un `flex flex-col gap-3`, et ce `gap` ouvrirait un vide entre un
+        onglet et sa page, ce qui est exactement ce qu'un classeur ne fait
+        pas.
+      */}
+      <div className="min-w-0">
+        <BinderTabs
+          value={tab}
+          onChange={setTab}
+          aria-label="Sections de l'aperçu"
+          items={(["actions", "inventaire", "magie", "traits", "maitrise"] as Tab[])
+            .filter((t) => t !== "magie" || spellcasting.known.length > 0)
+            // Libelles de la fiche jouable, jamais la cle brute passee a `capitalize` : elle rendait "Maitrise D'armes", sans accent et coupee a chaque mot.
+            .map((t) => ({ value: t, label: TAB_LABELS[t] }))}
+        />
+
+        <div className="rounded-b-lg border-2 border-t-0 border-edge-strong bg-panel-raised px-3 pb-3">
+          {tab === "actions" && (
+            <ActionsTab
+              worldSlug={worldSlug}
+              busy={true}
+              advantage={advantage}
+              setAdvantage={setAdvantage}
+              equippedWeapons={equippedWeapons}
+              itemChips={itemChips}
+              weaponByKey={weaponByKey}
+              masteredWeaponKeys={masteredWeaponKeys}
+              strMod={sheet.abilities.str.mod}
+              dexMod={sheet.abilities.dex.mod}
+              proficiencyBonus={sheet.proficiencyBonus}
+              isMonk={isMonk}
+              onAttack={noop}
+              onDamage={noop}
+              spellcasting={spellcasting.known.length > 0 ? spellcasting : undefined}
+              preparedSpells={preparedSpells}
+              spellSlots={sheet.spellcasting?.slots ?? {}}
+              spellSlotsUsed={{}}
+              spellAttackBonus={sheet.spellcasting?.attackBonus ?? 0}
+              spellSaveDc={sheet.spellcasting?.saveDc ?? 0}
+              spellAbilityLabel={sheet.spellcasting ? ABILITY_LABELS[sheet.spellcasting.ability] : ""}
+              onCast={noop}
+              onCastAttack={noop}
+              resources={undefined}
+              resourcesUsed={{}}
+              onChangeResource={noop}
+            />
+          )}
+
+          {tab === "magie" && spellcasting.known.length > 0 && (
+            <MagicTab
+              worldSlug={worldSlug}
+              sortedKnownSpells={sortedKnownSpells}
+              spellChips={spellChips}
+              spellcasting={spellcasting}
+              onTogglePrepared={togglePrepared}
+            />
+          )}
+
+          {tab === "inventaire" && (
+            <InventoryTab
+              worldSlug={worldSlug}
+              inventory={inventory}
+              onUpdateInventory={onUpdateInventory}
+              strMod={sheet.abilities.str.mod}
+              dexMod={sheet.abilities.dex.mod}
+              proficiencyBonus={sheet.proficiencyBonus}
+              isMonk={isMonk}
+              weaponByKey={weaponByKey}
+              equipment={equipment}
+              weight={weight}
+              cost={cost}
+              encumbrance={sheet.encumbrance}
+            />
+          )}
+
+          {tab === "traits" && <TraitsTab traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />}
+
+          {/* Les bottes d'arme se choisissent a leur propre etape (`RemainingChoicesStep`),
+              pas ici : `masteryChoices` vide, la section disparait et l'onglet ne garde
+              que les maitrises et les langues — exactement ce que l'onglet Traits
+              montrait avant qu'elles ne demenagent. */}
+          {tab === "maitrise" && (
+            <MasteriesTab
+              proficiencies={proficiencies}
+              masteryChoices={[]}
+              masteryChips={new Map()}
+              languageChoices={languageChoices}
+              allLanguages={allLanguages}
+              character={character}
+              patchCharacter={patchCharacter}
+            />
+          )}
+        </div>
       </div>
-
-      {tab === "actions" && (
-        <ActionsTab
-          worldSlug={worldSlug}
-          busy={true}
-          advantage={advantage}
-          setAdvantage={setAdvantage}
-          equippedWeapons={equippedWeapons}
-          itemChips={itemChips}
-          weaponByKey={weaponByKey}
-          masteredWeaponKeys={masteredWeaponKeys}
-          strMod={sheet.abilities.str.mod}
-          dexMod={sheet.abilities.dex.mod}
-          proficiencyBonus={sheet.proficiencyBonus}
-          isMonk={isMonk}
-          onAttack={noop}
-          onDamage={noop}
-          spellcasting={spellcasting.known.length > 0 ? spellcasting : undefined}
-          preparedSpells={preparedSpells}
-          spellSlots={sheet.spellcasting?.slots ?? {}}
-          spellSlotsUsed={{}}
-          spellAttackBonus={sheet.spellcasting?.attackBonus ?? 0}
-          spellSaveDc={sheet.spellcasting?.saveDc ?? 0}
-          spellAbilityLabel={sheet.spellcasting ? ABILITY_LABELS[sheet.spellcasting.ability] : ""}
-          onCast={noop}
-          onCastAttack={noop}
-          resources={undefined}
-          resourcesUsed={{}}
-          onChangeResource={noop}
-        />
-      )}
-
-      {tab === "magie" && spellcasting.known.length > 0 && (
-        <MagicTab
-          worldSlug={worldSlug}
-          sortedKnownSpells={sortedKnownSpells}
-          spellChips={spellChips}
-          spellcasting={spellcasting}
-          onTogglePrepared={togglePrepared}
-        />
-      )}
-
-      {tab === "inventaire" && (
-        <InventoryTab
-          worldSlug={worldSlug}
-          inventory={inventory}
-          onUpdateInventory={onUpdateInventory}
-          strMod={sheet.abilities.str.mod}
-          dexMod={sheet.abilities.dex.mod}
-          proficiencyBonus={sheet.proficiencyBonus}
-          isMonk={isMonk}
-          weaponByKey={weaponByKey}
-          equipment={equipment}
-          weight={weight}
-          cost={cost}
-          encumbrance={sheet.encumbrance}
-        />
-      )}
-
-      {tab === "traits" && <TraitsTab traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />}
-
-      {/* Les bottes d'arme se choisissent a leur propre etape (`RemainingChoicesStep`),
-          pas ici : `masteryChoices` vide, la section disparait et l'onglet ne garde
-          que les maitrises et les langues — exactement ce que l'onglet Traits
-          montrait avant qu'elles ne demenagent. */}
-      {tab === "maitrise" && (
-        <MasteriesTab
-          proficiencies={proficiencies}
-          masteryChoices={[]}
-          masteryChips={new Map()}
-          languageChoices={languageChoices}
-          allLanguages={allLanguages}
-          character={character}
-          patchCharacter={patchCharacter}
-        />
-      )}
     </div>
   );
 }
