@@ -2,22 +2,10 @@
 
 import { useEffect, useState } from "react";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import ActionsMenu, { type ActionsMenuItem } from "@/components/shared/ActionsMenu";
 import type { CampaignInviteAdminSummary } from "@/src/server/services/campaignInvites";
 
 const ROLE_LABELS: Record<string, string> = { gm: "MJ", player: "Joueur" };
-
-function CopyButton({ url, copiedUrl, onCopy }: { url: string; copiedUrl: string | null; onCopy: (url: string) => void }) {
-  const copied = copiedUrl === url;
-  return (
-    <button
-      type="button"
-      onClick={() => navigator.clipboard.writeText(url).then(() => onCopy(url))}
-      className="shrink-0 rounded-md border border-accent px-2 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
-    >
-      {copied ? "Copié ✓" : "Copier"}
-    </button>
-  );
-}
 
 /**
  * Une ligne de la liste transversale (V2-M6) : même geste que
@@ -47,6 +35,7 @@ function InviteAdminRow({
   /** Suppression d'un compte invite : `ConfirmDialog` est asynchrone, contrairement a `window.confirm` qu'il remplace ici. */
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const url = freshUrl ?? (invite.token ? `${window.location.origin}/rejoindre/${invite.token}` : null);
+  const copied = copiedUrl !== null && copiedUrl === url;
 
   async function savePassword() {
     setBusy(true);
@@ -124,100 +113,98 @@ function InviteAdminRow({
     window.location.href = url;
   }
 
+  /**
+   * Les six boutons de cette ligne sont devenus UN menu (V2.1-24, lot 4).
+   * Trois raisons, toutes mesurees sur la capture de l'auteur : neuf lignes
+   * a six boutons faisaient 52 controles simultanes ; ils se repliaient
+   * faute de place, ce qui detruisait tout alignement d'une ligne a
+   * l'autre ; et les deux actions destructrices avaient exactement le meme
+   * dessin que « Copier ». L'ordre suit la frequence, et `danger` marque ce
+   * qui ne se defait pas.
+   *
+   * Les anciens boutons portaient `disabled={busy}` ; `ActionsMenuItem` n'a
+   * pas de champ `disabled`, donc la garde passe DANS le geste (`ignoreSiBusy`)
+   * plutot que de disparaitre avec le bouton. Sans elle, deux clics pendant
+   * une requete en cours enverraient deux revocations.
+   */
+  const ignoreSiBusy = (geste: () => void) => () => {
+    if (busy) return;
+    geste();
+  };
+  const actions: ActionsMenuItem[] = [
+    ...(url ? [{ label: copied ? "Copié ✓" : "Copier le lien", onSelect: () => void navigator.clipboard.writeText(url).then(() => onCopy(url)) }] : []),
+    ...(invite.claimedByUserId ? [{ label: "Voir comme", onSelect: ignoreSiBusy(() => void viewAs()) }] : []),
+    { label: editingPassword ? "Fermer le mot de passe" : "Mot de passe", onSelect: () => setEditingPassword((v) => !v) },
+    { label: "Réinitialiser le lien", onSelect: ignoreSiBusy(() => void reset()), danger: true },
+    { label: "Révoquer", onSelect: ignoreSiBusy(() => void revoke()), danger: true },
+    ...(invite.claimedByUserId ? [{ label: "Supprimer le compte", onSelect: ignoreSiBusy(() => setConfirmingDelete(true)), danger: true }] : []),
+  ];
+
   return (
-    <li className="flex flex-col gap-1 border-b border-edge/40 pb-2 last:border-0">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="flex flex-wrap items-center gap-2 text-ink-muted">
-          <span>
-            <span className="text-ink">{invite.worldName ?? "?"}</span>
-            {invite.campaignName && <> — {invite.campaignName}</>}
-            {" · "}
-            {invite.intendedRole ? ROLE_LABELS[invite.intendedRole] : "Au choix"}
-            {invite.claimedName && <> · Réclamé par {invite.claimedName}</>}
-            {invite.hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
-          </span>
-          {invite.claimedByUserId && (
-            <button
-              type="button"
-              onClick={viewAs}
-              disabled={busy}
-              className="shrink-0 rounded-md border border-accent px-2 py-1 text-xs text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
-            >
-              Voir comme
-            </button>
-          )}
-        </span>
-        <div className="flex items-center gap-2">
-          {url && <CopyButton url={url} copiedUrl={copiedUrl} onCopy={onCopy} />}
-          <button
-            type="button"
-            onClick={() => setEditingPassword((v) => !v)}
-            className="shrink-0 rounded-md border border-edge px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-panel-raised"
-          >
-            Mot de passe
-          </button>
-          <button
-            type="button"
-            onClick={reset}
-            disabled={busy}
-            className="shrink-0 rounded-md border border-edge px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
-          >
-            Réinitialiser
-          </button>
-          <button
-            type="button"
-            onClick={revoke}
-            disabled={busy}
-            className="shrink-0 rounded-md border border-danger px-2 py-1 text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
-          >
-            Révoquer
-          </button>
-          {invite.claimedByUserId && (
-            <button
-              type="button"
-              onClick={() => setConfirmingDelete(true)}
-              disabled={busy}
-              className="shrink-0 rounded-md border border-danger px-2 py-1 text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
-            >
-              Supprimer le compte
-            </button>
-          )}
-        </div>
-      </div>
+    <>
+      <tr className="border-b border-edge/40">
+        <td className="py-1.5 pr-2 align-top text-ink">{invite.worldName ?? "?"}</td>
+        <td className="py-1.5 pr-2 align-top">{invite.campaignName ?? "—"}</td>
+        <td className="py-1.5 pr-2 align-top">{invite.intendedRole ? ROLE_LABELS[invite.intendedRole] : "Au choix"}</td>
+        <td className="py-1.5 pr-2 align-top">{invite.claimedName ?? "—"}</td>
+        <td className="py-1.5 pr-2 align-top">
+          {invite.hasPassword ? <span className="text-accent">protégé</span> : "—"}
+        </td>
+        <td className="py-1.5 align-top text-right">
+          <ActionsMenu items={actions} aria-label={`Actions sur le lien ${invite.worldName ?? ""}`} />
+          {/* `ConfirmDialog` rend `null` tant qu'il est ferme et passe par un
+              portail quand il s'ouvre : il ne coute donc rien dans cette
+              cellule et n'a pas besoin d'une ligne a lui. */}
+          <ConfirmDialog
+            open={confirmingDelete}
+            title="Supprimer ce compte ?"
+            message={`Le compte de ${invite.claimedName ?? "cet ami"} est définitivement supprimé, ainsi que son accès à la campagne. Les fiches qu'il a créées sont conservées.`}
+            confirmLabel="Supprimer le compte"
+            danger
+            onConfirm={deleteAccount}
+            onCancel={() => setConfirmingDelete(false)}
+          />
+        </td>
+      </tr>
       {freshUrl && (
-        <p className="text-[11px] text-danger">Nouveau lien généré — copiez-le maintenant, l&apos;ancien ne fonctionne plus.</p>
+        <tr>
+          <td colSpan={6} className="pb-1.5 text-[11px] text-danger">
+            Nouveau lien généré — copiez-le maintenant, l&apos;ancien ne fonctionne plus.
+          </td>
+        </tr>
       )}
       {editingPassword && (
-        <div className="flex items-center gap-2 rounded-md border border-edge bg-panel-sunken p-2">
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={invite.hasPassword ? "Nouveau mot de passe (vide pour retirer)" : "Mot de passe (optionnel)"}
-            className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none placeholder:text-ink-muted"
-          />
-          <button
-            type="button"
-            onClick={savePassword}
-            disabled={busy}
-            className="shrink-0 rounded-md border border-edge px-2 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
-          >
-            Enregistrer
-          </button>
-        </div>
+        <tr>
+          <td colSpan={6} className="pb-1.5">
+            <div className="flex items-center gap-2 rounded-md border border-edge bg-panel-sunken p-2">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={invite.hasPassword ? "Nouveau mot de passe (vide pour retirer)" : "Mot de passe (optionnel)"}
+                className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none placeholder:text-ink-muted"
+              />
+              <button
+                type="button"
+                onClick={savePassword}
+                disabled={busy}
+                className="shrink-0 rounded-md border border-edge px-2 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+              >
+                Enregistrer
+              </button>
+            </div>
+          </td>
+        </tr>
       )}
-      {error && <p className="text-[11px] text-danger">{error}</p>}
+      {error && (
+        <tr>
+          <td colSpan={6} className="pb-1.5 text-[11px] text-danger">
+            {error}
+          </td>
+        </tr>
+      )}
 
-      <ConfirmDialog
-        open={confirmingDelete}
-        title="Supprimer ce compte ?"
-        message={`Le compte de ${invite.claimedName ?? "cet ami"} est définitivement supprimé, ainsi que son accès à la campagne. Les fiches qu'il a créées sont conservées.`}
-        confirmLabel="Supprimer le compte"
-        danger
-        onConfirm={deleteAccount}
-        onCancel={() => setConfirmingDelete(false)}
-      />
-    </li>
+    </>
   );
 }
 
@@ -264,12 +251,29 @@ export default function AdminPanel() {
         {loadError && <p className="text-xs text-danger">{loadError}</p>}
         {invites === null && !loadError && <p className="text-xs text-ink-muted">…</p>}
         {invites && invites.length === 0 && <p className="text-xs text-ink-muted">Aucun lien actif pour l&apos;instant.</p>}
+        {/* Un vrai `<table>` et non une grille de `div` : les colonnes
+            s'alignent d'une ligne a l'autre sans qu'on ait a figer des
+            largeurs, et un lecteur d'ecran annonce l'en-tete de colonne avec
+            chaque cellule. C'est ce que la liste d'avant ne faisait pas —
+            ses six boutons se repliaient et plus rien ne s'alignait. */}
         {invites && invites.length > 0 && (
-          <ul className="flex flex-col gap-1.5 text-xs">
-            {invites.map((invite) => (
-              <InviteAdminRow key={invite.id} invite={invite} copiedUrl={copiedUrl} onCopy={setCopiedUrl} onRevoked={handleRevoked} onChanged={load} />
-            ))}
-          </ul>
+          <table className="w-full border-collapse text-left text-xs text-ink-muted">
+            <thead>
+              <tr className="border-b border-edge">
+                <th className="py-1 pr-2 font-medium">Monde</th>
+                <th className="py-1 pr-2 font-medium">Campagne</th>
+                <th className="py-1 pr-2 font-medium">Rôle</th>
+                <th className="py-1 pr-2 font-medium">Réclamé par</th>
+                <th className="py-1 pr-2 font-medium">État</th>
+                <th className="py-1 text-right font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invites.map((invite) => (
+                <InviteAdminRow key={invite.id} invite={invite} copiedUrl={copiedUrl} onCopy={setCopiedUrl} onRevoked={handleRevoked} onChanged={load} />
+              ))}
+            </tbody>
+          </table>
         )}
       </section>
     </div>

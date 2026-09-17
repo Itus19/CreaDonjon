@@ -5387,10 +5387,53 @@ gauche garde sa liste de joueurs**, désormais en double avec l'onglet Joueurs.
 L'esquisse B1 qu'il a validée montrait des cartes compactes ; les alléger n'est
 pas une traîne de ce lot.
 
-**Lot 4 — l'Administration en tableau.** Colonnes alignées (Monde · Campagne ·
-Rôle · Réclamé par · État) et `ActionsMenu` à la place des six boutons :
-`Copier`, `Voir comme` et `Mot de passe` en tête, `Réinitialiser`, `Révoquer`
-et `Supprimer le compte` marqués `danger`.
+**Lot 4 — l'Administration en tableau.** — **écrit, non vérifié en
+navigateur.** Colonnes alignées (Monde · Campagne · Rôle · Réclamé par · État ·
+Actions) et `ActionsMenu` à la place des six boutons : `Copier le lien`, `Voir
+comme` et `Mot de passe` en tête, `Réinitialiser le lien`, `Révoquer` et
+`Supprimer le compte` marqués `danger`.
+
+**Un vrai `<table>`, pas une grille de `div`.** Les colonnes s'alignent d'une
+ligne à l'autre sans qu'on fige des largeurs, et un lecteur d'écran annonce
+l'en-tête avec chaque cellule. C'est exactement ce que la liste d'avant ne
+faisait pas : ses six boutons se repliaient faute de place, et plus rien ne
+s'alignait.
+
+`ActionsMenu` n'a pas été écrit — il existait (V2-G, trois usages), avec
+portail, fermeture à `Échap`, ouverture vers le haut quand la place manque, et
+une marque `danger` par entrée. C'est le composant que je croyais devoir écrire
+en ouvrant ce ticket.
+
+Deux choses trouvées en écrivant, et corrigées avant de commiter. **`sr-only`
+n'est utilisé nulle part dans le dépôt** et n'est pas déclaré dans
+`globals.css` : l'en-tête de la colonne d'actions porte donc son nom en clair
+plutôt qu'une classe dont je ne peux pas vérifier qu'elle est engendrée. Et
+`ConfirmDialog` rend `null` tant qu'il est fermé puis passe par un portail : la
+ligne de tableau que je lui avais réservée était inutile, et elle ajoutait un
+`<tr>` vide par ligne.
+
+**Ce lot n'a pas été vu en navigateur**, et c'est dit plutôt que passé sous
+silence : la section Administration exige `is_superadmin()`, et le compte de
+test fourni par l'auteur ne l'est pas — la destination n'apparaît même pas dans
+le rail. `typecheck`, `lint` et `test` passent ; le rendu réel reste à
+confirmer par l'auteur.
+
+### Deux pièges d'outillage, consignés
+
+Ils n'ont rien coûté ici, et ils coûteraient le même temps à retrouver.
+
+**`npm run test | tail` ment sur le code de sortie.** Dans un tube, `$?` est
+celui de `tail`, pas de vitest : une suite rouge ressort « exit 0 ». Les
+verdicts de ce ticket sont justes parce qu'ils ont été lus sur la ligne de
+résumé, pas sur le code de sortie — mais la forme sûre est de rediriger vers un
+fichier, puis de lire le code. Même famille que la leçon de V2.1-22 sur `>` qui
+vide un fichier avant de savoir si la commande marche.
+
+**Deux vitest en parallèle sur la base distante se marchent dessus.** En
+relançant la suite avant que la précédente ait rendu la main, 12 tests sont
+tombés dans l'une et 1 dans l'autre. Relancée seule : 1075 passent, code 0. La
+base de test étant la base réelle (dépôt non lié), la suite n'est pas
+parallélisable entre processus.
 
 Le lot 2 passe avant les lots 3 et 4 volontairement : si le rail seul suffit à
 l'auteur, les deux derniers peuvent attendre.
