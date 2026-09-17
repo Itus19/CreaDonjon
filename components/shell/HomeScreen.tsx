@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { JournalEntry } from "@/src/server/services/activityJournal";
 import WorldCardActions from "@/app/WorldCardActions";
-import HomeProfilePanel from "./HomeProfilePanel";
 import DiceStatsPanel from "./DiceStatsPanel";
 
 export interface HomeWorldCard {
@@ -137,28 +136,25 @@ function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUs
 }
 
 /**
- * Ecran d'accueil en trois colonnes (retour utilisateur) : profil, mondes,
- * detail du monde selectionne — une seule grille a trois pistes egales
- * (`grid-cols-3`) plutot qu'une grille imbriquee, pour une repartition
- * homogene de la largeur d'ecran (retour utilisateur : "mieux repartir
- * l'espace... aussi leur repartition dans l'ecran", pas seulement l'espace
- * entre colonnes). La selection reste locale a ce composant, jamais dans
- * l'URL (pas de navigation tant qu'on n'a pas clique "Rejoindre").
+ * Destination « Mondes » de l'ecran d'accueil : la liste et le detail du
+ * monde selectionne. La colonne profil et la section Administration ont
+ * quitte cette grille en V2.1-24 (lot 2) pour devenir deux destinations du
+ * rail (`HomeShell`) — d'ou deux pistes et non plus trois.
+ *
+ * Elles ne sont pas egales : la liste est une colonne de reperage, le
+ * detail est ce qu'on lit. Le rapport suit l'esquisse B1 validee par
+ * l'auteur, et non un `grid-cols-2` qui donnerait deux moities.
+ *
+ * La selection reste locale a ce composant, jamais dans l'URL (pas de
+ * navigation tant qu'on n'a pas clique "Rejoindre").
  */
 export default function HomeScreen({
   worlds,
   currentUserId,
-  email,
-  displayName,
-  adminPanel,
   createTools,
 }: {
   worlds: HomeWorldCard[];
   currentUserId: string;
-  email: string;
-  displayName: string;
-  /** Section Administration (superadmin, M6) — sous le profil, dans la meme colonne (retour utilisateur : libere l'espace en hauteur plutot qu'un bandeau pleine largeur). `null` pour tout compte non-superadmin. */
-  adminPanel: React.ReactNode;
   /** Formulaires de creation/import (retour utilisateur : "en haut de la colonne centrale") — rendus ici plutot que par l'appelant pour rester au-dessus de la liste dans la MEME colonne du grid. */
   createTools: React.ReactNode;
 }) {
@@ -166,17 +162,16 @@ export default function HomeScreen({
   const selected = worlds.find((w) => w.id === selectedId) ?? null;
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-3 gap-6">
-      {/* Colonne profil (retour utilisateur, tient sur un ecran) : defile
-          comme un bloc si Administration + Profil depassent la hauteur
-          disponible — chacun des deux garde deja son propre plafond interne
-          (AdminPanel plafonne son journal a 320px). */}
-      <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto">
-        <HomeProfilePanel email={email} displayName={displayName} />
-        {adminPanel}
-      </div>
-
-      <div className="flex h-full min-h-0 flex-col gap-4">
+    // Sous 768 px les deux pistes s'empilent et c'est la page qui defile :
+    // cote a cote dans 375 px, une carte de monde rendait un mot par ligne.
+    // Au-dessus, on retrouve les deux colonnes bornees en hauteur, chacune
+    // defilant dans son cadre.
+    <div className="grid h-full min-h-0 grid-cols-1 gap-6 overflow-y-auto md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] md:overflow-hidden">
+      {/* `min-w-0` sur les deux pistes : `grid-cols-1` vaut
+          `minmax(auto, 1fr)`, dont le `min-width: auto` laisse le contenu le
+          plus large pousser la colonne au-dela du viewport. Sans lui, la page
+          debordait horizontalement a 375 px. */}
+      <div className="flex min-h-0 min-w-0 flex-col gap-4 md:h-full">
         <div className="shrink-0">{createTools}</div>
         <ul className="min-h-0 flex-1 overflow-y-auto flex flex-col gap-2">
           {worlds.map((world) => {
@@ -230,7 +225,7 @@ export default function HomeScreen({
         </ul>
       </div>
 
-      <div className="h-full min-h-0 rounded-lg border border-edge bg-panel-sunken p-4">
+      <div className="min-h-48 min-w-0 rounded-lg border border-edge bg-panel-sunken p-4 md:h-full md:min-h-0">
         {selected ? (
           // `key` force un remontage complet a chaque changement de monde
           // selectionne : sans lui, `WorldCardActions`/`RenameWorldSection`

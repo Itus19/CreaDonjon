@@ -10,6 +10,8 @@ import CreateWorldForm from "./CreateWorldForm";
 import ImportWorldForm from "./ImportWorldForm";
 import AdminPanel from "@/components/shell/AdminPanel";
 import HomeScreen from "@/components/shell/HomeScreen";
+import HomeShell from "@/components/shell/HomeShell";
+import HomeProfilePanel from "@/components/shell/HomeProfilePanel";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -24,37 +26,41 @@ export default async function Home() {
   const officialRulesets = (selectableRulesets ?? []).filter((r) => r.is_official_base);
 
   return (
-    <div className="flex h-dvh justify-center overflow-hidden font-sans">
-      <main className="flex h-full w-full max-w-[1600px] flex-col gap-4 py-8 px-10">
-        <div className="flex shrink-0 items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-wide text-accent">
-            CreaDonjon
-          </h1>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-ink-muted">{user?.email}</span>
+    // Ecran d'accueil en rail de sections (V2.1-24, lot 2) : trois
+    // destinations — Mondes, Compte, Administration — au lieu des trois
+    // colonnes de V2-M7c, ou "mon compte" et "l'administration de tous les
+    // mondes" partageaient une colonne sans avoir de rapport, la seconde
+    // ecrasant la premiere.
+    //
+    // L'en-tete a disparu : le titre, l'e-mail et la deconnexion vivent
+    // desormais dans le haut et le pied du rail, comme `AppShell.tsx` a
+    // cesse de rendre le sien pour la coquille joueur.
+    //
+    // `h-dvh` est conserve tel quel : ADR 0025 l'a retire des coquilles DE
+    // MONDE, ou un ancetre borne resout la hauteur. Cette page est hors
+    // `/m` et n'a pas cet ancetre ; le changer est un sujet a part, pas une
+    // traine de ce lot.
+    <div className="h-dvh overflow-hidden font-sans">
+      <HomeShell
+        compte={
+          <div className="flex flex-col gap-4">
+            <HomeProfilePanel email={user?.email ?? ""} displayName={profile?.display_name ?? ""} />
+            {/* La deconnexion vit ici et non dans le rail : en pied de rail
+                elle aurait ete `md:` comme celui de la coquille joueur, donc
+                absente sous 768 px, alors que l'ancienne barre du haut la
+                montrait a toutes les largeurs. */}
             <form action={logout}>
-              <button className="rounded-full border border-edge px-3 py-1 text-ink transition-colors hover:bg-panel-raised">
+              <button className="rounded-full border border-edge px-4 py-2 text-sm text-ink transition-colors hover:bg-panel-raised">
                 Se déconnecter
               </button>
             </form>
           </div>
-        </div>
-
-        {/* Ecran d'accueil en trois colonnes (retour utilisateur) : profil,
-            mondes/campagnes, detail du monde selectionne — remplace
-            l'ancienne colonne unique (V2-M5). L'Administration (superadmin,
-            M6) vit sous le profil, dans la meme colonne (retour utilisateur :
-            liberer l'espace en hauteur plutot qu'un bandeau pleine largeur).
-            Tient sur un seul ecran (retour utilisateur) : `flex-1 min-h-0`
-            laisse HomeScreen occuper le reste de la hauteur, dont chaque
-            colonne fait defiler son propre contenu (jamais la page entiere). */}
-        <div className="min-h-0 flex-1">
+        }
+        admin={canUseSoloMode ? <AdminPanel /> : null}
+        mondes={
           <HomeScreen
             worlds={worlds}
             currentUserId={user?.id ?? ""}
-            email={user?.email ?? ""}
-            displayName={profile?.display_name ?? ""}
-            adminPanel={canUseSoloMode ? <AdminPanel /> : null}
             createTools={
               <div className="flex flex-wrap items-center gap-2">
                 <CreateWorldForm officialRulesets={officialRulesets} canUseSoloMode={canUseSoloMode} />
@@ -62,8 +68,8 @@ export default async function Home() {
               </div>
             }
           />
-        </div>
-      </main>
+        }
+      />
     </div>
   );
 }

@@ -5319,12 +5319,37 @@ vrai, et non par entorse comme l'ADR le supposait. Converti au classeur : c'est
 un **changement d'apparence assumé**, contrairement au reste du lot, et il
 demandait donc un panneau qui n'existait pas là-bas.
 
-**Lot 2 — `HomeShell` : le rail et ses trois destinations.** Mondes garde la
-liste et le détail actuels tels quels, Compte reçoit `HomeProfilePanel`, Admin
-reçoit `AdminPanel`. **Aucun changement de contenu à ce lot** : on ne déplace
-que le contenant. La barre du haut de `app/page.tsx` (titre, e-mail,
-déconnexion) disparaît au profit du haut et du pied du rail, comme
-`AppShell.tsx` a cessé de rendre le sien pour la coquille joueur.
+**Lot 2 — `HomeShell` : le rail et ses trois destinations.** — **fait.** Mondes
+garde la liste et le détail actuels tels quels, Compte reçoit
+`HomeProfilePanel`, Admin reçoit `AdminPanel`. **Aucun changement de contenu** :
+on n'a déplacé que le contenant. La barre du haut de `app/page.tsx` a disparu,
+comme `AppShell.tsx` a cessé de rendre la sienne pour la coquille joueur.
+
+Trois choses que le navigateur a imposées, et qu'aucune relecture n'aurait
+trouvées :
+
+- **La déconnexion ne pouvait pas vivre en pied de rail.** Le pied de
+  `PlayerShell` est en `md:flex`, donc absent sous 768 px — où la barre du bas
+  ne porte que des destinations. La recopier telle quelle faisait disparaître
+  « Se déconnecter » sur téléphone, alors que l'ancienne barre du haut la
+  montrait à toutes les largeurs. Elle vit donc dans la destination Compte, qui
+  est son sujet et qui existe partout. L'e-mail l'y suit : il ne tient pas dans
+  80 px, il n'y rendait qu'une bouillie tronquée.
+- **Débordement horizontal à 375 px.** `grid-cols-1` vaut `minmax(auto, 1fr)`,
+  et ce `min-width: auto` laissait la carte de monde pousser la colonne au-delà
+  du viewport. Mesuré avant/après : `scrollWidth` 375 pour un `clientWidth` de
+  375, plus de débordement. Les deux pistes portent désormais `min-w-0`.
+- **Les deux colonnes s'empilent sous 768 px.** Côte à côte dans 375 px, une
+  carte de monde rendait un mot par ligne.
+
+Et un défaut que j'ai écrit puis corrigé avant de commiter : `min-h-48 min-h-0`
+sur le même élément, c'est-à-dire deux classes sur la même propriété, dont c'est
+l'ordre dans la feuille générée qui aurait tranché — pas celui écrit dans
+l'attribut. Devenu `min-h-48 md:min-h-0`.
+
+`h-dvh` est conservé sur la page : ADR 0025 l'a retiré des coquilles **de
+monde**, où un ancêtre borné résout la hauteur. L'accueil est hors `/m` et n'a
+pas cet ancêtre — le changer est un sujet à part, pas une traîne de ce lot.
 
 **Lot 3 — le détail du monde au classeur.** Onglets Journal (le `fetch`
 existant de `WorldDetail`), Joueurs, Accès, Réglages (`WorldCardActions`).
