@@ -124,7 +124,9 @@ function InviteRow({
   }
 
   const revokeMessage = invite.claimedName
-    ? `${invite.claimedName} perd l'accès à cette campagne${invite.claimedCharacterName ? `, et ${invite.claimedCharacterName} redevient libre` : ""}. Son compte et les fiches qu'elle a créées sont conservés.`
+    // Aucun pronom : le message nomme la personne puis parle du COMPTE, ce
+    // qui evite de lui supposer un genre — la table en compte de plusieurs.
+    ? `${invite.claimedName} perd l'accès à cette campagne${invite.claimedCharacterName ? `, et ${invite.claimedCharacterName} redevient libre` : ""}. Le compte et les fiches créées depuis ce compte sont conservés.`
     : "Ce lien cesse de fonctionner. Personne ne l'avait encore utilisé.";
 
   return (

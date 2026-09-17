@@ -178,7 +178,7 @@ function InviteAdminRow({
             title="Révoquer ce lien ?"
             message={
               invite.claimedName
-                ? `${invite.claimedName} perd l'accès à ${invite.campaignName ?? invite.worldName ?? "cette campagne"}, et son personnage redevient libre. Son compte et les fiches qu'il a créées sont conservés.`
+                ? `${invite.claimedName} perd l'accès à ${invite.campaignName ?? invite.worldName ?? "cette campagne"}, et son personnage redevient libre. Le compte et les fiches créées depuis ce compte sont conservés.`
                 : "Ce lien cesse de fonctionner. Personne ne l'avait encore utilisé."
             }
             confirmLabel="Révoquer"
@@ -189,7 +189,7 @@ function InviteAdminRow({
           <ConfirmDialog
             open={confirmingDelete}
             title="Supprimer ce compte ?"
-            message={`Le compte de ${invite.claimedName ?? "cet ami"} est définitivement supprimé, ainsi que son accès à la campagne. Les fiches qu'il a créées sont conservées.`}
+            message={`Le compte de ${invite.claimedName ?? "cet ami"} est définitivement supprimé, ainsi que son accès à la campagne. Les fiches créées depuis ce compte sont conservées.`}
             confirmLabel="Supprimer le compte"
             danger
             onConfirm={deleteAccount}

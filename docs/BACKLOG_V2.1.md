@@ -5617,10 +5617,25 @@ Deux choses trouvées en le faisant, et qui n'étaient pas dans le constat :
   vert ne veut donc pas dire qu'un fichier est propre — seulement qu'il est
   propre pour ce que le compilateur a bien voulu analyser.**
 
-Vérifié en navigateur, migration en place : un lien fabriqué pour l'occasion
-puis révoqué disparaît de la liste, et la confirmation d'un lien jamais ouvert
-dit bien « Personne ne l'avait encore utilisé. » Le chemin d'un lien **réclamé**
-— personnage libéré, adhésion retirée — reste à exercer en vrai.
+**Vérifié en navigateur, migration en place, sur les deux chemins.** Un lien
+fabriqué pour l'occasion puis révoqué disparaît, et sa confirmation dit bien
+« Personne ne l'avait encore utilisé. » Et sur un lien **réclamé** (compte de
+test de l'auteur, avec son accord) : la confirmation a nommé la personne et son
+personnage, puis la carte du monde est passée de « Fine Lââm — Infernal ·
+Roublard 1 · jouée par … » à « Fine Lââm — Infernal · Roublard 1 ». Le
+personnage est donc réellement libéré, dans la même transaction que le jeton.
+
+La suppression de la ligne `campaign_members` n'est **pas observable depuis
+l'écran** — rien ne l'affiche pour un joueur. Elle est dans la même transaction
+et la fonction est exercée, mais c'est le seul des trois effets qui n'a pas été
+vu de ses yeux.
+
+**Un dernier défaut, trouvé en lisant la confirmation à l'écran.** Elle disait
+« les fiches **qu'elle** a créées », ce qui suppose le genre d'une personne
+réelle. Réécrite sans pronom : « Le compte et les fiches créées depuis ce compte
+sont conservés. » La confirmation de suppression de compte portait le même
+défaut (« qu'il a créées »), antérieur à ce ticket, corrigé au passage — un mot,
+même phrase, même classe de défaut.
 
 **Lot 2 — la présentation.** Les deux sections, la hiérarchie inversée, les
 actions à abscisse fixe, `ActionsMenu`, `EmptyState`, le titre.
