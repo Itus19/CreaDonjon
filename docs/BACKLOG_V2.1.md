@@ -37,7 +37,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-22 | Le panneau « Mentionné dans » quitte l'application | `S` | **Fait** (16 septembre) — demande directe de l'auteur : « je n'en ai pas besoin ». Le chemin entier part, pas seulement l'affichage : sans lecteur, recalculer les mentions à chaque enregistrement d'un bloc texte ne servait plus personne. La table `entity_mentions` est supprimée, avec son accord. Les liens DANS le texte, qui portent le même nom dans la spec, ne sont pas touchés |
 | V2.1-23 | Les petits contrôles à un rapport de pixels fractionnaire | `M` | **Ouvert** (16 septembre) — le liseré d'un bouton et le petit texte coloré paraissent abîmés sur l'écran 4K de l'auteur, pas sur son portable. Mesuré : `dpr=1.5`, gamut sRGB — c'est Windows à 150 %, et un trait d'1 px y vaut 1,5 pixel physique qu'aucune valeur CSS ne peut faire tomber juste. Ce n'est pas une régression de V2.1-20/21, vérifié dans le diff. Ce qu'on peut changer n'est pas le rendu du trait mais le fait que nos petits contrôles **dépendent** d'un trait pour exister — un aplat de surface se rend proprement à n'importe quel rapport. Trois candidats, et l'auteur est le seul à pouvoir les départager : une page de comparaison passe avant toute modification. **Clos sans remède** le 16 septembre : la recette a été écrite, appliquée, puis annulée, et la mesure de clôture a montré pourquoi « convertir d'un coup » n'existait pas — 159 sites écrits de **93 façons distinctes**, dont 60 uniques. Le ticket ne laisse aucune ligne de code, mais quatre mesures et un chemin (`Button.tsx`, charte §7d) si le sujet revient |
 | V2.1-24 | L'accueil passe au rail de sections, le détail au classeur | `L` | **Les cinq lots livrés** (17 septembre), un seul critère restant : l'Administration en tableau n'a pas été vue en navigateur, faute d'un compte superadmin côté test. Ouvert le 16 septembre — demande de l'auteur sur capture : « revoir la disposition de cette page et l'organisation des boutons ». Compté avant de dessiner : **52 contrôles simultanés** pour la seule Administration, dont les boutons se replient faute de place dans un tiers d'écran, et une troisième colonne vide au chargement. Cinq esquisses regardées ensemble, puis trois — le **rail de sections** l'emporte, parce qu'il « rappelle le menu des joueurs » dont il emprunte l'esthétique, et le détail du monde passe aux **intercalaires de classeur** de la fiche de personnage. Rien de neuf à dessiner : `PlayerShell`, les onglets de `PlayableCharacterSheet` et `ActionsMenu` existent tous les trois. Le lot 0 était un arbitrage qui n'appartenait qu'à l'auteur — la charte interdit une deuxième présentation d'onglets, le dépôt en a déjà deux, et toutes deux se défendent : **tranché le jour même**, `BinderTabs` est extrait et l'ADR 0026 assume les deux présentations |
-| V2.1-25 | L'onglet Accès : une liste calme, et « Révoquer » qui tient sa promesse | `M` | **Ouvert** (17 septembre) — né d'une demande de présentation, qui a découvert autre chose en instruisant une remarque de l'auteur (« il reste des traces » après une révocation). **Ce n'était pas son erreur** : `revokeCampaignInvite` pose `revoked_at` et rien d'autre, donc le jeton meurt mais `campaign_members` et `campaign_characters.user_id` survivent — et `app.is_world_member` comptant les membres de campagne, **le monde reste ouvert à la personne révoquée**. Quatre besoins pour deux opérations et demie ; « retirer vraiment l'accès » n'existait qu'en supprimant le compte. L'auteur a tranché : révoquer retirera l'accès, par une fonction Postgres atomique — trois écritures sur trois tables pour une opération de sécurité ne se font pas à la file. Côté écran, quatre esquisses regardées ensemble, la liste calme retenue avec la séparation des liens en attente |
+| V2.1-25 | L'onglet Accès : une liste calme, et « Révoquer » qui tient sa promesse | `M` | **Les deux lots faits** (17 septembre) — né d'une demande de présentation, qui a découvert autre chose en instruisant une remarque de l'auteur (« il reste des traces » après une révocation). **Ce n'était pas son erreur** : `revokeCampaignInvite` pose `revoked_at` et rien d'autre, donc le jeton meurt mais `campaign_members` et `campaign_characters.user_id` survivent — et `app.is_world_member` comptant les membres de campagne, **le monde reste ouvert à la personne révoquée**. Quatre besoins pour deux opérations et demie ; « retirer vraiment l'accès » n'existait qu'en supprimant le compte. L'auteur a tranché : révoquer retirera l'accès, par une fonction Postgres atomique — trois écritures sur trois tables pour une opération de sécurité ne se font pas à la file. Côté écran, quatre esquisses regardées ensemble, la liste calme retenue avec la séparation des liens en attente |
 
 ---
 
@@ -5637,8 +5637,29 @@ sont conservés. » La confirmation de suppression de compte portait le même
 défaut (« qu'il a créées »), antérieur à ce ticket, corrigé au passage — un mot,
 même phrase, même classe de défaut.
 
-**Lot 2 — la présentation.** Les deux sections, la hiérarchie inversée, les
-actions à abscisse fixe, `ActionsMenu`, `EmptyState`, le titre.
+**Lot 2 — la présentation.** — **fait.** Les deux sections, la hiérarchie
+inversée, les actions à abscisse fixe, `ActionsMenu`, `EmptyState`.
+
+Deux écarts au plan, tous deux décidés en écrivant :
+
+- **Pas de titre de panneau du tout**, au lieu du « Accès à la campagne »
+  annoncé. Le ticket reprochait à l'ancien titre de faire doublon avec l'onglet
+  qui le surmonte — le remplacer par un autre titre aurait gardé le doublon. Les
+  deux en-têtes de section (« À LA TABLE — n », « LIENS EN ATTENTE — n ») disent
+  déjà ce que chaque bloc contient, ici comme dans `CampaignDetail`, l'autre
+  appelant.
+- **`Réinitialiser le personnage` reçoit aussi sa confirmation.** Le constat le
+  listait parmi les gestes destructeurs sans confirmation, mais la décision ne
+  parlait que de `Révoquer`. Il libère la fiche d'une joueuse : il confirme, et
+  son message dit ce que l'autre ne dit pas — que la personne, elle, **garde**
+  son accès.
+
+Vérifié en navigateur : les compteurs des deux sections suivent la création et
+la révocation d'un lien ; `Copier` n'apparaît en bouton que sur un lien en
+attente ; le menu d'un lien sans personnage ne propose pas de réinitialisation ;
+`EmptyState` s'affiche quand la seconde section est vide. Le lien fabriqué pour
+l'essai a été révoqué derrière. À 375 px, `scrollWidth` 375 pour un `clientWidth`
+de 375 — pas de débordement.
 
 ### Ce que ce ticket ne fait pas
 

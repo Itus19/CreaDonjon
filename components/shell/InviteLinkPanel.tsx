@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import ActionsMenu, { type ActionsMenuItem } from "@/components/shared/ActionsMenu";
+import EmptyState from "./EmptyState";
 import type { CampaignInviteSummary } from "@/src/server/services/campaignInvites";
 import { useCachedGet } from "./useCachedGet";
 
@@ -18,28 +20,24 @@ function formatDate(iso: string): string {
 }
 
 /**
- * Bouton copier reutilisable, meme motif que celui de `ShareLinkPanel.tsx`
- * (un seul etat "juste copie" partage par tous les liens de ce panneau).
- */
-function CopyButton({ url, copiedUrl, onCopy }: { url: string; copiedUrl: string | null; onCopy: (url: string) => void }) {
-  const copied = copiedUrl === url;
-  return (
-    <button
-      type="button"
-      onClick={() => navigator.clipboard.writeText(url).then(() => onCopy(url))}
-      className="shrink-0 rounded-md border border-accent px-2 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
-    >
-      {copied ? "Copié ✓" : "Copier"}
-    </button>
-  );
-}
-
-/**
- * Un lien d'invitation, dans la liste (V2-M4 suite, retour utilisateur 30
- * août : « reprends ce qu'on a fait pour le lien de partage » — meme
- * structure que `ShareLinkPanel.tsx`, jamais un jeton affiche une seule
- * fois puis perdu). Le mot de passe se change en place (jamais rappele en
- * clair une fois pose : seul `hasPassword` atteint ce composant).
+ * Une ligne de la liste (V2.1-25, lot 2 — esquisse « liste calme » retenue
+ * par l'auteur). Trois choses la gouvernent, et chacune corrige un defaut
+ * compte sur sa capture :
+ *
+ * - **La hierarchie est remise a l'endroit.** Ce qu'on cherche ici, c'est
+ *   qui est a la table : le nom passe en `text-sm`, le role et la date
+ *   descendent en `text-xs`. C'etait l'inverse.
+ * - **Les actions sont a abscisse fixe**, dans un `ActionsMenu` colle a
+ *   droite. Avant, « Reinitialiser le personnage » etait accroche a la fin
+ *   d'une phrase de longueur variable : quatre lignes, quatre positions.
+ * - **Les deux gestes destructeurs confirment.** Ils partaient au premier
+ *   clic, alors que l'un coupe un acces et l'autre libere la fiche d'une
+ *   joueuse.
+ *
+ * `Copier` reste un bouton visible pour un lien EN ATTENTE, ou c'est la
+ * seule action qui compte, et descend dans le menu pour un lien deja
+ * reclame : recopier le lien de quelqu'un qui est entre il y a dix jours
+ * n'avance sur rien.
  */
 function InviteRow({
   invite,
@@ -60,7 +58,11 @@ function InviteRow({
   const [error, setError] = useState<string | null>(null);
   const [hasPassword, setHasPassword] = useState(invite.hasPassword);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
   const url = invite.token ? `${window.location.origin}/rejoindre/${invite.token}` : null;
+  const copied = copiedUrl !== null && copiedUrl === url;
+  const claimed = invite.claimedName !== null;
+  const roleLabel = invite.intendedRole ? ROLE_LABELS[invite.intendedRole] : "Au choix";
 
   /**
    * Reinitialise le choix de personnage (retour utilisateur : "je dois
@@ -71,6 +73,7 @@ function InviteRow({
    * explicite : seul un personnage deja marque PJ atteint ce bouton.
    */
   async function resetCharacter() {
+    setConfirmingReset(false);
     if (!invite.claimedEntityId || !invite.campaignId) return;
     setBusy(true);
     setError(null);
@@ -123,51 +126,70 @@ function InviteRow({
     onRevoked(invite.id);
   }
 
-  const revokeMessage = invite.claimedName
-    // Aucun pronom : le message nomme la personne puis parle du COMPTE, ce
-    // qui evite de lui supposer un genre — la table en compte de plusieurs.
+  function copy() {
+    if (!url) return;
+    void navigator.clipboard.writeText(url).then(() => onCopy(url));
+  }
+
+  /** La garde vit dans le geste : `ActionsMenuItem` n'a pas de champ `disabled`, et sans elle deux clics pendant une requete en cours enverraient deux revocations. */
+  const ignoreSiBusy = (geste: () => void) => () => {
+    if (busy) return;
+    geste();
+  };
+
+  const actions: ActionsMenuItem[] = [
+    ...(url && claimed ? [{ label: copied ? "Copié ✓" : "Copier le lien", onSelect: copy }] : []),
+    { label: editingPassword ? "Fermer le mot de passe" : hasPassword ? "Changer le mot de passe" : "Ajouter un mot de passe", onSelect: () => setEditingPassword((v) => !v) },
+    ...(invite.claimedEntityId
+      ? [{ label: "Réinitialiser le personnage", onSelect: ignoreSiBusy(() => setConfirmingReset(true)), danger: true }]
+      : []),
+    { label: "Révoquer", onSelect: ignoreSiBusy(() => setConfirmingRevoke(true)), danger: true },
+  ];
+
+  // Aucun pronom : les messages nomment la personne puis parlent du COMPTE,
+  // ce qui evite de lui supposer un genre — la table en compte de plusieurs.
+  const revokeMessage = claimed
     ? `${invite.claimedName} perd l'accès à cette campagne${invite.claimedCharacterName ? `, et ${invite.claimedCharacterName} redevient libre` : ""}. Le compte et les fiches créées depuis ce compte sont conservés.`
     : "Ce lien cesse de fonctionner. Personne ne l'avait encore utilisé.";
 
   return (
-    <li className="flex flex-col gap-1 border-b border-edge/40 pb-2 last:border-0">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-ink-muted">
-          {invite.intendedRole ? ROLE_LABELS[invite.intendedRole] : "Au choix"} · créé le {formatDate(invite.createdAt)}
-          {hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
-        </span>
-        <div className="flex items-center gap-2">
-          {url && <CopyButton url={url} copiedUrl={copiedUrl} onCopy={onCopy} />}
-          <button type="button" onClick={() => setEditingPassword((v) => !v)} className="text-ink-muted hover:text-ink">
-            Mot de passe
-          </button>
+    <li className="flex flex-col gap-2 border-b border-edge/40 py-2 last:border-0">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          {claimed ? (
+            <>
+              <p className="truncate text-sm text-ink">
+                {invite.claimedName}
+                {invite.claimedCharacterName && <span className="text-ink-muted"> joue {invite.claimedCharacterName}</span>}
+              </p>
+              <p className="text-xs text-ink-muted">
+                {roleLabel} · lien créé le {formatDate(invite.createdAt)}
+                {hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-ink">{roleLabel}</p>
+              <p className="text-xs text-ink-muted">
+                Créé le {formatDate(invite.createdAt)} · jamais ouvert
+                {hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
+              </p>
+            </>
+          )}
+        </div>
+
+        {url && !claimed && (
           <button
             type="button"
-            onClick={() => setConfirmingRevoke(true)}
-            disabled={busy}
-            className="text-danger hover:underline disabled:opacity-50"
+            onClick={copy}
+            className="shrink-0 rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
           >
-            Révoquer
+            {copied ? "Copié ✓" : "Copier"}
           </button>
-        </div>
+        )}
+        <ActionsMenu items={actions} aria-label={`Actions sur le lien de ${invite.claimedName ?? roleLabel}`} />
       </div>
-      {invite.claimedName && (
-        <span className="flex flex-wrap items-center gap-2 text-[11px] text-ink-muted">
-          Réclamé par {invite.claimedName}
-          {invite.claimedCharacterName && <> · joue {invite.claimedCharacterName}</>}
-          {invite.claimedEntityId && (
-            <button
-              type="button"
-              onClick={resetCharacter}
-              disabled={busy}
-              title="Libère ce personnage — un autre lien (ou celui-ci rouvert) pourra le réclamer à nouveau."
-              className="text-danger hover:underline disabled:opacity-50"
-            >
-              Réinitialiser le personnage
-            </button>
-          )}
-        </span>
-      )}
+
       {editingPassword && (
         <div className="flex items-center gap-2 rounded-md border border-edge bg-panel-sunken p-2">
           <input
@@ -175,19 +197,19 @@ function InviteRow({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder={hasPassword ? "Nouveau mot de passe (vide pour retirer)" : "Mot de passe (optionnel)"}
-            className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none placeholder:text-ink-muted"
+            className="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none placeholder:text-ink-muted"
           />
           <button
             type="button"
             onClick={savePassword}
             disabled={busy}
-            className="shrink-0 rounded-md border border-edge px-2 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+            className="shrink-0 rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
           >
             Enregistrer
           </button>
         </div>
       )}
-      {error && <p className="text-[11px] text-danger">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
 
       <ConfirmDialog
         open={confirmingRevoke}
@@ -198,6 +220,15 @@ function InviteRow({
         onConfirm={revoke}
         onCancel={() => setConfirmingRevoke(false)}
       />
+      <ConfirmDialog
+        open={confirmingReset}
+        title="Réinitialiser le personnage ?"
+        message={`${invite.claimedCharacterName ?? "Ce personnage"} redevient libre : un autre lien, ou celui-ci rouvert, pourra le réclamer. ${invite.claimedName ?? "La personne"} garde son accès à la campagne.`}
+        confirmLabel="Réinitialiser"
+        danger
+        onConfirm={resetCharacter}
+        onCancel={() => setConfirmingReset(false)}
+      />
     </li>
   );
 }
@@ -205,8 +236,18 @@ function InviteRow({
 /**
  * Panneau complet (V2-M4 suite) : créer un lien (rôle + mot de passe
  * optionnel), lister les liens actifs, les copier/révoquer/reprotéger à
- * tout moment — remplace le générateur « affiché une seule fois » du
- * premier passage de ce ticket.
+ * tout moment.
+ *
+ * Deux sections depuis V2.1-25 (lot 2), sur demande de l'auteur : **une
+ * personne a ta table** et **un lien qui attend quelqu'un** sont deux objets
+ * differents, que cette liste rendait a l'identique. La premiere section
+ * repond a « qui joue ? », la seconde a « qu'est-ce que je dois encore
+ * envoyer ? ».
+ *
+ * Pas de titre de panneau : les deux en-tetes de section disent deja ce que
+ * chaque bloc contient, et l'ancien (« Liens d'invitation (sans email) »)
+ * decrivait l'implementation tout en faisant doublon avec l'onglet Acces qui
+ * le surmonte.
  */
 export default function InviteLinkPanel({ campaignId }: { campaignId: string }) {
   // `useCachedGet` (retour utilisateur : "elle a l'air de se recharger a
@@ -222,6 +263,9 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+
+  const claimed = invites?.filter((i) => i.claimedName !== null) ?? [];
+  const pending = invites?.filter((i) => i.claimedName === null) ?? [];
 
   async function generate(e: React.FormEvent) {
     e.preventDefault();
@@ -245,43 +289,68 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
     load();
   }
 
-  return (
-    <div className="flex flex-col gap-2 rounded-md border border-edge bg-panel-sunken p-2">
-      <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Liens d&apos;invitation (sans email)</p>
+  const rowProps = { copiedUrl, onCopy: setCopiedUrl, onRevoked: handleRevoked, onChanged: load };
 
-      <form onSubmit={generate} className="flex items-center gap-2">
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Le mot de passe est optionnel et rarement pose : il ne prend plus
+          toute la largeur disponible, qui faisait de lui le champ principal
+          d'un formulaire dont l'action est ailleurs. */}
+      <form onSubmit={generate} className="flex flex-wrap items-center gap-2">
         <Dropdown
           value={role}
           options={ROLE_OPTIONS}
           onChange={(v) => setRole(v as "gm" | "player" | "")}
           aria-label="Rôle du lien"
-          triggerClassName="shrink-0 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+          triggerClassName="shrink-0 rounded-full border border-edge px-3 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
         />
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Mot de passe (optionnel)"
-          className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
+          className="w-56 min-w-0 rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
         />
         <button
           type="submit"
           disabled={busy}
-          className="shrink-0 rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+          className="shrink-0 rounded-full border border-accent px-4 py-1.5 text-sm text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
         >
           {busy ? "Génération..." : "Générer un lien"}
         </button>
       </form>
       {error && <p className="text-xs text-danger">{error}</p>}
 
-      {invites && invites.length > 0 && (
-        <ul className="mt-1 flex flex-col gap-1.5 text-xs">
-          {invites.map((invite) => (
-            <InviteRow key={invite.id} invite={invite} copiedUrl={copiedUrl} onCopy={setCopiedUrl} onRevoked={handleRevoked} onChanged={load} />
-          ))}
-        </ul>
+      {claimed.length > 0 && (
+        <section className="flex flex-col gap-1">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+            À la table — {claimed.length}
+          </h3>
+          <ul className="flex flex-col">
+            {claimed.map((invite) => (
+              <InviteRow key={invite.id} invite={invite} {...rowProps} />
+            ))}
+          </ul>
+        </section>
       )}
-      {invites && invites.length === 0 && <p className="text-xs text-ink-muted">Aucun lien actif pour l&apos;instant.</p>}
+
+      <section className="flex flex-col gap-1">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+          Liens en attente — {pending.length}
+        </h3>
+        {pending.length > 0 ? (
+          <ul className="flex flex-col">
+            {pending.map((invite) => (
+              <InviteRow key={invite.id} invite={invite} {...rowProps} />
+            ))}
+          </ul>
+        ) : (
+          <EmptyState
+            title="Aucun lien en attente"
+            description="Génère un lien ci-dessus, puis envoie-le à la personne que tu veux inviter. Elle choisira son personnage en l'ouvrant."
+          />
+        )}
+      </section>
     </div>
   );
 }
