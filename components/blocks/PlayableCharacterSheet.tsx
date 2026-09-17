@@ -12,6 +12,7 @@ import type { AdvantageState } from "@/src/core/rules/action";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
 import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import Dropdown from "@/components/shared/Dropdown";
+import BinderTabs from "@/components/shared/BinderTabs";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import CharacterSheetHeader from "./CharacterSheetHeader";
 import ActionsTab, { type PreparedSpellView } from "./ActionsTab";
@@ -601,44 +602,23 @@ export default function PlayableCharacterSheet({
 
         <div className="min-w-0 flex-1">
           {/*
-            Onglets en intercalaire de classeur (retour joueur : "les onglets
-            ne sont pas tres visibles" — un souligne de 2 px etait le seul
-            signal, et rien ne rattachait l'onglet a sa page).
+            Onglets en intercalaire de classeur — le dessin et sa mecanique
+            vivent desormais dans `components/shared/BinderTabs.tsx`
+            (V2.1-24 lot 1, ADR 0026), avec le clavier que cette rangee
+            n'avait pas. Ne restent ici que la liste et son filtre.
 
-            La ligne du haut n'est PAS une bordure continue qu'on repeindrait
-            sous l'onglet actif : elle est composee par le bord bas de chaque
-            onglet INACTIF et du remplissage souple. L'onglet actif n'a pas de
-            bord bas — c'est la l'ouverture du classeur. Aucun chevauchement ni
-            decalage negatif, donc rien a corriger la ou `--panel-raised` est
-            translucide : l'onglet actif et la page composent leur alpha sur le
-            meme fond, cote a cote, jamais l'un sur l'autre.
-
-            Les coins hauts arrondis suffisent a separer deux onglets inactifs
-            jointifs — une marge entre eux trouerait la ligne du haut.
+            Plus de condition sur "maitrise" : l'onglet ne portait que les
+            bottes d'arme et disparaissait sans elles ; il porte maintenant
+            les maitrises et les langues, que tout personnage possede.
           */}
-          <div className="flex items-end overflow-x-auto text-xs">
-            {(["actions", "inventaire", "magie", "traits", "maitrise"] as Tab[])
-              // Plus de condition sur "maitrise" : l'onglet ne portait que les
-              // bottes d'arme et disparaissait sans elles ; il porte maintenant
-              // les maitrises et les langues, que tout personnage possede.
+          <BinderTabs
+            value={tab}
+            onChange={setTab}
+            aria-label="Sections de la fiche"
+            items={(["actions", "inventaire", "magie", "traits", "maitrise"] as Tab[])
               .filter((t) => t !== "magie" || spellcasting)
-              .map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTab(t)}
-                  className={`shrink-0 rounded-t-lg border-2 px-3.5 transition-colors ${
-                    tab === t
-                      ? "border-edge-strong border-b-transparent bg-panel-raised pb-2 pt-2.5 font-medium text-ink shadow-[inset_0_3px_0_0_var(--accent)]"
-                      : "border-transparent border-b-edge-strong bg-panel-sunken py-2 text-ink-muted hover:text-ink"
-                  }`}
-                >
-                  {TAB_LABELS[t]}
-                </button>
-              ))}
-            {/* Prolonge la ligne du haut jusqu'au bord droit de la page. */}
-            <span aria-hidden="true" className="min-w-4 flex-1 self-stretch border-b-2 border-edge-strong" />
-          </div>
+              .map((t) => ({ value: t, label: TAB_LABELS[t] }))}
+          />
 
           <div className="rounded-b-lg border-2 border-t-0 border-edge-strong bg-panel-raised px-3 pb-3">
             {tab === "maitrise" && (
