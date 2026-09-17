@@ -5351,9 +5351,41 @@ l'attribut. Devenu `min-h-48 md:min-h-0`.
 monde**, où un ancêtre borné résout la hauteur. L'accueil est hors `/m` et n'a
 pas cet ancêtre — le changer est un sujet à part, pas une traîne de ce lot.
 
-**Lot 3 — le détail du monde au classeur.** Onglets Journal (le `fetch`
-existant de `WorldDetail`), Joueurs, Accès, Réglages (`WorldCardActions`).
-« Rejoindre » reste hors du classeur, toujours visible.
+**Lot 3 — le détail du monde au classeur.** — **fait.** Onglets Journal (le
+`fetch` existant de `WorldDetail`), Joueurs, Accès, Réglages
+(`WorldCardActions`). « Rejoindre » reste hors du classeur et toujours visible :
+c'est la sortie de cet écran, elle ne se range pas dans un onglet.
+
+**Aucune route serveur ajoutée, comme promis.** L'onglet Accès rend
+`components/shell/InviteLinkPanel.tsx`, qui existait depuis V2-M4, ne prend
+qu'un `campaignId` et tape le `GET /api/campaigns/[id]/invites` déjà en place.
+Trouvé en cherchant où brancher l'onglet, pas écrit. `CampaignDetail`, lui, a
+été écarté : il exige `worldEntities` et `grantableEntities`, que l'accueil n'a
+pas et qui auraient demandé une requête de plus.
+
+**Côté joueur, pas de classeur.** Il n'a qu'une seule vue — les stats de jets —
+et un classeur à un onglet est un cadre, pas des onglets.
+
+L'onglet Accès disparaît quand le monde n'a pas de campagne : `InviteLinkPanel`
+ne sait inviter que dans une campagne, et un onglet qui ne peut rien montrer
+vaut moins qu'un onglet absent.
+
+**Vérifié en navigateur** sur une session locale : les quatre onglets s'ouvrent,
+le classeur suit, le clavier circule (`Début`, `←`) et le clic laisse bien le
+focus sur l'onglet. Réglages n'affiche qu'`Exporter`/`Dupliquer` pour ce compte,
+Renommer et Supprimer étant réservés au propriétaire — comportement attendu,
+vérifié plutôt que supposé.
+
+Deux choses **non vérifiées**, faute du bon compte : la destination
+Administration dans le rail (le compte de test n'est pas superadmin, la
+destination est donc absente — ce qui est le comportement correct, mais le
+panneau n'a jamais été rendu dedans), et la liste des liens existants dans
+l'onglet Accès, qui est ressortie vide pour ce compte.
+
+Reste ouvert, et c'est une décision de l'auteur : **la carte de la colonne de
+gauche garde sa liste de joueurs**, désormais en double avec l'onglet Joueurs.
+L'esquisse B1 qu'il a validée montrait des cartes compactes ; les alléger n'est
+pas une traîne de ce lot.
 
 **Lot 4 — l'Administration en tableau.** Colonnes alignées (Monde · Campagne ·
 Rôle · Réclamé par · État) et `ActionsMenu` à la place des six boutons :

@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { JournalEntry } from "@/src/server/services/activityJournal";
 import WorldCardActions from "@/app/WorldCardActions";
+import BinderTabs from "@/components/shared/BinderTabs";
 import DiceStatsPanel from "./DiceStatsPanel";
+import InviteLinkPanel from "./InviteLinkPanel";
 
 export interface HomeWorldCard {
   id: string;
@@ -30,17 +32,41 @@ function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
+type DetailTab = "journal" | "joueurs" | "acces" | "reglages";
+
+const DETAIL_TAB_LABELS: Record<DetailTab, string> = {
+  journal: "Journal",
+  joueurs: "Joueurs",
+  acces: "Accès",
+  reglages: "Réglages",
+};
+
 /**
- * Journal recent (MJ) ou stats de jets (Joueur) + bouton Rejoindre (retour
- * utilisateur, colonne de droite) — le serveur adapte deja le detail au role
- * (`/journal/mine`), rien a filtrer ici. Cote joueur, retour utilisateur :
- * "a la place d'avoir le journal... un petit ecran sur les stats de lance de
- * des" — `DiceStatsPanel` remplace la liste, jamais un second onglet.
+ * Detail du monde selectionne. Cote MJ, ses sections vivent depuis V2.1-24
+ * (lot 3) dans un classeur (`BinderTabs`, ADR 0026) — demande de l'auteur :
+ * "des onglets comme des separateurs de classeur pour passer de la gestion
+ * des permissions a l'historique des modifications". Le serveur adapte deja
+ * le detail au role (`/journal/mine`), rien a filtrer ici.
+ *
+ * Cote joueur, PAS de classeur : il n'a qu'une seule vue — retour
+ * utilisateur, "a la place d'avoir le journal... un petit ecran sur les
+ * stats de lance de des". Un classeur a un onglet est un cadre, pas des
+ * onglets.
+ *
+ * « Rejoindre » reste hors du classeur et toujours visible : c'est la
+ * sortie de cet ecran, elle ne se range pas dans un onglet.
  */
 function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUserId: string }) {
   const isPlayer = world.myRole === "player";
   const [entries, setEntries] = useState<JournalEntry[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [tab, setTab] = useState<DetailTab>("journal");
+  // « Accès » disparaît quand le monde n'a pas de campagne : `InviteLinkPanel`
+  // ne sait inviter que dans une campagne, et un onglet qui ne peut rien
+  // montrer vaut moins qu'un onglet absent.
+  const tabs: DetailTab[] = world.campaignId
+    ? ["journal", "joueurs", "acces", "reglages"]
+    : ["journal", "joueurs", "reglages"];
 
   useEffect(() => {
     if (isPlayer) return;
@@ -74,54 +100,95 @@ function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUs
         )}
       </div>
 
-      {/* Seule cette partie defile (retour utilisateur) : Rejoindre et les
-          actions MJ ci-dessous restent toujours visibles, jamais au fond
-          d'une zone qui defile. */}
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {isPlayer ? (
-          <>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Stats de jets</span>
-            <DiceStatsPanel campaignId={world.campaignId} />
-          </>
-        ) : (
-          <>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Journal récent</span>
-            {loadError && <p className="mt-1 text-xs text-danger">{loadError}</p>}
-            {entries === null && !loadError && <p className="mt-1 text-xs text-ink-muted">…</p>}
-            {entries && entries.length === 0 && <p className="mt-1 text-xs text-ink-muted">Aucune activité pour l&apos;instant.</p>}
-            {entries && entries.length > 0 && (
-              <ul className="mt-1 flex flex-col gap-1.5 text-xs">
-                {entries.slice(0, 30).map((entry, i) => (
-                  <li key={i} className="border-b border-edge/30 pb-1">
-                    <span className={entry.source === "wiki" ? "text-accent" : "text-ink"}>
-                      {entry.source === "wiki" ? "wiki" : "jeu"}
-                    </span>{" "}
-                    <span className="text-ink-muted">
-                      {entry.label}
-                      {entry.entityName && <> — {entry.entityName}</>}
-                      {entry.blockLabel && <> ({entry.blockLabel})</>}
-                    </span>
-                    <div className="text-ink-muted">
-                      {entry.accountName} · {formatDateTime(entry.createdAt)}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-      </div>
-
-      {world.myRole !== "player" && (
-        <div className="shrink-0">
-          <WorldCardActions
-            worldId={world.id}
-            worldSlug={world.slug}
-            worldName={world.name}
-            campaignId={world.campaignId}
-            campaignName={world.campaignName}
-            isOwner={world.ownerId === currentUserId}
+      {/* Cote joueur, pas de classeur : il n'a qu'une seule vue. Un
+          classeur a un onglet est un cadre, pas des onglets. */}
+      {isPlayer ? (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Stats de jets</span>
+          <DiceStatsPanel campaignId={world.campaignId} />
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <BinderTabs
+            value={tab}
+            onChange={setTab}
+            aria-label="Sections du monde"
+            items={tabs.map((t) => ({ value: t, label: DETAIL_TAB_LABELS[t] }))}
           />
+
+          {/* Seul le panneau defile : Rejoindre reste toujours visible,
+              jamais au fond d'une zone qui defile. */}
+          <div className="min-h-0 flex-1 overflow-y-auto rounded-b-lg border-2 border-t-0 border-edge-strong bg-panel-raised p-3">
+            {tab === "journal" && (
+              <>
+                {loadError && <p className="text-xs text-danger">{loadError}</p>}
+                {entries === null && !loadError && <p className="text-xs text-ink-muted">…</p>}
+                {entries && entries.length === 0 && <p className="text-xs text-ink-muted">Aucune activité pour l&apos;instant.</p>}
+                {entries && entries.length > 0 && (
+                  <ul className="flex flex-col gap-1.5 text-xs">
+                    {entries.slice(0, 30).map((entry, i) => (
+                      <li key={i} className="border-b border-edge/30 pb-1">
+                        <span className={entry.source === "wiki" ? "text-accent" : "text-ink"}>
+                          {entry.source === "wiki" ? "wiki" : "jeu"}
+                        </span>{" "}
+                        <span className="text-ink-muted">
+                          {entry.label}
+                          {entry.entityName && <> — {entry.entityName}</>}
+                          {entry.blockLabel && <> ({entry.blockLabel})</>}
+                        </span>
+                        <div className="text-ink-muted">
+                          {entry.accountName} · {formatDateTime(entry.createdAt)}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+
+            {/* Memes donnees que la carte de la colonne de gauche
+                (`HomeWorldCard.players`), au large. La carte les garde pour
+                l'instant : les alleger est une decision de l'auteur, pas une
+                traine de ce lot. */}
+            {tab === "joueurs" && (
+              <>
+                {world.gmNames.length > 0 && (
+                  <p className="text-xs text-ink-muted">MJ : {world.gmNames.join(", ")}</p>
+                )}
+                {world.players.length === 0 ? (
+                  <p className="mt-1 text-xs text-ink-muted">Aucun joueur.</p>
+                ) : (
+                  <ul className="mt-1 flex flex-col gap-1 text-sm">
+                    {world.players.map((pc) => (
+                      <li key={pc.entityId} className="border-b border-edge/30 pb-1 text-ink-muted">
+                        <span className="text-ink">{pc.name}</span>
+                        {(pc.speciesLabel || pc.classesLabel) && (
+                          <> — {[pc.speciesLabel, pc.classesLabel].filter(Boolean).join(" · ")}</>
+                        )}
+                        {pc.claimedByDisplayName && <> · jouée par {pc.claimedByDisplayName}</>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+
+            {/* `InviteLinkPanel` existait deja (V2-M4) et ne prend qu'un
+                `campaignId` : aucune route serveur ajoutee pour cet onglet,
+                il tape le GET `/api/campaigns/[id]/invites` deja en place. */}
+            {tab === "acces" && world.campaignId && <InviteLinkPanel campaignId={world.campaignId} />}
+
+            {tab === "reglages" && (
+              <WorldCardActions
+                worldId={world.id}
+                worldSlug={world.slug}
+                worldName={world.name}
+                campaignId={world.campaignId}
+                campaignName={world.campaignName}
+                isOwner={world.ownerId === currentUserId}
+              />
+            )}
+          </div>
         </div>
       )}
 
