@@ -34,6 +34,7 @@ function InviteAdminRow({
   const [freshUrl, setFreshUrl] = useState<string | null>(null);
   /** Suppression d'un compte invite : `ConfirmDialog` est asynchrone, contrairement a `window.confirm` qu'il remplace ici. */
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirmingRevoke, setConfirmingRevoke] = useState(false);
   const url = freshUrl ?? (invite.token ? `${window.location.origin}/rejoindre/${invite.token}` : null);
   const copied = copiedUrl !== null && copiedUrl === url;
 
@@ -68,11 +69,23 @@ function InviteAdminRow({
     setFreshUrl(`${window.location.origin}${body.url}`);
   }
 
+  /**
+   * V2.1-25 (lot 1) : cette route est partagee avec `InviteLinkPanel`, et
+   * revoquer y retire desormais l'ACCES et plus seulement le jeton. Ce
+   * panneau doit donc confirmer lui aussi — sans quoi le geste le plus
+   * destructeur de l'ecran resterait le seul a partir au premier clic.
+   */
   async function revoke() {
+    setConfirmingRevoke(false);
     setBusy(true);
+    setError(null);
     const res = await fetch(`/api/campaigns/${invite.campaignId}/invites/${invite.id}`, { method: "DELETE" });
     setBusy(false);
-    if (res.ok) onRevoked(invite.id);
+    if (!res.ok) {
+      setError("Échec de la révocation.");
+      return;
+    }
+    onRevoked(invite.id);
   }
 
   async function deleteAccount() {
@@ -110,7 +123,12 @@ function InviteAdminRow({
       return;
     }
     const { url } = (await res.json()) as { url: string };
-    window.location.href = url;
+    // `assign` et non `href = …` : une affectation sur un objet defini hors
+    // du composant est refusee par `react-hooks/immutability` (compilateur
+    // React). Le defaut dormait ici depuis V2-M7d ; il n'est remonte qu'en
+    // V2.1-25, quand ce composant est devenu analysable par le compilateur.
+    // Comportement identique — `assign` empile la meme entree d'historique.
+    window.location.assign(url);
   }
 
   /**
@@ -136,7 +154,7 @@ function InviteAdminRow({
     ...(invite.claimedByUserId ? [{ label: "Voir comme", onSelect: ignoreSiBusy(() => void viewAs()) }] : []),
     { label: editingPassword ? "Fermer le mot de passe" : "Mot de passe", onSelect: () => setEditingPassword((v) => !v) },
     { label: "Réinitialiser le lien", onSelect: ignoreSiBusy(() => void reset()), danger: true },
-    { label: "Révoquer", onSelect: ignoreSiBusy(() => void revoke()), danger: true },
+    { label: "Révoquer", onSelect: ignoreSiBusy(() => setConfirmingRevoke(true)), danger: true },
     ...(invite.claimedByUserId ? [{ label: "Supprimer le compte", onSelect: ignoreSiBusy(() => setConfirmingDelete(true)), danger: true }] : []),
   ];
 
@@ -155,6 +173,19 @@ function InviteAdminRow({
           {/* `ConfirmDialog` rend `null` tant qu'il est ferme et passe par un
               portail quand il s'ouvre : il ne coute donc rien dans cette
               cellule et n'a pas besoin d'une ligne a lui. */}
+          <ConfirmDialog
+            open={confirmingRevoke}
+            title="Révoquer ce lien ?"
+            message={
+              invite.claimedName
+                ? `${invite.claimedName} perd l'accès à ${invite.campaignName ?? invite.worldName ?? "cette campagne"}, et son personnage redevient libre. Son compte et les fiches qu'il a créées sont conservés.`
+                : "Ce lien cesse de fonctionner. Personne ne l'avait encore utilisé."
+            }
+            confirmLabel="Révoquer"
+            danger
+            onConfirm={revoke}
+            onCancel={() => setConfirmingRevoke(false)}
+          />
           <ConfirmDialog
             open={confirmingDelete}
             title="Supprimer ce compte ?"

@@ -16,6 +16,7 @@ import {
   setCampaignInvitePasswordHash,
   type CampaignInviteRow,
   type ResolvedCampaignInvite,
+  type RevokeInviteAccessResult,
   type UnclaimedCampaignCharacter,
 } from "@/src/server/repos/campaignInvites";
 import {
@@ -175,9 +176,14 @@ export async function getMyInvite(supabase: TypedClient, userId: string): Promis
   return row ? toSummary(row) : null;
 }
 
-export async function revokeInvite(supabase: TypedClient, id: string): Promise<{ revoked: boolean }> {
-  const { updated } = await revokeCampaignInvite(supabase, id);
-  return { revoked: updated };
+/**
+ * V2.1-25 (lot 1) — « Revoquer » retire l'acces et plus seulement le jeton :
+ * le personnage est libere, l'adhesion a la campagne supprimee, et pour un
+ * lien MJ de niveau monde la ligne `world_members` avec. Le COMPTE survit —
+ * c'est ce qui distingue ce geste de `deleteInvitedAccount`.
+ */
+export async function revokeInvite(supabase: TypedClient, id: string): Promise<RevokeInviteAccessResult> {
+  return revokeCampaignInvite(supabase, id);
 }
 
 /**

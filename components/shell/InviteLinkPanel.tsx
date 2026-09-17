@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import type { CampaignInviteSummary } from "@/src/server/services/campaignInvites";
 import { useCachedGet } from "./useCachedGet";
 
@@ -58,6 +59,7 @@ function InviteRow({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasPassword, setHasPassword] = useState(invite.hasPassword);
+  const [confirmingRevoke, setConfirmingRevoke] = useState(false);
   const url = invite.token ? `${window.location.origin}/rejoindre/${invite.token}` : null;
 
   /**
@@ -103,12 +105,27 @@ function InviteRow({
     setPassword("");
   }
 
+  /**
+   * V2.1-25 (lot 1) : revoquer retire desormais l'ACCES et plus seulement le
+   * jeton — d'ou la confirmation, qui NOMME ce qui va partir plutot que de
+   * demander « etes-vous sur ? » a vide. Le compte, lui, survit.
+   */
   async function revoke() {
+    setConfirmingRevoke(false);
     setBusy(true);
+    setError(null);
     const res = await fetch(`/api/campaigns/${invite.campaignId}/invites/${invite.id}`, { method: "DELETE" });
     setBusy(false);
-    if (res.ok) onRevoked(invite.id);
+    if (!res.ok) {
+      setError("Échec de la révocation.");
+      return;
+    }
+    onRevoked(invite.id);
   }
+
+  const revokeMessage = invite.claimedName
+    ? `${invite.claimedName} perd l'accès à cette campagne${invite.claimedCharacterName ? `, et ${invite.claimedCharacterName} redevient libre` : ""}. Son compte et les fiches qu'elle a créées sont conservés.`
+    : "Ce lien cesse de fonctionner. Personne ne l'avait encore utilisé.";
 
   return (
     <li className="flex flex-col gap-1 border-b border-edge/40 pb-2 last:border-0">
@@ -122,7 +139,12 @@ function InviteRow({
           <button type="button" onClick={() => setEditingPassword((v) => !v)} className="text-ink-muted hover:text-ink">
             Mot de passe
           </button>
-          <button type="button" onClick={revoke} disabled={busy} className="text-danger hover:underline disabled:opacity-50">
+          <button
+            type="button"
+            onClick={() => setConfirmingRevoke(true)}
+            disabled={busy}
+            className="text-danger hover:underline disabled:opacity-50"
+          >
             Révoquer
           </button>
         </div>
@@ -164,6 +186,16 @@ function InviteRow({
         </div>
       )}
       {error && <p className="text-[11px] text-danger">{error}</p>}
+
+      <ConfirmDialog
+        open={confirmingRevoke}
+        title="Révoquer ce lien ?"
+        message={revokeMessage}
+        confirmLabel="Révoquer"
+        danger
+        onConfirm={revoke}
+        onCancel={() => setConfirmingRevoke(false)}
+      />
     </li>
   );
 }

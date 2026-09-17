@@ -2716,6 +2716,16 @@ export type Database = {
         }[]
       }
       restore_entity: { Args: { p_entity_id: string }; Returns: boolean }
+      revoke_campaign_invite_access: {
+        Args: { p_invite_id: string }
+        Returns: {
+          allowed: boolean
+          released_character: boolean
+          removed_member: boolean
+          removed_world_member: boolean
+          revoked: boolean
+        }[]
+      }
       restore_entity_blocks: {
         Args: { p_blocks: Json; p_entity_id: string }
         Returns: undefined

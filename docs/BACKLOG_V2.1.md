@@ -5597,9 +5597,30 @@ habituel : écrire, faire appliquer, relancer la suite, puis commiter.
 
 ### Lots
 
-**Lot 1 — la révocation qui retire l'accès.** Migration + fonction, service et
-repo, `ConfirmDialog` nommant ce qui part. Se tient seul et corrige le défaut le
-plus grave même si le lot 2 n'est jamais fait.
+**Lot 1 — la révocation qui retire l'accès.** — **fait**, migration appliquée
+par l'auteur le 17 septembre. Fonction + repo + service + route, et
+`ConfirmDialog` des deux côtés nommant ce qui part. Se tient seul et corrige le
+défaut le plus grave même si le lot 2 n'est jamais fait.
+
+Deux choses trouvées en le faisant, et qui n'étaient pas dans le constat :
+
+- **`world_members` était le même défaut, un cran plus loin.** Un lien MJ de
+  niveau monde (V2-M8) écrit une ligne `world_members` à la réclamation ; la
+  laisser aurait rendu *cette* révocation-là purement cosmétique. La fonction la
+  supprime aussi. Trouvé en relisant `provisionInviteSession` pour savoir
+  exactement quoi défaire — pas en cherchant un bug.
+- **Un défaut dormant révélé par le compilateur React.** `window.location.href =
+  url` dans `viewAs()` (AdminPanel, V2-M7d) viole `react-hooks/immutability`. Le
+  lint ne le signalait pas : le compilateur n'analyse un composant que lorsqu'il
+  sait le compiler, et les ajouts de ce lot ont rendu celui-ci analysable.
+  Remplacé par `window.location.assign(url)`, comportement identique. **Un lint
+  vert ne veut donc pas dire qu'un fichier est propre — seulement qu'il est
+  propre pour ce que le compilateur a bien voulu analyser.**
+
+Vérifié en navigateur, migration en place : un lien fabriqué pour l'occasion
+puis révoqué disparaît de la liste, et la confirmation d'un lien jamais ouvert
+dit bien « Personne ne l'avait encore utilisé. » Le chemin d'un lien **réclamé**
+— personnage libéré, adhésion retirée — reste à exercer en vrai.
 
 **Lot 2 — la présentation.** Les deux sections, la hiérarchie inversée, les
 actions à abscisse fixe, `ActionsMenu`, `EmptyState`, le titre.
@@ -5609,9 +5630,16 @@ actions à abscisse fixe, `ActionsMenu`, `EmptyState`, le titre.
 - Il ne crée pas l'opération manquante « rendre le lien réutilisable » : elle
   n'a pas été demandée, et rien ne dit qu'elle servira une fois que révoquer
   fera son travail.
-- Il ne touche pas à `AdminPanel`, dont la liste transversale a déjà reçu son
-  tableau en V2.1-24 (lot 4). Sa propre `revoke()` reste inchangée par ce
-  ticket — **traîne assumée et dite** : les deux devront converger.
+- Il ne touche pas à la **présentation** d'`AdminPanel`, qui a déjà reçu son
+  tableau en V2.1-24 (lot 4).
+
+  > **Corrigé pendant le lot 1.** Cette ligne disait d'abord que la `revoke()`
+  > d'`AdminPanel` restait inchangée. C'est faux : **les deux panneaux appellent
+  > la même route** `DELETE /api/campaigns/[id]/invites/[inviteId]`. Changer le
+  > comportement la change donc des deux côtés, qu'on le veuille ou non — et
+  > `AdminPanel` révoquait sans confirmation. Il en reçoit une dans ce lot,
+  > sans quoi le geste le plus destructeur de cet écran serait resté le seul à
+  > partir au premier clic.
 - Il ne touche pas au partage public (`ShareLinkPanel`), dont ce panneau
   s'inspire mais qui n'a ni personnage ni adhésion.
 

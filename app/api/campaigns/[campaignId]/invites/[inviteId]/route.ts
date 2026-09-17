@@ -35,7 +35,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   return NextResponse.json({ ok: true }, { status: 200 });
 }
 
-/** Révoque un lien (V2-M4 suite) — réservé aux MJ/propriétaires/éditeurs du monde (`campaign_invites_write`, RLS). */
+/**
+ * Révoque un lien (V2-M4 suite) — réservé aux MJ/propriétaires/éditeurs du
+ * monde. Le droit est désormais vérifié DANS
+ * `app.revoke_campaign_invite_access` (V2.1-25, migration 20260917100000),
+ * qui est `security definer` : la RLS de l'appelant ne s'applique plus, la
+ * fonction reproduit donc elle-même la borne `app.is_world_admin`.
+ *
+ * Depuis V2.1-25, révoquer **retire l'accès** et non plus seulement le
+ * jeton : personnage libéré, adhésion supprimée, `world_members` avec pour
+ * un lien MJ de niveau monde. Les deux panneaux qui appellent cette route
+ * (`InviteLinkPanel` et `AdminPanel`) héritent du même comportement, et
+ * demandent tous deux confirmation avant de l'appeler.
+ */
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ campaignId: string; inviteId: string }> }) {
   const { inviteId } = await params;
 
@@ -47,9 +59,12 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  const { revoked } = await revokeInvite(supabase, inviteId);
-  if (!revoked) {
-    return NextResponse.json({ error: "Lien introuvable ou déjà révoqué." }, { status: 404 });
+  const result = await revokeInvite(supabase, inviteId);
+  if (!result.allowed) {
+    return NextResponse.json({ error: "Lien introuvable, ou vous n'avez pas le droit de le révoquer." }, { status: 403 });
+  }
+  if (!result.revoked) {
+    return NextResponse.json({ error: "Ce lien était déjà révoqué." }, { status: 404 });
   }
   return NextResponse.json({ ok: true }, { status: 200 });
 }

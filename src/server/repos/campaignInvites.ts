@@ -118,10 +118,34 @@ export async function getOwnCampaignInvite(supabase: TypedClient, userId: string
   return data[0] ?? null;
 }
 
-export async function revokeCampaignInvite(supabase: TypedClient, id: string): Promise<{ updated: boolean }> {
-  const { data, error } = await supabase.from("campaign_invites").update({ revoked_at: new Date().toISOString() }).eq("id", id).select("id");
+export interface RevokeInviteAccessResult {
+  /** `false` aussi bien pour un lien introuvable que pour un appelant sans droit — la fonction ne distingue pas les deux, pour ne pas dire a un tiers si un identifiant existe. */
+  allowed: boolean;
+  revoked: boolean;
+  releasedCharacter: boolean;
+  removedMember: boolean;
+  removedWorldMember: boolean;
+}
+
+/**
+ * V2.1-25 (lot 1) — revoquer retire desormais l'ACCES, pas seulement le
+ * jeton. Passe par `app.revoke_campaign_invite_access` (migration
+ * 20260917100000) : trois ecritures sur trois tables pour une operation de
+ * securite, donc une transaction et non une file de requetes. Le droit est
+ * verifie DANS la fonction, qui est `security definer`.
+ */
+export async function revokeCampaignInvite(supabase: TypedClient, id: string): Promise<RevokeInviteAccessResult> {
+  const { data, error } = await supabase.rpc("revoke_campaign_invite_access", { p_invite_id: id });
   if (error) throw new Error(error.message);
-  return { updated: data.length > 0 };
+  const row = data?.[0];
+  if (!row) return { allowed: false, revoked: false, releasedCharacter: false, removedMember: false, removedWorldMember: false };
+  return {
+    allowed: row.allowed,
+    revoked: row.revoked,
+    releasedCharacter: row.released_character,
+    removedMember: row.removed_member,
+    removedWorldMember: row.removed_world_member,
+  };
 }
 
 /**
