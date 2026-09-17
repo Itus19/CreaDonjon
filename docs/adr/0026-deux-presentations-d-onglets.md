@@ -63,11 +63,16 @@ n'est pas une troisième présentation.
   décrit plus la règle, et une charte qui ment sur un point est une charte
   qu'on cesse de croire sur les autres — c'est son propre §8 qui le dit.
 - `components/shared/BinderTabs.tsx` est extrait de `PlayableCharacterSheet`, à
-  apparence strictement inchangée pour la fiche. C'est le 2ᵉ usage et non le 3ᵉ,
-  donc une entorse assumée à la règle des trois : celle-ci vise les
-  abstractions spéculatives, pas un motif visuel de vingt-cinq lignes de
-  bordures qui se composent entre elles et qu'aucune copie ne reproduirait
-  fidèlement.
+  apparence strictement inchangée pour la fiche.
+
+  > **Corrigé après extraction.** Cet ADR annonçait ici une entorse assumée à la
+  > règle des trois, au motif que l'accueil serait le 2ᵉ usage. Il y en avait un
+  > troisième, trouvé en extrayant : `characterCreatorSteps/PreviewStep.tsx`
+  > rendait les mêmes cinq onglets, libellés importés compris, dans une
+  > **troisième** présentation — `rounded-t-md` et un souligné de 2 px, c'est-à-dire
+  > celle dont le joueur s'était plaint et qui a fait naître le classeur. La règle
+  > des trois était donc satisfaite sans entorse. `PreviewStep` est converti,
+  > cette fois avec un changement d'apparence assumé.
 - La fiche jouable **gagne** le clavier au passage. Ce n'était pas le but de
   V2.1-24, c'est un effet de l'extraction, et il ne doit pas se perdre : les
   cinq onglets deviennent navigables aux flèches comme le prescrit le motif
