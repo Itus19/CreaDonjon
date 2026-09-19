@@ -113,19 +113,23 @@ Aucun de ces six défauts ne se trouve en relisant le code : ils apparaissent en
 
 *Reprend `specs/moteur-de-jeu.md` §8 sans en changer la numérotation. Détail de conception dans la spec ; ici, seulement les critères d'acceptation et ce que la spec laissait ouvert.*
 
-### V3-A1 — Déclencheurs : schéma, évaluateur, bornes · `L`
+### V3-A1 — Déclencheurs : schéma, évaluateur, bornes · `L` — **fait le 19 septembre**
 
 Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** — les cas dorés sont des règles réelles.
 
-- [ ] `src/core/rules/triggers.ts` : `zTrigger` (Zod), un évaluateur, rien d'autre.
-- [ ] Le `if` réutilise l'AST existant, étendu de `and`/`or`/`not`/`eq`/`gte`/`lte`/`has_condition`/`has_feature`/`in_range` — **aucune grammaire nouvelle**.
-- [ ] Vocabulaire d'événements fermé (les 18 de la spec §4). Ajouter un événement = un ADR.
-- [ ] Les quatre bornes : profondeur 4, 32 déclencheurs par événement, un même déclencheur une fois par chaîne, 8 effets par déclencheur.
-- [ ] Cas doré n° 1 : **la concentration rompue par les dégâts, exprimée entièrement en données**, sans une ligne de code spécifique. C'est le test qui prouve que le mécanisme est le bon.
-- [ ] Cas doré n° 2 : deux déclencheurs qui se répondent s'arrêtent à la profondeur 4 avec une erreur explicite, jamais une boucle.
-- [ ] `triggers.ts` n'importe rien de `next`, `react` ni `@supabase` (vérifié par la règle ESLint existante).
+- [x] `src/core/rules/triggers.ts` : `zTrigger` (Zod), un évaluateur, rien d'autre.
+- [x] Le `if` réutilise l'AST existant pour ses feuilles numériques, enveloppé d'une couche booléenne `and`/`or`/`not`/`eq`/`gte`/`lte`/`has_condition`/`has_feature`/`in_range` — voir **ADR 0027** : `FormulaNode` est strictement numérique, l'étendre aurait imposé un retour `number | boolean` à `evaluate()`, appelé partout dans le moteur de fiche. Les nombres, eux, n'ont bien aucune grammaire nouvelle.
+- [x] Vocabulaire d'événements fermé (les 18 de la spec §4), plus les 10 effets, également fermés.
+- [x] Les quatre bornes. Trois sont vérifiées à l'exécution (profondeur, déclencheurs par événement, un même déclencheur une fois par événement émis) ; **la quatrième, 8 effets par déclencheur, est vérifiée par `zTrigger` à la saisie** — c'est une contrainte de forme de la donnée, pas du déroulement, et toute donnée entre par Zod.
+- [x] Cas doré n° 1 : **la concentration rompue par les dégâts, entièrement en données**. Le mot « concentration » n'apparaît nulle part dans `triggers.ts`.
+- [x] Cas doré n° 2 : deux déclencheurs qui se répondent s'arrêtent avec `chain_depth_exceeded`, message explicite citant la borne, jamais une boucle.
+- [x] `triggers.ts` n'importe rien de `next`, `react` ni `@supabase` (lint vert).
 
-**Question laissée ouverte par la spec, à trancher ici :** l'ordre d'exécution de deux déclencheurs sur le même événement. Recommandation — une priorité entière déclarée, même mécanisme que les couches de modificateurs de `sheet.ts`, à égalité l'ordre de déclaration. Écrire un ADR si un autre choix est fait.
+**Question tranchée :** l'ordre est une **priorité entière décroissante, égalité départagée par l'ordre de déclaration** — la recommandation, donc pas d'ADR. `Array.prototype.sort` étant stable depuis ES2019, l'ordre de déclaration n'a pas à être porté à la main.
+
+**Interprétation à confirmer.** « Un même déclencheur une fois par chaîne » est ambigu et change le résultat. Lu au pied de la lettre (une fois sur toute la descendance), un ping-pong A→B→A s'arrêterait à la profondeur 3 sans erreur, et le critère du cas doré n° 2 — « s'arrêtent à la profondeur 4 avec une erreur explicite » — deviendrait inatteignable. C'est donc **une fois par événement émis** qui a été implémenté : les deux critères sont alors cohérents, et c'est la profondeur qui borne le ping-pong. À confirmer ou corriger.
+
+**Vérifié par mutation** : `has_condition` forcé à `true` et un jet de sauvegarde toujours réussi font tomber deux tests. La suite mord, elle ne se contente pas de passer.
 
 ### V3-A2 — Brancher le vocabulaire d'événements · `M`
 
