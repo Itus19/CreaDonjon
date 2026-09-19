@@ -42,7 +42,8 @@ export interface SpikeSetup {
   locationName: string;
   locationText: string;
   npcs: typeof SPIKE_NPCS;
-  characterSummary: string;
+  hpCurrent: number;
+  ac: number;
   encounter: { monsterName: string; monsterEntryKey: string; count: number } | null;
 }
 
@@ -57,7 +58,13 @@ export async function getSpikeSetup(supabase: TypedClient, locale: Locale): Prom
   const runtime = await getOrInitializeRuntimeState(supabase, ctx);
   // Bram est un civil sans niveau de classe (hp_method fixed, classes: []) : hpMax derive a 0
   // (rien a deriver sans classe). PV actuels reste la seule valeur fiable a afficher ici.
-  const characterSummary = `Bram : PV actuels ${runtime.state.hp.current}, CA ${ctx.sheet.ac.value}.`;
+  //
+  // S2 : les NOMBRES partent d'ici, la phrase est composee cote client. L'ADR 0009
+  // reproche a S1 un "instantane pris une fois au debut" — pour mesurer si le modele
+  // reprend fidelement les PV restants, encore faut-il qu'ils bougent entre deux tours,
+  // ce que seul l'appelant (qui suit les degats) peut faire.
+  const hpCurrent = runtime.state.hp.current;
+  const ac = ctx.sheet.ac.value;
 
   // La campagne fixture pointe sa propre variante homebrew (aaaaaaaa-...-000000000004),
   // qui n'a par construction aucune entree "monster" a elle (listMonstersForRuleset,
@@ -84,7 +91,8 @@ export async function getSpikeSetup(supabase: TypedClient, locale: Locale): Prom
     locationName: location?.name ?? "Lieu",
     locationText,
     npcs: SPIKE_NPCS,
-    characterSummary,
+    hpCurrent,
+    ac,
     encounter,
   };
 }

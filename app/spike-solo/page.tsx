@@ -28,7 +28,8 @@ interface Setup {
   locationName: string;
   locationText: string;
   npcs: Npc[];
-  characterSummary: string;
+  hpCurrent: number;
+  ac: number;
   encounter: { monsterName: string; monsterEntryKey: string; count: number } | null;
 }
 
@@ -46,21 +47,35 @@ interface TurnEntry {
   coherence?: number;
   prose?: number;
   note?: string;
+  /** S2 : le modele contredit-il un nombre qu'on lui a fourni (degats, PV, reussite/echec) ? */
+  contradicted?: boolean;
+  /** S2 : le modele invente-t-il un fait mecanique absent du contexte (critique, chute, PNJ qui intervient) ? */
+  invented?: boolean;
 }
 
 export default function SpikeSoloPage() {
   const [setup, setSetup] = useState<Setup | "loading" | "error">("loading");
   const [playerAction, setPlayerAction] = useState("");
-  const [attackThisTurn, setAttackThisTurn] = useState(false);
   const [busy, setBusy] = useState(false);
   const [entries, setEntries] = useState<TurnEntry[]>([]);
+  /** PV suivis tour apres tour — `null` tant que le setup n'est pas charge. */
+  const [hp, setHp] = useState<number | null>(null);
+  const [blocked, setBlocked] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/spike-solo/setup")
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then((data: Setup) => setSetup(data))
+      .then((data: Setup) => {
+        setSetup(data);
+        setHp(data.hpCurrent);
+      })
       .catch(() => setSetup("error"));
   }, []);
+
+  /** Seul endroit ou cette phrase se compose — affichee ET envoyee au modele, jamais deux formulations. */
+  function characterLine(currentHp: number, ac: number): string {
+    return `Bram : PV actuels ${currentHp}, CA ${ac}.`;
+  }
 
   function recentEventStrings(): string[] {
     return entries
@@ -69,29 +84,46 @@ export default function SpikeSoloPage() {
       .filter((s) => s.length > 0);
   }
 
+  /**
+   * S2 : la resolution mecanique est OBLIGATOIRE et passe en premier.
+   *
+   * S1 en faisait une case a cocher, et l'unique fois ou elle a ete cochee la
+   * resolution a echoue sans rien interrompre : le combat des tours 2 a 4 a ete
+   * narre sans qu'aucun de reel soit lance (ADR 0009). La garantie centrale du
+   * projet — le modele ne calcule rien — n'a donc jamais ete observee. Ici, si la
+   * resolution echoue, le tour s'ARRETE : pas de fait, pas de narration. Un tour
+   * manquant se voit, un tour narre sans fait ne se voit pas.
+   */
   async function handleSubmit() {
-    if (!playerAction.trim() || setup === "loading" || setup === "error" || busy) return;
-    setBusy(true);
-
-    let mechanicalFact: string | null = null;
-    if (attackThisTurn && setup.encounter) {
-      const res = await fetch("/api/spike-solo/resolve-attack", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ monsterEntryKey: setup.encounter.monsterEntryKey }),
-      });
-      if (res.ok) {
-        const body = (await res.json()) as { fact: string };
-        mechanicalFact = body.fact;
-      }
+    if (!playerAction.trim() || setup === "loading" || setup === "error" || busy || hp === null) return;
+    if (!setup.encounter) {
+      setBlocked("Aucune rencontre preparee : S2 mesure des tours de COMBAT, il n'y a rien a resoudre.");
+      return;
     }
+    setBusy(true);
+    setBlocked(null);
+
+    const resolveRes = await fetch("/api/spike-solo/resolve-attack", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ monsterEntryKey: setup.encounter.monsterEntryKey }),
+    });
+    if (!resolveRes.ok) {
+      setBlocked(`Resolution mecanique echouee (HTTP ${resolveRes.status}) — tour ABANDONNE, le modele n'a pas ete appele.`);
+      setBusy(false);
+      return;
+    }
+    const resolved = (await resolveRes.json()) as { fact: string; hit: boolean; damage: number };
+    const hpAfter = Math.max(0, hp - resolved.damage);
+    const mechanicalFact = `${resolved.fact} PV de Bram apres ce coup : ${hpAfter}.`;
+    setHp(hpAfter);
 
     const res = await fetch("/api/spike-solo/turn", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         locationText: setup.locationText,
-        characterSummary: setup.characterSummary,
+        characterSummary: characterLine(hpAfter, setup.ac),
         recentEvents: recentEventStrings(),
         mechanicalFact,
         playerAction: playerAction.trim(),
@@ -132,11 +164,14 @@ export default function SpikeSoloPage() {
     }
 
     setPlayerAction("");
-    setAttackThisTurn(false);
     setBusy(false);
   }
 
   function rate(turn: number, field: "coherence" | "prose", value: number) {
+    setEntries((prev) => prev.map((e) => (e.turn === turn ? { ...e, [field]: value } : e)));
+  }
+
+  function flag(turn: number, field: "contradicted" | "invented", value: boolean) {
     setEntries((prev) => prev.map((e) => (e.turn === turn ? { ...e, [field]: value } : e)));
   }
 
@@ -151,16 +186,18 @@ export default function SpikeSoloPage() {
   const malformedCount = entries.length - okEntries.length;
   const avgLatency = okEntries.length ? Math.round(okEntries.reduce((a, e) => a + e.latencyMs, 0) / okEntries.length) : 0;
   const avgInputTokens = okEntries.length ? Math.round(okEntries.reduce((a, e) => a + e.inputTokens, 0) / okEntries.length) : 0;
+  const contradictedCount = okEntries.filter((e) => e.contradicted).length;
+  const inventedCount = okEntries.filter((e) => e.invented).length;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 p-6 text-ink">
-      <h1 className="text-lg font-semibold">V2-S1 — Spike de viabilite du solo</h1>
+      <h1 className="text-lg font-semibold">S2 — Le lien fait-mecanique → narration (dette de l&apos;ADR 0009)</h1>
 
       <div className="rounded-md border border-edge/50 bg-panel-sunken p-3 text-sm">
         <p className="font-medium">{setup.locationName}</p>
         <p className="text-ink-muted">{setup.locationText}</p>
         <p className="mt-2 font-medium">Personnage</p>
-        <p className="text-ink-muted">{setup.characterSummary}</p>
+        <p className="text-ink-muted">{hp === null ? "…" : characterLine(hp, setup.ac)}</p>
         <p className="mt-2 font-medium">PNJ presents</p>
         <ul className="list-inside list-disc text-ink-muted">
           {setup.npcs.map((n) => (
@@ -177,8 +214,14 @@ export default function SpikeSoloPage() {
       </div>
 
       <div className="rounded-md border border-edge/50 bg-panel-sunken p-3 text-xs text-ink-muted">
-        Tour {entries.length}/20 — latence moyenne {avgLatency} ms — tokens d&apos;entree moyens {avgInputTokens} — appels
-        malformes/identifiants inventes : {malformedCount}/{entries.length || 0}
+        Tour {entries.length}/10 — latence moyenne {avgLatency} ms — tokens d&apos;entree moyens {avgInputTokens} — appels
+        malformes : {malformedCount}/{entries.length || 0}
+        <br />
+        <span className={contradictedCount > 1 ? "text-danger" : undefined}>
+          S2 — nombres contredits : {contradictedCount}/{okEntries.length} (seuil d&apos;echec : plus de 1 sur 10)
+        </span>
+        {" — "}
+        <span className={inventedCount > 0 ? "text-danger" : undefined}>faits mecaniques inventes : {inventedCount}/{okEntries.length}</span>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -212,6 +255,14 @@ export default function SpikeSoloPage() {
                       ))}
                     </select>
                   </label>
+                  <label className="flex items-center gap-1">
+                    <input type="checkbox" checked={e.contradicted ?? false} onChange={(ev) => flag(e.turn, "contradicted", ev.target.checked)} />
+                    Nombre contredit
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input type="checkbox" checked={e.invented ?? false} onChange={(ev) => flag(e.turn, "invented", ev.target.checked)} />
+                    Fait invente
+                  </label>
                   <input
                     value={e.note ?? ""}
                     onChange={(ev) => setNote(e.turn, ev.target.value)}
@@ -236,11 +287,11 @@ export default function SpikeSoloPage() {
           className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm outline-none"
         />
         {setup.encounter && (
-          <label className="flex items-center gap-2 text-xs text-ink-muted">
-            <input type="checkbox" checked={attackThisTurn} onChange={(e) => setAttackThisTurn(e.target.checked)} />
-            Ce tour declenche une attaque de {setup.encounter.monsterName}
-          </label>
+          <p className="text-xs text-ink-muted">
+            Chaque tour resout d&apos;abord une attaque reelle de {setup.encounter.monsterName} — plus de case a cocher (S2).
+          </p>
         )}
+        {blocked && <p className="text-xs text-danger">{blocked}</p>}
         <button
           type="button"
           onClick={handleSubmit}
