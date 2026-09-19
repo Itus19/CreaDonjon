@@ -131,11 +131,16 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Vérifié par mutation** : `has_condition` forcé à `true` et un jet de sauvegarde toujours réussi font tomber deux tests. La suite mord, elle ne se contente pas de passer.
 
-### V3-A2 — Brancher le vocabulaire d'événements · `M`
+### V3-A2 — Brancher le vocabulaire d'événements · `M` — **noyau fait le 19 septembre, branchement serveur bloqué**
 
-- [ ] `resolveAction` et le combat émettent les événements du vocabulaire.
-- [ ] Chaque événement porte son contexte (`event.damage`, `event.target`…) accessible à l'AST.
-- [ ] Un déclencheur qui échoue est journalisé, jamais silencieux, et n'interrompt pas le tour.
+- [x] La résolution mécanique émet les événements — `src/core/rules/gameEvents.ts`. **`resolveAction` n'existe pas** : le ticket nomme une fonction absente du code. Les vrais points de résolution sont `resolveAttackRoll`, `resolveDamageRoll`, `resolveCheckRoll` (`action.ts`) et `advanceTurn` (`combat.ts`). Trois constructeurs couvrent ceux qui ont un producteur réel aujourd'hui : `eventsForAttack`, `eventsForSave`, `eventsForTurn`. Les douze autres événements du vocabulaire n'ont encore rien qui les produise — leur écrire un constructeur maintenant serait de l'échafaudage.
+- [x] Chaque événement porte son contexte, préfixé `event.` et donc lisible par un `ref` de condition (`event.damage`, `event.roll`, `event.ac`, `event.critical`, `event.dc`, `event.round`).
+- [x] Un déclencheur qui échoue est journalisé, jamais silencieux, et n'interrompt pas le tour — `TriggerRunResult.failures`, plus une ligne `ECHEC` dans la trace. Une règle maison mal formée ne fige plus une partie ; les effets déjà résolus par ce déclencheur sont conservés, parce qu'ils correspondent à des dés déjà lancés.
+- [ ] **Bloqué — le branchement côté serveur attend un magasin de déclencheurs.** `runTriggers` a besoin de la liste des déclencheurs applicables, et rien ne les persiste : aucune table, aucune migration. Câbler `checkRolls.ts` ou le combat aujourd'hui appellerait le moteur avec une liste vide. Cette dépendance n'est mentionnée nulle part dans le lot A ; elle doit être tranchée avant A5 (l'éditeur, qui suppose qu'on puisse enregistrer un déclencheur) et A6 (la conversion du SRD, qui suppose qu'on puisse en charger).
+
+**Choix de conception.** Les résolveurs restent des fonctions pures sans effet de bord : `gameEvents.ts` **traduit** leur résultat en événements, il ne les modifie pas. Leur donner un effet de bord « émetteur » aurait cassé ce qui fait leur valeur — on peut les appeler sans moteur de déclencheurs du tout.
+
+**Un coup émet les deux faces de l'échange** (`damage_dealt` sur l'attaquant, `damage_taken` sur la cible) : c'est ce qui permet au vol de vie et à la concentration de s'accrocher au même coup, et c'est la raison d'être du champ `subject`.
 
 ### V3-A3 — Économie d'action · `M`
 

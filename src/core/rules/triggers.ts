@@ -220,12 +220,26 @@ export interface FiredEvent {
   data?: Readonly<Record<string, number>>;
 }
 
-export type TriggerErrorCode = "chain_depth_exceeded" | "too_many_triggers" | "unknown_actor";
+/** Les bornes sont des erreurs de RUN : elles arretent tout, parce que la terminaison est en jeu. */
+export type TriggerErrorCode = "chain_depth_exceeded" | "too_many_triggers";
+
+export interface TriggerFailure {
+  triggerId: string;
+  reason: string;
+}
 
 export interface TriggerRunResult {
   effects: ResolvedEffect[];
-  /** Une ligne par declencheur parti, dans l'ordre. Un declencheur qui echoue est journalise, jamais silencieux (V3-A2). */
+  /** Une ligne par declencheur parti, dans l'ordre. */
   trace: string[];
+  /**
+   * V3-A2 : un declencheur qui echoue est journalise, JAMAIS silencieux, et
+   * n'interrompt pas le tour. Une regle maison mal formee (un acteur qui
+   * n'est pas dans la scene, une reference inconnue) ne doit pas figer une
+   * partie en cours — elle doit se voir. C'est l'inverse d'un `catch` muet,
+   * que CLAUDE.md interdit : l'erreur est conservee et rendue a l'appelant.
+   */
+  failures: TriggerFailure[];
   error?: { code: TriggerErrorCode; message: string };
 }
 
@@ -250,15 +264,9 @@ function followUpEvent(effect: ResolvedEffect): FiredEvent | null {
   }
 }
 
-class TriggerBoundError extends Error {
-  constructor(readonly code: TriggerErrorCode) {
-    super(code);
-  }
-}
-
 function actor(ctx: TriggerContext, who: string): TriggerActorState {
   const found = ctx.actors[who];
-  if (!found) throw new TriggerBoundError("unknown_actor");
+  if (!found) throw new Error(`Acteur "${who}" absent de la scene.`);
   return found;
 }
 
@@ -371,17 +379,18 @@ export function runTriggers(params: {
   const { triggers, ctx, rng } = params;
   const effects: ResolvedEffect[] = [];
   const trace: string[] = [];
+  const failures: TriggerFailure[] = [];
 
   const queue: { fired: FiredEvent; depth: number }[] = [{ fired: params.event, depth: 1 }];
 
-  try {
-    while (queue.length > 0) {
+  while (queue.length > 0) {
       const { fired, depth } = queue.shift()!;
 
       if (depth > TRIGGER_LIMITS.maxChainDepth) {
         return {
           effects,
           trace,
+          failures,
           error: {
             code: "chain_depth_exceeded",
             message: `Chaine de declencheurs interrompue : profondeur maximale ${TRIGGER_LIMITS.maxChainDepth} depassee sur l'evenement "${fired.event}".`,
@@ -396,6 +405,7 @@ export function runTriggers(params: {
         return {
           effects,
           trace,
+          failures,
           error: {
             code: "too_many_triggers",
             message: `${matching.length} declencheurs sur "${fired.event}", maximum ${TRIGGER_LIMITS.maxTriggersPerEvent}.`,
@@ -416,26 +426,30 @@ export function runTriggers(params: {
         if (firedHere.has(trigger.id)) continue;
         firedHere.add(trigger.id);
 
-        if (trigger.if && !evalCondition(trigger.if, ctx, fired, rng)) continue;
-        trace.push(`${fired.event} -> ${trigger.id} (profondeur ${depth})`);
+        // Chaque declencheur est isole : ce qui tombe ici ne fait tomber que
+        // lui. Les effets deja resolus par CE declencheur avant l'echec sont
+        // conserves — ils correspondent a des des deja lances, les effacer
+        // serait mentir sur ce qui s'est passe.
+        try {
+          if (trigger.if && !evalCondition(trigger.if, ctx, fired, rng)) continue;
+          trace.push(`${fired.event} -> ${trigger.id} (profondeur ${depth})`);
 
-        const pending: EffectNode[] = [...trigger.then];
-        while (pending.length > 0) {
-          const { resolved, branch } = resolveEffect(pending.shift()!, ctx, fired, rng);
-          effects.push(resolved);
-          pending.unshift(...branch);
+          const pending: EffectNode[] = [...trigger.then];
+          while (pending.length > 0) {
+            const { resolved, branch } = resolveEffect(pending.shift()!, ctx, fired, rng);
+            effects.push(resolved);
+            pending.unshift(...branch);
 
-          const next = followUpEvent(resolved);
-          if (next) queue.push({ fired: next, depth: depth + 1 });
+            const next = followUpEvent(resolved);
+            if (next) queue.push({ fired: next, depth: depth + 1 });
+          }
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : String(err);
+          failures.push({ triggerId: trigger.id, reason });
+          trace.push(`${fired.event} -> ${trigger.id} ECHEC : ${reason}`);
         }
       }
-    }
-  } catch (err) {
-    if (err instanceof TriggerBoundError) {
-      return { effects, trace, error: { code: err.code, message: `Acteur inconnu dans un declencheur.` } };
-    }
-    throw err;
   }
 
-  return { effects, trace };
+  return { effects, trace, failures };
 }
