@@ -1,5 +1,5 @@
 import type { Rng } from "../dice/rng";
-import type { RandomTableData, TableEntry } from "./types";
+import type { RandomTableData, TableEntry, TableEntryRange } from "./types";
 import { InvalidDieError, NoMatchingEntryError } from "./errors";
 
 /**
@@ -34,6 +34,39 @@ export function parseDie(die: string): number {
     throw new InvalidDieError(die);
   }
   return faces;
+}
+
+/**
+ * Plage de la prochaine entree ajoutee a une table : tout ce qui RESTE du de
+ * apres la derniere entree.
+ *
+ * Le defaut corrige (signale en saisissant la Taverne, V2-J1) : l'entree
+ * ajoutee naissait de largeur nulle (`min = max = dernier_max + 1`), ce qui
+ * laissait un trou entre elle et la fin du de — et `drawOnce` jette
+ * `NoMatchingEntryError` des qu'un jet tombe dans ce trou. Une table
+ * fraichement enrichie devenait donc intirable jusqu'a ce que l'auteur
+ * reparre les plages a la main.
+ *
+ * Un `die` incomplet n'est pas une erreur ici : l'editeur laisse taper "d"
+ * avant "d20", et la frappe suivante recalculera la plage. On retombe alors
+ * sur une largeur 1, exactement l'ancien comportement.
+ *
+ * Quand la derniere entree couvre deja tout le de (l'etat de depart d'un
+ * bloc `random_table` neuf, cf. `registry.ts`), il ne reste rien a couvrir :
+ * la plage renvoyee sort du de. L'entree est inatteignable au tirage, mais
+ * elle ne cree JAMAIS de trou — c'est a l'auteur de repartir ses plages.
+ */
+export function nextEntryRange(entries: readonly TableEntry[], die: string): TableEntryRange {
+  const lastMax = entries.at(-1)?.range.max ?? 0;
+  let faces: number;
+  try {
+    faces = parseDie(die);
+  } catch {
+    // Notation de de incomplete pendant la frappe — un etat attendu, pas une
+    // panne : `Math.max` ci-dessous retombe seul sur une plage de largeur 1.
+    faces = 0;
+  }
+  return { min: lastMax + 1, max: Math.max(lastMax + 1, faces) };
 }
 
 /** Lance le de du gabarit de table via le RNG fourni. Jamais Math.random() (CLAUDE.md regle 6). */

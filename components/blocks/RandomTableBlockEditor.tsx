@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { RandomTableBlockData } from "@/src/core/schemas/blocks/randomTable";
+import { nextEntryRange } from "@/src/core/tables/roll";
 import type { TableEntry, TableEntryPrice } from "@/src/core/tables/types";
 import { CURRENCY_ORDER, type CoinType } from "@/src/core/rules/currency";
 import { CURRENCY_LABELS_FR, formatTableEntryPrice } from "@/src/i18n/fr";
@@ -69,10 +70,9 @@ export default function RandomTableBlockEditor({
   }
 
   function addEntry() {
-    const lastMax = data.entries.at(-1)?.range.max ?? 0;
     onChange({
       ...data,
-      entries: [...data.entries, { range: { min: lastMax + 1, max: lastMax + 1 }, weight: 1, text: "" }],
+      entries: [...data.entries, { range: nextEntryRange(data.entries, data.die), weight: 1, text: "" }],
     });
   }
 

@@ -7,6 +7,7 @@ import {
   drawOnce,
   extractCascadeKeys,
   interpolateCascadeResults,
+  nextEntryRange,
   parseDie,
   pickEntryForRoll,
   rollOnDie,
@@ -32,6 +33,41 @@ describe("parseDie", () => {
     expect(() => parseDie("d0")).toThrow(InvalidDieError);
     expect(() => parseDie("d-5")).toThrow(InvalidDieError);
     expect(() => parseDie("foo")).toThrow(InvalidDieError);
+  });
+});
+
+describe("nextEntryRange", () => {
+  const entry = (min: number, max: number): TableEntry => ({ range: { min, max }, weight: 1, text: "x" });
+
+  it("etend la nouvelle entree jusqu'au bout du de, jamais une plage de largeur nulle", () => {
+    // Le defaut d'origine (V2-J1) : {1,1} puis ajout donnait {2,2}, et les
+    // jets 3..20 ne tombaient sur AUCUNE entree.
+    expect(nextEntryRange([entry(1, 1)], "d20")).toEqual({ min: 2, max: 20 });
+    expect(nextEntryRange([entry(1, 5)], "d20")).toEqual({ min: 6, max: 20 });
+  });
+
+  it("ne laisse aucun trou : la table reste tirable apres un ajout", () => {
+    const entries = [entry(1, 5), { ...entry(0, 0), range: nextEntryRange([entry(1, 5)], "d20") }];
+    for (let roll = 1; roll <= 20; roll++) {
+      expect(pickEntryForRoll(entries, roll)).not.toBeNull();
+    }
+  });
+
+  it("part de 1 sur une table vide", () => {
+    expect(nextEntryRange([], "d20")).toEqual({ min: 1, max: 20 });
+  });
+
+  it("retombe sur une largeur 1 quand le de est en cours de frappe", () => {
+    // L'editeur laisse taper "d" avant "d20" : un de incomplet n'est pas une
+    // panne, la frappe suivante corrigera la plage.
+    expect(nextEntryRange([entry(1, 3)], "d")).toEqual({ min: 4, max: 4 });
+    expect(nextEntryRange([entry(1, 3)], "")).toEqual({ min: 4, max: 4 });
+  });
+
+  it("sort du de quand la derniere entree le couvre deja entierement", () => {
+    // Etat de depart d'un bloc `random_table` neuf (registry.ts) : il ne
+    // RESTE rien a couvrir. Entree inatteignable, mais jamais un trou.
+    expect(nextEntryRange([entry(1, 20)], "d20")).toEqual({ min: 21, max: 21 });
   });
 });
 
