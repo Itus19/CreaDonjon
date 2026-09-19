@@ -460,7 +460,21 @@ async function ensureSoloDemoWorld(officialRulesetId: string): Promise<void> {
   must(
     await supabase.from("entity_runtime_state").insert({
       entity_id: SOLO_IDS.entityBram, campaign_id: SOLO_IDS.campaign,
-      state: { hp: { current: 9, temp: 0 }, hit_dice: { d8: 1 }, exhaustion: 0, conditions: [] },
+      // Doit satisfaire `zRuntimeState` EN ENTIER (src/core/schemas/runtimeState.ts) :
+      // la lecture le valide strictement, et cinq champs ajoutes au schema apres
+      // l'ecriture de ce seed manquaient encore ici — l'ecran du spike plantait
+      // donc sur une base fraichement seedee (trouve en montant S2).
+      state: {
+        hp: { current: 9, temp: 0 },
+        hit_dice: { d8: 1 },
+        exhaustion: 0,
+        xp: 0,
+        resources: {},
+        spell_slots_used: {},
+        conditions: [],
+        death_saves: { success: 0, fail: 0 },
+        attuned: [],
+      },
     }),
     "insert entity_runtime_state (demo solo)"
   );

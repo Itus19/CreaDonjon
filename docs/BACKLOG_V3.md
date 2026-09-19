@@ -88,10 +88,22 @@ Lot R    la rapidité, et le téléphone  hors séquence — les restes de l'aud
 
 Le combat des tours 2 à 4 du spike a été narré sans qu'aucun dé réel ne soit lancé. La garantie centrale du projet — le modèle ne calcule rien — n'a donc jamais été observée de bout en bout.
 
-- [ ] Réutiliser `/spike-solo`, sans rien reconstruire : dix tours de combat, chacun **obligatoirement** précédé d'une résolution mécanique réelle (`resolveAction`), la case à cocher facultative retirée.
-- [ ] Mesurer : le modèle reprend-il fidèlement les nombres fournis (dégâts, PV restants, réussite ou échec) ? Compter les écarts sur dix tours.
-- [ ] Mesurer : invente-t-il un fait mécanique absent du contexte (un coup critique, une chute, un PNJ qui intervient) ?
-- [ ] Écrire le verdict dans `docs/adr/0009` (amendement daté, jamais une réécriture) ou dans un ADR 0020 si la conclusion change la forme de la V3.
+- [x] Réutiliser `/spike-solo`, sans rien reconstruire : dix tours de combat, chacun **obligatoirement** précédé d'une résolution mécanique réelle (`resolveAction`), la case à cocher facultative retirée. **Fait le 19 septembre** — et la résolution ne se contente pas d'être obligatoire : si elle échoue, le tour s'arrête sans appeler le modèle.
+- [x] Mesurer : le modèle reprend-il fidèlement les nombres fournis ? **0 écart sur 10 tours.**
+- [x] Mesurer : invente-t-il un fait mécanique absent du contexte ? **0 sur 10.**
+- [x] Écrire le verdict dans `docs/adr/0009` — amendement daté du 19 septembre, ajouté sous l'original.
+
+**Verdict : le lien tient, le lot B peut s'écrire en prose libre.** Les gabarits à trous prévus en cas d'échec ne sont pas nécessaires. Trois réserves à lire avec le résultat : dix tours c'est peu ; Bram est tombé à 0 PV dès le tour 4, donc « PV restants » n'a réellement été éprouvé que sur trois transitions (9 → 5 → 2 → 0) ; et les défauts qualitatifs de S1 (réplique attribuée au mauvais PNJ, répétition verbatim, PNJ qui commentent sans raison) sont tous revenus — ce qui **confirme** le repli sur le MJ assisté. Mesure annexe : 1 364 tokens d'entrée par tour, soit plus du double du budget de 600 fixé par les critères transverses ci-dessous — à traiter dans le lot B.
+
+**Le banc d'essai était cassé, et le réparer a révélé six défauts réels.** S2 disait « sans rien reconstruire », en supposant `/spike-solo` fonctionnel. Il ne l'était plus depuis un mois :
+
+1. **`npm run ingest:srd` échouait sur toute base neuve depuis le 17 août** — `app.import_upsert_ruleset` (30 juillet) insère un ruleset officiel sans renseigner `content_origin`, colonne ajoutée ensuite avec une contrainte de cohérence. Invisible en production, où le SRD précédait la contrainte ; fatal sur le chemin d'amorçage documenté (`db reset` + `ingest:srd`). Corrigé par la migration `20260919120000`.
+2. **Les constantes du spike pointaient sur la fixture d'avant « un monde = une campagne »** (26 août) : la campagne visée n'existait plus. Repointées sur les identifiants `bbbbbbbb-*`.
+3. **`seed-dev.ts` écrivait un `entity_runtime_state` incomplet** — cinq champs ajoutés à `zRuntimeState` après lui manquaient, et la lecture valide strictement.
+4. **`scripts/write-encounter-budget-2024.ts` codait en dur l'UUID de production** du ruleset SRD 5.2.1 — identifiant généré à l'import, donc différent sur chaque base : violation de clé étrangère sur toute base neuve, et donc aucune table de budget de rencontre. Corrigé par une résolution via `base_system`.
+5. **Le générateur de rencontres optimise un budget de PX, pas la présence d'une attaque.** Une fois le budget rétabli, il a rendu un *Shrieker* — un champignon sans `attack_bonus`, sur lequel `resolveMonsterAttackOnBram` échoue. Or S2 exige une résolution réelle à chaque tour. Le spike prend désormais un adversaire **nommé et déterministe** (le bandit, cimeterre +3, 1d6+1) : deux mesures ne se comparent pas si l'adversaire change d'une exécution à l'autre. Le générateur n'est pas ce que S2 mesure.
+6. **Le monde solo ne contient aucun lieu.** L'Ancre Rouillée vit dans Valdoria ; le spike la lit là-bas pour préserver le décor de S1.
+Aucun de ces six défauts ne se trouve en relisant le code : ils apparaissent en montant une instance neuve. **Le chemin d'amorçage du projet n'avait pas été rejoué depuis un mois.**
 
 **Seuil d'échec :** plus d'un tour sur dix où un nombre fourni est contredit. Au-delà, la narration doit être encadrée davantage (gabarits à trous plutôt que prose libre) — et ça change le lot B, donc il faut le savoir avant.
 

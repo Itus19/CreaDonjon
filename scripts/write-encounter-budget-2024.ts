@@ -24,7 +24,12 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 }
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-const RULESET_5_2_1 = "110d20e9-dd80-4752-a57e-a957601b4eae";
+// Resolu par `base_system`, jamais code en dur : l'identifiant du ruleset
+// officiel est genere a l'import, donc different sur chaque base. La
+// version precedente portait l'UUID de la base de production et echouait
+// sur toute base neuve (violation de cle etrangere) — trouve en montant une
+// instance locale pour la mesure S2.
+const BASE_SYSTEM_5_2_1 = "dnd_srd_52";
 const ENTRY_KEY = "encounter-budget";
 const WRITE = process.argv.includes("--write");
 
@@ -67,7 +72,20 @@ const TABLE_DATA = {
 
 const ENTRY_NAME_FR = "Budget de rencontre par personnage";
 
+async function resolveRulesetId(): Promise<string> {
+  const { data, error } = await supabase
+    .from("rulesets")
+    .select("id")
+    .eq("is_official_base", true)
+    .eq("base_system", BASE_SYSTEM_5_2_1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error(`Aucun ruleset officiel ${BASE_SYSTEM_5_2_1} en base. Lancer \`npm run ingest:srd\` d'abord.`);
+  return data.id;
+}
+
 async function main() {
+  const RULESET_5_2_1 = await resolveRulesetId();
   const { data: existing, error: existingError } = await supabase
     .from("ruleset_entries")
     .select("id")

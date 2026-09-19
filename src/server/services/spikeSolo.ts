@@ -6,8 +6,7 @@ import { getEntityById } from "@/src/server/repos/entities";
 import { listBlocksForEntity } from "@/src/server/repos/blocks";
 import { resolveCharacterActionContext, getOrInitializeRuntimeState } from "@/src/server/services/characterActions";
 import { getRuleEntryForWorld } from "@/src/server/services/rules";
-import { listMonstersForRuleset, getEncounterBudgetTableForRuleset } from "@/src/server/services/encounters";
-import { encounterBudget, generateRandomEncounter } from "@/src/core/rules/encounter";
+import { listMonstersForRuleset } from "@/src/server/services/encounters";
 import { resolveAttackRoll, resolveDamageRoll } from "@/src/core/rules/action";
 import { formatFormulaNode } from "@/src/core/formula/format";
 import { serverRng } from "@/src/server/services/rng";
@@ -28,10 +27,24 @@ type TypedClient = SupabaseClient<Database>;
  * l'ecran, jamais persistes — un rechargement reset l'experience sans
  * toucher a la fixture partagee par d'autres tests.
  */
-const SPIKE_WORLD_ID = "aaaaaaaa-0000-0000-0000-000000000001";
-const SPIKE_CAMPAIGN_ID = "aaaaaaaa-0000-0000-0000-000000000006";
+// S2 : ces quatre constantes dataient d'AVANT « un monde = une campagne »
+// (migration 20260826100001). Ce jour-la, `seed-dev.ts` a sorti la
+// demonstration solo de Valdoria pour lui donner son propre monde et de
+// nouveaux identifiants `bbbbbbbb-*` ; il garde meme l'ancien
+// `aaaaaaaa-...0006` uniquement pour nettoyer les vieilles bases, en
+// precisant « jamais reutilises pour creer quoi que ce soit de nouveau ».
+// Personne n'a corrige le spike : la campagne visee ici n'existait plus, et
+// l'ecran plantait sur une base fraichement seedee depuis le 26 aout.
+const SPIKE_WORLD_ID = "bbbbbbbb-0000-0000-0000-000000000001";
+const SPIKE_CAMPAIGN_ID = "bbbbbbbb-0000-0000-0000-000000000005";
+const SPIKE_CHARACTER_ID = "bbbbbbbb-0000-0000-0000-00000000b001";
+
+// Seule exception assumee : le monde solo ne contient QUE Bram, aucun lieu.
+// L'Ancre Rouillee vit dans Valdoria, et c'est le decor de S1 — le garder
+// preserve la comparabilite du verdict de l'ADR 0009, ce qui est tout
+// l'objet de S2. `mj-demo` est membre des deux mondes (seed-dev), la RLS
+// laisse donc lire ce lieu.
 const SPIKE_LOCATION_ID = "aaaaaaaa-0000-0000-0000-00000000a001";
-const SPIKE_CHARACTER_ID = "aaaaaaaa-0000-0000-0000-00000000b001";
 
 /** Rien de reutilisable trouve dans le depot pour aplatir des segments en texte brut — 5 lignes, jetable (spike). */
 function flattenSegmentsToText(segments: Segment[]): string {
@@ -76,15 +89,24 @@ export async function getSpikeSetup(supabase: TypedClient, locale: Locale): Prom
   const worldRulesetId = await getWorldDefaultRulesetId(supabase, SPIKE_WORLD_ID);
   const encounter = await (async () => {
     if (!worldRulesetId) return null;
-    const budgetTable = await getEncounterBudgetTableForRuleset(supabase, worldRulesetId);
     const monsters = await listMonstersForRuleset(supabase, worldRulesetId, locale);
-    if (!budgetTable || monsters.length === 0) return null;
-    const budget = encounterBudget([1], "low", budgetTable.rows);
-    const generated = generateRandomEncounter(budget, monsters.map((m) => ({ entryKey: m.key, xp: m.xp })), serverRng);
-    const first = generated[0];
-    if (!first) return null;
-    const monster = monsters.find((m) => m.key === first.entryKey);
-    return monster ? { monsterName: monster.name, monsterEntryKey: monster.key, count: first.count } : null;
+
+    // S2 : adversaire NOMME, plus de rencontre generee.
+    //
+    // Le generateur (V1-E3) optimise un budget de PX, pas la presence d'une
+    // action d'attaque : il rend volontiers une grenouille ou un shrieker,
+    // creatures de decor sans `attack_bonus`, sur lesquelles
+    // `resolveMonsterAttackOnBram` echoue. Or S2 impose une resolution
+    // mecanique reelle a CHAQUE tour — un adversaire desarme arrete la
+    // mesure au premier tour.
+    //
+    // Un banc de mesure veut de toute facon un adversaire stable : le meme
+    // d'une execution a l'autre, sinon deux mesures ne se comparent pas. Le
+    // bandit (cimeterre +3, 1d6+1) convient a une taverne portuaire et
+    // existe dans les deux SRD. Le generateur reste teste ailleurs ; il
+    // n'est pas ce que ce ticket mesure.
+    const bandit = monsters.find((m) => m.key === "bandit");
+    return bandit ? { monsterName: bandit.name, monsterEntryKey: bandit.key, count: 1 } : null;
   })();
 
   return {
