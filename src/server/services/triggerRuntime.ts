@@ -2,10 +2,12 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { ABILITIES, type DerivedSheet } from "@/src/core/rules/sheet";
+import { sceneZoneOf, type SceneState } from "@/src/core/rules/scene";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import {
   runTriggers,
   type FiredEvent,
+  type TriggerZone,
   type TriggerActorState,
   type TriggerContext,
   type TriggerRunResult,
@@ -56,7 +58,12 @@ export function entryKeysForFeatures(features: readonly { key: string }[]): stri
 }
 
 /** L'acteur, vu par une condition : ses conditions, ses aptitudes, et les nombres qu'un `ref` peut lire. */
-export function buildActorState(sheet: DerivedSheet, runtime?: RuntimeState): TriggerActorState {
+export function buildActorState(
+  sheet: DerivedSheet,
+  runtime?: RuntimeState,
+  /** Zone DANS LA SCENE. Hors scene, `engaged` : sans scene il n'y a pas de distance, et `in_range` doit rester vrai plutot que de bloquer une regle pour une raison invisible. */
+  zone: TriggerZone = "engaged"
+): TriggerActorState {
   const numbers: Record<string, number> = {
     "ac": sheet.ac.value,
     "hp.max": sheet.hitPoints.max,
@@ -81,7 +88,7 @@ export function buildActorState(sheet: DerivedSheet, runtime?: RuntimeState): Tr
     // `species:fiendish-legacy-infernal` qui n'est qu'une cle d'affichage.
     features: entryKeysForFeatures(sheet.features),
     numbers,
-    zone: "engaged",
+    zone,
   };
 }
 
@@ -104,6 +111,15 @@ export async function fireTriggersForCharacter(
     sheet: DerivedSheet;
     runtime?: RuntimeState;
     event: FiredEvent;
+    /**
+     * V3-A4 — la scene, si la partie en a une. Elle donne leur ZONE aux
+     * acteurs, ce qui est la seule chose dont `in_range` a besoin. Les
+     * autres presents entrent dans le contexte sans fiche derivee : on
+     * connait leur distance, pas leurs conditions — assez pour une aura,
+     * pas pour `has_condition` sur eux. Cette borne tombera quand la boucle
+     * de tour resoudra les fiches de toute la scene (lot B).
+     */
+    scene?: SceneState;
   }
 ): Promise<TriggerRunResult & { rejected: { entryKey: string; index: number; reason: string }[] }> {
   const featureKeys = entryKeysForFeatures(params.sheet.features);
@@ -113,9 +129,18 @@ export async function fireTriggersForCharacter(
     return { effects: [], trace: [], failures: [], rejected };
   }
 
-  const ctx: TriggerContext = {
-    actors: { [params.subject]: buildActorState(params.sheet, params.runtime) },
+  const actors: Record<string, TriggerActorState> = {
+    [params.subject]: buildActorState(
+      params.sheet,
+      params.runtime,
+      params.scene ? sceneZoneOf(params.scene, params.subject) ?? "far" : "engaged"
+    ),
   };
+  for (const other of params.scene?.present ?? []) {
+    if (other.entityId === params.subject) continue;
+    actors[other.entityId] = { conditions: [], features: [], numbers: {}, zone: other.zone };
+  }
+  const ctx: TriggerContext = { actors };
 
   return { ...runTriggers({ event: params.event, triggers, ctx, rng: serverRng }), rejected };
 }

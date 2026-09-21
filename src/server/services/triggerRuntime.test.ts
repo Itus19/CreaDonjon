@@ -120,3 +120,19 @@ describe("entryKeysForFeatures", () => {
     expect(entryKeysForFeatures([{ key: "species:x" }, { key: "x" }])).toEqual(["x"]);
   });
 });
+
+/**
+ * V3-A4 : jusqu'ici `buildActorState` posait `engaged` en dur, donc
+ * `in_range` etait TOUJOURS vrai — une aura de paladin s'appliquait a
+ * l'autre bout de la taverne. La zone vient desormais de la scene.
+ */
+describe("la zone vient de la scene, plus d'une constante", () => {
+  it("prend la zone fournie", () => {
+    expect(buildActorState(sheet, undefined, "far").zone).toBe("far");
+    expect(buildActorState(sheet, undefined, "near").zone).toBe("near");
+  });
+
+  it("hors scene, reste `engaged` — sans distance, une regle de portee ne doit pas se bloquer", () => {
+    expect(buildActorState(sheet).zone).toBe("engaged");
+  });
+});

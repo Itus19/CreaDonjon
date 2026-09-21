@@ -34,8 +34,16 @@ alter table scene_states enable row level security;
 -- Meme portee que le reste d'une campagne : ses membres la lisent, ses
 -- administrateurs de monde l'ecrivent. Aucune regle parallele — un joueur
 -- qui voit la campagne voit la scene ou se trouve son personnage.
+--
+-- `app.is_world_member(app.campaign_world_id(...))` est l'idiome deja pose
+-- par `campaign_characters`, `campaign_members` et
+-- `campaign_entity_snapshots` (migration 20260730150001). Il n'existe pas de
+-- predicat `is_campaign_member` : le premier jet de cette migration en
+-- inventait un, et l'application a echoue sur `42883`. Les predicats
+-- disponibles sont `campaign_role`, `campaign_world_id`, `is_world_member`,
+-- `is_world_admin`, `is_superadmin`.
 create policy scene_states_select on scene_states
-  for select using (app.is_campaign_member(campaign_id));
+  for select using (app.is_world_member(app.campaign_world_id(campaign_id)));
 
 create policy scene_states_write on scene_states
   for all using (app.is_world_admin(app.campaign_world_id(campaign_id)))

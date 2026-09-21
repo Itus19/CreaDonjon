@@ -1119,6 +1119,12 @@ rulesets ── ruleset_entries ─┬── ruleset_entry_blocks
 | 012 | `rls.sql` | fonctions `security definer`, activation RLS, politiques |
 | 013 | `seed_dev.sql` | modèles fournis et données de démonstration (§23) |
 
+**Ajouts postérieurs à la Phase 0** (le tableau ci-dessus décrit l'amorçage, pas l'état courant) :
+
+| Migration | Contenu |
+|---|---|
+| `20260921210000` | `scene_states` — la scène courante d'une campagne (§26) |
+
 **Règle absolue :** une migration appliquée n'est jamais modifiée. On en écrit une nouvelle. Y compris pendant le développement, y compris « juste pour corriger une faute de frappe ».
 
 ---
@@ -1187,3 +1193,31 @@ En environnement de développement uniquement.
 | Suppression | logique partout / physique pour les journaux | logique sur les contenus, physique sur les journaux au-delà de N mois |
 | Plusieurs calendriers par monde | oui / non | non en V1, un seul en JSON |
 | Multi-tenant | par `world_id` / par schéma | par `world_id`, largement suffisant |
+
+---
+
+## 26. L'état de scène (V3-A4)
+
+`scene_states` porte **la scène courante** d'une campagne : où l'on est, qui est présent et à quelle distance, quelle heure il est, quelle lumière, et si un combat est en cours.
+
+```
+scene_states
+  campaign_id  uuid  primary key  references campaigns(id) on delete cascade
+  state        jsonb not null      -- validé par zSceneState (src/core/rules/scene.ts)
+  updated_at   timestamptz
+  updated_by   uuid  references auth.users(id)
+```
+
+**Une table, pas un `jsonb` sur `campaigns`.** La scène change à chaque tour. La poser sur `campaigns` en ferait une table chaude, réécrite sans cesse, alors qu'elle porte le nom du monde, le ruleset et les réglages — des données froides lues partout dans l'application.
+
+**Une ligne par campagne**, d'où la clé primaire sur `campaign_id`. C'est un état courant, pas une collection : « reprendre une partie trois semaines plus tard restitue la scène exacte » ne demande rien de plus.
+
+**L'historique n'est pas ici.** C'est le rôle de `session_events` (§7) ; `state.recentEvents` n'en garde que les cinq derniers identifiants, pour que le contexte envoyé à un modèle tienne sans requête supplémentaire.
+
+**`state` n'est pas éclaté en colonnes.** Aucune requête ne filtre sur l'heure de jeu ni sur l'éclairage, et les éclater imposerait une migration à chaque champ ajouté au moteur. La forme est garantie par Zod à la lecture comme à l'écriture — une colonne `jsonb` ne garantit rien par elle-même.
+
+**RLS** alignée sur la campagne, sans règle parallèle : `app.is_world_member(app.campaign_world_id(...))` en lecture, `app.is_world_admin(...)` en écriture — le même idiome que `campaign_characters` et `campaign_members`.
+
+**Tenue par le moteur, jamais par un modèle.** L'heure avance parce que le code la fait avancer (repos, voyage, action longue). Un modèle *reçoit* cet état ; il ne le modifie que par une proposition passée par `ai_proposals` (§16). C'est le trou n° 1 de l'ADR 0009, où les PNJ « présents » restaient une liste figée toute la session.
+
+---

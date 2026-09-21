@@ -1413,70 +1413,6 @@ export type Database = {
           },
         ]
       }
-      entity_mentions: {
-        Row: {
-          created_at: string
-          id: string
-          origin: string
-          source_entity_id: string
-          source_path: string
-          target_entity_id: string | null
-          target_kind: string
-          target_rule_key: string | null
-          visibility_level: string
-          visibility_scope_id: string | null
-          world_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          origin: string
-          source_entity_id: string
-          source_path: string
-          target_entity_id?: string | null
-          target_kind: string
-          target_rule_key?: string | null
-          visibility_level?: string
-          visibility_scope_id?: string | null
-          world_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          origin?: string
-          source_entity_id?: string
-          source_path?: string
-          target_entity_id?: string | null
-          target_kind?: string
-          target_rule_key?: string | null
-          visibility_level?: string
-          visibility_scope_id?: string | null
-          world_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "entity_mentions_source_entity_id_fkey"
-            columns: ["source_entity_id"]
-            isOneToOne: false
-            referencedRelation: "entities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "entity_mentions_target_entity_id_fkey"
-            columns: ["target_entity_id"]
-            isOneToOne: false
-            referencedRelation: "entities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "entity_mentions_world_id_fkey"
-            columns: ["world_id"]
-            isOneToOne: false
-            referencedRelation: "worlds"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       entity_revisions: {
         Row: {
           change_note: string | null
@@ -2290,6 +2226,35 @@ export type Database = {
           },
         ]
       }
+      scene_states: {
+        Row: {
+          campaign_id: string
+          state: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          campaign_id: string
+          state: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          state?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_states_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_events: {
         Row: {
           actor: string
@@ -2602,7 +2567,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      claim_journal_entry_grant: { Args: { p_assignment_id: string; p_entity_id: string }; Returns: boolean }
+      claim_journal_entry_grant: {
+        Args: { p_assignment_id: string; p_entity_id: string }
+        Returns: boolean
+      }
       delete_own_account: { Args: never; Returns: undefined }
       entity_blocks_full: {
         Args: { p_entity_id: string }
@@ -2716,6 +2684,10 @@ export type Database = {
         }[]
       }
       restore_entity: { Args: { p_entity_id: string }; Returns: boolean }
+      restore_entity_blocks: {
+        Args: { p_blocks: Json; p_entity_id: string }
+        Returns: undefined
+      }
       revoke_campaign_invite_access: {
         Args: { p_invite_id: string }
         Returns: {
@@ -2725,10 +2697,6 @@ export type Database = {
           removed_world_member: boolean
           revoked: boolean
         }[]
-      }
-      restore_entity_blocks: {
-        Args: { p_blocks: Json; p_entity_id: string }
-        Returns: undefined
       }
       search_entities: {
         Args: { p_query: string; p_world_id: string }

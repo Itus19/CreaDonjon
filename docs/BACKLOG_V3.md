@@ -163,15 +163,20 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 - [ ] **Signaler, ne pas interdire** : une action hors budget est marquée, jamais bloquée. Les tables dérogent en permanence.
 - [ ] Un déclencheur peut accorder ou retirer du budget.
 
-### V3-A4 — État de scène et zones abstraites · `M`
+### V3-A4 — État de scène et zones abstraites · `M` — **fait le 21 septembre**
 
 **Le ticket qui débloque tout le solo.** C'est le trou n° 1 d'ADR 0009.
 
-- [ ] `SceneState` : lieu, entités présentes, heure en jeu, éclairage, combat en cours, cinq derniers événements.
-- [ ] **Tenu par le moteur, jamais par le modèle.** L'heure avance parce que le code la fait avancer — sur repos, voyage, action longue.
-- [ ] Trois zones abstraites : `engaged` / `near` / `far`. Pas de grille tactique.
-- [ ] Persisté : reprendre une partie trois semaines plus tard restitue la scène exacte.
-- [ ] Aucun champ de `SceneState` n'est écrit depuis une sortie de modèle sans passer par `ai_proposals`.
+- [x] `SceneState` : lieu, entités présentes, heure en jeu, éclairage, combat en cours, cinq derniers événements — `src/core/rules/scene.ts`, module pur. Toutes les fonctions rendent une **nouvelle** scène, jamais de mutation sur place : c'est ce qui rendra possible d'annuler un tour (V3-F2).
+- [x] **Tenu par le moteur.** `advanceTime` fait franchir minuit par arithmétique, sur n'importe quel délai (repos long, voyage de plusieurs jours). Il **refuse un delta négatif** : le temps de jeu ne remonte pas, et laisser passer un recul transformerait un bug d'appelant en incohérence difficile à retrouver.
+- [x] Trois zones abstraites, pas de grille. **Et elles servent enfin** : `buildActorState` posait `engaged` en dur, donc `in_range` était toujours vrai — une aura de paladin s'appliquait à l'autre bout de la taverne. La zone vient désormais de la scène.
+- [x] Persisté : table `scene_states` (migration `20260921210000`, appliquée), une ligne par campagne, `zSceneState` validant **à la lecture comme à l'écriture** — une colonne `jsonb` ne garantit rien par elle-même.
+- [x] Aucun champ n'est écrit depuis une sortie de modèle : aucun chemin ne relie un modèle à cette table, et `updated_by` trace qui l'a fait avancer.
+- [ ] **Reste** : faire avancer la scène depuis le jeu (qui entre, qui sort, quand le temps passe). C'est la boucle de tour — lot B — qui l'appellera ; A4 fournit l'état et ses opérations, pas ses déclencheurs.
+
+**Limite assumée du contexte de déclencheur.** Les autres présents entrent dans le contexte avec leur **zone** mais sans fiche dérivée : on connaît leur distance, pas leurs conditions. Assez pour une aura, pas pour un `has_condition` sur eux. Cette borne tombera quand la boucle de tour résoudra les fiches de toute la scène.
+
+**`SCHEMA.md` ne prévoyait aucune scène** — A4 était donc un changement de schéma non planifié, ce qui est normalement un point d'arrêt. Le ticket le planifiait avec sa recommandation, suivie telle quelle ; `SCHEMA.md` gagne sa section 26 pour que la règle ne devienne pas une formalité.
 
 **Précision de conception, à décider ici** — où vit `SceneState` ? Recommandation : une table `scene_states` avec une ligne par campagne (la scène courante) plus un historique dans `session_events`, plutôt qu'un champ jsonb sur `campaigns`. Raison : la scène change à chaque tour, `campaigns` ne doit pas devenir une table chaude, et l'historique est déjà le rôle du journal.
 
