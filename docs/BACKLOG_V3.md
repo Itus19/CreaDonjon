@@ -203,7 +203,7 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Précision de conception, à décider ici** — où vit `SceneState` ? Recommandation : une table `scene_states` avec une ligne par campagne (la scène courante) plus un historique dans `session_events`, plutôt qu'un champ jsonb sur `campaigns`. Raison : la scène change à chaque tour, `campaigns` ne doit pas devenir une table chaude, et l'historique est déjà le rôle du journal.
 
-### V3-A5 — Éditeur de déclencheurs au formulaire · `L` — **fait le 21 septembre** (reste à constater en direct)
+### V3-A5 — Éditeur de déclencheurs au formulaire · `L` — **fait et vérifié en direct le 21 septembre**
 
 - [x] Un bac à sable : « si tel événement survient avec telles données, voici ce qui se passerait » — sans toucher à une vraie partie. Outil de règles `bac-a-sable-declencheurs`, même famille que le bac à sable de formule : fenêtre flottante, entrée de barre latérale, page dédiée.
   - **Même moteur que le jeu, jamais un chemin parallèle** : `/api/triggers/simulate` appelle `runTriggers`, exactement la fonction qu'un vrai jet invoque. Un bac à sable qui simulerait à sa façon mentirait le jour où l'on en aurait besoin — la raison même du critère, déjà posée par V1-D4.
@@ -215,7 +215,11 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
   - La conversion brouillon → déclencheur est **hors du composant** (`lib/triggers/draft.ts`, 11 tests) : c'est la seule logique du formulaire qui puisse se tromper en silence — une condition mal composée produit un déclencheur que Zod accepte mais qui ne part jamais, et aucun typage ne le verrait.
   - Une ligne incomplète est **signalée sous elle et écartée** à l'enregistrement, plutôt que de faire échouer tout l'import de la fiche.
   - **Plafond assumé** : trois formes de condition et six effets, pas l'AST complet. Une règle comme la concentration (jet de sauvegarde avec branche d'échec) se compose dans le bac à sable, en JSON. Construire un éditeur d'AST générique pour des cas qui n'existent pas encore serait l'abstraction que ce projet refuse.
-- [ ] **« Sans redémarrage » : toujours non constaté.** Rien ne met en cache le chemin de lecture, et la vérification en direct de A2 a déjà montré qu'un bloc `triggers` posé pendant que le serveur tourne est relu et part. Ce qui manque est le chemin **complet depuis le formulaire**, et il bute sur un point d'accès, pas sur le code : `listSelectableRulesetsForCurrentUser` ne liste que les variantes **de l'utilisateur connecté**, et la session de test est un compte invité. Il faut la session de l'auteur.
+- [x] **« Sans redémarrage » — constaté le 21 septembre**, sur la session de l'auteur (la variante d'un monde n'est proposée qu'à son propriétaire : `listSelectableRulesetsForCurrentUser`, ce qui avait d'abord bloqué la vérification avec un compte invité). Aptitude « Lecteur de mensonges » créée au formulaire dans ClaudeLand → surcharge `add_block` écrite avec l'identifiant stable `lecteur-de-mensonges-1` → **la fiche et son bloc s'affichent sur le serveur qui tournait déjà**, sans redémarrage ni vidage de cache.
+
+**Un défaut trouvé par cette vérification, et invisible autrement.** La section « Déclencheurs » s'affichait avec son titre et **rien dedans** : le catalogue rend chaque type de bloc par un composant dédié (`blockContentRenderer.tsx`), et `triggers` n'avait pas le sien — le bloc était bien stocké et bien lu, mais muet à l'écran. Corrigé par l'exact analogue de `Modifiers`, sans nouvelle mise en page.
+
+**Ce qui n'est pas prouvé par ce test précis** : que *cette* aptitude-là parte sur un vrai jet — elle n'est portée par aucun personnage. Que le moteur fasse partir un déclencheur stocké sur une aptitude réellement possédée a été prouvé séparément lors de la vérification de V3-A2.
 
 ### V3-A6 — Convertir les règles SRD qui ont des déclencheurs · `L`
 

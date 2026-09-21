@@ -14,6 +14,7 @@ import type {
   EffectsBlockData,
   LegendaryActionsBlockData,
   ModifiersBlockData,
+  TriggersBlockData,
   PrerequisitesBlockData,
   ScalingBlockData,
   SpellCastingBlockData,
@@ -973,6 +974,43 @@ function Prerequisites({ data }: { data: PrerequisitesBlockData }) {
   return <Chips items={data.items} />;
 }
 
+/**
+ * Declencheurs (bloc `triggers`, V3-A5) — une carte par regle, en francais.
+ *
+ * Sans ce composant, la section s'affichait avec son titre et RIEN dedans :
+ * le catalogue rend chaque type de bloc par un composant dedie, et un type
+ * sans le sien ne rend rien. Constate en verifiant A5 en direct, pas en
+ * relisant le code.
+ *
+ * Le resume reste volontairement grossier — l'evenement et le premier
+ * effet. Une regle complexe se lit dans le bac a sable, qui sait la
+ * simuler ; recopier ici un AST complet en prose ferait un second
+ * formateur a maintenir en plus de celui des formules.
+ */
+function Triggers({ data }: { data: TriggersBlockData }) {
+  const items = data.triggers.map((t) => {
+    const effet = t.then[0];
+    const resume =
+      effet.action === "narrate_hint"
+        ? `« ${effet.text} »`
+        : effet.action === "apply_condition" || effet.action === "remove_condition"
+          ? `${effet.action === "apply_condition" ? "applique" : "retire"} « ${effet.key} »`
+          : effet.action === "grant_budget"
+            ? `budget « ${effet.kind} »`
+            : effet.action;
+    return {
+      label: t.when.event,
+      value: (
+        <span>
+          {resume}
+          {t.then.length > 1 ? ` (+${t.then.length - 1})` : ""}
+        </span>
+      ),
+    };
+  });
+  return <KeyValues items={items} />;
+}
+
 /** Effets chiffres generalises (bloc `modifiers`, retour utilisateur "un don maison qui affecte reellement la fiche") — une carte par modificateur, meme mise en page `key_values` que le reste du catalogue. */
 function Modifiers({ data }: { data: ModifiersBlockData }) {
   const items = data.modifiers.map((m) => ({
@@ -1358,5 +1396,6 @@ export function renderBlockData(
   if (blockType === "condition_effects") return <ConditionEffects data={data as ConditionEffectsBlockData} />;
   if (blockType === "subclass_features") return <SubclassFeatures data={data as SubclassFeaturesBlockData} />;
   if (blockType === "modifiers") return <Modifiers data={data as ModifiersBlockData} />;
+  if (blockType === "triggers") return <Triggers data={data as TriggersBlockData} />;
   return null;
 }
