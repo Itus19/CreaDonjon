@@ -4,6 +4,7 @@ import CreateHomebrewBackgroundForm from "@/components/rules/CreateHomebrewBackg
 import CreateHomebrewFeatureForm from "@/components/rules/CreateHomebrewFeatureForm";
 import CreateHomebrewWeaponForm from "@/components/rules/CreateHomebrewWeaponForm";
 import FormulaSandbox from "@/components/rules/FormulaSandbox";
+import TriggerSandbox from "@/components/rules/TriggerSandbox";
 import { useDesktopWindowsState } from "@/components/shell/DesktopWindowsProvider";
 import type { RuleToolKey } from "./windowRefs";
 
@@ -22,5 +23,6 @@ export default function RuleToolWindowContent({ worldSlug, toolKey }: { worldSlu
   if (toolKey === "nouvel-historique") return <CreateHomebrewBackgroundForm worldSlug={worldSlug} onDone={onDone} />;
   if (toolKey === "nouveau-don") return <CreateHomebrewFeatureForm worldSlug={worldSlug} onDone={onDone} />;
   if (toolKey === "nouvelle-arme") return <CreateHomebrewWeaponForm worldSlug={worldSlug} onDone={onDone} />;
+  if (toolKey === "bac-a-sable-declencheurs") return <TriggerSandbox />;
   return <FormulaSandbox />;
 }

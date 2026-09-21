@@ -6,7 +6,7 @@
     "mj": "MJ",
     "ouvrirArborescence": "Ouvrir l'arborescence",
     "nouvelleEntite": "+ Nouvelle entité",
-  "chronologie": "Chronologie",
+    "chronologie": "Chronologie",
     "replier": "Replier",
     "deplier": "Déplier",
     "aucuneEntite": "Aucune entité pour l'instant.",
@@ -210,7 +210,22 @@
       "species": "Espèce",
       "magic_item": "Objet magique",
       "mount": "Monture"
-    }
+    },
+    "bacASableDeclencheurs": "Bac à sable de déclencheurs",
+    "bacASableDeclencheursDescription": "Essayez une règle sans toucher à une partie. Le même moteur que le jeu réel : les dés sont lancés par le serveur.",
+    "declencheurASimuler": "Déclencheur (JSON)",
+    "evenementSurvenu": "Événement survenu",
+    "sujetDeLEvenement": "Sujet",
+    "etiquettesEvenement": "Étiquettes de l'événement",
+    "donneesEvenement": "Données de l'événement",
+    "conditionsDuSujet": "Conditions du sujet",
+    "simuler": "Simuler",
+    "simulationEnCours": "Simulation…",
+    "erreurSimulation": "La simulation a échoué — vérifiez la forme du déclencheur.",
+    "declencheurIllisible": "Déclencheur illisible : ce n'est pas du JSON valide.",
+    "rienNeSeDeclenche": "Rien ne se déclenche.",
+    "effetsProduits": "Ce qui se passerait",
+    "declencheursEnEchec": "Déclencheurs en échec"
   },
   "mj": {
     "choisirOutil": "Choisissez un outil MJ dans la barre latérale.",

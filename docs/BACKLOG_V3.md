@@ -203,11 +203,15 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Précision de conception, à décider ici** — où vit `SceneState` ? Recommandation : une table `scene_states` avec une ligne par campagne (la scène courante) plus un historique dans `session_events`, plutôt qu'un champ jsonb sur `campaigns`. Raison : la scène change à chaque tour, `campaigns` ne doit pas devenir une table chaude, et l'historique est déjà le rôle du journal.
 
-### V3-A5 — Éditeur de déclencheurs au formulaire · `L`
+### V3-A5 — Éditeur de déclencheurs au formulaire · `L` — **bac à sable fait le 21 septembre, formulaire à faire**
 
-- [ ] Un formulaire engendré par les schémas Zod, même méthode que les blocs de règles existants.
-- [ ] Un bac à sable : « si tel événement survient avec telles données, voici ce qui se passerait » — sans toucher à une vraie partie.
-- [ ] Une règle maison créée au formulaire se déclenche en jeu **sans redémarrage**.
+- [x] Un bac à sable : « si tel événement survient avec telles données, voici ce qui se passerait » — sans toucher à une vraie partie. Outil de règles `bac-a-sable-declencheurs`, même famille que le bac à sable de formule : fenêtre flottante, entrée de barre latérale, page dédiée.
+  - **Même moteur que le jeu, jamais un chemin parallèle** : `/api/triggers/simulate` appelle `runTriggers`, exactement la fonction qu'un vrai jet invoque. Un bac à sable qui simulerait à sa façon mentirait le jour où l'on en aurait besoin — la raison même du critère, déjà posée par V1-D4.
+  - **Aucune lecture ni écriture en base** : déclencheurs, événement et acteurs viennent tous de la requête. C'est ce qui rend l'outil utile — on y essaie « et si le personnage était concentré, à 3 PV, et que le coup faisait 22 dégâts ? » sans mettre un personnage réel dans cet état.
+  - Les **échecs** s'affichent au même rang que les succès : dans un bac à sable, une règle qui échoue est l'information la plus utile.
+  - **Vérifié en direct** : la concentration part sur 22 dégâts (`DD 11`, soit `max(10, floor(22/2))` — le vrai calcul), la trace montre `damage_taken -> concentration (profondeur 1)` ; sans la condition `concentrating`, « rien ne se déclenche » ; un JSON cassé est annoncé comme une saisie, sans appel au serveur.
+- [ ] **Le formulaire guidé reste à faire.** Le déclencheur se saisit ici en JSON. Il n'existe **aucun générateur de formulaire depuis Zod** dans ce dépôt : « même méthode que les blocs de règles existants » veut dire un formulaire **dédié, à vocabulaires fermés en listes déroulantes** (`CreateHomebrewFeatureForm`, `CreateHomebrewWeaponForm`). Sa place est la section « Déclencheurs » de `CreateHomebrewFeatureForm`, exact analogue de sa section « Effets chiffrés » qui produit déjà un bloc `modifiers` — c'est là qu'on **écrit** une règle, quand le bac à sable est là où on l'**essaie**.
+- [ ] **« Sans redémarrage » : non vérifié.** Rien ne met en cache le chemin de lecture (`loadTriggersForEntries` interroge la base à chaque jet), donc ce devrait être acquis — mais ce sera constaté quand le formulaire existera, pas avant.
 
 ### V3-A6 — Convertir les règles SRD qui ont des déclencheurs · `L`
 

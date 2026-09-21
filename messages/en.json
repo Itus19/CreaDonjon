@@ -209,7 +209,22 @@
       "species": "Species",
       "magic_item": "Magic item",
       "mount": "Mount"
-    }
+    },
+    "bacASableDeclencheurs": "Trigger sandbox",
+    "bacASableDeclencheursDescription": "Try a rule without touching a game. The same engine as real play: dice are rolled by the server.",
+    "declencheurASimuler": "Trigger (JSON)",
+    "evenementSurvenu": "Event",
+    "sujetDeLEvenement": "Subject",
+    "etiquettesEvenement": "Event tags",
+    "donneesEvenement": "Event data",
+    "conditionsDuSujet": "Subject conditions",
+    "simuler": "Simulate",
+    "simulationEnCours": "Simulating…",
+    "erreurSimulation": "Simulation failed — check the trigger's shape.",
+    "declencheurIllisible": "Unreadable trigger: not valid JSON.",
+    "rienNeSeDeclenche": "Nothing fires.",
+    "effetsProduits": "What would happen",
+    "declencheursEnEchec": "Failed triggers"
   },
   "mj": {
     "choisirOutil": "Choose a GM tool in the sidebar.",

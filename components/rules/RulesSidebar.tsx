@@ -156,6 +156,7 @@ export default function RulesSidebar({ worldSlug, worldName }: { worldSlug: stri
   const openNouvelHistorique = useOpenRuleToolLink(worldSlug, "nouvel-historique");
   const openNouveauDon = useOpenRuleToolLink(worldSlug, "nouveau-don");
   const openBacASable = useOpenRuleToolLink(worldSlug, "bac-a-sable");
+  const openBacASableDeclencheurs = useOpenRuleToolLink(worldSlug, "bac-a-sable-declencheurs");
 
   const { groups, subclassesByParent, subspeciesByParent, classNameByKey } = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -294,6 +295,16 @@ export default function RulesSidebar({ worldSlug, worldName }: { worldSlug: stri
             className="block w-full rounded-full border border-edge px-4 py-2 text-center text-sm font-medium text-ink transition-colors hover:bg-panel-raised"
           >
             {t("bacASable")}
+          </Link>
+          <Link
+            href={openBacASableDeclencheurs.href}
+            onClick={(e) => {
+              openBacASableDeclencheurs.onClick(e);
+              setOpen(false);
+            }}
+            className="block w-full rounded-full border border-edge px-4 py-2 text-center text-sm font-medium text-ink transition-colors hover:bg-panel-raised"
+          >
+            {t("bacASableDeclencheurs")}
           </Link>
         </div>
       </aside>
