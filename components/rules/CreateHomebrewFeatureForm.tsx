@@ -9,6 +9,9 @@ import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntr
 import { MODIFIER_OP_LABELS_FR, modifierTargetLabel } from "@/src/i18n/fr";
 import { MODIFIER_TARGET_OPTIONS, OPS_BY_TARGET_CATEGORY, modifierOpNeedsValue, modifierTargetOption } from "@/src/core/rules/modifierTargets";
 import type { ModifierOp } from "@/src/core/rules/sheet";
+import { TRIGGER_EVENTS } from "@/src/core/rules/triggers";
+import { BUDGET_KINDS } from "@/src/core/rules/actionBudget";
+import { draftToTrigger, emptyDraft, type ConditionKind, type EffectKind, type TriggerDraft } from "@/lib/triggers/draft";
 
 interface SelectableRuleset {
   id: string;
@@ -23,6 +26,22 @@ interface ModifierDraft {
 }
 
 const TARGET_DROPDOWN_OPTIONS = MODIFIER_TARGET_OPTIONS.map((o) => ({ value: o.target, label: modifierTargetLabel(o.target) }));
+
+/**
+ * Identifiant d'un declencheur, derive du nom de la fiche. Il doit etre
+ * STABLE et lisible : c'est lui qui apparait dans la trace du moteur et
+ * dans `failures` quand la regle echoue — « vigilant-1 » se retrouve,
+ * un uuid non.
+ */
+function slugForTriggerId(name: string): string {
+  const slug = name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return slug === "" ? "declencheur" : slug;
+}
 
 function defaultOpForTarget(target: string): ModifierOp {
   const option = modifierTargetOption(target);
@@ -69,6 +88,7 @@ export default function CreateHomebrewFeatureForm({
   const [description, setDescription] = useState("");
   const [prerequisites, setPrerequisites] = useState<string[]>([]);
   const [modifiers, setModifiers] = useState<ModifierDraft[]>([]);
+  const [triggers, setTriggers] = useState<TriggerDraft[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,6 +136,18 @@ export default function CreateHomebrewFeatureForm({
     setModifiers((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function addTrigger() {
+    setTriggers((prev) => [...prev, emptyDraft()]);
+  }
+
+  function updateTrigger(index: number, patch: Partial<TriggerDraft>) {
+    setTriggers((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
+  }
+
+  function removeTrigger(index: number) {
+    setTriggers((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentRuleset || !name.trim() || !description.trim()) return;
@@ -124,6 +156,13 @@ export default function CreateHomebrewFeatureForm({
     setError(null);
 
     const cleanPrerequisites = prerequisites.map((p) => p.trim()).filter((p) => p.length > 0);
+    // Un brouillon incomplet est ECARTE plutot que d'emporter tout l'import
+    // de la fiche : `draftToTrigger` rend `null`, et l'avertissement sous la
+    // section a deja prevenu l'auteur.
+    const cleanTriggers = triggers
+      .map((d, i) => draftToTrigger(d, `${slugForTriggerId(name)}-${i + 1}`))
+      .filter((t): t is NonNullable<typeof t> => t !== null);
+
     const cleanModifiers = modifiers.map((m) => ({
       target: m.target,
       op: m.op,
@@ -159,6 +198,15 @@ export default function CreateHomebrewFeatureForm({
                       block_type: "modifiers" as const,
                       display: { label: "Effets chiffrés", layout: "key_values" },
                       data: { modifiers: cleanModifiers },
+                    },
+                  ]
+                : []),
+              ...(cleanTriggers.length > 0
+                ? [
+                    {
+                      block_type: "triggers" as const,
+                      display: { label: "Déclencheurs", layout: "key_values" },
+                      data: { triggers: cleanTriggers },
                     },
                   ]
                 : []),
@@ -286,6 +334,125 @@ export default function CreateHomebrewFeatureForm({
           className="self-start rounded-full border border-edge px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-panel"
         >
           {t("ajouterEffetChiffre")}
+        </button>
+      </div>
+
+      {/* Declencheurs (V3-A5) — meme forme que « Effets chiffres » juste
+          au-dessus : vocabulaires FERMES en listes deroulantes, jamais un
+          champ libre pour un ensemble ferme. Trois formes de condition et
+          six effets couvrent les regles maison ordinaires ; une regle
+          complexe se compose dans le bac a sable, en JSON. */}
+      <div className="flex flex-col gap-2 rounded-md border border-edge/50 bg-panel-sunken p-3">
+        <span className="text-sm text-ink">{t("declencheursSection")}</span>
+        <p className="text-xs text-ink-muted">{t("declencheursIntro")}</p>
+
+        {triggers.map((d, index) => {
+          const incomplet = draftToTrigger(d, "x") === null;
+          const besoinTexte = ["narrate_hint", "apply_condition", "remove_condition"].includes(d.effectKind);
+          const besoinMontant = ["heal", "deal_damage", "grant_budget"].includes(d.effectKind);
+          return (
+            <div key={index} className="flex flex-col gap-1.5 rounded-md border border-edge/40 p-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-ink-muted">{t("quand")}</span>
+                <Dropdown
+                  value={d.event}
+                  options={TRIGGER_EVENTS.map((e) => ({ value: e, label: e }))}
+                  onChange={(v) => updateTrigger(index, { event: v as TriggerDraft["event"] })}
+                  aria-label={t("quand")}
+                  triggerClassName="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+                />
+                <button type="button" onClick={() => removeTrigger(index)} className="shrink-0 text-xs text-danger hover:underline">
+                  {t("retirerDeclencheur")}
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-ink-muted">{t("siCondition")}</span>
+                <Dropdown
+                  value={d.conditionKind}
+                  options={[
+                    { value: "aucune", label: t("condAucune") },
+                    { value: "etiquette", label: t("condEtiquette") },
+                    { value: "condition", label: t("condCondition") },
+                    { value: "donnee", label: t("condDonnee") },
+                  ]}
+                  onChange={(v) => updateTrigger(index, { conditionKind: v as ConditionKind })}
+                  aria-label={t("siCondition")}
+                  triggerClassName="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+                />
+                {d.conditionKind !== "aucune" && (
+                  <input
+                    value={d.conditionKey}
+                    onChange={(e) => updateTrigger(index, { conditionKey: e.target.value })}
+                    placeholder={d.conditionKind === "etiquette" ? "skill:deception" : d.conditionKind === "condition" ? "concentrating" : "damage"}
+                    className="w-40 shrink-0 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                  />
+                )}
+                {d.conditionKind === "donnee" && (
+                  <input
+                    type="number"
+                    value={d.conditionMin}
+                    onChange={(e) => updateTrigger(index, { conditionMin: e.target.value })}
+                    className="w-16 shrink-0 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                  />
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-ink-muted">{t("alors")}</span>
+                <Dropdown
+                  value={d.effectKind}
+                  options={[
+                    { value: "narrate_hint", label: t("effetSouffler") },
+                    { value: "apply_condition", label: t("effetAppliquerCondition") },
+                    { value: "remove_condition", label: t("effetRetirerCondition") },
+                    { value: "heal", label: t("effetSoigner") },
+                    { value: "deal_damage", label: t("effetDegats") },
+                    { value: "grant_budget", label: t("effetBudget") },
+                  ]}
+                  onChange={(v) => updateTrigger(index, { effectKind: v as EffectKind })}
+                  aria-label={t("alors")}
+                  triggerClassName="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+                />
+                {besoinTexte && (
+                  <input
+                    value={d.effectText}
+                    onChange={(e) => updateTrigger(index, { effectText: e.target.value })}
+                    className="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                  />
+                )}
+                {d.effectKind === "grant_budget" && (
+                  <Dropdown
+                    value={d.budgetKind}
+                    options={BUDGET_KINDS.map((k) => ({ value: k, label: k }))}
+                    onChange={(v) => updateTrigger(index, { budgetKind: v as TriggerDraft["budgetKind"] })}
+                    aria-label={t("effetBudget")}
+                    triggerClassName="shrink-0 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
+                  />
+                )}
+                {besoinMontant && (
+                  <input
+                    type="number"
+                    value={d.effectAmount}
+                    onChange={(e) => updateTrigger(index, { effectAmount: e.target.value })}
+                    className="w-16 shrink-0 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+                  />
+                )}
+              </div>
+
+              {/* Dit tout de suite qu'une ligne ne partira pas, plutot que de
+                  la laisser disparaitre en silence a l'enregistrement. */}
+              {incomplet && <p className="text-xs text-danger">{t("declencheurIncomplet")}</p>}
+            </div>
+          );
+        })}
+
+        <button
+          type="button"
+          onClick={addTrigger}
+          className="self-start rounded-full border border-edge px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-panel"
+        >
+          {t("ajouterDeclencheur")}
         </button>
       </div>
 
