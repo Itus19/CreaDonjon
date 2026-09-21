@@ -72,6 +72,34 @@ export function eventsForSave(params: {
 }
 
 /**
+ * Un test de caracteristique ou de competence (ADR 0028). Les etiquettes
+ * disent LEQUEL : sans elles, un declencheur ne distinguerait pas un
+ * Athletisme rate d'un mensonge evente. La caracteristique gouvernante est
+ * etiquetee aussi, pour qu'une regle puisse viser « tout test de Charisme »
+ * sans enumerer les quatre competences concernees.
+ */
+export function eventsForCheck(params: {
+  who: string;
+  kind: "ability" | "skill";
+  key: string;
+  ability: string;
+  passed: boolean;
+  total: number;
+  dc: number;
+}): FiredEvent[] {
+  const tags =
+    params.kind === "skill" ? [`skill:${params.key}`, `ability:${params.ability}`] : [`ability:${params.ability}`];
+  return [
+    {
+      event: params.passed ? "check_passed" : "check_failed",
+      subject: params.who,
+      data: { "event.total": params.total, "event.dc": params.dc, "event.margin": params.total - params.dc },
+      tags,
+    },
+  ];
+}
+
+/**
  * La bascule d'un tour. `turn_end` precede `turn_start` : c'est ce qui
  * permet a un poison de finir le tour de sa victime avant que la suivante
  * commence, sans qu'aucune regle n'ait a connaitre l'ordre d'initiative.

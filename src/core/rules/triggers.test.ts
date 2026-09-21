@@ -32,8 +32,10 @@ function ctxWith(overrides: Partial<TriggerActorState> = {}): TriggerContext {
 }
 
 describe("vocabulaire ferme", () => {
-  it("compte les 18 evenements de la spec, ni plus ni moins", () => {
-    expect(TRIGGER_EVENTS).toHaveLength(18);
+  it("compte les 20 evenements du vocabulaire, ni plus ni moins", () => {
+    // 18 a la spec §4, plus `check_passed`/`check_failed` (ADR 0028). C'est ce
+    // nombre qui rend un ajout a la volee impossible : le changer exige un ADR.
+    expect(TRIGGER_EVENTS).toHaveLength(20);
     expect(TRIGGER_EVENTS).toContain("damage_taken");
     expect(TRIGGER_EVENTS).toContain("dies");
   });

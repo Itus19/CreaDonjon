@@ -140,6 +140,8 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Choix de conception.** Les résolveurs restent des fonctions pures sans effet de bord : `gameEvents.ts` **traduit** leur résultat en événements, il ne les modifie pas. Leur donner un effet de bord « émetteur » aurait cassé ce qui fait leur valeur — on peut les appeler sans moteur de déclencheurs du tout.
 
+**Le vocabulaire passe de 18 à 20 événements — ADR 0028.** En instrumentant A2, deux trous sont apparus. D'abord, `checkRolls.ts` expose quatre types de jets (caractéristique, compétence, sauvegarde, initiative) et **seule la sauvegarde** avait ses événements : une Persuasion réussie, une Intuition ratée, une Investigation n'émettaient rien. 14 des 18 événements ne se produisaient qu'en combat, alors que l'auteur rappelle que l'histoire est « le 80 % du jeu ». Ensuite, `FiredEvent` ne portait que des nombres : aucune condition ne pouvait demander **quel** sort, **quelle** condition, **quelle** compétence — un trou qui touchait déjà `spell_cast` et `condition_applied`. D'où `check_passed`/`check_failed`, des étiquettes sur l'événement, et l'opérateur `event_has`, miroir exact de `has_condition` mais sur l'événement. Les événements narratifs sans producteur (`attitude_changed`, `discovery_made`, `time_advanced`) sont volontairement écartés : ils reviendront avec le lot qui les émettra.
+
 **Un coup émet les deux faces de l'échange** (`damage_dealt` sur l'attaquant, `damage_taken` sur la cible) : c'est ce qui permet au vol de vie et à la concentration de s'accrocher au même coup, et c'est la raison d'être du champ `subject`.
 
 ### V3-A3 — Économie d'action · `M`

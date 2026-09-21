@@ -31,6 +31,11 @@ export const TRIGGER_EVENTS = [
   "damage_dealt",
   "save_passed",
   "save_failed",
+  // ADR 0028 : le jeu hors combat n'emettait rien. Strictement symetriques
+  // de `save_passed`/`save_failed`, et leur producteur existe deja
+  // (`rollAbilityCheck`, `rollSkillCheck`).
+  "check_passed",
+  "check_failed",
   "condition_applied",
   "condition_removed",
   "spell_cast",
@@ -79,6 +84,14 @@ export type ConditionNode =
   | { op: "lte"; args: [FormulaNode, FormulaNode] }
   | { op: "has_condition"; who: string; key: string }
   | { op: "has_feature"; who: string; key: string }
+  /**
+   * ADR 0028 — interroge les etiquettes de l'EVENEMENT, la ou
+   * `has_condition`/`has_feature` interrogent un acteur. Sans lui, un
+   * `check_failed` ne dirait pas quelle competence, un `spell_cast` quel
+   * sort, un `condition_applied` quelle condition : `FiredEvent` ne porte
+   * que des nombres, et aucun operateur ne lisait de chaine.
+   */
+  | { op: "event_has"; key: string }
   | { op: "in_range"; who: string; of: string; zone: TriggerZone };
 
 // ---------------------------------------------------------------------------
@@ -142,6 +155,7 @@ const zCondition: z.ZodType<ConditionNode> = z.lazy(() =>
     z.object({ op: z.literal("lte"), args: z.tuple([zFormulaNode, zFormulaNode]) }),
     z.object({ op: z.literal("has_condition"), who: z.string().min(1), key: z.string().min(1) }),
     z.object({ op: z.literal("has_feature"), who: z.string().min(1), key: z.string().min(1) }),
+    z.object({ op: z.literal("event_has"), key: z.string().min(1) }),
     z.object({ op: z.literal("in_range"), who: z.string().min(1), of: z.string().min(1), zone: zZone }),
   ]),
 );
@@ -218,6 +232,13 @@ export interface FiredEvent {
   subject: string;
   /** Donnees de l'evenement, deja prefixees `event.` pour etre lisibles par un `ref`. */
   data?: Readonly<Record<string, number>>;
+  /**
+   * ADR 0028 — ce que l'evenement EST, en chaines, lu par `event_has`.
+   * Convention de prefixes (`skill:`, `ability:`, `spell:`, `condition:`) :
+   * une convention, pas une contrainte de type. V3-A5 offrira une liste
+   * deroulante, jamais un champ libre.
+   */
+  tags?: readonly string[];
 }
 
 /** Les bornes sont des erreurs de RUN : elles arretent tout, parce que la terminaison est en jeu. */
@@ -298,6 +319,8 @@ function evalCondition(node: ConditionNode, ctx: TriggerContext, fired: FiredEve
       return actor(ctx, node.who).conditions.includes(node.key);
     case "has_feature":
       return actor(ctx, node.who).features.includes(node.key);
+    case "event_has":
+      return (fired.tags ?? []).includes(node.key);
     case "in_range": {
       // Sans grille tactique : deux acteurs sont "a portee" d'une bande quand
       // tous deux s'y trouvent. `near` couvre donc engaged ET near — c'est ce

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Rng } from "../dice/rng";
 import { resolveAttackRoll } from "./action";
-import { eventsForAttack, eventsForSave, eventsForTurn } from "./gameEvents";
+import { eventsForAttack, eventsForCheck, eventsForSave, eventsForTurn } from "./gameEvents";
 import { runTriggers, type Trigger, type TriggerContext } from "./triggers";
 
 function fixedRng(values: number[]): Rng {
@@ -48,6 +48,67 @@ describe("eventsForSave", () => {
   it("reussite et echec sont deux evenements distincts, pas un drapeau", () => {
     expect(eventsForSave({ who: "bram", passed: true, total: 14, dc: 11 })[0].event).toBe("save_passed");
     expect(eventsForSave({ who: "bram", passed: false, total: 5, dc: 11 })[0].event).toBe("save_failed");
+  });
+});
+
+/**
+ * ADR 0028 — le jeu HORS COMBAT emet enfin quelque chose. C'est le 80 % du
+ * jeu, et jusqu'ici aucune regle ne pouvait s'y accrocher.
+ */
+describe("eventsForCheck : les tests de competence, enfin audibles", () => {
+  const trompe = (passed: boolean) =>
+    eventsForCheck({ who: "bram", kind: "skill", key: "deception", ability: "cha", passed, total: 9, dc: 14 })[0];
+
+  it("reussite et echec sont deux evenements distincts", () => {
+    expect(trompe(true).event).toBe("check_passed");
+    expect(trompe(false).event).toBe("check_failed");
+  });
+
+  it("etiquette la competence ET sa caracteristique gouvernante", () => {
+    // Pour qu'une regle puisse viser « tout test de Charisme » sans enumerer
+    // les quatre competences concernees.
+    expect(trompe(false).tags).toEqual(["skill:deception", "ability:cha"]);
+  });
+
+  it("porte la marge, pas seulement le total", () => {
+    expect(trompe(false).data).toMatchObject({ "event.total": 9, "event.dc": 14, "event.margin": -5 });
+  });
+
+  it("un test de caracteristique nue n'etiquette pas de competence", () => {
+    const brut = eventsForCheck({ who: "bram", kind: "ability", key: "str", ability: "str", passed: true, total: 15, dc: 10 })[0];
+    expect(brut.tags).toEqual(["ability:str"]);
+  });
+});
+
+describe("event_has : une regle sait QUEL test a echoue", () => {
+  const surMensonge: Trigger = {
+    id: "il-a-vu-que-tu-mentais",
+    when: { event: "check_failed" },
+    if: { op: "event_has", key: "skill:deception" },
+    then: [{ action: "narrate_hint", text: "Le regard se durcit : il a vu le mensonge." }],
+  };
+
+  it("part sur un mensonge evente", () => {
+    const evt = eventsForCheck({ who: "bram", kind: "skill", key: "deception", ability: "cha", passed: false, total: 9, dc: 14 })[0];
+    const out = runTriggers({ event: evt, triggers: [surMensonge], ctx: CTX, rng: fixedRng([10]) });
+    expect(out.effects).toHaveLength(1);
+  });
+
+  it("ne part PAS sur un Athletisme rate — sans quoi l'evenement serait inutilisable", () => {
+    const evt = eventsForCheck({ who: "bram", kind: "skill", key: "athletics", ability: "str", passed: false, total: 8, dc: 14 })[0];
+    const out = runTriggers({ event: evt, triggers: [surMensonge], ctx: CTX, rng: fixedRng([10]) });
+    expect(out.effects).toHaveLength(0);
+  });
+
+  it("une regle peut viser la caracteristique plutot que la competence", () => {
+    const surCharisme: Trigger = {
+      ...surMensonge,
+      id: "tout-test-de-charisme",
+      if: { op: "event_has", key: "ability:cha" },
+    };
+    const evt = eventsForCheck({ who: "bram", kind: "skill", key: "persuasion", ability: "cha", passed: false, total: 9, dc: 14 })[0];
+    const out = runTriggers({ event: evt, triggers: [surCharisme], ctx: CTX, rng: fixedRng([10]) });
+    expect(out.effects).toHaveLength(1);
   });
 });
 
