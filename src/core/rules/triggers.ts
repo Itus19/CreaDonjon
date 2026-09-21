@@ -3,6 +3,7 @@ import type { Rng } from "../dice/rng";
 import type { FormulaNode } from "../formula/ast";
 import { evaluate } from "../formula/evaluate";
 import { zFormulaNode } from "../schemas/rule-blocks/primitives";
+import { BUDGET_KINDS, type BudgetKind } from "./actionBudget";
 import type { Modifier } from "./sheet";
 
 /**
@@ -108,6 +109,8 @@ export type EffectNode =
   | { action: "heal"; who: string; amount: FormulaNode }
   | { action: "spend_resource"; who: string; key: string; amount: FormulaNode }
   | { action: "move"; who: string; zone: TriggerZone }
+  /** ADR 0029 — accorde (montant positif) ou retire (negatif) du budget d'action. */
+  | { action: "grant_budget"; who: string; kind: BudgetKind; amount: FormulaNode }
   | { action: "roll"; label: string; formula: FormulaNode }
   | { action: "narrate_hint"; text: string };
 
@@ -121,6 +124,7 @@ export type ResolvedEffect =
   | { action: "heal"; who: string; amount: number }
   | { action: "spend_resource"; who: string; key: string; amount: number }
   | { action: "move"; who: string; zone: TriggerZone }
+  | { action: "grant_budget"; who: string; kind: BudgetKind; amount: number }
   | { action: "roll"; label: string; value: number }
   | { action: "narrate_hint"; text: string };
 
@@ -197,6 +201,12 @@ const zEffect: z.ZodType<EffectNode> = z.lazy(() =>
       amount: zFormulaNode,
     }),
     z.object({ action: z.literal("move"), who: z.string().min(1), zone: zZone }),
+    z.object({
+      action: z.literal("grant_budget"),
+      who: z.string().min(1),
+      kind: z.enum(BUDGET_KINDS),
+      amount: zFormulaNode,
+    }),
     z.object({ action: z.literal("roll"), label: z.string().min(1), formula: zFormulaNode }),
     z.object({ action: z.literal("narrate_hint"), text: z.string().min(1) }),
   ]),
@@ -373,6 +383,16 @@ function resolveEffect(
           action: "spend_resource",
           who: effect.who,
           key: effect.key,
+          amount: evalNumber(effect.amount, ctx, fired, rng),
+        },
+        branch: [],
+      };
+    case "grant_budget":
+      return {
+        resolved: {
+          action: "grant_budget",
+          who: effect.who,
+          kind: effect.kind,
           amount: evalNumber(effect.amount, ctx, fired, rng),
         },
         branch: [],

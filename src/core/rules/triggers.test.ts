@@ -269,3 +269,51 @@ describe("in_range : trois zones abstraites, pas de grille", () => {
     expect(out.effects).toHaveLength(0);
   });
 });
+
+/**
+ * ADR 0029 — la Fougue du guerrier, ecrite en donnees : une aptitude qui
+ * accorde une action bonus. Sans cet effet, le critere de V3-A3 « un
+ * declencheur peut accorder ou retirer du budget » restait du texte.
+ */
+describe("grant_budget", () => {
+  const fougue: Trigger = {
+    id: "fougue",
+    when: { event: "turn_start", subject: "self" },
+    then: [{ action: "grant_budget", who: "self", kind: "bonus", amount: { op: "num", value: 1 } }],
+  };
+
+  it("est une donnee valide, et resout son montant", () => {
+    expect(zTrigger.safeParse(fougue).success).toBe(true);
+    const out = runTriggers({
+      event: { event: "turn_start", subject: "self" },
+      triggers: [fougue],
+      ctx: ctxWith(),
+      rng: fixedRng([10]),
+    });
+    expect(out.effects).toEqual([{ action: "grant_budget", who: "self", kind: "bonus", amount: 1 }]);
+  });
+
+  it("retire avec un montant negatif — un seul effet pour les deux sens", () => {
+    const prive: Trigger = {
+      ...fougue,
+      id: "prive-de-reaction",
+      then: [{ action: "grant_budget", who: "self", kind: "reaction", amount: { op: "num", value: -1 } }],
+    };
+    const out = runTriggers({
+      event: { event: "turn_start", subject: "self" },
+      triggers: [prive],
+      ctx: ctxWith(),
+      rng: fixedRng([10]),
+    });
+    expect(out.effects[0]).toMatchObject({ action: "grant_budget", amount: -1 });
+  });
+
+  it("refuse une categorie de budget inventee", () => {
+    expect(
+      zTrigger.safeParse({
+        ...fougue,
+        then: [{ action: "grant_budget", who: "self", kind: "telepathie", amount: { op: "num", value: 1 } }],
+      }).success,
+    ).toBe(false);
+  });
+});

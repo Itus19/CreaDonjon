@@ -72,6 +72,12 @@ Lot F    la partie qui dure           reprise, sauvegarde, bascule vers une camp
 Lot R    la rapidité, et le téléphone  hors séquence — les restes de l'audit, à tout moment
 ```
 
+> **État au 21 septembre 2026.** S2 est rendu (verdict positif : le lien tient, le lot B peut s'écrire en prose libre). Du lot A, **A1, A2, A3 et A4 sont faits** ; restent **A5** (éditeur au formulaire) et **A6** (conversion du SRD). Le lot R est clos à l'exception de `P‑07`.
+>
+> Ce que le lot A produit aujourd'hui : un moteur de déclencheurs pur et borné, 20 événements et 11 effets fermés, un magasin sans table dédiée (bloc `triggers` sur une entrée de ruleset), le câblage des trois jets à verdict, une scène persistée et des zones qui servent enfin.
+>
+> **Ce qu'il ne produit pas encore : rien n'applique les effets.** Le moteur les *propose* ; les appliquer suppose qu'un tour existe, ce qui est le lot B. Et rien ne fait avancer la scène. Une règle maison se saisit, se relit et part — mais ne change encore rien à la partie.
+
 **A avant B avant C** — ce sont de vraies dépendances, pas une préférence : la boucle a besoin de l'état de scène, et l'écriture du monde a besoin de la boucle.
 
 **D peut commencer en parallèle de C.** L'écran se construit contre des données factices sans rien attendre ; c'est même souhaitable, parce que voir l'écran change la conception du reste.
@@ -82,7 +88,7 @@ Lot R    la rapidité, et le téléphone  hors séquence — les restes de l'aud
 
 ---
 
-## S2 — Reboucler le lien fait-mécanique → narration · `S`
+## S2 — Reboucler le lien fait-mécanique → narration · `S` — **fait le 19 septembre, verdict positif**
 
 **Ce n'est pas un ticket de fonctionnalité, c'est la dette de S1.** L'ADR 0009 le dit explicitement : *« Avant toute conclusion définitive : reboucler spécifiquement le lien fait-mécanique → narration, jamais réellement exercé dans ce spike (panne d'infrastructure sur l'unique tentative). »*
 
@@ -131,7 +137,7 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Vérifié par mutation** : `has_condition` forcé à `true` et un jet de sauvegarde toujours réussi font tomber deux tests. La suite mord, elle ne se contente pas de passer.
 
-### V3-A2 — Brancher le vocabulaire d'événements · `M` — **noyau fait le 19 septembre, branchement serveur bloqué**
+### V3-A2 — Brancher le vocabulaire d'événements · `M` — **fait les 19-21 septembre** (combat non câblé, cf. A4/lot B)
 
 - [x] La résolution mécanique émet les événements — `src/core/rules/gameEvents.ts`. **`resolveAction` n'existe pas** : le ticket nomme une fonction absente du code. Les vrais points de résolution sont `resolveAttackRoll`, `resolveDamageRoll`, `resolveCheckRoll` (`action.ts`) et `advanceTurn` (`combat.ts`). Trois constructeurs couvrent ceux qui ont un producteur réel aujourd'hui : `eventsForAttack`, `eventsForSave`, `eventsForTurn`. Les douze autres événements du vocabulaire n'ont encore rien qui les produise — leur écrire un constructeur maintenant serait de l'échafaudage.
 - [x] Chaque événement porte son contexte, préfixé `event.` et donc lisible par un `ref` de condition (`event.damage`, `event.roll`, `event.ac`, `event.critical`, `event.dc`, `event.round`).
@@ -156,12 +162,16 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Un coup émet les deux faces de l'échange** (`damage_dealt` sur l'attaquant, `damage_taken` sur la cible) : c'est ce qui permet au vol de vie et à la concentration de s'accrocher au même coup, et c'est la raison d'être du champ `subject`.
 
-### V3-A3 — Économie d'action · `M`
+### V3-A3 — Économie d'action · `M` — **fait le 21 septembre**
 
-- [ ] `ActionBudget` — action, bonus, réaction, déplacement, gratuit.
-- [ ] Consommé par `resolveAction`, remis à zéro sur `turn_start`.
-- [ ] **Signaler, ne pas interdire** : une action hors budget est marquée, jamais bloquée. Les tables dérogent en permanence.
-- [ ] Un déclencheur peut accorder ou retirer du budget.
+- [x] `ActionBudget` — action, bonus, réaction, déplacement (en mètres, dérivé de la vitesse), gratuit. `src/core/rules/actionBudget.ts`, pur.
+- [x] **Signaler, ne pas interdire.** `spendFromBudget` ne refuse jamais rien et ne lève jamais : le budget descend **en négatif**, et c'est ça le signal. Un plancher à zéro aurait effacé l'information même qu'on voulait porter. `overBudget` porte sur la catégorie touchée, pas sur le tour, pour que l'interface marque la bonne ligne.
+- [x] Un déclencheur peut accorder ou retirer du budget — nouvel effet `grant_budget`, **ADR 0029**. Un montant négatif retire : un seul effet pour les deux sens. « Fougue du guerrier » s'écrit désormais en données.
+- [ ] **Remis à zéro sur `turn_start` — non câblé.** `budgetForTurn` existe, mais rien ne tient le budget d'un tour : il n'y a pas encore de tour. C'est la boucle de tour (lot B) qui l'appellera et appliquera `grant_budget`.
+
+**La spec se contredisait, et l'implémentation l'a révélé.** Son §5 exige qu'un déclencheur puisse accorder du budget ; son §4 ferme le vocabulaire d'effets à dix entrées dont aucune n'y touche. Sans l'ADR 0029, le quatrième critère de ce ticket était inatteignable. Détourner `spend_resource` a été écarté : le budget n'est pas un tracker de ressource (il se réinitialise chaque tour, n'a pas d'identifiant de bloc, accepte des négatifs).
+
+**Le vocabulaire d'effets compte onze entrées**, verrouillé par test comme les vingt événements.
 
 ### V3-A4 — État de scène et zones abstraites · `M` — **fait le 21 septembre**
 

@@ -4,7 +4,7 @@ Tableau de bord transversal : « qu'est-ce qui existe déjà ? », par module, s
 rouvrir tous les tickets. Il ne remplace ni `docs/PDD.md` (la vision), ni
 `docs/SCHEMA.md` (le schéma), ni les backlogs (le détail ticket par ticket).
 
-**État vérifié le 2026-09-08** contre le dépôt : routes, services, migrations,
+**État vérifié le 2026-09-21** contre le dépôt : routes, services, migrations,
 cases cochées des backlogs. Ce qui n'a pas pu être vérifié sans base de données
 ni écran est dit tel quel, jamais coché par optimisme.
 
@@ -22,7 +22,7 @@ précédente de ce fichier.
 | `docs/BACKLOG.md` | Phase 0 et V0 — terminé, valeur historique |
 | `docs/BACKLOG_V1.md` | V1, le compagnon jouable — ses reports assumés sont repris dans V2-G1 |
 | `docs/BACKLOG_V2.md` | V2 — l'essentiel de ce qui existe aujourd'hui |
-| `docs/BACKLOG_V3.md` | V3, le mode solo — 28 tickets, aucun commencé |
+| `docs/BACKLOG_V3.md` | V3, le mode solo — S2 rendu, le lot A (le moteur) aux trois quarts fait |
 | `docs/audit/2026-09-06-*.md` | État de santé du code, backend et interface |
 
 ---
@@ -44,11 +44,13 @@ précédente de ce fichier.
 | **IA** | Couche `src/server/ai/` en place : `AiProvider`, adaptateurs, `ai_usage_log`, limitation de débit, `ai_proposals`, assistance à l'écriture, éditeur de règles, prose des générateurs | `specs/cible-locale-et-ia.md` |
 | **Stockage de fichiers** | Bucket Supabase Storage créé par migration, interface `storage.ts`, URLs signées, redimensionnement `sharp`. Images de blocs, fonds et portraits migrés hors de la base | V2-L1, V2-I1 phases A et F₂ |
 
+| **Moteur de déclencheurs (V3, lot A)** | Déclencheurs en données, purs et bornés — 20 événements et 11 effets en vocabulaire fermé, terminaison garantie par construction. Magasin **sans table dédiée** : un bloc `triggers` sur une entrée de ruleset, donc héritage, surcharges et homebrew gratuits. Les trois jets à verdict (caractéristique, compétence, sauvegarde) émettent et déclenchent. Scène persistée (`scene_states`), zones abstraites actives, économie d'action. **Les effets sont proposés, jamais appliqués** : il n'y a pas encore de tour pour les recevoir | V3-A1 à A4, ADR 0027-0029 |
+
 ## Ce qui reste ouvert
 
 | Sujet | Pourquoi ça n'avance pas |
 |---|---|
-| **Mode solo (V3)** | Cadré, 28 tickets écrits, aucun commencé. S1 a rendu son verdict : MJ assisté, pas MJ autonome (`docs/adr/0009-*`) |
+| **Mode solo (V3)** | **Commencé.** S1 puis S2 ont rendu leur verdict : MJ assisté, et le lien fait-mécanique → narration tient (0 nombre contredit sur 10 tours, amendement de l'ADR 0009). Le moteur existe — voir la ligne « Moteur de déclencheurs » ci-dessus. Il ne reste aucun blocage de conception ; ce qui manque est la **boucle de tour** (lot B) et l'**écran** (lot D), tous deux non commencés |
 | **Recherche globale** | La barre latérale filtre par nom sur la liste déjà chargée. Une vraie recherche plein texte demande `pg_trgm`/`unaccent` et une décision de portée |
 | **Liens automatiques dans le texte** | `src/core/linker` détecte et normalise ; l'insertion automatique en cours de frappe reste non tranchée (faux positifs, question ouverte du PDD) |
 | **Historique de fiche** | `src/core/history` (diff) et `entity_mechanical_revisions` existent ; l'écran de restauration n'est pas construit |
