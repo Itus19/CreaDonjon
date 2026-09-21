@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DerivedSheet } from "@/src/core/rules/sheet";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
-import { buildActorState } from "./triggerRuntime";
+import { buildActorState, entryKeysForFeatures } from "./triggerRuntime";
 
 /**
  * `buildActorState` definit LE VOCABULAIRE DE REFERENCES qu'un auteur de
@@ -83,5 +83,40 @@ describe("buildActorState", () => {
     // (`has_feature`), ce qui est la maniere d'ecrire « tant que Rage est
     // active ».
     expect(buildActorState(sheet).features).toEqual(["alert", "second-wind"]);
+  });
+});
+
+/**
+ * Regression trouvee en verification EN DIRECT, pas par un test : le cablage
+ * passait `sheet.features[].key` tel quel au magasin, alors qu'un tiers de
+ * ces cles ne sont pas des entrees de ruleset. Les declencheurs d'une espece
+ * ou d'un historique etaient donc introuvables, en silence.
+ */
+describe("entryKeysForFeatures", () => {
+  it("retire le prefixe d'affichage d'une espece et d'un historique", () => {
+    expect(
+      entryKeysForFeatures([{ key: "species:fiendish-legacy-infernal" }, { key: "background:artiste" }]),
+    ).toEqual(["fiendish-legacy-infernal", "artiste"]);
+  });
+
+  it("laisse intacte une cle d'entree ordinaire", () => {
+    expect(entryKeysForFeatures([{ key: "rogue-sneak-attack" }, { key: "musicien" }])).toEqual([
+      "rogue-sneak-attack",
+      "musicien",
+    ]);
+  });
+
+  it("ecarte les marqueurs de choix, qui ne sont aucune entree", () => {
+    expect(entryKeysForFeatures([{ key: "choice:rogue.skills" }, { key: "musicien" }])).toEqual(["musicien"]);
+  });
+
+  it("ne coupe PAS au premier `:` venu — un prefixe inconnu reste une cle", () => {
+    // Couper aveuglement ferait disparaitre les declencheurs d'une cle
+    // legitime qui contiendrait un deux-points, sans rien signaler.
+    expect(entryKeysForFeatures([{ key: "maison:regle-perso" }])).toEqual(["maison:regle-perso"]);
+  });
+
+  it("dedoublonne", () => {
+    expect(entryKeysForFeatures([{ key: "species:x" }, { key: "x" }])).toEqual(["x"]);
   });
 });

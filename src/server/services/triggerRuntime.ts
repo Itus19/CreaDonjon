@@ -27,6 +27,34 @@ type TypedClient = SupabaseClient<Database>;
  * rien ne mute tant que ce qui doit les recevoir n'existe pas.
  */
 
+/**
+ * Les cles d'ENTREE DE RULESET derriere les aptitudes d'une fiche.
+ *
+ * `sheet.features[].key` melange trois familles, et les confondre a coute
+ * une verification en direct (V3-A2, 21 septembre) :
+ *
+ * - des cles d'entree telles quelles — `rogue-sneak-attack`, `musicien` ;
+ * - des cles d'AFFICHAGE prefixees — `species:fiendish-legacy-infernal`,
+ *   `background:artiste` (composees par `resolvedRuleset.ts`) : l'entree
+ *   reelle est le suffixe ;
+ * - des marqueurs de CHOIX — `choice:rogue.skills` : aucune entree
+ *   correspondante, jamais porteurs de declencheurs.
+ *
+ * Les prefixes sont enumeres, jamais decoupes au premier `:` venu : une
+ * cle d'entree legitime pourrait en contenir un, et la couper en silence
+ * ferait disparaitre ses declencheurs sans que rien ne le signale.
+ */
+export function entryKeysForFeatures(features: readonly { key: string }[]): string[] {
+  const keys = new Set<string>();
+  for (const { key } of features) {
+    if (key.startsWith("choice:")) continue;
+    if (key.startsWith("species:")) keys.add(key.slice("species:".length));
+    else if (key.startsWith("background:")) keys.add(key.slice("background:".length));
+    else keys.add(key);
+  }
+  return [...keys];
+}
+
 /** L'acteur, vu par une condition : ses conditions, ses aptitudes, et les nombres qu'un `ref` peut lire. */
 export function buildActorState(sheet: DerivedSheet, runtime?: RuntimeState): TriggerActorState {
   const numbers: Record<string, number> = {
@@ -47,10 +75,11 @@ export function buildActorState(sheet: DerivedSheet, runtime?: RuntimeState): Tr
 
   return {
     conditions: runtime?.conditions ?? [],
-    // Les cles d'aptitude sont celles que `has_feature` interroge, et les
-    // MEMES que celles dont `loadTriggersForEntries` lit les declencheurs :
-    // une aptitude qui porte une regle peut donc se tester elle-meme.
-    features: sheet.features.map((f) => f.key),
+    // Cles NORMALISEES, les memes que celles dont `loadTriggersForEntries`
+    // lit les declencheurs : une aptitude qui porte une regle peut donc se
+    // tester elle-meme, et l'auteur ecrit `fiendish-legacy-infernal`, jamais
+    // `species:fiendish-legacy-infernal` qui n'est qu'une cle d'affichage.
+    features: entryKeysForFeatures(sheet.features),
     numbers,
     zone: "engaged",
   };
@@ -77,7 +106,7 @@ export async function fireTriggersForCharacter(
     event: FiredEvent;
   }
 ): Promise<TriggerRunResult & { rejected: { entryKey: string; index: number; reason: string }[] }> {
-  const featureKeys = params.sheet.features.map((f) => f.key);
+  const featureKeys = entryKeysForFeatures(params.sheet.features);
   const { triggers, rejected } = await loadTriggersForEntries(supabase, params.rulesetId, featureKeys);
 
   if (triggers.length === 0) {
