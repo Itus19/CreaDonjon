@@ -20,7 +20,7 @@ Trois trous précis ont été identifiés dans le spike, et chacun a son ticket 
 
 | Trou constaté (ADR 0009) | Où il est traité |
 |---|---|
-| Aucun suivi de scène : les PNJ « présents » restaient figés toute la session | **V3-A4**, puis **V3-B2** |
+| Aucun suivi de scène : les PNJ « présents » restaient figés toute la session | **V3-A4 — fait** (l'état existe et est persisté), puis **V3-B2** pour le faire avancer en jeu |
 | Le contexte de personnage était un instantané pris une fois | **V3-B3** |
 | Rien ne forçait le passage par la résolution mécanique avant de narrer un combat | **V3-B1** (la barre d'intention) — c'est le ticket le plus important du lot B |
 | Pas de voie pour faire parler un PNJ incident sans lui inventer un identifiant | **V3-C2** (l'esquisse) |
@@ -29,7 +29,7 @@ Et le point resté ouvert dans l'ADR — *« le lien fait-mécanique → narrati
 
 ---
 
-## 1. Ce qui existe déjà — inventaire vérifié au 6 septembre
+## 1. Ce qui existe déjà — inventaire du 6 septembre, complété le 21
 
 Il faut le lire avant de commencer : **une grande partie du solo est déjà construite**, dispersée dans la V1 et la V2. La V3 est surtout du câblage.
 
@@ -52,6 +52,19 @@ Il faut le lire avant de commencer : **une grande partie du solo est déjà cons
 | Fiche jouable tenue à 375 px | `PlayableCharacterSheet.tsx` | complet |
 | Coquille joueur responsive | `PlayerShell.tsx` | complet |
 | Rendu du wiki public en trois zones | `app/partage/**`, `BookSkin.tsx` | complet |
+
+**Construit par la V3 elle-même** (21 septembre) — à lire avec la réserve qui suit :
+
+| Brique | Où | État |
+|---|---|---|
+| Déclencheurs en données : 20 événements, 11 effets, quatre bornes | `src/core/rules/triggers.ts` | complet, pur, terminaison garantie par construction |
+| Ce que la résolution mécanique émet | `src/core/rules/gameEvents.ts` | attaque, sauvegarde, test, tour — le combat n'a pas d'appelant |
+| Magasin de déclencheurs, **sans table dédiée** | bloc `triggers` + `src/server/services/triggerStore.ts` | complet — hérite de la chaîne de rulesets, des surcharges et du homebrew |
+| Câblage jet → événement → déclencheur | `src/server/services/triggerRuntime.ts`, `checkRolls.ts` | les trois jets à verdict ; vérifié en direct |
+| État de scène et zones abstraites | `src/core/rules/scene.ts`, table `scene_states` | complet et persisté ; **rien ne le fait avancer** |
+| Économie d'action | `src/core/rules/actionBudget.ts` | complet ; **rien ne tient un budget de tour** |
+
+**La réserve, et elle est importante :** le moteur *propose* des effets, il n'en applique aucun. Il n'existe pas encore de tour pour les recevoir, ni rien qui fasse avancer la scène. Une règle maison se saisit, se relit et part — sans rien changer à la partie. C'est le lot B qui referme ça.
 
 **Ce qui manque vraiment**, et rien d'autre : les déclencheurs, l'économie d'action, l'état de scène, la boucle de tour, le pont entre le moteur et les générateurs, et l'écran.
 
@@ -803,9 +816,20 @@ Le dernier point de cette liste est le plus important en pratique : **le solo do
 
 ## 4. Ce qui reste ouvert
 
+**Tranchées depuis** — gardées ici pour qu'on ne les rouvre pas par mégarde :
+
+| Question | Décision |
+|---|---|
+| Où vit `SceneState` ? | Table `scene_states`, une ligne par campagne — **fait** (V3-A4, `SCHEMA.md` §26) |
+| Comment s'écrit la condition d'un déclencheur ? | Type propre, hors de l'AST numérique — **ADR 0027** |
+| Ordre de deux déclencheurs sur le même événement ? | Priorité entière décroissante, égalité par ordre de déclaration (V3-A1) |
+| Le jeu hors combat peut-il déclencher ? | Oui — `check_passed`/`check_failed` et l'opérateur `event_has`, **ADR 0028** |
+| Un déclencheur peut-il donner une action bonus ? | Oui — effet `grant_budget`, **ADR 0029** |
+
+**Encore ouvertes :**
+
 | Question | Recommandation |
 |---|---|
-| Où vit `SceneState` ? | Table dédiée, pas un jsonb sur `campaigns` — voir V3-A4 |
 | Le modèle peut-il proposer une esquisse de sa propre initiative ? | Non en V3. Le moteur décide quand générer ; le modèle habille. À rouvrir après une vraie partie |
 | Combien de tours garder en clair avant de résumer ? | À mesurer, pas à décider maintenant — dépend du modèle réellement utilisé |
 | Un modèle distant pour la narration, local pour le reste ? | `AiProvider` le permet déjà sans rien changer. À essayer quand la prose locale gêne vraiment |
