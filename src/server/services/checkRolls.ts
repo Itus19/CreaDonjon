@@ -10,7 +10,12 @@ import { DIE_TYPES, type DieType } from "@/src/core/dice/roll";
 import { parseFormula } from "@/src/core/formula/parser";
 import { evaluate } from "@/src/core/formula/evaluate";
 import { formatFormulaNode } from "@/src/core/formula/format";
-import { resolveCharacterActionContext } from "@/src/server/services/characterActions";
+import { resolveCharacterActionContext, getOrInitializeRuntimeState } from "@/src/server/services/characterActions";
+import { eventsForCheck, eventsForSave } from "@/src/core/rules/gameEvents";
+import { fireTriggersForCharacter } from "@/src/server/services/triggerRuntime";
+import type { DerivedSheet } from "@/src/core/rules/sheet";
+import type { FiredEvent } from "@/src/core/rules/triggers";
+import type { CharacterActionContext } from "@/src/server/services/characterActions";
 import { canUserEditEntityById, isWorldAdmin } from "@/src/server/services/permissions";
 import { getEntityById, type EntitySummary } from "@/src/server/repos/entities";
 import { getCampaignById, getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
@@ -77,6 +82,45 @@ function verdictFor(total: number, dc: number | null): "success" | "fail" | null
   return total >= dc ? "success" : "fail";
 }
 
+/**
+ * Fait partir les declencheurs d'un jet resolu, et rend de quoi les
+ * consigner. `null` quand il n'y a rien a dire — le cas de loin le plus
+ * frequent aujourd'hui, aucune fiche ne portant encore de declencheur.
+ *
+ * Les EFFETS ne sont pas appliques : ils sont proposes et consignes.
+ * Appliquer suppose l'etat de scene et l'economie d'action (V3-A3/A4). Une
+ * panne ici n'emporte jamais le jet : le de a ete lance, son resultat est
+ * acquis, et le perdre pour une regle maison cassee serait le pire des
+ * echanges.
+ */
+async function fireForRoll(
+  supabase: TypedClient,
+  emit: { ctx: CharacterActionContext; sheet: DerivedSheet; events: (p: boolean, t: number, d: number) => FiredEvent[] } | undefined,
+  verdict: "success" | "fail" | null,
+  total: number,
+  dc: number | null
+): Promise<{ effects: unknown[]; failures: unknown[]; rejected: unknown[]; trace: string[] } | null> {
+  if (!emit || verdict === null || dc === null) return null;
+  const [event] = emit.events(verdict === "success", total, dc);
+  if (!event) return null;
+
+  try {
+    const runtime = emit.ctx.campaignId ? (await getOrInitializeRuntimeState(supabase, emit.ctx)).state : undefined;
+    const out = await fireTriggersForCharacter(supabase, {
+      rulesetId: emit.ctx.rulesetId,
+      subject: emit.ctx.entityId,
+      sheet: emit.sheet,
+      runtime,
+      event,
+    });
+    if (out.effects.length === 0 && out.failures.length === 0 && out.rejected.length === 0) return null;
+    return { effects: out.effects, failures: out.failures, rejected: out.rejected, trace: out.trace };
+  } catch (err) {
+    // Jamais muet (CLAUDE.md) : consigne avec le jet, et le jet survit.
+    return { effects: [], failures: [{ reason: err instanceof Error ? err.message : String(err) }], rejected: [], trace: [] };
+  }
+}
+
 async function recordAndBuildOutcome(
   supabase: TypedClient,
   params: {
@@ -87,11 +131,27 @@ async function recordAndBuildOutcome(
     advantage: AdvantageState;
     dc: number | null;
     hidden: boolean;
+    /**
+     * V3-A2 : ce que ce jet EMET une fois resolu. Absent pour un jet libre
+     * ou sans DD — sans verdict, il n'y a ni reussite ni echec a annoncer.
+     * Le moteur de declencheurs part ICI plutot que chez chaque appelant :
+     * un seul endroit ou un jet devient un evenement.
+     */
+    emit?: {
+      ctx: CharacterActionContext;
+      sheet: DerivedSheet;
+      events: (passed: boolean, total: number, dc: number) => FiredEvent[];
+    };
   }
 ): Promise<RollOutcome> {
   const modifier = params.chips.reduce((sum, c) => sum + c.value, 0);
   const { total, ast, expression, trace } = resolveCheckRoll({ modifier, advantage: params.advantage }, serverRng);
   const verdict = verdictFor(total, params.dc);
+
+  // Les declencheurs partent AVANT l'enregistrement, pour que leur sortie
+  // parte avec le jet dans le journal : un jet et ce qu'il a reveille se
+  // relisent ensemble, jamais dans deux lignes a recoller.
+  const fired = await fireForRoll(supabase, params.emit, verdict, total, params.dc);
 
   if (params.campaignId) {
     const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
@@ -102,7 +162,7 @@ async function recordAndBuildOutcome(
       ast: ast as unknown as Json,
       context: { modifier } as unknown as Json,
       result: total,
-      detail: { who: params.who, what: params.what, chips: params.chips, dc: params.dc, verdict, trace } as unknown as Json,
+      detail: { who: params.who, what: params.what, chips: params.chips, dc: params.dc, verdict, trace, ...(fired ? { triggers: fired } : {}) } as unknown as Json,
       rolledBy: "player",
       visibilityLevel: params.hidden ? "gm" : "public",
     });
@@ -141,6 +201,12 @@ export async function rollAbilityCheck(
     advantage: params.advantage,
     dc: params.dc,
     hidden: params.hidden && isAdmin,
+    emit: {
+      ctx,
+      sheet: ctx.sheet,
+      events: (passed, total, dc) =>
+        eventsForCheck({ who: ctx.entityId, kind: "ability", key: params.ability, ability: params.ability, passed, total, dc }),
+    },
   });
   return { ok: true, roll };
 }
@@ -165,6 +231,20 @@ export async function rollSkillCheck(
     advantage: params.advantage,
     dc: params.dc,
     hidden: params.hidden && isAdmin,
+    emit: {
+      ctx,
+      sheet: ctx.sheet,
+      events: (passed, total, dc) =>
+        eventsForCheck({
+          who: ctx.entityId,
+          kind: "skill",
+          key: params.skill,
+          ability: SKILL_ABILITIES[params.skill],
+          passed,
+          total,
+          dc,
+        }),
+    },
   });
   return { ok: true, roll };
 }
@@ -188,6 +268,11 @@ export async function rollSavingThrow(
     advantage: params.advantage,
     dc: params.dc,
     hidden: params.hidden && isAdmin,
+    emit: {
+      ctx,
+      sheet: ctx.sheet,
+      events: (passed, total, dc) => eventsForSave({ who: ctx.entityId, passed, total, dc }),
+    },
   });
   return { ok: true, roll };
 }
