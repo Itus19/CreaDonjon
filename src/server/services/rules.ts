@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAuthUser } from "@/lib/supabase/server";
 import type { Database, Json } from "@/src/types/database";
 import {
-  dataSchemaForBlockType,
+  parseBlockData,
   validateBlockData,
   zWeaponBlockData,
   type AddEntryPayload,
@@ -146,8 +146,16 @@ export async function findEntryInRulesetChain(
   return null;
 }
 
+/** Bloc ecarte a la resolution, avec sa raison — jamais ecarte en silence (CLAUDE.md). */
+export interface RejectedBlock {
+  blockType: string;
+  reason: string;
+}
+
 export interface ResolvedEntryBlocks {
   entryType: EntryType;
+  /** Blocs ecartes (type inconnu, donnee invalide). Vide dans le cas normal. */
+  rejectedBlocks: RejectedBlock[];
   /** Donnee de chaque bloc deja validee par son schema Zod, indexee par block_type — jamais la ligne brute. */
   blocksByType: Map<string, unknown>;
   /**
@@ -305,11 +313,25 @@ function resolveOneEntryBlocks(
   if (!resolved || resolved.disabled) return null;
 
   const blocksByType = new Map<string, unknown>();
+  const rejectedBlocks: RejectedBlock[] = [];
   for (const block of resolved.blocks) {
-    blocksByType.set(block.block_type, dataSchemaForBlockType(block.block_type as BlockType).parse(block.data));
+    // Un bloc au type inconnu est ECARTE, pas fatal. Il n'a aucune raison de
+    // faire disparaitre les autres blocs de la fiche : une surcharge mal
+    // formee ou un import tiers ne doit pas rendre une entree illisible.
+    const parsed = parseBlockData(block.block_type, block.data);
+    if (!parsed.ok) {
+      rejectedBlocks.push({ blockType: block.block_type, reason: parsed.reason });
+      continue;
+    }
+    blocksByType.set(block.block_type, parsed.data);
   }
 
-  return { entryType: resolved.entry_type as EntryType, blocksByType, name: homebrewName ?? (entry ? entryNameFrom(entry) : null) };
+  return {
+    entryType: resolved.entry_type as EntryType,
+    blocksByType,
+    rejectedBlocks,
+    name: homebrewName ?? (entry ? entryNameFrom(entry) : null),
+  };
 }
 
 export async function resolveEntryBlocksInRuleset(
@@ -866,10 +888,17 @@ export async function getRuleEntryForWorld(
   // n'a pas d'"avant".
   const originalDataByBlockType = new Map((baseEntry?.blocks ?? []).map((b) => [b.block_type, b.data]));
 
-  const validated = resolved.blocks.map((block) => ({
+  // Un bloc fautif ne s'affiche pas, plutot que de faire tomber la fiche
+  // entiere — meme arbitrage que `resolveOneEntryBlocks`, meme fonction.
+  const validated = resolved.blocks
+    .flatMap((block) => {
+      const parsed = parseBlockData(block.block_type, block.data);
+      return parsed.ok ? [{ block, data: parsed.data }] : [];
+    })
+    .map(({ block, data }) => ({
     id: originalIdByBlockType.get(block.block_type) ?? `override:${block.block_type}`,
     blockType: block.block_type as BlockType,
-    data: dataSchemaForBlockType(block.block_type as BlockType).parse(block.data),
+    data,
     displayOrder: block.display_order,
     rawDisplay: block.display,
     originalData: resolved.modifiedBlockTypes.includes(block.block_type)

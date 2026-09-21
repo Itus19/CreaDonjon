@@ -231,7 +231,13 @@ export async function updateBlockContent(
   const allowed = await canUserEditEntityById(supabase, { entityId: existing.entity_id, userId: params.changedBy });
   if (!allowed) return { ok: false, reason: "forbidden" };
 
-  const validatedData = dataSchemaForBlockType(existing.block_type).parse(params.data);
+  // Ici l'inconnu est une FAUTE, pas un cas a tolerer : on edite un bloc
+  // precis, et ne pas savoir le valider doit refuser l'ecriture plutot que
+  // la laisser passer. Message explicite au lieu du `TypeError` opaque que
+  // produisait l'appel direct a `.parse` sur un schema absent.
+  const schema = dataSchemaForBlockType(existing.block_type);
+  if (!schema) throw new Error(`Type de bloc inconnu : "${existing.block_type}".`);
+  const validatedData = schema.parse(params.data);
 
   const row = await updateBlockWithVersionCheck(supabase, {
     id: params.id,

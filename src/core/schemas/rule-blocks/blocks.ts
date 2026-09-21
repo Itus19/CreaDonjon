@@ -544,10 +544,52 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 /** Registre : le moteur demande le schema Zod d'un block_type et recoit une forme garantie. */
-export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny {
+/**
+ * `undefined` quand le type n'est pas au catalogue. La signature le DIT
+ * plutot que de le cacher : un `block_type` venu de la base n'est qu'une
+ * chaine, et le caster en `BlockType` faisait mentir le typage — jusqu'a ce
+ * qu'un `.parse` de `undefined` fasse tomber la resolution de toute la
+ * fiche sur un message incomprehensible (constate le 21 septembre 2026, sur
+ * une surcharge `add_block` sans `block_type`).
+ *
+ * Un appelant qui doit TOLERER l'inconnu passe par `isBlockType` et ecarte
+ * le bloc en le signalant. Un appelant pour qui l'inconnu est une faute
+ * utilise `validateBlockData`, qui leve une erreur nommant le type.
+ */
+export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny | undefined {
   return DATA_SCHEMA_BY_BLOCK_TYPE[blockType];
 }
 
+/**
+ * Valide la donnee d'un bloc dont le type vient de la BASE ou d'un import —
+ * donc d'une simple chaine, jamais d'un type TypeScript.
+ *
+ * Rend un resultat plutot que de lever : les deux chemins de resolution
+ * d'une fiche doivent pouvoir ecarter UN bloc fautif en le signalant, sans
+ * faire tomber l'entree entiere. Fonction pure, d'ou sa presence ici : la
+ * meme decision se prenait a deux endroits de `rules.ts`, et un seul des
+ * deux aurait fini par diverger.
+ */
+export function parseBlockData(
+  blockType: string,
+  data: unknown
+): { ok: true; blockType: BlockType; data: unknown } | { ok: false; reason: string } {
+  if (!isBlockType(blockType)) return { ok: false, reason: "type de bloc inconnu" };
+  const parsed = dataSchemaForBlockType(blockType)!.safeParse(data);
+  if (parsed.success) return { ok: true, blockType, data: parsed.data };
+  return {
+    ok: false,
+    reason: parsed.error.issues.map((i) => `${i.path.join(".") || "(racine)"} : ${i.message}`).join(" ; "),
+  };
+}
+
+/** Garde de type pour un `block_type` venu de la base ou d'un import (bloc de regle). */
+export function isBlockType(value: string): value is BlockType {
+  return Object.prototype.hasOwnProperty.call(DATA_SCHEMA_BY_BLOCK_TYPE, value);
+}
+
 export function validateBlockData(blockType: BlockType, data: unknown) {
-  return dataSchemaForBlockType(blockType).parse(data);
+  const schema = dataSchemaForBlockType(blockType);
+  if (!schema) throw new Error(`Type de bloc inconnu : "${blockType}".`);
+  return schema.parse(data);
 }

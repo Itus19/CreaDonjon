@@ -262,12 +262,31 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
   },
 };
 
-export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny {
+/**
+ * `undefined` quand le type n'est pas au catalogue. La signature le DIT
+ * plutot que de le cacher : un `block_type` venu de la base n'est qu'une
+ * chaine, et le caster en `BlockType` faisait mentir le typage — jusqu'a ce
+ * qu'un `.parse` de `undefined` fasse tomber la resolution de toute la
+ * fiche sur un message incomprehensible (constate le 21 septembre 2026, sur
+ * une surcharge `add_block` sans `block_type`).
+ *
+ * Un appelant qui doit TOLERER l'inconnu passe par `isBlockType` et ecarte
+ * le bloc en le signalant. Un appelant pour qui l'inconnu est une faute
+ * utilise `validateBlockData`, qui leve une erreur nommant le type.
+ */
+export function dataSchemaForBlockType(blockType: BlockType): z.ZodTypeAny | undefined {
   return DATA_SCHEMA_BY_BLOCK_TYPE[blockType];
 }
 
+/** Garde de type pour un `block_type` venu de la base ou d'un import (bloc de wiki). */
+export function isBlockType(value: string): value is BlockType {
+  return Object.prototype.hasOwnProperty.call(DATA_SCHEMA_BY_BLOCK_TYPE, value);
+}
+
 export function validateBlockData(blockType: BlockType, data: unknown) {
-  return dataSchemaForBlockType(blockType).parse(data);
+  const schema = dataSchemaForBlockType(blockType);
+  if (!schema) throw new Error(`Type de bloc inconnu : "${blockType}".`);
+  return schema.parse(data);
 }
 
 export function defaultBlockData(blockType: BlockType): unknown {
