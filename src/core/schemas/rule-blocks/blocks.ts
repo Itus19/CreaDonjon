@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { zFormulaNode, zLocalized, zModifier, zQuantity, zReference } from "./primitives";
+import { zTrigger } from "../../rules/triggers";
 
 /**
  * Catalogue V1 des blocs de regles (specs/regles-blocs.md §5). Cinq blocs
@@ -41,6 +42,7 @@ export const BLOCK_TYPES = [
   "species_traits",
   "class_equipment",
   "modifiers",
+  "triggers",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -322,6 +324,20 @@ export type PrerequisitesBlockData = z.infer<typeof zPrerequisitesBlockData>;
 export const zModifiersBlockData = z.object({ modifiers: z.array(zModifier) });
 export type ModifiersBlockData = z.infer<typeof zModifiersBlockData>;
 
+// --- triggers (layout: key_values, V3-A2) --------------------------------
+// LE MAGASIN DE DECLENCHEURS. Pas de table nouvelle : un declencheur est
+// une donnee de regle, donc un BLOC TYPE, exactement comme `modifiers` l'est
+// pour le moteur de fiche. Il herite ainsi de tout ce qui existe deja —
+// chaine de rulesets, surcharges (`ruleset_overrides`), homebrew,
+// traductions, editeur — alors qu'une table `triggers` aurait exige de
+// reconstruire chacune de ces quatre choses.
+//
+// `ruleset_entry_blocks.block_type` est un `text` SANS contrainte CHECK
+// (migration 20260729204001) : ajouter un type de bloc ne demande donc
+// AUCUNE migration. Verifie avant d'en ecrire une.
+export const zTriggersBlockData = z.object({ triggers: z.array(zTrigger) });
+export type TriggersBlockData = z.infer<typeof zTriggersBlockData>;
+
 // --- class_basics (layout: key_values, V1-D1) ---------------------------
 export const zClassBasicsBlockData = z.object({
   hit_die: z.number().int().positive(),
@@ -524,6 +540,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   species_traits: zSpeciesTraitsBlockData,
   class_equipment: zClassEquipmentBlockData,
   modifiers: zModifiersBlockData,
+  triggers: zTriggersBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 /** Registre : le moteur demande le schema Zod d'un block_type et recoit une forme garantie. */
