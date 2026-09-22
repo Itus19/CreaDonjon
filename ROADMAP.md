@@ -22,7 +22,7 @@ précédente de ce fichier.
 | `docs/BACKLOG.md` | Phase 0 et V0 — terminé, valeur historique |
 | `docs/BACKLOG_V1.md` | V1, le compagnon jouable — ses reports assumés sont repris dans V2-G1 |
 | `docs/BACKLOG_V2.md` | V2 — l'essentiel de ce qui existe aujourd'hui |
-| `docs/BACKLOG_V3.md` | V3, le mode solo — S2 rendu, le lot A (le moteur) aux trois quarts fait |
+| `docs/BACKLOG_V3.md` | V3, le mode solo — S2 rendu, lot A (le moteur) clos ; lots B à F non commencés |
 | `docs/audit/2026-09-06-*.md` | État de santé du code, backend et interface |
 
 ---
@@ -44,7 +44,7 @@ précédente de ce fichier.
 | **IA** | Couche `src/server/ai/` en place : `AiProvider`, adaptateurs, `ai_usage_log`, limitation de débit, `ai_proposals`, assistance à l'écriture, éditeur de règles, prose des générateurs | `specs/cible-locale-et-ia.md` |
 | **Stockage de fichiers** | Bucket Supabase Storage créé par migration, interface `storage.ts`, URLs signées, redimensionnement `sharp`. Images de blocs, fonds et portraits migrés hors de la base | V2-L1, V2-I1 phases A et F₂ |
 
-| **Moteur de déclencheurs (V3, lot A)** | Déclencheurs en données, purs et bornés — 20 événements et 11 effets en vocabulaire fermé, terminaison garantie par construction. Magasin **sans table dédiée** : un bloc `triggers` sur une entrée de ruleset, donc héritage, surcharges et homebrew gratuits. Les trois jets à verdict (caractéristique, compétence, sauvegarde) émettent et déclenchent. Scène persistée (`scene_states`), zones abstraites actives, économie d'action. **Les effets sont proposés, jamais appliqués** : il n'y a pas encore de tour pour les recevoir | V3-A1 à A4, ADR 0027-0029 |
+| **Moteur de déclencheurs (V3, lot A)** | Déclencheurs en données, purs et bornés — 20 événements et 11 effets en vocabulaire fermé, terminaison garantie par construction. Magasin **sans table dédiée** : un bloc `triggers` sur une entrée de ruleset, donc héritage, surcharges et homebrew gratuits. Les trois jets à verdict (caractéristique, compétence, sauvegarde) émettent et déclenchent. Scène persistée (`scene_states`), zones abstraites actives, économie d'action. Bac à sable et formulaire de saisie. **Deux limites** : les effets sont proposés, jamais appliqués (il n'y a pas encore de tour pour les recevoir), et le vocabulaire d'effets n'exprime qu'une des six règles SRD visées — cinq manques comptés en A6 | V3-A1 à A6, ADR 0027-0029 |
 
 ## Ce qui reste ouvert
 

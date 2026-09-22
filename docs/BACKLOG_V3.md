@@ -85,11 +85,13 @@ Lot F    la partie qui dure           reprise, sauvegarde, bascule vers une camp
 Lot R    la rapidité, et le téléphone  hors séquence — les restes de l'audit, à tout moment
 ```
 
-> **État au 21 septembre 2026.** S2 est rendu (verdict positif : le lien tient, le lot B peut s'écrire en prose libre). Du lot A, **A1, A2, A3 et A4 sont faits** ; restent **A5** (éditeur au formulaire) et **A6** (conversion du SRD). Le lot R est clos à l'exception de `P‑07`.
+> **État au 22 septembre 2026.** S2 est rendu (verdict positif : le lien tient, le lot B peut s'écrire en prose libre). **Le lot A est clos — A1 à A6.** Trois cases y restent décochées et le resteront : elles décrivent du câblage qui **appartient au lot B**, pas au lot A (faire avancer la scène, tenir un budget de tour, émettre les événements de combat). Le lot A fournit l'état et les opérations ; la boucle de tour les appellera. Le lot R l'est aussi, à l'exception de `P‑07`. Les lots B, C, D, E et F ne sont pas commencés.
 >
-> Ce que le lot A produit aujourd'hui : un moteur de déclencheurs pur et borné, 20 événements et 11 effets fermés, un magasin sans table dédiée (bloc `triggers` sur une entrée de ruleset), le câblage des trois jets à verdict, une scène persistée et des zones qui servent enfin.
+> Ce que le lot A produit : un moteur de déclencheurs pur et borné, 20 événements et 11 effets fermés, un magasin sans table dédiée (bloc `triggers` sur une entrée de ruleset), le câblage des trois jets à verdict, une scène persistée, l'économie d'action, un bac à sable et un formulaire de saisie.
 >
-> **Ce qu'il ne produit pas encore : rien n'applique les effets.** Le moteur les *propose* ; les appliquer suppose qu'un tour existe, ce qui est le lot B. Et rien ne fait avancer la scène. Une règle maison se saisit, se relit et part — mais ne change encore rien à la partie.
+> **Deux limites, à lire avec.** D'abord, **rien n'applique les effets** : le moteur les *propose*, il faut un tour pour les recevoir — lot B. Rien ne fait avancer la scène non plus. Ensuite, **le vocabulaire d'effets est trop étroit** : sur les six règles SRD visées par A6, une seule est exprimable, et cinq manques distincts sont comptés (voir A6). Élargir le vocabulaire est une question **ouverte, non tranchée**.
+>
+> Autrement dit : une règle maison se saisit, se relit et part — mais elle ne change encore rien à la partie, et beaucoup de règles réelles ne s'écrivent pas encore.
 
 **A avant B avant C** — ce sont de vraies dépendances, pas une préférence : la boucle a besoin de l'état de scène, et l'écriture du monde a besoin de la boucle.
 
