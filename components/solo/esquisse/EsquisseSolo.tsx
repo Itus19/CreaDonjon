@@ -2,14 +2,19 @@
 
 import { useState } from "react";
 import BinderTabs from "@/components/shared/BinderTabs";
+import Checkbox from "@/components/shared/Checkbox";
 import {
-  DEMANDE_EN_COURS,
+  DES_FACTICES,
   DISCOVERY_MARK,
+  EMPLACEMENTS,
   ENTETE,
   FEED,
   FICHE,
+  INVENTAIRE,
   ORIGINE_LABEL,
   PRESENTS,
+  QUETES,
+  SORTS,
   SOURCE_MARK,
   WIKI,
   type FeedItem,
@@ -19,25 +24,23 @@ import {
 /**
  * V3-D — **Esquisse**, pas l'écran. Jetable.
  *
- * Deuxième version, après retour de l'auteur sur la première. Ce qu'elle
- * acte :
+ * Troisième passe. Ce que le dernier retour acte :
  *
- * - **Le fil est compact** ; sa trace se déplie au clic plutôt que de
- *   s'étaler (D4 demande « l'encart compact AVEC sa trace » — les deux
- *   tiennent, l'un caché dans l'autre).
- * - **Les marqueurs de source restent** (D6) : ils informent sans peser.
- * - **La colonne gauche se navigue** : on ouvre une fiche connue DANS la
- *   colonne, avec le chemin pour revenir.
- * - **Onglets en intercalaire de classeur**, ceux de la fiche jouable
- *   (`BinderTabs`, ADR 0026) — pas une seconde présentation.
- * - **Le moteur DEMANDE un jet, il ne le lance pas.** Le joueur répond
- *   avec ses outils (fiche, volet de dés) ou annonce son dé physique.
- *   C'est le vrai déroulé d'une table, et c'est un changement de V3-B1.
- * - **Ville · lieu · pièce** à gauche de l'en-tête, date/heure/météo et la
- *   radio à droite. Le bloc « Le monde » quitte la colonne de droite.
+ * - **Un onglet Quêtes** dans la colonne de gauche, à la forme du bloc
+ *   `quest` (des objectifs cochés ou non, rien de plus).
+ * - **La colonne de droite est la fiche jouable**, inventaire et magie
+ *   compris, avec l'équipement et la préparation des sorts. **Tout ce qui
+ *   se lance se clique** — caractéristique, sauvegarde, compétence,
+ *   attaque — et le résultat répond à la demande en cours.
+ * - **La barre latérale joueur est là** : cet écran est une destination de
+ *   `PlayerShell` comme les autres, et non une coquille à part.
+ * - **La demande de jet s'écrit DANS le champ de saisie**, en texte
+ *   temporaire, au lieu d'occuper un panneau sous lui. Le champ dit
+ *   lui-même ce qu'il attend.
  *
- * Tout vient de `fixtures.ts` : aucune requête, aucun compte, aucune
- * donnée réelle. Les jetons, eux, sont les vrais.
+ * Les dés sont tirés d'une liste fixe (`DES_FACTICES`) : dans ce projet le
+ * client ne lance pas les dés, et une esquisse qui prendrait l'habitude de
+ * `Math.random()` la donnerait au vrai écran.
  */
 
 const CHIP = "rounded-full border border-edge px-3 py-1 text-xs text-ink";
@@ -48,8 +51,25 @@ const BTN_GHOST =
   "rounded-full border border-accent px-4 py-2 text-sm text-accent transition-colors hover:bg-accent/10";
 /** Le panneau d'un classeur : c'est l'appelant qui le porte (BinderTabs ne rend que la rangée). */
 const CLASSEUR = "rounded-b-lg border-2 border-t-0 border-edge-strong bg-panel-raised p-3";
+const LIGNE_CLIQUABLE =
+  "flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-panel-sunken";
 
 type Colonne = "monde" | "jeu" | "fiche";
+
+/** Ce que le moteur attend. `null` quand il n'attend rien : le champ redevient « Que fais-tu ? ». */
+interface Demande {
+  label: string;
+  detail: string;
+  modificateur: number;
+  dc: number | null;
+}
+
+const PREMIERE_DEMANDE: Demande = {
+  label: "Sauvegarde de Dextérité",
+  detail: "le gobelin te pousse contre la rampe",
+  modificateur: 3,
+  dc: 13,
+};
 
 function Marqueur({ mark, title }: { mark: string; title: string }) {
   return (
@@ -66,9 +86,7 @@ function Marqueur({ mark, title }: { mark: string; title: string }) {
 function FicheWiki({ entry, onRetour }: { entry: WikiEntry; onRetour: () => void }) {
   return (
     <div className="flex flex-col gap-2">
-      {/* Le chemin de retour, toujours au même endroit : c'est lui qui rend
-          la navigation lisible dans une colonne étroite. */}
-      <button type="button" onClick={onRetour} className="self-start text-xs text-ink-muted hover:text-ink">
+      <button type="button" onClick={onRetour} className="self-start py-1 text-xs text-ink-muted hover:text-ink">
         ← {entry.group}
       </button>
       <div className="flex items-center gap-2">
@@ -88,7 +106,7 @@ function FicheWiki({ entry, onRetour }: { entry: WikiEntry; onRetour: () => void
 }
 
 function ColonneMonde() {
-  const [onglet, setOnglet] = useState<"wiki" | "presents" | "regles">("wiki");
+  const [onglet, setOnglet] = useState<"wiki" | "quetes" | "presents" | "regles">("wiki");
   const [ouverte, setOuverte] = useState<string | null>(null);
   const groupes = [...new Set(WIKI.map((e) => e.group))];
   const entry = WIKI.find((e) => e.id === ouverte) ?? null;
@@ -104,6 +122,7 @@ function ColonneMonde() {
         }}
         items={[
           { value: "wiki", label: "Wiki" },
+          { value: "quetes", label: "Quêtes" },
           { value: "presents", label: "Présents" },
           { value: "regles", label: "Règles" },
         ]}
@@ -124,7 +143,7 @@ function ColonneMonde() {
                       type="button"
                       onClick={() => setOuverte(e.id)}
                       disabled={e.discovery === "mentionne"}
-                      className="flex items-center justify-between gap-2 rounded-md px-1 py-1 text-left transition-colors hover:bg-panel-sunken disabled:opacity-50 disabled:hover:bg-transparent"
+                      className={`${LIGNE_CLIQUABLE} disabled:opacity-50 disabled:hover:bg-transparent`}
                     >
                       <span className="truncate text-sm text-ink">{e.name}</span>
                       <Marqueur {...DISCOVERY_MARK[e.discovery]} />
@@ -135,6 +154,33 @@ function ColonneMonde() {
               <p className="text-xs text-ink-muted">◆ connu · ○ esquisse · ◇ mentionné</p>
             </div>
           ))}
+
+        {onglet === "quetes" && (
+          <div className="flex flex-col gap-3">
+            {QUETES.map((q) => {
+              const faits = q.objectifs.filter((o) => o.done).length;
+              return (
+                <div key={q.id} className="flex flex-col gap-1 rounded-md border border-edge p-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-sm font-medium text-ink">{q.titre}</span>
+                    <span className="shrink-0 text-xs text-ink-muted">
+                      {faits}/{q.objectifs.length}
+                    </span>
+                  </div>
+                  <span className="text-xs text-ink-muted">donnée par {q.donneur}</span>
+                  <ul className="mt-1 flex flex-col gap-0.5">
+                    {q.objectifs.map((o) => (
+                      <li key={o.id} className={`text-sm ${o.done ? "text-ink-muted line-through" : "text-ink-soft"}`}>
+                        {o.done ? "✓" : "○"} {o.text}
+                      </li>
+                    ))}
+                  </ul>
+                  {q.recompense && <span className="mt-1 text-xs text-ink-muted">Récompense : {q.recompense}</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {onglet === "presents" && (
           <div className="flex flex-col gap-2">
@@ -196,10 +242,10 @@ function Jet({ item }: { item: Extract<FeedItem, { kind: "roll" }> }) {
   );
 }
 
-function Fil() {
+function Fil({ items }: { items: FeedItem[] }) {
   return (
     <div className="flex flex-col gap-2">
-      {FEED.map((item) => {
+      {items.map((item) => {
         switch (item.kind) {
           case "narration":
             return (
@@ -216,8 +262,6 @@ function Fil() {
             );
 
           case "mj":
-            // La réponse du MJ : elle éclaire, elle n'avance pas la partie.
-            // Le dire en toutes lettres évite de la confondre avec un fait.
             return (
               <div key={item.id} className="rounded-md border-l-2 border-accent bg-panel-sunken px-3 py-1.5">
                 <span className="text-xs uppercase tracking-wide text-ink-muted">MJ · hors du temps de jeu</span>
@@ -265,60 +309,52 @@ function Fil() {
 }
 
 /**
- * La zone de saisie. Trois choses sur une seule ligne — dire, **Jouer**,
- * **MJ** — puis, dessous, la demande en cours quand il y en a une.
+ * La saisie. Trois choses sur une seule ligne — dire, **Jouer**, **MJ**.
  *
- * `Jouer` fait avancer le tour. `MJ` pose une question sur la scène ou sur
- * une règle et **n'avance pas le temps de jeu** : c'est la différence qui
- * justifie deux boutons plutôt qu'un.
+ * Quand un jet est attendu, **c'est le champ qui le dit** : son texte
+ * temporaire devient la demande, et sa bordure passe à l'accent. Rien ne
+ * s'ajoute sous lui. Le joueur répond en lançant depuis sa fiche, depuis
+ * le volet de dés, ou en écrivant son résultat ici même.
  */
-function Saisie() {
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border border-edge bg-panel p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          placeholder="Que fais-tu ?"
-          aria-label="Que fais-tu ?"
-          className="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-2 text-sm text-ink outline-none"
-        />
-        <button type="button" className={BTN_ACCENT}>
-          Jouer
-        </button>
-        <button type="button" className={BTN_GHOST} title="Une question sur la scène ou sur une règle — le temps de jeu ne bouge pas">
-          MJ
-        </button>
-      </div>
+function Saisie({ demande }: { demande: Demande | null }) {
+  const invite = demande
+    ? `${demande.label}${demande.dc !== null ? ` DD ${demande.dc}` : ""} — lance depuis ta fiche, ou écris ton résultat`
+    : "Que fais-tu ?";
 
-      {/* La demande en cours. Le moteur dit CE QU'IL ATTEND ; il ne lance
-          rien lui-même. Trois façons d'y répondre, et la troisième est
-          celle des dés physiques. */}
-      <div className="flex flex-col gap-2 rounded-md border border-accent/40 bg-panel-sunken p-3">
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <span className={CHIP}>Jet demandé</span>
-          <span className="text-sm font-medium text-ink">{DEMANDE_EN_COURS.label}</span>
-          <span className="text-sm text-ink-muted">{DEMANDE_EN_COURS.detail}</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className={CHIP}>
-            lancer depuis la fiche ({DEMANDE_EN_COURS.modificateur})
-          </button>
-          <button type="button" className={CHIP}>
-            volet de dés
-          </button>
-          <span className="text-xs text-ink-muted">ou écris « j&apos;ai fait 12 » si tu lances tes propres dés</span>
-        </div>
-      </div>
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-edge bg-panel p-3">
+      <input
+        placeholder={invite}
+        aria-label={demande ? `Jet attendu : ${demande.label}` : "Que fais-tu ?"}
+        className={`min-w-0 flex-1 rounded-md border bg-transparent px-2 py-2 text-sm text-ink outline-none transition-colors ${
+          demande ? "border-accent placeholder:text-accent" : "border-edge"
+        }`}
+      />
+      <button type="button" className={BTN_ACCENT}>
+        Jouer
+      </button>
+      <button type="button" className={BTN_GHOST} title="Une question sur la scène ou sur une règle — le temps de jeu ne bouge pas">
+        MJ
+      </button>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Colonne droite — la fiche complète
+// Colonne droite — la fiche jouable
 // ---------------------------------------------------------------------------
 
-function ColonneFiche() {
-  const [onglet, setOnglet] = useState<"actions" | "competences" | "traits">("actions");
+type OngletFiche = "actions" | "inventaire" | "magie" | "competences" | "traits";
+
+function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: number) => void }) {
+  const [onglet, setOnglet] = useState<OngletFiche>("actions");
+  const [equipes, setEquipes] = useState(INVENTAIRE.filter((o) => o.equipe).map((o) => o.id));
+  const [prepares, setPrepares] = useState(SORTS.filter((s) => s.prepare).map((s) => s.id));
   const pct = Math.round((FICHE.hp.current / FICHE.hp.max) * 100);
+
+  function bascule(liste: string[], set: (v: string[]) => void, id: string) {
+    set(liste.includes(id) ? liste.filter((x) => x !== id) : [...liste, id]);
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -336,28 +372,34 @@ function ColonneFiche() {
             {FICHE.hp.current}/{FICHE.hp.max} PV
           </span>
           <span>CA {FICHE.ac}</span>
-          <span>Init {FICHE.initiative}</span>
           <span>{FICHE.vitesse}</span>
           <span>Maîtrise {FICHE.maitrise}</span>
         </div>
       </div>
 
-      {/* Les six caractéristiques : chacune son score, son modificateur et
-          sa sauvegarde — cliquables, parce que c'est ici qu'on répond à un
-          jet demandé. */}
+      {/* Caractéristiques : le modificateur lance un TEST, la ligne du bas
+          une SAUVEGARDE. Deux jets distincts, deux cibles de clic. */}
       <div className="grid grid-cols-3 gap-1">
         {FICHE.abilities.map((a) => (
-          <button
-            key={a.key}
-            type="button"
-            className="flex flex-col items-center rounded-md border border-edge py-1 transition-colors hover:bg-panel-raised"
-          >
+          <div key={a.key} className="flex flex-col items-center rounded-md border border-edge py-1">
             <span className="text-xs text-ink-muted">{a.key}</span>
-            <span className="text-sm font-medium text-ink">{a.mod}</span>
-            <span className="text-xs text-ink-muted">
-              {a.score} · JS {a.save}
-            </span>
-          </button>
+            <button
+              type="button"
+              onClick={() => onLancer(`Test de ${a.key}`, Number(a.mod))}
+              className="rounded-md px-2 py-0.5 text-sm font-medium text-ink transition-colors hover:bg-panel-sunken"
+              title={`Lancer un test de ${a.key}`}
+            >
+              {a.mod}
+            </button>
+            <button
+              type="button"
+              onClick={() => onLancer(`Sauvegarde de ${a.key}`, Number(a.save))}
+              className="rounded-md px-2 py-0.5 text-xs text-ink-muted transition-colors hover:bg-panel-sunken"
+              title={`Lancer une sauvegarde de ${a.key}`}
+            >
+              JS {a.save}
+            </button>
+          </div>
         ))}
       </div>
 
@@ -368,7 +410,9 @@ function ColonneFiche() {
           onChange={setOnglet}
           items={[
             { value: "actions", label: "Actions" },
-            { value: "competences", label: "Compétences" },
+            { value: "inventaire", label: "Sac" },
+            { value: "magie", label: "Magie" },
+            { value: "competences", label: "Comp." },
             { value: "traits", label: "Traits" },
           ]}
         />
@@ -382,13 +426,63 @@ function ColonneFiche() {
                     {a.attaque} · {a.degats}
                   </span>
                   <div className="flex gap-1">
-                    <button type="button" className={CHIP}>
+                    <button type="button" className={CHIP} onClick={() => onLancer(`Attaque — ${a.nom}`, Number(a.attaque))}>
                       attaquer
                     </button>
-                    <button type="button" className={CHIP_MUTED}>
+                    <button type="button" className={CHIP_MUTED} onClick={() => onLancer(`Dégâts — ${a.nom}`, 3)}>
                       dégâts
                     </button>
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {onglet === "inventaire" && (
+            <div className="flex flex-col gap-1">
+              {INVENTAIRE.map((o) => (
+                <div key={o.id} className="flex items-start justify-between gap-2 rounded-md border border-edge p-2">
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate text-sm text-ink">{o.nom}</span>
+                    <span className="text-xs text-ink-muted">{o.detail}</span>
+                  </div>
+                  <Checkbox
+                    aria-label={`Équiper ${o.nom}`}
+                    checked={equipes.includes(o.id)}
+                    onChange={() => bascule(equipes, setEquipes, o.id)}
+                  />
+                </div>
+              ))}
+              <p className="mt-1 text-xs text-ink-muted">La case équipe l&apos;objet — une arme équipée entre dans Actions.</p>
+            </div>
+          )}
+
+          {onglet === "magie" && (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-2">
+                {EMPLACEMENTS.map((e) => (
+                  <span key={e.niveau} className={CHIP_MUTED}>
+                    Niv. {e.niveau} : {e.total - e.utilises}/{e.total}
+                  </span>
+                ))}
+              </div>
+              {SORTS.map((s) => (
+                <div key={s.id} className="flex items-start justify-between gap-2 rounded-md border border-edge p-2">
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate text-sm text-ink">{s.nom}</span>
+                    <span className="text-xs text-ink-muted">
+                      {s.niveau === 0 ? "Sort mineur" : `Niveau ${s.niveau}`} · {s.ecole}
+                    </span>
+                  </div>
+                  {s.niveau === 0 ? (
+                    <span className="shrink-0 text-xs text-ink-muted">toujours prêt</span>
+                  ) : (
+                    <Checkbox
+                      aria-label={`Préparer ${s.nom}`}
+                      checked={prepares.includes(s.id)}
+                      onChange={() => bascule(prepares, setPrepares, s.id)}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -400,7 +494,9 @@ function ColonneFiche() {
                 <button
                   key={c.nom}
                   type="button"
-                  className="flex items-center justify-between rounded-md px-1 py-1 transition-colors hover:bg-panel-sunken"
+                  onClick={() => onLancer(c.nom, Number(c.mod))}
+                  className={LIGNE_CLIQUABLE}
+                  title={`Lancer ${c.nom}`}
                 >
                   <span className="text-sm text-ink">{c.nom}</span>
                   <span className="text-sm text-ink-muted">{c.mod}</span>
@@ -431,15 +527,47 @@ function ColonneFiche() {
 
 export default function EsquisseSolo() {
   const [colonne, setColonne] = useState<Colonne>("jeu");
+  const [demande, setDemande] = useState<Demande | null>(PREMIERE_DEMANDE);
+  const [fil, setFil] = useState<FeedItem[]>(FEED);
+  const [tirage, setTirage] = useState(0);
+
+  /**
+   * Un jet lancé depuis la fiche. Il RÉPOND à la demande en cours quand il
+   * y en a une — c'est tout l'intérêt de cliquer là plutôt qu'ailleurs :
+   * un seul chemin vers la résolution, jamais deux.
+   */
+  function lancer(label: string, modificateur: number) {
+    const de = DES_FACTICES[tirage % DES_FACTICES.length];
+    setTirage((t) => t + 1);
+    const total = de + modificateur;
+    const dc = demande?.dc ?? null;
+
+    setFil((precedent) => [
+      ...precedent,
+      {
+        id: `jet-${precedent.length}`,
+        kind: "roll",
+        label,
+        expression: `1d20 ${modificateur >= 0 ? "+" : "−"} ${Math.abs(modificateur)}`,
+        total,
+        dc,
+        verdict: dc === null ? null : total >= dc ? "success" : "fail",
+        trace: [`dé : ${de}`, `modificateur ${modificateur >= 0 ? "+" : "−"}${Math.abs(modificateur)}`],
+        origine: "fiche",
+      },
+    ]);
+    setDemande(null);
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <p className="rounded-lg border border-dashed border-edge px-4 py-1 text-xs text-ink-muted">
-        Esquisse — données factices, à jeter quand V3-D1 arrive.
+        Esquisse — données factices, à jeter quand V3-D1 arrive. Clique un modificateur, une compétence ou une attaque :
+        le jet répond à la demande en cours.
       </p>
 
-      {/* V3-D2 — l'en-tête d'état. Ville · lieu · pièce à gauche, tous
-          tenus par le moteur ; date, heure, météo et la radio à droite. */}
+      {/* V3-D2 — l'en-tête d'état. Ville · lieu · pièce à gauche ; date,
+          heure, météo et radio à droite. */}
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-edge bg-panel px-4 py-2">
         <nav className="flex flex-wrap items-baseline gap-x-2" aria-label="Où se passe la scène">
           <a href="#" className="text-sm font-medium text-link-entity hover:underline">
@@ -450,9 +578,6 @@ export default function EsquisseSolo() {
             {ENTETE.lieu.nom}
           </a>
           <span className="text-ink-muted">·</span>
-          {/* La pièce n'est pas un lien : anecdotique le plus souvent, et
-              quand elle ne l'est pas (salle secrète), elle vit dans un bloc
-              de la fiche du lieu. */}
           <span className="text-sm text-ink-soft">{ENTETE.piece}</span>
         </nav>
 
@@ -468,8 +593,6 @@ export default function EsquisseSolo() {
         </div>
       </header>
 
-      {/* Sous 1024 px : trois onglets. Au-dessus : trois colonnes. Une
-          seule implémentation, deux mises en page. */}
       <div className="lg:hidden">
         <BinderTabs
           aria-label="Colonne affichée"
@@ -483,20 +606,20 @@ export default function EsquisseSolo() {
         />
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(210px,1fr)_minmax(0,2.2fr)_minmax(260px,1.1fr)]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(200px,1fr)_minmax(0,2fr)_minmax(280px,1.2fr)]">
         <section className={`min-h-0 ${colonne === "monde" ? "" : "hidden"} lg:block`}>
           <ColonneMonde />
         </section>
 
         <section className={`flex min-h-0 flex-col gap-3 ${colonne === "jeu" ? "" : "hidden"} lg:flex`}>
           <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-edge bg-panel p-4">
-            <Fil />
+            <Fil items={fil} />
           </div>
-          <Saisie />
+          <Saisie demande={demande} />
         </section>
 
         <section className={`min-h-0 ${colonne === "fiche" ? "" : "hidden"} lg:block`}>
-          <ColonneFiche />
+          <ColonneFiche onLancer={lancer} />
         </section>
       </div>
     </div>

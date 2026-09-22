@@ -235,3 +235,86 @@ export const ORIGINE_LABEL: Record<"fiche" | "volet" | "a la main", string> = {
   volet: "volet de dés",
   "a la main": "annoncé à la main",
 };
+
+// --- Ajouts de la troisième passe -----------------------------------------
+
+export interface Quete {
+  id: string;
+  titre: string;
+  donneur: string;
+  objectifs: { id: string; text: string; done: boolean }[];
+  /** Ce que la quête promet — texte libre, comme dans le bloc `quest`. */
+  recompense?: string;
+}
+
+/** Même forme que le bloc `quest` (V2-H4) : des objectifs cochés ou non, rien de plus. */
+export const QUETES: Quete[] = [
+  {
+    id: "collier",
+    titre: "Le collier des Ventdescartes",
+    donneur: "Lyra Ventdescartes",
+    recompense: "150 pa et une dette de la maison Ventdescartes",
+    objectifs: [
+      { id: "o1", text: "Retrouver la trace du receleur", done: true },
+      { id: "o2", text: "Entrer dans l'entrepôt fermé", done: false },
+      { id: "o3", text: "Rapporter le collier à Lyra", done: false },
+    ],
+  },
+  {
+    id: "dette",
+    titre: "La dette de Grelin",
+    donneur: "toi-même",
+    objectifs: [
+      { id: "o1", text: "Retrouver Grelin à l'Ancre", done: true },
+      { id: "o2", text: "Récupérer les douze pièces d'argent", done: false },
+    ],
+  },
+];
+
+export interface Objet {
+  id: string;
+  nom: string;
+  detail: string;
+  equipe: boolean;
+}
+
+export const INVENTAIRE: Objet[] = [
+  { id: "epee", nom: "Épée longue", detail: "1d8 tranchant · 1,5 kg", equipe: true },
+  { id: "dague", nom: "Dague", detail: "1d4 perforant · finesse · 0,5 kg", equipe: true },
+  { id: "cuir", nom: "Armure de cuir clouté", detail: "CA 12 + Dex · 6,5 kg", equipe: true },
+  { id: "arc", nom: "Arc court", detail: "1d6 perforant · 24/96 m · 1 kg", equipe: false },
+  { id: "corde", nom: "Corde de chanvre (15 m)", detail: "4,5 kg", equipe: false },
+  { id: "outils", nom: "Outils de voleur", detail: "0,5 kg", equipe: false },
+];
+
+export interface Sort {
+  id: string;
+  nom: string;
+  niveau: number;
+  ecole: string;
+  prepare: boolean;
+}
+
+export const SORTS: Sort[] = [
+  { id: "prestidigitation", nom: "Prestidigitation", niveau: 0, ecole: "Transmutation", prepare: true },
+  { id: "main", nom: "Main du mage", niveau: 0, ecole: "Invocation", prepare: true },
+  { id: "charme", nom: "Charme-personne", niveau: 1, ecole: "Enchantement", prepare: true },
+  { id: "deguisement", nom: "Déguisement", niveau: 1, ecole: "Illusion", prepare: false },
+  { id: "image", nom: "Image silencieuse", niveau: 1, ecole: "Illusion", prepare: false },
+];
+
+export const EMPLACEMENTS = [
+  { niveau: 1, total: 4, utilises: 2 },
+  { niveau: 2, total: 2, utilises: 0 },
+];
+
+/**
+ * Des dés factices, tirés d'une liste FIXE.
+ *
+ * Jamais `Math.random()`, même dans une esquisse : dans ce projet le
+ * client ne lance pas les dés (CLAUDE.md, règle 8), et une esquisse qui
+ * prendrait cette habitude la donnerait au vrai écran. Une liste fixe a
+ * en prime le mérite d'être reproductible, et d'éviter un écart entre le
+ * rendu serveur et le rendu client.
+ */
+export const DES_FACTICES = [17, 4, 12, 20, 8, 15, 1, 11, 19, 6];
