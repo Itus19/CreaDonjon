@@ -301,7 +301,21 @@ Le modèle reçoit ces faits et écrit deux phrases.
 
 **Rien n'est appliqué à la cible.** Les PV du gobelin ne bougent pas : appliquer un effet est V3-B2. Le fait est établi et journalisé, ce qui suffit à la narration et permettra de l'appliquer plus tard sans relancer le dé. Dans la même logique, `eventsForAttack` (V3-A2) reste sans appelant — B1 lui fournit enfin ce qui lui manquait, la CA de la cible, mais c'est la boucle de tour qui fera partir ces déclencheurs, comme pour tous les autres.
 
-**Ce qui n'a pas pu être vérifié :** l'écran n'a pas été ouvert dans un navigateur — la session du volet n'est plus authentifiée, et saisir un mot de passe est exclu. `typecheck`, `lint`, `build` et les 1 234 tests passent ; la route répond correctement aux appels anonymes. Le rendu réel de la barre reste à regarder.
+**Vérifié en direct, le 22 septembre, sur la base réelle.** Fiche de contrôle créée dans `ClaudeLand` (le monde jetable), puis supprimée avec ses traces — session, jets, combat, revendication, blocs, entité ; la campagne est revenue à son état d'avant, vérifié ligne par ligne.
+
+| Ce qui a été exercé | Résultat |
+|---|---|
+| « je fouille la piece » | `Test · Investigation` proposé **en frappant**, sans aller-retour |
+| « j'escalade le mur » | `Test · Athlétisme` — le verbe désigne sa compétence |
+| « ce n'est pas ça » → cible `Gobelin 2 — CA 15`, DD 12 | *« Perrin — Athlétisme — test de Force sur Gobelin 2 : 14 (dé : 12, Force +2) contre DD 12 — réussite »*, journalisé en `roll` avec `corrected: true` |
+| « je regarde autour de moi en silence » | Action libre, journalisée en `player_action`, aucun dé |
+| 375 px, panneau de correction ouvert | Aucun débordement horizontal |
+
+Le jet est parti par le vrai chemin partagé : le volet de dés (V2-M11) s'est ouvert tout seul en temps réel avec le d20 et le détail du modificateur — preuve qu'aucune voie parallèle n'a été créée.
+
+**Un défaut trouvé par cette vérification, et corrigé :** le fait affiché contenait `1d20 + {mod}`. `expression` est un gabarit à trou composé pour la persistance — correct dans `dice_rolls`, illisible pour un joueur, et franchement dangereux dans un `fact` : c'est ce texte que le modèle recevra en B2, et un modèle à qui l'on tend `{mod}` finira par l'écrire, ou par en deviner la valeur. Les faits nomment désormais le dé et chaque modificateur (« dé : 12, Force +2 »), depuis la trace et les `chips` — jamais recomposés.
+
+**Une limite connue, qui appartient à B2 :** le fil des tours est un état de composant. Un rechargement le vide, alors que les événements, eux, sont bien en base. Le relire est le travail de la boucle de tour.
 
 **L'écran :** `/m/[worldSlug]/joueur/solo`, septième destination de la coquille joueur. C'est un toit minimal, **pas** le lot D : ni colonne du monde connu, ni fiche à droite. `IntentBar.tsx` est autonome et se déplacera tel quel dans la colonne centrale de V3-D4. La lecture de la phrase tourne dans le navigateur — `interpretIntent` est pur, donc la proposition s'affiche en frappant, sans aller-retour ; le serveur ne reçoit jamais une phrase à interpréter, seulement le **choix** retenu.
 

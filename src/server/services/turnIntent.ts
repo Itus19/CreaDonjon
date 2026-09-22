@@ -204,11 +204,37 @@ function advantageLabel(advantage: AdvantageState): string {
   return "";
 }
 
+/**
+ * Le detail d'un jet, en francais lisible : « d20 : 14, Intelligence +1 ».
+ *
+ * Jamais `expression` — verifie en direct le 22 septembre, il rend
+ * `1d20 + {mod}`, gabarit a trou que `formatFormulaNode` compose pour la
+ * persistance. Correct dans `dice_rolls`, illisible pour un joueur, et
+ * franchement dangereux dans un `fact` : c'est ce texte que le modele
+ * recevra en V3-B2, et un modele a qui l'on tend `{mod}` finira par
+ * l'ecrire dans sa prose ou, pire, par en deviner la valeur.
+ *
+ * Le de vient de la trace, les modificateurs des `chips` — les memes que le
+ * volet de des affiche, jamais recomposes. Le premier pas de trace EST le
+ * d20 : `resolveCheckRoll` compose toujours `d20 + {mod}`, dans cet ordre,
+ * et `action.ts` s'appuie deja sur cette meme garantie pour lire le
+ * naturel obtenu.
+ */
+function rollDetail(trace: RollOutcome["trace"], chips: RollOutcome["chips"]): string {
+  const natural = trace[0];
+  const parts = natural ? [`dé : ${natural.value}`] : [];
+  for (const chip of chips) {
+    if (chip.value === 0) continue;
+    parts.push(`${chip.label} ${chip.value >= 0 ? "+" : "−"}${Math.abs(chip.value)}`);
+  }
+  return parts.length === 0 ? "" : ` (${parts.join(", ")})`;
+}
+
 function factsFromCheck(who: string, roll: RollOutcome, target: IntentTargetDetail | null): string[] {
   const against = target ? ` sur ${target.label}` : "";
   const verdict = roll.verdict === null ? "" : roll.verdict === "success" ? " — réussite" : " — échec";
   const dc = roll.dc === null ? "" : ` contre DD ${roll.dc}`;
-  return [`${who} — ${roll.what}${against} : ${roll.expression} = ${roll.total}${dc}${verdict}.`];
+  return [`${who} — ${roll.what}${against} : ${roll.total}${rollDetail(roll.trace, roll.chips)}${dc}${verdict}.`];
 }
 
 /**
@@ -322,7 +348,7 @@ export async function executeIntent(
     const crit = attack.isCritical ? " — critique" : attack.isCriticalFail ? " — échec critique" : "";
     facts.push(
       `${data.actor.name} attaque ${target ? target.label : "sans cible désignée"} avec ${attackRoll.weaponLabel}` +
-        ` : ${attack.expression} = ${attack.total}${advantageLabel(choice.advantage)}` +
+        ` : ${attack.total} (dé : ${attack.trace[0]?.value ?? attack.total})${advantageLabel(choice.advantage)}` +
         (ac === null ? "" : ` contre CA ${ac} — ${hit ? "touché" : "raté"}`) +
         `${crit}.`
     );
@@ -344,7 +370,7 @@ export async function executeIntent(
         // Le fait est etabli et journalise, ce qui est tout ce dont la
         // narration a besoin — et ce qui permettra de l'appliquer plus tard
         // sans rejouer le de.
-        facts.push(`Dégâts sur ${target?.label ?? "la cible"} : ${damage.expression} = ${damage.total}.`);
+        facts.push(`Dégâts sur ${target?.label ?? "la cible"} : ${damage.total}.`);
       }
     }
 
