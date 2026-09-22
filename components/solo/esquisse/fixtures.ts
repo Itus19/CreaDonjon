@@ -2,14 +2,12 @@
  * V3-D — Données factices de l'esquisse. **Jetable avec elle.**
  *
  * Aucune requête, aucune base : l'écran se juge sur sa densité et sa
- * disposition, pas sur la fraîcheur de ses chiffres. Le backlog le dit —
- * « l'écran se construit contre des données factices sans rien attendre ;
- * c'est même souhaitable, parce que voir l'écran change la conception du
- * reste ».
+ * disposition, pas sur la fraîcheur de ses chiffres.
  *
- * Le contenu reprend la scène du dessin de la section « Le dessin » et du
- * spike S1 (l'Ancre Rouillée, Bram, une elfe taciturne) pour qu'on compare
- * ce qu'on voit à ce qui était prévu.
+ * Deuxième version, après retour de l'auteur : fil compact, marqueurs de
+ * source gardés, et surtout le **vrai déroulé d'un tour** — le joueur dit
+ * ce qu'il veut, le moteur demande un jet, le joueur le fait avec ses
+ * outils ou annonce son dé physique.
  */
 
 export type Discovery = "connu" | "esquisse" | "mentionne";
@@ -19,17 +17,43 @@ export interface WikiEntry {
   name: string;
   group: string;
   discovery: Discovery;
-  /** La fiche ouverte dans la colonne, s'il y en a une. */
-  current?: boolean;
+  /** Le corps de la fiche, tel qu'il s'ouvre DANS la colonne de gauche. */
+  body?: string[];
 }
 
 export const WIKI: WikiEntry[] = [
-  { id: "ancre", name: "L'Ancre Rouillée", group: "Lieux", discovery: "connu", current: true },
-  { id: "quais", name: "Les Quais", group: "Lieux", discovery: "connu" },
+  {
+    id: "port-valdor",
+    name: "Port-Valdor",
+    group: "Lieux",
+    discovery: "connu",
+    body: [
+      "Ville portuaire de sept mille âmes, bâtie sur trois terrasses au-dessus de la baie.",
+      "Le Quartier des Quais en occupe la terrasse basse : entrepôts, tavernes, et la moitié des rixes de la ville.",
+    ],
+  },
+  {
+    id: "ancre",
+    name: "L'Ancre Rouillée",
+    group: "Lieux",
+    discovery: "connu",
+    body: [
+      "Auberge à deux niveaux, poutres basses, une âtre qui tire mal.",
+      "Bram la tient depuis onze ans. Il loge quiconque paie d'avance et ne pose aucune question.",
+      "Salle commune au rez-de-chaussée, quatre chambres à l'étage, une cave dont il ne parle pas.",
+    ],
+  },
+  { id: "quais", name: "Les Quais", group: "Lieux", discovery: "connu", body: ["Six appontements, deux grues à bras."] },
   { id: "entrepot", name: "L'entrepôt fermé", group: "Lieux", discovery: "mentionne" },
-  { id: "bram", name: "Bram le Tavernier", group: "Personnes", discovery: "connu" },
-  { id: "elfe", name: "L'elfe taciturne", group: "Personnes", discovery: "esquisse" },
-  { id: "grelin", name: "Grelin", group: "Personnes", discovery: "connu" },
+  {
+    id: "bram",
+    name: "Bram le Tavernier",
+    group: "Personnes",
+    discovery: "connu",
+    body: ["Tavernier de l'Ancre Rouillée. Cordial, prudent, bien renseigné.", "Attitude envers toi : cordial."],
+  },
+  { id: "elfe", name: "L'elfe taciturne", group: "Personnes", discovery: "esquisse", body: ["Apparue en jouant. Rien d'écrit pour l'instant."] },
+  { id: "grelin", name: "Grelin", group: "Personnes", discovery: "connu", body: ["Docker. Te doit douze pièces d'argent."] },
   { id: "main", name: "La Main de Sel", group: "Factions", discovery: "mentionne" },
 ];
 
@@ -44,6 +68,7 @@ export interface Present {
 export const PRESENTS: Present[] = [
   { id: "bram", name: "Bram", attitude: "cordial", discovery: "connu", zone: "near" },
   { id: "elfe", name: "L'elfe taciturne", attitude: "neutre", discovery: "esquisse", zone: "far" },
+  { id: "gob2", name: "Gobelin 2", attitude: "hostile", discovery: "connu", zone: "engaged" },
 ];
 
 export type Source = "prepare" | "tire" | "narre";
@@ -51,6 +76,10 @@ export type Source = "prepare" | "tire" | "narre";
 export type FeedItem =
   | { id: string; kind: "narration"; text: string; source: Source }
   | { id: string; kind: "player"; text: string }
+  /** La réponse du MJ à une question — n'avance pas le temps, et le dit. */
+  | { id: string; kind: "mj"; text: string }
+  /** Le moteur DEMANDE un jet. Il ne le lance pas : c'est le joueur qui le fait. */
+  | { id: string; kind: "demande"; label: string; detail: string; repondu: boolean }
   | {
       id: string;
       kind: "roll";
@@ -60,14 +89,16 @@ export type FeedItem =
       dc: number | null;
       verdict: "success" | "fail" | null;
       trace: string[];
+      /** « à la main » quand le joueur a annoncé son dé physique. */
+      origine: "fiche" | "volet" | "a la main";
     }
   | { id: string; kind: "rule"; label: string; lines: string[] }
   | { id: string; kind: "world"; text: string; source: Source };
 
 /**
- * Un fil volontairement DENSE : deux tours complets, chacun avec son jet,
- * son application de règle et sa prose. C'est le cas qui sature, donc le
- * seul qui vaille d'être regardé — un fil de trois lignes est joli partout.
+ * Un fil volontairement DENSE, et qui suit le vrai déroulé : intention →
+ * demande de jet → jet fait par le joueur → conséquences → prose. Les
+ * trois façons de répondre à une demande y figurent au moins une fois.
  */
 export const FEED: FeedItem[] = [
   {
@@ -77,8 +108,9 @@ export const FEED: FeedItem[] = [
     text: "Tu pousses la porte. La salle sent la bière et le bois mouillé. Une demi-douzaine de dockers jouent aux dés près de l'âtre, sans lever les yeux.",
   },
   { id: "2", kind: "player", text: "je cherche qui tient le comptoir" },
+  { id: "3", kind: "demande", label: "Perception", detail: "test de Sagesse · DD 12", repondu: true },
   {
-    id: "3",
+    id: "4",
     kind: "roll",
     label: "Perception — test de Sagesse",
     expression: "1d20 + 3",
@@ -86,61 +118,104 @@ export const FEED: FeedItem[] = [
     dc: 12,
     verdict: "success",
     trace: ["dé : 13", "Sagesse +1", "Maîtrise +2"],
+    origine: "fiche",
   },
   {
-    id: "4",
+    id: "5",
     kind: "narration",
     source: "narre",
     text: "Derrière le comptoir, une elfe taciturne essuie des chopes sans te regarder. Bram, lui, t'a vu entrer — il lève un sourcil et repose sa pinte.",
   },
-  { id: "5", kind: "world", source: "tire", text: "L'elfe taciturne entre dans la scène" },
-  { id: "6", kind: "player", text: "je frappe le gobelin qui bloque l'escalier" },
+  { id: "6", kind: "world", source: "tire", text: "L'elfe taciturne entre dans la scène" },
+  { id: "7", kind: "player", text: "est-ce que je peux attaquer et me déplacer dans le même tour ?" },
   {
-    id: "7",
+    id: "8",
+    kind: "mj",
+    text: "Oui. Un tour te donne une action, une action bonus et ton déplacement — tu peux fractionner le déplacement avant et après l'attaque.",
+  },
+  { id: "9", kind: "player", text: "j'attaque le gobelin qui bloque l'escalier" },
+  { id: "10", kind: "demande", label: "Attaque", detail: "épée longue · Gobelin 2 · CA 12", repondu: true },
+  {
+    id: "11",
     kind: "roll",
     label: "Attaque — épée longue · Gobelin 2",
-    expression: "1d20 + 5",
+    expression: "annoncé à la main",
     total: 23,
     dc: 12,
     verdict: "success",
-    trace: ["dé : 18", "Force +3", "Maîtrise +2"],
+    trace: ["dé annoncé : 18", "Force +3", "Maîtrise +2"],
+    origine: "a la main",
   },
+  { id: "12", kind: "demande", label: "Dégâts", detail: "épée longue · 1d8 + 3", repondu: true },
   {
-    id: "8",
-    kind: "rule",
-    label: "Ce que le tour a changé",
-    lines: ["Gobelin 2 : 7 → 2 PV (Dégâts : 5)", "Naivara — action : 1 → 0"],
+    id: "13",
+    kind: "roll",
+    label: "Dégâts — épée longue",
+    expression: "1d8 + 3",
+    total: 5,
+    dc: null,
+    verdict: null,
+    trace: ["dé : 2", "Force +3"],
+    origine: "volet",
   },
+  { id: "14", kind: "rule", label: "Ce que le tour a changé", lines: ["Gobelin 2 : 7 → 2 PV (Dégâts : 5)", "Naivara — action : 1 → 0"] },
   {
-    id: "9",
+    id: "15",
     kind: "narration",
     source: "narre",
     text: "La lame mord l'épaule du gobelin, qui recule en sifflant contre la rampe. Il tient encore debout, de justesse.",
   },
 ];
 
+/** La demande en cours, celle à laquelle l'écran attend une réponse. */
+export const DEMANDE_EN_COURS = {
+  label: "Sauvegarde de Dextérité",
+  detail: "DD 13 · le gobelin te pousse contre la rampe",
+  modificateur: "+3",
+};
+
 export const FICHE = {
-  name: "Naivara",
-  hp: { current: 11, max: 17 },
+  name: "Naivara Amakiir",
+  ligne: "Elfe · Roublarde 4 · Criminelle",
+  hp: { current: 11, max: 17, temp: 0 },
   ac: 14,
   initiative: "+3",
-  slots: { used: 2, total: 4 },
-  inspiration: true,
+  vitesse: "9 m",
+  maitrise: "+2",
+  abilities: [
+    { key: "FOR", score: 10, mod: "+0", save: "+0" },
+    { key: "DEX", score: 17, mod: "+3", save: "+5" },
+    { key: "CON", score: 13, mod: "+1", save: "+1" },
+    { key: "INT", score: 12, mod: "+1", save: "+3" },
+    { key: "SAG", score: 12, mod: "+1", save: "+1" },
+    { key: "CHA", score: 14, mod: "+2", save: "+2" },
+  ],
+  actions: [
+    { nom: "Épée longue", attaque: "+5", degats: "1d8+3 tranchant" },
+    { nom: "Dague", attaque: "+5", degats: "1d4+3 perforant" },
+    { nom: "Arc court", attaque: "+5", degats: "1d6+3 perforant · 24/96 m" },
+  ],
+  competences: [
+    { nom: "Discrétion", mod: "+7" },
+    { nom: "Investigation", mod: "+3" },
+    { nom: "Perception", mod: "+3" },
+    { nom: "Escamotage", mod: "+7" },
+  ],
+  ressources: [
+    { nom: "Attaque sournoise", valeur: "2d6" },
+    { nom: "Inspiration", valeur: "✦" },
+  ],
 };
 
-export const MONDE = {
-  date: "Jour 14 · Ches",
-  lune: "Lune croissante",
-  bourse: "47 pa",
-  quete: "Retrouver le collier des Ventdescartes",
-};
-
+/** L'en-tête : ville, lieu, pièce à gauche ; date, heure, météo à droite. */
 export const ENTETE = {
-  lieu: "L'Ancre Rouillée",
-  quartier: "Quartier des Quais",
+  ville: { nom: "Port-Valdor", wikiId: "port-valdor" },
+  lieu: { nom: "L'Ancre Rouillée", wikiId: "ancre" },
+  piece: "salle commune",
+  date: "Mercredi 12 juillet",
+  heure: "22:15",
   meteo: "Pluie",
-  moment: "Nuit",
-  heure: "23h10",
+  temperature: "14 °C",
 };
 
 export const DISCOVERY_MARK: Record<Discovery, { mark: string; title: string }> = {
@@ -153,4 +228,10 @@ export const SOURCE_MARK: Record<Source, { mark: string; title: string }> = {
   prepare: { mark: "▪", title: "préparé — écrit avant la partie" },
   tire: { mark: "⬦", title: "tiré — sorti d'un générateur, dés réels" },
   narre: { mark: "~", title: "narré — habillé par le modèle, aucun fait inventé" },
+};
+
+export const ORIGINE_LABEL: Record<"fiche" | "volet" | "a la main", string> = {
+  fiche: "depuis la fiche",
+  volet: "volet de dés",
+  "a la main": "annoncé à la main",
 };
