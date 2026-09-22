@@ -176,7 +176,13 @@ export const DEMANDE_EN_COURS = {
 
 export const FICHE = {
   name: "Naivara Amakiir",
-  ligne: "Elfe · Roublarde 4 · Criminelle",
+  /**
+   * La ligne d'identité. L'ÂGE n'a pas de champ typé dans le bloc
+   * `character` : il vit dans une entrée du bloc `infobox` de la fiche,
+   * comme les autres faits d'identité du wiki. L'écran solo le lit là, il
+   * ne l'invente pas.
+   */
+  ligne: "Elfe · Roublarde 4 · Criminelle · 127 ans",
   hp: { current: 11, max: 17, temp: 0 },
   ac: 14,
   initiative: "+3",

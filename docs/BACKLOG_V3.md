@@ -85,7 +85,7 @@ Lot F    la partie qui dure           reprise, sauvegarde, bascule vers une camp
 Lot R    la rapidité, et le téléphone  hors séquence — les restes de l'audit, à tout moment
 ```
 
-> **État au 22 septembre 2026.** S2 est rendu (verdict positif : le lien tient, le lot B peut s'écrire en prose libre). **Le lot A est clos — A1 à A6.** **Le lot B est ouvert : B1 est fait, et la boucle de B2 tourne** — la barre d'intention, l'application des effets, la scène qui avance ; il reste la narration (seconde moitié de B2), puis B3 et B4. Les trois cases du lot A restées décochées sont **désormais tenues par le lot B**, comme annoncé : la scène avance, le budget de tour se tient, et les événements d'attaque ont enfin un appelant. Le lot R l'est aussi, à l'exception de `P‑07`. Les lots C, D, E et F ne sont pas commencés.
+> **État au 22 septembre 2026.** S2 est rendu (verdict positif : le lien tient, le lot B peut s'écrire en prose libre). **Le lot A est clos — A1 à A6.** **Le lot B est ouvert : B1 est fait, et la boucle de B2 tourne** — la barre d'intention, l'application des effets, la scène qui avance ; il reste la narration (seconde moitié de B2), puis B3, B4 et **B5** (la demande de jet, qui corrige la dernière étape de B1). **Le lot D a été réécrit le 22 septembre d'après une esquisse jouable**, reprise sept fois avec l'auteur : ses six tickets décrivent un écran qui a été ouvert et cliqué, plus une intention. Les trois cases du lot A restées décochées sont **désormais tenues par le lot B**, comme annoncé : la scène avance, le budget de tour se tient, et les événements d'attaque ont enfin un appelant. Le lot R l'est aussi, à l'exception de `P‑07`. Les lots C, D, E et F ne sont pas commencés.
 >
 > Ce que le lot A produit : un moteur de déclencheurs pur et borné, 20 événements et 11 effets fermés, un magasin sans table dédiée (bloc `triggers` sur une entrée de ruleset), le câblage des trois jets à verdict, une scène persistée, l'économie d'action, un bac à sable et un formulaire de saisie.
 >
@@ -293,6 +293,8 @@ Le modèle reçoit ces faits et écrit deux phrases.
 
 **Pourquoi ce dessin plutôt qu'un simple champ de texte :** l'ADR a montré qu'une case à cocher facultative ne suffit pas. Ici, la mécanique n'est pas une option qu'on peut oublier — c'est le chemin. Et le joueur y gagne : il voit ce que le moteur a compris avant que ça parte, ce qui supprime la frustration du « ce n'est pas ce que je voulais faire ».
 
+> **Sa dernière étape est dépassée depuis le 22 septembre.** En dessinant le lot D, l'auteur a décrit le vrai déroulé d'une table : le moteur **demande** un jet, et c'est le joueur qui lance — bouton de la fiche, outil de dés, ou dé physique annoncé. Ici « Lancer » résout dans la foulée. Tout le reste de ce ticket tient (l'interprétation, le catalogue, la correction, le journal) ; c'est la résolution qui se scinde, et c'est **V3-B5**.
+
 **Trois décisions prises en écrivant, à lire avant B2.**
 
 **Le repli par le modèle n'est pas écrit, et c'est délibéré.** Le ticket le prévoyait « uniquement pour classer » ; il attend d'être nourri par des cas réels. Le lexique compte une quinzaine d'entrées, chacune justifiée dans `INTENT_VERBS_FR`, et trois familles en sont volontairement absentes (« lancer », ambigu entre le javelot et le sort ; « regarder »/« chercher », trop courants pour ne pas déclencher un jet à contretemps ; les compétences de savoir, qu'aucun verbe ne désigne seul). Ce qu'elles ratent se mesurera en jouant — `intent.corrected` est là pour ça.
@@ -371,6 +373,40 @@ Répond à la répétition verbatim constatée dans le spike (la même réplique
 - [ ] Les *n* dernières narrations entrent dans le contexte avec la consigne explicite de ne pas les répéter.
 - [ ] Détection de similarité côté serveur (mesure simple, pas d'embedding) : au-dessus d'un seuil, un seul nouvel essai, puis on garde le meilleur.
 - [ ] Bouton **« autrement »** : rejoue la narration du *même* fait mécanique. Les dés ne sont pas relancés — c'est ce qui rend le bouton sûr, et c'est possible parce que le résultat est déjà journalisé.
+
+### V3-B5 — Le moteur demande un jet, il ne le lance pas · `L`
+
+*Ouvert le 22 septembre, en dessinant le lot D. **Ce ticket corrige la dernière étape de V3-B1** : il ne la jette pas.*
+
+**Ce que B1 fait aujourd'hui, et pourquoi ça ne tient pas.** La barre d'intention résout le jet dès qu'on appuie sur « Lancer » : le serveur lit l'intention, lance le dé et journalise, en un seul appel. C'est cohérent, c'est testé — et ce n'est pas ainsi qu'on joue. À une table, on annonce ce qu'on fait, **le MJ demande un jet**, et c'est le joueur qui lance, avec ses propres outils ou ses propres dés.
+
+**Le déroulé visé**, tel que l'auteur l'a décrit :
+
+```
+Le joueur écrit :  « j'attaque le gobelin »
+       ↓
+Le moteur DEMANDE :  Attaque · épée longue · Gobelin 2 · CA 12
+       ↓
+Le joueur répond, de trois façons au choix :
+   · un bouton de sa fiche        → le modificateur est connu, il s'ajoute au clic
+   · l'outil de lancer de dés     → le dé arrive NU, le modificateur s'applique après coup
+   · « j'ai fait 12 » dans le champ → même chemin que l'outil, avec un dé physique
+       ↓
+Le moteur encaisse le résultat, applique, journalise, avance l'horloge.
+```
+
+**La garantie du projet tient.** Un dé physique annoncé par le joueur est un nombre **humain**, pas un nombre de modèle : la règle absolue 8 interdit à un modèle de produire un aléa, elle n'a jamais interdit à la table de lancer ses dés. Le journal doit en revanche savoir que ce dé n'est pas venu du serveur — c'est ce que V3-D6 affiche.
+
+- [ ] `executeIntent` se scinde : **proposer une demande** d'un côté, **encaisser un résultat** de l'autre. L'interprétation, le catalogue, la correction et le journal de B1 ne changent pas.
+- [ ] La demande est **persistée** : elle survit à un rechargement, comme la scène. Une partie reprise trois semaines plus tard sait encore ce qu'elle attendait.
+- [ ] Au plus une demande en cours par personnage. Une nouvelle intention **remplace** la précédente plutôt que d'empiler — et l'abandon est journalisé, jamais silencieux.
+- [ ] Les boutons de la fiche et le volet de dés **savent qu'une demande attend** et s'y rattachent. C'est le critère de D5 (« un seul chemin vers la résolution, jamais deux ») porté côté serveur.
+- [ ] Un dé venu de l'outil ou annoncé à la main arrive **nu** : le moteur applique le modificateur, jamais le client. Le `session_event` distingue les trois origines.
+- [ ] Un résultat annoncé est **borné** (1 à 20 pour un d20) et refusé au-delà, avec un message — pas une valeur silencieusement écrêtée.
+- [ ] Un tour peut porter **plusieurs jets** (l'attaque puis les dégâts) : ils partent ensemble.
+- [ ] Les tests de V3-B1 restent verts, ou sont réécrits **en disant pourquoi**. `turnIntent.noAi.test.ts` continue d'interdire tout appel de modèle sur ce chemin.
+
+**Pourquoi `L` et pas `M`** : la demande introduit un état de jeu de plus, donc une forme à décider, un endroit où l'écrire et un cycle de vie (posée, honorée, abandonnée). C'est moins du code que des décisions.
 
 ---
 
@@ -462,78 +498,115 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 
 # Lot D — L'interface solo
 
-*Le dessin proposé par l'auteur — trois colonnes, wiki à gauche, jeu au centre, fiche à droite — est déjà celui de `specs/module-joueur-et-solo.md` §B1. Ce lot le confirme et précise ce que la spec laissait dans le vague.*
+*Réécrit le 22 septembre, d'après l'esquisse jouable. Les six tickets qui suivent ne décrivent plus une intention : ils décrivent un écran qui a été dessiné, ouvert, cliqué et corrigé sept fois avec l'auteur.*
 
 ## Le dessin
 
+**L'esquisse fait foi**, pas cet art ASCII : `components/solo/esquisse/` et la route `/m/[worldSlug]/joueur/solo/esquisse`, à jeter quand D1 arrive. Ce schéma n'en est qu'un rappel.
+
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│  L'Ancre Rouillée · Quartier des Quais    ☁ Pluie   Nuit · 23h10   ⏸  │
-├──────────────────┬───────────────────────────────┬─────────────────────┤
-│ Wiki │PNJ│Règles │                               │  Naivara            │
-│                  │  Tu pousses la porte. La      │  ●●●●●●○○○○  11/17  │
-│ ▸ Lieux          │  salle sent la bière et le    │  CA 14 · Init +3    │
-│   L'Ancre R.  ◆  │  bois mouillé.                │                     │
-│   Les Quais      │                               │  Emplacements ●●○○  │
-│ ▸ Personnes      │  ┌─ 🎲 Perception ─────────┐  │  Inspiration ✦      │
-│   Bram        ◆  │  │ d20+3 = 16 vs DD 12 ✓   │  │                     │
-│   ? (l'elfe)  ○  │  └─────────────────────────┘  │  ▸ Actions          │
-│ ▸ Factions       │                               │  ▸ Sorts            │
-│   La Main…    ◇  │  Derrière le comptoir, une    │  ▸ Sac              │
-│                  │  elfe taciturne essuie des    │                     │
-│ ── Présents ──   │  chopes sans lever les yeux.  │  ── Le monde ──     │
-│ Bram  cordial    │                               │  Jour 14 · Ches     │
-│ ? l'elfe  neutre │  ▸ 2 changements dans le monde│  Lune croissante    │
-│                  │                               │  Or : 47 pa         │
-│                  │ ┌───────────────────────────┐ │  Quête : retrouver  │
-│                  │ │ Que fais-tu ?          🎤 │ │  le collier         │
-│                  │ └───────────────────────────┘ │                     │
-│                  │ ⚔ Attaque · épée · Gobelin 2  │                     │
-└──────────────────┴───────────────────────────────┴─────────────────────┘
-        ◆ connu     ○ esquisse     ◇ mentionné
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ‹ Monde │ Port-Valdor · L'Ancre Rouillée · salle commune                 │
+│         │        Mercredi 12 juillet  22:15  Pluie · 14 °C  ♪   Fiche ›  │
+├────────────────┬───────────────────────────────┬────────────────────────┤
+│ Wiki Quêtes    │  Tu pousses la porte. La      │ Naivara Amakiir [à terre]│
+│ Présents Règles│  salle sent la bière…       ▪ │ Elfe · Roublarde 4 ·    │
+│                │                               │ Criminelle · 127 ans    │
+│ LIEUX          │        je cherche le comptoir │ ███████░░░ 11/17 PV     │
+│ Port-Valdor ◆  │                               │ CA 14 · 9 m · Épuis. 0  │
+│ L'Ancre R.  ◆  │  JET DEMANDÉ Perception · DD 12│ Inspiration ✦          │
+│ L'entrepôt  ◇  │  ┌───────────────────────────┐│ ████░░░░ 2 900 XP       │
+│                │  │PERCEPTION 16 ✓ · fiche    ││ ┌FOR┐┌DEX┐┌CON┐        │
+│ PERSONNES      │  └───────────────────────────┘│ └+0─┘└+3─┘└+1─┘        │
+│ Bram        ◆  │  Derrière le comptoir…      ~ │ ▸ COMPÉTENCES           │
+│ L'elfe      ○  │                               │ Actions Sac Magie       │
+│                │  ┌───────────────────────────┐│ Traits Maîtrises        │
+│ ◆ connu        │  │ Sauvegarde de Dex DD 13 — ││ ┌────────────────────┐  │
+│ ○ esquisse     │  │ lance depuis ta fiche…    ││ │ Épée longue        │  │
+│ ◇ mentionné    │  └───────────────────────────┘│ │ +5 · 1d8+3         │  │
+│                │  [ Jouer ] [ MJ ]             │ │ [attaquer][dégâts] │  │
+└────────────────┴───────────────────────────────┴────────────────────────┘
 ```
+
+**Sept passes avec l'auteur**, et ce que chacune a tranché :
+
+| Ce qui a changé | Pourquoi |
+|---|---|
+| Fil **compact**, trace du jet dépliable | Ce qui encombre n'est pas l'interligne, c'est la trace |
+| Onglets **en classeur** (`BinderTabs`) | Ceux de la fiche jouable — jamais une troisième présentation |
+| **Le moteur demande, il ne lance pas** | C'est le déroulé d'une vraie table (voir V3-B5) |
+| **Un seul champ** pour écrire et pour les jets | Un résultat se voit là où part tout le reste |
+| **Deux boutons**, `Jouer` et `MJ` | Seul `Jouer` fait avancer l'horloge |
+| Repli **depuis le bandeau**, boutons toujours visibles | La commande ne se déplace jamais |
+| Colonnes **sans fond**, encadrés fins | Le haut de la fiche, qui ne pèse rien |
+
+**Deux corrections à des tickets déjà écrits**, nées de l'esquisse :
+
+- **L'adresse de D1 change.** Le ticket d'origine plaçait l'écran hors de la coquille joueur ; l'auteur veut la barre latérale et ses outils. L'écran solo est **une destination de `PlayerShell`**, sous `joueur/`, comme l'écran minimal de V3-B1.
+- **La résolution de V3-B1 est dépassée.** « Lancer » résolvait le jet dans la foulée. Le vrai déroulé passe par une demande, puis une réponse — c'est **V3-B5**, ci-dessus dans le lot B. D1 à D6 le supposent fait.
+
+---
 
 ### V3-D1 — La coquille à trois colonnes · `M`
 
-- [ ] Route `/m/[worldSlug]/solo`, hors de `MondeShell`/`WindowsDesktop` — même décision que la coquille joueur : **le bureau à fenêtres est un paradigme MJ sur grand écran**, pas un écran de jeu.
-- [ ] Reprend la peau du wiki public (`BookSkin`, fond par lieu, jetons de design existants), comme le souhaite l'auteur — mais avec la colonne centrale interactive.
-- [ ] Les trois colonnes se replient indépendamment. Largeurs mémorisées par personne.
-- [ ] **Sous 1024 px, les colonnes deviennent des onglets** (Wiki · Jeu · Fiche), barre en bas, zone du pouce. Même méthode que `PlayerShell`, déjà éprouvée — pas une seconde implémentation.
-- [ ] Sous 768 px, l'onglet Jeu est celui qui s'ouvre par défaut, et la saisie reste ancrée en bas de l'écran, au-dessus du clavier virtuel.
+- [ ] Route `/m/[worldSlug]/joueur/solo`, **dans `PlayerShell`** : la barre latérale joueur et ses outils restent atteignables en jouant. L'écran minimal de V3-B1 est à cette adresse — ce ticket le remplace, il n'en ouvre pas une seconde.
+- [ ] Trois colonnes en `grid`, la centrale prioritaire (`minmax(0,2fr)`), les latérales bornées (200 px et 280 px au minimum).
+- [ ] **Repli depuis le bandeau**, un bouton à chaque extrémité, **toujours visibles** — qu'on replie ou qu'on déplie, la commande ne bouge pas de place. Le chevron pointe vers ce qui va se passer.
+- [ ] L'animation est celle du volet de dés : 200 ms, échelle et opacité, origine du côté de la colonne. **Piège vérifié le 22 septembre :** `grid-template-columns` n'interpole pas entre `minmax(200px,1fr)` et un `0px` nu — le navigateur reste bloqué sur l'ancienne valeur et la colonne ne se replie jamais. Les deux bornes doivent être des `minmax()` de même forme (`minmax(0px,0fr)` une fois repliée).
+- [ ] Les largeurs et l'état de repli sont **mémorisés par personne**.
+- [ ] **Sous 1024 px, les colonnes deviennent trois onglets** (Monde · Jeu · Fiche), et « Jeu » s'ouvre par défaut. Les classes d'animation du repli sont préfixées `lg:` : une colonne repliée sur grand écran ne doit pas revenir invisible dans son onglet de téléphone.
+- [ ] Sous 768 px, la saisie reste ancrée en bas, au-dessus du clavier virtuel.
+- [ ] Les deux colonnes repliées, **le fil ne s'étale pas** : il se recentre à 80 caractères. Replier sert à enlever le bruit autour, pas à élargir le texte.
 
 ### V3-D2 — L'en-tête d'état · `S`
 
-- [ ] Lieu · météo · moment du jour · heure en jeu. **Tous tenus par le moteur** (critère `module-joueur-et-solo.md` §C : *« Lieu et heure viennent du moteur, jamais d'une sortie du modèle »*).
-- [ ] Un clic sur le lieu ouvre sa fiche dans la colonne gauche.
-- [ ] Bouton pause : suspend la séance, la reprise restitue la scène exacte.
+- [ ] À gauche, **trois niveaux de lieu** : la ville la plus proche, le lieu à l'intérieur, puis la pièce. Les deux premiers sont des liens vers leur fiche ; **la pièce n'en est pas un** — anecdotique le plus souvent, et quand elle ne l'est pas (une salle secrète), elle vit dans un bloc de la fiche du lieu.
+- [ ] À droite, la date en jeu, l'heure, la météo et la température : `Mercredi 12 juillet · 22:15 · Pluie · 14 °C`. La date vient du calendrier du monde (`formatGameDate`), l'heure de `SceneState.time`.
+- [ ] **La météo et la température n'existent pas encore** — c'est V3-C6. Tant qu'il n'est pas fait, l'en-tête les omet plutôt que d'afficher une valeur inventée.
+- [ ] Tout à droite, la radio d'ambiance : `RadioWidget`, le composant existe.
+- [ ] **Tout y est tenu par le moteur** (critère `module-joueur-et-solo.md` §C). Un modèle ne décide ni du lieu ni de l'heure.
 
 ### V3-D3 — La colonne gauche : le monde connu · `M`
 
-- [ ] Trois onglets : **Wiki** (filtré par les découvertes), **Présents** (qui est dans la scène, avec sa bande d'attitude en un mot), **Règles** (recherche dans le ruleset — l'écran de règles existant, en version étroite).
-- [ ] **Un marqueur de niveau de découverte sur chaque entrée** : connu, esquisse, mentionné. Le joueur sait ce qui est établi et ce qui vient d'apparaître.
-- [ ] Un PNJ présent qui n'est encore qu'une esquisse s'affiche comme tel, avec un bouton « garder » qui l'ancre en fiche (V3-C2).
-- [ ] Aucun composant nouveau pour le wiki : c'est le rendu du wiki public, avec un filtre de plus.
+- [ ] **Quatre onglets de classeur** : Wiki, Quêtes, Présents, Règles.
+- [ ] **Le wiki se navigue DANS la colonne.** Une fiche connue s'ouvre sur place, avec le chemin pour revenir (`← Lieux`) et un lien vers la fiche entière. Une fiche seulement *mentionnée* n'est pas cliquable : il n'y a rien à ouvrir.
+- [ ] **Un marqueur de découverte sur chaque entrée** : connu `◆`, esquisse `○`, mentionné `◇`, avec leur légende en pied de liste.
+- [ ] **Quêtes** : les blocs `quest` en cours, avec leurs objectifs cochés ou non, le compte (`1/3`), le donneur et la récompense. `listActiveQuestsForWorld` existe depuis la V2 et n'a jamais eu d'appelant — il en a un.
+- [ ] **Présents** : qui est dans la scène, sa bande d'attitude en un mot et sa zone. Un PNJ qui n'est qu'une esquisse s'affiche comme tel, avec « garder cette fiche » qui l'ancre (V3-C2).
+- [ ] **Règles** : l'écran de règles existant, en version étroite. Aucun composant nouveau.
 
 ### V3-D4 — La colonne centrale : le fil et la saisie · `L`
 
-- [ ] Le fil **est** `session_events` rendu, pas un fil de discussion séparé. Recharger la page le reconstruit à l'identique (critère de la spec).
-- [ ] Un rendu par type : narration en prose, action du joueur alignée à droite et discrète, jet en encart compact **avec sa trace**, application de règle repliable, changement du monde en mention discrète.
-- [ ] La saisie porte la barre d'intention de V3-B1 — c'est ici qu'elle vit.
-- [ ] Saisie vocale par la reconnaissance du navigateur : gratuit, aucun token, une commodité de saisie et rien de plus.
-- [ ] Le fil défile automatiquement sauf si l'on a remonté — cas classique et systématiquement raté.
-- [ ] **Une région `aria-live` polie** annonce chaque nouveau tour : c'est le seul écran du produit où le contenu arrive sans action de l'utilisateur (voir F‑08 de l'audit).
+- [ ] Le fil **est** `session_events` rendu. Recharger la page le reconstruit à l'identique — c'est ce qui referme la limite connue de V3-B1, où le fil était un état de composant.
+- [ ] **Un rendu par type** : narration en prose ; action du joueur alignée à droite, discrète ; jet en encart compact **dont la trace se déplie au clic** ; application de règle repliable ; changement du monde en mention discrète ; **réponse du MJ** sur un liseré d'accent, qui dit en toutes lettres qu'elle est hors du temps de jeu.
+- [ ] **Un seul champ de saisie pour tout ce que le joueur envoie** — ce qu'il écrit ET ce qu'il lance. Un jet fait depuis la fiche ou depuis l'outil de dés vient s'y inscrire en texte, à côté de ce qu'il tapait. Il n'y a pas de volet séparé à valider.
+- [ ] Le champ **grandit avec son contenu**, d'une ligne à huit ; les boutons sont dessous. La hauteur suit la **valeur**, pas la frappe : un jet inséré doit faire grandir le champ comme le clavier le ferait.
+- [ ] **Les jets attachés sont au pluriel** : un tour en porte souvent deux, l'attaque puis les dégâts, et ils partent ensemble.
+- [ ] Quand un jet est attendu, **c'est le champ qui le dit** : son texte temporaire devient la demande (`Sauvegarde de Dextérité DD 13 — lance depuis ta fiche, ou écris ton résultat`) et sa bordure passe à l'accent.
+- [ ] **Deux boutons.** `Jouer` joue le tour et fait avancer l'horloge. `MJ` pose une question de scène ou de règle et **ne touche pas au temps de jeu** — c'est cette différence qui justifie deux boutons plutôt qu'un.
+- [ ] **Le moteur devine une question**, et le montre : point d'interrogation ou tournure interrogative en tête de phrase (liste **fermée**, comme le lexique de verbes de V3-B1) → `MJ` passe devant, `Jouer` recule, une ligne l'explique. **Jamais de reroutage silencieux.** Ce que la liste rate tombe du bon côté : une action, donc jamais une horloge qui avance par surprise.
+- [ ] Saisie vocale par la reconnaissance du navigateur : gratuit, aucun token, une commodité et rien de plus.
+- [ ] Le fil défile automatiquement **sauf si l'on a remonté** — cas classique et systématiquement raté.
+- [ ] **Une région `aria-live` polie** annonce chaque nouveau tour : c'est le seul écran du produit où le contenu arrive sans action de l'utilisateur (F‑08 de l'audit).
 
-### V3-D5 — La colonne droite : la fiche et le monde · `M`
+### V3-D5 — La colonne droite : la fiche jouable · `M`
 
-- [ ] La fiche jouable existante, en version étroite. **Mêmes composants, aucun code dupliqué** (critère de la spec) — elle est déjà tenue à 375 px depuis la V1.
-- [ ] Sous la fiche, un encart « Le monde » : date en jeu, phase de lune, bourse, quête active. Ce sont les données que l'auteur demande, et elles viennent toutes de sources existantes.
-- [ ] Les actions de la fiche (attaquer, lancer un sort, se reposer) **alimentent la barre d'intention** au lieu d'agir directement : un seul chemin vers la résolution, jamais deux.
+- [ ] **C'est la fiche jouable, au format étroit** — mêmes composants, aucun code dupliqué. Elle est tenue à 375 px depuis la V1.
+- [ ] **Les cinq onglets de la fiche, avec leur vrai contenu** : Actions, Sac, Magie, Traits (« Aptitudes accordées »), Maîtrises (maîtrises, maîtrise d'armes, langues). Rien n'est inventé ici ; seul le format d'affichage change.
+- [ ] **Six onglets ne tiennent pas dans 300 px** — le dernier se coupe. Les compétences vivent donc sous les caractéristiques, repliées, là où la vraie fiche les met : elles n'y sont pas un onglet non plus.
+- [ ] En tête : le nom, **les états en cours à côté** (`entity_runtime_state.conditions`), la ligne d'identité **avec l'âge** (entrée du bloc `infobox`, il n'a pas de champ typé), la barre de PV, la ligne CA · vitesse · maîtrise · **épuisement · inspiration**, puis **la barre d'XP** avec son seuil de niveau.
+- [ ] Les états et l'inspiration **manquent à la vraie fiche** : c'est **V2.1-26**, à faire avant ou avec ce ticket.
+- [ ] **Le Sac s'ouvre sur la bourse et la charge** — les deux choses qu'on vient y vérifier en jouant. On y équipe un objet ; dans Magie, on y prépare un sort.
+- [ ] **Tout ce qui se lance se clique** : modificateur de caractéristique (un test), sauvegarde, compétence, attaque, dégâts.
+- [ ] **Un jet lancé depuis la fiche répond à la demande en cours** (V3-B5) : un seul chemin vers la résolution, jamais deux.
 
 ### V3-D6 — Ce qui vient d'où · `S`
 
-*Proposition, au-delà de ce qui a été demandé — à garder ou écarter.*
+*Proposition d'origine, **retenue** après l'esquisse : « les marqueurs sont bien informatifs » (auteur, 22 septembre).*
 
-Chaque élément affiché indique discrètement sa source : **préparé** (écrit par l'auteur avant la partie), **tiré** (générateur, avec le dé au survol), **narré** (le modèle). Trois marqueurs minuscules, sans bruit visuel.
+- [ ] Chaque élément du fil indique discrètement sa source : **préparé** `▪` (écrit avant la partie), **tiré** `⬦` (générateur, avec le dé au survol), **narré** `~` (le modèle).
+- [ ] Un jet dit d'où il vient : **depuis la fiche**, **volet de dés**, **annoncé à la main**. La distinction compte : un dé annoncé n'a pas été lancé par le serveur, et le journal doit le savoir.
+- [ ] **Le placement reste à régler.** Posé en fin de paragraphe, le marqueur se lit comme une coquille (« il repose sa pinte. ~ »). Essayer en tête de bloc, ou en liseré de bordure, avant de figer.
 
 Pourquoi ça vaut la peine : en solo, la première question qui vient est *« est-ce que j'ai inventé ça ou est-ce que c'est canon ? »*. Y répondre d'un coup d'œil est ce qui permet de faire confiance au monde. Et c'est presque gratuit : la source est déjà dans le journal.
 
