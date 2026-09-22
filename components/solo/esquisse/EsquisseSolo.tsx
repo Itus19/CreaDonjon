@@ -34,8 +34,9 @@ import {
  *   depuis une caractéristique ou une compétence. Il n'entre dans la
  *   partie qu'au bouton **Utiliser**. Un résultat vu avant d'être engagé,
  *   c'est la même idée que la proposition mécanique de V3-B1.
- * - **Trois façons de replier les colonnes**, à essayer en haut de
- *   l'écran : poignées, bandeau, superposition.
+ * - **Les colonnes se replient depuis le bandeau**, par deux boutons
+ *   posés à ses extrémités et toujours visibles. Elles s'effacent avec
+ *   la meme animation que le volet de des (200 ms, echelle + opacite).
  *
  * Les dés sortent d'une liste fixe (`DES_FACTICES`) : dans ce projet le
  * client ne lance pas les dés.
@@ -54,7 +55,6 @@ const LIGNE_CLIQUABLE =
   "flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-panel-sunken";
 
 type Colonne = "monde" | "jeu" | "fiche";
-type ModeRepli = "poignees" | "bandeau" | "superposition";
 
 interface Demande {
   label: string;
@@ -70,6 +70,12 @@ interface JetEnAttente {
   modificateur: number;
   total: number;
   dc: number | null;
+  /**
+   * D'où vient le dé. `fiche` : le modificateur était connu au moment du
+   * clic, il s'est ajouté tout seul. `outil` : le dé est arrivé nu, et
+   * c'est le volet qui l'a rattaché à la demande en cours.
+   */
+  origine: "fiche" | "outil";
 }
 
 const PREMIERE_DEMANDE: Demande = {
@@ -341,42 +347,57 @@ function VoletDes({
   jet,
   demande,
   onUtiliser,
-  onRelancer,
+  onLancerDansOutil,
 }: {
   jet: JetEnAttente | null;
   demande: Demande | null;
   onUtiliser: () => void;
-  onRelancer: () => void;
+  onLancerDansOutil: () => void;
 }) {
   const verdict = jet && jet.dc !== null ? (jet.total >= jet.dc ? "réussite" : "échec") : null;
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-edge bg-panel px-3 py-2">
       <span className="text-xs uppercase tracking-wide text-ink-muted">Volet de dés</span>
+
       {jet === null ? (
-        <span className="text-sm text-ink-muted">
-          {demande ? `en attente — ${demande.label}` : "aucun jet en attente"}
-        </span>
+        <>
+          <span className="text-sm text-ink-muted">
+            {demande
+              ? `en attente — ${demande.label} (${demande.modificateur >= 0 ? "+" : "−"}${Math.abs(demande.modificateur)})`
+              : "aucun jet en attente"}
+          </span>
+          {/* Commande d'ESQUISSE : elle tient lieu du vrai volet de dés,
+              qu'on ne peut pas piloter d'ici. En vrai, le d20 lancé dans
+              l'outil arrive tout seul par ce chemin. */}
+          <button
+            type="button"
+            onClick={onLancerDansOutil}
+            className="ml-auto rounded-full border border-dashed border-edge px-3 py-1 text-xs text-ink-muted transition-colors hover:bg-panel-raised"
+          >
+            simuler un d20 lancé dans l&apos;outil
+          </button>
+        </>
       ) : (
         <>
           <span className="text-sm text-ink">{jet.label}</span>
           <span className="text-base font-medium text-ink">{jet.total}</span>
+          {/* D'où vient le dé, et comment le compte s'est fait. Le dire
+              importe : un dé venu de l'outil a été rattaché APRÈS coup à
+              ce qui était attendu. */}
           <span className="text-xs text-ink-muted">
-            dé {jet.de} {jet.modificateur >= 0 ? "+" : "−"} {Math.abs(jet.modificateur)}
+            {jet.origine === "outil" ? "dé de l'outil" : "dé"} {jet.de} {jet.modificateur >= 0 ? "+" : "−"}{" "}
+            {Math.abs(jet.modificateur)}
+            {jet.origine === "outil" && jet.modificateur !== 0 ? " (modificateur appliqué ici)" : ""}
           </span>
           {verdict && (
             <span className={`text-xs ${verdict === "réussite" ? "text-success" : "text-danger"}`}>
               contre DD {jet.dc} — {verdict}
             </span>
           )}
-          <div className="ml-auto flex gap-2">
-            <button type="button" className={CHIP_MUTED} onClick={onRelancer}>
-              relancer
-            </button>
-            <button type="button" className={BTN_ACCENT} onClick={onUtiliser}>
-              Utiliser
-            </button>
-          </div>
+          <button type="button" className={`${BTN_ACCENT} ml-auto`} onClick={onUtiliser}>
+            Utiliser
+          </button>
         </>
       )}
     </div>
@@ -611,34 +632,51 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
 }
 
 // ---------------------------------------------------------------------------
-// Le repli des colonnes — trois propositions
+// Le repli des colonnes
 // ---------------------------------------------------------------------------
 
-/** La poignée qui reste quand une colonne est repliée, mode « poignées ». */
-function Poignee({ cote, label, onOuvrir }: { cote: "gauche" | "droite"; label: string; onOuvrir: () => void }) {
+/**
+ * Le bouton de repli, aux deux extrémités du bandeau et **toujours
+ * visible** — qu'on replie ou qu'on déplie, la commande ne bouge jamais
+ * de place. C'est ce qui manquait aux trois propositions précédentes :
+ * les poignées apparaissaient et disparaissaient, le bandeau n'affichait
+ * le bouton qu'une fois la colonne fermée.
+ *
+ * Le chevron pointe vers ce qui va se passer : vers l'extérieur quand la
+ * colonne va se replier, vers l'intérieur quand elle va s'ouvrir.
+ */
+function BoutonRepli({
+  cote,
+  label,
+  repliee,
+  onBasculer,
+}: {
+  cote: "gauche" | "droite";
+  label: string;
+  repliee: boolean;
+  onBasculer: () => void;
+}) {
+  const versExterieur = cote === "gauche" ? "‹" : "›";
+  const versInterieur = cote === "gauche" ? "›" : "‹";
   return (
     <button
       type="button"
-      onClick={onOuvrir}
-      title={`Déplier ${label}`}
-      className="flex h-full w-8 flex-col items-center justify-center gap-2 rounded-lg border border-edge bg-panel text-xs text-ink-muted transition-colors hover:bg-panel-raised"
+      onClick={onBasculer}
+      aria-expanded={!repliee}
+      title={`${repliee ? "Déplier" : "Replier"} ${label}`}
+      className={`shrink-0 rounded-full border px-3 py-1 text-xs transition-colors ${
+        repliee ? "border-edge text-ink-muted hover:bg-panel-raised" : "border-accent text-accent"
+      }`}
     >
-      <span aria-hidden>{cote === "gauche" ? "›" : "‹"}</span>
-      <span className="[writing-mode:vertical-rl]">{label}</span>
-    </button>
-  );
-}
-
-/** Le bouton de repli posé dans l'angle d'une colonne ouverte. */
-function BoutonReplier({ cote, onReplier }: { cote: "gauche" | "droite"; onReplier: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onReplier}
-      title="Replier cette colonne"
-      className="absolute right-1 top-1 z-10 rounded-md px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-panel-raised"
-    >
-      {cote === "gauche" ? "‹" : "›"}
+      {cote === "gauche" ? (
+        <>
+          {repliee ? versInterieur : versExterieur} {label}
+        </>
+      ) : (
+        <>
+          {label} {repliee ? versInterieur : versExterieur}
+        </>
+      )}
     </button>
   );
 }
@@ -654,26 +692,54 @@ export default function EsquisseSolo() {
   const [tirage, setTirage] = useState(0);
   const [jetEnAttente, setJetEnAttente] = useState<JetEnAttente | null>(null);
 
-  const [mode, setMode] = useState<ModeRepli>("poignees");
   const [gaucheRepliee, setGaucheRepliee] = useState(false);
   const [droiteRepliee, setDroiteRepliee] = useState(false);
 
-  /** Un jet tombe TOUJOURS dans le volet d'abord — il n'entre dans la partie qu'au bouton « Utiliser ». */
+  /**
+   * Un jet lancé DEPUIS LA FICHE : le modificateur est connu, il s'ajoute
+   * tout de suite. Le résultat tombe dans le volet, jamais directement
+   * dans la partie.
+   */
   function lancer(label: string, modificateur: number) {
     const de = DES_FACTICES[tirage % DES_FACTICES.length];
     setTirage((t) => t + 1);
-    setJetEnAttente({ label, de, modificateur, total: de + modificateur, dc: demande?.dc ?? null });
+    setJetEnAttente({
+      label,
+      de,
+      modificateur,
+      total: de + modificateur,
+      dc: demande?.dc ?? null,
+      origine: "fiche",
+    });
   }
 
-  function relancer() {
-    if (!jetEnAttente) return;
-    lancer(jetEnAttente.label, jetEnAttente.modificateur);
+  /**
+   * Un dé lancé DANS L'OUTIL : il arrive nu. Le volet le rattache à ce
+   * qui était attendu et applique le modificateur **après coup** — c'est
+   * la seconde façon de répondre à une demande, et elle vaut aussi pour
+   * un dé physique annoncé.
+   *
+   * Sans demande en cours, le dé reste nu : rien à quoi le rattacher, et
+   * on n'invente pas un modificateur.
+   */
+  function lancerDansOutil() {
+    const de = DES_FACTICES[tirage % DES_FACTICES.length];
+    setTirage((t) => t + 1);
+    const modificateur = demande?.modificateur ?? 0;
+    setJetEnAttente({
+      label: demande?.label ?? "Jet libre",
+      de,
+      modificateur,
+      total: de + modificateur,
+      dc: demande?.dc ?? null,
+      origine: "outil",
+    });
   }
 
   /** « Utiliser » : c'est ici, et seulement ici, que le résultat entre dans la partie. */
   function utiliser() {
     if (!jetEnAttente) return;
-    const { label, de, modificateur, total, dc } = jetEnAttente;
+    const { label, de, modificateur, total, dc, origine } = jetEnAttente;
     setFil((precedent) => [
       ...precedent,
       {
@@ -684,68 +750,59 @@ export default function EsquisseSolo() {
         total,
         dc,
         verdict: dc === null ? null : total >= dc ? "success" : "fail",
-        trace: [`dé : ${de}`, `modificateur ${modificateur >= 0 ? "+" : "−"}${Math.abs(modificateur)}`],
-        origine: "volet",
+        trace: [
+          `dé${origine === "outil" ? " (outil)" : ""} : ${de}`,
+          `modificateur ${modificateur >= 0 ? "+" : "−"}${Math.abs(modificateur)}`,
+        ],
+        origine: origine === "outil" ? "volet" : "fiche",
       },
     ]);
     setJetEnAttente(null);
     setDemande(null);
   }
 
-  // Le gabarit des colonnes suit le mode et ce qui est replié. En
-  // superposition, les colonnes flottent AU-DESSUS : le centre garde sa
-  // largeur, donc la lecture ne bouge jamais.
-  const superposition = mode === "superposition";
-  const colGauche = superposition || gaucheRepliee ? (mode === "poignees" ? "2rem" : "0") : "minmax(200px,1fr)";
-  const colDroite = superposition || droiteRepliee ? (mode === "poignees" ? "2rem" : "0") : "minmax(280px,1.2fr)";
-  const gaucheVisible = superposition ? !gaucheRepliee : !gaucheRepliee;
-  const droiteVisible = superposition ? !droiteRepliee : !droiteRepliee;
 
-  const panneauFlottant =
-    "absolute inset-y-0 z-20 w-[min(22rem,80vw)] rounded-lg border border-edge-strong bg-panel-raised p-3 shadow-2xl";
+  // Le gabarit des colonnes. La transition sur `grid-template-columns`
+  // fait glisser la largeur ; les colonnes, elles, s'effacent comme le
+  // volet de dés (`transition-all duration-200`, échelle + opacité).
+  //
+  // Les deux bornes sont des `minmax()` de MÊME forme, y compris repliées.
+  // Vérifié en direct le 22 septembre : avec un `0px` nu en face d'un
+  // `minmax(200px,1fr)`, le navigateur n'interpole pas — il reste bloqué
+  // sur l'ancienne valeur, et la colonne ne se replie jamais. Deux
+  // `minmax()` s'interpolent composante par composante.
+  const colGauche = gaucheRepliee ? "minmax(0px,0fr)" : "minmax(200px,1fr)";
+  const colDroite = droiteRepliee ? "minmax(0px,0fr)" : "minmax(280px,1.2fr)";
+  // Variantes préfixées `lg:` : sous 1024 px les colonnes sont des
+  // ONGLETS, et une colonne repliée sur grand écran ne doit pas revenir
+  // invisible dans son onglet de téléphone.
+  const voleeGauche = `origin-left transition-all duration-200 ${
+    gaucheRepliee ? "lg:pointer-events-none lg:scale-95 lg:opacity-0" : "lg:scale-100 lg:opacity-100"
+  }`;
+  const voleeDroite = `origin-right transition-all duration-200 ${
+    droiteRepliee ? "lg:pointer-events-none lg:scale-95 lg:opacity-0" : "lg:scale-100 lg:opacity-100"
+  }`;
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
-      {/* Les commandes de l'ESQUISSE, jamais de l'écran. */}
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-edge px-4 py-2">
-        <span className="text-xs uppercase tracking-wide text-ink-muted">Replier les colonnes</span>
-        <div role="group" aria-label="Façon de replier les colonnes" className="flex gap-1">
-          {(
-            [
-              { value: "poignees", label: "poignées" },
-              { value: "bandeau", label: "bandeau" },
-              { value: "superposition", label: "superposition" },
-            ] as { value: ModeRepli; label: string }[]
-          ).map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              aria-pressed={mode === o.value}
-              onClick={() => {
-                setMode(o.value);
-                // La superposition part colonnes fermées : c'est son idée.
-                setGaucheRepliee(o.value === "superposition");
-                setDroiteRepliee(o.value === "superposition");
-              }}
-              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                mode === o.value ? "border-accent text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
-              }`}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <p className="rounded-lg border border-dashed border-edge px-4 py-1 text-xs text-ink-muted">
+        Esquisse — données factices, à jeter quand V3-D1 arrive.
+      </p>
 
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-edge bg-panel px-4 py-2">
+      {/* V3-D2 — l'en-tête d'état. Les deux boutons de repli sont à ses
+          extrémités et TOUJOURS visibles : la commande ne se déplace
+          jamais, qu'on replie ou qu'on déplie. */}
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-edge bg-panel px-3 py-2">
+        <div className="hidden lg:block">
+          <BoutonRepli
+            cote="gauche"
+            label="Monde"
+            repliee={gaucheRepliee}
+            onBasculer={() => setGaucheRepliee((v) => !v)}
+          />
+        </div>
+
         <nav className="flex flex-wrap items-baseline gap-x-2" aria-label="Où se passe la scène">
-          {/* Mode « bandeau » : la colonne repliée revient ici, sous forme
-              de bouton. Le contrôle quitte la colonne pour l'en-tête. */}
-          {mode !== "poignees" && gaucheRepliee && (
-            <button type="button" className={`${CHIP_MUTED} mr-2`} onClick={() => setGaucheRepliee(false)}>
-              ▸ Monde
-            </button>
-          )}
           <a href="#" className="text-sm font-medium text-link-entity hover:underline">
             {ENTETE.ville.nom}
           </a>
@@ -757,7 +814,7 @@ export default function EsquisseSolo() {
           <span className="text-sm text-ink-soft">{ENTETE.piece}</span>
         </nav>
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-sm text-ink-soft">{ENTETE.date}</span>
           <span className="text-sm text-ink">{ENTETE.heure}</span>
           <span className="text-sm text-ink-soft">
@@ -766,11 +823,15 @@ export default function EsquisseSolo() {
           <button type="button" className={CHIP_MUTED} title="Radio d'ambiance">
             ♪ radio
           </button>
-          {mode !== "poignees" && droiteRepliee && (
-            <button type="button" className={CHIP_MUTED} onClick={() => setDroiteRepliee(false)}>
-              Fiche ◂
-            </button>
-          )}
+        </div>
+
+        <div className="hidden lg:block">
+          <BoutonRepli
+            cote="droite"
+            label="Fiche"
+            repliee={droiteRepliee}
+            onBasculer={() => setDroiteRepliee((v) => !v)}
+          />
         </div>
       </header>
 
@@ -788,82 +849,33 @@ export default function EsquisseSolo() {
       </div>
 
       <div
-        className="relative grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[var(--col-gauche)_minmax(0,2fr)_var(--col-droite)]"
+        className="grid min-h-0 flex-1 grid-cols-1 gap-3 transition-[grid-template-columns] duration-200 lg:grid-cols-[var(--col-gauche)_minmax(0,2fr)_var(--col-droite)]"
         style={{ "--col-gauche": colGauche, "--col-droite": colDroite } as React.CSSProperties}
       >
-        {/* Colonne gauche — repliée, superposée, ou en place. */}
-        {!superposition && (
-          <section className={`relative min-h-0 ${colonne === "monde" ? "" : "hidden"} lg:block`}>
-            {gaucheRepliee ? (
-              mode === "poignees" ? (
-                <Poignee cote="gauche" label="Monde" onOuvrir={() => setGaucheRepliee(false)} />
-              ) : null
-            ) : (
-              <>
-                <div className="hidden lg:block">
-                  <BoutonReplier cote="gauche" onReplier={() => setGaucheRepliee(true)} />
-                </div>
-                <ColonneMonde />
-              </>
-            )}
-          </section>
-        )}
+        <section className={`min-h-0 overflow-hidden ${colonne === "monde" ? "" : "hidden"} lg:block ${voleeGauche}`}>
+          <ColonneMonde />
+        </section>
 
         <section className={`flex min-h-0 flex-col gap-3 ${colonne === "jeu" ? "" : "hidden"} lg:flex`}>
-          {/* Quand les deux colonnes sont repliées, le fil ne s'étale pas :
-              une colonne de prose de 1 100 px ne se lit plus. */}
+          {/* Les deux colonnes repliées, le fil ne s'étale pas : une
+              colonne de prose de 1 200 px ne se lit plus. */}
           <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-edge bg-panel p-4">
             <div className={gaucheRepliee && droiteRepliee ? "mx-auto max-w-[80ch]" : ""}>
               <Fil items={fil} />
             </div>
           </div>
-          <VoletDes jet={jetEnAttente} demande={demande} onUtiliser={utiliser} onRelancer={relancer} />
+          <VoletDes
+            jet={jetEnAttente}
+            demande={demande}
+            onUtiliser={utiliser}
+            onLancerDansOutil={lancerDansOutil}
+          />
           <Saisie demande={demande} />
         </section>
 
-        {!superposition && (
-          <section className={`relative min-h-0 ${colonne === "fiche" ? "" : "hidden"} lg:block`}>
-            {droiteRepliee ? (
-              mode === "poignees" ? (
-                <Poignee cote="droite" label="Fiche" onOuvrir={() => setDroiteRepliee(false)} />
-              ) : null
-            ) : (
-              <>
-                <div className="hidden lg:block">
-                  <BoutonReplier cote="droite" onReplier={() => setDroiteRepliee(true)} />
-                </div>
-                <ColonneFiche onLancer={lancer} />
-              </>
-            )}
-          </section>
-        )}
-
-        {/* Mode superposition : les colonnes flottent au-dessus du centre,
-            qui ne bouge jamais. On les ouvre depuis l'en-tête. */}
-        {superposition && gaucheVisible && (
-          <div className={`${panneauFlottant} left-0 hidden lg:block`}>
-            <button
-              type="button"
-              onClick={() => setGaucheRepliee(true)}
-              className="absolute right-1 top-1 rounded-md px-2 py-1 text-xs text-ink-muted hover:bg-panel-sunken"
-            >
-              ‹
-            </button>
-            <ColonneMonde />
-          </div>
-        )}
-        {superposition && droiteVisible && (
-          <div className={`${panneauFlottant} right-0 hidden lg:block`}>
-            <button
-              type="button"
-              onClick={() => setDroiteRepliee(true)}
-              className="absolute left-1 top-1 rounded-md px-2 py-1 text-xs text-ink-muted hover:bg-panel-sunken"
-            >
-              ›
-            </button>
-            <ColonneFiche onLancer={lancer} />
-          </div>
-        )}
+        <section className={`min-h-0 overflow-hidden ${colonne === "fiche" ? "" : "hidden"} lg:block ${voleeDroite}`}>
+          <ColonneFiche onLancer={lancer} />
+        </section>
       </div>
     </div>
   );
