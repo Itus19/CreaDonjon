@@ -5701,6 +5701,91 @@ de 375 — pas de débordement.
 
 ---
 
+## V2.1-26 — Deux compteurs que la fiche jouable ne montre pas · `S`
+
+### D'où vient ce ticket
+
+Trouvé en dessinant l'écran solo (lot V3-D). En transposant la fiche jouable
+dans la colonne de droite, deux choses manquaient — et pour deux raisons
+opposées : **l'une n'existe nulle part, l'autre existe en base et n'est
+affichée nulle part.** Aucune des deux n'appartient au mode solo ; ce sont des
+manques de la fiche, que le mode solo a seulement rendus visibles.
+
+### Constat 1 — l'inspiration n'existe pas
+
+`grep -i inspiration` sur `src/`, `components/`, `app/`, `lib/` : deux
+occurrences, toutes deux sans rapport (un commentaire de générateur, un
+commentaire de coquille). Ni champ en base, ni affichage, ni action.
+
+Or c'est un compteur de jeu au même titre que l'épuisement, qui est déjà là,
+à quelques lignes près, dans `CharacterSheetHeader.tsx` (rangée de
+`StatBadge`, bloc `Épuisement` avec son `Stepper`).
+
+Ce qu'il faut :
+
+- **Un champ dans `zRuntimeState`** (`src/core/schemas/runtimeState.ts`), et
+  **il doit porter un `.default(0)`**. Sans lui, toutes les lignes
+  `entity_runtime_state` déjà écrites cessent de se relire : `zRuntimeState.parse`
+  est appelé à chaque ouverture de fiche (`characterActions.ts`,
+  `getOrInitializeRuntimeState`). Même motif que `hp_rolls` du bloc
+  `character`, ajouté après coup pour la même raison. **Aucune migration SQL** —
+  `state` est un `jsonb`, seule sa forme Zod change.
+- **Un compteur à côté de l'épuisement**, même gabarit (`w-[6.5rem]`,
+  `Stepper`), pour que les deux se lisent ensemble.
+- **Une action serveur** sur le modèle exact de `changeExhaustion`
+  (`characterActions.ts`) : un `session_event` `world_update` comme toutes les
+  autres mutations de jeu, jamais une écriture directe.
+
+**Une décision à prendre : drapeau ou compteur ?** Le SRD 2024 rend
+l'inspiration héroïque binaire — on l'a ou on ne l'a pas. Beaucoup de tables en
+distribuent plusieurs. Un entier couvre les deux usages, un booléen impose la
+règle officielle. **Recommandation : un entier borné (0 à 5), affiché en
+pastilles** — la borne haute évite qu'un clic répété fasse dériver le compteur,
+et l'entier ne ferme pas la porte à la maison.
+
+### Constat 2 — les états sont en base, et la fiche ne les montre pas
+
+`RuntimeState.conditions: string[]` existe depuis V1-B3, avec son défaut.
+
+Il est **écrit** par `patchCombatParticipant` (`src/server/services/combats.ts`) :
+pour un participant qui porte une entité, le service écrit la ligne de combat
+*et* l'état de jeu de l'entité, en un seul événement. Un PJ marqué « à terre »
+depuis l'écran Initiative a donc bien la condition en base.
+
+Il n'est **lu** nulle part côté fiche : `grep conditions components/` ne
+remonte que l'Initiative et les outils MJ. Conséquence concrète : **le MJ pose
+un état, et le joueur ne le voit pas sur sa propre fiche.**
+
+Ce qu'il faut : de l'affichage, et rien d'autre. Aucun champ, aucune migration.
+Une rangée de pastilles près de l'identité, en `danger` — un état n'est pas une
+décoration. Le nom lisible se résout comme ailleurs (`listConditionNames`,
+`combats.ts`), **jamais une clé brute affichée telle quelle**.
+
+**Hors périmètre, et c'est délibéré : poser ou retirer un état depuis la
+fiche.** Aujourd'hui les états arrivent du combat ; laisser le joueur en retirer
+un sans que le MJ le sache est une décision de produit, pas d'affichage. À
+rouvrir au vu de l'usage, une fois qu'on les aura vus.
+
+### Critères d'acceptation
+
+- [ ] `zRuntimeState` porte l'inspiration avec un `.default(0)`, et une fiche
+      dont la ligne `entity_runtime_state` est antérieure s'ouvre sans erreur —
+      vérifié sur une ligne réelle, pas seulement en test.
+- [ ] Le compteur d'inspiration est à côté de l'épuisement, même gabarit, et se
+      modifie par les mêmes `Stepper`.
+- [ ] La mutation passe par une action serveur validée par Zod et journalisée en
+      `session_event` — jamais d'écriture directe depuis le client.
+- [ ] Les états en cours s'affichent sur la fiche, avec leur nom lisible, et
+      disparaissent quand la condition est retirée depuis l'Initiative.
+- [ ] Aucune migration SQL dans ce ticket. Si l'un des deux points semble en
+      exiger une, c'est que quelque chose a été mal compris — s'arrêter et le
+      dire.
+- [ ] Les quatre modes et le contraste élevé testés ; lisible à 375 px ; rien
+      sous `text-xs` ; aucune cible de clic sous 24 px.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+
+---
+
 ## Ordre suivi
 
 Aucune dépendance technique dure entre ces cinq tickets. Fait dans l'ordre
