@@ -11,7 +11,14 @@ import {
   FEED,
   FICHE,
   INVENTAIRE,
+  APTITUDES,
+  BOURSE,
+  CHARGE,
+  COMPTEURS,
+  ETATS,
+  MAITRISES,
   ORIGINE_LABEL,
+  PROGRESSION,
   PRESENTS,
   QUETES,
   SORTS,
@@ -446,13 +453,32 @@ function Saisie({
 // Colonne droite — la fiche jouable
 // ---------------------------------------------------------------------------
 
-type OngletFiche = "actions" | "inventaire" | "magie" | "competences" | "traits";
+
+/**
+ * La colonne de droite EST la fiche jouable, au format étroit.
+ *
+ * Les six onglets reprennent ceux de `PlayableCharacterSheet` — Actions,
+ * Sac, Magie, Traits, Maîtrises — et leur contenu est celui de leurs
+ * vrais onglets : « Aptitudes accordées » pour Traits, maîtrises /
+ * maîtrise d'armes / langues pour Maîtrises, la bourse et la charge en
+ * tête du Sac. Rien n'est inventé ici ; seul le format change.
+ *
+ * Les compétences ont leur propre onglet, que la vraie fiche n'a pas :
+ * elles y vivent dans le bandeau, qui ne tient pas dans 300 px.
+ */
+type OngletFiche = "actions" | "inventaire" | "magie" | "traits" | "maitrises";
+
+function SectionTitre({ children }: { children: React.ReactNode }) {
+  return <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{children}</span>;
+}
 
 function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: number) => void }) {
   const [onglet, setOnglet] = useState<OngletFiche>("actions");
   const [equipes, setEquipes] = useState(INVENTAIRE.filter((o) => o.equipe).map((o) => o.id));
   const [prepares, setPrepares] = useState(SORTS.filter((s) => s.prepare).map((s) => s.id));
-  const pct = Math.round((FICHE.hp.current / FICHE.hp.max) * 100);
+  const pctPv = Math.round((FICHE.hp.current / FICHE.hp.max) * 100);
+  const pctXp = Math.round((PROGRESSION.xp / PROGRESSION.seuilNiveauSuivant) * 100);
+  const pctCharge = Math.round((CHARGE.porte / CHARGE.capacite) * 100);
 
   function bascule(liste: string[], set: (v: string[]) => void, id: string) {
     set(liste.includes(id) ? liste.filter((x) => x !== id) : [...liste, id]);
@@ -461,22 +487,49 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <span className="font-chrome text-base font-medium text-ink">{FICHE.name}</span>
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="font-chrome text-base font-medium text-ink">{FICHE.name}</span>
+          {/* Les états en cours, à côté du nom : ils viennent de
+              `entity_runtime_state.conditions`, qui existe depuis la V1 et
+              que la fiche n'affiche nulle part. */}
+          {ETATS.map((etat) => (
+            <span key={etat} className="rounded-full border border-danger px-2 py-0.5 text-xs text-danger">
+              {etat}
+            </span>
+          ))}
+        </div>
         <span className="text-xs text-ink-muted">{FICHE.ligne}</span>
       </div>
 
       <div className="flex flex-col gap-1">
         <div className="h-2 w-full overflow-hidden rounded-full bg-panel-sunken">
-          <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+          <div className="h-full rounded-full bg-accent" style={{ width: `${pctPv}%` }} />
         </div>
-        <div className="flex flex-wrap gap-x-3 text-xs text-ink-muted">
+        <div className="flex flex-wrap items-center gap-x-3 text-xs text-ink-muted">
           <span>
             {FICHE.hp.current}/{FICHE.hp.max} PV
           </span>
           <span>CA {FICHE.ac}</span>
           <span>{FICHE.vitesse}</span>
           <span>Maîtrise {FICHE.maitrise}</span>
+          <span>Épuisement {COMPTEURS.epuisement}</span>
+          {/* L'inspiration MANQUE à la vraie fiche — à ajouter à la suite
+              de l'épuisement, et elle demande un champ de plus dans
+              `RuntimeState`. */}
+          <span className={COMPTEURS.inspiration > 0 ? "text-accent" : undefined}>
+            Inspiration {COMPTEURS.inspiration > 0 ? "✦".repeat(COMPTEURS.inspiration) : "—"}
+          </span>
         </div>
+
+        {/* La barre d'expérience, sous les compteurs — celle du bandeau de
+            la fiche, avec son seuil de niveau. */}
+        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-panel-sunken">
+          <div className="h-full rounded-full bg-accent" style={{ width: `${pctXp}%` }} />
+        </div>
+        <span className="text-xs text-ink-muted">
+          {PROGRESSION.xp.toLocaleString("fr-FR")} XP · niveau {PROGRESSION.niveau + 1} à{" "}
+          {PROGRESSION.seuilNiveauSuivant.toLocaleString("fr-FR")}
+        </span>
       </div>
 
       <div className="grid grid-cols-3 gap-1">
@@ -503,6 +556,31 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
         ))}
       </div>
 
+      {/* Les compétences suivent les caractéristiques, comme dans la vraie
+          fiche — elles n'y sont pas un onglet. Repliées par défaut : six
+          onglets ne tiennent pas dans 300 px (le dernier se coupait), et
+          la liste complète mangerait la colonne. Chaque ligne lance son
+          jet, comme les caractéristiques au-dessus. */}
+      <details className="rounded-md border border-edge px-2 py-1.5">
+        <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-ink-muted">
+          Compétences
+        </summary>
+        <div className="mt-1 flex flex-col gap-0.5">
+          {FICHE.competences.map((c) => (
+            <button
+              key={c.nom}
+              type="button"
+              onClick={() => onLancer(c.nom, Number(c.mod))}
+              className={LIGNE_CLIQUABLE}
+              title={`Lancer ${c.nom}`}
+            >
+              <span className="text-sm text-ink">{c.nom}</span>
+              <span className="text-sm text-ink-muted">{c.mod}</span>
+            </button>
+          ))}
+        </div>
+      </details>
+
       <div className="flex min-h-0 flex-1 flex-col">
         <BinderTabs
           aria-label="Sections de la fiche"
@@ -512,8 +590,8 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
             { value: "actions", label: "Actions" },
             { value: "inventaire", label: "Sac" },
             { value: "magie", label: "Magie" },
-            { value: "competences", label: "Comp." },
             { value: "traits", label: "Traits" },
+            { value: "maitrises", label: "Maîtrises" },
           ]}
         />
         <div className={`${CLASSEUR} min-h-0 flex-1 overflow-y-auto`}>
@@ -539,7 +617,35 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
           )}
 
           {onglet === "inventaire" && (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
+              {/* La bourse et la charge ouvrent le sac, comme dans
+                  `InventoryPanel` : ce sont les deux choses qu'on vient y
+                  vérifier en jouant. */}
+              <div className="flex flex-wrap gap-1">
+                {BOURSE.map((piece) => (
+                  <span
+                    key={piece.code}
+                    className={`rounded-full border border-edge px-2 py-0.5 text-xs ${
+                      piece.valeur > 0 ? "text-ink" : "text-ink-muted"
+                    }`}
+                  >
+                    {piece.valeur} {piece.code}
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-0.5">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-panel-sunken">
+                  <div
+                    className={`h-full rounded-full ${CHARGE.palier === "none" ? "bg-accent" : "bg-danger"}`}
+                    style={{ width: `${pctCharge}%` }}
+                  />
+                </div>
+                <span className="text-xs text-ink-muted">
+                  Charge : {CHARGE.porte} / {CHARGE.capacite} kg{CHARGE.palier !== "none" ? " — encombré" : ""}
+                </span>
+              </div>
+
               {INVENTAIRE.map((o) => (
                 <div key={o.id} className="flex items-start justify-between gap-2 rounded-md border border-edge p-2">
                   <div className="flex min-w-0 flex-col">
@@ -553,7 +659,7 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
                   />
                 </div>
               ))}
-              <p className="mt-1 text-xs text-ink-muted">La case équipe l&apos;objet — une arme équipée entre dans Actions.</p>
+              <p className="text-xs text-ink-muted">La case équipe l&apos;objet — une arme équipée entre dans Actions.</p>
             </div>
           )}
 
@@ -588,31 +694,60 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
             </div>
           )}
 
-          {onglet === "competences" && (
-            <div className="flex flex-col gap-0.5">
-              {FICHE.competences.map((c) => (
-                <button
-                  key={c.nom}
-                  type="button"
-                  onClick={() => onLancer(c.nom, Number(c.mod))}
-                  className={LIGNE_CLIQUABLE}
-                  title={`Lancer ${c.nom}`}
-                >
-                  <span className="text-sm text-ink">{c.nom}</span>
-                  <span className="text-sm text-ink-muted">{c.mod}</span>
-                </button>
+
+          {/* Traits = « Aptitudes accordées », la seule section de l'onglet
+              Traits de la vraie fiche : nom, source, résumé. */}
+          {onglet === "traits" && (
+            <div className="flex flex-col gap-2">
+              <SectionTitre>Aptitudes accordées</SectionTitre>
+              {APTITUDES.map((a) => (
+                <div key={a.nom} className="flex flex-col gap-0.5 rounded-md border border-edge p-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-sm font-medium text-link-rule">{a.nom}</span>
+                    <span className="shrink-0 text-xs uppercase tracking-wide text-ink-muted">{a.source}</span>
+                  </div>
+                  <p className="text-xs leading-snug text-ink-muted">{a.resume}</p>
+                </div>
               ))}
             </div>
           )}
 
-          {onglet === "traits" && (
-            <div className="flex flex-col gap-1">
-              {FICHE.ressources.map((r) => (
-                <div key={r.nom} className="flex items-center justify-between">
-                  <span className="text-sm text-ink">{r.nom}</span>
-                  <span className="text-sm text-ink-muted">{r.valeur}</span>
+          {/* Maîtrises = les trois sections de `MasteriesTab` : maîtrises,
+              maîtrise d'armes, langues. */}
+          {onglet === "maitrises" && (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <SectionTitre>Maîtrises</SectionTitre>
+                <div className="flex flex-wrap gap-1">
+                  {MAITRISES.general.map((m) => (
+                    <span key={m.nom} className={CHIP} title={`Source : ${m.source}`}>
+                      {m.nom}
+                    </span>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <SectionTitre>Maîtrise d&apos;armes</SectionTitre>
+                {MAITRISES.armes.map((m) => (
+                  <div key={m.nom} className="flex items-baseline justify-between gap-2">
+                    <span className="text-sm text-ink">{m.nom}</span>
+                    <span className="text-xs text-ink-muted">{m.botte}</span>
+                  </div>
+                ))}
+                <span className="text-xs text-ink-muted">Remis à zéro à chaque repos long.</span>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <SectionTitre>Langues</SectionTitre>
+                <div className="flex flex-wrap gap-1">
+                  {MAITRISES.langues.map((l) => (
+                    <span key={l.nom} className={CHIP_MUTED} title={`Source : ${l.source}`}>
+                      {l.nom}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>

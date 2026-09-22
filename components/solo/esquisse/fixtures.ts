@@ -318,3 +318,58 @@ export const EMPLACEMENTS = [
  * rendu serveur et le rendu client.
  */
 export const DES_FACTICES = [17, 4, 12, 20, 8, 15, 1, 11, 19, 6];
+
+// --- Ajouts de la sixième passe -------------------------------------------
+//
+// Rien d'inventé ici : ce sont les sections de la VRAIE fiche jouable
+// (`PlayableCharacterSheet` et ses onglets), transposées au format étroit
+// du mode solo. Traits = « Aptitudes accordées » ; Maîtrises = maîtrises,
+// maîtrise d'armes, langues ; le Sac ouvre sur la bourse et la charge,
+// comme `InventoryPanel`.
+
+/** Progression : la barre d'XP du bandeau de la fiche, avec son seuil de niveau. */
+export const PROGRESSION = { xp: 2_900, seuilNiveauSuivant: 6_500, niveau: 4 };
+
+/** Épuisement et inspiration, les deux compteurs du bandeau. L'inspiration MANQUE dans la vraie fiche. */
+export const COMPTEURS = { epuisement: 0, inspiration: 1 };
+
+/** États en cours — `entity_runtime_state.state.conditions`, déjà en base depuis la V1. */
+export const ETATS: string[] = ["à terre"];
+
+/** La bourse, telle que l'onglet Inventaire la montre (abréviations de `CURRENCY_LABELS_FR`). */
+export const BOURSE = [
+  { code: "pp", valeur: 2 },
+  { code: "po", valeur: 47 },
+  { code: "pe", valeur: 0 },
+  { code: "pa", valeur: 18 },
+  { code: "pc", valeur: 65 },
+];
+
+/** La charge : poids porté sur capacité (`computeEncumbrance`, Force × 7,5 kg). */
+export const CHARGE = { porte: 23.5, capacite: 75, palier: "none" as "none" | "encumbered" | "heavily_encumbered" };
+
+/** Onglet Traits — « Aptitudes accordées » : nom, source, résumé. */
+export const APTITUDES = [
+  { nom: "Attaque sournoise", source: "Roublard 1", resume: "2d6 de dégâts supplémentaires une fois par tour, avec avantage ou un allié au contact." },
+  { nom: "Expertise", source: "Roublard 1", resume: "Double le bonus de maîtrise sur deux compétences." },
+  { nom: "Ruse", source: "Roublard 2", resume: "Foncer, Se désengager ou Se cacher en action bonus." },
+  { nom: "Vision dans le noir", source: "Elfe", resume: "Voit dans la pénombre à 18 m comme en plein jour." },
+  { nom: "Ascendance féerique", source: "Elfe", resume: "Avantage contre l'état charmé ; le sommeil magique n'a pas de prise." },
+];
+
+/** Onglet Maîtrises — trois sections, comme `MasteriesTab`. */
+export const MAITRISES = {
+  general: [
+    { nom: "Armes courantes", source: "Roublard" },
+    { nom: "Épée longue", source: "Elfe" },
+    { nom: "Arc court", source: "Elfe" },
+    { nom: "Armures légères", source: "Roublard" },
+    { nom: "Outils de voleur", source: "Roublard" },
+  ],
+  armes: [{ nom: "Épée longue", botte: "Ébranler" }],
+  langues: [
+    { nom: "Commun", source: "Elfe" },
+    { nom: "Elfique", source: "Elfe" },
+    { nom: "Argot des voleurs", source: "Roublard" },
+  ],
+};
