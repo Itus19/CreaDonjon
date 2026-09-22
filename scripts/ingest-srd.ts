@@ -1001,6 +1001,32 @@ const ITEM_DAMAGE_SAVE: Record<string, Record<string, { damage?: { formula: Form
 };
 
 /**
+ * V3-A6 — Declencheurs ecrits a la main pour les regles SRD qui en ont.
+ *
+ * Le JSON du SRD ne porte AUCUNE mecanique de declenchement : elle est en
+ * prose (« au debut de chacun de ses tours... »). `data/srd/triggers-2024.json`
+ * la traduit dans le vocabulaire ferme, entree par entree.
+ *
+ * Lu ici plutot que pose par un script a part : l'import RECREE les blocs
+ * de chaque entree a chaque passage (`app.import_srd_entries`), donc un
+ * bloc ajoute hors import serait efface au prochain `npm run ingest:srd` —
+ * le piege qui vaut deja a `encounter-budget` d'etre rejoue a la main.
+ */
+const SRD_TRIGGERS: Record<string, { triggers?: unknown[] }> = JSON.parse(
+  readFileSync(resolve(process.cwd(), "data/srd/triggers-2024.json"), "utf-8")
+);
+
+function triggersBlock(entryKey: string): EntryBlock | null {
+  const authored = SRD_TRIGGERS[entryKey];
+  if (!authored?.triggers || authored.triggers.length === 0) return null;
+  const data = { triggers: authored.triggers };
+  // Valide ICI : une regle mal ecrite doit arreter l'import, jamais partir
+  // en base pour y etre rejetee silencieusement a la lecture.
+  validateBlockData("triggers", data);
+  return { block_type: "triggers", display: { label: "Déclencheurs", layout: "key_values" }, data, display_order: 200 };
+}
+
+/**
  * Tous les champs du schema sont optionnels (V1-D1) : `null` seulement si
  * aucun n'a pu etre rempli, pour eviter un bloc "present" mais vide de sens
  * (qui masquerait a tort le signal "regle incomplete").
@@ -1865,6 +1891,12 @@ function transformEntry(
     const effects = conditionEffectsBlock(entry);
     if (effects) blocks.push(effects);
   }
+
+  // Independant du type : un declencheur peut vivre sur un poison, une
+  // aptitude ou une condition. La table de `data/srd/triggers-2024.json`
+  // decide, pas une liste de types ici.
+  const triggers = triggersBlock(String(entry.index));
+  if (triggers) blocks.push(triggers);
 
   if (entryType === "subclass") {
     const features = subclassFeaturesBlock(entry);

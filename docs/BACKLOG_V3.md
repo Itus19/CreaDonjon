@@ -221,10 +221,31 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Ce qui n'est pas prouvé par ce test précis** : que *cette* aptitude-là parte sur un vrai jet — elle n'est portée par aucun personnage. Que le moteur fasse partir un déclencheur stocké sur une aptitude réellement possédée a été prouvé séparément lors de la vérification de V3-A2.
 
-### V3-A6 — Convertir les règles SRD qui ont des déclencheurs · `L`
+### V3-A6 — Convertir les règles SRD qui ont des déclencheurs · `L` — **fait le 22 septembre, et il rend un verdict inattendu**
 
-- [ ] Attaque d'opportunité, Second souffle, Rage, Aura de paladin, poison en début de tour, résistances et immunités.
-- [ ] **Tenir le compte des règles inexprimables.** À la troisième, rouvrir la question d'une échappatoire — pas avant (spec §3, la règle des trois).
+- [x] **Le compte est tenu** — `src/core/rules/srdTriggers.test.ts`, sous forme **exécutable** plutôt que sous forme d'affirmation. Chaque règle du ticket y est *écrite*, pas jugée à vue ; ce qui ne passe pas est verrouillé par un test qui **tombera le jour où la capacité manquante sera ajoutée**, pour rappeler de revenir réécrire la règle.
+- [x] Une règle SRD réellement convertie : **Fumées d'othur brûlées** (`burnt-othur-fumes`), sauvegarde CON DD 13 au début de chaque tour, 1d6 de poison à chaque échec. Écrite en **donnée** (`data/srd/triggers-2024.json`), jamais en code — on ajoute une règle en éditant un JSON. Lue par `ingest-srd.ts` plutôt que par un script à part, parce que l'import **recrée les blocs à chaque passage** : un bloc posé hors import serait effacé au prochain `npm run ingest:srd`, le piège qui vaut déjà à `encounter-budget` d'être rejoué à la main.
+
+**Sur les six règles nommées par le ticket, UNE SEULE est exprimable — et même elle, seulement en partie.**
+
+| Règle | Verdict | Ce qui manque |
+|---|---|---|
+| Poison qui ronge (*Fumées d'othur*) | **convertie**, partiellement | « s'arrête après trois réussites » : le moteur ne compte pas d'un tour à l'autre |
+| Aura de paladin | inexprimable | un modificateur **calculé** : `Modifier.value` est un nombre, pas une formule — « + ton modificateur de Charisme » n'a aucune écriture |
+| Rage | inexprimable | un effet **qui dure** : un effet est une proposition ponctuelle, il n'existe aucun « tant que » |
+| Résistances et immunités | inexprimable | **modifier les dégâts subis** : `damage_taken` arrive déjà calculé, et `deal_damage` ne sait qu'ajouter |
+| Attaque d'opportunité | à moitié | **agir** : `movement` + `in_range` détecte l'occasion, `grant_budget` consomme la réaction, mais aucun effet ne déclenche une attaque |
+| Second souffle | hors catégorie | ce n'est pas un déclencheur mais un **choix** du joueur — relève de la barre d'intention (V3-B1) |
+
+**Cinq manques distincts, la règle des trois est donc largement franchie.** Le ticket dit : « à la troisième, rouvrir la question d'une échappatoire ». Elle est rouverte, et c'est une décision de l'auteur, pas une à prendre seul :
+
+1. **Un modificateur dont la valeur est une formule** — `Modifier.value` en `FormulaNode`. Le plus petit des cinq, et il débloque toutes les auras.
+2. **Un effet qui dure** — le plus structurant : il suppose de savoir défaire un effet, donc de le suivre. Touche aussi `entity_active_effects`, table créée en Phase 0 et jamais écrite.
+3. **Modifier un jet en cours** (dégâts subis, et par extension avantage conditionnel) — demande que la résolution mécanique *consulte* les déclencheurs au lieu de seulement les notifier. C'est un changement de sens du moteur.
+4. **Agir depuis un déclencheur** (attaque d'opportunité) — suppose l'économie d'action *appliquée*, donc le lot B.
+5. **Compter d'un tour à l'autre** — un état par déclencheur ; le plus petit besoin, mais il ouvre la porte à un état arbitraire.
+
+**Ce que ce constat ne remet PAS en cause.** Le mécanisme lui-même tient : le cas doré de V3-A1 (la concentration) s'écrit entièrement en données, et le poison converti fonctionne. Ce qui manque n'est pas la forme déclarative, c'est l'**étendue du vocabulaire d'effets** — précisément ce que la spec §3 prévoyait d'élargir au vu de cas concrets, plutôt que de deviner à l'avance. Les cinq ci-dessus sont ces cas concrets.
 
 ---
 

@@ -1,0 +1,39 @@
+{
+  "_lisezmoi": [
+    "V3-A6 — Declencheurs des regles SRD 2024, ecrits a la main.",
+    "Le JSON du SRD ne porte aucune mecanique de declenchement : elle est en prose.",
+    "Ce fichier la traduit, entree par entree, dans le vocabulaire ferme de src/core/rules/triggers.ts.",
+    "Il est DONNEE, jamais code : ingest-srd.ts le lit, il n'y a rien a programmer pour en ajouter un.",
+    "Suivi par Git parce que le SRD est sous CC-BY-4.0 (voir NOTICE.md) — a la difference du contenu",
+    "personnel, qui vit dans data/personnel/ et n'est jamais commite.",
+    "La cle est l'`index` de l'entree SRD. Chaque declencheur est valide par zTrigger a l'import."
+  ],
+
+  "burnt-othur-fumes": {
+    "_regle": "Une creature soumise aux Fumees d'othur brulees refait une sauvegarde de Constitution DD 13 au debut de chacun de ses tours ; a chaque echec, 1d6 degats de poison.",
+    "_nonExprime": "« Apres trois sauvegardes reussies, le poison prend fin » — le moteur ne sait pas compter d'un tour a l'autre. Le poison ne s'arrete donc jamais tout seul : c'est au MJ de retirer la condition. Voir le compte des regles inexprimables, V3-A6.",
+    "triggers": [
+      {
+        "id": "burnt-othur-fumes-par-tour",
+        "when": { "event": "turn_start" },
+        "if": { "op": "has_condition", "who": "self", "key": "burnt-othur-fumes" },
+        "then": [
+          {
+            "action": "saving_throw",
+            "who": "self",
+            "ability": "con",
+            "dc": { "op": "num", "value": 13 },
+            "on_fail": [
+              {
+                "action": "deal_damage",
+                "who": "self",
+                "amount": { "op": "dice", "count": 1, "faces": 6 },
+                "damage_type": "poison"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
