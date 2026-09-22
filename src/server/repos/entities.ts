@@ -111,6 +111,28 @@ export async function getEntityBySlug(
   return data as EntitySummary | null;
 }
 
+/**
+ * Les fiches d'un monde pour un ou plusieurs `entity_kind` (V3-B2 : choisir
+ * le lieu d'une scene, y faire entrer quelqu'un). Triees par nom, parce que
+ * la seule consommatrice est une liste deroulante ou l'on cherche un nom.
+ */
+export async function listEntitiesByKinds(
+  supabase: TypedClient,
+  worldId: string,
+  kinds: readonly string[]
+): Promise<EntitySummary[]> {
+  if (kinds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("entities")
+    .select(ENTITY_COLUMNS)
+    .eq("world_id", worldId)
+    .in("entity_kind", kinds)
+    .is("deleted_at", null)
+    .order("name");
+  if (error) throw new Error(error.message);
+  return data as EntitySummary[];
+}
+
 /** Slugs bruts d'un monde, pour calculer le prochain slug numerique (src/core/slug). */
 export async function listEntitySlugsForWorld(supabase: TypedClient, worldId: string): Promise<string[]> {
   const { data, error } = await supabase.from("entities").select("slug").eq("world_id", worldId);

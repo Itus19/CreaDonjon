@@ -5,8 +5,9 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { buildIntentBarData } from "@/src/server/services/turnIntent";
+import { listSceneChoices, loadSceneView } from "@/src/server/services/soloScene";
 import EmptyState from "@/components/shell/EmptyState";
-import IntentBar from "@/components/solo/IntentBar";
+import SoloScreen from "@/components/solo/SoloScreen";
 import type { Locale } from "@/src/i18n/request";
 
 /**
@@ -65,6 +66,11 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
     );
   }
 
+  const [scene, choices] = await Promise.all([
+    loadSceneView(supabase, campaign.id),
+    listSceneChoices(supabase, world.id),
+  ]);
+
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -76,7 +82,15 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
         </p>
       </header>
 
-      <IntentBar worldSlug={worldSlug} campaignId={campaign.id} entityId={entityId} data={data} />
+      <SoloScreen
+        worldSlug={worldSlug}
+        campaignId={campaign.id}
+        entityId={entityId}
+        data={data}
+        scene={scene}
+        locations={choices.locations}
+        candidates={choices.candidates}
+      />
     </div>
   );
 }

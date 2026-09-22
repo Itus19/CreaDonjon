@@ -85,7 +85,7 @@ Lot F    la partie qui dure           reprise, sauvegarde, bascule vers une camp
 Lot R    la rapidité, et le téléphone  hors séquence — les restes de l'audit, à tout moment
 ```
 
-> **État au 22 septembre 2026.** S2 est rendu (verdict positif : le lien tient, le lot B peut s'écrire en prose libre). **Le lot A est clos — A1 à A6.** **Le lot B est ouvert : B1 est fait** — la barre d'intention, son écran solo minimal, et le journal du tour ; B2 à B4 restent. Trois cases y restent décochées et le resteront : elles décrivent du câblage qui **appartient au lot B**, pas au lot A (faire avancer la scène, tenir un budget de tour, émettre les événements de combat). Le lot A fournit l'état et les opérations ; la boucle de tour les appellera. Le lot R l'est aussi, à l'exception de `P‑07`. Les lots C, D, E et F ne sont pas commencés.
+> **État au 22 septembre 2026.** S2 est rendu (verdict positif : le lien tient, le lot B peut s'écrire en prose libre). **Le lot A est clos — A1 à A6.** **Le lot B est ouvert : B1 est fait, et la boucle de B2 tourne** — la barre d'intention, l'application des effets, la scène qui avance ; il reste la narration (seconde moitié de B2), puis B3 et B4. Les trois cases du lot A restées décochées sont **désormais tenues par le lot B**, comme annoncé : la scène avance, le budget de tour se tient, et les événements d'attaque ont enfin un appelant. Le lot R l'est aussi, à l'exception de `P‑07`. Les lots C, D, E et F ne sont pas commencés.
 >
 > Ce que le lot A produit : un moteur de déclencheurs pur et borné, 20 événements et 11 effets fermés, un magasin sans table dédiée (bloc `triggers` sur une entrée de ruleset), le câblage des trois jets à verdict, une scène persistée, l'économie d'action, un bac à sable et un formulaire de saisie.
 >
@@ -319,12 +319,37 @@ Le jet est parti par le vrai chemin partagé : le volet de dés (V2-M11) s'est o
 
 **L'écran :** `/m/[worldSlug]/joueur/solo`, septième destination de la coquille joueur. C'est un toit minimal, **pas** le lot D : ni colonne du monde connu, ni fiche à droite. `IntentBar.tsx` est autonome et se déplacera tel quel dans la colonne centrale de V3-D4. La lecture de la phrase tourne dans le navigateur — `interpretIntent` est pur, donc la proposition s'affiche en frappant, sans aller-retour ; le serveur ne reçoit jamais une phrase à interpréter, seulement le **choix** retenu.
 
-### V3-B2 — Le tour, de bout en bout · `L`
+### V3-B2 — Le tour, de bout en bout · `L` — **la boucle est faite le 22 septembre ; la narration reste**
 
-- [ ] `playTurn(intention)` : interprète → résout → applique les déclencheurs → met à jour la scène → construit le contexte → appelle le modèle → journalise.
-- [ ] **Chaque étape journalise indépendamment.** Si le modèle échoue, le tour a quand même eu lieu : les dés sont lancés, les PV à jour, la scène avancée. Seule la prose manque, avec un bouton « raconter ce tour » pour réessayer.
-- [ ] Les PNJ présents sont **recalculés depuis la scène à chaque tour**, jamais une liste figée (trou n° 1 d'ADR 0009 : Ktar commentait une scène qu'il avait quittée).
-- [ ] Budget d'entrée : moins de 600 tokens par tour, mesuré et journalisé dans `ai_usage_log`.
+- [x] `playTurn(intention)` : interprète → résout → **applique les déclencheurs** → met à jour la scène → journalise. La narration (« construit le contexte → appelle le modèle ») est le reste du ticket, volontairement écrite après — c'est ce qui rend le critère transverse « jouable sans IA du tout » vérifiable **seul**, plutôt que sur parole.
+- [x] **Chaque étape journalise indépendamment.** Le jet part en `roll` avant tout le reste ; l'application des effets est son propre `rule_application` ; la scène est écrite en dernier. Une étape qui tombe laisse les précédentes acquises.
+- [x] Les PNJ présents sont **recalculés depuis la scène à chaque tour** — le catalogue de cibles est reconstruit côté serveur à chaque rendu, et l'écran demande un `router.refresh()` dès que la scène change. Vérifié : le combat clos, le gobelin disparaît des cibles au tour suivant.
+- [ ] Budget d'entrée : moins de 600 tokens par tour, mesuré et journalisé dans `ai_usage_log` — avec la narration.
+
+**Ce que la boucle applique, et ce qu'elle refuse d'appliquer.** `src/core/rules/turn.ts` (pur, 13 tests) prend les `ResolvedEffect` que le moteur propose depuis A1 et rend un nouvel état plus la liste des changements. Dégâts (les PV temporaires d'abord), soins (plafonnés), conditions, zones, budget, ressources. **Un effet impossible est consigné, jamais tu, jamais levé** : un acteur absent, ou un `apply_modifier` — que A6 a compté parmi ses cinq manques, faute d'effet qui dure — ressortent avec leur raison, affichée à l'écran sous le tour. Une règle qui ne s'applique pas en silence est pire qu'une règle absente.
+
+**Les dégâts d'un coup porté sont le premier effet du tour.** Ils ne viennent d'aucun déclencheur : ils viennent du coup. C'est ce que B1 avait laissé de côté, et l'exemple que son ticket dessinait — « Gobelin 2 : 7 → 2 PV ». Un participant de combat passe par `patchCombatParticipant`, qui écrit **aussi** l'état de jeu quand la ligne porte une entité et journalise le tout en un événement annulable ; une entité hors combat passe par `applyRuntimeStateChange`. Deux chemins parce qu'il y a deux vérités en base, jamais un troisième inventé ici.
+
+**Trois décisions prises en écrivant.**
+
+**Le budget de tour vit dans la scène**, indexé par acteur (`SceneState.budgets`, `__v` passé à 2). Sur l'entité, il aurait survécu à une annulation de tour qui restaure une scène entière (V3-F2) — or un budget est un fait de *cette* scène, au même titre que les zones et l'heure. Aucune migration : SCHEMA §26 a voulu ce `jsonb` validé par Zod précisément pour qu'un champ ajouté au moteur n'en demande pas, et la table était vide.
+
+**L'horloge n'avance pas en combat.** Un round dure six secondes et `GameTime` compte en minutes : une minute par attaque ferait vieillir la partie de vingt minutes pendant un échange de coups. Hors combat, une action vaut une minute. Grossier et assumé — ce qui compte est que ce soit le code qui le décide.
+
+**La scène se pose à la main, pour l'instant.** Rien ne la créait : le moteur la tenait depuis A4, mais aucun écran ne disait où l'on est ni qui est là. Un panneau minimal (lieu, présents) la pose ; le lot C fera entrer et sortir les PNJ tout seul, depuis les générateurs et le wiki. Sans scène, le tour se joue quand même sur une scène éphémère — une règle qui déplace quelqu'un n'aura alors personne à déplacer, et le dira.
+
+**Un défaut trouvé en jouant, et corrigé :** le moteur ne reconnaissait pas « le gobelin » pour une ligne de combat nommée « Gobelin 2 ». Le nom sans son numéro de rang est désormais un terme de plus — la correspondance reste **exacte**, on ajoute un mot, on n'assouplit pas la règle.
+
+**Vérifié en direct le 22 septembre**, fiche de contrôle créée dans `ClaudeLand` puis supprimée avec toutes ses traces :
+
+| Ce qui a été exercé | Résultat |
+|---|---|
+| Scène posée sur un lieu | `jour 1, 08h00 · plein jour · combat en cours` — le combat qui tourne est détecté, jamais saisi |
+| « je frappe le gobelin » | `Attaque · cible : Gobelin 2 (CA 12)` — la cible reconnue sans son numéro |
+| Le tour lancé | `23 (dé : 19) contre CA 12 — touché`, `Dégâts : 5`, puis **`Gobelin 2 : 7 → 2 PV`** |
+| En base | `combat_participants.hp_current` 7 → 2 ; `session_events` : `roll` puis `rule_application` ; `budgets.action` 1 → 0 |
+| L'horloge | inchangée en combat ; `08h00 → 08h01` au tour suivant, combat clos |
+| Le modèle | jamais appelé — `turnIntent.noAi.test.ts` couvre désormais aussi `turnLoop.ts` |
 
 ### V3-B3 — Le contexte envoyé au modèle · `M`
 

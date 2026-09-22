@@ -26,6 +26,7 @@ const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const TURN_PATH = [
   "src/core/rules/intent.ts",
   "src/server/services/turnIntent.ts",
+  "src/server/services/turnLoop.ts",
   "app/api/solo/tour/route.ts",
   "components/solo/IntentBar.tsx",
 ];

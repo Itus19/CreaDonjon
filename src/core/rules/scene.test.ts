@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   DAY_MINUTES,
   advanceTime,
+  budgetOf,
+  startTurn,
   emptyScene,
   enterScene,
   leaveScene,
@@ -14,7 +16,7 @@ import {
 } from "./scene";
 
 const SCENE: SceneState = {
-  __v: 1,
+  __v: 2,
   locationId: "ancre-rouillee",
   present: [
     { entityId: "bram", zone: "engaged" },
@@ -24,6 +26,7 @@ const SCENE: SceneState = {
   lighting: "dim",
   activeCombatId: null,
   recentEvents: [],
+  budgets: {},
 };
 
 describe("le temps avance parce que le CODE le fait avancer", () => {
@@ -132,5 +135,22 @@ describe("le schema", () => {
 
   it("refuse plus de cinq evenements recents", () => {
     expect(zSceneState.safeParse({ ...SCENE, recentEvents: ["1", "2", "3", "4", "5", "6"] }).success).toBe(false);
+  });
+});
+
+describe("le budget de tour vit dans la scene (V3-B2)", () => {
+  it("ouvre un tour neuf : action, bonus, reaction, et la vitesse en metres", () => {
+    const scene = startTurn(SCENE, "bram", 9);
+    expect(scene.budgets.bram).toEqual({ action: 1, bonus: 1, reaction: 1, movement: 9, free: 1 });
+  });
+
+  it("n'efface pas le budget des autres — une reaction deja depensee le reste", () => {
+    const depense = { ...SCENE, budgets: { grelin: { action: 1, bonus: 1, reaction: 0, movement: 9, free: 1 } } };
+    expect(startTurn(depense, "bram", 9).budgets.grelin.reaction).toBe(0);
+  });
+
+  it("rend un budget neuf a qui n'en a pas encore, sans rien ecrire", () => {
+    expect(budgetOf(SCENE, "inconnu", 12).movement).toBe(12);
+    expect(SCENE.budgets).toEqual({});
   });
 });

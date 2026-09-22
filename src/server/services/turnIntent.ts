@@ -11,6 +11,7 @@ import {
 } from "@/src/core/rules/sheet";
 import { SKILL_LABELS_FR, INTENT_VERBS_FR } from "@/src/i18n/fr";
 import { type IntentAction, type IntentTarget } from "@/src/core/rules/intent";
+import type { ResolvedEffect } from "@/src/core/rules/triggers";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { InventoryItem } from "@/src/core/schemas/blocks/inventory";
@@ -65,8 +66,37 @@ type TypedClient = SupabaseClient<Database>;
 
 export type { TargetId, IntentTargetDetail, IntentBarData, TurnRecord };
 
+/**
+ * V3-B2 : le meme enregistrement, plus ce que la resolution a REVEILLE.
+ * Les effets ne traversent pas jusqu'au client — seule la boucle de tour
+ * les applique, et c'est elle qui dit ensuite ce qui a change.
+ */
+export interface ResolvedTurnRecord extends TurnRecord {
+  effects: ResolvedEffect[];
+}
+
 function itemRef(item: InventoryItem): BlockReference | null {
   return (item as { ref?: BlockReference }).ref ?? null;
+}
+
+/**
+ * Les mots qui designent une cible : son nom, et son nom sans le numero
+ * de rang.
+ *
+ * Constate en jouant (22 septembre) : le moteur ne reconnaissait pas « le
+ * gobelin » pour une ligne de combat nommee « Gobelin 2 », alors que c'est
+ * exactement ainsi qu'on parle a une table. La correspondance reste
+ * EXACTE — on ajoute un terme, on n'assouplit pas la regle : « Gobelin 2 »
+ * l'emporte toujours sur « Gobelin » quand les deux sont ecrits, puisque
+ * `detectEntityReferences` prefere la plus longue.
+ *
+ * Quand deux gobelins repondent au meme « gobelin », c'est le premier de
+ * l'ordre d'initiative qui est propose, et l'ecran laisse corriger d'un
+ * clic — jamais un tirage au sort.
+ */
+function targetTerms(label: string): string[] {
+  const withoutRank = label.replace(/\s+\d+$/, "").trim();
+  return withoutRank !== "" && withoutRank !== label ? [label, withoutRank] : [label];
 }
 
 /**
@@ -178,7 +208,7 @@ export async function buildIntentBarData(
   }
 
   const targetDetails = await loadTargets(supabase, { campaignId: params.campaignId, actorEntityId: params.entityId });
-  const targets: IntentTarget[] = targetDetails.map((t) => ({ id: t.id, label: t.label, terms: [t.label] }));
+  const targets: IntentTarget[] = targetDetails.map((t) => ({ id: t.id, label: t.label, terms: targetTerms(t.label) }));
 
   return {
     actor: { entityId: ctx.entityId, name: ctx.entityName },
@@ -290,7 +320,7 @@ export async function executeIntent(
     corrected: boolean;
     choice: IntentChoice;
   }
-): Promise<TurnRecord | { error: IntentErrorReason }> {
+): Promise<ResolvedTurnRecord | { error: IntentErrorReason }> {
   const data = await buildIntentBarData(supabase, params);
   if (!data) return { error: "not_found" };
 
@@ -323,7 +353,7 @@ export async function executeIntent(
     kind: "player_action",
     payload,
   });
-    return { kind: "player_action", facts, eventId, detail: payload };
+    return { kind: "player_action", facts, eventId, detail: payload, effects: [] };
   }
 
   if (choice.kind === "weapon_attack") {
@@ -389,7 +419,7 @@ export async function executeIntent(
     kind: "roll",
     payload,
   });
-    return { kind: "roll", facts, eventId, detail: payload };
+    return { kind: "roll", facts, eventId, detail: payload, effects: [] };
   }
 
   const rollParams = {
@@ -430,5 +460,5 @@ export async function executeIntent(
     kind: "roll",
     payload,
   });
-  return { kind: "roll", facts, eventId, detail: payload };
+  return { kind: "roll", facts, eventId, detail: payload, effects: outcome.roll.triggers?.effects ?? [] };
 }

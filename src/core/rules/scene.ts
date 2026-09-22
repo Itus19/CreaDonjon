@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TRIGGER_ZONES, type TriggerZone } from "./triggers";
+import { budgetForTurn, zActionBudget, type ActionBudget } from "./actionBudget";
 
 /**
  * V3-A4 — L'etat de scene (specs/moteur-de-jeu.md §6).
@@ -33,7 +34,14 @@ export interface ScenePresence {
 }
 
 export interface SceneState {
-  __v: 1;
+  /**
+   * V3-B2 : passe de 1 a 2 en ajoutant `budgets`. Aucune migration — la
+   * scene est un `jsonb` valide par Zod, et SCHEMA.md §26 l'a voulu ainsi
+   * précisément pour qu'un champ ajoute au moteur n'en demande pas. Aucune
+   * reprise d'anciennes lignes non plus : la table etait vide (verifie le
+   * 22 septembre), rien n'ecrivant encore de scene avant ce ticket.
+   */
+  __v: 2;
   locationId: string;
   present: ScenePresence[];
   time: GameTime;
@@ -41,6 +49,16 @@ export interface SceneState {
   activeCombatId: string | null;
   /** Les cinq derniers `session_events`, le plus recent en tete. */
   recentEvents: string[];
+  /**
+   * Le budget d'action de chaque acteur pour le tour EN COURS, indexe par
+   * identifiant.
+   *
+   * Il vit dans la scene, et pas sur l'entite, parce qu'un budget de tour
+   * est un fait de CETTE scene : annuler un tour (V3-F2) restaure une scene
+   * entiere, et le budget doit suivre le meme sort que les zones et
+   * l'heure. Le poser dans `entity_runtime_state` l'en aurait separe.
+   */
+  budgets: Record<string, ActionBudget>;
 }
 
 export const RECENT_EVENTS_KEPT = 5;
@@ -52,7 +70,7 @@ const zGameTime = z.object({
 });
 
 export const zSceneState = z.object({
-  __v: z.literal(1),
+  __v: z.literal(2),
   locationId: z.string().min(1),
   present: z.array(
     z.object({
@@ -65,18 +83,37 @@ export const zSceneState = z.object({
   lighting: z.enum(["bright", "dim", "dark"]),
   activeCombatId: z.string().min(1).nullable(),
   recentEvents: z.array(z.string().min(1)).max(RECENT_EVENTS_KEPT),
+  budgets: z.record(z.string(), zActionBudget),
 });
 
 export function emptyScene(locationId: string, time: GameTime = { day: 1, hour: 8, minute: 0 }): SceneState {
   return {
-    __v: 1,
+    __v: 2,
     locationId,
     present: [],
     time,
     lighting: lightingAt(time),
     activeCombatId: null,
     recentEvents: [],
+    budgets: {},
   };
+}
+
+/**
+ * Ouvre le tour de quelqu'un : son budget repart neuf.
+ *
+ * C'est le CODE qui le remet a zero, jamais le joueur ni un modele — meme
+ * discipline que l'horloge. Le budget de l'acteur precedent est conserve :
+ * hors combat les tours ne s'alternent pas vraiment, et effacer celui d'un
+ * autre ferait disparaitre une reaction deja depensee.
+ */
+export function startTurn(scene: SceneState, who: string, speed: number): SceneState {
+  return { ...scene, budgets: { ...scene.budgets, [who]: budgetForTurn(speed) } };
+}
+
+/** Le budget courant de quelqu'un, ou celui d'un tour neuf s'il n'en a pas encore. */
+export function budgetOf(scene: SceneState, who: string, speed: number): ActionBudget {
+  return scene.budgets[who] ?? budgetForTurn(speed);
 }
 
 /**

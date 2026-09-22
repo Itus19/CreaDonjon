@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ABILITIES, SKILLS, type Ability, type Skill } from "@/src/core/rules/sheet";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { executeIntent } from "@/src/server/services/turnIntent";
+import { playTurn } from "@/src/server/services/turnLoop";
 import type { Locale } from "@/src/i18n/request";
 
 const advantageField = z.enum(["normal", "advantage", "disadvantage"]);
@@ -100,16 +101,27 @@ export async function POST(request: NextRequest) {
   }
 
   const locale = (await getLocale()) as Locale;
-  const result = await executeIntent(supabase, {
+  const common = {
     entityId: parsed.data.entityId,
-    campaignId: parsed.data.campaignId,
     callerId: user.id,
     world: { id: world.id, slug: world.slug },
     locale,
     text: parsed.data.text,
     corrected: parsed.data.corrected,
     choice: parsed.data.choice,
-  });
+  };
+
+  // Hors campagne, il n'y a ni scene, ni etat de jeu, ni session ou
+  // journaliser : le tour se resout et s'affiche, mais ne change rien. La
+  // boucle complete (V3-B2) demande une campagne, et le dit en ne
+  // s'executant que la.
+  const result = parsed.data.campaignId
+    ? await playTurn(supabase, { ...common, campaignId: parsed.data.campaignId })
+    : await (async () => {
+        const record = await executeIntent(supabase, { ...common, campaignId: null });
+        if ("error" in record) return record;
+        return { record, changes: [], hints: [], ignored: [], time: null };
+      })();
 
   if ("error" in result) {
     return NextResponse.json({ error: REASON_MESSAGE[result.error] }, { status: REASON_STATUS[result.error] });

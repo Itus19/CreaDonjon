@@ -41,3 +41,34 @@ export interface TurnRecord {
   eventId: string | null;
   detail: Record<string, unknown>;
 }
+
+/**
+ * La scène courante, ses identifiants déjà résolus en noms (V3-B2). Le
+ * client n'a jamais à retraduire un `uuid` : le serveur envoie ce qui
+ * s'affiche.
+ */
+export interface SceneView {
+  locationId: string;
+  locationName: string;
+  time: { day: number; hour: number; minute: number };
+  lighting: "bright" | "dim" | "dark";
+  inCombat: boolean;
+  present: { entityId: string; name: string; zone: "engaged" | "near" | "far" }[];
+}
+
+/**
+ * Un tour complet (V3-B2) : le jet, puis ce que les déclencheurs ont
+ * réveillé, appliqué et persisté. Le fil de l'écran affiche les deux —
+ * d'abord le fait, ensuite ce qu'il a changé.
+ */
+export interface TurnOutcome {
+  record: TurnRecord;
+  /** En français, dans l'ordre d'application : « Gobelin 2 : 7 → 2 PV ». */
+  changes: string[];
+  /** Les `narrate_hint` des règles déclenchées — pour la narration (V3-B4), jamais pour la mécanique. */
+  hints: string[];
+  /** Ce que le moteur n'a PAS pu appliquer, avec sa raison. Jamais tu. */
+  ignored: string[];
+  /** L'heure de jeu après le tour, `null` si la campagne n'a pas encore de scène. */
+  time: { day: number; hour: number; minute: number } | null;
+}

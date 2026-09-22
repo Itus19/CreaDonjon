@@ -14,7 +14,7 @@ import { resolveCharacterActionContext, getOrInitializeRuntimeState } from "@/sr
 import { eventsForCheck, eventsForSave } from "@/src/core/rules/gameEvents";
 import { fireTriggersForCharacter } from "@/src/server/services/triggerRuntime";
 import type { DerivedSheet } from "@/src/core/rules/sheet";
-import type { FiredEvent } from "@/src/core/rules/triggers";
+import type { FiredEvent, ResolvedEffect } from "@/src/core/rules/triggers";
 import type { CharacterActionContext } from "@/src/server/services/characterActions";
 import { canUserEditEntityById, isWorldAdmin } from "@/src/server/services/permissions";
 import { getEntityById, type EntitySummary } from "@/src/server/repos/entities";
@@ -52,6 +52,14 @@ export interface RollOutcome {
   trace: TraceStep[];
   /** false si `campaignId` etait nul (fiche vue hors campagne, meme convention que `rollWeaponAttack` — characterActions.ts) : le jet a eu lieu mais n'est pas ecrit dans `dice_rolls`, donc absent du volet et de l'historique. */
   recorded: boolean;
+  /**
+   * V3-B2 : ce que ce jet a reveille, pour que la boucle de tour puisse
+   * l'APPLIQUER. Absent presque toujours — il faut une fiche qui porte un
+   * declencheur, un verdict et un DD. Les appelants plus anciens (boutons
+   * de fiche, volet de des) l'ignorent : un jet isole ne change rien a la
+   * partie, et c'est voulu.
+   */
+  triggers?: FiredForRoll;
 }
 
 interface RollParams {
@@ -83,15 +91,26 @@ function verdictFor(total: number, dc: number | null): "success" | "fail" | null
 }
 
 /**
+ * Ce qu'un jet a reveille. Rendu a l'appelant — la boucle de tour (V3-B2)
+ * l'applique — ET consigne avec le jet dans `dice_rolls.detail`.
+ */
+export interface FiredForRoll {
+  effects: ResolvedEffect[];
+  failures: unknown[];
+  rejected: unknown[];
+  trace: string[];
+}
+
+/**
  * Fait partir les declencheurs d'un jet resolu, et rend de quoi les
  * consigner. `null` quand il n'y a rien a dire — le cas de loin le plus
  * frequent aujourd'hui, aucune fiche ne portant encore de declencheur.
  *
- * Les EFFETS ne sont pas appliques : ils sont proposes et consignes.
- * Appliquer suppose l'etat de scene et l'economie d'action (V3-A3/A4). Une
- * panne ici n'emporte jamais le jet : le de a ete lance, son resultat est
- * acquis, et le perdre pour une regle maison cassee serait le pire des
- * echanges.
+ * Les effets sont RENDUS, jamais appliques ici (V3-B2 s'en charge) : un
+ * bouton de fiche qui lance un de ne doit pas changer la partie dans son
+ * dos. Une panne ici n'emporte jamais le jet : le de a ete lance, son
+ * resultat est acquis, et le perdre pour une regle maison cassee serait le
+ * pire des echanges.
  */
 async function fireForRoll(
   supabase: TypedClient,
@@ -99,7 +118,7 @@ async function fireForRoll(
   verdict: "success" | "fail" | null,
   total: number,
   dc: number | null
-): Promise<{ effects: unknown[]; failures: unknown[]; rejected: unknown[]; trace: string[] } | null> {
+): Promise<FiredForRoll | null> {
   if (!emit || verdict === null || dc === null) return null;
   const [event] = emit.events(verdict === "success", total, dc);
   if (!event) return null;
@@ -179,6 +198,7 @@ async function recordAndBuildOutcome(
     hidden: params.hidden,
     recorded: params.campaignId !== null,
     trace,
+    ...(fired ? { triggers: fired } : {}),
   };
 }
 
