@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BinderTabs from "@/components/shared/BinderTabs";
 import Checkbox from "@/components/shared/Checkbox";
 import {
@@ -24,16 +24,17 @@ import {
 /**
  * V3-D — **Esquisse**, pas l'écran. Jetable.
  *
- * Quatrième passe. Ce qu'elle ajoute :
+ * Sixième passe. Ce qu'elle acte :
  *
+ * - **Un seul champ pour tout ce que le joueur envoie.** Ce qu'il écrit
+ *   ET ce qu'il lance : un jet fait depuis la fiche ou depuis l'outil de
+ *   dés vient s'y inscrire en texte. Plus de volet séparé à valider — le
+ *   résultat se voit là où part tout le reste, et `Jouer` l'engage.
+ * - **Le champ grandit avec son contenu**, les boutons sont dessous.
  * - **Le moteur devine une question**, et le montre plutôt que de
- *   corriger en douce : quand la phrase ressemble à une question, `MJ`
- *   passe devant et `Jouer` recule. Même règle que la barre d'intention —
- *   on affiche ce qu'on a compris, le joueur garde la main.
- * - **Tout jet atterrit d'abord dans le volet de dés**, y compris lancé
- *   depuis une caractéristique ou une compétence. Il n'entre dans la
- *   partie qu'au bouton **Utiliser**. Un résultat vu avant d'être engagé,
- *   c'est la même idée que la proposition mécanique de V3-B1.
+ *   corriger en douce : `MJ` passe devant, `Jouer` recule.
+ * - **Les colonnes latérales n'ont pas de fond** : elles se posent sur le
+ *   fond de page, et de fins encadrés découpent leur contenu.
  * - **Les colonnes se replient depuis le bandeau**, par deux boutons
  *   posés à ses extrémités et toujours visibles. Elles s'effacent avec
  *   la meme animation que le volet de des (200 ms, echelle + opacite).
@@ -50,7 +51,17 @@ const BTN_GHOST =
   "rounded-full border border-accent px-4 py-2 text-sm text-accent transition-colors hover:bg-accent/10";
 const BTN_RETRAIT =
   "rounded-full border border-edge px-4 py-2 text-sm text-ink-muted transition-colors hover:bg-panel-raised";
-const CLASSEUR = "rounded-b-lg border-2 border-t-0 border-edge-strong bg-panel-raised p-3";
+/**
+ * Le panneau d'un classeur. **Sans fond**, comme le haut de la fiche :
+ * les deux colonnes latérales se posent sur le fond de page, et seuls de
+ * fins encadrés découpent ce qu'elles contiennent. C'est ce que l'auteur
+ * a retenu du premier jet — le bloc des caractéristiques, qui ne pèse
+ * rien parce qu'il ne pose aucune surface.
+ *
+ * Bord fin (`border`, pas `border-2`), de la couleur de la ligne des
+ * onglets pour que la jointure reste franche.
+ */
+const CLASSEUR = "rounded-b-lg border border-t-0 border-edge-strong p-3";
 const LIGNE_CLIQUABLE =
   "flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-panel-sunken";
 
@@ -335,104 +346,71 @@ function Fil({ items }: { items: FeedItem[] }) {
 }
 
 /**
- * Le volet de dés — **le seul endroit où un résultat tombe**, qu'il vienne
- * d'un bouton de la fiche, d'une compétence ou du volet lui-même.
+ * La saisie — **un seul champ pour tout ce que le joueur envoie.**
  *
- * Le résultat s'y voit AVANT d'entrer dans la partie ; `Utiliser`
- * l'engage. C'est la même idée que la proposition mécanique de V3-B1 :
- * rien ne part sans avoir été montré. Et c'est ce qui rend « relancer »
- * inoffensif — tant qu'on n'a pas utilisé, rien n'a eu lieu.
+ * Ce qu'il écrit, et ce qu'il lance : un jet fait depuis la fiche ou
+ * depuis l'outil de dés vient s'y inscrire en texte, à côté de ce qu'il
+ * était en train de taper. Il n'y a donc plus de volet séparé à valider —
+ * le résultat se voit là où part tout le reste, et `Jouer` l'engage.
+ *
+ * Le champ GRANDIT avec ce qu'on écrit : une ligne au départ, jusqu'à
+ * huit. Les boutons passent dessous, sinon ils descendraient avec lui.
+ *
+ * Quand la phrase ressemble à une question, `MJ` passe devant et `Jouer`
+ * recule — le moteur devine, il ne corrige pas en douce.
  */
-function VoletDes({
-  jet,
+function Saisie({
   demande,
-  onUtiliser,
+  texte,
+  onTexte,
+  onJouer,
   onLancerDansOutil,
 }: {
-  jet: JetEnAttente | null;
   demande: Demande | null;
-  onUtiliser: () => void;
+  texte: string;
+  onTexte: (v: string) => void;
+  onJouer: () => void;
   onLancerDansOutil: () => void;
 }) {
-  const verdict = jet && jet.dc !== null ? (jet.total >= jet.dc ? "réussite" : "échec") : null;
-
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-edge bg-panel px-3 py-2">
-      <span className="text-xs uppercase tracking-wide text-ink-muted">Volet de dés</span>
-
-      {jet === null ? (
-        <>
-          <span className="text-sm text-ink-muted">
-            {demande
-              ? `en attente — ${demande.label} (${demande.modificateur >= 0 ? "+" : "−"}${Math.abs(demande.modificateur)})`
-              : "aucun jet en attente"}
-          </span>
-          {/* Commande d'ESQUISSE : elle tient lieu du vrai volet de dés,
-              qu'on ne peut pas piloter d'ici. En vrai, le d20 lancé dans
-              l'outil arrive tout seul par ce chemin. */}
-          <button
-            type="button"
-            onClick={onLancerDansOutil}
-            className="ml-auto rounded-full border border-dashed border-edge px-3 py-1 text-xs text-ink-muted transition-colors hover:bg-panel-raised"
-          >
-            simuler un d20 lancé dans l&apos;outil
-          </button>
-        </>
-      ) : (
-        <>
-          <span className="text-sm text-ink">{jet.label}</span>
-          <span className="text-base font-medium text-ink">{jet.total}</span>
-          {/* D'où vient le dé, et comment le compte s'est fait. Le dire
-              importe : un dé venu de l'outil a été rattaché APRÈS coup à
-              ce qui était attendu. */}
-          <span className="text-xs text-ink-muted">
-            {jet.origine === "outil" ? "dé de l'outil" : "dé"} {jet.de} {jet.modificateur >= 0 ? "+" : "−"}{" "}
-            {Math.abs(jet.modificateur)}
-            {jet.origine === "outil" && jet.modificateur !== 0 ? " (modificateur appliqué ici)" : ""}
-          </span>
-          {verdict && (
-            <span className={`text-xs ${verdict === "réussite" ? "text-success" : "text-danger"}`}>
-              contre DD {jet.dc} — {verdict}
-            </span>
-          )}
-          <button type="button" className={`${BTN_ACCENT} ml-auto`} onClick={onUtiliser}>
-            Utiliser
-          </button>
-        </>
-      )}
-    </div>
-  );
-}
-
-/**
- * La saisie. `Jouer` fait avancer l'horloge, `MJ` ne la touche pas.
- *
- * Quand la phrase ressemble à une question, **`MJ` passe devant** et
- * `Jouer` recule : le moteur devine, il ne corrige pas en douce. Le mauvais
- * clic devient difficile à faire, et reste possible — c'est le joueur qui
- * décide, comme partout ailleurs dans cet écran.
- */
-function Saisie({ demande }: { demande: Demande | null }) {
-  const [texte, setTexte] = useState("");
   const question = ressembleAUneQuestion(texte);
+  const champRef = useRef<HTMLTextAreaElement>(null);
 
   const invite = demande
     ? `${demande.label}${demande.dc !== null ? ` DD ${demande.dc}` : ""} — lance depuis ta fiche, ou écris ton résultat`
     : "Que fais-tu ?";
 
+  /**
+   * Le champ suit son contenu : remis à plat, puis à la hauteur du texte.
+   *
+   * Dans un effet, et pas dans le gestionnaire de frappe : le texte
+   * n'arrive pas toujours du clavier — un jet lancé depuis la fiche s'y
+   * inscrit aussi, et le champ doit grandir pour lui de la même façon.
+   * Vérifié le 22 septembre : sur la frappe seule, un jet inséré restait
+   * coincé sur une ligne.
+   */
+  useEffect(() => {
+    const champ = champRef.current;
+    if (!champ) return;
+    champ.style.height = "auto";
+    champ.style.height = `${champ.scrollHeight}px`;
+  }, [texte]);
+
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-edge bg-panel p-3">
+    <div className="flex flex-col gap-2 rounded-lg border border-edge bg-panel p-3">
+      <textarea
+        ref={champRef}
+        rows={1}
+        value={texte}
+        onChange={(e) => onTexte(e.target.value)}
+        placeholder={invite}
+        aria-label={demande ? `Jet attendu : ${demande.label}` : "Que fais-tu ?"}
+        className={`max-h-48 w-full resize-none overflow-y-auto rounded-md border bg-transparent px-2 py-2 text-sm leading-snug text-ink outline-none transition-colors ${
+          demande ? "border-accent placeholder:text-accent" : "border-edge"
+        }`}
+      />
+
       <div className="flex flex-wrap items-center gap-2">
-        <input
-          value={texte}
-          onChange={(e) => setTexte(e.target.value)}
-          placeholder={invite}
-          aria-label={demande ? `Jet attendu : ${demande.label}` : "Que fais-tu ?"}
-          className={`min-w-0 flex-1 rounded-md border bg-transparent px-2 py-2 text-sm text-ink outline-none transition-colors ${
-            demande ? "border-accent placeholder:text-accent" : "border-edge"
-          }`}
-        />
-        <button type="button" className={question ? BTN_RETRAIT : BTN_ACCENT} title="Joue ce tour — l'horloge avance">
+        <button type="button" className={question ? BTN_RETRAIT : BTN_ACCENT} onClick={onJouer} title="Joue ce tour — l'horloge avance">
           Jouer
         </button>
         <button
@@ -442,12 +420,24 @@ function Saisie({ demande }: { demande: Demande | null }) {
         >
           MJ
         </button>
+
+        {question && (
+          <span className="text-xs text-ink-muted">
+            On dirait une question — elle part au MJ, et l&apos;horloge ne bouge pas.
+          </span>
+        )}
+
+        {/* Commande d'ESQUISSE : elle tient lieu du vrai outil de dés,
+            qu'on ne peut pas piloter d'ici. En vrai, le d20 lancé dans
+            l'outil vient s'inscrire ici tout seul. */}
+        <button
+          type="button"
+          onClick={onLancerDansOutil}
+          className="ml-auto rounded-full border border-dashed border-edge px-3 py-1 text-xs text-ink-muted transition-colors hover:bg-panel-raised"
+        >
+          simuler un d20 lancé dans l&apos;outil
+        </button>
       </div>
-      {question && (
-        <span className="text-xs text-ink-muted">
-          On dirait une question — elle part au MJ, et l&apos;horloge ne bouge pas.
-        </span>
-      )}
     </div>
   );
 }
@@ -690,34 +680,52 @@ export default function EsquisseSolo() {
   const [demande, setDemande] = useState<Demande | null>(PREMIERE_DEMANDE);
   const [fil, setFil] = useState<FeedItem[]>(FEED);
   const [tirage, setTirage] = useState(0);
-  const [jetEnAttente, setJetEnAttente] = useState<JetEnAttente | null>(null);
+  /**
+   * Les jets attachés à ce qu'on est en train d'écrire — au pluriel, parce
+   * qu'un tour en porte souvent deux : l'attaque, puis les dégâts. Ils
+   * partent ensemble au `Jouer`.
+   */
+  const [jetsAttaches, setJetsAttaches] = useState<JetEnAttente[]>([]);
+  const [texte, setTexte] = useState("");
 
   const [gaucheRepliee, setGaucheRepliee] = useState(false);
   const [droiteRepliee, setDroiteRepliee] = useState(false);
 
   /**
-   * Un jet lancé DEPUIS LA FICHE : le modificateur est connu, il s'ajoute
-   * tout de suite. Le résultat tombe dans le volet, jamais directement
-   * dans la partie.
+   * Un jet s'écrit DANS LE CHAMP DE SAISIE, à la suite de ce que le
+   * joueur était en train de taper. Il n'y a plus de volet à valider : le
+   * résultat se voit là où part tout le reste, et `Jouer` l'engage.
    */
+  function inscrire(jet: JetEnAttente) {
+    const detail = `dé${jet.origine === "outil" ? " de l'outil" : ""} ${jet.de} ${
+      jet.modificateur >= 0 ? "+" : "−"
+    } ${Math.abs(jet.modificateur)}`;
+    const ligne = `${jet.label} : ${jet.total} (${detail})`;
+    setJetsAttaches((precedents) => [...precedents, jet]);
+    setTexte((precedent) => (precedent.trim() === "" ? ligne : `${precedent.trim()}\n${ligne}`));
+  }
+
+  /** Depuis la fiche : le modificateur est connu au clic, il s'ajoute tout de suite. */
   function lancer(label: string, modificateur: number) {
     const de = DES_FACTICES[tirage % DES_FACTICES.length];
     setTirage((t) => t + 1);
-    setJetEnAttente({
+    // Un jet de dégâts n'a pas de seuil : lui coller le DD de la demande
+    // en cours le ferait annoncer « réussite », ce qui ne veut rien dire.
+    const degats = label.startsWith("Dégâts");
+    inscrire({
       label,
       de,
       modificateur,
       total: de + modificateur,
-      dc: demande?.dc ?? null,
+      dc: degats ? null : (demande?.dc ?? null),
       origine: "fiche",
     });
   }
 
   /**
-   * Un dé lancé DANS L'OUTIL : il arrive nu. Le volet le rattache à ce
-   * qui était attendu et applique le modificateur **après coup** — c'est
-   * la seconde façon de répondre à une demande, et elle vaut aussi pour
-   * un dé physique annoncé.
+   * Depuis l'outil de dés : le dé arrive NU. On le rattache à ce qui était
+   * attendu et le modificateur s'applique **après coup** — c'est le même
+   * chemin qu'un dé physique annoncé à la main.
    *
    * Sans demande en cours, le dé reste nu : rien à quoi le rattacher, et
    * on n'invente pas un modificateur.
@@ -726,7 +734,7 @@ export default function EsquisseSolo() {
     const de = DES_FACTICES[tirage % DES_FACTICES.length];
     setTirage((t) => t + 1);
     const modificateur = demande?.modificateur ?? 0;
-    setJetEnAttente({
+    inscrire({
       label: demande?.label ?? "Jet libre",
       de,
       modificateur,
@@ -736,28 +744,35 @@ export default function EsquisseSolo() {
     });
   }
 
-  /** « Utiliser » : c'est ici, et seulement ici, que le résultat entre dans la partie. */
-  function utiliser() {
-    if (!jetEnAttente) return;
-    const { label, de, modificateur, total, dc, origine } = jetEnAttente;
-    setFil((precedent) => [
-      ...precedent,
-      {
-        id: `jet-${precedent.length}`,
-        kind: "roll",
-        label,
-        expression: `1d20 ${modificateur >= 0 ? "+" : "−"} ${Math.abs(modificateur)}`,
-        total,
-        dc,
-        verdict: dc === null ? null : total >= dc ? "success" : "fail",
-        trace: [
-          `dé${origine === "outil" ? " (outil)" : ""} : ${de}`,
-          `modificateur ${modificateur >= 0 ? "+" : "−"}${Math.abs(modificateur)}`,
-        ],
-        origine: origine === "outil" ? "volet" : "fiche",
-      },
-    ]);
-    setJetEnAttente(null);
+  /** « Jouer » : ce qui est dans le champ part — le texte, et les jets qui y sont attachés. */
+  function jouer() {
+    const dit = texte.trim();
+    if (dit === "" && jetsAttaches.length === 0) return;
+
+    setFil((precedent) => {
+      const suite: FeedItem[] = [...precedent];
+      if (dit !== "") suite.push({ id: `dit-${precedent.length}`, kind: "player", text: dit });
+      jetsAttaches.forEach(({ label, de, modificateur, total, dc, origine }, index) => {
+        suite.push({
+          id: `jet-${precedent.length}-${index}`,
+          kind: "roll",
+          label,
+          expression: `1d20 ${modificateur >= 0 ? "+" : "−"} ${Math.abs(modificateur)}`,
+          total,
+          dc,
+          verdict: dc === null ? null : total >= dc ? "success" : "fail",
+          trace: [
+            `dé${origine === "outil" ? " (outil)" : ""} : ${de}`,
+            `modificateur ${modificateur >= 0 ? "+" : "−"}${Math.abs(modificateur)}`,
+          ],
+          origine: origine === "outil" ? "volet" : "fiche",
+        });
+      });
+      return suite;
+    });
+
+    setTexte("");
+    setJetsAttaches([]);
     setDemande(null);
   }
 
@@ -864,13 +879,13 @@ export default function EsquisseSolo() {
               <Fil items={fil} />
             </div>
           </div>
-          <VoletDes
-            jet={jetEnAttente}
+          <Saisie
             demande={demande}
-            onUtiliser={utiliser}
+            texte={texte}
+            onTexte={setTexte}
+            onJouer={jouer}
             onLancerDansOutil={lancerDansOutil}
           />
-          <Saisie demande={demande} />
         </section>
 
         <section className={`min-h-0 overflow-hidden ${colonne === "fiche" ? "" : "hidden"} lg:block ${voleeDroite}`}>
