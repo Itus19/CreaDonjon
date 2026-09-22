@@ -31,6 +31,8 @@ import {
 } from "@/src/server/repos/combats";
 import { getRulesetEntryByKey, listBlocksForRulesetEntry, listRulesetEntries, listTranslationsForEntries } from "@/src/server/repos/rules";
 import { entryNameFrom, getRuleEntryForWorld } from "@/src/server/services/rules";
+import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
+import { fireTriggersForCombatTurn } from "@/src/server/services/combatTriggers";
 import { getEntityById } from "@/src/server/repos/entities";
 import { putRuntimeState } from "@/src/server/repos/runtimeState";
 import { nextEventSeq, insertSessionEvent } from "@/src/server/repos/sessions";
@@ -143,13 +145,15 @@ interface CombatEventPayload {
   note: string;
   is_undo?: boolean;
   undoes?: string;
+  /** V3-A2 — ce que la bascule a reveille. Absent quand rien n'est parti, c'est-a-dire presque toujours. */
+  triggers?: unknown;
 }
 
 /** Journalise une modification de combat (specs/outils-mj.md §5.3) — rien a journaliser sans session ouverte (jamais le cas en pratique, une session s'ouvre au premier jet de la campagne). */
 async function journalCombatEvent(
   supabase: TypedClient,
   combat: CombatRow,
-  params: { target: "combat" | "participant"; targetId: string; before: unknown; after: unknown; note: string; actorUserId: string }
+  params: { target: "combat" | "participant"; targetId: string; before: unknown; after: unknown; note: string; actorUserId: string; triggers?: unknown }
 ): Promise<void> {
   if (!combat.session_id) return;
   const seq = await nextEventSeq(supabase, combat.session_id);
@@ -160,6 +164,7 @@ async function journalCombatEvent(
     before: params.before as Record<string, unknown>,
     after: params.after as Record<string, unknown>,
     note: params.note,
+    ...(params.triggers ? { triggers: params.triggers } : {}),
   };
   await insertSessionEvent(supabase, {
     sessionId: combat.session_id,
@@ -402,6 +407,35 @@ async function moveTurn(
   const current = { round: combat.round, turnIndex: combat.turn_index };
   const next = params.direction === "next" ? advanceTurn(current, participants.length) : retreatTurn(current, participants.length);
   const updated = await updateCombat(supabase, params.combatId, { round: next.round, turnIndex: next.turnIndex });
+
+  // V3-A2 — les declencheurs de la bascule, UNIQUEMENT en avant : revenir en
+  // arriere est une correction, pas un tour joue, et refaire partir un poison
+  // a chaque retour serait un defaut difficile a voir.
+  //
+  // Une panne du moteur n'emporte JAMAIS la bascule : le tour a change, c'est
+  // acquis, et le perdre pour une regle maison cassee serait le pire des
+  // echanges — meme arbitrage que pour un jet de des (V3-A2).
+  let fired: unknown;
+  if (params.direction === "next") {
+    try {
+      const campaign = await getCampaign(supabase, combat.campaign_id);
+      const rulesetId = campaign ? await getWorldDefaultRulesetId(supabase, campaign.worldId) : null;
+      if (rulesetId) {
+        fired =
+          (await fireTriggersForCombatTurn(supabase, {
+            rulesetId,
+            participants,
+            endingIndex: combat.turn_index,
+            startingIndex: next.turnIndex,
+            round: next.round,
+            newRound: next.round !== combat.round,
+          })) ?? undefined;
+      }
+    } catch (err) {
+      fired = { failures: [{ reason: err instanceof Error ? err.message : String(err) }] };
+    }
+  }
+
   await journalCombatEvent(supabase, combat, {
     target: "combat",
     targetId: combat.id,
@@ -409,6 +443,7 @@ async function moveTurn(
     after: { round: updated.round, turn_index: updated.turn_index, status: updated.status },
     note: params.direction === "next" ? "Tour suivant" : "Tour precedent",
     actorUserId: params.actorUserId,
+    triggers: fired,
   });
   return updated;
 }

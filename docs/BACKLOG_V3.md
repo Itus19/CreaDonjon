@@ -152,7 +152,7 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Vérifié par mutation** : `has_condition` forcé à `true` et un jet de sauvegarde toujours réussi font tomber deux tests. La suite mord, elle ne se contente pas de passer.
 
-### V3-A2 — Brancher le vocabulaire d'événements · `M` — **fait les 19-21 septembre** (combat non câblé : le moteur ne sait pas tirer pour un monstre, voir ci-dessous)
+### V3-A2 — Brancher le vocabulaire d'événements · `M` — **fait les 19-22 septembre, combat compris**
 
 - [x] La résolution mécanique émet les événements — `src/core/rules/gameEvents.ts`. **`resolveAction` n'existe pas** : le ticket nomme une fonction absente du code. Les vrais points de résolution sont `resolveAttackRoll`, `resolveDamageRoll`, `resolveCheckRoll` (`action.ts`) et `advanceTurn` (`combat.ts`). Trois constructeurs couvrent ceux qui ont un producteur réel aujourd'hui : `eventsForAttack`, `eventsForSave`, `eventsForTurn`. Les douze autres événements du vocabulaire n'ont encore rien qui les produise — leur écrire un constructeur maintenant serait de l'échafaudage.
 - [x] Chaque événement porte son contexte, préfixé `event.` et donc lisible par un `ref` de condition (`event.damage`, `event.roll`, `event.ac`, `event.critical`, `event.dc`, `event.round`).
@@ -164,14 +164,20 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Un jet n'est jamais perdu pour une règle cassée.** Le dé a été lancé, son résultat est acquis : une panne du moteur de déclencheurs est consignée avec le jet plutôt que de le faire échouer.
 
-- [ ] **Non câblé : le combat.** `eventsForTurn` et `eventsForAttack` existent et sont testés, mais **rien ne les appelle**.
+- [x] **Le combat est câblé (22 septembre).** `moveTurn` (`combats.ts`) émet les événements de bascule et fait partir les déclencheurs du participant dont le tour commence.
 
-  **Correction d'un constat faux écrit ici le 21 septembre** (« `advanceTurn` n'a pas d'appelant serveur ») : il en a un, `moveTurn` dans `src/server/services/combats.ts`, qui tient round et index **persistés** et des participants ordonnés par initiative. `resolveAttackRoll` en a deux (`characterActions.ts`). Les points d'accroche existent donc tous.
+  **La correction d'un constat faux écrit ici le 21 septembre.** J'avais noté qu'`advanceTurn` « n'a pas d'appelant serveur » : il en a un depuis toujours, `moveTurn`, avec round et index persistés. Le vrai obstacle était de conception — `fireTriggersForCharacter` exige une `DerivedSheet`, qu'un **monstre** n'a pas. Le moteur était taillé pour un personnage, pas pour un participant de combat.
 
-  **Le vrai obstacle est ailleurs, et il est de conception :** `fireTriggersForCharacter` exige une `DerivedSheet` et un `rulesetId`. Or un participant de combat est soit une **entité** (`entity_id`), soit un **monstre du ruleset** (`rule_key`) — et un monstre n'a pas de fiche dérivée. Le moteur de déclencheurs est taillé pour un **personnage**, pas pour un participant. Faire partir un `turn_start` sur le tour d'un gobelin n'a aujourd'hui aucun chemin.
+  **La réponse, la moins chère des deux envisagées** : `buildMonsterActorState` compose l'acteur depuis le bloc `stat_block`, qui porte déjà CA, PV, caractéristiques, maîtrises de sauvegarde et bonus de maîtrise. Et il arrive dans la **même requête** que les déclencheurs (`resolveEntryBlocksInRulesetBatch`) — aucune requête de plus, aucune fiche à dériver.
 
-  Deux façons d'en sortir, à trancher : donner au moteur un contexte d'acteur **minimal** construit depuis la ligne de participant (PV, CA, conditions y sont déjà — il manque les modificateurs de sauvegarde), ou dériver une fiche pour un monstre. La première est nettement moins chère et suffit aux déclencheurs de monstre ordinaires.
-- [x] **Vérifié en direct le 21 septembre** (base réelle, monde ClaudeLand, Fine Lââm — roublarde 1, héritage infernal, maîtrise en Tromperie). Règle posée en **surcharge** (`ruleset_overrides`, `add_block`), donc par le chemin du homebrew et non sur une fiche officielle, immuable. Relue par `loadTriggersForEntries` à travers la chaîne, 0 rejet. Un test de Tromperie raté produit bien `narrate_hint` « Le regard se durcit : il a vu le mensonge. » **Contre-épreuve** : un Athlétisme raté ne déclenche rien — sans quoi l'événement serait inutilisable. Surcharge supprimée après vérification (vérifié : 0 ligne restante).
+  Trois arbitrages, écrits parce qu'ils ne vont pas de soi :
+  - **Uniquement en avant.** Revenir au tour précédent est une correction, pas un tour joué : refaire partir un poison à chaque retour en arrière serait un défaut difficile à voir.
+  - **L'état vivant prime sur la fiche.** Un monstre blessé n'a plus ses PV d'origine, et une CA corrigée à la main par le MJ écrase celle du bloc. `null` veut dire « non renseigné », jamais « zéro » — les confondre donnerait une CA 0 à tout participant dont la ligne ne la précise pas.
+  - **Une panne du moteur n'emporte jamais la bascule.** Le tour a changé, c'est acquis ; le perdre pour une règle maison cassée serait le pire des échanges. L'échec part dans le journal avec le tour.
+
+  **Vérifié en direct** (base réelle, variante de ClaudeLand) : déclencheur posé en surcharge sur `goblin-warrior`, `turn_start` → sauvegarde de Constitution DD 13 résolue **avec le bonus lu dans son `stat_block`** (total − dé = 0, correct pour un gobelin Con 10 non maîtrisé), échec → 3 dégâts de poison. Sans la condition, rien ne part. Aucun combat créé pour ce test : `session_events` est en ajout seul par conception, un faux combat aurait laissé des traces permanentes.
+
+  **Deux limites qui restent.** Un participant-**entité** ne déclenche pas encore : ses règles viennent de ses aptitudes, donc de sa fiche dérivée, que la bascule ne connaît pas — à rejoindre quand la boucle de tour résoudra les fiches de toute la scène. Et `has_feature` est toujours faux pour un monstre : ses traits vivent dans un bloc `traits` sans clé interrogeable.
 
 **La vérification a trouvé un défaut réel que les tests unitaires ne pouvaient pas voir.** `sheet.features[].key` mélange trois familles : des clés d'entrée telles quelles (`rogue-sneak-attack`), des clés d'**affichage préfixées** (`species:fiendish-legacy-infernal`, `background:artiste`), et des marqueurs de **choix** (`choice:rogue.skills`) qui ne correspondent à aucune entrée. Le câblage les passait toutes au magasin : **les déclencheurs d'une espèce ou d'un historique étaient donc introuvables, en silence.** Les tests unitaires utilisaient des clés nues et ne pouvaient rien en dire. Corrigé par `entryKeysForFeatures`, qui énumère les préfixes connus plutôt que de couper au premier `:` — couper aveuglément ferait disparaître les déclencheurs d'une clé légitime qui en contiendrait un.
 
