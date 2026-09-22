@@ -33,6 +33,78 @@
 import { ABILITY_LABELS, type ModifierOp, type Skill } from "@/src/core/rules/sheet";
 import { modifierTargetOption, type ModifierTargetCategory } from "@/src/core/rules/modifierTargets";
 import type { LanguageKey } from "@/src/core/rules/srdMapping";
+import type { IntentVerb } from "@/src/core/rules/intent";
+
+/**
+ * V3-B1 — Les verbes que la barre d'intention reconnait.
+ *
+ * C'est du francais, donc c'est ici : le noyau (`src/core/rules/intent.ts`)
+ * ne connait que des termes qu'on lui passe. Aucune conjugaison n'est
+ * devinee, aucune racine n'est coupee — chaque forme acceptee est ECRITE.
+ * Un lexique ferme se relit, se corrige, et ne surprend jamais.
+ *
+ * **La liste est courte volontairement, et c'est une decision.** Une
+ * intention non reconnue tombe en « action libre », ce que le ticket
+ * prevoit comme une sortie explicite ; un verbe trop large, lui, ferait
+ * lancer un de a contretemps — bien plus desagreable que de ne pas
+ * comprendre. Trois familles de verbes sont donc ABSENTES, chacune pour une
+ * raison precise :
+ *
+ * - « lancer » : un javelot ou un sort, on ne peut pas trancher. Or l'un
+ *   est une attaque d'arme et l'autre n'est pas encore resolu du tout.
+ * - « regarder », « voir », « chercher » : trop courants dans une phrase
+ *   ordinaire. Leur donner Perception ferait d'« il regarde la porte » un
+ *   jet.
+ * - les competences de savoir (Arcanes, Histoire, Nature, Religion) : elles
+ *   se disent « je me souviens », « je reconnais » — des tournures dont
+ *   aucun mot ne designe la competence a lui seul.
+ *
+ * Elles s'ajouteront sur des cas reellement rencontres en jouant, jamais
+ * par anticipation.
+ */
+export const INTENT_VERBS_FR: IntentVerb[] = [
+  // Attaque d'arme : la famille seulement. Laquelle des armes equipees
+  // reste au catalogue, donc a la fiche, donc au joueur.
+  {
+    kind: "weapon_attack",
+    terms: [
+      "attaque",
+      "attaquer",
+      "attaques",
+      "frappe",
+      "frapper",
+      "frappes",
+      "cogne",
+      "cogner",
+      "tape",
+      "taper",
+      "tranche",
+      "trancher",
+      "transperce",
+      "transpercer",
+      "poignarde",
+      "poignarder",
+      "decoche",
+      "decocher",
+      "tire",
+      "tirer",
+    ],
+  },
+  { kind: "skill_check", actionId: "investigation", terms: ["fouille", "fouiller", "inspecte", "inspecter", "examine", "examiner"] },
+  { kind: "skill_check", actionId: "perception", terms: ["guette", "guetter", "scrute", "scruter", "ecoute", "ecouter"] },
+  { kind: "skill_check", actionId: "athletics", terms: ["escalade", "escalader", "grimpe", "grimper", "saute", "sauter", "nage", "nager"] },
+  { kind: "skill_check", actionId: "acrobatics", terms: ["esquive", "esquiver", "roule", "rouler"] },
+  { kind: "skill_check", actionId: "persuasion", terms: ["persuade", "persuader", "convaincs", "convaincre", "negocie", "negocier"] },
+  { kind: "skill_check", actionId: "intimidation", terms: ["intimide", "intimider", "menace", "menacer"] },
+  { kind: "skill_check", actionId: "deception", terms: ["mens", "mentir", "bluffe", "bluffer"] },
+  { kind: "skill_check", actionId: "stealth", terms: ["cache", "cacher", "faufile", "faufiler"] },
+  { kind: "skill_check", actionId: "sleight_of_hand", terms: ["crochete", "crocheter", "subtilise", "subtiliser", "escamote", "escamoter"] },
+  { kind: "skill_check", actionId: "medicine", terms: ["soigne", "soigner", "stabilise", "stabiliser"] },
+  { kind: "skill_check", actionId: "survival", terms: ["piste", "pister", "traque", "traquer"] },
+  { kind: "skill_check", actionId: "insight", terms: ["jauge", "jauger", "sonde", "sonder"] },
+  { kind: "skill_check", actionId: "animal_handling", terms: ["amadoue", "amadouer", "dresse", "dresser"] },
+  { kind: "skill_check", actionId: "performance", terms: ["chante", "chanter", "danse", "danser"] },
+];
 
 /** Libelles officiels des competences (traduction SRD, cf. data/srd/fr-source). */
 export const SKILL_LABELS_FR: Record<Skill, string> = {

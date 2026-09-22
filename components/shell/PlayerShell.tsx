@@ -58,6 +58,10 @@ export default function PlayerShell({
   const destinations: Destination[] = [
     { href: base, label: "Personnage", icon: "user", match: (p) => p === base },
     { href: `${base}/fiche`, label: "Édition", icon: "card", match: (p) => p.startsWith(`${base}/fiche`) },
+    // V3-B1 : septieme destination, la barre d'intention. Elle s'ajoute aux
+    // six d'origine plutot que d'en remplacer une — un ecran qu'on ne peut
+    // atteindre qu'en tapant son adresse n'est pas un ecran.
+    { href: `${base}/solo`, label: "Solo", icon: "dice", match: (p) => p.startsWith(`${base}/solo`) },
     { href: `${base}/notes`, label: "Notes", icon: "notes", match: (p) => p.startsWith(`${base}/notes`) },
     { href: `${base}/wiki`, label: "Wiki", icon: "map", match: (p) => p.startsWith(`${base}/wiki`) },
     { href: `${base}/regles`, label: "Règles", icon: "books", match: (p) => p.startsWith(`${base}/regles`) },
@@ -188,6 +192,13 @@ function Icon({ name }: { name: string }) {
         <svg {...common}>
           <path d="M4 5h16v11H8l-4 4V5Z" />
           <path d="M8 9h8M8 12.5h5" />
+        </svg>
+      );
+    case "dice":
+      return (
+        <svg {...common}>
+          <path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Z" />
+          <path d="M4 7.5 12 12l8-4.5M12 12v9" />
         </svg>
       );
     default:

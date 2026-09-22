@@ -85,7 +85,7 @@ Lot F    la partie qui dure           reprise, sauvegarde, bascule vers une camp
 Lot R    la rapidité, et le téléphone  hors séquence — les restes de l'audit, à tout moment
 ```
 
-> **État au 22 septembre 2026.** S2 est rendu (verdict positif : le lien tient, le lot B peut s'écrire en prose libre). **Le lot A est clos — A1 à A6.** Trois cases y restent décochées et le resteront : elles décrivent du câblage qui **appartient au lot B**, pas au lot A (faire avancer la scène, tenir un budget de tour, émettre les événements de combat). Le lot A fournit l'état et les opérations ; la boucle de tour les appellera. Le lot R l'est aussi, à l'exception de `P‑07`. Les lots B, C, D, E et F ne sont pas commencés.
+> **État au 22 septembre 2026.** S2 est rendu (verdict positif : le lien tient, le lot B peut s'écrire en prose libre). **Le lot A est clos — A1 à A6.** **Le lot B est ouvert : B1 est fait** — la barre d'intention, son écran solo minimal, et le journal du tour ; B2 à B4 restent. Trois cases y restent décochées et le resteront : elles décrivent du câblage qui **appartient au lot B**, pas au lot A (faire avancer la scène, tenir un budget de tour, émettre les événements de combat). Le lot A fournit l'état et les opérations ; la boucle de tour les appellera. Le lot R l'est aussi, à l'exception de `P‑07`. Les lots C, D, E et F ne sont pas commencés.
 >
 > Ce que le lot A produit : un moteur de déclencheurs pur et borné, 20 événements et 11 effets fermés, un magasin sans table dédiée (bloc `triggers` sur une entrée de ruleset), le câblage des trois jets à verdict, une scène persistée, l'économie d'action, un bac à sable et un formulaire de saisie.
 >
@@ -267,7 +267,7 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 *Ce lot n'existe dans aucune spec. C'est le chaînon manquant entre le moteur (lot A) et l'écran (lot D).*
 
-### V3-B1 — La barre d'intention · `L`
+### V3-B1 — La barre d'intention · `L` — **fait le 22 septembre**
 
 **Le ticket le plus important de la V3.** Il répond au trou le plus grave d'ADR 0009 : *« rien dans l'écran ne force son usage : la garantie "le modèle ne calcule rien" ne tient que si l'humain pense à toujours fournir le fait ».*
 
@@ -285,13 +285,25 @@ Il lance :         d20+5 = 17 vs CA 15 → touché · 1d8+3 = 8 dégâts
 Le modèle reçoit ces faits et écrit deux phrases.
 ```
 
-- [ ] Interprétation de l'intention : d'abord une correspondance déterministe (verbes connus, noms d'actions de la fiche, noms des présents dans la scène). Le modèle n'intervient qu'en repli, et **uniquement pour classer**, jamais pour résoudre.
-- [ ] La proposition mécanique est **toujours affichée avant d'être exécutée**, et modifiable en un clic.
-- [ ] Une intention non reconnue tombe dans « action libre » : pas de résolution, narration seule — un choix explicite, jamais un contournement silencieux.
-- [ ] **Aucun appel au modèle de narration avant que la résolution mécanique ait produit son résultat.** Vérifié par un test, pas par une convention.
-- [ ] Le résultat mécanique complet est journalisé en `session_events` (`kind: 'roll'`) avant la narration.
+- [x] Interprétation de l'intention : correspondance déterministe — `src/core/rules/intent.ts`, module pur, 17 tests écrits avant le code. Il réutilise `detectEntityReferences` (V0-05) plutôt qu'un second moteur de correspondance : mêmes frontières de mots, même priorité à la correspondance la plus longue (« épée longue » l'emporte sur « épée »), accents et casse ignorés. Le lexique de verbes est en français, donc dans `src/i18n/fr.ts` — fermé, sans conjugaison devinée.
+- [x] La proposition mécanique est **toujours affichée avant d'être exécutée**, et modifiable en un clic — « ce n'est pas ça » ouvre le choix de l'action, de la cible, de l'avantage et du DD. La correction est consignée (`intent.corrected`), pour savoir plus tard ce que le lexique rate vraiment.
+- [x] Une intention non reconnue tombe dans « action libre » — et elle dit **laquelle des deux raisons** : rien de reconnu, ou verbe compris mais cette fiche n'a rien pour le faire (aucune arme équipée). Journalisée en `player_action` avec `resolution: "aucune"`, jamais en silence.
+- [x] **Aucun appel au modèle**, point — `turnIntent.noAi.test.ts` verrouille les quatre fichiers du chemin (noyau, service, route, écran) contre tout import de `src/server/ai/` ou `src/core/ai/`. Le test tombera le jour où V3-B2 branchera la narration : il faudra alors venir y écrire l'ordre à la main, en connaissance de cause.
+- [x] Le résultat mécanique complet est journalisé en `session_events` (`kind: 'roll'`) avant de rendre la main, avec les `facts` en phrases — c'est exactement ce que V3-B2 donnera au modèle.
 
 **Pourquoi ce dessin plutôt qu'un simple champ de texte :** l'ADR a montré qu'une case à cocher facultative ne suffit pas. Ici, la mécanique n'est pas une option qu'on peut oublier — c'est le chemin. Et le joueur y gagne : il voit ce que le moteur a compris avant que ça parte, ce qui supprime la frustration du « ce n'est pas ce que je voulais faire ».
+
+**Trois décisions prises en écrivant, à lire avant B2.**
+
+**Le repli par le modèle n'est pas écrit, et c'est délibéré.** Le ticket le prévoyait « uniquement pour classer » ; il attend d'être nourri par des cas réels. Le lexique compte une quinzaine d'entrées, chacune justifiée dans `INTENT_VERBS_FR`, et trois familles en sont volontairement absentes (« lancer », ambigu entre le javelot et le sort ; « regarder »/« chercher », trop courants pour ne pas déclencher un jet à contretemps ; les compétences de savoir, qu'aucun verbe ne désigne seul). Ce qu'elles ratent se mesurera en jouant — `intent.corrected` est là pour ça.
+
+**Les cibles viennent du combat en cours, pas seulement de la scène.** La scène (V3-A4) est la source de vérité de « qui est là », mais **rien ne la fait encore avancer** — c'est précisément le reste du lot B. Les participants d'un combat `running`, eux, existent aujourd'hui et portent une CA : sans eux, la barre n'aurait eu personne à viser. Les deux sources sont lues, le combat d'abord parce qu'il est le seul à donner une CA. Sans CA, l'attaque est lancée mais **sans verdict** — on ne l'invente pas.
+
+**Rien n'est appliqué à la cible.** Les PV du gobelin ne bougent pas : appliquer un effet est V3-B2. Le fait est établi et journalisé, ce qui suffit à la narration et permettra de l'appliquer plus tard sans relancer le dé. Dans la même logique, `eventsForAttack` (V3-A2) reste sans appelant — B1 lui fournit enfin ce qui lui manquait, la CA de la cible, mais c'est la boucle de tour qui fera partir ces déclencheurs, comme pour tous les autres.
+
+**Ce qui n'a pas pu être vérifié :** l'écran n'a pas été ouvert dans un navigateur — la session du volet n'est plus authentifiée, et saisir un mot de passe est exclu. `typecheck`, `lint`, `build` et les 1 234 tests passent ; la route répond correctement aux appels anonymes. Le rendu réel de la barre reste à regarder.
+
+**L'écran :** `/m/[worldSlug]/joueur/solo`, septième destination de la coquille joueur. C'est un toit minimal, **pas** le lot D : ni colonne du monde connu, ni fiche à droite. `IntentBar.tsx` est autonome et se déplacera tel quel dans la colonne centrale de V3-D4. La lecture de la phrase tourne dans le navigateur — `interpretIntent` est pur, donc la proposition s'affiche en frappant, sans aller-retour ; le serveur ne reçoit jamais une phrase à interpréter, seulement le **choix** retenu.
 
 ### V3-B2 — Le tour, de bout en bout · `L`
 
