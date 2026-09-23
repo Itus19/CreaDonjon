@@ -579,14 +579,21 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 
 **Ce que ce ticket a déplacé.** Le nom du personnage et le compte des présents, provisoirement posés dans le bandeau par V3-D1, en sont partis — ils n'appartenaient pas à un en-tête de lieu/temps. Ils se réinstallent dans la fiche jouable, V3-D5, qui n'est encore qu'un `EmptyState`.
 
-### V3-D3 — La colonne gauche : le monde connu · `M`
+### V3-D3 — La colonne gauche : le monde connu · `M` — **fait le 23 septembre**
 
-- [ ] **Quatre onglets de classeur** : Wiki, Quêtes, Présents, Règles.
-- [ ] **Le wiki se navigue DANS la colonne.** Une fiche connue s'ouvre sur place, avec le chemin pour revenir (`← Lieux`) et un lien vers la fiche entière. Une fiche seulement *mentionnée* n'est pas cliquable : il n'y a rien à ouvrir.
-- [ ] **Un marqueur de découverte sur chaque entrée** : connu `◆`, esquisse `○`, mentionné `◇`, avec leur légende en pied de liste.
-- [ ] **Quêtes** : les blocs `quest` en cours, avec leurs objectifs cochés ou non, le compte (`1/3`), le donneur et la récompense. `listActiveQuestsForWorld` existe depuis la V2 et n'a jamais eu d'appelant — il en a un.
-- [ ] **Présents** : qui est dans la scène, sa bande d'attitude en un mot et sa zone. Un PNJ qui n'est qu'une esquisse s'affiche comme tel, avec « garder cette fiche » qui l'ancre (V3-C2).
-- [ ] **Règles** : l'écran de règles existant, en version étroite. Aucun composant nouveau.
+- [x] **Quatre onglets de classeur** : Wiki, Quêtes, Présents, Règles — `components/solo/ColonneMonde.tsx`, même famille que `BinderTabs` déjà utilisé par V3-D1.
+- [x] **Le wiki se navigue DANS la colonne.** Une fiche s'ouvre sur place, avec le chemin pour revenir (`← <groupe>`) et un lien vers la fiche entière.
+- [ ] **Un marqueur de découverte sur chaque entrée** : connu `◆`, esquisse `○`, mentionné `◇`, avec leur légende en pied de liste. **Omis** — voir la limite n° 1 ci-dessous. « Une fiche seulement *mentionnée* n'est pas cliquable » n'a donc pas de sens aujourd'hui : sans marqueur, rien n'est traité comme "mentionné seulement".
+- [x] **Quêtes** : les blocs `quest` en cours, avec leurs objectifs cochés ou non, le compte (`1/3`), le donneur et la récompense. `listActiveQuestsForWorld` (V2) a enfin un appelant (`buildQuestColumn`, `src/server/services/soloWorldColumn.ts`).
+- [x] **Présents** : qui est dans la scène, sa zone, et son mot d'attitude **si la scène le porte** (`ScenePresence.disposition`, posé par V3-A4/B2 en prévision de ce ticket exact — exposé dans `SceneView.present` seulement maintenant, rien ne l'écrit encore). Un PNJ qui n'est qu'une esquisse s'affiche comme tel, avec « garder cette fiche » : **omis**, voir la limite n° 2.
+- [x] **Règles** : l'écran de règles existant, en version étroite. **Aucun composant nouveau** au sens le plus strict — `PlayerRulesSidebar` (déjà utilisé par `joueur/regles`) est importé et posé tel quel dans l'onglet, pas recopié.
+
+**Deux trous que le ticket supposait combler, documentés plutôt que devinés — même méthode qu'en V3-D2.**
+
+1. **Aucun marqueur de découverte n'est affiché**, nulle part dans cette colonne. `entity_discoveries` existe depuis la Phase 0 et n'est écrite par rien (c'est tout V3-C4) — sans une seule ligne dans cette table pour aucune campagne, un marqueur serait soit toujours "mentionné" (inutile), soit inventé à partir d'une autre donnée. **Ce que le Wiki montre à la place aujourd'hui** : exactement ce qu'un joueur peut déjà ouvrir depuis `/joueur/wiki` — `getEntityTree` + `listPlayerVisibleEntityIds`, la visibilité par bloc déjà en place, pas la découverte progressive. Ce n'est ni plus ni moins que ce qui est déjà exposé ailleurs dans la coquille joueur ; V3-C4 viendra resserrer cette même colonne une fois qu'il écrira des lignes réelles, sans qu'elle change de forme.
+2. **Aucune esquisse ne peut apparaître dans « Présents ».** Le concept même — un PNJ vivant dans la scène sans UUID d'entité — n'existe pas avant V3-C2. `SceneState.present` ne contient que des entités réelles aujourd'hui : le bouton « garder cette fiche » n'a donc rien à faire, et n'est pas posé — un bouton qui ne ferait jamais rien serait pire qu'un bouton absent.
+
+**Ce qui a été réutilisé plutôt que reconstruit.** Le premier paragraphe visible de chaque fiche du Wiki vient de `resolveEntityRefExcerpts` (déjà écrit pour les cartes au survol d'un lien, V2.1-18) — un aller-retour groupé, pas un par fiche. Le libellé français de chaque groupe (« Lieux », « Personnages »...) vient de `messages/fr.json` (`shell.kindLabels`), la même table que la barre latérale MJ. Le donneur d'une quête n'est résolu que pour une référence d'**entité** ; une référence de **règle** (rare, "donné par une entrée de règle") n'affiche pas de nom, faute de justifier la machinerie de `resolveRuleRefPreviews` pour ce ticket.
 
 ### V3-D4 — La colonne centrale : le fil et la saisie · `L`
 

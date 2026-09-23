@@ -63,7 +63,52 @@ export interface SceneView {
   time: { day: number; hour: number; minute: number };
   lighting: "bright" | "dim" | "dark";
   inCombat: boolean;
-  present: { entityId: string; name: string; zone: "engaged" | "near" | "far" }[];
+  present: {
+    entityId: string;
+    name: string;
+    zone: "engaged" | "near" | "far";
+    /** Un mot sur l'attitude ("mefiant"), pose a l'entree en scene — `undefined` : rien n'ecrit ce champ aujourd'hui (V3-D3, colonne Présents). */
+    disposition?: string;
+  }[];
+}
+
+/**
+ * V3-D3 — La colonne gauche, onglet Wiki : une entree deja resolue en nom,
+ * slug et court extrait (premier paragraphe visible a CE joueur,
+ * `resolveEntityRefExcerpts`). Aucun marqueur de decouverte : la donnee qui
+ * le porterait (`entity_discoveries`) n'est jamais ecrite avant V3-C4.
+ */
+export interface WikiColumnEntry {
+  id: string;
+  name: string;
+  slug: string;
+  /** `null` : aucun bloc `text` visible sur cette fiche — la colonne l'affiche comme "Rien d'écrit pour l'instant.", jamais comme une erreur. */
+  excerpt: string | null;
+}
+
+export interface WikiColumnGroup {
+  /** `entity_kind` brut ("location", "pnj"...) — cle React, le libelle francais vit dans `label`. */
+  kind: string;
+  label: string;
+  entries: WikiColumnEntry[];
+}
+
+/** V3-D3, onglet Quêtes — un objectif deja resolu, jamais de reference brute côté client. */
+export interface QuestColumnObjective {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export interface QuestColumnEntry {
+  /** L'id du bloc `quest` — stable, jamais reconstruit a partir du titre. */
+  id: string;
+  title: string;
+  /** `null` : sans donneur, ou donneur non resolu (une reference de regle, hors de portee de ce ticket). */
+  giverName: string | null;
+  /** Les recompenses de la quete, deja jointes en une phrase — `null` si aucune n'est renseignee. */
+  rewardText: string | null;
+  objectives: QuestColumnObjective[];
 }
 
 /**

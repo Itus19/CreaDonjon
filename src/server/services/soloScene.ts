@@ -86,6 +86,7 @@ export async function loadSceneView(
       entityId: p.entityId,
       name: byId.get(p.entityId)?.name ?? p.entityId,
       zone: p.zone,
+      disposition: p.disposition,
     })),
   };
 }

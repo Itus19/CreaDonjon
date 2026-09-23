@@ -1,12 +1,15 @@
 import { notFound } from "next/navigation";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug, getCalendar } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { buildIntentBarData } from "@/src/server/services/turnIntent";
 import { listSceneChoices, loadSceneView, sceneDateLabel } from "@/src/server/services/soloScene";
+import { buildViewerForWorld } from "@/src/server/services/visibility";
+import { buildWikiColumn, buildQuestColumn } from "@/src/server/services/soloWorldColumn";
 import EmptyState from "@/components/shell/EmptyState";
+import ColonneMonde from "@/components/solo/ColonneMonde";
 import EnTeteEtat from "@/components/solo/EnTeteEtat";
 import SoloScreen from "@/components/solo/SoloScreen";
 import SoloShell from "@/components/solo/SoloShell";
@@ -16,12 +19,13 @@ import type { Locale } from "@/src/i18n/request";
  * L'ecran solo — **V3-D1 : la coquille a trois colonnes**, qui remplace le
  * toit minimal de V3-B1. **V3-D2** pose l'en-tete d'etat dans le bandeau
  * (lieu a gauche, date/heure a droite) — le nom du personnage qui y vivait
- * provisoirement se reinstalle dans la fiche jouable, V3-D5.
+ * provisoirement se reinstalle dans la fiche jouable, V3-D5. **V3-D3** pose
+ * la colonne gauche (le monde connu) : Wiki, Quetes, Presents, Regles.
  *
- * Les deux colonnes laterales annoncent encore ce qui viendra s'y asseoir :
- * le monde connu est V3-D3, la fiche jouable V3-D5. La colonne centrale
- * porte deja le vrai ecran de jeu (scene + barre d'intention), deplace tel
- * quel depuis V3-B1 — c'est V3-D4 qui le reprendra en fil.
+ * La colonne droite reste une annonce : la fiche jouable est V3-D5. La
+ * colonne centrale porte deja le vrai ecran de jeu (scene + barre
+ * d'intention), deplace tel quel depuis V3-B1 — c'est V3-D4 qui le
+ * reprendra en fil.
  *
  * Le personnage et la campagne se resolvent exactement comme l'onglet
  * Personnage (`joueur/page.tsx`) : le PJ revendique de la premiere campagne
@@ -69,10 +73,14 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
     );
   }
 
-  const [scene, choices, calendar] = await Promise.all([
+  const viewer = await buildViewerForWorld(supabase, world.id, user.id);
+  const t = await getTranslations("shell");
+  const [scene, choices, calendar, wiki, quests] = await Promise.all([
     loadSceneView(supabase, { campaignId: campaign.id, worldId: world.id }),
     listSceneChoices(supabase, world.id),
     getCalendar(supabase, world.id),
+    buildWikiColumn(supabase, world.id, user.id, viewer, t.raw("kindLabels") as Record<string, string>),
+    buildQuestColumn(supabase, world.id, viewer),
   ]);
   const dateLabel = scene ? sceneDateLabel(scene.time.day, calendar) : null;
 
@@ -81,12 +89,7 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
       <SoloShell
         worldSlug={worldSlug}
         entete={<EnTeteEtat worldSlug={worldSlug} scene={scene} dateLabel={dateLabel} />}
-        monde={
-          <EmptyState
-            title="Le monde connu"
-            description="Le wiki des fiches découvertes, les quêtes en cours, qui est présent et les règles actives viendront ici — c'est V3-D3."
-          />
-        }
+        monde={<ColonneMonde worldSlug={worldSlug} wiki={wiki} quests={quests} present={scene?.present ?? []} />}
         jeu={
           <SoloScreen
             worldSlug={worldSlug}

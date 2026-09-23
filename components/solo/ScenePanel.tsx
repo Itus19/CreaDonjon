@@ -26,7 +26,8 @@ const LIGHTING_LABELS: Record<SceneView["lighting"], string> = {
   dark: "obscurité",
 };
 
-const ZONE_LABELS: Record<SceneView["present"][number]["zone"], string> = {
+/** Exportee pour `ColonneMonde.tsx` (V3-D3, onglet Présents) — mêmes trois zones, jamais un second libellé. */
+export const ZONE_LABELS: Record<SceneView["present"][number]["zone"], string> = {
   engaged: "au contact",
   near: "à portée",
   far: "au loin",
