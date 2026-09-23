@@ -38,6 +38,27 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-23 | Les petits contrôles à un rapport de pixels fractionnaire | `M` | **Ouvert** (16 septembre) — le liseré d'un bouton et le petit texte coloré paraissent abîmés sur l'écran 4K de l'auteur, pas sur son portable. Mesuré : `dpr=1.5`, gamut sRGB — c'est Windows à 150 %, et un trait d'1 px y vaut 1,5 pixel physique qu'aucune valeur CSS ne peut faire tomber juste. Ce n'est pas une régression de V2.1-20/21, vérifié dans le diff. Ce qu'on peut changer n'est pas le rendu du trait mais le fait que nos petits contrôles **dépendent** d'un trait pour exister — un aplat de surface se rend proprement à n'importe quel rapport. Trois candidats, et l'auteur est le seul à pouvoir les départager : une page de comparaison passe avant toute modification. **Clos sans remède** le 16 septembre : la recette a été écrite, appliquée, puis annulée, et la mesure de clôture a montré pourquoi « convertir d'un coup » n'existait pas — 159 sites écrits de **93 façons distinctes**, dont 60 uniques. Le ticket ne laisse aucune ligne de code, mais quatre mesures et un chemin (`Button.tsx`, charte §7d) si le sujet revient |
 | V2.1-24 | L'accueil passe au rail de sections, le détail au classeur | `L` | **Les cinq lots livrés** (17 septembre), un seul critère restant : l'Administration en tableau n'a pas été vue en navigateur, faute d'un compte superadmin côté test. Ouvert le 16 septembre — demande de l'auteur sur capture : « revoir la disposition de cette page et l'organisation des boutons ». Compté avant de dessiner : **52 contrôles simultanés** pour la seule Administration, dont les boutons se replient faute de place dans un tiers d'écran, et une troisième colonne vide au chargement. Cinq esquisses regardées ensemble, puis trois — le **rail de sections** l'emporte, parce qu'il « rappelle le menu des joueurs » dont il emprunte l'esthétique, et le détail du monde passe aux **intercalaires de classeur** de la fiche de personnage. Rien de neuf à dessiner : `PlayerShell`, les onglets de `PlayableCharacterSheet` et `ActionsMenu` existent tous les trois. Le lot 0 était un arbitrage qui n'appartenait qu'à l'auteur — la charte interdit une deuxième présentation d'onglets, le dépôt en a déjà deux, et toutes deux se défendent : **tranché le jour même**, `BinderTabs` est extrait et l'ADR 0026 assume les deux présentations |
 | V2.1-25 | L'onglet Accès : une liste calme, et « Révoquer » qui tient sa promesse | `M` | **Les deux lots faits** (17 septembre) — né d'une demande de présentation, qui a découvert autre chose en instruisant une remarque de l'auteur (« il reste des traces » après une révocation). **Ce n'était pas son erreur** : `revokeCampaignInvite` pose `revoked_at` et rien d'autre, donc le jeton meurt mais `campaign_members` et `campaign_characters.user_id` survivent — et `app.is_world_member` comptant les membres de campagne, **le monde reste ouvert à la personne révoquée**. Quatre besoins pour deux opérations et demie ; « retirer vraiment l'accès » n'existait qu'en supprimant le compte. L'auteur a tranché : révoquer retirera l'accès, par une fonction Postgres atomique — trois écritures sur trois tables pour une opération de sécurité ne se font pas à la file. Côté écran, quatre esquisses regardées ensemble, la liste calme retenue avec la séparation des liens en attente |
+| V2.1-26 | Deux compteurs que la fiche jouable ne montre pas | `S` | **Fait** (23 septembre) — né du dessin de l'écran solo, et deux manques opposés : l'inspiration n'existait **nulle part**, les états existaient **en base** et ne s'affichaient nulle part. Le champ arrive en `.default(0)`, jamais requis — `zRuntimeState.parse` tourne à chaque ouverture de fiche, et un champ requis aurait rendu illisibles toutes les lignes déjà écrites ; vérifié sur une vraie ligne sans la clé. Un entier borné plutôt qu'un drapeau : le SRD 2024 rend l'inspiration binaire, beaucoup de tables en distribuent plusieurs. Le ticket se trompait sur un point, et c'était une bonne nouvelle — aucun nom de condition n'avait à être résolu, l'Initiative stocke déjà des noms |
+| V2.1-27 | Les cibles de clic sous le minimum, et la dérive des tailles | `M` | **Fait** (23 septembre) — né des deux critères que V2.1-26 n'a pas pu tenir : le défaut qu'on ne corrige pas dans le ticket qui le rencontre. `Stepper` est partagé par dix appels ; sa cible passe à 24 px **sans que le dessin bouge**, par une extension vers l'intérieur — le conteneur est `overflow-hidden`, une extension vers l'extérieur aurait été rognée, donc morte et silencieusement. La rangée de badges passe à `text-xs`, ce qui a demandé de monter sa bande de libellé de 24 à 32 px pour tous : « Perception passive » débordait de 7 px. Pas de passe globale, la charte l'interdit — mais une règle ESLint interdit désormais les **nouvelles** occurrences, 72 fichiers exemptés nommément |
+
+
+> **État au 23 septembre 2026 — les vingt-sept tickets sont livrés.** Ce qui
+> reste tient en quatre lignes, et **aucune n'est du code à écrire** :
+>
+> | Ce qui reste | Pourquoi ça n'est pas fait |
+> |---|---|
+> | **V2.1-24, lot 4** — l'Administration en tableau, jamais vue en navigateur | Il faut un compte **superadmin** côté test, et la session n'en a pas. Écrit, typé, testé ; seul le coup d'œil manque |
+> | **V2.1-10** — deux vérifications de déploiement | Les journaux de build Vercel et un envoi d'image réel **en production** : ni l'un ni l'autre n'est atteignable depuis une session de travail |
+> | **V2.1-18** — le poids HTML ajouté sur le Prologue | Une mesure jamais prise, pas un travail jamais fait — la case le dit déjà |
+> | **V2.1-23** — les petits contrôles à `dpr=1.5` | **Clos sans remède**, délibérément : 159 sites écrits de 93 façons distinctes, et la recette essayée a été annulée. Le ticket laisse quatre mesures et un chemin si le sujet revient |
+>
+> Les trois premières lignes appartiennent à l'auteur, pas au prochain ticket.
+>
+> **Les cases à cocher de ce fichier ne sont pas un état fiable**, et c'est
+> assumé : plusieurs tickets ont été livrés puis consignés dans leur corps
+> (« **Lot 2 — fait.** »), sans que la liste de critères soit repassée. Le
+> tableau ci-dessus et les titres font foi ; les cases disent ce qui a été
+> vérifié un par un, ce qui est une autre question.
 
 ---
 
@@ -250,7 +271,7 @@ dans les étapes :
 
 ---
 
-## V2.1-2 — Outil de notes et de préparation de séance · `L`
+## V2.1-2 — Outil de notes et de préparation de séance · `L` — fait
 
 ### Constat
 
@@ -788,7 +809,7 @@ type."
 
 ---
 
-## V2.1-6 — Bloc musique : ambiance sonore sur le wiki public · `L`
+## V2.1-6 — Bloc musique : ambiance sonore sur le wiki public · `L` — fait
 
 ### Constat
 
@@ -3380,7 +3401,7 @@ rendre ses `children`, la fiche aurait déjà été chargée.
 
 ---
 
-## V2.1-20 — La navigation du wiki public, de bout en bout · `L`
+## V2.1-20 — La navigation du wiki public, de bout en bout · `L` — fait
 
 ### Constat
 
@@ -4709,7 +4730,7 @@ courte, que le point H ne coûte rien, et qu'il n'y a rien à différer de ce c�
 
 ---
 
-## V2.1-21 — Le contraste élevé se perd sur une fiche illustrée · `S`
+## V2.1-21 — Le contraste élevé se perd sur une fiche illustrée · `S` — fait
 
 ### Constat
 
@@ -5144,7 +5165,7 @@ atteignable ici.
 
 ---
 
-## V2.1-24 — L'accueil passe au rail de sections, le détail au classeur · `L`
+## V2.1-24 — L'accueil passe au rail de sections, le détail au classeur · `L` — fait, **sauf la vérification du lot 4**
 
 ### Constat
 
@@ -5476,7 +5497,7 @@ l'auteur, les deux derniers peuvent attendre.
 
 ---
 
-## V2.1-25 — L'onglet Accès : une liste calme, et « Révoquer » qui tient sa promesse · `M`
+## V2.1-25 — L'onglet Accès : une liste calme, et « Révoquer » qui tient sa promesse · `M` — fait
 
 ### Constat — la présentation
 
