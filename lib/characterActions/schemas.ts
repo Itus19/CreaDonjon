@@ -101,6 +101,12 @@ export const exhaustionChangeSchema = z.object({
   delta: z.number().int(),
 });
 
+/** V2.1-26 : meme forme que l'epuisement, clampe a [0, 5] cote serveur (`changeInspiration`). */
+export const inspirationChangeSchema = z.object({
+  campaignId: campaignIdField,
+  delta: z.number().int(),
+});
+
 export const resourceUsageSchema = z.object({
   campaignId: campaignIdField,
   trackerId: z.string().min(1),

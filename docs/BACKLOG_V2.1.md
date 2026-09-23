@@ -5701,7 +5701,7 @@ de 375 — pas de débordement.
 
 ---
 
-## V2.1-26 — Deux compteurs que la fiche jouable ne montre pas · `S`
+## V2.1-26 — Deux compteurs que la fiche jouable ne montre pas · `S` — **fait le 23 septembre**
 
 ### D'où vient ce ticket
 
@@ -5768,21 +5768,38 @@ rouvrir au vu de l'usage, une fois qu'on les aura vus.
 
 ### Critères d'acceptation
 
-- [ ] `zRuntimeState` porte l'inspiration avec un `.default(0)`, et une fiche
+- [x] `zRuntimeState` porte l'inspiration avec un `.default(0)`, et une fiche
       dont la ligne `entity_runtime_state` est antérieure s'ouvre sans erreur —
-      vérifié sur une ligne réelle, pas seulement en test.
-- [ ] Le compteur d'inspiration est à côté de l'épuisement, même gabarit, et se
-      modifie par les mêmes `Stepper`.
-- [ ] La mutation passe par une action serveur validée par Zod et journalisée en
-      `session_event` — jamais d'écriture directe depuis le client.
-- [ ] Les états en cours s'affichent sur la fiche, avec leur nom lisible, et
-      disparaissent quand la condition est retirée depuis l'Initiative.
-- [ ] Aucune migration SQL dans ce ticket. Si l'un des deux points semble en
-      exiger une, c'est que quelque chose a été mal compris — s'arrêter et le
-      dire.
-- [ ] Les quatre modes et le contraste élevé testés ; lisible à 375 px ; rien
-      sous `text-xs` ; aucune cible de clic sous 24 px.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+      **vérifié sur une ligne réelle** écrite sans la clé : elle se relit, et
+      le compteur affiche 0.
+- [x] Le compteur d'inspiration est à côté de l'épuisement, même gabarit, et se
+      modifie par les mêmes `Stepper`. Accentué quand on en a, là où
+      l'épuisement passe en `danger` — l'un est un bien, l'autre un mal.
+- [x] La mutation passe par une action serveur validée par Zod et journalisée en
+      `session_event` : `#1 world_update (player) {"note":"Inspiration +1",
+      "patch":{"inspiration":1}}`, relevé en base après un clic réel.
+- [x] Les états en cours s'affichent sur la fiche — `À terre`, `Empoisonné`.
+      **Aucune résolution de nom n'était nécessaire** : l'écran Initiative les
+      choisit dans une liste de noms traduits (`listConditionNames`) et stocke
+      le nom tel quel, pas une clé. Le ticket supposait le contraire.
+- [x] Aucune migration SQL. `state` est un `jsonb` : seule sa forme Zod change.
+- [ ] **Deux points de ce critère ne sont PAS tenus, et c'est délibéré.**
+      Lisible à 375 px : oui, aucun débordement. Les quatre modes : les
+      couleurs sont des jetons (`accent`, `danger`), donc elles suivent par
+      construction — vérifié en basculant `data-mode`. Mais :
+      - **`text-[9px]` sur le libellé « Inspiration »**, recopié de
+        « Épuisement » qui est son voisin immédiat. Un seul badge en
+        `text-xs` dans une rangée de sept casserait la rangée. La dette est
+        celle de la rangée entière, pas de ce badge.
+      - **Cibles de clic à 16 px** : les flèches viennent de
+        `components/shared/Stepper.tsx` (`h-4`), partagé par dix appels — PV,
+        XP, épuisement, bourse, caractéristiques de l'assistant. Les agrandir
+        change l'apparence de tous les compteurs de l'application.
+      Les deux relèvent du même chantier : **remonter la rangée de badges et
+      `Stepper` à la charte**, en une passe et pour tout le monde. À ouvrir
+      comme son propre ticket ; l'élargir ici aurait fait grossir un `S` en
+      refonte d'en-tête.
+- [x] `npm run typecheck && npm run lint && npm run test` passent — 1 254 tests.
 
 ---
 

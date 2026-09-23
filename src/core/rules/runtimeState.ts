@@ -12,6 +12,7 @@ export interface RuntimeStatePatch {
   hp?: Partial<RuntimeState["hp"]>;
   hit_dice?: Record<string, number>;
   exhaustion?: number;
+  inspiration?: number;
   xp?: number;
   resources?: Record<string, number>;
   spell_slots_used?: Record<string, number>;
@@ -25,6 +26,7 @@ export function mergeRuntimeState(current: RuntimeState, patch: RuntimeStatePatc
     hp: { ...current.hp, ...patch.hp },
     hit_dice: { ...current.hit_dice, ...patch.hit_dice },
     exhaustion: patch.exhaustion ?? current.exhaustion,
+    inspiration: patch.inspiration ?? current.inspiration,
     xp: patch.xp ?? current.xp,
     resources: { ...current.resources, ...patch.resources },
     spell_slots_used: { ...current.spell_slots_used, ...patch.spell_slots_used },

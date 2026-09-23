@@ -44,6 +44,7 @@ const runtime = {
   hp: { current: 11, temp: 2 },
   hit_dice: { d8: 3 },
   exhaustion: 1,
+  inspiration: 0,
   xp: 0,
   resources: {},
   spell_slots_used: {},

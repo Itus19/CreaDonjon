@@ -15,6 +15,19 @@ export const zRuntimeState = z.object({
   // Cle libre ("d10", "d8"...) plutot qu'un type ferme : depend des classes du personnage.
   hit_dice: z.record(z.string(), z.number().int().nonnegative()),
   exhaustion: z.number().int().min(0).max(6),
+  /**
+   * V2.1-26 — l'inspiration héroïque, qui n'existait nulle part.
+   *
+   * `.default(0)` et jamais un champ requis : `zRuntimeState.parse` tourne à
+   * chaque ouverture de fiche (`getOrInitializeRuntimeState`), et toutes les
+   * lignes déjà en base ont été écrites sans ce champ. Aucune migration SQL —
+   * `state` est un `jsonb`, seule sa forme Zod change.
+   *
+   * Un ENTIER, pas un booléen : le SRD 2024 rend l'inspiration binaire, mais
+   * beaucoup de tables en distribuent plusieurs. L'entier couvre les deux, la
+   * borne haute évite qu'un clic répété fasse dériver le compteur.
+   */
+  inspiration: z.number().int().min(0).max(5).default(0),
   xp: z.number().int().nonnegative(),
   // Cle = id de tracker du bloc `resources` (V1-B2) ; valeur = usages consommes, pas restants.
   resources: z.record(z.string(), z.number().int().nonnegative()),
@@ -35,6 +48,7 @@ export function defaultRuntimeState(): RuntimeState {
     hp: { current: 0, temp: 0 },
     hit_dice: {},
     exhaustion: 0,
+    inspiration: 0,
     xp: 0,
     resources: {},
     spell_slots_used: {},

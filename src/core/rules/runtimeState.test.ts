@@ -35,4 +35,13 @@ describe("mergeRuntimeState", () => {
     const current = { ...defaultRuntimeState(), xp: 50 };
     expect(mergeRuntimeState(current, {})).toEqual(current);
   });
+
+  it("fusionne l'inspiration comme un compteur simple, zero compris", () => {
+    // Zero doit passer : `??` et non `||`, sinon retirer la derniere
+    // inspiration ne ferait rien — la faute classique sur un compteur qui
+    // descend jusqu'a zero.
+    const current = { ...defaultRuntimeState(), inspiration: 2 };
+    expect(mergeRuntimeState(current, { inspiration: 0 }).inspiration).toBe(0);
+    expect(mergeRuntimeState(current, {}).inspiration).toBe(2);
+  });
 });

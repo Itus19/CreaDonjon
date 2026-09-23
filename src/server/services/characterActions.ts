@@ -964,6 +964,28 @@ export async function changeExhaustion(
   });
 }
 
+/**
+ * V2.1-26 — l'inspiration heroique. Meme geste que l'epuisement, a trois
+ * lignes d'ici : un delta, borne cote SERVEUR, journalise comme toute
+ * mutation de jeu. Le client propose un delta, il ne pose jamais la valeur.
+ */
+export async function changeInspiration(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string | null; delta: number; actorUserId: string }
+): Promise<void> {
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
+  await applyRuntimeStateChange(supabase, {
+    entityId: params.entityId,
+    campaignId: params.campaignId,
+    patch: { inspiration: Math.max(0, Math.min(5, state.inspiration + params.delta)) },
+    note: `Inspiration ${params.delta >= 0 ? "+" : ""}${params.delta}`,
+    sessionId,
+    actor: "player",
+    actorUserId: params.actorUserId,
+  });
+}
+
 /** Consommation d'un compteur de ressource (onglet Actions) : +1 usage, ou une remise a une valeur precise (correction manuelle). */
 export async function changeResourceUsage(
   supabase: TypedClient,

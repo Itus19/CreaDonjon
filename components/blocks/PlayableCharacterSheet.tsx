@@ -350,6 +350,13 @@ export default function PlayableCharacterSheet({
     reloadRemote();
   }
 
+  /** V2.1-26 — meme geste que l'epuisement : le client reflete la borne pour l'affichage, le serveur la fait respecter. */
+  async function changeInspiration(delta: number) {
+    patchRuntimeState((state) => ({ ...state, inspiration: Math.max(0, Math.min(5, state.inspiration + delta)) }));
+    await postAction("inspiration", { campaignId, delta });
+    reloadRemote();
+  }
+
   /** Champ + boutons (V1-C4 suite, sur retour utilisateur) : remplace les anciens boutons a montant fixe (+100) — on tape le montant une fois, "+"/"-" l'appliquent puis vident le champ. Un champ laisse vide vaut 1 (sur retour utilisateur) plutot que de ne rien faire. */
   function applyXpDelta(sign: 1 | -1) {
     const amount = xpDelta.trim() === "" ? 1 : Math.abs(Math.trunc(Number(xpDelta)));
@@ -384,6 +391,10 @@ export default function PlayableCharacterSheet({
   const hpMax = remote?.runtimeState.hpMax ?? sheet.hitPoints.max;
 
   const exhaustion = runtimeState?.exhaustion ?? 0;
+  // V2.1-26 : `?? 0` et `?? []` comme partout ici — l'etat de jeu n'est pas
+  // encore charge au premier rendu, et une fiche sans campagne n'en a pas.
+  const inspiration = runtimeState?.inspiration ?? 0;
+  const conditions = runtimeState?.conditions ?? [];
   const hpCurrent = runtimeState?.hp.current ?? hpMax;
   const hpPct = hpMax > 0 ? Math.min(100, Math.max(0, (hpCurrent / hpMax) * 100)) : 0;
   const hpLow = hpMax > 0 && hpCurrent / hpMax <= 0.25;
@@ -411,6 +422,9 @@ export default function PlayableCharacterSheet({
         busy={busy}
         exhaustion={exhaustion}
         onChangeExhaustion={changeExhaustion}
+        inspiration={inspiration}
+        onChangeInspiration={changeInspiration}
+        conditions={conditions}
         hpCurrent={hpCurrent}
         hpMax={hpMax}
         hpLow={hpLow}

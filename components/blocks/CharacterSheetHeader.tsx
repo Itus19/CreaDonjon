@@ -179,6 +179,9 @@ export default function CharacterSheetHeader({
   busy,
   exhaustion,
   onChangeExhaustion,
+  inspiration,
+  onChangeInspiration,
+  conditions,
   hpCurrent,
   hpMax,
   hpLow,
@@ -213,6 +216,17 @@ export default function CharacterSheetHeader({
   busy: boolean;
   exhaustion: number;
   onChangeExhaustion: (delta: number) => void;
+  /** V2.1-26 — l'inspiration heroique, bornee a [0, 5] cote serveur. */
+  inspiration: number;
+  onChangeInspiration: (delta: number) => void;
+  /**
+   * V2.1-26 — les etats en cours (`entity_runtime_state.conditions`).
+   *
+   * Deja des noms LISIBLES, pas des cles : l'ecran Initiative les choisit
+   * dans une liste de noms traduits (`listConditionNames`) et stocke le nom
+   * tel quel. Rien a resoudre ici.
+   */
+  conditions: string[];
   hpCurrent: number;
   hpMax: number;
   hpLow: boolean;
@@ -462,7 +476,46 @@ export default function CharacterSheetHeader({
             <span className={`text-base font-semibold ${exhaustion > 0 ? "text-danger" : "text-ink"}`}>{exhaustion}</span>
           </Stepper>
         </div>
+
+        {/* V2.1-26 — l'inspiration, à la suite de l'épuisement : deux
+            compteurs de jeu qui se lisent ensemble. Accentuée quand on en a,
+            là où l'épuisement passe en `danger` — l'une est un bien, l'autre
+            un mal. */}
+        <div className="flex w-[6.5rem] shrink-0 flex-col items-center gap-1">
+          <span
+            className={`flex h-6 items-end justify-center text-center text-[9px] font-bold uppercase leading-tight tracking-widest ${
+              inspiration > 0 ? "text-accent" : "text-ink-muted"
+            }`}
+          >
+            Inspiration
+          </span>
+          <Stepper
+            onIncrement={() => onChangeInspiration(1)}
+            onDecrement={() => onChangeInspiration(-1)}
+            incrementDisabled={busy || inspiration >= 5}
+            decrementDisabled={busy || inspiration <= 0}
+            incrementLabel="Ajouter une inspiration"
+            decrementLabel="Retirer une inspiration"
+            className={`w-full ${inspiration > 0 ? "border-accent/60 bg-accent/10" : ""}`}
+          >
+            <span className={`text-base font-semibold ${inspiration > 0 ? "text-accent" : "text-ink"}`}>{inspiration}</span>
+          </Stepper>
+        </div>
       </div>
+
+      {/* V2.1-26 — les états en cours. Ils étaient déjà en base, écrits par
+          l'écran Initiative, et la fiche ne les montrait nulle part : le MJ
+          posait un état, le joueur ne le voyait pas. */}
+      {conditions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">États</span>
+          {conditions.map((condition) => (
+            <span key={condition} className="rounded-full border border-danger px-3 py-1 text-xs text-danger">
+              {condition}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-ink-muted">

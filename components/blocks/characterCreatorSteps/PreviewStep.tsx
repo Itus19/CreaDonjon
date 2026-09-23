@@ -159,6 +159,9 @@ export default function PreviewStep({
         busy={true}
         exhaustion={0}
         onChangeExhaustion={noop}
+        inspiration={0}
+        onChangeInspiration={noop}
+        conditions={[]}
         hpCurrent={sheet.hitPoints.max}
         hpMax={sheet.hitPoints.max}
         hpLow={false}
