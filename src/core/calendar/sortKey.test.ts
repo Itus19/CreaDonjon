@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeSortKey } from "./sortKey";
+import { computeSortKey, dateFromSortKey } from "./sortKey";
 import { DEFAULT_CALENDAR } from "./defaultCalendar";
 import type { CalendarConfig } from "./types";
 
@@ -41,5 +41,23 @@ describe("computeSortKey", () => {
     const before = computeSortKey({ year: -50, month: 1, day: 1 }, DEFAULT_CALENDAR);
     const after = computeSortKey({ year: 1, month: 1, day: 1 }, DEFAULT_CALENDAR);
     expect(before).toBeLessThan(after);
+  });
+});
+
+describe("dateFromSortKey", () => {
+  it("inverse computeSortKey (aller-retour)", () => {
+    const original = { year: 1247, month: 3, day: 12 };
+    const key = computeSortKey(original, DEFAULT_CALENDAR);
+    expect(dateFromSortKey(key, DEFAULT_CALENDAR)).toEqual(original);
+  });
+
+  it("franchit le passage d'annee", () => {
+    const lastDayOfYear1 = computeSortKey({ year: 1, month: 13, day: 28 }, THIRTEEN_MONTHS);
+    expect(dateFromSortKey(lastDayOfYear1 + 1, THIRTEEN_MONTHS)).toEqual({ year: 2, month: 1, day: 1 });
+  });
+
+  it("fonctionne pour une annee negative (avant une origine)", () => {
+    const key = computeSortKey({ year: -50, month: 6, day: 15 }, DEFAULT_CALENDAR);
+    expect(dateFromSortKey(key, DEFAULT_CALENDAR)).toEqual({ year: -50, month: 6, day: 15 });
   });
 });

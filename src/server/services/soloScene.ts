@@ -1,10 +1,14 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { emptyScene, enterScene, leaveScene, type SceneState } from "@/src/core/rules/scene";
+import { emptyScene, enterScene, leaveScene, sceneCalendarDate, type SceneState } from "@/src/core/rules/scene";
+import { formatGameDate } from "@/src/core/calendar/formatDate";
+import { weekdayNameForDate } from "@/src/core/calendar/weekday";
+import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import { getSceneState, putSceneState } from "@/src/server/repos/sceneStates";
 import { listCombatsForCampaign } from "@/src/server/repos/combats";
 import { listEntitiesByIds, listEntitiesByKinds } from "@/src/server/repos/entities";
+import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
 import type { SceneView } from "@/lib/solo/types";
 
 type TypedClient = SupabaseClient<Database>;
@@ -40,26 +44,65 @@ export async function listSceneChoices(
   };
 }
 
-/** La scene courante, ses identifiants resolus en noms — `null` si la campagne n'en a pas encore. */
-export async function loadSceneView(supabase: TypedClient, campaignId: string): Promise<SceneView | null> {
-  const scene = await getSceneState(supabase, campaignId);
+/**
+ * La scene courante, ses identifiants resolus en noms — `null` si la
+ * campagne n'en a pas encore.
+ *
+ * `worldId` (V3-D2) : sert uniquement a retrouver le parent `part_of` du
+ * lieu (la "ville la plus proche" de l'en-tete). Un aller-retour de plus
+ * que l'ancienne version, accepte parce que cette fonction ne tourne pas a
+ * chaque tour — seulement au chargement de l'ecran et quand la scene
+ * change.
+ */
+export async function loadSceneView(
+  supabase: TypedClient,
+  params: { campaignId: string; worldId: string }
+): Promise<SceneView | null> {
+  const scene = await getSceneState(supabase, params.campaignId);
   if (!scene) return null;
 
-  const ids = [scene.locationId, ...scene.present.map((p) => p.entityId)];
-  const byId = new Map((await listEntitiesByIds(supabase, ids)).map((e) => [e.id, e.name]));
+  const edges = await listPartOfRelationsForWorld(supabase, params.worldId);
+  const nearestCityId = edges.find((e) => e.source_entity_id === scene.locationId)?.target_entity_id ?? null;
+
+  const ids = [scene.locationId, ...scene.present.map((p) => p.entityId), ...(nearestCityId ? [nearestCityId] : [])];
+  const byId = new Map((await listEntitiesByIds(supabase, ids)).map((e) => [e.id, e]));
+
+  const location = byId.get(scene.locationId);
+  const nearestCityEntity = nearestCityId ? byId.get(nearestCityId) : undefined;
+  const nearestCity =
+    nearestCityEntity && nearestCityEntity.entity_kind === "location"
+      ? { name: nearestCityEntity.name, slug: nearestCityEntity.slug }
+      : null;
 
   return {
     locationId: scene.locationId,
-    locationName: byId.get(scene.locationId) ?? "Lieu inconnu",
+    locationName: location?.name ?? "Lieu inconnu",
+    locationSlug: location?.slug ?? null,
+    nearestCity,
     time: scene.time,
     lighting: scene.lighting,
     inCombat: scene.activeCombatId !== null,
     present: scene.present.map((p) => ({
       entityId: p.entityId,
-      name: byId.get(p.entityId) ?? p.entityId,
+      name: byId.get(p.entityId)?.name ?? p.entityId,
       zone: p.zone,
     })),
   };
+}
+
+/**
+ * V3-D2 — La date de la scene, formatee ("Mercredi 12 mars 1247"), pour
+ * l'en-tete d'etat. `null` si le calendrier du monde n'a pas de date
+ * "aujourd'hui" reglee a la precision du jour (`sceneCalendarDate`) : on
+ * omet plutot que d'afficher une date inventee, meme principe que la
+ * meteo (V3-C6, pas encore faite).
+ */
+export function sceneDateLabel(sceneDay: number, calendar: CalendarConfigInput): string | null {
+  const date = sceneCalendarDate(sceneDay, calendar);
+  if (date === null) return null;
+  const weekday = weekdayNameForDate(date, calendar);
+  const formatted = formatGameDate(date, calendar);
+  return weekday ? `${weekday} ${formatted}` : formatted;
 }
 
 /**

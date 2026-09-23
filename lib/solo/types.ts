@@ -50,6 +50,16 @@ export interface TurnRecord {
 export interface SceneView {
   locationId: string;
   locationName: string;
+  /** `null` si le lieu a ete supprime entre-temps — pas de lien a poser sur une fiche introuvable (V3-D2). */
+  locationSlug: string | null;
+  /**
+   * Le parent `part_of` direct du lieu de la scene, s'il en a un et s'il
+   * est lui-meme un lieu (V3-D2, en-tete d'etat) — "la ville la plus
+   * proche" au sens le plus litteral : le prochain conteneur, jamais la
+   * racine de toute la hierarchie. `null` si le lieu n'a pas de parent, ou
+   * si son parent n'est pas un lieu.
+   */
+  nearestCity: { name: string; slug: string } | null;
   time: { day: number; hour: number; minute: number };
   lighting: "bright" | "dim" | "dark";
   inCombat: boolean;

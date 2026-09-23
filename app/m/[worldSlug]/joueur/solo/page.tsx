@@ -1,25 +1,27 @@
 import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
-import { getWorldBySlug } from "@/src/server/services/worlds";
+import { getWorldBySlug, getCalendar } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { buildIntentBarData } from "@/src/server/services/turnIntent";
-import { listSceneChoices, loadSceneView } from "@/src/server/services/soloScene";
+import { listSceneChoices, loadSceneView, sceneDateLabel } from "@/src/server/services/soloScene";
 import EmptyState from "@/components/shell/EmptyState";
+import EnTeteEtat from "@/components/solo/EnTeteEtat";
 import SoloScreen from "@/components/solo/SoloScreen";
 import SoloShell from "@/components/solo/SoloShell";
 import type { Locale } from "@/src/i18n/request";
 
 /**
  * L'ecran solo — **V3-D1 : la coquille a trois colonnes**, qui remplace le
- * toit minimal de V3-B1.
+ * toit minimal de V3-B1. **V3-D2** pose l'en-tete d'etat dans le bandeau
+ * (lieu a gauche, date/heure a droite) — le nom du personnage qui y vivait
+ * provisoirement se reinstalle dans la fiche jouable, V3-D5.
  *
- * Ce ticket ne pose que la coquille. Les deux colonnes laterales annoncent
- * ce qui viendra s'y asseoir plutot que de rester vides : le monde connu
- * est V3-D3, la fiche jouable V3-D5. La colonne centrale porte deja le
- * vrai ecran de jeu (scene + barre d'intention), deplace tel quel depuis
- * V3-B1 — c'est V3-D4 qui le reprendra en fil.
+ * Les deux colonnes laterales annoncent encore ce qui viendra s'y asseoir :
+ * le monde connu est V3-D3, la fiche jouable V3-D5. La colonne centrale
+ * porte deja le vrai ecran de jeu (scene + barre d'intention), deplace tel
+ * quel depuis V3-B1 — c'est V3-D4 qui le reprendra en fil.
  *
  * Le personnage et la campagne se resolvent exactement comme l'onglet
  * Personnage (`joueur/page.tsx`) : le PJ revendique de la premiere campagne
@@ -67,25 +69,18 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
     );
   }
 
-  const [scene, choices] = await Promise.all([
-    loadSceneView(supabase, campaign.id),
+  const [scene, choices, calendar] = await Promise.all([
+    loadSceneView(supabase, { campaignId: campaign.id, worldId: world.id }),
     listSceneChoices(supabase, world.id),
+    getCalendar(supabase, world.id),
   ]);
+  const dateLabel = scene ? sceneDateLabel(scene.time.day, calendar) : null;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <SoloShell
         worldSlug={worldSlug}
-        entete={
-          <>
-            <h1 className="entity-title truncate">{data.actor.name}</h1>
-            <p className="text-sm text-ink-muted">
-              {data.targetDetails.length === 0
-                ? "Personne d'autre dans la scène pour l'instant."
-                : `${data.targetDetails.length} présent${data.targetDetails.length > 1 ? "s" : ""} à portée.`}
-            </p>
-          </>
-        }
+        entete={<EnTeteEtat worldSlug={worldSlug} scene={scene} dateLabel={dateLabel} />}
         monde={
           <EmptyState
             title="Le monde connu"

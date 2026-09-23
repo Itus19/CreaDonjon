@@ -31,3 +31,27 @@ export function computeSortKey(
   const day = date.day ?? 1;
   return date.year * length + daysBeforeMonth(calendar, month) + (day - 1);
 }
+
+/**
+ * L'inverse de `computeSortKey` (V3-D2 : convertir `SceneState.time.day`,
+ * un compteur relatif, en une date du calendrier du monde). `Math.floor`
+ * gere correctement une annee negative (avant une origine), contrairement
+ * au `%` natif de JS.
+ *
+ * Un calendrier sans mois (`yearLength` nul) n'a aucun jour a repartir :
+ * replie tout sur le 1er jour de l'annee plutot que de diviser par zero.
+ */
+export function dateFromSortKey(totalDays: number, calendar: CalendarConfig): { year: number; month: number; day: number } {
+  const length = yearLength(calendar);
+  if (length <= 0) return { year: 0, month: 1, day: 1 };
+
+  const year = Math.floor(totalDays / length);
+  let remainder = totalDays - year * length;
+  let month = 1;
+  for (const m of calendar.months) {
+    if (remainder < m.days) break;
+    remainder -= m.days;
+    month += 1;
+  }
+  return { year, month, day: remainder + 1 };
+}

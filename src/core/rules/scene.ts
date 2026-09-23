@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { TRIGGER_ZONES, type TriggerZone } from "./triggers";
 import { budgetForTurn, zActionBudget, type ActionBudget } from "./actionBudget";
+import { computeSortKey, dateFromSortKey } from "../calendar/sortKey";
+import type { CalendarConfig, GameDate } from "../calendar/types";
 
 /**
  * V3-A4 — L'etat de scene (specs/moteur-de-jeu.md §6).
@@ -185,4 +187,25 @@ export function moveToZone(scene: SceneState, entityId: string, zone: TriggerZon
 /** Retient un evenement de session ; ne garde que les cinq plus recents, le plus recent en tete. */
 export function rememberEvent(scene: SceneState, eventId: string): SceneState {
   return { ...scene, recentEvents: [eventId, ...scene.recentEvents].slice(0, RECENT_EVENTS_KEPT) };
+}
+
+/**
+ * V3-D2 — Convertit `GameTime.day` (un compteur relatif, sans ancrage
+ * calendaire) en une date du calendrier du monde, en posant que le premier
+ * jour d'une scene neuve (`day: 1`, `emptyScene`) tombe sur la date que le
+ * MJ a marquee comme "aujourd'hui" (`calendar.currentDate`).
+ *
+ * `null` si aucune date n'a ete reglee, ou reglee a une precision plus
+ * large que le jour (annee seule, decennie...) : afficher un jour et un
+ * mois calcules a partir d'une precision plus grossiere inventerait une
+ * exactitude que le MJ n'a jamais donnee — meme principe que la meteo
+ * omise tant que V3-C6 n'existe pas.
+ */
+export function sceneCalendarDate(day: number, calendar: CalendarConfig): GameDate | null {
+  const anchor = calendar.currentDate;
+  if (anchor === null || anchor.precision !== "day" || anchor.month === null || anchor.day === null) return null;
+
+  const totalDays = computeSortKey(anchor, calendar) + (day - 1);
+  const { year, month, day: dayOfMonth } = dateFromSortKey(totalDays, calendar);
+  return { year, month, day: dayOfMonth, precision: "day", end: null, label: null };
 }

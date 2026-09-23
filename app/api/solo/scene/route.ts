@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { setScene, loadSceneView } from "@/src/server/services/soloScene";
+import { getCampaignById } from "@/src/server/repos/campaigns";
 
 /**
  * V3-B2 — Poser la scene : ou l'on est, et qui est la.
@@ -41,6 +42,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const view = await loadSceneView(supabase, parsed.data.campaignId);
+  const campaign = await getCampaignById(supabase, parsed.data.campaignId);
+  if (!campaign) {
+    return NextResponse.json({ error: "Campagne introuvable." }, { status: 404 });
+  }
+
+  const view = await loadSceneView(supabase, { campaignId: parsed.data.campaignId, worldId: campaign.world_id });
   return NextResponse.json(view, { status: 200 });
 }

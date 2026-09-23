@@ -561,13 +561,23 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 - [x] Sous 768 px, la saisie reste ancrée en bas, au-dessus du clavier virtuel.
 - [x] Les deux colonnes repliées, **le fil ne s'étale pas** : il se recentre à 80 caractères. Replier sert à enlever le bruit autour, pas à élargir le texte.
 
-### V3-D2 — L'en-tête d'état · `S`
+### V3-D2 — L'en-tête d'état · `S` — **fait le 23 septembre**
 
-- [ ] À gauche, **trois niveaux de lieu** : la ville la plus proche, le lieu à l'intérieur, puis la pièce. Les deux premiers sont des liens vers leur fiche ; **la pièce n'en est pas un** — anecdotique le plus souvent, et quand elle ne l'est pas (une salle secrète), elle vit dans un bloc de la fiche du lieu.
-- [ ] À droite, la date en jeu, l'heure, la météo et la température : `Mercredi 12 juillet · 22:15 · Pluie · 14 °C`. La date vient du calendrier du monde (`formatGameDate`), l'heure de `SceneState.time`.
-- [ ] **La météo et la température n'existent pas encore** — c'est V3-C6. Tant qu'il n'est pas fait, l'en-tête les omet plutôt que d'afficher une valeur inventée.
-- [ ] **Pas de radio dans le bandeau** (auteur, 23 septembre) : `RadioWidget` est déjà dans la barre latérale joueur, et l'écran solo est une destination de `PlayerShell`. Un deuxième bouton pour la même chose, à deux centimètres du premier, ne se justifie que si le premier n'est pas atteignable — il l'est.
-- [ ] **Tout y est tenu par le moteur** (critère `module-joueur-et-solo.md` §C). Un modèle ne décide ni du lieu ni de l'heure.
+- [x] À gauche, **trois niveaux de lieu** : la ville la plus proche, le lieu à l'intérieur, puis la pièce. Les deux premiers sont des liens vers leur fiche ; **la pièce n'en est pas un** — anecdotique le plus souvent, et quand elle ne l'est pas (une salle secrète), elle vit dans un bloc de la fiche du lieu.
+- [x] À droite, la date en jeu, l'heure, la météo et la température : `Mercredi 12 juillet · 22:15 · Pluie · 14 °C`. La date vient du calendrier du monde (`formatGameDate`), l'heure de `SceneState.time`.
+- [x] **La météo et la température n'existent pas encore** — c'est V3-C6. Tant qu'il n'est pas fait, l'en-tête les omet plutôt que d'afficher une valeur inventée.
+- [x] **Pas de radio dans le bandeau** (auteur, 23 septembre) : `RadioWidget` est déjà dans la barre latérale joueur, et l'écran solo est une destination de `PlayerShell`. Un deuxième bouton pour la même chose, à deux centimètres du premier, ne se justifie que si le premier n'est pas atteignable — il l'est.
+- [x] **Tout y est tenu par le moteur** (critère `module-joueur-et-solo.md` §C). Un modèle ne décide ni du lieu ni de l'heure.
+
+**Trois trous que le ticket supposait combler, et que le modèle de données ne permet pas encore — documentés plutôt que devinés.**
+
+1. **Aucun ancrage entre `SceneState.time.day` (un compteur relatif, 1 au premier jour joué) et une vraie date du calendrier.** `calendar.currentDate` existe déjà (réglé par le MJ, V2-M13 : "jour actuel de la campagne") mais rien ne le reliait au compteur de la scène. **Décision prise ici** : le jour 1 de la scène tombe sur `currentDate`, et chaque jour suivant avance d'autant dans le calendrier du monde — `sceneCalendarDate` (`src/core/rules/scene.ts`), inverse de `computeSortKey` via la nouvelle `dateFromSortKey` (`src/core/calendar/sortKey.ts`). **Si `currentDate` n'est jamais réglé, ou réglé à une précision plus large que le jour** (année seule, décennie), l'en-tête omet la date plutôt que d'inventer un jour et un mois — même principe que la météo. Aucune migration : `currentDate` était déjà dans le schéma, seulement jamais consommé par un compteur relatif.
+2. **« La ville la plus proche » suppose un type de lieu (ville, région, bâtiment) qui n'existe pas** — un lieu est juste `entity_kind: "location"`, sans sous-type. Impossible de distinguer par le type. **Décision prise ici, au sens le plus littéral de « proche »** : le parent `part_of` **direct** du lieu de la scène — le prochain conteneur, jamais la racine de toute la hiérarchie continent → royaume → ville. Si le monde empile plus de niveaux entre le lieu joué et sa vraie ville, ce parent direct ne sera pas toujours une ville au sens propre. Aucun sous-type de lieu n'a été ajouté pour lever cette ambiguïté : ça aurait été un changement de schéma non demandé par ce ticket, pour un besoin qui n'est pas encore concret (règle des trois).
+3. **La pièce n'est trackée nulle part.** `SceneState` ne porte qu'un `locationId` unique ; rien ne dit "on est dans la salle commune" plutôt que dans la taverne en entier. Omise, comme le ticket le prévoyait déjà pour la météo — pas de nouveau champ ajouté à la scène pour un besoin qui n'a pas encore de consommateur.
+
+**Câblage.** `loadSceneView` (`src/server/services/soloScene.ts`) prend maintenant `{ campaignId, worldId }` (un aller-retour de plus, sur `relations` filtrées `part_of`, pour trouver ce parent direct) — mis à jour dans les deux appelants (`joueur/solo/page.tsx`, `/api/solo/scene`). `sceneDateLabel` compose le libellé affiché à partir de `sceneCalendarDate` et `weekdayNameForDate`. Le rendu vit dans `components/solo/EnTeteEtat.tsx`, **pas de `"use client"`** : deux liens et du texte statique, et la coquille joueur ne branche jamais le paradigme fenêtres flottantes (`joueur/layout.tsx`) — un `<Link>` ordinaire vers `/m/:worldSlug/joueur/wiki/:slug` suffit.
+
+**Ce que ce ticket a déplacé.** Le nom du personnage et le compte des présents, provisoirement posés dans le bandeau par V3-D1, en sont partis — ils n'appartenaient pas à un en-tête de lieu/temps. Ils se réinstallent dans la fiche jouable, V3-D5, qui n'est encore qu'un `EmptyState`.
 
 ### V3-D3 — La colonne gauche : le monde connu · `M`
 

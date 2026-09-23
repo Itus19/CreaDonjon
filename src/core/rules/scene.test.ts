@@ -10,10 +10,13 @@ import {
   lightingAt,
   moveToZone,
   rememberEvent,
+  sceneCalendarDate,
   sceneZoneOf,
   zSceneState,
   type SceneState,
 } from "./scene";
+import { DEFAULT_CALENDAR } from "../calendar/defaultCalendar";
+import type { CalendarConfig, GameDate } from "../calendar/types";
 
 const SCENE: SceneState = {
   __v: 2,
@@ -152,5 +155,40 @@ describe("le budget de tour vit dans la scene (V3-B2)", () => {
   it("rend un budget neuf a qui n'en a pas encore, sans rien ecrire", () => {
     expect(budgetOf(SCENE, "inconnu", 12).movement).toBe(12);
     expect(SCENE.budgets).toEqual({});
+  });
+});
+
+describe("la date de la scene vient du calendrier du monde (V3-D2)", () => {
+  const jourPrecis = (partial: Partial<GameDate>): GameDate => ({
+    year: 1247,
+    month: 3,
+    day: 12,
+    precision: "day",
+    end: null,
+    label: null,
+    ...partial,
+  });
+
+  it("le jour 1 tombe sur la date marquee 'aujourd'hui' par le MJ", () => {
+    const calendar: CalendarConfig = { ...DEFAULT_CALENDAR, currentDate: jourPrecis({}) };
+    expect(sceneCalendarDate(1, calendar)).toEqual(jourPrecis({}));
+  });
+
+  it("avance d'autant de jours que le compteur de scene, mois et annee compris", () => {
+    const calendar: CalendarConfig = { ...DEFAULT_CALENDAR, currentDate: jourPrecis({ day: 30 }) };
+    // DEFAULT_CALENDAR : des mois de 30 jours — le jour 3 de la scene tombe deux jours apres le 30, donc le 2 du mois suivant.
+    expect(sceneCalendarDate(3, calendar)).toEqual(jourPrecis({ month: 4, day: 2 }));
+  });
+
+  it("aucune date reglee : pas d'ancre, pas de date inventee", () => {
+    expect(sceneCalendarDate(5, DEFAULT_CALENDAR)).toBeNull();
+  });
+
+  it("une date reglee a une precision plus large que le jour n'est pas une ancre utilisable", () => {
+    const calendar: CalendarConfig = {
+      ...DEFAULT_CALENDAR,
+      currentDate: { year: 1247, month: null, day: null, precision: "year", end: null, label: null },
+    };
+    expect(sceneCalendarDate(5, calendar)).toBeNull();
   });
 });
