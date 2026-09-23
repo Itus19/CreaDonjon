@@ -894,30 +894,40 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
             <div className="flex flex-col gap-2">
               {/* La bourse et la charge ouvrent le sac, comme dans
                   `InventoryPanel` : ce sont les deux choses qu'on vient y
-                  vérifier en jouant. */}
-              <div className="flex flex-wrap gap-1">
-                {BOURSE.map((piece) => (
-                  <span
-                    key={piece.code}
-                    className={`rounded-full border border-edge px-2 py-0.5 text-xs ${
-                      piece.valeur > 0 ? "text-ink" : "text-ink-muted"
-                    }`}
-                  >
-                    {piece.valeur} {piece.code}
-                  </span>
-                ))}
-              </div>
+                  vérifier en jouant.
 
-              <div className="flex flex-col gap-0.5">
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-panel-sunken">
-                  <div
-                    className={`h-full rounded-full ${CHARGE.palier === "none" ? "bg-accent" : "bg-danger"}`}
-                    style={{ width: `${pctCharge}%` }}
-                  />
+                  Sur UNE ligne (auteur, 23 septembre) : la charge quitte la
+                  barre pleine largeur pour la jauge des PV et du niveau,
+                  et les pièces occupent la place qu'elle libère. Une seule
+                  forme pour « une part d'un tout » dans toute la colonne —
+                  deux dessins pour la même idée, c'est deux fois à
+                  apprendre.
+
+                  Le chiffre au centre est le poids porté, jamais
+                  `23,5/75` : sept caractères ne tiennent pas dans 40 px.
+                  La capacité vit sous la jauge, et le clic donne le
+                  pourcentage comme ailleurs. */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-1">
+                  {BOURSE.map((piece) => (
+                    <span
+                      key={piece.code}
+                      className={`rounded-full border border-edge px-2 py-0.5 text-xs ${
+                        piece.valeur > 0 ? "text-ink" : "text-ink-muted"
+                      }`}
+                    >
+                      {piece.valeur} {piece.code}
+                    </span>
+                  ))}
                 </div>
-                <span className="text-xs text-ink-muted">
-                  Charge : {CHARGE.porte} / {CHARGE.capacite} kg{CHARGE.palier !== "none" ? " — encombré" : ""}
-                </span>
+
+                <Jauge
+                  libelle={`/ ${CHARGE.capacite} kg`}
+                  valeur={CHARGE.porte.toLocaleString("fr-FR")}
+                  pct={pctCharge}
+                  ton={CHARGE.palier === "none" ? "accent" : "danger"}
+                  titre={`Charge : ${CHARGE.porte} / ${CHARGE.capacite} kg${CHARGE.palier !== "none" ? " — encombré" : ""}`}
+                />
               </div>
 
               {INVENTAIRE.map((o) => (
