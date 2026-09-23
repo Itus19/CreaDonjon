@@ -201,11 +201,12 @@ export const FICHE = {
     { key: "SAG", score: 12, mod: "+1", save: "+1" },
     { key: "CHA", score: 14, mod: "+2", save: "+2" },
   ],
-  actions: [
-    { nom: "Épée longue", attaque: "+5", degats: "1d8+3 tranchant" },
-    { nom: "Dague", attaque: "+5", degats: "1d4+3 perforant" },
-    { nom: "Arc court", attaque: "+5", degats: "1d6+3 perforant · 24/96 m" },
-  ],
+  /**
+   * L'incantation, pour les boutons de l'onglet Actions. Les attaques
+   * d'arme n'ont PAS de liste ici : elles se dérivent de ce qui est équipé
+   * dans le Sac, comme dans la vraie fiche.
+   */
+  sort: { attaque: "+7", dd: 15, carac: "INT" },
   competences: [
     { nom: "Discrétion", mod: "+7" },
     { nom: "Investigation", mod: "+3" },
@@ -287,13 +288,19 @@ export interface Objet {
   nom: string;
   detail: string;
   equipe: boolean;
+  /**
+   * L'action que l'objet POSE dans l'onglet Actions quand il est équipé.
+   * C'est le mécanisme de la vraie fiche : on n'écrit pas une liste
+   * d'actions à côté de l'inventaire, on la dérive de ce qui est équipé.
+   */
+  arme?: { attaque: string; degats: string };
 }
 
 export const INVENTAIRE: Objet[] = [
-  { id: "epee", nom: "Épée longue", detail: "1d8 tranchant · 1,5 kg", equipe: true },
-  { id: "dague", nom: "Dague", detail: "1d4 perforant · finesse · 0,5 kg", equipe: true },
+  { id: "epee", nom: "Épée longue", detail: "1d8 tranchant · 1,5 kg", equipe: true, arme: { attaque: "+5", degats: "1d8+3" } },
+  { id: "dague", nom: "Dague", detail: "1d4 perforant · finesse · 0,5 kg", equipe: true, arme: { attaque: "+5", degats: "1d4+3" } },
   { id: "cuir", nom: "Armure de cuir clouté", detail: "CA 12 + Dex · 6,5 kg", equipe: true },
-  { id: "arc", nom: "Arc court", detail: "1d6 perforant · 24/96 m · 1 kg", equipe: false },
+  { id: "arc", nom: "Arc court", detail: "1d6 perforant · 24/96 m · 1 kg", equipe: false, arme: { attaque: "+5", degats: "1d6+3" } },
   { id: "corde", nom: "Corde de chanvre (15 m)", detail: "4,5 kg", equipe: false },
   { id: "outils", nom: "Outils de voleur", detail: "0,5 kg", equipe: false },
 ];
@@ -302,16 +309,103 @@ export interface Sort {
   id: string;
   nom: string;
   niveau: number;
+  /** En français : `MAGIC_SCHOOL_COLOR_VAR` accepte les deux graphies. */
   ecole: string;
   prepare: boolean;
+  /** Ce que l'onglet Magie montre en pastilles — le bloc `spell_casting` de la vraie règle. */
+  incantation: string;
+  portee: string;
+  duree: string;
+  composantes: string;
+  concentration?: boolean;
+  rituel?: boolean;
+  description: string;
+  /** Ce que l'onglet Actions en fait. Un sort d'attaque porte un jet ; un sort à sauvegarde fait sauvegarder la CIBLE. */
+  attaque?: boolean;
+  sauvegarde?: string;
+  /** Dégâts au niveau du sort, puis ce que chaque emplacement supérieur ajoute. */
+  degats?: string;
+  parNiveau?: string;
 }
 
 export const SORTS: Sort[] = [
-  { id: "prestidigitation", nom: "Prestidigitation", niveau: 0, ecole: "Transmutation", prepare: true },
-  { id: "main", nom: "Main du mage", niveau: 0, ecole: "Invocation", prepare: true },
-  { id: "charme", nom: "Charme-personne", niveau: 1, ecole: "Enchantement", prepare: true },
-  { id: "deguisement", nom: "Déguisement", niveau: 1, ecole: "Illusion", prepare: false },
-  { id: "image", nom: "Image silencieuse", niveau: 1, ecole: "Illusion", prepare: false },
+  {
+    id: "givre",
+    nom: "Rayon de givre",
+    niveau: 0,
+    ecole: "Évocation",
+    prepare: true,
+    incantation: "1 action",
+    portee: "18 m",
+    duree: "Instantané",
+    composantes: "V, S",
+    description: "Un rayon de lumière bleu-blanc file vers une créature. Sa vitesse diminue de 3 m jusqu'au début de ton prochain tour.",
+    attaque: true,
+    degats: "1d8",
+  },
+  {
+    id: "prestidigitation",
+    nom: "Prestidigitation",
+    niveau: 0,
+    ecole: "Transmutation",
+    prepare: true,
+    incantation: "1 action",
+    portee: "3 m",
+    duree: "1 heure",
+    composantes: "V, S",
+    description: "Un tour de magie mineur : une odeur, une étincelle, une marque qui s'efface, un objet souillé ou nettoyé.",
+  },
+  {
+    id: "main",
+    nom: "Main du mage",
+    niveau: 0,
+    ecole: "Invocation",
+    prepare: true,
+    incantation: "1 action",
+    portee: "9 m",
+    duree: "1 minute",
+    composantes: "V, S",
+    description: "Une main spectrale manipule un objet, ouvre un contenant non verrouillé, verse le contenu d'une fiole.",
+  },
+  {
+    id: "charme",
+    nom: "Charme-personne",
+    niveau: 1,
+    ecole: "Enchantement",
+    prepare: true,
+    incantation: "1 action",
+    portee: "9 m",
+    duree: "1 heure",
+    composantes: "V, S",
+    description: "Une créature humanoïde qui te voit doit réussir une sauvegarde de Sagesse ou être charmée jusqu'à la fin de la durée.",
+    sauvegarde: "SAG",
+    parNiveau: "une créature de plus par niveau au-dessus du premier",
+  },
+  {
+    id: "deguisement",
+    nom: "Déguisement",
+    niveau: 1,
+    ecole: "Illusion",
+    prepare: false,
+    incantation: "1 action",
+    portee: "Personnelle",
+    duree: "1 heure",
+    composantes: "V, S",
+    description: "Tu changes d'apparence, vêtements compris. L'illusion ne résiste pas au toucher.",
+  },
+  {
+    id: "image",
+    nom: "Image silencieuse",
+    niveau: 1,
+    ecole: "Illusion",
+    prepare: false,
+    incantation: "1 action",
+    portee: "18 m",
+    duree: "10 minutes",
+    composantes: "V, S, M",
+    concentration: true,
+    description: "Tu crées l'image d'un objet, d'une créature ou d'un phénomène visible, sans son ni odeur, dans un cube de 4,50 m.",
+  },
 ];
 
 export const EMPLACEMENTS = [

@@ -3,6 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import BinderTabs from "@/components/shared/BinderTabs";
 import Checkbox from "@/components/shared/Checkbox";
+import Dropdown from "@/components/shared/Dropdown";
+import DieIcon from "@/components/shared/DieIcon";
+import { dieSidesFromFormula } from "@/src/core/dice/dieSides";
+// `withModifier` vient de la vraie fiche : c'est elle qui sait écrire
+// « 1d20+5 » à partir d'un modificateur, et deux façons de le faire
+// finiraient par diverger d'un signe.
+import { withModifier } from "@/components/blocks/InventoryPanel";
+import { MAGIC_SCHOOL_COLOR_VAR } from "@/src/i18n/fr";
 import {
   DES_FACTICES,
   DISCOVERY_MARK,
@@ -25,6 +33,7 @@ import {
   SOURCE_MARK,
   WIKI,
   type FeedItem,
+  type Sort,
   type WikiEntry,
 } from "./fixtures";
 
@@ -554,152 +563,234 @@ function Jauge({
 }
 
 /**
- * Les trois refontes des caractéristiques, demandées le 23 septembre —
- * « moins de place, esthétique et lisible ». L'interrupteur qui les
- * compare est un OUTIL D'ESQUISSE : il part avec le reste du dossier
- * quand V3-D1 arrive, seule la variante retenue survit.
+ * Le bouton de jet, au format de la colonne solo.
  *
- * Le pavé d'origine — six cartes bordées de trois lignes chacune — coûtait
- * deux rangées de 60 px. Les trois propositions attaquent le problème par
- * trois bouts différents, et aucune n'est une simple réduction de police :
- * on ne gagne pas de la place en rendant illisible ce qu'on garde.
+ * `ActionButton` (la vraie fiche) met sur UNE ligne son dé, son libellé, sa
+ * formule détaillée et sa formule résolue : il lui faut 15 rem, et sa
+ * grille le sait — en dessous, elle repasse les boutons l'un sous l'autre.
+ * Or l'auteur les veut côte à côte, et deux boutons côte à côte dans 280 px
+ * tombent à 113 px : le libellé s'y réduisait à « A… » (vu le 23 septembre).
+ *
+ * Même dessin — pastille, bord, teinte d'accent pour l'action principale,
+ * le vrai dé de `DieIcon` — mais le libellé passe AU-DESSUS de la formule,
+ * et la formule détaillée s'en va dans l'infobulle. Ce qui tombe est ce
+ * qu'on lit le moins, et rien ne se lit plus en « A… ».
+ *
+ * `.mech` (globals.css) impose son propre `font-size` hors de tout
+ * `@layer`, donc il bat n'importe quelle classe Tailwind posée à côté :
+ * seule une taille en ligne tient face à lui. C'est le même contournement,
+ * commenté, que dans `ActionButton`.
  */
-type VarianteCaracs = "reglette" | "barrette" | "grille";
+function BoutonJet({
+  label,
+  formule,
+  detail,
+  primaire = false,
+  inactif = false,
+  onClick,
+}: {
+  label: string;
+  formule: string;
+  detail: string;
+  primaire?: boolean;
+  inactif?: boolean;
+  onClick: () => void;
+}) {
+  const faces = dieSidesFromFormula(formule);
+  return (
+    <button
+      type="button"
+      disabled={inactif}
+      onClick={onClick}
+      title={detail}
+      className={`flex min-h-11 w-full items-center gap-1.5 rounded-full border px-2 py-1 text-left transition-colors disabled:opacity-50 ${
+        primaire ? "border-accent bg-accent/10 hover:bg-accent/20" : "border-edge hover:bg-panel"
+      }`}
+    >
+      {faces !== null && (
+        <DieIcon sides={faces} className={`h-5 w-5 shrink-0 ${primaire ? "text-accent" : "text-ink-muted"}`} />
+      )}
+      <span className="flex min-w-0 flex-col leading-tight">
+        <span className="truncate text-xs font-semibold text-ink">{label}</span>
+        <span className="mech truncate text-ink-muted" style={{ fontSize: "0.75rem" }}>
+          {formule}
+        </span>
+      </span>
+    </button>
+  );
+}
 
-const VARIANTES: { cle: VarianteCaracs; nom: string; note: string }[] = [
-  { cle: "reglette", nom: "Réglette", note: "deux colonnes de trois lignes — tout est visible, rien n'est caché" },
-  { cle: "barrette", nom: "Barrette", note: "retenue : une seule rangée, quatre étages — nom, score, test, sauvegarde" },
-  { cle: "grille", nom: "Grille", note: "la forme actuelle, mais chaque tuile tient sur une ligne" },
-];
-
+/**
+ * Les caractéristiques en grille, retenue le 23 septembre parmi trois
+ * refontes comparées dans l'esquisse (réglette, barrette, grille).
+ *
+ * Le pavé d'origine — six cartes bordées de trois lignes — mesurait 144 px
+ * pour six nombres. Celui-ci en fait deux rangées : le nom et le score sur
+ * la première ligne de la tuile, le modificateur et la sauvegarde sur la
+ * seconde, où ils sont les deux boutons — 24 px de haut chacun, le minimum
+ * de V2.1-27.
+ *
+ * L'encadré est celui des Compétences (`rounded-md border border-edge`),
+ * jamais un trait plus épais : six cadres côte à côte pèsent déjà six fois
+ * ce que pèse un cadre seul.
+ *
+ * `tabular-nums` : sans lui un `1` étroit décale sa colonne, et six
+ * colonnes qui ne s'alignent pas se lisent mal.
+ */
 function Caracteristiques({ onLancer }: { onLancer: (label: string, modificateur: number) => void }) {
-  const [variante, setVariante] = useState<VarianteCaracs>("barrette");
+  return (
+    <div className="grid grid-cols-3 gap-1">
+      {FICHE.abilities.map((a) => (
+        <div key={a.key} className="flex flex-col items-center rounded-md border border-edge px-1 py-0.5">
+          <div className="flex items-baseline gap-1">
+            <span className="text-xs text-ink-muted">{a.key}</span>
+            <span className="text-xs tabular-nums text-ink-soft" title={`Score de ${a.key}`}>
+              {a.score}
+            </span>
+          </div>
+          <div className="flex w-full items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => onLancer(`Test de ${a.key}`, Number(a.mod))}
+              className="flex h-6 flex-1 items-center justify-center rounded text-sm font-medium tabular-nums text-ink transition-colors hover:bg-panel-sunken"
+              title={`Lancer un test de ${a.key}`}
+            >
+              {a.mod}
+            </button>
+            <button
+              type="button"
+              onClick={() => onLancer(`Sauvegarde de ${a.key}`, Number(a.save))}
+              className="flex h-6 flex-1 items-center justify-center rounded text-xs tabular-nums text-ink-muted transition-colors hover:bg-panel-sunken"
+              title={`Lancer une sauvegarde de ${a.key}`}
+            >
+              js{a.save}
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Les emplacements de sorts, tous niveaux — pastilles pleines = disponible,
+ * creuses = dépensé. Même langage visuel que `SpellSlotsTracker`
+ * (`ActionsTab.tsx`), à une différence près : la vraie fiche écrit ses
+ * libellés en `text-[10px]`, exemptée nommément dans la règle ESLint de
+ * V2.1-27. Un fichier neuf n'a pas cette dispense, donc `text-xs`.
+ *
+ * Un niveau sans aucun emplacement n'apparaît pas : jamais une ligne à 0/0.
+ */
+function EmplacementsSorts({ utilises }: { utilises: Record<number, number> }) {
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1 rounded-md border border-edge bg-panel-sunken px-2 py-1.5">
+      {EMPLACEMENTS.filter((e) => e.total > 0).map((e) => {
+        const restants = Math.max(0, e.total - (utilises[e.niveau] ?? 0));
+        return (
+          <div key={e.niveau} className="flex items-center gap-1">
+            <span className="text-xs text-ink-muted">Niv. {e.niveau}</span>
+            <div className="flex gap-0.5">
+              {Array.from({ length: e.total }, (_, i) => (
+                <span
+                  key={i}
+                  className={`h-2 w-2 rounded-full ${i < restants ? "bg-accent" : "border border-edge bg-transparent"}`}
+                />
+              ))}
+            </div>
+            <span className="text-xs tabular-nums text-ink-muted">
+              {restants}/{e.total}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Un sort préparé, dans l'onglet ACTIONS — même squelette que
+ * `PreparedSpellCard` (`ActionsTab.tsx`) : le nom et ses pastilles
+ * au-dessus, les boutons de jet dessous, le sélecteur d'emplacement
+ * au-dessus du bouton de lancement.
+ *
+ * Un sort préparé arrive ici exactement comme une arme équipée arrive
+ * depuis le Sac : l'onglet Actions ne tient aucune liste à lui, il dérive
+ * ce qu'il montre de ce qui est préparé et de ce qui est équipé.
+ *
+ * Le sélecteur ne propose que des niveaux **au moins égaux** à celui du
+ * sort : on surclasse vers le haut, jamais vers le bas. C'est le filtre de
+ * la vraie fiche, recopié plutôt que réinventé.
+ *
+ * Dépenser un emplacement est ici un état local : l'esquisse montre le
+ * geste, le vrai décompte appartient au serveur — un client ne décide
+ * d'aucun résultat (règle absolue 8).
+ */
+function CarteSortAction({
+  sort,
+  utilises,
+  onDepenser,
+  onLancer,
+}: {
+  sort: Sort;
+  utilises: Record<number, number>;
+  onDepenser: (niveau: number) => void;
+  onLancer: (label: string, modificateur: number) => void;
+}) {
+  const mineur = sort.niveau === 0;
+  const niveauxValides = EMPLACEMENTS.filter((e) => e.total > 0 && e.niveau >= sort.niveau).map((e) => e.niveau);
+  const [niveau, setNiveau] = useState(mineur ? 0 : (niveauxValides[0] ?? sort.niveau));
+  const emplacement = EMPLACEMENTS.find((e) => e.niveau === niveau);
+  const restants = emplacement ? Math.max(0, emplacement.total - (utilises[niveau] ?? 0)) : 0;
+  const epuise = !mineur && restants === 0;
 
   return (
-    <div className="flex flex-col gap-1">
-      {/* Outil d'esquisse, pas un élément de l'écran. */}
-      <div className="flex items-center gap-1">
-        {VARIANTES.map((v) => (
-          <button
-            key={v.cle}
-            type="button"
-            onClick={() => setVariante(v.cle)}
-            title={v.note}
-            className={`rounded-full border px-2 py-0.5 text-xs transition-colors ${
-              variante === v.cle ? "border-accent text-accent" : "border-edge text-ink-muted hover:text-ink"
-            }`}
-          >
-            {v.nom}
-          </button>
-        ))}
+    <div className="flex flex-col gap-1.5 rounded-md border border-edge bg-panel-raised px-2 py-2">
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="truncate text-sm font-semibold text-ink">{sort.nom}</span>
+        <div className="flex flex-wrap gap-1">
+          <span className="rounded-full border border-edge px-1.5 text-xs text-ink-muted">
+            {mineur ? "Sort mineur" : `Niv. ${sort.niveau}`}
+          </span>
+          {sort.sauvegarde && (
+            <span className="rounded-full border border-edge px-1.5 text-xs text-ink-muted">
+              DD {FICHE.sort.dd} ({sort.sauvegarde})
+            </span>
+          )}
+        </div>
       </div>
-
-      {/* A — LA RÉGLETTE. Une caractéristique par ligne, deux colonnes.
-          Le test et la sauvegarde restent côte à côte et toujours lus :
-          c'est la plus lisible des trois, et elle économise déjà la
-          moitié de la hauteur en supprimant les bordures. */}
-      {variante === "reglette" && (
-        <div className="grid grid-cols-2 gap-x-3">
-          {FICHE.abilities.map((a) => (
-            <div key={a.key} className="flex items-baseline justify-between border-b border-edge py-0.5">
-              <span className="text-xs text-ink-muted">{a.key}</span>
-              <button
-                type="button"
-                onClick={() => onLancer(`Test de ${a.key}`, Number(a.mod))}
-                className="px-1 text-sm font-medium text-ink transition-colors hover:text-accent"
-                title={`Lancer un test de ${a.key}`}
-              >
-                {a.mod}
-              </button>
-              <button
-                type="button"
-                onClick={() => onLancer(`Sauvegarde de ${a.key}`, Number(a.save))}
-                className="text-xs text-ink-muted transition-colors hover:text-accent"
-                title={`Lancer une sauvegarde de ${a.key}`}
-              >
-                js {a.save}
-              </button>
-            </div>
-          ))}
+      {/* Les boutons sur une seule ligne, comme pour une arme équipée. */}
+      <div className="grid grid-cols-2 gap-1">
+        {sort.attaque && (
+          <BoutonJet
+            label="Attaquer"
+            formule={withModifier("1d20", Number(FICHE.sort.attaque))}
+            detail={`1d20 + ${FICHE.sort.carac} + maîtrise`}
+            primaire
+            onClick={() => onLancer(`Attaque de sort — ${sort.nom}`, Number(FICHE.sort.attaque))}
+          />
+        )}
+        <div className="flex flex-col gap-1">
+          {!mineur && niveauxValides.length > 0 && (
+            <Dropdown
+              value={String(niveau)}
+              options={niveauxValides.map((n) => ({ value: String(n), label: `Niv. ${n}` }))}
+              onChange={(v) => setNiveau(Number(v))}
+              aria-label={`Emplacement pour ${sort.nom}`}
+              triggerClassName="w-fit rounded-md border border-edge px-2 py-0.5 text-xs text-ink outline-none transition-colors hover:bg-panel"
+            />
+          )}
+          <BoutonJet
+            label={sort.degats ? "Dégâts" : "Lancer"}
+            formule={sort.degats ?? (mineur ? "—" : `${restants}/${emplacement?.total ?? 0}`)}
+            detail={mineur ? "sort mineur, sans emplacement" : `emplacements restants au niveau choisi`}
+            inactif={epuise}
+            onClick={() => {
+              if (!mineur) onDepenser(niveau);
+              if (sort.degats) onLancer(`Dégâts — ${sort.nom}`, 0);
+            }}
+          />
         </div>
-      )}
-
-      {/* B — LA BARRETTE, retenue par l'auteur le 23 septembre, et
-          complétée : la sauvegarde sous chaque caractéristique, le score
-          au-dessus du modificateur. L'interrupteur « tests / sauvegardes »
-          disparaît du même coup — il n'existait que pour cacher la moitié
-          qu'on affiche maintenant.
-
-          Quatre étages, du plus durable au plus lancé : le nom, le score
-          (qui ne bouge qu'à la montée de niveau), le modificateur, la
-          sauvegarde. Les deux du bas sont les deux boutons, et chacun fait
-          24 px de haut sur toute la largeur de la colonne (V2.1-27).
-
-          `tabular-nums` : sans lui, un `1` étroit décale la colonne
-          entière, et six colonnes qui ne s'alignent pas se lisent mal.
-
-          L'encadré est celui des Compétences juste en dessous —
-          `rounded-md border border-edge`, un seul pixel — et pas un trait
-          plus épais : six cadres côte à côte pèsent six fois ce que pèse
-          un cadre seul, et la colonne n'a pas de fond pour les porter. */}
-      {variante === "barrette" && (
-        <div className="flex justify-between">
-          {FICHE.abilities.map((a) => (
-            <div key={a.key} className="flex w-10 flex-col items-center rounded-md border border-edge py-0.5">
-              <span className="text-xs text-ink-muted">{a.key}</span>
-              <span className="text-xs tabular-nums text-ink-soft" title={`Score de ${a.key}`}>
-                {a.score}
-              </span>
-              <button
-                type="button"
-                onClick={() => onLancer(`Test de ${a.key}`, Number(a.mod))}
-                className="flex h-6 w-full items-center justify-center rounded-md text-sm font-medium tabular-nums text-ink transition-colors hover:bg-panel-sunken"
-                title={`Lancer un test de ${a.key}`}
-              >
-                {a.mod}
-              </button>
-              <button
-                type="button"
-                onClick={() => onLancer(`Sauvegarde de ${a.key}`, Number(a.save))}
-                className="flex h-6 w-full items-center justify-center rounded-md text-xs tabular-nums text-ink-muted transition-colors hover:bg-panel-sunken"
-                title={`Lancer une sauvegarde de ${a.key}`}
-              >
-                js {a.save}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* C — LA GRILLE. La disposition d'aujourd'hui, mais chaque tuile
-          tient sur UNE ligne au lieu de trois : deux rangées au lieu de
-          deux pavés. Le compromis — on garde l'encadré qui rythme la
-          colonne, on perd la hauteur qui ne servait à rien. */}
-      {variante === "grille" && (
-        <div className="grid grid-cols-3 gap-1">
-          {FICHE.abilities.map((a) => (
-            <div key={a.key} className="flex items-baseline justify-center gap-1 rounded-md border border-edge px-1 py-0.5">
-              <span className="text-xs text-ink-muted">{a.key}</span>
-              <button
-                type="button"
-                onClick={() => onLancer(`Test de ${a.key}`, Number(a.mod))}
-                className="text-sm font-medium text-ink transition-colors hover:text-accent"
-                title={`Lancer un test de ${a.key}`}
-              >
-                {a.mod}
-              </button>
-              <button
-                type="button"
-                onClick={() => onLancer(`Sauvegarde de ${a.key}`, Number(a.save))}
-                className="text-xs text-ink-muted transition-colors hover:text-accent"
-                title={`Lancer une sauvegarde de ${a.key}`}
-              >
-                js{a.save}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -711,8 +802,9 @@ function Caracteristiques({ onLancer }: { onLancer: (label: string, modificateur
  * c'est le but : la fiche et l'écran solo montrent la même chose, donc ils
  * la dessinent pareil. Seule la taille change — la colonne fait 280 px.
  *
- * Pas d'anneau pour la CA : un anneau dit une proportion, et une CA n'a pas
- * de maximum. Le bouclier dit « défense » sans rien promettre de tel.
+ * Pas d'anneau pour la CA : un anneau dit une proportion, et une classe
+ * d'armure n'a pas de maximum. Le bouclier dit « défense » sans rien
+ * promettre de tel.
  */
 function Bouclier({ valeur }: { valeur: number }) {
   return (
@@ -769,6 +861,20 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
   const [onglet, setOnglet] = useState<OngletFiche>("actions");
   const [equipes, setEquipes] = useState(INVENTAIRE.filter((o) => o.equipe).map((o) => o.id));
   const [prepares, setPrepares] = useState(SORTS.filter((s) => s.prepare).map((s) => s.id));
+  const [deplies, setDeplies] = useState<string[]>([]);
+  /**
+   * Les emplacements dépensés, par niveau. État LOCAL : l'esquisse montre
+   * le geste, le vrai décompte appartient au serveur — un client ne décide
+   * d'aucun résultat de règle (règle absolue 8).
+   */
+  const [utilises, setUtilises] = useState<Record<number, number>>(
+    Object.fromEntries(EMPLACEMENTS.map((e) => [e.niveau, e.utilises]))
+  );
+
+  function depenserEmplacement(niveau: number) {
+    const total = EMPLACEMENTS.find((e) => e.niveau === niveau)?.total ?? 0;
+    setUtilises((u) => ({ ...u, [niveau]: Math.min(total, (u[niveau] ?? 0) + 1) }));
+  }
   const pctPv = Math.round((FICHE.hp.current / FICHE.hp.max) * 100);
   const pctXp = Math.round((PROGRESSION.xp / PROGRESSION.seuilNiveauSuivant) * 100);
   const pctCharge = Math.round((CHARGE.porte / CHARGE.capacite) * 100);
@@ -880,23 +986,51 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
           ]}
         />
         <div className={`${CLASSEUR} min-h-0 flex-1 overflow-y-auto`}>
+          {/* ACTIONS — la présentation de `ActionsTab` : les emplacements en
+              tête, puis une carte par chose qu'on peut faire. L'onglet ne
+              tient AUCUNE liste à lui : il dérive ce qu'il montre de ce qui
+              est équipé dans le Sac et de ce qui est préparé dans Magie.
+              C'est le mécanisme de la vraie fiche, et c'est ce que l'auteur
+              a demandé pour les sorts. */}
           {onglet === "actions" && (
-            <div className="flex flex-col gap-1">
-              {FICHE.actions.map((a) => (
-                <div key={a.nom} className="flex flex-col gap-1 rounded-md border border-edge p-2">
-                  <span className="text-sm text-ink">{a.nom}</span>
-                  <span className="text-xs text-ink-muted">
-                    {a.attaque} · {a.degats}
-                  </span>
-                  <div className="flex gap-1">
-                    <button type="button" className={CHIP} onClick={() => onLancer(`Attaque — ${a.nom}`, Number(a.attaque))}>
-                      attaquer
-                    </button>
-                    <button type="button" className={CHIP_MUTED} onClick={() => onLancer(`Dégâts — ${a.nom}`, 3)}>
-                      dégâts
-                    </button>
+            <div className="flex flex-col gap-2">
+              <EmplacementsSorts utilises={utilises} />
+
+              {INVENTAIRE.filter((o) => equipes.includes(o.id) && o.arme).map((o) => (
+                <div key={o.id} className="flex flex-col gap-1.5 rounded-md border border-edge bg-panel-raised px-2 py-2">
+                  <span className="truncate text-sm font-semibold text-ink">{o.nom}</span>
+                  {/* Les deux boutons sur la même ligne (auteur, 23 septembre),
+                      et ce sont les boutons de la vraie fiche : `ActionButton`
+                      importé, avec son dé, sa formule résolue à droite et son
+                      détail en dessous. */}
+                  <div className="grid grid-cols-2 gap-1">
+                    <BoutonJet
+                      label="Attaquer"
+                      formule={withModifier("1d20", Number(o.arme!.attaque))}
+                      detail="1d20 + Dex + maîtrise"
+                      primaire
+                      onClick={() => onLancer(`Attaque — ${o.nom}`, Number(o.arme!.attaque))}
+                    />
+                    <BoutonJet
+                      label="Dégâts"
+                      formule={o.arme!.degats}
+                      detail={o.detail.split(" · ")[0]}
+                      onClick={() => onLancer(`Dégâts — ${o.nom}`, 3)}
+                    />
                   </div>
                 </div>
+              ))}
+
+              {/* Un sort mineur est toujours là ; les autres n'arrivent ici
+                  que préparés. Exactement comme l'épée n'y arrive qu'équipée. */}
+              {SORTS.filter((s) => s.niveau === 0 || prepares.includes(s.id)).map((s) => (
+                <CarteSortAction
+                  key={s.id}
+                  sort={s}
+                  utilises={utilises}
+                  onDepenser={depenserEmplacement}
+                  onLancer={onLancer}
+                />
               ))}
             </div>
           )}
@@ -980,37 +1114,86 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
             </div>
           )}
 
+          {/* MAGIE — la présentation de `MagicTab` : une carte par sort
+              connu, avec le bandeau vertical « Préparé / Préparer » à
+              gauche, l'école en pastille à sa couleur, le niveau à droite,
+              les propriétés d'incantation en pastilles, et la description
+              sous un bandeau de pliage.
+
+              Les couleurs d'école viennent de `MAGIC_SCHOOL_COLOR_VAR`
+              (`src/i18n/fr.ts`), jamais réécrites ici — la table accepte
+              les graphies françaises. */}
           {onglet === "magie" && (
             <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap gap-2">
-                {EMPLACEMENTS.map((e) => (
-                  <span key={e.niveau} className={CHIP_MUTED}>
-                    Niv. {e.niveau} : {e.total - e.utilises}/{e.total}
-                  </span>
-                ))}
-              </div>
-              {SORTS.map((s) => (
-                <div key={s.id} className="flex items-start justify-between gap-2 rounded-md border border-edge p-2">
-                  <div className="flex min-w-0 flex-col">
-                    <span className="truncate text-sm text-ink">{s.nom}</span>
-                    <span className="text-xs text-ink-muted">
-                      {s.niveau === 0 ? "Sort mineur" : `Niveau ${s.niveau}`} · {s.ecole}
-                    </span>
+              <EmplacementsSorts utilises={utilises} />
+
+              {SORTS.map((s) => {
+                const prepare = s.niveau === 0 || prepares.includes(s.id);
+                const couleur = MAGIC_SCHOOL_COLOR_VAR[s.ecole] ?? "--link-rule";
+                const deplie = deplies.includes(s.id);
+                const proprietes = [
+                  s.incantation,
+                  s.portee,
+                  s.concentration ? `${s.duree} (concentration)` : s.duree,
+                  s.composantes,
+                  ...(s.rituel ? ["Rituel"] : []),
+                ];
+                return (
+                  <div key={s.id} className="flex flex-col overflow-hidden rounded-md border border-edge bg-panel-raised">
+                    <button
+                      type="button"
+                      onClick={() => bascule(deplies, setDeplies, s.id)}
+                      title={deplie ? "Replier" : "Déplier"}
+                      aria-label={deplie ? "Replier" : "Déplier"}
+                      className="flex w-full items-center justify-center border-b border-edge bg-panel py-px text-xs leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent"
+                    >
+                      {deplie ? "▴" : "▾"}
+                    </button>
+                    <div className="flex">
+                      {/* Un sort mineur n'a rien à préparer : le bandeau le
+                          dit au lieu d'offrir une case qui ne ferait rien. */}
+                      <button
+                        type="button"
+                        disabled={s.niveau === 0}
+                        onClick={() => bascule(prepares, setPrepares, s.id)}
+                        title={s.niveau === 0 ? "Toujours prêt" : prepare ? "Ne plus préparer" : "Préparer"}
+                        className={`w-7 shrink-0 border-r text-xs font-semibold uppercase tracking-wide transition-colors ${
+                          prepare ? "border-accent bg-accent/20 text-accent" : "border-edge bg-panel text-ink-muted hover:bg-panel-raised"
+                        }`}
+                        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+                      >
+                        {s.niveau === 0 ? "Mineur" : prepare ? "Préparé" : "Préparer"}
+                      </button>
+                      <div className="flex min-w-0 flex-1 flex-col gap-1 px-2 pb-2 pt-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="min-w-0 flex-1 truncate text-sm font-semibold" style={{ color: "var(--link-rule)" }}>
+                            {s.nom}
+                          </span>
+                          <span
+                            className="shrink-0 rounded-full border px-1.5 text-xs"
+                            style={{ borderColor: `var(${couleur})`, color: `var(${couleur})` }}
+                          >
+                            {s.ecole}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          <span className="rounded-full border border-edge px-1.5 text-xs text-ink-muted">
+                            {s.niveau === 0 ? "Sort mineur" : `Niv. ${s.niveau}`}
+                          </span>
+                          {proprietes.map((prop) => (
+                            <span key={prop} className="rounded-full border border-edge px-1.5 text-xs text-ink-muted">
+                              {prop}
+                            </span>
+                          ))}
+                        </div>
+                        {deplie && <p className="text-xs leading-snug text-ink-muted">{s.description}</p>}
+                      </div>
+                    </div>
                   </div>
-                  {s.niveau === 0 ? (
-                    <span className="shrink-0 text-xs text-ink-muted">toujours prêt</span>
-                  ) : (
-                    <Checkbox
-                      aria-label={`Préparer ${s.nom}`}
-                      checked={prepares.includes(s.id)}
-                      onChange={() => bascule(prepares, setPrepares, s.id)}
-                    />
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
-
 
           {/* Traits = « Aptitudes accordées », la seule section de l'onglet
               Traits de la vraie fiche : nom, source, résumé. */}
