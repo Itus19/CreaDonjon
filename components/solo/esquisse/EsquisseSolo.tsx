@@ -625,11 +625,16 @@ function Caracteristiques({ onLancer }: { onLancer: (label: string, modificateur
           24 px de haut sur toute la largeur de la colonne (V2.1-27).
 
           `tabular-nums` : sans lui, un `1` étroit décale la colonne
-          entière, et six colonnes qui ne s'alignent pas se lisent mal. */}
+          entière, et six colonnes qui ne s'alignent pas se lisent mal.
+
+          L'encadré est celui des Compétences juste en dessous —
+          `rounded-md border border-edge`, un seul pixel — et pas un trait
+          plus épais : six cadres côte à côte pèsent six fois ce que pèse
+          un cadre seul, et la colonne n'a pas de fond pour les porter. */}
       {variante === "barrette" && (
         <div className="flex justify-between">
           {FICHE.abilities.map((a) => (
-            <div key={a.key} className="flex w-10 flex-col items-center">
+            <div key={a.key} className="flex w-10 flex-col items-center rounded-md border border-edge py-0.5">
               <span className="text-xs text-ink-muted">{a.key}</span>
               <span className="text-xs tabular-nums text-ink-soft" title={`Score de ${a.key}`}>
                 {a.score}
