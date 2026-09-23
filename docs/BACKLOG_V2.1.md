@@ -30,7 +30,7 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 | V2.1-13 | Centrer le couple sommaire + texte du wiki | `S` | **Fait** (15 septembre) — le vide entre sommaire et texte tombe de ~300 px à 32 px sur un écran de 1920, et cesse de dépendre de la fenêtre : il était un reste, il devient une marge. Une borne exprimée dans les unités du contenu, écrite une seule fois pour les trois routes — premier encaissement de la fusion de V2.1-12 |
 | V2.1-16 | Le défilement appartient aux fenêtres, et l'en-tête disparaît | `M` | **Fait** (16 septembre) — deux gênes signalées avec captures, une seule cause : `<body>` n'avait pas de hauteur définie, donc chaque coquille bornait la sienne dans son coin. Mesuré avant/après : la page défilait de 56 px, la hauteur exacte de l'en-tête — lequel a disparu au lot 2, rendant ces 56 px aux fiches |
 | V2.1-17 | Deux retouches de rendu au Livre de sessions | `S` | **Fait** (16 septembre) — les deux vues par l'auteur, captures à l'appui : le bloc Séance n'alignait pas ses libellés sur ses valeurs, et un trait posé en tête de bloc tombait entre le titre et le texte, en doublon du filet automatique que chaque bloc porte depuis V2-G11. L'alignement a ensuite été corrigé sur `PublicInfoboxBlock`, l'original d'où le défaut venait |
-| V2.1-18 | Aperçu des fiches au survol d'un lien | `L` | **Fait** (16 septembre) — les quatre lots livrés, les onze critères cochés, dont les deux ajoutés après coup sur retour de l'auteur (la carte coupée par un bord, et le pied « Ouvrir la fiche » qui était un `<span>` inerte). Statut corrigé le 16 septembre : la ligne disait encore « Ouvert » alors que le ticket était clos plus bas. Une seule case du tableau de fluidité reste *à relever* — le poids HTML ajouté sur le Prologue — et c'est une mesure jamais prise, pas un travail jamais fait. Le premier lot était autonome. Né d'un lien de règle qui ne mène nulle part sur `/partage` tout en portant la couleur et le souligné d'un vrai lien : trois mentions inertes sur vingt, mesurées sur la page en production. Trois variantes esquissées avec l'auteur avant tout code, la carte flottante retenue pour les entités comme pour les règles. La fluidité est une exigence du ticket, pas une optimisation d'après-coup : elle a une section, des cibles chiffrées, et elle a mis au jour un coût plus ancien, parti en V2.1-19 |
+| V2.1-18 | Aperçu des fiches au survol d'un lien | `L` | **Fait** (16 septembre) — les quatre lots livrés, les onze critères cochés, dont les deux ajoutés après coup sur retour de l'auteur (la carte coupée par un bord, et le pied « Ouvrir la fiche » qui était un `<span>` inerte). Statut corrigé le 16 septembre : la ligne disait encore « Ouvert » alors que le ticket était clos plus bas. La dernière case du tableau de fluidité a été relevée le 23 septembre : **+7 923 octets de HTML brut sur le Prologue, +3 150 une fois transférés**, mesurés à la frontière du ticket (`f9b9095` contre `601114b`) plutôt que contre HEAD, qui aurait mélangé dix tickets. Deux tiers partent dans la charge de la carte, un tiers dans les `data-ref-*` des vingt mentions et la déclaration du module client ; et la coupe à 240 caractères du lot 2, mesurée à son tour, économise 2 766 octets sur cette seule page. Le premier lot était autonome. Né d'un lien de règle qui ne mène nulle part sur `/partage` tout en portant la couleur et le souligné d'un vrai lien : trois mentions inertes sur vingt, mesurées sur la page en production. Trois variantes esquissées avec l'auteur avant tout code, la carte flottante retenue pour les entités comme pour les règles. La fluidité est une exigence du ticket, pas une optimisation d'après-coup : elle a une section, des cibles chiffrées, et elle a mis au jour un coût plus ancien, parti en V2.1-19 |
 | V2.1-19 | La mémoïsation n'atteignait pas le wiki public | `M` | **Fait** (16 septembre) — né de la section Fluidité de V2.1-18. `React.cache()` ne prend que si le client Supabase est stable par requête ; `createShareLinkServiceClient` est une fabrique nue, et chaque fonction de `publicShare.ts` construit la sienne. Tout le gain de l'audit P-01 était donc inerte sur `/partage`, et seulement là. Second volet : la coquille passe dans le layout, `/partage` était la dernière des trois routes de wiki à la reconstruire à chaque fiche. Mesure : 2 constructions de sommaire pour deux navigations avant, 0 après, et la recherche du sommaire survit désormais à la navigation |
 | V2.1-20 | La navigation du wiki public, de bout en bout | `L` | **Tous les lots faits** (16 septembre) — né de l'usage : « un long moment entre le clic et l'arrivée », et « le chargement s'effectue bizarrement quand le fond n'est pas celui par défaut ». **Le lot 0 a déplacé le ticket** : le temps de rendu est le nombre de vagues de requêtes multiplié par la latence, et 41 % sert à préparer des bulles que personne n'a survolées. **Lot 1** : trois `loading.tsx`, les premiers du dépôt, retour visible en 43 ms là où rien ne bougeait. **Lot 2 a trouvé autre chose que ce qu'il cherchait** : le fond n'était pas lent, il n'arrivait jamais — `/api/blocks/[id]/image` répondait 307 vers `/login` pour tout visiteur anonyme. Deux défauts empilés, plus une fuite refermée. **Lot 2.1** : les jetons de teinte passent dans le HTML, sur les trois routes, éditeur compris. **Lot 3** : deux vagues qui n'attendaient que leur tour dans l'ordre d'écriture — le Prologue passe de 873 à 678 ms. **Lot 5** : la chaine de rulesets cesse d attendre les cles de regle — le Prologue passe de 731 a 434 ms, soit -41 % depuis le lot 0. **Lot 4** : l auteur payait 66 ms de plus que ses joueuses a chaque clic, le middleware sort desormais avant de construire le client sur /partage — ecart ramene a -1 ms. **Lot 6** : l A/B tranche — squelette a 18 ms sur une cible prechargee contre 20 ms sur une cible qui ne l est pas, et une navigation coute exactement son rendu serveur. Le prechargement est coupe partout, 18 requetes par page ouverte tombent a 0 |
 | V2.1-21 | Le contraste élevé se perd sur une fiche illustrée | `S` | **Fait** (16 septembre) — trouvé en instruisant le lot 2.1 de V2.1-20, pas en le cherchant. `.wiki-bg-scope[data-mode="…"]` redéclare la palette **sur lui-même**, et une déclaration locale l'emporte sur une valeur héritée : ce n'est pas une affaire de spécificité, les deux règles ne visent même pas le même élément. Sur toute fiche portant un fond de page wiki, le contraste élevé était donc écrasé — le lecteur le perdait exactement là où il en a le plus besoin. Mesuré avant correction : fond à 17 % de clarté au lieu de 1,6 %, texte à 95 % au lieu de blanc pur. Corrigé par un garde `:root:not([data-contrast="high"])` sur les quatre portées ; l'auteur a choisi de garder l'image, qui reste affichée mais que le `--scrim` de ce mode voile à 92 % |
@@ -43,16 +43,16 @@ s'appuie sur ce qui existe déjà plutôt que de deviner :
 
 
 > **État au 23 septembre 2026 — les vingt-sept tickets sont livrés.** Ce qui
-> reste tient en quatre lignes, et **aucune n'est du code à écrire** :
+> reste tient en trois lignes, et **aucune n'est du code à écrire** :
 >
 > | Ce qui reste | Pourquoi ça n'est pas fait |
 > |---|---|
 > | **V2.1-24, lot 4** — l'Administration en tableau, jamais vue en navigateur | Il faut un compte **superadmin** côté test, et la session n'en a pas. Écrit, typé, testé ; seul le coup d'œil manque |
 > | **V2.1-10** — deux vérifications de déploiement | Les journaux de build Vercel et un envoi d'image réel **en production** : ni l'un ni l'autre n'est atteignable depuis une session de travail |
-> | **V2.1-18** — le poids HTML ajouté sur le Prologue | Une mesure jamais prise, pas un travail jamais fait — la case le dit déjà |
 > | **V2.1-23** — les petits contrôles à `dpr=1.5` | **Clos sans remède**, délibérément : 159 sites écrits de 93 façons distinctes, et la recette essayée a été annulée. Le ticket laisse quatre mesures et un chemin si le sujet revient |
 >
-> Les trois premières lignes appartiennent à l'auteur, pas au prochain ticket.
+> Les deux premières lignes appartiennent à l'auteur, pas au prochain ticket.
+> La quatrième case de V2.1-18 a été relevée le 23 septembre.
 >
 > **Les cases à cocher de ce fichier ne sont pas un état fiable**, et c'est
 > assumé : plusieurs tickets ont été livrés puis consignés dans leur corps
@@ -3240,11 +3240,57 @@ chargée en mentions :
 |---|---|
 | Survol → carte peinte | aucune requête réseau, une seule image |
 | Requêtes serveur ajoutées par fiche (lot 2) | 1, dans le `Promise.all` existant |
-| Poids HTML ajouté sur le Prologue | à relever ; extrait coupé à ~240 caractères côté serveur |
+| Poids HTML ajouté sur le Prologue | **+7 923 octets bruts (+13,8 %), +3 150 une fois transférés (+17,3 %)** — relevé le 23 septembre, détail ci-dessous |
 | Nœuds de carte dans le DOM | 1, quel que soit le nombre de mentions |
 | Décalage de mise en page à l'ouverture | 0 — portail, hors du flux du paragraphe |
 | Saut de la carte à l'arrivée du portrait | 0 — boîte réservée |
 | Clic après survol appuyé | ~~fiche préchargée~~ — **abandonné, mesuré sans effet** (448 ms à froid / 428 ms après survol ; voir Fluidité) |
+
+### La mesure manquante, relevée le 23 septembre
+
+Une case est restée *à relever* une semaine — la seule chose que ce ticket
+n'avait pas faite. Relevée **à la frontière du ticket lui-même** : `f9b9095`
+(le commit juste avant) contre `601114b` (le ticket), deux constructions de
+production servies par `next start`, la même URL
+(`/partage/leschroniquesdesroyaumesoublies/37`), les mêmes données
+d'aujourd'hui. Comparer à HEAD aurait mélangé dix tickets ; ici l'écart ne
+contient que celui-ci. Trois requêtes successives rendent un HTML identique à
+l'octet près, donc l'écart n'est pas du bruit.
+
+| | avant | après | écart |
+|---|---|---|---|
+| HTML brut | 57 254 o | 65 177 o | **+7 923 (+13,8 %)** |
+| Transféré (gzip du serveur) | 18 204 o | 21 354 o | **+3 150 (+17,3 %)** |
+
+Le compressé grossit **plus vite** que le brut, et c'est le bon signe à
+l'envers : ce qu'on ajoute est de la prose unique, pas du balisage répété.
+
+Où passent ces 7 923 octets :
+
+| Part | Écart | Quoi |
+|---|---|---|
+| Flux RSC | +6 316 | dont **3 643** de charge de carte (8 fiches, 2 règles ; 3 459 une fois déséchappée) et **2 673** de déclaration de module client — le prix fixe d'un composant client de plus, indépendant du nombre de mentions |
+| Corps rendu | +1 537 | les `data-ref-*` des 20 mentions : 40 attributs, 1 361 octets, ~68 par mention (l'identifiant est un UUID) |
+| Balises `<script>` | +70 | un fragment de plus à charger |
+
+**La coupe à 240 caractères n'était pas une précaution de style.** Les huit
+fiches citées par le Prologue ont des premiers paragraphes qui pèsent
+**4 666 octets** entiers ; coupés côté serveur, **1 868**. La décision du lot
+2 économise donc **2 766 octets sur cette seule page**, et l'écart grandit
+avec la longueur des fiches citées — sept extraits sur huit sont
+effectivement coupés, et la plus longue fiche citée aurait à elle seule pesé
+844 octets. Envoyer le paragraphe entier pour le tronquer en CSS aurait fait
+payer au visiteur du texte que personne ne lit.
+
+**L'ordre de grandeur, pour juger.** De la donnée — la charge de la carte et
+les identifiants des mentions — il y en a 5 004 octets, soit **7,7 % du HTML
+de la page mesurée** (6,8 % du Prologue d'aujourd'hui, qui a grossi depuis).
+Les 2 919 restants sont le prix fixe d'un composant client de plus : 2 673 de
+déclaration de module, 70 de balise, le solde en classes et attributs. Ce
+prix-là ne bouge pas avec le nombre de mentions, et c'est bien la page la
+plus chargée du monde qu'on mesure ici — vingt mentions, huit fiches
+distinctes, deux règles. Une fiche sans lien ne paie rien du tout :
+`RefPreviewLayer` n'est monté que si `hasRefs`.
 
 ---
 
