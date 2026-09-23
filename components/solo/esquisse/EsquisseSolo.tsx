@@ -509,13 +509,16 @@ function Jauge({
       <div className="relative h-12 w-12">
         <svg viewBox="0 0 40 40" className="h-full w-full -rotate-90" aria-hidden="true">
           <circle cx="20" cy="20" r="16" fill="none" strokeWidth="4" className="stroke-panel-sunken" />
+          {/* `strokeLinecap` : un cap arrondi sur une valeur nulle dessine
+              quand même un point, et un point d'épuisement à zéro est un
+              mensonge — à zéro, la jauge doit être VIDE. */}
           <circle
             cx="20"
             cy="20"
             r="16"
             fill="none"
             strokeWidth="4"
-            strokeLinecap="round"
+            strokeLinecap={borne === 0 ? "butt" : "round"}
             pathLength={100}
             strokeDasharray={`${borne} ${100 - borne}`}
             className={ton === "danger" ? "stroke-danger" : "stroke-accent"}
@@ -535,6 +538,149 @@ function Jauge({
         </button>
       </div>
       <span className="text-xs text-ink-muted">{libelle}</span>
+    </div>
+  );
+}
+
+/**
+ * Les trois refontes des caractéristiques, demandées le 23 septembre —
+ * « moins de place, esthétique et lisible ». L'interrupteur qui les
+ * compare est un OUTIL D'ESQUISSE : il part avec le reste du dossier
+ * quand V3-D1 arrive, seule la variante retenue survit.
+ *
+ * Le pavé d'origine — six cartes bordées de trois lignes chacune — coûtait
+ * deux rangées de 60 px. Les trois propositions attaquent le problème par
+ * trois bouts différents, et aucune n'est une simple réduction de police :
+ * on ne gagne pas de la place en rendant illisible ce qu'on garde.
+ */
+type VarianteCaracs = "reglette" | "barrette" | "grille";
+
+const VARIANTES: { cle: VarianteCaracs; nom: string; note: string }[] = [
+  { cle: "reglette", nom: "Réglette", note: "deux colonnes de trois lignes — tout est visible, rien n'est caché" },
+  { cle: "barrette", nom: "Barrette", note: "une seule rangée ; l'interrupteur bascule les six d'un coup" },
+  { cle: "grille", nom: "Grille", note: "la forme actuelle, mais chaque tuile tient sur une ligne" },
+];
+
+function Caracteristiques({ onLancer }: { onLancer: (label: string, modificateur: number) => void }) {
+  const [variante, setVariante] = useState<VarianteCaracs>("reglette");
+  const [sauvegardes, setSauvegardes] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-1">
+      {/* Outil d'esquisse, pas un élément de l'écran. */}
+      <div className="flex items-center gap-1">
+        {VARIANTES.map((v) => (
+          <button
+            key={v.cle}
+            type="button"
+            onClick={() => setVariante(v.cle)}
+            title={v.note}
+            className={`rounded-full border px-2 py-0.5 text-xs transition-colors ${
+              variante === v.cle ? "border-accent text-accent" : "border-edge text-ink-muted hover:text-ink"
+            }`}
+          >
+            {v.nom}
+          </button>
+        ))}
+      </div>
+
+      {/* A — LA RÉGLETTE. Une caractéristique par ligne, deux colonnes.
+          Le test et la sauvegarde restent côte à côte et toujours lus :
+          c'est la plus lisible des trois, et elle économise déjà la
+          moitié de la hauteur en supprimant les bordures. */}
+      {variante === "reglette" && (
+        <div className="grid grid-cols-2 gap-x-3">
+          {FICHE.abilities.map((a) => (
+            <div key={a.key} className="flex items-baseline justify-between border-b border-edge py-0.5">
+              <span className="text-xs text-ink-muted">{a.key}</span>
+              <button
+                type="button"
+                onClick={() => onLancer(`Test de ${a.key}`, Number(a.mod))}
+                className="px-1 text-sm font-medium text-ink transition-colors hover:text-accent"
+                title={`Lancer un test de ${a.key}`}
+              >
+                {a.mod}
+              </button>
+              <button
+                type="button"
+                onClick={() => onLancer(`Sauvegarde de ${a.key}`, Number(a.save))}
+                className="text-xs text-ink-muted transition-colors hover:text-accent"
+                title={`Lancer une sauvegarde de ${a.key}`}
+              >
+                js {a.save}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* B — LA BARRETTE. Une seule rangée de six : la plus compacte, au
+          prix d'une chose cachée à la fois. L'interrupteur bascule les six
+          ensemble — c'est le même geste que le chiffre des jauges, et deux
+          gestes identiques valent mieux que deux inventions. */}
+      {variante === "barrette" && (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-ink-muted">{sauvegardes ? "Sauvegardes" : "Tests"}</span>
+            <button
+              type="button"
+              onClick={() => setSauvegardes((v) => !v)}
+              className="rounded-full border border-edge px-2 py-0.5 text-xs text-ink-muted transition-colors hover:text-accent"
+              title="Basculer entre les tests et les sauvegardes"
+            >
+              {sauvegardes ? "voir les tests" : "voir les sauvegardes"}
+            </button>
+          </div>
+          <div className="flex justify-between">
+            {FICHE.abilities.map((a) => (
+              <button
+                key={a.key}
+                type="button"
+                onClick={() =>
+                  sauvegardes
+                    ? onLancer(`Sauvegarde de ${a.key}`, Number(a.save))
+                    : onLancer(`Test de ${a.key}`, Number(a.mod))
+                }
+                className="flex w-10 flex-col items-center rounded-md py-0.5 transition-colors hover:bg-panel-sunken"
+                title={`Lancer ${sauvegardes ? "une sauvegarde" : "un test"} de ${a.key}`}
+              >
+                <span className="text-xs text-ink-muted">{a.key}</span>
+                <span className="text-sm font-medium text-ink">{sauvegardes ? a.save : a.mod}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* C — LA GRILLE. La disposition d'aujourd'hui, mais chaque tuile
+          tient sur UNE ligne au lieu de trois : deux rangées au lieu de
+          deux pavés. Le compromis — on garde l'encadré qui rythme la
+          colonne, on perd la hauteur qui ne servait à rien. */}
+      {variante === "grille" && (
+        <div className="grid grid-cols-3 gap-1">
+          {FICHE.abilities.map((a) => (
+            <div key={a.key} className="flex items-baseline justify-center gap-1 rounded-md border border-edge px-1 py-0.5">
+              <span className="text-xs text-ink-muted">{a.key}</span>
+              <button
+                type="button"
+                onClick={() => onLancer(`Test de ${a.key}`, Number(a.mod))}
+                className="text-sm font-medium text-ink transition-colors hover:text-accent"
+                title={`Lancer un test de ${a.key}`}
+              >
+                {a.mod}
+              </button>
+              <button
+                type="button"
+                onClick={() => onLancer(`Sauvegarde de ${a.key}`, Number(a.save))}
+                className="text-xs text-ink-muted transition-colors hover:text-accent"
+                title={`Lancer une sauvegarde de ${a.key}`}
+              >
+                js{a.save}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -644,7 +790,7 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
             L'inspiration manquait à la vraie fiche quand cette esquisse a
             été dessinée ; V2.1-26 l'a ajoutée depuis, au bandeau comme dans
             `RuntimeState`. */}
-        <div className="flex items-start justify-center gap-1.5">
+        <div className="flex items-start justify-between gap-1">
           <Bouclier valeur={FICHE.ac} />
           <Jauge
             libelle="PV"
@@ -674,29 +820,7 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-1">
-        {FICHE.abilities.map((a) => (
-          <div key={a.key} className="flex flex-col items-center rounded-md border border-edge py-1">
-            <span className="text-xs text-ink-muted">{a.key}</span>
-            <button
-              type="button"
-              onClick={() => onLancer(`Test de ${a.key}`, Number(a.mod))}
-              className="rounded-md px-2 py-0.5 text-sm font-medium text-ink transition-colors hover:bg-panel-sunken"
-              title={`Lancer un test de ${a.key}`}
-            >
-              {a.mod}
-            </button>
-            <button
-              type="button"
-              onClick={() => onLancer(`Sauvegarde de ${a.key}`, Number(a.save))}
-              className="rounded-md px-2 py-0.5 text-xs text-ink-muted transition-colors hover:bg-panel-sunken"
-              title={`Lancer une sauvegarde de ${a.key}`}
-            >
-              JS {a.save}
-            </button>
-          </div>
-        ))}
-      </div>
+      <Caracteristiques onLancer={onLancer} />
 
       {/* Les compétences suivent les caractéristiques, comme dans la vraie
           fiche — elles n'y sont pas un onglet. Repliées par défaut : six
@@ -1112,9 +1236,6 @@ export default function EsquisseSolo() {
           <span className="text-sm text-ink-soft">
             {ENTETE.meteo} · {ENTETE.temperature}
           </span>
-          <button type="button" className={CHIP_MUTED} title="Radio d'ambiance">
-            ♪ radio
-          </button>
         </div>
 
         <div className="hidden lg:block">

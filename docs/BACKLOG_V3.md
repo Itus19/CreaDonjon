@@ -565,7 +565,7 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 - [ ] À gauche, **trois niveaux de lieu** : la ville la plus proche, le lieu à l'intérieur, puis la pièce. Les deux premiers sont des liens vers leur fiche ; **la pièce n'en est pas un** — anecdotique le plus souvent, et quand elle ne l'est pas (une salle secrète), elle vit dans un bloc de la fiche du lieu.
 - [ ] À droite, la date en jeu, l'heure, la météo et la température : `Mercredi 12 juillet · 22:15 · Pluie · 14 °C`. La date vient du calendrier du monde (`formatGameDate`), l'heure de `SceneState.time`.
 - [ ] **La météo et la température n'existent pas encore** — c'est V3-C6. Tant qu'il n'est pas fait, l'en-tête les omet plutôt que d'afficher une valeur inventée.
-- [ ] Tout à droite, la radio d'ambiance : `RadioWidget`, le composant existe.
+- [ ] **Pas de radio dans le bandeau** (auteur, 23 septembre) : `RadioWidget` est déjà dans la barre latérale joueur, et l'écran solo est une destination de `PlayerShell`. Un deuxième bouton pour la même chose, à deux centimètres du premier, ne se justifie que si le premier n'est pas atteignable — il l'est.
 - [ ] **Tout y est tenu par le moteur** (critère `module-joueur-et-solo.md` §C). Un modèle ne décide ni du lieu ni de l'heure.
 
 ### V3-D3 — La colonne gauche : le monde connu · `M`
@@ -596,9 +596,18 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 - [ ] **C'est la fiche jouable, au format étroit** — mêmes composants, aucun code dupliqué. Elle est tenue à 375 px depuis la V1.
 - [ ] **Les cinq onglets de la fiche, avec leur vrai contenu** : Actions, Sac, Magie, Traits (« Aptitudes accordées »), Maîtrises (maîtrises, maîtrise d'armes, langues). Rien n'est inventé ici ; seul le format d'affichage change.
 - [ ] **Six onglets ne tiennent pas dans 300 px** — le dernier se coupe. Les compétences vivent donc sous les caractéristiques, repliées, là où la vraie fiche les met : elles n'y sont pas un onglet non plus.
+- [ ] **Les caractéristiques tiennent en deux rangées au plus.** Le pavé d'origine — six cartes bordées de trois lignes — mesure **144 px** pour six nombres, et c'est le plus gros poste de la colonne après les onglets. Trois refontes sont dessinées dans l'esquisse, avec leur interrupteur de comparaison (auteur, 23 septembre) ; **le choix reste à faire** :
+
+| Proposition | Hauteur | Ce qu'elle échange |
+|---|---|---|
+| **Réglette** — deux colonnes de trois lignes | **75 px** (−48 %) | La plus lisible : test et sauvegarde toujours visibles côte à côte. Perd les encadrés, qui rythmaient la colonne |
+| **Barrette** — une seule rangée de six | **66 px** (−54 %) | La plus compacte à l'usage, mais **cache une valeur sur deux** : un interrupteur bascule les six de tests à sauvegardes, d'un seul geste — le même que le chiffre des jauges |
+| **Grille** — la forme actuelle, une ligne par tuile | **56 px** (−61 %) | Garde l'encadré et la disposition connue, perd la hauteur qui ne servait à rien. La plus dense, la moins aérée |
 - [ ] En tête : le nom, **les états en cours à côté** (`entity_runtime_state.conditions`), la ligne d'identité **avec l'âge** (entrée du bloc `infobox`, il n'a pas de champ typé), puis **une seule rangée pour tout l'état chiffré** : le **bouclier de CA**, **trois jauges circulaires** — PV, niveau, épuisement — et, à leur droite, les trois faits qui ne bougent pas en jouant : **VIT · MAÎT · INSP**. **Aucune ligne de légende dessous** : c'est là qu'est la place gagnée, plus que dans la forme des jauges.
 - [ ] **Le bouclier de CA est celui de la fiche** : le même `clipPath` que `CharacterSheetHeader`, pas un second dessin de la même chose. Il n'a pas d'anneau, et c'est délibéré — un anneau dit une proportion, une classe d'armure n'a pas de maximum. Même raison pour la vitesse, la maîtrise et l'inspiration : des constantes, pas des compteurs.
 - [ ] **Sous la jauge du milieu, le niveau atteint (`Niv. 4`), jamais le mot « XP »** ; dedans, la marche vers le suivant. Le seuil (`6 500`) vit dans l'infobulle : c'est une valeur qu'on consulte, pas qu'on surveille.
+- [ ] **Les sept éléments de la rangée sont espacés régulièrement** (`justify-between`), pas centrés en bloc : les largeurs diffèrent, les intervalles non.
+- [ ] **Une jauge à zéro est vide.** Un `strokeLinecap="round"` dessine un point même sur une valeur nulle, et un point d'épuisement à zéro se lit comme un début d'épuisement.
 - [ ] **Chaque anneau porte son chiffre au centre, et un clic sur ce chiffre le bascule en pourcentage** (auteur, 23 septembre). Chaque anneau garde son propre affichage : « combien de PV me reste-t-il » et « où j'en suis du niveau » ne se lisent pas de la même façon, l'une en valeur, l'autre en proportion. Le chiffre est le bouton, et sa cible fait 40 px — la règle des 24 px de V2.1-27 vaut ici comme ailleurs.
 - [ ] **L'épuisement se lit sur 6**, pas sur un maximum inventé : c'est la borne de `zRuntimeState` (`.min(0).max(6)`), parce que le niveau 6 est la mort. Son anneau se remplit à l'envers des deux autres — il monte quand ça va mal — d'où le ton d'alerte.
 - [x] Les états et l'inspiration manquaient à la vraie fiche : **V2.1-26 les a ajoutés le 23 septembre**, au bandeau comme dans `RuntimeState`. Cette dépendance est levée.
