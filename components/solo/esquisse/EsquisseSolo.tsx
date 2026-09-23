@@ -494,19 +494,23 @@ function Jauge({
   pct,
   ton = "accent",
   titre,
+  petite = false,
 }: {
   libelle: string;
-  valeur: string;
+  /** Une chaîne, ou deux lignes empilées quand la valeur porte son total. */
+  valeur: React.ReactNode;
   pct: number;
   ton?: "accent" | "danger";
   titre: string;
+  /** 40 px au lieu de 48 — la charge du Sac, qui n'est pas un compteur de combat. */
+  petite?: boolean;
 }) {
   const [enPourcent, setEnPourcent] = useState(false);
   const borne = Math.max(0, Math.min(100, pct));
 
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <div className="relative h-12 w-12">
+      <div className={`relative ${petite ? "h-10 w-10" : "h-12 w-12"}`}>
         <svg viewBox="0 0 40 40" className="h-full w-full -rotate-90" aria-hidden="true">
           <circle cx="20" cy="20" r="16" fill="none" strokeWidth="4" className="stroke-panel-sunken" />
           {/* `strokeLinecap` : un cap arrondi sur une valeur nulle dessine
@@ -524,9 +528,10 @@ function Jauge({
             className={ton === "danger" ? "stroke-danger" : "stroke-accent"}
           />
         </svg>
-        {/* Le bouton EST le centre de l'anneau : 40 px de cible dans 48 px
-            de jauge (V2.1-27 : jamais sous 24). Pas de fond au survol — il
-            mordrait sur le trait — mais la couleur d'accent. */}
+        {/* Le bouton EST le centre de l'anneau : 40 px de cible dans 48
+            de jauge, 32 dans 40 pour la petite (V2.1-27 : jamais sous 24).
+            Pas de fond au survol — il mordrait sur le trait — mais la
+            couleur d'accent. */}
         <button
           type="button"
           onClick={() => setEnPourcent((v) => !v)}
@@ -921,12 +926,23 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
                   ))}
                 </div>
 
+                {/* Tout le rapport DANS l'anneau (auteur, 23 septembre) :
+                    `23,5/75` sur une ligne fait 45 px et ne tient pas, donc
+                    deux lignes de `text-xs` — le plancher de la charte, on
+                    ne descend pas la police pour gagner de la place. Le
+                    total est en retrait : c'est la borne, pas la mesure. */}
                 <Jauge
-                  libelle={`/ ${CHARGE.capacite} kg`}
-                  valeur={CHARGE.porte.toLocaleString("fr-FR")}
+                  petite
+                  libelle="Charge"
+                  valeur={
+                    <span className="flex flex-col items-center leading-none">
+                      <span>{CHARGE.porte.toLocaleString("fr-FR")}</span>
+                      <span className="text-ink-muted">/{CHARGE.capacite}</span>
+                    </span>
+                  }
                   pct={pctCharge}
                   ton={CHARGE.palier === "none" ? "accent" : "danger"}
-                  titre={`Charge : ${CHARGE.porte} / ${CHARGE.capacite} kg${CHARGE.palier !== "none" ? " — encombré" : ""}`}
+                  titre={`Charge : ${CHARGE.porte.toLocaleString("fr-FR")} / ${CHARGE.capacite} kg${CHARGE.palier !== "none" ? " — encombré" : ""}`}
                 />
               </div>
 
