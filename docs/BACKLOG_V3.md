@@ -503,7 +503,7 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 
 ## Le dessin
 
-**L'esquisse fait foi**, pas cet art ASCII : `components/solo/esquisse/` et la route `/m/[worldSlug]/joueur/solo/esquisse`, à jeter quand D1 arrive. Ce schéma n'en est qu'un rappel.
+**L'esquisse fait foi**, pas cet art ASCII : `components/solo/esquisse/` et la route `/m/[worldSlug]/joueur/solo/esquisse`. Ce schéma n'en est qu'un rappel. Elle devait partir avec D1 ; **elle reste jusqu'à D6**, parce qu'elle documente aussi les cinq tickets suivants — la jeter maintenant reviendrait à jeter la référence de ce qui n'est pas encore écrit.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -549,16 +549,17 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 
 ---
 
-### V3-D1 — La coquille à trois colonnes · `M`
+### V3-D1 — La coquille à trois colonnes · `M` — **fait le 23 septembre**
 
-- [ ] Route `/m/[worldSlug]/joueur/solo`, **dans `PlayerShell`** : la barre latérale joueur et ses outils restent atteignables en jouant. L'écran minimal de V3-B1 est à cette adresse — ce ticket le remplace, il n'en ouvre pas une seconde.
-- [ ] Trois colonnes en `grid`, la centrale prioritaire (`minmax(0,2fr)`), les latérales bornées (200 px et 280 px au minimum).
-- [ ] **Repli depuis le bandeau**, un bouton à chaque extrémité, **toujours visibles** — qu'on replie ou qu'on déplie, la commande ne bouge pas de place. Le chevron pointe vers ce qui va se passer.
-- [ ] L'animation est celle du volet de dés : 200 ms, échelle et opacité, origine du côté de la colonne. **Piège vérifié le 22 septembre :** `grid-template-columns` n'interpole pas entre `minmax(200px,1fr)` et un `0px` nu — le navigateur reste bloqué sur l'ancienne valeur et la colonne ne se replie jamais. Les deux bornes doivent être des `minmax()` de même forme (`minmax(0px,0fr)` une fois repliée).
-- [ ] Les largeurs et l'état de repli sont **mémorisés par personne**.
-- [ ] **Sous 1024 px, les colonnes deviennent trois onglets** (Monde · Jeu · Fiche), et « Jeu » s'ouvre par défaut. Les classes d'animation du repli sont préfixées `lg:` : une colonne repliée sur grand écran ne doit pas revenir invisible dans son onglet de téléphone.
-- [ ] Sous 768 px, la saisie reste ancrée en bas, au-dessus du clavier virtuel.
-- [ ] Les deux colonnes repliées, **le fil ne s'étale pas** : il se recentre à 80 caractères. Replier sert à enlever le bruit autour, pas à élargir le texte.
+- [x] Route `/m/[worldSlug]/joueur/solo`, **dans `PlayerShell`** : la barre latérale joueur et ses outils restent atteignables en jouant. L'écran minimal de V3-B1 est à cette adresse — ce ticket le remplace, il n'en ouvre pas une seconde.
+- [x] Trois colonnes en `grid`, la centrale prioritaire (`minmax(0,2fr)`), les latérales bornées (200 px et 280 px au minimum).
+- [x] **Repli depuis le bandeau**, un bouton à chaque extrémité, **toujours visibles** — qu'on replie ou qu'on déplie, la commande ne bouge pas de place. Le chevron pointe vers ce qui va se passer.
+- [x] L'animation est celle du volet de dés : 200 ms, échelle et opacité, origine du côté de la colonne. **Piège vérifié le 22 septembre :** `grid-template-columns` n'interpole pas entre `minmax(200px,1fr)` et un `0px` nu — le navigateur reste bloqué sur l'ancienne valeur et la colonne ne se replie jamais. Les deux bornes doivent être des `minmax()` de même forme (`minmax(0px,0fr)` une fois repliée).
+- [x] **L'état de repli est mémorisé**, par monde et par navigateur (`creadonjon:solo:<monde>:gauche|droite`) — même précédent que `useCollapsedGroups` et `RadioWidget` : un confort de navigateur, jamais synchronisé entre appareils. Lu **après le montage**, sinon le HTML du serveur et le premier rendu client diffèrent.
+- [ ] **Les largeurs, non — et il n'y a rien à mémoriser tant qu'on ne peut pas les changer.** L'esquisse n'a jamais eu de poignée de redimensionnement, l'auteur n'en a pas demandé, et une poignée inventée ici aurait été une fonctionnalité de plus sous couvert de cocher une case. Le jour où elle existe, elle se mémorise au même endroit.
+- [x] **Sous 1024 px, les colonnes deviennent trois onglets** (Monde · Jeu · Fiche), et « Jeu » s'ouvre par défaut. Les classes d'animation du repli sont préfixées `lg:` : une colonne repliée sur grand écran ne doit pas revenir invisible dans son onglet de téléphone.
+- [x] Sous 768 px, la saisie reste ancrée en bas, au-dessus du clavier virtuel.
+- [x] Les deux colonnes repliées, **le fil ne s'étale pas** : il se recentre à 80 caractères. Replier sert à enlever le bruit autour, pas à élargir le texte.
 
 ### V3-D2 — L'en-tête d'état · `S`
 
