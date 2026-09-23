@@ -496,13 +496,19 @@ function Jauge({
   titre,
   petite = false,
 }: {
-  libelle: string;
+  /** Absent quand la valeur se suffit — la charge porte sa fraction dans l'anneau. */
+  libelle?: string;
   /** Une chaîne, ou deux lignes empilées quand la valeur porte son total. */
   valeur: React.ReactNode;
   pct: number;
   ton?: "accent" | "danger";
   titre: string;
-  /** 40 px au lieu de 48 — la charge du Sac, qui n'est pas un compteur de combat. */
+  /**
+   * 44 px au lieu de 48 — la charge du Sac, qui n'est pas un compteur de
+   * combat. Pas 40 : une fraction de deux lignes de 12 px mesure 25 px de
+   * haut, et dans un anneau de 40 px la corde disponible à cette hauteur
+   * tombe à 12,6 px. Le texte déborderait, ce qu'il faisait.
+   */
   petite?: boolean;
 }) {
   const [enPourcent, setEnPourcent] = useState(false);
@@ -510,7 +516,7 @@ function Jauge({
 
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <div className={`relative ${petite ? "h-10 w-10" : "h-12 w-12"}`}>
+      <div className={`relative ${petite ? "h-11 w-11" : "h-12 w-12"}`}>
         <svg viewBox="0 0 40 40" className="h-full w-full -rotate-90" aria-hidden="true">
           <circle cx="20" cy="20" r="16" fill="none" strokeWidth="4" className="stroke-panel-sunken" />
           {/* `strokeLinecap` : un cap arrondi sur une valeur nulle dessine
@@ -542,7 +548,7 @@ function Jauge({
           {enPourcent ? `${borne} %` : valeur}
         </button>
       </div>
-      <span className="text-xs text-ink-muted">{libelle}</span>
+      {libelle !== undefined && <span className="text-xs text-ink-muted">{libelle}</span>}
     </div>
   );
 }
@@ -926,18 +932,29 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
                   ))}
                 </div>
 
-                {/* Tout le rapport DANS l'anneau (auteur, 23 septembre) :
-                    `23,5/75` sur une ligne fait 45 px et ne tient pas, donc
-                    deux lignes de `text-xs` — le plancher de la charte, on
-                    ne descend pas la police pour gagner de la place. Le
-                    total est en retrait : c'est la borne, pas la mesure. */}
+                {/* La charge en FRACTION, tout dans l'anneau et plus rien
+                    dessous (auteur, 23 septembre).
+
+                    La police ne descend pas : `text-xs` est le plancher de
+                    la charte, et une règle ESLint l'impose depuis V2.1-27.
+                    Ce qui rentre dans un anneau se règle donc par la
+                    géométrie, pas par le corps du texte — et la géométrie
+                    est têtue : deux lignes de 12 px font 25 px de haut, et
+                    à cette hauteur un anneau de 40 px n'offre plus que
+                    12,6 px de large. D'où 44 px, et des nombres COURTS.
+
+                    Le poids est donc arrondi au kilo pour l'affichage —
+                    `23,5` mesure 25 px, `24` en mesure 14 — et la valeur
+                    exacte reste dans l'infobulle. Un demi-kilo ne change
+                    aucune décision ; un texte qui déborde de son anneau,
+                    si. */}
                 <Jauge
                   petite
-                  libelle="Charge"
                   valeur={
                     <span className="flex flex-col items-center leading-none">
-                      <span>{CHARGE.porte.toLocaleString("fr-FR")}</span>
-                      <span className="text-ink-muted">/{CHARGE.capacite}</span>
+                      <span>{Math.round(CHARGE.porte)}</span>
+                      <span className="w-3.5 border-t border-ink-muted" />
+                      <span className="text-ink-muted">{CHARGE.capacite}</span>
                     </span>
                   }
                   pct={pctCharge}
