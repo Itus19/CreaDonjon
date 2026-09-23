@@ -513,10 +513,10 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 │ Wiki Quêtes    │  Tu pousses la porte. La      │ Naivara Amakiir [à terre]│
 │ Présents Règles│  salle sent la bière…       ▪ │ Elfe · Roublarde 4 ·    │
 │                │                               │ Criminelle · 127 ans    │
-│ LIEUX          │        je cherche le comptoir │ ███████░░░ 11/17 PV     │
-│ Port-Valdor ◆  │                               │ CA 14 · 9 m · Épuis. 0  │
-│ L'Ancre R.  ◆  │  JET DEMANDÉ Perception · DD 12│ Inspiration ✦          │
-│ L'entrepôt  ◇  │  ┌───────────────────────────┐│ ████░░░░ 2 900 XP       │
+│ LIEUX          │        je cherche le comptoir │ [14] ◕11/17 ◔2900 ○0/6 │
+│ Port-Valdor ◆  │                               │  CA   PV    Niv.4  Épuis│
+│ L'Ancre R.  ◆  │  JET DEMANDÉ Perception · DD 12│ VIT 9 m · MAÎT +2 · ✦   │
+│ L'entrepôt  ◇  │  ┌───────────────────────────┐│                         │
 │                │  │PERCEPTION 16 ✓ · fiche    ││ ┌FOR┐┌DEX┐┌CON┐        │
 │ PERSONNES      │  └───────────────────────────┘│ └+0─┘└+3─┘└+1─┘        │
 │ Bram        ◆  │  Derrière le comptoir…      ~ │ ▸ COMPÉTENCES           │
@@ -529,7 +529,7 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 └────────────────┴───────────────────────────────┴────────────────────────┘
 ```
 
-**Sept passes avec l'auteur**, et ce que chacune a tranché :
+**Huit passes avec l'auteur**, et ce que chacune a tranché :
 
 | Ce qui a changé | Pourquoi |
 |---|---|
@@ -540,6 +540,7 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 | **Deux boutons**, `Jouer` et `MJ` | Seul `Jouer` fait avancer l'horloge |
 | Repli **depuis le bandeau**, boutons toujours visibles | La commande ne se déplace jamais |
 | Colonnes **sans fond**, encadrés fins | Le haut de la fiche, qui ne pèse rien |
+| **Une rangée unique** : bouclier de CA, trois anneaux, trois faits | Une barre coûte sa hauteur *plus* sa légende ; l'anneau porte son chiffre au centre, et la légende disparaît |
 
 **Deux corrections à des tickets déjà écrits**, nées de l'esquisse :
 
@@ -595,8 +596,12 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 - [ ] **C'est la fiche jouable, au format étroit** — mêmes composants, aucun code dupliqué. Elle est tenue à 375 px depuis la V1.
 - [ ] **Les cinq onglets de la fiche, avec leur vrai contenu** : Actions, Sac, Magie, Traits (« Aptitudes accordées »), Maîtrises (maîtrises, maîtrise d'armes, langues). Rien n'est inventé ici ; seul le format d'affichage change.
 - [ ] **Six onglets ne tiennent pas dans 300 px** — le dernier se coupe. Les compétences vivent donc sous les caractéristiques, repliées, là où la vraie fiche les met : elles n'y sont pas un onglet non plus.
-- [ ] En tête : le nom, **les états en cours à côté** (`entity_runtime_state.conditions`), la ligne d'identité **avec l'âge** (entrée du bloc `infobox`, il n'a pas de champ typé), la barre de PV, la ligne CA · vitesse · maîtrise · **épuisement · inspiration**, puis **la barre d'XP** avec son seuil de niveau.
-- [ ] Les états et l'inspiration **manquent à la vraie fiche** : c'est **V2.1-26**, à faire avant ou avec ce ticket.
+- [ ] En tête : le nom, **les états en cours à côté** (`entity_runtime_state.conditions`), la ligne d'identité **avec l'âge** (entrée du bloc `infobox`, il n'a pas de champ typé), puis **une seule rangée pour tout l'état chiffré** : le **bouclier de CA**, **trois jauges circulaires** — PV, niveau, épuisement — et, à leur droite, les trois faits qui ne bougent pas en jouant : **VIT · MAÎT · INSP**. **Aucune ligne de légende dessous** : c'est là qu'est la place gagnée, plus que dans la forme des jauges.
+- [ ] **Le bouclier de CA est celui de la fiche** : le même `clipPath` que `CharacterSheetHeader`, pas un second dessin de la même chose. Il n'a pas d'anneau, et c'est délibéré — un anneau dit une proportion, une classe d'armure n'a pas de maximum. Même raison pour la vitesse, la maîtrise et l'inspiration : des constantes, pas des compteurs.
+- [ ] **Sous la jauge du milieu, le niveau atteint (`Niv. 4`), jamais le mot « XP »** ; dedans, la marche vers le suivant. Le seuil (`6 500`) vit dans l'infobulle : c'est une valeur qu'on consulte, pas qu'on surveille.
+- [ ] **Chaque anneau porte son chiffre au centre, et un clic sur ce chiffre le bascule en pourcentage** (auteur, 23 septembre). Chaque anneau garde son propre affichage : « combien de PV me reste-t-il » et « où j'en suis du niveau » ne se lisent pas de la même façon, l'une en valeur, l'autre en proportion. Le chiffre est le bouton, et sa cible fait 40 px — la règle des 24 px de V2.1-27 vaut ici comme ailleurs.
+- [ ] **L'épuisement se lit sur 6**, pas sur un maximum inventé : c'est la borne de `zRuntimeState` (`.min(0).max(6)`), parce que le niveau 6 est la mort. Son anneau se remplit à l'envers des deux autres — il monte quand ça va mal — d'où le ton d'alerte.
+- [x] Les états et l'inspiration manquaient à la vraie fiche : **V2.1-26 les a ajoutés le 23 septembre**, au bandeau comme dans `RuntimeState`. Cette dépendance est levée.
 - [ ] **Le Sac s'ouvre sur la bourse et la charge** — les deux choses qu'on vient y vérifier en jouant. On y équipe un objet ; dans Magie, on y prépare un sort.
 - [ ] **Tout ce qui se lance se clique** : modificateur de caractéristique (un test), sauvegarde, compétence, attaque, dégâts.
 - [ ] **Un jet lancé depuis la fiche répond à la demande en cours** (V3-B5) : un seul chemin vers la résolution, jamais deux.

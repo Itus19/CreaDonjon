@@ -472,6 +472,134 @@ function SectionTitre({ children }: { children: React.ReactNode }) {
   return <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{children}</span>;
 }
 
+/**
+ * Une jauge circulaire — PV, XP, épuisement (auteur, 23 septembre).
+ *
+ * Pourquoi l'anneau plutôt que la barre : dans une colonne de 300 px, une
+ * barre horizontale coûte sa hauteur PLUS la ligne de légende qui la
+ * traduit, et c'est la légende qu'on lit. L'anneau porte son chiffre au
+ * centre, et les trois tiennent sur une rangée.
+ *
+ * Le clic bascule le chiffre en pourcentage, et **chaque anneau garde le
+ * sien** : « il me reste combien de PV » et « où j'en suis du niveau » ne
+ * se lisent pas de la même façon, l'une en valeur, l'autre en proportion.
+ *
+ * `pathLength={100}` : le navigateur renormalise la circonférence, donc le
+ * tiret se donne directement en pourcents — rien à recalculer si le
+ * diamètre change.
+ */
+function Jauge({
+  libelle,
+  valeur,
+  pct,
+  ton = "accent",
+  titre,
+}: {
+  libelle: string;
+  valeur: string;
+  pct: number;
+  ton?: "accent" | "danger";
+  titre: string;
+}) {
+  const [enPourcent, setEnPourcent] = useState(false);
+  const borne = Math.max(0, Math.min(100, pct));
+
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div className="relative h-12 w-12">
+        <svg viewBox="0 0 40 40" className="h-full w-full -rotate-90" aria-hidden="true">
+          <circle cx="20" cy="20" r="16" fill="none" strokeWidth="4" className="stroke-panel-sunken" />
+          <circle
+            cx="20"
+            cy="20"
+            r="16"
+            fill="none"
+            strokeWidth="4"
+            strokeLinecap="round"
+            pathLength={100}
+            strokeDasharray={`${borne} ${100 - borne}`}
+            className={ton === "danger" ? "stroke-danger" : "stroke-accent"}
+          />
+        </svg>
+        {/* Le bouton EST le centre de l'anneau : 40 px de cible dans 48 px
+            de jauge (V2.1-27 : jamais sous 24). Pas de fond au survol — il
+            mordrait sur le trait — mais la couleur d'accent. */}
+        <button
+          type="button"
+          onClick={() => setEnPourcent((v) => !v)}
+          title={titre}
+          aria-label={`${titre} — ${enPourcent ? "afficher la valeur" : "afficher le pourcentage"}`}
+          className="absolute inset-1 flex items-center justify-center rounded-full text-xs font-medium text-ink transition-colors hover:text-accent"
+        >
+          {enPourcent ? `${borne} %` : valeur}
+        </button>
+      </div>
+      <span className="text-xs text-ink-muted">{libelle}</span>
+    </div>
+  );
+}
+
+/**
+ * La CA en bouclier, à gauche des jauges (auteur, 23 septembre).
+ *
+ * Le `clipPath` est celui de `CharacterSheetHeader` au caractère près, et
+ * c'est le but : la fiche et l'écran solo montrent la même chose, donc ils
+ * la dessinent pareil. Seule la taille change — la colonne fait 280 px.
+ *
+ * Pas d'anneau pour la CA : un anneau dit une proportion, et une CA n'a pas
+ * de maximum. Le bouclier dit « défense » sans rien promettre de tel.
+ */
+function Bouclier({ valeur }: { valeur: number }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div
+        className="flex h-12 w-9 items-center justify-center border-2 border-accent bg-panel-raised"
+        style={{ clipPath: "polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)" }}
+        title="Classe d'armure — calculée, jamais saisie"
+      >
+        <span className="text-sm font-bold text-ink">{valeur}</span>
+      </div>
+      <span className="text-xs text-ink-muted">CA</span>
+    </div>
+  );
+}
+
+/**
+ * Les trois faits qui restent une fois la CA, les PV, le niveau et
+ * l'épuisement passés en jauges : vitesse, bonus de maîtrise, inspiration.
+ *
+ * Ils tiennent sur la même rangée, en colonne de trois lignes à sa droite.
+ * Pourquoi pas trois jauges de plus : ce sont des CONSTANTES de la fiche,
+ * pas des compteurs qui bougent en jouant — un anneau leur promettrait un
+ * mouvement qu'ils n'ont pas, et la rangée deviendrait illisible à force
+ * d'être régulière.
+ *
+ * L'étiquette est abrégée en toutes lettres plutôt qu'en pictogramme : un
+ * pictogramme de vitesse ou de maîtrise ne se devine pas.
+ */
+function TroisFaits({
+  vitesse,
+  maitrise,
+  inspiration,
+}: {
+  vitesse: string;
+  maitrise: string;
+  inspiration: number;
+}) {
+  return (
+    <div className="grid grid-cols-[auto_auto] items-center gap-x-1.5 pt-0.5 text-xs">
+      <span className="text-ink-muted">VIT</span>
+      <span className="text-ink">{vitesse}</span>
+      <span className="text-ink-muted">MAÎT</span>
+      <span className="text-ink">{maitrise}</span>
+      <span className="text-ink-muted">INSP</span>
+      <span className={inspiration > 0 ? "text-accent" : "text-ink-muted"}>
+        {inspiration > 0 ? "✦".repeat(inspiration) : "—"}
+      </span>
+    </div>
+  );
+}
+
 function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: number) => void }) {
   const [onglet, setOnglet] = useState<OngletFiche>("actions");
   const [equipes, setEquipes] = useState(INVENTAIRE.filter((o) => o.equipe).map((o) => o.id));
@@ -479,6 +607,9 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
   const pctPv = Math.round((FICHE.hp.current / FICHE.hp.max) * 100);
   const pctXp = Math.round((PROGRESSION.xp / PROGRESSION.seuilNiveauSuivant) * 100);
   const pctCharge = Math.round((CHARGE.porte / CHARGE.capacite) * 100);
+  // 6, et non un maximum inventé : `zRuntimeState` borne `exhaustion` à
+  // `.min(0).max(6)`, parce que le niveau 6 est la mort (MdJ 2024).
+  const pctEpuisement = Math.round((COMPTEURS.epuisement / 6) * 100);
 
   function bascule(liste: string[], set: (v: string[]) => void, id: string) {
     set(liste.includes(id) ? liste.filter((x) => x !== id) : [...liste, id]);
@@ -502,34 +633,45 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
       </div>
 
       <div className="flex flex-col gap-1">
-        <div className="h-2 w-full overflow-hidden rounded-full bg-panel-sunken">
-          <div className="h-full rounded-full bg-accent" style={{ width: `${pctPv}%` }} />
-        </div>
-        <div className="flex flex-wrap items-center gap-x-3 text-xs text-ink-muted">
-          <span>
-            {FICHE.hp.current}/{FICHE.hp.max} PV
-          </span>
-          <span>CA {FICHE.ac}</span>
-          <span>{FICHE.vitesse}</span>
-          <span>Maîtrise {FICHE.maitrise}</span>
-          <span>Épuisement {COMPTEURS.epuisement}</span>
-          {/* L'inspiration MANQUE à la vraie fiche — à ajouter à la suite
-              de l'épuisement, et elle demande un champ de plus dans
-              `RuntimeState`. */}
-          <span className={COMPTEURS.inspiration > 0 ? "text-accent" : undefined}>
-            Inspiration {COMPTEURS.inspiration > 0 ? "✦".repeat(COMPTEURS.inspiration) : "—"}
-          </span>
-        </div>
+        {/* Tout l'état chiffré du personnage sur UNE rangée : le bouclier
+            de CA, trois jauges, et les trois faits qui ne bougent pas. La
+            ligne de légende qui suivait les deux barres a disparu — c'est
+            là qu'est la place gagnée, plus que dans la forme des jauges.
 
-        {/* La barre d'expérience, sous les compteurs — celle du bandeau de
-            la fiche, avec son seuil de niveau. */}
-        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-panel-sunken">
-          <div className="h-full rounded-full bg-accent" style={{ width: `${pctXp}%` }} />
+            Le seuil du niveau suivant a quitté l'écran pour l'infobulle de
+            sa jauge : c'est une valeur qu'on consulte, pas qu'on surveille.
+
+            L'inspiration manquait à la vraie fiche quand cette esquisse a
+            été dessinée ; V2.1-26 l'a ajoutée depuis, au bandeau comme dans
+            `RuntimeState`. */}
+        <div className="flex items-start justify-center gap-1.5">
+          <Bouclier valeur={FICHE.ac} />
+          <Jauge
+            libelle="PV"
+            valeur={`${FICHE.hp.current}/${FICHE.hp.max}`}
+            pct={pctPv}
+            titre={`${FICHE.hp.current} points de vie sur ${FICHE.hp.max}`}
+          />
+          {/* Sous la jauge, le niveau ATTEINT ; dedans, la marche vers le
+              suivant. Les deux ensemble disent où l'on en est, et la ligne
+              « niveau 5 à 6 500 XP » n'a plus lieu d'être. */}
+          <Jauge
+            libelle={`Niv. ${PROGRESSION.niveau}`}
+            valeur={PROGRESSION.xp.toLocaleString("fr-FR")}
+            pct={pctXp}
+            titre={`${PROGRESSION.xp.toLocaleString("fr-FR")} XP — niveau ${PROGRESSION.niveau + 1} à ${PROGRESSION.seuilNiveauSuivant.toLocaleString("fr-FR")}`}
+          />
+          {/* L'épuisement monte quand ça va mal : son anneau se remplit à
+              l'envers des deux autres, d'où le ton d'alerte. */}
+          <Jauge
+            libelle="Épuis."
+            valeur={`${COMPTEURS.epuisement}/6`}
+            pct={pctEpuisement}
+            ton="danger"
+            titre={`Épuisement ${COMPTEURS.epuisement} sur 6`}
+          />
+          <TroisFaits vitesse={FICHE.vitesse} maitrise={FICHE.maitrise} inspiration={COMPTEURS.inspiration} />
         </div>
-        <span className="text-xs text-ink-muted">
-          {PROGRESSION.xp.toLocaleString("fr-FR")} XP · niveau {PROGRESSION.niveau + 1} à{" "}
-          {PROGRESSION.seuilNiveauSuivant.toLocaleString("fr-FR")}
-        </span>
       </div>
 
       <div className="grid grid-cols-3 gap-1">
