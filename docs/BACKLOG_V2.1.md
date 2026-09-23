@@ -5796,10 +5796,97 @@ rouvrir au vu de l'usage, une fois qu'on les aura vus.
         XP, épuisement, bourse, caractéristiques de l'assistant. Les agrandir
         change l'apparence de tous les compteurs de l'application.
       Les deux relèvent du même chantier : **remonter la rangée de badges et
-      `Stepper` à la charte**, en une passe et pour tout le monde. À ouvrir
-      comme son propre ticket ; l'élargir ici aurait fait grossir un `S` en
-      refonte d'en-tête.
+      `Stepper` à la charte**, en une passe et pour tout le monde. C'est
+      **V2.1-27**, ouvert pour ça ; l'élargir ici aurait fait grossir un `S`
+      en refonte d'en-tête.
 - [x] `npm run typecheck && npm run lint && npm run test` passent — 1 254 tests.
+
+---
+
+## V2.1-27 — Les cibles de clic sous le minimum, et la dérive des tailles · `M`
+
+### D'où vient ce ticket
+
+De V2.1-26, qui a buté sur ses deux derniers critères. En posant un compteur
+d'inspiration à côté de l'épuisement, deux règles de `CHARTE-UI.md` se sont
+révélées intenables **localement** : le libellé du badge est en `text-[9px]`
+et ses flèches font 16 px de haut. Les deux sont copiés du voisin immédiat.
+
+C'est le cas d'école du défaut qu'on ne peut pas corriger dans le ticket qui
+le rencontre : un seul badge à la charte dans une rangée de sept casserait la
+rangée, et élargir la flèche d'un compteur les élargirait tous.
+
+### Constat 1 — `Stepper` est sous le minimum, partout à la fois
+
+`components/shared/Stepper.tsx` dessine ses deux flèches en `h-4`, soit **16 px**
+— la charte (§4) en demande 24. Le composant est partagé par **dix appels dans
+cinq fichiers** : points de vie, expérience, épuisement, inspiration, bourse de
+l'inventaire, caractéristiques de l'assistant de création.
+
+C'est une vraie règle d'accessibilité, pas une préférence : sur un écran
+tactile, 16 px se rate. Et c'est **le défaut le plus grave des deux**, parce
+qu'il touche exactement les contrôles qu'on utilise en jouant.
+
+**La charte donne elle-même le remède**, et il ne change rien au dessin
+(§4, « Cible de clic ») : *« étendre la zone cliquable sans grossir le visuel
+plutôt que de laisser une cible de 20 px »*. Une zone tactile agrandie par
+pseudo-élément, la flèche dessinée à sa taille actuelle : la rangée de badges
+garde sa hauteur, le compteur son allure, et la cible passe à 24 px.
+
+### Constat 2 — les tailles sous `text-xs` dérivent
+
+La charte les compte à **209** (§7g) et tranche : *« figer une échelle et
+l'appliquer aux nouveaux écrans, convertir les anciens quand on les rouvre.
+**Surtout pas une passe globale.** »*
+
+Recompté le 23 septembre : **227 occurrences dans 74 fichiers** — `text-[10px]`
+(188), `text-[9px]` (23), `text-[11px]` (16). Dix-huit de plus qu'au moment où
+la charte a été écrite.
+
+**La politique est bonne, elle ne tient simplement pas toute seule.** Personne
+n'ajoute un `text-[10px]` par défi : on le recopie du composant d'à côté, comme
+V2.1-26 vient de le faire en toute connaissance de cause. Une règle qui repose
+sur la mémoire de qui écrit se perd à chaque fichier ouvert.
+
+**Ce que ce ticket ne fait pas : la passe globale.** La charte l'interdit, et
+elle a raison — 227 conversions à l'aveugle, c'est 227 occasions de casser une
+mise en page que personne ne regarde.
+
+### Ce qu'il fait, donc
+
+- [ ] **`Stepper` : cible de 24 px, dessin inchangé.** Zone tactile étendue
+      par pseudo-élément ; la hauteur du contrôle ne bouge pas. Vérifié sur
+      les dix appels, dont la rangée de badges de la fiche et la bourse.
+- [ ] **La rangée de badges de `CharacterSheetHeader` passe à `text-xs`** —
+      ses quatorze occurrences, d'un coup, parce que c'est une rangée et
+      qu'elle ne se convertit pas badge par badge. C'est exactement la
+      politique de la charte : *convertir les anciens quand on les rouvre*, et
+      V2.1-26 vient de l'ouvrir.
+- [ ] **Une règle ESLint interdit les nouvelles occurrences.** Le dépôt
+      enferme déjà ses règles absolues ainsi — la pureté de `src/core`, le
+      client service-role confiné à `publicShare.ts` : ce qui compte est
+      vérifié mécaniquement, jamais seulement écrit. Les fichiers existants
+      sont exemptés nommément, et la liste ne peut que **raccourcir** : y
+      ajouter un fichier demande de le dire en revue.
+- [ ] Le message de la règle dit quoi faire, pas seulement ce qui est
+      interdit — `text-xs` est le plancher, et un texte qui ne tient pas à
+      12 px est un texte trop long, pas un texte trop gros.
+- [ ] Aucun autre fichier n'est converti dans ce ticket. Les 213 occurrences
+      restantes attendent qu'on rouvre leur écran.
+- [ ] Les quatre modes et le contraste élevé testés sur la fiche jouable ;
+      lisible à 375 px — c'est là que la rangée de badges est la plus serrée,
+      et c'est là que le gain de lisibilité se juge.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+
+**Pourquoi `M`** : les deux corrections sont petites, la règle ESLint et sa
+liste d'exemptions ne le sont pas. Et il faut regarder dix compteurs à
+l'écran, dans deux tailles de fenêtre, avant de dire que le dessin n'a pas
+bougé.
+
+**Ce qui reste ouvert, et qui n'appartient pas à ce ticket :** figer *l'échelle*
+de tailles que la charte appelle de ses vœux. Tant qu'elle n'existe pas, la
+règle ci-dessus dit seulement « pas en dessous de 12 px », ce qui est un
+plancher, pas une échelle.
 
 ---
 
