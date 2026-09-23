@@ -83,6 +83,7 @@ Lot D    l'interface solo             les trois colonnes
 Lot E    la mémoire                   résumés, RAG, continuité entre séances
 Lot F    la partie qui dure           reprise, sauvegarde, bascule vers une campagne
 Lot R    la rapidité, et le téléphone  hors séquence — les restes de l'audit, à tout moment
+Lot Z    la dette de la fiche         hors séquence — ce que le solo a révélé en la transposant
 ```
 
 > **État au 22 septembre 2026.** S2 est rendu (verdict positif : le lien tient, le lot B peut s'écrire en prose libre). **Le lot A est clos — A1 à A6.** **Le lot B est ouvert : B1 est fait, et la boucle de B2 tourne** — la barre d'intention, l'application des effets, la scène qui avance ; il reste la narration (seconde moitié de B2), puis B3, B4 et **B5** (la demande de jet, qui corrige la dernière étape de B1). **Le lot D a été réécrit le 22 septembre d'après une esquisse jouable**, reprise sept fois avec l'auteur : ses six tickets décrivent un écran qui a été ouvert et cliqué, plus une intention. Les trois cases du lot A restées décochées sont **désormais tenues par le lot B**, comme annoncé : la scène avance, le budget de tour se tient, et les événements d'attaque ont enfin un appelant. Le lot R l'est aussi, à l'exception de `P‑07`. Les lots C, D, E et F ne sont pas commencés.
@@ -968,6 +969,41 @@ C'est le même enseignement que `P‑01` : *la primitive existait, il manquait d
 **Ce que la mesure du 12 septembre a changé dans cet ordre.** `V3-R0` a été faite, et elle a retourné les priorités : le JS ne pèse que 263 Ko quand une seule image en pèse 2 071. `V3-R4a` passe donc devant tout, et `V3-R3` (découper les éditeurs de blocs) perd beaucoup de son urgence — il reste juste, mais il se dispute des dizaines de Ko là où `R4a` en gagne deux mille.
 
 **`V3-R6` reste à faire et monte en valeur.** Mesure complémentaire du 12 septembre : une seconde visite ne transfère que **3 Ko** et prend pourtant **4,4 s**. Le temps restant n'est pas dans les octets, il est côté serveur — les 9 vagues de rendu de l'audit. Le TTFB mesuré confirme : ~0,3 s sur `/login`, **0,6 à 2,9 s** sur les routes de monde. Une fois `R4a` fait, c'est là que sera tout le temps restant, et `P‑05` (la région) est la première chose à aller regarder.
+
+---
+
+# Lot Z — Ce que le mode solo a révélé sur la fiche
+
+*Hors séquence, comme le lot R. Ces tickets ne construisent pas le solo : ils réparent des manques de la **fiche de personnage** que le solo a mis en évidence en la transposant dans une colonne de 300 px. Aucun n'a de dépendance vers les autres lots, et le lot D en suppose deux (voir V3-D5).*
+
+**Un frère vit ailleurs.** `V2.1-26` — l'inspiration et les états, absents de la fiche — a été ouvert dans `docs/BACKLOG_V2.1.md` avant que ce lot existe. Il y reste plutôt que d'être déplacé : un ticket qui change de fichier perd son voisinage, et le sien est le bon (la fiche jouable est un chantier de la V2.1). Les deux se lisent ensemble.
+
+---
+
+### V3-Z1 — L'âge du personnage, et l'identité à la création · `M`
+
+**Le constat, en deux temps.**
+
+D'abord : **l'âge n'a aucun champ.** `zCharacterBlockData` porte l'espèce, l'historique, les classes, les caractéristiques, les choix, la méthode de PV, le portrait, le genre et les pronoms — pas l'âge. Un `grep -n "\bage\b"` sur `src/core/schemas/blocks/` ne remonte rien. Aujourd'hui il ne peut s'écrire que dans une entrée libre d'un bloc `infobox` : du texte que rien ne valide, que rien ne sait relire, et que l'écran solo ne peut afficher qu'en devinant le nom de l'entrée.
+
+Ensuite, et c'est le vrai sujet : **l'assistant de création ne demande aucun trait d'identité.** Ses neuf étapes (`CharacterCreatorWizard.tsx`) sont Espèce, Classe, Caractéristiques, Points de vie, Historique, Équipement, Compétences, Sorts, Aperçu. Le genre et les pronoms **existent** dans le bloc depuis V1-C4 — mais ne se renseignent que plus tard, sur la fiche, dans la rangée d'identité de `CharacterSheetHeader`. On crée donc un personnage sans jamais pouvoir dire qui il est.
+
+**Le précédent à suivre est déjà écrit.** `gender` et `pronouns` ont été ajoutés après coup au bloc `character`, en `.optional()` — jamais `.default()`, parce qu'un champ absent veut dire « on ne sait pas », ce qui n'est pas la même chose qu'une valeur neutre choisie. Le schéma est `.strict()`, donc un champ de plus se déclare explicitement ; les blocs écrits avant continuent de se valider tant que le champ est optionnel. L'âge suit exactement ce chemin.
+
+**Une décision à prendre : champ typé ou entrée d'infobox ?** L'infobox est la maison des faits d'identité du wiki, et elle ne demande aucun schéma. Mais elle ne se relit pas : ni l'assistant, ni la fiche, ni l'écran solo ne peuvent s'appuyer dessus sans convention tacite sur le nom de l'entrée. **Recommandation : un champ typé optionnel** — et l'infobox reste libre de porter tout ce qui n'a pas de champ.
+
+**Une seconde décision : un âge est-il un nombre ?** Un elfe de 127 ans est jeune, un dragon compte en siècles, et certaines tables écrivent « d'âge mûr ». Un entier oblige à choisir ; une chaîne courte n'interdit rien mais ne se compare pas. **Recommandation : un entier optionnel**, avec l'unité laissée au monde (le calendrier existe déjà) — et une table qui veut écrire « d'âge mûr » le fait dans son infobox, comme aujourd'hui.
+
+- [ ] `age` ajouté à `zCharacterBlockData` en `.optional()`. Un bloc `character` écrit avant ce ticket se valide sans changement — vérifié sur une fiche réelle, pas seulement en test.
+- [ ] Aucune migration SQL : `blocks.data` est un `jsonb`, seule sa forme Zod change. Si ce ticket semble en exiger une, c'est qu'il a été mal compris — s'arrêter et le dire.
+- [ ] **Une étape « Identité » dans l'assistant de création**, qui demande l'âge, le genre et les pronoms. Les deux derniers existent déjà dans le bloc et n'ont jamais eu d'endroit où se saisir à la création : les ajouter ici ne coûte qu'un champ de plus et referme le même trou.
+- [ ] L'étape est **passable sans rien remplir** : aucun des trois champs n'est obligatoire, et un personnage sans âge reste un personnage valide.
+- [ ] L'âge s'édite aussi sur la fiche, dans la rangée d'identité de `CharacterSheetHeader`, à côté du genre et des pronoms — même geste, même endroit.
+- [ ] Il s'affiche dans la ligne d'identité de la fiche **et** dans la colonne de droite du mode solo (V3-D5), à la suite de l'espèce, de la classe et de l'historique.
+- [ ] Hors périmètre, et dit comme tel : **proposer une fourchette d'âge d'après l'espèce**. Les entrées d'espèce ne portent pas cette donnée aujourd'hui, et l'ajouter au SRD importé est un autre chantier. À rouvrir si la saisie à l'aveugle gêne réellement.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+
+**Pourquoi `M` et pas `S`** : le champ est trivial, l'étape d'assistant ne l'est pas. Ajouter une étape touche la barre de progression, la navigation, la reprise d'un brouillon, et l'aperçu final — quatre endroits qui se testent à la main.
 
 ---
 

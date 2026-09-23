@@ -181,8 +181,13 @@ export const FICHE = {
    * `character` : il vit dans une entrée du bloc `infobox` de la fiche,
    * comme les autres faits d'identité du wiki. L'écran solo le lit là, il
    * ne l'invente pas.
+   *
+   * La SOUS-CLASSE suit sa classe entre parenthèses : le bloc `character`
+   * la porte déjà (`classes[].subclass`), et la fiche l'édite par un
+   * sélecteur par classe — une ligne d'identité qui l'omet ne dit pas de
+   * quel personnage il s'agit à partir du niveau 3.
    */
-  ligne: "Elfe · Roublarde 4 · Criminelle · 127 ans",
+  ligne: "Elfe · Roublarde 4 (Voleuse) · Criminelle · 127 ans",
   hp: { current: 11, max: 17, temp: 0 },
   ac: 14,
   initiative: "+3",
