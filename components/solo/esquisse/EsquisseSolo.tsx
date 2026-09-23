@@ -27,6 +27,7 @@ import {
   MAITRISES,
   ORIGINE_LABEL,
   PROGRESSION,
+  PREPARATION,
   PRESENTS,
   QUETES,
   SORTS,
@@ -708,6 +709,43 @@ function EmplacementsSorts({ utilises }: { utilises: Record<number, number> }) {
 }
 
 /**
+ * Combien de sorts sont préparés, sur combien la classe en autorise —
+ * dans l'onglet MAGIE, à la place des emplacements (auteur, 23 septembre) :
+ * les emplacements se dépensent dans Actions, où l'on lance ; se préparer
+ * est ce qu'on vient faire ici.
+ *
+ * Mêmes pastilles que les emplacements, et c'est voulu : « il m'en reste
+ * combien » est la même question dans les deux cas, elle mérite le même
+ * dessin.
+ *
+ * La limite vient de `PREPARATION` — donc des règles de la classe — et non
+ * d'un calcul fait ici.
+ */
+function CompteurPreparation({ prepares }: { prepares: number }) {
+  const restants = Math.max(0, PREPARATION.max - prepares);
+  return (
+    <div
+      className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-edge bg-panel-sunken px-2 py-1.5"
+      title={`${PREPARATION.regle}. Les sorts mineurs n'y comptent pas.`}
+    >
+      <span className="text-xs text-ink-muted">Préparés</span>
+      <div className="flex gap-0.5">
+        {Array.from({ length: PREPARATION.max }, (_, i) => (
+          <span
+            key={i}
+            className={`h-2 w-2 rounded-full ${i < prepares ? "bg-accent" : "border border-edge bg-transparent"}`}
+          />
+        ))}
+      </div>
+      <span className="text-xs tabular-nums text-ink-muted">
+        {prepares}/{PREPARATION.max}
+      </span>
+      {restants === 0 && <span className="text-xs text-ink-muted">· complet</span>}
+    </div>
+  );
+}
+
+/**
  * Un sort préparé, dans l'onglet ACTIONS — même squelette que
  * `PreparedSpellCard` (`ActionsTab.tsx`) : le nom et ses pastilles
  * au-dessus, les boutons de jet dessous, le sélecteur d'emplacement
@@ -862,6 +900,12 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
   const [equipes, setEquipes] = useState(INVENTAIRE.filter((o) => o.equipe).map((o) => o.id));
   const [prepares, setPrepares] = useState(SORTS.filter((s) => s.prepare).map((s) => s.id));
   const [deplies, setDeplies] = useState<string[]>([]);
+  /**
+   * Seuls les sorts AVEC niveau se préparent : un sort mineur est toujours
+   * prêt, il ne prend pas de place dans la limite de la classe.
+   */
+  const nbPreparesAvecNiveau = SORTS.filter((s) => s.niveau > 0 && prepares.includes(s.id)).length;
+  const preparationComplete = nbPreparesAvecNiveau >= PREPARATION.max;
   /**
    * Les emplacements dépensés, par niveau. État LOCAL : l'esquisse montre
    * le geste, le vrai décompte appartient au serveur — un client ne décide
@@ -1125,7 +1169,7 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
               les graphies françaises. */}
           {onglet === "magie" && (
             <div className="flex flex-col gap-2">
-              <EmplacementsSorts utilises={utilises} />
+              <CompteurPreparation prepares={nbPreparesAvecNiveau} />
 
               {SORTS.map((s) => {
                 const prepare = s.niveau === 0 || prepares.includes(s.id);
@@ -1152,12 +1196,24 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
                     <div className="flex">
                       {/* Un sort mineur n'a rien à préparer : le bandeau le
                           dit au lieu d'offrir une case qui ne ferait rien. */}
+                      {/* La limite se tient ICI, pas au moment d'enregistrer :
+                          un bouton qui accepte puis refuse est un bouton qui
+                          ment. Se DÉ-préparer reste toujours possible, sinon
+                          on s'enferme à la limite atteinte. */}
                       <button
                         type="button"
-                        disabled={s.niveau === 0}
+                        disabled={s.niveau === 0 || (!prepare && preparationComplete)}
                         onClick={() => bascule(prepares, setPrepares, s.id)}
-                        title={s.niveau === 0 ? "Toujours prêt" : prepare ? "Ne plus préparer" : "Préparer"}
-                        className={`w-7 shrink-0 border-r text-xs font-semibold uppercase tracking-wide transition-colors ${
+                        title={
+                          s.niveau === 0
+                            ? "Toujours prêt — un sort mineur ne se prépare pas"
+                            : prepare
+                              ? "Ne plus préparer"
+                              : preparationComplete
+                                ? `Limite atteinte : ${PREPARATION.regle}`
+                                : "Préparer"
+                        }
+                        className={`w-7 shrink-0 border-r text-xs font-semibold uppercase tracking-wide transition-colors disabled:opacity-50 ${
                           prepare ? "border-accent bg-accent/20 text-accent" : "border-edge bg-panel text-ink-muted hover:bg-panel-raised"
                         }`}
                         style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}

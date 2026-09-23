@@ -406,7 +406,40 @@ export const SORTS: Sort[] = [
     concentration: true,
     description: "Tu crées l'image d'un objet, d'une créature ou d'un phénomène visible, sans son ni odeur, dans un cube de 4,50 m.",
   },
+  {
+    // Un quatrième sort AVEC niveau : sans lui, la limite de préparation
+    // ne se voit jamais — trois sorts pour trois places, aucun refus à
+    // montrer. L'esquisse doit pouvoir montrer la règle qui mord.
+    id: "detection",
+    nom: "Détection de la magie",
+    niveau: 1,
+    ecole: "Divination",
+    prepare: false,
+    incantation: "1 action",
+    portee: "Personnelle",
+    duree: "10 minutes",
+    composantes: "V, S",
+    concentration: true,
+    rituel: true,
+    description: "Tu perçois la magie dans un rayon de 9 m : aura, école, objet ensorcelé derrière une porte close.",
+  },
 ];
+
+/**
+ * Ce que la classe autorise à préparer.
+ *
+ * La limite est une VALEUR DE RÈGLE : elle vient de la table de la classe
+ * dans le ruleset, comme les emplacements. L'écran l'affiche et s'y tient,
+ * il ne la calcule pas — un écran qui recalcule une règle finit par en
+ * donner une version différente du moteur.
+ *
+ * Les sorts mineurs n'y comptent pas : ils sont toujours prêts, et c'est
+ * pour ça que leur bandeau dit « Mineur » au lieu d'offrir un bouton.
+ */
+export const PREPARATION = {
+  max: 3,
+  regle: "table de la classe — 3 sorts préparés au niveau 4",
+};
 
 export const EMPLACEMENTS = [
   { niveau: 1, total: 4, utilises: 2 },
