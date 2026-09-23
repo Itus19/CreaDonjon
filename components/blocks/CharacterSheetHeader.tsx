@@ -136,13 +136,13 @@ export function StatBadge({
       } ${onClick ? "cursor-pointer hover:border-accent" : ""}`}
     >
       <span className={`text-base font-semibold leading-tight ${danger ? "text-danger" : "text-ink"}`}>{value}</span>
-      {sub && <span className="text-[10px] leading-tight text-ink-muted">{sub}</span>}
+      {sub && <span className="text-xs leading-tight text-ink-muted">{sub}</span>}
     </div>
   );
   return (
     <div className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1">
       <span
-        className={`flex h-6 items-end justify-center text-center text-[9px] font-bold uppercase leading-tight tracking-widest ${
+        className={`flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide ${
           danger ? "text-danger" : "text-ink-muted"
         }`}
       >
@@ -284,7 +284,7 @@ export default function CharacterSheetHeader({
     <>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-wrap items-start gap-3">
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
             Espèce
             <RuleSelect
               worldSlug={worldSlug}
@@ -297,7 +297,7 @@ export default function CharacterSheetHeader({
               filterFn={(entry) => !entry.parentSpeciesKey}
             />
           </label>
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
             Lignée
             <RuleSelect
               worldSlug={worldSlug}
@@ -312,7 +312,7 @@ export default function CharacterSheetHeader({
               filterFn={(entry) => (baseSpeciesKey ? entry.parentSpeciesKey === baseSpeciesKey : false)}
             />
           </label>
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
             Historique
             <RuleSelect
               worldSlug={worldSlug}
@@ -324,7 +324,7 @@ export default function CharacterSheetHeader({
               chip={character.background ? buildChips.get(refIdentity(character.background)) : undefined}
             />
           </label>
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
             Genre
             <Dropdown
               value={genderDropdownValue(character.gender)}
@@ -348,7 +348,7 @@ export default function CharacterSheetHeader({
               />
             )}
           </label>
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
             Pronoms
             <input
               value={character.pronouns ?? ""}
@@ -357,7 +357,7 @@ export default function CharacterSheetHeader({
               className="w-24 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
             />
           </label>
-          <div className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
+          <div className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
             Classes
             <div className="flex flex-wrap items-center gap-2">
               {character.classes.map((c, index) => {
@@ -431,7 +431,7 @@ export default function CharacterSheetHeader({
 
       <div className="flex flex-wrap items-start gap-2">
         <div className="flex w-12 shrink-0 flex-col items-center gap-1">
-          <span className="flex h-6 items-end justify-center text-[9px] font-bold uppercase tracking-widest text-ink-muted">CA</span>
+          <span className="flex h-8 items-end justify-center text-xs font-bold uppercase tracking-wide text-ink-muted">CA</span>
           <div
             className="relative flex h-14 w-12 items-center justify-center border-2 border-accent bg-panel-raised"
             style={{ clipPath: "polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)" }}
@@ -458,7 +458,7 @@ export default function CharacterSheetHeader({
         <StatBadge label="Dés de vie" value={sheet.hitPoints.hitDice} />
         <div className="flex w-[6.5rem] shrink-0 flex-col items-center gap-1">
           <span
-            className={`flex h-6 items-end justify-center text-center text-[9px] font-bold uppercase leading-tight tracking-widest ${
+            className={`flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide ${
               exhaustion > 0 ? "text-danger" : "text-ink-muted"
             }`}
           >
@@ -483,7 +483,7 @@ export default function CharacterSheetHeader({
             un mal. */}
         <div className="flex w-[6.5rem] shrink-0 flex-col items-center gap-1">
           <span
-            className={`flex h-6 items-end justify-center text-center text-[9px] font-bold uppercase leading-tight tracking-widest ${
+            className={`flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide ${
               inspiration > 0 ? "text-accent" : "text-ink-muted"
             }`}
           >
@@ -508,7 +508,7 @@ export default function CharacterSheetHeader({
           posait un état, le joueur ne le voyait pas. */}
       {conditions.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">États</span>
+          <span className="text-xs font-bold uppercase tracking-wide text-ink-muted">États</span>
           {conditions.map((condition) => (
             <span key={condition} className="rounded-full border border-danger px-3 py-1 text-xs text-danger">
               {condition}
@@ -518,7 +518,7 @@ export default function CharacterSheetHeader({
       )}
 
       <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-ink-muted">
           <span>Points de vie</span>
           <span className={hpLow ? "text-danger" : "text-ink-muted"}>
             {hpCurrent}/{hpMax}
@@ -549,7 +549,7 @@ export default function CharacterSheetHeader({
       </div>
 
       <div className="flex flex-col gap-1 border-b border-edge/60 pb-3">
-        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-ink-muted">
           <span>Expérience</span>
           <span>
             {xpCurrent} XP{totalLevel < xpLevelThresholdsLength ? ` · niveau ${totalLevel + 1} à ${xpCeiling}` : ""}

@@ -5803,7 +5803,7 @@ rouvrir au vu de l'usage, une fois qu'on les aura vus.
 
 ---
 
-## V2.1-27 — Les cibles de clic sous le minimum, et la dérive des tailles · `M`
+## V2.1-27 — Les cibles de clic sous le minimum, et la dérive des tailles · `M` — **fait le 23 septembre**
 
 ### D'où vient ce ticket
 
@@ -5854,29 +5854,55 @@ mise en page que personne ne regarde.
 
 ### Ce qu'il fait, donc
 
-- [ ] **`Stepper` : cible de 24 px, dessin inchangé.** Zone tactile étendue
-      par pseudo-élément ; la hauteur du contrôle ne bouge pas. Vérifié sur
-      les dix appels, dont la rangée de badges de la fiche et la bourse.
-- [ ] **La rangée de badges de `CharacterSheetHeader` passe à `text-xs`** —
-      ses quatorze occurrences, d'un coup, parce que c'est une rangée et
-      qu'elle ne se convertit pas badge par badge. C'est exactement la
-      politique de la charte : *convertir les anciens quand on les rouvre*, et
-      V2.1-26 vient de l'ouvrir.
-- [ ] **Une règle ESLint interdit les nouvelles occurrences.** Le dépôt
-      enferme déjà ses règles absolues ainsi — la pureté de `src/core`, le
-      client service-role confiné à `publicShare.ts` : ce qui compte est
-      vérifié mécaniquement, jamais seulement écrit. Les fichiers existants
-      sont exemptés nommément, et la liste ne peut que **raccourcir** : y
-      ajouter un fichier demande de le dire en revue.
-- [ ] Le message de la règle dit quoi faire, pas seulement ce qui est
-      interdit — `text-xs` est le plancher, et un texte qui ne tient pas à
-      12 px est un texte trop long, pas un texte trop gros.
-- [ ] Aucun autre fichier n'est converti dans ce ticket. Les 213 occurrences
-      restantes attendent qu'on rouvre leur écran.
-- [ ] Les quatre modes et le contraste élevé testés sur la fiche jouable ;
-      lisible à 375 px — c'est là que la rangée de badges est la plus serrée,
-      et c'est là que le gain de lisibilité se juge.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+- [x] **`Stepper` : cible de 24 px, dessin inchangé.** Mesuré dans le
+      navigateur par `elementFromPoint`, ligne de pixels par ligne de pixels :
+      le bouton dessiné fait toujours **16 px**, la zone qui répond au clic en
+      fait **24**, et le point médian entre les deux flèches touche la valeur,
+      pas un bouton. L'extension déborde **vers l'intérieur** : le conteneur
+      est `overflow-hidden` depuis toujours (pour ses coins arrondis), une
+      extension vers l'extérieur aurait été rognée — donc morte, et
+      silencieusement.
+- [x] **La rangée de badges de `CharacterSheetHeader` passe à `text-xs`** —
+      ses quatorze occurrences.
+      **Un effet de bord, trouvé en regardant :** « Perception passive » passe
+      sur deux lignes et débordait de 7 px une bande de libellé calibrée pour
+      du 9 px. La bande passe donc de 24 à 32 px, **pour tous les badges** :
+      c'est sa hauteur fixe qui garde la rangée alignée, et un badge plus haut
+      que ses voisins était précisément le défaut que cette structure corrige
+      depuis V1-C4. La rangée grandit de 8 px ; c'est le prix du texte
+      lisible, et il est payé une fois.
+      Le `tracking-widest` des libellés se resserre en `tracking-wide` — à
+      12 px, la piste large faisait déborder « Épuisement » de sa case.
+- [x] **Une règle ESLint interdit les nouvelles occurrences.**
+      `no-restricted-syntax` sur deux sélecteurs — la chaîne littérale et le
+      gabarit — parce qu'une classe écrite dans un `` `...${x}...` `` échappe
+      au premier. Vérifiée par un fichier d'essai qui porte les deux formes :
+      elle remonte bien deux erreurs, puis le fichier est jeté.
+- [x] Le message dit quoi faire : `text-xs` est le plancher, un libellé qui
+      n'y tient pas est trop long, et un GLYPHE se sort en constante avec un
+      `eslint-disable-next-line` motivé.
+- [x] Aucun autre fichier converti. **72 exemptions**, une par fichier.
+      **Un piège trouvé en les posant, et écrit dans la config :** un chemin
+      de route Next porte des `[segments]` et des `(groupes)`, qui sont des
+      caractères de glob. Sans échappement, l'exemption ne matche pas le
+      fichier qu'elle nomme — et elle ne le dit pas, elle ne fait rien. Deux
+      fichiers pourtant listés remontaient trois erreurs.
+- [x] Lisible à 375 px, vérifié sur la fiche : aucun débordement, aucune
+      barre horizontale, et la rangée de badges se replie sur trois lignes.
+      Les couleurs sont des jetons (`accent`, `danger`), donc les quatre modes
+      et le contraste élevé suivent par construction.
+- [x] `npm run typecheck && npm run lint && npm run test` passent.
+
+**Ce qui n'a pas changé, et c'est le but :** les dix appels de `Stepper`
+gardent exactement leur hauteur. Le seul dessin modifié est la rangée de
+badges de la fiche, qui était l'objet du ticket.
+
+**Une exception assumée, visible à l'endroit où elle est faite :** les
+glyphes ▲ et ▼ de `Stepper` restent à 9 px. Ce ne sont pas des libellés, et
+le plancher les ferait déborder d'une bande de 16 px. La classe est sortie en
+constante (`TAILLE_GLYPHE`) pour que la dérogation tienne en une ligne, au
+bon endroit, plutôt que d'exempter le fichier entier — une exemption de
+fichier aurait aussi couvert les libellés qu'on y écrira demain.
 
 **Pourquoi `M`** : les deux corrections sont petites, la règle ESLint et sa
 liste d'exemptions ne le sont pas. Et il faut regarder dix compteurs à
