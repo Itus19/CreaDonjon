@@ -557,13 +557,12 @@ type VarianteCaracs = "reglette" | "barrette" | "grille";
 
 const VARIANTES: { cle: VarianteCaracs; nom: string; note: string }[] = [
   { cle: "reglette", nom: "Réglette", note: "deux colonnes de trois lignes — tout est visible, rien n'est caché" },
-  { cle: "barrette", nom: "Barrette", note: "une seule rangée ; l'interrupteur bascule les six d'un coup" },
+  { cle: "barrette", nom: "Barrette", note: "retenue : une seule rangée, quatre étages — nom, score, test, sauvegarde" },
   { cle: "grille", nom: "Grille", note: "la forme actuelle, mais chaque tuile tient sur une ligne" },
 ];
 
 function Caracteristiques({ onLancer }: { onLancer: (label: string, modificateur: number) => void }) {
-  const [variante, setVariante] = useState<VarianteCaracs>("reglette");
-  const [sauvegardes, setSauvegardes] = useState(false);
+  const [variante, setVariante] = useState<VarianteCaracs>("barrette");
 
   return (
     <div className="flex flex-col gap-1">
@@ -614,41 +613,45 @@ function Caracteristiques({ onLancer }: { onLancer: (label: string, modificateur
         </div>
       )}
 
-      {/* B — LA BARRETTE. Une seule rangée de six : la plus compacte, au
-          prix d'une chose cachée à la fois. L'interrupteur bascule les six
-          ensemble — c'est le même geste que le chiffre des jauges, et deux
-          gestes identiques valent mieux que deux inventions. */}
+      {/* B — LA BARRETTE, retenue par l'auteur le 23 septembre, et
+          complétée : la sauvegarde sous chaque caractéristique, le score
+          au-dessus du modificateur. L'interrupteur « tests / sauvegardes »
+          disparaît du même coup — il n'existait que pour cacher la moitié
+          qu'on affiche maintenant.
+
+          Quatre étages, du plus durable au plus lancé : le nom, le score
+          (qui ne bouge qu'à la montée de niveau), le modificateur, la
+          sauvegarde. Les deux du bas sont les deux boutons, et chacun fait
+          24 px de haut sur toute la largeur de la colonne (V2.1-27).
+
+          `tabular-nums` : sans lui, un `1` étroit décale la colonne
+          entière, et six colonnes qui ne s'alignent pas se lisent mal. */}
       {variante === "barrette" && (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-ink-muted">{sauvegardes ? "Sauvegardes" : "Tests"}</span>
-            <button
-              type="button"
-              onClick={() => setSauvegardes((v) => !v)}
-              className="rounded-full border border-edge px-2 py-0.5 text-xs text-ink-muted transition-colors hover:text-accent"
-              title="Basculer entre les tests et les sauvegardes"
-            >
-              {sauvegardes ? "voir les tests" : "voir les sauvegardes"}
-            </button>
-          </div>
-          <div className="flex justify-between">
-            {FICHE.abilities.map((a) => (
+        <div className="flex justify-between">
+          {FICHE.abilities.map((a) => (
+            <div key={a.key} className="flex w-10 flex-col items-center">
+              <span className="text-xs text-ink-muted">{a.key}</span>
+              <span className="text-xs tabular-nums text-ink-soft" title={`Score de ${a.key}`}>
+                {a.score}
+              </span>
               <button
-                key={a.key}
                 type="button"
-                onClick={() =>
-                  sauvegardes
-                    ? onLancer(`Sauvegarde de ${a.key}`, Number(a.save))
-                    : onLancer(`Test de ${a.key}`, Number(a.mod))
-                }
-                className="flex w-10 flex-col items-center rounded-md py-0.5 transition-colors hover:bg-panel-sunken"
-                title={`Lancer ${sauvegardes ? "une sauvegarde" : "un test"} de ${a.key}`}
+                onClick={() => onLancer(`Test de ${a.key}`, Number(a.mod))}
+                className="flex h-6 w-full items-center justify-center rounded-md text-sm font-medium tabular-nums text-ink transition-colors hover:bg-panel-sunken"
+                title={`Lancer un test de ${a.key}`}
               >
-                <span className="text-xs text-ink-muted">{a.key}</span>
-                <span className="text-sm font-medium text-ink">{sauvegardes ? a.save : a.mod}</span>
+                {a.mod}
               </button>
-            ))}
-          </div>
+              <button
+                type="button"
+                onClick={() => onLancer(`Sauvegarde de ${a.key}`, Number(a.save))}
+                className="flex h-6 w-full items-center justify-center rounded-md text-xs tabular-nums text-ink-muted transition-colors hover:bg-panel-sunken"
+                title={`Lancer une sauvegarde de ${a.key}`}
+              >
+                js {a.save}
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
