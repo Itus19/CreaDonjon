@@ -460,14 +460,16 @@ Quand le joueur dit « j'entre dans une taverne », qui décide qu'il y a une ta
 
 C'est le prolongement direct de « l'IA narre, le code arbitre » (règle absolue 8), appliqué au contenu du monde et pas seulement aux dés. Et c'est ce qui rend le monde **cohérent dans la durée** : revenir trois séances plus tard à la même taverne y retrouve le même tavernier, parce qu'il a été écrit en base au premier passage, pas ré-imaginé à chaque fois.
 
-### V3-C1 — Le pont générateur ↔ moteur · `M`
+### V3-C1 — Le pont générateur ↔ moteur · `M` — **fait le 24 septembre, sans appelant encore**
 
 Aujourd'hui les générateurs sont un outil MJ : on clique, on lit, on décide. En solo, le moteur doit pouvoir les invoquer lui-même.
 
-- [ ] `src/server/services/sceneGeneration.ts` : appeler un outil (`taverne`, `pnj`, `echoppe`, `noms`, `butin`) depuis le moteur, avec les axes de variante déduits de la scène — la richesse et la zone viennent du **lieu courant**, jamais d'un choix du modèle.
-- [ ] Le RNG est celui du serveur (`src/server/services/rng.ts`), avec sa graine journalisée : un tirage est **rejouable**, comme n'importe quel jet de dés.
-- [ ] Chaque tirage produit un `session_event` (`kind: 'world_update'`) avec la table, le dé et le résultat — la même trace qu'un jet.
-- [ ] **Zéro changement au moteur de générateurs.** Si ce ticket demande d'y toucher, c'est que le pont est mal placé.
+- [x] `src/server/services/sceneGeneration.ts` : `generateForScene` appelle un outil (`taverne`, `pnj`, `echoppe`, `noms`, `butin`) depuis le moteur. **La richesse et la zone viennent du lieu courant** — aucune entité `location` n'ayant de champ typé pour ça, l'auteur a tranché le 24 septembre : elles se lisent dans **l'infobox** du lieu (entrées « Richesse » et « Zone », ou `wealth`/`zone`, sans casse ni accents), puis dans celle de ses parents `part_of`, du plus proche au plus lointain. Le premier lieu qui porte l'entrée décide ; une valeur inconnue fait **tirer** l'axe plutôt que remonter au parent. Un axe que personne ne porte est tiré par le serveur, jamais par le modèle. Un `wealth`/`zone` fourni par l'appelant est ignoré ; les autres axes (type d'échoppe, genre, rareté) peuvent être fixés par l'appelant — du code. La source de chaque axe (`location`, `parent`, `caller`, `random`) est rendue et journalisée. Logique pure dans `src/core/generators/sceneVariant.ts`, testée d'abord.
+- [x] Le RNG est celui du serveur, avec sa graine journalisée : `serverRng` tire une graine, puis **tout** le tirage — axes aléatoires compris — passe par un `SeededRng` de cette graine. Même graine contre les mêmes tables, même résultat : vérifié par test sur huit graines.
+- [x] Chaque tirage produit un `session_event` (`kind: 'world_update'`, `actor: 'system'`, `source: 'generator'`) avec la graine, les axes et leur source, et pour chaque emplacement la **table**, le **dé** et le **résultat** — plus une `note` rédigée, que le journal d'activité sait déjà afficher.
+- [x] **Zéro changement au moteur de générateurs.** Chaque section passe par `drawTableSlotsFromGeneratorBlock` telle quelle, avec des axes déjà résolus — jamais « aléatoire », sinon chaque section de la taverne tirerait sa propre richesse. La clé de table journalisée est reconstruite à côté (`sceneTableKey`), pas remontée du moteur.
+
+**Ce que ce ticket ne fait pas, et le dit.** Il ne décide pas *quand* tirer : aucun appelant dans la boucle de tour. C'est l'affaire de V3-C2 (esquisses) et V3-C3 (écrire le wiki), qui sauront quand une taverne manque. Les emplacements `prose` restent vides : l'habillage par le modèle vient après. Et une limite à garder en tête : les blocs des « Générateurs de MJ » sont en visibilité `gm`, et le pont les lit avec le client de l'appelant — un joueur solo qui n'est pas MJ de son monde tirerait des sections vides. Sans objet tant que l'auteur joue dans ses propres mondes. **Non vérifié contre une vraie base** : le test remplace les accès Supabase par un monde en mémoire, mais fait tourner le vrai moteur de tables.
 
 **Ce que ça donne :** « tu entres à L'Ancre Rouillée. Derrière le comptoir, une elfe taciturne essuie des chopes. » — l'elfe taciturne vient de la table `patrons-tavernes`, tirée sur un d20 réel, pas de l'imagination du modèle.
 
@@ -654,7 +656,7 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 | **Grille** — trois colonnes, deux rangées, **retenue** | **~80 px** (−44 %) | Deux lignes par tuile : le nom et **le score** au-dessus, le modificateur et la sauvegarde en dessous, où ils sont les deux boutons (24 px de haut). Garde la disposition que la fiche utilise déjà, et l'encadré des Compétences |
 
 La grille retenue est **plus haute que la version comparée** (80 px contre 56), et c'est un échange assumé : elle ne cache plus rien. Elle reste à **44 % sous le pavé d'origine**, en montrant *deux fois plus* de chiffres — le score s'affichait nulle part avant. `tabular-nums` sur les trois lignes de chiffres, sans quoi un `1` étroit décale la colonne et six colonnes qui ne s'alignent pas se lisent mal. **L'encadré de chaque caractéristique est celui des Compétences** (`rounded-md border border-edge`, un pixel, vérifié en style calculé) : c'est le seul trait que la colonne connaisse, et six cadres côte à côte pèsent déjà six fois ce que pèse un cadre seul.
-- [x] En tête : le nom, **les états en cours à côté** (`entity_runtime_state.conditions`), la ligne d'identité **avec l'âge** (entrée du bloc `infobox`, il n'a pas de champ typé), puis **une seule rangée pour tout l'état chiffré** : le **bouclier de CA**, **trois jauges circulaires** — PV, niveau, épuisement — et, à leur droite, les trois faits qui ne bougent pas en jouant : **VIT · MAÎT · INSP**. **Aucune ligne de légende dessous** : c'est là qu'est la place gagnée, plus que dans la forme des jauges.
+- [x] En tête : le nom, **les états en cours à côté** (`entity_runtime_state.conditions`), la ligne d'identité **avec l'âge** (entrée du bloc `infobox`, il n'a pas de champ typé — *depuis V3-Z1, le champ typé `character.age` passe devant, l'infobox ne sert plus que de repli*), puis **une seule rangée pour tout l'état chiffré** : le **bouclier de CA**, **trois jauges circulaires** — PV, niveau, épuisement — et, à leur droite, les trois faits qui ne bougent pas en jouant : **VIT · MAÎT · INSP**. **Aucune ligne de légende dessous** : c'est là qu'est la place gagnée, plus que dans la forme des jauges.
 - [x] **Le bouclier de CA est celui de la fiche** : le même `clipPath` que `CharacterSheetHeader`, pas un second dessin de la même chose. Il n'a pas d'anneau, et c'est délibéré — un anneau dit une proportion, une classe d'armure n'a pas de maximum. Même raison pour la vitesse, la maîtrise et l'inspiration : des constantes, pas des compteurs.
 - [x] **Sous la jauge du milieu, le niveau atteint (`Niv. 4`), jamais le mot « XP »** ; dedans, la marche vers le suivant. Le seuil vit dans l'infobulle : c'est une valeur qu'on consulte, pas qu'on surveille.
 - [x] **Les sept éléments de la rangée sont espacés régulièrement** (`justify-between`), pas centrés en bloc : les largeurs diffèrent, les intervalles non.
@@ -1057,7 +1059,7 @@ C'est le même enseignement que `P‑01` : *la primitive existait, il manquait d
 
 ---
 
-### V3-Z1 — L'âge du personnage, et l'identité à la création · `M`
+### V3-Z1 — L'âge du personnage, et l'identité à la création · `M` — **fait le 24 septembre, vérification en direct à faire**
 
 **Le constat, en deux temps.**
 
@@ -1071,14 +1073,16 @@ Ensuite, et c'est le vrai sujet : **l'assistant de création ne demande aucun tr
 
 **Une seconde décision : un âge est-il un nombre ?** Un elfe de 127 ans est jeune, un dragon compte en siècles, et certaines tables écrivent « d'âge mûr ». Un entier oblige à choisir ; une chaîne courte n'interdit rien mais ne se compare pas. **Recommandation : un entier optionnel**, avec l'unité laissée au monde (le calendrier existe déjà) — et une table qui veut écrire « d'âge mûr » le fait dans son infobox, comme aujourd'hui.
 
-- [ ] `age` ajouté à `zCharacterBlockData` en `.optional()`. Un bloc `character` écrit avant ce ticket se valide sans changement — vérifié sur une fiche réelle, pas seulement en test.
-- [ ] Aucune migration SQL : `blocks.data` est un `jsonb`, seule sa forme Zod change. Si ce ticket semble en exiger une, c'est qu'il a été mal compris — s'arrêter et le dire.
-- [ ] **Une étape « Identité » dans l'assistant de création**, qui demande l'âge, le genre et les pronoms. Les deux derniers existent déjà dans le bloc et n'ont jamais eu d'endroit où se saisir à la création : les ajouter ici ne coûte qu'un champ de plus et referme le même trou.
-- [ ] L'étape est **passable sans rien remplir** : aucun des trois champs n'est obligatoire, et un personnage sans âge reste un personnage valide.
-- [ ] L'âge s'édite aussi sur la fiche, dans la rangée d'identité de `CharacterSheetHeader`, à côté du genre et des pronoms — même geste, même endroit.
-- [ ] Il s'affiche dans la ligne d'identité de la fiche **et** dans la colonne de droite du mode solo (V3-D5), à la suite de l'espèce, de la classe et de l'historique.
+- [x] `age` ajouté à `zCharacterBlockData` en `.optional()` — entier, `≥ 0`, jamais de valeur par défaut (ni dans l'assistant, ni dans `BLOCK_DEFAULTS`). Un bloc sans `age` se valide sans changement, et un test le verrouille. **Pas encore vérifié sur une fiche réelle** : la session cloud n'avait ni base ni Docker. À faire chez l'auteur — rouvrir une fiche existante, l'enregistrer, constater qu'elle passe.
+- [x] Aucune migration SQL.
+- [x] **Une étape « Identité » dans l'assistant de création**, en tête (`IdentityStep.tsx`) : âge, genre, pronoms. **Correction du constat** : le genre se saisissait déjà dans l'assistant, dans la rangée du nom — seuls les pronoms et l'âge manquaient. Le genre y quitte cette rangée pour rejoindre l'étape, où il retrouve les pronoms.
+- [x] L'étape est **passable sans rien remplir** : « Suivant » n'y teste rien, et le schéma accepte les trois champs absents.
+- [x] L'âge s'édite sur la fiche, dans la rangée d'identité de `CharacterSheetHeader`, après les pronoms. Un seul contrôle, `AgeInput`, partagé avec l'étape : un champ vidé écrit « on ne sait pas » (`undefined`), jamais `0`.
+- [x] Il s'affiche dans la rangée d'identité de la fiche (donc aussi dans l'Aperçu de l'assistant, qui la réutilise) **et** dans la colonne solo, qui lit désormais le champ typé. L'entrée d'infobox « Âge » n'y sert plus que de repli pour les fiches écrites avant ce ticket.
+- [x] `applyLevelUp` refuse une montée de niveau qui change l'âge, comme il refusait déjà le genre et les pronoms (`forbidden_field_change`).
 - [ ] Hors périmètre, et dit comme tel : **proposer une fourchette d'âge d'après l'espèce**. Les entrées d'espèce ne portent pas cette donnée aujourd'hui, et l'ajouter au SRD importé est un autre chantier. À rouvrir si la saisie à l'aveugle gêne réellement.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+- [x] `npm run typecheck && npm run lint && npm run test` passent (les tests d'intégration restent ignorés sans base locale, comme d'habitude).
+- [ ] **Non testé à la main** : la barre d'étapes, la navigation Précédent/Suivant et l'Aperçu avec la nouvelle étape. Ce sont justement les quatre endroits qui « se testent à la main » d'après la ligne suivante.
 
 **Pourquoi `M` et pas `S`** : le champ est trivial, l'étape d'assistant ne l'est pas. Ajouter une étape touche la barre de progression, la navigation, la reprise d'un brouillon, et l'aperçu final — quatre endroits qui se testent à la main.
 

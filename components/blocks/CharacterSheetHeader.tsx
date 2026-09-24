@@ -34,6 +34,41 @@ export function genderDropdownValue(gender: CharacterBlockData["gender"]): strin
   return gender;
 }
 
+/**
+ * Champ d'age (V3-Z1), partage par la fiche et l'etape Identite de
+ * l'assistant — un seul endroit qui sait qu'un champ vide veut dire « on ne
+ * sait pas » (`undefined`, jamais 0) et qu'une saisie hors des entiers
+ * positifs n'est pas ecrite : le schema la refuserait a l'enregistrement.
+ */
+export function AgeInput({
+  age,
+  onChange,
+  className,
+}: {
+  age: number | undefined;
+  onChange: (age: number | undefined) => void;
+  className?: string;
+}) {
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      min={0}
+      step={1}
+      value={age ?? ""}
+      onChange={(e) => {
+        const raw = e.target.value.trim();
+        if (raw === "") return onChange(undefined);
+        const n = Number(raw);
+        if (Number.isInteger(n) && n >= 0) onChange(n);
+      }}
+      placeholder="—"
+      aria-label="Âge"
+      className={`rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none ${className ?? ""}`}
+    />
+  );
+}
+
 function ruleRef(key: string): BlockReference | null {
   return key.trim() ? { kind: "rule", key: key.trim() } : null;
 }
@@ -356,6 +391,10 @@ export default function CharacterSheetHeader({
               placeholder="elle, il, iel…"
               className="w-24 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
             />
+          </label>
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
+            Âge
+            <AgeInput age={character.age} onChange={(age) => patchCharacter({ age })} className="w-16" />
           </label>
           <div className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
             Classes

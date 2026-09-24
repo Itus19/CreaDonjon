@@ -48,13 +48,15 @@ export const MJ_TOOL_LABELS: Record<MjToolKey, string> = {
  * son brouillon) — meme motif ferme que `MJ_TOOL_KEYS` : ces formulaires ne
  * sont pas tires d'une table, une union litterale suffit.
  */
-export const RULE_TOOL_KEYS = ["nouvel-historique", "nouveau-don", "nouvelle-arme", "bac-a-sable", "bac-a-sable-declencheurs"] as const;
+export const RULE_TOOL_KEYS = ["nouvel-historique", "nouveau-don", "nouvelle-arme", "nouvelle-sous-classe", "nouveau-sort", "bac-a-sable", "bac-a-sable-declencheurs"] as const;
 export type RuleToolKey = (typeof RULE_TOOL_KEYS)[number];
 
 export const RULE_TOOL_LABELS: Record<RuleToolKey, string> = {
   "nouvel-historique": "Créer un historique personnalisé",
   "nouveau-don": "Créer un don ou une aptitude",
   "nouvelle-arme": "Créer une arme maison",
+  "nouvelle-sous-classe": "Créer une sous-classe",
+  "nouveau-sort": "Créer un sort",
   "bac-a-sable": "Bac à sable de formule",
   "bac-a-sable-declencheurs": "Bac à sable de déclencheurs",
 };

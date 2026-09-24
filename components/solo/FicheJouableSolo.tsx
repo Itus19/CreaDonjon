@@ -62,6 +62,12 @@ interface SheetApiResponse {
   runtimeState: { state: RuntimeState; hpMax: number; hitDiceTotals: Record<string, number> };
 }
 
+/**
+ * Repli pour les fiches ecrites avant V3-Z1, dont l'age ne vit que dans une
+ * entree d'infobox nommee « Âge ». Le champ type `character.age` passe
+ * toujours devant : ce repli ne sert qu'a ne pas faire disparaitre un age
+ * deja saisi, il n'est pas une seconde source a entretenir.
+ */
 function ageFromInfobox(infobox: InfoboxBlockData | undefined): string | null {
   const entry = infobox?.entries.find((e) => ["âge", "age"].includes(e.label.trim().toLowerCase()));
   return entry?.value ?? null;
@@ -303,7 +309,7 @@ export default function FicheJouableSolo({
   const classSummary = character.classes
     .map((c) => `${buildChips.get(refIdentity(c.class))?.name ?? "?"} ${c.level}`)
     .join(" / ");
-  const age = ageFromInfobox(infobox);
+  const age = character.age !== undefined ? String(character.age) : ageFromInfobox(infobox);
   const identityLine = [speciesName, classSummary || null, backgroundName, age ? `${age} ans` : null].filter(Boolean).join(" · ");
 
   const weaponMasteryChoices = remainingChoices.filter((c) => c.kind === "weapon_mastery");

@@ -744,7 +744,8 @@ export async function applyLevelUp(
     !sameBlockReference(old.background, next.background) ||
     old.portrait_asset_id !== next.portrait_asset_id ||
     (old.gender ?? null) !== (next.gender ?? null) ||
-    (old.pronouns ?? "") !== (next.pronouns ?? "")
+    (old.pronouns ?? "") !== (next.pronouns ?? "") ||
+    (old.age ?? null) !== (next.age ?? null)
   ) {
     return { error: "forbidden_field_change" };
   }

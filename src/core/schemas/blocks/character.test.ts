@@ -60,4 +60,21 @@ describe("zCharacterBlockData", () => {
   it("rejette une valeur de genre hors enumeration", () => {
     expect(() => zCharacterBlockData.parse({ ...valid, gender: "other" })).toThrow();
   });
+
+  it("valide un bloc anterieur a V3-Z1, sans age", () => {
+    const parsed = zCharacterBlockData.parse(valid);
+    expect(parsed).toEqual(valid);
+    expect("age" in parsed).toBe(false);
+  });
+
+  it("accepte un age entier, zero compris", () => {
+    expect(zCharacterBlockData.parse({ ...valid, age: 127 }).age).toBe(127);
+    expect(zCharacterBlockData.parse({ ...valid, age: 0 }).age).toBe(0);
+  });
+
+  it("rejette un age negatif, decimal ou ecrit en texte", () => {
+    expect(() => zCharacterBlockData.parse({ ...valid, age: -1 })).toThrow();
+    expect(() => zCharacterBlockData.parse({ ...valid, age: 12.5 })).toThrow();
+    expect(() => zCharacterBlockData.parse({ ...valid, age: "d'âge mûr" })).toThrow();
+  });
 });
