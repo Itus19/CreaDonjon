@@ -5,13 +5,12 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
-import { GENDER_OPTIONS, genderDropdownValue } from "./CharacterSheetHeader";
-import Dropdown from "@/components/shared/Dropdown";
 import InventoryTab from "./InventoryTab";
 import AbilityScoreStep, { EMPTY_ABILITY_POOL_ASSIGNMENT, type AbilityPoolAssignment } from "./characterCreatorSteps/AbilityScoreStep";
 import RemainingChoicesStep from "./characterCreatorSteps/RemainingChoicesStep";
 import LevelClassesStep, { type ClassEquipmentChoiceState } from "./characterCreatorSteps/LevelClassesStep";
 import CreationHpRollStep, { type CreationHpGrant } from "./characterCreatorSteps/CreationHpRollStep";
+import IdentityStep from "./characterCreatorSteps/IdentityStep";
 import SpeciesStep from "./characterCreatorSteps/SpeciesStep";
 import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreatorSteps/BackgroundStep";
 import SpellSelectionStep from "./characterCreatorSteps/SpellSelectionStep";
@@ -50,6 +49,7 @@ const EMPTY_SPELLCASTING: SpellcastingBlockData = {
 };
 
 const ALL_STEPS = [
+  "Identité",
   "Espèce",
   "Classe",
   "Caractéristiques",
@@ -79,6 +79,10 @@ const ALL_STEPS = [
  * `class_progression` (`SpellSelectionStep.tsx`), ecrit dans le bloc
  * `spellcasting` — separe de `character`, cree a la validation seulement si
  * au moins un sort a ete choisi.
+ *
+ * Etape "Identite" en tete (V3-Z1) : age, genre, pronoms — le genre y
+ * quitte la rangee du nom, ou il vivait seul et sans les pronoms. Toujours
+ * visible, jamais filtree, et passable sans rien remplir.
  */
 /**
  * Reutilisation depuis une fiche EXISTANTE (retour utilisateur : "Assistant
@@ -264,30 +268,6 @@ export default function CharacterCreatorWizard({
             className="w-full max-w-sm rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
           />
         </label>
-        <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-          Genre
-          <Dropdown
-            value={genderDropdownValue(character.gender)}
-            options={GENDER_OPTIONS}
-            onChange={(v) =>
-              patchCharacter({
-                gender:
-                  v === "custom"
-                    ? { custom: typeof character.gender === "object" ? character.gender.custom : "" }
-                    : (v as Exclude<CharacterBlockData["gender"], { custom: string } | undefined>),
-              })
-            }
-            aria-label="Genre"
-          />
-          {typeof character.gender === "object" && (
-            <input
-              value={character.gender.custom}
-              onChange={(e) => patchCharacter({ gender: { custom: e.target.value } })}
-              placeholder="préciser…"
-              className="w-32 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-            />
-          )}
-        </label>
       </div>
 
       <div className="flex flex-wrap gap-1 border-b border-edge/60 pb-3 text-xs">
@@ -304,6 +284,8 @@ export default function CharacterCreatorWizard({
           </button>
         ))}
       </div>
+
+      {steps[step] === "Identité" && <IdentityStep character={character} patchCharacter={patchCharacter} />}
 
       {steps[step] === "Espèce" && <SpeciesStep worldSlug={worldSlug} character={character} patchCharacter={patchCharacter} />}
 

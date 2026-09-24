@@ -1047,7 +1047,7 @@ C'est le même enseignement que `P‑01` : *la primitive existait, il manquait d
 
 ---
 
-### V3-Z1 — L'âge du personnage, et l'identité à la création · `M`
+### V3-Z1 — L'âge du personnage, et l'identité à la création · `M` — **fait le 24 septembre, vérification en direct à faire**
 
 **Le constat, en deux temps.**
 
@@ -1061,14 +1061,16 @@ Ensuite, et c'est le vrai sujet : **l'assistant de création ne demande aucun tr
 
 **Une seconde décision : un âge est-il un nombre ?** Un elfe de 127 ans est jeune, un dragon compte en siècles, et certaines tables écrivent « d'âge mûr ». Un entier oblige à choisir ; une chaîne courte n'interdit rien mais ne se compare pas. **Recommandation : un entier optionnel**, avec l'unité laissée au monde (le calendrier existe déjà) — et une table qui veut écrire « d'âge mûr » le fait dans son infobox, comme aujourd'hui.
 
-- [ ] `age` ajouté à `zCharacterBlockData` en `.optional()`. Un bloc `character` écrit avant ce ticket se valide sans changement — vérifié sur une fiche réelle, pas seulement en test.
-- [ ] Aucune migration SQL : `blocks.data` est un `jsonb`, seule sa forme Zod change. Si ce ticket semble en exiger une, c'est qu'il a été mal compris — s'arrêter et le dire.
-- [ ] **Une étape « Identité » dans l'assistant de création**, qui demande l'âge, le genre et les pronoms. Les deux derniers existent déjà dans le bloc et n'ont jamais eu d'endroit où se saisir à la création : les ajouter ici ne coûte qu'un champ de plus et referme le même trou.
-- [ ] L'étape est **passable sans rien remplir** : aucun des trois champs n'est obligatoire, et un personnage sans âge reste un personnage valide.
-- [ ] L'âge s'édite aussi sur la fiche, dans la rangée d'identité de `CharacterSheetHeader`, à côté du genre et des pronoms — même geste, même endroit.
-- [ ] Il s'affiche dans la ligne d'identité de la fiche **et** dans la colonne de droite du mode solo (V3-D5), à la suite de l'espèce, de la classe et de l'historique.
+- [x] `age` ajouté à `zCharacterBlockData` en `.optional()` — entier, `≥ 0`, jamais de valeur par défaut (ni dans l'assistant, ni dans `BLOCK_DEFAULTS`). Un bloc sans `age` se valide sans changement, et un test le verrouille. **Pas encore vérifié sur une fiche réelle** : la session cloud n'avait ni base ni Docker. À faire chez l'auteur — rouvrir une fiche existante, l'enregistrer, constater qu'elle passe.
+- [x] Aucune migration SQL.
+- [x] **Une étape « Identité » dans l'assistant de création**, en tête (`IdentityStep.tsx`) : âge, genre, pronoms. **Correction du constat** : le genre se saisissait déjà dans l'assistant, dans la rangée du nom — seuls les pronoms et l'âge manquaient. Le genre y quitte cette rangée pour rejoindre l'étape, où il retrouve les pronoms.
+- [x] L'étape est **passable sans rien remplir** : « Suivant » n'y teste rien, et le schéma accepte les trois champs absents.
+- [x] L'âge s'édite sur la fiche, dans la rangée d'identité de `CharacterSheetHeader`, après les pronoms. Un seul contrôle, `AgeInput`, partagé avec l'étape : un champ vidé écrit « on ne sait pas » (`undefined`), jamais `0`.
+- [x] Il s'affiche dans la rangée d'identité de la fiche (donc aussi dans l'Aperçu de l'assistant, qui la réutilise) **et** dans la colonne solo, qui lit désormais le champ typé. L'entrée d'infobox « Âge » n'y sert plus que de repli pour les fiches écrites avant ce ticket.
+- [x] `applyLevelUp` refuse une montée de niveau qui change l'âge, comme il refusait déjà le genre et les pronoms (`forbidden_field_change`).
 - [ ] Hors périmètre, et dit comme tel : **proposer une fourchette d'âge d'après l'espèce**. Les entrées d'espèce ne portent pas cette donnée aujourd'hui, et l'ajouter au SRD importé est un autre chantier. À rouvrir si la saisie à l'aveugle gêne réellement.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+- [x] `npm run typecheck && npm run lint && npm run test` passent (les tests d'intégration restent ignorés sans base locale, comme d'habitude).
+- [ ] **Non testé à la main** : la barre d'étapes, la navigation Précédent/Suivant et l'Aperçu avec la nouvelle étape. Ce sont justement les quatre endroits qui « se testent à la main » d'après la ligne suivante.
 
 **Pourquoi `M` et pas `S`** : le champ est trivial, l'étape d'assistant ne l'est pas. Ajouter une étape touche la barre de progression, la navigation, la reprise d'un brouillon, et l'aperçu final — quatre endroits qui se testent à la main.
 

@@ -33,6 +33,11 @@ const zGender = z.union([
  * blocs `character` ecrits avant V1-C4 n'ont ni l'un ni l'autre, et
  * `.strict()` doit continuer a les valider tels quels plutot que d'inventer
  * une valeur qui n'a jamais ete choisie.
+ *
+ * `age` (V3-Z1) suit exactement le meme chemin : optionnel, jamais de valeur
+ * par defaut. Un entier plutot qu'une chaine — il se relit et se compare ;
+ * l'unite reste celle du monde, et une table qui veut ecrire « d'age mur »
+ * le fait dans son infobox, comme avant.
  */
 export const zCharacterBlockData = z
   .object({
@@ -53,6 +58,7 @@ export const zCharacterBlockData = z
     portrait_asset_id: z.string().nullable(),
     gender: zGender.optional(),
     pronouns: z.string().optional(),
+    age: z.number().int().nonnegative().optional(),
   })
   .strict();
 export type CharacterBlockData = z.infer<typeof zCharacterBlockData>;
