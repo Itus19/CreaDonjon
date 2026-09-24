@@ -32,6 +32,7 @@ import { computeProgressionRows } from "@/src/core/rules/progression";
 import { missingRequiredBlocks } from "@/src/core/rules/requiredBlocks";
 import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
 import { buildHomebrewSubclassEntry, subclassSlotWrite, type HomebrewSubclassInput } from "@/src/core/rules/homebrewSubclass";
+import { buildHomebrewSpellEntry, HomebrewSpellError, type HomebrewSpellInput } from "@/src/core/rules/homebrewSpell";
 import {
   applyOverrides,
   mergeHomebrewEntries,
@@ -2034,6 +2035,45 @@ export async function createHomebrewSubclass(
   });
 
   return { ok: true, entryKey, rulesetId, slotUpdated: true };
+}
+
+export type CreateHomebrewSpellResult =
+  | { ok: true; entryKey: string; rulesetId: string }
+  | { ok: false; reason: "unknown_class" | "invalid"; message?: string };
+
+/**
+ * Cree un sort maison (V2-N2) dans la variante active `rulesetId` — meme
+ * decision que `createHomebrewSubclass` : la variante active, son origine
+ * affichee par le formulaire. La fiche est construite par
+ * `buildHomebrewSpellEntry` (forme exacte de l'import SRD) et ecrite par
+ * `importRulesetEntries`, le seul chemin d'ecriture des fiches maison.
+ *
+ * Les classes autorisees arrivent en CLES seulement : chacune doit etre une
+ * classe de la chaine, et son nom est relu ici — jamais pris du client.
+ */
+export async function createHomebrewSpell(
+  supabase: TypedClient,
+  params: { rulesetId: string; spell: Omit<HomebrewSpellInput, "classes"> & { classKeys: string[] } }
+): Promise<CreateHomebrewSpellResult> {
+  const { classKeys, ...spell } = params.spell;
+  const classesInChain = new Map(
+    (await listEntriesInRulesetChain(supabase, params.rulesetId, "fr")).filter((e) => e.entryType === "class").map((e) => [e.key, e.name])
+  );
+  if (classKeys.some((key) => !classesInChain.has(key))) return { ok: false, reason: "unknown_class" };
+
+  let entry;
+  try {
+    entry = buildHomebrewSpellEntry({ ...spell, classes: classKeys.map((key) => ({ key, name: classesInChain.get(key) ?? key })) });
+  } catch (error) {
+    if (error instanceof HomebrewSpellError) return { ok: false, reason: "invalid", message: error.message };
+    throw error;
+  }
+
+  const imported = await importRulesetEntries(supabase, { rulesetId: params.rulesetId, entries: [entry] });
+  if (imported.errors.length > 0 || imported.imported.length === 0) {
+    return { ok: false, reason: "invalid", message: imported.errors[0]?.message };
+  }
+  return { ok: true, entryKey: imported.imported[0].entryKey, rulesetId: imported.rulesetId };
 }
 
 export type DisableRulesetEntryResult = "ok" | "not_found" | "official";

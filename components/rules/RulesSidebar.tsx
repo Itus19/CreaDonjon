@@ -156,6 +156,7 @@ export default function RulesSidebar({ worldSlug, worldName }: { worldSlug: stri
   const openNouvelHistorique = useOpenRuleToolLink(worldSlug, "nouvel-historique");
   const openNouveauDon = useOpenRuleToolLink(worldSlug, "nouveau-don");
   const openNouvelleSousClasse = useOpenRuleToolLink(worldSlug, "nouvelle-sous-classe");
+  const openNouveauSort = useOpenRuleToolLink(worldSlug, "nouveau-sort");
   const openBacASable = useOpenRuleToolLink(worldSlug, "bac-a-sable");
   const openBacASableDeclencheurs = useOpenRuleToolLink(worldSlug, "bac-a-sable-declencheurs");
 
@@ -286,6 +287,7 @@ export default function RulesSidebar({ worldSlug, worldName }: { worldSlug: stri
               { href: openNouvelHistorique.href, label: t("creerHistoriqueMaison"), onClick: openNouvelHistorique.onClick },
               { href: openNouveauDon.href, label: t("creerDonMaison"), onClick: openNouveauDon.onClick },
               { href: openNouvelleSousClasse.href, label: t("creerSousClasseMaison"), onClick: openNouvelleSousClasse.onClick },
+              { href: openNouveauSort.href, label: t("creerSortMaison"), onClick: openNouveauSort.onClick },
             ]}
           />
           <Link

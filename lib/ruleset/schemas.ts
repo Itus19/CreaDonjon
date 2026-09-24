@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BLOCK_TYPES, ENTRY_TYPES, zWeaponBlockData } from "@/src/core/schemas/rule-blocks";
+import { SAVE_ABILITIES, SPELL_DAMAGE_TYPES, SPELL_SCHOOLS } from "@/src/core/rules/homebrewSpell";
 
 export const setActiveRulesetSchema = z.object({
   rulesetId: z.string().uuid(),
@@ -115,3 +116,44 @@ export const createHomebrewSubclassSchema = z.object({
     .refine((features) => features.some((f) => f.name.trim().length > 0), "Ajoute au moins une aptitude nommée."),
 });
 export type CreateHomebrewSubclassInput = z.infer<typeof createHomebrewSubclassSchema>;
+
+/**
+ * Creation d'un sort maison (V2-N2, `POST /api/rulesets/[rulesetId]/spells`).
+ * Vocabulaires fermes (ecole, caracteristique, type de degats) : listes
+ * deroulantes cote formulaire, enumerations ici. Les formules, elles, sont
+ * verifiees par `buildHomebrewSpellEntry` (des et nombres seulement), qui
+ * renvoie un message lisible plutot qu'une erreur de schema.
+ */
+const shortText = (label: string) => z.string().trim().min(1, `${label} : requis.`).max(120, `${label} : 120 caractères maximum.`);
+
+export const createHomebrewSpellSchema = z.object({
+  rulesetId: z.string().uuid(),
+  name: z.string().trim().min(1, "Le nom est requis.").max(120, "120 caractères maximum."),
+  level: z.number().int().min(0, "Niveau entre 0 et 9.").max(9, "Niveau entre 0 et 9."),
+  school: z.enum(SPELL_SCHOOLS),
+  castingTime: shortText("Temps d'incantation"),
+  range: shortText("Portée"),
+  components: z.array(z.enum(["V", "S", "M"])).max(3),
+  material: z.string().max(300, "Composante matérielle : 300 caractères maximum.").default(""),
+  duration: shortText("Durée"),
+  concentration: z.boolean(),
+  ritual: z.boolean(),
+  description: z.string().max(2000, "2 000 caractères maximum : pour la prose d'un livre, indique plutôt sa page.").default(""),
+  pageRef: z.string().max(120, "120 caractères maximum.").default(""),
+  effect: z
+    .object({
+      kind: z.enum(["save", "attack", "none"]),
+      ability: z.enum(SAVE_ABILITIES),
+      attackRange: z.enum(["melee", "ranged"]),
+      formula: z.string().trim().min(1, "Formule de dégâts requise.").max(60),
+      damageType: z.enum(SPELL_DAMAGE_TYPES),
+      onSuccess: z.enum(["none", "half", "other"]),
+    })
+    .nullable(),
+  scaling: z
+    .array(z.object({ level: z.number().int().min(1).max(20), formula: z.string().max(60) }))
+    .max(20)
+    .default([]),
+  classKeys: z.array(z.string().min(1)).min(1, "Coche au moins une classe.").max(30),
+});
+export type CreateHomebrewSpellInput = z.infer<typeof createHomebrewSpellSchema>;

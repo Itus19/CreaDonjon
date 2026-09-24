@@ -2,6 +2,7 @@
 
 import CreateHomebrewBackgroundForm from "@/components/rules/CreateHomebrewBackgroundForm";
 import CreateHomebrewFeatureForm from "@/components/rules/CreateHomebrewFeatureForm";
+import CreateHomebrewSpellForm from "@/components/rules/CreateHomebrewSpellForm";
 import CreateHomebrewSubclassForm from "@/components/rules/CreateHomebrewSubclassForm";
 import CreateHomebrewWeaponForm from "@/components/rules/CreateHomebrewWeaponForm";
 import FormulaSandbox from "@/components/rules/FormulaSandbox";
@@ -25,6 +26,7 @@ export default function RuleToolWindowContent({ worldSlug, toolKey }: { worldSlu
   if (toolKey === "nouveau-don") return <CreateHomebrewFeatureForm worldSlug={worldSlug} onDone={onDone} />;
   if (toolKey === "nouvelle-arme") return <CreateHomebrewWeaponForm worldSlug={worldSlug} onDone={onDone} />;
   if (toolKey === "nouvelle-sous-classe") return <CreateHomebrewSubclassForm worldSlug={worldSlug} onDone={onDone} />;
+  if (toolKey === "nouveau-sort") return <CreateHomebrewSpellForm worldSlug={worldSlug} onDone={onDone} />;
   if (toolKey === "bac-a-sable-declencheurs") return <TriggerSandbox />;
   return <FormulaSandbox />;
 }
