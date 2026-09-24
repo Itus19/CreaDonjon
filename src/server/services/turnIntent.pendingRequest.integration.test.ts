@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
-import { proposeIntentRequest, resolveIntentRequest } from "./turnIntent";
+import { proposeIntentRequest, resolveIntentRequest, resolveIntentRequestFromRoll } from "./turnIntent";
 import { getEntityRuntimeState } from "./runtimeState";
 import { getOrOpenSessionForCampaign } from "./sessions";
 import { insertCombat, insertCombatParticipant, updateCombat } from "../repos/combats";
@@ -309,5 +309,90 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
     expect(resolved.chained!.die_max).toBe(12); // 1d6 double, jamais le modificateur
     expect(resolved.chained!.modifier).toBe(3); // FOR +3 (finesse : max(3, 0)), inchange par le critique
     expect(resolved.chained!.critical).toBe(true);
+
+    // Encaisse la demande de degats chainee : un test suivant qui suppose
+    // "aucune demande en attente" ne doit pas heriter de celle-ci.
+    const damageResolved = await resolveIntentRequest(admin, { ...common(), natural: 6, origin: "a_la_main" });
+    if ("error" in damageResolved) throw new Error(`echec inattendu : ${damageResolved.error}`);
+    expect(damageResolved.chained).toBeNull();
+  });
+
+  describe("V3-B5 Phase 2 — un bouton de fiche tire lui-meme un naturel cote serveur", () => {
+    it("sans demande en attente, refuse — meme sans aucun nombre a fournir", async () => {
+      const outcome = await resolveIntentRequestFromRoll(admin, common());
+      expect(outcome).toEqual({ error: "no_pending_request" });
+    });
+
+    it("un test de competence : le total tombe dans les bornes d'un d20 + le modificateur fige", async () => {
+      const pose = await proposeIntentRequest(admin, {
+        ...common(),
+        text: "je fouille la pièce",
+        corrected: false,
+        choice: { kind: "skill_check", actionId: "investigation", targetId: null, advantage: "normal", dc: null },
+      });
+      if ("error" in pose) throw new Error(`echec inattendu : ${pose.error}`);
+
+      const outcome = await resolveIntentRequestFromRoll(admin, common());
+      if ("error" in outcome) throw new Error(`echec inattendu : ${outcome.error}`);
+      const check = outcome.record.detail.check as { total: number };
+      expect(check.total).toBeGreaterThanOrEqual(1 + pose.request.modifier);
+      expect(check.total).toBeLessThanOrEqual(20 + pose.request.modifier);
+      expect(outcome.chained).toBeNull();
+
+      const { data: rolls, error } = await admin
+        .from("dice_rolls")
+        .select("*")
+        .eq("campaign_id", campaignId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (error) throw new Error(error.message);
+      expect((rolls![0].context as { origin?: string }).origin).toBe("fiche");
+
+      const state = await getEntityRuntimeState(admin, entityId, campaignId);
+      expect(state.pending_request).toBeNull();
+    });
+
+    it("une attaque qui touche chaine des degats bornes au VRAI de de l'arme — jamais un maximum uniforme entre 1 et die_max", async () => {
+      const combat = await insertCombat(admin, { campaignId, sessionId: null, name: "Combat de test (fiche)" });
+      await updateCombat(admin, combat.id, { status: "running" });
+      const participant = await insertCombatParticipant(admin, {
+        combatId: combat.id,
+        sourceKind: "custom",
+        entityId: null,
+        ruleKey: null,
+        label: "Mannequin (fiche)",
+        ac: 1,
+        hpMax: 10,
+        hpCurrent: 10,
+        isAlly: false,
+        displayOrder: 0,
+      });
+
+      const pose = await proposeIntentRequest(admin, {
+        ...common(),
+        text: "j'attaque depuis la fiche",
+        corrected: false,
+        choice: { kind: "weapon_attack", actionId: weaponItemId, targetId: `participant:${participant.id}`, advantage: "normal" },
+      });
+      if ("error" in pose) throw new Error(`echec inattendu : ${pose.error}`);
+
+      const attackOutcome = await resolveIntentRequestFromRoll(admin, common());
+      if ("error" in attackOutcome) throw new Error(`echec inattendu : ${attackOutcome.error}`);
+      expect((attackOutcome.record.detail as { verdict: string | null }).verdict).toBe("hit"); // CA 1 : touche toujours
+      expect(attackOutcome.chained).not.toBeNull();
+      expect(attackOutcome.chained!.kind).toBe("weapon_damage");
+      // 1d6, double a 12 seulement si le naturel de l'attaque etait 20 (1/20) — les deux valeurs sont correctes, un maximum uniforme (ex. 13) ne le serait pas.
+      expect([6, 12]).toContain(attackOutcome.chained!.die_max);
+
+      const damageOutcome = await resolveIntentRequestFromRoll(admin, common());
+      if ("error" in damageOutcome) throw new Error(`echec inattendu : ${damageOutcome.error}`);
+      const damage = (damageOutcome.record.detail as { damage: { total: number } | null }).damage;
+      expect(damage!.total).toBeGreaterThanOrEqual(1 + attackOutcome.chained!.modifier);
+      expect(damage!.total).toBeLessThanOrEqual(attackOutcome.chained!.die_max + attackOutcome.chained!.modifier);
+      expect(damageOutcome.chained).toBeNull();
+
+      const finalState = await getEntityRuntimeState(admin, entityId, campaignId);
+      expect(finalState.pending_request).toBeNull();
+    });
   });
 });

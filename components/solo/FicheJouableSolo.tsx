@@ -114,16 +114,27 @@ export default function FicheJouableSolo({
     if (res.ok) setRemote(await res.json());
   }
 
+  /**
+   * V3-B5 Phase 2 — constaté en vérification en direct (24 septembre) : un
+   * seul chargement au montage laissait cette colonne ignorer toute demande
+   * posée APRÈS coup par `IntentBar` — la colonne voisine, pas cette même
+   * fiche. Comme les deux colonnes sont deux arbres React indépendants sans
+   * canal live entre eux, ce n'est pas un cas bord : c'est le déroulé normal
+   * (les deux colonnes sont ouvertes en même temps, par construction de
+   * l'écran). Un sondage léger referme l'écart sans construire un canal
+   * Realtime dédié — le coût est celui d'un GET déjà bon marché, répété.
+   */
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body: SheetApiResponse | null) => {
-        if (!cancelled && body) setRemote(body);
-      })
-      .catch(() => {});
+    async function poll() {
+      const res = await fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId}`);
+      if (!cancelled && res.ok) setRemote(await res.json());
+    }
+    poll();
+    const interval = setInterval(poll, 4000);
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, [entityId, campaignId]);
 
@@ -253,13 +264,43 @@ export default function FicheJouableSolo({
     }
   }
 
+  /**
+   * V3-B5 Phase 2 — « un bouton de sa fiche répond à la demande en cours. »
+   * `pending` vient de l'état de jeu (`entity_runtime_state.pending_request`,
+   * déjà dans `remote` via `/api/entities/:id/sheet` — rien de plus à
+   * charger) : quand il correspond au bouton cliqué, ce clic n'est plus un
+   * jet immédiat mais un ENCAISSEMENT, avec un naturel tiré côté serveur.
+   * Sans correspondance, le chemin d'avant ce ticket continue tel quel.
+   */
+  async function resolveFromFiche() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/solo/tour/encaisser-fiche", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityId, campaignId, worldSlug }),
+      });
+      if (res.ok) await reloadRemote();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function attack(item: InventoryItem) {
+    if (pending?.kind === "weapon_attack" && pending.action_id === item.id) {
+      await resolveFromFiche();
+      return;
+    }
     const result = await postAction<{ attack?: { isCritical: boolean } }>("attack", { campaignId, itemId: item.id, advantage });
     if (!result?.attack) return;
     setPendingCrit((prev) => ({ ...prev, [item.id]: result.attack!.isCritical }));
   }
 
   async function damage(item: InventoryItem, versatile: boolean) {
+    if (pending?.kind === "weapon_damage" && pending.action_id === item.id) {
+      await resolveFromFiche();
+      return;
+    }
     const critical = pendingCrit[item.id] ?? false;
     await postAction("damage", { campaignId, itemId: item.id, critical, versatile });
   }
@@ -292,6 +333,10 @@ export default function FicheJouableSolo({
   }
 
   const runtimeState = remote?.runtimeState.state;
+  // V3-B5 Phase 2 — deja dans `remote` (RuntimeState porte `pending_request`
+  // depuis la Phase 1) : rien de plus a charger pour que cette colonne sache
+  // qu'une demande attend.
+  const pending = runtimeState?.pending_request ?? null;
   const hpMax = remote?.runtimeState.hpMax ?? sheet.hitPoints.max;
   const hpCurrent = runtimeState?.hp.current ?? hpMax;
   const exhaustion = runtimeState?.exhaustion ?? 0;
@@ -339,11 +384,24 @@ export default function FicheJouableSolo({
         inspiration={inspiration}
       />
 
+      {pending && (
+        <div className="flex items-center gap-2 rounded-full border border-accent px-2.5 py-1 text-xs text-accent">
+          <span className="font-medium">Jet demandé</span>
+          <span className="truncate text-ink">{pending.what}</span>
+        </div>
+      )}
+
       <CaracteristiquesEtCompetences
         sheet={sheet}
-        onRollAbility={(ability) => rollAbility(entityId, ability, advantage)}
-        onRollSave={(ability) => rollSave(entityId, ability, advantage)}
-        onRollSkill={(skill) => rollSkill(entityId, skill, advantage)}
+        onRollAbility={(ability) =>
+          pending?.kind === "ability_check" && pending.action_id === ability ? resolveFromFiche() : rollAbility(entityId, ability, advantage)
+        }
+        onRollSave={(ability) =>
+          pending?.kind === "saving_throw" && pending.action_id === ability ? resolveFromFiche() : rollSave(entityId, ability, advantage)
+        }
+        onRollSkill={(skill) =>
+          pending?.kind === "skill_check" && pending.action_id === skill ? resolveFromFiche() : rollSkill(entityId, skill, advantage)
+        }
       />
 
       <div className="flex min-h-0 flex-1 flex-col">

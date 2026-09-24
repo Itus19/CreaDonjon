@@ -12,6 +12,7 @@ import { resolveCharacterActionContext } from "@/src/server/services/characterAc
 import {
   executeIntent,
   resolveIntentRequest,
+  resolveIntentRequestFromRoll,
   type IntentChoice,
   type IntentErrorReason,
   type ResolvedTurnRecord,
@@ -156,7 +157,31 @@ export async function playEncashedTurn(
 ): Promise<(TurnOutcome & { chained: PendingRequest | null }) | { error: ResolveIntentErrorReason }> {
   const outcome = await resolveIntentRequest(supabase, params);
   if ("error" in outcome) return outcome;
+  return finishEncashedTurn(supabase, params, outcome);
+}
 
+/**
+ * V3-B5 Phase 2 — « un bouton de sa fiche : le modificateur est connu, il
+ * s'ajoute au clic. » Meme demande, meme pipeline que `playEncashedTurn` —
+ * seule differe la SOURCE du naturel : `resolveIntentRequestFromRoll`
+ * (turnIntent.ts) le tire elle-meme, cote serveur, au lieu de le recevoir
+ * du client. Rien d'autre ne change, d'ou la meme fonction de fin
+ * (`finishEncashedTurn`) que le chemin « annonce a la main »/« volet ».
+ */
+export async function playEncashedTurnFromRoll(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string; callerId: string; locale: Locale }
+): Promise<(TurnOutcome & { chained: PendingRequest | null }) | { error: ResolveIntentErrorReason }> {
+  const outcome = await resolveIntentRequestFromRoll(supabase, params);
+  if ("error" in outcome) return outcome;
+  return finishEncashedTurn(supabase, params, outcome);
+}
+
+async function finishEncashedTurn(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string; callerId: string; locale: Locale },
+  outcome: { record: ResolvedTurnRecord; chained: PendingRequest | null }
+): Promise<TurnOutcome & { chained: PendingRequest | null }> {
   const intent = outcome.record.detail.intent as { text: string; kind: PendingRequestKind };
   // Les degats chaines par une attaque qui a touche ne sont pas une action
   // a part : ils ne rouvrent pas le tour, ne depensent rien, ne font pas

@@ -14,7 +14,7 @@ import {
 import { SKILL_LABELS_FR, INTENT_VERBS_FR } from "@/src/i18n/fr";
 import { type IntentAction, type IntentTarget } from "@/src/core/rules/intent";
 import type { ResolvedEffect, FiredEvent } from "@/src/core/rules/triggers";
-import { weaponAttackAbilityMod, type AdvantageState } from "@/src/core/rules/action";
+import { resolveCheckRoll, resolveDamageRoll, weaponAttackAbilityMod, type AdvantageState } from "@/src/core/rules/action";
 import { eventsForCheck, eventsForSave } from "@/src/core/rules/gameEvents";
 import { parseFormula } from "@/src/core/formula/parser";
 import type { TraceStep } from "@/src/core/formula/evaluate";
@@ -43,6 +43,7 @@ import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
+import { serverRng } from "@/src/server/services/rng";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import type { TargetId, IntentTargetDetail, IntentBarData, TurnRecord } from "@/lib/solo/types";
 
@@ -695,6 +696,8 @@ async function clearPendingRequest(supabase: TypedClient, entityId: string, camp
   await applyRuntimeStateChange(supabase, { entityId, campaignId, patch: { pending_request: null }, note: "Demande honorée", sessionId, actor: "system" });
 }
 
+export type RollOrigin = "volet" | "a_la_main" | "fiche";
+
 /**
  * Encaisse un résultat NU (1 à 20, jamais écrêté — un résultat hors bornes
  * est REFUSÉ, avec un message, plutôt que silencieusement ramené à la
@@ -725,11 +728,56 @@ export async function resolveIntentRequest(
   if (!pending) return { error: "no_pending_request" };
   if (params.natural > pending.die_max) return { error: "out_of_range" };
 
-  const total = params.natural + pending.modifier;
-  const originLabel = params.origin === "a_la_main" ? "annoncé" : "volet de dés";
-  const trace: TraceStep[] = [{ text: originLabel, value: params.natural }];
+  return finishResolution(supabase, params, pending, params.natural, params.origin);
+}
+
+/**
+ * V3-B5 Phase 2 — le troisième chemin de réponse : « un bouton de sa fiche,
+ * le modificateur est connu, il s'ajoute au clic ». Le naturel n'arrive pas
+ * du client ici — un clic de fiche ne demande RIEN au joueur — il est tiré
+ * par le SERVEUR, à l'instant, avec les mêmes fonctions que les anciens
+ * boutons d'action (`resolveCheckRoll`/`resolveDamageRoll`, `action.ts`) :
+ * un modificateur nul isole exactement le jet nu, sans dupliquer la
+ * mécanique d'avantage ou de doublement des dés au critique.
+ */
+export async function resolveIntentRequestFromRoll(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string; callerId: string; locale: Locale }
+): Promise<ResolveIntentOutcome> {
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  const pending = state.pending_request;
+  if (!pending) return { error: "no_pending_request" };
+
+  let natural: number;
+  if (pending.kind === "weapon_damage") {
+    const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+    if (!ctx) return { error: "not_found" };
+    const item = ctx.inventoryData?.items.find((i) => i.id === pending.action_id);
+    if (!item) return { error: "item_not_found" };
+    const ref = itemRef(item);
+    const weapon = ref?.kind === "rule" ? ctx.weaponByKey[ref.key] : null;
+    if (!weapon) return { error: "not_a_weapon" };
+    natural = resolveDamageRoll({ formula: weapon.damageDice, critical: pending.critical }, serverRng).total;
+  } else {
+    natural = resolveCheckRoll({ modifier: 0, advantage: pending.advantage }, serverRng).total;
+  }
+
+  return finishResolution(supabase, params, pending, natural, "fiche");
+}
+
+/** Le naturel une fois connu — annoncé, lu sur le volet, ou tiré au clic d'un bouton de fiche — le reste du chemin ne varie plus par origine, seulement dans ce que le journal en dit. */
+async function finishResolution(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string; callerId: string; locale: Locale },
+  pending: PendingRequest,
+  natural: number,
+  origin: RollOrigin
+): Promise<ResolveIntentOutcome> {
+  const total = natural + pending.modifier;
+  const originLabel = origin === "a_la_main" ? "annoncé" : origin === "volet" ? "volet de dés" : "depuis la fiche";
+  const trace: TraceStep[] = [{ text: originLabel, value: natural }];
   const ast = parseFormula(String(Math.max(0, total)));
-  const expression = `${params.natural} (${originLabel}) + ${pending.modifier}`;
+  const expression = `${natural} (${originLabel}) + ${pending.modifier}`;
   const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
 
   async function recordDiceRoll(what: string, dc: number | null, verdict: "success" | "fail" | null, extra: Json) {
@@ -738,24 +786,24 @@ export async function resolveIntentRequest(
       campaignId: params.campaignId,
       expression,
       ast: ast as unknown as Json,
-      context: { modifier: pending!.modifier, origin: params.origin } as unknown as Json,
+      context: { modifier: pending.modifier, origin } as unknown as Json,
       result: total,
-      detail: { who: pending!.actor_name, what, chips: pending!.chips, dc, verdict, trace, origin: params.origin, ...(typeof extra === "object" && extra ? extra : {}) } as unknown as Json,
+      detail: { who: pending.actor_name, what, chips: pending.chips, dc, verdict, trace, origin, ...(typeof extra === "object" && extra ? extra : {}) } as unknown as Json,
       rolledBy: "player",
       visibilityLevel: "public",
     });
   }
 
   if (pending.kind === "weapon_attack") {
-    const isCritical = params.natural === 20;
-    const isCriticalFail = params.natural === 1;
+    const isCritical = natural === 20;
+    const isCriticalFail = natural === 1;
     const hit = pending.dc === null ? null : total >= pending.dc;
     await recordDiceRoll(pending.what, pending.dc, hit === null ? null : hit ? "success" : "fail", { isCritical, isCriticalFail });
 
     const crit = isCritical ? " — critique" : isCriticalFail ? " — échec critique" : "";
     const facts = [
       `${pending.actor_name} attaque ${pending.target_label ?? "sans cible désignée"} avec ${pending.what.replace("Attaque — ", "")}` +
-        ` : ${total} (dé : ${params.natural})` +
+        ` : ${total} (dé : ${natural})` +
         (pending.dc === null ? "" : ` contre CA ${pending.dc} — ${hit ? "touché" : "raté"}`) +
         `${crit}.`,
     ];
@@ -775,7 +823,7 @@ export async function resolveIntentRequest(
       verdict: hit === null ? null : hit ? "hit" : "miss",
       damage: null,
       weapon: pending.what,
-      origin: params.origin,
+      origin,
     };
     const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, kind: "roll", payload });
 
@@ -830,7 +878,7 @@ export async function resolveIntentRequest(
       verdict: null,
       damage: { expression, total, trace },
       weapon: pending.what,
-      origin: params.origin,
+      origin,
     };
     const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, kind: "roll", payload });
     await clearPendingRequest(supabase, params.entityId, params.campaignId, sessionId);
@@ -861,7 +909,7 @@ export async function resolveIntentRequest(
   }
 
   const facts = [
-    `${pending.actor_name} — ${pending.what}${pending.target_label ? ` sur ${pending.target_label}` : ""} : ${total} (dé : ${params.natural})` +
+    `${pending.actor_name} — ${pending.what}${pending.target_label ? ` sur ${pending.target_label}` : ""} : ${total} (dé : ${natural})` +
       (pending.dc === null ? "" : ` contre DD ${pending.dc}`) +
       (verdict === null ? "" : verdict === "success" ? " — réussite" : " — échec") +
       ".",
@@ -878,7 +926,7 @@ export async function resolveIntentRequest(
     intent,
     facts,
     check: { what: pending.what, expression, total, dc: pending.dc, verdict, trace },
-    origin: params.origin,
+    origin,
   };
   const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, kind: "roll", payload });
   await clearPendingRequest(supabase, params.entityId, params.campaignId, sessionId);
