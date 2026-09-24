@@ -16,17 +16,24 @@ import { fenceUntrustedData } from "./promptSafety";
  *
  * **Quel contenu est encadré, et lequel ne l'est pas — sans exception, à
  * dessein.** `fenceUntrustedData` (règle absolue 10) protège de la prose
- * qu'un humain a écrite dans le monde : le nom d'un lieu, d'un PNJ, le
- * texte d'une quête, un `narrate_hint` posé sur un déclencheur homebrew.
- * `facts`/`changes` n'ont besoin d'AUCUN encadrement : ce sont des phrases
+ * qu'un humain — ou un modèle — a écrite : le nom d'un lieu, d'un PNJ, le
+ * texte d'une quête, un `narrate_hint` posé sur un déclencheur homebrew,
+ * et depuis V3-B4 les dernières narrations elles-mêmes (de la prose de
+ * modèle réinjectée, encadrée comme n'importe quelle autre). `facts`/
+ * `changes` n'ont besoin d'AUCUN encadrement : ce sont des phrases
  * COMPOSÉES par le serveur à partir de gabarits fixes et de nombres
  * (`turnLoop.ts`/`describeChange`) — B1 l'a déjà posé en principe ("les
  * faits nomment désormais le dé et chaque modificateur... jamais
  * recomposés"). `playerAction` est le texte du joueur lui-même, jamais une
  * donnée du monde. Le test de ce fichier vérifie exactement cette
- * frontière : les quatre premières sont fenced, les trois dernières ne le
- * sont jamais — un cinquième champ de "contenu du monde" ajouté ici sans
+ * frontière : les cinq premières sont fenced, les trois dernières ne le
+ * sont jamais — un sixième champ de "contenu du monde" ajouté ici sans
  * passer par `fenceUntrustedData` casserait ce test.
+ *
+ * **La consigne « ne répète pas » (V3-B4) reste hors de l'encadrement.**
+ * C'est une vraie instruction du système, pas une donnée que le fencing
+ * inviterait le modèle à ignorer — la seule ligne de ce fichier qui suit
+ * une balise `<donnee>` sans être elle-même encadrée.
  */
 
 export interface TurnContextNpc {
@@ -58,6 +65,14 @@ export interface TurnContextInput {
   /** `hints` de `TurnOutcome` — les `narrate_hint` des règles déclenchées. Contenu du monde (posé par un auteur de règle) : encadré. */
   hints: string[];
   playerAction: string;
+  /**
+   * V3-B4 — Les *n* dernières narrations, la plus récente en tête. Contenu
+   * ENCADRÉ (c'est de la prose déjà produite par un modèle, réinjectée
+   * comme donnée de référence) ; la consigne de ne pas la répéter, elle,
+   * reste hors de l'encadrement — c'est une VRAIE instruction du système,
+   * pas une donnée du monde que le modèle aurait le droit d'ignorer.
+   */
+  recentNarrations: string[];
 }
 
 const LIGHTING_LABELS: Record<TurnContextInput["lighting"], string> = {
@@ -84,8 +99,7 @@ function questLine(quest: TurnContextQuest): string {
 
 /**
  * Assemble le contexte d'un tour solo, prêt à poser en message `user`
- * derrière `AiProvider` (câblage qui reste à faire — V3-B2, "il ne manque
- * qu'un appel derrière AiProvider").
+ * derrière `AiProvider` (`src/server/ai/soloNarration.ts`, V3-B2).
  */
 export function buildTurnContext(input: TurnContextInput): string {
   const locationText = `${input.locationName} — jour ${input.time.day}, ${String(input.time.hour).padStart(2, "0")}h${String(input.time.minute).padStart(2, "0")} — ${LIGHTING_LABELS[input.lighting]}`;
@@ -95,6 +109,13 @@ export function buildTurnContext(input: TurnContextInput): string {
     input.npcs.length > 0 ? fenceUntrustedData("pnjs-presents", input.npcs.map(npcLine).join("\n")) : null,
     input.quests.length > 0 ? fenceUntrustedData("quetes-en-cours", input.quests.map(questLine).join("\n")) : null,
     input.hints.length > 0 ? fenceUntrustedData("indices-de-narration", input.hints.join("\n")) : null,
+    // V3-B4 : la prose vient dans l'encadrement (c'est de la donnee de
+    // reference, deja produite par un modele), la consigne reste DEHORS —
+    // une vraie instruction du systeme, jamais quelque chose que le modele
+    // aurait le droit d'ignorer comme "contenu du monde".
+    input.recentNarrations.length > 0
+      ? `${fenceUntrustedData("dernieres-narrations", input.recentNarrations.map((n, i) => `${i + 1}. ${n}`).join("\n"))}\n\nConsigne : ne répète pas ces phrases ni leurs formulations dans ta nouvelle narration.`
+      : null,
     `Faits établis de ce tour :\n${input.facts.length > 0 ? input.facts.map((f) => `- ${f}`).join("\n") : "(aucun)"}`,
     input.changes.length > 0 ? `Changements :\n${input.changes.map((c) => `- ${c}`).join("\n")}` : null,
     `Action du joueur : ${input.playerAction}`,

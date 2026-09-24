@@ -386,13 +386,15 @@ Le jet est parti par le vrai chemin partagé : le volet de dés (V2-M11) s'est o
 
 **Un seul PNJ, un seul axe, une seule perception — trois simplifications assumées.** L'attitude vue est celle du PNJ envers le joueur (`getCurrentAttitude(npc → joueur)`), jamais l'inverse ; l'axe est fixe (`friendship_hostility`) plutôt que configurable ; `known_as` ne regarde que les blocs `relationship` du personnage joué, jamais ceux d'un autre PJ en cas de groupe. Aucune de ces bornes n'a de cas concret qui la dépasse aujourd'hui (solo = un seul joueur, un seul axe suffit à une narration de deux phrases) — à revoir si un cas réel l'exige (règle des trois).
 
-### V3-B4 — Varier la narration · `M`
+### V3-B4 — Varier la narration · `M` — **fait le 24 septembre**
 
 Répond à la répétition verbatim constatée dans le spike (la même réplique trois fois de suite aux tours 14-16).
 
-- [ ] Les *n* dernières narrations entrent dans le contexte avec la consigne explicite de ne pas les répéter.
-- [ ] Détection de similarité côté serveur (mesure simple, pas d'embedding) : au-dessus d'un seuil, un seul nouvel essai, puis on garde le meilleur.
-- [ ] Bouton **« autrement »** : rejoue la narration du *même* fait mécanique. Les dés ne sont pas relancés — c'est ce qui rend le bouton sûr, et c'est possible parce que le résultat est déjà journalisé.
+- [x] Les *n* dernières narrations entrent dans le contexte avec la consigne explicite de ne pas les répéter. `RECENT_NARRATIONS_KEPT = 5` (même n que `RECENT_EVENTS_KEPT`, `scene.ts`) ; `listRecentEventsByKind` (nouveau, `src/server/repos/sessions.ts`) les relit à chaque tour, jamais mises en cache. Encadrées par `fenceUntrustedData` comme toute prose déjà écrite (ici par un modèle, pas par un humain) — la consigne « ne répète pas », elle, reste délibérément HORS de l'encadrement : c'est une vraie instruction du système, pas une donnée que le fencing inviterait le modèle à ignorer.
+- [x] Détection de similarité côté serveur (`src/core/ai/narrationSimilarity.ts`, Jaccard sur les mots — accents et casse ignorés, aucun embedding) : au-dessus de 0,6, un seul nouvel essai (`narrateSoloTurn`), puis le moins similaire des deux est gardé — jamais les deux, un seul événement `narration` s'écrit.
+- [x] Bouton **« autrement »** — la capacité serveur existe (`reconstructTurnForNarration` + `POST /api/solo/tour/:eventId/autrement`), **le bouton lui-même n'a nulle part où vivre** : le fil (V3-D4) n'existe pas encore. Prête pour lui, même motif que `buildSoloTurnContext` (V3-B3) laissée prête pour `narrateSoloTurn`. `reconstructTurnForNarration` ne rejoue rien : elle relit `payload.facts` du `roll`/`player_action` d'origine et `payload.changes_text`/`hints_text` du `rule_application` qui s'y rattache — deux clés ajoutées à ce payload (V3-B2 n'écrivait que la forme brute, `changes: TurnChange[]`, jamais les phrases déjà composées) pour ne pas avoir à refaire la résolution de noms une seconde fois. Aucun dé n'est relancé, aucun fait recalculé — vérifié contre la vraie base et le vrai modèle : deux appels à `narrateSoloTurn` avec les mêmes faits reconstruits produisent deux événements `narration` distincts, tous deux liés au même `from_event`.
+
+**Vérifié le 24 septembre, base et modèle réels** (`src/server/ai/soloNarration.integration.test.ts`, ~20 s, deux vrais appels au modèle) : la reconstruction retrouve exactement `playerAction`/`facts`/`changes` déjà journalisés, et « raconter autrement » produit bien un second événement distinct du premier, tous deux rattachés au même tour.
 
 ### V3-B5 — Le moteur demande un jet, il ne le lance pas · `L`
 

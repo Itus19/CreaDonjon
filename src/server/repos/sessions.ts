@@ -46,6 +46,49 @@ export async function listSessionEvents(supabase: TypedClient, sessionId: string
   return data;
 }
 
+/**
+ * V3-B4 — Les `limit` evenements les plus recents d'UN type, plus recent
+ * en tete. Filtre et borne cote requete plutot que de relire
+ * `listSessionEvents` (tout le fil) et filtrer en memoire — une session
+ * grandit sans borne au fil des seances, et ce n'est PAS le cas d'une
+ * table de plus de cinq lignes (règle des trois) : c'est la meme requete
+ * qu'on rappellera a chaque tour, tant que la partie dure.
+ */
+export async function listRecentEventsByKind(supabase: TypedClient, sessionId: string, kind: string, limit: number): Promise<SessionEventRow[]> {
+  const { data, error } = await supabase
+    .from("session_events")
+    .select("id, session_id, seq, kind, actor, actor_user_id, payload, created_at")
+    .eq("session_id", sessionId)
+    .eq("kind", kind)
+    .order("seq", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function getSessionEventById(supabase: TypedClient, id: string): Promise<SessionEventRow | null> {
+  const { data, error } = await supabase
+    .from("session_events")
+    .select("id, session_id, seq, kind, actor, actor_user_id, payload, created_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** V3-B4 — « raconter autrement » retrouve l'application d'un tour passe par SON `payload.from_event`, exactement comme `rule_application` s'y rattache deja lui-meme. `maybeSingle` : un jet sans aucun effet applique (V3-B2, `if (applied.changes.length > 0)`) n'a legitimement aucune ligne a trouver. */
+export async function findEventByFromEvent(supabase: TypedClient, sessionId: string, kind: string, fromEventId: string): Promise<SessionEventRow | null> {
+  const { data, error } = await supabase
+    .from("session_events")
+    .select("id, session_id, seq, kind, actor, actor_user_id, payload, created_at")
+    .eq("session_id", sessionId)
+    .eq("kind", kind)
+    .eq("payload->>from_event", fromEventId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 /** La session la plus recente sans `ended_at` — `null` si aucune n'est ouverte (SCHEMA.md §12 : `ended_at` marque la fin). */
 export async function getOpenSessionForCampaign(supabase: TypedClient, campaignId: string): Promise<SessionRow | null> {
   const { data, error } = await supabase

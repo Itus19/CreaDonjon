@@ -285,6 +285,15 @@ export async function playTurn(
         effects,
         changes: applied.changes,
         persisted,
+        // V3-B4 — "raconter autrement" (reprendre un tour PASSE pour la
+        // narration) doit retrouver les memes phrases que celles deja
+        // montrees a l'ecran, sans re-resoudre `nameOf` : les noms
+        // viennent de `names`, construit une seule fois par tour et
+        // absent de ce payload — les recalculer depuis `changes`
+        // (TurnChange bruts) demanderait de refaire cette resolution.
+        // Ecrites une fois ici, elles se relisent telles quelles.
+        changes_text: changes,
+        hints_text: hints,
       } as unknown as Json,
     });
     applicationEventId = event.id;

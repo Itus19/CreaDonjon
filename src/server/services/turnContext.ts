@@ -8,8 +8,12 @@ import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
 import { getSceneState } from "@/src/server/repos/sceneStates";
 import { listBlocksForEntity } from "@/src/server/repos/blocks";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
+import { listRecentEventsByKind } from "@/src/server/repos/sessions";
 import { getCurrentAttitude } from "@/src/server/services/psyche";
 import { listActiveQuestsForWorld } from "@/src/server/services/quests";
+
+/** V3-B4 — « les *n* dernières narrations » : même n que `RECENT_EVENTS_KEPT` (`src/core/rules/scene.ts`), pas de raison d'en choisir un autre. */
+export const RECENT_NARRATIONS_KEPT = 5;
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -82,11 +86,21 @@ async function resolveQuests(supabase: TypedClient, worldId: string, viewer: Vie
   }));
 }
 
+/** V3-B4 — Les textes des dernières narrations de CETTE session, plus récente en tête ; une ligne dont `payload.text` ne serait pas une chaîne (jamais écrit par ce code, mais un payload reste une donnée non typée en base) est ignorée plutôt que de casser tout le contexte pour ça. */
+async function resolveRecentNarrations(supabase: TypedClient, sessionId: string): Promise<string[]> {
+  const events = await listRecentEventsByKind(supabase, sessionId, "narration", RECENT_NARRATIONS_KEPT);
+  return events
+    .map((e) => (e.payload as { text?: unknown } | null)?.text)
+    .filter((text): text is string => typeof text === "string");
+}
+
 export interface SoloTurnContext {
   /** Le texte pret a poser en message `user`. */
   text: string;
   /** Les ids des PNJ presents — jamais devine par l'appelant : c'est ce qui borne l'enum `npc_id` d'un outil de narration (meme garde-fou que le spike, generalise). */
   npcIds: string[];
+  /** V3-B4 — Rendues telles quelles (pas seulement injectees dans `text`) pour que l'appelant (`narrateSoloTurn`) puisse mesurer la similarite d'un essai SANS relire la session une seconde fois. */
+  recentNarrations: string[];
 }
 
 export async function buildSoloTurnContext(
@@ -97,6 +111,8 @@ export async function buildSoloTurnContext(
     playerEntityId: string;
     /** Le viewer du JOUEUR qui joue ce tour — jamais un viewer `gm`, c'est lui qui borne l'audience. */
     viewer: Viewer;
+    /** V3-B4 — sert à relire les dernières narrations de CETTE session, pour la consigne de ne pas les répéter. */
+    sessionId: string;
     playerAction: string;
     facts: string[];
     changes: string[];
@@ -105,12 +121,13 @@ export async function buildSoloTurnContext(
 ): Promise<SoloTurnContext> {
   const scene = await getSceneState(supabase, params.campaignId);
 
-  const [locationEntity, npcs, quests] = await Promise.all([
+  const [locationEntity, npcs, quests, recentNarrations] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
       ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: scene.present })
       : Promise.resolve([]),
     resolveQuests(supabase, params.worldId, params.viewer),
+    resolveRecentNarrations(supabase, params.sessionId),
   ]);
 
   const input: TurnContextInput = {
@@ -123,7 +140,8 @@ export async function buildSoloTurnContext(
     changes: params.changes,
     hints: params.hints,
     playerAction: params.playerAction,
+    recentNarrations,
   };
 
-  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id) };
+  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), recentNarrations };
 }

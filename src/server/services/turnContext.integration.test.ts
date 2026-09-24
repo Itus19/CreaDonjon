@@ -24,6 +24,7 @@ describe.skipIf(!hasCreds)("buildSoloTurnContext (integration, base reelle)", ()
   let admin: SupabaseClient;
   let worldId: string;
   let campaignId: string;
+  let sessionId: string;
   let locationEntityId: string;
   let playerEntityId: string;
   let npcEntityId: string;
@@ -65,6 +66,18 @@ describe.skipIf(!hasCreds)("buildSoloTurnContext (integration, base reelle)", ()
       .from("campaign_members")
       .insert([{ campaign_id: campaignId, user_id: playerUserId, role: "player" }]);
     if (membersError) throw new Error(membersError.message);
+
+    const { data: session, error: sessionError } = await admin.from("sessions").insert({ campaign_id: campaignId }).select("id").single();
+    if (sessionError || !session) throw new Error(sessionError?.message ?? "creation session echouee");
+    sessionId = session.id;
+
+    // V3-B4 : deux narrations deja journalisees, pour verifier qu'elles
+    // reviennent dans le contexte du tour suivant, plus recente en tete.
+    const { error: narrationsError } = await admin.from("session_events").insert([
+      { session_id: sessionId, seq: 1, kind: "narration", actor: "ai", payload: { __v: 1, from_event: null, text: "Bram sert une première bière.", npc_reaction: null } },
+      { session_id: sessionId, seq: 2, kind: "narration", actor: "ai", payload: { __v: 1, from_event: null, text: "Bram repose sa pinte.", npc_reaction: null } },
+    ]);
+    if (narrationsError) throw new Error(narrationsError.message);
 
     async function createEntity(slug: string, name: string, entityKind: string): Promise<string> {
       const { data, error } = await admin
@@ -154,6 +167,7 @@ describe.skipIf(!hasCreds)("buildSoloTurnContext (integration, base reelle)", ()
       campaignId,
       playerEntityId,
       viewer,
+      sessionId,
       playerAction: "je regarde autour de moi",
       facts: [],
       changes: [],
@@ -174,6 +188,7 @@ describe.skipIf(!hasCreds)("buildSoloTurnContext (integration, base reelle)", ()
       campaignId,
       playerEntityId,
       viewer,
+      sessionId,
       playerAction: "je regarde autour de moi",
       facts: [],
       changes: [],
@@ -182,5 +197,25 @@ describe.skipIf(!hasCreds)("buildSoloTurnContext (integration, base reelle)", ()
 
     expect(text).toContain("Quête visible du joueur");
     expect(text).not.toContain("Secret du MJ");
+  });
+
+  it("V3-B4 : les dernieres narrations reviennent dans le contexte, plus recente en tete, avec la consigne de ne pas les repeter", async () => {
+    const viewer: Viewer = { kind: "user", userId: playerUserId, worldRole: null, campaignRoles: { [campaignId]: "player" } };
+    const { text, recentNarrations } = await buildSoloTurnContext(playerClient, {
+      worldId,
+      campaignId,
+      playerEntityId,
+      viewer,
+      sessionId,
+      playerAction: "je regarde autour de moi",
+      facts: [],
+      changes: [],
+      hints: [],
+    });
+
+    expect(recentNarrations).toEqual(["Bram repose sa pinte.", "Bram sert une première bière."]);
+    expect(text).toContain('<donnee source="dernieres-narrations">');
+    expect(text).toContain("ne répète pas ces phrases");
+    expect(text.indexOf("Bram repose sa pinte.")).toBeLessThan(text.indexOf("Bram sert une première bière."));
   });
 });
