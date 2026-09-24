@@ -358,14 +358,18 @@ Le jet est parti par le vrai chemin partagé : le volet de dés (V2-M11) s'est o
 | L'horloge | inchangée en combat ; `08h00 → 08h01` au tour suivant, combat clos |
 | Le modèle | jamais appelé — `turnIntent.noAi.test.ts` couvre désormais aussi `turnLoop.ts` |
 
-### V3-B3 — Le contexte envoyé au modèle · `M`
+### V3-B3 — Le contexte envoyé au modèle · `M` — **fait le 24 septembre**
 
-- [ ] Construit **à chaque tour** depuis l'état courant, jamais un instantané pris au début (trou n° 2 d'ADR 0009).
-- [ ] Contenu : état de scène, PNJ présents avec leur bande d'attitude nommée, résultat mécanique du tour, indices de narration (`narrate_hint`), quêtes actives (`listActiveQuestsForWorld` existe déjà et n'attend qu'un appelant).
-- [ ] **La bande nommée, jamais le nombre** — « méfiant », pas « −34 ». Les bandes sont déjà définies (`bands.ts`), il ne manque que ce consommateur (critère laissé ouvert dans V2-H1).
-- [ ] `known_as` appliqué : un PNJ que le personnage ne connaît pas sous son vrai nom apparaît sous celui qu'il croit (autre critère V2-H1 en attente de ce consommateur).
-- [ ] Tout contenu venu de la base est encadré par `fenceUntrustedData` — sans exception, et vérifié par un test qui échoue si un chemin l'oublie.
-- [ ] Le contexte est **borné par l'audience de la sortie** (règle absolue 11) : en solo, la sortie est lue par le joueur, donc aucun bloc `gm` n'entre dans le prompt. Un test le vérifie.
+- [x] Construit **à chaque tour** depuis l'état courant, jamais un instantané pris au début (trou n° 2 d'ADR 0009) — `buildSoloTurnContext` relit `scene_states` à chaque appel, jamais mis en cache d'un tour à l'autre.
+- [x] Contenu : état de scène, PNJ présents avec leur bande d'attitude nommée, résultat mécanique du tour, indices de narration (`narrate_hint`), quêtes actives — `listActiveQuestsForWorld` a enfin un second appelant (après V3-D3).
+- [x] **La bande nommée, jamais le nombre** — « amical », pas « 40 ». `bands.ts` a son consommateur (critère V2-H1 refermé). Un seul axe montré, `friendship_hostility` — « l'attitude générale » : les six autres (méfiance, respect...) sont plus de nuance qu'une narration de deux phrases n'en a besoin. `null` (aucune attitude suivie) s'affiche « attitude inconnue », jamais un « neutre » inventé.
+- [x] `known_as` appliqué (critère V2-H1 refermé) — lu depuis le bloc `relationship` du **personnage joué** (sa perception à lui, jamais celle du PNJ) ciblant ce PNJ. Vérifié en direct : le vrai nom de l'entité n'apparaît nulle part dans le contexte quand un `known_as` est posé.
+- [x] Tout contenu venu de la base est encadré par `fenceUntrustedData` — lieu, PNJ présents, quêtes, indices de narration. **Sans exception, au sens strict du mot** : `facts`/`changes` n'en ont pas besoin — ce sont des phrases composées par le serveur à partir de gabarits fixes et de nombres (`turnLoop.ts`), jamais de la prose collée telle quelle ; c'est la frontière que `turnContext.test.ts` vérifie explicitement, plutôt que d'encadrer aveuglément toute chaîne de caractères.
+- [x] Le contexte est **borné par l'audience de la sortie** (règle absolue 11) : `viewer` vient toujours de l'appelant — la fonction ne peut pas s'élever elle-même à un viewer `gm`, elle transmet celui qu'on lui donne à `listActiveQuestsForWorld`, qui fait le filtrage réel (déjà éprouvé par `visibilityRls.integration.test.ts`). Vérifié contre la vraie base (`turnContext.integration.test.ts`) : une quête `gm` n'apparaît jamais dans un contexte construit avec le viewer du joueur.
+
+**Ce que ce ticket ne fait PAS, et pourquoi ce n'est pas un manque.** `buildSoloTurnContext` (`src/server/services/turnContext.ts`) construit le texte prêt à poser en message `user` — rien ne l'appelle encore. Câbler l'appel réel à `AiProvider` reste le travail que V3-B2 avait explicitement laissé ouvert (« il ne manque qu'un appel derrière AiProvider ») : ce ticket-ci fournissait la pièce qui manquait pour ça, pas le branchement lui-même.
+
+**Un seul PNJ, un seul axe, une seule perception — trois simplifications assumées.** L'attitude vue est celle du PNJ envers le joueur (`getCurrentAttitude(npc → joueur)`), jamais l'inverse ; l'axe est fixe (`friendship_hostility`) plutôt que configurable ; `known_as` ne regarde que les blocs `relationship` du personnage joué, jamais ceux d'un autre PJ en cas de groupe. Aucune de ces bornes n'a de cas concret qui la dépasse aujourd'hui (solo = un seul joueur, un seul axe suffit à une narration de deux phrases) — à revoir si un cas réel l'exige (règle des trois).
 
 ### V3-B4 — Varier la narration · `M`
 
