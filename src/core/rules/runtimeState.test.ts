@@ -44,4 +44,38 @@ describe("mergeRuntimeState", () => {
     expect(mergeRuntimeState(current, { inspiration: 0 }).inspiration).toBe(0);
     expect(mergeRuntimeState(current, {}).inspiration).toBe(2);
   });
+
+  describe("V3-B5 — pending_request, ou pourquoi ce champ seul echappe a `??`", () => {
+    const demande = {
+      kind: "skill_check" as const,
+      action_id: "athletics",
+      target_id: null,
+      target_label: null,
+      advantage: "normal" as const,
+      dc: 12,
+      die_max: 20,
+      modifier: 3,
+      chips: [{ label: "Athlétisme", value: 3 }],
+      what: "Athlétisme",
+      actor_name: "Perrin",
+      player_action_text: "j'escalade le mur",
+      critical: false,
+    };
+
+    it("un patch qui ne mentionne pas pending_request le laisse INCHANGE", () => {
+      const current = { ...defaultRuntimeState(), pending_request: demande };
+      expect(mergeRuntimeState(current, { xp: 10 }).pending_request).toEqual(demande);
+    });
+
+    it("un patch { pending_request: null } EFFACE la demande — la difference avec `??` que ce champ existe pour couvrir", () => {
+      const current = { ...defaultRuntimeState(), pending_request: demande };
+      expect(mergeRuntimeState(current, { pending_request: null }).pending_request).toBeNull();
+    });
+
+    it("un patch { pending_request: <nouvelle demande> } REMPLACE l'ancienne — jamais un empilement", () => {
+      const current = { ...defaultRuntimeState(), pending_request: demande };
+      const autre = { ...demande, action_id: "stealth", what: "Discrétion" };
+      expect(mergeRuntimeState(current, { pending_request: autre }).pending_request).toEqual(autre);
+    });
+  });
 });

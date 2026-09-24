@@ -4,7 +4,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { ABILITIES, SKILLS, type Ability, type Skill } from "@/src/core/rules/sheet";
 import { getWorldBySlug } from "@/src/server/services/worlds";
-import { executeIntent } from "@/src/server/services/turnIntent";
+import { executeIntent, proposeIntentRequest } from "@/src/server/services/turnIntent";
 import { playTurn } from "@/src/server/services/turnLoop";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
@@ -14,7 +14,7 @@ import type { Locale } from "@/src/i18n/request";
 // pour verifier cet ORDRE plutot que l'absence totale de ces imports).
 import { getOpenAiCompatibleProviderFromEnv } from "@/src/server/ai/adapters/openAiCompatible";
 import { narrateSoloTurn } from "@/src/server/ai/soloNarration";
-import type { TurnOutcome } from "@/lib/solo/types";
+import type { PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 
 const advantageField = z.enum(["normal", "advantage", "disadvantage"]);
 const dcField = z.number().int().min(1).max(50).nullable();
@@ -118,6 +118,20 @@ export async function POST(request: NextRequest) {
     corrected: parsed.data.corrected,
     choice: parsed.data.choice,
   };
+
+  // V3-B5 — un choix MECANIQUE en campagne ne se joue plus ici : il se
+  // POSE. Rien n'est lance, rien n'est journalise au-dela de la demande
+  // elle-meme ; c'est `POST .../encaisser` qui recevra le nombre annonce.
+  // L'action libre garde son chemin d'avant ce ticket — rien a differer
+  // quand aucun jet n'est en jeu.
+  if (parsed.data.choice.kind !== "free" && parsed.data.campaignId) {
+    const outcome = await proposeIntentRequest(supabase, { ...common, campaignId: parsed.data.campaignId, choice: parsed.data.choice });
+    if ("error" in outcome) {
+      return NextResponse.json({ error: REASON_MESSAGE[outcome.error] }, { status: REASON_STATUS[outcome.error] });
+    }
+    const response: PendingTurnResponse = { pending: outcome.request };
+    return NextResponse.json(response, { status: 200 });
+  }
 
   // Hors campagne, il n'y a ni scene, ni etat de jeu, ni session ou
   // journaliser : le tour se resout et s'affiche, mais ne change rien. La

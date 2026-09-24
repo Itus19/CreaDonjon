@@ -1,4 +1,7 @@
 import type { IntentCatalog } from "@/src/core/rules/intent";
+import type { PendingRequest } from "@/src/core/schemas/runtimeState";
+
+export type { PendingRequest };
 
 /**
  * V3-B1 — Ce qui traverse la frontiere client/serveur pour un tour solo.
@@ -133,4 +136,23 @@ export interface TurnOutcome {
    * est complet et journalisé que ce champ soit rempli ou non.
    */
   narration: { text: string; npcReaction: { npcId: string; text: string } | null } | null;
+}
+
+/**
+ * V3-B5 — ce que `POST /api/solo/tour` rend pour un choix MECANIQUE en
+ * campagne : rien n'est joue encore, la demande est posee, en attente du
+ * nombre que le joueur annoncera (`POST /api/solo/tour/encaisser`).
+ */
+export interface PendingTurnResponse {
+  pending: PendingRequest;
+}
+
+/**
+ * Un tour dont le jet vient d'etre ENCAISSE — meme forme qu'un tour immediat
+ * (`TurnOutcome`), plus la demande de degats CHAINEE quand l'attaque a
+ * touche : l'ecran doit alors relancer immediatement un encaissement, sans
+ * repasser par une phrase a interpreter.
+ */
+export interface EncashedTurnOutcome extends TurnOutcome {
+  chained: PendingRequest | null;
 }

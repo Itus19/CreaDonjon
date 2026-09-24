@@ -51,6 +51,7 @@ const runtime = {
   conditions: ["concentrating", "prone"],
   death_saves: { success: 0, fail: 0 },
   attuned: [],
+  pending_request: null,
 } satisfies RuntimeState;
 
 describe("buildActorState", () => {

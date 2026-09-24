@@ -17,14 +17,20 @@ const ETAT_AVANT_INSPIRATION = {
 describe("zRuntimeState", () => {
   it("valide un etat complet (specs/wiki-blocs.md §4.2)", () => {
     const state = { ...ETAT_AVANT_INSPIRATION, inspiration: 1 };
-    expect(zRuntimeState.parse(state)).toEqual(state);
+    expect(zRuntimeState.parse(state)).toEqual({ ...state, pending_request: null });
   });
 
   it("relit une ligne ecrite AVANT l'inspiration, et lui donne zero", () => {
     // V2.1-26, le seul risque de ce ticket : `zRuntimeState.parse` tourne a
     // chaque ouverture de fiche (`getOrInitializeRuntimeState`). Un champ
     // requis aurait rendu illisibles toutes les lignes deja en base.
-    expect(zRuntimeState.parse(ETAT_AVANT_INSPIRATION)).toEqual({ ...ETAT_AVANT_INSPIRATION, inspiration: 0 });
+    // `pending_request` (V3-B5) suit le meme principe : une ligne ecrite
+    // avant ce champ reste lisible, la demande absente vaut `null`.
+    expect(zRuntimeState.parse(ETAT_AVANT_INSPIRATION)).toEqual({
+      ...ETAT_AVANT_INSPIRATION,
+      inspiration: 0,
+      pending_request: null,
+    });
   });
 
   it("rejette une inspiration hors bornes", () => {

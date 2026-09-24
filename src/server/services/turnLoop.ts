@@ -9,7 +9,15 @@ import { eventsForAttack } from "@/src/core/rules/gameEvents";
 import type { AttackRollResult } from "@/src/core/rules/action";
 import type { ResolvedEffect } from "@/src/core/rules/triggers";
 import { resolveCharacterActionContext } from "@/src/server/services/characterActions";
-import { executeIntent, type IntentChoice, type IntentErrorReason } from "@/src/server/services/turnIntent";
+import {
+  executeIntent,
+  resolveIntentRequest,
+  type IntentChoice,
+  type IntentErrorReason,
+  type ResolvedTurnRecord,
+  type ResolveIntentErrorReason,
+} from "@/src/server/services/turnIntent";
+import type { PendingRequest, PendingRequestKind } from "@/src/core/schemas/runtimeState";
 import { fireTriggersForCharacter } from "@/src/server/services/triggerRuntime";
 import { getEntityRuntimeState, applyRuntimeStateChange } from "@/src/server/services/runtimeState";
 import { patchCombatParticipant } from "@/src/server/services/combats";
@@ -111,24 +119,94 @@ export async function playTurn(
     choice: IntentChoice;
   }
 ): Promise<TurnOutcome | { error: IntentErrorReason }> {
-  const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
-  if (!ctx) return { error: "not_found" };
-
-  // 1. Le tour s'ouvre : budget neuf, et la depense de CETTE action.
-  const sceneBefore = await getSceneState(supabase, params.campaignId);
-  let scene = sceneBefore ? startTurn(sceneBefore, params.entityId, ctx.sheet.speed.value) : null;
-
-  // 2. La mecanique, telle que B1 la resout — et telle qu'elle se
-  //    journalise, AVANT tout le reste.
+  // La mecanique, telle que B1 la resout — et telle qu'elle se journalise,
+  // AVANT tout le reste.
   const record = await executeIntent(supabase, params);
   if ("error" in record) return record;
 
-  // 3. Ce que ce fait reveille. Les tests et sauvegardes ont deja fait
+  return applyResolvedTurn(
+    supabase,
+    { entityId: params.entityId, campaignId: params.campaignId, callerId: params.callerId, locale: params.locale, text: params.text, choiceKind: params.choice.kind },
+    record
+  );
+}
+
+/**
+ * V3-B5 — Le pendant « demande posee, puis encaissee » de `playTurn`.
+ *
+ * `resolveIntentRequest` (turnIntent.ts) rend le meme `ResolvedTurnRecord`
+ * qu'`executeIntent` — c'est exactement ce qui permet de rejoindre ici le
+ * MEME pipeline (effets, budget, persistance, journal, scene) sans le
+ * reecrire. Ce que `playEncashedTurn` ajoute par-dessus est propre a
+ * l'encaissement : retrouver la phrase d'origine et le genre d'intention
+ * dans le fait resolu (la demande, elle, ne les portait que le temps d'etre
+ * en attente), et rendre `chained` — la demande de degats posee a la suite
+ * d'une attaque qui a touche, que l'ecran doit maintenant montrer.
+ */
+export async function playEncashedTurn(
+  supabase: TypedClient,
+  params: {
+    entityId: string;
+    campaignId: string;
+    callerId: string;
+    locale: Locale;
+    natural: number;
+    origin: "volet" | "a_la_main";
+  }
+): Promise<(TurnOutcome & { chained: PendingRequest | null }) | { error: ResolveIntentErrorReason }> {
+  const outcome = await resolveIntentRequest(supabase, params);
+  if ("error" in outcome) return outcome;
+
+  const intent = outcome.record.detail.intent as { text: string; kind: PendingRequestKind };
+  // Les degats chaines par une attaque qui a touche ne sont pas une action
+  // a part : ils ne rouvrent pas le tour, ne depensent rien, ne font pas
+  // avancer l'horloge une seconde fois pour le meme coup. `choiceKind: null`
+  // porte exactement cette distinction jusque dans `applyResolvedTurn`.
+  const choiceKind: IntentChoice["kind"] | null = intent.kind === "weapon_damage" ? null : intent.kind;
+
+  const turn = await applyResolvedTurn(
+    supabase,
+    { entityId: params.entityId, campaignId: params.campaignId, callerId: params.callerId, locale: params.locale, text: intent.text, choiceKind },
+    outcome.record
+  );
+  return { ...turn, chained: outcome.chained };
+}
+
+async function applyResolvedTurn(
+  supabase: TypedClient,
+  params: {
+    entityId: string;
+    campaignId: string;
+    callerId: string;
+    locale: Locale;
+    text: string;
+    /** `null` pour une resolution chainee (degats d'une attaque deja payee) : aucune depense, aucune ouverture de tour. */
+    choiceKind: IntentChoice["kind"] | null;
+  },
+  record: ResolvedTurnRecord
+): Promise<TurnOutcome> {
+  const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+  if (!ctx) throw new Error(`Entite introuvable pour appliquer un tour deja resolu : ${params.entityId}`);
+
+  // 1. Le tour s'ouvre : budget neuf, et la depense de CETTE action — sauf
+  //    resolution chainee, qui poursuit le tour deja ouvert par l'attaque.
+  const sceneBefore = await getSceneState(supabase, params.campaignId);
+  let scene = sceneBefore ? (params.choiceKind === null ? sceneBefore : startTurn(sceneBefore, params.entityId, ctx.sheet.speed.value)) : null;
+
+  // 2. Ce que ce fait reveille. Les tests et sauvegardes ont deja fait
   //    partir les leurs (`checkRolls`), qui nous les rend desormais ; une
   //    ATTAQUE, elle, n'avait aucun appelant avant ce ticket — il lui
   //    manquait la CA de la cible, que la barre d'intention fournit enfin.
   const effects: ResolvedEffect[] = [];
-  const attack = record.detail.attack as Pick<AttackRollResult, "total" | "isCritical"> | undefined;
+  // Le champ stocke s'appelle `critical`, jamais `isCritical` — c'est le nom
+  // que `payload.attack` porte reellement (turnIntent.ts, executeIntent ET
+  // resolveIntentRequest). Corrige ici (defaut trouve en ecrivant V3-B5) :
+  // l'ancien cast lisait `isCritical`, un champ absent du payload reel — un
+  // critique n'a donc jamais declenche `eventsForAttack` correctement.
+  const attackDetail = record.detail.attack as { total: number; critical: boolean } | undefined;
+  const attack: Pick<AttackRollResult, "total" | "isCritical"> | undefined = attackDetail
+    ? { total: attackDetail.total, isCritical: attackDetail.critical }
+    : undefined;
   const targetId = (record.detail.intent as { target_id?: string | null } | undefined)?.target_id ?? null;
   const ac = record.detail.ac as number | null | undefined;
   const damage = record.detail.damage as { total: number } | null | undefined;
@@ -178,7 +256,7 @@ export async function playTurn(
     }
   }
 
-  // 4. L'application. Le noyau pur decide, ce service persiste.
+  // 3. L'application. Le noyau pur decide, ce service persiste.
   // Le combat de la scene s'il y en a un, sinon celui qui tourne dans la
   // campagne — meme source que les cibles de la barre d'intention (B1),
   // jamais une seconde definition de « qui est en face ».
@@ -210,13 +288,17 @@ export async function playTurn(
   }
 
   // La depense du tour est un effet comme un autre : elle passe par le
-  // meme chemin, donc elle se lit dans le meme journal.
-  const spend = spendFromBudget(actors[params.entityId].budget, BUDGET_COST[params.choice.kind]);
-  actors[params.entityId] = { ...actors[params.entityId], budget: spend.budget };
+  // meme chemin, donc elle se lit dans le meme journal. Une resolution
+  // chainee (`choiceKind: null`) ne depense rien : l'action a deja ete
+  // payee par l'attaque qui l'a declenchee.
+  if (params.choiceKind !== null) {
+    const spend = spendFromBudget(actors[params.entityId].budget, BUDGET_COST[params.choiceKind]);
+    actors[params.entityId] = { ...actors[params.entityId], budget: spend.budget };
+  }
 
   const applied = applyEffects({ scene: scene ?? emptySceneFor(sceneBefore), actors }, effects);
 
-  // 5. La persistance, cible par cible. Un participant de combat passe par
+  // 4. La persistance, cible par cible. Un participant de combat passe par
   //    `patchCombatParticipant` — qui ecrit AUSSI l'etat de jeu quand la
   //    ligne porte une entite, et journalise l'ensemble en un evenement
   //    annulable d'un clic. Ne pas refaire ce travail a cote.
@@ -259,7 +341,7 @@ export async function playTurn(
     persisted.push(names[who] ?? who);
   }
 
-  // 6. Ce que le tour a change, en clair, dans son propre evenement.
+  // 5. Ce que le tour a change, en clair, dans son propre evenement.
   const nameOf = (id: string) => names[id] ?? id;
   const changes = applied.changes.map((c) => describeChange(c, nameOf)).filter((line): line is string => line !== null);
   const ignored = applied.changes
@@ -299,12 +381,16 @@ export async function playTurn(
     applicationEventId = event.id;
   }
 
-  // 7. La scene avance — l'heure, les zones que les effets ont changees,
+  // 6. La scene avance — l'heure, les zones que les effets ont changees,
   //    et les evenements recents. Ecrite en dernier : si tout ce qui
   //    precede a tenu, elle est le resume de ce tour.
   if (scene) {
     scene = { ...applied.state.scene, budgets: { ...applied.state.scene.budgets, [params.entityId]: applied.state.actors[params.entityId].budget } };
-    scene = { ...scene, time: advanceTime(scene.time, minutesForTurn(scene)) };
+    // Meme raison que la depense ci-dessus : une resolution chainee ne fait
+    // pas avancer l'horloge une seconde fois pour le meme coup.
+    if (params.choiceKind !== null) {
+      scene = { ...scene, time: advanceTime(scene.time, minutesForTurn(scene)) };
+    }
     for (const id of [record.eventId, applicationEventId].filter((i): i is string => i !== null)) {
       scene = rememberEvent(scene, id);
     }

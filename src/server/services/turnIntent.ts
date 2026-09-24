@@ -6,22 +6,30 @@ import {
   ABILITIES,
   ABILITY_LABELS,
   SKILLS,
+  SKILL_ABILITIES,
   type Ability,
   type Skill,
+  type Source,
 } from "@/src/core/rules/sheet";
 import { SKILL_LABELS_FR, INTENT_VERBS_FR } from "@/src/i18n/fr";
 import { type IntentAction, type IntentTarget } from "@/src/core/rules/intent";
-import type { ResolvedEffect } from "@/src/core/rules/triggers";
-import type { AdvantageState } from "@/src/core/rules/action";
+import type { ResolvedEffect, FiredEvent } from "@/src/core/rules/triggers";
+import { weaponAttackAbilityMod, type AdvantageState } from "@/src/core/rules/action";
+import { eventsForCheck, eventsForSave } from "@/src/core/rules/gameEvents";
+import { parseFormula } from "@/src/core/formula/parser";
+import type { TraceStep } from "@/src/core/formula/evaluate";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { InventoryItem } from "@/src/core/schemas/blocks/inventory";
+import type { PendingRequest, PendingRequestKind } from "@/src/core/schemas/runtimeState";
 import {
   resolveCharacterActionContext,
   rollWeaponAttack,
   rollWeaponDamage,
   type ActionErrorReason,
+  type CharacterActionContext,
 } from "@/src/server/services/characterActions";
 import {
+  fireForRoll,
   rollAbilityCheck,
   rollSavingThrow,
   rollSkillCheck,
@@ -33,7 +41,9 @@ import { getSceneState } from "@/src/server/repos/sceneStates";
 import { listCombatsForCampaign, listCombatParticipants } from "@/src/server/repos/combats";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
+import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
+import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import type { TargetId, IntentTargetDetail, IntentBarData, TurnRecord } from "@/lib/solo/types";
 
 type TypedClient = SupabaseClient<Database>;
@@ -77,6 +87,15 @@ export interface ResolvedTurnRecord extends TurnRecord {
 
 function itemRef(item: InventoryItem): BlockReference | null {
   return (item as { ref?: BlockReference }).ref ?? null;
+}
+
+/** Meme motif que `itemRef` — recopie plutot qu'importee (`characterActions.ts` ne l'exporte pas), meme profil que `itemRef`/`itemLabel` deja dupliques ailleurs (inventoryItem.ts, cote client). */
+function itemLabel(item: InventoryItem): string {
+  const label = (item as { label?: string }).label;
+  if (label) return label;
+  const ref = itemRef(item);
+  if (ref) return ref.kind === "rule" ? ref.key : ref.id;
+  return "";
 }
 
 /**
@@ -461,4 +480,407 @@ export async function executeIntent(
     payload,
   });
   return { kind: "roll", facts, eventId, detail: payload, effects: outcome.roll.triggers?.effects ?? [] };
+}
+
+/**
+ * V3-B5 — « Le moteur demande un jet, il ne le lance pas. »
+ *
+ * `executeIntent` (ci-dessus) reste tel quel pour l'action LIBRE — rien à
+ * demander, rien à changer, c'est déjà un choix consigné en un temps. Pour
+ * une intention MÉCANIQUE, ce qui suit remplace l'ancien réflexe « on lit,
+ * on lance, on journalise en un seul appel » par deux temps distincts :
+ *
+ *   POSER   — `proposeIntentRequest`. Calcule tout ce qu'un jet demanderait
+ *             (modificateur, DD, cible) et le FIGE dans
+ *             `entity_runtime_state.pending_request`. Aucun dé, aucun
+ *             `session_event` : une demande posée n'est pas encore un fait.
+ *   ENCAISSER — `resolveIntentRequest`. Reçoit un nombre NU (1 à 20) —
+ *             annoncé à la main ou lu sur le volet de dés — et lui ajoute le
+ *             modificateur FIGÉ à la pose, jamais recalculé depuis la fiche
+ *             au moment d'encaisser (elle a pu changer entre les deux).
+ *
+ * **Pourquoi le modificateur se fige à la pose.** Un buff appliqué entre la
+ * demande et la réponse ne doit ni gonfler ni dégonfler un jet déjà promis
+ * au joueur — ce qui a été annoncé (« Attaque, épée longue, +5 ») est ce à
+ * quoi le joueur répond, pas une fiche qui aurait bougé sous ses pieds.
+ *
+ * **Une attaque qui touche CHAÎNE une demande de dégâts** plutôt que de
+ * clore la première : c'est la lecture retenue de « un tour peut porter
+ * plusieurs jets... ils partent ensemble » — deux annonces consécutives du
+ * même tour, jamais un formulaire à deux nombres imposé au joueur.
+ *
+ * **Ce que ce ticket NE branche PAS encore, et pourquoi ce n'est pas un
+ * manque.** Les boutons de la fiche jouable et le volet de dés continuent
+ * d'appeler leurs chemins habituels (`rollWeaponAttack`, `rollSkillCheck`...),
+ * inchangés — les rendre conscients d'une demande en cours est un chantier
+ * séparé, sur des composants PARTAGÉS avec des contextes hors solo (écran
+ * Initiative, fiche large, campagne à MJ humain), où une demande n'existe
+ * pas et ne doit rien changer. Ce fichier livre le mécanisme central et le
+ * chemin « annoncé à la main »/« volet », en accord explicite avec l'auteur
+ * (24 septembre) : « le cœur maintenant, la fiche jouable et le volet de
+ * dés en suivi ».
+ */
+
+export type ProposeIntentOutcome = { kind: "pending"; request: PendingRequest } | { error: IntentErrorReason };
+
+interface PendingBasis {
+  kind: PendingRequestKind;
+  action_id: string;
+  dc: number | null;
+  /** Borne haute du nombre nu attendu — voir `zPendingRequest.die_max`. */
+  die_max: number;
+  modifier: number;
+  chips: Source[];
+  what: string;
+}
+
+/**
+ * "1d6" -> 6, "2d6" -> 12 — jamais un modificateur, deja separe dans
+ * `abilityMod`. Les degats d'arme (SRD comme homebrew, `weaponProposal.ts`)
+ * sont toujours une formule NdM simple ; une autre forme est un bogue en
+ * amont, pas un cas a couvrir en silence.
+ */
+function diceFormulaMax(formula: string): number {
+  const match = /^(\d*)d(\d+)$/i.exec(formula.trim());
+  if (!match) throw new Error(`Formule de dégâts d'arme inattendue : ${formula}`);
+  const count = match[1] === "" ? 1 : Number(match[1]);
+  const faces = Number(match[2]);
+  return count * faces;
+}
+
+/** Ce qu'une intention mécanique demanderait — sans rien lancer. Même trio de resolveurs que `executeIntent` (armes : `characterActions.ts` ; tests/sauvegardes : la fiche dérivée directement, comme `checkRolls.ts` le fait déjà), jamais une quatrième lecture de la fiche. */
+function buildPendingBasis(
+  ctx: CharacterActionContext,
+  choice: Exclude<IntentChoice, { kind: "free" }>
+): PendingBasis | { error: IntentErrorReason } {
+  if (choice.kind === "weapon_attack") {
+    const item = ctx.inventoryData?.items.find((i) => i.id === choice.actionId);
+    if (!item) return { error: "item_not_found" };
+    const ref = itemRef(item);
+    const weapon = ref?.kind === "rule" ? ctx.weaponByKey[ref.key] : null;
+    if (!weapon) return { error: "not_a_weapon" };
+    const abilityMod = weaponAttackAbilityMod(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
+    const modifier = abilityMod + ctx.sheet.proficiencyBonus;
+    const what = `Attaque — ${itemLabel(item)}`;
+    return { kind: "weapon_attack", action_id: choice.actionId, dc: null, die_max: 20, modifier, chips: [{ label: what, value: modifier }], what };
+  }
+
+  if (choice.kind === "skill_check") {
+    const result = ctx.sheet.skills[choice.actionId];
+    return {
+      kind: "skill_check",
+      action_id: choice.actionId,
+      dc: choice.dc,
+      die_max: 20,
+      modifier: result.mod,
+      chips: result.sources,
+      what: `${SKILL_LABELS_FR[choice.actionId]} — test de ${ABILITY_LABELS[SKILL_ABILITIES[choice.actionId]]}`,
+    };
+  }
+
+  if (choice.kind === "ability_check") {
+    const mod = ctx.sheet.abilities[choice.actionId].mod;
+    return {
+      kind: "ability_check",
+      action_id: choice.actionId,
+      dc: choice.dc,
+      die_max: 20,
+      modifier: mod,
+      chips: [{ label: ABILITY_LABELS[choice.actionId], value: mod }],
+      what: `Test de ${ABILITY_LABELS[choice.actionId]}`,
+    };
+  }
+
+  const save = ctx.sheet.savingThrows[choice.actionId];
+  return {
+    kind: "saving_throw",
+    action_id: choice.actionId,
+    dc: choice.dc,
+    die_max: 20,
+    modifier: save.mod,
+    chips: save.sources,
+    what: `Sauvegarde de ${ABILITY_LABELS[choice.actionId]}`,
+  };
+}
+
+/**
+ * Même calcul que `buildPendingBasis` pour l'arme d'une demande de dégâts
+ * CHAÎNÉE après une attaque qui a touché — jamais de DD (les dégâts ne se
+ * comparent à rien), jamais de cible pour le modificateur (la cible est
+ * déjà fixée par l'attaque). `critical` double `die_max`, jamais le
+ * modificateur (même règle que `doubleDiceCounts`, action.ts).
+ */
+function buildDamageBasis(ctx: CharacterActionContext, itemId: string, critical: boolean): PendingBasis | { error: IntentErrorReason } {
+  const item = ctx.inventoryData?.items.find((i) => i.id === itemId);
+  if (!item) return { error: "item_not_found" };
+  const ref = itemRef(item);
+  const weapon = ref?.kind === "rule" ? ctx.weaponByKey[ref.key] : null;
+  if (!weapon) return { error: "not_a_weapon" };
+  const abilityMod = weaponAttackAbilityMod(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
+  const what = `Dégâts — ${itemLabel(item)}`;
+  const dieMax = diceFormulaMax(weapon.damageDice) * (critical ? 2 : 1);
+  return { kind: "weapon_damage", action_id: itemId, dc: null, die_max: dieMax, modifier: abilityMod, chips: [{ label: what, value: abilityMod }], what };
+}
+
+/**
+ * Reservee aux choix MECANIQUES d'une fiche EN campagne. L'action libre et
+ * la fiche vue hors campagne n'ont rien a poser — aucun etat de jeu a
+ * modifier, aucun jet a differer — et continuent de passer par `playTurn`/
+ * `executeIntent`, exactement comme avant ce ticket ; c'est `route.ts` qui
+ * fait ce tri, pas cette fonction.
+ */
+export async function proposeIntentRequest(
+  supabase: TypedClient,
+  params: {
+    entityId: string;
+    campaignId: string;
+    callerId: string;
+    world: { id: string; slug: string };
+    locale: Locale;
+    text: string;
+    corrected: boolean;
+    choice: Exclude<IntentChoice, { kind: "free" }>;
+  }
+): Promise<ProposeIntentOutcome> {
+  const data = await buildIntentBarData(supabase, params);
+  if (!data) return { error: "not_found" };
+  const choice = params.choice;
+  const target = choice.targetId === null ? null : (data.targetDetails.find((t) => t.id === choice.targetId) ?? null);
+
+  const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+  if (!ctx) return { error: "not_found" };
+
+  const basis = buildPendingBasis(ctx, choice);
+  if ("error" in basis) return basis;
+
+  const request: PendingRequest = {
+    ...basis,
+    dc: basis.kind === "weapon_attack" ? (target?.ac ?? null) : basis.dc,
+    target_id: target?.id ?? null,
+    target_label: target?.label ?? null,
+    advantage: choice.advantage,
+    actor_name: data.actor.name,
+    player_action_text: params.text,
+    critical: false,
+  };
+
+  // « Une nouvelle intention remplace la precedente plutot que de
+  // s'empiler — et l'abandon est journalise, jamais silencieux. » Le
+  // remplacement lui-meme est deja garanti par `mergeRuntimeState`
+  // (jamais un empilement — voir runtimeState.test.ts) ; ce qui manquait
+  // ici est la TRACE : sans elle, une demande qui disparait sans reponse
+  // ne laisse rien dans le journal pour expliquer pourquoi.
+  const previous = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
+  const note = previous.pending_request
+    ? `Demande abandonnée : « ${previous.pending_request.what} » — remplacée par : ${request.what}`
+    : `Jet demandé : ${request.what}`;
+
+  await applyRuntimeStateChange(supabase, {
+    entityId: params.entityId,
+    campaignId: params.campaignId,
+    patch: { pending_request: request },
+    note,
+    sessionId,
+    actor: "system",
+  });
+
+  return { kind: "pending", request };
+}
+
+export type ResolveIntentErrorReason = "no_pending_request" | "out_of_range" | IntentErrorReason;
+export type ResolveIntentOutcome = { record: ResolvedTurnRecord; chained: PendingRequest | null } | { error: ResolveIntentErrorReason };
+
+async function clearPendingRequest(supabase: TypedClient, entityId: string, campaignId: string, sessionId: string): Promise<void> {
+  await applyRuntimeStateChange(supabase, { entityId, campaignId, patch: { pending_request: null }, note: "Demande honorée", sessionId, actor: "system" });
+}
+
+/**
+ * Encaisse un résultat NU (1 à 20, jamais écrêté — un résultat hors bornes
+ * est REFUSÉ, avec un message, plutôt que silencieusement ramené à la
+ * borne). `origin` distingue « volet de dés » de « annoncé à la main » :
+ * les deux arrivent nus ici, la différence ne compte que pour le journal
+ * (V3-D6). La borne haute elle-même n'est PAS 20 dans tous les cas — un
+ * dégât d'épée courte plafonne à 6 (12 en critique), jamais 20 : elle vient
+ * de `pending.die_max`, fixé à la pose (`buildPendingBasis`/
+ * `buildDamageBasis`), d'où le controle en deux temps ci-dessous.
+ */
+export async function resolveIntentRequest(
+  supabase: TypedClient,
+  params: {
+    entityId: string;
+    campaignId: string;
+    callerId: string;
+    locale: Locale;
+    natural: number;
+    origin: "volet" | "a_la_main";
+  }
+): Promise<ResolveIntentOutcome> {
+  if (!Number.isInteger(params.natural) || params.natural < 1) {
+    return { error: "out_of_range" };
+  }
+
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  const pending = state.pending_request;
+  if (!pending) return { error: "no_pending_request" };
+  if (params.natural > pending.die_max) return { error: "out_of_range" };
+
+  const total = params.natural + pending.modifier;
+  const originLabel = params.origin === "a_la_main" ? "annoncé" : "volet de dés";
+  const trace: TraceStep[] = [{ text: originLabel, value: params.natural }];
+  const ast = parseFormula(String(Math.max(0, total)));
+  const expression = `${params.natural} (${originLabel}) + ${pending.modifier}`;
+  const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
+
+  async function recordDiceRoll(what: string, dc: number | null, verdict: "success" | "fail" | null, extra: Json) {
+    await insertDiceRoll(supabase, {
+      sessionId,
+      campaignId: params.campaignId,
+      expression,
+      ast: ast as unknown as Json,
+      context: { modifier: pending!.modifier, origin: params.origin } as unknown as Json,
+      result: total,
+      detail: { who: pending!.actor_name, what, chips: pending!.chips, dc, verdict, trace, origin: params.origin, ...(typeof extra === "object" && extra ? extra : {}) } as unknown as Json,
+      rolledBy: "player",
+      visibilityLevel: "public",
+    });
+  }
+
+  if (pending.kind === "weapon_attack") {
+    const isCritical = params.natural === 20;
+    const isCriticalFail = params.natural === 1;
+    const hit = pending.dc === null ? null : total >= pending.dc;
+    await recordDiceRoll(pending.what, pending.dc, hit === null ? null : hit ? "success" : "fail", { isCritical, isCriticalFail });
+
+    const crit = isCritical ? " — critique" : isCriticalFail ? " — échec critique" : "";
+    const facts = [
+      `${pending.actor_name} attaque ${pending.target_label ?? "sans cible désignée"} avec ${pending.what.replace("Attaque — ", "")}` +
+        ` : ${total} (dé : ${params.natural})` +
+        (pending.dc === null ? "" : ` contre CA ${pending.dc} — ${hit ? "touché" : "raté"}`) +
+        `${crit}.`,
+    ];
+    const intent = {
+      text: pending.player_action_text,
+      kind: pending.kind,
+      action_id: pending.action_id,
+      target_id: pending.target_id,
+      target_label: pending.target_label,
+      corrected: false,
+    };
+    const payload = {
+      intent,
+      facts,
+      attack: { expression, total, critical: isCritical, trace },
+      ac: pending.dc,
+      verdict: hit === null ? null : hit ? "hit" : "miss",
+      damage: null,
+      weapon: pending.what,
+      origin: params.origin,
+    };
+    const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, kind: "roll", payload });
+
+    let chained: PendingRequest | null = null;
+    if (hit === true) {
+      const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+      const basis = ctx ? buildDamageBasis(ctx, pending.action_id, isCritical) : { error: "not_found" as const };
+      if (!("error" in basis)) {
+        chained = {
+          ...basis,
+          target_id: pending.target_id,
+          target_label: pending.target_label,
+          advantage: "normal",
+          actor_name: pending.actor_name,
+          player_action_text: pending.player_action_text,
+          critical: isCritical,
+        };
+      }
+    }
+    if (chained) {
+      await applyRuntimeStateChange(supabase, {
+        entityId: params.entityId,
+        campaignId: params.campaignId,
+        patch: { pending_request: chained },
+        note: `Jet demandé : ${chained.what}`,
+        sessionId,
+        actor: "system",
+      });
+    } else {
+      await clearPendingRequest(supabase, params.entityId, params.campaignId, sessionId);
+    }
+
+    return { record: { kind: "roll", facts, eventId, detail: payload, effects: [] }, chained };
+  }
+
+  if (pending.kind === "weapon_damage") {
+    await recordDiceRoll(pending.what, null, null, { critical: pending.critical });
+    const facts = [`Dégâts sur ${pending.target_label ?? "la cible"} : ${total}.`];
+    const intent = {
+      text: pending.player_action_text,
+      kind: pending.kind,
+      action_id: pending.action_id,
+      target_id: pending.target_id,
+      target_label: pending.target_label,
+      corrected: false,
+    };
+    const payload = {
+      intent,
+      facts,
+      attack: null,
+      ac: null,
+      verdict: null,
+      damage: { expression, total, trace },
+      weapon: pending.what,
+      origin: params.origin,
+    };
+    const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, kind: "roll", payload });
+    await clearPendingRequest(supabase, params.entityId, params.campaignId, sessionId);
+    return { record: { kind: "roll", facts, eventId, detail: payload, effects: [] }, chained: null };
+  }
+
+  // skill_check / ability_check / saving_throw : meme forme de fait et de
+  // payload que `executeIntent`, meme declencheurs que le chemin fiche
+  // (`fireForRoll`, exportee de checkRolls.ts pour ne pas la reecrire).
+  const verdict: "success" | "fail" | null = pending.dc === null ? null : total >= pending.dc ? "success" : "fail";
+  await recordDiceRoll(pending.what, pending.dc, verdict, {});
+
+  const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+  let firedTriggers: ResolvedEffect[] = [];
+  if (ctx) {
+    const events: ((passed: boolean, total: number, dc: number) => FiredEvent[]) | null =
+      pending.kind === "skill_check"
+        ? (passed, t, dc) => eventsForCheck({ who: ctx.entityId, kind: "skill", key: pending.action_id as Skill, ability: SKILL_ABILITIES[pending.action_id as Skill], passed, total: t, dc })
+        : pending.kind === "ability_check"
+          ? (passed, t, dc) => eventsForCheck({ who: ctx.entityId, kind: "ability", key: pending.action_id as Ability, ability: pending.action_id as Ability, passed, total: t, dc })
+          : pending.kind === "saving_throw"
+            ? (passed, t, dc) => eventsForSave({ who: ctx.entityId, passed, total: t, dc })
+            : null;
+    if (events) {
+      const fired = await fireForRoll(supabase, { ctx, sheet: ctx.sheet, events }, verdict, total, pending.dc);
+      firedTriggers = fired?.effects ?? [];
+    }
+  }
+
+  const facts = [
+    `${pending.actor_name} — ${pending.what}${pending.target_label ? ` sur ${pending.target_label}` : ""} : ${total} (dé : ${params.natural})` +
+      (pending.dc === null ? "" : ` contre DD ${pending.dc}`) +
+      (verdict === null ? "" : verdict === "success" ? " — réussite" : " — échec") +
+      ".",
+  ];
+  const intent = {
+    text: pending.player_action_text,
+    kind: pending.kind,
+    action_id: pending.action_id,
+    target_id: pending.target_id,
+    target_label: pending.target_label,
+    corrected: false,
+  };
+  const payload = {
+    intent,
+    facts,
+    check: { what: pending.what, expression, total, dc: pending.dc, verdict, trace },
+    origin: params.origin,
+  };
+  const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, kind: "roll", payload });
+  await clearPendingRequest(supabase, params.entityId, params.campaignId, sessionId);
+  return { record: { kind: "roll", facts, eventId, detail: payload, effects: firedTriggers }, chained: null };
 }

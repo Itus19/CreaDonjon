@@ -112,7 +112,8 @@ export interface FiredForRoll {
  * resultat est acquis, et le perdre pour une regle maison cassee serait le
  * pire des echanges.
  */
-async function fireForRoll(
+/** Exportee pour V3-B5 (`turnIntent.resolveIntentRequest`) : le chemin "annoncé/volet" fait partir les mêmes déclencheurs que le chemin "fiche", jamais une seconde implémentation. */
+export async function fireForRoll(
   supabase: TypedClient,
   emit: { ctx: CharacterActionContext; sheet: DerivedSheet; events: (p: boolean, t: number, d: number) => FiredEvent[] } | undefined,
   verdict: "success" | "fail" | null,

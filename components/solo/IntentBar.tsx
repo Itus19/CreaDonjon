@@ -5,7 +5,7 @@ import Dropdown from "@/components/shared/Dropdown";
 import EmptyState from "@/components/shell/EmptyState";
 import { interpretIntent, type IntentAction, type MechanicalIntentKind } from "@/src/core/rules/intent";
 import type { AdvantageState } from "@/src/core/rules/action";
-import type { IntentBarData, TurnOutcome } from "@/lib/solo/types";
+import type { EncashedTurnOutcome, IntentBarData, PendingRequest, PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 
 /**
  * V3-B1 — La barre d'intention.
@@ -64,6 +64,12 @@ export default function IntentBar({
   const [turns, setTurns] = useState<TurnOutcome[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // V3-B5 — le jet demande, pose mais pas encore encaisse. Etat purement
+  // local a l'ecran (Phase 1) : un rechargement de page le perd, la demande
+  // survit cote serveur dans `pending_request` mais l'ecran ne va pas encore
+  // la relire au montage — chantier separe, note au backlog.
+  const [pending, setPending] = useState<PendingRequest | null>(null);
+  const [natural, setNatural] = useState("");
 
   const proposal = useMemo(() => interpretIntent(text, data.catalog), [text, data.catalog]);
 
@@ -127,10 +133,61 @@ export default function IntentBar({
         setError(payload?.error ?? "Le tour n'a pas pu être joué.");
         return;
       }
-      const record = (await res.json()) as TurnOutcome;
-      setTurns((previous) => [record, ...previous]);
-      changeText("");
-      setDc("");
+      const body = (await res.json()) as TurnOutcome | PendingTurnResponse;
+      // V3-B5 — un choix mecanique en campagne ne rend plus un tour joue :
+      // il rend la demande posee, en attente du de annonce (`encash`).
+      // L'action libre, elle, garde son aller simple d'avant ce ticket.
+      if ("pending" in body) {
+        setPending(body.pending);
+        setNatural("");
+      } else {
+        setTurns((previous) => [body, ...previous]);
+        setPending(null);
+        changeText("");
+        setDc("");
+      }
+    } catch {
+      setError("Le serveur n'a pas répondu.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * Encaisse la demande posee : un nombre NU, jamais un total — c'est le
+   * serveur qui y ajoute le modificateur fige a la pose
+   * (`resolveIntentRequest`, turnIntent.ts). Une attaque qui touche CHAINE
+   * une demande de degats (`outcome.chained`) : l'ecran repart alors
+   * directement en attente d'un second nombre, meme tour, meme geste.
+   */
+  async function encash() {
+    if (pending === null) return;
+    const value = Number(natural);
+    if (!Number.isInteger(value) || value < 1 || value > pending.die_max) {
+      setError(`Un dé annoncé se lit entre 1 et ${pending.die_max}.`);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/solo/tour/encaisser", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityId, campaignId, worldSlug, natural: value, origin: "a_la_main" }),
+      });
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(payload?.error ?? "Le jet n'a pas pu être encaissé.");
+        return;
+      }
+      const outcome = (await res.json()) as EncashedTurnOutcome;
+      setTurns((previous) => [outcome, ...previous]);
+      setPending(outcome.chained);
+      setNatural("");
+      if (outcome.chained === null) {
+        changeText("");
+        setDc("");
+      }
     } catch {
       setError("Le serveur n'a pas répondu.");
     } finally {
@@ -154,6 +211,52 @@ export default function IntentBar({
             className="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
           />
         </label>
+
+        {pending && (
+          <div className="flex flex-col gap-3 rounded-md border border-accent bg-panel-sunken p-3">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-ink">
+              <span className={CHIP}>Jet demandé</span>
+              <span className="font-medium">{pending.what}</span>
+              {pending.target_label && (
+                <>
+                  <span className="text-ink-muted">·</span>
+                  <span>
+                    sur <span className="font-medium">{pending.target_label}</span>
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+              <span>
+                modificateur {pending.modifier >= 0 ? "+" : "−"}
+                {Math.abs(pending.modifier)}
+              </span>
+              {pending.dc !== null && (
+                <span>
+                  · {pending.kind === "weapon_attack" ? "CA" : "DD"} {pending.dc}
+                </span>
+              )}
+              {pending.advantage !== "normal" && <span>· {ADVANTAGE_LABELS[pending.advantage]}</span>}
+            </div>
+            <label className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-ink-muted">Dé annoncé (1-{pending.die_max})</span>
+              <input
+                value={natural}
+                onChange={(e) => setNatural(e.target.value.replace(/[^0-9]/g, ""))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !busy) void encash();
+                }}
+                inputMode="numeric"
+                maxLength={pending.die_max >= 100 ? 3 : 2}
+                placeholder="—"
+                className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+              />
+              <button type="button" className={BTN_PRIMARY} onClick={() => void encash()} disabled={busy || natural.trim() === ""}>
+                {busy ? "…" : "Annoncer"}
+              </button>
+            </label>
+          </div>
+        )}
 
         {text.trim().length === 0 ? (
           <p className="text-sm text-ink-muted">

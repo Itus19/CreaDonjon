@@ -1,4 +1,4 @@
-import type { RuntimeState } from "../schemas/runtimeState";
+import type { PendingRequest, RuntimeState } from "../schemas/runtimeState";
 
 /**
  * Patch partiel (V1-B3, specs/wiki-blocs.md §4.5) : "une bascule ecrit le
@@ -19,6 +19,16 @@ export interface RuntimeStatePatch {
   conditions?: string[];
   death_saves?: Partial<RuntimeState["death_saves"]>;
   attuned?: string[];
+  /**
+   * V3-B5 — `undefined` : champ non touché par ce patch (comportement de
+   * tous les autres champs ci-dessus, via `??`). `null` : la demande est
+   * explicitement EFFACÉE. Ces deux cas doivent rester distincts — un `??`
+   * comme les autres champs confondrait "n'y touche pas" et "efface-la",
+   * puisque `null ?? current` renverrait `current`, jamais `null`. C'est
+   * pour ça que ce champ seul a besoin d'un test `!== undefined` dans
+   * `mergeRuntimeState`, pas d'une exception dans la forme du patch.
+   */
+  pending_request?: PendingRequest | null;
 }
 
 export function mergeRuntimeState(current: RuntimeState, patch: RuntimeStatePatch): RuntimeState {
@@ -33,5 +43,6 @@ export function mergeRuntimeState(current: RuntimeState, patch: RuntimeStatePatc
     conditions: patch.conditions ?? current.conditions,
     death_saves: { ...current.death_saves, ...patch.death_saves },
     attuned: patch.attuned ?? current.attuned,
+    pending_request: patch.pending_request !== undefined ? patch.pending_request : current.pending_request,
   };
 }
