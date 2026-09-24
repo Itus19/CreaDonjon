@@ -149,7 +149,7 @@ describe.skipIf(!hasCreds)("buildSoloTurnContext (integration, base reelle)", ()
 
   it("le PNJ apparait sous son known_as, avec sa bande d'attitude nommee — jamais le vrai nom ni le nombre", async () => {
     const viewer: Viewer = { kind: "user", userId: playerUserId, worldRole: null, campaignRoles: { [campaignId]: "player" } };
-    const context = await buildSoloTurnContext(playerClient, {
+    const { text, npcIds } = await buildSoloTurnContext(playerClient, {
       worldId,
       campaignId,
       playerEntityId,
@@ -160,15 +160,16 @@ describe.skipIf(!hasCreds)("buildSoloTurnContext (integration, base reelle)", ()
       hints: [],
     });
 
-    expect(context).toContain("un étranger au regard dur");
-    expect(context).not.toContain("Le Vrai Nom Du PNJ");
-    expect(context).toContain("amical");
-    expect(context).not.toContain("40");
+    expect(text).toContain("un étranger au regard dur");
+    expect(text).not.toContain("Le Vrai Nom Du PNJ");
+    expect(text).toContain("amical");
+    expect(text).not.toContain("40");
+    expect(npcIds).toEqual([npcEntityId]);
   });
 
   it("seule la quete visible du joueur entre dans le contexte, jamais le secret du MJ", async () => {
     const viewer: Viewer = { kind: "user", userId: playerUserId, worldRole: null, campaignRoles: { [campaignId]: "player" } };
-    const context = await buildSoloTurnContext(playerClient, {
+    const { text } = await buildSoloTurnContext(playerClient, {
       worldId,
       campaignId,
       playerEntityId,
@@ -179,7 +180,7 @@ describe.skipIf(!hasCreds)("buildSoloTurnContext (integration, base reelle)", ()
       hints: [],
     });
 
-    expect(context).toContain("Quête visible du joueur");
-    expect(context).not.toContain("Secret du MJ");
+    expect(text).toContain("Quête visible du joueur");
+    expect(text).not.toContain("Secret du MJ");
   });
 });

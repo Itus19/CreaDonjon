@@ -82,6 +82,13 @@ async function resolveQuests(supabase: TypedClient, worldId: string, viewer: Vie
   }));
 }
 
+export interface SoloTurnContext {
+  /** Le texte pret a poser en message `user`. */
+  text: string;
+  /** Les ids des PNJ presents — jamais devine par l'appelant : c'est ce qui borne l'enum `npc_id` d'un outil de narration (meme garde-fou que le spike, generalise). */
+  npcIds: string[];
+}
+
 export async function buildSoloTurnContext(
   supabase: TypedClient,
   params: {
@@ -95,7 +102,7 @@ export async function buildSoloTurnContext(
     changes: string[];
     hints: string[];
   }
-): Promise<string> {
+): Promise<SoloTurnContext> {
   const scene = await getSceneState(supabase, params.campaignId);
 
   const [locationEntity, npcs, quests] = await Promise.all([
@@ -118,5 +125,5 @@ export async function buildSoloTurnContext(
     playerAction: params.playerAction,
   };
 
-  return buildTurnContext(input);
+  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id) };
 }

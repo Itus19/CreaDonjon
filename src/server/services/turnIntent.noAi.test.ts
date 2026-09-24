@@ -7,13 +7,17 @@ import { describe, expect, it } from "vitest";
  * modele de narration avant que la resolution mecanique ait produit son
  * resultat.** Verifie par un test, pas par une convention. »
  *
- * La forme la plus forte de cette garantie n'est pas un ordre d'appels
- * qu'on surveille : c'est qu'il n'y ait **aucun** appel de modele sur ce
- * chemin. C'est ce que ce test verrouille, fichier par fichier. Le jour ou
- * V3-B2 branchera la narration, ce test tombera — et c'est exactement ce
- * qu'on veut : il faudra alors venir ici ecrire l'ordre a la main, en
- * connaissance de cause, plutot que de decouvrir six mois plus tard qu'un
- * prompt est parti avant les des.
+ * **Mise a jour au cablage de la narration (V3-B2).** Ce fichier annoncait
+ * lui-meme, depuis V3-B1 : « le jour ou V3-B2 branchera la narration, ce
+ * test tombera — et c'est exactement ce qu'on veut : il faudra alors venir
+ * ici ecrire l'ordre a la main, en connaissance de cause ». C'est fait :
+ * `app/api/solo/tour/route.ts` appelle desormais `narrateSoloTurn` — mais
+ * seulement APRES `playTurn`, jamais avant, et seulement en best-effort
+ * (specs/cible-locale-et-ia.md §4). La garantie la plus forte (« aucun
+ * appel nulle part sur ce chemin ») reste vraie pour les quatre fichiers
+ * qui font REELLEMENT tourner la mecanique — `route.ts` n'en fait pas
+ * partie, il les enveloppe, et c'est desormais un ORDRE qu'on verifie,
+ * pas une absence.
  *
  * Meme motif que `publicShare.blockCoverage.test.ts` : lit les sources, ne
  * touche ni la base ni le reseau, s'execute donc partout — y compris sans
@@ -22,12 +26,11 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 
-/** Tout ce qu'un tour traverse, de la frappe au journal. */
-const TURN_PATH = [
+/** Le noyau du tour : jamais un appel d'IA, sans aucune exception. */
+const STRICT_PATH = [
   "src/core/rules/intent.ts",
   "src/server/services/turnIntent.ts",
   "src/server/services/turnLoop.ts",
-  "app/api/solo/tour/route.ts",
   "components/solo/IntentBar.tsx",
 ];
 
@@ -43,22 +46,38 @@ function sourceOf(relativePath: string): string {
   return readFileSync(new URL(relativePath, `file://${ROOT}`), "utf8");
 }
 
-describe("le chemin d'un tour n'appelle aucun modele", () => {
-  for (const file of TURN_PATH) {
+/** Lignes de code seulement — un marqueur en commentaire explique justement pourquoi il n'y en a pas. */
+function codeLines(source: string): string[] {
+  return source.split("\n").filter((line) => !line.trimStart().startsWith("*") && !line.trimStart().startsWith("//"));
+}
+
+describe("le noyau du tour n'appelle jamais aucun modele", () => {
+  for (const file of STRICT_PATH) {
     it(`${file} n'importe rien d'un fournisseur d'IA`, () => {
-      const source = sourceOf(file);
+      const lines = codeLines(sourceOf(file));
       for (const marker of AI_MARKERS) {
-        // Les mentions en commentaire sont legitimes (elles expliquent
-        // justement pourquoi il n'y en a pas) : seules les lignes de code
-        // comptent.
-        const offending = source
-          .split("\n")
-          .filter((line) => !line.trimStart().startsWith("*") && !line.trimStart().startsWith("//"))
-          .filter((line) => line.includes(marker));
+        const offending = lines.filter((line) => line.includes(marker));
         expect(offending, `${file} mentionne ${marker} hors commentaire`).toEqual([]);
       }
     });
   }
+});
+
+describe("la route du tour appelle l'IA, mais jamais avant playTurn", () => {
+  it("getOpenAiCompatibleProviderFromEnv() et narrateSoloTurn() n'apparaissent qu'APRES l'appel a playTurn(", () => {
+    const lines = codeLines(sourceOf("app/api/solo/tour/route.ts"));
+    const playTurnCallIndex = lines.findIndex((line) => line.includes("playTurn("));
+    expect(playTurnCallIndex, "playTurn( doit etre appele dans ce fichier").toBeGreaterThanOrEqual(0);
+
+    // Les CALLS, jamais les imports : un `import { x } from "..."` ne
+    // contient pas `x(`, seul un site d'appel reel le fait — inutile de
+    // filtrer les imports a part, la forme textuelle les exclut deja.
+    for (const call of ["getOpenAiCompatibleProviderFromEnv(", "narrateSoloTurn("]) {
+      const callIndex = lines.findIndex((line) => line.includes(call));
+      expect(callIndex, `${call} doit apparaitre dans ce fichier`).toBeGreaterThanOrEqual(0);
+      expect(callIndex, `${call} doit venir APRES playTurn(`).toBeGreaterThan(playTurnCallIndex);
+    }
+  });
 });
 
 describe("le journal precede tout le reste", () => {

@@ -6,7 +6,15 @@ import { ABILITIES, SKILLS, type Ability, type Skill } from "@/src/core/rules/sh
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { executeIntent } from "@/src/server/services/turnIntent";
 import { playTurn } from "@/src/server/services/turnLoop";
+import { buildViewerForWorld } from "@/src/server/services/visibility";
+import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import type { Locale } from "@/src/i18n/request";
+// La narration n'est appelee QU'APRES que playTurn a rendu son resultat,
+// jamais avant (garde-fou de turnIntent.noAi.test.ts, desormais reecrit
+// pour verifier cet ORDRE plutot que l'absence totale de ces imports).
+import { getOpenAiCompatibleProviderFromEnv } from "@/src/server/ai/adapters/openAiCompatible";
+import { narrateSoloTurn } from "@/src/server/ai/soloNarration";
+import type { TurnOutcome } from "@/lib/solo/types";
 
 const advantageField = z.enum(["normal", "advantage", "disadvantage"]);
 const dcField = z.number().int().min(1).max(50).nullable();
@@ -120,11 +128,47 @@ export async function POST(request: NextRequest) {
     : await (async () => {
         const record = await executeIntent(supabase, { ...common, campaignId: null });
         if ("error" in record) return record;
-        return { record, changes: [], hints: [], ignored: [], time: null };
+        const outcome: TurnOutcome = { record, changes: [], hints: [], ignored: [], time: null, narration: null };
+        return outcome;
       })();
 
   if ("error" in result) {
     return NextResponse.json({ error: REASON_MESSAGE[result.error] }, { status: REASON_STATUS[result.error] });
   }
+
+  // La narration : TOUJOURS apres, TOUJOURS best-effort. Le tour ci-dessus
+  // est deja complet et journalise — un fournisseur injoignable, une
+  // sortie invalide ou une limite de debit ne doit rien lui retirer
+  // (specs/cible-locale-et-ia.md §4 : "aucune fonction essentielle ne doit
+  // dependre du succes d'un appel").
+  if (parsed.data.campaignId && result.record.eventId) {
+    try {
+      const provider = getOpenAiCompatibleProviderFromEnv();
+      const [viewer, sessionId] = await Promise.all([
+        buildViewerForWorld(supabase, world.id, user.id),
+        getOrOpenSessionForCampaign(supabase, parsed.data.campaignId),
+      ]);
+      const outcome = await narrateSoloTurn(supabase, provider, {
+        worldId: world.id,
+        campaignId: parsed.data.campaignId,
+        playerEntityId: parsed.data.entityId,
+        viewer,
+        userId: user.id,
+        sessionId,
+        fromEventId: result.record.eventId,
+        playerAction: parsed.data.text,
+        facts: result.record.facts,
+        changes: result.changes,
+        hints: result.hints,
+      });
+      if (outcome.ok) {
+        result.narration = { text: outcome.narration!, npcReaction: outcome.npcReaction ?? null };
+      }
+    } catch {
+      // Aucun fournisseur configure, ou l'appel a echoue : le tour reste
+      // valide sans narration, jamais une erreur renvoyee au joueur pour ca.
+    }
+  }
+
   return NextResponse.json(result, { status: 200 });
 }

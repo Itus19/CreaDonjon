@@ -308,6 +308,10 @@ export async function playTurn(
     hints,
     ignored,
     time: scene?.time ?? null,
+    // Cette fonction n'appelle jamais de modele (turnIntent.noAi.test.ts le
+    // verrouille) : la narration, si elle existe, est ajoutee par
+    // l'appelant (app/api/solo/tour/route.ts), apres coup, jamais ici.
+    narration: null,
   };
 }
 
