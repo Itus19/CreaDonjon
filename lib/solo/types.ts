@@ -1,5 +1,6 @@
 import type { IntentCatalog } from "@/src/core/rules/intent";
 import type { PendingRequest } from "@/src/core/schemas/runtimeState";
+import type { TraceStep } from "@/src/core/formula/evaluate";
 
 export type { PendingRequest };
 
@@ -156,3 +157,27 @@ export interface PendingTurnResponse {
 export interface EncashedTurnOutcome extends TurnOutcome {
   chained: PendingRequest | null;
 }
+
+/**
+ * V3-D4 — le fil, tel que `session_events` le rend. Un item par `kind`
+ * RÉELLEMENT écrit par ce module (`turnFil.ts`) — `note`/`system` n'existent
+ * encore nulle part dans le code : `other` est un repli défensif, jamais un
+ * type qu'un appelant doit prévoir en pratique aujourd'hui.
+ */
+export type FilItem =
+  | { id: string; seq: number; createdAt: string; kind: "narration"; text: string; npcReaction: { npcId: string; text: string } | null }
+  | { id: string; seq: number; createdAt: string; kind: "player_action"; text: string; facts: string[] }
+  | {
+      id: string;
+      seq: number;
+      createdAt: string;
+      kind: "roll";
+      facts: string[];
+      total: number | null;
+      verdict: "success" | "fail" | null;
+      trace: TraceStep[];
+      origin: string | null;
+    }
+  | { id: string; seq: number; createdAt: string; kind: "rule_application"; changes: string[]; hints: string[]; ignored: string[] }
+  | { id: string; seq: number; createdAt: string; kind: "world_update"; note: string }
+  | { id: string; seq: number; createdAt: string; kind: "other"; label: string };

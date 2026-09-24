@@ -636,19 +636,24 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 
 **Ce qui a été réutilisé plutôt que reconstruit.** Le premier paragraphe visible de chaque fiche du Wiki vient de `resolveEntityRefExcerpts` (déjà écrit pour les cartes au survol d'un lien, V2.1-18) — un aller-retour groupé, pas un par fiche. Le libellé français de chaque groupe (« Lieux », « Personnages »...) vient de `messages/fr.json` (`shell.kindLabels`), la même table que la barre latérale MJ. Le donneur d'une quête n'est résolu que pour une référence d'**entité** ; une référence de **règle** (rare, "donné par une entrée de règle") n'affiche pas de nom, faute de justifier la machinerie de `resolveRuleRefPreviews` pour ce ticket.
 
-### V3-D4 — La colonne centrale : le fil et la saisie · `L`
+### V3-D4 — La colonne centrale : le fil et la saisie · `L` — **Phase 1 faite le 24 septembre**
 
-- [ ] Le fil **est** `session_events` rendu. Recharger la page le reconstruit à l'identique — c'est ce qui referme la limite connue de V3-B1, où le fil était un état de composant.
-- [ ] **Un rendu par type** : narration en prose ; action du joueur alignée à droite, discrète ; jet en encart compact **dont la trace se déplie au clic** ; application de règle repliable ; changement du monde en mention discrète ; **réponse du MJ** sur un liseré d'accent, qui dit en toutes lettres qu'elle est hors du temps de jeu.
-- [ ] **Un seul champ de saisie pour tout ce que le joueur envoie** — ce qu'il écrit ET ce qu'il lance. Un jet fait depuis la fiche ou depuis l'outil de dés vient s'y inscrire en texte, à côté de ce qu'il tapait. Il n'y a pas de volet séparé à valider.
-- [ ] Le champ **grandit avec son contenu**, d'une ligne à huit ; les boutons sont dessous. La hauteur suit la **valeur**, pas la frappe : un jet inséré doit faire grandir le champ comme le clavier le ferait.
-- [ ] **Les jets attachés sont au pluriel** : un tour en porte souvent deux, l'attaque puis les dégâts, et ils partent ensemble.
-- [ ] Quand un jet est attendu, **c'est le champ qui le dit** : son texte temporaire devient la demande (`Sauvegarde de Dextérité DD 13 — lance depuis ta fiche, ou écris ton résultat`) et sa bordure passe à l'accent.
-- [ ] **Deux boutons.** `Jouer` joue le tour et fait avancer l'horloge. `MJ` pose une question de scène ou de règle et **ne touche pas au temps de jeu** — c'est cette différence qui justifie deux boutons plutôt qu'un.
-- [ ] **Le moteur devine une question**, et le montre : point d'interrogation ou tournure interrogative en tête de phrase (liste **fermée**, comme le lexique de verbes de V3-B1) → `MJ` passe devant, `Jouer` recule, une ligne l'explique. **Jamais de reroutage silencieux.** Ce que la liste rate tombe du bon côté : une action, donc jamais une horloge qui avance par surprise.
-- [ ] Saisie vocale par la reconnaissance du navigateur : gratuit, aucun token, une commodité et rien de plus.
-- [ ] Le fil défile automatiquement **sauf si l'on a remonté** — cas classique et systématiquement raté.
-- [ ] **Une région `aria-live` polie** annonce chaque nouveau tour : c'est le seul écran du produit où le contenu arrive sans action de l'utilisateur (F‑08 de l'audit).
+**Découpé en phases, décision prise avant d'écrire une ligne (24 septembre).** Le ticket mélangeait trois choses de poids très différent : le fil persisté (fermer la limite connue de B1/B2), la refonte du champ de saisie unique (qui aurait changé ce que V3-B5 vient de fixer — la fiche répond directement, sans repasser par un champ), et le bouton « MJ » (un appel IA neuf, hors narration, qui n'existe encore nulle part). L'auteur a choisi de faire **seulement le fil** maintenant ; le champ unique et le bouton MJ restent des chantiers séparés, ouverts plus tard en connaissance de cause plutôt que tranchés en silence dans la foulée.
+
+- [x] Le fil **est** `session_events` rendu. Recharger la page le reconstruit à l'identique — c'est ce qui referme la limite connue de V3-B1, où le fil était un état de composant. `src/server/services/turnFil.ts` (`buildFilForSession`/`mapSessionEventToFilItem`) relit ce que B1, B2, B4 et B5 ont déjà écrit, chacun dans SA forme de payload — verrouillé par `turnFil.test.ts` (10 cas). `GET /api/campaigns/:id/fil` l'expose, `components/solo/Fil.tsx` le rend.
+- [x] **Un rendu par type** : narration en prose ; action du joueur alignée à droite, discrète ; jet en encart compact **dont la trace se déplie au clic** ; application de règle repliable (dont ce qui n'a pas pu s'appliquer, voir bogue ci-dessous) ; changement du monde en mention discrète — **y compris les demandes posées/honorées/abandonnées de V3-B5** (`world_update`, même forme). **Réponse du MJ non tenue** — reportée avec le bouton MJ dont elle dépend (voir plus bas).
+- [ ] **Reporté.** Un seul champ de saisie pour tout ce que le joueur envoie (ce qu'il écrit ET ce qu'il lance) — voir la décision de découpage ci-dessus. `IntentBar.tsx` garde son panneau « Jet demandé » séparé (V3-B5), inchangé.
+- [ ] **Reporté**, dépend du bullet précédent : le champ qui grandit avec son contenu, les jets pluriels qui s'y inscrivent.
+- [ ] **Reporté.** Le bouton `MJ` (question hors du temps de jeu) et la détection de question — nouvel appel IA, jamais commencé, un chantier à part entière.
+- [ ] **Reporté**, dépend du champ unique : la saisie vocale.
+- [x] Le fil défile automatiquement **sauf si l'on a remonté** — `SoloScreen.tsx` possède le conteneur défilant partagé avec `ScenePanel` (même zone, `overflow-y-auto`) et une marge de 48 px avant le bas pour décider si on est « remonté ».
+- [x] **Une région `aria-live` polie annonce chaque nouveau tour** (`aria-live="polite"`, `sr-only`, texte du dernier item) — critère F‑08 de l'audit.
+
+**Bogue trouvé en écrivant ce ticket, corrigé au passage (`turnLoop.ts`).** `ignored` (ce que le moteur n'a PAS pu appliquer) était rendu par l'ancien affichage de `IntentBar.tsx` mais **jamais écrit** dans `rule_application` — contrairement à `changes_text`/`hints_text` (ajoutés en V3-B4 pour exactement cette raison). Une règle non appliquée redevenait donc invisible dès le rechargement, silencieusement — exactement ce que la règle absolue 6 (CLAUDE.md) interdit. Ajouté `ignored_text` au payload, au même endroit et pour la même raison que ses deux voisins.
+
+**Un vrai gain accessoire : la narration se voit enfin.** `TurnOutcome.narration` existe depuis V3-B2/B4 (calculée, journalisée), mais rien dans `IntentBar.tsx` ne l'affichait jamais — un oubli d'écran, pas un défaut de câblage. Le fil, en relisant directement les événements `narration`, la montre pour la première fois.
+
+**Vérifié en direct, le 24 septembre, sur la base réelle** (fiche jetable dans ClaudeLand, tout supprimé après — entité, blocs, appartenance de campagne, jets, journal). Le fil affiche une action de joueur passée, sa narration, une demande posée (« Jet demandé : Sauvegarde de Force »), le jet résolu depuis la fiche (« Verif D4 Fil — Sauvegarde de Force : 24 (dé : 19). » avec l'origine « depuis la fiche ») et son abandon de demande (« Demande honorée ») — sans aucun rechargement entre la pose et la résolution, la colonne du fil ayant sondé le nouvel état toute seule.
 
 ### V3-D5 — La colonne droite : la fiche jouable · `M` — **fait le 24 septembre, deux réserves**
 

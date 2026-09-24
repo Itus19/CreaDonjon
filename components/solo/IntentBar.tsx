@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
-import EmptyState from "@/components/shell/EmptyState";
 import { interpretIntent, type IntentAction, type MechanicalIntentKind } from "@/src/core/rules/intent";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { EncashedTurnOutcome, IntentBarData, PendingRequest, PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
@@ -49,11 +48,14 @@ export default function IntentBar({
   campaignId,
   entityId,
   data,
+  onTurnPlayed,
 }: {
   worldSlug: string;
   campaignId: string | null;
   entityId: string;
   data: IntentBarData;
+  /** V3-D4 — le fil vit dans `SoloScreen.tsx` (`session_events` rendu, sondé) : appelé après un tour joué DEPUIS cette barre pour un rafraîchissement immédiat, sans attendre le sondage. */
+  onTurnPlayed?: () => void;
 }) {
   const [text, setText] = useState("");
   const [overrideActionId, setOverrideActionId] = useState<string | null>(null);
@@ -61,7 +63,6 @@ export default function IntentBar({
   const [correcting, setCorrecting] = useState(false);
   const [advantage, setAdvantage] = useState<AdvantageState>("normal");
   const [dc, setDc] = useState<string>("");
-  const [turns, setTurns] = useState<TurnOutcome[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // V3-B5 — le jet demande, pose mais pas encore encaisse. Etat purement
@@ -141,10 +142,10 @@ export default function IntentBar({
         setPending(body.pending);
         setNatural("");
       } else {
-        setTurns((previous) => [body, ...previous]);
         setPending(null);
         changeText("");
         setDc("");
+        onTurnPlayed?.();
       }
     } catch {
       setError("Le serveur n'a pas répondu.");
@@ -181,13 +182,13 @@ export default function IntentBar({
         return;
       }
       const outcome = (await res.json()) as EncashedTurnOutcome;
-      setTurns((previous) => [outcome, ...previous]);
       setPending(outcome.chained);
       setNatural("");
       if (outcome.chained === null) {
         changeText("");
         setDc("");
       }
+      onTurnPlayed?.();
     } catch {
       setError("Le serveur n'a pas répondu.");
     } finally {
@@ -368,72 +369,6 @@ export default function IntentBar({
               Réessayer
             </button>
           </div>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        {turns.length === 0 ? (
-          <EmptyState
-            title="Aucun tour joué"
-            description="Les faits établis s'écriront ici, au fur et à mesure. Ils sont journalisés avant toute narration — la prose viendra plus tard, les faits sont acquis."
-          />
-        ) : (
-          turns.map((turn, index) => (
-            <article key={turn.record.eventId ?? `${index}`} className="rounded-lg border border-edge bg-panel p-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={CHIP}>{turn.record.kind === "roll" ? "Jet résolu" : "Action libre"}</span>
-                {turn.time && (
-                  <span className="text-xs text-ink-muted">
-                    jour {turn.time.day}, {String(turn.time.hour).padStart(2, "0")}h
-                    {String(turn.time.minute).padStart(2, "0")}
-                  </span>
-                )}
-                {turn.record.eventId === null && <span className="text-xs text-ink-muted">hors campagne — non journalisé</span>}
-              </div>
-              <div className="mt-2 flex flex-col gap-1">
-                {turn.record.facts.map((fact, factIndex) => (
-                  <p key={factIndex} className="text-base text-ink">
-                    {fact}
-                  </p>
-                ))}
-              </div>
-
-              {/* Ce que le tour a CHANGE — les effets appliqués, pas les
-                  faits. Les deux se lisent ensemble ou pas du tout. */}
-              {turn.changes.length > 0 && (
-                <ul className="mt-3 flex flex-col gap-1 border-t border-edge pt-3">
-                  {turn.changes.map((line, changeIndex) => (
-                    <li key={changeIndex} className="text-sm text-ink-soft">
-                      {line}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {turn.hints.length > 0 && (
-                <ul className="mt-2 flex flex-col gap-1">
-                  {turn.hints.map((hint, hintIndex) => (
-                    <li key={hintIndex} className="text-sm italic text-ink-soft">
-                      {hint}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {/* Ce que le moteur n'a PAS pu appliquer se voit, toujours :
-                  une règle qui ne s'applique pas en silence est pire
-                  qu'une règle absente. */}
-              {turn.ignored.length > 0 && (
-                <ul className="mt-2 flex flex-col gap-1">
-                  {turn.ignored.map((reason, ignoredIndex) => (
-                    <li key={ignoredIndex} className="text-xs text-ink-muted">
-                      Non appliqué — {reason}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </article>
-          ))
         )}
       </section>
     </div>

@@ -401,6 +401,10 @@ async function applyResolvedTurn(
         // Ecrites une fois ici, elles se relisent telles quelles.
         changes_text: changes,
         hints_text: hints,
+        // V3-D4 — meme raison, pour le fil : `ignored` etait rendu par
+        // l'ecran mais jamais ecrit ici avant ce ticket, une regle non
+        // appliquee redevenait invisible des le rechargement.
+        ignored_text: ignored,
       } as unknown as Json,
     });
     applicationEventId = event.id;
