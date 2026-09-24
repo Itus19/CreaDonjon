@@ -11,6 +11,7 @@ import { buildWikiColumn, buildQuestColumn } from "@/src/server/services/soloWor
 import EmptyState from "@/components/shell/EmptyState";
 import ColonneMonde from "@/components/solo/ColonneMonde";
 import EnTeteEtat from "@/components/solo/EnTeteEtat";
+import FicheJouableSolo from "@/components/solo/FicheJouableSolo";
 import SoloScreen from "@/components/solo/SoloScreen";
 import SoloShell from "@/components/solo/SoloShell";
 import type { Locale } from "@/src/i18n/request";
@@ -22,10 +23,11 @@ import type { Locale } from "@/src/i18n/request";
  * provisoirement se reinstalle dans la fiche jouable, V3-D5. **V3-D3** pose
  * la colonne gauche (le monde connu) : Wiki, Quetes, Presents, Regles.
  *
- * La colonne droite reste une annonce : la fiche jouable est V3-D5. La
- * colonne centrale porte deja le vrai ecran de jeu (scene + barre
- * d'intention), deplace tel quel depuis V3-B1 — c'est V3-D4 qui le
- * reprendra en fil.
+ * **V3-D5** pose la colonne droite : la fiche jouable au format etroit
+ * (`FicheJouableSolo`, qui se charge elle-meme — voir son propre
+ * commentaire pour pourquoi). La colonne centrale porte deja le vrai
+ * ecran de jeu (scene + barre d'intention), deplace tel quel depuis
+ * V3-B1 — c'est V3-D4 qui le reprendra en fil.
  *
  * Le personnage et la campagne se resolvent exactement comme l'onglet
  * Personnage (`joueur/page.tsx`) : le PJ revendique de la premiere campagne
@@ -101,12 +103,7 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
             candidates={choices.candidates}
           />
         }
-        fiche={
-          <EmptyState
-            title="La fiche jouable"
-            description="La fiche du personnage au format étroit, avec ses cinq onglets et tout ce qui se lance — c'est V3-D5."
-          />
-        }
+        fiche={<FicheJouableSolo worldSlug={worldSlug} entityId={entityId} campaignId={campaign.id} entityName={data.actor.name} />}
       />
     </div>
   );

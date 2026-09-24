@@ -1,0 +1,412 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
+import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
+import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
+import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
+import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
+import type { DerivedSheet } from "@/src/core/rules/sheet";
+import type { RuntimeState } from "@/src/core/schemas/runtimeState";
+import type { AdvantageState } from "@/src/core/rules/action";
+import type { BlockItem } from "@/components/blocks/EntityBlocks";
+import { XP_LEVEL_THRESHOLDS } from "@/src/core/rules/experience";
+import { useCharacterSheetContext } from "@/components/blocks/useCharacterSheetContext";
+import { useReferenceChips, refIdentity } from "@/components/blocks/useReferenceChips";
+import { useDiceRoll } from "@/components/shell/DiceRollPanel";
+import BinderTabs from "@/components/shared/BinderTabs";
+import ActionsTab, { type PreparedSpellView } from "@/components/blocks/ActionsTab";
+import MagicTab, { type KnownSpellView } from "@/components/blocks/MagicTab";
+import TraitsTab from "@/components/blocks/TraitsTab";
+import MasteriesTab from "@/components/blocks/MasteriesTab";
+import { ABILITY_LABELS } from "@/components/blocks/PlayableCharacterSheet";
+import FicheJouableEnTete, { CaracteristiquesEtCompetences } from "./FicheJouableEnTete";
+import FicheJouableSac from "./FicheJouableSac";
+
+/**
+ * V3-D5 — La colonne droite de l'écran solo : la fiche jouable, au format
+ * étroit.
+ *
+ * **Ce fichier se charge lui-même**, au lieu de recevoir ses blocs déjà
+ * résolus du rendu serveur de la page (comme `EntityBlocks.tsx`) : même
+ * motif que `ParticipantCharacterSheet.tsx` (dérouleur "Caractéristiques"
+ * de l'écran Initiative), le seul autre endroit qui ouvre une fiche jouable
+ * avec un `campaignId` RÉEL — les jets et changements de PV faits ici
+ * doivent compter pour de vrai dans la campagne, pas rester des essais non
+ * enregistrés comme depuis la fiche du wiki (`campaignId: null`).
+ *
+ * **Duplication assumée, et où elle s'arrête.** Le chargement des blocs et
+ * `postAction` (attaque, dégâts, incantation, ressources) sont recopiés de
+ * `ParticipantCharacterSheet.tsx`/`PlayableCharacterSheet.tsx` plutôt
+ * qu'extraits en hook partagé : cette colonne est encore le DEUXIÈME
+ * endroit à en avoir besoin, et « la règle des trois » (CLAUDE.md) dit de
+ * généraliser au troisième cas concret, pas au deuxième — et le risque de
+ * toucher `PlayableCharacterSheet.tsx`, la fiche réellement jouée
+ * aujourd'hui, pour un refactor non demandé, l'emporte sur le confort d'un
+ * hook. Ce que le ticket demande explicitement — « mêmes composants,
+ * aucun code dupliqué » — porte sur la PRÉSENTATION (`ActionsTab`,
+ * `MagicTab`, `TraitsTab`, `MasteriesTab`, et `ActionButton` qu'ils
+ * importent) : ceux-là sont réutilisés tels quels, sans une ligne recopiée.
+ *
+ * **Ce qui n'est délibérément PAS repris de la fiche large** : l'édition du
+ * personnage (score de base, choix de compétence, classes), le repos, et
+ * les deltas manuels de PV/XP/épuisement/inspiration. Rien de tout ça
+ * n'est demandé par ce ticket, et cette colonne sert une partie EN COURS —
+ * la fiche complète (`/joueur/wiki/:slug`) reste l'endroit où construire
+ * le personnage.
+ */
+
+interface SheetApiResponse {
+  sheet: DerivedSheet;
+  hitDiceTotals: Record<string, number>;
+  runtimeState: { state: RuntimeState; hpMax: number; hitDiceTotals: Record<string, number> };
+}
+
+function ageFromInfobox(infobox: InfoboxBlockData | undefined): string | null {
+  const entry = infobox?.entries.find((e) => ["âge", "age"].includes(e.label.trim().toLowerCase()));
+  return entry?.value ?? null;
+}
+
+export default function FicheJouableSolo({
+  worldSlug,
+  entityId,
+  campaignId,
+  entityName,
+}: {
+  worldSlug: string;
+  entityId: string;
+  campaignId: string;
+  /** Le nom vient de l'entité, jamais du bloc `character` — qui ne porte pas ce champ. */
+  entityName: string;
+}) {
+  const [blocks, setBlocks] = useState<BlockItem[] | "loading" | "error">("loading");
+  const [remote, setRemote] = useState<SheetApiResponse | null>(null);
+  const [tab, setTab] = useState<"actions" | "inventaire" | "magie" | "traits" | "maitrise">("actions");
+  const [advantage, setAdvantage] = useState<AdvantageState>("normal");
+  const [pendingCrit, setPendingCrit] = useState<Record<string, boolean>>({});
+  const [busy, setBusy] = useState(false);
+
+  const { rollAbility, rollSkill, rollSave } = useDiceRoll();
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/entities/${entityId}/blocks`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: BlockItem[] | null) => {
+        if (!cancelled) setBlocks(data ?? "error");
+      })
+      .catch(() => {
+        if (!cancelled) setBlocks("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [entityId]);
+
+  async function reloadRemote() {
+    const res = await fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId}`);
+    if (res.ok) setRemote(await res.json());
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: SheetApiResponse | null) => {
+        if (!cancelled && body) setRemote(body);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [entityId, campaignId]);
+
+  function patchBlock(id: string, data: unknown) {
+    setBlocks((prev) => (Array.isArray(prev) ? prev.map((b) => (b.id === id ? { ...b, data } : b)) : prev));
+  }
+
+  async function saveBlock(id: string, data: unknown) {
+    if (!Array.isArray(blocks)) return;
+    const block = blocks.find((b) => b.id === id);
+    if (!block) return;
+    const res = await fetch(`/api/blocks/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        version: block.version,
+        display: block.display,
+        data,
+        visibility: { level: block.visibilityLevel, scopeId: block.visibilityScopeId ?? null },
+      }),
+    });
+    if (!res.ok) return;
+    const updated = (await res.json()) as BlockItem;
+    setBlocks((prev) => (Array.isArray(prev) ? prev.map((b) => (b.id === updated.id ? updated : b)) : prev));
+  }
+
+  async function createBlockWithData(blockType: string, label: string, data: unknown): Promise<BlockItem | null> {
+    const res = await fetch(`/api/entities/${entityId}/blocks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entityId, blockType, label, visibility: { level: "public", scopeId: null } }),
+    });
+    if (!res.ok) return null;
+    const block = (await res.json()) as BlockItem;
+    const patchRes = await fetch(`/api/blocks/${block.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ version: block.version, display: block.display, data, visibility: { level: block.visibilityLevel, scopeId: block.visibilityScopeId ?? null } }),
+    });
+    return patchRes.ok ? ((await patchRes.json()) as BlockItem) : block;
+  }
+
+  const characterBlock = Array.isArray(blocks) ? blocks.find((b) => b.blockType === "character") : undefined;
+  const inventoryBlock = Array.isArray(blocks) ? blocks.find((b) => b.blockType === "inventory") : undefined;
+  const spellcastingBlock = Array.isArray(blocks) ? blocks.find((b) => b.blockType === "spellcasting") : undefined;
+  const resourcesBlock = Array.isArray(blocks) ? blocks.find((b) => b.blockType === "resources") : undefined;
+  const infoboxBlock = Array.isArray(blocks) ? blocks.find((b) => b.blockType === "infobox") : undefined;
+
+  const character = characterBlock?.data as CharacterBlockData | undefined;
+  const inventory = inventoryBlock?.data as InventoryBlockData | undefined;
+  const spellcasting = spellcastingBlock?.data as SpellcastingBlockData | undefined;
+  const resources = resourcesBlock?.data as ResourcesBlockData | undefined;
+  const infobox = infoboxBlock?.data as InfoboxBlockData | undefined;
+
+  const {
+    sheet,
+    traits,
+    traitChips,
+    traitSourceLabel,
+    itemChips,
+    equippedWeapons,
+    buildChips,
+    weaponMasteryChips,
+    masteredWeaponKeys,
+    proficiencies,
+    weaponByKey,
+    isMonk,
+    remainingChoices,
+    languageChoices,
+    allLanguages,
+    spellLevels,
+  } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
+
+  const knownSpellRefs = useMemo(() => (spellcasting?.known ?? []).map((k) => k.ref), [spellcasting]);
+  const spellChips = useReferenceChips(worldSlug, knownSpellRefs);
+
+  const sortedKnownSpells: KnownSpellView[] = useMemo(() => {
+    return (spellcasting?.known ?? [])
+      .map((known) => {
+        const chip = spellChips.get(refIdentity(known.ref));
+        const label = chip?.found ? chip.name : known.ref.kind === "rule" ? known.ref.key : known.ref.id;
+        const level = known.ref.kind === "rule" ? (spellLevels[known.ref.key] ?? 0) : 0;
+        return { known, label, level };
+      })
+      .sort((a, b) => a.level - b.level || a.label.localeCompare(b.label));
+  }, [spellcasting, spellChips, spellLevels]);
+
+  const preparedSpells: PreparedSpellView[] = sortedKnownSpells
+    .filter((s) => s.known.ref.kind === "rule" && (spellcasting?.prepared ?? []).includes(s.known.ref.key))
+    .map((s) => ({ ref: s.known.ref, label: s.label, level: s.level }));
+
+  function togglePrepared(key: string) {
+    if (!spellcasting) return;
+    const prepared = spellcasting.prepared.includes(key) ? spellcasting.prepared.filter((k) => k !== key) : [...spellcasting.prepared, key];
+    saveCharDependent("spellcasting", spellcastingBlock, { ...spellcasting, prepared });
+  }
+
+  /** Bootstrap-si-absent (même motif que `ParticipantCharacterSheet.tsx`) : l'onglet Sac/Magie s'affiche toujours, même sans bloc encore créé. */
+  async function saveCharDependent(blockType: "inventory" | "spellcasting", block: BlockItem | undefined, data: unknown) {
+    if (block) {
+      patchBlock(block.id, data);
+      await saveBlock(block.id, data);
+      return;
+    }
+    const label = blockType === "inventory" ? "Inventaire" : "Incantation";
+    const created = await createBlockWithData(blockType, label, data);
+    if (created) setBlocks((prev) => (Array.isArray(prev) ? [...prev, created] : prev));
+  }
+
+  function updateInventory(data: InventoryBlockData) {
+    saveCharDependent("inventory", inventoryBlock, data);
+  }
+
+  async function postAction<T>(path: string, body: unknown): Promise<T | null> {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/entities/${entityId}/actions/${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) return null;
+      if (res.status === 204) return {} as T;
+      return (await res.json()) as T;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function attack(item: InventoryItem) {
+    const result = await postAction<{ attack?: { isCritical: boolean } }>("attack", { campaignId, itemId: item.id, advantage });
+    if (!result?.attack) return;
+    setPendingCrit((prev) => ({ ...prev, [item.id]: result.attack!.isCritical }));
+  }
+
+  async function damage(item: InventoryItem, versatile: boolean) {
+    const critical = pendingCrit[item.id] ?? false;
+    await postAction("damage", { campaignId, itemId: item.id, critical, versatile });
+  }
+
+  function spellCritKey(spellKey: string): string {
+    return `spell:${spellKey}`;
+  }
+
+  async function castSpellAttack(spellKey: string) {
+    const result = await postAction<{ attack?: { isCritical: boolean } }>("roll-spell-attack", { campaignId, spellKey, advantage });
+    if (!result?.attack) return;
+    setPendingCrit((prev) => ({ ...prev, [spellCritKey(spellKey)]: result.attack!.isCritical }));
+  }
+
+  async function cast(spellKey: string, slotLevel: number) {
+    const critical = pendingCrit[spellCritKey(spellKey)] ?? false;
+    const result = await postAction("cast-spell", { campaignId, spellKey, slotLevel, critical });
+    if (!result) return;
+    reloadRemote();
+  }
+
+  async function changeResource(trackerId: string, delta: number) {
+    await postAction("resource", { campaignId, trackerId, delta });
+    reloadRemote();
+  }
+
+  if (blocks === "loading") return <p className="text-sm text-ink-muted">Chargement…</p>;
+  if (blocks === "error" || !character) {
+    return <p className="text-sm text-ink-muted">Aucune fiche de personnage — ouvre l&apos;onglet Personnage pour la créer.</p>;
+  }
+
+  const runtimeState = remote?.runtimeState.state;
+  const hpMax = remote?.runtimeState.hpMax ?? sheet.hitPoints.max;
+  const hpCurrent = runtimeState?.hp.current ?? hpMax;
+  const exhaustion = runtimeState?.exhaustion ?? 0;
+  const inspiration = runtimeState?.inspiration ?? 0;
+  const conditions = runtimeState?.conditions ?? [];
+
+  const totalLevel = Math.max(1, character.classes.reduce((sum, c) => sum + c.level, 0));
+  const levelIndex = Math.min(totalLevel, XP_LEVEL_THRESHOLDS.length) - 1;
+  const xpFloor = XP_LEVEL_THRESHOLDS[levelIndex] ?? 0;
+  const xpCeiling = XP_LEVEL_THRESHOLDS[levelIndex + 1] ?? xpFloor;
+  const xpCurrent = runtimeState?.xp ?? 0;
+
+  const speciesName = character.species ? (buildChips.get(refIdentity(character.species))?.name ?? null) : null;
+  const backgroundName = character.background ? (buildChips.get(refIdentity(character.background))?.name ?? null) : null;
+  const classSummary = character.classes
+    .map((c) => `${buildChips.get(refIdentity(c.class))?.name ?? "?"} ${c.level}`)
+    .join(" / ");
+  const age = ageFromInfobox(infobox);
+  const identityLine = [speciesName, classSummary || null, backgroundName, age ? `${age} ans` : null].filter(Boolean).join(" · ");
+
+  const weaponMasteryChoices = remainingChoices.filter((c) => c.kind === "weapon_mastery");
+
+  function patchCharacter(fields: Partial<CharacterBlockData>) {
+    if (!characterBlock) return;
+    const data = { ...character, ...fields };
+    patchBlock(characterBlock.id, data);
+    saveBlock(characterBlock.id, data);
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <FicheJouableEnTete
+        name={entityName}
+        identityLine={identityLine}
+        conditions={conditions}
+        ac={sheet.ac.value}
+        hpCurrent={hpCurrent}
+        hpMax={hpMax}
+        level={totalLevel}
+        xpCurrent={xpCurrent - xpFloor}
+        xpCeiling={xpCeiling - xpFloor}
+        exhaustion={exhaustion}
+        speed={`${sheet.speed.value} m`}
+        proficiencyBonus={`${sheet.proficiencyBonus >= 0 ? "+" : ""}${sheet.proficiencyBonus}`}
+        inspiration={inspiration}
+      />
+
+      <CaracteristiquesEtCompetences
+        sheet={sheet}
+        onRollAbility={(ability) => rollAbility(entityId, ability, advantage)}
+        onRollSave={(ability) => rollSave(entityId, ability, advantage)}
+        onRollSkill={(skill) => rollSkill(entityId, skill, advantage)}
+      />
+
+      <div className="flex min-h-0 flex-1 flex-col">
+        <BinderTabs
+          aria-label="Sections de la fiche"
+          value={tab}
+          onChange={setTab}
+          items={(["actions", "inventaire", "magie", "traits", "maitrise"] as const)
+            .filter((t) => t !== "magie" || spellcasting)
+            .map((t) => ({
+              value: t,
+              label: { actions: "Actions", inventaire: "Sac", magie: "Magie", traits: "Traits", maitrise: "Maîtrises" }[t],
+            }))}
+        />
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-b-lg border border-t-0 border-edge-strong p-3">
+          {tab === "actions" && (
+            <ActionsTab
+              worldSlug={worldSlug}
+              busy={busy}
+              advantage={advantage}
+              setAdvantage={setAdvantage}
+              equippedWeapons={equippedWeapons}
+              itemChips={itemChips}
+              weaponByKey={weaponByKey}
+              masteredWeaponKeys={masteredWeaponKeys}
+              strMod={sheet.abilities.str.mod}
+              dexMod={sheet.abilities.dex.mod}
+              proficiencyBonus={sheet.proficiencyBonus}
+              isMonk={isMonk}
+              onAttack={attack}
+              onDamage={damage}
+              spellcasting={spellcasting}
+              preparedSpells={preparedSpells}
+              spellSlots={sheet.spellcasting?.slots ?? {}}
+              spellSlotsUsed={runtimeState?.spell_slots_used ?? {}}
+              spellAttackBonus={sheet.spellcasting?.attackBonus ?? 0}
+              spellSaveDc={sheet.spellcasting?.saveDc ?? 0}
+              spellAbilityLabel={sheet.spellcasting ? ABILITY_LABELS[sheet.spellcasting.ability] : ""}
+              onCast={cast}
+              onCastAttack={castSpellAttack}
+              resources={resources}
+              resourcesUsed={runtimeState?.resources ?? {}}
+              onChangeResource={changeResource}
+            />
+          )}
+
+          {tab === "inventaire" && (
+            <FicheJouableSac inventory={inventory} onUpdateInventory={updateInventory} itemChips={itemChips} encumbrance={sheet.encumbrance} />
+          )}
+
+          {tab === "magie" && spellcasting && (
+            <MagicTab worldSlug={worldSlug} sortedKnownSpells={sortedKnownSpells} spellChips={spellChips} spellcasting={spellcasting} onTogglePrepared={togglePrepared} />
+          )}
+
+          {tab === "traits" && <TraitsTab traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />}
+
+          {tab === "maitrise" && (
+            <MasteriesTab
+              proficiencies={proficiencies}
+              masteryChoices={weaponMasteryChoices}
+              masteryChips={weaponMasteryChips}
+              languageChoices={languageChoices}
+              allLanguages={allLanguages}
+              character={character}
+              patchCharacter={patchCharacter}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
