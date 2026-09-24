@@ -31,12 +31,14 @@ import { generateScalingTable, resolveScalingTarget } from "@/src/core/rules/sca
 import { computeProgressionRows } from "@/src/core/rules/progression";
 import { missingRequiredBlocks } from "@/src/core/rules/requiredBlocks";
 import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
+import { buildHomebrewSubclassEntry, subclassSlotWrite, type HomebrewSubclassInput } from "@/src/core/rules/homebrewSubclass";
 import {
   applyOverrides,
   mergeHomebrewEntries,
   MAX_RULESET_CHAIN_DEPTH,
   RulesetChainCycleError,
   RulesetChainDepthError,
+  type OverrideAction,
   type OverrideInput,
   type ResolvableBlock,
   type ResolvableEntry,
@@ -1967,6 +1969,71 @@ export async function createRulesetFromImport(
 
   const result = await importRulesetEntries(supabase, { rulesetId: created.id, entries: input.entries });
   return { ok: true, result };
+}
+
+export type CreateHomebrewSubclassResult =
+  | { ok: true; entryKey: string; rulesetId: string; slotUpdated: boolean }
+  | { ok: false; reason: "unknown_class" | "invalid"; message?: string };
+
+/**
+ * Cree une sous-classe maison (V2-N1) dans la variante `rulesetId` — la
+ * variante ACTIVE du monde, jamais une couche choisie a cote (decision de
+ * l'auteur, 24 septembre : un monde n'a qu'un ruleset actif, et un ruleset
+ * `personal_reference` ne peut deriver que d'une base officielle — une
+ * fiche ecrite ailleurs n'apparaitrait pas dans le monde).
+ *
+ * Deux temps, par les chemins d'ecriture qui existent deja :
+ * 1. la fiche elle-meme, par `importRulesetEntries` (`add_entry` avec
+ *    `parent_class_key`, puis un `add_block` par bloc rempli) — c'est
+ *    `parent_class_key` qui la niche sous sa classe dans la barre laterale
+ *    et la rend choisissable dans l'assistant de creation ;
+ * 2. l'option dans le `subclass_slot` de la classe (la liste des
+ *    sous-classes sur la page de la classe), relue RESOLUE avant d'ecrire —
+ *    voir `subclassSlotWrite`. Une classe sans `subclass_slot` n'en recoit
+ *    pas : `slotUpdated: false`, et l'ecran le dit.
+ *
+ * `rulesetId` de sortie : suit le fork-sur-publication d'un bout a l'autre,
+ * meme piege que `createHomebrewWeapon`.
+ */
+export async function createHomebrewSubclass(
+  supabase: TypedClient,
+  params: { rulesetId: string; subclass: HomebrewSubclassInput }
+): Promise<CreateHomebrewSubclassResult> {
+  const parentClass = await resolveEntryBlocksInRuleset(supabase, params.rulesetId, params.subclass.parentClassKey);
+  if (!parentClass || parentClass.entryType !== "class") return { ok: false, reason: "unknown_class" };
+
+  const entry = buildHomebrewSubclassEntry(params.subclass);
+  const imported = await importRulesetEntries(supabase, { rulesetId: params.rulesetId, entries: [entry] });
+  if (imported.errors.length > 0 || imported.imported.length === 0) {
+    return { ok: false, reason: "invalid", message: imported.errors[0]?.message };
+  }
+  const entryKey = imported.imported[0].entryKey;
+  let rulesetId = imported.rulesetId;
+
+  const slot = (await resolveEntryBlocksInRuleset(supabase, rulesetId, params.subclass.parentClassKey))?.blocksByType.get("subclass_slot") as
+    | SubclassSlotBlockData
+    | undefined;
+  if (!slot) return { ok: true, entryKey, rulesetId, slotUpdated: false };
+
+  const atThisLevel = (await listOverridesForRuleset(supabase, rulesetId, params.subclass.parentClassKey)).find(
+    (row) => row.block_type === "subclass_slot"
+  );
+  const write = subclassSlotWrite(
+    atThisLevel ? { action: atThisLevel.action as OverrideAction, payload: atThisLevel.payload, patch: atThisLevel.patch } : null,
+    slot.options,
+    entryKey
+  );
+  rulesetId = await upsertRulesetOverride(supabase, {
+    rulesetId,
+    entryKey: params.subclass.parentClassKey,
+    blockType: "subclass_slot",
+    action: write.action,
+    payload: write.payload as Json,
+    patch: write.patch as Json,
+    note: null,
+  });
+
+  return { ok: true, entryKey, rulesetId, slotUpdated: true };
 }
 
 export type DisableRulesetEntryResult = "ok" | "not_found" | "official";

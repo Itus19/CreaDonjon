@@ -89,3 +89,29 @@ export const createRulesetFromImportSchema = z.object({
   entries: z.array(zImportEntry).min(1).max(200),
 });
 export type CreateRulesetFromImportInput = z.infer<typeof createRulesetFromImportSchema>;
+
+/**
+ * Creation d'une sous-classe maison (V2-N1, `POST
+ * /api/rulesets/[rulesetId]/subclasses`). Au moins une aptitude nommee : une
+ * sous-classe sans aptitude n'a pas de sens (`subclass_features` est le bloc
+ * requis d'une sous-classe, `requiredBlocks`). Pas de champ « texte long » :
+ * la description reste courte, la prose d'un livre se reference par sa page.
+ */
+export const createHomebrewSubclassSchema = z.object({
+  rulesetId: z.string().uuid(),
+  name: z.string().trim().min(1, "Le nom est requis.").max(120, "120 caractères maximum."),
+  parentClassKey: z.string().trim().min(1, "Choisis la classe parente."),
+  description: z.string().max(2000, "2 000 caractères maximum : pour la prose d'un livre, indique plutôt sa page.").default(""),
+  pageRef: z.string().max(120, "120 caractères maximum.").default(""),
+  features: z
+    .array(
+      z.object({
+        name: z.string().max(120, "120 caractères maximum."),
+        level: z.number().int().min(1, "Niveau entre 1 et 20.").max(20, "Niveau entre 1 et 20."),
+        description: z.string().max(2000, "2 000 caractères maximum."),
+      })
+    )
+    .max(30, "30 aptitudes maximum.")
+    .refine((features) => features.some((f) => f.name.trim().length > 0), "Ajoute au moins une aptitude nommée."),
+});
+export type CreateHomebrewSubclassInput = z.infer<typeof createHomebrewSubclassSchema>;
