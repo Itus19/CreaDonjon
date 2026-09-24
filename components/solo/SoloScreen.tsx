@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import ScenePanel from "@/components/solo/ScenePanel";
 import IntentBar from "@/components/solo/IntentBar";
 import Fil from "@/components/solo/Fil";
-import type { FilItem, IntentBarData, SceneView } from "@/lib/solo/types";
+import type { FilItem, IntentBarData, PendingRequest, SceneView } from "@/lib/solo/types";
 
 /**
  * V3-B2 — Les deux moitiés de l'écran solo : la scène, puis le tour.
@@ -17,14 +17,20 @@ import type { FilItem, IntentBarData, SceneView } from "@/lib/solo/types";
  *
  * **V3-D4** : le fil (`Fil.tsx`) rejoint `ScenePanel` dans la MÊME zone
  * défilante — c'est ce composant-ci qui possède le défilement automatique
- * et l'annonce `aria-live`, puisqu'il possède déjà le conteneur. Sondé
- * toutes les 4 secondes (même raison que `FicheJouableSolo.tsx`, Phase 2
- * de V3-B5 : un jet résolu depuis la fiche, colonne voisine, n'a aucun
- * canal direct vers ce composant-ci) et rafraîchi tout de suite après un
- * tour joué DEPUIS cette colonne (`onTurnPlayed`), pour que la réponse à
- * son propre geste n'attende jamais le sondage.
+ * et l'annonce `aria-live`, puisqu'il possède déjà le conteneur.
+ *
+ * **V3-D4 Phase 2 — `pending` devient un état possédé ICI, pas par
+ * `IntentBar`.** Une demande peut être honorée depuis la fiche (colonne
+ * voisine, V3-B5 Phase 2) sans que `IntentBar` en soit jamais informé
+ * autrement : le sonder au même endroit que le fil — un seul minuteur, un
+ * seul aller-retour réseau par tick — plutôt que de dupliquer un second
+ * sondage dans `IntentBar.tsx` pour la même donnée.
  */
 const POLL_MS = 4000;
+
+interface SheetPendingResponse {
+  runtimeState: { state: { pending_request: PendingRequest | null } };
+}
 
 function summarizeForAnnounce(item: FilItem): string {
   switch (item.kind) {
@@ -63,27 +69,37 @@ export default function SoloScreen({
   const router = useRouter();
   const [sceneView, setSceneView] = useState(scene);
   const [filItems, setFilItems] = useState<FilItem[] | null>(null);
+  const [pending, setPending] = useState<PendingRequest | null>(null);
   const [announce, setAnnounce] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
   const lastSeqRef = useRef<number | null>(null);
 
-  async function reloadFil() {
-    const res = await fetch(`/api/campaigns/${campaignId}/fil`);
-    if (!res.ok) return;
-    const body = (await res.json()) as { items: FilItem[] };
-    const newest = body.items[body.items.length - 1];
-    if (newest && newest.seq !== lastSeqRef.current) {
-      lastSeqRef.current = newest.seq;
-      setAnnounce(summarizeForAnnounce(newest));
+  /** Rafraîchit le fil ET la demande en cours — même tick, même raison : les deux peuvent changer sans passer par cette colonne (un jet résolu depuis la fiche écrit les deux à la fois). */
+  async function reloadCenter() {
+    const [filRes, sheetRes] = await Promise.all([
+      fetch(`/api/campaigns/${campaignId}/fil`),
+      fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId}`),
+    ]);
+    if (filRes.ok) {
+      const body = (await filRes.json()) as { items: FilItem[] };
+      const newest = body.items[body.items.length - 1];
+      if (newest && newest.seq !== lastSeqRef.current) {
+        lastSeqRef.current = newest.seq;
+        setAnnounce(summarizeForAnnounce(newest));
+      }
+      setFilItems(body.items);
     }
-    setFilItems(body.items);
+    if (sheetRes.ok) {
+      const body = (await sheetRes.json()) as SheetPendingResponse;
+      setPending(body.runtimeState.state.pending_request);
+    }
   }
 
   useEffect(() => {
     let cancelled = false;
     async function poll() {
-      if (!cancelled) await reloadFil();
+      if (!cancelled) await reloadCenter();
     }
     poll();
     const interval = setInterval(poll, POLL_MS);
@@ -92,7 +108,7 @@ export default function SoloScreen({
       clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignId]);
+  }, [campaignId, entityId]);
 
   // Défile jusqu'en bas à chaque nouveau contenu, SAUF si le joueur a
   // remonté lire quelque chose plus haut — cas classique et
@@ -133,7 +149,15 @@ export default function SoloScreen({
       {/* `bg-bg` : le fil passe DERRIÈRE la barre en défilant, il ne doit
           pas se lire au travers. */}
       <div className="sticky bottom-0 shrink-0 bg-bg pb-1 pt-2">
-        <IntentBar worldSlug={worldSlug} campaignId={campaignId} entityId={entityId} data={data} onTurnPlayed={reloadFil} />
+        <IntentBar
+          worldSlug={worldSlug}
+          campaignId={campaignId}
+          entityId={entityId}
+          data={data}
+          pending={pending}
+          onPendingChange={setPending}
+          onActed={reloadCenter}
+        />
       </div>
     </div>
   );
