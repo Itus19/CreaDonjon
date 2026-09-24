@@ -450,14 +450,16 @@ Quand le joueur dit « j'entre dans une taverne », qui décide qu'il y a une ta
 
 C'est le prolongement direct de « l'IA narre, le code arbitre » (règle absolue 8), appliqué au contenu du monde et pas seulement aux dés. Et c'est ce qui rend le monde **cohérent dans la durée** : revenir trois séances plus tard à la même taverne y retrouve le même tavernier, parce qu'il a été écrit en base au premier passage, pas ré-imaginé à chaque fois.
 
-### V3-C1 — Le pont générateur ↔ moteur · `M`
+### V3-C1 — Le pont générateur ↔ moteur · `M` — **fait le 24 septembre, sans appelant encore**
 
 Aujourd'hui les générateurs sont un outil MJ : on clique, on lit, on décide. En solo, le moteur doit pouvoir les invoquer lui-même.
 
-- [ ] `src/server/services/sceneGeneration.ts` : appeler un outil (`taverne`, `pnj`, `echoppe`, `noms`, `butin`) depuis le moteur, avec les axes de variante déduits de la scène — la richesse et la zone viennent du **lieu courant**, jamais d'un choix du modèle.
-- [ ] Le RNG est celui du serveur (`src/server/services/rng.ts`), avec sa graine journalisée : un tirage est **rejouable**, comme n'importe quel jet de dés.
-- [ ] Chaque tirage produit un `session_event` (`kind: 'world_update'`) avec la table, le dé et le résultat — la même trace qu'un jet.
-- [ ] **Zéro changement au moteur de générateurs.** Si ce ticket demande d'y toucher, c'est que le pont est mal placé.
+- [x] `src/server/services/sceneGeneration.ts` : `generateForScene` appelle un outil (`taverne`, `pnj`, `echoppe`, `noms`, `butin`) depuis le moteur. **La richesse et la zone viennent du lieu courant** — aucune entité `location` n'ayant de champ typé pour ça, l'auteur a tranché le 24 septembre : elles se lisent dans **l'infobox** du lieu (entrées « Richesse » et « Zone », ou `wealth`/`zone`, sans casse ni accents), puis dans celle de ses parents `part_of`, du plus proche au plus lointain. Le premier lieu qui porte l'entrée décide ; une valeur inconnue fait **tirer** l'axe plutôt que remonter au parent. Un axe que personne ne porte est tiré par le serveur, jamais par le modèle. Un `wealth`/`zone` fourni par l'appelant est ignoré ; les autres axes (type d'échoppe, genre, rareté) peuvent être fixés par l'appelant — du code. La source de chaque axe (`location`, `parent`, `caller`, `random`) est rendue et journalisée. Logique pure dans `src/core/generators/sceneVariant.ts`, testée d'abord.
+- [x] Le RNG est celui du serveur, avec sa graine journalisée : `serverRng` tire une graine, puis **tout** le tirage — axes aléatoires compris — passe par un `SeededRng` de cette graine. Même graine contre les mêmes tables, même résultat : vérifié par test sur huit graines.
+- [x] Chaque tirage produit un `session_event` (`kind: 'world_update'`, `actor: 'system'`, `source: 'generator'`) avec la graine, les axes et leur source, et pour chaque emplacement la **table**, le **dé** et le **résultat** — plus une `note` rédigée, que le journal d'activité sait déjà afficher.
+- [x] **Zéro changement au moteur de générateurs.** Chaque section passe par `drawTableSlotsFromGeneratorBlock` telle quelle, avec des axes déjà résolus — jamais « aléatoire », sinon chaque section de la taverne tirerait sa propre richesse. La clé de table journalisée est reconstruite à côté (`sceneTableKey`), pas remontée du moteur.
+
+**Ce que ce ticket ne fait pas, et le dit.** Il ne décide pas *quand* tirer : aucun appelant dans la boucle de tour. C'est l'affaire de V3-C2 (esquisses) et V3-C3 (écrire le wiki), qui sauront quand une taverne manque. Les emplacements `prose` restent vides : l'habillage par le modèle vient après. Et une limite à garder en tête : les blocs des « Générateurs de MJ » sont en visibilité `gm`, et le pont les lit avec le client de l'appelant — un joueur solo qui n'est pas MJ de son monde tirerait des sections vides. Sans objet tant que l'auteur joue dans ses propres mondes. **Non vérifié contre une vraie base** : le test remplace les accès Supabase par un monde en mémoire, mais fait tourner le vrai moteur de tables.
 
 **Ce que ça donne :** « tu entres à L'Ancre Rouillée. Derrière le comptoir, une elfe taciturne essuie des chopes. » — l'elfe taciturne vient de la table `patrons-tavernes`, tirée sur un d20 réel, pas de l'imagination du modèle.
 
