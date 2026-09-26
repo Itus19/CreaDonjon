@@ -544,7 +544,7 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 
 ## Le dessin
 
-**L'esquisse fait foi**, pas cet art ASCII : `components/solo/esquisse/` et la route `/m/[worldSlug]/joueur/solo/esquisse`. Ce schéma n'en est qu'un rappel. Elle devait partir avec D1 ; **elle reste jusqu'à D6**, parce qu'elle documente aussi les cinq tickets suivants — la jeter maintenant reviendrait à jeter la référence de ce qui n'est pas encore écrit.
+**L'esquisse fait foi**, pas cet art ASCII : `components/solo/esquisse/` et la route `/m/[worldSlug]/joueur/solo/esquisse`. Ce schéma n'en est qu'un rappel. Elle devait partir avec D1 ; elle est restée jusqu'à D6 parce qu'elle documentait aussi les cinq tickets suivants. **D6 fait le 26 septembre : la condition d'origine est levée, mais l'auteur la garde** comme référence visuelle jusqu'à la fin de la V3 (26 septembre) — à supprimer à ce moment-là, pas avant.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -703,15 +703,17 @@ La grille retenue est **plus haute que la version comparée** (80 px contre 56),
 
 **Vérifié le 24 septembre** : `npm run typecheck`, `npm run lint` et `npm run test` passent (1261 tests, aucun changement à `src/core`, rien de nouveau à y tester). Le serveur de dev démarre et sert `/m/faerun-copie-3/joueur/solo` sans erreur (200, aucune exception serveur) ; le compte MJ connecté n'a pas de personnage réclamé dans ce monde et voit donc l'état vide attendu (« Aucun personnage à jouer »). **Non vérifié en direct avec une vraie fiche** : ça demande un compte joueur avec un PJ réclamé (lien d'invitation), pas encore fait.
 
-### V3-D6 — Ce qui vient d'où · `S`
+### V3-D6 — Ce qui vient d'où · `S` — **fait le 26 septembre, une réserve documentée**
 
 *Proposition d'origine, **retenue** après l'esquisse : « les marqueurs sont bien informatifs » (auteur, 22 septembre).*
 
-- [ ] Chaque élément du fil indique discrètement sa source : **préparé** `▪` (écrit avant la partie), **tiré** `⬦` (générateur, avec le dé au survol), **narré** `~` (le modèle).
-- [ ] Un jet dit d'où il vient : **depuis la fiche**, **volet de dés**, **annoncé à la main**. La distinction compte : un dé annoncé n'a pas été lancé par le serveur, et le journal doit le savoir.
-- [ ] **Le placement reste à régler.** Posé en fin de paragraphe, le marqueur se lit comme une coquille (« il repose sa pinte. ~ »). Essayer en tête de bloc, ou en liseré de bordure, avant de figer.
+- [ ] **Reporté, dépendant de V3-C1/V3-C2.** Chaque élément du fil indique discrètement sa source : **préparé** `▪` (écrit avant la partie), **tiré** `⬦` (générateur, avec le dé au survol), **narré** `~` (le modèle). Voir la réserve ci-dessous — même trou, même raison, que le marqueur de découverte omis en V3-D3.
+- [x] **Un jet dit d'où il vient : depuis la fiche, volet de dés, annoncé à la main.** Déjà fait, sans avoir été coché — câblé par V3-D4/V3-B5 (`originLabel`, `Fil.tsx`), avant même que ce ticket soit ouvert.
+- [x] **Le placement est réglé, par le même mécanisme.** L'origine du jet vit en ligne discrète sous l'encart, jamais collée en fin de phrase — la coquille que ce ticket redoutait ne se produit donc pas.
 
-Pourquoi ça vaut la peine : en solo, la première question qui vient est *« est-ce que j'ai inventé ça ou est-ce que c'est canon ? »*. Y répondre d'un coup d'œil est ce qui permet de faire confiance au monde. Et c'est presque gratuit : la source est déjà dans le journal.
+**Une réserve, même méthode qu'en V3-D3 (« Deux trous que le ticket supposait combler, documentés plutôt que devinés »).** Le marqueur préparé/tiré/narré suppose que les trois sources existent réellement dans le journal. Ce n'est pas le cas aujourd'hui : `narration` n'a qu'un seul écrivain possible, `narrateSoloTurn` (`src/server/ai/soloNarration.ts`), toujours le modèle — poser un marqueur reviendrait à afficher `~` sur CHAQUE narration, sans exception possible. Le pont générateur qui produirait du **tiré** existe (V3-C1, `src/server/services/sceneGeneration.ts`, `payload.source === "generator"`, graine et détail du dé déjà journalisés) mais **sans appelant encore** ; rien n'écrit non plus de prose **préparée avant la partie** dans le fil — ça, c'est V3-C2. Poser le marqueur maintenant serait donc soit un badge immuable (jamais faux, jamais informatif), soit une valeur inventée à partir d'une donnée qui ne la porte pas. **Documenté comme dépendant de la finalisation de V3-C1 (lui donner un appelant) et de V3-C2** (auteur, 26 septembre) — à reprendre quand l'une des deux existera pour de vrai dans une partie jouée, sans changer la forme de ce ticket.
+
+Pourquoi ça vaut la peine : en solo, la première question qui vient est *« est-ce que j'ai inventé ça ou est-ce que c'est canon ? »*. Y répondre d'un coup d'œil est ce qui permet de faire confiance au monde. Et c'est presque gratuit : la source est déjà dans le journal — **une fois que plus d'une source existe**.
 
 ---
 
