@@ -75,7 +75,8 @@ export interface TurnContextInput {
   recentNarrations: string[];
 }
 
-const LIGHTING_LABELS: Record<TurnContextInput["lighting"], string> = {
+/** Exportes : V3-D4 (`gmQuestionContext.ts`) en est le second consommateur — meme lieu, memes PNJ, memes quetes, pour une question hors du temps de jeu plutot qu'une narration de tour. */
+export const LIGHTING_LABELS: Record<TurnContextInput["lighting"], string> = {
   bright: "plein jour",
   dim: "pénombre",
   dark: "obscurité",
@@ -87,12 +88,12 @@ const ZONE_LABELS: Record<TurnContextNpc["zone"], string> = {
   far: "au loin",
 };
 
-function npcLine(npc: TurnContextNpc): string {
+export function npcLine(npc: TurnContextNpc): string {
   const attitude = npc.attitudeLabel ?? "attitude inconnue";
   return `- ${npc.name} (id: ${npc.id}) — ${ZONE_LABELS[npc.zone]}, ${attitude}`;
 }
 
-function questLine(quest: TurnContextQuest): string {
+export function questLine(quest: TurnContextQuest): string {
   if (quest.openObjectives.length === 0) return `- ${quest.title}`;
   return `- ${quest.title} : ${quest.openObjectives.join(" ; ")}`;
 }

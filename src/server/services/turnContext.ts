@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Viewer } from "@/src/core/visibility";
 import { buildTurnContext, type TurnContextInput, type TurnContextNpc, type TurnContextQuest } from "@/src/core/ai/turnContext";
+import { buildGmQuestionContext } from "@/src/core/ai/gmQuestionContext";
 import { relationshipAxisLabel } from "@/src/core/psyche/bands";
 import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
 import { getSceneState } from "@/src/server/repos/sceneStates";
@@ -144,4 +145,47 @@ export async function buildSoloTurnContext(
   };
 
   return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), recentNarrations };
+}
+
+/**
+ * V3-D4 — Même résolution que `buildSoloTurnContext` (scène, PNJ présents,
+ * quêtes, dernières narrations), mais pour une question posée HORS DU
+ * TEMPS DE JEU (le bouton `MJ`) : pas de `playerAction`/`facts`/`changes`/
+ * `hints`, rien n'a été résolu — voir `buildGmQuestionContext`
+ * (`src/core/ai/`) pour ce qui distingue les deux compositions.
+ */
+export async function buildSoloGmQuestionContext(
+  supabase: TypedClient,
+  params: {
+    worldId: string;
+    campaignId: string;
+    playerEntityId: string;
+    /** Le viewer du JOUEUR qui pose la question — jamais un viewer `gm`. */
+    viewer: Viewer;
+    sessionId: string;
+    question: string;
+  }
+): Promise<{ text: string }> {
+  const scene = await getSceneState(supabase, params.campaignId);
+
+  const [locationEntity, npcs, quests, recentNarrations] = await Promise.all([
+    scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
+    scene
+      ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: scene.present })
+      : Promise.resolve([]),
+    resolveQuests(supabase, params.worldId, params.viewer),
+    resolveRecentNarrations(supabase, params.sessionId),
+  ]);
+
+  return {
+    text: buildGmQuestionContext({
+      locationName: locationEntity?.name ?? "Hors scène",
+      time: scene?.time ?? { day: 1, hour: 8, minute: 0 },
+      lighting: scene?.lighting ?? "bright",
+      npcs,
+      quests,
+      recentNarrations,
+      question: params.question,
+    }),
+  };
 }

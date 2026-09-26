@@ -44,6 +44,8 @@ function summarizeForAnnounce(item: FilItem): string {
       return item.changes[0] ?? item.hints[0] ?? "";
     case "world_update":
       return item.note;
+    case "note":
+      return item.answer;
     case "other":
       return "";
   }

@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
-import { interpretIntent, type IntentAction, type MechanicalIntentKind } from "@/src/core/rules/intent";
+import { interpretIntent, looksLikeQuestion, type IntentAction, type MechanicalIntentKind } from "@/src/core/rules/intent";
+import { GM_QUESTION_MARKERS_FR } from "@/src/i18n/fr";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { EncashedTurnOutcome, IntentBarData, PendingRequest, PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 
@@ -36,6 +37,17 @@ import type { EncashedTurnOutcome, IntentBarData, PendingRequest, PendingTurnRes
  * un canal de plus pour un gain douteux (un pas de plus là où B5 en
  * demande déjà un de moins). Le champ unique porte donc le chemin « annoncé
  * à la main », le seul qui n'avait pas déjà de résolution directe.
+ *
+ * **V3-D4, bouton `MJ`.** Deux boutons côte à côte : `Jouer` résout le
+ * tour et fait avancer l'horloge (chemin déjà existant) ; `MJ` pose la
+ * même phrase comme une question hors du temps de jeu (`askSoloGm`,
+ * `src/server/ai/soloGmQuestion.ts`) — la scène ne bouge pas, aucun jet
+ * n'est lancé. `looksLikeQuestion` (noyau pur, lexique fermé de
+ * `src/i18n/fr.ts`) devine laquelle des deux l'utilisateur vise et fait
+ * PASSER DEVANT le bouton correspondant (style primaire) — jamais un
+ * reroutage silencieux : les deux boutons restent cliquables quoi que la
+ * détection réponde. `lastAttempt` retient lequel des deux a été tenté en
+ * dernier, pour que « Réessayer » rejoue le bon chemin après un échec.
  */
 
 const KIND_LABELS: Record<MechanicalIntentKind, string> = {
@@ -93,6 +105,8 @@ export default function IntentBar({
   const [dc, setDc] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** V3-D4 — quel bouton retenter avec « Réessayer » : `submit` (Jouer/Annoncer, selon `pending`) ou `mj`. */
+  const [lastAttempt, setLastAttempt] = useState<"submit" | "mj">("submit");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const proposal = useMemo(() => interpretIntent(text, data.catalog), [text, data.catalog]);
@@ -153,6 +167,7 @@ export default function IntentBar({
 
   async function play() {
     if (text.trim().length === 0) return;
+    setLastAttempt("submit");
     setBusy(true);
     setError(null);
     try {
@@ -213,6 +228,7 @@ export default function IntentBar({
       setError(`Un dé annoncé se lit entre 1 et ${pending.die_max}.`);
       return;
     }
+    setLastAttempt("submit");
     setBusy(true);
     setError(null);
     try {
@@ -242,12 +258,53 @@ export default function IntentBar({
     else void play();
   }
 
+  /**
+   * V3-D4 — Le bouton « MJ » : pose une question HORS du temps de jeu.
+   * N'appelle ni `play()` ni `encash()` — aucun tour, aucun jet, `pending`
+   * ne change pas. `app/api/solo/mj/route.ts` ne touche à aucune fonction
+   * de la boucle de tour, verrouillé par `turnIntent.noAi.test.ts`.
+   */
+  async function askMj() {
+    if (text.trim().length === 0 || campaignId === null) return;
+    setLastAttempt("mj");
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/solo/mj", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityId, campaignId, worldSlug, question: text.trim() }),
+      });
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(payload?.error ?? "La question n'a pas abouti.");
+        return;
+      }
+      changeText("");
+      onActed?.();
+    } catch {
+      setError("Le serveur n'a pas répondu.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function retry() {
+    if (lastAttempt === "mj") void askMj();
+    else submit();
+  }
+
   function handleChange(value: string) {
     // En attente d'une demande, le champ n'accepte que le naturel annonce
     // — jamais une phrase a interpreter tant que le tour n'est pas honore.
     if (pending) setText(value.replace(/[^0-9]/g, ""));
     else changeText(value);
   }
+
+  // V3-D4 — « le moteur devine une question, et le montre » : purement
+  // indicatif, les deux boutons restent cliquables quoi qu'il en soit.
+  const isQuestion = !pending && looksLikeQuestion(text, GM_QUESTION_MARKERS_FR);
+  const canAskMj = campaignId !== null;
 
   const label = pending ? "Jet demandé" : "Que fais-tu ?";
   const placeholder = pending
@@ -333,14 +390,24 @@ export default function IntentBar({
               )}
 
               <div className="flex flex-wrap items-center gap-2">
-                <button type="button" className={BTN_PRIMARY} onClick={() => void play()} disabled={busy}>
-                  {busy ? "…" : chosenAction ? "Lancer" : "Envoyer sans jet"}
+                <button type="button" className={isQuestion ? BTN_SECONDARY : BTN_PRIMARY} onClick={() => void play()} disabled={busy}>
+                  {busy && lastAttempt === "submit" ? "…" : "Jouer"}
+                </button>
+                <button
+                  type="button"
+                  className={isQuestion ? BTN_PRIMARY : BTN_SECONDARY}
+                  onClick={() => void askMj()}
+                  disabled={busy || !canAskMj}
+                  title={canAskMj ? undefined : "Sans campagne, il n'y a pas de MJ à qui demander."}
+                >
+                  {busy && lastAttempt === "mj" ? "…" : "MJ"}
                 </button>
                 <button type="button" className={BTN_SECONDARY} onClick={() => setCorrecting((v) => !v)} disabled={busy}>
                   ce n&apos;est pas ça
                 </button>
                 {corrected && <span className="text-xs text-ink-muted">corrigé</span>}
               </div>
+              {isQuestion && <p className="text-xs text-ink-muted">Ça ressemble à une question — MJ ne fait pas avancer le temps.</p>}
 
               {correcting && (
                 <div className="flex flex-col gap-2 border-t border-edge pt-3">
@@ -407,7 +474,7 @@ export default function IntentBar({
         {error !== null && (
           <div className="flex flex-wrap items-center gap-3 rounded-md border border-edge bg-panel-sunken p-3 text-sm text-danger">
             <span>{error}</span>
-            <button type="button" className={BTN_SECONDARY} onClick={() => submit()} disabled={busy}>
+            <button type="button" className={BTN_SECONDARY} onClick={() => retry()} disabled={busy}>
               Réessayer
             </button>
           </div>

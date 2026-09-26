@@ -114,9 +114,21 @@ describe("mapSessionEventToFilItem", () => {
     expect(item).toEqual({ id: "evt-1", seq: 1, createdAt: "2026-09-24T10:00:00Z", kind: "world_update", note: "Jet demandé : Discrétion" });
   });
 
-  it("un genre inattendu (note/system, jamais ecrit aujourd'hui) tombe sur un repli, jamais une exception", () => {
-    const item = mapSessionEventToFilItem(row({ kind: "note", payload: { anything: true } }));
-    expect(item).toEqual({ id: "evt-1", seq: 1, createdAt: "2026-09-24T10:00:00Z", kind: "other", label: "note" });
+  it("note : la reponse du MJ a une question posee hors du temps de jeu (V3-D4, bouton MJ)", () => {
+    const item = mapSessionEventToFilItem(row({ kind: "note", payload: { question: "Combien de PV me reste-t-il ?", answer: "Il t'en reste 7 sur 12." } }));
+    expect(item).toEqual({
+      id: "evt-1",
+      seq: 1,
+      createdAt: "2026-09-24T10:00:00Z",
+      kind: "note",
+      question: "Combien de PV me reste-t-il ?",
+      answer: "Il t'en reste 7 sur 12.",
+    });
+  });
+
+  it("un genre inattendu (system, jamais ecrit aujourd'hui) tombe sur un repli, jamais une exception", () => {
+    const item = mapSessionEventToFilItem(row({ kind: "system", payload: { anything: true } }));
+    expect(item).toEqual({ id: "evt-1", seq: 1, createdAt: "2026-09-24T10:00:00Z", kind: "other", label: "system" });
   });
 
   it("un roll sans check/attack/damage (ne devrait jamais arriver) ne casse pas l'ecran", () => {

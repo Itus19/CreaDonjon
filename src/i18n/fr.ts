@@ -106,6 +106,43 @@ export const INTENT_VERBS_FR: IntentVerb[] = [
   { kind: "skill_check", actionId: "performance", terms: ["chante", "chanter", "danse", "danser"] },
 ];
 
+/**
+ * V3-D4 — Liste FERMEE de tournures interrogatives, meme discipline que
+ * `INTENT_VERBS_FR` : « le moteur devine une question, jamais un
+ * reroutage silencieux » — le bouton `MJ` passe seulement devant, `Jouer`
+ * reste cliquable. Verifiees en DEBUT de phrase (apres minuscule), un
+ * point d'interrogation en fin de phrase etant deja verifie ailleurs.
+ */
+export const GM_QUESTION_MARKERS_FR: string[] = [
+  "est-ce que",
+  "est-ce qu'",
+  "qui est",
+  "qui a",
+  "qui sont",
+  "que sais",
+  "que fait",
+  "que font",
+  "qu'est-ce",
+  "où est",
+  "où se",
+  "où suis",
+  "où sont",
+  "quand est",
+  "pourquoi",
+  "comment",
+  "combien",
+  "quel est",
+  "quelle est",
+  "quels sont",
+  "quelles sont",
+  "puis-je",
+  "peux-je",
+  "ai-je",
+  "y a-t-il",
+  "est-il",
+  "est-elle",
+];
+
 /** Libelles officiels des competences (traduction SRD, cf. data/srd/fr-source). */
 export const SKILL_LABELS_FR: Record<Skill, string> = {
   acrobatics: "Acrobaties",

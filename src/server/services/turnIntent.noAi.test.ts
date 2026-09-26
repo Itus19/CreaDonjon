@@ -80,6 +80,41 @@ describe("la route du tour appelle l'IA, mais jamais avant playTurn", () => {
   });
 });
 
+describe("le bouton MJ (V3-D4) ne touche jamais au tour", () => {
+  /** Les deux fichiers de ce chemin : la route, et l'appel IA lui-meme. */
+  const NO_TURN_PATH = ["app/api/solo/mj/route.ts", "src/server/ai/soloGmQuestion.ts"];
+
+  /** Aucune de ces fonctions ne doit apparaitre : c'est exactement ce qui ferait avancer un tour (jet, effet, budget, horloge de scene). */
+  const TURN_MARKERS = [
+    "playTurn(",
+    "executeIntent(",
+    "resolveIntentRequest(",
+    "resolveIntentRequestFromRoll(",
+    "applyRuntimeStateChange(",
+    "advanceTime(",
+    "putSceneState(",
+  ];
+
+  for (const file of NO_TURN_PATH) {
+    it(`${file} n'appelle aucune fonction de la boucle de tour`, () => {
+      const lines = codeLines(sourceOf(file));
+      for (const marker of TURN_MARKERS) {
+        const offending = lines.filter((line) => line.includes(marker));
+        expect(offending, `${file} mentionne ${marker}`).toEqual([]);
+      }
+    });
+  }
+
+  it("appelle bien un modele — sinon ce garde-fou ne prouverait rien", () => {
+    expect(sourceOf("src/server/ai/soloGmQuestion.ts")).toContain("runAiCompletion(");
+  });
+
+  it("journalise en `note`, jamais en `roll`/`player_action`/`rule_application`/`world_update`", () => {
+    const source = sourceOf("src/server/ai/soloGmQuestion.ts");
+    expect(source).toContain('kind: "note"');
+  });
+});
+
 describe("le journal precede tout le reste", () => {
   it("chaque tour resolu passe par `journalTurn` avant de rendre son resultat", () => {
     const source = sourceOf("src/server/services/turnIntent.ts");

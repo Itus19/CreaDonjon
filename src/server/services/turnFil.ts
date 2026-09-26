@@ -81,6 +81,11 @@ function mapWorldUpdate(base: { id: string; seq: number; createdAt: string }, pa
   return { ...base, kind: "world_update", note: String(payload.note ?? "") };
 }
 
+/** V3-D4 — la reponse du MJ a une question posee hors du temps de jeu (`askSoloGm`, `src/server/ai/soloGmQuestion.ts`). */
+function mapNote(base: { id: string; seq: number; createdAt: string }, payload: Record<string, unknown>): FilItem {
+  return { ...base, kind: "note", question: String(payload.question ?? ""), answer: String(payload.answer ?? "") };
+}
+
 export function mapSessionEventToFilItem(row: SessionEventRow): FilItem {
   const base = { id: row.id, seq: row.seq, createdAt: row.created_at };
   const payload = (row.payload as Record<string, unknown> | null) ?? {};
@@ -95,10 +100,12 @@ export function mapSessionEventToFilItem(row: SessionEventRow): FilItem {
       return mapRuleApplication(base, payload);
     case "world_update":
       return mapWorldUpdate(base, payload);
+    case "note":
+      return mapNote(base, payload);
     default:
-      // `note`/`system` : dans l'enum de SCHEMA.md §12, jamais ecrits
-      // aujourd'hui. Un repli plutot qu'une exception — le fil reste
-      // lisible meme pour un genre que ce module ne connait pas encore.
+      // `system` : dans l'enum de SCHEMA.md §12, jamais ecrit aujourd'hui.
+      // Un repli plutot qu'une exception — le fil reste lisible meme pour
+      // un genre que ce module ne connait pas encore.
       return { ...base, kind: "other", label: row.kind };
   }
 }

@@ -108,6 +108,17 @@ function WorldUpdateRow({ item }: { item: Extract<FilItem, { kind: "world_update
   return <p className="text-xs text-ink-muted">{item.note}</p>;
 }
 
+/** V3-D4 — la réponse du MJ à une question posée hors du temps de jeu : un liseré d'accent qui le dit en toutes lettres, jamais confondu avec un fait de tour. */
+function NoteRow({ item }: { item: Extract<FilItem, { kind: "note" }> }) {
+  return (
+    <div className="flex flex-col gap-1 border-l-2 border-accent pl-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-accent">MJ — hors du temps de jeu</p>
+      <p className="text-sm text-ink-soft">{item.question}</p>
+      <p className="text-sm text-ink">{item.answer}</p>
+    </div>
+  );
+}
+
 function filRowKey(item: FilItem): string {
   return item.id;
 }
@@ -138,6 +149,8 @@ export default function Fil({ items }: { items: FilItem[] | null }) {
             return <RuleApplicationRow key={filRowKey(item)} item={item} />;
           case "world_update":
             return <WorldUpdateRow key={filRowKey(item)} item={item} />;
+          case "note":
+            return <NoteRow key={filRowKey(item)} item={item} />;
           case "other":
             return null;
         }

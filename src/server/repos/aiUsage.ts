@@ -12,9 +12,20 @@ type TypedClient = SupabaseClient<Database>;
  * qui produit une structure de regle). `generator_prose` ajoute par V2-J1 :
  * un emplacement `prose` de generateur compose (taverne/echoppe/PNJ...) —
  * distinct de `generate_npc` (reserve au PNJ generateur complet a base de
- * `rule_query`, specs/outils-mj.md §3, hors de ce ticket).
+ * `rule_query`, specs/outils-mj.md §3, hors de ce ticket). `solo_gm_question`
+ * ajoute par V3-D4 : le bouton MJ, une question posee HORS du temps de
+ * jeu — distinct de `solo_turn`, qui ne journalise que la narration d'un
+ * tour reellement joue.
  */
-export type AiUsagePurpose = "solo_turn" | "generate_npc" | "structure_rule" | "embed" | "summarize" | "assist_writing" | "generator_prose";
+export type AiUsagePurpose =
+  | "solo_turn"
+  | "solo_gm_question"
+  | "generate_npc"
+  | "structure_rule"
+  | "embed"
+  | "summarize"
+  | "assist_writing"
+  | "generator_prose";
 
 export interface AiUsageLogEntry {
   userId: string | null;

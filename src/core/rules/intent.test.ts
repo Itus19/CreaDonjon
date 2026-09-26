@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { interpretIntent, type IntentCatalog } from "./intent";
+import { interpretIntent, looksLikeQuestion, type IntentCatalog } from "./intent";
 
 /**
  * Catalogue de reference : Bram, une epee longue et une dague equipees,
@@ -165,5 +165,30 @@ describe("le module ne resout rien", () => {
     // Une proposition est une LECTURE de la phrase. Le moindre nombre ici
     // signifierait qu'un de a ete lance hors du serveur de jeu.
     expect(JSON.stringify(proposal)).not.toMatch(/\bd20\b|total|damage|degats/i);
+  });
+});
+
+describe("looksLikeQuestion — V3-D4, le moteur devine une question", () => {
+  const markers = ["est-ce que", "combien", "pourquoi", "où est"];
+
+  it("un point d'interrogation en fin de phrase suffit, quels que soient les marqueurs", () => {
+    expect(looksLikeQuestion("je peux monter sur le muret ?", [])).toBe(true);
+  });
+
+  it("une tournure de la liste en tete de phrase suffit, sans point d'interrogation", () => {
+    expect(looksLikeQuestion("combien de PV me reste-t-il", markers)).toBe(true);
+    expect(looksLikeQuestion("Est-ce que le gobelin est encore vivant", markers)).toBe(true);
+  });
+
+  it("une tournure de la liste au MILIEU de la phrase ne compte pas — seulement en tete", () => {
+    expect(looksLikeQuestion("je me demande combien il en reste", markers)).toBe(false);
+  });
+
+  it("une phrase ordinaire, sans marqueur ni point d'interrogation, n'est pas une question", () => {
+    expect(looksLikeQuestion("je frappe le gobelin avec mon épée", markers)).toBe(false);
+  });
+
+  it("un texte vide n'est jamais une question", () => {
+    expect(looksLikeQuestion("   ", markers)).toBe(false);
   });
 });

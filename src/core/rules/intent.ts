@@ -187,3 +187,18 @@ export function interpretIntent(rawText: string, catalog: IntentCatalog): Intent
   const fallback = catalog.actions.find((a) => a.kind === wantedKind);
   return fallback ? mechanical(fallback, null) : free("aucune_action_disponible", wantedKind);
 }
+
+/**
+ * V3-D4 — « Le moteur devine une question, et le montre. » Un point
+ * d'interrogation en fin de phrase, ou une tournure interrogative FERMEE
+ * en tête (`markers`, `src/i18n/fr.ts`) — jamais une heuristique plus
+ * maligne. Purement indicatif : l'écran garde les DEUX boutons cliquables
+ * quoi que cette fonction réponde, jamais un reroutage silencieux.
+ */
+export function looksLikeQuestion(rawText: string, markers: readonly string[]): boolean {
+  const text = rawText.trim();
+  if (text.length === 0) return false;
+  if (text.endsWith("?")) return true;
+  const lower = text.toLowerCase();
+  return markers.some((marker) => lower.startsWith(marker));
+}

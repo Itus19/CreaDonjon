@@ -160,9 +160,10 @@ export interface EncashedTurnOutcome extends TurnOutcome {
 
 /**
  * V3-D4 — le fil, tel que `session_events` le rend. Un item par `kind`
- * RÉELLEMENT écrit par ce module (`turnFil.ts`) — `note`/`system` n'existent
+ * RÉELLEMENT écrit par ce module (`turnFil.ts`) — `system` n'existe
  * encore nulle part dans le code : `other` est un repli défensif, jamais un
- * type qu'un appelant doit prévoir en pratique aujourd'hui.
+ * type qu'un appelant doit prévoir en pratique aujourd'hui. `note` (V3-D4
+ * Phase 3) est la réponse du MJ à une question posée hors du temps de jeu.
  */
 export type FilItem =
   | { id: string; seq: number; createdAt: string; kind: "narration"; text: string; npcReaction: { npcId: string; text: string } | null }
@@ -180,4 +181,5 @@ export type FilItem =
     }
   | { id: string; seq: number; createdAt: string; kind: "rule_application"; changes: string[]; hints: string[]; ignored: string[] }
   | { id: string; seq: number; createdAt: string; kind: "world_update"; note: string }
+  | { id: string; seq: number; createdAt: string; kind: "note"; question: string; answer: string }
   | { id: string; seq: number; createdAt: string; kind: "other"; label: string };
