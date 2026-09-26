@@ -19,28 +19,32 @@ export interface AiProposalRow {
   id: string;
   worldId: string;
   campaignId: string | null;
+  sessionEventId: string | null;
   kind: AiProposalKind;
   targetEntityId: string | null;
   payload: Json;
   status: AiProposalStatus;
   validationErrors: Json | null;
+  autoApplied: boolean;
   reviewedBy: string | null;
   appliedAt: string | null;
   createdAt: string;
 }
 
 const COLUMNS =
-  "id, world_id, campaign_id, kind, target_entity_id, payload, status, validation_errors, reviewed_by, applied_at, created_at";
+  "id, world_id, campaign_id, session_event_id, kind, target_entity_id, payload, status, validation_errors, auto_applied, reviewed_by, applied_at, created_at";
 
 interface AiProposalRawRow {
   id: string;
   world_id: string;
   campaign_id: string | null;
+  session_event_id: string | null;
   kind: string;
   target_entity_id: string | null;
   payload: Json;
   status: string;
   validation_errors: Json | null;
+  auto_applied: boolean;
   reviewed_by: string | null;
   applied_at: string | null;
   created_at: string;
@@ -51,11 +55,13 @@ function toRow(r: AiProposalRawRow): AiProposalRow {
     id: r.id,
     worldId: r.world_id,
     campaignId: r.campaign_id,
+    sessionEventId: r.session_event_id,
     kind: r.kind as AiProposalKind,
     targetEntityId: r.target_entity_id,
     payload: r.payload,
     status: r.status as AiProposalStatus,
     validationErrors: r.validation_errors,
+    autoApplied: r.auto_applied,
     reviewedBy: r.reviewed_by,
     appliedAt: r.applied_at,
     createdAt: r.created_at,
@@ -67,11 +73,17 @@ export async function insertAiProposal(
   params: {
     worldId: string;
     campaignId: string | null;
+    /** V3-C3 — le `session_event` qui a fait naître cette proposition, condition de « annuler ce tour » (V3-F2, pas encore fait) : sans lui, une mutation `auto_applied` ne serait pas retrouvable par son tour. */
+    sessionEventId?: string | null;
     kind: AiProposalKind;
     targetEntityId: string | null;
     payload: Json;
     status: AiProposalStatus;
     validationErrors?: Json | null;
+    /** V3-C3 — vrai pour une mutation décidée par le CODE (générateur, ancrage), jamais par le modèle : `false` par défaut, comme la colonne (SCHEMA.md §16.2). */
+    autoApplied?: boolean;
+    reviewedBy?: string | null;
+    appliedAt?: string | null;
   }
 ): Promise<AiProposalRow> {
   const { data, error } = await supabase
@@ -79,11 +91,15 @@ export async function insertAiProposal(
     .insert({
       world_id: params.worldId,
       campaign_id: params.campaignId,
+      session_event_id: params.sessionEventId ?? null,
       kind: params.kind,
       target_entity_id: params.targetEntityId,
       payload: params.payload,
       status: params.status,
       validation_errors: params.validationErrors ?? null,
+      auto_applied: params.autoApplied ?? false,
+      reviewed_by: params.reviewedBy ?? null,
+      applied_at: params.appliedAt ?? null,
     })
     .select(COLUMNS)
     .single();

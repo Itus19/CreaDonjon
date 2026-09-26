@@ -19,6 +19,7 @@ let sketchAppearances: { locationId: string }[] = [];
 let generateResult: { sections: { key: string; label: string; text: string; slots: [] }[] } | { error: string };
 let promoted: { ok: true; entity: { id: string; slug: string } } | { ok: false; reason: "forbidden" };
 const promoteCalls: { name: string; entityKind: string; blocks: { label: string; text: string }[] }[] = [];
+const proposalsInserted: { kind: string; targetEntityId: string | null; status: string; autoApplied: boolean; sessionEventId: string | null }[] = [];
 
 vi.mock("@/src/server/repos/sceneStates", () => ({
   getSceneState: async () => scene,
@@ -34,6 +35,21 @@ vi.mock("@/src/server/repos/sessions", () => ({
     return { id: `ev-${inserted.length}` };
   },
   listSketchAppearancesByName: async () => sketchAppearances,
+}));
+vi.mock("@/src/server/repos/aiProposals", () => ({
+  insertAiProposal: async (
+    _s: unknown,
+    params: { kind: string; targetEntityId: string | null; status: string; autoApplied?: boolean; sessionEventId?: string | null }
+  ) => {
+    proposalsInserted.push({
+      kind: params.kind,
+      targetEntityId: params.targetEntityId,
+      status: params.status,
+      autoApplied: params.autoApplied ?? false,
+      sessionEventId: params.sessionEventId ?? null,
+    });
+    return { id: `prop-${proposalsInserted.length}` };
+  },
 }));
 vi.mock("@/src/server/services/sceneGeneration", () => ({ generateForScene: async () => generateResult }));
 vi.mock("@/src/server/services/promotion", () => ({
@@ -53,6 +69,7 @@ beforeEach(() => {
   inserted.length = 0;
   sketchAppearances = [];
   promoteCalls.length = 0;
+  proposalsInserted.length = 0;
   generateResult = {
     sections: [
       { key: "pnj-nom", label: "Nom", text: "Grelin", slots: [] },
@@ -81,6 +98,11 @@ describe("drawSketchForScene", () => {
     expect(inserted[0].payload.location_id).toBe("ancre-rouillee");
   });
 
+  it("V3-C3 — une simple esquisse ne cree AUCUNE proposition : aucune entite a referencer encore", async () => {
+    await drawSketchForScene(supabase, base);
+    expect(proposalsInserted).toHaveLength(0);
+  });
+
   it("le tirage echoue (aucun outil MJ) : aucune esquisse, rien journalise", async () => {
     generateResult = { error: "no_generators" };
     const result = await drawSketchForScene(supabase, base);
@@ -96,6 +118,9 @@ describe("drawSketchForScene", () => {
     expect(scene!.sketches).toHaveLength(0);
     expect(scene!.present.map((p) => p.entityId)).toEqual(["entity-grelin"]);
     expect(inserted[0].payload.source).toBe("anchor");
+    expect(proposalsInserted).toEqual([
+      { kind: "create_entity", targetEntityId: "entity-grelin", status: "applied", autoApplied: true, sessionEventId: "ev-1" },
+    ]);
   });
 
   it("un nom deja vu dans le MEME lieu ne declenche pas l'ancrage precoce", async () => {
@@ -114,6 +139,9 @@ describe("promoteSketch", () => {
     expect(promoteCalls[0]).toMatchObject({ name: "Grelin", entityKind: "character", blocks: [{ label: "Description", text: "cicatrice" }] });
     expect(scene!.sketches).toHaveLength(0);
     expect(scene!.present).toEqual([{ entityId: "entity-grelin", zone: "near", disposition: "mefiant" }]);
+    expect(proposalsInserted).toEqual([
+      { kind: "create_entity", targetEntityId: "entity-grelin", status: "applied", autoApplied: true, sessionEventId: "ev-1" },
+    ]);
   });
 
   it("esquisse introuvable : ne cree rien", async () => {

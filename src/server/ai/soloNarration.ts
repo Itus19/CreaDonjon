@@ -6,6 +6,7 @@ import { soloNarrationSchema, soloNarrationToolSchema } from "@/src/core/ai/solo
 import { maxSimilarityToRecent } from "@/src/core/ai/narrationSimilarity";
 import { buildSoloTurnContext } from "@/src/server/services/turnContext";
 import { drawSketchForScene, recordSketchSpeechAndMaybeAnchor } from "@/src/server/services/sceneSketches";
+import { proposeWorldNote } from "@/src/server/services/soloWorldNotes";
 import { findEventByFromEvent, getSessionEventById, insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import type { AiProvider } from "./provider";
 import { runAiCompletion } from "./callAi";
@@ -31,7 +32,9 @@ const SYSTEM_PROMPT =
   "present reagit, utilise UNIQUEMENT un identifiant de PNJ fourni dans le contexte — n'en invente " +
   "jamais. Si un personnage incident, absent de cette liste, doit reagir MAINTENANT, ne l'invente pas : " +
   "demande-le via new_character avec seulement son role (jamais un nom ni un trait, le moteur les tire). " +
-  `Reponds toujours via l'outil ${TOOL_NAME}, une seule fois.`;
+  "Si un fait meriterait d'etre ajoute a la fiche d'un lieu ou d'un PNJ REELLEMENT present, suggere-le " +
+  "via world_note (un identifiant fourni, jamais invente) — un humain la relira, ne l'ecris jamais comme " +
+  `un fait acquis dans ta narration. Reponds toujours via l'outil ${TOOL_NAME}, une seule fois.`;
 
 export interface SoloNarrationParams {
   worldId: string;
@@ -65,6 +68,8 @@ interface NarrationAttempt {
   npcReaction?: { npcId: string; text: string };
   /** V3-C2 — un role demande, jamais un nom : `narrateSoloTurn` seul decide d'en tirer une esquisse. */
   newCharacterRequest?: { role: string };
+  /** V3-C3 — une suggestion redactionnelle, jamais ecrite directement (`proposeWorldNote`). */
+  worldNote?: { entityId: string; text: string };
   invalidReason?: string;
   inputTokens: number;
   outputTokens: number;
@@ -76,6 +81,7 @@ async function attemptNarration(
   provider: AiProvider,
   context: string,
   npcIds: string[],
+  knownEntityIds: string[],
   userId: string,
   campaignId: string
 ): Promise<NarrationAttempt> {
@@ -88,7 +94,7 @@ async function attemptNarration(
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: context },
       ],
-      tools: [{ name: TOOL_NAME, description: "Raconte ce tour de jeu solo", inputSchema: soloNarrationToolSchema(npcIds) }],
+      tools: [{ name: TOOL_NAME, description: "Raconte ce tour de jeu solo", inputSchema: soloNarrationToolSchema(npcIds, knownEntityIds) }],
     }
   );
 
@@ -97,7 +103,7 @@ async function attemptNarration(
     return { ok: false, invalidReason: "aucun appel d'outil", inputTokens: result.inputTokens, outputTokens: result.outputTokens };
   }
 
-  const parsed = soloNarrationSchema(npcIds).safeParse(call.input);
+  const parsed = soloNarrationSchema(npcIds, knownEntityIds).safeParse(call.input);
   if (!parsed.success) {
     const reason = parsed.error.issues.map((i) => `${i.path.join(".") || "(racine)"} : ${i.message}`).join(" ; ");
     return { ok: false, invalidReason: reason, inputTokens: result.inputTokens, outputTokens: result.outputTokens };
@@ -108,6 +114,7 @@ async function attemptNarration(
     narration: parsed.data.narration,
     npcReaction: parsed.data.npc_reaction ? { npcId: parsed.data.npc_reaction.npc_id, text: parsed.data.npc_reaction.text } : undefined,
     newCharacterRequest: parsed.data.new_character ? { role: parsed.data.new_character.role } : undefined,
+    worldNote: parsed.data.world_note ? { entityId: parsed.data.world_note.entity_id, text: parsed.data.world_note.text } : undefined,
     inputTokens: result.inputTokens,
     outputTokens: result.outputTokens,
   };
@@ -144,7 +151,7 @@ async function attemptNarration(
  * les deux, un seul événement `narration` s'écrit.
  */
 export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvider, params: SoloNarrationParams): Promise<SoloNarrationOutcome> {
-  const { text: context, npcIds, recentNarrations } = await buildSoloTurnContext(supabase, {
+  const { text: context, npcIds, knownEntityIds, recentNarrations } = await buildSoloTurnContext(supabase, {
     worldId: params.worldId,
     campaignId: params.campaignId,
     playerEntityId: params.playerEntityId,
@@ -156,7 +163,7 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
     hints: params.hints,
   });
 
-  const first = await attemptNarration(supabase, provider, context, npcIds, params.userId, params.campaignId);
+  const first = await attemptNarration(supabase, provider, context, npcIds, knownEntityIds, params.userId, params.campaignId);
   if (!first.ok) return first;
 
   let chosen = first;
@@ -184,11 +191,11 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
         changes: params.changes,
         hints: params.hints,
       });
-      const second = await attemptNarration(supabase, provider, retry.text, retry.npcIds, params.userId, params.campaignId);
+      const second = await attemptNarration(supabase, provider, retry.text, retry.npcIds, retry.knownEntityIds, params.userId, params.campaignId);
       if (second.ok) chosen = second;
     }
   } else if (recentNarrations.length > 0 && maxSimilarityToRecent(first.narration!, recentNarrations) > SIMILARITY_THRESHOLD) {
-    const second = await attemptNarration(supabase, provider, context, npcIds, params.userId, params.campaignId);
+    const second = await attemptNarration(supabase, provider, context, npcIds, knownEntityIds, params.userId, params.campaignId);
     if (second.ok) {
       const firstScore = maxSimilarityToRecent(first.narration!, recentNarrations);
       const secondScore = maxSimilarityToRecent(second.narration!, recentNarrations);
@@ -228,6 +235,23 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
         sessionId: params.sessionId,
         sketchId: chosen.npcReaction.npcId,
         callerId: params.userId,
+      });
+    } catch {
+      // Ignoré volontairement : la narration ci-dessus est déjà acquise.
+    }
+  }
+
+  if (chosen.worldNote) {
+    // V3-C3 — même discipline best-effort : une suggestion rédactionnelle
+    // n'est jamais essentielle (specs/cible-locale-et-ia.md §4), la
+    // narration reste acquise même si `ai_proposals` échoue à l'écrire.
+    try {
+      await proposeWorldNote(supabase, {
+        worldId: params.worldId,
+        campaignId: params.campaignId,
+        sessionEventId: event.id,
+        entityId: chosen.worldNote.entityId,
+        text: chosen.worldNote.text,
       });
     } catch {
       // Ignoré volontairement : la narration ci-dessus est déjà acquise.

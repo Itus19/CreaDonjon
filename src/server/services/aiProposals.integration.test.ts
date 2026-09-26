@@ -111,6 +111,22 @@ describe.skipIf(!hasCreds)("applyAiProposal / rejectAiProposal (integration, bas
     expect(updatedProposal).toMatchObject({ status: "rejected", reviewed_by: userId });
   });
 
+  it("V3-C3 — accepte auto_applied a l'ecriture (colonne reelle, pas simulee)", async () => {
+    const proposal = await insertAiProposal(admin, {
+      worldId,
+      campaignId: null,
+      kind: "create_entity",
+      targetEntityId: entityId,
+      payload: { name: "Grelin", trait: "cicatrice" },
+      status: "applied",
+      autoApplied: true,
+      appliedAt: new Date().toISOString(),
+    });
+    expect(proposal.autoApplied).toBe(true);
+    expect(proposal.status).toBe("applied");
+    expect(proposal.sessionEventId).toBeNull();
+  });
+
   it("refuse d'appliquer deux fois la meme proposition", async () => {
     const proposal = await insertAiProposal(admin, {
       worldId,

@@ -110,8 +110,10 @@ async function resolveRecentNarrations(supabase: TypedClient, sessionId: string)
 export interface SoloTurnContext {
   /** Le texte pret a poser en message `user`. */
   text: string;
-  /** Les ids des PNJ presents — jamais devine par l'appelant : c'est ce qui borne l'enum `npc_id` d'un outil de narration (meme garde-fou que le spike, generalise). */
+  /** Les ids des PNJ presents (esquisses comprises) — jamais devine par l'appelant : c'est ce qui borne l'enum `npc_id` d'un outil de narration (meme garde-fou que le spike, generalise). */
   npcIds: string[];
+  /** V3-C3 — le lieu et les PNJ REELS (jamais une esquisse, qui n'a pas de fiche) : ce qui borne l'enum `entity_id` de `world_note`, une suggestion redactionnelle jamais ecrite directement. */
+  knownEntityIds: string[];
   /** V3-B4 — Rendues telles quelles (pas seulement injectees dans `text`) pour que l'appelant (`narrateSoloTurn`) puisse mesurer la similarite d'un essai SANS relire la session une seconde fois. */
   recentNarrations: string[];
 }
@@ -157,7 +159,8 @@ export async function buildSoloTurnContext(
     recentNarrations,
   };
 
-  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), recentNarrations };
+  const knownEntityIds = [...(locationEntity ? [locationEntity.id] : []), ...realNpcs.map((n) => n.id)];
+  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations };
 }
 
 /**

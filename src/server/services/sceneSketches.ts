@@ -4,6 +4,7 @@ import type { Database, Json } from "@/src/types/database";
 import { addSketch, enterScene, recordSketchSpoke, removeSketch, sketchShouldAnchorForSpeaking, textNamesSketch, type SceneSketch } from "@/src/core/rules/scene";
 import { getSceneState, putSceneState } from "@/src/server/repos/sceneStates";
 import { insertSessionEvent, listSketchAppearancesByName, nextEventSeq } from "@/src/server/repos/sessions";
+import { insertAiProposal } from "@/src/server/repos/aiProposals";
 import { generateForScene } from "@/src/server/services/sceneGeneration";
 import { promoteToEntity, type PromoteToEntityResult } from "@/src/server/services/promotion";
 import type { EntitySummary } from "@/src/server/repos/entities";
@@ -65,16 +66,19 @@ export async function drawSketchForScene(
     });
     if (!promoted.ok) return { ok: false, reason: "forbidden" };
     await putSceneState(supabase, { campaignId: params.campaignId, state: enterScene(scene, { entityId: promoted.entity.id, zone: "near" }), updatedBy: params.callerId });
-    await journalSketchNote(supabase, params.sessionId, params.callerId, `${name} revient — ancré dans le monde dès sa deuxième apparition`, {
+    const eventId = await journalSketchNote(supabase, params.sessionId, params.callerId, `${name} revient — ancré dans le monde dès sa deuxième apparition`, {
       source: "anchor",
       entity_id: promoted.entity.id,
       name,
     });
+    await recordAnchorProposal(supabase, { worldId: params.worldId, campaignId: params.campaignId, sessionEventId: eventId, entity: promoted.entity, name, trait });
     return { ok: true, anchored: true, entity: promoted.entity };
   }
 
   const sketch: SceneSketch = { id: crypto.randomUUID(), name, trait, zone: "near", timesSpoken: 0, locationId: scene.locationId };
   await putSceneState(supabase, { campaignId: params.campaignId, state: addSketch(scene, sketch), updatedBy: params.callerId });
+  // V3-C3 — pas de proposition ici : rien n'est ecrit sur une entite tant
+  // que l'esquisse n'est pas ancree (aucun `target_entity_id` a porter).
   await journalSketchNote(supabase, params.sessionId, params.callerId, `${name} entre dans la scène`, {
     source: "sketch",
     sketch_id: sketch.id,
@@ -108,11 +112,12 @@ export async function promoteSketch(
   const withoutSketch = removeSketch(scene, sketch.id);
   const withEntity = enterScene(withoutSketch, { entityId: promoted.entity.id, zone: sketch.zone, disposition: sketch.disposition });
   await putSceneState(supabase, { campaignId: params.campaignId, state: withEntity, updatedBy: params.callerId });
-  await journalSketchNote(supabase, params.sessionId, params.callerId, `${sketch.name} a rejoint le monde`, {
+  const eventId = await journalSketchNote(supabase, params.sessionId, params.callerId, `${sketch.name} a rejoint le monde`, {
     source: "anchor",
     entity_id: promoted.entity.id,
     name: sketch.name,
   });
+  await recordAnchorProposal(supabase, { worldId: params.worldId, campaignId: params.campaignId, sessionEventId: eventId, entity: promoted.entity, name: sketch.name, trait: sketch.trait });
   return promoted;
 }
 
@@ -158,14 +163,40 @@ export async function anchorSketchesNamedInText(
   }
 }
 
-async function journalSketchNote(supabase: TypedClient, sessionId: string, callerId: string, note: string, extra: Record<string, unknown>): Promise<void> {
+async function journalSketchNote(supabase: TypedClient, sessionId: string, callerId: string, note: string, extra: Record<string, unknown>): Promise<string> {
   const seq = await nextEventSeq(supabase, sessionId);
-  await insertSessionEvent(supabase, {
+  const event = await insertSessionEvent(supabase, {
     sessionId,
     seq,
     kind: "world_update",
     actor: "system",
     actorUserId: callerId,
     payload: { __v: 1, note, ...extra } as unknown as Json,
+  });
+  return event.id;
+}
+
+/**
+ * V3-C3 — « auto_applied est réellement utilisé » (docs/BACKLOG_V3.md) : un
+ * ancrage d'esquisse crée bel et bien une entité, donc une ligne
+ * `ai_proposals` `kind: "create_entity"`, déjà appliquée par le CODE
+ * (jamais un modèle) — `auto_applied: true`, `status: "applied"`, liée à son
+ * `session_event_id` pour que « annuler ce tour » (V3-F2, pas encore fait)
+ * puisse un jour la retrouver.
+ */
+async function recordAnchorProposal(
+  supabase: TypedClient,
+  params: { worldId: string; campaignId: string; sessionEventId: string; entity: EntitySummary; name: string; trait: string }
+): Promise<void> {
+  await insertAiProposal(supabase, {
+    worldId: params.worldId,
+    campaignId: params.campaignId,
+    sessionEventId: params.sessionEventId,
+    kind: "create_entity",
+    targetEntityId: params.entity.id,
+    payload: { name: params.name, trait: params.trait } as unknown as Json,
+    status: "applied",
+    autoApplied: true,
+    appliedAt: new Date().toISOString(),
   });
 }

@@ -11,6 +11,13 @@ import { z } from "zod";
  * Sans PNJ présent, `npc_reaction` disparaît du schéma plutôt que
  * d'accepter un enum vide (`z.enum` refuse une liste vide) — cohérent avec
  * la scène : personne à qui faire réagir.
+ *
+ * **V3-C3 — `world_note` suit le MÊME garde-fou**, sur un enum séparé
+ * (`knownEntityIds` : le lieu et les PNJ RÉELS de la scène, jamais une
+ * esquisse — elle n'a pas de fiche à enrichir). Une suggestion rédactionnelle
+ * n'est jamais écrite directement : elle devient une ligne `ai_proposals`
+ * `pending`, relue par un humain (V1-F3, `applyAiProposal`/`rejectAiProposal`,
+ * `src/server/services/aiProposals.ts`).
  */
 
 /**
@@ -23,28 +30,39 @@ import { z } from "zod";
  * toute `npc_reaction` quand `npcIds` est vide, plutot que de laisser Zod
  * ignorer silencieusement une cle inconnue.
  */
-export function soloNarrationSchema(npcIds: string[]) {
+export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] = []) {
   const npcIdSet = new Set(npcIds);
+  const knownEntityIdSet = new Set(knownEntityIds);
   return z
     .object({
       narration: z.string().min(1).max(1000),
       npc_reaction: z.object({ npc_id: z.string().min(1), text: z.string().min(1).max(400) }).optional(),
       /** V3-C2 — jamais un nom : un ROLE seulement, le generateur tire l'identite. */
       new_character: z.object({ role: z.string().min(1).max(200) }).optional(),
+      /** V3-C3 — une suggestion redactionnelle, jamais ecrite directement : elle passe par `ai_proposals`, en attente d'une relecture humaine. */
+      world_note: z.object({ entity_id: z.string().min(1), text: z.string().min(1).max(400) }).optional(),
     })
     .strict()
     .superRefine((value, ctx) => {
-      if (!value.npc_reaction) return;
-      if (npcIdSet.size === 0) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_reaction"], message: "aucun PNJ present, aucune reaction possible" });
-      } else if (!npcIdSet.has(value.npc_reaction.npc_id)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_reaction", "npc_id"], message: "identifiant de PNJ inconnu — jamais invente" });
+      if (value.npc_reaction) {
+        if (npcIdSet.size === 0) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_reaction"], message: "aucun PNJ present, aucune reaction possible" });
+        } else if (!npcIdSet.has(value.npc_reaction.npc_id)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_reaction", "npc_id"], message: "identifiant de PNJ inconnu — jamais invente" });
+        }
+      }
+      if (value.world_note) {
+        if (knownEntityIdSet.size === 0) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["world_note"], message: "aucune entite connue de ce tour, aucune suggestion possible" });
+        } else if (!knownEntityIdSet.has(value.world_note.entity_id)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["world_note", "entity_id"], message: "identifiant d'entite inconnu — jamais invente" });
+        }
       }
     });
 }
 export type SoloNarrationProposal = z.infer<ReturnType<typeof soloNarrationSchema>>;
 
-export function soloNarrationToolSchema(npcIds: string[]) {
+export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string[] = []) {
   return {
     type: "object",
     properties: {
@@ -71,6 +89,20 @@ export function soloNarrationToolSchema(npcIds: string[]) {
         },
         required: ["role"],
       },
+      ...(knownEntityIds.length > 0
+        ? {
+            world_note: {
+              type: "object",
+              description:
+                "Optionnel : une phrase a suggerer pour enrichir la fiche d'un lieu ou d'un PNJ REELLEMENT dans ce tour — jamais applique directement, un humain la relira.",
+              properties: {
+                entity_id: { type: "string", enum: knownEntityIds, description: "Identifiant EXACT d'une entite de ce tour, jamais invente" },
+                text: { type: "string", description: "La phrase suggeree, un seul fait" },
+              },
+              required: ["entity_id", "text"],
+            },
+          }
+        : {}),
     },
     required: ["narration"],
   } as const;
