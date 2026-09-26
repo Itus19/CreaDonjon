@@ -525,15 +525,21 @@ Mais en solo il n'y a pas de MJ pour valider. D'où la règle :
 
 **Vérifié en direct le 26 septembre**, sur une fiche jetable dans ClaudeLand, tout supprimé après. Le retrofit de l'ancrage confirmé contre la vraie base : « garder cette fiche » sur une esquisse produit désormais, en plus de l'entité et de son bloc, une ligne `ai_proposals` correctement formée (`kind: create_entity`, `auto_applied: true`, `status: applied`, `session_event_id` pointant sur le bon événement du journal). **`world_note` n'a pas pu être rejoué en direct** — le fournisseur IA local était injoignable au moment de cette vérification (même limite que `new_character` en V3-C2 : le déclenchement dépend d'un choix du modèle, non forçable depuis l'écran) — couvert à la place par `soloNarrationProposal.test.ts` (garde-fou d'enum) et `soloWorldNotes.test.ts` (3 cas : bloc trouvé, bloc du mauvais type, aucun bloc). `aiProposals.integration.test.ts` confirme `auto_applied` contre la vraie table (colonne jamais exercée avant ce ticket).
 
-### V3-C4 — Le wiki qui se découvre · `M`
+### V3-C4 — Le wiki qui se découvre · `M` — **fait le 26 septembre**
 
 `entity_discoveries` existe depuis la Phase 0 et **n'a jamais été écrite**. C'est ce ticket.
 
-- [ ] Une entité rencontrée en jeu est marquée découverte, avec son niveau : `mentioned` (on en a entendu parler) → `known` (rencontrée) → `detailed` (fréquentée, fouillée).
-- [ ] La marque porte son `source_event_id` : on peut toujours répondre à « où ai-je appris ça ? ».
-- [ ] La colonne wiki du mode solo n'affiche **que** ce qui est découvert (critère de `module-joueur-et-solo.md` §C).
-- [ ] Une mention en narration promeut à `mentioned`, jamais plus — entendre parler d'un lieu n'ouvre pas sa fiche.
-- [ ] Le filtrage est fait **côté serveur, avant l'envoi** (règle absolue 5). Jamais une fiche envoyée puis masquée en CSS.
+- [x] **Une entité rencontrée en jeu est marquée découverte, avec son niveau** — `mentioned` → `known` → `detailed`, un ordre total qui ne régresse jamais (`promoteDetailLevel`, `src/core/rules/discovery.ts`, noyau pur testé d'abord). Trois déclencheurs concrets, choisis parmi ce qui existe déjà plutôt qu'une détection inventée :
+  - **`known`** — le lieu et les présents d'une scène posée (`setScene`, `src/server/services/soloScene.ts`) ; une esquisse ancrée (V3-C2), déjà rencontrée par construction.
+  - **`mentioned`** — le lieu qui CONTIENT celui posé (« la ville la plus proche », déjà résolu pour l'en-tête, V3-D2) : le joueur en a entendu parler sans y être allé.
+  - **`detailed`** — ouvrir la fiche entière depuis le wiki (`/joueur/wiki/:slug`), en lecture COMME en édition — un joueur solo, souvent MJ de son propre monde, édite au moins autant qu'il ne lit (bogue trouvé en vérifiant : la branche édition ne journalisait rien du tout au premier essai).
+  - **Non couvert, documenté plutôt que deviné, même méthode qu'en V3-C2/C3** : « une mention en narration promeut à `mentioned` » (bullet ci-dessous) n'a aujourd'hui aucun déclencheur possible — rien dans la narration solo ne peut nommer une entité *non* déjà connue (`npc_id`/`new_character`/`world_note` sont tous des enums fermés sur ce qui est déjà résolu, V3-C2/C3). Inventer une détection de texte aurait été fragile et hors du principe déjà tenu ailleurs dans ce lot.
+- [x] **La marque porte son `source_event_id` quand un événement existe.** Ajouté au dépôt (`src/server/repos/entityDiscoveries.ts`, jamais écrit avant ce ticket). `null` pour les deux déclencheurs manuels (poser une scène, ouvrir une fiche ne journalisent rien aujourd'hui) — la colonne l'autorise, une réponse honnête plutôt qu'un identifiant inventé.
+- [x] **La colonne wiki du mode solo n'affiche que ce qui est découvert.** Filtre posé dans `buildWikiColumn` (`src/server/services/soloWorldColumn.ts`) — jamais dans `getEntityTree`, qui sert aussi le wiki du MJ et d'une campagne classique, hors périmètre de ce ticket. La fiche du joueur lui-même échappe toujours au filtre.
+- [ ] **Une mention en narration promeut à `mentioned`** — reporté, voir la réserve ci-dessus.
+- [x] **Filtrage côté serveur, avant l'envoi.** `buildWikiColumn` calcule la liste déjà réduite ; le client ne reçoit jamais une entrée à masquer ensuite.
+
+**Vérifié en direct le 26 septembre**, sur une fiche jetable dans ClaudeLand (un lieu parent et un PNJ créés pour l'occasion, tout supprimé après). Avant toute scène posée, la colonne Wiki du solo ne montre QUE la fiche du joueur — le reste du monde (Bram, Naivara, une douzaine d'autres fiches réelles) reste invisible malgré un rôle `gm`, qui aurait tout montré sans ce filtre. Poser une scène fait apparaître exactement les trois entités attendues (le lieu et le PNJ présent en `known`, le lieu parent en `mentioned`) — confirmé à la fois dans `entity_discoveries` et dans le rendu de la colonne. Ouvrir la fiche entière du PNJ la promeut à `detailed` — après correction du bogue de la branche édition ci-dessus. `discoveries.integration.test.ts` confirme en plus, contre la vraie table, qu'une régression proposée (`known` → `mentioned`) est bien ignorée.
 
 ### V3-C5 — Le tiroir de conséquences · `M`
 

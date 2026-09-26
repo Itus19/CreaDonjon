@@ -81,7 +81,7 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
     loadSceneView(supabase, { campaignId: campaign.id, worldId: world.id }),
     listSceneChoices(supabase, world.id),
     getCalendar(supabase, world.id),
-    buildWikiColumn(supabase, world.id, user.id, viewer, t.raw("kindLabels") as Record<string, string>),
+    buildWikiColumn(supabase, world.id, user.id, viewer, t.raw("kindLabels") as Record<string, string>, campaign.id, entityId),
     buildQuestColumn(supabase, world.id, viewer),
   ]);
   const dateLabel = scene ? sceneDateLabel(scene.time.day, calendar) : null;

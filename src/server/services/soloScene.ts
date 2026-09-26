@@ -9,6 +9,7 @@ import { getSceneState, putSceneState } from "@/src/server/repos/sceneStates";
 import { listCombatsForCampaign } from "@/src/server/repos/combats";
 import { listEntitiesByIds, listEntitiesByKinds } from "@/src/server/repos/entities";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
+import { discoverEntity } from "@/src/server/services/discoveries";
 import type { SceneView } from "@/lib/solo/types";
 
 type TypedClient = SupabaseClient<Database>;
@@ -117,10 +118,16 @@ export function sceneDateLabel(sceneDay: number, calendar: CalendarConfigInput):
  *
  * `activeCombatId` n'est pas un choix du joueur : il est relu du combat qui
  * tourne. Deux sources pour un meme fait donneraient un jour deux reponses.
+ *
+ * **V3-C4** — poser une scène ici découvre : le lieu et les présents passent
+ * `known` (le joueur y est, ou les y voit), le lieu qui les contient
+ * (« la ville la plus proche », déjà résolu pour l'en-tête, V3-D2) passe
+ * `mentioned` — le joueur en a entendu parler sans y être allé. Jamais de
+ * régression (`discoverEntity`) : rejouer la même scène ne rétrograde rien.
  */
 export async function setScene(
   supabase: TypedClient,
-  params: { campaignId: string; locationId: string; present: string[]; callerId: string }
+  params: { campaignId: string; worldId: string; locationId: string; present: string[]; callerId: string }
 ): Promise<SceneState> {
   const existing = await getSceneState(supabase, params.campaignId);
   let scene = existing ? { ...existing, locationId: params.locationId } : emptyScene(params.locationId);
@@ -139,5 +146,16 @@ export async function setScene(
   scene = { ...scene, activeCombatId: running?.id ?? null };
 
   await putSceneState(supabase, { campaignId: params.campaignId, state: scene, updatedBy: params.callerId });
+
+  const edges = await listPartOfRelationsForWorld(supabase, params.worldId);
+  const nearestCityId = edges.find((e) => e.source_entity_id === params.locationId)?.target_entity_id ?? null;
+  await discoverEntity(supabase, { campaignId: params.campaignId, userId: params.callerId, entityId: params.locationId, level: "known" });
+  if (nearestCityId) {
+    await discoverEntity(supabase, { campaignId: params.campaignId, userId: params.callerId, entityId: nearestCityId, level: "mentioned" });
+  }
+  for (const entityId of params.present) {
+    await discoverEntity(supabase, { campaignId: params.campaignId, userId: params.callerId, entityId, level: "known" });
+  }
+
   return scene;
 }

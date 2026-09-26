@@ -7,6 +7,7 @@ import { insertSessionEvent, listSketchAppearancesByName, nextEventSeq } from "@
 import { insertAiProposal } from "@/src/server/repos/aiProposals";
 import { generateForScene } from "@/src/server/services/sceneGeneration";
 import { promoteToEntity, type PromoteToEntityResult } from "@/src/server/services/promotion";
+import { discoverEntity } from "@/src/server/services/discoveries";
 import type { EntitySummary } from "@/src/server/repos/entities";
 
 type TypedClient = SupabaseClient<Database>;
@@ -71,7 +72,7 @@ export async function drawSketchForScene(
       entity_id: promoted.entity.id,
       name,
     });
-    await recordAnchorProposal(supabase, { worldId: params.worldId, campaignId: params.campaignId, sessionEventId: eventId, entity: promoted.entity, name, trait });
+    await recordAnchorProposal(supabase, { worldId: params.worldId, campaignId: params.campaignId, sessionEventId: eventId, entity: promoted.entity, name, trait, callerId: params.callerId });
     return { ok: true, anchored: true, entity: promoted.entity };
   }
 
@@ -117,7 +118,7 @@ export async function promoteSketch(
     entity_id: promoted.entity.id,
     name: sketch.name,
   });
-  await recordAnchorProposal(supabase, { worldId: params.worldId, campaignId: params.campaignId, sessionEventId: eventId, entity: promoted.entity, name: sketch.name, trait: sketch.trait });
+  await recordAnchorProposal(supabase, { worldId: params.worldId, campaignId: params.campaignId, sessionEventId: eventId, entity: promoted.entity, name: sketch.name, trait: sketch.trait, callerId: params.callerId });
   return promoted;
 }
 
@@ -183,11 +184,21 @@ async function journalSketchNote(supabase: TypedClient, sessionId: string, calle
  * (jamais un modèle) — `auto_applied: true`, `status: "applied"`, liée à son
  * `session_event_id` pour que « annuler ce tour » (V3-F2, pas encore fait)
  * puisse un jour la retrouver.
+ *
+ * **V3-C4** — une esquisse ancrée est par définition rencontrée : `known`,
+ * jamais seulement `mentioned` — elle vient d'entrer dans la scène.
  */
 async function recordAnchorProposal(
   supabase: TypedClient,
-  params: { worldId: string; campaignId: string; sessionEventId: string; entity: EntitySummary; name: string; trait: string }
+  params: { worldId: string; campaignId: string; sessionEventId: string; entity: EntitySummary; name: string; trait: string; callerId: string }
 ): Promise<void> {
+  await discoverEntity(supabase, {
+    campaignId: params.campaignId,
+    userId: params.callerId,
+    entityId: params.entity.id,
+    level: "known",
+    sourceEventId: params.sessionEventId,
+  });
   await insertAiProposal(supabase, {
     worldId: params.worldId,
     campaignId: params.campaignId,

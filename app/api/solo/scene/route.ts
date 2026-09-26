@@ -33,18 +33,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
+  const campaign = await getCampaignById(supabase, parsed.data.campaignId);
+  if (!campaign) {
+    return NextResponse.json({ error: "Campagne introuvable." }, { status: 404 });
+  }
+
   try {
-    await setScene(supabase, { ...parsed.data, callerId: user.id });
+    await setScene(supabase, { ...parsed.data, worldId: campaign.world_id, callerId: user.id });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "La scène n'a pas pu être enregistrée." },
       { status: 400 },
     );
-  }
-
-  const campaign = await getCampaignById(supabase, parsed.data.campaignId);
-  if (!campaign) {
-    return NextResponse.json({ error: "Campagne introuvable." }, { status: 404 });
   }
 
   const view = await loadSceneView(supabase, { campaignId: parsed.data.campaignId, worldId: campaign.world_id });

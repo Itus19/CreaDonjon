@@ -51,6 +51,7 @@ vi.mock("@/src/server/repos/aiProposals", () => ({
     return { id: `prop-${proposalsInserted.length}` };
   },
 }));
+vi.mock("@/src/server/services/discoveries", () => ({ discoverEntity: async () => {} }));
 vi.mock("@/src/server/services/sceneGeneration", () => ({ generateForScene: async () => generateResult }));
 vi.mock("@/src/server/services/promotion", () => ({
   promoteToEntity: async (_s: unknown, params: { name: string; entityKind: string; blocks: { label: string; text: string }[] }) => {

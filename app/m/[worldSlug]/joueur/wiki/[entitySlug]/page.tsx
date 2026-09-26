@@ -6,6 +6,8 @@ import { getEntityBySlug } from "@/src/server/repos/entities";
 import { canUserEditEntity } from "@/src/server/services/permissions";
 import { getEntityWindowData } from "@/src/server/services/entityWindow";
 import { getPlayerEntityDetail, getPlayerWikiBackground } from "@/src/server/services/playerEntityDetail";
+import { listCampaigns } from "@/src/server/services/campaigns";
+import { discoverEntity } from "@/src/server/services/discoveries";
 import type { Locale } from "@/src/i18n/request";
 import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
 import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
@@ -39,6 +41,20 @@ export default async function JoueurWikiEntityPage({
 
   const entity = await getEntityBySlug(supabase, world.id, entitySlug);
   if (!entity) notFound();
+
+  // V3-C4 — ouvrir la fiche entière, c'est la « fréquenter, la fouiller » :
+  // le niveau le plus poussé, qu'on l'ouvre en lecture ou en édition — un
+  // joueur solo édite sa propre fiche (et souvent celle de ses PNJ, en
+  // MJ de son propre monde) au moins autant qu'il ne la lit. Best-effort :
+  // une écriture ratée ici ne doit jamais empêcher l'affichage de la fiche.
+  const campaigns = await listCampaigns(supabase, world.id);
+  if (campaigns[0]) {
+    try {
+      await discoverEntity(supabase, { campaignId: campaigns[0].id, userId: user.id, entityId: entity.id, level: "detailed" });
+    } catch {
+      // Ignoré volontairement : la fiche s'affiche déjà correctement.
+    }
+  }
 
   const canEdit = await canUserEditEntity(supabase, { worldId: world.id, entityId: entity.id, userId: user.id });
 

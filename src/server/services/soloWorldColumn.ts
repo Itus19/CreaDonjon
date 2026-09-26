@@ -6,6 +6,7 @@ import type { EntityTreeNode } from "@/src/core/entity-tree/build-tree";
 import { getEntityTree } from "@/src/server/services/entities";
 import { resolveEntityRefExcerpts } from "@/src/server/services/refPreview";
 import { listActiveQuestsForWorld } from "@/src/server/services/quests";
+import { listDiscoveredEntityIds } from "@/src/server/services/discoveries";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import type { QuestColumnEntry, WikiColumnGroup } from "@/lib/solo/types";
 
@@ -14,16 +15,14 @@ type TypedClient = SupabaseClient<Database>;
 /**
  * V3-D3 — La colonne gauche de l'écran solo : « le monde connu ».
  *
- * **Ce que ce ticket NE fait PAS, et pourquoi.** Le critère « un marqueur
- * de découverte sur chaque entrée » (connu/esquisse/mentionné) suppose deux
- * briques qui n'existent pas encore : `entity_discoveries` n'a jamais été
- * écrite (V3-C4), et une « esquisse » — un PNJ apparu en jouant sans fiche —
- * n'a pas de représentation dans le modèle avant V3-C2. Faute de données
- * réelles, aucun marqueur n'est affiché ici plutôt que d'en inventer un —
- * même principe que la météo omise en V3-D2. Cette colonne réutilise donc
- * la visibilité déjà en place pour l'onglet Wiki joueur (`listEntitiesByIds`
- * dans le monde entier) — RIEN DE PLUS que ce qu'un joueur peut déjà
- * ouvrir depuis `/joueur/wiki` aujourd'hui, jamais moins non plus.
+ * **V3-C4 — la colonne wiki du mode solo n'affiche que ce qui est
+ * découvert.** Filtre posé ICI, jamais dans `getEntityTree` : cette fonction
+ * sert aussi le wiki du MJ et celui d'une campagne classique, hors périmètre
+ * de ce ticket. La fiche du joueur lui-même (`playerEntityId`) échappe
+ * toujours au filtre — un joueur voit sa propre fiche, découverte ou non.
+ * Aucun marqueur visuel (« connu »/« esquisse »/« mentionné ») pour autant :
+ * ce ticket filtre la liste, il ne dessine pas encore la distinction entre
+ * ses trois niveaux à l'écran — un pas de plus, pas encore demandé.
  */
 
 /** Aplati l'arborescence `part_of` : cette colonne liste, elle n'imbrique pas (l'esquisse ne montrait aucune indentation). */
@@ -45,12 +44,17 @@ export async function buildWikiColumn(
   worldId: string,
   userId: string,
   viewer: Viewer,
-  kindLabels: Record<string, string>
+  kindLabels: Record<string, string>,
+  campaignId: string,
+  playerEntityId: string
 ): Promise<WikiColumnGroup[]> {
-  const tree = await getEntityTree(supabase, worldId, userId);
+  const [tree, discoveredIds] = await Promise.all([getEntityTree(supabase, worldId, userId), listDiscoveredEntityIds(supabase, campaignId, userId)]);
   const groups = tree.filter((g) => g.kind !== "session_journal");
 
-  const flatByGroup = groups.map((g) => ({ kind: g.kind, nodes: flatten(g.items) }));
+  const flatByGroup = groups.map((g) => ({
+    kind: g.kind,
+    nodes: flatten(g.items).filter((n) => n.id === playerEntityId || discoveredIds.has(n.id)),
+  }));
   const allIds = flatByGroup.flatMap((g) => g.nodes.map((n) => n.id));
   const excerpts = await resolveEntityRefExcerpts(supabase, allIds, viewer);
 
