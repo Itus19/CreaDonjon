@@ -3,6 +3,7 @@ import {
   DAY_MINUTES,
   SKETCH_SPOKEN_ANCHOR_THRESHOLD,
   addSketch,
+  advanceSceneTime,
   advanceTime,
   budgetOf,
   startTurn,
@@ -27,7 +28,7 @@ import { DEFAULT_CALENDAR } from "../calendar/defaultCalendar";
 import type { CalendarConfig, GameDate } from "../calendar/types";
 
 const SCENE: SceneState = {
-  __v: 3,
+  __v: 4,
   locationId: "ancre-rouillee",
   present: [
     { entityId: "bram", zone: "engaged" },
@@ -39,6 +40,7 @@ const SCENE: SceneState = {
   recentEvents: [],
   budgets: {},
   sketches: [],
+  weather: null,
 };
 
 const ELFE: SceneSketch = {
@@ -79,6 +81,22 @@ describe("le temps avance parce que le CODE le fait avancer", () => {
 
   it("zero minute est licite et ne change rien", () => {
     expect(advanceTime(SCENE.time, 0)).toEqual(SCENE.time);
+  });
+});
+
+describe("V3-C6 — l'horloge et le decor avancent ensemble (advanceSceneTime)", () => {
+  it("avance l'heure ET recalcule l'eclairage, dans le meme geste", () => {
+    const soir = { ...SCENE, time: { day: 1, hour: 17, minute: 50 }, lighting: "bright" as const };
+    const out = advanceSceneTime(soir, 20);
+    expect(out.time).toEqual({ day: 1, hour: 18, minute: 10 });
+    expect(out.lighting).toBe("dim");
+  });
+
+  it("ne change rien d'autre que l'heure et l'eclairage", () => {
+    const out = advanceSceneTime(SCENE, 5);
+    expect(out.locationId).toBe(SCENE.locationId);
+    expect(out.present).toEqual(SCENE.present);
+    expect(out.weather).toBe(SCENE.weather);
   });
 });
 
@@ -145,6 +163,15 @@ describe("le schema", () => {
 
   it("accepte une esquisse", () => {
     expect(zSceneState.safeParse({ ...SCENE, sketches: [ELFE] }).success).toBe(true);
+  });
+
+  it("accepte une meteo tiree, et son absence", () => {
+    expect(zSceneState.safeParse({ ...SCENE, weather: "Pluie battante" }).success).toBe(true);
+    expect(zSceneState.safeParse({ ...SCENE, weather: null }).success).toBe(true);
+  });
+
+  it("refuse une meteo vide plutot qu'absente", () => {
+    expect(zSceneState.safeParse({ ...SCENE, weather: "" }).success).toBe(false);
   });
 
   it("refuse une heure impossible", () => {

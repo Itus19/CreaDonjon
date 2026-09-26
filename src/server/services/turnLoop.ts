@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
-import { advanceTime, budgetOf, rememberEvent, startTurn, type SceneState } from "@/src/core/rules/scene";
+import { advanceSceneTime, budgetOf, rememberEvent, startTurn, type SceneState } from "@/src/core/rules/scene";
 import { spendFromBudget, type BudgetKind } from "@/src/core/rules/actionBudget";
 import { applyEffects, type TurnActor, type TurnChange } from "@/src/core/rules/turn";
 import { eventsForAttack } from "@/src/core/rules/gameEvents";
@@ -418,7 +418,7 @@ async function applyResolvedTurn(
     // Meme raison que la depense ci-dessus : une resolution chainee ne fait
     // pas avancer l'horloge une seconde fois pour le meme coup.
     if (params.choiceKind !== null) {
-      scene = { ...scene, time: advanceTime(scene.time, minutesForTurn(scene)) };
+      scene = advanceSceneTime(scene, minutesForTurn(scene));
     }
     for (const id of [record.eventId, applicationEventId].filter((i): i is string => i !== null)) {
       scene = rememberEvent(scene, id);
@@ -448,7 +448,7 @@ async function applyResolvedTurn(
 function emptySceneFor(existing: SceneState | null): SceneState {
   return (
     existing ?? {
-      __v: 3,
+      __v: 4,
       locationId: "hors-scene",
       present: [],
       time: { day: 1, hour: 8, minute: 0 },
@@ -457,6 +457,7 @@ function emptySceneFor(existing: SceneState | null): SceneState {
       recentEvents: [],
       budgets: {},
       sketches: [],
+      weather: null,
     }
   );
 }

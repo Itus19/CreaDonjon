@@ -35,6 +35,8 @@ import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasti
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { EffectsBlockData, ScalingBlockData } from "@/src/core/schemas/rule-blocks/blocks";
+import { advanceSceneTime } from "@/src/core/rules/scene";
+import { getSceneState, putSceneState } from "@/src/server/repos/sceneStates";
 import { getEntityById } from "@/src/server/repos/entities";
 import { insertBlock, listBlocksForEntity, updateBlockWithVersionCheck, type BlockRow } from "@/src/server/repos/blocks";
 import { defaultBlockDisplay } from "@/src/core/schemas/blocks/registry";
@@ -552,6 +554,24 @@ export interface RestOutcome {
   hitDiceSpent: Record<string, number>;
 }
 
+/**
+ * V3-C6 — « L'heure avance selon l'action ... un repos » (specs/moteur-de-jeu.md
+ * §6, docs/BACKLOG_V3.md). Une durée D&D non ambigue, contrairement a une
+ * action libre : un repos court dure une heure, un repos long huit heures,
+ * quel que soit ce que le joueur a tape. Sans scene posee, rien a avancer —
+ * hors campagne ou avant que le premier lieu soit choisi, un repos reste
+ * valide, juste sans horloge a tenir (meme repli que `playTurn`).
+ */
+const SHORT_REST_MINUTES = 60;
+const LONG_REST_MINUTES = 8 * 60;
+
+async function advanceSceneClockForRest(supabase: TypedClient, campaignId: string | null, minutes: number, callerId: string): Promise<void> {
+  if (!campaignId) return;
+  const scene = await getSceneState(supabase, campaignId);
+  if (!scene) return;
+  await putSceneState(supabase, { campaignId, state: advanceSceneTime(scene, minutes), updatedBy: callerId });
+}
+
 /** Repos court : depense de des de vie au choix (soigne, decompte), recharge des ressources `short_rest`. */
 export async function takeShortRest(
   supabase: TypedClient,
@@ -605,6 +625,7 @@ export async function takeShortRest(
     actor: "player",
     actorUserId: params.actorUserId,
   });
+  await advanceSceneClockForRest(supabase, params.campaignId, SHORT_REST_MINUTES, params.actorUserId);
 
   return { hpHealed, hitDiceSpent: params.hitDiceSpent };
 }
@@ -666,6 +687,7 @@ export async function takeLongRest(
     actor: "player",
     actorUserId: params.actorUserId,
   });
+  await advanceSceneClockForRest(supabase, params.campaignId, LONG_REST_MINUTES, params.actorUserId);
 
   return { ok: true };
 }

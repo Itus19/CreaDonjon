@@ -66,6 +66,8 @@ export interface SceneView {
   nearestCity: { name: string; slug: string } | null;
   time: { day: number; hour: number; minute: number };
   lighting: "bright" | "dim" | "dark";
+  /** V3-C6 — tirée au générateur `meteo`, jamais inventée. `null` sans table réelle à tirer dans ce monde. */
+  weather: string | null;
   inCombat: boolean;
   present: {
     entityId: string;

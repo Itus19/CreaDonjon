@@ -10,6 +10,7 @@ import { listCombatsForCampaign } from "@/src/server/repos/combats";
 import { listEntitiesByIds, listEntitiesByKinds } from "@/src/server/repos/entities";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
 import { discoverEntity } from "@/src/server/services/discoveries";
+import { generateForScene } from "@/src/server/services/sceneGeneration";
 import type { SceneView } from "@/lib/solo/types";
 
 type TypedClient = SupabaseClient<Database>;
@@ -29,6 +30,21 @@ type TypedClient = SupabaseClient<Database>;
  */
 
 const PRESENCE_KINDS = ["character", "npc", "creature", "monster"] as const;
+const WEATHER_TOOL_KEY = "meteo";
+const WEATHER_SECTION_KEY = "meteo-condition";
+
+/**
+ * V3-C6 — La condition tiree au generateur `meteo` (V3-C1, memes dés
+ * reels), jamais une invention du modele. `null` sans table reelle a tirer
+ * dans ce monde (aucun outil MJ, section vide) — omise plutot qu'inventee,
+ * meme discipline que la date sans calendrier reglé (V3-D2).
+ */
+async function drawWeather(supabase: TypedClient, params: { campaignId: string; worldId: string; callerId: string }): Promise<string | null> {
+  const drawn = await generateForScene(supabase, { campaignId: params.campaignId, worldId: params.worldId, toolKey: WEATHER_TOOL_KEY, callerId: params.callerId });
+  if ("error" in drawn) return null;
+  const condition = drawn.sections.find((s) => s.key === WEATHER_SECTION_KEY)?.text.trim();
+  return condition || null;
+}
 
 /** Les lieux et les presents possibles d'un monde, pour les deux listes de l'ecran. */
 export async function listSceneChoices(
@@ -82,6 +98,7 @@ export async function loadSceneView(
     nearestCity,
     time: scene.time,
     lighting: scene.lighting,
+    weather: scene.weather,
     inCombat: scene.activeCombatId !== null,
     present: scene.present.map((p) => ({
       entityId: p.entityId,
@@ -124,12 +141,20 @@ export function sceneDateLabel(sceneDay: number, calendar: CalendarConfigInput):
  * (« la ville la plus proche », déjà résolu pour l'en-tête, V3-D2) passe
  * `mentioned` — le joueur en a entendu parler sans y être allé. Jamais de
  * régression (`discoverEntity`) : rejouer la même scène ne rétrograde rien.
+ *
+ * **V3-C6** — un CHANGEMENT de lieu tire une météo fraîche (jamais en
+ * ré-enregistrant la même scène, sinon elle changerait à chaque « présents »
+ * retouché sans raison en jeu). Tirée APRÈS avoir écrit le nouveau lieu :
+ * `generateForScene` relit lui-même la scène pour résoudre ses axes
+ * (richesse/zone du lieu COURANT, V3-C1) — la tirer avant aurait résolu ces
+ * axes sur l'ANCIEN lieu, encore en base à cet instant.
  */
 export async function setScene(
   supabase: TypedClient,
   params: { campaignId: string; worldId: string; locationId: string; present: string[]; callerId: string }
 ): Promise<SceneState> {
   const existing = await getSceneState(supabase, params.campaignId);
+  const locationChanged = !existing || existing.locationId !== params.locationId;
   let scene = existing ? { ...existing, locationId: params.locationId } : emptyScene(params.locationId);
   // V3-C2 : une esquisse ne survit qu'a son lieu de tirage — changer de lieu la laisse derriere.
   scene = dropSketchesOutsideLocation(scene, params.locationId);
@@ -146,6 +171,11 @@ export async function setScene(
   scene = { ...scene, activeCombatId: running?.id ?? null };
 
   await putSceneState(supabase, { campaignId: params.campaignId, state: scene, updatedBy: params.callerId });
+
+  if (locationChanged) {
+    scene = { ...scene, weather: await drawWeather(supabase, { campaignId: params.campaignId, worldId: params.worldId, callerId: params.callerId }) };
+    await putSceneState(supabase, { campaignId: params.campaignId, state: scene, updatedBy: params.callerId });
+  }
 
   const edges = await listPartOfRelationsForWorld(supabase, params.worldId);
   const nearestCityId = edges.find((e) => e.source_entity_id === params.locationId)?.target_entity_id ?? null;

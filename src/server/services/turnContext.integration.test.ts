@@ -98,7 +98,7 @@ describe.skipIf(!hasCreds)("buildSoloTurnContext (integration, base reelle)", ()
     const { error: sceneError } = await admin.from("scene_states").insert({
       campaign_id: campaignId,
       state: {
-        __v: 3,
+        __v: 4,
         locationId: locationEntityId,
         present: [{ entityId: npcEntityId, zone: "near" }],
         time: { day: 3, hour: 22, minute: 15 },
@@ -107,6 +107,7 @@ describe.skipIf(!hasCreds)("buildSoloTurnContext (integration, base reelle)", ()
         recentEvents: [],
         budgets: {},
         sketches: [],
+        weather: null,
       },
       updated_by: gm.id,
     });

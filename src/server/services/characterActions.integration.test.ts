@@ -8,6 +8,7 @@ import {
   rollWeaponAttack,
   rollWeaponDamage,
   takeLongRest,
+  takeShortRest,
 } from "./characterActions";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
@@ -203,6 +204,35 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
     const state = await getOrInitializeRuntimeState(admin, ctx!);
     expect(state.state.hp.current).toBe(12);
     expect(state.state.spell_slots_used).toEqual({});
+  });
+
+  it("V3-C6 — repos court et repos long avancent l'horloge de la scene, et son eclairage", async () => {
+    const state = {
+      __v: 4,
+      locationId: "lieu-test-repos",
+      present: [],
+      time: { day: 1, hour: 17, minute: 50 },
+      lighting: "bright",
+      activeCombatId: null,
+      recentEvents: [],
+      budgets: {},
+      sketches: [],
+      weather: null,
+    };
+    const { error: sceneError } = await admin.from("scene_states").upsert({ campaign_id: campaignId, state }, { onConflict: "campaign_id" });
+    if (sceneError) throw new Error(sceneError.message);
+
+    await takeShortRest(admin, { entityId, campaignId, hitDiceSpent: {}, actorUserId: ownerId, locale: "fr" });
+    const { data: afterShort } = await admin.from("scene_states").select("state").eq("campaign_id", campaignId).single();
+    expect((afterShort!.state as typeof state).time).toEqual({ day: 1, hour: 18, minute: 50 });
+    expect((afterShort!.state as typeof state).lighting).toBe("dim"); // 18h50 : la nuit tombe
+
+    await takeLongRest(admin, { entityId, campaignId, actorUserId: ownerId, locale: "fr" });
+    const { data: afterLong } = await admin.from("scene_states").select("state").eq("campaign_id", campaignId).single();
+    expect((afterLong!.state as typeof state).time).toEqual({ day: 2, hour: 2, minute: 50 });
+    expect((afterLong!.state as typeof state).lighting).toBe("dark");
+
+    await admin.from("scene_states").delete().eq("campaign_id", campaignId);
   });
 
   it("lancer un sort sur un personnage qui ne le connait pas est rejete", async () => {

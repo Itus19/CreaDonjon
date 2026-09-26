@@ -59,11 +59,12 @@ export interface SceneSketch {
 export interface SceneState {
   /**
    * V3-B2 : passe de 1 a 2 en ajoutant `budgets`. V3-C2 : passe de 2 a 3 en
-   * ajoutant `sketches`. Aucune migration — la scene est un `jsonb` valide
-   * par Zod, et SCHEMA.md §26 l'a voulu ainsi précisément pour qu'un champ
-   * ajoute au moteur n'en demande pas.
+   * ajoutant `sketches`. V3-C6 : passe de 3 a 4 en ajoutant `weather`.
+   * Aucune migration — la scene est un `jsonb` valide par Zod, et
+   * SCHEMA.md §26 l'a voulu ainsi précisément pour qu'un champ ajoute au
+   * moteur n'en demande pas.
    */
-  __v: 3;
+  __v: 4;
   locationId: string;
   present: ScenePresence[];
   time: GameTime;
@@ -83,6 +84,14 @@ export interface SceneState {
   budgets: Record<string, ActionBudget>;
   /** V3-C2 — les personnages incidents de la scene courante, jamais persistants au-dela. */
   sketches: SceneSketch[];
+  /**
+   * V3-C6 — la condition tiree au generateur `meteo` (jamais une invention
+   * du modele, meme hierarchie que le tirage d'un PNJ, V3-C2). `null` tant
+   * qu'aucun tirage n'a reussi (aucun outil MJ dans ce monde, table vide) —
+   * omise plutot qu'inventee (meme principe que la date sans calendrier
+   * regle, V3-D2).
+   */
+  weather: string | null;
 }
 
 export const RECENT_EVENTS_KEPT = 5;
@@ -104,7 +113,7 @@ const zSceneSketch = z.object({
 });
 
 export const zSceneState = z.object({
-  __v: z.literal(3),
+  __v: z.literal(4),
   locationId: z.string().min(1),
   present: z.array(
     z.object({
@@ -119,11 +128,12 @@ export const zSceneState = z.object({
   recentEvents: z.array(z.string().min(1)).max(RECENT_EVENTS_KEPT),
   budgets: z.record(z.string(), zActionBudget),
   sketches: z.array(zSceneSketch),
+  weather: z.string().min(1).nullable(),
 });
 
 export function emptyScene(locationId: string, time: GameTime = { day: 1, hour: 8, minute: 0 }): SceneState {
   return {
-    __v: 3,
+    __v: 4,
     locationId,
     present: [],
     time,
@@ -132,6 +142,7 @@ export function emptyScene(locationId: string, time: GameTime = { day: 1, hour: 
     recentEvents: [],
     budgets: {},
     sketches: [],
+    weather: null,
   };
 }
 
@@ -168,6 +179,17 @@ export function advanceTime(time: GameTime, minutes: number): GameTime {
     hour: Math.floor((total % DAY_MINUTES) / 60),
     minute: total % 60,
   };
+}
+
+/**
+ * V3-C6 — « Le passage jour/nuit change l'éclairage de la scène. » Avancer
+ * l'heure sans jamais recalculer `lighting` laissait le décor figé au moment
+ * où la scène avait été posée — corrigé ici, au même endroit que l'horloge,
+ * pour qu'aucun appelant n'oublie l'un des deux.
+ */
+export function advanceSceneTime(scene: SceneState, minutes: number): SceneState {
+  const time = advanceTime(scene.time, minutes);
+  return { ...scene, time, lighting: lightingAt(time) };
 }
 
 /**

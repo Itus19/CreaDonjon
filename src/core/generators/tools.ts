@@ -230,6 +230,13 @@ export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
       },
     ],
   },
+  {
+    key: "meteo",
+    label: "Météo",
+    // Pas de `promote` : la meteo n'est pas une entite, meme discipline que
+    // "Noms"/"Butin" — une condition tiree, jamais une fiche.
+    sections: [{ key: "meteo-condition", label: "Condition" }],
+  },
 ];
 
 /**

@@ -56,10 +56,13 @@ export default function EnTeteEtat({
         )}
       </nav>
 
-      {/* Météo et température : V3-C6, pas encore fait — omises plutôt que d'afficher une valeur inventée. */}
+      {/* V3-C6 — la météo, tirée au générateur (jamais inventée) ; la
+          température n'est pas demandée par le ticket, omise plutôt que
+          devinée. */}
       <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
         {dateLabel && <span className="text-sm text-ink-soft">{dateLabel}</span>}
         <span className="text-sm text-ink">{heure}</span>
+        {scene.weather && <span className="text-sm text-ink-soft">· {scene.weather}</span>}
       </div>
     </>
   );
