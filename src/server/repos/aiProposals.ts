@@ -125,6 +125,40 @@ export async function listPendingAiProposalsForEntity(supabase: TypedClient, ent
   return (data ?? []).map(toRow);
 }
 
+/**
+ * V3-C5 — Le tiroir de conséquences. Les propositions en attente
+ * s'accumulent tant qu'on ne les relit pas (docs/BACKLOG_V3.md) : toute la
+ * campagne, jamais bornée à une séance.
+ */
+export async function listPendingAiProposalsForCampaign(supabase: TypedClient, campaignId: string): Promise<AiProposalRow[]> {
+  const { data, error } = await supabase
+    .from("ai_proposals")
+    .select(COLUMNS)
+    .eq("campaign_id", campaignId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(toRow);
+}
+
+/**
+ * V3-C5 — Ce qui a déjà été écrit dans le monde PENDANT cette séance
+ * (`sessionEventIds`, résolus par l'appelant) — auto-appliqué par le moteur
+ * ou accepté à la main, les deux comptent pour le récapitulatif de fin de
+ * séance. Vide sans events, jamais une clause `IN ()` invalide.
+ */
+export async function listAppliedAiProposalsBySessionEventIds(supabase: TypedClient, sessionEventIds: string[]): Promise<AiProposalRow[]> {
+  if (sessionEventIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("ai_proposals")
+    .select(COLUMNS)
+    .in("session_event_id", sessionEventIds)
+    .eq("status", "applied")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(toRow);
+}
+
 export async function updateAiProposalStatus(
   supabase: TypedClient,
   params: { id: string; status: AiProposalStatus; reviewedBy: string; appliedAt?: string | null }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ScenePanel from "@/components/solo/ScenePanel";
 import IntentBar from "@/components/solo/IntentBar";
 import Fil from "@/components/solo/Fil";
+import ConsequencesDrawer, { type ConsequencesDrawerData } from "@/components/solo/ConsequencesDrawer";
 import type { FilItem, IntentBarData, PendingRequest, SceneView } from "@/lib/solo/types";
 
 /**
@@ -72,16 +73,23 @@ export default function SoloScreen({
   const [sceneView, setSceneView] = useState(scene);
   const [filItems, setFilItems] = useState<FilItem[] | null>(null);
   const [pending, setPending] = useState<PendingRequest | null>(null);
+  const [consequences, setConsequences] = useState<ConsequencesDrawerData | null>(null);
   const [announce, setAnnounce] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
   const lastSeqRef = useRef<number | null>(null);
 
-  /** Rafraîchit le fil ET la demande en cours — même tick, même raison : les deux peuvent changer sans passer par cette colonne (un jet résolu depuis la fiche écrit les deux à la fois). */
+  /**
+   * Rafraîchit le fil, la demande en cours ET le tiroir de conséquences —
+   * même tick, même raison : les trois peuvent changer sans passer par
+   * cette colonne (un jet résolu depuis la fiche, une proposition acceptée
+   * depuis le tiroir lui-même).
+   */
   async function reloadCenter() {
-    const [filRes, sheetRes] = await Promise.all([
+    const [filRes, sheetRes, consequencesRes] = await Promise.all([
       fetch(`/api/campaigns/${campaignId}/fil`),
       fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId}`),
+      fetch(`/api/campaigns/${campaignId}/consequences`),
     ]);
     if (filRes.ok) {
       const body = (await filRes.json()) as { items: FilItem[] };
@@ -95,6 +103,9 @@ export default function SoloScreen({
     if (sheetRes.ok) {
       const body = (await sheetRes.json()) as SheetPendingResponse;
       setPending(body.runtimeState.state.pending_request);
+    }
+    if (consequencesRes.ok) {
+      setConsequences((await consequencesRes.json()) as ConsequencesDrawerData);
     }
   }
 
@@ -140,6 +151,9 @@ export default function SoloScreen({
         />
         <div className="mt-4">
           <Fil items={filItems} />
+        </div>
+        <div className="mt-2">
+          <ConsequencesDrawer data={consequences} onChanged={reloadCenter} />
         </div>
       </div>
       {/* Region discrete : annonce chaque nouveau tour sans deplacer le

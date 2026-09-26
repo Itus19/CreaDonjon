@@ -111,6 +111,25 @@ describe.skipIf(!hasCreds)("applyAiProposal / rejectAiProposal (integration, bas
     expect(updatedProposal).toMatchObject({ status: "rejected", reviewed_by: userId });
   });
 
+  it("V3-C5 — 'modifier' : le texte edite remplace le texte propose, jamais les deux", async () => {
+    const proposal = await insertAiProposal(admin, {
+      worldId,
+      campaignId: null,
+      kind: "update_block",
+      targetEntityId: entityId,
+      payload: { blockId, text: "Texte propose par le modele." },
+      status: "pending",
+    });
+
+    const outcome = await applyAiProposal(admin, { proposalId: proposal.id, userId, overrideText: "Texte reecrit par l'auteur avant d'accepter." });
+    expect(outcome).toEqual({ ok: true });
+
+    const { data: block } = await admin.from("blocks").select("data").eq("id", blockId).single();
+    const segments = (block!.data as { segments: Array<{ content: Array<{ v: string }> }> }).segments;
+    expect(segments.some((s) => s.content[0]?.v === "Texte reecrit par l'auteur avant d'accepter.")).toBe(true);
+    expect(segments.some((s) => s.content[0]?.v === "Texte propose par le modele.")).toBe(false);
+  });
+
   it("V3-C3 — accepte auto_applied a l'ecriture (colonne reelle, pas simulee)", async () => {
     const proposal = await insertAiProposal(admin, {
       worldId,

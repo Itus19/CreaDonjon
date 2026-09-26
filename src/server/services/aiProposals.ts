@@ -21,10 +21,15 @@ export type ApplyAiProposalOutcome =
  * reecriture), visibilite publique par defaut comme tout nouveau contenu.
  * `changeSource: "ai"` sur la revision resultante (distingue une edition
  * assistee d'une edition manuelle dans l'historique).
+ *
+ * **V3-C5 — « modifier ».** `overrideText` remplace le texte propose par
+ * le modele avant l'ecriture, si l'utilisateur l'a change au moment
+ * d'accepter — c'est TOUJOURS l'utilisateur qui ecrit ce qui part en base,
+ * jamais un texte que le modele n'a pas produit lui-meme sans relecture.
  */
 export async function applyAiProposal(
   supabase: TypedClient,
-  params: { proposalId: string; userId: string }
+  params: { proposalId: string; userId: string; overrideText?: string }
 ): Promise<ApplyAiProposalOutcome> {
   const proposal = await getAiProposalById(supabase, params.proposalId);
   if (!proposal) return { ok: false, reason: "not_found" };
@@ -32,7 +37,8 @@ export async function applyAiProposal(
   if (proposal.kind !== "update_block") return { ok: false, reason: "unsupported_kind" };
 
   const payload = proposal.payload as { blockId?: string; text?: string };
-  if (!payload.blockId || !payload.text) return { ok: false, reason: "unsupported_kind" };
+  const text = params.overrideText?.trim() || payload.text;
+  if (!payload.blockId || !text) return { ok: false, reason: "unsupported_kind" };
 
   const block = await getBlockById(supabase, payload.blockId);
   if (!block || block.entity_id !== proposal.targetEntityId || block.block_type !== "text") {
@@ -44,7 +50,7 @@ export async function applyAiProposal(
     id: crypto.randomUUID(),
     blockType: "paragraph",
     visibility: { level: "public", scopeId: null },
-    content: [{ t: "text", v: payload.text }],
+    content: [{ t: "text", v: text }],
     align: "left",
   };
   // `...currentData` plutot qu'un objet reconstruit : une proposition ajoute

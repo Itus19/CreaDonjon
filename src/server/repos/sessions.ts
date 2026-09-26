@@ -110,6 +110,13 @@ export async function listSketchAppearancesByName(supabase: TypedClient, session
     .map((locationId) => ({ locationId }));
 }
 
+/** V3-C5 — Les identifiants seuls, pour borner une requete ailleurs (`ai_proposals.session_event_id IN (...)`) sans relire chaque `payload`. */
+export async function listSessionEventIds(supabase: TypedClient, sessionId: string): Promise<string[]> {
+  const { data, error } = await supabase.from("session_events").select("id").eq("session_id", sessionId);
+  if (error) throw new Error(error.message);
+  return data.map((r) => r.id);
+}
+
 /** La session la plus recente sans `ended_at` — `null` si aucune n'est ouverte (SCHEMA.md §12 : `ended_at` marque la fin). */
 export async function getOpenSessionForCampaign(supabase: TypedClient, campaignId: string): Promise<SessionRow | null> {
   const { data, error } = await supabase
