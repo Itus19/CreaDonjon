@@ -89,6 +89,27 @@ export async function findEventByFromEvent(supabase: TypedClient, sessionId: str
   return data;
 }
 
+/**
+ * V3-C2 — Les esquisses deja tirees sous ce nom (`payload.source === "sketch"`,
+ * ecrit par `sceneSketches.ts`), pour detecter « une esquisse apparait dans
+ * une deuxieme scene » : le nom filtre directement en base plutot que de
+ * relire tout le fil et parser chaque payload en memoire.
+ */
+export async function listSketchAppearancesByName(supabase: TypedClient, sessionId: string, name: string): Promise<{ locationId: string }[]> {
+  const { data, error } = await supabase
+    .from("session_events")
+    .select("payload")
+    .eq("session_id", sessionId)
+    .eq("kind", "world_update")
+    .eq("payload->>source", "sketch")
+    .eq("payload->>name", name);
+  if (error) throw new Error(error.message);
+  return data
+    .map((row) => (row.payload as { location_id?: unknown } | null)?.location_id)
+    .filter((id): id is string => typeof id === "string")
+    .map((locationId) => ({ locationId }));
+}
+
 /** La session la plus recente sans `ended_at` — `null` si aucune n'est ouverte (SCHEMA.md §12 : `ended_at` marque la fin). */
 export async function getOpenSessionForCampaign(supabase: TypedClient, campaignId: string): Promise<SessionRow | null> {
   const { data, error } = await supabase

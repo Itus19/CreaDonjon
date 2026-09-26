@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import BinderTabs from "@/components/shared/BinderTabs";
 import PlayerRulesSidebar from "@/components/rules/PlayerRulesSidebar";
@@ -12,11 +13,14 @@ import type { QuestColumnEntry, SceneView, WikiColumnGroup } from "@/lib/solo/ty
  * repris à l'identique de l'esquisse (`components/solo/esquisse/`, jetable,
  * jamais importée ici) : Wiki, Quêtes, Présents, Règles.
  *
- * **Aucun marqueur de découverte, aucune esquisse de PNJ à ancrer.** Les
- * deux dépendent de données que rien n'écrit encore — `entity_discoveries`
- * (V3-C4) et le concept même d'esquisse de scène (V3-C2). Le ticket les
- * prévoyait ; ce composant les omet plutôt que d'inventer une marque sans
- * donnée derrière, même principe que la météo omise en V3-D2.
+ * **Aucun marqueur de découverte.** Dépend d'une donnée que rien n'écrit
+ * encore — `entity_discoveries` (V3-C4). Ce composant l'omet plutôt que
+ * d'inventer une marque sans donnée derrière, même principe que la météo
+ * omise en V3-D2.
+ *
+ * **V3-C2 — les esquisses rejoignent les Présents**, avec « garder cette
+ * fiche » : le seul des quatre déclencheurs d'ancrage qui est un geste du
+ * joueur plutôt qu'une règle automatique (`sceneSketches.ts`).
  *
  * Le Wiki de cette colonne montre exactement ce qu'un joueur peut déjà
  * ouvrir depuis `/joueur/wiki` — la même visibilité, calculée côté serveur
@@ -100,8 +104,39 @@ function OngletQuetes({ quests }: { quests: QuestColumnEntry[] }) {
   );
 }
 
-function OngletPresents({ present }: { present: SceneView["present"] }) {
-  if (present.length === 0) {
+function OngletPresents({
+  present,
+  sketches,
+  worldSlug,
+  campaignId,
+}: {
+  present: SceneView["present"];
+  sketches: SceneView["sketches"];
+  worldSlug: string;
+  campaignId: string;
+}) {
+  const router = useRouter();
+  const [ancrageEnCours, setAncrageEnCours] = useState<string | null>(null);
+
+  // `ColonneMonde` reçoit sa scène du composant serveur (`page.tsx`), pas
+  // d'un état local partagé avec `SoloScreen` (une colonne voisine, un arbre
+  // React distinct) — `router.refresh()` la relit fraîche, même geste que
+  // `ScenePanel.onChanged` pour la même raison.
+  async function garder(sketchId: string) {
+    setAncrageEnCours(sketchId);
+    try {
+      const res = await fetch(`/api/solo/scene/sketches/${sketchId}/garder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId, worldSlug }),
+      });
+      if (res.ok) router.refresh();
+    } finally {
+      setAncrageEnCours(null);
+    }
+  }
+
+  if (present.length === 0 && sketches.length === 0) {
     return <p className="text-sm text-ink-muted">Personne d&apos;autre dans la scène pour l&apos;instant.</p>;
   }
   return (
@@ -115,20 +150,40 @@ function OngletPresents({ present }: { present: SceneView["present"] }) {
           </span>
         </div>
       ))}
+      {sketches.map((s) => (
+        <div key={s.id} className="flex flex-col gap-1 rounded-md border border-dashed border-edge p-2">
+          <span className="text-sm text-ink">{s.name}</span>
+          <span className="text-xs text-ink-muted">
+            {s.trait} · {ZONE_LABELS[s.zone]}
+          </span>
+          <button
+            type="button"
+            onClick={() => void garder(s.id)}
+            disabled={ancrageEnCours === s.id}
+            className="self-start text-xs text-link-entity hover:underline disabled:opacity-50"
+          >
+            {ancrageEnCours === s.id ? "…" : "garder cette fiche"}
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
 
 export default function ColonneMonde({
   worldSlug,
+  campaignId,
   wiki,
   quests,
   present,
+  sketches,
 }: {
   worldSlug: string;
+  campaignId: string;
   wiki: WikiColumnGroup[];
   quests: QuestColumnEntry[];
   present: SceneView["present"];
+  sketches: SceneView["sketches"];
 }) {
   const [onglet, setOnglet] = useState<Onglet>("wiki");
 
@@ -148,7 +203,7 @@ export default function ColonneMonde({
       <div className={`${CLASSEUR} min-h-0 flex-1 overflow-y-auto`}>
         {onglet === "wiki" && <OngletWiki worldSlug={worldSlug} groups={wiki} />}
         {onglet === "quetes" && <OngletQuetes quests={quests} />}
-        {onglet === "presents" && <OngletPresents present={present} />}
+        {onglet === "presents" && <OngletPresents present={present} sketches={sketches} worldSlug={worldSlug} campaignId={campaignId} />}
         {onglet === "regles" && <PlayerRulesSidebar worldSlug={worldSlug} />}
       </div>
     </div>

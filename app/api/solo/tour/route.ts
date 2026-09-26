@@ -14,6 +14,7 @@ import type { Locale } from "@/src/i18n/request";
 // pour verifier cet ORDRE plutot que l'absence totale de ces imports).
 import { getOpenAiCompatibleProviderFromEnv } from "@/src/server/ai/adapters/openAiCompatible";
 import { narrateSoloTurn } from "@/src/server/ai/soloNarration";
+import { anchorSketchesNamedInText } from "@/src/server/services/sceneSketches";
 import type { PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 
 const advantageField = z.enum(["normal", "advantage", "disadvantage"]);
@@ -156,12 +157,27 @@ export async function POST(request: NextRequest) {
   // (specs/cible-locale-et-ia.md §4 : "aucune fonction essentielle ne doit
   // dependre du succes d'un appel").
   if (parsed.data.campaignId && result.record.eventId) {
+    const sessionId = await getOrOpenSessionForCampaign(supabase, parsed.data.campaignId);
+
+    // V3-C2 — « le joueur l'a nommée explicitement » : vérifié sur SON
+    // propre texte, avant la narration, pour qu'une esquisse tout juste
+    // ancrée y participe déjà comme une vraie fiche. Best-effort, même
+    // raison que la narration ci-dessous : jamais un tour cassé pour ça.
+    try {
+      await anchorSketchesNamedInText(supabase, {
+        campaignId: parsed.data.campaignId,
+        worldId: world.id,
+        sessionId,
+        callerId: user.id,
+        text: parsed.data.text,
+      });
+    } catch {
+      // Ignoré volontairement : le tour ci-dessus est déjà acquis.
+    }
+
     try {
       const provider = getOpenAiCompatibleProviderFromEnv();
-      const [viewer, sessionId] = await Promise.all([
-        buildViewerForWorld(supabase, world.id, user.id),
-        getOrOpenSessionForCampaign(supabase, parsed.data.campaignId),
-      ]);
+      const viewer = await buildViewerForWorld(supabase, world.id, user.id);
       const outcome = await narrateSoloTurn(supabase, provider, {
         worldId: world.id,
         campaignId: parsed.data.campaignId,

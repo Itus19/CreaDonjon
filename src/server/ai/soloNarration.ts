@@ -5,6 +5,7 @@ import type { Viewer } from "@/src/core/visibility";
 import { soloNarrationSchema, soloNarrationToolSchema } from "@/src/core/ai/soloNarrationProposal";
 import { maxSimilarityToRecent } from "@/src/core/ai/narrationSimilarity";
 import { buildSoloTurnContext } from "@/src/server/services/turnContext";
+import { drawSketchForScene, recordSketchSpeechAndMaybeAnchor } from "@/src/server/services/sceneSketches";
 import { findEventByFromEvent, getSessionEventById, insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import type { AiProvider } from "./provider";
 import { runAiCompletion } from "./callAi";
@@ -28,7 +29,9 @@ const SYSTEM_PROMPT =
   "etablis, jamais a recalculer, jamais a re-narrer differemment. Ta seule tache : raconter ce tour en " +
   "deux a quatre phrases, en francais, en integrant les faits fournis sans les contredire. Si un PNJ " +
   "present reagit, utilise UNIQUEMENT un identifiant de PNJ fourni dans le contexte — n'en invente " +
-  `jamais. Reponds toujours via l'outil ${TOOL_NAME}, une seule fois.`;
+  "jamais. Si un personnage incident, absent de cette liste, doit reagir MAINTENANT, ne l'invente pas : " +
+  "demande-le via new_character avec seulement son role (jamais un nom ni un trait, le moteur les tire). " +
+  `Reponds toujours via l'outil ${TOOL_NAME}, une seule fois.`;
 
 export interface SoloNarrationParams {
   worldId: string;
@@ -60,6 +63,8 @@ interface NarrationAttempt {
   ok: boolean;
   narration?: string;
   npcReaction?: { npcId: string; text: string };
+  /** V3-C2 — un role demande, jamais un nom : `narrateSoloTurn` seul decide d'en tirer une esquisse. */
+  newCharacterRequest?: { role: string };
   invalidReason?: string;
   inputTokens: number;
   outputTokens: number;
@@ -102,6 +107,7 @@ async function attemptNarration(
     ok: true,
     narration: parsed.data.narration,
     npcReaction: parsed.data.npc_reaction ? { npcId: parsed.data.npc_reaction.npc_id, text: parsed.data.npc_reaction.text } : undefined,
+    newCharacterRequest: parsed.data.new_character ? { role: parsed.data.new_character.role } : undefined,
     inputTokens: result.inputTokens,
     outputTokens: result.outputTokens,
   };
@@ -154,7 +160,34 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
   if (!first.ok) return first;
 
   let chosen = first;
-  if (recentNarrations.length > 0 && maxSimilarityToRecent(first.narration!, recentNarrations) > SIMILARITY_THRESHOLD) {
+  if (first.newCharacterRequest) {
+    // V3-C2 — jamais le modele qui invente un nom : le generateur tire une
+    // esquisse (dés réels, journalisée), et SEULEMENT ALORS un second essai
+    // raconte avec l'identite reellement tiree. Un tirage impossible (aucun
+    // outil MJ dans ce monde, par exemple) laisse `first` tel quel — le
+    // personnage incident reste alors hors scene plutot que de bloquer le tour.
+    const drawn = await drawSketchForScene(supabase, {
+      campaignId: params.campaignId,
+      worldId: params.worldId,
+      sessionId: params.sessionId,
+      callerId: params.userId,
+    });
+    if (drawn.ok) {
+      const retry = await buildSoloTurnContext(supabase, {
+        worldId: params.worldId,
+        campaignId: params.campaignId,
+        playerEntityId: params.playerEntityId,
+        viewer: params.viewer,
+        sessionId: params.sessionId,
+        playerAction: params.playerAction,
+        facts: params.facts,
+        changes: params.changes,
+        hints: params.hints,
+      });
+      const second = await attemptNarration(supabase, provider, retry.text, retry.npcIds, params.userId, params.campaignId);
+      if (second.ok) chosen = second;
+    }
+  } else if (recentNarrations.length > 0 && maxSimilarityToRecent(first.narration!, recentNarrations) > SIMILARITY_THRESHOLD) {
     const second = await attemptNarration(supabase, provider, context, npcIds, params.userId, params.campaignId);
     if (second.ok) {
       const firstScore = maxSimilarityToRecent(first.narration!, recentNarrations);
@@ -180,6 +213,26 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
       npc_reaction: chosen.npcReaction ? { npc_id: chosen.npcReaction.npcId, text: chosen.npcReaction.text } : null,
     } as unknown as Json,
   });
+
+  if (chosen.npcReaction) {
+    // V3-C2 — best-effort, APRÈS que la narration est déjà journalisée : un
+    // échec ici (base indisponible, esquisse déjà ancrée par ailleurs) ne
+    // doit jamais faire disparaître une narration réussie, même raison que
+    // le reste de ce fichier vis-à-vis de `playTurn`. Sans effet si
+    // `npc_id` désigne un vrai PNJ plutôt qu'une esquisse (garde-fou
+    // interne à `recordSketchSpeechAndMaybeAnchor`).
+    try {
+      await recordSketchSpeechAndMaybeAnchor(supabase, {
+        campaignId: params.campaignId,
+        worldId: params.worldId,
+        sessionId: params.sessionId,
+        sketchId: chosen.npcReaction.npcId,
+        callerId: params.userId,
+      });
+    } catch {
+      // Ignoré volontairement : la narration ci-dessus est déjà acquise.
+    }
+  }
 
   return {
     ok: true,

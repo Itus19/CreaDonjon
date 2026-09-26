@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { emptyScene, enterScene, leaveScene, sceneCalendarDate, type SceneState } from "@/src/core/rules/scene";
+import { dropSketchesOutsideLocation, emptyScene, enterScene, leaveScene, sceneCalendarDate, type SceneState } from "@/src/core/rules/scene";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
 import { weekdayNameForDate } from "@/src/core/calendar/weekday";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
@@ -88,6 +88,7 @@ export async function loadSceneView(
       zone: p.zone,
       disposition: p.disposition,
     })),
+    sketches: scene.sketches.map((s) => ({ id: s.id, name: s.name, trait: s.trait, zone: s.zone, disposition: s.disposition })),
   };
 }
 
@@ -123,6 +124,8 @@ export async function setScene(
 ): Promise<SceneState> {
   const existing = await getSceneState(supabase, params.campaignId);
   let scene = existing ? { ...existing, locationId: params.locationId } : emptyScene(params.locationId);
+  // V3-C2 : une esquisse ne survit qu'a son lieu de tirage — changer de lieu la laisse derriere.
+  scene = dropSketchesOutsideLocation(scene, params.locationId);
 
   const wanted = new Set(params.present);
   for (const current of scene.present) {

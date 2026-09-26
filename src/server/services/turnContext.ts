@@ -79,6 +79,18 @@ async function resolvePresentNpcs(
   return npcs;
 }
 
+/**
+ * V3-C2 — Les esquisses de la scène (`SceneState.sketches`) rejoignent les
+ * PNJ réels dans le MÊME `npcIds` fermé : un identifiant local, jamais une
+ * ligne `entities`, donc aucun aller-retour à `getCurrentAttitude`/
+ * `knownAsByTarget` (les deux supposent une vraie entité). Le modèle peut
+ * ainsi la faire parler (`npc_reaction`) sans jamais inventer son nom — le
+ * générateur l'a déjà tiré (`sceneSketches.ts`).
+ */
+function sketchesAsNpcs(sketches: { id: string; name: string; trait: string; zone: TurnContextNpc["zone"] }[]): TurnContextNpc[] {
+  return sketches.map((s) => ({ id: s.id, name: s.name, attitudeLabel: null, zone: s.zone, note: s.trait }));
+}
+
 async function resolveQuests(supabase: TypedClient, worldId: string, viewer: Viewer): Promise<TurnContextQuest[]> {
   const quests = await listActiveQuestsForWorld(supabase, worldId, viewer);
   return quests.map((q) => ({
@@ -122,7 +134,7 @@ export async function buildSoloTurnContext(
 ): Promise<SoloTurnContext> {
   const scene = await getSceneState(supabase, params.campaignId);
 
-  const [locationEntity, npcs, quests, recentNarrations] = await Promise.all([
+  const [locationEntity, realNpcs, quests, recentNarrations] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
       ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: scene.present })
@@ -130,6 +142,7 @@ export async function buildSoloTurnContext(
     resolveQuests(supabase, params.worldId, params.viewer),
     resolveRecentNarrations(supabase, params.sessionId),
   ]);
+  const npcs = [...realNpcs, ...sketchesAsNpcs(scene?.sketches ?? [])];
 
   const input: TurnContextInput = {
     locationName: locationEntity?.name ?? "Hors scène",
@@ -168,7 +181,7 @@ export async function buildSoloGmQuestionContext(
 ): Promise<{ text: string }> {
   const scene = await getSceneState(supabase, params.campaignId);
 
-  const [locationEntity, npcs, quests, recentNarrations] = await Promise.all([
+  const [locationEntity, realNpcs, quests, recentNarrations] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
       ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: scene.present })
@@ -176,6 +189,7 @@ export async function buildSoloGmQuestionContext(
     resolveQuests(supabase, params.worldId, params.viewer),
     resolveRecentNarrations(supabase, params.sessionId),
   ]);
+  const npcs = [...realNpcs, ...sketchesAsNpcs(scene?.sketches ?? [])];
 
   return {
     text: buildGmQuestionContext({

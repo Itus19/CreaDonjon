@@ -44,6 +44,8 @@ export interface TurnContextNpc {
   /** `null` : aucune attitude suivie pour cette paire — omis plutôt qu'un "neutre" inventé. */
   attitudeLabel: string | null;
   zone: "engaged" | "near" | "far";
+  /** V3-C2 — le trait tiré au générateur pour une esquisse (aucune fiche, donc aucune attitude suivie). `undefined` pour un PNJ réel. */
+  note?: string;
 }
 
 export interface TurnContextQuest {
@@ -90,7 +92,8 @@ const ZONE_LABELS: Record<TurnContextNpc["zone"], string> = {
 
 export function npcLine(npc: TurnContextNpc): string {
   const attitude = npc.attitudeLabel ?? "attitude inconnue";
-  return `- ${npc.name} (id: ${npc.id}) — ${ZONE_LABELS[npc.zone]}, ${attitude}`;
+  const note = npc.note ? `, ${npc.note}` : "";
+  return `- ${npc.name} (id: ${npc.id}) — ${ZONE_LABELS[npc.zone]}, ${attitude}${note}`;
 }
 
 export function questLine(quest: TurnContextQuest): string {

@@ -74,6 +74,14 @@ export interface SceneView {
     /** Un mot sur l'attitude ("mefiant"), pose a l'entree en scene — `undefined` : rien n'ecrit ce champ aujourd'hui (V3-D3, colonne Présents). */
     disposition?: string;
   }[];
+  /** V3-C2 — les personnages incidents de la scene : un nom et un trait tires au generateur, jamais une fiche. */
+  sketches: {
+    id: string;
+    name: string;
+    trait: string;
+    zone: "engaged" | "near" | "far";
+    disposition?: string;
+  }[];
 }
 
 /**

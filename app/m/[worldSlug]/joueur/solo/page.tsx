@@ -91,7 +91,16 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
       <SoloShell
         worldSlug={worldSlug}
         entete={<EnTeteEtat worldSlug={worldSlug} scene={scene} dateLabel={dateLabel} />}
-        monde={<ColonneMonde worldSlug={worldSlug} wiki={wiki} quests={quests} present={scene?.present ?? []} />}
+        monde={
+          <ColonneMonde
+            worldSlug={worldSlug}
+            campaignId={campaign.id}
+            wiki={wiki}
+            quests={quests}
+            present={scene?.present ?? []}
+            sketches={scene?.sketches ?? []}
+          />
+        }
         jeu={
           <SoloScreen
             worldSlug={worldSlug}

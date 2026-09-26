@@ -58,6 +58,13 @@ describe("buildTurnContext — ce qui est encadré, et ce qui ne l'est jamais", 
     expect(out).toContain("attitude inconnue");
   });
 
+  it("V3-C2 — le trait d'une esquisse voyage dans sa ligne, quand il existe", () => {
+    const out = buildTurnContext(
+      input({ npcs: [{ id: "esquisse-1", name: "L'elfe taciturne", attitudeLabel: null, zone: "far", note: "essuie des chopes" }] })
+    );
+    expect(out).toContain("essuie des chopes");
+  });
+
   it("aucun fait, aucun changement : le dit plutot que de ne rien ecrire", () => {
     const out = buildTurnContext(input({ facts: [], changes: [] }));
     expect(out).toContain("(aucun)");

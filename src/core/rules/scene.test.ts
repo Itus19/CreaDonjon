@@ -1,25 +1,33 @@
 import { describe, expect, it } from "vitest";
 import {
   DAY_MINUTES,
+  SKETCH_SPOKEN_ANCHOR_THRESHOLD,
+  addSketch,
   advanceTime,
   budgetOf,
   startTurn,
+  dropSketchesOutsideLocation,
   emptyScene,
   enterScene,
   leaveScene,
   lightingAt,
   moveToZone,
+  recordSketchSpoke,
+  removeSketch,
   rememberEvent,
   sceneCalendarDate,
   sceneZoneOf,
+  sketchShouldAnchorForSpeaking,
+  textNamesSketch,
   zSceneState,
+  type SceneSketch,
   type SceneState,
 } from "./scene";
 import { DEFAULT_CALENDAR } from "../calendar/defaultCalendar";
 import type { CalendarConfig, GameDate } from "../calendar/types";
 
 const SCENE: SceneState = {
-  __v: 2,
+  __v: 3,
   locationId: "ancre-rouillee",
   present: [
     { entityId: "bram", zone: "engaged" },
@@ -30,6 +38,16 @@ const SCENE: SceneState = {
   activeCombatId: null,
   recentEvents: [],
   budgets: {},
+  sketches: [],
+};
+
+const ELFE: SceneSketch = {
+  id: "esquisse-1",
+  name: "L'elfe taciturne",
+  trait: "essuie des chopes sans lever les yeux",
+  zone: "near",
+  timesSpoken: 0,
+  locationId: "ancre-rouillee",
 };
 
 describe("le temps avance parce que le CODE le fait avancer", () => {
@@ -125,6 +143,10 @@ describe("le schema", () => {
     expect(zSceneState.safeParse(SCENE).success).toBe(true);
   });
 
+  it("accepte une esquisse", () => {
+    expect(zSceneState.safeParse({ ...SCENE, sketches: [ELFE] }).success).toBe(true);
+  });
+
   it("refuse une heure impossible", () => {
     expect(zSceneState.safeParse({ ...SCENE, time: { day: 1, hour: 24, minute: 0 } }).success).toBe(false);
     expect(zSceneState.safeParse({ ...SCENE, time: { day: 1, hour: 1, minute: 60 } }).success).toBe(false);
@@ -190,5 +212,52 @@ describe("la date de la scene vient du calendrier du monde (V3-D2)", () => {
       currentDate: { year: 1247, month: null, day: null, precision: "year", end: null, label: null },
     };
     expect(sceneCalendarDate(5, calendar)).toBeNull();
+  });
+});
+
+describe("les esquisses (V3-C2) : un personnage incident, jamais une fiche", () => {
+  it("ajoute une esquisse", () => {
+    expect(addSketch(SCENE, ELFE).sketches).toEqual([ELFE]);
+  });
+
+  it("n'ajoute pas deux fois le meme identifiant local", () => {
+    const once = addSketch(SCENE, ELFE);
+    expect(addSketch(once, ELFE).sketches).toHaveLength(1);
+  });
+
+  it("retire une esquisse ancree ou disparue", () => {
+    const withElfe = addSketch(SCENE, ELFE);
+    expect(removeSketch(withElfe, ELFE.id).sketches).toEqual([]);
+  });
+
+  it("retirer une esquisse absente ne leve pas et ne change rien", () => {
+    expect(removeSketch(SCENE, "inconnue")).toEqual(SCENE);
+  });
+
+  it("compte chaque replique", () => {
+    const withElfe = addSketch(SCENE, ELFE);
+    const spoken = recordSketchSpoke(withElfe, ELFE.id);
+    expect(spoken.sketches[0].timesSpoken).toBe(1);
+  });
+
+  it("parler ne fait rien pour une esquisse absente", () => {
+    expect(recordSketchSpoke(SCENE, "inconnue")).toEqual(SCENE);
+  });
+
+  it(`s'ancre au-dela de ${SKETCH_SPOKEN_ANCHOR_THRESHOLD} repliques, pas avant`, () => {
+    expect(sketchShouldAnchorForSpeaking({ ...ELFE, timesSpoken: SKETCH_SPOKEN_ANCHOR_THRESHOLD })).toBe(false);
+    expect(sketchShouldAnchorForSpeaking({ ...ELFE, timesSpoken: SKETCH_SPOKEN_ANCHOR_THRESHOLD + 1 })).toBe(true);
+  });
+
+  it("une esquisse ne survit qu'a son lieu de tirage", () => {
+    const withElfe = addSketch(SCENE, ELFE);
+    expect(dropSketchesOutsideLocation(withElfe, "ancre-rouillee").sketches).toEqual([ELFE]);
+    expect(dropSketchesOutsideLocation(withElfe, "les-quais").sketches).toEqual([]);
+  });
+
+  it("nomme explicitement : un mot entier, jamais une sous-chaine", () => {
+    expect(textNamesSketch("je demande son nom à l'elfe taciturne", "elfe taciturne")).toBe(true);
+    expect(textNamesSketch("je regarde le brame du cerf", "bram")).toBe(false);
+    expect(textNamesSketch("Bram me sert une bière", "bram")).toBe(true);
   });
 });

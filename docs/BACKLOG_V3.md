@@ -481,17 +481,28 @@ Aujourd'hui les générateurs sont un outil MJ : on clique, on lit, on décide. 
 
 **Ce que ça donne :** « tu entres à L'Ancre Rouillée. Derrière le comptoir, une elfe taciturne essuie des chopes. » — l'elfe taciturne vient de la table `patrons-tavernes`, tirée sur un d20 réel, pas de l'imagination du modèle.
 
-### V3-C2 — Esquisses de scène · `M`
+### V3-C2 — Esquisses de scène · `M` — **fait le 26 septembre**
 
 Le problème : si chaque figurant devient une fiche, le wiki se remplit de bruit en trois séances. Si aucun ne le devient, le monde n'a pas de mémoire.
 
-**La réponse : deux états.** Une **esquisse** vit dans la scène — un nom, deux traits, aucune ligne en base hors du journal. Elle devient une **fiche** quand elle est *ancrée*.
+**La réponse : deux états.** Une **esquisse** vit dans la scène — un nom, un trait, aucune ligne en base hors du journal. Elle devient une **fiche** quand elle est *ancrée*.
 
-- [ ] Une esquisse porte un identifiant local à la scène, jamais un UUID d'entité — le modèle ne peut donc pas la confondre avec une vraie fiche.
-- [ ] Elle peut être nommée et prendre la parole (`npc_reaction` sur une esquisse) : c'est la réponse au trou n° 4 d'ADR 0009, *« aucune voie pour faire parler un personnage ponctuel sans lui donner un identifiant »*.
-- [ ] Règle d'ancrage — une esquisse devient une fiche quand **l'une** de ces conditions est vraie : le joueur l'a nommée explicitement, elle a parlé plus de trois fois, elle apparaît dans une deuxième scène, ou le joueur clique « garder ».
-- [ ] L'ancrage réutilise `promoteToEntity` tel quel. **Aucun second mécanisme de création de fiche.**
-- [ ] Les esquisses non ancrées disparaissent à la fin de la scène — mais restent dans le journal, donc retrouvables.
+- [x] **Une esquisse porte un identifiant local à la scène, jamais un UUID d'entité.** `SceneSketch` (`src/core/rules/scene.ts`, `SceneState.sketches`, `__v` 2→3, même « aucune migration » que l'ajout de `budgets` en V3-B2) — `id: crypto.randomUUID()` ne référence jamais `entities`. Le garde-fou anti-hallucination de la narration (`npc_id`, `soloNarrationProposal.ts`) était déjà une simple chaîne dans un enum fermé, jamais `z.string().uuid()` : une esquisse rejoint donc les PNJ réels dans le MÊME `npcIds` sans aucun changement de schéma d'outil (`resolvePresentNpcs`, `turnContext.ts`, fusionne les deux listes).
+- [x] **Elle peut être nommée et prendre la parole.** Le modèle ne choisit ni le nom ni le trait : un champ d'outil `new_character` (un RÔLE seulement — « le tavernier », jamais un nom) déclenche un tirage réel sur l'outil générateur `pnj` (dés réels, graine journalisée, V3-C1 — qui reçoit ici son premier appelant), puis un second essai de narration raconte avec l'identité réellement tirée (`narrateSoloTurn`, même schéma que le filet anti-répétition déjà en place). Répond au trou n° 4 de l'ADR 0009.
+- [x] **Règle d'ancrage, les quatre conditions, un seul mécanisme (`promoteSketch`, `src/server/services/sceneSketches.ts`) :**
+  - **nommée explicitement** — le texte du JOUEUR reprend le nom, mot entier (`textNamesSketch`, jamais un jugement du modèle), vérifié après `playTurn`, avant la narration (`app/api/solo/tour/route.ts`) ;
+  - **parlé plus de trois fois** — un compteur dans la scène (`SceneSketch.timesSpoken`), incrémenté après chaque `npc_reaction` la visant, ancrage à la réplique qui dépasse `SKETCH_SPOKEN_ANCHOR_THRESHOLD` ;
+  - **apparaît dans une deuxième scène** — vérifié au TIRAGE : un nom déjà vu dans un lieu DIFFÉRENT (`payload.source === "sketch"` du journal, `listSketchAppearancesByName`) ancre immédiatement, sans passer par l'état esquisse une seconde fois ;
+  - **le joueur clique « garder »** — le seul déclencheur manuel, posé dans l'onglet Présents (`ColonneMonde.tsx`), à côté des trois automatiques.
+- [x] **L'ancrage réutilise `promoteToEntity` tel quel** — un bloc `text` (le trait), `entityKind: "character"`, visibilité `public`. Aucun second mécanisme.
+- [x] **Les esquisses non ancrées disparaissent à la fin de la scène.** « Fin de scène » n'existe pas comme concept séparé dans ce moteur (`scene_states` est une ligne par campagne, jamais fermée — `setScene` déplace, ne recrée pas) : une esquisse porte donc son `locationId` de tirage, et `dropSketchesOutsideLocation` la laisse derrière dès que `setScene` change de lieu — retrouvable dans le journal (`payload.source: "sketch"`), jamais dans `scene_states`.
+
+**Deux constats faits en vérifiant, aucun des deux un défaut de ce ticket.**
+
+1. **`promoteToEntity` (donc l'ancrage) et `setScene` exigent un rôle `gm`** (`app.is_world_admin` : propriétaire du monde, `world_members` éditeur, ou `campaign_members.role = 'gm'` — jamais un simple `player`). Découvert en vérifiant avec un compte `player` jetable (403 sur l'ancrage, RLS sur `scene_states`) : en solo, le joueur qui pose sa propre scène EST déjà son propre MJ dans `campaign_members` (vrai pour le compte réel de l'auteur sur Fine Lââm) — la vérification a simplement mal reproduit ce rôle au premier essai, corrigé en le donnant au compte de test.
+2. **Aucune table réelle derrière `pnj-nom`/`pnj-apparence` dans ClaudeLand** — les deux sections du générateur PNJ existent mais pointent vers `nouvelle-table`, jamais remplie de contenu. Un tirage y échouerait donc avec `nom manquant au tirage` : sans rapport avec ce ticket (c'est du contenu de générateur à écrire, pas du code), géré par le même repli que « tirage impossible » documenté au-dessus. Vérifié en direct par tirage FORCÉ (données de scène posées à la main) plutôt que par un vrai `new_character`, pour cette raison précise.
+
+**Vérifié en direct le 26 septembre**, sur une fiche jetable dans ClaudeLand, tout supprimé après (deux entités ancrées, leurs blocs, la scène de test, les quatre événements de journal créés pendant la vérification — les deux événements pré-existants de Fine Lââm intacts). Trois chemins confirmés contre la vraie base : **« garder cette fiche »** (esquisse posée à la main → clic → entité réelle créée avec son bloc `text`, esquisse retirée de la scène, ajoutée aux présents réels, note journalisée et visible dans le fil) ; **« nommée explicitement »** (un tour normal, « je demande son nom au forgeron, il me répond Bregil » → l'esquisse « Bregil » s'ancre automatiquement avant même que la narration parte, sans casser le déroulé du tour) ; le schéma `SceneState` `__v: 3` se lit et s'écrit sans erreur (aucune ligne existante à migrer : la table `scene_states` était vide avant ce ticket, vérifié). Non rejoué en direct : le déclenchement `new_character` par le modèle lui-même (dépend du contenu de générateur manquant, ci-dessus) et le seuil des trois répliques — les deux sont couverts par `sceneSketches.test.ts` (12 cas, moteur réel de `scene.ts`, accès base simulés — même méthode que `sceneGeneration.test.ts` pour V3-C1).
 
 ### V3-C3 — Écrire dans le wiki en jouant · `L`
 

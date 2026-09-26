@@ -32,6 +32,16 @@ describe("soloNarrationSchema", () => {
     expect(schema.safeParse({ narration: "Le vent souffle." }).success).toBe(true);
     expect(schema.safeParse({ narration: "Le vent souffle.", npc_reaction: { npc_id: "x", text: "y" } }).success).toBe(false);
   });
+
+  it("V3-C2 — accepte une demande de personnage incident, un role seulement", () => {
+    const result = soloNarrationSchema([]).safeParse({ narration: "Quelqu'un approche.", new_character: { role: "le tavernier" } });
+    expect(result.success).toBe(true);
+  });
+
+  it("V3-C2 — rejette un role vide", () => {
+    const result = soloNarrationSchema([]).safeParse({ narration: "Quelqu'un approche.", new_character: { role: "" } });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("soloNarrationToolSchema", () => {
@@ -44,5 +54,10 @@ describe("soloNarrationToolSchema", () => {
   it("omet npc_reaction quand personne n'est present", () => {
     const schema = soloNarrationToolSchema([]);
     expect("npc_reaction" in schema.properties).toBe(false);
+  });
+
+  it("V3-C2 — new_character reste offert meme sans aucun PNJ present", () => {
+    const schema = soloNarrationToolSchema([]);
+    expect("new_character" in schema.properties).toBe(true);
   });
 });

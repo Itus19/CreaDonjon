@@ -448,7 +448,7 @@ async function applyResolvedTurn(
 function emptySceneFor(existing: SceneState | null): SceneState {
   return (
     existing ?? {
-      __v: 2,
+      __v: 3,
       locationId: "hors-scene",
       present: [],
       time: { day: 1, hour: 8, minute: 0 },
@@ -456,6 +456,7 @@ function emptySceneFor(existing: SceneState | null): SceneState {
       activeCombatId: null,
       recentEvents: [],
       budgets: {},
+      sketches: [],
     }
   );
 }

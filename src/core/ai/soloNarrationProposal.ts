@@ -29,6 +29,8 @@ export function soloNarrationSchema(npcIds: string[]) {
     .object({
       narration: z.string().min(1).max(1000),
       npc_reaction: z.object({ npc_id: z.string().min(1), text: z.string().min(1).max(400) }).optional(),
+      /** V3-C2 — jamais un nom : un ROLE seulement, le generateur tire l'identite. */
+      new_character: z.object({ role: z.string().min(1).max(200) }).optional(),
     })
     .strict()
     .superRefine((value, ctx) => {
@@ -60,6 +62,15 @@ export function soloNarrationToolSchema(npcIds: string[]) {
             },
           }
         : {}),
+      new_character: {
+        type: "object",
+        description:
+          "Optionnel : un personnage incident, absent de la liste, doit reagir MAINTENANT. Ne lui donne JAMAIS de nom ni de trait toi-meme : decris seulement son role, le moteur tire son identite.",
+        properties: {
+          role: { type: "string", description: "Le role ou la fonction du personnage, jamais un nom (ex: \"le tavernier\", \"une elfe au comptoir\")" },
+        },
+        required: ["role"],
+      },
     },
     required: ["narration"],
   } as const;
