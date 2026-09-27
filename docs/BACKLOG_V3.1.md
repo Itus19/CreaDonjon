@@ -41,3 +41,33 @@ Le ticket V2-N2 l'avait déjà noté en passant, sans ouvrir de ticket dédié :
   ont besoin.
 - [ ] Aucune régression sur les autres types d'entrée qui utilisent
   `REQUIRED_BLOCKS` (sous-classe, don, historique…).
+
+---
+
+### V3.1-2 — Aucun moyen d'éditer une fiche maison déjà créée · `M`
+
+Constaté le 27 septembre en corrigeant le don « Chanceux » : son texte,
+recopié depuis une mauvaise source, s'est révélé faux une fois la bonne page
+du manuel sous les yeux. Chaque fiche de règle (`RuleEntryView.tsx`) ne
+propose qu'un bouton « Supprimer » (`disable_entry`, via `/api/worlds/[slug]/
+regles/[cle]/disable`) — aucun « Modifier ». La seule façon de corriger un
+texte a été de supprimer la fiche puis de la recréer entièrement avec le
+formulaire d'origine, en resaisissant tous les champs déjà justes. Ça marche
+(la clé se libère : `disable_entry` retire la fiche de `existingKeys`, la
+recréation reprend le même slug), mais c'est un détour pour ce qui devrait
+être une simple correction de coquille ou de texte mal recopié.
+
+Vaut pour les cinq formulaires de la famille « Créer un/une… » (arme,
+historique, don/aptitude, sous-classe, sort) : aucun n'a d'équivalent en
+édition, contrairement aux entités du wiki (`EditEntityForm`).
+
+**Critères**
+- [ ] Une fiche maison (`content_origin` `user_created` ou
+  `personal_reference`) propose un bouton « Modifier » qui rouvre son
+  formulaire de création, pré-rempli avec les valeurs actuelles.
+- [ ] Valider le formulaire modifie la fiche en place (même `entry_key`,
+  mêmes blocs mis à jour) — jamais une nouvelle fiche à côté de l'ancienne.
+- [ ] Un renvoi existant vers cette fiche (`ruleset_entry_refs`, une classe
+  qui la référence comme sous-classe, un personnage qui la porte comme don)
+  continue de pointer dessus après modification.
+- [ ] Une base officielle reste inéditable — même verrou que la création.
