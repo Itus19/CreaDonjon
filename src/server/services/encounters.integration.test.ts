@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getEncounterBudgetTable, getEncounterBudgetTableForRuleset, listMonstersForRuleset } from "./encounters";
+import { getOfficialBaseRulesetId } from "@/src/server/repos/rules";
 
 /**
  * V1-E3 : verifie que la table "Budget de PX par personnage" ecrite par
@@ -10,13 +11,17 @@ import { getEncounterBudgetTable, getEncounterBudgetTableForRuleset, listMonster
  * valeur inventee. Contact reel a Supabase : se saute silencieusement si
  * .env.local n'est pas configure (meme pattern que les autres tests
  * d'integration).
+ *
+ * Les rulesets officiels sont resolus par `base_system` a chaque
+ * `beforeAll`, jamais par UUID code en dur : l'UUID est genere a l'import
+ * (`npm run ingest:srd`) et differe d'une base a l'autre — un UUID fige ici
+ * ne visait que la production, et echouait silencieusement (entree
+ * introuvable) sur toute base fraichement seedee (locale ou une autre
+ * machine). Meme motif que `getOfficialBaseRulesetId` dans encounters.ts.
  */
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const hasCreds = Boolean(SUPABASE_URL && SERVICE_ROLE_KEY);
-
-const RULESET_5_1 = "41ebff94-aabc-4f5c-b437-28f2f7a195ee";
-const RULESET_5_2_1 = "110d20e9-dd80-4752-a57e-a957601b4eae";
 
 describe.skipIf(!hasCreds)("getEncounterBudgetTable (integration, base reelle)", () => {
   // Construit dans `beforeAll`, jamais dans le corps du `describe` : Vitest
@@ -25,8 +30,12 @@ describe.skipIf(!hasCreds)("getEncounterBudgetTable (integration, base reelle)",
   // suite entiere echouait donc sur toute machine sans .env.local, au lieu
   // de se sauter — meme motif que campaigns.integration.test.ts.
   let admin: SupabaseClient;
-  beforeAll(() => {
+  let RULESET_5_1: string;
+  let RULESET_5_2_1: string;
+  beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+    RULESET_5_1 = (await getOfficialBaseRulesetId(admin, "dnd_srd_51"))!;
+    RULESET_5_2_1 = (await getOfficialBaseRulesetId(admin, "dnd_srd_52"))!;
   });
 
   it("lit la table complete pour le SRD 5.2.1, valeurs conformes au texte officiel", async () => {
@@ -50,8 +59,12 @@ describe.skipIf(!hasCreds)("getEncounterBudgetTableForRuleset (integration, base
   // suite entiere echouait donc sur toute machine sans .env.local, au lieu
   // de se sauter — meme motif que campaigns.integration.test.ts.
   let admin: SupabaseClient;
-  beforeAll(() => {
+  let RULESET_5_1: string;
+  let RULESET_5_2_1: string;
+  beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+    RULESET_5_1 = (await getOfficialBaseRulesetId(admin, "dnd_srd_51"))!;
+    RULESET_5_2_1 = (await getOfficialBaseRulesetId(admin, "dnd_srd_52"))!;
   });
 
   it("le SRD 5.2.1 n'a pas besoin de repli : ses propres lignes, isFallback a false", async () => {
@@ -74,8 +87,10 @@ describe.skipIf(!hasCreds)("listMonstersForRuleset (integration, base reelle)", 
   // suite entiere echouait donc sur toute machine sans .env.local, au lieu
   // de se sauter — meme motif que campaigns.integration.test.ts.
   let admin: SupabaseClient;
-  beforeAll(() => {
+  let RULESET_5_2_1: string;
+  beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+    RULESET_5_2_1 = (await getOfficialBaseRulesetId(admin, "dnd_srd_52"))!;
   });
 
   it("retrouve le gobelin-guerrier du SRD 5.2.1 avec ses PX et son FP", async () => {
