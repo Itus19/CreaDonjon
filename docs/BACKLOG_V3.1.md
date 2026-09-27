@@ -223,3 +223,63 @@ pour les langues d'historique.
   plutôt qu'à dupliquer).
 - [ ] Une espèce maison créée sans ce genre de trait n'est pas affectée —
   aucune étape supplémentaire imposée quand il n'y a rien à choisir.
+
+---
+
+### V3.1-7 — Une sous-classe n'apporte jamais d'effet mécanique, choix ou pas · `L`
+
+Constaté le 28 septembre en vérifiant les 12 sous-classes officielles pour le
+même genre de trou que V3.1-3/V3.1-6. Le trou est plus profond que prévu :
+ce n'est pas seulement que les *choix* de sous-classe ne sont pas résolus,
+c'est qu'**aucune sous-classe n'apporte jamais le moindre effet mécanique**,
+choix ou pas.
+
+Cause racine : `CreationSelection.classes` (`resolvedRuleset.ts:72`) est
+`{key, level}[]` — **aucun champ pour la sous-classe choisie**. La fonction
+qui assemble la fiche résolue (`assembleResolvedRuleset`, même fichier)
+résout espèce, historique et classe génériquement, mais n'ajoute jamais la
+clé de la sous-classe au lot résolu. Le schéma des blocs de sous-classe
+(`zSubclassFeatureEntry`, `src/core/schemas/rule-blocks/blocks.ts:442`) ne
+porte que `{name, level, description}` — aucune place pour un modificateur,
+une résistance, un type de dégâts ou une liste de sorts. L'écran de la fiche
+(`LevelClassesStep.tsx:327-330` → `SubclassFeatures`,
+`blockContentRenderer.tsx:930-948`) ne fait que trier par niveau et afficher
+le texte. **Ça vaut aussi pour « Serment de vengeance »** (créé le 27
+septembre dans cette même session) : ses aptitudes sont dans le même cas,
+ce n'est pas un recul propre au contenu maison.
+
+Cinq cas relevés sur les sous-classes officielles, qui couvrent trois formes
+différentes de ce qui manque :
+
+| Sous-classe | Aptitude | Ce qui manque |
+|---|---|---|
+| Cercle de la Terre (Druide) | Sorts du Cercle de la Terre | choix de terrain **rechoisi à chaque Repos long**, change la liste de sorts toujours préparés |
+| Sorcellerie draconique (Ensorceleur) | Affinité élémentaire (niv. 6) | choix d'un type de dégâts, **une fois** — résistance + bonus de dégâts |
+| Protecteur Fiélon (Occultiste) | Résilience fiélonne (niv. 10) | choix d'un type de dégâts, **rechoisi à chaque repos** — résistance |
+| Chasseur (Rôdeur) | Proie du chasseur / Tactiques défensives | choisir une aptitude passive parmi deux, **échangeable à chaque repos** |
+| Collège du Savoir (Barde) / Évocateur (Magicien) | Découvertes magiques / Savant en évocation | choisir des sorts à ajouter — **même mécanisme que V3.1-3** (dons à sorts) |
+
+**Aparté positif, à vérifier en direct plutôt qu'à corriger** : le choix de
+*lignage* d'espèce (Haut-elfe, Gnome des roches...) existe bien
+génériquement (`SpeciesStep.tsx:73-105`, filtre par `parentSpeciesKey`). Les
+10 couleurs d'Ascendance draconique du Drakéide semblent suivre la même
+forme en base, mais le script d'import standard ne les génère pas
+(`scripts/ingest-srd.ts:1992-1995` ne parcourt pas le tableau imbriqué
+`Species[].subspecies` du SRD) — impossible de confirmer sans lire la base
+réelle si elles portent un vrai modificateur ou seulement un nom.
+
+**Critères**
+- [ ] La sous-classe choisie est résolue au même titre que l'espèce,
+  l'historique et la classe — sa clé rejoint le lot dont les blocs
+  `modifiers` sont appliqués.
+- [ ] Un type de dégâts/caractéristique choisi une fois (Affinité
+  élémentaire) est mémorisé et appliqué (résistance, bonus de dégâts).
+- [ ] Un choix rechoisi à chaque repos (Cercle de la Terre, Résilience
+  fiélonne, Chasseur) est présenté à nouveau après un Repos court/long,
+  pas seulement à la création — recoupe V3.1-5 sur le déclenchement au
+  Repos long.
+- [ ] Un choix de sorts accordé par une sous-classe (Découvertes magiques,
+  Savant en évocation) réutilise le mécanisme de V3.1-3, pas un nouveau.
+- [ ] Une sous-classe purement descriptive (la majorité des niveaux, sur
+  toutes les sous-classes) continue de s'afficher telle quelle, sans rien
+  d'imposé en plus.
