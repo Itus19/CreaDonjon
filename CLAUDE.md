@@ -28,6 +28,7 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 | `docs/CHARTE-UI.md` | Jetons, recettes de boutons/champs/listes, états d'écran | **Avant tout code d'interface** |
 | `docs/BACKLOG_V2.md` | Tickets en cours | Au début de chaque tâche |
 | `docs/BACKLOG_V3.md` | Tickets du mode solo (moteur, boucle de tour, écriture du monde, écran) | Tickets V3 |
+| `docs/BACKLOG_V3.1.md` | Rugosités trouvées en jouant, ajoutées au fil de l'utilisation | Avant tout ticket qui répare un détail plutôt qu'il ne planifie une fonctionnalité |
 | `docs/PDD.md` | Source de vérité fonctionnelle | Avant toute décision produit |
 | `docs/adr/` | Décisions d'architecture et leurs raisons | Avant de « corriger » quelque chose qui semble étrange |
 | `specs/regles-couche.md` | Fiches de règles, renvois, surcharge, contrat moteur/IA | Tickets règles |
