@@ -422,3 +422,135 @@ jamais, faute de demande à afficher).
   seulement le calendrier de saisie.
 - [ ] L'onglet « Mes disponibilités » n'apparaît que si une demande est
   ouverte (V3.1-8) — sinon rien à remplir, pas d'onglet vide.
+
+---
+
+### V3.1-10 — Connexion par identifiant/mot de passe plutôt que lien à retrouver · `L`
+
+Constaté le 27 septembre : les joueuses redemandent systématiquement le lien
+d'invitation à l'auteur. Ce n'est pas un oubli isolé, c'est la conséquence
+directe d'un choix déjà acté — [docs/adr/0015-provisioning-comptes-invites.md](../adr/0015-provisioning-comptes-invites.md)
+: un compte invité (`provisionInviteSession`,
+`src/server/services/accountProvisioning.ts:11`) n'a **jamais** d'email
+réel ni de mot de passe, seulement une adresse synthétique invisible
+(`invite-{id}@creadonjon.invite`) et une reconnexion par lien magique
+(`auth.admin.generateLink`). Il n'y a donc rien qu'une joueuse puisse retenir
+ou retrouver seule : sans le lien, aucun accès possible, jamais.
+
+**Décision actée avec l'auteur** : remplacer le lien magique comme moyen de
+connexion **courant** par un identifiant + mot de passe, avec un bouton de
+connexion sur le wiki public. Le lien magique ne disparaît pas pour autant —
+il devient l'outil de secours du MJ (voir plus bas), pas plus. Ça renverse
+l'intention explicite de l'ADR 0015 (« sans qu'il voie jamais d'email ni de
+mot de passe ») : ce ticket ne se fait pas sans un nouvel ADR qui l'acte
+formellement, jamais silencieusement à côté de l'ancien.
+
+Le MJ doit en plus pouvoir, à tout moment sur un compte déjà provisionné (pas
+seulement à la création) :
+- **révoquer l'accès par mot de passe** — la joueuse ne peut plus se
+  reconnecter avec son mot de passe actuel ;
+- **forcer une réinitialisation** — au prochain besoin de connexion, la
+  joueuse doit obligatoirement choisir un nouveau mot de passe avant
+  d'accéder à quoi que ce soit d'autre.
+
+**Piste d'implémentation** — réutiliser ce qui existe plutôt que dupliquer :
+- Hachage de mot de passe : `hashSharePassword`/`verifySharePassword`
+  (`src/core/shareLinks/password.ts`, scrypt) déjà écrit pour les liens de
+  partage et les invitations protégées — même primitive, pas un deuxième
+  algorithme.
+- Le lien magique existant (`mintSessionForInvitedAccount`,
+  `accountProvisioning.ts:227`) devient le mécanisme de **secours** : au lieu
+  d'un mot de passe temporaire à inventer et transmettre à la main, « forcer
+  une réinitialisation » peut simplement générer un nouveau lien magique qui
+  mène, cette fois, à un écran obligatoire de choix de nouveau mot de passe
+  plutôt que directement dans l'app — aucune nouvelle mécanique de transport
+  de secret à construire.
+- `/login` (`app/login/actions.ts`) est déjà un formulaire email + mot de
+  passe (`signInWithPassword`) pour les comptes ordinaires (l'auteur
+  lui-même) — la nouvelle page de connexion par identifiant fait la même
+  chose côté serveur, après avoir résolu l'identifiant vers l'email
+  synthétique du compte (jamais exposé côté client).
+
+**Modèle de données**
+
+- `profiles` gagne un identifiant de connexion (colonne dédiée, distincte de
+  `display_name` qui n'est pas unique aujourd'hui — deux joueuses de mondes
+  différents peuvent déjà porter le même nom de personnage) : unique,
+  nullable (un compte ordinaire type auteur continue de se connecter par son
+  vrai email, cette colonne ne concerne que les comptes invités).
+- Colonne mot de passe (hash `scrypt$...`, même format que
+  `share_links`/`campaign_invites`) et un indicateur « doit changer son mot
+  de passe à la prochaine connexion » sur le même compte.
+- RLS : une joueuse ne lit/écrit jamais la ligne d'un autre compte ; la
+  résolution identifiant → compte au moment de la connexion passe par une
+  fonction dédiée (même doctrine que `resolveCampaignInviteToken`), jamais
+  une lecture directe de `profiles` par un visiteur anonyme.
+
+**Étapes**
+
+1. Nouvel ADR actant le remplacement du lien magique comme canal de
+   connexion courant (l'ADR 0015 n'est jamais modifié — règle absolue n°14
+   côté migrations, même esprit côté ADR : on écrit la suite, pas une
+   réécriture de l'ancien).
+2. Migration : colonne identifiant unique + hash de mot de passe + indicateur
+   de changement forcé sur `profiles` (ou table dédiée si `profiles` s'y
+   prête mal — à trancher à l'implémentation).
+3. Écran « choisir son mot de passe » (et son identifiant, si c'est la
+   joueuse qui le choisit — voir questions ouvertes) — obligatoire au premier
+   passage après provisionnement, et reste le même écran servi quand une
+   réinitialisation est forcée par le MJ.
+4. Page de connexion publique, reliée depuis le wiki public — identifiant +
+   mot de passe, résolution serveur vers l'email synthétique, jamais exposé.
+5. Panneau MJ (gestion des invitations existante,
+   `src/server/services/campaignInvites.ts`) : deux actions par compte
+   provisionné — « révoquer l'accès par mot de passe » et « forcer une
+   réinitialisation » — à côté de « Révoquer » (accès campagne) et « Voir
+   comme » déjà là.
+6. Le lien magique et sa page de reconnexion existante restent fonctionnels,
+   réservés à ce nouvel usage de secours déclenché par le MJ.
+
+**Critères**
+
+- [ ] Une joueuse se connecte depuis le wiki public avec un identifiant et un
+  mot de passe, sans avoir besoin du lien d'invitation d'origine.
+- [ ] Au premier accès après provisionnement, la joueuse doit définir son mot
+  de passe avant d'accéder à quoi que ce soit d'autre.
+- [ ] Le MJ peut révoquer l'accès par mot de passe d'un compte à tout moment
+  — la joueuse ne peut plus se reconnecter avec ce mot de passe ensuite.
+- [ ] Le MJ peut forcer une réinitialisation — la prochaine tentative de
+  connexion de la joueuse (ou le lien de secours envoyé par le MJ) mène
+  obligatoirement à un nouveau choix de mot de passe.
+- [ ] Un compte ordinaire (l'auteur, `/login` existant) n'est pas affecté par
+  ce nouveau mécanisme, réservé aux comptes provisionnés par invitation.
+- [ ] Un nouvel ADR documente ce renversement par rapport à l'ADR 0015.
+
+**Questions ouvertes — à trancher avant ou pendant l'implémentation**
+
+- **Qui choisit l'identifiant de connexion ?** Le MJ à la création du lien
+  (comme `claimed_name` aujourd'hui, avec un risque de collision entre deux
+  mondes différents à gérer), ou la joueuse elle-même au moment de choisir
+  son mot de passe (évite au MJ d'inventer des identifiants uniques, mais
+  ajoute une étape).
+- **Qui choisit le mot de passe initial ?** L'idée de départ (l'auteur fixe
+  un mot de passe initial, changement forcé ensuite) suppose de le
+  transmettre à la main — un canal de plus à sécuriser. Alternative : garder
+  le lien magique d'aujourd'hui pour le tout premier accès (déjà transmis une
+  fois, déjà éprouvé) et faire atterrir ce premier accès sur l'écran
+  obligatoire de choix de mot de passe plutôt que directement dans l'app —
+  aucun mot de passe initial à inventer ni à transmettre du tout.
+- **« Révoquer l'accès par mot de passe » coupe-t-il aussi une session déjà
+  ouverte ailleurs** (un appareil où la joueuse est déjà connectée), ou
+  seulement les connexions futures ? Le premier exige d'invalider les jetons
+  de rafraîchissement existants côté GoTrue (mécanisme à vérifier — pas
+  utilisé ailleurs dans le projet aujourd'hui) ; le second est immédiat à
+  écrire mais laisse une session en cours valide jusqu'à son expiration
+  naturelle.
+- **Combien de tentatives avant blocage ?** `verifyInvitePassword`
+  (`campaignInvites.ts:205`) plafonne déjà à 10 tentatives pour les mots de
+  passe de lien de partage — réutiliser le même seuil, ou un autre pour un
+  mot de passe de compte (accès plus sensible qu'une simple vue de partage) ?
+- **Le lien d'invitation d'origine reste-t-il valide indéfiniment comme canal
+  de secours**, ou faut-il pouvoir l'invalider une fois le mot de passe en
+  place (`resetInviteToken` existe déjà pour ça) — au risque de perdre le
+  seul filet de sécurité si un mot de passe est perdu et qu'aucune
+  réinitialisation n'a été forcée à temps ?
