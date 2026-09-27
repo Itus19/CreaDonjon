@@ -109,3 +109,68 @@ V3 le jour où il est pris, pas comme un ticket à boucler sur une session.
   réutiliser sans nouveau code de choix.
 - [ ] Un don sans choix (la majorité) continue de s'afficher tel quel, sans
   étape supplémentaire imposée à l'assistant.
+
+**Vaut aussi pour un don accordé par une espèce** (constaté le 27 septembre
+sur « Polyvalent »/Versatile, trait humain — don d'origine au choix) : la
+branche qui résout l'espèce (`resolvedRuleset.ts:342-351`) ne gère aucun don
+du tout, contrairement à l'historique qui en accorde au moins un fixe
+(`extractBackgroundFeat`). Un don accordé par une espèce est donc un cran
+plus creux que le cas déjà décrit ci-dessus — même critère, pas de ticket
+séparé.
+
+---
+
+### V3.1-4 — Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais · `S`/`M`
+
+Constaté le 27 septembre sur « Compétent »/Skillful, trait humain : « Vous
+gagnez la maîtrise d'une compétence de votre choix. » Les classes ont déjà ce
+mécanisme — `extractSkillChoices` lit `fields.proficiency_choices` et fait
+apparaître un choix de compétence dans l'assistant (`resolvedRuleset.ts:435`).
+La branche espèce, elle, ne lit que `mapSpeciesModifiers`/`mapProficiencies`/
+`extractLanguages` sur les champs de l'espèce elle-même
+(`resolvedRuleset.ts:342-351`) — jamais les `proficiency_choices` portés par
+un trait individuel de l'espèce (les traits d'espèce ne sont que des
+références `{index, name}` côté données SRD, la maîtrise à choisir vit sur la
+fiche du trait, jamais rejointe ici). Résultat : choisir Humain n'accorde
+aujourd'hui aucune maîtrise de compétence, ni choix ni maîtrise silencieuse.
+
+Plus contenu que V3.1-3 : le mécanisme de choix existe déjà (celui des
+classes), il s'agit de l'étendre aux traits d'espèce plutôt que d'en
+inventer un nouveau.
+
+**Critères**
+- [ ] Un trait d'espèce portant un `proficiency_choices` (compétence, langue,
+  outil...) présente ce choix dans l'assistant, comme le fait déjà un choix
+  de compétence de classe.
+- [ ] Le choix résolu produit une vraie maîtrise sur la fiche (test de
+  compétence concerné, bonus de maîtrise appliqué).
+- [ ] Aucune régression sur les maîtrises fixes déjà accordées par une
+  espèce (celles qui ne portent pas de choix).
+
+---
+
+### V3.1-5 — Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) · `M`
+
+Constaté le 27 septembre sur « Ingénieux »/Resourceful, trait humain : « Vous
+gagnez l'Inspiration héroïque lorsque vous terminez un Repos long. »
+L'inspiration existe bien comme ressource réelle sur la fiche (`inspiration:
+number`, `src/core/schemas/runtimeState.ts:77`, réglable à la main via
+`CharacterSheetHeader.tsx:519-540`), et le bouton « Repos long » appelle une
+vraie action serveur (`takeLongRest`, `src/server/services/
+characterActions.ts:634-693`). Mais cette fonction ne touche que PV, dés de
+vie, épuisement, emplacements de sort et ressources nommées — jamais
+l'inspiration — et ne vérifie nulle part si le personnage porte le trait
+« resourceful ». Un personnage humain qui clique sur Repos long n'obtient
+donc jamais son Inspiration héroïque.
+
+Contrairement à V3.1-3/V3.1-4, ce n'est pas un choix à la création : c'est un
+effet qui doit se déclencher en jeu, à chaque repos — plus proche des
+déclencheurs (V3-A5) que de l'assistant de personnage.
+
+**Critères**
+- [ ] Terminer un Repos long avec un personnage portant « Ingénieux »
+  accorde l'Inspiration héroïque (si elle n'est pas déjà à son maximum,
+  selon la règle 2024).
+- [ ] Un personnage sans ce trait n'est pas affecté.
+- [ ] Le mécanisme reste ouvert à d'autres effets liés au Repos long portés
+  par un trait/don futur, plutôt que câblé en dur pour Ingénieux seul.
