@@ -174,3 +174,52 @@ déclencheurs (V3-A5) que de l'assistant de personnage.
 - [ ] Un personnage sans ce trait n'est pas affecté.
 - [ ] Le mécanisme reste ouvert à d'autres effets liés au Repos long portés
   par un trait/don futur, plutôt que câblé en dur pour Ingénieux seul.
+
+---
+
+### V3.1-6 — Aucun mécanisme générique pour les traits d'espèce à choix · `L`
+
+Suite à V3.1-3/V3.1-4 (Humain seulement) : relevé le 27 septembre sur les 9
+espèces officielles du SRD 5.2.1, quels traits portent un choix.
+
+| Espèce | Trait à choix | Nature du choix |
+|---|---|---|
+| Elfe | Lignage elfique (Elven Lineage) | choisir un lignage (Drow / Haut-elfe / Elfe des bois) — chacun accorde un cantrip au niveau 1, un sort de plus aux niveaux 3 et 5, et une caractéristique d'incantation à choisir (Int/Sag/Cha) |
+| Elfe | Sens aiguisés (Keen Senses) | choisir une compétence parmi Intuition/Perception/Survie — **même mécanisme que V3.1-4** |
+| Gnome | Lignage gnomique (Gnomish Lineage) | choisir Gnome des forêts ou Gnome des roches — chacun accorde des cantrips et un sort/objet différents |
+| Goliath | Ascendance de géant (Giant Ancestry) | choisir un des 6 bénéfices (Nuage/Feu/Givre/Colline/Pierre/Tempête) — capacité rechargeable, utilisations = bonus de maîtrise, récupérées au Repos long |
+| Humain | Compétent (Skillful) | choisir une compétence — **V3.1-4** |
+| Humain | Polyvalent (Versatile) | choisir un don d'origine — **V3.1-3** |
+| Tieffelin | Legs infernal (Fiendish Legacy) | choisir un legs (Abyssal / Chthonien / Infernal) — même forme que le lignage elfique (résistance + cantrip niveau 1, sorts niveaux 3/5, caractéristique d'incantation à choisir) |
+
+Aucun choix pour Drakéide, Nain, Halfelin, Orc — vérifié, rien à faire sur ces
+quatre.
+
+**Le vrai trou n'est pas seulement Compétent/Polyvalent** (déjà couverts) :
+c'est le **lignage/legs à choix qui empaquette plusieurs effets** (un
+cantrip immédiat, un sort supplémentaire à deux paliers de niveau, une
+caractéristique d'incantation choisie une fois pour tout le lignage) — un
+schéma qui revient trois fois (Elfe, Gnome, Tieffelin) sans qu'aucun
+mécanisme ne l'accueille aujourd'hui. Traiter ce ticket au cas par cas
+(un lignage elfique câblé en dur, puis un legs tieffelin câblé en dur...)
+serait exactement l'inverse de ce qui est demandé : un mécanisme **générique**
+de « trait d'espèce à choix », pour qu'une espèce maison future avec un trait
+du même genre marche sans nouveau code — même esprit que `RemainingChoice`
+pour les langues d'historique.
+
+**Critères**
+- [ ] Un trait d'espèce à choix simple (compétence, langue, outil) suit
+  V3.1-4 — ce ticket n'y ajoute rien de plus.
+- [ ] Un trait d'espèce à choix de don suit V3.1-3.
+- [ ] Un trait d'espèce à choix de lignage/legs présente les options
+  (Drow/Haut-elfe/Elfe des bois, etc.) dans l'assistant, applique le
+  bénéfice de niveau 1 immédiatement, et prévoit la montée en puissance aux
+  niveaux 3 et 5 (nouveau sort toujours préparé, comme un don à sort fixe).
+- [ ] La caractéristique d'incantation du lignage/legs (Int/Sag/Cha, choisie
+  une fois) est mémorisée et réutilisée pour tous les sorts qu'il accorde.
+- [ ] Un trait d'espèce à choix de capacité rechargeable (Ascendance de
+  géant) présente le choix, et la capacité se récupère au Repos long comme
+  n'importe quelle ressource nommée (déjà un mécanisme existant, à réutiliser
+  plutôt qu'à dupliquer).
+- [ ] Une espèce maison créée sans ce genre de trait n'est pas affectée —
+  aucune étape supplémentaire imposée quand il n'y a rien à choisir.
