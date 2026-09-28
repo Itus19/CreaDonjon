@@ -495,10 +495,10 @@ seulement à la création) :
 2. Migration : colonne identifiant unique + hash de mot de passe + indicateur
    de changement forcé sur `profiles` (ou table dédiée si `profiles` s'y
    prête mal — à trancher à l'implémentation).
-3. Écran « choisir son mot de passe » (et son identifiant, si c'est la
-   joueuse qui le choisit — voir questions ouvertes) — obligatoire au premier
-   passage après provisionnement, et reste le même écran servi quand une
-   réinitialisation est forcée par le MJ.
+3. Écran « choisir son identifiant et son mot de passe » — obligatoire au
+   premier passage après provisionnement (atteint via le lien d'invitation
+   d'origine, inchangé pour ce tout premier accès), et reste le même écran
+   servi quand une réinitialisation est forcée par le MJ.
 4. Page de connexion publique, reliée depuis le wiki public — identifiant +
    mot de passe, résolution serveur vers l'email synthétique, jamais exposé.
 5. Panneau MJ (gestion des invitations existante,
@@ -506,51 +506,66 @@ seulement à la création) :
    provisionné — « révoquer l'accès par mot de passe » et « forcer une
    réinitialisation » — à côté de « Révoquer » (accès campagne) et « Voir
    comme » déjà là.
-6. Le lien magique et sa page de reconnexion existante restent fonctionnels,
-   réservés à ce nouvel usage de secours déclenché par le MJ.
+6. Dès le mot de passe défini (première connexion réussie), le jeton
+   d'invitation d'origine est invalidé (même geste que `resetInviteToken`,
+   déclenché automatiquement plutôt que par le MJ) — il ne doit plus rouvrir
+   le compte tout seul une fois le mot de passe en place, sans quoi
+   « révoquer »/« forcer une réinitialisation » ne protégeraient rien contre
+   ce lien s'il a été oublié dans une conversation. Au-delà de ce point, le
+   lien magique ne revit que si le MJ déclenche explicitement une
+   réinitialisation (étape 5) — jamais par simple réouverture de l'ancien
+   lien.
 
 **Critères**
 
 - [ ] Une joueuse se connecte depuis le wiki public avec un identifiant et un
   mot de passe, sans avoir besoin du lien d'invitation d'origine.
-- [ ] Au premier accès après provisionnement, la joueuse doit définir son mot
-  de passe avant d'accéder à quoi que ce soit d'autre.
-- [ ] Le MJ peut révoquer l'accès par mot de passe d'un compte à tout moment
-  — la joueuse ne peut plus se reconnecter avec ce mot de passe ensuite.
-- [ ] Le MJ peut forcer une réinitialisation — la prochaine tentative de
-  connexion de la joueuse (ou le lien de secours envoyé par le MJ) mène
-  obligatoirement à un nouveau choix de mot de passe.
+- [ ] Au premier accès après provisionnement, la joueuse choisit son
+  identifiant et son mot de passe avant d'accéder à quoi que ce soit d'autre
+  — aucun mot de passe initial n'est inventé ni transmis par le MJ.
+- [ ] Une fois le mot de passe défini, réouvrir le lien d'invitation d'origine
+  ne reconnecte plus personne — seule une réinitialisation forcée par le MJ
+  génère un accès de secours valide.
+- [ ] Le MJ peut révoquer l'accès par mot de passe d'un compte à tout moment ;
+  ça invalide aussi une session déjà ouverte ailleurs (pas seulement les
+  connexions futures), au plus tard à l'expiration du jeton d'accès en cours.
+- [ ] Le MJ peut forcer une réinitialisation — le lien de secours généré mène
+  obligatoirement à l'écran de choix d'un nouveau mot de passe, jamais
+  directement dans l'app.
 - [ ] Un compte ordinaire (l'auteur, `/login` existant) n'est pas affecté par
   ce nouveau mécanisme, réservé aux comptes provisionnés par invitation.
 - [ ] Un nouvel ADR documente ce renversement par rapport à l'ADR 0015.
 
-**Questions ouvertes — à trancher avant ou pendant l'implémentation**
+**Décisions tranchées (28 septembre)**
 
-- **Qui choisit l'identifiant de connexion ?** Le MJ à la création du lien
-  (comme `claimed_name` aujourd'hui, avec un risque de collision entre deux
-  mondes différents à gérer), ou la joueuse elle-même au moment de choisir
-  son mot de passe (évite au MJ d'inventer des identifiants uniques, mais
-  ajoute une étape).
-- **Qui choisit le mot de passe initial ?** L'idée de départ (l'auteur fixe
-  un mot de passe initial, changement forcé ensuite) suppose de le
-  transmettre à la main — un canal de plus à sécuriser. Alternative : garder
-  le lien magique d'aujourd'hui pour le tout premier accès (déjà transmis une
-  fois, déjà éprouvé) et faire atterrir ce premier accès sur l'écran
-  obligatoire de choix de mot de passe plutôt que directement dans l'app —
-  aucun mot de passe initial à inventer ni à transmettre du tout.
-- **« Révoquer l'accès par mot de passe » coupe-t-il aussi une session déjà
-  ouverte ailleurs** (un appareil où la joueuse est déjà connectée), ou
-  seulement les connexions futures ? Le premier exige d'invalider les jetons
-  de rafraîchissement existants côté GoTrue (mécanisme à vérifier — pas
-  utilisé ailleurs dans le projet aujourd'hui) ; le second est immédiat à
-  écrire mais laisse une session en cours valide jusqu'à son expiration
-  naturelle.
-- **Combien de tentatives avant blocage ?** `verifyInvitePassword`
-  (`campaignInvites.ts:205`) plafonne déjà à 10 tentatives pour les mots de
-  passe de lien de partage — réutiliser le même seuil, ou un autre pour un
-  mot de passe de compte (accès plus sensible qu'une simple vue de partage) ?
-- **Le lien d'invitation d'origine reste-t-il valide indéfiniment comme canal
-  de secours**, ou faut-il pouvoir l'invalider une fois le mot de passe en
-  place (`resetInviteToken` existe déjà pour ça) — au risque de perdre le
-  seul filet de sécurité si un mot de passe est perdu et qu'aucune
-  réinitialisation n'a été forcée à temps ?
+- **Identifiant de connexion : choisi par la joueuse**, à l'écran obligatoire
+  du premier accès — jamais par le MJ à la création du lien. Un compte se
+  provisionne parfois sur un lien déjà réutilisé pour un compte existant
+  (`existingUserId`, cf. Jeremy MJ + joueur) : l'identifiant est une
+  propriété du **compte**, pas de l'invitation, donc c'est à son titulaire de
+  le choisir une fois, pas au MJ de l'inventer pour chaque lien.
+- **Mot de passe initial : aucun n'est fixé par le MJ.** Le lien
+  d'invitation déjà transmis une fois (aujourd'hui éprouvé) sert
+  exactement à ça : il mène, à ce premier accès seulement, à l'écran
+  obligatoire de choix d'identifiant + mot de passe. Pas de secret
+  supplémentaire à inventer ni à transmettre par un second canal.
+- **Révoquer coupe aussi une session déjà ouverte ailleurs.** Une révocation
+  qui laisserait une session déjà connectée continuer de fonctionner ne
+  protégerait rien de concret (le cas d'usage visé — « si jamais » — est
+  justement celui où l'accès doit s'arrêter maintenant). Mécanisme exact à
+  vérifier à l'implémentation (verrou côté GoTrue empêchant le
+  rafraîchissement du jeton, aucun équivalent utilisé ailleurs dans le
+  projet aujourd'hui) ; à défaut d'un blocage immédiat du jeton d'accès déjà
+  émis, l'expiration naturelle de ce jeton (courte, pas de session qui dure
+  des jours sans rafraîchissement) borne le délai.
+- **Tentatives avant blocage : même seuil que l'existant**, 10 tentatives,
+  même mécanisme que `verifyInvitePassword`
+  (`campaignInvites.ts:205`) — pas une politique de verrouillage séparée à
+  maintenir pour un deuxième type de mot de passe.
+- **Le lien d'invitation d'origine ne reste pas valide indéfiniment** : il
+  s'invalide automatiquement dès que le mot de passe est défini (étape 6
+  ci-dessus). Au-delà, le seul chemin de secours est une réinitialisation
+  explicitement déclenchée par le MJ — cohérent avec le but du ticket
+  (arrêter de dépendre d'un lien qui traîne) et avec « révoquer », qui
+  perdrait tout son sens si un lien oublié quelque part rouvrait quand même
+  le compte sans repasser par le MJ.
