@@ -693,3 +693,44 @@ Indépendant de V3.1-10 : peut se faire avant, pendant ou après.
   n'importe où).
 - [ ] Revenir de « voir comme » fonctionne identiquement, que ce soit un MJ
   ou le superadmin qui l'ait démarré.
+
+---
+
+### V3.1-13 — Sous-classes manquantes pour les classes des 4 joueuses actives · `M`
+
+Différent des autres tickets de ce backlog : pas un trou dans l'outil, un
+manque de **contenu** — relevé le 28 septembre en comparant les sous-classes
+présentes sur Valdoria à la liste complète du Manuel des joueurs 2024, pour
+les classes des 4 joueuses de la table (Roublard, Barde, Druide, Guerrier,
+Paladin). Le SRD gratuit n'apporte qu'une seule sous-classe par classe (deux
+pour le Roublard) ; le reste vient du livre payant et doit être saisi à la
+main, comme « Serment de vengeance ».
+
+| Classe | Déjà présentes | Manquantes |
+|---|---|---|
+| Roublard | Voleur, Arnaqueur arcanique | Assassin, Sabre-psychique (Soulknife) |
+| Barde | Collège du Savoir | Collège de la Danse, Collège du Glamour, Collège de la Vaillance |
+| Druide | Cercle de la Terre | Cercle de la Lune, Cercle de la Mer, Cercle des Étoiles |
+| Guerrier | Champion | Maître de guerre (Battle Master), Chevalier occulte (Eldritch Knight), Guerrier psi (Psi Warrior) |
+| Paladin | Serment de Dévotion, Serment de vengeance | Serment des Anciens, Serment de Gloire |
+
+Soit 11 sous-classes à saisir. Chacune suit le même chemin que Serment de
+vengeance : le texte vient du manuel de l'auteur (jamais deviné, jamais
+recopié depuis la mémoire d'un modèle), passé par le formulaire « Créer une
+sous-classe » de la variante active.
+
+**À savoir avant de saisir, pas un frein** : tant que V3.1-7 n'est pas pris,
+ces aptitudes resteront purement descriptives, comme toutes les sous-classes
+du jeu aujourd'hui — cohérent, pas un recul propre à ce contenu.
+
+**Critères**
+- [ ] Les 11 sous-classes listées existent sur Valdoria, chacune rattachée à
+  sa classe parente et sélectionnable à l'assistant de création de
+  personnage au bon niveau.
+- [ ] Chaque fiche recopie fidèlement le texte du manuel de l'auteur (aucune
+  aptitude devinée) — l'auteur fournit le texte, capture ou photo à l'appui,
+  comme pour Serment de vengeance.
+- [ ] Une sous-classe saisie ici n'est pas bloquée par l'avertissement de
+  bloc manquant (V3.1-1, si toujours ouvert) ni par un défaut d'édition
+  (V3.1-2, si toujours ouvert) — dépendances à vérifier au moment de
+  saisir, pas à résoudre avant.
