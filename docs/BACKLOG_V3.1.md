@@ -431,141 +431,265 @@ Constaté le 27 septembre : les joueuses redemandent systématiquement le lien
 d'invitation à l'auteur. Ce n'est pas un oubli isolé, c'est la conséquence
 directe d'un choix déjà acté — [docs/adr/0015-provisioning-comptes-invites.md](../adr/0015-provisioning-comptes-invites.md)
 : un compte invité (`provisionInviteSession`,
-`src/server/services/accountProvisioning.ts:11`) n'a **jamais** d'email
-réel ni de mot de passe, seulement une adresse synthétique invisible
-(`invite-{id}@creadonjon.invite`) et une reconnexion par lien magique
-(`auth.admin.generateLink`). Il n'y a donc rien qu'une joueuse puisse retenir
-ou retrouver seule : sans le lien, aucun accès possible, jamais.
+`src/server/services/accountProvisioning.ts:11`) n'a **jamais** d'email réel
+ni de mot de passe, seulement une adresse synthétique invisible et une
+reconnexion par lien magique. Rien qu'une joueuse puisse retenir ou
+retrouver seule.
 
-**Décision actée avec l'auteur** : remplacer le lien magique comme moyen de
-connexion **courant** par un identifiant + mot de passe, avec un bouton de
-connexion sur le wiki public. Le lien magique ne disparaît pas pour autant —
-il devient l'outil de secours du MJ (voir plus bas), pas plus. Ça renverse
-l'intention explicite de l'ADR 0015 (« sans qu'il voie jamais d'email ni de
-mot de passe ») : ce ticket ne se fait pas sans un nouvel ADR qui l'acte
-formellement, jamais silencieusement à côté de l'ancien.
+**Vision retenue, sur plusieurs échanges les 27 et 28 septembre — remplace
+toutes les versions précédentes de ce ticket.**
 
-Le MJ doit en plus pouvoir, à tout moment sur un compte déjà provisionné (pas
-seulement à la création) :
-- **révoquer l'accès par mot de passe** — la joueuse ne peut plus se
-  reconnecter avec son mot de passe actuel ;
-- **forcer une réinitialisation** — au prochain besoin de connexion, la
-  joueuse doit obligatoirement choisir un nouveau mot de passe avant
-  d'accéder à quoi que ce soit d'autre.
+**Comptes et mondes sont découplés.** Un compte peut exister sans être
+membre d'aucun monde — au moment de sa création, ou après une révocation.
 
-**Piste d'implémentation** — réutiliser ce qui existe plutôt que dupliquer :
-- Hachage de mot de passe : `hashSharePassword`/`verifySharePassword`
-  (`src/core/shareLinks/password.ts`, scrypt) déjà écrit pour les liens de
-  partage et les invitations protégées — même primitive, pas un deuxième
-  algorithme.
-- Le lien magique existant (`mintSessionForInvitedAccount`,
-  `accountProvisioning.ts:227`) devient le mécanisme de **secours** : au lieu
-  d'un mot de passe temporaire à inventer et transmettre à la main, « forcer
-  une réinitialisation » peut simplement générer un nouveau lien magique qui
-  mène, cette fois, à un écran obligatoire de choix de nouveau mot de passe
-  plutôt que directement dans l'app — aucune nouvelle mécanique de transport
-  de secret à construire.
-- `/login` (`app/login/actions.ts`) est déjà un formulaire email + mot de
-  passe (`signInWithPassword`) pour les comptes ordinaires (l'auteur
-  lui-même) — la nouvelle page de connexion par identifiant fait la même
-  chose côté serveur, après avoir résolu l'identifiant vers l'email
-  synthétique du compte (jamais exposé côté client).
+**Deux familles de comptes, un seul écran de connexion (`/login`,
+`app/login/actions.ts`) :**
+- **Comptes ordinaires** (email réel + mot de passe) — inchangés, l'auteur
+  y compris. `/signup`/`/login` existants ne bougent pas.
+- **Comptes « tag »** — un nom affiché (pas unique : deux comptes peuvent
+  s'appeler « Julie ») accompagné d'un identifiant à **4 chiffres** généré
+  automatiquement (`#0000`–`#9999`, régénéré en cas de collision sur la
+  paire nom+chiffres), **invisible partout sauf dans les réglages du compte
+  concerné** — jamais dans une liste de membres, jamais dans l'attribution
+  publique d'une création. Chaque compte en a un, y compris celui de
+  l'auteur (`Gabriel#0000`) : le tag sert à l'attribution interne, pas
+  seulement aux comptes invités.
+- **À la connexion, on tape juste un nom et un mot de passe** — jamais le
+  tag. La résolution essaie, dans l'ordre, chaque compte « tag » portant ce
+  nom contre ce mot de passe (collisions rares à l'échelle d'une table de
+  jeu), puis retombe sur un email classique si rien ne correspond.
+- **N'importe qui peut créer un compte « tag » sans invitation**, depuis
+  `/login` (bascule « créer un compte ») — atteignable aussi par un bouton
+  que le MJ pose lui-même sur son wiki public, qui mène au même écran. Un
+  tel compte ne donne accès à rien tant que personne ne l'invite dans un
+  monde.
+
+**Un lien d'invitation rattache un compte (nouveau ou déjà existant) à un
+monde et un rôle — il ne crée plus de mot de passe, la personne le choisit
+elle-même en cliquant le lien pour la première fois :**
+- **Lien joueur : réutilisable par plusieurs personnes** — un lien = un
+  monde, pas une personne. Renverse la décision nominative de V2-M4 (« un
+  lien par personne »), volontairement : la nominativité perd son intérêt
+  une fois que c'est la personne elle-même, pas le MJ, qui choisit son
+  identité et son mot de passe.
+- **Lien MJ : reste nominatif, à usage unique**, comme aujourd'hui — rôle
+  plus sensible (droits d'édition sur tout le monde), pas de raison de le
+  rendre partageable.
+- Le mot de passe optionnel déjà existant sur un lien (`password_hash` sur
+  `campaign_invites`, `verifyInvitePassword`) reste disponible comme verrou
+  de groupe supplémentaire — d'autant plus utile qu'un lien joueur peut
+  désormais circuler plus largement qu'à une seule personne.
+
+**Personnage choisi après coup, pas à la création du compte.** Première
+visite d'un monde en tant que joueuse sans PJ assigné : écran listant les
+PJ ouverts (non réclamés) du monde, plus une option « Nouveau PJ » vers
+l'assistant de création existant. Le MJ garde la main pour réassigner qui
+joue quel PJ ensuite.
+
+**Révoquer une joueuse = l'expulser du monde**, rien de plus : retire son
+adhésion (`campaign_members`), libère le PJ qu'elle jouait
+(`campaign_characters.user_id = null`) — même geste que `revokeInvite`
+aujourd'hui. Le compte survit, inchangé ailleurs (autres mondes, ou aucun).
+Ne touche plus au lien lui-même, qui reste ouvert pour d'autres puisqu'il
+est désormais réutilisable.
+
+**Mot de passe oublié — pas de miracle sans email, donc ça reste médié :**
+un bouton « Mot de passe oublié » sur l'écran de connexion dépose une
+demande plutôt que d'exiger un aller-retour hors de l'app (Discord, SMS...).
+Elle apparaît dans le panneau de tout MJ dont ce compte est membre d'un
+monde. **Si le compte n'est membre d'aucun monde** (créé en libre-service,
+jamais invité, ou révoqué de partout), aucun MJ ordinaire n'a d'autorité
+dessus — c'est le superadmin qui la voit et agit (point suivant).
+
+**Le superadmin (compte de l'auteur, `profiles.account_role = 'superadmin'`,
+déjà posé par la migration `20260830090001_superadmin_role.sql`) étend ses
+pouvoirs déjà existants** (`app/api/admin/*`, `deleteInvitedAccount`, « voir
+comme ») avec trois gestes nouveaux, pour couvrir précisément les comptes
+qu'aucun MJ particulier ne gère :
+- réinitialiser le mot de passe de n'importe quel compte de la plateforme ;
+- supprimer n'importe quel compte — généralise `deleteInvitedAccount`
+  (`accountProvisioning.ts:192`), dont le garde-fou actuel (« refuse si
+  jamais réclamé par un lien d'invitation ») ne tient plus une fois les
+  comptes « tag » libre-service possibles, à revoir dans le même geste ;
+- transférer un ruleset personnel d'un compte à un autre
+  (`rulesets.created_by`) — jamais sur `is_official_base = true`, règle
+  absolue n°18, inchangée.
+
+**Corrections par rapport aux versions précédentes de ce ticket :**
+- Un mot de passe de **compte** passe par le mécanisme natif de Supabase
+  Auth (`admin.auth.admin.createUser({ email, password })`,
+  `signInWithPassword`) — jamais par `hashSharePassword`/scrypt
+  (`src/core/shareLinks/password.ts`), qui reste réservé aux mots de passe
+  de **lien** (partage, invitation), lesquels ne correspondent à aucune
+  identité `auth.users`. Une version antérieure de ce ticket proposait à
+  tort de réutiliser scrypt pour les mots de passe de compte.
+- Le lien magique (`mintSessionForInvitedAccount`/`mintSessionForOwnAccount`,
+  `accountProvisioning.ts`) reste exactement ce qu'il est aujourd'hui,
+  réservé à « voir comme » côté superadmin — il ne joue plus aucun rôle dans
+  la connexion ordinaire, contrairement à ce qu'une version antérieure de ce
+  ticket envisageait.
+- « Forcer une réinitialisation » (MJ ou superadmin, sur un compte
+  existant) ne suppose ni mot de passe temporaire tapé à la main, ni lien
+  magique : ça génère un jeton à usage unique — même primitive que les
+  liens d'invitation, pas une nouvelle mécanique — qui mène à l'écran de
+  choix d'un nouveau mot de passe (jamais de connexion automatique).
 
 **Modèle de données**
 
-- `profiles` gagne un identifiant de connexion (colonne dédiée, distincte de
-  `display_name` qui n'est pas unique aujourd'hui — deux joueuses de mondes
-  différents peuvent déjà porter le même nom de personnage) : unique,
-  nullable (un compte ordinaire type auteur continue de se connecter par son
-  vrai email, cette colonne ne concerne que les comptes invités).
-- Colonne mot de passe (hash `scrypt$...`, même format que
-  `share_links`/`campaign_invites`) et un indicateur « doit changer son mot
-  de passe à la prochaine connexion » sur le même compte.
-- RLS : une joueuse ne lit/écrit jamais la ligne d'un autre compte ; la
-  résolution identifiant → compte au moment de la connexion passe par une
-  fonction dédiée (même doctrine que `resolveCampaignInviteToken`), jamais
-  une lecture directe de `profiles` par un visiteur anonyme.
+- `profiles` gagne `handle_name` (texte) + `handle_tag` (4 chiffres),
+  uniques ensemble (pas `handle_name` seul), et `must_change_password`
+  (booléen). Aucune colonne de mot de passe applicatif — le mot de passe
+  vit dans `auth.users`, géré par Supabase Auth.
+- `campaign_invites` : les liens de rôle `player` perdent leur sémantique
+  « réclamé une seule fois » — plus de `claimed_by_user_id` singulier pour
+  ce rôle, la liste de qui a rejoint via un monde redevient simplement
+  `campaign_members` (source de vérité déjà existante, pas de nouvelle
+  table de suivi). Les liens de rôle `gm` gardent le comportement actuel à
+  l'identique.
+- Demande de réinitialisation en attente : petite table ou flag +
+  horodatage sur `profiles`, lisible par tout MJ d'un monde dont ce compte
+  est membre, et par le superadmin dans tous les cas.
 
 **Étapes**
 
-1. Nouvel ADR actant le remplacement du lien magique comme canal de
-   connexion courant (l'ADR 0015 n'est jamais modifié — règle absolue n°14
-   côté migrations, même esprit côté ADR : on écrit la suite, pas une
-   réécriture de l'ancien).
-2. Migration : colonne identifiant unique + hash de mot de passe + indicateur
-   de changement forcé sur `profiles` (ou table dédiée si `profiles` s'y
-   prête mal — à trancher à l'implémentation).
-3. Écran « choisir son identifiant et son mot de passe » — obligatoire au
-   premier passage après provisionnement (atteint via le lien d'invitation
-   d'origine, inchangé pour ce tout premier accès), et reste le même écran
-   servi quand une réinitialisation est forcée par le MJ.
-4. Page de connexion publique, reliée depuis le wiki public — identifiant +
-   mot de passe, résolution serveur vers l'email synthétique, jamais exposé.
-5. Panneau MJ (gestion des invitations existante,
-   `src/server/services/campaignInvites.ts`) : deux actions par compte
-   provisionné — « révoquer l'accès par mot de passe » et « forcer une
-   réinitialisation » — à côté de « Révoquer » (accès campagne) et « Voir
-   comme » déjà là.
-6. Dès le mot de passe défini (première connexion réussie), le jeton
-   d'invitation d'origine est invalidé (même geste que `resetInviteToken`,
-   déclenché automatiquement plutôt que par le MJ) — il ne doit plus rouvrir
-   le compte tout seul une fois le mot de passe en place, sans quoi
-   « révoquer »/« forcer une réinitialisation » ne protégeraient rien contre
-   ce lien s'il a été oublié dans une conversation. Au-delà de ce point, le
-   lien magique ne revit que si le MJ déclenche explicitement une
-   réinitialisation (étape 5) — jamais par simple réouverture de l'ancien
-   lien.
+1. Nouvel ADR actant : mots de passe natifs Supabase (jamais de lien
+   magique comme canal de connexion courant), liens joueurs réutilisables
+   (renverse V2-M4), comptes utilisables sans monde, réinitialisation
+   médiée par jeton à usage unique. L'ADR 0015 et le commentaire « un lien
+   par personne » de V2-M4 ne sont jamais réécrits — ce nouvel ADR
+   documente la suite, pas une correction de l'ancien.
+2. Migration : `handle_name`/`handle_tag`/`must_change_password` sur
+   `profiles` (avec attribution d'un tag à chaque compte existant,
+   `Gabriel#0000` pour l'auteur), assouplissement de `campaign_invites`
+   pour les liens joueur, table/flag de demande de réinitialisation.
+3. Écran de connexion unique (`/login`) : « se connecter » (nom + mot de
+   passe, ou email pour un compte ordinaire) et bascule « créer un compte »
+   (nom, tag généré à la volée, mot de passe) — utilisable avec ou sans
+   lien d'invitation en contexte.
+4. Un lien d'invitation ouvert dans cet écran attache automatiquement le
+   compte (nouveau ou existant) au monde/rôle visé, juste après connexion
+   ou création de compte.
+5. Première visite d'un monde en tant que joueuse sans PJ assigné : écran
+   « Choisis ton personnage » (PJ ouverts + « Nouveau PJ » vers l'assistant
+   existant).
+6. Panneau MJ (gestion des invitations existante,
+   `src/server/services/campaignInvites.ts`) : génération d'un lien joueur
+   réutilisable vs un lien MJ nominatif ; « Révoquer » simplifié (retire
+   l'adhésion + libère le PJ, ne touche plus au lien) ; bouton « Forcer une
+   réinitialisation » par compte ; liste des demandes de réinitialisation
+   en attente pour les mondes de ce MJ.
+7. Écran de connexion : bouton « Mot de passe oublié » qui dépose une
+   demande plutôt que d'exiger un canal externe.
+8. Panneau Administration (superadmin) : tous les comptes de la plateforme,
+   réinitialisation, suppression généralisée, transfert de ruleset
+   personnel, et les demandes de réinitialisation orphelines (compte sans
+   aucun monde).
 
 **Critères**
 
-- [ ] Une joueuse se connecte depuis le wiki public avec un identifiant et un
-  mot de passe, sans avoir besoin du lien d'invitation d'origine.
-- [ ] Au premier accès après provisionnement, la joueuse choisit son
-  identifiant et son mot de passe avant d'accéder à quoi que ce soit d'autre
-  — aucun mot de passe initial n'est inventé ni transmis par le MJ.
-- [ ] Une fois le mot de passe défini, réouvrir le lien d'invitation d'origine
-  ne reconnecte plus personne — seule une réinitialisation forcée par le MJ
-  génère un accès de secours valide.
-- [ ] Le MJ peut révoquer l'accès par mot de passe d'un compte à tout moment ;
-  ça invalide aussi une session déjà ouverte ailleurs (pas seulement les
-  connexions futures), au plus tard à l'expiration du jeton d'accès en cours.
-- [ ] Le MJ peut forcer une réinitialisation — le lien de secours généré mène
-  obligatoirement à l'écran de choix d'un nouveau mot de passe, jamais
-  directement dans l'app.
-- [ ] Un compte ordinaire (l'auteur, `/login` existant) n'est pas affecté par
-  ce nouveau mécanisme, réservé aux comptes provisionnés par invitation.
-- [ ] Un nouvel ADR documente ce renversement par rapport à l'ADR 0015.
+- [ ] N'importe qui peut créer un compte (nom + mot de passe, tag généré
+  automatiquement) sans invitation, depuis `/login` ou le bouton du wiki
+  public — ce compte n'a accès à aucun monde tant que personne ne l'y
+  invite.
+- [ ] Un lien joueur peut être utilisé par plusieurs personnes différentes,
+  chacune rejoignant le même monde avec son propre compte.
+- [ ] Un lien MJ reste utilisable par une seule personne, comme aujourd'hui.
+- [ ] À la première visite d'un monde comme joueuse, si aucun PJ n'est déjà
+  assigné, la joueuse choisit parmi les PJ ouverts ou en crée un nouveau —
+  jamais imposé au moment de la création du compte.
+- [ ] Révoquer une joueuse retire son accès au monde et libère son PJ ; son
+  compte reste utilisable ailleurs (autres mondes, ou aucun) ; le lien
+  d'invitation, lui, continue de fonctionner pour d'autres.
+- [ ] Une demande de réinitialisation envoyée sans mot de passe connu arrive
+  dans le panneau d'un MJ compétent, ou du superadmin si le compte n'a
+  aucun monde.
+- [ ] Le superadmin peut réinitialiser le mot de passe, supprimer, ou
+  transférer un ruleset personnel de n'importe quel compte de la
+  plateforme.
+- [ ] Le tag (`#NNNN`) n'est jamais visible ailleurs que dans les réglages
+  du compte concerné.
+- [ ] Un nouvel ADR documente ce modèle, sans modifier l'ADR 0015 ni le
+  commentaire de V2-M4.
 
-**Décisions tranchées (28 septembre)**
+---
 
-- **Identifiant de connexion : choisi par la joueuse**, à l'écran obligatoire
-  du premier accès — jamais par le MJ à la création du lien. Un compte se
-  provisionne parfois sur un lien déjà réutilisé pour un compte existant
-  (`existingUserId`, cf. Jeremy MJ + joueur) : l'identifiant est une
-  propriété du **compte**, pas de l'invitation, donc c'est à son titulaire de
-  le choisir une fois, pas au MJ de l'inventer pour chaque lien.
-- **Mot de passe initial : aucun n'est fixé par le MJ.** Le lien
-  d'invitation déjà transmis une fois (aujourd'hui éprouvé) sert
-  exactement à ça : il mène, à ce premier accès seulement, à l'écran
-  obligatoire de choix d'identifiant + mot de passe. Pas de secret
-  supplémentaire à inventer ni à transmettre par un second canal.
-- **Révoquer coupe aussi une session déjà ouverte ailleurs.** Une révocation
-  qui laisserait une session déjà connectée continuer de fonctionner ne
-  protégerait rien de concret (le cas d'usage visé — « si jamais » — est
-  justement celui où l'accès doit s'arrêter maintenant). Mécanisme exact à
-  vérifier à l'implémentation (verrou côté GoTrue empêchant le
-  rafraîchissement du jeton, aucun équivalent utilisé ailleurs dans le
-  projet aujourd'hui) ; à défaut d'un blocage immédiat du jeton d'accès déjà
-  émis, l'expiration naturelle de ce jeton (courte, pas de session qui dure
-  des jours sans rafraîchissement) borne le délai.
-- **Tentatives avant blocage : même seuil que l'existant**, 10 tentatives,
-  même mécanisme que `verifyInvitePassword`
-  (`campaignInvites.ts:205`) — pas une politique de verrouillage séparée à
-  maintenir pour un deuxième type de mot de passe.
-- **Le lien d'invitation d'origine ne reste pas valide indéfiniment** : il
-  s'invalide automatiquement dès que le mot de passe est défini (étape 6
-  ci-dessus). Au-delà, le seul chemin de secours est une réinitialisation
-  explicitement déclenchée par le MJ — cohérent avec le but du ticket
-  (arrêter de dépendre d'un lien qui traîne) et avec « révoquer », qui
-  perdrait tout son sens si un lien oublié quelque part rouvrait quand même
-  le compte sans repasser par le MJ.
+### V3.1-11 — Onglet « Solo » visible même avec un MJ humain déjà présent · `S`
+
+Constaté le 28 septembre, en discutant de V3.1-10 : la coquille joueuse
+(`PlayerShell.tsx:64`) liste « Solo » comme destination fixe, sans condition
+— le mode solo (V3, IA locale) n'a de sens que pour une joueuse sans MJ
+humain sur ce monde. Aujourd'hui il reste visible même dans un monde qui a
+un vrai MJ, alors que `campaign_members` porte déjà un rôle `gm` par
+campagne (`src/server/repos/campaigns.ts:138`) — une simple présence de ce
+rôle suffit à savoir si ce monde a un MJ humain.
+
+**Critères**
+- [ ] L'onglet « Solo » n'apparaît dans la coquille joueuse que si la
+  campagne du monde consulté ne compte aucun membre de rôle `gm`.
+- [ ] Un monde sans MJ humain (solo par nature) continue d'afficher l'onglet
+  normalement — aucune régression sur l'usage principal de ce mode.
+
+---
+
+### V3.1-12 — « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin · `M`
+
+Constaté le 28 septembre, en discutant de V3.1-10 : « voir comme »
+(`startViewAs`, `src/server/services/viewAs.ts:24`) est aujourd'hui réservé
+au superadmin (`isSuperadmin`), utilisable uniquement depuis la section
+Administration (`AdminPanel.tsx`). Demandé : un MJ de campagne doit pouvoir
+l'utiliser sur ses propres joueuses, depuis les options MJ du monde —
+concrètement la liste « Membres » déjà affichée dans `CampaignDetail.tsx:163`
+(Gestion de campagne, déjà gardée par `canManage`), à côté du bouton
+« Révoquer » qui y est déjà.
+
+**Décision**
+- **Autorisation** : en plus du superadmin (portée globale, inchangée), un
+  appelant peut démarrer « voir comme » sur `targetUserId` s'il est MJ de la
+  campagne dont la cible est membre — vérifié côté serveur avec le
+  `campaignId` transmis (jamais « est-il GM de N'IMPORTE quelle campagne
+  contenant cette cible », toujours scopé à la campagne depuis laquelle le
+  bouton est cliqué). Même garde que `canManage`/`isWorldAdmin` déjà utilisé
+  ailleurs dans cet écran.
+- **Garde-fou sur la cible, à redéfinir** : `mintSessionForInvitedAccount`
+  (`accountProvisioning.ts:227`) refuse aujourd'hui tout compte qui n'a
+  jamais réclamé une ligne `campaign_invites` — invariant qui ne tient plus
+  une fois les liens joueur réutilisables et les comptes créés en
+  libre-service (V3.1-10). Le vrai invariant à garder : ne jamais permettre
+  « voir comme » sur un compte **ordinaire** (email réel, `/signup`/`/login`)
+  — seulement sur un compte « tag » (identité interne à l'app, jamais un
+  email personnel externe). Peut se coder dès aujourd'hui sur le signal déjà
+  disponible (email synthétique), et se réaligne naturellement une fois
+  V3.1-10 posé.
+- **Retour (`returnFromViewAs`)** : le contrôle actuel
+  (`isSuperadminByIdViaServiceRole`) rejetterait à tort un MJ ordinaire qui
+  revient de son propre « voir comme ». La vraie garantie de sécurité est
+  déjà le cookie httpOnly posé par le serveur au démarrage (jamais
+  falsifiable côté client, jamais lu ni écrit ailleurs) — le contrôle au
+  retour se limite à vérifier que le compte d'origine existe toujours, plus
+  de condition superadmin.
+
+Indépendant de V3.1-10 : peut se faire avant, pendant ou après.
+
+**Étapes**
+1. `startViewAs` : accepte un `campaignId` optionnel ; si fourni et que
+   l'appelant est MJ de cette campagne et la cible en est membre, autorise —
+   sinon retombe sur la vérification superadmin actuelle.
+2. Redéfinir le garde-fou de `mintSessionForInvitedAccount` : refuse un
+   compte ordinaire (email réel), plus « jamais réclamé par un lien ».
+3. `returnFromViewAs` : retire la condition superadmin, garde uniquement
+   l'existence du compte d'origine.
+4. Bouton « Voir comme » sur chaque ligne de `data.members` dans
+   `CampaignDetail.tsx`, visible seulement si `canManage`.
+
+**Critères**
+- [ ] Un MJ (non superadmin) peut lancer « voir comme » sur une joueuse de
+  sa propre campagne, depuis la liste des membres de « Gestion de
+  campagne ».
+- [ ] Un MJ ne peut pas lancer « voir comme » sur un compte qui n'est pas
+  membre d'une campagne qu'il gère.
+- [ ] « Voir comme » reste impossible sur un compte ordinaire (email réel),
+  qu'on soit MJ ou superadmin.
+- [ ] Le superadmin garde sa portée actuelle (n'importe quel compte « tag »,
+  n'importe où).
+- [ ] Revenir de « voir comme » fonctionne identiquement, que ce soit un MJ
+  ou le superadmin qui l'ait démarré.
