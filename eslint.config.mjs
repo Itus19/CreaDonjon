@@ -99,6 +99,33 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // Troisieme trou confine, meme discipline (docs/adr/0031-comptes-tag-et-mots-de-passe-natifs.md
+  // §6) : tout ce qui touche un mot de passe de compte (V3.1-10), jamais un
+  // elargissement des deux trous existants (portees differentes : lecture
+  // de partage public / provisionner un compte invite SANS mot de passe).
+  {
+    files: ["**/*.{ts,tsx}"],
+    ignores: ["src/server/services/accountAuth.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "*/lib/supabase/serviceAccountAuth",
+                "@/lib/supabase/serviceAccountAuth",
+                "./serviceAccountAuth",
+                "../serviceAccountAuth",
+              ],
+              message:
+                "Le client service-role de mots de passe est confine a src/server/services/accountAuth.ts (docs/adr/0031-comptes-tag-et-mots-de-passe-natifs.md). Passe par les fonctions exportees de ce fichier plutot que de construire ce client ici.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // V2.1-27 — PLANCHER DE 12 px SUR LES TAILLES DE TEXTE.
   //
   // `docs/CHARTE-UI.md` §4 le dit depuis la V2 : « Rien en dessous de
