@@ -15,7 +15,7 @@ import SpeciesStep from "./characterCreatorSteps/SpeciesStep";
 import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreatorSteps/BackgroundStep";
 import SpellSelectionStep from "./characterCreatorSteps/SpellSelectionStep";
 import PreviewStep from "./characterCreatorSteps/PreviewStep";
-import { createCharacterFromWizardAction } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
+import { createCharacterFromWizardAction, type CreateCharacterFromWizardInput } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
 import { overwriteCharacterFromWizardAction } from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/actions";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import { useRuleEntryBlocks } from "./useRuleEntryBlocks";
@@ -109,6 +109,7 @@ export default function CharacterCreatorWizard({
   worldId,
   entityMode,
   playerRestricted,
+  onCreate,
 }: {
   worldSlug: string;
   /** Requis seulement hors `entityMode` (creation d'une nouvelle entite). */
@@ -116,6 +117,15 @@ export default function CharacterCreatorWizard({
   entityMode?: CharacterWizardEntityMode;
   /** Coquille joueur (retour utilisateur) : masque le multiclassage ("+ Ajouter une classe") a l'etape Classe — un joueur qui compose sa toute premiere fiche depuis l'onglet Personnage n'a pas a en decider seul. `undefined`/`false` en contexte MJ, rien ne change. */
   playerRestricted?: boolean;
+  /**
+   * Remplace `createCharacterFromWizardAction` pour la creation d'une
+   * nouvelle entite (V3.1-10, ecran "Choisis ton personnage" — Nouveau PJ) :
+   * l'ecran MJ cree une fiche libre, mais un joueur qui compose la sienne
+   * depuis la coquille joueuse doit AUSSI la reclamer dans sa campagne et
+   * repartir sur son propre ecran, jamais la fiche MJ. Ignore si
+   * `entityMode` est fourni (reecriture, jamais une creation).
+   */
+  onCreate?: (worldSlug: string, input: CreateCharacterFromWizardInput) => Promise<{ error: string } | void>;
 }) {
   const [rawStep, setStep] = useState(0);
   const [name, setName] = useState(entityMode?.initialName ?? "");
@@ -229,7 +239,7 @@ export default function CharacterCreatorWizard({
         return;
       }
 
-      const result = await createCharacterFromWizardAction(worldSlug, {
+      const result = await (onCreate ?? createCharacterFromWizardAction)(worldSlug, {
         worldId: worldId!,
         name,
         character,

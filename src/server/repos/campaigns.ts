@@ -156,6 +156,32 @@ export async function isCampaignMember(supabase: TypedClient, params: { campaign
   return data !== null;
 }
 
+/** Ecran "Choisis ton personnage" (V3.1-10) : PJ ouverts (jamais reclames) de cette campagne. */
+export async function listUnclaimedPcEntityIds(supabase: TypedClient, campaignId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("campaign_characters")
+    .select("entity_id")
+    .eq("campaign_id", campaignId)
+    .eq("is_pc", true)
+    .is("user_id", null);
+  if (error) throw new Error(error.message);
+  return data.map((row) => row.entity_id);
+}
+
+/** Reclame un PJ ouvert pour SOI (V3.1-10) — course-safe (`is("user_id", null)`), jamais un simple upsert qui ecraserait quelqu'un d'autre arrive une fraction de seconde plus tot. */
+export async function claimOpenCharacter(supabase: TypedClient, params: { campaignId: string; entityId: string; userId: string }): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("campaign_characters")
+    .update({ user_id: params.userId })
+    .eq("campaign_id", params.campaignId)
+    .eq("entity_id", params.entityId)
+    .eq("is_pc", true)
+    .is("user_id", null)
+    .select("entity_id");
+  if (error) throw new Error(error.message);
+  return data.length > 0;
+}
+
 export interface RevokeCampaignMemberResult {
   allowed: boolean;
   releasedCharacter: boolean;

@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
-import { listCampaigns } from "@/src/server/services/campaigns";
+import { listCampaigns, listUnclaimedCharacters } from "@/src/server/services/campaigns";
 import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { getEntityById } from "@/src/server/repos/entities";
 import ParticipantCharacterSheet from "@/components/shell/ParticipantCharacterSheet";
+import ChooseCharacterScreen from "./ChooseCharacterScreen";
 
 /**
  * Onglet Personnage (V2-M7b suite, retour utilisateur 31 août) : premier
@@ -25,9 +26,17 @@ export default async function JoueurPersonnagePage({ params }: { params: Promise
 
   const campaigns = await listCampaigns(supabase, world.id);
   const campaign = campaigns[0] ?? null;
-  const entityId = campaign ? await getClaimedCharacterEntityId(supabase, { campaignId: campaign.id, userId: user.id }) : null;
-  if (!campaign || !entityId) {
+  if (!campaign) {
     return <p className="mx-auto max-w-[70ch] text-sm text-ink-muted">Aucun personnage réclamé pour l&apos;instant dans ce monde.</p>;
+  }
+
+  const entityId = await getClaimedCharacterEntityId(supabase, { campaignId: campaign.id, userId: user.id });
+  if (!entityId) {
+    // Ecran "Choisis ton personnage" (V3.1-10) : membre du monde sans PJ
+    // assigné (ajoutée par email, ou personnage réinitialisé par le MJ) —
+    // jamais imposé à la création du compte.
+    const characters = await listUnclaimedCharacters(supabase, campaign.id);
+    return <ChooseCharacterScreen worldSlug={worldSlug} characters={characters} />;
   }
 
   // Nom/version necessaires seulement pour amorcer l'assistant de creation

@@ -3,6 +3,7 @@ import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import {
+  claimOpenCharacter,
   findUserIdByEmail,
   getCampaignById,
   insertCampaign,
@@ -11,6 +12,7 @@ import {
   listCampaignMembers,
   listCampaignsForWorld,
   listGmCampaignsForUser,
+  listUnclaimedPcEntityIds,
   revokeCampaignMember,
   updateCampaignMode,
   updateCampaignName,
@@ -23,6 +25,7 @@ import {
 import { getRulesetById } from "@/src/server/repos/rules";
 import { getWorldOwnerId } from "@/src/server/repos/worlds";
 import { createEntity, listEntities } from "@/src/server/services/entities";
+import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { listEntityGrantsForEntityIds, type EntityGrantRow } from "@/src/server/repos/entityGrants";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { isSuperadmin } from "@/src/server/services/account";
@@ -283,4 +286,26 @@ export async function assignCampaignCharacter(
   params: { campaignId: string; entityId: string; userId: string | null; isPc: boolean }
 ): Promise<CampaignCharacterRow> {
   return upsertCampaignCharacter(supabase, params);
+}
+
+/** Ecran "Choisis ton personnage" (V3.1-10) : PJ ouverts avec leur nom affichable — jamais imposé à la création du compte, la joueuse choisit après coup. */
+export async function listUnclaimedCharacters(
+  supabase: TypedClient,
+  campaignId: string
+): Promise<{ entityId: string; entityName: string }[]> {
+  const ids = await listUnclaimedPcEntityIds(supabase, campaignId);
+  if (ids.length === 0) return [];
+  const entities = await listEntitiesByIds(supabase, ids);
+  return entities.map((e) => ({ entityId: e.id, entityName: e.name }));
+}
+
+export type ClaimOwnOpenCharacterResult = { ok: true } | { ok: false; reason: "already_taken" };
+
+/** Reclame un PJ ouvert pour l'appelant lui-meme (V3.1-10) — jamais pour un autre compte, contrairement a `assignCampaignCharacter` (reserve au MJ, verifie par RLS). */
+export async function claimOwnOpenCharacter(
+  supabase: TypedClient,
+  params: { campaignId: string; entityId: string; userId: string }
+): Promise<ClaimOwnOpenCharacterResult> {
+  const claimed = await claimOpenCharacter(supabase, params);
+  return claimed ? { ok: true } : { ok: false, reason: "already_taken" };
 }
