@@ -85,9 +85,14 @@ export default function NextSessionBadge({ worldSlug }: { worldSlug: string }) {
         className={`relative hidden rounded-md border border-accent px-1.5 py-2 font-mono text-[clamp(8px,1.3vh,11px)] leading-tight text-accent transition-colors hover:bg-panel-raised md:block ${active ? "bg-accent/10" : ""}`}
       >
         {showBadge && (
+          // `left`/`bottom`, pas `right`/`top` : le parent est tourne a
+          // 180deg (`transform: rotate(180deg)`, pour lire le texte de bas
+          // en haut), ce qui tourne AUSSI cette pastille positionnee en
+          // absolu — verifie visuellement, "top-right" en CSS atterrissait
+          // en bas-gauche a l'ecran avant ce correctif.
           <span
             aria-label="Une demande de disponibilités attend une réponse"
-            className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-danger"
+            className="absolute -bottom-1 -left-1 h-2.5 w-2.5 rounded-full bg-danger"
             style={{ writingMode: "horizontal-tb", transform: "none" }}
           />
         )}
