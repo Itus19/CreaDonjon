@@ -85,8 +85,14 @@ create table profiles (
   id           uuid primary key references auth.users(id) on delete cascade,
   display_name text not null default '',
   locale       text not null default 'fr',
+  handle_name  text not null,   -- V3.1-10, ADR 0031 : nom affiche, pas unique seul
+  handle_tag   text not null,   -- V3.1-10 : 4 chiffres genere, unique avec handle_name, jamais affiche hors reglages du compte
+  account_role text not null default 'member' check (account_role in ('member', 'superadmin')),
+  must_change_password boolean not null default false,        -- V3.1-10 : reinitialisation forcee
+  password_reset_requested_at timestamptz,                    -- V3.1-10 : demande "mot de passe oublie" en attente, jamais un jeton utilisable
   created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
+  updated_at   timestamptz not null default now(),
+  unique (handle_name, handle_tag)
 );
 
 create table worlds (
@@ -115,6 +121,39 @@ create table world_members (
 `profiles` est créé par trigger sur `auth.users`. Ne jamais lire `auth.users` directement depuis l'application.
 
 `world_members` prépare le multi-MJ sans le construire. Coût aujourd'hui : une table. Coût plus tard : réécriture de toutes les politiques RLS.
+
+### 3.1 Invitations et réinitialisation (V2-M4, V3.1-10)
+
+```sql
+create table campaign_invites (
+  id                 uuid primary key default gen_random_uuid(),
+  campaign_id        uuid references campaigns(id) on delete cascade,
+  world_id           uuid references worlds(id) on delete cascade,   -- l'un des deux au moins
+  token              text,                        -- jeton en clair, conserve (recopiable depuis la liste)
+  token_hash         text not null unique,
+  intended_role      text check (intended_role in ('gm', 'player')),
+  password_hash      text,                        -- scrypt, src/core/shareLinks/password.ts, reutilise tel quel
+  password_attempts  int not null default 0,
+  claimed_by_user_id uuid references auth.users(id),  -- role gm seulement depuis V3.1-10 (ADR 0031) ; role player : campaign_members fait foi
+  claimed_name       text,
+  revoked_at         timestamptz,
+  created_by         uuid not null references auth.users(id),
+  created_at         timestamptz not null default now()
+);
+
+create table account_reset_tokens (       -- V3.1-10, ADR 0031 §5
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  token_hash  text not null unique,       -- jamais le jeton en clair : secret a usage unique, pas un lien permanent
+  created_by  uuid not null references auth.users(id),
+  created_at  timestamptz not null default now(),
+  used_at     timestamptz
+);
+```
+
+Un lien MJ reste nominatif et à usage unique (`claimed_by_user_id` en fait foi). Un lien joueur est réutilisable depuis V3.1-10 : qui a rejoint un monde par ce lien se lit dans `campaign_members`, jamais dans `campaign_invites`. Toute mutation privilégiée (résoudre un jeton sans session, réclamer, réinitialiser un mot de passe de lien, révoquer) passe par une fonction `security definer` dans le schéma `app`, jamais par une écriture directe depuis le rôle `anon`/`authenticated` — RLS refuse tout le reste.
+
+`account_reset_tokens` n'a aucune politique RLS (refus par défaut) : seul le client service-role confiné à `src/server/services/accountAuth.ts` y touche (ADR 0031 §6), même discipline que `accountProvisioning.ts` pour les comptes invités.
 
 ---
 

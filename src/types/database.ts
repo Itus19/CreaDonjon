@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_reset_tokens: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          token_hash: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          token_hash: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          token_hash?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_proposals: {
         Row: {
           applied_at: string | null
@@ -1815,24 +1842,36 @@ export type Database = {
           account_role: string
           created_at: string
           display_name: string
+          handle_name: string
+          handle_tag: string
           id: string
           locale: string
+          must_change_password: boolean
+          password_reset_requested_at: string | null
           updated_at: string
         }
         Insert: {
           account_role?: string
           created_at?: string
           display_name?: string
+          handle_name: string
+          handle_tag: string
           id: string
           locale?: string
+          must_change_password?: boolean
+          password_reset_requested_at?: string | null
           updated_at?: string
         }
         Update: {
           account_role?: string
           created_at?: string
           display_name?: string
+          handle_name?: string
+          handle_tag?: string
           id?: string
           locale?: string
+          must_change_password?: boolean
+          password_reset_requested_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2688,6 +2727,10 @@ export type Database = {
         Args: { p_success: boolean; p_token: string }
         Returns: undefined
       }
+      request_password_reset_by_name: {
+        Args: { p_handle_name: string }
+        Returns: undefined
+      }
       resolve_campaign_invite: {
         Args: { p_token: string }
         Returns: {
@@ -2699,6 +2742,12 @@ export type Database = {
           password_attempts: number
           password_hash: string
           world_id: string
+        }[]
+      }
+      resolve_login_emails: {
+        Args: { p_handle_name: string }
+        Returns: {
+          email: string
         }[]
       }
       resolve_share_link: {
@@ -2725,6 +2774,14 @@ export type Database = {
           removed_member: boolean
           removed_world_member: boolean
           revoked: boolean
+        }[]
+      }
+      revoke_campaign_member: {
+        Args: { p_campaign_id: string; p_user_id: string }
+        Returns: {
+          allowed: boolean
+          released_character: boolean
+          removed_member: boolean
         }[]
       }
       search_entities: {
