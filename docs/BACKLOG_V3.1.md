@@ -734,3 +734,75 @@ du jeu aujourd'hui — cohérent, pas un recul propre à ce contenu.
   bloc manquant (V3.1-1, si toujours ouvert) ni par un défaut d'édition
   (V3.1-2, si toujours ouvert) — dépendances à vérifier au moment de
   saisir, pas à résoudre avant.
+
+---
+
+### V3.1-14 — Aucun moyen pour une joueuse de créer elle-même son PJ sans personnage déjà assigné · `M`
+
+Constaté le 29 septembre, en vérifiant V3.1-9 : le lien de test donné par
+l'auteur menait à l'écran « Bienvenue » (`app/rejoindre/[token]/JoinForm.tsx`)
+avec « Aucun personnage disponible pour l'instant » — le rôle joueur exige
+aujourd'hui qu'un PJ non réclamé existe déjà (sinon `missing_entity`,
+`accountProvisioning.ts:69`), et la seule façon d'en créer un est que le MJ
+le fasse à la main au préalable (nouvelle fiche, puis dropdown « PNJ (sans
+joueur) » dans Gestion de campagne pour la laisser ouverte).
+
+Même trou côté onglet Personnage (`ParticipantCharacterSheet.tsx:37`) : le
+bouton « Créer mon personnage » n'amorce l'assistant (`CharacterCreatorWizard`)
+qu'en `entityMode` — sur une entité **déjà assignée** (`entityId`/
+`entityVersion` transmis par la page appelante) — jamais pour une joueuse qui
+n'a encore aucun PJ du tout.
+
+Pourtant `CharacterCreatorWizard` sait déjà créer une entité de zéro (mode
+hors `entityMode`, ligne 116 : « Requis seulement hors `entityMode` (création
+d'une nouvelle entité) », utilisé aujourd'hui seulement côté MJ via
+`EditEntityForm.tsx`) — la brique existe, elle n'est simplement jamais
+proposée à une joueuse sans PJ.
+
+**Décision** : une joueuse sans PJ assigné peut lancer l'assistant en mode
+création (pas seulement édition d'une entité existante), qui crée directement
+une fiche marquée PJ (`is_pc: true`) et attribuée à elle
+(`campaign_characters.user_id`) — éditable ensuite par elle-même et par le MJ
+comme n'importe quel PJ (`canEditEntity`, aucun mécanisme nouveau à écrire
+pour ça).
+
+Deux points d'entrée à couvrir :
+- Le bouton « Créer mon personnage » du menu Personnage
+  (`ParticipantCharacterSheet.tsx`), quand la joueuse n'a aucun PJ du tout —
+  pas seulement « PJ sans fiche », le cas déjà couvert aujourd'hui.
+- L'écran « Bienvenue » (`JoinForm.tsx`) — remplacer « Aucun personnage
+  disponible pour l'instant » par une option « Créer mon personnage » quand
+  la liste des PJ ouverts est vide.
+
+Recoupe l'étape « Nouveau PJ » prévue par V3.1-10 (choix du PJ à la première
+visite d'un monde, une fois le nouveau système de connexion en place) — même
+mécanisme, à ne construire qu'une fois : ce ticket peut se faire
+indépendamment et avant, V3.1-10 le réutilise plutôt que d'en réécrire un
+second.
+
+**Étapes**
+1. Identifier où « aucun PJ du tout » atteint aujourd'hui
+   `ParticipantCharacterSheet.tsx` (actuellement ce composant n'est monté
+   qu'avec un `entityId` déjà connu — la page appelante doit d'abord
+   accepter ce cas).
+2. Proposer l'assistant en mode création (hors `entityMode`) à cet endroit ;
+   à la validation, marquer la nouvelle entité PJ et l'attribuer à l'auteure
+   de la création (`campaign_characters` upsert, `is_pc: true`, `user_id`) —
+   un seul geste, pas une création suivie d'une attribution manuelle séparée
+   par le MJ.
+3. `JoinForm.tsx`/`actions.ts` : quand `characters.length === 0` (rôle
+   joueur), remplacer le message bloquant par une option « Créer mon
+   personnage » qui ouvre le même assistant avant de finaliser la connexion.
+4. Le MJ garde la main ensuite : la fiche reste réassignable/révocable comme
+   n'importe quel PJ (`CampaignDetail.tsx`, déjà existant) — rien de nouveau
+   à construire ici.
+
+**Critères**
+- [ ] Une joueuse sans aucun PJ assigné peut créer le sien elle-même via
+  l'assistant, depuis le menu Personnage.
+- [ ] La fiche créée est immédiatement un PJ attribué à elle — éditable par
+  elle et par le MJ, sans étape manuelle supplémentaire du MJ.
+- [ ] L'écran « Bienvenue » (rejoindre un monde) propose la création d'un PJ
+  quand aucun n'est disponible, au lieu d'un message bloquant sans issue.
+- [ ] Une joueuse qui a déjà un PJ (avec ou sans fiche) n'est pas affectée —
+  comportement actuel inchangé pour ce cas.
