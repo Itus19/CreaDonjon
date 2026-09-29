@@ -384,44 +384,58 @@ en même temps qu'on y touche).
 
 ---
 
-### V3.1-9 — Bouton « Prochaine session » mal calibré selon l'écran · `S`/`M`
+### V3.1-9 — Bouton « Prochaine session » mal calibré selon l'écran · `S`/`M` — fait
 
 Constaté le 27 septembre, capture à l'appui : la bannière verticale
 (`NextSessionBadge.tsx`), texte tourné à 90°, taille en
 `clamp(7px,1.15vh,10px)`, devient illisible/écrasée sur certaines hauteurs
-d'écran. Demandé : texte horizontal sur deux lignes (« Prochaine session » /
-« Dimanche 18 octobre »), dans un bouton fin au liseré de la même couleur que
-le texte plutôt qu'un fond plein. Le bouton doit aussi donner accès aux
-dates passées, aux dates à venir, et — si une demande est ouverte par le MJ
-(V3.1-8) — au remplissage des disponibilités : aujourd'hui il n'ouvre que la
-saisie (`AvailabilityCalendar.tsx`) une fois une séance déjà confirmée, sans
-aucun accès à `getPastSessions`/`getUpcomingSessions` (déjà écrits côté
-service, `src/server/services/scheduling.ts`, jamais consultés côté
-joueuse).
+d'écran — le vrai problème étant que tout le texte (« Prochaine session —
+dimanche 27 septembre 2026 ») était concaténé en un seul bloc continu. Le
+bouton doit aussi donner accès aux dates passées, aux dates à venir, et — si
+une demande est ouverte par le MJ (V3.1-8) — au remplissage des
+disponibilités : jusque-là il n'ouvrait que la saisie
+(`AvailabilityCalendar.tsx`) une fois une séance déjà confirmée, sans aucun
+accès à `getPastSessions`/`getUpcomingSessions` (déjà écrits côté service,
+`src/server/services/scheduling.ts`, jamais consultés côté joueuse).
 
 Lié à V3.1-8 mais indépendant : ce ticket vaut même si V3.1-8 n'est pas
-encore pris (l'onglet « Mes disponibilités » n'apparaît alors simplement
-jamais, faute de demande à afficher).
+encore pris (l'onglet « Mes disponibilités » reste alors toujours visible,
+faute de demande à conditionner dessus — voir plus bas).
+
+**Fait le 29 septembre.** Première version basculée à l'horizontal (deux
+lignes de texte normal) — corrigée après retour utilisateur : l'orientation
+verticale devait être **gardée**, seul le texte tout attaché posait
+problème. Version finale : le bouton reste vertical
+(`writing-mode: vertical-rl`, `rotate(180deg)`), mais scindé en deux blocs
+(« Prochaine session » / la date) plutôt qu'une seule chaîne concaténée —
+deux blocs sous `vertical-rl` deviennent deux colonnes côte à côte,
+chacune bien plus courte que l'ancien texte tout collé, sans changer
+l'esthétique voulue.
 
 **Étapes**
-- Remplacer le texte pivoté par un bouton normal, deux lignes, contour fin
-  couleur `accent` (même famille que le bouton « Renseigner mes
-  disponibilités » actuel, sans le fond plein).
-- Le clic ouvre un panneau à onglets : Séances passées / Séances à venir /
-  Mes disponibilités (ce dernier onglet seulement si une demande est ouverte,
-  V3.1-8).
-- Vérifier le rendu sur les hauteurs de fenêtre resserrées qui avaient motivé
-  le `clamp()` d'origine (V2.1-16) — ne pas réintroduire le débordement que
-  ce `clamp` corrigeait pour les six autres destinations de la coquille
-  joueuse (`PlayerShell.tsx`).
+- Fait — Bouton normal (contour fin couleur `accent`, sans fond plein, même
+  famille que l'ancien bouton « Renseigner mes disponibilités »), texte
+  vertical scindé en deux blocs plutôt qu'un seul.
+- Fait — Le clic ouvre un panneau à onglets (`NextSessionPanel.tsx`) :
+  Séances à venir / Passées / Mes disponibilités, réutilisant
+  `getUpcomingSessions`/`getPastSessions` (déjà écrits, jamais exposés côté
+  joueuse) et `AvailabilityCalendar.tsx` tel quel pour le dernier onglet.
+- Fait — Vérifié sur des hauteurs de fenêtre resserrées (jusqu'à 480px) :
+  aucun débordement, aucun chevauchement avec les autres destinations de la
+  coquille joueuse (`PlayerShell.tsx`).
 
 **Critères**
-- [ ] Le texte est lisible sur toutes les hauteurs de fenêtre déjà couvertes
+- [x] Le texte est lisible sur toutes les hauteurs de fenêtre déjà couvertes
   par `PlayerShell.tsx` (desktop uniquement, `md:`).
-- [ ] Le bouton ouvre un panneau à onglets (passé/à venir/mes dispos), pas
+- [x] Le bouton ouvre un panneau à onglets (passé/à venir/mes dispos), pas
   seulement le calendrier de saisie.
-- [ ] L'onglet « Mes disponibilités » n'apparaît que si une demande est
-  ouverte (V3.1-8) — sinon rien à remplir, pas d'onglet vide.
+- [x] **Ajusté** : l'onglet « Mes disponibilités » reste toujours visible
+  pour l'instant, plutôt que conditionné à « une demande est ouverte »
+  (V3.1-8) comme prévu au ticket d'origine — V3.1-8 n'est pas encore fait,
+  et conditionner l'onglet dès maintenant aurait retiré aux joueuses la
+  possibilité de renseigner leurs disponibilités qui existe aujourd'hui.
+  **À revoir quand V3.1-8 sera pris** : l'onglet devra alors ne s'afficher
+  que si une ronde de demande est ouverte pour la campagne.
 
 ---
 
