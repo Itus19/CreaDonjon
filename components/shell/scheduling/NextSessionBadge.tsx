@@ -10,24 +10,26 @@ interface NextSessionResponse {
   session: { scheduled_date: string; starts_at: string } | null;
 }
 
-function formatShortDate(dateStr: string): string {
+function formatSessionDate(dateStr: string): string {
   const date = new Date(`${dateStr}T00:00:00`);
-  return date.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  return date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 }
 
 /**
  * Bouton "Prochaine session" en bas de la barre latérale joueuse (V2.1-4,
- * recalibré V3.1-9 : le texte pivoté à 90° d'origine devenait illisible sur
- * les hauteurs d'écran resserrées — retour utilisateur, capture à l'appui).
+ * recalibré V3.1-9 : le texte pivoté à 90° d'origine concaténait tout en un
+ * seul bloc continu ("Prochaine session — dimanche 27 septembre 2026"),
+ * devenu illisible sur les hauteurs d'écran resserrées — retour utilisateur,
+ * capture à l'appui). Reste vertical (retour utilisateur : "je voulais le
+ * garder vertical") mais scindé en deux lignes distinctes — deux blocs sous
+ * `writing-mode: vertical-rl` deviennent deux colonnes verticales cote à
+ * cote plutôt qu'une seule longue colonne, chacune bien plus courte que
+ * l'ancien texte concaténé.
+ *
  * Un seul bouton désormais, confirmée ou non (plus deux présentations
  * différentes comme avant) : ouvre un panneau à onglets donnant accès aux
  * séances à venir, passées, et à la saisie des disponibilités
  * (`NextSessionPanel.tsx`).
- *
- * Date abrégée ("dim. 18 oct.", même format que `SchedulingMjPanel.tsx`)
- * plutôt qu'en toutes lettres : la colonne de la coquille joueuse ne fait
- * que 80px (`PlayerShell.tsx`), le format long n'y tiendrait pas sans
- * reproduire le problème de lisibilité que ce ticket corrige.
  */
 export default function NextSessionBadge({ worldSlug }: { worldSlug: string }) {
   const [data, setData] = useState<NextSessionResponse | null>(null);
@@ -49,10 +51,11 @@ export default function NextSessionBadge({ worldSlug }: { worldSlug: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full flex-col items-center gap-0.5 rounded-md border border-accent px-1 py-1.5 text-center font-mono text-[clamp(7px,1.1vh,9px)] leading-tight text-accent transition-colors hover:bg-panel-raised"
+        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+        className="rounded-md border border-accent px-1.5 py-2 font-mono text-[clamp(8px,1.3vh,11px)] leading-tight text-accent transition-colors hover:bg-panel-raised"
       >
-        <span>Prochaine session</span>
-        <span className="font-semibold">{data.session ? formatShortDate(data.session.scheduled_date) : "à définir"}</span>
+        <span className="block">Prochaine session</span>
+        <span className="block font-semibold">{data.session ? formatSessionDate(data.session.scheduled_date) : "à définir"}</span>
       </button>
 
       {open &&
