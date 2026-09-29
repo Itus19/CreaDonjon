@@ -2,13 +2,25 @@
 
 import { useEffect, useState } from "react";
 import Tabs from "@/components/shared/Tabs";
-import AvailabilityCalendar from "./AvailabilityCalendar";
+import AvailabilityRequestResponse from "./AvailabilityRequestResponse";
 
 interface RealSession {
   id: string;
   scheduled_date: string;
   starts_at: string;
   duration_minutes: number;
+}
+interface AvailabilityRequest {
+  id: string;
+  title: string;
+  candidate_dates: string[];
+  starts_at: string;
+  ends_at: string;
+}
+interface MyResponse {
+  date: string;
+  starts_at: string;
+  ends_at: string;
 }
 
 function formatDateLabel(dateStr: string): string {
@@ -30,19 +42,26 @@ function SessionList({ sessions, emptyLabel }: { sessions: RealSession[] | null;
 }
 
 /**
- * Contenu du panneau "Prochaine session" côté joueuse (V3.1-9) : trois
- * onglets qui réutilisent ce qui existait déjà côté service
- * (`getUpcomingSessions`/`getPastSessions`, jamais consultés côté joueuse
- * avant ce ticket — seul le MJ les voyait, `SchedulingMjPanel.tsx`).
- *
- * L'onglet "Mes disponibilités" reste pour l'instant toujours présent — le
- * ticket V3.1-8 (demande structurée du MJ, avec dates candidates) n'est pas
- * encore fait, et le conditionner à "une demande est ouverte" comme prévu
- * au ticket retirerait aux joueuses tout moyen de renseigner leurs
- * disponibilités tant que V3.1-8 n'existe pas — régression non voulue. À
- * revoir quand V3.1-8 arrivera.
+ * Contenu du panneau "Prochaine session" côté joueuse (V3.1-9, onglet
+ * "Mes dispos" refondu V3.1-8) : trois onglets — les deux premiers
+ * réutilisent `getUpcomingSessions`/`getPastSessions` (jamais consultés
+ * côté joueuse avant V3.1-9), le troisième répond à la ronde de demande
+ * ouverte (`AvailabilityRequestResponse.tsx`) plutôt qu'au calendrier libre
+ * d'avant V3.1-8.
  */
-export default function NextSessionPanel({ campaignId, hasUpcoming }: { campaignId: string; hasUpcoming: boolean }) {
+export default function NextSessionPanel({
+  campaignId,
+  hasUpcoming,
+  request,
+  myResponses,
+  onResponded,
+}: {
+  campaignId: string;
+  hasUpcoming: boolean;
+  request: AvailabilityRequest | null;
+  myResponses: MyResponse[];
+  onResponded: () => void;
+}) {
   const [tab, setTab] = useState(hasUpcoming ? "upcoming" : "availability");
   const [upcoming, setUpcoming] = useState<RealSession[] | null>(null);
   const [past, setPast] = useState<RealSession[] | null>(null);
@@ -74,7 +93,12 @@ export default function NextSessionPanel({ campaignId, hasUpcoming }: { campaign
 
       {tab === "upcoming" && <SessionList sessions={upcoming} emptyLabel="Aucune séance confirmée." />}
       {tab === "past" && <SessionList sessions={past} emptyLabel="Aucune séance passée." />}
-      {tab === "availability" && <AvailabilityCalendar campaignId={campaignId} />}
+      {tab === "availability" &&
+        (request ? (
+          <AvailabilityRequestResponse campaignId={campaignId} request={request} myResponses={myResponses} onSaved={onResponded} />
+        ) : (
+          <p className="text-xs italic text-ink-muted">Aucune demande de disponibilités n&apos;est ouverte pour le moment.</p>
+        ))}
     </div>
   );
 }

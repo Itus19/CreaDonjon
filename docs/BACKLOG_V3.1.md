@@ -286,7 +286,7 @@ réelle si elles portent un vrai modificateur ou seulement un nom.
 
 ---
 
-### V3.1-8 — Aucune demande structurée de disponibilités pour la prochaine séance · `L`
+### V3.1-8 — Aucune demande structurée de disponibilités pour la prochaine séance · `L` — fait
 
 Constaté le 27 septembre, captures de crab.fit à l'appui : le Calendrier réel
 (V2.1-4, `docs/BACKLOG_V2.1.md:639`) ne connaît qu'un mode — la joueuse
@@ -344,43 +344,81 @@ absolue n°14) ; SCHEMA.md ne documente aujourd'hui ni `real_sessions` ni
 `real_session_availabilities` (angle mort antérieur à ce ticket, à combler
 en même temps qu'on y touche).
 
-**Étapes**
+**Fait le 29 septembre.** Deux allers-retours en cours de ticket, après
+retour utilisateur sur la première version livrée :
+- **Formulaire en ligne, jamais dans une fenêtre pop-up** — la toute
+  première version ouvrait un assistant en plusieurs étapes dans une boîte
+  de dialogue (`RequestAvailabilityWizard.tsx`, supprimé). Refait en une
+  seule page qui s'affiche directement dans le Calendrier réel
+  (`RequestAvailabilityForm.tsx`), à l'image de la vraie page de crab.fit
+  (retour utilisateur : « je voulais un quasi copié-collé de ce que propose
+  crab.fit ») — nom, dates candidates, plage horaire empilés et visibles
+  d'un coup, pas de Suivant/Précédent.
+- **Plage horaire par curseur à deux poignées** (`TimeRangeSlider.tsx`), pas
+  deux champs heure — même retour utilisateur, plus proche de crab.fit que
+  le motif déjà utilisé pour le réglage manuel.
+- `AvailabilityCalendar.tsx` n'a pas été réutilisé pour l'écran de réponse
+  joueuse : ce composant naviguait un calendrier libre sur 12 mois, un
+  besoin qui n'existe plus une fois la joueuse restreinte à une poignée de
+  dates candidates fixes — un nouveau composant plus simple
+  (`AvailabilityRequestResponse.tsx`, une ligne par date candidate) l'a
+  remplacé, et `AvailabilityCalendar.tsx` a été supprimé (plus aucun appelant
+  après ce ticket).
 
-1. Migration : `availability_requests`, colonne `request_id` sur
-   `real_session_availabilities`, RLS.
-2. Assistant MJ (`components/shell/scheduling/`) : étapes nom → dates
-   candidates (deux onglets comme crab.fit : dates précises au clic-glissé,
-   ou motif par jour de semaine) → plage horaire (curseurs) → création.
-3. Écran de réponse joueuse : calendrier restreint aux seules dates
-   candidates de la ronde ouverte, une plage horaire par date — réutilise
-   autant que possible `AvailabilityCalendar.tsx` plutôt que d'en écrire un
-   second.
-4. `SchedulingMjPanel.tsx` : le classement par chevauchement se calcule sur
-   les réponses de la ronde ouverte, pas sur tout l'historique.
-5. Pastille sur le bouton « Prochaine session » (V3.1-9) dès qu'une ronde est
-   ouverte pour la campagne et que la joueuse n'y a pas encore répondu —
-   disparaît dès sa réponse enregistrée, sans attendre la confirmation du MJ.
-6. Fermer une ronde (séance confirmée, ou demande annulée par le MJ) : passe
-   `status` à `closed`, retire la pastille et l'invite à répondre pour tout
-   le monde.
+Le clic-glissé pour sélectionner des dates (retour utilisateur en cours de
+ticket : « ajoute aussi l'option du cliquer-glisser ») est implémenté et
+vérifié directement au niveau des évènements DOM (`mousedown` +
+`mouseover`/`relatedTarget`, la façon dont React synthétise réellement
+`onMouseEnter` en interne) — le simple clic reste possible en plus.
+
+**Étapes**
+1. Fait — Migration `20260929120000_availability_requests.sql` :
+   `availability_requests` (dates candidates en `date[]`, résolues côté
+   formulaire que l'origine soit un clic ou un motif « jours de semaine »),
+   colonne `request_id` sur `real_session_availabilities`, RLS, index partiel
+   `availability_requests_one_open_per_campaign`. `docs/SCHEMA.md` complété
+   au passage (angle mort antérieur à ce ticket).
+2. Fait — Formulaire MJ en ligne (`RequestAvailabilityForm.tsx`), affiché à
+   la place du classement tant qu'aucune ronde n'est ouverte : nom, dates
+   candidates (onglets « Dates précises » au clic/clic-glissé,
+   `expandWeekdayPattern` en pur pour « Jours de la semaine »), plage
+   horaire (`TimeRangeSlider.tsx`), bouton Créer — tout sur une page.
+3. Fait — Écran de réponse joueuse (`AvailabilityRequestResponse.tsx`), une
+   ligne par date candidate de la ronde ouverte.
+4. Fait — `SchedulingMjPanel.tsx` : le classement par chevauchement porte
+   sur `request.candidate_dates` (`getRankedDaysForRequest`), plus de
+   navigation libre par mois. Une date candidate sans aucune réponse
+   apparaît quand même, classée en dernier.
+5. Fait — Pastille sur `NextSessionBadge.tsx`, disparaît dès la réponse
+   enregistrée (`onResponded`, sans attendre la confirmation MJ).
+6. Fait — `createRealSession`/`cancelAvailabilityRequest` ferment la ronde
+   ouverte de la campagne.
 
 **Critères**
-- [ ] Le MJ ouvre une demande avec un nom (ou vide → généré), des dates
+- [x] Le MJ ouvre une demande avec un nom (ou vide → généré), des dates
   candidates (précises ou par jour de semaine sur une fenêtre), une plage
   horaire.
-- [ ] Toute joueuse de la campagne voit une pastille sur « Prochaine
+- [x] Toute joueuse de la campagne voit une pastille sur « Prochaine
   session » tant qu'elle n'a pas répondu à la demande ouverte.
-- [ ] La pastille disparaît dès que la joueuse a répondu, sans attendre que
+- [x] La pastille disparaît dès que la joueuse a répondu, sans attendre que
   le MJ confirme une séance.
-- [ ] La joueuse ne répond que sur les dates candidates précises de la
+- [x] La joueuse ne répond que sur les dates candidates précises de la
   demande en cours — plus de calendrier ouvert sur 12 mois sans demande.
-- [ ] Le classement des jours côté MJ ne porte que sur la demande ouverte en
+- [x] Le classement des jours côté MJ ne porte que sur la demande ouverte en
   cours.
-- [ ] Confirmer une séance, ou annuler la demande, la ferme : plus de
+- [x] Confirmer une séance, ou annuler la demande, la ferme : plus de
   pastille, plus d'invite à répondre, pour tout le monde.
-- [ ] Une seule demande ouverte à la fois par campagne — si un vrai besoin de
-  demandes concurrentes apparaît en jouant, il vaut un ticket à part plutôt
-  que d'être anticipé ici.
+- [x] Une seule demande ouverte à la fois par campagne (garanti par l'index
+  partiel en base).
+
+Vérifié en direct sur ClaudeLand (compte de test à la fois MJ et joueuse), y
+compris après le passage à la version en ligne : création d'une ronde par
+clic (dates précises) et par motif « jours de semaine sur une fenêtre »
+(`expandWeekdayPattern` vérifié bout en bout), glissement des deux poignées
+du curseur horaire, réponse joueuse, classement MJ mis à jour (« 1/1,
+session raccourcie »), confirmation créant la séance et fermant la ronde,
+annulation d'une ronde sans séance. `npm run typecheck && npm run lint &&
+npm run test:core` passent.
 
 ---
 
@@ -419,7 +457,8 @@ l'esthétique voulue.
 - Fait — Le clic ouvre un panneau à onglets (`NextSessionPanel.tsx`) :
   Séances à venir / Passées / Mes disponibilités, réutilisant
   `getUpcomingSessions`/`getPastSessions` (déjà écrits, jamais exposés côté
-  joueuse) et `AvailabilityCalendar.tsx` tel quel pour le dernier onglet.
+  joueuse) — le dernier onglet répond à la ronde ouverte (V3.1-8,
+  `AvailabilityRequestResponse.tsx`), pas au calendrier libre d'origine.
 - Fait — Vérifié sur des hauteurs de fenêtre resserrées (jusqu'à 480px) :
   aucun débordement, aucun chevauchement avec les autres destinations de la
   coquille joueuse (`PlayerShell.tsx`).
@@ -429,13 +468,9 @@ l'esthétique voulue.
   par `PlayerShell.tsx` (desktop uniquement, `md:`).
 - [x] Le bouton ouvre un panneau à onglets (passé/à venir/mes dispos), pas
   seulement le calendrier de saisie.
-- [x] **Ajusté** : l'onglet « Mes disponibilités » reste toujours visible
-  pour l'instant, plutôt que conditionné à « une demande est ouverte »
-  (V3.1-8) comme prévu au ticket d'origine — V3.1-8 n'est pas encore fait,
-  et conditionner l'onglet dès maintenant aurait retiré aux joueuses la
-  possibilité de renseigner leurs disponibilités qui existe aujourd'hui.
-  **À revoir quand V3.1-8 sera pris** : l'onglet devra alors ne s'afficher
-  que si une ronde de demande est ouverte pour la campagne.
+- [x] L'onglet « Mes disponibilités » affiche la réponse à la ronde ouverte
+  (V3.1-8, fait depuis) si une demande est en cours, sinon un message
+  explicite plutôt qu'un onglet vide.
 
 ---
 

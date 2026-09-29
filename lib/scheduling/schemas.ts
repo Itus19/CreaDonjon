@@ -25,3 +25,19 @@ export const createRealSessionSchema = z.object({
 });
 
 export const targetDurationSchema = z.object({ minutes: z.number().int().min(30).max(24 * 60) });
+
+/**
+ * Ouvrir une ronde de demande (V3.1-8) — `title` vide/absent est généré
+ * côté service (`openAvailabilityRequest`), jamais ici : ce schéma ne fait
+ * que valider la forme, pas la logique métier. Au moins une date
+ * candidate — une ronde sans aucune date candidate n'aurait rien à
+ * proposer.
+ */
+export const openAvailabilityRequestSchema = z
+  .object({
+    title: z.string().max(120).optional(),
+    candidateDates: z.array(zDate).min(1, "Choisis au moins une date candidate."),
+    startsAt: zTime,
+    endsAt: zTime,
+  })
+  .refine((v) => v.endsAt > v.startsAt, { message: "L'heure de fin doit être après l'heure de début.", path: ["endsAt"] });

@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       ai_proposals: {
@@ -283,6 +258,50 @@ export type Database = {
             columns: ["target_entity_id"]
             isOneToOne: false
             referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability_requests: {
+        Row: {
+          campaign_id: string
+          candidate_dates: string[]
+          created_at: string
+          created_by: string
+          ends_at: string
+          id: string
+          starts_at: string
+          status: string
+          title: string
+        }
+        Insert: {
+          campaign_id: string
+          candidate_dates: string[]
+          created_at?: string
+          created_by: string
+          ends_at: string
+          id?: string
+          starts_at: string
+          status?: string
+          title: string
+        }
+        Update: {
+          campaign_id?: string
+          candidate_dates?: string[]
+          created_at?: string
+          created_by?: string
+          ends_at?: string
+          id?: string
+          starts_at?: string
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_requests_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
         ]
@@ -1823,6 +1842,7 @@ export type Database = {
           campaign_id: string
           date: string
           ends_at: string
+          request_id: string | null
           starts_at: string
           updated_at: string
           user_id: string
@@ -1831,6 +1851,7 @@ export type Database = {
           campaign_id: string
           date: string
           ends_at: string
+          request_id?: string | null
           starts_at: string
           updated_at?: string
           user_id: string
@@ -1839,6 +1860,7 @@ export type Database = {
           campaign_id?: string
           date?: string
           ends_at?: string
+          request_id?: string | null
           starts_at?: string
           updated_at?: string
           user_id?: string
@@ -1849,6 +1871,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "real_session_availabilities_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "availability_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -2859,9 +2888,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

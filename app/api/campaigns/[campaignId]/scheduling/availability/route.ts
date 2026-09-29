@@ -1,11 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { setAvailabilitySchema } from "@/lib/scheduling/schemas";
-import { listAvailabilitiesForUserInRange, upsertAvailability } from "@/src/server/services/scheduling";
+import { getMyResponsesForRequest, getOpenRequest, respondToOpenRequest } from "@/src/server/services/scheduling";
 
-const YEAR_AHEAD_DAYS = 366;
-
-/** Mes disponibilités (V2.1-4) — sur un an à l'avance (retour utilisateur), jamais celles des autres (l'appelant ne voit ici que ses propres lignes). */
+/** Mes réponses à la ronde ouverte (V3.1-8) — jamais celles des autres, jamais sur une date hors proposition du MJ. `availabilities: []` si aucune ronde n'est ouverte. */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await params;
   const supabase = await createClient();
@@ -16,13 +14,14 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  const from = new Date().toISOString().slice(0, 10);
-  const to = new Date(Date.now() + YEAR_AHEAD_DAYS * 86_400_000).toISOString().slice(0, 10);
-  const availabilities = await listAvailabilitiesForUserInRange(supabase, campaignId, user.id, from, to);
+  const request = await getOpenRequest(supabase, campaignId);
+  if (!request) return NextResponse.json({ availabilities: [] }, { status: 200 });
+
+  const availabilities = await getMyResponsesForRequest(supabase, request.id, user.id);
   return NextResponse.json({ availabilities }, { status: 200 });
 }
 
-/** Pose (ou remplace) ma disponibilité d'un jour — une seule plage par jour (retour utilisateur). */
+/** Pose (ou remplace) ma disponibilité d'un jour candidat de la ronde ouverte — une seule plage par jour (retour utilisateur). */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await params;
 
@@ -40,6 +39,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  const availability = await upsertAvailability(supabase, { campaignId, userId: user.id, ...parsed.data });
-  return NextResponse.json(availability, { status: 200 });
+  const result = await respondToOpenRequest(supabase, { campaignId, userId: user.id, ...parsed.data });
+  if (!result.ok) {
+    const messages = { no_open_request: "Aucune demande de disponibilités n'est ouverte.", date_not_candidate: "Cette date ne fait pas partie de la demande en cours." };
+    return NextResponse.json({ error: messages[result.reason] }, { status: 409 });
+  }
+  return NextResponse.json(result.availability, { status: 200 });
 }

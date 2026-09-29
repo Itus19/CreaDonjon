@@ -2,15 +2,20 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import {
+  closeAvailabilityRequest as closeAvailabilityRequestRow,
   deleteAvailability as deleteAvailabilityRow,
   deleteRealSession as deleteRealSessionRow,
+  getAvailabilityRequestById,
+  getOpenAvailabilityRequest,
   getTargetSessionMinutes,
+  insertAvailabilityRequest,
   insertRealSession,
-  listAvailabilitiesForUserInRange,
-  listAvailabilitiesInRange,
+  listAvailabilitiesForRequest,
+  listAvailabilitiesForUserAndRequest,
   listRealSessions,
   setTargetSessionMinutes as setTargetSessionMinutesRow,
   upsertAvailability as upsertAvailabilityRow,
+  type AvailabilityRequestRow,
   type AvailabilityRow,
   type RealSessionRow,
 } from "@/src/server/repos/scheduling";
@@ -20,12 +25,8 @@ import { classifySession, computeOverlap, rankDays, timeToMinutes, minutesToTime
 
 type TypedClient = SupabaseClient<Database>;
 
-export { upsertAvailabilityRow as upsertAvailability, deleteAvailabilityRow as deleteAvailability, listAvailabilitiesForUserInRange };
-export type { AvailabilityRow, RealSessionRow };
-
-function daysInMonth(year: number, month: number): number {
-  return new Date(year, month, 0).getDate();
-}
+export { deleteAvailabilityRow as deleteAvailability };
+export type { AvailabilityRow, RealSessionRow, AvailabilityRequestRow };
 
 export interface RosterEntry {
   userId: string;
@@ -48,21 +49,102 @@ export async function resolvePlayerNames(supabase: TypedClient, campaignId: stri
   return new Map(pcs.map((c) => [c.user_id as string, nameByEntity.get(c.entity_id) ?? "?"]));
 }
 
+function formatDateFr(date: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+}
+
+export type OpenRequestResult = { ok: true; request: AvailabilityRequestRow } | { ok: false; reason: "already_open" };
+
 /**
- * Classement des jours candidats d'un mois (V2.1-4, piste F) : croise les
- * disponibilités déjà déposées avec l'effectif réel de joueuses de la
- * campagne, calcule le chevauchement horaire de chaque jour
- * (`src/core/scheduling/overlap.ts`, pur/testé) et renvoie les jours triés
- * du meilleur au moins bon, avec le détail par joueuse (roster affiché au
- * clic). `totalMembers` exclut le MJ — le classement répond à "combien de
- * joueuses", pas "combien de personnes en comptant moi-même qui n'ai pas
- * besoin d'être disponible pour ma propre table".
+ * Ouvre une ronde de demande (V3.1-8) — titre généré si laissé vide (« Séance
+ * du <première date candidate> »). L'unicité "une seule ouverte par
+ * campagne" est portée par l'index partiel en base
+ * (`availability_requests_one_open_per_campaign`) : cette fonction ne
+ * revérifie rien avant d'écrire, elle capture juste le conflit si la
+ * contrainte le déclenche (course-safe, plutôt qu'un aller-retour
+ * lire-puis-écrire qui laisserait une fenêtre entre les deux).
  */
-export async function getRankedDaysForMonth(supabase: TypedClient, campaignId: string, year: number, month: number): Promise<RankedDay[]> {
-  const from = `${year}-${String(month).padStart(2, "0")}-01`;
-  const to = `${year}-${String(month).padStart(2, "0")}-${String(daysInMonth(year, month)).padStart(2, "0")}`;
+export async function openAvailabilityRequest(
+  supabase: TypedClient,
+  params: { campaignId: string; title: string | null; candidateDates: string[]; startsAt: string; endsAt: string; createdBy: string }
+): Promise<OpenRequestResult> {
+  const sortedDates = [...params.candidateDates].sort();
+  const title = params.title?.trim() ? params.title.trim() : `Séance du ${formatDateFr(sortedDates[0])}`;
+  try {
+    const request = await insertAvailabilityRequest(supabase, {
+      campaignId: params.campaignId,
+      title,
+      candidateDates: sortedDates,
+      startsAt: params.startsAt,
+      endsAt: params.endsAt,
+      createdBy: params.createdBy,
+    });
+    return { ok: true, request };
+  } catch (error) {
+    if (error instanceof Error && /availability_requests_one_open_per_campaign/.test(error.message)) {
+      return { ok: false, reason: "already_open" };
+    }
+    throw error;
+  }
+}
+
+export async function getOpenRequest(supabase: TypedClient, campaignId: string): Promise<AvailabilityRequestRow | null> {
+  return getOpenAvailabilityRequest(supabase, campaignId);
+}
+
+/** A-t-elle déjà répondu à cette ronde (V3.1-8, pastille) — au moins une date renseignée compte comme une réponse, pas besoin d'avoir couvert toutes les dates candidates. */
+export async function hasRespondedToRequest(supabase: TypedClient, requestId: string, userId: string): Promise<boolean> {
+  const rows = await listAvailabilitiesForUserAndRequest(supabase, requestId, userId);
+  return rows.length > 0;
+}
+
+export async function getMyResponsesForRequest(supabase: TypedClient, requestId: string, userId: string): Promise<AvailabilityRow[]> {
+  return listAvailabilitiesForUserAndRequest(supabase, requestId, userId);
+}
+
+export type RespondResult = { ok: true; availability: AvailabilityRow } | { ok: false; reason: "no_open_request" | "date_not_candidate" };
+
+/**
+ * Répond à la ronde ouverte d'une campagne (V3.1-8) — résout et valide la
+ * ronde côté serveur (jamais un `requestId` transmis tel quel par le
+ * client) : la date doit faire partie des dates candidates de la ronde
+ * actuellement ouverte, sinon la joueuse répondrait à une question qui ne
+ * lui a jamais été posée (ronde déjà fermée entre-temps, ou date hors
+ * proposition).
+ */
+export async function respondToOpenRequest(
+  supabase: TypedClient,
+  params: { campaignId: string; userId: string; date: string; startsAt: string; endsAt: string }
+): Promise<RespondResult> {
+  const request = await getOpenAvailabilityRequest(supabase, params.campaignId);
+  if (!request) return { ok: false, reason: "no_open_request" };
+  if (!request.candidate_dates.includes(params.date)) return { ok: false, reason: "date_not_candidate" };
+
+  const availability = await upsertAvailabilityRow(supabase, {
+    campaignId: params.campaignId,
+    userId: params.userId,
+    date: params.date,
+    startsAt: params.startsAt,
+    endsAt: params.endsAt,
+    requestId: request.id,
+  });
+  return { ok: true, availability };
+}
+
+/**
+ * Classement des dates candidates d'une ronde de demande (V3.1-8) : croise
+ * les réponses déjà déposées avec l'effectif réel de joueuses de la
+ * campagne, calcule le chevauchement horaire de chaque date
+ * (`src/core/scheduling/overlap.ts`, pur/testé) et renvoie les dates
+ * triées du meilleur au moins bon, avec le détail par joueuse (roster
+ * affiché au clic). Porte sur `request.candidate_dates` uniquement — une
+ * date candidate sans aucune réponse apparaît quand même, classée en
+ * dernier (`category: "none"`), pour que le MJ voie toute sa proposition,
+ * pas seulement ce qui a déjà une réponse.
+ */
+export async function getRankedDaysForRequest(supabase: TypedClient, campaignId: string, request: AvailabilityRequestRow): Promise<RankedDay[]> {
   const [availabilities, members, targetMinutes, namesByUser] = await Promise.all([
-    listAvailabilitiesInRange(supabase, campaignId, from, to),
+    listAvailabilitiesForRequest(supabase, request.id),
     listCampaignMembers(supabase, campaignId),
     getTargetSessionMinutes(supabase, campaignId),
     resolvePlayerNames(supabase, campaignId),
@@ -70,35 +152,33 @@ export async function getRankedDaysForMonth(supabase: TypedClient, campaignId: s
   const totalMembers = members.filter((m) => m.role === "player").length;
 
   const byDate = new Map<string, AvailabilityRow[]>();
+  for (const date of request.candidate_dates) byDate.set(date, []);
   for (const row of availabilities) {
     const existing = byDate.get(row.date);
     if (existing) existing.push(row);
-    else byDate.set(row.date, [row]);
   }
 
   const days: RankedDay[] = [];
   for (const [date, rows] of byDate) {
     const overlap = computeOverlap(rows.map((r) => ({ userId: r.user_id, startsAt: timeToMinutes(r.starts_at), endsAt: timeToMinutes(r.ends_at) })));
-    if (!overlap) continue;
     days.push({
       date,
       participantCount: rows.length,
       totalMembers,
-      overlap,
-      category: classifySession(overlap.durationMinutes, targetMinutes),
+      overlap: overlap ?? { start: 0, end: 0, durationMinutes: 0 },
+      category: overlap ? classifySession(overlap.durationMinutes, targetMinutes) : "none",
       roster: rows.map((r) => ({ userId: r.user_id, name: namesByUser.get(r.user_id) ?? null, startsAt: r.starts_at, endsAt: r.ends_at })),
     });
   }
   return rankDays(days) as RankedDay[];
 }
 
-/** Qui a répondu quoi pour un jour précis (roster affiché au clic, V2.1-4) — recalculé depuis les mêmes lignes que le classement, jamais une deuxième source. */
-/** Confirme une séance, depuis le classement de disponibilités ou manuellement (retour utilisateur : "le MJ doit pouvoir mettre manuellement la prochaine date... sans passer par l'outil") — même écriture, `source` ne fait que changer l'étiquette affichée ensuite. Aucune limite au nombre de séances par mois (retour utilisateur). */
+/** Confirme une séance, depuis le classement de disponibilités ou manuellement (retour utilisateur : "le MJ doit pouvoir mettre manuellement la prochaine date... sans passer par l'outil") — même écriture, `source` ne fait que changer l'étiquette affichée ensuite. Aucune limite au nombre de séances par mois (retour utilisateur). Ferme la ronde ouverte de la campagne s'il y en a une (V3.1-8, étape 6) : une séance confirmée répond à la question posée, la ronde n'a plus de raison de rester ouverte. */
 export async function createRealSession(
   supabase: TypedClient,
   params: { campaignId: string; date: string; startsAt: string; durationMinutes: number; source: "availability" | "manual"; createdBy: string }
 ): Promise<RealSessionRow> {
-  return insertRealSession(supabase, {
+  const session = await insertRealSession(supabase, {
     campaignId: params.campaignId,
     scheduledDate: params.date,
     startsAt: params.startsAt,
@@ -106,7 +186,17 @@ export async function createRealSession(
     source: params.source,
     createdBy: params.createdBy,
   });
+  const openRequest = await getOpenAvailabilityRequest(supabase, params.campaignId);
+  if (openRequest) await closeAvailabilityRequestRow(supabase, openRequest.id);
+  return session;
 }
+
+/** Annule une ronde sans confirmer de séance (V3.1-8, « Annuler la demande ») — même fermeture que `createRealSession`, déclenchée explicitement par le MJ plutôt qu'en conséquence d'une confirmation. */
+export async function cancelAvailabilityRequest(supabase: TypedClient, id: string): Promise<void> {
+  await closeAvailabilityRequestRow(supabase, id);
+}
+
+export { getAvailabilityRequestById };
 
 export async function cancelRealSession(supabase: TypedClient, id: string): Promise<void> {
   await deleteRealSessionRow(supabase, id);

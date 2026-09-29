@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { minutesToTime, timeToMinutes, type SessionCategory } from "@/src/core/scheduling/overlap";
-
-const MONTH_LABELS = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
-];
+import RequestAvailabilityForm from "./RequestAvailabilityForm";
 
 interface RosterEntry {
   userId: string;
@@ -21,6 +17,13 @@ interface RankedDay {
   overlap: { start: number; end: number; durationMinutes: number };
   category: SessionCategory;
   roster: RosterEntry[];
+}
+interface AvailabilityRequest {
+  id: string;
+  title: string;
+  candidate_dates: string[];
+  starts_at: string;
+  ends_at: string;
 }
 interface RealSession {
   id: string;
@@ -37,23 +40,24 @@ const CATEGORY_STYLE: Record<SessionCategory, string> = {
 };
 const CATEGORY_LABEL: Record<SessionCategory, string> = { full: "session complète", short: "session raccourcie", none: "aucun créneau commun" };
 
-// `month` est ici 1-indexe (janvier = 1, comme `view.month` partout dans ce
-// composant) — contrairement a l'aide homonyme de `AvailabilityCalendar.tsx`
-// (0-indexe comme `Date.getMonth()`). Convertit en interne pour l'arithmetique
-// puis reconvertit avant de renvoyer, pour que `view.month` reste 1-indexe
-// d'un appel a l'autre (bug corrige : les deux boutons melangeaient les deux
-// conventions, "suivant" restait bloque sur le meme mois).
-function addMonths(year: number, month: number, delta: number) {
-  const total = year * 12 + (month - 1) + delta;
-  return { year: Math.floor(total / 12), month: (((total % 12) + 12) % 12) + 1 };
-}
 function formatDateLabel(dateStr: string): string {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
 }
 
+/**
+ * Calendrier réel côté MJ (V2.1-4, refondu V3.1-8) : le classement libre par
+ * mois a disparu, remplacé par la vue de la ronde de demande ouverte — le MJ
+ * propose des dates candidates précises plutôt que de parcourir un
+ * calendrier sans fin cherchant ce qui a été rempli. Le formulaire de
+ * demande (`RequestAvailabilityForm.tsx`) s'affiche en ligne, jamais dans
+ * une fenêtre pop-up (retour utilisateur), directement à la place du
+ * classement tant qu'aucune ronde n'est ouverte. Le réglage manuel et
+ * l'historique restent inchangés (retour utilisateur d'origine : "le MJ
+ * doit pouvoir mettre manuellement la prochaine date sans passer par
+ * l'outil").
+ */
 export default function SchedulingMjPanel({ campaignId }: { campaignId: string }) {
-  const today = new Date();
-  const [view, setView] = useState({ year: today.getFullYear(), month: today.getMonth() + 1 });
+  const [openRequest, setOpenRequest] = useState<AvailabilityRequest | null | "loading">("loading");
   const [days, setDays] = useState<RankedDay[]>([]);
   const [targetMinutes, setTargetMinutes] = useState(300);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -66,15 +70,16 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
 
   const manualDuration = timeToMinutes(manualEndTime) - timeToMinutes(manualTime);
 
-  function loadRecap() {
-    fetch(`/api/campaigns/${campaignId}/scheduling/recap?year=${view.year}&month=${view.month}`)
+  function loadOpenRequest() {
+    fetch(`/api/campaigns/${campaignId}/scheduling/requests/open`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then((body: { days: RankedDay[]; targetMinutes: number }) => {
+      .then((body: { request: AvailabilityRequest | null; days: RankedDay[]; targetMinutes: number }) => {
+        setOpenRequest(body.request);
         setDays(body.days);
         setTargetMinutes(body.targetMinutes);
         setDurationDraft(body.targetMinutes);
       })
-      .catch(() => {});
+      .catch(() => setOpenRequest(null));
   }
 
   function loadSessions() {
@@ -87,7 +92,7 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
       .catch(() => {});
   }
 
-  useEffect(loadRecap, [campaignId, view.year, view.month]);
+  useEffect(loadOpenRequest, [campaignId]);
   useEffect(loadSessions, [campaignId]);
 
   function confirmDay(day: RankedDay) {
@@ -96,7 +101,15 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ date: day.date, startsAt: minutesToTime(day.overlap.start), durationMinutes: duration, source: "availability" }),
-    }).then(() => loadSessions());
+    }).then(() => {
+      loadSessions();
+      loadOpenRequest();
+    });
+  }
+
+  function cancelRequest() {
+    if (!openRequest || openRequest === "loading") return;
+    fetch(`/api/campaigns/${campaignId}/scheduling/requests/${openRequest.id}/close`, { method: "POST" }).then(loadOpenRequest);
   }
 
   function confirmManual() {
@@ -108,6 +121,7 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
     }).then(() => {
       setManualDate("");
       loadSessions();
+      loadOpenRequest();
     });
   }
 
@@ -120,7 +134,7 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ minutes: durationDraft }),
-    }).then(() => loadRecap());
+    }).then(() => loadOpenRequest());
   }
 
   return (
@@ -144,51 +158,53 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
       </div>
 
       <div>
-        <div className="mb-2 flex items-center justify-between">
-          <button type="button" onClick={() => setView((v) => addMonths(v.year, v.month, -1))} className="rounded px-2 py-1 text-sm text-ink-muted hover:bg-panel-raised">
-            ‹
-          </button>
-          <span className="text-sm font-medium text-ink">
-            {MONTH_LABELS[view.month - 1]} {view.year}
-          </span>
-          <button type="button" onClick={() => setView((v) => addMonths(v.year, v.month, 1))} className="rounded px-2 py-1 text-sm text-ink-muted hover:bg-panel-raised">
-            ›
-          </button>
-        </div>
-
-        {days.length === 0 ? (
-          <p className="text-xs italic text-ink-muted">Aucune disponibilité renseignée ce mois-ci.</p>
+        {openRequest === "loading" ? (
+          <p className="text-xs italic text-ink-muted">Chargement…</p>
+        ) : openRequest === null ? (
+          <RequestAvailabilityForm campaignId={campaignId} onCreated={loadOpenRequest} />
         ) : (
-          <div className="flex flex-col gap-1.5">
-            {days.map((day) => (
-              <div key={day.date} className={`rounded-md border border-edge/60 p-2 text-xs ${CATEGORY_STYLE[day.category]}`}>
-                <div className="flex items-center justify-between gap-2">
-                  <button type="button" onClick={() => setExpanded((e) => (e === day.date ? null : day.date))} className="flex-1 text-left font-medium text-ink">
-                    {formatDateLabel(day.date)} — {day.participantCount}/{day.totalMembers}
-                    {day.category !== "none" && (
-                      <span className="ml-1.5 font-mono text-[10px]">
-                        {minutesToTime(day.overlap.start)}–{minutesToTime(day.overlap.end)} ({Math.round(day.overlap.durationMinutes / 60)}h)
-                      </span>
-                    )}
-                  </button>
-                  <span className="shrink-0 text-[10px] uppercase tracking-wide">{CATEGORY_LABEL[day.category]}</span>
-                  {day.category !== "none" && (
-                    <button type="button" onClick={() => confirmDay(day)} className="shrink-0 rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-medium text-accent-ink hover:bg-accent-hover">
-                      Confirmer
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-ink">{openRequest.title}</span>
+              <button type="button" onClick={cancelRequest} className="rounded-full border border-edge px-2.5 py-0.5 text-xs text-ink-muted hover:text-danger">
+                Annuler la demande
+              </button>
+            </div>
+            <span className="text-xs font-mono text-ink-muted">
+              {openRequest.starts_at.slice(0, 5)}–{openRequest.ends_at.slice(0, 5)} suggéré
+            </span>
+            <div className="flex flex-col gap-1.5">
+              {days.map((day) => (
+                <div key={day.date} className={`rounded-md border border-edge/60 p-2 text-xs ${CATEGORY_STYLE[day.category]}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <button type="button" onClick={() => setExpanded((e) => (e === day.date ? null : day.date))} className="flex-1 text-left font-medium text-ink">
+                      {formatDateLabel(day.date)} — {day.participantCount}/{day.totalMembers}
+                      {day.category !== "none" && (
+                        <span className="ml-1.5 font-mono text-[10px]">
+                          {minutesToTime(day.overlap.start)}–{minutesToTime(day.overlap.end)} ({Math.round(day.overlap.durationMinutes / 60)}h)
+                        </span>
+                      )}
                     </button>
+                    <span className="shrink-0 text-[10px] uppercase tracking-wide">{CATEGORY_LABEL[day.category]}</span>
+                    {day.category !== "none" && (
+                      <button type="button" onClick={() => confirmDay(day)} className="shrink-0 rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-medium text-accent-ink hover:bg-accent-hover">
+                        Confirmer
+                      </button>
+                    )}
+                  </div>
+                  {expanded === day.date && (
+                    <div className="mt-1.5 flex flex-col gap-0.5 border-t border-edge/40 pt-1.5 font-mono text-[10px] text-ink-muted">
+                      {day.roster.length === 0 && <span>Personne n&apos;a encore répondu.</span>}
+                      {day.roster.map((r) => (
+                        <span key={r.userId}>
+                          {r.name ?? "?"} — {r.startsAt.slice(0, 5)}–{r.endsAt.slice(0, 5)}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
-                {expanded === day.date && (
-                  <div className="mt-1.5 flex flex-col gap-0.5 border-t border-edge/40 pt-1.5 font-mono text-[10px] text-ink-muted">
-                    {day.roster.map((r) => (
-                      <span key={r.userId}>
-                        {r.name ?? "?"} — {r.startsAt.slice(0, 5)}–{r.endsAt.slice(0, 5)}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>
