@@ -44,10 +44,13 @@ interface Destination {
 export default function PlayerShell({
   worldSlug,
   worldName,
+  hasHumanGm,
   children,
 }: {
   worldSlug: string;
   worldName: string;
+  /** V3.1-11 : masque l'onglet Solo — ce mode (V3, IA locale) n'a de sens que sans MJ humain sur ce monde. */
+  hasHumanGm: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -60,8 +63,10 @@ export default function PlayerShell({
     { href: `${base}/fiche`, label: "Édition", icon: "card", match: (p) => p.startsWith(`${base}/fiche`) },
     // V3-B1 : septieme destination, la barre d'intention. Elle s'ajoute aux
     // six d'origine plutot que d'en remplacer une — un ecran qu'on ne peut
-    // atteindre qu'en tapant son adresse n'est pas un ecran.
-    { href: `${base}/solo`, label: "Solo", icon: "dice", match: (p) => p.startsWith(`${base}/solo`) },
+    // atteindre qu'en tapant son adresse n'est pas un ecran. V3.1-11 :
+    // retiree quand la campagne a deja un MJ humain, le mode solo (IA
+    // locale) n'a de sens que sans lui.
+    ...(hasHumanGm ? [] : [{ href: `${base}/solo`, label: "Solo", icon: "dice", match: (p: string) => p.startsWith(`${base}/solo`) }]),
     { href: `${base}/notes`, label: "Notes", icon: "notes", match: (p) => p.startsWith(`${base}/notes`) },
     { href: `${base}/wiki`, label: "Wiki", icon: "map", match: (p) => p.startsWith(`${base}/wiki`) },
     { href: `${base}/regles`, label: "Règles", icon: "books", match: (p) => p.startsWith(`${base}/regles`) },

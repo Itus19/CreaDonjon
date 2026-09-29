@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
+import { resolveCampaignId, hasHumanGm } from "@/src/server/services/campaigns";
 import PlayerShell from "@/components/shell/PlayerShell";
 
 /**
@@ -27,8 +28,11 @@ export default async function JoueurLayout({
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) redirect("/");
 
+  const campaignId = await resolveCampaignId(supabase, world.id);
+  const humanGm = campaignId ? await hasHumanGm(supabase, campaignId) : false;
+
   return (
-    <PlayerShell worldSlug={worldSlug} worldName={world.name}>
+    <PlayerShell worldSlug={worldSlug} worldName={world.name} hasHumanGm={humanGm}>
       {children}
     </PlayerShell>
   );

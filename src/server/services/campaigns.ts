@@ -66,6 +66,12 @@ export async function getCampaign(supabase: TypedClient, id: string): Promise<Ca
   return row ? toSummary(row) : null;
 }
 
+/** V3.1-11 : le mode solo (V3, IA locale) n'a de sens que sans MJ humain — même motif que `resolveNamesIncludingGm` dans `scheduling.ts`. */
+export async function hasHumanGm(supabase: TypedClient, campaignId: string): Promise<boolean> {
+  const members = await listCampaignMembers(supabase, campaignId);
+  return members.some((m) => m.role === "gm");
+}
+
 /**
  * Origine du ruleset epingle par une campagne (V1-D5, specs/ruleset-personnel.md
  * §3.1) : "inviter un membre reste autorise, avec un rappel explicite du

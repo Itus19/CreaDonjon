@@ -720,7 +720,7 @@ qu'aucun MJ particulier ne gère :
 
 ---
 
-### V3.1-11 — Onglet « Solo » visible même avec un MJ humain déjà présent · `S`
+### V3.1-11 — Onglet « Solo » visible même avec un MJ humain déjà présent · `S` — fait
 
 Constaté le 28 septembre, en discutant de V3.1-10 : la coquille joueuse
 (`PlayerShell.tsx:64`) liste « Solo » comme destination fixe, sans condition
@@ -731,10 +731,27 @@ campagne (`src/server/repos/campaigns.ts:138`) — une simple présence de ce
 rôle suffit à savoir si ce monde a un MJ humain.
 
 **Critères**
-- [ ] L'onglet « Solo » n'apparaît dans la coquille joueuse que si la
+- [x] L'onglet « Solo » n'apparaît dans la coquille joueuse que si la
   campagne du monde consulté ne compte aucun membre de rôle `gm`.
-- [ ] Un monde sans MJ humain (solo par nature) continue d'afficher l'onglet
+- [x] Un monde sans MJ humain (solo par nature) continue d'afficher l'onglet
   normalement — aucune régression sur l'usage principal de ce mode.
+
+Fait le 29 septembre. `hasHumanGm(supabase, campaignId)` (nouveau, dans
+`src/server/services/campaigns.ts`) réutilise `listCampaignMembers` et
+cherche un membre `role === "gm"` — même motif que `resolveNamesIncludingGm`
+dans `scheduling.ts`. `app/m/[worldSlug]/joueur/layout.tsx` résout la
+campagne du monde (`resolveCampaignId`, `null` traité comme « pas de MJ »)
+et passe le résultat à `PlayerShell` en prop `hasHumanGm`, qui filtre
+l'entrée « Solo » de son tableau `destinations` quand elle vaut `true`.
+
+Vérifié en navigateur sur ClaudeLand/Faerûn (copie), qui a un MJ humain :
+l'onglet Solo est bien absent de la coquille joueuse. Le cas inverse (monde
+sans MJ humain) n'a pas pu être rejoué en direct — la création de monde
+n'offre aujourd'hui que le mode « Campagne (MJ humain) », aucun moyen
+d'obtenir un monde solo depuis cet écran — mais découle directement du code :
+`createCampaign`/`insertCampaignMember` (`campaigns.ts:120`) n'insère un
+membre `role: "gm"` que pour `mode: "campaign"`, jamais pour `mode: "solo"`
+ni quand `resolveCampaignId` renvoie `null` (monde sans campagne).
 
 ---
 
