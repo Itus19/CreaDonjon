@@ -118,9 +118,7 @@ export default function PlayerShell({
               </Link>
             );
           })}
-          <div className="hidden md:block">
-            <NextSessionBadge worldSlug={worldSlug} />
-          </div>
+          <NextSessionBadge worldSlug={worldSlug} />
         </div>
 
         <div className="hidden shrink-0 flex-col items-center gap-2 border-t border-edge p-3 md:flex">

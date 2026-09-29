@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { minutesToTime, timeToMinutes, type SessionCategory } from "@/src/core/scheduling/overlap";
 import RequestAvailabilityForm from "./RequestAvailabilityForm";
+import AvailabilityHeatmap from "./AvailabilityHeatmap";
+import AvailabilityPaintGrid from "./AvailabilityPaintGrid";
 
 interface RosterEntry {
   userId: string;
@@ -25,12 +27,27 @@ interface AvailabilityRequest {
   starts_at: string;
   ends_at: string;
 }
+interface HeatmapCell {
+  date: string;
+  slotStart: number;
+  users: { userId: string; name: string | null }[];
+}
+interface Heatmap {
+  slots: number[];
+  step: number;
+  cells: HeatmapCell[];
+}
 interface RealSession {
   id: string;
   scheduled_date: string;
   starts_at: string;
   duration_minutes: number;
   source: string;
+}
+interface MyResponse {
+  date: string;
+  starts_at: string;
+  ends_at: string;
 }
 
 const CATEGORY_STYLE: Record<SessionCategory, string> = {
@@ -59,6 +76,11 @@ function formatDateLabel(dateStr: string): string {
 export default function SchedulingMjPanel({ campaignId }: { campaignId: string }) {
   const [openRequest, setOpenRequest] = useState<AvailabilityRequest | null | "loading">("loading");
   const [days, setDays] = useState<RankedDay[]>([]);
+  const [heatmap, setHeatmap] = useState<Heatmap | null>(null);
+  // `null` tant que non chargé — `AvailabilityPaintGrid` initialise son état
+  // peint UNE SEULE fois au montage : le rendre avant que la vraie réponse
+  // du MJ soit connue figerait la grille sur "rien peint" pour de bon.
+  const [myAvailabilities, setMyAvailabilities] = useState<MyResponse[] | null>(null);
   const [targetMinutes, setTargetMinutes] = useState(300);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [upcoming, setUpcoming] = useState<RealSession[]>([]);
@@ -73,13 +95,21 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
   function loadOpenRequest() {
     fetch(`/api/campaigns/${campaignId}/scheduling/requests/open`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then((body: { request: AvailabilityRequest | null; days: RankedDay[]; targetMinutes: number }) => {
+      .then((body: { request: AvailabilityRequest | null; days: RankedDay[]; heatmap: Heatmap | null; targetMinutes: number }) => {
         setOpenRequest(body.request);
         setDays(body.days);
+        setHeatmap(body.heatmap);
         setTargetMinutes(body.targetMinutes);
         setDurationDraft(body.targetMinutes);
       })
       .catch(() => setOpenRequest(null));
+    // Le MJ répond aussi désormais (retour utilisateur V3.1-8 : "le MJ doit
+    // aussi pouvoir mettre ses dispos") — même endpoint que côté joueuse,
+    // il renvoie toujours les réponses de l'appelant authentifié.
+    fetch(`/api/campaigns/${campaignId}/scheduling/availability`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
+      .then((body: { availabilities: MyResponse[] }) => setMyAvailabilities(body.availabilities))
+      .catch(() => {});
   }
 
   function loadSessions() {
@@ -173,6 +203,17 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
             <span className="text-xs font-mono text-ink-muted">
               {openRequest.starts_at.slice(0, 5)}–{openRequest.ends_at.slice(0, 5)} suggéré
             </span>
+            <div className="flex flex-col gap-1.5 rounded-md border border-edge/60 p-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Mes disponibilités</span>
+              {myAvailabilities === null ? (
+                <p className="text-xs italic text-ink-muted">Chargement…</p>
+              ) : (
+                <AvailabilityPaintGrid campaignId={campaignId} request={openRequest} myResponses={myAvailabilities} onSaved={loadOpenRequest} hideTitle />
+              )}
+            </div>
+            {heatmap && (
+              <AvailabilityHeatmap dates={openRequest.candidate_dates} slots={heatmap.slots} cells={heatmap.cells} totalMembers={days[0]?.totalMembers ?? 0} />
+            )}
             <div className="flex flex-col gap-1.5">
               {days.map((day) => (
                 <div key={day.date} className={`rounded-md border border-edge/60 p-2 text-xs ${CATEGORY_STYLE[day.category]}`}>

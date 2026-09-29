@@ -383,8 +383,9 @@ vérifié directement au niveau des évènements DOM (`mousedown` +
    candidates (onglets « Dates précises » au clic/clic-glissé,
    `expandWeekdayPattern` en pur pour « Jours de la semaine »), plage
    horaire (`TimeRangeSlider.tsx`), bouton Créer — tout sur une page.
-3. Fait — Écran de réponse joueuse (`AvailabilityRequestResponse.tsx`), une
-   ligne par date candidate de la ronde ouverte.
+3. Fait — Écran de réponse joueuse sur une grille à peindre
+   (`AvailabilityPaintGrid.tsx`, refondu — voir plus bas), une colonne par
+   date candidate de la ronde ouverte.
 4. Fait — `SchedulingMjPanel.tsx` : le classement par chevauchement porte
    sur `request.candidate_dates` (`getRankedDaysForRequest`), plus de
    navigation libre par mois. Une date candidate sans aucune réponse
@@ -394,31 +395,79 @@ vérifié directement au niveau des évènements DOM (`mousedown` +
 6. Fait — `createRealSession`/`cancelAvailabilityRequest` ferment la ronde
    ouverte de la campagne.
 
+**Deuxième vague, après retour utilisateur sur la première version livrée**
+(mêmes critères, complétés en dessous) :
+- **Grille à peindre plutôt que deux champs heure par date**
+  (`AvailabilityPaintGrid.tsx`, retour utilisateur : "sélectionner les
+  plages horaires par jours" comme sur crab.fit) — clic ou clic-glissé sur
+  des cases d'une demi-heure, colonnes = dates candidates, lignes = la
+  plage horaire suggérée par le MJ. Peindre reste une **façon de saisir**
+  la même plage continue par jour (`rangeFromSlots`,
+  `src/core/scheduling/availabilityGrid.ts`, pur/testé) — comble les trous
+  plutôt que d'les refuser, aucun changement du modèle de données V2.1-4
+  ("jamais deux disponibilités disjointes le même soir").
+- **Carte de chaleur côté MJ** (`AvailabilityHeatmap.tsx`, retour
+  utilisateur : "des zones de plus en plus foncées... avec une infobulle au
+  survol") — complète le classement/bouton Confirmer déjà existant, ne le
+  remplace pas : une case par (date, créneau de 30 min), teintée selon le
+  nombre de joueuses dont la réponse couvre ce créneau précis, infobulle au
+  survol listant qui.
+- **Le MJ peut aussi renseigner ses propres disponibilités** (retour
+  utilisateur : "le MJ doit aussi pouvoir mettre ses dispos") — section
+  « Mes disponibilités » dans `SchedulingMjPanel.tsx`, même
+  `AvailabilityPaintGrid.tsx` que côté joueuse, même endpoint
+  (`GET`/`POST .../scheduling/availability`, qui a toujours résolu
+  « mes propres réponses » depuis l'appelant authentifié — aucun
+  changement d'API nécessaire). `totalMembers` compte désormais **tout le
+  monde** (MJ inclus), pas seulement les joueuses — renverse le choix
+  d'origine V2.1-4 qui excluait le MJ parce qu'il ne répondait jamais ;
+  `resolveNamesIncludingGm` (copie locale, jamais `resolvePlayerNames`
+  lui-même, réutilisé ailleurs) donne au MJ le nom « MJ » dans les rosters/
+  infobulles, faute de PJ associé.
+- **Écran joueuse en ligne, jamais en fenêtre pop-up** (retour utilisateur :
+  "à l'image de ce que le joueur peut voir pour les autres onglets") —
+  nouvelle page `/joueur/prochaine-session` (`app/m/[worldSlug]/joueur/
+  prochaine-session/page.tsx`), au même titre que Notes ou Wiki.
+  `NextSessionBadge.tsx` n'ouvre plus de `createPortal`/dialogue : c'est
+  désormais un lien de navigation, plus léger.
+- **Bouton "Prochaine session" invisible sur mobile, corrigé** (retour
+  utilisateur : "le bouton de prochaine session disparaît" sur téléphone) —
+  il n'existait que pour desktop (`hidden md:block`). Deux présentations
+  du même lien dans `NextSessionBadge.tsx` : la bannière verticale habituelle
+  à partir de `md:`, une icône + libellé court ("Session") en dessous,
+  intégrée à la barre d'onglets du bas comme les six autres destinations.
+
 **Critères**
 - [x] Le MJ ouvre une demande avec un nom (ou vide → généré), des dates
   candidates (précises ou par jour de semaine sur une fenêtre), une plage
   horaire.
 - [x] Toute joueuse de la campagne voit une pastille sur « Prochaine
-  session » tant qu'elle n'a pas répondu à la demande ouverte.
+  session » tant qu'elle n'a pas répondu à la demande ouverte — visible sur
+  mobile comme sur desktop.
 - [x] La pastille disparaît dès que la joueuse a répondu, sans attendre que
   le MJ confirme une séance.
-- [x] La joueuse ne répond que sur les dates candidates précises de la
-  demande en cours — plus de calendrier ouvert sur 12 mois sans demande.
-- [x] Le classement des jours côté MJ ne porte que sur la demande ouverte en
-  cours.
+- [x] La joueuse (et le MJ) ne répond que sur les dates candidates précises
+  de la demande en cours, sur une grille à peindre — plus de calendrier
+  ouvert sur 12 mois sans demande, plus de champs heure séparés.
+- [x] Le classement des jours et la carte de chaleur côté MJ ne portent que
+  sur la demande ouverte en cours, MJ inclus dans l'effectif.
 - [x] Confirmer une séance, ou annuler la demande, la ferme : plus de
   pastille, plus d'invite à répondre, pour tout le monde.
 - [x] Une seule demande ouverte à la fois par campagne (garanti par l'index
   partiel en base).
+- [x] L'écran joueuse ("Prochaine session" et ses trois onglets) est une
+  page normale de la coquille, jamais une fenêtre pop-up.
 
-Vérifié en direct sur ClaudeLand (compte de test à la fois MJ et joueuse), y
-compris après le passage à la version en ligne : création d'une ronde par
-clic (dates précises) et par motif « jours de semaine sur une fenêtre »
-(`expandWeekdayPattern` vérifié bout en bout), glissement des deux poignées
-du curseur horaire, réponse joueuse, classement MJ mis à jour (« 1/1,
-session raccourcie »), confirmation créant la séance et fermant la ronde,
-annulation d'une ronde sans séance. `npm run typecheck && npm run lint &&
-npm run test:core` passent.
+Vérifié en direct sur ClaudeLand (compte de test à la fois MJ et joueuse) :
+création d'une ronde par clic (dates précises) et par motif « jours de
+semaine sur une fenêtre » (`expandWeekdayPattern` vérifié bout en bout),
+glissement des deux poignées du curseur horaire, peinture de cases sur la
+grille (glissé réel, pas seulement clic isolé), réponse joueuse **et** MJ,
+classement et carte de chaleur mis à jour (« 1/3, session raccourcie » une
+fois le MJ compté), confirmation créant la séance et fermant la ronde,
+annulation d'une ronde sans séance, page `/joueur/prochaine-session`
+atteignable sans pop-up, bouton visible en largeur mobile. `npm run
+typecheck && npm run lint && npm run test:core` passent.
 
 ---
 
@@ -454,20 +503,29 @@ l'esthétique voulue.
 - Fait — Bouton normal (contour fin couleur `accent`, sans fond plein, même
   famille que l'ancien bouton « Renseigner mes disponibilités »), texte
   vertical scindé en deux blocs plutôt qu'un seul.
-- Fait — Le clic ouvre un panneau à onglets (`NextSessionPanel.tsx`) :
-  Séances à venir / Passées / Mes disponibilités, réutilisant
-  `getUpcomingSessions`/`getPastSessions` (déjà écrits, jamais exposés côté
-  joueuse) — le dernier onglet répond à la ronde ouverte (V3.1-8,
-  `AvailabilityRequestResponse.tsx`), pas au calendrier libre d'origine.
+- Fait, puis refondu (V3.1-8, retour utilisateur : "à l'image de ce que le
+  joueur peut voir pour les autres onglets") — le clic ouvrait d'abord un
+  panneau à onglets en fenêtre pop-up ; il mène désormais à une vraie page
+  (`/joueur/prochaine-session`, `NextSessionPanel.tsx`), plus de
+  `createPortal`. Trois onglets inchangés (À venir / Passées / Mes
+  disponibilités), réutilisant `getUpcomingSessions`/`getPastSessions`.
+- Fait, puis complété (retour utilisateur : "le bouton de prochaine session
+  disparaît" sur téléphone) — n'existait que pour desktop (`hidden
+  md:block`). `NextSessionBadge.tsx` porte désormais deux présentations du
+  même lien : la bannière verticale à partir de `md:`, une icône + libellé
+  court intégrée à la barre d'onglets du bas en dessous, comme les six
+  autres destinations de `PlayerShell.tsx`.
 - Fait — Vérifié sur des hauteurs de fenêtre resserrées (jusqu'à 480px) :
   aucun débordement, aucun chevauchement avec les autres destinations de la
   coquille joueuse (`PlayerShell.tsx`).
 
 **Critères**
 - [x] Le texte est lisible sur toutes les hauteurs de fenêtre déjà couvertes
-  par `PlayerShell.tsx` (desktop uniquement, `md:`).
-- [x] Le bouton ouvre un panneau à onglets (passé/à venir/mes dispos), pas
-  seulement le calendrier de saisie.
+  par `PlayerShell.tsx` (desktop) — et visible tout court sur mobile, où il
+  n'apparaissait pas du tout.
+- [x] Le bouton mène à un écran à onglets (passé/à venir/mes dispos), une
+  page normale de la coquille plutôt qu'une fenêtre pop-up ou le seul
+  calendrier de saisie.
 - [x] L'onglet « Mes disponibilités » affiche la réponse à la ronde ouverte
   (V3.1-8, fait depuis) si une demande est en cours, sinon un message
   explicite plutôt qu'un onglet vide.

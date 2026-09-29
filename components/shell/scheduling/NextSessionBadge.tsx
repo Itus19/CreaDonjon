@@ -1,26 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { useModalKeyboard } from "@/components/shared/useModalKeyboard";
-import NextSessionPanel from "./NextSessionPanel";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface NextSessionResponse {
   campaignId: string | null;
   session: { scheduled_date: string; starts_at: string } | null;
 }
-interface AvailabilityRequest {
-  id: string;
-  title: string;
-  candidate_dates: string[];
-  starts_at: string;
-  ends_at: string;
-}
 interface OpenRequestResponse {
   campaignId: string | null;
-  request: AvailabilityRequest | null;
+  request: unknown | null;
   hasResponded: boolean;
-  myResponses: { date: string; starts_at: string; ends_at: string }[];
 }
 
 function formatSessionDate(dateStr: string): string {
@@ -28,41 +19,46 @@ function formatSessionDate(dateStr: string): string {
   return date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 }
 
+function CalendarIcon() {
+  return (
+    <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <rect x="4" y="5" width="16" height="15" rx="2" />
+      <path d="M4 9h16M8 3v4M16 3v4" />
+    </svg>
+  );
+}
+
 /**
- * Bouton "Prochaine session" en bas de la barre latérale joueuse (V2.1-4,
- * recalibré V3.1-9 : le texte pivoté à 90° d'origine concaténait tout en un
- * seul bloc continu, devenu illisible sur les hauteurs d'écran resserrées).
- * Reste vertical (retour utilisateur : "je voulais le garder vertical") mais
- * scindé en deux lignes distinctes — deux blocs sous `writing-mode:
- * vertical-rl` deviennent deux colonnes côte à côte plutôt qu'une seule
- * longue colonne.
+ * Lien "Prochaine session" (V2.1-4, recalibré V3.1-9, mène à une page depuis
+ * V3.1-8 — jamais une fenêtre pop-up, retour utilisateur : "à l'image de ce
+ * que le joueur peut voir pour les autres onglets"). Deux présentations du
+ * même lien, pas deux composants : sur desktop, la bannière verticale
+ * habituelle (retour utilisateur : "je voulais le garder vertical") ; sur
+ * mobile, une icône + libellé court comme les autres destinations de la
+ * barre du bas (retour utilisateur : "le bouton de prochaine session
+ * disparaît" sur téléphone — il n'existait jusque-là que pour desktop,
+ * `hidden md:block` côté `PlayerShell.tsx`).
  *
  * Pastille (V3.1-8) : dès qu'une ronde de demande est ouverte pour la
- * campagne et que la joueuse n'y a pas encore répondu — disparaît dès sa
- * réponse enregistrée, sans attendre que le MJ confirme une séance
- * (`onResponded` recharge cet état après chaque sauvegarde du panneau).
+ * campagne et que la joueuse n'y a pas encore répondu.
  */
 export default function NextSessionBadge({ worldSlug }: { worldSlug: string }) {
   const [data, setData] = useState<NextSessionResponse | null>(null);
   const [openRequestData, setOpenRequestData] = useState<OpenRequestResponse | null>(null);
-  const [open, setOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-  useModalKeyboard({ open, onClose: () => setOpen(false), panelRef });
-
-  const loadOpenRequest = useCallback(() => {
-    fetch(`/api/worlds/${worldSlug}/scheduling/open-request`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then(setOpenRequestData)
-      .catch(() => {});
-  }, [worldSlug]);
+  const pathname = usePathname();
+  const href = `/m/${worldSlug}/joueur/prochaine-session`;
+  const active = pathname === href;
 
   useEffect(() => {
     fetch(`/api/worlds/${worldSlug}/scheduling/next-session`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then(setData)
       .catch(() => {});
-    loadOpenRequest();
-  }, [worldSlug, loadOpenRequest]);
+    fetch(`/api/worlds/${worldSlug}/scheduling/open-request`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
+      .then(setOpenRequestData)
+      .catch(() => {});
+  }, [worldSlug]);
 
   if (!data || !data.campaignId) return null;
 
@@ -70,11 +66,23 @@ export default function NextSessionBadge({ worldSlug }: { worldSlug: string }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
+      <Link
+        href={href}
+        className={`relative flex flex-col items-center gap-[clamp(0px,0.5vh,4px)] rounded-md px-2 py-2 text-[11px] transition-colors md:hidden ${
+          active ? "text-accent" : "text-ink-muted hover:text-ink"
+        }`}
+      >
+        <span className="relative block h-5 w-5 shrink-0">
+          <CalendarIcon />
+          {showBadge && <span aria-label="Une demande de disponibilités attend une réponse" className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-danger" />}
+        </span>
+        Session
+      </Link>
+
+      <Link
+        href={href}
         style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-        className="relative rounded-md border border-accent px-1.5 py-2 font-mono text-[clamp(8px,1.3vh,11px)] leading-tight text-accent transition-colors hover:bg-panel-raised"
+        className={`relative hidden rounded-md border border-accent px-1.5 py-2 font-mono text-[clamp(8px,1.3vh,11px)] leading-tight text-accent transition-colors hover:bg-panel-raised md:block ${active ? "bg-accent/10" : ""}`}
       >
         {showBadge && (
           <span
@@ -85,30 +93,7 @@ export default function NextSessionBadge({ worldSlug }: { worldSlug: string }) {
         )}
         <span className="block">Prochaine session</span>
         <span className="block font-semibold">{data.session ? formatSessionDate(data.session.scheduled_date) : "à définir"}</span>
-      </button>
-
-      {open &&
-        data.campaignId &&
-        createPortal(
-          <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-scrim" onClick={() => setOpen(false)} role="dialog" aria-modal="true" aria-label="Prochaine session">
-            <div ref={panelRef} tabIndex={-1} onClick={(e) => e.stopPropagation()} className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-lg border border-edge-strong bg-panel-raised p-4 shadow-2xl outline-none">
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-ink">Prochaine session</h2>
-                <button type="button" onClick={() => setOpen(false)} aria-label="Fermer" className="rounded px-1.5 py-0.5 text-ink-muted hover:bg-panel hover:text-ink">
-                  ×
-                </button>
-              </div>
-              <NextSessionPanel
-                campaignId={data.campaignId}
-                hasUpcoming={data.session !== null}
-                request={openRequestData?.request ?? null}
-                myResponses={openRequestData?.myResponses ?? []}
-                onResponded={loadOpenRequest}
-              />
-            </div>
-          </div>,
-          document.body
-        )}
+      </Link>
     </>
   );
 }

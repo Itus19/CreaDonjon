@@ -22,6 +22,7 @@ import {
 import { listCampaignMembers, listCampaignCharacters } from "@/src/server/repos/campaigns";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { classifySession, computeOverlap, rankDays, timeToMinutes, minutesToTime, type DayCandidate } from "@/src/core/scheduling/overlap";
+import { buildHeatmap, generateSlots, type SlotResponse } from "@/src/core/scheduling/availabilityGrid";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -47,6 +48,15 @@ export async function resolvePlayerNames(supabase: TypedClient, campaignId: stri
   const entities = await listEntitiesByIds(supabase, pcs.map((c) => c.entity_id));
   const nameByEntity = new Map(entities.map((e) => [e.id, e.name]));
   return new Map(pcs.map((c) => [c.user_id as string, nameByEntity.get(c.entity_id) ?? "?"]));
+}
+
+/** `resolvePlayerNames` + le MJ (V3.1-8 : "le MJ doit aussi pouvoir mettre ses dispos") — copie locale, jamais modifiée pour les autres appelants de `resolvePlayerNames`, qui reste réservée aux PJ. */
+async function resolveNamesIncludingGm(supabase: TypedClient, campaignId: string): Promise<Map<string, string>> {
+  const [namesByUser, members] = await Promise.all([resolvePlayerNames(supabase, campaignId), listCampaignMembers(supabase, campaignId)]);
+  const names = new Map(namesByUser);
+  const gmMember = members.find((m) => m.role === "gm");
+  if (gmMember && !names.has(gmMember.user_id)) names.set(gmMember.user_id, "MJ");
+  return names;
 }
 
 function formatDateFr(date: string): string {
@@ -143,13 +153,17 @@ export async function respondToOpenRequest(
  * pas seulement ce qui a déjà une réponse.
  */
 export async function getRankedDaysForRequest(supabase: TypedClient, campaignId: string, request: AvailabilityRequestRow): Promise<RankedDay[]> {
-  const [availabilities, members, targetMinutes, namesByUser] = await Promise.all([
+  const [availabilities, members, targetMinutes, namesWithGm] = await Promise.all([
     listAvailabilitiesForRequest(supabase, request.id),
     listCampaignMembers(supabase, campaignId),
     getTargetSessionMinutes(supabase, campaignId),
-    resolvePlayerNames(supabase, campaignId),
+    resolveNamesIncludingGm(supabase, campaignId),
   ]);
-  const totalMembers = members.filter((m) => m.role === "player").length;
+  // Le MJ repond aussi desormais (retour utilisateur V3.1-8 : "le MJ doit
+  // aussi pouvoir mettre ses dispos") — totalMembers compte tout le monde,
+  // pas seulement les joueuses (renverse le choix d'origine V2.1-4, qui
+  // excluait le MJ parce qu'il ne repondait jamais).
+  const totalMembers = members.length;
 
   const byDate = new Map<string, AvailabilityRow[]>();
   for (const date of request.candidate_dates) byDate.set(date, []);
@@ -167,10 +181,49 @@ export async function getRankedDaysForRequest(supabase: TypedClient, campaignId:
       totalMembers,
       overlap: overlap ?? { start: 0, end: 0, durationMinutes: 0 },
       category: overlap ? classifySession(overlap.durationMinutes, targetMinutes) : "none",
-      roster: rows.map((r) => ({ userId: r.user_id, name: namesByUser.get(r.user_id) ?? null, startsAt: r.starts_at, endsAt: r.ends_at })),
+      roster: rows.map((r) => ({ userId: r.user_id, name: namesWithGm.get(r.user_id) ?? null, startsAt: r.starts_at, endsAt: r.ends_at })),
     });
   }
   return rankDays(days) as RankedDay[];
+}
+
+const HEATMAP_STEP_MINUTES = 30;
+
+export interface HeatmapCellWithNames {
+  date: string;
+  slotStart: number;
+  users: { userId: string; name: string | null }[];
+}
+export interface Heatmap {
+  slots: number[];
+  step: number;
+  cells: HeatmapCellWithNames[];
+}
+
+/**
+ * Carte de chaleur d'une ronde de demande (V3.1-8, retour utilisateur :
+ * "des zones de plus en plus foncées... avec une infobulle au survol") —
+ * découpe la plage horaire suggérée en créneaux de 30 minutes
+ * (`src/core/scheduling/availabilityGrid.ts`, pur/testé) et associe à
+ * chaque case les joueuses dont la réponse couvre entièrement ce créneau.
+ * Complète `getRankedDaysForRequest` (le classement/bouton Confirmer reste
+ * inchangé) plutôt que de le remplacer.
+ */
+export async function getHeatmapForRequest(supabase: TypedClient, campaignId: string, request: AvailabilityRequestRow): Promise<Heatmap> {
+  const [availabilities, namesByUser] = await Promise.all([listAvailabilitiesForRequest(supabase, request.id), resolveNamesIncludingGm(supabase, campaignId)]);
+  const slots = generateSlots(timeToMinutes(request.starts_at), timeToMinutes(request.ends_at), HEATMAP_STEP_MINUTES);
+  const responses: SlotResponse[] = availabilities.map((r) => ({
+    date: r.date,
+    userId: r.user_id,
+    startsAt: timeToMinutes(r.starts_at),
+    endsAt: timeToMinutes(r.ends_at),
+  }));
+  const cells = buildHeatmap(request.candidate_dates, slots, HEATMAP_STEP_MINUTES, responses);
+  return {
+    slots,
+    step: HEATMAP_STEP_MINUTES,
+    cells: cells.map((c) => ({ date: c.date, slotStart: c.slotStart, users: c.userIds.map((id) => ({ userId: id, name: namesByUser.get(id) ?? null })) })),
+  };
 }
 
 /** Confirme une séance, depuis le classement de disponibilités ou manuellement (retour utilisateur : "le MJ doit pouvoir mettre manuellement la prochaine date... sans passer par l'outil") — même écriture, `source` ne fait que changer l'étiquette affichée ensuite. Aucune limite au nombre de séances par mois (retour utilisateur). Ferme la ronde ouverte de la campagne s'il y en a une (V3.1-8, étape 6) : une séance confirmée répond à la question posée, la ronde n'a plus de raison de rester ouverte. */
