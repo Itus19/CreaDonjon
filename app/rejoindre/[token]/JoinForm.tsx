@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import Dropdown from "@/components/shared/Dropdown";
 import { joinInviteAction, type JoinInviteState } from "./actions";
 
@@ -31,10 +32,18 @@ export default function JoinForm({
 
       <h1 className="text-xl font-semibold text-accent">Bienvenue</h1>
 
-      {currentAccountName !== null && (
+      {currentAccountName !== null ? (
         <p className="text-xs text-ink-muted">
           Connecté·e en tant que <span className="text-ink">{currentAccountName || "toi"}</span> — ce nouveau rôle
           s&apos;ajoutera à ce compte.
+        </p>
+      ) : (
+        <p className="text-xs text-ink-muted">
+          Déjà un compte ?{" "}
+          <Link href="/login" className="text-accent hover:underline">
+            Connecte-toi d&apos;abord
+          </Link>
+          , puis rouvre ce lien.
         </p>
       )}
 
@@ -92,6 +101,20 @@ export default function JoinForm({
                 />
               )}
             </div>
+          )}
+
+          {currentAccountName === null && (
+            <label className="flex flex-col gap-1 text-sm">
+              Choisis un mot de passe
+              <input
+                name="accountPassword"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                className="rounded-md border border-edge bg-transparent px-3 py-2"
+              />
+            </label>
           )}
 
           {state?.error && <p className="text-sm text-danger">{state.error}</p>}

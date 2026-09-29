@@ -15,7 +15,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const supabase = await createClient();
 
   const resolved = await resolveInviteForJoin(supabase, token);
-  if (!resolved.ok || !resolved.invite.claimedByUserId) {
+  // Un lien JOUEUR reutilisable (V3.1-10) n'a plus de reconnexion par
+  // jeton : campaign_members fait foi, jamais claimed_by_user_id (ADR 0031)
+  // — renvoie vers l'ecran normal, qui saura rediriger un membre deja
+  // rejoint sans repasser par ce formulaire.
+  if (!resolved.ok || !resolved.invite.claimedByUserId || resolved.invite.intendedRole === "player") {
     return NextResponse.redirect(new URL(`/rejoindre/${token}`, request.url));
   }
 

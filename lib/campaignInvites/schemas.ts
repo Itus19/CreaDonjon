@@ -21,6 +21,10 @@ export const joinCampaignInviteSchema = z.object({
   role: z.enum(["gm", "player"]),
   name: z.string().trim().min(1, "Le nom est requis.").max(80, "80 caractères maximum."),
   entityId: z.string().min(1).optional(),
+  // Requis seulement pour un visiteur sans session deja ouverte (V3.1-10) :
+  // un compte "tag" avec mot de passe se cree a cette occasion. Optionnel
+  // ici, verifie cote action selon la presence d'une session.
+  accountPassword: z.string().min(8, "8 caractères minimum.").optional(),
 });
 
 export const reopenCampaignInviteSchema = z.object({

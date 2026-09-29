@@ -144,6 +144,18 @@ export async function listCampaignMembers(supabase: TypedClient, campaignId: str
   return data;
 }
 
+/** Lien joueur reutilisable (V3.1-10) : un visiteur deja membre se reconnecte directement, sans repasser par le choix de role/personnage (campaign_members fait foi, ADR 0031). */
+export async function isCampaignMember(supabase: TypedClient, params: { campaignId: string; userId: string }): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("campaign_members")
+    .select("user_id")
+    .eq("campaign_id", params.campaignId)
+    .eq("user_id", params.userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data !== null;
+}
+
 export async function insertCampaignMember(
   supabase: TypedClient,
   params: { campaignId: string; userId: string; role: string }
