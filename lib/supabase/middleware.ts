@@ -122,6 +122,11 @@ export async function updateSession(request: NextRequest) {
     // silencieux derriere lui renverrait les visiteurs vers /login.
     path.startsWith("/partage/") ||
     path.startsWith("/rejoindre/") ||
+    // /reinitialiser/* (V3.1-10) : meme genre de point d'entree que
+    // /rejoindre/* — resolu par un jeton a usage unique, atteint par une
+    // personne qui vient justement de PERDRE l'acces a son compte, jamais
+    // derriere le mur d'authentification.
+    path.startsWith("/reinitialiser/") ||
     path.startsWith("/api/assets/") ||
     /^\/api\/entities\/[^/]+\/portrait$/.test(path) ||
     // Troisieme occurrence du meme defaut, trouvee en mesurant le fond de page

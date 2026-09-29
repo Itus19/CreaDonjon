@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import InviteLinkPanel from "./InviteLinkPanel";
 import { useCachedGet } from "./useCachedGet";
 
@@ -33,6 +34,8 @@ interface CampaignDetailData {
   rulesetContentOrigin: string | null;
   /** V2-M9 (Lot M) : nom affichable par id de compte — l'uuid brut ne dit rien a personne dans "voir qui a deja quoi". */
   displayNames: Record<string, string>;
+  /** V3.1-10 : horodatage d'une demande "mot de passe oublié" en attente, par id de compte — absent = aucune demande. */
+  passwordResetRequests: Record<string, string>;
 }
 
 /** V1-D5, specs/ruleset-personnel.md §3.1 : une table de jeu ordinaire (4-6 joueurs + MJ) reste bien en-deca — au-dela, un rappel plus explicite, jamais un refus. */
@@ -63,6 +66,9 @@ export default function CampaignDetail({
   const [grantEntityId, setGrantEntityId] = useState("");
   const [grantUserId, setGrantUserId] = useState("");
   const [grantError, setGrantError] = useState<string | null>(null);
+  const [confirmingRevokeMemberId, setConfirmingRevokeMemberId] = useState<string | null>(null);
+  const [resetLinkByUserId, setResetLinkByUserId] = useState<Record<string, string>>({});
+  const [resetError, setResetError] = useState<string | null>(null);
 
   async function invite(e: React.FormEvent) {
     e.preventDefault();
@@ -137,6 +143,24 @@ export default function CampaignDetail({
     reload();
   }
 
+  /** Expulse un membre du monde (V3.1-10) : libere son personnage, jamais le lien qui l'a fait rejoindre (ADR 0031) — celui-ci reste utilisable par d'autres pour un lien joueur reutilisable. */
+  async function revokeMember(userId: string) {
+    await fetch(`/api/campaigns/${campaignId}/members/${userId}`, { method: "DELETE" });
+    reload();
+  }
+
+  /** "Forcer une réinitialisation" (V3.1-10, ADR 0031 §5) : jamais de mot de passe tapé à la main ni de connexion automatique — un jeton à usage unique, remis à la personne hors application. */
+  async function forceResetPassword(userId: string) {
+    setResetError(null);
+    const res = await fetch(`/api/campaigns/${campaignId}/members/${userId}/reset-password`, { method: "POST" });
+    if (!res.ok) {
+      setResetError("Échec de la génération du lien.");
+      return;
+    }
+    const body = (await res.json()) as { url: string };
+    setResetLinkByUserId((prev) => ({ ...prev, [userId]: `${window.location.origin}${body.url}` }));
+  }
+
   if (!data) return <p className="text-xs text-ink-muted">Chargement…</p>;
 
   const displayName = (userId: string) => data.displayNames[userId] || userId;
@@ -163,11 +187,46 @@ export default function CampaignDetail({
         <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Membres</span>
         <ul className="flex flex-col gap-1 text-xs">
           {data.members.map((m) => (
-            <li key={m.user_id}>
-              {ROLE_LABELS[m.role] ?? m.role} — {displayName(m.user_id)}
+            <li key={m.user_id} className="flex flex-col gap-1">
+              <div className="flex items-center justify-between gap-2">
+                <span>
+                  {ROLE_LABELS[m.role] ?? m.role} — {displayName(m.user_id)}
+                  {data.passwordResetRequests[m.user_id] && (
+                    <span className="ml-1.5 text-accent" title="A demandé un nouveau mot de passe">
+                      · mot de passe oublié
+                    </span>
+                  )}
+                </span>
+                {canManage && (
+                  <span className="flex shrink-0 items-center gap-2">
+                    <button type="button" onClick={() => forceResetPassword(m.user_id)} className="hover:underline">
+                      Forcer une réinitialisation
+                    </button>
+                    {/* Expulser le MJ n'est pas ce geste (transfert de
+                        campagne, hors perimetre) — seuls les joueurs sont
+                        revocables ici. */}
+                    {m.role === "player" && (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingRevokeMemberId(m.user_id)}
+                        className="text-danger hover:underline"
+                      >
+                        Révoquer
+                      </button>
+                    )}
+                  </span>
+                )}
+              </div>
+              {resetLinkByUserId[m.user_id] && (
+                <p className="rounded-md border border-edge bg-panel-sunken px-2 py-1 text-[11px] text-ink-muted">
+                  Lien à usage unique, à transmettre hors application :{" "}
+                  <span className="break-all text-ink">{resetLinkByUserId[m.user_id]}</span>
+                </p>
+              )}
             </li>
           ))}
         </ul>
+        {resetError && <p className="mt-1 text-xs text-danger">{resetError}</p>}
         {data.rulesetContentOrigin === "personal_reference" && (
           <>
             {/* Rappel explicite du cadre (V1-D5, specs/ruleset-personnel.md §3.1) :
@@ -323,6 +382,19 @@ export default function CampaignDetail({
         {grantError && <p className="mt-1 text-xs text-danger">{grantError}</p>}
       </div>
       )}
+
+      <ConfirmDialog
+        open={confirmingRevokeMemberId !== null}
+        title="Révoquer ce membre ?"
+        message={`${confirmingRevokeMemberId ? displayName(confirmingRevokeMemberId) : "Ce membre"} perd l'accès à cette campagne et son personnage redevient libre. Le compte et le lien d'invitation qui l'a fait rejoindre restent inchangés — un lien joueur réutilisable continue de fonctionner pour d'autres.`}
+        confirmLabel="Révoquer"
+        danger
+        onConfirm={() => {
+          if (confirmingRevokeMemberId) void revokeMember(confirmingRevokeMemberId);
+          setConfirmingRevokeMemberId(null);
+        }}
+        onCancel={() => setConfirmingRevokeMemberId(null)}
+      />
     </div>
   );
 }

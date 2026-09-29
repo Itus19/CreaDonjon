@@ -2,7 +2,11 @@ import { z } from "zod";
 
 export const createCampaignInviteSchema = z.object({
   campaignId: z.string().min(1),
-  intendedRole: z.enum(["gm", "player"]).nullable(),
+  // Role obligatoire depuis V3.1-10 : un lien joueur reutilisable et un
+  // lien MJ nominatif ont des semantiques trop differentes (ADR 0031) pour
+  // rester "au choix" — l'ancienne option laissait le VISITEUR trancher,
+  // desormais c'est le MJ qui le fait a la creation.
+  intendedRole: z.enum(["gm", "player"]),
   password: z.string().trim().max(200).optional().or(z.literal("")),
 });
 

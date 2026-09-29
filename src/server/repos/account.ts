@@ -21,6 +21,18 @@ export async function getOwnProfile(supabase: TypedClient, userId: string): Prom
   return data;
 }
 
+/** Demandes "mot de passe oublié" en attente (V3.1-10) — lecture groupée pour un panneau MJ/superadmin, jamais un aller-retour par membre. RLS (`profiles_select`, `app.shares_world_with`) borne déjà aux profils partageant un monde avec l'appelant. */
+export async function getPasswordResetRequestsForUsers(supabase: TypedClient, userIds: string[]): Promise<Record<string, string>> {
+  if (userIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, password_reset_requested_at")
+    .in("id", userIds)
+    .not("password_reset_requested_at", "is", null);
+  if (error) throw new Error(error.message);
+  return Object.fromEntries(data.map((row) => [row.id, row.password_reset_requested_at as string]));
+}
+
 export async function updateOwnProfile(
   supabase: TypedClient,
   userId: string,

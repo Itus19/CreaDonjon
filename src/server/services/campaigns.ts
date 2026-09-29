@@ -11,17 +11,22 @@ import {
   listCampaignMembers,
   listCampaignsForWorld,
   listGmCampaignsForUser,
+  revokeCampaignMember,
   updateCampaignMode,
   updateCampaignName,
   upsertCampaignCharacter,
   type CampaignCharacterRow,
   type CampaignMemberRow,
   type CampaignRow,
+  type RevokeCampaignMemberResult,
 } from "@/src/server/repos/campaigns";
 import { getRulesetById } from "@/src/server/repos/rules";
 import { getWorldOwnerId } from "@/src/server/repos/worlds";
 import { createEntity, listEntities } from "@/src/server/services/entities";
 import { listEntityGrantsForEntityIds, type EntityGrantRow } from "@/src/server/repos/entityGrants";
+import { isWorldAdmin } from "@/src/server/services/permissions";
+import { isSuperadmin } from "@/src/server/services/account";
+import { forcePasswordReset as forcePasswordResetForAccount } from "@/src/server/services/accountAuth";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -205,6 +210,38 @@ export async function inviteCampaignMember(
   if (!userId) return { ok: false, reason: "not_found" };
   await insertCampaignMember(supabase, { campaignId: params.campaignId, userId, role: params.role });
   return { ok: true, userId };
+}
+
+/** Simple relais — voir `revokeCampaignMember` (repo) pour la logique reelle (V3.1-10). */
+export async function revokeCampaignMemberAccess(
+  supabase: TypedClient,
+  params: { campaignId: string; userId: string }
+): Promise<RevokeCampaignMemberResult> {
+  return revokeCampaignMember(supabase, params);
+}
+
+export type ForceMemberPasswordResetResult = { ok: true; token: string } | { ok: false; reason: "not_authorized" | "not_found" };
+
+/**
+ * "Forcer une réinitialisation" (MJ d'un membre de cette campagne, ou
+ * superadmin — V3.1-10) : verifie le droit ICI (le module confine
+ * `accountAuth.ts` n'a pas de notion de "qui appelle"), puis relaie.
+ */
+export async function forceMemberPasswordReset(
+  supabase: TypedClient,
+  params: { campaignId: string; targetUserId: string; actingUserId: string }
+): Promise<ForceMemberPasswordResetResult> {
+  const campaign = await getCampaignById(supabase, params.campaignId);
+  if (!campaign) return { ok: false, reason: "not_found" };
+
+  const allowed =
+    (await isWorldAdmin(supabase, { worldId: campaign.world_id, userId: params.actingUserId })) ||
+    (await isSuperadmin(supabase, params.actingUserId));
+  if (!allowed) return { ok: false, reason: "not_authorized" };
+
+  const result = await forcePasswordResetForAccount({ targetUserId: params.targetUserId, actingUserId: params.actingUserId });
+  if (!result.ok) return { ok: false, reason: "not_found" };
+  return { ok: true, token: result.token };
 }
 
 export interface GmCampaignSummary {

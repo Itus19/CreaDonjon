@@ -9,8 +9,11 @@ import type { CampaignInviteSummary } from "@/src/server/services/campaignInvite
 import { useCachedGet } from "./useCachedGet";
 
 const ROLE_LABELS: Record<string, string> = { gm: "MJ", player: "Joueur" };
+// Plus de "Au choix" depuis V3.1-10 (ADR 0031) : un lien joueur reutilisable
+// et un lien MJ nominatif ont des consequences trop differentes pour rester
+// indecidees a la creation — c'est desormais le MJ qui tranche ici, jamais
+// le visiteur qui ouvre le lien.
 const ROLE_OPTIONS = [
-  { value: "", label: "Au choix" },
   { value: "player", label: "Joueur" },
   { value: "gm", label: "MJ" },
 ];
@@ -61,7 +64,11 @@ function InviteRow({
   const [confirmingReset, setConfirmingReset] = useState(false);
   const url = invite.token ? `${window.location.origin}/rejoindre/${invite.token}` : null;
   const copied = copiedUrl !== null && copiedUrl === url;
-  const claimed = invite.claimedName !== null;
+  // Un lien joueur (V3.1-10, ADR 0031) est reutilisable : claimedName ne
+  // veut plus rien dire pour lui (campaign_members fait foi, jamais suivi
+  // par invite) — ne JAMAIS le traiter comme "reclame par une personne".
+  const reusable = invite.intendedRole === "player";
+  const claimed = !reusable && invite.claimedName !== null;
   const roleLabel = invite.intendedRole ? ROLE_LABELS[invite.intendedRole] : "Au choix";
 
   /**
@@ -150,7 +157,9 @@ function InviteRow({
   // ce qui evite de lui supposer un genre — la table en compte de plusieurs.
   const revokeMessage = claimed
     ? `${invite.claimedName} perd l'accès à cette campagne${invite.claimedCharacterName ? `, et ${invite.claimedCharacterName} redevient libre` : ""}. Le compte et les fiches créées depuis ce compte sont conservés.`
-    : "Ce lien cesse de fonctionner. Personne ne l'avait encore utilisé.";
+    : reusable
+      ? "Ce lien cesse de fonctionner pour de nouvelles personnes. Celles qui l'ont déjà utilisé gardent leur accès (révocable individuellement dans « Membres »)."
+      : "Ce lien cesse de fonctionner. Personne ne l'avait encore utilisé.";
 
   return (
     <li className="flex flex-col gap-2 border-b border-edge/40 py-2 last:border-0">
@@ -164,6 +173,14 @@ function InviteRow({
               </p>
               <p className="text-xs text-ink-muted">
                 {roleLabel} · lien créé le {formatDate(invite.createdAt)}
+                {hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
+              </p>
+            </>
+          ) : reusable ? (
+            <>
+              <p className="text-sm text-ink">Joueur — lien réutilisable</p>
+              <p className="text-xs text-ink-muted">
+                Créé le {formatDate(invite.createdAt)} · qui l&apos;a utilisé apparaît dans « Membres »
                 {hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
               </p>
             </>
@@ -238,13 +255,13 @@ function InviteRow({
  * optionnel), lister les liens actifs, les copier/révoquer/reprotéger à
  * tout moment.
  *
- * Deux sections depuis V2.1-25 (lot 2), sur demande de l'auteur : **une
- * personne a ta table** et **un lien qui attend quelqu'un** sont deux objets
- * differents, que cette liste rendait a l'identique. La premiere section
- * repond a « qui joue ? », la seconde a « qu'est-ce que je dois encore
- * envoyer ? ».
+ * Trois sections depuis V3.1-10 (deux depuis V2.1-25, lot 2) : **une
+ * personne a ta table** (MJ nominatif deja reclame), **un lien joueur**
+ * (reutilisable, ADR 0031 — qui l'a utilise se lit dans « Membres », pas
+ * ici) et **un lien MJ qui attend quelqu'un** sont trois objets differents,
+ * que cette liste rendait autrefois a l'identique.
  *
- * Pas de titre de panneau : les deux en-tetes de section disent deja ce que
+ * Pas de titre de panneau : les en-tetes de section disent deja ce que
  * chaque bloc contient, et l'ancien (« Liens d'invitation (sans email) »)
  * decrivait l'implementation tout en faisant doublon avec l'onglet Acces qui
  * le surmonte.
@@ -258,14 +275,22 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
     `/api/campaigns/${campaignId}/invites`
   );
   const invites = data?.invites ?? null;
-  const [role, setRole] = useState<"gm" | "player" | "">("");
+  // Plus de "Au choix" (V3.1-10) : un defaut explicite plutot qu'une valeur
+  // vide que le Dropdown ne saurait pas etiqueter — "Joueur" est le cas le
+  // plus frequent, le MJ change avant de generer si besoin.
+  const [role, setRole] = useState<"gm" | "player">("player");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
-  const claimed = invites?.filter((i) => i.claimedName !== null) ?? [];
-  const pending = invites?.filter((i) => i.claimedName === null) ?? [];
+  const notRevoked = invites?.filter((i) => i.revokedAt === null) ?? [];
+  // Un lien joueur (V3.1-10) est reutilisable : jamais range parmi les liens
+  // "en attente" ou "a la table" d'un lien nominatif — sa propre section,
+  // toujours affichee tant qu'il n'est pas revoque, quel que soit son usage.
+  const reusableLinks = notRevoked.filter((i) => i.intendedRole === "player");
+  const claimed = notRevoked.filter((i) => i.intendedRole !== "player" && i.claimedName !== null);
+  const pending = notRevoked.filter((i) => i.intendedRole !== "player" && i.claimedName === null);
 
   async function generate(e: React.FormEvent) {
     e.preventDefault();
@@ -274,7 +299,7 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
     const res = await fetch(`/api/campaigns/${campaignId}/invites`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ intendedRole: role || null, password: password || undefined }),
+      body: JSON.stringify({ intendedRole: role, password: password || undefined }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -300,7 +325,7 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
         <Dropdown
           value={role}
           options={ROLE_OPTIONS}
-          onChange={(v) => setRole(v as "gm" | "player" | "")}
+          onChange={(v) => setRole(v as "gm" | "player")}
           aria-label="Rôle du lien"
           triggerClassName="shrink-0 rounded-full border border-edge px-3 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
         />
@@ -334,9 +359,22 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
         </section>
       )}
 
+      {reusableLinks.length > 0 && (
+        <section className="flex flex-col gap-1">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+            Liens joueurs — {reusableLinks.length}
+          </h3>
+          <ul className="flex flex-col">
+            {reusableLinks.map((invite) => (
+              <InviteRow key={invite.id} invite={invite} {...rowProps} />
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="flex flex-col gap-1">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-          Liens en attente — {pending.length}
+          Liens MJ en attente — {pending.length}
         </h3>
         {pending.length > 0 ? (
           <ul className="flex flex-col">
@@ -346,8 +384,8 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
           </ul>
         ) : (
           <EmptyState
-            title="Aucun lien en attente"
-            description="Génère un lien ci-dessus, puis envoie-le à la personne que tu veux inviter. Elle choisira son personnage en l'ouvrant."
+            title="Aucun lien MJ en attente"
+            description="Génère un lien de rôle MJ ci-dessus pour inviter un second MJ nominatif — usage unique, contrairement à un lien joueur."
           />
         )}
       </section>

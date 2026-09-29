@@ -156,6 +156,21 @@ export async function isCampaignMember(supabase: TypedClient, params: { campaign
   return data !== null;
 }
 
+export interface RevokeCampaignMemberResult {
+  allowed: boolean;
+  releasedCharacter: boolean;
+  removedMember: boolean;
+}
+
+/** Expulse un membre du monde SANS toucher au lien d'invitation (V3.1-10, `app.revoke_campaign_member`) — distinct de la revocation d'un lien MJ nominatif (`revokeCampaignInvite`). Le droit ("MJ de ce monde ou superadmin") est verifie a l'interieur de la fonction SQL. */
+export async function revokeCampaignMember(supabase: TypedClient, params: { campaignId: string; userId: string }): Promise<RevokeCampaignMemberResult> {
+  const { data, error } = await supabase
+    .rpc("revoke_campaign_member", { p_campaign_id: params.campaignId, p_user_id: params.userId })
+    .single();
+  if (error) throw new Error(error.message);
+  return { allowed: data.allowed, releasedCharacter: data.released_character, removedMember: data.removed_member };
+}
+
 export async function insertCampaignMember(
   supabase: TypedClient,
   params: { campaignId: string; userId: string; role: string }

@@ -10,6 +10,7 @@ import {
   setCampaignMode,
 } from "@/src/server/services/campaigns";
 import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
+import { getPasswordResetRequestsForUsers } from "@/src/server/repos/account";
 import { isSuperadmin } from "@/src/server/services/account";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
@@ -34,8 +35,14 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   // aller-retour par ligne.
   const userIds = [...members.map((m) => m.user_id), ...characters.flatMap((c) => (c.user_id ? [c.user_id] : []))];
   const displayNames = Object.fromEntries(await getDisplayNamesForUsers(supabase, userIds));
+  // V3.1-10 : demandes "mot de passe oublié" en attente pour les membres de
+  // cette campagne — bornées aux membres seuls (jamais tout compte).
+  const passwordResetRequests = await getPasswordResetRequestsForUsers(supabase, members.map((m) => m.user_id));
 
-  return NextResponse.json({ campaign, members, characters, rulesetContentOrigin, grants, displayNames }, { status: 200 });
+  return NextResponse.json(
+    { campaign, members, characters, rulesetContentOrigin, grants, displayNames, passwordResetRequests },
+    { status: 200 }
+  );
 }
 
 /** Mode modifiable apres creation (V2-G1 prepa, "un monde = une campagne") — seul endpoint d'ecriture de ce fichier jusqu'ici. */
