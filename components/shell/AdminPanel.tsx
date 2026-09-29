@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import ActionsMenu, { type ActionsMenuItem } from "@/components/shared/ActionsMenu";
+import Dropdown from "@/components/shared/Dropdown";
 import type { CampaignInviteAdminSummary } from "@/src/server/services/campaignInvites";
+import type { AdminAccountRow } from "@/src/server/repos/account";
 
 const ROLE_LABELS: Record<string, string> = { gm: "MJ", player: "Joueur" };
 
@@ -240,6 +242,186 @@ function InviteAdminRow({
 }
 
 /**
+ * Une ligne de compte (V3.1-10, ADR 0031) — trois gestes généralisés à
+ * N'IMPORTE QUEL compte de la plateforme, là où `InviteAdminRow` ci-dessus
+ * reste borné aux comptes arrivés par un lien d'invitation. Jamais
+ * `handle_tag` affiché (critère du ticket : invisible hors des réglages du
+ * compte concerné) — seul `handle_name` identifie une ligne ici.
+ */
+function AccountAdminRow({
+  account,
+  allAccounts,
+  onChanged,
+  onDeleted,
+}: {
+  account: AdminAccountRow;
+  allAccounts: AdminAccountRow[];
+  onChanged: () => void;
+  onDeleted: (id: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resetLink, setResetLink] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+  const [ownedRulesets, setOwnedRulesets] = useState<{ id: string; name: string }[] | null>(null);
+  const [selectedRulesetId, setSelectedRulesetId] = useState("");
+  const [selectedTargetId, setSelectedTargetId] = useState("");
+
+  async function forceReset() {
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/admin/accounts/${account.id}/reset-password`, { method: "POST" });
+    setBusy(false);
+    if (!res.ok) {
+      setError("Échec de la génération du lien.");
+      return;
+    }
+    const body = (await res.json()) as { url: string };
+    setResetLink(`${window.location.origin}${body.url}`);
+  }
+
+  async function openTransfer() {
+    setTransferring(true);
+    if (ownedRulesets !== null) return;
+    const res = await fetch(`/api/admin/accounts/${account.id}/rulesets`);
+    if (!res.ok) {
+      setOwnedRulesets([]);
+      return;
+    }
+    const body = (await res.json()) as { rulesets: { id: string; name: string }[] };
+    setOwnedRulesets(body.rulesets);
+  }
+
+  async function submitTransfer() {
+    if (!selectedRulesetId || !selectedTargetId) return;
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/admin/rulesets/${selectedRulesetId}/transfer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newOwnerId: selectedTargetId }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setError("Échec du transfert.");
+      return;
+    }
+    setTransferring(false);
+    setSelectedRulesetId("");
+    setSelectedTargetId("");
+    setOwnedRulesets(null);
+    onChanged();
+  }
+
+  async function deleteAccount() {
+    setConfirmingDelete(false);
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/admin/accounts/${account.id}`, { method: "DELETE" });
+    setBusy(false);
+    if (!res.ok) {
+      setError("Échec de la suppression.");
+      return;
+    }
+    onDeleted(account.id);
+  }
+
+  const ignoreSiBusy = (geste: () => void) => () => {
+    if (busy) return;
+    geste();
+  };
+  const actions: ActionsMenuItem[] = [
+    { label: "Forcer une réinitialisation", onSelect: ignoreSiBusy(() => void forceReset()) },
+    { label: "Transférer un ruleset…", onSelect: ignoreSiBusy(() => void openTransfer()) },
+    { label: "Supprimer le compte", onSelect: ignoreSiBusy(() => setConfirmingDelete(true)), danger: true },
+  ];
+
+  const targetOptions = [
+    { value: "", label: "Choisir un compte…" },
+    ...allAccounts.filter((a) => a.id !== account.id).map((a) => ({ value: a.id, label: a.handle_name })),
+  ];
+  const rulesetOptions = [
+    { value: "", label: ownedRulesets === null ? "Chargement…" : "Choisir un ruleset…" },
+    ...(ownedRulesets ?? []).map((r) => ({ value: r.id, label: r.name })),
+  ];
+
+  return (
+    <>
+      <tr className="border-b border-edge/40">
+        <td className="py-1.5 pr-2 align-top text-ink">
+          {account.handle_name}
+          {account.account_role === "superadmin" && <span className="ml-1.5 text-accent">superadmin</span>}
+        </td>
+        <td className="py-1.5 pr-2 align-top">
+          {account.password_reset_requested_at ? <span className="text-accent">mot de passe oublié</span> : "—"}
+        </td>
+        <td className="py-1.5 align-top text-right">
+          <ActionsMenu items={actions} aria-label={`Actions sur le compte ${account.handle_name}`} />
+          <ConfirmDialog
+            open={confirmingDelete}
+            title="Supprimer ce compte ?"
+            message={`Le compte ${account.handle_name} est définitivement supprimé, ainsi que son accès à tous les mondes. Les fiches créées depuis ce compte sont conservées.`}
+            confirmLabel="Supprimer le compte"
+            danger
+            onConfirm={deleteAccount}
+            onCancel={() => setConfirmingDelete(false)}
+          />
+        </td>
+      </tr>
+      {resetLink && (
+        <tr>
+          <td colSpan={3} className="pb-1.5 text-[11px] text-ink-muted">
+            Lien à usage unique, à transmettre hors application : <span className="break-all text-ink">{resetLink}</span>
+          </td>
+        </tr>
+      )}
+      {transferring && (
+        <tr>
+          <td colSpan={3} className="pb-1.5">
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-edge bg-panel-sunken p-2">
+              <Dropdown
+                value={selectedRulesetId}
+                onChange={setSelectedRulesetId}
+                options={rulesetOptions}
+                aria-label="Ruleset à transférer"
+                triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none"
+              />
+              <span className="text-xs text-ink-muted">vers</span>
+              <Dropdown
+                value={selectedTargetId}
+                onChange={setSelectedTargetId}
+                options={targetOptions}
+                aria-label="Nouveau propriétaire"
+                triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none"
+              />
+              <button
+                type="button"
+                onClick={submitTransfer}
+                disabled={busy || !selectedRulesetId || !selectedTargetId}
+                className="rounded-md border border-edge px-2 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+              >
+                Transférer
+              </button>
+              <button type="button" onClick={() => setTransferring(false)} className="text-xs text-ink-muted hover:text-ink">
+                Annuler
+              </button>
+            </div>
+          </td>
+        </tr>
+      )}
+      {error && (
+        <tr>
+          <td colSpan={3} className="pb-1.5 text-[11px] text-danger">
+            {error}
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+/**
  * Section Administration (V2-M6, Lot M) — visible uniquement pour
  * `is_superadmin()` (verifie cote serveur avant meme de rendre ce
  * composant, voir app/page.tsx). Liste transversale des liens
@@ -259,6 +441,8 @@ export default function AdminPanel() {
   const [invites, setInvites] = useState<CampaignInviteAdminSummary[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const [accounts, setAccounts] = useState<AdminAccountRow[] | null>(null);
+  const [accountsError, setAccountsError] = useState<string | null>(null);
 
   function load() {
     fetch("/api/admin/invites")
@@ -267,10 +451,22 @@ export default function AdminPanel() {
       .catch(() => setLoadError("Impossible de charger les liens."));
   }
 
+  function loadAccounts() {
+    fetch("/api/admin/accounts")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
+      .then((body: { accounts: AdminAccountRow[] }) => setAccounts(body.accounts))
+      .catch(() => setAccountsError("Impossible de charger les comptes."));
+  }
+
   useEffect(load, []);
+  useEffect(loadAccounts, []);
 
   function handleRevoked(id: string) {
     setInvites((prev) => prev?.filter((i) => i.id !== id) ?? null);
+  }
+
+  function handleAccountDeleted(id: string) {
+    setAccounts((prev) => prev?.filter((a) => a.id !== id) ?? null);
   }
 
   return (
@@ -302,6 +498,33 @@ export default function AdminPanel() {
             <tbody>
               {invites.map((invite) => (
                 <InviteAdminRow key={invite.id} invite={invite} copiedUrl={copiedUrl} onCopy={setCopiedUrl} onRevoked={handleRevoked} onChanged={load} />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      {/* Comptes — toute la plateforme (V3.1-10) : generalise ce que la
+          section ci-dessus ne couvrait que pour les comptes arrives par un
+          lien d'invitation — un compte "tag" libre-service n'apparait
+          jamais dans "Liens d'invitation", il lui faut sa propre liste. */}
+      <section className="flex flex-col gap-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Comptes — toute la plateforme</h3>
+        {accountsError && <p className="text-xs text-danger">{accountsError}</p>}
+        {accounts === null && !accountsError && <p className="text-xs text-ink-muted">…</p>}
+        {accounts && accounts.length === 0 && <p className="text-xs text-ink-muted">Aucun compte pour l&apos;instant.</p>}
+        {accounts && accounts.length > 0 && (
+          <table className="w-full border-collapse text-left text-xs text-ink-muted">
+            <thead>
+              <tr className="border-b border-edge">
+                <th className="py-1 pr-2 font-medium">Compte</th>
+                <th className="py-1 pr-2 font-medium">Réinitialisation</th>
+                <th className="py-1 text-right font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accounts.map((account) => (
+                <AccountAdminRow key={account.id} account={account} allAccounts={accounts} onChanged={loadAccounts} onDeleted={handleAccountDeleted} />
               ))}
             </tbody>
           </table>

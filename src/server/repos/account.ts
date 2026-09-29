@@ -21,6 +21,31 @@ export async function getOwnProfile(supabase: TypedClient, userId: string): Prom
   return data;
 }
 
+export interface AdminAccountRow {
+  id: string;
+  handle_name: string;
+  account_role: string;
+  must_change_password: boolean;
+  password_reset_requested_at: string | null;
+  created_at: string;
+}
+
+/**
+ * Tous les comptes de la plateforme (V3.1-10, panneau superadmin) — jamais
+ * `handle_tag` (critère du ticket : "invisible partout sauf dans les
+ * réglages du compte concerné"). RLS (`profiles_select`) laisse déjà
+ * `is_superadmin()` traverser toutes les lignes, aucun client service-role
+ * nécessaire pour une simple lecture.
+ */
+export async function listAllAccountsForAdmin(supabase: TypedClient): Promise<AdminAccountRow[]> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, handle_name, account_role, must_change_password, password_reset_requested_at, created_at")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 /** Demandes "mot de passe oublié" en attente (V3.1-10) — lecture groupée pour un panneau MJ/superadmin, jamais un aller-retour par membre. RLS (`profiles_select`, `app.shares_world_with`) borne déjà aux profils partageant un monde avec l'appelant. */
 export async function getPasswordResetRequestsForUsers(supabase: TypedClient, userIds: string[]): Promise<Record<string, string>> {
   if (userIds.length === 0) return {};

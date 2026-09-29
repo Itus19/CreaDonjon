@@ -532,7 +532,7 @@ l'esthétique voulue.
 
 ---
 
-### V3.1-10 — Connexion par identifiant/mot de passe plutôt que lien à retrouver · `L`
+### V3.1-10 — Connexion par identifiant/mot de passe plutôt que lien à retrouver · `L` — fait
 
 Constaté le 27 septembre : les joueuses redemandent systématiquement le lien
 d'invitation à l'auteur. Ce n'est pas un oubli isolé, c'est la conséquence
@@ -694,29 +694,86 @@ qu'aucun MJ particulier ne gère :
 
 **Critères**
 
-- [ ] N'importe qui peut créer un compte (nom + mot de passe, tag généré
+- [x] N'importe qui peut créer un compte (nom + mot de passe, tag généré
   automatiquement) sans invitation, depuis `/login` ou le bouton du wiki
   public — ce compte n'a accès à aucun monde tant que personne ne l'y
   invite.
-- [ ] Un lien joueur peut être utilisé par plusieurs personnes différentes,
+- [x] Un lien joueur peut être utilisé par plusieurs personnes différentes,
   chacune rejoignant le même monde avec son propre compte.
-- [ ] Un lien MJ reste utilisable par une seule personne, comme aujourd'hui.
-- [ ] À la première visite d'un monde comme joueuse, si aucun PJ n'est déjà
+- [x] Un lien MJ reste utilisable par une seule personne, comme aujourd'hui.
+- [x] À la première visite d'un monde comme joueuse, si aucun PJ n'est déjà
   assigné, la joueuse choisit parmi les PJ ouverts ou en crée un nouveau —
   jamais imposé au moment de la création du compte.
-- [ ] Révoquer une joueuse retire son accès au monde et libère son PJ ; son
+- [x] Révoquer une joueuse retire son accès au monde et libère son PJ ; son
   compte reste utilisable ailleurs (autres mondes, ou aucun) ; le lien
   d'invitation, lui, continue de fonctionner pour d'autres.
-- [ ] Une demande de réinitialisation envoyée sans mot de passe connu arrive
+- [x] Une demande de réinitialisation envoyée sans mot de passe connu arrive
   dans le panneau d'un MJ compétent, ou du superadmin si le compte n'a
   aucun monde.
-- [ ] Le superadmin peut réinitialiser le mot de passe, supprimer, ou
+- [x] Le superadmin peut réinitialiser le mot de passe, supprimer, ou
   transférer un ruleset personnel de n'importe quel compte de la
   plateforme.
-- [ ] Le tag (`#NNNN`) n'est jamais visible ailleurs que dans les réglages
+- [x] Le tag (`#NNNN`) n'est jamais visible ailleurs que dans les réglages
   du compte concerné.
-- [ ] Un nouvel ADR documente ce modèle, sans modifier l'ADR 0015 ni le
+- [x] Un nouvel ADR documente ce modèle, sans modifier l'ADR 0015 ni le
   commentaire de V2-M4.
+
+Fait le 29 septembre (ADR 0031). Réalisé en six étapes, chacune vérifiée en
+navigateur avec des comptes/mondes de test créés puis supprimés :
+
+1. **Migration** (`20260929130000_native_password_accounts.sql`) :
+   `profiles.handle_name`/`handle_tag`/`must_change_password`/
+   `password_reset_requested_at`, génération de tag avec retry sur
+   collision, `app.resolve_login_emails`/`app.request_password_reset_by_name`
+   (anon-safe), `app.revoke_campaign_member`, `account_reset_tokens` (RLS
+   sans aucune politique).
+2. **Écran de connexion unique** (`/login`) : nom-ou-email essaie d'abord
+   les comptes "tag", puis retombe sur un email ordinaire ; bascule "Créer
+   un compte" (tag, libre-service) ; "mot de passe oublié" par nom.
+3. **Liens joueurs réutilisables** : `provisionInviteSession` ne crée plus
+   de compte lui-même (déplacé vers `accountAuth.createTagAccount`,
+   appelé par `app/rejoindre/[token]/actions.ts` avant la connexion
+   directe par mot de passe) ; `campaign_members` fait foi pour un lien
+   joueur, `claimed_by_user_id` reste la source pour un lien MJ (nominatif,
+   usage unique, inchangé).
+4. **Panneau MJ** (`InviteLinkPanel`/`CampaignDetail`) : section "Liens
+   joueurs" distincte (jamais "jamais ouvert"), révocation individuelle
+   d'un membre (`app.revoke_campaign_member`, sans toucher au lien),
+   "Forcer une réinitialisation" par membre avec lien affiché inline,
+   indicateur "mot de passe oublié".
+5. **Écran "Choisis ton personnage"** (`/joueur`, sans PJ assigné) : PJ
+   ouverts de la campagne ou "Nouveau PJ" (même assistant que côté MJ,
+   `CharacterCreatorWizard` gagne un prop `onCreate` optionnel pour
+   réclamer la fiche immédiatement plutôt que la laisser flottante).
+6. **Panneau superadmin** (`AdminPanel`) : section "Comptes — toute la
+   plateforme" (jamais le tag), réinitialisation/suppression généralisées à
+   tout compte, transfert de ruleset personnel — `deleteInvitedAccount`
+   (ancien, borné aux comptes invités) supprimé, devenu mort code une fois
+   `adminDeleteAccount` généralisé en place.
+
+**Écarts assumés par rapport au ticket** :
+- La demande "mot de passe oublié" par nom (ambigu, plusieurs comptes
+  peuvent partager un `handle_name`) pose le drapeau sur TOUS les comptes
+  de ce nom plutôt que d'exiger une désambiguïsation — négligeable à
+  l'échelle d'une table de jeu personnelle, le MJ/superadmin reconnaît sa
+  propre joueuse dans son panneau.
+- Le panneau superadmin affiche `password_reset_requested_at` pour TOUS les
+  comptes, pas seulement ceux sans monde (le critère garantit un minimum —
+  "MJ compétent, ou superadmin si sans monde" — pas un maximum ; le
+  superadmin voit de toute façon tout le reste).
+- Réglages du compte affichant son propre `handle_tag` : non construit,
+  hors des huit étapes listées par le ticket — actuellement aucun endroit
+  ne montre jamais le tag à personne, y compris à son propriétaire.
+- Bouton "créer un compte" posable par le MJ sur son wiki public : non
+  construit (mentionné dans la vision, absent des critères d'acceptation
+  et des étapes).
+- Réouverture d'un lien MJ déjà réclamé sur un compte créé AVANT V3.1-10
+  (sans mot de passe) : ne fonctionne plus pour un lien de rôle `player`
+  (le garde-fou par rôle empêche la reconnexion par lien magique) — un tel
+  compte a besoin d'une réinitialisation forcée (MJ/superadmin) pour
+  obtenir son premier mot de passe. Cas rare (comptes antérieurs à ce
+  ticket uniquement), non couvert par une migration de données faute de
+  pouvoir deviner un mot de passe à leur place.
 
 ---
 

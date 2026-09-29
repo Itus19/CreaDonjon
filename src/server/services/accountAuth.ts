@@ -82,6 +82,60 @@ export async function resolveResetToken(token: string): Promise<ResolveResetToke
   return { ok: true, userId: data.user_id };
 }
 
+export type DeleteAnyAccountResult = { ok: true } | { ok: false; reason: "not_found" };
+
+/**
+ * Suppression generalisee (superadmin, V3.1-10) : meme sequence que
+ * `accountProvisioning.deleteInvitedAccount`, mais sans son garde-fou
+ * ("jamais un compte cree a la main") — celui-ci ne tenait plus une fois
+ * les comptes "tag" libre-service possibles (ADR 0031). L'autorisation
+ * ("qui appelle est bien superadmin") est verifiee par l'appelant, pas ici.
+ */
+export async function deleteAnyAccount(userId: string): Promise<DeleteAnyAccountResult> {
+  const admin = createAccountAuthServiceClient();
+  const { data: userData } = await admin.auth.admin.getUserById(userId);
+  if (!userData?.user) return { ok: false, reason: "not_found" };
+
+  await admin.from("campaign_characters").update({ user_id: null }).eq("user_id", userId);
+  await admin.from("campaign_invites").update({ claimed_by_user_id: null, revoked_at: new Date().toISOString() }).eq("claimed_by_user_id", userId);
+
+  // `auth.admin.deleteUser` peut echouer si ce compte a lui-meme cree du
+  // contenu (entities.created_by, rulesets.created_by...) sans cascade —
+  // le journal doit survivre a la suppression d'un compte. Accepte comme
+  // pour `deleteInvitedAccount` : les etapes ci-dessus ont deja retire tout
+  // acces reel, un echec silencieux ici n'est jamais un echec de securite.
+  await admin.auth.admin.deleteUser(userId);
+  return { ok: true };
+}
+
+export interface OwnedRulesetSummary {
+  id: string;
+  name: string;
+}
+
+/** Rulesets personnels d'un compte (superadmin, V3.1-10) — jamais via la RLS de l'appelant (`rulesets_select` n'a pas de carve-out superadmin), le client service-role bypasse la question. */
+export async function listRulesetsOwnedBy(userId: string): Promise<OwnedRulesetSummary[]> {
+  const admin = createAccountAuthServiceClient();
+  const { data, error } = await admin.from("rulesets").select("id, name").eq("created_by", userId).eq("is_official_base", false);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export type TransferRulesetResult = { ok: true } | { ok: false; reason: "not_found" | "official_base" };
+
+/** Transfere un ruleset PERSONNEL d'un compte a un autre (superadmin, V3.1-10) — jamais sur `is_official_base = true` (CLAUDE.md règle absolue 18, revérifiée ici même si l'appelant filtre déjà). */
+export async function transferRulesetOwnership(params: { rulesetId: string; newOwnerId: string }): Promise<TransferRulesetResult> {
+  const admin = createAccountAuthServiceClient();
+  const { data: ruleset, error } = await admin.from("rulesets").select("id, is_official_base").eq("id", params.rulesetId).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!ruleset) return { ok: false, reason: "not_found" };
+  if (ruleset.is_official_base) return { ok: false, reason: "official_base" };
+
+  const { error: updateError } = await admin.from("rulesets").update({ created_by: params.newOwnerId }).eq("id", params.rulesetId);
+  if (updateError) throw new Error(updateError.message);
+  return { ok: true };
+}
+
 export type ConsumeResetTokenResult = { ok: true; email: string } | { ok: false; reason: "invalid_token" };
 
 /** Change reellement le mot de passe (admin API, aucune colonne de mot de passe applicatif) et cloture le jeton + les drapeaux de reinitialisation. Renvoie l'email (toujours synthetique pour un compte "tag") pour que l'appelant puisse ouvrir la session lui-meme sur son client lie aux cookies. */

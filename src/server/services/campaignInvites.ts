@@ -19,16 +19,10 @@ import {
   type RevokeInviteAccessResult,
   type UnclaimedCampaignCharacter,
 } from "@/src/server/repos/campaignInvites";
-import {
-  deleteInvitedAccount as deleteInvitedAccountService,
-  provisionInviteSession,
-  type DeleteInvitedAccountResult,
-  type ProvisionInviteResult,
-} from "@/src/server/services/accountProvisioning";
+import { provisionInviteSession, type ProvisionInviteResult } from "@/src/server/services/accountProvisioning";
 import { getCampaignById, getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { getWorldById } from "@/src/server/repos/worlds";
 import { getEntityById } from "@/src/server/repos/entities";
-import { isSuperadmin } from "@/src/server/services/account";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -154,20 +148,6 @@ export async function resetInviteToken(supabase: TypedClient, inviteId: string):
   const token = generateCampaignInviteToken();
   const { updated } = await resetCampaignInviteToken(supabase, { inviteId, token, tokenHash: hashCampaignInviteToken(token) });
   return updated ? { token } : null;
-}
-
-/**
- * Reserve au superadmin (V2-M6, section Administration) — verifie ici,
- * avant de relayer vers le module confine (`accountProvisioning.ts`, qui
- * n'a pas de notion de "qui appelle").
- */
-export async function deleteInvitedAccount(
-  supabase: TypedClient,
-  params: { callerId: string; targetUserId: string }
-): Promise<DeleteInvitedAccountResult> {
-  const allowed = await isSuperadmin(supabase, params.callerId);
-  if (!allowed) return { ok: false, reason: "not_superadmin" };
-  return deleteInvitedAccountService(params.targetUserId);
 }
 
 /** « Mon lien » (V2-M4 suite) : l'invite reclame par CET utilisateur, s'il en a un — jamais celui d'un autre (`campaign_invites_select_own`, RLS). */
