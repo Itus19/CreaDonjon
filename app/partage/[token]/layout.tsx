@@ -77,6 +77,7 @@ export default async function ShareLinkLayout({
         worldSlug={resolved.worldSlug}
         tree={tree}
         hrefBase={`/partage/${token}`}
+        showLogin
       >
         {children}
       </BookSkin>

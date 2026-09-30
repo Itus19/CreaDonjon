@@ -49,12 +49,21 @@ export default function BookSkin({
   hrefBase,
   children,
   banner,
+  showLogin,
 }: {
   title: string;
   worldSlug: string;
   tree: EntityTreeGroup[];
   hrefBase: string;
   children: React.ReactNode;
+  /**
+   * V3.1-10 suite (retour utilisateur 30 sept.) : `BookSkin` sert aussi bien
+   * un visiteur ANONYME (`/partage/[token]`) qu'un compte deja authentifie
+   * (`/apercu` cote MJ, `/joueur/wiki` cote joueur) — lui proposer de se
+   * connecter n'aurait de sens que pour le premier. Seul `/partage/[token]/layout.tsx`
+   * passe `true`.
+   */
+  showLogin?: boolean;
   /**
    * V2.1-12 : bandeau pose au-dessus du contenu, dans la colonne de lecture —
    * la bannière de séance de la coquille joueur, qui n'avait nulle part où
@@ -139,9 +148,17 @@ export default function BookSkin({
             `/partage`, cette racine REDIRIGE de surcroit vers la derniere
             entree du Livre de sessions — precharger une redirection est du
             travail serveur dont il ne reste rien. */}
-        <Link href={hrefBase} prefetch={false} onClick={() => setOpen(false)} className="mb-4 block font-chrome text-base font-semibold text-ink hover:text-accent">
+        <Link href={hrefBase} prefetch={false} onClick={() => setOpen(false)} className="mb-3 block font-chrome text-base font-semibold text-ink hover:text-accent">
           {title}
         </Link>
+        {showLogin && (
+          <Link
+            href="/login"
+            className="mb-4 inline-block rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
+          >
+            Se connecter
+          </Link>
+        )}
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
