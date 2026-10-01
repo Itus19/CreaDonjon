@@ -312,9 +312,8 @@ export default function CampaignDetail({
                 </span>
                 <span className="rounded-full bg-accent/20 px-2 py-0.5 text-xs font-semibold text-accent">MJ</span>
                 {gm.pcEntityId && <span className="text-xs text-ink-muted">joue {entityName(gm.pcEntityId)}</span>}
-                {gm.grantedEntityIds.length > 0 && (
-                  <span className="text-xs text-ink-muted">peut aussi modifier : {gm.grantedEntityIds.map(entityName).join(", ")}</span>
-                )}
+                {/* Pas de « peut aussi modifier » : un MJ modifie déjà tout le monde,
+                    un octroi d'édition ne lui ajoute rien. */}
                 {data.passwordResetRequests[gm.userId] && <span className="text-xs text-accent">· mot de passe oublié</span>}
                 {canManage && <ActionsMenu items={personActions(gm)} aria-label={`Actions sur le compte de ${labelOf(gm.userId)}`} />}
               </div>

@@ -1246,6 +1246,13 @@ boîte, la liste sur toute la largeur, puis « Annuler » et « Attribuer » (ou
 « Partager ») en bouton plein, alignés à droite. Pour le PJ, la boîte remplace
 la case pointillée au lieu de s'empiler dessous. Vérifié au banc.
 
+**Retour en jouant (1ᵉʳ octobre) — plus de « peut aussi modifier » sur la
+ligne d'un MJ.** Un MJ modifie déjà tout le monde : afficher ses octrois
+d'édition (« peut aussi modifier : Prologue ») ne disait rien d'utile. La
+mention disparaît de la ligne des MJ ; les cartes joueuses la gardent. Les
+octrois eux-mêmes restent en base (rien n'est supprimé) : ils resserviraient
+tels quels si ce compte redevenait joueur.
+
 ---
 
 ### V3.1-16 — Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse · `M`/`L` — **codé le 1ᵉʳ octobre, à vérifier en direct**
