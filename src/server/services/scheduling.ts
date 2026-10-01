@@ -223,7 +223,7 @@ export async function getRequestBoard(supabase: TypedClient, campaignId: string,
   };
 }
 
-/** Confirme une séance, depuis le classement de disponibilités ou manuellement (retour utilisateur : "le MJ doit pouvoir mettre manuellement la prochaine date... sans passer par l'outil") — même écriture, `source` ne fait que changer l'étiquette affichée ensuite. Aucune limite au nombre de séances par mois (retour utilisateur). Ferme la ronde ouverte de la campagne s'il y en a une (V3.1-8, étape 6) : une séance confirmée répond à la question posée, la ronde n'a plus de raison de rester ouverte. */
+/** Confirme une séance, depuis le classement de disponibilités ou manuellement (retour utilisateur : "le MJ doit pouvoir mettre manuellement la prochaine date... sans passer par l'outil") — même écriture, `source` ne fait que changer l'étiquette affichée ensuite. Aucune limite au nombre de séances par mois (retour utilisateur). Ferme la ronde ouverte de la campagne **seulement pour une séance confirmée depuis les disponibilités** (V3.1-8, étape 6 : elle répond alors à la question posée). Une date réglée à la main est indépendante de la demande en cours et la laisse ouverte (bug rapporté le 1ᵉʳ octobre, V3.1-16 : la fermer faisait disparaître de l'écran les disponibilités déjà cochées). */
 export async function createRealSession(
   supabase: TypedClient,
   params: { campaignId: string; date: string; startsAt: string; durationMinutes: number; source: "availability" | "manual"; createdBy: string }
@@ -236,8 +236,10 @@ export async function createRealSession(
     source: params.source,
     createdBy: params.createdBy,
   });
-  const openRequest = await getOpenAvailabilityRequest(supabase, params.campaignId);
-  if (openRequest) await closeAvailabilityRequestRow(supabase, openRequest.id);
+  if (params.source === "availability") {
+    const openRequest = await getOpenAvailabilityRequest(supabase, params.campaignId);
+    if (openRequest) await closeAvailabilityRequestRow(supabase, openRequest.id);
+  }
   return session;
 }
 

@@ -1439,6 +1439,28 @@ mois → colonnes de 122 px, « oct. » et « nov. » dans l'en-tête ; dans le
 formulaire, cinq dates cliquées → l'aperçu en compte cinq, et « Finir plus
 tard » ajoute une ligne (40 → 45 cases).
 
+#### Bug trouvé en jouant — corrigé le 1ᵉʳ octobre
+
+**Constat (auteur)** : régler une date à la main pendant la demande d'octobre
+a fermé la demande, et les disponibilités cochées ont disparu de l'écran.
+
+**Cause** : `createRealSession` fermait la demande ouverte à **chaque** séance
+confirmée, manuelle comprise (comportement de V3.1-8, étape 6, pensé pour le
+seul bouton « Confirmer » des dates possibles). **Rien n'était effacé** :
+fermer une demande ne fait que passer `availability_requests.status` à
+`closed`, et les réponses restent en base, rattachées à elle
+(`real_session_availabilities.request_id`).
+
+**Correction** : seule une séance confirmée **depuis les disponibilités**
+(`source: "availability"`) ferme la demande ; une date réglée à la main
+(`source: "manual"`) est indépendante et la laisse ouverte. Test
+`scheduling.createRealSession.test.ts`, écrit avant la correction et vu
+échouer dessus.
+
+**Récupérer la demande fermée par erreur** : la rouvrir suffit, les réponses
+reviennent avec elle. À faire à la main dans l'éditeur SQL de Supabase (aucun
+écran ne rouvre une demande aujourd'hui).
+
 **Ce qui a été vérifié, et comment.** Sans base dans la session cloud, la grille
 a été montée seule dans Chromium (Playwright), alimentée par une demande
 d'octobre et des réponses de test : réponse existante relue (44,5 h cochées),
