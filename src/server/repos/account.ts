@@ -82,3 +82,16 @@ export async function deleteOwnAccount(supabase: TypedClient): Promise<void> {
   const { error } = await supabase.rpc("delete_own_account");
   if (error) throw new Error(error.message);
 }
+
+/**
+ * Tag à 4 chiffres des comptes donnés (V3.1-15, ADR 0032) — **à n'appeler que
+ * pour le MJ de la campagne** : c'est la route qui décide si l'appelant y a
+ * droit, la RLS de `profiles` laissant passer tout compte qui partage un
+ * monde. Lecture groupée, jamais un aller-retour par membre.
+ */
+export async function getHandleTagsForUsers(supabase: TypedClient, userIds: string[]): Promise<Record<string, string>> {
+  if (userIds.length === 0) return {};
+  const { data, error } = await supabase.from("profiles").select("id, handle_tag").in("id", userIds).not("handle_tag", "is", null);
+  if (error) throw new Error(error.message);
+  return Object.fromEntries(data.map((row) => [row.id, row.handle_tag as string]));
+}

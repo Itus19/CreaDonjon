@@ -3,11 +3,10 @@
 import { useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import ActionsMenu, { type ActionsMenuItem } from "@/components/shared/ActionsMenu";
 import InviteLinkPanel from "./InviteLinkPanel";
 import { useCachedGet } from "./useCachedGet";
-
-/** Meme convention que `InviteLinkPanel.tsx` (Administration) : le role stocke en base reste en anglais (identifiant technique, CLAUDE.md §11), jamais affiche tel quel. */
-const ROLE_LABELS: Record<string, string> = { gm: "MJ", player: "Joueur" };
+import { groupCampaignPeople, personLabel, type CampaignPerson } from "@/src/core/campaigns/people";
 
 interface MemberRow {
   campaign_id: string;
@@ -36,12 +35,36 @@ interface CampaignDetailData {
   displayNames: Record<string, string>;
   /** V3.1-10 : horodatage d'une demande "mot de passe oublié" en attente, par id de compte — absent = aucune demande. */
   passwordResetRequests: Record<string, string>;
+  /** V3.1-15 (ADR 0032) : tag à 4 chiffres par compte — renvoyé SEULEMENT au MJ du monde, vide pour quiconque d'autre. */
+  handleTags?: Record<string, string>;
 }
 
 /** V1-D5, specs/ruleset-personnel.md §3.1 : une table de jeu ordinaire (4-6 joueurs + MJ) reste bien en-deca — au-dela, un rappel plus explicite, jamais un refus. */
 const PERSONAL_REFERENCE_CIRCLE_SOFT_CAP = 7;
 
-/** Detail d'une campagne (V1-C1) : membres + personnages attribues, invitation par email, attribution d'un personnage. Charge a l'ouverture (jamais en avance — une campagne repliee ne coute rien). */
+const dropdownTrigger = "rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised";
+const smallButton = "rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50";
+
+type Confirming = { kind: "remove_member"; userId: string } | { kind: "free_character"; entityId: string; userId: string } | null;
+
+/**
+ * La Gestion de campagne (V1-C1, refaite V3.1-15 d'après l'esquisse « A —
+ * Invitations en haut, une fiche par personne », retenue par l'auteur le 1ᵉʳ
+ * octobre) :
+ *
+ * 1. le panneau **Invitations** (`InviteLinkPanel`) ;
+ * 2. **les MJ sur une ligne** — un MJ peut déjà tout modifier, une carte
+ *    entière serait du bruit ;
+ * 3. **une carte par compte joueur** : son PJ, les fiches qu'il peut aussi
+ *    modifier, et le menu ⋮ du compte ;
+ * 4. à part, **les personnages que personne ne tient** (PNJ, PJ libérés).
+ *
+ * Chaque geste de l'ancien écran garde une place, et une seule. « Révoquer »
+ * ne veut plus dire deux choses : « Retirer de la campagne » (le compte) et
+ * « Libérer le personnage » (la fiche) sont deux gestes distincts, chacun
+ * confirmé. Le tag à 4 chiffres suit le nom partout dans cet écran quand le
+ * serveur l'a envoyé (au MJ seulement, ADR 0032).
+ */
 export default function CampaignDetail({
   campaignId,
   worldEntities,
@@ -50,111 +73,102 @@ export default function CampaignDetail({
 }: {
   campaignId: string;
   worldEntities: { id: string; name: string }[];
-  /** V2-M9 (Lot M) : toutes les fiches du monde, pour "Octrois d'edition" — distinct de `worldEntities` (personnages seulement, "Personnages attribues"). */
+  /** V2-M9 (Lot M) : toutes les fiches du monde, pour les fiches partagées — distinct de `worldEntities` (personnages seulement). */
   grantableEntities: { id: string; name: string }[];
-  /** V2-M7 (Lot M) : revocation de fiche PJ et octrois d'edition reserves au MJ reel de ce monde — deja verifie cote serveur par la page appelante (`isWorldAdmin`), cette prop cache seulement des actions qui echoueraient toujours pour un simple joueur. */
+  /** V2-M7 (Lot M) : gestes reserves au MJ reel de ce monde — deja verifie cote serveur par la page appelante (`isWorldAdmin`), cette prop cache seulement des actions qui echoueraient toujours pour un simple joueur. */
   canManage: boolean;
 }) {
   // `useCachedGet` (retour utilisateur : "elle a l'air de se recharger a
   // chaque changement d'onglet") — evite le flash "Chargement..." quand ce
   // composant remonte a chaque bascule de section (Monde/Regles/MJ).
   const { data, reload } = useCachedGet<CampaignDetailData>(`campaignDetail:${campaignId}`, `/api/campaigns/${campaignId}`);
-  const [email, setEmail] = useState("");
-  const [inviteError, setInviteError] = useState<string | null>(null);
-  const [selectedEntityId, setSelectedEntityId] = useState("");
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [grantEntityId, setGrantEntityId] = useState("");
-  const [grantUserId, setGrantUserId] = useState("");
-  const [grantError, setGrantError] = useState<string | null>(null);
-  const [confirmingRevokeMemberId, setConfirmingRevokeMemberId] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<Confirming>(null);
   const [resetLinkByUserId, setResetLinkByUserId] = useState<Record<string, string>>({});
-  const [resetError, setResetError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  /** Compte dont la zone « attribuer un PJ » ou « partager une fiche » est ouverte. */
+  const [openPicker, setOpenPicker] = useState<{ userId: string; kind: "pc" | "grant" } | null>(null);
+  const [pickedEntityId, setPickedEntityId] = useState("");
+  const [npcEntityId, setNpcEntityId] = useState("");
+  const [npcOwnerId, setNpcOwnerId] = useState("");
 
-  async function invite(e: React.FormEvent) {
-    e.preventDefault();
-    setInviteError(null);
+  async function inviteByEmail(email: string, role: "gm" | "player"): Promise<string | null> {
     const res = await fetch(`/api/campaigns/${campaignId}/members`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, role: "player" }),
+      body: JSON.stringify({ email, role }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setInviteError(body?.error ?? "Échec de l'invitation.");
-      return;
+      return body?.error ?? "Échec de l'invitation.";
     }
-    setEmail("");
     reload();
+    return null;
   }
 
-  async function assignCharacter() {
-    if (!selectedEntityId) return;
-    const userId = selectedUserId || null;
-    await fetch(`/api/campaigns/${campaignId}/characters`, {
+  /** Attribue un personnage (V1-C1) : à un compte → PJ ; sans compte → PNJ de la campagne. Même endpoint qu'avant. */
+  async function assignCharacter(entityId: string, userId: string | null) {
+    setError(null);
+    const res = await fetch(`/api/campaigns/${campaignId}/characters`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entityId: selectedEntityId, userId, isPc: userId !== null }),
+      body: JSON.stringify({ entityId, userId, isPc: userId !== null }),
     });
-    setSelectedEntityId("");
-    setSelectedUserId("");
+    if (!res.ok) setError("Échec de l'attribution du personnage.");
     reload();
   }
 
   /**
-   * Revocation d'une fiche PJ (V2-M7, Lot M) : jamais le meme geste que
-   * "PNJ (sans joueur)" ci-dessus — `isPc` reste `true` pour que la fiche
+   * Libere une fiche PJ (V2-M7) : `isPc` reste `true` pour que la fiche
    * redevienne selectionnable par un NOUVEAU joueur (meme etat que juste
-   * apres la creation de la campagne, `is_pc: true, user_id: null`, filtre
-   * par `accountProvisioning.ts` pour la liste des personnages disponibles
-   * a la reclamation). Reutilise le meme endpoint que l'attribution, RLS
-   * (`campaign_characters_write`, is_world_admin) est deja le seul gate
-   * necessaire ici — meme choix deliberement documente que dans
-   * `assignCampaignCharacter` (aucun second controle cote service).
+   * apres la creation de la campagne, `is_pc: true, user_id: null`). La RLS
+   * (`campaign_characters_write`, is_world_admin) est le seul gate necessaire.
    */
-  async function revokeCharacterClaim(entityId: string) {
-    await fetch(`/api/campaigns/${campaignId}/characters`, {
+  async function freeCharacter(entityId: string) {
+    setError(null);
+    const res = await fetch(`/api/campaigns/${campaignId}/characters`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ entityId, userId: null, isPc: true }),
     });
+    if (!res.ok) setError("Échec de la libération du personnage.");
     reload();
   }
 
-  async function grantAccess() {
-    if (!grantEntityId || !grantUserId) return;
-    setGrantError(null);
-    const res = await fetch(`/api/entities/${grantEntityId}/grants`, {
+  async function grantAccess(entityId: string, userId: string) {
+    setError(null);
+    const res = await fetch(`/api/entities/${entityId}/grants`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: grantUserId }),
+      body: JSON.stringify({ userId }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setGrantError(body?.error ?? "Échec de l'octroi.");
-      return;
+      setError(body?.error ?? "Échec du partage de la fiche.");
     }
-    setGrantEntityId("");
-    setGrantUserId("");
     reload();
   }
 
   async function revokeAccess(entityId: string, userId: string) {
-    await fetch(`/api/entities/${entityId}/grants/${userId}`, { method: "DELETE" });
+    setError(null);
+    const res = await fetch(`/api/entities/${entityId}/grants/${userId}`, { method: "DELETE" });
+    if (!res.ok) setError("Échec du retrait de l'accès.");
     reload();
   }
 
-  /** Expulse un membre du monde (V3.1-10) : libere son personnage, jamais le lien qui l'a fait rejoindre (ADR 0031) — celui-ci reste utilisable par d'autres pour un lien joueur reutilisable. */
-  async function revokeMember(userId: string) {
-    await fetch(`/api/campaigns/${campaignId}/members/${userId}`, { method: "DELETE" });
+  /** Retire un membre de la campagne (V3.1-10) : libere son personnage, jamais le lien qui l'a fait rejoindre (ADR 0031). */
+  async function removeMember(userId: string) {
+    setError(null);
+    const res = await fetch(`/api/campaigns/${campaignId}/members/${userId}`, { method: "DELETE" });
+    if (!res.ok) setError("Échec du retrait de la campagne.");
     reload();
   }
 
-  /** "Forcer une réinitialisation" (V3.1-10, ADR 0031 §5) : jamais de mot de passe tapé à la main ni de connexion automatique — un jeton à usage unique, remis à la personne hors application. */
+  /** "Forcer une réinitialisation" (V3.1-10, ADR 0031 §5) : un jeton à usage unique, remis à la personne hors application. */
   async function forceResetPassword(userId: string) {
-    setResetError(null);
+    setError(null);
     const res = await fetch(`/api/campaigns/${campaignId}/members/${userId}/reset-password`, { method: "POST" });
     if (!res.ok) {
-      setResetError("Échec de la génération du lien.");
+      setError("Échec de la génération du lien.");
       return;
     }
     const body = (await res.json()) as { url: string };
@@ -163,237 +177,288 @@ export default function CampaignDetail({
 
   if (!data) return <p className="text-xs text-ink-muted">Chargement…</p>;
 
-  const displayName = (userId: string) => data.displayNames[userId] || userId;
-  const memberOptions = [
-    { value: "", label: "PNJ (sans joueur)" },
-    ...data.members.map((m) => ({ value: m.user_id, label: `${ROLE_LABELS[m.role] ?? m.role} — ${displayName(m.user_id)}` })),
-  ];
-  const entityOptions = [
-    { value: "", label: "Choisir un personnage…" },
-    ...worldEntities.map((e) => ({ value: e.id, label: e.name })),
-  ];
-  const grantEntityOptions = [
-    { value: "", label: "Choisir une fiche…" },
-    ...grantableEntities.map((e) => ({ value: e.id, label: e.name })),
-  ];
-  const grantMemberOptions = [
-    { value: "", label: "Choisir un joueur…" },
-    ...data.members.filter((m) => m.role === "player").map((m) => ({ value: m.user_id, label: displayName(m.user_id) })),
-  ];
+  const tags = data.handleTags ?? {};
+  const people = groupCampaignPeople({ members: data.members, characters: data.characters, grants: data.grants, displayNames: data.displayNames });
+  const labelOf = (userId: string) => personLabel(data.displayNames[userId] || "Sans nom", tags[userId]);
+  const entityName = (id: string) => grantableEntities.find((e) => e.id === id)?.name ?? worldEntities.find((e) => e.id === id)?.name ?? "Fiche inconnue";
+  // Un personnage déjà tenu par un compte ne se propose plus. Un PNJ, lui,
+  // peut encore devenir le PJ d'une joueuse (geste de l'ancien écran, gardé).
+  const heldIds = new Set(data.characters.filter((c) => c.user_id !== null).map((c) => c.entity_id));
+  const npcIds = new Set(data.characters.filter((c) => c.user_id === null && !c.is_pc).map((c) => c.entity_id));
+  const pcCandidates = worldEntities.filter((e) => !heldIds.has(e.id));
+  const npcCandidates = pcCandidates.filter((e) => !npcIds.has(e.id));
+
+  function openPickerFor(userId: string, kind: "pc" | "grant") {
+    setPickedEntityId("");
+    setOpenPicker({ userId, kind });
+  }
+
+  function personActions(person: CampaignPerson): ActionsMenuItem[] {
+    return [
+      { label: "Forcer une réinitialisation", onSelect: () => void forceResetPassword(person.userId) },
+      // Retirer un MJ n'est pas ce geste (transfert de campagne, hors
+      // perimetre) — seuls les comptes joueurs se retirent ici.
+      ...(person.role === "player" ? [{ label: "Retirer de la campagne", onSelect: () => setConfirming({ kind: "remove_member", userId: person.userId }), danger: true }] : []),
+    ];
+  }
+
+  function grantChips(person: CampaignPerson) {
+    return person.grantedEntityIds.map((entityId) => (
+      <span key={entityId} className="inline-flex items-center gap-1 rounded-full border border-edge bg-panel-raised py-0.5 pl-2.5 pr-1 text-sm text-ink">
+        {entityName(entityId)}
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => void revokeAccess(entityId, person.userId)}
+            aria-label={`Retirer à ${labelOf(person.userId)} l'accès à ${entityName(entityId)}`}
+            className="grid h-6 w-6 place-items-center rounded-full text-ink-muted hover:bg-panel hover:text-danger"
+          >
+            ×
+          </button>
+        )}
+      </span>
+    ));
+  }
+
+  function picker(person: CampaignPerson) {
+    if (!openPicker || openPicker.userId !== person.userId) return null;
+    const options =
+      openPicker.kind === "pc"
+        ? pcCandidates
+        : grantableEntities.filter((e) => !person.grantedEntityIds.includes(e.id) && e.id !== person.pcEntityId);
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <Dropdown
+          value={pickedEntityId}
+          onChange={setPickedEntityId}
+          options={[{ value: "", label: openPicker.kind === "pc" ? "Choisir un personnage…" : "Choisir une fiche…" }, ...options.map((e) => ({ value: e.id, label: e.name }))]}
+          aria-label={openPicker.kind === "pc" ? `Personnage à attribuer à ${labelOf(person.userId)}` : `Fiche à partager avec ${labelOf(person.userId)}`}
+          triggerClassName={`min-w-0 flex-1 ${dropdownTrigger}`}
+        />
+        <button
+          type="button"
+          disabled={!pickedEntityId}
+          onClick={() => {
+            if (openPicker.kind === "pc") void assignCharacter(pickedEntityId, person.userId);
+            else void grantAccess(pickedEntityId, person.userId);
+            setOpenPicker(null);
+          }}
+          className={smallButton}
+        >
+          {openPicker.kind === "pc" ? "Attribuer" : "Partager"}
+        </button>
+        <button type="button" onClick={() => setOpenPicker(null)} className="text-xs text-ink-muted hover:underline">
+          Fermer
+        </button>
+      </div>
+    );
+  }
+
+  function resetLink(userId: string) {
+    if (!resetLinkByUserId[userId]) return null;
+    return (
+      <p className="rounded-md border border-edge bg-panel-sunken px-2 py-1 text-xs text-ink-muted">
+        Lien à usage unique, à transmettre hors application : <span className="break-all text-ink">{resetLinkByUserId[userId]}</span>
+      </p>
+    );
+  }
+
+  const notice =
+    data.rulesetContentOrigin === "personal_reference" ? (
+      <div className="flex flex-col gap-1">
+        {/* Rappel explicite du cadre (V1-D5, specs/ruleset-personnel.md §3.1) :
+            l'invitation reste AUTORISEE — seul un rappel visible avant d'inviter. */}
+        <p className="text-xs text-danger">
+          Cette campagne utilise un ruleset de référence personnelle : les membres invités pourront consulter les fiches en session,
+          mais ne pourront jamais les exporter ni en repartir avec une copie.
+        </p>
+        {data.members.length > PERSONAL_REFERENCE_CIRCLE_SOFT_CAP && (
+          <p className="text-xs text-danger">
+            {data.members.length} membres : au-delà d’une table de jeu, ce n’est plus le cercle privé visé par une référence personnelle.
+          </p>
+        )}
+      </div>
+    ) : undefined;
+
+  const confirmingLabel = confirming ? labelOf(confirming.userId) : "";
 
   return (
-    <div className="flex flex-col gap-3 border-t border-edge/60 pt-3 text-sm">
-      <div>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Membres</span>
-        <ul className="flex flex-col gap-1 text-xs">
-          {data.members.map((m) => (
-            <li key={m.user_id} className="flex flex-col gap-1">
-              <div className="flex items-center justify-between gap-2">
-                <span>
-                  {ROLE_LABELS[m.role] ?? m.role} — {displayName(m.user_id)}
-                  {data.passwordResetRequests[m.user_id] && (
-                    <span className="ml-1.5 text-accent" title="A demandé un nouveau mot de passe">
-                      · mot de passe oublié
-                    </span>
-                  )}
+    <div className="flex flex-col gap-5 border-t border-edge/60 pt-4 text-sm">
+      {canManage && <InviteLinkPanel campaignId={campaignId} onEmailInvite={inviteByEmail} notice={notice} />}
+      {error && <p className="text-xs text-danger">{error}</p>}
+
+      {/* Les MJ sur une ligne : un MJ peut deja tout modifier. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="font-display text-lg text-ink">À la table</h3>
+        <div className="flex flex-wrap items-center gap-4">
+          {people.gms.map((gm) => (
+            <div key={gm.userId} className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-panel-raised text-xs font-semibold text-ink">{gm.name.charAt(0).toUpperCase()}</span>
+                <span className="text-ink">
+                  {gm.name}
+                  {tags[gm.userId] && <span className="text-ink-muted tabular-nums">#{tags[gm.userId]}</span>}
                 </span>
-                {canManage && (
-                  <span className="flex shrink-0 items-center gap-2">
-                    <button type="button" onClick={() => forceResetPassword(m.user_id)} className="hover:underline">
-                      Forcer une réinitialisation
-                    </button>
-                    {/* Expulser le MJ n'est pas ce geste (transfert de
-                        campagne, hors perimetre) — seuls les joueurs sont
-                        revocables ici. */}
-                    {m.role === "player" && (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingRevokeMemberId(m.user_id)}
-                        className="text-danger hover:underline"
-                      >
-                        Révoquer
-                      </button>
-                    )}
-                  </span>
+                <span className="rounded-full bg-accent/20 px-2 py-0.5 text-xs font-semibold text-accent">MJ</span>
+                {gm.pcEntityId && <span className="text-xs text-ink-muted">joue {entityName(gm.pcEntityId)}</span>}
+                {gm.grantedEntityIds.length > 0 && (
+                  <span className="text-xs text-ink-muted">peut aussi modifier : {gm.grantedEntityIds.map(entityName).join(", ")}</span>
                 )}
+                {data.passwordResetRequests[gm.userId] && <span className="text-xs text-accent">· mot de passe oublié</span>}
+                {canManage && <ActionsMenu items={personActions(gm)} aria-label={`Actions sur le compte de ${labelOf(gm.userId)}`} />}
               </div>
-              {resetLinkByUserId[m.user_id] && (
-                <p className="rounded-md border border-edge bg-panel-sunken px-2 py-1 text-[11px] text-ink-muted">
-                  Lien à usage unique, à transmettre hors application :{" "}
-                  <span className="break-all text-ink">{resetLinkByUserId[m.user_id]}</span>
-                </p>
-              )}
-            </li>
+              {resetLink(gm.userId)}
+            </div>
           ))}
-        </ul>
-        {resetError && <p className="mt-1 text-xs text-danger">{resetError}</p>}
-        {data.rulesetContentOrigin === "personal_reference" && (
-          <>
-            {/* Rappel explicite du cadre (V1-D5, specs/ruleset-personnel.md §3.1) :
-                l'invitation reste AUTORISEE — c'est le cercle prive vise, jamais un
-                refus — seul un rappel visible avant d'inviter. Meme couleur que le
-                badge de fiche (--danger), meme signification : attention, pas blocage. */}
-            <p className="mt-2 text-xs text-danger">
-              Cette campagne utilise un ruleset de référence personnelle : les membres invités pourront consulter les
-              fiches en session, mais ne pourront jamais les exporter ni en repartir avec une copie.
-            </p>
-            {/* Plafond souple (§3.1 : "un plafond souple sur le nombre de
-                membres... suffit a materialiser le cercle. Pas de refus
-                brutal — un avertissement explicite.") — jamais un blocage,
-                juste un rappel qui se renforce au-dela d'une table de jeu
-                ordinaire (4-6 joueurs + MJ). */}
-            {data.members.length > PERSONAL_REFERENCE_CIRCLE_SOFT_CAP && (
-              <p className="mt-1 text-xs text-danger">
-                {data.members.length} membres : au-delà d’une table de jeu, ce n’est plus le cercle privé visé par une
-                référence personnelle.
-              </p>
-            )}
-          </>
-        )}
-        <form onSubmit={invite} className="mt-2 flex items-center gap-2">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="courriel du joueur"
-            className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none"
-          />
-          <button type="submit" className="rounded-full border border-edge px-3 py-1 text-xs text-ink hover:bg-panel-raised">
-            Inviter
-          </button>
-        </form>
-        {inviteError && <p className="text-xs text-danger">{inviteError}</p>}
-      </div>
-
-      {/* Liens d'invitation nominatifs, joueur ou MJ au choix (retour
-          utilisateur : "ajoute les boutons d'invitation dans une campagne
-          quand on clique sur la campagne concernee, avec les options
-          d'invitation en tant que joueur ou MJ") — `InviteLinkPanel`
-          existait deja (V2-M4) mais n'etait plus monte nulle part depuis le
-          retrait du menu de reglages global, qui etait son seul appelant. */}
-      <InviteLinkPanel campaignId={campaignId} />
-
-      <div>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Personnages attribués</span>
-        <ul className="flex flex-col gap-1 text-xs">
-          {data.characters.map((c) => {
-            const entity = worldEntities.find((e) => e.id === c.entity_id);
-            return (
-              <li key={c.entity_id} className="flex items-center justify-between gap-2">
-                <span>
-                  {/* Etiquette PJ/PNJ derivee de is_pc (V1-C4, jamais un
-                      entity_kind distinct — un PNJ peut devenir un PJ) */}
-                  {entity?.name ?? c.entity_id} — {c.is_pc ? "PJ" : "PNJ"}
-                  {c.user_id ? ` (${displayName(c.user_id)})` : ""}
-                </span>
-                {c.user_id && canManage && (
-                  <button
-                    type="button"
-                    onClick={() => revokeCharacterClaim(c.entity_id)}
-                    className="shrink-0 text-danger hover:underline"
-                  >
-                    Révoquer
-                  </button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Dropdown
-            value={selectedEntityId}
-            onChange={setSelectedEntityId}
-            options={entityOptions}
-            aria-label="Personnage à attribuer"
-            triggerClassName="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
-          />
-          <Dropdown
-            value={selectedUserId}
-            onChange={setSelectedUserId}
-            options={memberOptions}
-            aria-label="Joueur à qui attribuer le personnage"
-            triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
-          />
-          <button
-            type="button"
-            onClick={assignCharacter}
-            className="rounded-full border border-edge px-3 py-1 text-xs text-ink hover:bg-panel-raised"
-          >
-            Attribuer
-          </button>
         </div>
       </div>
 
-      {canManage && (
-      <div>
-        {/* Octrois d'edition (V2-M7, elargi V2-M9 a toute fiche du monde,
-            retour utilisateur : "un outil... qui reference ainsi TOUT les
-            octrois d'edition") : accorder l'edition d'une fiche precise a un
-            joueur SANS la lui attribuer comme PJ — cas d'usage distinct de
-            "Personnages attribues" ci-dessus (ex. laisser un joueur editer
-            une fiche partagee du groupe). `entity_grants` existe depuis
-            V2-M3. Section entiere reservee au MJ (`canManage`) : lecture
-            comprise, un joueur n'a pas besoin de voir qui a quel octroi. */}
-        <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Octrois d&apos;édition</span>
-        <ul className="flex flex-col gap-1 text-xs">
-          {data.grants.length === 0 && <li className="text-ink-muted">Aucun octroi pour l&apos;instant.</li>}
-          {data.grants.map((g) => {
-            const entity = grantableEntities.find((e) => e.id === g.entity_id);
-            return (
-              <li key={`${g.entity_id}-${g.user_id}`} className="flex items-center justify-between gap-2">
-                <span>
-                  {entity?.name ?? g.entity_id} — {displayName(g.user_id)}
-                </span>
+      {people.players.length === 0 ? (
+        <p className="rounded-[10px] border border-dashed border-edge p-5 text-center text-sm text-ink-muted">
+          Aucune joueuse pour l&apos;instant : génère un lien joueur ci-dessus et envoie-le à ta table.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {people.players.map((player) => (
+            <div key={player.userId} className="flex flex-col gap-3 rounded-[14px] border border-edge bg-panel p-4">
+              <div className="flex items-center gap-2.5">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-panel-raised font-semibold text-ink">{player.name.charAt(0).toUpperCase()}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold text-ink">
+                    {player.name}
+                    {tags[player.userId] && <span className="font-normal text-ink-muted tabular-nums">#{tags[player.userId]}</span>}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="rounded-full bg-panel-raised px-2 py-0.5 text-xs font-semibold text-ink">Joueur</span>
+                    {data.passwordResetRequests[player.userId] && (
+                      <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent" title="A demandé un nouveau mot de passe">
+                        mot de passe oublié
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {canManage && <ActionsMenu items={personActions(player)} aria-label={`Actions sur le compte de ${labelOf(player.userId)}`} />}
+              </div>
+              {resetLink(player.userId)}
+
+              {player.pcEntityId ? (
+                <div className="flex items-center gap-2 rounded-[10px] border border-accent/55 bg-accent/10 px-3 py-2 text-ink">
+                  <span className="text-xs text-accent">Joue</span>
+                  <strong className="min-w-0 flex-1 truncate">{entityName(player.pcEntityId)}</strong>
+                  {canManage && (
+                    <ActionsMenu
+                      items={[{ label: "Libérer le personnage", onSelect: () => setConfirming({ kind: "free_character", entityId: player.pcEntityId as string, userId: player.userId }), danger: true }]}
+                      aria-label={`Actions sur le personnage de ${labelOf(player.userId)}`}
+                    />
+                  )}
+                </div>
+              ) : canManage ? (
                 <button
                   type="button"
-                  onClick={() => revokeAccess(g.entity_id, g.user_id)}
-                  className="shrink-0 text-danger hover:underline"
+                  onClick={() => openPickerFor(player.userId, "pc")}
+                  className="rounded-[10px] border border-dashed border-edge px-3 py-2 text-left text-sm text-ink-muted hover:bg-panel-raised"
                 >
-                  Retirer
+                  Aucun personnage — <span className="text-accent">attribuer un PJ</span>
                 </button>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Dropdown
-            value={grantEntityId}
-            onChange={setGrantEntityId}
-            options={grantEntityOptions}
-            aria-label="Fiche à confier en édition"
-            triggerClassName="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
-          />
-          <Dropdown
-            value={grantUserId}
-            onChange={setGrantUserId}
-            options={grantMemberOptions}
-            aria-label="Joueur à qui confier la fiche"
-            triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none transition-colors hover:bg-panel-raised"
-          />
-          <button
-            type="button"
-            onClick={grantAccess}
-            disabled={!grantEntityId || !grantUserId}
-            className="rounded-full border border-edge px-3 py-1 text-xs text-ink hover:bg-panel-raised disabled:opacity-50"
-          >
-            Accorder
-          </button>
+              ) : (
+                <p className="text-sm text-ink-muted">Aucun personnage.</p>
+              )}
+              {openPicker?.userId === player.userId && openPicker.kind === "pc" && picker(player)}
+
+              {canManage && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Peut aussi modifier</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {player.grantedEntityIds.length === 0 ? <span className="text-xs text-ink-muted">Aucune fiche partagée.</span> : grantChips(player)}
+                  </div>
+                  {openPicker?.userId === player.userId && openPicker.kind === "grant" ? (
+                    picker(player)
+                  ) : (
+                    <button type="button" onClick={() => openPickerFor(player.userId, "grant")} className={`self-start ${smallButton}`}>
+                      + Partager une fiche
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
-        {grantError && <p className="mt-1 text-xs text-danger">{grantError}</p>}
-      </div>
       )}
 
+      <section className="flex flex-col gap-2.5 rounded-[10px] border border-edge bg-panel-sunken p-4">
+        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Personnages sans joueur</span>
+        <div className="flex flex-wrap gap-1.5">
+          {people.unclaimed.length === 0 && <span className="text-xs text-ink-muted">Aucun.</span>}
+          {people.unclaimed.map((c) => (
+            <span key={c.entityId} className="inline-flex items-center gap-1.5 rounded-full border border-edge bg-panel-raised px-2.5 py-0.5 text-sm text-ink">
+              {entityName(c.entityId)}
+              <span className="text-xs text-ink-muted">
+                {c.kind === "npc" ? "PNJ" : c.kind === "free_pc" ? "PJ libre" : `tenu par ${data.displayNames[c.userId ?? ""] || "un ancien membre"}`}
+              </span>
+            </span>
+          ))}
+        </div>
+        {canManage && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Dropdown
+              value={npcEntityId}
+              onChange={setNpcEntityId}
+              options={[{ value: "", label: "Choisir un personnage…" }, ...npcCandidates.map((e) => ({ value: e.id, label: e.name }))]}
+              aria-label="Personnage à ajouter à la campagne"
+              triggerClassName={`min-w-0 flex-1 ${dropdownTrigger}`}
+            />
+            {/* Un personnage sans joueur, ou tenu par un MJ : les joueuses,
+                elles, reçoivent le leur depuis leur carte. */}
+            <Dropdown
+              value={npcOwnerId}
+              onChange={setNpcOwnerId}
+              options={[{ value: "", label: "PNJ (sans joueur)" }, ...people.gms.map((gm) => ({ value: gm.userId, label: `MJ — ${labelOf(gm.userId)}` }))]}
+              aria-label="À qui le confier"
+              triggerClassName={dropdownTrigger}
+            />
+            <button
+              type="button"
+              disabled={!npcEntityId}
+              onClick={() => {
+                void assignCharacter(npcEntityId, npcOwnerId || null);
+                setNpcEntityId("");
+                setNpcOwnerId("");
+              }}
+              className={smallButton}
+            >
+              Ajouter
+            </button>
+          </div>
+        )}
+      </section>
+
       <ConfirmDialog
-        open={confirmingRevokeMemberId !== null}
-        title="Révoquer ce membre ?"
-        message={`${confirmingRevokeMemberId ? displayName(confirmingRevokeMemberId) : "Ce membre"} perd l'accès à cette campagne et son personnage redevient libre. Le compte et le lien d'invitation qui l'a fait rejoindre restent inchangés — un lien joueur réutilisable continue de fonctionner pour d'autres.`}
-        confirmLabel="Révoquer"
+        open={confirming?.kind === "remove_member"}
+        title={`Retirer ${confirmingLabel} de la campagne ?`}
+        message={`${confirmingLabel} perd l'accès à cette campagne et son personnage redevient libre. Le compte et le lien d'invitation qui l'a fait rejoindre restent inchangés — un lien joueur réutilisable continue de fonctionner pour d'autres.`}
+        confirmLabel="Retirer de la campagne"
         danger
         onConfirm={() => {
-          if (confirmingRevokeMemberId) void revokeMember(confirmingRevokeMemberId);
-          setConfirmingRevokeMemberId(null);
+          if (confirming?.kind === "remove_member") void removeMember(confirming.userId);
+          setConfirming(null);
         }}
-        onCancel={() => setConfirmingRevokeMemberId(null)}
+        onCancel={() => setConfirming(null)}
+      />
+      <ConfirmDialog
+        open={confirming?.kind === "free_character"}
+        title="Libérer le personnage ?"
+        message={
+          confirming?.kind === "free_character"
+            ? `${entityName(confirming.entityId)} redevient libre : une autre joueuse pourra le réclamer. ${confirmingLabel} garde son accès à la campagne.`
+            : ""
+        }
+        confirmLabel="Libérer"
+        danger
+        onConfirm={() => {
+          if (confirming?.kind === "free_character") void freeCharacter(confirming.entityId);
+          setConfirming(null);
+        }}
+        onCancel={() => setConfirming(null)}
       />
     </div>
   );

@@ -4,7 +4,6 @@ import { useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import ActionsMenu, { type ActionsMenuItem } from "@/components/shared/ActionsMenu";
-import EmptyState from "./EmptyState";
 import type { CampaignInviteSummary } from "@/src/server/services/campaignInvites";
 import { useCachedGet } from "./useCachedGet";
 
@@ -251,22 +250,30 @@ function InviteRow({
 }
 
 /**
- * Panneau complet (V2-M4 suite) : créer un lien (rôle + mot de passe
- * optionnel), lister les liens actifs, les copier/révoquer/reprotéger à
- * tout moment.
+ * Le panneau « Invitations » de la Gestion de campagne (V2-M4, refait
+ * V3.1-15 d'après l'esquisse « A — Invitations en haut, une fiche par
+ * personne »). En tête, les comptes ; puis **une seule ligne pour inviter** :
+ * un courriel (compte déjà existant, ajouté directement) ou, sans courriel, un
+ * lien — rôle et mot de passe optionnel, un seul bouton principal dont le
+ * libellé dit ce qu'il va faire. Dessous, les liens en lignes calmes
+ * (`InviteRow`, inchangé depuis V2.1-25).
  *
- * Trois sections depuis V3.1-10 (deux depuis V2.1-25, lot 2) : **une
- * personne a ta table** (MJ nominatif deja reclame), **un lien joueur**
- * (reutilisable, ADR 0031 — qui l'a utilise se lit dans « Membres », pas
- * ici) et **un lien MJ qui attend quelqu'un** sont trois objets differents,
- * que cette liste rendait autrefois a l'identique.
- *
- * Pas de titre de panneau : les en-tetes de section disent deja ce que
- * chaque bloc contient, et l'ancien (« Liens d'invitation (sans email) »)
- * decrivait l'implementation tout en faisant doublon avec l'onglet Acces qui
- * le surmonte.
+ * Trois sortes de liens, jamais confondues (V3.1-10, ADR 0031) : les liens
+ * joueurs réutilisables, les liens MJ déjà utilisés, et les liens MJ qui
+ * attendent quelqu'un. Une section vide ne s'affiche plus : son compte est
+ * déjà dans l'en-tête.
  */
-export default function InviteLinkPanel({ campaignId }: { campaignId: string }) {
+export default function InviteLinkPanel({
+  campaignId,
+  onEmailInvite,
+  notice,
+}: {
+  campaignId: string;
+  /** Ajout d'un compte existant par courriel — renvoie un message d'erreur, ou `null` si c'est fait. Absent (accueil, Administration) : pas de champ courriel. */
+  onEmailInvite?: (email: string, role: "gm" | "player") => Promise<string | null>;
+  /** Rappel affiché au-dessus de la ligne d'invitation (cadre d'une référence personnelle). */
+  notice?: React.ReactNode;
+}) {
   // `useCachedGet` (retour utilisateur : "elle a l'air de se recharger a
   // chaque changement d'onglet") — evite le flash "Chargement..." quand ce
   // composant remonte a chaque bascule de section (Monde/Regles/MJ).
@@ -275,10 +282,10 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
     `/api/campaigns/${campaignId}/invites`
   );
   const invites = data?.invites ?? null;
-  // Plus de "Au choix" (V3.1-10) : un defaut explicite plutot qu'une valeur
-  // vide que le Dropdown ne saurait pas etiqueter — "Joueur" est le cas le
-  // plus frequent, le MJ change avant de generer si besoin.
+  // Plus de "Au choix" (V3.1-10) : "Joueur" est le cas le plus frequent, le
+  // MJ change avant d'inviter si besoin.
   const [role, setRole] = useState<"gm" | "player">("player");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -286,16 +293,26 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
 
   const notRevoked = invites?.filter((i) => i.revokedAt === null) ?? [];
   // Un lien joueur (V3.1-10) est reutilisable : jamais range parmi les liens
-  // "en attente" ou "a la table" d'un lien nominatif — sa propre section,
-  // toujours affichee tant qu'il n'est pas revoque, quel que soit son usage.
+  // MJ, sa propre section tant qu'il n'est pas revoque.
   const reusableLinks = notRevoked.filter((i) => i.intendedRole === "player");
   const claimed = notRevoked.filter((i) => i.intendedRole !== "player" && i.claimedName !== null);
   const pending = notRevoked.filter((i) => i.intendedRole !== "player" && i.claimedName === null);
+  const byEmail = email.trim() !== "";
 
-  async function generate(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    if (byEmail && onEmailInvite) {
+      const failure = await onEmailInvite(email.trim(), role);
+      setBusy(false);
+      if (failure) {
+        setError(failure);
+        return;
+      }
+      setEmail("");
+      return;
+    }
     const res = await fetch(`/api/campaigns/${campaignId}/invites`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -310,85 +327,83 @@ export default function InviteLinkPanel({ campaignId }: { campaignId: string }) 
     load();
   }
 
-  function handleRevoked() {
-    load();
-  }
-
-  const rowProps = { copiedUrl, onCopy: setCopiedUrl, onRevoked: handleRevoked, onChanged: load };
+  const rowProps = { copiedUrl, onCopy: setCopiedUrl, onRevoked: load, onChanged: load };
+  const inputClass = "min-w-0 rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted disabled:opacity-50";
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Le mot de passe est optionnel et rarement pose : il ne prend plus
-          toute la largeur disponible, qui faisait de lui le champ principal
-          d'un formulaire dont l'action est ailleurs. */}
-      <form onSubmit={generate} className="flex flex-wrap items-center gap-2">
+    <section className="flex flex-col gap-3 rounded-[14px] border border-edge bg-panel p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="font-display text-lg text-ink">Invitations</h3>
+        <span className="text-xs text-ink-muted">
+          {reusableLinks.length} lien{reusableLinks.length !== 1 ? "s" : ""} joueur{reusableLinks.length !== 1 ? "s" : ""} actif{reusableLinks.length !== 1 ? "s" : ""} · {pending.length} lien{pending.length !== 1 ? "s" : ""} MJ en attente
+        </span>
+      </div>
+      {notice}
+      <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
+        {onEmailInvite && (
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="courriel d'un compte existant (optionnel)"
+            aria-label="Courriel"
+            className={`flex-1 basis-56 ${inputClass}`}
+          />
+        )}
         <Dropdown
           value={role}
           options={ROLE_OPTIONS}
           onChange={(v) => setRole(v as "gm" | "player")}
-          aria-label="Rôle du lien"
+          aria-label="Rôle de l'invitation"
           triggerClassName="shrink-0 rounded-full border border-edge px-3 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
         />
+        {/* Un mot de passe protège un LIEN : sans objet pour un courriel. */}
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Mot de passe (optionnel)"
-          className="w-56 min-w-0 rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
+          disabled={byEmail}
+          placeholder="mot de passe (optionnel)"
+          aria-label="Mot de passe du lien"
+          className={`w-48 ${inputClass}`}
         />
         <button
           type="submit"
           disabled={busy}
-          className="shrink-0 rounded-full border border-accent px-4 py-1.5 text-sm text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+          className="shrink-0 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
         >
-          {busy ? "Génération..." : "Générer un lien"}
+          {busy ? "Envoi…" : byEmail ? "Inviter par courriel" : "Générer un lien"}
         </button>
       </form>
       {error && <p className="text-xs text-danger">{error}</p>}
 
-      {claimed.length > 0 && (
-        <section className="flex flex-col gap-1">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            À la table — {claimed.length}
-          </h3>
-          <ul className="flex flex-col">
-            {claimed.map((invite) => (
-              <InviteRow key={invite.id} invite={invite} {...rowProps} />
-            ))}
-          </ul>
-        </section>
-      )}
-
       {reusableLinks.length > 0 && (
-        <section className="flex flex-col gap-1">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            Liens joueurs — {reusableLinks.length}
-          </h3>
-          <ul className="flex flex-col">
-            {reusableLinks.map((invite) => (
-              <InviteRow key={invite.id} invite={invite} {...rowProps} />
-            ))}
-          </ul>
-        </section>
+        <ul className="flex flex-col border-t border-edge/40">
+          {reusableLinks.map((invite) => (
+            <InviteRow key={invite.id} invite={invite} {...rowProps} />
+          ))}
+        </ul>
       )}
-
-      <section className="flex flex-col gap-1">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-          Liens MJ en attente — {pending.length}
-        </h3>
-        {pending.length > 0 ? (
+      {pending.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Liens MJ en attente — {pending.length}</h4>
           <ul className="flex flex-col">
             {pending.map((invite) => (
               <InviteRow key={invite.id} invite={invite} {...rowProps} />
             ))}
           </ul>
-        ) : (
-          <EmptyState
-            title="Aucun lien MJ en attente"
-            description="Génère un lien de rôle MJ ci-dessus pour inviter un second MJ nominatif — usage unique, contrairement à un lien joueur."
-          />
-        )}
-      </section>
-    </div>
+        </div>
+      )}
+      {claimed.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Liens MJ utilisés — {claimed.length}</h4>
+          <ul className="flex flex-col">
+            {claimed.map((invite) => (
+              <InviteRow key={invite.id} invite={invite} {...rowProps} />
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   );
 }

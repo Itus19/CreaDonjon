@@ -993,7 +993,7 @@ second.
 
 ---
 
-### V3.1-15 — La Gestion de campagne illisible : invitations en haut, une carte par personne · `M` — tag tranché, prêt à coder
+### V3.1-15 — La Gestion de campagne illisible : invitations en haut, une carte par personne · `M` — **codé le 1ᵉʳ octobre, à vérifier en direct**
 
 Constaté le 1ᵉʳ octobre par l'auteur, captures à l'appui : la fenêtre « Gestion
 de campagne » (`CampaignDetail.tsx` + `InviteLinkPanel.tsx`) est « assez
@@ -1097,25 +1097,70 @@ captures, chacun vérifié dans le code :
 **Critères**
 
 - [ ] La fenêtre suit la piste A de l'esquisse : Invitations en haut, MJ sur
-  une ligne, une carte par compte joueur, PNJ sans joueur en bas.
-- [ ] Chaque geste de l'écran actuel existe encore, et un seul endroit le
-  porte — vérifié contre la liste de l'étape 1.
-- [ ] « Révoquer » n'apparaît plus pour deux portées différentes : « Retirer
+  une ligne, une carte par compte joueur, personnages sans joueur en bas.
+  **Vérifié au banc, à revoir chez l'auteur** sur la vraie campagne.
+- [x] Chaque geste de l'écran actuel existe encore, et un seul endroit le
+  porte — liste de l'étape 1 :
+
+  | Geste d'avant | Où il vit maintenant |
+  |---|---|
+  | Inviter par courriel | Panneau Invitations, même ligne que le lien : un courriel saisi change le bouton en « Inviter par courriel » (et le rôle choisi s'applique, là où l'ancien formulaire n'envoyait que « joueur ») |
+  | Générer un lien (rôle, mot de passe) | Panneau Invitations |
+  | Copier, mot de passe, réinitialiser le personnage, révoquer un lien | `InviteRow`, inchangé |
+  | Forcer une réinitialisation | Menu ⋮ de la carte (ou de la ligne MJ) |
+  | Révoquer un membre | « Retirer de la campagne », menu ⋮ de la carte, confirmé |
+  | Attribuer un PJ à une joueuse | Sa carte : « Aucun personnage — attribuer un PJ » (un PNJ peut toujours devenir son PJ) |
+  | Attribuer un personnage sans joueur, ou à un MJ | Encart « Personnages sans joueur » : « PNJ (sans joueur) » ou « MJ — … » |
+  | Révoquer une fiche PJ | « Libérer le personnage », menu ⋮ du PJ, **désormais confirmé** |
+  | Accorder l'édition d'une fiche | « + Partager une fiche », sur la carte : plus de second menu pour choisir la joueuse |
+  | Retirer un octroi | × sur l'étiquette de la fiche |
+  | Rappels « référence personnelle » | En tête du panneau Invitations |
+
+- [x] « Révoquer » n'apparaît plus pour deux portées différentes : « Retirer
   de la campagne » et « Libérer le personnage » sont distincts, et chacun
-  confirme en disant ce qu'il fait.
-- [ ] « Forcer une réinitialisation » n'est plus répété sur chaque ligne ; une
-  demande de réinitialisation en attente reste visible sur la carte concernée.
-- [ ] Partager une fiche se fait depuis la carte de la personne, sans choisir
+  confirme en nommant la personne et ce qu'elle garde.
+- [x] « Forcer une réinitialisation » n'est plus répété sur chaque ligne ; une
+  demande en attente reste visible sur la carte (« mot de passe oublié »).
+- [x] Partager une fiche se fait depuis la carte de la personne, sans choisir
   de joueur dans un second menu.
-- [ ] Chaque compte tag est nommé `Nom#0000` partout dans cet écran, y
+- [x] Chaque compte tag est nommé `Nom#0000` partout dans cet écran, y
   compris dans les confirmations ; deux comptes de même nom se distinguent.
 - [ ] Le tag n'est renvoyé par `/api/campaigns/[id]` qu'à qui gère la
-  campagne — vérifié par un test d'intégration côté joueuse.
-- [ ] Aucune nouvelle route ; une seule migration, celle du commentaire de
-  colonne. Le reste est de la présentation sur les données déjà renvoyées.
+  campagne — **codé** (`isWorldAdmin` dans la route), **pas de test
+  d'intégration** : il ne tournerait pas sans base dans la session cloud. À
+  vérifier en direct avec un compte joueuse (la réponse ne doit porter aucun
+  `handleTags` rempli).
+- [x] Aucune nouvelle route ; une seule migration
+  (`20261001120000_handle_tag_visible_to_gm.sql`), celle du commentaire de
+  colonne. Le reste est de la présentation.
 - [ ] Lisible à 375 px de large ; les quatre modes et le contraste élevé
-  testés (charte §6).
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+  testés (charte §6) — **à faire en direct** : la grille passe à une colonne
+  sous 768 px, deux jusqu'à 1 280, trois au-delà.
+- [x] `npm run typecheck && npm run lint && npm run test` passent.
+
+**Comment c'est construit.** Le regroupement par personne est une fonction
+pure, `groupCampaignPeople` (`src/core/campaigns/people.ts`, tests d'abord) :
+MJ, joueuses, et les personnages que personne ne tient — PNJ, PJ libérés, et un
+personnage resté au nom d'un compte qui n'est plus membre, qu'on ne perd pas.
+Le panneau Invitations est `InviteLinkPanel`, réorganisé : son champ courriel
+n'apparaît que dans la Gestion de campagne (l'onglet Accès de l'accueil,
+Administration, le monte sans).
+
+**Vérifié au banc** (Chromium, vrai CSS, données des captures de l'auteur) :
+les huit tags affichés, plus aucun « Révoquer » à l'écran, la confirmation
+« Retirer Tamara#0377 de la campagne ? ».
+
+**Écarts avec l'esquisse, voulus :**
+- Les liens MJ déjà utilisés (« Claude, lien créé le 27 septembre ») restent
+  dans le panneau Invitations sous « Liens MJ utilisés » plutôt que sur la ligne
+  du MJ : c'est là que vivent leurs gestes (mot de passe, révocation).
+- « Ouvrir la fiche » n'est pas dans le menu du PJ : l'écran ne connaît que
+  l'identifiant et le nom des fiches, pas leur adresse. Ce n'était pas un geste
+  de l'ancien écran.
+- La RLS de `profiles` laisse encore lire `handle_tag` à tout compte qui
+  partage un monde : c'est l'état laissé par V3.1-10. Le filtrage voulu par
+  l'ADR 0032 est fait par la route, comme la règle absolue 5 le demande ; une
+  restriction en base serait un autre ticket.
 
 **Le tag, visible du MJ — tranché le 1ᵉʳ octobre (ADR 0032).** Deux comptes
 peuvent porter le même nom ; c'est précisément ce que le tag à 4 chiffres de

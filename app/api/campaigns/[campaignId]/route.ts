@@ -10,7 +10,8 @@ import {
   setCampaignMode,
 } from "@/src/server/services/campaigns";
 import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
-import { getPasswordResetRequestsForUsers } from "@/src/server/repos/account";
+import { getHandleTagsForUsers, getPasswordResetRequestsForUsers } from "@/src/server/repos/account";
+import { isWorldAdmin } from "@/src/server/services/permissions";
 import { isSuperadmin } from "@/src/server/services/account";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
@@ -39,8 +40,18 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   // cette campagne — bornées aux membres seuls (jamais tout compte).
   const passwordResetRequests = await getPasswordResetRequestsForUsers(supabase, members.map((m) => m.user_id));
 
+  // V3.1-15 (ADR 0032) : le tag à 4 chiffres distingue deux comptes de même
+  // nom — renvoyé SEULEMENT à qui gère ce monde (même règle que les gestes du
+  // panneau, `isWorldAdmin`). Filtré ici, avant l'envoi (règle absolue 5) :
+  // une joueuse qui appelle la même route ne reçoit aucun tag.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const canSeeTags = user ? await isWorldAdmin(supabase, { worldId: campaign.worldId, userId: user.id }) : false;
+  const handleTags = canSeeTags ? await getHandleTagsForUsers(supabase, members.map((m) => m.user_id)) : {};
+
   return NextResponse.json(
-    { campaign, members, characters, rulesetContentOrigin, grants, displayNames, passwordResetRequests },
+    { campaign, members, characters, rulesetContentOrigin, grants, displayNames, passwordResetRequests, handleTags },
     { status: 200 }
   );
 }
