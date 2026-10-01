@@ -1701,9 +1701,16 @@ réellement la coquille :
   bouclier CA, PV, Niveau, Charge. Esquisse Solo-Desktop mise à jour.
   `JaugeCirculaire` existe déjà (`FicheJouableEnTete.tsx`), contrairement à ce
   que disait l'esquisse.
-- Le trou de 768 à 900 px : planche « Question · le trou sur tablette » (la
-  même fiche à 960, 540 et 680 px de fenêtre) ; deux pistes à choisir —
-  replier le rail plus tôt, ou une fiche qui s'adapte à sa fenêtre.
+- ~~Le trou de 768 à 900 px~~ — **tranché le 1ᵉʳ octobre : piste B**, la fiche
+  s'adapte à la largeur de SA fenêtre (pas de l'écran) : sous ~640 px,
+  caractéristiques au-dessus des onglets, en ligne de six. Planche
+  « Question · le trou sur tablette » (la même fiche à 960, 540 et 680 px).
+- Une seule commande jauge + ± (demande de l'auteur) : planche « Question ·
+  une seule commande jauge + ± », cinq propositions vivantes (A ailes ±,
+  B moitiés de l'anneau, C capsule, D anneau + réglette −5/−1/+1/+5,
+  E pastilles accrochées) ; choix à faire. Dans la proposition de fiche à
+  jauges, l'Inspiration prend la taille exacte d'un badge (72 × 56 px), ▲▼
+  intégrés.
 - Étendre les jauges circulaires à toutes les barres de progression : planche
   « Question · fiche avec jauges circulaires » (fiche actuelle et proposition
   côte à côte) ; décision après l'avoir vue.
