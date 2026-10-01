@@ -26,6 +26,7 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 |---|---|---|
 | `docs/SCHEMA.md` | Schéma de données, SQL, RLS, formules | Avant toute migration ou requête |
 | `docs/CHARTE-UI.md` | Jetons, recettes de boutons/champs/listes, états d'écran | **Avant tout code d'interface** |
+| `docs/catalogue/` | Catalogue d'interface : chaque élément, ses états, ses animations (index au §9 de la charte) | Avant de créer ou modifier un élément d'interface |
 | `docs/BACKLOG_V2.md` | Tickets en cours | Au début de chaque tâche |
 | `docs/BACKLOG_V3.md` | Tickets du mode solo (moteur, boucle de tour, écriture du monde, écran) | Tickets V3 |
 | `docs/BACKLOG_V3.1.md` | Rugosités trouvées en jouant, ajoutées au fil de l'utilisation | Avant tout ticket qui répare un détail plutôt qu'il ne planifie une fonctionnalité |
@@ -131,6 +132,8 @@ Une fiche créée ainsi appartient à un ruleset `personal_reference`, jamais à
 **Avant de commencer :** relis le ticket, vérifie qu'il ne contredit rien dans `docs/SCHEMA.md`, et annonce ton plan en trois à cinq lignes avant d'écrire du code.
 
 **Pour le noyau pur (`src/core`) : écris les tests d'abord.** C'est là qu'est toute la logique difficile, et ces tests s'exécutent en millisecondes.
+
+**Interface : le catalogue suit le code.** Avant de créer un élément, cherche-le au catalogue (`docs/CHARTE-UI.md` §9) et réutilise-le. Un élément nouveau ou modifié met sa planche à jour (`docs/catalogue/README.md`). Jamais d'émoji : icônes au trait ou glyphes de texte (§10).
 
 **Avant de dire qu'une tâche est terminée :** `npm run typecheck && npm run lint && npm run test` passent. Sinon la tâche n'est pas terminée.
 

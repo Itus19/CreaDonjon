@@ -6,6 +6,8 @@ Ce fichier est **normatif** et **extrait du code réel** — chaque recette ci-d
 
 Court volontairement. Une charte de 800 lignes est une charte qu'on cesse de lire.
 
+**Le visuel vit dans le catalogue d'interface** ([canevas](https://claude.ai/artifact/LcTPxvcvSbg1TdMqyrJD3G), sources dans `docs/catalogue/`, ADR 0033) : chaque élément y est montré tel qu'il est codé, avec ses états (repos, survol, focus, désactivé…) et ses animations. Ce fichier dit la règle ; le catalogue montre l'apparence. L'index du §9 relie les deux. **Avant de créer un élément, cherche-le au catalogue ; un élément nouveau ou modifié met sa planche à jour** (`docs/catalogue/README.md`).
+
 ---
 
 ## 1. Pourquoi les contrôles sortent blancs
@@ -235,6 +237,8 @@ Quatre états, pas un. Un écran qui n'a que le cas nominal n'est pas fini.
 - [ ] Navigable au clavier : `Tab` atteint tout, `Échap` ferme ce qui est ouvert.
 - [ ] Les quatre états du §5 existent.
 - [ ] Lisible à 375 px de large.
+- [ ] Aucun émoji (§10) — icônes au trait ou glyphes de texte autorisés.
+- [ ] Chaque élément nouveau ou modifié a sa planche au catalogue (§9).
 
 ---
 
@@ -341,3 +345,49 @@ Le problème n'était donc pas l'indiscipline, et il n'appelait pas une refonte.
 D'où la méthode suivie ici, et qui vaut pour la suite : **mesurer avant de refondre.** Le recensement des 370 boutons a pris dix minutes et a ramené le chantier de « 700 boutons à convertir » à « 7 boutons à corriger ».
 
 Ce fichier rend la règle lisible. Le §7d la rendrait mécanique — et c'est ce qui marche vraiment, comme l'ont montré la règle ESLint sur `src/core` et celle sur le client `service_role`.
+
+---
+
+## 9. Le catalogue — où voir chaque élément
+
+Neuf planches, en deux rangées sur le canevas : les briques (1 à 7), puis les éléments d'écran riches (8, 9). Chaque section d'une planche porte une ancre (`#boutons`, `#jauges`…) et nomme le composant à utiliser.
+
+| Planche | Éléments |
+|---|---|
+| 1 · Fondations | jetons de couleur, typographie (Outfit, Geist, Geist Mono), rayons |
+| 2 · Boutons et champs | boutons (principal, secondaire, fantôme, destructeur, lien de suppression, rond à icône), champ, date et heure natives, `Dropdown`, `Checkbox`, interrupteur |
+| 3 · Onglets, puces, menus | `Tabs`, `BinderTabs`, puces, puces d'entité et de relation, `ActionsMenu`, en-tête de bloc et visibilité (œil), arborescence, rail du joueur, palette de commandes, radio |
+| 4 · Surfaces et retours | `ConfirmDialog`, panneaux et `EmptyState`, ascenseur, info-bulle, aperçu de renvoi, bulles de chat, bandeaux et badges, fenêtre flottante, pastille chrome |
+| 5 · Éléments d'écran | grille de disponibilités, curseur horaire, curseur natif, `Stepper`, bouton de dés et volet, barres, tiroir, chargement, texte de fiche |
+| 6 · Fiche de personnage | bouclier de CA, `StatBadge`, caractéristiques et sauvegardes, compétences et pastilles de maîtrise, `ActionButton`, `DieIcon`, emplacements de sort, ressources, carte d'objet, états, bouton de jet de monstre |
+| 7 · Mode solo | `JaugeCirculaire`, fiche compacte, fil |
+| 8 · Wiki visuel | épingles et calques de carte, arbre généalogique et graphe des relations, radars, frise |
+| 9 · Outils du MJ | suivi d'initiative, budget de rencontre, assistant de création, accueil et personnalisation |
+
+**Écarts relevés en le construisant**, à corriger par tickets (jamais en passe globale) :
+- émojis dans `InitiativeTracker.tsx`, `SpellSelectionStep.tsx` et trois pages MJ (⚙) — V3.1-18 ;
+- `MissingBlocksBanner.tsx` en ambre Tailwind en dur, pas un jeton ;
+- deux règles pour « une barre qui baisse » : accent/danger sur la fiche, accent/terracotta/danger sur l'initiative et les rencontres ;
+- aucun état « appuyé » (`:active`) propre sur les boutons — constaté, pas un défaut tant que personne n'en demande.
+
+## 10. Icônes et glyphes
+
+- **Icône = SVG au trait en ligne**, `stroke="currentColor"`, trait de 1,4 à 1,8, sans remplissage : elle prend la couleur du texte et suit tous les modes. Modèles : `EyeIcon.tsx`, `DieIcon.tsx`, la coche de `Checkbox.tsx`.
+- **Glyphes de texte autorisés** (ils prennent aussi la couleur du texte) : `▾ ▸ ▴ ▲ ▼ ◁ ▷ ✕ × ✓ ☰ ⋮ ⠿ ✦ ☐ ☑ − +`.
+- **Jamais d'émoji** (🎲 💀 🧑 ❓ 👁 ⚙…) : il est peint en couleur par le système, ne suit ni les jetons ni les modes, et change d'aspect d'un appareil à l'autre. ⚙ compte comme émoji : selon la police, il en devient un.
+- Un bouton qui n'a qu'une icône porte un `aria-label`.
+
+## 11. La coquille (repris de l'esquisse « verre minéral », §0 à §16)
+
+Ce que l'esquisse a vérifié contre le code et qui fait donc foi. Les propositions de refonte de la même esquisse (rail repliable, dé encoché, ailes du solo) ne sont **pas** des règles : elles vivent dans le ticket V3.1-19.
+
+- **Typographie** — trois familles chargées par `next/font` (`app/layout.tsx`), jamais Spectral/Inter/IBM Plex Mono malgré `specs/coquille-et-design.md` : **Geist** pour tout le texte (`--font-chrome` et `--font-narrative` pointent vers elle), **Outfit** pour les titres seulement (`.entity-title` 800, 30 px, `-0.02em` ; `.block-title` 700, 24 px), **Geist Mono** pour les valeurs du moteur (`.mech`, `1d6+3`, `CA 14`). Corps d'une fiche : 14 px, interligne 1,6.
+- **Fond** — l'image du monde floutée (`.app-backdrop`, flou `--bg-blur`, `scale(1.08)`) sous un voile `--scrim` fixe par mode. `--h`/`--c` sont calculés une fois par image, à l'import (`builtinBackgrounds.ts`).
+- **Fenêtre flottante** (`WindowFrame.tsx`) — coins 16 px, `bg-panel` + flou 20 px, `shadow-2xl`, barre de titre de 38 px en `bg-panel-sunken`, trois pastilles plates de 11 px (réduire `edge-strong`, agrandir `accent/75`, fermer `danger/75`). Le défilement appartient à la fenêtre, jamais au document (ADR 0025).
+- **Barre latérale MJ** (`Sidebar.tsx`) — panneau plein de 280 px, angles droits, collé au bord, `bg-panel-sunken`, sans flou propre. Sous 768 px : tiroir de 280 px sur voile, bouton ☰ fixe.
+- **Pastille chrome** (`ChromePill.tsx`) — radio et horloge, verre `bg-panel/90`, en haut à droite, sous les fenêtres maximisées.
+- **Coquille joueur** (`PlayerShell.tsx`) — rail de 80 px, sept destinations, jamais l'onglet MJ ; sous 768 px, barre d'onglets en bas.
+- **Wiki public** (`BookSkin.tsx`) — coquille de lecture, aucune commande, aucune donnée MJ dans le HTML servi. Sommaire nu de 256 px + colonne de 70ch, centrés ensemble. Fond par fiche (`.wiki-bg-backdrop`).
+- **Deux comportements seulement** : sous 768 px et à partir de 768 px. Une tablette en portrait reçoit la mise en page desktop — zone d'ombre connue (~490 px pour la fenêtre de fiche à 820 px), à trancher avec la refonte.
+- **Piège CSS** : une liste qui défile dans un conteneur dont la largeur change pose `overflow-y: auto` **et** `overflow-x: hidden`, sinon une barre horizontale apparaît pendant la transition.
+
