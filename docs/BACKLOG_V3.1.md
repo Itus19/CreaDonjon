@@ -1728,3 +1728,48 @@ réellement la coquille :
 (b) dalle Outils (dés + radio) ; (c) téléphone ; (d) ailes du solo. Chacun met
 à jour ses planches (Pastille chrome, Tiroir, Bouton de dés, Rail du joueur, et
 une planche « Rail repliable » à créer).
+
+---
+
+### V3.1-20 — Fenêtres du MJ en deux volets à onglets · `L` — **décidé le 1ᵉʳ octobre, à coder**
+
+**Constat.** Les fenêtres du MJ se déplacent librement, s'aimantent à une
+moitié d'écran contre un bord, se réduisent en bas, mais **ne se
+redimensionnent pas** ; elles s'ouvrent à 860 px, décalées en cascade. L'auteur
+veut que la place se répartisse toute seule.
+
+**Décision** (sur quatre propositions esquissées et vivantes dans « verre
+minéral », rangée « Fenêtres du MJ » : 1 tuiles à deux, 2 une grande + une
+pile, 3 deux volets à onglets, 4 une fiche + des vignettes) : **la 3**, avec
+son évolution faite tout de suite.
+
+- **Une fiche** prend toute la zone de travail.
+- **Une deuxième** ouvre un second volet, moitié-moitié ; le séparateur se fait
+  glisser, un double-clic le ramène au milieu.
+- **Au-delà**, une fiche ne remplace rien : elle s'ajoute **en onglet** dans le
+  volet actif (le dernier cliqué). Les onglets vivent dans la barre de titre du
+  volet, chacun avec son ×.
+- **Glisser un onglet** :
+  - sur l'autre volet → il y passe (c'est ainsi qu'on choisit ce qui s'affiche
+    de chaque côté) ;
+  - hors de la barre d'onglets, sur la moitié vide quand il n'y a qu'un volet →
+    il crée le second volet.
+- Un volet dont on ferme le dernier onglet disparaît ; l'autre reprend toute la
+  place.
+- Les pastilles restent : agrandir un volet le temps de lire, fermer.
+
+**Ce qui ne change pas** : chaque fiche reste dans l'adresse (`?avec=`, ADR
+0006/0011) — l'URL devra porter aussi le volet et l'onglet actif de chaque
+fiche, pour qu'un rechargement rende la même disposition. Sur téléphone, rien
+ne change (plein écran, une fiche à la fois).
+
+**À trancher en le codant** : la barre des fiches réduites (V2-K4) devient
+inutile si plus rien ne se réduit — onglets à la place. Un ADR remplacera la
+partie « fenêtres flottantes » de l'ADR 0006.
+
+**Critères d'acceptation**
+- [ ] Une, deux, trois fiches et plus : disposition conforme ci-dessus.
+- [ ] Glisser un onglet d'un volet à l'autre, et hors de la barre pour créer le second volet.
+- [ ] Séparateur glissable, double-clic au milieu.
+- [ ] Rechargement : même disposition (URL).
+- [ ] Catalogue mis à jour (planche « Fenêtre flottante » remplacée).
