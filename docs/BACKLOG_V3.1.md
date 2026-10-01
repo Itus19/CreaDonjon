@@ -1705,10 +1705,14 @@ réellement la coquille :
   s'adapte à la largeur de SA fenêtre (pas de l'écran) : sous ~640 px,
   caractéristiques au-dessus des onglets, en ligne de six. Planche
   « Question · le trou sur tablette » (la même fiche à 960, 540 et 680 px).
-- Une seule commande jauge + ± (demande de l'auteur) : planche « Question ·
-  une seule commande jauge + ± », cinq propositions vivantes (A ailes ±,
-  B moitiés de l'anneau, C capsule, D anneau + réglette −5/−1/+1/+5,
-  E pastilles accrochées) ; choix à faire. Dans la proposition de fiche à
+- ~~Une seule commande jauge + ±~~ — **tranché le 1ᵉʳ octobre : option E**
+  (sur cinq propositions, les autres retirées de l'esquisse) : trois pastilles
+  accrochées au bord droit de la jauge — ▲ ajoute, un champ d'écart au milieu
+  (« — » tant qu'il est vide), ▼ retire. Champ vide : ±1 ; champ rempli (250 XP,
+  7 dégâts) : ▲/▼ appliquent ce nombre, puis le champ se vide. Bornes : PV et
+  épuisement plafonnés, XP et charge non (charge en danger au-delà du maximum).
+  Planche « Décidé · jauge à commandes (option E) » : états + PV, XP, Charge,
+  Épuisement vivants. Reportée dans la proposition de fiche à jauges. Dans la proposition de fiche à
   jauges, l'Inspiration prend la taille exacte d'un badge (72 × 56 px), ▲▼
   intégrés.
 - Étendre les jauges circulaires à toutes les barres de progression : planche
