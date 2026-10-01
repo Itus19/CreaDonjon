@@ -1554,3 +1554,133 @@ l'affichage changent.
 - Pas de test d'intégration sur deux MJ : il ne tournerait pas sans base. La
   règle du dénominateur est testée dans le noyau ; les noms viennent d'une seule
   requête groupée sur `profiles`.
+
+---
+
+### V3.1-17 — Un catalogue d'interface visuel, et une charte qui y renvoie · `M` — **fait le 1ᵉʳ octobre**
+
+**Constat.** Les défauts d'esthétique revenaient sur des éléments que la charte
+ne décrivait pas (l'ascenseur de la grille du calendrier, la bulle de date du
+navigateur, le sélecteur de PJ qui se chevauchait) ou qu'on réécrivait à la main
+sans voir l'original. Une charte en mots ne suffit pas : il faut voir l'élément,
+ses états et ses animations, et y puiser pour créer les suivants. L'auteur avait
+amorcé `CHARTE-UI-verre-mineral.md` dans une autre session dans ce but.
+
+**Ce qui est fait** (ADR 0033) :
+- **Le catalogue** — canevas https://claude.ai/artifact/LcTPxvcvSbg1TdMqyrJD3G,
+  sources dans `docs/catalogue/` (neuf planches `.dc.html` + `canvas.json`).
+  Deux rangées : les briques (1 Fondations, 2 Boutons et champs, 3 Onglets,
+  puces, menus, 4 Surfaces et retours, 5 Éléments d'écran, 6 Fiche de
+  personnage, 7 Mode solo), puis les éléments d'écran riches (8 Wiki visuel,
+  9 Outils du MJ). Chaque section : la règle, le composant à utiliser, la
+  transition réelle, les états qui existent côte à côte, un exemplaire vivant
+  (« Rejouer » pour les animations), un sélecteur de mode (sombre, tamisé,
+  doux, clair, contraste élevé).
+- **Aucun style recopié** : `scripts/catalogue/build-css.mjs` compile
+  `app/globals.css` avec les planches comme source et dérive `.st-hover`,
+  `.st-focus`, `.st-active` des vraies règles `:hover`, `:focus-visible`,
+  `:active`. `app/globals.css` exclut `docs/` du scan Tailwind
+  (`@source not "../docs"`) pour que la feuille de l'application ne gonfle pas.
+- **La charte** (`docs/CHARTE-UI.md`) gagne trois sections : §9 l'index des
+  planches et les écarts relevés, §10 icônes et glyphes (jamais d'émoji), §11
+  la coquille — les sections 0 à 16 de « verre minéral », vérifiées contre le
+  code. Deux cases de plus à la vérification du §6. **Un seul fichier fait foi** :
+  « verre minéral » n'entre pas dans le dépôt ; ses propositions de refonte
+  (§17-18) deviennent V3.1-19.
+- **`CLAUDE.md`** : le catalogue dans le tableau des documents, et la règle
+  « avant de créer un élément, cherche-le ; un élément nouveau ou modifié met sa
+  planche à jour ; jamais d'émoji ».
+- **Mode d'emploi** : `docs/catalogue/README.md` (anatomie d'une section,
+  reconstruire le CSS, publier, limite de 8 000 px par planche).
+
+**Méthode, et ce qu'elle a appris.** Chaque planche a été écrite à partir des
+classes réelles des composants (relevées fichier par fichier), puis vérifiée
+dans un rendu local avec le vrai CSS. Deux reprises en route : une première
+version tenait sur une seule page et était coupée après 8 000 px (limite du
+canevas) ; une première passe n'avait parcouru que les composants partagés et
+la coquille — l'auteur a signalé l'oubli du bouclier de CA, des jauges du mode
+solo et des boutons de jet. L'inventaire complet a ajouté les planches 6 à 9.
+
+**Écarts relevés** (charte §9) : émojis (→ V3.1-18) ; `MissingBlocksBanner` en
+ambre Tailwind en dur ; deux règles de couleur pour une barre qui baisse
+(accent/danger sur la fiche, accent/terracotta/danger sur l'initiative et les
+rencontres) ; aucun état « appuyé » propre sur les boutons.
+
+**Au passage, sur « verre minéral »** : la radio du rail reste visible quand le
+rail se replie (seul le libellé disparaît), avec le point d'activité au centre
+de l'icône, vert en lecture, rouge à l'arrêt — corrigé dans l'esquisse (MJ et
+joueur, desktop et tablette).
+
+**Critères d'acceptation**
+- [x] Chaque élément d'interface réutilisable a sa section, avec les états qui existent dans le code.
+- [x] Le style vient du CSS compilé, jamais d'une copie (`build-css.mjs` produit la feuille publiée à l'octet près).
+- [x] La charte renvoie au catalogue ; `CLAUDE.md` impose de le tenir à jour.
+- [ ] À vérifier par l'auteur : les exemplaires vivants et le sélecteur de mode dans le canevas.
+
+---
+
+### V3.1-18 — Retirer les émojis de l'interface · `S`
+
+**Constat** (relevé pour V3.1-17) : des émojis en couleur, qui ne suivent ni
+les jetons ni les modes et changent d'aspect selon l'appareil.
+
+| Fichier | Émojis | Remplacement proposé |
+|---|---|---|
+| `components/shell/InitiativeTracker.tsx` | 🎲 (relancer l'initiative) | `DieIcon sides={20}` |
+| même fichier | 🧑 ❓ 💀 devant le nom (entité, personnalisé, monstre) | trois icônes au trait du même style que `EyeIcon` |
+| `components/blocks/characterCreatorSteps/SpellSelectionStep.tsx` | 👁 | `EyeIcon` |
+| `app/m/[worldSlug]/mj/personnalisation/page.tsx`, `publication/page.tsx`, `regles-actives/page.tsx` | ⚙ | icône d'engrenage au trait |
+
+Les glyphes de texte (`✕ ✓ ☰ ☐ ☑ ✦`, ~20 occurrences) restent : la charte §10
+les autorise.
+
+**Critères d'acceptation**
+- [ ] Plus aucun émoji dans `components/` ni `app/` (hors esquisses et commentaires).
+- [ ] Les icônes nouvelles sont au trait, `currentColor`, avec un `aria-label` sur les boutons qui n'ont qu'elles.
+- [ ] Planche 9 (Suivi d'initiative) mise à jour, la mention « écart à la charte » retirée ; §9 de la charte mis à jour.
+
+C'est le premier ticket qui suit la règle de V3.1-17 : il sert aussi à vérifier
+que le circuit « corriger le composant → mettre à jour la planche → mettre à
+jour la charte » tient.
+
+---
+
+### V3.1-19 — Refonte « verre minéral » : rail repliable, outils intégrés, ailes du solo · `L` — **à découper**
+
+Esquisse : https://claude.ai/artifact/EzWpfdYv6xP9H9gMp6L8Lm (huit fenêtres :
+MJ, joueur, solo en desktop ; MJ, joueur en tablette ; MJ, joueur en
+smartphone ; wiki public). Les sections 0 à 16 de son fichier descriptif sont
+entrées dans la charte (§11) ; restent les **propositions**, qui changent
+réellement la coquille :
+
+1. **Rail repliable** (`Sidebar.tsx`, `PlayerShell.tsx`) — flottant, coins
+   arrondis, marge au bord ; 204 px déployé ↔ 64 px replié
+   (`width 380ms cubic-bezier(.4,0,.2,1)`), libellés qui s'effacent (opacité
+   180-200 ms, `max-width` 260-320 ms). Poignée en onglet plaquée au bord droit
+   (16 × 44 px). Replié, l'arborescence s'ouvre en menu flottant au survol.
+   Toute liste du rail pose `overflow-y: auto` **et** `overflow-x: hidden`.
+2. **Dalle « Outils »** — le bouton de dés quitte sa place flottante
+   (`DiceRollPanel`) et s'encoche dans le bord supérieur d'une dalle en bas du
+   rail (48 px, anneau de 6 px couleur du panneau) ; la radio quitte la
+   pastille chrome pour cette dalle. **La radio reste visible rail replié**
+   (icône seule), point d'activité au centre de l'icône : vert en lecture,
+   rouge à l'arrêt. L'horloge n'est pas reprise.
+3. **Téléphone** — MJ : le rail devient un tiroir flottant, déjà déployé.
+   Joueur : la barre du bas devient flottante, le dé encoché dedans.
+4. **Mode solo** (`SoloShell.tsx`) — poignées de repli sur les bords de la
+   fenêtre du Jeu ; Monde disparaît à 0 px ; la Fiche repliée devient une bande
+   de 96 px de jauges (CA, PV, Niveau).
+
+**À trancher avant de coder** :
+- Le trou de 768 à 900 px (tablette en portrait) : grille de fiche adaptative,
+  ou rail replié plus tôt ?
+- Les jauges de la bande repliée : `JaugeCirculaire` existe déjà
+  (`FicheJouableEnTete.tsx`), contrairement à ce que dit l'esquisse. Mais la CA
+  n'a pas de maximum (d'où le bouclier) : la bande garde-t-elle le bouclier ?
+- Étendre les jauges circulaires à toutes les barres de progression (piste
+  ouverte par l'auteur) : décision de DA à prendre ici ou à part.
+
+**Découpage proposé** : (a) rail repliable MJ + joueur desktop/tablette ;
+(b) dalle Outils (dés + radio) ; (c) téléphone ; (d) ailes du solo. Chacun met
+à jour ses planches (Pastille chrome, Tiroir, Bouton de dés, Rail du joueur, et
+une planche « Rail repliable » à créer).
