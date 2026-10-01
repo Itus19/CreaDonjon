@@ -6,6 +6,7 @@ import {
   listUnclaimedCharactersForToken,
   resolveDestinationForInvitedUser,
   resolveInviteForJoin,
+  revokeInvite,
   setInvitePassword,
   verifyInvitePassword,
 } from "./campaignInvites";
@@ -337,6 +338,24 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
       expect(roles.get(secondCampaign.id)).toBe("gm");
     } finally {
       await admin.from("worlds").delete().eq("id", secondWorld.id);
+    }
+  });
+
+  it("revoquer un lien JOUEUR herite de l'ancien regime n'expulse pas qui s'en est servi (bug V3.1-15, migration 20261001140000)", async () => {
+    const player = await getReusableTestAccount(admin, "player");
+    const { invite } = await createCampaignInvite(ownerClient, { campaignId, worldId: null, intendedRole: "player", createdBy: ownerId });
+    // Ancien regime a usage unique (avant V3.1-10) : le lien joueur porte
+    // encore `claimed_by_user_id`.
+    await admin.from("campaign_invites").update({ claimed_by_user_id: player.id, claimed_name: "Joueuse d'avant" }).eq("id", invite.id);
+    await admin.from("campaign_members").upsert({ campaign_id: campaignId, user_id: player.id, role: "player" }, { onConflict: "campaign_id,user_id" });
+
+    try {
+      const result = await revokeInvite(ownerClient, invite.id);
+      expect(result).toMatchObject({ allowed: true, revoked: true, removedMember: false, releasedCharacter: false });
+      const { data: member } = await admin.from("campaign_members").select("user_id").eq("campaign_id", campaignId).eq("user_id", player.id).maybeSingle();
+      expect(member).not.toBeNull();
+    } finally {
+      await admin.from("campaign_members").delete().eq("campaign_id", campaignId).eq("user_id", player.id);
     }
   });
 });
