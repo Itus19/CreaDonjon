@@ -1681,7 +1681,7 @@ lots le sont.
 | e | Fiche de personnage à jauges circulaires, commande E | décidé, à coder |
 | f | Tablette : la fiche s'adapte à sa fenêtre (piste B) | décidé, à coder |
 | g | Fenêtres du MJ en deux volets à onglets → **V3.1-20** | décidé, à coder |
-| h | Page d'accueil : répartition des mondes par rôle (MJ ici, joueur là), compte superadmin et utilisateur | **cinq propositions esquissées, à trancher** |
+| h | Page d'accueil en tableau de bord, rail joueur, « Nouveau monde » à trois choix | décidé, à coder — style d'onglets du panneau à trancher |
 | — | Jauges de l'initiative et du budget de rencontre | à trancher |
 
 Le détail de chaque décision suit.
@@ -1740,12 +1740,27 @@ réellement la coquille :
   CA reste un bouclier, les constantes restent des badges, l'Inspiration prend
   la taille d'un badge. Planche « fiche avec jauges circulaires ». L'initiative
   et le budget de rencontre ne sont pas encore tranchés.
-- **Page d'accueil (lot h)** — un même compte peut être MJ dans un monde et
-  joueur dans un autre ; les outils proposés à droite dépendent du rôle dans le
-  monde sélectionné, pas du compte. Cinq propositions vivantes dans l'esquisse,
-  rangée « Page d'accueil » : 1 deux colonnes par rôle, 2 cartes + panneau
-  glissant, 3 tableau de bord, 4 rail de mondes, 5 liste en accordéon. Chacune a
-  un interrupteur superadmin. À trancher par l'auteur.
+- ~~Page d'accueil (lot h)~~ — **tranché le 1ᵉʳ octobre : proposition 3,
+  tableau de bord** (sur cinq, les autres retirées de l'esquisse). Un même
+  compte est MJ dans un monde et joueur dans un autre : le panneau de droite
+  montre les outils du rôle tenu dans le monde choisi, pas ceux du compte.
+  - Rail : celui du joueur V4 (repliable, poignée). Dalle navigation : Mondes,
+    Compte, Administration (superadmin seulement), Déconnexion en pied. Dalle
+    Outils : les dés seuls, la radio appartenant à une campagne.
+  - En haut : prochaines séances de tous les mondes, et « Reprendre » sur la
+    dernière visite (donnée nouvelle à mémoriser).
+  - Bouton « Nouveau monde » agrandi, à gauche, au-dessus des colonnes. Il
+    ouvre trois choix : **Mener une partie** (nom, ruleset, créer ou
+    importer), **Jouer en solo** (nom, ruleset, puis le personnage),
+    **Rejoindre une table** (coller un lien d'invitation : ne crée rien, mais
+    donne enfin une place à ce lien).
+  - Colonnes « Je mène » (+ « En solo ») et « Je joue » alignées sur une même
+    ligne de titres ; panneau du monde à droite.
+  - **Reste à trancher** : le style des onglets du panneau MJ (Journal,
+    Joueurs, Accès, Réglages), qui remplace les onglets « classeur ». Cinq
+    styles sur la planche « onglets du panneau de monde » : A pilule glissante,
+    B soulignement, C pastilles à icônes, D liste latérale, E dalles résumé.
+    Essayables aussi dans la planche de l'accueil.
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
 
