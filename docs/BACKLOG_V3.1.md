@@ -987,3 +987,135 @@ second.
   quand aucun n'est disponible, au lieu d'un message bloquant sans issue.
 - [ ] Une joueuse qui a déjà un PJ (avec ou sans fiche) n'est pas affectée —
   comportement actuel inchangé pour ce cas.
+
+---
+
+### V3.1-15 — La Gestion de campagne illisible : invitations en haut, une carte par personne · `M`
+
+Constaté le 1ᵉʳ octobre par l'auteur, captures à l'appui : la fenêtre « Gestion
+de campagne » (`CampaignDetail.tsx` + `InviteLinkPanel.tsx`) est « assez
+illisible, avec une interface peu claire ». Elle empile cinq listes sans lien
+visible entre elles — Membres, À la table, Liens joueurs, Liens MJ en attente,
+Personnages attribués, Octrois d'édition — et c'est au MJ de recouper de tête
+qui joue quoi et qui peut modifier quoi.
+
+**Esquisse retenue : la piste A**, sur le canevas
+[Gestion de campagne — esquisses](https://claude.ai/artifact/KvM1bxgB61kUaJT2n1CxT2)
+(artboard « A — Invitations en haut, une fiche par personne », fichier
+`Main.dc.html`). Quatre pistes y ont été comparées le 1ᵉʳ octobre : A (cartes
+par personne), B (liste à gauche, détail à droite), C (tableau fiches ×
+joueurs), D (onglets). **A l'emporte** : elle répond d'un coup d'œil à « qui
+est à la table, et qu'est-ce que chacun peut toucher » — et sa seule faiblesse,
+s'allonger avec le nombre de joueurs, ne joue pas ici : une table dépasse
+rarement 4-5 joueuses (auteur). Comme pour V2.1-24/25, **l'esquisse fait foi**
+pour la disposition ; le code fait foi pour tout le reste (jetons, `Dropdown`,
+`ActionsMenu`, `ConfirmDialog`).
+
+**Ce que l'écran actuel cache, et que le ticket corrige** — relevé sur les
+captures, chacun vérifié dans le code :
+
+1. **« Révoquer » veut dire deux choses.** Dans « Membres », il retire la
+   personne de la campagne et libère son personnage (`revokeMember`,
+   `ConfirmDialog` « Révoquer ce membre ? ») ; dans « Personnages attribués »,
+   il libère seulement le PJ (`revokeCharacterClaim`). Même mot, même couleur,
+   deux portées. Deux libellés distincts : **« Retirer de la campagne »** et
+   **« Libérer le personnage »**.
+2. **« Forcer une réinitialisation » est répété sur chaque ligne** comme un
+   lien de texte, alors que c'est un geste rare. Il descend dans le menu ⋮ de
+   la carte, avec « Retirer de la campagne ». Une **demande de
+   réinitialisation en attente** (`passwordResetRequests`) reste en revanche
+   visible sur la carte, sous forme d'étiquette — c'est la seule raison
+   d'aller chercher ce geste.
+3. **Une même personne est dispersée** entre « Membres » (son compte),
+   « Personnages attribués » (son PJ) et « Octrois d'édition » (ses fiches).
+   La carte les réunit.
+4. **« Personnages attribués » mélange PJ et PNJ sans joueur.** Les PJ
+   passent sur les cartes ; les PNJ de la campagne (`is_pc: false`, sans
+   `user_id`) vont dans un encart à part, en bas.
+5. **Deux comptes portent le même nom** (« Tamara » deux fois, l'un sans
+   personnage ni fiche). Rien à l'écran ne permet de les distinguer — voir
+   « Question ouverte » ci-dessous.
+
+**La disposition (piste A)**
+
+- **En haut, un panneau « Invitations »** : la création d'une invitation sur
+  une ligne (courriel *ou* lien, rôle, mot de passe optionnel, un seul bouton
+  principal), puis les liens actifs en lignes calmes — rôle, date de création,
+  étiquette « protégé », `Copier` visible, le reste dans ⋮ (`InviteRow`
+  existant, déjà ainsi depuis V2.1-25). Le compte des liens dans l'en-tête du
+  panneau (« 5 liens joueurs actifs · 0 lien MJ en attente »). L'état vide
+  « Aucun lien MJ en attente » se réduit à cette mention : il n'a pas à
+  occuper un grand cadre pointillé.
+- **« À la table » : les MJ sur une ligne** (nom, étiquette MJ, et ce qu'ils
+  ont en plus — ex. « Peut éditer : Prologue »). Un MJ peut déjà tout
+  modifier : une carte entière pour lui serait du bruit.
+- **Une carte par compte joueur**, en grille (3 colonnes sur grand écran,
+  1 sur téléphone) :
+  - en-tête : initiale, nom, rôle, menu ⋮ du compte (« Forcer une
+    réinitialisation », « Retirer de la campagne », tous deux confirmés) ;
+  - **le PJ joué**, mis en avant (fond d'accent), avec son propre ⋮ («
+    Ouvrir la fiche », « Libérer le personnage ») — ou, sans PJ, une zone
+    pointillée « Aucun personnage — attribuer un PJ » qui ouvre le choix ;
+  - **« Peut aussi modifier »** : les fiches octroyées en étiquettes, chacune
+    retirable par ×, puis « + Partager une fiche » (le `Dropdown` de fiches
+    existant, à l'endroit de la personne — on ne choisit plus le joueur dans
+    un second menu, il est déjà donné par la carte).
+- **En bas, « PNJ de la campagne · sans joueur »** : les PNJ attribués en
+  étiquettes, et « + Ajouter un PNJ » (le geste « Attribuer » actuel, cas
+  « PNJ (sans joueur) »).
+
+**Étapes**
+
+1. Relire `CampaignDetail.tsx` et `InviteLinkPanel.tsx` sur `master` (tous
+   deux retouchés par V3.1-10) et lister chaque geste existant ; **aucun ne
+   disparaît**, chacun reçoit une place dans la carte, le panneau ou l'encart.
+2. Regrouper côté client les données que `/api/campaigns/[id]` renvoie déjà
+   (`members`, `characters`, `grants`, `displayNames`,
+   `passwordResetRequests`) en une vue par personne. **Aucune route ni
+   requête nouvelle** : si ce regroupement semble en demander une, s'arrêter
+   et le dire. Le regroupement est une fonction pure, testée.
+3. Composants : `CampaignPersonCard` (une carte), le panneau Invitations
+   (réorganisation de `InviteLinkPanel`, `InviteRow` gardé tel quel),
+   l'encart PNJ. `CampaignDetail` les assemble.
+4. Libellés : « Retirer de la campagne » / « Libérer le personnage » /
+   « Partager une fiche » ; textes des `ConfirmDialog` relus pour dire chacun
+   sa portée exacte.
+5. Vérifier en navigateur sur la campagne réelle (La Croisade des Ombres),
+   aux largeurs bureau et 375 px, dans les quatre modes de la charte.
+
+**Critères**
+
+- [ ] La fenêtre suit la piste A de l'esquisse : Invitations en haut, MJ sur
+  une ligne, une carte par compte joueur, PNJ sans joueur en bas.
+- [ ] Chaque geste de l'écran actuel existe encore, et un seul endroit le
+  porte — vérifié contre la liste de l'étape 1.
+- [ ] « Révoquer » n'apparaît plus pour deux portées différentes : « Retirer
+  de la campagne » et « Libérer le personnage » sont distincts, et chacun
+  confirme en disant ce qu'il fait.
+- [ ] « Forcer une réinitialisation » n'est plus répété sur chaque ligne ; une
+  demande de réinitialisation en attente reste visible sur la carte concernée.
+- [ ] Partager une fiche se fait depuis la carte de la personne, sans choisir
+  de joueur dans un second menu.
+- [ ] Aucune nouvelle route, aucune migration : uniquement de la présentation
+  sur les données déjà renvoyées.
+- [ ] Lisible à 375 px de large ; les quatre modes et le contraste élevé
+  testés (charte §6).
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+
+**Question ouverte, à trancher par l'auteur avant l'étape 3 : comment
+distinguer deux comptes de même nom ?** Le tag à 4 chiffres de V3.1-10 serait
+la réponse naturelle, mais V3.1-10 a posé qu'il n'est **jamais affiché
+ailleurs que dans les réglages du compte concerné** (commentaire de
+`profiles.handle_tag`, migration `20260929130000`). Trois voies : l'afficher
+au seul MJ de la campagne (rouvre cette règle), montrer le courriel quand il
+existe (un compte tag n'en a pas forcément), ou se contenter d'une étiquette
+« même nom qu'un autre compte » et laisser le MJ régler le doublon — c'est ce
+que montre l'esquisse, faute de mieux. Dans le cas présent, le second
+« Tamara » n'a ni personnage ni fiche : c'est probablement un doublon à
+retirer, ce que la carte rend désormais visible.
+
+**Hors périmètre, et dit comme tel** : les cinq liens joueurs réutilisables
+se ressemblent tous (seule leur date les distingue). Un seul suffit sans
+doute ; les révoquer est un geste du MJ, pas un changement d'écran. Les
+nommer (« lien Discord », « lien table du jeudi ») serait une fonctionnalité
+neuve, à rouvrir si le besoin se confirme.
