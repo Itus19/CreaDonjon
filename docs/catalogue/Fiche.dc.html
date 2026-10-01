@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Catalogue — Fiche de personnage</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/c99a8dfeda2eaa39f291c88d383c62bd">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600&amp;family=Outfit:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+:root{--font-geist-sans:'Geist';--font-outfit:'Outfit';--font-geist-mono:'Geist Mono';}
+body{margin:0}
+a{color:inherit}
+code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
+</style>
+</helmet>
+<div class="wiki-bg-scope cat-scope bg-bg font-chrome text-ink" data-mode="{{modeAttr}}" data-contrast="{{contrastAttr}}">
+<header class="sticky top-0 z-30 border-b border-edge backdrop-blur-[var(--blur)]" style="background: linear-gradient(var(--panel), var(--panel)), var(--bg)">
+<div class="mx-auto flex max-w-[1200px] flex-col gap-3 px-6 py-4">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div><h1 class="font-display text-2xl font-extrabold text-ink" style="letter-spacing:-0.02em">Catalogue d'interface — Fiche de personnage</h1><p class="text-xs text-ink-muted">La fiche jouable : statistiques, jets, inventaire.</p></div>
+<div class="flex items-center gap-2"><span class="text-xs text-ink-muted">Mode</span>
+<div class="flex items-center gap-1 rounded-full border border-edge p-0.5 text-xs">
+<sc-for list="{{modes}}" as="m" hint-placeholder-count="5"><button type="button" onClick="{{m.pick}}" class="rounded-full px-3 py-1 text-center transition-colors {{m.cls}}">{{m.label}}</button></sc-for>
+</div></div>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<nav class="flex flex-wrap items-center gap-1 rounded-full border border-edge p-0.5" aria-label="Planches du catalogue"><a href="Main.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Fondations</a><a href="Controles.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Boutons et champs</a><a href="Navigation.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Onglets, puces, menus</a><a href="Surfaces.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Surfaces et retours</a><a href="Ecrans.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Éléments d'écran</a><a href="Fiche.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors bg-panel-raised text-ink">Fiche de personnage</a><a href="Solo.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Mode solo</a><a href="WikiVisuel.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Wiki visuel</a><a href="OutilsMJ.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Outils du MJ</a></nav>
+<nav class="flex flex-wrap gap-1.5" aria-label="Sections"><a href="#bouclier" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Bouclier, badges</a><a href="#caracs" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Caractéristiques</a><a href="#competences" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Compétences</a><a href="#jets" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Boutons de jet</a><a href="#icones-des" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Icônes de dés</a><a href="#emplacements" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Emplacements</a><a href="#objet" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Carte d'objet</a><a href="#fiche-divers" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">États, PV/XP</a><a href="#jet-monstre" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Jet de monstre</a></nav>
+</div>
+</div>
+</header>
+<main class="mx-auto flex max-w-[1200px] flex-col gap-6 px-6 pb-16 pt-6">
+
+<div id="g-fiche" class="mt-6 flex scroll-mt-28 flex-col gap-1">
+<h2 class="font-display text-3xl font-extrabold text-ink" style="letter-spacing:-0.02em">Fiche de personnage</h2>
+<p class="text-sm text-ink-muted">La fiche jouable : statistiques, jets, inventaire.</p>
+</div>
+<section id="bouclier" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Bouclier de CA et badges de statistique</h2>
+<span class="text-xs text-ink-muted">CharacterSheetHeader.tsx (StatBadge) · FicheJouableEnTete.tsx (Bouclier)</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">La CA est un bouclier découpé (<code>clip-path</code>) à bordure accent : une classe d'armure n'a pas de maximum, donc jamais d'anneau. Les autres statistiques sont des badges de même hauteur (libellé au-dessus, encadré de 56 px). Un badge cliquable (Initiative) lance un jet et prend une bordure accent au survol ; un badge en alerte passe en <code>--danger</code>.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">aucun (survol : changement instantané)</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Bouclier · fiche</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex w-12 shrink-0 flex-col items-center gap-1"><span class="flex h-8 items-end justify-center text-xs font-bold uppercase tracking-wide text-ink-muted">CA</span><div class="relative flex h-14 w-12 items-center justify-center border-2 border-accent bg-panel-raised" style="clip-path: polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)"><span class="text-xl font-bold text-ink">14</span></div></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Bouclier · solo</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-center gap-0.5"><div class="flex h-12 w-9 items-center justify-center border-2 border-accent bg-panel-raised" style="clip-path: polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)"><span class="text-sm font-bold text-ink">14</span></div><span class="text-xs text-ink-muted">CA</span></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Badge</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex w-[4.5rem] shrink-0 flex-col items-center gap-1"><span class="flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide text-ink-muted">Maîtrise</span><div class="flex h-14 w-full flex-col items-center justify-center rounded-md border border-edge bg-panel-raised "><span class="text-base font-semibold leading-tight text-ink">+2</span></div></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Badge avec sous-ligne</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex w-[4.5rem] shrink-0 flex-col items-center gap-1"><span class="flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide text-ink-muted">Vitesse</span><div class="flex h-14 w-full flex-col items-center justify-center rounded-md border border-edge bg-panel-raised "><span class="text-base font-semibold leading-tight text-ink">9 m</span><span class="text-xs leading-tight text-ink-muted">6 cases</span></div></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Badge cliquable</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex w-[4.5rem] shrink-0 flex-col items-center gap-1"><span class="flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide text-ink-muted">Initiative</span><button type="button" class="w-full" aria-label="Lancer Initiative"><div class="flex h-14 w-full flex-col items-center justify-center rounded-md border border-edge bg-panel-raised cursor-pointer hover:border-accent "><span class="text-base font-semibold leading-tight text-ink">+3</span></div></button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Badge cliquable · survol</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex w-[4.5rem] shrink-0 flex-col items-center gap-1"><span class="flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide text-ink-muted">Initiative</span><button type="button" class="w-full" aria-label="Lancer Initiative"><div class="flex h-14 w-full flex-col items-center justify-center rounded-md border border-edge bg-panel-raised cursor-pointer hover:border-accent st-hover"><span class="text-base font-semibold leading-tight text-ink">+3</span></div></button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Badge en alerte</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex w-[4.5rem] shrink-0 flex-col items-center gap-1"><span class="flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide text-danger">Épuisement</span><div class="flex h-14 w-full flex-col items-center justify-center rounded-md border border-danger/60 bg-danger/10 "><span class="text-base font-semibold leading-tight text-danger">2</span></div></div></div>
+</div></div>
+
+</section>
+<section id="caracs" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Caractéristiques et sauvegardes</h2>
+<span class="text-xs text-ink-muted">PlayableCharacterSheet.tsx</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Fiche complète : une tuile par caractéristique, libellé en accent, modificateur cliquable (test), score de base modifiable, pastille de sauvegarde. Sauvegarde maîtrisée : pastille accent pleine.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">aucun</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Sauvegarde non maîtrisée</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center" style="width: 96px"><span class="text-[10px] font-bold uppercase tracking-widest text-accent">FOR</span><button type="button" class="text-xl font-bold text-ink hover:text-accent">+1</button><input type="number" value="12" aria-label="Score" class="w-10 rounded-full border border-edge bg-panel-sunken px-1 py-0.5 text-center text-xs text-ink-muted outline-none [appearance:textfield]" /><button type="button" class="flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold hover:border-accent border-edge text-ink-muted"><span class="h-1.5 w-1.5 rounded-full bg-edge" aria-hidden="true"></span>Sauv. +1</button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Sauvegarde maîtrisée</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center" style="width: 96px"><span class="text-[10px] font-bold uppercase tracking-widest text-accent">DEX</span><button type="button" class="text-xl font-bold text-ink hover:text-accent">+3</button><input type="number" value="16" aria-label="Score" class="w-10 rounded-full border border-edge bg-panel-sunken px-1 py-0.5 text-center text-xs text-ink-muted outline-none [appearance:textfield]" /><button type="button" class="flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold hover:border-accent border-accent bg-accent/20 text-accent"><span class="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true"></span>Sauv. +3</button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol du modificateur</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center" style="width: 96px"><span class="text-[10px] font-bold uppercase tracking-widest text-accent">CON</span><button type="button" class="text-xl font-bold text-ink hover:text-accent st-hover">+2</button><input type="number" value="14" aria-label="Score" class="w-10 rounded-full border border-edge bg-panel-sunken px-1 py-0.5 text-center text-xs text-ink-muted outline-none [appearance:textfield]" /><button type="button" class="flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold hover:border-accent border-edge text-ink-muted"><span class="h-1.5 w-1.5 rounded-full bg-edge" aria-hidden="true"></span>Sauv. +2</button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol de la sauvegarde</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center" style="width: 96px"><span class="text-[10px] font-bold uppercase tracking-widest text-accent">SAG</span><button type="button" class="text-xl font-bold text-ink hover:text-accent">+0</button><input type="number" value="10" aria-label="Score" class="w-10 rounded-full border border-edge bg-panel-sunken px-1 py-0.5 text-center text-xs text-ink-muted outline-none [appearance:textfield]" /><button type="button" class="flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold hover:border-accent border-edge text-ink-muted st-hover"><span class="h-1.5 w-1.5 rounded-full bg-edge" aria-hidden="true"></span>Sauv. +0</button></div></div>
+</div></div>
+
+</section>
+<section id="competences" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Compétences et pastilles de maîtrise</h2>
+<span class="text-xs text-ink-muted">PlayableCharacterSheet.tsx</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Une ligne cliquable par compétence (lance le jet, passe en accent au survol), précédée d'une pastille de 8 px qui dit le niveau de maîtrise. À la création, la pastille devient un choix (cercle épais à cliquer).</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">aucun</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Non maîtrisée</span>
+<div class="flex min-h-[64px] items-center rounded-lg bg-panel-sunken px-4 py-4"><div class="flex w-full items-center gap-2 text-sm"><span class="flex h-4 w-4 shrink-0 items-center justify-center"><span class="h-2 w-2 rounded-full border border-edge bg-transparent"></span></span><button type="button" class="flex flex-1 items-center gap-2 text-left hover:text-accent"><span class="flex-1 text-ink">Arcanes</span><span class="text-[10px] uppercase text-ink-muted">INT</span><span class="w-8 text-right font-medium text-ink">+0</span></button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Maîtrisée</span>
+<div class="flex min-h-[64px] items-center rounded-lg bg-panel-sunken px-4 py-4"><div class="flex w-full items-center gap-2 text-sm"><span class="flex h-4 w-4 shrink-0 items-center justify-center"><span class="h-2 w-2 rounded-full border border-accent bg-accent/40"></span></span><button type="button" class="flex flex-1 items-center gap-2 text-left hover:text-accent"><span class="flex-1 text-ink">Discrétion</span><span class="text-[10px] uppercase text-ink-muted">DEX</span><span class="w-8 text-right font-medium text-ink">+5</span></button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Expertise</span>
+<div class="flex min-h-[64px] items-center rounded-lg bg-panel-sunken px-4 py-4"><div class="flex w-full items-center gap-2 text-sm"><span class="flex h-4 w-4 shrink-0 items-center justify-center"><span class="h-2 w-2 rounded-full bg-accent"></span></span><button type="button" class="flex flex-1 items-center gap-2 text-left hover:text-accent"><span class="flex-1 text-ink">Escamotage</span><span class="text-[10px] uppercase text-ink-muted">DEX</span><span class="w-8 text-right font-medium text-ink">+7</span></button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol</span>
+<div class="flex min-h-[64px] items-center rounded-lg bg-panel-sunken px-4 py-4"><div class="flex w-full items-center gap-2 text-sm"><span class="flex h-4 w-4 shrink-0 items-center justify-center"><span class="h-2 w-2 rounded-full border border-accent bg-accent/40"></span></span><button type="button" class="flex flex-1 items-center gap-2 text-left hover:text-accent st-hover"><span class="flex-1 text-ink">Discrétion</span><span class="text-[10px] uppercase text-ink-muted">DEX</span><span class="w-8 text-right font-medium text-ink">+5</span></button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">À choisir</span>
+<div class="flex min-h-[64px] items-center rounded-lg bg-panel-sunken px-4 py-4"><div class="flex w-full items-center gap-2 text-sm"><span class="flex h-4 w-4 shrink-0 items-center justify-center"><span class="h-2 w-2 rounded-full border-2 border-ink bg-transparent"></span></span><button type="button" class="flex flex-1 items-center gap-2 text-left hover:text-accent"><span class="flex-1 text-ink">Perspicacité</span><span class="text-[10px] uppercase text-ink-muted">SAG</span><span class="w-8 text-right font-medium text-ink">+1</span></button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Choix complet</span>
+<div class="flex min-h-[64px] items-center rounded-lg bg-panel-sunken px-4 py-4"><div class="flex w-full items-center gap-2 text-sm"><span class="flex h-4 w-4 shrink-0 items-center justify-center"><span class="h-2 w-2 rounded-full border border-edge bg-transparent opacity-40"></span></span><button type="button" class="flex flex-1 items-center gap-2 text-left hover:text-accent"><span class="flex-1 text-ink">Histoire</span><span class="text-[10px] uppercase text-ink-muted">INT</span><span class="w-8 text-right font-medium text-ink">+0</span></button></div></div>
+</div></div>
+
+</section>
+<section id="jets" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Boutons de jet</h2>
+<span class="text-xs text-ink-muted">InventoryPanel.tsx (ActionButton) · ActionsTab.tsx</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Onglet Actions et Inventaire : une pastille pleine largeur avec l'icône du dé, le verbe, le détail de la formule et la formule résolue à droite. L'action principale d'une carte (l'attaque) est teintée accent ; les autres restent neutres. Au-dessus, le choix du prochain jet (normal, avantage, désavantage).</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">couleurs, 150 ms, cubic-bezier(0.4, 0, 0.2, 1) (<code>transition-colors</code>)</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Principal</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-full border py-1.5 pl-2 pr-3 text-left text-ink transition-colors disabled:opacity-50 border-accent bg-accent/10 hover:bg-accent/20 " style="max-width: 260px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-7 w-7 shrink-0 text-accent"><path d="M12 1.6 21.6 7v10L12 22.4 2.4 17V7z"></path><path d="M12 6.2 18 16.4H6z"></path><path d="M12 1.6v4.6M2.4 7l3.6 9.4M21.6 7 18 16.4"></path></svg><span class="flex min-w-0 flex-col"><span class="truncate text-xs font-semibold leading-tight">Attaquer</span><span class="mech truncate text-ink-muted" style="font-size: 0.625rem">1d20 + DEX + maîtrise</span></span><span class="mech ml-auto shrink-0 pl-1" style="font-size: 1rem">1d20+5</span></button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Principal · survol</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-full border py-1.5 pl-2 pr-3 text-left text-ink transition-colors disabled:opacity-50 border-accent bg-accent/10 hover:bg-accent/20 st-hover" style="max-width: 260px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-7 w-7 shrink-0 text-accent"><path d="M12 1.6 21.6 7v10L12 22.4 2.4 17V7z"></path><path d="M12 6.2 18 16.4H6z"></path><path d="M12 1.6v4.6M2.4 7l3.6 9.4M21.6 7 18 16.4"></path></svg><span class="flex min-w-0 flex-col"><span class="truncate text-xs font-semibold leading-tight">Attaquer</span><span class="mech truncate text-ink-muted" style="font-size: 0.625rem">1d20 + DEX + maîtrise</span></span><span class="mech ml-auto shrink-0 pl-1" style="font-size: 1rem">1d20+5</span></button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Neutre</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-full border py-1.5 pl-2 pr-3 text-left text-ink transition-colors disabled:opacity-50 border-edge hover:bg-panel " style="max-width: 260px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-7 w-7 shrink-0 text-ink-muted"><path d="M12 1.6 21 12l-9 10.4L3 12z"></path><path d="M3 12h18M12 12v10.4"></path></svg><span class="flex min-w-0 flex-col"><span class="truncate text-xs font-semibold leading-tight">Dégâts</span><span class="mech truncate text-ink-muted" style="font-size: 0.625rem">1d8 + DEX</span></span><span class="mech ml-auto shrink-0 pl-1" style="font-size: 1rem">1d8+3</span></button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Neutre · survol</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-full border py-1.5 pl-2 pr-3 text-left text-ink transition-colors disabled:opacity-50 border-edge hover:bg-panel st-hover" style="max-width: 260px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-7 w-7 shrink-0 text-ink-muted"><path d="M12 1.6 21 12l-9 10.4L3 12z"></path><path d="M3 12h18M12 12v10.4"></path></svg><span class="flex min-w-0 flex-col"><span class="truncate text-xs font-semibold leading-tight">Dégâts</span><span class="mech truncate text-ink-muted" style="font-size: 0.625rem">1d8 + DEX</span></span><span class="mech ml-auto shrink-0 pl-1" style="font-size: 1rem">1d8+3</span></button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Désactivé (plus d'emplacement)</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" disabled="" class="flex min-h-11 w-full items-center gap-2 rounded-full border py-1.5 pl-2 pr-3 text-left text-ink transition-colors disabled:opacity-50 border-edge hover:bg-panel " style="max-width: 260px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-7 w-7 shrink-0 text-ink-muted"><path d="M12 1.8 21.6 7.3v9.4L12 22.2 2.4 16.7V7.3z"></path><path d="M12 12.1V1.8M12 12.1 2.4 16.7M12 12.1l9.6 4.6"></path></svg><span class="flex min-w-0 flex-col"><span class="truncate text-xs font-semibold leading-tight">Lancer</span><span class="mech truncate text-ink-muted" style="font-size: 0.625rem">emplacements</span></span><span class="mech ml-auto shrink-0 pl-1" style="font-size: 1rem">0/2</span></button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Focus clavier</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-full border py-1.5 pl-2 pr-3 text-left text-ink transition-colors disabled:opacity-50 border-accent bg-accent/10 hover:bg-accent/20 st-focus" style="max-width: 260px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-7 w-7 shrink-0 text-accent"><path d="M12 1.6 21.6 7v10L12 22.4 2.4 17V7z"></path><path d="M12 6.2 18 16.4H6z"></path><path d="M12 1.6v4.6M2.4 7l3.6 9.4M21.6 7 18 16.4"></path></svg><span class="flex min-w-0 flex-col"><span class="truncate text-xs font-semibold leading-tight">Attaquer</span><span class="mech truncate text-ink-muted" style="font-size: 0.625rem">1d20 + DEX + maîtrise</span></span><span class="mech ml-auto shrink-0 pl-1" style="font-size: 1rem">1d20+5</span></button></div>
+</div></div><div class="flex items-center gap-1 text-xs"><span class="text-ink-muted">Prochain jet :</span><button type="button" class="rounded-full border px-2 py-0.5 border-edge text-ink-muted">Désavantage</button><button type="button" class="rounded-full border px-2 py-0.5 border-accent text-accent">Normal</button><button type="button" class="rounded-full border px-2 py-0.5 border-edge text-ink-muted">Avantage</button></div>
+<div class="flex flex-col gap-2 rounded-xl border border-dashed border-edge-strong p-4">
+<span class="text-xs font-semibold uppercase tracking-wider text-accent">À essayer</span>
+<div class="flex flex-col gap-3"><div class="flex items-center gap-1 text-xs"><span class="text-ink-muted">Prochain jet :</span><sc-for list="{{advItems}}" as="a" hint-placeholder-count="3"><button type="button" onClick="{{a.pick}}" class="rounded-full border px-2 py-0.5 {{a.cls}}">{{a.label}}</button></sc-for></div>
+<div class="grid gap-2" style="grid-template-columns: repeat(2, minmax(0, 260px))"><button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-full border py-1.5 pl-2 pr-3 text-left text-ink transition-colors disabled:opacity-50 border-accent bg-accent/10 hover:bg-accent/20 " style="max-width: 260px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-7 w-7 shrink-0 text-accent"><path d="M12 1.6 21.6 7v10L12 22.4 2.4 17V7z"></path><path d="M12 6.2 18 16.4H6z"></path><path d="M12 1.6v4.6M2.4 7l3.6 9.4M21.6 7 18 16.4"></path></svg><span class="flex min-w-0 flex-col"><span class="truncate text-xs font-semibold leading-tight">Attaquer</span><span class="mech truncate text-ink-muted" style="font-size: 0.625rem">1d20 + DEX + maîtrise</span></span><span class="mech ml-auto shrink-0 pl-1" style="font-size: 1rem">1d20+5</span></button><button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-full border py-1.5 pl-2 pr-3 text-left text-ink transition-colors disabled:opacity-50 border-edge hover:bg-panel " style="max-width: 260px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-7 w-7 shrink-0 text-ink-muted"><path d="M12 1.6 21 12l-9 10.4L3 12z"></path><path d="M3 12h18M12 12v10.4"></path></svg><span class="flex min-w-0 flex-col"><span class="truncate text-xs font-semibold leading-tight">Dégâts</span><span class="mech truncate text-ink-muted" style="font-size: 0.625rem">1d8 + DEX</span></span><span class="mech ml-auto shrink-0 pl-1" style="font-size: 1rem">1d8+3</span></button></div></div>
+</div>
+</section>
+<section id="icones-des" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Icônes de dés</h2>
+<span class="text-xs text-ink-muted">components/shared/DieIcon.tsx</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Six solides dessinés au trait (1,4 px), couleur du texte courant : d4, d6, d8, d10, d12, d20. Accent dans un bouton principal, discret sinon. Le d100 n'a pas d'icône.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">aucun</span></span></div>
+<div class="flex flex-wrap items-end gap-6 rounded-lg bg-panel-sunken px-6 py-5"><div class="flex flex-col items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-10 w-10 text-ink"><path d="M12 2.6 21.4 20H2.6z"></path><path d="M7.3 11.3h9.4L12 20z"></path></svg><span class="font-mono text-xs text-ink-muted">d4</span></div><div class="flex flex-col items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-10 w-10 text-ink"><path d="M12 1.8 21.6 7.3v9.4L12 22.2 2.4 16.7V7.3z"></path><path d="M12 12.1V1.8M12 12.1 2.4 16.7M12 12.1l9.6 4.6"></path></svg><span class="font-mono text-xs text-ink-muted">d6</span></div><div class="flex flex-col items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-10 w-10 text-ink"><path d="M12 1.6 21 12l-9 10.4L3 12z"></path><path d="M3 12h18M12 12v10.4"></path></svg><span class="font-mono text-xs text-ink-muted">d8</span></div><div class="flex flex-col items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-10 w-10 text-ink"><path d="M12 1.6 21 9.4l-9 13-9-13z"></path><path d="M12 15.6 3 9.4M12 15.6l9-6.2M12 1.6v14"></path></svg><span class="font-mono text-xs text-ink-muted">d10</span></div><div class="flex flex-col items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-10 w-10 text-ink"><path d="M12 2 21.9 9.3 18.2 21.2H5.8L2.1 9.3z"></path><path d="M12 18.2 6.7 10.9 8.7 8.1h6.6l2 2.8z"></path></svg><span class="font-mono text-xs text-ink-muted">d12</span></div><div class="flex flex-col items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-10 w-10 text-ink"><path d="M12 1.6 21.6 7v10L12 22.4 2.4 17V7z"></path><path d="M12 6.2 18 16.4H6z"></path><path d="M12 1.6v4.6M2.4 7l3.6 9.4M21.6 7 18 16.4"></path></svg><span class="font-mono text-xs text-ink-muted">d20</span></div><div class="flex flex-col items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-10 w-10 text-accent"><path d="M12 1.6 21.6 7v10L12 22.4 2.4 17V7z"></path><path d="M12 6.2 18 16.4H6z"></path><path d="M12 1.6v4.6M2.4 7l3.6 9.4M21.6 7 18 16.4"></path></svg><span class="font-mono text-xs text-ink-muted">accent</span></div></div>
+
+</section>
+<section id="emplacements" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Emplacements de sort et ressources</h2>
+<span class="text-xs text-ink-muted">ActionsTab.tsx</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Une pastille de 8 px par emplacement : pleine accent si disponible, cerclée si dépensée. Les ressources de classe (Ki, Rage…) se comptent avec deux petits boutons carrés ±.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">aucun</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Emplacements</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-wrap gap-x-4 gap-y-2 rounded-md border border-edge/60 bg-panel-sunken px-2.5 py-2"><div class="flex items-center gap-1.5"><span class="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Niv. 1</span><div class="flex gap-0.5"><span class="h-2 w-2 rounded-full bg-accent"></span><span class="h-2 w-2 rounded-full bg-accent"></span><span class="h-2 w-2 rounded-full bg-accent"></span><span class="h-2 w-2 rounded-full border border-edge bg-transparent"></span></div><span class="mech text-[10px] text-ink-muted">3/4</span></div><div class="flex items-center gap-1.5"><span class="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Niv. 2</span><div class="flex gap-0.5"><span class="h-2 w-2 rounded-full border border-edge bg-transparent"></span><span class="h-2 w-2 rounded-full border border-edge bg-transparent"></span></div><span class="mech text-[10px] text-ink-muted">0/2</span></div></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Ressource</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex w-full items-center gap-2 text-sm"><span class="flex-1 text-ink">Inspiration bardique</span><span class="text-ink-muted">2/3</span><button type="button" class="rounded border border-edge px-1.5 text-xs">+</button><button type="button" class="rounded border border-edge px-1.5 text-xs">−</button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Ressource à la borne</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex w-full items-center gap-2 text-sm"><span class="flex-1 text-ink">Rage</span><span class="text-ink-muted">3/3</span><button type="button" disabled="" class="rounded border border-edge px-1.5 text-xs disabled:opacity-50">+</button><button type="button" class="rounded border border-edge px-1.5 text-xs">−</button></div></div>
+</div></div>
+
+</section>
+<section id="objet" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Carte d'objet</h2>
+<span class="text-xs text-ink-muted">InventoryPanel.tsx (ItemCard)</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Inventaire et Actions : bandeau vertical « Équiper » à gauche (accent quand l'objet est équipé), bandeau ▾ en haut pour replier, nom en vert d'eau quand il renvoie à une règle, colonnes poids / quantité alignées, × de retrait en danger.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">couleurs, 150 ms, cubic-bezier(0.4, 0, 0.2, 1) (<code>transition-colors</code>)</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Non équipé</span>
+<div class="flex rounded-lg bg-panel-sunken p-3"><div class="flex w-full flex-col overflow-hidden rounded-md border border-edge/60 bg-panel-raised"><button type="button" aria-label="Déplier" class="flex w-full items-center justify-center border-b border-edge/60 bg-panel py-px text-xs leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent">▾</button><div class="flex"><button type="button" class="w-7 shrink-0 border-r text-[10px] font-semibold uppercase tracking-widest transition-colors border-edge/60 bg-panel text-ink-muted hover:bg-panel-raised " style="writing-mode: vertical-rl; transform: rotate(180deg)">Équiper</button><div class="flex min-w-0 flex-1 flex-col gap-1.5 px-2.5 pb-2.5 pt-1.5"><div class="flex items-center gap-2"><span class="block min-w-0 flex-1 truncate text-sm font-semibold" style="color: var(--link-rule)">Rapière</span><span class="mech w-12 text-right text-ink-muted" style="font-size: 0.625rem">1 kg</span><span class="w-10 text-right text-[10px] text-ink-muted">× 1</span><button type="button" aria-label="Retirer" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-base text-danger transition-colors hover:bg-danger/10">×</button></div><div class="flex flex-wrap gap-1"><span class="w-fit rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">Finesse</span><span class="w-fit rounded-full border border-accent px-1.5 py-0 text-[10px] text-accent">Botte : Vexation</span></div></div></div></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol du bandeau</span>
+<div class="flex rounded-lg bg-panel-sunken p-3"><div class="flex w-full flex-col overflow-hidden rounded-md border border-edge/60 bg-panel-raised"><button type="button" aria-label="Déplier" class="flex w-full items-center justify-center border-b border-edge/60 bg-panel py-px text-xs leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent">▾</button><div class="flex"><button type="button" class="w-7 shrink-0 border-r text-[10px] font-semibold uppercase tracking-widest transition-colors border-edge/60 bg-panel text-ink-muted hover:bg-panel-raised st-hover" style="writing-mode: vertical-rl; transform: rotate(180deg)">Équiper</button><div class="flex min-w-0 flex-1 flex-col gap-1.5 px-2.5 pb-2.5 pt-1.5"><div class="flex items-center gap-2"><span class="block min-w-0 flex-1 truncate text-sm font-semibold" style="color: var(--link-rule)">Rapière</span><span class="mech w-12 text-right text-ink-muted" style="font-size: 0.625rem">1 kg</span><span class="w-10 text-right text-[10px] text-ink-muted">× 1</span><button type="button" aria-label="Retirer" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-base text-danger transition-colors hover:bg-danger/10">×</button></div><div class="flex flex-wrap gap-1"><span class="w-fit rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">Finesse</span><span class="w-fit rounded-full border border-accent px-1.5 py-0 text-[10px] text-accent">Botte : Vexation</span></div></div></div></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Équipé</span>
+<div class="flex rounded-lg bg-panel-sunken p-3"><div class="flex w-full flex-col overflow-hidden rounded-md border border-edge/60 bg-panel-raised"><button type="button" aria-label="Déplier" class="flex w-full items-center justify-center border-b border-edge/60 bg-panel py-px text-xs leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent">▾</button><div class="flex"><button type="button" class="w-7 shrink-0 border-r text-[10px] font-semibold uppercase tracking-widest transition-colors border-accent/50 bg-accent/20 text-accent " style="writing-mode: vertical-rl; transform: rotate(180deg)">Équipé</button><div class="flex min-w-0 flex-1 flex-col gap-1.5 px-2.5 pb-2.5 pt-1.5"><div class="flex items-center gap-2"><span class="block min-w-0 flex-1 truncate text-sm font-semibold" style="color: var(--link-rule)">Rapière</span><span class="mech w-12 text-right text-ink-muted" style="font-size: 0.625rem">1 kg</span><span class="w-10 text-right text-[10px] text-ink-muted">× 1</span><button type="button" aria-label="Retirer" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-base text-danger transition-colors hover:bg-danger/10">×</button></div><div class="flex flex-wrap gap-1"><span class="w-fit rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">Finesse</span><span class="w-fit rounded-full border border-accent px-1.5 py-0 text-[10px] text-accent">Botte : Vexation</span></div></div></div></div></div>
+</div></div>
+<div class="flex flex-col gap-2 rounded-xl border border-dashed border-edge-strong p-4">
+<span class="text-xs font-semibold uppercase tracking-wider text-accent">À essayer</span>
+<div style="max-width: 420px" class="flex flex-col overflow-hidden rounded-md border border-edge/60 bg-panel-raised"><div class="flex"><button type="button" onClick="{{toggleEquip}}" class="w-7 shrink-0 border-r text-[10px] font-semibold uppercase tracking-widest transition-colors {{equipCls}}" style="writing-mode: vertical-rl; transform: rotate(180deg)">{{equipLabel}}</button><div class="flex min-w-0 flex-1 flex-col gap-1.5 px-2.5 py-2.5"><span class="truncate text-sm font-semibold" style="color: var(--link-rule)">Rapière</span><button type="button" class="flex min-h-11 w-full items-center gap-2 rounded-full border py-1.5 pl-2 pr-3 text-left text-ink transition-colors disabled:opacity-50 border-accent bg-accent/10 hover:bg-accent/20 " style="max-width: 260px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" class="h-7 w-7 shrink-0 text-accent"><path d="M12 1.6 21.6 7v10L12 22.4 2.4 17V7z"></path><path d="M12 6.2 18 16.4H6z"></path><path d="M12 1.6v4.6M2.4 7l3.6 9.4M21.6 7 18 16.4"></path></svg><span class="flex min-w-0 flex-col"><span class="truncate text-xs font-semibold leading-tight">Attaquer</span><span class="mech truncate text-ink-muted" style="font-size: 0.625rem">1d20 + DEX + maîtrise</span></span><span class="mech ml-auto shrink-0 pl-1" style="font-size: 1rem">1d20+5</span></button></div></div></div>
+</div>
+</section>
+<section id="fiche-divers" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">États, avertissement, barres PV/XP</h2>
+<span class="text-xs text-ink-muted">CharacterSheetHeader.tsx</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Un état en cours (Empoisonné…) est une puce danger. Un personnage illégal reste enregistrable : l'avertissement est un encart danger. Les barres de PV et d'XP font 10 px, avec un compteur ▲▼ et une saisie pour appliquer un écart.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">barres : largeur, 150 ms</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(2, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">États</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-wrap items-center gap-2"><span class="text-xs font-bold uppercase tracking-wide text-ink-muted">États</span><span class="rounded-full border border-danger px-3 py-1 text-xs text-danger">Empoisonné</span><span class="rounded-full border border-danger px-3 py-1 text-xs text-danger">À terre</span></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Avertissement</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="rounded-md border border-danger/60 bg-danger/10 px-3 py-2 text-sm text-danger"><p class="font-semibold">Personnage illégal — enregistrable quand même :</p><ul class="list-inside list-disc"><li>Deux sorts mineurs de trop</li></ul></div></div>
+</div></div><div class="flex flex-col gap-1 rounded-lg bg-panel-sunken p-4"><div class="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-ink-muted"><span>Points de vie</span><span class="text-ink-muted">11/15</span></div><div class="flex items-center gap-2"><div class="h-2.5 flex-1 overflow-hidden rounded-full bg-panel-sunken" style="outline: 1px solid var(--edge)"><div class="h-full rounded-full bg-accent transition-[width]" style="width: 73%"></div></div><div class="mech flex w-16 flex-col overflow-hidden rounded-lg border-2 border-edge bg-panel-sunken text-ink"><button type="button" aria-label="Augmenter" class="relative flex h-4 w-full shrink-0 items-center justify-center text-[9px] leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent disabled:opacity-30">▲</button><div class="flex items-center justify-center py-0.5"><input type="number" placeholder="1" aria-label="Écart" class="w-full bg-transparent text-center text-sm text-ink outline-none [appearance:textfield]" /></div><button type="button" aria-label="Diminuer" class="relative flex h-4 w-full shrink-0 items-center justify-center text-[9px] leading-none text-ink-muted transition-colors hover:bg-panel-raised hover:text-accent disabled:opacity-30">▼</button></div></div></div>
+
+</section>
+<section id="jet-monstre" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Bouton de jet de monstre</h2>
+<span class="text-xs text-ink-muted">components/rules/MonsterRollButton.tsx</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Bloc de statistiques d'un monstre : petite tuile verticale (libellé, formule, détail).</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">aucun</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repos</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="flex min-w-[5.5rem] flex-col items-center gap-0.5 rounded-md border border-edge px-2.5 py-1 text-ink hover:bg-panel"><span class="text-[10px] font-medium">Morsure</span><span class="mech" style="font-size: 0.8125rem">+4</span><span class="mech text-ink-muted" style="font-size: 0.625rem">2d4+2</span></button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="flex min-w-[5.5rem] flex-col items-center gap-0.5 rounded-md border border-edge px-2.5 py-1 text-ink hover:bg-panel st-hover"><span class="text-[10px] font-medium">Morsure</span><span class="mech" style="font-size: 0.8125rem">+4</span><span class="mech text-ink-muted" style="font-size: 0.625rem">2d4+2</span></button></div>
+</div></div>
+
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":4700}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'dark', ddOpen: false, ddValue: 'player', cb: true, sw: false, seg: 0, binder: 0,
+      amOpen: false, confirmOpen: false, diceOpen: false, hp: 15, drawerOpen: false, adv: 'normal', equipped: true, eye: true, fold: false, ringPct: {}, treeEye: false, turn: 0, fighters: [7, 15, 11], species: 'elfe', bg: 1 };
+  }
+  componentWillUnmount() { clearTimeout(this._t1); clearTimeout(this._t2); }
+  renderVals() {
+    const s = this.state;
+    const MODES = [['dark', 'Sombre'], ['dim', 'Tamisé'], ['soft', 'Doux'], ['light', 'Clair'], ['high', 'Contraste élevé']];
+    const DD = [['gm', 'MJ'], ['player', 'Joueur'], ['viewer', 'Spectateur']];
+    const SEG = ['Monde', 'Règles', 'MJ'];
+    const BINDER = ['Actions', 'Inventaire', 'Magie'];
+    const segOn = 'bg-panel-raised text-ink';
+    const segOff = 'text-ink-muted hover:text-ink';
+    const btOn = 'border-edge-strong border-b-transparent bg-panel-raised pb-2 pt-2.5 font-medium text-ink shadow-[inset_0_3px_0_0_var(--accent)]';
+    const btOff = 'border-transparent border-b-edge-strong bg-panel-sunken py-2 text-ink-muted hover:text-ink';
+    const ddLabel = (DD.find((d) => d[0] === s.ddValue) || DD[1])[1];
+    const hpPct = Math.round((100 * s.hp) / 15);
+    return {
+      modeAttr: s.mode === 'high' ? '' : s.mode,
+      contrastAttr: s.mode === 'high' ? 'high' : '',
+      modes: MODES.map((m) => ({ label: m[1], cls: s.mode === m[0] ? segOn : segOff, pick: () => this.setState({ mode: m[0] }) })),
+      ddOpen: s.ddOpen,
+      ddLabel: ddLabel,
+      toggleDd: () => this.setState({ ddOpen: !s.ddOpen }),
+      ddOptions: DD.map((d) => ({ label: d[1], cls: d[0] === s.ddValue ? 'text-accent' : 'text-ink', pick: () => this.setState({ ddValue: d[0], ddOpen: false }) })),
+      cbAria: s.cb ? 'true' : 'false',
+      cbCls: s.cb ? 'border-accent bg-accent text-accent-ink' : 'border-edge bg-transparent text-transparent hover:border-edge-strong',
+      toggleCb: () => this.setState({ cb: !s.cb }),
+      swTrack: s.sw ? 'border-accent bg-accent' : 'border-edge-strong bg-edge',
+      swKnob: s.sw ? 'left-[13px]' : 'left-0.5',
+      swText: s.sw ? 'font-semibold text-accent' : 'text-ink-muted',
+      swLabel: s.sw ? 'DD visible des joueurs' : 'DD privé',
+      toggleSw: () => this.setState({ sw: !s.sw }),
+      replaySw: () => {
+        clearTimeout(this._t1);
+        this.setState({ sw: false });
+        this._t1 = setTimeout(() => this.setState({ sw: true }), 450);
+      },
+      segItems: SEG.map((l, i) => ({ label: l, cls: s.seg === i ? segOn : segOff, pick: () => this.setState({ seg: i }) })),
+      binderItems: BINDER.map((l, i) => ({ label: l, cls: s.binder === i ? btOn : btOff, pick: () => this.setState({ binder: i }) })),
+      amOpen: s.amOpen,
+      toggleAm: () => this.setState({ amOpen: !s.amOpen }),
+      confirmOpen: s.confirmOpen,
+      openConfirm: () => this.setState({ confirmOpen: true, amOpen: false }),
+      closeConfirm: () => this.setState({ confirmOpen: false }),
+      diceBtnCls: s.diceOpen ? 'pointer-events-none scale-50 opacity-0' : 'scale-100 opacity-100',
+      dicePanelCls: s.diceOpen ? 'scale-100 opacity-100' : 'pointer-events-none scale-[0.12] opacity-0',
+      openDice: () => this.setState({ diceOpen: true }),
+      closeDice: () => this.setState({ diceOpen: false }),
+      replayDice: () => {
+        clearTimeout(this._t2);
+        this.setState({ diceOpen: false });
+        this._t2 = setTimeout(() => this.setState({ diceOpen: true }), 500);
+      },
+      hpWidth: hpPct + '%',
+      hpCls: hpPct <= 30 ? 'bg-danger' : 'bg-accent',
+      hpText: s.hp + ' / 15',
+      hit: () => this.setState({ hp: Math.max(0, s.hp - 4) }),
+      heal: () => this.setState({ hp: 15 }),
+      drawerOpen: s.drawerOpen,
+      drawerCls: s.drawerOpen ? 'translate-x-0' : '-translate-x-full',
+      toggleDrawer: () => this.setState({ drawerOpen: !s.drawerOpen }),
+      advItems: [['dis', 'Désavantage'], ['normal', 'Normal'], ['adv', 'Avantage']].map((a) => ({ label: a[1], cls: s.adv === a[0] ? 'border-accent text-accent' : 'border-edge text-ink-muted', pick: () => this.setState({ adv: a[0] }) })),
+      toggleEquip: () => this.setState({ equipped: !s.equipped }),
+      equipCls: s.equipped ? 'border-accent/50 bg-accent/20 text-accent' : 'border-edge/60 bg-panel text-ink-muted hover:bg-panel-raised',
+      equipLabel: s.equipped ? 'Équipé' : 'Équiper',
+      eyeOpen: s.eye,
+      eyeShut: !s.eye,
+      eyeLabel: s.eye ? 'Visible au wiki public' : 'Masqué au wiki public',
+      toggleEye: () => this.setState({ eye: !s.eye }),
+      foldDeg: s.fold ? -90 : 0,
+      toggleFold: () => this.setState({ fold: !s.fold }),
+      treeEyeOpen: s.treeEye,
+      treeEyeShut: !s.treeEye,
+      treeEyeLabel: s.treeEye ? 'Lien visible au wiki public' : 'Lien caché au wiki public',
+      treeEdgeStroke: s.treeEye ? 'var(--edge-strong)' : 'var(--ink-muted)',
+      treeEdgeDash: s.treeEye ? 'none' : '4 3',
+      toggleTreeEye: () => this.setState({ treeEye: !s.treeEye }),
+      turnName: ['Gobelin', 'Candide', 'Loup'][s.turn],
+      prevTurn: () => this.setState({ turn: (s.turn + 2) % 3 }),
+      nextTurn: () => this.setState({ turn: (s.turn + 1) % 3 }),
+      fighters: [['Gobelin', 7], ['Candide', 15], ['Loup', 11]].map((f, i) => {
+        const hp = s.fighters[i];
+        const r = hp / f[1];
+        return { name: f[0], hpText: hp + ' / ' + f[1], width: Math.round(100 * Math.max(0, r)) + '%',
+          bar: r <= 0 ? 'bg-ink-muted' : r <= 0.33 ? 'bg-danger' : r <= 0.66 ? 'bg-gm' : 'bg-accent',
+          cls: s.turn === i ? 'border-accent bg-panel-raised' : 'border-edge/60',
+          hit: () => { const next = s.fighters.slice(); next[i] = Math.max(0, hp - 3); this.setState({ fighters: next }); } };
+      }),
+      speciesItems: [['elfe', 'Elfe', 'Taille M · 9 m'], ['nain', 'Nain', 'Taille M · 9 m'], ['halfelin', 'Halfelin', 'Taille P · 9 m']].map((x) => ({ name: x[1], info: x[2],
+        cls: s.species === x[0] ? 'border-accent bg-accent/10' : 'border-edge/60 bg-panel-raised hover:bg-panel', pick: () => this.setState({ species: x[0] }) })),
+      bgItems: [66, 152, 250, 25].map((h, i) => ({ bg: 'linear-gradient(135deg, oklch(0.45 0.08 ' + h + '), oklch(0.2 0.04 ' + h + '))',
+        cls: s.bg === i ? 'ring-2 ring-accent' : 'ring-1 ring-edge hover:ring-edge-strong', pick: () => this.setState({ bg: i }) })),
+      rings: [['pv', 'PV', s.hp, 15, false], ['niv', 'Niv. 2', 360, 900, false], ['epuis', 'Épuis.', 2, 6, true]].map((r) => {
+        const pct = Math.max(0, Math.min(100, Math.round((100 * r[2]) / r[3])));
+        const asPct = !!s.ringPct[r[0]];
+        return { label: r[1], cap: pct === 0 ? 'butt' : 'round', dash: pct + ' ' + (100 - pct), tone: r[4] ? 'stroke-danger' : 'stroke-accent',
+          text: asPct ? pct + ' %' : (r[0] === 'niv' ? String(r[2]) : r[2] + '/' + r[3]),
+          pick: () => this.setState({ ringPct: Object.assign({}, s.ringPct, { [r[0]]: !asPct }) }) };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

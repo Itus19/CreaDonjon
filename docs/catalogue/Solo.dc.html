@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Catalogue — Mode solo</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/c99a8dfeda2eaa39f291c88d383c62bd">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600&amp;family=Outfit:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+:root{--font-geist-sans:'Geist';--font-outfit:'Outfit';--font-geist-mono:'Geist Mono';}
+body{margin:0}
+a{color:inherit}
+code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
+</style>
+</helmet>
+<div class="wiki-bg-scope cat-scope bg-bg font-chrome text-ink" data-mode="{{modeAttr}}" data-contrast="{{contrastAttr}}">
+<header class="sticky top-0 z-30 border-b border-edge backdrop-blur-[var(--blur)]" style="background: linear-gradient(var(--panel), var(--panel)), var(--bg)">
+<div class="mx-auto flex max-w-[1200px] flex-col gap-3 px-6 py-4">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div><h1 class="font-display text-2xl font-extrabold text-ink" style="letter-spacing:-0.02em">Catalogue d'interface — Mode solo</h1><p class="text-xs text-ink-muted">La colonne de fiche compacte et le fil de la partie.</p></div>
+<div class="flex items-center gap-2"><span class="text-xs text-ink-muted">Mode</span>
+<div class="flex items-center gap-1 rounded-full border border-edge p-0.5 text-xs">
+<sc-for list="{{modes}}" as="m" hint-placeholder-count="5"><button type="button" onClick="{{m.pick}}" class="rounded-full px-3 py-1 text-center transition-colors {{m.cls}}">{{m.label}}</button></sc-for>
+</div></div>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<nav class="flex flex-wrap items-center gap-1 rounded-full border border-edge p-0.5" aria-label="Planches du catalogue"><a href="Main.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Fondations</a><a href="Controles.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Boutons et champs</a><a href="Navigation.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Onglets, puces, menus</a><a href="Surfaces.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Surfaces et retours</a><a href="Ecrans.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Éléments d'écran</a><a href="Fiche.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Fiche de personnage</a><a href="Solo.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors bg-panel-raised text-ink">Mode solo</a><a href="WikiVisuel.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Wiki visuel</a><a href="OutilsMJ.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Outils du MJ</a></nav>
+<nav class="flex flex-wrap gap-1.5" aria-label="Sections"><a href="#jauges" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Jauges circulaires</a><a href="#solo-fiche" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Fiche compacte</a><a href="#fil" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Fil</a></nav>
+</div>
+</div>
+</header>
+<main class="mx-auto flex max-w-[1200px] flex-col gap-6 px-6 pb-16 pt-6">
+
+<div id="g-solo" class="mt-6 flex scroll-mt-28 flex-col gap-1">
+<h2 class="font-display text-3xl font-extrabold text-ink" style="letter-spacing:-0.02em">Mode solo</h2>
+<p class="text-sm text-ink-muted">La colonne de fiche compacte et le fil de la partie.</p>
+</div>
+<section id="jauges" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Jauges circulaires</h2>
+<span class="text-xs text-ink-muted">FicheJouableEnTete.tsx (JaugeCirculaire)</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Mode solo : une seule forme pour « une part d'un tout » — PV, progression vers le niveau suivant, épuisement (en danger : il monte quand ça va mal), charge du sac (petite, 44 px). Un clic sur le centre bascule entre la valeur et le pourcentage, jauge par jauge. À zéro, l'anneau est vide (pas de point d'extrémité). Piste en <code>--panel-sunken</code>, anneau de 4 px à bouts ronds, départ en haut.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">anneau : aucun (change d'un coup) ; chiffre : couleur au survol, 150 ms</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">PV</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-center gap-0.5"><div class="relative h-12 w-12"><svg viewBox="0 0 40 40" class="h-full w-full -rotate-90" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" class="stroke-panel-sunken"></circle><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="73 27" class="stroke-accent"></circle></svg><button type="button" class="absolute inset-1 flex items-center justify-center rounded-full text-xs font-medium text-ink transition-colors hover:text-accent ">11/15</button></div><span class="text-xs text-ink-muted">PV</span></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Niveau (vers le suivant)</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-center gap-0.5"><div class="relative h-12 w-12"><svg viewBox="0 0 40 40" class="h-full w-full -rotate-90" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" class="stroke-panel-sunken"></circle><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="40 60" class="stroke-accent"></circle></svg><button type="button" class="absolute inset-1 flex items-center justify-center rounded-full text-xs font-medium text-ink transition-colors hover:text-accent ">360</button></div><span class="text-xs text-ink-muted">Niv. 2</span></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Épuisement (danger)</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-center gap-0.5"><div class="relative h-12 w-12"><svg viewBox="0 0 40 40" class="h-full w-full -rotate-90" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" class="stroke-panel-sunken"></circle><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="33 67" class="stroke-danger"></circle></svg><button type="button" class="absolute inset-1 flex items-center justify-center rounded-full text-xs font-medium text-ink transition-colors hover:text-accent ">2/6</button></div><span class="text-xs text-ink-muted">Épuis.</span></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">À zéro</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-center gap-0.5"><div class="relative h-12 w-12"><svg viewBox="0 0 40 40" class="h-full w-full -rotate-90" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" class="stroke-panel-sunken"></circle><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" stroke-linecap="butt" pathLength="100" stroke-dasharray="0 100" class="stroke-danger"></circle></svg><button type="button" class="absolute inset-1 flex items-center justify-center rounded-full text-xs font-medium text-ink transition-colors hover:text-accent ">0/6</button></div><span class="text-xs text-ink-muted">Épuis.</span></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Petite (sac)</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-center gap-0.5"><div class="relative h-11 w-11"><svg viewBox="0 0 40 40" class="h-full w-full -rotate-90" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" class="stroke-panel-sunken"></circle><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="62 38" class="stroke-accent"></circle></svg><button type="button" class="absolute inset-1 flex items-center justify-center rounded-full text-xs font-medium text-ink transition-colors hover:text-accent ">31/50</button></div></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol du centre</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-center gap-0.5"><div class="relative h-12 w-12"><svg viewBox="0 0 40 40" class="h-full w-full -rotate-90" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" class="stroke-panel-sunken"></circle><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="73 27" class="stroke-accent"></circle></svg><button type="button" class="absolute inset-1 flex items-center justify-center rounded-full text-xs font-medium text-ink transition-colors hover:text-accent st-hover">11/15</button></div><span class="text-xs text-ink-muted">PV</span></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">En pourcentage</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-center gap-0.5"><div class="relative h-12 w-12"><svg viewBox="0 0 40 40" class="h-full w-full -rotate-90" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" class="stroke-panel-sunken"></circle><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="73 27" class="stroke-accent"></circle></svg><button type="button" class="absolute inset-1 flex items-center justify-center rounded-full text-xs font-medium text-ink transition-colors hover:text-accent ">73 %</button></div><span class="text-xs text-ink-muted">PV</span></div></div>
+</div></div><p class="text-xs text-ink-muted">Piste ouverte : l'auteur envisage d'étendre cette forme à toutes les barres de progression (PV et XP de la fiche, encombrement, rencontres). Ce serait une décision de DA, pas encore prise.</p>
+<div class="flex flex-col gap-2 rounded-xl border border-dashed border-edge-strong p-4">
+<span class="text-xs font-semibold uppercase tracking-wider text-accent">À essayer</span>
+<div class="flex flex-wrap items-start gap-6"><sc-for list="{{rings}}" as="r" hint-placeholder-count="3"><div class="flex flex-col items-center gap-0.5"><div class="relative h-12 w-12"><svg viewBox="0 0 40 40" class="h-full w-full -rotate-90" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" class="stroke-panel-sunken"></circle><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" stroke-linecap="{{r.cap}}" pathLength="100" stroke-dasharray="{{r.dash}}" class="{{r.tone}}"></circle></svg><button type="button" onClick="{{r.pick}}" aria-label="Basculer valeur et pourcentage" class="absolute inset-1 flex items-center justify-center rounded-full text-xs font-medium text-ink transition-colors hover:text-accent">{{r.text}}</button></div><span class="text-xs text-ink-muted">{{r.label}}</span></div></sc-for>
+<div class="flex flex-col gap-2"><button type="button" onClick="{{hit}}" class="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50">Encaisser 4 dégâts</button><button type="button" onClick="{{heal}}" class="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50">Soigner</button></div></div><p class="text-xs text-ink-muted">Clique au centre d'une jauge pour passer en pourcentage.</p>
+</div>
+</section>
+<section id="solo-fiche" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Fiche compacte du mode solo</h2>
+<span class="text-xs text-ink-muted">FicheJouableEnTete.tsx</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Colonne de 300 px : caractéristiques en grille de trois (test à gauche, sauvegarde à droite, en plus discret), compétences repliées dans un <code>&lt;details&gt;</code>, trois constantes en texte (pas de jauge : elles ne bougent pas en jouant). Inspiration en étoiles accent.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">couleurs, 150 ms, cubic-bezier(0.4, 0, 0.2, 1) (<code>transition-colors</code>)</span></span></div>
+<div class="flex flex-wrap items-start gap-6 rounded-lg bg-panel-sunken p-4"><div class="flex items-start gap-3"><div class="flex flex-col items-center gap-0.5"><div class="flex h-12 w-9 items-center justify-center border-2 border-accent bg-panel-raised" style="clip-path: polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)"><span class="text-sm font-bold text-ink">14</span></div><span class="text-xs text-ink-muted">CA</span></div><div class="flex flex-col items-center gap-0.5"><div class="relative h-12 w-12"><svg viewBox="0 0 40 40" class="h-full w-full -rotate-90" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" class="stroke-panel-sunken"></circle><circle cx="20" cy="20" r="16" fill="none" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="73 27" class="stroke-accent"></circle></svg><button type="button" class="absolute inset-1 flex items-center justify-center rounded-full text-xs font-medium text-ink transition-colors hover:text-accent ">11/15</button></div><span class="text-xs text-ink-muted">PV</span></div><div class="grid grid-cols-[auto_auto] items-center gap-x-1.5 pt-0.5 text-xs"><span class="text-ink-muted">VIT</span><span class="text-ink">9 m</span><span class="text-ink-muted">MAÎT</span><span class="text-ink">+2</span><span class="text-ink-muted">INSP</span><span class="text-accent">✦✦</span></div></div>
+<div class="grid grid-cols-3 gap-1"><div class="flex flex-col items-center rounded-md border border-edge px-1 py-0.5" style="width: 90px"><div class="flex items-baseline gap-1"><span class="text-xs text-ink-muted">FOR</span><span class="text-xs tabular-nums text-ink-soft">12</span></div><div class="flex w-full items-center gap-0.5"><button type="button" class="flex h-6 flex-1 items-center justify-center rounded text-sm font-medium tabular-nums text-ink transition-colors hover:bg-panel-sunken">+1</button><button type="button" class="flex h-6 flex-1 items-center justify-center rounded text-xs tabular-nums text-ink-muted transition-colors hover:bg-panel-sunken">+1</button></div></div><div class="flex flex-col items-center rounded-md border border-edge px-1 py-0.5" style="width: 90px"><div class="flex items-baseline gap-1"><span class="text-xs text-ink-muted">DEX</span><span class="text-xs tabular-nums text-ink-soft">16</span></div><div class="flex w-full items-center gap-0.5"><button type="button" class="flex h-6 flex-1 items-center justify-center rounded text-sm font-medium tabular-nums text-ink transition-colors hover:bg-panel-sunken">+3</button><button type="button" class="flex h-6 flex-1 items-center justify-center rounded text-xs tabular-nums text-ink-muted transition-colors hover:bg-panel-sunken">+5</button></div></div><div class="flex flex-col items-center rounded-md border border-edge px-1 py-0.5" style="width: 90px"><div class="flex items-baseline gap-1"><span class="text-xs text-ink-muted">CON</span><span class="text-xs tabular-nums text-ink-soft">14</span></div><div class="flex w-full items-center gap-0.5"><button type="button" class="flex h-6 flex-1 items-center justify-center rounded text-sm font-medium tabular-nums text-ink transition-colors hover:bg-panel-sunken">+2</button><button type="button" class="flex h-6 flex-1 items-center justify-center rounded text-xs tabular-nums text-ink-muted transition-colors hover:bg-panel-sunken">+2</button></div></div></div>
+<details class="rounded-md border border-edge px-2 py-1.5" style="width: 280px" open=""><summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-ink-muted">Compétences</summary><div class="mt-1 flex flex-col gap-0.5"><button type="button" class="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left transition-colors hover:bg-panel-sunken"><span class="flex-1 text-sm text-ink">Discrétion</span><span class="text-xs uppercase text-ink-muted">DEX</span><span class="w-8 text-right text-sm font-medium text-ink">+5</span></button><button type="button" class="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left transition-colors hover:bg-panel-sunken st-hover"><span class="flex-1 text-sm text-ink">Persuasion</span><span class="text-xs uppercase text-ink-muted">CHA</span><span class="w-8 text-right text-sm font-medium text-ink">+4</span></button></div></details></div>
+
+</section>
+<section id="fil" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Fil du mode solo</h2>
+<span class="text-xs text-ink-muted">components/solo/Fil.tsx</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Ce qui s'est passé, tour par tour. La narration en texte courant, la réplique d'un PNJ en italique ; l'action du joueur alignée à droite ; un jet dans une petite carte en retrait (total vert si réussite, rouge si échec ; un clic déroule le détail) ; l'application d'une règle repliée ; la réponse du MJ hors du temps de jeu marquée d'un liseré accent.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">aucun</span></span></div>
+<div class="flex flex-col gap-2 rounded-lg bg-panel-sunken p-4" style="max-width: 640px">
+<div class="flex flex-col gap-1"><p class="text-sm leading-relaxed text-ink">La porte du cirque grince. Une odeur de cire chaude flotte dans l'allée.</p><p class="text-sm italic leading-relaxed text-ink-soft">« Vous êtes en retard pour la représentation. »</p></div>
+<div class="flex flex-col items-end gap-0.5 text-right"><p class="text-sm text-ink-soft">Je me glisse derrière les roulottes sans faire de bruit.</p></div>
+<div class="rounded-md border border-edge bg-panel-sunken px-3 py-2"><button type="button" class="flex w-full items-center justify-between gap-2 text-left"><span class="text-sm text-ink">Discrétion 1d20+5 contre DD 13</span><span class="shrink-0 text-sm font-semibold text-success">17</span></button><p class="mt-0.5 text-xs text-ink-muted">depuis la fiche</p><ul class="mt-2 flex flex-col gap-0.5 border-t border-edge pt-2"><li class="text-xs text-ink-muted">1d20 = 12</li><li class="text-xs text-ink-muted">+ DEX + maîtrise = 5</li></ul></div>
+<div class="rounded-md border border-edge bg-panel-sunken px-3 py-2"><button type="button" class="flex w-full items-center justify-between gap-2 text-left"><span class="text-sm text-ink">Perception 1d20+1 contre DD 15</span><span class="shrink-0 text-sm font-semibold text-danger">9</span></button></div>
+<div class="rounded-md border border-edge bg-panel-sunken px-3 py-2"><button type="button" class="text-xs font-medium text-ink-muted">▸ 2 changements</button></div>
+<p class="text-xs text-ink-muted">Le monde se met à jour : le cirque est désormais connu.</p>
+<div class="flex flex-col gap-1 border-l-2 border-accent pl-3"><p class="text-xs font-semibold uppercase tracking-wide text-accent">MJ — hors du temps de jeu</p><p class="text-sm text-ink-soft">Est-ce que je connais ce cirque ?</p><p class="text-sm text-ink">Oui : tu y as vu un spectacle enfant.</p></div>
+</div>
+
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":2300}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'dark', ddOpen: false, ddValue: 'player', cb: true, sw: false, seg: 0, binder: 0,
+      amOpen: false, confirmOpen: false, diceOpen: false, hp: 15, drawerOpen: false, adv: 'normal', equipped: true, eye: true, fold: false, ringPct: {}, treeEye: false, turn: 0, fighters: [7, 15, 11], species: 'elfe', bg: 1 };
+  }
+  componentWillUnmount() { clearTimeout(this._t1); clearTimeout(this._t2); }
+  renderVals() {
+    const s = this.state;
+    const MODES = [['dark', 'Sombre'], ['dim', 'Tamisé'], ['soft', 'Doux'], ['light', 'Clair'], ['high', 'Contraste élevé']];
+    const DD = [['gm', 'MJ'], ['player', 'Joueur'], ['viewer', 'Spectateur']];
+    const SEG = ['Monde', 'Règles', 'MJ'];
+    const BINDER = ['Actions', 'Inventaire', 'Magie'];
+    const segOn = 'bg-panel-raised text-ink';
+    const segOff = 'text-ink-muted hover:text-ink';
+    const btOn = 'border-edge-strong border-b-transparent bg-panel-raised pb-2 pt-2.5 font-medium text-ink shadow-[inset_0_3px_0_0_var(--accent)]';
+    const btOff = 'border-transparent border-b-edge-strong bg-panel-sunken py-2 text-ink-muted hover:text-ink';
+    const ddLabel = (DD.find((d) => d[0] === s.ddValue) || DD[1])[1];
+    const hpPct = Math.round((100 * s.hp) / 15);
+    return {
+      modeAttr: s.mode === 'high' ? '' : s.mode,
+      contrastAttr: s.mode === 'high' ? 'high' : '',
+      modes: MODES.map((m) => ({ label: m[1], cls: s.mode === m[0] ? segOn : segOff, pick: () => this.setState({ mode: m[0] }) })),
+      ddOpen: s.ddOpen,
+      ddLabel: ddLabel,
+      toggleDd: () => this.setState({ ddOpen: !s.ddOpen }),
+      ddOptions: DD.map((d) => ({ label: d[1], cls: d[0] === s.ddValue ? 'text-accent' : 'text-ink', pick: () => this.setState({ ddValue: d[0], ddOpen: false }) })),
+      cbAria: s.cb ? 'true' : 'false',
+      cbCls: s.cb ? 'border-accent bg-accent text-accent-ink' : 'border-edge bg-transparent text-transparent hover:border-edge-strong',
+      toggleCb: () => this.setState({ cb: !s.cb }),
+      swTrack: s.sw ? 'border-accent bg-accent' : 'border-edge-strong bg-edge',
+      swKnob: s.sw ? 'left-[13px]' : 'left-0.5',
+      swText: s.sw ? 'font-semibold text-accent' : 'text-ink-muted',
+      swLabel: s.sw ? 'DD visible des joueurs' : 'DD privé',
+      toggleSw: () => this.setState({ sw: !s.sw }),
+      replaySw: () => {
+        clearTimeout(this._t1);
+        this.setState({ sw: false });
+        this._t1 = setTimeout(() => this.setState({ sw: true }), 450);
+      },
+      segItems: SEG.map((l, i) => ({ label: l, cls: s.seg === i ? segOn : segOff, pick: () => this.setState({ seg: i }) })),
+      binderItems: BINDER.map((l, i) => ({ label: l, cls: s.binder === i ? btOn : btOff, pick: () => this.setState({ binder: i }) })),
+      amOpen: s.amOpen,
+      toggleAm: () => this.setState({ amOpen: !s.amOpen }),
+      confirmOpen: s.confirmOpen,
+      openConfirm: () => this.setState({ confirmOpen: true, amOpen: false }),
+      closeConfirm: () => this.setState({ confirmOpen: false }),
+      diceBtnCls: s.diceOpen ? 'pointer-events-none scale-50 opacity-0' : 'scale-100 opacity-100',
+      dicePanelCls: s.diceOpen ? 'scale-100 opacity-100' : 'pointer-events-none scale-[0.12] opacity-0',
+      openDice: () => this.setState({ diceOpen: true }),
+      closeDice: () => this.setState({ diceOpen: false }),
+      replayDice: () => {
+        clearTimeout(this._t2);
+        this.setState({ diceOpen: false });
+        this._t2 = setTimeout(() => this.setState({ diceOpen: true }), 500);
+      },
+      hpWidth: hpPct + '%',
+      hpCls: hpPct <= 30 ? 'bg-danger' : 'bg-accent',
+      hpText: s.hp + ' / 15',
+      hit: () => this.setState({ hp: Math.max(0, s.hp - 4) }),
+      heal: () => this.setState({ hp: 15 }),
+      drawerOpen: s.drawerOpen,
+      drawerCls: s.drawerOpen ? 'translate-x-0' : '-translate-x-full',
+      toggleDrawer: () => this.setState({ drawerOpen: !s.drawerOpen }),
+      advItems: [['dis', 'Désavantage'], ['normal', 'Normal'], ['adv', 'Avantage']].map((a) => ({ label: a[1], cls: s.adv === a[0] ? 'border-accent text-accent' : 'border-edge text-ink-muted', pick: () => this.setState({ adv: a[0] }) })),
+      toggleEquip: () => this.setState({ equipped: !s.equipped }),
+      equipCls: s.equipped ? 'border-accent/50 bg-accent/20 text-accent' : 'border-edge/60 bg-panel text-ink-muted hover:bg-panel-raised',
+      equipLabel: s.equipped ? 'Équipé' : 'Équiper',
+      eyeOpen: s.eye,
+      eyeShut: !s.eye,
+      eyeLabel: s.eye ? 'Visible au wiki public' : 'Masqué au wiki public',
+      toggleEye: () => this.setState({ eye: !s.eye }),
+      foldDeg: s.fold ? -90 : 0,
+      toggleFold: () => this.setState({ fold: !s.fold }),
+      treeEyeOpen: s.treeEye,
+      treeEyeShut: !s.treeEye,
+      treeEyeLabel: s.treeEye ? 'Lien visible au wiki public' : 'Lien caché au wiki public',
+      treeEdgeStroke: s.treeEye ? 'var(--edge-strong)' : 'var(--ink-muted)',
+      treeEdgeDash: s.treeEye ? 'none' : '4 3',
+      toggleTreeEye: () => this.setState({ treeEye: !s.treeEye }),
+      turnName: ['Gobelin', 'Candide', 'Loup'][s.turn],
+      prevTurn: () => this.setState({ turn: (s.turn + 2) % 3 }),
+      nextTurn: () => this.setState({ turn: (s.turn + 1) % 3 }),
+      fighters: [['Gobelin', 7], ['Candide', 15], ['Loup', 11]].map((f, i) => {
+        const hp = s.fighters[i];
+        const r = hp / f[1];
+        return { name: f[0], hpText: hp + ' / ' + f[1], width: Math.round(100 * Math.max(0, r)) + '%',
+          bar: r <= 0 ? 'bg-ink-muted' : r <= 0.33 ? 'bg-danger' : r <= 0.66 ? 'bg-gm' : 'bg-accent',
+          cls: s.turn === i ? 'border-accent bg-panel-raised' : 'border-edge/60',
+          hit: () => { const next = s.fighters.slice(); next[i] = Math.max(0, hp - 3); this.setState({ fighters: next }); } };
+      }),
+      speciesItems: [['elfe', 'Elfe', 'Taille M · 9 m'], ['nain', 'Nain', 'Taille M · 9 m'], ['halfelin', 'Halfelin', 'Taille P · 9 m']].map((x) => ({ name: x[1], info: x[2],
+        cls: s.species === x[0] ? 'border-accent bg-accent/10' : 'border-edge/60 bg-panel-raised hover:bg-panel', pick: () => this.setState({ species: x[0] }) })),
+      bgItems: [66, 152, 250, 25].map((h, i) => ({ bg: 'linear-gradient(135deg, oklch(0.45 0.08 ' + h + '), oklch(0.2 0.04 ' + h + '))',
+        cls: s.bg === i ? 'ring-2 ring-accent' : 'ring-1 ring-edge hover:ring-edge-strong', pick: () => this.setState({ bg: i }) })),
+      rings: [['pv', 'PV', s.hp, 15, false], ['niv', 'Niv. 2', 360, 900, false], ['epuis', 'Épuis.', 2, 6, true]].map((r) => {
+        const pct = Math.max(0, Math.min(100, Math.round((100 * r[2]) / r[3])));
+        const asPct = !!s.ringPct[r[0]];
+        return { label: r[1], cap: pct === 0 ? 'butt' : 'round', dash: pct + ' ' + (100 - pct), tone: r[4] ? 'stroke-danger' : 'stroke-accent',
+          text: asPct ? pct + ' %' : (r[0] === 'niv' ? String(r[2]) : r[2] + '/' + r[3]),
+          pick: () => this.setState({ ringPct: Object.assign({}, s.ringPct, { [r[0]]: !asPct }) }) };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

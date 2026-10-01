@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Catalogue — Boutons et champs</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/c99a8dfeda2eaa39f291c88d383c62bd">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600&amp;family=Outfit:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+:root{--font-geist-sans:'Geist';--font-outfit:'Outfit';--font-geist-mono:'Geist Mono';}
+body{margin:0}
+a{color:inherit}
+code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
+</style>
+</helmet>
+<div class="wiki-bg-scope cat-scope bg-bg font-chrome text-ink" data-mode="{{modeAttr}}" data-contrast="{{contrastAttr}}">
+<header class="sticky top-0 z-30 border-b border-edge backdrop-blur-[var(--blur)]" style="background: linear-gradient(var(--panel), var(--panel)), var(--bg)">
+<div class="mx-auto flex max-w-[1200px] flex-col gap-3 px-6 py-4">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div><h1 class="font-display text-2xl font-extrabold text-ink" style="letter-spacing:-0.02em">Catalogue d'interface — Boutons et champs</h1><p class="text-xs text-ink-muted">Ce sur quoi on clique, coche ou tape.</p></div>
+<div class="flex items-center gap-2"><span class="text-xs text-ink-muted">Mode</span>
+<div class="flex items-center gap-1 rounded-full border border-edge p-0.5 text-xs">
+<sc-for list="{{modes}}" as="m" hint-placeholder-count="5"><button type="button" onClick="{{m.pick}}" class="rounded-full px-3 py-1 text-center transition-colors {{m.cls}}">{{m.label}}</button></sc-for>
+</div></div>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<nav class="flex flex-wrap items-center gap-1 rounded-full border border-edge p-0.5" aria-label="Planches du catalogue"><a href="Main.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Fondations</a><a href="Controles.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors bg-panel-raised text-ink">Boutons et champs</a><a href="Navigation.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Onglets, puces, menus</a><a href="Surfaces.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Surfaces et retours</a><a href="Ecrans.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Éléments d'écran</a><a href="Fiche.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Fiche de personnage</a><a href="Solo.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Mode solo</a><a href="WikiVisuel.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Wiki visuel</a><a href="OutilsMJ.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Outils du MJ</a></nav>
+<nav class="flex flex-wrap gap-1.5" aria-label="Sections"><a href="#boutons" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Boutons</a><a href="#champs" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Champs</a><a href="#dates" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Dates</a><a href="#liste" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Liste</a><a href="#case" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Case</a><a href="#interrupteur" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Interrupteur</a></nav>
+</div>
+</div>
+</header>
+<main class="mx-auto flex max-w-[1200px] flex-col gap-6 px-6 pb-16 pt-6">
+
+<div id="g-ctrl" class="mt-6 flex scroll-mt-28 flex-col gap-1">
+<h2 class="font-display text-3xl font-extrabold text-ink" style="letter-spacing:-0.02em">Boutons et champs</h2>
+<p class="text-sm text-ink-muted">Ce sur quoi on clique, coche ou tape.</p>
+</div>
+<section id="boutons" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Boutons</h2>
+<span class="text-xs text-ink-muted">Recettes de docs/CHARTE-UI.md §3</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Une seule action principale par écran. Le texte sur fond coloré est toujours <code>text-accent-ink</code>, jamais <code>text-white</code> : le jeton s'inverse avec le mode. Pas d'état « appuyé » propre : au clic, l'élément garde son survol.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">couleurs, 150 ms, cubic-bezier(0.4, 0, 0.2, 1) (<code>transition-colors</code>)</span></span></div>
+<div class="flex flex-col gap-6"><div class="flex flex-col gap-2">
+<div class="flex flex-wrap items-baseline justify-between gap-2"><strong class="text-sm text-ink">Principal</strong><code class="rounded-md bg-panel-sunken px-1.5 py-0.5 font-mono text-xs text-ink-soft">rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50</code></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repos</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50">Confirmer</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50 st-hover">Confirmer</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Focus clavier</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50 st-focus">Confirmer</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Désactivé</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" disabled="" class="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50">Confirmer</button></div>
+</div></div>
+</div><div class="flex flex-col gap-2">
+<div class="flex flex-wrap items-baseline justify-between gap-2"><strong class="text-sm text-ink">Principal compact</strong><code class="rounded-md bg-panel-sunken px-1.5 py-0.5 font-mono text-xs text-ink-soft">rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50</code></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repos</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50">Attribuer</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50 st-hover">Attribuer</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Focus clavier</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50 st-focus">Attribuer</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Désactivé</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" disabled="" class="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50">Attribuer</button></div>
+</div></div>
+</div><div class="flex flex-col gap-2">
+<div class="flex flex-wrap items-baseline justify-between gap-2"><strong class="text-sm text-ink">Secondaire</strong><code class="rounded-md bg-panel-sunken px-1.5 py-0.5 font-mono text-xs text-ink-soft">rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50</code></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repos</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50">Copier</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50 st-hover">Copier</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Focus clavier</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50 st-focus">Copier</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Désactivé</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" disabled="" class="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50">Copier</button></div>
+</div></div>
+</div><div class="flex flex-col gap-2">
+<div class="flex flex-wrap items-baseline justify-between gap-2"><strong class="text-sm text-ink">Secondaire confortable</strong><code class="rounded-md bg-panel-sunken px-1.5 py-0.5 font-mono text-xs text-ink-soft">rounded-full border border-edge px-4 py-2 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50</code></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repos</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full border border-edge px-4 py-2 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50">Annuler</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full border border-edge px-4 py-2 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50 st-hover">Annuler</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Focus clavier</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full border border-edge px-4 py-2 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50 st-focus">Annuler</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Désactivé</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" disabled="" class="rounded-full border border-edge px-4 py-2 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50">Annuler</button></div>
+</div></div>
+</div><div class="flex flex-col gap-2">
+<div class="flex flex-wrap items-baseline justify-between gap-2"><strong class="text-sm text-ink">Fantôme accent</strong><code class="rounded-md bg-panel-sunken px-1.5 py-0.5 font-mono text-xs text-ink-soft">rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10 disabled:opacity-50</code></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repos</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10 disabled:opacity-50">Copier</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10 disabled:opacity-50 st-hover">Copier</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Focus clavier</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10 disabled:opacity-50 st-focus">Copier</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Désactivé</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" disabled="" class="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10 disabled:opacity-50">Copier</button></div>
+</div></div>
+</div><div class="flex flex-col gap-2">
+<div class="flex flex-wrap items-baseline justify-between gap-2"><strong class="text-sm text-ink">Destructeur</strong><code class="rounded-md bg-panel-sunken px-1.5 py-0.5 font-mono text-xs text-ink-soft">rounded-full bg-danger px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:opacity-90 disabled:opacity-50</code></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repos</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full bg-danger px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:opacity-90 disabled:opacity-50">Supprimer</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full bg-danger px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:opacity-90 disabled:opacity-50 st-hover">Supprimer</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Focus clavier</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="rounded-full bg-danger px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:opacity-90 disabled:opacity-50 st-focus">Supprimer</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Désactivé</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" disabled="" class="rounded-full bg-danger px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:opacity-90 disabled:opacity-50">Supprimer</button></div>
+</div></div>
+</div><div class="flex flex-col gap-2">
+<div class="flex flex-wrap items-baseline justify-between gap-2"><strong class="text-sm text-ink">Suppression discrète (lien)</strong><code class="rounded-md bg-panel-sunken px-1.5 py-0.5 font-mono text-xs text-ink-soft">text-xs text-danger hover:underline</code></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repos</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="text-xs text-danger hover:underline">Retirer</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="text-xs text-danger hover:underline st-hover">Retirer</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Focus clavier</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="text-xs text-danger hover:underline st-focus">Retirer</button></div>
+</div></div>
+</div><div class="flex flex-col gap-2">
+<div class="flex flex-wrap items-baseline justify-between gap-2"><strong class="text-sm text-ink">Bouton rond à icône</strong><code class="rounded-md bg-panel-sunken px-1.5 py-0.5 font-mono text-xs text-ink-soft">grid h-8 w-8 place-items-center rounded-full border border-edge text-ink hover:bg-panel-raised</code></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repos</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" aria-label="Moins" class="grid h-8 w-8 place-items-center rounded-full border border-edge text-ink hover:bg-panel-raised">−</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" aria-label="Moins" class="grid h-8 w-8 place-items-center rounded-full border border-edge text-ink hover:bg-panel-raised st-hover">−</button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Focus clavier</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" aria-label="Moins" class="grid h-8 w-8 place-items-center rounded-full border border-edge text-ink hover:bg-panel-raised st-focus">−</button></div>
+</div></div>
+<p class="text-xs text-ink-muted">Pas de transition : le survol change d'un coup (aucune classe <code>transition-colors</code> sur ce bouton du curseur d'horaires).</p>
+</div></div>
+<div class="flex flex-col gap-2 rounded-xl border border-dashed border-edge-strong p-4">
+<span class="text-xs font-semibold uppercase tracking-wider text-accent">À essayer</span>
+<div class="flex flex-wrap items-center gap-3">
+<button type="button" class="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50">Confirmer</button>
+<button type="button" class="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50">Copier</button>
+<button type="button" class="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10 disabled:opacity-50">Copier</button>
+<button type="button" class="rounded-full bg-danger px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:opacity-90 disabled:opacity-50">Supprimer</button>
+<button type="button" class="text-xs text-danger hover:underline">Retirer</button>
+<button type="button" aria-label="Plus" class="grid h-8 w-8 place-items-center rounded-full border border-edge text-ink hover:bg-panel-raised">+</button>
+</div>
+</div>
+</section>
+<section id="champs" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Champ de saisie</h2>
+<span class="text-xs text-ink-muted">Recette CHARTE-UI §3 « Champ de saisie »</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Fond transparent : le champ prend la couleur de son conteneur. Toujours dans un <code>&lt;label&gt;</code>. Pas de survol. Le focus clavier est l'anneau global <code>:focus-visible</code> (2 px, accent, décalé de 2 px).</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">aucun</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repos</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><input class="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none" value="Faerûn" aria-label="Exemple" /></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Vide</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><input class="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none" placeholder="Nom de l'entité" aria-label="Exemple" /></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Focus clavier</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><input class="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none st-focus" value="Faerûn" aria-label="Exemple" /></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Désactivé</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><input class="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none disabled:opacity-50" disabled="" value="Faerûn" aria-label="Exemple" /></div>
+</div></div>
+<div class="flex flex-col gap-2 rounded-xl border border-dashed border-edge-strong p-4">
+<span class="text-xs font-semibold uppercase tracking-wider text-accent">À essayer</span>
+<label class="flex flex-col gap-1 text-xs text-ink-muted">Nom<input class="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none" placeholder="Tape ici" /></label>
+</div>
+</section>
+<section id="dates" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Date et heure (natif)</h2>
+<span class="text-xs text-ink-muted">Natif — pas de composant</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">État actuel : <code>&lt;input type="date"&gt;</code> et <code>type="time"</code> natifs, avec la recette du champ. Le champ suit nos jetons, mais <strong>la bulle du calendrier est peinte par le navigateur</strong> : seul <code>color-scheme</code> (posé par mode dans tokens.css) la fait passer en sombre. Aucune classe ne l'atteint. Utilisé dans Calendrier réel (date à la main) et quelques formulaires.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">celui du navigateur</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Date</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><input type="date" class="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none" value="2026-10-03" aria-label="Date" /></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Heure</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><input type="time" class="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none" value="19:00" aria-label="Heure" /></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Focus clavier</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><input type="date" class="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none st-focus" value="2026-10-03" aria-label="Date" /></div>
+</div></div>
+<div class="flex flex-col gap-2 rounded-xl border border-dashed border-edge-strong p-4">
+<span class="text-xs font-semibold uppercase tracking-wider text-accent">À essayer</span>
+<div class="flex flex-wrap items-center gap-2"><input type="date" class="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none" aria-label="Date de la séance" /><input type="time" class="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none" value="19:00" aria-label="Début" /><span class="text-ink-muted">à</span><input type="time" class="rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none" value="23:00" aria-label="Fin" /></div><p class="text-xs text-ink-muted">Ouvre la bulle : c'est elle qui jure avec la DA, et c'est le navigateur qui la dessine.</p>
+</div>
+</section>
+<section id="liste" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Liste déroulante</h2>
+<span class="text-xs text-ink-muted">components/shared/Dropdown.tsx</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Toujours <code>Dropdown.tsx</code>, jamais un <code>&lt;select&gt;</code>. Deux tailles : <code>md</code> (formulaire) et <code>sm</code> (barre d'outils). Menu en portail, jamais coupé par un conteneur qui défile. Option choisie en accent, survol d'une option en <code>bg-panel</code>. Le menu apparaît et disparaît sans animation.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">couleurs, 150 ms, cubic-bezier(0.4, 0, 0.2, 1) (<code>transition-colors</code>) ; ouverture du menu : instantanée</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repos · md</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="inline-flex items-center gap-1 rounded-md border border-edge bg-transparent text-left text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50 px-2 py-1.5 text-sm "><span class="min-w-0 flex-1 truncate">Joueur</span><span class="shrink-0 text-ink-muted">▾</span></button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol · md</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="inline-flex items-center gap-1 rounded-md border border-edge bg-transparent text-left text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50 px-2 py-1.5 text-sm st-hover"><span class="min-w-0 flex-1 truncate">Joueur</span><span class="shrink-0 text-ink-muted">▾</span></button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repos · sm</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="inline-flex items-center gap-1 rounded-md border border-edge bg-transparent text-left text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50 px-2 py-1 text-xs "><span class="min-w-0 flex-1 truncate">Public</span><span class="shrink-0 text-ink-muted">▾</span></button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Désactivé</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" disabled="" class="inline-flex items-center gap-1 rounded-md border border-edge bg-transparent text-left text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50 px-2 py-1.5 text-sm "><span class="min-w-0 flex-1 truncate">Joueur</span><span class="shrink-0 text-ink-muted">▾</span></button></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Ouvert (option survolée : Spectateur)</span>
+<div class="flex min-h-[64px] items-start justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-start gap-1"><button type="button" class="inline-flex items-center gap-1 rounded-md border border-edge bg-transparent text-left text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50 px-2 py-1.5 text-sm "><span class="min-w-0 flex-1 truncate">Joueur</span><span class="shrink-0 text-ink-muted">▾</span></button><div class="z-10 max-h-60 overflow-auto rounded-md border border-edge-strong bg-panel-raised shadow-2xl" style="min-width: 120px">
+<button type="button" class="block w-full whitespace-nowrap px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-panel text-ink">MJ</button>
+<button type="button" class="block w-full whitespace-nowrap px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-panel text-accent">Joueur</button>
+<button type="button" class="block w-full whitespace-nowrap px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-panel text-ink st-hover">Spectateur</button>
+</div></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Focus clavier</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><button type="button" class="inline-flex items-center gap-1 rounded-md border border-edge bg-transparent text-left text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50 px-2 py-1.5 text-sm st-focus"><span class="min-w-0 flex-1 truncate">Joueur</span><span class="shrink-0 text-ink-muted">▾</span></button></div>
+</div></div>
+<div class="flex flex-col gap-2 rounded-xl border border-dashed border-edge-strong p-4">
+<span class="text-xs font-semibold uppercase tracking-wider text-accent">À essayer</span>
+<div class="relative inline-flex flex-col items-start gap-1" style="min-height: 150px">
+<button type="button" onClick="{{toggleDd}}" aria-label="Rôle" class="inline-flex items-center gap-1 rounded-md border border-edge bg-transparent text-left text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50 px-2 py-1.5 text-sm"><span class="min-w-0 flex-1 truncate">{{ddLabel}}</span><span class="shrink-0 text-ink-muted">▾</span></button>
+<sc-if value="{{ddOpen}}" hint-placeholder-val="{{false}}">
+<div class="z-10 max-h-60 overflow-auto rounded-md border border-edge-strong bg-panel-raised shadow-2xl" style="min-width: 140px">
+<sc-for list="{{ddOptions}}" as="opt" hint-placeholder-count="3">
+<button type="button" onClick="{{opt.pick}}" class="block w-full whitespace-nowrap px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-panel {{opt.cls}}">{{opt.label}}</button>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</div>
+</section>
+<section id="case" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Case à cocher</h2>
+<span class="text-xs text-ink-muted">components/shared/Checkbox.tsx</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Toujours <code>Checkbox.tsx</code> : 16 × 16 px, coins 4 px, coche SVG. Nommée par un libellé visible ou un <code>aria-label</code>. Survol seulement sur la case décochée (bordure plus forte).</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">couleurs, 150 ms, cubic-bezier(0.4, 0, 0.2, 1) (<code>transition-colors</code>)</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(5, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Décochée</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><span class="inline-flex select-none items-center gap-1.5 cursor-pointer text-sm text-ink"><span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors border-edge bg-transparent text-transparent hover:border-edge-strong"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" class="h-2.5 w-2.5" aria-hidden="true"><path d="M2 6.2 4.8 9 10 3" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span>Visible des joueurs</span></span></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Survol</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><span class="inline-flex select-none items-center gap-1.5 cursor-pointer text-sm text-ink"><span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors border-edge bg-transparent text-transparent hover:border-edge-strong st-hover"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" class="h-2.5 w-2.5" aria-hidden="true"><path d="M2 6.2 4.8 9 10 3" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span>Visible des joueurs</span></span></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Cochée</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><span class="inline-flex select-none items-center gap-1.5 cursor-pointer text-sm text-ink"><span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors border-accent bg-accent text-accent-ink"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" class="h-2.5 w-2.5" aria-hidden="true"><path d="M2 6.2 4.8 9 10 3" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span>Visible des joueurs</span></span></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Focus clavier</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><span class="inline-flex select-none items-center gap-1.5 cursor-pointer text-sm text-ink"><span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors border-edge bg-transparent text-transparent hover:border-edge-strong st-focus"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" class="h-2.5 w-2.5" aria-hidden="true"><path d="M2 6.2 4.8 9 10 3" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span>Visible des joueurs</span></span></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Désactivée</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><span class="inline-flex select-none items-center gap-1.5 cursor-not-allowed opacity-50 text-sm text-ink"><span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors border-edge bg-transparent text-transparent hover:border-edge-strong"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" class="h-2.5 w-2.5" aria-hidden="true"><path d="M2 6.2 4.8 9 10 3" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span>Visible des joueurs</span></span></div>
+</div></div>
+<div class="flex flex-col gap-2 rounded-xl border border-dashed border-edge-strong p-4">
+<span class="text-xs font-semibold uppercase tracking-wider text-accent">À essayer</span>
+<button type="button" role="checkbox" aria-checked="{{cbAria}}" onClick="{{toggleCb}}" class="inline-flex select-none items-center gap-1.5 text-sm text-ink"><span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors {{cbCls}}"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" class="h-2.5 w-2.5" aria-hidden="true"><path d="M2 6.2 4.8 9 10 3" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span>Visible des joueurs</span></button>
+</div>
+</section>
+<section id="interrupteur" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Interrupteur</h2>
+<span class="text-xs text-ink-muted">DiceRollPanel.tsx (pas de composant partagé)</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Un seul exemplaire dans le code : « DD visible des joueurs », dans le volet de dés du MJ. La pastille glisse, la piste change de couleur d'un coup.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">pastille : toutes propriétés, 150 ms (<code>transition-all</code>) ; piste : instantanée</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Éteint</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><span class="flex items-center justify-center gap-1.5"><span class="relative h-4 w-7 rounded-full border border-edge-strong bg-edge"><span class="absolute top-0.5 h-3 w-3 rounded-full bg-panel transition-all left-0.5"></span></span><span class="text-[10px] text-ink-muted">DD privé</span></span></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Allumé</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><span class="flex items-center justify-center gap-1.5"><span class="relative h-4 w-7 rounded-full border border-accent bg-accent"><span class="absolute top-0.5 h-3 w-3 rounded-full bg-panel transition-all left-[13px]"></span></span><span class="text-[10px] font-semibold text-accent">DD visible des joueurs</span></span></div>
+</div></div>
+<div class="flex flex-col gap-2 rounded-xl border border-dashed border-edge-strong p-4">
+<span class="text-xs font-semibold uppercase tracking-wider text-accent">À essayer</span>
+<div class="flex flex-wrap items-center gap-4">
+<button type="button" onClick="{{toggleSw}}" class="flex items-center justify-center gap-1.5"><span class="relative h-4 w-7 rounded-full border {{swTrack}}"><span class="absolute top-0.5 h-3 w-3 rounded-full bg-panel transition-all {{swKnob}}"></span></span><span class="text-[10px] {{swText}}">{{swLabel}}</span></button>
+<button type="button" onClick="{{replaySw}}" class="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised">Rejouer l'animation</button>
+</div>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":4900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'dark', ddOpen: false, ddValue: 'player', cb: true, sw: false, seg: 0, binder: 0,
+      amOpen: false, confirmOpen: false, diceOpen: false, hp: 15, drawerOpen: false, adv: 'normal', equipped: true, eye: true, fold: false, ringPct: {}, treeEye: false, turn: 0, fighters: [7, 15, 11], species: 'elfe', bg: 1 };
+  }
+  componentWillUnmount() { clearTimeout(this._t1); clearTimeout(this._t2); }
+  renderVals() {
+    const s = this.state;
+    const MODES = [['dark', 'Sombre'], ['dim', 'Tamisé'], ['soft', 'Doux'], ['light', 'Clair'], ['high', 'Contraste élevé']];
+    const DD = [['gm', 'MJ'], ['player', 'Joueur'], ['viewer', 'Spectateur']];
+    const SEG = ['Monde', 'Règles', 'MJ'];
+    const BINDER = ['Actions', 'Inventaire', 'Magie'];
+    const segOn = 'bg-panel-raised text-ink';
+    const segOff = 'text-ink-muted hover:text-ink';
+    const btOn = 'border-edge-strong border-b-transparent bg-panel-raised pb-2 pt-2.5 font-medium text-ink shadow-[inset_0_3px_0_0_var(--accent)]';
+    const btOff = 'border-transparent border-b-edge-strong bg-panel-sunken py-2 text-ink-muted hover:text-ink';
+    const ddLabel = (DD.find((d) => d[0] === s.ddValue) || DD[1])[1];
+    const hpPct = Math.round((100 * s.hp) / 15);
+    return {
+      modeAttr: s.mode === 'high' ? '' : s.mode,
+      contrastAttr: s.mode === 'high' ? 'high' : '',
+      modes: MODES.map((m) => ({ label: m[1], cls: s.mode === m[0] ? segOn : segOff, pick: () => this.setState({ mode: m[0] }) })),
+      ddOpen: s.ddOpen,
+      ddLabel: ddLabel,
+      toggleDd: () => this.setState({ ddOpen: !s.ddOpen }),
+      ddOptions: DD.map((d) => ({ label: d[1], cls: d[0] === s.ddValue ? 'text-accent' : 'text-ink', pick: () => this.setState({ ddValue: d[0], ddOpen: false }) })),
+      cbAria: s.cb ? 'true' : 'false',
+      cbCls: s.cb ? 'border-accent bg-accent text-accent-ink' : 'border-edge bg-transparent text-transparent hover:border-edge-strong',
+      toggleCb: () => this.setState({ cb: !s.cb }),
+      swTrack: s.sw ? 'border-accent bg-accent' : 'border-edge-strong bg-edge',
+      swKnob: s.sw ? 'left-[13px]' : 'left-0.5',
+      swText: s.sw ? 'font-semibold text-accent' : 'text-ink-muted',
+      swLabel: s.sw ? 'DD visible des joueurs' : 'DD privé',
+      toggleSw: () => this.setState({ sw: !s.sw }),
+      replaySw: () => {
+        clearTimeout(this._t1);
+        this.setState({ sw: false });
+        this._t1 = setTimeout(() => this.setState({ sw: true }), 450);
+      },
+      segItems: SEG.map((l, i) => ({ label: l, cls: s.seg === i ? segOn : segOff, pick: () => this.setState({ seg: i }) })),
+      binderItems: BINDER.map((l, i) => ({ label: l, cls: s.binder === i ? btOn : btOff, pick: () => this.setState({ binder: i }) })),
+      amOpen: s.amOpen,
+      toggleAm: () => this.setState({ amOpen: !s.amOpen }),
+      confirmOpen: s.confirmOpen,
+      openConfirm: () => this.setState({ confirmOpen: true, amOpen: false }),
+      closeConfirm: () => this.setState({ confirmOpen: false }),
+      diceBtnCls: s.diceOpen ? 'pointer-events-none scale-50 opacity-0' : 'scale-100 opacity-100',
+      dicePanelCls: s.diceOpen ? 'scale-100 opacity-100' : 'pointer-events-none scale-[0.12] opacity-0',
+      openDice: () => this.setState({ diceOpen: true }),
+      closeDice: () => this.setState({ diceOpen: false }),
+      replayDice: () => {
+        clearTimeout(this._t2);
+        this.setState({ diceOpen: false });
+        this._t2 = setTimeout(() => this.setState({ diceOpen: true }), 500);
+      },
+      hpWidth: hpPct + '%',
+      hpCls: hpPct <= 30 ? 'bg-danger' : 'bg-accent',
+      hpText: s.hp + ' / 15',
+      hit: () => this.setState({ hp: Math.max(0, s.hp - 4) }),
+      heal: () => this.setState({ hp: 15 }),
+      drawerOpen: s.drawerOpen,
+      drawerCls: s.drawerOpen ? 'translate-x-0' : '-translate-x-full',
+      toggleDrawer: () => this.setState({ drawerOpen: !s.drawerOpen }),
+      advItems: [['dis', 'Désavantage'], ['normal', 'Normal'], ['adv', 'Avantage']].map((a) => ({ label: a[1], cls: s.adv === a[0] ? 'border-accent text-accent' : 'border-edge text-ink-muted', pick: () => this.setState({ adv: a[0] }) })),
+      toggleEquip: () => this.setState({ equipped: !s.equipped }),
+      equipCls: s.equipped ? 'border-accent/50 bg-accent/20 text-accent' : 'border-edge/60 bg-panel text-ink-muted hover:bg-panel-raised',
+      equipLabel: s.equipped ? 'Équipé' : 'Équiper',
+      eyeOpen: s.eye,
+      eyeShut: !s.eye,
+      eyeLabel: s.eye ? 'Visible au wiki public' : 'Masqué au wiki public',
+      toggleEye: () => this.setState({ eye: !s.eye }),
+      foldDeg: s.fold ? -90 : 0,
+      toggleFold: () => this.setState({ fold: !s.fold }),
+      treeEyeOpen: s.treeEye,
+      treeEyeShut: !s.treeEye,
+      treeEyeLabel: s.treeEye ? 'Lien visible au wiki public' : 'Lien caché au wiki public',
+      treeEdgeStroke: s.treeEye ? 'var(--edge-strong)' : 'var(--ink-muted)',
+      treeEdgeDash: s.treeEye ? 'none' : '4 3',
+      toggleTreeEye: () => this.setState({ treeEye: !s.treeEye }),
+      turnName: ['Gobelin', 'Candide', 'Loup'][s.turn],
+      prevTurn: () => this.setState({ turn: (s.turn + 2) % 3 }),
+      nextTurn: () => this.setState({ turn: (s.turn + 1) % 3 }),
+      fighters: [['Gobelin', 7], ['Candide', 15], ['Loup', 11]].map((f, i) => {
+        const hp = s.fighters[i];
+        const r = hp / f[1];
+        return { name: f[0], hpText: hp + ' / ' + f[1], width: Math.round(100 * Math.max(0, r)) + '%',
+          bar: r <= 0 ? 'bg-ink-muted' : r <= 0.33 ? 'bg-danger' : r <= 0.66 ? 'bg-gm' : 'bg-accent',
+          cls: s.turn === i ? 'border-accent bg-panel-raised' : 'border-edge/60',
+          hit: () => { const next = s.fighters.slice(); next[i] = Math.max(0, hp - 3); this.setState({ fighters: next }); } };
+      }),
+      speciesItems: [['elfe', 'Elfe', 'Taille M · 9 m'], ['nain', 'Nain', 'Taille M · 9 m'], ['halfelin', 'Halfelin', 'Taille P · 9 m']].map((x) => ({ name: x[1], info: x[2],
+        cls: s.species === x[0] ? 'border-accent bg-accent/10' : 'border-edge/60 bg-panel-raised hover:bg-panel', pick: () => this.setState({ species: x[0] }) })),
+      bgItems: [66, 152, 250, 25].map((h, i) => ({ bg: 'linear-gradient(135deg, oklch(0.45 0.08 ' + h + '), oklch(0.2 0.04 ' + h + '))',
+        cls: s.bg === i ? 'ring-2 ring-accent' : 'ring-1 ring-edge hover:ring-edge-strong', pick: () => this.setState({ bg: i }) })),
+      rings: [['pv', 'PV', s.hp, 15, false], ['niv', 'Niv. 2', 360, 900, false], ['epuis', 'Épuis.', 2, 6, true]].map((r) => {
+        const pct = Math.max(0, Math.min(100, Math.round((100 * r[2]) / r[3])));
+        const asPct = !!s.ringPct[r[0]];
+        return { label: r[1], cap: pct === 0 ? 'butt' : 'round', dash: pct + ' ' + (100 - pct), tone: r[4] ? 'stroke-danger' : 'stroke-accent',
+          text: asPct ? pct + ' %' : (r[0] === 'niv' ? String(r[2]) : r[2] + '/' + r[3]),
+          pick: () => this.setState({ ringPct: Object.assign({}, s.ringPct, { [r[0]]: !asPct }) }) };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

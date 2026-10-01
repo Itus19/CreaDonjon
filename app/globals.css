@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "../src/styles/tokens.css";
 
+/* Le catalogue d'interface (docs/catalogue/, ADR 0033) emploie des classes
+   qui n'existent que pour lui : elles n'ont rien à faire dans la feuille de
+   l'application. scripts/catalogue/build-css.mjs l'ajoute explicitement. */
+@source not "../docs";
+
 @theme inline {
   --color-bg: var(--bg);
   --color-panel: var(--panel);

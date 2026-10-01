@@ -1,0 +1,124 @@
+{
+ "v": 3,
+ "attachments": {},
+ "createdOnFiles": {
+  "at": "2026-10-01T13:30:00Z",
+  "v": 1
+ },
+ "designSystems": [],
+ "notes": {
+  "rangee-briques": {
+   "x": 0,
+   "y": -320,
+   "text": "Briques d'interface",
+   "kind": "title1",
+   "maxW": 9440
+  },
+  "rangee-ecrans": {
+   "x": 0,
+   "y": 5180,
+   "text": "Éléments d'écran riches",
+   "kind": "title1",
+   "maxW": 2640
+  }
+ },
+ "pages": [],
+ "title": "Catalogue d'interface",
+ "launch": {
+  "view": "canvas"
+ },
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1280,
+   "h": 1400,
+   "title": "1 · Fondations",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Controles.dc.html": {
+   "x": 1360,
+   "y": 0,
+   "w": 1280,
+   "h": 4900,
+   "title": "2 · Boutons et champs",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Navigation.dc.html": {
+   "x": 2720,
+   "y": 0,
+   "w": 1280,
+   "h": 4400,
+   "title": "3 · Onglets, puces, menus",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Surfaces.dc.html": {
+   "x": 4080,
+   "y": 0,
+   "w": 1280,
+   "h": 5000,
+   "title": "4 · Surfaces et retours",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Ecrans.dc.html": {
+   "x": 5440,
+   "y": 0,
+   "w": 1280,
+   "h": 4500,
+   "title": "5 · Éléments d'écran",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Fiche.dc.html": {
+   "x": 6800,
+   "y": 0,
+   "w": 1280,
+   "h": 4700,
+   "title": "6 · Fiche de personnage",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Solo.dc.html": {
+   "x": 8160,
+   "y": 0,
+   "w": 1280,
+   "h": 2300,
+   "title": "7 · Mode solo",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "WikiVisuel.dc.html": {
+   "x": 0,
+   "y": 5500,
+   "w": 1280,
+   "h": 3100,
+   "title": "8 · Wiki visuel",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "OutilsMJ.dc.html": {
+   "x": 1360,
+   "y": 5500,
+   "w": 1280,
+   "h": 2800,
+   "title": "9 · Outils du MJ",
+   "expand": "fill",
+   "is_interactive": true
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Controles.dc.html",
+  "Navigation.dc.html",
+  "Surfaces.dc.html",
+  "Ecrans.dc.html",
+  "Fiche.dc.html",
+  "Solo.dc.html",
+  "WikiVisuel.dc.html",
+  "OutilsMJ.dc.html"
+ ]
+}
