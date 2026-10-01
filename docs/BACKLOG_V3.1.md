@@ -1619,7 +1619,7 @@ joueur, desktop et tablette).
 
 ---
 
-### V3.1-18 — Retirer les émojis de l'interface · `S`
+### V3.1-18 — Retirer les émojis de l'interface · `S` — **fait le 1ᵉʳ octobre**
 
 **Constat** (relevé pour V3.1-17) : des émojis en couleur, qui ne suivent ni
 les jetons ni les modes et changent d'aspect selon l'appareil.
@@ -1629,15 +1629,36 @@ les jetons ni les modes et changent d'aspect selon l'appareil.
 | `components/shell/InitiativeTracker.tsx` | 🎲 (relancer l'initiative) | `DieIcon sides={20}` |
 | même fichier | 🧑 ❓ 💀 devant le nom (entité, personnalisé, monstre) | trois icônes au trait du même style que `EyeIcon` |
 | `components/blocks/characterCreatorSteps/SpellSelectionStep.tsx` | 👁 | `EyeIcon` |
-| `app/m/[worldSlug]/mj/personnalisation/page.tsx`, `publication/page.tsx`, `regles-actives/page.tsx` | ⚙ | icône d'engrenage au trait |
 
 Les glyphes de texte (`✕ ✓ ☰ ☐ ☑ ✦`, ~20 occurrences) restent : la charte §10
 les autorise.
 
+**Correction du relevé** : les trois ⚙ signalés dans les pages MJ
+(Personnalisation, Publication, Règles actives) ne sont que dans des
+commentaires de code (« gomme le bouton ⚙ ») — rien ne s'affiche. Le premier
+relevé ignorait les lignes `//` et `*`, pas celles qui ouvrent un `/**`.
+
+**Ce qui est fait** :
+- Initiative : relancer = `DieIcon sides={20}`, avec un `aria-label` qui nomme
+  le combattant. Devant le nom, `ParticipantKindIcon` (dans le même fichier :
+  un seul usage, pas de composant partagé — règle des trois) : silhouette pour
+  une entité du monde, point d'interrogation cerclé pour un combattant
+  improvisé, crâne au trait pour un monstre. Trait 1,8, `currentColor`,
+  `text-ink-muted`, `role="img"` + `title` pour en dire le sens.
+- Sélection des sorts : « En savoir plus » = `EyeIcon` ouvert (▴ quand déplié,
+  inchangé).
+- Planche 9 du catalogue mise à jour et republiée ; charte §9 mise à jour.
+
+**Le circuit tient** : corriger le composant, reporter les mêmes tracés dans la
+planche (aucune classe nouvelle : le CSS du catalogue est resté identique, pas
+besoin de le republier), mettre à jour la charte. Le README du catalogue a
+suffi.
+
 **Critères d'acceptation**
-- [ ] Plus aucun émoji dans `components/` ni `app/` (hors esquisses et commentaires).
-- [ ] Les icônes nouvelles sont au trait, `currentColor`, avec un `aria-label` sur les boutons qui n'ont qu'elles.
-- [ ] Planche 9 (Suivi d'initiative) mise à jour, la mention « écart à la charte » retirée ; §9 de la charte mis à jour.
+- [x] Plus aucun émoji affiché dans `components/` ni `app/` (il en reste dans des commentaires).
+- [x] Les icônes nouvelles sont au trait, `currentColor`, avec un `aria-label` sur les boutons qui n'ont qu'elles.
+- [x] Planche 9 (Suivi d'initiative) mise à jour, la mention « écart à la charte » retirée ; §9 de la charte mis à jour.
+- [ ] À vérifier en direct : les trois icônes dans un vrai combat, aux quatre modes.
 
 C'est le premier ticket qui suit la règle de V3.1-17 : il sert aussi à vérifier
 que le circuit « corriger le composant → mettre à jour la planche → mettre à

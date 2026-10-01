@@ -365,7 +365,7 @@ Neuf planches, en deux rangées sur le canevas : les briques (1 à 7), puis les 
 | 9 · Outils du MJ | suivi d'initiative, budget de rencontre, assistant de création, accueil et personnalisation |
 
 **Écarts relevés en le construisant**, à corriger par tickets (jamais en passe globale) :
-- émojis dans `InitiativeTracker.tsx`, `SpellSelectionStep.tsx` et trois pages MJ (⚙) — V3.1-18 ;
+- ~~émojis dans `InitiativeTracker.tsx` et `SpellSelectionStep.tsx`~~ — retirés par V3.1-18 ;
 - `MissingBlocksBanner.tsx` en ambre Tailwind en dur, pas un jeton ;
 - deux règles pour « une barre qui baisse » : accent/danger sur la fiche, accent/terracotta/danger sur l'initiative et les rencontres ;
 - aucun état « appuyé » (`:active`) propre sur les boutons — constaté, pas un défaut tant que personne n'en demande.
