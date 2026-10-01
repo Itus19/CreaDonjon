@@ -68,3 +68,16 @@ export function groupCampaignPeople(input: {
 export function personLabel(name: string, tag: string | undefined): string {
   return tag ? `${name}#${tag}` : name;
 }
+
+/**
+ * « Retirer de la campagne » se propose-t-il pour cette personne ? Toujours
+ * pour un compte joueur ; pour un MJ, seulement s'il n'est pas le créateur du
+ * monde (`worlds.owner_id`) — retirer celui-là reviendrait à transférer le
+ * monde, un autre geste. Le serveur refuse de toute façon (migration
+ * 20261001130000) : ceci ne fait qu'éviter de proposer un bouton voué à
+ * l'échec. Créateur inconnu : aucun MJ proposé, par prudence.
+ */
+export function canRemoveFromCampaign(person: Pick<CampaignPerson, "userId" | "role">, worldOwnerId: string | null): boolean {
+  if (person.role === "player") return true;
+  return worldOwnerId !== null && person.userId !== worldOwnerId;
+}

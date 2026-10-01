@@ -6,7 +6,9 @@ import { revokeCampaignMemberAccess } from "@/src/server/services/campaigns";
  * Revoque un membre (V3.1-10) : expulse du monde, libere son personnage,
  * ne touche jamais au lien d'invitation — un lien joueur reste reutilisable
  * par d'autres (ADR 0031). Le droit est verifie a l'interieur de la
- * fonction SQL (`app.revoke_campaign_member`), pas ici.
+ * fonction SQL (`app.revoke_campaign_member`), pas ici. Vaut aussi pour un
+ * second MJ (V3.1-15) ; le createur du monde, lui, est toujours refuse par
+ * cette meme fonction (migration 20261001130000).
  */
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ campaignId: string; userId: string }> }) {
   const { campaignId, userId } = await params;

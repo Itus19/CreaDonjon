@@ -12,6 +12,7 @@ import {
 import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
 import { getHandleTagsForUsers, getPasswordResetRequestsForUsers } from "@/src/server/repos/account";
 import { isWorldAdmin } from "@/src/server/services/permissions";
+import { getWorldOwnerId } from "@/src/server/repos/worlds";
 import { isSuperadmin } from "@/src/server/services/account";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
@@ -49,9 +50,13 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   } = await supabase.auth.getUser();
   const canSeeTags = user ? await isWorldAdmin(supabase, { worldId: campaign.worldId, userId: user.id }) : false;
   const handleTags = canSeeTags ? await getHandleTagsForUsers(supabase, members.map((m) => m.user_id)) : {};
+  // V3.1-15 : le créateur du monde, pour ne pas proposer « Retirer de la
+  // campagne » sur sa ligne — la base le refuse de toute façon. Utile au
+  // seul panneau de gestion : même borne que les tags.
+  const worldOwnerId = canSeeTags ? await getWorldOwnerId(supabase, campaign.worldId) : null;
 
   return NextResponse.json(
-    { campaign, members, characters, rulesetContentOrigin, grants, displayNames, passwordResetRequests, handleTags },
+    { campaign, members, characters, rulesetContentOrigin, grants, displayNames, passwordResetRequests, handleTags, worldOwnerId },
     { status: 200 }
   );
 }

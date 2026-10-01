@@ -6,7 +6,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import ActionsMenu, { type ActionsMenuItem } from "@/components/shared/ActionsMenu";
 import InviteLinkPanel from "./InviteLinkPanel";
 import { useCachedGet } from "./useCachedGet";
-import { groupCampaignPeople, personLabel, type CampaignPerson } from "@/src/core/campaigns/people";
+import { canRemoveFromCampaign, groupCampaignPeople, personLabel, type CampaignPerson } from "@/src/core/campaigns/people";
 
 interface MemberRow {
   campaign_id: string;
@@ -37,6 +37,8 @@ interface CampaignDetailData {
   passwordResetRequests: Record<string, string>;
   /** V3.1-15 (ADR 0032) : tag à 4 chiffres par compte — renvoyé SEULEMENT au MJ du monde, vide pour quiconque d'autre. */
   handleTags?: Record<string, string>;
+  /** V3.1-15 : créateur du monde — jamais retiré de la campagne. Renvoyé au seul MJ du monde, `null` sinon. */
+  worldOwnerId?: string | null;
 }
 
 /** V1-D5, specs/ruleset-personnel.md §3.1 : une table de jeu ordinaire (4-6 joueurs + MJ) reste bien en-deca — au-dela, un rappel plus explicite, jamais un refus. */
@@ -45,7 +47,7 @@ const PERSONAL_REFERENCE_CIRCLE_SOFT_CAP = 7;
 const dropdownTrigger = "rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised";
 const smallButton = "rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50";
 
-type Confirming = { kind: "remove_member"; userId: string } | { kind: "free_character"; entityId: string; userId: string } | null;
+type Confirming = { kind: "remove_member"; userId: string; role: CampaignPerson["role"] } | { kind: "free_character"; entityId: string; userId: string } | null;
 
 /**
  * La Gestion de campagne (V1-C1, refaite V3.1-15 d'après l'esquisse « A —
@@ -178,6 +180,7 @@ export default function CampaignDetail({
   if (!data) return <p className="text-xs text-ink-muted">Chargement…</p>;
 
   const tags = data.handleTags ?? {};
+  const worldOwnerId = data.worldOwnerId ?? null;
   const people = groupCampaignPeople({ members: data.members, characters: data.characters, grants: data.grants, displayNames: data.displayNames });
   const labelOf = (userId: string) => personLabel(data.displayNames[userId] || "Sans nom", tags[userId]);
   const entityName = (id: string) => grantableEntities.find((e) => e.id === id)?.name ?? worldEntities.find((e) => e.id === id)?.name ?? "Fiche inconnue";
@@ -196,9 +199,11 @@ export default function CampaignDetail({
   function personActions(person: CampaignPerson): ActionsMenuItem[] {
     return [
       { label: "Forcer une réinitialisation", onSelect: () => void forceResetPassword(person.userId) },
-      // Retirer un MJ n'est pas ce geste (transfert de campagne, hors
-      // perimetre) — seuls les comptes joueurs se retirent ici.
-      ...(person.role === "player" ? [{ label: "Retirer de la campagne", onSelect: () => setConfirming({ kind: "remove_member", userId: person.userId }), danger: true }] : []),
+      // Un compte joueur, ou un second MJ — jamais le créateur du monde
+      // (ce serait un transfert de monde ; la base le refuse aussi).
+      ...(canRemoveFromCampaign(person, worldOwnerId)
+        ? [{ label: "Retirer de la campagne", onSelect: () => setConfirming({ kind: "remove_member", userId: person.userId, role: person.role }), danger: true }]
+        : []),
     ];
   }
 
@@ -435,7 +440,11 @@ export default function CampaignDetail({
       <ConfirmDialog
         open={confirming?.kind === "remove_member"}
         title={`Retirer ${confirmingLabel} de la campagne ?`}
-        message={`${confirmingLabel} perd l'accès à cette campagne et son personnage redevient libre. Le compte et le lien d'invitation qui l'a fait rejoindre restent inchangés — un lien joueur réutilisable continue de fonctionner pour d'autres.`}
+        message={
+          confirming?.kind === "remove_member" && confirming.role === "gm"
+            ? `${confirmingLabel} n'est plus MJ de cette campagne et perd l'accès à cette campagne ; son personnage, s'il en tient un, redevient libre. Le compte reste. Son lien MJ, déjà utilisé, ne resservira pas : pour le faire revenir, génère un nouveau lien MJ.`
+            : `${confirmingLabel} perd l'accès à cette campagne et son personnage redevient libre. Le compte et le lien d'invitation qui l'a fait rejoindre restent inchangés — un lien joueur réutilisable continue de fonctionner pour d'autres.`
+        }
         confirmLabel="Retirer de la campagne"
         danger
         onConfirm={() => {

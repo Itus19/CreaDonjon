@@ -6,6 +6,7 @@ import {
   getCampaignCharacters,
   getCampaignMembers,
   inviteCampaignMember,
+  revokeCampaignMemberAccess,
   type CampaignSummary,
 } from "./campaigns";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
@@ -57,6 +58,7 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
   let gmClient: SupabaseClient;
   let gmUserId: string;
   let playerUserId: string;
+  let playerClient: SupabaseClient;
   let playerEmail: string;
   let rulesetId: string;
   const createdWorldIds: string[] = [];
@@ -83,6 +85,7 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
     const player = await getReusableTestAccount(admin, "player");
     playerUserId = player.id;
     playerEmail = player.email;
+    playerClient = player.client;
 
     const { data: official, error: officialError } = await admin
       .from("rulesets")
@@ -192,5 +195,29 @@ describe.skipIf(!hasCreds)("campagnes (integration, base reelle)", () => {
     expect(characters).toEqual([
       { campaign_id: campaign.id, entity_id: characterEntity.id, user_id: playerUserId, is_pc: true },
     ]);
+  });
+
+  it("retire un second MJ de la campagne, jamais le createur du monde (V3.1-15, migration 20261001130000)", async () => {
+    const worldId = await createTestWorld();
+    const campaign = await createCampaign(gmClient, {
+      worldId,
+      createdBy: gmUserId,
+      name: "Campagne a deux MJ",
+      rulesetId,
+      mode: "campaign",
+    });
+    assertCampaign(campaign);
+    // Second MJ invite au niveau de la campagne : une seule ligne
+    // `campaign_members` role 'gm' (comme `accountProvisioning.ts`), qui
+    // suffit a `app.is_world_admin` — donc a appeler la fonction de retrait.
+    await inviteCampaignMember(gmClient, { campaignId: campaign.id, email: playerEmail, role: "gm" });
+
+    const ownerAttempt = await revokeCampaignMemberAccess(playerClient, { campaignId: campaign.id, userId: gmUserId });
+    expect(ownerAttempt.allowed).toBe(false);
+    expect((await getCampaignMembers(admin, campaign.id)).map((m) => m.user_id)).toContain(gmUserId);
+
+    const removal = await revokeCampaignMemberAccess(gmClient, { campaignId: campaign.id, userId: playerUserId });
+    expect(removal).toMatchObject({ allowed: true, removedMember: true });
+    expect((await getCampaignMembers(admin, campaign.id)).map((m) => m.user_id)).not.toContain(playerUserId);
   });
 });

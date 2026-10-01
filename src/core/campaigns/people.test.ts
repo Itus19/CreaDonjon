@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupCampaignPeople, personLabel } from "./people";
+import { canRemoveFromCampaign, groupCampaignPeople, personLabel } from "./people";
 
 const members = [
   { user_id: "soso", role: "player" },
@@ -64,5 +64,26 @@ describe("personLabel", () => {
 
   it("nom seul sans tag (compte a courriel, ou appelant qui n'est pas MJ)", () => {
     expect(personLabel("Tamara", undefined)).toBe("Tamara");
+  });
+});
+
+describe("canRemoveFromCampaign", () => {
+  const person = (userId: string, role: "gm" | "player") => ({ userId, role, name: userId, pcEntityId: null, grantedEntityIds: [] });
+
+  it("un compte joueur se retire toujours", () => {
+    expect(canRemoveFromCampaign(person("soso", "player"), "gabriel")).toBe(true);
+  });
+
+  it("un second MJ (pas le createur du monde) se retire aussi", () => {
+    expect(canRemoveFromCampaign(person("claude", "gm"), "gabriel")).toBe(true);
+  });
+
+  it("jamais le createur du monde", () => {
+    expect(canRemoveFromCampaign(person("gabriel", "gm"), "gabriel")).toBe(false);
+  });
+
+  it("createur inconnu : aucun MJ ne se propose au retrait, par prudence", () => {
+    expect(canRemoveFromCampaign(person("claude", "gm"), null)).toBe(false);
+    expect(canRemoveFromCampaign(person("soso", "player"), null)).toBe(true);
   });
 });

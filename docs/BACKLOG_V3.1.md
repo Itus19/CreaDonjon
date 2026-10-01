@@ -1185,9 +1185,57 @@ variante) lit `handle_tag` en plus de `display_name`.
 
 **Hors périmètre, et dit comme tel** : les cinq liens joueurs réutilisables
 se ressemblent tous (seule leur date les distingue). Un seul suffit sans
-doute ; les révoquer est un geste du MJ, pas un changement d'écran. Les
+doute ; les révoquer est un geste du MJ, pas un changement d'écran (mais voir
+le bug ci-dessous : avant le correctif du 1ᵉʳ octobre, ce geste expulsait). Les
 nommer (« lien Discord », « lien table du jeudi ») serait une fonctionnalité
 neuve, à rouvrir si le besoin se confirme.
+
+**Complément du 1ᵉʳ octobre — retirer un second MJ.** Demande de l'auteur :
+pouvoir éjecter un MJ de la partie depuis le ⋮ de sa ligne, sauf le créateur du
+monde.
+- Le ⋮ d'un MJ propose « Retirer de la campagne » **si ce n'est pas le
+  créateur du monde** (`worlds.owner_id`). La règle tient dans
+  `canRemoveFromCampaign` (`src/core/campaigns/people.ts`, tests d'abord) ;
+  `/api/campaigns/[id]` renvoie `worldOwnerId` au seul MJ (même borne que les
+  tags).
+- La confirmation parle d'un MJ : « n'est plus MJ de cette campagne… Son lien
+  MJ, déjà utilisé, ne resservira pas : pour le faire revenir, génère un
+  nouveau lien MJ. »
+- **Faille fermée en base** (migration `20261001130000`) :
+  `app.revoke_campaign_member` vérifiait que l'appelant gère le monde, jamais
+  qui était visé. Or tout MJ de campagne gère le monde : un second MJ pouvait
+  expulser le créateur en appelant la route à la main. La fonction refuse
+  maintenant toute cible qui est le créateur du monde.
+- Un MJ invité au niveau du monde (`world_members`, lien MJ de monde) perd sa
+  place dans la campagne mais garde ses droits sur le monde : c'est
+  « Révoquer » sur son lien qui les retire.
+- Test d'intégration ajouté (`campaigns.integration.test.ts`), sauté sans base.
+- [ ] À vérifier en direct : le ⋮ de Gabriel (créateur) n'a pas « Retirer » ;
+  celui d'un second MJ l'a, et le retrait le fait disparaître de « À la table ».
+
+**Bug trouvé en jouant (1ᵉʳ octobre) — révoquer un lien joueur expulsait des
+joueuses.** L'auteur a révoqué les liens joueur en double pour n'en garder
+qu'un (celui du 2 septembre) : les joueuses ont disparu de « À la table » et
+leur PJ est redevenu libre. L'écran promettait pourtant « Celles qui l'ont
+déjà utilisé gardent leur accès ».
+- **Cause** : `app.revoke_campaign_invite_access` (V2.1-25) retire l'accès de
+  `claimed_by_user_id`. Les liens joueur sont réutilisables depuis V3.1-10 et
+  n'écrivent plus ce champ — mais ceux créés **avant**, sous l'ancien régime à
+  usage unique, le portaient encore. Révoquer l'un d'eux expulsait la joueuse
+  qui l'avait utilisé en premier.
+- **Correctif** (migration `20261001140000`) : un lien joueur révoqué cesse
+  seulement de fonctionner ; personne n'est expulsé. Retirer quelqu'un, c'est
+  « Retirer de la campagne » dans son ⋮. Un lien MJ garde l'ancien
+  comportement (le révoquer retire son MJ — c'est ce qui a servi à retirer
+  Claude).
+- Les comptes, eux, n'ont jamais été touchés : identifiant, mot de passe et
+  tag restent valides. Seules les lignes `campaign_members` ont disparu.
+  Réintégration donnée à l'auteur : une requête qui recrée la ligne
+  `campaign_members` (rôle `player`) pour chaque `claimed_by_user_id` des liens
+  joueur révoqués, puis réattribution des PJ depuis « Personnages sans
+  joueur » ou « Attribuer un PJ ».
+- Test d'intégration ajouté (`campaignInvites.integration.test.ts`), sauté
+  sans base.
 
 ---
 
