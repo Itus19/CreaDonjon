@@ -1237,6 +1237,15 @@ déjà utilisé gardent leur accès ».
 - Test d'intégration ajouté (`campaignInvites.integration.test.ts`), sauté
   sans base.
 
+**Retour en jouant (1ᵉʳ octobre) — le sélecteur « attribuer un PJ » se
+chevauchait.** Dans une carte joueuse, la liste, « Attribuer » et « Fermer »
+ne tenaient pas sur une ligne et se repliaient les uns sur les autres ; le
+chevron de la liste passait sous son libellé (`triggerClassName` remplace le
+style de base du `Dropdown`, `inline-flex` compris). Désormais : une petite
+boîte, la liste sur toute la largeur, puis « Annuler » et « Attribuer » (ou
+« Partager ») en bouton plein, alignés à droite. Pour le PJ, la boîte remplace
+la case pointillée au lieu de s'empiler dessous. Vérifié au banc.
+
 ---
 
 ### V3.1-16 — Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse · `M`/`L` — **codé le 1ᵉʳ octobre, à vérifier en direct**

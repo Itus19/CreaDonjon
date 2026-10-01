@@ -44,7 +44,9 @@ interface CampaignDetailData {
 /** V1-D5, specs/ruleset-personnel.md §3.1 : une table de jeu ordinaire (4-6 joueurs + MJ) reste bien en-deca — au-dela, un rappel plus explicite, jamais un refus. */
 const PERSONAL_REFERENCE_CIRCLE_SOFT_CAP = 7;
 
-const dropdownTrigger = "rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised";
+// `inline-flex` : `triggerClassName` remplace le style de base du Dropdown,
+// sans lui le chevron passe sous un libellé long.
+const dropdownTrigger = "inline-flex items-center gap-2 text-left rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised";
 const smallButton = "rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50";
 
 type Confirming = { kind: "remove_member"; userId: string; role: CampaignPerson["role"] } | { kind: "free_character"; entityId: string; userId: string } | null;
@@ -231,30 +233,34 @@ export default function CampaignDetail({
       openPicker.kind === "pc"
         ? pcCandidates
         : grantableEntities.filter((e) => !person.grantedEntityIds.includes(e.id) && e.id !== person.pcEntityId);
+    // Empilé (liste pleine largeur, puis les gestes) : une carte joueuse est
+    // trop étroite pour tenir liste + deux boutons sur une ligne.
     return (
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-2 rounded-[10px] border border-edge-strong bg-panel-sunken p-2.5">
         <Dropdown
           value={pickedEntityId}
           onChange={setPickedEntityId}
           options={[{ value: "", label: openPicker.kind === "pc" ? "Choisir un personnage…" : "Choisir une fiche…" }, ...options.map((e) => ({ value: e.id, label: e.name }))]}
           aria-label={openPicker.kind === "pc" ? `Personnage à attribuer à ${labelOf(person.userId)}` : `Fiche à partager avec ${labelOf(person.userId)}`}
-          triggerClassName={`min-w-0 flex-1 ${dropdownTrigger}`}
+          triggerClassName={`w-full ${dropdownTrigger}`}
         />
-        <button
-          type="button"
-          disabled={!pickedEntityId}
-          onClick={() => {
-            if (openPicker.kind === "pc") void assignCharacter(pickedEntityId, person.userId);
-            else void grantAccess(pickedEntityId, person.userId);
-            setOpenPicker(null);
-          }}
-          className={smallButton}
-        >
-          {openPicker.kind === "pc" ? "Attribuer" : "Partager"}
-        </button>
-        <button type="button" onClick={() => setOpenPicker(null)} className="text-xs text-ink-muted hover:underline">
-          Fermer
-        </button>
+        <div className="flex items-center justify-end gap-2">
+          <button type="button" onClick={() => setOpenPicker(null)} className="rounded-full px-3 py-1 text-xs text-ink-muted hover:bg-panel-raised hover:text-ink">
+            Annuler
+          </button>
+          <button
+            type="button"
+            disabled={!pickedEntityId}
+            onClick={() => {
+              if (openPicker.kind === "pc") void assignCharacter(pickedEntityId, person.userId);
+              else void grantAccess(pickedEntityId, person.userId);
+              setOpenPicker(null);
+            }}
+            className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink hover:bg-accent-hover disabled:opacity-50"
+          >
+            {openPicker.kind === "pc" ? "Attribuer" : "Partager"}
+          </button>
+        </div>
       </div>
     );
   }
@@ -357,6 +363,8 @@ export default function CampaignDetail({
                     />
                   )}
                 </div>
+              ) : openPicker?.userId === player.userId && openPicker.kind === "pc" ? (
+                picker(player)
               ) : canManage ? (
                 <button
                   type="button"
@@ -368,7 +376,6 @@ export default function CampaignDetail({
               ) : (
                 <p className="text-sm text-ink-muted">Aucun personnage.</p>
               )}
-              {openPicker?.userId === player.userId && openPicker.kind === "pc" && picker(player)}
 
               {canManage && (
                 <div className="flex flex-col gap-1.5">
