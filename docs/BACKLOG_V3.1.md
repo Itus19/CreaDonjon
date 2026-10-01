@@ -1715,9 +1715,12 @@ réellement la coquille :
   Épuisement vivants. Reportée dans la proposition de fiche à jauges. Dans la proposition de fiche à
   jauges, l'Inspiration prend la taille exacte d'un badge (72 × 56 px), ▲▼
   intégrés.
-- Étendre les jauges circulaires à toutes les barres de progression : planche
-  « Question · fiche avec jauges circulaires » (fiche actuelle et proposition
-  côte à côte) ; décision après l'avoir vue.
+- ~~Étendre les jauges circulaires à toutes les barres de progression~~ —
+  **tranché le 1ᵉʳ octobre : oui pour la fiche de personnage**, avec la
+  commande E (PV, niveau/XP, épuisement ; charge du sac dans l'Inventaire). La
+  CA reste un bouclier, les constantes restent des badges, l'Inspiration prend
+  la taille d'un badge. Planche « fiche avec jauges circulaires ». L'initiative
+  et le budget de rencontre ne sont pas encore tranchés.
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
 
