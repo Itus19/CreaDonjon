@@ -1143,3 +1143,189 @@ se ressemblent tous (seule leur date les distingue). Un seul suffit sans
 doute ; les révoquer est un geste du MJ, pas un changement d'écran. Les
 nommer (« lien Discord », « lien table du jeudi ») serait une fonctionnalité
 neuve, à rouvrir si le besoin se confirme.
+
+---
+
+### V3.1-16 — Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse · `M`/`L`
+
+Constaté le 1ᵉʳ octobre par l'auteur, captures à l'appui : le Calendrier réel
+du MJ (`SchedulingMjPanel.tsx`) empile deux grilles hautes qu'il faut faire
+défiler dans les deux sens, perd les heures dès qu'on défile vers la droite,
+affiche « ? » au survol à la place de l'auteur, et liste les 31 jours même
+quand personne n'est disponible. La vue joueuse (`NextSessionPanel.tsx`,
+page `joueur/prochaine-session`) est « pas ouf » : trois onglets, la
+prochaine séance cachée derrière l'un d'eux, et aucune vue de la table.
+
+**L'esquisse fait foi, au pixel près pour la grille** — canevas
+[Calendrier réel — esquisses](https://claude.ai/artifact/Lh9FKyKz4zF3LbMSBCcXe5),
+interactif (bouton Play de chaque cadre) :
+
+- **Vue MJ** : cadre « A — Retenue : une grille, bascule Mes dispos / Toute
+  la table », fichier `Main.dc.html`.
+- **Vue joueuse** : cadre « Vue joueuse — même écran, sans les outils MJ »,
+  fichier `Joueuse.dc.html`.
+
+Les cadres B, C et D (une grille avec panneau latéral, une semaine à la fois,
+jours en lignes) ont été regardés et écartés ; ils restent sur le canevas.
+Dans l'esquisse, les disponibilités de l'auteur (11, 24, 25 octobre 10:00–22:00,
+31 octobre 10:00–18:30) et les séances listées sont réelles ; **celles des
+joueuses sont inventées** pour que la carte de chaleur ait quelque chose à
+montrer. Comme pour V3.1-15, l'esquisse fait foi pour la disposition et les
+comportements ; le code fait foi pour les jetons (`--accent`, `--edge`,
+`--panel-*`), `Dropdown`, `ConfirmDialog` et la charte.
+
+#### La grille — commune aux deux vues
+
+Un seul composant de grille remplace `AvailabilityPaintGrid.tsx` et
+`AvailabilityHeatmap.tsx` à l'affichage (la logique de peinture et
+d'enregistrement de `AvailabilityPaintGrid` est reprise, pas réécrite).
+
+- **Bascule « Mes disponibilités / Toute la table »** (segments, comme dans
+  l'esquisse), au-dessus de la grille. Une seule grille à l'écran, jamais deux
+  empilées.
+  - *Mes disponibilités* : on peint ses créneaux (clic, ou glisser pour
+    cocher ou décocher une plage), case pleine en `--accent`. À côté de la
+    bascule, le total coché (« 9,5 h cochées »).
+  - *Toute la table* : carte de chaleur, fond `--accent` d'autant plus opaque
+    qu'il y a de monde, et la légende « Moins → Toute la table » sous la grille.
+- **Géométrie de l'esquisse** : colonnes de jour de 40 px, lignes d'une
+  demi-heure de 20 px, en-tête de dates de 46 px (jour abrégé au-dessus, numéro
+  en dessous), colonne des heures de 68 px avec un libellé par heure pleine.
+  Trait vertical plus marqué entre dimanche et lundi ; samedi et dimanche
+  légèrement teintés dans l'en-tête.
+- **Toutes les heures visibles sans défilement vertical** : la grille prend sa
+  hauteur entière (créneau proposé de 08:00 à 22:00 = 28 lignes ≈ 600 px).
+  **Une ligne de clôture affiche la dernière heure** (« 22:00 », en accent)
+  sous la dernière demi-heure : on voit où finit le créneau proposé. Seul le
+  défilement horizontal subsiste, sur les jours.
+- **La colonne des heures reste à gauche** quand on défile vers la droite
+  (`position: sticky`), et la ligne des dates reste en haut.
+- **Surbrillance en croix au survol** : la date dans l'en-tête et l'heure dans
+  la colonne de gauche passent en fond accent atténué ; la ligne et la colonne
+  de la case s'éclaircissent légèrement ; la case visée est entourée. Vrai dans
+  les deux modes.
+- **Info-bulle au survol en mode « Toute la table »** : jour en toutes lettres
+  et demi-heure (« samedi 24 oct. · 16:00–16:30 »), le décompte (« 5/8
+  disponibles »), puis les noms, **la personne qui regarde en tête avec
+  « (toi) »**. L'info-bulle passe à gauche de la case près du bord droit.
+- **Barre de défilement aux couleurs de l'application** : celle de
+  `app/globals.css` (6 px, piste transparente, poignée `--edge`,
+  `--edge-strong` au survol), et une marge sous la grille pour qu'elle ne
+  couvre jamais la ligne « 22:00 ». Ces règles `::-webkit-scrollbar` ne
+  touchent pas Firefox, qui garde la barre du système — limite connue de
+  `globals.css`, hors de ce ticket.
+
+#### Les dates possibles — commune aux deux vues
+
+- **Seulement les jours où au moins une personne est disponible.** Les jours
+  à « 0/8 — aucun créneau commun » disparaissent.
+- Une ligne par jour, comme dans l'esquisse : rang, décompte en grand (« 5/8 »),
+  date, meilleur créneau et sa durée (« 14:00–22:00 · 8 h »), étiquette
+  « Session complète » ou « Moins de 5 h » (selon la durée visée), les noms des
+  présents sur ce créneau, une barre de remplissage.
+- **Changement de règle, voulu** : le « meilleur créneau » d'un jour est la plus
+  longue plage où le **plus grand nombre** de personnes est disponible, et le
+  classement trie par ce nombre, puis par la durée. Aujourd'hui
+  (`computeOverlap`/`rankDays`, `src/core/scheduling/overlap.ts`) il faut un
+  créneau commun à **toutes** les personnes ayant répondu ce jour-là : une
+  seule joueuse dispo le matin seulement suffit à classer le jour « aucun
+  créneau commun », alors que quatre autres pourraient jouer 5 h. Fonction
+  pure dans `src/core/scheduling`, **tests d'abord**, avec ce cas-là.
+
+#### Vue MJ (`Main.dc.html`)
+
+De haut en bas : en-tête (titre de la demande, « Créneau proposé · N jours ·
+X réponses sur Y », durée visée, « Annuler la demande ») → la grille à bascule
+→ « Dates possibles » avec un bouton « Confirmer » par ligne (accent plein pour
+une session complète) → trois cartes côte à côte : « Régler une date à la
+main », « Séances à venir » (avec « Annuler »), « Déjà jouées ».
+
+#### Vue joueuse (`Joueuse.dc.html`)
+
+La même page **sans aucun outil MJ** : ni durée visée, ni « Annuler la
+demande », ni « Confirmer », ni date à la main, ni « Annuler » sur les séances.
+Elle remplace les trois onglets actuels par une seule page :
+
+1. **La prochaine séance confirmée, en tête et en grand** (carte avec la date
+   en pavé, « Dimanche 18 octobre · 16:00 », « environ 6 h · dans 17 jours »).
+2. **La demande ouverte** : titre, une phrase qui dit ce que le MJ propose
+   (« du 1ᵉʳ au 31 octobre, entre 08:00 et 22:00 — coche tout ce qui t'irait »),
+   l'état de sa réponse (« Réponse enregistrée »), puis la grille à bascule —
+   **« Toute la table » compris**.
+3. **« Les dates qui se dessinent »** : le même classement, en lecture seule,
+   avec « c'est le MJ qui choisit ».
+4. « Séances à venir » et « Déjà jouées », côte à côte, en lecture seule.
+
+Sans demande ouverte, la section 2 se réduit à une ligne (« Aucune demande de
+disponibilités pour le moment ») et la 3 disparaît.
+
+**La joueuse voit la table : aucun droit nouveau.** La RLS de
+`real_session_availabilities` ouvre déjà la lecture à tout membre du monde
+(« rien ici n'est sensible entre coéquipières », migration
+`20260913140000_real_scheduling.sql`). La route
+`/api/campaigns/[id]/scheduling/requests/open`, qui renvoie la carte de chaleur
+et le classement, ne vérifie que l'authentification : elle sert déjà à une
+joueuse, il suffit que sa page l'appelle. Les champs propres au MJ (durée visée)
+peuvent rester dans la réponse : ils ne sont pas secrets, seulement inutiles.
+
+#### Deux bugs relevés en lisant le code — corrigés par ce ticket
+
+1. **Le « ? » à la place de l'auteur.** `resolveNamesIncludingGm`
+   (`src/server/services/scheduling.ts`) ne nomme que **le premier** MJ trouvé
+   (`members.find(m => m.role === "gm")`). Avec deux MJ (Claude et Gabriel),
+   l'autre reste sans nom, rendu « ? » par `AvailabilityHeatmap`. Tous les MJ
+   sont nommés.
+2. **Le « /8 ».** `totalMembers` compte tous les membres de la campagne : les
+   deux MJ et le doublon « Tamara ». Le dénominateur devient **les personnes
+   attendues à la table** : les joueuses et le MJ qui a ouvert la demande — pas
+   un second MJ qui ne répond pas.
+
+#### Points tranchés par l'esquisse, à respecter
+
+- **Les noms affichés sont ceux des personnes**, pas de leurs PJ : l'info-bulle
+  et les dates possibles disent « Soso », pas « Fine Lââm ». Aujourd'hui
+  `resolvePlayerNames` renvoie le nom du PJ. Lire `display_name` (et le tag de
+  V3.1-15 si deux comptes portent le même nom, côté MJ seulement — ADR 0032).
+- **Enregistrement côté joueuse** : l'esquisse montre un bouton « Enregistrer
+  mes disponibilités ». Aujourd'hui `AvailabilityPaintGrid` enregistre seule, à
+  chaque relâchement de la souris. **On garde l'enregistrement automatique** (un
+  bouton oublié perd une réponse) et le bouton de l'esquisse devient une ligne
+  d'état à la même place : « Enregistrement… » puis « Enregistré ✓ », et l'erreur
+  en `--danger` si l'écriture échoue. À rouvrir si l'auteur préfère le bouton.
+- Côté MJ, la grille « Mes disponibilités » remplace la grille de peinture
+  actuelle : le MJ répond comme une joueuse.
+
+**Étapes**
+
+1. Noyau (`src/core/scheduling`), **tests d'abord** : meilleur créneau d'un jour
+   (plus grand nombre, puis plus longue plage), classement, filtrage des jours
+   vides, total coché.
+2. Serveur : nommer tous les MJ, dénominateur « attendus à la table », noms de
+   personnes au lieu des PJ. Tests d'intégration sur deux MJ.
+3. Composant de grille unique (bascule, sticky, croix, info-bulle, ligne
+   22:00, barre de défilement), monté par les deux vues.
+4. `SchedulingMjPanel` réorganisé selon `Main.dc.html`.
+5. `NextSessionPanel` réécrit selon `Joueuse.dc.html` (fin des trois onglets).
+6. Vérifier en navigateur, avec un compte MJ et un compte joueuse, sur la
+   campagne réelle : bureau et 375 px, les quatre modes, le contraste élevé.
+
+**Critères**
+
+- [ ] Vue MJ et vue joueuse conformes à `Main.dc.html` et `Joueuse.dc.html`,
+  comparées côte à côte avec l'esquisse.
+- [ ] Une seule grille par vue, avec la bascule « Mes disponibilités / Toute la
+  table ».
+- [ ] De 08:00 à 22:00, toutes les heures sont visibles sans défilement
+  vertical, la ligne « 22:00 » comprise, et la barre de défilement ne la
+  couvre pas.
+- [ ] Les heures restent visibles en défilant vers la droite ; les dates restent
+  visibles en haut.
+- [ ] Au survol, la date et l'heure de la case s'allument ; en « Toute la
+  table », l'info-bulle donne les noms des personnes disponibles, le sien en
+  tête avec « (toi) », et **jamais « ? »**, y compris pour un second MJ.
+- [ ] Les dates possibles ne listent que les jours où quelqu'un est disponible,
+  classées par nombre de présents puis par durée.
+- [ ] La vue joueuse ne montre aucun outil MJ, met la prochaine séance en tête,
+  et laisse voir la table.
+- [ ] La barre de défilement reprend le style de `app/globals.css`.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
