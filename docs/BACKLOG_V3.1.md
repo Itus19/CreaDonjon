@@ -1666,7 +1666,26 @@ jour la charte » tient.
 
 ---
 
-### V3.1-19 — Refonte « verre minéral » : rail repliable, outils intégrés, ailes du solo · `L` — **à découper**
+### V3.1-19 — Refonte « verre minéral » (ticket parent) · `XL` — **en conception**
+
+Ce ticket regroupe **toute** la refonte graphique en cours. Chaque lot se code
+et se livre seul, dans l'ordre qu'on voudra ; le ticket est fini quand tous les
+lots le sont.
+
+| Lot | Contenu | État |
+|---|---|---|
+| a | Rail repliable, MJ + joueur, desktop et tablette | décidé, à coder |
+| b | Dalle « Outils » : dés encochés + radio (point vert/rouge) | décidé, à coder |
+| c | Téléphone : tiroir MJ flottant, barre joueur flottante | décidé, à coder |
+| d | Ailes du solo : bande repliée (bouclier CA, PV, Niveau, Charge) | décidé, à coder |
+| e | Fiche de personnage à jauges circulaires, commande E | décidé, à coder |
+| f | Tablette : la fiche s'adapte à sa fenêtre (piste B) | décidé, à coder |
+| g | Fenêtres du MJ en deux volets à onglets → **V3.1-20** | décidé, à coder |
+| h | Page d'accueil : répartition des mondes par rôle (MJ ici, joueur là), compte superadmin et utilisateur | **cinq propositions esquissées, à trancher** |
+| — | Jauges de l'initiative et du budget de rencontre | à trancher |
+
+Le détail de chaque décision suit.
+
 
 Esquisse : https://claude.ai/artifact/EzWpfdYv6xP9H9gMp6L8Lm (huit fenêtres :
 MJ, joueur, solo en desktop ; MJ, joueur en tablette ; MJ, joueur en
@@ -1721,17 +1740,24 @@ réellement la coquille :
   CA reste un bouclier, les constantes restent des badges, l'Inspiration prend
   la taille d'un badge. Planche « fiche avec jauges circulaires ». L'initiative
   et le budget de rencontre ne sont pas encore tranchés.
+- **Page d'accueil (lot h)** — un même compte peut être MJ dans un monde et
+  joueur dans un autre ; les outils proposés à droite dépendent du rôle dans le
+  monde sélectionné, pas du compte. Cinq propositions vivantes dans l'esquisse,
+  rangée « Page d'accueil » : 1 deux colonnes par rôle, 2 cartes + panneau
+  glissant, 3 tableau de bord, 4 rail de mondes, 5 liste en accordéon. Chacune a
+  un interrupteur superadmin. À trancher par l'auteur.
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
 
-**Découpage proposé** : (a) rail repliable MJ + joueur desktop/tablette ;
-(b) dalle Outils (dés + radio) ; (c) téléphone ; (d) ailes du solo. Chacun met
+**Planches** : chaque lot met
 à jour ses planches (Pastille chrome, Tiroir, Bouton de dés, Rail du joueur, et
 une planche « Rail repliable » à créer).
 
 ---
 
 ### V3.1-20 — Fenêtres du MJ en deux volets à onglets · `L` — **décidé le 1ᵉʳ octobre, à coder**
+
+Lot g du ticket parent V3.1-19 (refonte « verre minéral »).
 
 **Constat.** Les fenêtres du MJ se déplacent librement, s'aimantent à une
 moitié d'écran contre un bord, se réduisent en bas, mais **ne se
