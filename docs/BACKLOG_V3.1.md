@@ -1695,11 +1695,20 @@ réellement la coquille :
 **À trancher avant de coder** :
 - Le trou de 768 à 900 px (tablette en portrait) : grille de fiche adaptative,
   ou rail replié plus tôt ?
-- Les jauges de la bande repliée : `JaugeCirculaire` existe déjà
-  (`FicheJouableEnTete.tsx`), contrairement à ce que dit l'esquisse. Mais la CA
-  n'a pas de maximum (d'où le bouclier) : la bande garde-t-elle le bouclier ?
-- Étendre les jauges circulaires à toutes les barres de progression (piste
-  ouverte par l'auteur) : décision de DA à prendre ici ou à part.
+- ~~Les jauges de la bande repliée~~ — **tranché le 1ᵉʳ octobre** : la CA est
+  un bouclier à la taille des jauges (pas d'anneau), plié comme déplié ; la
+  bande gagne une jauge de **charge du sac** (encombrement). Bande repliée :
+  bouclier CA, PV, Niveau, Charge. Esquisse Solo-Desktop mise à jour.
+  `JaugeCirculaire` existe déjà (`FicheJouableEnTete.tsx`), contrairement à ce
+  que disait l'esquisse.
+- Le trou de 768 à 900 px : planche « Question · le trou sur tablette » (la
+  même fiche à 960, 540 et 680 px de fenêtre) ; deux pistes à choisir —
+  replier le rail plus tôt, ou une fiche qui s'adapte à sa fenêtre.
+- Étendre les jauges circulaires à toutes les barres de progression : planche
+  « Question · fiche avec jauges circulaires » (fiche actuelle et proposition
+  côte à côte) ; décision après l'avoir vue.
+- La refonte n'est pas figée : l'auteur prévoit encore des retouches de
+  l'esquisse avant tout code.
 
 **Découpage proposé** : (a) rail repliable MJ + joueur desktop/tablette ;
 (b) dalle Outils (dés + radio) ; (c) téléphone ; (d) ailes du solo. Chacun met
