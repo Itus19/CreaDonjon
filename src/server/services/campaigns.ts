@@ -74,7 +74,7 @@ export async function getCampaign(supabase: TypedClient, id: string): Promise<Ca
   return row ? toSummary(row) : null;
 }
 
-/** V3.1-11 : le mode solo (V3, IA locale) n'a de sens que sans MJ humain — même motif que `resolveNamesIncludingGm` dans `scheduling.ts`. */
+/** V3.1-11 : le mode solo (V3, IA locale) n'a de sens que sans MJ humain — même motif que l'ancien `resolveNamesIncludingGm` de `scheduling.ts`. */
 export async function hasHumanGm(supabase: TypedClient, campaignId: string): Promise<boolean> {
   const members = await listCampaignMembers(supabase, campaignId);
   return members.some((m) => m.role === "gm");

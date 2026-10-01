@@ -1146,7 +1146,7 @@ neuve, à rouvrir si le besoin se confirme.
 
 ---
 
-### V3.1-16 — Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse · `M`/`L`
+### V3.1-16 — Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse · `M`/`L` — **codé le 1ᵉʳ octobre, à vérifier en direct**
 
 Constaté le 1ᵉʳ octobre par l'auteur, captures à l'appui : le Calendrier réel
 du MJ (`SchedulingMjPanel.tsx`) empile deux grilles hautes qu'il faut faire
@@ -1312,20 +1312,60 @@ peuvent rester dans la réponse : ils ne sont pas secrets, seulement inutiles.
 **Critères**
 
 - [ ] Vue MJ et vue joueuse conformes à `Main.dc.html` et `Joueuse.dc.html`,
-  comparées côte à côte avec l'esquisse.
-- [ ] Une seule grille par vue, avec la bascule « Mes disponibilités / Toute la
-  table ».
-- [ ] De 08:00 à 22:00, toutes les heures sont visibles sans défilement
+  comparées côte à côte avec l'esquisse. **À faire chez l'auteur**, sur la
+  campagne réelle, avec un compte MJ et un compte joueuse.
+- [x] Une seule grille par vue, avec la bascule « Mes disponibilités / Toute la
+  table » (`AvailabilityGrid.tsx`, monté par `SchedulingMjPanel` et
+  `NextSessionPanel` ; `AvailabilityPaintGrid` et `AvailabilityHeatmap`
+  supprimés).
+- [x] De 08:00 à 22:00, toutes les heures sont visibles sans défilement
   vertical, la ligne « 22:00 » comprise, et la barre de défilement ne la
   couvre pas.
-- [ ] Les heures restent visibles en défilant vers la droite ; les dates restent
-  visibles en haut.
-- [ ] Au survol, la date et l'heure de la case s'allument ; en « Toute la
-  table », l'info-bulle donne les noms des personnes disponibles, le sien en
-  tête avec « (toi) », et **jamais « ? »**, y compris pour un second MJ.
-- [ ] Les dates possibles ne listent que les jours où quelqu'un est disponible,
-  classées par nombre de présents puis par durée.
-- [ ] La vue joueuse ne montre aucun outil MJ, met la prochaine séance en tête,
-  et laisse voir la table.
-- [ ] La barre de défilement reprend le style de `app/globals.css`.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+- [x] Les heures restent visibles en défilant vers la droite. *La ligne des
+  dates n'a plus besoin de rester en haut : la grille n'a plus de défilement
+  vertical.* La colonne des heures a un fond opaque (le panneau posé sur le fond
+  de page) : `--panel` est translucide, et les cases défilant dessous
+  transparaissaient.
+- [x] Au survol, la date et l'heure de la case s'allument, sa ligne et sa
+  colonne s'éclaircissent (ombre intérieure, visible aussi sur une case vide) ;
+  en « Toute la table », l'info-bulle donne les noms, le sien en tête avec
+  « (toi) », et **jamais « ? »** : tous les MJ sont nommés.
+- [x] Les dates possibles ne listent que les jours où quelqu'un est disponible,
+  classées par nombre de présents puis par durée (`bestWindow.ts`, tests
+  d'abord : le cas « une joueuse le matin ne casse plus la journée », et deux
+  groupes contigus de même taille jamais fusionnés).
+- [x] La vue joueuse ne montre aucun outil MJ, met la prochaine séance en tête,
+  et laisse voir la table. Page élargie (`max-w-lg` → `max-w-5xl`).
+- [x] La barre de défilement reprend le style de `app/globals.css` (rien à
+  écrire : la règle globale s'applique).
+- [x] `npm run typecheck && npm run lint && npm run test` passent.
+
+**Ce qui a été vérifié, et comment.** Sans base dans la session cloud, la grille
+a été montée seule dans Chromium (Playwright), alimentée par une demande
+d'octobre et des réponses de test : réponse existante relue (44,5 h cochées),
+colonne des heures immobile à 600 px de défilement, info-bulle « 3/6 disponibles
+· Gabriel (toi) · Soso · Leïla », classement des dates, et un glisser sur quatre
+cases qui enregistre **une seule plage** `10:00–12:00` — la forme d'avant. Les
+routes, la RLS et les deux écrans complets n'ont pas tourné : c'est la
+vérification en direct qui reste.
+
+**Les réponses déjà déposées pour octobre ne bougent pas** (demande de l'auteur
+pendant le codage) : aucune migration, aucune écriture nouvelle. Une réponse
+reste « une plage par jour et par personne » ; seuls le calcul du classement et
+l'affichage changent.
+
+**Décisions prises en codant :**
+- Noms : **la personne seulement** (`profiles.display_name`), tranché par
+  l'auteur le 1ᵉʳ octobre — l'ancien commentaire « les comptes s'identifient par
+  leur personnage partout » ne vaut plus pour cet écran. `resolvePlayerNames`
+  (nom du PJ) reste inchangé pour le Livre de sessions. Le tag de V3.1-15 n'est
+  pas ajouté ici : il vient avec V3.1-15.
+- Dénominateur : les joueuses, le MJ qui a ouvert la demande, et tout autre
+  membre qui a répondu (`expectedAtTable`). Le doublon « Tamara » compte encore,
+  c'est un vrai membre : V3.1-15 permettra de le retirer.
+- Enregistrement : automatique au relâchement, comme avant, avec une ligne
+  d'état « Enregistrement… / Enregistré ✓ » à côté de la bascule.
+- `computeOverlap`/`rankDays` supprimés avec leurs tests : plus aucun appelant.
+- Pas de test d'intégration sur deux MJ : il ne tournerait pas sans base. La
+  règle du dénominateur est testée dans le noyau ; les noms viennent d'une seule
+  requête groupée sur `profiles`.

@@ -21,24 +21,31 @@ import {
 } from "@/src/server/repos/scheduling";
 import { listCampaignMembers, listCampaignCharacters } from "@/src/server/repos/campaigns";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
-import { classifySession, computeOverlap, rankDays, timeToMinutes, minutesToTime, type DayCandidate } from "@/src/core/scheduling/overlap";
+import { classifySession, timeToMinutes, minutesToTime, type SessionCategory } from "@/src/core/scheduling/overlap";
 import { buildHeatmap, generateSlots, type SlotResponse } from "@/src/core/scheduling/availabilityGrid";
+import { bestWindowForDay, expectedAtTable, rankBestDays } from "@/src/core/scheduling/bestWindow";
+import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
 
 type TypedClient = SupabaseClient<Database>;
 
 export { deleteAvailabilityRow as deleteAvailability };
 export type { AvailabilityRow, RealSessionRow, AvailabilityRequestRow };
 
-export interface RosterEntry {
-  userId: string;
-  /** Nom du PJ (retour utilisateur : les comptes s'identifient par leur personnage partout ailleurs dans l'app, jamais par un nom de compte) — `null` si ce compte n'a pas encore de PJ dans cette campagne. */
-  name: string | null;
-  startsAt: string;
-  endsAt: string;
-}
-
-export interface RankedDay extends DayCandidate {
-  roster: RosterEntry[];
+/**
+ * Une date possible d'une ronde de demande (V3.1-16) : son meilleur créneau —
+ * la plus longue plage où le plus de monde est présent (`bestWindowForDay`) —
+ * et qui y est. `count`/`expected` font le décompte affiché (« 5/6 »).
+ */
+export interface RankedDay {
+  date: string;
+  count: number;
+  expected: number;
+  start: number;
+  end: number;
+  durationMinutes: number;
+  category: SessionCategory;
+  people: { userId: string; name: string }[];
+  respondentCount: number;
 }
 
 /** (compte → nom du PJ) pour une campagne — même identité que partout ailleurs dans l'app (`campaign_characters` → entité), jamais le nom de compte. Exportée : réutilisée telle quelle par le Livre de sessions (V2.1-3, même besoin exact de roster). */
@@ -50,13 +57,16 @@ export async function resolvePlayerNames(supabase: TypedClient, campaignId: stri
   return new Map(pcs.map((c) => [c.user_id as string, nameByEntity.get(c.entity_id) ?? "?"]));
 }
 
-/** `resolvePlayerNames` + le MJ (V3.1-8 : "le MJ doit aussi pouvoir mettre ses dispos") — copie locale, jamais modifiée pour les autres appelants de `resolvePlayerNames`, qui reste réservée aux PJ. */
-async function resolveNamesIncludingGm(supabase: TypedClient, campaignId: string): Promise<Map<string, string>> {
-  const [namesByUser, members] = await Promise.all([resolvePlayerNames(supabase, campaignId), listCampaignMembers(supabase, campaignId)]);
-  const names = new Map(namesByUser);
-  const gmMember = members.find((m) => m.role === "gm");
-  if (gmMember && !names.has(gmMember.user_id)) names.set(gmMember.user_id, "MJ");
-  return names;
+/**
+ * Nom de chaque personne d'une campagne pour le Calendrier réel (V3.1-16) :
+ * son nom de compte (`profiles.display_name`), jamais celui de son PJ — choix
+ * de l'auteur le 1ᵉʳ octobre, pour cet écran seulement : `resolvePlayerNames`
+ * (nom du PJ) reste ce qu'il est pour le Livre de sessions. Tous les MJ sont
+ * nommés : l'ancienne version ne nommait que le premier, et l'autre
+ * s'affichait « ? ».
+ */
+async function resolveSchedulingNames(supabase: TypedClient, userIds: string[]): Promise<Map<string, string>> {
+  return getDisplayNamesForUsers(supabase, userIds);
 }
 
 function formatDateFr(date: string): string {
@@ -141,58 +151,12 @@ export async function respondToOpenRequest(
   return { ok: true, availability };
 }
 
-/**
- * Classement des dates candidates d'une ronde de demande (V3.1-8) : croise
- * les réponses déjà déposées avec l'effectif réel de joueuses de la
- * campagne, calcule le chevauchement horaire de chaque date
- * (`src/core/scheduling/overlap.ts`, pur/testé) et renvoie les dates
- * triées du meilleur au moins bon, avec le détail par joueuse (roster
- * affiché au clic). Porte sur `request.candidate_dates` uniquement — une
- * date candidate sans aucune réponse apparaît quand même, classée en
- * dernier (`category: "none"`), pour que le MJ voie toute sa proposition,
- * pas seulement ce qui a déjà une réponse.
- */
-export async function getRankedDaysForRequest(supabase: TypedClient, campaignId: string, request: AvailabilityRequestRow): Promise<RankedDay[]> {
-  const [availabilities, members, targetMinutes, namesWithGm] = await Promise.all([
-    listAvailabilitiesForRequest(supabase, request.id),
-    listCampaignMembers(supabase, campaignId),
-    getTargetSessionMinutes(supabase, campaignId),
-    resolveNamesIncludingGm(supabase, campaignId),
-  ]);
-  // Le MJ repond aussi desormais (retour utilisateur V3.1-8 : "le MJ doit
-  // aussi pouvoir mettre ses dispos") — totalMembers compte tout le monde,
-  // pas seulement les joueuses (renverse le choix d'origine V2.1-4, qui
-  // excluait le MJ parce qu'il ne repondait jamais).
-  const totalMembers = members.length;
-
-  const byDate = new Map<string, AvailabilityRow[]>();
-  for (const date of request.candidate_dates) byDate.set(date, []);
-  for (const row of availabilities) {
-    const existing = byDate.get(row.date);
-    if (existing) existing.push(row);
-  }
-
-  const days: RankedDay[] = [];
-  for (const [date, rows] of byDate) {
-    const overlap = computeOverlap(rows.map((r) => ({ userId: r.user_id, startsAt: timeToMinutes(r.starts_at), endsAt: timeToMinutes(r.ends_at) })));
-    days.push({
-      date,
-      participantCount: rows.length,
-      totalMembers,
-      overlap: overlap ?? { start: 0, end: 0, durationMinutes: 0 },
-      category: overlap ? classifySession(overlap.durationMinutes, targetMinutes) : "none",
-      roster: rows.map((r) => ({ userId: r.user_id, name: namesWithGm.get(r.user_id) ?? null, startsAt: r.starts_at, endsAt: r.ends_at })),
-    });
-  }
-  return rankDays(days) as RankedDay[];
-}
-
 const HEATMAP_STEP_MINUTES = 30;
 
 export interface HeatmapCellWithNames {
   date: string;
   slotStart: number;
-  users: { userId: string; name: string | null }[];
+  users: { userId: string; name: string }[];
 }
 export interface Heatmap {
   slots: number[];
@@ -200,17 +164,32 @@ export interface Heatmap {
   cells: HeatmapCellWithNames[];
 }
 
+export interface RequestBoard {
+  /** Seulement les jours où quelqu'un est disponible, du meilleur au moins bon. */
+  days: RankedDay[];
+  heatmap: Heatmap;
+  /** Personnes attendues à la table — le dénominateur de chaque décompte. */
+  expected: number;
+}
+
 /**
- * Carte de chaleur d'une ronde de demande (V3.1-8, retour utilisateur :
- * "des zones de plus en plus foncées... avec une infobulle au survol") —
- * découpe la plage horaire suggérée en créneaux de 30 minutes
- * (`src/core/scheduling/availabilityGrid.ts`, pur/testé) et associe à
- * chaque case les joueuses dont la réponse couvre entièrement ce créneau.
- * Complète `getRankedDaysForRequest` (le classement/bouton Confirmer reste
- * inchangé) plutôt que de le remplacer.
+ * Tout ce que la grille et les dates possibles affichent pour une ronde de
+ * demande (V3.1-16), en une seule lecture des réponses : la carte de chaleur
+ * par demi-heure (`buildHeatmap`), puis, par jour, son meilleur créneau
+ * (`bestWindowForDay`), classés (`rankBestDays`). Les réponses déjà déposées
+ * sont lues telles quelles : rien ne change dans leur forme (une plage par
+ * jour et par personne), seul le calcul du classement change.
  */
-export async function getHeatmapForRequest(supabase: TypedClient, campaignId: string, request: AvailabilityRequestRow): Promise<Heatmap> {
-  const [availabilities, namesByUser] = await Promise.all([listAvailabilitiesForRequest(supabase, request.id), resolveNamesIncludingGm(supabase, campaignId)]);
+export async function getRequestBoard(supabase: TypedClient, campaignId: string, request: AvailabilityRequestRow): Promise<RequestBoard> {
+  const [availabilities, members, targetMinutes] = await Promise.all([
+    listAvailabilitiesForRequest(supabase, request.id),
+    listCampaignMembers(supabase, campaignId),
+    getTargetSessionMinutes(supabase, campaignId),
+  ]);
+  const expectedIds = expectedAtTable(members, request.created_by, availabilities.map((a) => a.user_id));
+  const names = await resolveSchedulingNames(supabase, expectedIds);
+  const nameOf = (userId: string) => names.get(userId) ?? "Sans nom";
+
   const slots = generateSlots(timeToMinutes(request.starts_at), timeToMinutes(request.ends_at), HEATMAP_STEP_MINUTES);
   const responses: SlotResponse[] = availabilities.map((r) => ({
     date: r.date,
@@ -219,10 +198,28 @@ export async function getHeatmapForRequest(supabase: TypedClient, campaignId: st
     endsAt: timeToMinutes(r.ends_at),
   }));
   const cells = buildHeatmap(request.candidate_dates, slots, HEATMAP_STEP_MINUTES, responses);
+
+  const best = request.candidate_dates.map((date) => bestWindowForDay(date, cells, HEATMAP_STEP_MINUTES)).filter((d) => d !== null);
+  const days: RankedDay[] = rankBestDays(best).map((d) => ({
+    date: d.date,
+    count: d.count,
+    expected: expectedIds.length,
+    start: d.start,
+    end: d.end,
+    durationMinutes: d.durationMinutes,
+    category: classifySession(d.durationMinutes, targetMinutes),
+    people: d.userIds.map((userId) => ({ userId, name: nameOf(userId) })),
+    respondentCount: d.respondentCount,
+  }));
+
   return {
-    slots,
-    step: HEATMAP_STEP_MINUTES,
-    cells: cells.map((c) => ({ date: c.date, slotStart: c.slotStart, users: c.userIds.map((id) => ({ userId: id, name: namesByUser.get(id) ?? null })) })),
+    days,
+    expected: expectedIds.length,
+    heatmap: {
+      slots,
+      step: HEATMAP_STEP_MINUTES,
+      cells: cells.map((c) => ({ date: c.date, slotStart: c.slotStart, users: c.userIds.map((userId) => ({ userId, name: nameOf(userId) })) })),
+    },
   };
 }
 
