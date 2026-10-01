@@ -1678,10 +1678,10 @@ lots le sont.
 | b | Dalle « Outils » : dés encochés + radio (point vert/rouge) | décidé, à coder |
 | c | Téléphone : tiroir MJ flottant, barre joueur flottante | décidé, à coder |
 | d | Ailes du solo : bande repliée (bouclier CA, PV, Niveau, Charge) | décidé, à coder |
-| e | Fiche de personnage à jauges circulaires, commande E | décidé, à coder |
+| e | Fiche de personnage à jauges circulaires, commande E ; onglets en pilule glissante | décidé, à coder |
 | f | Tablette : la fiche s'adapte à sa fenêtre (piste B) | décidé, à coder |
 | g | Fenêtres du MJ en deux volets à onglets → **V3.1-20** | décidé, à coder |
-| h | Page d'accueil en tableau de bord, rail joueur, « Nouveau monde » à trois choix | décidé, à coder — style d'onglets du panneau à trancher |
+| h | Page d'accueil en tableau de bord, rail joueur, « Nouveau monde » à trois choix, onglets en pilule glissante | décidé, à coder |
 | — | Jauges de l'initiative et du budget de rencontre | à trancher |
 
 Le détail de chaque décision suit.
@@ -1756,11 +1756,15 @@ réellement la coquille :
     donne enfin une place à ce lien).
   - Colonnes « Je mène » (+ « En solo ») et « Je joue » alignées sur une même
     ligne de titres ; panneau du monde à droite.
-  - **Reste à trancher** : le style des onglets du panneau MJ (Journal,
-    Joueurs, Accès, Réglages), qui remplace les onglets « classeur ». Cinq
-    styles sur la planche « onglets du panneau de monde » : A pilule glissante,
-    B soulignement, C pastilles à icônes, D liste latérale, E dalles résumé.
-    Essayables aussi dans la planche de l'accueil.
+  - ~~Style des onglets du panneau MJ~~ — **tranché le 1ᵉʳ octobre : A,
+    pilule glissante** (sur cinq : pilule, soulignement, pastilles à icônes,
+    liste latérale, dalles résumé). **Elle remplace aussi les onglets
+    « classeur » de la fiche de personnage** : une seule présentation
+    d'onglets dans l'application (ADR 0034, qui remplace en partie l'ADR 0026).
+    Glissement du fond 260 ms, sauté sous `prefers-reduced-motion`. Usages de
+    `BinderTabs` à convertir : accueil, fiche jouable, fiche solo, colonne
+    Monde et coquille du solo, aperçu du créateur. Charte §3 et planche 3 du
+    catalogue mises à jour avec le code.
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
 
