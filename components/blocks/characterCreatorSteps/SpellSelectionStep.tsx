@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import EyeIcon from "@/components/shared/EyeIcon";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { AbilityScores } from "@/src/core/schemas/blocks/abilities";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
@@ -200,7 +201,7 @@ function SpellRow({
             aria-label={expanded ? "Replier" : "En savoir plus"}
             className="shrink-0 rounded-full p-1 text-ink-muted transition-colors hover:bg-panel hover:text-accent"
           >
-            {expanded ? "▴" : "👁"}
+            {expanded ? "▴" : <EyeIcon open className="h-4 w-4" />}
           </button>
         )}
       </div>

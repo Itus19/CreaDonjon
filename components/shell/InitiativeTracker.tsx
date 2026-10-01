@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import Stepper from "@/components/shared/Stepper";
+import DieIcon from "@/components/shared/DieIcon";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { MonsterCard } from "@/components/rules/blockContentRenderer";
 import ParticipantCharacterSheet from "./ParticipantCharacterSheet";
@@ -19,6 +20,51 @@ const STATUS_OPTIONS = [
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+}
+
+/**
+ * D'où vient un combattant — entité du monde, combattant improvisé, monstre
+ * d'un bloc de statistiques. Icônes au trait (charte §10) à la place des
+ * émojis 🧑 ❓ 💀 d'avant V3.1-18 : elles prennent la couleur du texte et
+ * suivent les modes. Le libellé reste dans `title` et pour les lecteurs
+ * d'écran : l'icône seule ne dit pas son sens.
+ */
+function ParticipantKindIcon({ kind }: { kind: string }) {
+  const label = kind === "entity" ? "Entité du monde" : kind === "custom" ? "Combattant improvisé" : "Monstre";
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      role="img"
+      aria-label={label}
+      className="h-4 w-4 shrink-0 text-ink-muted"
+    >
+      <title>{label}</title>
+      {kind === "entity" ? (
+        <>
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+        </>
+      ) : kind === "custom" ? (
+        <>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.4" />
+          <path d="M12 16.8h.01" />
+        </>
+      ) : (
+        <>
+          <path d="M12 3a7 7 0 0 0-7 7c0 2.4 1.2 4.1 3 5.2V19h8v-3.8c1.8-1.1 3-2.8 3-5.2a7 7 0 0 0-7-7Z" />
+          <circle cx="9.5" cy="10.5" r="1.2" />
+          <circle cx="14.5" cy="10.5" r="1.2" />
+          <path d="M10.5 19v2M13.5 19v2" />
+        </>
+      )}
+    </svg>
+  );
 }
 
 function hpBarColor(current: number, max: number): string {
@@ -629,8 +675,9 @@ export default function InitiativeTracker({
                   onClick={() => rollOne(p.id)}
                   className="rounded-md border border-edge px-2 py-1.5 text-sm text-ink transition-colors hover:border-accent hover:bg-panel-raised"
                   title="Relancer l'initiative"
+                  aria-label={`Relancer l'initiative de ${p.label}`}
                 >
-                  🎲
+                  <DieIcon sides={20} className="h-4 w-4" />
                 </button>
                 {p.source_kind === "statblock" && p.rule_key ? (
                   <a
@@ -642,8 +689,8 @@ export default function InitiativeTracker({
                     {p.label}
                   </a>
                 ) : (
-                  <span className="text-sm font-medium text-ink">
-                    {p.source_kind === "entity" ? "🧑 " : p.source_kind === "custom" ? "❓ " : "💀 "}
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-ink">
+                    <ParticipantKindIcon kind={p.source_kind} />
                     {p.label}
                   </span>
                 )}
