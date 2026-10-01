@@ -561,6 +561,9 @@ membre d'aucun monde — au moment de sa création, ou après une révocation.
   publique d'une création. Chaque compte en a un, y compris celui de
   l'auteur (`Gabriel#0000`) : le tag sert à l'attribution interne, pas
   seulement aux comptes invités.
+  *Amendé le 1ᵉʳ octobre par V3.1-15 et l'ADR 0032 : le tag devient
+  visible du MJ de la campagne, dans la Gestion de campagne, pour distinguer
+  deux comptes de même nom. Invisible partout ailleurs, comme avant.*
 - **À la connexion, on tape juste un nom et un mot de passe** — jamais le
   tag. La résolution essaie, dans l'ordre, chaque compte « tag » portant ce
   nom contre ce mot de passe (collisions rares à l'échelle d'une table de
@@ -990,7 +993,7 @@ second.
 
 ---
 
-### V3.1-15 — La Gestion de campagne illisible : invitations en haut, une carte par personne · `M`
+### V3.1-15 — La Gestion de campagne illisible : invitations en haut, une carte par personne · `M` — tag tranché, prêt à coder
 
 Constaté le 1ᵉʳ octobre par l'auteur, captures à l'appui : la fenêtre « Gestion
 de campagne » (`CampaignDetail.tsx` + `InviteLinkPanel.tsx`) est « assez
@@ -1033,8 +1036,9 @@ captures, chacun vérifié dans le code :
    passent sur les cartes ; les PNJ de la campagne (`is_pc: false`, sans
    `user_id`) vont dans un encart à part, en bas.
 5. **Deux comptes portent le même nom** (« Tamara » deux fois, l'un sans
-   personnage ni fiche). Rien à l'écran ne permet de les distinguer — voir
-   « Question ouverte » ci-dessous.
+   personnage ni fiche). Rien à l'écran ne permet de les distinguer. **Tranché
+   le 1ᵉʳ octobre : le tag à 4 chiffres** — voir « Le tag, visible du MJ »
+   ci-dessous.
 
 **La disposition (piste A)**
 
@@ -1051,8 +1055,10 @@ captures, chacun vérifié dans le code :
   modifier : une carte entière pour lui serait du bruit.
 - **Une carte par compte joueur**, en grille (3 colonnes sur grand écran,
   1 sur téléphone) :
-  - en-tête : initiale, nom, rôle, menu ⋮ du compte (« Forcer une
-    réinitialisation », « Retirer de la campagne », tous deux confirmés) ;
+  - en-tête : initiale, nom **suivi de son tag** (`Tamara#4821`, le tag en
+    `text-ink-muted` et en chiffres tabulaires, plus discret que le nom),
+    rôle, menu ⋮ du compte (« Forcer une réinitialisation », « Retirer de la
+    campagne », tous deux confirmés) ;
   - **le PJ joué**, mis en avant (fond d'accent), avec son propre ⋮ («
     Ouvrir la fiche », « Libérer le personnage ») — ou, sans PJ, une zone
     pointillée « Aucun personnage — attribuer un PJ » qui ouvre le choix ;
@@ -1074,13 +1080,18 @@ captures, chacun vérifié dans le code :
    `passwordResetRequests`) en une vue par personne. **Aucune route ni
    requête nouvelle** : si ce regroupement semble en demander une, s'arrêter
    et le dire. Le regroupement est une fonction pure, testée.
-3. Composants : `CampaignPersonCard` (une carte), le panneau Invitations
+3. **Le tag** (ADR 0032) : `/api/campaigns/[id]` renvoie
+   `handleTags: Record<userId, string>` quand l'appelant gère la campagne,
+   rien sinon ; test d'intégration des deux cas (MJ reçoit, joueuse ne reçoit
+   pas). Nouvelle migration qui remplace le commentaire de colonne
+   `profiles.handle_tag` (l'ancienne, appliquée, ne se modifie pas).
+4. Composants : `CampaignPersonCard` (une carte), le panneau Invitations
    (réorganisation de `InviteLinkPanel`, `InviteRow` gardé tel quel),
    l'encart PNJ. `CampaignDetail` les assemble.
-4. Libellés : « Retirer de la campagne » / « Libérer le personnage » /
+5. Libellés : « Retirer de la campagne » / « Libérer le personnage » /
    « Partager une fiche » ; textes des `ConfirmDialog` relus pour dire chacun
    sa portée exacte.
-5. Vérifier en navigateur sur la campagne réelle (La Croisade des Ombres),
+6. Vérifier en navigateur sur la campagne réelle (La Croisade des Ombres),
    aux largeurs bureau et 375 px, dans les quatre modes de la charte.
 
 **Critères**
@@ -1096,23 +1107,36 @@ captures, chacun vérifié dans le code :
   demande de réinitialisation en attente reste visible sur la carte concernée.
 - [ ] Partager une fiche se fait depuis la carte de la personne, sans choisir
   de joueur dans un second menu.
-- [ ] Aucune nouvelle route, aucune migration : uniquement de la présentation
-  sur les données déjà renvoyées.
+- [ ] Chaque compte tag est nommé `Nom#0000` partout dans cet écran, y
+  compris dans les confirmations ; deux comptes de même nom se distinguent.
+- [ ] Le tag n'est renvoyé par `/api/campaigns/[id]` qu'à qui gère la
+  campagne — vérifié par un test d'intégration côté joueuse.
+- [ ] Aucune nouvelle route ; une seule migration, celle du commentaire de
+  colonne. Le reste est de la présentation sur les données déjà renvoyées.
 - [ ] Lisible à 375 px de large ; les quatre modes et le contraste élevé
   testés (charte §6).
 - [ ] `npm run typecheck && npm run lint && npm run test` passent.
 
-**Question ouverte, à trancher par l'auteur avant l'étape 3 : comment
-distinguer deux comptes de même nom ?** Le tag à 4 chiffres de V3.1-10 serait
-la réponse naturelle, mais V3.1-10 a posé qu'il n'est **jamais affiché
-ailleurs que dans les réglages du compte concerné** (commentaire de
-`profiles.handle_tag`, migration `20260929130000`). Trois voies : l'afficher
-au seul MJ de la campagne (rouvre cette règle), montrer le courriel quand il
-existe (un compte tag n'en a pas forcément), ou se contenter d'une étiquette
-« même nom qu'un autre compte » et laisser le MJ régler le doublon — c'est ce
-que montre l'esquisse, faute de mieux. Dans le cas présent, le second
-« Tamara » n'a ni personnage ni fiche : c'est probablement un doublon à
-retirer, ce que la carte rend désormais visible.
+**Le tag, visible du MJ — tranché le 1ᵉʳ octobre (ADR 0032).** Deux comptes
+peuvent porter le même nom ; c'est précisément ce que le tag à 4 chiffres de
+V3.1-10 sert à distinguer. Il s'affiche donc **au MJ de la campagne, dans cet
+écran**, après le nom : `Tamara#4821`. Ce choix amende V3.1-10 et l'ADR 0031,
+qui le voulaient « invisible hors des réglages du compte concerné » ; il reste
+invisible partout ailleurs (liste vue par une joueuse, attribution publique,
+wiki). Trois conséquences :
+
+- **Filtrage serveur** (règle absolue 5) : `/api/campaigns/[id]` ajoute les
+  tags à sa réponse **seulement** si l'appelant gère la campagne (la garde qui
+  alimente déjà `canManage`). Une joueuse qui ouvre la même route ne reçoit
+  aucun tag — pas un champ envoyé puis masqué.
+- **Partout où le MJ nomme une personne dans cet écran** — cartes, ligne des
+  MJ, textes des `ConfirmDialog` (« Retirer Tamara#4821 de la campagne ? ») —
+  le tag suit le nom, pour qu'aucun geste ne vise le mauvais compte.
+- Un compte ordinaire (courriel, sans tag) affiche son nom seul.
+
+C'est une petite entorse au « aucune route nouvelle » des critères : la
+route existe, elle gagne un champ. `getDisplayNamesForUsers` (ou une
+variante) lit `handle_tag` en plus de `display_name`.
 
 **Hors périmètre, et dit comme tel** : les cinq liens joueurs réutilisables
 se ressemblent tous (seule leur date les distingue). Un seul suffit sans
