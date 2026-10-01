@@ -1,14 +1,17 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { generateSlots, rangeFromSlots } from "@/src/core/scheduling/availabilityGrid";
 import { minutesToTime, timeToMinutes } from "@/src/core/scheduling/overlap";
 
 const STEP_MINUTES = 30;
 /** Géométrie de l'esquisse V3.1-16 (`Main.dc.html`/`Joueuse.dc.html`) — l'info-bulle se place d'après elle. */
 const LABEL_W = 68;
-const HEADER_H = 46;
-const CELL_W = 40;
+/** En-tête de date : le mois (au premier jour et à chaque changement), le jour abrégé, le numéro. */
+const HEADER_H = 58;
+/** Colonnes élargies quand il y a peu de dates (esquisse « Formulaire »/« EnCours ») : jamais sous 40 px, jamais au-delà de 140. */
+const CELL_W_MIN = 40;
+const CELL_W_MAX = 140;
 const CELL_H = 20;
 const TIP_W = 250;
 
@@ -44,6 +47,9 @@ function stickyBackground(lit: boolean): React.CSSProperties {
   return { background: layers.join(", ") };
 }
 
+function monthShort(date: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("fr-FR", { month: "short" });
+}
 function weekdayShort(date: string): string {
   return new Date(`${date}T00:00:00`).toLocaleDateString("fr-FR", { weekday: "short" });
 }
@@ -89,6 +95,7 @@ export default function AvailabilityGrid({
   expected,
   viewerId,
   onSaved,
+  preview,
 }: {
   campaignId: string;
   request: GridRequest;
@@ -98,6 +105,8 @@ export default function AvailabilityGrid({
   expected: number;
   viewerId: string | null;
   onSaved: () => void;
+  /** Aperçu du formulaire de demande : la grille telle que la verront les joueuses, sans bascule, sans peinture, sans enregistrement. */
+  preview?: boolean;
 }) {
   const dates = useMemo(() => [...request.candidate_dates].sort(), [request.candidate_dates]);
   const slots = useMemo(() => generateSlots(timeToMinutes(request.starts_at), timeToMinutes(request.ends_at), STEP_MINUTES), [request.starts_at, request.ends_at]);
@@ -114,6 +123,19 @@ export default function AvailabilityGrid({
   const [saved, setSaved] = useState(false);
 
   const dragModeRef = useRef<"add" | "remove" | null>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [availableWidth, setAvailableWidth] = useState(0);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setAvailableWidth(el.clientWidth));
+    observer.observe(el);
+    setAvailableWidth(el.clientWidth);
+    return () => observer.disconnect();
+  }, []);
+
+  const cellW = Math.max(CELL_W_MIN, Math.min(CELL_W_MAX, Math.floor((availableWidth - LABEL_W - 2) / Math.max(dates.length, 1))));
   const touchedDatesRef = useRef<Set<string>>(new Set());
 
   const usersByCell = useMemo(() => {
@@ -135,7 +157,7 @@ export default function AvailabilityGrid({
   }
 
   function startDrag(date: string, slotStart: number) {
-    if (mode !== "mine") return;
+    if (mode !== "mine" || preview) return;
     const add = !(painted[date]?.has(slotStart) ?? false);
     dragModeRef.current = add ? "add" : "remove";
     paintCell(date, slotStart, add);
@@ -143,7 +165,7 @@ export default function AvailabilityGrid({
 
   function enterCell(date: string, slotStart: number) {
     setHover({ date, slot: slotStart });
-    if (mode === "mine" && dragModeRef.current !== null) paintCell(date, slotStart, dragModeRef.current === "add");
+    if (mode === "mine" && !preview && dragModeRef.current !== null) paintCell(date, slotStart, dragModeRef.current === "add");
   }
 
   /** `current` : l'état peint à enregistrer — passé explicitement au clavier, où le nouvel état n'est pas encore rendu. */
@@ -189,7 +211,7 @@ export default function AvailabilityGrid({
   const hoverUsers = hover ? (usersByCell.get(`${hover.date}|${hover.slot}`) ?? []) : [];
   const orderedHoverUsers = [...hoverUsers.filter((u) => u.userId === viewerId), ...hoverUsers.filter((u) => u.userId !== viewerId)];
   const tipFlip = hoverIndex > dates.length - 6;
-  const tipLeft = LABEL_W + hoverIndex * CELL_W + (tipFlip ? -TIP_W - 8 : CELL_W + 8);
+  const tipLeft = LABEL_W + hoverIndex * cellW + (tipFlip ? -TIP_W - 8 : cellW + 8);
   const tipTop = HEADER_H + hoverSlotIndex * CELL_H - 6;
 
   function heatStyle(count: number): React.CSSProperties | undefined {
@@ -200,6 +222,7 @@ export default function AvailabilityGrid({
 
   return (
     <div className="flex flex-col gap-3" onMouseUp={endDrag}>
+      {!preview && (
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div role="tablist" aria-label="Vue de la grille" className="inline-flex gap-0.5 rounded-full border border-edge bg-panel-sunken p-[3px]">
           {(
@@ -231,8 +254,10 @@ export default function AvailabilityGrid({
           </span>
         )}
       </div>
+      )}
 
       <div
+        ref={scrollerRef}
         className="relative overflow-x-auto overflow-y-hidden rounded-[10px] border border-edge bg-panel-sunken pb-2.5"
         onMouseLeave={() => {
           setHover(null);
@@ -242,15 +267,19 @@ export default function AvailabilityGrid({
         <div className="relative w-max select-none">
           <div className="flex">
             <div className="sticky left-0 z-[4] shrink-0 border-b border-r border-edge" style={{ width: LABEL_W, ...stickyBackground(false) }} />
-            {dates.map((date) => {
+            {dates.map((date, index) => {
               const lit = hover?.date === date;
               const weekend = dayIndex(date) === 0 || dayIndex(date) === 6;
+              // Le mois au premier jour et à chaque changement : une demande à
+              // cheval sur deux mois ne dit pas, sinon, à quel mois est le « 1 ».
+              const showMonth = index === 0 || date.slice(0, 7) !== dates[index - 1].slice(0, 7);
               return (
                 <div
                   key={date}
-                  className={`flex shrink-0 flex-col items-center justify-center border-b border-edge font-mono text-xs ${lit ? "bg-accent/25 text-accent" : weekend ? "bg-panel-raised/50 text-ink-muted" : "text-ink-muted"}`}
-                  style={{ width: CELL_W, height: HEADER_H }}
+                  className={`flex shrink-0 flex-col items-center justify-end border-b border-edge pb-1.5 font-mono text-xs ${lit ? "bg-accent/25 text-accent" : weekend ? "bg-panel-raised/50 text-ink-muted" : "text-ink-muted"}`}
+                  style={{ width: cellW, height: HEADER_H }}
                 >
+                  <span className="h-3.5 font-sans text-xs font-semibold leading-3.5 text-accent">{showMonth ? monthShort(date) : ""}</span>
                   <span>{weekdayShort(date)}</span>
                   <span className={`text-[13px] font-medium ${lit ? "text-accent" : "text-ink"}`}>{Number(date.slice(8, 10))}</span>
                 </div>
@@ -292,7 +321,7 @@ export default function AvailabilityGrid({
                       onMouseEnter={() => enterCell(date, slotStart)}
                       onFocus={() => setHover({ date, slot: slotStart })}
                       onKeyDown={(e) => {
-                        if (mode === "mine" && (e.key === "Enter" || e.key === " ")) {
+                        if (mode === "mine" && !preview && (e.key === "Enter" || e.key === " ")) {
                           e.preventDefault();
                           const set = new Set(painted[date] ?? []);
                           if (isMine) set.delete(slotStart);
@@ -306,11 +335,11 @@ export default function AvailabilityGrid({
                         endOfWeek ? "border-r-edge-strong" : "border-r-edge/40",
                         fullHour ? "border-t border-t-edge/70" : "",
                         mode === "mine" ? (isMine ? "bg-accent" : "") : "",
-                        mode === "table" ? "cursor-default" : "cursor-pointer",
+                        mode === "table" || preview ? "cursor-default" : "cursor-pointer",
                         lit ? "shadow-[inset_0_0_0_40px_color-mix(in_oklch,var(--ink)_9%,transparent)]" : "",
                         exact ? "outline outline-2 -outline-offset-2 outline-ink" : "",
                       ].join(" ")}
-                      style={{ width: CELL_W, height: CELL_H, ...(mode === "table" ? heatStyle(users.length) : undefined) }}
+                      style={{ width: cellW, height: CELL_H, ...(mode === "table" ? heatStyle(users.length) : undefined) }}
                     />
                   );
                 })}

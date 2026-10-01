@@ -75,29 +75,66 @@ export default function TimeRangeSlider({
   const startPct = ((startMinutes - min) / (max - min)) * 100;
   const endPct = ((endMinutes - min) / (max - min)) * 100;
 
+  function nudge(handle: "start" | "end", delta: number) {
+    if (handle === "start") onChange({ startMinutes: Math.min(Math.max(min, startMinutes + delta), endMinutes - step), endMinutes });
+    else onChange({ startMinutes, endMinutes: Math.max(Math.min(max, endMinutes + delta), startMinutes + step) });
+  }
+
+  // V3.1-16 (esquisse « Formulaire ») : chaque heure se règle aussi d'une
+  // demi-heure au clic, à côté de la poignée qu'on glisse — plus précis
+  // qu'un glisser sur une piste de 24 h, et accessible au clavier.
+  const stepper = (handle: "start" | "end", value: number) => (
+    <div className="flex shrink-0 items-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => nudge(handle, -step)}
+        aria-label={handle === "start" ? "Commencer plus tôt" : "Finir plus tôt"}
+        className="grid h-8 w-8 place-items-center rounded-full border border-edge text-ink hover:bg-panel-raised"
+      >
+        −
+      </button>
+      <span className="min-w-12 text-center font-mono text-sm text-ink">{formatTime(value)}</span>
+      <button
+        type="button"
+        onClick={() => nudge(handle, step)}
+        aria-label={handle === "start" ? "Commencer plus tard" : "Finir plus tard"}
+        className="grid h-8 w-8 place-items-center rounded-full border border-edge text-ink hover:bg-panel-raised"
+      >
+        +
+      </button>
+    </div>
+  );
+
   return (
-    <div className="flex flex-col gap-3 py-1">
-      <div className="flex items-center justify-between text-xs font-mono text-ink">
-        <span>{formatTime(startMinutes)}</span>
-        <span>{formatTime(endMinutes)}</span>
+    <div className="flex flex-wrap items-center gap-4 py-1">
+      {stepper("start", startMinutes)}
+      <div className="min-w-48 flex-1 px-2.5">
+        <div ref={trackRef} className="relative h-2 rounded-full bg-panel-raised">
+          <div className="absolute h-2 rounded-full bg-accent" style={{ left: `${startPct}%`, width: `${endPct - startPct}%` }} />
+          <button
+            type="button"
+            aria-label="Heure de début"
+            onMouseDown={() => (draggingRef.current = "start")}
+            className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-[3px] border-accent bg-ink active:cursor-grabbing"
+            style={{ left: `${startPct}%` }}
+          />
+          <button
+            type="button"
+            aria-label="Heure de fin"
+            onMouseDown={() => (draggingRef.current = "end")}
+            className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-[3px] border-accent bg-ink active:cursor-grabbing"
+            style={{ left: `${endPct}%` }}
+          />
+        </div>
+        {min === 0 && max === 24 * 60 && (
+          <div className="mt-1.5 flex justify-between font-mono text-xs text-ink-muted">
+            {[0, 6, 12, 18, 24].map((h) => (
+              <span key={h}>{String(h).padStart(2, "0")}:00</span>
+            ))}
+          </div>
+        )}
       </div>
-      <div ref={trackRef} className="relative h-1.5 rounded-full bg-panel-sunken">
-        <div className="absolute h-1.5 rounded-full bg-accent" style={{ left: `${startPct}%`, width: `${endPct - startPct}%` }} />
-        <button
-          type="button"
-          aria-label="Heure de début"
-          onMouseDown={() => (draggingRef.current = "start")}
-          className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-2 border-accent bg-panel-raised active:cursor-grabbing"
-          style={{ left: `${startPct}%` }}
-        />
-        <button
-          type="button"
-          aria-label="Heure de fin"
-          onMouseDown={() => (draggingRef.current = "end")}
-          className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-2 border-accent bg-panel-raised active:cursor-grabbing"
-          style={{ left: `${endPct}%` }}
-        />
-      </div>
+      {stepper("end", endMinutes)}
     </div>
   );
 }

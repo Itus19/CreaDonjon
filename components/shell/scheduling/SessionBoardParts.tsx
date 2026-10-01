@@ -149,3 +149,51 @@ export function SessionsCard({
     </section>
   );
 }
+
+function daysUntil(date: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((new Date(`${date}T00:00:00`).getTime() - today.getTime()) / 86_400_000);
+}
+
+function untilLabel(date: string): string {
+  const n = daysUntil(date);
+  if (n <= 0) return "aujourd'hui";
+  if (n === 1) return "demain";
+  return `dans ${n} jours`;
+}
+
+function formatDayMonth(date: string): { day: string; month: string } {
+  const d = new Date(`${date}T00:00:00`);
+  return { day: String(d.getDate()), month: d.toLocaleDateString("fr-FR", { month: "short" }) };
+}
+
+/** La prochaine séance confirmée, en tête du Calendrier réel (MJ sans demande, et joueuse) — c'est ce qu'on vient chercher en premier. */
+export function NextSessionCard({ session, loading }: { session: RealSession | null; loading?: boolean }) {
+  return (
+    <section className="flex items-center gap-5 rounded-[14px] border border-edge bg-panel p-5">
+      {session ? (
+        <>
+          <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-[14px] border border-accent/60 bg-accent/15">
+            <span className="text-xs text-accent">{formatDayMonth(session.scheduled_date).month}</span>
+            <span className="font-display text-2xl font-bold leading-none text-ink">{formatDayMonth(session.scheduled_date).day}</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Prochaine séance confirmée</div>
+            <div className="font-display text-xl font-semibold text-ink">
+              {formatDayLong(session.scheduled_date)} · {session.starts_at.slice(0, 5)}
+            </div>
+            <div className="text-xs text-ink-muted">
+              environ {formatHours(session.duration_minutes)} · {untilLabel(session.scheduled_date)}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Prochaine séance</div>
+          <div className="text-sm italic text-ink-muted">{loading ? "Chargement…" : "Aucune séance confirmée pour l'instant."}</div>
+        </div>
+      )}
+    </section>
+  );
+}

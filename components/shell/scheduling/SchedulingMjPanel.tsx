@@ -4,16 +4,17 @@ import { useEffect, useState } from "react";
 import { minutesToTime, timeToMinutes } from "@/src/core/scheduling/overlap";
 import RequestAvailabilityForm from "./RequestAvailabilityForm";
 import AvailabilityGrid, { type GridResponse } from "./AvailabilityGrid";
-import { PossibleDates, SessionsCard, formatHours, respondentCount, type OpenRequestBoard, type RankedDay, type RealSession } from "./SessionBoardParts";
+import { NextSessionCard, PossibleDates, SessionsCard, formatHours, respondentCount, type OpenRequestBoard, type RankedDay, type RealSession } from "./SessionBoardParts";
 
 /**
  * Calendrier réel côté MJ (V2.1-4, refondu V3.1-8, redessiné V3.1-16 d'après
  * l'esquisse « A — Retenue », `Main.dc.html`) : en-tête de la demande, UNE
  * grille à bascule « Mes disponibilités / Toute la table »
  * (`AvailabilityGrid.tsx`), les dates possibles avec « Confirmer », puis
- * trois cartes : date à la main, séances à venir, déjà jouées. Tant
- * qu'aucune ronde n'est ouverte, le formulaire de demande
- * (`RequestAvailabilityForm.tsx`) prend la place de la grille. Tous les
+ * trois cartes : date à la main, séances à venir, déjà jouées. Sans ronde
+ * ouverte : la prochaine séance confirmée et un écran vide avec « Demander
+ * les disponibilités », qui ouvre le formulaire (`RequestAvailabilityForm.tsx`,
+ * avec l'aperçu en direct de la grille) à la place de la grille. Tous les
  * gestes d'avant restent : durée visée, annuler la demande, confirmer, régler
  * à la main, annuler une séance.
  */
@@ -29,6 +30,8 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
   const [manualTime, setManualTime] = useState("19:00");
   const [manualEndTime, setManualEndTime] = useState("23:00");
   const [durationDraft, setDurationDraft] = useState(300);
+  /** Sans demande en cours : l'écran vide (esquisse « MJ — sans demande »), puis le formulaire au clic. */
+  const [showForm, setShowForm] = useState(false);
 
   const manualDuration = timeToMinutes(manualEndTime) - timeToMinutes(manualTime);
 
@@ -129,7 +132,7 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-display text-2xl text-ink">{request ? request.title : "Prochaine séance"}</h2>
+          <h2 className="font-display text-2xl text-ink">{request ? request.title : showForm ? "Demander les disponibilités" : "Prochaine séance"}</h2>
           {request && (
             <div className="mt-1 text-xs text-ink-muted">
               Créneau proposé : {request.starts_at.slice(0, 5)} – {request.ends_at.slice(0, 5)} · {request.candidate_dates.length} jours · {respondentCount(board.heatmap)} réponses sur {board.expected}
@@ -181,8 +184,26 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
             onConfirm={confirmDay}
           />
         </>
+      ) : showForm ? (
+        <RequestAvailabilityForm
+          campaignId={campaignId}
+          onCreated={() => {
+            setShowForm(false);
+            loadBoard();
+          }}
+          onCancel={() => setShowForm(false)}
+        />
       ) : (
-        <RequestAvailabilityForm campaignId={campaignId} onCreated={loadBoard} />
+        <>
+          <NextSessionCard session={upcoming[0] ?? null} />
+          <section className="flex flex-col items-center gap-2.5 rounded-[14px] border border-edge bg-panel px-6 py-9 text-center">
+            <h3 className="font-display text-xl text-ink">Aucune demande de disponibilités en cours</h3>
+            <p className="max-w-lg text-sm text-ink-muted">Propose des dates et une plage horaire : chaque joueuse coche ce qui lui va, et les meilleures dates se classent toutes seules.</p>
+            <button type="button" onClick={() => setShowForm(true)} className="mt-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-ink hover:bg-accent-hover">
+              Demander les disponibilités
+            </button>
+          </section>
+        </>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

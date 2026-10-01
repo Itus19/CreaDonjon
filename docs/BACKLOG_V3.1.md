@@ -1338,7 +1338,61 @@ peuvent rester dans la réponse : ils ne sont pas secrets, seulement inutiles.
   et laisse voir la table. Page élargie (`max-w-lg` → `max-w-5xl`).
 - [x] La barre de défilement reprend le style de `app/globals.css` (rien à
   écrire : la règle globale s'applique).
+- [x] Sans demande en cours, le MJ voit la prochaine séance et un écran vide
+  avec « Demander les disponibilités » ; le formulaire s'ouvre au clic, avec
+  l'aperçu en direct de la grille (`SansDemande.dc.html`, `Formulaire.dc.html`).
+- [x] La grille suit la forme de la demande : colonnes élargies jusqu'à 140 px
+  quand il y a peu de dates, mois dans l'en-tête (`EnCours.dc.html`).
 - [x] `npm run typecheck && npm run lint && npm run test` passent.
+
+#### Avant et après la demande — ajouté le 1ᵉʳ octobre
+
+Le ticket ne disait rien de l'écran **sans demande en cours**, ni du
+**formulaire** qui en ouvre une. L'auteur a demandé à les voir, et à vérifier
+que la grille s'adapte à une demande d'une autre forme. Trois cadres ajoutés au
+même canevas, rangée « Avant et après la demande », retenus tels quels
+(« Allons comme ça ») :
+
+- **`SansDemande.dc.html` — MJ sans demande en cours** : la prochaine séance
+  confirmée en tête (la même carte que chez la joueuse, `NextSessionCard`), un
+  panneau vide « Aucune demande de disponibilités en cours » avec une phrase
+  d'explication et le bouton « Demander les disponibilités », puis les trois
+  cartes du bas. Le formulaire ne s'affiche plus d'office : il s'ouvre au clic.
+- **`Formulaire.dc.html` — formuler une demande** : trois étapes numérotées
+  (nom, dates, plage horaire) et, dessous, **l'aperçu en direct de la grille
+  que verront les joueuses** (`AvailabilityGrid` en mode `preview` : ni
+  bascule, ni peinture, ni enregistrement). « Annuler » revient à l'écran vide,
+  « Envoyer la demande » crée la ronde, comme le « Créer » d'avant.
+- **`EnCours.dc.html` — une autre demande** : week-ends de 19:00 à 23:00 sur
+  deux mois, pour montrer l'adaptation.
+
+**La grille s'adapte à la demande — c'était déjà vrai, deux choses ajoutées.**
+Ses colonnes sont les dates proposées (et elles seules, même non contiguës), ses
+lignes la plage horaire par demi-heure, sa ligne de clôture l'heure de fin. Le
+curseur va de 00:00 à 24:00 : une demande ne passe jamais minuit. Ajouté :
+
+- **Colonnes élargies quand il y a peu de dates** : la largeur se mesure
+  (`ResizeObserver`) et se répartit, entre 40 et 140 px. Huit dates en font
+  122 ; trente et une restent à 40, avec défilement.
+- **Le mois dans l'en-tête**, au premier jour puis à chaque changement
+  (« oct. », « nov. ») : une demande à cheval sur deux mois ne disait pas à quel
+  mois appartenait le « 1 ». L'en-tête passe de 46 à 58 px.
+
+**Le formulaire, ce qui change et ce qui reste.**
+- Deux mois côte à côte au lieu d'un, flèches pour avancer ; clic et
+  clic-glissé comme avant. **Les jours passés ne se choisissent plus** (ils
+  restent visibles) : une date candidate passée n'a jamais de sens.
+- L'onglet « Jours de la semaine » **garde son fonctionnement** (jours cochés,
+  « Du … au … », « Appliquer ») : l'esquisse le simplifiait sur deux mois fixes,
+  ce qui aurait perdu la plage libre. Seul le style change.
+- Le curseur horaire (`TimeRangeSlider`) se glisse toujours, et gagne des
+  boutons − / + d'une demi-heure de chaque côté et une échelle 00:00 → 24:00.
+- Même envoi au serveur qu'avant : aucune route ni donnée touchée.
+
+**Vérifié au banc** (même méthode que plus bas) : 8 dates de week-end sur deux
+mois → colonnes de 122 px, « oct. » et « nov. » dans l'en-tête ; dans le
+formulaire, cinq dates cliquées → l'aperçu en compte cinq, et « Finir plus
+tard » ajoute une ligne (40 → 45 cases).
 
 **Ce qui a été vérifié, et comment.** Sans base dans la session cloud, la grille
 a été montée seule dans Chromium (Playwright), alimentée par une demande
