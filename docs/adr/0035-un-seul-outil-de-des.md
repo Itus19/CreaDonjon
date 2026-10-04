@@ -21,3 +21,8 @@ Option 2. Un bouton de jet (attaque, dégâts, sort, soin, caractéristique, sau
 - Les dés restent lancés par le serveur et la résolution passe par le moteur (règle absolue 8) : l'outil n'affiche qu'un résultat reçu.
 - Une touche réussie propose les dégâts, même cible conservée (dés doublés au critique).
 - La résolution automatique (touche contre CA, sauvegardes, dégâts, états) est le ticket V3.1-21 ; le salon où arrivent les jets, V3.1-22.
+
+## Complété le 4 octobre (lot i)
+
+Le gabarit est fixé et identique partout ; seul le pré-remplissage change, son nom en titre (« Jet libre » depuis le dé). En-tête : Secret. Sous la grille : DD, et « DD privé » pour le MJ. Une zone de résultat permanente, à hauteur fixe (« — » et un carré vide par dé avant le lancer). Verdict seulement contre une CA ou un DD, en remplissage de la case (vert, rouge, or au critique). Une bande au pied de la zone devient « Lancer les dégâts » sur une réussite suivie de dégâts, et rien sinon ; les dégâts s'appliquent à la cible. Un monstre qui touche un joueur attend la validation du MJ. Détail et critères : V3.1-33.
+

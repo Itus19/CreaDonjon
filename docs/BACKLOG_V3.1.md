@@ -1926,6 +1926,8 @@ réellement la coquille :
     deux modes de `DiceRollPanel`), « Lancer » qui récapitule la formule,
     résultat avec chaque dé (max en ambre, 1 en rouge, dé écarté barré),
     derniers jets de la table. Planche « Smartphone du MJ », écran 7.
+    **La référence à jour de l'outil est V3.1-33** (et la planche « Décidé ·
+    le jet en animation ») : ce qui suit retrace comment on y est arrivé.
     - **Revu le 4 octobre** : le modificateur prend la case libre sous le
       d10 (gain de hauteur) ; « Effacer » rejoint « Lancer » sur la même
       ligne, même gabarit en version secondaire. **Avantage / désavantage** :
@@ -1934,14 +1936,16 @@ réellement la coquille :
       le résultat retenu compte et entre dans les derniers jets.
     - **Animation de lancer** — une seule pour toute l'application (feuille
       des dés, boutons de la fiche, Table, chat). Cinq propositions vivantes,
-      planche « Animations de lancer » : A rouleau, B dé qui roule,
+      ancienne planche « Animations de lancer » : A rouleau, B dé qui roule,
       C secousse et éclat, D scintillement, E retournement. Dans tous les
       cas : l'animation part au toucher et masque l'attente du serveur (qui
       seul lance) ; les chiffres qui défilent sont décoratifs ; mouvement
       réduit → résultat immédiat. **Tranché le 4 octobre : D,
       scintillement** — les chiffres défilent flous puis se figent un par un,
-      le total compte jusqu'à sa valeur.
-    - La feuille des dés s'ouvre **à la hauteur de la feuille Outils** ; les
+      le total compte jusqu'à sa valeur. Les quatre autres sont retirées ; la
+      planche est devenue « Décidé · le jet en animation », sur l'outil réel.
+    - La feuille des dés s'ouvre **à la hauteur de la feuille Outils** (revu
+      ensuite : plus haute, pour loger la zone de résultat permanente) ; les
       derniers jets (30 gardés) défilent dans leur zone, avec l'ascenseur fin
       de l'application (6 px, couleur `edge`, coins ronds, comme
       `globals.css`).
@@ -2129,7 +2133,11 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     (« Vous entrez en combat ») : « Lancer l'initiative · d20 +2 », ou un vrai
     dé saisi avec un **interrupteur « modificateur inclus »** (éteint : l'app
     ajoute le +2 ; allumé : on saisit le total). Si le MJ saisit la valeur,
-    l'invitation se ferme seule. En combat, Perso. passe en **mode combat** :
+    l'invitation se ferme seule. **Revu le 4 octobre** : toucher « Lancer
+    l'initiative » change le bouton, par un balayage de gauche à droite, en
+    **la zone de résultat de l'outil de dés** (la même) ; le scintillement
+    part, le résultat s'affiche, et **4 secondes plus tard** il est validé
+    et la fenêtre se ferme (« validé dans 4 s… » en décompte). En combat, Perso. passe en **mode combat** :
     l'ordre du tour, l'économie d'action (action, action bonus, réaction),
     puis **Actions · Sorts · Capacités** en pilule, prêts à lancer, sur
     téléphone comme sur ordinateur. Combat terminé : la fiche redevient
@@ -2141,7 +2149,7 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - **Pour tous** : chaque attaque a **deux boutons, touche puis dégâts**
     (ou DD pour une sauvegarde) ; chacun ouvre l'outil de dés pré-rempli,
     Cibler parmi les participants (alliés pour un soin) ; une touche propose
-    « Préparer les dégâts » sur la même cible (dés doublés au critique).
+    la bande « Lancer les dégâts » de l'outil, même cible (dés doublés au critique).
   - **PV temporaires** : arc bleu autour de la jauge, annotation « 20/15 »
     (PV + temporaires / max) ; les dégâts les entament d'abord.
   - **Retouches du 4 octobre (2 et 3)** : l'outil de dés de l'initiative est
@@ -2278,7 +2286,7 @@ on **confirme par « Lancer »**. L'outil gagne un bouton **« Cibler »** sur l
 ligne de « Lancer » et « Effacer » : il liste les participants de
 l'initiative (alliés pour un soin), affiche la cible retenue, et se grise hors
 initiative ou pour un jet sans cible (test, sauvegarde). Une touche réussie
-propose « Préparer les dégâts ▸ » (dés doublés au critique), même cible
+fait apparaître la bande « Lancer les dégâts » (V3.1-33 ; dés doublés au critique), même cible
 conservée. Partout : MJ, joueur, **solo** (la barre d'intention de V3-B1 y
 pré-remplit l'outil de la même façon). Avis : bonne idée — un seul endroit
 pour l'avantage, le modificateur, le secret et la cible ; le coût est un
@@ -2631,7 +2639,10 @@ téléphone du joueur (trois planches). **Dépend de** : 24, 26, 29.
 **Modèle conseillé : Sonnet** — ADR 0035, ADR 0036 §6, planches précises ; la cible reste à V3.1-21.
 
 **Planches** : téléphones (feuille des dés), « Décidé · outil de dés sur
-ordinateur et tablette », « Décidé · animation de lancer : scintillement ».
+ordinateur et tablette », « Décidé · le jet en animation » (l'outil réel,
+issue du d20 forçable : réussite, échec, critique). C'est le même gabarit
+sur toutes les planches qui ont un outil de dés (fiche complète, six
+téléphones MJ et joueur, trois téléphones solo, ordinateur, Initiative).
 **Départ** : `DiceRollPanel.tsx`, `POST /api/campaigns/[id]/dice-rolls`.
 **Dépend de** : 29.
 
@@ -2684,7 +2695,9 @@ ordinateur et tablette », « Décidé · animation de lancer : scintillement »
     place est **toujours réservée** (la hauteur ne bouge jamais) :
     - **invisible** s'il n'y a rien à battre (ni cible, ni DD) ou pas de
       suite ;
-    - avant le jet : « ensuite : dégâts 1d4 + 2 » ;
+    - avant le jet : rien (revu le 4 octobre : la bande n'annonçait la suite
+      que pour s'effacer sur un raté — elle n'apparaît plus que sur une
+      réussite suivie de dégâts) ;
     - **touché** : toute la bande devient le bouton « Lancer les dégâts » ;
       côté MJ, un monstre qui touche un joueur donne « Valider · dégâts » /
       « Faire échouer » ;
@@ -2725,6 +2738,11 @@ ordinateur et tablette », « Décidé · animation de lancer : scintillement »
 - [ ] Jet avec avantage : deux d20 affichés, seul le retenu dans le total et les derniers jets.
 - [ ] Le client n'envoie jamais un résultat (test de la route).
 - [ ] Même outil sur téléphone, tablette et ordinateur.
+- [ ] Titre : le nom du bouton touché, ou « Jet libre » ; Secret dans l'en-tête ; DD sous la grille, « DD privé » pour le MJ (le joueur lit « contre DD ? »).
+- [ ] Zone de résultat toujours visible, hauteur fixe : « — » et un carré vide par dé du prochain jet avant le lancer.
+- [ ] Verdict seulement contre une CA ou un DD, en remplissage de la case : vert, rouge, or au 20 naturel ; mouvement réduit : teinte sans mouvement.
+- [ ] Bande « Lancer les dégâts » seulement sur une réussite suivie de dégâts ; le jet de dégâts s'applique à la cible et affiche l'effet à la place du verdict, sans remplissage.
+- [ ] Monstre qui touche un joueur : « Valider · dégâts » / « Faire échouer » côté MJ.
 
 ### ☐ V3.1-34 — L'outil Table du MJ · `L` — **prêt**
 
