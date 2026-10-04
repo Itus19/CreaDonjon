@@ -1676,12 +1676,14 @@ lots le sont.
 |---|---|---|
 | a | Rail repliable, MJ + joueur, desktop et tablette | décidé, à coder |
 | b | Dalle « Outils » : dés encochés + radio (point vert/rouge) | décidé, à coder |
-| c | Téléphone : barre joueur flottante ; **MJ : même barre à six entrées** (Monde, Règles, Fiches, Table, Chat, Outils), feuilles du bas, pile de fiches | joueur décidé ; MJ proposé (planche d'exemple), à valider |
+| c | Téléphone : barre flottante à six entrées et dé encoché (MJ : Monde, Règles, Fiches, Table, Chat, Outils ; joueur : Perso., Édition, Notes, Wiki, Règles, Chat), feuilles du bas, wiki et règles (☰ + récents), éditeur plein écran en accordéon, outil de dés | décidé, à coder — planches définitives |
 | d | Ailes du solo : bande repliée (bouclier CA, PV, Niveau, Charge) | décidé, à coder |
 | e | Fiche de personnage à jauges circulaires, commande E ; onglets en pilule glissante | décidé, à coder |
 | f | Tablette : la fiche s'adapte à sa fenêtre (piste B) | décidé, à coder |
 | g | Fenêtres du MJ en deux volets à onglets → **V3.1-20** | décidé, à coder |
 | h | Page d'accueil en tableau de bord, rail joueur, « Nouveau monde » à trois choix, onglets en pilule glissante | décidé, à coder |
+| — | Outil de dés unique, partout (téléphone, ordinateur, solo) : pré-rempli, Cibler · Lancer · Effacer — détail en V3.1-21 | décidé, à coder |
+| — | Outil MJ « Table » (les PJ en direct) | décidé, à coder |
 | — | Jauges de l'initiative et du budget de rencontre | à trancher |
 
 **Règle transverse (4 octobre) : chaque lot livre aussi sa vue
@@ -1935,6 +1937,35 @@ réellement la coquille :
   - Corrections de règles 2024 dans l'esquisse : un barde n'a pas la
     maîtrise des armes de guerre ni de botte d'arme (rapière → dague) ;
     Mot de guérison soigne 2d4 + mod.
+- **Passe du 4 octobre — l'esquisse devient la référence**
+  - **Wiki et Règles sur téléphone (MJ et joueur)** : toucher « Monde » /
+    « Wiki » / « Règles » dans la barre ouvre un écran d'accueil — le bouton
+    ☰ (sommaire complet, types repliables) et la liste des fiches consultées
+    récemment, avec la recherche. Une fois une fiche choisie, elle s'affiche
+    dans la peau du wiki actuelle (`BookSkin`) ; ☰ reste en haut à gauche.
+    Toucher de nouveau l'entrée de la barre ramène à l'accueil. Le tiroir
+    commence lui aussi par « Récemment ». Côté MJ : « + » nouvelle entité,
+    passages MJ en orange (le joueur ne les reçoit jamais), crayon qui ouvre
+    l'éditeur plein écran en accordéon. Règles : même parcours, la règle en
+    page (propriétés, effet).
+  - **Outil de dés unique** : le même partout — dé central de la barre,
+    boutons de jet de la fiche, « Morsure » de l'outil Table (Cibler sur les
+    PJ, dégâts sur les PV temporaires d'abord, JS de Force, À terre), et sur
+    ordinateur et tablette un panneau flottant ancré au dé du rail.
+  - **Chat du MJ** : pilule « Salon de table / Fils privés », liste des fils
+    par joueur avec leurs non-lus (salon et jets : V3.1-22).
+  - **Fiche d'ordinateur** mise au même niveau que le téléphone : onglets en
+    pilule glissante, jauges E (PV, niveau, épuisement), Inspiration au
+    gabarit d'un badge, boutons de jet ; en dessous de ~640 px de fenêtre,
+    caractéristiques en ligne de six au-dessus des onglets (piste B).
+  - **Esquisse nettoyée** : planches abandonnées supprimées (propositions
+    d'accueil, d'onglets, de fenêtres, d'éditeur, quatre animations
+    écartées, anciennes planches téléphone). Restent les décisions : ordinateur
+    et tablette, fiche à jauges, jauge à commandes, outil de dés sur
+    ordinateur, animation (scintillement), fenêtres à deux volets, accueil,
+    et **six planches définitives du téléphone** — MJ et joueur, chacune en
+    trois états (écrans ; feuilles ouvertes ; plein écran et infobulles) —
+    plus la fiche complète déroulée en sous-planche.
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
 
