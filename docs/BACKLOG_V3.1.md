@@ -1858,6 +1858,19 @@ réellement la coquille :
     deux modes de `DiceRollPanel`), « Lancer » qui récapitule la formule,
     résultat avec chaque dé (max en ambre, 1 en rouge, dé écarté barré),
     derniers jets de la table. Planche « Smartphone du MJ », écran 7.
+    - **Revu le 4 octobre** : le modificateur prend la case libre sous le
+      d10 (gain de hauteur) ; « Effacer » rejoint « Lancer » sur la même
+      ligne, même gabarit en version secondaire. **Avantage / désavantage** :
+      les deux d20 sont tirés et affichés **ensemble**, dans une paire
+      étiquetée ; le d20 retenu est cerclé d'ambre, l'écarté s'efface. Seul
+      le résultat retenu compte et entre dans les derniers jets.
+    - **Animation de lancer** — une seule pour toute l'application (feuille
+      des dés, boutons de la fiche, Table, chat). Cinq propositions vivantes,
+      planche « Animations de lancer » : A rouleau, B dé qui roule,
+      C secousse et éclat, D scintillement, E retournement. Dans tous les
+      cas : l'animation part au toucher et masque l'attente du serveur (qui
+      seul lance) ; les chiffres qui défilent sont décoratifs ; mouvement
+      réduit → résultat immédiat. **À trancher par l'auteur.**
   - **Outils** : les outils MJ en grille par moment (séance, préparation,
     campagne), radio comprise ; le chat n'y figure plus (il est dans la barre).
   - **À valider par l'auteur.**
