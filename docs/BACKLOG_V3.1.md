@@ -2105,25 +2105,48 @@ moment comme dans la feuille Outils du téléphone :
   actives, Personnalisation, Publication, Journal historique.
 Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
 
-- **Initiative — quatre propositions, à trancher** (planche « Question ·
-  initiative », 4 octobre). Le même combat dans les quatre (l'escalier de la
-  cave, round 2, au tour du Worg), chacune montrée au MJ (ordinateur,
-  téléphone) et au joueur (téléphone, ordinateur) :
-  A la liste vivante (l'outil actuel remis à plat, lignes qui se déplient) ;
-  B la frise et le projecteur (jetons du tour en haut, le participant actif
-  au centre avec ses actions) ; C deux camps (alliés / adversaires, une jauge
-  par camp) ; D le tableau de combat (dense sur ordinateur, ligne → feuille
-  sur téléphone, « mode combat » côté joueur).
-  Points communs proposés, à confirmer avec le choix :
-  - **le joueur voit l'initiative en direct** — nouveau : la spec
-    (`specs/outils-mj.md` §9) la réservait au MJ ; ses alliés en PV, les
-    adversaires en état de blessure (Indemne, Blessé, En sang, Hors de
-    combat), jamais leurs PV, filtrés par le serveur ;
-  - **C9, jauges** : PV de chaque participant en anneau ; pendant le combat,
+- **Initiative — décidé le 4 octobre : A, la liste vivante, retouchée**
+  (planche « Décidé · initiative », parcours vivant MJ ↔ joueur ; B, C et D
+  retirés de l'esquisse). Tickets : **V3.1-37** (données, sécurité, temps
+  réel — Opus) puis **V3.1-38** (interface — Sonnet).
+  - **MJ** : une ligne par participant, dans l'ordre ; jauge de PV, bouclier
+    de CA et PV **alignés en colonnes à droite** sur toutes les lignes.
+    Toucher le **score d'initiative** le rend modifiable (▲▼, OK) et l'ordre
+    se refait. Toucher la ligne la déplie : PV (−5, −1, +1, + PV temporaires),
+    + état, **toutes les actions** — monstre, PNJ ou PJ (pour jouer à la
+    place d'un joueur sans l'application).
+  - **Renommer un adversaire** : « Gobelin 1 » devient « Monstre non
+    identifié » ; le MJ garde le nom d'origine en petit à côté (« Gobelin ») ;
+    le joueur ne reçoit que le nouveau nom.
+  - **Déroulé** : « Commencer le combat » lance l'initiative des adversaires
+    (serveur) et envoie une **invitation** aux joueurs dont le PJ combat. Le
+    MJ voit qui manque et peut saisir la valeur d'un joueur sans
+    l'application (« … »). « Round 1 » quand tout le monde a lancé. Quand le
+    dernier adversaire tombe, le **MJ confirme** la fin (« Continuer » reste
+    possible : renforts, ennemi qui se relève).
+  - **Joueur** : l'initiative n'a pas d'entrée dans la barre — c'est un
+    **écran de situation dans Perso.** L'invitation passe au premier plan
+    (« Vous entrez en combat ») : « Lancer l'initiative · d20 +2 », ou un vrai
+    dé saisi avec un **interrupteur « modificateur inclus »** (éteint : l'app
+    ajoute le +2 ; allumé : on saisit le total). Si le MJ saisit la valeur,
+    l'invitation se ferme seule. En combat, Perso. passe en **mode combat** :
+    l'ordre du tour, l'économie d'action (action, action bonus, réaction),
+    puis **Actions · Sorts · Capacités** en pilule, prêts à lancer, sur
+    téléphone comme sur ordinateur. Combat terminé : la fiche redevient
+    normale.
+  - **Ce que voit le joueur** : ses alliés en PV ; les adversaires en **état
+    de blessure** (Indemne, Blessé, En sang, Hors de combat), jamais leurs
+    PV, leur CA ni leur nom d'origine — filtré par le serveur. Le verdict
+    d'une attaque dit « Touché — Worg », sans la CA.
+  - **Pour tous** : chaque attaque a **deux boutons, touche puis dégâts**
+    (ou DD pour une sauvegarde) ; chacun ouvre l'outil de dés pré-rempli,
+    Cibler parmi les participants (alliés pour un soin) ; une touche propose
+    « Préparer les dégâts » sur la même cible (dés doublés au critique).
+  - **PV temporaires** : arc bleu autour de la jauge, annotation « 20/15 »
+    (PV + temporaires / max) ; les dégâts les entament d'abord.
+  - **C9 tranché** : PV de chaque participant en anneau ; pendant le combat,
     la « menace restante » (XP des adversaires encore debout rapportée à la
-    rencontre) remplace le budget de rencontre ;
-  - les actions du bestiaire ▸ ouvrent l'outil de dés pré-rempli (V3.1-33),
-    Cibler sur les participants (V3.1-21).
+    rencontre) remplace le budget de rencontre.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
@@ -2392,6 +2415,13 @@ Fondation des tickets 32, 33 et 34. Aucune interface.
    du renvoi du bloc entier.
 4. Repos (ADR 0036 §7) : `takeShortRest` / `takeLongRest` émettent
    `short_rest` / `long_rest` dans `runTriggers` après leurs effets de base.
+5. **PV temporaires** (vérifié le 4 octobre) : ils sont stockés (`hp.temp`,
+   `combat_participants.temp_hp`) et le tour solo les entame d'abord
+   (`applyDamage`, `src/core/rules/turn.ts`), mais `changeHp` (fiche) les
+   ignore et aucune commande ne permet d'en donner. `changeHp` négatif passe
+   par la même règle que `applyDamage` ; nouveau service `changeTempHp`
+   (les PV temporaires ne se cumulent pas : on garde le plus grand, règle
+   2024).
 
 **Critères d'acceptation**
 - [ ] Les cas de jets contre la mort ci-dessus, chacun un test du noyau.
@@ -2399,6 +2429,7 @@ Fondation des tickets 32, 33 et 34. Aucune interface.
 - [ ] Dépenser 3 po avec 1 pp et 0 po rend la monnaie ; dépenser plus que le total est refusé sans rien écrire.
 - [ ] Ajouter 5 pa à 0 pa ne forme pas d'électrum ; 2 pe détenues restent 2 pe après un dépôt.
 - [ ] Un repos long émet `long_rest` (test d'intégration avec un déclencheur factice).
+- [ ] −7 PV sur 15/15 avec 5 temporaires laisse 13/15 et 0 temporaire (test).
 - [ ] Aucune migration SQL.
 
 ### ☐ V3.1-25 — La pilule glissante remplace `BinderTabs` · `S` — **prêt**
@@ -2695,3 +2726,68 @@ glissante ». **Départ** : `HomeShell.tsx`, `HomeScreen.tsx`,
 **Critères d'acceptation**
 - [ ] Un tour complet sur téléphone : intention, outil de dés, Lancer, le tour dans le fil.
 - [ ] Aucun changement du moteur de tour (tests solo existants verts sans modification).
+
+### ☐ V3.1-37 — L'initiative vue des joueurs : sécurité, invitation, temps réel · `M` — **à concevoir**
+
+**Modèle conseillé : Opus** — RLS à resserrer, nouvelle vue filtrée pour les joueurs, signal temps réel.
+
+**Constat (lu le 4 octobre, `20260818120001_combats.sql`).** Les politiques
+de `combats` et `combat_participants` sont restées celles de la « Phase 0 » :
+**tout membre du monde lit et écrit** les deux tables. Un joueur peut donc
+déjà, par l'API, lire les PV et la CA des adversaires ou modifier un combat
+— la règle absolue 5 n'est tenue que parce qu'aucun écran joueur ne les
+affiche. À corriger avant tout écran joueur.
+
+**À faire**
+1. **RLS** (nouvelle migration) : écriture réservée au MJ de la campagne sur
+   les deux tables ; lecture de `combat_participants` réservée au MJ. La
+   ligne `combats` (statut, round, tour) reste lisible des membres : elle
+   ne porte rien de secret et sert de signal.
+2. **Vue joueur** côté serveur (`GET`, Zod) : l'ordre, le tour, le round ;
+   pour chaque participant, son nom **affiché** (le renommage est le
+   `label`, le nom d'origine se lit de `rule_key` ou de l'entité et ne sort
+   que pour le MJ) ; PV pour les alliés, **état de blessure** calculé côté
+   serveur pour les adversaires (Indemne ≥ max, Blessé > ½, En sang > 0,
+   Hors de combat 0) ; jamais de CA adverse.
+3. **Invitation et jets** : statut « jets d'initiative » entre préparation et
+   round 1 ; un joueur dont le PJ combat lance son initiative (serveur) ou
+   saisit un vrai dé, avec ou sans modificateur (même principe que
+   « annoncé à la main », V3-B5) ; le MJ peut saisir à sa place ; le combat
+   terminé (confirmé par le MJ) ramène la fiche normale.
+4. **Temps réel** : un signal sans donnée sensible (changement de la ligne
+   `combats`, ou canal de diffusion) ; le client du joueur relit la vue
+   filtrée. Reprendre le mécanisme déjà utilisé par le chat
+   (`ChatPanel.tsx`).
+5. Vérifier `docs/SCHEMA.md` : si le statut « jets d'initiative » demande
+   une valeur de plus dans le `check` de `combats.status`, c'est un
+   changement de schéma — le mettre à jour dans le même ticket.
+
+**Critères d'acceptation**
+- [ ] Test d'intégration RLS : un joueur ne lit aucune ligne de `combat_participants` et n'écrit ni `combats` ni `combat_participants`.
+- [ ] La vue joueur ne contient ni PV ni CA ni nom d'origine d'un adversaire (test).
+- [ ] Invitation, jet du joueur, saisie du MJ, fin confirmée : chacun journalisé.
+
+### ☐ V3.1-38 — L'outil Initiative refondu, MJ et joueur · `L` — **prêt après V3.1-37**
+
+**Modèle conseillé : Sonnet** — planche définitive, données fournies par V3.1-37.
+
+**Planche** : « Décidé · initiative (A retouchée) ». **Départ** :
+`components/shell/InitiativeTracker.tsx`, `app/m/[worldSlug]/mj/initiative/page.tsx`.
+**Dépend de** : V3.1-37, V3.1-24 (PV temporaires), V3.1-26 (jauges),
+V3.1-29 (téléphone), V3.1-33 (outil de dés).
+
+- MJ, ordinateur et téléphone : tout le détail de la décision (V3.1-19,
+  lot i) — colonnes CA / PV alignées, score modifiable qui réordonne,
+  lignes dépliables avec toutes les actions en deux boutons (touche,
+  dégâts), PV temporaires, renommage avec le nom d'origine en petit,
+  menace restante, Commencer / Round 1 / fin confirmée.
+- Joueur : invitation au premier plan (lancer, ou vrai dé avec
+  l'interrupteur « modificateur inclus »), mode combat dans Perso. (ordre,
+  économie d'action, Actions · Sorts · Capacités), retour à la fiche
+  normale à la fin.
+
+**Critères d'acceptation**
+- [ ] Le parcours de la planche, de « Commencer » à la fin confirmée, avec un MJ et deux joueurs (dont un sans l'application).
+- [ ] À 390 px et sur ordinateur, côté MJ et côté joueur.
+- [ ] Planche du catalogue « Initiative » créée ou mise à jour.
+
