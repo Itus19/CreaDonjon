@@ -92,6 +92,11 @@ historique, don/aptitude, sous-classe, sort) : aucun n'a d'équivalent en
 
 **Modèle conseillé : Opus** — mécanisme générique de choix pour les dons, partagé avec V3.1-6 et V3.1-7.
 
+**À concevoir ensemble : V3.1-3, V3.1-6 et V3.1-7.** Les trois demandent le
+même mécanisme générique de choix (dons, traits d'espèce, sous-classes) :
+le concevoir une fois, avec Opus, avant d'en coder un seul. V3.1-4 se branche
+ensuite dessus, avec Sonnet.
+
 Constaté le 27 septembre en accordant « Initié à la magie » via l'historique
 « Guide ». Le don s'affiche sur la fiche en texte descriptif, mais l'assistant
 de création de personnage ne propose **aucune étape** pour résoudre ses
@@ -201,6 +206,11 @@ déclencheurs (V3-A5) que de l'assistant de personnage.
 
 **Modèle conseillé : Opus** — mécanisme générique des traits à choix, cinq formes de choix.
 
+**À concevoir ensemble : V3.1-3, V3.1-6 et V3.1-7.** Les trois demandent le
+même mécanisme générique de choix (dons, traits d'espèce, sous-classes) :
+le concevoir une fois, avec Opus, avant d'en coder un seul. V3.1-4 se branche
+ensuite dessus, avec Sonnet.
+
 Suite à V3.1-3/V3.1-4 (Humain seulement) : relevé le 27 septembre sur les 9
 espèces officielles du SRD 5.2.1, quels traits portent un choix.
 
@@ -251,6 +261,11 @@ pour les langues d'historique.
 ### ☐ V3.1-7 — Une sous-classe n'apporte jamais d'effet mécanique, choix ou pas · `L`
 
 **Modèle conseillé : Opus** — sous-classes mécaniques : touche characterSheet() et les choix rechoisis.
+
+**À concevoir ensemble : V3.1-3, V3.1-6 et V3.1-7.** Les trois demandent le
+même mécanisme générique de choix (dons, traits d'espèce, sous-classes) :
+le concevoir une fois, avec Opus, avant d'en coder un seul. V3.1-4 se branche
+ensuite dessus, avec Sonnet.
 
 Constaté le 28 septembre en vérifiant les 12 sous-classes officielles pour le
 même genre de trou que V3.1-3/V3.1-6. Le trou est plus profond que prévu :
@@ -2040,6 +2055,69 @@ réellement la coquille :
   - **Notes** : pilule Les miennes / Journal de partie (le récit tour par tour).
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
+
+#### Reste à concevoir et découper avant de confier le code à Sonnet (4 octobre)
+
+L'interface est décidée ; ce qui manque est **sous** l'interface, et le
+découpage en tickets. Relevé en lisant `docs/SCHEMA.md` et
+`src/core/schemas/runtimeState.ts`. Tant qu'un point de A ou B n'est pas
+tranché, le lot qui en dépend ne part pas à Sonnet.
+
+**A. Données — à concevoir (Opus), décision écrite avant tout code**
+1. **Pièces et équipement** vivent dans le bloc `inventory`, pas dans
+   `entity_runtime_state`. Or la Table (± pièces, « Toute la table ») et la
+   bascule Équipé / Au sac les changent en pleine séance : une révision
+   immuable par clic (règle 17), ou une part en état de jeu ? ADR à écrire.
+2. **Maximum d'inspiration** : `zRuntimeState` le borne à 5 en dur ; la
+   décision dit « le maximum vient du ruleset, 1 par défaut ». Où vit ce
+   maximum ?
+3. **Concentration** : seul l'état `concentrating` existe. Le sort maintenu
+   (« Concentration : Fou rire », « Rompre ») n'est stocké nulle part.
+4. **« Reprendre »** (dernière visite, accueil) et **« Consultées
+   récemment »** (wiki, règles) : donnée nouvelle. Serveur (suit le compte
+   d'un appareil à l'autre) ou navigateur (rien en base) ?
+5. **Droits des joueurs** : V3.1-23, déjà ouvert.
+
+**B. Mécanique — à concevoir (Opus)**
+6. **Résolution depuis l'outil de dés** : V3.1-21, déjà ouvert. L'outil de
+   dés unique en dépend (pré-remplissage, Cibler, avantage avec les deux d20
+   rendus par le serveur).
+7. **Repos court et long** de « Toute la table » : une seule fonction de
+   repos, partagée avec V3.1-5 (effets de traits au Repos long) — à concevoir
+   ensemble pour ne pas l'écrire deux fois.
+8. **Jets contre la mort** : Inconscient ajouté et retiré seul, trois
+   réussites → stabilisé, « Soigner +1 PV » remet à zéro. Règles du noyau,
+   tests d'abord.
+
+**C. À trancher par l'auteur**
+9. Jauges de l'initiative et du budget de rencontre.
+10. L'électrum dans le regroupement automatique (dès 5 pa), ou exclu.
+11. Déclarer l'esquisse figée : les mentions « À valider par l'auteur » des
+    lots c sont dépassées par la passe du 4 octobre.
+
+**D. Découpage — un ticket par ligne, avec critères d'acceptation et
+planche de référence.** Seuls les lots g (V3.1-20) et les outils
+transverses (V3.1-21 à 23) ont aujourd'hui un ticket. Ordre proposé, chaque
+ligne posant ce dont la suivante a besoin :
+
+| # | Ticket à écrire | Dépend de | Code |
+|---|---|---|---|
+| 1 | Pilule glissante à la place de `BinderTabs` (ADR 0034) | — | Sonnet |
+| 2 | Fiche d'ordinateur : jauges, commande E, Inspiration au gabarit d'un badge | 1 ; A2 pour le ▲ de l'inspiration | Sonnet |
+| 3 | Rail repliable et dalle Outils (lots a, b) | — | Sonnet |
+| 4 | Tablette, piste B (lot f) | 2 | Sonnet |
+| 5 | Coquille téléphone : barre flottante MJ et joueur, feuilles du bas | 3 | Sonnet |
+| 6 | Wiki et Règles sur téléphone (☰ + récents) | 5, A4 | Sonnet |
+| 7 | Éditeur plein écran en accordéon | 5 | Sonnet |
+| 8 | Fiche sur téléphone : boutons de jet, infobulles de règles, Équipé / Au sac | 2, 5, A1 | Sonnet |
+| 9 | Outil de dés unique (feuille, panneau d’ordinateur, scintillement) | 5, B6 | Sonnet |
+| 10 | Outil Table | A1-A3, B7, B8, V3.1-23 | Sonnet, une fois A et B tranchés |
+| 11 | Accueil en tableau de bord, « Nouveau monde » à trois choix (lot h) | 1, 3, A4 | Sonnet |
+| 12 | Solo : ailes d'ordinateur et téléphone modèle A (lot d) | 5, 8, 9 | Sonnet |
+| 13 | Fenêtres du MJ en deux volets (V3.1-20, lot g) | 1 | Sonnet |
+
+Une fois A et B tranchés et ces tickets écrits, chacun se confie à Sonnet
+tel quel ; V3.1-21, 22 et 23 restent à Opus.
 
 **Planches** : chaque lot met
 à jour ses planches (Pastille chrome, Tiroir, Bouton de dés, Rail du joueur, et
