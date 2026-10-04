@@ -1880,6 +1880,22 @@ réellement la coquille :
   - **Outils** : les outils MJ en grille par moment (séance, préparation,
     campagne), radio comprise ; le chat n'y figure plus (il est dans la barre).
   - **À valider par l'auteur.**
+- **Smartphone du joueur (lot c)** — esquissé le 4 octobre sur le modèle du
+  MJ, planche « Smartphone du joueur » (huit écrans vivants). Barre à six
+  entrées (Perso., Édition, Notes | Wiki, Règles, Chat), dé encoché.
+  - Accueil : le même que le MJ, ouvert sur « Je joue ».
+  - Personnage : la fiche complète (jauges, boutons de jet, ciblage pendant
+    l'initiative — V3.1-21).
+  - Édition : ce que le MJ laisse modifier (fiche, pages, faction confiée),
+    éditeur en feuille avec « Qui le voit » (moi / moi et le MJ / la table).
+  - Notes : les miennes / partagées à la table, en pilule ; les noms sont des
+    liens vers le wiki.
+  - Wiki : ce que le personnage a découvert, et rien d'autre (filtré côté
+    serveur) ; une page s'ouvre en feuille, « Ajouter à mes notes ».
+  - Règles et Dés : identiques au MJ.
+  - Chat : table ou MJ en privé ; les jets arrivent en cartes (total, dés,
+    verdict de l'initiative), un jet secret n'est vu que du joueur et du MJ.
+  - **À valider par l'auteur.**
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
 
