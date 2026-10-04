@@ -2420,8 +2420,9 @@ Fondation des tickets 32, 33 et 34. Aucune interface.
    (`applyDamage`, `src/core/rules/turn.ts`), mais `changeHp` (fiche) les
    ignore et aucune commande ne permet d'en donner. `changeHp` négatif passe
    par la même règle que `applyDamage` ; nouveau service `changeTempHp`
-   (les PV temporaires ne se cumulent pas : on garde le plus grand, règle
-   2024).
+   (les PV temporaires ne se cumulent pas : en 2024, on choisit de garder
+   les anciens ou de prendre les nouveaux — l'interface propose le plus
+   grand par défaut).
 
 **Critères d'acceptation**
 - [ ] Les cas de jets contre la mort ci-dessus, chacun un test du noyau.
