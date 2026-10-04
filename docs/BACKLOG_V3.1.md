@@ -2144,6 +2144,15 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     « Préparer les dégâts » sur la même cible (dés doublés au critique).
   - **PV temporaires** : arc bleu autour de la jauge, annotation « 20/15 »
     (PV + temporaires / max) ; les dégâts les entament d'abord.
+  - **Retouches du 4 octobre (2)** : l'outil de dés de l'initiative est
+    **exactement** celui de partout (V3.1-33) ; « **Quitter le combat** »
+    (MJ) suspend sans rien perdre — fausse manipulation, oubli — et
+    « Reprendre » relance ; côté joueur, une 4ᵉ pilule **Objets** (potion de
+    soins, fiole d'acide : consommés à l'usage ; le reste de l'inventaire
+    reste dans la fiche) ; dans **Sorts**, les **emplacements** par niveau,
+    dépensés au lancer. Les **PV temporaires** deviennent une seconde jauge
+    bleue posée **par-dessus** la verte, qui n'existe que s'il y en a et se
+    consomme d'abord.
   - **C9 tranché** : PV de chaque participant en anneau ; pendant le combat,
     la « menace restante » (XP des adversaires encore debout rapportée à la
     rencontre) remplace le budget de rencontre.
@@ -2639,6 +2648,32 @@ ordinateur et tablette », « Décidé · animation de lancer : scintillement »
   immédiat.
 - API de pré-remplissage utilisée par la fiche (32), la Table (34) et le
   solo (36) : `openDiceTool({ dice, modifier, label, advantage? })`.
+- **Revu le 4 octobre (lot i)** :
+  - **Un seul gabarit, toujours le même** : seule la présélection change
+    selon le bouton touché ; son nom s'affiche en titre (« Dague — touche »).
+    Ouvert depuis le dé, sans bouton : « **Jet libre** ».
+  - **Secret** : interrupteur dans l'en-tête de l'outil (il existait dans
+    `DiceRollPanel` et manquait à l'esquisse). Un jet secret n'est vu que de
+    son auteur et du MJ ; les jets d'un monstre sont secrets par défaut.
+  - **Verdict, puis enchaînement** : après le scintillement, « Touché » /
+    « Raté » (ou « La cible résiste » / « n'a pas résisté ») s'affiche avec
+    son animation (**à trancher : planche « Question · verdict d'un jet »,
+    quatre propositions**). Si l'attaque réussit, le bouton « **Lancer les
+    dégâts · 1d4 + 2** » apparaît : un toucher lance les bons dés sur la
+    même cible et les dégâts s'appliquent seuls.
+  - **Critique** : un 20 naturel touche toujours et double les **dés** de
+    dégâts, pas le modificateur (1d4+2 → 2d4+2) ; un 1 naturel rate
+    toujours. Règle 2024, déjà dans l'outil.
+  - **Validation du MJ** : quand un monstre touche un joueur, l'outil du MJ
+    s'arrête sur « Valider la touche » / « Faire échouer » avant les dégâts.
+  - **Limites relevées, à traiter dans V3.1-21** : un bonus de dégâts choisi
+    après la touche (Attaque sournoise, Châtiment divin) doit pouvoir
+    s'ajouter avant le lancer des dégâts — le bouton enchaîné garde un
+    « Ajuster » ; une réaction (Bouclier, +5 CA) peut annuler une touche —
+    il faut une fenêtre de réaction avant les dégâts ; résistances,
+    immunités et vulnérabilités viennent du bloc de la cible ; des dégâts
+    sur un lanceur concentré déclenchent son JS de Constitution (DD 10 ou
+    moitié des dégâts) ; une zone (Boule de feu) demande un jet par cible.
 
 **Critères d'acceptation**
 - [ ] Jet avec avantage : deux d20 affichés, seul le retenu dans le total et les derniers jets.
@@ -2789,6 +2824,47 @@ V3.1-29 (téléphone), V3.1-33 (outil de dés).
 
 **Critères d'acceptation**
 - [ ] Le parcours de la planche, de « Commencer » à la fin confirmée, avec un MJ et deux joueurs (dont un sans l'application).
+- [ ] « Quitter le combat » puis « Reprendre » : ordre, PV et états intacts.
+- [ ] Côté joueur : Objets (consommés à l'usage) et emplacements de sorts (dépensés au lancer).
 - [ ] À 390 px et sur ordinateur, côté MJ et côté joueur.
 - [ ] Planche du catalogue « Initiative » créée ou mise à jour.
+
+### ☐ V3.1-39 — Les sauvegardes demandées à la cible · `L` — **à concevoir**
+
+**Modèle conseillé : Opus** — nouveau flux joueur ↔ MJ, et une donnée de règle à ajouter aux effets.
+
+**Demande (4 octobre).** Un sort comme Moquerie cruelle ne se « lance »
+pas sur la cible : c'est **la cible qui résiste** par un jet de sauvegarde.
+Quand une action impose une sauvegarde, la cible reçoit une demande au
+premier plan — « Résiste à Moquerie cruelle · JS Sagesse DD 13 » — avec,
+comme pour l'initiative : lancer via l'application, saisir un vrai dé
+(interrupteur « modificateur inclus »), ou laisser le MJ saisir la valeur.
+Le résultat revient à l'outil de dés de l'auteur, qui affiche le verdict et
+enchaîne les dégâts ou l'effet.
+
+**Où le MJ répond.** En combat : dans l'outil Initiative (la demande s'y
+affiche en bandeau). Hors combat : dans l'outil **Table**, qui liste déjà
+les PJ — c'est la bonne place (avis : d'accord) ; une pastille sur le dé
+encoché signale une demande en attente, où qu'on soit. Un PNJ ou un
+monstre ciblé : le MJ lance ou saisit, comme pour l'initiative.
+
+**Les règles exactes.** Le moteur doit vérifier la cible avant de demander
+quoi que ce soit : Charme-personne ne vise qu'un humanoïde, certains effets
+ignorent les créatures immunisées à un état. **Constat (lu le 4 octobre)** :
+un effet (`zEffectData`, `src/core/schemas/rule-blocks/blocks.ts`) porte sa
+sauvegarde (`save.ability`) ou son attaque, mais **aucune restriction de
+cible** ; les types de créature existent sur les blocs de stats et les
+espèces. À ajouter : un champ optionnel de restriction (types de créature,
+immunités d'état), validé par Zod — pas de migration SQL (`jsonb`), mais
+les fiches SRD concernées devront le recevoir. Aucun ticket existant ne le
+couvre ; il complète V3.1-21 (résolution) et V3-A6 (règles à
+déclencheurs).
+
+**Dépend de** : V3.1-21, V3.1-37 (signal temps réel), V3.1-34 (Table).
+
+**Critères d'acceptation**
+- [ ] Une sauvegarde imposée à un PJ arrive à son joueur ; lancer, vrai dé ou saisie du MJ y répondent.
+- [ ] Le résultat revient à l'auteur du jet ; verdict, puis dégâts ou effet appliqués.
+- [ ] Une cible hors restriction (Charme-personne sur un mort-vivant) est refusée avant toute demande (test du noyau).
+- [ ] Hors combat, la demande s'affiche dans l'outil Table ; en combat, dans l'Initiative.
 
