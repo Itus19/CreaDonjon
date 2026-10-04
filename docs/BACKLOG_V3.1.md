@@ -2668,10 +2668,21 @@ ordinateur et tablette », « Décidé · animation de lancer : scintillement »
   - **Verdict, dans la case du résultat** (aucune place en plus) : il ne
     s'affiche que s'il y a quelque chose à battre — une CA (attaque), un DD
     (test, sauvegarde). Réussite en vert, **échec en rouge**, **critique en
-    or lumineux**. Animation **à trancher : planche « Question · verdict
-    d'un jet », quatre propositions dans la case** (cadre qui se trace, case
-    qui se remplit, cadre qui pulse, étiquette au coin). Le même outil
+    or lumineux**. Animation **tranchée le 4 octobre : B, la case se
+    remplit** — la couleur du verdict envahit la case de gauche à droite
+    puis se pose en teinte légère derrière le résultat (planche « Décidé ·
+    verdict d'un jet ») ; mouvement réduit : la teinte seule. Le même outil
     servant partout, le verdict est le même partout.
+  - **Zone de résultat permanente** (4 octobre) : elle est toujours là,
+    même avant le premier jet — « — » et **un carré vide par dé** du
+    prochain lancer (deux pour un d20 avec avantage), qui se remplissent au
+    lancer. Sur téléphone, la feuille des dés monte plus haut pour la
+    loger. Sa hauteur ne change jamais.
+  - **« Lancer les dégâts » dans la zone de résultat** : place réservée,
+    toujours présente, visible seulement quand elle sert — **à trancher :
+    planche « Question · Lancer les dégâts dans la zone de résultat »**,
+    quatre propositions (case réservée à droite, bande du bas, le verdict
+    devient bouton, les deux temps côte à côte).
   - **Enchaînement** : « Touché » /
     « Raté » (ou « Résiste » / « Pas résisté ») puis le bouton suivant. Si l'attaque réussit, le bouton « **Lancer les
     dégâts · 1d4 + 2** » apparaît : un toucher lance les bons dés sur la
