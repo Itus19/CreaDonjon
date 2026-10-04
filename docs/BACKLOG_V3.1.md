@@ -2144,15 +2144,20 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     « Préparer les dégâts » sur la même cible (dés doublés au critique).
   - **PV temporaires** : arc bleu autour de la jauge, annotation « 20/15 »
     (PV + temporaires / max) ; les dégâts les entament d'abord.
-  - **Retouches du 4 octobre (2)** : l'outil de dés de l'initiative est
-    **exactement** celui de partout (V3.1-33) ; « **Quitter le combat** »
-    (MJ) suspend sans rien perdre — fausse manipulation, oubli — et
-    « Reprendre » relance ; côté joueur, une 4ᵉ pilule **Objets** (potion de
-    soins, fiole d'acide : consommés à l'usage ; le reste de l'inventaire
-    reste dans la fiche) ; dans **Sorts**, les **emplacements** par niveau,
-    dépensés au lancer. Les **PV temporaires** deviennent une seconde jauge
-    bleue posée **par-dessus** la verte, qui n'existe que s'il y en a et se
-    consomme d'abord.
+  - **Retouches du 4 octobre (2 et 3)** : l'outil de dés de l'initiative est
+    **exactement** celui de partout (V3.1-33). « **Quitter le combat** »
+    (MJ) suspend sans rien perdre — fausse manipulation, oubli ; ensuite,
+    deux choix : **« Reprendre tel quel »** (même ordre, même round, mêmes
+    PV) ou **« Recommencer »** (l'initiative se relance, invitation renvoyée
+    aux joueurs). Côté joueur, le mode combat **ne remplace pas la fiche** :
+    il ajoute en tête l'ordre du tour, et dessous c'est **la fiche
+    elle-même**, exactement la même que hors combat — jauges, Actions,
+    Inventaire, Magie, Traits, Maîtrises, avec leurs boutons de jet, leurs
+    infobulles de règles, les emplacements de sorts et la bascule Équipé /
+    Au sac (les potions sont dans l'inventaire). Les **PV temporaires** sont
+    une seconde jauge bleue posée **par-dessus** la verte, qui n'existe que
+    s'il y en a et se consomme d'abord — **sur la fiche aussi** (V3.1-26,
+    V3.1-32), annotation « 18/15 ».
   - **C9 tranché** : PV de chaque participant en anneau ; pendant le combat,
     la « menace restante » (XP des adversaires encore debout rapportée à la
     rencontre) remplace le budget de rencontre.
@@ -2655,10 +2660,20 @@ ordinateur et tablette », « Décidé · animation de lancer : scintillement »
   - **Secret** : interrupteur dans l'en-tête de l'outil (il existait dans
     `DiceRollPanel` et manquait à l'esquisse). Un jet secret n'est vu que de
     son auteur et du MJ ; les jets d'un monstre sont secrets par défaut.
-  - **Verdict, puis enchaînement** : après le scintillement, « Touché » /
-    « Raté » (ou « La cible résiste » / « n'a pas résisté ») s'affiche avec
-    son animation (**à trancher : planche « Question · verdict d'un jet »,
-    quatre propositions**). Si l'attaque réussit, le bouton « **Lancer les
+  - **DD** (retour de l'auteur, 4 octobre : l'outil en ligne, `DiceRollPanel`,
+    l'a déjà et l'esquisse l'avait perdu) : une ligne DD sous la grille —
+    ▼ valeur ▲, vide = pas de DD — et, pour le MJ seul, **« DD privé »** :
+    le joueur voit « contre DD ? », jamais la valeur. Le « Lancé public » de
+    l'outil en ligne devient l'interrupteur Secret.
+  - **Verdict, dans la case du résultat** (aucune place en plus) : il ne
+    s'affiche que s'il y a quelque chose à battre — une CA (attaque), un DD
+    (test, sauvegarde). Réussite en vert, **échec en rouge**, **critique en
+    or lumineux**. Animation **à trancher : planche « Question · verdict
+    d'un jet », quatre propositions dans la case** (cadre qui se trace, case
+    qui se remplit, cadre qui pulse, étiquette au coin). Le même outil
+    servant partout, le verdict est le même partout.
+  - **Enchaînement** : « Touché » /
+    « Raté » (ou « Résiste » / « Pas résisté ») puis le bouton suivant. Si l'attaque réussit, le bouton « **Lancer les
     dégâts · 1d4 + 2** » apparaît : un toucher lance les bons dés sur la
     même cible et les dégâts s'appliquent seuls.
   - **Critique** : un 20 naturel touche toujours et double les **dés** de
@@ -2666,14 +2681,22 @@ ordinateur et tablette », « Décidé · animation de lancer : scintillement »
     toujours. Règle 2024, déjà dans l'outil.
   - **Validation du MJ** : quand un monstre touche un joueur, l'outil du MJ
     s'arrête sur « Valider la touche » / « Faire échouer » avant les dégâts.
-  - **Limites relevées, à traiter dans V3.1-21** : un bonus de dégâts choisi
-    après la touche (Attaque sournoise, Châtiment divin) doit pouvoir
-    s'ajouter avant le lancer des dégâts — le bouton enchaîné garde un
-    « Ajuster » ; une réaction (Bouclier, +5 CA) peut annuler une touche —
-    il faut une fenêtre de réaction avant les dégâts ; résistances,
-    immunités et vulnérabilités viennent du bloc de la cible ; des dégâts
-    sur un lanceur concentré déclenchent son JS de Constitution (DD 10 ou
-    moitié des dégâts) ; une zone (Boule de feu) demande un jet par cible.
+  - **Limites relevées, tranchées avec l'auteur, à traiter dans V3.1-21** :
+    - **bonus après la touche** : l'outil **lit la fiche du lanceur** et
+      propose ce qui est disponible à ce moment (Attaque sournoise si l'arme
+      et la situation la permettent et qu'elle n'a pas servi ce tour,
+      Châtiment divin s'il reste un emplacement, Inspiration bardique
+      reçue…) ; le joueur coche, les dés s'ajoutent avant le lancer ;
+    - **réactions** : en 2024, Bouclier est une **réaction prise quand on
+      est touché** (+5 CA, y compris contre l'attaque qui la déclenche) —
+      elle se joue donc **après** le « Touché », avant les dégâts. Il faut
+      une courte fenêtre de réaction côté cible ; si elle fait passer la CA
+      au-dessus du jet, la touche devient un raté ;
+    - **résistances, immunités, vulnérabilités** de la cible appliquées par
+      le moteur, et **JS de concentration** déclenché quand une cible
+      concentrée subit des dégâts (DD 10 ou moitié des dégâts, au plus 30) ;
+    - **zones** : le lanceur choisit **plusieurs cibles** dans « Cibler » ;
+      un jet de sauvegarde par cible, dégâts lancés une fois.
 
 **Critères d'acceptation**
 - [ ] Jet avec avantage : deux d20 affichés, seul le retenu dans le total et les derniers jets.
@@ -2824,8 +2847,9 @@ V3.1-29 (téléphone), V3.1-33 (outil de dés).
 
 **Critères d'acceptation**
 - [ ] Le parcours de la planche, de « Commencer » à la fin confirmée, avec un MJ et deux joueurs (dont un sans l'application).
-- [ ] « Quitter le combat » puis « Reprendre » : ordre, PV et états intacts.
-- [ ] Côté joueur : Objets (consommés à l'usage) et emplacements de sorts (dépensés au lancer).
+- [ ] « Quitter le combat » puis « Reprendre tel quel » : ordre, PV et états intacts ; « Recommencer » relance l'initiative et renvoie l'invitation.
+- [ ] Côté joueur, le mode combat garde la fiche complète (même composant que hors combat), l'ordre du tour en tête.
+- [ ] Un dégât porté depuis la fiche du joueur se voit aussitôt dans l'initiative du MJ, et inversement (même état de jeu).
 - [ ] À 390 px et sur ordinateur, côté MJ et côté joueur.
 - [ ] Planche du catalogue « Initiative » créée ou mise à jour.
 
