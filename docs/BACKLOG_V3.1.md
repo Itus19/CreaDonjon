@@ -1729,7 +1729,7 @@ jour la charte » tient.
 
 ---
 
-### ☐ V3.1-19 — Refonte « verre minéral » (ticket parent) · `XL` — **conçu et découpé (V3.1-24 à 36), reste C**
+### ☐ V3.1-19 — Refonte « verre minéral » (ticket parent) · `XL` — **lots a à h découpés (V3.1-24 à 36) ; lot i (outils du MJ) à concevoir**
 
 **Modèle conseillé : Opus** — ticket parent : la conception et le découpage ; chaque lot décidé se code ensuite avec Sonnet, sauf mention contraire.
 
@@ -2079,15 +2079,31 @@ réellement la coquille :
   `short_rest` / `long_rest` (V3.1-5 s'y branche).
 - **B8 jets contre la mort** : fonctions pures du noyau, règles 2024.
 
-**C. À trancher par l'auteur**
-9. Jauges de l'initiative et du budget de rencontre.
-10. L'électrum dans le regroupement automatique (dès 5 pa), ou exclu. Le
-    code actuel (`recompose`, `currency.ts`) le forme déjà.
-11. Déclarer l'esquisse figée : les mentions « À valider par l'auteur » des
-    lots c sont dépassées par la passe du 4 octobre.
-12. Accepter la colonne `table_settings` sur `campaigns` (ADR 0036 §5) ;
-    et le maximum d'inspiration en réglage de campagne plutôt que de
-    ruleset.
+**C. Tranché par l'auteur le 4 octobre**
+- ~~10. Électrum~~ — **exclu du regroupement** : la monnaie ne forme jamais
+  d'électrum toute seule (10 pa → 1 po) ; celui qu'on reçoit est gardé tel
+  quel, et ne se casse que si les autres pièces ne suffisent pas. À coder
+  dans V3.1-24.
+- ~~12. Colonne `table_settings`~~ — **acceptée**, avec le maximum
+  d'inspiration réglé par campagne (ADR 0036 §5). V3.1-23 peut partir.
+- ~~11. Esquisse figée~~ — **non** : l'auteur veut d'abord **refondre
+  visuellement chaque outil du MJ** → lot i ci-dessous. Les tickets V3.1-24
+  à 36 restent valables : ils ne touchent pas l'intérieur des outils, sauf la
+  Table (34), déjà esquissée.
+- 9. Jauges de l'initiative et du budget de rencontre — **reporté au lot i**
+  (outils Initiative et Rencontres).
+
+**Lot i — refonte visuelle des outils du MJ (ouvert le 4 octobre, à
+concevoir).** Passer outil par outil, esquisse à l'appui, dans la même
+méthode que les lots précédents (propositions vivantes, choix de l'auteur,
+planches définitives, ticket prêt pour Sonnet). Les outils, rangés par
+moment comme dans la feuille Outils du téléphone :
+- **Séance** : Initiative, Table, Chat, Livre de sessions, Notes ;
+- **Préparation** : Rencontres, Générateurs, Probabilités, Création de
+  personnage ;
+- **Campagne** : Gestion de campagne, Calendrier, Calendrier réel, Règles
+  actives, Personnalisation, Publication, Journal historique.
+Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
@@ -2103,13 +2119,13 @@ réellement la coquille :
 | V3.1-31 | Éditeur plein écran en accordéon | 29 |
 | V3.1-32 | Fiche sur téléphone : jets, infobulles, sac | 24, 26, 29 |
 | V3.1-33 | Outil de dés unique | 29 |
-| V3.1-34 | Outil Table | 24, 26, 29, 33 ; C10 |
+| V3.1-34 | Outil Table | 24, 26, 29, 33 |
 | V3.1-35 | Accueil en tableau de bord (h) | 25, 27 |
 | V3.1-36 | Solo : ailes et téléphone modèle A (d) | 29, 32, 33 |
 | V3.1-20 | Fenêtres du MJ en deux volets (g) | 25 |
 
 Tous à Sonnet. Restent à Opus : V3.1-21 (cible et résolution), V3.1-22
-(salon), V3.1-23 (droits des joueurs, après C12).
+(salon), V3.1-23 (droits des joueurs).
 
 **Planches** : chaque lot met
 à jour ses planches (Pastille chrome, Tiroir, Bouton de dés, Rail du joueur, et
@@ -2267,7 +2283,7 @@ de l'initiative ; un jet secret visible du seul joueur et du MJ).
 
 **Modèle conseillé : Opus** — droits d'écriture des joueurs, appliqués côté serveur ; schéma à vérifier.
 
-**4 octobre — ADR 0036 §5 (proposé)** : colonne `table_settings jsonb` sur `campaigns`, validée par `zCampaignTableSettings`, qui porte aussi le maximum d'inspiration. À coder seulement une fois la proposition acceptée par l'auteur (V3.1-19, C12).
+**4 octobre — ADR 0036 §5, accepté par l'auteur** : colonne `table_settings jsonb` sur `campaigns`, validée par `zCampaignTableSettings`, qui porte aussi le maximum d'inspiration (1 par défaut, réglé dans Règles actives). Migration et mise à jour de `docs/SCHEMA.md` dans ce ticket.
 
 **Constat.** Un joueur peut aujourd'hui toucher à tout ce que sa fiche affiche
 en commande. À la table, certaines valeurs sont la prérogative du MJ — les
@@ -2348,7 +2364,10 @@ Fondation des tickets 32, 33 et 34. Aucune interface.
    `concentrating` des déclencheurs est dérivé de ce champ.
 3. Monnaie et équipement (ADR 0036 §1) : services `changeCurrency`
    (delta par pièce, `depositCoins` / `spendCoins`, refus si le total ne
-   suffit pas) et `setItemEquipped`, écriture du bloc `inventory` avec
+   suffit pas) et `setItemEquipped`. **Électrum exclu du regroupement**
+   (décision du 4 octobre) : `recompose` ne forme jamais de pe ; l'électrum
+   déjà détenu reste tel quel et ne se casse que si le reste ne suffit pas
+   — tests d’abord dans `currency.test.ts`. Écriture du bloc `inventory` avec
    contrôle de version ; routes Zod. `InventoryPanel` les utilise à la place
    du renvoi du bloc entier.
 4. Repos (ADR 0036 §7) : `takeShortRest` / `takeLongRest` émettent
@@ -2358,6 +2377,7 @@ Fondation des tickets 32, 33 et 34. Aucune interface.
 - [ ] Les cas de jets contre la mort ci-dessus, chacun un test du noyau.
 - [ ] Une fiche enregistrée avant ce ticket se relit sans `concentration` (test).
 - [ ] Dépenser 3 po avec 1 pp et 0 po rend la monnaie ; dépenser plus que le total est refusé sans rien écrire.
+- [ ] Ajouter 5 pa à 0 pa ne forme pas d'électrum ; 2 pe détenues restent 2 pe après un dépôt.
 - [ ] Un repos long émet `long_rest` (test d'intégration avec un déclencheur factice).
 - [ ] Aucune migration SQL.
 
@@ -2573,7 +2593,7 @@ ordinateur et tablette », « Décidé · animation de lancer : scintillement »
 - [ ] Le client n'envoie jamais un résultat (test de la route).
 - [ ] Même outil sur téléphone, tablette et ordinateur.
 
-### ☐ V3.1-34 — L'outil Table du MJ · `L` — **prêt** (sauf C)
+### ☐ V3.1-34 — L'outil Table du MJ · `L` — **prêt**
 
 **Modèle conseillé : Sonnet** — tout est esquissé ; données et règles fournies par 24.
 
@@ -2600,7 +2620,6 @@ feuilles ouvertes » (Toute la table). **Départ** : `mjToolWindows.ts`,
 - Chaque geste passe par le même service que la fiche (même journal) ; le
   MJ a toutes les commandes. Sur ordinateur : fenêtre d'outil MJ, ascenseur
   fin ; sur téléphone : `no-scrollbar`.
-- **Attend C** : l'électrum dans le regroupement automatique.
 
 **Critères d'acceptation**
 - [ ] Les gestes de la planche, chacun journalisé une fois.

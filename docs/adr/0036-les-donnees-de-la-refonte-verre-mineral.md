@@ -1,6 +1,6 @@
 # ADR 0036 — Les données sous la refonte « verre minéral »
 
-**Date** : 4 octobre 2026 · **Statut** : accepté, sauf le point 5 (réglages de campagne) — **proposé, à valider par l'auteur** : il ajoute une colonne à `campaigns` (V3.1-19, points A et B)
+**Date** : 4 octobre 2026 · **Statut** : accepté le 4 octobre 2026, point 5 compris (V3.1-19, points A et B)
 
 ## Contexte
 
@@ -18,7 +18,7 @@ L'esquisse de V3.1-19 est décidée, mais plusieurs écrans montrent des valeurs
 ## Options et décisions
 
 **1. Pièces et équipement (A1) — restent dans le bloc `inventory`.**
-Options : les déplacer dans l'état de jeu, ou les garder dans le bloc. On les garde : l'économie et le journal en dépendent, et ce sont des possessions, pas un état de combat. Ce qui change : la Table et la fiche ne renvoient plus tout le bloc, elles appellent un **service serveur** `changeCurrency(entityId, delta par pièce)` (et `setItemEquipped`) qui relit le bloc, applique `depositCoins` / `spendCoins`, et l'écrit avec contrôle de version, comme `takeLongRest` le fait déjà pour le bloc `character`. Une révision par geste et par personnage : c'est le prix d'une économie lisible, et il est déjà payé aujourd'hui.
+Options : les déplacer dans l'état de jeu, ou les garder dans le bloc. On les garde : l'économie et le journal en dépendent, et ce sont des possessions, pas un état de combat. Ce qui change : la Table et la fiche ne renvoient plus tout le bloc, elles appellent un **service serveur** `changeCurrency(entityId, delta par pièce)` (et `setItemEquipped`) qui relit le bloc, applique `depositCoins` / `spendCoins`, et l'écrit avec contrôle de version, comme `takeLongRest` le fait déjà pour le bloc `character`. Une révision par geste et par personnage : c'est le prix d'une économie lisible, et il est déjà payé aujourd'hui. **L'électrum est exclu du regroupement** (décision de l'auteur) : la monnaie ne forme jamais de pe toute seule ; celle qu'on détient est gardée et ne se casse qu'en dernier recours.
 
 **2. Maximum d'inspiration (A2) — un réglage de campagne, pas une règle de ruleset.**
 Un ruleset publié est figé (`SCHEMA.md`) : changer ce maximum obligerait à publier une variante. On le range avec les droits des joueurs (point 5), dans Règles actives. `1` par défaut (règle 2024) ; la borne `max(5)` de `zRuntimeState` reste comme garde-fou. `changeInspiration` borne au réglage, côté serveur.
@@ -29,7 +29,7 @@ Un ruleset publié est figé (`SCHEMA.md`) : changer ce maximum obligerait à pu
 **4. « Reprendre » et « Consultées récemment » (A4) — dans le navigateur.**
 Options : une table serveur (suit le compte d'un appareil à l'autre) ou `localStorage`. On choisit le navigateur : aucune donnée personnelle de plus en base, aucune migration, compatible avec la cible locale. Ce qu'on perd : la liste ne suit pas d'un appareil à l'autre. Lecture et écriture protégées (`try/catch` qui retombe sur une liste vide, jamais silencieux en développement) ; la liste ne garde que des identifiants et des titres, jamais un contenu caché (la visibilité reste résolue par le serveur à l'ouverture).
 
-**5. Réglages de campagne (A2, A5) — une colonne `table_settings jsonb` sur `campaigns`.** _Proposé._
+**5. Réglages de campagne (A2, A5) — une colonne `table_settings jsonb` sur `campaigns`.** _Accepté par l'auteur le 4 octobre._
 Données froides, lues partout, changées rarement : la place de `target_session_minutes`. Une colonne `jsonb not null default '{}'`, validée par un schéma Zod `zCampaignTableSettings` qui donne les valeurs par défaut : `inspiration_max` (1), et `player_can_edit` à six interrupteurs — `conditions` et `inspiration` faux, `hp`, `currency`, `spell_slots`, `hit_dice` vrais. Une seule migration, mise à jour de `SCHEMA.md` dans le même ticket. Le serveur refuse l'écriture d'un joueur quand l'interrupteur est coupé ; le MJ et le moteur (repos, résolution) ne sont jamais concernés. Détail : V3.1-23.
 
 **6. Résolution depuis l'outil de dés (B6) — un cœur commun extrait du tour solo.**
@@ -53,5 +53,5 @@ Dans `src/core/rules/deathSaves.ts`, tests d'abord :
 ## Conséquences
 
 - Les points 1, 3, 4, 6 (sans cible), 7 et 8 ne demandent aucune migration : les tickets qui en dépendent peuvent partir à Sonnet.
-- Le point 5 ajoute une colonne : il attend l'accord de l'auteur, puis V3.1-23 l'applique. L'Inspiration ▲▼ des joueurs et le réglage du maximum en dépendent.
+- Le point 5 ajoute une colonne, acceptée : V3.1-23 l'applique (migration et `SCHEMA.md`). L'Inspiration ▲▼ des joueurs et le réglage du maximum en dépendent.
 - Les lots qui changent la monnaie ou l'équipement passent par les nouveaux services, jamais par un renvoi du bloc entier depuis un nouvel écran.
