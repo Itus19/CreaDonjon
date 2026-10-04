@@ -1870,7 +1870,13 @@ réellement la coquille :
       C secousse et éclat, D scintillement, E retournement. Dans tous les
       cas : l'animation part au toucher et masque l'attente du serveur (qui
       seul lance) ; les chiffres qui défilent sont décoratifs ; mouvement
-      réduit → résultat immédiat. **À trancher par l'auteur.**
+      réduit → résultat immédiat. **Tranché le 4 octobre : D,
+      scintillement** — les chiffres défilent flous puis se figent un par un,
+      le total compte jusqu'à sa valeur.
+    - La feuille des dés s'ouvre **à la hauteur de la feuille Outils** ; les
+      derniers jets (30 gardés) défilent dans leur zone, avec l'ascenseur fin
+      de l'application (6 px, couleur `edge`, coins ronds, comme
+      `globals.css`).
   - **Outils** : les outils MJ en grille par moment (séance, préparation,
     campagne), radio comprise ; le chat n'y figure plus (il est dans la barre).
   - **À valider par l'auteur.**
