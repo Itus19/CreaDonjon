@@ -1684,6 +1684,7 @@ lots le sont.
 | h | Page d'accueil en tableau de bord, rail joueur, « Nouveau monde » à trois choix, onglets en pilule glissante | décidé, à coder |
 | — | Outil de dés unique, partout (téléphone, ordinateur, solo) : pré-rempli, Cibler · Lancer · Effacer — détail en V3.1-21 | décidé, à coder |
 | — | Outil MJ « Table » (les PJ en direct) | décidé, à coder |
+| — | Droits des joueurs sur leur fiche, réglés dans Règles actives → **V3.1-23** | décidé, à concevoir |
 | — | Jauges de l'initiative et du budget de rencontre | à trancher |
 
 **Règle transverse (4 octobre) : chaque lot livre aussi sa vue
@@ -1917,9 +1918,8 @@ réellement la coquille :
     leur inspiration, leurs PV, leurs pièces, leurs emplacements, leurs dés
     de vie (interrupteurs). Par défaut : états et inspiration au MJ seul, le
     reste au joueur. Sans le droit, le joueur voit la valeur sans commande
-    (pas de « + état »). **À vérifier avant de coder** : où vit ce réglage
-    (campagne), et si `docs/SCHEMA.md` le prévoit — sinon s'arrêter et
-    demander (règle de méthode).
+    (pas de « + état »). **Ticket à part, pour toute l'application :
+    V3.1-23.**
   - **Wiki du joueur sur téléphone** : la peau actuelle (`BookSkin`) reste
     telle quelle — fiche en pleine largeur, sommaire en tiroir à gauche,
     groupes par type repliables (7 à 10 types, PJ déplié par défaut). Le
@@ -2043,7 +2043,7 @@ Esquissé : fiche complète (bouton « Voir hors combat / en combat ») et outil
 Table (au tour du Worg, « Morsure » sur un PJ : touche, dégâts, JS de Force,
 À terre).
 
-**Revu le 4 octobre : tout passe par l'outil de dés.** Un bouton de jet de la
+**Revu le 4 octobre : tout passe par l'outil de dés (ADR 0035).** Un bouton de jet de la
 fiche (touche, dégâts, sort, soin, caractéristique, sauvegarde, compétence,
 initiative) **ouvre l'outil de dés pré-rempli** (dés, modificateur, libellé)
 au lieu de lancer ; on peut encore ajouter un dé, l'avantage ou le secret, puis
@@ -2104,4 +2104,45 @@ de l'initiative ; un jet secret visible du seul joueur et du MJ).
 - [ ] Un salon commun MJ + joueurs, à côté des fils privés.
 - [ ] Les jets publics apparaissent dans le salon en cartes ; les secrets seulement pour leur auteur et le MJ.
 - [ ] RLS : un joueur ne lit jamais le fil privé d'un autre.
+
+---
+
+### V3.1-23 — Ce que les joueurs modifient eux-mêmes (Règles actives) · `M` — **décidé le 4 octobre, à concevoir**
+
+**Constat.** Un joueur peut aujourd'hui toucher à tout ce que sa fiche affiche
+en commande. À la table, certaines valeurs sont la prérogative du MJ — les
+états (Charmé, À terre…) surtout, et l'inspiration — d'autres sont plus
+pratiques tenues par le joueur (PV, pièces, emplacements, dés de vie).
+
+**Décision de l'auteur.** Dans l'outil MJ **Règles actives**, une section
+« **Ce que les joueurs modifient eux-mêmes** » : un interrupteur par valeur —
+leurs **états**, leur **inspiration**, leurs **PV**, leurs **pièces**, leurs
+**emplacements de sorts**, leurs **dés de vie**. Réglage de la campagne, valable
+**partout dans l'application** : fiche sur ordinateur, tablette et téléphone,
+fenêtres du MJ, tout écran où le joueur voit sa fiche.
+
+- Par défaut : états et inspiration au MJ seul ; PV, pièces, emplacements et
+  dés de vie au joueur.
+- Interrupteur coupé : le joueur voit la valeur, sans commande (pas de
+  « + état », pas de ▲▼ sur l'inspiration) ; le MJ la change depuis la fiche
+  ou l'outil Table.
+- Interrupteur allumé : le joueur la change sur sa fiche ; chaque changement
+  est journalisé.
+- Les changements faits par le moteur (dégâts résolus par V3.1-21, repos) ne
+  dépendent pas de ces réglages.
+
+Esquissé : planche « Téléphone du MJ — feuilles ouvertes », écran Outils →
+Règles actives ; fiche joueur sans « + état » ni ▲▼ d'inspiration.
+
+**À vérifier avant de coder** (règles de méthode) : où vit ce réglage
+(table ou colonne de campagne) et si `docs/SCHEMA.md` le prévoit — sinon
+s'arrêter et demander. L'autorisation passe par le serveur (`canEditEntity`
+étendu, ou une vérification à côté) : un interrupteur coupé refuse
+l'écriture côté serveur, pas seulement l'affichage du bouton.
+
+**Critères d'acceptation**
+- [ ] Six interrupteurs dans Règles actives, réglage de campagne, valeurs par défaut ci-dessus.
+- [ ] Interrupteur coupé : aucune commande côté joueur, et l'écriture est refusée par le serveur.
+- [ ] Même comportement sur ordinateur, tablette et téléphone.
+- [ ] Le MJ garde toutes les commandes, quels que soient les réglages.
 
