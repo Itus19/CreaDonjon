@@ -1929,7 +1929,9 @@ réellement la coquille :
     propositions vivantes, planche « Édition d'une fiche sur téléphone » :
     A accordéon, B sommaire puis bloc en plein écran, C lecture avec un
     crayon par bloc, D pas à pas. Exemple avec Chronologie et Personnalité.
-    **À trancher par l'auteur.**
+    **Tranché le 4 octobre : A, accordéon** — tous les blocs dans la page,
+    repliés en une ligne de résumé, un seul ouvert à la fois, sur place ;
+    poignée ⠿ pour réordonner, « + bloc » en bas.
   - Corrections de règles 2024 dans l'esquisse : un barde n'a pas la
     maîtrise des armes de guerre ni de botte d'arme (rapière → dague) ;
     Mot de guérison soigne 2d4 + mod.
