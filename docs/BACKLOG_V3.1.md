@@ -1676,13 +1676,28 @@ lots le sont.
 |---|---|---|
 | a | Rail repliable, MJ + joueur, desktop et tablette | décidé, à coder |
 | b | Dalle « Outils » : dés encochés + radio (point vert/rouge) | décidé, à coder |
-| c | Téléphone : tiroir MJ flottant, barre joueur flottante | décidé, à coder |
+| c | Téléphone : barre joueur flottante ; **MJ : même barre** (Monde, Fiches, Table, Chat, Outils), feuilles du bas, pile de fiches | joueur décidé ; MJ proposé (planche d'exemple), à valider |
 | d | Ailes du solo : bande repliée (bouclier CA, PV, Niveau, Charge) | décidé, à coder |
 | e | Fiche de personnage à jauges circulaires, commande E ; onglets en pilule glissante | décidé, à coder |
 | f | Tablette : la fiche s'adapte à sa fenêtre (piste B) | décidé, à coder |
 | g | Fenêtres du MJ en deux volets à onglets → **V3.1-20** | décidé, à coder |
 | h | Page d'accueil en tableau de bord, rail joueur, « Nouveau monde » à trois choix, onglets en pilule glissante | décidé, à coder |
 | — | Jauges de l'initiative et du budget de rencontre | à trancher |
+
+**Règle transverse (4 octobre) : chaque lot livre aussi sa vue
+smartphone.** Un lot n'est pas fini tant que son écran ne marche pas à 390 px :
+mêmes principes que la planche « Smartphone du MJ » de l'esquisse (barre du
+bas flottante, dé encoché, ce qui s'ouvre vient du bas, onglets en pilule,
+une fiche à la fois). Le lot c fixe la coquille téléphone ; les autres lots
+y adaptent leur contenu :
+- **a** rail → sur téléphone, la barre du bas (le rail n'existe pas sous 768 px) ;
+- **b** dalle Outils → dé encoché dans la barre ; radio et outils MJ dans la feuille « Outils » ;
+- **d** solo → la fiche repliée devient une bande de jauges au-dessus du fil ;
+- **e** fiche à jauges → bouclier CA, PV (commande E), niveau en une ligne, pilule à cinq onglets ;
+- **f** tablette → sans objet ;
+- **g** fenêtres → une fiche à la fois, pile « N fiches » en feuille (même adresse `?avec=`) ;
+- **h** accueil → les colonnes deviennent une pilule Je mène / Je joue / Solo,
+  le monde choisi s'ouvre en feuille, « Nouveau monde » en grand bouton.
 
 Le détail de chaque décision suit.
 
@@ -1765,6 +1780,15 @@ réellement la coquille :
     `BinderTabs` à convertir : accueil, fiche jouable, fiche solo, colonne
     Monde et coquille du solo, aperçu du créateur. Charte §3 et planche 3 du
     catalogue mises à jour avec le code.
+- **Smartphone du MJ (lot c)** — proposé le 4 octobre, planche « Smartphone
+  du MJ » (cinq écrans vivants : accueil, Monde, Fiches, Table, Outils).
+  Le tiroir disparaît : le MJ reçoit la même barre flottante que le joueur
+  — Monde, Fiches, Table | Chat, Outils, dé encoché au centre. Monde =
+  l'arborescence en page (recherche, « + » nouvelle entité) ; Fiches = une
+  fiche à la fois, pastille « 3 fiches » qui ouvre la pile ; Table =
+  initiative et rencontre préparée, « Tour suivant » au pouce ; Outils = les
+  quinze outils en grille par moment (séance, préparation, campagne), radio
+  comprise. **À valider par l'auteur.**
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
 
