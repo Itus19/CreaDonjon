@@ -176,6 +176,8 @@ inventer un nouveau.
 
 **Modèle conseillé : Sonnet** — un effet de Repos long sur le vocabulaire de déclencheurs existant.
 
+**4 octobre — ADR 0036 §7** : V3.1-24 fait émettre `long_rest` par `takeLongRest` ; ce ticket n'a plus qu'à donner à « Ingénieux » un déclencheur `long_rest` — l'effet qui accorde l'inspiration manque au vocabulaire fermé des déclencheurs : l'ajouter s'écrit en ADR. **Dépend de** : V3.1-24.
+
 Constaté le 27 septembre sur « Ingénieux »/Resourceful, trait humain : « Vous
 gagnez l'Inspiration héroïque lorsque vous terminez un Repos long. »
 L'inspiration existe bien comme ressource réelle sur la fiche (`inspiration:
@@ -1727,7 +1729,7 @@ jour la charte » tient.
 
 ---
 
-### ☐ V3.1-19 — Refonte « verre minéral » (ticket parent) · `XL` — **en conception**
+### ☐ V3.1-19 — Refonte « verre minéral » (ticket parent) · `XL` — **conçu et découpé (V3.1-24 à 36), reste C**
 
 **Modèle conseillé : Opus** — ticket parent : la conception et le découpage ; chaque lot décidé se code ensuite avec Sonnet, sauf mention contraire.
 
@@ -2056,68 +2058,58 @@ réellement la coquille :
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
 
-#### Reste à concevoir et découper avant de confier le code à Sonnet (4 octobre)
+#### Conception et découpage — fait le 4 octobre
 
-L'interface est décidée ; ce qui manque est **sous** l'interface, et le
-découpage en tickets. Relevé en lisant `docs/SCHEMA.md` et
-`src/core/schemas/runtimeState.ts`. Tant qu'un point de A ou B n'est pas
-tranché, le lot qui en dépend ne part pas à Sonnet.
-
-**A. Données — à concevoir (Opus), décision écrite avant tout code**
-1. **Pièces et équipement** vivent dans le bloc `inventory`, pas dans
-   `entity_runtime_state`. Or la Table (± pièces, « Toute la table ») et la
-   bascule Équipé / Au sac les changent en pleine séance : une révision
-   immuable par clic (règle 17), ou une part en état de jeu ? ADR à écrire.
-2. **Maximum d'inspiration** : `zRuntimeState` le borne à 5 en dur ; la
-   décision dit « le maximum vient du ruleset, 1 par défaut ». Où vit ce
-   maximum ?
-3. **Concentration** : seul l'état `concentrating` existe. Le sort maintenu
-   (« Concentration : Fou rire », « Rompre ») n'est stocké nulle part.
-4. **« Reprendre »** (dernière visite, accueil) et **« Consultées
-   récemment »** (wiki, règles) : donnée nouvelle. Serveur (suit le compte
-   d'un appareil à l'autre) ou navigateur (rien en base) ?
-5. **Droits des joueurs** : V3.1-23, déjà ouvert.
-
-**B. Mécanique — à concevoir (Opus)**
-6. **Résolution depuis l'outil de dés** : V3.1-21, déjà ouvert. L'outil de
-   dés unique en dépend (pré-remplissage, Cibler, avantage avec les deux d20
-   rendus par le serveur).
-7. **Repos court et long** de « Toute la table » : une seule fonction de
-   repos, partagée avec V3.1-5 (effets de traits au Repos long) — à concevoir
-   ensemble pour ne pas l'écrire deux fois.
-8. **Jets contre la mort** : Inconscient ajouté et retiré seul, trois
-   réussites → stabilisé, « Soigner +1 PV » remet à zéro. Règles du noyau,
-   tests d'abord.
+**A et B sont traités par l'ADR 0036** (`docs/adr/0036-les-donnees-de-la-refonte-verre-mineral.md`), après lecture du code :
+- **A1 pièces et équipement** : restent dans le bloc `inventory` (l'économie
+  et le journal lisent les révisions) ; écrits par des services serveur
+  `changeCurrency` / `setItemEquipped`. La monnaie automatique et la bascule
+  « Équiper » existaient déjà.
+- **A2 maximum d'inspiration** : réglage de campagne (Règles actives), 1 par
+  défaut — pas une règle de ruleset, qui est figé une fois publié.
+- **A3 concentration** : champ `concentration` de l'état de jeu, sans
+  migration ; l'état `concentrating` des déclencheurs en est dérivé.
+- **A4 « Reprendre » et « Consultées récemment »** : dans le navigateur.
+- **A5 droits des joueurs** : colonne `table_settings jsonb` sur `campaigns`
+  (avec le maximum d'inspiration) — **proposé, à valider** : changement de
+  schéma.
+- **B6 résolution** : cœur commun extrait de `playTurn` (V3.1-21, Opus) ;
+  l'outil de dés n'attend pas, « Cibler » reste grisé jusque-là.
+- **B7 repos** : `takeShortRest` / `takeLongRest` seuls chemins, ils émettent
+  `short_rest` / `long_rest` (V3.1-5 s'y branche).
+- **B8 jets contre la mort** : fonctions pures du noyau, règles 2024.
 
 **C. À trancher par l'auteur**
 9. Jauges de l'initiative et du budget de rencontre.
-10. L'électrum dans le regroupement automatique (dès 5 pa), ou exclu.
+10. L'électrum dans le regroupement automatique (dès 5 pa), ou exclu. Le
+    code actuel (`recompose`, `currency.ts`) le forme déjà.
 11. Déclarer l'esquisse figée : les mentions « À valider par l'auteur » des
     lots c sont dépassées par la passe du 4 octobre.
+12. Accepter la colonne `table_settings` sur `campaigns` (ADR 0036 §5) ;
+    et le maximum d'inspiration en réglage de campagne plutôt que de
+    ruleset.
 
-**D. Découpage — un ticket par ligne, avec critères d'acceptation et
-planche de référence.** Seuls les lots g (V3.1-20) et les outils
-transverses (V3.1-21 à 23) ont aujourd'hui un ticket. Ordre proposé, chaque
-ligne posant ce dont la suivante a besoin :
+**D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
-| # | Ticket à écrire | Dépend de | Code |
-|---|---|---|---|
-| 1 | Pilule glissante à la place de `BinderTabs` (ADR 0034) | — | Sonnet |
-| 2 | Fiche d'ordinateur : jauges, commande E, Inspiration au gabarit d'un badge | 1 ; A2 pour le ▲ de l'inspiration | Sonnet |
-| 3 | Rail repliable et dalle Outils (lots a, b) | — | Sonnet |
-| 4 | Tablette, piste B (lot f) | 2 | Sonnet |
-| 5 | Coquille téléphone : barre flottante MJ et joueur, feuilles du bas | 3 | Sonnet |
-| 6 | Wiki et Règles sur téléphone (☰ + récents) | 5, A4 | Sonnet |
-| 7 | Éditeur plein écran en accordéon | 5 | Sonnet |
-| 8 | Fiche sur téléphone : boutons de jet, infobulles de règles, Équipé / Au sac | 2, 5, A1 | Sonnet |
-| 9 | Outil de dés unique (feuille, panneau d’ordinateur, scintillement) | 5, B6 | Sonnet |
-| 10 | Outil Table | A1-A3, B7, B8, V3.1-23 | Sonnet, une fois A et B tranchés |
-| 11 | Accueil en tableau de bord, « Nouveau monde » à trois choix (lot h) | 1, 3, A4 | Sonnet |
-| 12 | Solo : ailes d'ordinateur et téléphone modèle A (lot d) | 5, 8, 9 | Sonnet |
-| 13 | Fenêtres du MJ en deux volets (V3.1-20, lot g) | 1 | Sonnet |
+| Ticket | Contenu | Dépend de |
+|---|---|---|
+| V3.1-24 | Services de jeu : jets contre la mort, concentration, monnaie, équipement, repos | — |
+| V3.1-25 | Pilule glissante à la place de `BinderTabs` | — |
+| V3.1-26 | Fiche d'ordinateur à jauges, commande E | 25 |
+| V3.1-27 | Rail repliable et dalle Outils (a, b) | — |
+| V3.1-28 | Tablette, piste B (f) | 26 |
+| V3.1-29 | Coquille téléphone : barre flottante, feuilles du bas (c) | 27 |
+| V3.1-30 | Wiki et Règles sur téléphone (☰ + récents) | 29 |
+| V3.1-31 | Éditeur plein écran en accordéon | 29 |
+| V3.1-32 | Fiche sur téléphone : jets, infobulles, sac | 24, 26, 29 |
+| V3.1-33 | Outil de dés unique | 29 |
+| V3.1-34 | Outil Table | 24, 26, 29, 33 ; C10 |
+| V3.1-35 | Accueil en tableau de bord (h) | 25, 27 |
+| V3.1-36 | Solo : ailes et téléphone modèle A (d) | 29, 32, 33 |
+| V3.1-20 | Fenêtres du MJ en deux volets (g) | 25 |
 
-Une fois A et B tranchés et ces tickets écrits, chacun se confie à Sonnet
-tel quel ; V3.1-21, 22 et 23 restent à Opus.
+Tous à Sonnet. Restent à Opus : V3.1-21 (cible et résolution), V3.1-22
+(salon), V3.1-23 (droits des joueurs, après C12).
 
 **Planches** : chaque lot met
 à jour ses planches (Pastille chrome, Tiroir, Bouton de dés, Rail du joueur, et
@@ -2165,6 +2157,12 @@ ne change (plein écran, une fiche à la fois).
 inutile si plus rien ne se réduit — onglets à la place. Un ADR remplacera la
 partie « fenêtres flottantes » de l'ADR 0006.
 
+**Tranché le 4 octobre, pour que le ticket parte à Sonnet** : la barre des
+fiches réduites (V2-K4) disparaît, les onglets la remplacent ; l'ADR qui
+remplace la partie « fenêtres flottantes » de l'ADR 0006 s'écrit dans ce
+ticket. Sur téléphone, la pile « N fiches » en feuille est faite par
+V3.1-29. **Dépend de** : V3.1-25 (pilule).
+
 **Critères d'acceptation**
 - [ ] Une, deux, trois fiches et plus : disposition conforme ci-dessus.
 - [ ] Glisser un onglet d'un volet à l'autre, et hors de la barre pour créer le second volet.
@@ -2177,6 +2175,8 @@ partie « fenêtres flottantes » de l'ADR 0006.
 ### ☐ V3.1-21 — Cibler et résoudre depuis les boutons de jet · `L` — **décidé le 4 octobre, à concevoir**
 
 **Modèle conseillé : Opus** — résolution partagée par MJ, joueur et solo ; dés lancés par le serveur (règle 8).
+
+**4 octobre — ADR 0036 §6** : cœur commun extrait de `playTurn` ; l'initiative en cours, c'est `combats` et ses participants ; un jet secret qui touche reste secret mais s'applique. L'outil de dés (V3.1-33) livre « Cibler » grisé, ce ticket l'allume.
 
 **Constat.** Les boutons de jet de la fiche (touche, dégâts, sorts, soins)
 lancent un dé et l'affichent ; c'est ensuite à la table de calculer et de
@@ -2267,6 +2267,8 @@ de l'initiative ; un jet secret visible du seul joueur et du MJ).
 
 **Modèle conseillé : Opus** — droits d'écriture des joueurs, appliqués côté serveur ; schéma à vérifier.
 
+**4 octobre — ADR 0036 §5 (proposé)** : colonne `table_settings jsonb` sur `campaigns`, validée par `zCampaignTableSettings`, qui porte aussi le maximum d'inspiration. À coder seulement une fois la proposition acceptée par l'auteur (V3.1-19, C12).
+
 **Constat.** Un joueur peut aujourd'hui toucher à tout ce que sa fiche affiche
 en commande. À la table, certaines valeurs sont la prérogative du MJ — les
 états (Charmé, À terre…) surtout, et l'inspiration — d'autres sont plus
@@ -2304,3 +2306,353 @@ l'écriture côté serveur, pas seulement l'affichage du bouton.
 - [ ] Même comportement sur ordinateur, tablette et téléphone.
 - [ ] Le MJ garde toutes les commandes, quels que soient les réglages.
 
+
+---
+
+## Tickets de la refonte « verre minéral » prêts pour Sonnet (4 octobre)
+
+Découpage de V3.1-19, sur la base de l'ADR 0036 (données) et de l'esquisse
+https://claude.ai/artifact/EzWpfdYv6xP9H9gMp6L8Lm (planches citées par leur
+titre). Ordre conseillé : 24, puis 25 à 36 dans l'ordre des dépendances ;
+V3.1-20 (lot g) peut partir dès que 25 est fait.
+
+**Règles communes à ces tickets** — à relire avant d'en prendre un :
+- Lire `docs/CHARTE-UI.md` et la planche du catalogue concernée **avant**
+  d'écrire ; réutiliser ce qui existe ; mettre la planche à jour avec le code.
+- Un écran n'est fini que s'il marche à **390 px**, à 820 px (tablette) et
+  sur ordinateur, dans les quatre modes et en contraste élevé.
+- Mouvement : chaque animation est sautée sous `prefers-reduced-motion`.
+- Aucun calcul de règle côté client ; aucune donnée cachée envoyée au client.
+- Ce qui n'est pas dans le ticket n'est pas fait : un manque trouvé en
+  route s'écrit dans ce backlog, il ne s'ajoute pas au ticket.
+- Fini quand `npm run typecheck && npm run lint && npm run test` passent.
+
+### ☐ V3.1-24 — Les services de jeu sous la refonte · `M` — **prêt**
+
+**Modèle conseillé : Sonnet** — décisions toutes prises dans l'ADR 0036 ; noyau pur, tests d'abord.
+
+Fondation des tickets 32, 33 et 34. Aucune interface.
+
+**À faire**
+1. `src/core/rules/deathSaves.ts` (tests d'abord) : les règles 2024 de
+   l'ADR 0036 §8 — Inconscient à 0 PV, mort directe si les dégâts restants
+   atteignent les PV max, un échec par coup à 0 PV (deux au critique), jet
+   (10+ réussit, 1 = deux échecs, 20 = 1 PV), trois réussites stabilisé,
+   trois échecs mort, tout soin remet à zéro et retire Inconscient.
+   `changeHp` et les dégâts résolus l'appliquent.
+2. Concentration (ADR 0036 §3) : champ `concentration` dans `zRuntimeState`
+   (`.default(null)`, test de relecture d'une ligne ancienne comme pour
+   `inspiration`) ; `castSpell` la pose pour un sort de concentration et
+   remplace la précédente ; service `breakConcentration` ; synchronisation
+   avec `combat_participants.concentration` comme les états ; l'état
+   `concentrating` des déclencheurs est dérivé de ce champ.
+3. Monnaie et équipement (ADR 0036 §1) : services `changeCurrency`
+   (delta par pièce, `depositCoins` / `spendCoins`, refus si le total ne
+   suffit pas) et `setItemEquipped`, écriture du bloc `inventory` avec
+   contrôle de version ; routes Zod. `InventoryPanel` les utilise à la place
+   du renvoi du bloc entier.
+4. Repos (ADR 0036 §7) : `takeShortRest` / `takeLongRest` émettent
+   `short_rest` / `long_rest` dans `runTriggers` après leurs effets de base.
+
+**Critères d'acceptation**
+- [ ] Les cas de jets contre la mort ci-dessus, chacun un test du noyau.
+- [ ] Une fiche enregistrée avant ce ticket se relit sans `concentration` (test).
+- [ ] Dépenser 3 po avec 1 pp et 0 po rend la monnaie ; dépenser plus que le total est refusé sans rien écrire.
+- [ ] Un repos long émet `long_rest` (test d'intégration avec un déclencheur factice).
+- [ ] Aucune migration SQL.
+
+### ☐ V3.1-25 — La pilule glissante remplace `BinderTabs` · `S` — **prêt**
+
+**Modèle conseillé : Sonnet** — composant décidé (ADR 0034), usages listés.
+
+**Planche** : « Décidé · accueil : tableau de bord, onglets en pilule
+glissante ». **Départ** : `components/shared/BinderTabs.tsx`.
+
+Un composant d'onglets unique : fond qui glisse sous l'onglet actif (260 ms,
+sauté sous mouvement réduit), clavier (flèches, Début, Fin), rôles ARIA
+`tablist` / `tab` / `tabpanel`. Il remplace `BinderTabs` partout : fiche
+jouable, fiche solo, colonne Monde et coquille du solo, aperçu du créateur.
+Sur téléphone, la pilule défile horizontalement si elle déborde.
+
+**Critères d'acceptation**
+- [ ] Plus aucun import de `BinderTabs` ; le fichier est supprimé.
+- [ ] Clavier et lecteur d'écran : un test de composant.
+- [ ] Charte §3 et planche 3 du catalogue mises à jour.
+
+### ☐ V3.1-26 — Fiche d'ordinateur à jauges et commande E · `M` — **prêt**
+
+**Modèle conseillé : Sonnet** — interface esquissée, services existants.
+
+**Planches** : « Décidé · fiche à jauges circulaires (ordinateur) »,
+« Décidé · jauge à commandes (option E) ». **Départ** :
+`CharacterSheetHeader.tsx`, `JaugeCirculaire` (`FicheJouableEnTete.tsx`).
+**Dépend de** : 25.
+
+- Bouclier de CA ; jauges circulaires PV (temporaires d'abord), niveau / XP,
+  épuisement (0 à 6), chacune avec la commande E : ▲, champ d'écart, ▼ —
+  champ vide = ±1, champ rempli = ce nombre puis le champ se vide.
+- Bornes : PV et épuisement plafonnés ; XP sans plafond.
+- Constantes en badges (initiative, vitesse, maîtrise) ; Inspiration au
+  gabarit exact d'un badge (72 × 56 px), même taille de chiffre, ▲▼ intégrés.
+- Les onglets de la fiche en pilule (25).
+- Les commandes appellent les services existants (`changeHp`, `changeXp`,
+  `changeExhaustion`, `changeInspiration`) ; aucune valeur posée par le client.
+
+**Critères d'acceptation**
+- [ ] Les quatre jauges et l'inspiration conformes à la planche, aux quatre modes.
+- [ ] Commande E : ±1 champ vide, ±N champ rempli, champ vidé après usage.
+- [ ] Un composant `CommandeE` réutilisable (il resservira en 32 et 34), avec sa planche au catalogue.
+
+### ☐ V3.1-27 — Rail repliable et dalle Outils (lots a, b) · `M` — **prêt**
+
+**Modèle conseillé : Sonnet** — mesures et comportements donnés par V3.1-19.
+
+**Planches** : MJ et joueur, ordinateur et tablette. **Départ** :
+`Sidebar.tsx`, `MjSidebar.tsx`, `PlayerShell.tsx`, `RadioWidget.tsx`,
+`ChromePill.tsx`, `DiceRollPanel.tsx`.
+
+- Rail flottant, coins arrondis : 204 px déployé ↔ 64 px replié
+  (`width 380ms cubic-bezier(.4,0,.2,1)`), libellés qui s'effacent ;
+  poignée en onglet 16 × 44 px sur le bord droit ; replié, l'arborescence
+  s'ouvre en menu flottant au survol et au clavier. Listes :
+  `overflow-y: auto` et `overflow-x: hidden`. État replié mémorisé dans le
+  navigateur (`localStorage` protégé).
+- Dalle « Outils » en bas du rail : le dé s'y encoche (48 px, anneau de 6 px
+  couleur du panneau) et ouvre le panneau de dés existant ; la radio y
+  passe, visible rail replié, point vert en lecture / rouge à l'arrêt.
+  L'horloge n'est pas reprise.
+- Au-dessous de 768 px, le rail n'existe pas (le téléphone est 29).
+
+**Critères d'acceptation**
+- [ ] Déplier / replier à la souris et au clavier ; état gardé au rechargement.
+- [ ] Radio et dé utilisables rail replié.
+- [ ] Planches « Pastille chrome », « Bouton de dés », « Rail du joueur » mises à jour ; planche « Rail repliable » créée.
+
+### ☐ V3.1-28 — Tablette : la fiche s'adapte à sa fenêtre (lot f) · `S` — **prêt**
+
+**Modèle conseillé : Sonnet** — règle simple, planche à trois largeurs.
+
+**Planche** : « Décidé · tablette : la fiche s'adapte à sa fenêtre
+(piste B) ». **Dépend de** : 26.
+
+La fiche lit la largeur de **sa** fenêtre (requête de conteneur CSS, pas
+la largeur de l'écran) : sous ~640 px, les six caractéristiques passent en
+ligne au-dessus des onglets.
+
+**Critères d'acceptation**
+- [ ] La même fiche à 960, 680 et 540 px de fenêtre, conforme à la planche.
+- [ ] Aucune lecture de `window.innerWidth` pour cette règle.
+
+### ☐ V3.1-29 — Coquille téléphone : barre flottante et feuilles du bas (lot c) · `L` — **prêt**
+
+**Modèle conseillé : Sonnet** — entrées, gabarits et comportements fixés par les planches.
+
+**Planches** : « Décidé · téléphone du MJ — écrans » et « — feuilles
+ouvertes », mêmes planches côté joueur. **Départ** : `PlayerShell.tsx`,
+`AppShell.tsx`, `useMatchMedia.ts`. **Dépend de** : 27 (dalle Outils).
+
+- Sous 768 px : barre du bas flottante à six entrées, dé encoché au centre.
+  MJ : Monde, Règles, Fiches | Table, Chat, Outils. Joueur : Perso.,
+  Édition, Notes | Wiki, Règles, Chat. Toucher de nouveau une entrée active
+  ramène à son écran d'accueil.
+- Un composant « feuille du bas » unique (poignée, glisser pour fermer,
+  piège du focus, Échap) : tout ce qui s'ouvre vient du bas.
+- **Fiches** (MJ) : une fiche à la fois, pastille « N fiches » qui ouvre la
+  pile en feuille, même adresse `?avec=`.
+- **Outils** (MJ) : grille par moment (séance, préparation, campagne),
+  radio comprise ; le chat n'y est plus.
+- Écrans Table, Wiki, Règles, Édition, dés : des emplacements, remplis par
+  30, 31, 33 et 34.
+
+**Critères d'acceptation**
+- [ ] Les deux barres conformes aux planches à 390 px ; aucune page à défilement horizontal.
+- [ ] Feuille du bas : clavier, lecteur d'écran, glisser pour fermer.
+- [ ] Au-dessus de 768 px, rien ne change.
+- [ ] Planche « Tiroir » remplacée par « Feuille du bas » ; planche « Barre flottante » créée.
+
+### ☐ V3.1-30 — Wiki et Règles sur téléphone : ☰ et consultées récemment · `M` — **prêt**
+
+**Modèle conseillé : Sonnet** — parcours esquissé ; stockage tranché (ADR 0036 §4).
+
+**Planches** : téléphones MJ et joueur, écrans Monde / Wiki / Règles et
+leurs feuilles. **Départ** : `BookSkin.tsx`, `TwoPaneReaderLayout.tsx`,
+`PlayerRulesSidebar.tsx`. **Dépend de** : 29.
+
+- Toucher Monde / Wiki / Règles ouvre un écran d'accueil : recherche,
+  bouton ☰ (sommaire complet, types repliables, PJ déplié par défaut) et
+  la liste des fiches consultées récemment.
+- Une fiche choisie s'affiche dans la peau actuelle (`BookSkin`), ☰ en
+  haut à gauche ; le tiroir commence lui aussi par « Récemment ».
+- « Récemment » vit dans le navigateur (identifiants et titres seulement,
+  20 au plus, par monde) ; une fiche devenue invisible n'est pas affichée
+  (le serveur répond à l'ouverture).
+- Côté MJ : « + » nouvelle entité, passages MJ en orange, crayon vers
+  l'éditeur (31). Règles : même parcours, la règle en page.
+
+**Critères d'acceptation**
+- [ ] Le parcours accueil → fiche → retour, pour le MJ et le joueur.
+- [ ] Le joueur ne reçoit jamais un passage MJ (test serveur existant toujours vert).
+- [ ] Navigation privée ou stockage bloqué : la liste est vide, rien ne casse.
+
+### ☐ V3.1-31 — Éditeur plein écran en accordéon (téléphone) · `M` — **prêt**
+
+**Modèle conseillé : Sonnet** — option A tranchée et esquissée.
+
+**Planche** : « Décidé · téléphone du MJ — plein écran et infobulles ».
+**Dépend de** : 29.
+
+Plein écran, barre flottante masquée, « Annuler » / « Enregistrer » en
+haut. Tous les blocs dans la page, repliés en une ligne de résumé, un seul
+ouvert à la fois ; poignée ⠿ pour réordonner (aussi au clavier) ; « + bloc »
+en bas. Le joueur a le même éditeur, limité à ses droits (`canEditEntity`).
+Les éditeurs de blocs existants sont réutilisés tels quels à l'intérieur.
+
+**Critères d'acceptation**
+- [ ] Ouvrir, modifier deux blocs, réordonner, enregistrer : une seule écriture, contrôle de version compris.
+- [ ] Annuler avec des changements demande confirmation.
+- [ ] Un joueur ne voit pas les blocs qu'il ne peut pas modifier.
+
+### ☐ V3.1-32 — Fiche sur téléphone : jets, infobulles de règles, sac · `L` — **prêt**
+
+**Modèle conseillé : Sonnet** — fiche entièrement esquissée ; services fournis par 24.
+
+**Planches** : « Sous-planche · fiche complète déroulée (téléphone) »,
+téléphone du joueur (trois planches). **Dépend de** : 24, 26, 29.
+
+- Ordre de la sous-planche : en-tête, bouclier CA et jauges PV, niveau,
+  épuisement (commande E de 26), constantes, perception passive, dés de vie,
+  concentration, états, six caractéristiques, compétences repliables, puis
+  la pilule des cinq onglets collée en haut au défilement.
+- Boutons de jet : chaque case de caractéristique a deux boutons (haut :
+  test, bas : sauvegarde) ; une compétence se touche ; initiative, attaque
+  de sort, bonus de touche et dégâts sont des boutons. Tous ouvrent l'outil
+  de dés pré-rempli (33) — en attendant 33, ils appellent le chemin actuel.
+- Infobulles de règles : tout nom d'arme, sort, objet, aptitude, action,
+  état, la concentration et l'épuisement ouvrent leur règle en feuille du
+  bas (« Ouvrir dans Règles ») — partir de `useOpenRuleLink`. Même contenu
+  en fenêtre sur ordinateur.
+- Inventaire : « Équipé » / « Au sac » par objet (`setItemEquipped`, 24) ;
+  la charge se recalcule.
+- À 0 PV, les jauges cèdent la place aux jets contre la mort (24).
+
+**Critères d'acceptation**
+- [ ] La fiche de Candide de la sous-planche, reproduite à 390 px.
+- [ ] Chaque type de nom ouvre la bonne règle, joueur et MJ.
+- [ ] À 0 PV : jets contre la mort, puis stabilisé ou mort selon 24.
+
+### ☐ V3.1-33 — L'outil de dés unique (feuille, panneau, scintillement) · `L` — **prêt**
+
+**Modèle conseillé : Sonnet** — ADR 0035, ADR 0036 §6, planches précises ; la cible reste à V3.1-21.
+
+**Planches** : téléphones (feuille des dés), « Décidé · outil de dés sur
+ordinateur et tablette », « Décidé · animation de lancer : scintillement ».
+**Départ** : `DiceRollPanel.tsx`, `POST /api/campaigns/[id]/dice-rolls`.
+**Dépend de** : 29.
+
+- Point d'entrée serveur étendu (Zod) : dés, **modificateur**, **avantage /
+  désavantage**, **libellé**, secret. Le serveur lance ; avec avantage, il
+  renvoie les deux d20 et lequel est retenu.
+- Une seule interface : feuille du bas sur téléphone (hauteur de la feuille
+  Outils), panneau ancré au dé du rail sur ordinateur et tablette. Dés d4 à
+  d100 empilables avec compteur ; modificateur dans la case sous le d10
+  (commande E) ; pilule Normal / Avantage / Désavantage ; une ligne
+  **Cibler · Lancer · Effacer** — Cibler grisé tant que V3.1-21 n'est pas
+  livré.
+- Résultat : chaque dé (max en ambre, 1 en rouge) ; avantage : paire
+  étiquetée, d20 retenu cerclé d'ambre, l'autre effacé. Derniers jets (30)
+  qui défilent avec l'ascenseur fin de `globals.css`.
+- Animation scintillement : les chiffres défilent flous puis se figent un
+  par un, le total compte jusqu'à sa valeur ; elle couvre l'attente du
+  serveur ; chiffres décoratifs seulement ; mouvement réduit → résultat
+  immédiat.
+- API de pré-remplissage utilisée par la fiche (32), la Table (34) et le
+  solo (36) : `openDiceTool({ dice, modifier, label, advantage? })`.
+
+**Critères d'acceptation**
+- [ ] Jet avec avantage : deux d20 affichés, seul le retenu dans le total et les derniers jets.
+- [ ] Le client n'envoie jamais un résultat (test de la route).
+- [ ] Même outil sur téléphone, tablette et ordinateur.
+
+### ☐ V3.1-34 — L'outil Table du MJ · `L` — **prêt** (sauf C)
+
+**Modèle conseillé : Sonnet** — tout est esquissé ; données et règles fournies par 24.
+
+**Planches** : « Décidé · téléphone du MJ — écrans » (Table) et « —
+feuilles ouvertes » (Toute la table). **Départ** : `mjToolWindows.ts`,
+`MjToolWindowContent.tsx` (un outil de plus dans la liste). **Dépend de** :
+24, 26 (commande E), 29, 33.
+
+- Une ligne par PJ de la campagne : nom + niveau ; dessous « joueur · CA ·
+  PV » puis la ligne des états ; à droite classe et sous-classe. Toucher
+  déplie.
+- Déplié : jauge de PV + commande E, PV temporaires ; inspiration en
+  quantité ; dés de vie ; les cinq pièces ▲▼ (`changeCurrency`, la monnaie
+  se fait seule, un message dit le change fait) ; emplacements de sorts en
+  pastilles ; états (puces retirables, « + état » ouvre les états du ruleset
+  en feuille) ; épuisement ; ressource de classe ; concentration
+  (« Rompre ») ; ajout d'objet.
+- À 0 PV, la ligne se transforme : fond rouge, « Contre la mort »,
+  trois réussites / trois échecs, « Soigner +1 PV » (règles de 24).
+- « Toute la table » : + XP, ± pièces, repos court, repos long — chacun en
+  feuille avec « Pour qui » ; XP et pièces à partager ou à chacun, aperçu par
+  PJ, qui monte de niveau est signalé ; les repos passent par
+  `takeShortRest` / `takeLongRest` pour chaque PJ coché.
+- Chaque geste passe par le même service que la fiche (même journal) ; le
+  MJ a toutes les commandes. Sur ordinateur : fenêtre d'outil MJ, ascenseur
+  fin ; sur téléphone : `no-scrollbar`.
+- **Attend C** : l'électrum dans le regroupement automatique.
+
+**Critères d'acceptation**
+- [ ] Les gestes de la planche, chacun journalisé une fois.
+- [ ] Partage de 10 po entre trois PJ : 3 po chacun, le reste affiché.
+- [ ] Un repos long sur trois PJ : trois résultats, trois événements `long_rest`.
+
+### ☐ V3.1-35 — Accueil en tableau de bord (lot h) · `M` — **prêt**
+
+**Modèle conseillé : Sonnet** — proposition 3 tranchée ; « Reprendre » rangé dans le navigateur (ADR 0036 §4).
+
+**Planche** : « Décidé · accueil : tableau de bord, onglets en pilule
+glissante ». **Départ** : `HomeShell.tsx`, `HomeScreen.tsx`,
+`CampaignsPanel.tsx`. **Dépend de** : 25, 27.
+
+- Rail du joueur : Mondes, Compte, Administration (superadmin seulement),
+  Déconnexion en pied ; dalle Outils avec les dés seuls.
+- En haut : prochaines séances de tous les mondes ; « Reprendre » sur la
+  dernière visite (mémorisée dans le navigateur).
+- Bouton « Nouveau monde » agrandi, à gauche : Mener une partie, Jouer en
+  solo, Rejoindre une table (coller un lien d'invitation).
+- Colonnes « Je mène » (+ « En solo ») et « Je joue » sur une même ligne de
+  titres ; panneau du monde choisi à droite, avec les outils du **rôle tenu
+  dans ce monde**.
+- Téléphone : pilule Je mène / Je joue / Solo, le monde en feuille,
+  « Nouveau monde » en grand bouton.
+
+**Critères d'acceptation**
+- [ ] Un compte MJ dans un monde et joueur dans un autre voit les bons outils pour chacun.
+- [ ] « Rejoindre une table » accepte un lien d'invitation valide et refuse un lien invalide, sans rien créer.
+- [ ] « Reprendre » absent si rien n'est mémorisé.
+
+### ☐ V3.1-36 — Le solo : ailes d'ordinateur et téléphone modèle A (lot d) · `L` — **prêt**
+
+**Modèle conseillé : Sonnet** — planches définitives ; le moteur solo ne change pas.
+
+**Planches** : « Solo-Desktop » ; « Décidé · solo sur téléphone (modèle A) »
+(trois planches). **Départ** : `SoloShell.tsx`, `IntentBar.tsx`,
+`ScenePanel`, `ConsequencesDrawer`. **Dépend de** : 29, 32, 33.
+
+- Ordinateur : poignées de repli sur les bords de la fenêtre du Jeu ; Monde
+  disparaît replié ; la Fiche repliée devient une bande de 96 px — bouclier
+  CA, PV, Niveau, Charge.
+- Téléphone : barre Jeu, Monde, Fiche | Quêtes, Règles, Notes, dé encoché.
+  Monde = wiki du joueur avec « Présents dans la scène » en tête, puis
+  récents (Quêtes et Règles n'y sont plus). Jeu : bandeau lieu / heure,
+  bande de jauges, fil, barre d'intention ; ✦ ouvre la feuille des
+  conséquences. Fiche : la fiche de 32. Quêtes : pilule En cours /
+  Terminées, une quête en feuille avec ses étapes. Notes : Les miennes /
+  Journal de partie.
+- « Jouer » ouvre l'outil de dés pré-rempli (33) ; « Lancer » confirme, le
+  tour suit le chemin actuel de V3-B5.
+
+**Critères d'acceptation**
+- [ ] Un tour complet sur téléphone : intention, outil de dés, Lancer, le tour dans le fil.
+- [ ] Aucun changement du moteur de tour (tests solo existants verts sans modification).
