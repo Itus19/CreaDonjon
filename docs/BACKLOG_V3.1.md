@@ -1966,6 +1966,16 @@ réellement la coquille :
     et **six planches définitives du téléphone** — MJ et joueur, chacune en
     trois états (écrans ; feuilles ouvertes ; plein écran et infobulles) —
     plus la fiche complète déroulée en sous-planche.
+- **Solo sur téléphone (lot d)** — quatre propositions vivantes, planche
+  « Solo sur téléphone » : fusion du téléphone joueur (barre flottante,
+  pilules, feuilles, outil de dés) et du solo desktop (bandeau lieu/heure,
+  fil, barre d'intention, colonne Monde à quatre onglets, fiche repliée en
+  bande de jauges). Toujours présentes : la bande de jauges (CA, PV, niveau,
+  charge, épuisement) et la barre d'intention.
+  A trois pages dans la barre (Jeu, Monde, Fiche | Quêtes, Règles, Notes) ;
+  B ailes en tiroirs, fidèle au desktop ; C fiche en feuille à trois crans
+  (jauges → « sous la main » → fiche complète) ; D trois pages qu'on fait
+  glisser (Monde ← Jeu → Fiche). **À trancher par l'auteur.**
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
 
