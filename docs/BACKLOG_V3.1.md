@@ -2105,6 +2105,26 @@ moment comme dans la feuille Outils du téléphone :
   actives, Personnalisation, Publication, Journal historique.
 Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
 
+- **Initiative — quatre propositions, à trancher** (planche « Question ·
+  initiative », 4 octobre). Le même combat dans les quatre (l'escalier de la
+  cave, round 2, au tour du Worg), chacune montrée au MJ (ordinateur,
+  téléphone) et au joueur (téléphone, ordinateur) :
+  A la liste vivante (l'outil actuel remis à plat, lignes qui se déplient) ;
+  B la frise et le projecteur (jetons du tour en haut, le participant actif
+  au centre avec ses actions) ; C deux camps (alliés / adversaires, une jauge
+  par camp) ; D le tableau de combat (dense sur ordinateur, ligne → feuille
+  sur téléphone, « mode combat » côté joueur).
+  Points communs proposés, à confirmer avec le choix :
+  - **le joueur voit l'initiative en direct** — nouveau : la spec
+    (`specs/outils-mj.md` §9) la réservait au MJ ; ses alliés en PV, les
+    adversaires en état de blessure (Indemne, Blessé, En sang, Hors de
+    combat), jamais leurs PV, filtrés par le serveur ;
+  - **C9, jauges** : PV de chaque participant en anneau ; pendant le combat,
+    la « menace restante » (XP des adversaires encore debout rapportée à la
+    rencontre) remplace le budget de rencontre ;
+  - les actions du bestiaire ▸ ouvrent l'outil de dés pré-rempli (V3.1-33),
+    Cibler sur les participants (V3.1-21).
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
