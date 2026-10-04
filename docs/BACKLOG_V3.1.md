@@ -1808,11 +1808,46 @@ réellement la coquille :
     - suggestions de l'esquisse, à confirmer : ressource de classe
       (Inspiration bardique 2/3…), concentration (sort maintenu, « Rompre »),
       ajout d'objet ;
-    - « Toute la table » : + XP, ± pièces, repos court, repos long.
+    - en-tête de chaque PJ : nom + **niveau**, sous le nom « joueur · CA · PV »
+      puis la ligne des états s'il y en a ; à droite, **classe et
+      sous-classe** (plus d'étoile) ;
+    - **monnaie automatique** : retirer une pièce d'un compteur vide rompt la
+      plus proche pièce supérieure (1 po → 2 pe → 5 pa…), ajouter regroupe
+      dès qu'une pièce supérieure est complète (10 pc → 1 pa, 5 pa → 1 pe,
+      2 pe → 1 po, 10 po → 1 pp). Taux 2024 ; un message dit le change fait.
+      À noter : avec le regroupement, l'électrum se forme dès 5 pa — à
+      revoir si l'auteur préfère l'en exclure ;
+    - **à 0 PV, la ligne du PJ se transforme** : fond rouge, « Contre la
+      mort » et ses pastilles ; déplié, trois réussites / trois échecs,
+      « Stabilisé » ou « Mort », « Soigner +1 PV » qui remet les jets à zéro.
+      L'état Inconscient s'ajoute et se retire de lui-même ;
+    - suggestions **retenues** par l'auteur : dés de vie, ressource de classe,
+      concentration, ajout d'objet, jets contre la mort ;
+    - « Toute la table » : chaque bouton ouvre une feuille, avec « Pour qui »
+      (PJ cochés) :
+      - **+ XP** : à partager ou à chacun, aperçu par PJ, signale qui monte de
+        niveau (la montée se fait dans la fiche) ;
+      - **± pièces** : un montant par type (négatif = retirer), à partager ou
+        à chacun ; le reste d'un partage est affiché, la monnaie se fait seule ;
+      - **repos court** : dés de vie à dépenser par PJ (lancés par le
+        serveur), ressources « repos court » rendues ;
+      - **repos long** : PV au max, dés de vie, emplacements, ressources,
+        épuisement −1, inspiration héroïque des humains.
+    - pas d'ascenseur visible sur téléphone (`no-scrollbar`, comme le
+      sommaire du joueur) ; sur ordinateur, la barre fine de `globals.css`.
     Chaque modification passe par le serveur comme depuis la fiche (même
     autorisation, même journal) ; rien de dérivé n'est stocké (règle 16).
-    Le détail complet du personnage reste dans la fiche : l'esquisse de
-    l'écran Fiches montre le style, pas l'inventaire des informations.
+    Le détail complet du personnage reste dans la fiche.
+  - **Fiche complète d'un PJ sur téléphone** (lot e) : planche « fiche
+    complète » (Candide, barde 2), téléphone vivant + déroulé de chaque
+    partie. En-tête (portrait, espèce · classe · historique, joueuse),
+    bouclier CA, jauges PV (temporaires d'abord) et niveau/XP avec commande E,
+    constantes (initiative, vitesse, maîtrise, inspiration ▲▼), perception
+    passive, dés de vie, épuisement, concentration, états, six
+    caractéristiques avec leurs sauvegardes, compétences repliables, puis la
+    pilule des cinq onglets réels (Actions, Inventaire, Magie, Traits,
+    Maîtrises) collée en haut au défilement. À 0 PV, les jauges cèdent la
+    place aux jets contre la mort.
   - **Outils** : les outils MJ en grille par moment (séance, préparation,
     campagne), radio comprise ; le chat n'y figure plus (il est dans la barre).
   - **À valider par l'auteur.**
