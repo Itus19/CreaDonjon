@@ -1896,6 +1896,43 @@ réellement la coquille :
   - Chat : table ou MJ en privé ; les jets arrivent en cartes (total, dés,
     verdict de l'initiative), un jet secret n'est vu que du joueur et du MJ.
   - **À valider par l'auteur.**
+- **Retours du 4 octobre sur la fiche et le téléphone joueur**
+  - **Règles en infobulle** (fiche joueur et MJ, partout) : tout nom d'arme,
+    de sort, d'objet, d'aptitude, d'action de base, d'état (Charmé,
+    Inconscient…), la concentration et l'épuisement ouvrent leur fiche de
+    règle en feuille du bas (propriétés, effet, renvoi « Ouvrir dans
+    Règles »). Sur ordinateur, même contenu en fenêtre de règle — partir de
+    ce qui existe déjà (`useOpenRuleLink`, puces de référence de la fiche).
+  - **Caractéristiques** : chaque case a deux boutons — le haut lance le
+    test, le bas le jet de sauvegarde. **Compétences** : toucher une ligne
+    lance le test. **Initiative** et **attaque de sort** : boutons aussi.
+  - **Inventaire** : chaque objet se bascule « Équipé » / « Au sac » ; la
+    charge du sac se recalcule.
+  - **Inspiration** : même taille de chiffre que Initiative, Vitesse,
+    Maîtrise ; ▲▼ seulement si le joueur a le droit de la changer.
+  - **Droits des joueurs sur leur fiche** — réglage du MJ dans **Règles
+    actives**, « Ce que les joueurs modifient eux-mêmes » : leurs états,
+    leur inspiration, leurs PV, leurs pièces, leurs emplacements, leurs dés
+    de vie (interrupteurs). Par défaut : états et inspiration au MJ seul, le
+    reste au joueur. Sans le droit, le joueur voit la valeur sans commande
+    (pas de « + état »). **À vérifier avant de coder** : où vit ce réglage
+    (campagne), et si `docs/SCHEMA.md` le prévoit — sinon s'arrêter et
+    demander (règle de méthode).
+  - **Wiki du joueur sur téléphone** : la peau actuelle (`BookSkin`) reste
+    telle quelle — fiche en pleine largeur, sommaire en tiroir à gauche,
+    groupes par type repliables (7 à 10 types, PJ déplié par défaut). Le
+    tiroir s'ouvre par ☰ **ou** en touchant « Wiki » une seconde fois dans
+    la barre flottante.
+  - **Édition d'une fiche de wiki sur téléphone (MJ et joueur)** : toujours
+    en plein écran, barre flottante masquée, « Annuler » / « Enregistrer »
+    en haut ; le joueur a le même éditeur, limité à ses droits. Quatre
+    propositions vivantes, planche « Édition d'une fiche sur téléphone » :
+    A accordéon, B sommaire puis bloc en plein écran, C lecture avec un
+    crayon par bloc, D pas à pas. Exemple avec Chronologie et Personnalité.
+    **À trancher par l'auteur.**
+  - Corrections de règles 2024 dans l'esquisse : un barde n'a pas la
+    maîtrise des armes de guerre ni de botte d'arme (rapière → dague) ;
+    Mot de guérison soigne 2d4 + mod.
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
 
@@ -1973,6 +2010,20 @@ Esquissé : fiche complète (bouton « Voir hors combat / en combat ») et outil
 Table (au tour du Worg, « Morsure » sur un PJ : touche, dégâts, JS de Force,
 À terre).
 
+**Revu le 4 octobre : tout passe par l'outil de dés.** Un bouton de jet de la
+fiche (touche, dégâts, sort, soin, caractéristique, sauvegarde, compétence,
+initiative) **ouvre l'outil de dés pré-rempli** (dés, modificateur, libellé)
+au lieu de lancer ; on peut encore ajouter un dé, l'avantage ou le secret, puis
+on **confirme par « Lancer »**. L'outil gagne un bouton **« Cibler »** sur la
+ligne de « Lancer » et « Effacer » : il liste les participants de
+l'initiative (alliés pour un soin), affiche la cible retenue, et se grise hors
+initiative ou pour un jet sans cible (test, sauvegarde). Une touche réussie
+propose « Préparer les dégâts ▸ » (dés doublés au critique), même cible
+conservée. Partout : MJ, joueur, **solo** (la barre d'intention de V3-B1 y
+pré-remplit l'outil de la même façon). Avis : bonne idée — un seul endroit
+pour l'avantage, le modificateur, le secret et la cible ; le coût est un
+toucher de plus par jet, compensé par le pré-remplissage.
+
 **Contraintes (règles absolues).** Les dés sont lancés par le serveur et la
 résolution passe par le moteur (`resolveAttackRoll`, `resolveDamageRoll`,
 `eventsForAttack`…) : le client ne calcule rien. Chaque étape est journalisée
@@ -1994,4 +2045,30 @@ son PJ, le MJ avec n'importe quel participant).
 - [ ] Même comportement depuis la fiche, l'outil Table et l'outil Initiative, sur tous les écrans.
 - [ ] Sans initiative, les jets restent de simples jets.
 - [ ] « Annuler » revient en arrière par une écriture journalisée.
+
+---
+
+### V3.1-22 — Salon de groupe et jets dans le chat · `M` — **à concevoir**
+
+**Constat (vérifié dans le code le 4 octobre).** Le chat n'a que des fils
+privés joueur ↔ MJ : `campaign_chat_messages` porte un `thread_user_id`
+(migration `20260901130001`, V2-M13) et la RLS ne montre un fil qu'à son
+joueur et au MJ. Le salon partagé de la première migration a été remplacé.
+Les jets vivent dans `dice_rolls`, à part ; aucun n'apparaît dans le chat.
+
+**Demande.** L'esquisse du téléphone joueur (écran Chat) montre une pilule
+« Table / MJ, en privé » et les jets arrivant en cartes (total, dés, verdict
+de l'initiative ; un jet secret visible du seul joueur et du MJ).
+
+**À trancher avant de coder.**
+- Le salon de table : un fil sans `thread_user_id` (nouvelle migration, RLS
+  « membre du monde »), ou une table à part.
+- Les jets dans le chat : lire `dice_rolls` dans le fil (même temps réel) ou
+  écrire un message par jet ; la visibilité d'un jet secret reste filtrée par
+  le serveur.
+
+**Critères d'acceptation**
+- [ ] Un salon commun MJ + joueurs, à côté des fils privés.
+- [ ] Les jets publics apparaissent dans le salon en cartes ; les secrets seulement pour leur auteur et le MJ.
+- [ ] RLS : un joueur ne lit jamais le fil privé d'un autre.
 
