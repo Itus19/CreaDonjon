@@ -2678,11 +2678,23 @@ ordinateur et tablette », « Décidé · animation de lancer : scintillement »
     prochain lancer (deux pour un d20 avec avantage), qui se remplissent au
     lancer. Sur téléphone, la feuille des dés monte plus haut pour la
     loger. Sa hauteur ne change jamais.
-  - **« Lancer les dégâts » dans la zone de résultat** : place réservée,
-    toujours présente, visible seulement quand elle sert — **à trancher :
-    planche « Question · Lancer les dégâts dans la zone de résultat »**,
-    quatre propositions (case réservée à droite, bande du bas, le verdict
-    devient bouton, les deux temps côte à côte).
+  - **« Lancer les dégâts » dans la zone de résultat — tranché le 4
+    octobre : la bande du bas** (sur quatre propositions, les autres
+    retirées de l'esquisse). Une bande fine au pied de la zone, dont la
+    place est **toujours réservée** (la hauteur ne bouge jamais) :
+    - **invisible** s'il n'y a rien à battre (ni cible, ni DD) ou pas de
+      suite ;
+    - avant le jet : « ensuite : dégâts 1d4 + 2 » ;
+    - **touché** : toute la bande devient le bouton « Lancer les dégâts » ;
+      côté MJ, un monstre qui touche un joueur donne « Valider · dégâts » /
+      « Faire échouer » ;
+    - **raté** : pas de bande du tout ;
+    - **dégâts lancés depuis la bande** : la partie du dessus rejoue le
+      scintillement avec les dés de dégâts, **sans remplissage** (un jet de
+      dégâts ne réussit ni n'échoue) ; à la place du verdict, l'effet
+      (« Worg −3 PV », « Tharnok +7 PV ») ; la bande disparaît.
+    Les détails (« contre CA 13 », « JS Force : raté — À terre ») restent
+    en lignes sous la zone.
   - **Enchaînement** : « Touché » /
     « Raté » (ou « Résiste » / « Pas résisté ») puis le bouton suivant. Si l'attaque réussit, le bouton « **Lancer les
     dégâts · 1d4 + 2** » apparaît : un toucher lance les bons dés sur la
