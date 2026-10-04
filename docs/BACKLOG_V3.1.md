@@ -1848,6 +1848,16 @@ réellement la coquille :
     pilule des cinq onglets réels (Actions, Inventaire, Magie, Traits,
     Maîtrises) collée en haut au défilement. À 0 PV, les jauges cèdent la
     place aux jets contre la mort.
+    - **4 octobre** : l'épuisement devient une **jauge circulaire** (0 à 6,
+      commande E) au même étage que la CA, les PV et le niveau ; le bonus de
+      touche (« +4 ») est un **bouton** de jet, comme les dégâts. Ce que ces
+      boutons font pendant une initiative : V3.1-21.
+  - **Écran des dés (lot c)** — le bouton central de la barre ouvre une
+    feuille : dés à empiler (d4 à d100, compteur sur chaque dé), modificateur
+    (commande E), avantage / désavantage en pilule, public ou secret (les
+    deux modes de `DiceRollPanel`), « Lancer » qui récapitule la formule,
+    résultat avec chaque dé (max en ambre, 1 en rouge, dé écarté barré),
+    derniers jets de la table. Planche « Smartphone du MJ », écran 7.
   - **Outils** : les outils MJ en grille par moment (séance, préparation,
     campagne), radio comprise ; le chat n'y figure plus (il est dans la barre).
   - **À valider par l'auteur.**
@@ -1904,3 +1914,49 @@ partie « fenêtres flottantes » de l'ADR 0006.
 - [ ] Séparateur glissable, double-clic au milieu.
 - [ ] Rechargement : même disposition (URL).
 - [ ] Catalogue mis à jour (planche « Fenêtre flottante » remplacée).
+
+---
+
+### V3.1-21 — Cibler et résoudre depuis les boutons de jet · `L` — **décidé le 4 octobre, à concevoir**
+
+**Constat.** Les boutons de jet de la fiche (touche, dégâts, sorts, soins)
+lancent un dé et l'affichent ; c'est ensuite à la table de calculer et de
+reporter le résultat à la main sur la cible. Le mode solo, lui, sait déjà
+viser une cible du combat en cours, lire sa CA et établir le verdict
+(V3-B1), puis appliquer les effets (V3-B2).
+
+**Décision de l'auteur.** Partout dans l'application (desktop, tablette,
+téléphone ; fiche, outil Table, outil Initiative) : **quand une initiative
+est lancée**, un bouton de jet demande d'abord une **cible parmi les
+participants**, puis tout se résout et s'applique seul — jet de touche
+contre la CA, jet de sauvegarde de la cible contre le DD, dégâts (dés doublés
+au critique, PV temporaires d'abord), états posés, soins, emplacement dépensé,
+PJ à 0 PV → jets contre la mort, créature à 0 PV → sortie de l'initiative.
+Sans initiative, rien ne change : le jet s'affiche, sans cible.
+
+Esquissé : fiche complète (bouton « Voir hors combat / en combat ») et outil
+Table (au tour du Worg, « Morsure » sur un PJ : touche, dégâts, JS de Force,
+À terre).
+
+**Contraintes (règles absolues).** Les dés sont lancés par le serveur et la
+résolution passe par le moteur (`resolveAttackRoll`, `resolveDamageRoll`,
+`eventsForAttack`…) : le client ne calcule rien. Chaque étape est journalisée
+comme en solo ; « Annuler » est une écriture inverse journalisée, pas un
+effacement. L'autorisation passe par `canEditEntity` (un joueur cible avec
+son PJ, le MJ avec n'importe quel participant).
+
+**À trancher avant de coder.**
+- Réutiliser telle quelle la résolution du tour solo (`playTurn`) ou en
+  extraire le cœur commun — probablement la seconde : le solo ajoute
+  l'interprétation et la narration, que la table n'a pas.
+- Où vit « l'initiative en cours » côté multijoueur : la table `combats`
+  (participants, CA) existe ; vérifier qu'elle suffit pour les PNJ sans fiche.
+- Ce qui est montré au joueur ciblé et aux autres (visibilité côté serveur).
+
+**Critères d'acceptation**
+- [ ] Initiative lancée : tout bouton de jet offensif ou de soin demande une cible parmi les participants.
+- [ ] Touche, sauvegarde, dégâts, états et soins résolus par le moteur et appliqués, journalisés.
+- [ ] Même comportement depuis la fiche, l'outil Table et l'outil Initiative, sur tous les écrans.
+- [ ] Sans initiative, les jets restent de simples jets.
+- [ ] « Annuler » revient en arrière par une écriture journalisée.
+
