@@ -4,6 +4,16 @@
 **Établi sur :** l'état réel du dépôt à `6851a0f`, vérifié fichier par fichier.
 **Documents liés :** `specs/moteur-de-jeu.md` · `specs/module-joueur-et-solo.md` · `docs/adr/0009-viabilite-solo.md` · `specs/outils-mj.md` · `specs/psyche-pnj.md` · `docs/SCHEMA.md`
 
+**Lire les titres.** ☑ : ticket terminé. ☐ : il reste du travail, y compris
+une simple vérification en direct chez l'auteur. Un ticket « fait » dont des
+points sont reportés ou réservés (et écrits comme tels) est coché. Sous chaque
+titre, le **modèle conseillé** : *Sonnet* quand le ticket est bien spécifié et
+local (interface d'après une esquisse décidée, saisie, fonction pure) ; *Opus*
+quand il faut concevoir, ou qu'il touche au noyau du moteur, à l'IA, au schéma,
+à la RLS ou à la sécurité. Le critère n'est pas la taille mais le risque et
+l'ambiguïté : un petit ticket de sécurité va à Opus, un gros écran déjà dessiné
+à Sonnet.
+
 ---
 
 ## 0. Ce que S1 a changé, et qu'il faut avoir en tête partout
@@ -104,7 +114,9 @@ Lot Z    la dette de la fiche         hors séquence — ce que le solo a révé
 
 ---
 
-## S2 — Reboucler le lien fait-mécanique → narration · `S` — **fait le 19 septembre, verdict positif**
+## ☑ S2 — Reboucler le lien fait-mécanique → narration · `S` — **fait le 19 septembre, verdict positif**
+
+**Modèle conseillé : Opus** — verdict à rendre sur la boucle moteur → narration ; demande du jugement, pas du code.
 
 **Ce n'est pas un ticket de fonctionnalité, c'est la dette de S1.** L'ADR 0009 le dit explicitement : *« Avant toute conclusion définitive : reboucler spécifiquement le lien fait-mécanique → narration, jamais réellement exercé dans ce spike (panne d'infrastructure sur l'unique tentative). »*
 
@@ -135,7 +147,9 @@ Aucun de ces six défauts ne se trouve en relisant le code : ils apparaissent en
 
 *Reprend `specs/moteur-de-jeu.md` §8 sans en changer la numérotation. Détail de conception dans la spec ; ici, seulement les critères d'acceptation et ce que la spec laissait ouvert.*
 
-### V3-A1 — Déclencheurs : schéma, évaluateur, bornes · `L` — **fait le 19 septembre**
+### ☑ V3-A1 — Déclencheurs : schéma, évaluateur, bornes · `L` — **fait le 19 septembre**
+
+**Modèle conseillé : Opus** — évaluateur de déclencheurs dans le noyau, avec ses bornes : cœur du moteur.
 
 Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** — les cas dorés sont des règles réelles.
 
@@ -153,7 +167,9 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Vérifié par mutation** : `has_condition` forcé à `true` et un jet de sauvegarde toujours réussi font tomber deux tests. La suite mord, elle ne se contente pas de passer.
 
-### V3-A2 — Brancher le vocabulaire d'événements · `M` — **fait les 19-22 septembre, combat compris**
+### ☑ V3-A2 — Brancher le vocabulaire d'événements · `M` — **fait les 19-22 septembre, combat compris**
+
+**Modèle conseillé : Opus** — vocabulaire d'événements branché dans tout le moteur, combat compris.
 
 - [x] La résolution mécanique émet les événements — `src/core/rules/gameEvents.ts`. **`resolveAction` n'existe pas** : le ticket nomme une fonction absente du code. Les vrais points de résolution sont `resolveAttackRoll`, `resolveDamageRoll`, `resolveCheckRoll` (`action.ts`) et `advanceTurn` (`combat.ts`). Trois constructeurs couvrent ceux qui ont un producteur réel aujourd'hui : `eventsForAttack`, `eventsForSave`, `eventsForTurn`. Les douze autres événements du vocabulaire n'ont encore rien qui les produise — leur écrire un constructeur maintenant serait de l'échafaudage.
 - [x] Chaque événement porte son contexte, préfixé `event.` et donc lisible par un `ref` de condition (`event.damage`, `event.roll`, `event.ac`, `event.critical`, `event.dc`, `event.round`).
@@ -190,7 +206,9 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Un coup émet les deux faces de l'échange** (`damage_dealt` sur l'attaquant, `damage_taken` sur la cible) : c'est ce qui permet au vol de vie et à la concentration de s'accrocher au même coup, et c'est la raison d'être du champ `subject`.
 
-### V3-A3 — Économie d'action · `M` — **fait le 21 septembre**
+### ☑ V3-A3 — Économie d'action · `M` — **fait le 21 septembre**
+
+**Modèle conseillé : Sonnet** — fonctions pures du noyau, bien spécifiées, testées d'abord.
 
 - [x] `ActionBudget` — action, bonus, réaction, déplacement (en mètres, dérivé de la vitesse), gratuit. `src/core/rules/actionBudget.ts`, pur.
 - [x] **Signaler, ne pas interdire.** `spendFromBudget` ne refuse jamais rien et ne lève jamais : le budget descend **en négatif**, et c'est ça le signal. Un plancher à zéro aurait effacé l'information même qu'on voulait porter. `overBudget` porte sur la catégorie touchée, pas sur le tour, pour que l'interface marque la bonne ligne.
@@ -201,7 +219,9 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Le vocabulaire d'effets compte onze entrées**, verrouillé par test comme les vingt événements.
 
-### V3-A4 — État de scène et zones abstraites · `M` — **fait le 21 septembre**
+### ☑ V3-A4 — État de scène et zones abstraites · `M` — **fait le 21 septembre**
+
+**Modèle conseillé : Sonnet** — état de scène persisté, forme décidée à l'avance.
 
 **Le ticket qui débloque tout le solo.** C'est le trou n° 1 d'ADR 0009.
 
@@ -218,7 +238,9 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Précision de conception, à décider ici** — où vit `SceneState` ? Recommandation : une table `scene_states` avec une ligne par campagne (la scène courante) plus un historique dans `session_events`, plutôt qu'un champ jsonb sur `campaigns`. Raison : la scène change à chaque tour, `campaigns` ne doit pas devenir une table chaude, et l'historique est déjà le rôle du journal.
 
-### V3-A5 — Éditeur de déclencheurs au formulaire · `L` — **fait et vérifié en direct le 21 septembre**
+### ☑ V3-A5 — Éditeur de déclencheurs au formulaire · `L` — **fait et vérifié en direct le 21 septembre**
+
+**Modèle conseillé : Sonnet** — formulaire au-dessus d'un schéma déjà fixé.
 
 - [x] Un bac à sable : « si tel événement survient avec telles données, voici ce qui se passerait » — sans toucher à une vraie partie. Outil de règles `bac-a-sable-declencheurs`, même famille que le bac à sable de formule : fenêtre flottante, entrée de barre latérale, page dédiée.
   - **Même moteur que le jeu, jamais un chemin parallèle** : `/api/triggers/simulate` appelle `runTriggers`, exactement la fonction qu'un vrai jet invoque. Un bac à sable qui simulerait à sa façon mentirait le jour où l'on en aurait besoin — la raison même du critère, déjà posée par V1-D4.
@@ -236,7 +258,9 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 **Ce qui n'est pas prouvé par ce test précis** : que *cette* aptitude-là parte sur un vrai jet — elle n'est portée par aucun personnage. Que le moteur fasse partir un déclencheur stocké sur une aptitude réellement possédée a été prouvé séparément lors de la vérification de V3-A2.
 
-### V3-A6 — Convertir les règles SRD qui ont des déclencheurs · `L` — **fait le 22 septembre, et il rend un verdict inattendu**
+### ☑ V3-A6 — Convertir les règles SRD qui ont des déclencheurs · `L` — **fait le 22 septembre, et il rend un verdict inattendu**
+
+**Modèle conseillé : Opus** — lire chaque règle SRD et trancher ce qui se convertit.
 
 - [x] **Le compte est tenu** — `src/core/rules/srdTriggers.test.ts`, sous forme **exécutable** plutôt que sous forme d'affirmation. Chaque règle du ticket y est *écrite*, pas jugée à vue ; ce qui ne passe pas est verrouillé par un test qui **tombera le jour où la capacité manquante sera ajoutée**, pour rappeler de revenir réécrire la règle.
 - [x] Une règle SRD réellement convertie : **Fumées d'othur brûlées** (`burnt-othur-fumes`), sauvegarde CON DD 13 au début de chaque tour, 1d6 de poison à chaque échec. Écrite en **donnée** (`data/srd/triggers-2024.json`), jamais en code — on ajoute une règle en éditant un JSON. Lue par `ingest-srd.ts` plutôt que par un script à part, parce que l'import **recrée les blocs à chaque passage** : un bloc posé hors import serait effacé au prochain `npm run ingest:srd`, le piège qui vaut déjà à `encounter-budget` d'être rejoué à la main.
@@ -268,7 +292,9 @@ Le cœur. Fonction pure, aucune base, aucun réseau. **Tests avant le code** —
 
 *Ce lot n'existe dans aucune spec. C'est le chaînon manquant entre le moteur (lot A) et l'écran (lot D).*
 
-### V3-B1 — La barre d'intention · `L` — **fait le 22 septembre**
+### ☑ V3-B1 — La barre d'intention · `L` — **fait le 22 septembre**
+
+**Modèle conseillé : Opus** — première résolution d'intention, garde-fous IA (règles 8 et 9).
 
 **Le ticket le plus important de la V3.** Il répond au trou le plus grave d'ADR 0009 : *« rien dans l'écran ne force son usage : la garantie "le modèle ne calcule rien" ne tient que si l'humain pense à toujours fournir le fait ».*
 
@@ -322,7 +348,9 @@ Le jet est parti par le vrai chemin partagé : le volet de dés (V2-M11) s'est o
 
 **L'écran :** `/m/[worldSlug]/joueur/solo`, septième destination de la coquille joueur. C'est un toit minimal, **pas** le lot D : ni colonne du monde connu, ni fiche à droite. `IntentBar.tsx` est autonome et se déplacera tel quel dans la colonne centrale de V3-D4. La lecture de la phrase tourne dans le navigateur — `interpretIntent` est pur, donc la proposition s'affiche en frappant, sans aller-retour ; le serveur ne reçoit jamais une phrase à interpréter, seulement le **choix** retenu.
 
-### V3-B2 — Le tour, de bout en bout · `L` — **fait le 24 septembre, narration comprise**
+### ☑ V3-B2 — Le tour, de bout en bout · `L` — **fait le 24 septembre, narration comprise**
+
+**Modèle conseillé : Opus** — boucle de tour de bout en bout, transactionnelle.
 
 - [x] `playTurn(intention)` : interprète → résout → **applique les déclencheurs** → met à jour la scène → journalise. La narration (« construit le contexte → appelle le modèle ») est le reste du ticket, volontairement écrite après — c'est ce qui a rendu le critère transverse « jouable sans IA du tout » vérifiable **seul**, avant d'y revenir.
 - [x] **Chaque étape journalise indépendamment.** Le jet part en `roll` avant tout le reste ; l'application des effets est son propre `rule_application` ; la scène est écrite en dernier. Une étape qui tombe laisse les précédentes acquises.
@@ -373,7 +401,9 @@ Le jet est parti par le vrai chemin partagé : le volet de dés (V2-M11) s'est o
 | L'horloge | inchangée en combat ; `08h00 → 08h01` au tour suivant, combat clos |
 | Le modèle | jamais appelé — `turnIntent.noAi.test.ts` couvre désormais aussi `turnLoop.ts` |
 
-### V3-B3 — Le contexte envoyé au modèle · `M` — **fait le 24 septembre**
+### ☑ V3-B3 — Le contexte envoyé au modèle · `M` — **fait le 24 septembre**
+
+**Modèle conseillé : Opus** — contexte du modèle borné par l'audience (règle 11).
 
 - [x] Construit **à chaque tour** depuis l'état courant, jamais un instantané pris au début (trou n° 2 d'ADR 0009) — `buildSoloTurnContext` relit `scene_states` à chaque appel, jamais mis en cache d'un tour à l'autre.
 - [x] Contenu : état de scène, PNJ présents avec leur bande d'attitude nommée, résultat mécanique du tour, indices de narration (`narrate_hint`), quêtes actives — `listActiveQuestsForWorld` a enfin un second appelant (après V3-D3).
@@ -386,7 +416,9 @@ Le jet est parti par le vrai chemin partagé : le volet de dés (V2-M11) s'est o
 
 **Un seul PNJ, un seul axe, une seule perception — trois simplifications assumées.** L'attitude vue est celle du PNJ envers le joueur (`getCurrentAttitude(npc → joueur)`), jamais l'inverse ; l'axe est fixe (`friendship_hostility`) plutôt que configurable ; `known_as` ne regarde que les blocs `relationship` du personnage joué, jamais ceux d'un autre PJ en cas de groupe. Aucune de ces bornes n'a de cas concret qui la dépasse aujourd'hui (solo = un seul joueur, un seul axe suffit à une narration de deux phrases) — à revoir si un cas réel l'exige (règle des trois).
 
-### V3-B4 — Varier la narration · `M` — **fait le 24 septembre**
+### ☑ V3-B4 — Varier la narration · `M` — **fait le 24 septembre**
+
+**Modèle conseillé : Sonnet** — variation de prose, périmètre étroit.
 
 Répond à la répétition verbatim constatée dans le spike (la même réplique trois fois de suite aux tours 14-16).
 
@@ -396,7 +428,9 @@ Répond à la répétition verbatim constatée dans le spike (la même réplique
 
 **Vérifié le 24 septembre, base et modèle réels** (`src/server/ai/soloNarration.integration.test.ts`, ~20 s, deux vrais appels au modèle) : la reconstruction retrouve exactement `playerAction`/`facts`/`changes` déjà journalisés, et « raconter autrement » produit bien un second événement distinct du premier, tous deux rattachés au même tour.
 
-### V3-B5 — Le moteur demande un jet, il ne le lance pas · `L` — **Phase 1 et Phase 2 faites le 24 septembre**
+### ☑ V3-B5 — Le moteur demande un jet, il ne le lance pas · `L` — **Phase 1 et Phase 2 faites le 24 septembre**
+
+**Modèle conseillé : Opus** — mécanisme central de demande de jet, chaîné et journalisé.
 
 *Ouvert le 22 septembre, en dessinant le lot D. **Ce ticket corrige la dernière étape de V3-B1** : il ne la jette pas.*
 
@@ -468,7 +502,9 @@ Quand le joueur dit « j'entre dans une taverne », qui décide qu'il y a une ta
 
 C'est le prolongement direct de « l'IA narre, le code arbitre » (règle absolue 8), appliqué au contenu du monde et pas seulement aux dés. Et c'est ce qui rend le monde **cohérent dans la durée** : revenir trois séances plus tard à la même taverne y retrouve le même tavernier, parce qu'il a été écrit en base au premier passage, pas ré-imaginé à chaque fois.
 
-### V3-C1 — Le pont générateur ↔ moteur · `M` — **fait le 24 septembre, sans appelant encore**
+### ☑ V3-C1 — Le pont générateur ↔ moteur · `M` — **fait le 24 septembre, sans appelant encore**
+
+**Modèle conseillé : Sonnet** — pont étroit entre deux modules existants.
 
 Aujourd'hui les générateurs sont un outil MJ : on clique, on lit, on décide. En solo, le moteur doit pouvoir les invoquer lui-même.
 
@@ -481,7 +517,9 @@ Aujourd'hui les générateurs sont un outil MJ : on clique, on lit, on décide. 
 
 **Ce que ça donne :** « tu entres à L'Ancre Rouillée. Derrière le comptoir, une elfe taciturne essuie des chopes. » — l'elfe taciturne vient de la table `patrons-tavernes`, tirée sur un d20 réel, pas de l'imagination du modèle.
 
-### V3-C2 — Esquisses de scène · `M` — **fait le 26 septembre**
+### ☑ V3-C2 — Esquisses de scène · `M` — **fait le 26 septembre**
+
+**Modèle conseillé : Opus** — faire parler un PNJ sans identifiant inventé : sécurité de l'IA.
 
 Le problème : si chaque figurant devient une fiche, le wiki se remplit de bruit en trois séances. Si aucun ne le devient, le monde n'a pas de mémoire.
 
@@ -504,7 +542,9 @@ Le problème : si chaque figurant devient une fiche, le wiki se remplit de bruit
 
 **Vérifié en direct le 26 septembre**, sur une fiche jetable dans ClaudeLand, tout supprimé après (deux entités ancrées, leurs blocs, la scène de test, les quatre événements de journal créés pendant la vérification — les deux événements pré-existants de Fine Lââm intacts). Trois chemins confirmés contre la vraie base : **« garder cette fiche »** (esquisse posée à la main → clic → entité réelle créée avec son bloc `text`, esquisse retirée de la scène, ajoutée aux présents réels, note journalisée et visible dans le fil) ; **« nommée explicitement »** (un tour normal, « je demande son nom au forgeron, il me répond Bregil » → l'esquisse « Bregil » s'ancre automatiquement avant même que la narration parte, sans casser le déroulé du tour) ; le schéma `SceneState` `__v: 3` se lit et s'écrit sans erreur (aucune ligne existante à migrer : la table `scene_states` était vide avant ce ticket, vérifié). Non rejoué en direct : le déclenchement `new_character` par le modèle lui-même (dépend du contenu de générateur manquant, ci-dessus) et le seuil des trois répliques — les deux sont couverts par `sceneSketches.test.ts` (12 cas, moteur réel de `scene.ts`, accès base simulés — même méthode que `sceneGeneration.test.ts` pour V3-C1).
 
-### V3-C3 — Écrire dans le wiki en jouant · `L` — **fait le 26 septembre**
+### ☑ V3-C3 — Écrire dans le wiki en jouant · `L` — **fait le 26 septembre**
+
+**Modèle conseillé : Opus** — l'IA écrit dans le wiki : tout passe par ai_proposals (règle 9).
 
 **Le ticket qui rend le monde vivant.** Toute mutation passe par `ai_proposals` (règle absolue 9) — la table existe, avec exactement les bons `kind` : `create_entity`, `update_entity`, `create_block`, `update_block`, `create_relation`, `set_discovery`.
 
@@ -525,7 +565,9 @@ Mais en solo il n'y a pas de MJ pour valider. D'où la règle :
 
 **Vérifié en direct le 26 septembre**, sur une fiche jetable dans ClaudeLand, tout supprimé après. Le retrofit de l'ancrage confirmé contre la vraie base : « garder cette fiche » sur une esquisse produit désormais, en plus de l'entité et de son bloc, une ligne `ai_proposals` correctement formée (`kind: create_entity`, `auto_applied: true`, `status: applied`, `session_event_id` pointant sur le bon événement du journal). **`world_note` n'a pas pu être rejoué en direct** — le fournisseur IA local était injoignable au moment de cette vérification (même limite que `new_character` en V3-C2 : le déclenchement dépend d'un choix du modèle, non forçable depuis l'écran) — couvert à la place par `soloNarrationProposal.test.ts` (garde-fou d'enum) et `soloWorldNotes.test.ts` (3 cas : bloc trouvé, bloc du mauvais type, aucun bloc). `aiProposals.integration.test.ts` confirme `auto_applied` contre la vraie table (colonne jamais exercée avant ce ticket).
 
-### V3-C4 — Le wiki qui se découvre · `M` — **fait le 26 septembre**
+### ☑ V3-C4 — Le wiki qui se découvre · `M` — **fait le 26 septembre**
+
+**Modèle conseillé : Sonnet** — états de découverte déjà modélisés.
 
 `entity_discoveries` existe depuis la Phase 0 et **n'a jamais été écrite**. C'est ce ticket.
 
@@ -541,7 +583,9 @@ Mais en solo il n'y a pas de MJ pour valider. D'où la règle :
 
 **Vérifié en direct le 26 septembre**, sur une fiche jetable dans ClaudeLand (un lieu parent et un PNJ créés pour l'occasion, tout supprimé après). Avant toute scène posée, la colonne Wiki du solo ne montre QUE la fiche du joueur — le reste du monde (Bram, Naivara, une douzaine d'autres fiches réelles) reste invisible malgré un rôle `gm`, qui aurait tout montré sans ce filtre. Poser une scène fait apparaître exactement les trois entités attendues (le lieu et le PNJ présent en `known`, le lieu parent en `mentioned`) — confirmé à la fois dans `entity_discoveries` et dans le rendu de la colonne. Ouvrir la fiche entière du PNJ la promeut à `detailed` — après correction du bogue de la branche édition ci-dessus. `discoveries.integration.test.ts` confirme en plus, contre la vraie table, qu'une régression proposée (`known` → `mentioned`) est bien ignorée.
 
-### V3-C5 — Le tiroir de conséquences · `M` — **fait le 26 septembre**
+### ☑ V3-C5 — Le tiroir de conséquences · `M` — **fait le 26 septembre**
+
+**Modèle conseillé : Sonnet** — écran de lecture sur des données existantes.
 
 Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 
@@ -555,7 +599,9 @@ Rend visible ce que le monde vient d'écrire, sans interrompre le jeu.
 
 **Vérifié en direct le 26 septembre**, sur une fiche jetable dans ClaudeLand (une proposition en attente et une déjà appliquée posées à la main, tout supprimé après). Les trois actions confirmées contre la vraie base : **Accepter** (segment écrit dans le bloc, la proposition passe `applied`, rejoint aussitôt la liste « déjà écrit ») ; **Modifier puis Accepter** (le texte RÉÉCRIT est celui qui part en base, jamais l'original — vérifié dans le bloc et couvert par un cas dédié dans `aiProposals.integration.test.ts`) ; **Rejeter** (statut `rejected`, bloc intact, disparaît du compte). Le récapitulatif affiche correctement « 1 fiche » en ignorant le bloc modifié. Une instabilité d'outil rencontrée en vérifiant, sans rapport avec le code : le module compilé de `joueur/wiki/[entitySlug]/page.tsx` restait bloqué sur une erreur de compilation déjà corrigée (« `campaigns` défini deux fois ») après un `preview_stop`/redémarrage — un onglet neuf, jamais le même que celui qui avait chargé le bundle fautif, a suffi (même famille d'instabilité Turbopack déjà rencontrée deux fois plus tôt cette session, jamais un défaut de code).
 
-### V3-C6 — La météo, le temps, le monde qui bouge · `S` — **fait le 26 septembre, deux réserves**
+### ☑ V3-C6 — La météo, le temps, le monde qui bouge · `S` — **fait le 26 septembre, deux réserves**
+
+**Modèle conseillé : Sonnet** — horloge et météo, logique simple.
 
 Le ticket le plus dispersé du lot C — quatre sujets, dont deux butaient sur une mécanique absente. Découpé avec l'auteur avant d'écrire une ligne.
 
@@ -624,7 +670,9 @@ Le ticket le plus dispersé du lot C — quatre sujets, dont deux butaient sur u
 
 ---
 
-### V3-D1 — La coquille à trois colonnes · `M` — **fait le 23 septembre**
+### ☑ V3-D1 — La coquille à trois colonnes · `M` — **fait le 23 septembre**
+
+**Modèle conseillé : Sonnet** — coquille d'interface d'après l'esquisse.
 
 - [x] Route `/m/[worldSlug]/joueur/solo`, **dans `PlayerShell`** : la barre latérale joueur et ses outils restent atteignables en jouant. L'écran minimal de V3-B1 est à cette adresse — ce ticket le remplace, il n'en ouvre pas une seconde.
 - [x] Trois colonnes en `grid`, la centrale prioritaire (`minmax(0,2fr)`), les latérales bornées (200 px et 280 px au minimum).
@@ -636,7 +684,9 @@ Le ticket le plus dispersé du lot C — quatre sujets, dont deux butaient sur u
 - [x] Sous 768 px, la saisie reste ancrée en bas, au-dessus du clavier virtuel.
 - [x] Les deux colonnes repliées, **le fil ne s'étale pas** : il se recentre à 80 caractères. Replier sert à enlever le bruit autour, pas à élargir le texte.
 
-### V3-D2 — L'en-tête d'état · `S` — **fait le 23 septembre**
+### ☑ V3-D2 — L'en-tête d'état · `S` — **fait le 23 septembre**
+
+**Modèle conseillé : Sonnet** — en-tête d'interface d'après l'esquisse.
 
 - [x] À gauche, **trois niveaux de lieu** : la ville la plus proche, le lieu à l'intérieur, puis la pièce. Les deux premiers sont des liens vers leur fiche ; **la pièce n'en est pas un** — anecdotique le plus souvent, et quand elle ne l'est pas (une salle secrète), elle vit dans un bloc de la fiche du lieu.
 - [x] À droite, la date en jeu, l'heure, la météo et la température : `Mercredi 12 juillet · 22:15 · Pluie · 14 °C`. La date vient du calendrier du monde (`formatGameDate`), l'heure de `SceneState.time`.
@@ -654,7 +704,9 @@ Le ticket le plus dispersé du lot C — quatre sujets, dont deux butaient sur u
 
 **Ce que ce ticket a déplacé.** Le nom du personnage et le compte des présents, provisoirement posés dans le bandeau par V3-D1, en sont partis — ils n'appartenaient pas à un en-tête de lieu/temps. Ils se réinstallent dans la fiche jouable, V3-D5, qui n'est encore qu'un `EmptyState`.
 
-### V3-D3 — La colonne gauche : le monde connu · `M` — **fait le 23 septembre**
+### ☑ V3-D3 — La colonne gauche : le monde connu · `M` — **fait le 23 septembre**
+
+**Modèle conseillé : Sonnet** — colonne d'interface d'après l'esquisse.
 
 - [x] **Quatre onglets de classeur** : Wiki, Quêtes, Présents, Règles — `components/solo/ColonneMonde.tsx`, même famille que `BinderTabs` déjà utilisé par V3-D1.
 - [x] **Le wiki se navigue DANS la colonne.** Une fiche s'ouvre sur place, avec le chemin pour revenir (`← <groupe>`) et un lien vers la fiche entière.
@@ -670,7 +722,9 @@ Le ticket le plus dispersé du lot C — quatre sujets, dont deux butaient sur u
 
 **Ce qui a été réutilisé plutôt que reconstruit.** Le premier paragraphe visible de chaque fiche du Wiki vient de `resolveEntityRefExcerpts` (déjà écrit pour les cartes au survol d'un lien, V2.1-18) — un aller-retour groupé, pas un par fiche. Le libellé français de chaque groupe (« Lieux », « Personnages »...) vient de `messages/fr.json` (`shell.kindLabels`), la même table que la barre latérale MJ. Le donneur d'une quête n'est résolu que pour une référence d'**entité** ; une référence de **règle** (rare, "donné par une entrée de règle") n'affiche pas de nom, faute de justifier la machinerie de `resolveRuleRefPreviews` pour ce ticket.
 
-### V3-D4 — La colonne centrale : le fil et la saisie · `L` — **Phases 1, 2 et 3 faites le 26 septembre**
+### ☑ V3-D4 — La colonne centrale : le fil et la saisie · `L` — **Phases 1, 2 et 3 faites le 26 septembre**
+
+**Modèle conseillé : Opus** — fil persisté, champ unique et nouvel appel IA « MJ ».
 
 **Découpé en phases, décision prise avant d'écrire une ligne (24 septembre).** Le ticket mélangeait trois choses de poids très différent : le fil persisté (fermer la limite connue de B1/B2), la refonte du champ de saisie unique (qui touche à ce que V3-B5 vient de fixer), et le bouton « MJ » (un appel IA neuf, hors narration, qui n'existe encore nulle part). L'auteur a choisi la Phase 1 (le fil) d'abord, puis la Phase 2 (le champ unique), puis la Phase 3 (le bouton `MJ`, 26 septembre) — la saisie vocale reste seule à part, en fin de ticket.
 
@@ -699,7 +753,9 @@ Le ticket le plus dispersé du lot C — quatre sujets, dont deux butaient sur u
 
 **Phase 3 (bouton `MJ`) vérifiée en direct le 26 septembre**, sur une troisième fiche jetable dans ClaudeLand (tout supprimé après, même geste que les deux fois précédentes — sauf l'utilisateur d'authentification jetable, dont la suppression échoue systématiquement avec une erreur Supabase vide (`AuthRetryableFetchError`), sans donnée attachée : un compte orphelin inerte, pas un défaut de ce ticket). Quatre scénarios : une phrase ordinaire laisse `Jouer` en primaire et `MJ` en secondaire, sans ligne d'explication ; une question (« Combien de PV me reste-t-il ? ») fait passer `MJ` en primaire, `Jouer` en secondaire, et affiche la ligne d'explication ; cliquer `MJ` avec le fournisseur IA local injoignable échoue proprement (aucun événement `note` journalisé, « Réessayer » disponible) — exactement le comportement déjà établi par `autrement`, hors du champ de ce ticket ; puis, LM Studio relancé, « Réessayer » aboutit : la réponse se journalise en `kind: "note"`, s'affiche dans le fil sous « MJ — hors du temps de jeu », et la scène de la campagne (jamais posée) reste non posée — confirmant à l'œil que ce chemin n'a touché ni `scene_states` ni `entity_runtime_state`. Suite complète (`npm run typecheck && npm run lint && npm run test`) : 150 fichiers, 1381 tests, 3 sautés (intégration sans base/IA vivantes), 1 à faire.
 
-### V3-D5 — La colonne droite : la fiche jouable · `M` — **fait le 24 septembre, deux réserves**
+### ☑ V3-D5 — La colonne droite : la fiche jouable · `M` — **fait le 24 septembre, deux réserves**
+
+**Modèle conseillé : Sonnet** — fiche jouable : composants existants réassemblés.
 
 - [x] **C'est la fiche jouable, au format étroit** — mêmes composants pour les onglets, aucun code dupliqué là. `FicheJouableSolo.tsx` se charge lui-même (même motif que `ParticipantCharacterSheet.tsx`, le seul autre endroit qui ouvre la fiche jouable avec un `campaignId` réel plutôt que `null`) : les jets et l'équipement faits ici comptent pour de vrai dans la campagne.
 - [x] **Les cinq onglets de la fiche, avec leur vrai contenu** : Actions, Sac, Magie, Traits (« Aptitudes accordées »), Maîtrises (maîtrises, maîtrise d'armes, langues). Rien n'est inventé ici ; seul le format d'affichage change.
@@ -737,7 +793,9 @@ La grille retenue est **plus haute que la version comparée** (80 px contre 56),
 
 **Vérifié le 24 septembre** : `npm run typecheck`, `npm run lint` et `npm run test` passent (1261 tests, aucun changement à `src/core`, rien de nouveau à y tester). Le serveur de dev démarre et sert `/m/faerun-copie-3/joueur/solo` sans erreur (200, aucune exception serveur) ; le compte MJ connecté n'a pas de personnage réclamé dans ce monde et voit donc l'état vide attendu (« Aucun personnage à jouer »). **Non vérifié en direct avec une vraie fiche** : ça demande un compte joueur avec un PJ réclamé (lien d'invitation), pas encore fait.
 
-### V3-D6 — Ce qui vient d'où · `S` — **fait le 26 septembre, une réserve documentée**
+### ☑ V3-D6 — Ce qui vient d'où · `S` — **fait le 26 septembre, une réserve documentée**
+
+**Modèle conseillé : Sonnet** — marqueurs d'origine, affichage seul.
 
 *Proposition d'origine, **retenue** après l'esquisse : « les marqueurs sont bien informatifs » (auteur, 22 septembre).*
 
@@ -755,18 +813,24 @@ Pourquoi ça vaut la peine : en solo, la première question qui vient est *« es
 
 *À ouvrir seulement après trois séances réellement jouées. Concevoir la mémoire longue avant, c'est deviner.*
 
-### V3-E1 — Résumé de scène · `M`
+### ☐ V3-E1 — Résumé de scène · `M`
+
+**Modèle conseillé : Opus** — mémoire longue du modèle : conception à faire après trois séances.
 
 - [ ] À la fermeture d'une scène, un résumé court, journalisé, relu par le joueur.
 - [ ] Les résumés remplacent les tours détaillés dans le contexte des scènes suivantes — c'est ce qui borne les tokens quand la partie dure.
 
-### V3-E2 — RAG sur le wiki · `L`
+### ☐ V3-E2 — RAG sur le wiki · `L`
+
+**Modèle conseillé : Opus** — RAG, dimension d'embedding à figer en ADR, audience à garantir.
 
 - [ ] `chunks` et `embedding_queue` existent, l'index HNSW aussi. **La dimension d'embedding doit être figée avant la première indexation** (`SCHEMA.md` §17) — décision à prendre et à consigner en ADR avant d'écrire une ligne.
 - [ ] Ce que la recherche remonte entre dans le prompt **encadré par `fenceUntrustedData`**, sans exception.
 - [ ] Le contexte reste borné par l'audience (règle 11) : la recherche ne remonte jamais un bloc `gm` dans une sortie lue par le joueur.
 
-### V3-E3 — Le journal de personnage · `S`
+### ☐ V3-E3 — Le journal de personnage · `S`
+
+**Modèle conseillé : Opus** — petit, mais c'est encore la mémoire du modèle : ce qui entre dans le contexte.
 
 - [ ] Un carnet tenu automatiquement : ce que le personnage a appris, promis, refusé. Nourri par le journal, relu par le joueur.
 - [ ] Entre dans le contexte du tour à la place des faits bruts — moins de tokens, plus de sens.
@@ -775,17 +839,23 @@ Pourquoi ça vaut la peine : en solo, la première question qui vient est *« es
 
 # Lot F — La partie qui dure
 
-### V3-F1 — Reprendre une partie · `M`
+### ☐ V3-F1 — Reprendre une partie · `M`
+
+**Modèle conseillé : Sonnet** — relire ce qui est déjà persisté ; le rappel réutilise E1.
 
 - [ ] Rouvrir une séance trois semaines plus tard restitue la scène, la fiche et le fil à l'identique.
 - [ ] Un rappel d'ouverture : « la dernière fois… », engendré depuis les résumés.
 
-### V3-F2 — Annuler un tour · `M`
+### ☐ V3-F2 — Annuler un tour · `M`
+
+**Modèle conseillé : Opus** — défaire des mutations sans jamais effacer le journal.
 
 - [ ] Défaire le dernier tour : les mutations `auto_applied` se retirent par leur `session_event_id`.
 - [ ] Le journal reste en ajout seul — annuler écrit un événement d'annulation, n'efface jamais.
 
-### V3-F3 — D'une partie solo à une vraie table · `M`
+### ☐ V3-F3 — D'une partie solo à une vraie table · `M`
+
+**Modèle conseillé : Opus** — passer de solo à campagne : RLS, rôles, données existantes.
 
 `module-joueur-et-solo.md` §D le dit : *« une campagne solo a la même forme qu'une campagne classique. Ne pas fermer cette porte. »*
 
@@ -811,7 +881,9 @@ Pourquoi ça vaut la peine : en solo, la première question qui vient est *« es
 
 ---
 
-### V3-R0 — Poser la mesure et le budget · `S` — **mesuré le 12 septembre**
+### ☑ V3-R0 — Poser la mesure et le budget · `S` — **mesuré le 12 septembre**
+
+**Modèle conseillé : Sonnet** — mesure et tableau de référence.
 
 **Avant tout le reste, et c'est la règle du projet** (`campaigns.ts:215` : « à mesurer avant d'optimiser »). `P‑06` a posé un chronomètre **serveur** (`PERF_LOG=1`). Rien ne mesure le **client**, qui est justement là où le téléphone souffre.
 
@@ -843,7 +915,9 @@ Pourquoi ça vaut la peine : en solo, la première question qui vient est *« es
 
 ---
 
-### V3-R1 — Ne plus livrer le bureau à fenêtres au téléphone · `M` — **fait le 12 septembre**
+### ☑ V3-R1 — Ne plus livrer le bureau à fenêtres au téléphone · `M` — **fait le 12 septembre**
+
+**Modèle conseillé : Sonnet** — découpage par taille d'écran, mécanique.
 
 **Le gain le plus net du lot, et le plus spécifiquement smartphone.** Constaté en lisant le code, non relevé tel quel par l'audit.
 
@@ -872,7 +946,9 @@ Mais les imports sont **statiques**. Fermeture transitive mesurée depuis `AvecW
 
 ---
 
-### V3-R2 — Le premier rendu ne suppose plus un grand écran · `S` — **fait le 12 septembre**
+### ☑ V3-R2 — Le premier rendu ne suppose plus un grand écran · `S` — **fait le 12 septembre**
+
+**Modèle conseillé : Sonnet** — premier rendu, périmètre étroit.
 
 `WindowsDesktop.tsx:26` et `AvecWindowsLayer.tsx:60` font tous les deux `useState(false)` puis résolvent la largeur dans un `useEffect`.
 
@@ -891,7 +967,9 @@ Conséquence sur téléphone : le premier rendu client **suppose un grand écran
 
 ---
 
-### V3-R3 — Découper les éditeurs de blocs · `M` — *audit `F‑14`* — **fait le 12 septembre**
+### ☑ V3-R3 — Découper les éditeurs de blocs · `M` — *audit `F‑14`* — **fait le 12 septembre**
+
+**Modèle conseillé : Sonnet** — chargement différé des éditeurs, mécanique.
 
 `components/blocks/EntityBlocks.tsx` : 977 lignes, 54 imports, **les 19 éditeurs `*BlockEditor` plus `PlayableCharacterSheet` importés statiquement** (lignes 21‑41 ; l'audit annonçait 21 éditeurs, le décompte exact est de 19 + 1). Fermeture transitive mesurée : **272 fichiers, 44 048 lignes**.
 
@@ -922,7 +1000,9 @@ L'audit souligne le point qui compte le plus : **le coût augmente à chaque nou
 
 ---
 
-### V3-R4 — Les images à la taille du téléphone · `M` — *audit `F‑15`* — **devenu le ticket n° 1 du lot**
+### ☑ V3-R4 — Les images à la taille du téléphone · `M` — *audit `F‑15`* — **devenu le ticket n° 1 du lot**
+
+**Modèle conseillé : Sonnet** — images redimensionnées, mécanique.
 
 > **Réécrit le 12 septembre, après la mesure de `V3-R0`.** Ce ticket visait les images d'entité et les cartes. La mesure sur le déploiement réel a montré que le poste dominant est ailleurs, et qu'il est bien plus gros : **l'image de fond de l'application, 2 071 Ko à elle seule, 84 % du poids d'une page.** Le reste du ticket est inchangé et reste valable, mais il passe après.
 
@@ -986,7 +1066,9 @@ La justification écrite dans le code (« images dynamiques dont Next ne connaî
 
 ---
 
-### V3-R5 — Supprimer les cascades de chargement · `L` — *audit `F‑16`* — **fait le 12 septembre — et c'est lui qui a fait bouger le temps**
+### ☑ V3-R5 — Supprimer les cascades de chargement · `L` — *audit `F‑16`* — **fait le 12 septembre — et c'est lui qui a fait bouger le temps**
+
+**Modèle conseillé : Opus** — cascades de chargement : architecture serveur/client de tout l'app.
 
 **38 composants** font un `fetch` dans un `useEffect`. Le déroulement est toujours le même : le serveur rend la page → le navigateur télécharge le JS → React monte → l'effet part → la requête voyage → le contenu apparaît. Quatre allers-retours là où un seul suffirait.
 
@@ -1018,7 +1100,9 @@ L'audit le dit lui-même : **pas en une fois.** Page par page, en commençant pa
 
 ---
 
-### V3-R6 — Les deux chiffres que seul l'auteur peut lire · `S` — *audit `P‑05`, `P‑07`* — **`P‑05` refermé le 12 septembre**
+### ☐ V3-R6 — Les deux chiffres que seul l'auteur peut lire · `S` — *audit `P‑05`, `P‑07`* — **`P‑05` refermé le 12 septembre**
+
+**Modèle conseillé : Sonnet** — reste une mesure chez l'auteur (P‑07), presque pas de code.
 
 Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de bord.
 
@@ -1053,7 +1137,9 @@ Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de b
 
 ---
 
-### V3-R7 — Deux boucles qui rechargent les règles une par une · `M` — **fait le 13 septembre**
+### ☐ V3-R7 — Deux boucles qui rechargent les règles une par une · `M` — **fait le 13 septembre**
+
+**Modèle conseillé : Sonnet** — regrouper des lectures en une requête.
 
 *Ouvert le 12 septembre, à partir de `pg_stat_statements` — pas de l'audit, qui ne l'avait pas vu.*
 
@@ -1118,7 +1204,9 @@ C'est le même enseignement que `P‑01` : *la primitive existait, il manquait d
 
 ---
 
-### V3-Z1 — L'âge du personnage, et l'identité à la création · `M` — **fait le 24 septembre, vérification en direct à faire**
+### ☐ V3-Z1 — L'âge du personnage, et l'identité à la création · `M` — **fait le 24 septembre, vérification en direct à faire**
+
+**Modèle conseillé : Sonnet** — un champ optionnel et une étape d'assistant ; reste la vérification en direct.
 
 **Le constat, en deux temps.**
 

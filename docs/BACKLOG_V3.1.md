@@ -10,9 +10,21 @@ s'y ajoute quand quelque chose de ce genre est constaté, pas quand il est
 planifié. Taille attendue : `S` ou `M` presque toujours — si un ticket ici
 grossit au point de devenir un vrai chantier, il migre vers V2 ou V3.
 
+**Lire les titres.** ☑ : ticket terminé. ☐ : il reste du travail, y compris
+une simple vérification en direct chez l'auteur. Un ticket « fait » dont des
+points sont reportés ou réservés (et écrits comme tels) est coché. Sous chaque
+titre, le **modèle conseillé** : *Sonnet* quand le ticket est bien spécifié et
+local (interface d'après une esquisse décidée, saisie, fonction pure) ; *Opus*
+quand il faut concevoir, ou qu'il touche au noyau du moteur, à l'IA, au schéma,
+à la RLS ou à la sécurité. Le critère n'est pas la taille mais le risque et
+l'ambiguïté : un petit ticket de sécurité va à Opus, un gros écran déjà dessiné
+à Sonnet.
+
 ---
 
-### V3.1-1 — `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré · `S`
+### ☐ V3.1-1 — `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré · `S`
+
+**Modèle conseillé : Sonnet** — assouplir une validation, cas bien décrits.
 
 Constaté le 27 septembre en créant la sous-classe « Serment de vengeance »
 (Paladin) et en relisant le ticket V2-N2 : sur les 339 sorts de la base SRD
@@ -44,7 +56,9 @@ Le ticket V2-N2 l'avait déjà noté en passant, sans ouvrir de ticket dédié :
 
 ---
 
-### V3.1-2 — Aucun moyen d'éditer une fiche maison déjà créée · `M`
+### ☐ V3.1-2 — Aucun moyen d'éditer une fiche maison déjà créée · `M`
+
+**Modèle conseillé : Sonnet** — réutiliser le formulaire de création en édition, verrous déjà connus.
 
 Constaté le 27 septembre en corrigeant le don « Chanceux » : son texte,
 recopié depuis une mauvaise source, s'est révélé faux une fois la bonne page
@@ -74,7 +88,9 @@ historique, don/aptitude, sous-classe, sort) : aucun n'a d'équivalent en
 
 ---
 
-### V3.1-3 — Les dons à choix (Initié à la magie, etc.) n'ont aucune UI de choix · `L`
+### ☐ V3.1-3 — Les dons à choix (Initié à la magie, etc.) n'ont aucune UI de choix · `L`
+
+**Modèle conseillé : Opus** — mécanisme générique de choix pour les dons, partagé avec V3.1-6 et V3.1-7.
 
 Constaté le 27 septembre en accordant « Initié à la magie » via l'historique
 « Guide ». Le don s'affiche sur la fiche en texte descriptif, mais l'assistant
@@ -120,7 +136,9 @@ séparé.
 
 ---
 
-### V3.1-4 — Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais · `S`/`M`
+### ☐ V3.1-4 — Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais · `S`/`M`
+
+**Modèle conseillé : Sonnet** — brancher un choix déjà lu par extractSkillChoices.
 
 Constaté le 27 septembre sur « Compétent »/Skillful, trait humain : « Vous
 gagnez la maîtrise d'une compétence de votre choix. » Les classes ont déjà ce
@@ -149,7 +167,9 @@ inventer un nouveau.
 
 ---
 
-### V3.1-5 — Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) · `M`
+### ☐ V3.1-5 — Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) · `M`
+
+**Modèle conseillé : Sonnet** — un effet de Repos long sur le vocabulaire de déclencheurs existant.
 
 Constaté le 27 septembre sur « Ingénieux »/Resourceful, trait humain : « Vous
 gagnez l'Inspiration héroïque lorsque vous terminez un Repos long. »
@@ -177,7 +197,9 @@ déclencheurs (V3-A5) que de l'assistant de personnage.
 
 ---
 
-### V3.1-6 — Aucun mécanisme générique pour les traits d'espèce à choix · `L`
+### ☐ V3.1-6 — Aucun mécanisme générique pour les traits d'espèce à choix · `L`
+
+**Modèle conseillé : Opus** — mécanisme générique des traits à choix, cinq formes de choix.
 
 Suite à V3.1-3/V3.1-4 (Humain seulement) : relevé le 27 septembre sur les 9
 espèces officielles du SRD 5.2.1, quels traits portent un choix.
@@ -226,7 +248,9 @@ pour les langues d'historique.
 
 ---
 
-### V3.1-7 — Une sous-classe n'apporte jamais d'effet mécanique, choix ou pas · `L`
+### ☐ V3.1-7 — Une sous-classe n'apporte jamais d'effet mécanique, choix ou pas · `L`
+
+**Modèle conseillé : Opus** — sous-classes mécaniques : touche characterSheet() et les choix rechoisis.
 
 Constaté le 28 septembre en vérifiant les 12 sous-classes officielles pour le
 même genre de trou que V3.1-3/V3.1-6. Le trou est plus profond que prévu :
@@ -286,7 +310,9 @@ réelle si elles portent un vrai modificateur ou seulement un nom.
 
 ---
 
-### V3.1-8 — Aucune demande structurée de disponibilités pour la prochaine séance · `L` — fait
+### ☑ V3.1-8 — Aucune demande structurée de disponibilités pour la prochaine séance · `L` — fait
+
+**Modèle conseillé : Opus** — nouveau flux de demande de disponibilités, schéma et RLS.
 
 Constaté le 27 septembre, captures de crab.fit à l'appui : le Calendrier réel
 (V2.1-4, `docs/BACKLOG_V2.1.md:639`) ne connaît qu'un mode — la joueuse
@@ -471,7 +497,9 @@ typecheck && npm run lint && npm run test:core` passent.
 
 ---
 
-### V3.1-9 — Bouton « Prochaine session » mal calibré selon l'écran · `S`/`M` — fait
+### ☑ V3.1-9 — Bouton « Prochaine session » mal calibré selon l'écran · `S`/`M` — fait
+
+**Modèle conseillé : Sonnet** — ajustement d'affichage.
 
 Constaté le 27 septembre, capture à l'appui : la bannière verticale
 (`NextSessionBadge.tsx`), texte tourné à 90°, taille en
@@ -532,7 +560,9 @@ l'esthétique voulue.
 
 ---
 
-### V3.1-10 — Connexion par identifiant/mot de passe plutôt que lien à retrouver · `L` — fait
+### ☑ V3.1-10 — Connexion par identifiant/mot de passe plutôt que lien à retrouver · `L` — fait
+
+**Modèle conseillé : Opus** — authentification.
 
 Constaté le 27 septembre : les joueuses redemandent systématiquement le lien
 d'invitation à l'auteur. Ce n'est pas un oubli isolé, c'est la conséquence
@@ -780,7 +810,9 @@ navigateur avec des comptes/mondes de test créés puis supprimés :
 
 ---
 
-### V3.1-11 — Onglet « Solo » visible même avec un MJ humain déjà présent · `S` — fait
+### ☑ V3.1-11 — Onglet « Solo » visible même avec un MJ humain déjà présent · `S` — fait
+
+**Modèle conseillé : Sonnet** — une condition d'affichage.
 
 Constaté le 28 septembre, en discutant de V3.1-10 : la coquille joueuse
 (`PlayerShell.tsx:64`) liste « Solo » comme destination fixe, sans condition
@@ -815,7 +847,9 @@ ni quand `resolveCampaignId` renvoie `null` (monde sans campagne).
 
 ---
 
-### V3.1-12 — « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin · `M`
+### ☐ V3.1-12 — « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin · `M`
+
+**Modèle conseillé : Opus** — « voir comme » : usurpation d'identité, portée de sécurité.
 
 Constaté le 28 septembre, en discutant de V3.1-10 : « voir comme »
 (`startViewAs`, `src/server/services/viewAs.ts:24`) est aujourd'hui réservé
@@ -880,7 +914,9 @@ Indépendant de V3.1-10 : peut se faire avant, pendant ou après.
 
 ---
 
-### V3.1-13 — Sous-classes manquantes pour les classes des 4 joueuses actives · `M`
+### ☐ V3.1-13 — Sous-classes manquantes pour les classes des 4 joueuses actives · `M`
+
+**Modèle conseillé : Sonnet** — saisie de règles d'après les livres de l'auteur.
 
 Différent des autres tickets de ce backlog : pas un trou dans l'outil, un
 manque de **contenu** — relevé le 28 septembre en comparant les sous-classes
@@ -921,7 +957,9 @@ du jeu aujourd'hui — cohérent, pas un recul propre à ce contenu.
 
 ---
 
-### V3.1-14 — Aucun moyen pour une joueuse de créer elle-même son PJ sans personnage déjà assigné · `M`
+### ☐ V3.1-14 — Aucun moyen pour une joueuse de créer elle-même son PJ sans personnage déjà assigné · `M`
+
+**Modèle conseillé : Opus** — une joueuse crée sa fiche : propriété, RLS, canEditEntity.
 
 Constaté le 29 septembre, en vérifiant V3.1-9 : le lien de test donné par
 l'auteur menait à l'écran « Bienvenue » (`app/rejoindre/[token]/JoinForm.tsx`)
@@ -993,7 +1031,9 @@ second.
 
 ---
 
-### V3.1-15 — La Gestion de campagne illisible : invitations en haut, une carte par personne · `M` — **codé le 1ᵉʳ octobre, à vérifier en direct**
+### ☐ V3.1-15 — La Gestion de campagne illisible : invitations en haut, une carte par personne · `M` — **codé le 1ᵉʳ octobre, à vérifier en direct**
+
+**Modèle conseillé : Sonnet** — interface d'après l'esquisse ; reste la vérification en direct.
 
 Constaté le 1ᵉʳ octobre par l'auteur, captures à l'appui : la fenêtre « Gestion
 de campagne » (`CampaignDetail.tsx` + `InviteLinkPanel.tsx`) est « assez
@@ -1255,7 +1295,9 @@ tels quels si ce compte redevenait joueur.
 
 ---
 
-### V3.1-16 — Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse · `M`/`L` — **codé le 1ᵉʳ octobre, à vérifier en direct**
+### ☐ V3.1-16 — Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse · `M`/`L` — **codé le 1ᵉʳ octobre, à vérifier en direct**
+
+**Modèle conseillé : Sonnet** — interface d'après l'esquisse ; reste la vérification en direct.
 
 Constaté le 1ᵉʳ octobre par l'auteur, captures à l'appui : le Calendrier réel
 du MJ (`SchedulingMjPanel.tsx`) empile deux grilles hautes qu'il faut faire
@@ -1557,7 +1599,9 @@ l'affichage changent.
 
 ---
 
-### V3.1-17 — Un catalogue d'interface visuel, et une charte qui y renvoie · `M` — **fait le 1ᵉʳ octobre**
+### ☐ V3.1-17 — Un catalogue d'interface visuel, et une charte qui y renvoie · `M` — **fait le 1ᵉʳ octobre**
+
+**Modèle conseillé : Sonnet** — documentation et planches.
 
 **Constat.** Les défauts d'esthétique revenaient sur des éléments que la charte
 ne décrivait pas (l'ascenseur de la grille du calendrier, la bulle de date du
@@ -1619,7 +1663,9 @@ joueur, desktop et tablette).
 
 ---
 
-### V3.1-18 — Retirer les émojis de l'interface · `S` — **fait le 1ᵉʳ octobre**
+### ☐ V3.1-18 — Retirer les émojis de l'interface · `S` — **fait le 1ᵉʳ octobre**
+
+**Modèle conseillé : Sonnet** — remplacements mécaniques.
 
 **Constat** (relevé pour V3.1-17) : des émojis en couleur, qui ne suivent ni
 les jetons ni les modes et changent d'aspect selon l'appareil.
@@ -1666,7 +1712,9 @@ jour la charte » tient.
 
 ---
 
-### V3.1-19 — Refonte « verre minéral » (ticket parent) · `XL` — **en conception**
+### ☐ V3.1-19 — Refonte « verre minéral » (ticket parent) · `XL` — **en conception**
+
+**Modèle conseillé : Opus** — ticket parent : la conception et le découpage ; chaque lot décidé se code ensuite avec Sonnet, sauf mention contraire.
 
 Ce ticket regroupe **toute** la refonte graphique en cours. Chaque lot se code
 et se livre seul, dans l'ordre qu'on voudra ; le ticket est fini quand tous les
@@ -1999,7 +2047,9 @@ une planche « Rail repliable » à créer).
 
 ---
 
-### V3.1-20 — Fenêtres du MJ en deux volets à onglets · `L` — **décidé le 1ᵉʳ octobre, à coder**
+### ☐ V3.1-20 — Fenêtres du MJ en deux volets à onglets · `L` — **décidé le 1ᵉʳ octobre, à coder**
+
+**Modèle conseillé : Sonnet** — interface décidée et esquissée, sans nouvelle donnée.
 
 Lot g du ticket parent V3.1-19 (refonte « verre minéral »).
 
@@ -2046,7 +2096,9 @@ partie « fenêtres flottantes » de l'ADR 0006.
 
 ---
 
-### V3.1-21 — Cibler et résoudre depuis les boutons de jet · `L` — **décidé le 4 octobre, à concevoir**
+### ☐ V3.1-21 — Cibler et résoudre depuis les boutons de jet · `L` — **décidé le 4 octobre, à concevoir**
+
+**Modèle conseillé : Opus** — résolution partagée par MJ, joueur et solo ; dés lancés par le serveur (règle 8).
 
 **Constat.** Les boutons de jet de la fiche (touche, dégâts, sorts, soins)
 lancent un dé et l'affichent ; c'est ensuite à la table de calculer et de
@@ -2105,7 +2157,9 @@ son PJ, le MJ avec n'importe quel participant).
 
 ---
 
-### V3.1-22 — Salon de groupe et jets dans le chat · `M` — **à concevoir**
+### ☐ V3.1-22 — Salon de groupe et jets dans le chat · `M` — **à concevoir**
+
+**Modèle conseillé : Opus** — nouveau salon : schéma, RLS, temps réel.
 
 **Constat (vérifié dans le code le 4 octobre).** Le chat n'a que des fils
 privés joueur ↔ MJ : `campaign_chat_messages` porte un `thread_user_id`
@@ -2131,7 +2185,9 @@ de l'initiative ; un jet secret visible du seul joueur et du MJ).
 
 ---
 
-### V3.1-23 — Ce que les joueurs modifient eux-mêmes (Règles actives) · `M` — **décidé le 4 octobre, à concevoir**
+### ☐ V3.1-23 — Ce que les joueurs modifient eux-mêmes (Règles actives) · `M` — **décidé le 4 octobre, à concevoir**
+
+**Modèle conseillé : Opus** — droits d'écriture des joueurs, appliqués côté serveur ; schéma à vérifier.
 
 **Constat.** Un joueur peut aujourd'hui toucher à tout ce que sa fiche affiche
 en commande. À la table, certaines valeurs sont la prérogative du MJ — les
