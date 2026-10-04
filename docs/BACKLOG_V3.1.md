@@ -1676,7 +1676,7 @@ lots le sont.
 |---|---|---|
 | a | Rail repliable, MJ + joueur, desktop et tablette | décidé, à coder |
 | b | Dalle « Outils » : dés encochés + radio (point vert/rouge) | décidé, à coder |
-| c | Téléphone : barre joueur flottante ; **MJ : même barre** (Monde, Fiches, Table, Chat, Outils), feuilles du bas, pile de fiches | joueur décidé ; MJ proposé (planche d'exemple), à valider |
+| c | Téléphone : barre joueur flottante ; **MJ : même barre à six entrées** (Monde, Règles, Fiches, Table, Chat, Outils), feuilles du bas, pile de fiches | joueur décidé ; MJ proposé (planche d'exemple), à valider |
 | d | Ailes du solo : bande repliée (bouclier CA, PV, Niveau, Charge) | décidé, à coder |
 | e | Fiche de personnage à jauges circulaires, commande E ; onglets en pilule glissante | décidé, à coder |
 | f | Tablette : la fiche s'adapte à sa fenêtre (piste B) | décidé, à coder |
@@ -1780,15 +1780,25 @@ réellement la coquille :
     `BinderTabs` à convertir : accueil, fiche jouable, fiche solo, colonne
     Monde et coquille du solo, aperçu du créateur. Charte §3 et planche 3 du
     catalogue mises à jour avec le code.
-- **Smartphone du MJ (lot c)** — proposé le 4 octobre, planche « Smartphone
-  du MJ » (cinq écrans vivants : accueil, Monde, Fiches, Table, Outils).
-  Le tiroir disparaît : le MJ reçoit la même barre flottante que le joueur
-  — Monde, Fiches, Table | Chat, Outils, dé encoché au centre. Monde =
-  l'arborescence en page (recherche, « + » nouvelle entité) ; Fiches = une
-  fiche à la fois, pastille « 3 fiches » qui ouvre la pile ; Table =
-  initiative et rencontre préparée, « Tour suivant » au pouce ; Outils = les
-  quinze outils en grille par moment (séance, préparation, campagne), radio
-  comprise. **À valider par l'auteur.**
+- **Smartphone du MJ (lot c)** — proposé le 4 octobre, revu le jour même
+  sur retour de l'auteur. Planche « Smartphone du MJ » : six écrans vivants
+  (accueil, Monde, Règles, Fiches, Table, Outils).
+  - Le tiroir disparaît : le MJ reçoit la même barre flottante que le joueur,
+    **six entrées** (nombre pair, trois de chaque côté du dé encoché, comme
+    celle du joueur) : Monde, Règles, Fiches | Table, Chat, Outils.
+  - **Règles** : le wiki de règles du ruleset du monde (recherche,
+    catégories, consultées récemment) ; une règle s'ouvre en feuille du bas.
+  - **Fiches** : une fiche à la fois, pastille « N fiches » qui ouvre la pile.
+  - **Table** — nouvel outil, pas l'initiative (qui reste dans Outils) : les
+    PJ de la campagne modifiables en direct sans ouvrir chaque fiche — PV et
+    pièces d'or (commande E), inspiration, ajout d'objet, lien vers la fiche ;
+    en tête, « Toute la table » : XP, PO, repos court, repos long pour tous.
+    Chaque modification passe par le serveur comme depuis la fiche (même
+    autorisation, même journal). **Pertinent aussi sur desktop** : à décider
+    s'il devient un outil MJ à part entière.
+  - **Outils** : les outils MJ en grille par moment (séance, préparation,
+    campagne), radio comprise ; le chat n'y figure plus (il est dans la barre).
+  - **À valider par l'auteur.**
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
 
