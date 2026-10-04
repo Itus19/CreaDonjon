@@ -1677,7 +1677,7 @@ lots le sont.
 | a | Rail repliable, MJ + joueur, desktop et tablette | décidé, à coder |
 | b | Dalle « Outils » : dés encochés + radio (point vert/rouge) | décidé, à coder |
 | c | Téléphone : barre flottante à six entrées et dé encoché (MJ : Monde, Règles, Fiches, Table, Chat, Outils ; joueur : Perso., Édition, Notes, Wiki, Règles, Chat), feuilles du bas, wiki et règles (☰ + récents), éditeur plein écran en accordéon, outil de dés | décidé, à coder — planches définitives |
-| d | Ailes du solo : bande repliée (bouclier CA, PV, Niveau, Charge) | décidé, à coder |
+| d | Ailes du solo : bande repliée (bouclier CA, PV, Niveau, Charge) ; téléphone : modèle A (Jeu, Monde, Fiche \| Quêtes, Règles, Notes) | décidé, à coder — planches définitives |
 | e | Fiche de personnage à jauges circulaires, commande E ; onglets en pilule glissante | décidé, à coder |
 | f | Tablette : la fiche s'adapte à sa fenêtre (piste B) | décidé, à coder |
 | g | Fenêtres du MJ en deux volets à onglets → **V3.1-20** | décidé, à coder |
@@ -1695,7 +1695,7 @@ une fiche à la fois). Le lot c fixe la coquille téléphone ; les autres lots
 y adaptent leur contenu :
 - **a** rail → sur téléphone, la barre du bas (le rail n'existe pas sous 768 px) ;
 - **b** dalle Outils → dé encoché dans la barre ; radio et outils MJ dans la feuille « Outils » ;
-- **d** solo → la fiche repliée devient une bande de jauges au-dessus du fil ;
+- **d** solo → la fiche repliée devient une bande de jauges au-dessus du fil ; barre Jeu, Monde, Fiche | Quêtes, Règles, Notes (modèle A) ;
 - **e** fiche à jauges → bouclier CA, PV (commande E), niveau en une ligne, pilule à cinq onglets ;
 - **f** tablette → sans objet ;
 - **g** fenêtres → une fiche à la fois, pile « N fiches » en feuille (même adresse `?avec=`) ;
@@ -1966,16 +1966,30 @@ réellement la coquille :
     et **six planches définitives du téléphone** — MJ et joueur, chacune en
     trois états (écrans ; feuilles ouvertes ; plein écran et infobulles) —
     plus la fiche complète déroulée en sous-planche.
-- **Solo sur téléphone (lot d)** — quatre propositions vivantes, planche
-  « Solo sur téléphone » : fusion du téléphone joueur (barre flottante,
-  pilules, feuilles, outil de dés) et du solo desktop (bandeau lieu/heure,
-  fil, barre d'intention, colonne Monde à quatre onglets, fiche repliée en
-  bande de jauges). Toujours présentes : la bande de jauges (CA, PV, niveau,
-  charge, épuisement) et la barre d'intention.
-  A trois pages dans la barre (Jeu, Monde, Fiche | Quêtes, Règles, Notes) ;
-  B ailes en tiroirs, fidèle au desktop ; C fiche en feuille à trois crans
-  (jauges → « sous la main » → fiche complète) ; D trois pages qu'on fait
-  glisser (Monde ← Jeu → Fiche). **À trancher par l'auteur.**
+- **Solo sur téléphone (lot d) — décidé : modèle A** (les propositions B, C
+  et D sont retirées de l'esquisse). Trois planches définitives « Solo sur
+  téléphone » (écrans ; feuilles ouvertes ; plein écran et infobulles) :
+  - **Barre flottante** : Jeu, Monde, Fiche | Quêtes, Règles, Notes, dé
+    encoché au centre (outil de dés).
+  - **Pas de doublon** : la colonne Monde du desktop (Wiki, Quêtes, Présents,
+    Règles) perd Quêtes et Règles, qui n'existent qu'une fois, dans la barre.
+    L'écran **Monde** = le wiki du joueur (☰ sommaire, fiche dans la peau du
+    wiki) avec en tête « Présents dans la scène », puis les fiches consultées
+    récemment.
+  - **Jeu** : bandeau lieu/heure, bande de jauges (bouclier CA, PV, niveau,
+    charge, épuisement), fil, barre d'intention. « Jouer » ouvre l'outil de
+    dés **pré-rempli** (arme, cible) ; le joueur confirme par « Lancer » — le
+    serveur lance (règle 8), le tour s'ajoute au fil. ✦ ouvre la feuille des
+    conséquences (« Déjà écrit dans le monde » / « En attente de relecture »).
+  - **Fiche** : exactement la fiche du joueur hors solo — jets depuis les
+    caractéristiques, compétences, attaques et sorts via l'outil de dés
+    pré-rempli, Cibler sur les participants, infobulles de règles sur chaque
+    nom, état et concentration, inventaire avec équipement, pièces.
+  - **Quêtes** : pilule En cours / Terminées, une quête s'ouvre en feuille avec
+    ses étapes ; le moteur ouvre et ferme les quêtes, ce qu'il propose passe
+    par la relecture.
+  - **Règles** : comme partout (☰ + règles récentes, puis la règle en page).
+  - **Notes** : pilule Les miennes / Journal de partie (le récit tour par tour).
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
 
