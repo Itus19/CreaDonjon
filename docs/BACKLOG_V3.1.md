@@ -1789,13 +1789,30 @@ réellement la coquille :
   - **Règles** : le wiki de règles du ruleset du monde (recherche,
     catégories, consultées récemment) ; une règle s'ouvre en feuille du bas.
   - **Fiches** : une fiche à la fois, pastille « N fiches » qui ouvre la pile.
-  - **Table** — nouvel outil, pas l'initiative (qui reste dans Outils) : les
-    PJ de la campagne modifiables en direct sans ouvrir chaque fiche — PV et
-    pièces d'or (commande E), inspiration, ajout d'objet, lien vers la fiche ;
-    en tête, « Toute la table » : XP, PO, repos court, repos long pour tous.
+  - **Table** — nouvel outil, pas l'initiative (qui reste dans Outils).
+    **Tranché le 4 octobre : outil MJ à part entière**, sur desktop comme sur
+    téléphone (il rejoint la liste des outils du rail). Les PJ de la campagne
+    modifiables en direct sans ouvrir chaque fiche ; une ligne par PJ (jauge
+    de PV, inspiration, états), toucher la déplie :
+    - jauge circulaire de PV + commande E, PV temporaires ;
+    - inspiration **en quantité** (commande E). Les règles 2024 en font un
+      oui/non (on l'a ou pas) : le maximum vient du ruleset, 1 par défaut,
+      plus dans un ruleset personnel ;
+    - dés de vie ;
+    - les cinq pièces (pp, po, pe, pa, pc), chacune ▲/▼ ; le champ d'écart de
+      la commande E sert aux grosses sommes ;
+    - emplacements de sorts par niveau : une pastille par emplacement, la
+      toucher le dépense ou le rend ;
+    - états : puces retirables, « + état » ouvre les quatorze états 2024 en
+      feuille ; épuisement à part (niveaux 0 à 6, commande E) ;
+    - suggestions de l'esquisse, à confirmer : ressource de classe
+      (Inspiration bardique 2/3…), concentration (sort maintenu, « Rompre »),
+      ajout d'objet ;
+    - « Toute la table » : + XP, ± pièces, repos court, repos long.
     Chaque modification passe par le serveur comme depuis la fiche (même
-    autorisation, même journal). **Pertinent aussi sur desktop** : à décider
-    s'il devient un outil MJ à part entière.
+    autorisation, même journal) ; rien de dérivé n'est stocké (règle 16).
+    Le détail complet du personnage reste dans la fiche : l'esquisse de
+    l'écran Fiches montre le style, pas l'inventaire des informations.
   - **Outils** : les outils MJ en grille par moment (séance, préparation,
     campagne), radio comprise ; le chat n'y figure plus (il est dans la barre).
   - **À valider par l'auteur.**
