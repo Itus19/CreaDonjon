@@ -2360,6 +2360,22 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     table ; jets lus dans `dice_rolls` et intercalés, jamais recopiés ;
     jet secret de joueur = niveau `roller` et `rolled_by_user_id`.
 
+- **Table — en cours (5 octobre), trois propositions pour la fenêtre du
+  MJ** (planche « Propositions · outil Table », rangée Lot i). Rien dans le
+  code ; le téléphone est décidé (V3.1-34). Reprend de la fiche : anneau de
+  PV et PV temporaires, commande E, « Ce qui se dépense » en groupes, états
+  et concentration dans un champ, pièces avec commande E.
+  - **A** — la liste du téléphone, dépliée en grand (une ligne par PJ, un
+    toucher déplie tous les contrôles).
+  - **B** — une carte par PJ, tout visible d'emblée ; seules les pièces se
+    déplient.
+  - **C** — le tableau : une ligne par PJ, une colonne par valeur, chaque
+    cellule modifiable sur place.
+  - « Toute la table » (+ XP, ± pièces, repos court, repos long) vivant
+    dans les trois : à partager / à chacun, pour qui, aperçu, reste du
+    partage, montée de niveau signalée.
+  - **À trancher par l'auteur** : A, B ou C.
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
