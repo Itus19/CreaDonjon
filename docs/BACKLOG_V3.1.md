@@ -2061,6 +2061,30 @@ réellement la coquille :
   - **Notes** : pilule Les miennes / Journal de partie (le récit tour par tour).
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
+- **Fiche de personnage — réorganisation de l'esquisse (5 octobre, en
+  cours).** Constat de l'auteur : les planches de la fiche sont éparpillées
+  (téléphone seul en partie par partie, ordinateur incomplet et mêlé aux
+  décisions de l'outil de dés, mode combat seulement dans l'Initiative).
+  Plan validé : une zone « Fiche de personnage » — fiche d'ordinateur
+  vivante et déroulée partie par partie, téléphone, tablette (piste B),
+  fiche en combat, fiche vue par le MJ et par le joueur (droits V3.1-23),
+  jauge à commandes — et une zone « Outil de dés » à part.
+  **Manques relevés en comparant au code**, à remettre dans toutes les vues :
+  - Magie : **Préparé / Préparer** sur chaque sort (existe :
+    `MagicTab.tsx`), compteur de sorts préparés, étiquettes Rituel et
+    Concentration ;
+  - **niveau d'emplacement au lancer** (existe : sélecteur de
+    `ActionsTab.tsx`, `castSpell` accepte un niveau supérieur) — **à
+    trancher : planche « Question · niveau d'emplacement au lancer d'un
+    sort »**, quatre propositions (pilule sur la carte du sort, ligne dans
+    l'outil de dés, feuille de lancement, bouton divisé) ;
+  - Actions : sections Armes, Sorts préparés, Sorts mineurs, Ressources ;
+  - Inventaire : contenants, quantité, poids, harmonisation (3 au plus),
+    ajouter un objet ;
+  - En-tête : Repos court (dés de vie) et Repos long, Monter de niveau
+    quand l'XP le permet, identité (âge, genre, pronoms) ;
+  - Combat : ordre du tour, économie d'action, PV temporaires par-dessus la
+    jauge.
 
 #### Conception et découpage — fait le 4 octobre
 
