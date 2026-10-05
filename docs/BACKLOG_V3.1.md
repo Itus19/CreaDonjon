@@ -2405,6 +2405,27 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - Données : rien de nouveau en base pour (1) et (3) (assignations et
     entrées existent) ; (2) dépend du salon / des fils de V3.1-22.
 
+- **Rencontres — en cours (5 octobre), trois propositions pour la fenêtre
+  du MJ** (planche « Propositions · Rencontres », rangée Lot i). Existant
+  (`EncounterBuilder.tsx`) : nombre de PJ et niveau en listes, difficulté,
+  génération aléatoire (solveur), barre de budget, catalogue, rencontre en
+  cours, sauvegarde, « Lancer le combat » vers l'Initiative ; « Mes
+  combats » en simple liste qu'on ne rouvre pas ; table à part
+  `campaign_encounters`, alors que `specs/outils-mj.md` §4.3 voulait un bloc
+  `encounter` sur une fiche.
+  - **A** — l'atelier en trois colonnes (groupe, difficulté, mes
+    rencontres | catalogue | budget, rencontre, lancer).
+  - **B** — la barre de budget en tête, catalogue et rencontre dessous,
+    « Mes rencontres » en second onglet.
+  - **C** — une rencontre appartient à un lieu ou une quête (bloc de sa
+    fiche, comme la spécification) — changement de modèle.
+  - Communs : le groupe = les PJ de la campagne avec leurs vrais niveaux
+    (cocher un absent) ; trois paliers 2024 et la difficulté visée sur la
+    barre ; une rencontre sauvegardée se rouvre. Téléphone du MJ : Outils ›
+    Rencontres, catalogue en feuille.
+  - **À trancher par l'auteur** : A, B ou C ; si C, ADR (changement de
+    modèle).
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
