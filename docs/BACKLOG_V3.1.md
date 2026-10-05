@@ -2405,26 +2405,26 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - Données : rien de nouveau en base pour (1) et (3) (assignations et
     entrées existent) ; (2) dépend du salon / des fils de V3.1-22.
 
-- **Rencontres — en cours (5 octobre), trois propositions pour la fenêtre
-  du MJ** (planche « Propositions · Rencontres », rangée Lot i). Existant
-  (`EncounterBuilder.tsx`) : nombre de PJ et niveau en listes, difficulté,
-  génération aléatoire (solveur), barre de budget, catalogue, rencontre en
-  cours, sauvegarde, « Lancer le combat » vers l'Initiative ; « Mes
-  combats » en simple liste qu'on ne rouvre pas ; table à part
-  `campaign_encounters`, alors que `specs/outils-mj.md` §4.3 voulait un bloc
-  `encounter` sur une fiche.
-  - **A** — l'atelier en trois colonnes (groupe, difficulté, mes
-    rencontres | catalogue | budget, rencontre, lancer).
-  - **B** — la barre de budget en tête, catalogue et rencontre dessous,
-    « Mes rencontres » en second onglet.
-  - **C** — une rencontre appartient à un lieu ou une quête (bloc de sa
-    fiche, comme la spécification) — changement de modèle.
-  - Communs : le groupe = les PJ de la campagne avec leurs vrais niveaux
-    (cocher un absent) ; trois paliers 2024 et la difficulté visée sur la
-    barre ; une rencontre sauvegardée se rouvre. Téléphone du MJ : Outils ›
-    Rencontres, catalogue en feuille.
-  - **À trancher par l'auteur** : A, B ou C ; si C, ADR (changement de
-    modèle).
+- **Rencontres — décidé le 5 octobre : A, l'atelier en trois colonnes**
+  (planche « Décidé · Rencontres », rangée Lot i ; B et C retirées).
+  - Ordinateur : à gauche le groupe (PJ de la campagne, vrais niveaux, un
+    absent se décoche), la difficulté visée, « Mes rencontres » (une
+    rencontre se rouvre) ; au centre le catalogue du ruleset (recherche,
+    filtres par type) ; à droite la barre de budget (trois paliers 2024 et
+    la difficulté visée), la rencontre en cours (± nombre, ×), « Génération
+    aléatoire », sauvegarder, « Lancer le combat » vers l'Initiative.
+  - Tablette : les colonnes s'empilent. Téléphone du MJ : Outils ›
+    Rencontres, catalogue en feuille du bas.
+  - Inchangé : budget en donnée de ruleset (`encounter_budget`), solveur du
+    code, table `campaign_encounters` (C, la rencontre comme bloc d'une
+    fiche, écartée).
+- **Rail des planches du lot i (5 octobre, remarque de l'auteur)** : les
+  planches du lot i dessinaient un rail simplifié. Elles reprennent
+  désormais le rail décidé à l'identique (V3.1-27, planches « MJ · Desktop »
+  et « Joueur · Desktop ») : poignée de repli, logo du monde et son point,
+  dé encoché à l'anneau de 6 px, radio et son point ; côté joueur, sept
+  destinations (Solo compris) et « Mes mondes » en pied. **La référence du
+  rail reste V3.1-27**, jamais une planche d'outil.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
