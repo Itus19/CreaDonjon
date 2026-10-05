@@ -2502,6 +2502,26 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     sous-étapes dans l'ordre ; l'aperçu en direct à droite (le vrai moteur
     de la fiche). Un choix ouvert n'empêche pas de créer (rappelé sur la
     fiche).
+  - **Identité (remarque de l'auteur, 5 octobre)** : deux champs, Prénom
+    et Nom, puis genre et pronoms. **La naissance dans le calendrier du
+    monde** : on saisit l'âge (± ou au clavier), on choisit le jour et le
+    mois (les mois du calendrier du monde) ; l'année se calcule depuis la
+    date du jour en jeu (`calendar.currentDate`) : année du jour − âge,
+    moins un si l'anniversaire n'est pas encore passé cette année
+    (121 ans au 14 Germinal 1492, né un 3 Messidor → 1370). Une phrase
+    résume : « Née le 3 Messidor 1370 · 121 ans au 14 Germinal 1492 ».
+    Si le MJ n'a jamais réglé la date du jour, l'année se saisit à la main
+    (et l'âge attend la date du jour).
+  - **Données, à décider par un ADR avant de coder** (règle 16 : une
+    valeur dérivée n'est jamais stockée) : la fiche stocke la **date de
+    naissance** (une `GameDate` du calendrier du monde) et plus l'âge ;
+    l'âge devient dérivé de la date du jour en jeu et vieillit avec la
+    campagne. Le bloc `character` gagne `given_name` et `family_name` ;
+    le nom de l'entité (wiki, mentions, recherche) reste « Prénom Nom »
+    composé à la création — à trancher : se recompose-t-il quand on édite
+    l'un des deux, ou reste-t-il libre (surnom) ? Reprise de l'âge
+    existant : `age` devient une date de naissance au 1er du premier mois,
+    à corriger à la main.
   - MJ : dans une fenêtre, niveau de départ et multiclassage. Joueur : en
     page pleine (rail joueur, pas de fenêtres), niveau 1, sans
     multiclassage. Tablette : sans la colonne d'aperçu (l'étape Aperçu
