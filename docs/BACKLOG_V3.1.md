@@ -2134,6 +2134,31 @@ réellement la coquille :
     coupé, la joueuse lit « Le MJ dépense tes dés de vie » ;
   - Combat : ordre du tour, économie d'action, PV temporaires par-dessus la
     jauge.
+  - **Retouches de l'auteur (5 octobre)**, appliquées à toutes les vues :
+    - Inspiration : même gabarit que les autres badges (chiffre et libellé
+      centrés), ▲▼ dans une marge à droite.
+    - Sous la ligne Initiative / Vitesse / Maîtrise / Inspiration, une
+      seconde ligne au même style : Perception passive, Dés de vie, un champ
+      unique **États · concentration** (états en rouge, concentration
+      « ◎ Fou rire » en violet, « + » en coin pour le MJ ou si permis), puis
+      **Repos court** et **Repos long** l'un sur l'autre. Elle passe
+      au-dessus de « Ce qui se dépense ». Plus de puces séparées ni de
+      ligne « États ».
+    - Plus de bouton « Niveau 3 à 900 XP » : quand l'XP le permet, la
+      légende sous la jauge de niveau devient « monter de niveau ▸ ».
+    - Titres de section des onglets (Armes, Sorts mineurs, Ressources…)
+      plus visibles : capitales ambre, filet qui se prolonge ; les indices
+      passent sur une ligne discrète dessous.
+    - Pièces : la commande E (▲, champ, ▼) à droite de chaque pièce, sur
+      une seule rangée. Le regroupement ne forme jamais d'électrum (ADR
+      0036 : 10 pa → 1 po).
+    - Magie : les emplacements en pastilles rondes, comme l'égaliseur
+      (toucher dépense) ; plus de renvoi « voir Ce qui se dépense ».
+    - Traits : l'explication passe sous le titre, même quand le titre est un
+      lien de règle.
+    - **Question ouverte** : un bouton d'utilisation pour Chanceux et les
+      capacités qui jouent après un jet (Inspiration héroïque, Chanceux,
+      Inspiration bardique reçue), peut-être dans la bande du résultat.
 
 #### Conception et découpage — fait le 4 octobre
 
