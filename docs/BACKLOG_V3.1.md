@@ -2377,6 +2377,11 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     les jauges cèdent la place aux jets contre la mort.
   - En tête : « Toute la table » et le bandeau d'initiative. Le téléphone
     garde ses lignes dépliables (planches décidées).
+  - **Validé par l'auteur le 5 octobre.** Rappel de l'auteur, valable pour
+    tout le lot i : les ascenseurs suivent la charte (fins, 6 px, piste
+    transparente, curseur `edge` arrondi, `edge-strong` au survol — règle
+    globale de `app/globals.css`) ; aucun ascenseur natif. L'esquisse est
+    corrigée partout.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
