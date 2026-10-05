@@ -2342,26 +2342,23 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     `docs/SCHEMA.md` et un ADR. Ces entités ne rejoignent pas les listes du
     wiki (comme `session_journal`).
 
-- **Chat — en cours (5 octobre), trois propositions pour la fenêtre du MJ**
-  (planche « Propositions · chat », rangée Lot i). Le téléphone est déjà
-  décidé (pilule « Salon de table / Fils privés », jets en cartes) ; restent
-  l'ordinateur et la tablette. Rail présent partout.
-  - **A** — deux colonnes : « Salon de table » puis un fil par joueur
-    (dernier message, non-lus) à gauche, la conversation à droite (forme de
-    `ChatThreadsPanel` aujourd'hui).
-  - **B** — le salon en grand, les joueurs en pastilles en haut ; un fil
-    privé s'ouvre en colonne à droite sans quitter le salon.
-  - **C** — la pilule du téléphone, telle quelle.
-  - Joueur : page pleine (pas de fenêtres), deux conversations, « Salon de
-    table » et « MJ, en privé ».
-  - Jets en cartes : total, dés, modificateur, verdict (vert / rouge) s'il
-    y avait une CA ou un DD ; secret en pointillé violet, vu de son auteur
-    et du MJ seulement ; avec « DD privé », pas de verdict côté joueur.
-  - Données (V3.1-22), ma recommandation : le salon dans la même table
-    (`thread_user_id` nul = salon, RLS membres de la campagne) ; les jets
-    lus dans `dice_rolls` et intercalés par l'heure, jamais recopiés en
-    message. Migration et ADR dans le ticket.
-  - **À trancher par l'auteur** : A, B ou C ; le modèle de données.
+- **Chat — décidé le 5 octobre : B, le salon en grand, le privé sur le
+  côté** (planche « Décidé · chat (B) », rangée Lot i ; A et C retirées).
+  - MJ, ordinateur : la fenêtre Chat montre toujours le salon de table (où
+    passent les jets publics) ; les joueurs en pastilles en haut, avec leurs
+    non-lus ; une pastille ouvre son fil privé en colonne à droite, × la
+    referme.
+  - Tablette : le fil privé s'ouvre en panneau par-dessus le salon.
+  - Joueur : page pleine, deux conversations (« Salon de table », « MJ, en
+    privé »). Téléphones : planches déjà décidées.
+  - Jets en cartes : total, dés, modificateur, verdict vert / rouge s'il y
+    avait une CA ou un DD ; secret en pointillé violet, vu de son auteur et
+    du MJ ; avec « DD privé », pas de verdict côté joueur.
+  - **Demande de modification retirée** (décision de l'auteur : le MJ donne
+    ou reprend le droit d'édition par les octrois).
+  - Données : **ADR 0038** — salon = `thread_user_id` nul dans la même
+    table ; jets lus dans `dice_rolls` et intercalés, jamais recopiés ;
+    jet secret de joueur = niveau `roller` et `rolled_by_user_id`.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
@@ -2509,7 +2506,7 @@ son PJ, le MJ avec n'importe quel participant).
 
 ---
 
-### ☐ V3.1-22 — Salon de groupe et jets dans le chat · `M` — **à concevoir**
+### ☐ V3.1-22 — Salon de groupe et jets dans le chat · `M` — **décidé le 5 octobre, à coder**
 
 **Modèle conseillé : Opus** — nouveau salon : schéma, RLS, temps réel.
 
@@ -2523,17 +2520,27 @@ Les jets vivent dans `dice_rolls`, à part ; aucun n'apparaît dans le chat.
 « Table / MJ, en privé » et les jets arrivant en cartes (total, dés, verdict
 de l'initiative ; un jet secret visible du seul joueur et du MJ).
 
-**À trancher avant de coder.**
-- Le salon de table : un fil sans `thread_user_id` (nouvelle migration, RLS
-  « membre du monde »), ou une table à part.
-- Les jets dans le chat : lire `dice_rolls` dans le fil (même temps réel) ou
-  écrire un message par jet ; la visibilité d'un jet secret reste filtrée par
-  le serveur.
+**Tranché le 5 octobre — ADR 0038** (`docs/adr/0038-salon-de-table-et-jets-dans-le-chat.md`).
+- Salon : `thread_user_id` nullable, `null` = salon, RLS membres de la
+  campagne ; les fils privés ne changent pas.
+- Jets : lus dans `dice_rolls` et intercalés par `created_at`, jamais
+  recopiés en message.
+- Jet secret d'un joueur : `rolled_by_user_id` (posé par le serveur) et
+  niveau de visibilité `roller` (lanceur et MJ).
+- Interface : fenêtre B du MJ (salon en grand, fil privé en colonne à
+  droite), page pleine du joueur, tablette en panneau — planche « Décidé ·
+  chat (B) ».
+- La « Demande de modification » est retirée : `RequestEditButton`,
+  `relatedEntityId` (schéma Zod, route, repo) et leur affichage côté MJ.
 
 **Critères d'acceptation**
 - [ ] Un salon commun MJ + joueurs, à côté des fils privés.
 - [ ] Les jets publics apparaissent dans le salon en cartes ; les secrets seulement pour leur auteur et le MJ.
 - [ ] RLS : un joueur ne lit jamais le fil privé d'un autre.
+- [ ] RLS : un joueur ne lit jamais le jet `roller` d'un autre ; il lit le sien.
+- [ ] Fenêtre du MJ conforme à la planche B ; page pleine côté joueur ; tablette en panneau.
+- [ ] Plus aucune trace de la demande de modification (bouton, champ, route).
+- [ ] `docs/SCHEMA.md` à jour, migration nouvelle (aucune migration appliquée modifiée).
 
 ---
 
