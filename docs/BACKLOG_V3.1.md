@@ -2074,10 +2074,22 @@ réellement la coquille :
     `MagicTab.tsx`), compteur de sorts préparés, étiquettes Rituel et
     Concentration ;
   - **niveau d'emplacement au lancer** (existe : sélecteur de
-    `ActionsTab.tsx`, `castSpell` accepte un niveau supérieur) — **à
-    trancher : planche « Question · niveau d'emplacement au lancer d'un
-    sort »**, quatre propositions (pilule sur la carte du sort, ligne dans
-    l'outil de dés, feuille de lancement, bouton divisé) ;
+    `ActionsTab.tsx`, `castSpell` accepte un niveau supérieur) — **tranché
+    le 5 octobre : D, le bouton divisé** : il lance au plus petit niveau
+    disponible, sa flèche « niv. 1 ▾ » ouvre le menu des niveaux du
+    personnage (jusqu'à 9, le menu défile) avec restes et dés ; pour
+    l'occultiste, l'emplacement de pacte seul ;
+  - **affichage des emplacements jusqu'au niveau 20** (remarque de
+    l'auteur : la rangée actuelle ne tient pas un lanceur de niveau 20) —
+    règles 2024 : lanceur complet 4·3·3·3·3·2·2·1·1 (22 emplacements, 9
+    niveaux) ; occultiste : 4 emplacements de pacte de niveau 5 (repos
+    court) et un Arcanum mystique par niveau 6 à 9 (1 / repos long) ; une
+    ressource nombreuse (20 points de sorcellerie) est un **compteur à
+    commandes**, jamais une rangée de pastilles. **À trancher : planche
+    « Question · emplacements jusqu'au niveau 20 »**, quatre affichages
+    (grille 3 × 3, égaliseur, jetons de niveau, liste repliable), testables
+    sur un barde 5, une magicienne 20, une ensorceleuse 20, un occultiste
+    20 ;
   - Actions : sections Armes, Sorts préparés, Sorts mineurs, Ressources ;
   - Inventaire : contenants, quantité, poids, harmonisation (3 au plus),
     ajouter un objet ;
