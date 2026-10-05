@@ -2552,6 +2552,29 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     `src/i18n/fr.ts`) ; les planches qui écrivaient « Perspicacité » sont
     corrigées.
 
+- **Création — la Classe : en cours (5 octobre), trois propositions**
+  (planche « Propositions · Création — la Classe », à droite des
+  Origines).
+  - Ce qui naît du niveau de départ (MJ), commun aux trois : au niveau 3 la
+    sous-classe devient une sous-étape (cartes : celles du SRD et celles du
+    ruleset personnel), au niveau 4 « Amélioration » (caractéristique ou
+    don), au-delà du niveau 1 l'étape Points de vie. Chaque classe garde
+    ses choix propres (Ordre divin, Ordre primitif, Invocation, Style de
+    combat…) et son équipement A/B ; le budget de sorts suit la classe.
+    Côté joueur : niveau 1, pas de multiclassage.
+  - **A · La grille, puis la fiche** (comme les Origines) : douze classes en
+    petites cartes, la fiche (maîtrises, ce qu'elle donne jusqu'au niveau
+    choisi, ce qui en naît).
+  - **B · La grille, puis la progression** : la fiche montre la progression
+    niveau par niveau (acquis, niveau de départ, la suite estompée) ;
+    toucher un niveau le choisit.
+  - **C · Les emplacements de classe** : les classes du personnage en
+    emplacements, « + Ajouter une classe » (multiclassage, MJ) avec le
+    contrôle des prérequis (13 dans la caractéristique principale de
+    chaque classe ; Force ou Dextérité pour le Guerrier ; le MJ peut passer
+    outre).
+  - À trancher : A, B ou C.
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
