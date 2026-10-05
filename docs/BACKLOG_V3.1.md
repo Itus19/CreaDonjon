@@ -2310,6 +2310,11 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - **Rail toujours présent** sur ordinateur et tablette (rappel de
     l'auteur) : le bloc-notes est un outil du MJ, « MJ » allumé dans le
     rail.
+  - **MJ en fenêtre, joueur en page pleine** (rappel de l'auteur) : le MJ
+    ouvre le bloc-notes dans les fenêtres à volets (V3.1-20) ; le joueur n'a
+    pas de fenêtres, « Notes » est une entrée de son rail qui s'ouvre en page
+    pleine, même disposition (sommaire « Mes notes » puis « Partagées à la
+    table », page, fiche citée).
   - Ordinateur : sommaire arborescent à gauche (« Mon cahier » : pages,
     fiches ◆ et règles § épinglées ; puis « Partagées à la table »), la page
     au centre, la fiche citée ou épinglée dans le panneau de droite — le
@@ -2328,8 +2333,8 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     autrice. Privée, elle n'est envoyée à personne, MJ compris. Un nom cité
     que la table n'a pas découvert s'affiche sans lien (filtré côté
     serveur).
-  - **En base — proposition à valider avant tout code** (changement de
-    schéma, donc arrêt et ADR selon les règles de méthode) : sur le modèle
+  - **En base — principe accepté le 5 octobre, ADR 0037**
+    (`docs/adr/0037-une-page-partagee-devient-une-entite.md`) : sur le modèle
     du Livre de sessions, une page partagée devient sa propre entité
     (genre `shared_note`, visibilité de la table), son autrice en reçoit
     l'octroi d'écriture (`entity_grants`, que le MJ peut reprendre), et le
