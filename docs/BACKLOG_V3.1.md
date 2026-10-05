@@ -2079,17 +2079,25 @@ réellement la coquille :
     disponible, sa flèche « niv. 1 ▾ » ouvre le menu des niveaux du
     personnage (jusqu'à 9, le menu défile) avec restes et dés ; pour
     l'occultiste, l'emplacement de pacte seul ;
-  - **affichage des emplacements jusqu'au niveau 20** (remarque de
-    l'auteur : la rangée actuelle ne tient pas un lanceur de niveau 20) —
-    règles 2024 : lanceur complet 4·3·3·3·3·2·2·1·1 (22 emplacements, 9
-    niveaux) ; occultiste : 4 emplacements de pacte de niveau 5 (repos
-    court) et un Arcanum mystique par niveau 6 à 9 (1 / repos long) ; une
-    ressource nombreuse (20 points de sorcellerie) est un **compteur à
-    commandes**, jamais une rangée de pastilles. **À trancher : planche
-    « Question · emplacements jusqu'au niveau 20 »**, quatre affichages
-    (grille 3 × 3, égaliseur, jetons de niveau, liste repliable), testables
-    sur un barde 5, une magicienne 20, une ensorceleuse 20, un occultiste
-    20 ;
+  - **emplacements et ressources de classe — tranché le 5 octobre :
+    l'égaliseur à pastilles rondes** (planche « Décidé · emplacements et
+    ressources de classe »). Une seule ligne pour tout ce qui se dépense :
+    une colonne de pastilles par niveau d'emplacement (jusqu'à 9 ; lanceur
+    complet de niveau 20 : 4·3·3·3·3·2·2·1·1), puis, après un trait,
+    l'emplacement de pacte (violet) et chaque ressource de classe (ambre).
+    Une ressource de plus de six utilisations (points de sorcellerie, de
+    focalisation, Imposition des mains) devient un **compteur à commandes**
+    de la même hauteur. Sous chaque colonne, sa recharge (court, long,
+    « court +1 »). Toucher une colonne dépense ; toucher une pastille vide la
+    rend. La ligne défile si elle déborde.
+  - **Pas d'onglet par classe** (tour des douze classes, 5 octobre) : tout
+    ce qui se compte entre dans la ligne ci-dessus (bloc `resources`
+    générique, déjà en base) ; les options de classe entrent dans les
+    onglets existants — manœuvres et techniques de moine dans Actions,
+    métamagie et grimoire du magicien dans Magie, manifestations
+    d'occultiste dans Traits ; la Rage du barbare devient un état actif.
+    Manques de données → **V3.1-40** ; la **forme sauvage** du druide
+    demande sa propre vue, à esquisser ;
   - Actions : sections Armes, Sorts préparés, Sorts mineurs, Ressources ;
   - Inventaire : contenants, quantité, poids, harmonisation (3 au plus),
     ajouter un objet ;
@@ -2968,4 +2976,32 @@ déclencheurs).
 - [ ] Le résultat revient à l'auteur du jet ; verdict, puis dégâts ou effet appliqués.
 - [ ] Une cible hors restriction (Charme-personne sur un mort-vivant) est refusée avant toute demande (test du noyau).
 - [ ] Hors combat, la demande s'affiche dans l'outil Table ; en combat, dans l'Initiative.
+
+### ☐ V3.1-40 — Ressources de classe : magie de pacte et recharge partielle · `M` — **à concevoir**
+
+**Modèle conseillé : Opus** — deux formes de données que le moteur ne connaît pas encore.
+
+**Constat (lu le 5 octobre).** Les ressources de classe sont génériques
+(`src/core/schemas/blocks/resources.ts` : maximum en formule, recharge
+`short_rest` / `long_rest` / `dawn` / `never`) et les emplacements de sorts
+se dérivent de la progression de la classe (`spellcasting.ts`). Deux règles
+2024 n'y entrent pas :
+- **la magie de pacte** de l'occultiste : des emplacements tous du même
+  niveau (5 au niveau 20), rendus au repos court, distincts des
+  emplacements ordinaires (un multiclassé a les deux) ; l'Arcanum mystique
+  (un sort précis par niveau 6 à 9, une fois par repos long) ;
+- **la recharge partielle** : Rage, Conduit divin, Forme sauvage, Second
+  souffle rendent **une** utilisation au repos court et toutes au repos long.
+
+**À faire** : une valeur de recharge de plus (une au repos court), une
+source d'incantation « pacte » dans `spellcasting`, les repos (V3.1-24) qui
+les appliquent, et la ligne d'égaliseur (planche « Décidé · emplacements et
+ressources de classe ») qui les affiche. Validé par Zod, sans migration SQL
+(`jsonb`). Les libellés français des ressources (points de focalisation,
+Ruse magique…) sont à vérifier dans le manuel de l'auteur.
+
+**Critères d'acceptation**
+- [ ] Un occultiste 20 a 4 emplacements de pacte de niveau 5, rendus au repos court ; un multiclassé garde les deux réserves séparées.
+- [ ] Un repos court rend une Rage, un repos long toutes (test du noyau).
+- [ ] Une ressource de plus de six utilisations s'affiche en compteur.
 
