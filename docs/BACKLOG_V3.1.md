@@ -2383,25 +2383,27 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     globale de `app/globals.css`) ; aucun ascenseur natif. L'esquisse est
     corrigée partout.
 
-- **Livre de sessions — en cours (5 octobre), trois propositions pour la
-  fenêtre du MJ** (planche « Propositions · Livre de sessions », rangée
-  Lot i). Existant : le MJ assigne un devoir (date en jeu, rédactrice) ; la
-  joueuse le voit en bandeau au-dessus du wiki, donne un titre, écrit
-  l'entrée comme une fiche (bloc `session_journal_meta` : date en jeu,
-  autrice, date d'écriture, séance réelle) ; le wiki joueur s'ouvre sur
-  l'entrée la plus récente ; la liste du MJ n'est que du texte sans lien.
-  - **A** — le registre : une ligne par séance (date en jeu, titre,
-    autrice, séance, état), lecture dans une colonne à droite.
-  - **B** — le livre ouvert : sommaire chronologique à gauche, l'entrée en
-    grand ; devoirs en attente en ambre dans le sommaire.
-  - **C** — les devoirs en colonnes : séances sans devoir, en attente,
-    rédigées.
-  - Communs : prochaine séance réelle et date en jeu proposées d'office ;
-    « Assigner le devoir » en feuille avec « Qui l'écrit ».
-  - **Ajouts à valider** : suggestion « à qui le tour » ; « Relancer » via
-    le fil privé du chat ; côté joueur, le Livre en chapitre de tête du
-    sommaire du wiki.
-  - **À trancher par l'auteur** : A, B ou C ; les ajouts.
+- **Livre de sessions — décidé le 5 octobre : A, le registre, avec les
+  trois ajouts** (planche « Décidé · Livre de sessions », rangée Lot i ; B et
+  C retirées).
+  - MJ, ordinateur : une ligne par séance (date en jeu, titre, autrice,
+    séance réelle, état : Rédigée, En attente, Pas de devoir) ; en tête, la
+    prochaine séance et « Assigner le devoir » (feuille : séance réelle et
+    date en jeu proposées d'office, « Qui l'écrit ») ; une entrée — ou un
+    devoir en attente, avec « Relancer » et « Annuler le devoir » — s'ouvre
+    en lecture dans la colonne de droite.
+  - Tablette : registre réduit (date · titre · état), lecture en panneau
+    par-dessus. Téléphone du MJ : Outils › Livre de sessions, prochaine
+    séance puis registre en liste, entrée en plein écran.
+  - Joueur (ordinateur en page pleine, téléphone) : le bandeau du devoir,
+    puis le Livre en premier chapitre du sommaire du wiki.
+  - **Ajouts retenus** : (1) suggestion « à qui le tour » — la personne qui
+    n'a pas écrit depuis le plus longtemps (ou jamais) ; (2) « Relancer » —
+    un rappel posé dans le fil privé du chat (V3.1-22), journalisé ; (3) le
+    Livre en chapitre de tête du sommaire du wiki joueur (aujourd'hui, seule
+    la page d'ouverture y mène).
+  - Données : rien de nouveau en base pour (1) et (3) (assignations et
+    entrées existent) ; (2) dépend du salon / des fils de V3.1-22.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
