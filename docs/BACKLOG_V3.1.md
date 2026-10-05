@@ -2530,24 +2530,27 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     V3.1-7) reste à concevoir ; cette structure est l'endroit où il
     s'affiche.
 
-- **Création — les Origines (Espèce, Historique) : en cours (5 octobre),
-  trois propositions** (planche « Propositions · Création — les
-  Origines », à droite de la Création de personnage), dans la structure
-  décidée (le chemin qui se ramifie).
-  - Commun aux trois : une fiche détaillée de la sélection — traits en une
-    ligne chacun (la prose longue reste sur la fiche de règle), « Ce qui en
-    naît » en pastilles qui mènent aux sous-étapes. Les neuf espèces du
-    SRD 5.2.1 et les quatre historiques.
-  - Sous-étapes communes proposées : lignage, legs ou ascendance en
-    **tableau comparatif** (une colonne par option, ce qu'elle donne aux
-    niveaux 1, 3 et 5 ; au téléphone, une carte par option) ; **valeurs de
-    caractéristique de l'historique en jetons** (mode « +2 et +1 » ou
-    « +1 à chacune », on touche la caractéristique qui reçoit +2 puis celle
-    qui reçoit +1, le total s'affiche) au lieu de sept cartes de
-    combinaisons.
-  - **A · La grille, puis la fiche** ; **B · La liste et la fiche côte à
-    côte** ; **C · L'accordéon** (la sélection se déplie sur place).
-  - À trancher : A, B ou C, et les deux sous-étapes communes.
+- **Création — les Origines (Espèce, Historique) : décidé le 5 octobre,
+  A, la grille puis la fiche, avec les deux sous-étapes communes**
+  (planche « Décidé · Création — les Origines » ; B et C retirées).
+  - Espèce et Historique : les options en petites cartes (trois par ligne,
+    deux sur tablette et téléphone), dessous la fiche de la sélection —
+    traits en une ligne chacun, « Ce qui en naît » en pastilles qui mènent
+    aux sous-étapes.
+  - Lignage, legs, lignage gnomique : tableau comparatif (une colonne par
+    option, niveaux 1, 3 et 5 ; une carte par option au téléphone).
+    Valeurs de caractéristique de l'historique : jetons « +2 et +1 » ou
+    « +1 à chacune », le total s'affiche.
+  - **Choix expliqués (demande de l'auteur)** : la caractéristique
+    d'incantation dit à quoi elle sert (DD et attaque des sorts du trait,
+    rien d'autre) et chaque option montre son effet chiffré pour ce
+    personnage (« mod. +2 → DD 12, attaque +4 »), en signalant celle de la
+    classe ou la meilleure. Sens aiguisés : ce que couvre chaque
+    compétence, le total qu'elle donnerait, et « déjà maîtrisée
+    (Acolyte) : ce choix ne donnerait rien de plus ».
+  - Libellé : la compétence Insight se dit **Intuition** (comme
+    `src/i18n/fr.ts`) ; les planches qui écrivaient « Perspicacité » sont
+    corrigées.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
