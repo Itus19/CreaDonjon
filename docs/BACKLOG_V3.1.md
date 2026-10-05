@@ -2470,6 +2470,39 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     de caractéristique (même formule, touche-à-tout compris), tests
     d'abord. Rien en base (règle 16).
 
+- **Création de personnage — en cours (5 octobre) : d'abord la structure
+  du parcours, trois propositions** (planche « Propositions · Création de
+  personnage », rangée Lot i, à droite des Probabilités). L'auteur prévient
+  qu'il y a beaucoup d'écrans et des étapes propres à certaines classes ou
+  espèces : on décide **d'abord la structure** (comment les choix propres
+  apparaissent et se parcourent), **ensuite les écrans un par un**
+  (origines, classe, caractéristiques, sorts, équipement, aperçu), comme
+  pour la fiche.
+  - Ce qui existe : dix onglets (Identité, Espèce, Classe, Caractéristiques,
+    Points de vie si niveau > 1, Historique, Équipement, Compétences, Sorts
+    si incantateur, Aperçu) ; même assistant pour le MJ (fenêtre), le
+    joueur (page pleine, sans multiclassage) et la réécriture d'une fiche.
+  - Les choix propres relevés (V3.1-3, V3.1-6, V3.1-7) : lignage ou legs et
+    sa caractéristique d'incantation (Elfe, Gnome, Tieffelin), Sens
+    aiguisés, Compétent, Polyvalent (don d'origine, qui peut demander des
+    sorts), taille ; Ordre divin, Ordre primitif, Style de combat,
+    Expertise, maîtrise d'armes, invocations, sous-classe ; répartition
+    +2/+1 ou +1/+1/+1, don d'origine et ses choix (Initié à la magie), jeu
+    ou outil. Dans les trois propositions, un choix naît **là où sa source
+    est choisie** et disparaît si la source change.
+  - **A · Le chemin qui se ramifie** : étapes à gauche, les choix nés de
+    chaque étape en sous-étapes (point doré / vert), écran au centre,
+    aperçu en direct à droite.
+  - **B · La fiche à trous** : pas d'étapes, la fiche section par section ;
+    chaque choix ouvert est une pastille dorée dans sa section, ouverte en
+    panneau, « Choix suivant ».
+  - **C · Quatre onglets et la liste des choix** : Origines, Classe,
+    Caractéristiques, Sorts, Aperçu ; à droite les choix en attente rangés
+    par source, à cocher dans l'ordre qu'on veut.
+  - Téléphone : A en étapes plein écran avec barre de progression, B la
+    fiche et une feuille du bas, C les onglets et la liste en feuille.
+  - À trancher : A, B ou C.
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
