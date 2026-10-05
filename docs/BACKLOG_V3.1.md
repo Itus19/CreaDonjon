@@ -2414,7 +2414,10 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     la difficulté visée), la rencontre en cours (± nombre, ×), « Génération
     aléatoire », sauvegarder, « Lancer le combat » vers l'Initiative.
   - Tablette : les colonnes s'empilent. Téléphone du MJ : Outils ›
-    Rencontres, catalogue en feuille du bas.
+    Rencontres — le groupe en pastilles (prénom · niveau, toucher un absent
+    le retire, le budget suit ; ajouté à la demande de l'auteur), la
+    difficulté et la barre, la rencontre en cours, le catalogue en feuille
+    du bas, « Lancer le combat ».
   - Inchangé : budget en donnée de ruleset (`encounter_budget`), solveur du
     code, table `campaign_encounters` (C, la rencontre comme bloc d'une
     fiche, écartée).
