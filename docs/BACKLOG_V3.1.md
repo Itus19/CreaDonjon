@@ -2518,8 +2518,8 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     l'âge devient dérivé de la date du jour en jeu et vieillit avec la
     campagne. Le bloc `character` gagne `given_name` et `family_name` ;
     le nom de l'entité (wiki, mentions, recherche) reste « Prénom Nom »
-    composé à la création — à trancher : se recompose-t-il quand on édite
-    l'un des deux, ou reste-t-il libre (surnom) ? Reprise de l'âge
+    composé à la création, et **recomposé automatiquement** quand on
+    édite le prénom ou le nom (décidé par l'auteur le 5 octobre). Reprise de l'âge
     existant : `age` devient une date de naissance au 1er du premier mois,
     à corriger à la main.
   - MJ : dans une fenêtre, niveau de départ et multiclassage. Joueur : en
