@@ -2061,15 +2061,35 @@ réellement la coquille :
   - **Notes** : pilule Les miennes / Journal de partie (le récit tour par tour).
 - La refonte n'est pas figée : l'auteur prévoit encore des retouches de
   l'esquisse avant tout code.
-- **Fiche de personnage — réorganisation de l'esquisse (5 octobre, en
-  cours).** Constat de l'auteur : les planches de la fiche sont éparpillées
+- **Fiche de personnage — réorganisation de l'esquisse (faite le 5
+  octobre).** Constat de l'auteur : les planches de la fiche sont éparpillées
   (téléphone seul en partie par partie, ordinateur incomplet et mêlé aux
   décisions de l'outil de dés, mode combat seulement dans l'Initiative).
   Plan validé : une zone « Fiche de personnage » — fiche d'ordinateur
   vivante et déroulée partie par partie, téléphone, tablette (piste B),
   fiche en combat, fiche vue par le MJ et par le joueur (droits V3.1-23),
   jauge à commandes — et une zone « Outil de dés » à part.
-  **Manques relevés en comparant au code**, à remettre dans toutes les vues :
+  **Fait** : toutes les vues tirent la même fiche vivante (un seul moteur) ;
+  l'ancienne planche « fiche à jauges circulaires » et l'ancienne planche
+  tablette (dessin de fiche périmé) sont retirées. Zone **« Fiche de
+  personnage »** :
+  - « Décidé · fiche sur ordinateur, vivante et déroulée partie par partie »
+    (deux colonnes dans sa fenêtre : en-tête à gauche, pilule des onglets à
+    droite ; outil de dés ancré au dé du rail, règles en panneau) ;
+  - « Décidé · fiche sur téléphone, vivante et déroulée partie par partie » ;
+  - « Décidé · fiche sur tablette : elle suit la largeur de sa fenêtre
+    (piste B) » — tablette de 820 px, rail déployé, fenêtre ≈ 556 px : une
+    colonne, comme au téléphone ;
+  - « Décidé · fiche en combat » (téléphone et ordinateur, ordre du tour en
+    tête, même moteur que l'Initiative) ;
+  - « Décidé · fiche vue par le MJ et par le joueur » : deux téléphones, la
+    même fiche, réglés par les six interrupteurs de V3.1-23 ; le MJ garde
+    toutes les commandes, ses notes privées et « DD privé » ;
+  - « Décidé · jauge à commandes » et « Décidé · emplacements et ressources
+    de classe ».
+  Zone **« Outil de dés »** : « Décidé · outil de dés sur ordinateur et
+  tablette », « Décidé · le jet en animation ».
+  **Manques relevés en comparant au code**, remis dans toutes les vues :
   - Magie : **Préparé / Préparer** sur chaque sort (existe :
     `MagicTab.tsx`), compteur de sorts préparés, étiquettes Rituel et
     Concentration ;
@@ -2417,7 +2437,11 @@ fenêtres du MJ, tout écran où le joueur voit sa fiche.
   dépendent pas de ces réglages.
 
 Esquissé : planche « Téléphone du MJ — feuilles ouvertes », écran Outils →
-Règles actives ; fiche joueur sans « + état » ni ▲▼ d'inspiration.
+Règles actives ; planche « Décidé · fiche vue par le MJ et par le joueur »
+(zone « Fiche de personnage ») : les six interrupteurs, vivants, pilotent la
+fiche de la joueuse — coupé, la commande disparaît (« + état », ▲▼ de
+l'inspiration, des PV, des pièces ; colonnes « niv. » de l'égaliseur
+inertes).
 
 **À vérifier avant de coder** (règles de méthode) : où vit ce réglage
 (table ou colonne de campagne) et si `docs/SCHEMA.md` le prévoit — sinon
@@ -2521,8 +2545,9 @@ Sur téléphone, la pilule défile horizontalement si elle déborde.
 
 **Modèle conseillé : Sonnet** — interface esquissée, services existants.
 
-**Planches** : « Décidé · fiche à jauges circulaires (ordinateur) »,
-« Décidé · jauge à commandes (option E) ». **Départ** :
+**Planches** (zone « Fiche de personnage ») : « Décidé · fiche sur
+ordinateur, vivante et déroulée partie par partie », « Décidé · jauge à
+commandes (option E) ». **Départ** :
 `CharacterSheetHeader.tsx`, `JaugeCirculaire` (`FicheJouableEnTete.tsx`).
 **Dépend de** : 25.
 
@@ -2570,8 +2595,9 @@ Sur téléphone, la pilule défile horizontalement si elle déborde.
 
 **Modèle conseillé : Sonnet** — règle simple, planche à trois largeurs.
 
-**Planche** : « Décidé · tablette : la fiche s'adapte à sa fenêtre
-(piste B) ». **Dépend de** : 26.
+**Planche** : « Décidé · fiche sur tablette : elle suit la largeur de sa
+fenêtre (piste B) » (zone « Fiche de personnage » ; la fiche y prend, sous
+~640 px, la disposition du téléphone). **Dépend de** : 26.
 
 La fiche lit la largeur de **sa** fenêtre (requête de conteneur CSS, pas
 la largeur de l'écran) : sous ~640 px, les six caractéristiques passent en
@@ -2654,8 +2680,9 @@ Les éditeurs de blocs existants sont réutilisés tels quels à l'intérieur.
 
 **Modèle conseillé : Sonnet** — fiche entièrement esquissée ; services fournis par 24.
 
-**Planches** : « Sous-planche · fiche complète déroulée (téléphone) »,
-téléphone du joueur (trois planches). **Dépend de** : 24, 26, 29.
+**Planches** : « Décidé · fiche sur téléphone, vivante et déroulée partie
+par partie », « Décidé · fiche en combat », téléphone du joueur (trois
+planches). **Dépend de** : 24, 26, 29.
 
 - Ordre de la sous-planche : en-tête, bouclier CA et jauges PV, niveau,
   épuisement (commande E de 26), constantes, perception passive, dés de vie,
@@ -2685,8 +2712,9 @@ téléphone du joueur (trois planches). **Dépend de** : 24, 26, 29.
 **Planches** : téléphones (feuille des dés), « Décidé · outil de dés sur
 ordinateur et tablette », « Décidé · le jet en animation » (l'outil réel,
 issue du d20 forçable : réussite, échec, critique). C'est le même gabarit
-sur toutes les planches qui ont un outil de dés (fiche complète, six
-téléphones MJ et joueur, trois téléphones solo, ordinateur, Initiative).
+sur toutes les planches qui ont un outil de dés (zone « Fiche de
+personnage » entière, six téléphones MJ et joueur, trois téléphones solo,
+outil de dés sur ordinateur, Initiative).
 **Départ** : `DiceRollPanel.tsx`, `POST /api/campaigns/[id]/dice-rolls`.
 **Dépend de** : 29.
 
