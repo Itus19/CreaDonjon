@@ -2303,26 +2303,39 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     la « menace restante » (XP des adversaires encore debout rapportée à la
     rencontre) remplace le budget de rencontre.
 
-- **Bloc-notes — en cours (5 octobre), trois propositions vivantes**
-  (planche « Propositions · bloc-notes », rangée Lot i). Existant dans le
-  code : un cahier privé par compte et par monde (bloc `note_tree`,
-  `NotebookWorkspace.tsx`), pages imbriquées, fiches et règles épinglées,
-  second panneau interne (compagnon ou autre page), modèle « Préparation de
-  séance » pour le MJ.
-  - **A** — le cahier refait tel quel : sommaire à gauche, page, compagnon
-    interne à droite.
-  - **B** — la page en grand : plus de compagnon interne, une fiche ou une
-    règle (épinglée ou citée) s'ouvre en onglet dans le second volet des
-    fenêtres du MJ (V3.1-20) ; le sommaire devient un tiroir ☰.
-  - **C** — B plus un journal de séance : bande « Séance 12 · en cours »,
-    champ « Noter vite » qui ajoute une ligne horodatée (et le round
-    d'initiative) à la page « Journal de séance » — fonction nouvelle.
-  - Téléphone du MJ : Outils › Bloc-notes, épinglées en puces, pages en
-    liste, page en plein écran, fiche citée en feuille du bas.
-  - Téléphone du joueur : la pilule « Partagées à la table » de l'esquisse
-    du 4 octobre **n'existe pas en base** (cahier privé par construction).
-  - **À trancher par l'auteur** : A, B ou C ; le journal de séance ; les
-    notes partagées (changement de schéma) ou le retrait de la pilule.
+- **Bloc-notes — décidé le 5 octobre : A, le cahier refait, avec le
+  partage à la table** (planche « Décidé · bloc-notes (A) », rangée Lot i ;
+  B — fiches dans l'autre volet — et C — journal de séance — retirées de
+  l'esquisse ; le journal pourra revenir avec le Livre de sessions).
+  - **Rail toujours présent** sur ordinateur et tablette (rappel de
+    l'auteur) : le bloc-notes est un outil du MJ, « MJ » allumé dans le
+    rail.
+  - Ordinateur : sommaire arborescent à gauche (« Mon cahier » : pages,
+    fiches ◆ et règles § épinglées ; puis « Partagées à la table »), la page
+    au centre, la fiche citée ou épinglée dans le panneau de droite — le
+    cahier d'aujourd'hui (`NotebookWorkspace.tsx`) au style verre minéral.
+  - Tablette (fenêtre ≈ 556 px) : sommaire en tiroir ☰, fiche en panneau
+    par-dessus la page ; au-dessus de ~640 px, la disposition d'ordinateur.
+  - Téléphone du MJ : Outils › Bloc-notes, épinglées en puces, « Mon
+    cahier » puis « Partagées à la table » en liste, page en plein écran,
+    fiche citée en feuille du bas.
+  - Téléphone du joueur : Notes, pilule « Les miennes / Partagées à la
+    table ».
+  - **Partage à la table (voulu par l'auteur)** : chaque page de son cahier
+    porte « Privée | La table ». Partagée, la table la lit (MJ et joueurs),
+    seule son autrice l'écrit ; elle reste à sa place, marquée « partagée »,
+    et apparaît chez les autres sous « Partagées à la table » avec son
+    autrice. Privée, elle n'est envoyée à personne, MJ compris. Un nom cité
+    que la table n'a pas découvert s'affiche sans lien (filtré côté
+    serveur).
+  - **En base — proposition à valider avant tout code** (changement de
+    schéma, donc arrêt et ADR selon les règles de méthode) : sur le modèle
+    du Livre de sessions, une page partagée devient sa propre entité
+    (genre `shared_note`, visibilité de la table), son autrice en reçoit
+    l'octroi d'écriture (`entity_grants`, que le MJ peut reprendre), et le
+    cahier garde un lien vers elle. Pas de nouvelle table ; une migration,
+    `docs/SCHEMA.md` et un ADR. Ces entités ne rejoignent pas les listes du
+    wiki (comme `session_journal`).
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
