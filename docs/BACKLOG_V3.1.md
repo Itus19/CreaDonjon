@@ -2449,6 +2449,26 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     ruleset ; la prose de l'IA reste de la donnée revue avant création
     (règle 10) ; rien de nouveau en base.
 
+- **Probabilités — en cours (5 octobre), trois propositions** (planche
+  « Propositions · Probabilités », rangée Lot i, à droite des Générateurs).
+  - Ce qui existe : une page MJ, un tableau par PJ de la campagne
+    (compétence, modificateur, DD 10 / 15 / 20), avantage ou désavantage
+    de la fiche signalé, campagne au choix ; calcul pur
+    (`successProbability`), données calculées côté serveur.
+  - Commun aux trois : campagne en sélecteur compact, couleurs par seuil
+    (moins de 35 %, 35 à 65 %, plus de 65 %) ; rien en base (règle 16).
+  - **A · La matrice** : compétences en lignes, PJ en colonnes, % au DD
+    choisi (5 à 30, pas à pas ou en puces), le meilleur de chaque ligne
+    encadré, une case touchée explique son calcul.
+  - **B · La question du MJ** : la compétence à gauche (rangée par
+    caractéristique, meilleur % du groupe), les PJ classés en barres, le
+    calcul du PJ touché.
+  - **C · Les fiches, retouchées** : une carte par PJ, trois colonnes de DD
+    au choix (10·15·20, 5·10·15, 15·20·25).
+  - Téléphone du MJ : la compétence en feuille du bas, le DD en puces, les
+    PJ classés en barres.
+  - À trancher : A, B ou C.
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
