@@ -2428,6 +2428,26 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   dé encoché à l'anneau de 6 px, radio et son point ; côté joueur, sept
   destinations (Solo compris) et « Mes mondes » en pied. **La référence du
   rail reste V3.1-27**, jamais une planche d'outil.
+- **Générateurs — en cours (5 octobre), trois propositions** (planche
+  « Propositions · Générateurs », rangée Lot i, à droite des Rencontres).
+  - Ce qui existe : outils en onglets (taverne, échoppe, PNJ…), variantes
+    en listes déroulantes (dont « Aléatoire »), sections tirées une à une,
+    prose de l'IA en 40 / 80 / 120 mots, « Éditer les tables » en fenêtre,
+    « Détails des tirages » (↻ par emplacement), menu de taverne en mise en
+    page dédiée, « Créer la fiche » (promotion en entité).
+  - Commun aux trois : variantes en puces, « Tout relancer », menu en deux
+    colonnes (une au téléphone), marque « IA » sur les passages écrits par
+    le modèle (le résultat reste de la donnée, revu avant création).
+  - **A · La fiche qui se compose** : l'aperçu de la fiche à créer, chaque
+    morceau tiré souligné en pointillé et relançable seul ; tables en
+    panneau à droite.
+  - **B · Les sections en cartes** : l'existant au style verre minéral, une
+    carte par section avec « Détails des tirages » dépliable.
+  - **C · Les tirages à gauche, la fiche à droite** : emplacements (dé,
+    résultat, ↻) et aperçu côte à côte.
+  - Téléphone du MJ : Outils › Générateurs, pilule des outils, variantes en
+    feuille du bas, aperçu de la fiche, « Créer la fiche ».
+  - À trancher : A, B ou C.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
