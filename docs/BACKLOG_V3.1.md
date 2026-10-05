@@ -2158,7 +2158,37 @@ réellement la coquille :
       lien de règle.
     - **Question ouverte** : un bouton d'utilisation pour Chanceux et les
       capacités qui jouent après un jet (Inspiration héroïque, Chanceux,
-      Inspiration bardique reçue), peut-être dans la bande du résultat.
+      Inspiration bardique reçue). Planche « Proposition · la bande
+      d'après-jet » (zone « Outil de dés »), trois variantes vivantes sur le
+      même jet : **A** les options côte à côte dans la bande (violet) ;
+      **B** un bouton « Modifier le jet » qui déplie la liste sous la case ;
+      **C** des pastilles rondes en bas à droite de la case. Dans les trois :
+      seulement sur un jet de d20 de son propre personnage, jamais sur une
+      réussite (la bande garde « Lancer les dégâts »), une fois par jet, le
+      point retiré à l'usage. **À trancher par l'auteur** ; le moment exact
+      de Chanceux (don 2024) est à vérifier dans le Manuel des joueurs.
+  - **Deuxièmes retouches (5 octobre)** :
+    - Cause trouvée des badges « Inspiration » et « Dés de vie » différents
+      dans le canevas : la valeur dynamique y est enveloppée dans un `span`
+      qui héritait du style des libellés (9 px, capitales). Le style du
+      libellé ne touche plus la valeur. **À retenir pour le code** : un
+      sélecteur de libellé (`.badge span`) ne doit jamais atteindre la
+      valeur.
+    - Dés de vie : « 2/2 » en grand, « Dés de vie d8 » en libellé, comme
+      Perception passive.
+    - Repos court / long : recette « bouton fantôme accent » de la charte
+      (§3 : contour et texte ambre, `rounded-full`, survol `accent/10`).
+    - Inventaire : la jauge de charge sur la ligne des pièces (« Charge et
+      pièces ») ; sur téléphone, jauge de 50 px puis les cinq pièces, chacune
+      avec sa commande E.
+    - Actions → Ressources : restes en pastilles rondes ambre (Inspiration
+      bardique ●●○, Chanceux ●●).
+    - « Ce qui se dépense » : le titre unique laisse place à des **groupes
+      titrés répartis horizontalement** — « Emplacements de sorts »
+      (niveaux, puis pacte), « Classe », « Traits » (dons, espèce) — chacun
+      avec ses colonnes de pastilles réparties sous son titre, séparés par un
+      filet. La planche « égaliseur, douze classes » suit (largeur de groupe
+      proportionnelle à ses colonnes).
 
 #### Conception et découpage — fait le 4 octobre
 
