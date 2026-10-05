@@ -2383,6 +2383,26 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     globale de `app/globals.css`) ; aucun ascenseur natif. L'esquisse est
     corrigée partout.
 
+- **Livre de sessions — en cours (5 octobre), trois propositions pour la
+  fenêtre du MJ** (planche « Propositions · Livre de sessions », rangée
+  Lot i). Existant : le MJ assigne un devoir (date en jeu, rédactrice) ; la
+  joueuse le voit en bandeau au-dessus du wiki, donne un titre, écrit
+  l'entrée comme une fiche (bloc `session_journal_meta` : date en jeu,
+  autrice, date d'écriture, séance réelle) ; le wiki joueur s'ouvre sur
+  l'entrée la plus récente ; la liste du MJ n'est que du texte sans lien.
+  - **A** — le registre : une ligne par séance (date en jeu, titre,
+    autrice, séance, état), lecture dans une colonne à droite.
+  - **B** — le livre ouvert : sommaire chronologique à gauche, l'entrée en
+    grand ; devoirs en attente en ambre dans le sommaire.
+  - **C** — les devoirs en colonnes : séances sans devoir, en attente,
+    rédigées.
+  - Communs : prochaine séance réelle et date en jeu proposées d'office ;
+    « Assigner le devoir » en feuille avec « Qui l'écrit ».
+  - **Ajouts à valider** : suggestion « à qui le tour » ; « Relancer » via
+    le fil privé du chat ; côté joueur, le Livre en chapitre de tête du
+    sommaire du wiki.
+  - **À trancher par l'auteur** : A, B ou C ; les ajouts.
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
