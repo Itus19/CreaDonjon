@@ -2123,6 +2123,15 @@ réellement la coquille :
     ajouter un objet ;
   - En-tête : Repos court (dés de vie) et Repos long, Monter de niveau
     quand l'XP le permet, identité (âge, genre, pronoms) ;
+  - **Repos court — précisé le 5 octobre** : le bouton ouvre un panneau
+    « Repos court · 1 heure » sous la barre des repos : dés de vie restants
+    (pastilles et « 2/2 d8 »), « **Dépenser un dé · 1d8 + 1** » qui ouvre
+    l'outil de dés pré-rempli (le serveur lance, règle 8) et rend 1d8 + mod.
+    de Constitution en PV, plafonnés au maximum ; bouton inerte à 0 dé ou à
+    PV pleins. « Terminer le repos » recharge ce qui revient au repos court.
+    Le repos long rend PV **et tous les dés de vie** (règles 2024).
+    L'interrupteur « Leurs dés de vie » de V3.1-23 porte sur ce seul bouton :
+    coupé, la joueuse lit « Le MJ dépense tes dés de vie » ;
   - Combat : ordre du tour, économie d'action, PV temporaires par-dessus la
     jauge.
 
@@ -2441,7 +2450,8 @@ Règles actives ; planche « Décidé · fiche vue par le MJ et par le joueur »
 (zone « Fiche de personnage ») : les six interrupteurs, vivants, pilotent la
 fiche de la joueuse — coupé, la commande disparaît (« + état », ▲▼ de
 l'inspiration, des PV, des pièces ; colonnes « niv. » de l'égaliseur
-inertes).
+inertes ; « Dépenser un dé » du repos court remplacé par « Le MJ dépense
+tes dés de vie »).
 
 **À vérifier avant de coder** (règles de méthode) : où vit ce réglage
 (table ou colonne de campagne) et si `docs/SCHEMA.md` le prévoit — sinon
