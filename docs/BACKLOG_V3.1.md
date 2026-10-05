@@ -2360,21 +2360,23 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     table ; jets lus dans `dice_rolls` et intercalés, jamais recopiés ;
     jet secret de joueur = niveau `roller` et `rolled_by_user_id`.
 
-- **Table — en cours (5 octobre), trois propositions pour la fenêtre du
-  MJ** (planche « Propositions · outil Table », rangée Lot i). Rien dans le
-  code ; le téléphone est décidé (V3.1-34). Reprend de la fiche : anneau de
-  PV et PV temporaires, commande E, « Ce qui se dépense » en groupes, états
-  et concentration dans un champ, pièces avec commande E.
-  - **A** — la liste du téléphone, dépliée en grand (une ligne par PJ, un
-    toucher déplie tous les contrôles).
-  - **B** — une carte par PJ, tout visible d'emblée ; seules les pièces se
-    déplient.
-  - **C** — le tableau : une ligne par PJ, une colonne par valeur, chaque
-    cellule modifiable sur place.
-  - « Toute la table » (+ XP, ± pièces, repos court, repos long) vivant
-    dans les trois : à partager / à chacun, pour qui, aperçu, reste du
-    partage, montée de niveau signalée.
-  - **À trancher par l'auteur** : A, B ou C.
+- **Table — décidé le 5 octobre : B retouchée, une carte par PJ = le haut
+  de la fiche** (planche « Décidé · outil Table », rangée Lot i ; A et C
+  retirées). Idée de l'auteur : la carte reprend exactement le haut de la
+  fiche (bouclier de CA, PV et temporaires, niveau et XP, épuisement avec la
+  commande E ; initiative, vitesse, maîtrise, inspiration ; Perception
+  passive, dés de vie, états · concentration, repos court et long ; « Ce qui
+  se dépense » en groupes), plus la charge et les pièces en dessous. Le même
+  composant que la fiche, en mode MJ.
+  - ▲▼ ajoutés sur les **dés de vie**, au gabarit de l'inspiration.
+  - **Pas de commande sur la CA** (décision de l'auteur) : elle reste
+    calculée par le moteur (armure, Dextérité, bouclier), comme initiative,
+    vitesse, maîtrise et Perception passive (règle 16).
+  - Deux cartes par rangée dans la fenêtre du MJ ; une seule quand la
+    fenêtre partage l'écran avec un second volet, et sur tablette. À 0 PV,
+    les jauges cèdent la place aux jets contre la mort.
+  - En tête : « Toute la table » et le bandeau d'initiative. Le téléphone
+    garde ses lignes dépliables (planches décidées).
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
@@ -2997,11 +2999,18 @@ feuilles ouvertes » (Toute la table). **Départ** : `mjToolWindows.ts`,
 - Chaque geste passe par le même service que la fiche (même journal) ; le
   MJ a toutes les commandes. Sur ordinateur : fenêtre d'outil MJ, ascenseur
   fin ; sur téléphone : `no-scrollbar`.
+- **Ordinateur et tablette — décidé le 5 octobre** (planche « Décidé ·
+  outil Table ») : une carte par PJ, qui **est** le haut de la fiche
+  (composant partagé avec V3.1-26 / V3.1-32, en mode MJ), plus la charge et
+  les pièces ; ▲▼ sur les dés de vie ; aucune commande sur CA, initiative,
+  vitesse, maîtrise, Perception passive (valeurs dérivées). Deux cartes par
+  rangée, une seule dans un volet partagé ou sur tablette.
 
 **Critères d'acceptation**
 - [ ] Les gestes de la planche, chacun journalisé une fois.
 - [ ] Partage de 10 po entre trois PJ : 3 po chacun, le reste affiché.
 - [ ] Un repos long sur trois PJ : trois résultats, trois événements `long_rest`.
+- [ ] Ordinateur : la carte réutilise le composant du haut de fiche, sans le dupliquer.
 
 ### ☐ V3.1-35 — Accueil en tableau de bord (lot h) · `M` — **prêt**
 
