@@ -2156,17 +2156,22 @@ réellement la coquille :
       (toucher dépense) ; plus de renvoi « voir Ce qui se dépense ».
     - Traits : l'explication passe sous le titre, même quand le titre est un
       lien de règle.
-    - **Question ouverte** : un bouton d'utilisation pour Chanceux et les
-      capacités qui jouent après un jet (Inspiration héroïque, Chanceux,
-      Inspiration bardique reçue). Planche « Proposition · la bande
-      d'après-jet » (zone « Outil de dés »), trois variantes vivantes sur le
-      même jet : **A** les options côte à côte dans la bande (violet) ;
-      **B** un bouton « Modifier le jet » qui déplie la liste sous la case ;
-      **C** des pastilles rondes en bas à droite de la case. Dans les trois :
-      seulement sur un jet de d20 de son propre personnage, jamais sur une
-      réussite (la bande garde « Lancer les dégâts »), une fois par jet, le
-      point retiré à l'usage. **À trancher par l'auteur** ; le moment exact
-      de Chanceux (don 2024) est à vérifier dans le Manuel des joueurs.
+    - **Capacités qui jouent après un jet — tranché le 5 octobre : A, la
+      bande d'après-jet.** Trois variantes ont été comparées (A options dans
+      la bande, B bouton « Modifier le jet » et menu, C pastilles dans la
+      case) ; B et C sont retirées de l'esquisse. Sur un jet de d20 raté de
+      son propre personnage (attaque, test, sauvegarde ; ou sans DD connu),
+      la bande du bas propose, côte à côte et en violet (pour ne pas la
+      confondre avec « Lancer les dégâts », ambre) : **Relancer**
+      (Inspiration héroïque : nouveau d20, il remplace l'ancien),
+      **Avantage** (Chanceux : second d20, le meilleur compte),
+      **+ d6** (Inspiration bardique reçue d'un autre barde, après un
+      échec). Une fois par jet ; le point est retiré à l'usage ; la case
+      rejoue scintillement et verdict, une ligne dit ce qui a changé ; le
+      serveur lance toujours (règle 8). Sur une réussite, rien : la bande
+      garde « Lancer les dégâts ». Dans l'onglet Actions, Chanceux garde
+      ses pastilles. Le moment exact de Chanceux (don 2024) est à vérifier
+      dans le Manuel des joueurs. Ticket : **V3.1-33**.
   - **Deuxièmes retouches (5 octobre)** :
     - Cause trouvée des badges « Inspiration » et « Dés de vie » différents
       dans le canevas : la valeur dynamique y est enveloppée dans un `span`
@@ -2880,6 +2885,7 @@ outil de dés sur ordinateur, Initiative).
 - [ ] Verdict seulement contre une CA ou un DD, en remplissage de la case : vert, rouge, or au 20 naturel ; mouvement réduit : teinte sans mouvement.
 - [ ] Bande « Lancer les dégâts » seulement sur une réussite suivie de dégâts ; le jet de dégâts s'applique à la cible et affiche l'effet à la place du verdict, sans remplissage.
 - [ ] Monstre qui touche un joueur : « Valider · dégâts » / « Faire échouer » côté MJ.
+- [ ] Bande d'après-jet (décision A du 5 octobre, V3.1-19) : sur un d20 raté de son personnage, Relancer (Inspiration héroïque), Avantage (Chanceux), + d6 (Inspiration bardique reçue) selon ce que la fiche possède ; une fois par jet ; le point est retiré côté serveur et le nouveau jet est lancé par le serveur ; rien sur une réussite.
 
 ### ☐ V3.1-34 — L'outil Table du MJ · `L` — **prêt**
 
