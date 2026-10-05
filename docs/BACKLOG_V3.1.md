@@ -2303,6 +2303,27 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     la « menace restante » (XP des adversaires encore debout rapportée à la
     rencontre) remplace le budget de rencontre.
 
+- **Bloc-notes — en cours (5 octobre), trois propositions vivantes**
+  (planche « Propositions · bloc-notes », rangée Lot i). Existant dans le
+  code : un cahier privé par compte et par monde (bloc `note_tree`,
+  `NotebookWorkspace.tsx`), pages imbriquées, fiches et règles épinglées,
+  second panneau interne (compagnon ou autre page), modèle « Préparation de
+  séance » pour le MJ.
+  - **A** — le cahier refait tel quel : sommaire à gauche, page, compagnon
+    interne à droite.
+  - **B** — la page en grand : plus de compagnon interne, une fiche ou une
+    règle (épinglée ou citée) s'ouvre en onglet dans le second volet des
+    fenêtres du MJ (V3.1-20) ; le sommaire devient un tiroir ☰.
+  - **C** — B plus un journal de séance : bande « Séance 12 · en cours »,
+    champ « Noter vite » qui ajoute une ligne horodatée (et le round
+    d'initiative) à la page « Journal de séance » — fonction nouvelle.
+  - Téléphone du MJ : Outils › Bloc-notes, épinglées en puces, pages en
+    liste, page en plein écran, fiche citée en feuille du bas.
+  - Téléphone du joueur : la pilule « Partagées à la table » de l'esquisse
+    du 4 octobre **n'existe pas en base** (cahier privé par construction).
+  - **À trancher par l'auteur** : A, B ou C ; le journal de séance ; les
+    notes partagées (changement de schéma) ou le retrait de la pilule.
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
