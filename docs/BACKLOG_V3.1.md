@@ -2476,8 +2476,18 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   (origines, classe, caractéristiques, sorts, équipement, aperçu).
   - Étapes à gauche : Identité, Espèce, Classe, Caractéristiques, Points
     de vie (seulement au-delà du niveau 1), Historique, Équipement, Sorts
-    (seulement pour un incantateur), Aperçu. Les Compétences quittent leur
-    onglet : chaque choix de compétence vit sous l'étape qui l'accorde.
+    (seulement pour un incantateur), Aperçu. L'onglet Compétences
+    disparaît, ses trois contenus sont redistribués : chaque choix de
+    compétence et de maîtrise d'armes vit sous l'étape qui l'accorde ; **les
+    langues (le Commun, plus deux au choix) vivent sous Identité** — en
+    2024 elles appartiennent au personnage, ni à l'espèce ni à
+    l'historique (le code les rattache déjà à « Personnage »,
+    `resolvedRuleset.ts`) ; une langue donnée par une classe (Roublard :
+    Argot des voleurs acquis, plus une au choix) sous Classe, une langue
+    fixe (druidique) affichée comme acquise ; un historique ou une espèce
+    maison qui en donne les fait naître sous son étape. La grille des
+    dix-huit compétences et de leurs modificateurs passe dans l'aperçu
+    (colonne de droite et étape Aperçu). Remarque de l'auteur, 5 octobre.
   - **Sous chaque étape, les choix qu'elle fait naître**, en sous-étapes
     (point doré à faire, vert fait ; « n à faire » sur l'étape) : lignage ou
     legs et sa caractéristique d'incantation, Sens aiguisés, Compétent,
