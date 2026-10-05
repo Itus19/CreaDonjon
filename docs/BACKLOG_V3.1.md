@@ -2989,12 +2989,17 @@ feuilles ouvertes » (Toute la table). **Départ** : `mjToolWindows.ts`,
 - Une ligne par PJ de la campagne : nom + niveau ; dessous « joueur · CA ·
   PV » puis la ligne des états ; à droite classe et sous-classe. Toucher
   déplie.
-- Déplié : jauge de PV + commande E, PV temporaires ; inspiration en
-  quantité ; dés de vie ; les cinq pièces ▲▼ (`changeCurrency`, la monnaie
-  se fait seule, un message dit le change fait) ; emplacements de sorts en
-  pastilles ; états (puces retirables, « + état » ouvre les états du ruleset
-  en feuille) ; épuisement ; ressource de classe ; concentration
-  (« Rompre ») ; ajout d'objet.
+- Déplié — **revu le 5 octobre** (alignement sur la fiche et la carte de
+  l'ordinateur) : la ligne dépliée **est** le haut de la fiche du téléphone,
+  même composant que la carte de l'ordinateur — bouclier de CA ; PV
+  (temporaires par-dessus), niveau et XP, épuisement, chacun avec la
+  commande E ; initiative, vitesse, maîtrise, inspiration ▲▼ ; Perception
+  passive, dés de vie ▲▼, états · concentration (× retire ou rompt, « + »
+  ouvre les états du ruleset en feuille), repos court et long du PJ ; « Ce
+  qui se dépense » en groupes ; charge et pièces avec commande E
+  (`changeCurrency`, un message dit le change fait). Aucune commande sur
+  CA, initiative, vitesse, maîtrise, Perception passive. La ligne repliée ne
+  change pas.
 - À 0 PV, la ligne se transforme : fond rouge, « Contre la mort »,
   trois réussites / trois échecs, « Soigner +1 PV » (règles de 24).
 - « Toute la table » : + XP, ± pièces, repos court, repos long — chacun en
