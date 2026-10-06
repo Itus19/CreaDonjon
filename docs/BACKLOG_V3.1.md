@@ -2522,9 +2522,9 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     édite le prénom ou le nom (décidé par l'auteur le 5 octobre). Reprise de l'âge
     existant : `age` devient une date de naissance au 1er du premier mois,
     à corriger à la main.
-  - MJ : dans une fenêtre, niveau de départ et multiclassage. Joueur : en
-    page pleine (rail joueur, pas de fenêtres), niveau 1, sans
-    multiclassage. Tablette : sans la colonne d'aperçu (l'étape Aperçu
+  - MJ : dans une fenêtre. Joueur : en page pleine (rail joueur, pas de
+    fenêtres), mêmes droits que le MJ — niveau de départ et multiclassage
+    (décidé le 6 octobre, voir Classe). Tablette : sans la colonne d'aperçu (l'étape Aperçu
     reste). Téléphone : une étape par écran, barre de progression.
   - Dépendance : le mécanisme générique des choix (V3.1-3, V3.1-6,
     V3.1-7) reste à concevoir ; cette structure est l'endroit où il
@@ -2552,28 +2552,47 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     `src/i18n/fr.ts`) ; les planches qui écrivaient « Perspicacité » sont
     corrigées.
 
-- **Création — la Classe : en cours (5 octobre), trois propositions**
-  (planche « Propositions · Création — la Classe », à droite des
-  Origines).
-  - Ce qui naît du niveau de départ (MJ), commun aux trois : au niveau 3 la
-    sous-classe devient une sous-étape (cartes : celles du SRD et celles du
-    ruleset personnel), au niveau 4 « Amélioration » (caractéristique ou
-    don), au-delà du niveau 1 l'étape Points de vie. Chaque classe garde
-    ses choix propres (Ordre divin, Ordre primitif, Invocation, Style de
-    combat…) et son équipement A/B ; le budget de sorts suit la classe.
-    Côté joueur : niveau 1, pas de multiclassage.
-  - **A · La grille, puis la fiche** (comme les Origines) : douze classes en
-    petites cartes, la fiche (maîtrises, ce qu'elle donne jusqu'au niveau
-    choisi, ce qui en naît).
-  - **B · La grille, puis la progression** : la fiche montre la progression
-    niveau par niveau (acquis, niveau de départ, la suite estompée) ;
-    toucher un niveau le choisit.
-  - **C · Les emplacements de classe** : les classes du personnage en
-    emplacements, « + Ajouter une classe » (multiclassage, MJ) avec le
-    contrôle des prérequis (13 dans la caractéristique principale de
-    chaque classe ; Force ou Dextérité pour le Guerrier ; le MJ peut passer
-    outre).
-  - À trancher : A, B ou C.
+- **Création — la Classe : décidé le 6 octobre, B (la progression) avec
+  les emplacements de multiclassage, et le même écran pour monter de
+  niveau** (planche « Décidé · Création — la Classe » ; A et C retirées).
+  - En tête, les classes du personnage en emplacements, « + Ajouter une
+    classe » avec le contrôle des prérequis (le MJ peut passer outre).
+    L'emplacement choisi ouvre sa grille et sa fiche ; le niveau de cette
+    classe se règle par − / + ou d'un toucher (1, 5, 10, 15, plafond) ; le
+    niveau de personnage, somme des classes, ne dépasse pas le plafond.
+  - **La progression porte les choix de classe** : tous les niveaux de la
+    classe, une ligne chacun (acquis en vert, niveau atteint en doré, la
+    suite estompée avec ce qui viendra). Chaque choix d'un niveau atteint
+    (sous-classe, améliorations, don épique, Expertise du roublard…) est
+    une pastille sur sa ligne qui ouvre le choix. L'étape Classe, à gauche,
+    ne liste que les choix du niveau 1, plus « Choix de niveau · n à faire »
+    — sinon un personnage de niveau 20 noierait la colonne.
+  - Points de vie : une ligne par niveau au-delà du premier (classe, dé,
+    moyenne ou jet du serveur, à basculer), « Moyenne pour tous » ou
+    « Lancer tous ».
+  - **Monter de niveau** : le même écran, ouvert par « monter de niveau ▸ »
+    sur la fiche. On choisit la classe qui gagne le niveau (existante ou
+    nouvelle), combien de niveaux (plusieurs d'un coup) ; les niveaux
+    acquis sont verrouillés, les nouveaux en doré ; les étapes se réduisent
+    à ce qui change (points de vie, choix des nouveaux niveaux, sorts),
+    puis un aperçu avant → après. Remplace `LevelUpWizard.tsx`.
+  - **Joueur (décidé le 6 octobre)** : il choisit lui-même son niveau de
+    départ (de bonne foi, entre amis et en solo) et multiclasse lui-même,
+    à la création comme au passage de niveau. `playerRestricted` /
+    `hideAddClass` disparaissent.
+  - **Tout vient du ruleset (remarque de l'auteur)** : aucune règle de
+    personnage écrite en dur — plafond de niveau (20 en D&D 2024, un autre
+    pour un ruleset maison), progression de chaque classe, niveau de la
+    sous-classe, niveaux d'amélioration et don épique, dé de vie, budget de
+    sorts, prérequis de multiclassage. Déjà en données :
+    `class_progression` (avec `max_level`), `subclass_slot.chosen_at_level`,
+    le dé de vie, la progression d'incantation. **À structurer avant de
+    coder** : les prérequis (`prerequisites` n'est que du texte libre —
+    sans structure, le contrôle reste indicatif), les améliorations et dons
+    comme choix accordés par une ligne de progression, et un plafond de
+    niveau de personnage porté par le ruleset (aujourd'hui seul le plafond
+    par classe existe). Rejoint le mécanisme générique des choix
+    (V3.1-3, V3.1-6, V3.1-7).
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
