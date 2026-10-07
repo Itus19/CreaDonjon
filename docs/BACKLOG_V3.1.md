@@ -2791,6 +2791,29 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - **Téléphone** (Outils › Règles actives) : le ruleset, la table, l'aperçu,
     puis « Variantes et import » replié.
 
+- **Personnalisation — en cours (7 octobre)** : planche « Lot i — la
+  Personnalisation », trois propositions pour la fenêtre du MJ plus le
+  téléphone.
+  - Ce qui existe : `PersonnalisationPanel`.
+    - Quatre modes ; un mode que le fond ne permet pas est grisé, et
+      choisir un tel fond bascule sur un mode permis.
+    - Neuf fonds fournis et la bibliothèque personnelle.
+    - Flou de 0 à 40 px et contraste élevé, appliqués aussitôt par cookie.
+  - Ce qui change dans les trois :
+    - des vignettes de mode teintées par le fond, et les vraies miniatures ;
+    - l'interrupteur de la charte pour le contraste ;
+    - une ligne « réglages personnels, sur cet appareil ».
+  - Les trois pistes :
+    - A : une colonne (Mode, Fond d'écran, Lisibilité) ;
+    - B : les mêmes réglages avec un aperçu vivant aux jetons de
+      `tokens.css` ;
+    - C : le fond d'abord, en grandes vignettes avec leurs modes lisibles,
+      et une barre de réglages.
+  - **Question posée** : la Personnalisation est un réglage personnel mais
+    n'existe que dans les outils du MJ ; une joueuse ne peut pas choisir son
+    mode ni son fond. On ne l'ajoute pas sans accord. **À trancher : A, B ou
+    C.**
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
