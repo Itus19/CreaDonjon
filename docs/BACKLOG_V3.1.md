@@ -2606,18 +2606,24 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     ruleset — aujourd'hui constantes de `src/core/rules/abilityGeneration`,
     à déplacer en données. Le bonus d'historique se répartit dans sa
     sous-étape, les améliorations de niveau dans la leur.
-- **Création — l'Historique, ses sous-étapes : en cours (7 octobre), trois
-  propositions** (planche « Propositions · Création — l'Historique »).
-  L'écran Historique et ses jetons +2/+1 sont déjà décidés (Origines).
-  - Le don d'origine et ses choix (Initié à la magie : caractéristique,
-    deux sorts mineurs, un sort) : **A** trois sous-étapes séparées ;
-    **B** une sous-étape « Don : … · n/3 » dont l'écran regroupe les trois
-    choix en sections ; **C** comme B, avec la fiche du sort touché
-    (école, temps, portée, durée, effet) — le sélecteur qui resservira à
-    l'étape Sorts.
-  - Commun : l'équipement A ou B en deux cartes (liste des objets face aux
-    pièces), l'outil à choisir en cartes.
-  - À trancher : A, B ou C.
+- **Création — l'Historique, ses sous-étapes : décidé le 7 octobre, C, le
+  don et la fiche du sort** (planche « Décidé · Création — l'Historique » ;
+  A et B retirées). L'écran Historique et ses jetons +2/+1 étaient décidés
+  avec les Origines.
+  - Une seule sous-étape « Don : Initié à la magie (Clerc) · n/3 » sous
+    Historique ; son écran regroupe les choix du don en sections
+    (caractéristique d'incantation avec son effet chiffré, deux sorts
+    mineurs, un sort de niveau 1), chacune avec son compte ; à côté, la
+    fiche du sort touché (école, temps, portée, durée, effet).
+  - **Un seul sélecteur de sorts** (cartes + fiche du sort) : celui de
+    l'étape Sorts et de tout choix de sorts né d'un trait (lignage, legs,
+    Polyvalent → Initié à la magie) ou d'une sous-classe — mécanisme
+    générique des choix (V3.1-3, V3.1-6, V3.1-7).
+  - Équipement A ou B : deux cartes, la liste des objets de l'option A face
+    aux pièces de l'option B. L'outil à choisir (le jeu du Soldat) en
+    cartes.
+  - Tablette et téléphone : la fiche du sort passe sous les sections, les
+    cartes d'équipement s'empilent.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
