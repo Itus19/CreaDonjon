@@ -2705,7 +2705,7 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
 - **Outils de Campagne (7 octobre)** : Gestion de campagne, Calendrier,
   Calendrier réel, Règles actives, Personnalisation, Publication, Journal
   historique.
-- **Gestion de campagne — à valider (7 octobre)** : la disposition est
+- **Gestion de campagne — décidé le 7 octobre** : la disposition est
   décidée depuis le 1er octobre (V3.1-15, piste A, codée) et n'est pas
   rediscutée ; la planche « À valider · Gestion de campagne » la transpose
   au verre minéral — fenêtre à volets du MJ et rail, panneaux en verre,
@@ -2714,6 +2714,12 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   de la charte ; tablette : deux cartes par rangée ; téléphone (Outils ›
   Gestion de campagne) : cartes l'une sous l'autre, ligne de lien réduite au
   rôle, Copier et ⋮.
+  - **« Voir comme » (demande de l'auteur)** : en tête du menu ⋮ de
+    chaque carte de joueuse, avant « Forcer une réinitialisation » et
+    « Retirer de la campagne » : « Voir comme Inès#4821 » — l'application
+    telle que la joueuse la voit, avec un bandeau pour revenir. Autorisation
+    et garde-fous : **V3.1-12** (MJ de cette campagne seulement, comptes tag
+    seulement, retour sûr).
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
