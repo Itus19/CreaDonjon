@@ -2660,6 +2660,10 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     objet éteint en fondu celui qui occupait l'emplacement. Les objets qui
     ne se portent pas gardent la place de la bande, vide, pour l'alignement.
     Mouvement réduit : sans animation.
+  - **Inventaire par ordre alphabétique** (demande de l'auteur), objets
+    portés compris ; symbole de l'arme : une petite épée dessinée au trait
+    (lame, garde, poignée, pommeau), comme les autres icônes du projet —
+    aucune bibliothèque d'icônes (charte §10).
   - **Tuiles sans boutons, qui scintillent** : armure, main principale,
     main secondaire montrent ce qui est porté ; au remplacement, la tuile
     **scintille comme les dés** (nom et fiche défilent flous, parmi les
