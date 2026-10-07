@@ -2690,6 +2690,18 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     dans le MdJ 2024** avant de saisir la table dans le ruleset.
   - Tablette et téléphone : les emplacements passent sur deux colonnes.
 
+- **Création — l'Aperçu : décidé le 7 octobre, la fiche de personnage
+  décidée, rien à réinventer** (remarque de l'auteur). L'étape Aperçu
+  affiche la fiche telle qu'elle sera en jeu — celle des planches de la
+  fiche (ordinateur V3.1-26, tablette V3.1-28, téléphone V3.1-32), même
+  composant et même moteur, comme le fait déjà `PreviewStep.tsx` avec la
+  fiche actuelle. Le personnage n'existe pas encore : les actions de jeu
+  (jets, repos, PV) restent inactives, l'inventaire reste modifiable.
+  Seuls ajouts, déjà présents aujourd'hui : les choix encore ouverts (un
+  toucher ramène à leur sous-étape ; un personnage incomplet ou illégal
+  reste créable, la fiche le rappellera) et « Créer le personnage ». Pas de
+  planche dédiée.
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
