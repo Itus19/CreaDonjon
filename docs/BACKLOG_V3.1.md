@@ -2625,6 +2625,25 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - Tablette et téléphone : la fiche du sort passe sous les sections, les
     cartes d'équipement s'empilent.
 
+- **Création — les Sorts (7 octobre)** : pas de propositions à part —
+  l'étape reprend le sélecteur décidé pour l'Historique (cartes + fiche du
+  sort), avec le budget de la classe (sorts mineurs, sorts préparés, lu
+  dans la progression d'incantation du ruleset).
+- **Création — l'Équipement : en cours (7 octobre), trois propositions**
+  (planche « Propositions · Création — l'Équipement »).
+  - Commun : l'inventaire de départ vient des options A/B (provenance
+    affichée) ; l'or des options se dépense aux prix du ruleset ; un objet
+    de départ se retire (sans remboursement) ; la charge suit la Force
+    (Force × 7,5 kg en 2024, lu dans le ruleset) ; équiper une armure ou un
+    bouclier recalcule la CA (jamais stockée, règle 16). Aujourd'hui :
+    l'onglet Inventaire de la fiche, sans boutique.
+  - **A · L'inventaire de la fiche** (bourse et charge, Équipé puis Sac,
+    « + Acheter » ouvre la boutique dessous) ; **B · La boutique** (boutique
+    et inventaire côte à côte, « acheter » grisé si la bourse ne suffit
+    pas) ; **C · Les emplacements** (armure, main principale, main
+    secondaire, avec la CA et l'attaque ; le sac dessous).
+  - À trancher : A, B ou C.
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
