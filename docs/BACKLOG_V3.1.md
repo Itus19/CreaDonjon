@@ -2640,6 +2640,16 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - Bourse et charge en tête : l'or des options de départ (A/B de la
     classe et de l'historique), dépensé aux prix du ruleset ; charge selon
     la Force (Force × 7,5 kg en 2024, lu dans le ruleset).
+  - **Changer ce qui est équipé (question de l'auteur)** : chaque
+    emplacement a « changer ▾ » — les objets compatibles du sac, ou la
+    boutique filtrée (« armure », « arme », « bouclier ») — et
+    « déséquiper », qui remet l'objet au sac ; dans le sac, « équiper →
+    Armure » dit où va l'objet, l'ancien revient au sac.
+  - **Vendre (demande de l'auteur)** : × vend l'objet à la moitié de son
+    prix (règle 2024, ratio lu dans le ruleset) ; il quitte l'inventaire
+    et l'or rejoint la bourse (« ventes +x po »). Un objet magique se
+    négocie avec le MJ. **Poids et prix affichés pour toutes les
+    entrées** : emplacements, sac, boutique.
   - **Boutique cherchable (demande de l'auteur)** : une zone de recherche
     (nom, type, propriété — « épée », « armure », « perforants ») ; **sous
     chaque objet, sa fiche chiffrée** : dés de dégâts et propriétés, botte
