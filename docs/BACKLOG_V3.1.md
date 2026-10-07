@@ -2594,25 +2594,29 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     par classe existe). Rejoint le mécanisme générique des choix
     (V3.1-3, V3.1-6, V3.1-7).
 
-- **Création — les Caractéristiques : en cours (7 octobre), trois
-  propositions** (planche « Propositions · Création — les
-  Caractéristiques », à droite de la Classe).
-  - Commun aux trois : les trois méthodes et leurs paramètres viennent du
-    ruleset (tableau, budget et coûts de l'achat de points, formule du
-    tirage) — aujourd'hui ce sont des constantes du code
-    (`src/core/rules/abilityGeneration`), à déplacer en données. Le tirage
-    est fait par le serveur. Le bonus d'historique se répartit dans sa
-    sous-étape et s'affiche ici ; les améliorations de niveau se
-    répartissent dans leur sous-étape de Classe, de la même façon.
-  - **A · Les valeurs, puis les cases** : six jetons de valeur, on touche
-    une valeur puis la caractéristique (une case remplie se vide d'un
-    toucher) ; achat de points en − / + avec la jauge du budget.
-  - **B · Le tableau des sources** : une ligne par caractéristique — base,
-    bonus, total, modificateur, à quoi elle sert ; la principale de la
-    classe signalée.
-  - **C · La suggestion, puis l'échange** : « Répartir pour un clerc »
-    place tout selon la classe, puis on touche deux cases pour les
-    échanger.
+- **Création — les Caractéristiques : décidé le 7 octobre, C, la
+  suggestion puis l'échange** (planche « Décidé · Création — les
+  Caractéristiques » ; A et B retirées).
+  - « Répartir pour un clerc » place les valeurs selon la classe (ordre
+    lu dans le ruleset), puis on touche deux cases pour échanger leurs
+    valeurs. Six grandes cases : total, modificateur, d'où vient le total.
+    Achat de points : − / + par case, jauge du budget qui refuse de
+    dépasser. Tirage fait par le serveur, puis suggestion et échange.
+  - Le tableau, le budget et ses coûts, la formule du tirage viennent du
+    ruleset — aujourd'hui constantes de `src/core/rules/abilityGeneration`,
+    à déplacer en données. Le bonus d'historique se répartit dans sa
+    sous-étape, les améliorations de niveau dans la leur.
+- **Création — l'Historique, ses sous-étapes : en cours (7 octobre), trois
+  propositions** (planche « Propositions · Création — l'Historique »).
+  L'écran Historique et ses jetons +2/+1 sont déjà décidés (Origines).
+  - Le don d'origine et ses choix (Initié à la magie : caractéristique,
+    deux sorts mineurs, un sort) : **A** trois sous-étapes séparées ;
+    **B** une sous-étape « Don : … · n/3 » dont l'écran regroupe les trois
+    choix en sections ; **C** comme B, avec la fiche du sort touché
+    (école, temps, portée, durée, effet) — le sélecteur qui resservira à
+    l'étape Sorts.
+  - Commun : l'équipement A ou B en deux cartes (liste des objets face aux
+    pièces), l'outil à choisir en cartes.
   - À trancher : A, B ou C.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
