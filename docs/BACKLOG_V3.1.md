@@ -2721,6 +2721,24 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     et garde-fous : **V3.1-12** (MJ de cette campagne seulement, comptes tag
     seulement, retour sûr).
 
+- **Calendrier ingame — en cours (7 octobre)** : planche « Lot i — le
+  Calendrier ingame », trois propositions pour la fenêtre du MJ plus le
+  téléphone. Ce qui existe : `CalendarSettingsPanel` (jour actuel, semaine
+  et repère de l'an 0, mois, ères, Enregistrer). Ce qui change dans les trois :
+  le jour actuel passe en tête de l'outil. Il affiche son jour de la semaine,
+  son ère, l'an de l'ère et « jour 44 sur 360 ». Des pas permettent de le
+  déplacer : veille, lendemain, une semaine. Rien n'est enregistré avant
+  « Enregistrer ». Les jours de mois se règlent en − / + (de 1 à 60). Les
+  trois propositions n'ajoutent aucune donnée : tout vit déjà dans
+  `CalendarConfig`.
+  - A : aujourd'hui en tête, Mois · Semaine · Ères en trois colonnes ;
+  - B : la grille du mois affiché (toucher un jour → « En faire
+    aujourd'hui »), la structure en onglets ;
+  - C : la frise des ères, les douze mois en vignettes, la semaine en puces,
+    un panneau de réglage contextuel.
+  - Téléphone (Outils › Calendrier) : aujourd'hui, la grille, puis Mois,
+    Semaine et Ères en accordéons. **À trancher : A, B ou C.**
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
