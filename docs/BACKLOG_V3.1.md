@@ -2766,24 +2766,30 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     table » comprise) et les dates en lecture seule. L'enregistrement reste
     automatique (« Enregistrement… » puis « Enregistré ✓ »).
 
-- **Règles actives — en cours (7 octobre)** : planche « Lot i — les Règles
-  actives », trois propositions pour la fenêtre du MJ plus le téléphone.
-  - Ce qui existe : `RulesetSelector`, avec la liste des rulesets, Choisir,
-    Exporter (jamais pour une référence personnelle), ×, « Créer une
-    variante » avec l'option référence personnelle, et « Importer des
-    règles ».
-  - Ce qui est décidé et doit trouver sa place : les six interrupteurs de
-    V3.1-23 et le maximum d'inspiration (ADR 0036 §5).
-  - Ce qui change dans les trois : les variantes en arbre sous leur base, la
-    suppression confirmée, un interrupteur qui dit qui tient la valeur, et
-    « Par défaut ».
-  - Les trois pistes :
-    - A : une colonne (ruleset, la table, l'atelier) ;
-    - B : deux volets, les règles à gauche, la table à droite avec un aperçu
-      vivant de la fiche de la joueuse ;
-    - C : trois onglets (Ruleset, La table, Atelier).
-  - Téléphone : la colonne de A, variantes et import repliés. **À trancher :
-    A, B ou C.**
+- **Règles actives — décidé le 7 octobre : la B, deux volets.**
+  - **À gauche, le ruleset** :
+    - le ruleset de la campagne et ses variantes, en arbre sous leur base ;
+    - sur chaque ligne : Choisir, Exporter (jamais pour une référence
+      personnelle), et × confirmé en surface flottante ; supprimer la
+      variante active ramène la campagne à sa base ;
+    - « Créer une variante » : base en puces, nom, interrupteur « Référence
+      personnelle » avec son avertissement ;
+    - « Importer des règles » : ajouter à la variante active, ou créer un
+      ruleset personnel ; les erreurs sont listées ligne à ligne.
+  - **À droite, la table** :
+    - « Ce que les joueurs modifient eux-mêmes » (V3.1-23) : six
+      interrupteurs, chacun dit qui tient la valeur (« le MJ » ou « la
+      joueuse ») ; « Par défaut » remet les six réglages ;
+    - l'inspiration au plus, en − / + ;
+    - **l'aperçu de la fiche de la joueuse**, qui suit les interrupteurs en
+      direct : « + état », ▲▼, emplacements inertes, « Le MJ dépense tes dés
+      de vie ». C'est la fiche réelle en lecture.
+  - **Données** : rien de neuf — `worlds.default_ruleset_id` et
+    `campaigns.table_settings` (ADR 0036 §5).
+  - **Tablette** : un seul volet, la table et l'aperçu d'abord, puis le
+    ruleset et l'atelier.
+  - **Téléphone** (Outils › Règles actives) : le ruleset, la table, l'aperçu,
+    puis « Variantes et import » replié.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
