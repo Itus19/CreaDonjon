@@ -2636,7 +2636,7 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     la fiche chiffrée de l'objet ; la CA et l'attaque qui en découlent
     (jamais stockées, règle 16). Le sac dessous : provenance (Clerc A,
     Acolyte A, acheté, objet magique), fiche de l'objet, « équiper » qui
-    remplit l'emplacement, ×.
+    remplit l'emplacement, × (revu : voir la bande d'équipement ci-dessous).
   - Bourse et charge en tête : l'or des options de départ (A/B de la
     classe et de l'historique), dépensé aux prix du ruleset ; charge selon
     la Force (Force × 7,5 kg en 2024, lu dans le ruleset).
@@ -2651,13 +2651,24 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     (règle 2024, ratio lu dans le ruleset). Un objet magique de départ se
     change dans sa sous-étape. **Poids et prix affichés et alignés en
     colonnes pour toutes les entrées** : emplacements, sac, boutique.
-  - **Le bouton pour porter un objet : en cours (7 octobre), quatre
-    propositions** (planche « Propositions · Équipement — le bouton »,
-    l'auteur n'étant pas satisfait de « équiper → ») : **A** les verbes
-    « Porter » (fantôme accent) / « Ranger » (secondaire) ; **B** le rond à
-    icône de l'emplacement (armure, arme, bouclier), plein quand porté ;
-    **C** l'interrupteur « porté » ; **D** l'étiquette d'emplacement
-    (pointillé, pleine et cochée quand porté). À trancher.
+  - **Porter un objet : la bande d'équipement (décidée par l'auteur le
+    7 octobre, après refus des quatre propositions)**. À gauche de chaque
+    objet qui se porte, une bande-bouton sur toute la hauteur de la ligne
+    (comme l'écran actuel), avec **le symbole du type** — armure, arme,
+    bouclier, icônes au trait — au lieu d'un texte : éteinte quand l'objet
+    est rangé, dorée quand il est porté. **Animation douce** : allumer un
+    objet éteint en fondu celui qui occupait l'emplacement. Les objets qui
+    ne se portent pas gardent la place de la bande, vide, pour l'alignement.
+    Mouvement réduit : sans animation.
+  - **Tuiles sans boutons, qui scintillent** : armure, main principale,
+    main secondaire montrent ce qui est porté ; au remplacement, la tuile
+    **scintille comme les dés** (nom et fiche défilent flous, parmi les
+    objets du même type, puis se figent) et la CA compte jusqu'à sa
+    nouvelle valeur. « Changer ▾ » et « déséquiper » disparaissent : tout se
+    fait par la bande.
+  - **Colonnes communes à l'inventaire et à la boutique** : bande (ou
+    symbole du type en boutique), nom et fiche, poids, prix, action
+    (« rendre », « acheter ») — poids et prix exactement au même endroit.
   - **Boutique cherchable (demande de l'auteur)** : une zone de recherche
     (nom, type, propriété — « épée », « armure », « perforants ») ; **sous
     chaque objet, sa fiche chiffrée** : dés de dégâts et propriétés, botte
