@@ -2702,6 +2702,19 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   reste créable, la fiche le rappellera) et « Créer le personnage ». Pas de
   planche dédiée.
 
+- **Outils de Campagne (7 octobre)** : Gestion de campagne, Calendrier,
+  Calendrier réel, Règles actives, Personnalisation, Publication, Journal
+  historique.
+- **Gestion de campagne — à valider (7 octobre)** : la disposition est
+  décidée depuis le 1er octobre (V3.1-15, piste A, codée) et n'est pas
+  rediscutée ; la planche « À valider · Gestion de campagne » la transpose
+  au verre minéral — fenêtre à volets du MJ et rail, panneaux en verre,
+  carte de joueuse en verre sombre avec le PJ en ambre, menus ⋮ et
+  confirmations en surfaces flottantes (elles nomment `Nom#0000`), boutons
+  de la charte ; tablette : deux cartes par rangée ; téléphone (Outils ›
+  Gestion de campagne) : cartes l'une sous l'autre, ligne de lien réduite au
+  rôle, Copier et ⋮.
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
