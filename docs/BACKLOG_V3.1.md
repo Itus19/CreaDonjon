@@ -2766,6 +2766,25 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     table » comprise) et les dates en lecture seule. L'enregistrement reste
     automatique (« Enregistrement… » puis « Enregistré ✓ »).
 
+- **Règles actives — en cours (7 octobre)** : planche « Lot i — les Règles
+  actives », trois propositions pour la fenêtre du MJ plus le téléphone.
+  - Ce qui existe : `RulesetSelector`, avec la liste des rulesets, Choisir,
+    Exporter (jamais pour une référence personnelle), ×, « Créer une
+    variante » avec l'option référence personnelle, et « Importer des
+    règles ».
+  - Ce qui est décidé et doit trouver sa place : les six interrupteurs de
+    V3.1-23 et le maximum d'inspiration (ADR 0036 §5).
+  - Ce qui change dans les trois : les variantes en arbre sous leur base, la
+    suppression confirmée, un interrupteur qui dit qui tient la valeur, et
+    « Par défaut ».
+  - Les trois pistes :
+    - A : une colonne (ruleset, la table, l'atelier) ;
+    - B : deux volets, les règles à gauche, la table à droite avec un aperçu
+      vivant de la fiche de la joueuse ;
+    - C : trois onglets (Ruleset, La table, Atelier).
+  - Téléphone : la colonne de A, variantes et import repliés. **À trancher :
+    A, B ou C.**
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
