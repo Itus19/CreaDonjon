@@ -2629,20 +2629,29 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   l'étape reprend le sélecteur décidé pour l'Historique (cartes + fiche du
   sort), avec le budget de la classe (sorts mineurs, sorts préparés, lu
   dans la progression d'incantation du ruleset).
-- **Création — l'Équipement : en cours (7 octobre), trois propositions**
-  (planche « Propositions · Création — l'Équipement »).
-  - Commun : l'inventaire de départ vient des options A/B (provenance
-    affichée) ; l'or des options se dépense aux prix du ruleset ; un objet
-    de départ se retire (sans remboursement) ; la charge suit la Force
-    (Force × 7,5 kg en 2024, lu dans le ruleset) ; équiper une armure ou un
-    bouclier recalcule la CA (jamais stockée, règle 16). Aujourd'hui :
-    l'onglet Inventaire de la fiche, sans boutique.
-  - **A · L'inventaire de la fiche** (bourse et charge, Équipé puis Sac,
-    « + Acheter » ouvre la boutique dessous) ; **B · La boutique** (boutique
-    et inventaire côte à côte, « acheter » grisé si la bourse ne suffit
-    pas) ; **C · Les emplacements** (armure, main principale, main
-    secondaire, avec la CA et l'attaque ; le sac dessous).
-  - À trancher : A, B ou C.
+- **Création — l'Équipement : décidé le 7 octobre, C, les emplacements,
+  avec deux demandes de l'auteur** (planche « Décidé · Création —
+  l'Équipement » ; A et B retirées).
+  - Armure, main principale, main secondaire en trois cases, chacune avec
+    la fiche chiffrée de l'objet ; la CA et l'attaque qui en découlent
+    (jamais stockées, règle 16). Le sac dessous : provenance (Clerc A,
+    Acolyte A, acheté, objet magique), fiche de l'objet, « équiper » qui
+    remplit l'emplacement, ×.
+  - Bourse et charge en tête : l'or des options de départ (A/B de la
+    classe et de l'historique), dépensé aux prix du ruleset ; charge selon
+    la Force (Force × 7,5 kg en 2024, lu dans le ruleset).
+  - **Boutique cherchable (demande de l'auteur)** : une zone de recherche
+    (nom, type, propriété — « épée », « armure », « perforants ») ; **sous
+    chaque objet, sa fiche chiffrée** : dés de dégâts et propriétés, botte
+    d'arme, CA et limite de Dextérité, Force requise, discrétion, poids.
+    « Acheter » grisé si la bourse ne suffit pas.
+  - **Départ à haut niveau (décidé le 7 octobre)** : d'après la table
+    « Commencer à un niveau supérieur » du ruleset, au-delà du niveau 4 de
+    l'or en plus (une somme fixe et un jet fait par le serveur) et, aux
+    niveaux élevés, des objets magiques à choisir — une sous-étape
+    d'Équipement. Les valeurs de la planche sont un exemple : **à vérifier
+    dans le MdJ 2024** avant de saisir la table dans le ruleset.
+  - Tablette et téléphone : les emplacements passent sur deux colonnes.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
