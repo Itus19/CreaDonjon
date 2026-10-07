@@ -2660,6 +2660,10 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     objet éteint en fondu celui qui occupait l'emplacement. Les objets qui
     ne se portent pas gardent la place de la bande, vide, pour l'alignement.
     Mouvement réduit : sans animation.
+  - Téléphone et tablette : la ligne passe sur deux rangées (« rendre » ou
+    « acheter » dessous) et **la bande couvre toute la hauteur de la
+    carte** ; marge à droite pour que le prix ne touche pas le bord
+    (remarques de l'auteur).
   - **Inventaire par ordre alphabétique** (demande de l'auteur), objets
     portés compris ; symbole de l'arme : une petite épée dessinée au trait
     (lame, garde, poignée, pommeau), comme les autres icônes du projet —
