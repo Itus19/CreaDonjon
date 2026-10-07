@@ -2645,11 +2645,19 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     boutique filtrée (« armure », « arme », « bouclier ») — et
     « déséquiper », qui remet l'objet au sac ; dans le sac, « équiper →
     Armure » dit où va l'objet, l'ancien revient au sac.
-  - **Vendre (demande de l'auteur)** : × vend l'objet à la moitié de son
-    prix (règle 2024, ratio lu dans le ruleset) ; il quitte l'inventaire
-    et l'or rejoint la bourse (« ventes +x po »). Un objet magique se
-    négocie avec le MJ. **Poids et prix affichés pour toutes les
-    entrées** : emplacements, sac, boutique.
+  - **Rendre ou vendre (demandes de l'auteur)** : pendant la création, ×
+    **rend** l'objet et le **rembourse en entier** (on corrige une
+    erreur) ; une fois en jeu, sur la fiche, × **vend** à la moitié du prix
+    (règle 2024, ratio lu dans le ruleset). Un objet magique de départ se
+    change dans sa sous-étape. **Poids et prix affichés et alignés en
+    colonnes pour toutes les entrées** : emplacements, sac, boutique.
+  - **Le bouton pour porter un objet : en cours (7 octobre), quatre
+    propositions** (planche « Propositions · Équipement — le bouton »,
+    l'auteur n'étant pas satisfait de « équiper → ») : **A** les verbes
+    « Porter » (fantôme accent) / « Ranger » (secondaire) ; **B** le rond à
+    icône de l'emplacement (armure, arme, bouclier), plein quand porté ;
+    **C** l'interrupteur « porté » ; **D** l'étiquette d'emplacement
+    (pointillé, pleine et cochée quand porté). À trancher.
   - **Boutique cherchable (demande de l'auteur)** : une zone de recherche
     (nom, type, propriété — « épée », « armure », « perforants ») ; **sous
     chaque objet, sa fiche chiffrée** : dés de dégâts et propriétés, botte
