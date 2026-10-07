@@ -2747,12 +2747,12 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     vignettes par rangée, la semaine. Un mois ou une ère touché s'ouvre en
     feuille du bas ; Enregistrer est en haut.
 
-- **Calendrier réel — à valider (7 octobre)** : la disposition est
+- **Calendrier réel — décidé le 7 octobre** : la disposition est
   décidée et codée depuis le 1er octobre (V3.1-16 : une grille à bascule
   « Mes disponibilités / Toute la table », toutes les heures visibles avec la
   ligne « 22:00 », colonne des heures fixe, croix au survol, info-bulle
   « (toi) » en tête, dates possibles classées par nombre puis par durée). Elle
-  n'est pas rediscutée. La planche « À valider · Calendrier réel » la
+  n'est pas rediscutée. La planche « Décidé · Calendrier réel » la
   transpose au verre minéral.
   - MJ : fenêtre à volets et rail. En-tête : titre, réponses, durée visée en
     − / +, « Annuler la demande » en danger fantôme. La grille et les dates
