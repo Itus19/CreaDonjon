@@ -2896,9 +2896,11 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     - **la visibilité en pastille de couleur** (vert Public, bleu Joueurs,
       orange MJ, gris Privé), qui ouvre un menu disant qui la voit (« le MJ
       seul — jamais envoyé aux joueurs ») ;
-    - ⋮ : Monter, Descendre, Dupliquer, Supprimer… La suppression est
-      confirmée et rappelle l'historique. Les ▲▼ d'aujourd'hui passent dans
-      ⋮.
+    - ⋮ : Monter, Descendre, Dupliquer, Choisir la visibilité…,
+      Supprimer… La suppression est confirmée et rappelle l'historique. Les
+      ▲▼ d'aujourd'hui passent dans ⋮.
+    - **Revu le 8 octobre** : toucher la pastille fait passer à la
+      visibilité suivante, avec « Annuler » (voir les blocs Récit).
   - **Texte** : toucher un paragraphe ouvre la bulle de l'éditeur riche
     (niveau de titre, G / I / S, Lier à une fiche, Créer une fiche,
     Spoiler, visibilité du paragraphe : Public, Joueurs, MJ). Un passage MJ
@@ -2919,28 +2921,40 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     chaque éditeur, par famille — Récit, puis Psyché et liens, puis Outils
     de jeu. Les blocs de personnage sont déjà décidés avec la fiche.
 
-- **Les blocs de la fiche du wiki — 1 · Récit (8 octobre, en cours)** :
-  planche « À trancher · Blocs de la fiche — 1 · Récit »
-  (`Blocs-Recit-Propositions.dc.html`). Pour chaque bloc : ce qui existe et
-  ce qui est proposé, dans la carte décidée (A).
-  - **Texte** : la lettrine devient un interrupteur dans l'en-tête de la
-    carte. L'assistance IA passe en encart violet sous le texte ; la
-    proposition s'affiche en pointillé à sa place, rien n'est écrit avant
-    « Accepter » (règle 9), et le budget de propositions reste visible.
-  - **Encadré** : les lignes se lisent comme dans le wiki et s'éditent sur
-    place ; ⠿ pour réordonner ; « @ » cite une fiche ; des intitulés
-    suggérés selon le type de fiche (liste dans le code ou en données, à
-    décider).
-  - **Tableau** : un vrai tableau, × de colonne et de ligne au survol,
-    « + » au bout des en-têtes, « + Ligne » dessous.
-  - **Image** :
-    - A : trois sections repliables qui résument leur réglage ;
-    - B : une barre flottante sur l'image, l'aperçu dans le texte, et le
-      fond de page à part.
-  - **Chronologie** : l'axe en bande (périodes en barres, le jour actuel en
-    trait doré) ; une ligne par événement avec le genre et la visibilité en
-    pastilles de couleur, et « → en faire une fiche ».
-  - **À trancher** : accord bloc par bloc, et A ou B pour l'Image.
+- **Les blocs de la fiche du wiki — 1 · Récit : décidé le 8 octobre**
+  (planche « Décidé · Blocs de la fiche — 1 · Récit »,
+  `Blocs-Recit-Decide.dc.html`). Tout est accepté tel que proposé ; pour
+  l'Image, la B.
+  - **Texte** : la lettrine en interrupteur dans l'en-tête de la carte ;
+    l'assistance IA en encart violet sous le texte, la proposition en
+    pointillé à sa place, rien d'écrit avant « Accepter » (règle 9), le
+    budget visible.
+  - **Encadré** : lignes lues comme dans le wiki, éditées sur place ; ⠿ ;
+    « @ » cite une fiche ; intitulés suggérés selon le type de fiche (liste
+    à décider en codant : code ou données).
+  - **Tableau** : un vrai tableau ; × de colonne et de ligne au survol ;
+    « + » au bout des en-têtes, « + Ligne ».
+  - **Image (B)** :
+    - toucher l'image fait paraître une barre flottante (Gauche, Centre,
+      Droite ; − taille + ; « Le texte contourne ») ;
+    - l'aperçu montre l'image dans le texte, telle qu'elle sera dans le
+      wiki, avec sa légende ;
+    - à part : l'emplacement (bloc autonome ou dans un bloc de texte), la
+      parallaxe, et le fond de la page du wiki (non, en fond et dans la
+      fiche, seulement en fond) avec flou et fondu.
+  - **Chronologie** : l'axe en bande (périodes, jour actuel en trait doré) ;
+    une ligne par événement, genre et visibilité en pastilles, « → en faire
+    une fiche ».
+- **La pastille de visibilité au toucher (demande de l'auteur, 8 octobre),
+  pour tous les blocs et les événements de la Chronologie** :
+  - un toucher fait passer à la visibilité suivante : Public → Joueurs →
+    MJ → Privé → Public ; couleur et libellé suivent ;
+  - chaque changement s'annonce (« visible par le MJ seul ») avec
+    « Annuler » ; quand le bloc redevient plus visible, l'annonce le dit ;
+  - le choix direct reste dans ⋮ « Choisir la visibilité… ».
+  - **Limite connue** : l'écriture est immédiate, donc un clic de trop sur
+    un bloc MJ le rend visible jusqu'à « Annuler » — d'où l'annonce. La
+    visibilité reste filtrée côté serveur (règle 5).
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
