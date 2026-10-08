@@ -3037,6 +3037,45 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - **Reste ouvert** : d'où viennent les dates de naissance et de mort
     (Généalogie B).
 
+- **Les blocs de la fiche du wiki — 3 · Outils de jeu (8 octobre, en
+  cours)** : une planche par bloc, trois propositions vivantes chacune
+  (`Outil-{tab,quest,music,map,crea}-Propositions.dc.html`). La Fiche de
+  créature est rangée dans la famille Personnage de la palette, mais n'avait
+  pas encore de dessin : elle est traitée ici. Le Générateur reste l'outil
+  du MJ déjà décidé (planche « Décidé · Générateurs »), pas un bloc de la
+  palette.
+  - **Table aléatoire** (`random_table`, specs/outils-mj.md §2) — A : la
+    table et « Tirer » au-dessus, résultat en carte, sa ligne s'allume ; B :
+    le tirage d'abord, table repliée, derniers tirages en puces ; C : la
+    bande des vingt faces, une couleur par entrée (la part du dé se voit),
+    puis la table. Communs : liens vers des fiches dans les entrées,
+    sous-tirage `{table:…}` écrit dessous, « Sans répétition », prix et
+    palier en pastilles, attribution ; le dé est lancé par le serveur
+    (règle 8).
+  - **Quête** (`quest`) — A : la fiche de quête (état en pilule à cinq
+    choix, commanditaire, progression, objectifs à cocher, récompenses et
+    prérequis côte à côte) ; B : le journal de quête (bandeau, tampon de
+    l'état qui se touche, objectifs en étapes reliées) ; C : une ligne
+    dépliable (anneau de progression, état, prochain objectif).
+  - **Musique** (`music`, ADR 0022) — A : la platine (piste en cours,
+    contrôles, progression, ce que le service permet) puis la liste ; B : la
+    liste seule, réglages repliés ; C : les tuiles d'ambiance, comme une
+    table de mixage. Communs : sur la page de lecture le bloc ne s'affiche
+    pas (♪ à côté du nom) ; fondus et bornes pour YouTube seulement.
+  - **Carte** (`map`, ADR 0017) — A : la vignette et « Agrandir » (l'outil
+    Carte en grand) ; B : la carte vivante dans le bloc (zoom, couches à
+    cocher, outils du MJ, « Cadrer ce bloc ») ; C : la carte et sa liste
+    rangée par couches, pastilles de visibilité au toucher. B et C ont
+    « Voir comme les joueurs » : ce que le serveur leur envoie (règle 5 ;
+    une punaise n'est vue que si sa couche l'est aussi).
+  - **Fiche de créature** (`statblock`) — A : le bloc de statistiques à la
+    Manuel des monstres, jets en boutons ; B : la fiche de combat (CA,
+    vitesse, FP en gros, PV en jauge, états, actions en cartes « Toucher » /
+    « Dégâts ») ; C : une pilule Lecture / Édition. Valeurs plates saisies,
+    seuls les modificateurs se calculent (règle 16) ; PV et états joués
+    vivent dans le suivi d'initiative (specs/outils-mj.md §5).
+  - **À trancher** : A, B ou C pour chacun des cinq blocs.
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
