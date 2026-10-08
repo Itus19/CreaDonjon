@@ -3143,36 +3143,44 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     (V2-G1), « Récemment » vit dans le navigateur comme au téléphone
     (V3.1-30).
 
-- **Chronologie du monde (8 octobre, à trancher)** : planche « À trancher ·
-  Chronologie du monde » (`Chrono-Propositions.dc.html`), trois propositions
-  dans l'écran réel (rail, fenêtre à volets).
+- **Chronologie du monde (8 octobre)** : la B retenue, **refaite à
+  l'horizontale** à la demande de l'auteur, avec le réglage des ères —
+  planche « À valider · Chronologie du monde » (`Chrono-B-Horizontale.dc.html` ;
+  A et C retirées).
   - **Aujourd'hui** (`/m/[monde]/chronologie`, `WorldTimelineView.tsx`,
     `src/server/services/timeline.ts`) : une liste de cartes — toutes les
     entrées visibles de tous les blocs Chronologie du monde, triées et
     regroupées par ère ; chaque carte : genre, date, titre (lien si
     l'entrée est devenue une fiche), résumé, « Depuis la fiche de… ». MJ
     seulement, par le sommaire du Monde.
-  - **A · La frise et la liste** : en haut la frise des ères, un point par
-    événement (couleur du genre), le jour actuel en trait doré ; zoom Tout
-    (chaque ère la même largeur), Cette ère, 50 ans ; dessous la liste par
-    ère.
-  - **B · Le fleuve** : axe vertical, événements de part et d'autre, ères
-    en bandeaux, « Aujourd'hui » en fin ; à droite « Aller à » (les ères en
-    barres proportionnelles).
-  - **C · Les pistes** : une piste par fiche sur un axe commun (les vies en
-    barre de la naissance à la mort ou à aujourd'hui), l'événement touché
-    s'ouvre dessous ; échelle Tout, Cette ère, Un siècle.
+  - **Le fleuve à l'horizontale** : un axe horizontal ; les événements de
+    part et d'autre (une carte au-dessus, la suivante au-dessous), reliés à
+    leur point sur l'axe, couleur du genre ; **espacés régulièrement**
+    (l'ordre compte, pas les distances : des siècles vides ne font pas de
+    trous) ; les **ères en bandeaux colorés sur l'axe**, sous les événements
+    qu'elles couvrent, leur nom suit la vue ; « Aujourd'hui » au bout, en
+    doré.
+  - **Se déplacer** : ‹ › ; « Aller à » une ère ou à aujourd'hui ; molette et
+    glisser. À l'ouverture : les derniers événements et aujourd'hui.
+  - **Les ères (« Ères… »)**, demande de l'auteur : un panneau à droite —
+    chaque ère, son nom, son année de début (la fin = le début de la
+    suivante, écrite dessous), ×, « + Ajouter une ère », « Enregistrer ».
+    **Rien de neuf en base** : les ères vivent déjà dans le calendrier du
+    monde (`CalendarConfig.eras` : `name`, `startYear`), le même réglage que
+    l'outil Calendrier (V3.1-55). La couleur d'une ère vient de son rang,
+    pas d'une donnée.
   - **Communs** : filtres par genre et par fiche, recherche, « Voir comme les
     joueurs » (ce que le serveur leur envoie), « + Événement » (date, titre,
     genre et la fiche qui le porte — ajouté à son bloc Chronologie, créé
     s'il n'existe pas), pastille de visibilité au toucher (V3.1-64),
     « → en faire une fiche » (route `timeline-promote` existante). Le jour
     actuel vient du calendrier du monde.
-  - **Questions** : la Chronologie devient-elle aussi une page des joueurs
-    (dans le Wiki, avec seulement ce qu'ils peuvent voir) ? Les séances du
-    Livre de sessions doivent-elles y paraître (date en jeu de chaque
-    séance, sans rien stocker de plus) ?
-  - **À trancher** : A, B ou C, et les deux questions.
+  - **Questions ouvertes** : la Chronologie devient-elle aussi une page des
+    joueurs (dans le Wiki, avec seulement ce qu'ils peuvent voir) ? Les
+    séances du Livre de sessions doivent-elles y paraître (date en jeu de
+    chaque séance, sans rien stocker de plus) ?
+  - **À valider** : le fleuve horizontal et le panneau des ères ; les deux
+    questions.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
