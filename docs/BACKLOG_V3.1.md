@@ -3034,8 +3034,10 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - Les exemples « trait, idéal, lien, défaut » des planches de la fiche
     (Personnalité) n'étaient pas le vrai modèle : c'est celui-ci qui fait
     foi.
-  - **Reste ouvert** : d'où viennent les dates de naissance et de mort
-    (Généalogie B).
+  - **Dates de naissance et de mort — décidé (8 octobre)** : naissance
+    du bloc `character` (V3.1-48) ; mort = champ optionnel `death`
+    (`GameDate`) du même bloc, « défunt » = `death` renseigné ; une fiche
+    sans bloc `character` n'a pas de dates dans l'arbre. Ticket V3.1-74.
 
 - **Les blocs de la fiche du wiki — 3 · Outils de jeu (8 octobre,
   décidé)** : une planche par bloc, trois propositions vivantes chacune
@@ -4978,8 +4980,8 @@ il s'arrête et la note ici.
 
 **Ordre conseillé** : 63 → 64 (tout le reste s'appuie sur la carte de verre
 et sa pastille) ; puis Récit (65 à 68) ; puis 69 (noyau psyché) → 70, 71,
-72, 73 ; puis Outils de jeu (75 à 78) ; 79 après V3.1-26 et 33 ; 74 quand
-l'auteur a tranché la question des dates.
+72, 73 ; puis Outils de jeu (75 à 78) ; 79 après V3.1-26 et 33 ; 74 après
+V3.1-48.
 
 | Ticket | Contenu | Taille | Modèle | Dépend de |
 |---|---|---|---|---|
@@ -4994,7 +4996,7 @@ l'auteur a tranché la question des dates.
 | V3.1-71 | Relation (A) : deux portraits, le résumé, les fils à perle | L | Sonnet | 63, 69 |
 | V3.1-72 | Réseau (B) : vignettes, filtres, survol qui allume | M | Sonnet | 63 |
 | V3.1-73 | Généalogie (B) : les grands portraits | M | Sonnet | 63 ; dates : 74 |
-| V3.1-74 | Dates de naissance et de mort (données) | M | **Opus** | 48 ; décision de l'auteur |
+| V3.1-74 | Dates de naissance et de mort (données) | M | **Opus** | 48 |
 | V3.1-75 | Table aléatoire (A) et le dé animé | M | Sonnet | 63, 33 |
 | V3.1-76 | Quête (C) : une ligne, dépliable | S | Sonnet | 63 |
 | V3.1-77 | Musique (A) : la platine, les bornes, la durée des fondus | M | Sonnet | 63 |
@@ -5492,7 +5494,7 @@ et téléphone). **Départ** : `components/blocks/GenealogyBlockEditor.tsx`,
 - [ ] Ajouter un lien depuis la barre crée la relation (test existant étendu).
 - [ ] Sans données de dates, aucune ligne vide sous les noms.
 
-### ☐ V3.1-74 — Dates de naissance et de mort (données) · `M` — **à concevoir (Opus), décision de l'auteur attendue**
+### ☐ V3.1-74 — Dates de naissance et de mort (données) · `M` — **prêt (Opus) — proposition validée par l'auteur le 8 octobre**
 
 **Modèle conseillé : Opus** — donnée nouvelle, ADR, `SCHEMA.md`.
 
@@ -5506,7 +5508,7 @@ dans le bloc `character`), `src/core/schemas/blocks/character.ts`,
 **la mort n'existe nulle part**, et une fiche sans bloc `character` (un
 PNJ décrit en texte) n'a pas de naissance.
 
-**Proposition à faire valider par l'auteur avant tout code**
+**Décidé (auteur, 8 octobre) — la proposition ci-dessous est acceptée**
 - Naissance : celle de V3.1-48 (`character`).
 - Mort : un champ optionnel `death` (`GameDate`) dans le même bloc ;
   « défunt » = `death` renseigné (pas de booléen à part, règle 16).
@@ -5514,7 +5516,7 @@ PNJ décrit en texte) n'a pas de naissance.
   d'inventé).
 - L'âge affiché s'arrête à la mort.
 
-**À faire après validation** : ADR, `SCHEMA.md`, schéma Zod (lecture
+**À faire** : ADR (décision ci-dessus, dix lignes), `SCHEMA.md`, schéma Zod (lecture
 tolérante), service de la généalogie qui lit naissance et mort en **une
 requête groupée**, remplissage de la ligne prévue en V3.1-73.
 
