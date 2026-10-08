@@ -2823,22 +2823,29 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   lisibles, flou), dans l'outil de partage du wiki. C'est un réglage du
   monde publié, pas un cookie de visiteur.
 
-- **Publication — en cours (8 octobre)** : planche « Lot i — la
-  Publication », trois propositions pour la fenêtre du MJ plus le téléphone.
-  - **Ce qui existe** : « Prévisualiser ↗ », le message d'accueil
-    (500 caractères) et `ShareLinkPanel` (alias, mot de passe, Créer,
-    Copier, Révoquer).
-  - **Ajouté** : le fond par défaut du wiki public, avec la galerie de la
-    Personnalisation, le mode des pages et le flou. C'est un réglage du monde
-    publié ; une fiche qui a son propre fond (V2-G13) le garde. **Donnée
-    nouvelle** : le fond, le mode et le flou par monde, à écrire dans
-    `docs/SCHEMA.md` avant de coder.
-  - **Les trois pistes** :
-    - A : une colonne (les liens, le message, le fond) ;
-    - B : la même colonne, plus un aperçu de la page d'accueil publique ;
-    - C : deux onglets, Liens de partage et Page d'accueil (avec l'aperçu).
-  - **Question posée** : l'onglet Wiki des joueuses (même `BookSkin`)
-    prend-il aussi ce fond par défaut ? **À trancher : A, B ou C.**
+- **Publication — décidé le 8 octobre : la B**, les réglages à gauche et ce
+  que voit un visiteur à droite.
+  - **À gauche** :
+    - « Partage en lecture seule » : alias, mot de passe, Créer un lien, le
+      lien créé à copier, puis la liste (créé le…, protégé, Copier,
+      Révoquer) ;
+    - le message d'accueil (500 caractères, Enregistrer) ;
+    - le fond par défaut du wiki : galerie de la Personnalisation, modes
+      lisibles en points, mode des pages, flou. Choisir un fond qui ne
+      permet pas le mode bascule sur un mode permis.
+  - **À droite** : « Ce que voit un visiteur », la page d'accueil du wiki en
+    petit (le message en titre, le sommaire, le fond, le mode, le flou), qui
+    suit chaque changement. « Prévisualiser ↗ » ouvre le vrai.
+  - **Le fond par défaut** est un réglage du monde. Il s'applique au wiki
+    public (`/partage`) **et à l'onglet Wiki des joueuses** (décision de
+    l'auteur), qui utilisent le même `BookSkin`. Une fiche qui a son propre
+    fond (V2-G13) le garde.
+    - **Donnée nouvelle** : le fond, le mode et le flou par monde. À écrire
+      dans `docs/SCHEMA.md`, avec un ADR, avant de coder.
+  - **Tablette** : un seul volet, l'aperçu d'abord, puis le message, le fond
+    et les liens.
+  - **Téléphone** (Outils › Publication) : les liens, le message, le fond,
+    puis l'aperçu ; « Prévisualiser ↗ » en haut.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
