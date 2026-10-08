@@ -2847,6 +2847,30 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - **Téléphone** (Outils › Publication) : les liens, le message, le fond,
     puis l'aperçu ; « Prévisualiser ↗ » en haut.
 
+- **Journal historique — en cours (8 octobre)** : planche « Lot i — le
+  Journal historique », trois propositions pour la fenêtre du MJ plus le
+  téléphone.
+  - **Ce qui existe** : `GmJournalPanel`, une liste fusionnée des révisions
+    du wiki et des événements de jeu, la plus récente en tête, et
+    `DeletedEntitiesPanel` pour Rétablir.
+  - **Demande de l'auteur** : chercher par personne, trier, filtrer par objet
+    modifié ou par élément (fiche de personnage, PNJ, lieu, faction, objet,
+    page, jeu).
+  - **Ajouté pour y arriver** :
+    - « Partie modifiée » (le bloc) ;
+    - le type de la fiche sur chaque ligne ;
+    - un toucher sur le nom d'une fiche ne montre qu'elle ;
+    - les filtres actifs en étiquettes, retirées d'un × ;
+    - le tri : plus récent, plus ancien, par personne, par fiche.
+  - **Données** : rien de neuf en base ; le journal renvoie en plus
+    `entity_kind`.
+  - **Les trois pistes** :
+    - A : une barre de filtres en puces, puis la liste par jour ;
+    - B : des facettes à cocher avec compteurs à gauche ;
+    - C : une carte par fiche, avec une bascule vers la vue chronologique.
+  - **Téléphone** : la recherche, la liste, et « Filtres » en feuille du
+    bas. **À trancher : A, B ou C.**
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
