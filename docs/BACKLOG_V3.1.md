@@ -3038,43 +3038,58 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     (Généalogie B).
 
 - **Les blocs de la fiche du wiki — 3 · Outils de jeu (8 octobre, en
-  cours)** : une planche par bloc, trois propositions vivantes chacune
+  cours ; quatre blocs décidés)** : une planche par bloc, trois propositions vivantes chacune
   (`Outil-{tab,quest,music,map,crea}-Propositions.dc.html`). La Fiche de
   créature est rangée dans la famille Personnage de la palette, mais n'avait
   pas encore de dessin : elle est traitée ici. Le Générateur reste l'outil
   du MJ déjà décidé (planche « Décidé · Générateurs »), pas un bloc de la
   palette.
-  - **Table aléatoire** (`random_table`, specs/outils-mj.md §2) — A : la
-    table et « Tirer » au-dessus, résultat en carte, sa ligne s'allume ; B :
-    le tirage d'abord, table repliée, derniers tirages en puces ; C : la
-    bande des vingt faces, une couleur par entrée (la part du dé se voit),
-    puis la table. Communs : liens vers des fiches dans les entrées,
-    sous-tirage `{table:…}` écrit dessous, « Sans répétition », prix et
-    palier en pastilles, attribution ; le dé est lancé par le serveur
-    (règle 8).
-  - **Quête** (`quest`) — A : la fiche de quête (état en pilule à cinq
-    choix, commanditaire, progression, objectifs à cocher, récompenses et
-    prérequis côte à côte) ; B : le journal de quête (bandeau, tampon de
-    l'état qui se touche, objectifs en étapes reliées) ; C : une ligne
-    dépliable (anneau de progression, état, prochain objectif).
-  - **Musique** (`music`, ADR 0022) — A : la platine (piste en cours,
-    contrôles, progression, ce que le service permet) puis la liste ; B : la
-    liste seule, réglages repliés ; C : les tuiles d'ambiance, comme une
-    table de mixage. Communs : sur la page de lecture le bloc ne s'affiche
-    pas (♪ à côté du nom) ; fondus et bornes pour YouTube seulement.
-  - **Carte** (`map`, ADR 0017) — A : la vignette et « Agrandir » (l'outil
-    Carte en grand) ; B : la carte vivante dans le bloc (zoom, couches à
-    cocher, outils du MJ, « Cadrer ce bloc ») ; C : la carte et sa liste
-    rangée par couches, pastilles de visibilité au toucher. B et C ont
-    « Voir comme les joueurs » : ce que le serveur leur envoie (règle 5 ;
-    une punaise n'est vue que si sa couche l'est aussi).
-  - **Fiche de créature** (`statblock`) — A : le bloc de statistiques à la
-    Manuel des monstres, jets en boutons ; B : la fiche de combat (CA,
-    vitesse, FP en gros, PV en jauge, états, actions en cartes « Toucher » /
-    « Dégâts ») ; C : une pilule Lecture / Édition. Valeurs plates saisies,
-    seuls les modificateurs se calculent (règle 16) ; PV et états joués
-    vivent dans le suivi d'initiative (specs/outils-mj.md §5).
-  - **À trancher** : A, B ou C pour chacun des cinq blocs.
+  - **Décidé le 8 octobre** — planche « Décidé · Outils de jeu »
+    (`Outils-Decide.dc.html`), ordinateur et téléphone ; la tablette reprend
+    le dessin d'ordinateur dans la colonne de la fiche.
+    - **Table aléatoire : A.** La table telle qu'on la lit, « Tirer · d20 »
+      au-dessus, résultat en carte, liens vers les fiches, sous-tirage
+      `{table:…}` écrit dessous, « Sans répétition », prix et palier,
+      attribution. **Le tirage reprend l'animation de l'outil de dés**
+      (scintillement, V3.1-33) : les dés défilent flous puis se figent un
+      par un (le d20, puis le dé de la sous-table), le temps que le serveur
+      lance (règle 8) ; la ligne sortie ne s'allume qu'à la fin ; mouvement
+      réduit → résultat immédiat.
+    - **Quête : C.** Repliée en une ligne (anneau de progression, état,
+      commanditaire, prochain objectif) ; dépliée : pilule d'état à cinq
+      choix, objectifs à cocher, récompenses et prérequis (l'un sous l'autre
+      sur téléphone).
+    - **Musique : A, complétée.** La platine en tête, la liste dessous.
+      Ajouts demandés : « ⋯ » sur une piste règle où elle commence et où
+      elle finit (`startSeconds` / `endSeconds`, YouTube seulement ; pour
+      Spotify et SoundCloud le bloc dit pourquoi c'est impossible) ; durée
+      des fondus entrant et sortant réglable (`fadeInMs` / `fadeOutMs`, 0 à
+      5 s par pas de 0,5 s). Lancer à la visite, boucle, fondus en
+      interrupteurs. Rien de neuf en base : les champs existent déjà
+      (ADR 0022).
+    - **Carte : C.** La carte et sa liste rangée par couches ; toucher un
+      nom centre la carte ; pastilles de visibilité au toucher ; une punaise
+      n'est vue que si sa couche l'est aussi (ADR 0017) ; « Voir comme les
+      joueurs ». Téléphone : la liste passe sous la carte.
+  - **Fiche de créature — tour 2, à trancher** (`Outil-crea-Propositions`).
+    Demande de l'auteur : reprendre les éléments et l'apparence de la fiche
+    de personnage. Exemple : Venomfang (jeune dragon vert), pour montrer une
+    capacité à recharge.
+    - Éléments repris de la fiche : en-tête à portrait, bouclier de CA,
+      anneau de PV à commandes (▲ — ▼), anneau de FP (à la place du niveau),
+      constantes (initiative, vitesse, maîtrise, Perception passive), boîte
+      des états, « Ce qui se recharge » (souffle, recharge 5–6, avec son jet
+      d6), caractéristiques à deux boutons (test, sauvegarde), pilule
+      glissante Actions / Traits / Maîtrises, attaques à pastilles de jet,
+      sections ambrées, actions de base en puces.
+    - A — la fiche en deux colonnes, comme sur ordinateur ;
+    - B — la fiche en une colonne, comme dans une fenêtre étroite ;
+    - C — repliée en bande (portrait, CA, PV, attaques utiles, souffle,
+      états), « Fiche complète » déplie la fiche à deux colonnes.
+    - Inchangé : valeurs plates saisies, seuls les modificateurs se
+      calculent (règle 16) ; chaque pastille ouvre l'outil de dés
+      pré-rempli ; le serveur lance (règle 8).
+  - **À trancher** : la Fiche de créature (A, B ou C).
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
