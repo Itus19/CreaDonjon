@@ -2823,6 +2823,23 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   lisibles, flou), dans l'outil de partage du wiki. C'est un réglage du
   monde publié, pas un cookie de visiteur.
 
+- **Publication — en cours (8 octobre)** : planche « Lot i — la
+  Publication », trois propositions pour la fenêtre du MJ plus le téléphone.
+  - **Ce qui existe** : « Prévisualiser ↗ », le message d'accueil
+    (500 caractères) et `ShareLinkPanel` (alias, mot de passe, Créer,
+    Copier, Révoquer).
+  - **Ajouté** : le fond par défaut du wiki public, avec la galerie de la
+    Personnalisation, le mode des pages et le flou. C'est un réglage du monde
+    publié ; une fiche qui a son propre fond (V2-G13) le garde. **Donnée
+    nouvelle** : le fond, le mode et le flou par monde, à écrire dans
+    `docs/SCHEMA.md` avant de coder.
+  - **Les trois pistes** :
+    - A : une colonne (les liens, le message, le fond) ;
+    - B : la même colonne, plus un aperçu de la page d'accueil publique ;
+    - C : deux onglets, Liens de partage et Page d'accueil (avec l'aperçu).
+  - **Question posée** : l'onglet Wiki des joueuses (même `BookSkin`)
+    prend-il aussi ce fond par défaut ? **À trancher : A, B ou C.**
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
