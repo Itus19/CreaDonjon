@@ -2957,85 +2957,68 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     visibilité reste filtrée côté serveur (règle 5).
 
 - **Les blocs de la fiche du wiki — 2 · Psyché et liens (8 octobre, en
-  cours ; tour 2 le même jour)** : la première planche (une seule proposition) est remplacée, à la
+  cours ; tours 2 et 3 le même jour)** : la première planche (une seule proposition) est remplacée, à la
   demande de l'auteur, par **trois propositions par bloc**, une planche par
   bloc (`Psy-pers`, `Psy-conv`, `Psy-rel`, `Psy-net`, `Psy-fam`
   `-Propositions.dc.html`). Toutes suivent `specs/psyche-pnj.md` :
   −100…+100 en base, **bandes nommées à l'écran**, valeur exacte au survol
   pour le MJ (§1.5). L'auteur veut garder les **graphes en radar** qui
   existent aujourd'hui, au moins pour la Personnalité et les Convictions.
-  - **Personnalité — décidé (8 octobre) : A.** Radar en tête (bandes nommées
-    aux sommets), six barres bipolaires à côté pour régler, ★ pour les deux
-    pôles prioritaires ; dessous : aspirations en trois colonnes (Une vie, En
-    ce moment, Ce soir), « Ne fera jamais » / « Fera, à contrecœur », façon
-    de parler en pastilles, souvenirs repliables. Les déclinaisons ordinateur,
-    tablette et téléphone viennent avec les Convictions, qui prennent le même
-    dessin.
-  - **Convictions — tour 2, à trancher** : sur le dessin de la Personnalité A
-    (demande de l'auteur), « Comparer avec » pose la faction en pointillé
-    bleu sur le radar et en trait bleu sur les barres ; la tension s'écrit
-    dessous (calcul d'affichage nouveau, dans le noyau).
-    - **Fusionner ?** Deux formes proposées : (1) deux blocs, même dessin —
-      recommandé : une faction a des convictions mais pas de tempérament
-      (spec §2), chaque bloc garde sa visibilité, la comparaison
-      PNJ/faction reste simple ; (2) un cadre « Psyché » à deux onglets —
-      fusion à l'affichage seulement, les données restent deux blocs, mais
-      une seule pastille de visibilité.
-    - **Les pôles, relus** (libellés seulement, les clés en base ne changent
-      pas) : « Circonspection ↔ Curiosité » plutôt que « Conservatisme »
-      (recoupe Tradition ↔ Progrès) ou « Prudence » (doublon) ; « Profit ↔
-      Honneur » plutôt que « Richesse ↔ Honneur » ; le reste gardé, raisons
-      sur la planche. Ajout possible : « Calme ↔ Emportement », le seul grand
-      trait de tempérament absent — un 7ᵉ pôle change les données du bloc
-      (schéma Zod, version), donc ADR si retenu.
-  - **Relation — tour 2, trois nouvelles propositions sans radar** (l'auteur
-    ne trouvait pas son bonheur dans le tour 1) :
-    - A — le fil entre deux portraits : couleur = amitié, épaisseur =
-      intensité, pointillé = méfiance ; les mots forts noués dessus (en
-      toucher un ouvre son curseur) ; « Et Gundren, envers Sildar ? » montre
-      le fil retour, lu dans le bloc de l'autre, avec sa propre visibilité ;
-    - B — la boussole : amitié en x, confiance en y, quatre quartiers nommés
-      (Allié, Ami méfiant, Adversaire loyal, Ennemi) ; toucher le plan pose
-      le point (réglage fin du MJ, hors journal) ; le pointillé est le
-      chemin rejoué depuis le journal ; les autres relations du PNJ en gris ;
-      les cinq autres axes en barres ;
-    - C — la courbe du temps : une courbe par axe choisi, rejouée depuis
-      `attitude_events` (jamais stockée, règle 16), un repère par événement
-      avec son résumé au survol, le mot d'aujourd'hui au bout.
-    - Dans les trois : « Le connaît comme », le journal de la paire,
-      confirmation au-delà de 40.
-  - **Réseau — tour 2, trois nouvelles propositions** sur le modèle de graphe
-    envoyé par l'auteur. Rectification : le bloc `relations_graph` lit les
-    **liens du wiki** (table `relations` : membre de, originaire de, porte…),
-    pas les blocs Relation — le tour 1 mélangeait les deux.
-    - Communs : vignette par fiche (portrait `entity_assets` rôle
-      `portrait`, sinon l'icône de son type), nom dessous, la fiche au
-      centre plus grande ; **survoler une vignette allume ses liens et ses
-      voisins, éteint le reste, et écrit le type de lien** ; toucher ouvre
-      la carte de la fiche ; 1 ou 2 degrés.
-    - A — le graphe libre (comme le modèle) ;
-    - B — le même avec un liseré par type, des filtres par type avec leur
-      nombre, et « Trouver… » ;
-    - C — le graphe rangé par familles (personnes, factions, lieux, objets
-      chacun dans son coin ; 2ᵉ degré plus loin).
-    - Le portrait n'est pas dans `GraphEntityInput` aujourd'hui : à ajouter
-      côté service (une requête groupée, pas de N+1).
-  - **Généalogie — tour 2** : A (l'arbre en cartes) gardée pour l'instant ;
-    trois nouvelles, plus conviviales, sur le modèle envoyé :
-    - B — les portraits : grands portraits, nom en pastille à cheval sur le
-      bas, dates dessous, traits arrondis, défunt en gris, zoom en bas à
-      droite ;
-    - C — les médaillons en bandes nommées (Parents, Génération de…,
-      Enfants), courbes douces ;
-    - D — autour de la fiche : la fiche en grand au centre, chaque lien
-      nommé (père, sœur…), cases « + » pour agrandir, toucher un parent
-      recentre.
-    - Toucher une personne, dans les trois : ouvrir la fiche, centrer
-      l'arbre ici, ajouter un des neuf liens.
-    - **Dates de naissance et de mort** : l'auteur les veut, mais elles
-      n'existent pas en base (ni `relations`, ni le bloc `character`).
-      Donnée nouvelle à décider (champ du bloc personnage relié au
-      calendrier du monde ?) : `SCHEMA.md` et ADR avant tout code.
+  - **Décidé (8 octobre)** — planche « Décidé · Psyché et liens »
+    (`Psy-Decide.dc.html`), ordinateur et téléphone ; la tablette reprend le
+    dessin d'ordinateur dans la colonne de la fiche.
+    - **Personnalité : A.** Radar en tête (bandes nommées aux sommets), six
+      barres bipolaires pour régler, ★ pour les deux pôles prioritaires ;
+      aspirations en trois colonnes (Une vie, En ce moment, Ce soir), « Ne
+      fera jamais » / « Fera, à contrecœur », façon de parler, souvenirs
+      repliables. Téléphone : radar au-dessus, chaque barre sur trois lignes
+      (les deux pôles, la barre, le mot), colonnes empilées.
+    - **Convictions : deux blocs, même dessin** (pas de fusion : une faction
+      a des convictions sans tempérament, chaque bloc garde sa visibilité).
+      « Comparer avec » pose la faction en pointillé bleu sur le radar et en
+      trait bleu sur les barres ; la tension s'écrit dessous (calcul
+      d'affichage dans le noyau, testé d'abord).
+    - **Deux renommages, libellés seulement** (clés et valeurs inchangées,
+      aucune migration) : `curiosity_caution` → « Circonspection ↔
+      Curiosité » (fin du doublon « Prudence ») ; `wealth_honor` → « Profit ↔
+      Honneur ». « Calme ↔ Emportement » n'est pas retenu.
+    - **Réseau : B.** Liens du wiki (table `relations`) en vignettes
+      (portrait, sinon icône du type) avec un liseré par type ; filtres par
+      type avec leur nombre ; « Trouver… » ; le survol allume les liens et
+      les voisins et écrit le type de lien ; toucher ouvre la carte de la
+      fiche. Téléphone : pas de survol — un toucher allume la vignette et
+      fait paraître les noms voisins, un second ouvre la fiche ; seuls les
+      noms utiles s'affichent ; filtres en bande qui défile. Le portrait
+      s'ajoute à `GraphEntityInput` côté service (une requête groupée).
+    - **Généalogie : B.** Grands portraits, nom en pastille à cheval sur le
+      bas, dates dessous, traits arrondis, ex-partenaire en pointillé
+      orange, défunt en gris, zoom ; toucher : ouvrir, centrer l'arbre ici,
+      ajouter un des neuf liens. Téléphone : cartes plus petites, prénoms
+      seuls, l'arbre se parcourt du doigt et s'ouvre centré sur la fiche.
+    - **Dates de naissance et de mort : en attente.** La donnée n'existe pas
+      (ni `relations`, ni le bloc `character`) : `SCHEMA.md` et ADR avant
+      tout code.
+  - **Relation — tour 3, à trancher** (`Psy-rel-Propositions.dc.html`).
+    Idée de l'auteur : deux portraits (ceux de la Généalogie B), celui de la
+    fiche et celui de la cible, qu'on change (« Envers ▾ » : n'importe
+    quelle fiche — personnage, faction, créature) ; entre eux, un fil par
+    axe et une perle qui glisse. « ⇄ Voir l'autre sens » lit le bloc de la
+    cible envers la fiche (sa visibilité à lui) ; s'il n'existe pas, on
+    propose de le créer. « Attirance » est masquée quand la cible n'est pas
+    une personne.
+    - A — les fils et leurs perles : une perle par axe, son mot dedans ;
+      vers l'autre portrait = le sentiment le vise ; survol = pourquoi (les
+      souvenirs du journal) ;
+    - B — le faisceau : un brin par axe d'un portrait à l'autre, épais et
+      coloré si fort, effiloché en rouge si contraire, pâle si neutre ;
+      toucher un mot ouvre son fil à perle ;
+    - C — le face-à-face (Crusader Kings, Dwarf Fortress) : le verdict en
+      mots et le nombre de souvenirs entre les portraits ; chaque axe en sept
+      crans nommés ; sous chaque axe, les souvenirs qui l'ont fait bouger.
+    - Inspirations notées (à décider à part, données nouvelles) : une
+      étiquette de lien nommée à la Dwarf Fortress / Crusader Kings
+      (« compagnon d'armes », « rancune »…), et le compteur de rencontres
+      — dérivable du journal, donc sans stockage.
   - **Vu dans le code** :
     - les curseurs affichent aujourd'hui le nombre, contre la spec §1.5 ;
     - deux pôles portent le même nom, « Prudence » (curiosité ↔ prudence,
@@ -3044,8 +3027,8 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - Les exemples « trait, idéal, lien, défaut » des planches de la fiche
     (Personnalité) n'étaient pas le vrai modèle : c'est celui-ci qui fait
     foi.
-  - **À trancher** : Convictions (1 ou 2, et les pôles), Relation (A, B,
-    C), Réseau (A, B, C), Généalogie (A, B, C, D).
+  - **À trancher** : Relation (A, B ou C) ; d'où viennent les dates de
+    naissance et de mort.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
