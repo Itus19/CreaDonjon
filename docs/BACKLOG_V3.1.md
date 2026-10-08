@@ -2811,7 +2811,7 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     colonnes.
   - **Ouverte aux joueuses (accord de l'auteur, 8 octobre)** : c'est un
     réglage personnel, et une joueuse n'y a aujourd'hui aucun accès. Le même
-    écran lui est donné. **Emplacement à confirmer** (proposition) :
+    écran lui est donné. **Emplacement validé le 8 octobre** :
     - « Compte » dans l'accueil (V3.1-35), pour tout le monde, à côté du
       profil ;
     - une entrée « Apparence » en pied du rail du joueur, au-dessus de
