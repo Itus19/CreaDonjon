@@ -2957,7 +2957,7 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     visibilité reste filtrée côté serveur (règle 5).
 
 - **Les blocs de la fiche du wiki — 2 · Psyché et liens (8 octobre, en
-  cours ; tours 2 et 3 le même jour)** : la première planche (une seule proposition) est remplacée, à la
+  cours ; tours 2 à 4 le même jour)** : la première planche (une seule proposition) est remplacée, à la
   demande de l'auteur, par **trois propositions par bloc**, une planche par
   bloc (`Psy-pers`, `Psy-conv`, `Psy-rel`, `Psy-net`, `Psy-fam`
   `-Propositions.dc.html`). Toutes suivent `specs/psyche-pnj.md` :
@@ -2998,23 +2998,28 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     - **Dates de naissance et de mort : en attente.** La donnée n'existe pas
       (ni `relations`, ni le bloc `character`) : `SCHEMA.md` et ADR avant
       tout code.
-  - **Relation — tour 3, à trancher** (`Psy-rel-Propositions.dc.html`).
-    Idée de l'auteur : deux portraits (ceux de la Généalogie B), celui de la
-    fiche et celui de la cible, qu'on change (« Envers ▾ » : n'importe
-    quelle fiche — personnage, faction, créature) ; entre eux, un fil par
-    axe et une perle qui glisse. « ⇄ Voir l'autre sens » lit le bloc de la
-    cible envers la fiche (sa visibilité à lui) ; s'il n'existe pas, on
-    propose de le créer. « Attirance » est masquée quand la cible n'est pas
-    une personne.
-    - A — les fils et leurs perles : une perle par axe, son mot dedans ;
-      vers l'autre portrait = le sentiment le vise ; survol = pourquoi (les
-      souvenirs du journal) ;
-    - B — le faisceau : un brin par axe d'un portrait à l'autre, épais et
-      coloré si fort, effiloché en rouge si contraire, pâle si neutre ;
-      toucher un mot ouvre son fil à perle ;
-    - C — le face-à-face (Crusader Kings, Dwarf Fortress) : le verdict en
-      mots et le nombre de souvenirs entre les portraits ; chaque axe en sept
-      crans nommés ; sous chaque axe, les souvenirs qui l'ont fait bouger.
+  - **Relation — tour 4, à trancher** (`Psy-rel-Propositions.dc.html`).
+    Le tour 3 (perles, faisceau, face-à-face) a donné la direction : garder
+    la **finesse de réglage des perles** (A) et le **résumé en mots entre
+    les portraits** (C). Communs aux trois croisements :
+    - deux portraits (ceux de la Généalogie B) : la fiche, et la cible qu'on
+      change (« Envers ▾ » : n'importe quelle fiche, personnage, faction,
+      créature) ;
+    - « ⇄ Voir l'autre sens » lit le bloc de la cible envers la fiche (sa
+      visibilité à lui) ; s'il n'existe pas, on propose de le créer ;
+    - « Attirance » masquée quand la cible n'est pas une personne ;
+    - un fil par axe, une perle qui glisse au point près, son mot dedans ;
+      vers l'autre portrait = le sentiment le vise ; survol = pourquoi ;
+    - le résumé (les bandes fortes, en mots) et le nombre de souvenirs,
+      recalculés en direct à partir des valeurs et du journal, jamais
+      stockés (règle 16).
+    Les trois :
+    - A — le face-à-face en tête (portraits, résumé au milieu), puis les
+      fils sur toute la largeur (le réglage le plus fin) ;
+    - B — les fils tendus entre les portraits, le résumé posé au-dessus
+      d'eux (le plus compact) ;
+    - C — comme A, avec de petits traits sur chaque fil aux seuils des sept
+      bandes, et sous chaque fil les souvenirs qui l'ont fait bouger.
     - Inspirations notées (à décider à part, données nouvelles) : une
       étiquette de lien nommée à la Dwarf Fortress / Crusader Kings
       (« compagnon d'armes », « rancune »…), et le compteur de rencontres
