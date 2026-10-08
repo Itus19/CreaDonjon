@@ -2919,6 +2919,29 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     chaque éditeur, par famille — Récit, puis Psyché et liens, puis Outils
     de jeu. Les blocs de personnage sont déjà décidés avec la fiche.
 
+- **Les blocs de la fiche du wiki — 1 · Récit (8 octobre, en cours)** :
+  planche « À trancher · Blocs de la fiche — 1 · Récit »
+  (`Blocs-Recit-Propositions.dc.html`). Pour chaque bloc : ce qui existe et
+  ce qui est proposé, dans la carte décidée (A).
+  - **Texte** : la lettrine devient un interrupteur dans l'en-tête de la
+    carte. L'assistance IA passe en encart violet sous le texte ; la
+    proposition s'affiche en pointillé à sa place, rien n'est écrit avant
+    « Accepter » (règle 9), et le budget de propositions reste visible.
+  - **Encadré** : les lignes se lisent comme dans le wiki et s'éditent sur
+    place ; ⠿ pour réordonner ; « @ » cite une fiche ; des intitulés
+    suggérés selon le type de fiche (liste dans le code ou en données, à
+    décider).
+  - **Tableau** : un vrai tableau, × de colonne et de ligne au survol,
+    « + » au bout des en-têtes, « + Ligne » dessous.
+  - **Image** :
+    - A : trois sections repliables qui résument leur réglage ;
+    - B : une barre flottante sur l'image, l'aperçu dans le texte, et le
+      fond de page à part.
+  - **Chronologie** : l'axe en bande (périodes en barres, le jour actuel en
+    trait doré) ; une ligne par événement avec le genre et la visibilité en
+    pastilles de couleur, et « → en faire une fiche ».
+  - **À trancher** : accord bloc par bloc, et A ou B pour l'Image.
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
