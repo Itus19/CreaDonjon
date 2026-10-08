@@ -3037,8 +3037,8 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - **Reste ouvert** : d'où viennent les dates de naissance et de mort
     (Généalogie B).
 
-- **Les blocs de la fiche du wiki — 3 · Outils de jeu (8 octobre, en
-  cours ; quatre blocs décidés)** : une planche par bloc, trois propositions vivantes chacune
+- **Les blocs de la fiche du wiki — 3 · Outils de jeu (8 octobre,
+  décidé)** : une planche par bloc, trois propositions vivantes chacune
   (`Outil-{tab,quest,music,map,crea}-Propositions.dc.html`). La Fiche de
   créature est rangée dans la famille Personnage de la palette, mais n'avait
   pas encore de dessin : elle est traitée ici. Le Générateur reste l'outil
@@ -3071,25 +3071,37 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
       nom centre la carte ; pastilles de visibilité au toucher ; une punaise
       n'est vue que si sa couche l'est aussi (ADR 0017) ; « Voir comme les
       joueurs ». Téléphone : la liste passe sous la carte.
-  - **Fiche de créature — tour 2, à trancher** (`Outil-crea-Propositions`).
-    Demande de l'auteur : reprendre les éléments et l'apparence de la fiche
-    de personnage. Exemple : Venomfang (jeune dragon vert), pour montrer une
-    capacité à recharge.
-    - Éléments repris de la fiche : en-tête à portrait, bouclier de CA,
-      anneau de PV à commandes (▲ — ▼), anneau de FP (à la place du niveau),
-      constantes (initiative, vitesse, maîtrise, Perception passive), boîte
-      des états, « Ce qui se recharge » (souffle, recharge 5–6, avec son jet
-      d6), caractéristiques à deux boutons (test, sauvegarde), pilule
-      glissante Actions / Traits / Maîtrises, attaques à pastilles de jet,
-      sections ambrées, actions de base en puces.
-    - A — la fiche en deux colonnes, comme sur ordinateur ;
-    - B — la fiche en une colonne, comme dans une fenêtre étroite ;
-    - C — repliée en bande (portrait, CA, PV, attaques utiles, souffle,
-      états), « Fiche complète » déplie la fiche à deux colonnes.
-    - Inchangé : valeurs plates saisies, seuls les modificateurs se
-      calculent (règle 16) ; chaque pastille ouvre l'outil de dés
-      pré-rempli ; le serveur lance (règle 8).
-  - **À trancher** : la Fiche de créature (A, B ou C).
+  - **Fiche de créature — décidé (8 octobre) : A, la fiche en deux
+    colonnes** (planche « Décidé · Fiche de créature »,
+    `Creature-Decide.dc.html`, ordinateur et téléphone). Demande de l'auteur
+    : reprendre les éléments et l'apparence de la fiche de personnage.
+    Exemple : Venomfang (jeune dragon vert), pour la capacité à recharge.
+    - **Colonne de gauche** : en-tête à portrait (nom, taille, type,
+      alignement, FP, PX, repaire) ; jauges : bouclier de CA, anneau de PV à
+      commandes (▲ — ▼), anneau de FP à la place du niveau ; **constantes en
+      quatre tuiles égales, libellés sur une ligne** — Initiative (jet),
+      Vitesse, Maîtrise, Taille — et les autres vitesses dessous (« Aussi :
+      vol 24 m · nage 12 m ») ; Perception passive et boîte des états sur la
+      ligne suivante, comme la fiche ; « Ce qui se recharge » (point prêt /
+      dépensé, jet « Recharge d6 ») ; caractéristiques à deux boutons (test,
+      sauvegarde ; le point plein = maîtrise du jet).
+    - **Colonne de droite** : pilule glissante Actions / Traits / Maîtrises.
+      Actions : attaques (attaques multiples, chaque attaque avec ses
+      pastilles « toucher » et « dégâts »), capacités (souffle : DD, dégâts,
+      estompé une fois dépensé), réactions, actions de base en puces. Traits
+      : traits, repaire (lien de fiche). Maîtrises : jets de sauvegarde,
+      compétences (jets), défenses, sens et langues.
+    - Tablette : la fiche suit la largeur de sa fenêtre (piste B, comme la
+      fiche de personnage). Téléphone : une colonne, la pilule après les
+      caractéristiques.
+    - Inchangé : valeurs plates saisies (`statblock`), seuls les
+      modificateurs se calculent (règle 16) ; chaque pastille ouvre l'outil
+      de dés pré-rempli, le serveur lance (règle 8). Données : « Ce qui se
+      recharge » et l'état prêt / dépensé du souffle sont du jeu (suivi
+      d'initiative, specs/outils-mj.md §5), pas du bloc ; la recharge
+      elle-même (5–6) est écrite dans le texte de la capacité — à
+      structurer plus tard si un cas l'exige.
+  - **Outils de jeu : tout est décidé.**
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
