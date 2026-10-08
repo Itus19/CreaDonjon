@@ -2956,8 +2956,8 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     un bloc MJ le rend visible jusqu'à « Annuler » — d'où l'annonce. La
     visibilité reste filtrée côté serveur (règle 5).
 
-- **Les blocs de la fiche du wiki — 2 · Psyché et liens (8 octobre, en
-  cours ; tours 2 à 4 le même jour)** : la première planche (une seule proposition) est remplacée, à la
+- **Les blocs de la fiche du wiki — 2 · Psyché et liens (8 octobre,
+  décidé ; tours 2 à 4 le même jour)** : la première planche (une seule proposition) est remplacée, à la
   demande de l'auteur, par **trois propositions par bloc**, une planche par
   bloc (`Psy-pers`, `Psy-conv`, `Psy-rel`, `Psy-net`, `Psy-fam`
   `-Propositions.dc.html`). Toutes suivent `specs/psyche-pnj.md` :
@@ -2998,28 +2998,30 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     - **Dates de naissance et de mort : en attente.** La donnée n'existe pas
       (ni `relations`, ni le bloc `character`) : `SCHEMA.md` et ADR avant
       tout code.
-  - **Relation — tour 4, à trancher** (`Psy-rel-Propositions.dc.html`).
-    Le tour 3 (perles, faisceau, face-à-face) a donné la direction : garder
-    la **finesse de réglage des perles** (A) et le **résumé en mots entre
-    les portraits** (C). Communs aux trois croisements :
-    - deux portraits (ceux de la Généalogie B) : la fiche, et la cible qu'on
-      change (« Envers ▾ » : n'importe quelle fiche, personnage, faction,
-      créature) ;
+  - **Relation — décidé (8 octobre) : la A du tour 4**, ajoutée à la
+    planche « Décidé · Psyché et liens » (ordinateur et téléphone).
+    Quatre tours : radar et barres, puis fil/boussole/courbe, puis
+    perles/faisceau/face-à-face, enfin trois croisements de la finesse des
+    perles et du résumé central.
+    - **En tête, le face-à-face** : deux portraits (ceux de la Généalogie B,
+      colonnes de 184 px pour que les noms tiennent dans le bloc) — la
+      fiche, et la cible qu'on change (« Envers ▾ » : n'importe quelle fiche,
+      personnage, faction, créature).
+    - **Au milieu, le résumé** : « Sildar envers Gundren », les bandes
+      fortes en mots (« aveugle, amical, admiratif et obligé »), le nombre de
+      souvenirs et la date du dernier. Recalculé en direct à partir des
+      valeurs et du journal, jamais stocké (règle 16).
+    - **Dessous, les fils sur toute la largeur** : un fil par axe, une perle
+      qui glisse au point près, son mot dedans ; vers l'autre portrait = le
+      sentiment le vise, au milieu = neutre ; survol (toucher sur
+      téléphone) = pourquoi, d'après le journal ; « MJ » sur Attirance.
     - « ⇄ Voir l'autre sens » lit le bloc de la cible envers la fiche (sa
-      visibilité à lui) ; s'il n'existe pas, on propose de le créer ;
-    - « Attirance » masquée quand la cible n'est pas une personne ;
-    - un fil par axe, une perle qui glisse au point près, son mot dedans ;
-      vers l'autre portrait = le sentiment le vise ; survol = pourquoi ;
-    - le résumé (les bandes fortes, en mots) et le nombre de souvenirs,
-      recalculés en direct à partir des valeurs et du journal, jamais
-      stockés (règle 16).
-    Les trois :
-    - A — le face-à-face en tête (portraits, résumé au milieu), puis les
-      fils sur toute la largeur (le réglage le plus fin) ;
-    - B — les fils tendus entre les portraits, le résumé posé au-dessus
-      d'eux (le plus compact) ;
-    - C — comme A, avec de petits traits sur chaque fil aux seuils des sept
-      bandes, et sous chaque fil les souvenirs qui l'ont fait bouger.
+      visibilité à lui) ; s'il n'existe pas, on propose de le créer.
+      « Attirance » est masquée quand la cible n'est pas une personne.
+    - Téléphone : portraits plus petits, prénoms seuls, mêmes fils.
+    - Données : la cible accepte déjà toute entité (`target.kind:
+      "entity"`) ; le portrait vient de `entity_assets` (rôle `portrait`),
+      sinon l'icône du type.
     - Inspirations notées (à décider à part, données nouvelles) : une
       étiquette de lien nommée à la Dwarf Fortress / Crusader Kings
       (« compagnon d'armes », « rancune »…), et le compteur de rencontres
@@ -3032,8 +3034,8 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - Les exemples « trait, idéal, lien, défaut » des planches de la fiche
     (Personnalité) n'étaient pas le vrai modèle : c'est celui-ci qui fait
     foi.
-  - **À trancher** : Relation (A, B ou C) ; d'où viennent les dates de
-    naissance et de mort.
+  - **Reste ouvert** : d'où viennent les dates de naissance et de mort
+    (Généalogie B).
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
