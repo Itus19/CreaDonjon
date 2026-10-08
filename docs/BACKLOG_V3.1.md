@@ -3107,6 +3107,37 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     V3.1-63 à V3.1-79 (avec la fiche du wiki, Récit et Psyché et liens),
     en fin de fichier.
 
+- **Règles sur ordinateur (8 octobre, à trancher)** : planche « À trancher ·
+  Règles sur ordinateur » (`Regles-Ordi-Propositions.dc.html`), trois
+  propositions dans l'écran réel (rail V3.1-27, fenêtres à volets V3.1-20).
+  Le téléphone est déjà décidé (V3.1-30).
+  - **Aujourd'hui** (`RulesSidebar.tsx`, `RuleEntryView.tsx`) : une barre de
+    280 px hors fenêtre (en-tête du monde, bascule Monde / Règles, filtre,
+    groupes par type repliables, sous-classes sous leur classe, « Ajouter une
+    règle », deux bacs à sable), puis une fenêtre par règle : titre, type,
+    source, un cadre d'illustration vide côté MJ, les blocs selon leur mise
+    en page, la fiche de monstre, les renvois.
+  - **A · Le sommaire et la fenêtre à volets** : le sommaire passe dans la
+    fenêtre (recherche, « Récemment », catégories repliables avec leur
+    nombre, sous-classes sous leur classe, « + Ajouter une règle », bacs à
+    sable) ; la règle au centre ; toucher un renvoi l'ouvre dans le volet de
+    droite ; chaque règle ouverte devient un onglet.
+  - **B · La bibliothèque** : grande recherche, catégories en tuiles, tableau
+    filtrable (sorts : niveau, école, concentration ; monstres : FP, type…),
+    la règle dans un panneau à droite, « Ouvrir en fenêtre ».
+  - **C · La règle d'abord** : barre de recherche (Ctrl K) qui répond par
+    catégories, règles épinglées pour la séance en puces, la règle en
+    colonne de lecture ; survol d'un renvoi = aperçu, toucher = onglet ;
+    sommaire complet dans ☰.
+  - **Communs** : « Modifiée dans ta variante » et, sur le bloc modifié, la
+    bascule Officiel / Ta variante ; « Cette règle cite / Citée par » ; ⋮ :
+    épingler au Bloc-notes, copier le lien pour le wiki, créer une version
+    maison (copie dans la variante), Modifier (fiches maison seulement,
+    V3.1-2 ; une règle officielle ne se modifie jamais, règle 18) ; plus de
+    cadre d'illustration vide. Un joueur a la même page en page pleine, sans
+    ⋮ ni données brutes.
+  - **À trancher** : A, B ou C (ou un mélange).
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
