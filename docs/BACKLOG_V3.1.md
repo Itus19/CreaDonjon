@@ -2956,6 +2956,43 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     un bloc MJ le rend visible jusqu'à « Annuler » — d'où l'annonce. La
     visibilité reste filtrée côté serveur (règle 5).
 
+- **Les blocs de la fiche du wiki — 2 · Psyché et liens (8 octobre, en
+  cours)** : planche « À trancher · Blocs de la fiche — 2 · Psyché et
+  liens » (`Blocs-Psyche-Propositions.dc.html`). Elle suit
+  `specs/psyche-pnj.md` : −100…+100 en base, **bandes nommées à l'écran**,
+  valeur exacte au survol pour le MJ (§1.5).
+  - **Personnalité** :
+    - barres bipolaires nommées (« Autorité extrême », « neutre — ne s'en
+      soucie pas ») ;
+    - ★ pour les deux pôles prioritaires, dans l'ordre ;
+    - aspirations en trois colonnes (Une vie, En ce moment, Ce soir),
+      intensité en points, visibilité en pastille ;
+    - « Ne fera jamais » et « Fera, à contrecœur » côte à côte ;
+    - façon de parler en pastilles, souvenirs repliables.
+  - **Relation** :
+    - la cible en pastille, « Le connaît comme » sur la même ligne ;
+    - sept barres avec le mot de la bande ; « Attirance » marquée MJ ;
+    - le journal de la paire avec l'ajout en une ligne (confirmation
+      au-delà de 40, brut et appliqué affichés, §4).
+  - **Convictions** : barres nommées. « Comparer avec » une faction pose son
+    trait sur chaque barre ; une divergence de trois crans ou plus devient
+    une tension écrite (§2). C'est un calcul d'affichage nouveau.
+  - **Réseau** : le degré en puces ; liens colorés par la bande d'amitié,
+    épaisseur selon l'intensité, pointillé au 2ᵉ degré ; toucher une
+    personne dit ce que la fiche ressent, en mots.
+  - **Généalogie** : cartes de verre (dates, † pour un défunt),
+    ex-partenaire en pointillé orange ; toucher une carte ouvre les neuf
+    liens en puces et la recherche.
+  - **Vu dans le code** :
+    - les curseurs affichent aujourd'hui le nombre, contre la spec §1.5 ;
+    - deux pôles portent le même nom, « Prudence » (curiosité ↔ prudence,
+      impulsivité ↔ prudence). Proposé : « Conservatisme » pour le premier,
+      comme dans la spec.
+  - Les exemples « trait, idéal, lien, défaut » des planches de la fiche
+    (Personnalité) n'étaient pas le vrai modèle : c'est celui-ci qui fait
+    foi.
+  - **À trancher** : accord bloc par bloc, et « Conservatisme ».
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
