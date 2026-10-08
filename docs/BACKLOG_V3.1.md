@@ -2957,32 +2957,45 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     visibilité reste filtrée côté serveur (règle 5).
 
 - **Les blocs de la fiche du wiki — 2 · Psyché et liens (8 octobre, en
-  cours)** : planche « À trancher · Blocs de la fiche — 2 · Psyché et
-  liens » (`Blocs-Psyche-Propositions.dc.html`). Elle suit
-  `specs/psyche-pnj.md` : −100…+100 en base, **bandes nommées à l'écran**,
-  valeur exacte au survol pour le MJ (§1.5).
+  cours)** : la première planche (une seule proposition) est remplacée, à la
+  demande de l'auteur, par **trois propositions par bloc**, une planche par
+  bloc (`Psy-pers`, `Psy-conv`, `Psy-rel`, `Psy-net`, `Psy-fam`
+  `-Propositions.dc.html`). Toutes suivent `specs/psyche-pnj.md` :
+  −100…+100 en base, **bandes nommées à l'écran**, valeur exacte au survol
+  pour le MJ (§1.5). L'auteur veut garder les **graphes en radar** qui
+  existent aujourd'hui, au moins pour la Personnalité et les Convictions.
   - **Personnalité** :
-    - barres bipolaires nommées (« Autorité extrême », « neutre — ne s'en
-      soucie pas ») ;
-    - ★ pour les deux pôles prioritaires, dans l'ordre ;
-    - aspirations en trois colonnes (Une vie, En ce moment, Ce soir),
-      intensité en points, visibilité en pastille ;
-    - « Ne fera jamais » et « Fera, à contrecœur » côte à côte ;
-    - façon de parler en pastilles, souvenirs repliables.
-  - **Relation** :
-    - la cible en pastille, « Le connaît comme » sur la même ligne ;
-    - sept barres avec le mot de la bande ; « Attirance » marquée MJ ;
-    - le journal de la paire avec l'ajout en une ligne (confirmation
-      au-delà de 40, brut et appliqué affichés, §4).
-  - **Convictions** : barres nommées. « Comparer avec » une faction pose son
-    trait sur chaque barre ; une divergence de trois crans ou plus devient
-    une tension écrite (§2). C'est un calcul d'affichage nouveau.
-  - **Réseau** : le degré en puces ; liens colorés par la bande d'amitié,
-    épaisseur selon l'intensité, pointillé au 2ᵉ degré ; toucher une
-    personne dit ce que la fiche ressent, en mots.
-  - **Généalogie** : cartes de verre (dates, † pour un défunt),
-    ex-partenaire en pointillé orange ; toucher une carte ouvre les neuf
-    liens en puces et la recherche.
+    - A — le radar en tête (bandes nommées aux sommets), les six barres
+      bipolaires à côté pour régler, ★ pour les pôles prioritaires ;
+    - B — le radar se règle lui-même : toucher un sommet passe à la bande
+      suivante ; aspirations, limites, façon de parler et souvenirs en
+      onglets-pastilles ;
+    - C — petit radar et pastilles de bandes ; « Régler les pôles » déplie
+      les barres.
+    - Communs : aspirations en trois colonnes (Une vie, En ce moment, Ce
+      soir), intensité en points ; « Ne fera jamais » et « Fera, à
+      contrecœur » ; façon de parler en pastilles ; souvenirs repliables.
+  - **Convictions** :
+    - A — un radar, deux silhouettes : la faction choisie en pointillé
+      bleu par-dessus ; barres à côté ;
+    - B — les sept barres nommées avec le trait de la faction, un petit
+      radar en rappel ;
+    - C — deux radars côte à côte, puis les écarts classés en crans.
+    - Une divergence de trois crans ou plus devient une tension écrite (§2) :
+      calcul d'affichage nouveau, dans le noyau.
+  - **Relation** (« Le connaît comme » et journal de la paire dans les
+    trois ; confirmation au-delà de 40, brut et appliqué affichés, §4) :
+    - A — sept barres avec le mot de la bande ;
+    - B — radar à sept branches et barres à côté ;
+    - C — une phrase (« Envers Gundren, Sildar est aveugle, amical… ») et
+      des pastilles de mots ; « Régler finement » déplie les barres.
+    - Avis donné : le radar se lit moins bien axe par axe pour une
+      relation ; il n'est proposé qu'en B.
+  - **Réseau** : A — le graphe en forces (comme aujourd'hui) ; B — des
+    cercles concentriques autour de la fiche (1ᵉʳ et 2ᵉ degré) ; C — une
+    liste (mots, barre, degré).
+  - **Généalogie** : A — l'arbre en cartes ; B — trois colonnes
+    (Parents, Sa génération, Enfants) ; C — une ligne par sorte de lien.
   - **Vu dans le code** :
     - les curseurs affichent aujourd'hui le nombre, contre la spec §1.5 ;
     - deux pôles portent le même nom, « Prudence » (curiosité ↔ prudence,
@@ -2991,7 +3004,8 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - Les exemples « trait, idéal, lien, défaut » des planches de la fiche
     (Personnalité) n'étaient pas le vrai modèle : c'est celui-ci qui fait
     foi.
-  - **À trancher** : accord bloc par bloc, et « Conservatisme ».
+  - **À trancher** : A, B ou C pour chacun des cinq blocs, et
+    « Conservatisme ».
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
