@@ -2957,45 +2957,85 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     visibilité reste filtrée côté serveur (règle 5).
 
 - **Les blocs de la fiche du wiki — 2 · Psyché et liens (8 octobre, en
-  cours)** : la première planche (une seule proposition) est remplacée, à la
+  cours ; tour 2 le même jour)** : la première planche (une seule proposition) est remplacée, à la
   demande de l'auteur, par **trois propositions par bloc**, une planche par
   bloc (`Psy-pers`, `Psy-conv`, `Psy-rel`, `Psy-net`, `Psy-fam`
   `-Propositions.dc.html`). Toutes suivent `specs/psyche-pnj.md` :
   −100…+100 en base, **bandes nommées à l'écran**, valeur exacte au survol
   pour le MJ (§1.5). L'auteur veut garder les **graphes en radar** qui
   existent aujourd'hui, au moins pour la Personnalité et les Convictions.
-  - **Personnalité** :
-    - A — le radar en tête (bandes nommées aux sommets), les six barres
-      bipolaires à côté pour régler, ★ pour les pôles prioritaires ;
-    - B — le radar se règle lui-même : toucher un sommet passe à la bande
-      suivante ; aspirations, limites, façon de parler et souvenirs en
-      onglets-pastilles ;
-    - C — petit radar et pastilles de bandes ; « Régler les pôles » déplie
-      les barres.
-    - Communs : aspirations en trois colonnes (Une vie, En ce moment, Ce
-      soir), intensité en points ; « Ne fera jamais » et « Fera, à
-      contrecœur » ; façon de parler en pastilles ; souvenirs repliables.
-  - **Convictions** :
-    - A — un radar, deux silhouettes : la faction choisie en pointillé
-      bleu par-dessus ; barres à côté ;
-    - B — les sept barres nommées avec le trait de la faction, un petit
-      radar en rappel ;
-    - C — deux radars côte à côte, puis les écarts classés en crans.
-    - Une divergence de trois crans ou plus devient une tension écrite (§2) :
-      calcul d'affichage nouveau, dans le noyau.
-  - **Relation** (« Le connaît comme » et journal de la paire dans les
-    trois ; confirmation au-delà de 40, brut et appliqué affichés, §4) :
-    - A — sept barres avec le mot de la bande ;
-    - B — radar à sept branches et barres à côté ;
-    - C — une phrase (« Envers Gundren, Sildar est aveugle, amical… ») et
-      des pastilles de mots ; « Régler finement » déplie les barres.
-    - Avis donné : le radar se lit moins bien axe par axe pour une
-      relation ; il n'est proposé qu'en B.
-  - **Réseau** : A — le graphe en forces (comme aujourd'hui) ; B — des
-    cercles concentriques autour de la fiche (1ᵉʳ et 2ᵉ degré) ; C — une
-    liste (mots, barre, degré).
-  - **Généalogie** : A — l'arbre en cartes ; B — trois colonnes
-    (Parents, Sa génération, Enfants) ; C — une ligne par sorte de lien.
+  - **Personnalité — décidé (8 octobre) : A.** Radar en tête (bandes nommées
+    aux sommets), six barres bipolaires à côté pour régler, ★ pour les deux
+    pôles prioritaires ; dessous : aspirations en trois colonnes (Une vie, En
+    ce moment, Ce soir), « Ne fera jamais » / « Fera, à contrecœur », façon
+    de parler en pastilles, souvenirs repliables. Les déclinaisons ordinateur,
+    tablette et téléphone viennent avec les Convictions, qui prennent le même
+    dessin.
+  - **Convictions — tour 2, à trancher** : sur le dessin de la Personnalité A
+    (demande de l'auteur), « Comparer avec » pose la faction en pointillé
+    bleu sur le radar et en trait bleu sur les barres ; la tension s'écrit
+    dessous (calcul d'affichage nouveau, dans le noyau).
+    - **Fusionner ?** Deux formes proposées : (1) deux blocs, même dessin —
+      recommandé : une faction a des convictions mais pas de tempérament
+      (spec §2), chaque bloc garde sa visibilité, la comparaison
+      PNJ/faction reste simple ; (2) un cadre « Psyché » à deux onglets —
+      fusion à l'affichage seulement, les données restent deux blocs, mais
+      une seule pastille de visibilité.
+    - **Les pôles, relus** (libellés seulement, les clés en base ne changent
+      pas) : « Circonspection ↔ Curiosité » plutôt que « Conservatisme »
+      (recoupe Tradition ↔ Progrès) ou « Prudence » (doublon) ; « Profit ↔
+      Honneur » plutôt que « Richesse ↔ Honneur » ; le reste gardé, raisons
+      sur la planche. Ajout possible : « Calme ↔ Emportement », le seul grand
+      trait de tempérament absent — un 7ᵉ pôle change les données du bloc
+      (schéma Zod, version), donc ADR si retenu.
+  - **Relation — tour 2, trois nouvelles propositions sans radar** (l'auteur
+    ne trouvait pas son bonheur dans le tour 1) :
+    - A — le fil entre deux portraits : couleur = amitié, épaisseur =
+      intensité, pointillé = méfiance ; les mots forts noués dessus (en
+      toucher un ouvre son curseur) ; « Et Gundren, envers Sildar ? » montre
+      le fil retour, lu dans le bloc de l'autre, avec sa propre visibilité ;
+    - B — la boussole : amitié en x, confiance en y, quatre quartiers nommés
+      (Allié, Ami méfiant, Adversaire loyal, Ennemi) ; toucher le plan pose
+      le point (réglage fin du MJ, hors journal) ; le pointillé est le
+      chemin rejoué depuis le journal ; les autres relations du PNJ en gris ;
+      les cinq autres axes en barres ;
+    - C — la courbe du temps : une courbe par axe choisi, rejouée depuis
+      `attitude_events` (jamais stockée, règle 16), un repère par événement
+      avec son résumé au survol, le mot d'aujourd'hui au bout.
+    - Dans les trois : « Le connaît comme », le journal de la paire,
+      confirmation au-delà de 40.
+  - **Réseau — tour 2, trois nouvelles propositions** sur le modèle de graphe
+    envoyé par l'auteur. Rectification : le bloc `relations_graph` lit les
+    **liens du wiki** (table `relations` : membre de, originaire de, porte…),
+    pas les blocs Relation — le tour 1 mélangeait les deux.
+    - Communs : vignette par fiche (portrait `entity_assets` rôle
+      `portrait`, sinon l'icône de son type), nom dessous, la fiche au
+      centre plus grande ; **survoler une vignette allume ses liens et ses
+      voisins, éteint le reste, et écrit le type de lien** ; toucher ouvre
+      la carte de la fiche ; 1 ou 2 degrés.
+    - A — le graphe libre (comme le modèle) ;
+    - B — le même avec un liseré par type, des filtres par type avec leur
+      nombre, et « Trouver… » ;
+    - C — le graphe rangé par familles (personnes, factions, lieux, objets
+      chacun dans son coin ; 2ᵉ degré plus loin).
+    - Le portrait n'est pas dans `GraphEntityInput` aujourd'hui : à ajouter
+      côté service (une requête groupée, pas de N+1).
+  - **Généalogie — tour 2** : A (l'arbre en cartes) gardée pour l'instant ;
+    trois nouvelles, plus conviviales, sur le modèle envoyé :
+    - B — les portraits : grands portraits, nom en pastille à cheval sur le
+      bas, dates dessous, traits arrondis, défunt en gris, zoom en bas à
+      droite ;
+    - C — les médaillons en bandes nommées (Parents, Génération de…,
+      Enfants), courbes douces ;
+    - D — autour de la fiche : la fiche en grand au centre, chaque lien
+      nommé (père, sœur…), cases « + » pour agrandir, toucher un parent
+      recentre.
+    - Toucher une personne, dans les trois : ouvrir la fiche, centrer
+      l'arbre ici, ajouter un des neuf liens.
+    - **Dates de naissance et de mort** : l'auteur les veut, mais elles
+      n'existent pas en base (ni `relations`, ni le bloc `character`).
+      Donnée nouvelle à décider (champ du bloc personnage relié au
+      calendrier du monde ?) : `SCHEMA.md` et ADR avant tout code.
   - **Vu dans le code** :
     - les curseurs affichent aujourd'hui le nombre, contre la spec §1.5 ;
     - deux pôles portent le même nom, « Prudence » (curiosité ↔ prudence,
@@ -3004,8 +3044,8 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - Les exemples « trait, idéal, lien, défaut » des planches de la fiche
     (Personnalité) n'étaient pas le vrai modèle : c'est celui-ci qui fait
     foi.
-  - **À trancher** : A, B ou C pour chacun des cinq blocs, et
-    « Conservatisme ».
+  - **À trancher** : Convictions (1 ou 2, et les pôles), Relation (A, B,
+    C), Réseau (A, B, C), Généalogie (A, B, C, D).
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
