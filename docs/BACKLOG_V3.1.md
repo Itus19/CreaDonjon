@@ -2873,6 +2873,33 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   fichier, « Tickets du lot i »), plus V3.1-22, 23, 34, 37 et 38 déjà
   écrits.
 
+- **Après le lot i — la fiche du wiki sur ordinateur (8 octobre, en
+  cours)** : c'est l'écran le plus utilisé du MJ. Le téléphone est déjà
+  couvert (V3.1-30, 31), pas l'ordinateur. Planche « À trancher · Fiche du
+  wiki sur ordinateur » (`Wiki-Fiche-Propositions.dc.html`, sous la rangée
+  de la fiche de personnage), dans la fenêtre à volets (V3.1-20).
+  - **Ce qui existe** : `EditEntityForm` (titre, type, historique, œil du
+    wiki public, slug, alias, relations, portrait), `EntityBlocks` (carte par
+    bloc : ⠿, ▾, titre, type, état, visibilité, ▲▼, ⋮) et `RichTextEditor`
+    (bulle, avec la visibilité du paragraphe).
+  - **Les trois pistes** :
+    - A : tout éditable, mieux rangé ;
+    - B : lire d'abord, éditer un bloc à la fois (même geste que l'éditeur du
+      téléphone) ;
+    - C : le plan à gauche, la page au centre, l'inspecteur à droite.
+  - **Ce qui change dans les trois** :
+    - la visibilité en couleur : vert Public, bleu Joueurs, orange MJ, gris
+      Privé, avec ce qu'elle veut dire ;
+    - un passage MJ bordé d'orange ;
+    - « Ajouter un bloc » rangé en familles ;
+    - la suppression d'un bloc confirmée.
+  - **À trancher : A, B ou C.**
+  - **Ensuite, les blocs eux-mêmes (question de l'auteur)** : l'intérieur
+    de chaque éditeur de bloc n'est pas encore revu. Il est à passer en
+    revue par famille, une planche chacune, une fois le cadre choisi. Les
+    blocs de personnage (Personnage, Inventaire, Incantation, Ressources)
+    sont déjà décidés avec la fiche de personnage.
+
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
 | Ticket | Contenu | Dépend de |
