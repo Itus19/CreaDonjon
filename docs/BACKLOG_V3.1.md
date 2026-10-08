@@ -2873,32 +2873,51 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   fichier, « Tickets du lot i »), plus V3.1-22, 23, 34, 37 et 38 déjà
   écrits.
 
-- **Après le lot i — la fiche du wiki sur ordinateur (8 octobre, en
-  cours)** : c'est l'écran le plus utilisé du MJ. Le téléphone est déjà
-  couvert (V3.1-30, 31), pas l'ordinateur. Planche « À trancher · Fiche du
-  wiki sur ordinateur » (`Wiki-Fiche-Propositions.dc.html`, sous la rangée
-  de la fiche de personnage), dans la fenêtre à volets (V3.1-20).
-  - **Ce qui existe** : `EditEntityForm` (titre, type, historique, œil du
-    wiki public, slug, alias, relations, portrait), `EntityBlocks` (carte par
-    bloc : ⠿, ▾, titre, type, état, visibilité, ▲▼, ⋮) et `RichTextEditor`
-    (bulle, avec la visibilité du paragraphe).
-  - **Les trois pistes** :
-    - A : tout éditable, mieux rangé ;
-    - B : lire d'abord, éditer un bloc à la fois (même geste que l'éditeur du
-      téléphone) ;
-    - C : le plan à gauche, la page au centre, l'inspecteur à droite.
-  - **Ce qui change dans les trois** :
-    - la visibilité en couleur : vert Public, bleu Joueurs, orange MJ, gris
-      Privé, avec ce qu'elle veut dire ;
-    - un passage MJ bordé d'orange ;
-    - « Ajouter un bloc » rangé en familles ;
-    - la suppression d'un bloc confirmée.
-  - **À trancher : A, B ou C.**
-  - **Ensuite, les blocs eux-mêmes (question de l'auteur)** : l'intérieur
-    de chaque éditeur de bloc n'est pas encore revu. Il est à passer en
-    revue par famille, une planche chacune, une fois le cadre choisi. Les
-    blocs de personnage (Personnage, Inventaire, Incantation, Ressources)
-    sont déjà décidés avec la fiche de personnage.
+- **Après le lot i — la fiche du wiki sur ordinateur : décidé le 8
+  octobre, la A, « tout éditable, mieux rangé »** (planche « Décidé · Fiche
+  du wiki sur ordinateur », `Wiki-Fiche-Decide.dc.html` ; B et C retirées).
+  C'est l'écran le plus utilisé du MJ ; le téléphone garde l'éditeur décidé
+  (V3.1-30, 31).
+  - La fiche s'édite directement, au verre minéral, dans la fenêtre à volets
+    (V3.1-20).
+  - **En-tête** :
+    - le titre (nom par défaut sélectionné sur une fiche neuve) ;
+    - le type ▾ (PJ, PNJ, Lieu… « + Créer une catégorie ») ;
+    - l'historique et l'œil du wiki public ;
+    - l'adresse (slug) dessous ;
+    - Alias et Relations en pastilles (× et « + ») ;
+    - le portrait à droite.
+  - **Une carte de verre par bloc.** Son en-tête :
+    - ⠿ pour glisser, aussi au clavier ;
+    - ▾ / ▸ pour replier ;
+    - le titre, éditable sur place ;
+    - le type en pastille ;
+    - « Enregistré », annoncé poliment ;
+    - **la visibilité en pastille de couleur** (vert Public, bleu Joueurs,
+      orange MJ, gris Privé), qui ouvre un menu disant qui la voit (« le MJ
+      seul — jamais envoyé aux joueurs ») ;
+    - ⋮ : Monter, Descendre, Dupliquer, Supprimer… La suppression est
+      confirmée et rappelle l'historique. Les ▲▼ d'aujourd'hui passent dans
+      ⋮.
+  - **Texte** : toucher un paragraphe ouvre la bulle de l'éditeur riche
+    (niveau de titre, G / I / S, Lier à une fiche, Créer une fiche,
+    Spoiler, visibilité du paragraphe : Public, Joueurs, MJ). Un passage MJ
+    est bordé d'orange (`--gm`) et marqué « MJ » ; un passage Joueurs est
+    bordé de bleu.
+  - **« + Ajouter un bloc »** ouvre la palette en familles :
+    - Récit : Texte, Encadré, Image, Tableau, Chronologie ;
+    - Personnage : Personnage, Inventaire, Incantation, Ressources, Fiche de
+      créature ;
+    - Psyché et liens : Personnalité, Relation, Convictions, Réseau,
+      Généalogie ;
+    - Outils de jeu : Table aléatoire, Quête, Musique, Carte.
+  - **Fenêtre étroite** (tablette, volet partagé ; requête de conteneur) :
+    portrait réduit, personnalité sur une colonne, type de bloc masqué dans
+    l'en-tête de carte.
+  - **Données** : rien de neuf.
+  - **Ensuite, les blocs eux-mêmes (question de l'auteur)** : l'intérieur de
+    chaque éditeur, par famille — Récit, puis Psyché et liens, puis Outils
+    de jeu. Les blocs de personnage sont déjà décidés avec la fiche.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
