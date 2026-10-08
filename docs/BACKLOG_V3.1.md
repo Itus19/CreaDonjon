@@ -2791,28 +2791,37 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - **Téléphone** (Outils › Règles actives) : le ruleset, la table, l'aperçu,
     puis « Variantes et import » replié.
 
-- **Personnalisation — en cours (7 octobre)** : planche « Lot i — la
-  Personnalisation », trois propositions pour la fenêtre du MJ plus le
-  téléphone.
-  - Ce qui existe : `PersonnalisationPanel`.
-    - Quatre modes ; un mode que le fond ne permet pas est grisé, et
-      choisir un tel fond bascule sur un mode permis.
-    - Neuf fonds fournis et la bibliothèque personnelle.
-    - Flou de 0 à 40 px et contraste élevé, appliqués aussitôt par cookie.
-  - Ce qui change dans les trois :
-    - des vignettes de mode teintées par le fond, et les vraies miniatures ;
-    - l'interrupteur de la charte pour le contraste ;
-    - une ligne « réglages personnels, sur cet appareil ».
-  - Les trois pistes :
-    - A : une colonne (Mode, Fond d'écran, Lisibilité) ;
-    - B : les mêmes réglages avec un aperçu vivant aux jetons de
-      `tokens.css` ;
-    - C : le fond d'abord, en grandes vignettes avec leurs modes lisibles,
-      et une barre de réglages.
-  - **Question posée** : la Personnalisation est un réglage personnel mais
-    n'existe que dans les outils du MJ ; une joueuse ne peut pas choisir son
-    mode ni son fond. On ne l'ajoute pas sans accord. **À trancher : A, B ou
-    C.**
+- **Personnalisation — décidé le 8 octobre : la C, « le fond d'abord ».**
+  - **Barre en tête** :
+    - le mode en pilule à quatre ; un mode que le fond ne permet pas est
+      grisé, avec sa raison au survol ;
+    - le flou du fond, de 0 à 40 px ;
+    - le contraste élevé, en interrupteur.
+  - **Galerie des fonds** : les fonds en grandes vignettes (les vraies
+    miniatures), chacun avec ses modes lisibles en points de couleur.
+    - Les images personnelles suivent, avec × pour supprimer, et « + Ajouter
+      une image » en dernière vignette.
+    - Choisir un fond qui ne permet pas le mode en cours bascule sur un mode
+      permis, et le dit.
+  - **Données** : rien de neuf. Les cookies `mode`, `contrast`, `background`
+    et `bgBlur` (sur cet appareil, appliqués aussitôt) et la bibliothèque
+    personnelle. Une ligne le dit sous la galerie.
+  - **Tablette** : deux vignettes par rangée. **Téléphone** (Outils ›
+    Personnalisation) : la barre en colonne, puis la galerie en deux
+    colonnes.
+  - **Ouverte aux joueuses (accord de l'auteur, 8 octobre)** : c'est un
+    réglage personnel, et une joueuse n'y a aujourd'hui aucun accès. Le même
+    écran lui est donné. **Emplacement à confirmer** (proposition) :
+    - « Compte » dans l'accueil (V3.1-35), pour tout le monde, à côté du
+      profil ;
+    - une entrée « Apparence » en pied du rail du joueur, au-dessus de
+      « Mes mondes », qui ouvre l'écran en page pleine ;
+    - au téléphone, par Accueil › Compte, car la barre est pleine ;
+    - le MJ garde son outil.
+- **À faire dans Publication (demande de l'auteur, 8 octobre)** : le même
+  écran choisit le **fond par défaut du wiki public** (galerie, modes
+  lisibles, flou), dans l'outil de partage du wiki. C'est un réglage du
+  monde publié, pas un cookie de visiteur.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
