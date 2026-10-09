@@ -42,15 +42,15 @@ Ce qui n'est **pas** encore prêt à coder :
   Opus : la portée d'un événement, où vit un événement ajouté directement,
   l'agrégation des naissances et des morts).
 - **Des tickets « à concevoir » (Opus)** : conception à faire avant de
-  coder — V3.1-21 (cibler et résoudre), 23 (droits des joueurs), 37
+  coder — V3.1-100 (rejoindre sans PJ, lien nominatif), V3.1-21 (cibler et résoudre), 23 (droits des joueurs), 37
   (initiative côté joueurs, RLS), 39 (sauvegardes demandées à la cible), 40
   (ressources de classe), 47 (règles de personnage en données), 59 (fond par
   défaut du wiki). Et des tickets de données Opus déjà spécifiés : 41, 74,
   84, 89.
 - **Des rugosités d'avant la refonte**, hors interface : V3.1-1 à 7 (règles
   et choix d'espèce, de don, de sous-classe — 3, 6 et 7 nourrissent 47), 12
-  (« Voir comme » des MJ), 13 (sous-classes manquantes), 14 (une joueuse crée
-  son PJ — **en grande partie repris par V3.1-83**, à vérifier puis fermer).
+  (« Voir comme » des MJ), 13 (sous-classes manquantes). V3.1-14 est fermé,
+  repris par 82, 83 et 100.
   V3.1-15 et 16 sont faits et vérifiés en direct le 9 octobre (leurs
   écrans seront refaits au verre minéral par 54 et 56).
 
@@ -66,13 +66,13 @@ valables ; celui-ci les relie.
 | **0 · Sécurité et mesure** | **37** (Opus : `combats` lisible et modifiable par tout membre du monde — une fuite), **62** étapes 1-2 (Opus : mesurer avant de recâbler) | Un défaut de sécurité passe avant tout ; la mesure dit où la rapidité se perd avant qu'on reconstruise les écrans. |
 | **1 · Les données que les écrans attendent** (Opus, en parallèle) | 24 (services de jeu, Sonnet), 84 (identité de l'application), 41 (page partagée), 23 (droits des joueurs), 59 (fond par défaut), 47 (règles de personnage, avec 3, 6, 7), 74 (naissance et mort) → 96 (chronologie), 89 (attribuer chaque jet) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
 | **2 · La coquille** | 25 → 26 → 28 ; 27 → 29 → 30, 31, 32, 33 ; 20 (dès 25) ; 35 ; 34 ; 36 ; 62 étape 3 | Tout le reste vit dedans : pilule glissante, rail, fenêtres en deux volets, téléphone, accueil. |
-| **3 · Entrer et se reconnaître** | 85 → 86 ; 80 → 81 ; 82 → 83 ; 87 → 88 | Le premier écran que voit un ami ; court, et tout est décidé. |
+| **3 · Entrer et se reconnaître** | 85 → 86 ; 80 → 81 ; 82 → 83 → 100 (Opus) ; 87 → 88 | Le premier écran que voit un ami ; court, et tout est décidé. |
 | **4 · Les outils du MJ (lot i)** | 46, 55, 61, 54, 56, 44, 45, 43 ; 41 → 42 ; 59 → 60 ; 23 → 57 ; 58 ; 37 → 38 ; 21 → 39 | Les petits outils sans donnée nouvelle d'abord, puis ceux qui attendaient l'étape 1. |
 | **5 · La fiche du wiki et ses blocs** | 63 → 64 → 65 à 68 → 69 → 70 à 73 → 75 à 78 ; 79 (après 26 et 33) ; 74 (après 48) | La carte de verre et sa pastille portent tous les blocs. |
 | **6 · La création de personnage** | 47 → 48 → 49 → 50, 51, 52, 53 ; 40 | Le plus gros chantier ; il attend les règles en données (47). |
 | **7 · Les statistiques du joueur** | 89 → 90 → 91 → 92 | Il leur faut des jets attribués ; les jets d'avant 89 ne comptent pas. |
 | **8 · Règles et Chronologie** | 93 → 94 → 95 ; 96 → 97 → 98 → 99 | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
-| **À côté, quand on veut** | 1, 2, 4, 5 (petites rugosités de règles) ; 12, 13 ; vérifier 14 (repris par 83) | Indépendants de la refonte. |
+| **À côté, quand on veut** | 1, 2, 4, 5 (petites rugosités de règles) ; 12, 13 | Indépendants de la refonte. |
 
 **Règle** : un ticket Opus « à concevoir » ne se code pas ; il se conçoit
 (ADR), puis il se découpe en tickets prêts. Si Sonnet bute sur une décision
@@ -1032,7 +1032,13 @@ du jeu aujourd'hui — cohérent, pas un recul propre à ce contenu.
 
 ---
 
-### ☐ V3.1-14 — Aucun moyen pour une joueuse de créer elle-même son PJ sans personnage déjà assigné · `M`
+### ☑ V3.1-14 — Aucun moyen pour une joueuse de créer elle-même son PJ sans personnage déjà assigné · `M` — **repris par V3.1-82, 83 et 100 (9 octobre)**
+
+**Fermé le 9 octobre, repris ailleurs** (décision de l'auteur) : « Créer mon
+personnage » depuis l'onglet Personnage → V3.1-83 (carte « Nouveau
+personnage » du carrousel, V3.1-82) ; rejoindre une table sans choisir de PJ,
+et le lien qui vise un PJ précis → **V3.1-100**. Le texte ci-dessous reste
+pour mémoire.
 
 **Modèle conseillé : Opus** — une joueuse crée sa fiche : propriété, RLS, canEditEntity.
 
@@ -6136,6 +6142,7 @@ rangée x = 5420, y ≈ 35 790 et dessous) :
 | V3.1-86 | La marque partout : rail, onglet, Rejoindre, Réinitialiser | Sonnet | 84, 85 |
 | V3.1-87 | Administration (B) : tableau de bord | Sonnet | 35 |
 | V3.1-88 | Administration › Identité de l'application | Sonnet | 84, 87 |
+| V3.1-100 | Rejoindre sans choisir de PJ ; lien qui vise un PJ précis | **Opus** | 82, 83 |
 
 **Ordre conseillé** : 84 (Opus) d'abord, en parallèle 80 → 81 et 82 → 83 ;
 puis 85 → 86, 87 → 88.
@@ -6259,6 +6266,10 @@ puis 85 → 86, 87 → 88.
 - **La page s'ouvre sur « Nouveau personnage »** (à sa gauche le dernier
   PJ ouvert, à sa droite le premier). Sans PJ ouvert : la carte est seule,
   sans flèches ni points.
+- **Arrivée par un lien qui vise un PJ précis** (V3.1-100) : le carrousel
+  ne montre que **ce PJ et « Nouveau personnage »** (au cas où), et
+  **s'ouvre sur le PJ**. Le composant reçoit la liste et la carte de départ
+  du serveur ; il ne filtre rien lui-même.
 - **Un seul bouton** sous le carrousel : « Jouer Naivara » (prénom), ou
   « + Créer mon personnage » quand la carte « Nouveau » est centrée.
   « Jouer » réclame (`claimCharacterAction`) puis l'onglet Personnage
@@ -6406,13 +6417,15 @@ rail). **Départ** : `app/layout.tsx` (`metadata.title`),
   téléversée sinon).
 - **Rejoindre, sa porte à mot de passe, Réinitialiser** prennent le cadre
   de l'écran-titre : même fond, même titre ; le panneau de verre à la
-  place du menu porte leur formulaire **actuel, inchangé** (rôle, nom,
-  personnage, mot de passe ; nouveau mot de passe).
+  place du menu porte leur formulaire **actuel** (rôle, nom, mot de passe ;
+  nouveau mot de passe) — **sans le choix du personnage** : la joueuse le
+  fait ensuite dans le carrousel (V3.1-100).
 
 **Critères d'acceptation**
 - [ ] Changer le nom en administration change l'onglet du navigateur au
   rechargement suivant.
-- [ ] Les trois formulaires gardent tous leurs champs et messages.
+- [ ] Les trois formulaires gardent tous leurs champs et messages, sauf le
+  choix du personnage de Rejoindre (déplacé, V3.1-100).
 
 ### ☐ V3.1-87 — Administration (B) : le tableau de bord · `M` — **prêt**
 
@@ -6488,6 +6501,46 @@ de** : V3.1-35 (« Administration » dans le rail, superadmin seulement).
 - [ ] Enregistrer change l'écran-titre et la tête du rail pour tous.
 - [ ] Rétablir revient au nom, à la phrase et au d20 par défaut.
 
+### ☐ V3.1-100 — Rejoindre sans choisir de PJ ; le lien qui vise un PJ précis · `M` — **à concevoir (Opus)**
+
+**Modèle conseillé : Opus** — parcours d'adhésion, une colonne nouvelle,
+une réservation à faire respecter côté serveur.
+
+**Décision de l'auteur (9 octobre)**
+- **Rejoindre une table ne demande plus de choisir un PJ.** L'écran
+  Rejoindre (V3.1-86) garde rôle, nom et mot de passe ; la joueuse arrive
+  ensuite sur le **carrousel** (V3.1-82), ouvert sur « Nouveau personnage ».
+  Plus de blocage « Aucun personnage disponible » (V3.1-14).
+- **Un lien peut viser un PJ précis** (« ce lien est pour Naivara ») : la
+  joueuse qui l'ouvre voit un carrousel réduit à **ce PJ et « Nouveau
+  personnage »** (au cas où), **ouvert sur le PJ**.
+
+**Constat (lu le 9 octobre)** : `campaign_invites` n'a pas de colonne de
+personnage ; `accountProvisioning.ts` refuse un rôle joueur sans
+`entityId` (`missing_entity`) et réclame le PJ au moment de rejoindre.
+
+**À concevoir, ADR à l'appui**
+- `campaign_invites.entity_id uuid null` (lien nominatif) ; la génération
+  d'un lien joueur dans Gestion de campagne gagne « pour : [PJ ▾]
+  (facultatif) » (avec V3.1-54).
+- Adhésion sans réclamation : `accountProvisioning` accepte un joueur sans
+  `entityId` ; la réclamation se fait ensuite par le carrousel.
+- **Réservation** : tant que le lien nominatif est actif et non utilisé, son
+  PJ n'apparaît pas dans le carrousel des autres joueuses ; la joueuse
+  arrivée par ce lien peut le réclamer même s'il n'est pas « ouvert ». La
+  règle est vérifiée par le serveur à la réclamation, pas seulement à
+  l'affichage.
+- Le serveur dit au carrousel quoi montrer et sur quelle carte s'ouvrir
+  (V3.1-82).
+
+**Critères d'acceptation**
+- [ ] Une joueuse rejoint par un lien ouvert sans aucun PJ disponible, puis
+  crée le sien depuis le carrousel.
+- [ ] Par un lien nominatif : carrousel réduit au PJ visé et à « Nouveau
+  personnage », ouvert sur le PJ ; une autre joueuse ne voit pas ce PJ.
+- [ ] Réclamer le PJ réservé avec un autre compte est refusé par le serveur
+  (test).
+
 ## Tickets du volet « Je joue » de l'accueil : les statistiques (9 octobre)
 
 Décision du 9 octobre (V3.1-19, section « Accueil, volet « Je joue » :
@@ -6548,13 +6601,16 @@ désavantage, la trace porte les deux d20 sans dire lequel est gardé.
   `attack`, `damage`, `check`, `save`, `spell`, `heal`, `free` — pour
   regrouper « l'action la plus utilisée » sans analyser du texte.
 - **Jets anciens** (sans ces champs) : `entity_id` reste null ; on ne
-  devine pas par le nom (homonymes). Ils sont exclus des statistiques
-  personnelles, et le volet le dit (« Statistiques depuis le 9 octobre »)
-  tant qu'ils existent. À l'auteur de dire si un rattrapage par nom, au cas
-  par cas, vaut la peine.
-- RLS : inchangée en lecture (la visibilité `visibility_level` reste la
-  barrière ; un jet caché du MJ n'entre jamais dans les statistiques d'une
-  joueuse). Les nouvelles colonnes ne s'écrivent que côté serveur.
+  devine pas par le nom (homonymes). Ils sont **exclus** des statistiques
+  personnelles (**confirmé par l'auteur le 9 octobre** : pas de rattrapage),
+  et le volet le dit (« Statistiques depuis le … », date de la migration).
+- **Les jets secrets ne comptent jamais** (décision de l'auteur, 9
+  octobre) : `listRollsForStats` ne lit que les jets `visibility_level =
+  'public'` — ni les jets cachés du MJ (`gm`), ni les jets secrets d'un
+  joueur (`roller`, ADR 0038), **pas même pour leur auteur**. Même règle pour
+  la moyenne de la table.
+- RLS : inchangée en lecture. Les nouvelles colonnes ne s'écrivent que côté
+  serveur.
 - **Monnaie** : vérifier que les mouvements de monnaie (services de jeu,
   V3.1-24) créent encore une révision du bloc `inventory` ; si la monnaie a
   migré vers `entity_runtime_state`, `campaignEconomy.ts` ne la voit plus et
@@ -6581,8 +6637,8 @@ désavantage, la trace porte les deux d20 sans dire lequel est gardé.
   `naturalD20`, `kind` (tests d'intégration).
 - [ ] Avantage : `naturalD20` = le plus haut des deux ; désavantage : le
   plus bas (test).
-- [ ] Un jet caché du MJ n'apparaît pas dans `listRollsForStats` lu par une
-  joueuse (test RLS).
+- [ ] Aucun jet `gm` ni `roller` n'apparaît dans `listRollsForStats`, même
+  lu par son auteur (test).
 
 ### ☐ V3.1-90 — Statistiques : le noyau pur · `S` — **prêt**
 
@@ -6598,7 +6654,8 @@ des données de V3.1-89.
   (le d20 **gardé**). Les nombres de 1 et de 20 affichés au-dessus des
   colonnes **sont** les colonnes 1 et 20 : un seul calcul. (Différence
   voulue avec `computeDiceStats`, qui compte un 20 dès qu'un des deux dés
-  d'un avantage l'affiche : ici, les chiffres doivent égaler leurs barres.)
+  d'un avantage l'affiche : ici, les chiffres doivent égaler leurs barres —
+  **règle validée par l'auteur le 9 octobre**.)
 - `d20Average(rolls)` : moyenne des d20 gardés, arrondie au dixième ;
   `null` sans jet. `rollCount` : nombre de jets à d20.
 - `longestStreak(rolls, face)` : la plus longue suite de jets consécutifs
@@ -6695,8 +6752,8 @@ volet de droite de l'accueil (`Accueil-3-Tableau.dc.html`, V3.1-35).
   colonnes (même source).
 - [ ] « Dernière séance » ne compte que les jets et mouvements de la
   dernière séance de la campagne.
-- [ ] Une joueuse ne voit jamais les jets cachés du MJ ni les statistiques
-  d'un autre PJ.
+- [ ] Aucun jet secret (MJ ou joueur, même les siens) n'entre dans les
+  chiffres ; une joueuse ne voit jamais les statistiques d'un autre PJ.
 - [ ] Ordinateur 1400 × 860 : volet sans défilement ; téléphone 390 px :
   aucun chiffre recouvert.
 - [ ] `DiceStatsPanel` retiré (et ses routes si plus rien ne les lit).
