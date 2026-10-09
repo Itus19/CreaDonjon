@@ -22,6 +22,61 @@ l'ambiguïté : un petit ticket de sécurité va à Opus, un gros écran déjà 
 
 ---
 
+## Feuille de route (9 octobre) — à lire en premier
+
+### Où en est la refonte
+
+**Tous les écrans de la refonte « verre minéral » sont décidés** (V3.1-19 :
+lots a à h, lot i des outils du MJ, la Création, la fiche du wiki et ses
+blocs, Règles sur ordinateur, Chronologie du monde, Compte, Choix du
+personnage, Écrans d'entrée et marque « Antre Nous », Administration,
+statistiques du volet « Je joue »). Chaque décision a sa planche
+« Décidé » sur le canevas https://claude.ai/artifact/EzWpfdYv6xP9H9gMp6L8Lm.
+
+Ce qui n'est **pas** encore prêt à coder :
+- **Deux écrans décidés sans tickets** : Règles sur ordinateur (décidé le
+  8 octobre) et Chronologie du monde (décidé le 9 octobre, avec trois points
+  de données pour Opus : la portée d'un événement, où vit un événement ajouté
+  directement, l'agrégation des naissances et des morts). **À découper.**
+- **Des tickets « à concevoir » (Opus)** : conception à faire avant de
+  coder — V3.1-21 (cibler et résoudre), 23 (droits des joueurs), 37
+  (initiative côté joueurs, RLS), 39 (sauvegardes demandées à la cible), 40
+  (ressources de classe), 47 (règles de personnage en données), 59 (fond par
+  défaut du wiki). Et des tickets de données Opus déjà spécifiés : 41, 74,
+  84, 89.
+- **Des rugosités d'avant la refonte**, hors interface : V3.1-1 à 7 (règles
+  et choix d'espèce, de don, de sous-classe — 3, 6 et 7 nourrissent 47), 12
+  (« Voir comme » des MJ), 13 (sous-classes manquantes), 14 (une joueuse crée
+  son PJ — **en grande partie repris par V3.1-83**, à vérifier puis fermer).
+  V3.1-15 et 16 sont codés, **à vérifier en direct** (leurs écrans sont
+  ensuite refaits par 54 et 56).
+
+### Ordre recommandé
+
+Chaque étape s'appuie sur la précédente ; à l'intérieur d'une étape, l'ordre
+est celui des flèches, et les tickets séparés par des virgules peuvent partir
+en parallèle. Les ordres détaillés de chaque section (plus bas) restent
+valables ; celui-ci les relie.
+
+| Étape | Tickets | Pourquoi d'abord |
+|---|---|---|
+| **0 · Sécurité et mesure** | **37** (Opus : `combats` lisible et modifiable par tout membre du monde — une fuite), **62** étapes 1-2 (Opus : mesurer avant de recâbler) | Un défaut de sécurité passe avant tout ; la mesure dit où la rapidité se perd avant qu'on reconstruise les écrans. |
+| **1 · Les données que les écrans attendent** (Opus, en parallèle) | 24 (services de jeu, Sonnet), 84 (identité de l'application), 41 (page partagée), 23 (droits des joueurs), 59 (fond par défaut), 47 (règles de personnage, avec 3, 6, 7), 74 (naissance et mort), 89 (attribuer chaque jet) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
+| **2 · La coquille** | 25 → 26 → 28 ; 27 → 29 → 30, 31, 32, 33 ; 20 (dès 25) ; 35 ; 34 ; 36 ; 62 étape 3 | Tout le reste vit dedans : pilule glissante, rail, fenêtres en deux volets, téléphone, accueil. |
+| **3 · Entrer et se reconnaître** | 85 → 86 ; 80 → 81 ; 82 → 83 ; 87 → 88 | Le premier écran que voit un ami ; court, et tout est décidé. |
+| **4 · Les outils du MJ (lot i)** | 46, 55, 61, 54, 56, 44, 45, 43 ; 41 → 42 ; 59 → 60 ; 23 → 57 ; 58 ; 37 → 38 ; 21 → 39 | Les petits outils sans donnée nouvelle d'abord, puis ceux qui attendaient l'étape 1. |
+| **5 · La fiche du wiki et ses blocs** | 63 → 64 → 65 à 68 → 69 → 70 à 73 → 75 à 78 ; 79 (après 26 et 33) ; 74 (après 48) | La carte de verre et sa pastille portent tous les blocs. |
+| **6 · La création de personnage** | 47 → 48 → 49 → 50, 51, 52, 53 ; 40 | Le plus gros chantier ; il attend les règles en données (47). |
+| **7 · Les statistiques du joueur** | 89 → 90 → 91 → 92 | Il leur faut des jets attribués ; les jets d'avant 89 ne comptent pas. |
+| **8 · À découper, puis coder** | Règles sur ordinateur ; Chronologie du monde (et ses points Opus) | Décidés, sans tickets. |
+| **À côté, quand on veut** | 1, 2, 4, 5 (petites rugosités de règles) ; 12, 13 ; vérifier 14, 15, 16 | Indépendants de la refonte. |
+
+**Règle** : un ticket Opus « à concevoir » ne se code pas ; il se conçoit
+(ADR), puis il se découpe en tickets prêts. Si Sonnet bute sur une décision
+qu'un ticket ne tranche pas, il s'arrête et la note ici.
+
+---
+
 ### ☐ V3.1-1 — `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré · `S`
 
 **Modèle conseillé : Sonnet** — assouplir une validation, cas bien décrits.
@@ -1750,7 +1805,7 @@ lots le sont.
 | — | Outil de dés unique, partout (téléphone, ordinateur, solo) : pré-rempli, Cibler · Lancer · Effacer — détail en V3.1-21 | décidé, à coder |
 | — | Outil MJ « Table » (les PJ en direct) | décidé, à coder |
 | — | Droits des joueurs sur leur fiche, réglés dans Règles actives → **V3.1-23** | décidé, à concevoir |
-| — | Jauges de l'initiative et du budget de rencontre | à trancher |
+| — | Jauges de l'initiative et du budget de rencontre | tranché dans le lot i (C9 : PV en anneau, « menace restante ») → V3.1-38, V3.1-44 |
 
 **Règle transverse (4 octobre) : chaque lot livre aussi sa vue
 smartphone.** Un lot n'est pas fini tant que son écran ne marche pas à 390 px :
