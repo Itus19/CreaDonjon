@@ -3240,8 +3240,8 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     bouton à côté d'un champ (« Enregistrer », « Supprimer définitivement »)
     passe sous le champ plutôt que de se couper sur deux lignes.
   - Écartées : B (onglets), C (carte d'identité et lignes de réglages).
-- **Choix du personnage — à trancher (9 octobre)** : planche « Choix du
-  personnage · trois propositions ». Aujourd'hui, `ChooseCharacterScreen`
+- **Choix du personnage — la C retenue, variante à trancher (9 octobre)** :
+  planche « Choix du personnage ». Aujourd'hui, `ChooseCharacterScreen`
   (V3.1-10) est une liste de noms en boutons, avec « Nouveau PJ ». Il
   s'affiche dans l'onglet Personnage quand une joueuse membre d'un monde n'a
   pas de PJ (ajoutée par email, ou PJ libéré par le MJ).
@@ -3251,16 +3251,28 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   (`entity_assets`, rôle portrait, l'initiale à défaut), le `summary` et
   l'identité calculée par `characterSheet()` (espèce, classe, niveau). Rien
   n'est stocké, et seules les fiches que la joueuse peut voir sont envoyées.
-  - **A — la galerie** : de grandes cartes portrait (nom, espèce et classe,
-    une phrase), puis « Créer mon personnage » en carte pointillée. Une barre
-    en bas confirme le choix : « Jouer Naivara ».
-  - **B — la liste et l'aperçu** : une liste compacte à gauche ; à droite, le
-    personnage en grand (portrait, phrase, six caractéristiques, CA, PV max,
-    vitesse) et « Jouer Naivara ».
-  - **C — la sélection de héros** : un carrousel comme dans un jeu, avec un
-    personnage au centre, ses voisins en retrait, des flèches, des points et
-    les touches ← →. « Jouer Naivara » dessous, et « ou créer mon
-    personnage » en lien.
+  - **Retenue : la C, la sélection de héros** (9 octobre). Un carrousel :
+    un personnage au centre, ses voisins en retrait, des flèches, des points
+    et les touches ← →. A (galerie) et B (liste et aperçu) sont écartées.
+  - **Reste à choisir comment « Créer mon personnage » se montre**, aussi
+    visible que « Jouer » :
+    - **C1 — deux boutons jumeaux** : « Jouer Naivara » (plein) et
+      « + Créer mon personnage » (cerclé d'accent), de même taille, côte à
+      côte ;
+    - **C2 — une carte du carrousel** : « Nouveau personnage », la dernière,
+      en pointillés avec un grand + ; centrée, le bouton unique devient
+      « + Créer mon personnage ».
+  - **PJ ouvert sans fiche de personnage** (fiche de wiki seulement, pas de
+    bloc `character`) : à la place de l'espèce et de la classe, l'étiquette
+    « Fiche de personnage à créer » ; le portrait et le `summary` viennent de
+    la fiche de wiki. Le bouton dit « Jouer Mirelle · créer sa fiche ».
+  - **Après le choix**, l'onglet Personnage montre la fiche jouable du PJ.
+    Sans fiche, la réclamation ouvre directement l'assistant de création
+    (Création décidée, A), déjà au nom et au portrait de la fiche de wiki.
+    Aujourd'hui, il faut encore toucher « Créer la fiche » sous « Aucune
+    fiche de personnage » (`ParticipantCharacterSheet`). « Créer mon
+    personnage » ouvre l'assistant sur une entité nouvelle, réclamée par la
+    joueuse à la fin de l'assistant.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
