@@ -207,6 +207,44 @@ describe("extractSkillChoices / mapChosenSkillModifiers", () => {
     ]);
   });
 
+  // V3.1-4 : forme reelle d'un trait d'espece SRD 2024 (« Skillful »,
+  // « Keen Senses ») — un OBJET unique, pas une liste, et des index nus
+  // (« perception »), sans le prefixe « skill- » des classes.
+  it("extrait le choix d'un trait d'espece (objet unique, index nus)", () => {
+    const fields = parseCustomTableFields([
+      { field: "index", value: "keen-senses" },
+      {
+        field: "proficiency_choices",
+        value: JSON.stringify({
+          choose: 1,
+          type: "proficiencies",
+          from: {
+            option_set_type: "options_array",
+            options: [
+              { option_type: "reference", item: { index: "insight", name: "Insight" } },
+              { option_type: "reference", item: { index: "perception", name: "Perception" } },
+              { option_type: "reference", item: { index: "animal-handling", name: "Animal Handling" } },
+            ],
+          },
+        }),
+      },
+    ]);
+    expect(extractSkillChoices(fields)).toEqual([{ count: 1, options: ["insight", "perception", "animal_handling"] }]);
+  });
+
+  it("ignore une option qui n'est pas une competence (instrument, outil)", () => {
+    const fields = {
+      proficiency_choices: [
+        {
+          choose: 3,
+          type: "proficiencies",
+          from: { option_set_type: "options_array", options: [{ item: { index: "lute" } }, { item: { index: "smiths-tools" } }] },
+        },
+      ],
+    };
+    expect(extractSkillChoices(fields)).toEqual([]);
+  });
+
   it("mappe des competences choisies en modificateurs de maitrise (couche 3)", () => {
     expect(mapChosenSkillModifiers(["athletics", "intimidation"], "class:fighter", "Guerrier")).toEqual([
       { target: "skill.athletics", op: "proficiency", layer: 3, source: "class:fighter", label: "Guerrier" },

@@ -1,4 +1,4 @@
-import type { Ability, Modifier, Prerequisite } from "./sheet";
+import { SKILLS, type Ability, type Modifier, type Prerequisite } from "./sheet";
 import { formatFormulaNode } from "../formula/format";
 import type {
   ActionsBlockData,
@@ -181,9 +181,23 @@ export interface SkillChoice {
 }
 
 /** Choix de competences offerts par une classe (§B2), pour la liste des "choix restants" — pas encore les competences retenues. */
+/**
+ * Index d'option -> cle de competence. Les classes prefixent (« skill-athletics ») ;
+ * les traits d'espece 2024 donnent l'index nu (« perception », V3.1-4) — accepte
+ * seulement s'il nomme une vraie competence, pour ne jamais prendre un
+ * instrument ou un outil (« lute ») pour une competence.
+ */
+function skillKeyFromOptionIndex(index: string): string | null {
+  const prefixed = skillKeyFromIndex(index);
+  if (prefixed) return prefixed;
+  const bare = index.replace(/-/g, "_");
+  return (SKILLS as readonly string[]).includes(bare) ? bare : null;
+}
+
 export function extractSkillChoices(fields: ParsedFields): SkillChoice[] {
-  const choices = fields.proficiency_choices;
-  if (!Array.isArray(choices)) return [];
+  // Une classe porte une LISTE de choix ; un trait d'espece (V3.1-4) un objet unique.
+  const raw = fields.proficiency_choices;
+  const choices = Array.isArray(raw) ? raw : raw && typeof raw === "object" ? [raw] : [];
 
   const result: SkillChoice[] = [];
   for (const c of choices as {
@@ -193,7 +207,7 @@ export function extractSkillChoices(fields: ParsedFields): SkillChoice[] {
   }[]) {
     if (c.type !== "proficiencies" || c.from?.option_set_type !== "options_array") continue;
     const options = (c.from.options ?? [])
-      .map((o) => (o.item?.index ? skillKeyFromIndex(o.item.index) : null))
+      .map((o) => (o.item?.index ? skillKeyFromOptionIndex(o.item.index) : null))
       .filter((s): s is string => s !== null);
     if (options.length > 0 && typeof c.choose === "number") {
       result.push({ count: c.choose, options });

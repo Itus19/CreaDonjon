@@ -193,6 +193,17 @@ interface BatchEntry {
   progressionRows: ProgressionRow[];
   /** Present uniquement pour une fiche maison resolue via le repli ci-dessous (bloc dedie `background`, jamais de `custom_table`). */
   backgroundBlock?: BackgroundBlockData;
+  /** Cles des fiches de traits d'une espece (bloc `species_traits`, V3.1-4) — vide pour toute autre fiche. */
+  traitKeys: string[];
+}
+
+/** Cles de regle du bloc `species_traits` ; tolere une donnee absente ou d'une autre forme. */
+function speciesTraitKeys(data: unknown): string[] {
+  const traits = (data as { traits?: unknown } | undefined)?.traits;
+  if (!Array.isArray(traits)) return [];
+  return traits
+    .map((t) => (t as { kind?: unknown; key?: unknown }).kind === "rule" ? (t as { key?: unknown }).key : null)
+    .filter((k): k is string => typeof k === "string" && k !== "");
 }
 
 /**
@@ -254,6 +265,7 @@ async function fetchEntriesBatch(
       const rows = blocksByEntryId.get(entry.id) ?? [];
       const customTableRow = rows.find((r) => r.block_type === "custom_table");
       const progressionRow = rows.find((r) => r.block_type === "class_progression");
+      const speciesTraitsRow = rows.find((r) => r.block_type === "species_traits");
 
       const customTableData = (overrideBlocks.custom_table ?? customTableRow?.data) as { rows: CustomTableRow[] } | undefined;
       const progressionData = (overrideBlocks.class_progression ?? progressionRow?.data) as
@@ -264,6 +276,7 @@ async function fetchEntriesBatch(
         name: translation?.name ?? entryNameFrom(entry),
         fields: customTableData ? parseCustomTableFields(customTableData.rows) : {},
         progressionRows: progressionData?.rows ?? [],
+        traitKeys: speciesTraitKeys(overrideBlocks.species_traits ?? speciesTraitsRow?.data),
       });
       remaining.delete(entry.entry_key);
     }
@@ -280,6 +293,7 @@ async function fetchEntriesBatch(
         fields: {},
         progressionRows: [],
         backgroundBlock: resolved.blocksByType.get("background") as BackgroundBlockData | undefined,
+        traitKeys: speciesTraitKeys(resolved.blocksByType.get("species_traits")),
       });
       remaining.delete(key);
     }
@@ -456,6 +470,29 @@ export async function assembleResolvedRuleset(
           count: weaponMasteryCountForClass,
           options,
           kind: "weapon_mastery",
+        });
+      }
+    }
+  }
+
+  // Traits d'espece a choix (V3.1-4, « Competent » humain, « Sens
+  // aiguises » elfe) : leur `proficiency_choices` vit sur la fiche du TRAIT,
+  // jamais sur celle de l'espece — un second lot, seulement s'il y a des
+  // traits. Ajoutes APRES les choix de classe : une competence proposee par
+  // les deux va d'abord a la classe (`routeSkillChoices`).
+  const speciesEntry = selection.species ? batch.get(selection.species) : undefined;
+  if (speciesEntry && speciesEntry.traitKeys.length > 0) {
+    const traitBatch = await fetchEntriesBatch(supabase, rulesetId, speciesEntry.traitKeys, locale);
+    for (const traitKey of speciesEntry.traitKeys) {
+      const trait = traitBatch.get(traitKey);
+      if (!trait) continue;
+      for (const choice of extractSkillChoices(trait.fields)) {
+        remainingChoices.push({
+          id: `${traitKey}.skills`,
+          label: `${speciesEntry.name} — ${trait.name}`,
+          count: choice.count,
+          options: choice.options,
+          kind: "skill",
         });
       }
     }

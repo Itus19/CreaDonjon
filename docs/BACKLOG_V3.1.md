@@ -231,7 +231,7 @@ séparé.
 
 ---
 
-### ☐ V3.1-4 — Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais · `S`/`M`
+### ☑ V3.1-4 — Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais · `S`/`M` — **fait le 9 octobre**
 
 **Modèle conseillé : Sonnet** — brancher un choix déjà lu par extractSkillChoices.
 
@@ -252,13 +252,31 @@ classes), il s'agit de l'étendre aux traits d'espèce plutôt que d'en
 inventer un nouveau.
 
 **Critères**
-- [ ] Un trait d'espèce portant un `proficiency_choices` (compétence, langue,
+- [x] Un trait d'espèce portant un `proficiency_choices` (compétence, langue,
   outil...) présente ce choix dans l'assistant, comme le fait déjà un choix
   de compétence de classe.
-- [ ] Le choix résolu produit une vraie maîtrise sur la fiche (test de
+- [x] Le choix résolu produit une vraie maîtrise sur la fiche (test de
   compétence concerné, bonus de maîtrise appliqué).
-- [ ] Aucune régression sur les maîtrises fixes déjà accordées par une
+- [x] Aucune régression sur les maîtrises fixes déjà accordées par une
   espèce (celles qui ne portent pas de choix).
+
+**Fait le 9 octobre.** `assembleResolvedRuleset` lit le bloc `species_traits`
+de l'espèce, charge ses traits en un second lot, et ajoute un choix de
+compétence `<trait>.skills` (« Humain — Compétent ») pour chaque trait qui
+porte un `proficiency_choices`. `extractSkillChoices` lit désormais aussi la
+forme des traits 2024 : un objet unique et des index nus (« perception »),
+acceptés seulement s'ils nomment une vraie compétence. Le choix passe par le
+même chemin que celui des classes : grille de l'assistant, puis
+`mapChosenSkillModifiers`, donc une vraie maîtrise sur la fiche. Couvre
+Compétent (Humain) et Sens aiguisés (Elfe) ; aucun trait du SRD 2024 ne
+porte de choix de langue ou d'outil. La grille n'a qu'un rond par
+compétence : `routeSkillChoices` (`src/core/rules/skillChoiceRouting.ts`)
+envoie une compétence au choix qui l'a déjà retenue, sinon au premier qui a
+encore de la place. La classe passe en premier, le trait prend le reste, et
+Athlétisme reste possible pour Compétent une fois les choix du Guerrier
+remplis. Le mécanisme générique (ADR 0046, V3.1-116) reprendra ces choix
+sous sa forme `zChoiceGrant`. Tests : `srdMapping.test.ts` (2 cas),
+`skillChoiceRouting.test.ts` (5 cas) ; typecheck, lint et tests verts.
 
 ---
 

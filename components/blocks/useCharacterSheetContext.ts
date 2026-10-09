@@ -6,6 +6,7 @@ import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/block
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import { characterSheet, type Ability, type CharacterBuild, type DerivedSheet, type EquippedItem, type ResolvedFeature } from "@/src/core/rules/sheet";
+import { routeSkillChoices } from "@/src/core/rules/skillChoiceRouting";
 import { armorAcModifier, mapChosenSkillModifiers, type ArmorData, type ItemCost, type WeaponData } from "@/src/core/rules/srdMapping";
 import { asiModifiers, parseAsiChoice } from "@/src/core/rules/abilityScoreImprovement";
 import {
@@ -253,16 +254,13 @@ export function useCharacterSheetContext(
     return ruleset.features[f.source]?.label ?? f.source;
   }
 
-  const skillChoices = useMemo(() => {
-    const map = new Map<string, RemainingChoiceView>();
-    for (const choice of remainingChoices) {
-      if (choice.kind !== "skill") continue;
-      for (const option of choice.options) {
-        if (!map.has(option)) map.set(option, choice);
-      }
-    }
-    return map;
-  }, [remainingChoices]);
+  // V3.1-4 : plusieurs choix peuvent proposer la meme competence (classe et
+  // trait d'espece) ; le choix d'une competence depend de ce qui est deja coche.
+  const choicesSoFar = character?.choices;
+  const skillChoices = useMemo(
+    () => routeSkillChoices(remainingChoices.filter((c) => c.kind === "skill"), choicesSoFar ?? {}),
+    [remainingChoices, choicesSoFar]
+  );
 
   const languageChoices = useMemo(() => {
     const map = new Map<string, RemainingChoiceView>();
