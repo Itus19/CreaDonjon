@@ -41,8 +41,11 @@ Ce qui n'est **pas** encore prêt à coder :
   (V3.1-93 à 99) ; la Chronologie attend sa conception de données (V3.1-96,
   Opus : la portée d'un événement, où vit un événement ajouté directement,
   l'agrégation des naissances et des morts).
-- **Des tickets « à concevoir » (Opus)** : conception à faire avant de
-  coder — V3.1-100 (rejoindre sans PJ, lien nominatif), V3.1-21 (cibler et résoudre), 23 (droits des joueurs), 37
+- **Conception faite le 9 octobre** (ADR 0040 à 0049) : les anciens « à
+  concevoir » sont découpés en V3.1-101 à 119 (section « Conception du 9
+  octobre », en fin de fichier). **Seul V3.1-104 est bloqué** : il attend la
+  décision de l'auteur sur l'ADR 0041 (règle absolue 2) ; il bloque à son
+  tour V3.1-107. Pour mémoire, l'ancienne liste : V3.1-100, V3.1-21 (cibler et résoudre), 23 (droits des joueurs), 37
   (initiative côté joueurs, RLS), 39 (sauvegardes demandées à la cible), 40
   (ressources de classe), 47 (règles de personnage en données), 59 (fond par
   défaut du wiki). Et des tickets de données Opus déjà spécifiés : 41, 74,
@@ -63,16 +66,17 @@ valables ; celui-ci les relie.
 
 | Étape | Tickets | Pourquoi d'abord |
 |---|---|---|
-| **0 · Sécurité et mesure** | **37** (Opus : `combats` lisible et modifiable par tout membre du monde — une fuite), **62** étapes 1-2 (Opus : mesurer avant de recâbler) | Un défaut de sécurité passe avant tout ; la mesure dit où la rapidité se perd avant qu'on reconstruise les écrans. |
-| **1 · Les données que les écrans attendent** (Opus, en parallèle) | 24 (services de jeu, Sonnet), 84 (identité de l'application), 41 (page partagée), 23 (droits des joueurs), 59 (fond par défaut), 47 (règles de personnage, avec 3, 6, 7), 74 (naissance et mort) → 96 (chronologie), 89 (attribuer chaque jet) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
+| **0 · Sécurité et mesure** | **101** (Opus : `combats` lisible et modifiable par tout membre du monde, routes sans contrôle MJ — une fuite), **108** (Opus : l'état de jeu modifiable par tout membre du monde), **62** étapes 1-2 (mesurer avant de recâbler) | Un défaut de sécurité passe avant tout ; la mesure dit où la rapidité se perd avant qu'on reconstruise les écrans. |
+| **1 · Les données que les écrans attendent** (Opus, en parallèle) | 24 (services de jeu, Sonnet), 84 (identité de l'application), 41 (page partagée), 59 (fond par défaut), 115 → 116 → 117 (règles de personnage et choix), 113 (pacte, multiclassage), 74 (naissance et mort) → 96 (chronologie), 89 (attribuer chaque jet), 100 (rejoindre sans PJ), 102 → 103 (initiative des joueurs), 105 (cœur de résolution) → 110 → 111 (sauvegardes) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
 | **2 · La coquille** | 25 → 26 → 28 ; 27 → 29 → 30, 31, 32, 33 ; 20 (dès 25) ; 35 ; 34 ; 36 ; 62 étape 3 | Tout le reste vit dedans : pilule glissante, rail, fenêtres en deux volets, téléphone, accueil. |
-| **3 · Entrer et se reconnaître** | 85 → 86 ; 80 → 81 ; 82 → 83 → 100 (Opus) ; 87 → 88 | Le premier écran que voit un ami ; court, et tout est décidé. |
-| **4 · Les outils du MJ (lot i)** | 46, 55, 61, 54, 56, 44, 45, 43 ; 41 → 42 ; 59 → 60 ; 23 → 57 ; 58 ; 37 → 38 ; 21 → 39 | Les petits outils sans donnée nouvelle d'abord, puis ceux qui attendaient l'étape 1. |
+| **3 · Entrer et se reconnaître** | 85 → 86 ; 80 → 81 ; 82 → 83 (après 100) ; 87 → 88 | Le premier écran que voit un ami ; court, et tout est décidé. |
+| **4 · Les outils du MJ (lot i)** | 46, 55, 61, 54, 56, 44, 45, 43 ; 41 → 42 ; 59 → 60 ; 108 → 57, 109 ; 58 ; 102, 103 → 38 ; 105 → 106 ; 111 → 112 ; 113 → 114 | Les petits outils sans donnée nouvelle d'abord, puis ceux qui attendaient l'étape 1. |
 | **5 · La fiche du wiki et ses blocs** | 63 → 64 → 65 à 68 → 69 → 70 à 73 → 75 à 78 ; 79 (après 26 et 33) ; 74 (après 48) | La carte de verre et sa pastille portent tous les blocs. |
-| **6 · La création de personnage** | 47 → 48 → 49 → 50, 51, 52, 53 ; 40 | Le plus gros chantier ; il attend les règles en données (47). |
+| **6 · La création de personnage** | 48 → 49 → 50, 51, 52, 53 (après 115) ; 118, 119 (après 116, 117) | Le plus gros chantier ; il attend les règles en données (47). |
 | **7 · Les statistiques du joueur** | 89 → 90 → 91 → 92 | Il leur faut des jets attribués ; les jets d'avant 89 ne comptent pas. |
 | **8 · Règles et Chronologie** | 93 → 94 → 95 ; 96 → 97 → 98 → 99 | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
-| **À côté, quand on veut** | 1, 2, 4, 5 (petites rugosités de règles) ; 12, 13 | Indépendants de la refonte. |
+| **À côté, quand on veut** | 1, 2, 4, 5 (petites rugosités de règles) ; 12, 13 |
+| **En attente de l'auteur** | 104 (ADR 0041) → 107 | Touche la règle absolue 2. | Indépendants de la refonte. |
 
 **Règle** : un ticket Opus « à concevoir » ne se code pas ; il se conçoit
 (ADR), puis il se découpe en tickets prêts. Si Sonnet bute sur une décision
@@ -146,7 +150,7 @@ historique, don/aptitude, sous-classe, sort) : aucun n'a d'équivalent en
 
 ---
 
-### ☐ V3.1-3 — Les dons à choix (Initié à la magie, etc.) n'ont aucune UI de choix · `L`
+### ☑ V3.1-3 — Les dons à choix (Initié à la magie, etc.) n'ont aucune UI de choix · `L` — **conçu le 9 octobre (ADR 0046) ; implémentation : V3.1-116 à 119**
 
 **Modèle conseillé : Opus** — mécanisme générique de choix pour les dons, partagé avec V3.1-6 et V3.1-7.
 
@@ -262,7 +266,7 @@ déclencheurs (V3-A5) que de l'assistant de personnage.
 
 ---
 
-### ☐ V3.1-6 — Aucun mécanisme générique pour les traits d'espèce à choix · `L`
+### ☑ V3.1-6 — Aucun mécanisme générique pour les traits d'espèce à choix · `L` — **conçu le 9 octobre (ADR 0046) ; implémentation : V3.1-116 à 119**
 
 **Modèle conseillé : Opus** — mécanisme générique des traits à choix, cinq formes de choix.
 
@@ -318,7 +322,7 @@ pour les langues d'historique.
 
 ---
 
-### ☐ V3.1-7 — Une sous-classe n'apporte jamais d'effet mécanique, choix ou pas · `L`
+### ☑ V3.1-7 — Une sous-classe n'apporte jamais d'effet mécanique, choix ou pas · `L` — **conçu le 9 octobre (ADR 0046) ; implémentation : V3.1-116 à 119**
 
 **Modèle conseillé : Opus** — sous-classes mécaniques : touche characterSheet() et les choix rechoisis.
 
@@ -3534,7 +3538,7 @@ V3.1-29. **Dépend de** : V3.1-25 (pilule).
 
 ---
 
-### ☐ V3.1-21 — Cibler et résoudre depuis les boutons de jet · `L` — **décidé le 4 octobre, à concevoir**
+### ☐ V3.1-21 — Cibler et résoudre depuis les boutons de jet · `L` — **conçu le 9 octobre (ADR 0042, 0041) → V3.1-105, 106, 107**
 
 **Modèle conseillé : Opus** — résolution partagée par MJ, joueur et solo ; dés lancés par le serveur (règle 8).
 
@@ -3635,7 +3639,7 @@ de l'initiative ; un jet secret visible du seul joueur et du MJ).
 
 ---
 
-### ☐ V3.1-23 — Ce que les joueurs modifient eux-mêmes (Règles actives) · `M` — **décidé le 4 octobre, à concevoir**
+### ☐ V3.1-23 — Ce que les joueurs modifient eux-mêmes (Règles actives) · `M` — **conçu le 9 octobre (ADR 0043) → V3.1-108, 109 (écran : 57)**
 
 **Modèle conseillé : Opus** — droits d'écriture des joueurs, appliqués côté serveur ; schéma à vérifier.
 
@@ -4140,7 +4144,7 @@ glissante ». **Départ** : `HomeShell.tsx`, `HomeScreen.tsx`,
 - [ ] Un tour complet sur téléphone : intention, outil de dés, Lancer, le tour dans le fil.
 - [ ] Aucun changement du moteur de tour (tests solo existants verts sans modification).
 
-### ☐ V3.1-37 — L'initiative vue des joueurs : sécurité, invitation, temps réel · `M` — **à concevoir**
+### ☐ V3.1-37 — L'initiative vue des joueurs : sécurité, invitation, temps réel · `M` — **conçu le 9 octobre (ADR 0040) → V3.1-101, 102, 103**
 
 **Modèle conseillé : Opus** — RLS à resserrer, nouvelle vue filtrée pour les joueurs, signal temps réel.
 
@@ -4207,7 +4211,7 @@ V3.1-29 (téléphone), V3.1-33 (outil de dés).
 - [ ] À 390 px et sur ordinateur, côté MJ et côté joueur.
 - [ ] Planche du catalogue « Initiative » créée ou mise à jour.
 
-### ☐ V3.1-39 — Les sauvegardes demandées à la cible · `L` — **à concevoir**
+### ☐ V3.1-39 — Les sauvegardes demandées à la cible · `L` — **conçu le 9 octobre (ADR 0044) → V3.1-110, 111, 112**
 
 **Modèle conseillé : Opus** — nouveau flux joueur ↔ MJ, et une donnée de règle à ajouter aux effets.
 
@@ -4246,7 +4250,7 @@ déclencheurs).
 - [ ] Une cible hors restriction (Charme-personne sur un mort-vivant) est refusée avant toute demande (test du noyau).
 - [ ] Hors combat, la demande s'affiche dans l'outil Table ; en combat, dans l'Initiative.
 
-### ☐ V3.1-40 — Ressources de classe : magie de pacte et recharge partielle · `M` — **à concevoir**
+### ☐ V3.1-40 — Ressources de classe : magie de pacte et recharge partielle · `M` — **conçu le 9 octobre (ADR 0045) → V3.1-113, 114**
 
 **Modèle conseillé : Opus** — deux formes de données que le moteur ne connaît pas encore.
 
@@ -4590,7 +4594,7 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 - [ ] La grille montre 6 + 18 lignes, le meilleur de chaque ligne encadré.
 - [ ] Teinte continue : 50 % et 51 % ont deux teintes différentes ; contraste AA du chiffre dans les quatre modes.
 
-### ☐ V3.1-47 — Création : les règles de personnage viennent du ruleset · `L` — **à concevoir (Opus)**
+### ☐ V3.1-47 — Création : les règles de personnage viennent du ruleset · `L` — **conçu le 9 octobre (ADR 0046) → V3.1-115 à 119**
 
 **Modèle conseillé : Opus** — structures de données de règles, ADR, et lien avec le mécanisme générique des choix.
 
@@ -5084,7 +5088,7 @@ cas `regles-actives`. **Dépend de** : **23** (interrupteurs,
 - [ ] Choisir un fond à deux modes en mode clair bascule en sombre et l'annonce.
 - [ ] Un seul composant monté aux trois endroits (aucun doublon).
 
-### ☐ V3.1-59 — Publication : le fond par défaut du wiki (données) · `M` — **à concevoir (Opus)**
+### ☐ V3.1-59 — Publication : le fond par défaut du wiki (données) · `M` — **prêt (Opus) — conçu le 9 octobre, ADR 0047**
 
 **Modèle conseillé : Opus** — donnée nouvelle par monde, lue par la page publique (service role) et par l'onglet Wiki des joueuses.
 
@@ -6501,7 +6505,7 @@ de** : V3.1-35 (« Administration » dans le rail, superadmin seulement).
 - [ ] Enregistrer change l'écran-titre et la tête du rail pour tous.
 - [ ] Rétablir revient au nom, à la phrase et au d20 par défaut.
 
-### ☐ V3.1-100 — Rejoindre sans choisir de PJ ; le lien qui vise un PJ précis · `M` — **à concevoir (Opus)**
+### ☐ V3.1-100 — Rejoindre sans choisir de PJ ; le lien qui vise un PJ précis · `M` — **prêt (Opus) — conçu le 9 octobre, ADR 0049**
 
 **Modèle conseillé : Opus** — parcours d'adhésion, une colonne nouvelle,
 une réservation à faire respecter côté serveur.
@@ -6916,7 +6920,7 @@ exemples.
 - [ ] Le joueur ne reçoit ni les gestes du MJ ni les données brutes (vérifié
   dans la réponse serveur, pas seulement à l'écran).
 
-### ☐ V3.1-96 — Chronologie : portée, événements directs, naissances et morts (données, ADR) · `M` — **prêt (Opus)**
+### ☐ V3.1-96 — Chronologie : portée, événements directs, naissances et morts (données, ADR) · `M` — **prêt (Opus) — conçu le 9 octobre, ADR 0048 (fiche système `world_timeline`)**
 
 **Modèle conseillé : Opus** — forme d'une donnée de bloc, une fiche
 système, une agrégation filtrée côté serveur.
@@ -7059,3 +7063,348 @@ système, une agrégation filtrée côté serveur.
   privée (test).
 - [ ] Téléphone 390 px : pincer zoome, glisser défile, aucun défilement
   horizontal de la page.
+
+## Conception du 9 octobre : les tickets Opus découpés
+
+Les neuf tickets « à concevoir » ont été conçus le 9 octobre ; chaque
+décision a son ADR (0040 à 0049). Ce qui suit les découpe en tickets prêts.
+**Un ticket reste bloqué** : V3.1-104, qui attend la décision de l'auteur sur
+l'ADR 0041 (règle absolue 2).
+
+| Conçu | ADR | Découpé en |
+|---|---|---|
+| V3.1-37 initiative côté joueurs | 0040 | 101, 102, 103 (puis 38) |
+| — écritures du moteur au nom d'un joueur | 0041 (**en attente**) | 104 |
+| V3.1-21 cibler et résoudre | 0042 | 105, 106, 107 |
+| V3.1-23 droits des joueurs | 0043 | 108, 109 (puis 57) |
+| V3.1-39 sauvegardes demandées | 0044 | 110, 111, 112 |
+| V3.1-40 ressources de classe | 0045 | 113, 114 |
+| V3.1-47 (+ 3, 6, 7) règles de personnage, choix | 0046 | 115, 116, 117, 118, 119 |
+| V3.1-59 fond par défaut du wiki | 0047 | 59 lui-même, désormais prêt |
+| V3.1-96 données de la chronologie | 0048 | 96 lui-même, désormais prêt |
+| V3.1-100 rejoindre sans PJ, lien nominatif | 0049 | 100 lui-même, désormais prêt |
+
+### ☐ V3.1-101 — Initiative : la base et les routes réservées au MJ · `S` — **prêt (Opus) — à faire en premier**
+
+**Modèle conseillé : Opus** — RLS et sécurité. **ADR 0040.**
+
+- Migration nouvelle : `combats` lisible des membres, écrit par
+  `app.is_world_admin(app.campaign_world_id(campaign_id))` ;
+  `combat_participants` lu et écrit par `app.is_world_admin(app.combat_world_id(combat_id))`.
+- **Chaque route** de `app/api/campaigns/[campaignId]/combats/**` vérifie
+  `isWorldAdmin` (`src/server/services/permissions.ts`) et répond 403 avant
+  toute lecture de participants ou écriture.
+- Vérifier que rien d'autre ne lisait les participants pour un joueur en
+  multijoueur (lu le 9 octobre : `turnIntent`, `turnLoop`, `combatTriggers`,
+  `soloScene` — solo, où le joueur est propriétaire) ; le solo ne change pas.
+
+**Critères d'acceptation**
+- [ ] Test d'intégration RLS : un joueur ne lit aucune ligne de
+  `combat_participants` et n'écrit ni `combats` ni `combat_participants`.
+- [ ] Chaque route de combat répond 403 à un joueur (test de route).
+- [ ] Le solo et l'outil Initiative du MJ marchent comme avant.
+
+### ☐ V3.1-102 — Initiative : la vue filtrée des joueurs · `M` — **prêt (Opus)**
+
+**Modèle conseillé : Opus.** **ADR 0040.** **Dépend de** : 101.
+
+- Fonction `app.combat_player_view(p_combat uuid)` (`security definer`,
+  `row_security = off`), vérifie que l'appelant est membre de la campagne ;
+  renvoie par participant : `id`, `label`, `initiative`, ordre, `is_current`,
+  `side`, états ; allié (PJ ou `is_ally`) : PV courants, max, temporaires ;
+  adversaire : `wound` parmi `unhurt` (≥ max), `hurt` (> ½), `bloodied`
+  (> 0), `down` (0). Jamais `ac`, `rule_key`, ni le nom d'entité d'un
+  adversaire. Plus la ligne `combats` (statut, round, tour).
+- Service `getPlayerCombatView`, route `GET
+  /api/campaigns/[campaignId]/combats/active/player` (Zod).
+- Le MJ touche `combats.updated_at` à chaque changement de participant
+  (signal temps réel des joueurs).
+
+**Critères d'acceptation**
+- [ ] La vue ne contient ni PV, ni CA, ni nom d'origine d'un adversaire (test).
+- [ ] Un non-membre reçoit un refus.
+
+### ☐ V3.1-103 — Initiative : les jets d'initiative des joueurs · `M` — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — changement de schéma. **ADR 0040.**
+**Dépend de** : 101.
+
+- Migration : `combats.status` accepte `rolling` (« jets d'initiative »)
+  entre `draft` et `running` ; `docs/SCHEMA.md`.
+- Fonction `app.set_own_initiative(p_participant uuid, p_value int)` : seul
+  le joueur dont le PJ (`campaign_characters.user_id`) est ce participant,
+  seulement en `rolling`, valeur −10 à 40.
+- Route `POST …/combats/[combatId]/my-initiative` (Zod) : `{ mode: "roll" }`
+  (le serveur tire le d20 et ajoute l'initiative de la fiche, règle 8) ou
+  `{ mode: "die", natural: 1..20, modifierIncluded: boolean }`.
+- Le MJ : « Demander les jets » (draft → rolling), saisir à la place d'un
+  joueur, « Commencer » (rolling → running), « Terminer » (confirmé).
+- Chaque étape écrit un `session_events` de genre `combat`.
+
+**Critères d'acceptation**
+- [ ] Un joueur ne peut écrire que l'initiative de son PJ, et seulement en
+  `rolling` (test).
+- [ ] Invitation, jet, saisie du MJ, fin : journalisés.
+
+### ☐ V3.1-104 — Écritures du moteur au nom d'un joueur · `M` — **bloqué : décision de l'auteur (ADR 0041)**
+
+**Modèle conseillé : Opus.** L'ADR 0041 propose trois voies (changements
+signés — recommandée ; module privilégié — demande d'amender la règle
+absolue 2 ; validation par le MJ). **Ne pas coder avant que l'auteur ait
+choisi.** Débloque V3.1-107 et le soin d'un autre PJ.
+
+### ☐ V3.1-105 — Cibler : le cœur commun de résolution · `L` — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — extraction du tour solo, moteur. **ADR 0042.**
+**Dépend de** : 101.
+
+- `src/server/services/targetedRoll.ts` : `resolveTargetedRoll` (entrée
+  Zod de l'ADR) — lit la cible dans le combat `running`, lance (serveur),
+  résout (`resolveAttackRoll`, `resolveDamageRoll`, sauvegarde contre DD
+  pour un sort à jet du MJ, `eventsForAttack`, déclencheurs), calcule
+  (`applyEffects`) et écrit ; touche → demande de dégâts chaînée (dés
+  doublés au critique) ; PJ à 0 PV → jets contre la mort (ADR 0036 §8) ;
+  créature à 0 PV → hors de l'initiative ; journal ; « Annuler » = écriture
+  inverse journalisée.
+- `applyResolvedTurn` (solo) délègue sa partie « appliquer » à ce service ;
+  les tests du solo restent verts **sans modification**.
+- Autorisation : MJ → tout participant ; joueur → son PJ comme acteur, et
+  écriture refusée sur une cible qu'il ne contrôle pas (verdict seulement)
+  tant que V3.1-104 n'est pas fait.
+
+**Critères d'acceptation**
+- [ ] Touche, dégâts, états, soins résolus par le moteur et appliqués,
+  journalisés (tests de service).
+- [ ] Les tests du solo passent tels quels.
+- [ ] « Annuler » rend l'état d'avant par une écriture inverse.
+
+### ☐ V3.1-106 — Cibler côté MJ : outil de dés, Table, Initiative · `M` — **prêt**
+
+**Modèle conseillé : Sonnet.** **Dépend de** : 105, 33 (outil de dés), 34, 38.
+
+- « Cibler » s'allume dans l'outil de dés **pour le MJ** quand une
+  initiative est `running` : liste des participants (alliés pour un soin),
+  cible retenue affichée ; grisé hors initiative ou pour un jet sans cible.
+- « Lancer » appelle `resolveTargetedRoll` ; une touche fait apparaître la
+  bande « Lancer les dégâts » (même cible) ; verdict et changements affichés.
+- Même chemin depuis l'outil Table (action d'un PNJ) et l'outil Initiative.
+
+**Critères d'acceptation**
+- [ ] Au tour du Worg, « Morsure » sur un PJ : touche, dégâts, JS, À terre
+  appliqués (planche de la Table).
+- [ ] Hors initiative, les jets restent de simples jets.
+
+### ☐ V3.1-107 — Cibler côté joueur · `M` — **bloqué par V3.1-104**
+
+**Modèle conseillé : Sonnet.** Comme V3.1-106, pour le joueur avec son PJ,
+une fois l'écriture au nom du joueur tranchée et faite (V3.1-104). D'ici là,
+le joueur voit le verdict, sans application sur une cible qu'il ne contrôle
+pas.
+
+### ☐ V3.1-108 — Droits des joueurs : la base ferme, le serveur règle · `M` — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — RLS et schéma. **ADR 0043.**
+
+- Migration : `campaigns.table_settings jsonb not null default '{}'` ;
+  `docs/SCHEMA.md` ; `zCampaignTableSettings` (défauts : `inspiration_max`
+  1 ; `player_can_edit` : `conditions` et `inspiration` faux, `hp`,
+  `currency`, `spell_slots`, `hit_dice` vrais).
+- Migration : écriture de `entity_runtime_state` et `entity_active_effects`
+  par `app.can_edit_entity(entity_id)` (au lieu de tout membre du monde).
+- `src/core/campaigns/tableSettings.ts` : `mayPlayerChange(field, settings)`
+  (tests d'abord) ; garde dans chaque service qui écrit un de ces champs
+  pour une joueuse (PV, états, inspiration, pièces, emplacements, dés de
+  vie) : 403 si l'interrupteur est coupé et que l'appelant n'est pas MJ.
+  Les fonctions du moteur (repos, résolution) ne passent pas par la garde.
+- Route d'écriture des réglages (Zod, MJ seul).
+
+**Critères d'acceptation**
+- [ ] Une joueuse ne peut plus écrire l'état de jeu d'une autre fiche
+  (test RLS).
+- [ ] Interrupteur coupé : l'écriture d'une joueuse est refusée par le
+  serveur ; le MJ et le repos passent (tests de service).
+
+### ☐ V3.1-109 — Droits des joueurs : la fiche obéit aux interrupteurs · `M` — **prêt**
+
+**Modèle conseillé : Sonnet.** **Dépend de** : 108, 26, 32. L'écran
+Règles actives est V3.1-57.
+
+- Partout où la joueuse voit sa fiche (ordinateur, tablette, téléphone) :
+  interrupteur coupé → la valeur se voit, sans commande (« + état » absent,
+  ▲▼ de l'inspiration, des PV, des pièces absents, colonnes « niv. » de
+  l'égaliseur inertes, « Le MJ dépense tes dés de vie » à la place de
+  « Dépenser un dé ») — planche « Décidé · fiche vue par le MJ et par le
+  joueur ». Le MJ garde toutes les commandes.
+
+**Critères d'acceptation**
+- [ ] Les six interrupteurs pilotent la fiche de la joueuse sur les trois
+  écrans.
+
+### ☐ V3.1-110 — Sauvegardes : la restriction de cible (noyau) · `S` — **prêt**
+
+**Modèle conseillé : Sonnet** — noyau pur, tests d'abord. **ADR 0044.**
+
+- `zEffectData` gagne `target?: { creature_types?, exclude_creature_types?,
+  immune_conditions_block? }` (Zod) ; `isValidTarget(effect, target)` dans
+  `src/core/rules/` lit le type de créature (bloc de stats, espèce) et les
+  immunités d'état.
+- L'import SRD pose la restriction sur les sorts concernés (Charme-personne :
+  humanoïde, etc.) — liste à relever dans le SRD, le contenu reste l'import.
+
+**Critères d'acceptation**
+- [ ] Charme-personne sur un mort-vivant : refusé (test) ; sur un humanoïde :
+  accepté ; un immunisé à Charmé : refusé.
+
+### ☐ V3.1-111 — Sauvegardes : la demande et la réponse (données, serveur) · `M` — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — table nouvelle, RLS. **ADR 0044.**
+**Dépend de** : 105, 110.
+
+- Migration : table `save_requests` (champs de l'ADR), RLS (lecture :
+  auteur, cible, MJ ; réponse par `app.answer_save_request`) ;
+  `docs/SCHEMA.md`.
+- `resolveTargetedRoll` (105) : un effet à sauvegarde vérifie la cible
+  (`isValidTarget`), puis crée la demande au lieu d'appliquer ; la réponse
+  (lancer côté serveur, vrai dé avec « modificateur inclus », ou saisie du
+  MJ) est traitée **au nom de celui qui répond** : verdict, puis dégâts ou
+  état appliqués, journal, et le résultat revient au jet de l'auteur.
+
+**Critères d'acceptation**
+- [ ] Une sauvegarde imposée à un PJ n'est lisible que de l'auteur, du
+  joueur de la cible et du MJ (test RLS).
+- [ ] Réponse → verdict → effet appliqué, journalisé (test de service).
+
+### ☐ V3.1-112 — Sauvegardes : les écrans · `M` — **prêt**
+
+**Modèle conseillé : Sonnet.** **Dépend de** : 111, 33, 34, 38.
+
+- La cible reçoit un **bandeau au premier plan** : « Résiste à Moquerie
+  cruelle · JS Sagesse DD 13 » — « Lancer », « J'ai un vrai dé »
+  (interrupteur « modificateur inclus »), « Laisser le MJ saisir ».
+- Le MJ répond dans l'outil **Initiative** en combat (bandeau), dans
+  l'outil **Table** hors combat ; une **pastille sur le dé encoché** compte
+  les demandes en attente, où qu'on soit.
+- L'outil de dés de l'auteur affiche le verdict revenu, puis enchaîne.
+
+**Critères d'acceptation**
+- [ ] Les trois façons de répondre fonctionnent, sur ordinateur et téléphone.
+
+### ☐ V3.1-113 — Ressources : pacte, recharge partielle, multiclassage (noyau) · `M` — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — moteur, tests d'abord. **ADR 0045.**
+**Dépend de** : 115 (pour la table du multiclassé dans `character_rules`).
+
+- `recharge: "short_rest_one"` (bloc Ressources, version relevée) ;
+  `spellcasting.kind` `slots` | `pact` et `pactSlots` ; `casterWeight` ;
+  `pact_slots_used` dans l'état de jeu (défaut 0).
+- `characterSheet()` : emplacements du multiclassé (niveaux pondérés,
+  arrondi inférieur, table du ruleset) ; réserve de pacte séparée.
+- Import SRD : poids d'incantation, magie de pacte de l'occultiste, Arcanum
+  mystique (ressource `long_rest` par niveau 6 à 9), recharges partielles
+  (Rage, Conduit divin, Forme sauvage, Second souffle).
+
+**Critères d'acceptation**
+- [ ] Occultiste 20 : 4 emplacements de pacte de niveau 5 ; clerc 3 /
+  magicien 2 : emplacements d'un lanceur de niveau 5 ; un multiclassé
+  occultiste garde deux réserves (tests).
+- [ ] Repos court : une Rage rendue ; repos long : toutes (test).
+
+### ☐ V3.1-114 — Ressources : repos et égaliseur · `S` — **prêt**
+
+**Modèle conseillé : Sonnet.** **Dépend de** : 113, 24, 26.
+
+- `takeShortRest` rend les emplacements de pacte et une utilisation des
+  `short_rest_one` ; `takeLongRest` rend tout.
+- L'égaliseur (planche « Décidé · emplacements et ressources de classe »)
+  montre la réserve de pacte à part ; une ressource de plus de six
+  utilisations en compteur.
+
+**Critères d'acceptation**
+- [ ] Les trois cas de V3.1-40 se voient sur la fiche.
+
+### ☐ V3.1-115 — Règles de personnage : la fiche `character_rules` · `L` — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — structure de règles, héritage, import.
+**ADR 0046.**
+
+- Bloc typé `zCharacterRules` (champs de l'ADR) ; une fiche
+  `character_rules` par ruleset, héritée et surchargée champ par champ comme
+  les autres fiches ; sur la fiche de classe : `multiclass_prerequisites`
+  structurés, `suggested_abilities`, `casterWeight`.
+- Import SRD (base officielle) : les valeurs 2024 (plafond 20, tableau
+  standard, achat de points, tirage, charge, revente, table du multiclassé,
+  prérequis de multiclassage). **Le départ à haut niveau** : valeurs à
+  vérifier par l'auteur dans le MdJ 2024 avant saisie — le contenu va en
+  base ou dans `data/personnel/`, jamais en migration.
+- `resolvedRuleset` expose ces valeurs ; `abilityGeneration.ts`,
+  l'encombrement et la revente les lisent : **plus aucune constante**.
+
+**Critères d'acceptation**
+- [ ] Un ruleset de test au plafond 15 limite la création à 15 (test).
+- [ ] Un prérequis non rempli est signalé ; le MJ peut passer outre (test).
+- [ ] Plus aucune constante de génération dans `abilityGeneration.ts`.
+
+### ☐ V3.1-116 — Le mécanisme générique des choix (noyau et résolution) · `L` — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — cœur du moteur. **ADR 0046.**
+**Dépend de** : 115.
+
+- `zChoiceGrant` (champs de l'ADR), accepté dans la progression d'une
+  classe ou sous-classe, un trait d'espèce, un historique, un don.
+- `resolvedRuleset` collecte tous les choix accessibles et rend
+  `RemainingChoice` généralisé ; `characterSheet()` applique les effets des
+  options choisies (`character.choices`, clés qualifiées).
+- Les améliorations de caractéristiques et dons de progression deviennent
+  des choix `ability` / `feat`.
+- Import SRD : Compétent, Polyvalent, Sens aiguisés, lignages elfiques et
+  gnomiques, legs infernal, ascendance de géant, Initié à la magie.
+
+**Critères d'acceptation**
+- [ ] Initié à la magie : le choix de liste, les sorts mineurs et le sort de
+  niveau 1 deviennent des sorts réels de la fiche (test).
+- [ ] Lignage elfique Drow : le sort mineur au niveau 1, les sorts aux
+  niveaux 3 et 5, la caractéristique d'incantation choisie une fois (test).
+- [ ] Un don ou un trait sans choix n'ajoute rien à faire.
+
+### ☐ V3.1-117 — La sous-classe résolue et ses choix · `M` — **prêt (Opus)**
+
+**Modèle conseillé : Opus.** **ADR 0046.** **Dépend de** : 116.
+
+- `CreationSelection.classes[].subclass` ; la sous-classe rejoint le lot
+  résolu ; `zSubclassFeatureEntry` accepte modificateurs, sorts toujours
+  préparés et `zChoiceGrant`.
+- Import SRD : Affinité élémentaire (type de dégâts, une fois), Cercle de
+  la Terre (terrain, au repos long), Résilience fiélonne (au repos),
+  Proie du chasseur / Tactiques défensives (au repos), Découvertes
+  magiques, Savant en évocation (sorts).
+
+**Critères d'acceptation**
+- [ ] Affinité élémentaire Feu : résistance et bonus de dégâts appliqués (test).
+- [ ] Une sous-classe purement descriptive ne change rien.
+
+### ☐ V3.1-118 — Les choix dans l'assistant de création et de montée de niveau · `L` — **prêt**
+
+**Modèle conseillé : Sonnet.** **Dépend de** : 116, 117, 49, 50, 51.
+
+- Chaque `RemainingChoice` s'affiche à l'étape de sa source (Origines,
+  Historique, Classe, montée de niveau), avec le sélecteur de son genre :
+  compétences, langues, outils, maîtrises d'armes, dons (filtrés), sorts
+  (le sélecteur unique de V3.1-50), types de dégâts, caractéristiques, et
+  **options nommées** (cartes, chacune avec ses effets).
+- La caractéristique d'incantation d'un lignage se choisit une fois, dans
+  l'option.
+
+**Critères d'acceptation**
+- [ ] Les trois critères de V3.1-3 et de V3.1-6 passent dans l'assistant.
+
+### ☐ V3.1-119 — Les choix rouverts au repos · `M` — **prêt**
+
+**Modèle conseillé : Sonnet.** **Dépend de** : 116, 117, 24 (repos), V3.1-5.
+
+- Un repos qui rouvre un choix (`refresh`) émet son événement ; la fiche
+  propose « Choisir à nouveau : Résilience fiélonne » (feuille du bas au
+  téléphone) ; sans réponse, le choix d'avant reste.
+
+**Critères d'acceptation**
+- [ ] Cercle de la Terre : après un repos long, le terrain se rechoisit et
+  la liste de sorts suit (test de service + écran).
