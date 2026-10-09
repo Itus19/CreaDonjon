@@ -1125,7 +1125,8 @@ export async function getRuleEntryForWorld(
     blocks,
     missingBlocks: missingRequiredBlocks(
       resolved.entry_type as EntryType,
-      resolved.blocks.map((b) => b.block_type)
+      resolved.blocks.map((b) => b.block_type),
+      { descriptionText: descriptionTextOf(resolved.blocks.find((b) => b.block_type === "description")?.data) }
     ),
     outgoingRefs,
     incomingRefs,
@@ -1133,6 +1134,12 @@ export async function getRuleEntryForWorld(
     personalReference,
     isHomebrew: entry === null,
   };
+}
+
+/** Texte brut d'un bloc `description` (segments mis bout a bout) pour `missingRequiredBlocks` — vide pour une fiche sans prose (reference de page). */
+function descriptionTextOf(data: unknown): string {
+  const segments = (data as { segments?: { text?: unknown }[] } | undefined)?.segments;
+  return Array.isArray(segments) ? segments.map((s) => (typeof s.text === "string" ? s.text : "")).join(" ") : "";
 }
 
 export interface RuleEntrySummary {

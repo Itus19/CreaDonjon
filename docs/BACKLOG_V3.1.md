@@ -84,7 +84,7 @@ qu'un ticket ne tranche pas, il s'arrête et la note ici.
 
 ---
 
-### ☐ V3.1-1 — `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré · `S`
+### ☑ V3.1-1 — `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré · `S` — **fait le 9 octobre**
 
 **Modèle conseillé : Sonnet** — assouplir une validation, cas bien décrits.
 
@@ -106,15 +106,25 @@ Le ticket V2-N2 l'avait déjà noté en passant, sans ouvrir de ticket dédié :
 à part »*.
 
 **Critères**
-- [ ] Un sort sans effet chiffré légitime (buff, utilitaire, mise en scène)
+- [x] Un sort sans effet chiffré légitime (buff, utilitaire, mise en scène)
   n'affiche plus d'avertissement de bloc manquant.
-- [ ] Un sort qui devrait porter un effet chiffré (jet d'attaque ou de
+- [x] Un sort qui devrait porter un effet chiffré (jet d'attaque ou de
   sauvegarde décrit en prose) continue de le signaler s'il n'en a pas —
   la relecture ne doit pas juste supprimer `effects` de la liste sans
   y réfléchir, sous peine de perdre le signal utile sur les 66 sorts qui en
   ont besoin.
-- [ ] Aucune régression sur les autres types d'entrée qui utilisent
+- [x] Aucune régression sur les autres types d'entrée qui utilisent
   `REQUIRED_BLOCKS` (sous-classe, don, historique…).
+
+**Fait le 9 octobre.** `effects` n'est plus dans `REQUIRED_BLOCKS.spell` ;
+`missingRequiredBlocks` (`src/core/rules/requiredBlocks.ts`) l'exige sous
+condition : quand la description parle d'un jet de sauvegarde, d'un jet
+d'attaque de sort, ou de dés de dégâts ou de soins (anglais et français). Un
+bonus de dé sans dégâts ni soins (Assistance) ne le déclenche pas. Le service
+(`rules.ts`) passe le texte du bloc `description`. Limite connue : une fiche
+de `personal_reference` sans prose (référence de page) n'est jamais signalée.
+Tests : `requiredBlocks.test.ts` (13 cas de plus) ; typecheck, lint et tests
+verts.
 
 ---
 

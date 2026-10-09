@@ -39,7 +39,8 @@ export type EntryType = (typeof ENTRY_TYPES)[number];
  * classes n'incantent pas) pour en faire une exigence globale par type.
  */
 export const REQUIRED_BLOCKS: Partial<Record<EntryType, string[]>> = {
-  spell: ["spell_casting", "effects"],
+  // `effects` n'est attendu que sous condition (V3.1-1, `requiredBlocks.ts`).
+  spell: ["spell_casting"],
   class: ["class_progression", "class_basics", "subclass_slot"],
   weapon: ["weapon"],
   armor: ["armor"],
