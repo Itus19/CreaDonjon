@@ -3233,6 +3233,12 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     Connexion, Invitation, Apparence, Langue, Supprimer), galerie à deux
     vignettes. Téléphone : Accueil › Compte (« ‹ Accueil »), mêmes pastilles,
     champs sous leur libellé, la barre de l'apparence en colonne.
+    **Au téléphone (corrigé le 9 octobre)** : dans la barre en colonne, le
+    flou ne prend jamais « toute la largeur » par `flex-basis: 100%` (en
+    colonne, cela devient toute la hauteur et pousse le flou hors de
+    l'écran) ; la pilule des modes garde sa hauteur, libellés en 11 px ; un
+    bouton à côté d'un champ (« Enregistrer », « Supprimer définitivement »)
+    passe sous le champ plutôt que de se couper sur deux lignes.
   - Écartées : B (onglets), C (carte d'identité et lignes de réglages).
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
