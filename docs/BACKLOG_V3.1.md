@@ -3360,13 +3360,11 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     les sorts…). Titres et seuils dans un fichier de libellés.
   - Téléphone : le même volet en feuille, la bascule sous son titre,
     histogramme plus bas, titres resserrés, bouton sur toute la largeur.
-  - **Point de données pour Opus** : `dice_rolls` ne dit aujourd'hui ni qui
-    a lancé (seulement `rolled_by`), ni pour quel personnage, ni quelle
-    action ; la monnaie n'a pas d'historique (seulement l'état courant).
-    Les statistiques demandent au minimum `dice_rolls.actor_user_id`,
-    `entity_id` et un libellé d'action dans `context`, et un journal des
-    mouvements de monnaie (ou des `session_events` dédiés). Les valeurs
-    affichées restent calculées, jamais stockées (règle 16).
+  - **Point de données pour Opus** : voir V3.1-89. `dice_rolls` ne dit
+    ni qui a lancé ni pour quel personnage (`who` n'est qu'un nom affiché),
+    ni quel d20 est gardé en cas d'avantage. L'argent gagné et dépensé est
+    déjà calculé à partir des révisions du bloc `inventory`
+    (`campaignEconomy.ts`), à vérifier depuis V3.1-24.
   - Le cadre retenu habillera aussi Rejoindre (`/rejoindre/[token]`), sa
     porte à mot de passe, et Réinitialiser (`/reinitialiser/[token]`).
   - **PJ ouvert sans fiche de personnage** (fiche de wiki seulement, pas de
