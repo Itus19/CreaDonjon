@@ -3143,7 +3143,7 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     (V2-G1), « Récemment » vit dans le navigateur comme au téléphone
     (V3.1-30).
 
-- **Chronologie du monde (8 octobre)** : la B retenue, **refaite à
+- **Chronologie du monde (8 et 9 octobre)** : la B retenue, **refaite à
   l'horizontale** à la demande de l'auteur, avec le réglage des ères —
   planche « À valider · Chronologie du monde » (`Chrono-B-Horizontale.dc.html` ;
   A et C retirées).
@@ -3153,34 +3153,58 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     regroupées par ère ; chaque carte : genre, date, titre (lien si
     l'entrée est devenue une fiche), résumé, « Depuis la fiche de… ». MJ
     seulement, par le sommaire du Monde.
-  - **Le fleuve à l'horizontale** : un axe horizontal ; les événements de
-    part et d'autre (une carte au-dessus, la suivante au-dessous), reliés à
-    leur point sur l'axe, couleur du genre ; **espacés régulièrement**
-    (l'ordre compte, pas les distances : des siècles vides ne font pas de
-    trous) ; les **ères en bandeaux colorés sur l'axe**, sous les événements
-    qu'elles couvrent, leur nom suit la vue ; « Aujourd'hui » au bout, en
-    doré.
-  - **Se déplacer** : ‹ › ; « Aller à » une ère ou à aujourd'hui ; molette et
-    glisser. À l'ouverture : les derniers événements et aujourd'hui.
-  - **Les ères (« Ères… »)**, demande de l'auteur : un panneau à droite —
-    chaque ère, son nom, son année de début (la fin = le début de la
-    suivante, écrite dessous), ×, « + Ajouter une ère », « Enregistrer ».
-    **Rien de neuf en base** : les ères vivent déjà dans le calendrier du
-    monde (`CalendarConfig.eras` : `name`, `startYear`), le même réglage que
-    l'outil Calendrier (V3.1-55). La couleur d'une ère vient de son rang,
-    pas d'une donnée.
-  - **Communs** : filtres par genre et par fiche, recherche, « Voir comme les
-    joueurs » (ce que le serveur leur envoie), « + Événement » (date, titre,
-    genre et la fiche qui le porte — ajouté à son bloc Chronologie, créé
-    s'il n'existe pas), pastille de visibilité au toucher (V3.1-64),
-    « → en faire une fiche » (route `timeline-promote` existante). Le jour
-    actuel vient du calendrier du monde.
-  - **Questions ouvertes** : la Chronologie devient-elle aussi une page des
-    joueurs (dans le Wiki, avec seulement ce qu'ils peuvent voir) ? Les
-    séances du Livre de sessions doivent-elles y paraître (date en jeu de
-    chaque séance, sans rien stocker de plus) ?
-  - **À valider** : le fleuve horizontal et le panneau des ères ; les deux
-    questions.
+  - **Retours du 9 octobre (auteur)** : le fleuve horizontal est retenu ;
+    il se parcourt à la molette et se zoome ; la chronologie générale
+    devient aussi une page des joueurs ; les séances n'y paraissent pas ; on
+    ajoute un événement directement dans la frise générale ou par un bloc
+    Chronologie d'une fiche.
+  - **Le fleuve à l'horizontale** : un axe horizontal, **proportionnel au
+    temps** ; les événements de part et d'autre (une carte au-dessus, la
+    suivante au-dessous), reliés à leur point, couleur du genre ; les **ères
+    en bandeaux colorés** sur l'axe, leur nom suit la vue ; graduations
+    selon le zoom (250, 100, 50, 10, 5 ans) ; « aujourd'hui » en trait doré.
+  - **Se déplacer** : **molette haut / bas = défiler de gauche à droite** ;
+    **Ctrl + molette (ou pincer) = zoomer** autour du point visé ; − / + ;
+    glisser ; ‹ › ; préréglages Le monde, Une ère, Un siècle, Une vie.
+  - **Le zoom règle le niveau de détail** : chaque date a une **portée** —
+    **Monde** (paraît de loin), **Région** (à l'échelle d'une ère, au-dessous
+    de ~400 ans), **Détail** (au-dessous de ~130 ans : naissances et morts
+    des personnages, rencontres…). La barre dit ce qu'on voit (« Vue : 120
+    ans · tout, jusqu'aux naissances ») et combien de dates attendent un
+    zoom de plus. Des cartes qui se chevaucheraient se rangent en « + n
+    autour » sur la carte voisine, qui zoome dessus. Le MJ change la portée
+    d'un toucher sur la carte (Monde → Région → Détail).
+  - **D'où viennent les dates** : la frise générale rassemble toutes les
+    dates du monde — les entrées des blocs Chronologie des fiches, **les
+    naissances et morts des fiches personnage** (V3.1-48, 74), et les
+    événements **ajoutés directement dans la frise générale** (« + Événement
+    » → « dans : la frise générale » ou une fiche). Chaque carte dit d'où
+    vient sa date. **Pas de séances.**
+  - **Visibilité** : chaque date garde la sienne (celle de l'entrée, ou du
+    bloc personnage pour une naissance ou une mort) ; pastille au toucher
+    (V3.1-64) ; « Voir comme les joueurs ».
+  - **Joueurs : une page du Wiki** (rail du joueur ; téléphone : Wiki ›
+    Chronologie) : la même frise, **seulement ce qu'ils peuvent voir** (une
+    date MJ ou privée n'est pas envoyée, règle 5) ; mêmes gestes et niveaux
+    de détail ; ni ères à régler, ni « + Événement », ni pastilles.
+  - **Les ères (« Ères… »)** : panneau à droite — nom, année de début (fin =
+    début de la suivante), ×, « + Ajouter une ère », « Enregistrer ». Rien de
+    neuf en base : `CalendarConfig.eras` (`name`, `startYear`), le même
+    réglage que l'outil Calendrier (V3.1-55).
+  - **Communs** : filtres par genre et par fiche, recherche, « → en faire
+    une fiche » (route `timeline-promote` existante).
+  - **Données à décider (Opus, ADR)** : (1) **la portée** d'une entrée
+    (`major` / `notable` / `detail`), par défaut selon le genre — guerre,
+    catastrophe, fondation → Monde ; bataille, découverte, serment,
+    trahison → Région ; naissance, mort, rencontre → Détail ; naissances et
+    morts des fiches personnage → Détail ; (2) **où vit un événement ajouté
+    directement** dans la frise générale — proposé : le bloc Chronologie
+    d'une fiche système « Chronologie du monde », hors des listes du wiki
+    (comme le Livre de sessions), plutôt qu'une table nouvelle ; (3) le
+    service qui agrège (`getWorldTimeline`) lit aussi naissances et morts,
+    en une requête groupée, visibilité filtrée côté serveur.
+  - **À valider** : la planche « Chronologie du monde — fleuve horizontal,
+    molette et zoom, page des joueurs ».
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
