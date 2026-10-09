@@ -3335,21 +3335,28 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     droite. Téléphone : Accueil › Administration, « ‹ Accueil », mêmes
     tuiles, champs sous leur libellé.
   - Écartées : A (sections et sommaire), C (liste et fiche du compte).
-- **Accueil, volet « Je joue » : statistiques — à trancher (9 octobre)** :
-  planche « Accueil, volet « Je joue » · statistiques ». L'auteur veut, sous
+- **Accueil, volet « Je joue » : statistiques — décidé le 9 octobre :
+  l'histogramme de B et les titres de C** (planche « Décidé · Accueil,
+  volet « Je joue » »). L'auteur veut, sous
   « Mon personnage » et « Prochaine séance », des statistiques rigolotes qui
   remplissent le volet sans défiler : pièces gagnées et dépensées, d20
   moyen, nombre de 20 et de 1 naturels, action la plus utilisée. Ajoutés en
   proposition : séances et heures de jeu, plus gros coup, fois à terre et
   jets contre la mort réussis. Bascule « Cette campagne / Dernière séance ».
-  - **A — les tuiles** : huit petites tuiles en grille (l'action favorite
-    en large).
-  - **B — tes dés, puis le carnet** : l'histogramme du d20 (combien de fois
-    chaque face, le 20 en vert, le 1 en rouge, la moyenne), puis quatre
-    lignes (bourse, action favorite, plus gros coup, à terre).
-  - **C — les titres** : quatre titres gagnés comme des trophées (« Béni
-    des dés », « Chat noir », « Bourse percée », un titre selon l'action
-    favorite) et une bande de chiffres.
+  - **Retenu** : sous « Tes dés et tes titres » (avec la bascule), l'**histogramme
+    du d20** (combien de fois chaque face est sortie ; le 1 en rouge, le 20
+    en vert ; la moyenne, le nombre de jets, de 20 et de 1 ; survol d'une
+    barre : « 14 : 13 fois »), puis les **quatre titres** en 2 × 2. La
+    bande de chiffres de la C est retirée. Les tuiles (A) et le carnet (B)
+    sont écartés.
+  - **Les titres** sont calculés, jamais stockés : la chance (« Béni des
+    dés » si plus de 20 naturels que la moyenne de la table, « Chat noir »
+    pour les 1), la bourse (« Bourse percée » si l'on dépense plus qu'on ne
+    gagne, « Écureuil » sinon), l'action favorite (un titre par sorte :
+    « Lame de l'ombre » pour les attaques sournoises, « Arcaniste » pour
+    les sorts…). Titres et seuils dans un fichier de libellés.
+  - Téléphone : le même volet en feuille, la bascule sous son titre,
+    histogramme plus bas, titres resserrés, bouton sur toute la largeur.
   - **Point de données pour Opus** : `dice_rolls` ne dit aujourd'hui ni qui
     a lancé (seulement `rolled_by`), ni pour quel personnage, ni quelle
     action ; la monnaie n'a pas d'historique (seulement l'état courant).
