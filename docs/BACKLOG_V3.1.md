@@ -3143,9 +3143,9 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     (V2-G1), « Récemment » vit dans le navigateur comme au téléphone
     (V3.1-30).
 
-- **Chronologie du monde (8 et 9 octobre)** : la B retenue, **refaite à
+- **Chronologie du monde — décidé le 9 octobre** : la B retenue, **refaite à
   l'horizontale** à la demande de l'auteur, avec le réglage des ères —
-  planche « À valider · Chronologie du monde » (`Chrono-B-Horizontale.dc.html` ;
+  planche « Décidé · Chronologie du monde » (`Chrono-B-Horizontale.dc.html` ;
   A et C retirées).
   - **Aujourd'hui** (`/m/[monde]/chronologie`, `WorldTimelineView.tsx`,
     `src/server/services/timeline.ts`) : une liste de cartes — toutes les
@@ -3165,7 +3165,9 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     selon le zoom (250, 100, 50, 10, 5 ans) ; « aujourd'hui » en trait doré.
   - **Se déplacer** : **molette haut / bas = défiler de gauche à droite** ;
     **Ctrl + molette (ou pincer) = zoomer** autour du point visé ; − / + ;
-    glisser ; ‹ › ; préréglages Le monde, Une ère, Un siècle, Une vie.
+    glisser ; ‹ › ; préréglages Le monde, Une ère, Un siècle, Une vie ;
+    **« ◎ Centrer sur aujourd'hui »** (demande de l'auteur) ramène la vue sur
+    le jour actuel, au même zoom, si l'on a défilé trop loin (MJ et joueurs).
   - **Le zoom règle le niveau de détail** : chaque date a une **portée** —
     **Monde** (paraît de loin), **Région** (à l'échelle d'une ère, au-dessous
     de ~400 ans), **Détail** (au-dessous de ~130 ans : naissances et morts
@@ -3203,8 +3205,9 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     (comme le Livre de sessions), plutôt qu'une table nouvelle ; (3) le
     service qui agrège (`getWorldTimeline`) lit aussi naissances et morts,
     en une requête groupée, visibilité filtrée côté serveur.
-  - **À valider** : la planche « Chronologie du monde — fleuve horizontal,
-    molette et zoom, page des joueurs ».
+  - **Décidé** (9 octobre), avec le bouton « Centrer sur aujourd'hui ». Les
+    trois points de données ci-dessus restent à trancher par Opus, ADR à
+    l'appui, avant de coder la page.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
