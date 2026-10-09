@@ -51,8 +51,8 @@ Ce qui n'est **pas** encore prêt à coder :
   et choix d'espèce, de don, de sous-classe — 3, 6 et 7 nourrissent 47), 12
   (« Voir comme » des MJ), 13 (sous-classes manquantes), 14 (une joueuse crée
   son PJ — **en grande partie repris par V3.1-83**, à vérifier puis fermer).
-  V3.1-15 et 16 sont codés, **à vérifier en direct** (leurs écrans sont
-  ensuite refaits par 54 et 56).
+  V3.1-15 et 16 sont faits et vérifiés en direct le 9 octobre (leurs
+  écrans seront refaits au verre minéral par 54 et 56).
 
 ### Ordre recommandé
 
@@ -72,7 +72,7 @@ valables ; celui-ci les relie.
 | **6 · La création de personnage** | 47 → 48 → 49 → 50, 51, 52, 53 ; 40 | Le plus gros chantier ; il attend les règles en données (47). |
 | **7 · Les statistiques du joueur** | 89 → 90 → 91 → 92 | Il leur faut des jets attribués ; les jets d'avant 89 ne comptent pas. |
 | **8 · Règles et Chronologie** | 93 → 94 → 95 ; 96 → 97 → 98 → 99 | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
-| **À côté, quand on veut** | 1, 2, 4, 5 (petites rugosités de règles) ; 12, 13 ; vérifier 14, 15, 16 | Indépendants de la refonte. |
+| **À côté, quand on veut** | 1, 2, 4, 5 (petites rugosités de règles) ; 12, 13 ; vérifier 14 (repris par 83) | Indépendants de la refonte. |
 
 **Règle** : un ticket Opus « à concevoir » ne se code pas ; il se conçoit
 (ADR), puis il se découpe en tickets prêts. Si Sonnet bute sur une décision
@@ -1106,7 +1106,7 @@ second.
 
 ---
 
-### ☐ V3.1-15 — La Gestion de campagne illisible : invitations en haut, une carte par personne · `M` — **codé le 1ᵉʳ octobre, à vérifier en direct**
+### ☑ V3.1-15 — La Gestion de campagne illisible : invitations en haut, une carte par personne · `M` — **fait, vérifié en direct le 9 octobre**
 
 **Modèle conseillé : Sonnet** — interface d'après l'esquisse ; reste la vérification en direct.
 
@@ -1211,9 +1211,9 @@ captures, chacun vérifié dans le code :
 
 **Critères**
 
-- [ ] La fenêtre suit la piste A de l'esquisse : Invitations en haut, MJ sur
+- [x] La fenêtre suit la piste A de l'esquisse : Invitations en haut, MJ sur
   une ligne, une carte par compte joueur, personnages sans joueur en bas.
-  **Vérifié au banc, à revoir chez l'auteur** sur la vraie campagne.
+  Vérifié au banc, puis **chez l'auteur le 9 octobre** sur la vraie campagne.
 - [x] Chaque geste de l'écran actuel existe encore, et un seul endroit le
   porte — liste de l'étape 1 :
 
@@ -1240,15 +1240,15 @@ captures, chacun vérifié dans le code :
   de joueur dans un second menu.
 - [x] Chaque compte tag est nommé `Nom#0000` partout dans cet écran, y
   compris dans les confirmations ; deux comptes de même nom se distinguent.
-- [ ] Le tag n'est renvoyé par `/api/campaigns/[id]` qu'à qui gère la
+- [x] Le tag n'est renvoyé par `/api/campaigns/[id]` qu'à qui gère la
   campagne — **codé** (`isWorldAdmin` dans la route), **pas de test
   d'intégration** : il ne tournerait pas sans base dans la session cloud. À
   vérifier en direct avec un compte joueuse (la réponse ne doit porter aucun
-  `handleTags` rempli).
+  `handleTags` rempli). **Vérifié le 9 octobre.**
 - [x] Aucune nouvelle route ; une seule migration
   (`20261001120000_handle_tag_visible_to_gm.sql`), celle du commentaire de
   colonne. Le reste est de la présentation.
-- [ ] Lisible à 375 px de large ; les quatre modes et le contraste élevé
+- [x] Lisible à 375 px de large ; les quatre modes et le contraste élevé
   testés (charte §6) — **à faire en direct** : la grille passe à une colonne
   sous 768 px, deux jusqu'à 1 280, trois au-delà.
 - [x] `npm run typecheck && npm run lint && npm run test` passent.
@@ -1325,7 +1325,7 @@ monde.
   place dans la campagne mais garde ses droits sur le monde : c'est
   « Révoquer » sur son lien qui les retire.
 - Test d'intégration ajouté (`campaigns.integration.test.ts`), sauté sans base.
-- [ ] À vérifier en direct : le ⋮ de Gabriel (créateur) n'a pas « Retirer » ;
+- [x] Vérifié en direct le 9 octobre : le ⋮ de Gabriel (créateur) n'a pas « Retirer » ;
   celui d'un second MJ l'a, et le retrait le fait disparaître de « À la table ».
 
 **Bug trouvé en jouant (1ᵉʳ octobre) — révoquer un lien joueur expulsait des
@@ -1370,7 +1370,7 @@ tels quels si ce compte redevenait joueur.
 
 ---
 
-### ☐ V3.1-16 — Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse · `M`/`L` — **codé le 1ᵉʳ octobre, à vérifier en direct**
+### ☑ V3.1-16 — Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse · `M`/`L` — **fait, vérifié en direct le 9 octobre**
 
 **Modèle conseillé : Sonnet** — interface d'après l'esquisse ; reste la vérification en direct.
 
@@ -1537,8 +1537,8 @@ peuvent rester dans la réponse : ils ne sont pas secrets, seulement inutiles.
 
 **Critères**
 
-- [ ] Vue MJ et vue joueuse conformes à `Main.dc.html` et `Joueuse.dc.html`,
-  comparées côte à côte avec l'esquisse. **À faire chez l'auteur**, sur la
+- [x] Vue MJ et vue joueuse conformes à `Main.dc.html` et `Joueuse.dc.html`,
+  comparées côte à côte avec l'esquisse. **Fait chez l'auteur le 9 octobre**, sur la
   campagne réelle, avec un compte MJ et un compte joueuse.
 - [x] Une seule grille par vue, avec la bascule « Mes disponibilités / Toute la
   table » (`AvailabilityGrid.tsx`, monté par `SchedulingMjPanel` et
