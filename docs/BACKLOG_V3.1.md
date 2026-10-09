@@ -3335,6 +3335,28 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     droite. Téléphone : Accueil › Administration, « ‹ Accueil », mêmes
     tuiles, champs sous leur libellé.
   - Écartées : A (sections et sommaire), C (liste et fiche du compte).
+- **Accueil, volet « Je joue » : statistiques — à trancher (9 octobre)** :
+  planche « Accueil, volet « Je joue » · statistiques ». L'auteur veut, sous
+  « Mon personnage » et « Prochaine séance », des statistiques rigolotes qui
+  remplissent le volet sans défiler : pièces gagnées et dépensées, d20
+  moyen, nombre de 20 et de 1 naturels, action la plus utilisée. Ajoutés en
+  proposition : séances et heures de jeu, plus gros coup, fois à terre et
+  jets contre la mort réussis. Bascule « Cette campagne / Dernière séance ».
+  - **A — les tuiles** : huit petites tuiles en grille (l'action favorite
+    en large).
+  - **B — tes dés, puis le carnet** : l'histogramme du d20 (combien de fois
+    chaque face, le 20 en vert, le 1 en rouge, la moyenne), puis quatre
+    lignes (bourse, action favorite, plus gros coup, à terre).
+  - **C — les titres** : quatre titres gagnés comme des trophées (« Béni
+    des dés », « Chat noir », « Bourse percée », un titre selon l'action
+    favorite) et une bande de chiffres.
+  - **Point de données pour Opus** : `dice_rolls` ne dit aujourd'hui ni qui
+    a lancé (seulement `rolled_by`), ni pour quel personnage, ni quelle
+    action ; la monnaie n'a pas d'historique (seulement l'état courant).
+    Les statistiques demandent au minimum `dice_rolls.actor_user_id`,
+    `entity_id` et un libellé d'action dans `context`, et un journal des
+    mouvements de monnaie (ou des `session_events` dédiés). Les valeurs
+    affichées restent calculées, jamais stockées (règle 16).
   - Le cadre retenu habillera aussi Rejoindre (`/rejoindre/[token]`), sa
     porte à mot de passe, et Réinitialiser (`/reinitialiser/[token]`).
   - **PJ ouvert sans fiche de personnage** (fiche de wiki seulement, pas de
