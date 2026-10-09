@@ -280,7 +280,7 @@ sous sa forme `zChoiceGrant`. Tests : `srdMapping.test.ts` (2 cas),
 
 ---
 
-### ☐ V3.1-5 — Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) · `M`
+### ☑ V3.1-5 — Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) · `M` — **fait le 9 octobre (ADR 0050)**
 
 **Modèle conseillé : Sonnet** — un effet de Repos long sur le vocabulaire de déclencheurs existant.
 
@@ -303,12 +303,34 @@ effet qui doit se déclencher en jeu, à chaque repos — plus proche des
 déclencheurs (V3-A5) que de l'assistant de personnage.
 
 **Critères**
-- [ ] Terminer un Repos long avec un personnage portant « Ingénieux »
+- [x] Terminer un Repos long avec un personnage portant « Ingénieux »
   accorde l'Inspiration héroïque (si elle n'est pas déjà à son maximum,
   selon la règle 2024).
-- [ ] Un personnage sans ce trait n'est pas affecté.
-- [ ] Le mécanisme reste ouvert à d'autres effets liés au Repos long portés
+- [x] Un personnage sans ce trait n'est pas affecté.
+- [x] Le mécanisme reste ouvert à d'autres effets liés au Repos long portés
   par un trait/don futur, plutôt que câblé en dur pour Ingénieux seul.
+
+**Fait le 9 octobre (ADR 0050).** Le point 4 de V3.1-24 est fait du même
+coup : `takeShortRest` / `takeLongRest` émettent `short_rest` / `long_rest`
+après leurs effets de base. Un nouvel effet fermé, `grant_inspiration`, a été
+ajouté (`triggers.ts`, rapporté « ignoré » par le tour solo). Un repos
+applique lui-même les effets rendus par ses déclencheurs, sur l'état d'après
+repos et en une seule écriture : `applyRestEffects`
+(`src/core/rules/restEffects.ts`) applique l'inspiration (maximum 1 jusqu'à
+V3.1-108), les soins et la pose ou le retrait d'une condition. Tout autre
+effet, un déclencheur en échec ou rejeté, est consigné dans la note du
+changement. « Ingénieux » est une donnée : `resourceful` dans
+`data/srd/triggers-2024.json`. **À faire par l'auteur** : relancer
+`ingest-srd` pour que le déclencheur entre en base.
+
+**Bogue trouvé en passant, corrigé** : le repos long écrivait
+`spell_slots_used: {}`, et `mergeRuntimeState` fusionne clé par clé. Aucun
+emplacement n'était donc rendu. `clearedSpellSlots` remet chaque niveau
+consommé à 0.
+
+Tests : `restEffects.test.ts` (7 cas), `triggers.test.ts` (1 cas). Pas de
+test d'intégration ici, faute de base locale dans cette session. Typecheck,
+lint et tests verts.
 
 ---
 
@@ -3783,6 +3805,8 @@ Fondation des tickets 32, 33 et 34. Aucune interface.
    du renvoi du bloc entier.
 4. Repos (ADR 0036 §7) : `takeShortRest` / `takeLongRest` émettent
    `short_rest` / `long_rest` dans `runTriggers` après leurs effets de base.
+   **Fait le 9 octobre avec V3.1-5 (ADR 0050).** Reste le test d'intégration
+   du critère ci-dessous.
 5. **PV temporaires** (vérifié le 4 octobre) : ils sont stockés (`hp.temp`,
    `combat_participants.temp_hp`) et le tour solo les entame d'abord
    (`applyDamage`, `src/core/rules/turn.ts`), mais `changeHp` (fiche) les

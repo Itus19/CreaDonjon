@@ -220,6 +220,17 @@ export function applyEffects(state: TurnState, effects: readonly ResolvedEffect[
         changes.push({ kind: "hint", text: effect.text });
         break;
 
+      case "grant_inspiration":
+        // ADR 0050 : l'etat du tour ne porte pas l'inspiration ; seul un
+        // repos l'applique (`applyRestEffects`). Rapporte, jamais perdu.
+        changes.push({
+          kind: "ignored",
+          action: effect.action,
+          who: effect.who,
+          reason: "Inspiration héroïque non appliquée dans le tour : seul un repos l'accorde aujourd'hui (ADR 0050).",
+        });
+        break;
+
       case "apply_modifier":
         // V3-A6 a compte ce manque parmi les cinq : un effet QUI DURE n'a
         // aucune ecriture — `entity_active_effects` existe depuis la Phase 0

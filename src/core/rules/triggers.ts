@@ -111,6 +111,8 @@ export type EffectNode =
   | { action: "move"; who: string; zone: TriggerZone }
   /** ADR 0029 — accorde (montant positif) ou retire (negatif) du budget d'action. */
   | { action: "grant_budget"; who: string; kind: BudgetKind; amount: FormulaNode }
+  /** ADR 0050 — accorde une Inspiration heroique, dans la limite du maximum (« Ingenieux », V3.1-5). */
+  | { action: "grant_inspiration"; who: string }
   | { action: "roll"; label: string; formula: FormulaNode }
   | { action: "narrate_hint"; text: string };
 
@@ -125,6 +127,7 @@ export type ResolvedEffect =
   | { action: "spend_resource"; who: string; key: string; amount: number }
   | { action: "move"; who: string; zone: TriggerZone }
   | { action: "grant_budget"; who: string; kind: BudgetKind; amount: number }
+  | { action: "grant_inspiration"; who: string }
   | { action: "roll"; label: string; value: number }
   | { action: "narrate_hint"; text: string };
 
@@ -207,6 +210,7 @@ const zEffect: z.ZodType<EffectNode> = z.lazy(() =>
       kind: z.enum(BUDGET_KINDS),
       amount: zFormulaNode,
     }),
+    z.object({ action: z.literal("grant_inspiration"), who: z.string().min(1) }),
     z.object({ action: z.literal("roll"), label: z.string().min(1), formula: zFormulaNode }),
     z.object({ action: z.literal("narrate_hint"), text: z.string().min(1) }),
   ]),
@@ -397,6 +401,8 @@ function resolveEffect(
         },
         branch: [],
       };
+    case "grant_inspiration":
+      return { resolved: { action: "grant_inspiration", who: effect.who }, branch: [] };
     case "roll":
       return { resolved: { action: "roll", label: effect.label, value: evalNumber(effect.formula, ctx, fired, rng) }, branch: [] };
     default:

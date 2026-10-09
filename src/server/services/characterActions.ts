@@ -27,7 +27,7 @@ import { armorAcModifier, mapChosenSkillModifiers, type WeaponData } from "@/src
 import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { resolveScaledFormulaText } from "@/src/core/rules/scaling";
 import { formatFormulaNode } from "@/src/core/formula/format";
-import type { RuntimeStatePatch } from "@/src/core/rules/runtimeState";
+import { mergeRuntimeState, type RuntimeStatePatch } from "@/src/core/rules/runtimeState";
 import { zRuntimeState, type RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
@@ -50,6 +50,8 @@ import { assembleResolvedRuleset, resolveEquipmentData, type RemainingChoice } f
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
+import { fireTriggersForCharacter } from "@/src/server/services/triggerRuntime";
+import { applyRestEffects, clearedSpellSlots } from "@/src/core/rules/restEffects";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -573,6 +575,51 @@ async function advanceSceneClockForRest(supabase: TypedClient, campaignId: strin
 }
 
 /** Repos court : depense de des de vie au choix (soigne, decompte), recharge des ressources `short_rest`. */
+/**
+ * ADR 0036 §7 et ADR 0050 (V3.1-5) — un repos emet son evenement APRES ses
+ * effets de base, et applique ce que ses declencheurs rendent (« Ingenieux » :
+ * l'inspiration au repos long). Calcule sur l'etat d'apres repos, pour une
+ * seule ecriture ; rend le patch complementaire et les lignes de la note.
+ * Un declencheur qui echoue ou un effet ignore est consigne, jamais muet ;
+ * le repos, lui, a lieu quoi qu'il arrive.
+ */
+async function restTriggersPatch(
+  supabase: TypedClient,
+  ctx: CharacterActionContext,
+  rested: RuntimeState,
+  event: "short_rest" | "long_rest"
+): Promise<{ patch: RuntimeStatePatch; notes: string[] }> {
+  try {
+    // Un repos n'a qu'un acteur : le personnage, sous le nom `self` qu'emploient
+    // les declencheurs (formulaires, donnees SRD).
+    const out = await fireTriggersForCharacter(supabase, {
+      rulesetId: ctx.rulesetId,
+      subject: "self",
+      sheet: ctx.sheet,
+      runtime: rested,
+      event: { event, subject: "self" },
+    });
+    const result = applyRestEffects(rested, out.effects, { hpMax: ctx.sheet.hitPoints.max, inspirationMax: 1 });
+    const notes = [
+      ...result.applied,
+      ...result.ignored.map((i) => `Effet ignoré (${i.action}) : ${i.reason}`),
+      ...out.failures.map((f) => `Déclencheur en échec : ${f.reason}`),
+      ...out.rejected.map((r) => `Déclencheur rejeté (${r.entryKey}) : ${r.reason}`),
+      ...(out.error ? [`Déclencheurs interrompus : ${out.error.message}`] : []),
+    ];
+    return {
+      patch: { hp: { current: result.state.hp.current }, conditions: result.state.conditions, inspiration: result.state.inspiration },
+      notes,
+    };
+  } catch (err) {
+    return { patch: {}, notes: [`Déclencheurs du repos en échec : ${err instanceof Error ? err.message : String(err)}`] };
+  }
+}
+
+function restNote(base: string, notes: readonly string[]): string {
+  return notes.length === 0 ? base : `${base} — ${notes.join(" ; ")}`;
+}
+
 export async function takeShortRest(
   supabase: TypedClient,
   params: { entityId: string; campaignId: string | null; hitDiceSpent: Record<string, number>; actorUserId: string; locale: Locale }
@@ -611,16 +658,17 @@ export async function takeShortRest(
 
   const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
   const maxHp = ctx.sheet.hitPoints.max;
-  const patch: RuntimeStatePatch = {
+  const basePatch: RuntimeStatePatch = {
     hit_dice: nextHitDice,
     hp: { current: Math.min(maxHp, state.hp.current + hpHealed) },
     resources: rechargeResources(ctx.resourcesData, state.resources, ["short_rest"]),
   };
+  const triggered = await restTriggersPatch(supabase, ctx, mergeRuntimeState(state, basePatch), "short_rest");
   await applyRuntimeStateChange(supabase, {
     entityId: params.entityId,
     campaignId: params.campaignId,
-    patch,
-    note: `Repos court : ${hpHealed} PV soignes`,
+    patch: { ...basePatch, ...triggered.patch },
+    note: restNote(`Repos court : ${hpHealed} PV soignes`, triggered.notes),
     sessionId,
     actor: "player",
     actorUserId: params.actorUserId,
@@ -672,17 +720,21 @@ export async function takeLongRest(
   }
 
   const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
+  const basePatch: RuntimeStatePatch = {
+    hp: { current: ctx.sheet.hitPoints.max },
+    hit_dice: nextHitDice,
+    exhaustion: Math.max(0, state.exhaustion - 1),
+    // Chaque niveau consomme remis a 0 : `{}` ne remettait rien, la fusion
+    // se faisant cle par cle (`clearedSpellSlots`).
+    spell_slots_used: clearedSpellSlots(state.spell_slots_used),
+    resources: rechargeResources(ctx.resourcesData, state.resources, ["short_rest", "long_rest"]),
+  };
+  const triggered = await restTriggersPatch(supabase, ctx, mergeRuntimeState(state, basePatch), "long_rest");
   await applyRuntimeStateChange(supabase, {
     entityId: params.entityId,
     campaignId: params.campaignId,
-    patch: {
-      hp: { current: ctx.sheet.hitPoints.max },
-      hit_dice: nextHitDice,
-      exhaustion: Math.max(0, state.exhaustion - 1),
-      spell_slots_used: {},
-      resources: rechargeResources(ctx.resourcesData, state.resources, ["short_rest", "long_rest"]),
-    },
-    note: "Repos long",
+    patch: { ...basePatch, ...triggered.patch },
+    note: restNote("Repos long", triggered.notes),
     sessionId,
     actor: "player",
     actorUserId: params.actorUserId,

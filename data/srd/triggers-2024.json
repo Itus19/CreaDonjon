@@ -9,6 +9,17 @@
     "La cle est l'`index` de l'entree SRD. Chaque declencheur est valide par zTrigger a l'import."
   ],
 
+  "resourceful": {
+    "_regle": "Ingenieux (trait humain) : vous gagnez l'Inspiration heroique lorsque vous terminez un Repos long.",
+    "triggers": [
+      {
+        "id": "resourceful-repos-long",
+        "when": { "event": "long_rest" },
+        "then": [{ "action": "grant_inspiration", "who": "self" }]
+      }
+    ]
+  },
+
   "burnt-othur-fumes": {
     "_regle": "Une creature soumise aux Fumees d'othur brulees refait une sauvegarde de Constitution DD 13 au debut de chacun de ses tours ; a chaque echec, 1d6 degats de poison.",
     "_nonExprime": "« Apres trois sauvegardes reussies, le poison prend fin » — le moteur ne sait pas compter d'un tour a l'autre. Le poison ne s'arrete donc jamais tout seul : c'est au MJ de retirer la condition. Voir le compte des regles inexprimables, V3-A6.",

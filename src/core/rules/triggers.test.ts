@@ -317,3 +317,21 @@ describe("grant_budget", () => {
     ).toBe(false);
   });
 });
+
+describe("grant_inspiration (ADR 0050, V3.1-5)", () => {
+  it("se valide et se resout tel quel sur l'evenement long_rest", () => {
+    const trigger = zTrigger.parse({
+      id: "resourceful-repos-long",
+      when: { event: "long_rest" },
+      then: [{ action: "grant_inspiration", who: "self" }],
+    });
+    const out = runTriggers({
+      event: { event: "long_rest", subject: "self" },
+      triggers: [trigger],
+      ctx: { actors: { self: { conditions: [], features: [], numbers: {} } } },
+      rng: { nextInt: () => 0 },
+    });
+    expect(out.effects).toEqual([{ action: "grant_inspiration", who: "self" }]);
+    expect(out.failures).toEqual([]);
+  });
+});
