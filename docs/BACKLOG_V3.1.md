@@ -3265,8 +3265,8 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     280 px. Téléphone : onglet Perso. de la barre du joueur, une carte de
     250 px au centre, les voisines qui dépassent des bords, le bouton sur
     toute la largeur au-dessus de la barre.
-- **Écrans d'entrée — à trancher (9 octobre)** : planche « Écrans d'entrée
-  · trois propositions ». Aujourd'hui, `/login` (V3.1-10) est une carte
+- **Écrans d'entrée — la C retenue (9 octobre), nom et logo à choisir** :
+  planche « Écrans d'entrée ». Aujourd'hui, `/login` (V3.1-10) est une carte
   simple : bascule « Se connecter / Créer un compte », « Nom ou email » et
   mot de passe, création d'un compte sans email (nom et mot de passe), et
   deux liens « Mot de passe oublié ? » (avec email : `/auth/forgot-password` ;
@@ -3276,14 +3276,20 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     « nom ou email », le serveur choisit la voie (lien par email, ou demande
     au MJ ou à l'administrateur), et la même réponse s'affiche que le compte
     existe ou non : l'écran ne révèle jamais si un nom existe.
-  - **A — la carte de verre** : le fond de l'application flouté, une carte
-    au centre (marque, pilule, champs, « Mot de passe oublié ? »).
-  - **B — l'image et le panneau** : le fond en grand à gauche avec la marque
-    et « Ton monde, ses règles, ta table. » ; à droite un panneau plein,
-    « Bon retour », onglets soulignés.
-  - **C — l'écran-titre** : le titre en très grand, un menu de trois gros
-    boutons (Se connecter, Créer un compte, J'ai un lien d'invitation) ;
-    choisir ouvre un petit panneau à la place du menu.
+  - **Retenue : la C, l'écran-titre**. Le titre en très grand sur le fond
+    flouté, un menu de trois gros boutons (Se connecter, Créer un compte,
+    J'ai un lien d'invitation) ; choisir ouvre un petit panneau à la place
+    du menu, « ‹ Menu » pour revenir. A (carte de verre) et B (image et
+    panneau) sont écartées.
+  - **Nom public et logo à choisir** (planche « Nom public et logo ») :
+    l'auteur veut changer le nom affiché de l'application et son logo.
+    Douze noms à jeu de mots (Antre Nous, DéVingt, Gobelet, Dédale, Jet de
+    Plume, Maître des Lieux, Tablée, Écaille & Encre, Initiative, Carte
+    Blanche, Mille Faces, Mémoire de Dragon) et douze logos au trait (d20,
+    porte du donjon, œil du dragon, gobelet, plume et dé, clé, grimoire,
+    tour, dédale, écaille, antre, carte), chacun en tuile d'accent et en
+    trait seul. « CreaDonjon » reste le nom technique du dépôt ; le nom
+    public vit dans `messages/` et les métadonnées de l'application.
   - Le cadre retenu habillera aussi Rejoindre (`/rejoindre/[token]`), sa
     porte à mot de passe, et Réinitialiser (`/reinitialiser/[token]`).
   - **PJ ouvert sans fiche de personnage** (fiche de wiki seulement, pas de
