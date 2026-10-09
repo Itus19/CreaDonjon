@@ -3345,8 +3345,11 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   jets contre la mort réussis. Bascule « Cette campagne / Dernière séance ».
   - **Retenu** : sous « Tes dés et tes titres » (avec la bascule), l'**histogramme
     du d20** (combien de fois chaque face est sortie ; le 1 en rouge, le 20
-    en vert ; la moyenne, le nombre de jets, de 20 et de 1 ; survol d'une
-    barre : « 14 : 13 fois »), puis les **quatre titres** en 2 × 2. La
+    en vert ; survol d'une barre : « 14 : 13 fois »). **Au-dessus** : au
+    centre la moyenne en grand (« 11,4 », ~26 px) et « 214 jets » en petit
+    (12 px) à côté ; le nombre de 1 en rouge au-dessus de la colonne du 1,
+    le nombre de 20 en vert au-dessus de la colonne du 20, en taille
+    intermédiaire (~17 px). Puis les **quatre titres** en 2 × 2. La
     bande de chiffres de la C est retirée. Les tuiles (A) et le carnet (B)
     sont écartés.
   - **Les titres** sont calculés, jamais stockés : la chance (« Béni des
