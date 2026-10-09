@@ -3300,8 +3300,9 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     stockage), RLS en lecture pour tous (l'écran-titre la lit avant
     connexion), écriture réservée au superadmin. Les textes par défaut
     restent dans `messages/`.
-- **Administration — à trancher (9 octobre)** : planche « Administration ·
-  trois propositions », dans le rail de l'accueil (marque Antre Nous).
+- **Administration — décidé le 9 octobre : la B, le tableau de bord**
+  (planche « Décidé · Administration »), dans le rail de l'accueil (marque
+  Antre Nous).
   Aujourd'hui, `AdminPanel` affiche deux tableaux sur l'accueil :
   - « Liens d'invitation — tous mondes » : monde, campagne, rôle, réclamé
     par, état ; le menu ⋮ propose copier, voir comme, mot de passe,
@@ -3313,19 +3314,27 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   Les trois propositions gardent chaque geste, ajoutent « Identité de
   l'application » (décidée) et une recherche de compte. Le numéro (#4821)
   n'apparaît jamais ici (V3.1-10).
-  - **A — une page en sections** : Comptes, Liens d'invitation et Identité
-    empilés, avec un sommaire à gauche ; les tableaux deviennent des lignes
-    de verre avec leurs étiquettes (superadmin, réinitialisation demandée,
-    doit changer son mot de passe) et ⋮.
-  - **B — le tableau de bord** : quatre tuiles (À traiter, Comptes, Liens
-    actifs, Identité) ; la tuile choisie ouvre sa liste dessous. La page
-    s'ouvre sur « À traiter » (les demandes de réinitialisation, avec le
-    geste en un clic).
-  - **C — la liste et la fiche du compte** : trois onglets. Pour les
-    comptes, la liste est à gauche (recherche ; filtres Tous, À traiter,
-    Superadmin) et la fiche à droite : mondes du compte, liens réclamés,
-    gestes en boutons. Lire les mondes d'un compte demande une requête
-    nouvelle, sans changement de schéma.
+  - **Retenue : la B.** Quatre tuiles en tête : À traiter (nombre en
+    accent), Comptes, Liens d'invitation actifs, Identité de l'application
+    (logo et nom). La tuile choisie ouvre sa liste dessous, et la page
+    s'ouvre sur « À traiter ».
+  - **À traiter** : les demandes de réinitialisation de tous les comptes,
+    chacune avec « Forcer une réinitialisation » en un clic (lien à usage
+    unique, à transmettre hors de l'application). Pour mémoire, sans geste :
+    les comptes qui doivent changer leur mot de passe
+    (`must_change_password`). Sans rien à traiter, la tuile affiche 0 et la
+    page s'ouvre sur Comptes.
+  - **Comptes et Liens d'invitation** : les deux tableaux d'aujourd'hui en
+    lignes de verre, avec leurs étiquettes (superadmin, réinitialisation
+    demandée, doit changer son mot de passe) et ⋮. Les gestes ne changent
+    pas ; les destructeurs sont en rouge et confirmés (`ConfirmDialog`).
+    Recherche de compte par nom.
+  - **Identité de l'application** : le panneau décidé avec les écrans
+    d'entrée.
+  - Tablette : tuiles en 2 × 2, lignes de lien sur deux lignes, ⋮ en haut à
+    droite. Téléphone : Accueil › Administration, « ‹ Accueil », mêmes
+    tuiles, champs sous leur libellé.
+  - Écartées : A (sections et sommaire), C (liste et fiche du compte).
   - Le cadre retenu habillera aussi Rejoindre (`/rejoindre/[token]`), sa
     porte à mot de passe, et Réinitialiser (`/reinitialiser/[token]`).
   - **PJ ouvert sans fiche de personnage** (fiche de wiki seulement, pas de
