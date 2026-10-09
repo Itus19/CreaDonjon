@@ -3265,8 +3265,8 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     280 px. Téléphone : onglet Perso. de la barre du joueur, une carte de
     250 px au centre, les voisines qui dépassent des bords, le bouton sur
     toute la largeur au-dessus de la barre.
-- **Écrans d'entrée — la C retenue (9 octobre), nom et logo à choisir** :
-  planche « Écrans d'entrée ». Aujourd'hui, `/login` (V3.1-10) est une carte
+- **Écrans d'entrée — décidé le 9 octobre : la C, « Antre Nous » et le
+  d20** (planche « Décidé · Écrans d'entrée »). Aujourd'hui, `/login` (V3.1-10) est une carte
   simple : bascule « Se connecter / Créer un compte », « Nom ou email » et
   mot de passe, création d'un compte sans email (nom et mot de passe), et
   deux liens « Mot de passe oublié ? » (avec email : `/auth/forgot-password` ;
@@ -3281,15 +3281,25 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     J'ai un lien d'invitation) ; choisir ouvre un petit panneau à la place
     du menu, « ‹ Menu » pour revenir. A (carte de verre) et B (image et
     panneau) sont écartées.
-  - **Nom public et logo à choisir** (planche « Nom public et logo ») :
-    l'auteur veut changer le nom affiché de l'application et son logo.
-    Douze noms à jeu de mots (Antre Nous, DéVingt, Gobelet, Dédale, Jet de
-    Plume, Maître des Lieux, Tablée, Écaille & Encre, Initiative, Carte
-    Blanche, Mille Faces, Mémoire de Dragon) et douze logos au trait (d20,
-    porte du donjon, œil du dragon, gobelet, plume et dé, clé, grimoire,
-    tour, dédale, écaille, antre, carte), chacun en tuile d'accent et en
-    trait seul. « CreaDonjon » reste le nom technique du dépôt ; le nom
-    public vit dans `messages/` et les métadonnées de l'application.
+  - **Marque décidée : « Antre Nous »** (l'antre du dragon, et « entre
+    nous », la table d'amis), phrase d'accueil « Le repaire de ta table. »,
+    **logo d20** au trait en tuile d'accent. Elle s'affiche sur l'écran-titre,
+    en tête du rail de l'accueil (hors d'un monde), dans l'onglet du
+    navigateur (titre et favicon). « CreaDonjon » reste le nom du dépôt.
+  - **Le superadmin la change** : Administration › Identité de
+    l'application. Nom (32 caractères), phrase d'accueil (80), logo parmi
+    les douze au trait (d20, porte du donjon, œil du dragon, gobelet, plume
+    et dé, clé, grimoire, tour, dédale, écaille, antre, carte) ou une image
+    téléversée (PNG ou WebP carré de 512 px, **jamais de SVG téléversé** :
+    il peut porter du script). Aperçu en direct, « Enregistrer » l'applique
+    à tous, « Rétablir « Antre Nous » » revient au défaut.
+  - **À trancher par Opus (ADR), changement de schéma** : où vit
+    l'identité de l'application. Rien n'existe dans `docs/SCHEMA.md`.
+    Proposé : une table à ligne unique `app_identity` (`name`, `tagline`,
+    `logo_key` parmi les douze, `logo_asset_path` via l'interface de
+    stockage), RLS en lecture pour tous (l'écran-titre la lit avant
+    connexion), écriture réservée au superadmin. Les textes par défaut
+    restent dans `messages/`.
   - Le cadre retenu habillera aussi Rejoindre (`/rejoindre/[token]`), sa
     porte à mot de passe, et Réinitialiser (`/reinitialiser/[token]`).
   - **PJ ouvert sans fiche de personnage** (fiche de wiki seulement, pas de
