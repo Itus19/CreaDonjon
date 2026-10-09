@@ -3334,6 +3334,12 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - Tablette : tuiles en 2 × 2, lignes de lien sur deux lignes, ⋮ en haut à
     droite. Téléphone : Accueil › Administration, « ‹ Accueil », mêmes
     tuiles, champs sous leur libellé.
+  - **Titres des joueurs (ajouté le 9 octobre, demande de l'auteur)** : une
+    cinquième tuile, « Titres des joueurs », où le superadmin paramètre tout
+    des titres du volet « Je joue » : pour chacune des quatre cases (Chance,
+    Malchance, Bourse, Action favorite), ses **paliers** — plage (de … à …),
+    nom, petit texte à variables, icône parmi douze, couleur parmi cinq.
+    Voir V3.1-92.
   - Écartées : A (sections et sommaire), C (liste et fiche du compte).
 - **Accueil, volet « Je joue » : statistiques — décidé le 9 octobre :
   l'histogramme de B et les titres de C** (planche « Décidé · Accueil,
@@ -3357,7 +3363,9 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     pour les 1), la bourse (« Bourse percée » si l'on dépense plus qu'on ne
     gagne, « Écureuil » sinon), l'action favorite (un titre par sorte :
     « Lame de l'ombre » pour les attaques sournoises, « Arcaniste » pour
-    les sorts…). Titres et seuils dans un fichier de libellés.
+    les sorts…). **Titres, seuils, icônes et couleurs sont paramétrables
+    par le superadmin** (Administration › Titres des joueurs, V3.1-92) ;
+    les valeurs livrées sont des valeurs par défaut.
   - Téléphone : le même volet en feuille, la bascule sous son titre,
     histogramme plus bas, titres resserrés, bouton sur toute la largeur.
   - **Point de données pour Opus** : voir V3.1-89. `dice_rolls` ne dit
@@ -6360,9 +6368,10 @@ de** : V3.1-35 (« Administration » dans le rail, superadmin seulement).
 **Ce qui est décidé**
 - Une page « Administration » (« Superadmin seulement · toute la
   plateforme »), vérifiée côté serveur (`isSuperadmin`) avant tout rendu.
-- **Quatre tuiles** en tête : **À traiter** (le nombre en accent),
+- **Cinq tuiles** en tête : **À traiter** (le nombre en accent),
   **Comptes**, **Liens d'invitation actifs**, **Identité de
-  l'application** (tuile du logo + nom). La tuile choisie (bordure
+  l'application** (tuile du logo + nom), **Titres des joueurs** (nombre de
+  titres ; panneau : V3.1-92). La tuile choisie (bordure
   d'accent) ouvre sa liste dessous. **La page s'ouvre sur « À traiter »**,
   ou sur Comptes s'il n'y a rien à traiter.
 - **À traiter** : une ligne par compte avec `password_reset_requested_at`
@@ -6454,6 +6463,7 @@ Les règles de lecture des tickets du 9 octobre (plus haut) valent ici.
 | V3.1-89 | Données : qui lance, pour quel personnage, quel d20 est gardé | **Opus** | — |
 | V3.1-90 | Noyau pur : histogramme, compteurs, titres (tests d'abord) | Sonnet | 89 (forme des données) |
 | V3.1-91 | Service et volet : histogramme et titres sur l'accueil | Sonnet | 35, 89, 90 |
+| V3.1-92 | Administration › Titres des joueurs : l'éditeur | Sonnet | 87, 89, 90 |
 
 ### ☐ V3.1-89 — Statistiques : attribuer chaque jet (données, ADR) · `M` — **prêt (Opus)**
 
@@ -6490,6 +6500,17 @@ désavantage, la trace porte les deux d20 sans dire lequel est gardé.
   migré vers `entity_runtime_state`, `campaignEconomy.ts` ne la voit plus et
   il faut une autre source (journal de mouvements ou `session_events`).
   Trancher, et documenter dans l'ADR.
+- **Les titres sont des données** (le superadmin les change, V3.1-92) :
+  proposé, une table `player_title_tiers` (`family` parmi `luck`, `bad_luck`,
+  `purse`, `favorite_action` ; `position` ; `range_from numeric`,
+  `range_to numeric null` (null = sans borne) pour les trois premières ;
+  `action_kind` pour la quatrième ; `name` ; `template` (petit texte à
+  variables) ; `icon_key` parmi douze icônes **du code** ; `color_token`
+  parmi `success`, `danger`, `accent`, `link_entity`, `link_rule`),
+  globale à la plateforme. RLS : lecture pour tout compte connecté,
+  écriture superadmin. Valeurs par défaut insérées par la migration
+  **comme réglages**, pas comme contenu de règles. Zod valide `icon_key`,
+  `color_token` et les variables du `template`.
 - Contrat pour V3.1-90/91 : `listRollsForStats(campaignId, entityId,
   sinceSessionId?)` renvoie `{ naturalD20, kind, what, result, sessionId,
   createdAt }[]` (repo) ; `getPlayerEconomy(entityId, sinceSessionId?)`.
@@ -6525,23 +6546,35 @@ des données de V3.1-89.
 - `favoriteAction(rolls)` : le `kind` le plus fréquent (hors `damage` et
   `free`), avec son `what` le plus fréquent et le nombre ; égalité : le plus
   récent. `biggestHit(rolls)` : le plus grand `result` d'un jet `damage`.
-- `playerTitles(stats, tableStats)` → **quatre titres**, un par case, dans
-  cet ordre, chacun `{ key, value }` (libellés dans `messages/`) :
-  1. **Chance (20)** : `blessed` (« Béni des dés ») si le nombre de 20 de la
-     joueuse dépasse la moyenne des joueurs de la table, sinon `patient`
-     (« En attente d'un miracle »).
-  2. **Malchance (1)** : `black_cat` (« Chat noir ») si le nombre de 1
-     dépasse la moyenne de la table, sinon `steady` (« Pied ferme ») ; la
-     plus longue suite de 1 dans le petit texte quand elle vaut 2 ou plus.
-  3. **Bourse** : `leaky_purse` (« Bourse percée ») si dépensé > gagné,
-     sinon `squirrel` (« Écureuil ») ; petit texte « −860 po dépensées pour
-     +1 240 gagnées ».
-  4. **Action favorite** : par `kind` — attaque sournoise (`what` contenant
-     l'attaque sournoise) `shadow_blade` (« Lame de l'ombre »), autre
-     attaque `duelist` (« Bretteur »), sort `arcanist` (« Arcaniste »), soin
-     `healer` (« Main secourable »), test ou sauvegarde `cautious`
-     (« Prudent ») ; petit texte « Attaque sournoise, ×47 ; record : 27
-     dégâts ».
+- `familyMeasures(stats, tableStats)` → les trois mesures :
+  **luck** = 20 de la joueuse ÷ moyenne des 20 des joueurs de la table ;
+  **bad_luck** = même chose pour les 1 ; **purse** = dépensé ÷ gagné (en
+  po ; gagné nul → mesure infinie). **favorite_action** = le `kind`
+  favori (avec l'attaque sournoise distinguée de l'attaque d'arme).
+- `pickTitle(tiers, measure)` : le palier dont `range_from ≤ mesure <
+  range_to` (`range_to` null = sans borne) ; aucun palier → `null` (la case
+  reste vide). Pour l'action favorite : le palier de son `action_kind`.
+- `renderTemplate(template, values)` : remplace `{n20}`, `{table20}`,
+  `{n1}`, `{suite}`, `{depense}`, `{gagne}`, `{action}`, `{fois}`,
+  `{record}` ; une variable inconnue reste telle quelle. Pas d'`eval`, pas
+  de HTML (texte brut).
+- `checkTiers(tiers)` : chevauchements et trous de plages, pour
+  l'avertissement de l'éditeur (V3.1-92).
+- **Paliers par défaut** (insérés par V3.1-89) :
+  - Chance : 0–0,8 « En attente d'un miracle » (étoile, ambre) ; 0,8–1,2
+    « Bonne étoile » (trèfle, sarcelle) ; 1,2+ « Béni des dés » (d20,
+    vert). Texte : « {n20} × 20 naturels — plus que toute la table »…
+  - Malchance : 0–0,8 « Pied ferme » (bouclier, sarcelle) ; 0,8–1,2 « Ça
+    arrive » (d20, ambre) ; 1,2+ « Chat noir » (chat, rouge), « {n1} × 1
+    naturels, dont {suite} d'affilée ».
+  - Bourse : 0–0,5 « Écureuil » (bourse, vert) ; 0,5–1 « Bon
+    gestionnaire » (pièce, ambre) ; 1+ « Bourse percée » (bourse, rouge),
+    « −{depense} po dépensées pour +{gagne} gagnées ».
+  - Action favorite : attaque sournoise « Lame de l'ombre » (dague,
+    violet), attaque d'arme « Bretteur » (épée), sort « Arcaniste »
+    (baguette), soin « Main secourable » (cœur), test ou sauvegarde
+    « Prudent » (bouclier) ; « {action}, ×{fois} ; record : {record}
+    dégâts ».
 - Moins de 5 jets à d20 : `playerTitles` renvoie `[]` et l'histogramme est
   marqué `tooFew` (le volet affiche un état vide).
 
@@ -6607,3 +6640,48 @@ volet de droite de l'accueil (`Accueil-3-Tableau.dc.html`, V3.1-35).
 - [ ] Ordinateur 1400 × 860 : volet sans défilement ; téléphone 390 px :
   aucun chiffre recouvert.
 - [ ] `DiceStatsPanel` retiré (et ses routes si plus rien ne les lit).
+
+### ☐ V3.1-92 — Administration › Titres des joueurs : l'éditeur · `M` — **prêt**
+
+**Modèle conseillé : Sonnet.**
+
+**Planche** : `Admin-Decide.dc.html`, cinquième tuile « Titres des
+joueurs » (vivante : familles, paliers, icônes, couleurs, valeur d'essai).
+**Dépend de** : 87 (le tableau de bord), 89 (table `player_title_tiers`),
+90 (`pickTitle`, `renderTemplate`, `checkTiers`).
+
+**Ce qui est décidé**
+- La tuile « Titres des joueurs » (icône d20, nombre de titres) ouvre le
+  panneau : note « Les quatre cases du volet « Je joue ». Chaque case lit
+  une mesure et affiche le titre du palier où elle tombe. Les changements
+  valent pour tous les mondes, aussitôt enregistrés. »
+- **Quatre familles** en boutons (Chance · les 20 naturels ; Malchance ·
+  les 1 naturels ; Bourse · dépensé ÷ gagné ; Action favorite · ce qu'on
+  fait le plus), puis « Mesure : » et sa phrase.
+- **Une ligne par palier** : la pastille d'icône teintée (toucher ouvre un
+  sélecteur : les douze icônes au trait en 6 × 2 et les cinq couleurs
+  dessous) ; le **nom** ; la **plage** « de [0,8] à [1,2] » (vide = ∞,
+  virgule décimale) — ou, pour l'action favorite, la sorte d'action ; le
+  **petit texte** ; × pour retirer (jamais le dernier palier). Le palier où
+  tombe la valeur d'essai est bordé d'accent.
+- « + Ajouter un palier » (la nouvelle plage part de la fin de la
+  précédente) ou « + Ajouter une action » ; les **variables** de la famille
+  en étiquettes à côté.
+- **Avertissement** (`checkTiers`) sous la liste quand des plages se
+  chevauchent ou laissent un trou : « Plages à revoir : … Enregistrer reste
+  possible ; une valeur hors plage n'affiche pas de titre. »
+- **Aperçu** à droite : une **valeur d'essai** en curseur (« 1,4 × la
+  table ») — l'action favorite s'essaie en touchant un palier — et la carte
+  du titre telle que la joueuse la verra, avec des chiffres d'exemple.
+  **Enregistrer** (« Enregistré ✓ ») et **« Rétablir les titres par
+  défaut »** (confirmé).
+- Écriture par une action serveur Zod, superadmin vérifié.
+- Tablette et téléphone : les familles passent à la ligne ; chaque palier
+  sur trois lignes (nom ; plage ; petit texte), l'aperçu sous la liste.
+
+**Critères d'acceptation**
+- [ ] Un changement enregistré se voit dans le volet « Je joue » de toutes
+  les joueuses au rechargement.
+- [ ] Une icône ou une couleur hors liste est refusée par le serveur.
+- [ ] Le petit texte ne peut pas injecter de HTML (affiché en texte brut).
+- [ ] Rétablir remet les paliers par défaut de V3.1-90.
