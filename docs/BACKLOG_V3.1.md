@@ -3240,6 +3240,27 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     bouton à côté d'un champ (« Enregistrer », « Supprimer définitivement »)
     passe sous le champ plutôt que de se couper sur deux lignes.
   - Écartées : B (onglets), C (carte d'identité et lignes de réglages).
+- **Choix du personnage — à trancher (9 octobre)** : planche « Choix du
+  personnage · trois propositions ». Aujourd'hui, `ChooseCharacterScreen`
+  (V3.1-10) est une liste de noms en boutons, avec « Nouveau PJ ». Il
+  s'affiche dans l'onglet Personnage quand une joueuse membre d'un monde n'a
+  pas de PJ (ajoutée par email, ou PJ libéré par le MJ).
+  `claimCharacterAction` réclame le PJ, et le MJ peut le réattribuer. Le lien
+  ouvert (`/rejoindre`) propose les mêmes PJ dans un menu déroulant. Les
+  trois propositions demandent à `listUnclaimedCharacters` le portrait
+  (`entity_assets`, rôle portrait, l'initiale à défaut), le `summary` et
+  l'identité calculée par `characterSheet()` (espèce, classe, niveau). Rien
+  n'est stocké, et seules les fiches que la joueuse peut voir sont envoyées.
+  - **A — la galerie** : de grandes cartes portrait (nom, espèce et classe,
+    une phrase), puis « Créer mon personnage » en carte pointillée. Une barre
+    en bas confirme le choix : « Jouer Naivara ».
+  - **B — la liste et l'aperçu** : une liste compacte à gauche ; à droite, le
+    personnage en grand (portrait, phrase, six caractéristiques, CA, PV max,
+    vitesse) et « Jouer Naivara ».
+  - **C — la sélection de héros** : un carrousel comme dans un jeu, avec un
+    personnage au centre, ses voisins en retrait, des flèches, des points et
+    les touches ← →. « Jouer Naivara » dessous, et « ou créer mon
+    personnage » en lien.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
