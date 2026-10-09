@@ -50,10 +50,16 @@ Ce qui n'est **pas** encore prêt à coder :
   (ressources de classe), 47 (règles de personnage en données), 59 (fond par
   défaut du wiki). Et des tickets de données Opus déjà spécifiés : 41, 74,
   84, 89.
-- **Des rugosités d'avant la refonte**, hors interface : V3.1-1 à 7 (règles
-  et choix d'espèce, de don, de sous-classe — 3, 6 et 7 nourrissent 47), 12
-  (« Voir comme » des MJ), 13 (sous-classes manquantes). V3.1-14 est fermé,
-  repris par 82, 83 et 100.
+- **Des rugosités d'avant la refonte**, hors interface : **faites le 9
+  octobre** : V3.1-1, 2, 4, 5 et 12. V3.1-3, 6 et 7 sont conçus (ADR 0046) et
+  repris par 116 à 119. **Reste V3.1-13** (sous-classes manquantes) : c'est
+  de la saisie, qui attend le texte des livres de l'auteur. V3.1-14 est
+  fermé, repris par 82, 83 et 100.
+- **Deux failles corrigées le 9 octobre** en préparant V3.1-12 :
+  - ADR 0051 : le retour de « voir comme » prenait le compte dont
+    l'identifiant était dans un cookie forgeable ;
+  - ADR 0052 : « Forcer une réinitialisation » marchait sur n'importe quel
+    compte.
   V3.1-15 et 16 sont faits et vérifiés en direct le 9 octobre (leurs
   écrans seront refaits au verre minéral par 54 et 56).
 
@@ -1128,10 +1134,17 @@ du jeu aujourd'hui — cohérent, pas un recul propre à ce contenu.
 - [ ] Chaque fiche recopie fidèlement le texte du manuel de l'auteur (aucune
   aptitude devinée) — l'auteur fournit le texte, capture ou photo à l'appui,
   comme pour Serment de vengeance.
-- [ ] Une sous-classe saisie ici n'est pas bloquée par l'avertissement de
+- [x] Une sous-classe saisie ici n'est pas bloquée par l'avertissement de
   bloc manquant (V3.1-1, si toujours ouvert) ni par un défaut d'édition
   (V3.1-2, si toujours ouvert) — dépendances à vérifier au moment de
   saisir, pas à résoudre avant.
+
+**9 octobre.** Le troisième critère est rempli : V3.1-1 et V3.1-2 sont
+faits. Une sous-classe saisie n'affiche plus d'avertissement de bloc, et elle
+se corrige en place par « Modifier ». **Attend l'auteur** : le texte des 11
+sous-classes, une par une, depuis le manuel. Il passe par le formulaire
+« Créer une sous-classe » ou, sur demande, par Claude dans la base, jamais
+dans un fichier suivi par Git.
 
 ---
 
