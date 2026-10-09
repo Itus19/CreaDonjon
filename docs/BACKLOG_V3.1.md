@@ -3300,6 +3300,32 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     stockage), RLS en lecture pour tous (l'écran-titre la lit avant
     connexion), écriture réservée au superadmin. Les textes par défaut
     restent dans `messages/`.
+- **Administration — à trancher (9 octobre)** : planche « Administration ·
+  trois propositions », dans le rail de l'accueil (marque Antre Nous).
+  Aujourd'hui, `AdminPanel` affiche deux tableaux sur l'accueil :
+  - « Liens d'invitation — tous mondes » : monde, campagne, rôle, réclamé
+    par, état ; le menu ⋮ propose copier, voir comme, mot de passe,
+    réinitialiser le lien, révoquer, supprimer le compte ;
+  - « Comptes — toute la plateforme » : nom, réinitialisation demandée ; le
+    menu ⋮ propose forcer une réinitialisation, transférer un ruleset,
+    supprimer.
+
+  Les trois propositions gardent chaque geste, ajoutent « Identité de
+  l'application » (décidée) et une recherche de compte. Le numéro (#4821)
+  n'apparaît jamais ici (V3.1-10).
+  - **A — une page en sections** : Comptes, Liens d'invitation et Identité
+    empilés, avec un sommaire à gauche ; les tableaux deviennent des lignes
+    de verre avec leurs étiquettes (superadmin, réinitialisation demandée,
+    doit changer son mot de passe) et ⋮.
+  - **B — le tableau de bord** : quatre tuiles (À traiter, Comptes, Liens
+    actifs, Identité) ; la tuile choisie ouvre sa liste dessous. La page
+    s'ouvre sur « À traiter » (les demandes de réinitialisation, avec le
+    geste en un clic).
+  - **C — la liste et la fiche du compte** : trois onglets. Pour les
+    comptes, la liste est à gauche (recherche ; filtres Tous, À traiter,
+    Superadmin) et la fiche à droite : mondes du compte, liens réclamés,
+    gestes en boutons. Lire les mondes d'un compte demande une requête
+    nouvelle, sans changement de schéma.
   - Le cadre retenu habillera aussi Rejoindre (`/rejoindre/[token]`), sa
     porte à mot de passe, et Réinitialiser (`/reinitialiser/[token]`).
   - **PJ ouvert sans fiche de personnage** (fiche de wiki seulement, pas de
