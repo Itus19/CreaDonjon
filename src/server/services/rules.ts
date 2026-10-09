@@ -33,6 +33,7 @@ import { missingRequiredBlocks } from "@/src/core/rules/requiredBlocks";
 import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
 import { buildHomebrewSubclassEntry, subclassSlotWrite, type HomebrewSubclassInput } from "@/src/core/rules/homebrewSubclass";
 import { buildHomebrewSpellEntry, HomebrewSpellError, type HomebrewSpellInput } from "@/src/core/rules/homebrewSpell";
+import { blockTypesToRemove } from "@/src/core/rules/homebrewEdit";
 import {
   applyOverrides,
   mergeHomebrewEntries,
@@ -1829,47 +1830,7 @@ export async function importRulesetEntries(supabase: TypedClient, input: { rules
         }
       }
 
-      // Valide TOUS les blocs avant d'ecrire quoi que ce soit pour cette
-      // entree — jamais une entree a moitie ecrite si son deuxieme bloc
-      // echoue son schema.
-      const validatedBlocks = entry.blocks.map((b) => ({
-        block_type: b.block_type,
-        display: { ...DEFAULT_BLOCK_DISPLAY[b.block_type], ...b.display },
-        data: validateBlockData(b.block_type, b.data),
-      }));
-
-      const addEntryPayload: AddEntryPayload = zAddEntryPayload.parse({
-        name: entry.name,
-        entry_type: entry.entry_type,
-        parent_class_key: entry.parent_class_key,
-      });
-      currentRulesetId = await upsertRulesetOverride(supabase, {
-        rulesetId: currentRulesetId,
-        entryKey,
-        blockType: null,
-        action: "add_entry",
-        payload: addEntryPayload as unknown as Json,
-        patch: null,
-        note: entry.note ?? null,
-      });
-
-      for (const [index, block] of validatedBlocks.entries()) {
-        const blockPayload: ResolvableBlock = {
-          block_type: block.block_type,
-          display: block.display,
-          data: block.data,
-          display_order: (index + 1) * 100,
-        };
-        currentRulesetId = await upsertRulesetOverride(supabase, {
-          rulesetId: currentRulesetId,
-          entryKey,
-          blockType: block.block_type,
-          action: "add_block",
-          payload: blockPayload as unknown as Json,
-          patch: null,
-          note: entry.note ?? null,
-        });
-      }
+      currentRulesetId = await writeEntryOverrides(supabase, currentRulesetId, entryKey, entry);
 
       existingKeys.add(entryKey);
       imported.push({ entryKey, name: entry.name });
@@ -1881,6 +1842,136 @@ export async function importRulesetEntries(supabase: TypedClient, input: { rules
   }
 
   return { imported, errors, rulesetId: currentRulesetId };
+}
+
+/**
+ * Ecrit une fiche maison (une `add_entry`, puis une `add_block` par bloc)
+ * dans `rulesetId` — le seul chemin d'ecriture d'une fiche entiere, partage
+ * par l'import et par la modification (V3.1-2). Valide TOUS les blocs avant
+ * d'ecrire quoi que ce soit : jamais une entree a moitie ecrite si son
+ * deuxieme bloc echoue son schema. Rend l'identifiant du ruleset reellement
+ * ecrit (une variante publiee est d'abord copiee en v+1 par la RPC).
+ */
+async function writeEntryOverrides(supabase: TypedClient, rulesetId: string, entryKey: string, entry: ImportRulesetEntryInput): Promise<string> {
+  const validatedBlocks = entry.blocks.map((b) => ({
+    block_type: b.block_type,
+    display: { ...DEFAULT_BLOCK_DISPLAY[b.block_type], ...b.display },
+    data: validateBlockData(b.block_type, b.data),
+  }));
+
+  const addEntryPayload: AddEntryPayload = zAddEntryPayload.parse({
+    name: entry.name,
+    entry_type: entry.entry_type,
+    parent_class_key: entry.parent_class_key,
+  });
+  let currentRulesetId = await upsertRulesetOverride(supabase, {
+    rulesetId,
+    entryKey,
+    blockType: null,
+    action: "add_entry",
+    payload: addEntryPayload as unknown as Json,
+    patch: null,
+    note: entry.note ?? null,
+  });
+
+  for (const [index, block] of validatedBlocks.entries()) {
+    const blockPayload: ResolvableBlock = {
+      block_type: block.block_type,
+      display: block.display,
+      data: block.data,
+      display_order: (index + 1) * 100,
+    };
+    currentRulesetId = await upsertRulesetOverride(supabase, {
+      rulesetId: currentRulesetId,
+      entryKey,
+      blockType: block.block_type,
+      action: "add_block",
+      payload: blockPayload as unknown as Json,
+      patch: null,
+      note: entry.note ?? null,
+    });
+  }
+  return currentRulesetId;
+}
+
+/** Ce qu'il faut pour rouvrir une fiche maison dans son formulaire (V3.1-2) : son nom, son type, sa classe parente, et la donnee de chacun de ses blocs. */
+export interface HomebrewEntryForEdit {
+  entryKey: string;
+  name: string;
+  entryType: EntryType;
+  parentClassKey: string | null;
+  blocks: { blockType: string; data: unknown }[];
+}
+
+/**
+ * Une fiche maison modifiable dans CE niveau de ruleset (V3.1-2) : elle doit
+ * y avoir son `add_entry` (une fiche heritee d'un parent, ou une base
+ * officielle, ne se modifie pas ici — regle 18 et `upsert_ruleset_override`).
+ * Une fiche supprimee (`disable_entry` a remplace l'`add_entry`) n'est plus
+ * trouvee.
+ */
+export async function getHomebrewEntryForEdit(
+  supabase: TypedClient,
+  params: { rulesetId: string; entryKey: string }
+): Promise<HomebrewEntryForEdit | null> {
+  const rows = await listOverridesForRuleset(supabase, params.rulesetId, params.entryKey);
+  const addEntryRow = rows.find((r) => r.action === "add_entry");
+  if (!addEntryRow) return null;
+  const addEntry = zAddEntryPayload.parse(addEntryRow.payload);
+  return {
+    entryKey: params.entryKey,
+    name: addEntry.name,
+    entryType: addEntry.entry_type as EntryType,
+    parentClassKey: addEntry.parent_class_key ?? null,
+    blocks: rows
+      .filter((r) => r.action === "add_block" && r.block_type)
+      .map((r) => ({ blockType: r.block_type as string, data: (r.payload as { data?: unknown } | null)?.data ?? null })),
+  };
+}
+
+export type ReplaceHomebrewEntryResult =
+  | { ok: true; entryKey: string; rulesetId: string }
+  | { ok: false; reason: "not_found" | "type_mismatch" | "invalid"; message?: string };
+
+/**
+ * Modifie une fiche maison EN PLACE (V3.1-2) : meme cle, memes renvois
+ * (`ruleset_entry_refs`, emplacement de sous-classe, don porte par un
+ * personnage — tous designent la cle, qui ne change pas). Reecrit l'entree
+ * par le meme chemin que l'import (chaque surcharge est un upsert sur
+ * `(ruleset, cle, bloc)`) ; un bloc present avant et absent maintenant
+ * devient une surcharge `remove_block`, jamais une suppression de ligne
+ * (journal en ajout seul, SCHEMA.md §9.4). Une base officielle est refusee
+ * par la RPC elle-meme.
+ */
+export async function replaceHomebrewEntry(
+  supabase: TypedClient,
+  params: { rulesetId: string; entryKey: string; entry: ImportRulesetEntryInput }
+): Promise<ReplaceHomebrewEntryResult> {
+  const existing = await getHomebrewEntryForEdit(supabase, { rulesetId: params.rulesetId, entryKey: params.entryKey });
+  if (!existing) return { ok: false, reason: "not_found" };
+  if (existing.entryType !== params.entry.entry_type) return { ok: false, reason: "type_mismatch" };
+
+  let rulesetId: string;
+  try {
+    rulesetId = await writeEntryOverrides(supabase, params.rulesetId, params.entryKey, params.entry);
+  } catch (error) {
+    if (error instanceof z.ZodError) return { ok: false, reason: "invalid", message: error.issues[0]?.message ?? "Donnée invalide." };
+    throw error;
+  }
+
+  const kept = new Set(params.entry.blocks.map((b) => b.block_type as string));
+  for (const blockType of blockTypesToRemove(existing.blocks.map((b) => b.blockType), [...kept])) {
+    rulesetId = await upsertRulesetOverride(supabase, {
+      rulesetId,
+      entryKey: params.entryKey,
+      blockType,
+      action: "remove_block",
+      payload: {},
+      patch: null,
+      note: params.entry.note ?? null,
+    });
+  }
+  return { ok: true, entryKey: params.entryKey, rulesetId };
 }
 
 export interface RulesetExport {
@@ -1981,7 +2072,7 @@ export async function createRulesetFromImport(
 
 export type CreateHomebrewSubclassResult =
   | { ok: true; entryKey: string; rulesetId: string; slotUpdated: boolean }
-  | { ok: false; reason: "unknown_class" | "invalid"; message?: string };
+  | { ok: false; reason: "unknown_class" | "invalid" | "not_found" | "parent_changed"; message?: string };
 
 /**
  * Cree une sous-classe maison (V2-N1) dans la variante `rulesetId` — la
@@ -2005,12 +2096,23 @@ export type CreateHomebrewSubclassResult =
  */
 export async function createHomebrewSubclass(
   supabase: TypedClient,
-  params: { rulesetId: string; subclass: HomebrewSubclassInput }
+  params: { rulesetId: string; subclass: HomebrewSubclassInput; entryKey?: string }
 ): Promise<CreateHomebrewSubclassResult> {
   const parentClass = await resolveEntryBlocksInRuleset(supabase, params.rulesetId, params.subclass.parentClassKey);
   if (!parentClass || parentClass.entryType !== "class") return { ok: false, reason: "unknown_class" };
 
   const entry = buildHomebrewSubclassEntry(params.subclass);
+
+  // V3.1-2 : modifier la fiche existante, meme cle. La classe parente ne
+  // change pas : elle porte la sous-classe dans son emplacement
+  // (`subclass_slot`), deja a jour depuis la creation.
+  if (params.entryKey) {
+    const existing = await getHomebrewEntryForEdit(supabase, { rulesetId: params.rulesetId, entryKey: params.entryKey });
+    if (!existing) return { ok: false, reason: "not_found" };
+    if (existing.parentClassKey !== params.subclass.parentClassKey) return { ok: false, reason: "parent_changed" };
+    const replaced = await replaceHomebrewEntry(supabase, { rulesetId: params.rulesetId, entryKey: params.entryKey, entry });
+    return replaced.ok ? { ...replaced, slotUpdated: false } : { ok: false, reason: replaced.reason === "not_found" ? "not_found" : "invalid", message: replaced.message };
+  }
   const imported = await importRulesetEntries(supabase, { rulesetId: params.rulesetId, entries: [entry] });
   if (imported.errors.length > 0 || imported.imported.length === 0) {
     return { ok: false, reason: "invalid", message: imported.errors[0]?.message };
@@ -2046,7 +2148,7 @@ export async function createHomebrewSubclass(
 
 export type CreateHomebrewSpellResult =
   | { ok: true; entryKey: string; rulesetId: string }
-  | { ok: false; reason: "unknown_class" | "invalid"; message?: string };
+  | { ok: false; reason: "unknown_class" | "invalid" | "not_found"; message?: string };
 
 /**
  * Cree un sort maison (V2-N2) dans la variante active `rulesetId` — meme
@@ -2060,9 +2162,9 @@ export type CreateHomebrewSpellResult =
  */
 export async function createHomebrewSpell(
   supabase: TypedClient,
-  params: { rulesetId: string; spell: Omit<HomebrewSpellInput, "classes"> & { classKeys: string[] } }
+  params: { rulesetId: string; spell: Omit<HomebrewSpellInput, "classes"> & { classKeys: string[]; entryKey?: string } }
 ): Promise<CreateHomebrewSpellResult> {
-  const { classKeys, ...spell } = params.spell;
+  const { classKeys, entryKey: editKey, ...spell } = params.spell;
   const classesInChain = new Map(
     (await listEntriesInRulesetChain(supabase, params.rulesetId, "fr")).filter((e) => e.entryType === "class").map((e) => [e.key, e.name])
   );
@@ -2074,6 +2176,12 @@ export async function createHomebrewSpell(
   } catch (error) {
     if (error instanceof HomebrewSpellError) return { ok: false, reason: "invalid", message: error.message };
     throw error;
+  }
+
+  // V3.1-2 : modifier la fiche existante, meme cle.
+  if (editKey) {
+    const replaced = await replaceHomebrewEntry(supabase, { rulesetId: params.rulesetId, entryKey: editKey, entry });
+    return replaced.ok ? replaced : { ok: false, reason: replaced.reason === "not_found" ? "not_found" : "invalid", message: replaced.message };
   }
 
   const imported = await importRulesetEntries(supabase, { rulesetId: params.rulesetId, entries: [entry] });

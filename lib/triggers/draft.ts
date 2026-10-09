@@ -108,3 +108,72 @@ export function draftToTrigger(draft: TriggerDraft, id: string): Trigger | null 
   const condition = conditionFrom(draft);
   return { id, when: { event: draft.event }, ...(condition ? { if: condition } : {}), then: [then] };
 }
+
+function numOf(node: unknown): number | null {
+  const n = node as { op?: unknown; value?: unknown } | undefined;
+  return n?.op === "num" && typeof n.value === "number" ? n.value : null;
+}
+
+/**
+ * Le chemin inverse (V3.1-2) : rouvrir un don maison pour le modifier. Rend
+ * le brouillon d'un declencheur que ce formulaire sait saisir — un seul
+ * effet, porte par `self`, une condition parmi les trois formes — et
+ * `null` pour tout autre (colle depuis le bac a sable) : le formulaire le
+ * garde alors tel quel, sans jamais le perdre ni le simplifier.
+ */
+export function triggerToDraft(trigger: Trigger): TriggerDraft | null {
+  if (trigger.then.length !== 1) return null;
+  const base = emptyDraft();
+  const draft: TriggerDraft = { ...base, event: trigger.when.event };
+
+  const cond = trigger.if as { op?: string; who?: string; key?: string; args?: unknown[] } | undefined;
+  if (!cond) {
+    draft.conditionKind = "aucune";
+    draft.conditionKey = "";
+  } else if (cond.op === "has_condition" && cond.who === SELF && typeof cond.key === "string") {
+    draft.conditionKind = "condition";
+    draft.conditionKey = cond.key;
+  } else if (cond.op === "event_has" && typeof cond.key === "string") {
+    draft.conditionKind = "etiquette";
+    draft.conditionKey = cond.key;
+  } else if (cond.op === "gte" && Array.isArray(cond.args) && cond.args.length === 2) {
+    const ref = cond.args[0] as { op?: unknown; name?: unknown };
+    const min = numOf(cond.args[1]);
+    if (ref?.op !== "ref" || typeof ref.name !== "string" || min === null) return null;
+    draft.conditionKind = "donnee";
+    draft.conditionKey = ref.name.startsWith("event.") ? ref.name.slice("event.".length) : ref.name;
+    draft.conditionMin = String(min);
+  } else {
+    return null;
+  }
+
+  const effect = trigger.then[0] as { action?: string; who?: string; key?: string; text?: string; amount?: unknown; kind?: string };
+  switch (effect.action) {
+    case "narrate_hint":
+      if (typeof effect.text !== "string") return null;
+      draft.effectKind = "narrate_hint";
+      draft.effectText = effect.text;
+      return draft;
+    case "apply_condition":
+    case "remove_condition":
+      if (effect.who !== SELF || typeof effect.key !== "string") return null;
+      draft.effectKind = effect.action;
+      draft.effectText = effect.key;
+      return draft;
+    case "heal":
+    case "deal_damage":
+    case "grant_budget": {
+      const amount = numOf(effect.amount);
+      if (effect.who !== SELF || amount === null) return null;
+      draft.effectKind = effect.action;
+      draft.effectAmount = String(amount);
+      if (effect.action === "grant_budget") {
+        if (typeof effect.kind !== "string") return null;
+        draft.budgetKind = effect.kind as BudgetKind;
+      }
+      return draft;
+    }
+    default:
+      return null;
+  }
+}

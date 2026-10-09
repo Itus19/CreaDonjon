@@ -310,7 +310,15 @@
     "effetSoigner": "heal",
     "effetDegats": "deal damage",
     "effetBudget": "grant action budget",
-    "declencheurIncomplet": "A trigger is incomplete: it will not be saved."
+    "declencheurIncomplet": "A trigger is incomplete: it will not be saved.",
+    "modifierFicheMaison": "Edit “{name}”",
+    "modifierFicheIntro": "The entry keeps its key: everything that references it still does.",
+    "enregistrerModifications": "Save changes",
+    "enregistrementEnCours": "Saving…",
+    "annulerModification": "Cancel",
+    "erreurLectureFiche": "Unable to read this entry.",
+    "lectureFiche": "Reading the entry…",
+    "declencheursConserves": "{count, plural, one {One trigger entered in the sandbox is kept as is.} other {# triggers entered in the sandbox are kept as is.}}"
   },
   "mj": {
     "choisirOutil": "Choose a GM tool in the sidebar.",

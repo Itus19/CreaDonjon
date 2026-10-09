@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { zTrigger } from "@/src/core/rules/triggers";
-import { draftToTrigger, emptyDraft, type TriggerDraft } from "./draft";
+import { draftToTrigger, emptyDraft, triggerToDraft, type TriggerDraft } from "./draft";
 
 function draft(patch: Partial<TriggerDraft> = {}): TriggerDraft {
   return { ...emptyDraft(), ...patch };
@@ -93,5 +93,33 @@ describe("un brouillon incomplet ne produit rien", () => {
 
   it("mais un effet chiffre a zero reste un effet voulu", () => {
     expect(draftToTrigger(draft({ effectKind: "heal", effectAmount: "0" }), "a")).not.toBeNull();
+  });
+});
+
+// V3.1-2 : rouvrir un don maison pour le modifier. Un declencheur saisi
+// par ce formulaire doit revenir en brouillon a l'identique ; un
+// declencheur plus riche (colle depuis le bac a sable) n'a pas de
+// brouillon, et le formulaire le garde tel quel.
+describe("triggerToDraft (V3.1-2)", () => {
+  it("rend le brouillon d'origine pour chaque forme du formulaire", () => {
+    const cas: TriggerDraft[] = [
+      draft({ conditionKind: "etiquette", conditionKey: "skill:deception", effectText: "Il a vu le mensonge." }),
+      draft({ conditionKind: "condition", conditionKey: "concentrating", effectKind: "apply_condition", effectText: "prone" }),
+      draft({ conditionKind: "donnee", conditionKey: "damage", conditionMin: "5", effectKind: "remove_condition", effectText: "prone" }),
+      draft({ conditionKind: "aucune", conditionKey: "", effectKind: "heal", effectAmount: "3" }),
+      draft({ conditionKind: "aucune", conditionKey: "", effectKind: "deal_damage", effectAmount: "2" }),
+      draft({ conditionKind: "aucune", conditionKey: "", effectKind: "grant_budget", budgetKind: "reaction", effectAmount: "-1" }),
+    ];
+    for (const d of cas) {
+      const back = triggerToDraft(draftToTrigger(d, "essai")!);
+      expect(back).toEqual({ ...d, conditionKey: d.conditionKind === "aucune" ? "" : d.conditionKey });
+    }
+  });
+
+  it("rend null pour un declencheur hors du vocabulaire du formulaire", () => {
+    expect(triggerToDraft({ id: "x", when: { event: "check_failed" }, then: [{ action: "narrate_hint", text: "a" }, { action: "narrate_hint", text: "b" }] })).toBeNull();
+    expect(
+      triggerToDraft({ id: "y", when: { event: "check_failed" }, if: { op: "has_condition", who: "target", key: "prone" }, then: [{ action: "narrate_hint", text: "a" }] })
+    ).toBeNull();
   });
 });

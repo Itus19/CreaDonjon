@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Dropdown from "@/components/shared/Dropdown";
 import { clearWorldRuleEntriesCache, useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
+import { subclassFormValues } from "@/src/core/rules/homebrewEdit";
+import { useHomebrewEntryForEdit } from "@/components/rules/useHomebrewEntryForEdit";
 
 interface SelectableRuleset {
   id: string;
@@ -39,10 +41,13 @@ const EMPTY_FEATURE: FeatureDraft = { name: "", level: "3", description: "" };
 export default function CreateHomebrewSubclassForm({
   worldSlug,
   onDone,
+  edit,
 }: {
   worldSlug: string;
   /** Ouvert en fenetre flottante : ferme la fenetre au lieu de naviguer vers la fiche creee. */
   onDone?: () => void;
+  /** V3.1-2 : rouvre une fiche maison existante pour la modifier en place (meme cle, meme classe parente). */
+  edit?: { entryKey: string; onCancel: () => void };
 }) {
   const t = useTranslations("regles");
   const router = useRouter();
@@ -72,6 +77,22 @@ export default function CreateHomebrewSubclassForm({
       .finally(() => setLoading(false));
   }, [worldSlug, t]);
 
+  // V3.1-2 : pre-remplir depuis la fiche relue, une seule fois.
+  const { entry: editEntry, error: editError } = useHomebrewEntryForEdit(currentRuleset?.id ?? null, edit?.entryKey);
+  // Ajuste l'etat pendant le rendu plutot que dans un effet (meme motif
+  // que `EntityTree.tsx`) : le formulaire se remplit au premier rendu
+  // qui dispose de la fiche, sans rendu intermediaire vide.
+  const [prefilledFrom, setPrefilledFrom] = useState<typeof editEntry>(null);
+  if (editEntry && editEntry !== prefilledFrom) {
+    setPrefilledFrom(editEntry);
+    const v = subclassFormValues(editEntry.blocks);
+    setName(editEntry.name);
+    setParentClassKey(editEntry.parentClassKey ?? "");
+    setDescription(v.description);
+    setPageRef(v.pageRef);
+    setFeatures(v.features.length > 0 ? v.features.map((f) => ({ name: f.name, level: String(f.level), description: f.description })) : [EMPTY_FEATURE]);
+  }
+
   function updateFeature(index: number, patch: Partial<FeatureDraft>) {
     setFeatures((prev) => prev.map((f, i) => (i === index ? { ...f, ...patch } : f)));
   }
@@ -95,6 +116,7 @@ export default function CreateHomebrewSubclassForm({
         description,
         pageRef,
         features: features.map((f) => ({ name: f.name, level: Number(f.level) || 1, description: f.description })),
+        ...(edit ? { entryKey: edit.entryKey } : {}),
       }),
     });
 
@@ -107,6 +129,11 @@ export default function CreateHomebrewSubclassForm({
 
     const body = (await res.json()) as { entryKey: string; slotUpdated: boolean };
     clearWorldRuleEntriesCache(worldSlug);
+    // Une modification ne touche pas l'emplacement de la classe (deja a jour depuis la creation).
+    if (edit) {
+      onDone?.();
+      return;
+    }
     // Une classe sans emplacement de sous-classe ne la proposera jamais a
     // la creation de personnage : on le dit ici, plutot que de fermer la
     // fenetre sur un succes qui n'en est qu'a moitie un.
@@ -143,13 +170,16 @@ export default function CreateHomebrewSubclassForm({
     );
   }
 
+  if (edit && editError) return <p className="text-sm text-danger">{editError}</p>;
+  if (edit && !editEntry) return <p className="text-sm text-ink-muted">{t("lectureFiche")}</p>;
+
   const origin = currentRuleset.content_origin === "personal_reference" ? t("origineReferencePersonnelle") : t("origineRegleMaison");
 
   return (
     <form onSubmit={handleSubmit} className="flex max-w-2xl flex-col gap-4">
-      <h1 className="text-base font-semibold text-ink">{t("creerSousClasseMaison")}</h1>
-      <p className="text-xs text-ink-muted">{t("creerSousClasseVariante", { name: currentRuleset.name, origin })}</p>
-      <p className="text-xs text-ink-muted">{t("creerSousClasseIntro")}</p>
+      <h1 className="text-base font-semibold text-ink">{edit && editEntry ? t("modifierFicheMaison", { name: editEntry.name }) : t("creerSousClasseMaison")}</h1>
+      <p className="text-xs text-ink-muted">{edit ? t("modifierFicheIntro") : t("creerSousClasseVariante", { name: currentRuleset.name, origin })}</p>
+      {!edit && <p className="text-xs text-ink-muted">{t("creerSousClasseIntro")}</p>}
 
       <label className="flex flex-col gap-1 text-sm text-ink">
         {t("nomDeLaSousClasse")}
@@ -163,7 +193,10 @@ export default function CreateHomebrewSubclassForm({
 
       <div className="flex flex-col gap-1 text-sm text-ink">
         {t("classeParente")}
-        {classes.length === 0 ? (
+        {edit ? (
+          // La classe parente d'une sous-classe ne change pas : son emplacement la porte deja.
+          <p className="text-sm text-ink-muted">{classes.find((c) => c.key === parentClassKey)?.name ?? parentClassKey}</p>
+        ) : classes.length === 0 ? (
           <p className="text-xs text-ink-muted">{t("aucuneClasse")}</p>
         ) : (
           <Dropdown
@@ -248,13 +281,20 @@ export default function CreateHomebrewSubclassForm({
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={!canSubmit}
-        className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
-      >
-        {submitting ? t("creationEnCours") : t("creerSousClasse")}
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
+        >
+          {submitting ? (edit ? t("enregistrementEnCours") : t("creationEnCours")) : edit ? t("enregistrerModifications") : t("creerSousClasse")}
+        </button>
+        {edit && (
+          <button type="button" onClick={edit.onCancel} className="text-sm text-ink-muted hover:text-ink">
+            {t("annulerModification")}
+          </button>
+        )}
+      </div>
     </form>
   );
 }

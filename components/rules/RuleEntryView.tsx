@@ -10,6 +10,7 @@ import { MonsterCard } from "@/components/rules/blockContentRenderer";
 import MissingBlocksBanner from "@/components/rules/MissingBlocksBanner";
 import RuleRefsPanel from "@/components/rules/RuleRefsPanel";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import HomebrewEditForm, { isEditableHomebrewType } from "@/components/rules/HomebrewEditForm";
 
 /** Coquille joueur (retour utilisateur : "les blocs de données brutes SRD ne sont pas visibles par défaut" — puis, sur un `<details>` replie : "le titre... est toujours visible") — retires ENTIEREMENT pour un joueur (jamais juste replies, un `<summary>` reste visible par nature), toujours visibles pour le MJ. Tables techniques telles quelles, jamais mises en recit — le contenu narratif (description, traits, actions...) n'est jamais concerne. */
 const RAW_DATA_BLOCK_TYPES = new Set(["custom_table", "class_progression", "spellcasting_progression"]);
@@ -38,6 +39,11 @@ export default function RuleEntryView({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // V3.1-2 : la fiche maison se modifie EN PLACE, dans son formulaire de
+  // creation rouvert ici meme (meme fenetre, meme page) — pas de nouvelle
+  // route ni de nouvelle cle de fenetre.
+  const [editing, setEditing] = useState(false);
+  const canEdit = !playerRestricted && entry.isHomebrew && isEditableHomebrewType(entry.entryType);
 
   async function handleDelete() {
     setDeleting(true);
@@ -81,6 +87,16 @@ export default function RuleEntryView({
               <span className="whitespace-nowrap px-1 py-1 text-sm font-medium text-ink-muted">
                 {entryTypeLabels[entry.entryType] ?? entry.entryType}
               </span>
+              {canEdit && !editing && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="whitespace-nowrap text-xs text-accent hover:underline"
+                  title="Modifier cette fiche maison"
+                >
+                  Modifier
+                </button>
+              )}
               {!playerRestricted && entry.isHomebrew && (
                 <button
                   type="button"
@@ -112,6 +128,19 @@ export default function RuleEntryView({
           </div>
         )}
       </div>
+
+      {editing && (
+        <HomebrewEditForm
+          worldSlug={worldSlug}
+          entryType={entry.entryType}
+          entryKey={entry.entryKey}
+          onDone={() => {
+            setEditing(false);
+            router.refresh();
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      )}
 
       <MissingBlocksBanner missingBlocks={entry.missingBlocks} />
 

@@ -12,6 +12,8 @@ import DescriptionTextarea from "@/components/rules/DescriptionTextarea";
 import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
 import { useOpenRuleToolLink } from "@/components/shell/useOpenRuleToolLink";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
+import { backgroundFormValues } from "@/src/core/rules/homebrewEdit";
+import { useHomebrewEntryForEdit } from "@/components/rules/useHomebrewEntryForEdit";
 
 interface SelectableRuleset {
   id: string;
@@ -51,10 +53,13 @@ function nextOptionLabel(count: number): string {
 export default function CreateHomebrewBackgroundForm({
   worldSlug,
   onDone,
+  edit,
 }: {
   worldSlug: string;
   /** Ouvert en fenetre flottante (retour utilisateur, V2) : ferme la fenetre au lieu de naviguer vers la fiche creee — jamais fourni depuis la route en plein cadre, qui garde la navigation habituelle. */
   onDone?: () => void;
+  /** V3.1-2 : rouvre une fiche maison existante pour la modifier en place (meme cle). */
+  edit?: { entryKey: string; onCancel: () => void };
 }) {
   const t = useTranslations("regles");
   const router = useRouter();
@@ -87,6 +92,26 @@ export default function CreateHomebrewBackgroundForm({
       .catch(() => setError(t("erreurChargementRulesets")))
       .finally(() => setLoading(false));
   }, [worldSlug, t]);
+
+  // V3.1-2 : pre-remplir depuis la fiche relue, une seule fois.
+  const { entry: editEntry, error: editError } = useHomebrewEntryForEdit(currentRuleset?.id ?? null, edit?.entryKey);
+  // Ajuste l'etat pendant le rendu plutot que dans un effet (meme motif
+  // que `EntityTree.tsx`) : le formulaire se remplit au premier rendu
+  // qui dispose de la fiche, sans rendu intermediaire vide.
+  const [prefilledFrom, setPrefilledFrom] = useState<typeof editEntry>(null);
+  if (editEntry && editEntry !== prefilledFrom) {
+    setPrefilledFrom(editEntry);
+    const v = backgroundFormValues(editEntry.blocks);
+    setName(editEntry.name);
+    if (v) {
+      setDescription(v.description);
+      setAbilityScores(v.abilityScores as Ability[]);
+      setSkillProficiencies(new Set(v.skillProficiencies as Skill[]));
+      setToolProficiency(v.toolProficiency);
+      setFeatKey(v.featKey);
+      setEquipmentOptions(v.equipmentOptions);
+    }
+  }
 
   const featEntry = worldEntries.find((e) => e.entryType === "feature" && e.key === featKey);
 
@@ -165,35 +190,46 @@ export default function CreateHomebrewBackgroundForm({
       equipment_options,
     };
 
-    const res = await fetch(`/api/rulesets/${currentRuleset.id}/import`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        entries: [
-          {
-            name: name.trim(),
-            entry_type: "background",
-            blocks: [
-              ...(description.trim()
-                ? [
-                    {
-                      block_type: "description" as const,
-                      display: { label: "Description", layout: "prose" },
-                      data: { segments: [{ text: description.trim() }] },
-                    },
-                  ]
-                : []),
-              { block_type: "background", display: { label: "Historique", layout: "key_values" }, data: backgroundData },
-            ],
-          },
-        ],
-      }),
-    });
+    const entry = {
+      name: name.trim(),
+      entry_type: "background",
+      blocks: [
+        ...(description.trim()
+          ? [
+              {
+                block_type: "description" as const,
+                display: { label: "Description", layout: "prose" },
+                data: { segments: [{ text: description.trim() }] },
+              },
+            ]
+          : []),
+        { block_type: "background", display: { label: "Historique", layout: "key_values" }, data: backgroundData },
+      ],
+    };
+
+    // V3.1-2 : en modification, la fiche est reecrite en place (meme cle).
+    const res = edit
+      ? await fetch(`/api/rulesets/${currentRuleset.id}/entries/${edit.entryKey}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(entry),
+        })
+      : await fetch(`/api/rulesets/${currentRuleset.id}/import`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ entries: [entry] }),
+        });
 
     setSubmitting(false);
     if (!res.ok) {
       const body = (await res.json().catch(() => null)) as { error?: string } | null;
       setError(body?.error ?? t("erreurCreationHistorique"));
+      return;
+    }
+
+    if (edit) {
+      clearWorldRuleEntriesCache(worldSlug);
+      onDone?.();
       return;
     }
 
@@ -217,10 +253,13 @@ export default function CreateHomebrewBackgroundForm({
     return <p className="text-sm text-ink-muted">{t("historiqueMaisonNeedsVariante")}</p>;
   }
 
+  if (edit && editError) return <p className="text-sm text-danger">{editError}</p>;
+  if (edit && !editEntry) return <p className="text-sm text-ink-muted">{t("lectureFiche")}</p>;
+
   return (
     <form onSubmit={handleSubmit} className="flex max-w-2xl flex-col gap-4">
-      <h1 className="text-base font-semibold text-ink">{t("creerHistoriqueMaison")}</h1>
-      <p className="text-xs text-ink-muted">{t("creerHistoriqueMaisonVariante", { name: currentRuleset.name })}</p>
+      <h1 className="text-base font-semibold text-ink">{edit && editEntry ? t("modifierFicheMaison", { name: editEntry.name }) : t("creerHistoriqueMaison")}</h1>
+      <p className="text-xs text-ink-muted">{edit ? t("modifierFicheIntro") : t("creerHistoriqueMaisonVariante", { name: currentRuleset.name })}</p>
       <p className="text-xs text-ink-muted">{t("creerHistoriqueMaisonIntro")}</p>
 
       <label className="flex flex-col gap-1 text-sm text-ink">
@@ -369,13 +408,20 @@ export default function CreateHomebrewBackgroundForm({
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={submitting || !name.trim()}
-        className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
-      >
-        {submitting ? t("creationEnCours") : t("creerHistorique")}
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={submitting || !name.trim()}
+          className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
+        >
+          {submitting ? (edit ? t("enregistrementEnCours") : t("creationEnCours")) : edit ? t("enregistrerModifications") : t("creerHistorique")}
+        </button>
+        {edit && (
+          <button type="button" onClick={edit.onCancel} className="text-sm text-ink-muted hover:text-ink">
+            {t("annulerModification")}
+          </button>
+        )}
+      </div>
     </form>
   );
 }

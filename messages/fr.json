@@ -311,7 +311,15 @@
     "effetSoigner": "soigner",
     "effetDegats": "infliger des dégâts",
     "effetBudget": "accorder du budget d'action",
-    "declencheurIncomplet": "Un déclencheur est incomplet : il ne sera pas enregistré."
+    "declencheurIncomplet": "Un déclencheur est incomplet : il ne sera pas enregistré.",
+    "modifierFicheMaison": "Modifier « {name} »",
+    "modifierFicheIntro": "La fiche garde sa clé : tout ce qui la cite continue de la citer.",
+    "enregistrerModifications": "Enregistrer les modifications",
+    "enregistrementEnCours": "Enregistrement…",
+    "annulerModification": "Annuler",
+    "erreurLectureFiche": "Impossible de relire cette fiche.",
+    "lectureFiche": "Lecture de la fiche…",
+    "declencheursConserves": "{count, plural, one {Un déclencheur saisi dans le bac à sable est gardé tel quel.} other {# déclencheurs saisis dans le bac à sable sont gardés tels quels.}}"
   },
   "mj": {
     "choisirOutil": "Choisissez un outil MJ dans la barre latérale.",

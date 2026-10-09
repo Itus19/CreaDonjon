@@ -11,7 +11,10 @@ import { MODIFIER_TARGET_OPTIONS, OPS_BY_TARGET_CATEGORY, modifierOpNeedsValue, 
 import type { ModifierOp } from "@/src/core/rules/sheet";
 import { TRIGGER_EVENTS } from "@/src/core/rules/triggers";
 import { BUDGET_KINDS } from "@/src/core/rules/actionBudget";
-import { draftToTrigger, emptyDraft, type ConditionKind, type EffectKind, type TriggerDraft } from "@/lib/triggers/draft";
+import type { Trigger } from "@/src/core/rules/triggers";
+import { draftToTrigger, emptyDraft, triggerToDraft, type ConditionKind, type EffectKind, type TriggerDraft } from "@/lib/triggers/draft";
+import { featureFormValues } from "@/src/core/rules/homebrewEdit";
+import { useHomebrewEntryForEdit } from "@/components/rules/useHomebrewEntryForEdit";
 
 interface SelectableRuleset {
   id: string;
@@ -73,10 +76,13 @@ function defaultOpForTarget(target: string): ModifierOp {
 export default function CreateHomebrewFeatureForm({
   worldSlug,
   onDone,
+  edit,
 }: {
   worldSlug: string;
   /** Ouvert en fenetre flottante (retour utilisateur, V2) : ferme la fenetre au lieu de naviguer vers la fiche creee — jamais fourni depuis la route en plein cadre, qui garde la navigation habituelle. */
   onDone?: () => void;
+  /** V3.1-2 : rouvre une fiche maison existante pour la modifier en place (meme cle). */
+  edit?: { entryKey: string; onCancel: () => void };
 }) {
   const t = useTranslations("regles");
   const router = useRouter();
@@ -89,6 +95,10 @@ export default function CreateHomebrewFeatureForm({
   const [prerequisites, setPrerequisites] = useState<string[]>([]);
   const [modifiers, setModifiers] = useState<ModifierDraft[]>([]);
   const [triggers, setTriggers] = useState<TriggerDraft[]>([]);
+  // V3.1-2 : les declencheurs que le formulaire ne sait pas representer
+  // (composes au bac a sable, en JSON) sont gardes tels quels et renvoyes
+  // a l'enregistrement — les rouvrir ici les detruirait.
+  const [preservedTriggers, setPreservedTriggers] = useState<Trigger[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +112,30 @@ export default function CreateHomebrewFeatureForm({
       .catch(() => setError(t("erreurChargementRulesets")))
       .finally(() => setLoading(false));
   }, [worldSlug, t]);
+
+  // V3.1-2 : pre-remplir depuis la fiche relue, une seule fois.
+  const { entry: editEntry, error: editError } = useHomebrewEntryForEdit(currentRuleset?.id ?? null, edit?.entryKey);
+  // Ajuste l'etat pendant le rendu plutot que dans un effet (meme motif
+  // que `EntityTree.tsx`) : le formulaire se remplit au premier rendu
+  // qui dispose de la fiche, sans rendu intermediaire vide.
+  const [prefilledFrom, setPrefilledFrom] = useState<typeof editEntry>(null);
+  if (editEntry && editEntry !== prefilledFrom) {
+    setPrefilledFrom(editEntry);
+    const v = featureFormValues(editEntry.blocks);
+    setName(editEntry.name);
+    setDescription(v.description);
+    setPrerequisites(v.prerequisites);
+    setModifiers(v.modifiers.map((m) => ({ target: m.target, op: m.op as ModifierOp, value: m.value })));
+    const drafts: TriggerDraft[] = [];
+    const preserved: Trigger[] = [];
+    for (const trigger of v.triggers) {
+      const draft = triggerToDraft(trigger);
+      if (draft) drafts.push(draft);
+      else preserved.push(trigger);
+    }
+    setTriggers(drafts);
+    setPreservedTriggers(preserved);
+  }
 
   function updatePrerequisite(index: number, value: string) {
     setPrerequisites((prev) => prev.map((p, i) => (i === index ? value : p)));
@@ -159,9 +193,19 @@ export default function CreateHomebrewFeatureForm({
     // Un brouillon incomplet est ECARTE plutot que d'emporter tout l'import
     // de la fiche : `draftToTrigger` rend `null`, et l'avertissement sous la
     // section a deja prevenu l'auteur.
-    const cleanTriggers = triggers
-      .map((d, i) => draftToTrigger(d, `${slugForTriggerId(name)}-${i + 1}`))
-      .filter((t): t is NonNullable<typeof t> => t !== null);
+    // Les identifiants des declencheurs conserves sont gardes ; un nouveau
+    // numero saute ceux deja pris, pour ne jamais en dupliquer un.
+    const takenIds = new Set(preservedTriggers.map((tr) => tr.id));
+    let nextNumber = 1;
+    function freshTriggerId(): string {
+      let id = `${slugForTriggerId(name)}-${nextNumber++}`;
+      while (takenIds.has(id)) id = `${slugForTriggerId(name)}-${nextNumber++}`;
+      return id;
+    }
+    const cleanTriggers = [
+      ...triggers.map((d) => draftToTrigger(d, freshTriggerId())).filter((tr): tr is NonNullable<typeof tr> => tr !== null),
+      ...preservedTriggers,
+    ];
 
     const cleanModifiers = modifiers.map((m) => ({
       target: m.target,
@@ -169,57 +213,69 @@ export default function CreateHomebrewFeatureForm({
       ...(modifierOpNeedsValue(m.op) ? { value: Number(m.value) || 0 } : {}),
     }));
 
-    const res = await fetch(`/api/rulesets/${currentRuleset.id}/import`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        entries: [
-          {
-            name: name.trim(),
-            entry_type: "feature",
-            blocks: [
+    const entry = {
+      name: name.trim(),
+      entry_type: "feature",
+      blocks: [
+        {
+          block_type: "description",
+          display: { label: "Description", layout: "prose" },
+          data: { segments: [{ text: description.trim() }] },
+        },
+        ...(cleanPrerequisites.length > 0
+          ? [
               {
-                block_type: "description",
-                display: { label: "Description", layout: "prose" },
-                data: { segments: [{ text: description.trim() }] },
+                block_type: "prerequisites" as const,
+                display: { label: "Prérequis", layout: "chips" },
+                data: { items: cleanPrerequisites },
               },
-              ...(cleanPrerequisites.length > 0
-                ? [
-                    {
-                      block_type: "prerequisites" as const,
-                      display: { label: "Prérequis", layout: "chips" },
-                      data: { items: cleanPrerequisites },
-                    },
-                  ]
-                : []),
-              ...(cleanModifiers.length > 0
-                ? [
-                    {
-                      block_type: "modifiers" as const,
-                      display: { label: "Effets chiffrés", layout: "key_values" },
-                      data: { modifiers: cleanModifiers },
-                    },
-                  ]
-                : []),
-              ...(cleanTriggers.length > 0
-                ? [
-                    {
-                      block_type: "triggers" as const,
-                      display: { label: "Déclencheurs", layout: "key_values" },
-                      data: { triggers: cleanTriggers },
-                    },
-                  ]
-                : []),
-            ],
-          },
-        ],
-      }),
-    });
+            ]
+          : []),
+        ...(cleanModifiers.length > 0
+          ? [
+              {
+                block_type: "modifiers" as const,
+                display: { label: "Effets chiffrés", layout: "key_values" },
+                data: { modifiers: cleanModifiers },
+              },
+            ]
+          : []),
+        ...(cleanTriggers.length > 0
+          ? [
+              {
+                block_type: "triggers" as const,
+                display: { label: "Déclencheurs", layout: "key_values" },
+                data: { triggers: cleanTriggers },
+              },
+            ]
+          : []),
+      ],
+    };
+
+    // V3.1-2 : en modification, la fiche est reecrite en place (meme cle) ;
+    // sinon elle part par l'import, comme toute nouvelle fiche.
+    const res = edit
+      ? await fetch(`/api/rulesets/${currentRuleset.id}/entries/${edit.entryKey}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(entry),
+        })
+      : await fetch(`/api/rulesets/${currentRuleset.id}/import`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ entries: [entry] }),
+        });
 
     setSubmitting(false);
     if (!res.ok) {
       const body = (await res.json().catch(() => null)) as { error?: string } | null;
       setError(body?.error ?? t("erreurCreationDon"));
+      return;
+    }
+
+    if (edit) {
+      clearWorldRuleEntriesCache(worldSlug);
+      onDone?.();
       return;
     }
 
@@ -243,10 +299,13 @@ export default function CreateHomebrewFeatureForm({
     return <p className="text-sm text-ink-muted">{t("donMaisonNeedsVariante")}</p>;
   }
 
+  if (edit && editError) return <p className="text-sm text-danger">{editError}</p>;
+  if (edit && !editEntry) return <p className="text-sm text-ink-muted">{t("lectureFiche")}</p>;
+
   return (
     <form onSubmit={handleSubmit} className="flex max-w-2xl flex-col gap-4">
-      <h1 className="text-base font-semibold text-ink">{t("creerDonMaison")}</h1>
-      <p className="text-xs text-ink-muted">{t("creerDonMaisonVariante", { name: currentRuleset.name })}</p>
+      <h1 className="text-base font-semibold text-ink">{edit && editEntry ? t("modifierFicheMaison", { name: editEntry.name }) : t("creerDonMaison")}</h1>
+      <p className="text-xs text-ink-muted">{edit ? t("modifierFicheIntro") : t("creerDonMaisonVariante", { name: currentRuleset.name })}</p>
       <p className="text-xs text-ink-muted">{t("creerDonMaisonIntro")}</p>
 
       <label className="flex flex-col gap-1 text-sm text-ink">
@@ -447,6 +506,10 @@ export default function CreateHomebrewFeatureForm({
           );
         })}
 
+        {preservedTriggers.length > 0 && (
+          <p className="text-xs text-ink-muted">{t("declencheursConserves", { count: preservedTriggers.length })}</p>
+        )}
+
         <button
           type="button"
           onClick={addTrigger}
@@ -458,13 +521,20 @@ export default function CreateHomebrewFeatureForm({
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={submitting || !name.trim() || !description.trim()}
-        className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
-      >
-        {submitting ? t("creationEnCours") : t("creerDon")}
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={submitting || !name.trim() || !description.trim()}
+          className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
+        >
+          {submitting ? (edit ? t("enregistrementEnCours") : t("creationEnCours")) : edit ? t("enregistrerModifications") : t("creerDon")}
+        </button>
+        {edit && (
+          <button type="button" onClick={edit.onCancel} className="text-sm text-ink-muted hover:text-ink">
+            {t("annulerModification")}
+          </button>
+        )}
+      </div>
     </form>
   );
 }

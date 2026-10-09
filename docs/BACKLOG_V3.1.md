@@ -128,7 +128,7 @@ verts.
 
 ---
 
-### ☐ V3.1-2 — Aucun moyen d'éditer une fiche maison déjà créée · `M`
+### ☑ V3.1-2 — Aucun moyen d'éditer une fiche maison déjà créée · `M` — **fait le 9 octobre**
 
 **Modèle conseillé : Sonnet** — réutiliser le formulaire de création en édition, verrous déjà connus.
 
@@ -148,15 +148,33 @@ historique, don/aptitude, sous-classe, sort) : aucun n'a d'équivalent en
 édition, contrairement aux entités du wiki (`EditEntityForm`).
 
 **Critères**
-- [ ] Une fiche maison (`content_origin` `user_created` ou
+- [x] Une fiche maison (`content_origin` `user_created` ou
   `personal_reference`) propose un bouton « Modifier » qui rouvre son
   formulaire de création, pré-rempli avec les valeurs actuelles.
-- [ ] Valider le formulaire modifie la fiche en place (même `entry_key`,
+- [x] Valider le formulaire modifie la fiche en place (même `entry_key`,
   mêmes blocs mis à jour) — jamais une nouvelle fiche à côté de l'ancienne.
-- [ ] Un renvoi existant vers cette fiche (`ruleset_entry_refs`, une classe
+- [x] Un renvoi existant vers cette fiche (`ruleset_entry_refs`, une classe
   qui la référence comme sous-classe, un personnage qui la porte comme don)
   continue de pointer dessus après modification.
-- [ ] Une base officielle reste inéditable — même verrou que la création.
+- [x] Une base officielle reste inéditable — même verrou que la création.
+
+**Fait le 9 octobre.** Le bouton « Modifier » de `RuleEntryView.tsx`
+rouvre, en place, le formulaire de création du type (`HomebrewEditForm.tsx`,
+cinq types : sort, sous-classe, don, historique, arme ; les autres types n'ont
+pas de bouton, faute de formulaire). Chaque formulaire relit la fiche par
+`GET /api/rulesets/[id]/entries/[clé]` et se pré-remplit avec les fonctions
+pures de `src/core/rules/homebrewEdit.ts`, testées contre les constructeurs
+eux-mêmes (ce qu'un formulaire écrit, il le relit à l'identique). Enregistrer
+réécrit la même clé : sort et sous-classe par leurs routes habituelles avec
+`entryKey`, les trois autres par `PUT` sur la même route
+(`replaceHomebrewEntry`), qui pose un `remove_block` pour chaque bloc
+disparu. La clé ne change pas, donc les renvois tiennent ; le type ne change
+pas (refusé) ; la sous-classe garde sa classe parente. Seule une fiche dont
+l'`add_entry` vit dans la variante active est modifiable (404 sinon), et la
+RPC refuse toujours une base officielle. Les déclencheurs que le formulaire
+ne sait pas représenter (composés en JSON) sont conservés tels quels.
+Tests : `homebrewEdit.test.ts`, `draft.test.ts` (`triggerToDraft`) ;
+typecheck, lint et tests verts.
 
 ---
 

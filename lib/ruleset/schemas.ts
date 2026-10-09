@@ -100,6 +100,8 @@ export type CreateRulesetFromImportInput = z.infer<typeof createRulesetFromImpor
  */
 export const createHomebrewSubclassSchema = z.object({
   rulesetId: z.string().uuid(),
+  /** Modifier la fiche maison existante de cette cle (V3.1-2) au lieu d'en creer une. */
+  entryKey: z.string().trim().min(1).max(80).regex(/^[a-z0-9_-]+$/).optional(),
   name: z.string().trim().min(1, "Le nom est requis.").max(120, "120 caractères maximum."),
   parentClassKey: z.string().trim().min(1, "Choisis la classe parente."),
   description: z.string().max(2000, "2 000 caractères maximum : pour la prose d'un livre, indique plutôt sa page.").default(""),
@@ -128,6 +130,8 @@ const shortText = (label: string) => z.string().trim().min(1, `${label} : requis
 
 export const createHomebrewSpellSchema = z.object({
   rulesetId: z.string().uuid(),
+  /** Modifier la fiche maison existante de cette cle (V3.1-2) au lieu d'en creer une. */
+  entryKey: z.string().trim().min(1).max(80).regex(/^[a-z0-9_-]+$/).optional(),
   name: z.string().trim().min(1, "Le nom est requis.").max(120, "120 caractères maximum."),
   level: z.number().int().min(0, "Niveau entre 0 et 9.").max(9, "Niveau entre 0 et 9."),
   school: z.enum(SPELL_SCHOOLS),
@@ -157,3 +161,14 @@ export const createHomebrewSpellSchema = z.object({
   classKeys: z.array(z.string().min(1)).min(1, "Coche au moins une classe.").max(30),
 });
 export type CreateHomebrewSpellInput = z.infer<typeof createHomebrewSpellSchema>;
+
+/**
+ * Modifier une fiche maison (V3.1-2, `PUT /api/rulesets/[rulesetId]/entries/[entryKey]`) :
+ * la meme forme qu'une entree d'import, sans cle (elle vient de l'URL et ne
+ * change jamais — c'est ce qui garde les renvois intacts).
+ */
+export const replaceHomebrewEntrySchema = z.object({
+  rulesetId: z.string().uuid(),
+  entryKey: z.string().min(1).max(80).regex(/^[a-z0-9_-]+$/),
+  entry: zImportEntry.omit({ entry_key: true }),
+});

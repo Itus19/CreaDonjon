@@ -30,8 +30,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { rulesetId: targetRulesetId, ...spell } = parsed.data;
   const result = await createHomebrewSpell(supabase, { rulesetId: targetRulesetId, spell });
   if (!result.ok) {
-    const error = result.reason === "unknown_class" ? "Une des classes cochées n'existe pas dans la variante active." : (result.message ?? "Sort invalide.");
-    return NextResponse.json({ error }, { status: result.reason === "unknown_class" ? 404 : 400 });
+    const error =
+      result.reason === "unknown_class"
+        ? "Une des classes cochées n'existe pas dans la variante active."
+        : result.reason === "not_found"
+          ? "Ce sort n'est pas une fiche maison de la variante active."
+          : (result.message ?? "Sort invalide.");
+    return NextResponse.json({ error }, { status: result.reason === "invalid" ? 400 : 404 });
   }
-  return NextResponse.json(result, { status: 201 });
+  return NextResponse.json(result, { status: spell.entryKey ? 200 : 201 });
 }

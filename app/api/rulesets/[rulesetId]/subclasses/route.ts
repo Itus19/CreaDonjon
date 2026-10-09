@@ -27,11 +27,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  const { rulesetId: targetRulesetId, ...subclass } = parsed.data;
-  const result = await createHomebrewSubclass(supabase, { rulesetId: targetRulesetId, subclass });
+  const { rulesetId: targetRulesetId, entryKey, ...subclass } = parsed.data;
+  const result = await createHomebrewSubclass(supabase, { rulesetId: targetRulesetId, subclass, entryKey });
   if (!result.ok) {
-    const error = result.reason === "unknown_class" ? "Cette classe n'existe pas dans la variante active." : (result.message ?? "Sous-classe invalide.");
-    return NextResponse.json({ error }, { status: result.reason === "unknown_class" ? 404 : 400 });
+    const error =
+      result.reason === "unknown_class"
+        ? "Cette classe n'existe pas dans la variante active."
+        : result.reason === "not_found"
+          ? "Cette sous-classe n'est pas une fiche maison de la variante active."
+          : result.reason === "parent_changed"
+            ? "La classe parente d'une sous-classe ne change pas : crée une nouvelle sous-classe."
+            : (result.message ?? "Sous-classe invalide.");
+    return NextResponse.json({ error }, { status: result.reason === "unknown_class" || result.reason === "not_found" ? 404 : 400 });
   }
-  return NextResponse.json(result, { status: 201 });
+  return NextResponse.json(result, { status: entryKey ? 200 : 201 });
 }

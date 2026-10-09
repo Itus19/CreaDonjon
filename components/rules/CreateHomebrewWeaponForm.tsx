@@ -9,7 +9,9 @@ import { clearWorldRuleEntriesCache, useWorldRuleEntries } from "@/components/bl
 import DescriptionTextarea from "@/components/rules/DescriptionTextarea";
 import Checkbox from "@/components/shared/Checkbox";
 import Dropdown from "@/components/shared/Dropdown";
-import { kgToLb, lbToKg, mToFt } from "@/src/core/rules/encumbrance";
+import { ftToM, kgToLb, lbToKg, mToFt } from "@/src/core/rules/encumbrance";
+import { weaponFormValues } from "@/src/core/rules/homebrewEdit";
+import { useHomebrewEntryForEdit } from "@/components/rules/useHomebrewEntryForEdit";
 
 interface SelectableRuleset {
   id: string;
@@ -49,10 +51,13 @@ function AiBadge({ shown, label }: { shown: boolean; label: string }) {
 export default function CreateHomebrewWeaponForm({
   worldSlug,
   onDone,
+  edit,
 }: {
   worldSlug: string;
   /** Ouvert en fenetre flottante (retour utilisateur, V2) : ferme la fenetre au lieu de naviguer vers la fiche creee — jamais fourni depuis la route en plein cadre, qui garde la navigation habituelle. */
   onDone?: () => void;
+  /** V3.1-2 : rouvre une fiche maison existante pour la modifier en place (meme cle). */
+  edit?: { entryKey: string; onCancel: () => void };
 }) {
   const t = useTranslations("regles");
   const router = useRouter();
@@ -103,6 +108,39 @@ export default function CreateHomebrewWeaponForm({
       .catch(() => setError(t("erreurChargementRulesets")))
       .finally(() => setLoading(false));
   }, [worldSlug, t]);
+
+  // V3.1-2 : pre-remplir depuis la fiche relue, une seule fois. Le bloc
+  // garde pieds et livres ; le formulaire affiche metres et kilos.
+  const { entry: editEntry, error: editError } = useHomebrewEntryForEdit(currentRuleset?.id ?? null, edit?.entryKey);
+  // Ajuste l'etat pendant le rendu plutot que dans un effet (meme motif
+  // que `EntityTree.tsx`) : le formulaire se remplit au premier rendu
+  // qui dispose de la fiche, sans rendu intermediaire vide.
+  const [prefilledFrom, setPrefilledFrom] = useState<typeof editEntry>(null);
+  if (editEntry && editEntry !== prefilledFrom) {
+    setPrefilledFrom(editEntry);
+    const v = weaponFormValues(editEntry.blocks);
+    setName(editEntry.name);
+    if (v) {
+      setDescription(v.description);
+      setCategory(v.category);
+      setIsRanged(v.isRanged);
+      setRangeNormal(v.rangeFt ? String(ftToM(v.rangeFt.normal)) : "");
+      setRangeLong(v.rangeFt?.long != null ? String(ftToM(v.rangeFt.long)) : "");
+      setDiceCount(v.diceCount);
+      setDiceFaces(v.diceFaces);
+      setDamageType(v.damageType);
+      setVersatile(v.versatile !== null);
+      if (v.versatile) {
+        setVersatileDiceCount(v.versatile.count);
+        setVersatileDiceFaces(v.versatile.faces);
+      }
+      setPropertyKeys(new Set(v.propertyKeys));
+      setMasteryKey(v.masteryKey);
+      setWeight(v.weightLb !== null ? String(lbToKg(v.weightLb)) : "");
+      setCostQuantity(v.cost ? String(v.cost.value) : "");
+      if (v.cost && (CURRENCY_UNITS as readonly string[]).includes(v.cost.unit)) setCostUnit(v.cost.unit as (typeof CURRENCY_UNITS)[number]);
+    }
+  }
 
   function toggleProperty(key: string) {
     setPropertyKeys((prev) => {
@@ -195,21 +233,44 @@ export default function CreateHomebrewWeaponForm({
       cost: costQuantity.trim() ? { value: Number(costQuantity), unit: costUnit } : undefined,
     };
 
-    const res = await fetch(`/api/worlds/${worldSlug}/rules/weapons`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        rulesetId: currentRuleset.id,
-        name: name.trim(),
-        description: description.trim() || undefined,
-        weapon,
-      }),
-    });
+    // V3.1-2 : en modification, la fiche est reecrite en place (meme cle),
+    // avec les memes blocs que la creation : description puis arme.
+    const res = edit
+      ? await fetch(`/api/rulesets/${currentRuleset.id}/entries/${edit.entryKey}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name.trim(),
+            entry_type: "weapon",
+            blocks: [
+              ...(description.trim()
+                ? [{ block_type: "description", display: { label: "Description", layout: "prose" }, data: { segments: [{ text: description.trim() }] } }]
+                : []),
+              { block_type: "weapon", display: { label: "Arme", layout: "key_values" }, data: weapon },
+            ],
+          }),
+        })
+      : await fetch(`/api/worlds/${worldSlug}/rules/weapons`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rulesetId: currentRuleset.id,
+            name: name.trim(),
+            description: description.trim() || undefined,
+            weapon,
+          }),
+        });
 
     setSubmitting(false);
     if (!res.ok) {
       const body = (await res.json().catch(() => null)) as { error?: string } | null;
       setError(body?.error ?? t("erreurCreationArme"));
+      return;
+    }
+
+    if (edit) {
+      clearWorldRuleEntriesCache(worldSlug);
+      onDone?.();
       return;
     }
 
@@ -229,10 +290,13 @@ export default function CreateHomebrewWeaponForm({
     return <p className="text-sm text-ink-muted">{t("armeMaisonNeedsVariante")}</p>;
   }
 
+  if (edit && editError) return <p className="text-sm text-danger">{editError}</p>;
+  if (edit && !editEntry) return <p className="text-sm text-ink-muted">{t("lectureFiche")}</p>;
+
   return (
     <form onSubmit={handleSubmit} className="flex max-w-2xl flex-col gap-4">
-      <h1 className="text-base font-semibold text-ink">{t("creerArmeMaison")}</h1>
-      <p className="text-xs text-ink-muted">{t("creerArmeMaisonVariante", { name: currentRuleset.name })}</p>
+      <h1 className="text-base font-semibold text-ink">{edit && editEntry ? t("modifierFicheMaison", { name: editEntry.name }) : t("creerArmeMaison")}</h1>
+      <p className="text-xs text-ink-muted">{edit ? t("modifierFicheIntro") : t("creerArmeMaisonVariante", { name: currentRuleset.name })}</p>
 
       <label className="flex flex-col gap-1 text-sm text-ink">
         {t("nomDeLArme")}
@@ -512,13 +576,20 @@ export default function CreateHomebrewWeaponForm({
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={submitting || !name.trim()}
-        className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
-      >
-        {submitting ? t("creationEnCours") : t("creerArme")}
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={submitting || !name.trim()}
+          className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
+        >
+          {submitting ? (edit ? t("enregistrementEnCours") : t("creationEnCours")) : edit ? t("enregistrerModifications") : t("creerArme")}
+        </button>
+        {edit && (
+          <button type="button" onClick={edit.onCancel} className="text-sm text-ink-muted hover:text-ink">
+            {t("annulerModification")}
+          </button>
+        )}
+      </div>
     </form>
   );
 }

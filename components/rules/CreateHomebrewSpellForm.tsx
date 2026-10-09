@@ -9,6 +9,8 @@ import { clearWorldRuleEntriesCache, useWorldRuleEntries } from "@/components/bl
 import { DAMAGE_TYPE_LABELS_FR, MAGIC_SCHOOL_LABELS_FR } from "@/src/i18n/fr";
 import { ABILITY_LABELS } from "@/src/core/rules/sheet";
 import { SAVE_ABILITIES, SPELL_DAMAGE_TYPES, SPELL_SCHOOLS, type HomebrewSpellEffectInput } from "@/src/core/rules/homebrewSpell";
+import { spellFormValues } from "@/src/core/rules/homebrewEdit";
+import { useHomebrewEntryForEdit } from "@/components/rules/useHomebrewEntryForEdit";
 
 interface SelectableRuleset {
   id: string;
@@ -47,10 +49,13 @@ const DEFAULT_EFFECT: HomebrewSpellEffectInput = {
 export default function CreateHomebrewSpellForm({
   worldSlug,
   onDone,
+  edit,
 }: {
   worldSlug: string;
   /** Ouvert en fenetre flottante : ferme la fenetre au lieu de naviguer vers la fiche creee. */
   onDone?: () => void;
+  /** V3.1-2 : rouvre une fiche maison existante pour la modifier en place (meme cle). */
+  edit?: { entryKey: string; onCancel: () => void };
 }) {
   const t = useTranslations("regles");
   const router = useRouter();
@@ -87,6 +92,32 @@ export default function CreateHomebrewSpellForm({
       .catch(() => setError(t("erreurChargementRulesets")))
       .finally(() => setLoading(false));
   }, [worldSlug, t]);
+
+  // V3.1-2 : pre-remplir depuis la fiche relue, une seule fois.
+  const { entry: editEntry, error: editError } = useHomebrewEntryForEdit(currentRuleset?.id ?? null, edit?.entryKey);
+  // Ajuste l'etat pendant le rendu plutot que dans un effet (meme motif
+  // que `EntityTree.tsx`) : le formulaire se remplit au premier rendu
+  // qui dispose de la fiche, sans rendu intermediaire vide.
+  const [prefilledFrom, setPrefilledFrom] = useState<typeof editEntry>(null);
+  if (editEntry && editEntry !== prefilledFrom) {
+    setPrefilledFrom(editEntry);
+    const v = spellFormValues(editEntry.blocks);
+    setName(editEntry.name);
+    setLevel(String(v.level));
+    setSchool(v.school);
+    setCastingTime(v.castingTime);
+    setRange(v.range);
+    setDuration(v.duration);
+    setComponents(v.components);
+    setMaterial(v.material);
+    setConcentration(v.concentration);
+    setRitual(v.ritual);
+    setDescription(v.description);
+    setPageRef(v.pageRef);
+    setClassKeys(v.classKeys);
+    setEffect(v.effect);
+    setScaling(v.scaling.map((row) => ({ level: String(row.level), formula: row.formula })));
+  }
 
   const spellLevel = Number(level) || 0;
 
@@ -141,6 +172,7 @@ export default function CreateHomebrewSpellForm({
         effect,
         scaling: effect ? scaling.map((row) => ({ level: Number(row.level) || 0, formula: row.formula })) : [],
         classKeys,
+        ...(edit ? { entryKey: edit.entryKey } : {}),
       }),
     });
 
@@ -167,12 +199,15 @@ export default function CreateHomebrewSpellForm({
     return <p className="text-sm text-ink-muted">{t("donMaisonNeedsVariante")}</p>;
   }
 
+  if (edit && editError) return <p className="text-sm text-danger">{editError}</p>;
+  if (edit && !editEntry) return <p className="text-sm text-ink-muted">{t("lectureFiche")}</p>;
+
   const origin = currentRuleset.content_origin === "personal_reference" ? t("origineReferencePersonnelle") : t("origineRegleMaison");
 
   return (
     <form onSubmit={handleSubmit} className="flex max-w-2xl flex-col gap-4">
-      <h1 className="text-base font-semibold text-ink">{t("creerSortMaison")}</h1>
-      <p className="text-xs text-ink-muted">{t("creerSortVariante", { name: currentRuleset.name, origin })}</p>
+      <h1 className="text-base font-semibold text-ink">{edit && editEntry ? t("modifierFicheMaison", { name: editEntry.name }) : t("creerSortMaison")}</h1>
+      <p className="text-xs text-ink-muted">{edit ? t("modifierFicheIntro") : t("creerSortVariante", { name: currentRuleset.name, origin })}</p>
       <p className="text-xs text-ink-muted">{t("creerSortIntro")}</p>
 
       <label className="flex flex-col gap-1 text-sm text-ink">
@@ -399,13 +434,20 @@ export default function CreateHomebrewSpellForm({
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={!canSubmit}
-        className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
-      >
-        {submitting ? t("creationEnCours") : t("creerSort")}
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
+        >
+          {submitting ? (edit ? t("enregistrementEnCours") : t("creationEnCours")) : edit ? t("enregistrerModifications") : t("creerSort")}
+        </button>
+        {edit && (
+          <button type="button" onClick={edit.onCancel} className="text-sm text-ink-muted hover:text-ink">
+            {t("annulerModification")}
+          </button>
+        )}
+      </div>
     </form>
   );
 }
