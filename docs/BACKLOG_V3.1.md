@@ -3240,8 +3240,8 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     bouton à côté d'un champ (« Enregistrer », « Supprimer définitivement »)
     passe sous le champ plutôt que de se couper sur deux lignes.
   - Écartées : B (onglets), C (carte d'identité et lignes de réglages).
-- **Choix du personnage — la C retenue, variante à trancher (9 octobre)** :
-  planche « Choix du personnage ». Aujourd'hui, `ChooseCharacterScreen`
+- **Choix du personnage — décidé le 9 octobre : la C2** (planche
+  « Décidé · Choix du personnage »). Aujourd'hui, `ChooseCharacterScreen`
   (V3.1-10) est une liste de noms en boutons, avec « Nouveau PJ ». Il
   s'affiche dans l'onglet Personnage quand une joueuse membre d'un monde n'a
   pas de PJ (ajoutée par email, ou PJ libéré par le MJ).
@@ -3254,14 +3254,17 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - **Retenue : la C, la sélection de héros** (9 octobre). Un carrousel :
     un personnage au centre, ses voisins en retrait, des flèches, des points
     et les touches ← →. A (galerie) et B (liste et aperçu) sont écartées.
-  - **Reste à choisir comment « Créer mon personnage » se montre**, aussi
-    visible que « Jouer » :
-    - **C1 — deux boutons jumeaux** : « Jouer Naivara » (plein) et
-      « + Créer mon personnage » (cerclé d'accent), de même taille, côte à
-      côte ;
-    - **C2 — une carte du carrousel** : « Nouveau personnage », la dernière,
-      en pointillés avec un grand + ; centrée, le bouton unique devient
-      « + Créer mon personnage ».
+  - **Décidé : la C2** (9 octobre). « Nouveau personnage » est une carte du
+    carrousel, en pointillés avec un grand + ; centrée, le bouton unique
+    devient « + Créer mon personnage ». La variante C1 (deux boutons
+    jumeaux) est écartée.
+  - **La page s'ouvre sur « Nouveau personnage »** : à sa gauche le dernier
+    personnage ouvert, à sa droite le premier (le carrousel boucle). Sans
+    personnage ouvert, la carte est seule, sans flèches ni points.
+  - Tablette : le même carrousel, sans flèches (on glisse), cartes de
+    280 px. Téléphone : onglet Perso. de la barre du joueur, une carte de
+    250 px au centre, les voisines qui dépassent des bords, le bouton sur
+    toute la largeur au-dessus de la barre.
   - **PJ ouvert sans fiche de personnage** (fiche de wiki seulement, pas de
     bloc `character`) : à la place de l'espèce et de la classe, l'étiquette
     « Fiche de personnage à créer » ; le portrait et le `summary` viennent de
