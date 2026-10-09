@@ -3265,6 +3265,27 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
     280 px. Téléphone : onglet Perso. de la barre du joueur, une carte de
     250 px au centre, les voisines qui dépassent des bords, le bouton sur
     toute la largeur au-dessus de la barre.
+- **Écrans d'entrée — à trancher (9 octobre)** : planche « Écrans d'entrée
+  · trois propositions ». Aujourd'hui, `/login` (V3.1-10) est une carte
+  simple : bascule « Se connecter / Créer un compte », « Nom ou email » et
+  mot de passe, création d'un compte sans email (nom et mot de passe), et
+  deux liens « Mot de passe oublié ? » (avec email : `/auth/forgot-password` ;
+  sans email : « Signaler », la demande arrive chez le MJ). `/signup`
+  (compte à email) ne change pas.
+  - Proposé dans les trois : **un seul « Mot de passe oublié ? »**. Un champ
+    « nom ou email », le serveur choisit la voie (lien par email, ou demande
+    au MJ ou à l'administrateur), et la même réponse s'affiche que le compte
+    existe ou non : l'écran ne révèle jamais si un nom existe.
+  - **A — la carte de verre** : le fond de l'application flouté, une carte
+    au centre (marque, pilule, champs, « Mot de passe oublié ? »).
+  - **B — l'image et le panneau** : le fond en grand à gauche avec la marque
+    et « Ton monde, ses règles, ta table. » ; à droite un panneau plein,
+    « Bon retour », onglets soulignés.
+  - **C — l'écran-titre** : le titre en très grand, un menu de trois gros
+    boutons (Se connecter, Créer un compte, J'ai un lien d'invitation) ;
+    choisir ouvre un petit panneau à la place du menu.
+  - Le cadre retenu habillera aussi Rejoindre (`/rejoindre/[token]`), sa
+    porte à mot de passe, et Réinitialiser (`/reinitialiser/[token]`).
   - **PJ ouvert sans fiche de personnage** (fiche de wiki seulement, pas de
     bloc `character`) : à la place de l'espèce et de la classe, l'étiquette
     « Fiche de personnage à créer » ; le portrait et le `summary` viennent de
