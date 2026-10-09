@@ -115,7 +115,9 @@ export async function fireTriggersForCombatTurn(
   let error: TriggerRunResult["error"];
 
   for (const event of events) {
-    const out = runTriggers({ event, triggers, ctx, rng: serverRng });
+    // Le porteur des regles est le participant dont le tour commence, meme
+    // pour l'evenement de fin de tour du precedent : c'est lui que `self` designe.
+    const out = runTriggers({ event, triggers, ctx, rng: serverRng, self: starting.id });
     effects.push(...out.effects);
     trace.push(...out.trace);
     failures.push(...out.failures);

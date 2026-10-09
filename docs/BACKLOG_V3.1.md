@@ -55,6 +55,13 @@ Ce qui n'est **pas** encore prêt à coder :
   repris par 116 à 119. **Reste V3.1-13** (sous-classes manquantes) : c'est
   de la saisie, qui attend le texte des livres de l'auteur. V3.1-14 est
   fermé, repris par 82, 83 et 100.
+- **Alias `self` des déclencheurs, corrigé le 9 octobre.** Les formulaires
+  et les données SRD écrivent `who: "self"`, mais le serveur nomme les
+  acteurs par leur identifiant. Hors repos, une condition sur `self`
+  échouait (« acteur absent ») et un effet sur `self` ne s'appliquait à
+  personne. `bindSelf` (`triggers.ts`) remplace l'alias par le **porteur de
+  la règle** : le personnage, ou, en combat, le participant dont le tour
+  commence. 4 tests dans `triggers.test.ts`.
 - **Deux failles corrigées le 9 octobre** en préparant V3.1-12 :
   - ADR 0051 : le retour de « voir comme » prenait le compte dont
     l'identifiant était dans un cookie forgeable ;

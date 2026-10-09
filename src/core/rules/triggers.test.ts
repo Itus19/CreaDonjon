@@ -335,3 +335,51 @@ describe("grant_inspiration (ADR 0050, V3.1-5)", () => {
     expect(out.failures).toEqual([]);
   });
 });
+
+describe("l'alias « self » : le porteur de la regle", () => {
+  const porteur: TriggerActorState = { conditions: ["raging"], features: [], numbers: { "save.con": 2 }, zone: "engaged" };
+  const ctx: TriggerContext = { actors: { "entite-42": porteur, autre: { conditions: [], features: [], numbers: {}, zone: "engaged" } } };
+
+  const rage = zTrigger.parse({
+    id: "rage-soin",
+    when: { event: "damage_taken", subject: "self" },
+    if: { op: "has_condition", who: "self", key: "raging" },
+    then: [{ action: "heal", who: "self", amount: { op: "num", value: 2 } }],
+  });
+
+  it("se lit comme le sujet de l'evenement initial quand rien d'autre n'est dit", () => {
+    const out = runTriggers({ event: { event: "damage_taken", subject: "entite-42" }, triggers: [rage], ctx, rng: fixedRng([0]) });
+    expect(out.failures).toEqual([]);
+    expect(out.effects).toEqual([{ action: "heal", who: "entite-42", amount: 2 }]);
+  });
+
+  it("vise le porteur donne explicitement, pas le sujet d'un evenement qui le concerne pas", () => {
+    const out = runTriggers({ event: { event: "damage_taken", subject: "autre" }, triggers: [rage], ctx, rng: fixedRng([0]), self: "entite-42" });
+    // `when.subject: self` : le porteur n'a pas pris de degats, rien ne part.
+    expect(out.effects).toEqual([]);
+    expect(out.trace).toEqual([]);
+  });
+
+  it("resout aussi les branches d'un jet de sauvegarde", () => {
+    const t = zTrigger.parse({
+      id: "brulure",
+      when: { event: "turn_start" },
+      then: [
+        {
+          action: "saving_throw",
+          who: "self",
+          ability: "con",
+          dc: { op: "num", value: 30 },
+          on_fail: [{ action: "apply_condition", who: "self", key: "burning" }],
+        },
+      ],
+    });
+    const out = runTriggers({ event: { event: "turn_start", subject: "entite-42" }, triggers: [t], ctx, rng: fixedRng([0]) });
+    expect(out.effects.map((e) => ("who" in e ? e.who : null))).toEqual(["entite-42", "entite-42"]);
+  });
+
+  it("laisse intact un contexte ou l'acteur s'appelle reellement « self »", () => {
+    const out = runTriggers({ event: { event: "damage_taken", subject: "self" }, triggers: [rage], ctx: { actors: { self: porteur } }, rng: fixedRng([0]) });
+    expect(out.effects).toEqual([{ action: "heal", who: "self", amount: 2 }]);
+  });
+});

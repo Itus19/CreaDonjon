@@ -142,5 +142,6 @@ export async function fireTriggersForCharacter(
   }
   const ctx: TriggerContext = { actors };
 
-  return { ...runTriggers({ event: params.event, triggers, ctx, rng: serverRng }), rejected };
+  // Les regles chargees sont celles du personnage : il est le porteur que `self` designe.
+  return { ...runTriggers({ event: params.event, triggers, ctx, rng: serverRng, self: params.subject }), rejected };
 }

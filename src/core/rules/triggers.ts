@@ -299,6 +299,30 @@ function followUpEvent(effect: ResolvedEffect): FiredEvent | null {
   }
 }
 
+const SELF = "self";
+
+/**
+ * Remplace l'alias `"self"` par le porteur, partout ou un acteur est nomme :
+ * `when.subject`, les `who`/`of` des conditions et des effets, branches de
+ * sauvegarde comprises. Les formulaires et les donnees SRD ecrivent `self` ;
+ * le contexte, lui, nomme ses acteurs par leur identifiant. Sans cette
+ * traduction, une condition sur `self` echouait (« acteur absent ») et un
+ * effet sur `self` ne trouvait personne a qui s'appliquer.
+ */
+export function bindSelf(trigger: Trigger, bearer: string): Trigger {
+  if (bearer === SELF) return trigger;
+  const swap = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(swap);
+    if (value === null || typeof value !== "object") return value;
+    const out: Record<string, unknown> = {};
+    for (const [key, v] of Object.entries(value)) {
+      out[key] = (key === "who" || key === "of" || key === "subject") && v === SELF ? bearer : swap(v);
+    }
+    return out;
+  };
+  return swap(trigger) as Trigger;
+}
+
 function actor(ctx: TriggerContext, who: string): TriggerActorState {
   const found = ctx.actors[who];
   if (!found) throw new Error(`Acteur "${who}" absent de la scene.`);
@@ -424,8 +448,17 @@ export function runTriggers(params: {
   triggers: readonly Trigger[];
   ctx: TriggerContext;
   rng: Rng;
+  /**
+   * Le PORTEUR des regles, que `"self"` designe (cle d'acteur de `ctx`). Par
+   * defaut, le sujet de l'evenement initial — vrai pour un personnage, dont
+   * on ne charge que les propres regles. A preciser quand le porteur n'est
+   * pas ce sujet (la bascule d'un tour de combat, ou l'evenement de fin de
+   * tour concerne un autre participant).
+   */
+  self?: string;
 }): TriggerRunResult {
-  const { triggers, ctx, rng } = params;
+  const { ctx, rng } = params;
+  const triggers = params.triggers.map((t) => bindSelf(t, params.self ?? params.event.subject));
   const effects: ResolvedEffect[] = [];
   const trace: string[] = [];
   const failures: TriggerFailure[] = [];
