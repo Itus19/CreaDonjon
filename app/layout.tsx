@@ -8,6 +8,7 @@ import { getOwnProfile } from "@/src/server/repos/account";
 import { resolveBackgroundSelection } from "@/src/server/services/backgroundImages";
 import ViewAsBanner from "@/components/shell/ViewAsBanner";
 import { MusicPlaybackProvider } from "@/components/shell/MusicPlaybackContext";
+import { LEGACY_VIEW_AS_COOKIE, VIEW_AS_RETURN_COOKIE } from "@/src/server/services/viewAs";
 import "./globals.css";
 
 // Trois familles chargees localement (auto-hebergees a la build par
@@ -81,7 +82,9 @@ export default async function RootLayout({
   // session courante EST deja celle du compte cible a ce stade, jamais
   // distinguable autrement. Bandeau rendu ici (racine) pour rester visible
   // sur TOUTE page, pas seulement l'ecran d'accueil.
-  const viewingAsAdminUid = cookieStore.get("view_as_admin_uid")?.value;
+  // L'ancien cookie (identifiant en clair, avant ADR 0051) garde le bandeau
+  // visible, pour que son bouton l'efface ; il ne permet plus aucun retour.
+  const viewingAsAdminUid = cookieStore.get(VIEW_AS_RETURN_COOKIE)?.value ?? cookieStore.get(LEGACY_VIEW_AS_COOKIE)?.value;
 
   return (
     <html

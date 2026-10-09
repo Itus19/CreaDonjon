@@ -1,33 +1,29 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { returnFromViewAs } from "@/src/server/services/viewAs";
-
-const REASON_STATUS = { not_superadmin: 403, not_found: 404, not_an_invited_account: 400 } as const;
-const REASON_MESSAGE = {
-  not_superadmin: "Cookie de retour invalide.",
-  not_found: "Compte administrateur introuvable.",
-  not_an_invited_account: "Cookie de retour invalide.",
-} as const;
+import { createClient } from "@/lib/supabase/server";
+import { LEGACY_VIEW_AS_COOKIE, VIEW_AS_RETURN_COOKIE, returnFromViewAs } from "@/src/server/services/viewAs";
 
 /**
- * Retour vers le superadmin (retour utilisateur, bandeau "voir comme") — lit
- * le cookie pose par `/api/admin/view-as`, jamais la session courante (qui
- * EST le compte impersonne a ce stade). Efface le cookie dans tous les cas
- * (succes ou echec) : un cookie invalide ne doit jamais rester a trainer.
+ * Retour de "voir comme" (bandeau, ADR 0051) — reprend la session mise de
+ * cote par `/api/admin/view-as` a partir du jeton de rafraichissement du
+ * cookie httpOnly. Ce jeton ne se forge pas : aucune verification de role
+ * n'est necessaire, et aucun lien de connexion n'est fabrique pour qui que
+ * ce soit. Efface les cookies dans tous les cas (succes ou echec) : un
+ * cookie invalide ne doit jamais rester a trainer.
  */
 export async function POST(request: NextRequest) {
-  const adminUserId = request.cookies.get("view_as_admin_uid")?.value;
-  if (!adminUserId) {
-    return NextResponse.json({ error: "Aucune session admin à restaurer." }, { status: 400 });
-  }
-
-  const result = await returnFromViewAs(adminUserId);
-  if (!result.ok) {
-    const response = NextResponse.json({ error: REASON_MESSAGE[result.reason] }, { status: REASON_STATUS[result.reason] });
-    response.cookies.delete("view_as_admin_uid");
+  const refreshToken = request.cookies.get(VIEW_AS_RETURN_COOKIE)?.value;
+  if (!refreshToken) {
+    const response = NextResponse.json({ error: "Aucune session à restaurer : reconnectez-vous." }, { status: 400 });
+    response.cookies.delete(LEGACY_VIEW_AS_COOKIE);
     return response;
   }
 
-  const response = NextResponse.json({ url: `/auth/confirm?token_hash=${result.tokenHash}&type=magiclink&next=/` }, { status: 200 });
-  response.cookies.delete("view_as_admin_uid");
+  const supabase = await createClient();
+  const result = await returnFromViewAs(supabase, refreshToken);
+  const response = result.ok
+    ? NextResponse.json({ url: "/" }, { status: 200 })
+    : NextResponse.json({ error: "Session d'origine expirée : reconnectez-vous." }, { status: 401 });
+  response.cookies.delete(VIEW_AS_RETURN_COOKIE);
+  response.cookies.delete(LEGACY_VIEW_AS_COOKIE);
   return response;
 }

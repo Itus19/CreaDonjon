@@ -1025,6 +1025,14 @@ concrètement la liste « Membres » déjà affichée dans `CampaignDetail.tsx:1
   email personnel externe). Peut se coder dès aujourd'hui sur le signal déjà
   disponible (email synthétique), et se réaligne naturellement une fois
   V3.1-10 posé.
+- **9 octobre — faille, ADR 0051.** Le raisonnement ci-dessous était faux :
+  httpOnly empêche le JavaScript de lire le cookie, pas quelqu'un d'en
+  envoyer un forgé. Le cookie portait un identifiant, donc n'importe qui
+  connaissant l'identifiant du superadmin pouvait se connecter à son compte,
+  et retirer la condition superadmin l'aurait permis pour tout compte.
+  Corrigé : le cookie porte désormais le jeton de rafraîchissement de la
+  session d'origine, qui ne se forge pas. L'étape 3 est faite par ce
+  correctif.
 - **Retour (`returnFromViewAs`)** : le contrôle actuel
   (`isSuperadminByIdViaServiceRole`) rejetterait à tort un MJ ordinaire qui
   revient de son propre « voir comme ». La vraie garantie de sécurité est

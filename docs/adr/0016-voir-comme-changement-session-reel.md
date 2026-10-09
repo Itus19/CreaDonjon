@@ -1,7 +1,7 @@
 # 0016 — « Voir comme » : changement de session réel, jamais une superposition en lecture seule
 
 **Date :** 2026-08-30
-**Statut :** acceptée
+**Statut :** acceptée ; le mécanisme de retour est remplacé par l'ADR 0051 (le cookie portait un identifiant, qui se forge)
 
 ## Contexte
 
