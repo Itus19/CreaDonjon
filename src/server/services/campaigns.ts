@@ -8,6 +8,7 @@ import {
   getCampaignById,
   insertCampaign,
   insertCampaignMember,
+  isCampaignMember,
   listCampaignCharacters,
   listCampaignMembers,
   listCampaignsForWorld,
@@ -29,7 +30,8 @@ import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { listEntityGrantsForEntityIds, type EntityGrantRow } from "@/src/server/repos/entityGrants";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { isSuperadmin } from "@/src/server/services/account";
-import { forcePasswordReset as forcePasswordResetForAccount } from "@/src/server/services/accountAuth";
+import { forcePasswordReset as forcePasswordResetForAccount, isSyntheticAccount } from "@/src/server/services/accountAuth";
+import { canActOnMemberAccount, type MemberAccountAction, type MemberAccountDecision } from "@/src/core/accounts/memberAccountActions";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -229,6 +231,11 @@ export type ForceMemberPasswordResetResult = { ok: true; token: string } | { ok:
  * "Forcer une réinitialisation" (MJ d'un membre de cette campagne, ou
  * superadmin — V3.1-10) : verifie le droit ICI (le module confine
  * `accountAuth.ts` n'a pas de notion de "qui appelle"), puis relaie.
+ *
+ * ADR 0052 : un MJ ne vise qu'un MEMBRE de cette campagne, et seulement un
+ * compte « tag ». Avant, n'importe quel administrateur de monde — donc
+ * n'importe quel compte, la creation d'un monde etant libre — obtenait un
+ * lien de reinitialisation pour n'importe quel identifiant.
  */
 export async function forceMemberPasswordReset(
   supabase: TypedClient,
@@ -237,14 +244,34 @@ export async function forceMemberPasswordReset(
   const campaign = await getCampaignById(supabase, params.campaignId);
   if (!campaign) return { ok: false, reason: "not_found" };
 
-  const allowed =
-    (await isWorldAdmin(supabase, { worldId: campaign.world_id, userId: params.actingUserId })) ||
-    (await isSuperadmin(supabase, params.actingUserId));
-  if (!allowed) return { ok: false, reason: "not_authorized" };
+  const decision = await decideMemberAccountAction(supabase, {
+    action: "reset_password",
+    campaign,
+    callerId: params.actingUserId,
+    targetUserId: params.targetUserId,
+  });
+  if (decision === "not_found") return { ok: false, reason: "not_found" };
+  if (!decision.allowed) return { ok: false, reason: "not_authorized" };
 
   const result = await forcePasswordResetForAccount({ targetUserId: params.targetUserId, actingUserId: params.actingUserId });
   if (!result.ok) return { ok: false, reason: "not_found" };
   return { ok: true, token: result.token };
+}
+
+/**
+ * Rassemble ce que `canActOnMemberAccount` (ADR 0052) doit savoir, depuis la
+ * campagne d'ou le geste est fait. `not_found` si le compte vise n'existe pas.
+ */
+export async function decideMemberAccountAction(
+  supabase: TypedClient,
+  params: { action: MemberAccountAction; campaign: { id: string; world_id: string }; callerId: string; targetUserId: string }
+): Promise<MemberAccountDecision | "not_found"> {
+  const targetIsSyntheticAccount = await isSyntheticAccount(params.targetUserId);
+  if (targetIsSyntheticAccount === null) return "not_found";
+  const callerIsSuperadmin = await isSuperadmin(supabase, params.callerId);
+  const callerManagesCampaign = callerIsSuperadmin ? false : await isWorldAdmin(supabase, { worldId: params.campaign.world_id, userId: params.callerId });
+  const targetIsMember = await isCampaignMember(supabase, { campaignId: params.campaign.id, userId: params.targetUserId });
+  return canActOnMemberAccount({ action: params.action, callerIsSuperadmin, callerManagesCampaign, targetIsMember, targetIsSyntheticAccount });
 }
 
 export interface GmCampaignSummary {

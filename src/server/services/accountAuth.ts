@@ -2,6 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { createAccountAuthServiceClient } from "@/lib/supabase/serviceAccountAuth";
 import { generateCampaignInviteToken, hashCampaignInviteToken } from "@/src/core/campaignInvites/token";
+import { isSyntheticAccountEmail } from "@/src/core/accounts/memberAccountActions";
 
 /**
  * Seul fichier ou `createAccountAuthServiceClient` est construit et utilise
@@ -34,6 +35,18 @@ export async function createTagAccount(params: { handleName: string; password: s
   });
   if (error || !data.user) return { ok: false, reason: "creation_failed" };
   return { ok: true, email, userId: data.user.id };
+}
+
+/**
+ * ADR 0052 : le compte vise est-il un compte sans email reel (« tag ») ?
+ * `null` si le compte n'existe pas. Ne rend qu'un booleen, jamais l'email :
+ * l'appelant decide avec `canActOnMemberAccount`.
+ */
+export async function isSyntheticAccount(userId: string): Promise<boolean | null> {
+  const admin = createAccountAuthServiceClient();
+  const { data, error } = await admin.auth.admin.getUserById(userId);
+  if (error || !data.user) return null;
+  return isSyntheticAccountEmail(data.user.email);
 }
 
 export type ForcePasswordResetResult = { ok: true; token: string } | { ok: false; reason: "not_found" };
