@@ -994,7 +994,7 @@ ni quand `resolveCampaignId` renvoie `null` (monde sans campagne).
 
 ---
 
-### ☐ V3.1-12 — « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin · `M`
+### ☑ V3.1-12 — « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin · `M` — **fait le 9 octobre (ADR 0051, 0052)**
 
 **Modèle conseillé : Opus** — « voir comme » : usurpation d'identité, portée de sécurité.
 
@@ -1055,17 +1055,40 @@ Indépendant de V3.1-10 : peut se faire avant, pendant ou après.
    `CampaignDetail.tsx`, visible seulement si `canManage`.
 
 **Critères**
-- [ ] Un MJ (non superadmin) peut lancer « voir comme » sur une joueuse de
+- [x] Un MJ (non superadmin) peut lancer « voir comme » sur une joueuse de
   sa propre campagne, depuis la liste des membres de « Gestion de
   campagne ».
-- [ ] Un MJ ne peut pas lancer « voir comme » sur un compte qui n'est pas
+- [x] Un MJ ne peut pas lancer « voir comme » sur un compte qui n'est pas
   membre d'une campagne qu'il gère.
-- [ ] « Voir comme » reste impossible sur un compte ordinaire (email réel),
+- [x] « Voir comme » reste impossible sur un compte ordinaire (email réel),
   qu'on soit MJ ou superadmin.
-- [ ] Le superadmin garde sa portée actuelle (n'importe quel compte « tag »,
+- [x] Le superadmin garde sa portée actuelle (n'importe quel compte « tag »,
   n'importe où).
-- [ ] Revenir de « voir comme » fonctionne identiquement, que ce soit un MJ
+- [x] Revenir de « voir comme » fonctionne identiquement, que ce soit un MJ
   ou le superadmin qui l'ait démarré.
+
+**Fait le 9 octobre.** En le préparant, deux failles ont été trouvées et
+corrigées d'abord, chacune dans son commit :
+
+- **ADR 0051.** Le retour de « voir comme » faisait confiance à un
+  identifiant dans un cookie. Il reprend désormais la session d'origine par
+  son jeton de rafraîchissement. Cela couvre l'étape 3.
+- **ADR 0052.** « Forcer une réinitialisation » marchait sur n'importe quel
+  compte pour n'importe quel administrateur de monde. La règle pure
+  `canActOnMemberAccount` décide maintenant pour les deux gestes.
+
+Ensuite :
+
+- **Étape 1.** `startViewAs` accepte `campaignId` : un MJ agit sur un compte
+  « tag » membre de cette campagne ; sans campagne, superadmin seulement.
+- **Étape 2.** `mintSessionForInvitedAccount` refuse un compte ordinaire,
+  reconnu à son email réel, au lieu de « jamais réclamé par un lien ».
+- **Étape 4.** « Voir comme » apparaît dans le menu ⋮ de chaque membre
+  (`CampaignDetail.tsx`) ; planche Navigation mise à jour.
+
+Tests : `memberAccountActions.test.ts` (9 cas). Non vérifié en navigateur
+dans cette session, faute de base. **À contrôler par l'auteur** : démarrer et
+revenir, en MJ puis en superadmin.
 
 ---
 

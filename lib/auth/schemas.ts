@@ -32,4 +32,6 @@ export const consumeAccountResetTokenSchema = z.object({ token: z.string().min(1
  */
 export const viewAsSchema = z.object({
   targetUserId: z.string().uuid(),
+  /** V3.1-12 : depuis Gestion de campagne, la campagne d'ou le MJ agit. Absent depuis Administration. */
+  campaignId: z.string().uuid().optional(),
 });

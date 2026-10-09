@@ -3,11 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { VIEW_AS_RETURN_COOKIE, captureReturnSession, startViewAs } from "@/src/server/services/viewAs";
 import { viewAsSchema } from "@/lib/auth/schemas";
 
-const REASON_STATUS = { not_superadmin: 403, not_found: 404, not_an_invited_account: 400 } as const;
+const REASON_STATUS = { not_authorized: 403, not_found: 404, not_a_member: 403, ordinary_account: 400 } as const;
 const REASON_MESSAGE = {
-  not_superadmin: "Réservé au superadmin.",
+  not_authorized: "Action non autorisée.",
   not_found: "Compte introuvable.",
-  not_an_invited_account: "Ce compte n'a pas été créé par un lien d'invitation.",
+  not_a_member: "Ce compte n'est pas membre de cette campagne.",
+  ordinary_account: "« Voir comme » ne s'utilise que sur un compte sans email.",
 } as const;
 
 /**
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "targetUserId requis." }, { status: 400 });
   }
-  const { targetUserId } = parsed.data;
+  const { targetUserId, campaignId } = parsed.data;
 
   const supabase = await createClient();
   const {
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  const result = await startViewAs(supabase, { callerId: user.id, targetUserId });
+  const result = await startViewAs(supabase, { callerId: user.id, targetUserId, campaignId });
   if (!result.ok) {
     return NextResponse.json({ error: REASON_MESSAGE[result.reason] }, { status: REASON_STATUS[result.reason] });
   }

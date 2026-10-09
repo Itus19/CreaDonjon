@@ -1,6 +1,7 @@
 import "server-only";
 import { createAccountProvisioningServiceClient } from "@/lib/supabase/serviceAccountProvisioning";
 import type { ResolvedCampaignInvite } from "@/src/server/repos/campaignInvites";
+import { isSyntheticAccountEmail } from "@/src/core/accounts/memberAccountActions";
 
 /**
  * Seul fichier ou `createAccountProvisioningServiceClient` est construit et
@@ -149,31 +150,26 @@ export async function provisionInviteSession(params: {
   return { ok: true, tokenHash: null };
 }
 
-export type MintSessionResult = { ok: true; tokenHash: string } | { ok: false; reason: "not_found" | "not_an_invited_account" };
+export type MintSessionResult = { ok: true; tokenHash: string } | { ok: false; reason: "not_found" | "ordinary_account" };
 
 /**
  * Genere un lien de connexion pour un compte EXISTANT, par id (retour
  * utilisateur : "voir l'interface du point de vue de..."). Garde-fou :
- * refuse un compte jamais issu d'un lien d'invitation — ce mecanisme sert
- * a voir comme un profil invite, jamais a se reconnecter comme n'importe
- * quel compte au hasard (la suppression generalisee, elle, n'a plus ce
- * garde-fou depuis V3.1-10 : `src/server/services/accountAuth.ts`).
+ * refuse un compte ordinaire (email reel) — ce mecanisme sert a voir comme
+ * un compte « tag », jamais a se reconnecter comme n'importe quel compte
+ * (ADR 0052).
  * L'autorisation ("qui a le droit d'appeler ceci") est verifiee par
  * l'appelant (`src/server/services/viewAs.ts`), pas ici.
  */
 export async function mintSessionForInvitedAccount(userId: string): Promise<MintSessionResult> {
   const admin = createAccountProvisioningServiceClient();
 
-  const { data: ownInvites, error: ownInvitesError } = await admin
-    .from("campaign_invites")
-    .select("id")
-    .eq("claimed_by_user_id", userId)
-    .limit(1);
-  if (ownInvitesError) throw new Error(ownInvitesError.message);
-  if (ownInvites.length === 0) return { ok: false, reason: "not_an_invited_account" };
-
   const { data: userData, error: userError } = await admin.auth.admin.getUserById(userId);
   if (userError || !userData.user?.email) return { ok: false, reason: "not_found" };
+  // V3.1-12 (ADR 0052) : le vrai invariant n'est plus « reclame par un lien »
+  // (les comptes « tag » se creent aussi en libre-service depuis V3.1-10),
+  // c'est « jamais un compte ordinaire » — un email reel n'est jamais emprunte.
+  if (!isSyntheticAccountEmail(userData.user.email)) return { ok: false, reason: "ordinary_account" };
 
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({ type: "magiclink", email: userData.user.email });
   if (linkError) throw new Error(linkError.message);

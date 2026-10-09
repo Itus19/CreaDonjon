@@ -3,25 +3,48 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { isSuperadmin } from "@/src/server/services/account";
 import { mintSessionForInvitedAccount } from "@/src/server/services/accountProvisioning";
+import { decideMemberAccountAction } from "@/src/server/services/campaigns";
+import { getCampaignById } from "@/src/server/repos/campaigns";
 
 type TypedClient = SupabaseClient<Database>;
 
-export type ViewAsResult = { ok: true; tokenHash: string } | { ok: false; reason: "not_superadmin" | "not_found" | "not_an_invited_account" };
+export type ViewAsResult =
+  | { ok: true; tokenHash: string }
+  | { ok: false; reason: "not_authorized" | "not_found" | "not_a_member" | "ordinary_account" };
 
 /**
  * "Voir l'interface du point de vue de..." (retour utilisateur, section
  * Administration) — changement de session REEL, pas une simple
- * superposition d'affichage : le superadmin se connecte litteralement comme
+ * superposition d'affichage : l'appelant se connecte litteralement comme
  * le compte cible, avec ses vraies permissions. Choix delibere malgre le
  * risque (voir `returnFromViewAs` ci-dessous pour le filet de securite qui
  * en decoule) : l'utilisateur a prefere ce mode, plus proche de ce qu'un
  * ami voit vraiment, a une vue en lecture seule reconstruite en parallele.
+ *
+ * V3.1-12 (ADR 0052) : depuis Gestion de campagne, `campaignId` fourni, un
+ * MJ peut aussi le faire, sur un compte « tag » membre de CETTE campagne.
+ * Sans `campaignId` (Administration), superadmin seulement. Jamais sur un
+ * compte ordinaire, quel que soit l'appelant — verifie ici ET par
+ * `mintSessionForInvitedAccount`.
  */
 export async function startViewAs(
   supabase: TypedClient,
-  params: { callerId: string; targetUserId: string }
+  params: { callerId: string; targetUserId: string; campaignId?: string }
 ): Promise<ViewAsResult> {
-  if (!(await isSuperadmin(supabase, params.callerId))) return { ok: false, reason: "not_superadmin" };
+  if (params.campaignId) {
+    const campaign = await getCampaignById(supabase, params.campaignId);
+    if (!campaign) return { ok: false, reason: "not_found" };
+    const decision = await decideMemberAccountAction(supabase, {
+      action: "view_as",
+      campaign,
+      callerId: params.callerId,
+      targetUserId: params.targetUserId,
+    });
+    if (decision === "not_found") return { ok: false, reason: "not_found" };
+    if (!decision.allowed) return { ok: false, reason: decision.reason };
+  } else if (!(await isSuperadmin(supabase, params.callerId))) {
+    return { ok: false, reason: "not_authorized" };
+  }
   return mintSessionForInvitedAccount(params.targetUserId);
 }
 

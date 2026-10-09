@@ -179,6 +179,28 @@ export default function CampaignDetail({
     setResetLinkByUserId((prev) => ({ ...prev, [userId]: `${window.location.origin}${body.url}` }));
   }
 
+  /**
+   * « Voir comme » (V3.1-12, ADR 0052) : se connecter réellement comme une
+   * joueuse de cette campagne, pour voir ce qu'elle voit. Le serveur vérifie
+   * qu'elle en est membre et que son compte est un compte « tag » ; le
+   * bandeau permanent ramène à son propre compte.
+   */
+  async function viewAs(userId: string) {
+    setError(null);
+    const res = await fetch("/api/admin/view-as", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetUserId: userId, campaignId }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      setError(body?.error ?? "Échec du changement de session.");
+      return;
+    }
+    const { url } = (await res.json()) as { url: string };
+    window.location.assign(url);
+  }
+
   if (!data) return <p className="text-xs text-ink-muted">Chargement…</p>;
 
   const tags = data.handleTags ?? {};
@@ -200,6 +222,7 @@ export default function CampaignDetail({
 
   function personActions(person: CampaignPerson): ActionsMenuItem[] {
     return [
+      { label: "Voir comme", onSelect: () => void viewAs(person.userId) },
       { label: "Forcer une réinitialisation", onSelect: () => void forceResetPassword(person.userId) },
       // Un compte joueur, ou un second MJ — jamais le créateur du monde
       // (ce serait un transfert de monde ; la base le refuse aussi).
