@@ -3208,6 +3208,23 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - **Décidé** (9 octobre), avec le bouton « Centrer sur aujourd'hui ». Les
     trois points de données ci-dessus restent à trancher par Opus, ADR à
     l'appui, avant de coder la page.
+- **Compte — à trancher (9 octobre)** : planche « Compte · trois
+  propositions ». Aujourd'hui, la colonne « Profil » de l'accueil
+  (`HomeProfilePanel`) porte email, nom affiché, mot de passe, « Mon lien
+  d'invitation » et la zone dangereuse (taper SUPPRIMER) ; la langue
+  (`setLocaleAction`) et l'identifiant « nom #0000 » (V3.1-10) existent côté
+  serveur sans écran. Les trois propositions vivent dans le rail de l'accueil
+  (Mondes, Compte, Administration, Déconnexion — V3.1-35) et ouvrent
+  l'Apparence (Personnalisation C) à tous. Aucune donnée nouvelle.
+  - **A — une page en sections** : cartes de verre empilées (Identité,
+    Connexion, Mon lien d'invitation, Apparence, Langue, Supprimer le
+    compte en rouge), un sommaire à gauche qui saute à la section.
+  - **B — des onglets** : pilule Identité / Connexion / Apparence / Langue /
+    Compte ; une section à la fois, la suppression rangée dans « Compte ».
+  - **C — la carte d'identité, puis les réglages** : à gauche l'initiale,
+    « Léonie #4821 », l'email, mondes menés et joués, parties solo, date
+    d'arrivée ; à droite une ligne par réglage avec sa valeur, qui s'ouvre
+    en place ; la suppression en bas, à part.
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
