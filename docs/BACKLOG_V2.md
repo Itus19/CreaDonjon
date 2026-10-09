@@ -1190,6 +1190,8 @@ Notée telle quelle (retour utilisateur 30 août, en discutant la coquille joueu
 
 ### Idée future — stats de jets amusantes
 
+**Reprise le 9 octobre par V3.1-89 à 92** (volet « Je joue » de l'accueil : histogramme du d20 et titres paramétrables). Le côté « ceux de chaque joueur pour son MJ » reste une idée.
+
 Notée telle quelle (retour utilisateur 30 août), pas un ticket : des statistiques rigolotes de jets de dés — les siens en tant que joueur, ceux de chaque joueur pour son MJ. Suppose de vérifier d'abord que les jets individuels sont conservés sous une forme exploitable pour un tel calcul (`session_events` de type `roll`, à confirmer) avant d'y engager du travail réel.
 
 ### V2-M8 — Collaboration MJ amis : dupliquer Valdoria, ajouter des éditeurs · `S`

@@ -29,7 +29,7 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 | `docs/catalogue/` | Catalogue d'interface : chaque élément, ses états, ses animations (index au §9 de la charte) | Avant de créer ou modifier un élément d'interface |
 | `docs/BACKLOG_V2.md` | Tickets en cours | Au début de chaque tâche |
 | `docs/BACKLOG_V3.md` | Tickets du mode solo (moteur, boucle de tour, écriture du monde, écran) | Tickets V3 |
-| `docs/BACKLOG_V3.1.md` | Rugosités trouvées en jouant, ajoutées au fil de l'utilisation | Avant tout ticket qui répare un détail plutôt qu'il ne planifie une fonctionnalité |
+| `docs/BACKLOG_V3.1.md` | Rugosités trouvées en jouant, **et la refonte « verre minéral »** (V3.1-19 à 99) ; feuille de route et ordre recommandé en tête | Avant tout ticket qui répare un détail, et avant tout ticket de la refonte |
 | `docs/PDD.md` | Source de vérité fonctionnelle | Avant toute décision produit |
 | `docs/adr/` | Décisions d'architecture et leurs raisons | Avant de « corriger » quelque chose qui semble étrange |
 | `specs/regles-couche.md` | Fiches de règles, renvois, surcharge, contrat moteur/IA | Tickets règles |

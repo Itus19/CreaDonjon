@@ -9,6 +9,9 @@ concret, un avertissement qui ment, un détail qui gêne à la table. Un ticket
 s'y ajoute quand quelque chose de ce genre est constaté, pas quand il est
 planifié. Taille attendue : `S` ou `M` presque toujours — si un ticket ici
 grossit au point de devenir un vrai chantier, il migre vers V2 ou V3.
+**Exception assumée** : la refonte « verre minéral » (V3.1-19) est née ici
+et y est restée, avec ses tickets V3.1-20 à 99 ; la feuille de route
+ci-dessous l'ordonne.
 
 **Lire les titres.** ☑ : ticket terminé. ☐ : il reste du travail, y compris
 une simple vérification en direct chez l'auteur. Un ticket « fait » dont des
@@ -6515,7 +6518,7 @@ Les règles de lecture des tickets du 9 octobre (plus haut) valent ici.
 
 | Ticket | Contenu | Modèle | Dépend de |
 |---|---|---|---|
-| V3.1-89 | Données : qui lance, pour quel personnage, quel d20 est gardé | **Opus** | — |
+| V3.1-89 | Données : qui lance, pour quel personnage, quel d20 est gardé | **Opus** | ADR 0038 (colonne partagée avec 22) |
 | V3.1-90 | Noyau pur : histogramme, compteurs, titres (tests d'abord) | Sonnet | 89 (forme des données) |
 | V3.1-91 | Service et volet : histogramme et titres sur l'accueil | Sonnet | 35, 89, 90 |
 | V3.1-92 | Administration › Titres des joueurs : l'éditeur | Sonnet | 87, 89, 90 |
@@ -6531,13 +6534,15 @@ est un nom affiché, instable (renommage, homonymes). Et avec avantage ou
 désavantage, la trace porte les deux d20 sans dire lequel est gardé.
 
 **Proposé (à trancher, ADR à l'appui)**
-- Migration nouvelle : `dice_rolls.actor_user_id uuid null references
-  auth.users(id)` et `dice_rolls.entity_id uuid null references
+- **Qui a lancé** : `dice_rolls.rolled_by_user_id`, **déjà décidé par
+  l'ADR 0038** (salon et jets secrets, V3.1-22) et posé par le serveur.
+  Ne pas créer de seconde colonne : si V3.1-22 n'est pas encore fait, ce
+  ticket ajoute cette colonne-là, sous ce nom, et V3.1-22 la réutilise.
+- Migration nouvelle : `dice_rolls.entity_id uuid null references
   entities(id) on delete set null` ; index `(campaign_id, entity_id,
-  created_at desc)`. Remplis par les quatre chemins d'écriture (l'acteur
-  est l'appelant authentifié ; l'entité est celle du jet quand il y en a
-  une — jet libre : l'entité réclamée par l'appelant dans la campagne, sinon
-  null).
+  created_at desc)`. Rempli par les quatre chemins d'écriture : l'entité du
+  jet quand il y en a une — jet libre : l'entité réclamée par l'appelant
+  dans la campagne, sinon null.
 - `detail.naturalD20` (entier 1 à 20, ou absent sans d20) : **le d20
   gardé**, écrit au moment du jet par le serveur (règle 8). `detail.kind` :
   `attack`, `damage`, `check`, `save`, `spell`, `heal`, `free` — pour
@@ -6572,7 +6577,7 @@ désavantage, la trace porte les deux d20 sans dire lequel est gardé.
 
 **Critères d'acceptation**
 - [ ] ADR ; migration ; `docs/SCHEMA.md` ; types régénérés.
-- [ ] Les quatre chemins écrivent `actor_user_id`, `entity_id`,
+- [ ] Les quatre chemins écrivent `rolled_by_user_id`, `entity_id`,
   `naturalD20`, `kind` (tests d'intégration).
 - [ ] Avantage : `naturalD20` = le plus haut des deux ; désavantage : le
   plus bas (test).
