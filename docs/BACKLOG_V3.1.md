@@ -3208,23 +3208,32 @@ Chaque outil sur ordinateur (fenêtre) et sur téléphone (écran ou feuille).
   - **Décidé** (9 octobre), avec le bouton « Centrer sur aujourd'hui ». Les
     trois points de données ci-dessus restent à trancher par Opus, ADR à
     l'appui, avant de coder la page.
-- **Compte — à trancher (9 octobre)** : planche « Compte · trois
-  propositions ». Aujourd'hui, la colonne « Profil » de l'accueil
-  (`HomeProfilePanel`) porte email, nom affiché, mot de passe, « Mon lien
-  d'invitation » et la zone dangereuse (taper SUPPRIMER) ; la langue
+- **Compte — décidé le 9 octobre : la A, une page en sections** (planche
+  « Décidé · Compte »). Dans le rail de l'accueil (Mondes, Compte,
+  Administration, Déconnexion — V3.1-35). Aujourd'hui, la colonne « Profil »
+  de l'accueil (`HomeProfilePanel`) porte email, nom affiché, mot de passe,
+  « Mon lien d'invitation » et la zone dangereuse ; la langue
   (`setLocaleAction`) et l'identifiant « nom #0000 » (V3.1-10) existent côté
-  serveur sans écran. Les trois propositions vivent dans le rail de l'accueil
-  (Mondes, Compte, Administration, Déconnexion — V3.1-35) et ouvrent
-  l'Apparence (Personnalisation C) à tous. Aucune donnée nouvelle.
-  - **A — une page en sections** : cartes de verre empilées (Identité,
-    Connexion, Mon lien d'invitation, Apparence, Langue, Supprimer le
-    compte en rouge), un sommaire à gauche qui saute à la section.
-  - **B — des onglets** : pilule Identité / Connexion / Apparence / Langue /
-    Compte ; une section à la fois, la suppression rangée dans « Compte ».
-  - **C — la carte d'identité, puis les réglages** : à gauche l'initiale,
-    « Léonie #4821 », l'email, mondes menés et joués, parties solo, date
-    d'arrivée ; à droite une ligne par réglage avec sa valeur, qui s'ouvre
-    en place ; la suppression en bas, à part.
+  serveur sans écran. Aucune donnée nouvelle.
+  - Sections empilées en cartes de verre : **Identité** (nom affiché,
+    identifiant « Léonie #4821 » avec sa note — visible ici et par le MJ des
+    campagnes —, email seulement pour les comptes ouverts avec un email),
+    **Connexion** (nom et mot de passe ; oublié : réinitialisé par le MJ ou
+    l'administrateur, aucun email), **Mon lien d'invitation** (seulement si
+    l'on a rejoint par un lien), **Apparence**, **Langue** (Français /
+    English, enregistrée sur le compte), **Supprimer le compte** en rouge,
+    en bas (taper SUPPRIMER). Un sommaire à gauche (200 px) allume et
+    rejoint la section.
+  - **Apparence = la Personnalisation décidée (C)**, le même composant que la
+    fenêtre Personnalisation des outils du MJ (un code, deux portes) : la
+    barre (pilule des quatre modes, contraste élevé, puis le flou du fond sur
+    toute la largeur) et la galerie de fonds avec leurs modes lisibles,
+    images personnelles (+, ×). Plus de lien « Toute la personnalisation ».
+  - Tablette : le sommaire devient une rangée de pastilles en tête (Identité,
+    Connexion, Invitation, Apparence, Langue, Supprimer), galerie à deux
+    vignettes. Téléphone : Accueil › Compte (« ‹ Accueil »), mêmes pastilles,
+    champs sous leur libellé, la barre de l'apparence en colonne.
+  - Écartées : B (onglets), C (carte d'identité et lignes de réglages).
 
 **D. Découpage** — treize tickets prêts, plus V3.1-20 déjà écrit :
 
