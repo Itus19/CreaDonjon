@@ -29,7 +29,7 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 | `docs/catalogue/` | Catalogue d'interface : chaque élément, ses états, ses animations (index au §9 de la charte) | Avant de créer ou modifier un élément d'interface |
 | `docs/BACKLOG_V2.md` | Tickets en cours | Au début de chaque tâche |
 | `docs/BACKLOG_V3.md` | Tickets du mode solo (moteur, boucle de tour, écriture du monde, écran) | Tickets V3 |
-| `docs/BACKLOG_V3.1.md` | Rugosités trouvées en jouant, **et la refonte « verre minéral »** (V3.1-19 à 119) ; feuille de route et ordre recommandé en tête ; chaque ticket prêt dit son modèle et ses sous-tâches Haiku | Avant tout ticket qui répare un détail, et avant tout ticket de la refonte |
+| `docs/BACKLOG_V3.1.md` | **Index** : feuille de route, ordre recommandé, et table ticket → fichier. Les tickets (rugosités et refonte « verre minéral », V3.1-1 à 119) vivent dans `docs/backlog-v3.1/`, un fichier par partie ; chaque ticket prêt dit son modèle et ses sous-tâches Haiku. **Ne lis que le fichier du ticket en cours** | Avant tout ticket qui répare un détail, et avant tout ticket de la refonte |
 | `docs/PDD.md` | Source de vérité fonctionnelle | Avant toute décision produit |
 | `docs/adr/` | Décisions d'architecture et leurs raisons | Avant de « corriger » quelque chose qui semble étrange |
 | `specs/regles-couche.md` | Fiches de règles, renvois, surcharge, contrat moteur/IA | Tickets règles |

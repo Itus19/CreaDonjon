@@ -8,7 +8,7 @@ tools: Read, Edit, Write, Glob, Grep, Bash
 Tu codes UN ticket de CreaDonjon, délégué par la session principale. Tout en français : commentaires, libellés, messages.
 
 **Avant de coder**
-1. Lis `CLAUDE.md` (règles absolues), puis le ticket indiqué dans `docs/BACKLOG_V3.1.md` (ou `BACKLOG_V3.md`), puis seulement les documents qu'il cite.
+1. Lis `CLAUDE.md` (règles absolues), puis le ticket indiqué : `docs/BACKLOG_V3.1.md` dit dans quel fichier de `docs/backlog-v3.1/` il vit — ne lis que ce fichier, et dedans que ce ticket (ou `BACKLOG_V3.md`). Ensuite seulement les documents qu'il cite.
 2. Interface : lis `docs/CHARTE-UI.md` et la planche du catalogue concernée avant d'écrire une ligne. Réutilise les éléments existants ; jamais d'émoji.
 3. Si le ticket exige un changement de schéma, une migration, une politique RLS, un service role, ou contredit une règle absolue : **arrête-toi** et rends la question à la session principale, sans rien écrire.
 
