@@ -13,6 +13,10 @@ grossit au point de devenir un vrai chantier, il migre vers V2 ou V3.
 et y est restée, avec ses tickets V3.1-20 à 99 ; la feuille de route
 ci-dessous l'ordonne.
 
+**Répartition par modèle (ADR 0053).** Une session Opus orchestre. Elle
+délègue les tickets « Sonnet » à `dev-sonnet`, et la ligne « Sous-tâches
+Haiku » de chaque ticket prêt à `aide-haiku` (`.claude/agents/`).
+
 **Lire les titres.** ☑ : ticket terminé. ☐ : il reste du travail, y compris
 une simple vérification en direct chez l'auteur. Un ticket « fait » dont des
 points sont reportés ou réservés (et écrits comme tels) est coché. Sous chaque
@@ -49,8 +53,8 @@ Ce qui n'est **pas** encore prêt à coder :
   (ressources de classe), 47 (règles de personnage en données), 59 (fond par
   défaut du wiki). Et des tickets de données Opus déjà spécifiés : 41, 74,
   84, 89.
-- **Des rugosités d'avant la refonte**, hors interface : **faites le 9
-  octobre** : V3.1-1, 2, 4, 5 et 12. V3.1-3, 6 et 7 sont conçus (ADR 0046) et
+- **Des rugosités d'avant la refonte**, hors interface : **codées le 9
+  octobre** : V3.1-1, 2, 4, 5 et 12 (reste leur vérification en direct). V3.1-3, 6 et 7 sont conçus (ADR 0046) et
   repris par 116 à 119. **Reste V3.1-13** (sous-classes manquantes) : c'est
   de la saisie, qui attend le texte des livres de l'auteur. V3.1-14 est
   fermé, repris par 82, 83 et 100.
@@ -87,7 +91,7 @@ valables ; celui-ci les relie.
 | **6 · La création de personnage** | 48 → 49 → 50, 51, 52, 53 (après 115) ; 118, 119 (après 116, 117) | Le plus gros chantier ; il attend les règles en données (47). |
 | **7 · Les statistiques du joueur** | 89 → 90 → 91 → 92 | Il leur faut des jets attribués ; les jets d'avant 89 ne comptent pas. |
 | **8 · Règles et Chronologie** | 93 → 94 → 95 ; 96 → 97 → 98 → 99 | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
-| **À côté, quand on veut** | 1, 2, 4, 5 (petites rugosités de règles) ; 12, 13 |
+| **À côté, quand on veut** | 13 (attend le texte des manuels de l'auteur) ; vérifications en direct de 1, 2, 4, 5, 12, 17, 18 | Codés ; il ne reste que l'œil de l'auteur. | |
 | **Étape 4, avec 105** | 104 (ADR 0041, option B) → 107 | Le joueur qui cible : écritures signées par le serveur. | Après 105. |
 
 **Règle** : un ticket Opus « à concevoir » ne se code pas ; il se conçoit
@@ -96,7 +100,7 @@ qu'un ticket ne tranche pas, il s'arrête et la note ici.
 
 ---
 
-### ☑ V3.1-1 — `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré · `S` — **fait le 9 octobre**
+### ☐ V3.1-1 — `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré · `S` — **fait le 9 octobre ; reste une vérification en direct**
 
 **Modèle conseillé : Sonnet** — assouplir une validation, cas bien décrits.
 
@@ -127,6 +131,7 @@ Le ticket V2-N2 l'avait déjà noté en passant, sans ouvrir de ticket dédié :
   ont besoin.
 - [x] Aucune régression sur les autres types d'entrée qui utilisent
   `REQUIRED_BLOCKS` (sous-classe, don, historique…).
+- [ ] À vérifier en direct par l'auteur : Détection de la magie n'affiche plus d'avertissement de bloc manquant ; un sort maison à jet de sauvegarde sans effet chiffré, si.
 
 **Fait le 9 octobre.** `effects` n'est plus dans `REQUIRED_BLOCKS.spell` ;
 `missingRequiredBlocks` (`src/core/rules/requiredBlocks.ts`) l'exige sous
@@ -140,7 +145,7 @@ verts.
 
 ---
 
-### ☑ V3.1-2 — Aucun moyen d'éditer une fiche maison déjà créée · `M` — **fait le 9 octobre**
+### ☐ V3.1-2 — Aucun moyen d'éditer une fiche maison déjà créée · `M` — **fait le 9 octobre ; reste une vérification en direct**
 
 **Modèle conseillé : Sonnet** — réutiliser le formulaire de création en édition, verrous déjà connus.
 
@@ -169,6 +174,7 @@ historique, don/aptitude, sous-classe, sort) : aucun n'a d'équivalent en
   qui la référence comme sous-classe, un personnage qui la porte comme don)
   continue de pointer dessus après modification.
 - [x] Une base officielle reste inéditable — même verrou que la création.
+- [ ] À vérifier en direct par l'auteur : « Modifier » sur une fiche maison de chaque type (sort, sous-classe, don, historique, arme), enregistrer, rouvrir.
 
 **Fait le 9 octobre.** Le bouton « Modifier » de `RuleEntryView.tsx`
 rouvre, en place, le formulaire de création du type (`HomebrewEditForm.tsx`,
@@ -243,7 +249,7 @@ séparé.
 
 ---
 
-### ☑ V3.1-4 — Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais · `S`/`M` — **fait le 9 octobre**
+### ☐ V3.1-4 — Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais · `S`/`M` — **fait le 9 octobre ; reste une vérification en direct**
 
 **Modèle conseillé : Sonnet** — brancher un choix déjà lu par extractSkillChoices.
 
@@ -271,6 +277,7 @@ inventer un nouveau.
   compétence concerné, bonus de maîtrise appliqué).
 - [x] Aucune régression sur les maîtrises fixes déjà accordées par une
   espèce (celles qui ne portent pas de choix).
+- [ ] À vérifier en direct par l'auteur : créer un Humain : Compétent propose une compétence ; avec un Guerrier, une compétence de classe déjà prise reste possible pour Compétent.
 
 **Fait le 9 octobre.** `assembleResolvedRuleset` lit le bloc `species_traits`
 de l'espèce, charge ses traits en un second lot, et ajoute un choix de
@@ -292,7 +299,7 @@ sous sa forme `zChoiceGrant`. Tests : `srdMapping.test.ts` (2 cas),
 
 ---
 
-### ☑ V3.1-5 — Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) · `M` — **fait le 9 octobre (ADR 0050)**
+### ☐ V3.1-5 — Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) · `M` — **fait le 9 octobre (ADR 0050) ; reste une vérification en direct**
 
 **Modèle conseillé : Sonnet** — un effet de Repos long sur le vocabulaire de déclencheurs existant.
 
@@ -321,6 +328,7 @@ déclencheurs (V3-A5) que de l'assistant de personnage.
 - [x] Un personnage sans ce trait n'est pas affecté.
 - [x] Le mécanisme reste ouvert à d'autres effets liés au Repos long portés
   par un trait/don futur, plutôt que câblé en dur pour Ingénieux seul.
+- [ ] À vérifier en direct par l'auteur : un Humain sans Inspiration fait un repos long : il la gagne (journal « Inspiration héroïque : 0 → 1 ») et ses emplacements de sort reviennent.
 
 **Fait le 9 octobre (ADR 0050).** Le point 4 de V3.1-24 est fait du même
 coup : `takeShortRest` / `takeLongRest` émettent `short_rest` / `long_rest`
@@ -1006,7 +1014,7 @@ ni quand `resolveCampaignId` renvoie `null` (monde sans campagne).
 
 ---
 
-### ☑ V3.1-12 — « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin · `M` — **fait le 9 octobre (ADR 0051, 0052)**
+### ☐ V3.1-12 — « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin · `M` — **fait le 9 octobre (ADR 0051, 0052) ; reste une vérification en direct**
 
 **Modèle conseillé : Opus** — « voir comme » : usurpation d'identité, portée de sécurité.
 
@@ -1078,6 +1086,7 @@ Indépendant de V3.1-10 : peut se faire avant, pendant ou après.
   n'importe où).
 - [x] Revenir de « voir comme » fonctionne identiquement, que ce soit un MJ
   ou le superadmin qui l'ait démarré.
+- [ ] À vérifier en direct par l'auteur : « Voir comme » depuis Gestion de campagne en MJ, puis depuis Administration en superadmin ; revenir à son compte les deux fois.
 
 **Fait le 9 octobre.** En le préparant, deux failles ont été trouvées et
 corrigées d'abord, chacune dans son commit :
@@ -1802,7 +1811,7 @@ l'affichage changent.
 
 ---
 
-### ☐ V3.1-17 — Un catalogue d'interface visuel, et une charte qui y renvoie · `M` — **fait le 1ᵉʳ octobre**
+### ☐ V3.1-17 — Un catalogue d'interface visuel, et une charte qui y renvoie · `M` — **fait le 1ᵉʳ octobre ; reste une vérification en direct**
 
 **Modèle conseillé : Sonnet** — documentation et planches.
 
@@ -1866,7 +1875,7 @@ joueur, desktop et tablette).
 
 ---
 
-### ☐ V3.1-18 — Retirer les émojis de l'interface · `S` — **fait le 1ᵉʳ octobre**
+### ☐ V3.1-18 — Retirer les émojis de l'interface · `S` — **fait le 1ᵉʳ octobre ; reste une vérification en direct**
 
 **Modèle conseillé : Sonnet** — remplacements mécaniques.
 
@@ -3656,7 +3665,7 @@ V3.1-29. **Dépend de** : V3.1-25 (pilule).
 
 ---
 
-### ☐ V3.1-21 — Cibler et résoudre depuis les boutons de jet · `L` — **conçu le 9 octobre (ADR 0042, 0041) → V3.1-105, 106, 107**
+### ☑ V3.1-21 — Cibler et résoudre depuis les boutons de jet · `L` — **conçu le 9 octobre (ADR 0042, 0041) → V3.1-105, 106, 107**
 
 **Modèle conseillé : Opus** — résolution partagée par MJ, joueur et solo ; dés lancés par le serveur (règle 8).
 
@@ -3757,7 +3766,7 @@ de l'initiative ; un jet secret visible du seul joueur et du MJ).
 
 ---
 
-### ☐ V3.1-23 — Ce que les joueurs modifient eux-mêmes (Règles actives) · `M` — **conçu le 9 octobre (ADR 0043) → V3.1-108, 109 (écran : 57)**
+### ☑ V3.1-23 — Ce que les joueurs modifient eux-mêmes (Règles actives) · `M` — **conçu le 9 octobre (ADR 0043) → V3.1-108, 109 (écran : 57)**
 
 **Modèle conseillé : Opus** — droits d'écriture des joueurs, appliqués côté serveur ; schéma à vérifier.
 
@@ -3830,6 +3839,8 @@ V3.1-20 (lot g) peut partir dès que 25 est fait.
 
 **Modèle conseillé : Sonnet** — décisions toutes prises dans l'ADR 0036 ; noyau pur, tests d'abord.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 Fondation des tickets 32, 33 et 34. Aucune interface.
 
 **À faire**
@@ -3879,6 +3890,8 @@ Fondation des tickets 32, 33 et 34. Aucune interface.
 
 **Modèle conseillé : Sonnet** — composant décidé (ADR 0034), usages listés.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; recenser les usages à remplacer avant de coder, puis vérifier qu'il n'en reste aucun ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : « Décidé · accueil : tableau de bord, onglets en pilule
 glissante ». **Départ** : `components/shared/BinderTabs.tsx`.
 
@@ -3896,6 +3909,8 @@ Sur téléphone, la pilule défile horizontalement si elle déborde.
 ### ☐ V3.1-26 — Fiche d'ordinateur à jauges et commande E · `M` — **prêt**
 
 **Modèle conseillé : Sonnet** — interface esquissée, services existants.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planches** (zone « Fiche de personnage ») : « Décidé · fiche sur
 ordinateur, vivante et déroulée partie par partie », « Décidé · jauge à
@@ -3922,6 +3937,8 @@ commandes (option E) ». **Départ** :
 
 **Modèle conseillé : Sonnet** — mesures et comportements donnés par V3.1-19.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planches** : MJ et joueur, ordinateur et tablette. **Départ** :
 `Sidebar.tsx`, `MjSidebar.tsx`, `PlayerShell.tsx`, `RadioWidget.tsx`,
 `ChromePill.tsx`, `DiceRollPanel.tsx`.
@@ -3947,6 +3964,8 @@ commandes (option E) ». **Départ** :
 
 **Modèle conseillé : Sonnet** — règle simple, planche à trois largeurs.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : « Décidé · fiche sur tablette : elle suit la largeur de sa
 fenêtre (piste B) » (zone « Fiche de personnage » ; la fiche y prend, sous
 ~640 px, la disposition du téléphone). **Dépend de** : 26.
@@ -3962,6 +3981,8 @@ ligne au-dessus des onglets.
 ### ☐ V3.1-29 — Coquille téléphone : barre flottante et feuilles du bas (lot c) · `L` — **prêt**
 
 **Modèle conseillé : Sonnet** — entrées, gabarits et comportements fixés par les planches.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planches** : « Décidé · téléphone du MJ — écrans » et « — feuilles
 ouvertes », mêmes planches côté joueur. **Départ** : `PlayerShell.tsx`,
@@ -3990,6 +4011,8 @@ ouvertes », mêmes planches côté joueur. **Départ** : `PlayerShell.tsx`,
 
 **Modèle conseillé : Sonnet** — parcours esquissé ; stockage tranché (ADR 0036 §4).
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planches** : téléphones MJ et joueur, écrans Monde / Wiki / Règles et
 leurs feuilles. **Départ** : `BookSkin.tsx`, `TwoPaneReaderLayout.tsx`,
 `PlayerRulesSidebar.tsx`. **Dépend de** : 29.
@@ -4014,6 +4037,8 @@ leurs feuilles. **Départ** : `BookSkin.tsx`, `TwoPaneReaderLayout.tsx`,
 
 **Modèle conseillé : Sonnet** — option A tranchée et esquissée.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : « Décidé · téléphone du MJ — plein écran et infobulles ».
 **Dépend de** : 29.
 
@@ -4031,6 +4056,8 @@ Les éditeurs de blocs existants sont réutilisés tels quels à l'intérieur.
 ### ☐ V3.1-32 — Fiche sur téléphone : jets, infobulles de règles, sac · `L` — **prêt**
 
 **Modèle conseillé : Sonnet** — fiche entièrement esquissée ; services fournis par 24.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planches** : « Décidé · fiche sur téléphone, vivante et déroulée partie
 par partie », « Décidé · fiche en combat », téléphone du joueur (trois
@@ -4060,6 +4087,8 @@ planches). **Dépend de** : 24, 26, 29.
 ### ☐ V3.1-33 — L'outil de dés unique (feuille, panneau, scintillement) · `L` — **prêt**
 
 **Modèle conseillé : Sonnet** — ADR 0035, ADR 0036 §6, planches précises ; la cible reste à V3.1-21.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planches** : téléphones (feuille des dés), « Décidé · outil de dés sur
 ordinateur et tablette », « Décidé · le jet en animation » (l'outil réel,
@@ -4173,6 +4202,8 @@ outil de dés sur ordinateur, Initiative).
 
 **Modèle conseillé : Sonnet** — tout est esquissé ; données et règles fournies par 24.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planches** : « Décidé · téléphone du MJ — écrans » (Table) et « —
 feuilles ouvertes » (Toute la table). **Départ** : `mjToolWindows.ts`,
 `MjToolWindowContent.tsx` (un outil de plus dans la liste). **Dépend de** :
@@ -4218,6 +4249,8 @@ feuilles ouvertes » (Toute la table). **Départ** : `mjToolWindows.ts`,
 
 **Modèle conseillé : Sonnet** — proposition 3 tranchée ; « Reprendre » rangé dans le navigateur (ADR 0036 §4).
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : « Décidé · accueil : tableau de bord, onglets en pilule
 glissante ». **Départ** : `HomeShell.tsx`, `HomeScreen.tsx`,
 `CampaignsPanel.tsx`. **Dépend de** : 25, 27.
@@ -4243,6 +4276,8 @@ glissante ». **Départ** : `HomeShell.tsx`, `HomeScreen.tsx`,
 
 **Modèle conseillé : Sonnet** — planches définitives ; le moteur solo ne change pas.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planches** : « Solo-Desktop » ; « Décidé · solo sur téléphone (modèle A) »
 (trois planches). **Départ** : `SoloShell.tsx`, `IntentBar.tsx`,
 `ScenePanel`, `ConsequencesDrawer`. **Dépend de** : 29, 32, 33.
@@ -4264,7 +4299,7 @@ glissante ». **Départ** : `HomeShell.tsx`, `HomeScreen.tsx`,
 - [ ] Un tour complet sur téléphone : intention, outil de dés, Lancer, le tour dans le fil.
 - [ ] Aucun changement du moteur de tour (tests solo existants verts sans modification).
 
-### ☐ V3.1-37 — L'initiative vue des joueurs : sécurité, invitation, temps réel · `M` — **conçu le 9 octobre (ADR 0040) → V3.1-101, 102, 103**
+### ☑ V3.1-37 — L'initiative vue des joueurs : sécurité, invitation, temps réel · `M` — **conçu le 9 octobre (ADR 0040) → V3.1-101, 102, 103**
 
 **Modèle conseillé : Opus** — RLS à resserrer, nouvelle vue filtrée pour les joueurs, signal temps réel.
 
@@ -4308,6 +4343,8 @@ affiche. À corriger avant tout écran joueur.
 
 **Modèle conseillé : Sonnet** — planche définitive, données fournies par V3.1-37.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : « Décidé · initiative (A retouchée) ». **Départ** :
 `components/shell/InitiativeTracker.tsx`, `app/m/[worldSlug]/mj/initiative/page.tsx`.
 **Dépend de** : V3.1-37, V3.1-24 (PV temporaires), V3.1-26 (jauges),
@@ -4331,7 +4368,7 @@ V3.1-29 (téléphone), V3.1-33 (outil de dés).
 - [ ] À 390 px et sur ordinateur, côté MJ et côté joueur.
 - [ ] Planche du catalogue « Initiative » créée ou mise à jour.
 
-### ☐ V3.1-39 — Les sauvegardes demandées à la cible · `L` — **conçu le 9 octobre (ADR 0044) → V3.1-110, 111, 112**
+### ☑ V3.1-39 — Les sauvegardes demandées à la cible · `L` — **conçu le 9 octobre (ADR 0044) → V3.1-110, 111, 112**
 
 **Modèle conseillé : Opus** — nouveau flux joueur ↔ MJ, et une donnée de règle à ajouter aux effets.
 
@@ -4370,7 +4407,7 @@ déclencheurs).
 - [ ] Une cible hors restriction (Charme-personne sur un mort-vivant) est refusée avant toute demande (test du noyau).
 - [ ] Hors combat, la demande s'affiche dans l'outil Table ; en combat, dans l'Initiative.
 
-### ☐ V3.1-40 — Ressources de classe : magie de pacte et recharge partielle · `M` — **conçu le 9 octobre (ADR 0045) → V3.1-113, 114**
+### ☑ V3.1-40 — Ressources de classe : magie de pacte et recharge partielle · `M` — **conçu le 9 octobre (ADR 0045) → V3.1-113, 114**
 
 **Modèle conseillé : Opus** — deux formes de données que le moteur ne connaît pas encore.
 
@@ -4514,6 +4551,8 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
 
 **Modèle conseillé : Opus** — migration, RLS et octrois d'écriture ; principe déjà tranché.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Décision** : ADR 0037 (`docs/adr/0037-une-page-partagee-devient-une-entite.md`,
 accepté le 5 octobre). Une page du cahier marquée « La table » devient sa
 propre **entité** (genre `shared_note`, visibilité de la table), son
@@ -4545,6 +4584,8 @@ sessions (`session_journal`).
 ### ☐ V3.1-42 — Bloc-notes : le cahier refait, MJ et joueuse · `L` — **prêt après V3.1-41**
 
 **Modèle conseillé : Sonnet** — planche définitive ; données fournies par 41.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Notes-Decide.dc.html` (« Décidé · bloc-notes (A) avec le
 partage à la table »). **Départ** :
@@ -4585,6 +4626,8 @@ partage à la table »). **Départ** :
 
 **Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Livre-Decide.dc.html`. **Départ** :
 `components/shell/sessionJournal/SessionJournalMjPanel.tsx`,
 `components/shell/sessionJournal/SessionJournalBanner.tsx`, cas
@@ -4618,6 +4661,8 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 
 **Modèle conseillé : Sonnet** — planche définitive ; budget et solveur inchangés.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Rencontres-Decide.dc.html`. **Départ** :
 `components/shell/EncounterBuilder.tsx`, cas `rencontres` de
 `MjToolWindowContent.tsx` et de la route
@@ -4648,6 +4693,8 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 ### ☐ V3.1-45 — Générateurs : les tirages à gauche, la fiche à droite · `M` — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; tables et IA inchangées.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Generateurs-Decide.dc.html`. **Départ** :
 `components/shell/GeneratorToolPanel.tsx`, cas `generateurs`. **Dépend de** :
@@ -4683,6 +4730,8 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 
 **Modèle conseillé : Sonnet** — calcul pur à étendre, tests d'abord ; planche définitive.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Probabilites-Decide.dc.html`. **Départ** :
 `src/core/rules/probability.ts` (+ `probability.test.ts`),
 `components/shell/PartyProbabilityTable.tsx`, cas `probabilites`.
@@ -4714,7 +4763,7 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 - [ ] La grille montre 6 + 18 lignes, le meilleur de chaque ligne encadré.
 - [ ] Teinte continue : 50 % et 51 % ont deux teintes différentes ; contraste AA du chiffre dans les quatre modes.
 
-### ☐ V3.1-47 — Création : les règles de personnage viennent du ruleset · `L` — **conçu le 9 octobre (ADR 0046) → V3.1-115 à 119**
+### ☑ V3.1-47 — Création : les règles de personnage viennent du ruleset · `L` — **conçu le 9 octobre (ADR 0046) → V3.1-115 à 119**
 
 **Modèle conseillé : Opus** — structures de données de règles, ADR, et lien avec le mécanisme générique des choix.
 
@@ -4765,6 +4814,8 @@ demander) :
 
 **Modèle conseillé : Sonnet** — décision prise ; ADR à écrire d'après elle, noyau pur, tests d'abord.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Creation-Decide.dc.html` (étape Identité). **Départ** :
 `src/core/schemas/blocks/character.ts` (+ test),
 `components/blocks/characterCreatorSteps/IdentityStep.tsx`,
@@ -4802,6 +4853,8 @@ schéma Zod ; recomposition du nom côté serveur.
 ### ☐ V3.1-49 — Création : le chemin qui se ramifie (structure, aperçu, joueuse) · `L` — **prêt après 47 et 48**
 
 **Modèle conseillé : Opus** — l'écran est décidé, mais le cœur est un état de choix en cascade (un choix naît de sa source, disparaît si elle change, attend un autre choix) partagé par toutes les étapes, l'aperçu en direct et la création finale ; une erreur y casse les quatre tickets suivants. **Sonnet** pour 50 à 53, qui se branchent dessus.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Creation-Decide.dc.html` (MJ, joueuse, tablette, téléphone).
 **Départ** : `components/blocks/CharacterCreatorWizard.tsx` et
@@ -4859,6 +4912,8 @@ schéma Zod ; recomposition du nom côté serveur.
 
 **Modèle conseillé : Sonnet** — planches définitives.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planches** : `Origines-Decide.dc.html`, `Historique-Decide.dc.html`.
 **Départ** : `SpeciesStep.tsx`, `BackgroundStep.tsx`,
 `SpellSelectionStep.tsx`, `RemainingChoicesStep.tsx`. **Dépend de** : 49.
@@ -4902,6 +4957,8 @@ schéma Zod ; recomposition du nom côté serveur.
 
 **Modèle conseillé : Sonnet** — planche définitive ; règles fournies par 47.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Classe-Decide.dc.html`. **Départ** : `LevelClassesStep.tsx`,
 `HpRollStep.tsx`, `CreationHpRollStep.tsx`, `AsiStep.tsx`,
 `components/blocks/LevelUpWizard.tsx` (remplacé). **Dépend de** : 47, 49.
@@ -4940,6 +4997,8 @@ schéma Zod ; recomposition du nom côté serveur.
 
 **Modèle conseillé : Sonnet** — planche définitive ; constantes déplacées par 47.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Carac-Decide.dc.html`. **Départ** : `AbilityScoreStep.tsx`,
 `src/core/rules/abilityGeneration.ts`. **Dépend de** : 47, 49.
 
@@ -4965,6 +5024,8 @@ schéma Zod ; recomposition du nom côté serveur.
 ### ☐ V3.1-53 — Création : l'Équipement (bande d'équipement, boutique, départ à haut niveau) · `L` — **prêt après 24, 47 et 49**
 
 **Modèle conseillé : Sonnet** — planche définitive, très détaillée ; services de 24.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Equipement-Decide.dc.html`. **Départ** : étape
 « Équipement » de `CharacterCreatorWizard.tsx`, services `changeCurrency` et
@@ -5021,6 +5082,8 @@ schéma Zod ; recomposition du nom côté serveur.
 
 **Modèle conseillé : Sonnet** — disposition déjà codée (V3.1-15) ; transposition seulement.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Campagne-Gestion.dc.html`. **Départ** :
 `components/shell/CampaignsPanel.tsx`, `components/shell/CampaignDetail.tsx`,
 `InviteLinkPanel.tsx`. **Dépend de** : 20, 29 ; l'entrée « Voir comme »
@@ -5046,6 +5109,8 @@ Copier et ⋮.
 ### ☐ V3.1-55 — Calendrier ingame : l'année d'un coup d'œil · `M` — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Calendrier-Decide.dc.html`. **Départ** :
 `components/shell/CalendarSettingsPanel.tsx`, `src/core/calendar/*`
@@ -5092,6 +5157,8 @@ Copier et ⋮.
 
 **Modèle conseillé : Sonnet** — disposition déjà codée (V3.1-16) ; transposition seulement.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Calendrier-Reel.dc.html`. **Départ** :
 `components/shell/scheduling/*` (`SchedulingMjPanel.tsx`,
 `NextSessionPanel.tsx`, `AvailabilityGrid.tsx`),
@@ -5126,6 +5193,8 @@ enregistrement automatique de la joueuse). Le verre minéral :
 ### ☐ V3.1-57 — Règles actives : le ruleset à gauche, la table à droite · `M` — **prêt après V3.1-23**
 
 **Modèle conseillé : Sonnet** — planche définitive ; données et serveur de V3.1-23.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Regles-Decide.dc.html`. **Départ** :
 `components/rules/RulesetSelector.tsx`, `RulesetImportMappingDialog.tsx`,
@@ -5173,6 +5242,8 @@ cas `regles-actives`. **Dépend de** : **23** (interrupteurs,
 
 **Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Perso-Decide.dc.html`. **Départ** :
 `components/shell/PersonnalisationPanel.tsx`, `BackgroundPicker.tsx`,
 `src/core/theme/builtinBackgrounds.ts`, `HomeProfilePanel.tsx`,
@@ -5212,6 +5283,8 @@ cas `regles-actives`. **Dépend de** : **23** (interrupteurs,
 
 **Modèle conseillé : Opus** — donnée nouvelle par monde, lue par la page publique (service role) et par l'onglet Wiki des joueuses.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Décision de l'auteur (8 octobre)** : le MJ choisit le **fond par défaut du
 wiki** — un fond (fourni ou de sa bibliothèque), le **mode des pages**, le
 **flou**. C'est un réglage **du monde**, vu de tous : il s'applique au wiki
@@ -5241,6 +5314,8 @@ garde**.
 ### ☐ V3.1-60 — Publication : les réglages, et ce que voit un visiteur · `M` — **prêt après 58 et 59**
 
 **Modèle conseillé : Sonnet** — planche définitive ; galerie de 58, données de 59.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Publication-Decide.dc.html`. **Départ** :
 `components/shell/PublicationPanel.tsx`, `ShareLinkPanel.tsx`,
@@ -5274,6 +5349,8 @@ garde**.
 ### ☐ V3.1-61 — Journal historique : par fiche, ou chronologique · `M` — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; un champ de plus côté serveur.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Journal-Decide.dc.html`. **Départ** :
 `components/shell/GmJournalPanel.tsx`, `DeletedEntitiesPanel.tsx`,
@@ -5475,6 +5552,8 @@ V3.1-48.
 
 **Modèle conseillé : Sonnet** — planche définitive, aucune donnée nouvelle.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Wiki-Fiche-Decide.dc.html`. **Départ** :
 `app/m/[worldSlug]/(monde)/f/[entitySlug]/page.tsx` et `EditEntityForm.tsx`,
 `components/blocks/EntityBlocks.tsx` (`BLOCK_TYPE_LABELS`,
@@ -5556,6 +5635,8 @@ changer le téléphone ; ajouter un type de bloc.
 
 **Modèle conseillé : Sonnet** — comportement entièrement décrit ; route existante.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Blocs-Recit-Decide.dc.html` (toutes les cartes ; essayer la
 pastille). **Départ** : `BlockCard` (V3.1-63),
 `components/shared/visibilityOptions.ts`, la route de mise à jour de
@@ -5600,6 +5681,8 @@ planche du catalogue.
 
 **Modèle conseillé : Sonnet** — tout existe ; c'est un rangement.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Blocs-Recit-Decide.dc.html`, carte « Texte ». **Départ** :
 `components/blocks/TextBlockEditor.tsx`,
 `components/entities/richtext/RichTextEditor.tsx`,
@@ -5632,6 +5715,8 @@ planche du catalogue.
 
 **Modèle conseillé : Sonnet** — décisions prises ; une seule à trancher dans le ticket (tranchée ci-dessous).
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Blocs-Recit-Decide.dc.html`, cartes « Encadré » et
 « Tableau ». **Départ** : `components/blocks/InfoboxBlockEditor.tsx`,
 `components/blocks/CustomTableBlockEditor.tsx`,
@@ -5663,6 +5748,8 @@ planche du catalogue.
 ### ☐ V3.1-67 — Bloc Image : la barre flottante et l'aperçu dans le texte (B) · `M` — **prêt**
 
 **Modèle conseillé : Sonnet** — tous les champs existent déjà ; c'est l'interface.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Blocs-Recit-Decide.dc.html`, carte « Image ». **Départ** :
 `components/blocks/ImageBlockEditor.tsx`, `src/core/schemas/blocks/image.ts`
@@ -5699,6 +5786,8 @@ planche du catalogue.
 
 **Modèle conseillé : Sonnet** — dessin décidé, schéma inchangé.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Blocs-Recit-Decide.dc.html`, carte « Chronologie ».
 **Départ** : `components/blocks/TimelineBlockEditor.tsx`,
 `components/entities/timeline/`, `src/core/schemas/blocks/timeline.ts`,
@@ -5722,6 +5811,8 @@ planche du catalogue.
 ### ☐ V3.1-69 — Noyau psyché : libellés uniques, bandes des pôles, tension, résumé · `S` — **prêt**
 
 **Modèle conseillé : Sonnet** — fonctions pures, tests d'abord.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Départ** : `src/core/psyche/` (`keys.ts`, `bands.ts`), et les libellés
 aujourd'hui **dupliqués** dans `components/entities/psyche/`
@@ -5762,6 +5853,8 @@ aujourd'hui **dupliqués** dans `components/entities/psyche/`
 ### ☐ V3.1-70 — Personnalité (A) et Convictions (même dessin, comparer avec une faction) · `L` — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; une règle de liste tranchée ci-dessous.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Psy-Decide.dc.html`, sections « Personnalité — A » et
 « Convictions ». **Départ** : `components/blocks/PersonalityBlockEditor.tsx`,
@@ -5825,6 +5918,8 @@ aujourd'hui **dupliqués** dans `components/entities/psyche/`
 
 **Modèle conseillé : Sonnet** — planche définitive ; lecture du sens inverse décrite.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Psy-Decide.dc.html`, section « Relation — A (perles et résumé
 central) » (ordinateur et téléphone). **Départ** :
 `components/blocks/RelationshipBlockEditor.tsx`,
@@ -5885,6 +5980,8 @@ central) » (ordinateur et téléphone). **Départ** :
 
 **Modèle conseillé : Sonnet** — planche définitive ; un champ ajouté côté service.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Psy-Decide.dc.html`, section « Réseau — B » (ordinateur et
 téléphone). **Départ** : `components/entities/psyche/RelationsGraphCanvas.tsx`
 (d3-force, à garder), `RelationsGraphNodeCard.tsx`,
@@ -5926,6 +6023,8 @@ téléphone). **Départ** : `components/entities/psyche/RelationsGraphCanvas.tsx
 
 **Modèle conseillé : Sonnet** — planche définitive ; les dates attendent V3.1-74.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Psy-Decide.dc.html`, section « Généalogie — B » (ordinateur
 et téléphone). **Départ** : `components/blocks/GenealogyBlockEditor.tsx`,
 `components/entities/genealogy/FamilyTreeCanvas.tsx`, `FamilyTreeCard.tsx`,
@@ -5966,6 +6065,8 @@ et téléphone). **Départ** : `components/blocks/GenealogyBlockEditor.tsx`,
 
 **Modèle conseillé : Opus** — donnée nouvelle, ADR, `SCHEMA.md`.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Départ** : V3.1-48 (la naissance d'un personnage devient une `GameDate`
 dans le bloc `character`), `src/core/schemas/blocks/character.ts`,
 `src/core/calendar/`, `src/server/services/genealogy.ts`. **Dépend de** :
@@ -5991,6 +6092,8 @@ requête groupée**, remplissage de la ligne prévue en V3.1-73.
 ### ☐ V3.1-75 — Table aléatoire (A) et le dé animé · `M` — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; route de tirage existante.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Outils-Decide.dc.html`, section « Table aléatoire — A ».
 **Départ** : `components/blocks/RandomTableBlockEditor.tsx`,
@@ -6034,6 +6137,8 @@ dés de V3.1-33**. **Dépend de** : 63, 33.
 
 **Modèle conseillé : Sonnet** — petit, tout décidé.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Outils-Decide.dc.html`, section « Quête — C ». **Départ** :
 `components/blocks/QuestBlockEditor.tsx`, `src/core/schemas/blocks/quest.ts`.
 **Dépend de** : 63.
@@ -6060,6 +6165,8 @@ dés de V3.1-33**. **Dépend de** : 63, 33.
 ### ☐ V3.1-77 — Musique (A) : la platine, les bornes, la durée des fondus · `M` — **prêt**
 
 **Modèle conseillé : Sonnet** — tous les champs existent (ADR 0022).
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Outils-Decide.dc.html`, section « Musique — A » (ouvrir
 « ⋯ » sur une piste). **Départ** : `components/blocks/MusicBlockEditor.tsx`,
@@ -6103,6 +6210,8 @@ dés de V3.1-33**. **Dépend de** : 63, 33.
 
 **Modèle conseillé : Sonnet** — modèle et services existants (ADR 0017).
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Outils-Decide.dc.html`, section « Carte — C ». **Départ** :
 `components/blocks/MapBlockEditor.tsx`, `components/entities/map/`
 (`MapCanvas`, `MapPinMarker`, `MapLayersPanel`, `MapRefPanel`),
@@ -6143,6 +6252,8 @@ dés de V3.1-33**. **Dépend de** : 63, 33.
 ### ☐ V3.1-79 — Fiche de créature (A) : la fiche de personnage, pour une créature · `L` — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; composants de la fiche réutilisés ; règle de l'état de jeu tranchée ci-dessous.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Creature-Decide.dc.html` (ordinateur et téléphone), et pour
 les composants d'origine la zone « Fiche de personnage » (« Décidé · fiche
@@ -6275,6 +6386,8 @@ puis 85 → 86, 87 → 88.
 
 **Modèle conseillé : Sonnet.**
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Compte-Decide.dc.html`. **Départ** :
 `components/shell/HomeProfilePanel.tsx` (et `DisplayNameForm`,
 `PasswordForm`, `MyInvitePanel.tsx`, `DeleteAccountSection.tsx`),
@@ -6336,6 +6449,8 @@ puis 85 → 86, 87 → 88.
 
 **Modèle conseillé : Sonnet.**
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Compte-Decide.dc.html`, section Apparence ;
 `Perso-Decide.dc.html` (la Personnalisation décidée). **Départ** :
 `components/shell/PersonnalisationPanel.tsx`. **Dépend de** : 80.
@@ -6365,6 +6480,8 @@ puis 85 → 86, 87 → 88.
 ### ☐ V3.1-82 — Choix du personnage (C2) : le carrousel · `M` — **prêt**
 
 **Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Choix-Decide.dc.html`. **Départ** :
 `app/m/[worldSlug]/joueur/ChooseCharacterScreen.tsx`,
@@ -6418,6 +6535,8 @@ puis 85 → 86, 87 → 88.
 
 **Modèle conseillé : Sonnet.**
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Choix-Decide.dc.html` (Mirelle Vantor, 3ᵉ carte).
 **Départ** : `components/shell/ParticipantCharacterSheet.tsx` (`wizardOpen`,
 « Aucune fiche de personnage pour cette entrée »),
@@ -6445,6 +6564,8 @@ puis 85 → 86, 87 → 88.
 
 **Modèle conseillé : Opus** — changement de schéma, RLS lue avant
 connexion, téléversement.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Ce qui est décidé (auteur, 9 octobre)** : la marque par défaut est
 **« Antre Nous »**, phrase **« Le repaire de ta table. »**, logo **d20**
@@ -6478,6 +6599,8 @@ script).
 ### ☐ V3.1-85 — Écran-titre (C) : connexion, création, mot de passe oublié · `M` — **prêt**
 
 **Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Entree-Decide.dc.html`. **Départ** : `app/login/page.tsx`,
 `app/login/actions.ts`, `app/auth/forgot-password/`. **Dépend de** : 84.
@@ -6525,6 +6648,8 @@ script).
 
 **Modèle conseillé : Sonnet.**
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planches** : `Entree-Decide.dc.html`, `Admin-Decide.dc.html` (tête du
 rail). **Départ** : `app/layout.tsx` (`metadata.title`),
 `app/rejoindre/[token]/` (`InvitePasswordGate`, `JoinForm`),
@@ -6554,6 +6679,8 @@ rail). **Départ** : `app/layout.tsx` (`metadata.title`),
 ### ☐ V3.1-87 — Administration (B) : le tableau de bord · `M` — **prêt**
 
 **Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Admin-Decide.dc.html`. **Départ** :
 `components/shell/AdminPanel.tsx` (`InviteAdminRow`, `AccountAdminRow`),
@@ -6605,6 +6732,8 @@ de** : V3.1-35 (« Administration » dans le rail, superadmin seulement).
 
 **Modèle conseillé : Sonnet.**
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planches** : `Entree-Decide.dc.html` (panneau de droite),
 `Admin-Decide.dc.html` (tuile Identité). **Dépend de** : 84, 87.
 
@@ -6629,6 +6758,8 @@ de** : V3.1-35 (« Administration » dans le rail, superadmin seulement).
 
 **Modèle conseillé : Opus** — parcours d'adhésion, une colonne nouvelle,
 une réservation à faire respecter côté serveur.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Décision de l'auteur (9 octobre)**
 - **Rejoindre une table ne demande plus de choisir un PJ.** L'écran
@@ -6705,6 +6836,8 @@ Les règles de lecture des tickets du 9 octobre (plus haut) valent ici.
 **Modèle conseillé : Opus** — changement de schéma, quatre chemins
 d'écriture, RLS d'une table temps réel.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Le problème** : `dice_rolls` ne dit pas **qui** a lancé (seulement
 `rolled_by` : player, gm, ai, system) ni **pour quel personnage** ; `who`
 est un nom affiché, instable (renommage, homonymes). Et avec avantage ou
@@ -6769,6 +6902,8 @@ désavantage, la trace porte les deux d20 sans dire lequel est gardé.
 **Modèle conseillé : Sonnet** — logique pure, **tests d'abord**
 (`npm run test:core`).
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Fichier** : `src/core/stats/playerStats.ts` (+ `playerStats.test.ts`).
 Rien de `next`, `react`, `@supabase` (règle 19). **Dépend de** : la forme
 des données de V3.1-89.
@@ -6829,6 +6964,8 @@ des données de V3.1-89.
 
 **Modèle conseillé : Sonnet.**
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Stats-Decide.dc.html` (ordinateur et téléphone).
 **Départ** : `components/shell/DiceStatsPanel.tsx`, `HomeScreen.tsx`, le
 volet de droite de l'accueil (`Accueil-3-Tableau.dc.html`, V3.1-35).
@@ -6885,6 +7022,8 @@ volet de droite de l'accueil (`Accueil-3-Tableau.dc.html`, V3.1-35).
 ### ☐ V3.1-92 — Administration › Titres des joueurs : l'éditeur · `M` — **prêt**
 
 **Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Admin-Decide.dc.html`, cinquième tuile « Titres des
 joueurs » (vivante : familles, paliers, icônes, couleurs, valeur d'essai).
@@ -6963,6 +7102,8 @@ exemples.
 
 **Modèle conseillé : Sonnet.**
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Regles-Ordi-Decide.dc.html`, vue MJ. **Départ** :
 `components/rules/RulesSidebar.tsx` (la barre de 280 px hors fenêtre),
 `src/server/services/rules.ts` (liste lue à la demande, V2-G1).
@@ -6990,6 +7131,8 @@ exemples.
 ### ☐ V3.1-94 — Règles : la règle au centre, renvois en volet, onglets · `L` — **prêt**
 
 **Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Regles-Ordi-Decide.dc.html`, vue MJ. **Départ** :
 `components/rules/RuleEntryView.tsx`, `RuleRefsPanel.tsx`,
@@ -7020,6 +7163,8 @@ exemples.
 
 **Modèle conseillé : Sonnet.**
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Regles-Ordi-Decide.dc.html`, vues « fenêtre étroite » et
 « joueur ». **Départ** : la page joueur des règles
 (`app/m/[worldSlug]/joueur/regles/page.tsx`, `PlayerRulesSidebar.tsx`).
@@ -7044,6 +7189,8 @@ exemples.
 
 **Modèle conseillé : Opus** — forme d'une donnée de bloc, une fiche
 système, une agrégation filtrée côté serveur.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Départ** : `src/core/schemas/blocks/timeline.ts`,
 `src/server/services/timeline.ts` (`getWorldTimeline`), la route
@@ -7081,6 +7228,8 @@ système, une agrégation filtrée côté serveur.
 
 **Modèle conseillé : Sonnet** — logique pure, **tests d'abord**.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Fichier** : `src/core/timeline/view.ts` (+ tests). Rien de `react`,
 `next`, `@supabase`. **Dépend de** : la forme des entrées de V3.1-96.
 
@@ -7117,6 +7266,8 @@ système, une agrégation filtrée côté serveur.
 ### ☐ V3.1-98 — Chronologie : la frise du MJ · `L` — **prêt**
 
 **Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **Planche** : `Chrono-B-Horizontale.dc.html`, vue MJ. **Départ** :
 `app/m/[worldSlug]/(monde)/chronologie/page.tsx`,
@@ -7165,6 +7316,8 @@ système, une agrégation filtrée côté serveur.
 
 **Modèle conseillé : Sonnet.**
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 **Planche** : `Chrono-B-Horizontale.dc.html`, vue joueur. **Dépend de** :
 98, 27 (rail du joueur).
 
@@ -7207,6 +7360,8 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 **Modèle conseillé : Opus** — RLS et sécurité. **ADR 0040.**
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 - Migration nouvelle : `combats` lisible des membres, écrit par
   `app.is_world_admin(app.campaign_world_id(campaign_id))` ;
   `combat_participants` lu et écrit par `app.is_world_admin(app.combat_world_id(combat_id))`.
@@ -7226,6 +7381,8 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 ### ☐ V3.1-102 — Initiative : la vue filtrée des joueurs · `M` — **prêt (Opus)**
 
 **Modèle conseillé : Opus.** **ADR 0040.** **Dépend de** : 101.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 - Fonction `app.combat_player_view(p_combat uuid)` (`security definer`,
   `row_security = off`), vérifie que l'appelant est membre de la campagne ;
@@ -7248,6 +7405,8 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 **Modèle conseillé : Opus** — changement de schéma. **ADR 0040.**
 **Dépend de** : 101.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 - Migration : `combats.status` accepte `rolling` (« jets d'initiative »)
   entre `draft` et `running` ; `docs/SCHEMA.md`.
 - Fonction `app.set_own_initiative(p_participant uuid, p_value int)` : seul
@@ -7268,6 +7427,8 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 ### ☐ V3.1-104 — Écritures du moteur au nom d'un joueur : changements signés · `M` — **prêt (Opus) — ADR 0041, option B**
 
 **Modèle conseillé : Opus** — sécurité, base, cryptographie. **Dépend de** : 105.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 **À faire**
 1. **Migration.**
@@ -7298,6 +7459,8 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 **Modèle conseillé : Opus** — extraction du tour solo, moteur. **ADR 0042.**
 **Dépend de** : 101.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 - `src/server/services/targetedRoll.ts` : `resolveTargetedRoll` (entrée
   Zod de l'ADR) — lit la cible dans le combat `running`, lance (serveur),
   résout (`resolveAttackRoll`, `resolveDamageRoll`, sauvegarde contre DD
@@ -7322,6 +7485,8 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 105, 33 (outil de dés), 34, 38.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 - « Cibler » s'allume dans l'outil de dés **pour le MJ** quand une
   initiative est `running` : liste des participants (alliés pour un soin),
   cible retenue affichée ; grisé hors initiative ou pour un jet sans cible.
@@ -7344,6 +7509,8 @@ pas.
 ### ☐ V3.1-108 — Droits des joueurs : la base ferme, le serveur règle · `M` — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — RLS et schéma. **ADR 0043.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 - Migration : `campaigns.table_settings jsonb not null default '{}'` ;
   `docs/SCHEMA.md` ; `zCampaignTableSettings` (défauts : `inspiration_max`
@@ -7369,6 +7536,8 @@ pas.
 **Modèle conseillé : Sonnet.** **Dépend de** : 108, 26, 32. L'écran
 Règles actives est V3.1-57.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 - Partout où la joueuse voit sa fiche (ordinateur, tablette, téléphone) :
   interrupteur coupé → la valeur se voit, sans commande (« + état » absent,
   ▲▼ de l'inspiration, des PV, des pièces absents, colonnes « niv. » de
@@ -7383,6 +7552,8 @@ Règles actives est V3.1-57.
 ### ☐ V3.1-110 — Sauvegardes : la restriction de cible (noyau) · `S` — **prêt**
 
 **Modèle conseillé : Sonnet** — noyau pur, tests d'abord. **ADR 0044.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 - `zEffectData` gagne `target?: { creature_types?, exclude_creature_types?,
   immune_conditions_block? }` (Zod) ; `isValidTarget(effect, target)` dans
@@ -7399,6 +7570,8 @@ Règles actives est V3.1-57.
 
 **Modèle conseillé : Opus** — table nouvelle, RLS. **ADR 0044.**
 **Dépend de** : 105, 110.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 - Migration : table `save_requests` (champs de l'ADR), RLS (lecture :
   auteur, cible, MJ ; réponse par `app.answer_save_request`) ;
@@ -7418,6 +7591,8 @@ Règles actives est V3.1-57.
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 111, 33, 34, 38.
 
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 - La cible reçoit un **bandeau au premier plan** : « Résiste à Moquerie
   cruelle · JS Sagesse DD 13 » — « Lancer », « J'ai un vrai dé »
   (interrupteur « modificateur inclus »), « Laisser le MJ saisir ».
@@ -7433,6 +7608,8 @@ Règles actives est V3.1-57.
 
 **Modèle conseillé : Opus** — moteur, tests d'abord. **ADR 0045.**
 **Dépend de** : 115 (pour la table du multiclassé dans `character_rules`).
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 - `recharge: "short_rest_one"` (bloc Ressources, version relevée) ;
   `spellcasting.kind` `slots` | `pact` et `pactSlots` ; `casterWeight` ;
@@ -7453,6 +7630,8 @@ Règles actives est V3.1-57.
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 113, 24, 26.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 - `takeShortRest` rend les emplacements de pacte et une utilisation des
   `short_rest_one` ; `takeLongRest` rend tout.
 - L'égaliseur (planche « Décidé · emplacements et ressources de classe »)
@@ -7466,6 +7645,8 @@ Règles actives est V3.1-57.
 
 **Modèle conseillé : Opus** — structure de règles, héritage, import.
 **ADR 0046.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 - Bloc typé `zCharacterRules` (champs de l'ADR) ; une fiche
   `character_rules` par ruleset, héritée et surchargée champ par champ comme
@@ -7489,6 +7670,8 @@ Règles actives est V3.1-57.
 **Modèle conseillé : Opus** — cœur du moteur. **ADR 0046.**
 **Dépend de** : 115.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 - `zChoiceGrant` (champs de l'ADR), accepté dans la progression d'une
   classe ou sous-classe, un trait d'espèce, un historique, un don.
 - `resolvedRuleset` collecte tous les choix accessibles et rend
@@ -7510,6 +7693,8 @@ Règles actives est V3.1-57.
 
 **Modèle conseillé : Opus.** **ADR 0046.** **Dépend de** : 116.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 - `CreationSelection.classes[].subclass` ; la sous-classe rejoint le lot
   résolu ; `zSubclassFeatureEntry` accepte modificateurs, sorts toujours
   préparés et `zChoiceGrant`.
@@ -7526,6 +7711,8 @@ Règles actives est V3.1-57.
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 116, 117, 49, 50, 51.
 
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
 - Chaque `RemainingChoice` s'affiche à l'étape de sa source (Origines,
   Historique, Classe, montée de niveau), avec le sélecteur de son genre :
   compétences, langues, outils, maîtrises d'armes, dons (filtrés), sorts
@@ -7540,6 +7727,8 @@ Règles actives est V3.1-57.
 ### ☐ V3.1-119 — Les choix rouverts au repos · `M` — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 116, 117, 24 (repos), V3.1-5.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
 - Un repos qui rouvre un choix (`refresh`) émet son événement ; la fiche
   propose « Choisir à nouveau : Résilience fiélonne » (feuille du bas au

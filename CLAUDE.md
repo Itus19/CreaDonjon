@@ -29,7 +29,7 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 | `docs/catalogue/` | Catalogue d'interface : chaque élément, ses états, ses animations (index au §9 de la charte) | Avant de créer ou modifier un élément d'interface |
 | `docs/BACKLOG_V2.md` | Tickets en cours | Au début de chaque tâche |
 | `docs/BACKLOG_V3.md` | Tickets du mode solo (moteur, boucle de tour, écriture du monde, écran) | Tickets V3 |
-| `docs/BACKLOG_V3.1.md` | Rugosités trouvées en jouant, **et la refonte « verre minéral »** (V3.1-19 à 99) ; feuille de route et ordre recommandé en tête | Avant tout ticket qui répare un détail, et avant tout ticket de la refonte |
+| `docs/BACKLOG_V3.1.md` | Rugosités trouvées en jouant, **et la refonte « verre minéral »** (V3.1-19 à 119) ; feuille de route et ordre recommandé en tête ; chaque ticket prêt dit son modèle et ses sous-tâches Haiku | Avant tout ticket qui répare un détail, et avant tout ticket de la refonte |
 | `docs/PDD.md` | Source de vérité fonctionnelle | Avant toute décision produit |
 | `docs/adr/` | Décisions d'architecture et leurs raisons | Avant de « corriger » quelque chose qui semble étrange |
 | `specs/regles-couche.md` | Fiches de règles, renvois, surcharge, contrat moteur/IA | Tickets règles |
@@ -138,6 +138,15 @@ Une fiche créée ainsi appartient à un ruleset `personal_reference`, jamais à
 **Avant de dire qu'une tâche est terminée :** `npm run typecheck && npm run lint && npm run test` passent. Sinon la tâche n'est pas terminée.
 
 **Commits :** petits, en français, à l'impératif. `feat: ajoute la table des déclencheurs`, `fix: corrige la récursion RLS sur campaign_members`.
+
+## Répartition par modèle
+
+L'auteur lance la session principale avec **Opus**, qui orchestre. **Autorisation durable** : Opus délègue de lui-même, sans qu'on le lui demande, aux sous-agents du projet (`.claude/agents/`).
+
+- **Opus garde** la conception, les ADR, la sécurité, la RLS, les migrations, le noyau du moteur, l'IA, et les tickets marqués « Modèle conseillé : Opus ». Il relit **chaque diff** délégué avant de commiter. Ce qui est délégué reste sous sa responsabilité.
+- **`dev-sonnet`** code un ticket marqué « Sonnet » de bout en bout, d'après sa spécification, une fois le plan annoncé. Il ne commite pas.
+- **`aide-haiku`** fait les gestes mécaniques listés sous « Sous-tâches Haiku » dans chaque ticket : vérifications et résumé des échecs, libellés, planche du catalogue, recensement d'usages.
+- **Ne pas déléguer** ce qui tient en quelques lignes, ni ce qui exige le contexte déjà chargé : un sous-agent repart de zéro, et le relancer coûte plus cher que le faire.
 
 ## Quand t'arrêter et demander
 
