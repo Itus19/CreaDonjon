@@ -65,7 +65,9 @@ npx vitest run src/server/services/<ticket>Rls.integration.test.ts
 - **Sans clé publique dans la session cloud** (`NEXT_PUBLIC_SUPABASE_ANON_KEY` absente), Claude passe la clé service comme simple clé d'API, pour ces fichiers seulement : `NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_SERVICE_ROLE_KEY" npx vitest run <fichier>`. Chaque client de ces tests se connecte avec un compte, et c'est la session de ce compte qui fixe ses droits. Une erreur ne peut que faire échouer un refus attendu, jamais le faire passer à tort. Jamais pour toute la suite : d'autres tests utilisent un client non connecté.
 - **Après le test**, Claude vérifie qu'aucun monde de test n'est resté.
 - Un échec sur un test de droits veut d'abord dire « migration pas appliquée » : Claude le dit, et l'état du registre (`SECURITE.md` §3) reste *en attente*.
-- **L'interface** (affichage, clics, mode sombre) reste à l'auteur, sur le Banc d'essai (§3, §4).
+- **L'interface** se vérifie dans une **session de vérification** : une session cloud lancée par Claude, qui démarre l'application et la pilote avec Chromium (Playwright) sur le Banc d'essai, avec les trois comptes du §3. Elle exige `NEXT_PUBLIC_SUPABASE_ANON_KEY` dans l'environnement (jamais remplacée par la clé service). Le mode sombre et le téléphone restent à l'auteur.
+
+**Le compte rendu d'une session de vérification.** La session principale ne lit pas le fil d'une autre session, seulement son résumé. Toute session de vérification écrit donc son compte rendu dans `docs/verifications/AAAA-MM-JJ-<ticket>.md` et le pousse sur une branche à part, `claude/verif-<ticket>`, **jamais sur master**. Elle ne touche à aucun autre fichier. La session principale le lit (`git fetch origin claude/verif-<ticket>`), en tire les conclusions (backlog, registre de `SECURITE.md`), puis supprime la branche. Le compte rendu dit, pour chaque geste : OK, ou l'erreur exacte (route, code HTTP, message, capture) ; et si un échec vient de l'application ou du pilotage du navigateur.
 
 ## 5. Le ménage des comptes
 
