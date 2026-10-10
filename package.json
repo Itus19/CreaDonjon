@@ -16,6 +16,7 @@
     "seed:dev": "tsx --env-file=.env.local scripts/seed-dev.ts",
     "test:comptes-manuels": "tsx --conditions=react-server --env-file=.env.local scripts/comptes-test-manuels.ts",
     "audit:comptes": "tsx --env-file=.env.local scripts/audit-comptes.ts",
+    "supprimer:comptes-jetables": "tsx --env-file=.env.local scripts/supprimer-comptes-jetables.ts",
     "translate:srd-official": "tsx --env-file=.env.local scripts/translate-srd-official.ts",
     "translate:entries": "tsx --env-file=.env.local scripts/translate-entries.ts",
     "translate:spell-descriptions": "tsx --env-file=.env.local scripts/translate-spell-descriptions-fr.ts",

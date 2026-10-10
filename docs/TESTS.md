@@ -64,4 +64,6 @@ Suivre la ligne de la zone touchée. Chaque étape doit marcher **et** ne rien a
 - les comptes « tag » sans campagne (à examiner) ;
 - les comptes actifs.
 
+Les anciens comptes jetables (`@creadonjon.local`, hors groupe des tests et comptes de démo) se suppriment avec `npm run supprimer:comptes-jetables` : liste d'abord, suppression seulement avec `-- --confirmer` ; un compte superadmin ou propriétaire d'un monde est gardé et signalé.
+
 L'email d'un compte ordinaire n'est jamais affiché. **La suppression reste un geste de l'auteur** (Administration › Comptes), ou de Claude sur une liste d'identifiants validée par l'auteur. Un script ne peut pas distinguer un compte « tag » de test d'un compte de joueuse.
