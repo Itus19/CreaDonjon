@@ -21,7 +21,7 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 ---
 
-### ☐ V3.1-101 — Initiative : la base et les routes réservées au MJ · `S` — **prêt (Opus) — à faire en premier**
+### ☐ V3.1-101 — Initiative : la base et les routes réservées au MJ · `S` — **codé le 10 octobre ; reste à appliquer la migration et à vérifier en direct**
 
 **Modèle conseillé : Opus** — RLS et sécurité. **ADR 0040.**
 
@@ -42,6 +42,15 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
   `combat_participants` et n'écrit ni `combats` ni `combat_participants`.
 - [ ] Chaque route de combat répond 403 à un joueur (test de route).
 - [ ] Le solo et l'outil Initiative du MJ marchent comme avant.
+- [ ] À faire par l'auteur : appliquer la migration `20261010120000_combats_gm_only` (`supabase db push`), puis relancer les tests d'intégration avec `NEXT_PUBLIC_SUPABASE_ANON_KEY` défini.
+
+**Codé le 10 octobre.**
+- **Base** : migration `20261010120000_combats_gm_only`. `combats` reste lisible des membres et n'est plus écrit que par un administrateur du monde ; `combat_participants` est lu et écrit par l'administrateur seulement.
+- **Routes** : les dix routes de `app/api/campaigns/[campaignId]/combats/**` passent par une porte commune, `guardCombatRoute` (`lib/combats/routeGuard.ts`). Elle valide l'adresse par Zod (règle 4, ce qui manquait partout), exige une session (trois lectures n'en demandaient pas) et le droit MJ, puis vérifie que le combat appartient à la campagne de l'adresse et le participant au combat. Elle répond 400, 401, 403 ou 404 avant toute lecture ou écriture.
+- **Décision** : la règle pure `decideCombatAccess` (`src/core/permissions/combatAccess.ts`, 6 tests) refuse un joueur avant de lui dire si un combat existe. Les faits sont rassemblés par `checkCombatAccess` (`services/combats.ts`).
+- **Solo** : inchangé. Le joueur y est propriétaire du monde, donc administrateur ; `turnLoop`, `turnIntent`, `soloScene` et `combatTriggers` ne sont pas touchés.
+- **Tests** : `combatsRls.integration.test.ts`. Un joueur voit le combat mais aucun participant, et n'écrit rien ; le MJ lit et écrit ; la porte rend le même verdict. Ce test n'a pas tourné ici : la base n'est pas joignable avec la clé publique, et la migration n'est pas encore appliquée.
+- Typecheck et lint verts. `npm run test` : 1405 tests passent ; 3 échecs et 14 fichiers en erreur **préexistants**, identiques sans ce ticket. Cette session voit l'URL et la clé service de Supabase mais pas la clé publique : des tests d'intégration démarrent puis échouent à connecter leurs comptes.
 
 ---
 

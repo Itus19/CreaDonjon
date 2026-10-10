@@ -37,6 +37,9 @@ import { getEntityById } from "@/src/server/repos/entities";
 import { putRuntimeState } from "@/src/server/repos/runtimeState";
 import { nextEventSeq, insertSessionEvent } from "@/src/server/repos/sessions";
 import { getCampaign } from "@/src/server/services/campaigns";
+import { getCampaignById } from "@/src/server/repos/campaigns";
+import { isWorldAdmin } from "@/src/server/services/permissions";
+import { decideCombatAccess, type CombatAccess } from "@/src/core/permissions/combatAccess";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { resolveCharacterActionContext } from "@/src/server/services/characterActions";
@@ -617,3 +620,30 @@ export async function getCombatDetail(supabase: TypedClient, combatId: string): 
 }
 
 export { getActiveCombatForCampaign, getCombatById, listCombatParticipants, listCombatsForCampaign };
+
+/**
+ * V3.1-101 (ADR 0040) — rassemble ce que `decideCombatAccess` doit savoir
+ * pour une route de combat : la campagne de l'adresse, le droit MJ de
+ * l'appelant sur son monde, et l'appartenance du combat / du participant.
+ * Defense en profondeur : la RLS refuse deja les joueurs, la route refuse
+ * avant toute lecture ou ecriture.
+ */
+export async function checkCombatAccess(
+  supabase: TypedClient,
+  params: { userId: string; campaignId: string; combatId?: string; participantId?: string }
+): Promise<CombatAccess> {
+  const campaign = await getCampaignById(supabase, params.campaignId);
+  const callerIsWorldAdmin = campaign ? await isWorldAdmin(supabase, { worldId: campaign.world_id, userId: params.userId }) : false;
+  if (!campaign || !callerIsWorldAdmin) {
+    return decideCombatAccess({ campaignId: params.campaignId, campaignFound: Boolean(campaign), callerIsWorldAdmin });
+  }
+  const combatRow = params.combatId ? await getCombatById(supabase, params.combatId) : undefined;
+  const participantRow = params.participantId ? await getCombatParticipantById(supabase, params.participantId) : undefined;
+  return decideCombatAccess({
+    campaignId: params.campaignId,
+    campaignFound: true,
+    callerIsWorldAdmin,
+    combat: combatRow === undefined ? undefined : combatRow && { id: combatRow.id, campaignId: combatRow.campaign_id },
+    participant: participantRow === undefined ? undefined : participantRow && { combatId: participantRow.combat_id },
+  });
+}

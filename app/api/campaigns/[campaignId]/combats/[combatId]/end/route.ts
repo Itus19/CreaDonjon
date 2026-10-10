@@ -1,21 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { guardCombatRoute } from "@/lib/combats/routeGuard";
 import { endCombat } from "@/src/server/services/combats";
 
-export async function POST(_request: NextRequest, { params }: { params: Promise<{ combatId: string }> }) {
-  const { combatId } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
-  }
+/** Termine le combat. MJ seulement (V3.1-101). */
+export async function POST(_request: NextRequest, { params }: { params: Promise<{ campaignId: string; combatId: string }> }) {
+  const guard = await guardCombatRoute(params);
+  if (!guard.ok) return guard.response;
 
   try {
-    const combat = await endCombat(supabase, { combatId, actorUserId: user.id });
+    const combat = await endCombat(guard.supabase, { combatId: guard.params.combatId!, actorUserId: guard.userId });
     return NextResponse.json(combat, { status: 200 });
-  } catch {
+  } catch (error) {
+    // L'acces est deja verifie : un echec ici est une erreur reelle, journalisee.
+    console.error("Fin de combat en echec :", error);
     return NextResponse.json({ error: "Combat introuvable." }, { status: 404 });
   }
 }

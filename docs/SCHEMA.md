@@ -732,6 +732,18 @@ create table availability_requests (
 
 RLS sur les trois tables, même motif que `combats` : lecture ouverte à tout membre du monde (`app.is_world_member`), écriture réservée au MJ (`app.is_world_admin`) sauf `real_session_availabilities` où chaque joueuse n'écrit que sa propre ligne.
 
+
+### Combats : `combats` et `combat_participants` (V1-E4, V3.1-101)
+
+Un combat appartient à une campagne (`combats.campaign_id`). Il a un nom, un `status` (`draft`, `running` ou `ended`), un `round` et un `turn_index`. Ses participants sont les lignes de `combat_participants` : un PJ ou un PNJ (`entity_id`), un monstre du ruleset (`rule_key`) ou une saisie libre. Chaque participant porte son initiative, sa CA, ses PV (`hp_current`, `hp_max`, `temp_hp`), ses états, sa concentration, et `is_ally`.
+
+**RLS (ADR 0040, migration `20261010120000_combats_gm_only`).**
+- `combats` est **lisible de tout membre du monde** : statut, round et tour n'ont rien de secret, et c'est le signal temps réel des écrans joueurs.
+- `combats` ne **s'écrit que par un administrateur du monde** (`app.is_world_admin` : propriétaire, éditeur ou MJ d'une campagne du monde).
+- `combat_participants` se **lit et s'écrit par l'administrateur seulement** (`app.combat_world_id`). Les PV et la CA des adversaires n'arrivent jamais à un joueur ; sa vue filtrée passera par une fonction dédiée (V3.1-102).
+- Les routes `/api/campaigns/[id]/combats/**` vérifient la même chose avant toute lecture ou écriture (`guardCombatRoute`).
+- En solo, le joueur est propriétaire du monde, donc administrateur : rien ne change pour lui.
+
 ---
 
 ## 12. Sessions et journal d'événements

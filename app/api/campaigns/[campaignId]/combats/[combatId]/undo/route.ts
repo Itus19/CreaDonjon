@@ -1,19 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { guardCombatRoute } from "@/lib/combats/routeGuard";
 import { undoLastCombatAction } from "@/src/server/services/combats";
 
-/** "Annuler la derniere action" (Ctrl+Z, specs/outils-mj.md §5.3). */
-export async function POST(_request: NextRequest, { params }: { params: Promise<{ combatId: string }> }) {
-  const { combatId } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
-  }
+/** "Annuler la derniere action" (Ctrl+Z, specs/outils-mj.md §5.3). MJ seulement (V3.1-101). */
+export async function POST(_request: NextRequest, { params }: { params: Promise<{ campaignId: string; combatId: string }> }) {
+  const guard = await guardCombatRoute(params);
+  if (!guard.ok) return guard.response;
 
-  const undone = await undoLastCombatAction(supabase, combatId, user.id);
+  const undone = await undoLastCombatAction(guard.supabase, guard.params.combatId!, guard.userId);
   if (!undone) {
     return NextResponse.json({ error: "Rien à annuler." }, { status: 400 });
   }

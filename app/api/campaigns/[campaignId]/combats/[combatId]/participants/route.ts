@@ -1,26 +1,22 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
-import { createClient } from "@/lib/supabase/server";
+import { guardCombatRoute } from "@/lib/combats/routeGuard";
 import { addParticipantSchema } from "@/lib/combats/schemas";
 import { addCustomParticipant, addEntityParticipant, addStatblockParticipant } from "@/src/server/services/combats";
 import type { Locale } from "@/src/i18n/request";
 
-/** "+ Ajouter" (V1-E4) — un PJ/PNJ nomme, un monstre du ruleset, ou une saisie libre (specs/outils-mj.md §5.1). */
+/** "+ Ajouter" (V1-E4) — un PJ/PNJ nomme, un monstre du ruleset, ou une saisie libre (specs/outils-mj.md §5.1). MJ seulement (V3.1-101). */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ campaignId: string; combatId: string }> }) {
-  const { campaignId, combatId } = await params;
+  const guard = await guardCombatRoute(params);
+  if (!guard.ok) return guard.response;
+  const { supabase } = guard;
+  const { campaignId } = guard.params;
+  const combatId = guard.params.combatId!;
 
   const body = await request.json().catch(() => null);
   const parsed = addParticipantSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Corps invalide." }, { status: 400 });
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
   if (parsed.data.sourceKind === "entity") {
