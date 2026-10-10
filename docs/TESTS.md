@@ -67,3 +67,11 @@ Suivre la ligne de la zone touchée. Chaque étape doit marcher **et** ne rien a
 Les anciens comptes jetables (`@creadonjon.local`, hors groupe des tests et comptes de démo) se suppriment avec `npm run supprimer:comptes-jetables` : liste d'abord, suppression seulement avec `-- --confirmer` ; un compte superadmin ou propriétaire d'un monde est gardé et signalé.
 
 L'email d'un compte ordinaire n'est jamais affiché. **La suppression reste un geste de l'auteur** (Administration › Comptes), ou de Claude sur une liste d'identifiants validée par l'auteur. Un script ne peut pas distinguer un compte « tag » de test d'un compte de joueuse.
+
+**Ménage du 10 octobre.** 69 comptes → 15.
+- Supprimés :
+  - les anciens comptes jetables `@creadonjon.local`, avec leurs mondes de test ;
+  - les comptes de test passés par des liens d'invitation (« Claude… », « Concurrent », « test », « Compte ») ;
+  - les doublons d'invitation jamais connectés et sans campagne.
+- Fait en SQL dans l'éditeur Supabase, en un seul bloc « tout ou rien ». Les traces facultatives (journal d'IA, auteur d'un bloc…) sont gardées sans auteur ; une trace obligatoire arrête tout et nomme la table.
+- Reste à examiner : le monde « ClaudeLand » (test), dont le propriétaire n'était pas visé.
