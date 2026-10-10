@@ -21,7 +21,7 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 ---
 
-### ☐ V3.1-101 — Initiative : la base et les routes réservées au MJ · `S` — **codé le 10 octobre ; reste à appliquer la migration et à vérifier en direct**
+### ☐ V3.1-101 — Initiative : la base et les routes réservées au MJ · `S` — **migration appliquée et vérifiée en base le 10 octobre (4/4) ; reste l'outil Initiative à vérifier à la main**
 
 **Modèle conseillé : Opus** — RLS et sécurité. **ADR 0040.**
 
@@ -38,11 +38,11 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
   `soloScene` — solo, où le joueur est propriétaire) ; le solo ne change pas.
 
 **Critères d'acceptation**
-- [ ] Test d'intégration RLS : un joueur ne lit aucune ligne de
+- [x] Test d'intégration RLS : un joueur ne lit aucune ligne de
   `combat_participants` et n'écrit ni `combats` ni `combat_participants`.
-- [ ] Chaque route de combat répond 403 à un joueur (test de route).
+- [x] Chaque route de combat répond 403 à un joueur (test de la porte `checkCombatAccess` sur la base, commune aux dix routes).
 - [ ] Le solo et l'outil Initiative du MJ marchent comme avant.
-- [ ] À faire par l'auteur : appliquer la migration `20261010120000_combats_gm_only` (`supabase db push`), puis relancer les tests d'intégration avec `NEXT_PUBLIC_SUPABASE_ANON_KEY` défini.
+- [x] À faire par l'auteur : appliquer la migration `20261010120000_combats_gm_only` (`supabase db push`), puis relancer les tests d'intégration avec `NEXT_PUBLIC_SUPABASE_ANON_KEY` défini.
 
 **Codé le 10 octobre.**
 - **Base** : migration `20261010120000_combats_gm_only`. `combats` reste lisible des membres et n'est plus écrit que par un administrateur du monde ; `combat_participants` est lu et écrit par l'administrateur seulement.

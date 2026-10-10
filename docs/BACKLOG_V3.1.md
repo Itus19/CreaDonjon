@@ -223,7 +223,7 @@ sa partie, et une ligne s'ajoute ici.
 | V3.1-98 | ☐ | Chronologie : la frise du MJ | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
 | V3.1-99 | ☐ | Chronologie : la page des joueurs | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
 | V3.1-100 | ☐ | Rejoindre sans choisir de PJ ; le lien qui vise un PJ précis | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-101 | ☐ | Initiative : la base et les routes réservées au MJ — codé, migration à appliquer | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-101 | ☐ | Initiative : la base et les routes réservées au MJ — vérifié en base, reste l'écran du MJ à la main | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-102 | ☐ | Initiative : la vue filtrée des joueurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-103 | ☐ | Initiative : les jets d'initiative des joueurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-104 | ☐ | Écritures du moteur au nom d'un joueur : changements signés | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
