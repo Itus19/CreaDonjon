@@ -38,6 +38,8 @@ Plan décidé (ne pas rediscuter) :
 Fichiers à toucher : <chemins>. À lire si besoin : <chemins précis, pas « le projet »>.
 Ne pas toucher : <chemins, ou « rien hors de ces fichiers »>.
 Arrête-toi et rends la question si : <cas prévisibles : schéma, sécurité, choix de design>.
+Sécurité : si le ticket touche une route, une action serveur, une migration ou un compte,
+coche la liste de docs/SECURITE.md §2 et dis dans le compte rendu ce que tu as coché.
 Rends : fichiers touchés ; critères cochés ou non (et pourquoi) ; à vérifier en direct ;
 hésitations. Court : pas de recopie du code.
 ```
@@ -56,7 +58,7 @@ Pour `aide-haiku`, **regroupe en une seule délégation** les sous-tâches Haiku
 Ce qui est délégué reste sous la responsabilité d'Opus.
 
 1. `git diff --stat`, puis le diff complet des fichiers sensibles : routes, services, `src/core`, tout ce qui touche à l'accès.
-2. Contrôle les **règles absolues** au vu du diff, sans faire confiance au compte rendu : Zod en entrée, requêtes seulement dans `repos/`, pas de `any`, pas de `catch` silencieux, libellés dans `messages/`, pas d'émoji.
+2. Contrôle les **règles absolues** et, pour une route, une migration ou un compte, la liste de `docs/SECURITE.md` §2, au vu du diff, sans faire confiance au compte rendu : Zod en entrée, requêtes seulement dans `repos/`, pas de `any`, pas de `catch` silencieux, libellés dans `messages/`, pas d'émoji.
 3. Relance toi-même `npm run typecheck && npm run lint && npm run test`, ou fais-les relancer par `aide-haiku` avec un résumé.
 4. Un défaut **local** se corrige directement ; un défaut **de fond** (mauvaise approche) repart au même agent avec la raison.
 5. Commit par Opus, message en français, avec la note de clôture du ticket.
