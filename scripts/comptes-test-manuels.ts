@@ -12,10 +12,17 @@
 // `createEntity`...), pas par des insertions a la main : il est exactement
 // ce que l'interface aurait produit. D'ou `--conditions=react-server` dans la
 // commande npm, qui laisse ces modules `server-only` se charger hors de Next.
+//
+// Ces services s'appellent EN TANT QUE l'utilisateur, comme dans l'app : la
+// base verifie qui agit (ex. `world_has_slug` exige d'etre membre du monde).
+// Le script se connecte donc comme Testeur MJ pour creer son monde ; la cle
+// service ne sert qu'a creer les comptes et a les retrouver.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../src/types/database";
 import { createWorldWithCampaign } from "../src/server/services/worlds";
+import { createCampaign } from "../src/server/services/campaigns";
+import { setWorldDefaultRuleset } from "../src/server/repos/worlds";
 import { createEntity } from "../src/server/services/entities";
 import { insertCampaignMember, listCampaignsForWorld, upsertCampaignCharacter } from "../src/server/repos/campaigns";
 
@@ -86,7 +93,7 @@ async function officialRuleset2024Id(): Promise<string> {
   return data.id;
 }
 
-async function ensureCharacter(params: { worldId: string; mjId: string; name: string }): Promise<string> {
+async function ensureCharacter(params: { client: SupabaseClient<Database>; worldId: string; mjId: string; name: string }): Promise<string> {
   const { data, error } = await admin
     .from("entities")
     .select("id")
@@ -95,14 +102,30 @@ async function ensureCharacter(params: { worldId: string; mjId: string; name: st
     .maybeSingle();
   if (error) throw new Error(`entities : ${error.message}`);
   if (data) return data.id;
-  const created = await createEntity(admin, { worldId: params.worldId, createdBy: params.mjId, name: params.name, entityKind: "character", aliases: [] });
+  const created = await createEntity(params.client, { worldId: params.worldId, createdBy: params.mjId, name: params.name, entityKind: "character", aliases: [] });
   return created.id;
+}
+
+/**
+ * Client connecte COMME un compte : la base voit son identite (auth.uid()) et
+ * applique ses droits, exactement comme quand il clique dans l'app. La cle
+ * publique si elle est definie, sinon la cle service comme simple cle d'API :
+ * c'est le jeton de session de l'utilisateur qui decide du role, pas elle.
+ */
+async function signedInAs(email: string): Promise<SupabaseClient<Database>> {
+  const client = createClient<Database>(SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? SERVICE_ROLE_KEY!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { error } = await client.auth.signInWithPassword({ email, password: PASSWORD! });
+  if (error) throw new Error(`connexion de ${email} : ${error.message}`);
+  return client;
 }
 
 async function main() {
   console.log("Comptes de test manuels — monde « Banc d'essai »\n");
   const ids: Record<string, string> = {};
   for (const account of ACCOUNTS) ids[account.key] = await ensureAccount(account);
+  const mj = await signedInAs(ACCOUNTS[0].email);
 
   const { data: existingWorld, error: worldError } = await admin
     .from("worlds")
@@ -119,22 +142,32 @@ async function main() {
     worldSlug = existingWorld.slug;
     console.log(`  Monde : existait (/m/${worldSlug}).`);
   } else {
-    const { world } = await createWorldWithCampaign(admin, { ownerId: ids.mj, name: WORLD_NAME, rulesetId: await officialRuleset2024Id(), mode: "campaign" });
+    const { world } = await createWorldWithCampaign(mj, { ownerId: ids.mj, name: WORLD_NAME, rulesetId: await officialRuleset2024Id(), mode: "campaign" });
     worldId = world.id;
     worldSlug = world.slug;
     console.log(`  Monde : cree (/m/${worldSlug}).`);
   }
 
-  const [campaign] = await listCampaignsForWorld(admin, worldId);
-  if (!campaign) throw new Error("Le monde « Banc d'essai » n'a pas de campagne : incoherence, a examiner a la main.");
+  let [campaign] = await listCampaignsForWorld(admin, worldId);
+  if (!campaign) {
+    // Reprise d'une creation interrompue (premier essai, fait sans identite) :
+    // le monde existe, sa campagne non. Meme fin de parcours que l'app.
+    const rulesetId = await officialRuleset2024Id();
+    await setWorldDefaultRuleset(mj, worldId, rulesetId);
+    const created = await createCampaign(mj, { worldId, createdBy: ids.mj, name: WORLD_NAME, rulesetId, mode: "campaign" });
+    if (created === "world_already_has_campaign") throw new Error("Campagne apparue entre-temps : relancer le script.");
+    [campaign] = await listCampaignsForWorld(admin, worldId);
+    if (!campaign) throw new Error("Campagne introuvable apres sa creation : a examiner a la main.");
+    console.log("  Campagne : reprise de la creation interrompue.");
+  }
 
   for (const key of ["a", "b"] as const) {
     const account = ACCOUNTS.find((a) => a.key === key)!;
-    await insertCampaignMember(admin, { campaignId: campaign.id, userId: ids[key], role: "player" });
+    await insertCampaignMember(mj, { campaignId: campaign.id, userId: ids[key], role: "player" });
     // Le PJ existe mais sans fiche : la premiere verification de l'assistant
     // de creation la remplit, puis elle reste d'une fois sur l'autre.
-    const entityId = await ensureCharacter({ worldId, mjId: ids.mj, name: `PJ de ${account.name}` });
-    await upsertCampaignCharacter(admin, { campaignId: campaign.id, entityId, userId: ids[key], isPc: true });
+    const entityId = await ensureCharacter({ client: mj, worldId, mjId: ids.mj, name: `PJ de ${account.name}` });
+    await upsertCampaignCharacter(mj, { campaignId: campaign.id, entityId, userId: ids[key], isPc: true });
   }
   console.log("  Campagne : Testeuse A et Testeur B joueurs, chacun avec son PJ.\n");
 
