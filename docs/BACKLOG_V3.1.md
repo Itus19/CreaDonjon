@@ -332,8 +332,8 @@ repos et en une seule écriture : `applyRestEffects`
 V3.1-108), les soins et la pose ou le retrait d'une condition. Tout autre
 effet, un déclencheur en échec ou rejeté, est consigné dans la note du
 changement. « Ingénieux » est une donnée : `resourceful` dans
-`data/srd/triggers-2024.json`. **À faire par l'auteur** : relancer
-`ingest-srd` pour que le déclencheur entre en base.
+`data/srd/triggers-2024.json`. `ingest-srd` relancé le 10 octobre : 0 échec,
+et `resourceful` porte bien son bloc `triggers` en base.
 
 **Bogue trouvé en passant, corrigé** : le repos long écrivait
 `spell_slots_used: {}`, et `mergeRuntimeState` fusionne clé par clé. Aucun
