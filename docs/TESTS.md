@@ -54,6 +54,19 @@ Suivre la ligne de la zone touchée. Chaque étape doit marcher **et** ne rien a
 | **Comptes** | En Testeur MJ : « Voir comme » Testeuse A depuis Gestion de campagne, puis revenir. |
 | **Solo** | Hors Banc d'essai (mode solo réservé au superadmin) : un tour, en vérifiant que les dés viennent du serveur. |
 
+## 4 bis. Les vérifications faites par Claude
+
+Après un ticket qui touche les droits (RLS, route, compte), **Claude vérifie lui-même** sur la vraie base, sans attendre l'auteur : il lance le test d'intégration du ticket, qui se connecte avec les comptes du groupe fixe (§2), crée son monde de test, vérifie, puis le supprime.
+
+```bash
+npx vitest run src/server/services/<ticket>Rls.integration.test.ts
+```
+
+- **Sans clé publique dans la session cloud** (`NEXT_PUBLIC_SUPABASE_ANON_KEY` absente), Claude passe la clé service comme simple clé d'API, pour ces fichiers seulement : `NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_SERVICE_ROLE_KEY" npx vitest run <fichier>`. Chaque client de ces tests se connecte avec un compte, et c'est la session de ce compte qui fixe ses droits. Une erreur ne peut que faire échouer un refus attendu, jamais le faire passer à tort. Jamais pour toute la suite : d'autres tests utilisent un client non connecté.
+- **Après le test**, Claude vérifie qu'aucun monde de test n'est resté.
+- Un échec sur un test de droits veut d'abord dire « migration pas appliquée » : Claude le dit, et l'état du registre (`SECURITE.md` §3) reste *en attente*.
+- **L'interface** (affichage, clics, mode sombre) reste à l'auteur, sur le Banc d'essai (§3, §4).
+
 ## 5. Le ménage des comptes
 
 `npm run audit:comptes` liste les comptes **sans rien supprimer**, rangés par origine :

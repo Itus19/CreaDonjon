@@ -194,7 +194,7 @@ pas.
 
 ---
 
-### ☐ V3.1-108 — Droits des joueurs : la base ferme, le serveur règle · `M` — **codé le 10 octobre ; reste à appliquer la migration et à vérifier en direct**
+### ☑ V3.1-108 — Droits des joueurs : la base ferme, le serveur règle · `M` — **terminé le 10 octobre**
 
 **Modèle conseillé : Opus** — RLS et schéma. **ADR 0043.**
 
@@ -214,9 +214,9 @@ pas.
 - Route d'écriture des réglages (Zod, MJ seul).
 
 **Critères d'acceptation**
-- [ ] Une joueuse ne peut plus écrire l'état de jeu d'une autre fiche
+- [x] Une joueuse ne peut plus écrire l'état de jeu d'une autre fiche
   (test RLS).
-- [ ] Interrupteur coupé : l'écriture d'une joueuse est refusée par le
+- [x] Interrupteur coupé : l'écriture d'une joueuse est refusée par le
   serveur ; le MJ et le repos passent (tests de service).
 
 **Note de clôture (10 octobre).** Fait :
@@ -231,8 +231,8 @@ pas.
 - la route de la fiche n'enregistre l'état de départ que pour qui peut
   éditer ;
 - route `/api/campaigns/[campaignId]/table-settings` (GET membres, PUT MJ) ;
-- test d'intégration `runtimeStateRls.integration.test.ts` (ignoré sans
-  clé publique dans la session cloud : à lancer en local).
+- test d'intégration `runtimeStateRls.integration.test.ts`, passé sur la
+  vraie base le 10 octobre (4/4, voir `docs/TESTS.md` §4 bis).
 
 Pièces, emplacements et dés de vie n'ont pas encore de geste manuel (seuls
 le sort et les repos les écrivent, chemins du moteur) : leur garde viendra
