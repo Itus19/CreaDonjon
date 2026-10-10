@@ -26,7 +26,7 @@ Ils passent tous par `getReusableTestAccount(role)` (`src/server/testUtils/reusa
 
 ## 3. À la main : le Banc d'essai
 
-Trois comptes « tag » permanents, dans un monde à eux, **« Banc d'essai »** (ruleset SRD 5.2.1) :
+Trois comptes « tag » permanents, dans un monde à eux, **« Banc d'essai »** (`/m/banc-d-essai`, ruleset SRD 5.2.1, créé le 10 octobre) :
 
 | Compte | Rôle dans le Banc d'essai | Sert à tester |
 |---|---|---|
