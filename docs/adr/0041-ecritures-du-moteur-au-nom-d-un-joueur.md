@@ -1,7 +1,7 @@
 # 0041 — Les écritures du moteur au nom d'un joueur
 
 **Date :** 2026-10-09
-**Statut :** proposée — **en attente de l'auteur** (touche la règle absolue 2)
+**Statut :** acceptée le 10 octobre — **option B** (choix de l'auteur)
 
 ## Contexte
 
@@ -15,9 +15,19 @@ Quand un joueur cible un adversaire (V3.1-21), le serveur résout le jet par le 
 
 ## Décision
 
-**Recommandée : B.** Elle tient la règle 2 et laisse la base trancher. **A** est acceptable si l'auteur préfère la simplicité et amende la règle 2 (ADR et règle ESLint à jour). **C** reste le repli si aucune des deux n'est voulue.
+**B, choisie par l'auteur le 10 octobre.** La règle absolue 2 reste intacte : le service role reste confiné à `publicShare.ts`.
 
-En attendant : les jets du **MJ** se résolvent et s'appliquent seuls (il a le droit d'écrire partout) ; ceux d'un **joueur** sur sa propre fiche aussi ; ceux d'un joueur **sur une autre cible** affichent le verdict sans appliquer.
+- **La clé.** Elle vit en deux endroits, et nulle part dans Git :
+  - côté serveur, la variable d'environnement `ENGINE_SIGNING_KEY` (serveur uniquement, jamais `NEXT_PUBLIC_`, comme les clés d'IA) ;
+  - côté base, une table du schéma privé `app_private.engine_signing_keys (id, secret, active)`, sans aucun droit pour `anon` ni `authenticated`, lue seulement par la fonction ci-dessous.
+
+  La poser est un geste manuel, documenté, aussi en cible locale. Deux clés peuvent être actives à la fois : c'est ce qui permet la rotation.
+- **Le changement signé.** Le moteur produit un objet fermé : `{ key_id, nonce, issued_at, campaign_id, changes: [{ kind: "participant" | "runtime", id, hp?, temp_hp?, conditions? }] }`. Le serveur le signe en HMAC-SHA256 (`node:crypto`) sur sa forme canonique (clés triées).
+- **L'application.** Une fonction `security definer`, `app.apply_engine_change(payload jsonb, signature text)` :
+  - recalcule la signature avec `pgcrypto` (`hmac(…, 'sha256')`) et compare ;
+  - refuse un `issued_at` de plus de 60 s, et un `nonce` déjà vu (table `app_private.engine_change_nonces`, purgée au-delà d'une heure) : un changement ne se rejoue pas ;
+  - n'écrit que les champs listés, sur des lignes de la campagne nommée, dans une transaction.
+- **Le client.** Celui de l'utilisateur appelle la fonction. Sans la clé, il ne peut fabriquer aucun changement accepté.
 
 ## Conséquences
 

@@ -43,9 +43,8 @@ Ce qui n'est **pas** encore prêt à coder :
   l'agrégation des naissances et des morts).
 - **Conception faite le 9 octobre** (ADR 0040 à 0049) : les anciens « à
   concevoir » sont découpés en V3.1-101 à 119 (section « Conception du 9
-  octobre », en fin de fichier). **Seul V3.1-104 est bloqué** : il attend la
-  décision de l'auteur sur l'ADR 0041 (règle absolue 2) ; il bloque à son
-  tour V3.1-107. Pour mémoire, l'ancienne liste : V3.1-100, V3.1-21 (cibler et résoudre), 23 (droits des joueurs), 37
+  octobre », en fin de fichier). Plus aucun n'est bloqué : l'auteur a choisi
+  l'option B de l'ADR 0041 (changements signés) le 10 octobre. Pour mémoire, l'ancienne liste : V3.1-100, V3.1-21 (cibler et résoudre), 23 (droits des joueurs), 37
   (initiative côté joueurs, RLS), 39 (sauvegardes demandées à la cible), 40
   (ressources de classe), 47 (règles de personnage en données), 59 (fond par
   défaut du wiki). Et des tickets de données Opus déjà spécifiés : 41, 74,
@@ -89,7 +88,7 @@ valables ; celui-ci les relie.
 | **7 · Les statistiques du joueur** | 89 → 90 → 91 → 92 | Il leur faut des jets attribués ; les jets d'avant 89 ne comptent pas. |
 | **8 · Règles et Chronologie** | 93 → 94 → 95 ; 96 → 97 → 98 → 99 | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
 | **À côté, quand on veut** | 1, 2, 4, 5 (petites rugosités de règles) ; 12, 13 |
-| **En attente de l'auteur** | 104 (ADR 0041) → 107 | Touche la règle absolue 2. | Indépendants de la refonte. |
+| **Étape 4, avec 105** | 104 (ADR 0041, option B) → 107 | Le joueur qui cible : écritures signées par le serveur. | Après 105. |
 
 **Règle** : un ticket Opus « à concevoir » ne se code pas ; il se conçoit
 (ADR), puis il se découpe en tickets prêts. Si Sonnet bute sur une décision
@@ -7189,13 +7188,12 @@ système, une agrégation filtrée côté serveur.
 
 Les neuf tickets « à concevoir » ont été conçus le 9 octobre ; chaque
 décision a son ADR (0040 à 0049). Ce qui suit les découpe en tickets prêts.
-**Un ticket reste bloqué** : V3.1-104, qui attend la décision de l'auteur sur
-l'ADR 0041 (règle absolue 2).
+V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 | Conçu | ADR | Découpé en |
 |---|---|---|
 | V3.1-37 initiative côté joueurs | 0040 | 101, 102, 103 (puis 38) |
-| — écritures du moteur au nom d'un joueur | 0041 (**en attente**) | 104 |
+| — écritures du moteur au nom d'un joueur | 0041 (option B) | 104 |
 | V3.1-21 cibler et résoudre | 0042 | 105, 106, 107 |
 | V3.1-23 droits des joueurs | 0043 | 108, 109 (puis 57) |
 | V3.1-39 sauvegardes demandées | 0044 | 110, 111, 112 |
@@ -7267,12 +7265,33 @@ l'ADR 0041 (règle absolue 2).
   `rolling` (test).
 - [ ] Invitation, jet, saisie du MJ, fin : journalisés.
 
-### ☐ V3.1-104 — Écritures du moteur au nom d'un joueur · `M` — **bloqué : décision de l'auteur (ADR 0041)**
+### ☐ V3.1-104 — Écritures du moteur au nom d'un joueur : changements signés · `M` — **prêt (Opus) — ADR 0041, option B**
 
-**Modèle conseillé : Opus.** L'ADR 0041 propose trois voies (changements
-signés — recommandée ; module privilégié — demande d'amender la règle
-absolue 2 ; validation par le MJ). **Ne pas coder avant que l'auteur ait
-choisi.** Débloque V3.1-107 et le soin d'un autre PJ.
+**Modèle conseillé : Opus** — sécurité, base, cryptographie. **Dépend de** : 105.
+
+**À faire**
+1. **Migration.**
+   - Schéma `app_private` (s'il n'existe pas), tables `engine_signing_keys (id text primary key, secret bytea not null, active boolean not null default true)` et `engine_change_nonces (nonce uuid primary key, seen_at timestamptz not null default now())`, sans droit pour `anon` ni `authenticated`.
+   - Fonction `app.apply_engine_change(payload jsonb, signature text)`, `security definer`, `search_path` fixé. Elle refuse :
+     - une clé inconnue ou inactive ;
+     - une signature fausse : HMAC-SHA256 par `pgcrypto`, sur le texte canonique reçu dans `payload` ;
+     - un `issued_at` de plus de 60 s ;
+     - un `nonce` déjà vu ;
+     - une ligne hors de `campaign_id` ;
+     - un champ hors de la liste (`hp`, `temp_hp`, `conditions`).
+
+     Elle écrit dans une transaction, puis purge les `nonce` de plus d'une heure.
+   - `SCHEMA.md` mis à jour dans le même ticket.
+2. **Serveur.** `src/server/services/engineSigning.ts` signe en HMAC-SHA256 (`node:crypto`), avec `ENGINE_SIGNING_KEY` et `ENGINE_SIGNING_KEY_ID`, sur la forme canonique (clés triées, une fonction pure testée dans `src/core`). Son appel au repo passe par `src/server/repos/`. Clé absente : erreur explicite au démarrage du service, jamais un repli silencieux.
+3. **Branchement.** `resolveTargetedRoll` (105) passe par ce chemin quand l'acteur est un joueur et que la cible n'est pas à lui. Le MJ garde l'écriture directe.
+4. **Documentation.** Poser et faire tourner la clé, en hébergé et en cible locale : une section de `docs/` et `.env.example`.
+
+**Critères d'acceptation**
+- [ ] Un changement signé s'applique ; le même, rejoué, est refusé (test d'intégration).
+- [ ] Une signature fausse, une clé inactive, un `issued_at` trop vieux, un champ hors liste : chacun refusé, sans rien écrire.
+- [ ] Un joueur qui appelle la fonction avec un objet de sa main est refusé.
+- [ ] Deux clés actives : un changement signé par l'une ou l'autre passe (rotation).
+- [ ] Aucun import du service role hors `publicShare.ts` (la règle ESLint reste verte).
 
 ### ☐ V3.1-105 — Cibler : le cœur commun de résolution · `L` — **prêt (Opus)**
 
@@ -7315,7 +7334,7 @@ choisi.** Débloque V3.1-107 et le soin d'un autre PJ.
   appliqués (planche de la Table).
 - [ ] Hors initiative, les jets restent de simples jets.
 
-### ☐ V3.1-107 — Cibler côté joueur · `M` — **bloqué par V3.1-104**
+### ☐ V3.1-107 — Cibler côté joueur · `M` — **dépend de V3.1-104**
 
 **Modèle conseillé : Sonnet.** Comme V3.1-106, pour le joueur avec son PJ,
 une fois l'écriture au nom du joueur tranchée et faite (V3.1-104). D'ici là,
