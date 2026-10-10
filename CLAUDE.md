@@ -26,6 +26,7 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 |---|---|---|
 | `docs/ARCHITECTURE.md` | La carte du code : couches et règles d'import, trajet d'une requête, barrières de sécurité, sous-systèmes, « où mettre du code nouveau » | En début de session si le code est inconnu ; **mis à jour par tout ticket qui déplace une frontière** |
 | `docs/SCHEMA.md` | Schéma de données, SQL, RLS, formules | Avant toute migration ou requête |
+| `docs/TESTS.md` | Niveaux de test, comptes de test (jamais de compte neuf), Banc d'essai, parcours de vérification à la main | Avant d'écrire un test d'intégration ou de vérifier à la main |
 | `docs/CHARTE-UI.md` | Jetons, recettes de boutons/champs/listes, états d'écran | **Avant tout code d'interface** |
 | `docs/catalogue/` | Catalogue d'interface : chaque élément, ses états, ses animations (index au §9 de la charte) | Avant de créer ou modifier un élément d'interface |
 | `docs/BACKLOG_V2.md` | Tickets en cours | Au début de chaque tâche |
