@@ -25,3 +25,7 @@ Haiku ne reçoit pas de ticket entier : même les petits demandent du jugement s
 ## Conséquences
 
 Chaque délégation repart de zéro et coûte une relecture : un ticket de quelques lignes reste à Opus. Les sous-agents ne commitent ni ne poussent. L'accès aux modèles dépend de l'abonnement de l'auteur.
+
+## Complément du 10 octobre
+
+La méthode détaillée vit dans le skill `deleguer` (`.claude/skills/deleguer/SKILL.md`), chargé seulement au moment de déléguer, pour ne pas alourdir `CLAUDE.md` lu à chaque session. Elle reprend le tri par type de tâche, le reclassement unique et la mesure de TokenWise (CodeShuX/tokenwise, MIT, lu, non installé : il réécrit le `CLAUDE.md` global et tient un journal hors du dépôt). Les coûts se notent dans `docs/DELEGATIONS.md`.

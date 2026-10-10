@@ -148,6 +148,7 @@ L'auteur lance la session principale avec **Opus**, qui orchestre. **Autorisatio
 - **`dev-sonnet`** code un ticket marqué « Sonnet » de bout en bout, d'après sa spécification, une fois le plan annoncé. Il ne commite pas.
 - **`aide-haiku`** fait les gestes mécaniques listés sous « Sous-tâches Haiku » dans chaque ticket : vérifications et résumé des échecs, libellés, planche du catalogue, recensement d'usages.
 - **Ne pas déléguer** ce qui tient en quelques lignes, ni ce qui exige le contexte déjà chargé : un sous-agent repart de zéro, et le relancer coûte plus cher que le faire.
+- **Avant toute délégation, charge le skill `deleguer`** (`.claude/skills/deleguer/`) : tri, modèle de brief, relecture, journal des coûts (`docs/DELEGATIONS.md`).
 
 ## Quand t'arrêter et demander
 
