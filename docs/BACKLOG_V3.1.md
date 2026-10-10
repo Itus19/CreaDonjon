@@ -83,7 +83,7 @@ valables ; celui-ci les relie.
 | Étape | Tickets | Pourquoi d'abord |
 |---|---|---|
 | **0 · Sécurité et mesure** | **101** (Opus : `combats` lisible et modifiable par tout membre du monde, routes sans contrôle MJ — une fuite), **108** (Opus : l'état de jeu modifiable par tout membre du monde), **62** étapes 1-2 (mesurer avant de recâbler) | Un défaut de sécurité passe avant tout ; la mesure dit où la rapidité se perd avant qu'on reconstruise les écrans. |
-| **1 · Les données que les écrans attendent** (Opus, en parallèle) | 24 (services de jeu, Sonnet), 84 (identité de l'application), 41 (page partagée), 59 (fond par défaut), 115 → 116 → 117 (règles de personnage et choix), 113 (pacte, multiclassage), 74 (naissance et mort) → 96 (chronologie), 89 (attribuer chaque jet), 100 (rejoindre sans PJ), 102 → 103 (initiative des joueurs), 105 (cœur de résolution) → 110 → 111 (sauvegardes) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
+| **1 · Les données que les écrans attendent** (Opus, en parallèle) | **120** (cycles d'import, Sonnet : avant de toucher la fiche jouable et les services), 24 (services de jeu, Sonnet), 84 (identité de l'application), 41 (page partagée), 59 (fond par défaut), 115 → 116 → 117 (règles de personnage et choix), 113 (pacte, multiclassage), 74 (naissance et mort) → 96 (chronologie), 89 (attribuer chaque jet), 100 (rejoindre sans PJ), 102 → 103 (initiative des joueurs), 105 (cœur de résolution) → 110 → 111 (sauvegardes) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
 | **2 · La coquille** | 25 → 26 → 28 ; 27 → 29 → 30, 31, 32, 33 ; 20 (dès 25) ; 35 ; 34 ; 36 ; 62 étape 3 | Tout le reste vit dedans : pilule glissante, rail, fenêtres en deux volets, téléphone, accueil. |
 | **3 · Entrer et se reconnaître** | 85 → 86 ; 80 → 81 ; 82 → 83 (après 100) ; 87 → 88 | Le premier écran que voit un ami ; court, et tout est décidé. |
 | **4 · Les outils du MJ (lot i)** | 46, 55, 61, 54, 56, 44, 45, 43 ; 41 → 42 ; 59 → 60 ; 108 → 57, 109 ; 58 ; 102, 103 → 38 ; 105 → 106 ; 111 → 112 ; 113 → 114 | Les petits outils sans donnée nouvelle d'abord, puis ceux qui attendaient l'étape 1. |
@@ -118,6 +118,7 @@ sa partie, et une ligne s'ajoute ici.
 - [`07-statistiques.md`](backlog-v3.1/07-statistiques.md) — Tickets du volet « Je joue » de l'accueil : les statistiques (9 octobre)
 - [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) — Tickets des Règles sur ordinateur et de la Chronologie du monde (9 octobre)
 - [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) — Conception du 9 octobre : les tickets Opus découpés
+- [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) — Dette technique (V3.1-120…)
 - [`termines.md`](backlog-v3.1/termines.md) — Tickets terminés (☑)
 
 | Ticket | État | Titre | Fichier |
@@ -241,3 +242,4 @@ sa partie, et une ligne s'ajoute ici.
 | V3.1-117 | ☐ | La sous-classe résolue et ses choix | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-118 | ☐ | Les choix dans l'assistant de création et de montée de niveau | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-119 | ☐ | Les choix rouverts au repos | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-120 | ☐ | Défaire les cycles d'import (services serveur, fiche jouable) | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
