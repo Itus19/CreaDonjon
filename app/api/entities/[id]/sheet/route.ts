@@ -1,9 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
 import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getOrInitializeRuntimeState, resolveCharacterActionContext } from "@/src/server/services/characterActions";
 import type { Locale } from "@/src/i18n/request";
 import { entityCampaignQuerySchema, searchParamsToObject } from "@/lib/queryParams/schemas";
+import { canUserEditEntityById } from "@/src/server/services/permissions";
+
+const zEntityIdParams = z.object({ id: z.string().uuid() });
 
 /**
  * Fiche derivee + etat de jeu d'une entite (V1-B5) : les blocs
@@ -19,7 +23,11 @@ import { entityCampaignQuerySchema, searchParamsToObject } from "@/lib/queryPara
  * des actions elles-memes (attaque/degats).
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id: entityId } = await params;
+  const parsedParams = zEntityIdParams.safeParse(await params);
+  if (!parsedParams.success) {
+    return NextResponse.json({ error: "Adresse invalide." }, { status: 400 });
+  }
+  const entityId = parsedParams.data.id;
   // `?campaignId=` (valeur vide) vaut "pas de campagne" : le client l'envoie
   // ainsi (`campaignId ?? ""` dans l'URL). Sans cette normalisation, ""
   // descendrait jusqu'a `putRuntimeState` qui l'insere tel quel dans une
@@ -45,7 +53,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Fiche de personnage introuvable ou sans ruleset résolvable." }, { status: 404 });
   }
 
-  const runtimeState = await getOrInitializeRuntimeState(supabase, ctx);
+  const canEdit = await canUserEditEntityById(supabase, { entityId, userId: user.id });
+  const runtimeState = await getOrInitializeRuntimeState(supabase, ctx, { persist: canEdit });
 
   return NextResponse.json(
     { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState },

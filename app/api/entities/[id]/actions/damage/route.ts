@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
-import { createClient } from "@/lib/supabase/server";
+import { guardSheetActionRoute } from "@/lib/characterActions/routeGuard";
 import { weaponDamageSchema } from "@/lib/characterActions/schemas";
 import { rollWeaponDamage } from "@/src/server/services/characterActions";
 import type { Locale } from "@/src/i18n/request";
@@ -12,29 +12,17 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id: entityId } = await params;
-
-  const body = await request.json().catch(() => null);
-  const parsed = weaponDamageSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Corps invalide." }, { status: 400 });
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
-  }
+  const guard = await guardSheetActionRoute(request, params, weaponDamageSchema);
+  if (!guard.ok) return guard.response;
+  const { supabase, entityId, body } = guard;
 
   const locale = (await getLocale()) as Locale;
   const result = await rollWeaponDamage(supabase, {
     entityId,
-    campaignId: parsed.data.campaignId,
-    itemId: parsed.data.itemId,
-    critical: parsed.data.critical,
-    versatile: parsed.data.versatile,
+    campaignId: body.campaignId,
+    itemId: body.itemId,
+    critical: body.critical,
+    versatile: body.versatile,
     locale,
   });
 

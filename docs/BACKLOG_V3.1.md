@@ -230,7 +230,7 @@ sa partie, et une ligne s'ajoute ici.
 | V3.1-105 | ☐ | Cibler : le cœur commun de résolution | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-106 | ☐ | Cibler côté MJ : outil de dés, Table, Initiative | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-107 | ☐ | Cibler côté joueur | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-108 | ☐ | Droits des joueurs : la base ferme, le serveur règle | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-108 | ☐ | Droits des joueurs : la base ferme, le serveur règle — codé, migration à appliquer | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-109 | ☐ | Droits des joueurs : la fiche obéit aux interrupteurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-110 | ☐ | Sauvegardes : la restriction de cible (noyau) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-111 | ☐ | Sauvegardes : la demande et la réponse (données, serveur) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |

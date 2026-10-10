@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/src/types/database";
+import type { Database, Json } from "@/src/types/database";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -126,6 +126,35 @@ export async function updateCampaignName(
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data;
+}
+
+/**
+ * V3.1-108 (ADR 0043) — reglages de table, lus a part de `CAMPAIGN_COLUMNS` :
+ * seuls les gestes de fiche et l'ecran de reglages en ont besoin. La valeur
+ * brute est rendue telle quelle ; `parseTableSettings` (noyau) la complete.
+ * `undefined` : campagne introuvable ou invisible.
+ */
+export async function getCampaignTableSettingsRaw(supabase: TypedClient, campaignId: string): Promise<Json | undefined> {
+  const { data, error } = await supabase
+    .from("campaigns")
+    .select("table_settings")
+    .eq("id", campaignId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? data.table_settings : undefined;
+}
+
+/** Ecrit les reglages complets (RLS : administrateur du monde seulement). `false` si aucune ligne n'a ete touchee. */
+export async function updateCampaignTableSettings(supabase: TypedClient, params: { campaignId: string; settings: Json }): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("campaigns")
+    .update({ table_settings: params.settings })
+    .eq("id", params.campaignId)
+    .is("deleted_at", null)
+    .select("id");
+  if (error) throw new Error(error.message);
+  return (data ?? []).length > 0;
 }
 
 export interface CampaignMemberRow {

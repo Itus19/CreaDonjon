@@ -187,11 +187,11 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
 
   it("initialise l'etat de jeu au premier acces (PV au maximum), puis reste stable", async () => {
     const ctx = await resolveCharacterActionContext(admin, entityId, campaignId, "fr");
-    const first = await getOrInitializeRuntimeState(admin, ctx!);
+    const first = await getOrInitializeRuntimeState(admin, ctx!, { persist: true });
     expect(first.state.hp.current).toBe(12);
     expect(first.state.hit_dice).toEqual({ d10: 1 });
 
-    const second = await getOrInitializeRuntimeState(admin, ctx!);
+    const second = await getOrInitializeRuntimeState(admin, ctx!, { persist: true });
     expect(second.state).toEqual(first.state); // pas de reinitialisation au second appel
   });
 
@@ -201,7 +201,7 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
     expect(result).toEqual({ ok: true });
 
     const ctx = await resolveCharacterActionContext(admin, entityId, campaignId, "fr");
-    const state = await getOrInitializeRuntimeState(admin, ctx!);
+    const state = await getOrInitializeRuntimeState(admin, ctx!, { persist: true });
     expect(state.state.hp.current).toBe(12);
     expect(state.state.spell_slots_used).toEqual({});
   });

@@ -1,30 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { guardSheetActionRoute } from "@/lib/characterActions/routeGuard";
 import { exhaustionChangeSchema } from "@/lib/characterActions/schemas";
 import { changeExhaustion } from "@/src/server/services/characterActions";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id: entityId } = await params;
-
-  const body = await request.json().catch(() => null);
-  const parsed = exhaustionChangeSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Corps invalide." }, { status: 400 });
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
-  }
+  const guard = await guardSheetActionRoute(request, params, exhaustionChangeSchema, "conditions");
+  if (!guard.ok) return guard.response;
+  const { supabase, userId, entityId, body } = guard;
 
   await changeExhaustion(supabase, {
     entityId,
-    campaignId: parsed.data.campaignId,
-    delta: parsed.data.delta,
-    actorUserId: user.id,
+    campaignId: body.campaignId,
+    delta: body.delta,
+    actorUserId: userId,
   });
 
   return new NextResponse(null, { status: 204 });

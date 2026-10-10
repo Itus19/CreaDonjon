@@ -194,7 +194,7 @@ pas.
 
 ---
 
-### ☐ V3.1-108 — Droits des joueurs : la base ferme, le serveur règle · `M` — **prêt (Opus)**
+### ☐ V3.1-108 — Droits des joueurs : la base ferme, le serveur règle · `M` — **codé le 10 octobre ; reste à appliquer la migration et à vérifier en direct**
 
 **Modèle conseillé : Opus** — RLS et schéma. **ADR 0043.**
 
@@ -218,6 +218,26 @@ pas.
   (test RLS).
 - [ ] Interrupteur coupé : l'écriture d'une joueuse est refusée par le
   serveur ; le MJ et le repos passent (tests de service).
+
+**Note de clôture (10 octobre).** Fait :
+- migration `20261010130000_runtime_state_can_edit_and_table_settings` : RLS
+  d'écriture par `can_edit_entity`, colonne `table_settings` (objet) ;
+- `src/core/campaigns/tableSettings.ts` et
+  `src/core/permissions/sheetActionAccess.ts` (tests d'abord, 15 tests) ;
+- porte commune `lib/characterActions/routeGuard.ts` sur les 11 routes
+  d'action qui ne vérifiaient rien (droit d'éditer, Zod sur l'adresse,
+  campagne du même monde) ; interrupteurs : PV → `hp`, inspiration →
+  `inspiration` (plafonnée à `inspiration_max`), épuisement → `conditions` ;
+- la route de la fiche n'enregistre l'état de départ que pour qui peut
+  éditer ;
+- route `/api/campaigns/[campaignId]/table-settings` (GET membres, PUT MJ) ;
+- test d'intégration `runtimeStateRls.integration.test.ts` (ignoré sans
+  clé publique dans la session cloud : à lancer en local).
+
+Pièces, emplacements et dés de vie n'ont pas encore de geste manuel (seuls
+le sort et les repos les écrivent, chemins du moteur) : leur garde viendra
+avec ces gestes (V3.1-24, 109). L'écran des réglages et le masquage des
+commandes coupées : V3.1-57, 109.
 
 ---
 

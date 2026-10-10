@@ -629,6 +629,8 @@ create table campaigns (
   mode       text not null check (mode in ('campaign','solo')),
   rng_seed   text not null default encode(gen_random_bytes(16),'hex'),
   party_entity_id uuid references entities(id) on delete set null,  -- entite `faction` du groupe de joueurs (V1-C1, migration 20260804140001)
+  table_settings jsonb not null default '{}'::jsonb   -- reglages de table (V3.1-108, ADR 0043), voir ci-dessous
+    check (jsonb_typeof(table_settings) = 'object'),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
@@ -666,6 +668,16 @@ create table campaign_entity_snapshots (
 ```
 
 `rng_seed` permet de rejouer une partie solo à l'identique et de diagnostiquer un bug de règle.
+
+**Réglages de table** (`campaigns.table_settings`, V3.1-108, ADR 0036 §5 et 0043) : « ce que les joueurs modifient eux-mêmes ». Forme validée par `zCampaignTableSettings` (`src/core/campaigns/tableSettings.ts`) et lue par `parseTableSettings`, qui complète champ par champ avec les défauts ; un objet vide vaut donc les défauts :
+
+```json
+{ "inspiration_max": 1,
+  "player_can_edit": { "conditions": false, "inspiration": false, "hp": true,
+                       "currency": true, "spell_slots": true, "hit_dice": true } }
+```
+
+Lecture par tout membre du monde, écriture par le MJ (`campaigns_write` : `is_world_admin`), par la route `/api/campaigns/[campaignId]/table-settings`. Les interrupteurs ne règlent que les gestes **manuels** d'une joueuse en campagne (`guardSheetActionRoute`) ; le MJ et le moteur (repos, résolution) n'y passent pas. L'épuisement compte comme un état (`conditions`).
 
 **`campaign_encounters`** (migration `20260818110001_campaign_encounters.sql`, V1-E3) — rencontres composées par le générateur MJ (outil autonome, jamais un bloc de wiki, voir §7) :
 
@@ -799,6 +811,8 @@ create unique index runtime_state_uniq on entity_runtime_state
 Contenu : points de vie courants et temporaires, dés de vie, épuisement, expérience, usages de ressources, emplacements de sorts consommés, conditions, jets de sauvegarde contre la mort, harmonisation.
 
 Séparer cette table permet au même personnage d'exister dans deux campagnes sans que ses points de vie se mélangent, et évite qu'une fiche de wiki soit modifiée quarante fois par séance.
+
+**Droits** (V3.1-108, ADR 0043) : lecture par tout membre du monde ; écriture de `entity_runtime_state` et `entity_active_effects` par `app.can_edit_entity(entity_id)` seulement (administrateur du monde, joueuse qui a revendiqué ce PJ, octroi). Un lecteur sans droit voit l'état de départ calculé, jamais enregistré (route de la fiche).
 
 ### 12.2 Effets actifs
 

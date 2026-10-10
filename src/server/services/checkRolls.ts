@@ -125,7 +125,7 @@ export async function fireForRoll(
   if (!event) return null;
 
   try {
-    const runtime = emit.ctx.campaignId ? (await getOrInitializeRuntimeState(supabase, emit.ctx)).state : undefined;
+    const runtime = emit.ctx.campaignId ? (await getOrInitializeRuntimeState(supabase, emit.ctx, { persist: true })).state : undefined;
     const out = await fireTriggersForCharacter(supabase, {
       rulesetId: emit.ctx.rulesetId,
       subject: emit.ctx.entityId,

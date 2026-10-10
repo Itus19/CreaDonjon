@@ -68,7 +68,7 @@ export async function getSpikeSetup(supabase: TypedClient, locale: Locale): Prom
 
   const ctx = await resolveCharacterActionContext(supabase, SPIKE_CHARACTER_ID, SPIKE_CAMPAIGN_ID, locale);
   if (!ctx) throw new Error("Bram introuvable ou sans bloc character (fixture seed-dev manquante ?).");
-  const runtime = await getOrInitializeRuntimeState(supabase, ctx);
+  const runtime = await getOrInitializeRuntimeState(supabase, ctx, { persist: true });
   // Bram est un civil sans niveau de classe (hp_method fixed, classes: []) : hpMax derive a 0
   // (rien a deriver sans classe). PV actuels reste la seule valeur fiable a afficher ici.
   //

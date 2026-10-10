@@ -772,6 +772,7 @@ export type Database = {
           party_entity_id: string | null
           rng_seed: string
           ruleset_id: string
+          table_settings: Json
           target_session_minutes: number
           updated_at: string
           world_id: string
@@ -786,6 +787,7 @@ export type Database = {
           party_entity_id?: string | null
           rng_seed?: string
           ruleset_id: string
+          table_settings?: Json
           target_session_minutes?: number
           updated_at?: string
           world_id: string
@@ -800,6 +802,7 @@ export type Database = {
           party_entity_id?: string | null
           rng_seed?: string
           ruleset_id?: string
+          table_settings?: Json
           target_session_minutes?: number
           updated_at?: string
           world_id?: string

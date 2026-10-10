@@ -28,7 +28,7 @@ import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { resolveScaledFormulaText } from "@/src/core/rules/scaling";
 import { formatFormulaNode } from "@/src/core/formula/format";
 import { mergeRuntimeState, type RuntimeStatePatch } from "@/src/core/rules/runtimeState";
-import { zRuntimeState, type RuntimeState } from "@/src/core/schemas/runtimeState";
+import { defaultRuntimeState, zRuntimeState, type RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
@@ -274,16 +274,23 @@ export interface RuntimeStateView {
  */
 export async function getOrInitializeRuntimeState(
   supabase: TypedClient,
-  ctx: CharacterActionContext
+  ctx: CharacterActionContext,
+  options: { persist: boolean }
 ): Promise<RuntimeStateView> {
   const existingRow = await getRuntimeStateRow(supabase, ctx.entityId, ctx.campaignId);
   if (existingRow) {
     return { state: zRuntimeState.parse(existingRow.state), hpMax: ctx.sheet.hitPoints.max, hitDiceTotals: ctx.hitDiceTotals };
   }
+  const initialPatch: RuntimeStatePatch = { hp: { current: ctx.sheet.hitPoints.max, temp: 0 }, hit_dice: ctx.hitDiceTotals };
+  // V3.1-108 : seul qui peut editer la fiche ecrit son etat (RLS). Un
+  // lecteur voit la meme valeur de depart, calculee sans etre enregistree.
+  if (!options.persist) {
+    return { state: mergeRuntimeState(defaultRuntimeState(), initialPatch), hpMax: ctx.sheet.hitPoints.max, hitDiceTotals: ctx.hitDiceTotals };
+  }
   const state = await applyRuntimeStateChange(supabase, {
     entityId: ctx.entityId,
     campaignId: ctx.campaignId,
-    patch: { hp: { current: ctx.sheet.hitPoints.max, temp: 0 }, hit_dice: ctx.hitDiceTotals },
+    patch: initialPatch,
     note: "Initialisation de l'etat de jeu",
     sessionId: null,
     actor: "system",
@@ -1043,17 +1050,18 @@ export async function changeExhaustion(
  * V2.1-26 — l'inspiration heroique. Meme geste que l'epuisement, a trois
  * lignes d'ici : un delta, borne cote SERVEUR, journalise comme toute
  * mutation de jeu. Le client propose un delta, il ne pose jamais la valeur.
+ * `max` : plafond de la table (`table_settings.inspiration_max`, V3.1-108).
  */
 export async function changeInspiration(
   supabase: TypedClient,
-  params: { entityId: string; campaignId: string | null; delta: number; actorUserId: string }
+  params: { entityId: string; campaignId: string | null; delta: number; actorUserId: string; max?: number }
 ): Promise<void> {
   const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
   const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
   await applyRuntimeStateChange(supabase, {
     entityId: params.entityId,
     campaignId: params.campaignId,
-    patch: { inspiration: Math.max(0, Math.min(5, state.inspiration + params.delta)) },
+    patch: { inspiration: Math.max(0, Math.min(params.max ?? 5, state.inspiration + params.delta)) },
     note: `Inspiration ${params.delta >= 0 ? "+" : ""}${params.delta}`,
     sessionId,
     actor: "player",
