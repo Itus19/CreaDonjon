@@ -26,6 +26,7 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 |---|---|---|
 | `docs/ARCHITECTURE.md` | La carte du code : couches et règles d'import, trajet d'une requête, barrières de sécurité, sous-systèmes, « où mettre du code nouveau » | En début de session si le code est inconnu ; **mis à jour par tout ticket qui déplace une frontière** |
 | `docs/SCHEMA.md` | Schéma de données, SQL, RLS, formules | Avant toute migration ou requête |
+| `docs/CABLAGE.md` | Comment un écran charge ses données : règles C1 à C7, mesures, carte des écrans, cliquet (ADR 0055) | **Avant tout ticket qui crée ou modifie un écran, un hook de chargement, une route `/api` lue par un écran ou un layout** |
 | `docs/SECURITE.md` | Modèle de menace, **liste de contrôle** de toute route/action/migration, registre des failles | **Avant tout ticket qui touche une route, une action serveur, une migration ou un compte** |
 | `docs/TESTS.md` | Niveaux de test, comptes de test (jamais de compte neuf), Banc d'essai, parcours de vérification à la main | Avant d'écrire un test d'intégration ou de vérifier à la main |
 | `docs/CHARTE-UI.md` | Jetons, recettes de boutons/champs/listes, états d'écran | **Avant tout code d'interface** |

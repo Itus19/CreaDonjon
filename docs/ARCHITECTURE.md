@@ -155,7 +155,7 @@ Pour chacun, le point d'entrée dans le code et l'ADR qui l'explique.
 | lire ou écrire une table | une fonction dans `src/server/repos/<table>.ts` |
 | enchaîner lecture, droits, calcul et écriture | un service dans `src/server/services/` |
 | une adresse que l'interface appelle | `app/api/<chemin>/route.ts`, entrée validée par un schéma de `lib/<domaine>/schemas.ts` |
-| un écran ou un élément d'interface | `components/<domaine>/`, après la charte et le catalogue ; libellés dans `messages/` |
+| un écran ou un élément d'interface | `components/<domaine>/`, après la charte et le catalogue ; libellés dans `messages/` ; ses données suivent les règles de câblage de [`CABLAGE.md`](CABLAGE.md) (chargées avec la page, une fois par écran) |
 | une nouvelle colonne ou table | une **nouvelle** migration dans `supabase/migrations/`, puis `SCHEMA.md` et les types régénérés |
 | un appel d'IA | `src/server/ai/`, par `runAiCompletion` |
 | une règle de jeu (sort, don, sous-classe…) | **pas dans le code** : en base, ou dans `data/personnel/` (ignoré par Git) |

@@ -963,7 +963,7 @@ filtrer par objet modifié ou par élément (wiki, fiche de personnage…).
 
 ---
 
-### ☐ V3.1-62 — Rapidité : mesurer, puis recâbler · `M` — **à faire en premier**
+### ☐ V3.1-62 — Rapidité : mesurer, puis recâbler · `M` — **étapes 1 et 2 faites le 11 octobre (mesures, ADR 0055, `docs/CABLAGE.md`) ; reste l'étape 3**
 
 **Modèle conseillé : Opus** pour la mesure et le plan (étapes 1 et 2), **Sonnet** pour appliquer les corrections listées (étape 3).
 
@@ -1007,7 +1007,16 @@ aussi. Relevé dans le code le 8 octobre, sans mesure :
    commit, **sans changer aucun comportement** ; les outils refaits par le
    lot i suivent déjà la règle 6.
 
+**Fait le 11 octobre (étapes 1 et 2).**
+- **Instrumentation** : `lib/supabase/measuredFetch.ts`, en développement seulement, active avec `CREADONJON_MESURE=1`.
+- **Outils de mesure** : `scripts/mesure-cablage.mjs` (pilote) et `scripts/analyse-mesure.ts` ; `src/core/mesure/vagues.ts` compte les vagues, avec ses tests.
+- **Mesures** sur le Banc d'essai, dans `docs/CABLAGE.md` §3. La fiche de personnage coûte 581 requêtes, 123 vagues et 44 chargements après affichage.
+- **Décision** : ADR 0055, sept règles C1 à C7.
+- **Garde-fou** : le cliquet `lib/cablage.test.ts`.
+
+**Étape 3 (Sonnet)** : suivre `docs/CABLAGE.md` §7, dans l'ordre. Une correction par commit, une mesure après chacune, le plafond du cliquet abaissé à chaque fois.
+
 **Critères d'acceptation**
-- [ ] Les mesures avant / après sont écrites dans ce ticket.
+- [ ] Les mesures avant / après sont écrites dans ce ticket. *Avant : faites le 11 octobre, dans `docs/CABLAGE.md` §3 (pour ne pas les recopier deux fois).*
 - [ ] Aucune régression : `npm run test` vert, aucun test affaibli.
 - [ ] Aucun changement de sécurité (RLS, vérification de session) sans décision écrite de l'auteur.

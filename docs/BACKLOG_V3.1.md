@@ -185,7 +185,7 @@ sa partie, et une ligne s'ajoute ici.
 | V3.1-59 | ☐ | Publication : le fond par défaut du wiki (données) | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-60 | ☐ | Publication : les réglages, et ce que voit un visiteur | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-61 | ☐ | Journal historique : par fiche, ou chronologique | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-62 | ☐ | Rapidité : mesurer, puis recâbler | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-62 | ☐ | Rapidité : mesurer, puis recâbler — mesuré, règles écrites (`docs/CABLAGE.md`), reste le recâblage | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-63 | ☐ | Fiche du wiki sur ordinateur : en-tête, cartes de verre, palette en familles | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-64 | ☐ | La pastille de visibilité au toucher, avec « Annuler » | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-65 | ☐ | Bloc Texte : lettrine, bulle du paragraphe, assistance IA en encart | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
