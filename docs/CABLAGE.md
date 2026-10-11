@@ -59,6 +59,21 @@ Banc d'essai, mode développement, médiane de 3 passages. Les fiches des PJ son
 
 Le temps ne baisse presque pas, et la mesure dit pourquoi. Ce qui reste, ce sont trois routes serveur lentes, appelées l'une après l'autre : `sheet` (≈ 6 s), `resolved-ruleset` (≈ 5 s) et `rule-entries` (≈ 4 s). C'est la correction 2.
 
+**Après la correction 2 (§7), le 11 octobre** : `assembleResolvedRuleset` lance ensemble ses quatre lectures qui ne dépendent que du premier lot : catalogue d'armes, traits d'espèce, noms des aptitudes et maîtrises, blocs des aptitudes. `resolveCharacterActionContext` en fait autant pour la fiche, ses blocs et la campagne, puis pour le ruleset et l'équipement. La sortie a été comparée octet par octet sur six sélections (2014 et 2024, multiclassage compris), et un test fige l'ordre des choix restants.
+
+| Écran ou route | Vagues | Écran stable (ou temps de la route) |
+|---|---|---|
+| Route `sheet` | 26 → **15** | ≈ 5,3 s → **3,6 s** |
+| Route `resolved-ruleset` | 18 → **11** | ≈ 4,4 s → **3,2 s** |
+| MJ, fiche de personnage | 123 → 88 → **55** | 23,6 s → 21,4 s → **15,5 s** |
+| Joueuse, sa fiche | 77 → 68 → **45** | 16,5 s → 15,6 s → **11,4 s** |
+| Joueuse, fiche du wiki de son PJ | 65 → 48 → **42** | 12,8 s → 10,1 s → **9,1 s** |
+| MJ, accueil du monde | 28 → **19** | 6,7 s → **5,6 s** |
+
+Ce qui reste visible dans les chiffres :
+- `rulesets` est lu 5 fois par appel de route. `walkRulesetChain` est mis en cache par `React.cache()`, mais ce cache ne fonctionne que pendant le rendu d'une page : dans une route `/api`, il ne joue pas. À traiter avec la correction 2 suite : passer la chaîne déjà lue aux fonctions qui la refont.
+- La fiche calcule encore le ruleset deux fois, une fois par la route `sheet` et une fois par `resolved-ruleset`. Les réunir en un seul appel relève de C1 (correction 1, seconde partie).
+
 Les routes les plus lentes, en temps serveur moyen :
 
 | Route | Temps moyen | Appels par fiche de personnage |
@@ -132,7 +147,7 @@ Dans l'ordre des gains mesurés, une correction par commit, sans changer aucun c
    - Les puces de référence d'une fiche demandées en une requête.
    - Les blocs de règles en un lot.
    - Cible : moins de 10 chargements après affichage, moins de 100 requêtes.
-2. **La route `sheet`** (6,7 s) : trouver où partent ses vagues (`resolveCharacterActionContext`, `assembleResolvedRuleset`) et les mettre en parallèle (C3).
+2. **La route `sheet`** (6,7 s) : trouver où partent ses vagues (`resolveCharacterActionContext`, `assembleResolvedRuleset`) et les mettre en parallèle (C3). *Fait le 11 octobre : 26 → 15 vagues pour `sheet`, 18 → 11 pour `resolved-ruleset`. Reste la chaîne de rulesets relue dans les routes `/api`.*
 3. **Le fond commun** : dés, radio, messages non lus et calendrier arrivent avec le layout (C1).
 4. **L'accueil du MJ** : les layouts en parallèle (C3).
 5. **La fenêtre Initiative** : `ruleset_entries` en un lot (C4).

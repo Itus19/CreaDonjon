@@ -302,6 +302,22 @@ async function fetchEntriesBatch(
   return result;
 }
 
+/** Noms d'affichage d'un lot de cles (fiche + traduction), en deux allers-retours qui s'enchainent forcement : la traduction a besoin des identifiants. */
+async function fetchChipsWithNames(
+  supabase: TypedClient,
+  rulesetId: string,
+  keys: string[],
+  locale: Locale
+): Promise<{ chips: Awaited<ReturnType<typeof listRulesetEntryChipsByKeys>>; nameByChipEntryId: Map<string, string> }> {
+  const chips = await listRulesetEntryChipsByKeys(supabase, rulesetId, keys);
+  const nameByChipEntryId = new Map<string, string>();
+  if (locale !== "en" && chips.length > 0) {
+    const translations = await listTranslationsForEntries(supabase, chips.map((c) => c.id), locale);
+    for (const t of translations) nameByChipEntryId.set(t.entry_id, t.name);
+  }
+  return { chips, nameByChipEntryId };
+}
+
 /**
  * Assemble un `ResolvedRuleset` (V1-B1) reel a partir des entrees SRD deja
  * importees (V1-A1/A2) — pas de jeu de donnees de demonstration : espece,
@@ -351,7 +367,20 @@ export async function assembleResolvedRuleset(
     const count = weaponMasteryCount(found.progressionRows, cl.level);
     if (count > 0) weaponMasteryCounts.set(cl.key, count);
   }
-  const weaponPool = weaponMasteryCounts.size > 0 ? await fetchWeaponPool(supabase, rulesetId) : null;
+
+  // V3.1-62 (docs/CABLAGE.md, C3) : tout ce qui suit ne depend que de `batch`.
+  // Les quatre lectures restantes (catalogue d'armes, traits d'espece, noms
+  // des aptitudes et maitrises, blocs des aptitudes) partent donc ENSEMBLE
+  // apres les boucles ci-dessous, au lieu de s'attendre l'une l'autre (18
+  // vagues mesurees pour un Humain Guerrier). Les choix qui en dependent
+  // (maitrise d'armes, traits) sont inseres ensuite a la place exacte
+  // qu'ils occupaient : l'ordre des choix restants ne change pas.
+  const weaponPoolPromise = weaponMasteryCounts.size > 0 ? fetchWeaponPool(supabase, rulesetId) : Promise.resolve(null);
+  const speciesEntry = selection.species ? batch.get(selection.species) : undefined;
+  const traitBatchPromise =
+    speciesEntry && speciesEntry.traitKeys.length > 0 ? fetchEntriesBatch(supabase, rulesetId, speciesEntry.traitKeys, locale) : Promise.resolve(null);
+  /** Choix de maitrise d'armes en attente du catalogue : leur place dans `remainingChoices` est retenue. */
+  const pendingWeaponMastery: { insertAt: number; classKey: string; label: string; classProficiencyKeys: string[]; meleeOnly: boolean; count: number }[] = [];
 
   if (selection.species) {
     const found = batch.get(selection.species);
@@ -457,21 +486,15 @@ export async function assembleResolvedRuleset(
     }
 
     const weaponMasteryCountForClass = weaponMasteryCounts.get(cl.key);
-    if (weaponMasteryCountForClass !== undefined && weaponPool) {
-      const options = weaponMasteryOptions(
-        classProficiencies.map((p) => p.key),
-        weaponPool,
-        weaponMasteryMeleeOnly(found.progressionRows, cl.level)
-      );
-      if (options.length > 0) {
-        remainingChoices.push({
-          id: `${cl.key}.weapon_mastery`,
-          label: `${label} — maîtrise d'armes`,
-          count: weaponMasteryCountForClass,
-          options,
-          kind: "weapon_mastery",
-        });
-      }
+    if (weaponMasteryCountForClass !== undefined) {
+      pendingWeaponMastery.push({
+        insertAt: remainingChoices.length,
+        classKey: cl.key,
+        label,
+        classProficiencyKeys: classProficiencies.map((p) => p.key),
+        meleeOnly: weaponMasteryMeleeOnly(found.progressionRows, cl.level),
+        count: weaponMasteryCountForClass,
+      });
     }
   }
 
@@ -480,23 +503,7 @@ export async function assembleResolvedRuleset(
   // jamais sur celle de l'espece — un second lot, seulement s'il y a des
   // traits. Ajoutes APRES les choix de classe : une competence proposee par
   // les deux va d'abord a la classe (`routeSkillChoices`).
-  const speciesEntry = selection.species ? batch.get(selection.species) : undefined;
-  if (speciesEntry && speciesEntry.traitKeys.length > 0) {
-    const traitBatch = await fetchEntriesBatch(supabase, rulesetId, speciesEntry.traitKeys, locale);
-    for (const traitKey of speciesEntry.traitKeys) {
-      const trait = traitBatch.get(traitKey);
-      if (!trait) continue;
-      for (const choice of extractSkillChoices(trait.fields)) {
-        remainingChoices.push({
-          id: `${traitKey}.skills`,
-          label: `${speciesEntry.name} — ${trait.name}`,
-          count: choice.count,
-          options: choice.options,
-          kind: "skill",
-        });
-      }
-    }
-  }
+  const traitChoicesInsertAt = remainingChoices.length;
 
   // Regle universelle 2024 (retour utilisateur, V2-G1, point 3) : le SRD
   // 5.2.1 ne rattache plus AUCUNE langue a l'espece ni a l'historique
@@ -535,13 +542,51 @@ export async function assembleResolvedRuleset(
   const featureKeys = [...extraFeatureKeys.keys()];
   const proficiencyKeys = [...new Set(proficiencies.map((p) => p.key))];
   const combinedKeys = [...new Set([...featureKeys, ...proficiencyKeys])];
-  if (combinedKeys.length > 0) {
-    const chips = await listRulesetEntryChipsByKeys(supabase, rulesetId, combinedKeys);
-    const nameByChipEntryId = new Map<string, string>();
-    if (locale !== "en" && chips.length > 0) {
-      const translations = await listTranslationsForEntries(supabase, chips.map((c) => c.id), locale);
-      for (const t of translations) nameByChipEntryId.set(t.entry_id, t.name);
+  const [weaponPool, traitBatch, chipsAndNames, resolvedFeatureBlocksOrNull] = await Promise.all([
+    weaponPoolPromise,
+    traitBatchPromise,
+    combinedKeys.length > 0 ? fetchChipsWithNames(supabase, rulesetId, combinedKeys, locale) : Promise.resolve(null),
+    combinedKeys.length > 0 ? resolveEntryBlocksInRulesetBatch(supabase, rulesetId, featureKeys) : Promise.resolve(null),
+  ]);
+
+  // Insertions a leur place d'origine, de la plus loin a la plus proche
+  // (une insertion ne decale jamais une place situee avant elle) : les
+  // traits apres les choix de classe, chaque maitrise d'armes apres les
+  // competences de sa classe.
+  if (speciesEntry && traitBatch) {
+    const traitChoices: RemainingChoice[] = [];
+    for (const traitKey of speciesEntry.traitKeys) {
+      const trait = traitBatch.get(traitKey);
+      if (!trait) continue;
+      for (const choice of extractSkillChoices(trait.fields)) {
+        traitChoices.push({
+          id: `${traitKey}.skills`,
+          label: `${speciesEntry.name} — ${trait.name}`,
+          count: choice.count,
+          options: choice.options,
+          kind: "skill",
+        });
+      }
     }
+    remainingChoices.splice(traitChoicesInsertAt, 0, ...traitChoices);
+  }
+  if (weaponPool) {
+    for (const pending of [...pendingWeaponMastery].reverse()) {
+      const options = weaponMasteryOptions(pending.classProficiencyKeys, weaponPool, pending.meleeOnly);
+      if (options.length === 0) continue;
+      remainingChoices.splice(pending.insertAt, 0, {
+        id: `${pending.classKey}.weapon_mastery`,
+        label: `${pending.label} — maîtrise d'armes`,
+        count: pending.count,
+        options,
+        kind: "weapon_mastery",
+      });
+    }
+  }
+
+  if (chipsAndNames && resolvedFeatureBlocksOrNull) {
+    const { chips, nameByChipEntryId } = chipsAndNames;
+    const resolvedFeatureBlocks = resolvedFeatureBlocksOrNull;
     const chipByKey = new Map(chips.map((c) => [c.entry_key, c]));
 
     // Modificateurs generiques d'une aptitude/don (bloc `modifiers`, retour
@@ -551,8 +596,8 @@ export async function assembleResolvedRuleset(
     // (override-aware, jamais `listRulesetEntryChipsByKeys` ci-dessus qui ne
     // lit QUE `ruleset_entries` — un don maison qui ne vit que dans
     // `ruleset_overrides`, comme n'importe quelle fiche cree via
-    // `importRulesetEntries`, resout quand meme ici).
-    const resolvedFeatureBlocks = await resolveEntryBlocksInRulesetBatch(supabase, rulesetId, featureKeys);
+    // `importRulesetEntries`, resout quand meme ici). Lu plus haut, en meme
+    // temps que les autres lectures (V3.1-62).
     const declaredModifiersByKey = new Map(
       featureKeys.map((fk): [string, DeclaredModifier[]] => {
         const data = resolvedFeatureBlocks.get(fk)?.blocksByType.get("modifiers") as { modifiers: DeclaredModifier[] } | undefined;

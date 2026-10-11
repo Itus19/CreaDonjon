@@ -137,14 +137,18 @@ export async function resolveCharacterActionContext(
   campaignId: string | null,
   locale: Locale
 ): Promise<CharacterActionContext | null> {
-  const entity = await getEntityById(supabase, entityId);
+  // V3.1-62 (docs/CABLAGE.md, C3) : la fiche, ses blocs et la campagne ne
+  // dependent pas les uns des autres — une seule vague au lieu de trois.
+  const [entity, campaign, blocks] = await Promise.all([
+    getEntityById(supabase, entityId),
+    campaignId ? getCampaignById(supabase, campaignId) : Promise.resolve(null),
+    listBlocksForEntity(supabase, entityId),
+  ]);
   if (!entity) return null;
 
-  const campaign = campaignId ? await getCampaignById(supabase, campaignId) : null;
   const rulesetId = campaign?.ruleset_id ?? (await getWorldDefaultRulesetId(supabase, entity.world_id));
   if (!rulesetId) return null;
 
-  const blocks = await listBlocksForEntity(supabase, entityId);
   const characterRow = blocks.find((b) => b.block_type === "character");
   if (!characterRow) return null;
   const characterData = characterRow.data as unknown as CharacterBlockData;
@@ -162,22 +166,20 @@ export async function resolveCharacterActionContext(
     .filter((c) => c.class.kind === "rule" && c.class.key)
     .map((c) => ({ key: (c.class as { kind: "rule"; key: string }).key, level: c.level }));
 
-  const assembled = await assembleResolvedRuleset(
-    supabase,
-    rulesetId,
-    { species: speciesKey, background: backgroundKey, classes: classSelections, choices: characterData.choices },
-    locale
-  );
-
   const equipmentKeys = (inventoryData?.items ?? [])
     .map(itemRef)
     .filter((r): r is { kind: "rule"; key: string } => r?.kind === "rule")
     .map((r) => r.key);
-  const {
-    armor: armorByKey,
-    weapon: weaponByKey,
-    weight: weightByKey,
-  } = await resolveEquipmentData(supabase, rulesetId, equipmentKeys);
+  // Le ruleset assemble et l'equipement ne dependent pas l'un de l'autre (V3.1-62, C3).
+  const [assembled, { armor: armorByKey, weapon: weaponByKey, weight: weightByKey }] = await Promise.all([
+    assembleResolvedRuleset(
+      supabase,
+      rulesetId,
+      { species: speciesKey, background: backgroundKey, classes: classSelections, choices: characterData.choices },
+      locale
+    ),
+    resolveEquipmentData(supabase, rulesetId, equipmentKeys),
+  ]);
   const carriedWeight = totalCarriedWeight(inventoryData?.items ?? [], weightByKey);
 
   const dexScore = characterData.abilities.base.dex;

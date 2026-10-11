@@ -81,4 +81,20 @@ describe.skipIf(!hasCreds)("assembleResolvedRuleset (integration, base reelle)",
       spellcasting: { ability: "int", slotsByLevel: { 3: { 1: 4, 2: 2 } } },
     });
   });
+
+  // V3.1-62 : l'assembleur lance ses lectures en parallele ; l'ordre des
+  // choix restants, lui, ne doit pas bouger — l'assistant de creation les
+  // affiche dans cet ordre, et une competence proposee par la classe ET par
+  // un trait va d'abord a la classe (`routeSkillChoices`, V3.1-4).
+  it("SRD 2024 : l'ordre des choix restants d'un Humain Guerrier reste classe, armes, trait, langues", async () => {
+    const { data, error } = await admin.from("rulesets").select("id").eq("base_system", "dnd_srd_52").eq("is_official_base", true).single();
+    if (error || !data) throw new Error(error?.message ?? "aucun ruleset SRD 5.2.1 officiel en base");
+    const assembled = await assembleResolvedRuleset(
+      admin,
+      data.id,
+      { species: "human", background: "soldier", classes: [{ key: "fighter", level: 1 }] },
+      "fr"
+    );
+    expect(assembled.remainingChoices.map((c) => c.id)).toEqual(["fighter.skills", "fighter.weapon_mastery", "skillful.skills", "character.languages"]);
+  });
 });
