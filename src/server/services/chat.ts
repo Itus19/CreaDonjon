@@ -6,6 +6,7 @@ import { listCampaignMembers } from "@/src/server/repos/campaigns";
 import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
 import {
   countUnreadInThread,
+  getChatLastReadAt,
   listChatLastReadAtByThread,
   listLastMessagePerThread,
   type ChatMessageRow,
@@ -79,4 +80,25 @@ export async function listChatThreadSummaries(
     return bt.localeCompare(at);
   });
   return summaries;
+}
+
+
+/**
+ * Pastille du chat : messages non lus de l'appelant dans une campagne
+ * (V2-M12/M13). Le MJ (administrateur du monde, verifie cote serveur) compte
+ * tous les fils ; une joueuse, le sien seulement. Partage par la route
+ * `/api/campaigns/[campaignId]/chat/unread-count` et le layout du monde, qui
+ * le calcule avec la page depuis V3.1-62 (docs/CABLAGE.md, C1).
+ */
+export async function countUnreadChatMessages(
+  supabase: TypedClient,
+  params: { campaignId: string; worldId: string; userId: string }
+): Promise<number> {
+  const isMj = await isWorldAdmin(supabase, { worldId: params.worldId, userId: params.userId });
+  if (isMj) {
+    const threads = await listChatThreadSummaries(supabase, { campaignId: params.campaignId, mjUserId: params.userId });
+    return threads.reduce((sum, t) => sum + t.unreadCount, 0);
+  }
+  const lastReadAt = await getChatLastReadAt(supabase, { campaignId: params.campaignId, userId: params.userId, threadUserId: params.userId });
+  return countUnreadInThread(supabase, { campaignId: params.campaignId, threadUserId: params.userId, readerId: params.userId, sinceExclusive: lastReadAt });
 }

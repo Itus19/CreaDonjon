@@ -20,12 +20,15 @@ import ChatUnreadProvider from "./useChatUnread";
 export default function AppShell({
   worldSlug,
   campaignId,
+  initialUnreadCount = null,
   children,
   overlay,
 }: {
   worldSlug: string;
   /** V2-M11 (volet de lancer de des) : "un monde = une campagne" — `null` avant la creation de la premiere campagne. */
   campaignId: string | null;
+  /** Messages non lus, comptes par le layout avec la page (V3.1-62) ; `null` : la pastille les demande elle-meme. */
+  initialUnreadCount?: number | null;
   children: React.ReactNode;
   /**
    * Emplacement pour un contenu monte une seule fois, HORS du flux flex de
@@ -43,7 +46,7 @@ export default function AppShell({
   const isMj = pathname.startsWith(`/m/${worldSlug}/mj`);
   return (
     <DiceRollProvider campaignId={campaignId} isGm={isMj}>
-      <ChatUnreadProvider campaignId={campaignId} isMj={isMj}>
+      <ChatUnreadProvider campaignId={campaignId} isMj={isMj} initialUnreadCount={initialUnreadCount}>
         {/* `flex-1 min-h-0` plutot qu'une hauteur fixe (`h-dvh`) : ce conteneur
             n'est pas toujours le seul enfant de `<body>` — le bandeau "voir comme"
             (`ViewAsBanner`, app/layout.tsx) s'empile au-dessus quand il est

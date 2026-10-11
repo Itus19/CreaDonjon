@@ -34,13 +34,18 @@ export function useChatUnread(): ChatUnreadValue {
 export default function ChatUnreadProvider({
   campaignId,
   isMj,
+  initialUnreadCount = null,
   children,
 }: {
   campaignId: string | null;
   isMj: boolean;
+  /** Compte lu par le layout avec la page (V3.1-62, C1) : le premier montage ne le redemande pas. */
+  initialUnreadCount?: number | null;
   children: React.ReactNode;
 }) {
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(initialUnreadCount ?? 0);
+  /** Le compte du layout ne sert qu'au premier montage ; un changement de section (MJ ou joueuse) redemande le compte. */
+  const compteInitialDisponible = useRef(initialUnreadCount !== null);
   const supabase = useMemo(() => createClient(), []);
   const userIdRef = useRef<string | null>(null);
 
@@ -52,12 +57,21 @@ export default function ChatUnreadProvider({
       userIdRef.current = data.user?.id ?? null;
     });
 
-    fetch(`/api/campaigns/${campaignId}/chat/unread-count`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body: { count: number } | null) => {
-        if (!cancelled && body) setUnreadCount(body.count);
-      })
-      .catch(() => {});
+    if (compteInitialDisponible.current) {
+      compteInitialDisponible.current = false;
+    } else {
+      fetch(`/api/campaigns/${campaignId}/chat/unread-count`)
+        .then((res) => {
+          if (!res.ok) throw new Error(`chat/unread-count : ${res.status}`);
+          return res.json() as Promise<{ count: number }>;
+        })
+        .then((body) => {
+          if (!cancelled) setUnreadCount(body.count);
+        })
+        .catch((erreur: unknown) => {
+          console.error("Messages non lus non charges", erreur);
+        });
+    }
 
     const channel = supabase
       .channel(`chat_unread:${campaignId}`)
@@ -85,7 +99,9 @@ export default function ChatUnreadProvider({
       if (!isMj) {
         // Un seul fil cote joueur : le vider vide toute la pastille, tout de suite.
         setUnreadCount(0);
-        fetch(`/api/campaigns/${campaignId}/chat/read`, { method: "POST" }).catch(() => {});
+        fetch(`/api/campaigns/${campaignId}/chat/read`, { method: "POST" }).catch((erreur: unknown) => {
+          console.error("Lecture du chat non enregistree", erreur);
+        });
         return;
       }
       // Cote MJ, ouvrir UN fil ne vide jamais la pastille globale a l'aveugle
@@ -97,7 +113,9 @@ export default function ChatUnreadProvider({
         .then((body: { count: number } | null) => {
           if (body) setUnreadCount(body.count);
         })
-        .catch(() => {});
+        .catch((erreur: unknown) => {
+          console.error("Messages non lus non recalcules", erreur);
+        });
     },
     [campaignId, isMj]
   );

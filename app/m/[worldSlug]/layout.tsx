@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
+import { countUnreadChatMessages } from "@/src/server/services/chat";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import AppShell from "@/components/shell/AppShell";
@@ -24,8 +25,13 @@ export default async function WorldLayout({
   // de des, messages non lus) — le NOM de la campagne est affiche par la
   // barre laterale MJ, qui le relit elle-meme (`listCampaigns` est memoise
   // par requete, donc sans second aller-retour).
-  const campaigns = await listCampaigns(supabase, world.id);
+  const [campaigns, user] = await Promise.all([listCampaigns(supabase, world.id), getAuthUser(supabase)]);
   const campaignId = campaigns[0]?.id ?? null;
+  // V3.1-62 (docs/CABLAGE.md, C1) : la pastille du chat est visible sur
+  // toutes les pages du monde ; son compte arrive avec la page plutot que
+  // par un appel `/api` apres l'affichage.
+  const initialUnreadCount =
+    campaignId && user ? await countUnreadChatMessages(supabase, { campaignId, worldId: world.id, userId: user.id }) : null;
 
   return (
     // Etat des fenetres flottantes (ADR-0011), partage par Monde et Regles
@@ -37,6 +43,7 @@ export default async function WorldLayout({
         <AppShell
           worldSlug={world.slug}
           campaignId={campaignId}
+          initialUnreadCount={initialUnreadCount}
           overlay={<AvecWindowsLayer worldSlug={world.slug} />}
         >
           {children}
