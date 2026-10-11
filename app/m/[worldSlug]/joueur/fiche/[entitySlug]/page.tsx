@@ -1,3 +1,4 @@
+import { getLocale } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
@@ -5,6 +6,8 @@ import { getEntityBySlug } from "@/src/server/repos/entities";
 import { canUserEditEntity } from "@/src/server/services/permissions";
 import { getEntityWindowData } from "@/src/server/services/entityWindow";
 import EditEntityForm from "../../../(monde)/f/[entitySlug]/EditEntityForm";
+import { lancerFicheAvecPage } from "@/src/server/services/ficheAvecPage";
+import type { Locale } from "@/src/i18n/request";
 
 /**
  * Fiche d'une entree de l'outil Édition (V2-M13) — toujours en edition
@@ -52,6 +55,7 @@ export default async function JoueurFicheEntityPage({
       campaignCharacterUserId={data.campaignCharacterUserId}
       initialPortraitLayout={data.portraitLayout}
       playerRestricted
+      ficheAvecPage={lancerFicheAvecPage(supabase, { worldId: data.entity.world_id, entityId: data.entity.id, userId: user.id, locale: (await getLocale()) as Locale, blocks: data.blocks })}
     />
   );
 }

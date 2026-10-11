@@ -13,6 +13,7 @@ import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
 import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
 import WikiBackgroundPreload from "@/components/entities/public/WikiBackgroundPreload";
 import EditEntityForm from "../../../(monde)/f/[entitySlug]/EditEntityForm";
+import { lancerFicheAvecPage } from "@/src/server/services/ficheAvecPage";
 
 /**
  * Fiche du Wiki (V2-M7b, coquille joueur) — lecture seule PAR DEFAUT
@@ -87,6 +88,7 @@ export default async function JoueurWikiEntityPage({
           campaignCharacterUserId={data.campaignCharacterUserId}
           initialPortraitLayout={data.portraitLayout}
           playerRestricted
+          ficheAvecPage={lancerFicheAvecPage(supabase, { worldId: data.entity.world_id, entityId: data.entity.id, userId: user.id, locale: (await getLocale()) as Locale, blocks: data.blocks })}
         />
       </>
     );

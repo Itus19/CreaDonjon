@@ -24,6 +24,13 @@ export interface ChargeurParLots<V> {
   charger(cles: readonly string[]): Promise<Map<string, V>>;
   /** Le résultat tout de suite si TOUTES les clés sont en cache et fraîches, sinon `null` (premier affichage sans clignotement). */
   lireSiPret(cles: readonly string[]): Map<string, V> | null;
+  /**
+   * Adopte une promesse déjà lancée ailleurs pour cette clé (données parties
+   * avec la page, C1) : les demandes suivantes l'attendent au lieu d'appeler
+   * le serveur. Si elle échoue ou rend `undefined`, la clé se charge
+   * normalement. Sans effet si la clé est déjà en cache frais ou en cours.
+   */
+  amorcer(cle: string, promesse: Promise<V | undefined>): void;
   /** Oublie les clés choisies (toutes sans filtre), pour forcer un rechargement. */
   vider(filtre?: (cle: string) => boolean): void;
 }
@@ -78,25 +85,35 @@ export function creerChargeurParLots<V>(options: {
     }
   }
 
-  function attendre(cle: string): Promise<V | undefined> {
-    const entree = cache.get(cle);
-    if (entree && maintenant() - entree.chargeeA < options.dureeCacheMs) return Promise.resolve(entree.valeur);
-    const deja = enCours.get(cle);
-    if (deja) return deja.promesse;
+  function planifier(cle: string): void {
+    file.push(cle);
+    if (!envoiPrevu) {
+      envoiPrevu = true;
+      setTimeout(envoyer, 0);
+    }
+  }
 
+  function nouvelleAttente(cle: string): Attente<V> {
     let resoudre: (valeur: V | undefined) => void = () => {};
     let rejeter: (erreur: unknown) => void = () => {};
     const promesse = new Promise<V | undefined>((ok, ko) => {
       resoudre = ok;
       rejeter = ko;
     });
-    enCours.set(cle, { promesse, resoudre, rejeter });
-    file.push(cle);
-    if (!envoiPrevu) {
-      envoiPrevu = true;
-      setTimeout(envoyer, 0);
-    }
-    return promesse;
+    const attente = { promesse, resoudre, rejeter };
+    enCours.set(cle, attente);
+    return attente;
+  }
+
+  function attendre(cle: string): Promise<V | undefined> {
+    const entree = cache.get(cle);
+    if (entree && maintenant() - entree.chargeeA < options.dureeCacheMs) return Promise.resolve(entree.valeur);
+    const deja = enCours.get(cle);
+    if (deja) return deja.promesse;
+
+    const attente = nouvelleAttente(cle);
+    planifier(cle);
+    return attente.promesse;
   }
 
   return {
@@ -109,6 +126,29 @@ export function creerChargeurParLots<V>(options: {
         if (valeur !== undefined) resultat.set(cle, valeur);
       });
       return resultat;
+    },
+    amorcer(cle, promesse) {
+      const entree = cache.get(cle);
+      if (entree && maintenant() - entree.chargeeA < options.dureeCacheMs) return;
+      if (enCours.has(cle)) return;
+      const attente = nouvelleAttente(cle);
+      // Repli sur une requete normale si la promesse amorcee ne donne rien :
+      // l'attente reste la meme, `envoyer` la resoudra.
+      promesse.then(
+        (valeur) => {
+          if (valeur === undefined) {
+            planifier(cle);
+            return;
+          }
+          cache.set(cle, { valeur, chargeeA: maintenant() });
+          enCours.delete(cle);
+          attente.resoudre(valeur);
+        },
+        (erreur: unknown) => {
+          console.error(`Donnee partie avec la page non recue (${cle}), demande au serveur`, erreur);
+          planifier(cle);
+        }
+      );
     },
     lireSiPret(cles) {
       const resultat = new Map<string, V>();

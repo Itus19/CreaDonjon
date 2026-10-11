@@ -120,6 +120,17 @@ Chaque page affichée fait deux appels `/api` de moins : c'est aussi du quota é
 | Joueuse, accueil | 24 → **16** | 3 → **1** | 2,9 s → 2,8 s |
 | Joueuse, sa fiche | 144 → **118** | 10 → **8** | 7,8 s → **6,2 s** |
 
+**Après les corrections 7 et 8 (§7), le 11 octobre** :
+- **Messages non lus** : le compte arrive avec le layout du monde (`countUnreadChatMessages`, partagé avec la route). Plus aucun appel `/api` après l'affichage sur les accueils.
+- **La fiche avec la page (C1, ADR 0056)** : la page lance le calcul de la fiche sans l'attendre et le passe en promesse ; la fiche l'adopte à la place de `/sheet` et `/resolved-ruleset`. Ces deux appels ont disparu sur les trois pages qui affichent une fiche par `EditEntityForm`.
+
+| Écran | Fin des chargements (chronologie) |
+|---|---|
+| MJ, fiche de personnage | 5,4 s → **4,4 s** |
+| Joueuse, fiche du wiki de son PJ | 6,1 s → **4,8 s** |
+
+Ce qui finit en dernier maintenant : la liste de toutes les règles (`/rule-entries`, ≈ 2,5 s, une fois par onglet), puis la seconde vague de puces et de blocs de règles, qui attend le ruleset résolu pour connaître ses clés.
+
 Les routes les plus lentes, en temps serveur moyen :
 
 | Route | Temps moyen | Appels par fiche de personnage |
@@ -188,7 +199,7 @@ Le test échoue si un compte augmente. Une correction qui le fait baisser **abai
 
 Dans l'ordre des gains mesurés, une correction par commit, sans changer aucun comportement, avec une mesure après chacune :
 
-1. **La fiche de personnage** : C2, puis C1. *C2 fait le 11 octobre (chargeur par lots) : 44 → 11 chargements après affichage, 581 → 244 requêtes. C1 reste à faire.*
+1. **La fiche de personnage** : C2, puis C1. *C2 fait le 11 octobre (chargeur par lots) : 44 → 11 chargements après affichage, 581 → 244 requêtes. C1 fait le 11 octobre (ADR 0056) : `/sheet` et `/resolved-ruleset` partent avec la page.*
    - Un seul chargement du ruleset résolu par fiche, partagé par tous les blocs.
    - Les puces de référence d'une fiche demandées en une requête.
    - Les blocs de règles en un lot.

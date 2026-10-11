@@ -2,9 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { resolveRulesetSchema } from "@/lib/resolvedRuleset/schemas";
-import { assembleResolvedRuleset, resolveEquipmentData, resolveSpellLevels } from "@/src/server/services/resolvedRuleset";
+import { buildResolvedRulesetView } from "@/src/server/services/resolvedRuleset";
 import { getWorldBySlug } from "@/src/server/services/worlds";
-import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import type { Locale } from "@/src/i18n/request";
 
 /**
@@ -28,34 +27,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Monde introuvable." }, { status: 404 });
   }
 
-  const [rulesetId, locale] = await Promise.all([
-    getWorldDefaultRulesetId(supabase, world.id),
-    getLocale() as Promise<Locale>,
-  ]);
-  if (!rulesetId) {
-    return NextResponse.json(
-      {
-        ruleset: { classes: {}, features: {} },
-        remainingChoices: [],
-        proficiencies: [],
-        languages: [],
-        asiGrantedLevels: {},
-        backgroundAbilityScores: null,
-        equipment: {},
-        weaponByKey: {},
-        weight: {},
-        cost: {},
-        spellLevels: {},
-      },
-      { status: 200 }
-    );
-  }
-
-  const [assembled, equipmentData, spellLevels] = await Promise.all([
-    assembleResolvedRuleset(supabase, rulesetId, parsed.data, locale),
-    resolveEquipmentData(supabase, rulesetId, parsed.data.equipmentKeys ?? []),
-    resolveSpellLevels(supabase, rulesetId, parsed.data.spellKeys ?? []),
-  ]);
-  const { armor: equipment, weapon: weaponByKey, weight, cost } = equipmentData;
-  return NextResponse.json({ ...assembled, equipment, weaponByKey, weight, cost, spellLevels }, { status: 200 });
+  const locale = (await getLocale()) as Locale;
+  return NextResponse.json(await buildResolvedRulesetView(supabase, world.id, parsed.data, locale), { status: 200 });
 }

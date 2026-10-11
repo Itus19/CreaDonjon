@@ -5,7 +5,7 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
-import { SKILLS, SKILL_ABILITIES, type Ability, type DerivedSheet } from "@/src/core/rules/sheet";
+import { SKILLS, SKILL_ABILITIES, type Ability } from "@/src/core/rules/sheet";
 import { XP_LEVEL_THRESHOLDS, hasReachedNextLevel } from "@/src/core/rules/experience";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
@@ -23,7 +23,7 @@ import MasteriesTab from "./MasteriesTab";
 import { toggleChoice } from "./characterChoiceUtils";
 import LevelUpWizard from "./LevelUpWizard";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
-import { creerChargeurParLots } from "@/lib/chargement/chargeurParLots";
+import { chargerFicheCalculee, type SheetApiResponse } from "./ficheCalculee";
 
 export const ABILITY_LABELS: Record<Ability, string> = {
   str: "FOR",
@@ -48,31 +48,6 @@ export const TAB_LABELS: Record<Tab, string> = {
   maitrise: "Maîtrises",
 };
 
-interface SheetApiResponse {
-  sheet: DerivedSheet;
-  hitDiceTotals: Record<string, number>;
-  runtimeState: { state: RuntimeState; hpMax: number; hitDiceTotals: Record<string, number> };
-}
-
-/**
- * V3.1-62 (docs/CABLAGE.md, C2) : la fiche lancait trois GET `/sheet`
- * identiques au montage (double montage du mode strict, plusieurs instances).
- * Le serveur les traitait a la file : le dernier finissait 8 s apres le
- * premier, et fixait la fin de l'affichage. Les demandes SIMULTANEES
- * partagent maintenant la meme attente ; aucune reponse n'est gardee en cache
- * (`dureeCacheMs: 0`), donc un rechargement apres une action repart toujours
- * au serveur.
- */
-const chargeurFiche = creerChargeurParLots<SheetApiResponse>({
-  tailleMax: 1,
-  dureeCacheMs: 0,
-  chargerLot: async ([cle]) => {
-    const [entityId, campaignId] = JSON.parse(cle) as [string, string];
-    const res = await fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId}`);
-    if (!res.ok) throw new Error(`sheet : ${res.status}`);
-    return new Map([[cle, (await res.json()) as SheetApiResponse]]);
-  },
-});
 
 /**
  * Fiche de personnage jouable (V1-B5, specs/fiche-personnage-interactive.md).
@@ -248,11 +223,8 @@ export default function PlayableCharacterSheet({
   // motif que useReferenceChips.ts/useWorldRuleEntries.ts.
   useEffect(() => {
     let cancelled = false;
-    const cle = JSON.stringify([entityId, campaignId ?? ""]);
-    chargeurFiche
-      .charger([cle])
-      .then((resultat) => {
-        const body = resultat.get(cle);
+    chargerFicheCalculee(entityId, campaignId)
+      .then((body) => {
         if (!cancelled && body) setRemote(body);
       })
       .catch((erreur: unknown) => {

@@ -84,6 +84,47 @@ describe("creerChargeurParLots", () => {
     expect(chargeur.lireSiPret(["x", "y"])).toBeNull();
   });
 
+  it("amorcer : une promesse deja lancee sert la cle, sans requete", async () => {
+    const { chargeur, appels } = chargeurDeTest();
+    chargeur.amorcer("x", Promise.resolve("venue-du-serveur"));
+    expect(await chargeur.charger(["x", "y"])).toEqual(new Map([["x", "venue-du-serveur"], ["y", "valeur:y"]]));
+    expect(appels).toEqual([["y"]]);
+  });
+
+  it("amorcer : une promesse rendant undefined laisse la cle se charger normalement", async () => {
+    const { chargeur, appels } = chargeurDeTest();
+    chargeur.amorcer("x", Promise.resolve(undefined));
+    expect(await chargeur.charger(["x"])).toEqual(new Map([["x", "valeur:x"]]));
+    expect(appels).toEqual([["x"]]);
+  });
+
+  it("amorcer : un echec de la promesse retombe sur une requete normale", async () => {
+    const { chargeur, appels } = chargeurDeTest();
+    chargeur.amorcer("x", Promise.reject(new Error("serveur")));
+    expect(await chargeur.charger(["x"])).toEqual(new Map([["x", "valeur:x"]]));
+    expect(appels).toEqual([["x"]]);
+  });
+
+  it("amorcer n'ecrase jamais une cle deja en cache", async () => {
+    const { chargeur, appels } = chargeurDeTest();
+    await chargeur.charger(["x"]);
+    chargeur.amorcer("x", Promise.resolve("ancienne"));
+    expect(await chargeur.charger(["x"])).toEqual(new Map([["x", "valeur:x"]]));
+    expect(appels).toEqual([["x"]]);
+  });
+
+  it("amorcer accepte un « thenable » dont then ne renvoie rien (promesse venue du serveur par React)", async () => {
+    const { chargeur, appels } = chargeurDeTest();
+    const thenable = {
+      then(ok: (v: string) => void) {
+        setTimeout(() => ok("venue-du-serveur"), 0);
+      },
+    };
+    chargeur.amorcer("x", thenable as unknown as Promise<string>);
+    expect(await chargeur.charger(["x"])).toEqual(new Map([["x", "venue-du-serveur"]]));
+    expect(appels).toEqual([]);
+  });
+
   it("aucune requete pour une liste vide", async () => {
     const { chargeur, appels } = chargeurDeTest();
     expect((await chargeur.charger([])).size).toBe(0);

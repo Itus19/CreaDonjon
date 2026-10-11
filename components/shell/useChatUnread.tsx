@@ -44,8 +44,12 @@ export default function ChatUnreadProvider({
   children: React.ReactNode;
 }) {
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount ?? 0);
-  /** Le compte du layout ne sert qu'au premier montage ; un changement de section (MJ ou joueuse) redemande le compte. */
-  const compteInitialDisponible = useRef(initialUnreadCount !== null);
+  /**
+   * Le compte du layout vaut pour la campagne et la section (MJ ou joueuse)
+   * du premier affichage. Tant qu'elles ne changent pas, on ne le redemande
+   * pas ; le mode strict, qui rejoue l'effet, ne le redemande pas non plus.
+   */
+  const compteInitialPour = useRef(initialUnreadCount !== null ? `${campaignId}|${isMj}` : null);
   const supabase = useMemo(() => createClient(), []);
   const userIdRef = useRef<string | null>(null);
 
@@ -57,9 +61,9 @@ export default function ChatUnreadProvider({
       userIdRef.current = data.user?.id ?? null;
     });
 
-    if (compteInitialDisponible.current) {
-      compteInitialDisponible.current = false;
-    } else {
+    // Sauf si le layout a deja fourni le compte de cette campagne et de cette section.
+    if (compteInitialPour.current !== `${campaignId}|${isMj}`) {
+      compteInitialPour.current = null;
       fetch(`/api/campaigns/${campaignId}/chat/unread-count`)
         .then((res) => {
           if (!res.ok) throw new Error(`chat/unread-count : ${res.status}`);

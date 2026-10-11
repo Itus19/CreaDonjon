@@ -4,6 +4,9 @@ import { getEntityWindowData } from "@/src/server/services/entityWindow";
 import { isPlayerOnlyInWorld } from "@/src/server/services/permissions";
 import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 import EditEntityForm from "./EditEntityForm";
+import { getLocale } from "next-intl/server";
+import { lancerFicheAvecPage } from "@/src/server/services/ficheAvecPage";
+import type { Locale } from "@/src/i18n/request";
 
 /**
  * Retour utilisateur : "quand un joueur utilise les hyperliens... ils
@@ -30,6 +33,18 @@ export default async function EntityPage({
     redirect(`/m/${worldSlug}/joueur/wiki/${entitySlug}`);
   }
 
+  // V3.1-62 (ADR 0056, docs/CABLAGE.md C1) : la fiche de personnage se
+  // calcule EN MEME TEMPS que la page, sans la retarder. La promesse n'est
+  // pas attendue ici : elle part avec la page, et la fiche l'adopte a la
+  // place de ses appels `/sheet` et `/resolved-ruleset`.
+  const ficheAvecPage = lancerFicheAvecPage(supabase, {
+    worldId: data.entity.world_id,
+    entityId: data.entity.id,
+    userId: user?.id ?? null,
+    locale: (await getLocale()) as Locale,
+    blocks: data.blocks,
+  });
+
   return (
     <>
       <RegisterPrimaryWindow
@@ -50,6 +65,7 @@ export default async function EntityPage({
         initialIsPc={data.isPc}
         campaignCharacterUserId={data.campaignCharacterUserId}
         initialPortraitLayout={data.portraitLayout}
+        ficheAvecPage={ficheAvecPage}
       />
     </>
   );

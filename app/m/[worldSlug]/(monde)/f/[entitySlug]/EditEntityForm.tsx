@@ -18,6 +18,7 @@ import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
+import { useAmorcerFicheAvecPage, type FicheAvecPage } from "@/components/blocks/useAmorcerFicheAvecPage";
 
 const ENTITY_KIND_DROPDOWN_OPTIONS = ENTITY_KINDS.map((kind) => ({
   value: kind,
@@ -54,6 +55,7 @@ export default function EditEntityForm({
   campaignCharacterUserId,
   initialPortraitLayout,
   playerRestricted,
+  ficheAvecPage = null,
 }: {
   entity: EntitySummary;
   worldSlug: string;
@@ -69,7 +71,10 @@ export default function EditEntityForm({
   initialPortraitLayout: EntityPortraitLayout;
   /** Coquille joueur (retour utilisateur, V2-M7b) : masque l'assistant de creation et limite "Ajouter un bloc" au texte — "si les joueurs veulent ajouter des choses il faudra demander au MJ". `undefined`/`false` en contexte MJ, rien ne change. */
   playerRestricted?: boolean;
+  /** Fiche de personnage calculee par la page en meme temps qu'elle (V3.1-62, ADR 0056) ; `null` sans fiche de personnage. */
+  ficheAvecPage?: Promise<FicheAvecPage> | null;
 }) {
+  useAmorcerFicheAvecPage({ worldSlug, entityId: entity.id, blocks: initialBlocks, promesse: ficheAvecPage });
   const router = useRouter();
   const [name, setName] = useState(entity.name);
   const [entityKind, setEntityKind] = useState(entity.entity_kind);

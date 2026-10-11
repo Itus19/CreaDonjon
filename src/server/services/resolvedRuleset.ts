@@ -1,4 +1,5 @@
 import "server-only";
+import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
@@ -826,4 +827,42 @@ export async function resolveSpellLevels(
     result[key] = found ? parseSpellLevel(found.fields) : null;
   }
   return result;
+}
+
+/** Reponse de `/api/worlds/[worldSlug]/resolved-ruleset` quand le monde n'a pas de ruleset par defaut. */
+const EMPTY_RULESET_VIEW = {
+  ruleset: { classes: {}, features: {} },
+  remainingChoices: [],
+  proficiencies: [],
+  languages: [],
+  asiGrantedLevels: {},
+  backgroundAbilityScores: null,
+  equipment: {},
+  weaponByKey: {},
+  weight: {},
+  cost: {},
+  spellLevels: {},
+};
+
+/**
+ * La reponse de `/api/worlds/[worldSlug]/resolved-ruleset`, construite ici
+ * pour etre partagee par la route et par la page de la fiche, qui la lance
+ * avec elle (V3.1-62, ADR 0056). Ruleset par defaut du monde, sans les choix
+ * du personnage : exactement ce que la route a toujours rendu.
+ */
+export async function buildResolvedRulesetView(
+  supabase: TypedClient,
+  worldId: string,
+  selection: { species?: string; background?: string; classes: { key: string; level: number }[]; equipmentKeys?: string[]; spellKeys?: string[] },
+  locale: Locale
+) {
+  const rulesetId = await getWorldDefaultRulesetId(supabase, worldId);
+  if (!rulesetId) return EMPTY_RULESET_VIEW;
+  const [assembled, equipmentData, spellLevels] = await Promise.all([
+    assembleResolvedRuleset(supabase, rulesetId, selection, locale),
+    resolveEquipmentData(supabase, rulesetId, selection.equipmentKeys ?? []),
+    resolveSpellLevels(supabase, rulesetId, selection.spellKeys ?? []),
+  ]);
+  const { armor: equipment, weapon: weaponByKey, weight, cost } = equipmentData;
+  return { ...assembled, equipment, weaponByKey, weight, cost, spellLevels };
 }

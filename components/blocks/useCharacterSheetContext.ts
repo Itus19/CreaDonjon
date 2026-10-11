@@ -18,6 +18,7 @@ import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { useResolvedRuleset, type RemainingChoiceView, type TraitGrantView } from "./useResolvedRuleset";
 import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
 import { itemLabel, itemRef } from "./inventoryItem";
+import { rulesetSelectionFromBlocks } from "@/lib/resolvedRuleset/selection";
 import type { ResolvedRuleset } from "@/src/core/rules/sheet";
 import { LANGUAGE_LABELS_FR } from "@/src/i18n/fr";
 import type { LanguageKey } from "@/src/core/rules/srdMapping";
@@ -113,25 +114,12 @@ export function useCharacterSheetContext(
   inventory: InventoryBlockData | undefined,
   spellcasting: SpellcastingBlockData | undefined
 ): CharacterSheetContext {
+  // V3.1-62 (ADR 0056) : la meme fonction construit cette selection cote
+  // serveur, pour la reponse partie avec la page — memes cles des deux cotes.
+  const selection = useMemo(() => rulesetSelectionFromBlocks(character, inventory, spellcasting), [character, inventory, spellcasting]);
+  const { species: speciesKey, classes: classSelections } = selection;
   const characterClasses = useMemo(() => character?.classes ?? [], [character]);
-  const speciesKey = character?.species?.kind === "rule" ? character.species.key : undefined;
-  const backgroundKey = character?.background?.kind === "rule" ? character.background.key : undefined;
-  const classSelections = useMemo(
-    () =>
-      characterClasses
-        .filter((c) => c.class.kind === "rule" && c.class.key)
-        .map((c) => ({ key: (c.class as { kind: "rule"; key: string }).key, level: c.level })),
-    [characterClasses]
-  );
   const isMonk = classSelections.some((c) => c.key === "monk");
-  const equipmentKeys = useMemo(
-    () => (inventory?.items ?? []).map(itemRef).filter((r): r is { kind: "rule"; key: string } => r?.kind === "rule").map((r) => r.key),
-    [inventory]
-  );
-  const spellKeys = useMemo(
-    () => (spellcasting?.known ?? []).map((k) => k.ref).filter((r): r is { kind: "rule"; key: string } => r.kind === "rule").map((r) => r.key),
-    [spellcasting]
-  );
 
   const {
     ruleset,
@@ -145,13 +133,7 @@ export function useCharacterSheetContext(
     spellLevels,
     asiGrantedLevels,
     backgroundAbilityScores: rawBackgroundAbilityScores,
-  } = useResolvedRuleset(worldSlug, {
-    species: speciesKey,
-    background: backgroundKey,
-    classes: classSelections,
-    equipmentKeys,
-    spellKeys,
-  });
+  } = useResolvedRuleset(worldSlug, selection);
   const backgroundAbilityScores = (rawBackgroundAbilityScores as Ability[] | null) ?? null;
 
   const carriedWeight = useMemo(() => totalCarriedWeight(inventory?.items ?? [], weight), [inventory, weight]);

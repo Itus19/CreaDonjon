@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { ResolvedRuleset } from "@/src/core/rules/sheet";
 import type { ArmorData, ItemCost, WeaponData } from "@/src/core/rules/srdMapping";
 import { creerChargeurParLots } from "@/lib/chargement/chargeurParLots";
+import { selectionBody, selectionHasAnything, selectionKey, type RulesetSelection } from "@/lib/resolvedRuleset/selection";
 
 export interface RemainingChoiceView {
   id: string;
@@ -49,13 +50,7 @@ export interface ResolvedRulesetView {
   backgroundAbilityScores: string[] | null;
 }
 
-export interface RulesetSelection {
-  species?: string;
-  background?: string;
-  classes: { key: string; level: number }[];
-  equipmentKeys: string[];
-  spellKeys: string[];
-}
+export type { RulesetSelection };
 
 const EMPTY: ResolvedRulesetView = {
   ruleset: { classes: {}, features: {} },
@@ -71,28 +66,6 @@ const EMPTY: ResolvedRulesetView = {
   backgroundAbilityScores: null,
 };
 
-/**
- * Une cle vide apparait des qu'un objet d'inventaire bascule en "Reference
- * de regle" avant que l'utilisateur ait tape quoi que ce soit (`itemRef`
- * = `{kind:"rule", key:""}`) — `resolveRulesetSchema` (`z.string().min(1)`)
- * la rejette alors, la requete echoue, et sans ce filtre TOUT le ruleset
- * resolu (espece, classes, choix) disparaissait pendant la frappe : un bug
- * reel decouvert en testant V1-B5, pas propre a ce ticket (deja present
- * dans l'ancien `CharacterSheetPreview`, meme calcul d'`equipmentKeys`).
- */
-function nonEmptyKeys(keys: readonly string[]): string[] {
-  return keys.filter((k) => k.trim() !== "");
-}
-
-function selectionKey(s: RulesetSelection): string {
-  return JSON.stringify([
-    s.species,
-    s.background,
-    s.classes,
-    [...nonEmptyKeys(s.equipmentKeys)].sort(),
-    [...nonEmptyKeys(s.spellKeys)].sort(),
-  ]);
-}
 
 /**
  * V3.1-62 (docs/CABLAGE.md, C2) : la fiche de personnage demandait 6 fois le
@@ -116,6 +89,16 @@ const chargeurRuleset = creerChargeurParLots<ResolvedRulesetView>({
     return new Map([[cle, (await res.json()) as ResolvedRulesetView]]);
   },
 });
+
+/**
+ * V3.1-62 (ADR 0056) : la page lance le calcul du ruleset en meme temps
+ * qu'elle (promesse en flux) ; la fiche l'adopte ici AVANT sa propre
+ * demande, qui attend alors cette promesse au lieu d'appeler la route. La
+ * cle doit etre celle que la fiche calculera (`selectionKey`, module partage).
+ */
+export function amorcerRulesetResolu(worldSlug: string, cleSelection: string, promesse: Promise<ResolvedRulesetView | undefined>): void {
+  chargeurRuleset.amorcer(JSON.stringify([worldSlug, cleSelection]), promesse);
+}
 
 async function chargerRulesetResolu(worldSlug: string, dedupeKey: string, body: unknown): Promise<ResolvedRulesetView> {
   const cle = JSON.stringify([worldSlug, dedupeKey]);
@@ -141,18 +124,11 @@ export function useResolvedRuleset(worldSlug: string, selection: RulesetSelectio
    * d'inventaire seul, sur une entite sans fiche de personnage (boutique,
    * coffre), doit pouvoir les afficher lui aussi.
    */
-  const hasAnything =
-    selection.species || selection.background || selection.classes.length > 0 || nonEmptyKeys(selection.equipmentKeys).length > 0;
+  const hasAnything = selectionHasAnything(selection);
 
   useEffect(() => {
     let cancelled = false;
-    const body = {
-      species: selection.species,
-      background: selection.background,
-      classes: selection.classes,
-      equipmentKeys: nonEmptyKeys(selection.equipmentKeys),
-      spellKeys: nonEmptyKeys(selection.spellKeys),
-    };
+    const body = selectionBody(selection);
     const request: Promise<ResolvedRulesetView> = hasAnything ? chargerRulesetResolu(worldSlug, dedupeKey, body) : Promise.resolve(EMPTY);
 
     request
