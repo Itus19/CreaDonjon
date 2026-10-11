@@ -99,6 +99,27 @@ Ce qui reste visible dans les chiffres :
 
 Chaque page affichée fait deux appels `/api` de moins : c'est aussi du quota épargné (`docs/QUOTAS.md`, Q1).
 
+**Après les corrections 5 et 6 (§7), le 11 octobre** :
+- **Les listes de règles ne transportent plus le texte SRD.** `listRulesetEntries` lisait `source_raw` en entier pour toutes les entrées : 2,45 Mo pour le ruleset 2024. Les quatre lecteurs n'en gardaient que le nom, la classe ou l'espèce parente, ou les caractéristiques d'un monstre. La base n'envoie plus que ces champs (`source_raw->name`…), et seulement pour le type demandé. Les sorties ont été comparées octet par octet sur 26 cas (monstres et états dans les deux éditions et les deux langues, armes, liste des règles de chaque monde).
+
+  | Lecture | Avant | Après |
+  |---|---|---|
+  | Liste de toutes les règles | 2,45 Mo | 302 ko |
+  | Monstres (Initiative, Rencontres) | 2,45 Mo | 63 ko |
+  | États (Initiative) | 2,45 Mo | 2 ko |
+  | Catalogue d'armes (chaque calcul de fiche avec maîtrise d'armes, deux fois par affichage) | 2,45 Mo | 5 ko |
+
+- **Fenêtre Initiative** : les PJ sont lus en un lot, en même temps que le combat actif (C4).
+- **Badge « Prochaine session » de la joueuse** : ses données arrivent avec le layout joueur (C1), au lieu de deux appels `/api` sur chaque page joueuse.
+
+| Écran | Requêtes à la base | Chargements après affichage | Écran stable |
+|---|---|---|---|
+| MJ, fenêtre Initiative | 34 → **15** | — | 3,6 s → **1,6 s** |
+| MJ, page Initiative | 46 → **28** | 1 | 5,1 s → **3,0 s** |
+| MJ, fiche de personnage | 144 → **126** | 7 | 7,4 s → **5,4 s** |
+| Joueuse, accueil | 24 → **16** | 3 → **1** | 2,9 s → 2,8 s |
+| Joueuse, sa fiche | 144 → **118** | 10 → **8** | 7,8 s → **6,2 s** |
+
 Les routes les plus lentes, en temps serveur moyen :
 
 | Route | Temps moyen | Appels par fiche de personnage |
@@ -175,5 +196,5 @@ Dans l'ordre des gains mesurés, une correction par commit, sans changer aucun c
 2. **La route `sheet`** (6,7 s) : trouver où partent ses vagues (`resolveCharacterActionContext`, `assembleResolvedRuleset`) et les mettre en parallèle (C3). *Fait le 11 octobre : 26 → 15 vagues pour `sheet`, 18 → 11 pour `resolved-ruleset`. Reste la chaîne de rulesets relue dans les routes `/api`.*
 3. **Le fond commun** : dés, radio, messages non lus et calendrier arrivent avec le layout (C1). *Dés et radio chargés à la première ouverture de leur volet le 11 octobre. Restent les messages non lus et, côté joueuse, le calendrier (`next-session`, `open-request`).*
 4. **L'accueil du MJ** : les layouts en parallèle (C3). *Fait le 11 octobre autrement : le vrai coût était l'assemblage complet du ruleset par PJ, remplacé par la lecture des noms seuls (68 → 30 requêtes).*
-5. **La fenêtre Initiative** : `ruleset_entries` en un lot (C4).
+5. **La fenêtre Initiative** : `ruleset_entries` en un lot (C4). *Fait le 11 octobre : listes réduites aux champs utiles, PJ en un lot (34 → 15 requêtes, 3,6 s → 1,6 s).*
 6. **Les `router.refresh()`** remplacés un par un par des mises à jour ciblées (C5).

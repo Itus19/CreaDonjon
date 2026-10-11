@@ -1,17 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-interface NextSessionResponse {
-  campaignId: string | null;
-  session: { scheduled_date: string; starts_at: string } | null;
-}
-interface OpenRequestResponse {
-  campaignId: string | null;
-  request: unknown | null;
-  hasResponded: boolean;
+/** Ce que le badge affiche, lu par le layout joueur (V3.1-62, C1). */
+export interface ProchaineSession {
+  /** Date de la prochaine seance (`YYYY-MM-DD`), `null` si aucune n'est fixee. */
+  date: string | null;
+  /** Une ronde de demande de disponibilites est ouverte et la joueuse n'y a pas repondu. */
+  demandeEnAttente: boolean;
 }
 
 function formatSessionDate(dateStr: string): string {
@@ -42,27 +39,14 @@ function CalendarIcon() {
  * Pastille (V3.1-8) : dès qu'une ronde de demande est ouverte pour la
  * campagne et que la joueuse n'y a pas encore répondu.
  */
-export default function NextSessionBadge({ worldSlug }: { worldSlug: string }) {
-  const [data, setData] = useState<NextSessionResponse | null>(null);
-  const [openRequestData, setOpenRequestData] = useState<OpenRequestResponse | null>(null);
+export default function NextSessionBadge({ worldSlug, prochaineSession }: { worldSlug: string; prochaineSession: ProchaineSession | null }) {
   const pathname = usePathname();
   const href = `/m/${worldSlug}/joueur/prochaine-session`;
   const active = pathname === href;
 
-  useEffect(() => {
-    fetch(`/api/worlds/${worldSlug}/scheduling/next-session`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then(setData)
-      .catch(() => {});
-    fetch(`/api/worlds/${worldSlug}/scheduling/open-request`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then(setOpenRequestData)
-      .catch(() => {});
-  }, [worldSlug]);
+  if (!prochaineSession) return null;
 
-  if (!data || !data.campaignId) return null;
-
-  const showBadge = openRequestData?.request !== null && openRequestData?.hasResponded === false;
+  const showBadge = prochaineSession.demandeEnAttente;
 
   return (
     <>
@@ -97,7 +81,7 @@ export default function NextSessionBadge({ worldSlug }: { worldSlug: string }) {
           />
         )}
         <span className="block">Prochaine session</span>
-        <span className="block font-semibold">{data.session ? formatSessionDate(data.session.scheduled_date) : "à définir"}</span>
+        <span className="block font-semibold">{prochaineSession.date ? formatSessionDate(prochaineSession.date) : "à définir"}</span>
       </Link>
     </>
   );

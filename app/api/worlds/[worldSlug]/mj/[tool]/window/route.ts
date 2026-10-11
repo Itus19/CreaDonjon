@@ -12,7 +12,7 @@ import { isWorldAdmin } from "@/src/server/services/permissions";
 import { getPartySkillProbabilities } from "@/src/server/services/partyProbabilities";
 import { getEncounterBudgetTableForRuleset, listMonstersForRuleset, listSavedEncounters } from "@/src/server/services/encounters";
 import { getActiveCombatForCampaign, getCombatDetail, listCombatsForCampaign, listConditionNames } from "@/src/server/services/combats";
-import { getEntityById } from "@/src/server/repos/entities";
+import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { getCalendar } from "@/src/server/services/worlds";
 import { resolveBackgroundSelection } from "@/src/server/services/backgroundImages";
 import { listShareLinks } from "@/src/server/services/shareLinks";
@@ -148,9 +148,17 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         monsters = monsterList;
         conditions = conditionList;
         const pcs = characters.filter((c) => c.is_pc);
-        const resolvedEntities = await Promise.all(pcs.map((c) => getEntityById(supabase, c.entity_id)));
-        pcOptions = resolvedEntities.filter((e): e is NonNullable<typeof e> => e !== null).map((e) => ({ id: e.id, name: e.name }));
-        activeCombat = active ? await getCombatDetail(supabase, active.id) : null;
+        // V3.1-62 (docs/CABLAGE.md, C4) : les PJ en un lot, plus une lecture par PJ ; en meme temps que le detail du combat actif.
+        const [resolvedEntities, activeDetail] = await Promise.all([
+          pcs.length > 0 ? listEntitiesByIds(supabase, pcs.map((c) => c.entity_id)) : Promise.resolve([]),
+          active ? getCombatDetail(supabase, active.id) : Promise.resolve(null),
+        ]);
+        const entityById = new Map(resolvedEntities.map((e) => [e.id, e]));
+        pcOptions = pcs
+          .map((c) => entityById.get(c.entity_id))
+          .filter((e): e is NonNullable<typeof e> => e !== undefined)
+          .map((e) => ({ id: e.id, name: e.name }));
+        activeCombat = activeDetail;
       }
       data = {
         tool,

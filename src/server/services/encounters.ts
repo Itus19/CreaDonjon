@@ -129,8 +129,7 @@ export async function listMonstersForRuleset(
   rulesetId: string,
   locale: Locale
 ): Promise<EncounterMonsterSummary[]> {
-  const entries = await listRulesetEntries(supabase, rulesetId);
-  const monsters = entries.filter((e) => e.entry_type === "monster");
+  const monsters = await listRulesetEntries(supabase, rulesetId, { entryTypes: ["monster"] });
   if (monsters.length === 0) return [];
 
   const translationByEntryId = new Map<string, string>();

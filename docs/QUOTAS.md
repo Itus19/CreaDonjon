@@ -66,7 +66,9 @@ Aujourd'hui, seul le mode solo sonde (superadmin seulement).
 
 **Q3. Un abonnement temps réel par besoin, refermé au démontage.** Chaque `channel()` ouvert compte dans les 200 connexions simultanées. Un abonnement filtre côté serveur (`filter`) au lieu de recevoir toute une table.
 
-**Q4. Ne lire que les colonnes utiles.** `select("*")` sur une table de règles envoie des blocs entiers et leur prose : c'est de la sortie réseau facturée au quota. Lister les colonnes. Paginer toute liste qui peut grandir.
+**Q4. Ne lire que les colonnes utiles.** `select("*")` sur une table de règles envoie des blocs entiers et leur prose : c'est de la sortie réseau facturée au quota. Lister les colonnes ; dans une colonne JSON, extraire les seuls champs utiles (`source_raw->name`). Filtrer par type côté base plutôt qu'après réception. Paginer toute liste qui peut grandir.
+
+*Cas réel, 11 octobre* : chaque ouverture de l'Initiative transportait 4,9 Mo (deux fois le texte SRD complet de 1 907 entrées), soit un millier d'ouvertures pour épuiser les 5 Go du mois. Chaque affichage de la fiche d'un Guerrier en transportait autant. Après correction : 65 ko et 10 ko (`docs/CABLAGE.md` §3).
 
 **Q5. Les images restent légères.** 50 Mo au plus par fichier côté Supabase. On réduit l'image avant l'envoi (largeur utile, WebP ou JPEG compressé). Pas de `next/image` sans relire les 5 000 transformations mensuelles.
 

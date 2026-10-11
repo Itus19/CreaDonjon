@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import RadioWidget from "./RadioWidget";
 import { useChatUnread } from "./useChatUnread";
-import NextSessionBadge from "./scheduling/NextSessionBadge";
+import NextSessionBadge, { type ProchaineSession } from "./scheduling/NextSessionBadge";
 
 interface Destination {
   href: string;
@@ -45,12 +45,15 @@ export default function PlayerShell({
   worldSlug,
   worldName,
   hasHumanGm,
+  prochaineSession,
   children,
 }: {
   worldSlug: string;
   worldName: string;
   /** V3.1-11 : masque l'onglet Solo — ce mode (V3, IA locale) n'a de sens que sans MJ humain sur ce monde. */
   hasHumanGm: boolean;
+  /** Badge « Prochaine session », lu par le layout joueur (`null` : monde sans campagne). */
+  prochaineSession: ProchaineSession | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -123,7 +126,7 @@ export default function PlayerShell({
               </Link>
             );
           })}
-          <NextSessionBadge worldSlug={worldSlug} />
+          <NextSessionBadge worldSlug={worldSlug} prochaineSession={prochaineSession} />
         </div>
 
         <div className="hidden shrink-0 flex-col items-center gap-2 border-t border-edge p-3 md:flex">

@@ -156,8 +156,8 @@ async function fetchWeaponPool(
   const chain = await walkRulesetChain(supabase, rulesetId);
   const result = new Map<string, { category: "simple" | "martial"; isRanged: boolean }>();
   for (const link of chain) {
-    const entries = await listRulesetEntries(supabase, link.rulesetId);
-    const weaponEntries = entries.filter((e) => e.entry_type === "weapon" && !result.has(e.entry_key));
+    const entries = await listRulesetEntries(supabase, link.rulesetId, { entryTypes: ["weapon"] });
+    const weaponEntries = entries.filter((e) => !result.has(e.entry_key));
     if (weaponEntries.length === 0) continue;
     const blockRows = await listBlocksForRulesetEntries(supabase, weaponEntries.map((e) => e.id));
     const dataByEntryId = new Map(blockRows.filter((r) => r.block_type === "weapon").map((r) => [r.entry_id, r.data as WeaponBlockData]));

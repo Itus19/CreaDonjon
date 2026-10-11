@@ -510,15 +510,72 @@ const LIST_PAGE_SIZE = 1000;
  */
 const MAX_EXTRA_PAGES = 9;
 
+/**
+ * V3.1-62 (docs/QUOTAS.md, Q4) : les listes ne lisent de `source_raw` que ces
+ * champs — nom, classe ou espece parente (sous-classes, sous-especes),
+ * caracteristiques d'un monstre. Le texte SRD complet pesait 2,45 Mo pour le
+ * ruleset 2024, transporte a chaque ouverture de l'Initiative (deux fois),
+ * de l'outil Rencontres et de la liste des regles, pour n'en garder que
+ * quelques octets par entree. PostgREST extrait les champs cote base
+ * (`source_raw->name`), et `source_raw` est recompose avec eux seuls : les
+ * lecteurs (`entryNameFrom`, `subclassParentClassKey`, `monsterFieldsFrom`...)
+ * ne changent pas.
+ */
+const SOURCE_RAW_LIST_SELECT = [
+  "id",
+  "entry_key",
+  "entry_type",
+  "raw_name:source_raw->name",
+  "raw_class_index:source_raw->class->index",
+  "raw_species_index:source_raw->species->index",
+  "raw_race_index:source_raw->race->index",
+  "raw_xp:source_raw->xp",
+  "raw_challenge_rating:source_raw->challenge_rating",
+  "raw_type:source_raw->type",
+  "raw_size:source_raw->size",
+].join(", ");
+
+interface SlimEntryRow {
+  id: string;
+  entry_key: string;
+  entry_type: string;
+  raw_name: Json;
+  raw_class_index: Json;
+  raw_species_index: Json;
+  raw_race_index: Json;
+  raw_xp: Json;
+  raw_challenge_rating: Json;
+  raw_type: Json;
+  raw_size: Json;
+}
+
+function slimSourceRaw(row: SlimEntryRow): Json {
+  const raw: { [key: string]: Json } = {};
+  if (row.raw_name !== null) raw.name = row.raw_name;
+  if (row.raw_class_index !== null) raw.class = { index: row.raw_class_index };
+  if (row.raw_species_index !== null) raw.species = { index: row.raw_species_index };
+  if (row.raw_race_index !== null) raw.race = { index: row.raw_race_index };
+  if (row.raw_xp !== null) raw.xp = row.raw_xp;
+  if (row.raw_challenge_rating !== null) raw.challenge_rating = row.raw_challenge_rating;
+  if (row.raw_type !== null) raw.type = row.raw_type;
+  if (row.raw_size !== null) raw.size = row.raw_size;
+  return raw;
+}
+
+/**
+ * Toutes les entrees d'UN ruleset (ou celles des types demandes), avec un
+ * `source_raw` reduit aux champs de liste (`SOURCE_RAW_LIST_SELECT`). Pour le
+ * texte complet d'une fiche, passer par une lecture par cle.
+ */
 export async function listRulesetEntries(
   supabase: TypedClient,
-  rulesetId: string
+  rulesetId: string,
+  options: { entryTypes?: readonly string[] } = {}
 ): Promise<RulesetEntrySummaryRow[]> {
-  const fetchPage = async (from: number) => {
-    const { data, error } = await supabase
-      .from("ruleset_entries")
-      .select("id, entry_key, entry_type, source_raw")
-      .eq("ruleset_id", rulesetId)
+  const fetchPage = async (from: number): Promise<RulesetEntrySummaryRow[]> => {
+    let query = supabase.from("ruleset_entries").select(SOURCE_RAW_LIST_SELECT).eq("ruleset_id", rulesetId);
+    if (options.entryTypes) query = query.in("entry_type", [...options.entryTypes]);
+    const { data, error } = await query
       // `.order()` explicite (bug reel trouve en verifiant la sous-espece,
       // V2-G1 suite) — sans lui, Postgres ne garantit AUCUN ordre stable
       // entre deux executions de la meme requete : deux `.range()` qui se
@@ -531,7 +588,9 @@ export async function listRulesetEntries(
       .order("id")
       .range(from, from + LIST_PAGE_SIZE - 1);
     if (error) throw new Error(error.message);
-    return data;
+    // Le selecteur est une chaine construite : supabase-js ne peut pas en deduire le type des colonnes extraites.
+    const rows = (data ?? []) as unknown as SlimEntryRow[];
+    return rows.map((row) => ({ id: row.id, entry_key: row.entry_key, entry_type: row.entry_type, source_raw: slimSourceRaw(row) }));
   };
 
   const first = await fetchPage(0);

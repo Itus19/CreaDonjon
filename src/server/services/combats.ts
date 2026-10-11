@@ -596,8 +596,7 @@ export async function undoLastCombatAction(supabase: TypedClient, combatId: stri
 
 /** Catalogue des conditions du ruleset (entry_type "condition"), traduites — le menu deroulant "+ Condition" de l'ecran d'initiative, jamais une liste figee en dur (les deux SRD n'ont pas exactement les memes noms). */
 export async function listConditionNames(supabase: TypedClient, rulesetId: string, locale: Locale): Promise<string[]> {
-  const entries = await listRulesetEntries(supabase, rulesetId);
-  const conditions = entries.filter((e) => e.entry_type === "condition");
+  const conditions = await listRulesetEntries(supabase, rulesetId, { entryTypes: ["condition"] });
   const translationByEntryId = new Map<string, string>();
   if (locale !== "en") {
     const translations = await listTranslationsForEntries(supabase, conditions.map((e) => e.id), locale);
