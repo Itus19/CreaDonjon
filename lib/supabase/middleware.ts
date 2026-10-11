@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { EN_TETE_CHEMIN } from "@/lib/wikiPath";
+import { measuredFetch } from "@/lib/supabase/measuredFetch";
 
 /**
  * `NextResponse.next()` en recopiant le chemin dans un en-tete de requete
@@ -66,6 +67,8 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // Mesure du cablage (V3.1-62), developpement seulement : `undefined` sinon.
+      global: { fetch: measuredFetch("middleware") },
       cookies: {
         getAll() {
           return request.cookies.getAll();

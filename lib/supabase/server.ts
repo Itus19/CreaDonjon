@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { measuredFetch } from "@/lib/supabase/measuredFetch";
 
 /**
  * `React.cache()` (retour utilisateur : "l'application... recharge des
@@ -23,6 +24,8 @@ export const createClient = cache(async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // Mesure du cablage (V3.1-62), developpement seulement : `undefined` sinon.
+      global: { fetch: measuredFetch("serveur") },
       cookies: {
         getAll() {
           return cookieStore.getAll();
