@@ -119,6 +119,7 @@ sa partie, et une ligne s'ajoute ici.
 - [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) — Tickets des Règles sur ordinateur et de la Chronologie du monde (9 octobre)
 - [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) — Conception du 9 octobre : les tickets Opus découpés
 - [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) — Dette technique (V3.1-120…)
+- [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) — Défauts vus par la session de vérification du 11 octobre (V3.1-121…)
 - [`termines.md`](backlog-v3.1/termines.md) — Tickets terminés (☑)
 
 | Ticket | État | Titre | Fichier |
@@ -243,3 +244,8 @@ sa partie, et une ligne s'ajoute ici.
 | V3.1-118 | ☐ | Les choix dans l'assistant de création et de montée de niveau | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-119 | ☐ | Les choix rouverts au repos | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-120 | ☐ | Défaire les cycles d'import (services serveur, fiche jouable) | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
+| V3.1-121 | ☐ | Ténacité naine ignorée dans les PV max | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |
+| V3.1-122 | ☐ | Initiative : PV d'une saisie libre, liste des combats | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |
+| V3.1-123 | ☐ | Fiche jouable : l'état transitoire après l'enregistrement | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |
+| V3.1-124 | ☐ | Assistant, étape Compétences : doublons et maîtrises d'outil | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |
+| V3.1-125 | ☐ | Données et affichages de règles | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |

@@ -36,7 +36,7 @@ Trois comptes « tag » permanents, dans un monde à eux, **« Banc d'essai »**
 
 - **Connexion** : le nom (par exemple « Testeuse A ») et le mot de passe `MANUAL_TEST_PASSWORD` (dans `.env.local`, jamais dans Git). Le script affiche leur numéro (`#1234`).
 - **Mise en place**, ou remise à niveau : `npm run test:comptes-manuels`. Le script est idempotent : il ne recrée rien de ce qui existe. Changer `MANUAL_TEST_PASSWORD` puis le relancer change le mot de passe des trois comptes.
-- **Les PJ** sont créés sans fiche. La première vérification de l'assistant de création la remplit, puis elle reste d'une fois sur l'autre.
+- **Les PJ** ont leur fiche, remplie par l'assistant de création le 11 octobre : Testeuse A, Humaine Guerrière 1 Soldat (CA 16, PV 12) ; Testeur B, Nain Clerc 1 Acolyte (CA 16, PV 10, 11 attendus : V3.1-121). Elles restent d'une fois sur l'autre.
 - **Superadmin** : pour Administration et « Voir comme » côté superadmin, utiliser son propre compte. Aucun compte de test n'est superadmin.
 - **Ne jouez pas la vraie campagne avec ces comptes**, et ne testez pas dans le vrai monde de la table : tout essai se fait dans le Banc d'essai.
 
@@ -50,7 +50,7 @@ Suivre la ligne de la zone touchée. Chaque étape doit marcher **et** ne rien a
 | **Wiki** | En Testeur MJ : créer une entité, ajouter un bloc, mettre un bloc en visibilité MJ. En Testeuse A : le bloc MJ n'apparaît pas, même dans le code source de la page. |
 | **Fiche** | En Testeuse A : ouvrir son PJ, un jet de compétence, un repos court, puis un repos long (PV, emplacements, Inspiration si Humain). |
 | **Règles** | En Testeur MJ : créer une fiche maison, la modifier (« Modifier »), vérifier l'avertissement de bloc manquant. |
-| **Combat** | En Testeur MJ : lancer une initiative avec les deux PJ ; en Testeur B, dans un second navigateur ou une fenêtre privée, suivre le tour. |
+| **Combat** | En Testeur MJ : lancer une initiative avec les deux PJ ; en Testeur B, dans un second navigateur, vérifier que rien de l'adversaire n'apparaît (la vue joueur du combat arrive avec V3.1-102). Ajouter un PJ au combat exige que sa fiche soit remplie. |
 | **Comptes** | En Testeur MJ : « Voir comme » Testeuse A depuis Gestion de campagne, puis revenir. |
 | **Solo** | Hors Banc d'essai (mode solo réservé au superadmin) : un tour, en vérifiant que les dés viennent du serveur. |
 
