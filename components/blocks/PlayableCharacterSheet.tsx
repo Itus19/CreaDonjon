@@ -23,6 +23,7 @@ import MasteriesTab from "./MasteriesTab";
 import { toggleChoice } from "./characterChoiceUtils";
 import LevelUpWizard from "./LevelUpWizard";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
+import { creerChargeurParLots } from "@/lib/chargement/chargeurParLots";
 
 export const ABILITY_LABELS: Record<Ability, string> = {
   str: "FOR",
@@ -52,6 +53,26 @@ interface SheetApiResponse {
   hitDiceTotals: Record<string, number>;
   runtimeState: { state: RuntimeState; hpMax: number; hitDiceTotals: Record<string, number> };
 }
+
+/**
+ * V3.1-62 (docs/CABLAGE.md, C2) : la fiche lancait trois GET `/sheet`
+ * identiques au montage (double montage du mode strict, plusieurs instances).
+ * Le serveur les traitait a la file : le dernier finissait 8 s apres le
+ * premier, et fixait la fin de l'affichage. Les demandes SIMULTANEES
+ * partagent maintenant la meme attente ; aucune reponse n'est gardee en cache
+ * (`dureeCacheMs: 0`), donc un rechargement apres une action repart toujours
+ * au serveur.
+ */
+const chargeurFiche = creerChargeurParLots<SheetApiResponse>({
+  tailleMax: 1,
+  dureeCacheMs: 0,
+  chargerLot: async ([cle]) => {
+    const [entityId, campaignId] = JSON.parse(cle) as [string, string];
+    const res = await fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId}`);
+    if (!res.ok) throw new Error(`sheet : ${res.status}`);
+    return new Map([[cle, (await res.json()) as SheetApiResponse]]);
+  },
+});
 
 /**
  * Fiche de personnage jouable (V1-B5, specs/fiche-personnage-interactive.md).
@@ -227,12 +248,17 @@ export default function PlayableCharacterSheet({
   // motif que useReferenceChips.ts/useWorldRuleEntries.ts.
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId ?? ""}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body: SheetApiResponse | null) => {
+    const cle = JSON.stringify([entityId, campaignId ?? ""]);
+    chargeurFiche
+      .charger([cle])
+      .then((resultat) => {
+        const body = resultat.get(cle);
         if (!cancelled && body) setRemote(body);
       })
-      .catch(() => {});
+      .catch((erreur: unknown) => {
+        // Jamais muet : la fiche reste sur son calcul local, et l'erreur se voit.
+        console.error("Fiche calculee non chargee", erreur);
+      });
     return () => {
       cancelled = true;
     };

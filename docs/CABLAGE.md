@@ -72,7 +72,16 @@ Le temps ne baisse presque pas, et la mesure dit pourquoi. Ce qui reste, ce sont
 
 Ce qui reste visible dans les chiffres :
 - `rulesets` est lu 5 fois par appel de route. `walkRulesetChain` est mis en cache par `React.cache()`, mais ce cache ne fonctionne que pendant le rendu d'une page : dans une route `/api`, il ne joue pas. À traiter avec la correction 2 suite : passer la chaîne déjà lue aux fonctions qui la refont.
-- La fiche calcule encore le ruleset deux fois, une fois par la route `sheet` et une fois par `resolved-ruleset`. Les réunir en un seul appel relève de C1 (correction 1, seconde partie).
+- La fiche calcule encore le ruleset deux fois, une fois par la route `sheet` et une fois par `resolved-ruleset`. Les deux partent en parallèle : ce n'est plus le chemin critique, mais c'est une charge serveur en double. Les réunir relève de C1 (correction 1, seconde partie).
+
+**Après la correction 2 bis (§7), le 11 octobre** : la chronologie exacte de la fiche a montré un chemin critique qu'aucun tableau ne montrait. La fiche lançait trois GET `/sheet` identiques au même instant (double montage du mode strict, plusieurs instances). Le serveur les traitait à la file, et le troisième finissait 8 s après le premier. Les demandes simultanées partagent maintenant la même attente.
+
+| Écran | Requêtes à la base | Vagues | Écran stable |
+|---|---|---|---|
+| MJ, fiche de personnage | 581 → 244 → **160** | 123 → 55 → **30** | 23,6 s → 15,5 s → **7,4 s** |
+| Joueuse, sa fiche | 279 → 204 → **161** | 77 → 45 → **29** | 16,5 s → 11,4 s → **≈ 7,8 s** (chronologie) |
+
+**Leçon de méthode** : compter les requêtes ne suffit pas. Il faut aussi relever la **chronologie** d'un écran (qui part quand, qui finit quand) pour voir ce qui fixe vraiment la fin de l'affichage.
 
 Les routes les plus lentes, en temps serveur moyen :
 
