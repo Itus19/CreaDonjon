@@ -1,5 +1,4 @@
 import "server-only";
-import { cache } from "react";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAuthUser } from "@/lib/supabase/server";
@@ -108,7 +107,7 @@ export interface RulesetChainLink {
  * niveaux d'heritage) a chaque cle resolue, alors qu'elle est identique
  * pour tout un calcul de fiche de personnage.
  */
-export const walkRulesetChain = cache(async function walkRulesetChain(supabase: TypedClient, startRulesetId: string): Promise<RulesetChainLink[]> {
+async function walkRulesetChainUncached(supabase: TypedClient, startRulesetId: string): Promise<RulesetChainLink[]> {
   const chain: RulesetChainLink[] = [];
   const visited = new Set<string>();
   let currentId: string | null = startRulesetId;
@@ -125,7 +124,36 @@ export const walkRulesetChain = cache(async function walkRulesetChain(supabase: 
   }
 
   return chain;
-});
+}
+
+
+/**
+ * V3.1-62 (docs/CABLAGE.md) : `React.cache()` ne memorise que pendant le
+ * rendu d'une page, jamais dans une route `/api` — or c'est la que la fiche
+ * de personnage passe (`/sheet`, `/resolved-ruleset`), et la chaine y etait
+ * relue 5 fois par appel. La memoire est donc attachee au client Supabase de
+ * la requete (un objet par requete, `createClient`) : elle sert partout, les
+ * branches lancees en parallele partagent la meme lecture, et elle disparait
+ * avec le client. Une lecture en echec n'est pas gardee.
+ */
+const chainsByClient = new WeakMap<TypedClient, Map<string, Promise<RulesetChainLink[]>>>();
+
+export function walkRulesetChain(supabase: TypedClient, startRulesetId: string): Promise<RulesetChainLink[]> {
+  let chains = chainsByClient.get(supabase);
+  if (!chains) {
+    chains = new Map();
+    chainsByClient.set(supabase, chains);
+  }
+  const known = chains.get(startRulesetId);
+  if (known) return known;
+  const chain = walkRulesetChainUncached(supabase, startRulesetId);
+  chains.set(startRulesetId, chain);
+  const memory = chains;
+  // Oublier l'echec pour qu'un prochain appel reessaie ; l'erreur, elle,
+  // atteint toujours l'appelant par `chain`, jamais avalee.
+  chain.then(undefined, () => memory.delete(startRulesetId));
+  return chain;
+}
 
 /**
  * Un monde variante n'a d'entrees que pour ce qu'il surcharge (V1-A4) —

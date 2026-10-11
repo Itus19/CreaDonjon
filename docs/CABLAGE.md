@@ -71,7 +71,7 @@ Le temps ne baisse presque pas, et la mesure dit pourquoi. Ce qui reste, ce sont
 | MJ, accueil du monde | 28 → **19** | 6,7 s → **5,6 s** |
 
 Ce qui reste visible dans les chiffres :
-- `rulesets` est lu 5 fois par appel de route. `walkRulesetChain` est mis en cache par `React.cache()`, mais ce cache ne fonctionne que pendant le rendu d'une page : dans une route `/api`, il ne joue pas. À traiter avec la correction 2 suite : passer la chaîne déjà lue aux fonctions qui la refont.
+- *Fait le 11 octobre* : `rulesets` était lu 5 fois par appel de route, car `React.cache()` ne joue pas dans une route `/api`. `walkRulesetChain` garde maintenant sa mémoire sur le client Supabase de la requête : `sheet` passe de 42 à 38 requêtes. Le gain est faible sur le Banc d'essai, dont la chaîne n'a qu'un maillon ; il grandit avec un ruleset variante.
 - La fiche calcule encore le ruleset deux fois, une fois par la route `sheet` et une fois par `resolved-ruleset`. Les deux partent en parallèle : ce n'est plus le chemin critique, mais c'est une charge serveur en double. Les réunir relève de C1 (correction 1, seconde partie).
 
 **Après la correction 2 bis (§7), le 11 octobre** : la chronologie exacte de la fiche a montré un chemin critique qu'aucun tableau ne montrait. La fiche lançait trois GET `/sheet` identiques au même instant (double montage du mode strict, plusieurs instances). Le serveur les traitait à la file, et le troisième finissait 8 s après le premier. Les demandes simultanées partagent maintenant la même attente.
