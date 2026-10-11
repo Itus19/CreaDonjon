@@ -12,6 +12,8 @@
 - **Vague** : un groupe de requêtes qui partent ensemble. Une requête qui attend la réponse d'une autre ouvre une nouvelle vague. **Le temps d'un écran suit à peu près le nombre de vagues multiplié par la latence** (constat de V2.1-20). Dix requêtes en une vague coûtent moins cher que trois en trois vagues.
 - **Chargement après affichage** : un composant qui s'affiche vide, puis lance un `fetch` dans un `useEffect`. L'écran se remplit par morceaux, souvent en cascade.
 
+**Rapidité et quotas vont ensemble.** Chaque appel `/api` évité est aussi un appel de fonction Vercel et des requêtes Supabase en moins (`docs/QUOTAS.md`, Q1). Une mesure coûte elle-même du quota : on mesure avant et après une correction, pas à chaque essai (T3).
+
 ## 2. Mesurer
 
 Le protocole, à rejouer à l'identique avant et après chaque correction :

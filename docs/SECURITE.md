@@ -22,7 +22,7 @@ CreaDonjon est un outil personnel : un MJ et sa table. Les menaces réalistes ne
 | **N'importe qui avec un compte** | Créer un compte en libre-service depuis `/login`, puis créer son propre monde : il en devient administrateur | Utiliser ce droit d'administrateur de **son** monde pour agir sur un compte ou un objet d'un **autre** monde |
 | **Quelqu'un qui a un lien** | Un lien d'invitation ou de partage public qui circule au-delà de la table | Rejoindre une campagne, lire une page partagée |
 | **Une session Claude** | Les sessions cloud ont la clé service de Supabase, qui contourne toute la RLS | Une suppression ou une écriture faite trop vite, sur la vraie base |
-| **L'usage lui-même** | Le plan gratuit de Supabase a des quotas (utilisateurs actifs par mois, trafic) | Des tests qui créent des comptes en boucle et font tomber l'app pour la table |
+| **L'usage lui-même** | Les plans gratuits de Supabase et de Vercel ont des quotas : au-delà, ils coupent l'app (`docs/QUOTAS.md`) | Des tests qui créent des comptes en boucle, un sondage oublié dans un onglet, et l'app tombe pour la table |
 
 **Ce qu'aucun d'eux ne doit jamais obtenir :**
 1. un **secret du MJ** : bloc ou segment caché, PV et CA des adversaires, notes privées ;

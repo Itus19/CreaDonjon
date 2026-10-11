@@ -27,6 +27,7 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 | `docs/ARCHITECTURE.md` | La carte du code : couches et règles d'import, trajet d'une requête, barrières de sécurité, sous-systèmes, « où mettre du code nouveau » | En début de session si le code est inconnu ; **mis à jour par tout ticket qui déplace une frontière** |
 | `docs/SCHEMA.md` | Schéma de données, SQL, RLS, formules | Avant toute migration ou requête |
 | `docs/CABLAGE.md` | Comment un écran charge ses données : règles C1 à C7, mesures, carte des écrans, cliquet (ADR 0055) | **Avant tout ticket qui crée ou modifie un écran, un hook de chargement, une route `/api` lue par un écran ou un layout** |
+| `docs/QUOTAS.md` | Limites des plans gratuits Vercel et Supabase, ce qui les consomme chez nous, réflexes Q1-Q7 (code) et T1-T5 (tests, mesures) | **Avant tout ticket qui ajoute un chargement, une route, un sondage, du temps réel, des images, et avant de lancer tests, mesures ou scripts contre la vraie base** |
 | `docs/SECURITE.md` | Modèle de menace, **liste de contrôle** de toute route/action/migration, registre des failles | **Avant tout ticket qui touche une route, une action serveur, une migration ou un compte** |
 | `docs/TESTS.md` | Niveaux de test, comptes de test (jamais de compte neuf), Banc d'essai, parcours de vérification à la main | Avant d'écrire un test d'intégration ou de vérifier à la main |
 | `docs/CHARTE-UI.md` | Jetons, recettes de boutons/champs/listes, états d'écran | **Avant tout code d'interface** |
@@ -138,6 +139,8 @@ Une fiche créée ainsi appartient à un ruleset `personal_reference`, jamais à
 **Pour le noyau pur (`src/core`) : écris les tests d'abord.** C'est là qu'est toute la logique difficile, et ces tests s'exécutent en millisecondes.
 
 **Interface : le catalogue suit le code.** Avant de créer un élément, cherche-le au catalogue (`docs/CHARTE-UI.md` §9) et réutilise-le. Un élément nouveau ou modifié met sa planche à jour (`docs/catalogue/README.md`). Jamais d'émoji : icônes au trait ou glyphes de texte (§10).
+
+**Les plans gratuits sont une contrainte de conception** (`docs/QUOTAS.md`). Un débordement ne facture rien : il coupe l'app pour toute la table. Tout nouveau chargement, sondage, abonnement temps réel ou script contre la vraie base dit ce qu'il consomme. On teste sobrement : jamais de compte neuf, et pas de suite complète en boucle.
 
 **Avant de dire qu'une tâche est terminée :** `npm run typecheck && npm run lint && npm run test` passent. Sinon la tâche n'est pas terminée.
 

@@ -73,6 +73,8 @@ npx vitest run src/server/services/<ticket>Rls.integration.test.ts
 
 **Le compte rendu d'une session de vérification.** La session principale ne lit pas le fil d'une autre session, seulement son résumé. Toute session de vérification écrit donc son compte rendu dans `docs/verifications/AAAA-MM-JJ-<ticket>.md` et le pousse sur une branche à part, `claude/verif-<ticket>`, **jamais sur master**. Elle ne touche à aucun autre fichier. La session principale le lit (`git fetch origin claude/verif-<ticket>`), en tire les conclusions (backlog, registre de `SECURITE.md`). La session principale ne peut pas supprimer cette branche (refus du dépôt) : l’auteur la supprime sur GitHub quand il veut, elle ne gêne rien. Le compte rendu dit, pour chaque geste : OK, ou l'erreur exacte (route, code HTTP, message, capture) ; et si un échec vient de l'application ou du pilotage du navigateur.
 
+**Sobriété.** Les tests, les mesures et les scripts consomment les quotas de la vraie table : voir `docs/QUOTAS.md` §3 (T1 à T5).
+
 ## 5. Le ménage des comptes
 
 `npm run audit:comptes` liste les comptes **sans rien supprimer**, rangés par origine :
