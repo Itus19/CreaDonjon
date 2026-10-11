@@ -30,6 +30,7 @@ npx tsx scripts/analyse-mesure.ts /tmp/mesure/serveur.log /tmp/mesure/marqueurs.
 - `lib/supabase/measuredFetch.ts` écrit une ligne `[mesure]` par requête Supabase du serveur : origine, départ, durée, chemin. La ligne ne contient jamais de jeton ni de clé.
 - `src/core/mesure/vagues.ts` compte les vagues : la plus longue chaîne de requêtes dont chacune part après la fin de la précédente.
 - `navigateur.json` donne le délai avant le premier octet (TTFB), le temps jusqu'à un écran stable, et la liste des chargements après affichage.
+- **Le mode strict de React double les chargements en développement.** Il monte chaque composant deux fois, donc tout `fetch` lancé dans un `useEffect` part deux fois. Les « chargements après affichage » mesurés ici sont donc plus nombreux qu'en production, où ce double montage n'existe pas. On compare toujours développement avec développement.
 - Il faut **comparer les nombres** (requêtes, vagues, chargements) plus que les millisecondes. Le mode développement et la distance entre le conteneur et Supabase gonflent les temps ; en production ils sont plus courts, mais la forme reste la même.
 
 ## 3. Les mesures « avant » (11 octobre)
