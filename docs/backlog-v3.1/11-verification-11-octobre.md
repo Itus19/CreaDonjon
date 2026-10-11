@@ -1,14 +1,25 @@
-# V3.1 — Défauts vus par la session de vérification du 11 octobre
+# V3.1 — Ce qu'a montré la session de vérification du 11 octobre
 
 Source : compte rendu `docs/verifications/2026-10-11-fiches-banc.md` (branche `claude/verif-fiches-banc`). Les fiches des PJ du Banc d'essai ont été remplies par l'assistant de création (Humaine Guerrière 1 Soldat ; Nain Clerc 1 Acolyte), puis les deux PJ sont entrés dans un combat.
 
-Déjà couverts ailleurs, donc pas de ticket ici :
-- Style de combat (Guerrier 1), Ordre divin (Clerc 1) et choix de taille de l'espèce absents de l'assistant : **V3.1-118**.
-- Aucune vue joueur du combat (Testeur B ne peut pas suivre le tour) : **V3.1-102**.
+**Tri.** Beaucoup de ce qui a été vu touche des écrans ou des règles **pas encore branchés**, que des tickets V3.1 refont déjà. Ce n'est pas un défaut nouveau : le constat est ajouté comme critère au ticket qui s'en charge. Seul ce qu'aucun ticket ne couvre reçoit un ticket ici.
+
+| Constat | Rattaché à |
+|---|---|
+| Style de combat, Ordre divin, choix de taille absents de l'assistant | V3.1-118 (déjà prévu) |
+| Aucune vue joueur du combat | V3.1-102 (déjà prévu) |
+| Adversaire saisi à la main sans PV ; liste « Mes combats » figée sur « Pas engagé » | V3.1-38, critère ajouté |
+| Fiche jouable : valeurs provisoires fausses et clés d'objet au chargement ; vitesses « 9.1 m » | V3.1-26, critère ajouté |
+| Assistant, Compétences : « Lance » en double, outil en anglais, outil du Soldat absent | V3.1-50, critère ajouté |
+| « Polyvalente » listé parmi les traits de l'Humain | V3.1-116, critère ajouté |
+| Guerrier FOR 17 « Encombré » à 75 kg (constante d'encombrement variante) | V3.1-115, critère ajouté |
+| Clés techniques dans les sources de CA | rien : seulement dans le JSON, jamais affiché |
+
+Les numéros V3.1-122 à 124, ouverts puis rattachés le 11 octobre, ne sont pas réutilisés.
 
 ---
 
-### ☐ V3.1-121 — Ténacité naine ignorée dans les PV max · `S` — **à diagnostiquer (Opus)**
+### ☐ V3.1-121 — Ténacité naine ignorée dans les PV max · `S` — **à diagnostiquer (Opus)** — branchement manquant : les effets passifs des traits d'espèce ne sont appliqués nulle part, et aucun ticket ne le prévoit (V3.1-116 ne traite que les traits à choix).
 
 **Modèle conseillé : Opus** — calcul de la fiche (`characterSheet()`, noyau).
 
@@ -20,55 +31,11 @@ Nain Clerc 1, CON 14 : PV max 10 au lieu de 11. Les sources de PV renvoyées par
 
 ---
 
-### ☐ V3.1-122 — Initiative : PV d'une saisie libre, liste des combats · `S` — **prêt (Sonnet)**
+### ☐ V3.1-125 — Masse d'armes : poids faux à l'import · `S` — **prêt (Sonnet)**
 
 **Modèle conseillé : Sonnet.**
 
-1. Le formulaire de saisie libre ne demande que le nom, et la ligne PV d'un participant n'apparaît que si ses PV max sont renseignés : impossible de donner des PV à un adversaire saisi à la main. Le formulaire demande aussi CA et PV max (facultatifs).
-2. « Mes combats » affiche « Pas engagé » pour un combat commencé puis terminé, alors que l'en-tête suit : la liste se rafraîchit après « Go », « Stop » et la suppression.
+La masse d'armes pèse 0,9 kg sur la fiche ; le SRD donne 4 lb, soit environ 1,8 kg. Trouver l'erreur de conversion dans `ingest-srd` (et vérifier les autres armes de la même famille), la corriger à l'import, jamais à la main en base.
 
 **Critères d'acceptation**
-- [ ] Un Gobelin saisi avec CA 15 et PV 7 les affiche et se modifie comme un PJ.
-- [ ] La liste suit l'état du combat sans recharger la page.
-
----
-
-### ☐ V3.1-123 — Fiche jouable : l'état transitoire après l'enregistrement · `S` — **à diagnostiquer (Sonnet)**
-
-**Modèle conseillé : Sonnet.**
-
-Juste après « Enregistrer le personnage », la fiche jouable affiche quelques secondes CA 11, PV 0/0, dés de vie vides, « Aucune arme équipée », puis se corrige seule (données enregistrées justes). Pendant le chargement, l'inventaire montre les clés techniques (`chain-mail`, `greatsword`). Afficher l'état de chargement de la charte (`docs/CHARTE-UI.md`) tant que la fiche calculée n'est pas arrivée, jamais des valeurs fausses.
-
-**Critères d'acceptation**
-- [ ] Aucune valeur provisoire fausse ni clé technique visible après l'enregistrement ou au chargement.
-
----
-
-### ☐ V3.1-124 — Assistant, étape Compétences : doublons et maîtrises d'outil · `S` — **à diagnostiquer (Sonnet)**
-
-**Modèle conseillé : Sonnet.**
-
-- « Lance » apparaît deux fois dans les maîtrises d'arme (Guerrier).
-- « Déjà acquis » affiche en anglais « Tool: Calligrapher's Supplies » (Acolyte) : libellé français attendu.
-- La maîtrise d'outil du Soldat (boîte de jeux) n'apparaît pas dans « Déjà acquis ».
-
-**Critères d'acceptation**
-- [ ] Chaque maîtrise une seule fois, en français, y compris celles d'outil venues de l'historique.
-
----
-
-### ☐ V3.1-125 — Données et affichages de règles · `S` — **à diagnostiquer (Sonnet ; Haiku pour le recensement)**
-
-**Modèle conseillé : Sonnet.** Sous-tâches Haiku : recenser les affichages de distance non formatés en français.
-
-- Humain : le trait « Polyvalente » (propriété d'arme) figure parmi ses traits, confusion probable de référence avec « Polyvalent ».
-- Masse d'armes : 0,9 kg affiché ; le SRD donne 4 lb, soit environ 1,8 kg.
-- Vitesses affichées « 9.1 m » : nombre au format français, et arrondi à 9 m (convention des livres français).
-- Sources de CA de la fiche : clés techniques (`chain-shirt`, `shield`) au lieu des noms.
-
-**Critères d'acceptation**
-- [ ] Les quatre points corrigés ; une donnée SRD fausse se corrige à l'import (`ingest-srd`), jamais à la main en base.
-
----
-
-**Question à l'auteur (pas de ticket tant qu'elle n'est pas tranchée).** Le Guerrier est « Encombré (vitesse −3 m) » avec 75 kg pour FOR 17 : c'est la règle d'encombrement variante. Voulue par défaut, ou à rendre optionnelle (réglage de table) ?
+- [ ] Masse d'armes à 1,8 kg après réimport ; un test de conversion couvre le cas.

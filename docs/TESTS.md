@@ -67,6 +67,10 @@ npx vitest run src/server/services/<ticket>Rls.integration.test.ts
 - Un échec sur un test de droits veut d'abord dire « migration pas appliquée » : Claude le dit, et l'état du registre (`SECURITE.md` §3) reste *en attente*.
 - **L'interface** se vérifie dans une **session de vérification** : une session cloud lancée par Claude, qui démarre l'application et la pilote avec Chromium (Playwright) sur le Banc d'essai, avec les trois comptes du §3. Elle exige `NEXT_PUBLIC_SUPABASE_ANON_KEY` dans l'environnement (jamais remplacée par la clé service). Le mode sombre et le téléphone restent à l'auteur.
 
+**Ne vérifier que ce qui est branché.** Beaucoup d'écrans et de règles seront refaits par des tickets V3.1 encore ouverts. Une vérification ne teste donc que **ce que le ticket vérifié a changé**, plus ce dont ce changement dépend directement. Son brief le dit explicitement. Ce qu'elle remarque en passant est trié avant de devenir un ticket :
+- l'écran ou la règle est déjà prévu par un ticket ouvert : le constat devient un **critère de ce ticket**, pas un ticket nouveau ;
+- rien ne le prévoit : ticket nouveau, en disant si c'est un défaut du code actuel ou un **branchement manquant**.
+
 **Le compte rendu d'une session de vérification.** La session principale ne lit pas le fil d'une autre session, seulement son résumé. Toute session de vérification écrit donc son compte rendu dans `docs/verifications/AAAA-MM-JJ-<ticket>.md` et le pousse sur une branche à part, `claude/verif-<ticket>`, **jamais sur master**. Elle ne touche à aucun autre fichier. La session principale le lit (`git fetch origin claude/verif-<ticket>`), en tire les conclusions (backlog, registre de `SECURITE.md`). La session principale ne peut pas supprimer cette branche (refus du dépôt) : l’auteur la supprime sur GitHub quand il veut, elle ne gêne rien. Le compte rendu dit, pour chaque geste : OK, ou l'erreur exacte (route, code HTTP, message, capture) ; et si un échec vient de l'application ou du pilotage du navigateur.
 
 ## 5. Le ménage des comptes

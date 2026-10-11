@@ -386,6 +386,7 @@ Règles actives est V3.1-57.
 - [ ] Un ruleset de test au plafond 15 limite la création à 15 (test).
 - [ ] Un prérequis non rempli est signalé ; le MJ peut passer outre (test).
 - [ ] Plus aucune constante de génération dans `abilityGeneration.ts`.
+- [ ] La charge suit la règle 2024 (Force × 7,5 kg) : un Guerrier FOR 17 à 75 kg n'est plus « Encombré » (vu par la vérification du 11 octobre).
 
 ---
 
@@ -412,6 +413,7 @@ Règles actives est V3.1-57.
 - [ ] Lignage elfique Drow : le sort mineur au niveau 1, les sorts aux
   niveaux 3 et 5, la caractéristique d'incantation choisie une fois (test).
 - [ ] Un don ou un trait sans choix n'ajoute rien à faire.
+- [ ] L'Humain ne liste plus « Polyvalente » (propriété d'arme) parmi ses traits (vu par la vérification du 11 octobre).
 
 ---
 

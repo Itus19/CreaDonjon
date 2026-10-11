@@ -486,6 +486,7 @@ schéma Zod ; recomposition du nom côté serveur.
 - [ ] Un seul composant de sélection de sorts, utilisé par l'étape Sorts et par Initié à la magie (aucun doublon).
 - [ ] Sens aiguisés sur une compétence déjà maîtrisée affiche « ce choix ne donnerait rien de plus ».
 - [ ] L'effet chiffré de la caractéristique d'incantation suit les valeurs de caractéristiques en direct.
+- [ ] Maîtrises sans doublon (« Lance » en double), toutes en français (outil de l'Acolyte), y compris la maîtrise d'outil du Soldat (vu par la vérification du 11 octobre).
 
 ---
 

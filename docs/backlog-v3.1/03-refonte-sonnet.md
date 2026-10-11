@@ -121,6 +121,7 @@ commandes (option E) ». **Départ** :
 - [ ] Les quatre jauges et l'inspiration conformes à la planche, aux quatre modes.
 - [ ] Commande E : ±1 champ vide, ±N champ rempli, champ vidé après usage.
 - [ ] Un composant `CommandeE` réutilisable (il resservira en 32 et 34), avec sa planche au catalogue.
+- [ ] Jamais de valeur provisoire fausse (CA 11, PV 0/0) ni de clé technique d'objet pendant le chargement de la fiche ; vitesses au format français, arrondies au mètre (« 9 m ») (vu par la vérification du 11 octobre).
 
 ---
 
@@ -538,3 +539,4 @@ V3.1-29 (téléphone), V3.1-33 (outil de dés).
 - [ ] Un dégât porté depuis la fiche du joueur se voit aussitôt dans l'initiative du MJ, et inversement (même état de jeu).
 - [ ] À 390 px et sur ordinateur, côté MJ et côté joueur.
 - [ ] Planche du catalogue « Initiative » créée ou mise à jour.
+- [ ] Un adversaire saisi à la main reçoit CA et PV dès l'ajout ; la liste des combats suit l'état (commencé, terminé) sans recharger (vu par la vérification du 11 octobre).
