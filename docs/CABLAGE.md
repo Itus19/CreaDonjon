@@ -85,6 +85,20 @@ Ce qui reste visible dans les chiffres :
 
 **Leçon de méthode** : compter les requêtes ne suffit pas. Il faut aussi relever la **chronologie** d'un écran (qui part quand, qui finit quand) pour voir ce qui fixe vraiment la fin de l'affichage.
 
+**Après les corrections 3 et 4 (§7), le 11 octobre** :
+- **Accueil du MJ** : il appelait l'assemblage complet du ruleset pour chaque PJ (catalogue d'armes, traits, aptitudes, choix), seulement pour afficher « Humain — Guerrier 1 ». Il lit maintenant les seuls noms (`resolveEntryNames`), une lecture par ruleset pour tous ses PJ. Libellés comparés sur les 8 PJ des 6 mondes : identiques.
+- **Fond commun** : l'historique des jets et les stations de radio ne s'affichent que dans leurs volets. Ils se chargent à la première ouverture, avec les états chargement et erreur de la charte. Les messages non lus restent chargés tout de suite, car leur pastille est visible.
+
+| Écran | Requêtes à la base | Chargements après affichage | Écran stable |
+|---|---|---|---|
+| MJ, accueil du monde | 68 → **30** | 3 → **1** | 6,7 s → **3,4 s** |
+| MJ, fiche du wiki | 40 → **32** | 3 → **1** | 3,3 s → 3,2 s |
+| MJ, page Initiative | 54 → **46** | 3 → **1** | 5,1 s |
+| Joueuse, accueil | 33 → **24** | 5 → **3** | 3,1 s → 2,9 s |
+| MJ, fiche de personnage | 160 → **144** | 9 → **7** | 7,4 s → 7,7 s (écart de mesure) |
+
+Chaque page affichée fait deux appels `/api` de moins : c'est aussi du quota épargné (`docs/QUOTAS.md`, Q1).
+
 Les routes les plus lentes, en temps serveur moyen :
 
 | Route | Temps moyen | Appels par fiche de personnage |
@@ -159,7 +173,7 @@ Dans l'ordre des gains mesurés, une correction par commit, sans changer aucun c
    - Les blocs de règles en un lot.
    - Cible : moins de 10 chargements après affichage, moins de 100 requêtes.
 2. **La route `sheet`** (6,7 s) : trouver où partent ses vagues (`resolveCharacterActionContext`, `assembleResolvedRuleset`) et les mettre en parallèle (C3). *Fait le 11 octobre : 26 → 15 vagues pour `sheet`, 18 → 11 pour `resolved-ruleset`. Reste la chaîne de rulesets relue dans les routes `/api`.*
-3. **Le fond commun** : dés, radio, messages non lus et calendrier arrivent avec le layout (C1).
-4. **L'accueil du MJ** : les layouts en parallèle (C3).
+3. **Le fond commun** : dés, radio, messages non lus et calendrier arrivent avec le layout (C1). *Dés et radio chargés à la première ouverture de leur volet le 11 octobre. Restent les messages non lus et, côté joueuse, le calendrier (`next-session`, `open-request`).*
+4. **L'accueil du MJ** : les layouts en parallèle (C3). *Fait le 11 octobre autrement : le vrai coût était l'assemblage complet du ruleset par PJ, remplacé par la lecture des noms seuls (68 → 30 requêtes).*
 5. **La fenêtre Initiative** : `ruleset_entries` en un lot (C4).
 6. **Les `router.refresh()`** remplacés un par un par des mises à jour ciblées (C5).

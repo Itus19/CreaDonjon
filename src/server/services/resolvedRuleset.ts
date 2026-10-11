@@ -302,6 +302,24 @@ async function fetchEntriesBatch(
   return result;
 }
 
+/**
+ * V3.1-62 (docs/CABLAGE.md, C4) : les NOMS seuls d'un lot de fiches (espece,
+ * classes...), lus exactement comme `assembleResolvedRuleset` les lit
+ * (`fetchEntriesBatch` : chaine de rulesets, traduction, fiche maison en
+ * repli) — sans le reste de l'assemblage (catalogue d'armes, traits,
+ * aptitudes, choix). L'accueil du monde appelait l'assemblage complet par PJ
+ * pour afficher « Humain — Guerrier 1 ». Une cle introuvable est absente.
+ */
+export async function resolveEntryNames(
+  supabase: TypedClient,
+  rulesetId: string,
+  keys: string[],
+  locale: Locale
+): Promise<Map<string, string>> {
+  const batch = await fetchEntriesBatch(supabase, rulesetId, keys, locale);
+  return new Map([...batch.entries()].map(([key, entry]) => [key, entry.name]));
+}
+
 /** Noms d'affichage d'un lot de cles (fiche + traduction), en deux allers-retours qui s'enchainent forcement : la traduction a besoin des identifiants. */
 async function fetchChipsWithNames(
   supabase: TypedClient,

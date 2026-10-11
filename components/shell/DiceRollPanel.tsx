@@ -139,6 +139,21 @@ export function useDiceRoll(): DiceRollContextValue {
 }
 
 const HISTORY_LIMIT = 50;
+
+/** Etat de l'historique des jets, charge a la premiere ouverture du volet (V3.1-62). */
+type EtatHistorique = "sans-campagne" | "chargement" | "erreur" | "charge";
+
+/**
+ * L'historique charge rejoint les jets recus en direct pendant que le volet
+ * etait ferme : on garde ceux-ci s'ils sont plus recents que l'historique,
+ * sans doublon.
+ */
+function fusionnerJets(historique: DisplayRoll[], enDirect: DisplayRoll[]): DisplayRoll[] {
+  const ids = new Set(historique.map((r) => r.id));
+  const plusRecent = historique[0]?.createdAt ?? "";
+  const recus = enDirect.filter((r) => !ids.has(r.id) && r.createdAt > plusRecent);
+  return [...recus, ...historique].slice(0, HISTORY_LIMIT);
+}
 /**
  * Seuil PROPRE au volet de des (`sm` de Tailwind), deliberement different
  * du seuil du bureau a fenetres (`WINDOWS_MOBILE_QUERY`, 768 px) : les deux
@@ -164,6 +179,8 @@ export default function DiceRollProvider({
   const [tab, setTab] = useState<"lancer" | "historique">("lancer");
   const isMobile = useMatchMedia(MOBILE_QUERY);
   const [rolls, setRolls] = useState<DisplayRoll[]>([]);
+  const [historique, setHistorique] = useState<{ pour: string; etat: "charge" | "erreur" } | null>(null);
+  const etatHistorique: EtatHistorique = !campaignId ? "sans-campagne" : historique?.pour === campaignId ? historique.etat : "chargement";
   const [lastRoll, setLastRoll] = useState<DisplayRoll | null>(null);
   const [toast, setToast] = useState<DisplayRoll | null>(null);
   const [pool, setPool] = useState<Record<DieType, number>>({ d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 1, d100: 0 });
@@ -203,17 +220,37 @@ export default function DiceRollProvider({
     [isMobile]
   );
 
-  // Chargement initial + abonnement Realtime, tous deux inutiles sans
-  // campagne (monde pas encore dote d'une campagne — meme cas que `recorded: false`).
+  // V3.1-62 (docs/CABLAGE.md, docs/QUOTAS.md Q1) : l'historique ne s'affiche
+  // que dans le volet, ferme la plupart du temps. Il se charge donc a la
+  // PREMIERE ouverture, plus a chaque page : un appel `/api` de moins par
+  // page affichee. Les jets en direct (Realtime, ci-dessous) arrivent, eux,
+  // des le montage, volet ferme compris.
   useEffect(() => {
-    if (!campaignId) return;
+    if (!campaignId || !open || historique?.pour === campaignId) return;
     let cancelled = false;
     fetch(`/api/campaigns/${campaignId}/dice-rolls?limit=${HISTORY_LIMIT}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body: { rolls: DiceRollRow[] } | null) => {
-        if (!cancelled && body) setRolls(body.rolls.map(rollFromRow));
+      .then((res) => {
+        if (!res.ok) throw new Error(`dice-rolls : ${res.status}`);
+        return res.json() as Promise<{ rolls: DiceRollRow[] }>;
       })
-      .catch(() => {});
+      .then((body) => {
+        if (cancelled) return;
+        setRolls((prev) => fusionnerJets(body.rolls.map(rollFromRow), prev));
+        setHistorique({ pour: campaignId, etat: "charge" });
+      })
+      .catch((erreur: unknown) => {
+        console.error("Historique des jets non charge", erreur);
+        if (!cancelled) setHistorique({ pour: campaignId, etat: "erreur" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignId, open, historique]);
+
+  // Abonnement Realtime, inutile sans campagne (monde pas encore dote d'une
+  // campagne — meme cas que `recorded: false`).
+  useEffect(() => {
+    if (!campaignId) return;
 
     const channel = supabase
       .channel(`dice_rolls:${campaignId}`)
@@ -237,7 +274,6 @@ export default function DiceRollProvider({
     channelRef.current = channel;
 
     return () => {
-      cancelled = true;
       channelRef.current = null;
       supabase.removeChannel(channel);
     };
@@ -409,6 +445,8 @@ export default function DiceRollProvider({
               rolling={rolling}
               rollingFaces={rollingFaces}
               rolls={rolls}
+              etatHistorique={etatHistorique}
+              onReessayer={() => setHistorique(null)}
               pool={pool}
               dc={dc}
               setDc={updateDc}
@@ -425,7 +463,7 @@ export default function DiceRollProvider({
               onRoll={rollFreeform}
             />
           ) : (
-            <HistoriqueTab rolls={rolls} hasCampaign={campaignId !== null} />
+            <HistoriqueTab rolls={rolls} etat={etatHistorique} onReessayer={() => setHistorique(null)} />
           )}
         </div>
       </div>
@@ -453,6 +491,8 @@ function LancerTab({
   rolling,
   rollingFaces,
   rolls,
+  etatHistorique,
+  onReessayer,
   pool,
   dc,
   setDc,
@@ -472,6 +512,8 @@ function LancerTab({
   rolling: boolean;
   rollingFaces: number[];
   rolls: DisplayRoll[];
+  etatHistorique: EtatHistorique;
+  onReessayer: () => void;
   pool: Record<DieType, number>;
   dc: string;
   setDc: (v: string) => void;
@@ -632,6 +674,7 @@ function LancerTab({
 
       <div className="border-t border-edge pt-1">
         <div className="mb-1 text-[10px] uppercase tracking-wide text-ink-muted">4 derniers jets</div>
+        {rolls.length === 0 && <EtatHistoriqueMessage etat={etatHistorique} onReessayer={onReessayer} />}
         <div className="flex flex-col">
           {rolls.slice(0, 4).map((r) => (
             <div key={r.id} className="flex justify-between border-b border-edge/60 py-0.5 text-xs last:border-0">
@@ -648,8 +691,24 @@ function LancerTab({
   );
 }
 
-function HistoriqueTab({ rolls, hasCampaign }: { rolls: DisplayRoll[]; hasCampaign: boolean }) {
-  if (!hasCampaign) return <p className="text-center text-xs text-ink-muted">Ce monde n&apos;a pas encore de campagne.</p>;
+/** Chargement, erreur ou vide de l'historique (charte, etats d'ecran) ; rien quand il est charge et non vide. */
+function EtatHistoriqueMessage({ etat, onReessayer }: { etat: EtatHistorique; onReessayer: () => void }) {
+  if (etat === "chargement") return <p className="text-center text-xs text-ink-muted">Chargement…</p>;
+  if (etat === "erreur")
+    return (
+      <p className="text-center text-xs text-danger">
+        Historique indisponible.{" "}
+        <button type="button" onClick={onReessayer} className="underline hover:text-ink">
+          Réessayer
+        </button>
+      </p>
+    );
+  return null;
+}
+
+function HistoriqueTab({ rolls, etat, onReessayer }: { rolls: DisplayRoll[]; etat: EtatHistorique; onReessayer: () => void }) {
+  if (etat === "sans-campagne") return <p className="text-center text-xs text-ink-muted">Ce monde n&apos;a pas encore de campagne.</p>;
+  if (rolls.length === 0 && etat !== "charge") return <EtatHistoriqueMessage etat={etat} onReessayer={onReessayer} />;
   if (rolls.length === 0) return <p className="text-center text-xs text-ink-muted">Aucun jet pour le moment.</p>;
   return (
     <div className="flex flex-col">

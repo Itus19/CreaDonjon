@@ -61,6 +61,9 @@ export default function RadioWidget({ worldSlug }: { worldSlug: string }) {
   const [rect, setRect] = useState<PanelRect | null>(null);
   const [stations, setStations] = useState<RadioStation[]>([]);
   const [canManage, setCanManage] = useState(false);
+  /** Stations chargees a la premiere ouverture du volet, pour ce monde (V3.1-62). */
+  const [chargement, setChargement] = useState<{ pour: string; etat: "charge" | "erreur" } | null>(null);
+  const etatStations = chargement?.pour === worldSlug ? chargement.etat : "chargement";
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -68,20 +71,31 @@ export default function RadioWidget({ worldSlug }: { worldSlug: string }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // V3.1-62 (docs/CABLAGE.md, docs/QUOTAS.md Q1) : les stations ne
+  // s'affichent que dans le volet. Chargees a sa PREMIERE ouverture, plus a
+  // chaque page : un appel `/api` de moins par page affichee.
   useEffect(() => {
+    if (!open || chargement?.pour === worldSlug) return;
     let cancelled = false;
     fetch(`/api/worlds/${worldSlug}/radio-stations`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { stations: RadioStation[]; canManage: boolean } | null) => {
-        if (cancelled || !data) return;
+      .then((res) => {
+        if (!res.ok) throw new Error(`radio-stations : ${res.status}`);
+        return res.json() as Promise<{ stations: RadioStation[]; canManage: boolean }>;
+      })
+      .then((data) => {
+        if (cancelled) return;
         setStations(data.stations);
         setCanManage(data.canManage);
+        setChargement({ pour: worldSlug, etat: "charge" });
       })
-      .catch(() => {});
+      .catch((erreur: unknown) => {
+        console.error("Stations de radio non chargees", erreur);
+        if (!cancelled) setChargement({ pour: worldSlug, etat: "erreur" });
+      });
     return () => {
       cancelled = true;
     };
-  }, [worldSlug]);
+  }, [worldSlug, open, chargement]);
 
   useEffect(() => {
     if (!open) return;
@@ -160,7 +174,9 @@ export default function RadioWidget({ worldSlug }: { worldSlug: string }) {
   async function removeStation(id: string) {
     setStations((prev) => prev.filter((s) => s.id !== id));
     if (currentKey === `radio:${id}`) stop();
-    await fetch(`/api/worlds/${worldSlug}/radio-stations/${id}`, { method: "DELETE" }).catch(() => {});
+    await fetch(`/api/worlds/${worldSlug}/radio-stations/${id}`, { method: "DELETE" }).catch((erreur: unknown) => {
+      console.error("Station de radio non supprimee", erreur);
+    });
   }
 
   function toggleStation(station: RadioStation) {
@@ -202,7 +218,16 @@ export default function RadioWidget({ worldSlug }: { worldSlug: string }) {
           >
             <h2 className="text-sm font-semibold text-ink">Radio</h2>
 
-            {stations.length === 0 ? (
+            {etatStations === "chargement" ? (
+              <p className="text-xs text-ink-muted">Chargement…</p>
+            ) : etatStations === "erreur" ? (
+              <p className="text-xs text-danger">
+                Stations indisponibles.{" "}
+                <button type="button" onClick={() => setChargement(null)} className="underline hover:text-ink">
+                  Réessayer
+                </button>
+              </p>
+            ) : stations.length === 0 ? (
               <p className="text-xs text-ink-muted">Aucune station pour l&apos;instant.</p>
             ) : (
               <ul className="flex flex-col gap-1">

@@ -7,7 +7,7 @@ import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
 import { listCampaignCharacters } from "@/src/server/repos/campaigns";
 import { listCampaigns } from "@/src/server/services/campaigns";
-import { assembleResolvedRuleset } from "@/src/server/services/resolvedRuleset";
+import { resolveEntryNames } from "@/src/server/services/resolvedRuleset";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -63,43 +63,52 @@ export async function listWorldPlayerCharacters(
   const entityById = new Map(entities.map((e) => [e.id, e]));
   const characterDataByEntityId = new Map(characterBlocks.map((b) => [b.entity_id, b.data as CharacterBlockData]));
 
-  const results = await Promise.all(
-    pcRows.map(async ({ campaign, row }): Promise<WorldPlayerCharacter | null> => {
-      const entity = entityById.get(row.entity_id);
-      if (!entity) return null;
-
-      const characterData = characterDataByEntityId.get(row.entity_id);
-      let speciesLabel: string | null = null;
-      let classesLabel: string | null = null;
-      if (characterData) {
-        const speciesKey = characterData.species?.kind === "rule" ? characterData.species.key : undefined;
-        const classSelections = characterData.classes
-          .filter((c) => c.class.kind === "rule" && c.class.key)
-          .map((c) => ({ key: (c.class as { kind: "rule"; key: string }).key, level: c.level }));
-
-        const assembled = await assembleResolvedRuleset(
-          supabase,
-          campaign.rulesetId,
-          { species: speciesKey, classes: classSelections },
-          locale
-        );
-        speciesLabel = speciesKey ? (assembled.ruleset.features[`species:${speciesKey}`]?.label ?? speciesKey) : null;
-        classesLabel =
-          classSelections.length > 0
-            ? classSelections.map((c) => `${assembled.ruleset.classes[c.key]?.label ?? c.key} ${c.level}`).join(" / ")
-            : null;
-      }
-
-      return {
-        entityId: entity.id,
-        entitySlug: entity.slug,
-        entityName: entity.name,
-        speciesLabel,
-        classesLabel,
-        claimedByUserId: row.user_id,
-      };
-    })
+  // V3.1-62 (docs/CABLAGE.md, C4) : seuls les NOMS de l'espece et des
+  // classes s'affichent ici. Une lecture de noms par ruleset (toutes les
+  // cles de tous ses PJ ensemble) au lieu d'un assemblage complet par PJ —
+  // memes noms, lus par la meme fonction que l'assembleur.
+  const selections = pcRows.map(({ campaign, row }) => {
+    const characterData = characterDataByEntityId.get(row.entity_id);
+    const speciesKey = characterData?.species?.kind === "rule" ? characterData.species.key : undefined;
+    const classSelections = (characterData?.classes ?? [])
+      .filter((c) => c.class.kind === "rule" && c.class.key)
+      .map((c) => ({ key: (c.class as { kind: "rule"; key: string }).key, level: c.level }));
+    return { campaign, row, hasCharacter: Boolean(characterData), speciesKey, classSelections };
+  });
+  const keysByRuleset = new Map<string, Set<string>>();
+  for (const sel of selections) {
+    if (!sel.hasCharacter) continue;
+    const keys = keysByRuleset.get(sel.campaign.rulesetId) ?? new Set<string>();
+    if (sel.speciesKey) keys.add(sel.speciesKey);
+    for (const c of sel.classSelections) keys.add(c.key);
+    keysByRuleset.set(sel.campaign.rulesetId, keys);
+  }
+  const namesByRuleset = new Map(
+    await Promise.all(
+      [...keysByRuleset.entries()].map(
+        async ([rulesetId, keys]) => [rulesetId, await resolveEntryNames(supabase, rulesetId, [...keys], locale)] as const
+      )
+    )
   );
+
+  const results = selections.map(({ campaign, row, hasCharacter, speciesKey, classSelections }): WorldPlayerCharacter | null => {
+    const entity = entityById.get(row.entity_id);
+    if (!entity) return null;
+    const names = namesByRuleset.get(campaign.rulesetId) ?? new Map<string, string>();
+    const speciesLabel = hasCharacter && speciesKey ? (names.get(speciesKey) ?? speciesKey) : null;
+    const classesLabel =
+      hasCharacter && classSelections.length > 0
+        ? classSelections.map((c) => `${names.get(c.key) ?? c.key} ${c.level}`).join(" / ")
+        : null;
+    return {
+      entityId: entity.id,
+      entitySlug: entity.slug,
+      entityName: entity.name,
+      speciesLabel,
+      classesLabel,
+      claimedByUserId: row.user_id,
+    };
+  });
 
   return results.filter((r): r is WorldPlayerCharacter => r !== null);
 }
