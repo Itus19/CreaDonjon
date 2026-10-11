@@ -48,6 +48,16 @@ Banc d'essai, mode développement, médiane de 3 passages. Les fiches des PJ son
 | **Joueuse, sa fiche** `/joueur` | **279 (22)** | 30 | **77** | **21** | **16,5 s** |
 | **Joueuse, fiche du wiki de son PJ** | **334 (33)** | 40 | **65** | **31** | **12,8 s** |
 
+**Après la correction 1 (§7), le 11 octobre** : les puces, les blocs de règles et le ruleset résolu passent par un chargeur par lots (`lib/chargement/chargeurParLots.ts`). Ils partent en une requête par écran, et ne sont plus redemandés tant que la réponse est fraîche.
+
+| Écran | Requêtes à la base | Vagues | Chargements après affichage | Écran stable |
+|---|---|---|---|---|
+| MJ, fiche de personnage | 581 → **244** | 123 → **88** | 44 → **11** | 23,6 s → 21,4 s |
+| Joueuse, sa fiche | 279 → **204** | 77 → **68** | 21 → **13** | 16,5 s → 15,6 s |
+| Joueuse, fiche du wiki de son PJ | 334 → **189** | 65 → **48** | 31 → **12** | 12,8 s → 10,1 s |
+
+Le temps ne baisse presque pas, et la mesure dit pourquoi. Ce qui reste, ce sont trois routes serveur lentes, appelées l'une après l'autre : `sheet` (≈ 6 s), `resolved-ruleset` (≈ 5 s) et `rule-entries` (≈ 4 s). C'est la correction 2.
+
 Les routes les plus lentes, en temps serveur moyen :
 
 | Route | Temps moyen | Appels par fiche de personnage |
@@ -116,7 +126,7 @@ Le test échoue si un compte augmente. Une correction qui le fait baisser **abai
 
 Dans l'ordre des gains mesurés, une correction par commit, sans changer aucun comportement, avec une mesure après chacune :
 
-1. **La fiche de personnage** : C2, puis C1.
+1. **La fiche de personnage** : C2, puis C1. *C2 fait le 11 octobre (chargeur par lots) : 44 → 11 chargements après affichage, 581 → 244 requêtes. C1 reste à faire.*
    - Un seul chargement du ruleset résolu par fiche, partagé par tous les blocs.
    - Les puces de référence d'une fiche demandées en une requête.
    - Les blocs de règles en un lot.

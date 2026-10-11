@@ -1014,7 +1014,7 @@ aussi. Relevé dans le code le 8 octobre, sans mesure :
 - **Décision** : ADR 0055, sept règles C1 à C7.
 - **Garde-fou** : le cliquet `lib/cablage.test.ts`.
 
-**Étape 3 (Sonnet)** : suivre `docs/CABLAGE.md` §7, dans l'ordre. Une correction par commit, une mesure après chacune, le plafond du cliquet abaissé à chaque fois.
+**Étape 3 (Sonnet)** : suivre `docs/CABLAGE.md` §7, dans l'ordre. *Correction 1, partie C2, faite le 11 octobre par Opus : le contexte était déjà chargé dans la session (skill `deleguer`, règle 1). Mesures dans `docs/CABLAGE.md` §3.* Une correction par commit, une mesure après chacune, le plafond du cliquet abaissé à chaque fois.
 
 **Critères d'acceptation**
 - [ ] Les mesures avant / après sont écrites dans ce ticket. *Avant : faites le 11 octobre, dans `docs/CABLAGE.md` §3 (pour ne pas les recopier deux fois).*

@@ -41,7 +41,8 @@ const contextes = {};
 for (const [cle, email] of Object.entries(comptes)) {
   const ctx = await browser.newContext();
   const p = await ctx.newPage();
-  await p.goto(`${BASE}/login`);
+  // Premier passage : le mode developpement compile la page, bien au-dela de 30 s.
+  await p.goto(`${BASE}/login`, { timeout: 180000 });
   await p.fill('input[name="identifier"]', email);
   await p.fill('input[name="password"]', process.env.MANUAL_TEST_PASSWORD);
   await Promise.all([p.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 60000 }), p.click('button[type="submit"]')]);

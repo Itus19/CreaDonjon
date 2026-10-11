@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ResolvedRuleset } from "@/src/core/rules/sheet";
 import type { ArmorData, ItemCost, WeaponData } from "@/src/core/rules/srdMapping";
+import { creerChargeurParLots } from "@/lib/chargement/chargeurParLots";
 
 export interface RemainingChoiceView {
   id: string;
@@ -94,14 +95,46 @@ function selectionKey(s: RulesetSelection): string {
 }
 
 /**
+ * V3.1-62 (docs/CABLAGE.md, C2) : la fiche de personnage demandait 6 fois le
+ * meme ruleset resolu (un par bloc qui l'utilise), environ 5 s de serveur
+ * chacun. Une meme selection ne part plus qu'une fois : les demandes
+ * simultanees partagent la meme attente, et la reponse sert 30 s.
+ */
+const DUREE_CACHE_MS = 30_000;
+const corpsParCle = new Map<string, unknown>();
+const chargeurRuleset = creerChargeurParLots<ResolvedRulesetView>({
+  tailleMax: 1,
+  dureeCacheMs: DUREE_CACHE_MS,
+  chargerLot: async ([cle]) => {
+    const [worldSlug] = JSON.parse(cle) as [string, string];
+    const res = await fetch(`/api/worlds/${worldSlug}/resolved-ruleset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(corpsParCle.get(cle)),
+    });
+    if (!res.ok) throw new Error(`resolved-ruleset : ${res.status}`);
+    return new Map([[cle, (await res.json()) as ResolvedRulesetView]]);
+  },
+});
+
+async function chargerRulesetResolu(worldSlug: string, dedupeKey: string, body: unknown): Promise<ResolvedRulesetView> {
+  const cle = JSON.stringify([worldSlug, dedupeKey]);
+  corpsParCle.set(cle, body);
+  return (await chargeurRuleset.charger([cle])).get(cle) ?? EMPTY;
+}
+
+/**
  * Assemble un `ResolvedRuleset` reel des que l'espece/l'historique/les
  * classes/l'equipement change (V1-B4) — la fiche derivee, elle, se
  * recalcule a chaque rendu a partir du dernier resultat en cache, sans
  * refetch (`characterSheet()` est pure et instantanee, §4.5).
  */
 export function useResolvedRuleset(worldSlug: string, selection: RulesetSelection): ResolvedRulesetView {
-  const [data, setData] = useState<ResolvedRulesetView>(EMPTY);
   const dedupeKey = selectionKey(selection);
+  const [data, setData] = useState<ResolvedRulesetView>(() => {
+    const cle = JSON.stringify([worldSlug, dedupeKey]);
+    return chargeurRuleset.lireSiPret([cle])?.get(cle) ?? EMPTY;
+  });
   /**
    * L'equipement se resout independamment du personnage (V1-C18) : le poids
    * et le cout d'un objet SRD ne dependent pas de qui le porte — un bloc
@@ -113,27 +146,24 @@ export function useResolvedRuleset(worldSlug: string, selection: RulesetSelectio
 
   useEffect(() => {
     let cancelled = false;
-    const request: Promise<ResolvedRulesetView> = hasAnything
-      ? fetch(`/api/worlds/${worldSlug}/resolved-ruleset`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            species: selection.species,
-            background: selection.background,
-            classes: selection.classes,
-            equipmentKeys: nonEmptyKeys(selection.equipmentKeys),
-            spellKeys: nonEmptyKeys(selection.spellKeys),
-          }),
-        })
-          .then((res) => (res.ok ? res.json() : null))
-          .then((body: ResolvedRulesetView | null) => body ?? EMPTY)
-      : Promise.resolve(EMPTY);
+    const body = {
+      species: selection.species,
+      background: selection.background,
+      classes: selection.classes,
+      equipmentKeys: nonEmptyKeys(selection.equipmentKeys),
+      spellKeys: nonEmptyKeys(selection.spellKeys),
+    };
+    const request: Promise<ResolvedRulesetView> = hasAnything ? chargerRulesetResolu(worldSlug, dedupeKey, body) : Promise.resolve(EMPTY);
 
-    request.then((body) => {
-      if (!cancelled) setData(body);
-    }).catch(() => {
-      if (!cancelled) setData(EMPTY);
-    });
+    request
+      .then((resultat) => {
+        if (!cancelled) setData(resultat);
+      })
+      .catch((erreur: unknown) => {
+        // Jamais muet : la fiche se calcule sans ruleset (valeurs de base), et l'erreur se voit.
+        console.error("Ruleset resolu non charge", erreur);
+        if (!cancelled) setData(EMPTY);
+      });
     return () => {
       cancelled = true;
     };

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { creerChargeurParLots, type ChargeurParLots } from "@/lib/chargement/chargeurParLots";
 
 export interface RuleEntryBlockData {
   blockType: string;
@@ -9,78 +10,63 @@ export interface RuleEntryBlockData {
 
 const EMPTY: Record<string, RuleEntryBlockData[]> = {};
 
-// Cache module-level, meme motif que `useWorldRuleEntries.ts` : les memes
-// cles (ex. la liste complete des sorts) sont redemandees a chaque etape du
-// wizard visitee, sans que le contenu ait change entre-temps.
-const cache = new Map<string, Record<string, RuleEntryBlockData[]>>();
+/** Borne du schema de la route (`ruleEntryBlocksSchema`, 1000 cles au plus). */
+const TAILLE_MAX_LOT = 1000;
 
-// Requetes EN COURS — meme raison que `useWorldRuleEntries.ts` (retour
-// utilisateur, V2-G1) : sans ce suivi, le prechargement des sorts de
-// `CharacterCreatorWizard` et un deuxieme appelant sur la meme cle (React
-// StrictMode en dev double le montage, ou deux composants reels) lancent
-// chacun leur propre POST identique au lieu de partager la meme reponse.
-const inFlight = new Map<string, Promise<Record<string, RuleEntryBlockData[]>>>();
+/**
+ * Un chargeur par monde (la route est propre a un monde). Cache sans
+ * peremption, comme avant V3.1-62 : le contenu d'une fiche de regle ne change
+ * qu'avec le ruleset actif, et `clearRuleEntryBlocksCache` le vide alors.
+ *
+ * V3.1-62 (docs/CABLAGE.md, C2) : les blocs d'un meme ecran demandent leurs
+ * cles ensemble, en UNE requete, au lieu d'une requete par lot de cles.
+ */
+const chargeurs = new Map<string, ChargeurParLots<RuleEntryBlockData[]>>();
 
-function cacheKey(worldSlug: string, dedupeKey: string): string {
-  return `${worldSlug}:${dedupeKey}`;
+function chargeurPour(worldSlug: string): ChargeurParLots<RuleEntryBlockData[]> {
+  let chargeur = chargeurs.get(worldSlug);
+  if (!chargeur) {
+    chargeur = creerChargeurParLots<RuleEntryBlockData[]>({
+      tailleMax: TAILLE_MAX_LOT,
+      dureeCacheMs: Infinity,
+      chargerLot: async (keys) => {
+        const res = await fetch(`/api/worlds/${worldSlug}/rule-entry-blocks`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ keys }),
+        });
+        if (!res.ok) throw new Error(`rule-entry-blocks : ${res.status}`);
+        const body = (await res.json()) as Record<string, RuleEntryBlockData[]>;
+        return new Map(Object.entries(body));
+      },
+    });
+    chargeurs.set(worldSlug, chargeur);
+  }
+  return chargeur;
 }
 
 /** Meme raison que `clearWorldRuleEntriesCache` (`useWorldRuleEntries.ts`) : a appeler au changement de ruleset actif d'un monde. */
 export function clearRuleEntryBlocksCache(worldSlug: string): void {
-  for (const key of cache.keys()) {
-    if (key.startsWith(`${worldSlug}:`)) cache.delete(key);
-  }
+  chargeurs.get(worldSlug)?.vider();
 }
 
-/**
- * Blocs bruts (description, bases de classe...) d'un lot de fiches de regle
- * (assistant de creation de personnage, V2-G1) — mis en cache par lot de
- * cles (retour utilisateur : revisiter une etape du wizard redemandait tout
- * a chaque fois, alors que `listRuleEntryBlocksByKeys` reste plus lent que
- * `useWorldRuleEntries` — une liste de sorts pese plus d'une seconde meme
- * une fois le N+1 corrige cote serveur). Invalide au changement de ruleset
- * actif (`clearRuleEntryBlocksCache`), jamais pendant l'edition normale
- * d'une fiche de regle — meme compromis que `useWorldRuleEntries`.
- */
 export function useRuleEntryBlocks(worldSlug: string, keys: readonly string[]): Record<string, RuleEntryBlockData[]> {
   const dedupeKey = JSON.stringify([...keys].sort());
-  const [data, setData] = useState<Record<string, RuleEntryBlockData[]>>(() => cache.get(cacheKey(worldSlug, dedupeKey)) ?? EMPTY);
+  const [data, setData] = useState<Record<string, RuleEntryBlockData[]>>(() => {
+    const pret = chargeurPour(worldSlug).lireSiPret(keys);
+    return pret && pret.size > 0 ? Object.fromEntries(pret) : EMPTY;
+  });
 
   useEffect(() => {
     let cancelled = false;
-    const key = cacheKey(worldSlug, dedupeKey);
-    const cached = cache.get(key);
-    let request: Promise<Record<string, RuleEntryBlockData[]>>;
-    if (cached) {
-      request = Promise.resolve(cached);
-    } else if (keys.length === 0) {
-      request = Promise.resolve(EMPTY);
-    } else {
-      const pending = inFlight.get(key);
-      if (pending) {
-        request = pending;
-      } else {
-        request = fetch(`/api/worlds/${worldSlug}/rule-entry-blocks`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ keys }),
-        })
-          .then((res) => (res.ok ? res.json() : null))
-          .then((body: Record<string, RuleEntryBlockData[]> | null) => body ?? EMPTY);
-        inFlight.set(key, request);
-        request.finally(() => {
-          if (inFlight.get(key) === request) inFlight.delete(key);
-        });
-      }
-    }
-
-    request
-      .then((body) => {
-        if (cancelled) return;
-        cache.set(key, body);
-        setData(body);
+    chargeurPour(worldSlug)
+      .charger(keys)
+      .then((resultat) => {
+        if (!cancelled) setData(resultat.size === 0 ? EMPTY : Object.fromEntries(resultat));
       })
-      .catch(() => {
+      .catch((erreur: unknown) => {
+        // Jamais muet : les blocs restent vides, et l'erreur se voit.
+        console.error("Blocs de regle non charges", erreur);
         if (!cancelled) setData(EMPTY);
       });
     return () => {
