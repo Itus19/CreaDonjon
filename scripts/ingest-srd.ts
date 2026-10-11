@@ -39,6 +39,19 @@ interface ConversionFailure {
   message: string;
 }
 
+
+/**
+ * Fiches officielles ecrites par un script d'auteur a part, jamais par ce
+ * fichier : protegees de l'elagage. Ces scripts reecrivent aussi des blocs
+ * que l'import recree ; ils se rejouent donc apres chaque import (rappel
+ * affiche en fin de script).
+ */
+const CLES_ECRITES_HORS_IMPORT = ["encounter-budget", "commerce", "lifestyle-expenses"];
+const SCRIPTS_A_REJOUER = [
+  "scripts/write-encounter-budget-2024.ts",
+  "scripts/write-commerce-2024.ts",
+  "scripts/write-lifestyle-expenses-2024.ts",
+];
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -2106,9 +2119,13 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
   // les anciennes variantes par classe d'une aptitude generique, fusionnees
   // par dedupeFeatures) — sans ca, rejouer l'import laisserait des fiches
   // mortes en base indefiniment (blocs et traductions cascadent avec elles).
+  // Les fiches officielles ecrites par un script d'auteur, hors JSON SRD
+  // (CLES_ECRITES_HORS_IMPORT), ne sont jamais elaguees : le 10 octobre, un
+  // reimport a ainsi efface la table de budget des rencontres, « Commerce »
+  // et « Train de vie », sans que personne ne le voie.
   const { data: prunedCount, error: pruneError } = await supabase.rpc("import_prune_stale_entries", {
     p_ruleset_id: rulesetId,
-    p_valid_keys: [...seenKeys],
+    p_valid_keys: [...seenKeys, ...CLES_ECRITES_HORS_IMPORT],
   });
   if (pruneError) throw new Error(`import_prune_stale_entries (${config.file}) : ${pruneError.message}`);
   if (typeof prunedCount === "number" && prunedCount > 0) {
@@ -2146,6 +2163,8 @@ async function main() {
   } else {
     console.log("Aucun echec de conversion.");
   }
+  console.log("\nA rejouer maintenant (fiches et blocs ecrits hors import) :");
+  for (const script of SCRIPTS_A_REJOUER) console.log(`  npx tsx --env-file=.env.local ${script} --write`);
 }
 
 main().catch((err) => {

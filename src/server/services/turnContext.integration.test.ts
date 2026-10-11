@@ -179,7 +179,9 @@ describe.skipIf(!hasCreds)("buildSoloTurnContext (integration, base reelle)", ()
     expect(text).toContain("un étranger au regard dur");
     expect(text).not.toContain("Le Vrai Nom Du PNJ");
     expect(text).toContain("amical");
-    expect(text).not.toContain("40");
+    // « 40 » comme nombre isole : le texte contient des identifiants tires au
+    // hasard (« c961a40d-… ») qui portent parfois ces deux chiffres.
+    expect(text).not.toMatch(/(?<![0-9a-f-])40(?![0-9a-f-])/);
     expect(npcIds).toEqual([npcEntityId]);
   });
 

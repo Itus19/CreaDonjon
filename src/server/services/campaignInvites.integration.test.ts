@@ -13,14 +13,18 @@ import {
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
- * V2-M4 (Lot M) : verifie contre une vraie base le mecanisme le plus
- * sensible du lot — un ami obtient un compte reel et une session, sans
- * jamais voir d'email ni de mot de passe, uniquement via un jeton
- * d'invitation. Couvre : resolution anonyme du jeton, liste des
- * personnages non reclames (elle aussi anonyme), reclamation course-safe
- * (deux visiteurs ne peuvent pas prendre le meme personnage), etablissement
- * reel d'une session via `verifyOtp`, et reouverture du meme lien plus
- * tard qui reconnecte le MEME compte sans jamais redemander le role.
+ * V2-M4 (Lot M), mis a jour pour V3.1-10 (ADR 0031) : verifie contre une
+ * vraie base le mecanisme le plus sensible du lot. Couvre : resolution
+ * anonyme du jeton, liste des personnages non reclames (elle aussi
+ * anonyme), reclamation course-safe (deux visiteurs ne peuvent pas prendre
+ * le meme personnage), et reouverture d'un lien MJ deja reclame qui
+ * reconnecte le MEME compte par lien magique.
+ *
+ * Depuis V3.1-10, `claimInvite` n'ouvre plus de compte : la personne en a
+ * deja un (cree par `accountAuth.createTagAccount`, ou sa session courante)
+ * et le passe en `existingUserId`. Les « visiteurs » de ce fichier sont donc
+ * des comptes du groupe fixe (docs/TESTS.md §2) : aucun compte n'est cree
+ * ni supprime ici.
  */
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -35,7 +39,6 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
   let campaignId: string;
   let entityAId: string;
   let entityBId: string;
-  const createdInvitedUserIds: string[] = [];
 
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
@@ -88,11 +91,8 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
 
   afterAll(async () => {
     if (worldId) await admin.from("worlds").delete().eq("id", worldId);
-    // ownerId n'est jamais supprime : compte du pool reutilisable
-    // (reusableTestAccounts.ts), pas un compte jetable de ce fichier. Seuls
-    // les comptes crees par le flux d'invitation LUI-MEME (le sujet reel de
-    // ce test) sont jetables.
-    for (const id of createdInvitedUserIds) if (id) await admin.auth.admin.deleteUser(id);
+    // Les comptes du groupe fixe ne sont jamais supprimes : leurs roles et
+    // personnages partent avec le monde (cascade).
   });
 
   it("un jeton invalide ne resout a rien", async () => {
@@ -120,17 +120,17 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
     const characters = await listUnclaimedCharactersForToken(anon, token);
     expect(characters.map((c) => c.entityId).sort()).toEqual([entityAId, entityBId].sort());
 
-    const claim = await claimInvite({ invite: resolved.invite, claim: { role: "player", name: "Jérémy", entityId: entityAId } });
-    expect(claim.ok).toBe(true);
-    if (!claim.ok) return;
-    if (!claim.tokenHash) throw new Error("premiere reclamation sans session existante : un tokenHash est toujours attendu");
-
-    const { data: verified, error: verifyError } = await anon.auth.verifyOtp({ type: "magiclink", token_hash: claim.tokenHash });
-    if (verifyError || !verified.user) throw new Error(verifyError?.message ?? "session non etablie");
-    createdInvitedUserIds.push(verified.user.id);
+    // Le visiteur a deja son compte (V3.1-10) : il le passe, et garde sa session.
+    const visitor = await getReusableTestAccount(admin, "playerB");
+    const claim = await claimInvite({
+      invite: resolved.invite,
+      claim: { role: "player", name: "Jérémy", entityId: entityAId },
+      existingUserId: visitor.id,
+    });
+    expect(claim).toEqual({ ok: true, tokenHash: null });
 
     // La destination calculee doit pointer vers la fiche du personnage reclame.
-    const destination = await resolveDestinationForInvitedUser(anon, resolved.invite, verified.user.id);
+    const destination = await resolveDestinationForInvitedUser(visitor.client, resolved.invite, visitor.id);
     expect(destination).toContain("/f/pj-a");
 
     // La fiche revendiquee n'apparait plus dans la liste des personnages libres.
@@ -145,25 +145,21 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
     const resolved = await resolveInviteForJoin(anon, token);
     if (!resolved.ok) throw new Error("resolution echouee");
 
+    const [antoine, concurrent] = await Promise.all([getReusableTestAccount(admin, "playerC"), getReusableTestAccount(admin, "viewer")]);
     const [first, second] = await Promise.all([
-      claimInvite({ invite: resolved.invite, claim: { role: "player", name: "Antoine", entityId: entityBId } }),
-      claimInvite({ invite: { ...resolved.invite }, claim: { role: "player", name: "Concurrent", entityId: entityBId } }),
+      claimInvite({ invite: resolved.invite, claim: { role: "player", name: "Antoine", entityId: entityBId }, existingUserId: antoine.id }),
+      claimInvite({ invite: { ...resolved.invite }, claim: { role: "player", name: "Concurrent", entityId: entityBId }, existingUserId: concurrent.id }),
     ]);
     const results = [first, second];
     const succeeded = results.filter((r) => r.ok);
     const failed = results.filter((r) => !r.ok);
     expect(succeeded).toHaveLength(1);
     expect(failed).toHaveLength(1);
-    // Meme jeton non encore reclame => meme adresse synthetique pour les
-    // deux : le perdant echoue a la creation du compte lui-meme
-    // (`invite_already_claimed`), avant meme d'atteindre la reclamation du
-    // personnage — deux visiteurs d'un lien ENCORE LIBRE ne peuvent de
-    // toute facon devenir qu'UNE seule identite au final.
-    if (failed[0] && !failed[0].ok) expect(failed[0].reason).toBe("invite_already_claimed");
-
-    // Nettoyage : le compte du gagnant a ete lie a l'invite ci-dessus (meme jeton, deja "reclame" par le gagnant) — retrouve pour suppression.
+    // Lien joueur reutilisable (V3.1-10) : la course se joue sur le
+    // PERSONNAGE (`is("user_id", null)`), jamais sur le lien.
+    if (failed[0] && !failed[0].ok) expect(failed[0].reason).toBe("character_already_taken");
     const { data } = await admin.from("campaign_characters").select("user_id").eq("entity_id", entityBId).single();
-    if (data?.user_id) createdInvitedUserIds.push(data.user_id);
+    expect([antoine.id, concurrent.id]).toContain(data?.user_id);
   });
 
   it("un lien deja reclame reconnecte le MEME compte a la reouverture, sans redemander de role", async () => {
@@ -172,17 +168,14 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
 
     const firstResolve = await resolveInviteForJoin(anon, token);
     if (!firstResolve.ok) throw new Error("resolution echouee");
-    const firstClaim = await claimInvite({ invite: firstResolve.invite, claim: { role: "gm", name: "Jérémy MJ" } });
-    if (!firstClaim.ok) throw new Error("reclamation echouee");
-    if (!firstClaim.tokenHash) throw new Error("premiere reclamation sans session existante : un tokenHash est toujours attendu");
-    const { data: firstSession, error: firstError } = await anon.auth.verifyOtp({ type: "magiclink", token_hash: firstClaim.tokenHash });
-    if (firstError || !firstSession.user) throw new Error("premiere session echouee");
-    createdInvitedUserIds.push(firstSession.user.id);
+    const jeremy = await getReusableTestAccount(admin, "editor");
+    const firstClaim = await claimInvite({ invite: firstResolve.invite, claim: { role: "gm", name: "Jérémy MJ" }, existingUserId: jeremy.id });
+    expect(firstClaim).toEqual({ ok: true, tokenHash: null });
 
-    // Reouverture : meme jeton, aucune information de role/nom fournie.
+    // Reouverture, depuis un navigateur SANS session : meme jeton, aucune information de role/nom fournie.
     const secondResolve = await resolveInviteForJoin(anon, token);
     if (!secondResolve.ok) throw new Error("seconde resolution echouee");
-    expect(secondResolve.invite.claimedByUserId).toBe(firstSession.user.id);
+    expect(secondResolve.invite.claimedByUserId).toBe(jeremy.id);
 
     const secondClaim = await claimInvite({ invite: secondResolve.invite });
     if (!secondClaim.ok) throw new Error("reouverture echouee");
@@ -190,7 +183,7 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
     const { data: secondSession, error: secondError } = await anon.auth.verifyOtp({ type: "magiclink", token_hash: secondClaim.tokenHash });
     if (secondError || !secondSession.user) throw new Error("seconde session echouee");
 
-    expect(secondSession.user.id).toBe(firstSession.user.id);
+    expect(secondSession.user.id).toBe(jeremy.id);
   });
 
   it("un lien revoque ne resout plus a rien, meme deja reclame", async () => {
@@ -226,19 +219,16 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
     const anon = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
     const resolved = await resolveInviteForJoin(anon, token);
     if (!resolved.ok) throw new Error("resolution echouee");
-    const claim = await claimInvite({ invite: resolved.invite, claim: { role: "gm", name: "Antoine MJ" } });
+    const antoine = await getReusableTestAccount(admin, "editor");
+    const claim = await claimInvite({ invite: resolved.invite, claim: { role: "gm", name: "Antoine MJ" }, existingUserId: antoine.id });
     if (!claim.ok) throw new Error("reclamation echouee");
-    if (!claim.tokenHash) throw new Error("premiere reclamation sans session existante : un tokenHash est toujours attendu");
-    const { data: session, error: sessionError } = await anon.auth.verifyOtp({ type: "magiclink", token_hash: claim.tokenHash });
-    if (sessionError || !session.user) throw new Error("session echouee");
-    createdInvitedUserIds.push(session.user.id);
 
     // Le proprietaire du monde peut poser un mot de passe.
     const byOwner = await setInvitePassword(ownerClient, { inviteId: invite.id, password: "pose-par-le-mj" });
     expect(byOwner.allowed).toBe(true);
 
     // La personne qui a reclame ce lien peut le changer elle-meme.
-    const byClaimant = await setInvitePassword(anon, { inviteId: invite.id, password: "change-par-lui-meme" });
+    const byClaimant = await setInvitePassword(antoine.client, { inviteId: invite.id, password: "change-par-lui-meme" });
     expect(byClaimant.allowed).toBe(true);
 
     // Un tiers sans lien avec cette invitation ne le peut pas.
@@ -287,25 +277,20 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
         intendedRole: "player",
         createdBy: ownerId,
       });
-      const anon = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
+      const jeremy = await getReusableTestAccount(admin, "gm");
+      const anon = jeremy.client;
       const firstResolved = await resolveInviteForJoin(anon, firstToken);
       if (!firstResolved.ok) throw new Error("premiere resolution echouee");
       const firstClaim = await claimInvite({
         invite: firstResolved.invite,
         claim: { role: "player", name: "Jérémy", entityId: entityC.id },
+        existingUserId: jeremy.id,
       });
       if (!firstClaim.ok) throw new Error("premiere reclamation echouee");
-      if (!firstClaim.tokenHash) throw new Error("premiere reclamation sans session existante : un tokenHash est toujours attendu");
-      const { data: firstSession, error: firstSessionError } = await anon.auth.verifyOtp({
-        type: "magiclink",
-        token_hash: firstClaim.tokenHash,
-      });
-      if (firstSessionError || !firstSession.user) throw new Error("premiere session echouee");
-      createdInvitedUserIds.push(firstSession.user.id);
+      const firstSession = { user: { id: jeremy.id } };
 
-      // Deuxieme lien, SUR LE SECOND MONDE, reclame en tant que MJ — la
-      // session de `anon` est deja ouverte (meme client reutilise) : ceci
-      // exerce `existingUserId`, jamais un compte createUser une seconde fois.
+      // Deuxieme lien, SUR LE SECOND MONDE, reclame en tant que MJ — avec la
+      // session deja ouverte de ce compte : le role s'ajoute au MEME compte.
       const { token: secondToken } = await createCampaignInvite(ownerClient, {
         campaignId: secondCampaign.id,
         worldId: null,
