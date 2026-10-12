@@ -22,7 +22,7 @@ précédente de ce fichier.
 | `docs/BACKLOG.md` | Phase 0 et V0 — terminé, valeur historique |
 | `docs/BACKLOG_V1.md` | V1, le compagnon jouable — ses reports assumés sont repris dans V2-G1 |
 | `docs/BACKLOG_V2.md` | V2 — l'essentiel de ce qui existe aujourd'hui |
-| `docs/BACKLOG_V3.md` | V3, le mode solo — S2 rendu, lot A (le moteur) clos ; lots B à F non commencés |
+| `docs/BACKLOG_V3.md` | V3, le mode solo — index ; lots A à D et R terminés (deux mesures chez l'auteur), E et F attendent une vraie partie jouée |
 | `docs/audit/2026-09-06-*.md` | État de santé du code, backend et interface |
 
 ---

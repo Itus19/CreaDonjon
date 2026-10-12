@@ -33,7 +33,7 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 | `docs/CHARTE-UI.md` | Jetons, recettes de boutons/champs/listes, états d'écran | **Avant tout code d'interface** |
 | `docs/catalogue/` | Catalogue d'interface : chaque élément, ses états, ses animations (index au §9 de la charte) | Avant de créer ou modifier un élément d'interface |
 | `docs/BACKLOG_V2.md` | Tickets en cours | Au début de chaque tâche |
-| `docs/BACKLOG_V3.md` | Tickets du mode solo (moteur, boucle de tour, écriture du monde, écran) | Tickets V3 |
+| `docs/BACKLOG_V3.md` | **Index** du mode solo : feuille de route, ordre recommandé, table ticket → fichier. Les tickets (lots A à F, R, Z) vivent dans `docs/backlog-v3/`, un fichier par lot, plus `00-cadre.md` (critères transverses). Chaque titre dit s'il faut un **modèle d'IA** joignable. **Ne lis que le fichier du ticket en cours** | Tickets V3 |
 | `docs/BACKLOG_V3.1.md` | **Index** : feuille de route, ordre recommandé, et table ticket → fichier. Les tickets (rugosités et refonte « verre minéral », V3.1-1 à 119) vivent dans `docs/backlog-v3.1/`, un fichier par partie ; chaque ticket prêt dit son modèle et ses sous-tâches Haiku. **Ne lis que le fichier du ticket en cours** | Avant tout ticket qui répare un détail, et avant tout ticket de la refonte |
 | `docs/PDD.md` | Source de vérité fonctionnelle | Avant toute décision produit |
 | `docs/adr/` | Décisions d'architecture et leurs raisons | Avant de « corriger » quelque chose qui semble étrange |

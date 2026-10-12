@@ -31,6 +31,7 @@ Un sous-agent **repart de zéro**. Chaque information que le brief ne donne pas,
 
 ```
 Ticket : V3.1-NN — <titre>, dans docs/backlog-v3.1/<fichier>.md (ne lis que ce ticket).
+        (ou V3-XN, dans docs/backlog-v3/<fichier>.md ; dire s'il est « avec modèle IA » et si le fournisseur est joignable)
 But : <une phrase>.
 Plan décidé (ne pas rediscuter) :
 1. …

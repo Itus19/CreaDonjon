@@ -41,7 +41,7 @@ supabase gen types typescript --local > src/types/database.ts
 | `docs/BACKLOG.md` | Tickets Phase 0 et V0 (termine, valeur historique) |
 | `docs/BACKLOG_V1.md` | Tickets V1, le compagnon jouable |
 | `docs/BACKLOG_V2.md` | Tickets V2 — l'essentiel de ce qui existe aujourd'hui |
-| `docs/BACKLOG_V3.md` | Tickets V3, le mode solo (aucun commence) |
+| `docs/BACKLOG_V3.md` | Index des tickets V3, le mode solo (lots A à D terminés ; tickets dans `docs/backlog-v3/`) |
 | `docs/audit/` | Rapports d'audit du 2026-09-06 : backend, interface, synthese |
 | `ROADMAP.md` | Etat d'avancement par module (tableau de bord, pas une liste de tickets) |
 | `docs/adr/` | Decisions d'architecture et leurs raisons |
