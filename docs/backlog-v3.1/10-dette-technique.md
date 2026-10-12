@@ -68,3 +68,26 @@ Ce qui ne se voit pas à l'écran mais rend le code fragile à modifier. Relevé
 - [ ] Plus aucun `catch` sans traitement de l'erreur hors des tests.
 - [ ] Le cliquet compte les `catch` muets et échoue s'ils augmentent.
 - [ ] `npm run typecheck && npm run lint && npm run test` passent.
+
+---
+
+### ☐ V3.1-127 — Mettre à jour Next et les dépendances vulnérables · `S` — **prêt (Opus : décision de version ; Haiku pour les vérifications)**
+
+**Modèle conseillé : Opus**, car le changement de version de Next touche tout le rendu. Sous-tâches Haiku : lancer `npm audit --omit=dev`, typecheck, lint, tests et build, et résumer les échecs.
+
+Le 12 octobre, `npm audit --omit=dev` relève 32 failles (1 critique, 6 hautes, 25 moyennes), inscrites au registre de `docs/SECURITE.md` §3.
+- **Next 16.2.12** : plusieurs failles corrigées en 16.3.8, dont des exécutions de code à distance (optimisation d'images AVIF, `next/og`, serveur Windows) et une falsification de requête par l'optimisation d'images. Le code n'utilise ni `next/image` ni `next/og` : exposition faible, mais `/_next/image` répond quand même.
+- **Éditeur** : `@tiptap/core` et `prosemirror-view` (XSS au collage) ; correctif dans les versions permises.
+- **Outillage** : `sharp`, `postcss` (suivent Next), `nanoid`, `source-map-js`.
+
+**Méthode**
+1. Monter `next` (et `eslint-config-next`) à la dernière 16.x, au moins 16.3.8 ; lire ses notes de version pour les changements de comportement.
+2. `npm audit fix`, **sans** `--force`.
+3. `npm run typecheck && npm run lint && npm run test`, `npm run build`, `npm run verifier:secrets`.
+4. Parcours à la main (`docs/TESTS.md`) : une fiche de personnage, l'éditeur (coller du texte), un portrait téléversé, une page partagée.
+5. Passer la ligne du registre à *corrigée*.
+
+**Critères d'acceptation**
+- [ ] `npm audit --omit=dev` ne relève plus de faille critique ni haute, ou chaque reste est justifié au registre.
+- [ ] `npm run typecheck && npm run lint && npm run test` et le build passent.
+- [ ] Le parcours à la main ne montre aucune régression.

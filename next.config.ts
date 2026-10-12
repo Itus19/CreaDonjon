@@ -65,6 +65,24 @@ const nextConfig: NextConfig = {
    */
   async headers() {
     return [
+      // docs/SECURITE.md §5 : consignes de securite donnees au navigateur,
+      // sur toutes les pages. Pas de politique de contenu complete (CSP) :
+      // elle demande d'inventorier chaque source (YouTube, Supabase, images)
+      // et casserait l'app si l'inventaire est incomplet.
+      {
+        source: "/:path*",
+        headers: [
+          // Personne ne peut afficher l'app dans une page a lui (piege au clic).
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          // Le navigateur ne devine pas le type d'un fichier (une image piegee reste une image).
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          // Un lien sortant n'emporte pas l'adresse complete (jetons d'invitation ou de partage).
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // Ni camera, ni micro, ni position : l'app n'en a pas besoin.
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
       {
         source: "/backgrounds/:file*",
         headers: [{ key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=31536000" }],

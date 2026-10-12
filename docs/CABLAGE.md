@@ -4,6 +4,18 @@
 
 **Quand le lire :** avant tout ticket qui crée ou modifie un écran, un hook de chargement (`use…` qui fait un `fetch`), une route `/api` lue par un écran, ou un `layout.tsx`. Le skill `deleguer` l'impose à Sonnet.
 
+**Les réflexes, avant d'écrire un écran** (le détail et les raisons sont au §4) :
+
+1. **Ce que l'écran affiche d'emblée arrive avec la page** : lu par le composant serveur et passé en props. Si le calcul est long, il part sans être attendu, en promesse (ADR 0056). Un `fetch` dans un `useEffect` au montage est un retour en arrière (C1).
+2. **Une donnée demandée par plusieurs blocs passe par un chargeur partagé** : `lib/chargement/chargeurParLots.ts`, ou un fournisseur commun. Jamais une requête par bloc (C2).
+3. **Côté serveur, les lectures indépendantes partent ensemble** (`Promise.all`), et une liste se lit en un lot (`.in("id", ids)`) (C3, C4).
+4. **Après une écriture, on met à jour son coin d'écran** : état local, ou rechargement de la seule donnée touchée. `router.refresh()` seulement si tout l'écran change ; jamais juste après `router.push` (la page d'arrivée est déjà demandée fraîche) ; jamais `window.location.reload()` (C5).
+5. **Un champ quitté sans modification n'écrit rien.** On compare aux dernières valeurs enregistrées avant d'appeler le serveur : chaque écriture évitée épargne aussi le recalcul de la page.
+6. **Une promesse reçue du serveur passe par `Promise.resolve`** avant d'être enchaînée : React la reconstruit côté client en objet dont le `.then` ne renvoie rien.
+7. **Un code qui ne tourne que dans le navigateur** (cache de module, chargeur) se garde de `typeof window === "undefined"` : côté serveur, ce cache serait partagé entre les utilisateurs.
+8. **Aucun `catch` muet dans un chargement** : l'erreur est journalisée, et l'écran montre l'état d'erreur de la charte (C7).
+9. **On mesure avant et après, pas à chaque essai** (§2 ; `docs/QUOTAS.md`, T3). Le cliquet `lib/cablage.test.ts` (§6) échoue si un chargement après affichage ou un `router.refresh()` s'ajoute.
+
 ---
 
 ## 1. Trois mots

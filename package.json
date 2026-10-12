@@ -12,6 +12,7 @@
     "test:core": "vitest run src/core",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "verifier:secrets": "node --env-file-if-exists=.env.local scripts/verifier-secrets-build.mjs",
     "ingest:srd": "tsx --env-file=.env.local scripts/ingest-srd.ts",
     "seed:dev": "tsx --env-file=.env.local scripts/seed-dev.ts",
     "test:comptes-manuels": "tsx --conditions=react-server --env-file=.env.local scripts/comptes-test-manuels.ts",

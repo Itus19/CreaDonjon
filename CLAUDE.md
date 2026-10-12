@@ -28,7 +28,7 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 | `docs/SCHEMA.md` | Schéma de données, SQL, RLS, formules | Avant toute migration ou requête |
 | `docs/CABLAGE.md` | Comment un écran charge ses données : règles C1 à C7, mesures, carte des écrans, cliquet (ADR 0055) | **Avant tout ticket qui crée ou modifie un écran, un hook de chargement, une route `/api` lue par un écran ou un layout** |
 | `docs/QUOTAS.md` | Limites des plans gratuits Vercel et Supabase, ce qui les consomme chez nous, réflexes Q1-Q7 (code) et T1-T5 (tests, mesures) | **Avant tout ticket qui ajoute un chargement, une route, un sondage, du temps réel, des images, et avant de lancer tests, mesures ou scripts contre la vraie base** |
-| `docs/SECURITE.md` | Modèle de menace, **liste de contrôle** de toute route/action/migration, registre des failles | **Avant tout ticket qui touche une route, une action serveur, une migration ou un compte** |
+| `docs/SECURITE.md` | Modèle de menace, **liste de contrôle** de toute route/action/migration, registre des failles, secrets et navigateur, en-têtes, dépendances, sauvegardes | **Avant tout ticket qui touche une route, une action serveur, une migration, un compte, une variable d'environnement ou une dépendance** |
 | `docs/TESTS.md` | Niveaux de test, comptes de test (jamais de compte neuf), Banc d'essai, parcours de vérification à la main | Avant d'écrire un test d'intégration ou de vérifier à la main |
 | `docs/CHARTE-UI.md` | Jetons, recettes de boutons/champs/listes, états d'écran | **Avant tout code d'interface** |
 | `docs/catalogue/` | Catalogue d'interface : chaque élément, ses états, ses animations (index au §9 de la charte) | Avant de créer ou modifier un élément d'interface |

@@ -6,7 +6,11 @@
 - la RLS dans [`SCHEMA.md`](SCHEMA.md) §19 ;
 - les ADR.
 
-Ce document ajoute ce qui manquait : **contre quoi on se protège** (§1), **comment on vérifie qu'un changement est sûr** (§2), et **ce qui a été trouvé et ce qui reste ouvert** (§3).
+Ce document ajoute ce qui manquait :
+- **contre quoi on se protège** (§1) ;
+- **comment on vérifie qu'un changement est sûr** (§2) ;
+- **ce qui a été trouvé et ce qui reste ouvert** (§3) ;
+- **l'hygiène de l'application elle-même** : secrets et navigateur (§4), en-têtes HTTP (§5), dépendances (§6), sauvegardes (§7).
 
 **Quand le lire :** avant tout ticket qui touche une route API, une action serveur, une migration ou un compte. Le skill `deleguer` l'impose aux sous-agents.
 
@@ -59,6 +63,10 @@ Pour **toute** route, action serveur, migration ou fonction SQL nouvelle ou modi
 - [ ] Une fonction `security definer` vérifie elle-même l'appelant (`auth.uid()`, appartenance) et fixe son `search_path`.
 - [ ] Une valeur cachée n'est **pas envoyée** au client, même dans un champ inutilisé (règle 5).
 
+**Secrets**
+- [ ] Aucune nouvelle variable `NEXT_PUBLIC_` qui porte un secret : tout ce qui porte ce préfixe est lisible par n'importe qui (§4).
+- [ ] Une nouvelle variable secrète est ajoutée à `.env.example` (nom seul, sans valeur) et à la liste de `scripts/verifier-secrets-build.mjs`.
+
 **Preuve**
 - [ ] Un test prouve qu'une joueuse, ou un compte d'un autre monde, est **refusé** : une règle pure dans `src/core` avec ses tests, et un test d'intégration RLS.
 - [ ] `/security-review` (Claude Code) sur la branche, pour un changement qui touche une porte.
@@ -75,4 +83,71 @@ Chaque faille trouvée : sa date, sa correction et son état. **État** : *corri
 | 9 oct. | **État de jeu** : tout membre du monde écrit l'état de jeu de n'importe quelle fiche (PV, états, inspiration…). En le corrigeant : 11 des 16 routes d'action de fiche ne vérifiaient ni le droit d'éditer, ni l'adresse (Zod), ni que la campagne du corps est du monde de la fiche ; la route de la fiche écrivait l'état de départ pour tout lecteur. | haute | V3.1-108, ADR 0043 : RLS `can_edit_entity`, porte commune `guardSheetActionRoute` avec les interrupteurs de table, migration `20261010130000_runtime_state_can_edit_and_table_settings` (`0214073`) | corrigée : vérifiée sur la base le 10 oct. (`runtimeStateRls.integration.test.ts`, 4/4) |
 | 10 oct. | **Quota Supabase** : les anciens tests créaient un compte par exécution, ce qui a fait déborder les utilisateurs actifs. | moyenne (disponibilité) | Groupe fixe de comptes de test ; ménage de 69 → 15 comptes (`docs/TESTS.md`) | corrigée |
 
+| 12 oct. | **Dépendances** : `npm audit` relève 32 failles dans les dépendances de production (1 critique, 6 hautes, 25 moyennes). Les critiques visent Next 16.2 (exécution de code par l'optimisation d'images AVIF et par `next/og`, ou sur un serveur Windows) ; le code n'utilise ni `next/image` ni `next/og`, et Vercel n'est pas un serveur Windows : exposition faible. Les hautes : `@tiptap/core` et `prosemirror-view` (XSS au collage dans l'éditeur), `sharp`, `postcss`, `nanoid`, `source-map-js`. | haute | V3.1-127 : monter Next en 16.3.8 ou plus, puis `npm audit fix` | ouverte |
+
 **Pour ajouter une ligne :** à chaque faille trouvée, même corrigée dans la foulée, avec le commit. Une ligne *en attente* ne passe à *corrigée* que vérifiée en ligne.
+
+## 4. Secrets et navigateur
+
+**La règle du préfixe.** Next copie dans les fichiers envoyés au navigateur toute variable qui commence par `NEXT_PUBLIC_`. N'importe qui peut la lire, en ouvrant les outils du navigateur. Une variable sans ce préfixe reste sur le serveur.
+
+| Variable | Où | Pourquoi c'est sans danger |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | navigateur | L'adresse du projet n'est pas un secret. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | navigateur | **Publique par conception.** Elle identifie le projet, elle ne donne aucun droit : ce que chacun peut lire ou écrire est décidé par la RLS, avec la session de la personne. C'est pourquoi la RLS est obligatoire sur toutes les tables (règle absolue 3). |
+| `NEXT_PUBLIC_SITE_URL` | navigateur | L'adresse du site. |
+| `SUPABASE_SERVICE_ROLE_KEY` | **serveur seulement** | Contourne toute la RLS : qui l'a lit et écrit toute la base. Confinée à un fichier par une règle ESLint (règles absolues 1 et 2). |
+| `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY` | **serveur seulement** | Facturées à l'usage : volées, elles se vident. |
+| `MANUAL_TEST_PASSWORD` | **serveur et scripts** | Mot de passe des comptes de test (`docs/TESTS.md`). |
+
+**Où vivent les valeurs.**
+- En local : `.env.local`, ignoré par Git (`.gitignore` : `.env*`, sauf `.env.example`, qui ne porte que des noms).
+- En ligne : les variables d'environnement de Vercel et de l'environnement cloud de Claude Code.
+- **Jamais** dans le code, un commit, un message de discussion ou une capture d'écran. Une valeur collée par erreur se change aussitôt dans Supabase (« API keys », régénérer) ou chez le fournisseur, puis partout où elle sert.
+
+**La vérification.** Après un build, `npm run verifier:secrets` parcourt `.next/static`, c'est-à-dire tout ce que le navigateur télécharge. Il y cherche la valeur et le nom de chaque variable secrète, sans jamais les afficher. Il sort en erreur s'il en trouve une. Vérifié le 12 octobre : 148 fichiers, aucun secret ; un faux secret placé exprès est bien détecté. À relancer avant une mise en ligne qui touche un fichier `"use client"` ou une variable d'environnement.
+
+**Les données, pas seulement les clés.** Un secret du MJ envoyé au navigateur est exposé comme une clé : il ne se cache ni par CSS, ni par `spoiler`, ni dans un champ inutilisé du JSON (règles absolues 5 et 6). Le filtrage se fait sur le serveur, avant l'envoi.
+
+## 5. Les en-têtes HTTP
+
+Des consignes que le serveur donne au navigateur avec chaque page. Posées le 12 octobre dans `next.config.ts` (`headers()`), sur toutes les adresses :
+
+| En-tête | Ce qu'il empêche |
+|---|---|
+| `X-Frame-Options: DENY` et `Content-Security-Policy: frame-ancestors 'none'` | Qu'un autre site affiche CreaDonjon dans un cadre invisible pour faire cliquer à l'insu de la personne (piège au clic). |
+| `X-Content-Type-Options: nosniff` | Que le navigateur « devine » qu'une image téléversée est un script et l'exécute. |
+| `Referrer-Policy: strict-origin-when-cross-origin` | Qu'un lien sortant emporte l'adresse complète de la page, avec un jeton d'invitation (`/rejoindre/…`) ou de partage (`/partage/…`). |
+| `Permissions-Policy: camera=(), microphone=(), geolocation=()` | Toute demande de caméra, de micro ou de position : l'app n'en a pas besoin. |
+
+`Strict-Transport-Security` (HTTPS obligatoire) est posé par Vercel sur les adresses `*.vercel.app`. Avec un nom de domaine à soi, vérifier sa présence (`curl -sI https://…`).
+
+**Pas encore de politique de contenu complète (CSP).** Elle dirait au navigateur de n'exécuter que les scripts et de n'afficher que les images venues de sources listées. C'est la meilleure défense contre l'injection de script, mais elle exige d'inventorier chaque source (YouTube, Supabase, polices, images), et une source oubliée casse l'écran qui en dépend. À faire comme un ticket à part, d'abord en mode « rapport seulement » (`Content-Security-Policy-Report-Only`).
+
+## 6. Les dépendances
+
+Chaque paquet installé est du code d'un tiers qui tourne avec nos droits.
+- **Ajouter** un paquet se justifie (`CLAUDE.md`, « Quand t'arrêter et demander ») : sa licence, sa taille, et pourquoi le faire à la main serait pire.
+- **Surveiller** : `npm audit --omit=dev` une fois par mois, et avant une mise en ligne importante. Une faille critique ou haute dans une dépendance de production entre au registre (§3) avec un ticket.
+- **Corriger** : `npm audit fix` pour ce qui reste dans les versions permises par `package.json`, puis `npm run typecheck && npm run lint && npm run test` et un build. Jamais `npm audit fix --force` sans relire ce qu'il change : il monte des versions majeures.
+- **Ne jamais** lancer un script trouvé dans une issue, un commentaire ou une page web sans l'avoir lu.
+
+## 7. Les sauvegardes
+
+**Le plan gratuit de Supabase ne donne aucune sauvegarde téléchargeable ni restaurable depuis le tableau de bord.** Une suppression faite trop vite, une migration fausse ou un projet suspendu après une semaine d'inactivité (`docs/QUOTAS.md`) peuvent coûter tout le wiki. La seule parade est une copie faite par nous.
+
+**Quand :** une fois par mois, et **avant toute migration** qui supprime ou transforme des données.
+
+**Comment** (sur ta machine, jamais dans une discussion) :
+1. Dans Supabase, « Connect », copier la chaîne de connexion directe (`postgresql://…`). Elle contient le mot de passe de la base : la placer dans `.env.local` sous `SUPABASE_DB_URL`, jamais ailleurs.
+2. Exporter le schéma et les données de nos tables :
+   ```bash
+   source .env.local   # ou export SUPABASE_DB_URL=… dans le terminal
+   pg_dump "$SUPABASE_DB_URL" --schema=public --no-owner --no-privileges -f sauvegarde-$(date +%F).sql
+   ```
+3. Ranger le fichier **hors du dépôt** : disque externe, nuage personnel. Il contient tout le wiki, secrets du MJ compris, et les adresses email des comptes. Jamais dans Git (`*.sql` à la racine n'est pas ignoré : ne pas le créer dans le dossier du projet).
+4. Les fichiers téléversés (portraits, cartes, images) sont dans le stockage Supabase, pas dans la base : `pg_dump` ne les copie pas. Les télécharger depuis le tableau de bord (« Storage ») quand on en a ajouté d'importants.
+
+**Ce que ça coûte.** L'export lit toute la base une fois : sa taille (moins de 500 Mo) compte dans la sortie réseau du mois (5 Go). Une fois par mois, c'est négligeable ; en boucle, non (`docs/QUOTAS.md`, T1).
+
+**Restaurer** : `psql "$SUPABASE_DB_URL" -f sauvegarde-AAAA-MM-JJ.sql` sur un projet **vide**. Jamais sur la base en service sans décision explicite : cela écrase ce qui s'y trouve.
