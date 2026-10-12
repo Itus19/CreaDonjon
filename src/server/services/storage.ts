@@ -81,13 +81,26 @@ export async function deleteAssetIfUnreferenced(supabase: TypedClient, assetId: 
   }
 }
 
-/** `false` si l'asset n'existe pas ou est hors de portee (RLS `assets_delete`, deja `app.is_world_member`) — le fichier n'est retire du bucket qu'apres confirmation que la ligne a bien ete supprimee, jamais avant. */
+/**
+ * `false` si l'asset n'existe pas ou est hors de portee (RLS `assets_select`
+ * puis `assets_delete`, `app.is_world_member`).
+ *
+ * Le FICHIER d'abord, la ligne ensuite (V3.1-128, corrige le 12 octobre).
+ * La regle de lecture du stockage (`assets_bucket_select`, migration
+ * 20260902110001) n'ouvre un fichier que si une ligne `assets` le designe ;
+ * et `remove` ne retire que ce qu'il peut lire. Dans l'ordre inverse, la
+ * ligne effacee rendait le fichier invisible : `remove` ne retirait rien,
+ * sans erreur, et chaque image supprimee depuis le 2 septembre restait dans
+ * le stockage. Lire la ligne (`getAssetById`) donne le meme droit de lecture
+ * que le fichier : un appelant qui arrive ici peut le retirer.
+ */
 export async function deleteAsset(supabase: TypedClient, assetId: string): Promise<boolean> {
   const asset = await getAssetById(supabase, assetId);
   if (!asset) return false;
-  const deleted = await deleteAssetRow(supabase, assetId);
-  if (!deleted) return false;
-  const { error } = await supabase.storage.from(BUCKET).remove([asset.storage_path]);
+  const { data: retires, error } = await supabase.storage.from(BUCKET).remove([asset.storage_path]);
   if (error) throw new Error(error.message);
-  return true;
+  // Fichier deja absent (envoi interrompu, ancien nettoyage) : la ligne part
+  // quand meme, elle ne designe plus rien. Signale, jamais muet.
+  if (retires.length === 0) console.error(`Fichier ${asset.storage_path} absent ou non retire du stockage ; la ligne assets ${assetId} est effacee quand meme`);
+  return deleteAssetRow(supabase, assetId);
 }

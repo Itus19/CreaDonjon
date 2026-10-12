@@ -248,4 +248,4 @@ sa partie, et une ligne s'ajoute ici.
 | V3.1-125 | ☐ | Masse d'armes : poids faux à l'import | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |
 | V3.1-126 | ☐ | Les `catch` muets restants | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
 | V3.1-127 | ☑ | Mettre à jour Next et les dépendances vulnérables | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
-| V3.1-128 | ☐ | Les cartes laissent leurs images dans le stockage | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
+| V3.1-128 | ☑ | Les cartes laissent leurs images dans le stockage | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |

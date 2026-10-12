@@ -107,9 +107,9 @@ Le 12 octobre, `npm audit --omit=dev` relève 32 failles (1 critique, 6 hautes, 
 
 ---
 
-### ☐ V3.1-128 — Les cartes laissent leurs images dans le stockage · `S` — **code fait le 12 octobre ; reste à appliquer la migration (auteur) et à repasser le test**
+### ☑ V3.1-128 — Les cartes laissent leurs images dans le stockage · `S` — **fait le 12 octobre**
 
-**Modèle conseillé : Sonnet.** Sous-tâches Haiku : aucune.
+**Modèle conseillé : Sonnet** au départ. *Corrigé après coup : le ticket a demandé une migration et une fonction `security definer`, domaine d'Opus (`CLAUDE.md`, répartition par modèle). Fait par Opus.* Sous-tâches Haiku : aucune.
 
 Trouvé le 12 octobre en écrivant `docs/QUOTAS.md` Q5. Les portraits, images de blocs et fonds d'écran effacent leur ancien fichier (`deleteAsset`). Les cartes, non :
 - **Remplacer l'image d'une carte** (`components/entities/map/MapWorkspace.tsx`, `upload`) téléverse deux nouveaux fichiers (4096 px et vignette 1600 px) et remplace `assetId` et `thumbnailAssetId` dans les données du bloc. Les deux anciens restent dans le stockage et dans `assets`, désignés par rien.
@@ -128,9 +128,10 @@ Chaque cas laisse ≈ 700 ko d'orphelins, sur 1 Go de stockage gratuit.
 - `src/core/images/imagesDeCarte.ts` (10 tests) : les images qu'un enregistrement abandonne.
 - `deleteAssetIfUnreferenced` (`storage.ts`) : efface après l'écriture, seulement à un compte de 0 ; un échec est journalisé.
 - Branché dans `updateBlockContent` et `deleteBlock` pour les blocs `map`.
-- **Orphelins existants** : `npm run recenser:images-orphelines` (lecture seule). Le 12 octobre : 19 images, 27,8 Mo, toutes dans « Faerûn », des paires carte + vignette du 1er septembre. Rien n'est effacé sans l'accord de l'auteur.
+- **Migration appliquée par l'auteur** (SQL Editor) le 12 octobre. Le test d'intégration a alors révélé un **défaut plus ancien, commun à toutes les images** : `deleteAsset` effaçait la ligne `assets` avant le fichier, or la règle de lecture du stockage (`assets_bucket_select`, migration `20260902110001`) n'ouvre un fichier que si une ligne le désigne. Le fichier devenait invisible et `remove` ne retirait rien, sans erreur : chaque portrait, image de bloc ou fond d'écran supprimé depuis le 2 septembre est resté dans le stockage. Corrigé : le fichier d'abord, la ligne ensuite.
+- **Orphelins existants** : `npm run recenser:images-orphelines` (lecture seule). Le 12 octobre : 19 images, 27,8 Mo, toutes dans « Faerûn », des paires carte + vignette du 1er septembre. S'y ajoutent 12 fichiers sans ligne (0,4 Mo), laissés par le défaut de `deleteAsset`. Rien n'est effacé sans l'accord de l'auteur.
 
 **Critères d'acceptation**
-- [ ] Remplacer l'image d'une carte, puis supprimer son bloc, ne laisse aucun fichier ni aucune ligne `assets` orpheline (test d'intégration `mapAssetsCleanup.integration.test.ts`). *En attente de la migration : avant elle, le test échoue comme prévu (fonction absente) et l'app n'efface rien.*
-- [ ] Une carte dupliquée garde son image quand on supprime l'original (même test, copie dans un bloc privé invisible au MJ).
-- [ ] `npm run typecheck && npm run lint && npm run test` passent. *Tout passe sauf ce test d'intégration, qui attend la migration.*
+- [x] Remplacer l'image d'une carte, puis supprimer son bloc, ne laisse aucun fichier ni aucune ligne `assets` orpheline (test d'intégration `mapAssetsCleanup.integration.test.ts`). *5/5 sur la vraie base le 12 octobre, après la migration et la correction de `deleteAsset`.*
+- [x] Une carte dupliquée garde son image quand on supprime l'original (même test, copie dans un bloc privé invisible au MJ).
+- [x] `npm run typecheck && npm run lint && npm run test` passent (1603 tests).

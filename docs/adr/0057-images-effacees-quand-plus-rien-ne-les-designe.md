@@ -27,5 +27,6 @@ Le serveur (`deleteAssetIfUnreferenced`) n'efface qu'**après** l'écriture qui 
 ## Conséquences
 
 - Plus d'orphelin nouveau pour les cartes. Un échec d'effacement est journalisé, n'annule pas l'écriture, et laisse au pire un orphelin.
-- Avant que la migration soit appliquée, l'appel échoue et rien n'est effacé : l'app reste sûre.
+- Avant que la migration soit appliquée, l'appel échoue et rien n'est effacé : l'app reste sûre. Appliquée le 12 octobre.
+- `deleteAsset` retire le **fichier avant la ligne** : la règle de lecture du stockage n'ouvre un fichier que si une ligne `assets` le désigne, et `remove` ne retire que ce qu'il voit. L'ordre inverse, en place depuis le 2 septembre, laissait chaque fichier supprimé dans le stockage, sans erreur.
 - Les orphelins anciens se recensent avec `npm run recenser:images-orphelines`, en lecture seule. Leur effacement reste une décision de l'auteur.
