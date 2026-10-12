@@ -365,7 +365,7 @@ typecheck && npm run lint && npm run test:core` passent.
 
 ---
 
-### ☑ V3.1-9 — Bouton « Prochaine session » mal calibré selon l'écran · `S` · sans modèle IA/`M` — fait
+### ☑ V3.1-9 — Bouton « Prochaine session » mal calibré selon l'écran · `S`/`M` · sans modèle IA — fait
 
 **Modèle conseillé : Sonnet** — ajustement d'affichage.
 
@@ -1059,7 +1059,7 @@ tels quels si ce compte redevenait joueur.
 
 ---
 
-### ☑ V3.1-16 — Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse · `M` · sans modèle IA/`L` — **fait, vérifié en direct le 9 octobre**
+### ☑ V3.1-16 — Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse · `M`/`L` · sans modèle IA — **fait, vérifié en direct le 9 octobre**
 
 **Modèle conseillé : Sonnet** — interface d'après l'esquisse ; reste la vérification en direct.
 
@@ -1635,3 +1635,228 @@ demander) :
 - [ ] Un ruleset de test au plafond 15 limite la création à 15 (test).
 - [ ] Un prérequis non rempli est signalé ; le MJ peut passer outre (test).
 - [ ] Plus aucune constante de génération dans `abilityGeneration.ts` (lu du ruleset), tests du noyau verts.
+
+---
+
+### ☑ V3.1-62 — Rapidité : mesurer, puis recâbler · `M` · sans modèle IA — **fait le 12 octobre (mesures, ADR 0055 et 0056, `docs/CABLAGE.md`)**
+
+**Modèle conseillé : Opus** pour la mesure et le plan (étapes 1 et 2), **Sonnet** pour appliquer les corrections listées (étape 3).
+
+**Question de l'auteur (8 octobre)** : faut-il revoir le « câblage » pour
+rendre l'application plus rapide ? **Oui, mais en mesurant d'abord.** Ce
+qui est déjà bien : `createClient`, `getAuthUser` et `getWorldBySlug` sont
+mis en cache par requête (`cache()` de React) ; plusieurs services publics
+aussi. Relevé dans le code le 8 octobre, sans mesure :
+- **Chargements après affichage** : 56 composants lancent un `fetch` dans un
+  `useEffect` — l'écran s'affiche vide (« … ») puis se remplit, souvent en
+  cascade (une requête attend la précédente). Les fenêtres du MJ demandent
+  leurs données à `/api/worlds/[worldSlug]/mj/[tool]/window` **après**
+  l'ouverture.
+- **Rafraîchissements complets** : 32 `router.refresh()` — chacun relance
+  tout l'arbre serveur de la page (layouts compris : arborescence, entités,
+  campagnes) pour un seul changement ; un `window.location.reload()`
+  (`DeletedEntitiesPanel`).
+- **Attentes en série** dans les layouts et la route des fenêtres : monde →
+  utilisateur → droits → campagnes, l'un après l'autre alors que plusieurs
+  sont indépendants.
+- **Requêtes par ligne** : l'Initiative charge chaque PJ un par un
+  (`getEntityById` par participant, route des fenêtres, cas `initiative`).
+- **Peu de chargement progressif** : 3 `loading.tsx`, 2 `<Suspense>` — une
+  page lente bloque tout l'écran.
+- **Deux allers-retours d'authentification par navigation** (le
+  middleware et le serveur appellent chacun `auth.getUser()`) — à mesurer
+  avant d'y toucher : la vérification réseau est un choix de sécurité
+  documenté dans `lib/supabase/middleware.ts`.
+
+**À faire**
+1. **Mesurer** (Opus) : temps serveur des pages les plus utilisées (fiche
+   du wiki, fiche de personnage, ouverture d'une fenêtre d'outil, accueil,
+   page joueur) — en-tête `Server-Timing` ou journal en développement —, et
+   nombre de requêtes à la base par page. Écrire les chiffres ici.
+2. **Planifier** (Opus) : classer les causes par gain mesuré ; écrire un ADR
+   court sur les conventions retenues (données initiales en props,
+   mises à jour optimistes, `Promise.all`, `loading.tsx` par zone,
+   `revalidatePath` ciblé plutôt que `router.refresh()` global), qui devient
+   la règle commune 6 des tickets du lot i.
+3. **Recâbler** (Sonnet) : les corrections listées par le plan, une par
+   commit, **sans changer aucun comportement** ; les outils refaits par le
+   lot i suivent déjà la règle 6.
+
+**Fait le 11 octobre (étapes 1 et 2).**
+- **Instrumentation** : `lib/supabase/measuredFetch.ts`, en développement seulement, active avec `CREADONJON_MESURE=1`.
+- **Outils de mesure** : `scripts/mesure-cablage.mjs` (pilote) et `scripts/analyse-mesure.ts` ; `src/core/mesure/vagues.ts` compte les vagues, avec ses tests.
+- **Mesures** sur le Banc d'essai, dans `docs/CABLAGE.md` §3. La fiche de personnage coûte 581 requêtes, 123 vagues et 44 chargements après affichage.
+- **Décision** : ADR 0055, sept règles C1 à C7.
+- **Garde-fou** : le cliquet `lib/cablage.test.ts`.
+
+**Étape 3 (Sonnet)** : suivre `docs/CABLAGE.md` §7, dans l'ordre. *Correction 1, partie C2, faite le 11 octobre par Opus : le contexte était déjà chargé dans la session (skill `deleguer`, règle 1). Mesures dans `docs/CABLAGE.md` §3.* Une correction par commit, une mesure après chacune, le plafond du cliquet abaissé à chaque fois.
+
+**Étape 3 faite les 11 et 12 octobre** (par Opus, le contexte étant chargé) : les six corrections de `docs/CABLAGE.md` §7, une par commit, chacune mesurée. Chemin détaillé dans `docs/CABLAGE.md` §3, rechargements restants justifiés au §6.
+
+**Avant / après** (Banc d'essai, développement, médiane de 3 essais ; avant le 11 octobre, après le 12 octobre) :
+
+| Écran | Requêtes à la base | Vagues | Chargements après affichage | Écran stable |
+|---|---|---|---|---|
+| MJ, accueil du monde | 68 → 25 | 28 → 8 | 3 → 0 | 6,7 s → 4,0 s |
+| MJ, fiche du wiki | 42 → 29 | 14 → 11 | 3 → 0 | 3,3 s → 3,5 s |
+| MJ, fiche de personnage | 581 → 143 | 123 → 30 | 44 → 5 | 23,6 s → 7,5 s |
+| MJ, page Initiative | 54 → 23 | 14 → 7 | 3 → 0 | 5,1 s → 2,8 s |
+| MJ, fenêtre Initiative (route) | 34 → 15 | 10 → 8 | — | 3,4 s → 1,4 s |
+| Joueuse, accueil | 33 → 13 | 11 → 7 | 5 → 0 | 3,1 s → 3,1 s |
+| Joueuse, sa fiche | 279 → 115 | 77 → 28 | 21 → 7 | 16,5 s → 6,7 s |
+| Joueuse, fiche du wiki de son PJ | 334 → 132 | 65 → 30 | 31 → 5 | 12,8 s → 7,0 s |
+
+Sortie de la base par ouverture de la fenêtre Initiative : 4,9 Mo → 65 ko. `router.refresh()` : 20 appels → 14.
+
+**Critères d'acceptation**
+- [x] Les mesures avant / après sont écrites dans ce ticket (tableau ci-dessus ; détail correction par correction dans `docs/CABLAGE.md` §3).
+- [x] Aucune régression : `npm run test` vert, aucun test affaibli.
+- [x] Aucun changement de sécurité (RLS, vérification de session) sans décision écrite de l'auteur.
+
+---
+
+### ☑ V3.1-101 — Initiative : la base et les routes réservées au MJ · `S` · sans modèle IA — **terminé le 10 octobre**
+
+**Modèle conseillé : Opus** — RLS et sécurité. **ADR 0040.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+- Migration nouvelle : `combats` lisible des membres, écrit par
+  `app.is_world_admin(app.campaign_world_id(campaign_id))` ;
+  `combat_participants` lu et écrit par `app.is_world_admin(app.combat_world_id(combat_id))`.
+- **Chaque route** de `app/api/campaigns/[campaignId]/combats/**` vérifie
+  `isWorldAdmin` (`src/server/services/permissions.ts`) et répond 403 avant
+  toute lecture de participants ou écriture.
+- Vérifier que rien d'autre ne lisait les participants pour un joueur en
+  multijoueur (lu le 9 octobre : `turnIntent`, `turnLoop`, `combatTriggers`,
+  `soloScene` — solo, où le joueur est propriétaire) ; le solo ne change pas.
+
+**Critères d'acceptation**
+- [x] Test d'intégration RLS : un joueur ne lit aucune ligne de
+  `combat_participants` et n'écrit ni `combats` ni `combat_participants`.
+- [x] Chaque route de combat répond 403 à un joueur (test de la porte `checkCombatAccess` sur la base, commune aux dix routes).
+- [x] Le solo et l'outil Initiative du MJ marchent comme avant. Vérifié à l'écran le 10 octobre par une session de vérification : créer, lancer les initiatives, commencer, passer les tours, terminer, supprimer, tout en 200/201. L'ajout d'un PJ sans fiche répond 404, comme avant (les PJ du Banc d'essai n'ont pas encore de fiche). Solo non joué : le joueur y est propriétaire du monde, donc administrateur.
+- [x] À faire par l'auteur : appliquer la migration `20261010120000_combats_gm_only` (`supabase db push`), puis relancer les tests d'intégration avec `NEXT_PUBLIC_SUPABASE_ANON_KEY` défini.
+
+**Codé le 10 octobre.**
+- **Base** : migration `20261010120000_combats_gm_only`. `combats` reste lisible des membres et n'est plus écrit que par un administrateur du monde ; `combat_participants` est lu et écrit par l'administrateur seulement.
+- **Routes** : les dix routes de `app/api/campaigns/[campaignId]/combats/**` passent par une porte commune, `guardCombatRoute` (`lib/combats/routeGuard.ts`). Elle valide l'adresse par Zod (règle 4, ce qui manquait partout), exige une session (trois lectures n'en demandaient pas) et le droit MJ, puis vérifie que le combat appartient à la campagne de l'adresse et le participant au combat. Elle répond 400, 401, 403 ou 404 avant toute lecture ou écriture.
+- **Décision** : la règle pure `decideCombatAccess` (`src/core/permissions/combatAccess.ts`, 6 tests) refuse un joueur avant de lui dire si un combat existe. Les faits sont rassemblés par `checkCombatAccess` (`services/combats.ts`).
+- **Solo** : inchangé. Le joueur y est propriétaire du monde, donc administrateur ; `turnLoop`, `turnIntent`, `soloScene` et `combatTriggers` ne sont pas touchés.
+- **Tests** : `combatsRls.integration.test.ts`. Un joueur voit le combat mais aucun participant, et n'écrit rien ; le MJ lit et écrit ; la porte rend le même verdict. Ce test n'a pas tourné ici : la base n'est pas joignable avec la clé publique, et la migration n'est pas encore appliquée.
+- Typecheck et lint verts. `npm run test` : 1405 tests passent ; 3 échecs et 14 fichiers en erreur **préexistants**, identiques sans ce ticket. Cette session voit l'URL et la clé service de Supabase mais pas la clé publique : des tests d'intégration démarrent puis échouent à connecter leurs comptes.
+
+---
+
+### ☑ V3.1-108 — Droits des joueurs : la base ferme, le serveur règle · `M` · sans modèle IA — **terminé le 10 octobre**
+
+**Modèle conseillé : Opus** — RLS et schéma. **ADR 0043.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+- Migration : `campaigns.table_settings jsonb not null default '{}'` ;
+  `docs/SCHEMA.md` ; `zCampaignTableSettings` (défauts : `inspiration_max`
+  1 ; `player_can_edit` : `conditions` et `inspiration` faux, `hp`,
+  `currency`, `spell_slots`, `hit_dice` vrais).
+- Migration : écriture de `entity_runtime_state` et `entity_active_effects`
+  par `app.can_edit_entity(entity_id)` (au lieu de tout membre du monde).
+- `src/core/campaigns/tableSettings.ts` : `mayPlayerChange(field, settings)`
+  (tests d'abord) ; garde dans chaque service qui écrit un de ces champs
+  pour une joueuse (PV, états, inspiration, pièces, emplacements, dés de
+  vie) : 403 si l'interrupteur est coupé et que l'appelant n'est pas MJ.
+  Les fonctions du moteur (repos, résolution) ne passent pas par la garde.
+- Route d'écriture des réglages (Zod, MJ seul).
+
+**Critères d'acceptation**
+- [x] Une joueuse ne peut plus écrire l'état de jeu d'une autre fiche
+  (test RLS).
+- [x] Interrupteur coupé : l'écriture d'une joueuse est refusée par le
+  serveur ; le MJ et le repos passent (tests de service).
+
+**Note de clôture (10 octobre).** Fait :
+- migration `20261010130000_runtime_state_can_edit_and_table_settings` : RLS
+  d'écriture par `can_edit_entity`, colonne `table_settings` (objet) ;
+- `src/core/campaigns/tableSettings.ts` et
+  `src/core/permissions/sheetActionAccess.ts` (tests d'abord, 15 tests) ;
+- porte commune `lib/characterActions/routeGuard.ts` sur les 11 routes
+  d'action qui ne vérifiaient rien (droit d'éditer, Zod sur l'adresse,
+  campagne du même monde) ; interrupteurs : PV → `hp`, inspiration →
+  `inspiration` (plafonnée à `inspiration_max`), épuisement → `conditions` ;
+- la route de la fiche n'enregistre l'état de départ que pour qui peut
+  éditer ;
+- route `/api/campaigns/[campaignId]/table-settings` (GET membres, PUT MJ) ;
+- test d'intégration `runtimeStateRls.integration.test.ts`, passé sur la
+  vraie base le 10 octobre (4/4, voir `docs/TESTS.md` §4 bis).
+
+Pièces, emplacements et dés de vie n'ont pas encore de geste manuel (seuls
+le sort et les repos les écrivent, chemins du moteur) : leur garde viendra
+avec ces gestes (V3.1-24, 109). L'écran des réglages et le masquage des
+commandes coupées : V3.1-57, 109.
+
+---
+
+### ☑ V3.1-127 — Mettre à jour Next et les dépendances vulnérables · `S` · sans modèle IA — **fait le 12 octobre**
+
+**Modèle conseillé : Opus**, car le changement de version de Next touche tout le rendu. Sous-tâches Haiku : lancer `npm audit --omit=dev`, typecheck, lint, tests et build, et résumer les échecs.
+
+Le 12 octobre, `npm audit --omit=dev` relève 32 failles (1 critique, 6 hautes, 25 moyennes), inscrites au registre de `docs/SECURITE.md` §3.
+- **Next 16.2.12** : plusieurs failles corrigées en 16.3.8, dont des exécutions de code à distance (optimisation d'images AVIF, `next/og`, serveur Windows) et une falsification de requête par l'optimisation d'images. Le code n'utilise ni `next/image` ni `next/og` : exposition faible, mais `/_next/image` répond quand même.
+- **Éditeur** : `@tiptap/core` et `prosemirror-view` (XSS au collage) ; correctif dans les versions permises.
+- **Outillage** : `sharp`, `postcss` (suivent Next), `nanoid`, `source-map-js`.
+
+**Méthode**
+1. Monter `next` (et `eslint-config-next`) à la dernière 16.x, au moins 16.3.8 ; lire ses notes de version pour les changements de comportement.
+2. `npm audit fix`, **sans** `--force`.
+3. `npm run typecheck && npm run lint && npm run test`, `npm run build`, `npm run verifier:secrets`.
+4. Parcours à la main (`docs/TESTS.md`) : une fiche de personnage, l'éditeur (coller du texte), un portrait téléversé, une page partagée.
+5. Passer la ligne du registre à *corrigée*.
+
+**Fait le 12 octobre.**
+- **Next 16.3.8**, pas 16.4.0 : dernière version corrective de la ligne 16.3, qui corrige toutes les failles relevées ; 16.4.0 (six jours) apporte des nouveautés, donc plus de changements possibles. `eslint-config-next` suit.
+- **Tiptap 3.31.4**, toutes les extensions ensemble (elles exigent la même version exacte). Le fichier de verrouillage gardait l'ancienne version de chaque extension : ses entrées Tiptap ont été retirées pour que npm les résolve à neuf, puis `npm ci` a prouvé qu'il s'installe proprement depuis zéro.
+- `sharp`, `nanoid`, `source-map-js` montés dans leurs versions permises (`npm update`).
+- `npm audit fix` plante avec npm 10.9 (`edgesOut`) : les mises à jour ont été faites paquet par paquet.
+- **Parcours à la main** sur le build de production (`next start`), Banc d'essai, Chromium :
+  - fiche de personnage côté MJ et côté joueuse : CA 16, PV 12/12 ;
+  - éditeur : bloc Texte ajouté à la faction, frappe et collage enregistrés et relus ; une image collée avec un script caché (`onerror`) ne l'exécute pas ; bloc supprimé ensuite ;
+  - page partagée avec un jeton inconnu : 404 prévu, pas d'erreur serveur ; en-têtes de sécurité présents.
+  - Téléversement d'image : *erreur corrigée le 12 octobre*. Ce ticket affirmait d'abord que notre code n'utilisait pas `sharp` : faux, il le charge à la demande (`await import("sharp")`, `src/server/services/assetUpload.ts`, `blockImageUpload.ts`, `backgroundImageProcessing.ts`), forme que la recherche n'avait pas trouvée. Vérifié ensuite sur la machine, sans rien téléverser, avec `sharp` 0.35.5 et les réglages exacts de l'app : une carte PNG de 19,6 Mo (5760 px) devient un WebP de 537 ko à 4096 px, 168 ko à 1600 px, 30 ko en portrait ; un faux fichier est refusé proprement. L'envoi vers le stockage (`supabase-js`) n'a pas changé de version.
+- **Nouveau en 16.3** : la règle de lint `no-location-assign-relative-destination` signalait `components/shell/CommandPalette.tsx` (navigation par `window.location.href`, donc rechargement complet). Corrigé le même jour : `router.push`. Cette branche ne sert que hors du bureau de fenêtres, qui entoure aujourd'hui toutes les pages d'un monde ; aucun écran actuel ne change.
+- **Outils de développement**, le même jour : 10 → 5 failles avec npm 11 (Vitest 4.1.11, `brace-expansion`, `js-yaml`) ; les 5 restantes n'ont aucun correctif publié (`docs/SECURITE.md` §6).
+
+**Critères d'acceptation**
+- [x] `npm audit --omit=dev` ne relève plus de faille critique ni haute, ou chaque reste est justifié au registre. *0 faille en production ; les 10 restes des outils de développement sont justifiés dans `docs/SECURITE.md` §6.*
+- [x] `npm run typecheck && npm run lint && npm run test` et le build passent.
+- [x] Le parcours à la main ne montre aucune régression.
+
+---
+
+### ☑ V3.1-128 — Les cartes laissent leurs images dans le stockage · `S` · sans modèle IA — **fait le 12 octobre**
+
+**Modèle conseillé : Sonnet** au départ. *Corrigé après coup : le ticket a demandé une migration et une fonction `security definer`, domaine d'Opus (`CLAUDE.md`, répartition par modèle). Fait par Opus.* Sous-tâches Haiku : aucune.
+
+Trouvé le 12 octobre en écrivant `docs/QUOTAS.md` Q5. Les portraits, images de blocs et fonds d'écran effacent leur ancien fichier (`deleteAsset`). Les cartes, non :
+- **Remplacer l'image d'une carte** (`components/entities/map/MapWorkspace.tsx`, `upload`) téléverse deux nouveaux fichiers (4096 px et vignette 1600 px) et remplace `assetId` et `thumbnailAssetId` dans les données du bloc. Les deux anciens restent dans le stockage et dans `assets`, désignés par rien.
+- **Supprimer un bloc `map`** (`deleteBlock`, `src/server/services/blocks.ts`) ne retire l'image que pour un bloc `image`.
+
+Chaque cas laisse ≈ 700 ko d'orphelins, sur 1 Go de stockage gratuit.
+
+**À faire**
+1. Côté serveur, à l'enregistrement d'un bloc `map` : si `assetId` ou `thumbnailAssetId` change, effacer l'ancien par `deleteAsset`, après l'écriture réussie.
+2. `deleteBlock` : pour un bloc `map`, effacer ses deux images, comme pour un bloc `image`.
+3. Vérifier qu'aucune autre ligne ne désigne ces images avant de les effacer (une carte dupliquée partage-t-elle ses images ? Lire « Dupliquer » avant de coder).
+4. Recenser les orphelins déjà présents (lignes `assets` qu'aucun bloc, portrait ni fond ne désigne) et proposer leur nettoyage à l'auteur, sans rien effacer d'office.
+
+**Fait le 12 octobre** (Opus, contexte déjà chargé ; décision de l'auteur, ADR 0057).
+- **Les images se partagent.** `duplicateEntity` et la duplication d'un bloc recopient `assetId` : compter avant d'effacer est indispensable. Et la RLS cache certains blocs même au MJ : le compte se fait par `app.asset_reference_count`, `security definer` (migration `20261012120000`).
+- `src/core/images/imagesDeCarte.ts` (10 tests) : les images qu'un enregistrement abandonne.
+- `deleteAssetIfUnreferenced` (`storage.ts`) : efface après l'écriture, seulement à un compte de 0 ; un échec est journalisé.
+- Branché dans `updateBlockContent` et `deleteBlock` pour les blocs `map`.
+- **Migration appliquée par l'auteur** (SQL Editor) le 12 octobre. Le test d'intégration a alors révélé un **défaut plus ancien, commun à toutes les images** : `deleteAsset` effaçait la ligne `assets` avant le fichier, or la règle de lecture du stockage (`assets_bucket_select`, migration `20260902110001`) n'ouvre un fichier que si une ligne le désigne. Le fichier devenait invisible et `remove` ne retirait rien, sans erreur : chaque portrait, image de bloc ou fond d'écran supprimé depuis le 2 septembre est resté dans le stockage. Corrigé : le fichier d'abord, la ligne ensuite.
+- **Orphelins existants** : `npm run recenser:images-orphelines` (lecture seule). Le 12 octobre : 19 images, 27,8 Mo, toutes dans « Faerûn », des paires carte + vignette du 1er septembre. S'y ajoutent 12 fichiers sans ligne (0,4 Mo), laissés par le défaut de `deleteAsset`. Rien n'est effacé sans l'accord de l'auteur.
+- **Effacement** (demandé par l'auteur le 12 octobre) : `npm run effacer:images-orphelines`. Même liste que le recensement (`src/core/images/orphelins.ts`, 10 tests), exige l'empreinte de la liste relue, met de côté ce qui a moins d'une heure, fichier avant ligne. Essayé sur un monde jetable : orphelin effacé, image désignée gardée, fichier récent intact, empreinte fausse refusée. Lancé par l'auteur, jamais par Claude.
+
+**Critères d'acceptation**
+- [x] Remplacer l'image d'une carte, puis supprimer son bloc, ne laisse aucun fichier ni aucune ligne `assets` orpheline (test d'intégration `mapAssetsCleanup.integration.test.ts`). *5/5 sur la vraie base le 12 octobre, après la migration et la correction de `deleteAsset`.*
+- [x] Une carte dupliquée garde son image quand on supprime l'original (même test, copie dans un bloc privé invisible au MJ).
+- [x] `npm run typecheck && npm run lint && npm run test` passent (1603 tests).

@@ -19,41 +19,6 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 | V3.1-96 données de la chronologie | 0048 | 96 lui-même, désormais prêt |
 | V3.1-100 rejoindre sans PJ, lien nominatif | 0049 | 100 lui-même, désormais prêt |
 
----
-
-### ☑ V3.1-101 — Initiative : la base et les routes réservées au MJ · `S` · sans modèle IA — **terminé le 10 octobre**
-
-**Modèle conseillé : Opus** — RLS et sécurité. **ADR 0040.**
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- Migration nouvelle : `combats` lisible des membres, écrit par
-  `app.is_world_admin(app.campaign_world_id(campaign_id))` ;
-  `combat_participants` lu et écrit par `app.is_world_admin(app.combat_world_id(combat_id))`.
-- **Chaque route** de `app/api/campaigns/[campaignId]/combats/**` vérifie
-  `isWorldAdmin` (`src/server/services/permissions.ts`) et répond 403 avant
-  toute lecture de participants ou écriture.
-- Vérifier que rien d'autre ne lisait les participants pour un joueur en
-  multijoueur (lu le 9 octobre : `turnIntent`, `turnLoop`, `combatTriggers`,
-  `soloScene` — solo, où le joueur est propriétaire) ; le solo ne change pas.
-
-**Critères d'acceptation**
-- [x] Test d'intégration RLS : un joueur ne lit aucune ligne de
-  `combat_participants` et n'écrit ni `combats` ni `combat_participants`.
-- [x] Chaque route de combat répond 403 à un joueur (test de la porte `checkCombatAccess` sur la base, commune aux dix routes).
-- [x] Le solo et l'outil Initiative du MJ marchent comme avant. Vérifié à l'écran le 10 octobre par une session de vérification : créer, lancer les initiatives, commencer, passer les tours, terminer, supprimer, tout en 200/201. L'ajout d'un PJ sans fiche répond 404, comme avant (les PJ du Banc d'essai n'ont pas encore de fiche). Solo non joué : le joueur y est propriétaire du monde, donc administrateur.
-- [x] À faire par l'auteur : appliquer la migration `20261010120000_combats_gm_only` (`supabase db push`), puis relancer les tests d'intégration avec `NEXT_PUBLIC_SUPABASE_ANON_KEY` défini.
-
-**Codé le 10 octobre.**
-- **Base** : migration `20261010120000_combats_gm_only`. `combats` reste lisible des membres et n'est plus écrit que par un administrateur du monde ; `combat_participants` est lu et écrit par l'administrateur seulement.
-- **Routes** : les dix routes de `app/api/campaigns/[campaignId]/combats/**` passent par une porte commune, `guardCombatRoute` (`lib/combats/routeGuard.ts`). Elle valide l'adresse par Zod (règle 4, ce qui manquait partout), exige une session (trois lectures n'en demandaient pas) et le droit MJ, puis vérifie que le combat appartient à la campagne de l'adresse et le participant au combat. Elle répond 400, 401, 403 ou 404 avant toute lecture ou écriture.
-- **Décision** : la règle pure `decideCombatAccess` (`src/core/permissions/combatAccess.ts`, 6 tests) refuse un joueur avant de lui dire si un combat existe. Les faits sont rassemblés par `checkCombatAccess` (`services/combats.ts`).
-- **Solo** : inchangé. Le joueur y est propriétaire du monde, donc administrateur ; `turnLoop`, `turnIntent`, `soloScene` et `combatTriggers` ne sont pas touchés.
-- **Tests** : `combatsRls.integration.test.ts`. Un joueur voit le combat mais aucun participant, et n'écrit rien ; le MJ lit et écrit ; la porte rend le même verdict. Ce test n'a pas tourné ici : la base n'est pas joignable avec la clé publique, et la migration n'est pas encore appliquée.
-- Typecheck et lint verts. `npm run test` : 1405 tests passent ; 3 échecs et 14 fichiers en erreur **préexistants**, identiques sans ce ticket. Cette session voit l'URL et la clé service de Supabase mais pas la clé publique : des tests d'intégration démarrent puis échouent à connecter leurs comptes.
-
----
-
 ### ☐ V3.1-102 — Initiative : la vue filtrée des joueurs · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus.** **ADR 0040.** **Dépend de** : 101.
@@ -191,55 +156,6 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 une fois l'écriture au nom du joueur tranchée et faite (V3.1-104). D'ici là,
 le joueur voit le verdict, sans application sur une cible qu'il ne contrôle
 pas.
-
----
-
-### ☑ V3.1-108 — Droits des joueurs : la base ferme, le serveur règle · `M` · sans modèle IA — **terminé le 10 octobre**
-
-**Modèle conseillé : Opus** — RLS et schéma. **ADR 0043.**
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- Migration : `campaigns.table_settings jsonb not null default '{}'` ;
-  `docs/SCHEMA.md` ; `zCampaignTableSettings` (défauts : `inspiration_max`
-  1 ; `player_can_edit` : `conditions` et `inspiration` faux, `hp`,
-  `currency`, `spell_slots`, `hit_dice` vrais).
-- Migration : écriture de `entity_runtime_state` et `entity_active_effects`
-  par `app.can_edit_entity(entity_id)` (au lieu de tout membre du monde).
-- `src/core/campaigns/tableSettings.ts` : `mayPlayerChange(field, settings)`
-  (tests d'abord) ; garde dans chaque service qui écrit un de ces champs
-  pour une joueuse (PV, états, inspiration, pièces, emplacements, dés de
-  vie) : 403 si l'interrupteur est coupé et que l'appelant n'est pas MJ.
-  Les fonctions du moteur (repos, résolution) ne passent pas par la garde.
-- Route d'écriture des réglages (Zod, MJ seul).
-
-**Critères d'acceptation**
-- [x] Une joueuse ne peut plus écrire l'état de jeu d'une autre fiche
-  (test RLS).
-- [x] Interrupteur coupé : l'écriture d'une joueuse est refusée par le
-  serveur ; le MJ et le repos passent (tests de service).
-
-**Note de clôture (10 octobre).** Fait :
-- migration `20261010130000_runtime_state_can_edit_and_table_settings` : RLS
-  d'écriture par `can_edit_entity`, colonne `table_settings` (objet) ;
-- `src/core/campaigns/tableSettings.ts` et
-  `src/core/permissions/sheetActionAccess.ts` (tests d'abord, 15 tests) ;
-- porte commune `lib/characterActions/routeGuard.ts` sur les 11 routes
-  d'action qui ne vérifiaient rien (droit d'éditer, Zod sur l'adresse,
-  campagne du même monde) ; interrupteurs : PV → `hp`, inspiration →
-  `inspiration` (plafonnée à `inspiration_max`), épuisement → `conditions` ;
-- la route de la fiche n'enregistre l'état de départ que pour qui peut
-  éditer ;
-- route `/api/campaigns/[campaignId]/table-settings` (GET membres, PUT MJ) ;
-- test d'intégration `runtimeStateRls.integration.test.ts`, passé sur la
-  vraie base le 10 octobre (4/4, voir `docs/TESTS.md` §4 bis).
-
-Pièces, emplacements et dés de vie n'ont pas encore de geste manuel (seuls
-le sort et les repos les écrivent, chemins du moteur) : leur garde viendra
-avec ces gestes (V3.1-24, 109). L'écran des réglages et le masquage des
-commandes coupées : V3.1-57, 109.
-
----
 
 ### ☐ V3.1-109 — Droits des joueurs : la fiche obéit aux interrupteurs · `M` · sans modèle IA — **prêt**
 

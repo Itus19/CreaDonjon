@@ -98,7 +98,7 @@ typecheck, lint et tests verts.
 
 ---
 
-### ☐ V3.1-4 — Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais · `S` · sans modèle IA/`M` — **fait le 9 octobre ; reste une vérification en direct**
+### ☐ V3.1-4 — Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais · `S`/`M` · sans modèle IA — **fait le 9 octobre ; reste une vérification en direct**
 
 **Modèle conseillé : Sonnet** — brancher un choix déjà lu par extractSkillChoices.
 

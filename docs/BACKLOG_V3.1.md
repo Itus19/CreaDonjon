@@ -187,7 +187,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-59 | ☐ | sans | Publication : le fond par défaut du wiki (données) | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-60 | ☐ | sans | Publication : les réglages, et ce que voit un visiteur | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-61 | ☐ | sans | Journal historique : par fiche, ou chronologique | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-62 | ☑ | sans | Rapidité : mesurer, puis recâbler | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-62 | ☑ | sans | Rapidité : mesurer, puis recâbler | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-63 | ☐ | sans | Fiche du wiki sur ordinateur : en-tête, cartes de verre, palette en familles | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-64 | ☐ | sans | La pastille de visibilité au toucher, avec « Annuler » | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-65 | ☐ | **avec** | Bloc Texte : lettrine, bulle du paragraphe, assistance IA en encart | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
@@ -226,14 +226,14 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-98 | ☐ | sans | Chronologie : la frise du MJ | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
 | V3.1-99 | ☐ | sans | Chronologie : la page des joueurs | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
 | V3.1-100 | ☐ | sans | Rejoindre sans choisir de PJ ; le lien qui vise un PJ précis | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-101 | ☑ | sans | Initiative : la base et les routes réservées au MJ | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-101 | ☑ | sans | Initiative : la base et les routes réservées au MJ | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-102 | ☐ | sans | Initiative : la vue filtrée des joueurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-103 | ☐ | sans | Initiative : les jets d'initiative des joueurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-104 | ☐ | sans | Écritures du moteur au nom d'un joueur : changements signés | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-105 | ☐ | sans | Cibler : le cœur commun de résolution | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-106 | ☐ | sans | Cibler côté MJ : outil de dés, Table, Initiative | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-107 | ☐ | sans | Cibler côté joueur | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-108 | ☑ | sans | Droits des joueurs : la base ferme, le serveur règle | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-108 | ☑ | sans | Droits des joueurs : la base ferme, le serveur règle | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-109 | ☐ | sans | Droits des joueurs : la fiche obéit aux interrupteurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-110 | ☐ | sans | Sauvegardes : la restriction de cible (noyau) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-111 | ☐ | sans | Sauvegardes : la demande et la réponse (données, serveur) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
@@ -249,5 +249,5 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-121 | ☐ | sans | Ténacité naine ignorée dans les PV max | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |
 | V3.1-125 | ☐ | sans | Masse d'armes : poids faux à l'import | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |
 | V3.1-126 | ☐ | sans | Les `catch` muets restants | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
-| V3.1-127 | ☑ | sans | Mettre à jour Next et les dépendances vulnérables | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
-| V3.1-128 | ☑ | sans | Les cartes laissent leurs images dans le stockage | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
+| V3.1-127 | ☑ | sans | Mettre à jour Next et les dépendances vulnérables | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-128 | ☑ | sans | Les cartes laissent leurs images dans le stockage | [`termines.md`](backlog-v3.1/termines.md) |
