@@ -379,6 +379,8 @@ schéma Zod ; recomposition du nom côté serveur.
 - [ ] Le cas « 121 ans au 14 Germinal 1492, né un 3 Messidor → 1370 », et le cas « anniversaire aujourd'hui », en tests.
 - [ ] Une fiche enregistrée avec `age` se relit (test) ; l'âge affiché est calculé, jamais stocké.
 - [ ] Éditer le prénom renomme l'entité ; les mentions suivent (test serveur).
+- [ ] Les trois lecteurs actuels du champ `age` (V3-Z1) passent à l'âge dérivé : la rangée d'identité de `CharacterSheetHeader` (avec `AgeInput`), la colonne solo, et le refus de `applyLevelUp` (`forbidden_field_change`), qui porte désormais sur la date de naissance.
+- [ ] *Repris de V3-Z1 (12 octobre)* : vérifié à la main dans l'assistant, la barre d'étapes, Précédent / Suivant et l'Aperçu avec l'étape Identité (`docs/TESTS.md` §4, Fiche).
 
 ---
 

@@ -635,7 +635,7 @@ La grille retenue est **plus haute que la version comparée** (80 px contre 56),
 - [x] **Les emplacements de tous les niveaux disponibles sont lançables** — déjà le comportement réel de `ActionsTab.tsx`.
 - [x] **L'onglet Magie ne montre PAS les emplacements** — déjà vrai de `MagicTab.tsx` avant ce ticket (il n'a jamais montré les emplacements, seulement « Préparé »/« Préparer »).
 - [ ] **La limite est tenue, et elle vient des règles — non fait, et pas une simplification d'affichage.** Aucune valeur « sorts préparables par classe » n'existe nulle part dans le moteur (`DerivedSheet.spellcasting` porte `slots`, jamais un maximum de préparation) : ni dans `characterSheet()`, ni dans un bloc de ruleset. L'ajouter demande de décider *où* cette valeur vit dans les règles de classe et *comment* elle se calcule (formule `niveau + modificateur`, table fixe, ou autre selon la classe) — une extension du moteur de règles, pas un branchement d'écran. `MagicTab.tsx` reste donc **exactement tel qu'il était** : « Préparer » un bascule libre, sans compteur ni limite. Un vrai gain (le ticket n'était pas réalisable sans lui) plutôt qu'une invention à sa place — même principe que la météo omise en V3-D2.
-- [ ] **Les sorts mineurs ne comptent pas dans la limite** — dépend du bullet précédent, donc pas fait non plus.
+- [ ] **Les sorts mineurs ne comptent pas dans la limite** — dépend du bullet précédent, donc pas fait non plus. *(12 octobre : couvert par la V3.1. **V3.1-50** lit le budget de sorts mineurs et préparés dans la progression d'incantation du ruleset, et la fiche refaite affiche le compteur de sorts préparés (V3.1-19, onglet Magie). La colonne solo reprend la fiche de V3.1-32 : rien à faire ici.)*
 - [x] **Le décompte d'emplacements appartient au serveur.** Vrai par construction : `spellSlotsUsed` vient de `entity_runtime_state` via `/api/entities/:id/sheet`, jamais d'un état local — cette colonne ne fait qu'afficher ce que `ActionsTab` reçoit du serveur, comme la fiche large.
 - [x] **Un jet lancé depuis la fiche répond à la demande en cours** (V3-B5 Phase 2, faite le 24 septembre). `FicheJouableSolo.tsx` lit `pending_request` (déjà dans la réponse de `/api/entities/:id/sheet`) et, quand un clic correspond à la demande posée, l'encaisse (`POST /api/solo/tour/encaisser-fiche`) au lieu d'appeler `/api/entities/:id/actions/*` en immédiat. Un clic qui NE correspond à rien garde l'ancien chemin, inchangé — exactement le même que la fiche large aujourd'hui.
 
@@ -877,3 +877,36 @@ L'audit le dit lui-même : **pas en une fois.** Page par page, en commençant pa
 > **Observation laissée ouverte.** La coquille joueur précharge encore ses 8 routes (15 requêtes) — les six onglets de sa barre du bas. Contrairement à l'arbre d'entités, ce sont de **vraies destinations** entre lesquelles un joueur bascule sans cesse, donc le préchargement s'y défend. À rouvrir seulement si une mesure sur un vrai téléphone le désigne.
 
 **Ne pas ouvrir ce ticket avant que `V3-R1` et `V3-R3` soient faits.** C'est le plus long du lot et le moins rentable au Ko ; les deux premiers rendent une partie de son gain sans toucher à la forme des pages.
+
+---
+
+### ☑ V3-Z1 — L'âge du personnage, et l'identité à la création · `M` · sans modèle IA — **fait le 24 septembre ; vérification reprise par V3.1-48 (12 octobre)**
+
+**Modèle conseillé : Sonnet** — un champ optionnel et une étape d'assistant ; reste la vérification en direct.
+
+**Le constat, en deux temps.**
+
+D'abord : **l'âge n'a aucun champ.** `zCharacterBlockData` porte l'espèce, l'historique, les classes, les caractéristiques, les choix, la méthode de PV, le portrait, le genre et les pronoms — pas l'âge. Un `grep -n "\bage\b"` sur `src/core/schemas/blocks/` ne remonte rien. Aujourd'hui il ne peut s'écrire que dans une entrée libre d'un bloc `infobox` : du texte que rien ne valide, que rien ne sait relire, et que l'écran solo ne peut afficher qu'en devinant le nom de l'entrée.
+
+Ensuite, et c'est le vrai sujet : **l'assistant de création ne demande aucun trait d'identité.** Ses neuf étapes (`CharacterCreatorWizard.tsx`) sont Espèce, Classe, Caractéristiques, Points de vie, Historique, Équipement, Compétences, Sorts, Aperçu. Le genre et les pronoms **existent** dans le bloc depuis V1-C4 — mais ne se renseignent que plus tard, sur la fiche, dans la rangée d'identité de `CharacterSheetHeader`. On crée donc un personnage sans jamais pouvoir dire qui il est.
+
+**Le précédent à suivre est déjà écrit.** `gender` et `pronouns` ont été ajoutés après coup au bloc `character`, en `.optional()` — jamais `.default()`, parce qu'un champ absent veut dire « on ne sait pas », ce qui n'est pas la même chose qu'une valeur neutre choisie. Le schéma est `.strict()`, donc un champ de plus se déclare explicitement ; les blocs écrits avant continuent de se valider tant que le champ est optionnel. L'âge suit exactement ce chemin.
+
+**Une décision à prendre : champ typé ou entrée d'infobox ?** L'infobox est la maison des faits d'identité du wiki, et elle ne demande aucun schéma. Mais elle ne se relit pas : ni l'assistant, ni la fiche, ni l'écran solo ne peuvent s'appuyer dessus sans convention tacite sur le nom de l'entrée. **Recommandation : un champ typé optionnel** — et l'infobox reste libre de porter tout ce qui n'a pas de champ.
+
+**Une seconde décision : un âge est-il un nombre ?** Un elfe de 127 ans est jeune, un dragon compte en siècles, et certaines tables écrivent « d'âge mûr ». Un entier oblige à choisir ; une chaîne courte n'interdit rien mais ne se compare pas. **Recommandation : un entier optionnel**, avec l'unité laissée au monde (le calendrier existe déjà) — et une table qui veut écrire « d'âge mûr » le fait dans son infobox, comme aujourd'hui.
+
+- [x] `age` ajouté à `zCharacterBlockData` en `.optional()` — entier, `≥ 0`, jamais de valeur par défaut (ni dans l'assistant, ni dans `BLOCK_DEFAULTS`). Un bloc sans `age` se valide sans changement, et un test le verrouille. **Pas encore vérifié sur une fiche réelle** : la session cloud n'avait ni base ni Docker. À faire chez l'auteur — rouvrir une fiche existante, l'enregistrer, constater qu'elle passe.
+- [x] Aucune migration SQL.
+- [x] **Une étape « Identité » dans l'assistant de création**, en tête (`IdentityStep.tsx`) : âge, genre, pronoms. **Correction du constat** : le genre se saisissait déjà dans l'assistant, dans la rangée du nom — seuls les pronoms et l'âge manquaient. Le genre y quitte cette rangée pour rejoindre l'étape, où il retrouve les pronoms.
+- [x] L'étape est **passable sans rien remplir** : « Suivant » n'y teste rien, et le schéma accepte les trois champs absents.
+- [x] L'âge s'édite sur la fiche, dans la rangée d'identité de `CharacterSheetHeader`, après les pronoms. Un seul contrôle, `AgeInput`, partagé avec l'étape : un champ vidé écrit « on ne sait pas » (`undefined`), jamais `0`.
+- [x] Il s'affiche dans la rangée d'identité de la fiche (donc aussi dans l'Aperçu de l'assistant, qui la réutilise) **et** dans la colonne solo, qui lit désormais le champ typé. L'entrée d'infobox « Âge » n'y sert plus que de repli pour les fiches écrites avant ce ticket.
+- [x] `applyLevelUp` refuse une montée de niveau qui change l'âge, comme il refusait déjà le genre et les pronoms (`forbidden_field_change`).
+- [ ] Hors périmètre, et dit comme tel : **proposer une fourchette d'âge d'après l'espèce**. Les entrées d'espèce ne portent pas cette donnée aujourd'hui, et l'ajouter au SRD importé est un autre chantier. À rouvrir si la saisie à l'aveugle gêne réellement.
+- [x] `npm run typecheck && npm run lint && npm run test` passent (les tests d'intégration restent ignorés sans base locale, comme d'habitude).
+- [ ] **Non testé à la main** : la barre d'étapes, la navigation Précédent/Suivant et l'Aperçu avec la nouvelle étape. Ce sont justement les quatre endroits qui « se testent à la main » d'après la ligne suivante.
+
+**Pourquoi `M` et pas `S`** : le champ est trivial, l'étape d'assistant ne l'est pas. Ajouter une étape touche la barre de progression, la navigation, la reprise d'un brouillon, et l'aperçu final — quatre endroits qui se testent à la main.
+
+> **Fermé le 12 octobre, sans doublon avec la V3.1.** L'étape « Identité » et l'âge sont refaits par **V3.1-48** (prénom et nom, date de naissance au calendrier du monde, âge **dérivé** et non plus stocké, règle 16), la barre d'étapes et l'aperçu par **V3.1-49**. Vérifier à la main un écran sur le point d'être refait ne servait à rien : la vérification restante est devenue un critère de V3.1-48, avec le passage des trois lecteurs actuels de `age` à l'âge dérivé. La fourchette d'âge d'après l'espèce reste une idée hors périmètre, à rouvrir si la saisie à l'aveugle gêne.
