@@ -97,7 +97,8 @@ Le 12 octobre, `npm audit --omit=dev` relève 32 failles (1 critique, 6 hautes, 
   - éditeur : bloc Texte ajouté à la faction, frappe et collage enregistrés et relus ; une image collée avec un script caché (`onerror`) ne l'exécute pas ; bloc supprimé ensuite ;
   - page partagée avec un jeton inconnu : 404 prévu, pas d'erreur serveur ; en-têtes de sécurité présents.
   - Non refait : le téléversement d'un portrait. Notre code n'utilise pas `sharp` (Next ne s'en sert que pour `next/image`, absent de l'app), et l'essai aurait coûté du stockage.
-- **Nouveau en 16.3** : la règle de lint `no-location-assign-relative-destination` signale `components/shell/CommandPalette.tsx` (navigation par `window.location.href`, donc rechargement complet). Simple avertissement ; le corriger changerait le comportement, hors de ce ticket.
+- **Nouveau en 16.3** : la règle de lint `no-location-assign-relative-destination` signalait `components/shell/CommandPalette.tsx` (navigation par `window.location.href`, donc rechargement complet). Corrigé le même jour : `router.push`. Cette branche ne sert que hors du bureau de fenêtres, qui entoure aujourd'hui toutes les pages d'un monde ; aucun écran actuel ne change.
+- **Outils de développement**, le même jour : 10 → 5 failles avec npm 11 (Vitest 4.1.11, `brace-expansion`, `js-yaml`) ; les 5 restantes n'ont aucun correctif publié (`docs/SECURITE.md` §6).
 
 **Critères d'acceptation**
 - [x] `npm audit --omit=dev` ne relève plus de faille critique ni haute, ou chaque reste est justifié au registre. *0 faille en production ; les 10 restes des outils de développement sont justifiés dans `docs/SECURITE.md` §6.*

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useDesktop } from "./DesktopContext";
 
 export interface PaletteEntity {
@@ -41,6 +42,7 @@ export default function CommandPalette({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const desktop = useDesktop();
+  const router = useRouter();
 
   const localResults = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -117,7 +119,9 @@ export default function CommandPalette({
     if (desktop) {
       desktop.openRef({ kind: "entity", key: slug });
     } else {
-      window.location.href = `/m/${worldSlug}/f/${slug}`;
+      // Navigation dans l'app : la coquille, l'arborescence et les volets
+      // restent en place (avant : rechargement complet de la page, C5).
+      router.push(`/m/${worldSlug}/f/${slug}`);
     }
   }
 
