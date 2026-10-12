@@ -28,15 +28,29 @@ Sous-tâches Haiku : aucune avant sa conception ; ensuite, recenser les écritur
 
 ---
 
-### ☐ V3-F3 — D'une partie solo à une vraie table · `M` · sans modèle IA
+### ☐ V3-F3 — Copier le wiki d'un monde, sans jamais convertir une partie solo · `L` · sans modèle IA — **réécrit le 12 octobre (ADR 0058)**
 
-**Modèle conseillé : Opus** — passer de solo à campagne : RLS, rôles, données existantes.
+**Modèle conseillé : Opus** — stockage, droits, copie d'images, retrait d'une route.
 
-Sous-tâches Haiku : recenser ce qui distingue une campagne `solo` d'une campagne ordinaire (colonnes, RLS, écrans) avant la conception.
+Sous-tâches Haiku : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
-`module-joueur-et-solo.md` §D le dit : *« une campagne solo a la même forme qu'une campagne classique. Ne pas fermer cette porte. »*
+**Ce que le ticket demandait, et pourquoi il a changé.** Il demandait qu'une campagne `solo` devienne une campagne ordinaire. L'auteur a tranché autrement (12 octobre, ADR 0058) : **une table solo ne devient jamais une vraie table**. Le seul passage est de copier le wiki d'un monde dans un monde neuf, joué en mode MJ / joueurs.
 
-- [ ] Une campagne `solo` devient une campagne ordinaire sans migration de données.
-- [ ] Le monde écrit en solo est un monde comme un autre : les fiches, découvertes et relations créées en jouant restent valables avec des amis autour de la table.
+**Constaté en le préparant.**
+- Une bascule existait (`PATCH /api/campaigns/[id]`, menu de l'écran Campagne), incomplète : elle ne créait aucun membre `gm`, l'onglet Solo restait donc visible.
+- « Dupliquer » gardait le mode d'origine (une copie de monde solo restait solo) et **ne copiait aucune image** : portraits et blocs Image perdus, cartes pointant vers l'image du monde d'origine, invisible des joueurs de la copie.
+- Et un défaut introduit le même jour par V3.1-128 : le compte des références d'une image ne cherchait que dans son monde. Remplacer une carte dans l'original aurait effacé l'image encore utilisée par une copie.
 
-**Ce que la V3.1 en dit déjà (12 octobre), sans doublon.** **V3.1-11** (☑) n'affiche l'onglet « Solo » que si la campagne n'a aucun membre `gm` : après la bascule, l'onglet doit disparaître de lui-même, et un test le dira. Le même ticket constate que **la création de monde n'offre que le mode « Campagne »** : aujourd'hui, un monde solo ne se crée pas depuis l'interface. Les invitations (**V3.1-100**) servent à faire entrer les amis après la bascule.
+**À faire**
+1. Migration `20261012130000` : `app.asset_reference_count` compte dans tous les mondes.
+2. Retirer la bascule de mode : route `PATCH`, `setCampaignMode`, `updateCampaignMode`, son schéma, le menu de `CampaignsPanel`.
+3. « Dupliquer » ouvre une fenêtre : mode de la copie (solo réservé au superadmin, vérifié côté serveur), et « Les règles suivent » (oui / non). Route validée par Zod.
+4. La copie emporte ses images : chaque image désignée (cartes, portrait du bloc personnage, `entity_assets`, `block_images`) est recopiée dans le monde neuf, et ses identifiants remplacés dans les blocs et les révisions.
+
+**Critères d'acceptation**
+- [ ] Aucune route ni aucun écran ne change le mode d'une campagne existante.
+- [ ] Dupliquer un monde solo en « campagne » donne un monde dont le propriétaire est MJ, sans découverte, scène, journal ni membre copiés.
+- [ ] « Les règles suivent : non » donne le ruleset officiel ; « oui » recopie une variante et reprend un ruleset personnel.
+- [ ] Les images de la copie vivent dans le monde neuf ; supprimer l'original ne les casse pas (test d'intégration).
+- [ ] Une image de carte partagée par une ancienne copie n'est pas effacée quand on la remplace dans l'original (test d'intégration).
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.

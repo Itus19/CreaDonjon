@@ -222,4 +222,4 @@ La fiche jouable, en version étroite. Mêmes composants, même moteur, mêmes b
 | ~~Édition du wiki par les joueurs~~ | **tranché : sa propre fiche en V3, `canEditEntity` extensible, droits par entité en V4** |
 | Chrono partagé sur les écrans joueurs | avec le compagnon, pas avant — il n'a personne à qui s'afficher |
 | Notes de joueur : bloc ou table dédiée ? | entité `notes` privée par joueur, avec les blocs existants — pas de second système |
-| Le mode solo peut-il basculer en campagne ? | oui à terme : une campagne `solo` a la même forme qu'une campagne `campaign`. Ne pas fermer cette porte |
+| Le mode solo peut-il basculer en campagne ? | **Non, tranché le 12 octobre (ADR 0058)** : le mode se choisit à la création et ne change plus. Le passage d'un monde solo à une table se fait en **copiant son wiki** (« Dupliquer », mode et règles au choix) |
