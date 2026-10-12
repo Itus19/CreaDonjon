@@ -18,6 +18,7 @@
     "test:comptes-manuels": "tsx --conditions=react-server --env-file=.env.local scripts/comptes-test-manuels.ts",
     "audit:comptes": "tsx --env-file=.env.local scripts/audit-comptes.ts",
     "recenser:images-orphelines": "tsx --env-file=.env.local scripts/recenser-images-orphelines.ts",
+    "effacer:images-orphelines": "tsx --env-file=.env.local scripts/effacer-images-orphelines.ts",
     "supprimer:comptes-jetables": "tsx --env-file=.env.local scripts/supprimer-comptes-jetables.ts",
     "translate:srd-official": "tsx --env-file=.env.local scripts/translate-srd-official.ts",
     "translate:entries": "tsx --env-file=.env.local scripts/translate-entries.ts",
