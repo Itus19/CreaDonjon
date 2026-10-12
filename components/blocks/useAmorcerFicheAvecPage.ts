@@ -7,6 +7,7 @@ import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasti
 import { rulesetSelectionFromBlocks, selectionHasAnything, selectionKey } from "@/lib/resolvedRuleset/selection";
 import { amorcerFicheCalculee, type SheetApiResponse } from "./ficheCalculee";
 import { amorcerRulesetResolu, type ResolvedRulesetView } from "./useResolvedRuleset";
+import { prechargerReglesDuMonde } from "./useWorldRuleEntries";
 
 /**
  * Ce que la page de la fiche a lance avec elle (`chargerFicheAvecPage`,
@@ -50,6 +51,8 @@ export function useAmorcerFicheAvecPage(params: {
     // rien. `Promise.resolve` en fait une vraie promesse, que l'on peut
     // enchainer (constate le 11 octobre : sans cela, la fiche attendait sans fin).
     const promesse = Promise.resolve(recue);
+    // La fiche demandera aussi la liste des regles du monde : autant la lancer maintenant.
+    prechargerReglesDuMonde(params.worldSlug);
 
     const character = params.blocks.find((b) => b.blockType === "character")?.data as CharacterBlockData | undefined;
     const inventory = params.blocks.find((b) => b.blockType === "inventory")?.data as InventoryBlockData | undefined;

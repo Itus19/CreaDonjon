@@ -41,6 +41,42 @@ export function clearWorldRuleEntriesCache(worldSlug: string): void {
   listeners.forEach((notify) => notify(worldSlug));
 }
 
+/**
+ * La liste du monde : depuis le cache, depuis la demande deja en cours, ou
+ * par une nouvelle demande, mise en cache a son retour. `null` si la route
+ * refuse (monde introuvable).
+ */
+function demanderReglesDuMonde(worldSlug: string): Promise<RuleEntrySummary[] | null> {
+  const cached = cache.get(worldSlug);
+  if (cached) return Promise.resolve(cached);
+  const pending = inFlight.get(worldSlug);
+  if (pending) return pending;
+  const request = fetch(`/api/worlds/${worldSlug}/rule-entries`)
+    .then((res) => (res.ok ? res.json() : null))
+    .then((body: { entries: RuleEntrySummary[] } | null) => {
+      const entries = body?.entries ?? null;
+      if (entries) cache.set(worldSlug, entries);
+      return entries;
+    });
+  inFlight.set(worldSlug, request);
+  const oublier = () => {
+    if (inFlight.get(worldSlug) === request) inFlight.delete(worldSlug);
+  };
+  request.then(oublier, oublier);
+  return request;
+}
+
+/**
+ * V3.1-62 (docs/CABLAGE.md) : lance la liste des que la page sait qu'elle en
+ * aura besoin (la fiche de personnage, chargee a part, la demandait ~0,8 s
+ * plus tard). Meme demande partagee : aucun appel de plus.
+ */
+export function prechargerReglesDuMonde(worldSlug: string): void {
+  demanderReglesDuMonde(worldSlug).catch((erreur: unknown) => {
+    console.error("Liste des regles du monde non prechargee", erreur);
+  });
+}
+
 /** Charge une fois la liste complete des regles du monde, reutilisee par tous les champs d'autocompletion de la page (V1-B2). */
 export function useWorldRuleEntries(worldSlug: string): RuleEntrySummary[] {
   const [entries, setEntries] = useState<RuleEntrySummary[]>(() => cache.get(worldSlug) ?? []);
@@ -58,32 +94,13 @@ export function useWorldRuleEntries(worldSlug: string): RuleEntrySummary[] {
 
   useEffect(() => {
     let cancelled = false;
-    const cached = cache.get(worldSlug);
-    let request: Promise<RuleEntrySummary[] | null>;
-    if (cached) {
-      request = Promise.resolve(cached);
-    } else {
-      const pending = inFlight.get(worldSlug);
-      if (pending) {
-        request = pending;
-      } else {
-        request = fetch(`/api/worlds/${worldSlug}/rule-entries`)
-          .then((res) => (res.ok ? res.json() : null))
-          .then((body: { entries: RuleEntrySummary[] } | null) => body?.entries ?? null);
-        inFlight.set(worldSlug, request);
-        request.finally(() => {
-          if (inFlight.get(worldSlug) === request) inFlight.delete(worldSlug);
-        });
-      }
-    }
-
-    request
+    demanderReglesDuMonde(worldSlug)
       .then((entries) => {
-        if (cancelled || !entries) return;
-        cache.set(worldSlug, entries);
-        setEntries(entries);
+        if (!cancelled && entries) setEntries(entries);
       })
-      .catch(() => {});
+      .catch((erreur: unknown) => {
+        console.error("Liste des regles du monde non chargee", erreur);
+      });
     return () => {
       cancelled = true;
     };

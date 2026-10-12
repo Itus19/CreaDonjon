@@ -52,8 +52,9 @@ export default async function JoueurWikiEntityPage({
   if (campaigns[0]) {
     try {
       await discoverEntity(supabase, { campaignId: campaigns[0].id, userId: user.id, entityId: entity.id, level: "detailed" });
-    } catch {
-      // Ignoré volontairement : la fiche s'affiche déjà correctement.
+    } catch (erreur) {
+      // La fiche s'affiche quand même ; l'échec, lui, se voit dans le journal du serveur (pas de catch muet).
+      console.error("Découverte de la fiche non enregistrée", erreur);
     }
   }
 

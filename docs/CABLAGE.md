@@ -131,6 +131,10 @@ Chaque page affichée fait deux appels `/api` de moins : c'est aussi du quota é
 
 Ce qui finit en dernier maintenant : la liste de toutes les règles (`/rule-entries`, ≈ 2,5 s, une fois par onglet), puis la seconde vague de puces et de blocs de règles, qui attend le ruleset résolu pour connaître ses clés.
 
+**Le 12 octobre, deux décisions mesurées** :
+- **La liste de toutes les règles** (`/rule-entries`) part dès l'arrivée du formulaire de la fiche (`prechargerReglesDuMonde`), au lieu d'attendre l'en-tête de la fiche jouable, chargé à part. En développement, aucun gain visible : la demande y attend une connexion libre, occupée par le chargement du code. Elle ne coûte aucune requête de plus, et cette liste n'est chargée qu'une fois par onglet en usage réel.
+- **Les puces de la seconde vague ne partent pas avec la page.** Leurs clés ne se connaissent qu'avec le ruleset résolu : le serveur ne pourrait les préparer qu'après lui, presque au moment où la fiche les demande. Le gain serait d'environ 0,5 s, hors du chemin critique (la seconde vague finit vers 4,4 s, la liste des règles vers 5,0 s). Écarté pour sa complexité.
+
 Les routes les plus lentes, en temps serveur moyen :
 
 | Route | Temps moyen | Appels par fiche de personnage |
