@@ -1005,6 +1005,34 @@ C'est le même enseignement que `P‑01` : *la primitive existait, il manquait d
 
 ---
 
+### ☑ V3-R8 — Les noms traduits des règles, en dix paquets · `S` · sans modèle IA — **fait et mesuré le 12 octobre**
+
+**Modèle conseillé : Opus** — touche la lecture des règles, au cœur du projet, et sa vérification se fait contre la vraie base.
+
+Sous-tâches Haiku : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Le constat (mesure de V3-R6, 12 octobre).** Après la correction de la liste paginée, la requête la plus chère des règles est la lecture des **noms traduits** : 377 appels × 69,7 ms = 26,3 s sur le parcours de 36 pages. `listRuleEntriesForWorld` lit la liste complète (~1 900 entrées), puis `listTranslationsForEntries` demande leurs traductions **par paquets de 200 identifiants** (`TRANSLATION_BATCH_SIZE`, pour qu'une liste `in (...)` tienne dans une adresse) : 10 requêtes par chargement de liste.
+
+**La piste.** Lire la traduction **dans la même requête que la liste**, par une jointure PostgREST (`ruleset_entry_translations(name)` filtrée sur la langue), au lieu d'une seconde série de requêtes. 0 requête de plus au lieu de 10.
+
+**À vérifier avant de coder.** Que la jointure garde la pagination exacte de la liste (une ligne par entrée, même avec plusieurs langues), et le coût de la RLS de `ruleset_entry_translations` dans la jointure. Mesurer avant et après, même protocole que V3-R6, compteur de sortie réseau sous 80 % (`docs/QUOTAS.md`, T3).
+
+**Critères d'acceptation**
+- [x] La liste des règles d'un monde, avec ses noms traduits, en 2 requêtes au lieu de 12 (`rules.listPagination.test.ts`, 2 tests de plus). `listRulesetEntries` accepte une langue et lit `ruleset_entry_translations(name)` par jointure externe filtrée sur elle.
+- [x] Les mêmes noms qu'avant, en français et en anglais : listes de Banc d'essai (1 907) et de Faerûn (1 918), fr et en, **identiques à l'octet** avant / après.
+- [x] Mesure avant / après écrite ici (même protocole que V3-R6 : remise à zéro par l'auteur, 36 pages ; le parcours a été relancé par erreur 5 secondes, d'où 2 appels de liste en trop) :
+
+  | | Après R6 | Après R8 |
+  |---|---|---|
+  | Liste des règles (avec la jointure) | 64 × 183 ms = 11,7 s | 66 × 269 ms = 17,8 s |
+  | Traductions par paquets | 377 × 69,7 ms = 26,3 s | **disparues** |
+  | **Total base, règles** | **≈ 39 s** | **≈ 19 s** |
+
+  Depuis le matin du 12 octobre (avant R6) : **≈ 159 s → ≈ 19 s** pour le même parcours.
+- [x] `npm run typecheck && npm run lint && npm run test` passent (1 629 tests).
+
+---
+
 ### ☑ V3-Z1 — L'âge du personnage, et l'identité à la création · `M` · sans modèle IA — **fait le 24 septembre ; vérification reprise par V3.1-48 (12 octobre)**
 
 **Modèle conseillé : Sonnet** — un champ optionnel et une étape d'assistant ; reste la vérification en direct.

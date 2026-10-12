@@ -19,27 +19,6 @@
 
 **Terminés** (dans [`termines.md`](termines.md)) : V3-R0, V3-R1, V3-R2, V3-R3, V3-R4, V3-R5.
 
----
-
-### ☐ V3-R8 — Les noms traduits des règles, en dix paquets · `S` · sans modèle IA — **à faire si l'auteur le veut (ouvert le 12 octobre)**
-
-**Modèle conseillé : Opus** — touche la lecture des règles, au cœur du projet, et sa vérification se fait contre la vraie base.
-
-Sous-tâches Haiku : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Le constat (mesure de V3-R6, 12 octobre).** Après la correction de la liste paginée, la requête la plus chère des règles est la lecture des **noms traduits** : 377 appels × 69,7 ms = 26,3 s sur le parcours de 36 pages. `listRuleEntriesForWorld` lit la liste complète (~1 900 entrées), puis `listTranslationsForEntries` demande leurs traductions **par paquets de 200 identifiants** (`TRANSLATION_BATCH_SIZE`, pour qu'une liste `in (...)` tienne dans une adresse) : 10 requêtes par chargement de liste.
-
-**La piste.** Lire la traduction **dans la même requête que la liste**, par une jointure PostgREST (`ruleset_entry_translations(name)` filtrée sur la langue), au lieu d'une seconde série de requêtes. 0 requête de plus au lieu de 10.
-
-**À vérifier avant de coder.** Que la jointure garde la pagination exacte de la liste (une ligne par entrée, même avec plusieurs langues), et le coût de la RLS de `ruleset_entry_translations` dans la jointure. Mesurer avant et après, même protocole que V3-R6, compteur de sortie réseau sous 80 % (`docs/QUOTAS.md`, T3).
-
-**Critères d'acceptation**
-- [ ] La liste des règles d'un monde, avec ses noms traduits, en 2 requêtes au lieu de 12 (test unitaire avec faux client, comme `rules.listPagination.test.ts`).
-- [ ] Les mêmes noms qu'avant, en français et en anglais (comparaison sur un monde réel).
-- [ ] Mesure avant / après écrite ici.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
----
-
 ### Ordre de traitement
 
 | Ordre | Ticket | Pourquoi là |
