@@ -95,7 +95,7 @@ V3.1-48.
 
 ---
 
-### ☐ V3.1-63 — Fiche du wiki sur ordinateur : en-tête, cartes de verre, palette en familles · `L` — **prêt**
+### ☐ V3.1-63 — Fiche du wiki sur ordinateur : en-tête, cartes de verre, palette en familles · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive, aucune donnée nouvelle.
 
@@ -180,7 +180,7 @@ changer le téléphone ; ajouter un type de bloc.
 
 ---
 
-### ☐ V3.1-64 — La pastille de visibilité au toucher, avec « Annuler » · `S` — **prêt**
+### ☐ V3.1-64 — La pastille de visibilité au toucher, avec « Annuler » · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — comportement entièrement décrit ; route existante.
 
@@ -228,7 +228,7 @@ planche du catalogue.
 
 ---
 
-### ☐ V3.1-65 — Bloc Texte : lettrine, bulle du paragraphe, assistance IA en encart · `M` — **prêt**
+### ☐ V3.1-65 — Bloc Texte : lettrine, bulle du paragraphe, assistance IA en encart · `M` · **avec modèle IA** — **prêt**
 
 **Modèle conseillé : Sonnet** — tout existe ; c'est un rangement.
 
@@ -264,7 +264,7 @@ planche du catalogue.
 
 ---
 
-### ☐ V3.1-66 — Blocs Encadré et Tableau · `M` — **prêt**
+### ☐ V3.1-66 — Blocs Encadré et Tableau · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — décisions prises ; une seule à trancher dans le ticket (tranchée ci-dessous).
 
@@ -300,7 +300,7 @@ planche du catalogue.
 
 ---
 
-### ☐ V3.1-67 — Bloc Image : la barre flottante et l'aperçu dans le texte (B) · `M` — **prêt**
+### ☐ V3.1-67 — Bloc Image : la barre flottante et l'aperçu dans le texte (B) · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — tous les champs existent déjà ; c'est l'interface.
 
@@ -339,7 +339,7 @@ planche du catalogue.
 
 ---
 
-### ☐ V3.1-68 — Bloc Chronologie : l'axe en bande et une ligne par événement · `M` — **prêt**
+### ☐ V3.1-68 — Bloc Chronologie : l'axe en bande et une ligne par événement · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — dessin décidé, schéma inchangé.
 
@@ -367,7 +367,7 @@ planche du catalogue.
 
 ---
 
-### ☐ V3.1-69 — Noyau psyché : libellés uniques, bandes des pôles, tension, résumé · `S` — **prêt**
+### ☐ V3.1-69 — Noyau psyché : libellés uniques, bandes des pôles, tension, résumé · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — fonctions pures, tests d'abord.
 
@@ -411,7 +411,7 @@ aujourd'hui **dupliqués** dans `components/entities/psyche/`
 
 ---
 
-### ☐ V3.1-70 — Personnalité (A) et Convictions (même dessin, comparer avec une faction) · `L` — **prêt**
+### ☐ V3.1-70 — Personnalité (A) et Convictions (même dessin, comparer avec une faction) · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; une règle de liste tranchée ci-dessous.
 
@@ -477,7 +477,7 @@ aujourd'hui **dupliqués** dans `components/entities/psyche/`
 
 ---
 
-### ☐ V3.1-71 — Relation (A) : deux portraits, le résumé, les fils à perle · `L` — **prêt**
+### ☐ V3.1-71 — Relation (A) : deux portraits, le résumé, les fils à perle · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; lecture du sens inverse décrite.
 
@@ -541,7 +541,7 @@ central) » (ordinateur et téléphone). **Départ** :
 
 ---
 
-### ☐ V3.1-72 — Réseau (B) : vignettes, filtres, survol qui allume · `M` — **prêt**
+### ☐ V3.1-72 — Réseau (B) : vignettes, filtres, survol qui allume · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; un champ ajouté côté service.
 
@@ -586,7 +586,7 @@ téléphone). **Départ** : `components/entities/psyche/RelationsGraphCanvas.tsx
 
 ---
 
-### ☐ V3.1-73 — Généalogie (B) : les grands portraits · `M` — **prêt**
+### ☐ V3.1-73 — Généalogie (B) : les grands portraits · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; les dates attendent V3.1-74.
 
@@ -630,7 +630,7 @@ et téléphone). **Départ** : `components/blocks/GenealogyBlockEditor.tsx`,
 
 ---
 
-### ☐ V3.1-74 — Dates de naissance et de mort (données) · `M` — **prêt (Opus) — proposition validée par l'auteur le 8 octobre**
+### ☐ V3.1-74 — Dates de naissance et de mort (données) · `M` · sans modèle IA — **prêt (Opus) — proposition validée par l'auteur le 8 octobre**
 
 **Modèle conseillé : Opus** — donnée nouvelle, ADR, `SCHEMA.md`.
 
@@ -660,7 +660,7 @@ requête groupée**, remplissage de la ligne prévue en V3.1-73.
 
 ---
 
-### ☐ V3.1-75 — Table aléatoire (A) et le dé animé · `M` — **prêt**
+### ☐ V3.1-75 — Table aléatoire (A) et le dé animé · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; route de tirage existante.
 
@@ -706,7 +706,7 @@ dés de V3.1-33**. **Dépend de** : 63, 33.
 
 ---
 
-### ☐ V3.1-76 — Quête (C) : une ligne, dépliable · `S` — **prêt**
+### ☐ V3.1-76 — Quête (C) : une ligne, dépliable · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — petit, tout décidé.
 
@@ -737,7 +737,7 @@ dés de V3.1-33**. **Dépend de** : 63, 33.
 
 ---
 
-### ☐ V3.1-77 — Musique (A) : la platine, les bornes, la durée des fondus · `M` — **prêt**
+### ☐ V3.1-77 — Musique (A) : la platine, les bornes, la durée des fondus · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — tous les champs existent (ADR 0022).
 
@@ -783,7 +783,7 @@ dés de V3.1-33**. **Dépend de** : 63, 33.
 
 ---
 
-### ☐ V3.1-78 — Carte (C) : la carte et sa liste par couches · `M` — **prêt**
+### ☐ V3.1-78 — Carte (C) : la carte et sa liste par couches · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — modèle et services existants (ADR 0017).
 
@@ -828,7 +828,7 @@ dés de V3.1-33**. **Dépend de** : 63, 33.
 
 ---
 
-### ☐ V3.1-79 — Fiche de créature (A) : la fiche de personnage, pour une créature · `L` — **prêt**
+### ☐ V3.1-79 — Fiche de créature (A) : la fiche de personnage, pour une créature · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; composants de la fiche réutilisés ; règle de l'état de jeu tranchée ci-dessous.
 

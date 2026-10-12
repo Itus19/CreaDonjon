@@ -17,6 +17,8 @@ ci-dessous l'ordonne. **Depuis le 10 octobre, ce fichier n'est plus qu'un index*
 délègue les tickets « Sonnet » à `dev-sonnet`, et la ligne « Sous-tâches
 Haiku » de chaque ticket prêt à `aide-haiku` (`.claude/agents/`).
 
+**Le modèle d'IA, dans chaque titre** (même règle que `docs/BACKLOG_V3.md`). **« avec modèle IA »** : le ticket appelle le fournisseur d'IA (`src/server/ai/`, derrière `AiProvider`), ou ne se vérifie qu'avec lui ; il faut un modèle joignable, local ou distant, pour le coder et le vérifier. **« sans modèle IA »** : rien n'appelle de modèle, le ticket se code et se vérifie IA débranchée. Le critère est l'appel réel, pas le sujet : le Journal historique (61) affiche l'auteur « IA » de lignes déjà écrites, il est « sans ». Au 12 octobre, trois tickets sont « avec » : 19 (le parent de la refonte), 45 (la prose des générateurs) et 65 (l'assistance IA du bloc Texte).
+
 **Lire les titres.** ☑ : ticket terminé. ☐ : il reste du travail, y compris
 une simple vérification en direct chez l'auteur. Un ticket « fait » dont des
 points sont reportés ou réservés (et écrits comme tels) est coché. Sous chaque
@@ -107,7 +109,7 @@ Les tickets vivent dans `docs/backlog-v3.1/`, un fichier par partie. **Ne lis qu
 **Tenir l'index à jour.** Quand un ticket change d'état, change aussi sa ligne
 ci-dessous. Un ticket qui passe à ☑ est déplacé de son fichier vers
 `termines.md`, rangé par numéro. Un ticket nouveau s'écrit dans le fichier de
-sa partie, et une ligne s'ajoute ici.
+sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, et une ligne s'ajoute ici.
 
 - [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) — Rugosités d'avant la refonte (V3.1-1 à 18)
 - [`02-refonte-parent.md`](backlog-v3.1/02-refonte-parent.md) — La refonte « verre minéral » : ticket parent et décisions transverses (V3.1-19 à 23)
@@ -122,130 +124,130 @@ sa partie, et une ligne s'ajoute ici.
 - [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) — Ce qu'a montré la vérification du 11 octobre : tri, rattachements, V3.1-121 et 125
 - [`termines.md`](backlog-v3.1/termines.md) — Tickets terminés (☑)
 
-| Ticket | État | Titre | Fichier |
-|---|---|---|---|
-| V3.1-1 | ☐ | `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
-| V3.1-2 | ☐ | Aucun moyen d'éditer une fiche maison déjà créée | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
-| V3.1-3 | ☑ | Les dons à choix (Initié à la magie, etc.) n'ont aucune UI de choix | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-4 | ☐ | Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
-| V3.1-5 | ☐ | Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
-| V3.1-6 | ☑ | Aucun mécanisme générique pour les traits d'espèce à choix | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-7 | ☑ | Une sous-classe n'apporte jamais d'effet mécanique, choix ou pas | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-8 | ☑ | Aucune demande structurée de disponibilités pour la prochaine séance | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-9 | ☑ | Bouton « Prochaine session » mal calibré selon l'écran | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-10 | ☑ | Connexion par identifiant/mot de passe plutôt que lien à retrouver | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-11 | ☑ | Onglet « Solo » visible même avec un MJ humain déjà présent | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-12 | ☐ | « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
-| V3.1-13 | ☐ | Sous-classes manquantes pour les classes des 4 joueuses actives | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
-| V3.1-14 | ☑ | Aucun moyen pour une joueuse de créer elle-même son PJ sans personnage déjà assigné | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-15 | ☑ | La Gestion de campagne illisible : invitations en haut, une carte par personne | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-16 | ☑ | Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-17 | ☐ | Un catalogue d'interface visuel, et une charte qui y renvoie | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
-| V3.1-18 | ☐ | Retirer les émojis de l'interface | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
-| V3.1-19 | ☐ | Refonte « verre minéral » (ticket parent) | [`02-refonte-parent.md`](backlog-v3.1/02-refonte-parent.md) |
-| V3.1-20 | ☐ | Fenêtres du MJ en deux volets à onglets | [`02-refonte-parent.md`](backlog-v3.1/02-refonte-parent.md) |
-| V3.1-21 | ☑ | Cibler et résoudre depuis les boutons de jet | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-22 | ☐ | Salon de groupe et jets dans le chat | [`02-refonte-parent.md`](backlog-v3.1/02-refonte-parent.md) |
-| V3.1-23 | ☑ | Ce que les joueurs modifient eux-mêmes (Règles actives) | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-24 | ☐ | Les services de jeu sous la refonte | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-25 | ☐ | La pilule glissante remplace `BinderTabs` | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-26 | ☐ | Fiche d'ordinateur à jauges et commande E | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-27 | ☐ | Rail repliable et dalle Outils (lots a, b) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-28 | ☐ | Tablette : la fiche s'adapte à sa fenêtre (lot f) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-29 | ☐ | Coquille téléphone : barre flottante et feuilles du bas (lot c) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-30 | ☐ | Wiki et Règles sur téléphone : ☰ et consultées récemment | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-31 | ☐ | Éditeur plein écran en accordéon (téléphone) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-32 | ☐ | Fiche sur téléphone : jets, infobulles de règles, sac | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-33 | ☐ | L'outil de dés unique (feuille, panneau, scintillement) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-34 | ☐ | L'outil Table du MJ | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-35 | ☐ | Accueil en tableau de bord (lot h) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-36 | ☐ | Le solo : ailes d'ordinateur et téléphone modèle A (lot d) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-37 | ☑ | L'initiative vue des joueurs : sécurité, invitation, temps réel | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-38 | ☐ | L'outil Initiative refondu, MJ et joueur | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-39 | ☑ | Les sauvegardes demandées à la cible | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-40 | ☑ | Ressources de classe : magie de pacte et recharge partielle | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-41 | ☐ | Bloc-notes : la page partagée devient une entité (données) | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-42 | ☐ | Bloc-notes : le cahier refait, MJ et joueuse | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-43 | ☐ | Livre de sessions : le registre et ses trois ajouts | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-44 | ☐ | Rencontres : l'atelier en trois colonnes | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-45 | ☐ | Générateurs : les tirages à gauche, la fiche à droite | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-46 | ☐ | Probabilités : la matrice, caractéristiques et compétences | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-47 | ☑ | Création : les règles de personnage viennent du ruleset | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-48 | ☐ | Création : identité, prénom, nom, naissance au calendrier du monde | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-49 | ☐ | Création : le chemin qui se ramifie (structure, aperçu, joueuse) | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-50 | ☐ | Création : Origines, Historique et un seul sélecteur de sorts | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-51 | ☐ | Création : la Classe, et le même écran pour monter de niveau | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-52 | ☐ | Création : les Caractéristiques, la suggestion puis l'échange | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-53 | ☐ | Création : l'Équipement (bande d'équipement, boutique, départ à haut niveau) | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-54 | ☐ | Gestion de campagne au verre minéral, avec « Voir comme » | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-55 | ☐ | Calendrier ingame : l'année d'un coup d'œil | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-56 | ☐ | Calendrier réel au verre minéral, côté MJ et côté joueuse | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-57 | ☐ | Règles actives : le ruleset à gauche, la table à droite | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-58 | ☐ | Personnalisation : le fond d'abord, et pour les joueuses | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-59 | ☐ | Publication : le fond par défaut du wiki (données) | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-60 | ☐ | Publication : les réglages, et ce que voit un visiteur | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-61 | ☐ | Journal historique : par fiche, ou chronologique | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-62 | ☑ | Rapidité : mesurer, puis recâbler | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-63 | ☐ | Fiche du wiki sur ordinateur : en-tête, cartes de verre, palette en familles | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-64 | ☐ | La pastille de visibilité au toucher, avec « Annuler » | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-65 | ☐ | Bloc Texte : lettrine, bulle du paragraphe, assistance IA en encart | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-66 | ☐ | Blocs Encadré et Tableau | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-67 | ☐ | Bloc Image : la barre flottante et l'aperçu dans le texte (B) | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-68 | ☐ | Bloc Chronologie : l'axe en bande et une ligne par événement | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-69 | ☐ | Noyau psyché : libellés uniques, bandes des pôles, tension, résumé | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-70 | ☐ | Personnalité (A) et Convictions (même dessin, comparer avec une faction) | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-71 | ☐ | Relation (A) : deux portraits, le résumé, les fils à perle | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-72 | ☐ | Réseau (B) : vignettes, filtres, survol qui allume | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-73 | ☐ | Généalogie (B) : les grands portraits | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-74 | ☐ | Dates de naissance et de mort (données) | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-75 | ☐ | Table aléatoire (A) et le dé animé | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-76 | ☐ | Quête (C) : une ligne, dépliable | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-77 | ☐ | Musique (A) : la platine, les bornes, la durée des fondus | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-78 | ☐ | Carte (C) : la carte et sa liste par couches | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-79 | ☐ | Fiche de créature (A) : la fiche de personnage, pour une créature | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-80 | ☐ | Compte (A) : une page en sections | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-81 | ☐ | L'Apparence du Compte est la Personnalisation C | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-82 | ☐ | Choix du personnage (C2) : le carrousel | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-83 | ☐ | Choix : PJ sans fiche et « Créer mon personnage » | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-84 | ☐ | Identité de l'application : où elle vit (ADR) | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-85 | ☐ | Écran-titre (C) : connexion, création, mot de passe oublié | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-86 | ☐ | La marque partout : rail, onglet, Rejoindre, Réinitialiser | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-87 | ☐ | Administration (B) : le tableau de bord | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-88 | ☐ | Administration › Identité de l'application | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-89 | ☐ | Statistiques : attribuer chaque jet (données, ADR) | [`07-statistiques.md`](backlog-v3.1/07-statistiques.md) |
-| V3.1-90 | ☐ | Statistiques : le noyau pur | [`07-statistiques.md`](backlog-v3.1/07-statistiques.md) |
-| V3.1-91 | ☐ | Statistiques : le service et le volet de l'accueil | [`07-statistiques.md`](backlog-v3.1/07-statistiques.md) |
-| V3.1-92 | ☐ | Administration › Titres des joueurs : l'éditeur | [`07-statistiques.md`](backlog-v3.1/07-statistiques.md) |
-| V3.1-93 | ☐ | Règles : le sommaire passe dans la fenêtre | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
-| V3.1-94 | ☐ | Règles : la règle au centre, renvois en volet, onglets | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
-| V3.1-95 | ☐ | Règles : fenêtre étroite et page du joueur | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
-| V3.1-96 | ☐ | Chronologie : portée, événements directs, naissances et morts (données, ADR) | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
-| V3.1-97 | ☐ | Chronologie : le noyau pur | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
-| V3.1-98 | ☐ | Chronologie : la frise du MJ | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
-| V3.1-99 | ☐ | Chronologie : la page des joueurs | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
-| V3.1-100 | ☐ | Rejoindre sans choisir de PJ ; le lien qui vise un PJ précis | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-101 | ☑ | Initiative : la base et les routes réservées au MJ | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-102 | ☐ | Initiative : la vue filtrée des joueurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-103 | ☐ | Initiative : les jets d'initiative des joueurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-104 | ☐ | Écritures du moteur au nom d'un joueur : changements signés | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-105 | ☐ | Cibler : le cœur commun de résolution | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-106 | ☐ | Cibler côté MJ : outil de dés, Table, Initiative | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-107 | ☐ | Cibler côté joueur | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-108 | ☑ | Droits des joueurs : la base ferme, le serveur règle | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-109 | ☐ | Droits des joueurs : la fiche obéit aux interrupteurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-110 | ☐ | Sauvegardes : la restriction de cible (noyau) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-111 | ☐ | Sauvegardes : la demande et la réponse (données, serveur) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-112 | ☐ | Sauvegardes : les écrans | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-113 | ☐ | Ressources : pacte, recharge partielle, multiclassage (noyau) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-114 | ☐ | Ressources : repos et égaliseur | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-115 | ☐ | Règles de personnage : la fiche `character_rules` | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-116 | ☐ | Le mécanisme générique des choix (noyau et résolution) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-117 | ☐ | La sous-classe résolue et ses choix | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-118 | ☐ | Les choix dans l'assistant de création et de montée de niveau | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-119 | ☐ | Les choix rouverts au repos | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-120 | ☐ | Défaire les cycles d'import (services serveur, fiche jouable) | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
-| V3.1-121 | ☐ | Ténacité naine ignorée dans les PV max | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |
-| V3.1-125 | ☐ | Masse d'armes : poids faux à l'import | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |
-| V3.1-126 | ☐ | Les `catch` muets restants | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
-| V3.1-127 | ☑ | Mettre à jour Next et les dépendances vulnérables | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
-| V3.1-128 | ☑ | Les cartes laissent leurs images dans le stockage | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
+| Ticket | État | Modèle IA | Titre | Fichier |
+|---|---|---|---|---|
+| V3.1-1 | ☐ | sans | `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
+| V3.1-2 | ☐ | sans | Aucun moyen d'éditer une fiche maison déjà créée | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
+| V3.1-3 | ☑ | sans | Les dons à choix (Initié à la magie, etc.) n'ont aucune UI de choix | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-4 | ☐ | sans | Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
+| V3.1-5 | ☐ | sans | Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
+| V3.1-6 | ☑ | sans | Aucun mécanisme générique pour les traits d'espèce à choix | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-7 | ☑ | sans | Une sous-classe n'apporte jamais d'effet mécanique, choix ou pas | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-8 | ☑ | sans | Aucune demande structurée de disponibilités pour la prochaine séance | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-9 | ☑ | sans | Bouton « Prochaine session » mal calibré selon l'écran | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-10 | ☑ | sans | Connexion par identifiant/mot de passe plutôt que lien à retrouver | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-11 | ☑ | sans | Onglet « Solo » visible même avec un MJ humain déjà présent | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-12 | ☐ | sans | « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
+| V3.1-13 | ☐ | sans | Sous-classes manquantes pour les classes des 4 joueuses actives | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
+| V3.1-14 | ☑ | sans | Aucun moyen pour une joueuse de créer elle-même son PJ sans personnage déjà assigné | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-15 | ☑ | sans | La Gestion de campagne illisible : invitations en haut, une carte par personne | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-16 | ☑ | sans | Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-17 | ☐ | sans | Un catalogue d'interface visuel, et une charte qui y renvoie | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
+| V3.1-18 | ☐ | sans | Retirer les émojis de l'interface | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
+| V3.1-19 | ☐ | **avec** | Refonte « verre minéral » (ticket parent) | [`02-refonte-parent.md`](backlog-v3.1/02-refonte-parent.md) |
+| V3.1-20 | ☐ | sans | Fenêtres du MJ en deux volets à onglets | [`02-refonte-parent.md`](backlog-v3.1/02-refonte-parent.md) |
+| V3.1-21 | ☑ | sans | Cibler et résoudre depuis les boutons de jet | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-22 | ☐ | sans | Salon de groupe et jets dans le chat | [`02-refonte-parent.md`](backlog-v3.1/02-refonte-parent.md) |
+| V3.1-23 | ☑ | sans | Ce que les joueurs modifient eux-mêmes (Règles actives) | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-24 | ☐ | sans | Les services de jeu sous la refonte | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-25 | ☐ | sans | La pilule glissante remplace `BinderTabs` | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-26 | ☐ | sans | Fiche d'ordinateur à jauges et commande E | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-27 | ☐ | sans | Rail repliable et dalle Outils (lots a, b) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-28 | ☐ | sans | Tablette : la fiche s'adapte à sa fenêtre (lot f) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-29 | ☐ | sans | Coquille téléphone : barre flottante et feuilles du bas (lot c) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-30 | ☐ | sans | Wiki et Règles sur téléphone : ☰ et consultées récemment | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-31 | ☐ | sans | Éditeur plein écran en accordéon (téléphone) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-32 | ☐ | sans | Fiche sur téléphone : jets, infobulles de règles, sac | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-33 | ☐ | sans | L'outil de dés unique (feuille, panneau, scintillement) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-34 | ☐ | sans | L'outil Table du MJ | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-35 | ☐ | sans | Accueil en tableau de bord (lot h) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-36 | ☐ | sans | Le solo : ailes d'ordinateur et téléphone modèle A (lot d) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-37 | ☑ | sans | L'initiative vue des joueurs : sécurité, invitation, temps réel | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-38 | ☐ | sans | L'outil Initiative refondu, MJ et joueur | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-39 | ☑ | sans | Les sauvegardes demandées à la cible | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-40 | ☑ | sans | Ressources de classe : magie de pacte et recharge partielle | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-41 | ☐ | sans | Bloc-notes : la page partagée devient une entité (données) | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-42 | ☐ | sans | Bloc-notes : le cahier refait, MJ et joueuse | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-43 | ☐ | sans | Livre de sessions : le registre et ses trois ajouts | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-44 | ☐ | sans | Rencontres : l'atelier en trois colonnes | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-45 | ☐ | **avec** | Générateurs : les tirages à gauche, la fiche à droite | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-46 | ☐ | sans | Probabilités : la matrice, caractéristiques et compétences | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-47 | ☑ | sans | Création : les règles de personnage viennent du ruleset | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-48 | ☐ | sans | Création : identité, prénom, nom, naissance au calendrier du monde | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-49 | ☐ | sans | Création : le chemin qui se ramifie (structure, aperçu, joueuse) | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-50 | ☐ | sans | Création : Origines, Historique et un seul sélecteur de sorts | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-51 | ☐ | sans | Création : la Classe, et le même écran pour monter de niveau | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-52 | ☐ | sans | Création : les Caractéristiques, la suggestion puis l'échange | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-53 | ☐ | sans | Création : l'Équipement (bande d'équipement, boutique, départ à haut niveau) | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-54 | ☐ | sans | Gestion de campagne au verre minéral, avec « Voir comme » | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-55 | ☐ | sans | Calendrier ingame : l'année d'un coup d'œil | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-56 | ☐ | sans | Calendrier réel au verre minéral, côté MJ et côté joueuse | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-57 | ☐ | sans | Règles actives : le ruleset à gauche, la table à droite | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-58 | ☐ | sans | Personnalisation : le fond d'abord, et pour les joueuses | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-59 | ☐ | sans | Publication : le fond par défaut du wiki (données) | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-60 | ☐ | sans | Publication : les réglages, et ce que voit un visiteur | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-61 | ☐ | sans | Journal historique : par fiche, ou chronologique | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-62 | ☑ | sans | Rapidité : mesurer, puis recâbler | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-63 | ☐ | sans | Fiche du wiki sur ordinateur : en-tête, cartes de verre, palette en familles | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-64 | ☐ | sans | La pastille de visibilité au toucher, avec « Annuler » | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-65 | ☐ | **avec** | Bloc Texte : lettrine, bulle du paragraphe, assistance IA en encart | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-66 | ☐ | sans | Blocs Encadré et Tableau | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-67 | ☐ | sans | Bloc Image : la barre flottante et l'aperçu dans le texte (B) | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-68 | ☐ | sans | Bloc Chronologie : l'axe en bande et une ligne par événement | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-69 | ☐ | sans | Noyau psyché : libellés uniques, bandes des pôles, tension, résumé | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-70 | ☐ | sans | Personnalité (A) et Convictions (même dessin, comparer avec une faction) | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-71 | ☐ | sans | Relation (A) : deux portraits, le résumé, les fils à perle | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-72 | ☐ | sans | Réseau (B) : vignettes, filtres, survol qui allume | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-73 | ☐ | sans | Généalogie (B) : les grands portraits | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-74 | ☐ | sans | Dates de naissance et de mort (données) | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-75 | ☐ | sans | Table aléatoire (A) et le dé animé | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-76 | ☐ | sans | Quête (C) : une ligne, dépliable | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-77 | ☐ | sans | Musique (A) : la platine, les bornes, la durée des fondus | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-78 | ☐ | sans | Carte (C) : la carte et sa liste par couches | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-79 | ☐ | sans | Fiche de créature (A) : la fiche de personnage, pour une créature | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-80 | ☐ | sans | Compte (A) : une page en sections | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
+| V3.1-81 | ☐ | sans | L'Apparence du Compte est la Personnalisation C | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
+| V3.1-82 | ☐ | sans | Choix du personnage (C2) : le carrousel | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
+| V3.1-83 | ☐ | sans | Choix : PJ sans fiche et « Créer mon personnage » | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
+| V3.1-84 | ☐ | sans | Identité de l'application : où elle vit (ADR) | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
+| V3.1-85 | ☐ | sans | Écran-titre (C) : connexion, création, mot de passe oublié | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
+| V3.1-86 | ☐ | sans | La marque partout : rail, onglet, Rejoindre, Réinitialiser | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
+| V3.1-87 | ☐ | sans | Administration (B) : le tableau de bord | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
+| V3.1-88 | ☐ | sans | Administration › Identité de l'application | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
+| V3.1-89 | ☐ | sans | Statistiques : attribuer chaque jet (données, ADR) | [`07-statistiques.md`](backlog-v3.1/07-statistiques.md) |
+| V3.1-90 | ☐ | sans | Statistiques : le noyau pur | [`07-statistiques.md`](backlog-v3.1/07-statistiques.md) |
+| V3.1-91 | ☐ | sans | Statistiques : le service et le volet de l'accueil | [`07-statistiques.md`](backlog-v3.1/07-statistiques.md) |
+| V3.1-92 | ☐ | sans | Administration › Titres des joueurs : l'éditeur | [`07-statistiques.md`](backlog-v3.1/07-statistiques.md) |
+| V3.1-93 | ☐ | sans | Règles : le sommaire passe dans la fenêtre | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
+| V3.1-94 | ☐ | sans | Règles : la règle au centre, renvois en volet, onglets | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
+| V3.1-95 | ☐ | sans | Règles : fenêtre étroite et page du joueur | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
+| V3.1-96 | ☐ | sans | Chronologie : portée, événements directs, naissances et morts (données, ADR) | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
+| V3.1-97 | ☐ | sans | Chronologie : le noyau pur | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
+| V3.1-98 | ☐ | sans | Chronologie : la frise du MJ | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
+| V3.1-99 | ☐ | sans | Chronologie : la page des joueurs | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
+| V3.1-100 | ☐ | sans | Rejoindre sans choisir de PJ ; le lien qui vise un PJ précis | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
+| V3.1-101 | ☑ | sans | Initiative : la base et les routes réservées au MJ | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-102 | ☐ | sans | Initiative : la vue filtrée des joueurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-103 | ☐ | sans | Initiative : les jets d'initiative des joueurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-104 | ☐ | sans | Écritures du moteur au nom d'un joueur : changements signés | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-105 | ☐ | sans | Cibler : le cœur commun de résolution | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-106 | ☐ | sans | Cibler côté MJ : outil de dés, Table, Initiative | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-107 | ☐ | sans | Cibler côté joueur | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-108 | ☑ | sans | Droits des joueurs : la base ferme, le serveur règle | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-109 | ☐ | sans | Droits des joueurs : la fiche obéit aux interrupteurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-110 | ☐ | sans | Sauvegardes : la restriction de cible (noyau) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-111 | ☐ | sans | Sauvegardes : la demande et la réponse (données, serveur) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-112 | ☐ | sans | Sauvegardes : les écrans | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-113 | ☐ | sans | Ressources : pacte, recharge partielle, multiclassage (noyau) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-114 | ☐ | sans | Ressources : repos et égaliseur | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-115 | ☐ | sans | Règles de personnage : la fiche `character_rules` | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-116 | ☐ | sans | Le mécanisme générique des choix (noyau et résolution) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-117 | ☐ | sans | La sous-classe résolue et ses choix | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-118 | ☐ | sans | Les choix dans l'assistant de création et de montée de niveau | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-119 | ☐ | sans | Les choix rouverts au repos | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-120 | ☐ | sans | Défaire les cycles d'import (services serveur, fiche jouable) | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
+| V3.1-121 | ☐ | sans | Ténacité naine ignorée dans les PV max | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |
+| V3.1-125 | ☐ | sans | Masse d'armes : poids faux à l'import | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |
+| V3.1-126 | ☐ | sans | Les `catch` muets restants | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
+| V3.1-127 | ☑ | sans | Mettre à jour Next et les dépendances vulnérables | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
+| V3.1-128 | ☑ | sans | Les cartes laissent leurs images dans le stockage | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |

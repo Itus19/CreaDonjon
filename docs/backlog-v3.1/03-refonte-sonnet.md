@@ -20,7 +20,7 @@ V3.1-20 (lot g) peut partir dès que 25 est fait.
 
 ---
 
-### ☐ V3.1-24 — Les services de jeu sous la refonte · `M` — **prêt**
+### ☐ V3.1-24 — Les services de jeu sous la refonte · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — décisions toutes prises dans l'ADR 0036 ; noyau pur, tests d'abord.
 
@@ -73,7 +73,7 @@ Fondation des tickets 32, 33 et 34. Aucune interface.
 
 ---
 
-### ☐ V3.1-25 — La pilule glissante remplace `BinderTabs` · `S` — **prêt**
+### ☐ V3.1-25 — La pilule glissante remplace `BinderTabs` · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — composant décidé (ADR 0034), usages listés.
 
@@ -95,7 +95,7 @@ Sur téléphone, la pilule défile horizontalement si elle déborde.
 
 ---
 
-### ☐ V3.1-26 — Fiche d'ordinateur à jauges et commande E · `M` — **prêt**
+### ☐ V3.1-26 — Fiche d'ordinateur à jauges et commande E · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — interface esquissée, services existants.
 
@@ -125,7 +125,7 @@ commandes (option E) ». **Départ** :
 
 ---
 
-### ☐ V3.1-27 — Rail repliable et dalle Outils (lots a, b) · `M` — **prêt**
+### ☐ V3.1-27 — Rail repliable et dalle Outils (lots a, b) · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — mesures et comportements donnés par V3.1-19.
 
@@ -154,7 +154,7 @@ commandes (option E) ». **Départ** :
 
 ---
 
-### ☐ V3.1-28 — Tablette : la fiche s'adapte à sa fenêtre (lot f) · `S` — **prêt**
+### ☐ V3.1-28 — Tablette : la fiche s'adapte à sa fenêtre (lot f) · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — règle simple, planche à trois largeurs.
 
@@ -174,7 +174,7 @@ ligne au-dessus des onglets.
 
 ---
 
-### ☐ V3.1-29 — Coquille téléphone : barre flottante et feuilles du bas (lot c) · `L` — **prêt**
+### ☐ V3.1-29 — Coquille téléphone : barre flottante et feuilles du bas (lot c) · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — entrées, gabarits et comportements fixés par les planches.
 
@@ -205,7 +205,7 @@ ouvertes », mêmes planches côté joueur. **Départ** : `PlayerShell.tsx`,
 
 ---
 
-### ☐ V3.1-30 — Wiki et Règles sur téléphone : ☰ et consultées récemment · `M` — **prêt**
+### ☐ V3.1-30 — Wiki et Règles sur téléphone : ☰ et consultées récemment · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — parcours esquissé ; stockage tranché (ADR 0036 §4).
 
@@ -233,7 +233,7 @@ leurs feuilles. **Départ** : `BookSkin.tsx`, `TwoPaneReaderLayout.tsx`,
 
 ---
 
-### ☐ V3.1-31 — Éditeur plein écran en accordéon (téléphone) · `M` — **prêt**
+### ☐ V3.1-31 — Éditeur plein écran en accordéon (téléphone) · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — option A tranchée et esquissée.
 
@@ -255,7 +255,7 @@ Les éditeurs de blocs existants sont réutilisés tels quels à l'intérieur.
 
 ---
 
-### ☐ V3.1-32 — Fiche sur téléphone : jets, infobulles de règles, sac · `L` — **prêt**
+### ☐ V3.1-32 — Fiche sur téléphone : jets, infobulles de règles, sac · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — fiche entièrement esquissée ; services fournis par 24.
 
@@ -288,7 +288,7 @@ planches). **Dépend de** : 24, 26, 29.
 
 ---
 
-### ☐ V3.1-33 — L'outil de dés unique (feuille, panneau, scintillement) · `L` — **prêt**
+### ☐ V3.1-33 — L'outil de dés unique (feuille, panneau, scintillement) · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — ADR 0035, ADR 0036 §6, planches précises ; la cible reste à V3.1-21.
 
@@ -404,7 +404,7 @@ outil de dés sur ordinateur, Initiative).
 
 ---
 
-### ☐ V3.1-34 — L'outil Table du MJ · `L` — **prêt**
+### ☐ V3.1-34 — L'outil Table du MJ · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — tout est esquissé ; données et règles fournies par 24.
 
@@ -453,7 +453,7 @@ feuilles ouvertes » (Toute la table). **Départ** : `mjToolWindows.ts`,
 
 ---
 
-### ☐ V3.1-35 — Accueil en tableau de bord (lot h) · `M` — **prêt**
+### ☐ V3.1-35 — Accueil en tableau de bord (lot h) · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — proposition 3 tranchée ; « Reprendre » rangé dans le navigateur (ADR 0036 §4).
 
@@ -482,7 +482,7 @@ glissante ». **Départ** : `HomeShell.tsx`, `HomeScreen.tsx`,
 
 ---
 
-### ☐ V3.1-36 — Le solo : ailes d'ordinateur et téléphone modèle A (lot d) · `L` — **prêt**
+### ☐ V3.1-36 — Le solo : ailes d'ordinateur et téléphone modèle A (lot d) · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planches définitives ; le moteur solo ne change pas.
 
@@ -511,7 +511,7 @@ glissante ». **Départ** : `HomeShell.tsx`, `HomeScreen.tsx`,
 
 ---
 
-### ☐ V3.1-38 — L'outil Initiative refondu, MJ et joueur · `L` — **prêt après V3.1-37**
+### ☐ V3.1-38 — L'outil Initiative refondu, MJ et joueur · `L` · sans modèle IA — **prêt après V3.1-37**
 
 **Modèle conseillé : Sonnet** — planche définitive, données fournies par V3.1-37.
 

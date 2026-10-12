@@ -112,7 +112,7 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
 
 ---
 
-### ☐ V3.1-41 — Bloc-notes : la page partagée devient une entité (données) · `M` — **prêt**
+### ☐ V3.1-41 — Bloc-notes : la page partagée devient une entité (données) · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Opus** — migration, RLS et octrois d'écriture ; principe déjà tranché.
 
@@ -148,7 +148,7 @@ sessions (`session_journal`).
 
 ---
 
-### ☐ V3.1-42 — Bloc-notes : le cahier refait, MJ et joueuse · `L` — **prêt après V3.1-41**
+### ☐ V3.1-42 — Bloc-notes : le cahier refait, MJ et joueuse · `L` · sans modèle IA — **prêt après V3.1-41**
 
 **Modèle conseillé : Sonnet** — planche définitive ; données fournies par 41.
 
@@ -191,7 +191,7 @@ partage à la table »). **Départ** :
 
 ---
 
-### ☐ V3.1-43 — Livre de sessions : le registre et ses trois ajouts · `M` — **prêt**
+### ☐ V3.1-43 — Livre de sessions : le registre et ses trois ajouts · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.
 
@@ -228,7 +228,7 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 
 ---
 
-### ☐ V3.1-44 — Rencontres : l'atelier en trois colonnes · `M` — **prêt**
+### ☐ V3.1-44 — Rencontres : l'atelier en trois colonnes · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; budget et solveur inchangés.
 
@@ -263,7 +263,7 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 
 ---
 
-### ☐ V3.1-45 — Générateurs : les tirages à gauche, la fiche à droite · `M` — **prêt**
+### ☐ V3.1-45 — Générateurs : les tirages à gauche, la fiche à droite · `M` · **avec modèle IA** — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; tables et IA inchangées.
 
@@ -301,7 +301,7 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 
 ---
 
-### ☐ V3.1-46 — Probabilités : la matrice, caractéristiques et compétences · `M` — **prêt**
+### ☐ V3.1-46 — Probabilités : la matrice, caractéristiques et compétences · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — calcul pur à étendre, tests d'abord ; planche définitive.
 
@@ -340,7 +340,7 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 
 ---
 
-### ☐ V3.1-48 — Création : identité, prénom, nom, naissance au calendrier du monde · `M` — **prêt**
+### ☐ V3.1-48 — Création : identité, prénom, nom, naissance au calendrier du monde · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — décision prise ; ADR à écrire d'après elle, noyau pur, tests d'abord.
 
@@ -382,7 +382,7 @@ schéma Zod ; recomposition du nom côté serveur.
 
 ---
 
-### ☐ V3.1-49 — Création : le chemin qui se ramifie (structure, aperçu, joueuse) · `L` — **prêt après 47 et 48**
+### ☐ V3.1-49 — Création : le chemin qui se ramifie (structure, aperçu, joueuse) · `L` · sans modèle IA — **prêt après 47 et 48**
 
 **Modèle conseillé : Opus** — l'écran est décidé, mais le cœur est un état de choix en cascade (un choix naît de sa source, disparaît si elle change, attend un autre choix) partagé par toutes les étapes, l'aperçu en direct et la création finale ; une erreur y casse les quatre tickets suivants. **Sonnet** pour 50 à 53, qui se branchent dessus.
 
@@ -442,7 +442,7 @@ schéma Zod ; recomposition du nom côté serveur.
 
 ---
 
-### ☐ V3.1-50 — Création : Origines, Historique et un seul sélecteur de sorts · `L` — **prêt après 49**
+### ☐ V3.1-50 — Création : Origines, Historique et un seul sélecteur de sorts · `L` · sans modèle IA — **prêt après 49**
 
 **Modèle conseillé : Sonnet** — planches définitives.
 
@@ -490,7 +490,7 @@ schéma Zod ; recomposition du nom côté serveur.
 
 ---
 
-### ☐ V3.1-51 — Création : la Classe, et le même écran pour monter de niveau · `L` — **prêt après 47 et 49**
+### ☐ V3.1-51 — Création : la Classe, et le même écran pour monter de niveau · `L` · sans modèle IA — **prêt après 47 et 49**
 
 **Modèle conseillé : Sonnet** — planche définitive ; règles fournies par 47.
 
@@ -532,7 +532,7 @@ schéma Zod ; recomposition du nom côté serveur.
 
 ---
 
-### ☐ V3.1-52 — Création : les Caractéristiques, la suggestion puis l'échange · `M` — **prêt après 47 et 49**
+### ☐ V3.1-52 — Création : les Caractéristiques, la suggestion puis l'échange · `M` · sans modèle IA — **prêt après 47 et 49**
 
 **Modèle conseillé : Sonnet** — planche définitive ; constantes déplacées par 47.
 
@@ -562,7 +562,7 @@ schéma Zod ; recomposition du nom côté serveur.
 
 ---
 
-### ☐ V3.1-53 — Création : l'Équipement (bande d'équipement, boutique, départ à haut niveau) · `L` — **prêt après 24, 47 et 49**
+### ☐ V3.1-53 — Création : l'Équipement (bande d'équipement, boutique, départ à haut niveau) · `L` · sans modèle IA — **prêt après 24, 47 et 49**
 
 **Modèle conseillé : Sonnet** — planche définitive, très détaillée ; services de 24.
 
@@ -621,7 +621,7 @@ schéma Zod ; recomposition du nom côté serveur.
 
 ---
 
-### ☐ V3.1-54 — Gestion de campagne au verre minéral, avec « Voir comme » · `S` — **prêt**
+### ☐ V3.1-54 — Gestion de campagne au verre minéral, avec « Voir comme » · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — disposition déjà codée (V3.1-15) ; transposition seulement.
 
@@ -651,7 +651,7 @@ Copier et ⋮.
 
 ---
 
-### ☐ V3.1-55 — Calendrier ingame : l'année d'un coup d'œil · `M` — **prêt**
+### ☐ V3.1-55 — Calendrier ingame : l'année d'un coup d'œil · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.
 
@@ -700,7 +700,7 @@ Copier et ⋮.
 
 ---
 
-### ☐ V3.1-56 — Calendrier réel au verre minéral, côté MJ et côté joueuse · `M` — **prêt**
+### ☐ V3.1-56 — Calendrier réel au verre minéral, côté MJ et côté joueuse · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — disposition déjà codée (V3.1-16) ; transposition seulement.
 
@@ -739,7 +739,7 @@ enregistrement automatique de la joueuse). Le verre minéral :
 
 ---
 
-### ☐ V3.1-57 — Règles actives : le ruleset à gauche, la table à droite · `M` — **prêt après V3.1-23**
+### ☐ V3.1-57 — Règles actives : le ruleset à gauche, la table à droite · `M` · sans modèle IA — **prêt après V3.1-23**
 
 **Modèle conseillé : Sonnet** — planche définitive ; données et serveur de V3.1-23.
 
@@ -789,7 +789,7 @@ cas `regles-actives`. **Dépend de** : **23** (interrupteurs,
 
 ---
 
-### ☐ V3.1-58 — Personnalisation : le fond d'abord, et pour les joueuses · `M` — **prêt**
+### ☐ V3.1-58 — Personnalisation : le fond d'abord, et pour les joueuses · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.
 
@@ -832,7 +832,7 @@ cas `regles-actives`. **Dépend de** : **23** (interrupteurs,
 
 ---
 
-### ☐ V3.1-59 — Publication : le fond par défaut du wiki (données) · `M` — **prêt (Opus) — conçu le 9 octobre, ADR 0047**
+### ☐ V3.1-59 — Publication : le fond par défaut du wiki (données) · `M` · sans modèle IA — **prêt (Opus) — conçu le 9 octobre, ADR 0047**
 
 **Modèle conseillé : Opus** — donnée nouvelle par monde, lue par la page publique (service role) et par l'onglet Wiki des joueuses.
 
@@ -866,7 +866,7 @@ garde**.
 
 ---
 
-### ☐ V3.1-60 — Publication : les réglages, et ce que voit un visiteur · `M` — **prêt après 58 et 59**
+### ☐ V3.1-60 — Publication : les réglages, et ce que voit un visiteur · `M` · sans modèle IA — **prêt après 58 et 59**
 
 **Modèle conseillé : Sonnet** — planche définitive ; galerie de 58, données de 59.
 
@@ -903,7 +903,7 @@ garde**.
 
 ---
 
-### ☐ V3.1-61 — Journal historique : par fiche, ou chronologique · `M` — **prêt**
+### ☐ V3.1-61 — Journal historique : par fiche, ou chronologique · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; un champ de plus côté serveur.
 
@@ -963,7 +963,7 @@ filtrer par objet modifié ou par élément (wiki, fiche de personnage…).
 
 ---
 
-### ☑ V3.1-62 — Rapidité : mesurer, puis recâbler · `M` — **fait le 12 octobre (mesures, ADR 0055 et 0056, `docs/CABLAGE.md`)**
+### ☑ V3.1-62 — Rapidité : mesurer, puis recâbler · `M` · sans modèle IA — **fait le 12 octobre (mesures, ADR 0055 et 0056, `docs/CABLAGE.md`)**
 
 **Modèle conseillé : Opus** pour la mesure et le plan (étapes 1 et 2), **Sonnet** pour appliquer les corrections listées (étape 3).
 

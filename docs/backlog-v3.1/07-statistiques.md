@@ -37,7 +37,7 @@ Les règles de lecture des tickets du 9 octobre (plus haut) valent ici.
 
 ---
 
-### ☐ V3.1-89 — Statistiques : attribuer chaque jet (données, ADR) · `M` — **prêt (Opus)**
+### ☐ V3.1-89 — Statistiques : attribuer chaque jet (données, ADR) · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — changement de schéma, quatre chemins
 d'écriture, RLS d'une table temps réel.
@@ -105,7 +105,7 @@ désavantage, la trace porte les deux d20 sans dire lequel est gardé.
 
 ---
 
-### ☐ V3.1-90 — Statistiques : le noyau pur · `S` — **prêt**
+### ☐ V3.1-90 — Statistiques : le noyau pur · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — logique pure, **tests d'abord**
 (`npm run test:core`).
@@ -170,7 +170,7 @@ des données de V3.1-89.
 
 ---
 
-### ☐ V3.1-91 — Statistiques : le service et le volet de l'accueil · `M` — **prêt**
+### ☐ V3.1-91 — Statistiques : le service et le volet de l'accueil · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
@@ -231,7 +231,7 @@ volet de droite de l'accueil (`Accueil-3-Tableau.dc.html`, V3.1-35).
 
 ---
 
-### ☐ V3.1-92 — Administration › Titres des joueurs : l'éditeur · `M` — **prêt**
+### ☐ V3.1-92 — Administration › Titres des joueurs : l'éditeur · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 

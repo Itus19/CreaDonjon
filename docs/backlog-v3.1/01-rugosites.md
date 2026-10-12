@@ -2,7 +2,7 @@
 
 Partie de [`BACKLOG_V3.1.md`](../BACKLOG_V3.1.md), qui tient la feuille de route et l'index des tickets. Les tickets terminés (☑) sont dans [`termines.md`](termines.md).
 
-### ☐ V3.1-1 — `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré · `S` — **fait le 9 octobre ; reste une vérification en direct**
+### ☐ V3.1-1 — `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré · `S` · sans modèle IA — **fait le 9 octobre ; reste une vérification en direct**
 
 **Modèle conseillé : Sonnet** — assouplir une validation, cas bien décrits.
 
@@ -47,7 +47,7 @@ verts.
 
 ---
 
-### ☐ V3.1-2 — Aucun moyen d'éditer une fiche maison déjà créée · `M` — **fait le 9 octobre ; reste une vérification en direct**
+### ☐ V3.1-2 — Aucun moyen d'éditer une fiche maison déjà créée · `M` · sans modèle IA — **fait le 9 octobre ; reste une vérification en direct**
 
 **Modèle conseillé : Sonnet** — réutiliser le formulaire de création en édition, verrous déjà connus.
 
@@ -98,7 +98,7 @@ typecheck, lint et tests verts.
 
 ---
 
-### ☐ V3.1-4 — Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais · `S`/`M` — **fait le 9 octobre ; reste une vérification en direct**
+### ☐ V3.1-4 — Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais · `S` · sans modèle IA/`M` — **fait le 9 octobre ; reste une vérification en direct**
 
 **Modèle conseillé : Sonnet** — brancher un choix déjà lu par extractSkillChoices.
 
@@ -148,7 +148,7 @@ sous sa forme `zChoiceGrant`. Tests : `srdMapping.test.ts` (2 cas),
 
 ---
 
-### ☐ V3.1-5 — Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) · `M` — **fait le 9 octobre (ADR 0050) ; reste une vérification en direct**
+### ☐ V3.1-5 — Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) · `M` · sans modèle IA — **fait le 9 octobre (ADR 0050) ; reste une vérification en direct**
 
 **Modèle conseillé : Sonnet** — un effet de Repos long sur le vocabulaire de déclencheurs existant.
 
@@ -203,7 +203,7 @@ lint et tests verts.
 
 ---
 
-### ☐ V3.1-12 — « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin · `M` — **fait le 9 octobre (ADR 0051, 0052) ; reste une vérification en direct**
+### ☐ V3.1-12 — « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin · `M` · sans modèle IA — **fait le 9 octobre (ADR 0051, 0052) ; reste une vérification en direct**
 
 **Modèle conseillé : Opus** — « voir comme » : usurpation d'identité, portée de sécurité.
 
@@ -302,7 +302,7 @@ revenir, en MJ puis en superadmin.
 
 ---
 
-### ☐ V3.1-13 — Sous-classes manquantes pour les classes des 4 joueuses actives · `M`
+### ☐ V3.1-13 — Sous-classes manquantes pour les classes des 4 joueuses actives · `M` · sans modèle IA
 
 **Modèle conseillé : Sonnet** — saisie de règles d'après les livres de l'auteur.
 
@@ -352,7 +352,7 @@ dans un fichier suivi par Git.
 
 ---
 
-### ☐ V3.1-17 — Un catalogue d'interface visuel, et une charte qui y renvoie · `M` — **fait le 1ᵉʳ octobre ; reste une vérification en direct**
+### ☐ V3.1-17 — Un catalogue d'interface visuel, et une charte qui y renvoie · `M` · sans modèle IA — **fait le 1ᵉʳ octobre ; reste une vérification en direct**
 
 **Modèle conseillé : Sonnet** — documentation et planches.
 
@@ -416,7 +416,7 @@ joueur, desktop et tablette).
 
 ---
 
-### ☐ V3.1-18 — Retirer les émojis de l'interface · `S` — **fait le 1ᵉʳ octobre ; reste une vérification en direct**
+### ☐ V3.1-18 — Retirer les émojis de l'interface · `S` · sans modèle IA — **fait le 1ᵉʳ octobre ; reste une vérification en direct**
 
 **Modèle conseillé : Sonnet** — remplacements mécaniques.
 

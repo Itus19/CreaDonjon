@@ -34,7 +34,7 @@ exemples.
 
 ---
 
-### ☐ V3.1-93 — Règles : le sommaire passe dans la fenêtre · `M` — **prêt**
+### ☐ V3.1-93 — Règles : le sommaire passe dans la fenêtre · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
@@ -66,7 +66,7 @@ exemples.
 
 ---
 
-### ☐ V3.1-94 — Règles : la règle au centre, renvois en volet, onglets · `L` — **prêt**
+### ☐ V3.1-94 — Règles : la règle au centre, renvois en volet, onglets · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
@@ -99,7 +99,7 @@ exemples.
 
 ---
 
-### ☐ V3.1-95 — Règles : fenêtre étroite et page du joueur · `S` — **prêt**
+### ☐ V3.1-95 — Règles : fenêtre étroite et page du joueur · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
@@ -127,7 +127,7 @@ exemples.
 
 ---
 
-### ☐ V3.1-96 — Chronologie : portée, événements directs, naissances et morts (données, ADR) · `M` — **prêt (Opus) — conçu le 9 octobre, ADR 0048 (fiche système `world_timeline`)**
+### ☐ V3.1-96 — Chronologie : portée, événements directs, naissances et morts (données, ADR) · `M` · sans modèle IA — **prêt (Opus) — conçu le 9 octobre, ADR 0048 (fiche système `world_timeline`)**
 
 **Modèle conseillé : Opus** — forme d'une donnée de bloc, une fiche
 système, une agrégation filtrée côté serveur.
@@ -168,7 +168,7 @@ système, une agrégation filtrée côté serveur.
 
 ---
 
-### ☐ V3.1-97 — Chronologie : le noyau pur · `S` — **prêt**
+### ☐ V3.1-97 — Chronologie : le noyau pur · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — logique pure, **tests d'abord**.
 
@@ -209,7 +209,7 @@ système, une agrégation filtrée côté serveur.
 
 ---
 
-### ☐ V3.1-98 — Chronologie : la frise du MJ · `L` — **prêt**
+### ☐ V3.1-98 — Chronologie : la frise du MJ · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
@@ -260,7 +260,7 @@ système, une agrégation filtrée côté serveur.
 
 ---
 
-### ☐ V3.1-99 — Chronologie : la page des joueurs · `S` — **prêt**
+### ☐ V3.1-99 — Chronologie : la page des joueurs · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 

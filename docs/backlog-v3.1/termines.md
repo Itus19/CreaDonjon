@@ -2,7 +2,7 @@
 
 Partie de [`BACKLOG_V3.1.md`](../BACKLOG_V3.1.md). Faits, ou conçus et découpés en tickets d'implémentation. Rarement à relire : les décisions qu'ils portent vivent dans `docs/adr/`.
 
-### ☑ V3.1-3 — Les dons à choix (Initié à la magie, etc.) n'ont aucune UI de choix · `L` — **conçu le 9 octobre (ADR 0046) ; implémentation : V3.1-116 à 119**
+### ☑ V3.1-3 — Les dons à choix (Initié à la magie, etc.) n'ont aucune UI de choix · `L` · sans modèle IA — **conçu le 9 octobre (ADR 0046) ; implémentation : V3.1-116 à 119**
 
 **Modèle conseillé : Opus** — mécanisme générique de choix pour les dons, partagé avec V3.1-6 et V3.1-7.
 
@@ -55,7 +55,7 @@ séparé.
 
 ---
 
-### ☑ V3.1-6 — Aucun mécanisme générique pour les traits d'espèce à choix · `L` — **conçu le 9 octobre (ADR 0046) ; implémentation : V3.1-116 à 119**
+### ☑ V3.1-6 — Aucun mécanisme générique pour les traits d'espèce à choix · `L` · sans modèle IA — **conçu le 9 octobre (ADR 0046) ; implémentation : V3.1-116 à 119**
 
 **Modèle conseillé : Opus** — mécanisme générique des traits à choix, cinq formes de choix.
 
@@ -111,7 +111,7 @@ pour les langues d'historique.
 
 ---
 
-### ☑ V3.1-7 — Une sous-classe n'apporte jamais d'effet mécanique, choix ou pas · `L` — **conçu le 9 octobre (ADR 0046) ; implémentation : V3.1-116 à 119**
+### ☑ V3.1-7 — Une sous-classe n'apporte jamais d'effet mécanique, choix ou pas · `L` · sans modèle IA — **conçu le 9 octobre (ADR 0046) ; implémentation : V3.1-116 à 119**
 
 **Modèle conseillé : Opus** — sous-classes mécaniques : touche characterSheet() et les choix rechoisis.
 
@@ -178,7 +178,7 @@ réelle si elles portent un vrai modificateur ou seulement un nom.
 
 ---
 
-### ☑ V3.1-8 — Aucune demande structurée de disponibilités pour la prochaine séance · `L` — fait
+### ☑ V3.1-8 — Aucune demande structurée de disponibilités pour la prochaine séance · `L` · sans modèle IA — fait
 
 **Modèle conseillé : Opus** — nouveau flux de demande de disponibilités, schéma et RLS.
 
@@ -365,7 +365,7 @@ typecheck && npm run lint && npm run test:core` passent.
 
 ---
 
-### ☑ V3.1-9 — Bouton « Prochaine session » mal calibré selon l'écran · `S`/`M` — fait
+### ☑ V3.1-9 — Bouton « Prochaine session » mal calibré selon l'écran · `S` · sans modèle IA/`M` — fait
 
 **Modèle conseillé : Sonnet** — ajustement d'affichage.
 
@@ -428,7 +428,7 @@ l'esthétique voulue.
 
 ---
 
-### ☑ V3.1-10 — Connexion par identifiant/mot de passe plutôt que lien à retrouver · `L` — fait
+### ☑ V3.1-10 — Connexion par identifiant/mot de passe plutôt que lien à retrouver · `L` · sans modèle IA — fait
 
 **Modèle conseillé : Opus** — authentification.
 
@@ -678,7 +678,7 @@ navigateur avec des comptes/mondes de test créés puis supprimés :
 
 ---
 
-### ☑ V3.1-11 — Onglet « Solo » visible même avec un MJ humain déjà présent · `S` — fait
+### ☑ V3.1-11 — Onglet « Solo » visible même avec un MJ humain déjà présent · `S` · sans modèle IA — fait
 
 **Modèle conseillé : Sonnet** — une condition d'affichage.
 
@@ -715,7 +715,7 @@ ni quand `resolveCampaignId` renvoie `null` (monde sans campagne).
 
 ---
 
-### ☑ V3.1-14 — Aucun moyen pour une joueuse de créer elle-même son PJ sans personnage déjà assigné · `M` — **repris par V3.1-82, 83 et 100 (9 octobre)**
+### ☑ V3.1-14 — Aucun moyen pour une joueuse de créer elle-même son PJ sans personnage déjà assigné · `M` · sans modèle IA — **repris par V3.1-82, 83 et 100 (9 octobre)**
 
 **Fermé le 9 octobre, repris ailleurs** (décision de l'auteur) : « Créer mon
 personnage » depuis l'onglet Personnage → V3.1-83 (carte « Nouveau
@@ -795,7 +795,7 @@ second.
 
 ---
 
-### ☑ V3.1-15 — La Gestion de campagne illisible : invitations en haut, une carte par personne · `M` — **fait, vérifié en direct le 9 octobre**
+### ☑ V3.1-15 — La Gestion de campagne illisible : invitations en haut, une carte par personne · `M` · sans modèle IA — **fait, vérifié en direct le 9 octobre**
 
 **Modèle conseillé : Sonnet** — interface d'après l'esquisse ; reste la vérification en direct.
 
@@ -1059,7 +1059,7 @@ tels quels si ce compte redevenait joueur.
 
 ---
 
-### ☑ V3.1-16 — Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse · `M`/`L` — **fait, vérifié en direct le 9 octobre**
+### ☑ V3.1-16 — Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse · `M` · sans modèle IA/`L` — **fait, vérifié en direct le 9 octobre**
 
 **Modèle conseillé : Sonnet** — interface d'après l'esquisse ; reste la vérification en direct.
 
@@ -1363,7 +1363,7 @@ l'affichage changent.
 
 ---
 
-### ☑ V3.1-21 — Cibler et résoudre depuis les boutons de jet · `L` — **conçu le 9 octobre (ADR 0042, 0041) → V3.1-105, 106, 107**
+### ☑ V3.1-21 — Cibler et résoudre depuis les boutons de jet · `L` · sans modèle IA — **conçu le 9 octobre (ADR 0042, 0041) → V3.1-105, 106, 107**
 
 **Modèle conseillé : Opus** — résolution partagée par MJ, joueur et solo ; dés lancés par le serveur (règle 8).
 
@@ -1426,7 +1426,7 @@ son PJ, le MJ avec n'importe quel participant).
 
 ---
 
-### ☑ V3.1-23 — Ce que les joueurs modifient eux-mêmes (Règles actives) · `M` — **conçu le 9 octobre (ADR 0043) → V3.1-108, 109 (écran : 57)**
+### ☑ V3.1-23 — Ce que les joueurs modifient eux-mêmes (Règles actives) · `M` · sans modèle IA — **conçu le 9 octobre (ADR 0043) → V3.1-108, 109 (écran : 57)**
 
 **Modèle conseillé : Opus** — droits d'écriture des joueurs, appliqués côté serveur ; schéma à vérifier.
 
@@ -1476,7 +1476,7 @@ l'écriture côté serveur, pas seulement l'affichage du bouton.
 
 ---
 
-### ☑ V3.1-37 — L'initiative vue des joueurs : sécurité, invitation, temps réel · `M` — **conçu le 9 octobre (ADR 0040) → V3.1-101, 102, 103**
+### ☑ V3.1-37 — L'initiative vue des joueurs : sécurité, invitation, temps réel · `M` · sans modèle IA — **conçu le 9 octobre (ADR 0040) → V3.1-101, 102, 103**
 
 **Modèle conseillé : Opus** — RLS à resserrer, nouvelle vue filtrée pour les joueurs, signal temps réel.
 
@@ -1518,7 +1518,7 @@ affiche. À corriger avant tout écran joueur.
 
 ---
 
-### ☑ V3.1-39 — Les sauvegardes demandées à la cible · `L` — **conçu le 9 octobre (ADR 0044) → V3.1-110, 111, 112**
+### ☑ V3.1-39 — Les sauvegardes demandées à la cible · `L` · sans modèle IA — **conçu le 9 octobre (ADR 0044) → V3.1-110, 111, 112**
 
 **Modèle conseillé : Opus** — nouveau flux joueur ↔ MJ, et une donnée de règle à ajouter aux effets.
 
@@ -1559,7 +1559,7 @@ déclencheurs).
 
 ---
 
-### ☑ V3.1-40 — Ressources de classe : magie de pacte et recharge partielle · `M` — **conçu le 9 octobre (ADR 0045) → V3.1-113, 114**
+### ☑ V3.1-40 — Ressources de classe : magie de pacte et recharge partielle · `M` · sans modèle IA — **conçu le 9 octobre (ADR 0045) → V3.1-113, 114**
 
 **Modèle conseillé : Opus** — deux formes de données que le moteur ne connaît pas encore.
 
@@ -1589,7 +1589,7 @@ Ruse magique…) sont à vérifier dans le manuel de l'auteur.
 
 ---
 
-### ☑ V3.1-47 — Création : les règles de personnage viennent du ruleset · `L` — **conçu le 9 octobre (ADR 0046) → V3.1-115 à 119**
+### ☑ V3.1-47 — Création : les règles de personnage viennent du ruleset · `L` · sans modèle IA — **conçu le 9 octobre (ADR 0046) → V3.1-115 à 119**
 
 **Modèle conseillé : Opus** — structures de données de règles, ADR, et lien avec le mécanisme générique des choix.
 

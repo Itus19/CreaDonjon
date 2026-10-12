@@ -6,7 +6,7 @@ Ce qui ne se voit pas à l'écran mais rend le code fragile à modifier. Relevé
 
 ---
 
-### ☐ V3.1-120 — Défaire les cycles d'import (services serveur, fiche jouable) · `M` — **prêt**
+### ☐ V3.1-120 — Défaire les cycles d'import (services serveur, fiche jouable) · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — refactorisation sans changement de comportement ; les tests existants font foi.
 
@@ -51,7 +51,7 @@ Ce qui ne se voit pas à l'écran mais rend le code fragile à modifier. Relevé
 
 ---
 
-### ☐ V3.1-126 — Les `catch` muets restants · `M` — **prêt (Sonnet ; Haiku pour le recensement)**
+### ☐ V3.1-126 — Les `catch` muets restants · `M` · sans modèle IA — **prêt (Sonnet ; Haiku pour le recensement)**
 
 **Modèle conseillé : Sonnet.** Sous-tâches Haiku : recenser les occurrences et les classer par fichier (`grep -rn "catch {\|\.catch(() => {})" app components lib src`, tests exclus).
 
@@ -71,7 +71,7 @@ Ce qui ne se voit pas à l'écran mais rend le code fragile à modifier. Relevé
 
 ---
 
-### ☑ V3.1-127 — Mettre à jour Next et les dépendances vulnérables · `S` — **fait le 12 octobre**
+### ☑ V3.1-127 — Mettre à jour Next et les dépendances vulnérables · `S` · sans modèle IA — **fait le 12 octobre**
 
 **Modèle conseillé : Opus**, car le changement de version de Next touche tout le rendu. Sous-tâches Haiku : lancer `npm audit --omit=dev`, typecheck, lint, tests et build, et résumer les échecs.
 
@@ -107,7 +107,7 @@ Le 12 octobre, `npm audit --omit=dev` relève 32 failles (1 critique, 6 hautes, 
 
 ---
 
-### ☑ V3.1-128 — Les cartes laissent leurs images dans le stockage · `S` — **fait le 12 octobre**
+### ☑ V3.1-128 — Les cartes laissent leurs images dans le stockage · `S` · sans modèle IA — **fait le 12 octobre**
 
 **Modèle conseillé : Sonnet** au départ. *Corrigé après coup : le ticket a demandé une migration et une fonction `security definer`, domaine d'Opus (`CLAUDE.md`, répartition par modèle). Fait par Opus.* Sous-tâches Haiku : aucune.
 

@@ -21,7 +21,7 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 ---
 
-### ☑ V3.1-101 — Initiative : la base et les routes réservées au MJ · `S` — **terminé le 10 octobre**
+### ☑ V3.1-101 — Initiative : la base et les routes réservées au MJ · `S` · sans modèle IA — **terminé le 10 octobre**
 
 **Modèle conseillé : Opus** — RLS et sécurité. **ADR 0040.**
 
@@ -54,7 +54,7 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 ---
 
-### ☐ V3.1-102 — Initiative : la vue filtrée des joueurs · `M` — **prêt (Opus)**
+### ☐ V3.1-102 — Initiative : la vue filtrée des joueurs · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus.** **ADR 0040.** **Dépend de** : 101.
 
@@ -78,7 +78,7 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 ---
 
-### ☐ V3.1-103 — Initiative : les jets d'initiative des joueurs · `M` — **prêt (Opus)**
+### ☐ V3.1-103 — Initiative : les jets d'initiative des joueurs · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — changement de schéma. **ADR 0040.**
 **Dépend de** : 101.
@@ -104,7 +104,7 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 ---
 
-### ☐ V3.1-104 — Écritures du moteur au nom d'un joueur : changements signés · `M` — **prêt (Opus) — ADR 0041, option B**
+### ☐ V3.1-104 — Écritures du moteur au nom d'un joueur : changements signés · `M` · sans modèle IA — **prêt (Opus) — ADR 0041, option B**
 
 **Modèle conseillé : Opus** — sécurité, base, cryptographie. **Dépend de** : 105.
 
@@ -136,7 +136,7 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 ---
 
-### ☐ V3.1-105 — Cibler : le cœur commun de résolution · `L` — **prêt (Opus)**
+### ☐ V3.1-105 — Cibler : le cœur commun de résolution · `L` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — extraction du tour solo, moteur. **ADR 0042.**
 **Dépend de** : 101.
@@ -165,7 +165,7 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 ---
 
-### ☐ V3.1-106 — Cibler côté MJ : outil de dés, Table, Initiative · `M` — **prêt**
+### ☐ V3.1-106 — Cibler côté MJ : outil de dés, Table, Initiative · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 105, 33 (outil de dés), 34, 38.
 
@@ -185,7 +185,7 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 ---
 
-### ☐ V3.1-107 — Cibler côté joueur · `M` — **dépend de V3.1-104**
+### ☐ V3.1-107 — Cibler côté joueur · `M` · sans modèle IA — **dépend de V3.1-104**
 
 **Modèle conseillé : Sonnet.** Comme V3.1-106, pour le joueur avec son PJ,
 une fois l'écriture au nom du joueur tranchée et faite (V3.1-104). D'ici là,
@@ -194,7 +194,7 @@ pas.
 
 ---
 
-### ☑ V3.1-108 — Droits des joueurs : la base ferme, le serveur règle · `M` — **terminé le 10 octobre**
+### ☑ V3.1-108 — Droits des joueurs : la base ferme, le serveur règle · `M` · sans modèle IA — **terminé le 10 octobre**
 
 **Modèle conseillé : Opus** — RLS et schéma. **ADR 0043.**
 
@@ -241,7 +241,7 @@ commandes coupées : V3.1-57, 109.
 
 ---
 
-### ☐ V3.1-109 — Droits des joueurs : la fiche obéit aux interrupteurs · `M` — **prêt**
+### ☐ V3.1-109 — Droits des joueurs : la fiche obéit aux interrupteurs · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 108, 26, 32. L'écran
 Règles actives est V3.1-57.
@@ -261,7 +261,7 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-110 — Sauvegardes : la restriction de cible (noyau) · `S` — **prêt**
+### ☐ V3.1-110 — Sauvegardes : la restriction de cible (noyau) · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — noyau pur, tests d'abord. **ADR 0044.**
 
@@ -280,7 +280,7 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-111 — Sauvegardes : la demande et la réponse (données, serveur) · `M` — **prêt (Opus)**
+### ☐ V3.1-111 — Sauvegardes : la demande et la réponse (données, serveur) · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — table nouvelle, RLS. **ADR 0044.**
 **Dépend de** : 105, 110.
@@ -303,7 +303,7 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-112 — Sauvegardes : les écrans · `M` — **prêt**
+### ☐ V3.1-112 — Sauvegardes : les écrans · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 111, 33, 34, 38.
 
@@ -322,7 +322,7 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-113 — Ressources : pacte, recharge partielle, multiclassage (noyau) · `M` — **prêt (Opus)**
+### ☐ V3.1-113 — Ressources : pacte, recharge partielle, multiclassage (noyau) · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — moteur, tests d'abord. **ADR 0045.**
 **Dépend de** : 115 (pour la table du multiclassé dans `character_rules`).
@@ -346,7 +346,7 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-114 — Ressources : repos et égaliseur · `S` — **prêt**
+### ☐ V3.1-114 — Ressources : repos et égaliseur · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 113, 24, 26.
 
@@ -363,7 +363,7 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-115 — Règles de personnage : la fiche `character_rules` · `L` — **prêt (Opus)**
+### ☐ V3.1-115 — Règles de personnage : la fiche `character_rules` · `L` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — structure de règles, héritage, import.
 **ADR 0046.**
@@ -390,7 +390,7 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-116 — Le mécanisme générique des choix (noyau et résolution) · `L` — **prêt (Opus)**
+### ☐ V3.1-116 — Le mécanisme générique des choix (noyau et résolution) · `L` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — cœur du moteur. **ADR 0046.**
 **Dépend de** : 115.
@@ -417,7 +417,7 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-117 — La sous-classe résolue et ses choix · `M` — **prêt (Opus)**
+### ☐ V3.1-117 — La sous-classe résolue et ses choix · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus.** **ADR 0046.** **Dépend de** : 116.
 
@@ -437,7 +437,7 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-118 — Les choix dans l'assistant de création et de montée de niveau · `L` — **prêt**
+### ☐ V3.1-118 — Les choix dans l'assistant de création et de montée de niveau · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 116, 117, 49, 50, 51.
 
@@ -456,7 +456,7 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-119 — Les choix rouverts au repos · `M` — **prêt**
+### ☐ V3.1-119 — Les choix rouverts au repos · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 116, 117, 24 (repos), V3.1-5.
 

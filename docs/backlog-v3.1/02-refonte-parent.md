@@ -2,7 +2,7 @@
 
 Partie de [`BACKLOG_V3.1.md`](../BACKLOG_V3.1.md), qui tient la feuille de route et l'index des tickets. Les tickets terminés (☑) sont dans [`termines.md`](termines.md).
 
-### ☐ V3.1-19 — Refonte « verre minéral » (ticket parent) · `XL` — **lots a à h découpés (V3.1-24 à 36) ; lot i découpé (V3.1-41 à 62)**
+### ☐ V3.1-19 — Refonte « verre minéral » (ticket parent) · `XL` · **avec modèle IA** — **lots a à h découpés (V3.1-24 à 36) ; lot i découpé (V3.1-41 à 62)**
 
 **Modèle conseillé : Opus** — ticket parent : la conception et le découpage ; chaque lot décidé se code ensuite avec Sonnet, sauf mention contraire.
 
@@ -1688,7 +1688,7 @@ une planche « Rail repliable » à créer).
 
 ---
 
-### ☐ V3.1-20 — Fenêtres du MJ en deux volets à onglets · `L` — **décidé le 1ᵉʳ octobre, à coder**
+### ☐ V3.1-20 — Fenêtres du MJ en deux volets à onglets · `L` · sans modèle IA — **décidé le 1ᵉʳ octobre, à coder**
 
 **Modèle conseillé : Sonnet** — interface décidée et esquissée, sans nouvelle donnée.
 
@@ -1743,7 +1743,7 @@ V3.1-29. **Dépend de** : V3.1-25 (pilule).
 
 ---
 
-### ☐ V3.1-22 — Salon de groupe et jets dans le chat · `M` — **décidé le 5 octobre, à coder**
+### ☐ V3.1-22 — Salon de groupe et jets dans le chat · `M` · sans modèle IA — **décidé le 5 octobre, à coder**
 
 **Modèle conseillé : Opus** — nouveau salon : schéma, RLS, temps réel.
 

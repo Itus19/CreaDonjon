@@ -55,7 +55,7 @@ puis 85 → 86, 87 → 88.
 
 ---
 
-### ☐ V3.1-80 — Compte (A) : une page en sections · `M` — **prêt**
+### ☐ V3.1-80 — Compte (A) : une page en sections · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
@@ -120,7 +120,7 @@ puis 85 → 86, 87 → 88.
 
 ---
 
-### ☐ V3.1-81 — L'Apparence du Compte est la Personnalisation C · `S` — **prêt**
+### ☐ V3.1-81 — L'Apparence du Compte est la Personnalisation C · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
@@ -154,7 +154,7 @@ puis 85 → 86, 87 → 88.
 
 ---
 
-### ☐ V3.1-82 — Choix du personnage (C2) : le carrousel · `M` — **prêt**
+### ☐ V3.1-82 — Choix du personnage (C2) : le carrousel · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
@@ -210,7 +210,7 @@ puis 85 → 86, 87 → 88.
 
 ---
 
-### ☐ V3.1-83 — Choix : PJ sans fiche et « Créer mon personnage » · `S` — **prêt**
+### ☐ V3.1-83 — Choix : PJ sans fiche et « Créer mon personnage » · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
@@ -241,7 +241,7 @@ puis 85 → 86, 87 → 88.
 
 ---
 
-### ☐ V3.1-84 — Identité de l'application : où elle vit (ADR) · `M` — **prêt (Opus)**
+### ☐ V3.1-84 — Identité de l'application : où elle vit (ADR) · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — changement de schéma, RLS lue avant
 connexion, téléversement.
@@ -279,7 +279,7 @@ script).
 
 ---
 
-### ☐ V3.1-85 — Écran-titre (C) : connexion, création, mot de passe oublié · `M` — **prêt**
+### ☐ V3.1-85 — Écran-titre (C) : connexion, création, mot de passe oublié · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
@@ -329,7 +329,7 @@ script).
 
 ---
 
-### ☐ V3.1-86 — La marque partout : rail, onglet, Rejoindre, Réinitialiser · `S` — **prêt**
+### ☐ V3.1-86 — La marque partout : rail, onglet, Rejoindre, Réinitialiser · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
@@ -363,7 +363,7 @@ rail). **Départ** : `app/layout.tsx` (`metadata.title`),
 
 ---
 
-### ☐ V3.1-87 — Administration (B) : le tableau de bord · `M` — **prêt**
+### ☐ V3.1-87 — Administration (B) : le tableau de bord · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
@@ -417,7 +417,7 @@ de** : V3.1-35 (« Administration » dans le rail, superadmin seulement).
 
 ---
 
-### ☐ V3.1-88 — Administration › Identité de l'application · `S` — **prêt**
+### ☐ V3.1-88 — Administration › Identité de l'application · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
@@ -445,7 +445,7 @@ de** : V3.1-35 (« Administration » dans le rail, superadmin seulement).
 
 ---
 
-### ☐ V3.1-100 — Rejoindre sans choisir de PJ ; le lien qui vise un PJ précis · `M` — **prêt (Opus) — conçu le 9 octobre, ADR 0049**
+### ☐ V3.1-100 — Rejoindre sans choisir de PJ ; le lien qui vise un PJ précis · `M` · sans modèle IA — **prêt (Opus) — conçu le 9 octobre, ADR 0049**
 
 **Modèle conseillé : Opus** — parcours d'adhésion, une colonne nouvelle,
 une réservation à faire respecter côté serveur.
