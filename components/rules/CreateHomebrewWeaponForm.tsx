@@ -280,8 +280,10 @@ export default function CreateHomebrewWeaponForm({
       onDone();
       return;
     }
+    // La page de la nouvelle regle est dynamique : la navigation la demande
+    // fraiche au serveur, et la liste laterale s'est rechargee sur
+    // `clearWorldRuleEntriesCache`. Plus de `router.refresh()` en plus (C5).
     router.push(`/m/${worldSlug}/regles/${created.entryKey}`);
-    router.refresh();
   }
 
   if (loading) return <p className="text-sm text-ink-muted">{t("chargementRulesets")}</p>;

@@ -963,7 +963,7 @@ filtrer par objet modifié ou par élément (wiki, fiche de personnage…).
 
 ---
 
-### ☐ V3.1-62 — Rapidité : mesurer, puis recâbler · `M` — **étapes 1 et 2 faites le 11 octobre (mesures, ADR 0055, `docs/CABLAGE.md`) ; reste l'étape 3**
+### ☑ V3.1-62 — Rapidité : mesurer, puis recâbler · `M` — **fait le 12 octobre (mesures, ADR 0055 et 0056, `docs/CABLAGE.md`)**
 
 **Modèle conseillé : Opus** pour la mesure et le plan (étapes 1 et 2), **Sonnet** pour appliquer les corrections listées (étape 3).
 
@@ -1016,7 +1016,24 @@ aussi. Relevé dans le code le 8 octobre, sans mesure :
 
 **Étape 3 (Sonnet)** : suivre `docs/CABLAGE.md` §7, dans l'ordre. *Correction 1, partie C2, faite le 11 octobre par Opus : le contexte était déjà chargé dans la session (skill `deleguer`, règle 1). Mesures dans `docs/CABLAGE.md` §3.* Une correction par commit, une mesure après chacune, le plafond du cliquet abaissé à chaque fois.
 
+**Étape 3 faite les 11 et 12 octobre** (par Opus, le contexte étant chargé) : les six corrections de `docs/CABLAGE.md` §7, une par commit, chacune mesurée. Chemin détaillé dans `docs/CABLAGE.md` §3, rechargements restants justifiés au §6.
+
+**Avant / après** (Banc d'essai, développement, médiane de 3 essais ; avant le 11 octobre, après le 12 octobre) :
+
+| Écran | Requêtes à la base | Vagues | Chargements après affichage | Écran stable |
+|---|---|---|---|---|
+| MJ, accueil du monde | 68 → 25 | 28 → 8 | 3 → 0 | 6,7 s → 4,0 s |
+| MJ, fiche du wiki | 42 → 29 | 14 → 11 | 3 → 0 | 3,3 s → 3,5 s |
+| MJ, fiche de personnage | 581 → 143 | 123 → 30 | 44 → 5 | 23,6 s → 7,5 s |
+| MJ, page Initiative | 54 → 23 | 14 → 7 | 3 → 0 | 5,1 s → 2,8 s |
+| MJ, fenêtre Initiative (route) | 34 → 15 | 10 → 8 | — | 3,4 s → 1,4 s |
+| Joueuse, accueil | 33 → 13 | 11 → 7 | 5 → 0 | 3,1 s → 3,1 s |
+| Joueuse, sa fiche | 279 → 115 | 77 → 28 | 21 → 7 | 16,5 s → 6,7 s |
+| Joueuse, fiche du wiki de son PJ | 334 → 132 | 65 → 30 | 31 → 5 | 12,8 s → 7,0 s |
+
+Sortie de la base par ouverture de la fenêtre Initiative : 4,9 Mo → 65 ko. `router.refresh()` : 20 appels → 14.
+
 **Critères d'acceptation**
-- [ ] Les mesures avant / après sont écrites dans ce ticket. *Avant : faites le 11 octobre, dans `docs/CABLAGE.md` §3 (pour ne pas les recopier deux fois).*
-- [ ] Aucune régression : `npm run test` vert, aucun test affaibli.
-- [ ] Aucun changement de sécurité (RLS, vérification de session) sans décision écrite de l'auteur.
+- [x] Les mesures avant / après sont écrites dans ce ticket (tableau ci-dessus ; détail correction par correction dans `docs/CABLAGE.md` §3).
+- [x] Aucune régression : `npm run test` vert, aucun test affaibli.
+- [x] Aucun changement de sécurité (RLS, vérification de session) sans décision écrite de l'auteur.

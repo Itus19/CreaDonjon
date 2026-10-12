@@ -17,7 +17,7 @@ import { describe, expect, it } from "vitest";
  */
 const PLAFONDS = {
   fichiersChargeantApresAffichage: 59,
-  rafraichissementsComplets: 37,
+  rafraichissementsComplets: 14,
   rechargementsNavigateur: 2,
 };
 
@@ -31,9 +31,17 @@ function fichiers(dossier: string): string[] {
   });
 }
 
+/** Le code sans ses lignes de commentaire : une mention de `router.refresh()` dans une explication n'est pas un appel. */
+function sansCommentaires(source: string): string {
+  return source
+    .split("\n")
+    .filter((ligne) => !/^\s*(\/\/|\/\*|\*)/.test(ligne))
+    .join("\n");
+}
+
 function compter() {
   const sources = RACINES.flatMap(fichiers).map((f) => readFileSync(f, "utf8"));
-  const occurrences = (motif: RegExp) => sources.reduce((n, s) => n + (s.match(motif)?.length ?? 0), 0);
+  const occurrences = (motif: RegExp) => sources.reduce((n, s) => n + (sansCommentaires(s).match(motif)?.length ?? 0), 0);
   return {
     fichiersChargeantApresAffichage: sources.filter((s) => s.includes("useEffect") && s.includes("fetch(")).length,
     rafraichissementsComplets: occurrences(/router\.refresh\(\)/g),

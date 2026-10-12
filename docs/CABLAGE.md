@@ -135,7 +135,23 @@ Ce qui finit en dernier maintenant : la liste de toutes les règles (`/rule-entr
 - **La liste de toutes les règles** (`/rule-entries`) part dès l'arrivée du formulaire de la fiche (`prechargerReglesDuMonde`), au lieu d'attendre l'en-tête de la fiche jouable, chargé à part. En développement, aucun gain visible : la demande y attend une connexion libre, occupée par le chargement du code. Elle ne coûte aucune requête de plus, et cette liste n'est chargée qu'une fois par onglet en usage réel.
 - **Les puces de la seconde vague ne partent pas avec la page.** Leurs clés ne se connaissent qu'avec le ruleset résolu : le serveur ne pourrait les préparer qu'après lui, presque au moment où la fiche les demande. Le gain serait d'environ 0,5 s, hors du chemin critique (la seconde vague finit vers 4,4 s, la liste des règles vers 5,0 s). Écarté pour sa complexité.
 
-Les routes les plus lentes, en temps serveur moyen :
+**Bilan, le 12 octobre (mesure « après » de V3.1-62)** : même protocole, un seul passage du pilote (`docs/QUOTAS.md`, T3), médiane de 3 essais. Avant = première mesure du 11 octobre (tableau du haut).
+
+| Écran | Requêtes à la base | Vagues | Chargements après affichage | Écran stable |
+|---|---|---|---|---|
+| MJ, accueil du monde | 68 → **25** | 28 → **8** | 3 → **0** | 6,7 s → **4,0 s** |
+| MJ, fiche du wiki (faction) | 42 → **29** | 14 → **11** | 3 → **0** | 3,3 s → 3,5 s |
+| **MJ, fiche de personnage** | 581 → **143** | 123 → **30** | 44 → **5** | 23,6 s → **7,5 s** |
+| MJ, page Initiative | 54 → **23** | 14 → **7** | 3 → **0** | 5,1 s → **2,8 s** |
+| MJ, fenêtre Initiative (route) | 34 → **15** | 10 → **8** | — | 3,4 s → **1,4 s** |
+| MJ, fenêtre fiche PJ (route) | 18 → 18 | 5 → 5 | — | 0,9 s → 0,9 s |
+| Joueuse, accueil | 33 → **13** | 11 → **7** | 5 → **0** | 3,1 s → 3,1 s |
+| **Joueuse, sa fiche** | 279 → **115** | 77 → **28** | 21 → **7** | 16,5 s → **6,7 s** |
+| **Joueuse, fiche du wiki de son PJ** | 334 → **132** | 65 → **30** | 31 → **5** | 12,8 s → **7,0 s** |
+
+« Écran stable » attend une seconde de calme réseau : il compte large. La chronologie de la fiche du MJ finit vers 4,4 s (puces) et 5 s (liste des règles, une fois par onglet). Les chargements après affichage qui restent sur une fiche : deux lots de puces, un lot de blocs de règles, la liste des règles ; ils attendent le ruleset résolu pour connaître leurs clés (décision du 12 octobre ci-dessus).
+
+Les routes les plus lentes, en temps serveur moyen (mesure avant) :
 
 | Route | Temps moyen | Appels par fiche de personnage |
 |---|---|---|
@@ -191,11 +207,23 @@ Chaque appel refait la session, le monde et la chaîne de rulesets : d'où `rule
 
 `lib/cablage.test.ts` compte, dans `components/`, `app/` et `src/` :
 
-| Motif | Plafond au 11 octobre |
-|---|---|
-| Fichiers qui chargent après affichage (`useEffect` et `fetch(` dans le même fichier) | 59 |
-| `router.refresh()` | 37 |
-| `window.location.reload()` | 2 |
+| Motif | Plafond au 11 octobre | Au 12 octobre |
+|---|---|---|
+| Fichiers qui chargent après affichage (`useEffect` et `fetch(` dans le même fichier) | 59 | 59 |
+| `router.refresh()` | 37 | **14** |
+| `window.location.reload()` | 2 | 2 |
+
+Depuis le 12 octobre, le cliquet ne compte plus les lignes de commentaire : 17 des 37 `router.refresh()` n'étaient que des mentions dans des explications.
+
+**Les 14 `router.refresh()` qui restent, et pourquoi** (C5 : tout l'écran dépend du changement) :
+- **Fiche d'entité** (`EditEntityForm`, 3) : après l'assistant de création (tous les blocs changent), après un changement de l'en-tête (nom et type dans l'arborescence et le titre de fenêtre ; bloc `map` créé par le serveur pour une carte), après le choix PJ/PNJ. *Le 12 octobre : quitter un champ sans l'avoir modifié n'écrit plus rien et ne recharge plus rien ; passer en PJ ou PNJ recharge une fois au lieu de deux.* Depuis ADR 0056, chacun relance aussi le calcul de la fiche : à cibler en premier si l'édition de l'en-tête paraît lente.
+- **Ruleset du monde** (`RulesetSelector`, 4) : changer de ruleset ou importer des règles change tout ce qui s'affiche.
+- **Règle maison modifiée** (`RuleEntryView`, 1) : la page de la règle est rendue par le serveur.
+- **Restauration d'une version** (`EntityHistoryPanel`, 1) : toute la fiche change.
+- **Mots de passe** (`InvitePasswordGate`, `SharePasswordGate`, 2) : le cookie posé ouvre la page, que le serveur doit rendre à nouveau.
+- **Liens de partage** (`PublicationPanel`, 1), **scène et croquis du mode solo** (`SoloScreen`, `ColonneMonde`, 2) : rendus par le serveur.
+
+*Retirés le 12 octobre* : les cinq formulaires de règle maison et la suppression d'une règle enchaînaient `router.push` et `router.refresh()`. La page d'arrivée est dynamique : la navigation la demande déjà fraîche au serveur. La suppression vide aussi la liste latérale des règles, gardée dans un cache du navigateur que `router.refresh()` ne touchait pas : la règle supprimée y restait affichée.
 
 Le test échoue si un compte augmente. Une correction qui le fait baisser **abaisse le plafond dans le même commit**. Un nouveau cas vraiment nécessaire se justifie dans son commit et ici.
 
@@ -212,4 +240,4 @@ Dans l'ordre des gains mesurés, une correction par commit, sans changer aucun c
 3. **Le fond commun** : dés, radio, messages non lus et calendrier arrivent avec le layout (C1). *Dés et radio chargés à la première ouverture de leur volet le 11 octobre. Restent les messages non lus et, côté joueuse, le calendrier (`next-session`, `open-request`).*
 4. **L'accueil du MJ** : les layouts en parallèle (C3). *Fait le 11 octobre autrement : le vrai coût était l'assemblage complet du ruleset par PJ, remplacé par la lecture des noms seuls (68 → 30 requêtes).*
 5. **La fenêtre Initiative** : `ruleset_entries` en un lot (C4). *Fait le 11 octobre : listes réduites aux champs utiles, PJ en un lot (34 → 15 requêtes, 3,6 s → 1,6 s).*
-6. **Les `router.refresh()`** remplacés un par un par des mises à jour ciblées (C5).
+6. **Les `router.refresh()`** remplacés un par un par des mises à jour ciblées (C5). *Fait le 12 octobre : 20 appels réels → 14, les restants justifiés au §6.*

@@ -38,6 +38,11 @@ const CUSTOM_KIND_OPTION = "__custom__";
 const PJ_VALUE = "character:pj";
 const PNJ_VALUE = "character:pnj";
 
+/** L'en-tete tel qu'enregistre, en une chaine comparable (les alias gardent leur ordre). */
+function enTeteComparable(name: string, entityKind: string, aliases: readonly string[], isPublic: boolean): string {
+  return JSON.stringify([name, entityKind, aliases, isPublic]);
+}
+
 /**
  * Toujours editable en place, comme l'ancienne application (master,
  * EntityDetail.tsx) : chaque champ sauvegarde tout seul (blur/changement),
@@ -89,6 +94,9 @@ export default function EditEntityForm({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const versionRef = useRef(entity.version);
   const saveChainRef = useRef<Promise<void>>(Promise.resolve());
+  // Dernieres valeurs ecrites (V3.1-62, docs/CABLAGE.md C5) : quitter le
+  // champ du nom sans l'avoir change n'ecrit rien et ne recharge pas la page.
+  const enregistreRef = useRef(enTeteComparable(entity.name, entity.entity_kind, entity.aliases, entity.is_public));
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "conflict" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Assistant de creation lance depuis cette fiche (retour utilisateur) :
@@ -138,6 +146,7 @@ export default function EditEntityForm({
           onDone: (result) => {
             setName(result.name);
             versionRef.current = result.version;
+            enregistreRef.current = enTeteComparable(result.name, entityKind, aliases, isPublic);
             setWizardVersion(result.version);
             setWizardOpen(false);
             router.refresh();
@@ -161,27 +170,30 @@ export default function EditEntityForm({
    * perimee et echoue en 409, perdant silencieusement son changement. La
    * chaine garantit l'ordre et une version toujours a jour.
    */
-  function save(overrides?: SaveOverrides) {
-    const run = () => doSave(overrides);
+  function save(overrides?: SaveOverrides, options?: { rafraichir: boolean }) {
+    const run = () => doSave(overrides, options?.rafraichir ?? true);
     const next = saveChainRef.current.then(run, run);
     saveChainRef.current = next;
     return next;
   }
 
-  async function doSave(overrides?: SaveOverrides) {
+  async function doSave(overrides: SaveOverrides | undefined, rafraichir: boolean) {
+    const valeurs = {
+      name: overrides?.name ?? name,
+      entityKind: overrides?.entityKind ?? entityKind,
+      aliases: overrides?.aliases ?? aliases,
+      isPublic: overrides?.isPublic ?? isPublic,
+    };
+    const comparable = enTeteComparable(valeurs.name, valeurs.entityKind, valeurs.aliases, valeurs.isPublic);
+    if (comparable === enregistreRef.current) return;
+
     setStatus("saving");
     setErrorMessage(null);
 
     const res = await fetch(`/api/entities/${entity.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        version: versionRef.current,
-        name: overrides?.name ?? name,
-        entityKind: overrides?.entityKind ?? entityKind,
-        aliases: overrides?.aliases ?? aliases,
-        isPublic: overrides?.isPublic ?? isPublic,
-      }),
+      body: JSON.stringify({ version: versionRef.current, ...valeurs }),
     });
 
     if (res.status === 409) {
@@ -197,8 +209,9 @@ export default function EditEntityForm({
 
     const updated = await res.json();
     versionRef.current = updated.version;
+    enregistreRef.current = comparable;
     setStatus("saved");
-    router.refresh();
+    if (rafraichir) router.refresh();
   }
 
   function addAlias() {
@@ -216,15 +229,27 @@ export default function EditEntityForm({
     save({ aliases: next });
   }
 
-  /** N'ecrit rien si le monde n'a pas de campagne (ne devrait plus arriver) : is_pc n'a pas de sens hors campagne. */
-  async function assignCampaignRole(nextIsPc: boolean) {
-    if (!campaignId) return;
-    await fetch(`/api/campaigns/${campaignId}/characters`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entityId: entity.id, userId: campaignCharacterUserId, isPc: nextIsPc }),
-    });
-    router.refresh();
+  /**
+   * N'ecrit rien si le monde n'a pas de campagne (ne devrait plus arriver) :
+   * is_pc n'a pas de sens hors campagne. Passe par la meme chaine que
+   * `save`, apres l'eventuel changement de type : un seul rechargement de
+   * la page pour les deux ecritures (V3.1-62, C5 ; il y en avait deux).
+   */
+  function assignCampaignRole(nextIsPc: boolean) {
+    const run = async () => {
+      if (campaignId) {
+        const res = await fetch(`/api/campaigns/${campaignId}/characters`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ entityId: entity.id, userId: campaignCharacterUserId, isPc: nextIsPc }),
+        });
+        if (!res.ok) console.error(`Role PJ/PNJ non enregistre (HTTP ${res.status})`);
+      }
+      router.refresh();
+    };
+    const next = saveChainRef.current.then(run, run);
+    saveChainRef.current = next;
+    return next;
   }
 
   function handleKindChange(kind: string) {
@@ -237,7 +262,7 @@ export default function EditEntityForm({
       setIsPc(nextIsPc);
       if (entityKind !== "character") {
         setEntityKind("character");
-        save({ entityKind: "character" });
+        save({ entityKind: "character" }, { rafraichir: false });
       }
       void assignCampaignRole(nextIsPc);
       return;

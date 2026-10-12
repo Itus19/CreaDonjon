@@ -10,6 +10,7 @@ import { MonsterCard } from "@/components/rules/blockContentRenderer";
 import MissingBlocksBanner from "@/components/rules/MissingBlocksBanner";
 import RuleRefsPanel from "@/components/rules/RuleRefsPanel";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
 import HomebrewEditForm, { isEditableHomebrewType } from "@/components/rules/HomebrewEditForm";
 
 /** Coquille joueur (retour utilisateur : "les blocs de données brutes SRD ne sont pas visibles par défaut" — puis, sur un `<details>` replie : "le titre... est toujours visible") — retires ENTIEREMENT pour un joueur (jamais juste replies, un `<summary>` reste visible par nature), toujours visibles pour le MJ. Tables techniques telles quelles, jamais mises en recit — le contenu narratif (description, traits, actions...) n'est jamais concerne. */
@@ -56,8 +57,11 @@ export default function RuleEntryView({
       setDeleteError(body?.error ?? "Impossible de supprimer cette fiche.");
       return;
     }
+    // La liste laterale vit dans un cache du navigateur, que `router.refresh()`
+    // ne touchait pas : elle montrait encore la regle supprimee. La page
+    // `/regles`, dynamique, est demandee fraiche par la navigation (C5).
+    clearWorldRuleEntriesCache(worldSlug);
     router.push(`/m/${worldSlug}/regles`);
-    router.refresh();
   }
 
   const statBlockEntry = entry.blocks.find((b) => b.blockType === "stat_block");
