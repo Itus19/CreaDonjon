@@ -911,6 +911,60 @@ L'audit le dit lui-même : **pas en une fois.** Page par page, en commençant pa
 
 ---
 
+### ☑ V3-R6 — Les deux chiffres que seul l'auteur peut lire · `S` · sans modèle IA — *audit `P‑05`, `P‑07`* — **`P‑05` refermé le 12 septembre ; `P‑07` diagnostiqué, corrigé et remesuré le 12 octobre**
+
+**Modèle conseillé : Sonnet** — reste une mesure chez l'auteur (P‑07), presque pas de code.
+
+Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de bord.
+
+**La région** (`P‑05`). `vercel.json` fixe `"regions": ["dub1"]` (Dublin) ; la région du projet Supabase n'apparaît nulle part dans le dépôt. Si les deux diffèrent, **chacune des 9 vagues de rendu paie un aller-retour transatlantique** — et aucune optimisation de code ne rattrapera ça. L'audit est net : « changer une ligne de `vercel.json` produirait plus de gain que tous les autres points de cette section réunis ». C'est doublement vrai sur téléphone, où la latence est déjà dégradée avant même d'atteindre Vercel.
+
+- [x] **Région lue : la base est en West EU (Ireland), `eu-west-1`.** Or la région Vercel `dub1` **est** `eu-west-1` : les fonctions et la base sont déjà dans le même centre de données. **`P‑05` se referme — il n'y avait rien à corriger.** Le réglage était bon depuis le début.
+- [x] La raison est écrite dans `vercel.json` lui-même, pas seulement ici : c'est le fichier qu'on ouvre quand on se pose la question.
+
+> **Un piège, rencontré pour de vrai, et qui vaut d'être écrit.** Le réglage « Function Region » du tableau de bord Vercel est **écrasé par `vercel.json`** dès que ce fichier déclare `regions` — le tableau de bord l'affiche d'ailleurs comme *« Overridden »*. Le changer dans l'interface ne produit donc aucun effet tant que le fichier dit autre chose. Le fichier fait foi.
+>
+> **Et une erreur commise en traitant ce ticket, gardée ici plutôt qu'effacée.** `cdg1` a été pris pour la région Supabase alors que c'est un code de région **Vercel** ; `vercel.json` est passé à `cdg1` (Paris) avant que le tableau de bord Supabase ne montre `eu-west-1` (Dublin). Cela **éloignait** les fonctions de la base au lieu de les rapprocher — l'inverse exact du but de `P‑05`. Corrigé en revenant à `dub1`. La leçon est celle que l'audit répète partout : **lire le chiffre à la source avant d'agir dessus**, y compris quand quelqu'un vous le donne de mémoire.
+
+**Le coût des fonctions RLS** (`P‑07`). Dix minutes dans Reports → Query Performance (`pg_stat_statements`).
+
+- [x] **Relevé fait, deux fois.** Le premier (cumulé depuis des mois) était inexploitable : 11 767 `INSERT INTO users` et 11 634 `DELETE FROM users` — du développement, pas de l'usage. Le second, après `pg_stat_statements_reset()` et quelques minutes d'usage normal sur une instance au repos, est net.
+- [x] **`P‑07` est confirmé, et il est plus étroit que l'audit ne le craignait.** Ce n'est pas « la RLS coûte par ligne » en général :
+
+  | Table | Moyenne | Lignes rendues |
+  |---|---|---|
+  | `ruleset_entries` | **421 ms** | 1 |
+  | `ruleset_entry_translations` | **262 ms** | 1 |
+  | `campaign_members` | 10,2 ms | 1 |
+  | `worlds` | 9,3 ms | 1 |
+  | `entity_revisions` | 6,7 ms | 1 |
+
+  Les autres politiques RLS répondent en 10 ms. **Le coût est isolé aux tables de règles**, dont les deux politiques passent par `app.can_read_ruleset`.
+
+- [x] **Cause trouvée, et ce n'est pas la logique de visibilité :** `can_read_ruleset` cherche le ruleset dans `campaigns` et `worlds` par une colonne de clé étrangère, et **ni `campaigns.ruleset_id` ni `worlds.default_ruleset_id` n'a jamais porté d'index** — Postgres n'en crée jamais côté enfant. Chaque évaluation faisait deux balayages complets. Et comme un prédicat RLS est évalué **avant** les filtres de l'utilisateur, le coût se paie par ligne *parcourue* : une lecture qui ne rend qu'un sort traverse quand même le SRD en appelant la fonction à chaque entrée.
+- [x] Migration écrite : `supabase/migrations/20260912203000_ruleset_lookup_indexes.sql`. **Elle n'ajoute que deux index** — aucune politique, aucune fonction, aucune donnée touchée. La barrière de sécurité reste identique, elle devient praticable. C'est la moins risquée des deux pistes que l'audit envisageait ; l'autre (restructurer la logique de visibilité) reste écartée.
+- [x] **Appliquée** (index présents le 12 octobre), puis remesurée. **Les index n'ont rien changé, et le diagnostic était faux** — voir « Mesure du 12 octobre » ci-dessous. Texte d'origine : **à appliquer par l'auteur** (`supabase db push`), puis remesurer avec le même protocole. Attendu : `ruleset_entries` rejoint l'ordre de grandeur des autres tables. Si ce n'est pas le cas, ne pas insister sur les index — refaire un `EXPLAIN ANALYZE` et rouvrir.
+- [ ] `P‑08` (listes sans borne) ne se rouvre **que** si une mesure le désigne. Rien ici ne le fait.
+
+**Mesure du 12 octobre : le vrai coupable.** Même protocole que R7, même fenêtre. Une requête pèse 92 % du temps base des règles : **320 appels à 457 ms**, le même ordre que les 421 ms de septembre. Son filtre complet : `WHERE ruleset_id = $1 ORDER BY id LIMIT … OFFSET …`. Ce n'est pas une lecture d'une ligne : `pg_stat_statements` compte une page JSON de PostgREST comme « une ligne », et c'était déjà vrai du chiffre de septembre. C'est **la liste complète d'un ruleset**, page par page (`listRulesetEntries`, appelée par `listRuleEntriesForWorld` : page Règles et route `/rule-entries`).
+- Le code demandait la première page (1 000 entrées), puis **9 pages de plus d'office**, en parallèle (V2-G1). Pour le SRD 2024 (~1 900 entrées), 8 revenaient vides, et chacune coûtait quand même ~460 ms : avec `OFFSET`, Postgres parcourt les lignes sautées et évalue la RLS (`can_read_ruleset`) sur chacune. **10 requêtes par liste, dont 8 pour rien.**
+- Les index de la migration du 12 septembre n'y pouvaient rien : le coût n'est pas dans la recherche du ruleset, il est dans l'évaluation de la RLS ligne par ligne.
+
+- [x] **Corrigé le 12 octobre** : les pages se lisent une à une, jusqu'à la première incomplète (`rules.listPagination.test.ts`, 5 tests). Pour le SRD 2024 : 2 requêtes au lieu de 10, le même nombre d'allers-retours qu'avant.
+- [x] **Remesuré le 12 octobre**, même protocole (remise à zéro par l'auteur, les mêmes 36 pages, build local avec la correction) :
+
+  | Requête | Avant | Après |
+  |---|---|---|
+  | Liste paginée des règles | 320 appels × 457 ms = **146 s** | 64 appels × 183 ms = **11,7 s** |
+  | Traductions des noms (par paquets de 200) | 378 × 30,6 ms = 11,6 s | 377 × 69,7 ms = 26,3 s |
+  | Tout le reste | ~1 s | ~1 s |
+  | **Total base, règles** | **≈ 159 s** | **≈ 39 s** |
+
+  2 appels par chargement de liste au lieu de 10, comme prévu ; temps base de la liste divisé par 12, total des règles par 4. La traduction passe en tête : ticket V3-R8.
+- [x] *Écarté pour l'instant* : rendre `can_read_ruleset` moins coûteux par ligne. La liste ne pèse plus que 11,7 s sur le parcours ; un changement de RLS ne se justifie pas. À rouvrir seulement si une mesure le désigne.
+
+---
+
 ### ☑ V3-R7 — Deux boucles qui rechargent les règles une par une · `M` · sans modèle IA — **fait le 13 septembre, mesuré le 12 octobre**
 
 **Modèle conseillé : Sonnet** — regrouper des lectures en une requête.
