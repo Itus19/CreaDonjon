@@ -77,27 +77,6 @@ export async function insertCampaign(
 }
 
 /**
- * Bascule le mode d'une campagne (V2-G1 prepa, mode modifiable apres
- * creation par decision explicite de l'utilisateur) — `gm_user_id` suit la
- * meme regle qu'a la creation (`createCampaign`) : MJ humain en `campaign`,
- * `null` (l'IA) en `solo`.
- */
-export async function updateCampaignMode(
-  supabase: TypedClient,
-  params: { campaignId: string; mode: string; gmUserId: string | null }
-): Promise<CampaignRow | null> {
-  const { data, error } = await supabase
-    .from("campaigns")
-    .update({ mode: params.mode, gm_user_id: params.gmUserId })
-    .eq("id", params.campaignId)
-    .is("deleted_at", null)
-    .select(CAMPAIGN_COLUMNS)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-/**
  * Change le ruleset epingle par une campagne (V2-G1 suite, "un monde = une
  * campagne") : le verrou d'origine ("une campagne epingle un ruleset precis,
  * jamais retroactif" — SCHEMA.md §9.5) protegeait les AUTRES campagnes d'un

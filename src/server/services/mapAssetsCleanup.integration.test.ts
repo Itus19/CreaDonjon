@@ -26,7 +26,10 @@ describe.skipIf(!hasCreds)("images des cartes effacees quand plus rien ne les de
   let player: { id: string; client: SupabaseClient };
   let outsider: { id: string; client: SupabaseClient };
   let worldId: string;
+  /** Un second monde, comme une copie faite avant l'ADR 0058 : sa carte designe une image du premier. */
+  let copieAncienneId: string;
   let mapBlockId: string;
+  let fichesDuMonde: string[] = [];
   const assets: Record<string, string> = {};
 
   async function creerImage(nom: string): Promise<string> {
@@ -107,6 +110,7 @@ describe.skipIf(!hasCreds)("images des cartes effacees quand plus rien ne les de
     if (fichesError || !fiches) throw new Error(fichesError?.message ?? "creation fiches echouee");
     const ficheCarte = fiches.find((f) => f.slug === "carte")!.id;
     const ficheCopie = fiches.find((f) => f.slug === "copie")!.id;
+    fichesDuMonde = [ficheCarte, ficheCopie];
 
     await creerImage("partagee");
     await creerImage("partageeVignette");
@@ -141,16 +145,41 @@ describe.skipIf(!hasCreds)("images des cartes effacees quand plus rien ne les de
       .select("id, entity_id");
     if (blocsError || !blocs) throw new Error(blocsError?.message ?? "creation blocs echouee");
     mapBlockId = blocs.find((b) => b.entity_id === ficheCarte)!.id;
+
+    const { data: copie, error: copieError } = await admin
+      .from("worlds")
+      .insert({ name: "Ancienne copie (test images)", slug: `integration-test-map-assets-copie-${Date.now()}`, owner_id: gm.id })
+      .select("id")
+      .single();
+    if (copieError || !copie) throw new Error(copieError?.message ?? "creation copie echouee");
+    copieAncienneId = copie.id;
+    const { data: ficheAncienne, error: ficheAncienneError } = await admin
+      .from("entities")
+      .insert({ world_id: copieAncienneId, slug: "carte", name: "Carte (copie)", entity_kind: "carte", created_by: gm.id })
+      .select("id")
+      .single();
+    if (ficheAncienneError || !ficheAncienne) throw new Error(ficheAncienneError?.message ?? "creation fiche copie echouee");
+    const { error: blocAncienError } = await admin.from("blocks").insert({
+      entity_id: ficheAncienne.id,
+      block_type: "map",
+      data: carte(assets.troisieme, assets.partageeVignette),
+      display: {},
+      display_order: 1000,
+      visibility_level: "gm",
+      created_by: gm.id,
+    });
+    if (blocAncienError) throw new Error(blocAncienError.message);
   });
 
   afterAll(async () => {
     if (!worldId) return;
     await admin.storage.from(ASSETS_BUCKET).remove(Object.values(assets).map((id) => `${worldId}/${id}.webp`));
     await admin.from("worlds").delete().eq("id", worldId);
+    if (copieAncienneId) await admin.from("worlds").delete().eq("id", copieAncienneId);
   });
 
   it("le MJ ne voit pas la copie privee, mais le compte la trouve", async () => {
-    const { data: visibles } = await gm.client.from("blocks").select("id").eq("block_type", "map");
+    const { data: visibles } = await gm.client.from("blocks").select("id").eq("block_type", "map").in("entity_id", fichesDuMonde);
     expect((visibles ?? []).length).toBe(1);
     const { data: compte, error } = await gm.client.rpc("asset_reference_count", { p_asset_id: assets.partagee });
     expect(error).toBeNull();
@@ -175,10 +204,11 @@ describe.skipIf(!hasCreds)("images des cartes effacees quand plus rien ne les de
     expect(await existe("secondeVignette")).toEqual({ ligne: false, fichier: false });
   });
 
-  it("supprimer le bloc efface ses images", async () => {
+  it("supprimer le bloc efface ses images, sauf celle qu'une copie d'un autre monde designe encore", async () => {
     const resultat = await deleteBlock(gm.client as SupabaseClient<Database>, mapBlockId, gm.id);
     expect(resultat.ok).toBe(true);
-    expect(await existe("troisieme")).toEqual({ ligne: false, fichier: false });
+    // ADR 0058 : l'ancienne copie (autre monde) designe `troisieme` : gardee.
+    expect(await existe("troisieme")).toEqual({ ligne: true, fichier: true });
     expect(await existe("troisiemeVignette")).toEqual({ ligne: false, fichier: false });
     // La copie privee n'a pas bouge : ses images restent.
     expect(await existe("partagee")).toEqual({ ligne: true, fichier: true });

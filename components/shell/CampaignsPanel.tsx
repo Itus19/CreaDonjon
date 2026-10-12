@@ -88,24 +88,6 @@ export default function CampaignsPanel({
     setName("");
   }
 
-  async function switchMode(campaignId: string, nextMode: "campaign" | "solo") {
-    setPending(true);
-    setError(null);
-    const res = await fetch(`/api/campaigns/${campaignId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: nextMode }),
-    });
-    setPending(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      setError(body?.error ?? "Échec du changement de mode.");
-      return;
-    }
-    const updated = (await res.json()) as CampaignSummaryView;
-    setCampaigns((prev) => prev.map((c) => (c.id === campaignId ? updated : c)));
-  }
-
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-edge bg-panel-sunken p-4">
       <h2 className="block-title text-base">Campagne</h2>
@@ -153,14 +135,10 @@ export default function CampaignsPanel({
                 >
                   {c.name}
                 </button>
-                <Dropdown
-                  value={c.mode}
-                  onChange={(v) => switchMode(c.id, v as "campaign" | "solo")}
-                  options={modeOptions}
-                  disabled={pending}
-                  aria-label="Mode de jeu"
-                  triggerClassName="rounded-full border border-edge bg-transparent px-2 py-0.5 text-xs text-ink-muted outline-none transition-colors hover:bg-panel-raised disabled:opacity-50"
-                />
+                {/* Le mode ne change plus après la création (ADR 0058) : il s'affiche, il ne se choisit plus. */}
+                <span className="rounded-full border border-edge px-2 py-0.5 text-xs text-ink-muted">
+                  {c.mode === "solo" ? "Solo (MJ IA)" : "Campagne (MJ humain)"}
+                </span>
               </div>
               {expandedId === c.id && (
                 <CampaignDetail campaignId={c.id} worldEntities={worldEntities} grantableEntities={grantableEntities} canManage={canManage} />

@@ -6,11 +6,6 @@ export const createCampaignSchema = z.object({
   mode: z.enum(["campaign", "solo"]),
 });
 
-/** Mode modifiable apres creation (V2-G1 prepa, "un monde = une campagne") — seul le mode se change ici, jamais le ruleset ni le nom via cette route. */
-export const updateCampaignSchema = z.object({
-  mode: z.enum(["campaign", "solo"]),
-});
-
 /** Renommage depuis l'ecran de choix de monde (V2-M1, retour utilisateur) — ne change que `campaigns.name`. */
 export const renameCampaignSchema = z.object({
   campaignId: z.string().min(1),

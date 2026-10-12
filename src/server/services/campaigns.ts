@@ -15,7 +15,6 @@ import {
   listGmCampaignsForUser,
   listUnclaimedPcEntityIds,
   revokeCampaignMember,
-  updateCampaignMode,
   updateCampaignName,
   upsertCampaignCharacter,
   type CampaignCharacterRow,
@@ -141,24 +140,6 @@ export async function createCampaign(
 
 export async function getCampaignMembers(supabase: TypedClient, campaignId: string): Promise<CampaignMemberRow[]> {
   return listCampaignMembers(supabase, campaignId);
-}
-
-/**
- * Mode modifiable apres creation (V2-G1 prepa, "un monde = une campagne") :
- * `gmUserId` suit la meme regle qu'a la creation — celui qui bascule vers
- * `campaign` en devient le MJ humain, `null` (l'IA) en `solo`. `null` si la
- * campagne est introuvable.
- */
-export async function setCampaignMode(
-  supabase: TypedClient,
-  params: { campaignId: string; mode: "campaign" | "solo"; actorUserId: string }
-): Promise<CampaignSummary | null> {
-  const row = await updateCampaignMode(supabase, {
-    campaignId: params.campaignId,
-    mode: params.mode,
-    gmUserId: params.mode === "campaign" ? params.actorUserId : null,
-  });
-  return row ? toSummary(row) : null;
 }
 
 /**
