@@ -911,6 +911,46 @@ L'audit le dit lui-même : **pas en une fois.** Page par page, en commençant pa
 
 ---
 
+### ☑ V3-R7 — Deux boucles qui rechargent les règles une par une · `M` · sans modèle IA — **fait le 13 septembre, mesuré le 12 octobre**
+
+**Modèle conseillé : Sonnet** — regrouper des lectures en une requête.
+
+*Ouvert le 12 septembre, à partir de `pg_stat_statements` — pas de l'audit, qui ne l'avait pas vu.*
+
+**Le chiffre.** `ruleset_entries` en lecture unitaire : **39 871 appels** pour une requête qui renvoie **une seule ligne**, plus trois variantes de la même table dans le même relevé. À elles quatre, elles représentent l'essentiel du temps base mesuré.
+
+**Ce que ce chiffre n'est pas.** La moyenne relevée (445 ms) ne dit **pas** que la requête est mal écrite : `unique (ruleset_id, entry_key)` fournit exactement l'index qu'elle utilise, c'est une recherche directe. Cette moyenne reflète très probablement la **contention** sur une instance `t4g.nano` saturée par le volume de requêtes d'avant `V3-R5`. Ce ticket ne porte donc pas sur la latence d'une requête, mais sur leur **nombre**.
+
+**La cause, trouvée en lisant le code.** `src/server/services/rules.ts`, deux endroits :
+
+- `resolveOutgoingRefs` (≈ ligne 413)
+- `resolveEntryNames` (≈ ligne 701)
+
+Les deux suivent le même motif : une requête groupée par `listRulesetEntriesByKeys`, **puis une boucle séquentielle** sur les clés absentes, appelant `findEntryInRulesetChain` pour chacune.
+
+Or `listRulesetEntriesByKeys` n'interroge **qu'un seul ruleset** — jamais la chaîne parente. Donc pour un monde dont le ruleset est une variante (le cas prévu par le modèle : `parent_ruleset_id`, règle absolue n° 18), **toutes** les clés qui vivent dans le SRD officiel manquent au premier tir et tombent dans la boucle. Et `findEntryInRulesetChain` fait **deux requêtes par niveau de chaîne**, en série : `getRulesetEntryByKey` puis `getRulesetById`.
+
+Une fiche de personnage citant trente sorts et dons, sur un monde à ruleset dérivé, c'est donc trente clés × deux requêtes × le nombre de niveaux — là où une seule requête suffirait.
+
+**Le correctif est déjà écrit, à côté.** `getRulesetEntriesByKeysAcrossRulesets` (`src/server/repos/rules.ts`) fait exactement ça : **toutes les clés × toute la chaîne, en une requête**. Son propre commentaire dit qu'elle a été ajoutée pendant l'audit pour supprimer ce motif dans `fetchEquipmentBlocks`. Ces deux consommateurs-ci n'ont simplement jamais été convertis.
+
+C'est le même enseignement que `P‑01` : *la primitive existait, il manquait de vérifier qui d'autre en avait besoin.*
+
+- [x] `resolveOutgoingRefs` et `resolveEntryNames` résolvent leurs clés par `getRulesetEntriesByKeysAcrossRulesets`, sur la chaîne déjà résolue (`walkRulesetChain`, mémoïsée) plutôt que sur le seul ruleset du monde. Extrait dans une fonction partagée, `entriesFromChainByKeys` (juste après `entryFromChainByKey`, dont elle est la version "plusieurs clés") : une requête au lieu d'une par clé absente.
+- [x] La boucle de repli ne subsiste que pour les fiches **maison** (`resolveHomebrewEntryDisplay`), qui ne vivent pas dans `ruleset_entries` — c'est le seul cas qu'un tir groupé ne peut pas couvrir. Rien d'autre n'est resté séquentiel.
+- [x] **Le résultat ne change pas, y compris l'ordre de priorité de la chaîne** : `entriesFromChainByKeys` reprend exactement l'algorithme d'`entryFromChainByKey` (parcours de `chain` feuille → racine sur les candidats renvoyés par la requête groupée), pas une nouvelle logique.
+- [x] Un test couvre le cas qui casse tout le reste (`rules.chainPriority.integration.test.ts`, base réelle) : un ruleset parent et un enfant, une clé présente **uniquement chez le parent** (retombe dessus) et une clé **surchargée** dans l'enfant (la version de l'enfant gagne) — les deux vérifiées dans le même appel à `entriesFromChainByKeys`.
+- [x] `findEntryInRulesetChain` reste pour ses appelants unitaires légitimes (`resolveEntryDetail`, `resolveHomebrewEntryDisplay`, `characterActions.ts`) — ni supprimée ni touchée.
+- [x] **Mesure avant/après**, sur `pg_stat_statements` remis à zéro : le nombre d'appels à la lecture unitaire doit s'effondrer. *Mesuré le 12 octobre (remise à zéro par l'auteur, 36 pages ouvertes par le navigateur piloté en 3 min 30 : fiches, Initiative, six pages de classe et de sous-classe, fiche et wiki de la joueuse) : la lecture par clé ne fait plus que **42 appels à 3,4 ms**. Elle n'est plus un sujet.* Texte d'origine : Pas encore fait — ça demande quelques minutes d'usage réel de l'application (même protocole que `P‑07`), pas une mesure qu'on peut produire depuis une session de développement sans trafic. **À faire par l'auteur après ce ticket** : `pg_stat_statements_reset()`, naviguer normalement quelques minutes (fiches de personnage, pages de classe/sous-classe), puis comparer le nombre d'appels sur `ruleset_entries` au chiffre de référence (39 871). La correction elle-même ne dépend pas de cette mesure : par construction, `entriesFromChainByKeys` fait exactement **une** requête par appel, quel que soit le nombre de clés ou de niveaux de chaîne — c'est une propriété du code, pas un résultat à confirmer statistiquement.
+
+**Pourquoi `M` et pas `S` :** la résolution de règles est le cœur du projet, et l'ordre de priorité de la chaîne est ce qui fait qu'une variante surcharge correctement une base officielle. Le correctif est mécanique ; sa vérification ne l'est pas.
+
+**À ne pas faire dans ce ticket.** Ne pas toucher aux politiques RLS de `ruleset_entries` : rien dans la mesure ne les désigne, et l'audit est formel — ces politiques sont la barrière de sécurité, on ne les réécrit pas sur une intuition (`P‑07`). Non touchées.
+
+**Vérifié** : `npm run typecheck && npm run lint` passent, `npm run test:core` (760 tests) passe. Le nouveau test d'intégration passe seul et aux côtés des tests d'intégration existants sur `rules.ts` (`rules.homebrewReference`, `resolvedRuleset`). La suite d'intégration complète (`npm run test`) reste intermittente sous charge contre la base de dev distante partagée (limite de débit de l'API Auth, expirations à 5 s) — même constat environnemental que documenté ailleurs dans ce dépôt (`docs/BACKLOG_V2.md`, lot H), sans rapport avec ce ticket : aucun des échecs ne touche `rules.ts` ni les fichiers modifiés ici.
+
+---
+
 ### ☑ V3-Z1 — L'âge du personnage, et l'identité à la création · `M` · sans modèle IA — **fait le 24 septembre ; vérification reprise par V3.1-48 (12 octobre)**
 
 **Modèle conseillé : Sonnet** — un champ optionnel et une étape d'assistant ; reste la vérification en direct.

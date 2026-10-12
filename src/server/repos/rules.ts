@@ -500,13 +500,15 @@ const LIST_PAGE_SIZE = 1000;
  * renvoye (constate en verifiant dans le navigateur : Fireball manquait).
  */
 /**
- * Marge de pages tirees en parallele apres la premiere (V2-G1, retour
- * utilisateur : "lenteur generale" — /rule-entries prenait ~4s pour le SRD
- * 2024, 1904 entrees en pages sequentielles). Le total est inconnu tant que
- * la premiere page n'est pas revenue (on ne sait pas s'il y en a une
- * deuxieme) ; au-dela, largement assez pour tout ruleset reel (9 pages
- * de plus = jusqu'a 10 000 entrees) — quelques pages vides en trop pres de
- * la limite reelle coutent moins cher qu'un aller-retour sequentiel de plus.
+ * Plafond de pages apres la premiere (jusqu'a 10 000 entrees, largement
+ * assez pour tout ruleset reel).
+ *
+ * V3-R6, mesure du 12 octobre (`pg_stat_statements`) : ces 9 pages partaient
+ * d'office en parallele des que la premiere etait pleine (V2-G1). Pour le
+ * SRD 2024 (~1 900 entrees), 8 revenaient vides, mais chacune coutait ~460 ms
+ * de base : avec `OFFSET`, Postgres parcourt les lignes sautees et evalue la
+ * RLS (`can_read_ruleset`) sur chacune. 10 requetes par liste, dont 8 pour
+ * rien : 92 % du temps base mesure sur les regles.
  */
 const MAX_EXTRA_PAGES = 9;
 
@@ -593,13 +595,19 @@ export async function listRulesetEntries(
     return rows.map((row) => ({ id: row.id, entry_key: row.entry_key, entry_type: row.entry_type, source_raw: slimSourceRaw(row) }));
   };
 
-  const first = await fetchPage(0);
-  if (first.length < LIST_PAGE_SIZE) return first;
-
-  const extraPages = await Promise.all(
-    Array.from({ length: MAX_EXTRA_PAGES }, (_, i) => fetchPage((i + 1) * LIST_PAGE_SIZE))
-  );
-  return [first, ...extraPages].flat();
+  // Page apres page, et on s'arrete a la premiere incomplete : elle dit
+  // qu'il n'y a rien apres. Pour le SRD 2024, deux allers-retours, comme
+  // avec l'ancien tir parallele (la premiere page, puis les autres), mais
+  // deux requetes au lieu de dix. L'ancienne lenteur des pages sequentielles
+  // (V2-G1, ~4 s) venait d'une boucle qui allait jusqu'a une page VIDE : un
+  // aller-retour de plus.
+  const toutes: RulesetEntrySummaryRow[] = [];
+  for (let page = 0; page <= MAX_EXTRA_PAGES; page++) {
+    const lignes = await fetchPage(page * LIST_PAGE_SIZE);
+    toutes.push(...lignes);
+    if (lignes.length < LIST_PAGE_SIZE) break;
+  }
+  return toutes;
 }
 
 export interface EntryTranslationRow {

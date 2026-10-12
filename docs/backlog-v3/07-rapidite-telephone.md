@@ -21,7 +21,7 @@
 
 ---
 
-### ☐ V3-R6 — Les deux chiffres que seul l'auteur peut lire · `S` · sans modèle IA — *audit `P‑05`, `P‑07`* — **`P‑05` refermé le 12 septembre**
+### ☐ V3-R6 — Les deux chiffres que seul l'auteur peut lire · `S` · sans modèle IA — *audit `P‑05`, `P‑07`* — **`P‑05` refermé le 12 septembre ; `P‑07` diagnostiqué et corrigé le 12 octobre, reste à remesurer**
 
 **Modèle conseillé : Sonnet** — reste une mesure chez l'auteur (P‑07), presque pas de code.
 
@@ -55,50 +55,16 @@ Ce ticket ne demande presque pas de code. Il demande d'ouvrir deux tableaux de b
 
 - [x] **Cause trouvée, et ce n'est pas la logique de visibilité :** `can_read_ruleset` cherche le ruleset dans `campaigns` et `worlds` par une colonne de clé étrangère, et **ni `campaigns.ruleset_id` ni `worlds.default_ruleset_id` n'a jamais porté d'index** — Postgres n'en crée jamais côté enfant. Chaque évaluation faisait deux balayages complets. Et comme un prédicat RLS est évalué **avant** les filtres de l'utilisateur, le coût se paie par ligne *parcourue* : une lecture qui ne rend qu'un sort traverse quand même le SRD en appelant la fonction à chaque entrée.
 - [x] Migration écrite : `supabase/migrations/20260912203000_ruleset_lookup_indexes.sql`. **Elle n'ajoute que deux index** — aucune politique, aucune fonction, aucune donnée touchée. La barrière de sécurité reste identique, elle devient praticable. C'est la moins risquée des deux pistes que l'audit envisageait ; l'autre (restructurer la logique de visibilité) reste écartée.
-- [ ] **À appliquer par l'auteur** (`supabase db push`), puis remesurer avec le même protocole. Attendu : `ruleset_entries` rejoint l'ordre de grandeur des autres tables. Si ce n'est pas le cas, ne pas insister sur les index — refaire un `EXPLAIN ANALYZE` et rouvrir.
+- [x] **Appliquée** (index présents le 12 octobre), puis remesurée. **Les index n'ont rien changé, et le diagnostic était faux** — voir « Mesure du 12 octobre » ci-dessous. Texte d'origine : **à appliquer par l'auteur** (`supabase db push`), puis remesurer avec le même protocole. Attendu : `ruleset_entries` rejoint l'ordre de grandeur des autres tables. Si ce n'est pas le cas, ne pas insister sur les index — refaire un `EXPLAIN ANALYZE` et rouvrir.
 - [ ] `P‑08` (listes sans borne) ne se rouvre **que** si une mesure le désigne. Rien ici ne le fait.
 
----
+**Mesure du 12 octobre : le vrai coupable.** Même protocole que R7, même fenêtre. Une requête pèse 92 % du temps base des règles : **320 appels à 457 ms**, le même ordre que les 421 ms de septembre. Son filtre complet : `WHERE ruleset_id = $1 ORDER BY id LIMIT … OFFSET …`. Ce n'est pas une lecture d'une ligne : `pg_stat_statements` compte une page JSON de PostgREST comme « une ligne », et c'était déjà vrai du chiffre de septembre. C'est **la liste complète d'un ruleset**, page par page (`listRulesetEntries`, appelée par `listRuleEntriesForWorld` : page Règles et route `/rule-entries`).
+- Le code demandait la première page (1 000 entrées), puis **9 pages de plus d'office**, en parallèle (V2-G1). Pour le SRD 2024 (~1 900 entrées), 8 revenaient vides, et chacune coûtait quand même ~460 ms : avec `OFFSET`, Postgres parcourt les lignes sautées et évalue la RLS (`can_read_ruleset`) sur chacune. **10 requêtes par liste, dont 8 pour rien.**
+- Les index de la migration du 12 septembre n'y pouvaient rien : le coût n'est pas dans la recherche du ruleset, il est dans l'évaluation de la RLS ligne par ligne.
 
-### ☐ V3-R7 — Deux boucles qui rechargent les règles une par une · `M` · sans modèle IA — **fait le 13 septembre**
-
-**Modèle conseillé : Sonnet** — regrouper des lectures en une requête.
-
-Sous-tâches Haiku : aucune : il reste une mesure dans `pg_stat_statements`, chez l'auteur.
-
-*Ouvert le 12 septembre, à partir de `pg_stat_statements` — pas de l'audit, qui ne l'avait pas vu.*
-
-**Le chiffre.** `ruleset_entries` en lecture unitaire : **39 871 appels** pour une requête qui renvoie **une seule ligne**, plus trois variantes de la même table dans le même relevé. À elles quatre, elles représentent l'essentiel du temps base mesuré.
-
-**Ce que ce chiffre n'est pas.** La moyenne relevée (445 ms) ne dit **pas** que la requête est mal écrite : `unique (ruleset_id, entry_key)` fournit exactement l'index qu'elle utilise, c'est une recherche directe. Cette moyenne reflète très probablement la **contention** sur une instance `t4g.nano` saturée par le volume de requêtes d'avant `V3-R5`. Ce ticket ne porte donc pas sur la latence d'une requête, mais sur leur **nombre**.
-
-**La cause, trouvée en lisant le code.** `src/server/services/rules.ts`, deux endroits :
-
-- `resolveOutgoingRefs` (≈ ligne 413)
-- `resolveEntryNames` (≈ ligne 701)
-
-Les deux suivent le même motif : une requête groupée par `listRulesetEntriesByKeys`, **puis une boucle séquentielle** sur les clés absentes, appelant `findEntryInRulesetChain` pour chacune.
-
-Or `listRulesetEntriesByKeys` n'interroge **qu'un seul ruleset** — jamais la chaîne parente. Donc pour un monde dont le ruleset est une variante (le cas prévu par le modèle : `parent_ruleset_id`, règle absolue n° 18), **toutes** les clés qui vivent dans le SRD officiel manquent au premier tir et tombent dans la boucle. Et `findEntryInRulesetChain` fait **deux requêtes par niveau de chaîne**, en série : `getRulesetEntryByKey` puis `getRulesetById`.
-
-Une fiche de personnage citant trente sorts et dons, sur un monde à ruleset dérivé, c'est donc trente clés × deux requêtes × le nombre de niveaux — là où une seule requête suffirait.
-
-**Le correctif est déjà écrit, à côté.** `getRulesetEntriesByKeysAcrossRulesets` (`src/server/repos/rules.ts`) fait exactement ça : **toutes les clés × toute la chaîne, en une requête**. Son propre commentaire dit qu'elle a été ajoutée pendant l'audit pour supprimer ce motif dans `fetchEquipmentBlocks`. Ces deux consommateurs-ci n'ont simplement jamais été convertis.
-
-C'est le même enseignement que `P‑01` : *la primitive existait, il manquait de vérifier qui d'autre en avait besoin.*
-
-- [x] `resolveOutgoingRefs` et `resolveEntryNames` résolvent leurs clés par `getRulesetEntriesByKeysAcrossRulesets`, sur la chaîne déjà résolue (`walkRulesetChain`, mémoïsée) plutôt que sur le seul ruleset du monde. Extrait dans une fonction partagée, `entriesFromChainByKeys` (juste après `entryFromChainByKey`, dont elle est la version "plusieurs clés") : une requête au lieu d'une par clé absente.
-- [x] La boucle de repli ne subsiste que pour les fiches **maison** (`resolveHomebrewEntryDisplay`), qui ne vivent pas dans `ruleset_entries` — c'est le seul cas qu'un tir groupé ne peut pas couvrir. Rien d'autre n'est resté séquentiel.
-- [x] **Le résultat ne change pas, y compris l'ordre de priorité de la chaîne** : `entriesFromChainByKeys` reprend exactement l'algorithme d'`entryFromChainByKey` (parcours de `chain` feuille → racine sur les candidats renvoyés par la requête groupée), pas une nouvelle logique.
-- [x] Un test couvre le cas qui casse tout le reste (`rules.chainPriority.integration.test.ts`, base réelle) : un ruleset parent et un enfant, une clé présente **uniquement chez le parent** (retombe dessus) et une clé **surchargée** dans l'enfant (la version de l'enfant gagne) — les deux vérifiées dans le même appel à `entriesFromChainByKeys`.
-- [x] `findEntryInRulesetChain` reste pour ses appelants unitaires légitimes (`resolveEntryDetail`, `resolveHomebrewEntryDisplay`, `characterActions.ts`) — ni supprimée ni touchée.
-- [ ] **Mesure avant/après**, sur `pg_stat_statements` remis à zéro : le nombre d'appels à la lecture unitaire doit s'effondrer. Pas encore fait — ça demande quelques minutes d'usage réel de l'application (même protocole que `P‑07`), pas une mesure qu'on peut produire depuis une session de développement sans trafic. **À faire par l'auteur après ce ticket** : `pg_stat_statements_reset()`, naviguer normalement quelques minutes (fiches de personnage, pages de classe/sous-classe), puis comparer le nombre d'appels sur `ruleset_entries` au chiffre de référence (39 871). La correction elle-même ne dépend pas de cette mesure : par construction, `entriesFromChainByKeys` fait exactement **une** requête par appel, quel que soit le nombre de clés ou de niveaux de chaîne — c'est une propriété du code, pas un résultat à confirmer statistiquement.
-
-**Pourquoi `M` et pas `S` :** la résolution de règles est le cœur du projet, et l'ordre de priorité de la chaîne est ce qui fait qu'une variante surcharge correctement une base officielle. Le correctif est mécanique ; sa vérification ne l'est pas.
-
-**À ne pas faire dans ce ticket.** Ne pas toucher aux politiques RLS de `ruleset_entries` : rien dans la mesure ne les désigne, et l'audit est formel — ces politiques sont la barrière de sécurité, on ne les réécrit pas sur une intuition (`P‑07`). Non touchées.
-
-**Vérifié** : `npm run typecheck && npm run lint` passent, `npm run test:core` (760 tests) passe. Le nouveau test d'intégration passe seul et aux côtés des tests d'intégration existants sur `rules.ts` (`rules.homebrewReference`, `resolvedRuleset`). La suite d'intégration complète (`npm run test`) reste intermittente sous charge contre la base de dev distante partagée (limite de débit de l'API Auth, expirations à 5 s) — même constat environnemental que documenté ailleurs dans ce dépôt (`docs/BACKLOG_V2.md`, lot H), sans rapport avec ce ticket : aucun des échecs ne touche `rules.ts` ni les fichiers modifiés ici.
+- [x] **Corrigé le 12 octobre** : les pages se lisent une à une, jusqu'à la première incomplète (`rules.listPagination.test.ts`, 5 tests). Pour le SRD 2024 : 2 requêtes au lieu de 10, le même nombre d'allers-retours qu'avant.
+- [ ] **Remesurer après déploiement**, même protocole : la requête de liste doit passer de ~10 à ~2 appels par chargement. *Reporté après le 13 octobre : la sortie réseau du mois était à 89 % le 12, plus aucun essai contre la vraie base d'ici là.*
+- [ ] Si la liste reste trop chère avec 2 pages : rendre `can_read_ruleset` moins coûteux par ligne (une vérification par requête plutôt que par ligne). C'est un changement de RLS : ADR et Opus, seulement si une mesure le désigne.
 
 ---
 

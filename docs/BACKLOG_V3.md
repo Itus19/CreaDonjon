@@ -25,14 +25,14 @@ Le critère n'est pas « le ticket parle d'IA » : la barre d'intention (B1) est
 **Les lots A, B, C et D sont terminés** : le moteur (déclencheurs, économie d'action, scène), la boucle de tour (intention, résolution, demande de jet, narration), le monde qui s'écrit (générateurs, esquisses, wiki, découvertes, conséquences, météo) et l'écran solo à trois colonnes. **Le lot R l'est presque**, à deux mesures près chez l'auteur.
 
 **Ce qui reste** :
-- **Deux mesures chez l'auteur**, sans code : V3-R6 (la mesure `P‑07` après la migration d'index du 12 septembre), V3-R7 (le nombre d'appels sur `ruleset_entries` après sa correction). *V3-Z1 est fermé le 12 octobre : sa vérification est reprise par V3.1-48, qui refait l'étape « Identité ».*
+- **Une mesure chez l'auteur, après le 13 octobre** : V3-R6. Le 12 octobre, la mesure a trouvé le vrai coût de `P‑07` (la liste complète des règles demandait 10 pages, dont 8 vides) ; c'est corrigé, il reste à remesurer après déploiement. *V3-R7 est atteint et fermé (mesure du 12 octobre). V3-Z1 est fermé : sa vérification est reprise par V3.1-48.*
 - **Les lots E et F**, qui attendent **une vraie partie jouée** : concevoir la mémoire longue avant trois séances réelles, c'est deviner (`00-cadre.md` §2). Leurs tickets ne sont pas encore prêts à coder : ils se conçoivent d'abord (ADR), puis se découpent.
 
 ### Ordre recommandé
 
 | Étape | Tickets | Modèle IA | Pourquoi d'abord |
 |---|---|---|---|
-| **0 · Vérifier ce qui est fait** | R6, R7 | sans | Codés ; il ne reste que la mesure de l'auteur. |
+| **0 · Vérifier ce qui est fait** | R6 | sans | Corrigé le 12 octobre ; reste à remesurer après la remise à zéro du quota (13 octobre). |
 | ~~0 bis · Sans IA ni partie jouée~~ | ~~F3~~ | sans | **Fait le 12 octobre** (ADR 0058) : un monde solo se copie, il ne se convertit pas. |
 | **1 · Jouer** | trois séances solo réelles | avec | E et F se conçoivent à partir de ce qui a manqué en jouant. Noter ce qui gêne : répétitions, oublis d'une séance à l'autre, envie d'annuler un tour. |
 | **2 · La mémoire** | E1 → E3 ; E2 (ADR sur la dimension d'embedding d'abord) | avec | E1 borne les tokens quand la partie dure ; E3 s'appuie sur le même journal. E2 est indépendant mais engage le schéma (`SCHEMA.md` §17). |
@@ -55,7 +55,7 @@ Les tickets vivent dans `docs/backlog-v3/`, un fichier par lot. **Ne lis que le 
 - [`04-interface-solo.md`](backlog-v3/04-interface-solo.md) — Lot D : l'interface solo, et son dessin (terminé)
 - [`05-memoire.md`](backlog-v3/05-memoire.md) — Lot E : la mémoire (E1 à E3)
 - [`06-partie-qui-dure.md`](backlog-v3/06-partie-qui-dure.md) — Lot F : la partie qui dure (F1 à F3)
-- [`07-rapidite-telephone.md`](backlog-v3/07-rapidite-telephone.md) — Lot R : la rapidité, et le téléphone (R6, R7, ordre de traitement)
+- [`07-rapidite-telephone.md`](backlog-v3/07-rapidite-telephone.md) — Lot R : la rapidité, et le téléphone (R6, ordre de traitement)
 - [`08-fiche-revelee-par-le-solo.md`](backlog-v3/08-fiche-revelee-par-le-solo.md) — Lot Z : ce que le mode solo a révélé sur la fiche (terminé ; Z1 repris par V3.1-48)
 - [`termines.md`](backlog-v3/termines.md) — Tickets terminés (☑), S2 compris
 
@@ -98,5 +98,5 @@ Les tickets vivent dans `docs/backlog-v3/`, un fichier par lot. **Ne lis que le 
 | V3-R4 | ☑ | sans | Les images à la taille du téléphone | [`termines.md`](backlog-v3/termines.md) |
 | V3-R5 | ☑ | sans | Supprimer les cascades de chargement | [`termines.md`](backlog-v3/termines.md) |
 | V3-R6 | ☐ | sans | Les deux chiffres que seul l'auteur peut lire | [`07-rapidite-telephone.md`](backlog-v3/07-rapidite-telephone.md) |
-| V3-R7 | ☐ | sans | Deux boucles qui rechargent les règles une par une | [`07-rapidite-telephone.md`](backlog-v3/07-rapidite-telephone.md) |
+| V3-R7 | ☑ | sans | Deux boucles qui rechargent les règles une par une | [`termines.md`](backlog-v3/termines.md) |
 | V3-Z1 | ☑ | sans | L'âge du personnage, et l'identité à la création | [`termines.md`](backlog-v3/termines.md) |
