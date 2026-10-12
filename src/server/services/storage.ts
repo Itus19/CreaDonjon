@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { getAssetById, deleteAssetRow } from "@/src/server/repos/assets";
+import { countAssetReferences, getAssetById, deleteAssetRow } from "@/src/server/repos/assets";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -59,6 +59,26 @@ export async function getSignedAssetUrl(supabase: TypedClient, assetId: string):
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(asset.storage_path, SIGNED_URL_TTL_SECONDS);
   if (error) throw new Error(error.message);
   return data.signedUrl;
+}
+
+/**
+ * V3.1-128 (docs/QUOTAS.md Q5) — efface une image que plus rien ne designe.
+ * A appeler APRES l'ecriture qui l'a abandonnee : le compte voit alors
+ * l'etat final. Une image encore designee ailleurs (fiche ou bloc
+ * duplique), ou dont le compte est inconnu, est gardee.
+ *
+ * Geste « au mieux » : un echec est journalise et n'annule pas l'ecriture
+ * qui vient de reussir ; au pire, un orphelin reste dans le stockage.
+ */
+export async function deleteAssetIfUnreferenced(supabase: TypedClient, assetId: string): Promise<boolean> {
+  try {
+    const references = await countAssetReferences(supabase, assetId);
+    if (references !== 0) return false;
+    return await deleteAsset(supabase, assetId);
+  } catch (erreur) {
+    console.error(`Image ${assetId} non effacee (orpheline possible dans le stockage)`, erreur);
+    return false;
+  }
 }
 
 /** `false` si l'asset n'existe pas ou est hors de portee (RLS `assets_delete`, deja `app.is_world_member`) — le fichier n'est retire du bucket qu'apres confirmation que la ligne a bien ete supprimee, jamais avant. */

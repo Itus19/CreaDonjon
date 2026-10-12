@@ -107,7 +107,7 @@ Le 12 octobre, `npm audit --omit=dev` relève 32 failles (1 critique, 6 hautes, 
 
 ---
 
-### ☐ V3.1-128 — Les cartes laissent leurs images dans le stockage · `S` — **prêt (Sonnet)**
+### ☐ V3.1-128 — Les cartes laissent leurs images dans le stockage · `S` — **code fait le 12 octobre ; reste à appliquer la migration (auteur) et à repasser le test**
 
 **Modèle conseillé : Sonnet.** Sous-tâches Haiku : aucune.
 
@@ -123,7 +123,14 @@ Chaque cas laisse ≈ 700 ko d'orphelins, sur 1 Go de stockage gratuit.
 3. Vérifier qu'aucune autre ligne ne désigne ces images avant de les effacer (une carte dupliquée partage-t-elle ses images ? Lire « Dupliquer » avant de coder).
 4. Recenser les orphelins déjà présents (lignes `assets` qu'aucun bloc, portrait ni fond ne désigne) et proposer leur nettoyage à l'auteur, sans rien effacer d'office.
 
+**Fait le 12 octobre** (Opus, contexte déjà chargé ; décision de l'auteur, ADR 0057).
+- **Les images se partagent.** `duplicateEntity` et la duplication d'un bloc recopient `assetId` : compter avant d'effacer est indispensable. Et la RLS cache certains blocs même au MJ : le compte se fait par `app.asset_reference_count`, `security definer` (migration `20261012120000`).
+- `src/core/images/imagesDeCarte.ts` (10 tests) : les images qu'un enregistrement abandonne.
+- `deleteAssetIfUnreferenced` (`storage.ts`) : efface après l'écriture, seulement à un compte de 0 ; un échec est journalisé.
+- Branché dans `updateBlockContent` et `deleteBlock` pour les blocs `map`.
+- **Orphelins existants** : `npm run recenser:images-orphelines` (lecture seule). Le 12 octobre : 19 images, 27,8 Mo, toutes dans « Faerûn », des paires carte + vignette du 1er septembre. Rien n'est effacé sans l'accord de l'auteur.
+
 **Critères d'acceptation**
-- [ ] Remplacer l'image d'une carte, puis supprimer son bloc, ne laisse aucun fichier ni aucune ligne `assets` orpheline (test d'intégration).
-- [ ] Une carte dupliquée garde son image quand on supprime l'original.
-- [ ] `npm run typecheck && npm run lint && npm run test` passent.
+- [ ] Remplacer l'image d'une carte, puis supprimer son bloc, ne laisse aucun fichier ni aucune ligne `assets` orpheline (test d'intégration `mapAssetsCleanup.integration.test.ts`). *En attente de la migration : avant elle, le test échoue comme prévu (fonction absente) et l'app n'efface rien.*
+- [ ] Une carte dupliquée garde son image quand on supprime l'original (même test, copie dans un bloc privé invisible au MJ).
+- [ ] `npm run typecheck && npm run lint && npm run test` passent. *Tout passe sauf ce test d'intégration, qui attend la migration.*

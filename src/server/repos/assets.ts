@@ -66,6 +66,19 @@ export async function getAssetById(supabase: TypedClient, id: string): Promise<A
   return data;
 }
 
+/**
+ * V3.1-128 — combien de lignes du monde designent encore cette image
+ * (`app.asset_reference_count`, qui voit aussi les blocs caches a
+ * l'appelant). `null` : inconnu (image introuvable, appelant hors du monde),
+ * a traiter comme « encore utilisee ».
+ */
+export async function countAssetReferences(supabase: TypedClient, id: string): Promise<number | null> {
+  const { data, error } = await supabase.rpc("asset_reference_count", { p_asset_id: id });
+  if (error) throw new Error(error.message);
+  const compte: unknown = data;
+  return typeof compte === "number" ? compte : null;
+}
+
 export async function deleteAssetRow(supabase: TypedClient, id: string): Promise<boolean> {
   const { data, error } = await supabase.from("assets").delete().eq("id", id).select("id").maybeSingle();
   if (error) throw new Error(error.message);

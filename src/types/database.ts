@@ -2638,6 +2638,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      asset_reference_count: { Args: { p_asset_id: string }; Returns: number }
       claim_journal_entry_grant: {
         Args: { p_assignment_id: string; p_entity_id: string }
         Returns: boolean

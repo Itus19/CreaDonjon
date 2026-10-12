@@ -25,10 +25,11 @@ import { getEntityById } from "@/src/server/repos/entities";
 import { getBlockImageAssetId } from "@/src/server/repos/blockImages";
 import { updateAssetVisibility } from "@/src/server/repos/assets";
 import type { MapBlockData } from "@/src/core/schemas/blocks/map";
+import { imagesAbandonnees } from "@/src/core/images/imagesDeCarte";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { recordEntityRevision } from "@/src/server/services/entityHistory";
 import { canUserEditEntityById } from "@/src/server/services/permissions";
-import { deleteAsset } from "@/src/server/services/storage";
+import { deleteAsset, deleteAssetIfUnreferenced } from "@/src/server/services/storage";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -256,6 +257,10 @@ export async function updateBlockContent(
 
   if (existing.block_type === "map") {
     await syncMapAssetVisibility(supabase, row.data, params.visibilityLevel, params.visibilityScopeId);
+    // V3.1-128 : une image remplacee ne reste pas dans le stockage.
+    for (const assetId of imagesAbandonnees(existing.data, row.data)) {
+      await deleteAssetIfUnreferenced(supabase, assetId);
+    }
   }
 
   return { ok: true, block: toVisibleBlock(row) };
@@ -293,6 +298,13 @@ export async function deleteBlock(
 
   await repoDeleteBlock(supabase, id);
   if (assetId) await deleteAsset(supabase, assetId);
+  // V3.1-128 : un bloc `map` porte ses images dans ses donnees ; elles ne
+  // partent que si aucun autre bloc (fiche ou bloc duplique) ne les designe.
+  if (existing.block_type === "map") {
+    for (const mapAssetId of imagesAbandonnees(existing.data, null)) {
+      await deleteAssetIfUnreferenced(supabase, mapAssetId);
+    }
+  }
   await recordBlockRevision(supabase, existing.entity_id, changedBy);
   return { ok: true };
 }

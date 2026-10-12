@@ -88,7 +88,8 @@ Aujourd'hui, seul le mode solo sonde (superadmin seulement).
 
 *Les réflexes :*
 - **Une image nouvelle passe par `uploadAsset`** avec une `maxDimension` choisie pour son affichage réel. Jamais d'envoi direct au stockage, jamais l'original gardé « au cas où ».
-- **Remplacer ou supprimer une image efface l'ancien fichier** (`deleteAsset`, qui retire la ligne `assets` *et* le fichier). Un fichier sans ligne qui le désigne est un orphelin : invisible dans l'app, il occupe le stockage pour toujours. Portraits, images de blocs et fonds d'écran le font (V2-L1). **Pas encore les cartes** : en remplacer une ou supprimer son bloc laisse ses deux fichiers (≈ 700 ko). Ticket V3.1-128.
+- **Remplacer ou supprimer une image efface l'ancien fichier** (`deleteAsset`, qui retire la ligne `assets` *et* le fichier). Un fichier sans ligne qui le désigne est un orphelin : invisible dans l'app, il occupe le stockage pour toujours. Portraits, images de blocs et fonds d'écran le font (V2-L1), les cartes aussi depuis V3.1-128. Une image **partagée** (fiche ou bloc dupliqué) ne s'efface que lorsque plus rien ne la désigne : `deleteAssetIfUnreferenced`, qui compte les références dans tout le monde (ADR 0057).
+- **Recenser les orphelins** : `npm run recenser:images-orphelines`, en lecture seule, de temps en temps et avant de s'approcher du quota. Le 12 octobre : 19 images, 27,8 Mo sur 31,5 Mo stockés, toutes des essais de carte remplacés.
 - **Une image ne part pas dans la base**, ni en `data:` dans une colonne JSON, sauf une vignette de quelques ko : la base est le quota le plus petit.
 - **Pas de `next/image`** : son optimisation compte dans les 5 000 transformations mensuelles de Vercel, et l'app réduit déjà ses images à l'envoi.
 - **Les images s'affichent par `/api/assets/[id]`**, redirection mise en cache vers une adresse signée : chaque affichage est de la sortie réseau, d'où l'intérêt de fichiers légers.
