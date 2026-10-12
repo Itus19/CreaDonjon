@@ -11,6 +11,7 @@ import {
   type RenameWorldState,
 } from "@/app/actions";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import Dropdown from "@/components/shared/Dropdown";
 
 /**
  * Renommage (V2, retour utilisateur, ecran d'accueil) : "etes-vous sur ?"
@@ -222,6 +223,7 @@ export default function WorldCardActions({
   campaignId,
   campaignName,
   isOwner,
+  canUseSoloMode,
 }: {
   worldId: string;
   worldSlug: string;
@@ -231,6 +233,8 @@ export default function WorldCardActions({
   campaignName: string | null;
   /** Renommer/supprimer sont reserves au proprietaire (RLS `worlds_write` les refuserait sinon) — inutile d'afficher un bouton qui echoue toujours a un simple membre invite. */
   isOwner: boolean;
+  /** Superadmin : la copie peut naitre en solo (ADR 0058) ; sinon le choix du mode n'est pas propose. */
+  canUseSoloMode: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<"export" | "duplicate" | null>(null);
@@ -272,11 +276,21 @@ export default function WorldCardActions({
     downloadExport(payload);
   }
 
-  async function handleDuplicate(e: React.MouseEvent) {
-    e.preventDefault();
+  // V3-F3 (ADR 0058) : dupliquer copie le wiki dans un monde neuf ; le mode
+  // de la copie et le sort des regles se choisissent a chaque fois.
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [duplicateMode, setDuplicateMode] = useState<"campaign" | "solo">("campaign");
+  const [rulesFollow, setRulesFollow] = useState(true);
+
+  async function handleDuplicate() {
+    setDuplicateOpen(false);
     setPending("duplicate");
     setError(null);
-    const res = await fetch(`/api/worlds/${worldSlug}/duplicate`, { method: "POST" });
+    const res = await fetch(`/api/worlds/${worldSlug}/duplicate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: canUseSoloMode ? duplicateMode : "campaign", rulesFollow }),
+    });
     setPending(null);
     if (!res.ok) {
       const body = await res.json().catch(() => null);
@@ -300,7 +314,10 @@ export default function WorldCardActions({
         </button>
         <button
           type="button"
-          onClick={handleDuplicate}
+          onClick={(e) => {
+            e.preventDefault();
+            setDuplicateOpen(true);
+          }}
           disabled={pending !== null}
           className="rounded-full border border-edge px-2 py-0.5 text-[11px] text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
         >
@@ -313,6 +330,38 @@ export default function WorldCardActions({
         {isOwner && <DeleteWorldSection worldId={worldId} worldName={worldName} />}
         {error && <p className="text-[11px] text-danger">{error}</p>}
       </div>
+
+      <ConfirmDialog
+        open={duplicateOpen}
+        title="Dupliquer ce monde ?"
+        message="Le wiki est copié dans un monde neuf, avec ses images : fiches, blocs, relations. La partie elle-même ne suit pas : ni découvertes, ni scène, ni journal, ni joueurs."
+        confirmLabel="Dupliquer"
+        onConfirm={() => void handleDuplicate()}
+        onCancel={() => setDuplicateOpen(false)}
+      >
+        {canUseSoloMode && (
+          <Dropdown
+            value={duplicateMode}
+            onChange={(v) => setDuplicateMode(v as "campaign" | "solo")}
+            options={[
+              { value: "campaign", label: "Copie en campagne (MJ humain)" },
+              { value: "solo", label: "Copie en solo (MJ IA)" },
+            ]}
+            aria-label="Mode de la copie"
+            triggerClassName="w-full rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none transition-colors hover:bg-panel"
+          />
+        )}
+        <Dropdown
+          value={rulesFollow ? "suivent" : "officielles"}
+          onChange={(v) => setRulesFollow(v === "suivent")}
+          options={[
+            { value: "suivent", label: "Les règles du monde suivent" },
+            { value: "officielles", label: "Repartir des règles officielles" },
+          ]}
+          aria-label="Règles de la copie"
+          triggerClassName="w-full rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none transition-colors hover:bg-panel"
+        />
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={pendingExport !== null}

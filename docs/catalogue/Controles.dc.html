@@ -226,7 +226,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 <h2 class="font-display text-2xl font-bold text-ink">Liste déroulante</h2>
 <span class="text-xs text-ink-muted">components/shared/Dropdown.tsx</span>
 </div>
-<p class="max-w-3xl text-sm text-ink-soft">Toujours <code>Dropdown.tsx</code>, jamais un <code>&lt;select&gt;</code>. Deux tailles : <code>md</code> (formulaire) et <code>sm</code> (barre d'outils). Menu en portail, jamais coupé par un conteneur qui défile. Option choisie en accent, survol d'une option en <code>bg-panel</code>. Le menu apparaît et disparaît sans animation.</p>
+<p class="max-w-3xl text-sm text-ink-soft">Toujours <code>Dropdown.tsx</code>, jamais un <code>&lt;select&gt;</code>. Deux tailles : <code>md</code> (formulaire) et <code>sm</code> (barre d'outils). Menu en portail, jamais coupé par un conteneur qui défile, et au-dessus des fenêtres (<code>z-[1200]</code> contre <code>z-[1100]</code> pour <code>ConfirmDialog</code>) : ouvert dans une fenêtre, il reste cliquable. Option choisie en accent, survol d'une option en <code>bg-panel</code>. Le menu apparaît et disparaît sans animation.</p>
 <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">couleurs, 150 ms, cubic-bezier(0.4, 0, 0.2, 1) (<code>transition-colors</code>) ; ouverture du menu : instantanée</span></span></div>
 <div class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
 <span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repos · md</span>

@@ -48,3 +48,9 @@ export const updateWikiWelcomeMessageSchema = z.object({
   // chaine vide stockee.
   message: z.string().trim().max(500, "500 caractères maximum.").optional().or(z.literal("")),
 });
+
+/** Dupliquer un monde (V3-F3, ADR 0058) : le mode de la copie et si les règles suivent, choisis à chaque fois. */
+export const duplicateWorldSchema = z.object({
+  mode: z.enum(["campaign", "solo"]),
+  rulesFollow: z.boolean(),
+});

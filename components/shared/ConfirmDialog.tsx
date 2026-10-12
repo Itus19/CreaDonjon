@@ -22,6 +22,7 @@ export default function ConfirmDialog({
   danger,
   onConfirm,
   onCancel,
+  children,
 }: {
   open: boolean;
   title: string;
@@ -31,6 +32,8 @@ export default function ConfirmDialog({
   danger?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Des choix à faire avant de confirmer (V3-F3 : mode de la copie, règles), posés sous le message. */
+  children?: React.ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   // Avant tout `return` conditionnel : un hook ne peut pas etre appele
@@ -56,6 +59,7 @@ export default function ConfirmDialog({
       >
         <h2 className="text-sm font-semibold text-ink">{title}</h2>
         <p className="mt-1.5 text-sm text-ink-muted">{message}</p>
+        {children && <div className="mt-3 flex flex-col gap-2">{children}</div>}
         <div className="mt-4 flex justify-end gap-2">
           <button
             type="button"

@@ -61,6 +61,7 @@ export default async function Home() {
           <HomeScreen
             worlds={worlds}
             currentUserId={user?.id ?? ""}
+            canUseSoloMode={canUseSoloMode}
             createTools={
               <div className="flex flex-wrap items-center gap-2">
                 <CreateWorldForm officialRulesets={officialRulesets} canUseSoloMode={canUseSoloMode} />

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { validateBlockData, type BlockType } from "@/src/core/schemas/blocks/registry";
 import { remapEntityIds } from "@/src/core/linker/remapEntityIds";
+import { remapAssetIds } from "@/src/core/images/remapAssetIds";
 import { WORLD_EXPORT_FORMAT_VERSION, type WorldExport } from "@/src/core/schemas/worldExport";
 import {
   getOfficialBaseRulesetId,
@@ -11,6 +12,11 @@ import {
 } from "@/src/server/repos/rules";
 import {
   getRulesetInfoForExport,
+  insertBlockImages,
+  insertEntityAssets,
+  listAssetsForWorld,
+  listBlockImagesForBlocks,
+  listEntityAssetsForEntities,
   getSingleCampaignMode,
   getWorldForExport,
   insertImportedBlocks,
@@ -28,6 +34,7 @@ import { createCampaign, type CampaignSummary } from "@/src/server/services/camp
 import { createEntity } from "@/src/server/services/entities";
 import { generateUniqueSlug } from "@/src/server/services/worlds";
 import { getWorldById, type WorldSummary } from "@/src/server/repos/worlds";
+import { copyAssetToWorld } from "@/src/server/services/storage";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -44,6 +51,21 @@ export interface ExportWorldResult {
 }
 
 export async function exportWorld(supabase: TypedClient, worldId: string): Promise<ExportWorldResult> {
+  const { data, warnings } = await lireMonde(supabase, worldId);
+  return { data, warnings };
+}
+
+/**
+ * L'export, plus ce que seule la duplication utilise et qui ne part jamais
+ * dans un fichier (V3-F3) : les identifiants d'origine des blocs (dans
+ * l'ordre de `data.blocks`) et le ruleset du monde.
+ */
+interface MondeLu extends ExportWorldResult {
+  sourceBlockIds: string[];
+  sourceRulesetId: string;
+}
+
+async function lireMonde(supabase: TypedClient, worldId: string): Promise<MondeLu> {
   const world = await getWorldForExport(supabase, worldId);
   if (!world) throw new Error("Monde introuvable.");
   if (!world.defaultRulesetId) {
@@ -142,7 +164,7 @@ export async function exportWorld(supabase: TypedClient, worldId: string): Promi
     );
   }
 
-  return { data, warnings };
+  return { data, warnings, sourceBlockIds: blocks.map((b) => b.id), sourceRulesetId: world.defaultRulesetId };
 }
 
 export interface ImportWorldParams {
@@ -168,9 +190,29 @@ export interface ImportWorldResult {
  * remappees directement ici.
  */
 export async function importWorld(supabase: TypedClient, params: ImportWorldParams): Promise<ImportWorldResult> {
+  const { world, campaign } = await importerMonde(supabase, params);
+  return { world, campaign };
+}
+
+/** Ce que seule la duplication ajoute a un import (V3-F3, ADR 0058). */
+interface OptionsDeCopie {
+  /** Reprendre ce ruleset tel quel (ruleset personnel du meme proprietaire), au lieu de le resoudre depuis l'export. */
+  rulesetId?: string;
+  /** Appele des que le monde neuf existe, avant ses blocs : copie les images et rend « ancien id -> nouvel id ». */
+  copierImages?: (nouveauMondeId: string) => Promise<Map<string, string>>;
+}
+
+interface MondeImporte extends ImportWorldResult {
+  entityIdMap: Map<string, string>;
+  /** Identifiants des blocs crees, dans l'ordre de `data.blocks`. */
+  blockIds: string[];
+  assetIdMap: Map<string, string>;
+}
+
+async function importerMonde(supabase: TypedClient, params: ImportWorldParams & OptionsDeCopie): Promise<MondeImporte> {
   const { ownerId, data } = params;
 
-  const rulesetId = await resolveImportedRuleset(supabase, ownerId, data.ruleset);
+  const rulesetId = params.rulesetId ?? (await resolveImportedRuleset(supabase, ownerId, data.ruleset));
 
   const slug = await generateUniqueSlug(supabase, ownerId, data.world.name);
   const insertedWorld = await insertImportedWorld(supabase, {
@@ -191,6 +233,8 @@ export async function importWorld(supabase: TypedClient, params: ImportWorldPara
     throw new Error("Le monde importé possède déjà une campagne : incohérence interne.");
   }
 
+  const assetIdMap = params.copierImages ? await params.copierImages(insertedWorld.id) : new Map<string, string>();
+
   const idMap = new Map<string, string>();
   for (const entity of data.entities) {
     const inserted = await createEntity(supabase, {
@@ -206,7 +250,7 @@ export async function importWorld(supabase: TypedClient, params: ImportWorldPara
   const blockInputs = data.blocks.map((b) => {
     const entityId = idMap.get(b.entityRef);
     if (!entityId) throw new Error(`Bloc reference une entite inconnue (${b.entityRef}) : fichier corrompu.`);
-    const remappedData = remapEntityIds(b.data, idMap) as Json;
+    const remappedData = remapAssetIds(remapEntityIds(b.data, idMap), assetIdMap) as Json;
     validateBlockData(b.blockType, remappedData);
     return {
       entityId,
@@ -218,7 +262,7 @@ export async function importWorld(supabase: TypedClient, params: ImportWorldPara
       createdBy: ownerId,
     };
   });
-  await insertImportedBlocks(supabase, blockInputs);
+  const blockIds = await insertImportedBlocks(supabase, blockInputs);
 
   const relationInputs = data.relations.map((r) => {
     const sourceEntityId = idMap.get(r.sourceRef);
@@ -244,7 +288,7 @@ export async function importWorld(supabase: TypedClient, params: ImportWorldPara
       return {
         entityId,
         revisionNumber: r.revisionNumber,
-        mechanicalData: remapEntityIds(r.mechanicalData, idMap) as Json,
+        mechanicalData: remapAssetIds(remapEntityIds(r.mechanicalData, idMap), assetIdMap) as Json,
         changeNote: r.changeNote,
         createdBy: ownerId,
       };
@@ -263,7 +307,7 @@ export async function importWorld(supabase: TypedClient, params: ImportWorldPara
   const world = await getWorldById(supabase, insertedWorld.id);
   if (!world) throw new Error("Monde importé introuvable juste après sa création : incohérence interne.");
 
-  return { world, campaign };
+  return { world, campaign, entityIdMap: idMap, blockIds, assetIdMap };
 }
 
 async function resolveImportedRuleset(supabase: TypedClient, ownerId: string, ruleset: WorldExport["ruleset"]): Promise<string> {
@@ -300,13 +344,79 @@ async function resolveImportedRuleset(supabase: TypedClient, ownerId: string, ru
   return variant.id;
 }
 
-/** Dupliquer = exporter puis reimporter pour le meme proprietaire, sans jamais serialiser le JSON intermediaire vers le client (une seule requete, V2-G1). */
-export async function duplicateWorld(supabase: TypedClient, params: { worldId: string; ownerId: string }): Promise<ImportWorldResult> {
-  const { data } = await exportWorld(supabase, params.worldId);
-  const renamed: WorldExport = { ...data, world: { ...data.world, name: `${data.world.name} (copie)` } };
-  return importWorld(supabase, {
+export interface DuplicateWorldParams {
+  worldId: string;
+  ownerId: string;
+  /** Choisi a chaque duplication (ADR 0058) ; `solo` est verifie superadmin par la route. */
+  mode: "campaign" | "solo";
+  /** Les regles suivent : variante recopiee, ruleset personnel repris tel quel. Sinon, le ruleset officiel de la meme base. */
+  rulesFollow: boolean;
+}
+
+/**
+ * Dupliquer = copier le wiki d'un monde dans un monde neuf, pour le meme
+ * proprietaire (V2-G1, refait par V3-F3, ADR 0058). Le wiki seul : fiches,
+ * blocs, relations, revisions mecaniques, et leurs images, copiees dans le
+ * monde neuf. Rien de la partie : ni decouvertes, ni scene, ni journal, ni
+ * membres, ni personnages attribues. Le JSON intermediaire ne passe jamais
+ * par le client (une seule requete).
+ */
+export async function duplicateWorld(supabase: TypedClient, params: DuplicateWorldParams): Promise<ImportWorldResult> {
+  const lu = await lireMonde(supabase, params.worldId);
+  let data: WorldExport = { ...lu.data, world: { ...lu.data.world, name: `${lu.data.world.name} (copie)` } };
+  let rulesetId: string | undefined;
+  if (!params.rulesFollow) {
+    data = { ...data, ruleset: { kind: "official", baseSystem: data.ruleset.baseSystem } };
+  } else if (data.ruleset.kind === "personal_omitted") {
+    rulesetId = lu.sourceRulesetId; // meme proprietaire : son ruleset personnel le suit tel quel
+  }
+
+  // Les images que le wiki designe : liens (portraits, blocs Image) et
+  // identifiants pris dans les donnees des blocs et des revisions (cartes,
+  // portrait du bloc personnage, adresses). Une image que rien ne designe
+  // n'est pas copiee.
+  const sourceEntityIds = lu.data.entities.map((e) => e.ref);
+  const [assets, portraits, imagesDeBlocs] = await Promise.all([
+    listAssetsForWorld(supabase, params.worldId),
+    listEntityAssetsForEntities(supabase, sourceEntityIds),
+    listBlockImagesForBlocks(supabase, lu.sourceBlockIds),
+  ]);
+  const texte = JSON.stringify([lu.data.blocks.map((b) => b.data), lu.data.mechanicalRevisions.map((r) => r.mechanicalData)]);
+  const lies = new Set([...portraits.map((p) => p.asset_id), ...imagesDeBlocs.map((b) => b.asset_id)]);
+  const aCopier = assets.filter((a) => lies.has(a.id) || texte.includes(a.id));
+
+  const copie = await importerMonde(supabase, {
     ownerId: params.ownerId,
-    mode: data.suggestedMode ?? "campaign",
-    data: renamed,
+    mode: params.mode,
+    data,
+    rulesetId,
+    copierImages: async (nouveauMondeId) => {
+      const correspondance = new Map<string, string>();
+      for (const asset of aCopier) {
+        correspondance.set(asset.id, await copyAssetToWorld(supabase, asset, { worldId: nouveauMondeId, uploadedBy: params.ownerId }));
+      }
+      return correspondance;
+    },
   });
+
+  // Les liens d'image, rattaches aux fiches et aux blocs neufs.
+  const blocNeuf = new Map(lu.sourceBlockIds.map((ancien, k) => [ancien, copie.blockIds[k]]));
+  await insertEntityAssets(
+    supabase,
+    portraits.flatMap((p) => {
+      const entityId = copie.entityIdMap.get(p.entity_id);
+      const assetId = copie.assetIdMap.get(p.asset_id);
+      return entityId && assetId ? [{ ...p, entity_id: entityId, asset_id: assetId }] : [];
+    })
+  );
+  await insertBlockImages(
+    supabase,
+    imagesDeBlocs.flatMap((b) => {
+      const blockId = blocNeuf.get(b.block_id);
+      const assetId = copie.assetIdMap.get(b.asset_id);
+      return blockId && assetId ? [{ block_id: blockId, asset_id: assetId, hue: b.hue, chroma: b.chroma, available_modes: b.available_modes }] : [];
+    })
+  );
+
+  return { world: copie.world, campaign: copie.campaign };
 }

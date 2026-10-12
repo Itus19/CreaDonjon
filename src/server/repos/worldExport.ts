@@ -94,6 +94,8 @@ export async function listEntitiesForWorld(supabase: TypedClient, worldId: strin
 }
 
 export interface BlockForExport {
+  /** Lu pour la duplication (images des blocs, V3-F3) ; jamais recopie dans le fichier d'export. */
+  id: string;
   entity_id: string;
   block_type: string;
   display: Json;
@@ -106,7 +108,7 @@ export async function listBlocksForEntities(supabase: TypedClient, entityIds: st
   if (entityIds.length === 0) return [];
   const { data, error } = await supabase
     .from("blocks")
-    .select("entity_id, block_type, display, data, display_order, visibility_level")
+    .select("id, entity_id, block_type, display, data, display_order, visibility_level")
     .in("entity_id", entityIds);
   if (error) throw new Error(error.message);
   return data;
@@ -174,9 +176,10 @@ export interface ImportedBlockInput {
   createdBy: string;
 }
 
-export async function insertImportedBlocks(supabase: TypedClient, blocks: ImportedBlockInput[]): Promise<void> {
-  if (blocks.length === 0) return;
-  const { error } = await supabase.from("blocks").insert(
+/** Rend les identifiants des blocs crees, dans l'ordre de `blocks` (verifie : un ecart leve une erreur plutot que de rattacher une image au mauvais bloc). */
+export async function insertImportedBlocks(supabase: TypedClient, blocks: ImportedBlockInput[]): Promise<string[]> {
+  if (blocks.length === 0) return [];
+  const { data, error } = await supabase.from("blocks").insert(
     blocks.map((b) => ({
       entity_id: b.entityId,
       block_type: b.blockType,
@@ -186,8 +189,13 @@ export async function insertImportedBlocks(supabase: TypedClient, blocks: Import
       visibility_level: b.visibilityLevel,
       created_by: b.createdBy,
     }))
-  );
+  ).select("id, entity_id, block_type");
   if (error) throw new Error(error.message);
+  const lignes = data ?? [];
+  if (lignes.length !== blocks.length || lignes.some((l, k) => l.entity_id !== blocks[k].entityId || l.block_type !== blocks[k].blockType)) {
+    throw new Error("Blocs importes rendus dans un autre ordre que celui de l'insertion : copie interrompue.");
+  }
+  return lignes.map((l) => l.id);
 }
 
 export interface ImportedRelationInput {
@@ -248,3 +256,56 @@ export async function setEntityCurrentRevision(supabase: TypedClient, entityId: 
   const { error } = await supabase.from("entities").update({ current_mechanical_revision_id: revisionId }).eq("id", entityId);
   if (error) throw new Error(error.message);
 }
+
+// ---------------------------------------------------------------------------
+// V3-F3 (ADR 0058) — les images d'un monde, pour les copier avec son wiki.
+
+export interface AssetForCopy {
+  id: string;
+  storage_path: string;
+  mime_type: string;
+  byte_size: number;
+  width: number | null;
+  height: number | null;
+  alt_text: string | null;
+  visibility_level: string;
+}
+
+export async function listAssetsForWorld(supabase: TypedClient, worldId: string): Promise<AssetForCopy[]> {
+  const { data, error } = await supabase
+    .from("assets")
+    .select("id, storage_path, mime_type, byte_size, width, height, alt_text, visibility_level")
+    .eq("world_id", worldId);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export type EntityAssetRow = Database["public"]["Tables"]["entity_assets"]["Row"];
+export type BlockImageRow = Database["public"]["Tables"]["block_images"]["Row"];
+
+export async function listEntityAssetsForEntities(supabase: TypedClient, entityIds: string[]): Promise<EntityAssetRow[]> {
+  if (entityIds.length === 0) return [];
+  const { data, error } = await supabase.from("entity_assets").select("*").in("entity_id", entityIds);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function listBlockImagesForBlocks(supabase: TypedClient, blockIds: string[]): Promise<BlockImageRow[]> {
+  if (blockIds.length === 0) return [];
+  const { data, error } = await supabase.from("block_images").select("*").in("block_id", blockIds);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function insertEntityAssets(supabase: TypedClient, rows: EntityAssetRow[]): Promise<void> {
+  if (rows.length === 0) return;
+  const { error } = await supabase.from("entity_assets").insert(rows);
+  if (error) throw new Error(error.message);
+}
+
+export async function insertBlockImages(supabase: TypedClient, rows: Omit<BlockImageRow, "created_at">[]): Promise<void> {
+  if (rows.length === 0) return;
+  const { error } = await supabase.from("block_images").insert(rows);
+  if (error) throw new Error(error.message);
+}
+

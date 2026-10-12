@@ -173,11 +173,14 @@ export default function Dropdown({
       </button>
       {open &&
         rect &&
+        // z-[1200] : au-dessus des fenetres (`ConfirmDialog` et ses pareilles,
+        // z-[1100]). Un menu ouvert DANS une fenetre s'affichait derriere
+        // elle, ses options impossibles a cliquer (V3-F3, choix de la copie).
         createPortal(
           <div
             ref={panelRef}
             role="listbox"
-            className="fixed z-[1000] max-h-60 overflow-auto rounded-md border border-edge-strong bg-panel-raised shadow-2xl"
+            className="fixed z-[1200] max-h-60 overflow-auto rounded-md border border-edge-strong bg-panel-raised shadow-2xl"
             style={{ top: rect.top, bottom: rect.bottom, left: rect.left, minWidth: rect.width }}
           >
             {options.map((opt) => (

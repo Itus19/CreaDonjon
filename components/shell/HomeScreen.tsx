@@ -56,7 +56,7 @@ const DETAIL_TAB_LABELS: Record<DetailTab, string> = {
  * « Rejoindre » reste hors du classeur et toujours visible : c'est la
  * sortie de cet ecran, elle ne se range pas dans un onglet.
  */
-function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUserId: string }) {
+function WorldDetail({ world, currentUserId, canUseSoloMode }: { world: HomeWorldCard; currentUserId: string; canUseSoloMode: boolean }) {
   const isPlayer = world.myRole === "player";
   const [entries, setEntries] = useState<JournalEntry[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -186,6 +186,7 @@ function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUs
                 campaignId={world.campaignId}
                 campaignName={world.campaignName}
                 isOwner={world.ownerId === currentUserId}
+                canUseSoloMode={canUseSoloMode}
               />
             )}
           </div>
@@ -218,10 +219,13 @@ function WorldDetail({ world, currentUserId }: { world: HomeWorldCard; currentUs
 export default function HomeScreen({
   worlds,
   currentUserId,
+  canUseSoloMode,
   createTools,
 }: {
   worlds: HomeWorldCard[];
   currentUserId: string;
+  /** Superadmin : la copie d'un monde peut naître en solo (ADR 0058). */
+  canUseSoloMode: boolean;
   /** Formulaires de creation/import (retour utilisateur : "en haut de la colonne centrale") — rendus ici plutot que par l'appelant pour rester au-dessus de la liste dans la MEME colonne du grid. */
   createTools: React.ReactNode;
 }) {
@@ -301,7 +305,7 @@ export default function HomeScreen({
           // avoir ouvert "Renommer" sur Faerûn puis change de selection sans
           // fermer le panneau — le nom tape restait celui de l'ancien monde
           // pendant que `worldId` (input cache) pointait deja sur le nouveau).
-          <WorldDetail key={selected.id} world={selected} currentUserId={currentUserId} />
+          <WorldDetail key={selected.id} world={selected} currentUserId={currentUserId} canUseSoloMode={canUseSoloMode} />
         ) : (
           <p className="text-sm text-ink-muted">Sélectionnez un monde pour voir son détail.</p>
         )}

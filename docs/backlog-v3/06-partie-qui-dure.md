@@ -41,6 +41,8 @@ Sous-tâches Haiku : lancer `npm run typecheck && npm run lint && npm run test` 
 - « Dupliquer » gardait le mode d'origine (une copie de monde solo restait solo) et **ne copiait aucune image** : portraits et blocs Image perdus, cartes pointant vers l'image du monde d'origine, invisible des joueurs de la copie.
 - Et un défaut introduit le même jour par V3.1-128 : le compte des références d'une image ne cherchait que dans son monde. Remplacer une carte dans l'original aurait effacé l'image encore utilisée par une copie.
 
+**Trouvé en l'écrivant (12 octobre)** : supprimer un monde qui contient un bloc Image échouait (`block_images.asset_id` obligatoire, mais clé étrangère en `on delete set null`). Corrigé par la migration `20261012140000` (`on delete cascade`). Et un menu `Dropdown` ouvert dans une fenêtre s'affichait derrière elle : son menu passe au niveau `z-[1200]`.
+
 **À faire**
 1. Migration `20261012130000` : `app.asset_reference_count` compte dans tous les mondes.
 2. Retirer la bascule de mode : route `PATCH`, `setCampaignMode`, `updateCampaignMode`, son schéma, le menu de `CampaignsPanel`.
@@ -48,9 +50,9 @@ Sous-tâches Haiku : lancer `npm run typecheck && npm run lint && npm run test` 
 4. La copie emporte ses images : chaque image désignée (cartes, portrait du bloc personnage, `entity_assets`, `block_images`) est recopiée dans le monde neuf, et ses identifiants remplacés dans les blocs et les révisions.
 
 **Critères d'acceptation**
-- [ ] Aucune route ni aucun écran ne change le mode d'une campagne existante.
-- [ ] Dupliquer un monde solo en « campagne » donne un monde dont le propriétaire est MJ, sans découverte, scène, journal ni membre copiés.
-- [ ] « Les règles suivent : non » donne le ruleset officiel ; « oui » recopie une variante et reprend un ruleset personnel.
+- [x] Aucune route ni aucun écran ne change le mode d'une campagne existante. *Route `PATCH` et menu retirés ; l'écran Campagne affiche le mode (vérifié au navigateur).*
+- [x] Dupliquer un monde solo en « campagne » donne un monde dont le propriétaire est MJ, sans découverte, scène, journal ni membre copiés. *`worldDuplicate.integration.test.ts`.*
+- [x] « Les règles suivent : non » donne le ruleset officiel ; « oui » recopie une variante et reprend un ruleset personnel. *Même test, ruleset personnel et officiel ; la variante garde le comportement de l'import, déjà testé.*
 - [ ] Les images de la copie vivent dans le monde neuf ; supprimer l'original ne les casse pas (test d'intégration).
 - [ ] Une image de carte partagée par une ancienne copie n'est pas effacée quand on la remplace dans l'original (test d'intégration).
 - [ ] `npm run typecheck && npm run lint && npm run test` passent.

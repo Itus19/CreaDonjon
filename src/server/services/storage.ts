@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { countAssetReferences, getAssetById, deleteAssetRow } from "@/src/server/repos/assets";
+import { countAssetReferences, getAssetById, deleteAssetRow, insertAsset } from "@/src/server/repos/assets";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -104,3 +104,48 @@ export async function deleteAsset(supabase: TypedClient, assetId: string): Promi
   if (retires.length === 0) console.error(`Fichier ${asset.storage_path} absent ou non retire du stockage ; la ligne assets ${assetId} est effacee quand meme`);
   return deleteAssetRow(supabase, assetId);
 }
+
+/**
+ * V3-F3 (ADR 0058) — copie une image dans un autre monde : un fichier neuf
+ * (`<monde>/<id>.<ext>`) et sa ligne `assets`, jamais un partage. Un joueur
+ * du monde neuf n'est pas membre de l'ancien : il ne verrait pas une image
+ * restee la-bas. Une portee `campaign`/`user` ne survit pas au changement de
+ * monde (ses identifiants n'y existent pas) : elle retombe sur `gm`, comme a
+ * l'export. Le fichier d'abord, la ligne ensuite : un echec entre les deux
+ * laisse au pire un fichier sans ligne, que le recensement retrouve.
+ */
+export async function copyAssetToWorld(
+  supabase: TypedClient,
+  asset: {
+    storage_path: string;
+    mime_type: string;
+    byte_size: number;
+    width: number | null;
+    height: number | null;
+    alt_text: string | null;
+    visibility_level: string;
+  },
+  params: { worldId: string; uploadedBy: string }
+): Promise<string> {
+  const id = crypto.randomUUID();
+  const extension = asset.storage_path.includes(".") ? asset.storage_path.slice(asset.storage_path.lastIndexOf(".")) : "";
+  const storagePath = `${params.worldId}/${id}${extension}`;
+  const { error } = await supabase.storage.from(BUCKET).copy(asset.storage_path, storagePath);
+  if (error) throw new Error(`Image ${asset.storage_path} non copiee : ${error.message}`);
+  const visibilityLevel = asset.visibility_level === "campaign" || asset.visibility_level === "user" ? "gm" : asset.visibility_level;
+  await insertAsset(supabase, {
+    id,
+    worldId: params.worldId,
+    storagePath,
+    mimeType: asset.mime_type,
+    byteSize: asset.byte_size,
+    width: asset.width,
+    height: asset.height,
+    altText: asset.alt_text,
+    visibilityLevel,
+    visibilityScopeId: null,
+    uploadedBy: params.uploadedBy,
+  });
+  return id;
+}
+
