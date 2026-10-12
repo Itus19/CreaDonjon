@@ -70,7 +70,28 @@ Aujourd'hui, seul le mode solo sonde (superadmin seulement).
 
 *Cas réel, 11 octobre* : chaque ouverture de l'Initiative transportait 4,9 Mo (deux fois le texte SRD complet de 1 907 entrées), soit un millier d'ouvertures pour épuiser les 5 Go du mois. Chaque affichage de la fiche d'un Guerrier en transportait autant. Après correction : 65 ko et 10 ko (`docs/CABLAGE.md` §3).
 
-**Q5. Les images restent légères.** 50 Mo au plus par fichier côté Supabase. On réduit l'image avant l'envoi (largeur utile, WebP ou JPEG compressé). Pas de `next/image` sans relire les 5 000 transformations mensuelles.
+**Q5. Les images restent légères, et ne laissent rien derrière elles.** Les images vont dans le **stockage de fichiers** (1 Go), pas dans la base (500 Mo) : la base n'en garde qu'une ligne de description (`assets`).
+
+*Ce que fait déjà l'app, à garder pour toute image nouvelle.* Tout envoi passe par `uploadAsset` (`src/server/services/assetUpload.ts`), qui, sur le serveur, avec `sharp` :
+1. n'accepte que PNG, JPEG et WebP, et refuse un fichier qui n'est pas vraiment une image ;
+2. **réduit** l'image à la taille utile de son usage, sans jamais l'agrandir ;
+3. la **réencode en WebP**, qualité 85 (perte invisible à l'œil).
+
+| Usage | Côté le plus long | Fichier reçu au plus | Poids typique stocké |
+|---|---|---|---|
+| Portrait | 640 px | 5 Mo | ≈ 30 ko |
+| Image de bloc | 1600 px | 5 Mo | ≈ 170 ko |
+| Fond d'écran | 1920 px (+ vignette 64 px en base, ≈ 1 ko) | 5 Mo | ≈ 220 ko |
+| Carte | 4096 px, **plus** une vignette de 1600 px | 25 Mo | ≈ 540 + 170 ko |
+
+*Mesuré le 12 octobre* (`sharp` 0.35.5, réglages de l'app) : une carte PNG de 19,6 Mo (5760 px) devient 537 ko ; une photo JPEG de 1,2 Mo devient 28 à 539 ko selon l'usage. À ≈ 200 ko par image, 1 Go tient environ 5 000 images.
+
+*Les réflexes :*
+- **Une image nouvelle passe par `uploadAsset`** avec une `maxDimension` choisie pour son affichage réel. Jamais d'envoi direct au stockage, jamais l'original gardé « au cas où ».
+- **Remplacer ou supprimer une image efface l'ancien fichier** (`deleteAsset`, qui retire la ligne `assets` *et* le fichier). Un fichier sans ligne qui le désigne est un orphelin : invisible dans l'app, il occupe le stockage pour toujours. Portraits, images de blocs et fonds d'écran le font (V2-L1). **Pas encore les cartes** : en remplacer une ou supprimer son bloc laisse ses deux fichiers (≈ 700 ko). Ticket V3.1-128.
+- **Une image ne part pas dans la base**, ni en `data:` dans une colonne JSON, sauf une vignette de quelques ko : la base est le quota le plus petit.
+- **Pas de `next/image`** : son optimisation compte dans les 5 000 transformations mensuelles de Vercel, et l'app réduit déjà ses images à l'envoi.
+- **Les images s'affichent par `/api/assets/[id]`**, redirection mise en cache vers une adresse signée : chaque affichage est de la sortie réseau, d'où l'intérêt de fichiers légers.
 
 **Q6. Les valeurs dérivées ne sont jamais stockées** (règle absolue 16). C'est aussi une règle de place : la base reste petite.
 

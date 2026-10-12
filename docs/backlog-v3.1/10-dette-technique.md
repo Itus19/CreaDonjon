@@ -104,3 +104,26 @@ Le 12 octobre, `npm audit --omit=dev` relève 32 failles (1 critique, 6 hautes, 
 - [x] `npm audit --omit=dev` ne relève plus de faille critique ni haute, ou chaque reste est justifié au registre. *0 faille en production ; les 10 restes des outils de développement sont justifiés dans `docs/SECURITE.md` §6.*
 - [x] `npm run typecheck && npm run lint && npm run test` et le build passent.
 - [x] Le parcours à la main ne montre aucune régression.
+
+---
+
+### ☐ V3.1-128 — Les cartes laissent leurs images dans le stockage · `S` — **prêt (Sonnet)**
+
+**Modèle conseillé : Sonnet.** Sous-tâches Haiku : aucune.
+
+Trouvé le 12 octobre en écrivant `docs/QUOTAS.md` Q5. Les portraits, images de blocs et fonds d'écran effacent leur ancien fichier (`deleteAsset`). Les cartes, non :
+- **Remplacer l'image d'une carte** (`components/entities/map/MapWorkspace.tsx`, `upload`) téléverse deux nouveaux fichiers (4096 px et vignette 1600 px) et remplace `assetId` et `thumbnailAssetId` dans les données du bloc. Les deux anciens restent dans le stockage et dans `assets`, désignés par rien.
+- **Supprimer un bloc `map`** (`deleteBlock`, `src/server/services/blocks.ts`) ne retire l'image que pour un bloc `image`.
+
+Chaque cas laisse ≈ 700 ko d'orphelins, sur 1 Go de stockage gratuit.
+
+**À faire**
+1. Côté serveur, à l'enregistrement d'un bloc `map` : si `assetId` ou `thumbnailAssetId` change, effacer l'ancien par `deleteAsset`, après l'écriture réussie.
+2. `deleteBlock` : pour un bloc `map`, effacer ses deux images, comme pour un bloc `image`.
+3. Vérifier qu'aucune autre ligne ne désigne ces images avant de les effacer (une carte dupliquée partage-t-elle ses images ? Lire « Dupliquer » avant de coder).
+4. Recenser les orphelins déjà présents (lignes `assets` qu'aucun bloc, portrait ni fond ne désigne) et proposer leur nettoyage à l'auteur, sans rien effacer d'office.
+
+**Critères d'acceptation**
+- [ ] Remplacer l'image d'une carte, puis supprimer son bloc, ne laisse aucun fichier ni aucune ligne `assets` orpheline (test d'intégration).
+- [ ] Une carte dupliquée garde son image quand on supprime l'original.
+- [ ] `npm run typecheck && npm run lint && npm run test` passent.
