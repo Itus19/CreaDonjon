@@ -110,6 +110,8 @@ Les tests, les mesures et les scripts tournent **contre la vraie base**, celle d
 
 **T3. Les mesures de câblage coûtent.** Un passage de `scripts/mesure-cablage.mjs` charge neuf écrans quatre fois : environ 2 000 requêtes à la base. On mesure avant et après une correction, pas à chaque essai.
 
+*Constaté sur le graphique de sortie réseau du cycle 13 septembre - 13 octobre* (4,47 Go sur 5 le 12 octobre) : les jours de mesure et de tests en série font les pics. Environ 1,1 Go vers le 25 septembre, **689 Mo le 11 octobre**, jour de six passages du pilote de câblage et de plusieurs suites complètes, avec des listes de règles qui pesaient encore 2,45 Mo chacune. Un jour d'usage ordinaire ne dépasse pas quelques dizaines de Mo. Le 12 octobre, avec les listes allégées, une journée entière de travail (plusieurs suites complètes, un parcours de 36 pages) est restée sous 100 Mo. **Avant une séance de mesures ou de tests, regarder le compteur du cycle** : au-delà de 80 %, on attend la remise à zéro.
+
 **T4. Les scripts d'import se lancent rarement.** `npm run ingest:srd` réécrit des milliers de lignes, et il efface ce qu'il ne connaît pas : relancer ensuite les scripts qu'il rappelle. On ne le lance que pour une raison écrite.
 
 **T5. Les sessions de vérification se ferment.** Une session cloud qui garde `npm run dev` ouvert ne consomme rien chez Vercel, mais garde des abonnements temps réel et des requêtes vers Supabase. On arrête le serveur à la fin.
