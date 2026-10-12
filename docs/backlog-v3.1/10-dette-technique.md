@@ -71,7 +71,7 @@ Ce qui ne se voit pas à l'écran mais rend le code fragile à modifier. Relevé
 
 ---
 
-### ☐ V3.1-127 — Mettre à jour Next et les dépendances vulnérables · `S` — **prêt (Opus : décision de version ; Haiku pour les vérifications)**
+### ☑ V3.1-127 — Mettre à jour Next et les dépendances vulnérables · `S` — **fait le 12 octobre**
 
 **Modèle conseillé : Opus**, car le changement de version de Next touche tout le rendu. Sous-tâches Haiku : lancer `npm audit --omit=dev`, typecheck, lint, tests et build, et résumer les échecs.
 
@@ -87,7 +87,19 @@ Le 12 octobre, `npm audit --omit=dev` relève 32 failles (1 critique, 6 hautes, 
 4. Parcours à la main (`docs/TESTS.md`) : une fiche de personnage, l'éditeur (coller du texte), un portrait téléversé, une page partagée.
 5. Passer la ligne du registre à *corrigée*.
 
+**Fait le 12 octobre.**
+- **Next 16.3.8**, pas 16.4.0 : dernière version corrective de la ligne 16.3, qui corrige toutes les failles relevées ; 16.4.0 (six jours) apporte des nouveautés, donc plus de changements possibles. `eslint-config-next` suit.
+- **Tiptap 3.31.4**, toutes les extensions ensemble (elles exigent la même version exacte). Le fichier de verrouillage gardait l'ancienne version de chaque extension : ses entrées Tiptap ont été retirées pour que npm les résolve à neuf, puis `npm ci` a prouvé qu'il s'installe proprement depuis zéro.
+- `sharp`, `nanoid`, `source-map-js` montés dans leurs versions permises (`npm update`).
+- `npm audit fix` plante avec npm 10.9 (`edgesOut`) : les mises à jour ont été faites paquet par paquet.
+- **Parcours à la main** sur le build de production (`next start`), Banc d'essai, Chromium :
+  - fiche de personnage côté MJ et côté joueuse : CA 16, PV 12/12 ;
+  - éditeur : bloc Texte ajouté à la faction, frappe et collage enregistrés et relus ; une image collée avec un script caché (`onerror`) ne l'exécute pas ; bloc supprimé ensuite ;
+  - page partagée avec un jeton inconnu : 404 prévu, pas d'erreur serveur ; en-têtes de sécurité présents.
+  - Non refait : le téléversement d'un portrait. Notre code n'utilise pas `sharp` (Next ne s'en sert que pour `next/image`, absent de l'app), et l'essai aurait coûté du stockage.
+- **Nouveau en 16.3** : la règle de lint `no-location-assign-relative-destination` signale `components/shell/CommandPalette.tsx` (navigation par `window.location.href`, donc rechargement complet). Simple avertissement ; le corriger changerait le comportement, hors de ce ticket.
+
 **Critères d'acceptation**
-- [ ] `npm audit --omit=dev` ne relève plus de faille critique ni haute, ou chaque reste est justifié au registre.
-- [ ] `npm run typecheck && npm run lint && npm run test` et le build passent.
-- [ ] Le parcours à la main ne montre aucune régression.
+- [x] `npm audit --omit=dev` ne relève plus de faille critique ni haute, ou chaque reste est justifié au registre. *0 faille en production ; les 10 restes des outils de développement sont justifiés dans `docs/SECURITE.md` §6.*
+- [x] `npm run typecheck && npm run lint && npm run test` et le build passent.
+- [x] Le parcours à la main ne montre aucune régression.

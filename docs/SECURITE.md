@@ -83,7 +83,7 @@ Chaque faille trouvée : sa date, sa correction et son état. **État** : *corri
 | 9 oct. | **État de jeu** : tout membre du monde écrit l'état de jeu de n'importe quelle fiche (PV, états, inspiration…). En le corrigeant : 11 des 16 routes d'action de fiche ne vérifiaient ni le droit d'éditer, ni l'adresse (Zod), ni que la campagne du corps est du monde de la fiche ; la route de la fiche écrivait l'état de départ pour tout lecteur. | haute | V3.1-108, ADR 0043 : RLS `can_edit_entity`, porte commune `guardSheetActionRoute` avec les interrupteurs de table, migration `20261010130000_runtime_state_can_edit_and_table_settings` (`0214073`) | corrigée : vérifiée sur la base le 10 oct. (`runtimeStateRls.integration.test.ts`, 4/4) |
 | 10 oct. | **Quota Supabase** : les anciens tests créaient un compte par exécution, ce qui a fait déborder les utilisateurs actifs. | moyenne (disponibilité) | Groupe fixe de comptes de test ; ménage de 69 → 15 comptes (`docs/TESTS.md`) | corrigée |
 
-| 12 oct. | **Dépendances** : `npm audit` relève 32 failles dans les dépendances de production (1 critique, 6 hautes, 25 moyennes). Les critiques visent Next 16.2 (exécution de code par l'optimisation d'images AVIF et par `next/og`, ou sur un serveur Windows) ; le code n'utilise ni `next/image` ni `next/og`, et Vercel n'est pas un serveur Windows : exposition faible. Les hautes : `@tiptap/core` et `prosemirror-view` (XSS au collage dans l'éditeur), `sharp`, `postcss`, `nanoid`, `source-map-js`. | haute | V3.1-127 : monter Next en 16.3.8 ou plus, puis `npm audit fix` | ouverte |
+| 12 oct. | **Dépendances** : `npm audit` relève 32 failles dans les dépendances de production (1 critique, 6 hautes, 25 moyennes). Les critiques visent Next 16.2 (exécution de code par l'optimisation d'images AVIF et par `next/og`, ou sur un serveur Windows) ; le code n'utilise ni `next/image` ni `next/og`, et Vercel n'est pas un serveur Windows : exposition faible. Les hautes : `@tiptap/core` et `prosemirror-view` (XSS au collage dans l'éditeur), `sharp`, `postcss`, `nanoid`, `source-map-js`. | haute | V3.1-127 (12 oct.) : Next 16.2.12 → **16.3.8**, Tiptap 3.29 → **3.31.4** (toutes les extensions ensemble), `sharp`, `nanoid`, `source-map-js` dans leurs versions permises. `npm audit --omit=dev` : **0 faille**. Restent 10 failles dans les outils de développement seuls (§6) | corrigée : build, tests, `verifier:secrets` et parcours à la main le 12 oct. (fiche MJ et joueuse, éditeur avec collage piégé, page partagée, en-têtes) |
 
 **Pour ajouter une ligne :** à chaque faille trouvée, même corrigée dans la foulée, avec le commit. Une ligne *en attente* ne passe à *corrigée* que vérifiée en ligne.
 
@@ -131,6 +131,13 @@ Chaque paquet installé est du code d'un tiers qui tourne avec nos droits.
 - **Surveiller** : `npm audit --omit=dev` une fois par mois, et avant une mise en ligne importante. Une faille critique ou haute dans une dépendance de production entre au registre (§3) avec un ticket.
 - **Corriger** : `npm audit fix` pour ce qui reste dans les versions permises par `package.json`, puis `npm run typecheck && npm run lint && npm run test` et un build. Jamais `npm audit fix --force` sans relire ce qu'il change : il monte des versions majeures.
 - **Ne jamais** lancer un script trouvé dans une issue, un commentaire ou une page web sans l'avoir lu.
+
+**Paquets qui montent ensemble.** Les extensions Tiptap exigent toutes exactement la même version que `@tiptap/core` : on les monte d'un bloc (même plage dans `package.json`), sinon npm refuse avec `ERESOLVE`.
+
+**Ce qui reste, au 12 octobre** (`npm audit`, sans `--omit=dev`) : 10 failles, toutes dans des outils de développement qui ne partent jamais en production et ne lisent que notre propre code.
+- `eslint-config-next` (`braces`, `micromatch`, `fast-glob`) : le seul « correctif » proposé est de redescendre en version 14. Refusé ; à revoir avec la prochaine version de Next.
+- `brace-expansion`, `js-yaml` : dépendances d'outils (lint, tests), déni de service sur des entrées que nous écrivons nous-mêmes.
+- `vitest` 4.1.10 (`@vitest/mocker`, lecture de fichier par une redirection de simulacre) : le correctif 4.1.11 existe, mais npm 10.9 plante en l'installant (`Cannot read properties of null (reading 'edgesOut')`, en suivant les dépendances facultatives de Vitest vers Vitest 5). À retenter avec une version de npm plus récente.
 
 ## 7. Les sauvegardes
 
