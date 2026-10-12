@@ -33,7 +33,7 @@ Le critère n'est pas « le ticket parle d'IA » : la barre d'intention (B1) est
 | Étape | Tickets | Modèle IA | Pourquoi d'abord |
 |---|---|---|---|
 | **0 · Vérifier ce qui est fait** | R6, R7 | sans | Codés ; il ne reste que la mesure de l'auteur. |
-| **0 bis · Sans IA ni partie jouée** | F3 (réécrit le 12 octobre, ADR 0058) | sans | Copier le wiki d'un monde ; ne dépend ni du modèle ni d'une partie jouée. |
+| ~~0 bis · Sans IA ni partie jouée~~ | ~~F3~~ | sans | **Fait le 12 octobre** (ADR 0058) : un monde solo se copie, il ne se convertit pas. |
 | **1 · Jouer** | trois séances solo réelles | avec | E et F se conçoivent à partir de ce qui a manqué en jouant. Noter ce qui gêne : répétitions, oublis d'une séance à l'autre, envie d'annuler un tour. |
 | **2 · La mémoire** | E1 → E3 ; E2 (ADR sur la dimension d'embedding d'abord) | avec | E1 borne les tokens quand la partie dure ; E3 s'appuie sur le même journal. E2 est indépendant mais engage le schéma (`SCHEMA.md` §17). |
 | **3 · La partie qui dure** | F1 (après E1) ; F2 ; F3 | F1 avec, F2 et F3 sans | F1 réutilise les résumés de E1. F2 et F3 ne dépendent de rien d'autre et peuvent partir dès qu'une partie a montré leur besoin. |
@@ -90,7 +90,7 @@ Les tickets vivent dans `docs/backlog-v3/`, un fichier par lot. **Ne lis que le 
 | V3-E3 | ☐ | **avec** | Le journal de personnage | [`05-memoire.md`](backlog-v3/05-memoire.md) |
 | V3-F1 | ☐ | **avec** | Reprendre une partie | [`06-partie-qui-dure.md`](backlog-v3/06-partie-qui-dure.md) |
 | V3-F2 | ☐ | sans | Annuler un tour | [`06-partie-qui-dure.md`](backlog-v3/06-partie-qui-dure.md) |
-| V3-F3 | ☐ | sans | Copier le wiki d'un monde, sans jamais convertir une partie solo | [`06-partie-qui-dure.md`](backlog-v3/06-partie-qui-dure.md) |
+| V3-F3 | ☑ | sans | Copier le wiki d'un monde, sans jamais convertir une partie solo | [`termines.md`](backlog-v3/termines.md) |
 | V3-R0 | ☑ | sans | Poser la mesure et le budget | [`termines.md`](backlog-v3/termines.md) |
 | V3-R1 | ☑ | sans | Ne plus livrer le bureau à fenêtres au téléphone | [`termines.md`](backlog-v3/termines.md) |
 | V3-R2 | ☑ | sans | Le premier rendu ne suppose plus un grand écran | [`termines.md`](backlog-v3/termines.md) |
