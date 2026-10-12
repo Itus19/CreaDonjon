@@ -12,20 +12,29 @@ import { listRulesetEntries } from "./rules";
  * Faux client : il compte les pages demandees, sans toucher la base.
  */
 function fauxClient(total: number) {
-  const pages: Array<{ from: number; to: number; types: readonly string[] | null }> = [];
+  const pages: Array<{ from: number; to: number; types: readonly string[] | null; select: string; filtres: Array<[string, string]> }> = [];
   const client = {
     from() {
       let types: readonly string[] | null = null;
+      let colonnes = "";
+      const filtres: Array<[string, string]> = [];
       const requete = {
-        select: () => requete,
-        eq: () => requete,
+        select: (c: string) => {
+          colonnes = c;
+          return requete;
+        },
+        eq: (colonne: string, valeur: string) => {
+          filtres.push([colonne, valeur]);
+          return requete;
+        },
         in: (_colonne: string, valeurs: readonly string[]) => {
           types = valeurs;
           return requete;
         },
         order: () => requete,
         range: async (from: number, to: number) => {
-          pages.push({ from, to, types });
+          pages.push({ from, to, types, select: colonnes, filtres: [...filtres] });
+          const avecTraduction = colonnes.includes("ruleset_entry_translations(name)");
           const n = Math.max(0, Math.min(to, total - 1) - from + 1);
           const data = Array.from({ length: n }, (_, i) => ({
             id: `e${from + i}`,
@@ -39,6 +48,8 @@ function fauxClient(total: number) {
             raw_challenge_rating: null,
             raw_type: null,
             raw_size: null,
+            // Une entree sur deux a une traduction ; les autres, un tableau vide (jointure externe).
+            ...(avecTraduction ? { ruleset_entry_translations: (from + i) % 2 === 0 ? [{ name: `Nom ${from + i}` }] : [] } : {}),
           }));
           return { data, error: null };
         },
@@ -82,4 +93,25 @@ describe("listRulesetEntries : pages lues jusqu'a la premiere incomplete", () =>
     await listRulesetEntries(client, "rs", { entryTypes: ["monster"] });
     expect(pages.every((p) => p.types?.[0] === "monster")).toBe(true);
   });
+
+  it("V3-R8 : sans langue demandee, aucune jointure de traduction", async () => {
+    const { client, pages } = fauxClient(10);
+    const entrees = await listRulesetEntries(client, "rs");
+    expect(pages[0].select).not.toContain("ruleset_entry_translations");
+    expect(entrees[0].translated_name).toBeUndefined();
+  });
+
+  it("V3-R8 : la traduction vient dans la meme requete que la liste, filtree sur la langue", async () => {
+    const { client, pages } = fauxClient(1907);
+    const entrees = await listRulesetEntries(client, "rs", { locale: "fr" });
+    expect(pages).toHaveLength(2); // aucune requete de plus
+    for (const p of pages) {
+      expect(p.select).toContain("ruleset_entry_translations(name)");
+      expect(p.filtres).toContainEqual(["ruleset_entry_translations.locale", "fr"]);
+    }
+    expect(entrees[0].translated_name).toBe("Nom 0");
+    expect(entrees[1].translated_name).toBeNull(); // pas de traduction : le nom anglais servira
+    expect(entrees[1000].translated_name).toBe("Nom 1000");
+  });
 });
+

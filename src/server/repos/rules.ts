@@ -455,6 +455,8 @@ export interface RulesetEntrySummaryRow {
   entry_key: string;
   entry_type: string;
   source_raw: Json;
+  /** V3-R8 : seulement si une langue est demandee a `listRulesetEntries` ; `null` sans traduction dans cette langue. */
+  translated_name?: string | null;
 }
 
 export interface RulesetEntryChipRow {
@@ -549,6 +551,8 @@ interface SlimEntryRow {
   raw_challenge_rating: Json;
   raw_type: Json;
   raw_size: Json;
+  /** Jointure externe (V3-R8) : vide quand l'entree n'a pas de traduction dans la langue demandee. */
+  ruleset_entry_translations?: { name: string }[];
 }
 
 function slimSourceRaw(row: SlimEntryRow): Json {
@@ -572,10 +576,20 @@ function slimSourceRaw(row: SlimEntryRow): Json {
 export async function listRulesetEntries(
   supabase: TypedClient,
   rulesetId: string,
-  options: { entryTypes?: readonly string[] } = {}
+  options: { entryTypes?: readonly string[]; locale?: string } = {}
 ): Promise<RulesetEntrySummaryRow[]> {
+  // V3-R8 (mesure du 12 octobre) : le nom traduit vient DANS la requete de la
+  // liste, par jointure externe filtree sur la langue, au lieu d'une seconde
+  // serie de requetes par paquets de 200 identifiants (10 pour le SRD 2024).
+  // La jointure ne filtre pas les entrees : une entree sans traduction revient
+  // avec un tableau vide, la pagination reste exacte.
+  const avecTraduction = options.locale !== undefined;
   const fetchPage = async (from: number): Promise<RulesetEntrySummaryRow[]> => {
-    let query = supabase.from("ruleset_entries").select(SOURCE_RAW_LIST_SELECT).eq("ruleset_id", rulesetId);
+    let query = supabase
+      .from("ruleset_entries")
+      .select(avecTraduction ? `${SOURCE_RAW_LIST_SELECT}, ruleset_entry_translations(name)` : SOURCE_RAW_LIST_SELECT)
+      .eq("ruleset_id", rulesetId);
+    if (avecTraduction) query = query.eq("ruleset_entry_translations.locale", options.locale!);
     if (options.entryTypes) query = query.in("entry_type", [...options.entryTypes]);
     const { data, error } = await query
       // `.order()` explicite (bug reel trouve en verifiant la sous-espece,
@@ -592,7 +606,13 @@ export async function listRulesetEntries(
     if (error) throw new Error(error.message);
     // Le selecteur est une chaine construite : supabase-js ne peut pas en deduire le type des colonnes extraites.
     const rows = (data ?? []) as unknown as SlimEntryRow[];
-    return rows.map((row) => ({ id: row.id, entry_key: row.entry_key, entry_type: row.entry_type, source_raw: slimSourceRaw(row) }));
+    return rows.map((row) => ({
+      id: row.id,
+      entry_key: row.entry_key,
+      entry_type: row.entry_type,
+      source_raw: slimSourceRaw(row),
+      ...(avecTraduction ? { translated_name: row.ruleset_entry_translations?.[0]?.name ?? null } : {}),
+    }));
   };
 
   // Page apres page, et on s'arrete a la premiere incomplete : elle dit

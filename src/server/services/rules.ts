@@ -1260,17 +1260,13 @@ async function listEntriesInRulesetChain(
       }
     }
 
-    const entries = await listRulesetEntries(supabase, currentId);
+    // V3-R8 : la traduction arrive avec la liste (une jointure), plus en dix paquets.
+    const entries = await listRulesetEntries(supabase, currentId, locale !== "en" ? { locale } : {});
     if (entries.length > 0) {
-      const translationByEntryId = new Map<string, string>();
-      if (locale !== "en") {
-        const translations = await listTranslationsForEntries(supabase, entries.map((e) => e.id), locale);
-        for (const t of translations) translationByEntryId.set(t.entry_id, t.name);
-      }
       const baseSummaries = entries.map((e) => ({
         key: e.entry_key,
         entryType: e.entry_type as EntryType,
-        name: translationByEntryId.get(e.id) ?? entryNameFrom(e),
+        name: e.translated_name ?? entryNameFrom(e),
         parentClassKey:
           e.entry_type === "subclass" || e.entry_type === "feature" ? subclassParentClassKey(e.source_raw) : undefined,
         parentSpeciesKey: e.entry_type === "species" ? speciesParentKey(e.source_raw) : undefined,
