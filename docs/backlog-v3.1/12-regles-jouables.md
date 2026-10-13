@@ -125,3 +125,24 @@ Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, d
 
 ### ☐ V3.1-140 — La conversion assistée : du texte aux briques · `L` · **avec modèle IA** — **après la fondation**
 Le modèle lit le texte d'une fiche et propose des blocs (`resources`, `activation`, `coverage`), par `ai_proposals` : Zod, validation métier, relecture par l'auteur, application. Jamais d'écriture directe (règle absolue 9). Le texte de la règle entre dans le prompt comme donnée encadrée (règle 10).
+
+### ☐ V3.1-141 — Le système monétaire en données : pièces courantes, réserve, pièces maison · `M` · sans modèle IA — **à concevoir (Opus)**
+
+**Modèle conseillé : Opus** : forme d'un bloc de règle, forme du porte-monnaie, compatibilité des inventaires déjà enregistrés.
+
+**Origine (auteur, 13 octobre).** La monnaie se compose désormais en or, argent et cuivre ; le platine et l'électrum sont une réserve, jamais formés, gardés, cassés seulement au besoin (l'électrum d'abord, au plus juste). C'est codé en dur dans `src/core/rules/currency.ts` (`COMMON_COINS`, `RESERVE_BREAK_ORDER`). L'auteur veut pouvoir le régler sans code, et ajouter des pièces propres à un monde. C'est l'esprit de l'ADR 0059 : une règle de jeu vit dans les données.
+
+**Proposition à trancher par l'ADR**
+- **Un bloc de règle typé** « système monétaire », porté par la fiche « Pièces de monnaie » (`standard-exchange-rates`, SRD 5.2.1). Pour chaque pièce : sa clé, son libellé (fr, en), sa valeur en pièces de cuivre, et son rôle, *courante* (elle se regroupe) ou *réserve* (gardée, cassée au besoin) ; plus l'ordre de casse des réserves.
+- **Le comportement par défaut** reste celui du 13 octobre : rien ne change pour un ruleset qui ne porte pas le bloc.
+- **Pour le modifier** : une surcharge dans un ruleset personnel. Les règles officielles ne se modifient jamais (règle absolue 18).
+- **Le moteur** (`depositCoins`, `spendCoins`, `applyCurrencyDelta`, `totalValueCp`) reçoit le système en paramètre au lieu de ses constantes ; le service le lit par la chaîne de rulesets de la campagne.
+
+**La partie lourde : des pièces maison.** Aujourd'hui le porte-monnaie a cinq cases fixes (`pp`, `gp`, `ep`, `sp`, `cp`). Elles sont dans le schéma du bloc `inventory`, dans `InventoryPanel`, dans les statistiques d'économie de campagne (`totalValueCp`, V2-M12) et dans la route `actions/currency`. Une pièce maison demande un porte-monnaie en liste libre (clé → nombre). Les inventaires déjà enregistrés doivent se relire sans erreur, sans migration SQL (le bloc est du `jsonb`, seule sa forme Zod change). À trancher : garder les cinq clés connues et accepter des clés en plus, ou passer tout le porte-monnaie en dictionnaire.
+
+**Découpage probable** : ADR ; noyau paramétré (tests d'abord, les 28 tests de `currency.test.ts` restent verts avec le système par défaut) ; bloc de règle et sa lecture ; pièces maison ; écran.
+
+**Critères d'acceptation (de la conception)**
+- [ ] ADR écrit : forme du bloc, forme du porte-monnaie, compatibilité des inventaires existants.
+- [ ] Tickets prêts découpés et ajoutés à l'index.
+
