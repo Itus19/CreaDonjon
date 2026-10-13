@@ -11,6 +11,7 @@ import {
   takeShortRest,
 } from "./characterActions";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { upsertRulesetOverride } from "../repos/rules";
 
 /**
  * V1-B5 : verifie contre la base reelle que l'orchestration cablee dans
@@ -196,7 +197,7 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
   });
 
   it("repos long : restaure les PV au maximum et les emplacements de sort", async () => {
-    await changeHp(admin, { entityId, campaignId, delta: -8, actorUserId: ownerId });
+    await changeHp(admin, { entityId, campaignId, delta: -8, actorUserId: ownerId, locale: "fr" });
     const result = await takeLongRest(admin, { entityId, campaignId, actorUserId: ownerId, locale: "fr" });
     expect(result).toEqual({ ok: true });
 
@@ -233,6 +234,67 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
     expect((afterLong!.state as typeof state).lighting).toBe("dark");
 
     await admin.from("scene_states").delete().eq("campaign_id", campaignId);
+  });
+
+  it("V3.1-24 — un repos long emet `long_rest` (declencheur factice), un repos court non", async () => {
+    // Une variante du SRD (jamais une base officielle, regle 18) porte, sur
+    // l'espece « dwarf » du personnage, un declencheur factice : a `long_rest`,
+    // accorder l'inspiration. Observable dans l'etat de jeu, sans rien d'autre.
+    const owner = await getReusableTestAccount(admin, "owner");
+    const { data: variant, error: variantError } = await admin
+      .from("rulesets")
+      .insert({
+        name: "Variante de test integration — repos long",
+        base_system: "dnd_srd_51",
+        parent_ruleset_id: rulesetId,
+        is_official_base: false,
+        created_by: ownerId,
+        content_origin: "user_created",
+      })
+      .select("id")
+      .single();
+    if (variantError || !variant) throw new Error(variantError?.message ?? "creation variante echouee");
+    let variantId: string = variant.id;
+    let pinned = false;
+
+    try {
+      variantId = await upsertRulesetOverride(owner.client, {
+        rulesetId: variantId,
+        entryKey: "dwarf",
+        blockType: "triggers",
+        action: "add_block",
+        payload: {
+          block_type: "triggers",
+          display: { label: "Declencheurs", layout: "key_values" },
+          data: {
+            triggers: [{ id: "test-24-repos-long", when: { event: "long_rest", subject: "self" }, then: [{ action: "grant_inspiration", who: "self" }] }],
+          },
+          display_order: 100,
+        },
+        patch: null,
+        note: null,
+      });
+
+      // Un monde n'a qu'une campagne : on epingle temporairement celle du test sur la variante.
+      const { error: pinError } = await admin.from("campaigns").update({ ruleset_id: variantId }).eq("id", campaignId);
+      if (pinError) throw new Error(pinError.message);
+      pinned = true;
+
+      const stateOf = async () => {
+        const ctx = await resolveCharacterActionContext(admin, entityId, campaignId, "fr");
+        return (await getOrInitializeRuntimeState(admin, ctx!, { persist: true })).state;
+      };
+      expect((await stateOf()).inspiration).toBe(0);
+
+      await takeShortRest(admin, { entityId, campaignId, hitDiceSpent: {}, actorUserId: ownerId, locale: "fr" });
+      expect((await stateOf()).inspiration).toBe(0); // `short_rest` n'est pas `long_rest`
+
+      await takeLongRest(admin, { entityId, campaignId, actorUserId: ownerId, locale: "fr" });
+      expect((await stateOf()).inspiration).toBe(1);
+    } finally {
+      if (pinned) await admin.from("campaigns").update({ ruleset_id: rulesetId }).eq("id", campaignId);
+      await admin.from("rulesets").delete().eq("id", variantId);
+    }
   });
 
   it("lancer un sort sur un personnage qui ne le connait pas est rejete", async () => {

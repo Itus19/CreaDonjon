@@ -2,6 +2,8 @@ import { z } from "zod";
 import { grantToBudget, zActionBudget, type ActionBudget, type BudgetKind } from "./actionBudget";
 import { moveToZone, sceneZoneOf, type SceneState } from "./scene";
 import type { ResolvedEffect, TriggerZone } from "./triggers";
+import { applyDamageToHp } from "./tempHp";
+import { applyDamageWithDeath, applyHealing, type DeathSaves } from "./deathSaves";
 
 /**
  * V3-B2 — Appliquer ce que le moteur PROPOSE.
@@ -40,6 +42,13 @@ export interface TurnActor {
   /** Compteurs nommes (emplacements, charges) — `spend_resource` les entame. */
   resources: Record<string, number>;
   budget: ActionBudget;
+  /**
+   * V3.1-24 (ADR 0036 §8) — present pour un personnage joueur seulement : ses
+   * degats et soins suivent alors les regles des jets contre la mort
+   * (Inconscient a 0 PV, mort directe, echecs). Absent (monstre, participant) :
+   * les PV tombent a zero sans autre suite, comme avant.
+   */
+  deathSaves?: DeathSaves;
 }
 
 export interface TurnState {
@@ -59,6 +68,7 @@ export const zTurnActor = z.object({
   conditions: z.array(z.string().min(1)),
   resources: z.record(z.string(), z.number()),
   budget: zActionBudget,
+  deathSaves: z.object({ success: z.number().int().min(0).max(3), fail: z.number().int().min(0).max(3) }).optional(),
 });
 
 export type TurnChange =
@@ -83,15 +93,24 @@ function withActor(state: TurnState, who: string, next: TurnActor): TurnState {
 
 /**
  * Les degats entament les points de vie TEMPORAIRES en premier (regle
- * standard), puis les courants, et s'arretent a zero. Zero n'est pas la
- * mort : c'est l'inconscience et les jets de sauvegarde contre la mort, que
- * ce module ne simule pas — il rend l'etat, l'appelant en tire ce qu'il
- * veut.
+ * standard, `applyDamageToHp`), puis les courants, et s'arretent a zero. Pour
+ * un acteur qui porte des `deathSaves` (un PJ), le passage a zero suit les
+ * regles 2024 de `deathSaves.ts` ; sinon c'est tout ce que ce module simule.
  */
-function applyDamage(hp: ActorHp, amount: number): ActorHp {
-  const absorbed = Math.min(hp.temp, amount);
-  const rest = amount - absorbed;
-  return { ...hp, temp: hp.temp - absorbed, current: Math.max(0, hp.current - rest) };
+function damageActor(actor: TurnActor, amount: number): TurnActor {
+  if (actor.deathSaves) {
+    const out = applyDamageWithDeath({ hp: actor.hp, conditions: actor.conditions, deathSaves: actor.deathSaves }, amount);
+    return { ...actor, hp: out.hp, conditions: out.conditions, deathSaves: out.deathSaves };
+  }
+  return { ...actor, hp: applyDamageToHp(actor.hp, amount).hp };
+}
+
+function healActor(actor: TurnActor, amount: number): TurnActor {
+  if (actor.deathSaves) {
+    const out = applyHealing({ hp: actor.hp, conditions: actor.conditions, deathSaves: actor.deathSaves }, amount);
+    return { ...actor, hp: out.hp, conditions: out.conditions, deathSaves: out.deathSaves };
+  }
+  return { ...actor, hp: { ...actor.hp, current: Math.min(actor.hp.max, actor.hp.current + amount) } };
 }
 
 export function applyEffects(state: TurnState, effects: readonly ResolvedEffect[]): ApplyResult {
@@ -117,16 +136,20 @@ export function applyEffects(state: TurnState, effects: readonly ResolvedEffect[
           break;
         }
         const from = actor.hp;
-        const to =
-          effect.action === "deal_damage"
-            ? applyDamage(from, effect.amount)
-            : { ...from, current: Math.min(from.max, from.current + effect.amount) };
+        const updated = effect.action === "deal_damage" ? damageActor(actor, effect.amount) : healActor(actor, effect.amount);
+        const to = updated.hp;
         const note =
           effect.action === "deal_damage"
             ? `Dégâts : ${effect.amount}${effect.damage_type ? ` (${effect.damage_type})` : ""}`
             : `Soins : ${effect.amount}`;
-        next = withActor(next, effect.who, { ...actor, hp: to });
+        next = withActor(next, effect.who, updated);
         changes.push({ kind: "hp", who: effect.who, from, to, note });
+        for (const key of updated.conditions.filter((c) => !actor.conditions.includes(c))) {
+          changes.push({ kind: "condition", who: effect.who, key, added: true });
+        }
+        for (const key of actor.conditions.filter((c) => !updated.conditions.includes(c))) {
+          changes.push({ kind: "condition", who: effect.who, key, added: false });
+        }
         break;
       }
 

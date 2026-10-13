@@ -107,6 +107,31 @@ export const inspirationChangeSchema = z.object({
   delta: z.number().int(),
 });
 
+/** V3.1-24 : PV temporaires donnes. `choice` : garder les anciens, prendre les nouveaux, ou le plus grand (défaut de l'interface). */
+export const tempHpChangeSchema = z.object({
+  campaignId: campaignIdField,
+  amount: z.number().int().min(0).max(1000),
+  choice: z.enum(["keep", "replace", "largest"]).default("largest"),
+});
+
+const coinDeltaField = z.number().int().min(-1_000_000).max(1_000_000).optional();
+
+/** V3.1-24 : variation du porte-monnaie, par pièce (positif = dépôt, négatif = dépense). Le serveur applique `depositCoins` / `spendCoins`. */
+export const currencyChangeSchema = z.object({
+  campaignId: campaignIdField,
+  delta: z
+    .object({ pp: coinDeltaField, gp: coinDeltaField, ep: coinDeltaField, sp: coinDeltaField, cp: coinDeltaField })
+    .strict()
+    .refine((d) => Object.values(d).some((v) => v !== undefined && v !== 0), { message: "Aucune pièce à ajouter ou à retirer." }),
+});
+
+/** V3.1-24 : équiper ou déséquiper un objet de l'inventaire. */
+export const equipItemSchema = z.object({
+  campaignId: campaignIdField,
+  itemId: z.string().min(1),
+  equipped: z.boolean(),
+});
+
 export const resourceUsageSchema = z.object({
   campaignId: campaignIdField,
   trackerId: z.string().min(1),

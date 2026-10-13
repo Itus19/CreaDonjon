@@ -12,7 +12,7 @@ import {
 } from "@/src/core/rules/combat";
 import type { Rng } from "@/src/core/dice/rng";
 import { mergeRuntimeState, type RuntimeStatePatch } from "@/src/core/rules/runtimeState";
-import { zRuntimeState } from "@/src/core/schemas/runtimeState";
+import { zRuntimeState, type Concentration } from "@/src/core/schemas/runtimeState";
 import type { ActionsBlockData, LegendaryActionsBlockData, StatBlockBlockData, TraitsBlockData } from "@/src/core/schemas/rule-blocks";
 import {
   deleteCombat,
@@ -456,6 +456,18 @@ export const advanceCombatTurn = (supabase: TypedClient, params: { combatId: str
 export const retreatCombatTurn = (supabase: TypedClient, params: { combatId: string; actorUserId: string }) =>
   moveTurn(supabase, { ...params, direction: "previous" });
 
+/**
+ * V3.1-24 — la concentration d'un participant (`{ label }`) vue comme celle
+ * d'une fiche (`{ spell_key, label }`). Le sort de la fiche est conserve quand
+ * le libelle est le meme ; sinon la cle est inconnue (`null`).
+ */
+function concentrationFromParticipant(raw: unknown, current: Concentration | null): Concentration | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const label = (raw as { label?: unknown }).label;
+  if (typeof label !== "string") return null;
+  return { spell_key: current && current.label === label ? current.spell_key : null, label };
+}
+
 export interface ParticipantPatchInput {
   initiative?: number;
   ac?: number;
@@ -500,6 +512,11 @@ export async function patchCombatParticipant(
       rtPatch.hp = { current: params.patch.hpCurrent ?? state.hp.current, temp: params.patch.tempHp ?? state.hp.temp };
     }
     if (params.patch.conditions !== undefined) rtPatch.conditions = params.patch.conditions;
+    // V3.1-24 : la concentration suit, comme les etats. Le participant ne porte
+    // que le libelle ; on garde le sort de la fiche s'il s'agit du meme.
+    if (params.patch.concentration !== undefined) {
+      rtPatch.concentration = concentrationFromParticipant(params.patch.concentration, state.concentration);
+    }
     if (Object.keys(rtPatch).length > 0) {
       const next = mergeRuntimeState(state, rtPatch);
       zRuntimeState.parse(next);
@@ -565,6 +582,7 @@ export async function undoLastCombatAction(supabase: TypedClient, combatId: stri
       const next = mergeRuntimeState(state, {
         hp: { current: before.hp_current ?? state.hp.current, temp: before.temp_hp ?? state.hp.temp },
         conditions: (before.conditions as unknown as string[] | undefined) ?? state.conditions,
+        concentration: concentrationFromParticipant(before.concentration, state.concentration),
       });
       zRuntimeState.parse(next);
       await putRuntimeState(supabase, { entityId: participant.entity_id, campaignId: combat.campaign_id, state: next as unknown as Json });

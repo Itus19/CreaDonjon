@@ -13,6 +13,40 @@ function stateWith(actors: Record<string, TurnActor>, scene?: SceneState): TurnS
   return { scene: s, actors };
 }
 
+describe("les points de vie d'un personnage joueur (jets contre la mort, V3.1-24)", () => {
+  const pj = (hp: number, max = 12): TurnActor => ({ ...actor(hp, max), deathSaves: { success: 0, fail: 0 } });
+
+  it("tomber a 0 PV rend Inconscient et le dit dans les changements", () => {
+    const out = applyEffects(stateWith({ bram: pj(5) }), [{ action: "deal_damage", who: "bram", amount: 8 }]);
+    expect(out.state.actors.bram.conditions).toContain("unconscious");
+    expect(out.changes).toContainEqual({ kind: "condition", who: "bram", key: "unconscious", added: true });
+  });
+
+  it("des degats restants egaux aux PV max tuent sur le coup", () => {
+    const out = applyEffects(stateWith({ bram: pj(5, 12) }), [{ action: "deal_damage", who: "bram", amount: 17 }]);
+    expect(out.state.actors.bram.deathSaves).toEqual({ success: 0, fail: 3 });
+  });
+
+  it("un soin a 0 PV retire Inconscient et remet les jets a zero", () => {
+    const down: TurnActor = { ...actor(0), conditions: ["unconscious"], deathSaves: { success: 1, fail: 2 } };
+    const out = applyEffects(stateWith({ bram: down }), [{ action: "heal", who: "bram", amount: 3 }]);
+    expect(out.state.actors.bram.hp.current).toBe(3);
+    expect(out.state.actors.bram.conditions).toEqual([]);
+    expect(out.state.actors.bram.deathSaves).toEqual({ success: 0, fail: 0 });
+  });
+
+  it("les PV temporaires sont toujours entames en premier", () => {
+    const state = stateWith({ bram: { ...pj(9), hp: { current: 9, max: 12, temp: 4 } } });
+    const out = applyEffects(state, [{ action: "deal_damage", who: "bram", amount: 6 }]);
+    expect(out.state.actors.bram.hp).toEqual({ current: 7, max: 12, temp: 0 });
+  });
+
+  it("un acteur sans jets contre la mort (monstre) tombe a 0 sans Inconscient", () => {
+    const out = applyEffects(stateWith({ gob: actor(3) }), [{ action: "deal_damage", who: "gob", amount: 11 }]);
+    expect(out.state.actors.gob.conditions).toEqual([]);
+  });
+});
+
 describe("les points de vie", () => {
   it("entame les points de vie temporaires AVANT les courants", () => {
     const state = stateWith({ bram: { ...actor(9), hp: { current: 9, max: 12, temp: 4 } } });

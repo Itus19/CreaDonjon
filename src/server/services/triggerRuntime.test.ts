@@ -52,6 +52,7 @@ const runtime = {
   death_saves: { success: 0, fail: 0 },
   attuned: [],
   pending_request: null,
+  concentration: null,
 } satisfies RuntimeState;
 
 describe("buildActorState", () => {
@@ -69,6 +70,12 @@ describe("buildActorState", () => {
 
   it("reprend les conditions de l'etat d'execution, que `has_condition` interroge", () => {
     expect(buildActorState(sheet, runtime).conditions).toEqual(["concentrating", "prone"]);
+  });
+
+  it("derive `concentrating` du champ `concentration`, sans le stocker dans les conditions (ADR 0036 §3)", () => {
+    const concentre = { ...runtime, conditions: ["prone"], concentration: { spell_key: "bless", label: "Bénédiction" } };
+    expect(buildActorState(sheet, concentre).conditions).toEqual(["prone", "concentrating"]);
+    expect(buildActorState(sheet, { ...concentre, concentration: null }).conditions).toEqual(["prone"]);
   });
 
   it("ajoute les PV courants SEULEMENT quand l'etat d'execution est connu", () => {

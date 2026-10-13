@@ -4,6 +4,7 @@ import type { Database } from "@/src/types/database";
 import { ABILITIES, type DerivedSheet } from "@/src/core/rules/sheet";
 import { sceneZoneOf, type SceneState } from "@/src/core/rules/scene";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
+import { concentratingConditions } from "@/src/core/rules/concentration";
 import {
   runTriggers,
   type FiredEvent,
@@ -81,7 +82,9 @@ export function buildActorState(
   }
 
   return {
-    conditions: runtime?.conditions ?? [],
+    // `concentrating` est DERIVE du champ `concentration` (ADR 0036 §3) :
+    // jamais stocke en double dans `conditions`.
+    conditions: concentratingConditions(runtime?.conditions ?? [], runtime?.concentration ?? null),
     // Cles NORMALISEES, les memes que celles dont `loadTriggersForEntries`
     // lit les declencheurs : une aptitude qui porte une regle peut donc se
     // tester elle-meme, et l'auteur ecrit `fiendish-legacy-infernal`, jamais

@@ -1,4 +1,4 @@
-import type { PendingRequest, RuntimeState } from "../schemas/runtimeState";
+import type { Concentration, PendingRequest, RuntimeState } from "../schemas/runtimeState";
 
 /**
  * Patch partiel (V1-B3, specs/wiki-blocs.md §4.5) : "une bascule ecrit le
@@ -29,6 +29,8 @@ export interface RuntimeStatePatch {
    * `mergeRuntimeState`, pas d'une exception dans la forme du patch.
    */
   pending_request?: PendingRequest | null;
+  /** V3.1-24 — même distinction que `pending_request` : `undefined` n'y touche pas, `null` rompt la concentration. */
+  concentration?: Concentration | null;
 }
 
 export function mergeRuntimeState(current: RuntimeState, patch: RuntimeStatePatch): RuntimeState {
@@ -44,5 +46,6 @@ export function mergeRuntimeState(current: RuntimeState, patch: RuntimeStatePatc
     death_saves: { ...current.death_saves, ...patch.death_saves },
     attuned: patch.attuned ?? current.attuned,
     pending_request: patch.pending_request !== undefined ? patch.pending_request : current.pending_request,
+    concentration: patch.concentration !== undefined ? patch.concentration : current.concentration,
   };
 }

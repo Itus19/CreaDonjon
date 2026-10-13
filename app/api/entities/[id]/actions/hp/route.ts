@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { guardSheetActionRoute } from "@/lib/characterActions/routeGuard";
 import { hpChangeSchema } from "@/lib/characterActions/schemas";
+import { getLocale } from "next-intl/server";
+import type { Locale } from "@/src/i18n/request";
 import { changeHp } from "@/src/server/services/characterActions";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -8,11 +10,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!guard.ok) return guard.response;
   const { supabase, userId, entityId, body } = guard;
 
+  const locale = (await getLocale()) as Locale;
   await changeHp(supabase, {
     entityId,
     campaignId: body.campaignId,
     delta: body.delta,
     actorUserId: userId,
+    locale,
   });
 
   return new NextResponse(null, { status: 204 });

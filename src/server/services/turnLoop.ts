@@ -81,6 +81,7 @@ async function loadActor(
   return {
     hp: { current: state.hp.current, max: params.hpMax, temp: state.hp.temp },
     conditions: [...state.conditions],
+    deathSaves: { ...state.death_saves },
     resources: { ...state.resources },
     budget: params.scene ? budgetOf(params.scene, params.entityId, params.budgetSpeed) : { action: 1, bonus: 1, reaction: 1, movement: params.budgetSpeed, free: 1 },
   };
@@ -332,7 +333,11 @@ async function applyResolvedTurn(
     const before = actors[who];
     const changedHp = before.hp.current !== after.hp.current || before.hp.temp !== after.hp.temp;
     const changedConditions = before.conditions.join("|") !== after.conditions.join("|");
-    if (!changedHp && !changedConditions) continue;
+    const changedDeath =
+      before.deathSaves !== undefined &&
+      after.deathSaves !== undefined &&
+      (before.deathSaves.success !== after.deathSaves.success || before.deathSaves.fail !== after.deathSaves.fail);
+    if (!changedHp && !changedConditions && !changedDeath) continue;
 
     if (who.startsWith("participant:")) {
       const participantId = who.slice("participant:".length);
@@ -357,6 +362,7 @@ async function applyResolvedTurn(
       patch: {
         ...(changedHp ? { hp: { current: after.hp.current, temp: after.hp.temp } } : {}),
         ...(changedConditions ? { conditions: after.conditions } : {}),
+        ...(changedDeath && after.deathSaves ? { death_saves: after.deathSaves } : {}),
       },
       note: `Tour solo — ${params.text}`,
       sessionId: await getOrOpenSessionForCampaign(supabase, params.campaignId),

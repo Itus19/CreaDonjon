@@ -17,7 +17,7 @@ const ETAT_AVANT_INSPIRATION = {
 describe("zRuntimeState", () => {
   it("valide un etat complet (specs/wiki-blocs.md §4.2)", () => {
     const state = { ...ETAT_AVANT_INSPIRATION, inspiration: 1 };
-    expect(zRuntimeState.parse(state)).toEqual({ ...state, pending_request: null });
+    expect(zRuntimeState.parse(state)).toEqual({ ...state, pending_request: null, concentration: null });
   });
 
   it("relit une ligne ecrite AVANT l'inspiration, et lui donne zero", () => {
@@ -30,7 +30,20 @@ describe("zRuntimeState", () => {
       ...ETAT_AVANT_INSPIRATION,
       inspiration: 0,
       pending_request: null,
+      concentration: null,
     });
+  });
+
+  it("relit une ligne ecrite AVANT la concentration (V3.1-24) : le champ vaut null", () => {
+    // Meme risque que pour l'inspiration : toutes les lignes deja en base
+    // ont ete ecrites sans ce champ, et `parse` tourne a chaque ouverture de fiche.
+    const ancienne = { ...ETAT_AVANT_INSPIRATION, inspiration: 1 };
+    expect(zRuntimeState.parse(ancienne).concentration).toBeNull();
+  });
+
+  it("relit une concentration ecrite", () => {
+    const state = { ...ETAT_AVANT_INSPIRATION, concentration: { spell_key: "bless", label: "Bénédiction" } };
+    expect(zRuntimeState.parse(state).concentration).toEqual({ spell_key: "bless", label: "Bénédiction" });
   });
 
   it("rejette une inspiration hors bornes", () => {

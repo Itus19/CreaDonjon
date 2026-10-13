@@ -45,13 +45,18 @@ import { getCampaignById } from "@/src/server/repos/campaigns";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { listBlocksForRulesetEntry, type RulesetEntryRow } from "@/src/server/repos/rules";
-import { findEntryInRulesetChain } from "@/src/server/services/rules";
+import { entryNameFrom, findEntryInRulesetChain } from "@/src/server/services/rules";
 import { assembleResolvedRuleset, resolveEquipmentData, type RemainingChoice } from "@/src/server/services/resolvedRuleset";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
 import { fireTriggersForCharacter } from "@/src/server/services/triggerRuntime";
 import { applyRestEffects, clearedSpellSlots } from "@/src/core/rules/restEffects";
+import { applyDamageWithDeath, applyHealing, type DeathState } from "@/src/core/rules/deathSaves";
+import { grantTempHp, type TempHpChoice } from "@/src/core/rules/tempHp";
+import { zSpellCastingBlockData } from "@/src/core/schemas/rule-blocks/blocks";
+import { setConcentration } from "@/src/server/services/concentration";
+import type { Concentration } from "@/src/core/schemas/runtimeState";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -430,6 +435,8 @@ export interface CastSpellOutcome {
   slotLevelConsumed: number;
   remainingSlots: number;
   damage?: DamageRollResult;
+  /** V3.1-24 : présent seulement pour un sort de concentration — la concentration posée, et celle qu'elle a remplacée (rompue) s'il y en avait une. */
+  concentration?: { current: Concentration; broken: Concentration | null };
 }
 
 /** Jet d'attaque de sort (retour utilisateur, boutons d'action des sorts — meme motif que `rollWeaponAttack`) : 1d20 + `sheet.spellcasting.attackBonus`, deja la somme caracteristique+maitrise (V1-B1) — jamais recompose ici. */
@@ -511,9 +518,16 @@ export async function castSpell(
   }
 
   let damage: DamageRollResult | undefined;
+  // V3.1-24 : un sort de concentration la pose. `spell_casting.concentration`
+  // est lu avec les blocs deja charges pour les degats — aucune lecture de plus.
+  let concentrationToStart: Concentration | null = null;
   const entry = await findEntryInRulesetChain(supabase, ctx.rulesetId, params.spellKey);
   if (entry) {
     const spellBlocks = await listBlocksForRulesetEntry(supabase, entry.id);
+    const casting = zSpellCastingBlockData.safeParse(spellBlocks.find((b) => b.block_type === "spell_casting")?.data);
+    if (casting.success && casting.data.concentration) {
+      concentrationToStart = { spell_key: params.spellKey, label: entryNameFrom(entry) };
+    }
     const effectsBlock = spellBlocks.find((b) => b.block_type === "effects");
     const scalingBlock = spellBlocks.find((b) => b.block_type === "scaling");
     const effectsData = effectsBlock?.data as unknown as EffectsBlockData | undefined;
@@ -552,7 +566,20 @@ export async function castSpell(
     });
   }
 
-  return { slotLevelConsumed: params.slotLevel, remainingSlots: isCantrip ? 0 : available - used - 1, damage };
+  let concentration: CastSpellOutcome["concentration"];
+  if (concentrationToStart) {
+    // Le seul chemin qui change une concentration (`setConcentration`) : la
+    // precedente est remplacee et rendue comme rompue (V3.1-130 s'y branchera).
+    const change = await setConcentration(supabase, {
+      entityId: params.entityId,
+      campaignId: params.campaignId,
+      incoming: concentrationToStart,
+      actorUserId: params.actorUserId,
+    });
+    if (change.next) concentration = { current: change.next, broken: change.broken };
+  }
+
+  return { slotLevelConsumed: params.slotLevel, remainingSlots: isCantrip ? 0 : available - used - 1, damage, concentration };
 }
 
 /** `sheet.spellcasting.slots` est deja le resultat combine (characterSheet(), V1-B1) : rien a recombiner ici. */
@@ -581,6 +608,18 @@ async function advanceSceneClockForRest(supabase: TypedClient, campaignId: strin
   const scene = await getSceneState(supabase, campaignId);
   if (!scene) return;
   await putSceneState(supabase, { campaignId, state: advanceSceneTime(scene, minutes), updatedBy: callerId });
+}
+
+/**
+ * V3.1-24 : un repos qui rend des PV est un soin comme un autre (ADR 0036 §8) —
+ * il remet les jets contre la mort a zero et retire Inconscient a qui etait a 0 PV.
+ */
+function healedByRest(state: RuntimeState, hpMax: number, nextCurrent: number): RuntimeStatePatch {
+  const healed = applyHealing(
+    { hp: { current: state.hp.current, max: hpMax, temp: state.hp.temp }, conditions: state.conditions, deathSaves: state.death_saves },
+    nextCurrent - state.hp.current
+  );
+  return { hp: { current: nextCurrent }, conditions: healed.conditions, death_saves: healed.deathSaves };
 }
 
 /** Repos court : depense de des de vie au choix (soigne, decompte), recharge des ressources `short_rest`. */
@@ -669,7 +708,7 @@ export async function takeShortRest(
   const maxHp = ctx.sheet.hitPoints.max;
   const basePatch: RuntimeStatePatch = {
     hit_dice: nextHitDice,
-    hp: { current: Math.min(maxHp, state.hp.current + hpHealed) },
+    ...healedByRest(state, maxHp, Math.min(maxHp, state.hp.current + hpHealed)),
     resources: rechargeResources(ctx.resourcesData, state.resources, ["short_rest"]),
   };
   const triggered = await restTriggersPatch(supabase, ctx, mergeRuntimeState(state, basePatch), "short_rest");
@@ -730,7 +769,7 @@ export async function takeLongRest(
 
   const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
   const basePatch: RuntimeStatePatch = {
-    hp: { current: ctx.sheet.hitPoints.max },
+    ...healedByRest(state, ctx.sheet.hitPoints.max, ctx.sheet.hitPoints.max),
     hit_dice: nextHitDice,
     exhaustion: Math.max(0, state.exhaustion - 1),
     // Chaque niveau consomme remis a 0 : `{}` ne remettait rien, la fusion
@@ -994,18 +1033,71 @@ function rechargeResources(
   return next;
 }
 
-/** PV courants +/- (bouton manuel de l'en-tete) — jamais un jet, une simple modification d'etat. */
+/**
+ * PV courants +/- (bouton manuel de l'en-tete) — jamais un jet, une simple
+ * modification d'etat, mais qui suit les memes regles que la resolution des
+ * degats du tour (V3.1-24, ADR 0036 §8) : un delta negatif entame d'abord les
+ * PV temporaires, puis les courants ; a 0 PV, Inconscient, mort directe ou
+ * echec aux jets contre la mort ; un delta positif est un soin (jets remis a
+ * zero, Inconscient retire). Les PV maximum ne sont lus (fiche derivee) que si
+ * le coup atteint zero : seule la mort directe en a besoin.
+ */
 export async function changeHp(
   supabase: TypedClient,
-  params: { entityId: string; campaignId: string | null; delta: number; actorUserId: string }
+  params: { entityId: string; campaignId: string | null; delta: number; actorUserId: string; locale: Locale }
 ): Promise<void> {
   const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
+
+  // Sans fiche derivee (entite sans personnage), pas de maximum : ni mort directe, ni plafond de soin, comme avant.
+  let hpMax = Number.MAX_SAFE_INTEGER;
+  if (params.delta < 0 && -params.delta >= state.hp.temp + state.hp.current) {
+    const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+    if (ctx) hpMax = ctx.sheet.hitPoints.max;
+  }
+
+  const before: DeathState = {
+    hp: { current: state.hp.current, max: hpMax, temp: state.hp.temp },
+    conditions: state.conditions,
+    deathSaves: state.death_saves,
+  };
+  const after = params.delta < 0 ? applyDamageWithDeath(before, -params.delta) : applyHealing(before, params.delta);
+
+  await applyRuntimeStateChange(supabase, {
+    entityId: params.entityId,
+    campaignId: params.campaignId,
+    patch: {
+      hp: { current: after.hp.current, temp: after.hp.temp },
+      conditions: after.conditions,
+      death_saves: after.deathSaves,
+    },
+    note: `PV ${params.delta >= 0 ? "+" : ""}${params.delta}`,
+    sessionId,
+    actor: "player",
+    actorUserId: params.actorUserId,
+  });
+}
+
+/**
+ * PV temporaires donnes (V3.1-24, ticket point 5) : ils ne se cumulent pas.
+ * `choice` : garder les anciens, prendre les nouveaux, ou le plus grand des
+ * deux (par defaut, ce que propose l'interface). Un montant a zero ne fait
+ * rien ; retirer des PV temporaires se fait par `changeHp` (ils partent
+ * d'abord).
+ */
+export async function changeTempHp(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string | null; amount: number; choice?: TempHpChoice; actorUserId: string }
+): Promise<void> {
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  const temp = grantTempHp(state.hp.temp, params.amount, params.choice ?? "largest");
+  if (temp === state.hp.temp) return;
   const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
   await applyRuntimeStateChange(supabase, {
     entityId: params.entityId,
     campaignId: params.campaignId,
-    patch: { hp: { current: Math.max(0, state.hp.current + params.delta) } },
-    note: `PV ${params.delta >= 0 ? "+" : ""}${params.delta}`,
+    patch: { hp: { temp } },
+    note: `PV temporaires ${state.hp.temp} → ${temp}`,
     sessionId,
     actor: "player",
     actorUserId: params.actorUserId,

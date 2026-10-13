@@ -78,4 +78,10 @@ describe("mergeRuntimeState", () => {
       expect(mergeRuntimeState(current, { pending_request: autre }).pending_request).toEqual(autre);
     });
   });
+
+  it("V3.1-24 : un patch { concentration: null } rompt la concentration, un patch sans le champ n'y touche pas", () => {
+    const current = { ...defaultRuntimeState(), concentration: { spell_key: "bless", label: "Bénédiction" } };
+    expect(mergeRuntimeState(current, { concentration: null }).concentration).toBeNull();
+    expect(mergeRuntimeState(current, { xp: 5 }).concentration).toEqual(current.concentration);
+  });
 });

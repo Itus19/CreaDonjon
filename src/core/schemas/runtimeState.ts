@@ -48,6 +48,14 @@ export const zPendingRequest = z.object({
 export type PendingRequest = z.infer<typeof zPendingRequest>;
 
 /**
+ * V3.1-24 (ADR 0036 §3) — la concentration en cours : le sort (`spell_key`,
+ * `null` pour une concentration posee a la main ou venue d'un participant
+ * d'initiative) et son libelle. Au plus une par personnage.
+ */
+export const zConcentration = z.object({ spell_key: z.string().nullable(), label: z.string() });
+export type Concentration = z.infer<typeof zConcentration>;
+
+/**
  * Forme de `entity_runtime_state.state` (V1-B3, specs/wiki-blocs.md §4.2) :
  * ni build, ni valeur derivee — ce qui change a chaque tour de jeu et
  * depend de la campagne. Jamais dans le bloc `character` (V1-B2), jamais
@@ -89,6 +97,8 @@ export const zRuntimeState = z.object({
   attuned: z.array(z.string()),
   /** V3-B5 — `.default(null)`, même raison que `inspiration` : toutes les lignes déjà en base ont été écrites sans ce champ, aucune migration SQL. */
   pending_request: zPendingRequest.nullable().default(null),
+  /** V3.1-24 — `.default(null)`, même raison que `inspiration` : les lignes déjà en base n'ont pas ce champ, aucune migration SQL. */
+  concentration: zConcentration.nullable().default(null),
 });
 export type RuntimeState = z.infer<typeof zRuntimeState>;
 
@@ -103,6 +113,7 @@ export function defaultRuntimeState(): RuntimeState {
     spell_slots_used: {},
     conditions: [],
     pending_request: null,
+    concentration: null,
     death_saves: { success: 0, fail: 0 },
     attuned: [],
   };

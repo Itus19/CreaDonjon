@@ -689,6 +689,7 @@ export default function PlayableCharacterSheet({
                 weight={weight}
                 cost={cost}
                 encumbrance={sheet.encumbrance}
+                server={{ entityId, campaignId, onBlockRefreshed }}
               />
             )}
 

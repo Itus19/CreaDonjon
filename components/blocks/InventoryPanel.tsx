@@ -534,10 +534,18 @@ export default function InventoryPanel({
   weight,
   cost,
   encumbrance,
+  server,
 }: {
   worldSlug: string;
   inventory: InventoryBlockData | undefined;
   onUpdateInventory: (data: InventoryBlockData) => void;
+  /**
+   * V3.1-24 (ADR 0036 §1) : quand l'entite existe et que son bloc `inventory`
+   * aussi, la monnaie et l'equipement passent par les services serveur
+   * (`/actions/currency`, `/actions/equip`) au lieu de renvoyer le bloc entier.
+   * Absent (assistant de creation, apercu) : l'ancien chemin local, inchange.
+   */
+  server?: { entityId: string; campaignId: string | null; onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void };
   strMod: number;
   dexMod: number;
   proficiencyBonus: number;
@@ -552,6 +560,8 @@ export default function InventoryPanel({
   const [coinDelta, setCoinDelta] = useState("");
   const [coinType, setCoinType] = useState<CoinType>("gp");
   const [coinError, setCoinError] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
   const inventoryRefs = (inventory?.items ?? []).map(itemRef).filter((r): r is BlockReference => r !== null);
   const itemChips = useReferenceChips(worldSlug, inventoryRefs);
@@ -586,9 +596,59 @@ export default function InventoryPanel({
    * possible. `null` signale une valeur totale insuffisante : rien n'est
    * modifie, seul `coinError` s'allume pour le signaler.
    */
-  function applyCoinDelta(sign: 1 | -1) {
+  /**
+   * Geste serveur (V3.1-24) : POST sur la route de l'action, puis le bloc
+   * ecrit rafraichit l'ecran (`onBlockRefreshed`). Rend `true` si le geste a
+   * abouti ; l'echec est affiche, jamais tu (`coinError` pour des fonds
+   * insuffisants, le message du serveur sinon).
+   */
+  async function postInventoryAction(path: "currency" | "equip", body: Record<string, unknown>): Promise<boolean> {
+    if (!server || pending) return false;
+    setPending(true);
+    setServerError(null);
+    try {
+      const res = await fetch(`/api/entities/${server.entityId}/actions/${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId: server.campaignId, ...body }),
+      });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        if (path === "currency" && res.status === 400) setCoinError(true);
+        else setServerError(err?.error ?? "Action impossible.");
+        return false;
+      }
+      server.onBlockRefreshed((await res.json()) as { id: string; data: unknown; version: number });
+      return true;
+    } catch (erreur) {
+      // Reseau coupe ou reponse illisible : le geste n'a pas abouti, on le dit.
+      console.error("Action d'inventaire impossible", erreur);
+      setServerError("Action impossible : vérifiez la connexion et réessayez.");
+      return false;
+    } finally {
+      setPending(false);
+    }
+  }
+
+  /** Champ de piece quitte (mode serveur) : l'ecart avec la valeur affichee devient un delta de cette piece. */
+  async function commitCoinField(coin: CoinType, raw: string) {
+    const typed = Math.max(0, Math.trunc(Number(raw) || 0));
+    const diff = typed - (inventory?.currency[coin] ?? 0);
+    if (diff === 0) return;
+    setCoinError(false);
+    await postInventoryAction("currency", { delta: { [coin]: diff } });
+  }
+
+  async function applyCoinDelta(sign: 1 | -1) {
     const amount = coinDelta.trim() === "" ? 1 : Math.abs(Math.trunc(Number(coinDelta)));
     if (!amount) return;
+    if (server && inventory) {
+      if (await postInventoryAction("currency", { delta: { [coinType]: sign * amount } })) {
+        setCoinError(false);
+        setCoinDelta("");
+      }
+      return;
+    }
     const base = inventoryBase();
     if (sign === 1) {
       onUpdateInventory({ ...base, currency: depositCoins(base.currency, coinType, amount) });
@@ -640,16 +700,30 @@ export default function InventoryPanel({
             {(["pp", "gp", "ep", "sp", "cp"] as const).map((coin) => (
               <label key={coin} className="flex flex-col gap-1 text-xs text-ink-muted">
                 {CURRENCY_LABELS_FR[coin]}
-                <input
-                  type="number"
-                  min={0}
-                  value={inventory?.currency[coin] ?? 0}
-                  onChange={(e) => {
-                    const base = inventoryBase();
-                    onUpdateInventory({ ...base, currency: { ...base.currency, [coin]: Number(e.target.value) || 0 } });
-                  }}
-                  className="w-full rounded-md border border-edge bg-transparent px-1 py-1 text-center text-xs text-ink outline-none"
-                />
+                {server && inventory ? (
+                  // Mode serveur : on valide en quittant le champ (un delta par saisie
+                  // finie, pas par frappe) ; la cle remet le champ a la valeur ecrite.
+                  <input
+                    key={`${coin}-${inventory.currency[coin]}`}
+                    type="number"
+                    min={0}
+                    defaultValue={inventory.currency[coin]}
+                    disabled={pending}
+                    onBlur={(e) => void commitCoinField(coin, e.target.value)}
+                    className="w-full rounded-md border border-edge bg-transparent px-1 py-1 text-center text-xs text-ink outline-none disabled:opacity-50"
+                  />
+                ) : (
+                  <input
+                    type="number"
+                    min={0}
+                    value={inventory?.currency[coin] ?? 0}
+                    onChange={(e) => {
+                      const base = inventoryBase();
+                      onUpdateInventory({ ...base, currency: { ...base.currency, [coin]: Number(e.target.value) || 0 } });
+                    }}
+                    className="w-full rounded-md border border-edge bg-transparent px-1 py-1 text-center text-xs text-ink outline-none"
+                  />
+                )}
               </label>
             ))}
           </div>
@@ -679,6 +753,7 @@ export default function InventoryPanel({
           </div>
         </div>
         {coinError && <span className="text-xs text-danger">Fonds insuffisants, même en cassant des pièces plus grosses.</span>}
+        {serverError && <span className="text-xs text-danger">{serverError}</span>}
       </div>
 
       <AddItemRow worldSlug={worldSlug} onAdd={addInventoryItem} />
@@ -705,7 +780,11 @@ export default function InventoryPanel({
               showAttackInfo={showAttackInfo}
               collapsible={true}
               busy={false}
-              onToggleEquipped={() => updateInventoryItem(index, { equipped: !item.equipped })}
+              onToggleEquipped={() =>
+                server && inventory
+                  ? void postInventoryAction("equip", { itemId: item.id, equipped: !item.equipped })
+                  : updateInventoryItem(index, { equipped: !item.equipped })
+              }
               onChangeQty={(qty) => updateInventoryItem(index, { qty })}
               onRemove={() => removeInventoryItem(index)}
             />

@@ -24,6 +24,7 @@ export default function InventoryTab({
   weight,
   cost,
   encumbrance,
+  server,
 }: {
   worldSlug: string;
   inventory: InventoryBlockData | undefined;
@@ -37,6 +38,8 @@ export default function InventoryTab({
   weight: Record<string, number | null>;
   cost: Record<string, ItemCost | null>;
   encumbrance: EncumbranceResult;
+  /** V3.1-24 : monnaie et equipement par les services serveur (voir `InventoryPanel`). */
+  server?: { entityId: string; campaignId: string | null; onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void };
 }) {
   return (
     <div className="pt-3">
@@ -54,6 +57,7 @@ export default function InventoryTab({
         weight={weight}
         cost={cost}
         encumbrance={encumbrance}
+        server={server}
       />
     </div>
   );
