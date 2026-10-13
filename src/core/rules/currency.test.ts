@@ -13,11 +13,21 @@ describe("depositCoins", () => {
     expect(depositCoins(empty, "cp", 7)).toEqual({ ...empty, cp: 7 });
   });
 
-  it("convertit vers la piece superieure des que le seuil est franchi (sur retour utilisateur)", () => {
-    // 9 po + 1 po = 10 po = 1 pp : la meme conversion automatique qu'a la
-    // depense, mais dans l'autre sens.
+  it("regroupe en or, argent et cuivre seulement : 9 po + 1 po restent 10 po, jamais 1 pp (decision du 13 octobre)", () => {
     const currency: Currency = { ...empty, gp: 9 };
-    expect(depositCoins(currency, "gp", 1)).toEqual({ ...empty, pp: 1 });
+    expect(depositCoins(currency, "gp", 1)).toEqual({ ...empty, gp: 10 });
+  });
+
+  it("monte vers la piece superieure parmi or, argent, cuivre : 99 pa + 1 pa = 10 po", () => {
+    expect(depositCoins({ ...empty, sp: 99 }, "sp", 1)).toEqual({ ...empty, gp: 10 });
+  });
+
+  it("le platine detenu reste tel quel apres un depot d'une autre piece", () => {
+    expect(depositCoins({ ...empty, pp: 2 }, "gp", 3)).toEqual({ ...empty, pp: 2, gp: 3 });
+  });
+
+  it("deposer du platine l'ajoute aux pp detenues", () => {
+    expect(depositCoins({ ...empty, pp: 1, gp: 4 }, "pp", 2)).toEqual({ ...empty, pp: 3, gp: 4 });
   });
 
   it("recompose tout le porte-monnaie, pas seulement le type depose, sans former d'electrum", () => {
@@ -64,7 +74,7 @@ describe("spendCoins", () => {
     expect(spendCoins(currency, "cp", 5)).toEqual(empty);
   });
 
-  it("recompose du plus gros au plus petit, sans jamais former d'electrum", () => {
+  it("recompose du plus gros au plus petit, sans jamais former d'electrum ni de platine", () => {
     // 25 pa (250 pc) + 3 pc = 253 pc. Retirer 3 pc laisse 250 pc : 2 po + 5 pa.
     const currency: Currency = { ...empty, sp: 25, cp: 3 };
     expect(spendCoins(currency, "cp", 3)).toEqual({ ...empty, gp: 2, sp: 5 });
@@ -72,6 +82,22 @@ describe("spendCoins", () => {
 
   it("depenser 3 po avec 1 pp et 0 po rend la monnaie", () => {
     expect(spendCoins({ ...empty, pp: 1 }, "gp", 3)).toEqual({ ...empty, gp: 7 });
+  });
+
+  it("le platine detenu n'est pas casse tant que l'or, l'argent et le cuivre suffisent", () => {
+    expect(spendCoins({ ...empty, pp: 1, gp: 5 }, "gp", 3)).toEqual({ ...empty, pp: 1, gp: 2 });
+  });
+
+  it("le platine se casse au plus juste : 3 pp, depenser 15 po casse 2 pp et garde la troisieme", () => {
+    expect(spendCoins({ ...empty, pp: 3 }, "gp", 15)).toEqual({ ...empty, pp: 1, gp: 5 });
+  });
+
+  it("l'electrum se casse avant le platine (la plus petite reserve d'abord)", () => {
+    expect(spendCoins({ ...empty, pp: 1, ep: 2 }, "cp", 50)).toEqual({ ...empty, pp: 1, ep: 1 });
+  });
+
+  it("depenser du platine consomme d'abord les pp detenues", () => {
+    expect(spendCoins({ ...empty, pp: 2, gp: 5 }, "pp", 1)).toEqual({ ...empty, pp: 1, gp: 5 });
   });
 
   it("l'electrum detenu n'est pas casse tant que le reste suffit", () => {

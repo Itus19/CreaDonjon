@@ -12,7 +12,7 @@ type TypedClient = SupabaseClient<Database>;
  * V3.1-24 (ADR 0036 §1) — les pièces et l'équipement restent dans le bloc
  * `inventory` ; ces services en sont le seul chemin d'écriture depuis la fiche
  * et la Table. Ils relisent le bloc, appliquent la règle du noyau
- * (`applyCurrencyDelta` : `depositCoins` / `spendCoins`, électrum exclu du
+ * (`applyCurrencyDelta` : `depositCoins` / `spendCoins`, platine et électrum hors du
  * regroupement) et l'écrivent avec contrôle de version, par `updateBlockContent` :
  * droit d'édition de l'entité, validation Zod du bloc et UNE révision par geste
  * (l'économie de campagne et le journal lisent le porte-monnaie dans les
