@@ -168,7 +168,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-38 | ☐ | sans | L'outil Initiative refondu, MJ et joueur | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
 | V3.1-39 | ☑ | sans | Les sauvegardes demandées à la cible | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-40 | ☑ | sans | Ressources de classe : magie de pacte et recharge partielle | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-41 | ☐ | sans | Bloc-notes : la page partagée devient une entité (données) | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-41 | ☑ | sans | Bloc-notes : la page partagée devient une entité (données) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-42 | ☐ | sans | Bloc-notes : le cahier refait, MJ et joueuse | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-43 | ☐ | sans | Livre de sessions : le registre et ses trois ajouts | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-44 | ☐ | sans | Rencontres : l'atelier en trois colonnes | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |

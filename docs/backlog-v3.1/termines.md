@@ -1676,6 +1676,59 @@ Ruse magique…) sont à vérifier dans le manuel de l'auteur.
 
 ---
 
+### ☑ V3.1-41 — Bloc-notes : la page partagée devient une entité (données) · `M` · sans modèle IA — **fait le 13 octobre**
+
+**Modèle conseillé : Opus** — migration, RLS et octrois d'écriture ; principe déjà tranché.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Décision** : ADR 0037 (`docs/adr/0037-une-page-partagee-devient-une-entite.md`,
+accepté le 5 octobre). Une page du cahier marquée « La table » devient sa
+propre **entité** (genre `shared_note`, visibilité de la table), son
+autrice reçoit l'octroi d'écriture (`entity_grants`, que le MJ peut
+reprendre), et le cahier garde un lien vers elle. Modèle : le Livre de
+sessions (`session_journal`).
+
+**À faire**
+1. Relire l'ADR 0037 et `docs/SCHEMA.md` ; la migration ajoute ce que l'ADR
+   demande (nouvelle migration, aucune migration appliquée modifiée) ;
+   `docs/SCHEMA.md` à jour dans le même commit.
+2. Services : `shareNotebookPage(pageId)` (crée l'entité, l'octroi, le lien ;
+   idempotent) et `unshareNotebookPage(pageId)` (retire la visibilité de la
+   table ; l'entité n'est plus lue que par l'autrice ; aucune donnée perdue).
+   Routes Zod.
+3. Lecture : « Partagées à la table » = les entités `shared_note` visibles
+   du lecteur, avec le nom de l'autrice. Un nom cité que le lecteur n'a pas
+   découvert s'affiche **sans lien** — filtré côté serveur (règle 5).
+4. Ces entités **ne rejoignent pas** les listes du wiki (arborescence,
+   recherche, sommaire public), comme `session_journal`.
+
+**Critères d'acceptation**
+- [x] Test d'intégration RLS : une page privée n'est lue par personne d'autre que son autrice, MJ compris.
+- [x] Partagée : MJ et joueuses la lisent, seule l'autrice l'écrit ; le MJ peut retirer l'octroi.
+- [x] Repasser en privée : plus personne d'autre ne la lit ; le texte est intact.
+- [x] Une `shared_note` n'apparaît ni dans l'arborescence, ni dans la recherche, ni dans le wiki public (tests).
+- [x] Un nom non découvert arrive au joueur sans identifiant de fiche (test serveur).
+
+**Note de clôture (13 octobre, Opus).** Décisions consignées en bas de l'[ADR 0037](../adr/0037-une-page-partagee-devient-une-entite.md).
+- **« La table »** = visibilité `players` du monde.
+- **« Ne plus partager »** repasse le bloc de texte en `user` de l'autrice ; l'entité reste.
+- **Le titre** est le libellé du bloc. Le nom de l'entité est toujours « Page du cahier », pour qu'aucun titre privé ne soit lisible par la RLS d'`entities`.
+- **L'octroi** se réclame seulement à la création (`claim_shared_note_grant`, migration `20261013130000`, appliquée par l'auteur le 13 octobre).
+
+*Code :*
+- noyau `src/core/notebook/share.ts` (`pageToSharedLink`, `unlinkUnknownEntityRefs`, 4 tests) ;
+- ligne de cahier `shared_page` ;
+- service `sharedNotes.ts` (`shareNotebookPage`, `unshareNotebookPage`, `listSharedNotes`) ;
+- routes `notes/share`, `notes/unshare`, `notes/shared` (Zod sur l'adresse et le corps) ;
+- exclusions dans l'arborescence, la recherche, le wiki public (liste, sommaire, détail) et les fiches à épingler.
+
+*Preuve* : `sharedNotes.integration.test.ts`, **8/8 sur la base le 13 octobre**, aucun monde de test resté.
+
+*En attendant V3.1-42*, le cahier actuel montre une ligne « Page partagée » qui ne s'ouvre pas.
+
+---
+
 ### ☑ V3.1-47 — Création : les règles de personnage viennent du ruleset · `L` · sans modèle IA — **conçu le 9 octobre (ADR 0046) → V3.1-115 à 119**
 
 **Modèle conseillé : Opus** — structures de données de règles, ADR, et lien avec le mécanisme générique des choix.

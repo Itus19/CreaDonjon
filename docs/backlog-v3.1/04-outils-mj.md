@@ -112,42 +112,6 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
 
 ---
 
-### ☐ V3.1-41 — Bloc-notes : la page partagée devient une entité (données) · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Opus** — migration, RLS et octrois d'écriture ; principe déjà tranché.
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Décision** : ADR 0037 (`docs/adr/0037-une-page-partagee-devient-une-entite.md`,
-accepté le 5 octobre). Une page du cahier marquée « La table » devient sa
-propre **entité** (genre `shared_note`, visibilité de la table), son
-autrice reçoit l'octroi d'écriture (`entity_grants`, que le MJ peut
-reprendre), et le cahier garde un lien vers elle. Modèle : le Livre de
-sessions (`session_journal`).
-
-**À faire**
-1. Relire l'ADR 0037 et `docs/SCHEMA.md` ; la migration ajoute ce que l'ADR
-   demande (nouvelle migration, aucune migration appliquée modifiée) ;
-   `docs/SCHEMA.md` à jour dans le même commit.
-2. Services : `shareNotebookPage(pageId)` (crée l'entité, l'octroi, le lien ;
-   idempotent) et `unshareNotebookPage(pageId)` (retire la visibilité de la
-   table ; l'entité n'est plus lue que par l'autrice ; aucune donnée perdue).
-   Routes Zod.
-3. Lecture : « Partagées à la table » = les entités `shared_note` visibles
-   du lecteur, avec le nom de l'autrice. Un nom cité que le lecteur n'a pas
-   découvert s'affiche **sans lien** — filtré côté serveur (règle 5).
-4. Ces entités **ne rejoignent pas** les listes du wiki (arborescence,
-   recherche, sommaire public), comme `session_journal`.
-
-**Critères d'acceptation**
-- [ ] Test d'intégration RLS : une page privée n'est lue par personne d'autre que son autrice, MJ compris.
-- [ ] Partagée : MJ et joueuses la lisent, seule l'autrice l'écrit ; le MJ peut retirer l'octroi.
-- [ ] Repasser en privée : plus personne d'autre ne la lit ; le texte est intact.
-- [ ] Une `shared_note` n'apparaît ni dans l'arborescence, ni dans la recherche, ni dans le wiki public (tests).
-- [ ] Un nom non découvert arrive au joueur sans identifiant de fiche (test serveur).
-
----
-
 ### ☐ V3.1-42 — Bloc-notes : le cahier refait, MJ et joueuse · `L` · sans modèle IA — **prêt après V3.1-41**
 
 **Modèle conseillé : Sonnet** — planche définitive ; données fournies par 41.
