@@ -1,7 +1,7 @@
 # Étude — des fiches de règles qui se jouent
 
 **Statut :** échantillon fixé le 13 octobre 2026 · découpage à faire
-**Esquisse visuelle :** fiche terminée, éditeur de briques, onglet Actions en jeu (Abjuration d'ennemis)
+**Esquisse visuelle :** planches « Esquisse · Règle jouable » (fiche terminée, éditeur de briques, onglet Actions en jeu) sur le canevas de la refonte https://claude.ai/artifact/EzWpfdYv6xP9H9gMp6L8Lm, sous le titre « Règles jouables »
 
 ## Objet
 
