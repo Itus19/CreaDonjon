@@ -154,3 +154,49 @@ describe.skipIf(!hasCreds)("choix accordés du SRD 2024 (integration, base reell
     expect(assembled.remainingChoices.some((c) => c.id === "keen-senses.skills")).toBe(true);
   });
 });
+
+/**
+ * V3.1-117 : la sous-classe rejoint le lot résolu ; ses aptitudes atteintes
+ * ouvrent leurs choix, comptés au niveau de CLASSE.
+ */
+describe.skipIf(!hasCreds)("sous-classes du SRD 2024 (integration, base reelle)", () => {
+  let admin: SupabaseClient;
+  let rulesetId: string;
+
+  beforeAll(async () => {
+    admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+    const { data, error } = await admin.from("rulesets").select("id").eq("base_system", "dnd_srd_52").eq("is_official_base", true).limit(1).single();
+    if (error || !data) throw new Error(error?.message ?? "aucun ruleset SRD 5.2.1 officiel en base");
+    rulesetId = data.id;
+  });
+
+  it("Druide 5 du Cercle de la Terre, terres arides : ses sorts de cercle jusqu'au niveau 5", async () => {
+    // L'import désambiguïse la clé : « circle-of-the-land » est déjà une aptitude 2014.
+    const classes = [{ key: "druid", level: 5, subclass: "circle-of-the-land-subclass" }];
+    const assembled = await assembleResolvedRuleset(admin, rulesetId, { classes }, "fr");
+    expect(assembled.choiceSources.map((s) => s.key)).toContain("circle-of-the-land-subclass.circle-of-the-land-spells");
+    const resolved = await resolveCharacterChoices(admin, rulesetId, assembled, { "circle-of-the-land-subclass.circle-of-the-land-spells.land": ["arid"] }, 5, { druid: 5 });
+    const build: CharacterBuild = {
+      species: "",
+      classes: [{ key: "druid", level: 5 }],
+      abilities: { assigned: { str: 8, dex: 12, con: 14, int: 10, wis: 16, cha: 10 } },
+      featureKeys: resolved.features.map((f) => f.key),
+    };
+    const features = Object.fromEntries(resolved.features.map((f) => [f.key, f]));
+    const sheet = characterSheet(build, { ...assembled.ruleset, features: { ...assembled.ruleset.features, ...features } }, [], []);
+    expect(sheet.grantedSpells.map((s) => s.key)).toEqual(["blur", "burning-hands", "fire-bolt", "fireball"]);
+  });
+
+  it("Magicien évocateur : Savant en évocation refuse un sort d'une autre école ou de niveau 3", async () => {
+    const assembled = await assembleResolvedRuleset(admin, rulesetId, { classes: [{ key: "wizard", level: 3, subclass: "evoker" }] }, "fr");
+    const resolved = await resolveCharacterChoices(admin, rulesetId, assembled, { "evoker.evocation-savant.spells": ["fireball", "shield", "magic-missile"] }, 3, { wizard: 3 });
+    expect(resolved.open.find((c) => c.key === "evoker.evocation-savant.spells")?.chosen).toEqual(["magic-missile"]);
+  });
+
+  it("une sous-classe descriptive (Voleur) n'ajoute ni aptitude chiffrée ni choix", async () => {
+    const without = await assembleResolvedRuleset(admin, rulesetId, { classes: [{ key: "rogue", level: 3 }] }, "fr");
+    const withThief = await assembleResolvedRuleset(admin, rulesetId, { classes: [{ key: "rogue", level: 3, subclass: "thief" }] }, "fr");
+    expect(Object.keys(withThief.ruleset.features).sort()).toEqual(Object.keys(without.ruleset.features).sort());
+    expect(withThief.choiceSources).toEqual(without.choiceSources);
+  });
+});

@@ -108,6 +108,8 @@ Chacun commence par un ADR, puis se découpe en tickets prêts. Les règles vis�
 ### ☐ V3.1-134 — Les valeurs calculées · `M` · sans modèle IA — **à concevoir (Opus)**
 Valeur de modificateur en formule ou en dé (+ mod. CHA, +1d4, 10 + DEX + CON), nombre et taille des dés en formule dans l'AST, nouvelles cibles (`crit_range`, sens, vitesses, lumière, maîtrises). Règles visées : 2, 3, 5, 11, 12, 13, 23, 24, 25, 32.
 
+*Reçu de V3.1-117 (13 octobre)* : le bonus de dégâts de l'Affinité élémentaire (+ mod. CHA à un jet de dégâts d'un sort du type choisi). Critère : « Affinité élémentaire Feu : bonus de dégâts appliqué (test) ». Le type choisi est déjà enregistré (`<sous-classe>.elemental-affinity.damage-type`).
+
 ### ☐ V3.1-135 — Intervenir sur un jet · `L` · sans modèle IA — **à concevoir (Opus)**
 Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), opérations sur un jet en cours (ajouter ou soustraire un dé, relancer, fixer à 20, CA contre ce jet, diviser les dégâts), limite une fois par tour. Règles visées : 5, 9, 10, 19, 20, 27, 28, 33, 37, 39.
 
@@ -116,6 +118,8 @@ Attaques multiples, action disponible en action bonus, temps d'incantation chang
 
 ### ☐ V3.1-137 — Les conditions de jeu et les distances réelles · `L` · sans modèle IA — **à concevoir (Opus)**
 Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, auras, résistances et immunités, conditions sur l'équipement, règles qui en modifient d'autres, étiquettes d'arme sur `attack_hit`. Règles visées : 2, 3, 10, 12, 13, 17, 18, 24, 25, 26, 29, 32, 33, 36.
+
+*Reçu de V3.1-117 (13 octobre)* : les résistances choisies (Affinité élémentaire, Résilience fiélonne, héritages fiélons). Critère : « Affinité élémentaire Feu : résistance appliquée (test) ».
 
 ### ☐ V3.1-138 — Le modèle du monde · `L` · sans modèle IA — **à concevoir (Opus)**
 Perception et visibilité (invisible, caché, sens), lumière, étiquettes de magie (divination, capteurs), immunités et restrictions de ciblage, et les cas uniques : transformation, invocation, PV temporaires en effet (sur V3.1-24), redirection, jauge qui monte, recharge sur événement, quantité choisie, consommables, choix contraints pour les règles ouvertes. Règles visées : 8, 15, 16, 22, 29, 34, 35, 38.

@@ -14,7 +14,8 @@ import { itemRef } from "@/components/blocks/inventoryItem";
 export interface RulesetSelection {
   species?: string;
   background?: string;
-  classes: { key: string; level: number }[];
+  /** V3.1-117 : `subclass`, clé de la sous-classe choisie, pour résoudre ses aptitudes. */
+  classes: { key: string; level: number; subclass?: string }[];
   equipmentKeys: string[];
   spellKeys: string[];
 }
@@ -29,7 +30,11 @@ export function rulesetSelectionFromBlocks(
     background: character?.background?.kind === "rule" ? character.background.key : undefined,
     classes: (character?.classes ?? [])
       .filter((c) => c.class.kind === "rule" && c.class.key)
-      .map((c) => ({ key: (c.class as { kind: "rule"; key: string }).key, level: c.level })),
+      .map((c) => ({
+        key: (c.class as { kind: "rule"; key: string }).key,
+        level: c.level,
+        ...(c.subclass?.kind === "rule" && c.subclass.key ? { subclass: c.subclass.key } : {}),
+      })),
     equipmentKeys: (inventory?.items ?? [])
       .map(itemRef)
       .filter((r): r is { kind: "rule"; key: string } => r?.kind === "rule")
@@ -54,7 +59,7 @@ export function nonEmptyKeys(keys: readonly string[]): string[] {
 export function selectionBody(s: RulesetSelection): {
   species?: string;
   background?: string;
-  classes: { key: string; level: number }[];
+  classes: { key: string; level: number; subclass?: string }[];
   equipmentKeys: string[];
   spellKeys: string[];
 } {

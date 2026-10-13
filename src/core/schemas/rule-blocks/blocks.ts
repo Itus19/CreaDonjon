@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { zFormulaNode, zLocalized, zModifier, zQuantity, zReference } from "./primitives";
 import { zCharacterRulesBlockData, zMulticlassPrerequisites } from "./characterRules";
-import { zChoicesBlockData } from "./choices";
+import { zChoiceGrant, zChoicesBlockData, zGrantedSpell } from "./choices";
 import { zTrigger } from "../../rules/triggers";
 
 /**
@@ -447,7 +447,19 @@ export type ConditionEffectsBlockData = z.infer<typeof zConditionEffectsBlockDat
 // distinct de `traits`/`condition_effects` (meme raison qu'eux : un futur
 // formulaire MJ "creer une sous-classe" reste nomme comme tel). Toujours
 // requis : une sous-classe sans aptitude n'a pas de sens.
-export const zSubclassFeatureEntry = z.object({ name: z.string(), level: z.number().int().positive(), description: z.string() });
+/**
+ * Une aptitude de sous-classe. V3.1-117 (ADR 0046) : elle peut porter des
+ * modificateurs, des sorts toujours préparés (niveau de CLASSE) et des
+ * choix accordés ; sans eux, elle reste descriptive.
+ */
+export const zSubclassFeatureEntry = z.object({
+  name: z.string(),
+  level: z.number().int().positive(),
+  description: z.string(),
+  modifiers: z.array(zModifier).optional(),
+  spells: z.array(zGrantedSpell).optional(),
+  grants: z.array(zChoiceGrant).optional(),
+});
 export const zSubclassFeaturesBlockData = z.object({ features: z.array(zSubclassFeatureEntry) });
 export type SubclassFeaturesBlockData = z.infer<typeof zSubclassFeaturesBlockData>;
 

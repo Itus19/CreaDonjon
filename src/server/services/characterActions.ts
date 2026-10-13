@@ -172,7 +172,11 @@ export async function resolveCharacterActionContext(
   const backgroundKey = characterData.background?.kind === "rule" ? characterData.background.key : undefined;
   const classSelections = characterData.classes
     .filter((c) => c.class.kind === "rule" && c.class.key)
-    .map((c) => ({ key: (c.class as { kind: "rule"; key: string }).key, level: c.level }));
+    .map((c) => ({
+      key: (c.class as { kind: "rule"; key: string }).key,
+      level: c.level,
+      ...(c.subclass?.kind === "rule" && c.subclass.key ? { subclass: c.subclass.key } : {}),
+    }));
 
   const equipmentKeys = (inventoryData?.items ?? [])
     .map(itemRef)
@@ -207,7 +211,8 @@ export async function resolveCharacterActionContext(
   // les réponses du personnage et ses sorts validés. Leurs effets remplacent
   // ceux de l'ancienne boucle pour les mêmes clés.
   const characterLevel = Math.max(1, classSelections.reduce((sum, c) => sum + c.level, 0));
-  const grantedChoices = await resolveCharacterChoices(supabase, rulesetId, assembled, characterData.choices, characterLevel);
+  const classLevels = Object.fromEntries(classSelections.map((c) => [c.key, c.level]));
+  const grantedChoices = await resolveCharacterChoices(supabase, rulesetId, assembled, characterData.choices, characterLevel, classLevels);
   const grantedChoiceKeys = new Set(grantedChoices.open.map((c) => c.key));
 
   const choiceFeatures: Record<string, ResolvedFeature> = {};

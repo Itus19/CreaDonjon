@@ -47,3 +47,11 @@ V3.1-3, 6 et 7 sont conçus ici et fermés au profit des tickets d'implémentati
   - les améliorations de caractéristiques restent sur leur mécanisme (`<classe>.l<n>.asi`) ; leur passage en choix `ability`/`feat` va avec l'assistant de V3.1-118 ;
   - l'affichage des choix imbriqués et des sorts accordés à l'écran revient aussi à V3.1-118 ;
   - restent en prose, faute de vocabulaire : la Vision dans le noir du Drow, les résistances des héritages fiélons, les usages de l'Ascendance gigante (ressources, ADR 0060), le sort mineur interchangeable du Haut-elfe.
+
+## Réalisé (V3.1-117, 13 octobre 2026)
+
+- **Sous-classe résolue** : `CreationSelection.classes[].subclass` ; `subclassFeatures` (`src/core/rules/subclass.ts`) rend les aptitudes atteintes, avec leurs effets et leurs choix.
+- **Niveau de classe** : une source de choix peut venir d'une classe (`ChoiceSource.classKey`) ; ses choix et ses sorts se comptent alors au niveau de cette classe (`classLevels`), pas au niveau de personnage.
+- **Choix de sort élargi** : `lists`, `max_level`, `school` ; `level` devient facultatif. La validation côté serveur relève toutes les réponses brutes avant de les filtrer, pour ne pas perdre un sort valide placé après un sort refusé.
+- **Données** : `data/srd/subclasses-2024.json` couvre Cercle de la Terre, Affinité élémentaire, Résilience fiélonne, Proie du chasseur, Tactiques défensives, Découvertes magiques et Savant en évocation. Une aptitude saisie mais introuvable arrête l'import.
+- **Reporté par décision de l'auteur** : la résistance et le bonus de dégâts de l'Affinité élémentaire, ainsi que la résistance de la Résilience fiélonne, attendent le vocabulaire de V3.1-137 (résistances) et de V3.1-134 (valeurs calculées). D'ici là, le type choisi est seulement enregistré.

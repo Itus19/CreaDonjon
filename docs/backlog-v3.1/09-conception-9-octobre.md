@@ -279,26 +279,6 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-117 — La sous-classe résolue et ses choix · `M` · sans modèle IA — **prêt (Opus)**
-
-**Modèle conseillé : Opus.** **ADR 0046.** **Dépend de** : 116.
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- `CreationSelection.classes[].subclass` ; la sous-classe rejoint le lot
-  résolu ; `zSubclassFeatureEntry` accepte modificateurs, sorts toujours
-  préparés et `zChoiceGrant`.
-- Import SRD : Affinité élémentaire (type de dégâts, une fois), Cercle de
-  la Terre (terrain, au repos long), Résilience fiélonne (au repos),
-  Proie du chasseur / Tactiques défensives (au repos), Découvertes
-  magiques, Savant en évocation (sorts).
-
-**Critères d'acceptation**
-- [ ] Affinité élémentaire Feu : résistance et bonus de dégâts appliqués (test).
-- [ ] Une sous-classe purement descriptive ne change rien.
-
----
-
 ### ☐ V3.1-118 — Les choix dans l'assistant de création et de montée de niveau · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 116, 117, 49, 50, 51.

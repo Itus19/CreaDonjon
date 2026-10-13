@@ -1,6 +1,7 @@
 import "server-only";
 import { zCharacterRulesBlockData, type CharacterRules, type MulticlassPrerequisites } from "@/src/core/schemas/rule-blocks/characterRules";
-import { zClassBasicsBlockData, zModifiersBlockData } from "@/src/core/schemas/rule-blocks/blocks";
+import { zClassBasicsBlockData, zModifiersBlockData, zSubclassFeaturesBlockData } from "@/src/core/schemas/rule-blocks/blocks";
+import { subclassFeatures, type SubclassFeatureData } from "@/src/core/rules/subclass";
 import { zChoicesBlockData, type ChoiceGrant, type ChoicesBlockData } from "@/src/core/schemas/rule-blocks/choices";
 import { resolveChoices, simpleGrantChoices, type ChoiceSource, type FeatChoiceData, type ResolvedChoices, type SpellMeta } from "@/src/core/rules/choices";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
@@ -76,7 +77,8 @@ type TypedClient = SupabaseClient<Database>;
 export interface CreationSelection {
   species?: string;
   background?: string;
-  classes: { key: string; level: number }[];
+  /** V3.1-117 : `subclass`, clé de la sous-classe choisie. */
+  classes: { key: string; level: number; subclass?: string }[];
   /** `character.choices` (V2-G7) — seul `"background.ability_bonus"` est lu ici aujourd'hui ; les autres cles (ASI, competences restantes) restent resolues ailleurs (`characterActions.ts`/`useCharacterSheetContext.ts`), jamais dupliquees ici. */
   choices?: Record<string, unknown>;
 }
@@ -215,6 +217,19 @@ interface BatchEntry {
   suggestedAbilities?: Ability[];
   /** V3.1-116 : le bloc `choices` de la fiche, s'il en porte un. */
   choices?: ChoicesBlockData;
+  /** V3.1-117 : les aptitudes d'une fiche de sous-classe (bloc `subclass_features`). */
+  subclassFeatures?: SubclassFeatureData[];
+}
+
+/** Bloc `subclass_features`, validé. Mal formé : ignoré mais journalisé. */
+function parseSubclassFeatures(data: unknown): SubclassFeatureData[] | undefined {
+  if (data === undefined || data === null) return undefined;
+  const parsed = zSubclassFeaturesBlockData.safeParse(data);
+  if (!parsed.success) {
+    console.error("Bloc subclass_features mal forme, ignore", parsed.error.issues);
+    return undefined;
+  }
+  return parsed.data.features;
 }
 
 /** Bloc `choices`, validé. Mal formé : ignoré mais journalisé, comme `declaredModifiers`. */
@@ -330,6 +345,7 @@ async function fetchEntriesBatch(
       const modifiersRow = rows.find((r) => r.block_type === "modifiers");
       const classBasicsRow = rows.find((r) => r.block_type === "class_basics");
       const choicesRow = rows.find((r) => r.block_type === "choices");
+      const subclassFeaturesRow = rows.find((r) => r.block_type === "subclass_features");
 
       const customTableData = (overrideBlocks.custom_table ?? customTableRow?.data) as { rows: CustomTableRow[] } | undefined;
       const progressionData = (overrideBlocks.class_progression ?? progressionRow?.data) as
@@ -344,6 +360,7 @@ async function fetchEntriesBatch(
         modifiers: declaredModifiers(overrideBlocks.modifiers ?? modifiersRow?.data),
         ...classBasicsExtras(overrideBlocks.class_basics ?? classBasicsRow?.data),
         choices: parseChoicesBlock(choicesRow?.data),
+        subclassFeatures: parseSubclassFeatures(subclassFeaturesRow?.data),
       });
       remaining.delete(entry.entry_key);
     }
@@ -364,6 +381,7 @@ async function fetchEntriesBatch(
         modifiers: declaredModifiers(resolved.blocksByType.get("modifiers")),
         ...classBasicsExtras(resolved.blocksByType.get("class_basics")),
         choices: parseChoicesBlock(resolved.blocksByType.get("choices")),
+        subclassFeatures: parseSubclassFeatures(resolved.blocksByType.get("subclass_features")),
       });
       remaining.delete(key);
     }
@@ -484,17 +502,31 @@ export async function resolveCharacterChoices(
   rulesetId: string,
   assembled: Pick<AssembledRuleset, "choiceSources" | "choicePresets" | "featCatalog">,
   choices: Record<string, unknown>,
-  characterLevel: number
+  characterLevel: number,
+  classLevels: Record<string, number> = {}
 ): Promise<ResolvedChoices> {
-  const input = { sources: assembled.choiceSources, choices, presets: assembled.choicePresets, characterLevel, feats: assembled.featCatalog };
+  const input = { sources: assembled.choiceSources, choices, presets: assembled.choicePresets, characterLevel, classLevels, feats: assembled.featCatalog };
   const firstPass = resolveChoices(input);
-  const spellKeys = [...new Set(firstPass.open.filter((c) => c.from.kind === "spell").flatMap((c) => c.chosen))];
+  // Toutes les réponses brutes, pas seulement celles retenues : sans le
+  // catalogue, la première passe garde les `count` premières, et un sort
+  // valide placé après un sort refusé serait perdu.
+  const spellKeys = [
+    ...new Set(
+      firstPass.open
+        .filter((c) => c.from.kind === "spell")
+        .flatMap((c) => {
+          const raw = choices[c.key];
+          return Array.isArray(raw) ? raw.filter((v): v is string => typeof v === "string" && v !== "") : [];
+        })
+    ),
+  ];
   if (spellKeys.length === 0) return firstPass;
   const batch = await fetchEntriesBatch(supabase, rulesetId, spellKeys, "en");
   const spells: Record<string, SpellMeta> = {};
   for (const [key, entry] of batch) {
     const level = parseSpellLevel(entry.fields);
-    if (level !== null) spells[key] = { level, lists: parseSpellClasses(entry.fields) };
+    const school = (entry.fields.school as { index?: unknown } | undefined)?.index;
+    if (level !== null) spells[key] = { level, lists: parseSpellClasses(entry.fields), ...(typeof school === "string" ? { school } : {}) };
   }
   return resolveChoices({ ...input, spells });
 }
@@ -538,6 +570,7 @@ export async function assembleResolvedRuleset(
     ...(selection.species ? [selection.species] : []),
     ...(selection.background ? [selection.background] : []),
     ...selection.classes.map((c) => c.key),
+    ...selection.classes.flatMap((c) => (c.subclass ? [c.subclass] : [])),
   ];
   // V3.1-115 (ADR 0046) : les regles de personnage du ruleset, surcharges de la
   // variante comprises. Lues en parallele du lot : aucune vague de plus.
@@ -673,6 +706,18 @@ export async function assembleResolvedRuleset(
     for (const fk of extractFeatureKeysUpToLevel(found.progressionRows, cl.level)) extraFeatureKeys.set(fk, `class:${cl.key}`);
 
     asiGrantedLevels[cl.key] = extractAsiGrantedLevels(found.progressionRows, cl.key);
+
+    // V3.1-117 : la sous-classe choisie rejoint le lot ; ses aptitudes atteintes
+    // (niveau de classe) donnent leurs effets et leurs choix.
+    const subclassEntry = cl.subclass ? batch.get(cl.subclass) : undefined;
+    if (cl.subclass && subclassEntry?.subclassFeatures) {
+      const sub = subclassFeatures(
+        { key: cl.subclass, label: subclassEntry.name, classKey: cl.key, classLevel: cl.level },
+        subclassEntry.subclassFeatures
+      );
+      for (const f of sub.features) features[f.key] = f;
+      choiceSources.push(...sub.sources);
+    }
 
     for (const choice of extractSkillChoices(found.fields)) {
       remainingChoices.push({

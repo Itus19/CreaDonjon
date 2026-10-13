@@ -25,6 +25,11 @@ export interface ChoiceSource {
   /** Couche des modificateurs que ses choix produisent (espèce 2, classe 3, historique 4, don 5). */
   layer: Layer;
   grants: readonly ChoiceGrant[];
+  /**
+   * V3.1-117 : la fiche vient d'une classe (sous-classe) ; ses choix et ses
+   * sorts se comptent au niveau de CETTE classe, pas au niveau de personnage.
+   */
+  classKey?: string;
 }
 
 /** Un don qu'un choix `feat` peut désigner, avec ce qu'il accorde. */
@@ -41,6 +46,8 @@ export interface FeatChoiceData {
 export interface SpellMeta {
   level: number;
   lists: readonly string[];
+  /** École de magie (`evocation`…). Absente : un choix qui exige une école refuse le sort. */
+  school?: string;
 }
 
 export interface ResolveChoicesInput {
@@ -49,6 +56,8 @@ export interface ResolveChoicesInput {
   /** Réponses imposées par une autre fiche (historique Acolyte → liste du clerc). Elles priment sur la réponse stockée. */
   presets?: Readonly<Record<string, readonly string[]>>;
   characterLevel: number;
+  /** Niveau de chaque classe, pour les fiches qui en viennent (`ChoiceSource.classKey`). Absent : leurs choix restent fermés. */
+  classLevels?: Readonly<Record<string, number>>;
   /** Les dons qu'un choix `feat` peut désigner. Absent : aucun don choisi n'a d'effet. */
   feats?: Readonly<Record<string, FeatChoiceData>>;
   /**
@@ -136,14 +145,28 @@ export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
     if (!KEY_PATTERN.test(key)) return false;
     if (!input.spells) return true;
     const meta = input.spells[key];
-    if (!meta || meta.level !== from.level) return false;
-    return from.list === undefined || meta.lists.includes(from.list);
+    if (!meta) return false;
+    if (from.level !== undefined && meta.level !== from.level) return false;
+    if (from.max_level !== undefined && meta.level > from.max_level) return false;
+    if (from.school !== undefined && meta.school !== from.school) return false;
+    if (from.list !== undefined && !meta.lists.includes(from.list)) return false;
+    return from.lists === undefined || from.lists.some((l) => meta.lists.includes(l));
   }
 
-  function featureSpells(spells: readonly { key: string; at_level?: number; always_prepared?: boolean; free_cast?: FreeCast }[], ability: Ability | undefined): FeatureSpell[] {
+  /** Niveau qui ouvre les choix d'une fiche : celui de sa classe, ou du personnage. */
+  function levelOf(source: ChoiceSource): number {
+    return source.classKey ? (input.classLevels?.[source.classKey] ?? 0) : input.characterLevel;
+  }
+
+  function featureSpells(
+    spells: readonly { key: string; at_level?: number; always_prepared?: boolean; free_cast?: FreeCast }[],
+    ability: Ability | undefined,
+    classKey: string | undefined
+  ): FeatureSpell[] {
     return spells.map((s) => ({
       key: s.key,
       atLevel: s.at_level ?? 1,
+      ...(classKey ? { classKey } : {}),
       ...(ability ? { ability } : {}),
       alwaysPrepared: s.always_prepared === true,
       ...(s.free_cast ? { freeCast: s.free_cast } : {}),
@@ -157,10 +180,10 @@ export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
   }
 
   /** La caractéristique d'incantation déclarée dans une liste de choix : elle vaut pour tout ce que la liste accorde, quel que soit l'ordre. */
-  function spellcastingAbility(grants: readonly ChoiceGrant[], prefix: string): Ability | undefined {
+  function spellcastingAbility(grants: readonly ChoiceGrant[], prefix: string, level: number): Ability | undefined {
     for (const grant of grants) {
       if (grant.from.kind !== "ability" || !grant.from.spellcasting) continue;
-      if ((grant.at_level ?? 1) > input.characterLevel) continue;
+      if ((grant.at_level ?? 1) > level) continue;
       const allowed = grant.from.options ?? ABILITIES;
       const [value] = retain(answerOf(`${prefix}.${grant.id}`).values, 1, (v) => (allowed as readonly string[]).includes(v));
       return value as Ability | undefined;
@@ -169,9 +192,11 @@ export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
   }
 
   function walk(grants: readonly ChoiceGrant[], scope: Scope) {
-    const ability = spellcastingAbility(grants, scope.prefix) ?? scope.ability;
+    const level = levelOf(scope.source);
+    const classKey = scope.source.classKey;
+    const ability = spellcastingAbility(grants, scope.prefix, level) ?? scope.ability;
     for (const grant of grants) {
-      if ((grant.at_level ?? 1) > input.characterLevel) continue;
+      if ((grant.at_level ?? 1) > level) continue;
       const key = `${scope.prefix}.${grant.id}`;
       const count = grant.from.kind === "ability" || grant.from.kind === "option" || grant.from.kind === "feat" ? 1 : (grant.count ?? 1);
       const label = localizedLabel(grant.label, grant.id);
@@ -214,7 +239,8 @@ export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
           open.chosen = retain(answer.values, count, (v) => spellAccepted(v, from));
           const spells = featureSpells(
             open.chosen.map((k) => ({ key: k, at_level: grant.at_level, always_prepared: from.always_prepared, free_cast: from.free_cast })),
-            ability
+            ability,
+            classKey
           );
           pushFeature(`choice:${key}`, scope.source.label, here, [], spells);
           break;
@@ -229,7 +255,7 @@ export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
             optionLabel,
             here,
             resolveDeclaredModifiers(option.modifiers ?? [], scope.source.key, optionLabel, scope.source.layer),
-            featureSpells(option.spells ?? [], spellcastingAbility(option.grants ?? [], `${key}.${option.id}`) ?? ability)
+            featureSpells(option.spells ?? [], spellcastingAbility(option.grants ?? [], `${key}.${option.id}`, level) ?? ability, classKey)
           );
           if (option.grants) walk(option.grants, { ...here, prefix: `${key}.${option.id}` });
           break;

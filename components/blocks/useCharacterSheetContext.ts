@@ -170,6 +170,9 @@ export function useCharacterSheetContext(
     choices: character?.choices ?? {},
     presets: choicePresets,
     characterLevel,
+    classLevels: Object.fromEntries(
+      characterClasses.filter((c) => c.class.kind === "rule" && c.class.key).map((c) => [(c.class as { kind: "rule"; key: string }).key, c.level])
+    ),
     feats: featCatalog,
   });
   const grantedChoiceKeys = new Set(grantedChoices.open.map((c) => c.key));

@@ -108,8 +108,9 @@ export interface Prerequisite {
 /** Un sort qu'une aptitude accorde (V3.1-116 : option de lignage, sort choisi d'un don). */
 export interface FeatureSpell {
   key: string;
-  /** Niveau de personnage à partir duquel il est connu. */
+  /** Niveau à partir duquel il est connu : de personnage, ou de `classKey` si l'aptitude vient d'une classe (V3.1-117). */
   atLevel: number;
+  classKey?: string;
   /** Caractéristique d'incantation choisie pour cette aptitude. Absente : pas encore choisie. */
   ability?: Ability;
   alwaysPrepared: boolean;
@@ -562,7 +563,7 @@ export function characterSheet(
 
   const grantedSpells: GrantedSpell[] = features.flatMap((f) =>
     (f.spells ?? [])
-      .filter((s) => s.atLevel <= totalLevel)
+      .filter((s) => s.atLevel <= (s.classKey ? (build.classes.find((c) => c.key === s.classKey)?.level ?? 0) : totalLevel))
       .map((s) => ({
         key: s.key,
         featureKey: f.key,

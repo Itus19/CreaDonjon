@@ -1,0 +1,364 @@
+{
+  "_lisezmoi": [
+    "V3.1-117 — Mecanique des aptitudes de sous-classe du SRD 2024, ecrite a la main (ADR 0046).",
+    "Cle : l'`index` de la sous-classe, puis le debut exact du nom de l'aptitude dans le SRD. `name` remplace un nom mal decoupe par le JSON source.",
+    "DONNEE, jamais code : ingest-srd.ts la fusionne dans le bloc `subclass_features`, valide. Suivi par Git (SRD sous CC-BY-4.0, NOTICE.md).",
+    "Les niveaux des sorts sont des niveaux de CLASSE.",
+    "Pas encore exprimable (V3.1-134 valeurs calculees, V3.1-137 resistances) : la resistance et le bonus de degats de l'Affinite elementaire, la resistance de la Resilience fielonne, les effets de Proie du chasseur et Tactiques defensives. Le choix est enregistre, l'effet attend son vocabulaire."
+  ],
+  "circle-of-the-land": {
+    "_regle": "Sorts du Cercle de la Terre : un terrain choisi a chaque repos long, ses sorts toujours prepares selon le niveau de druide.",
+    "features": {
+      "Circle of the Land Spells": {
+        "name": "Circle of the Land Spells",
+        "grants": [
+          {
+            "id": "land",
+            "label": {
+              "fr": "Terrain",
+              "en": "Land"
+            },
+            "refresh": "long_rest",
+            "from": {
+              "kind": "option",
+              "options": [
+                {
+                  "id": "arid",
+                  "label": {
+                    "fr": "Terres arides",
+                    "en": "Arid Land"
+                  },
+                  "spells": [
+                    {
+                      "key": "blur",
+                      "at_level": 3,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "burning-hands",
+                      "at_level": 3,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "fire-bolt",
+                      "at_level": 3,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "fireball",
+                      "at_level": 5,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "blight",
+                      "at_level": 7,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "wall-of-stone",
+                      "at_level": 9,
+                      "always_prepared": true
+                    }
+                  ]
+                },
+                {
+                  "id": "polar",
+                  "label": {
+                    "fr": "Terres polaires",
+                    "en": "Polar Land"
+                  },
+                  "spells": [
+                    {
+                      "key": "fog-cloud",
+                      "at_level": 3,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "hold-person",
+                      "at_level": 3,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "ray-of-frost",
+                      "at_level": 3,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "sleet-storm",
+                      "at_level": 5,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "ice-storm",
+                      "at_level": 7,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "cone-of-cold",
+                      "at_level": 9,
+                      "always_prepared": true
+                    }
+                  ]
+                },
+                {
+                  "id": "temperate",
+                  "label": {
+                    "fr": "Terres tempérées",
+                    "en": "Temperate Land"
+                  },
+                  "spells": [
+                    {
+                      "key": "misty-step",
+                      "at_level": 3,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "shocking-grasp",
+                      "at_level": 3,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "sleep",
+                      "at_level": 3,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "lightning-bolt",
+                      "at_level": 5,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "freedom-of-movement",
+                      "at_level": 7,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "tree-stride",
+                      "at_level": 9,
+                      "always_prepared": true
+                    }
+                  ]
+                },
+                {
+                  "id": "tropical",
+                  "label": {
+                    "fr": "Terres tropicales",
+                    "en": "Tropical Land"
+                  },
+                  "spells": [
+                    {
+                      "key": "acid-splash",
+                      "at_level": 3,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "ray-of-sickness",
+                      "at_level": 3,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "web",
+                      "at_level": 3,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "stinking-cloud",
+                      "at_level": 5,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "polymorph",
+                      "at_level": 7,
+                      "always_prepared": true
+                    },
+                    {
+                      "key": "insect-plague",
+                      "at_level": 9,
+                      "always_prepared": true
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "draconic-sorcery": {
+    "_regle": "Affinite elementaire : un type de degats parmi acide, froid, feu, foudre, poison, choisi une fois.",
+    "features": {
+      "Elemental Affinity": {
+        "grants": [
+          {
+            "id": "damage-type",
+            "label": {
+              "fr": "Type de dégâts",
+              "en": "Damage type"
+            },
+            "from": {
+              "kind": "damage_type",
+              "options": [
+                "acid",
+                "cold",
+                "fire",
+                "lightning",
+                "poison"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "fiend-patron": {
+    "_regle": "Resilience fielonne : un type de degats autre que force, choisi a chaque repos court ou long.",
+    "features": {
+      "Fiendish Resilience": {
+        "grants": [
+          {
+            "id": "damage-type",
+            "label": {
+              "fr": "Type de dégâts",
+              "en": "Damage type"
+            },
+            "refresh": "short_rest",
+            "from": {
+              "kind": "damage_type",
+              "options": [
+                "acid",
+                "bludgeoning",
+                "cold",
+                "fire",
+                "lightning",
+                "necrotic",
+                "piercing",
+                "poison",
+                "psychic",
+                "radiant",
+                "slashing",
+                "thunder"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "hunter": {
+    "_regle": "Proie du chasseur et Tactiques defensives : une option, remplacable a chaque repos court ou long.",
+    "features": {
+      "Hunter's Prey": {
+        "grants": [
+          {
+            "id": "option",
+            "label": {
+              "fr": "Proie du chasseur",
+              "en": "Hunter's Prey"
+            },
+            "refresh": "short_rest",
+            "from": {
+              "kind": "option",
+              "options": [
+                {
+                  "id": "colossus-slayer",
+                  "label": {
+                    "fr": "Goût du sang",
+                    "en": "Colossus Slayer"
+                  }
+                },
+                {
+                  "id": "horde-breaker",
+                  "label": {
+                    "fr": "Briseur de hordes",
+                    "en": "Horde Breaker"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "Defensive Tactics": {
+        "grants": [
+          {
+            "id": "option",
+            "label": {
+              "fr": "Tactiques défensives",
+              "en": "Defensive Tactics"
+            },
+            "refresh": "short_rest",
+            "from": {
+              "kind": "option",
+              "options": [
+                {
+                  "id": "escape-the-horde",
+                  "label": {
+                    "fr": "Cauchemar de la horde",
+                    "en": "Escape the Horde"
+                  }
+                },
+                {
+                  "id": "multiattack-defense",
+                  "label": {
+                    "fr": "Défense contre les attaques multiples",
+                    "en": "Multiattack Defense"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "college-of-lore": {
+    "_regle": "Decouvertes magiques : deux sorts des listes du clerc, du druide ou du magicien, toujours prepares.",
+    "features": {
+      "Magical Discoveries": {
+        "grants": [
+          {
+            "id": "spells",
+            "label": {
+              "fr": "Découvertes magiques",
+              "en": "Magical Discoveries"
+            },
+            "count": 2,
+            "from": {
+              "kind": "spell",
+              "lists": [
+                "cleric",
+                "druid",
+                "wizard"
+              ],
+              "always_prepared": true
+            }
+          }
+        ]
+      }
+    }
+  },
+  "evoker": {
+    "_regle": "Savant en evocation : deux sorts d'evocation du magicien, niveau 2 au plus, ajoutes au grimoire.",
+    "features": {
+      "Evocation Savant": {
+        "grants": [
+          {
+            "id": "spells",
+            "label": {
+              "fr": "Savant en évocation",
+              "en": "Evocation Savant"
+            },
+            "count": 2,
+            "from": {
+              "kind": "spell",
+              "list": "wizard",
+              "max_level": 2,
+              "school": "evocation"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

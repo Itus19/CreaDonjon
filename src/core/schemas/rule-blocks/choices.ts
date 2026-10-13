@@ -42,8 +42,22 @@ export type ChoiceFrom =
   | { kind: "tool"; options?: string[] }
   /** `category` : la catégorie du don (`origin`, `general`, `fighting-style`, `epic-boon`). Absente : tout don. */
   | { kind: "feat"; category?: string }
-  /** Un sort d'une liste de classe, d'un niveau donné (0 : sort mineur). */
-  | { kind: "spell"; list?: string; level: number; always_prepared?: boolean; free_cast?: FreeCast }
+  /**
+   * Un sort. Filtres facultatifs : une liste (`list`) ou plusieurs (`lists`),
+   * un niveau exact (`level`, 0 : sort mineur) ou maximal (`max_level`), une
+   * école (`school`). Découvertes magiques : trois listes ; Savant en
+   * évocation : magicien, évocation, niveau 2 au plus.
+   */
+  | {
+      kind: "spell";
+      list?: string;
+      lists?: string[];
+      level?: number;
+      max_level?: number;
+      school?: string;
+      always_prepared?: boolean;
+      free_cast?: FreeCast;
+    }
   /** `spellcasting` : cette caractéristique sert aux sorts accordés par la même fiche, ou par l'option qui la porte. */
   | { kind: "ability"; options?: Ability[]; spellcasting?: boolean }
   | { kind: "damage_type"; options?: string[] }
@@ -91,7 +105,10 @@ export const zChoiceFrom: z.ZodType<ChoiceFrom> = z.lazy(() =>
     z.object({
       kind: z.literal("spell"),
       list: z.string().min(1).optional(),
-      level: z.number().int().min(0).max(9),
+      lists: z.array(z.string().min(1)).min(1).optional(),
+      level: z.number().int().min(0).max(9).optional(),
+      max_level: z.number().int().min(0).max(9).optional(),
+      school: z.string().min(1).optional(),
       always_prepared: z.boolean().optional(),
       free_cast: zFreeCast.optional(),
     }),

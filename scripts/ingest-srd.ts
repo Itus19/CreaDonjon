@@ -1107,6 +1107,33 @@ function choicesBlock(category: string, entryIndex: string, baseSystem: string):
 }
 
 /**
+ * V3.1-117 — Mecanique des aptitudes de sous-classe ecrite a la main
+ * (`data/srd/subclasses-2024.json`, ADR 0046) : modificateurs, sorts
+ * toujours prepares, choix. Fusionnee dans le bloc `subclass_features` deja
+ * construit depuis le SRD, aptitude par aptitude (debut du nom). Propre au
+ * SRD 2024. Une aptitude saisie mais introuvable arrete l'import : elle
+ * serait sinon ignoree en silence.
+ */
+const SRD_SUBCLASSES: Record<string, { features?: Record<string, { name?: string; modifiers?: unknown[]; spells?: unknown[]; grants?: unknown[] }> }> =
+  JSON.parse(readFileSync(resolve(process.cwd(), "data/srd/subclasses-2024.json"), "utf-8"));
+
+function mergeSubclassMechanics(category: string, entryIndex: string, baseSystem: string, blocks: EntryBlock[]): void {
+  if (baseSystem !== "dnd_srd_52" || category !== "Subclasses") return;
+  const authored = SRD_SUBCLASSES[entryIndex]?.features;
+  if (!authored) return;
+  const block = blocks.find((b) => b.block_type === "subclass_features");
+  const features = (block?.data as { features?: SrdRecord[] } | undefined)?.features;
+  if (!block || !features) throw new Error(`subclasses-2024.json : ${entryIndex} n'a pas de bloc subclass_features`);
+  for (const [prefix, mechanics] of Object.entries(authored)) {
+    const feature = features.find((f) => String(f.name).startsWith(prefix));
+    if (!feature) throw new Error(`subclasses-2024.json : aptitude « ${prefix} » introuvable dans ${entryIndex}`);
+    const { name, ...rest } = mechanics;
+    Object.assign(feature, rest, name ? { name } : {});
+  }
+  validateBlockData("subclass_features", block.data);
+}
+
+/**
  * Tous les champs du schema sont optionnels (V1-D1) : `null` seulement si
  * aucun n'a pu etre rempli, pour eviter un bloc "present" mais vide de sens
  * (qui masquerait a tort le signal "regle incomplete").
@@ -2149,6 +2176,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
         );
         const choices = choicesBlock(category, String(item.index), config.baseSystem);
         if (choices) t.blocks.push(choices);
+        mergeSubclassMechanics(category, String(item.index), config.baseSystem, t.blocks);
         transformed.push(t);
         blocksTotal += t.blocks.length;
         refsTotal += t.refs.length;

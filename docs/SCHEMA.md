@@ -501,6 +501,8 @@ Blocs V1 : `description`, `spell_casting`, `effects`, `scaling`, `class_progress
 
 **Choix accordés** (V3.1-116, ADR 0046). Une fiche (trait d'espèce, don, historique, aptitude) porte un bloc `choices` : des `zChoiceGrant` (compétence, langue, outil, don, sort, caractéristique, type de dégâts, ou option nommée avec ses modificateurs, ses sorts par niveau et ses propres choix), et des `presets` (réponse imposée à un choix d'une autre fiche, ex. Acolyte → liste du clerc). La réponse vit dans `character.choices[<source>.<choix>]`, sous `<clé>.<option>.<choix>` ou `<clé>.<don>.<choix>` quand elle est imbriquée. `resolveChoices` (noyau) en tire les effets ; aucun n'est stocké. Valeurs SRD : `data/srd/choices-2024.json`, posées par l'import (SRD 2024 seulement).
 
+**Aptitudes de sous-classe** (V3.1-117, ADR 0046). Une entrée du bloc `subclass_features` peut porter `modifiers`, `spells` (toujours préparés, niveau de CLASSE) et `grants`. La sous-classe choisie (`CreationSelection.classes[].subclass`, lue sur `character.classes[].subclass`) rejoint le lot résolu ; ses aptitudes atteintes donnent leurs effets (couche 3) et leurs choix, sous la clé `<sous-classe>.<aptitude>.<choix>` (ex. `circle-of-the-land-subclass.circle-of-the-land-spells.land` : la clé de la sous-classe est celle que l'import lui donne). Valeurs SRD : `data/srd/subclasses-2024.json`.
+
 ### 9.2 Traductions
 
 ```sql
