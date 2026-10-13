@@ -12378,7 +12378,7 @@
       "range": {
         "normal": 5
       },
-      "weight": 2,
+      "weight": 4,
       "properties": [],
       "mastery": {
         "index": "sap",
@@ -13073,7 +13073,7 @@
       "range": {
         "normal": 5
       },
-      "weight": 6,
+      "weight": 18,
       "properties": [
         {
           "index": "heavy",
@@ -14647,7 +14647,7 @@
       "range": {
         "normal": 5
       },
-      "weight": 2,
+      "weight": 3,
       "properties": [
         {
           "index": "thrown",
