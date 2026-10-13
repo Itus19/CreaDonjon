@@ -4,7 +4,8 @@ import { useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { AbilityScores } from "@/src/core/schemas/blocks/abilities";
 import type { Ability, DerivedSheet } from "@/src/core/rules/sheet";
-import { POINT_BUY_BUDGET, POINT_BUY_MAX, POINT_BUY_MIN, STANDARD_ARRAY, pointBuyCost } from "@/src/core/rules/abilityGeneration";
+import { pointBuyCost } from "@/src/core/rules/characterRules";
+import type { CharacterRules } from "@/src/core/schemas/rule-blocks/characterRules";
 import Dropdown from "@/components/shared/Dropdown";
 import Stepper from "@/components/shared/Stepper";
 import { StatBadge } from "@/components/blocks/CharacterSheetHeader";
@@ -33,7 +34,11 @@ export const EMPTY_ABILITY_POOL_ASSIGNMENT: AbilityPoolAssignment = { rolledPool
 
 /**
  * Etape 3 du parcours de creation (specs/wiki-liens-et-personnages.md §B8) :
- * les trois methodes officielles d'attribution des caracteristiques.
+ * les methodes d'attribution des caracteristiques QUE LE RULESET PROPOSE
+ * (V3.1-115, ADR 0046) : tableau, achat de points, tirage — leurs valeurs et
+ * le plafond d'une caracteristique viennent de `characterRules`, jamais d'une
+ * constante. Une methode absente des regles n'est pas proposee ; sans regles
+ * du tout, l'etape le dit au lieu d'inventer des valeurs.
  * Tableau standard et tirage partagent la meme UI d'assignation (un bassin
  * fixe de six valeurs a repartir) ; l'achat de points a sa propre UI de
  * curseurs bornes par un budget.
@@ -55,18 +60,40 @@ export default function AbilityScoreStep({
   pool: poolState,
   onChangePool,
   sheet,
+  characterRules,
+  worldSlug,
+  rulesLoaded,
 }: {
   character: CharacterBlockData;
   patchCharacter: (fields: Partial<CharacterBlockData>) => void;
   pool: AbilityPoolAssignment;
   onChangePool: (next: AbilityPoolAssignment) => void;
   sheet: DerivedSheet;
+  /** Regles de personnage du ruleset resolu (deja dans la reponse chargee par l'assistant) ; `undefined` si le ruleset n'en a pas. */
+  characterRules: CharacterRules | undefined;
+  /** Monde dont le ruleset dicte le tirage (la route de tirage lit les regles cote serveur). */
+  worldSlug: string;
+  /** Le ruleset resolu est-il arrive ? Avant l'espece/la classe, ou pendant le chargement, son absence n'est pas « pas de regles ». */
+  rulesLoaded: boolean;
 }) {
   const [rolling, setRolling] = useState(false);
   const [rollError, setRollError] = useState<string | null>(null);
 
-  const method = character.abilities.method;
-  const pool = method === "standard_array" ? [...STANDARD_ARRAY] : method === "roll" ? poolState.rolledPool : null;
+  const generation = characterRules?.ability_generation;
+  const cap = characterRules?.ability_score_cap;
+  const offeredMethods: CharacterBlockData["abilities"]["method"][] = [
+    ...(generation?.standard_array ? (["standard_array"] as const) : []),
+    ...(generation?.point_buy ? (["point_buy"] as const) : []),
+    ...(generation?.roll ? (["roll"] as const) : []),
+  ];
+  // Une methode enregistree mais absente des regles n'est pas la methode active : l'utilisatrice doit en choisir une.
+  const method = offeredMethods.includes(character.abilities.method) ? character.abilities.method : null;
+  const standardArray = generation?.standard_array;
+  const pointBuy = generation?.point_buy;
+  const rollRule = generation?.roll;
+  const pool = method === "standard_array" ? (standardArray ?? null) : method === "roll" ? poolState.rolledPool : null;
+  /** Valeurs du bassin au-dessus du plafond : signalees, jamais assignables. */
+  const overCapValues = pool && cap !== undefined ? pool.filter((v) => v > cap) : [];
 
   function setMethod(next: CharacterBlockData["abilities"]["method"]) {
     onChangePool(EMPTY_ABILITY_POOL_ASSIGNMENT);
@@ -90,9 +117,14 @@ export default function AbilityScoreStep({
     setRolling(true);
     setRollError(null);
     try {
-      const res = await fetch("/api/character-creator/roll-abilities", { method: "POST" });
+      const res = await fetch("/api/character-creator/roll-abilities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ worldSlug }),
+      });
       if (!res.ok) {
-        setRollError("Le tirage a échoué — réessayez.");
+        const body: { error?: string } | null = await res.json().catch(() => null);
+        setRollError(body?.error ?? "Le tirage a échoué — réessayez.");
         return;
       }
       const body: { rolls: number[] } = await res.json();
@@ -107,20 +139,44 @@ export default function AbilityScoreStep({
     patchCharacter({ abilities: { ...character.abilities, base: { ...character.abilities.base, [ability]: score } } });
   }
 
-  const spentPoints = method === "point_buy" ? pointBuyCost(character.abilities.base) : 0;
+  const spentPoints = method === "point_buy" && pointBuy ? pointBuyCost(character.abilities.base, pointBuy) : 0;
+
+  if (!characterRules) {
+    return (
+      <p className="text-sm text-ink-muted">
+        {rulesLoaded ? "Ce ruleset n'a pas de règles de personnage." : "Choisissez d'abord une espèce ou une classe : les règles de personnage viennent du ruleset."}
+      </p>
+    );
+  }
+  if (offeredMethods.length === 0) {
+    return <p className="text-sm text-ink-muted">Les règles de ce ruleset ne proposent aucune méthode d&apos;attribution des caractéristiques.</p>;
+  }
+
+  const methodOptions = [
+    ...(method === null ? [{ value: "", label: "Choisir une méthode" }] : []),
+    ...(standardArray ? [{ value: "standard_array", label: `Tableau standard (${standardArray.join("/")})` }] : []),
+    ...(pointBuy ? [{ value: "point_buy", label: `Achat de points (${pointBuy.budget} points)` }] : []),
+    ...(rollRule
+      ? [
+          {
+            value: "roll",
+            label:
+              rollRule.keep_highest === rollRule.dice_count
+                ? `Tirage (${rollRule.dice_count}d${rollRule.dice_faces})`
+                : `Tirage (${rollRule.dice_count}d${rollRule.dice_faces}, on garde les ${rollRule.keep_highest} meilleurs)`,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div className="flex flex-col gap-4">
       <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
         Méthode
         <Dropdown
-          value={method}
-          options={[
-            { value: "standard_array", label: "Tableau standard (15/14/13/12/10/8)" },
-            { value: "point_buy", label: "Achat de points (27 points)" },
-            { value: "roll", label: "Tirage (4d6, on garde les 3 meilleurs)" },
-          ]}
-          onChange={(v) => setMethod(v as CharacterBlockData["abilities"]["method"])}
+          value={method ?? ""}
+          options={methodOptions}
+          onChange={(v) => v !== "" && setMethod(v as CharacterBlockData["abilities"]["method"])}
           aria-label="Méthode d'attribution des caractéristiques"
         />
       </label>
@@ -139,6 +195,12 @@ export default function AbilityScoreStep({
         </div>
       )}
 
+      {overCapValues.length > 0 && (
+        <p className="text-xs text-danger">
+          Au-dessus du plafond de {cap} du ruleset, non attribuable : {overCapValues.join(", ")}.
+        </p>
+      )}
+
       {(method === "standard_array" || method === "roll") && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {ABILITIES.map((ability) => {
@@ -155,7 +217,7 @@ export default function AbilityScoreStep({
                   { value: "", label: "—" },
                   ...pool
                     .map((value, idx) => ({ value: String(idx), label: `${value} (${formatMod(value)})`, idx }))
-                    .filter((o) => !usedByOthers.has(o.idx)),
+                    .filter((o) => !usedByOthers.has(o.idx) && (cap === undefined || pool[o.idx] <= cap)),
                 ]
               : [{ value: "", label: "Tirez d'abord les dés" }];
             const score = currentIdx !== undefined && pool ? pool[currentIdx] : null;
@@ -176,10 +238,10 @@ export default function AbilityScoreStep({
         </div>
       )}
 
-      {method === "point_buy" && (
+      {method === "point_buy" && pointBuy && (
         <div className="flex flex-col gap-3">
-          <p className={`text-xs ${spentPoints > POINT_BUY_BUDGET ? "text-danger" : "text-ink-muted"}`}>
-            {spentPoints}/{POINT_BUY_BUDGET} points dépensés
+          <p className={`text-xs ${spentPoints > pointBuy.budget ? "text-danger" : "text-ink-muted"}`}>
+            {spentPoints}/{pointBuy.budget} points dépensés
           </p>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {ABILITIES.map((ability) => {
@@ -191,9 +253,11 @@ export default function AbilityScoreStep({
                     onIncrement={() => setPointBuyScore(ability, score + 1)}
                     onDecrement={() => setPointBuyScore(ability, score - 1)}
                     incrementDisabled={
-                      score >= POINT_BUY_MAX || pointBuyCost({ ...character.abilities.base, [ability]: score + 1 }) > POINT_BUY_BUDGET
+                      score >= pointBuy.max ||
+                      (cap !== undefined && score + 1 > cap) ||
+                      pointBuyCost({ ...character.abilities.base, [ability]: score + 1 }, pointBuy) > pointBuy.budget
                     }
-                    decrementDisabled={score <= POINT_BUY_MIN}
+                    decrementDisabled={score <= pointBuy.min}
                     incrementLabel={`Augmenter ${ABILITY_LABELS[ability]}`}
                     decrementLabel={`Diminuer ${ABILITY_LABELS[ability]}`}
                     className="w-14"

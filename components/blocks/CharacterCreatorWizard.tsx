@@ -319,6 +319,9 @@ export default function CharacterCreatorWizard({
           pool={abilityPool}
           onChangePool={setAbilityPool}
           sheet={sheet}
+          characterRules={ruleset.characterRules}
+          worldSlug={worldSlug}
+          rulesLoaded={Object.keys(ruleset.classes).length + Object.keys(ruleset.features).length > 0}
         />
       )}
 

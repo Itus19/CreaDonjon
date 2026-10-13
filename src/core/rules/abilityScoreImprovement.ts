@@ -2,10 +2,9 @@ import { ABILITIES, type Ability, type Modifier } from "./sheet";
 
 /**
  * Amelioration de caracteristique (ASI, V2-G1 — montee de niveau
- * accompagnee) : +2 sur une caracteristique, ou +1 sur deux, plafond 20
- * (le plafond se verifie contre le score effectif au moment du choix, pas
- * ici — cette fonction ne connait que la forme du choix, jamais l'etat
- * du personnage). Stocke dans `character.choices["<classe>.l<niveau>.asi"]`,
+ * accompagnee) : +2 sur une caracteristique, ou +1 sur deux, plafond du ruleset
+ * (`asiExceedsCap` le verifie contre les scores d'avant le choix ; les autres
+ * fonctions ne connaissent que la forme du choix, jamais l'etat du personnage). Stocke dans `character.choices["<classe>.l<niveau>.asi"]`,
  * la cle generique existante (`src/core/schemas/blocks/character.ts`) —
  * aucun champ de schema dedie.
  */
@@ -40,6 +39,15 @@ export function isValidAsiChoice(choice: AsiChoice): boolean {
     total += amount;
   }
   return total === 2;
+}
+
+/**
+ * Ce choix ferait-il dépasser le plafond de caractéristique du ruleset
+ * (`ability_score_cap`, V3.1-115) ? `scoresBefore` : les scores AVANT ce choix.
+ * Le plafond vient du ruleset, jamais d'une constante.
+ */
+export function asiExceedsCap(choice: AsiChoice, scoresBefore: Record<Ability, number>, cap: number): boolean {
+  return Object.entries(choice.increases).some(([ability, amount]) => scoresBefore[ability as Ability] + (amount ?? 0) > cap);
 }
 
 /** Un modificateur additif couche 5 par caracteristique touchee — meme forme que `mapSpeciesModifiers` (couche 2, srdMapping.ts), seule la couche differe. */

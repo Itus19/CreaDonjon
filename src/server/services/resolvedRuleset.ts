@@ -1,6 +1,6 @@
 import "server-only";
-import { zCharacterRulesBlockData, type CharacterRules } from "@/src/core/schemas/rule-blocks/characterRules";
-import { zModifiersBlockData } from "@/src/core/schemas/rule-blocks/blocks";
+import { zCharacterRulesBlockData, type CharacterRules, type MulticlassPrerequisites } from "@/src/core/schemas/rule-blocks/characterRules";
+import { zClassBasicsBlockData, zModifiersBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
@@ -200,6 +200,28 @@ interface BatchEntry {
   traitKeys: string[];
   /** Modificateurs declares par la fiche (bloc `modifiers`). Lus pour les traits d'espece (V3.1-121, Ténacité naine) ; vide si la fiche n'en porte pas. */
   modifiers: DeclaredModifier[];
+  /** V3.1-115 : prérequis de multiclassage et caractéristiques suggérées (bloc `class_basics`) — absents pour toute autre fiche. */
+  multiclassPrerequisites?: MulticlassPrerequisites;
+  suggestedAbilities?: Ability[];
+}
+
+/**
+ * Prérequis de multiclassage et caractéristiques suggérées du bloc
+ * `class_basics` (V3.1-115). Tolère une donnée absente ; une donnée mal
+ * formée est ignorée mais journalisée (un prérequis perdu en silence
+ * laisserait entrer dans une classe sans le dire).
+ */
+function classBasicsExtras(data: unknown): Pick<BatchEntry, "multiclassPrerequisites" | "suggestedAbilities"> {
+  if (data === undefined || data === null) return {};
+  const parsed = zClassBasicsBlockData.pick({ multiclass_prerequisites: true, suggested_abilities: true }).safeParse(data);
+  if (!parsed.success) {
+    console.error("Bloc class_basics : prérequis de multiclassage mal formés, ignorés", parsed.error.issues);
+    return {};
+  }
+  return {
+    ...(parsed.data.multiclass_prerequisites ? { multiclassPrerequisites: parsed.data.multiclass_prerequisites } : {}),
+    ...(parsed.data.suggested_abilities ? { suggestedAbilities: parsed.data.suggested_abilities } : {}),
+  };
 }
 
 /** Modificateurs du bloc `modifiers`, valides par son schema. Absent : aucun. Mal forme : aucun, mais journalise (un effet ignore en silence fausserait la fiche sans qu'on sache pourquoi). */
@@ -283,6 +305,7 @@ async function fetchEntriesBatch(
       const progressionRow = rows.find((r) => r.block_type === "class_progression");
       const speciesTraitsRow = rows.find((r) => r.block_type === "species_traits");
       const modifiersRow = rows.find((r) => r.block_type === "modifiers");
+      const classBasicsRow = rows.find((r) => r.block_type === "class_basics");
 
       const customTableData = (overrideBlocks.custom_table ?? customTableRow?.data) as { rows: CustomTableRow[] } | undefined;
       const progressionData = (overrideBlocks.class_progression ?? progressionRow?.data) as
@@ -295,6 +318,7 @@ async function fetchEntriesBatch(
         progressionRows: progressionData?.rows ?? [],
         traitKeys: speciesTraitKeys(overrideBlocks.species_traits ?? speciesTraitsRow?.data),
         modifiers: declaredModifiers(overrideBlocks.modifiers ?? modifiersRow?.data),
+        ...classBasicsExtras(overrideBlocks.class_basics ?? classBasicsRow?.data),
       });
       remaining.delete(entry.entry_key);
     }
@@ -313,6 +337,7 @@ async function fetchEntriesBatch(
         backgroundBlock: resolved.blocksByType.get("background") as BackgroundBlockData | undefined,
         traitKeys: speciesTraitKeys(resolved.blocksByType.get("species_traits")),
         modifiers: declaredModifiers(resolved.blocksByType.get("modifiers")),
+        ...classBasicsExtras(resolved.blocksByType.get("class_basics")),
       });
       remaining.delete(key);
     }
@@ -373,6 +398,13 @@ export async function readCharacterRules(supabase: TypedClient, rulesetId: strin
     return null;
   }
   return parsed.data;
+}
+
+/** Les règles de personnage du ruleset par défaut d'un monde (V3.1-115). `null` : monde sans ruleset, ou ruleset sans règles. */
+export async function readWorldCharacterRules(supabase: TypedClient, worldId: string): Promise<CharacterRules | null> {
+  const rulesetId = await getWorldDefaultRulesetId(supabase, worldId);
+  if (!rulesetId) return null;
+  return readCharacterRules(supabase, rulesetId);
 }
 
 /**
@@ -528,6 +560,8 @@ export async function assembleResolvedRuleset(
       hitDie: core.hitDie,
       savingThrowProficiencies: core.savingThrowProficiencies,
       spellcasting: spellAbility ? { ability: spellAbility, slotsByLevel } : undefined,
+      ...(found.multiclassPrerequisites ? { multiclassPrerequisites: found.multiclassPrerequisites } : {}),
+      ...(found.suggestedAbilities ? { suggestedAbilities: found.suggestedAbilities } : {}),
     };
 
     const classProficiencies = mapProficiencies(found.fields);

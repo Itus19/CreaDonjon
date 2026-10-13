@@ -45,3 +45,33 @@ export function checkMulticlassPrerequisites(prereq: MulticlassPrerequisites | u
   const allUnmet = anyMet ? unmet : [...unmet, ...any];
   return { met: allUnmet.length === 0, unmet: allUnmet };
 }
+
+/** Le niveau total dépasse-t-il le plafond de niveau du ruleset ? */
+export function exceedsLevelCap(totalLevel: number, levelCap: number): boolean {
+  return totalLevel > levelCap;
+}
+
+export interface MulticlassEntryCheck {
+  met: boolean;
+  /** Une entrée par classe dont le prérequis n'est pas rempli, avec ses conditions manquantes. */
+  failures: { classKey: string; unmet: MulticlassCheck["unmet"] }[];
+}
+
+/**
+ * Entrer dans une nouvelle classe (règle 5e) : le prérequis de la NOUVELLE
+ * classe et celui de CHAQUE classe actuelle doivent être remplis, avec les
+ * caractéristiques actuelles. `classes` liste donc la nouvelle et les actuelles.
+ * Un prérequis non rempli est signalé ; c'est à l'appelant de décider si le MJ
+ * peut passer outre (ADR 0046).
+ */
+export function checkMulticlassEntry(
+  classes: { key: string; prerequisites?: MulticlassPrerequisites }[],
+  scores: Record<Ability, number>
+): MulticlassEntryCheck {
+  const failures: MulticlassEntryCheck["failures"] = [];
+  for (const c of classes) {
+    const check = checkMulticlassPrerequisites(c.prerequisites, scores);
+    if (!check.met) failures.push({ classKey: c.key, unmet: check.unmet });
+  }
+  return { met: failures.length === 0, failures };
+}

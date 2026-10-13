@@ -220,7 +220,8 @@ export function useCharacterSheetContext(
 
   const sheet = characterSheet(
     build,
-    { classes: ruleset.classes, features: { ...ruleset.features, ...choiceFeatures } },
+    // V3.1-115 : les regles de personnage du ruleset (plafond, charge) suivent la reponse deja chargee.
+    { classes: ruleset.classes, features: { ...ruleset.features, ...choiceFeatures }, characterRules: ruleset.characterRules },
     equippedItems,
     [],
     carriedWeight

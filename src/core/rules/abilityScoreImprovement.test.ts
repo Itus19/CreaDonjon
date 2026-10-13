@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { asiModifiers, isValidAsiChoice, parseAsiChoice } from "./abilityScoreImprovement";
+import { asiExceedsCap, asiModifiers, isValidAsiChoice, parseAsiChoice } from "./abilityScoreImprovement";
 
 describe("isValidAsiChoice", () => {
   it("accepte +2 sur une seule caracteristique", () => {
@@ -48,5 +48,20 @@ describe("asiModifiers", () => {
       ])
     );
     expect(modifiers).toHaveLength(2);
+  });
+});
+
+describe("asiExceedsCap (plafond du ruleset, V3.1-115)", () => {
+  const avant = { str: 19, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
+  it("+2 sur 19 dépasse le plafond 20, +1 non", () => {
+    expect(asiExceedsCap({ kind: "asi", increases: { str: 2 } }, avant, 20)).toBe(true);
+    expect(asiExceedsCap({ kind: "asi", increases: { str: 1, dex: 1 } }, avant, 20)).toBe(false);
+  });
+  it("lit le plafond du ruleset : au plafond 15, 14 + 2 dépasse", () => {
+    expect(asiExceedsCap({ kind: "asi", increases: { dex: 2 } }, { ...avant, dex: 14 }, 15)).toBe(true);
+    expect(asiExceedsCap({ kind: "asi", increases: { dex: 2 } }, { ...avant, dex: 13 }, 15)).toBe(false);
+  });
+  it("une caractéristique déjà au-dessus du plafond ne peut plus monter", () => {
+    expect(asiExceedsCap({ kind: "asi", increases: { str: 1, dex: 1 } }, { ...avant, str: 21 }, 20)).toBe(true);
   });
 });

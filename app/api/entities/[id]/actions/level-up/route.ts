@@ -13,6 +13,8 @@ const ERROR_MESSAGES: Record<ApplyLevelUpError, string> = {
   invalid_hp_choice: "Choix de points de vie manquant ou incohérent avec les niveaux gagnés.",
   xp_insufficient: "Le total de PX actuel ne justifie plus cette montée de niveau.",
   forbidden_field_change: "La montée de niveau ne peut pas changer l'espèce, l'historique ou l'identité du personnage.",
+  level_cap_exceeded: "Le niveau total dépasserait le plafond de niveau de ce ruleset.",
+  multiclass_prerequisites_unmet: "Prérequis de multiclassage non remplis : seul le MJ peut passer outre.",
 };
 
 const STATUS_BY_ERROR: Partial<Record<ApplyLevelUpError, number>> = {
@@ -45,6 +47,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     character: parsed.data.character,
     spellcasting: parsed.data.spellcasting,
     hpChoices: parsed.data.hpChoices,
+    overrideMulticlassPrerequisites: parsed.data.overrideMulticlassPrerequisites,
     actorUserId: user.id,
     locale,
   });

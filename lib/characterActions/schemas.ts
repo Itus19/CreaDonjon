@@ -147,4 +147,7 @@ export const applyLevelUpSchema = z.object({
   // Une INTENTION par nouveau niveau gagne, par classe (V2-G1) — jamais une
   // valeur de PV : le jet reel se fait cote serveur (CLAUDE.md regle 6).
   hpChoices: z.record(z.string(), z.array(z.enum(["average", "rolled"]))).default({}),
+  // V3.1-115 : le MJ passe outre un prerequis de multiclassage non rempli. Une
+  // INTENTION : le serveur la reclampe a `isWorldAdmin`, jamais fiee au client.
+  overrideMulticlassPrerequisites: z.boolean().default(false),
 });

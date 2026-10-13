@@ -1108,6 +1108,7 @@ function SortableBlockCard({
             onUpdateInventory={onUpdateInventory}
             onUpdateSpellcasting={onUpdateSpellcasting}
             onBlockRefreshed={onBlockRefreshed}
+            isWorldAdmin={!hideAiAssist}
           />
         )
       ) : block.blockType === "statblock" ? (

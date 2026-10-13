@@ -85,6 +85,7 @@ export default function PlayableCharacterSheet({
   onUpdateInventory,
   onUpdateSpellcasting,
   onBlockRefreshed,
+  isWorldAdmin = false,
 }: {
   worldSlug: string;
   entityId: string;
@@ -101,6 +102,8 @@ export default function PlayableCharacterSheet({
   onUpdateSpellcasting: (data: SpellcastingBlockData) => void;
   /** Un bloc a ete ecrit par une autre voie que la sauvegarde normale de ce composant (V2-G1, montee de niveau) — synchronise la version locale sans redeclencher une sauvegarde (meme motif que `BlockDataEditor`/`EntityBlocks.handleBlockRefreshed`). */
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
+  /** MJ du monde (V3.1-115) : peut passer outre un prerequis de multiclassage a la montee de niveau. Indication d'interface seulement, le serveur le re-verifie. */
+  isWorldAdmin?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("actions");
   const [advantage, setAdvantage] = useState<AdvantageState>("normal");
@@ -235,6 +238,7 @@ export default function PlayableCharacterSheet({
         initialCharacter={character}
         initialInventory={inventory ?? { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } }}
         initialSpellcasting={spellcasting}
+        isWorldAdmin={isWorldAdmin}
         onCancel={() => setLevelUpOpen(false)}
         onDone={(result) => {
           onBlockRefreshed({ id: characterBlockId, data: result.character.data, version: result.character.version });

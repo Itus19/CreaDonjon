@@ -14,7 +14,7 @@
  */
 
 import { computeEncumbrance, encumbranceModifiers, type EncumbranceResult } from "./encumbrance";
-import type { CharacterRules } from "../schemas/rule-blocks/characterRules";
+import type { CharacterRules, MulticlassPrerequisites } from "../schemas/rule-blocks/characterRules";
 import { rollDice } from "../dice/roll";
 import type { Rng } from "../dice/rng";
 
@@ -137,6 +137,10 @@ export interface ResolvedClass {
    */
   savingThrowProficiencies: readonly Ability[];
   spellcasting?: ClassSpellcasting;
+  /** V3.1-115 : prérequis pour entrer dans cette classe en multiclassant (bloc `class_basics`). Absent : aucun déclaré. */
+  multiclassPrerequisites?: MulticlassPrerequisites;
+  /** V3.1-115 : caractéristiques suggérées pour cette classe (bloc `class_basics`), affichées à la répartition. */
+  suggestedAbilities?: Ability[];
 }
 
 export interface ResolvedRuleset {

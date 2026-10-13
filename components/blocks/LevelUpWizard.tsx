@@ -4,7 +4,10 @@ import { useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
-import type { HpGainChoice } from "@/src/core/rules/sheet";
+import { ABILITIES, type Ability, type HpGainChoice } from "@/src/core/rules/sheet";
+import { parseAsiChoice } from "@/src/core/rules/abilityScoreImprovement";
+import { checkMulticlassEntry, exceedsLevelCap } from "@/src/core/rules/characterRules";
+import { ABILITY_LABELS } from "./sheetLabels";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import { useRuleEntryBlocks } from "./useRuleEntryBlocks";
@@ -62,6 +65,7 @@ export default function LevelUpWizard({
   initialCharacter,
   initialInventory,
   initialSpellcasting,
+  isWorldAdmin = false,
   onCancel,
   onDone,
 }: {
@@ -72,6 +76,8 @@ export default function LevelUpWizard({
   initialCharacter: CharacterBlockData;
   initialInventory: InventoryBlockData;
   initialSpellcasting: SpellcastingBlockData | undefined;
+  /** Le MJ peut passer outre un prerequis de multiclassage non rempli (V3.1-115, ADR 0046). Indication d'interface : le serveur le re-verifie. */
+  isWorldAdmin?: boolean;
   onCancel: () => void;
   onDone: (result: LevelUpWizardDoneResult) => void;
 }) {
@@ -96,6 +102,7 @@ export default function LevelUpWizard({
   const [hpChoices, setHpChoices] = useState<Record<string, HpGainChoice[]>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [overrideMulticlass, setOverrideMulticlass] = useState(false);
 
   // Niveau de chaque classe AVANT la montee, fige au montage (jamais mis a
   // jour ensuite — un ref se lirait pendant le rendu, react-hooks/refs) :
@@ -183,6 +190,34 @@ export default function LevelUpWizard({
   const totalLevelBefore = initialCharacter.classes.reduce((sum, c) => sum + c.level, 0);
   const totalLevelAfter = character.classes.reduce((sum, c) => sum + c.level, 0);
 
+  // Regles de personnage du ruleset (V3.1-115) : plafond de niveau, et plafond
+  // de caracteristique pour l'etape d'amelioration. Sans regles, rien n'est
+  // invente ici (le serveur applique celles du ruleset).
+  const characterRules = ruleset.characterRules;
+  const levelCapExceeded = characterRules !== undefined && exceedsLevelCap(totalLevelAfter, characterRules.level_cap);
+
+  // Multiclassage (5e) : entrer dans une NOUVELLE classe exige le prerequis de
+  // cette classe ET celui de chaque classe actuelle, avec les caracteristiques
+  // d'AVANT la montee : on retranche de la fiche les ameliorations choisies
+  // pendant cette montee (cle absente du personnage initial).
+  const scoresBeforeLevelUp = Object.fromEntries(ABILITIES.map((a) => [a, sheet.abilities[a].score])) as Record<Ability, number>;
+  for (const [choiceKey, raw] of Object.entries(character.choices)) {
+    if (!choiceKey.endsWith(".asi") || choiceKey in initialCharacter.choices) continue;
+    const asi = parseAsiChoice(raw);
+    if (!asi) continue;
+    for (const a of ABILITIES) scoresBeforeLevelUp[a] -= asi.increases[a] ?? 0;
+  }
+  const newClassKeys = classKeys.filter((k) => !oldLevelByKey.has(k));
+  const multiclassCheck =
+    newClassKeys.length > 0 && oldLevelByKey.size > 0
+      ? checkMulticlassEntry(
+          [...newClassKeys, ...oldLevelByKey.keys()].map((key) => ({ key, prerequisites: ruleset.classes[key]?.multiclassPrerequisites })),
+          scoresBeforeLevelUp
+        )
+      : { met: true, failures: [] };
+  /** Un prerequis non rempli bloque la joueuse ; le MJ peut passer outre, explicitement. */
+  const multiclassBlocked = !multiclassCheck.met && !(isWorldAdmin && overrideMulticlass);
+
   const steps = [
     "Classe",
     ...(hpGrants.length > 0 ? ["Points de vie"] : []),
@@ -210,6 +245,7 @@ export default function LevelUpWizard({
           character,
           spellcasting: spellcasting.known.length > 0 ? spellcasting : undefined,
           hpChoices: hpChoicesPayload,
+          overrideMulticlassPrerequisites: isWorldAdmin && overrideMulticlass,
         }),
       });
       if (!res.ok) {
@@ -254,6 +290,33 @@ export default function LevelUpWizard({
         ))}
       </div>
 
+      {levelCapExceeded && characterRules && (
+        <p className="text-xs text-danger">
+          Niveau total {totalLevelAfter} : au-dessus du plafond de niveau ({characterRules.level_cap}) de ce ruleset.
+        </p>
+      )}
+
+      {!multiclassCheck.met && (
+        <div className="flex flex-col gap-1.5 rounded-md border border-danger/60 bg-danger/10 px-3 py-2 text-xs text-danger">
+          <p className="font-semibold">Prérequis de multiclassage non remplis :</p>
+          <ul className="list-inside list-disc">
+            {multiclassCheck.failures.map((f) => (
+              <li key={f.classKey}>
+                {ruleset.classes[f.classKey]?.label ?? f.classKey} : {f.unmet.map((u) => `${ABILITY_LABELS[u.ability]} ${u.min}`).join(", ")} requis
+              </li>
+            ))}
+          </ul>
+          {isWorldAdmin ? (
+            <label className="flex items-center gap-2 text-ink">
+              <input type="checkbox" checked={overrideMulticlass} onChange={(e) => setOverrideMulticlass(e.target.checked)} />
+              Passer outre (MJ)
+            </label>
+          ) : (
+            <p className="text-ink-muted">Seul le MJ peut passer outre.</p>
+          )}
+        </div>
+      )}
+
       {steps[step] === "Classe" && (
         <LevelClassesStep
           worldSlug={worldSlug}
@@ -271,7 +334,13 @@ export default function LevelUpWizard({
         <HpRollStep grants={hpGrants} conMod={sheet.abilities.con.mod} choiceAt={hpChoiceAt} onChoose={setHpChoiceAt} />
       )}
 
-      {steps[step] === "Caractéristiques" && <AsiStep character={character} patchCharacter={patchCharacter} sheet={sheet} grants={asiGrants} />}
+      {steps[step] === "Caractéristiques" && <AsiStep
+          character={character}
+          patchCharacter={patchCharacter}
+          sheet={sheet}
+          grants={asiGrants}
+          abilityScoreCap={characterRules?.ability_score_cap}
+        />}
 
       {steps[step] === "Compétences" && (
         <RemainingChoicesStep
@@ -330,7 +399,7 @@ export default function LevelUpWizard({
 
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || levelCapExceeded || multiclassBlocked}
             onClick={submit}
             className="w-fit rounded-full border border-accent px-4 py-1.5 text-sm text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
           >

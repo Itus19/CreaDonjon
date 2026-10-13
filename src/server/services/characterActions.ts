@@ -6,6 +6,7 @@ import {
   ABILITIES,
   characterSheet,
   resolveHpGain,
+  type Ability,
   type CharacterBuild,
   type DerivedSheet,
   type EquippedItem,
@@ -14,7 +15,9 @@ import {
   type ResolvedFeature,
 } from "@/src/core/rules/sheet";
 import { hasReachedNextLevel } from "@/src/core/rules/experience";
-import { asiModifiers, isValidAsiChoice, parseAsiChoice } from "@/src/core/rules/abilityScoreImprovement";
+import { asiExceedsCap, asiModifiers, isValidAsiChoice, parseAsiChoice, type AsiChoice } from "@/src/core/rules/abilityScoreImprovement";
+import { checkMulticlassEntry, exceedsLevelCap, withinAbilityScoreCap } from "@/src/core/rules/characterRules";
+import { isWorldAdmin } from "@/src/server/services/permissions";
 import {
   resolveAttackRoll,
   resolveDamageRoll,
@@ -233,7 +236,8 @@ export async function resolveCharacterActionContext(
 
   const sheet = characterSheet(
     build,
-    { classes: assembled.ruleset.classes, features: { ...assembled.ruleset.features, ...choiceFeatures } },
+    // V3.1-115 : plafond de caracteristique et charge lus dans les regles du ruleset.
+    { classes: assembled.ruleset.classes, features: { ...assembled.ruleset.features, ...choiceFeatures }, characterRules: assembled.ruleset.characterRules },
     equippedItems,
     [],
     carriedWeight
@@ -799,7 +803,9 @@ export type ApplyLevelUpError =
   | "invalid_asi"
   | "invalid_hp_choice"
   | "xp_insufficient"
-  | "forbidden_field_change";
+  | "forbidden_field_change"
+  | "level_cap_exceeded"
+  | "multiclass_prerequisites_unmet";
 
 export interface ApplyLevelUpOutcome {
   character: BlockRow;
@@ -840,6 +846,13 @@ function sameBlockReference(a: BlockReference | null, b: BlockReference | null):
  * legitimite de chaque choix d'ASI (le niveau accorde-t-il vraiment une
  * amelioration de caracteristique pour cette classe, lu dans
  * `assembleResolvedRuleset` — jamais une liste de niveaux codee en dur).
+ *
+ * Regles de personnage du ruleset (V3.1-115, ADR 0046) : plafond de niveau,
+ * plafond de caracteristique et prerequis de multiclassage se lisent dans
+ * `assembled.ruleset.characterRules` / `ResolvedClass`, jamais en constante.
+ * Un prerequis de multiclassage non rempli refuse la montee, SAUF pour le MJ
+ * (`isWorldAdmin`) qui l'a explicitement demande (`overrideMulticlassPrerequisites`) ;
+ * une joueuse qui envoie le drapeau est refusee comme si elle ne l'avait pas fait.
  */
 export async function applyLevelUp(
   supabase: TypedClient,
@@ -851,6 +864,8 @@ export async function applyLevelUp(
     spellcasting: SpellcastingBlockData | undefined;
     /** Un choix moyenne/jet par NOUVEAU niveau gagne, par classe (V2-G1) — jamais une valeur, seulement une intention ; le jet lui-meme se fait ici (regle 6). */
     hpChoices: Record<string, HpGainChoice[]>;
+    /** Le MJ passe outre un prerequis de multiclassage non rempli (V3.1-115). Sans effet pour qui n'est pas MJ du monde. */
+    overrideMulticlassPrerequisites: boolean;
     actorUserId: string;
     locale: Locale;
   }
@@ -900,6 +915,30 @@ export async function applyLevelUp(
     params.locale
   );
 
+  // Plafond de niveau du ruleset (V3.1-115) : sur le niveau TOTAL.
+  const characterRules = assembled.ruleset.characterRules;
+  if (characterRules && exceedsLevelCap(newTotalLevel, characterRules.level_cap)) return { error: "level_cap_exceeded" };
+
+  // Multiclassage (V3.1-115, regle 5e) : une classe NOUVELLE exige son
+  // prerequis ET celui de chaque classe actuelle, avec les caracteristiques
+  // actuelles (`ctx.sheet`, la fiche d'AVANT la montee). Non rempli : refus,
+  // sauf pour le MJ qui passe outre explicitement.
+  const newClassKeys = [...new Set(next.classes.filter((c) => c.class.kind === "rule" && c.class.key).map((c) => (c.class as { kind: "rule"; key: string }).key))].filter(
+    (key) => !oldLevelByKey.has(key)
+  );
+  if (newClassKeys.length > 0 && oldLevelByKey.size > 0) {
+    const currentScores = Object.fromEntries(ABILITIES.map((a) => [a, ctx.sheet.abilities[a].score])) as Record<Ability, number>;
+    const entry = checkMulticlassEntry(
+      [...newClassKeys, ...oldLevelByKey.keys()].map((key) => ({ key, prerequisites: assembled.ruleset.classes[key]?.multiclassPrerequisites })),
+      currentScores
+    );
+    if (!entry.met) {
+      const mayOverride =
+        params.overrideMulticlassPrerequisites && (await isWorldAdmin(supabase, { worldId: ctx.worldId, userId: params.actorUserId }));
+      if (!mayOverride) return { error: "multiclass_prerequisites_unmet" };
+    }
+  }
+
   // Jet de de de vie (V2-G1) : chaque niveau NOUVELLEMENT gagne (jamais un
   // niveau deja possede) exige un choix moyenne/jet explicite, un par
   // niveau — jamais un choix global qui masquerait de quelle classe/de il
@@ -939,6 +978,7 @@ export async function applyLevelUp(
   }
 
   const ASI_CHOICE_KEY = /^(.+)\.l(\d+)\.asi$/;
+  const asiChoices: AsiChoice[] = [];
   for (const [choiceKey, rawValue] of Object.entries(next.choices)) {
     const match = ASI_CHOICE_KEY.exec(choiceKey);
     if (!match) continue;
@@ -946,6 +986,7 @@ export async function applyLevelUp(
     const asi = parseAsiChoice(rawValue);
     if (!asi || !isValidAsiChoice(asi)) return { error: "invalid_asi" };
     if (!(assembled.asiGrantedLevels[classKey] ?? []).includes(Number(levelText))) return { error: "invalid_asi" };
+    asiChoices.push(asi);
 
     const key = `choice:${choiceKey}`;
     const label = `Amélioration de caractéristique (${assembled.ruleset.classes[classKey]?.label ?? classKey} niv. ${levelText})`;
@@ -966,14 +1007,22 @@ export async function applyLevelUp(
     abilities: { assigned: next.abilities.base },
     featureKeys: [...Object.keys(assembled.ruleset.features), ...choiceFeatureKeys],
   };
+  // Sans `characterRules` : la fiche candidate ne PLAFONNE pas les scores, qu'on
+  // compare ensuite nous-memes au plafond du ruleset (un choix qui le depasserait
+  // doit etre refuse, pas silencieusement ramene au plafond).
   const candidateSheet = characterSheet(
     build,
     { classes: assembled.ruleset.classes, features: { ...assembled.ruleset.features, ...choiceFeatures } },
     [],
     []
   );
-  for (const ability of ABILITIES) {
-    if (candidateSheet.abilities[ability].score > 20) return { error: "invalid_asi" };
+  if (characterRules) {
+    const candidateScores = Object.fromEntries(ABILITIES.map((a) => [a, candidateSheet.abilities[a].score])) as Record<Ability, number>;
+    if (!withinAbilityScoreCap(candidateScores, characterRules.ability_score_cap)) return { error: "invalid_asi" };
+    for (const asi of asiChoices) {
+      const scoresBefore = Object.fromEntries(ABILITIES.map((a) => [a, candidateScores[a] - (asi.increases[a] ?? 0)])) as Record<Ability, number>;
+      if (asiExceedsCap(asi, scoresBefore, characterRules.ability_score_cap)) return { error: "invalid_asi" };
+    }
   }
 
   const updatedCharacter = await updateBlockWithVersionCheck(supabase, {
