@@ -177,7 +177,8 @@ export interface ResolvedCampaignInvite {
   intendedRole: "gm" | "player" | null;
   claimedByUserId: string | null;
   claimedName: string | null;
-  passwordHash: string | null;
+  /** V3.1-142 : seulement s'il y a un mot de passe. Le hash ne sort jamais vers un visiteur ; le serveur le lit par `getCampaignInvitePasswordHash`. */
+  hasPassword: boolean;
   passwordAttempts: number;
 }
 
@@ -201,7 +202,7 @@ export async function resolveCampaignInviteToken(supabase: TypedClient, token: s
     intendedRole: row.intended_role as "gm" | "player" | null,
     claimedByUserId: row.claimed_by_user_id,
     claimedName: row.claimed_name,
-    passwordHash: row.password_hash,
+    hasPassword: row.has_password,
     passwordAttempts: row.password_attempts,
   };
 }
@@ -230,3 +231,16 @@ export async function listUnclaimedCampaignCharactersForToken(
   if (error) throw new Error(error.message);
   return data.map((row) => ({ entityId: row.entity_id, entityName: row.entity_name }));
 }
+
+/**
+ * V3.1-142 — le hash du mot de passe d'une invitation. La fonction n'est
+ * exécutable que par la clé service (migration 20261013150000) : seul
+ * `accountProvisioning.ts` l'appelle. `null` : pas de mot de passe, ou lien
+ * inconnu ou révoqué.
+ */
+export async function getCampaignInvitePasswordHash(supabase: TypedClient, token: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc("campaign_invite_password_hash", { p_token: token });
+  if (error) throw new Error(error.message);
+  return data ?? null;
+}
+

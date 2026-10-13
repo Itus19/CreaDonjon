@@ -6,7 +6,7 @@ import {
   getPublicWikiWelcomeMessage,
   getLatestPublicSessionJournalSlug,
 } from "@/src/server/services/publicShare";
-import { hasVerifiedSharePassword } from "./passwordActions";
+import { hasVerifiedSharePassword } from "@/lib/shareLinks/passwordCookie";
 import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
 import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
 
@@ -27,7 +27,7 @@ export default async function ShareLinkWorldPage({
   // validation, jamais "charge puis masque". Posee ici EN PLUS du layout
   // (V2.1-19 volet B) : layout et page s'executent concurremment, seule
   // cette garde-ci empeche le chargement qui suit.
-  if (resolved.passwordHash && !(await hasVerifiedSharePassword(token))) {
+  if (resolved.passwordHash && !(await hasVerifiedSharePassword(token, resolved.passwordHash))) {
     return <SharePasswordGate token={token} worldName={resolved.worldName} />;
   }
 

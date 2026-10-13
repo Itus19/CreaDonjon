@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { resolveShareLink, getPublicEntityDetail } from "@/src/server/services/publicShare";
 import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
-import { hasVerifiedSharePassword } from "../passwordActions";
+import { hasVerifiedSharePassword } from "@/lib/shareLinks/passwordCookie";
 import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
 import type { Locale } from "@/src/i18n/request";
 import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
@@ -28,7 +28,7 @@ export default async function ShareLinkEntityPage({
   // beau refuser de rendre ses `children`, la fiche aurait deja ete chargee.
   // `resolveShareLink` etant memoise (volet A), la seconde verification ne
   // coute aucune requete.
-  if (resolved.passwordHash && !(await hasVerifiedSharePassword(token))) {
+  if (resolved.passwordHash && !(await hasVerifiedSharePassword(token, resolved.passwordHash))) {
     return <SharePasswordGate token={token} worldName={resolved.worldName} />;
   }
 

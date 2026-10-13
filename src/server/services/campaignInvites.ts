@@ -1,4 +1,5 @@
 import "server-only";
+import { readInvitePasswordHash } from "@/src/server/services/accountProvisioning";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { generateCampaignInviteToken, hashCampaignInviteToken } from "@/src/core/campaignInvites/token";
@@ -194,10 +195,13 @@ export type InvitePasswordResult = "ok" | "wrong" | "locked" | "not_required";
 export async function verifyInvitePassword(supabase: TypedClient, token: string, password: string): Promise<InvitePasswordResult> {
   const resolved = await resolveCampaignInviteToken(supabase, token);
   if (!resolved) return "wrong";
-  if (!resolved.passwordHash) return "not_required";
+  if (!resolved.hasPassword) return "not_required";
   if (resolved.passwordAttempts >= MAX_PASSWORD_ATTEMPTS) return "locked";
 
-  const success = verifySharePassword(password, resolved.passwordHash);
+  // V3.1-142 : le hash ne vient plus de la fonction ouverte aux visiteurs ; le serveur le lit par la clé service.
+  const passwordHash = await readInvitePasswordHash(token);
+  if (!passwordHash) return "wrong";
+  const success = verifySharePassword(password, passwordHash);
   await recordCampaignInvitePasswordAttempt(supabase, token, success);
   return success ? "ok" : "wrong";
 }

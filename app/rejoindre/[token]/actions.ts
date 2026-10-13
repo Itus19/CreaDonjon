@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { joinCampaignInviteSchema } from "@/lib/campaignInvites/schemas";
 import { claimInvite, resolveDestinationForInvitedUser, resolveInviteForJoin } from "@/src/server/services/campaignInvites";
 import { createTagAccount } from "@/src/server/services/accountAuth";
-import { hasVerifiedInvitePassword } from "./passwordActions";
+import { hasVerifiedInvitePassword } from "@/lib/campaignInvites/passwordCookie";
 
 export type JoinInviteState = { error: string } | null;
 
@@ -40,7 +40,7 @@ export async function joinInviteAction(_prevState: JoinInviteState, formData: Fo
   // Defense en profondeur : la page n'affiche ce formulaire qu'apres
   // validation du mot de passe, mais cette action reste atteignable
   // directement.
-  if (resolved.invite.passwordHash && !(await hasVerifiedInvitePassword(parsed.data.token))) {
+  if (resolved.invite.hasPassword && !(await hasVerifiedInvitePassword(parsed.data.token))) {
     return { error: "Mot de passe requis." };
   }
 

@@ -1,6 +1,6 @@
 import "server-only";
 import { createAccountProvisioningServiceClient } from "@/lib/supabase/serviceAccountProvisioning";
-import type { ResolvedCampaignInvite } from "@/src/server/repos/campaignInvites";
+import { getCampaignInvitePasswordHash, type ResolvedCampaignInvite } from "@/src/server/repos/campaignInvites";
 import { isSyntheticAccountEmail } from "@/src/core/accounts/memberAccountActions";
 
 /**
@@ -175,3 +175,14 @@ export async function mintSessionForInvitedAccount(userId: string): Promise<Mint
   if (linkError) throw new Error(linkError.message);
   return { ok: true, tokenHash: linkData.properties.hashed_token };
 }
+
+/**
+ * V3.1-142 — le hash du mot de passe d'une invitation, lu par la clé service :
+ * la fonction qui le renvoie est fermée aux visiteurs (migration
+ * 20261013150000). Sert à vérifier un mot de passe et à signer ou contrôler
+ * la preuve du cookie ; ne quitte jamais le serveur.
+ */
+export async function readInvitePasswordHash(token: string): Promise<string | null> {
+  return getCampaignInvitePasswordHash(createAccountProvisioningServiceClient(), token);
+}
+

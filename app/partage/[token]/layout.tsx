@@ -9,7 +9,7 @@ import {
 } from "@/src/server/services/publicShare";
 import { EN_TETE_CHEMIN, entitySlugFromPathname } from "@/lib/wikiPath";
 import { chooseWikiBackground } from "@/src/core/theme/worldWikiBackground";
-import { hasVerifiedSharePassword } from "./passwordActions";
+import { hasVerifiedSharePassword } from "@/lib/shareLinks/passwordCookie";
 import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
 import BookSkin from "@/components/entities/public/BookSkin";
 import WikiBackgroundProvider from "@/components/entities/public/WikiBackgroundProvider";
@@ -52,7 +52,7 @@ export default async function ShareLinkLayout({
 
   // Jamais de contenu recupere avant validation, jamais "charge puis masque"
   // (V1-C4) : rien de ce qui suit ne part tant que le cookie est absent.
-  if (resolved.passwordHash && !(await hasVerifiedSharePassword(token))) {
+  if (resolved.passwordHash && !(await hasVerifiedSharePassword(token, resolved.passwordHash))) {
     return <SharePasswordGate token={token} worldName={resolved.worldName} />;
   }
 

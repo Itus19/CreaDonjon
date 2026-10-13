@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getPublicWorldWikiBackgroundSignedUrl, resolveShareLink } from "@/src/server/services/publicShare";
 import { SIGNED_URL_CACHE_HEADER } from "@/src/server/services/storage";
-import { hasVerifiedSharePassword } from "../passwordActions";
+import { hasVerifiedSharePassword } from "@/lib/shareLinks/passwordCookie";
 
 const zParams = z.object({ token: z.string().min(1).max(200) });
 
@@ -19,7 +19,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { token } = parsed.data;
 
   const resolved = await resolveShareLink(token);
-  if (!resolved || (resolved.passwordHash && !(await hasVerifiedSharePassword(token)))) {
+  if (!resolved || (resolved.passwordHash && !(await hasVerifiedSharePassword(token, resolved.passwordHash)))) {
     return NextResponse.json({ error: "Image introuvable." }, { status: 404 });
   }
 

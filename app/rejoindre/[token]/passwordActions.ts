@@ -1,20 +1,8 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { hashCampaignInviteToken } from "@/src/core/campaignInvites/token";
+import { setVerifiedInvitePassword } from "@/lib/campaignInvites/passwordCookie";
 import { verifyInvitePassword } from "@/src/server/services/campaignInvites";
-
-/**
- * Cookie de vérification du mot de passe d'un lien d'invitation (V2-M4
- * suite, retour utilisateur 30 août) — même mécanisme que
- * `app/partage/[token]/passwordActions.ts` : nom dérivé du jeton (jamais
- * le jeton lui-même dans le nom), scopé au chemin de CE lien précis,
- * `httpOnly` (jamais lisible ni falsifiable depuis un script client).
- */
-function cookieName(token: string): string {
-  return `iv_${hashCampaignInviteToken(token).slice(0, 16)}`;
-}
 
 export type VerifyInvitePasswordState = { error: string } | { ok: true } | null;
 
@@ -28,14 +16,8 @@ export async function verifyInvitePasswordAction(
   const result = await verifyInvitePassword(supabase, token, password);
 
   if (result === "ok") {
-    const cookieStore = await cookies();
-    cookieStore.set(cookieName(token), "1", {
-      path: `/rejoindre/${token}`,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 6,
-    });
+    // V3.1-142 : la preuve est signée par le hash du mot de passe, que seul le serveur connaît.
+    if (!(await setVerifiedInvitePassword(token))) return { error: "Ce lien n'existe plus." };
     return { ok: true };
   }
 
@@ -43,9 +25,4 @@ export async function verifyInvitePasswordAction(
     return { error: "Trop de tentatives. Ce lien ne peut plus être déverrouillé par mot de passe." };
   }
   return { error: "Mot de passe incorrect." };
-}
-
-export async function hasVerifiedInvitePassword(token: string): Promise<boolean> {
-  const cookieStore = await cookies();
-  return cookieStore.get(cookieName(token))?.value === "1";
 }

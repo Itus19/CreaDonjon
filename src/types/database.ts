@@ -2676,6 +2676,7 @@ export type Database = {
         Args: { p_assignment_id: string; p_entity_id: string }
         Returns: boolean
       }
+      campaign_invite_password_hash: { Args: { p_token: string }; Returns: string }
       claim_shared_note_grant: { Args: { p_entity_id: string }; Returns: boolean }
       delete_own_account: { Args: never; Returns: undefined }
       entity_blocks_full: {
@@ -2777,8 +2778,8 @@ export type Database = {
           claimed_name: string
           id: string
           intended_role: string
+          has_password: boolean
           password_attempts: number
-          password_hash: string
           world_id: string
         }[]
       }

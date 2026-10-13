@@ -87,14 +87,16 @@ export interface ResolvedShareLink {
 
 /**
  * Passe par la fonction `security definer` public.resolve_share_link
- * (migration 20260801140001) : la cle anon suffit, aucune session
- * necessaire (la fonction est grantee a `anon`) — pas besoin du client
- * service-role pour cette seule verification. `null` couvre aussi bien
+ * (migration 20260801140001). V3.1-142 : par la clé SERVICE, plus la clé
+ * anon. La fonction renvoie le hash du mot de passe ; ouverte aux visiteurs,
+ * elle permettait de le lire et d'essayer des mots de passe hors ligne. Elle
+ * leur est fermée depuis la migration 20261013150000, et ce hash ne quitte
+ * jamais le serveur. `null` couvre aussi bien
  * "jamais existe" que "expire"/"revoque" — jamais de distinction cote
  * appelant (docs/BACKLOG.md V0-07, ne pas reveler qu'un lien a existe).
  */
 async function resolveShareLinkUncached(token: string): Promise<ResolvedShareLink | null> {
-  const supabase = createAnonClient();
+  const supabase = createShareLinkServiceClient();
   const { data, error } = await supabase.rpc("resolve_share_link", { p_token: token });
   if (error) throw new Error(error.message);
   const row = data?.[0];
