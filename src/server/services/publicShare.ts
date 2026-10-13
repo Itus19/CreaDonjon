@@ -1,5 +1,5 @@
 import "server-only";
-import { SHARED_NOTE_KIND } from "@/src/core/notebook/share";
+import { isWikiHiddenKind } from "@/src/core/entities/systemKinds";
 import { cache } from "react";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
@@ -179,7 +179,7 @@ export async function listPublicEntities(worldId: string): Promise<EntitySummary
   const supabase = createShareLinkServiceClient();
   const entities = await listEntitiesForWorld(supabase, worldId);
   // V3.1-41 : une page partagée du cahier n'est jamais du wiki public (ADR 0037).
-  return entities.filter((e) => e.is_public && e.entity_kind !== SHARED_NOTE_KIND);
+  return entities.filter((e) => e.is_public && !isWikiHiddenKind(e.entity_kind));
 }
 
 /**
@@ -211,7 +211,7 @@ async function getPublicEntityTreeUncached(worldId: string): Promise<EntityTreeG
   // que `getEntityTree` (entities.ts) : son groupe epingle (ci-dessus) le
   // remplace, jamais un doublon.
   // V3.1-41 : une page partagée du cahier non plus (ADR 0037), même rendue publique.
-  const entities = allEntities.filter((e) => e.is_public && e.entity_kind !== "session_journal" && e.entity_kind !== SHARED_NOTE_KIND);
+  const entities = allEntities.filter((e) => e.is_public && e.entity_kind !== "session_journal" && !isWikiHiddenKind(e.entity_kind));
   const tree = buildEntityTree(withPlayerCharacterKinds(entities, playerCharacterIds), partOfEdges, kindOrder);
   return journalGroup ? [journalGroup, ...tree] : tree;
 }
@@ -482,7 +482,7 @@ const getPublicEntityBySlug = cache(async function getPublicEntityBySlug(
   // `null` aussi bien pour "n'existe pas" que pour "masquee" : la distinction
   // ne doit jamais remonter, et la faire ici evite que chaque appelant ait a
   // se souvenir de la faire.
-  if (!entity || !entity.is_public || entity.entity_kind === SHARED_NOTE_KIND) return null;
+  if (!entity || !entity.is_public || isWikiHiddenKind(entity.entity_kind)) return null;
   return entity;
 });
 

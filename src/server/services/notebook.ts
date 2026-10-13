@@ -1,5 +1,5 @@
 import "server-only";
-import { SHARED_NOTE_KIND } from "@/src/core/notebook/share";
+import { isWikiHiddenKind } from "@/src/core/entities/systemKinds";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { EntitySummary } from "@/src/server/repos/entities";
@@ -86,7 +86,7 @@ async function listPinnableEntities(supabase: TypedClient, worldId: string, user
   const all = await listEntitiesForWorld(supabase, worldId);
   const admin = await isWorldAdmin(supabase, { worldId, userId });
   // V3.1-41 : les pages partagées ne s'épinglent pas comme des fiches ; le cahier de l'autrice les désigne déjà.
-  let visible = all.filter((e) => e.entity_kind !== "notes" && e.entity_kind !== SHARED_NOTE_KIND);
+  let visible = all.filter((e) => e.entity_kind !== "notes" && !isWikiHiddenKind(e.entity_kind));
   if (!admin) {
     const visibleIds = await listPlayerVisibleEntityIds(supabase, worldId, visible.map((e) => e.id), userId);
     visible = visible.filter((e) => visibleIds.has(e.id));

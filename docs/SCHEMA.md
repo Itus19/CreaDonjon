@@ -249,10 +249,13 @@ Pas de table `characters`, `npcs`, `locations`. La distinction se fait par les b
 
 **Le `slug`** rend l'URL stable et partageable. Unique par monde, généré depuis le nom, immuable après création.
 
-**Les entités qui ne sont pas des fiches du wiki.** Trois genres servent d'autres outils, et ne rejoignent ni l'arborescence, ni la recherche, ni le wiki public :
+**Les entités qui ne sont pas des fiches du wiki.** Quatre genres servent d'autres outils, et ne rejoignent ni l'arborescence, ni la recherche, ni le wiki public :
 - `notes` : le cahier privé de chaque compte (bloc `note_tree`, visibilité `user`) ;
 - `session_journal` : une entrée du Livre de sessions, dans son groupe épinglé ;
 - `shared_note` (V3.1-41, ADR 0037) : une page du cahier partagée avec la table. Son bloc `text` porte le titre (son libellé) et le contenu. Il est en visibilité `players` quand la page est partagée, `user` de l'autrice sinon. L'autrice écrit par un octroi (`entity_grants`) qu'elle ne peut réclamer qu'à la création (`public.claim_shared_note_grant`, migration `20261013130000`), et que le MJ peut reprendre. Le nom de l'entité est toujours « Page du cahier » : la RLS d'`entities` laisse lire tout nom à tout membre du monde, le titre n'y est donc jamais.
+- `world_timeline` (V3.1-96, ADR 0048) : la **Chronologie du monde**, une par monde (index unique partiel `entities_world_timeline_unique`), créée au premier événement ajouté directement à la frise générale. Son bloc `timeline` porte ces événements. Seul un MJ du monde peut la créer (`entities_insert`, migration `20261013160000`). La liste de ces genres vit dans `src/core/entities/systemKinds.ts` (`WIKI_HIDDEN_KINDS`), sauf `notes` et `session_journal`, traités à part.
+
+**Une entrée de chronologie** (bloc `timeline`) porte une portée facultative `scope` (`major`, `notable`, `detail`) ; absente, elle vaut le défaut de son genre (`resolveScope`, `src/core/timeline/worldTimeline.ts`). La frise générale (`getWorldTimeline`) lit les blocs `timeline` et `character` du monde en une requête, et filtre chaque date pour le lecteur (visibilité du bloc, puis de l'entrée).
 
 ---
 

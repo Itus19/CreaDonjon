@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { zBlockReference } from "./reference";
-import { zGameDate } from "@/src/core/schemas/calendar";
+import { zGameDate } from "../calendar";
 
 /**
  * Bloc `timeline` (V2-H2, specs/wiki-blocs.md §3) : entrées en ligne d'une
@@ -35,6 +35,15 @@ export const TIMELINE_ENTRY_KINDS = [
 ] as const;
 export type TimelineEntryKind = (typeof TIMELINE_ENTRY_KINDS)[number];
 
+/**
+ * Portée d'une entrée (V3.1-96, ADR 0048) : `major` (Monde), `notable`
+ * (Région), `detail`. Facultative : absente, elle vaut le défaut de son
+ * genre (`resolveScope`). Champ ajouté sans relever `__v` : les blocs écrits
+ * avant restent valides tels quels, rien n'est réécrit en base.
+ */
+export const TIMELINE_SCOPES = ["major", "notable", "detail"] as const;
+export type TimelineScope = (typeof TIMELINE_SCOPES)[number];
+
 /** Meme forme que `zSegmentVisibility`/`zAspirationVisibility` — dupliquee plutot qu'importee (CLAUDE.md regle 14). */
 const zTimelineEntryVisibility = z
   .object({
@@ -54,6 +63,7 @@ export const zTimelineEntry = z.object({
   /** Present une fois l'entree promue en entite (specs/wiki-blocs.md §3) — navigation seulement, jamais la source de `date`/`title`. */
   ref: zBlockReference.optional(),
   visibility: zTimelineEntryVisibility.default({ level: "public", scopeId: null }),
+  scope: z.enum(TIMELINE_SCOPES).optional(),
 });
 export type TimelineEntry = z.infer<typeof zTimelineEntry>;
 

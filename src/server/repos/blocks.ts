@@ -48,6 +48,22 @@ export async function listBlocksByTypeForEntities(
   return data as BlockRow[];
 }
 
+/** V3.1-96 : plusieurs types de blocs en UNE requête (la Chronologie du monde lit `timeline` et `character` ensemble). */
+export async function listBlocksByTypesForEntities(
+  supabase: TypedClient,
+  entityIds: string[],
+  blockTypes: readonly string[]
+): Promise<BlockRow[]> {
+  if (entityIds.length === 0 || blockTypes.length === 0) return [];
+  const { data, error } = await supabase
+    .from("blocks")
+    .select(BLOCK_COLUMNS)
+    .in("entity_id", entityIds)
+    .in("block_type", [...blockTypes]);
+  if (error) throw new Error(error.message);
+  return data as BlockRow[];
+}
+
 export interface BlockVisibilityRow {
   entity_id: string;
   visibility_level: string;

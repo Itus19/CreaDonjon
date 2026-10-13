@@ -1,5 +1,5 @@
 import "server-only";
-import { SHARED_NOTE_KIND } from "@/src/core/notebook/share";
+import { isWikiHiddenKind } from "@/src/core/entities/systemKinds";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { nextNumericSlug } from "@/src/core/slug/slug";
@@ -65,9 +65,13 @@ function excludeSessionJournalEntries(entities: EntitySummary[]): EntitySummary[
   return entities.filter((e) => e.entity_kind !== "session_journal");
 }
 
-/** V3.1-41 (ADR 0037) : une page du cahier partagée avec la table n'est pas une fiche du wiki. Elle n'apparaît ni dans l'arborescence, ni dans la recherche ; elle se lit dans « Partagées à la table » (`sharedNotes.ts`). */
-function excludeSharedNotes<T extends { entity_kind: string }>(entities: T[]): T[] {
-  return entities.filter((e) => e.entity_kind !== SHARED_NOTE_KIND);
+/**
+ * Les fiches système ne sont pas des fiches du wiki (V3.1-41 page partagée du
+ * cahier, V3.1-96 Chronologie du monde) : ni dans l'arborescence, ni dans la
+ * recherche. Elles se lisent par leur propre écran.
+ */
+function excludeWikiHidden<T extends { entity_kind: string }>(entities: T[]): T[] {
+  return entities.filter((e) => !isWikiHiddenKind(e.entity_kind));
 }
 
 export async function listEntities(supabase: TypedClient, worldId: string, userId: string | null): Promise<EntitySummary[]> {
@@ -157,7 +161,7 @@ export async function getEntityTree(
     getWorldEntityKindOrder(supabase, worldId),
     userId ? isWorldAdmin(supabase, { worldId, userId }) : Promise.resolve(false),
   ]);
-  let visibleEntities = excludeSharedNotes(excludeSessionJournalEntries(excludeOthersPrivateNotes(entities, userId)));
+  let visibleEntities = excludeWikiHidden(excludeSessionJournalEntries(excludeOthersPrivateNotes(entities, userId)));
   // Reste en seconde vague, et ne peut pas en sortir : la liste d'ids a
   // filtrer n'existe qu'apres `excludeOthersPrivateNotes` ci-dessus.
   if (userId && !admin) {
@@ -447,7 +451,7 @@ export async function searchEntities(
 ): Promise<EntitySearchResult[]> {
   const trimmed = query.trim();
   if (trimmed === "") return [];
-  const results = excludeSharedNotes(await searchEntitiesInWorld(supabase, worldId, trimmed));
+  const results = excludeWikiHidden(await searchEntitiesInWorld(supabase, worldId, trimmed));
   if (!userId || (await isWorldAdmin(supabase, { worldId, userId }))) return results;
   const visibleIds = await listPlayerVisibleEntityIds(supabase, worldId, results.map((r) => r.id), userId);
   return results.filter((r) => visibleIds.has(r.id));

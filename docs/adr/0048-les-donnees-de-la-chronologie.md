@@ -20,3 +20,22 @@ La frise générale (décidée le 9 octobre) a besoin d'une portée par date, d'
 ## Conséquences
 
 V3.1-96 passe « prêt (Opus) ». Le noyau (V3.1-97) reçoit la portée déjà résolue.
+
+## Réalisé (V3.1-96, 13 octobre 2026)
+
+- **Portée.**
+  - `scope` facultatif sur une entrée, et `resolveScope` (`src/core/timeline/worldTimeline.ts`).
+  - Les genres que la décision ne classe pas (`trauma`, `custom`) valent `detail` : la frise ne met rien en avant sans qu'on le choisisse.
+  - **Écart** : `__v` n'est pas relevé. Un champ facultatif garde valides les blocs écrits avant, et une nouvelle version aurait imposé une migration sans gain.
+- **Fiche système.**
+  - `world_timeline`, index unique partiel.
+  - **Ajouté** : la création de ce genre est réservée au MJ dans `entities_insert`. Tout membre pouvait créer une entité de n'importe quel genre, donc un joueur aurait pu occuper la place unique (migration `20261013160000`).
+  - Les genres cachés du wiki sont regroupés dans `WIKI_HIDDEN_KINDS` (troisième cas : règle des trois).
+- **Agrégation.**
+  - Les blocs `timeline` et `character` sont lus en **une** requête (`listBlocksByTypesForEntities`).
+  - **Ajouté** : la visibilité du **bloc** est filtrée avant celle de l'entrée. Avant, seule l'entrée l'était, et la RLS couvrait le bloc.
+  - Chaque entrée porte `source` (`world`, `entity` avec son bloc, `birth`, `death`) et sa portée résolue.
+- **Écritures.**
+  - `addTimelineEvent` : frise générale pour le MJ ; fiche quelconque selon le droit d'écriture sur la fiche.
+  - `setTimelineEntryScope` : `null` rend la portée au défaut du genre.
+  - Toutes deux passent par des actions serveur validées par Zod (`app/m/[worldSlug]/(monde)/chronologie/actions.ts`).
