@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { zFormulaNode, zLocalized, zModifier, zQuantity, zReference } from "./primitives";
 import { zCharacterRulesBlockData, zMulticlassPrerequisites } from "./characterRules";
+import { zChoicesBlockData } from "./choices";
 import { zTrigger } from "../../rules/triggers";
 
 /**
@@ -45,6 +46,7 @@ export const BLOCK_TYPES = [
   "modifiers",
   "triggers",
   "character_rules",
+  "choices",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -548,6 +550,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   modifiers: zModifiersBlockData,
   triggers: zTriggersBlockData,
   character_rules: zCharacterRulesBlockData,
+  choices: zChoicesBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 /** Registre : le moteur demande le schema Zod d'un block_type et recoit une forme garantie. */

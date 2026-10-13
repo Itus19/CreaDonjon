@@ -1,0 +1,625 @@
+{
+  "_lisezmoi": [
+    "V3.1-116 — Choix accordes par les regles SRD 2024, ecrits a la main (ADR 0046).",
+    "Le JSON du SRD ne les porte qu'en prose (« choisissez un lignage... »). Ce fichier les traduit en bloc `choices` (src/core/schemas/rule-blocks/choices.ts).",
+    "DONNEE, jamais code : ingest-srd.ts le lit et valide chaque bloc. Suivi par Git (SRD sous CC-BY-4.0, voir NOTICE.md), comme modifiers-2024.json.",
+    "La cle est l'`index` de l'entree SRD 2024. `presets` : reponse imposee a un choix d'une autre fiche (l'historique impose la liste de son Initie a la magie).",
+    "Pas encore exprimable, laisse en prose : Vision dans le noir du Drow (36 m), resistances des heritages fielons, usages de l'Ascendance gigante (bonus de maitrise par repos long, ADR 0060), remplacement du sort mineur du Haut-elfe au repos long."
+  ],
+  "skillful": {
+    "_regle": "Competent (humain) : une competence au choix.",
+    "grants": [
+      {
+        "id": "skills",
+        "label": {
+          "fr": "Compétent",
+          "en": "Skillful"
+        },
+        "from": {
+          "kind": "skill"
+        }
+      }
+    ]
+  },
+  "keen-senses": {
+    "_regle": "Sens aiguises (elfe) : Intuition, Perception ou Survie.",
+    "grants": [
+      {
+        "id": "skills",
+        "label": {
+          "fr": "Sens aiguisés",
+          "en": "Keen Senses"
+        },
+        "from": {
+          "kind": "skill",
+          "options": [
+            "insight",
+            "perception",
+            "survival"
+          ]
+        }
+      }
+    ]
+  },
+  "versatile": {
+    "_regle": "Polyvalent (humain) : un don d'origine au choix.",
+    "grants": [
+      {
+        "id": "feat",
+        "label": {
+          "fr": "Don d'origine",
+          "en": "Origin feat"
+        },
+        "from": {
+          "kind": "feat",
+          "category": "origin"
+        }
+      }
+    ]
+  },
+  "skilled": {
+    "_regle": "Doue (don d'origine) : trois competences ou outils au choix.",
+    "grants": [
+      {
+        "id": "proficiencies",
+        "label": {
+          "fr": "Compétences ou outils",
+          "en": "Skills or tools"
+        },
+        "count": 3,
+        "from": {
+          "kind": "skill",
+          "tools": true
+        }
+      }
+    ]
+  },
+  "magic-initiate": {
+    "_regle": "Initie a la magie : une liste (clerc, druide, magicien), deux sorts mineurs et un sort de niveau 1 de cette liste, la caracteristique d'incantation.",
+    "grants": [
+      {
+        "id": "list",
+        "label": {
+          "fr": "Liste de sorts",
+          "en": "Spell list"
+        },
+        "from": {
+          "kind": "option",
+          "options": [
+            {
+              "id": "cleric",
+              "label": {
+                "fr": "Clerc",
+                "en": "Cleric"
+              },
+              "grants": [
+                {
+                  "id": "cantrips",
+                  "label": {
+                    "fr": "Sorts mineurs",
+                    "en": "Cantrips"
+                  },
+                  "count": 2,
+                  "from": {
+                    "kind": "spell",
+                    "list": "cleric",
+                    "level": 0
+                  }
+                },
+                {
+                  "id": "spell",
+                  "label": {
+                    "fr": "Sort de niveau 1",
+                    "en": "Level 1 spell"
+                  },
+                  "from": {
+                    "kind": "spell",
+                    "list": "cleric",
+                    "level": 1,
+                    "always_prepared": true,
+                    "free_cast": {
+                      "uses": 1,
+                      "refresh": "long_rest"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "id": "druid",
+              "label": {
+                "fr": "Druide",
+                "en": "Druid"
+              },
+              "grants": [
+                {
+                  "id": "cantrips",
+                  "label": {
+                    "fr": "Sorts mineurs",
+                    "en": "Cantrips"
+                  },
+                  "count": 2,
+                  "from": {
+                    "kind": "spell",
+                    "list": "druid",
+                    "level": 0
+                  }
+                },
+                {
+                  "id": "spell",
+                  "label": {
+                    "fr": "Sort de niveau 1",
+                    "en": "Level 1 spell"
+                  },
+                  "from": {
+                    "kind": "spell",
+                    "list": "druid",
+                    "level": 1,
+                    "always_prepared": true,
+                    "free_cast": {
+                      "uses": 1,
+                      "refresh": "long_rest"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "id": "wizard",
+              "label": {
+                "fr": "Magicien",
+                "en": "Wizard"
+              },
+              "grants": [
+                {
+                  "id": "cantrips",
+                  "label": {
+                    "fr": "Sorts mineurs",
+                    "en": "Cantrips"
+                  },
+                  "count": 2,
+                  "from": {
+                    "kind": "spell",
+                    "list": "wizard",
+                    "level": 0
+                  }
+                },
+                {
+                  "id": "spell",
+                  "label": {
+                    "fr": "Sort de niveau 1",
+                    "en": "Level 1 spell"
+                  },
+                  "from": {
+                    "kind": "spell",
+                    "list": "wizard",
+                    "level": 1,
+                    "always_prepared": true,
+                    "free_cast": {
+                      "uses": 1,
+                      "refresh": "long_rest"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "ability",
+        "label": {
+          "fr": "Caractéristique d'incantation",
+          "en": "Spellcasting ability"
+        },
+        "from": {
+          "kind": "ability",
+          "options": [
+            "int",
+            "wis",
+            "cha"
+          ],
+          "spellcasting": true
+        }
+      }
+    ]
+  },
+  "elven-lineage": {
+    "_regle": "Lignage elfique : Drow, Elfe sylvestre ou Haut-elfe ; sorts aux niveaux 1, 3, 5.",
+    "grants": [
+      {
+        "id": "lineage",
+        "label": {
+          "fr": "Lignage elfique",
+          "en": "Elven lineage"
+        },
+        "from": {
+          "kind": "option",
+          "options": [
+            {
+              "id": "drow",
+              "label": {
+                "fr": "Drow",
+                "en": "Drow"
+              },
+              "spells": [
+                {
+                  "key": "dancing-lights"
+                },
+                {
+                  "key": "faerie-fire",
+                  "at_level": 3,
+                  "always_prepared": true,
+                  "free_cast": {
+                    "uses": 1,
+                    "refresh": "long_rest"
+                  }
+                },
+                {
+                  "key": "darkness",
+                  "at_level": 5,
+                  "always_prepared": true,
+                  "free_cast": {
+                    "uses": 1,
+                    "refresh": "long_rest"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "wood-elf",
+              "label": {
+                "fr": "Elfe sylvestre",
+                "en": "Wood Elf"
+              },
+              "modifiers": [
+                {
+                  "target": "speed",
+                  "op": "add",
+                  "value": 5
+                }
+              ],
+              "spells": [
+                {
+                  "key": "druidcraft"
+                },
+                {
+                  "key": "longstrider",
+                  "at_level": 3,
+                  "always_prepared": true,
+                  "free_cast": {
+                    "uses": 1,
+                    "refresh": "long_rest"
+                  }
+                },
+                {
+                  "key": "pass-without-trace",
+                  "at_level": 5,
+                  "always_prepared": true,
+                  "free_cast": {
+                    "uses": 1,
+                    "refresh": "long_rest"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "high-elf",
+              "label": {
+                "fr": "Haut-elfe",
+                "en": "High Elf"
+              },
+              "spells": [
+                {
+                  "key": "prestidigitation"
+                },
+                {
+                  "key": "detect-magic",
+                  "at_level": 3,
+                  "always_prepared": true,
+                  "free_cast": {
+                    "uses": 1,
+                    "refresh": "long_rest"
+                  }
+                },
+                {
+                  "key": "misty-step",
+                  "at_level": 5,
+                  "always_prepared": true,
+                  "free_cast": {
+                    "uses": 1,
+                    "refresh": "long_rest"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "ability",
+        "label": {
+          "fr": "Caractéristique d'incantation",
+          "en": "Spellcasting ability"
+        },
+        "from": {
+          "kind": "ability",
+          "options": [
+            "int",
+            "wis",
+            "cha"
+          ],
+          "spellcasting": true
+        }
+      }
+    ]
+  },
+  "gnomish-lineage": {
+    "_regle": "Lignage gnome : gnome des forets ou des roches.",
+    "grants": [
+      {
+        "id": "lineage",
+        "label": {
+          "fr": "Lignage gnome",
+          "en": "Gnomish lineage"
+        },
+        "from": {
+          "kind": "option",
+          "options": [
+            {
+              "id": "forest-gnome",
+              "label": {
+                "fr": "Gnome des forêts",
+                "en": "Forest Gnome"
+              },
+              "spells": [
+                {
+                  "key": "minor-illusion"
+                },
+                {
+                  "key": "speak-with-animals",
+                  "always_prepared": true,
+                  "free_cast": {
+                    "uses": "proficiency",
+                    "refresh": "long_rest"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "rock-gnome",
+              "label": {
+                "fr": "Gnome des roches",
+                "en": "Rock Gnome"
+              },
+              "spells": [
+                {
+                  "key": "mending"
+                },
+                {
+                  "key": "prestidigitation"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "ability",
+        "label": {
+          "fr": "Caractéristique d'incantation",
+          "en": "Spellcasting ability"
+        },
+        "from": {
+          "kind": "ability",
+          "options": [
+            "int",
+            "wis",
+            "cha"
+          ],
+          "spellcasting": true
+        }
+      }
+    ]
+  },
+  "fiendish-legacy": {
+    "_regle": "Heritage fielon : abyssal, chtonien ou infernal ; sorts aux niveaux 1, 3, 5.",
+    "grants": [
+      {
+        "id": "legacy",
+        "label": {
+          "fr": "Héritage fiélon",
+          "en": "Fiendish legacy"
+        },
+        "from": {
+          "kind": "option",
+          "options": [
+            {
+              "id": "abyssal",
+              "label": {
+                "fr": "Abyssal",
+                "en": "Abyssal"
+              },
+              "spells": [
+                {
+                  "key": "poison-spray"
+                },
+                {
+                  "key": "ray-of-sickness",
+                  "at_level": 3,
+                  "always_prepared": true,
+                  "free_cast": {
+                    "uses": 1,
+                    "refresh": "long_rest"
+                  }
+                },
+                {
+                  "key": "hold-person",
+                  "at_level": 5,
+                  "always_prepared": true,
+                  "free_cast": {
+                    "uses": 1,
+                    "refresh": "long_rest"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "chthonic",
+              "label": {
+                "fr": "Chtonien",
+                "en": "Chthonic"
+              },
+              "spells": [
+                {
+                  "key": "chill-touch"
+                },
+                {
+                  "key": "false-life",
+                  "at_level": 3,
+                  "always_prepared": true,
+                  "free_cast": {
+                    "uses": 1,
+                    "refresh": "long_rest"
+                  }
+                },
+                {
+                  "key": "ray-of-enfeeblement",
+                  "at_level": 5,
+                  "always_prepared": true,
+                  "free_cast": {
+                    "uses": 1,
+                    "refresh": "long_rest"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "infernal",
+              "label": {
+                "fr": "Infernal",
+                "en": "Infernal"
+              },
+              "spells": [
+                {
+                  "key": "fire-bolt"
+                },
+                {
+                  "key": "hellish-rebuke",
+                  "at_level": 3,
+                  "always_prepared": true,
+                  "free_cast": {
+                    "uses": 1,
+                    "refresh": "long_rest"
+                  }
+                },
+                {
+                  "key": "darkness",
+                  "at_level": 5,
+                  "always_prepared": true,
+                  "free_cast": {
+                    "uses": 1,
+                    "refresh": "long_rest"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "ability",
+        "label": {
+          "fr": "Caractéristique d'incantation",
+          "en": "Spellcasting ability"
+        },
+        "from": {
+          "kind": "ability",
+          "options": [
+            "int",
+            "wis",
+            "cha"
+          ],
+          "spellcasting": true
+        }
+      }
+    ]
+  },
+  "giant-ancestry": {
+    "_regle": "Ascendance gigante (goliath) : un benefice au choix.",
+    "grants": [
+      {
+        "id": "ancestry",
+        "label": {
+          "fr": "Ascendance gigante",
+          "en": "Giant ancestry"
+        },
+        "from": {
+          "kind": "option",
+          "options": [
+            {
+              "id": "cloud",
+              "label": {
+                "fr": "Saut des nuées",
+                "en": "Cloud's Jaunt"
+              }
+            },
+            {
+              "id": "fire",
+              "label": {
+                "fr": "Brûlure ignée",
+                "en": "Fire's Burn"
+              }
+            },
+            {
+              "id": "frost",
+              "label": {
+                "fr": "Froid mordant",
+                "en": "Frost's Chill"
+              }
+            },
+            {
+              "id": "hill",
+              "label": {
+                "fr": "Renversement des coteaux",
+                "en": "Hill's Tumble"
+              }
+            },
+            {
+              "id": "stone",
+              "label": {
+                "fr": "Endurance de la pierre",
+                "en": "Stone's Endurance"
+              }
+            },
+            {
+              "id": "storm",
+              "label": {
+                "fr": "Tonnerre des cieux",
+                "en": "Storm's Thunder"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "acolyte": {
+    "_regle": "Acolyte : Initie a la magie (Clerc).",
+    "grants": [],
+    "presets": {
+      "magic-initiate.list": [
+        "cleric"
+      ]
+    }
+  },
+  "sage": {
+    "_regle": "Sage : Initie a la magie (Magicien).",
+    "grants": [],
+    "presets": {
+      "magic-initiate.list": [
+        "wizard"
+      ]
+    }
+  }
+}

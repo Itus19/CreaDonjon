@@ -15,6 +15,7 @@
 
 import { computeEncumbrance, encumbranceModifiers, type EncumbranceResult } from "./encumbrance";
 import type { CharacterRules, MulticlassPrerequisites } from "../schemas/rule-blocks/characterRules";
+import type { FreeCast } from "../schemas/rule-blocks/choices";
 import { rollDice } from "../dice/roll";
 import type { Rng } from "../dice/rng";
 
@@ -104,12 +105,38 @@ export interface Prerequisite {
   key?: string;
 }
 
+/** Un sort qu'une aptitude accorde (V3.1-116 : option de lignage, sort choisi d'un don). */
+export interface FeatureSpell {
+  key: string;
+  /** Niveau de personnage à partir duquel il est connu. */
+  atLevel: number;
+  /** Caractéristique d'incantation choisie pour cette aptitude. Absente : pas encore choisie. */
+  ability?: Ability;
+  alwaysPrepared: boolean;
+  freeCast?: FreeCast;
+}
+
 export interface ResolvedFeature {
   key: string;
   label: string;
   source: string;
   modifiers: Modifier[];
   prerequisites?: Prerequisite[];
+  /** V3.1-116 : sorts accordés, filtrés par niveau dans `characterSheet()`. */
+  spells?: FeatureSpell[];
+}
+
+/** Un sort accordé par une aptitude, sur la fiche calculée (V3.1-116). DD et attaque se calculent avec SA caractéristique, pas celle de la classe. */
+export interface GrantedSpell {
+  key: string;
+  featureKey: string;
+  /** Libellé de l'aptitude qui l'accorde (« Lignage elfique (Drow) »). */
+  label: string;
+  ability?: Ability;
+  saveDc?: number;
+  attackBonus?: number;
+  alwaysPrepared: boolean;
+  freeCast?: FreeCast;
 }
 
 export type Warning =
@@ -224,6 +251,8 @@ export interface DerivedSheet {
   speed: { value: number; sources: Source[] };
   features: ResolvedFeature[];
   spellcasting?: { ability: Ability; saveDc: number; attackBonus: number; slots: Record<number, number> };
+  /** V3.1-116 : sorts accordés par les aptitudes, au niveau atteint. */
+  grantedSpells: GrantedSpell[];
   warnings: Warning[];
   encumbrance: EncumbranceResult;
 }
@@ -531,5 +560,20 @@ export function characterSheet(
     }
   }
 
-  return { abilities, proficiencyBonus, ac, savingThrows, skills, hitPoints, speed, features, spellcasting, warnings, encumbrance };
+  const grantedSpells: GrantedSpell[] = features.flatMap((f) =>
+    (f.spells ?? [])
+      .filter((s) => s.atLevel <= totalLevel)
+      .map((s) => ({
+        key: s.key,
+        featureKey: f.key,
+        label: f.label,
+        alwaysPrepared: s.alwaysPrepared,
+        ...(s.freeCast ? { freeCast: s.freeCast } : {}),
+        ...(s.ability
+          ? { ability: s.ability, saveDc: 8 + proficiencyBonus + abilities[s.ability].mod, attackBonus: proficiencyBonus + abilities[s.ability].mod }
+          : {}),
+      }))
+  );
+
+  return { abilities, proficiencyBonus, ac, savingThrows, skills, hitPoints, speed, features, spellcasting, grantedSpells, warnings, encumbrance };
 }

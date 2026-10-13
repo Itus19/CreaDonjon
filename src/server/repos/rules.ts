@@ -450,6 +450,23 @@ export async function listRulesetEntriesByKeys(
   });
 }
 
+/**
+ * V3.1-116 : les clés des dons d'une catégorie (`origin`, `general`…) d'UN
+ * ruleset, lue dans `source_raw.type` du SRD. Les dons sont des fiches
+ * `feature` comme les aptitudes : le type seul ne les distingue pas. Un don
+ * maison qui ne vit que dans `ruleset_overrides` n'y figure pas.
+ */
+export async function listFeatKeysByCategory(supabase: TypedClient, rulesetId: string, category: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("ruleset_entries")
+    .select("entry_key")
+    .eq("ruleset_id", rulesetId)
+    .eq("entry_type", "feature")
+    .eq("source_raw->>type", category);
+  if (error) throw new Error(error.message);
+  return data.map((r) => r.entry_key);
+}
+
 export interface RulesetEntrySummaryRow {
   id: string;
   entry_key: string;

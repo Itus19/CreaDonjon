@@ -1086,6 +1086,27 @@ function modifiersBlock(entryKey: string): EntryBlock | null {
 }
 
 /**
+ * V3.1-116 — Choix accordes ecrits a la main (`data/srd/choices-2024.json`,
+ * ADR 0046), meme raison que les effets passifs ci-dessus. Propres au SRD
+ * 2024 : sous 2014, « Sens aiguises » accorde Perception sans choix, et
+ * aucun historique n'accorde de don. Seules les fiches de trait, de don et
+ * d'historique les recoivent : un index ne designe jamais autre chose.
+ */
+const SRD_CHOICES: Record<string, { grants?: unknown[]; presets?: Record<string, string[]> }> = JSON.parse(
+  readFileSync(resolve(process.cwd(), "data/srd/choices-2024.json"), "utf-8")
+);
+const CHOICE_CATEGORIES = new Set(["Traits", "Feats", "Backgrounds"]);
+
+function choicesBlock(category: string, entryIndex: string, baseSystem: string): EntryBlock | null {
+  if (baseSystem !== "dnd_srd_52" || !CHOICE_CATEGORIES.has(category)) return null;
+  const authored = SRD_CHOICES[entryIndex];
+  if (!authored?.grants) return null;
+  const data = { grants: authored.grants, ...(authored.presets ? { presets: authored.presets } : {}) };
+  validateBlockData("choices", data);
+  return { block_type: "choices", display: { label: "Choix", layout: "key_values" }, data, display_order: 195 };
+}
+
+/**
  * Tous les champs du schema sont optionnels (V1-D1) : `null` seulement si
  * aucun n'a pu etre rempli, pour eviter un bloc "present" mais vide de sens
  * (qui masquerait a tort le signal "regle incomplete").
@@ -2126,6 +2147,8 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
           speciesAndSubspeciesKeys,
           categoryMembersByName
         );
+        const choices = choicesBlock(category, String(item.index), config.baseSystem);
+        if (choices) t.blocks.push(choices);
         transformed.push(t);
         blocksTotal += t.blocks.length;
         refsTotal += t.refs.length;
