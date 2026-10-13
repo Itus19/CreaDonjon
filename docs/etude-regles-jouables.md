@@ -1,6 +1,6 @@
 # Étude — des fiches de règles qui se jouent
 
-**Statut :** échantillon fixé et découpé le 13 octobre 2026 · ADR à écrire
+**Statut :** échantillon fixé et découpé le 13 octobre 2026 · **objectif relevé à 100 % jouable** (voir « Exigence ») · ADR à écrire
 **Esquisse visuelle :** planches « Esquisse · Règle jouable » (fiche terminée, éditeur de briques, onglet Actions en jeu) sur le canevas de la refonte https://claude.ai/artifact/EzWpfdYv6xP9H9gMp6L8Lm, sous le titre « Règles jouables »
 
 ## Objet
@@ -10,6 +10,24 @@ Savoir si **un petit jeu de briques génériques** (coût, cibles, effets, duré
 On ne conçoit **pas** un formulaire par règle ni un bloc par type de règle : chaque règle doit s'écrire comme une combinaison de briques. Le moteur ne connaît que les briques.
 
 Rien n'est construit tant que l'étude n'est pas finie. Sa sortie est un ADR.
+
+## Exigence : 100 % jouable
+
+**Décision de l'auteur (13 octobre 2026).** Toute règle doit être jouable à 100 % par le moteur. « Texte seulement » et « partiel » ne sont pas des verdicts acceptables, seulement des états de travail.
+
+La raison tient au mode solo. Sans MJ à la table, une règle laissée en texte n'est arbitrée par personne : soit elle est ignorée en silence, soit c'est le modèle qui la lit et tranche, ce que la règle absolue n° 8 interdit (« l'IA narre, le code arbitre »). Exemple : une créature qui porte une Amulette d'antidétection doit échapper à un sort de divination parce que le moteur le refuse, pas parce qu'un modèle s'en souvient.
+
+Ce que « jouable à 100 % » veut dire ici :
+
+1. **Toute conséquence mécanique est résolue par le moteur** : jets, cibles autorisées ou refusées, états, durées, ressources, dégâts, perception. Le modèle reçoit le résultat et le raconte.
+2. **Une règle ouverte** (« le MJ décide », Souhait, une illusion qu'on examine) se résout par un **choix contraint** proposé au joueur, ou par une table, définis en données. Jamais par le modèle.
+3. **Une règle pas encore entièrement codée se voit** : la fiche porte son état de couverture, et le mode solo avertit avant qu'elle n'entre en jeu.
+
+Conséquences sur la méthode :
+
+- La règle des trois change de rôle. Elle ne décide plus **si** une mécanique est prise en charge (elle l'est toujours) mais **quand on la généralise** : une brique peut naître pour un seul cas et être généralisée au troisième.
+- La question d'une échappatoire (`specs/moteur-de-jeu.md` §3 et §10, « à la troisième règle inexprimable ») est rouverte, puisque l'étude en trouve plus de trois. Réponse : **l'échappatoire n'est jamais le modèle**. Elle est soit une brique de données de plus, soit, pour un cas vraiment unique, un comportement codé et testé dans `src/core`, rattaché à la clé de la règle. Le choix entre les deux est à trancher dans l'ADR.
+- Un vocabulaire fermé ne couvrira jamais d'avance **toutes** les règles maison possibles. L'objectif tenable est donc : **100 % des règles présentes dans nos rulesets**, avec un circuit pour toute règle nouvelle qui ne s'exprime pas encore (signalée, puis une brique ajoutée).
 
 ## Ce qu'on part de
 
@@ -213,10 +231,10 @@ Verdicts : **J** jouable · **P** partiel · **T** texte seulement. Trois colonn
 | M7 | **Une fois par tour ou par round** | 3, 32, 39 | 3 | retenue |
 | M18 | **Zones géométriques** (cône, ligne, rayon en mètres) face aux trois zones abstraites | 24, 32, 38 | 3 | à trancher dans l'ADR |
 | M20 | **Accorder ou lancer un sort** comme effet | 16, 32, 33 | 3 | retenue |
-| M13 | Quantité choisie dans une réserve | 4, 22 | 2 | texte (sort au prochain cas) |
-| M15 | Restriction d'état ou immunité spéciale | 8, 34 | 2 | texte |
-| M30 | Consommer l'objet | 38 | 1 | à réexaminer : le SRD a beaucoup de consommables et les munitions |
-| M10, M11, M22, M23, M28, M29 | Transformation, invocation, recharge sur événement, PV temporaires, rediriger une attaque, ressource qui monte | un cas chacun | 1 | texte |
+| M13 | Quantité choisie dans une réserve | 4, 22 | 2 | à construire, avec les variantes de P1 |
+| M15 | **Restrictions et immunités par étiquette** : ne peut pas être ciblé par la divination, une seule chose par tour, immunité à un sort précis | 8, 9, 34 | 3 | à construire, avec le modèle du monde |
+| M30 | Consommer l'objet | 38 | 1 | à construire (le SRD a beaucoup de consommables, et les munitions) |
+| M10, M11, M22, M23, M28, M29 | Transformation, invocation, recharge sur événement, PV temporaires, rediriger une attaque, ressource qui monte | un cas chacun | 1 | à construire, sous une forme spécifique tant qu'il n'y a pas de troisième cas |
 
 Petit manque hors brique : l'événement `attack_hit` ne porte aucune étiquette d'arme ni de propriété (`gameEvents.ts` n'en pose que sur les tests). Sans ça, une propriété d'arme maison (n° 36) ne peut pas se déclencher. C'est l'extension directe de l'ADR 0028.
 
@@ -240,6 +258,20 @@ Ce qui existe déjà et marche sans rien ajouter : le soin du Second souffle, le
 4. **Actions modifiées**, puis **conditions de jeu**.
 
 La conversion assistée par l'IA (texte → briques, validées par Zod et relues) vient après la fondation : avant, elle n'a pas assez de briques pour écrire quoi que ce soit.
+
+### 5. Ce que l'exigence de 100 % ajoute
+
+Les verdicts « P » et « T » ci-dessus deviennent des **travaux à faire**, plus des limites. Trois ajouts au plan :
+
+| Chantier | Contenu | Pourquoi |
+|---|---|---|
+| **Modèle du monde** | perception et visibilité (invisible, caché, sens : vision dans le noir, vision véritable, perception aveugle), lumière par zone, étiquettes de magie (école, divination, capteurs), immunités et restrictions de ciblage (M15) | sans lui, ni l'Amulette d'antidétection, ni l'invisibilité, ni la lumière de l'Aasimar ne se jouent |
+| **Cas uniques** | transformation (profil remplacé), invocation (créature alliée pilotée par le moteur), PV temporaires, redirection d'attaque, jauge qui monte, recharge sur événement, quantité choisie, consommables | chacun sert au moins une règle de l'échantillon |
+| **Choix contraints** | « le MJ décide » transformé en options en données, présentées au joueur ou tirées sur une table | le seul substitut au MJ qui respecte la règle n° 8 |
+
+Et une question devient centrale : **les distances**. Les trois zones abstraites (`specs/moteur-de-jeu.md` §6) ne savent pas dire « cône de 4,5 m », « à 18 m » ou « lumière vive sur 3 m ». Jouer ces règles à 100 % demande sans doute des distances réelles entre créatures, sans aller jusqu'à une grille tactique.
+
+L'échantillon ne suffit plus non plus à **prouver** 100 %. Il a servi à trouver les familles de briques. Pour garantir la couverture, il faut un **inventaire complet** de ce qui entre en jeu : sorts, aptitudes, objets magiques, et les monstres avec leurs actions et traits (le solo en fait jouer beaucoup).
 
 ## Étape suivante
 
