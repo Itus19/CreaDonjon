@@ -2284,3 +2284,50 @@ Chaque cas laisse ≈ 700 ko d'orphelins, sur 1 Go de stockage gratuit.
   - avec le cookie forgé « 1 », elle reste affichée ;
   - avec un mauvais mot de passe aussi ;
   - avec le bon, elle s'ouvre, et le cookie posé vaut `<échéance>.<signature>`.
+
+---
+
+### ☑ V3.1-115 — Règles de personnage : la fiche `character_rules` · `L` · sans modèle IA — **fait le 13 octobre (ADR 0046)**
+
+**Modèle conseillé : Opus** — structure de règles, héritage, import.
+**ADR 0046.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+- Bloc typé `zCharacterRules` (champs de l'ADR) ; une fiche
+  `character_rules` par ruleset, héritée et surchargée champ par champ comme
+  les autres fiches ; sur la fiche de classe : `multiclass_prerequisites`
+  structurés, `suggested_abilities`, `casterWeight`.
+- Import SRD (base officielle) : les valeurs 2024 (plafond 20, tableau
+  standard, achat de points, tirage, charge, revente, table du multiclassé,
+  prérequis de multiclassage). **Le départ à haut niveau** : valeurs à
+  vérifier par l'auteur dans le MdJ 2024 avant saisie — le contenu va en
+  base ou dans `data/personnel/`, jamais en migration.
+- `resolvedRuleset` expose ces valeurs ; `abilityGeneration.ts`,
+  l'encombrement et la revente les lisent : **plus aucune constante**.
+
+**Critères d'acceptation**
+- [x] Un ruleset de test au plafond 15 limite la création à 15 (test).
+- [x] Un prérequis non rempli est signalé ; le MJ peut passer outre (test).
+- [x] Plus aucune constante de génération dans `abilityGeneration.ts`.
+- [x] La charge suit la règle 2024 (Force × 7,5 kg) : un Guerrier FOR 17 à 75 kg n'est plus « Encombré » (vu par la vérification du 11 octobre).
+
+**Note de clôture (13 octobre, Opus).** Détail dans l'[ADR 0046](../adr/0046-regles-de-personnage-et-choix-generiques.md), section « Réalisé ».
+
+*Noyau et données (Opus) :*
+- bloc `character_rules`, fiche `character-rules` posée par l'import dans les deux bases officielles (`data/srd/character-rules.json`) ;
+- `class_basics` porte `multiclass_prerequisites` et `suggested_abilities` ;
+- `characterSheet()` applique le plafond de caractéristique ; la charge lit ses paliers dans les règles (2024 : aucun palier).
+
+*Écrans et routes (Sonnet, relu par Opus) :*
+- l'étape des caractéristiques ne propose que les méthodes du ruleset, avec ses valeurs ; le tirage lit les règles côté serveur ;
+- la montée de niveau refuse le dépassement du plafond de niveau et un prérequis de multiclassage non rempli ; le MJ peut passer outre, le serveur le re-vérifie (`isWorldAdmin`) ;
+- `abilityGeneration.ts` supprimé.
+
+*Vérifié en vrai* (Testeur B, Clerc nain) : charge 29,5 / 88,5 kg, soit FOR 13 × 15 lb, sans « Encombré ». Le cas exact du Guerrier FOR 17 à 75 kg est couvert par un test du noyau.
+
+*Restes, hors de ce ticket :*
+- `sell_ratio` est stocké mais aucun code de revente n'existe encore ;
+- le départ à haut niveau reste à saisir par l'auteur ;
+- le test du MJ qui passe outre porte sur le noyau (`checkMulticlassEntry`) ; la condition serveur tient en une ligne, sans test d'intégration dédié ;
+- l'assistant de création lit le ruleset par défaut du monde, la fiche celui de la campagne : écart antérieur, à traiter avec V3.1-118.

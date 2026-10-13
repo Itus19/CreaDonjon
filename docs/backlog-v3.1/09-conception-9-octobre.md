@@ -279,33 +279,6 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-115 — Règles de personnage : la fiche `character_rules` · `L` · sans modèle IA — **prêt (Opus)**
-
-**Modèle conseillé : Opus** — structure de règles, héritage, import.
-**ADR 0046.**
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- Bloc typé `zCharacterRules` (champs de l'ADR) ; une fiche
-  `character_rules` par ruleset, héritée et surchargée champ par champ comme
-  les autres fiches ; sur la fiche de classe : `multiclass_prerequisites`
-  structurés, `suggested_abilities`, `casterWeight`.
-- Import SRD (base officielle) : les valeurs 2024 (plafond 20, tableau
-  standard, achat de points, tirage, charge, revente, table du multiclassé,
-  prérequis de multiclassage). **Le départ à haut niveau** : valeurs à
-  vérifier par l'auteur dans le MdJ 2024 avant saisie — le contenu va en
-  base ou dans `data/personnel/`, jamais en migration.
-- `resolvedRuleset` expose ces valeurs ; `abilityGeneration.ts`,
-  l'encombrement et la revente les lisent : **plus aucune constante**.
-
-**Critères d'acceptation**
-- [ ] Un ruleset de test au plafond 15 limite la création à 15 (test).
-- [ ] Un prérequis non rempli est signalé ; le MJ peut passer outre (test).
-- [ ] Plus aucune constante de génération dans `abilityGeneration.ts`.
-- [ ] La charge suit la règle 2024 (Force × 7,5 kg) : un Guerrier FOR 17 à 75 kg n'est plus « Encombré » (vu par la vérification du 11 octobre).
-
----
-
 ### ☐ V3.1-116 — Le mécanisme générique des choix (noyau et résolution) · `L` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — cœur du moteur. **ADR 0046.**

@@ -242,7 +242,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-112 | ☐ | sans | Sauvegardes : les écrans | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-113 | ☐ | sans | Ressources : pacte, recharge partielle, multiclassage (noyau) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-114 | ☐ | sans | Ressources : repos et égaliseur | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-115 | ☐ | sans | Règles de personnage : la fiche `character_rules` | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-115 | ☑ | sans | Règles de personnage : la fiche `character_rules` | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-116 | ☐ | sans | Le mécanisme générique des choix (noyau et résolution) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-117 | ☐ | sans | La sous-classe résolue et ses choix | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-118 | ☐ | sans | Les choix dans l'assistant de création et de montée de niveau | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
