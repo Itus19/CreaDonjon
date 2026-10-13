@@ -5,51 +5,58 @@ import type { InventoryItem } from "../schemas/blocks/inventory";
 // Seuils verifies dans le texte de regle du SRD 2014 (data/srd/srd-2014.json,
 // Rule-Sections "using-each-ability", variante "Encumbrance") : capacite de
 // charge = FOR x 15, encombre au-dela de FOR x 5, lourdement encombre
-// au-dela de FOR x 10. Reutilise pour 2024 (meme mecanique, decision
-// utilisateur — le SRD 2024 importe n'a pas de section de regle en texte
-// libre equivalente a verifier).
+// au-dela de FOR x 10. Depuis V3.1-115, ces seuils viennent des regles de
+// personnage du ruleset : ces tests passent la variante de 2014 en donnee.
+const VARIANTE_2014 = {
+  capacity_per_strength_lb: 15,
+  tiers: [
+    { above_per_strength_lb: 5, speed_penalty_ft: 10, disadvantage: [] },
+    { above_per_strength_lb: 10, speed_penalty_ft: 20, disadvantage: ["str" as const, "dex" as const, "con" as const] },
+  ],
+};
+
 describe("computeEncumbrance", () => {
   it("sous le seuil : aucun encombrement", () => {
-    const result = computeEncumbrance(14, 50);
+    const result = computeEncumbrance(14, 50, VARIANTE_2014);
     expect(result).toEqual({ carried: 50, capacity: 210, tier: "none", speedPenalty: 0, disadvantageAbilities: [] });
   });
 
   it("exactement au seuil encombre (FOR x 5) : pas encore encombre (« en exces de »)", () => {
-    const result = computeEncumbrance(10, 50);
+    const result = computeEncumbrance(10, 50, VARIANTE_2014);
     expect(result.tier).toBe("none");
   });
 
   it("juste au-dessus du seuil encombre : vitesse -10, aucun desavantage", () => {
-    const result = computeEncumbrance(10, 51);
+    const result = computeEncumbrance(10, 51, VARIANTE_2014);
     expect(result).toMatchObject({ tier: "encumbered", speedPenalty: 10, disadvantageAbilities: [] });
   });
 
   it("exactement au seuil lourdement encombre (FOR x 10) : encore seulement encombre", () => {
-    const result = computeEncumbrance(10, 100);
+    const result = computeEncumbrance(10, 100, VARIANTE_2014);
     expect(result.tier).toBe("encumbered");
   });
 
   it("juste au-dessus du seuil lourdement encombre : vitesse -20, desavantage FOR/DEX/CON", () => {
-    const result = computeEncumbrance(10, 101);
+    const result = computeEncumbrance(10, 101, VARIANTE_2014);
     expect(result).toMatchObject({ tier: "heavily_encumbered", speedPenalty: 20, disadvantageAbilities: ["str", "dex", "con"] });
   });
 });
 
 describe("encumbranceModifiers", () => {
   it("aucun modificateur si pas encombre", () => {
-    const result = computeEncumbrance(14, 50);
+    const result = computeEncumbrance(14, 50, VARIANTE_2014);
     expect(encumbranceModifiers(result, "encumbrance", "Encombrement")).toEqual([]);
   });
 
   it("penalite de vitesse seule si simplement encombre", () => {
-    const result = computeEncumbrance(10, 51);
+    const result = computeEncumbrance(10, 51, VARIANTE_2014);
     expect(encumbranceModifiers(result, "encumbrance", "Encombrement")).toEqual([
       { target: "speed", op: "add", value: -10, layer: 6, source: "encumbrance", label: "Encombrement" },
     ]);
   });
 
   it("vitesse -20 + desavantage sur les jets FOR/DEX/CON (sauvegardes et competences gouvernees) si lourdement encombre", () => {
-    const result = computeEncumbrance(10, 101);
+    const result = computeEncumbrance(10, 101, VARIANTE_2014);
     const modifiers = encumbranceModifiers(result, "encumbrance", "Encombrement");
     expect(modifiers).toContainEqual({ target: "speed", op: "add", value: -20, layer: 6, source: "encumbrance", label: "Encombrement" });
     expect(modifiers).toContainEqual({ target: "save.str", op: "disadvantage", layer: 6, source: "encumbrance", label: "Encombrement" });

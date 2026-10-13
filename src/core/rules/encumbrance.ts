@@ -1,18 +1,18 @@
 import { SKILLS, SKILL_ABILITIES, type Ability } from "./abilities";
 import type { Modifier } from "./sheet";
 import type { InventoryItem } from "../schemas/blocks/inventory";
+import type { EncumbranceRules } from "../schemas/rule-blocks/characterRules";
 
 /**
- * Variante d'encombrement du SRD (texte verifie dans data/srd/srd-2014.json,
- * Rule-Sections "using-each-ability" — "Variant: Encumbrance"). Le SRD 2024
- * importe ne porte pas la section de regle equivalente en texte libre ;
- * reutilisee telle quelle pour les deux editions, decision utilisateur (la
- * mecanique de capacite de charge n'a pas change entre les deux).
+ * Charge d'un personnage (V3.1-115) : les seuils viennent des règles de
+ * personnage du ruleset (`character_rules.encumbrance`), jamais d'une
+ * constante. En livres, unité native du SRD (l'écran convertit en kg).
  *
- * Capacite de charge = FOR x 15. Au-dela de FOR x 5 (strictement, "en exces
- * de") : encombre, vitesse -10. Au-dela de FOR x 10 : lourdement encombre,
- * vitesse -20 et desavantage aux jets de FOR/DEX/CON (verifications,
- * attaques, sauvegardes).
+ * Capacité = FOR × `capacity_per_strength_lb`. Chaque palier s'applique
+ * « en excès de » FOR × `above_per_strength_lb` (strictement) : le premier
+ * rend « encombré », les suivants « lourdement encombré ». Règle 2024 : aucun
+ * palier. Variante de 2014 : × 5 (vitesse −10) et × 10 (vitesse −20,
+ * désavantage aux jets de FOR, DEX, CON).
  */
 export type EncumbranceTier = "none" | "encumbered" | "heavily_encumbered";
 
@@ -24,22 +24,22 @@ export interface EncumbranceResult {
   disadvantageAbilities: readonly Ability[];
 }
 
-const CAPACITY_MULTIPLIER = 15;
-const ENCUMBERED_MULTIPLIER = 5;
-const HEAVILY_ENCUMBERED_MULTIPLIER = 10;
-
-export function computeEncumbrance(strScore: number, carried: number): EncumbranceResult {
-  const capacity = strScore * CAPACITY_MULTIPLIER;
-  const heavyThreshold = strScore * HEAVILY_ENCUMBERED_MULTIPLIER;
-  const encumberedThreshold = strScore * ENCUMBERED_MULTIPLIER;
-
-  if (carried > heavyThreshold) {
-    return { carried, capacity, tier: "heavily_encumbered", speedPenalty: 20, disadvantageAbilities: ["str", "dex", "con"] };
-  }
-  if (carried > encumberedThreshold) {
-    return { carried, capacity, tier: "encumbered", speedPenalty: 10, disadvantageAbilities: [] };
-  }
-  return { carried, capacity, tier: "none", speedPenalty: 0, disadvantageAbilities: [] };
+export function computeEncumbrance(strScore: number, carried: number, rules: EncumbranceRules): EncumbranceResult {
+  const capacity = strScore * rules.capacity_per_strength_lb;
+  const tiers = [...rules.tiers].sort((a, b) => a.above_per_strength_lb - b.above_per_strength_lb);
+  let reached = -1;
+  tiers.forEach((tier, index) => {
+    if (carried > strScore * tier.above_per_strength_lb) reached = index;
+  });
+  if (reached < 0) return { carried, capacity, tier: "none", speedPenalty: 0, disadvantageAbilities: [] };
+  const tier = tiers[reached];
+  return {
+    carried,
+    capacity,
+    tier: reached === 0 ? "encumbered" : "heavily_encumbered",
+    speedPenalty: tier.speed_penalty_ft,
+    disadvantageAbilities: tier.disadvantage,
+  };
 }
 
 /**

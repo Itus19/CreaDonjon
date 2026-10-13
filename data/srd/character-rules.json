@@ -1,0 +1,58 @@
+{
+  "_lisezmoi": [
+    "V3.1-115 (ADR 0046) — Règles de personnage des rulesets officiels, écrites à la main.",
+    "Le JSON du SRD ne les porte pas en données : elles sont en prose (création, multiclassage, équipement).",
+    "ingest-srd.ts en fait la fiche « character-rules » (bloc `character_rules`) de chaque ruleset officiel.",
+    "Une variante (ruleset personnel) les surcharge champ par champ ; le code n'a aucune valeur de repli.",
+    "Clé : le base_system du ruleset. Chaque bloc est validé par zCharacterRulesBlockData à l'import.",
+    "starting_at_higher_level est absent : à saisir d'après le MdJ 2024 (valeurs sous droits)."
+  ],
+
+  "dnd_srd_52": {
+    "_regle": "SRD 5.2.1 : création (tableau standard, achat de points, tirage 4d6), plafond 20, capacité de charge Force × 15 lb (7,5 kg) sans palier, revente à moitié prix, table « Multiclass Spellcaster ».",
+    "character_rules": {
+      "level_cap": 20,
+      "ability_score_cap": 20,
+      "ability_generation": {
+        "standard_array": [15, 14, 13, 12, 10, 8],
+        "point_buy": { "budget": 27, "min": 8, "max": 15, "costs": { "8": 0, "9": 1, "10": 2, "11": 3, "12": 4, "13": 5, "14": 7, "15": 9 } },
+        "roll": { "dice_count": 4, "dice_faces": 6, "keep_highest": 3, "rolls": 6 }
+      },
+      "encumbrance": { "capacity_per_strength_lb": 15, "tiers": [] },
+      "sell_ratio": 0.5,
+      "multiclass_spell_slots": {
+        "1": [2], "2": [3], "3": [4, 2], "4": [4, 3], "5": [4, 3, 2], "6": [4, 3, 3], "7": [4, 3, 3, 1], "8": [4, 3, 3, 2],
+        "9": [4, 3, 3, 3, 1], "10": [4, 3, 3, 3, 2], "11": [4, 3, 3, 3, 2, 1], "12": [4, 3, 3, 3, 2, 1],
+        "13": [4, 3, 3, 3, 2, 1, 1], "14": [4, 3, 3, 3, 2, 1, 1], "15": [4, 3, 3, 3, 2, 1, 1, 1], "16": [4, 3, 3, 3, 2, 1, 1, 1],
+        "17": [4, 3, 3, 3, 2, 1, 1, 1, 1], "18": [4, 3, 3, 3, 3, 1, 1, 1, 1], "19": [4, 3, 3, 3, 3, 2, 1, 1, 1], "20": [4, 3, 3, 3, 3, 2, 2, 1, 1]
+      }
+    }
+  },
+
+  "dnd_srd_51": {
+    "_regle": "SRD 5.1 : mêmes méthodes de création et même table du multiclassé ; la charge garde la variante à deux paliers (× 5 : vitesse −10 ; × 10 : vitesse −20 et désavantage FOR, DEX, CON), comportement de l'application avant V3.1-115.",
+    "character_rules": {
+      "level_cap": 20,
+      "ability_score_cap": 20,
+      "ability_generation": {
+        "standard_array": [15, 14, 13, 12, 10, 8],
+        "point_buy": { "budget": 27, "min": 8, "max": 15, "costs": { "8": 0, "9": 1, "10": 2, "11": 3, "12": 4, "13": 5, "14": 7, "15": 9 } },
+        "roll": { "dice_count": 4, "dice_faces": 6, "keep_highest": 3, "rolls": 6 }
+      },
+      "encumbrance": {
+        "capacity_per_strength_lb": 15,
+        "tiers": [
+          { "above_per_strength_lb": 5, "speed_penalty_ft": 10, "disadvantage": [] },
+          { "above_per_strength_lb": 10, "speed_penalty_ft": 20, "disadvantage": ["str", "dex", "con"] }
+        ]
+      },
+      "sell_ratio": 0.5,
+      "multiclass_spell_slots": {
+        "1": [2], "2": [3], "3": [4, 2], "4": [4, 3], "5": [4, 3, 2], "6": [4, 3, 3], "7": [4, 3, 3, 1], "8": [4, 3, 3, 2],
+        "9": [4, 3, 3, 3, 1], "10": [4, 3, 3, 3, 2], "11": [4, 3, 3, 3, 2, 1], "12": [4, 3, 3, 3, 2, 1],
+        "13": [4, 3, 3, 3, 2, 1, 1], "14": [4, 3, 3, 3, 2, 1, 1], "15": [4, 3, 3, 3, 2, 1, 1, 1], "16": [4, 3, 3, 3, 2, 1, 1, 1],
+        "17": [4, 3, 3, 3, 2, 1, 1, 1, 1], "18": [4, 3, 3, 3, 3, 1, 1, 1, 1], "19": [4, 3, 3, 3, 3, 2, 1, 1, 1], "20": [4, 3, 3, 3, 3, 2, 2, 1, 1]
+      }
+    }
+  }
+}

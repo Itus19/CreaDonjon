@@ -1,4 +1,5 @@
 import "server-only";
+import { zCharacterRulesBlockData, type CharacterRules } from "@/src/core/schemas/rule-blocks/characterRules";
 import { zModifiersBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -354,6 +355,26 @@ async function fetchChipsWithNames(
   return { chips, nameByChipEntryId };
 }
 
+/** Clé de la fiche des règles de personnage d'un ruleset (V3.1-115, `scripts/ingest-srd.ts`). */
+export const CHARACTER_RULES_ENTRY_KEY = "character-rules";
+
+/**
+ * Les règles de personnage du ruleset (V3.1-115, ADR 0046), surcharges de la
+ * chaîne comprises. `null` si le ruleset n'en a pas, ou si elles sont mal
+ * formées (journalisé) : la fiche le signale alors, sans valeur inventée.
+ */
+export async function readCharacterRules(supabase: TypedClient, rulesetId: string): Promise<CharacterRules | null> {
+  const resolved = await resolveEntryBlocksInRuleset(supabase, rulesetId, CHARACTER_RULES_ENTRY_KEY);
+  const data = resolved?.blocksByType.get("character_rules");
+  if (data === undefined) return null;
+  const parsed = zCharacterRulesBlockData.safeParse(data);
+  if (!parsed.success) {
+    console.error("Règles de personnage mal formées, ignorées", rulesetId, parsed.error.issues);
+    return null;
+  }
+  return parsed.data;
+}
+
 /**
  * Assemble un `ResolvedRuleset` (V1-B1) reel a partir des entrees SRD deja
  * importees (V1-A1/A2) — pas de jeu de donnees de demonstration : espece,
@@ -384,7 +405,12 @@ export async function assembleResolvedRuleset(
     ...(selection.background ? [selection.background] : []),
     ...selection.classes.map((c) => c.key),
   ];
-  const batch = await fetchEntriesBatch(supabase, rulesetId, topKeys, locale);
+  // V3.1-115 (ADR 0046) : les regles de personnage du ruleset, surcharges de la
+  // variante comprises. Lues en parallele du lot : aucune vague de plus.
+  const [batch, characterRules] = await Promise.all([
+    fetchEntriesBatch(supabase, rulesetId, topKeys, locale),
+    readCharacterRules(supabase, rulesetId),
+  ]);
 
   // Le catalogue d'armes n'est charge que si une classe choisie accorde
   // REELLEMENT une maitrise d'armes DANS CE RULESET — jamais seulement parce
@@ -689,7 +715,14 @@ export async function assembleResolvedRuleset(
     for (const l of languages) l.name = LANGUAGE_LABELS_FR[l.key as LanguageKey] ?? l.name;
   }
 
-  return { ruleset: { classes, features }, remainingChoices, proficiencies, languages, asiGrantedLevels, backgroundAbilityScores };
+  return {
+    ruleset: { classes, features, ...(characterRules ? { characterRules } : {}) },
+    remainingChoices,
+    proficiencies,
+    languages,
+    asiGrantedLevels,
+    backgroundAbilityScores,
+  };
 }
 
 interface EquipmentBlocks {

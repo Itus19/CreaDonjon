@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { zFormulaNode, zLocalized, zModifier, zQuantity, zReference } from "./primitives";
+import { zCharacterRulesBlockData, zMulticlassPrerequisites } from "./characterRules";
 import { zTrigger } from "../../rules/triggers";
 
 /**
@@ -43,6 +44,7 @@ export const BLOCK_TYPES = [
   "class_equipment",
   "modifiers",
   "triggers",
+  "character_rules",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -345,6 +347,10 @@ export const zClassBasicsBlockData = z.object({
   armor_proficiencies: z.array(z.string()).optional(),
   weapon_proficiencies: z.array(z.string()).optional(),
   tool_proficiencies: z.array(z.string()).optional(),
+  /** V3.1-115 (ADR 0046) : prérequis de multiclassage structurés, lus du SRD. */
+  multiclass_prerequisites: zMulticlassPrerequisites.optional(),
+  /** V3.1-115 : les caractéristiques à privilégier, dans l'ordre (« Répartir pour un clerc »). */
+  suggested_abilities: z.array(z.enum(["str", "dex", "con", "int", "wis", "cha"])).optional(),
 });
 export type ClassBasicsBlockData = z.infer<typeof zClassBasicsBlockData>;
 
@@ -541,6 +547,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   class_equipment: zClassEquipmentBlockData,
   modifiers: zModifiersBlockData,
   triggers: zTriggersBlockData,
+  character_rules: zCharacterRulesBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 /** Registre : le moteur demande le schema Zod d'un block_type et recoit une forme garantie. */

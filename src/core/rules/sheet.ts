@@ -14,6 +14,7 @@
  */
 
 import { computeEncumbrance, encumbranceModifiers, type EncumbranceResult } from "./encumbrance";
+import type { CharacterRules } from "../schemas/rule-blocks/characterRules";
 import { rollDice } from "../dice/roll";
 import type { Rng } from "../dice/rng";
 
@@ -111,11 +112,10 @@ export interface ResolvedFeature {
   prerequisites?: Prerequisite[];
 }
 
-export interface Warning {
-  kind: "unmet_prerequisite";
-  message: string;
-  featureKey: string;
-}
+export type Warning =
+  | { kind: "unmet_prerequisite"; message: string; featureKey: string }
+  /** V3.1-115 : le ruleset n'a pas de fiche de règles de personnage ; plafond et charge ne sont pas appliqués. */
+  | { kind: "missing_character_rules"; message: string };
 
 // --- Ruleset resolu et build (§B1-B3) --------------------------------------
 
@@ -142,6 +142,8 @@ export interface ResolvedClass {
 export interface ResolvedRuleset {
   classes: Record<string, ResolvedClass>;
   features: Record<string, ResolvedFeature>;
+  /** V3.1-115 (ADR 0046) : les règles de personnage du ruleset (plafonds, charge…). Absentes : la fiche le signale, sans inventer de valeur. */
+  characterRules?: CharacterRules;
 }
 
 export interface ClassLevel {
@@ -453,14 +455,20 @@ export function characterSheet(
       build.abilities.assigned[ability],
       "Valeur attribuee",
     );
-    abilities[ability] = { score: value, mod: abilityModifier(value), sources };
+    // V3.1-115 : le plafond du ruleset, sauf si un objet FIXE la valeur (« Force 19 »), qui peut le dépasser.
+    const cap = ruleset.characterRules?.ability_score_cap;
+    const fixedByItem = allModifiers.some((m) => m.target === `ability.${ability}` && m.op === "set");
+    const score = cap !== undefined && !fixedByItem ? Math.min(value, cap) : value;
+    abilities[ability] = { score, mod: abilityModifier(score), sources };
   }
 
   // Encombrement (couche 6) : depend du score de Force resolu ci-dessus,
   // ajoute donc ses propres modificateurs (vitesse, desavantage) apres coup
   // plutot que d'etre precalcule avec le reste — n'affecte jamais ability.*,
   // ac, ni hp.max, seulement savingThrows/skills/speed ci-dessous.
-  const encumbrance = computeEncumbrance(abilities.str.score, carriedWeight);
+  const encumbrance: EncumbranceResult = ruleset.characterRules
+    ? computeEncumbrance(abilities.str.score, carriedWeight, ruleset.characterRules.encumbrance)
+    : { carried: carriedWeight, capacity: 0, tier: "none", speedPenalty: 0, disadvantageAbilities: [] };
   allModifiers.push(...encumbranceModifiers(encumbrance, "encumbrance", "Encombrement"));
 
   // Classe d'armure : base 10 + Dex, ecrasee par un "set" d'armure lourde le cas echeant.
@@ -499,7 +507,10 @@ export function characterSheet(
   const speed = resolveTargetStack("speed", allModifiers, 30, "Vitesse de base");
 
   const grantedFeatureKeys = new Set(build.featureKeys);
-  const warnings = features.flatMap((f) => checkPrerequisites(f, abilities, totalLevel, grantedFeatureKeys));
+  const warnings: Warning[] = features.flatMap((f) => checkPrerequisites(f, abilities, totalLevel, grantedFeatureKeys));
+  if (!ruleset.characterRules) {
+    warnings.push({ kind: "missing_character_rules", message: "Ce ruleset n'a pas de règles de personnage : plafond de caractéristique et charge ne sont pas appliqués." });
+  }
 
   let spellcasting: DerivedSheet["spellcasting"];
   for (const cl of build.classes) {

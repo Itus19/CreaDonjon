@@ -655,3 +655,34 @@ export function statblockFromMonsterBlocks(params: {
     legendary_actions: (legendaryActions?.actions ?? []).map((a) => ({ name: a.name, text: a.description })),
   };
 }
+
+type AbilityMinimum = { ability: Ability; min: number };
+
+function abilityMinimum(raw: unknown): AbilityMinimum | null {
+  const r = raw as { ability_score?: { index?: unknown }; minimum_score?: unknown } | undefined;
+  const ability = r?.ability_score?.index;
+  const min = r?.minimum_score;
+  return isAbility(ability) && typeof min === "number" ? { ability, min } : null;
+}
+
+/**
+ * V3.1-115 (ADR 0046) — prérequis de multiclassage d'une classe, lus du SRD
+ * (`multi_classing`) : `prerequisites` exige toutes ses conditions,
+ * `prerequisite_options` une parmi plusieurs (Guerrier : FOR 13 ou DEX 13).
+ * `undefined` si le SRD n'en déclare aucun.
+ */
+export function mapMulticlassPrerequisites(fields: ParsedFields): { all?: AbilityMinimum[]; any?: AbilityMinimum[] } | undefined {
+  const mc = fields.multi_classing as { prerequisites?: unknown[]; prerequisite_options?: { from?: { options?: unknown[] } } } | undefined;
+  const all = (mc?.prerequisites ?? []).map(abilityMinimum).filter((c): c is AbilityMinimum => c !== null);
+  const any = (mc?.prerequisite_options?.from?.options ?? []).map(abilityMinimum).filter((c): c is AbilityMinimum => c !== null);
+  if (all.length === 0 && any.length === 0) return undefined;
+  return { ...(all.length > 0 ? { all } : {}), ...(any.length > 0 ? { any } : {}) };
+}
+
+/** V3.1-115 — les caractéristiques à privilégier : la caractéristique principale de la classe (SRD 2024, `primary_ability`). */
+export function mapSuggestedAbilities(fields: ParsedFields): Ability[] | undefined {
+  const scores = (fields.primary_ability as { ability_scores?: { index?: unknown }[] } | undefined)?.ability_scores ?? [];
+  const abilities = scores.map((s) => s.index).filter(isAbility);
+  return abilities.length > 0 ? abilities : undefined;
+}
+

@@ -25,6 +25,8 @@ import type { FormulaNode } from "../src/core/formula/ast";
 import { extractDerivedRefs, type DerivedRef } from "../src/core/rules/refs";
 import {
   mapClassCore,
+  mapMulticlassPrerequisites,
+  mapSuggestedAbilities,
   parseArmorData,
   parseItemCost,
   parseItemWeight,
@@ -1029,6 +1031,32 @@ const SRD_TRIGGERS: Record<string, { triggers?: unknown[] }> = JSON.parse(
   readFileSync(resolve(process.cwd(), "data/srd/triggers-2024.json"), "utf-8")
 );
 
+/**
+ * V3.1-115 (ADR 0046) — Les regles de personnage de chaque ruleset officiel
+ * (`data/srd/character-rules.json`, par `base_system`) : le SRD ne les porte
+ * qu'en prose. Elles deviennent la fiche `character-rules`, recreee a chaque
+ * import comme les autres ; une variante les surcharge champ par champ.
+ */
+const SRD_CHARACTER_RULES: Record<string, { character_rules?: unknown }> = JSON.parse(
+  readFileSync(resolve(process.cwd(), "data/srd/character-rules.json"), "utf-8")
+);
+const CHARACTER_RULES_KEY = "character-rules";
+
+function characterRulesEntry(baseSystem: string, sourceAttribution: string): TransformedEntry {
+  const data = SRD_CHARACTER_RULES[baseSystem]?.character_rules;
+  if (!data) throw new Error(`data/srd/character-rules.json : aucune regle de personnage pour ${baseSystem}`);
+  validateBlockData("character_rules", data);
+  return {
+    entry_key: CHARACTER_RULES_KEY,
+    entry_type: "rule",
+    ai_digest: "Regles de personnage du ruleset : plafonds, generation des caracteristiques, charge, revente, table du multiclasse.",
+    source_attribution: sourceAttribution,
+    source_raw: { index: CHARACTER_RULES_KEY, name: "Character Rules" },
+    blocks: [{ block_type: "character_rules", display: { label: "Règles de personnage", layout: "key_values" }, data: data as SrdRecord, display_order: 100 }],
+    refs: [],
+  };
+}
+
 function triggersBlock(entryKey: string): EntryBlock | null {
   const authored = SRD_TRIGGERS[entryKey];
   if (!authored?.triggers || authored.triggers.length === 0) return null;
@@ -1407,6 +1435,9 @@ function classBasicsBlock(entry: SrdRecord): EntryBlock {
     armor_proficiencies: armorProf.length > 0 ? armorProf : undefined,
     weapon_proficiencies: weaponProf.length > 0 ? weaponProf : undefined,
     tool_proficiencies: toolProf.length > 0 ? toolProf : undefined,
+    // V3.1-115 (ADR 0046) : prerequis de multiclassage structures et caracteristiques suggerees, lus du SRD.
+    multiclass_prerequisites: mapMulticlassPrerequisites(entry),
+    suggested_abilities: mapSuggestedAbilities(entry),
   };
   validateBlockData("class_basics", data);
   return { block_type: "class_basics", display: { label: "Bases de classe", layout: "key_values" }, data, display_order: 150 };
@@ -2124,6 +2155,13 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
     byCategory.push({ category, entries: transformed });
   }
 
+  // V3.1-115 : la fiche des regles de personnage, absente du JSON du SRD.
+  const characterRules = characterRulesEntry(config.baseSystem, config.sourceAttribution);
+  seenKeys.add(characterRules.entry_key);
+  counts.rule = (counts.rule ?? 0) + 1;
+  blocksTotal += characterRules.blocks.length;
+  byCategory.push({ category: "CharacterRules", entries: [characterRules] });
+
   for (const { category, entries } of byCategory) {
     if (entries.length === 0) continue;
     const { error } = await supabase.rpc("import_srd_entries", {
@@ -2134,6 +2172,19 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
       throw new Error(`import_srd_entries (${config.file}, ${category}) : ${error.message}`);
     }
   }
+
+  // V3.1-115 : nom francais de la fiche des regles de personnage (le SRD ne la nomme pas).
+  const { data: rulesEntry, error: rulesEntryError } = await supabase
+    .from("ruleset_entries")
+    .select("id")
+    .eq("ruleset_id", rulesetId)
+    .eq("entry_key", CHARACTER_RULES_KEY)
+    .single();
+  if (rulesEntryError || !rulesEntry) throw new Error(rulesEntryError?.message ?? `${CHARACTER_RULES_KEY} introuvable apres import`);
+  const { error: rulesNameError } = await supabase
+    .from("ruleset_entry_translations")
+    .upsert({ entry_id: rulesEntry.id, locale: "fr", name: "Règles de personnage", source: "official_srd" }, { onConflict: "entry_id,locale" });
+  if (rulesNameError) throw new Error(rulesNameError.message);
 
   // Purge les entry_key qui n'existent plus dans ce jeu de donnees (ex :
   // les anciennes variantes par classe d'une aptitude generique, fusionnees

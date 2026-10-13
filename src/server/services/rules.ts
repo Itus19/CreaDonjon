@@ -1800,6 +1800,7 @@ const DEFAULT_BLOCK_DISPLAY: Record<BlockType, { label: string; layout: string }
   class_equipment: { label: "Équipement de départ", layout: "key_values" },
   modifiers: { label: "Effets chiffrés", layout: "key_values" },
   triggers: { label: "Déclencheurs", layout: "key_values" },
+  character_rules: { label: "Règles de personnage", layout: "key_values" },
 };
 
 export interface ImportRulesetEntryInput {

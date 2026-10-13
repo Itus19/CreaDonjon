@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  mapMulticlassPrerequisites,
+  mapSuggestedAbilities,
   armorAcModifier,
   armorDataFromBlock,
   backgroundFeatKeyFromBlock,
@@ -795,5 +797,26 @@ describe("mapPrerequisites", () => {
   it("retourne un tableau vide si source_raw n'est pas un objet", () => {
     expect(mapPrerequisites(null)).toEqual([]);
     expect(mapPrerequisites(undefined)).toEqual([]);
+  });
+});
+
+describe("mapMulticlassPrerequisites / mapSuggestedAbilities (V3.1-115)", () => {
+  const ab = (index: string) => ({ ability_score: { index }, minimum_score: 13 });
+  it("toutes les conditions : Moine DEX 13 et SAG 13", () => {
+    expect(mapMulticlassPrerequisites({ multi_classing: { prerequisites: [ab("dex"), ab("wis")] } })).toEqual({
+      all: [{ ability: "dex", min: 13 }, { ability: "wis", min: 13 }],
+    });
+  });
+  it("une parmi plusieurs : Guerrier FOR 13 ou DEX 13", () => {
+    expect(mapMulticlassPrerequisites({ multi_classing: { prerequisite_options: { choose: 1, from: { options: [ab("str"), ab("dex")] } } } })).toEqual({
+      any: [{ ability: "str", min: 13 }, { ability: "dex", min: 13 }],
+    });
+  });
+  it("rien de déclaré : undefined", () => {
+    expect(mapMulticlassPrerequisites({})).toBeUndefined();
+  });
+  it("caractéristiques suggérées : la caractéristique principale de la classe (2024)", () => {
+    expect(mapSuggestedAbilities({ primary_ability: { ability_scores: [{ index: "dex" }, { index: "wis" }] } })).toEqual(["dex", "wis"]);
+    expect(mapSuggestedAbilities({})).toBeUndefined();
   });
 });

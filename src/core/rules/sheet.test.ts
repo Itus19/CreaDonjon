@@ -94,7 +94,7 @@ describe("characterSheet — cas dores (specs/wiki-liens-et-personnages.md §B7)
     expect(sheet.hitPoints.max).toBe(12);
     expect(sheet.hitPoints.hitDice).toBe("1d10");
     expect(sheet.speed.value).toBe(25);
-    expect(sheet.warnings).toEqual([]);
+    expect(sheet.warnings.filter((w) => w.kind === "unmet_prerequisite")).toEqual([]);
   });
 
   it("un modificateur couche 5 (ASI, V2-G1) s'empile sur un modificateur couche 2 (espece) sur la meme caracteristique", () => {
@@ -351,7 +351,7 @@ describe("characterSheet — cas dores (specs/wiki-liens-et-personnages.md §B7)
 
     // Le personnage illegal reste enregistrable : le don reste dans la liste.
     expect(sheet.features.map((f) => f.key)).toContain("grappler_feat");
-    expect(sheet.warnings).toEqual([
+    expect(sheet.warnings.filter((w) => w.kind === "unmet_prerequisite")).toEqual([
       {
         kind: "unmet_prerequisite",
         featureKey: "grappler_feat",
@@ -498,9 +498,10 @@ describe("characterSheet — regles d'empilement (§B4)", () => {
 
     const sheet = characterSheet(build, ruleset, [], []);
 
-    expect(sheet.warnings).toHaveLength(2);
-    expect(sheet.warnings.every((w) => w.featureKey === "needs_ally_and_level")).toBe(true);
-    expect(sheet.warnings.map((w) => w.message)).toEqual([
+    const prerequis = sheet.warnings.filter((w) => w.kind === "unmet_prerequisite");
+    expect(prerequis).toHaveLength(2);
+    expect(prerequis.every((w) => w.featureKey === "needs_ally_and_level")).toBe(true);
+    expect(prerequis.map((w) => w.message)).toEqual([
       'Prerequis non satisfait pour "Necessite un allie et le niveau 10" : Niveau >= 10',
       'Prerequis non satisfait pour "Necessite un allie et le niveau 10" : Possede "nonexistent"',
     ]);
@@ -521,7 +522,24 @@ describe("characterSheet — encombrement (poids porte)", () => {
     abilities: { assigned: { str: 10, dex: 14, con: 10, int: 10, wis: 10, cha: 10 } },
     featureKeys: [],
   };
-  const ruleset: ResolvedRuleset = { classes: { fighter: FIGHTER }, features: {} };
+  // V3.1-115 : les seuils de charge viennent des regles du ruleset ; ces tests gardent la variante de 2014, passee en donnee.
+  const ruleset: ResolvedRuleset = {
+    classes: { fighter: FIGHTER },
+    features: {},
+    characterRules: {
+      level_cap: 20,
+      ability_score_cap: 20,
+      ability_generation: {},
+      encumbrance: {
+        capacity_per_strength_lb: 15,
+        tiers: [
+          { above_per_strength_lb: 5, speed_penalty_ft: 10, disadvantage: [] },
+          { above_per_strength_lb: 10, speed_penalty_ft: 20, disadvantage: ["str", "dex", "con"] },
+        ],
+      },
+      sell_ratio: 0.5,
+    },
+  };
 
   it("carriedWeight par defaut (0) : aucun effet, comportement inchange pour les appelants existants", () => {
     const sheet = characterSheet(build, ruleset, [], []);
@@ -646,5 +664,52 @@ describe("modificateur par niveau (V3.1-121, Ténacité naine)", () => {
     expect(fixe[0].perLevel).toBeUndefined();
     const sheet = characterSheet(nainClerc(4), { ...ruleset, features: { "species:dwarf": { key: "species:dwarf", label: "Nain", source: "species:dwarf", modifiers: fixe } } }, [], []);
     expect(sheet.hitPoints.sources).toContainEqual({ label: "Fixe", value: 1 });
+  });
+});
+
+describe("règles de personnage du ruleset (V3.1-115)", () => {
+  const regles = (cap: number) => ({
+    level_cap: 20,
+    ability_score_cap: cap,
+    ability_generation: {},
+    encumbrance: { capacity_per_strength_lb: 15, tiers: [] },
+    sell_ratio: 0.5,
+  });
+  const build = (assigned: Record<"str" | "dex" | "con" | "int" | "wis" | "cha", number>, featureKeys: string[] = []): CharacterBuild => ({
+    species: "human",
+    classes: [{ key: "fighter", level: 1 }],
+    abilities: { assigned },
+    featureKeys,
+  });
+  const base = { str: 14, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
+  const bonusFor2: ResolvedRuleset["features"] = {
+    bonus: { key: "bonus", label: "+2 FOR", source: "species:x", modifiers: [{ target: "ability.str", op: "add", value: 2, source: "species:x", label: "+2 FOR", layer: 2 }] },
+  };
+
+  it("un ruleset au plafond 15 limite la Force à 15, même avec un bonus", () => {
+    const sheet = characterSheet(build(base, ["bonus"]), { classes: { fighter: FIGHTER }, features: bonusFor2, characterRules: regles(15) }, [], []);
+    expect(sheet.abilities.str.score).toBe(15);
+  });
+
+  it("au plafond 20, le même bonus donne 16", () => {
+    const sheet = characterSheet(build(base, ["bonus"]), { classes: { fighter: FIGHTER }, features: bonusFor2, characterRules: regles(20) }, [], []);
+    expect(sheet.abilities.str.score).toBe(16);
+  });
+
+  it("un objet qui FIXE la valeur n'est pas plafonné (Gantelets de puissance d'ogre : 19)", () => {
+    const gantelets = { key: "g", label: "Gantelets", equipped: true, modifiers: [{ target: "ability.str", op: "set" as const, value: 19, source: "item:g", label: "Gantelets", layer: 6 as const }] };
+    const sheet = characterSheet(build(base), { classes: { fighter: FIGHTER }, features: {}, characterRules: regles(15) }, [gantelets], []);
+    expect(sheet.abilities.str.score).toBe(19);
+  });
+
+  it("la charge suit la règle du ruleset : FOR 17 à 165 lb n'est pas encombré en 2024", () => {
+    const sheet = characterSheet(build({ ...base, str: 17 }), { classes: { fighter: FIGHTER }, features: {}, characterRules: regles(20) }, [], [], 165);
+    expect(sheet.encumbrance).toMatchObject({ tier: "none", capacity: 255 });
+  });
+
+  it("sans règles de personnage, la fiche le dit au lieu d'inventer une valeur", () => {
+    const sheet = characterSheet(build(base), { classes: { fighter: FIGHTER }, features: {} }, [], []);
+    expect(sheet.warnings.map((w) => w.kind)).toContain("missing_character_rules");
+    expect(sheet.encumbrance.tier).toBe("none");
   });
 });
