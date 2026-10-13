@@ -24,3 +24,14 @@ B.
 ## Conséquences
 
 V3.1-3, 6 et 7 sont conçus ici et fermés au profit des tickets d'implémentation. Gros chantier : le schéma et l'import d'abord, l'assistant ensuite (V3.1-49 à 53 lisent ces données).
+
+## Réalisé (V3.1-115, 13 octobre 2026)
+
+- **La fiche** `character-rules` (type `rule`) et son bloc `character_rules` (`src/core/schemas/rule-blocks/characterRules.ts`). Les valeurs officielles sont saisies dans `data/srd/character-rules.json` et posées par l'import.
+- **2024** : charge Force × 15 lb (7,5 kg) sans palier. **2014** garde la variante à deux paliers, comportement d'avant.
+- **Table du multiclassé** : relevée dans le SRD 5.2.1 (« Multiclass Spellcaster »).
+- **Départ à haut niveau** : absent, à saisir par l'auteur.
+- **Le plafond de caractéristique** s'applique dans `characterSheet()`, sauf quand un objet FIXE la valeur (op `set`).
+- **Sans fiche** : avertissement `missing_character_rules`, et aucune charge calculée.
+- **`class_basics`** porte `multiclass_prerequisites` (`all` et `any`, Guerrier : FOR 13 ou DEX 13) et `suggested_abilities` (la caractéristique principale du SRD 2024). L'ordre complet « Répartir pour un clerc » reste à saisir.
+

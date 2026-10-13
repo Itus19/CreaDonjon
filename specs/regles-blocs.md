@@ -123,6 +123,14 @@ C'est ce qui garantit que toutes les fiches se ressemblent sans avoir à dessine
 
 `class_basics`, `weapon`, `armor`, `item_properties`, `charges`, `stat_block`, `actions`, `traits`, `prerequisites`, `spellcasting_progression`, `subclass_slot`.
 
+### Règles de personnage (V3.1-115, ADR 0046)
+
+| Bloc | Layout | Contenu |
+|---|---|---|
+| `character_rules` | `key_values` | les règles de personnage du ruleset : `level_cap`, `ability_score_cap`, `ability_generation` (`standard_array`, `point_buy`, `roll`), `encumbrance` (capacité et paliers, en livres par point de Force), `sell_ratio`, `multiclass_spell_slots`, `starting_at_higher_level` |
+
+Porté par **une** fiche par ruleset, `character-rules` (type `rule`), surchargée champ par champ par une variante. Le code n'a aucune valeur de repli : sans fiche, l'écran et la fiche de personnage le disent. Les rulesets officiels la reçoivent de `data/srd/character-rules.json` à l'import. `class_basics` porte aussi `multiclass_prerequisites` (`all` / `any` de `{ ability, min }`) et `suggested_abilities`, lus du SRD.
+
 ### Blocs requis par type d'entrée
 
 C'est ce qui répond à « n'oublier aucune information ». Chaque `entry_type` déclare les blocs qu'il doit posséder :

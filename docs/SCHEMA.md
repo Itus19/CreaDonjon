@@ -497,6 +497,8 @@ create index entry_blocks_type_idx  on ruleset_entry_blocks (block_type);
 
 Blocs V1 : `description`, `spell_casting`, `effects`, `scaling`, `class_progression`, `custom_table`. Détail complet dans `Spec_Blocs_de_Regles_v0_1.md`.
 
+**Règles de personnage** (V3.1-115, ADR 0046). Chaque ruleset porte une fiche `character-rules` (type `rule`) avec un bloc `character_rules` : plafonds de niveau et de caractéristique, génération des caractéristiques, charge, revente, table du multiclassé, départ à haut niveau. Une variante la surcharge comme toute fiche. `assembleResolvedRuleset` la lit (`readCharacterRules`) et `characterSheet()` l'applique ; sans elle, rien n'est inventé, un avertissement le dit. Valeurs officielles : `data/srd/character-rules.json`, posées par l'import.
+
 ### 9.2 Traductions
 
 ```sql
