@@ -247,7 +247,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-119 | ☐ | sans | Les choix rouverts au repos | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-120 | ☑ | sans | Défaire les cycles d'import (services serveur, fiche jouable) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-121 | ☐ | sans | Ténacité naine ignorée dans les PV max | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |
-| V3.1-125 | ☐ | sans | Masse d'armes : poids faux à l'import | [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) |
+| V3.1-125 | ☑ | sans | Masse d'armes : poids faux à l'import | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-126 | ☑ | sans | Les `catch` muets restants | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-127 | ☑ | sans | Mettre à jour Next et les dépendances vulnérables | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-128 | ☑ | sans | Les cartes laissent leurs images dans le stockage | [`termines.md`](backlog-v3.1/termines.md) |

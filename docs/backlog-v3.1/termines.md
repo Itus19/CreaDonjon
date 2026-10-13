@@ -1853,6 +1853,24 @@ Les autres arêtes du tableau du constat (`getCalendar`, `createCampaign`, `reso
 
 ---
 
+### ☑ V3.1-125 — Masse d'armes : poids faux à l'import · `S` · sans modèle IA — **fait le 13 octobre**
+
+**Modèle conseillé : Sonnet.**
+
+La masse d'armes pèse 0,9 kg sur la fiche ; le SRD donne 4 lb, soit environ 1,8 kg. Trouver l'erreur de conversion dans `ingest-srd` (et vérifier les autres armes de la même famille), la corriger à l'import, jamais à la main en base.
+
+**Critères d'acceptation**
+- [x] Masse d'armes à 1,8 kg après réimport ; un test couvre le cas. **Réimport fait le 13 octobre** : 4 lb en base dans les deux rulesets SRD (1 904 entrées, aucun échec), les trois scripts d'auteur rejoués.
+
+**Diagnostic du 13 octobre (`dev-sonnet`, vérifié par Opus).** Pas d'erreur de conversion : `lbToKg` est juste. C'est `data/srd/srd-2024.json` qui était faux. Comparé au tableau des armes du SRD 5.2.1 (`data/srd/en-source/srd-5.2.1-en.txt`) :
+- masse d'armes : 2 lb au lieu de 4 ;
+- lance : 2 lb au lieu de 3 ;
+- pique : 6 lb au lieu de 18.
+
+Les trois sont corrigées dans le JSON. `srdWeaponWeights.test.ts` compare les 28 armes de corps à corps au tableau ; il échoue sans la correction.
+
+---
+
 ### ☑ V3.1-126 — Les `catch` muets restants · `M` · sans modèle IA — **fait le 13 octobre**
 
 **Modèle conseillé : Sonnet.** Sous-tâches Haiku : recenser les occurrences et les classer par fichier (`grep -rn "catch {\|\.catch(() => {})" app components lib src`, tests exclus).

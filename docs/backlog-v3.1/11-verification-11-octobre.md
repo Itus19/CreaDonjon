@@ -27,28 +27,10 @@ Nain Clerc 1, CON 14 : PV max 10 au lieu de 11. Les sources de PV renvoyées par
 
 **Critères d'acceptation**
 - [x] Test d'abord (noyau) : un Nain niveau 1 gagne +1 PV max, puis +1 par niveau.
-- [ ] La fiche du PJ de Testeur B affiche 11 PV max, avec la source « Ténacité naine ». **Attend le réimport du SRD** (`npm run ingest:srd`).
+- [ ] La fiche du PJ de Testeur B affiche 11 PV max, avec la source « Ténacité naine ». **Réimport fait le 13 octobre** : le bloc `modifiers` de `dwarven-toughness` est en base dans les deux rulesets SRD. Reste à le voir sur la fiche (vérification en direct).
 
 **Codé le 13 octobre (Opus).** Choix de l'auteur : un modificateur « par niveau ».
 - **Moteur.** Un modificateur peut porter `per_level` (`zModifier`, `DeclaredModifier`). `characterSheet()` multiplie sa valeur par le niveau total du personnage, avant toute pile ; les sources affichent le total. 5 tests dans `sheet.test.ts`.
 - **Branchement.** `resolvedRuleset.ts` lit enfin le bloc `modifiers` des traits d'espèce, validé par Zod, et l'ajoute à la feature de l'espèce en couche 2, avec le nom du trait pour étiquette. Aucune requête de plus : `fetchEntriesBatch` lisait déjà tous les blocs des traits.
 - **Donnée.** `data/srd/modifiers-2024.json`, saisi à la main sur le modèle de `triggers-2024.json`, lu par `ingest-srd.ts` et testé par `srdModifiersData.test.ts`. La fiche de règle affiche « +1 par niveau ».
 - **Pas fait ici.** La Résilience draconique dépend du *niveau de classe*, et les aptitudes de sous-classe ne sont pas encore résolues : elle attend V3.1-117. Le don Robuste n'est pas dans le SRD 5.2.1 ; une version maison peut porter `per_level`.
-
----
-
-### ☐ V3.1-125 — Masse d'armes : poids faux à l'import · `S` · sans modèle IA — **prêt (Sonnet)**
-
-**Modèle conseillé : Sonnet.**
-
-La masse d'armes pèse 0,9 kg sur la fiche ; le SRD donne 4 lb, soit environ 1,8 kg. Trouver l'erreur de conversion dans `ingest-srd` (et vérifier les autres armes de la même famille), la corriger à l'import, jamais à la main en base.
-
-**Critères d'acceptation**
-- [ ] Masse d'armes à 1,8 kg après réimport ; un test couvre le cas. **Test fait ; attend le réimport du SRD** (`npm run ingest:srd`).
-
-**Diagnostic du 13 octobre (`dev-sonnet`, vérifié par Opus).** Pas d'erreur de conversion : `lbToKg` est juste. C'est `data/srd/srd-2024.json` qui était faux. Comparé au tableau des armes du SRD 5.2.1 (`data/srd/en-source/srd-5.2.1-en.txt`) :
-- masse d'armes : 2 lb au lieu de 4 ;
-- lance : 2 lb au lieu de 3 ;
-- pique : 6 lb au lieu de 18.
-
-Les trois sont corrigées dans le JSON. `srdWeaponWeights.test.ts` compare les 28 armes de corps à corps au tableau ; il échoue sans la correction.
