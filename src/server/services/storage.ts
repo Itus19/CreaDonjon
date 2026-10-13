@@ -149,3 +149,29 @@ export async function copyAssetToWorld(
   return id;
 }
 
+/**
+ * V3.1-84 (ADR 0061) — le logo téléversé de l'application. Bucket à part,
+ * `brand`, car il n'appartient à aucun monde : les règles du bucket `assets`
+ * (dossier = monde) ne s'y appliquent pas. Lecture ouverte à tous (l'écran-
+ * titre le montre avant connexion), écriture au superadmin (migration
+ * 20261013120000). Toujours un WebP, réencodé par le serveur avant l'écriture.
+ */
+const BRAND_BUCKET = "brand";
+
+export async function putBrandLogo(supabase: TypedClient, path: string, webp: Buffer): Promise<void> {
+  const { error } = await supabase.storage.from(BRAND_BUCKET).upload(path, webp, { contentType: "image/webp", upsert: false });
+  if (error) throw new Error(`logo : ${error.message}`);
+}
+
+/** Les octets du logo, ou `null` s'il n'existe plus. */
+export async function readBrandLogo(supabase: TypedClient, path: string): Promise<Buffer | null> {
+  const { data, error } = await supabase.storage.from(BRAND_BUCKET).download(path);
+  if (error || !data) return null;
+  return Buffer.from(await data.arrayBuffer());
+}
+
+export async function removeBrandLogo(supabase: TypedClient, path: string): Promise<void> {
+  const { error } = await supabase.storage.from(BRAND_BUCKET).remove([path]);
+  if (error) throw new Error(`logo : ${error.message}`);
+}
+

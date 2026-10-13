@@ -129,6 +129,8 @@ Trois choses à remarquer :
 | `src/server/services/accountProvisioning.ts` | rattacher un compte à une campagne, « voir comme » | [0015](adr/0015-provisioning-comptes-invites.md), [0052](adr/0052-agir-sur-le-compte-d-un-membre.md) |
 | `src/server/services/accountAuth.ts` | tout ce qui touche un mot de passe | [0031](adr/0031-comptes-tag-et-mots-de-passe-natifs.md) |
 
+**Un client anonyme, à l'inverse** (`lib/supabase/anon.ts`, V3.1-84) : sans cookie ni session, il voit exactement ce que voit un visiteur non connecté, jamais plus. Il sert aux seules lectures publiques par nature, mises en cache entre les requêtes : l'identité de l'application ([ADR 0061](adr/0061-l-identite-de-l-application.md)).
+
 Un quatrième chemin privilégié est décidé mais pas encore codé : les changements signés du moteur ([ADR 0041](adr/0041-ecritures-du-moteur-au-nom-d-un-joueur.md), V3.1-104).
 
 ## 5. Les grands sous-systèmes

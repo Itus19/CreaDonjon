@@ -165,6 +165,36 @@ export type Database = {
           },
         ]
       }
+      app_identity: {
+        Row: {
+          id: boolean
+          logo_key: string
+          logo_storage_path: string | null
+          name: string
+          tagline: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          logo_key?: string
+          logo_storage_path?: string | null
+          name: string
+          tagline?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          logo_key?: string
+          logo_storage_path?: string | null
+          name?: string
+          tagline?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           alt_text: string | null

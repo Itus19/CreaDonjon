@@ -1051,6 +1051,22 @@ create table share_links (
 
 **Supabase Storage, buckets privés, URLs signées de courte durée.** Un bucket public réduirait à néant tout le travail sur la visibilité — une carte avec les emplacements secrets serait accessible par URL directe.
 
+### 18.0 `app_identity` — l'identité de l'application (V3.1-84, ADR 0061)
+
+```sql
+create table public.app_identity (
+  id boolean primary key default true check (id),   -- une ligne au plus
+  name text not null check (char_length(btrim(name)) between 1 and 32),
+  tagline text not null default '' check (char_length(tagline) <= 80),
+  logo_key text not null default 'd20',             -- une des douze clés de src/core/brand/identity.ts
+  logo_storage_path text,                           -- logo téléversé, bucket `brand`, 'logo/…'
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users(id) on delete set null
+);
+```
+
+Lecture par tous, `anon` compris : l'écran-titre la lit avant connexion. Écriture et suppression par le superadmin (`app.is_superadmin()`). Aucune ligne : les valeurs par défaut du code (« Antre Nous », d20). Le logo téléversé vit dans le bucket privé **`brand`** (WebP seulement, 1 Mo au plus ; lecture pour tous, écriture au superadmin), servi par `/api/app-identity/logo` avec un cache long et versionné. Migration `20261013120000`.
+
 ### 18.1 `background_images` — fond d'écran personnel (V2-G4 reformulé)
 
 Distincte d'`assets` : ce n'est jamais un fichier d'un monde, mais un réglage **du joueur**, indépendant de toute partie ouverte (`specs/coquille-et-design.md` §2b). Le fichier d'origine n'est jamais conservé tel quel — l'image est retraitée une fois à l'envoi (`src/server/backgroundImageProcessing.ts`) en deux formes distinctes, plus la teinte/chroma OKLCH (`src/core/theme/oklch.ts`) :
@@ -1239,6 +1255,7 @@ rulesets ── ruleset_entries ─┬── ruleset_entry_blocks
 | Migration | Contenu |
 |---|---|
 | `20260921210000` | `scene_states` — la scène courante d'une campagne (§26) |
+| `20261013120000` | `app_identity` et le bucket `brand` — l'identité de l'application (§18.0, ADR 0061) |
 
 **Règle absolue :** une migration appliquée n'est jamais modifiée. On en écrit une nouvelle. Y compris pendant le développement, y compris « juste pour corriger une faute de frappe ».
 

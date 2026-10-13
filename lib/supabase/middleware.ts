@@ -131,6 +131,9 @@ export async function updateSession(request: NextRequest) {
     // derriere le mur d'authentification.
     path.startsWith("/reinitialiser/") ||
     path.startsWith("/api/assets/") ||
+    // V3.1-84 (ADR 0061) : le logo de l'application, que l'écran-titre montre
+    // AVANT toute connexion. Lisible par tous par conception (RLS `anon`).
+    path === "/api/app-identity/logo" ||
     /^\/api\/entities\/[^/]+\/portrait$/.test(path) ||
     // Troisieme occurrence du meme defaut, trouvee en mesurant le fond de page
     // (V2.1-20 lot 2) : `/api/blocks/[id]/image` (V2-G12, V2-L1) sert les

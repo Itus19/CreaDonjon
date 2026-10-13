@@ -76,3 +76,15 @@ describe("updateSession ailleurs — le court-circuit ne deborde pas", () => {
     expect(createServerClient).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("updateSession sur le logo de l'application (V3.1-84)", () => {
+  it("un visiteur anonyme l'atteint sans être renvoyé vers /login : l'écran-titre le montre avant connexion", async () => {
+    const reponse = await updateSession(requete("/api/app-identity/logo?v=1"));
+    expect(reponse.headers.get("location")).toBeNull();
+  });
+
+  it("une autre route d'API reste fermée à un visiteur anonyme", async () => {
+    const reponse = await updateSession(requete("/api/app-identity/autre"));
+    expect(reponse.headers.get("location")).toContain("/login");
+  });
+});
