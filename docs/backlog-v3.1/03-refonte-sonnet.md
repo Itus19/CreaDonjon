@@ -20,59 +20,6 @@ V3.1-20 (lot g) peut partir dès que 25 est fait.
 
 ---
 
-### ☐ V3.1-24 — Les services de jeu sous la refonte · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — décisions toutes prises dans l'ADR 0036 ; noyau pur, tests d'abord.
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-Fondation des tickets 32, 33 et 34. Aucune interface.
-
-**À faire**
-1. `src/core/rules/deathSaves.ts` (tests d'abord) : les règles 2024 de
-   l'ADR 0036 §8 — Inconscient à 0 PV, mort directe si les dégâts restants
-   atteignent les PV max, un échec par coup à 0 PV (deux au critique), jet
-   (10+ réussit, 1 = deux échecs, 20 = 1 PV), trois réussites stabilisé,
-   trois échecs mort, tout soin remet à zéro et retire Inconscient.
-   `changeHp` et les dégâts résolus l'appliquent.
-2. Concentration (ADR 0036 §3) : champ `concentration` dans `zRuntimeState`
-   (`.default(null)`, test de relecture d'une ligne ancienne comme pour
-   `inspiration`) ; `castSpell` la pose pour un sort de concentration et
-   remplace la précédente ; service `breakConcentration` ; synchronisation
-   avec `combat_participants.concentration` comme les états ; l'état
-   `concentrating` des déclencheurs est dérivé de ce champ.
-3. Monnaie et équipement (ADR 0036 §1) : services `changeCurrency`
-   (delta par pièce, `depositCoins` / `spendCoins`, refus si le total ne
-   suffit pas) et `setItemEquipped`. **Électrum exclu du regroupement**
-   (décision du 4 octobre) : `recompose` ne forme jamais de pe ; l'électrum
-   déjà détenu reste tel quel et ne se casse que si le reste ne suffit pas
-   — tests d’abord dans `currency.test.ts`. Écriture du bloc `inventory` avec
-   contrôle de version ; routes Zod. `InventoryPanel` les utilise à la place
-   du renvoi du bloc entier.
-4. Repos (ADR 0036 §7) : `takeShortRest` / `takeLongRest` émettent
-   `short_rest` / `long_rest` dans `runTriggers` après leurs effets de base.
-   **Fait le 9 octobre avec V3.1-5 (ADR 0050).** Reste le test d'intégration
-   du critère ci-dessous.
-5. **PV temporaires** (vérifié le 4 octobre) : ils sont stockés (`hp.temp`,
-   `combat_participants.temp_hp`) et le tour solo les entame d'abord
-   (`applyDamage`, `src/core/rules/turn.ts`), mais `changeHp` (fiche) les
-   ignore et aucune commande ne permet d'en donner. `changeHp` négatif passe
-   par la même règle que `applyDamage` ; nouveau service `changeTempHp`
-   (les PV temporaires ne se cumulent pas : en 2024, on choisit de garder
-   les anciens ou de prendre les nouveaux — l'interface propose le plus
-   grand par défaut).
-
-**Critères d'acceptation**
-- [ ] Les cas de jets contre la mort ci-dessus, chacun un test du noyau.
-- [ ] Une fiche enregistrée avant ce ticket se relit sans `concentration` (test).
-- [ ] Dépenser 3 po avec 1 pp et 0 po rend la monnaie ; dépenser plus que le total est refusé sans rien écrire.
-- [ ] Ajouter 5 pa à 0 pa ne forme pas d'électrum ; 2 pe détenues restent 2 pe après un dépôt.
-- [ ] Un repos long émet `long_rest` (test d'intégration avec un déclencheur factice).
-- [ ] −7 PV sur 15/15 avec 5 temporaires laisse 13/15 et 0 temporaire (test).
-- [ ] Aucune migration SQL.
-
----
-
 ### ☐ V3.1-25 — La pilule glissante remplace `BinderTabs` · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — composant décidé (ADR 0034), usages listés.
@@ -121,7 +68,7 @@ commandes (option E) ». **Départ** :
 - [ ] Les quatre jauges et l'inspiration conformes à la planche, aux quatre modes.
 - [ ] Commande E : ±1 champ vide, ±N champ rempli, champ vidé après usage.
 - [ ] Un composant `CommandeE` réutilisable (il resservira en 32 et 34), avec sa planche au catalogue.
-- [ ] Jamais de valeur provisoire fausse (CA 11, PV 0/0) ni de clé technique d'objet pendant le chargement de la fiche ; vitesses au format français, arrondies au mètre (« 9 m ») (vu par la vérification du 11 octobre).
+- [ ] Jamais de valeur provisoire fausse (CA 11, PV 0/0) ni de clé technique d'objet pendant le chargement de la fiche ; vitesses au format français, arrondies au mètre (« 9 m ») (vu par la vérification du 11 octobre). Le 13 octobre, la même CA provisoire provoque une erreur d'hydratation de React : le serveur rend 11, le navigateur 16 quand les règles sont déjà en cache.
 
 ---
 

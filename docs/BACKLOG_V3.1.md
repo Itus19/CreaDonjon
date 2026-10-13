@@ -95,7 +95,7 @@ valables ; celui-ci les relie.
 | **8 · Règles et Chronologie** | 93 → 94 → 95 ; 96 → 97 → 98 → 99 | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
 | **À côté, quand on veut** | 13 (attend le texte des manuels de l'auteur) ; vérifications en direct de 1, 2, 4, 5, 12, 17, 18 | Codés ; il ne reste que l'œil de l'auteur. | |
 | **Étape 4, avec 105** | 104 (ADR 0041, option B) → 107 | Le joueur qui cible : écritures signées par le serveur. | Après 105. |
-| **Étape 9 · Les règles jouables** | 129 → 130 → 131, 132 ; 133 (après 129) ; puis 134 à 138, un ADR chacun ; 139, 140 | La clé de voûte du solo : toute règle en jeu est jouable à 100 % par le moteur, sans qu'un modèle la lise (ADR 0059). 129 peut partir tout de suite (seule la recharge partielle attend 113) ; 130 attend 24 pour la concentration ; 131 et 132 attendent que les planches « Esquisse · Règle jouable » passent en « Décidé ». |
+| **Étape 9 · Les règles jouables** | 129 → 130 → 131, 132 ; 133 (après 129) ; puis 134 à 138, un ADR chacun ; 139, 140 | La clé de voûte du solo : toute règle en jeu est jouable à 100 % par le moteur, sans qu'un modèle la lise (ADR 0059). 129 peut partir tout de suite (seule la recharge partielle attend 113) ; 130 n’attend plus 24 (fait le 13 octobre : la concentration change en un seul point, `setConcentration`) ; 131 et 132 attendent que les planches « Esquisse · Règle jouable » passent en « Décidé ». |
 
 **Règle** : un ticket Opus « à concevoir » ne se code pas ; il se conçoit
 (ADR), puis il se découpe en tickets prêts. Si Sonnet bute sur une décision
@@ -151,7 +151,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-21 | ☑ | sans | Cibler et résoudre depuis les boutons de jet | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-22 | ☐ | sans | Salon de groupe et jets dans le chat | [`02-refonte-parent.md`](backlog-v3.1/02-refonte-parent.md) |
 | V3.1-23 | ☑ | sans | Ce que les joueurs modifient eux-mêmes (Règles actives) | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-24 | ☐ | sans | Les services de jeu sous la refonte | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-24 | ☑ | sans | Les services de jeu sous la refonte | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-25 | ☐ | sans | La pilule glissante remplace `BinderTabs` | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
 | V3.1-26 | ☐ | sans | Fiche d'ordinateur à jauges et commande E | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
 | V3.1-27 | ☐ | sans | Rail repliable et dalle Outils (lots a, b) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |

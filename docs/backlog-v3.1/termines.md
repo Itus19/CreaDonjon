@@ -1476,6 +1476,93 @@ l'écriture côté serveur, pas seulement l'affichage du bouton.
 
 ---
 
+### ☑ V3.1-24 — Les services de jeu sous la refonte · `M` · sans modèle IA — **fait le 13 octobre**
+
+**Modèle conseillé : Sonnet** — décisions toutes prises dans l'ADR 0036 ; noyau pur, tests d'abord.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+Fondation des tickets 32, 33 et 34. Aucune interface.
+
+**À faire**
+1. `src/core/rules/deathSaves.ts` (tests d'abord) : les règles 2024 de
+   l'ADR 0036 §8 — Inconscient à 0 PV, mort directe si les dégâts restants
+   atteignent les PV max, un échec par coup à 0 PV (deux au critique), jet
+   (10+ réussit, 1 = deux échecs, 20 = 1 PV), trois réussites stabilisé,
+   trois échecs mort, tout soin remet à zéro et retire Inconscient.
+   `changeHp` et les dégâts résolus l'appliquent.
+2. Concentration (ADR 0036 §3) : champ `concentration` dans `zRuntimeState`
+   (`.default(null)`, test de relecture d'une ligne ancienne comme pour
+   `inspiration`) ; `castSpell` la pose pour un sort de concentration et
+   remplace la précédente ; service `breakConcentration` ; synchronisation
+   avec `combat_participants.concentration` comme les états ; l'état
+   `concentrating` des déclencheurs est dérivé de ce champ.
+3. Monnaie et équipement (ADR 0036 §1) : services `changeCurrency`
+   (delta par pièce, `depositCoins` / `spendCoins`, refus si le total ne
+   suffit pas) et `setItemEquipped`. **Électrum exclu du regroupement**
+   (décision du 4 octobre) : `recompose` ne forme jamais de pe ; l'électrum
+   déjà détenu reste tel quel et ne se casse que si le reste ne suffit pas
+   — tests d’abord dans `currency.test.ts`. Écriture du bloc `inventory` avec
+   contrôle de version ; routes Zod. `InventoryPanel` les utilise à la place
+   du renvoi du bloc entier.
+4. Repos (ADR 0036 §7) : `takeShortRest` / `takeLongRest` émettent
+   `short_rest` / `long_rest` dans `runTriggers` après leurs effets de base.
+   **Fait le 9 octobre avec V3.1-5 (ADR 0050).** Reste le test d'intégration
+   du critère ci-dessous.
+5. **PV temporaires** (vérifié le 4 octobre) : ils sont stockés (`hp.temp`,
+   `combat_participants.temp_hp`) et le tour solo les entame d'abord
+   (`applyDamage`, `src/core/rules/turn.ts`), mais `changeHp` (fiche) les
+   ignore et aucune commande ne permet d'en donner. `changeHp` négatif passe
+   par la même règle que `applyDamage` ; nouveau service `changeTempHp`
+   (les PV temporaires ne se cumulent pas : en 2024, on choisit de garder
+   les anciens ou de prendre les nouveaux — l'interface propose le plus
+   grand par défaut).
+
+**Critères d'acceptation**
+- [x] Les cas de jets contre la mort ci-dessus, chacun un test du noyau.
+- [x] Une fiche enregistrée avant ce ticket se relit sans `concentration` (test).
+- [x] Dépenser 3 po avec 1 pp et 0 po rend la monnaie ; dépenser plus que le total est refusé sans rien écrire.
+- [x] Ajouter 5 pa à 0 pa ne forme pas d'électrum ; 2 pe détenues restent 2 pe après un dépôt.
+- [x] Un repos long émet `long_rest` (test d'intégration avec un déclencheur factice).
+- [x] −7 PV sur 15/15 avec 5 temporaires laisse 13/15 et 0 temporaire (test).
+- [x] Aucune migration SQL.
+
+**Note de clôture (13 octobre, `dev-sonnet`, relu et corrigé par Opus).**
+
+*Noyau, tests écrits d'abord :*
+- `deathSaves.ts` : jets contre la mort, règles 2024 ;
+- `tempHp.ts` : entame des PV temporaires d'abord, et non-cumul (garder, remplacer, ou le plus grand par défaut) ;
+- `concentration.ts` : le point unique de rupture ;
+- `currency.ts` : `applyCurrencyDelta`, électrum hors du regroupement.
+
+*Services :*
+- `changeHp` suit les règles de la mort ; il ne lit les PV max que si le coup atteint 0.
+- `changeTempHp`.
+- `setConcentration`, seul chemin pour changer une concentration, appelé par `castSpell` et `breakConcentration`. Il rend `broken`, où V3.1-130 se branchera.
+- `changeCurrency` et `setItemEquipped`, dans un fichier à part, `inventoryActions.ts`.
+- Les repos soignent par `applyHealing`.
+- `concentrating` est dérivé dans `buildActorState`, jamais stocké.
+
+*Routes* `actions/temp-hp`, `actions/currency`, `actions/equip` : toutes par `guardSheetActionRoute`. Entrée Zod stricte, droit d'édition, même monde, interrupteur de table (`hp`, `currency` ; aucun pour l'équipement). Aucune migration.
+
+*Corrigé par Opus à la relecture :*
+- Un soin ne ramène plus un mort. Le repos long, qui soigne aussi, l'aurait relevé ; il faut une magie de résurrection. Un test l'établit.
+- `InventoryPanel` affichait rien si le réseau coupait : l'erreur est maintenant capturée et montrée.
+
+*Vérifié en direct (Opus, Testeur B) :*
+- `POST actions/currency` 200 en dépôt et en retrait ;
+- `POST actions/equip` 200, aller et retour (l'amulette remise comme avant).
+
+À savoir : un dépôt **regroupe** les pièces. Les 15 po de Testeur B sont devenues 1 pp 5 po, de même valeur. C'est la règle de `depositCoins`, mais elle s'applique aussi quand on saisit une valeur dans un champ de pièce.
+
+*Restent hors de ce ticket, pour les tickets d'interface (32 à 34) :*
+- aucune route pour `breakConcentration` ni pour un jet contre la mort ;
+- la synchronisation fiche → participant d'initiative : seul le MJ écrit les participants (RLS), et elle ne va donc que dans le sens participant → fiche, comme les états.
+- Le libellé de concentration est le nom source de la règle (anglais possible), faute de traduction sans requête de plus.
+- Le mode serveur de l'inventaire ne vaut que dans l'onglet Inventaire de la fiche. Ajouts, quantités et suppressions d'objets renvoient encore le bloc entier.
+
+---
+
 ### ☑ V3.1-37 — L'initiative vue des joueurs : sécurité, invitation, temps réel · `M` · sans modèle IA — **conçu le 9 octobre (ADR 0040) → V3.1-101, 102, 103**
 
 **Modèle conseillé : Opus** — RLS à resserrer, nouvelle vue filtrée pour les joueurs, signal temps réel.
