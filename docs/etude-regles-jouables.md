@@ -1,6 +1,6 @@
 # Étude — des fiches de règles qui se jouent
 
-**Statut :** échantillon fixé et découpé le 13 octobre 2026 · **objectif relevé à 100 % jouable**, distances réelles et échappatoire en données : [ADR 0059](adr/0059-toute-regle-est-jouable-par-le-moteur.md) · ADR de la fondation à écrire
+**Statut :** échantillon fixé et découpé le 13 octobre 2026 · **objectif relevé à 100 % jouable**, distances réelles et échappatoire en données : [ADR 0059](adr/0059-toute-regle-est-jouable-par-le-moteur.md) · fondation : [ADR 0060](adr/0060-la-fondation-des-regles-jouables.md) · tickets V3.1-129 à 140 ([`backlog-v3.1/12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md))
 **Esquisse visuelle :** planches « Esquisse · Règle jouable » (fiche terminée, éditeur de briques, onglet Actions en jeu) sur le canevas de la refonte https://claude.ai/artifact/EzWpfdYv6xP9H9gMp6L8Lm, sous le titre « Règles jouables »
 
 ## Objet
@@ -275,4 +275,4 @@ L'échantillon ne suffit plus non plus à **prouver** 100 %. Il a servi à trouv
 
 ## Étape suivante
 
-Un **ADR** qui fixe la fondation (P1, P2, P3, avec les variantes et les jetons), tranche la question des zones (M18) et le découpage en tickets des cinq chantiers. Il relève de la session Opus : il engage le schéma et le noyau.
+Faite le 13 octobre : la fondation est fixée par l'[ADR 0060](adr/0060-la-fondation-des-regles-jouables.md), et le travail découpé en tickets V3.1-129 à 140 ([`backlog-v3.1/12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md)).

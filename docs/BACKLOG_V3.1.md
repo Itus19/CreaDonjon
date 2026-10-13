@@ -11,7 +11,7 @@ planifié. Taille attendue : `S` ou `M` presque toujours — si un ticket ici
 grossit au point de devenir un vrai chantier, il migre vers V2 ou V3.
 **Exception assumée** : la refonte « verre minéral » (V3.1-19) est née ici
 et y est restée, avec ses tickets V3.1-20 à 119 ; la feuille de route
-ci-dessous l'ordonne. **Depuis le 10 octobre, ce fichier n'est plus qu'un index** : les tickets vivent dans `docs/backlog-v3.1/` (voir « Où trouver un ticket », en bas).
+ci-dessous l'ordonne. **Seconde exception** (13 octobre, à la demande de l'auteur) : les règles jouables, V3.1-129 à 140 (ADR 0059 et 0060). **Depuis le 10 octobre, ce fichier n'est plus qu'un index** : les tickets vivent dans `docs/backlog-v3.1/` (voir « Où trouver un ticket », en bas).
 
 **Répartition par modèle (ADR 0053).** Une session Opus orchestre. Elle
 délègue les tickets « Sonnet » à `dev-sonnet`, et la ligne « Sous-tâches
@@ -95,6 +95,7 @@ valables ; celui-ci les relie.
 | **8 · Règles et Chronologie** | 93 → 94 → 95 ; 96 → 97 → 98 → 99 | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
 | **À côté, quand on veut** | 13 (attend le texte des manuels de l'auteur) ; vérifications en direct de 1, 2, 4, 5, 12, 17, 18 | Codés ; il ne reste que l'œil de l'auteur. | |
 | **Étape 4, avec 105** | 104 (ADR 0041, option B) → 107 | Le joueur qui cible : écritures signées par le serveur. | Après 105. |
+| **Étape 9 · Les règles jouables** | 129 → 130 → 131, 132 ; 133 (après 129) ; puis 134 à 138, un ADR chacun ; 139, 140 | La clé de voûte du solo : toute règle en jeu est jouable à 100 % par le moteur, sans qu'un modèle la lise (ADR 0059). 129 peut partir tout de suite (seule la recharge partielle attend 113) ; 130 attend 24 pour la concentration ; 131 et 132 attendent que les planches « Esquisse · Règle jouable » passent en « Décidé ». |
 
 **Règle** : un ticket Opus « à concevoir » ne se code pas ; il se conçoit
 (ADR), puis il se découpe en tickets prêts. Si Sonnet bute sur une décision
@@ -122,6 +123,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 - [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) — Conception du 9 octobre : les tickets Opus découpés
 - [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) — Dette technique (V3.1-120…)
 - [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) — Ce qu'a montré la vérification du 11 octobre : tri, rattachements, V3.1-121 et 125
+- [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) — Les règles jouables : fondation et chantiers (V3.1-129 à 140, 13 octobre)
 - [`termines.md`](backlog-v3.1/termines.md) — Tickets terminés (☑)
 
 | Ticket | État | Modèle IA | Titre | Fichier |
@@ -251,3 +253,15 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-126 | ☑ | sans | Les `catch` muets restants | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-127 | ☑ | sans | Mettre à jour Next et les dépendances vulnérables | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-128 | ☑ | sans | Les cartes laissent leurs images dans le stockage | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-129 | ☐ | sans | Le noyau : ressources déclarées, activation, effets qui durent | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-130 | ☐ | sans | La migration et le service `activateFeature` | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-131 | ☐ | sans | La fiche jouable : un bouton par activation | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-132 | ☐ | sans | L'éditeur de briques et l'état de couverture | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-133 | ☐ | sans | Les données : le quotidien du SRD rendu jouable | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-134 | ☐ | sans | Les valeurs calculées | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-135 | ☐ | sans | Intervenir sur un jet | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-136 | ☐ | sans | Les actions modifiées | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-137 | ☐ | sans | Les conditions de jeu et les distances réelles | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-138 | ☐ | sans | Le modèle du monde | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-139 | ☐ | sans | L'inventaire et la couverture du SRD | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-140 | ☐ | **avec** | La conversion assistée : du texte aux briques | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
