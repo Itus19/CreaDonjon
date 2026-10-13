@@ -1853,6 +1853,30 @@ Les autres arêtes du tableau du constat (`getCalendar`, `createCampaign`, `reso
 
 ---
 
+### ☑ V3.1-121 — Ténacité naine ignorée dans les PV max · `S` · sans modèle IA — **fait et vérifié le 13 octobre** — cause : les effets passifs des traits d'espèce ne sont appliqués nulle part, et aucun ticket ne le prévoit (V3.1-116 ne traite que les traits à choix).
+
+**Modèle conseillé : Opus** — calcul de la fiche (`characterSheet()`, noyau).
+
+Nain Clerc 1, CON 14 : PV max 10 au lieu de 11. Les sources de PV renvoyées par `GET /api/entities/[id]/sheet` ne listent que « Dés de vie (1d8) » 8 et « Constitution » 2 ; le trait est affiché à l'étape Espèce mais ne produit aucun modificateur.
+
+**Critères d'acceptation**
+- [x] Test d'abord (noyau) : un Nain niveau 1 gagne +1 PV max, puis +1 par niveau.
+- [x] La fiche du PJ de Testeur B affiche 11 PV max, avec la source « Ténacité naine ».
+
+**Vérifié en direct le 13 octobre (Opus).** Application lancée en local, connexion en Testeur B par Chromium, fiche `/m/banc-d-essai/joueur/fiche/3`.
+- La jauge affiche « 10/11 ». Les PV actuels restent à 10 : c'est un état enregistré, et une hausse du maximum ne soigne pas.
+- Les données de la page portent les trois sources des PV : Dés de vie 8, Constitution 2, **Ténacité naine 1**.
+- L'écran n'affiche aucune source des PV, ni au survol ni ailleurs, pour aucune des trois. C'est déjà le cas avant ce ticket ; la fiche à jauges (V3.1-26) est l'endroit pour les montrer.
+- En passant : l'inventaire affiche la masse d'armes à 1.8 kg (V3.1-125).
+
+**Codé le 13 octobre (Opus).** Choix de l'auteur : un modificateur « par niveau ».
+- **Moteur.** Un modificateur peut porter `per_level` (`zModifier`, `DeclaredModifier`). `characterSheet()` multiplie sa valeur par le niveau total du personnage, avant toute pile ; les sources affichent le total. 5 tests dans `sheet.test.ts`.
+- **Branchement.** `resolvedRuleset.ts` lit enfin le bloc `modifiers` des traits d'espèce, validé par Zod, et l'ajoute à la feature de l'espèce en couche 2, avec le nom du trait pour étiquette. Aucune requête de plus : `fetchEntriesBatch` lisait déjà tous les blocs des traits.
+- **Donnée.** `data/srd/modifiers-2024.json`, saisi à la main sur le modèle de `triggers-2024.json`, lu par `ingest-srd.ts` et testé par `srdModifiersData.test.ts`. La fiche de règle affiche « +1 par niveau ».
+- **Pas fait ici.** La Résilience draconique dépend du *niveau de classe*, et les aptitudes de sous-classe ne sont pas encore résolues : elle attend V3.1-117. Le don Robuste n'est pas dans le SRD 5.2.1 ; une version maison peut porter `per_level`.
+
+---
+
 ### ☑ V3.1-125 — Masse d'armes : poids faux à l'import · `S` · sans modèle IA — **fait le 13 octobre**
 
 **Modèle conseillé : Sonnet.**

@@ -36,7 +36,7 @@ Trois comptes « tag » permanents, dans un monde à eux, **« Banc d'essai »**
 
 - **Connexion** : le nom (par exemple « Testeuse A ») et le mot de passe `MANUAL_TEST_PASSWORD` (dans `.env.local`, jamais dans Git). Le script affiche leur numéro (`#1234`).
 - **Mise en place**, ou remise à niveau : `npm run test:comptes-manuels`. Le script est idempotent : il ne recrée rien de ce qui existe. Changer `MANUAL_TEST_PASSWORD` puis le relancer change le mot de passe des trois comptes.
-- **Les PJ** ont leur fiche, remplie par l'assistant de création le 11 octobre : Testeuse A, Humaine Guerrière 1 Soldat (CA 16, PV 12) ; Testeur B, Nain Clerc 1 Acolyte (CA 16, PV 10, 11 attendus : V3.1-121). Elles restent d'une fois sur l'autre.
+- **Les PJ** ont leur fiche, remplie par l'assistant de création le 11 octobre : Testeuse A, Humaine Guerrière 1 Soldat (CA 16, PV 12) ; Testeur B, Nain Clerc 1 Acolyte (CA 16, PV max 11 avec la Ténacité naine, V3.1-121). Elles restent d'une fois sur l'autre.
 - **Superadmin** : pour Administration et « Voir comme » côté superadmin, utiliser son propre compte. Aucun compte de test n'est superadmin.
 - **Ne jouez pas la vraie campagne avec ces comptes**, et ne testez pas dans le vrai monde de la table : tout essai se fait dans le Banc d'essai.
 
