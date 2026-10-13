@@ -202,7 +202,9 @@ export async function resolveCampaignInviteToken(supabase: TypedClient, token: s
     intendedRole: row.intended_role as "gm" | "player" | null,
     claimedByUserId: row.claimed_by_user_id,
     claimedName: row.claimed_name,
-    hasPassword: row.has_password,
+    // Tant que la migration 20261013150000 n'est pas appliquée, la fonction renvoie encore
+    // `password_hash` et pas `has_password` : lire « pas de mot de passe » ouvrirait la porte.
+    hasPassword: row.has_password ?? (row as { password_hash?: string | null }).password_hash != null,
     passwordAttempts: row.password_attempts,
   };
 }
