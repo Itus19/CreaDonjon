@@ -2,11 +2,12 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { countUnreadChatMessages } from "@/src/server/services/chat";
-import { getWorldBySlug } from "@/src/server/services/worlds";
+import { getCalendar, getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import AppShell from "@/components/shell/AppShell";
 import DesktopWindowsProvider from "@/components/shell/DesktopWindowsProvider";
 import AvecWindowsLayer from "@/components/shell/AvecWindowsLayer";
+import WorldCalendarProvider from "@/components/shared/WorldCalendarProvider";
 
 export default async function WorldLayout({
   children,
@@ -25,7 +26,14 @@ export default async function WorldLayout({
   // de des, messages non lus) — le NOM de la campagne est affiche par la
   // barre laterale MJ, qui le relit elle-meme (`listCampaigns` est memoise
   // par requete, donc sans second aller-retour).
-  const [campaigns, user] = await Promise.all([listCampaigns(supabase, world.id), getAuthUser(supabase)]);
+  // V3.1-48 : le calendrier du monde part dans la meme vague (une lecture
+  // d'une colonne par rendu du layout, QUOTAS Q1) ; il alimente l'age derive
+  // de la fiche et de l'assistant, sans `fetch` cote client.
+  const [campaigns, user, calendar] = await Promise.all([
+    listCampaigns(supabase, world.id),
+    getAuthUser(supabase),
+    getCalendar(supabase, world.id),
+  ]);
   const campaignId = campaigns[0]?.id ?? null;
   // V3.1-62 (docs/CABLAGE.md, C1) : la pastille du chat est visible sur
   // toutes les pages du monde ; son compte arrive avec la page plutot que
@@ -46,7 +54,7 @@ export default async function WorldLayout({
           initialUnreadCount={initialUnreadCount}
           overlay={<AvecWindowsLayer worldSlug={world.slug} />}
         >
-          {children}
+          <WorldCalendarProvider calendar={calendar}>{children}</WorldCalendarProvider>
         </AppShell>
       </DesktopWindowsProvider>
     </Suspense>

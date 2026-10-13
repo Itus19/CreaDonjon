@@ -22,6 +22,7 @@ import {
   updateBlockWithVersionCheck,
 } from "@/src/server/repos/blocks";
 import { getEntityById } from "@/src/server/repos/entities";
+import { composeCharacterName } from "@/src/core/rules/characterName";
 import { getBlockImageAssetId } from "@/src/server/repos/blockImages";
 import { updateAssetVisibility } from "@/src/server/repos/assets";
 import type { MapBlockData } from "@/src/core/schemas/blocks/map";
@@ -29,6 +30,7 @@ import { imagesAbandonnees } from "@/src/core/images/imagesDeCarte";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { recordEntityRevision } from "@/src/server/services/entityHistory";
 import { canUserEditEntityById } from "@/src/server/services/permissions";
+import { updateEntity } from "@/src/server/services/entities";
 import { deleteAsset, deleteAssetIfUnreferenced } from "@/src/server/services/storage";
 
 type TypedClient = SupabaseClient<Database>;
@@ -208,6 +210,44 @@ export async function createBlock(
   return { ok: true, block: toVisibleBlock(row) };
 }
 
+/**
+ * Recompose le nom de l'entite « Prenom Nom » quand le prenom ou le nom du
+ * bloc `character` ont change (V3.1-48). Passe par `updateEntity` (droit
+ * d'ecriture, version, revision). Les mentions du wiki pointent l'entite par
+ * `id` : elles suivent ; le `label` qu'un auteur a ecrit n'est jamais
+ * reecrit (specs/wiki-liens-et-personnages.md §A1). Un echec de renommage
+ * n'annule pas l'enregistrement du bloc, mais il est journalise.
+ */
+async function renameEntityAfterNameChange(
+  supabase: TypedClient,
+  params: { entityId: string; before: unknown; after: unknown; changedBy: string }
+): Promise<void> {
+  const names = (data: unknown) => {
+    const d = (data ?? {}) as { given_name?: unknown; family_name?: unknown };
+    return {
+      given: typeof d.given_name === "string" ? d.given_name : undefined,
+      family: typeof d.family_name === "string" ? d.family_name : undefined,
+    };
+  };
+  const before = names(params.before);
+  const after = names(params.after);
+  if (before.given === after.given && before.family === after.family) return;
+  const composed = composeCharacterName(after.given, after.family);
+  if (!composed) return;
+  const entity = await getEntityById(supabase, params.entityId);
+  if (!entity || entity.name === composed) return;
+  const renamed = await updateEntity(supabase, {
+    id: entity.id,
+    changedBy: params.changedBy,
+    expectedVersion: entity.version,
+    name: composed,
+    entityKind: entity.entity_kind,
+    aliases: entity.aliases,
+    isPublic: entity.is_public,
+  });
+  if (!renamed.ok) console.error("Renommage de l'entite apres changement de prenom/nom impossible", params.entityId, renamed.reason);
+}
+
 export async function updateBlockContent(
   supabase: TypedClient,
   params: {
@@ -253,6 +293,15 @@ export async function updateBlockContent(
 
   if (existing.block_type === "image" && (validatedData as { useAsWikiBackground?: boolean }).useAsWikiBackground) {
     await clearOtherWikiBackgrounds(supabase, existing.entity_id, params.id);
+  }
+
+  if (existing.block_type === "character") {
+    await renameEntityAfterNameChange(supabase, {
+      entityId: existing.entity_id,
+      before: existing.data,
+      after: validatedData,
+      changedBy: params.changedBy,
+    });
   }
 
   if (existing.block_type === "map") {

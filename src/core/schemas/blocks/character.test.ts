@@ -77,4 +77,23 @@ describe("zCharacterBlockData", () => {
     expect(() => zCharacterBlockData.parse({ ...valid, age: 12.5 })).toThrow();
     expect(() => zCharacterBlockData.parse({ ...valid, age: "d'âge mûr" })).toThrow();
   });
+
+  it("relit une fiche ancienne qui n'a que `age` (ni prenom, ni nom, ni naissance)", () => {
+    const parsed = zCharacterBlockData.parse({ ...valid, age: 121 });
+    expect(parsed.age).toBe(121);
+    expect(parsed.birth).toBeUndefined();
+    expect(parsed.given_name).toBeUndefined();
+    expect(parsed.family_name).toBeUndefined();
+  });
+
+  it("accepte prenom, nom et une naissance en date de jeu", () => {
+    const birth = { year: 1370, month: 10, day: 3, precision: "day" as const };
+    const parsed = zCharacterBlockData.parse({ ...valid, given_name: "Mira", family_name: "Vance", birth });
+    expect(parsed.given_name).toBe("Mira");
+    expect(parsed.birth).toMatchObject({ year: 1370, month: 10, day: 3, end: null, label: null });
+  });
+
+  it("rejette une naissance mal formee", () => {
+    expect(() => zCharacterBlockData.parse({ ...valid, birth: { year: "1370" } })).toThrow();
+  });
 });

@@ -2,41 +2,58 @@
 
 ---
 
-### ☑ V3.1-113 — Ressources : pacte, recharge partielle, multiclassage (noyau) · `M` · sans modèle IA — **fait le 13 octobre (ADR 0045)**
+### ☑ V3.1-48 — Création : identité, prénom, nom, naissance au calendrier du monde · `M` · sans modèle IA — **fait le 13 octobre (ADR 0063)**
 
-**Modèle conseillé : Opus** — moteur, tests d'abord. **ADR 0045.**
-**Dépend de** : 115 (pour la table du multiclassé dans `character_rules`).
+**Modèle conseillé : Sonnet** — décision prise ; ADR à écrire d'après elle, noyau pur, tests d'abord.
 
 **Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
-- `recharge: "short_rest_one"` (bloc Ressources, version relevée) ;
-  `spellcasting.kind` `slots` | `pact` et `pactSlots` ; `casterWeight` ;
-  `pact_slots_used` dans l'état de jeu (défaut 0).
-- `characterSheet()` : emplacements du multiclassé (niveaux pondérés,
-  arrondi inférieur, table du ruleset) ; réserve de pacte séparée.
-- Import SRD : poids d'incantation, magie de pacte de l'occultiste, Arcanum
-  mystique (ressource `long_rest` par niveau 6 à 9), recharges partielles
-  (Rage, Conduit divin, Forme sauvage, Second souffle).
+**Planche** : `Creation-Decide.dc.html` (étape Identité). **Départ** :
+`src/core/schemas/blocks/character.ts` (+ test),
+`components/blocks/characterCreatorSteps/IdentityStep.tsx`,
+`src/core/calendar/` (types, `formatDate.ts`).
+
+**Ce qui est décidé (auteur, 5 octobre)**
+- Deux champs **Prénom** et **Nom** (`given_name`, `family_name` dans le bloc
+  `character`), puis genre et pronoms. Le nom de l'entité (wiki, mentions,
+  recherche) reste « Prénom Nom », composé à la création et **recomposé
+  automatiquement** quand on édite le prénom ou le nom.
+- **Naissance** : on saisit l'âge (± ou au clavier) et on choisit jour et
+  mois (les mois du calendrier du monde). L'année se calcule depuis
+  `calendar.currentDate` : année du jour − âge, moins un si l'anniversaire
+  n'est pas encore passé cette année (121 ans au 14 Germinal 1492, né un
+  3 Messidor → 1370). Une phrase résume : « Née le 3 Messidor 1370 ·
+  121 ans au 14 Germinal 1492 ». Sans date du jour réglée par le MJ,
+  l'année se saisit à la main et l'âge attend la date du jour.
+- **Règle 16** : la fiche stocke la **date de naissance** (`GameDate`), plus
+  l'âge ; l'âge est **dérivé** de la date du jour en jeu et vieillit avec la
+  campagne.
+- **Reprise** : un `age` existant devient une date de naissance au 1er du
+  premier mois, à corriger à la main (lecture tolérante dans Zod, test de
+  relecture d'une fiche ancienne).
+
+**À faire** : écrire l'ADR (décision ci-dessus, dix lignes) ; fonctions
+pures `birthYearFromAge` et `ageAt` dans `src/core/calendar` (tests
+d'abord, mois de longueurs différentes, anniversaire le jour même) ;
+schéma Zod ; recomposition du nom côté serveur.
 
 **Critères d'acceptation**
-- [x] Occultiste 20 : 4 emplacements de pacte de niveau 5 ; clerc 3 /
-  magicien 2 : emplacements d'un lanceur de niveau 5 ; un multiclassé
-  occultiste garde deux réserves (tests).
-- [x] Repos court : une Rage rendue ; repos long : toutes (test).
+- [x] Le cas « 121 ans au 14 Germinal 1492, né un 3 Messidor → 1370 », et le cas « anniversaire aujourd'hui », en tests.
+- [x] Une fiche enregistrée avec `age` se relit (test) ; l'âge affiché est calculé, jamais stocké.
+- [x] Éditer le prénom renomme l'entité ; ~~les mentions suivent~~ les mentions pointent toujours l'entité par `id`, leur libellé écrit n'est jamais réécrit (spec §A1 ; reformulé le 13 octobre) (test serveur).
+- [x] Les trois lecteurs actuels du champ `age` (V3-Z1) passent à l'âge dérivé : la rangée d'identité de `CharacterSheetHeader` (avec `AgeInput`), la colonne solo, et le refus de `applyLevelUp` (`forbidden_field_change`), qui porte désormais sur la date de naissance.
+- [ ] *Repris de V3-Z1 (12 octobre)* : vérifié à la main dans l'assistant, la barre d'étapes, Précédent / Suivant et l'Aperçu avec l'étape Identité (`docs/TESTS.md` §4, Fiche).
 
-**Note de clôture (13 octobre, Opus).** Détail dans l'[ADR 0045](../adr/0045-pacte-recharge-partielle-multiclassage.md), section « Réalisé ».
+**Note de clôture (13 octobre, Opus).** [ADR 0063](../adr/0063-naissance-en-date-de-jeu.md). Codé par Sonnet ; relu, et deux défauts locaux corrigés par Opus (précision « mois » d'une naissance sans jour ; import relatif dans le noyau).
 
-*Fait :*
-- `computeSpellSlots` et `rechargeTrackers`, 12 tests du noyau ;
-- `pact_slots_used` dans l'état de jeu ;
-- poids d'incantation de chaque classe dans `data/srd/class-spellcasting.json` ;
-- `castSpell` et les repos branchés ;
-- 2 tests d'intégration contre la base (occultiste 20, clerc 3 / magicien 2), et ceux des repos rejoués.
+*Décisions prises en route :*
+- **Mentions** : une mention garde le texte que l'auteur a écrit (« le tavernier » pour Bram), comme le veut la spec. Le renommage ne casse aucun lien, puisque tout passe par l'`id`.
+- **Calendrier** : le layout du monde le lit côté serveur, en même temps que le reste (une lecture d'une colonne par rendu, QUOTAS Q1), et le partage par un contexte (`WorldCalendarProvider`). Aucun écran ne le demande au montage.
 
-*Corrigé en route* : l'arrondi de l'ADR 0045. En 2024, la moitié des niveaux de paladin ou de rôdeur s'arrondit au supérieur.
+*Vérifié* :
+- 26 tests unitaires et 1 test d'intégration (renommage et mentions) ;
+- en vrai, sur la fiche de Testeur B : Prénom, Nom, Âge, Jour, Mois ; son monde n'a pas de date du jour, donc « Année de naissance » s'affiche.
 
-*Vérifié en vrai* (Testeur B, Clerc 1) : « Niv. 1 — 2/2 » emplacements, inchangé.
+*À voir par l'auteur* : l'assistant avec une date du jour réglée (121 ans, 3 Messidor → « Née le 3 Messidor 1370 · 121 ans au 14 Germinal 1492 »).
 
-*Reporté* :
-- les recharges de classe déclarées par les règles et l'Arcanum mystique vont à V3.1-129 ;
-- l'écran de la réserve de pacte va à V3.1-114. D'ici là, un occultiste ne voit pas ses emplacements de pacte à l'écran, mais il peut les dépenser.
+*Reste* : une fiche ancienne qui n'a qu'un `age` devient une date de naissance à la première édition de l'âge, pas avant.

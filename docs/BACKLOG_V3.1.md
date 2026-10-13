@@ -87,7 +87,7 @@ valables ; celui-ci les relie.
 | Étape | Tickets | Pourquoi d'abord |
 |---|---|---|
 | **0 · Sécurité et mesure** — *faite* | ~~101~~, ~~108~~, ~~62~~ étapes 1-2 | Un défaut de sécurité passe avant tout ; la mesure dit où la rapidité se perd avant qu'on reconstruise les écrans. |
-| **1 · Les données que les écrans attendent** (Opus, en parallèle) | Fait : ~~120~~, ~~24~~, ~~84~~, ~~41~~, ~~59~~, ~~115 → 116 → 117~~, ~~113~~. **Reste, dans cet ordre** : **48** (naissance en date de jeu, Sonnet — remonté ici le 13 octobre : 74 en dépend) → 74 (naissance et mort) → 96 (chronologie) ; 89 (attribuer chaque jet) ; 100 (rejoindre sans PJ) ; 102 → 103 (initiative des joueurs) ; 105 (cœur de résolution) → 110 → 111 (sauvegardes) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
+| **1 · Les données que les écrans attendent** (Opus, en parallèle) | Fait : ~~120~~, ~~24~~, ~~84~~, ~~41~~, ~~59~~, ~~115 → 116 → 117~~, ~~113~~. ~~48~~ (remonté ici le 13 octobre : 74 en dépend). **Reste, dans cet ordre** : 74 (naissance et mort) → 96 (chronologie) ; 89 (attribuer chaque jet) ; 100 (rejoindre sans PJ) ; 102 → 103 (initiative des joueurs) ; 105 (cœur de résolution) → 110 → 111 (sauvegardes) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
 | **2 · La coquille** | 25 → 26 → 28 ; 27 → 29 → 30, 31, 32, 33 ; 20 (dès 25) ; 35 ; 34 ; 36 ; 62 étape 3 | Tout le reste vit dedans : pilule glissante, rail, fenêtres en deux volets, téléphone, accueil. |
 | **3 · Entrer et se reconnaître** | 85 → 86 ; 80 → 81 ; 82 → 83 (après 100) ; 87 → 88 | Le premier écran que voit un ami ; court, et tout est décidé. |
 | **4 · Les outils du MJ (lot i)** | 46, 55, 61, 54, 56, 44, 45, 43 ; 41 → 42 ; 59 → 60 ; 108 → 57, 109 ; 58 ; 102, 103 → 38 ; 105 → 106 ; 111 → 112 ; 113 → 114 | Les petits outils sans donnée nouvelle d'abord, puis ceux qui attendaient l'étape 1. |
@@ -177,7 +177,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-45 | ☐ | **avec** | Générateurs : les tirages à gauche, la fiche à droite | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-46 | ☐ | sans | Probabilités : la matrice, caractéristiques et compétences | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-47 | ☑ | sans | Création : les règles de personnage viennent du ruleset | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-48 | ☐ | sans | Création : identité, prénom, nom, naissance au calendrier du monde | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-48 | ☑ | sans | Création : identité, prénom, nom, naissance au calendrier du monde | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-49 | ☐ | sans | Création : le chemin qui se ramifie (structure, aperçu, joueuse) | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-50 | ☐ | sans | Création : Origines, Historique et un seul sélecteur de sorts | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-51 | ☐ | sans | Création : la Classe, et le même écran pour monter de niveau | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |

@@ -1,5 +1,6 @@
 "use client";
 
+import { composeCharacterName } from "@/src/core/rules/characterName";
 import { useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
@@ -218,6 +219,9 @@ export default function CharacterCreatorWizard({
   );
   const step = Math.min(rawStep, steps.length - 1);
 
+  // « Prénom Nom » prime sur le champ libre quand l'étape Identité est remplie (V3.1-48).
+  const finalName = composeCharacterName(character.given_name, character.family_name) || name.trim();
+
   async function submit() {
     setBusy(true);
     setError(null);
@@ -226,7 +230,7 @@ export default function CharacterCreatorWizard({
         const result = await overwriteCharacterFromWizardAction(worldSlug, {
           entityId: entityMode.entityId,
           expectedVersion: entityMode.expectedVersion,
-          name,
+          name: finalName,
           character,
           inventory: inventory.items.length > 0 ? inventory : undefined,
           spellcasting: spellcasting.known.length > 0 ? spellcasting : undefined,
@@ -241,7 +245,7 @@ export default function CharacterCreatorWizard({
 
       const result = await (onCreate ?? createCharacterFromWizardAction)(worldSlug, {
         worldId: worldId!,
-        name,
+        name: finalName,
         character,
         inventory: inventory.items.length > 0 ? inventory : undefined,
         spellcasting: spellcasting.known.length > 0 ? spellcasting : undefined,
@@ -420,10 +424,10 @@ export default function CharacterCreatorWizard({
 
           <button
             type="button"
-            disabled={busy || !name.trim()}
+            disabled={busy || !finalName}
             onClick={submit}
             className="w-fit rounded-full border border-accent px-4 py-1.5 text-sm text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
-            title={!name.trim() ? "Donnez un nom au personnage d'abord" : undefined}
+            title={!finalName ? "Donnez un nom au personnage d'abord" : undefined}
           >
             {entityMode ? "Enregistrer le personnage" : "Créer le personnage"}
           </button>

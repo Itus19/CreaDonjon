@@ -1,5 +1,7 @@
 "use client";
 
+import { useWorldCalendarContext } from "@/components/shared/WorldCalendarProvider";
+import { ageAt } from "@/src/core/calendar/age";
 import { useEffect, useMemo, useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
@@ -92,6 +94,7 @@ export default function FicheJouableSolo({
   const [pendingCrit, setPendingCrit] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
 
+  const worldCalendar = useWorldCalendarContext();
   const { rollAbility, rollSkill, rollSave } = useDiceRoll();
 
   useEffect(() => {
@@ -354,7 +357,14 @@ export default function FicheJouableSolo({
   const classSummary = character.classes
     .map((c) => `${buildChips.get(refIdentity(c.class))?.name ?? "?"} ${c.level}`)
     .join(" / ");
-  const age = character.age !== undefined ? String(character.age) : ageFromInfobox(infobox);
+  // Age DERIVE de la naissance et de la date du jour du monde (V3.1-48) ; l'ancien champ `age`, puis l'infobox, ne servent que de repli.
+  const todayInGame = worldCalendar.currentDate;
+  const age =
+    character.birth && todayInGame
+      ? String(ageAt(character.birth, todayInGame))
+      : character.age !== undefined
+        ? String(character.age)
+        : ageFromInfobox(infobox);
   const identityLine = [speciesName, classSummary || null, backgroundName, age ? `${age} ans` : null].filter(Boolean).join(" · ");
 
   const weaponMasteryChoices = remainingChoices.filter((c) => c.kind === "weapon_mastery");

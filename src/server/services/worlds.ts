@@ -108,14 +108,19 @@ export async function updateEntityKindOrder(
 
 /**
  * Calendrier d'un monde (V2-H2, specs/wiki-blocs.md §3) : `{}` (jamais
- * regle) ou une valeur corrompue retombent silencieusement sur
+ * regle) ou une valeur corrompue (journalisee) retombent sur
  * `DEFAULT_CALENDAR` plutot que de faire echouer la fiche qui en depend —
  * la validation stricte n'intervient qu'a l'ECRITURE (`updateCalendar`).
  */
 export async function getCalendar(supabase: TypedClient, worldId: string): Promise<CalendarConfigInput> {
   const raw = await getWorldCalendar(supabase, worldId);
   const parsed = zCalendarConfig.safeParse(raw);
-  return parsed.success ? parsed.data : DEFAULT_CALENDAR;
+  if (parsed.success) return parsed.data;
+  // Jamais regle (`null` ou `{}`) : le defaut est normal. Autre chose = valeur
+  // abimee en base : on retombe sur le defaut MAIS on le dit (pas de catch muet).
+  const jamaisRegle = raw === null || (typeof raw === "object" && !Array.isArray(raw) && Object.keys(raw).length === 0);
+  if (!jamaisRegle) console.error("Calendrier du monde mal forme, repli sur le calendrier par defaut", worldId, parsed.error.issues);
+  return DEFAULT_CALENDAR;
 }
 
 /** Remplace le calendrier entier (deja valide par l'appelant via `zCalendarConfig`, meme profil que `updateEntityKindOrder`). */

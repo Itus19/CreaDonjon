@@ -915,7 +915,9 @@ export async function applyLevelUp(
     old.portrait_asset_id !== next.portrait_asset_id ||
     (old.gender ?? null) !== (next.gender ?? null) ||
     (old.pronouns ?? "") !== (next.pronouns ?? "") ||
-    (old.age ?? null) !== (next.age ?? null)
+    JSON.stringify(old.birth ?? null) !== JSON.stringify(next.birth ?? null) ||
+    (old.given_name ?? "") !== (next.given_name ?? "") ||
+    (old.family_name ?? "") !== (next.family_name ?? "")
   ) {
     return { error: "forbidden_field_change" };
   }

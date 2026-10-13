@@ -2,11 +2,11 @@
 
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import Dropdown from "@/components/shared/Dropdown";
-import { AgeInput, GENDER_OPTIONS, genderDropdownValue } from "../CharacterSheetHeader";
+import { BirthFields, NameFields, GENDER_OPTIONS, genderDropdownValue } from "../CharacterSheetHeader";
 
 /**
  * Etape « Identite » de l'assistant de creation (V3-Z1) : qui est le
- * personnage, avant ce qu'il sait faire. Trois champs, aucun obligatoire —
+ * personnage, avant ce qu'il sait faire. Prénom, nom, genre, pronoms et naissance, aucun obligatoire —
  * l'etape se passe sans rien remplir, et un personnage sans age reste un
  * personnage valide (`age`, `gender`, `pronouns` sont `.optional()` dans le
  * bloc). Memes controles que la rangee d'identite de `CharacterSheetHeader`,
@@ -23,10 +23,7 @@ export default function IdentityStep({
     <div className="flex flex-col gap-3">
       <p className="text-sm text-ink-muted">Qui est ce personnage ? Rien n&apos;est obligatoire ici : tout se complète plus tard sur la fiche.</p>
       <div className="flex flex-wrap items-start gap-3">
-        <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
-          Âge
-          <AgeInput age={character.age} onChange={(age) => patchCharacter({ age })} className="w-20" />
-        </label>
+        <NameFields character={character} patchCharacter={patchCharacter} className="w-40" />
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
           Genre
           <Dropdown
@@ -63,6 +60,7 @@ export default function IdentityStep({
           />
         </label>
       </div>
+      <BirthFields character={character} patchCharacter={patchCharacter} className="w-24" />
     </div>
   );
 }

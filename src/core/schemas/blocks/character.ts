@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { zBlockReference } from "./reference";
 import { zAbilityScores } from "./abilities";
+import { zGameDate } from "../calendar";
 
 const zClassLevel = z.object({
   class: zBlockReference,
@@ -34,6 +35,8 @@ const zGender = z.union([
  * `.strict()` doit continuer a les valider tels quels plutot que d'inventer
  * une valeur qui n'a jamais ete choisie.
  *
+ * `given_name`/`family_name`/`birth` (V3.1-48) : memes regles, optionnels.
+ *
  * `age` (V3-Z1) suit exactement le meme chemin : optionnel, jamais de valeur
  * par defaut. Un entier plutot qu'une chaine — il se relit et se compare ;
  * l'unite reste celle du monde, et une table qui veut ecrire « d'age mur »
@@ -58,7 +61,12 @@ export const zCharacterBlockData = z
     portrait_asset_id: z.string().nullable(),
     gender: zGender.optional(),
     pronouns: z.string().optional(),
+    /** Ancien champ (V3-Z1), garde en LECTURE pour les fiches anterieures a V3.1-48 : l'age affiche vient de `birth` quand il existe (regle 16, ADR 0063). */
     age: z.number().int().nonnegative().optional(),
+    given_name: z.string().optional(),
+    family_name: z.string().optional(),
+    /** Naissance au calendrier du monde (V3.1-48) : l'age est DERIVE de cette date et de la date du jour en jeu (`ageAt`). */
+    birth: zGameDate.optional(),
   })
   .strict();
 export type CharacterBlockData = z.infer<typeof zCharacterBlockData>;

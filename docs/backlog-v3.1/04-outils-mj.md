@@ -304,50 +304,6 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 
 ---
 
-### ☐ V3.1-48 — Création : identité, prénom, nom, naissance au calendrier du monde · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — décision prise ; ADR à écrire d'après elle, noyau pur, tests d'abord.
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Creation-Decide.dc.html` (étape Identité). **Départ** :
-`src/core/schemas/blocks/character.ts` (+ test),
-`components/blocks/characterCreatorSteps/IdentityStep.tsx`,
-`src/core/calendar/` (types, `formatDate.ts`).
-
-**Ce qui est décidé (auteur, 5 octobre)**
-- Deux champs **Prénom** et **Nom** (`given_name`, `family_name` dans le bloc
-  `character`), puis genre et pronoms. Le nom de l'entité (wiki, mentions,
-  recherche) reste « Prénom Nom », composé à la création et **recomposé
-  automatiquement** quand on édite le prénom ou le nom.
-- **Naissance** : on saisit l'âge (± ou au clavier) et on choisit jour et
-  mois (les mois du calendrier du monde). L'année se calcule depuis
-  `calendar.currentDate` : année du jour − âge, moins un si l'anniversaire
-  n'est pas encore passé cette année (121 ans au 14 Germinal 1492, né un
-  3 Messidor → 1370). Une phrase résume : « Née le 3 Messidor 1370 ·
-  121 ans au 14 Germinal 1492 ». Sans date du jour réglée par le MJ,
-  l'année se saisit à la main et l'âge attend la date du jour.
-- **Règle 16** : la fiche stocke la **date de naissance** (`GameDate`), plus
-  l'âge ; l'âge est **dérivé** de la date du jour en jeu et vieillit avec la
-  campagne.
-- **Reprise** : un `age` existant devient une date de naissance au 1er du
-  premier mois, à corriger à la main (lecture tolérante dans Zod, test de
-  relecture d'une fiche ancienne).
-
-**À faire** : écrire l'ADR (décision ci-dessus, dix lignes) ; fonctions
-pures `birthYearFromAge` et `ageAt` dans `src/core/calendar` (tests
-d'abord, mois de longueurs différentes, anniversaire le jour même) ;
-schéma Zod ; recomposition du nom côté serveur.
-
-**Critères d'acceptation**
-- [ ] Le cas « 121 ans au 14 Germinal 1492, né un 3 Messidor → 1370 », et le cas « anniversaire aujourd'hui », en tests.
-- [ ] Une fiche enregistrée avec `age` se relit (test) ; l'âge affiché est calculé, jamais stocké.
-- [ ] Éditer le prénom renomme l'entité ; les mentions suivent (test serveur).
-- [ ] Les trois lecteurs actuels du champ `age` (V3-Z1) passent à l'âge dérivé : la rangée d'identité de `CharacterSheetHeader` (avec `AgeInput`), la colonne solo, et le refus de `applyLevelUp` (`forbidden_field_change`), qui porte désormais sur la date de naissance.
-- [ ] *Repris de V3-Z1 (12 octobre)* : vérifié à la main dans l'assistant, la barre d'étapes, Précédent / Suivant et l'Aperçu avec l'étape Identité (`docs/TESTS.md` §4, Fiche).
-
----
-
 ### ☐ V3.1-49 — Création : le chemin qui se ramifie (structure, aperçu, joueuse) · `L` · sans modèle IA — **prêt après 47 et 48**
 
 **Modèle conseillé : Opus** — l'écran est décidé, mais le cœur est un état de choix en cascade (un choix naît de sa source, disparaît si elle change, attend un autre choix) partagé par toutes les étapes, l'aperçu en direct et la création finale ; une erreur y casse les quatre tickets suivants. **Sonnet** pour 50 à 53, qui se branchent dessus.

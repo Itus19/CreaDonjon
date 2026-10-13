@@ -13,6 +13,10 @@ import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import Stepper from "@/components/shared/Stepper";
+import { useWorldCalendarContext } from "@/components/shared/WorldCalendarProvider";
+import { ageAt, birthYearFromAge } from "@/src/core/calendar/age";
+import { formatGameDate } from "@/src/core/calendar/formatDate";
+import type { GameDate } from "@/src/core/calendar/types";
 
 const SPECIES_TYPES = ["species"] as const;
 const BACKGROUND_TYPES = ["background"] as const;
@@ -66,6 +70,158 @@ export function AgeInput({
       aria-label="Âge"
       className={`rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none ${className ?? ""}`}
     />
+  );
+}
+
+function birthDate(year: number, month: number | null, day: number | null): GameDate {
+  return { year, month, day, precision: month === null ? "year" : day === null ? "month" : "day", end: null, label: null };
+}
+
+/** Champs Prénom et Nom (V3.1-48) : le nom de l'entité est recomposé « Prénom Nom » côté serveur à l'enregistrement du bloc. */
+export function NameFields({
+  character,
+  patchCharacter,
+  className,
+}: {
+  character: CharacterBlockData;
+  patchCharacter: (fields: Partial<CharacterBlockData>) => void;
+  className?: string;
+}) {
+  return (
+    <>
+      <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
+        Prénom
+        <input
+          value={character.given_name ?? ""}
+          onChange={(e) => patchCharacter({ given_name: e.target.value })}
+          className={`rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none ${className ?? ""}`}
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
+        Nom
+        <input
+          value={character.family_name ?? ""}
+          onChange={(e) => patchCharacter({ family_name: e.target.value })}
+          className={`rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none ${className ?? ""}`}
+        />
+      </label>
+    </>
+  );
+}
+
+/**
+ * Naissance au calendrier du monde (V3.1-48, ADR 0063) : âge, jour et mois.
+ * L'âge affiché est DÉRIVÉ (`ageAt`) de la naissance et de la date du jour
+ * du monde, jamais stocké (règle 16). Saisir l'âge ou le jour/mois écrit
+ * `birth` (année par `birthYearFromAge`) et retire l'ancien champ `age`.
+ * Sans date du jour réglée, l'âge reste « — » et l'année se saisit à la main.
+ */
+export function BirthFields({
+  character,
+  patchCharacter,
+  className,
+}: {
+  character: CharacterBlockData;
+  patchCharacter: (fields: Partial<CharacterBlockData>) => void;
+  className?: string;
+}) {
+  const calendar = useWorldCalendarContext();
+  const today = calendar.currentDate;
+  const birth = character.birth;
+  const age = birth && today ? ageAt(birth, today) : character.age;
+  const monthOptions = [
+    { value: "", label: "—" },
+    ...calendar.months.map((m, i) => ({ value: String(i + 1), label: m.name })),
+  ];
+
+  function writeBirth(year: number, month: number | null, day: number | null) {
+    patchCharacter({ birth: birthDate(year, month, day), age: undefined });
+  }
+
+  function onAgeChange(next: number | undefined) {
+    if (next === undefined) return patchCharacter({ birth: undefined, age: undefined });
+    if (!today) return;
+    const month = birth?.month ?? 1;
+    const day = birth?.day ?? 1;
+    writeBirth(birthYearFromAge(next, month, day, today), month, day);
+  }
+
+  function onMonthDayChange(month: number | null, day: number | null) {
+    if (!birth) return;
+    const dayKept = month === null ? null : day;
+    if (today && age !== undefined) writeBirth(birthYearFromAge(age, month, dayKept, today), month, dayKept);
+    else writeBirth(birth.year, month, dayKept);
+  }
+
+  const maxDay = calendar.months[(birth?.month ?? 1) - 1]?.days ?? 31;
+  const bornPrefix = character.gender === "feminine" ? "Née" : character.gender === "masculine" ? "Né" : "Naissance :";
+  const bornText = birth ? `${birth.precision === "day" ? "le " : "en "}${formatGameDate(birth, calendar)}` : null;
+  const summary = birth
+    ? [
+        `${bornPrefix} ${bornText}`,
+        today && age !== undefined ? `${age} an${age > 1 ? "s" : ""} au ${formatGameDate(today, calendar)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-start gap-3">
+        <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
+          Âge
+          {today ? (
+            <AgeInput age={age} onChange={onAgeChange} className={className} />
+          ) : (
+            <input value="—" readOnly aria-label="Âge" title="L'âge attend la date du jour du monde (Calendrier)" className={`rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink-muted outline-none ${className ?? ""}`} />
+          )}
+        </label>
+        {!today && (
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
+            Année de naissance
+            <input
+              type="number"
+              step={1}
+              value={birth?.year ?? ""}
+              onChange={(e) => {
+                const raw = e.target.value.trim();
+                if (raw === "") return patchCharacter({ birth: undefined });
+                const n = Number(raw);
+                if (Number.isInteger(n)) writeBirth(n, birth?.month ?? null, birth?.day ?? null);
+              }}
+              className={`rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none ${className ?? ""}`}
+            />
+          </label>
+        )}
+        <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
+          Jour
+          <input
+            type="number"
+            min={1}
+            max={maxDay}
+            step={1}
+            disabled={!birth || birth.month === null}
+            value={birth?.day ?? ""}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              if (Number.isInteger(n) && n >= 1 && n <= maxDay) onMonthDayChange(birth?.month ?? null, n);
+            }}
+            aria-label="Jour de naissance"
+            className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none disabled:opacity-50"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
+          Mois
+          <Dropdown
+            value={birth?.month != null ? String(birth.month) : ""}
+            options={monthOptions}
+            onChange={(v) => onMonthDayChange(v === "" ? null : Number(v), v === "" ? null : (birth?.day ?? 1))}
+            aria-label="Mois de naissance"
+          />
+        </label>
+      </div>
+      {summary && <p className="text-xs text-ink-muted">{summary}</p>}
+    </div>
   );
 }
 
@@ -392,10 +548,8 @@ export default function CharacterSheetHeader({
               className="w-24 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
-            Âge
-            <AgeInput age={character.age} onChange={(age) => patchCharacter({ age })} className="w-16" />
-          </label>
+          <NameFields character={character} patchCharacter={patchCharacter} className="w-28" />
+          <BirthFields character={character} patchCharacter={patchCharacter} className="w-16" />
           <div className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
             Classes
             <div className="flex flex-wrap items-center gap-2">
