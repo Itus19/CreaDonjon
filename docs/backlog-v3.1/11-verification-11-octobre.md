@@ -19,7 +19,7 @@ Les numéros V3.1-122 à 124, ouverts puis rattachés le 11 octobre, ne sont pas
 
 ---
 
-### ☐ V3.1-121 — Ténacité naine ignorée dans les PV max · `S` · sans modèle IA — **à diagnostiquer (Opus)** — branchement manquant : les effets passifs des traits d'espèce ne sont appliqués nulle part, et aucun ticket ne le prévoit (V3.1-116 ne traite que les traits à choix).
+### ☐ V3.1-121 — Ténacité naine ignorée dans les PV max · `S` · sans modèle IA — **codé le 13 octobre, reste la vérification en direct** — cause : les effets passifs des traits d'espèce ne sont appliqués nulle part, et aucun ticket ne le prévoit (V3.1-116 ne traite que les traits à choix).
 
 **Modèle conseillé : Opus** — calcul de la fiche (`characterSheet()`, noyau).
 
