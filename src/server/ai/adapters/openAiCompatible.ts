@@ -26,7 +26,9 @@ interface OpenAiEmbeddingResponse {
 function parseToolArguments(raw: string): unknown {
   try {
     return JSON.parse(raw);
-  } catch {
+  } catch (erreur) {
+    // Arguments illisibles : `{}` est refuse ensuite par le schema Zod de l'outil.
+    console.error("Arguments d'outil illisibles dans la réponse du modèle", erreur);
     return {};
   }
 }

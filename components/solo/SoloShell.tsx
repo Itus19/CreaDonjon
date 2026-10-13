@@ -35,8 +35,9 @@ function usePliMemorise(cle: string): [boolean, () => void] {
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- lecture de localStorage, disponible seulement cote client, au premier montage
       setReplie(window.localStorage.getItem(cle) === "1");
-    } catch {
+    } catch (erreur) {
       // Stockage indisponible (navigation privee stricte) : la colonne reste depliee.
+      console.error("Lecture du pli de la colonne solo impossible", erreur);
     }
   }, [cle]);
 
@@ -45,8 +46,9 @@ function usePliMemorise(cle: string): [boolean, () => void] {
       const suivant = !v;
       try {
         window.localStorage.setItem(cle, suivant ? "1" : "0");
-      } catch {
+      } catch (erreur) {
         // Rien a faire : le pli tient pour cette session.
+        console.error("Enregistrement du pli de la colonne solo impossible", erreur);
       }
       return suivant;
     });

@@ -58,7 +58,7 @@ export default function SessionJournalMetaBlockEditor({
     fetch(`/api/worlds/${worldSlug}/calendar`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then((body: { calendar: CalendarConfigInput }) => setCalendar(body.calendar))
-      .catch(() => {});
+      .catch((erreur) => console.error("Chargement du calendrier impossible", erreur));
   }, [worldSlug]);
 
   useEffect(() => {
@@ -66,14 +66,14 @@ export default function SessionJournalMetaBlockEditor({
     fetch(`/api/campaigns/${campaignId}/session-journal/roster`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then((body: { roster: RosterEntry[] }) => setRoster(body.roster))
-      .catch(() => {});
+      .catch((erreur) => console.error("Chargement du roster du journal impossible", erreur));
     fetch(`/api/campaigns/${campaignId}/scheduling/sessions`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then((body: { upcoming: RealSessionRow[]; past: RealSessionRow[] }) => {
         const all = [...body.past, ...body.upcoming].sort((a, b) => (a.scheduled_date < b.scheduled_date ? 1 : -1));
         setSessions(all);
       })
-      .catch(() => {});
+      .catch((erreur) => console.error("Chargement des séances impossible", erreur));
   }, [campaignId]);
 
   function row(label: string, control: React.ReactNode) {

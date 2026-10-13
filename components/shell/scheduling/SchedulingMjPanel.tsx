@@ -51,7 +51,10 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
     fetch(`/api/campaigns/${campaignId}/scheduling/availability`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then((body: { availabilities: GridResponse[] }) => setMyAvailabilities(body.availabilities))
-      .catch(() => setMyAvailabilities([]));
+      .catch((erreur) => {
+        console.error("Chargement de mes disponibilités impossible", erreur);
+        setMyAvailabilities([]);
+      });
   }
 
   function loadSessions() {
@@ -61,7 +64,7 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
         setUpcoming(body.upcoming);
         setPast(body.past);
       })
-      .catch(() => {});
+      .catch((erreur) => console.error("Chargement des séances réelles impossible", erreur));
   }
 
   useEffect(() => {

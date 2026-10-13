@@ -22,7 +22,10 @@ function fetchCalendar(worldSlug: string): Promise<CalendarConfigInput> {
     promise = fetch(`/api/worlds/${worldSlug}/calendar`)
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { calendar: CalendarConfigInput } | null) => body?.calendar ?? DEFAULT_CALENDAR)
-      .catch(() => DEFAULT_CALENDAR);
+      .catch((erreur) => {
+        console.error("Chargement du calendrier du monde impossible", erreur);
+        return DEFAULT_CALENDAR;
+      });
     cache.set(worldSlug, promise);
   }
   return promise;

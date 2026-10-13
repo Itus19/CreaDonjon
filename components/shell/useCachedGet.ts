@@ -55,7 +55,7 @@ export function useCachedGet<T>(key: string, url: string): { data: T | null; rel
         cache.set(key, body);
         setData(body);
       })
-      .catch(() => {});
+      .catch((erreur) => console.error("Chargement en cache impossible", erreur));
     return () => {
       cancelled = true;
     };

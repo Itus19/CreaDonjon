@@ -72,7 +72,7 @@ function spellClassKeys(blocks: readonly EditableBlock[]): string[] {
     const list: unknown = JSON.parse(raw);
     return Array.isArray(list) ? list.map((c) => (c as { index?: unknown }).index).filter((k): k is string => typeof k === "string") : [];
   } catch {
-    // Une ligne illisible ne bloque pas la modification : le formulaire
+    // catch-attendu : une ligne illisible ne bloque pas la modification : le formulaire
     // repart sans classe cochee, et l'auteur les recoche.
     return [];
   }

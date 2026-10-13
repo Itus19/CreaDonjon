@@ -171,8 +171,9 @@ export async function POST(request: NextRequest) {
         callerId: user.id,
         text: parsed.data.text,
       });
-    } catch {
+    } catch (erreur) {
       // Ignoré volontairement : le tour ci-dessus est déjà acquis.
+      console.error("Mémorisation de l'esquisse du tour impossible", erreur);
     }
 
     try {
@@ -194,9 +195,10 @@ export async function POST(request: NextRequest) {
       if (outcome.ok) {
         result.narration = { text: outcome.narration!, npcReaction: outcome.npcReaction ?? null };
       }
-    } catch {
+    } catch (erreur) {
       // Aucun fournisseur configure, ou l'appel a echoue : le tour reste
       // valide sans narration, jamais une erreur renvoyee au joueur pour ca.
+      console.error("Narration du tour impossible", erreur);
     }
   }
 

@@ -67,7 +67,8 @@ export default function EncounterBuilder({
   if (budgetTable) {
     try {
       budget = encounterBudget(Array.from({ length: partySize }, () => partyLevel), band, budgetTable);
-    } catch {
+    } catch (erreur) {
+      console.error("Calcul du budget de rencontre impossible", erreur);
       budget = null;
     }
   }

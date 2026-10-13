@@ -23,6 +23,7 @@ export function detectProvider(url: string): MusicProvider | null {
   try {
     parsed = new URL(url);
   } catch {
+    // catch-attendu : une URL malformee est un refus ordinaire, pas une panne.
     return null;
   }
   if (parsed.protocol !== "https:") return null;

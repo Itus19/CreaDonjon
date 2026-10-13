@@ -62,7 +62,7 @@ export function nextEntryRange(entries: readonly TableEntry[], die: string): Tab
   try {
     faces = parseDie(die);
   } catch {
-    // Notation de de incomplete pendant la frappe — un etat attendu, pas une
+    // catch-attendu : notation de de incomplete pendant la frappe — un etat attendu, pas une
     // panne : `Math.max` ci-dessous retombe seul sur une plage de largeur 1.
     faces = 0;
   }

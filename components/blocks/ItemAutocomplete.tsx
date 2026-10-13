@@ -57,7 +57,7 @@ export default function ItemAutocomplete({
         .then((results: EntitySearchResult[]) => {
           if (!cancelled) setEntityResults(results);
         })
-        .catch(() => {});
+        .catch((erreur) => console.error("Recherche d'entités impossible", erreur));
     }, 200);
     return () => {
       cancelled = true;

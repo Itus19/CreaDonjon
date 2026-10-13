@@ -110,9 +110,10 @@ export async function POST(request: NextRequest) {
       if (narrated.ok) {
         result.narration = { text: narrated.narration!, npcReaction: narrated.npcReaction ?? null };
       }
-    } catch {
+    } catch (erreur) {
       // Aucun fournisseur configure, ou l'appel a echoue : le tour reste
       // valide sans narration, jamais une erreur renvoyee au joueur pour ca.
+      console.error("Narration du tour impossible", erreur);
     }
   }
 

@@ -64,7 +64,8 @@ export default function PublicMapBlock({
       .then((body: AssetRow | null) => {
         if (!cancelled) setAsset(body);
       })
-      .catch(() => {
+      .catch((erreur) => {
+        console.error("Chargement du fond de carte impossible", erreur);
         if (!cancelled) setAsset(null);
       });
     return () => {

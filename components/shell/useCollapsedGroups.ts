@@ -21,8 +21,9 @@ export function useCollapsedGroups(storageKey: string, defaultCollapsed: string[
         // eslint-disable-next-line react-hooks/set-state-in-effect -- lecture de localStorage, disponible seulement cote client, au premier montage
         setCollapsed(new Set(JSON.parse(raw)));
       }
-    } catch {
+    } catch (erreur) {
       // Stockage indisponible (navigation privee stricte) : le defaut passe en argument reste applique.
+      console.error("Lecture de l'état des groupes repliés impossible", erreur);
     }
   }, [storageKey]);
 
@@ -33,8 +34,9 @@ export function useCollapsedGroups(storageKey: string, defaultCollapsed: string[
       else next.add(key);
       try {
         window.localStorage.setItem(storageKey, JSON.stringify([...next]));
-      } catch {
+      } catch (erreur) {
         // Rien a faire si le stockage est indisponible : le pli reste actif pour cette session.
+        console.error("Enregistrement de l'état des groupes repliés impossible", erreur);
       }
       return next;
     });

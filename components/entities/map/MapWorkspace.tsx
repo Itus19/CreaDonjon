@@ -101,21 +101,30 @@ export default function MapWorkspace({
     fetch(`/api/blocks/${blockId}/pins`)
       .then((res) => (res.ok ? res.json() : []))
       .then((body: VisibleMapPin[]) => setPins(body))
-      .catch(() => setPins([]));
+      .catch((erreur) => {
+        console.error("Chargement des repères impossible", erreur);
+        setPins([]);
+      });
   }
 
   function reloadRegions() {
     fetch(`/api/blocks/${blockId}/regions`)
       .then((res) => (res.ok ? res.json() : []))
       .then((body: VisibleMapRegion[]) => setRegions(body))
-      .catch(() => setRegions([]));
+      .catch((erreur) => {
+        console.error("Chargement des régions impossible", erreur);
+        setRegions([]);
+      });
   }
 
   function reloadLayers() {
     fetch(`/api/blocks/${blockId}/layers`)
       .then((res) => (res.ok ? res.json() : []))
       .then((body: VisibleMapLayer[]) => setLayers(body))
-      .catch(() => setLayers([]));
+      .catch((erreur) => {
+        console.error("Chargement des calques impossible", erreur);
+        setLayers([]);
+      });
   }
 
   useEffect(() => {
@@ -139,7 +148,8 @@ export default function MapWorkspace({
       .then((body: AssetRow | null) => {
         if (!cancelled) setAsset(body);
       })
-      .catch(() => {
+      .catch((erreur) => {
+        console.error("Chargement du fond de carte impossible", erreur);
         if (!cancelled) setAsset(null);
       });
     return () => {

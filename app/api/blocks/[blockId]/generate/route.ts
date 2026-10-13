@@ -61,7 +61,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     let provider;
     try {
       provider = getOpenAiCompatibleProviderFromEnv();
-    } catch {
+    } catch (erreur) {
+      // Pas de fournisseur configure : les emplacements de prose restent vides.
+      console.error("Fournisseur d'IA indisponible", erreur);
       provider = null;
     }
     if (provider) {

@@ -26,8 +26,9 @@ function useExpandedGroups(storageKey: string) {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- lecture de localStorage, disponible seulement cote client, au premier montage
         setExpanded(new Set(JSON.parse(raw)));
       }
-    } catch {
+    } catch (erreur) {
       // Stockage indisponible (navigation privee stricte) : tout reste ferme.
+      console.error("Lecture de l'état de la barre de règles impossible", erreur);
     }
   }, [storageKey]);
 
@@ -38,8 +39,9 @@ function useExpandedGroups(storageKey: string) {
       else next.add(key);
       try {
         window.localStorage.setItem(storageKey, JSON.stringify([...next]));
-      } catch {
+      } catch (erreur) {
         // Rien a faire si le stockage est indisponible : le depli reste actif pour cette session.
+        console.error("Enregistrement de l'état de la barre de règles impossible", erreur);
       }
       return next;
     });

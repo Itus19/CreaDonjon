@@ -31,7 +31,7 @@ export default function SessionJournalBanner({ worldSlug }: { worldSlug: string 
     fetch(`/api/worlds/${worldSlug}/session-journal/my-assignment`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then((body: { assignment: MyAssignment | null }) => setAssignment(body.assignment))
-      .catch(() => {});
+      .catch((erreur) => console.error("Chargement de l'attribution du journal impossible", erreur));
   }, [worldSlug]);
 
   function submit() {

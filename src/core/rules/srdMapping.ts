@@ -44,6 +44,7 @@ function tryParseJson(value: unknown): unknown {
   try {
     return JSON.parse(value);
   } catch {
+    // catch-attendu : une cellule du SRD est souvent du texte simple, pas du JSON ; elle reste alors telle quelle.
     return value;
   }
 }

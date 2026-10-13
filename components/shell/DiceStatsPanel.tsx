@@ -82,7 +82,7 @@ export default function DiceStatsPanel({ campaignId }: { campaignId: string | nu
     fetch(`/api/campaigns/${campaignId}/economy-stats`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then((body: EconomyStats) => setEconomy(body))
-      .catch(() => {});
+      .catch((erreur) => console.error("Chargement des statistiques d'économie impossible", erreur));
   }, [campaignId]);
 
   if (!campaignId) {

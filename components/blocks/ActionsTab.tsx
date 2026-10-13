@@ -40,7 +40,8 @@ function resourceMax(tracker: { max: { formula: import("@/src/core/formula/ast")
   const neverRolls = { nextInt: () => { throw new Error("le mode max n'appelle jamais le RNG"); } };
   try {
     return evaluate(tracker.max.formula, {}, neverRolls, "max").value;
-  } catch {
+  } catch (erreur) {
+    console.error("Formule de maximum de ressource illisible", erreur);
     return 0;
   }
 }

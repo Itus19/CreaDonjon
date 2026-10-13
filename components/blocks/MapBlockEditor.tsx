@@ -88,7 +88,8 @@ export default function MapBlockEditor({
       .then((body: AssetRow | null) => {
         if (!cancelled) setAsset(body);
       })
-      .catch(() => {
+      .catch((erreur) => {
+        console.error("Chargement du fond de carte impossible", erreur);
         if (!cancelled) setAsset(null);
       });
     return () => {
@@ -104,7 +105,8 @@ export default function MapBlockEditor({
       .then((body: MapSourceInfo | null) => {
         if (!cancelled) setRefSource(body);
       })
-      .catch(() => {
+      .catch((erreur) => {
+        console.error("Chargement de la carte source impossible", erreur);
         if (!cancelled) setRefSource(null);
       });
     return () => {
@@ -120,7 +122,8 @@ export default function MapBlockEditor({
       .then((body: AssetRow | null) => {
         if (!cancelled) setRefAsset(body);
       })
-      .catch(() => {
+      .catch((erreur) => {
+        console.error("Chargement de l'image de la carte source impossible", erreur);
         if (!cancelled) setRefAsset(null);
       });
     return () => {
@@ -160,7 +163,8 @@ export default function MapBlockEditor({
           setRegions(r);
         }
       })
-      .catch(() => {
+      .catch((erreur) => {
+        console.error("Chargement des repères impossible", erreur);
         if (!cancelled) {
           setPins([]);
           setRegions([]);

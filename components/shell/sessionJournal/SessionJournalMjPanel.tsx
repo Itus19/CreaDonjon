@@ -67,14 +67,14 @@ export default function SessionJournalMjPanel({
         setRoster(body.roster);
         setAssignedTo((current) => current || body.roster[0]?.userId || "");
       })
-      .catch(() => {});
+      .catch((erreur) => console.error("Chargement du roster du journal impossible", erreur));
   }
 
   function loadAssignments() {
     fetch(`/api/campaigns/${campaignId}/session-journal/assignments`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then((body: { assignments: Assignment[] }) => setAssignments(body.assignments))
-      .catch(() => {});
+      .catch((erreur) => console.error("Chargement des attributions du journal impossible", erreur));
   }
 
   useEffect(loadRoster, [campaignId]);

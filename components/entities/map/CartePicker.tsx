@@ -31,7 +31,8 @@ export default function CartePicker({
       .then((body: CarteOption[]) => {
         if (!cancelled) setOptions(body);
       })
-      .catch(() => {
+      .catch((erreur) => {
+        console.error("Chargement des cartes proposées impossible", erreur);
         if (!cancelled) setOptions([]);
       });
     return () => {

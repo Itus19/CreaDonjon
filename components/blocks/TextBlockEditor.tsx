@@ -69,7 +69,7 @@ export default function TextBlockEditor({
     fetch(`/api/entities/${entityId}/ai-proposals`)
       .then((res) => (res.ok ? res.json() : []))
       .then((all: AiProposalItem[]) => setProposals(all.filter((p) => p.payload?.blockId === blockId)))
-      .catch(() => {});
+      .catch((erreur) => console.error("Chargement des propositions d'écriture impossible", erreur));
   }, [showAssist, entityId, blockId]);
 
   async function handlePropose() {

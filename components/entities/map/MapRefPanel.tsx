@@ -59,7 +59,8 @@ export default function MapRefPanel({
       .then((body: MapSourceInfo | null) => {
         if (!cancelled) setSource(body);
       })
-      .catch(() => {
+      .catch((erreur) => {
+        console.error("Chargement de la carte source impossible", erreur);
         if (!cancelled) setSource(null);
       });
     return () => {
@@ -74,7 +75,8 @@ export default function MapRefPanel({
       .then((body: VisibleMapPin[]) => {
         if (!cancelled) setPins(body);
       })
-      .catch(() => {
+      .catch((erreur) => {
+        console.error("Chargement des repères impossible", erreur);
         if (!cancelled) setPins([]);
       });
     return () => {
@@ -89,7 +91,8 @@ export default function MapRefPanel({
       .then((body: VisibleMapRegion[]) => {
         if (!cancelled) setRegions(body);
       })
-      .catch(() => {
+      .catch((erreur) => {
+        console.error("Chargement des régions impossible", erreur);
         if (!cancelled) setRegions([]);
       });
     return () => {
@@ -105,7 +108,8 @@ export default function MapRefPanel({
       .then((body: AssetRow | null) => {
         if (!cancelled) setAsset(body);
       })
-      .catch(() => {
+      .catch((erreur) => {
+        console.error("Chargement du fond de carte impossible", erreur);
         if (!cancelled) setAsset(null);
       });
     return () => {

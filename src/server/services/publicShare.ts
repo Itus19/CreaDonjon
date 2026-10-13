@@ -577,7 +577,7 @@ export async function getPublicEntityDetail(
   // Le `catch` ne masque aucune erreur utile : il empeche un rejet sans
   // destinataire quand personne ne reclame la chaine. Celle ou celui qui
   // l'attend vraiment recoit l'erreur par la promesse memoisee, intacte.
-  warmRuleChain(supabase, worldId).catch(() => {});
+  warmRuleChain(supabase, worldId).catch((erreur) => console.error("Préchauffage de la chaîne de règles impossible", erreur));
 
   // Fiche masquee (V2, retour utilisateur point 2) : meme reponse que
   // "n'existe pas", jamais de distinction qui revelerait qu'une fiche

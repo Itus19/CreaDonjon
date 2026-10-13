@@ -47,7 +47,7 @@ export function entitySlugFromPathname(pathname: string | null | undefined, href
   try {
     return decodeURIComponent(segment);
   } catch {
-    // Une sequence d'echappement invalide n'est pas une raison de faire
+    // catch-attendu : une sequence d'echappement invalide n'est pas une raison de faire
     // echouer le rendu d'un layout : pas de fiche, pas de fond, la page
     // s'affiche.
     return null;

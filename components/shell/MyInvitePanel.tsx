@@ -25,7 +25,10 @@ export default function MyInvitePanel() {
     fetch("/api/my-invite")
       .then((res) => (res.ok ? res.json() : { invite: null }))
       .then((body: { invite: MyInvite | null }) => setInvite(body.invite))
-      .catch(() => setInvite(null));
+      .catch((erreur) => {
+        console.error("Chargement de mon invitation impossible", erreur);
+        setInvite(null);
+      });
   }, []);
 
   if (!invite) return null;

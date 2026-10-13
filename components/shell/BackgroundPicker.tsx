@@ -62,7 +62,7 @@ export default function BackgroundPicker({
           }))
         );
       })
-      .catch(() => {});
+      .catch((erreur) => console.error("Chargement des fonds d'écran impossible", erreur));
   }, []);
 
   function select(ref: string, backdropUrl: string, hue: number, chroma: number, availableModes: string[]) {

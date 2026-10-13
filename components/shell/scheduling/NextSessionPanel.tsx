@@ -51,7 +51,10 @@ export default function NextSessionPanel({ worldSlug }: { worldSlug: string }) {
     fetch(`/api/campaigns/${campaignId}/scheduling/requests/open`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then(setBoard)
-      .catch(() => setBoard(null));
+      .catch((erreur) => {
+        console.error("Chargement du tableau de disponibilités impossible", erreur);
+        setBoard(null);
+      });
   }, [campaignId]);
 
   useEffect(loadBoard, [loadBoard]);
@@ -64,7 +67,8 @@ export default function NextSessionPanel({ worldSlug }: { worldSlug: string }) {
         setUpcoming(body.upcoming);
         setPast(body.past);
       })
-      .catch(() => {
+      .catch((erreur) => {
+        console.error("Chargement des séances à venir impossible", erreur);
         setUpcoming([]);
         setPast([]);
       });

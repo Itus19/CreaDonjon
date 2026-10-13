@@ -236,8 +236,9 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
         sketchId: chosen.npcReaction.npcId,
         callerId: params.userId,
       });
-    } catch {
+    } catch (erreur) {
       // Ignoré volontairement : la narration ci-dessus est déjà acquise.
+      console.error("Mémorisation de la réplique de l'esquisse impossible", erreur);
     }
   }
 
@@ -253,8 +254,9 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
         entityId: chosen.worldNote.entityId,
         text: chosen.worldNote.text,
       });
-    } catch {
+    } catch (erreur) {
       // Ignoré volontairement : la narration ci-dessus est déjà acquise.
+      console.error("Proposition de note de monde impossible", erreur);
     }
   }
 

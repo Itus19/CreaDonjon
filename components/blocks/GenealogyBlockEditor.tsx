@@ -88,7 +88,7 @@ export default function GenealogyBlockEditor({
       .then((body: FamilyTree | null) => {
         if (!cancelled && body) setTree(body);
       })
-      .catch(() => {});
+      .catch((erreur) => console.error("Chargement de la généalogie impossible", erreur));
     return () => {
       cancelled = true;
     };

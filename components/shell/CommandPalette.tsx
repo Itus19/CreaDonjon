@@ -70,7 +70,7 @@ export default function CommandPalette({
           if (data) setServerResults(data);
         })
         .catch(() => {
-          // Requete annulee (nouvelle frappe) ou erreur reseau : le filtrage
+          // catch-attendu : requete annulee (nouvelle frappe) ou erreur reseau : le filtrage
           // local reste affiche, pas de raison de faire echouer la palette.
         });
     }, DEBOUNCE_MS);
