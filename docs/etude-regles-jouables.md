@@ -1,6 +1,6 @@
 # Étude — des fiches de règles qui se jouent
 
-**Statut :** échantillon fixé et découpé le 13 octobre 2026 · **objectif relevé à 100 % jouable** (voir « Exigence ») · ADR à écrire
+**Statut :** échantillon fixé et découpé le 13 octobre 2026 · **objectif relevé à 100 % jouable**, distances réelles et échappatoire en données : [ADR 0059](adr/0059-toute-regle-est-jouable-par-le-moteur.md) · ADR de la fondation à écrire
 **Esquisse visuelle :** planches « Esquisse · Règle jouable » (fiche terminée, éditeur de briques, onglet Actions en jeu) sur le canevas de la refonte https://claude.ai/artifact/EzWpfdYv6xP9H9gMp6L8Lm, sous le titre « Règles jouables »
 
 ## Objet
@@ -26,7 +26,7 @@ Ce que « jouable à 100 % » veut dire ici :
 Conséquences sur la méthode :
 
 - La règle des trois change de rôle. Elle ne décide plus **si** une mécanique est prise en charge (elle l'est toujours) mais **quand on la généralise** : une brique peut naître pour un seul cas et être généralisée au troisième.
-- La question d'une échappatoire (`specs/moteur-de-jeu.md` §3 et §10, « à la troisième règle inexprimable ») est rouverte, puisque l'étude en trouve plus de trois. Réponse : **l'échappatoire n'est jamais le modèle**. Elle est soit une brique de données de plus, soit, pour un cas vraiment unique, un comportement codé et testé dans `src/core`, rattaché à la clé de la règle. Le choix entre les deux est à trancher dans l'ADR.
+- La question d'une échappatoire (`specs/moteur-de-jeu.md` §3 et §10, « à la troisième règle inexprimable ») est rouverte, puisque l'étude en trouve plus de trois. Réponse : **l'échappatoire n'est jamais le modèle**. Elle est soit une brique de données de plus, soit, pour un cas vraiment unique, un comportement codé et testé dans `src/core`, rattaché à la clé de la règle. **Tranché (ADR 0059) : toujours une brique de données**, même pour un seul cas, pour que toute règle reste modifiable sans code.
 - Un vocabulaire fermé ne couvrira jamais d'avance **toutes** les règles maison possibles. L'objectif tenable est donc : **100 % des règles présentes dans nos rulesets**, avec un circuit pour toute règle nouvelle qui ne s'exprime pas encore (signalée, puis une brique ajoutée).
 
 ## Ce qu'on part de
@@ -242,7 +242,7 @@ Petit manque hors brique : l'événement `attack_hit` ne porte aucune étiquette
 
 | Chantier | Contenu | Règles débloquées | Nature |
 |---|---|---|---|
-| **Fondation** | P1 (avec M12), P2, P3 (avec M16) | toutes | données et noyau ; P3 écrit enfin `entity_active_effects` |
+| **Fondation** | P1 (avec M12), P2, P3 (avec M16) | toutes | données et noyau ; P3 écrit enfin `entity_active_effects`. Dépend de V3.1-24 (concentration dans l'état de jeu, point 2) et de V3.1-113 (recharge « une au repos court ») |
 | **Valeurs calculées** | M3, M27, cibles N | 10 | surtout l'AST et `characterSheet()` : le moins cher |
 | **Intervenir sur un jet** | M1, M2, M7 | 13 | le plus gros : une fenêtre de réaction dans le déroulé d'un jet, côté serveur |
 | **Actions modifiées** | M8, M20 | 10 | le budget d'action et les sorts |
@@ -266,10 +266,10 @@ Les verdicts « P » et « T » ci-dessus deviennent des **travaux à faire**, p
 | Chantier | Contenu | Pourquoi |
 |---|---|---|
 | **Modèle du monde** | perception et visibilité (invisible, caché, sens : vision dans le noir, vision véritable, perception aveugle), lumière par zone, étiquettes de magie (école, divination, capteurs), immunités et restrictions de ciblage (M15) | sans lui, ni l'Amulette d'antidétection, ni l'invisibilité, ni la lumière de l'Aasimar ne se jouent |
-| **Cas uniques** | transformation (profil remplacé), invocation (créature alliée pilotée par le moteur), PV temporaires, redirection d'attaque, jauge qui monte, recharge sur événement, quantité choisie, consommables | chacun sert au moins une règle de l'échantillon |
+| **Cas uniques** | transformation (profil remplacé), invocation (créature alliée pilotée par le moteur), effet « accorder des PV temporaires » (le stockage et le service `changeTempHp` sont déjà prévus par V3.1-24, point 5 : il ne reste que l'effet), redirection d'attaque, jauge qui monte, recharge sur événement, quantité choisie, consommables | chacun sert au moins une règle de l'échantillon |
 | **Choix contraints** | « le MJ décide » transformé en options en données, présentées au joueur ou tirées sur une table | le seul substitut au MJ qui respecte la règle n° 8 |
 
-Et une question devient centrale : **les distances**. Les trois zones abstraites (`specs/moteur-de-jeu.md` §6) ne savent pas dire « cône de 4,5 m », « à 18 m » ou « lumière vive sur 3 m ». Jouer ces règles à 100 % demande sans doute des distances réelles entre créatures, sans aller jusqu'à une grille tactique.
+Et une question devient centrale : **les distances**. Les trois zones abstraites (`specs/moteur-de-jeu.md` §6) ne savent pas dire « cône de 4,5 m », « à 18 m » ou « lumière vive sur 3 m ». **Tranché (ADR 0059) : distances réelles en mètres entre les créatures**, sans grille tactique ; les trois zones deviennent une lecture de ces distances.
 
 L'échantillon ne suffit plus non plus à **prouver** 100 %. Il a servi à trouver les familles de briques. Pour garantir la couverture, il faut un **inventaire complet** de ce qui entre en jeu : sorts, aptitudes, objets magiques, et les monstres avec leurs actions et traits (le solo en fait jouer beaucoup).
 

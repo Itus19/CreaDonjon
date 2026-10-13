@@ -199,6 +199,8 @@ Le modèle **reçoit** cet état ; il ne le modifie que par proposition validée
 
 ### Les distances sans grille tactique
 
+> **Amendé par l'ADR 0059 (13 octobre 2026)** : le moteur tient des distances réelles en mètres entre créatures, toujours sans grille ; les trois zones ci-dessous deviennent une lecture de ces distances.
+
 Pour `in_range` et les zones, une grille de combat n'est pas nécessaire. Trois zones abstraites suffisent et couvrent l'immense majorité des cas :
 
 `engaged` (contact) · `near` (même mêlée, ~9 m) · `far` (à portée de vue)
@@ -261,7 +263,7 @@ Environ **400 à 500 tokens d'entrée par tour**, contre plusieurs milliers dans
 
 | Question | Recommandation |
 |---|---|
-| Faut-il une grille tactique ? | non — trois zones abstraites, et on y revient seulement si ça manque vraiment |
+| Faut-il une grille tactique ? | non — mais des distances réelles en mètres entre créatures (ADR 0059) ; les trois zones en sont une lecture |
 | Les déclencheurs peuvent-ils appeler l'IA ? | non. `narrate_hint` lui passe l'information, le déclencheur ne l'attend pas |
-| Que faire d'une règle inexprimable ? | la noter. À la troisième, rouvrir la question d'une échappatoire — pas avant |
+| Que faire d'une règle inexprimable ? | tranché par l'ADR 0059 : toute règle est jouable à 100 % ; une mécanique nouvelle devient une brique de données, jamais une lecture par le modèle |
 | Concurrence de deux déclencheurs sur le même événement | ordre déclaré par priorité, comme les couches de modificateurs |
