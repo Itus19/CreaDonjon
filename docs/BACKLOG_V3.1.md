@@ -186,7 +186,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-56 | ☐ | sans | Calendrier réel au verre minéral, côté MJ et côté joueuse | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-57 | ☐ | sans | Règles actives : le ruleset à gauche, la table à droite | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-58 | ☐ | sans | Personnalisation : le fond d'abord, et pour les joueuses | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
-| V3.1-59 | ☐ | sans | Publication : le fond par défaut du wiki (données) | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
+| V3.1-59 | ☑ | sans | Publication : le fond par défaut du wiki (données) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-60 | ☐ | sans | Publication : les réglages, et ce que voit un visiteur | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-61 | ☐ | sans | Journal historique : par fiche, ou chronologique | [`04-outils-mj.md`](backlog-v3.1/04-outils-mj.md) |
 | V3.1-62 | ☑ | sans | Rapidité : mesurer, puis recâbler | [`termines.md`](backlog-v3.1/termines.md) |

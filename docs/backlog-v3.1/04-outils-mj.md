@@ -798,40 +798,6 @@ cas `regles-actives`. **Dépend de** : **23** (interrupteurs,
 
 ---
 
-### ☐ V3.1-59 — Publication : le fond par défaut du wiki (données) · `M` · sans modèle IA — **prêt (Opus) — conçu le 9 octobre, ADR 0047**
-
-**Modèle conseillé : Opus** — donnée nouvelle par monde, lue par la page publique (service role) et par l'onglet Wiki des joueuses.
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Décision de l'auteur (8 octobre)** : le MJ choisit le **fond par défaut du
-wiki** — un fond (fourni ou de sa bibliothèque), le **mode des pages**, le
-**flou**. C'est un réglage **du monde**, vu de tous : il s'applique au wiki
-public (`/partage`) **et à l'onglet Wiki des joueuses** (même `BookSkin`).
-Une fiche qui a son propre fond (image « fond de page wiki », V2-G13) **le
-garde**.
-
-**À faire**
-1. Où stocker : colonne(s) sur `worlds` ou réglage existant — **pas prévu
-   dans `docs/SCHEMA.md` : ADR, mise à jour du schéma, nouvelle migration**.
-   Valider par Zod (référence de fond, mode parmi les modes permis par le
-   fond, flou 0–40).
-2. Une image de la bibliothèque **personnelle** du MJ devient visible des
-   visiteurs anonymes : décider comment elle est servie (copie dans le
-   stockage du monde, ou lecture publique de cette seule image) — la règle 2
-   s'applique (`publicShare.ts` seul porte le service role).
-3. `BookSkin` / `WikiBackgroundProvider` : fond de la fiche s'il existe,
-   sinon fond par défaut du monde, sinon rien (comportement actuel).
-4. Route d'écriture (Zod, MJ seul).
-
-**Critères d'acceptation**
-- [ ] ADR et `docs/SCHEMA.md` à jour ; nouvelle migration.
-- [ ] Un visiteur anonyme voit le fond par défaut ; une fiche avec son propre fond garde le sien (tests).
-- [ ] Une joueuse voit le même fond dans son onglet Wiki.
-- [ ] Aucune autre image de la bibliothèque du MJ n'est lisible publiquement (test).
-
----
-
 ### ☐ V3.1-60 — Publication : les réglages, et ce que voit un visiteur · `M` · sans modèle IA — **prêt après 58 et 59**
 
 **Modèle conseillé : Sonnet** — planche définitive ; galerie de 58, données de 59.
