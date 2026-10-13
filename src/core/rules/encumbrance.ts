@@ -1,4 +1,5 @@
-import { SKILLS, SKILL_ABILITIES, type Ability, type Modifier } from "./sheet";
+import { SKILLS, SKILL_ABILITIES, type Ability } from "./abilities";
+import type { Modifier } from "./sheet";
 import type { InventoryItem } from "../schemas/blocks/inventory";
 
 /**

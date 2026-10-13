@@ -35,7 +35,7 @@ import { recordEntityRevision } from "@/src/server/services/entityHistory";
 import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerCharacters";
 import { canUserEditEntity, isWorldAdmin } from "@/src/server/services/permissions";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
-import { getSessionJournalTreeGroup } from "@/src/server/services/sessionJournal";
+import { getSessionJournalTreeGroup } from "@/src/server/services/sessionJournalTree";
 
 type TypedClient = SupabaseClient<Database>;
 

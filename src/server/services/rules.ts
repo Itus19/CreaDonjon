@@ -74,7 +74,7 @@ import {
 } from "@/src/server/repos/rules";
 import { getWorldDefaultRulesetId, setWorldDefaultRuleset } from "@/src/server/repos/worlds";
 import { listCampaignsForWorld, updateCampaignRuleset } from "@/src/server/repos/campaigns";
-import { getWorldBySlug } from "@/src/server/services/worlds";
+import { getWorldBySlug } from "@/src/server/services/worldLookup";
 import type { Locale } from "@/src/i18n/request";
 
 type TypedClient = SupabaseClient<Database>;

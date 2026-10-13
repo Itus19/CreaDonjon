@@ -1,5 +1,4 @@
 import "server-only";
-import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import {
@@ -11,7 +10,6 @@ import {
   isCampaignMember,
   listCampaignCharacters,
   listCampaignMembers,
-  listCampaignsForWorld,
   listGmCampaignsForUser,
   listUnclaimedPcEntityIds,
   revokeCampaignMember,
@@ -19,10 +17,10 @@ import {
   upsertCampaignCharacter,
   type CampaignCharacterRow,
   type CampaignMemberRow,
-  type CampaignRow,
   type RevokeCampaignMemberResult,
 } from "@/src/server/repos/campaigns";
 import { getRulesetById } from "@/src/server/repos/rules";
+import { listCampaigns, toSummary, type CampaignSummary } from "@/src/server/services/campaignSummary";
 import { getWorldOwnerId } from "@/src/server/repos/worlds";
 import { createEntity, listEntities } from "@/src/server/services/entities";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
@@ -34,35 +32,10 @@ import { canActOnMemberAccount, type MemberAccountAction, type MemberAccountDeci
 
 type TypedClient = SupabaseClient<Database>;
 
-export interface CampaignSummary {
-  id: string;
-  worldId: string;
-  name: string;
-  rulesetId: string;
-  gmUserId: string | null;
-  mode: string;
-  partyEntityId: string | null;
-  createdAt: string;
-}
-
-function toSummary(row: CampaignRow): CampaignSummary {
-  return {
-    id: row.id,
-    worldId: row.world_id,
-    name: row.name,
-    rulesetId: row.ruleset_id,
-    gmUserId: row.gm_user_id,
-    mode: row.mode,
-    partyEntityId: row.party_entity_id,
-    createdAt: row.created_at,
-  };
-}
-
-/** `React.cache()` (retour utilisateur : "recharge des choses déjà présentes") — "un monde = une campagne" (V2-G1), appelee independamment par de nombreux layouts/pages pour LA campagne du meme monde sur une seule requete. */
-export const listCampaigns = cache(async function listCampaigns(supabase: TypedClient, worldId: string): Promise<CampaignSummary[]> {
-  const rows = await listCampaignsForWorld(supabase, worldId);
-  return rows.map(toSummary);
-});
+// `CampaignSummary` et `listCampaigns` vivent dans `campaignSummary.ts`
+// (V3.1-120) : `worldPlayerCharacters.ts` en a besoin, et ce fichier le tire
+// par `entities.ts`. Reexportes ici : meme fonction, donc meme memoisation.
+export { listCampaigns, type CampaignSummary } from "@/src/server/services/campaignSummary";
 
 /** "Un monde = une campagne" (migration 20260826100001) : au plus une ligne. Reutilise partout ou une fonctionnalite doit se rattacher a "la" campagne d'un monde sans que l'appelant en connaisse deja l'id (quests.ts, sessions.ts, psyche.ts). */
 export async function resolveCampaignId(supabase: TypedClient, worldId: string): Promise<string | null> {

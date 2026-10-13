@@ -5,7 +5,7 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
-import { SKILLS, SKILL_ABILITIES, type Ability } from "@/src/core/rules/sheet";
+import { SKILL_ABILITIES, type Ability } from "@/src/core/rules/sheet";
 import { XP_LEVEL_THRESHOLDS, hasReachedNextLevel } from "@/src/core/rules/experience";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
@@ -24,18 +24,7 @@ import { toggleChoice } from "./characterChoiceUtils";
 import LevelUpWizard from "./LevelUpWizard";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { chargerFicheCalculee, type SheetApiResponse } from "./ficheCalculee";
-
-export const ABILITY_LABELS: Record<Ability, string> = {
-  str: "FOR",
-  dex: "DEX",
-  con: "CON",
-  int: "INT",
-  wis: "SAG",
-  cha: "CHA",
-};
-
-/** Compétences triées par libellé FR (V1-C4 suite) — même ordre que la référence visuelle fournie par l'utilisateur. Exportée pour `RemainingChoicesStep.tsx` (assistant de création, V2-G1) — même esthétique, jamais un deuxième tri recalculé. */
-export const SORTED_SKILLS = [...SKILLS].sort((a, b) => SKILL_LABELS_FR[a].localeCompare(SKILL_LABELS_FR[b]));
+import { ABILITY_LABELS, SORTED_SKILLS } from "./sheetLabels";
 
 export type Tab = "actions" | "magie" | "inventaire" | "traits" | "maitrise";
 

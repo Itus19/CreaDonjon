@@ -19,7 +19,7 @@ import ActionsTab, { type PreparedSpellView } from "@/components/blocks/ActionsT
 import MagicTab, { type KnownSpellView } from "@/components/blocks/MagicTab";
 import TraitsTab from "@/components/blocks/TraitsTab";
 import MasteriesTab from "@/components/blocks/MasteriesTab";
-import { ABILITY_LABELS } from "@/components/blocks/PlayableCharacterSheet";
+import { ABILITY_LABELS } from "@/components/blocks/sheetLabels";
 import FicheJouableEnTete, { CaracteristiquesEtCompetences } from "./FicheJouableEnTete";
 import FicheJouableSac from "./FicheJouableSac";
 

@@ -8,7 +8,7 @@ import type { DerivedSheet } from "@/src/core/rules/sheet";
 import { SKILL_ABILITIES } from "@/src/core/rules/sheet";
 import type { LanguageKey } from "@/src/core/rules/srdMapping";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
-import { SORTED_SKILLS, ABILITY_LABELS } from "../PlayableCharacterSheet";
+import { SORTED_SKILLS, ABILITY_LABELS } from "../sheetLabels";
 
 /**
  * Etape 6 (specs/wiki-liens-et-personnages.md §B8) : "une liste, pas un

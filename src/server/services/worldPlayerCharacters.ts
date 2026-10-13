@@ -6,7 +6,7 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
 import { listCampaignCharacters } from "@/src/server/repos/campaigns";
-import { listCampaigns } from "@/src/server/services/campaigns";
+import { listCampaigns } from "@/src/server/services/campaignSummary";
 import { resolveEntryNames } from "@/src/server/services/resolvedRuleset";
 
 type TypedClient = SupabaseClient<Database>;

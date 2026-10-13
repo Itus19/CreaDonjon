@@ -240,6 +240,19 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // Aucun cycle d'import (V3.1-120, audit du 10 octobre, ADR 0054). Un
+  // cycle rend l'ordre de chargement fragile : une constante peut valoir
+  // `undefined` au moment ou un module la lit. Pour en casser un : appeler
+  // le repo, ou descendre la fonction partagee dans un module feuille ;
+  // jamais un `import()` dynamique (docs/backlog-v3.1/termines.md, V3.1-120).
+  // Le plugin `import` est charge par eslint-config-next, avec son
+  // resolveur TypeScript (alias `@/`).
+  {
+    files: ["src/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
+    rules: {
+      "import/no-cycle": ["error", { ignoreExternal: true }],
+    },
+  },
 ]);
 
 export default eslintConfig;

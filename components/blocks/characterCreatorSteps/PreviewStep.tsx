@@ -12,7 +12,7 @@ import type { RemainingChoiceView, TraitGrantView } from "../useResolvedRuleset"
 import { useReferenceChips, refIdentity, type ResolvedChipView } from "../useReferenceChips";
 import CharacterSheetHeader from "../CharacterSheetHeader";
 import ActionsTab, { type PreparedSpellView } from "../ActionsTab";
-import { ABILITY_LABELS } from "../PlayableCharacterSheet";
+import { ABILITY_LABELS } from "../sheetLabels";
 import MagicTab, { type KnownSpellView } from "../MagicTab";
 import InventoryTab from "../InventoryTab";
 import TraitsTab from "../TraitsTab";

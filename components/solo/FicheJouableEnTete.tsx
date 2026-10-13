@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Ability, DerivedSheet, Skill } from "@/src/core/rules/sheet";
 import { SKILL_ABILITIES } from "@/src/core/rules/sheet";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
-import { ABILITY_LABELS, SORTED_SKILLS } from "@/components/blocks/PlayableCharacterSheet";
+import { ABILITY_LABELS, SORTED_SKILLS } from "@/components/blocks/sheetLabels";
 
 /**
  * V3-D5 — Le haut de la fiche jouable au format étroit : le nom, les états,

@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import { ABILITIES, type Ability, type DerivedSheet } from "@/src/core/rules/sheet";
 import { isValidAsiChoice, parseAsiChoice, type AsiChoice } from "@/src/core/rules/abilityScoreImprovement";
-import { ABILITY_LABELS } from "../PlayableCharacterSheet";
+import { ABILITY_LABELS } from "../sheetLabels";
 
 /** Un niveau d'ASI a traiter (V2-G1) — resolu en amont par `LevelUpWizard` a partir de `asiGrantedLevels`, jamais devine ici. */
 export interface AsiGrant {

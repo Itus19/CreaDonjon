@@ -1,5 +1,4 @@
 import "server-only";
-import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
@@ -9,7 +8,6 @@ import { DEFAULT_CALENDAR } from "@/src/core/calendar/defaultCalendar";
 import {
   deleteWorldRow,
   getWorldById,
-  getWorldBySlugForCurrentUser,
   getWorldCalendar,
   getWorldOwnerId,
   insertWorld,
@@ -85,22 +83,10 @@ export async function getWorld(supabase: TypedClient, id: string): Promise<World
   return getWorldById(supabase, id);
 }
 
-/**
- * `React.cache()` (retour utilisateur : "l'application... recharge des
- * choses déjà présentes") — appelee independamment par presque chaque
- * layout/page de l'arborescence d'un monde (`app/m/[worldSlug]/layout.tsx`,
- * `joueur/layout.tsx`, `joueur/fiche/layout.tsx`, la page elle-meme...)
- * pour le MEME `worldSlug` sur UNE seule requete. Fonctionne uniquement
- * parce que `createClient()` (lib/supabase/server.ts) est lui-meme
- * memoise : sans un `supabase` reference-stable, cette memoisation ne
- * ferait jamais de hit.
- */
-export const getWorldBySlug = cache(async function getWorldBySlug(
-  supabase: TypedClient,
-  slug: string
-): Promise<WorldSummary | null> {
-  return getWorldBySlugForCurrentUser(supabase, slug);
-});
+// `getWorldBySlug` vit dans `worldLookup.ts` (V3.1-120) : `rules.ts` en a
+// besoin, et ce fichier tire `rules.ts` par `worldPlayerCharacters.ts`.
+// Reexporte ici : meme fonction, donc meme memoisation `React.cache()`.
+export { getWorldBySlug } from "@/src/server/services/worldLookup";
 
 /** Panneau de publication (V2-G2, extension) : `message` vide efface la personnalisation. */
 export async function updateWikiWelcomeMessage(
